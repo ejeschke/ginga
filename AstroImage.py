@@ -89,9 +89,14 @@ class AstroImage(object):
         if numhdu == None:
             hdu = fits_f[0]
             # compressed FITS file?
-            if (hdu.data == None) and (len(fits_f) > 1) and \
-               isinstance(fits_f[1], pyfits.core.CompImageHDU):
-                hdu = fits_f[1]
+            if (hdu.data == None) and (len(fits_f) > 1):
+                i = 1
+                while (hdu.data == None) and (i < len(fits_f)):
+                    hdu = fits_f[i]
+                    i += 1
+                if hdu.data == None:
+                    raise CalcError("No valid data HDU found in '%s'" % (
+                        filepath))
         else:
             numhdu = fits_f[numhdu]
             
