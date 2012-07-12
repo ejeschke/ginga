@@ -2,7 +2,7 @@
 # PluginManagerGtk.py -- Simple class to manage plugins.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Jun 22 13:41:33 HST 2012
+#  Last edit: Thu Jul 12 10:15:53 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -36,7 +36,8 @@ class PluginManager(object):
         self.active = {}
         self.focus  = set([])
         self.exclusive = set([])
-
+        self.focuscolor = "green"
+        
         self.hbox = None
 
     def set_widget(self, hbox):
@@ -202,9 +203,10 @@ class PluginManager(object):
         lname = name.lower()
         bnch = self.active[lname]
         if bnch.exclusive:
-            print "focus=%s exclusive=%s" % (self.focus, self.exclusive)
+            self.logger.debug("focus=%s exclusive=%s" % (
+                self.focus, self.exclusive))
             defocus = filter(lambda x: x in self.exclusive, self.focus)
-            print "defocus: %s" % (str(defocus))
+            self.logger.debug("defocus: %s" % (str(defocus)))
             for xname in defocus:
                 self.clear_focus(xname)
 
@@ -213,21 +215,21 @@ class PluginManager(object):
         # plug in
         if pInfo.chinfo != None:
             itab = pInfo.chinfo.name
-            print "raising tab %s" % itab
+            self.logger.debug("raising tab %s" % (itab))
             self.ds.raise_tab(itab)
             
         pInfo.obj.resume()
         self.focus.add(lname)
         ## bnch.label.set_markup('<span background="green">%s</span>' % (
         ##     bnch.lblname))
-        bnch.evbox.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse("green"))
+        bnch.evbox.modify_bg(gtk.STATE_NORMAL,
+                             gtk.gdk.color_parse(self.focuscolor))
         if pInfo.widget != None:
             self.ds.raise_tab('Dialogs')
             self.ds.raise_tab(pInfo.tabname)
 
     def clear_focus(self, name):
-        print "unfocusing %s" % name
-        self.logger.info("Unfocusing plugin '%s'" % (name))
+        self.logger.debug("Unfocusing plugin '%s'" % (name))
         lname = name.lower()
         bnch = self.active[lname]
         try:

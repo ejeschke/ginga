@@ -322,9 +322,12 @@ position as much as possible in the center of the window.  The pan
 position may also be set by certain plugins, such as Pick.
 
 Ginga has an auto zoom feature to automatically fit newly loaded images
-to the window.  See section \ref{sec:autozoom} for details.
+to the window.  See section \ref{pref:autozoom} for details.
 
 \subsection{Setting cut levels}
+
+Ginga has an auto cuts feature to automatically set cut levels on newly
+loaded images.  See section \ref{pref:autocuts} for details.
 
 \subsection{Manipulating the color map}
 
@@ -454,12 +457,41 @@ an operation.
 \subsection{PixTable}
 \subsection{Preferences}
 
-Ginga can auto zoom new images; i.e. when a new image is loaded into a
-channel it can zoom the image to fit the window.  This setting is on a
-per-channel basis, and has three possible values: on, override, and off.
-In the \emph{on} mode, new images are always zoomed to fit.  In the 
-\emph{off} mode, the current zoom settings are applied.  In
-\emph{override} mode, images are automatically fitted until the zoom is
+\label{pref:autozoom}
+Ginga can automatically set the zoom level to fit the window when you
+switch images; 
+for example, when a new image is loaded into a channel or you click the
+thumbnail of an old image.
+This setting is on a per-channel basis and is governed by the ``Zoom
+New'' setting with three possible values: on, override, and off.  
+In the \emph{on} mode, the switched image is always zoomed to fit.  In the 
+\emph{off} mode, the current zoom settings are applied to the new image.
+In \emph{override} mode, images are automatically fitted until the zoom is
+changed manually--then the mode automatically changes to \emph{off}.
+Override mode can be re-enabled from off mode by a keypress--see
+Appendix \ref{app:mousekbdref} for the default key binding.
+
+\label{pref:autocuts}
+Ginga can automatically set cut levels when you switch images;
+for example, when a new image is loaded into a channel or you click the
+thumbnail of an old image.
+This setting is on a per-channel basis, and is governed by three
+possible values for the ``Cut New'' setting (on, override, and off) plus
+the ``Use saved cuts'' checkbox setting.
+The idea of the ``Use saved cuts'' preference comes from the notion that
+if you previously manually set the cut levels on an image then you
+probably want to use the same cut levels if you visit that same image again.  
+So if the switched image is already loaded (e.g. you clicked a thumbnail of
+an older image) \emph{and} a \emph{manual} cut levels operation was
+previously applied to that image \emph{and} the use saved cuts checkbox
+is checked, then the previously saved cut levels for that image will be
+used.
+For images which never had a manually set cut levels, or new images, Ginga
+will set the levels according to the value of the ``Cut New'' setting.
+In the \emph{on} mode, an auto cut levels is always applied to the
+new image.  
+In the \emph{off} mode, the current cut levels are applied to the new image.
+In \emph{override} mode, images are automatically cut until the cut levels are
 changed manually--then the mode automatically changes to \emph{off}.
 
 \subsection{Catalog}

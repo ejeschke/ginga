@@ -2,7 +2,7 @@
 # FitsImage.py -- abstract classes for the display of FITS files
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Jun 22 13:38:37 HST 2012
+#  Last edit: Wed Jul 11 19:30:01 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -1037,19 +1037,21 @@ class FitsImageBase(Callback.Callbacks):
             data = f.clip(0.0, 1.0) * vmax
         return data
 
-    def cut_levels(self, loval, hival, redraw=True):
+    def cut_levels(self, loval, hival, no_reset=False, redraw=True):
         self.t_locut = loval
         self.t_hicut = hival
 
         # If user specified override for auto levels, then turn off
         # auto levels now that they have set the levels manually
-        if self.t_autolevels == 'override':
+        if (not no_reset) and (self.t_autolevels == 'override'):
             value = 'off'
             self.t_autolevels = value
             self.make_callback('autocuts', value)
 
         # save cut levels with this image as metadata
         if self.image != None:
+            self.logger.debug("saving cut levels with image: cutlo=%f cuthi=%f" % (
+                loval, hival))
             self.image.set(cutlo=loval, cuthi=hival)
             
         self.make_callback('cut-set', self.t_locut, self.t_hicut)
@@ -1061,8 +1063,8 @@ class FitsImageBase(Callback.Callbacks):
         self._set_cut_levels(method=method, pct=pct, numbins=numbins)
 
         # save cut levels with this image as metadata
-        if self.image != None:
-            self.image.set(cutlo=self.t_locut, cuthi=self.t_hicut)
+        ## if self.image != None:
+        ##     self.image.set(cutlo=self.t_locut, cuthi=self.t_hicut)
             
         self.make_callback('cut-set', self.t_locut, self.t_hicut)
         if redraw:
@@ -1088,7 +1090,7 @@ class FitsImageBase(Callback.Callbacks):
             loval, hival = self.image.get_list('cutlo', 'cuthi')
             self.logger.debug("setting cut levels from saved cuts lo=%f hi=%f" % (
                 loval, hival))
-            self.cut_levels(loval, hival, redraw=redraw)
+            self.cut_levels(loval, hival, no_reset=True, redraw=redraw)
 
         # else possibly perform an auto cut levels
         elif self.t_autolevels != 'off':

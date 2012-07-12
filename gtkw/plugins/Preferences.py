@@ -2,7 +2,7 @@
 # Preferences.py -- Preferences plugin for fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Jun 22 13:44:52 HST 2012
+#  Last edit: Wed Jul 11 17:08:59 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -163,7 +163,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.w.tooltips.set_tip(b.cut_new,
                                 "Automatically set cut levels for new images")
         self.w.tooltips.set_tip(b.use_saved_cuts,
-                                "Set cut levels from a previous cut levels on same image, if possible")
+                                "Set cut levels from a previous MANUAL cut levels on SAME image, if possible")
         self.w.tooltips.set_tip(b.auto_method,
                                 "Choose algorithm for auto levels")
         self.w.tooltips.set_tip(b.hist_pct,
@@ -401,7 +401,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.prefs.auto_levels = option
 
     def autocuts_changed_cb(self, fitsimage, option):
-        print "autocuts changed to %s" % option,
+        print "autocuts changed to %s" % option
         index = self.autocut_options.index(option)
         self.w.btn_cut_new.set_active(index)
 

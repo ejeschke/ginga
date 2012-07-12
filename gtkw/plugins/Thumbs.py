@@ -2,7 +2,7 @@
 # Thumbs.py -- Thumbnail plugin for fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Jun 22 13:44:53 HST 2012
+#  Last edit: Thu Jul 12 09:50:52 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -13,6 +13,7 @@ import FitsImageGtk as FitsImageGtk
 import GingaPlugin
 
 import gtk
+import gobject
 import time
 
 import Bunch
@@ -36,10 +37,15 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         # max length of thumb on the long side
         self.thumbWidth = 150
 
+        self.cutstask = None
+        self.lagtime = 1000
+
         self.keywords = ['OBJECT', 'FRAMEID', 'UT', 'DATE-OBS']
 
         fv.set_callback('add-image', self.add_image)
+        fv.set_callback('add-channel', self.add_channel)
         fv.set_callback('delete-channel', self.delete_channel)
+        fv.add_callback('active-image', self.focus_cb)
 
     def initialize(self, container):
         width, height = 300, 300
@@ -96,6 +102,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             metadata[kwd] = header.get(kwd, 'N/A')
 
         self.thumb_generator.set_data(data)
+        self.copy_attrs(chinfo.fitsimage)
         imgwin = self.thumb_generator.get_image_as_widget()
 
         imgwin.set_property("has-tooltip", True)
@@ -112,7 +119,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         vbox.pack_start(evbox, expand=False, fill=False)
         vbox.show_all()
 
-        bnch = Bunch.Bunch(widget=vbox)
+        bnch = Bunch.Bunch(widget=vbox, evbox=evbox)
 
         if self.thumbColCount == 0:
             hbox = gtk.HBox(homogeneous=True, spacing=self.thumbSep)
@@ -213,6 +220,91 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         self.thumbDict = {}
         self.rebuild_thumbs()
         
+    def add_channel(self, viewer, chinfo):
+        """Called when a channel is added from the main interface.
+        Parameter is chinfo (a bunch)."""
+        fitsimage = chinfo.fitsimage
+        fitsimage.add_callback('cut-set', self.cutset_cb)
+        fitsimage.add_callback('transform', self.transform_cb)
+
+        rgbmap = fitsimage.get_rgbmap()
+        rgbmap.add_callback('changed', self.rgbmap_cb, fitsimage)
+
+    def focus_cb(self, viewer, fitsimage):
+        # Reflect transforms, colormap, etc.
+        self.copy_attrs(fitsimage)
+
+    def transform_cb(self, fitsimage):
+        self.redo_delay(fitsimage)
+        return True
+        
+    def cutset_cb(self, fitsimage, loval, hival):
+        self.redo_delay(fitsimage)
+        return True
+
+    def rgbmap_cb(self, rgbmap, fitsimage):
+        # color mapping has changed in some way
+        self.redo_delay(fitsimage)
+        return True
+
+    def copy_attrs(self, fitsimage):
+        # Reflect transforms, colormap, etc.
+        fitsimage.copy_attributes(self.thumb_generator,
+                                  ['transforms', 'cutlevels',
+                                   'rgbmap'],
+                                  redraw=False)
+
+    def redo_delay(self, fitsimage):
+        # Delay regeneration of thumbnail until most changes have propagated
+        if self.cutstask != None:
+            gobject.source_remove(self.cutstask)
+        self.cutstask = gobject.timeout_add(self.lagtime, self.redo_thumbnail,
+                                            fitsimage)
+        return True
+
+    def redo_thumbnail(self, fitsimage):
+        # Get the thumbnail image 
+        image = fitsimage.get_image()
+        if image == None:
+            return
+        
+        # Get metadata for mouse-over tooltip
+        header = image.get_header()
+        metadata = {}
+        for kwd in self.keywords:
+            metadata[kwd] = header.get(kwd, 'N/A')
+
+        # Look up our version of the thumb
+        name = image.get('name', None)
+        if name == None:
+            return
+        try:
+            bnch = self.thumbDict[name]
+        except KeyError:
+            return
+
+        # Generate new thumbnail
+        # TODO: Can't use set_image() because we will override the saved
+        # cuts settings...should look into fixing this...
+        ## timage = self.thumb_generator.get_image()
+        ## if timage != image:
+        ##     self.thumb_generator.set_image(image)
+        data = image.get_data()
+        self.thumb_generator.set_data(data)
+        fitsimage.copy_attributes(self.thumb_generator,
+                                  ['transforms', 'cutlevels',
+                                   'rgbmap'],
+                                  redraw=False)
+        imgwin = self.thumb_generator.get_image_as_widget()
+
+        imgwin.set_property("has-tooltip", True)
+        imgwin.connect("query-tooltip", lambda tw, x, y, kbmode, ttw: self.query_thumb(metadata, x, y, ttw))
+
+        # Replace thumbnail image widget
+        child = bnch.evbox.get_child()
+        bnch.evbox.remove(child)
+        bnch.evbox.add(imgwin)
+
     def delete_channel(self, viewer, chinfo):
         """Called when a channel is deleted from the main interface.
         Parameter is chinfo (a bunch)."""

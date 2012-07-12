@@ -2,7 +2,7 @@
 # PluginManagerQt.py -- Simple class to manage plugins.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Jun 22 13:48:14 HST 2012
+#  Last edit: Thu Jul 12 10:15:52 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -113,6 +113,9 @@ class PluginManager(object):
                                 alignment=QtCore.Qt.AlignLeft)
 
             lbl.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+            # better than making a whole new subclass just to get a label to
+            # respond to a mouse click
+            lbl.mousePressEvent = lambda event: lbl.emit(QtCore.SIGNAL("clicked"))
 
             menu = QtGui.QMenu()
             item = QtGui.QAction(QtCore.QString("Focus"), menu)
@@ -126,24 +129,14 @@ class PluginManager(object):
                 menu.exec_(lbl.mapToGlobal(point))
 
             lbl.connect(lbl, QtCore.SIGNAL('customContextMenuRequested(const QPoint&)'), on_context_menu)
+            lbl.connect(lbl, QtCore.SIGNAL('clicked'),
+                        lambda: self.set_focus(lname))
 
             bnch = Bunch.Bunch(widget=lbl, label=lbl, lblname=lblname,
                                menu=menu, pInfo=pInfo, exclusive=exclusive)
             self.active[lname] = bnch
             if exclusive:
                 self.exclusive.add(lname)
-
-    
-    def button_press_event(self, widget, event, name):
-        bnch = self.active[name]
-        if event.button == 1:
-            return self.set_focus(name)
-            #return bnch.menu.popup(None, None, None, event.button, event.time)
-
-        elif event.button == 3:
-            return bnch.menu.popup(None, None, None, event.button, event.time)
-
-        return False
 
     def deactivate(self, name):
         self.logger.debug("deactivating %s" % (name))
@@ -224,9 +217,8 @@ class PluginManager(object):
         lname = name.lower()
         bnch = self.active[lname]
         try:
-            bnch.pInfo.obj.pause()
             self.focus.remove(lname)
-            self.exclusive.remove(lname)
+            bnch.pInfo.obj.pause()
         except:
             pass
         bnch.label.setStyleSheet("QLabel { background-color: grey; }")

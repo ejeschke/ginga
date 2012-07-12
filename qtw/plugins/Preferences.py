@@ -2,7 +2,7 @@
 # Preferences.py -- Preferences plugin for fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Jun 22 13:50:30 HST 2012
+#  Last edit: Wed Jul 11 17:08:59 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -143,7 +143,7 @@ class Preferences(GingaPlugin.LocalPlugin):
                     ('Hist Pct', 'spinfloat'))
         w, b = QtHelp.build_info(captions)
         b.cut_new.setToolTip("Automatically set cut levels for new images")
-        b.use_saved_cuts.setToolTip("Set cut levels from a previous cut levels on same image, if possible")
+        b.use_saved_cuts.setToolTip("Set cut levels from a previous MANUAL cut levels on SAME image, if possible")
         b.auto_method.setToolTip("Choose algorithm for auto levels")
         b.hist_pct.setToolTip("Percentage of image to save for Histogram algorithm")
 
@@ -362,11 +362,12 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.prefs.auto_levels = option
 
     def autocuts_changed_cb(self, fitsimage, option):
-        print "autocuts changed to %s" % option,
+        print "autocuts changed to %s" % option
         index = self.autocut_options.index(option)
         self.w.btn_cut_new.setCurrentIndex(index)
 
     def toggle_saved_cuts_cb(self, tf):
+        tf = (tf != 0)
         self.fitsimage.t_use_saved_cuts = tf
         self.fitsimage.first_cuts(redraw=True)
 

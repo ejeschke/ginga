@@ -2,7 +2,7 @@
 # Thumbs.py -- Thumbnail plugin for fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Jun 22 13:50:30 HST 2012
+#  Last edit: Thu Jul 12 09:50:52 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -24,7 +24,7 @@ class MyScrollArea(QtGui.QScrollArea):
         x1, y1, x2, y2 = rect.getCoords()
         width = x2 - x1
         height = y2 - y1
-        print "area resized to %dx%d" % (width,height)
+        #print "area resized to %dx%d" % (width,height)
         self.thumbs_cb(width, height)
 
 class MyLabel(QtGui.QLabel):
@@ -46,19 +46,24 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         # For thumbnail pane
         self.thumbDict = {}
         self.thumbList = []
-        self.thumbRowList = []
         self.thumbNumRows = 20
         self.thumbNumCols = 1
         self.thumbColCount = 0
+        self.thumbRowCount = 0
         # distance in pixels between thumbs
         self.thumbSep = 15
         # max length of thumb on the long side
         self.thumbWidth = 150
 
+        self.cutstask = None
+        self.lagtime = 1000
+
         self.keywords = ['OBJECT', 'FRAMEID', 'UT', 'DATE-OBS']
 
         fv.set_callback('add-image', self.add_image)
+        fv.set_callback('add-channel', self.add_channel)
         fv.set_callback('delete-channel', self.delete_channel)
+        fv.add_callback('active-image', self.focus_cb)
 
     def initialize(self, container):
         rvbox = container
@@ -78,7 +83,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
         # Create thumbnails pane
         widget = QtGui.QWidget()
-        vbox = QtGui.QVBoxLayout()
+        vbox = QtGui.QGridLayout()
         vbox.setContentsMargins(4, 4, 4, 4)
         vbox.setSpacing(14)
         widget.setLayout(vbox)
@@ -103,7 +108,6 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             
         # Is this thumbnail already in the list?
         # TODO: does not handle two separate images with the same name!!
-        print self.thumbDict
         if self.thumbDict.has_key(name):
             return
 
@@ -131,33 +135,25 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         imglbl.setToolTip(text)
 
         widget = QtGui.QWidget()
-        vbox = QtGui.QVBoxLayout()
+        vbox = QtGui.QGridLayout()
         vbox.setContentsMargins(0, 0, 0, 0)
         vbox.setSpacing(0)
         widget.setLayout(vbox)
         namelbl = QtGui.QLabel(thumbname)
         namelbl.setAlignment(QtCore.Qt.AlignHCenter)
-        vbox.addWidget(namelbl, stretch=0)
-        vbox.addWidget(imglbl, stretch=0)
+        vbox.addWidget(namelbl, 0, 0)
+        vbox.addWidget(imglbl,  1, 0)
         widget.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed))
         #widget.show()
-        bnch = Bunch.Bunch(widget=widget, image=imgwin)
+        bnch = Bunch.Bunch(widget=widget, image=imgwin, layout=vbox,
+                           imglbl=imglbl, name=name, chname=chname,
+                           path=path, pixmap=pixmap)
 
-        if self.thumbColCount == 0:
-            widget2 = QtGui.QWidget()
-            hbox = QtGui.QHBoxLayout()
-            hbox.setContentsMargins(0, 0, 0, 0)
-            hbox.setSpacing(self.thumbSep)
-            widget2.setLayout(hbox)
-            #widget2.show()
-            self.w.thumbs.addWidget(widget2, stretch=0)
-            self.thumbRowList.append(widget2)
-
-        else:
-            hbox = self.thumbRowList[-1].layout()
-
-        hbox.addWidget(bnch.widget, stretch=0)
+        self.w.thumbs.addWidget(widget,
+                                self.thumbRowCount, self.thumbColCount)
         self.thumbColCount = (self.thumbColCount + 1) % self.thumbNumCols
+        if self.thumbColCount == 0:
+            self.thumbRowCount += 1
 
         #self.w.thumbs.show()
         
@@ -170,36 +166,24 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         #self.w.thumbs_scroll.show()
 
     def rebuild_thumbs(self):
-        # Remove old rows
-        for widget in self.thumbRowList:
-            hbox = widget.layout()
-            children = widget.children()
-            children.remove(hbox)
-            for child in children:
-                hbox.removeWidget(child)
-            self.w.thumbs.removeWidget(widget)
+        # Remove widgets from grid
+        for name in self.thumbList:
+            bnch = self.thumbDict[name]
+            self.w.thumbs.removeWidget(bnch.widget)
 
         # Add thumbs back in by rows
-        self.thumbRowList = []
-        colCount = 0
-        hbox = None
+        self.thumbColCount = 0
+        self.thumbRowCount = 0
         for name in self.thumbList:
-            self.logger.debug("adding thumb for %s" % (name))
             bnch = self.thumbDict[name]
-            if colCount == 0:
-                widget2 = QtGui.QWidget()
-                hbox = QtGui.QHBoxLayout()
-                hbox.setContentsMargins(0, 0, 0, 0)
-                hbox.setSpacing(self.thumbSep)
-                widget2.setLayout(hbox)
-                self.w.thumbs.addWidget(widget2, stretch=0)
-                self.thumbRowList.append(widget2)
-
-            hbox.addWidget(bnch.widget, stretch=0)
-            colCount = (colCount + 1) % self.thumbNumCols
-
-        self.thumbColCount = colCount
-        self.w.thumbs_scroll.show()
+            self.w.thumbs.addWidget(bnch.widget,
+                                    self.thumbRowCount, self.thumbColCount)
+            self.thumbColCount = (self.thumbColCount + 1) % self.thumbNumCols
+            if self.thumbColCount == 0:
+                self.thumbRowCount += 1
+                
+        self.w.thumbs_w.update()
+        #self.w.thumbs_scroll.show()
         
     def update_thumbs(self, nameList):
         
@@ -248,6 +232,90 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         self.thumbList = []
         self.thumbDict = {}
         self.rebuild_thumbs()
+        
+    def add_channel(self, viewer, chinfo):
+        """Called when a channel is added from the main interface.
+        Parameter is chinfo (a bunch)."""
+        fitsimage = chinfo.fitsimage
+        fitsimage.add_callback('cut-set', self.cutset_cb)
+        fitsimage.add_callback('transform', self.transform_cb)
+
+        rgbmap = fitsimage.get_rgbmap()
+        rgbmap.add_callback('changed', self.rgbmap_cb, fitsimage)
+
+    def focus_cb(self, viewer, fitsimage):
+        # Reflect transforms, colormap, etc.
+        self.copy_attrs(fitsimage)
+
+    def transform_cb(self, fitsimage):
+        self.redo_delay(fitsimage)
+        return True
+        
+    def cutset_cb(self, fitsimage, loval, hival):
+        self.redo_delay(fitsimage)
+        return True
+
+    def rgbmap_cb(self, rgbmap, fitsimage):
+        # color mapping has changed in some way
+        self.redo_delay(fitsimage)
+        return True
+
+    def copy_attrs(self, fitsimage):
+        # Reflect transforms, colormap, etc.
+        fitsimage.copy_attributes(self.thumb_generator,
+                                  ['transforms', 'cutlevels',
+                                   'rgbmap'],
+                                  redraw=False)
+
+    def redo_delay(self, fitsimage):
+        # Delay regeneration of thumbnail until most changes have propagated
+        try:
+            self.cutstask.stop()
+        except:
+            pass
+        self.cutstask = QtCore.QTimer()
+        self.cutstask.setSingleShot(True)
+        self.cutstask.timeout.connect(lambda: self.redo_thumbnail(fitsimage))
+        self.cutstask.start(self.lagtime)
+        #print "added delay task..."
+        return True
+
+    def redo_thumbnail(self, fitsimage):
+        self.logger.debug("redoing thumbnail...")
+        # Get the thumbnail image 
+        image = fitsimage.get_image()
+        if image == None:
+            return
+        
+        # Look up our version of the thumb
+        name = image.get('name', None)
+        if name == None:
+            return
+        try:
+            bnch = self.thumbDict[name]
+        except KeyError:
+            return
+
+        # Generate new thumbnail
+        # TODO: Can't use set_image() because we will override the saved
+        # cuts settings...should look into fixing this...
+        ## timage = self.thumb_generator.get_image()
+        ## if timage != image:
+        ##     self.thumb_generator.set_image(image)
+        data = image.get_data()
+        self.thumb_generator.set_data(data)
+        fitsimage.copy_attributes(self.thumb_generator,
+                                  ['transforms', 'cutlevels',
+                                   'rgbmap'],
+                                  redraw=False)
+        imgwin = self.thumb_generator.get_image_as_widget()
+
+        self.logger.debug("generating pixmap.")
+        pixmap = QtGui.QPixmap.fromImage(imgwin)
+        bnch.imgwin = imgwin
+        bnch.pixmap = pixmap
+        bnch.imglbl.setPixmap(pixmap)
+        self.w.thumbs_w.update()
         
     def delete_channel(self, viewer, chinfo):
         """Called when a channel is deleted from the main interface.
