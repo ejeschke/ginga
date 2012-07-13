@@ -747,7 +747,7 @@ and work up to more complicated examples like Pick or Catalogs.
 You may find that you have a need to control Ginga remotely.  For
 example, you want to invoke the loading of images, or performing
 operations on images, etc.  Like all other aspects, Ginga delegates this
-task to a plugin: RemoteControl.  
+task to a plugin: RC.  
 Because remote control of Ginga is handled by a plugin, you can easily
 change the types of operations that can be done, or completely change
 the protocol used.
@@ -755,7 +755,35 @@ the protocol used.
 The remote control module is not loaded by default.  To load it, specify
 the command line option:
 \begin{verbatim}
---modules=RemoteControl
+--modules=RC
+\end{verbatim}
+
+You can then control Ginga from the {\tt grc\.py} program located in the 
+{\tt util} directory.  Some examples:
+\begin{verbatim}
+ Create a new channel:
+ $ ./grc.py add_channel FOO
+ 
+ Load a file:
+ $ ./grc.py display_fitsfile FOO /home/eric/testdata/SPCAM/SUPA01118797.fits False
+
+ Load a file, controlled from a different host:
+ $ ./grc.py --host=bar --port=9000 display_fitsfile FOO /home/eric/testdata/SPCAM/SUPA01118797.fits False
+
+ Cut levels:
+ $ ./grc.py cut_levels FOO 163 1300
+
+ Auto cut levels:
+ $ ./grc.py autocuts FOO
+
+ Zoom to a specific level:
+ ./grc.py -- zoom FOO -7
+ 
+ Zoom to fit:
+ ./grc.py zoom_fit FOO
+ 
+ Transform:
+ ./grc.py transform FOO 1 0 1
 \end{verbatim}
 
 \chapter{Ginga Programming Internals}

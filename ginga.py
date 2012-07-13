@@ -3,7 +3,7 @@
 # ginga.py -- FITS image viewer and tool.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Thu Jun 21 18:24:00 HST 2012
+#  Last edit: Thu Jul 12 14:11:27 HST 2012
 #]
 #
 """
@@ -130,6 +130,10 @@ def main(options, args):
     settings = Settings.Settings(basefolder=basedir)
     sys.path.insert(0, basedir)
 
+    moduleHome = os.path.split(sys.modules[__name__].__file__)[0]
+    childDir = os.path.join(moduleHome, 'misc', 'plugins')
+    sys.path.insert(0, childDir)
+
     # Choose a toolkit
     if options.toolkit == 'gtk':
         from gtkw.GingaGtk import GingaView
@@ -172,12 +176,6 @@ def main(options, args):
                   ev_quit=ev_quit)
     ginga.followFocus(False)
 
-    # Load any custom modules
-    if options.modules:
-        modules = options.modules.split(',')
-        for mdname in modules:
-            ginga.add_global_plugin(mdname)
-
     # Build desired layout
     ginga.build_toplevel(layout=default_layout)
 
@@ -186,6 +184,15 @@ def main(options, args):
         ginga.add_global_plugin(pluginName)
         ws = ginga.ds.get_nb(wsName)
         ginga.add_global_pane(pluginName, tabName, ws)
+
+    # Load any custom modules
+    if options.modules:
+        modules = options.modules.split(',')
+        for pluginName in modules:
+            ginga.add_global_plugin(pluginName)
+            ws = ginga.ds.get_nb('right')
+            tabName = pluginName
+            ginga.add_global_pane(pluginName, tabName, ws)
 
     # Load modules for "local" (per-channel) plug ins
     for name in local_plugins:
