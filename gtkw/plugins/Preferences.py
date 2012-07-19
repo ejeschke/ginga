@@ -2,7 +2,7 @@
 # Preferences.py -- Preferences plugin for fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Wed Jul 11 17:08:59 HST 2012
+#  Last edit: Mon Jul 16 16:13:02 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -365,7 +365,8 @@ class Preferences(GingaPlugin.LocalPlugin):
 
     def autozoom_changed_cb(self, fitsimage, option):
         index = self.autozoom_options.index(option)
-        self.w.btn_zoom_new.set_active(index)
+        if self.w.has_key('btn_zoom_new'):
+            self.w.btn_zoom_new.set_active(index)
 
     def set_zoom_minmax(self):
         zmin = self.w.min_zoom.get_value()
@@ -401,9 +402,10 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.prefs.auto_levels = option
 
     def autocuts_changed_cb(self, fitsimage, option):
-        print "autocuts changed to %s" % option
+        self.logger.debug("autocuts changed to %s" % option)
         index = self.autocut_options.index(option)
-        self.w.btn_cut_new.set_active(index)
+        if self.w.has_key('btn_cut_new'):
+            self.w.btn_cut_new.set_active(index)
 
     def toggle_saved_cuts_cb(self, w):
         use_saved_cuts = w.get_active()

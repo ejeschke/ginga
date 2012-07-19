@@ -2,14 +2,17 @@
 # Catalogs.py -- Catalogs plugin for fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Thu Jul 19 12:01:52 HST 2012
+#  Last edit: Thu Jul 19 12:01:53 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-import FitsImageCanvasTypesGtk as CanvasTypes
+from PyQt4 import QtGui, QtCore
+import QtHelp
+
+import FitsImageCanvasTypesQt as CanvasTypes
 import GingaPlugin
 import ColorBar
 import cmap, imap
@@ -17,10 +20,6 @@ import wcs
 
 import Bunch
 import Future
-import gobject
-import gtk
-import pango
-import GtkHelp
 
 class Catalogs(GingaPlugin.LocalPlugin):
 
@@ -39,8 +38,6 @@ class Catalogs(GingaPlugin.LocalPlugin):
         canvas.enable_draw(True)
         canvas.set_drawtype('rectangle', color='cyan', linestyle='dash',
                             drawdims=True)
-        #canvas.set_callback('button-press', self.btndown)
-        ## canvas.set_callback('motion', self.motion)
         canvas.set_callback('button-release', self.btnup)
         canvas.set_callback('draw-event', self.getarea)
         canvas.setSurface(self.fitsimage)
@@ -55,193 +52,172 @@ class Catalogs(GingaPlugin.LocalPlugin):
         self.catalog_server_options = []
         self.catalog_server_params = None
 
-        self.tooltips = self.fv.w.tooltips
 
     def build_gui(self, container, future=None):
-        vbox1 = gtk.VBox()
+        vbox1 = QtHelp.VBox()
 
-        self.msgFont = pango.FontDescription("Sans 12")
-        tw = gtk.TextView()
-        tw.set_wrap_mode(gtk.WRAP_WORD)
-        tw.set_left_margin(4)
-        tw.set_right_margin(4)
-        tw.set_editable(False)
-        tw.set_left_margin(4)
-        tw.set_right_margin(4)
-        tw.modify_font(self.msgFont)
+        msgFont = QtGui.QFont("Sans", 14)
+        tw = QtGui.QLabel()
+        tw.setFont(msgFont)
+        tw.setWordWrap(True)
         self.tw = tw
 
-        fr = gtk.Frame(" Instructions ")
-        fr.set_shadow_type(gtk.SHADOW_ETCHED_OUT)
-        fr.set_label_align(0.1, 0.5)
-        fr.add(tw)
-        vbox1.pack_start(fr, padding=4, fill=True, expand=False)
+        fr = QtHelp.Frame("Instructions")
+        fr.addWidget(tw, stretch=1, alignment=QtCore.Qt.AlignTop)
+        vbox1.addWidget(fr, stretch=0, alignment=QtCore.Qt.AlignTop)
         
-        nb = gtk.Notebook()
-        #nb.set_group_id(group)
-        #nb.connect("create-window", self.detach_page, group)
-        nb.set_tab_pos(gtk.POS_BOTTOM)
-        nb.set_scrollable(True)
-        nb.set_show_tabs(True)
-        nb.set_show_border(False)
-        self.nb = nb
-        vbox1.pack_start(nb, padding=4, fill=True, expand=True)
+        nb = QtHelp.TabWidget()
+        nb.setTabPosition(QtGui.QTabWidget.South)
+        nb.setUsesScrollButtons(True)
+        self.w.nb = nb
+        #vbox1.addWidget(nb, stretch=1, alignment=QtCore.Qt.AlignTop)
+        vbox1.addWidget(nb, stretch=1)
 
-        vbox0 = gtk.VBox()
-        hbox = gtk.HBox(spacing=4)
+        vbox0 = QtHelp.VBox()
 
-        vbox = gtk.VBox()
-        fr = gtk.Frame(" Image Server ")
-        fr.set_shadow_type(gtk.SHADOW_ETCHED_IN)
-        fr.set_label_align(0.5, 0.5)
-        fr.add(vbox)
+        hbox = QtHelp.HBox()
+        hbox.setSpacing(4)
+        vbox0.addWidget(hbox, stretch=1, alignment=QtCore.Qt.AlignTop)
+
+        vbox = QtHelp.VBox()
+        fr = QtHelp.Frame(" Image Server ")
+        fr.addWidget(vbox, stretch=1, alignment=QtCore.Qt.AlignTop)
+        hbox.addWidget(fr, stretch=0, alignment=QtCore.Qt.AlignLeft)
 
         captions = (('Server', 'combobox'),
                     ('Get Image', 'button'))
-        w, self.w = GtkHelp.build_info(captions)
-        self.w.get_image.connect('clicked', lambda w: self.getimage())
+        w, b = QtHelp.build_info(captions)
+        self.w.update(b)
+        self.w.get_image.clicked.connect(lambda w: self.getimage())
 
-        vbox.pack_start(w, padding=4, fill=True, expand=False)
+        vbox.addWidget(w, stretch=0, alignment=QtCore.Qt.AlignTop)
 
-        self.w.img_params = gtk.VBox()
-        vbox.pack_start(self.w.img_params, padding=4, fill=True, expand=False)
+        self.w.img_params = QtHelp.StackedWidget()
+        vbox.addWidget(self.w.img_params, stretch=1,
+                       alignment=QtCore.Qt.AlignTop)
         
         combobox = self.w.server
         index = 0
         self.image_server_options = self.fv.imgsrv.getServerNames(kind='image')
         for name in self.image_server_options:
-            combobox.insert_text(index, name)
+            combobox.addItem(name)
             index += 1
         index = 0
-        combobox.set_active(index)
-        combobox.sconnect('changed', self.setup_params_image)
+        combobox.setCurrentIndex(index)
+        combobox.activated.connect(self.setup_params_image)
         if len(self.image_server_options) > 0:
-            self.setup_params_image(combobox)
+            self.setup_params_image(index)
 
-        hbox.pack_start(fr, fill=True, expand=True)
-
-        vbox = gtk.VBox()
-        fr = gtk.Frame(" Catalog Server ")
-        fr.set_shadow_type(gtk.SHADOW_ETCHED_IN)
-        fr.set_label_align(0.5, 0.5)
-        fr.add(vbox)
+        vbox = QtHelp.VBox()
+        fr = QtHelp.Frame(" Catalog Server ")
+        fr.addWidget(vbox, stretch=1, alignment=QtCore.Qt.AlignTop)
+        hbox.addWidget(fr, stretch=0, alignment=QtCore.Qt.AlignLeft)
 
         captions = (('Server', 'combobox'),
                     ('Limit stars to area', 'checkbutton'),
                     ('Search', 'button'))
-        w, self.w2 = GtkHelp.build_info(captions)
-        self.w2.search.connect('clicked', lambda w: self.getcatalog())
-        self.w2.limit_stars_to_area.set_active(self.limit_stars_to_area)
-        self.w2.limit_stars_to_area.connect('toggled', self.limit_area_cb)
+        w, self.w2 = QtHelp.build_info(captions)
+        self.w2.search.clicked.connect(lambda w: self.getcatalog())
+        self.w2.limit_stars_to_area.setChecked(self.limit_stars_to_area)
+        self.w2.limit_stars_to_area.stateChanged.connect(self.limit_area_cb)
 
-        vbox.pack_start(w, padding=4, fill=True, expand=False)
+        vbox.addWidget(w, stretch=0, alignment=QtCore.Qt.AlignTop)
 
-        self.w2.cat_params = gtk.VBox()
-        vbox.pack_start(self.w2.cat_params, padding=4, fill=True, expand=False)
+        self.w2.cat_params = QtHelp.StackedWidget()
+        vbox.addWidget(self.w2.cat_params, stretch=1,
+                       alignment=QtCore.Qt.AlignTop)
         
         combobox = self.w2.server
         index = 0
         self.catalog_server_options = self.fv.imgsrv.getServerNames(kind='catalog')
         for name in self.catalog_server_options:
-            combobox.insert_text(index, name)
+            combobox.addItem(name)
             index += 1
         index = 0
-        combobox.set_active(index)
-        combobox.sconnect('changed', self.setup_params_catalog)
+        combobox.setCurrentIndex(index)
+        combobox.activated.connect(self.setup_params_catalog)
         if len(self.catalog_server_options) > 0:
-            self.setup_params_catalog(combobox)
+            self.setup_params_catalog(index)
 
-        hbox.pack_start(fr, fill=True, expand=True)
-        vbox0.pack_start(hbox, fill=True, expand=True)
+        btns = QtHelp.HBox()
+        btns.setSpacing(5)
+        
+        btn = QtGui.QPushButton("Set parameters from entire image")
+        btn.clicked.connect(lambda w: self.setfromimage())
+        btns.addWidget(btn, stretch=0, alignment=QtCore.Qt.AlignCenter)
+        vbox0.addWidget(btns, stretch=0, alignment=QtCore.Qt.AlignTop)
 
-        btns = gtk.HButtonBox()
-        btns.set_layout(gtk.BUTTONBOX_CENTER)
-        btns.set_spacing(5)
+        nb.addTab(vbox0, "Params")
 
-        btn = gtk.Button("Set parameters from entire image")
-        btn.connect('clicked', lambda w: self.setfromimage())
-        btns.add(btn)
-        vbox0.pack_start(btns, padding=4, fill=True, expand=False)
-
-        lbl = gtk.Label("Params")
-        nb.append_page(vbox0, lbl)
-
-        vbox = gtk.VBox()
+        vbox = QtHelp.VBox()
         self.table = CatalogListing(self.logger, vbox)
 
-        hbox = gtk.HBox()
-        ## scale = GtkHelp.SpinButton()
-        ## adj = scale.get_adjustment()
-        ## adj.configure(0.0, 0.0, 1.0, 0.01, 0.10, 0.10)
-        adj = gtk.Adjustment(lower=0.0, upper=1.0)
-        adj.set_value(0.0)
-        scale = GtkHelp.HScale(adj)
-        #scale.set_size_request(200, -1)
-        scale.set_digits(2)
-        scale.set_draw_value(False)
-        scale.set_value_pos(gtk.POS_BOTTOM)
-        self.tooltips.set_tip(scale, "Choose subset of stars plotted")
-        #scale.set_update_policy(gtk.UPDATE_DISCONTINUOUS)
-        self.w.plotgrp = scale
-        scale.connect('value-changed', self.plot_pct_cb)
-        hbox.pack_start(scale, padding=0, fill=True, expand=True)
+        hbox = QtHelp.HBox()
+        adj = QtGui.QSlider(QtCore.Qt.Horizontal)
+        adj.setRange(0, 1000)
+        adj.setSingleStep(1)
+        adj.setPageStep(10)
+        #adj.setMaximum(1000)
+        adj.setValue(0)
+        #adj.resize(200, -1)
+        adj.setTracking(True)
+        adj.setToolTip("Choose subset of stars plotted")
+        self.w.plotgrp = adj
+        adj.valueChanged.connect(self.plot_pct_cb)
+        hbox.addWidget(adj, stretch=1)
 
-        sb = GtkHelp.SpinButton()
-        adj = sb.get_adjustment()
-        adj.configure(self.plot_limit, 10, self.plot_max, 10, 100, 100)
+        sb = QtGui.QSpinBox()
+        sb.setRange(10, self.plot_max)
+        sb.setValue(self.plot_limit)
+        sb.setSingleStep(10)
+        adj.setPageStep(100)
+        sb.setWrapping(False)
         self.w.plotnum = sb
-        self.tooltips.set_tip(sb, "Adjust size of subset of stars plotted")
-        sb.connect('value-changed', self.plot_limit_cb)
-        hbox.pack_start(sb, padding=0, fill=False, expand=False)
-        vbox.pack_start(hbox, padding=0, fill=False, expand=False)
+        sb.setToolTip("Adjust size of subset of stars plotted")
+        sb.valueChanged.connect(self.plot_limit_cb)
+        hbox.addWidget(sb, stretch=1)
 
-        #vbox1.pack_start(vbox, padding=4, fill=True, expand=True)
-        lbl = gtk.Label("Listing")
-        nb.append_page(vbox, lbl)
+        vbox.addWidget(hbox, stretch=0)
+        nb.addTab(vbox, "Listing")
 
-        btns = gtk.HButtonBox()
-        btns.set_layout(gtk.BUTTONBOX_START)
-        btns.set_spacing(3)
-        btns.set_child_size(15, -1)
+        btns = QtHelp.HBox()
+        btns.setSpacing(3)
+        #btns.set_child_size(15, -1)
         self.w.buttons = btns
 
-        btn = gtk.Button("Close")
-        btn.connect('clicked', lambda w: self.close())
-        btns.add(btn)
+        btn = QtGui.QPushButton("Close")
+        btn.clicked.connect(lambda w: self.close())
+        btns.addWidget(btn, stretch=0, alignment=QtCore.Qt.AlignLeft)
 
         if future:
-            btn = gtk.Button('Ok')
-            btn.connect('clicked', lambda w: self.ok())
-            btns.add(btn)
-            btn = gtk.Button('Cancel')
-            btn.connect('clicked', lambda w: self.cancel())
-            btns.add(btn)
-        vbox1.pack_start(btns, padding=4, fill=True, expand=False)
+            btn = QtGui.QPushButton('Ok')
+            btn.clicked.connect(lambda w: self.ok())
+            btns.addWidget(btn, stretch=0, alignment=QtCore.Qt.AlignLeft)
+            btn = QtGui.QPushButton('Cancel')
+            btn.clicked.connect(lambda w: self.cancel())
+            btns.addWidget(btn, stretch=0, alignment=QtCore.Qt.AlignLeft)
 
-        vbox1.show_all()
-        container.pack_start(vbox1, padding=0, fill=True, expand=True)
+        container.addWidget(vbox1, stretch=1)
         
 
-    def limit_area_cb(self, w):
-        self.limit_stars_to_area = w.get_active()
+    def limit_area_cb(self, tf):
+        self.limit_stars_to_area = tf
         return True
 
-    def plot_pct_cb(self, rng):
-        val = rng.get_value()
-        self.plot_pct = val
+    def plot_pct_cb(self):
+        val = self.w.plotgrp.value()
+        self.plot_pct = float(val) / 1000.0
         self.replot_stars()
         return True
 
-    def plot_limit_cb(self, rng):
-        val = rng.get_value()
+    def plot_limit_cb(self):
+        val = self.w.plotnum.value()
         self.plot_limit = val
         self.replot_stars()
         return True
 
     def set_message(self, msg):
-        buf = self.tw.get_buffer()
-        buf.set_text(msg)
-        self.tw.modify_font(self.msgFont)
+        self.tw.setText(msg)
         
     def ok(self):
         return self.close()
@@ -267,20 +243,18 @@ class Catalogs(GingaPlugin.LocalPlugin):
             captions.append((text, 'entry'))
 
         # TODO: put RA/DEC first, and other stuff not in random orders
-        w, b = GtkHelp.build_info(captions)
+        w, b = QtHelp.build_info(captions)
 
         # remove old widgets
-        children = container.get_children()
-        for child in children:
-            container.remove(child)
+        old_w = container.currentWidget()
+        if old_w != None:
+            container.removeWidget(old_w)
 
         # add new widgets
-        container.pack_start(w, fill=False, expand=False)
-        container.show_all()
+        container.insertWidget(0, w)
         return b
 
-    def setup_params_image(self, combobox):
-        index = combobox.get_active()
+    def setup_params_image(self, index):
         key = self.image_server_options[index]
 
         # Get the parameter list and adjust the widget
@@ -288,8 +262,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
         b = self._setup_params(obj, self.w.img_params)
         self.image_server_params = b
 
-    def setup_params_catalog(self, combobox):
-        index = combobox.get_active()
+    def setup_params_catalog(self, index):
         key = self.catalog_server_options[index]
 
         # Get the parameter list and adjust the widget
@@ -388,13 +361,10 @@ class Catalogs(GingaPlugin.LocalPlugin):
             if bnch != None:
                 for key in bnch.keys():
                     if d.has_key(key):
-                        bnch[key].set_text(str(d[key]))
+                        bnch[key].setText(str(d[key]))
 
         return True
     
-    def btndown(self, canvas, button, data_x, data_y):
-        pass
-
     def btnup(self, canvas, button, data_x, data_y):
         if not (button == 0x1):
             return
@@ -410,6 +380,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
         x = obj.objects[0].x
         y = obj.objects[0].y
         delta = 10
+        
         radius = obj.objects[0].radius + delta
 
         hilite = CanvasTypes.Circle(x, y, radius,
@@ -475,14 +446,14 @@ class Catalogs(GingaPlugin.LocalPlugin):
     def get_params(self, bnch):
         params = {}
         for key in bnch.keys():
-            params[key] = bnch[key].get_text()
+            params[key] = str(bnch[key].text())
         return params
 
         
     def getimage(self):
         params = self.get_params(self.image_server_params)
 
-        index = self.w.server.get_active()
+        index = self.w.server.currentIndex()
         server = self.image_server_options[index]
 
         self.clearAll()
@@ -509,7 +480,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
     def getcatalog(self):
         params = self.get_params(self.catalog_server_params)
 
-        index = self.w2.server.get_active()
+        index = self.w2.server.currentIndex()
         server = self.catalog_server_options[index]
 
         # Offload this network task to a non-gui thread
@@ -526,7 +497,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
         starlist, info = future.get_value()
         self.logger.debug("starlist=%s" % str(starlist))
         
-        filter_starlist = self.w2.limit_stars_to_area.get_active()
+        filter_starlist = self.w2.limit_stars_to_area.isChecked()
             
         self.filter_results(starlist, info, filter_starlist)
 
@@ -568,7 +539,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
 
         image = self.fitsimage.get_image()
         canvas = self.canvas
-
+        
         length = len(self.starlist)
         if length <= self.plot_limit:
             i = 0
@@ -629,9 +600,6 @@ class CatalogListing(object):
                         ('Dst', 'dst'),
                         ('Description', 'description'),
                         ]
-        self.cell_sort_funcs = []
-        for kwd, key in self.columns:
-            self.cell_sort_funcs.append(self._mksrtfnN(key))
 
         self.catalog = None
         self.cursor = 0
@@ -645,93 +613,47 @@ class CatalogListing(object):
 
         self.mframe = container
             
-        vbox = gtk.VBox()
+        vbox = QtHelp.VBox()
 
-        sw = gtk.ScrolledWindow()
-        sw.set_border_width(2)
-        sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
-
-        #self.font = pango.FontDescription('Monospace 10')
+        # create the table
+        table = QtGui.QTableWidget()
+        table.setColumnCount(len(self.columns))
+        table.cellClicked.connect(self.select_star)
+        self.table = table
         
-        # create the TreeView
-        treeview = gtk.TreeView()
-        self.treeview = treeview
-        
-        # create the TreeViewColumns to display the data
-        tvcolumn = [None] * len(self.columns)
-        for n in range(0, len(self.columns)):
-            cell = gtk.CellRendererText()
-            cell.set_padding(2, 0)
-            header, kwd = self.columns[n]
-            tvc = gtk.TreeViewColumn(header, cell)
-            tvc.set_spacing(4)
-            tvc.set_resizable(True)
-            tvc.connect('clicked', self.sort_cb, n)
-            tvc.set_clickable(True)
-            tvcolumn[n] = tvc
-            fn_data = self._mkcolfnN(kwd)
-            tvcolumn[n].set_cell_data_func(cell, fn_data)
-            treeview.append_column(tvcolumn[n])
+        col = 0
+        for hdr, kwd in self.columns:
+            item = QtGui.QTableWidgetItem(hdr)
+            table.setHorizontalHeaderItem(col, item)
+            col += 1
 
-        sw.add(treeview)
-        self.treeview.connect('cursor-changed', self.select_star)
-        sw.show_all()
-        vbox.pack_start(sw, fill=True, expand=True)
+        vbox.addWidget(table, stretch=1)
 
         self.cbar = ColorBar.ColorBar(self.logger)
         self.cmap = cmap.get_cmap(self.magmap)
         self.imap = imap.get_imap('ramp')
         self.cbar.set_cmap(self.cmap)
         self.cbar.set_imap(self.imap)
-        self.cbar.set_size_request(-1, 20)
+        #self.cbar.set_size_request(-1, 20)
 
-        vbox.pack_start(self.cbar, padding=4, fill=True, expand=False)
+        vbox.addWidget(self.cbar, stretch=0)
 
-        btns = gtk.HButtonBox()
-        btns.set_layout(gtk.BUTTONBOX_CENTER)
-        btns.set_spacing(5)
+        btns = QtHelp.HBox()
+        btns.setSpacing(5)
 
         for name in ('Plot', 'Clear', #'Close'
                      ):
-            btn = gtk.Button(name)
-            btns.add(btn)
+            btn = QtGui.QPushButton(name)
+            btns.addWidget(btn, stretch=0, alignment=QtCore.Qt.AlignCenter)
             self.btn[name.lower()] = btn
 
-        self.btn.plot.connect('clicked', lambda w: self.replot_stars())
-        self.btn.clear.connect('clicked', lambda w: self.clear())
-        #self.btn.close.connect('clicked', lambda w: self.close())
+        self.btn.plot.clicked.connect(lambda w: self.replot_stars())
+        self.btn.clear.clicked.connect(lambda w: self.clear())
+        #self.btn.close.clicked.connect(lambda w: self.close())
 
-        vbox.pack_start(btns, padding=4, fill=True, expand=False)
-        vbox.show_all()
+        vbox.addWidget(btns, stretch=0, alignment=QtCore.Qt.AlignTop)
         
-        self.mframe.pack_start(vbox, expand=True, fill=True)
-        self.mframe.show_all()
-
-    def _mkcolfnN(self, kwd):
-        def fn(column, cell, model, iter):
-            bnch = model.get_value(iter, 0)
-            cell.set_property('text', bnch[kwd])
-        return fn
-
-    def sort_cb(self, column, idx):
-        treeview = column.get_tree_view()
-        model = treeview.get_model()
-        model.set_sort_column_id(idx, gtk.SORT_ASCENDING)
-        fn = self.cell_sort_funcs[idx]
-        model.set_sort_func(idx, fn)
-        return True
-
-    def _mksrtfnN(self, key):
-        def fn(model, iter1, iter2):
-            bnch1 = model.get_value(iter1, 0)
-            bnch2 = model.get_value(iter2, 0)
-            val1, val2 = bnch1[key], bnch2[key]
-            if isinstance(val1, str):
-                val1 = val1.lower()
-                val2 = val2.lower()
-            res = cmp(val1, val2)
-            return res
-        return fn
+        self.mframe.addWidget(vbox, stretch=1)
 
     def show_table(self, catalog, info, starlist):
         self.starlist = starlist
@@ -739,15 +661,25 @@ class CatalogListing(object):
         #self.info = info
         self.selected = []
 
+        table = self.table
+        table.clearContents()
+        table.setSortingEnabled(False)
         # Update the starlist info
-        listmodel = gtk.ListStore(object)
+        row = 0
+        table.setRowCount(len(starlist))
+        
         for star in starlist:
-            listmodel.append([star])
-
-        self.treeview.set_model(listmodel)
+            col = 0
+            for hdr, kwd in self.columns:
+                val = str(star.starInfo.get(kwd, ''))
+                item = QtGui.QTableWidgetItem(val)
+                item.setFlags(item.flags() & ~QtCore.Qt.ItemIsEditable)
+                table.setItem(row, col, item)
+                col += 1
+            row += 1
+        table.setSortingEnabled(True)
 
         self.catalog = catalog
-
 
     def get_color(self, obj):
         try:
@@ -803,12 +735,31 @@ class CatalogListing(object):
 
 
     def show_selection(self, star):
-        treeselection = self.treeview.get_selection()
+        """This is called by the canvas handling code when a star is clicked.
+        """
         star_idx = self.starlist.index(star)
-        treeselection.select_path(star_idx)
-        self.treeview.scroll_to_cell(star_idx, use_align=True, row_align=0.5)
+        maxcol = len(self.columns)-1
+        item = self.table.item(star_idx, 0)
 
+        # Decide selection or deselection of star
         self.mark_selection(star)
+
+        # Mark all in table that are selected
+        checked = set()
+        for modelidx in self.table.selectedIndexes():
+            idx = modelidx.row()
+            star2 = self.starlist[idx]
+            checked.add(star2)
+            isSelected = star2 in self.selected
+            _range = QtGui.QTableWidgetSelectionRange(idx, 0, idx, maxcol)
+            self.table.setRangeSelected(_range, isSelected)
+
+        for star2 in set(self.selected) - checked:
+            idx = self.starlist.index(star2)
+            _range = QtGui.QTableWidgetSelectionRange(idx, 0, idx, maxcol)
+            self.table.setRangeSelected(_range, True)
+            
+        self.table.scrollToItem(item)
 
     def clear(self):
         self.catalog.clear()
@@ -821,11 +772,8 @@ class CatalogListing(object):
         canvobjs = map(lambda star: star.canvobj, self.selected)
         self.catalog.highlight_objects(canvobjs, 'selected', 'skyblue')
             
-    def select_star(self, treeview):
-        path, column = treeview.get_cursor()
-        model = treeview.get_model()
-        iter = model.get_iter(path)
-        star = model.get_value(iter, 0)
+    def select_star(self, row, col):
+        star = self.starlist[row]
         self.mark_selection(star)
         return True
     
