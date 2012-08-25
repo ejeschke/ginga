@@ -2,7 +2,7 @@
 # FitsImage.py -- abstract classes for the display of FITS files
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Wed Jul 11 19:30:01 HST 2012
+#  Last edit: Sat Jul 21 14:42:36 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -15,30 +15,10 @@ import logging
 import time
 
 import Callback
+import Settings
 import RGBMap
+import AutoCuts
 import cmap, imap
-
-have_scipy = True
-autocut_methods = ('minmax', 'median', 'histogram', 'stddev')
-try:
-    import scipy.ndimage.filters
-    import scipy.misc
-except ImportError:
-    have_scipy = False
-    autocut_methods = ('minmax', 'histogram', 'stddev')
-
-# Default number of bins to use in the calculation of the autolevels
-# histogram for algorithm "histogram"
-default_autolevels_bins = 2048
-
-# Default percentage of pixels to keep "inside" the cut, used in 
-# the calculation of the autolevels histogram for algorithm "histogram"
-default_autolevels_hist_pct = 0.999
-
-# Constants used to calculate the lo and hi cut levels using the
-# "stddev" algorithm (from the old SOSS fits viewer)
-hensa_lo = 35.0
-hensa_hi = 90.0
 
 
 class FitsImageError(Exception):
@@ -76,6 +56,9 @@ class FitsImageBase(Callback.Callbacks):
             self.rgbmap.set_imap(im)
         self.rgbmap.add_callback('changed', self.rgbmap_cb)
 
+        # Object that calculates auto cut levels
+        self.autocuts = AutoCuts.AutoCuts(self.logger)
+        
         # actual image width and height (see set_data())
         self._data_org = numpy.zeros((1, 1))
         self.data = self._data_org.copy()
@@ -93,11 +76,11 @@ class FitsImageBase(Callback.Callbacks):
         self.t_hicut = 0.0
         self.t_autocut_method = 'histogram'
         #self.t_autocut_method = 'stddev'
-        self.t_autocut_hist_pct = default_autolevels_hist_pct
-        self.t_autocut_bins = default_autolevels_bins
+        self.t_autocut_hist_pct = AutoCuts.default_autolevels_hist_pct
+        self.t_autocut_bins = AutoCuts.default_autolevels_bins
         self.t_autocut_usecrop = True
         self.t_autocut_crop_radius = 512
-        self.t_use_saved_cuts = False
+        self.t_use_embedded_profile = True
 
         # for zoom levels
         self.autoscale_options = ('on', 'override', 'off')
@@ -222,14 +205,23 @@ class FitsImageBase(Callback.Callbacks):
         
         # original data
         self._data_org = data
+        self.maxval = numpy.nanmax(self._data_org)
+        self.minval = numpy.nanmin(self._data_org)
+
+        #self.first_cuts(redraw=False)
         self.image = image
+        if self.image != None:
+            profile = self.image.get('profile', None)
+            if (profile != None) and (self.t_use_embedded_profile):
+                self.apply_profile(profile, redraw=False)
 
-        self.reset_data(redraw=False)
-
-        self.first_cuts(redraw=False)
+        # NOTE [A]
+        self.apply_data_transforms1()
 
         if self.t_autoscale != 'off':
             self.zoom_fit(redraw=False, no_reset=True)
+        if self.t_autolevels != 'off':
+            self.auto_levels(redraw=False)
 
         self.make_callback('data-set', data)
         if redraw:
@@ -238,16 +230,30 @@ class FitsImageBase(Callback.Callbacks):
     def clear(self, redraw=True):
         self.set_data(numpy.zeros((1, 1)), redraw=redraw)
         
-    def reset_data(self, redraw=True):
-        self.maxval = numpy.nanmax(self._data_org)
-        self.minval = numpy.nanmin(self._data_org)
+    def save_profile(self, category, **params):
+        if self.image == None:
+            return
+        profile = self.image.get('profile', None)
+        if (profile == None):
+            # If image has no profile then create one
+            profile = Settings.Settings()
+            self.image.set(profile=profile) 
 
-        # NOTE [A]
-        self.apply_data_transforms1()
-        #self.height, self.width = self.data.shape
-
-        if redraw:
-            self.redraw()
+        self.logger.debug("saving to image profile: cat='%s' params=%s" % (
+                category, str(params)))
+        section = profile.createCategory(category)
+        section.update(params)
+            
+    def apply_profile(self, profile, redraw=False):
+        # If there is image metadata associated that has cut levels
+        # then use those values if t_use_saved_cuts == True
+        ## if (self.t_use_saved_cuts and (self.image != None) and
+        ##     (self.image.get('cutlo', None) != None)):
+        ##     loval, hival = self.image.get_list('cutlo', 'cuthi')
+        ##     self.logger.debug("setting cut levels from saved cuts lo=%f hi=%f" % (
+        ##         loval, hival))
+        ##     self.cut_levels(loval, hival, no_reset=True, redraw=redraw)
+        pass
 
     def copy_to_dst(self, target):
         target.set_data(self._data_org.copy())
@@ -874,149 +880,8 @@ class FitsImageBase(Callback.Callbacks):
         if cropradius:
             self.t_autocut_crop_radius = cropradius
 
-    def _set_cut_levels(self, method=None, pct=None, numbins=None,
-                        usecrop=None, cropradius=None):
-        if not method:
-            method = self.t_autocut_method
-        if not pct:
-            pct = self.t_autocut_hist_pct
-        if not numbins:
-            numbins = self.t_autocut_bins
-        if usecrop == None:
-            usecrop = self.t_autocut_usecrop
-        if not cropradius:
-            cropradius = self.t_autocut_crop_radius
-
-        start_time = time.time()
-        if method == 'minmax':
-            loval, hival = self.get_minmax()
-
-        else:
-            # Even with numpy, it's kind of slow to take the distribution
-            # on a large image, so if usecrop==True we take
-            # a crop of size (radius*2)x(radius*2) from the center of the
-            # image and calculate the histogram on that
-            if usecrop:
-                x, y = self.width // 2, self.height // 2
-                if x > cropradius:
-                    x0 = x - cropradius
-                    x1 = x0 + cropradius*2
-                else:
-                    x0 = 0
-                    x1 = self.width-1
-                if y > cropradius:
-                    y0 = y - cropradius
-                    y1 = y0 + cropradius*2
-                else:
-                    y0 = 0
-                    y1 = self.height-1
-
-                data = self.data[y0:y1, x0:x1]
-            else:
-                # Use the full data!
-                data = self.data
-                
-            if method == 'median':
-                length = 7
-                xout = scipy.ndimage.filters.median_filter(data, size=length)
-                #data_f = numpy.ravel(data)
-                #xout = medfilt1(data_f, length)
-
-                loval = numpy.nanmin(xout)
-                hival = numpy.nanmax(xout)
-
-            elif method == 'stddev':
-                # This is the method used in the old SOSS fits viewer
-                mdata = numpy.ma.masked_array(data, numpy.isnan(data))
-                mean = numpy.mean(mdata)
-                sdev = numpy.std(mdata)
-
-                hensa_lo_factor = (hensa_lo - 50.0) / 10.0
-                hensa_hi_factor = (hensa_hi - 50.0) / 10.0
-                
-                loval = hensa_lo_factor * sdev + mean
-                hival = hensa_hi_factor * sdev + mean
-                
-            elif method == 'histogram':
-                self.logger.debug("Computing histogram, pct=%.4f numbins=%d" % (
-                pct, numbins))
-                height, width = data.shape
-                self.logger.debug("Median analysis array is %dx%d" % (
-                    width, height))
-
-                total_px = width * height
-                minval = data.min()
-                if numpy.isnan(minval):
-                    self.logger.warn("NaN's found in data, using workaround for histogram")
-                    minval = numpy.nanmin(data)
-                    maxval = numpy.nanmax(data)
-                    substval = (minval + maxval)/2.0
-                    # Oh crap, the array has a NaN value.  We have to workaround
-                    # this by making a copy of the array and substituting for
-                    # the NaNs, otherwise numpy's histogram() cannot handle it
-                    data = data.copy()
-                    data[numpy.isnan(data)] = substval
-                    dist, bins = numpy.histogram(data, bins=numbins,
-                                                 density=False)
-                else:
-                    dist, bins = numpy.histogram(data, bins=numbins,
-                                                 density=False)
-                cutoff = int((float(total_px)*(1.0-pct))/2.0)
-                top = len(dist)-1
-                self.logger.debug("top=%d cutoff=%d" % (top, cutoff))
-
-                # calculate low cutoff
-                cumsum = numpy.cumsum(dist)
-                i = numpy.flatnonzero(cumsum > cutoff)[0]
-                count_px = cumsum[i]
-                if i > 0:
-                    nprev = cumsum[i-1]
-                else:
-                    nprev = 0
-
-                # interpolate between last two low bins
-                val1, val2 = bins[i], bins[i+1]
-                divisor = float(count_px) - float(nprev)
-                if divisor > 0.0:
-                    interp = (float(cutoff)-float(nprev))/ divisor
-                else:
-                    interp = 0.0
-                loval = val1 + ((val2 - val1) * interp)
-                self.logger.debug("loval=%f val1=%f val2=%f interp=%f" % (
-                    loval, val1, val2, interp))
-
-                # calculate high cutoff
-                revdist = dist[::-1]
-                cumsum = numpy.cumsum(revdist)
-                i = numpy.flatnonzero(cumsum > cutoff)[0]
-                count_px = cumsum[i]
-                if i > 0:
-                    nprev = cumsum[i-1]
-                else:
-                    nprev = 0
-                j = top - i
-
-                # interpolate between last two high bins
-                val1, val2 = bins[j], bins[j+1]
-                divisor = float(count_px) - float(nprev)
-                if divisor > 0.0:
-                    interp = (float(cutoff)-float(nprev))/ divisor
-                else:
-                    interp = 0.0
-                hival = val1 + ((val2 - val1) * interp)
-                self.logger.debug("hival=%f val1=%f val2=%f interp=%f" % (
-                    hival, val1, val2, interp))
-
-        end_time = time.time()
-        self.logger.debug("cut levels calculation time=%.4f" % (
-            end_time - start_time))
-
-        self.logger.debug("lo=%.2f hi=%.2f" % (loval, hival))
-        self.t_locut = loval
-        self.t_hicut = hival
-
     def get_autocut_methods(self):
-        return autocut_methods
+        return self.autocuts.get_algorithms()
     
     def get_cut_levels(self):
         return (self.t_locut, self.t_hicut)
@@ -1048,11 +913,8 @@ class FitsImageBase(Callback.Callbacks):
             self.t_autolevels = value
             self.make_callback('autocuts', value)
 
-        # save cut levels with this image as metadata
-        if self.image != None:
-            self.logger.debug("saving cut levels with image: cutlo=%f cuthi=%f" % (
-                loval, hival))
-            self.image.set(cutlo=loval, cuthi=hival)
+        # Save cut levels with this image embedded profile
+        self.save_profile('cut_levels', cutlo=loval, cuthi=hival)
             
         self.make_callback('cut-set', self.t_locut, self.t_hicut)
         if redraw:
@@ -1060,11 +922,14 @@ class FitsImageBase(Callback.Callbacks):
 
     def auto_levels(self, method=None, pct=None,
                     numbins=None, redraw=True):
-        self._set_cut_levels(method=method, pct=pct, numbins=numbins)
+        loval, hival = self.autocuts.calc_cut_levels(self, method=method,
+                                                     pct=pct, numbins=numbins)
+        self.t_locut = loval
+        self.t_hicut = hival
 
-        # save cut levels with this image as metadata
-        ## if self.image != None:
-        ##     self.image.set(cutlo=self.t_locut, cuthi=self.t_hicut)
+        # Save cut levels with this image embedded profile
+        # UPDATE: only manual cut_levels saves to profile
+        #self.save_profile('cut_levels', cutlo=loval, cuthi=hival)
             
         self.make_callback('cut-set', self.t_locut, self.t_hicut)
         if redraw:
@@ -1081,20 +946,6 @@ class FitsImageBase(Callback.Callbacks):
 
     def get_autolevels_options(self):
         return self.autolevels_options
-
-    def first_cuts(self, redraw=False):
-        # If there is image metadata associated that has cut levels
-        # then use those values if t_use_saved_cuts == True
-        if (self.t_use_saved_cuts and (self.image != None) and
-            (self.image.get('cutlo', None) != None)):
-            loval, hival = self.image.get_list('cutlo', 'cuthi')
-            self.logger.debug("setting cut levels from saved cuts lo=%f hi=%f" % (
-                loval, hival))
-            self.cut_levels(loval, hival, no_reset=True, redraw=redraw)
-
-        # else possibly perform an auto cut levels
-        elif self.t_autolevels != 'off':
-            self.auto_levels(redraw=redraw)
 
     def transform(self, flipx, flipy, swapxy, redraw=True):
         # Adjust pan position to account for previous state of
@@ -1113,7 +964,8 @@ class FitsImageBase(Callback.Callbacks):
         self._swapXY = swapxy
         self.logger.debug("flipx=%s flipy=%s swapXY=%s" % (
             self._flipX, self._flipY, self._swapXY))
-        self.reset_data()
+        # NOTE [A]
+        self.apply_data_transforms1()
 
         self.make_callback('transform')
         if redraw:

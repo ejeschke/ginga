@@ -2,7 +2,7 @@
 # Ruler.py -- Ruler plugin for Ginga FITS viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Jun 22 13:44:52 HST 2012
+#  Last edit: Thu Aug 23 13:57:48 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -157,7 +157,7 @@ class Ruler(GingaPlugin.LocalPlugin):
     def clear(self, canvas, button, data_x, data_y):
         if (button == 0x4) or (button == 0x21):
             self.canvas.deleteAllObjects()
-        return True
+        return False
 
     def wcsruler(self, surface, tag):
         obj = self.canvas.getObjectByTag(tag)

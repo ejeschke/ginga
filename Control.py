@@ -2,7 +2,7 @@
 # Control.py -- Controller for the Ginga FITS viewer.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Jun 22 13:38:35 HST 2012
+#  Last edit: Sat Jul 21 15:35:31 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -92,8 +92,8 @@ class GingaControl(Callback.Callbacks):
         self.fn_keys = ('f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8',
                         'f9', 'f10', 'f11', 'f12')
         
-        self.global_plugins = []
-        self.local_plugins = []
+        self.global_plugins = {}
+        self.local_plugins = {}
         self.operations  = []
 
         # This plugin manager handles "global" (aka standard) plug ins
@@ -276,21 +276,31 @@ class GingaControl(Callback.Callbacks):
         opmon = chinfo.opmon
         opmon.deactivate(opname)
             
-    def add_local_plugin(self, name, visible=True):
+    def add_local_plugin(self, spec):
         try:
-            self.mm.loadModule(name, pfx=pluginconfpfx)
-            self.local_plugins.append(name)
-            self.add_operation(name)
+            name = spec.setdefault('name', spec.get('klass', spec.module))
+            self.local_plugins[name] = spec
+
+            self.mm.loadModule(spec.module, pfx=pluginconfpfx)
+
+            hidden = spec.get('hidden', False)
+            if not hidden:
+                self.add_operation(name)
+
         except Exception, e:
             self.logger.error("Unable to load local plugin '%s': %s" % (
                 name, str(e)))
         
-    def add_global_plugin(self, name):
+    def add_global_plugin(self, spec):
         try:
-            self.mm.loadModule(name, pfx=pluginconfpfx)
-            self.gpmon.loadPlugin(name)
-            self.global_plugins.append(name)
+            name = spec.setdefault('name', spec.get('klass', spec.module))
+            self.global_plugins[name] = spec
+            
+            self.mm.loadModule(spec.module, pfx=pluginconfpfx)
 
+            self.gpmon.loadPlugin(name, spec)
+            self.start_global_plugin(name)
+                
         except Exception, e:
             self.logger.error("Unable to load global plugin '%s': %s" % (
                 name, str(e)))
@@ -624,8 +634,8 @@ class GingaControl(Callback.Callbacks):
             self.w.channel.insert_alpha(chname)
             
         # Prepare local plugins for this channel
-        for opname in self.local_plugins:
-            opmon.loadPlugin(opname, chinfo=chinfo)
+        for opname, spec in self.local_plugins.items():
+            opmon.loadPlugin(opname, spec, chinfo=chinfo)
 
         self.make_callback('add-channel', chinfo)
 
@@ -669,9 +679,9 @@ class GingaControl(Callback.Callbacks):
         prefs.auto_levels = prefs.get('auto_levels',
                                       fitsimage.t_autolevels)
         fitsimage.enable_autolevels(prefs.auto_levels)
-        prefs.usesavedcuts = prefs.get('usesavedcuts',
-                                       fitsimage.t_use_saved_cuts)
-        fitsimage.t_use_saved_cuts = prefs.usesavedcuts
+        ## prefs.usesavedcuts = prefs.get('usesavedcuts',
+        ##                                fitsimage.t_use_saved_cuts)
+        ## fitsimage.t_use_saved_cuts = prefs.usesavedcuts
 
         prefs.autocut_method = prefs.get('autocut_method',
                                       fitsimage.t_autocut_method)

@@ -2,7 +2,7 @@
 # GingaGtk.py -- Gtk display handler for the Ginga FITS tool.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Jun 22 13:41:32 HST 2012
+#  Last edit: Fri Jul 20 16:43:51 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -353,35 +353,46 @@ class GingaView(GtkMain.GtkMain):
         sw.show_all()
         return Bunch.Bunch(widget=sw, textw=tw, buf=buf)
 
-    def add_global_pane(self, pluginName, paneName, nbw):
-        vbox = gtk.VBox(spacing=2)
-        vbox.set_border_width(0)
-        
-        try:
-            pluginObj = self.gpmon.getPlugin(pluginName)
-            pluginObj.initialize(vbox)
+    def start_global_plugin(self, pluginName):
 
-            pluginObj.start()
+        pInfo = self.gpmon.getPluginInfo(pluginName)
+        spec = pInfo.spec
+
+        vbox = None
+        try:
+            wsName = spec.get('ws', None)
+            if wsName:
+                ws = self.ds.get_nb(wsName)
+                tabName = spec.get('tab', pInfo.name)
+
+                vbox = gtk.VBox(spacing=2)
+                vbox.set_border_width(0)
+        
+                pInfo.obj.initialize(vbox)
+                vbox.show_all()
+
+            pInfo.obj.start()
+
         except Exception, e:
             errmsg = "Failed to load global plugin '%s': %s" % (
                 pluginName, str(e))
             try:
                 (type, value, tb) = sys.exc_info()
                 tb_str = "\n".join(traceback.format_tb(tb))
-                
+
             except Exception, e:
                 tb_str = "Traceback information unavailable."
 
             self.logger.error(errmsg)
-            self.logger.error(tb_str)
-            bnch = self.mktextwidget(errmsg + '\n' + tb_str)
-            vbox.pack_start(bnch.widget, fill=True, expand=True)
-            
-        vbox.show_all()
+            self.logger.error("Traceback:\n%s" % (tb_str))
+            if vbox:
+                bnch = self.mktextwidget(errmsg + '\n' + tb_str)
+                vbox.pack_start(bnch.widget, fill=True, expand=True)
+                vbox.show_all()
 
-        self.ds.add_tab(nbw, vbox, 2, paneName)
-        return vbox
-    
+        if vbox:
+            self.ds.add_tab(ws, vbox, 2, tabName)
+
     def stop_global_plugin(self, pluginName):
         self.logger.debug("Attempting to stop plugin '%s'" % (pluginName))
         try:

@@ -3,7 +3,7 @@
 # ginga.py -- FITS image viewer and tool.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Thu Jul 12 14:11:27 HST 2012
+#  Last edit: Fri Jul 20 16:34:34 HST 2012
 #]
 #
 """
@@ -50,12 +50,12 @@ import logging, logging.handlers
 import threading
 
 # Local application imports
+from Bunch import Bunch
 import Task
 import ModuleManager
 import Datasrc
 import Settings
 from Control import GingaControl
-
 
 version = "20120510.0"
 
@@ -81,22 +81,29 @@ default_layout = ['hpanel', {},
                     ],
                   ]
 
-# Global plugins
-# (tabname, globalpluginname, workspacename), ...
-default_tabs = [('Pan', 'Pan', 'uleft'),
-                ('Info', 'Info', 'lleft'),
-                ('Header', 'Header', 'left'),
-                ('Zoom', 'Zoom', 'left'),
-                ('Thumbs', 'Thumbs', 'right'),
-                ('Contents', 'Contents', 'right'),
-                ('Help', 'WBrowser', 'right'),
-                ('Debug', 'Debug', 'right'),
-                ]
+global_plugins = [
+    Bunch(module='Pan', tab='Pan', ws='uleft', raisekey='i'),
+    Bunch(module='Info', tab='Info', ws='lleft', raisekey='i'),
+    Bunch(module='Header', tab='Header', ws='left', raisekey='h'),
+    Bunch(module='Zoom', tab='Zoom', ws='left', raisekey='z'),
+    Bunch(module='Thumbs', tab='Thumbs', ws='right', raisekey='t'),
+    Bunch(module='Contents', tab='Contents', ws='right', raisekey='c'),
+    Bunch(module='WBrowser', tab='Help', ws='right', raisekey='?'),
+    Bunch(module='Debug', tab='Debug', ws='right'),
+    ]
 
-local_plugins = [ 'Pick', 'Ruler', 'MultiDim', 
-                  'Cuts', 'Histogram', 'PixTable',
-                  'Preferences', 'Catalogs', 'Drawing', 'FBrowser', 
-                  ]
+local_plugins = [
+    Bunch(module='Pick', ws='dialogs', shortkey='f1'),
+    Bunch(module='Ruler', ws='dialogs', shortkey='f2'),
+    Bunch(module='MultiDim', ws='dialogs', shortkey='f4'), 
+    Bunch(module='Cuts', ws='dialogs', shortkey='f5'),
+    Bunch(module='Histogram', ws='dialogs', shortkey='f6'),
+    Bunch(module='PixTable', ws='dialogs', shortkey='f7'),
+    Bunch(module='Preferences', ws='dialogs', shortkey='f9'),
+    Bunch(module='Catalogs', ws='dialogs', shortkey='f10'),
+    Bunch(module='Drawing', ws='dialogs', shortkey='f11'),
+    Bunch(module='FBrowser', ws='dialogs', shortkey='f12'), 
+    ]
 
 # max size of log file before rotating
 log_maxsize = 20 * 1024*1024
@@ -180,29 +187,27 @@ def main(options, args):
     ginga.build_toplevel(layout=default_layout)
 
     # Add desired global plugins
-    for tabName, pluginName, wsName in default_tabs:
-        ginga.add_global_plugin(pluginName)
-        ws = ginga.ds.get_nb(wsName)
-        ginga.add_global_pane(pluginName, tabName, ws)
+    for spec in global_plugins:
+        ginga.add_global_plugin(spec)
 
     # Load any custom modules
     if options.modules:
         modules = options.modules.split(',')
         for pluginName in modules:
-            ginga.add_global_plugin(pluginName)
-            ws = ginga.ds.get_nb('right')
-            tabName = pluginName
-            ginga.add_global_pane(pluginName, tabName, ws)
+            spec = Bunch(name=pluginName, module=pluginName)
+            ginga.add_global_plugin(spec)
 
     # Load modules for "local" (per-channel) plug ins
-    for name in local_plugins:
-        ginga.add_local_plugin(name)
+    for spec in local_plugins:
+        ginga.add_local_plugin(spec)
 
     # Load any custom plugins
     if options.plugins:
         plugins = options.plugins.split(',')
-        for plname in plugins:
-            ginga.add_local_plugin(plname)
+        for pluginName in plugins:
+            spec = Bunch(module=pluginName, ws='dialogs',
+                         hidden=True)
+            ginga.add_local_plugin(spec)
 
     ginga.update_pending()
 

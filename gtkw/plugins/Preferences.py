@@ -2,7 +2,7 @@
 # Preferences.py -- Preferences plugin for fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Mon Jul 16 16:13:02 HST 2012
+#  Last edit: Sat Jul 21 15:35:30 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -157,21 +157,17 @@ class Preferences(GingaPlugin.LocalPlugin):
         fr.set_shadow_type(gtk.SHADOW_ETCHED_IN)
         fr.set_label_align(0.5, 0.5)
 
-        captions = (('Cut New', 'combobox', 'Use saved cuts', 'checkbutton'),
-            ('Auto Method', 'combobox'), ('Hist Pct', 'spinbutton'))
+        captions = (('Cut New', 'combobox'),
+                    ('Auto Method', 'combobox'),
+                    ('Hist Pct', 'spinbutton'))
         w, b = GtkHelp.build_info(captions)
         self.w.tooltips.set_tip(b.cut_new,
                                 "Automatically set cut levels for new images")
-        self.w.tooltips.set_tip(b.use_saved_cuts,
-                                "Set cut levels from a previous MANUAL cut levels on SAME image, if possible")
         self.w.tooltips.set_tip(b.auto_method,
                                 "Choose algorithm for auto levels")
         self.w.tooltips.set_tip(b.hist_pct,
                                 "Percentage of image to save for Histogram algorithm")
 
-        self.w.use_saved_cuts = b.use_saved_cuts
-        b.use_saved_cuts.sconnect('toggled', self.toggle_saved_cuts_cb)
-        
         self.w.btn_cut_new = b.cut_new
         combobox = b.cut_new
         index = 0
@@ -407,11 +403,6 @@ class Preferences(GingaPlugin.LocalPlugin):
         if self.w.has_key('btn_cut_new'):
             self.w.btn_cut_new.set_active(index)
 
-    def toggle_saved_cuts_cb(self, w):
-        use_saved_cuts = w.get_active()
-        self.fitsimage.t_use_saved_cuts = use_saved_cuts
-        self.fitsimage.first_cuts(redraw=True)
-
     def set_transforms(self):
         flipX = self.w.btn_flip_x.get_active()
         flipY = self.w.btn_flip_y.get_active()
@@ -429,7 +420,6 @@ class Preferences(GingaPlugin.LocalPlugin):
         prefs.switchnew = self.w.btn_follow_new_images.get_active()
         prefs.raisenew = self.w.btn_raise_new_images.get_active()
         prefs.genthumb = self.w.btn_create_thumbnail.get_active()
-        prefs.usesavedcuts = self.w.use_saved_cuts.get_active()
 
         (flipX, flipY, swapXY) = self.fitsimage.get_transforms()
         prefs.flipX = flipX
@@ -469,9 +459,6 @@ class Preferences(GingaPlugin.LocalPlugin):
         
         prefs.genthumb = prefs.get('genthumb', True)
         self.w.btn_create_thumbnail.set_active(prefs.genthumb)
-
-        prefs.usesavedcuts = prefs.get('usesavedcuts', False)
-        self.w.use_saved_cuts.set_active(prefs.usesavedcuts)
 
         rgbmap = self.fitsimage.get_rgbmap()
         cm = rgbmap.get_cmap()

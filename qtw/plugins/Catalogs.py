@@ -2,7 +2,7 @@
 # Catalogs.py -- Catalogs plugin for fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Thu Jul 19 12:01:53 HST 2012
+#  Last edit: Thu Jul 19 15:16:05 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -106,7 +106,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
         combobox.setCurrentIndex(index)
         combobox.activated.connect(self.setup_params_image)
         if len(self.image_server_options) > 0:
-            self.setup_params_image(index)
+            self.setup_params_image(index, redo=False)
 
         vbox = QtHelp.VBox()
         fr = QtHelp.Frame(" Catalog Server ")
@@ -137,7 +137,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
         combobox.setCurrentIndex(index)
         combobox.activated.connect(self.setup_params_catalog)
         if len(self.catalog_server_options) > 0:
-            self.setup_params_catalog(index)
+            self.setup_params_catalog(index, redo=False)
 
         btns = QtHelp.HBox()
         btns.setSpacing(5)
@@ -147,6 +147,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
         btns.addWidget(btn, stretch=0, alignment=QtCore.Qt.AlignCenter)
         vbox0.addWidget(btns, stretch=0, alignment=QtCore.Qt.AlignTop)
 
+        self.w.params = vbox0
         nb.addTab(vbox0, "Params")
 
         vbox = QtHelp.VBox()
@@ -175,9 +176,10 @@ class Catalogs(GingaPlugin.LocalPlugin):
         self.w.plotnum = sb
         sb.setToolTip("Adjust size of subset of stars plotted")
         sb.valueChanged.connect(self.plot_limit_cb)
-        hbox.addWidget(sb, stretch=1)
+        hbox.addWidget(sb, stretch=0)
 
         vbox.addWidget(hbox, stretch=0)
+        self.w.listing = vbox
         nb.addTab(vbox, "Listing")
 
         btns = QtHelp.HBox()
@@ -254,7 +256,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
         container.insertWidget(0, w)
         return b
 
-    def setup_params_image(self, index):
+    def setup_params_image(self, index, redo=True):
         key = self.image_server_options[index]
 
         # Get the parameter list and adjust the widget
@@ -262,13 +264,19 @@ class Catalogs(GingaPlugin.LocalPlugin):
         b = self._setup_params(obj, self.w.img_params)
         self.image_server_params = b
 
-    def setup_params_catalog(self, index):
+        if redo:
+            self.redo()
+
+    def setup_params_catalog(self, index, redo=True):
         key = self.catalog_server_options[index]
 
         # Get the parameter list and adjust the widget
         obj = self.fv.imgsrv.getCatalogServer(key)
         b = self._setup_params(obj, self.w2.cat_params)
         self.catalog_server_params = b
+
+        if redo:
+            self.redo()
 
             
     def instructions(self):
@@ -284,6 +292,9 @@ class Catalogs(GingaPlugin.LocalPlugin):
             # Add canvas layer
             self.fitsimage.add(self.canvas, tag=self.layertag)
             
+        # Raise the params tab
+        self.w.nb.setCurrentWidget(self.w.params)
+
         self.setfromimage()
         self.resume()
 
@@ -441,6 +452,8 @@ class Catalogs(GingaPlugin.LocalPlugin):
         canvas.redraw(whence=3)
 
         self.areatag = tag
+        # Raise the params tab
+        self.w.nb.setCurrentWidget(self.w.params)
         return self.redo()
 
     def get_params(self, bnch):
@@ -465,10 +478,12 @@ class Catalogs(GingaPlugin.LocalPlugin):
         future2 = Future.Future()
         future2.freeze(self.fv.gui_do, self.getimage_cb, future)
         future.add_callback('resolved', future2.thaw)
+        self.fitsimage.onscreen_message("Querying image db...",
+                                        delay=1.0)
         self.fv.nongui_do_future(future)
 
     def getimage_cb(self, future):
-        self.logger.debug("future terminated.")
+        self.logger.debug("getimage_continuation 1.")
         fitspath = future.get_value()
 
         chname = self.fv.get_channelName(self.fitsimage)
@@ -490,40 +505,44 @@ class Catalogs(GingaPlugin.LocalPlugin):
         future2 = Future.Future()
         future2.freeze(self.fv.gui_do, self.getcatalog_cb, future)
         future.add_callback('resolved', future2.thaw)
+        self.fitsimage.onscreen_message("Querying catalog db...",
+                                        delay=1.0)
         self.fv.nongui_do_future(future)
 
     def getcatalog_cb(self, future):
-        self.logger.debug("future terminated.")
+        self.logger.debug("getcatalog continuation 1.")
         starlist, info = future.get_value()
         self.logger.debug("starlist=%s" % str(starlist))
-        
-        filter_starlist = self.w2.limit_stars_to_area.isChecked()
-            
-        self.filter_results(starlist, info, filter_starlist)
 
-    def filter_results(self, starlist, info, filter_starlist):
+        obj = None
+        if self.limit_stars_to_area:
+            # Look for the defining rectangle to filter stars
+            # If none, then use the visible image area
+            try:
+                obj = self.canvas.getObjectByTag(self.areatag)
+            
+            except KeyError:
+                pass
+            
+        self.filter_results(starlist, info, obj)
+
+    def filter_results(self, starlist, info, filter_obj):
         image = self.fitsimage.get_image()
 
-        # Look for the defining rectangle to filter stars
-        # If none, then use the visible image area
-        try:
-            obj = self.canvas.getObjectByTag(self.areatag)
-            x1, y1, x2, y2 = obj.x1, obj.y1, obj.x2, obj.y2
-            
-        except KeyError:
-            x1, y1, x2, y2 = self.fitsimage.get_zoomrect()
-
-        if filter_starlist:
+        # Filter starts by a containing object, if provided
+        if filter_obj:
             stars = []
             for star in starlist:
                 x, y = image.radectopix(star['ra_deg'], star['dec_deg'])
-                if ((x >= x1) and (x <= x2) and
-                    (y >= y1) and (y <= y2)):
+                if filter_obj.contains(x, y):
                     stars.append(star)
             starlist = stars
 
         self.starlist = starlist
         self.table.show_table(self, info, starlist)
+        # Raise the listing tab
+        self.w.nb.setCurrentWidget(self.w.listing)
+
         self.replot_stars()
 
     def clear(self):

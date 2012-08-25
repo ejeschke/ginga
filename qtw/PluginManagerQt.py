@@ -2,7 +2,7 @@
 # PluginManagerQt.py -- Simple class to manage plugins.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Thu Jul 12 10:15:52 HST 2012
+#  Last edit: Sat Jul 21 11:14:43 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -42,37 +42,39 @@ class PluginManager(object):
     def set_widget(self, hbox):
         self.hbox = hbox
         
-    def loadPlugin(self, moduleName, chinfo=None):
+    def loadPlugin(self, name, spec, chinfo=None):
         try:
-            module = self.mm.getModule(moduleName)
-            method = getattr(module, moduleName)
+            module = self.mm.getModule(spec.module)
+            className = spec.get('klass', spec.module)
+            klass = getattr(module, className)
 
             if chinfo == None:
                 # global plug in
-                obj = method(self.fv)
+                obj = klass(self.fv)
                 fitsimage = None
             else:
                 # local plugin
                 fitsimage = chinfo.fitsimage
-                obj = method(self.fv, fitsimage)
+                obj = klass(self.fv, fitsimage)
 
             # Prepare configuration for module
-            opname = moduleName.lower()
-            self.plugin[opname] = Bunch.Bunch(klass=method, obj=obj,
-                                              widget=None, name=moduleName,
+            opname = name.lower()
+            self.plugin[opname] = Bunch.Bunch(klass=klass, obj=obj,
+                                              widget=None, name=name,
+                                              spec=spec,
                                               fitsimage=fitsimage,
                                               chinfo=chinfo)
             
-            self.logger.info("Plugin '%s' loaded." % moduleName)
+            self.logger.info("Plugin '%s' loaded." % name)
         
         except Exception, e:
             self.logger.error("Failed to load plugin '%s': %s" % (
-                moduleName, str(e)))
+                name, str(e)))
             #raise PluginManagerError(e)
 
     def reloadPlugin(self, plname, chinfo=None):
         pInfo = self.getPluginInfo(plname)
-        return self.loadPlugin(pInfo.name, chinfo=chinfo)
+        return self.loadPlugin(pInfo.name, pInfo.spec, chinfo=chinfo)
         
     def getPluginInfo(self, plname):
         plname = plname.lower()

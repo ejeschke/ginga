@@ -2,7 +2,7 @@
 # GingaQt.py -- Qt display handler for the Ginga FITS tool.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Jun 22 15:45:18 HST 2012
+#  Last edit: Sat Jul 21 11:09:52 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -359,39 +359,49 @@ class GingaView(QtMain.QtMain):
         return bnch
 
 
-    def add_global_pane(self, pluginName, paneName, nbw):
-        self.logger.debug("Adding pane '%s'" % (paneName))
-        widget = QtGui.QWidget()
-        vbox = QtGui.QVBoxLayout()
-        vbox.setContentsMargins(4, 4, 4, 4)
-        vbox.setSpacing(2)
-        widget.setLayout(vbox)
-        self.ds.add_tab(nbw, widget, 2, paneName)
+    def start_global_plugin(self, pluginName):
 
+        pInfo = self.gpmon.getPluginInfo(pluginName)
+        spec = pInfo.spec
+
+        vbox = None
         try:
-            pluginObj = self.gpmon.getPlugin(pluginName)
-            pluginObj.initialize(vbox)
+            wsName = spec.get('ws', None)
+            if wsName:
+                ws = self.ds.get_nb(wsName)
+                tabName = spec.get('tab', pInfo.name)
 
-            pluginObj.start()
+                widget = QtGui.QWidget()
+                vbox = QtGui.QVBoxLayout()
+                vbox.setContentsMargins(4, 4, 4, 4)
+                vbox.setSpacing(2)
+                widget.setLayout(vbox)
+
+                pInfo.obj.initialize(vbox)
+
+            pInfo.obj.start()
+
         except Exception, e:
-            self.logger.error("Failed to load global plugin '%s': %s" % (
-                pluginName, str(e)))
+            errmsg = "Failed to load global plugin '%s': %s" % (
+                pluginName, str(e))
             try:
                 (type, value, tb) = sys.exc_info()
                 tb_str = "\n".join(traceback.format_tb(tb))
-                self.logger.error("Traceback:\n%s" % (tb_str))
+                
+            except Exception, e:
+                tb_str = "Traceback information unavailable."
+                
+            self.logger.error(errmsg)
+            self.logger.error("Traceback:\n%s" % (tb_str))
+            if vbox:
                 textw = QtGui.QTextEdit()
                 textw.append(str(e) + '\n')
                 textw.append(tb_str)
                 textw.setReadOnly(True)
                 vbox.addWidget(textw, stretch=1)
+        if vbox:
+            self.ds.add_tab(ws, widget, 2, tabName)
                 
-            except Exception, e:
-                self.logger.error("Traceback information unavailable.")
-                
-        self.logger.debug("pane '%s' added." % (paneName))
-        return vbox
-    
     def stop_global_plugin(self, pluginName):
         self.logger.debug("Attempting to stop plugin '%s'" % (pluginName))
         try:

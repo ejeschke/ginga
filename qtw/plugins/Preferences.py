@@ -2,7 +2,7 @@
 # Preferences.py -- Preferences plugin for fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Wed Jul 11 17:08:59 HST 2012
+#  Last edit: Sat Jul 21 15:35:30 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -138,18 +138,14 @@ class Preferences(GingaPlugin.LocalPlugin):
 
         fr = QtHelp.Frame("Autocuts")
 
-        captions = (('Cut New', 'combobox', 'Use saved cuts', 'checkbutton'),
+        captions = (('Cut New', 'combobox'),
                     ('Auto Method', 'combobox'),
                     ('Hist Pct', 'spinfloat'))
         w, b = QtHelp.build_info(captions)
         b.cut_new.setToolTip("Automatically set cut levels for new images")
-        b.use_saved_cuts.setToolTip("Set cut levels from a previous MANUAL cut levels on SAME image, if possible")
         b.auto_method.setToolTip("Choose algorithm for auto levels")
         b.hist_pct.setToolTip("Percentage of image to save for Histogram algorithm")
 
-        self.w.use_saved_cuts = b.use_saved_cuts
-        b.use_saved_cuts.stateChanged.connect(self.toggle_saved_cuts_cb)
-        
         self.w.btn_cut_new = b.cut_new
         combobox = b.cut_new
         index = 0
@@ -366,11 +362,6 @@ class Preferences(GingaPlugin.LocalPlugin):
         index = self.autocut_options.index(option)
         self.w.btn_cut_new.setCurrentIndex(index)
 
-    def toggle_saved_cuts_cb(self, tf):
-        tf = (tf != 0)
-        self.fitsimage.t_use_saved_cuts = tf
-        self.fitsimage.first_cuts(redraw=True)
-
     def set_transforms(self):
         flipX = self.w.btn_flip_x.checkState()
         flipY = self.w.btn_flip_y.checkState()
@@ -388,7 +379,6 @@ class Preferences(GingaPlugin.LocalPlugin):
         prefs.switchnew = self.w.btn_follow_new_images.checkState()
         prefs.raisenew = self.w.btn_raise_new_images.checkState()
         prefs.genthumb = self.w.btn_create_thumbnail.checkState()
-        prefs.usesavedcuts = self.w.use_saved_cuts.checkState()
 
         (flipX, flipY, swapXY) = self.fitsimage.get_transforms()
         prefs.flipX = flipX

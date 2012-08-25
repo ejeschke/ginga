@@ -2,7 +2,7 @@
 # Catalogs.py -- Catalogs plugin for fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Thu Jul 19 12:01:52 HST 2012
+#  Last edit: Thu Jul 19 16:18:07 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -39,8 +39,6 @@ class Catalogs(GingaPlugin.LocalPlugin):
         canvas.enable_draw(True)
         canvas.set_drawtype('rectangle', color='cyan', linestyle='dash',
                             drawdims=True)
-        #canvas.set_callback('button-press', self.btndown)
-        ## canvas.set_callback('motion', self.motion)
         canvas.set_callback('button-release', self.btnup)
         canvas.set_callback('draw-event', self.getarea)
         canvas.setSurface(self.fitsimage)
@@ -84,7 +82,6 @@ class Catalogs(GingaPlugin.LocalPlugin):
         nb.set_scrollable(True)
         nb.set_show_tabs(True)
         nb.set_show_border(False)
-        self.nb = nb
         vbox1.pack_start(nb, padding=4, fill=True, expand=True)
 
         vbox0 = gtk.VBox()
@@ -99,6 +96,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
         captions = (('Server', 'combobox'),
                     ('Get Image', 'button'))
         w, self.w = GtkHelp.build_info(captions)
+        self.w.nb = nb
         self.w.get_image.connect('clicked', lambda w: self.getimage())
 
         vbox.pack_start(w, padding=4, fill=True, expand=False)
@@ -116,7 +114,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
         combobox.set_active(index)
         combobox.sconnect('changed', self.setup_params_image)
         if len(self.image_server_options) > 0:
-            self.setup_params_image(combobox)
+            self.setup_params_image(combobox, redo=False)
 
         hbox.pack_start(fr, fill=True, expand=True)
 
@@ -149,7 +147,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
         combobox.set_active(index)
         combobox.sconnect('changed', self.setup_params_catalog)
         if len(self.catalog_server_options) > 0:
-            self.setup_params_catalog(combobox)
+            self.setup_params_catalog(combobox, redo=False)
 
         hbox.pack_start(fr, fill=True, expand=True)
         vbox0.pack_start(hbox, fill=True, expand=True)
@@ -164,6 +162,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
         vbox0.pack_start(btns, padding=4, fill=True, expand=False)
 
         lbl = gtk.Label("Params")
+        self.w.params = vbox0
         nb.append_page(vbox0, lbl)
 
         vbox = gtk.VBox()
@@ -197,6 +196,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
 
         #vbox1.pack_start(vbox, padding=4, fill=True, expand=True)
         lbl = gtk.Label("Listing")
+        self.w.listing = vbox
         nb.append_page(vbox, lbl)
 
         btns = gtk.HButtonBox()
@@ -279,7 +279,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
         container.show_all()
         return b
 
-    def setup_params_image(self, combobox):
+    def setup_params_image(self, combobox, redo=True):
         index = combobox.get_active()
         key = self.image_server_options[index]
 
@@ -288,7 +288,10 @@ class Catalogs(GingaPlugin.LocalPlugin):
         b = self._setup_params(obj, self.w.img_params)
         self.image_server_params = b
 
-    def setup_params_catalog(self, combobox):
+        if redo:
+            self.redo()
+
+    def setup_params_catalog(self, combobox, redo=True):
         index = combobox.get_active()
         key = self.catalog_server_options[index]
 
@@ -297,6 +300,8 @@ class Catalogs(GingaPlugin.LocalPlugin):
         b = self._setup_params(obj, self.w2.cat_params)
         self.catalog_server_params = b
 
+        if redo:
+            self.redo()
             
     def instructions(self):
         self.set_message("""TBD.""")
@@ -311,6 +316,10 @@ class Catalogs(GingaPlugin.LocalPlugin):
             # Add canvas layer
             self.fitsimage.add(self.canvas, tag=self.layertag)
             
+        # Raise the params tab
+        num = self.w.nb.page_num(self.w.params)
+        self.w.nb.set_current_page(num)
+
         self.setfromimage()
         self.resume()
 
@@ -470,6 +479,9 @@ class Catalogs(GingaPlugin.LocalPlugin):
         canvas.redraw(whence=3)
 
         self.areatag = tag
+        # Raise the params tab
+        num = self.w.nb.page_num(self.w.params)
+        self.w.nb.set_current_page(num)
         return self.redo()
 
     def get_params(self, bnch):
@@ -494,10 +506,12 @@ class Catalogs(GingaPlugin.LocalPlugin):
         future2 = Future.Future()
         future2.freeze(self.fv.gui_do, self.getimage_cb, future)
         future.add_callback('resolved', future2.thaw)
+        self.fitsimage.onscreen_message("Querying image db...",
+                                        delay=1.0)
         self.fv.nongui_do_future(future)
 
     def getimage_cb(self, future):
-        self.logger.debug("future terminated.")
+        self.logger.debug("getimage_continuation 1.")
         fitspath = future.get_value()
 
         chname = self.fv.get_channelName(self.fitsimage)
@@ -519,49 +533,61 @@ class Catalogs(GingaPlugin.LocalPlugin):
         future2 = Future.Future()
         future2.freeze(self.fv.gui_do, self.getcatalog_cb, future)
         future.add_callback('resolved', future2.thaw)
+
+        # Clear current plots and table
+        self.reset()
+        self.fitsimage.onscreen_message("Querying catalog db...",
+                                        delay=1.0)
         self.fv.nongui_do_future(future)
 
     def getcatalog_cb(self, future):
-        self.logger.debug("future terminated.")
+        self.logger.debug("getcatalog continuation 1.")
         starlist, info = future.get_value()
         self.logger.debug("starlist=%s" % str(starlist))
-        
-        filter_starlist = self.w2.limit_stars_to_area.get_active()
-            
-        self.filter_results(starlist, info, filter_starlist)
 
-    def filter_results(self, starlist, info, filter_starlist):
+        obj = None
+        if self.limit_stars_to_area:
+            # Look for the defining rectangle to filter stars
+            # If none, then use the visible image area
+            try:
+                obj = self.canvas.getObjectByTag(self.areatag)
+            
+            except KeyError:
+                pass
+            
+        self.filter_results(starlist, info, obj)
+
+    def filter_results(self, starlist, info, filter_obj):
         image = self.fitsimage.get_image()
 
-        # Look for the defining rectangle to filter stars
-        # If none, then use the visible image area
-        try:
-            obj = self.canvas.getObjectByTag(self.areatag)
-            x1, y1, x2, y2 = obj.x1, obj.y1, obj.x2, obj.y2
-            
-        except KeyError:
-            x1, y1, x2, y2 = self.fitsimage.get_zoomrect()
-
-        if filter_starlist:
+        # Filter starts by a containing object, if provided
+        if filter_obj:
             stars = []
             for star in starlist:
                 x, y = image.radectopix(star['ra_deg'], star['dec_deg'])
-                if ((x >= x1) and (x <= x2) and
-                    (y >= y1) and (y <= y2)):
+                if filter_obj.contains(x, y):
                     stars.append(star)
             starlist = stars
 
         self.starlist = starlist
         self.table.show_table(self, info, starlist)
+        # Raise the listing tab
+        num = self.w.nb.page_num(self.w.listing)
+        self.w.nb.set_current_page(num)
+
         self.replot_stars()
+        return starlist
 
     def clear(self):
-        # TODO: remove only star objects?
         objects = self.canvas.getObjectsByTagpfx('star')
         self.canvas.deleteObjects(objects)
        
     def clearAll(self):
         self.canvas.deleteAllObjects()
+       
+    def reset(self):
+        self.clearAll()
+        self.table.clear()
        
     def replot_stars(self, selected=[]):
         self.clear()
@@ -574,7 +600,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
             i = 0
         else:
             i = int(self.plot_pct * length)
-            i = min(i, length - self.plot_limit)
+            i = int(min(i, length - self.plot_limit))
             length = self.plot_limit
         
         #for obj in self.starlist:
@@ -783,9 +809,8 @@ class CatalogListing(object):
             self.selected.remove(star)
             try:
                 self.catalog.unhighlight_object(star.canvobj, 'selected')
-            except:
-                # star may not actually be highlighted
-                pass
+            except Exception, e:
+                self.logger.warn("Error unhilighting star: %s" % (str(e)))
             return False
         else:
             if self.selection_mode == 'single':
@@ -794,11 +819,13 @@ class CatalogListing(object):
                     self.selected.remove(star2)
                     try:
                         self.catalog.unhighlight_object(star2.canvobj, 'selected')
-                    except:
-                        # star may not actually be highlighted
-                        pass
+                    except Exception, e:
+                        self.logger.warn("Error unhilighting star: %s" % (str(e)))
             self.selected.append(star)
-            self.catalog.highlight_object(star.canvobj, 'selected', 'skyblue')
+            try:
+                self.catalog.highlight_object(star.canvobj, 'selected', 'skyblue')
+            except Exception, e:
+                self.logger.warn("Error hilighting star: %s" % (str(e)))
             return True
 
 
@@ -811,7 +838,11 @@ class CatalogListing(object):
         self.mark_selection(star)
 
     def clear(self):
-        self.catalog.clear()
+        try:
+            self.catalog.clear()
+        except Exception, e:
+            # may not have generated a catalog yet
+            self.logger.warn("Error clearing star table: %s" % (str(e)))
 
     def get_selected(self):
         return self.selected
