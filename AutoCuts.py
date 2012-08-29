@@ -2,7 +2,7 @@
 # AutoCuts.py -- class for calculating auto cut levels
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Sat Jul 21 14:19:20 HST 2012
+#  Last edit: Fri Aug 24 15:21:14 HST 2012
 #]
 #
 # Copyright (c) 2012, Eric R. Jeschke.  All rights reserved.
@@ -111,7 +111,7 @@ class AutoCuts(object):
             elif method == 'histogram':
                 self.logger.debug("Computing histogram, pct=%.4f numbins=%d" % (
                 pct, numbins))
-                height, width = data.shape
+                height, width = data.shape[:2]
                 self.logger.debug("Median analysis array is %dx%d" % (
                     width, height))
 

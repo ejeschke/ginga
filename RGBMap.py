@@ -2,7 +2,7 @@
 # RGBMap.py -- color mapping
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Jun 22 13:38:37 HST 2012
+#  Last edit: Tue Aug 28 10:43:42 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -119,9 +119,34 @@ class RGBMapper(Callback.Callbacks):
         arr = numpy.dstack((ar, ag, ab))
         return arr
         
+    def _get_rgbarray_rgb(self, idx_r, idx_g, idx_b):
+        # NOTE: data is assumed to be in the range 0-255 at this point
+        # but clip as a precaution
+        idx_r = idx_r.clip(0, 255)
+        ar = self.arr[0][idx_r]
+        idx_g = idx_g.clip(0, 255)
+        ag = self.arr[1][idx_g]
+        idx_b = idx_b.clip(0, 255)
+        ab = self.arr[2][idx_b]
+        arr = numpy.dstack((ar, ag, ab))
+        return arr
+
     def get_rgbarray(self, idx):
-        idx = self.get_hasharray(idx)
-        arr = self._get_rgbarray(idx)
+        shape = idx.shape
+        if len(shape) == 2:
+            # 2D monochrome image
+            idx = self.get_hasharray(idx)
+            arr = self._get_rgbarray(idx)
+        elif len(shape) == 3:
+            # Assume 2D color image
+            assert shape[2] in (3, 4), \
+                   RGBMapError("Number of color channels != 3")
+            idx_r = self.get_hasharray(idx[:, :, 0])
+            idx_g = self.get_hasharray(idx[:, :, 1])
+            idx_b = self.get_hasharray(idx[:, :, 2])
+            # alpha channel is usually 3
+            arr = self._get_rgbarray_rgb(idx_r, idx_g, idx_b)
+            
         return arr
         
     def get_hasharray(self, idx):

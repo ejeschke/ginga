@@ -2,7 +2,7 @@
 # FitsImage.py -- abstract classes for the display of FITS files
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Sat Jul 21 14:42:36 HST 2012
+#  Last edit: Tue Aug 28 17:08:48 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -159,8 +159,12 @@ class FitsImageBase(Callback.Callbacks):
             raise FitsImageError("Dimensions of actual window are not yet determined")
         return (self._imgwin_wd, self._imgwin_ht)
 
+    def get_dims(self, data):
+        height, width = data.shape[:2]
+        return (width, height)
+
     def get_data_size(self):
-        height, width = self._data_org.shape
+        width, height = self.get_dims(self._data_org)
         return (width, height)
 
     # TODO: deprecate these two?
@@ -200,8 +204,8 @@ class FitsImageBase(Callback.Callbacks):
 
     def set_data(self, data, image=None, redraw=True):
         dims = data.shape
-        assert (len(dims) == 2), \
-               FitsImageError("Only 2D images are supported!")
+        ## assert (len(dims) == 2), \
+        ##        FitsImageError("Only 2D images are supported!")
         
         # original data
         self._data_org = data
@@ -399,7 +403,7 @@ class FitsImageBase(Callback.Callbacks):
             # Record offsets for calculating mapping between screen and data
             # These are the screen locations for self._org_x1 and self._org_y1
             # Note [A]
-            fnht, fnwd = newdata.shape
+            fnwd, fnht = self.get_dims(newdata)
             self._off_x = self._dst_x
             self._off_y = self._imgwin_ht - (self._dst_y + fnht)
             self.logger.debug("off_x=%d off_y=%d" % (self._off_x, self._off_y))
@@ -409,7 +413,9 @@ class FitsImageBase(Callback.Callbacks):
         if (whence <= 2) or (self._rgbarr == None):
             # Convert data to an index array
             # TODO: Not sure which is the fastest index type, might be 64-bit
+            # on 64-bit systems?
             idx = self._prergb.astype('uint32')
+            self.logger.info("shape of index is %s" % (str(idx.shape)))
 
             # Apply colormap.  We produce three arrays, one for R, G and B,
             # then combine them for a NxMx3 array.
@@ -434,12 +440,12 @@ class FitsImageBase(Callback.Callbacks):
             # data size is bigger, skip pixels
             xskip = max(1, dx // width)
             yskip = max(1, dy // height)
-            #skip = min(xskip, yskip)
             skip = max(xskip, yskip)
             self.logger.debug("xskip=%d yskip=%d skip=%d" % (xskip, yskip, skip))
 
             # NOTE [A]
             newdata = self.data[y1:y2+1:skip, x1:x2+1:skip]
+            self.logger.debug("intermediate shape %s" % str(newdata.shape))
             org_fac = - skip
         else:
             # data size is smaller, repeat pixels
@@ -455,11 +461,10 @@ class FitsImageBase(Callback.Callbacks):
             newdata = newdata.repeat(rept, axis=0)
             newdata = newdata.repeat(rept, axis=1)
             self.logger.debug("intermediate shape 2 %s" % str(newdata.shape))
-            #newdata = newdata[0:width, 0:height]
             org_fac = rept
 
         # NOTE [A]
-        ht, wd = newdata.shape
+        wd, ht = self.get_dims(newdata)
         self.logger.debug("cutout is %dx%d  render=%dx%d" % (wd, ht, width, height))
         assert (wd >= width) and (ht >= height), \
                FitsImageError("cutout is %dx%d  render=%dx%d" % (
@@ -683,11 +688,9 @@ class FitsImageBase(Callback.Callbacks):
     
     def apply_data_transforms1(self):
         newdata = self._data_org
+        print "data shape is %s" % str(newdata.shape)
         
         if self._swapXY:
-            #newdata = numpy.rot90(newdata, 1)
-            #newdata = numpy.rollaxis(newdata, 1, 0)
-            #newdata = newdata.transpose()
             newdata = newdata.swapaxes(0, 1)
         if self._flipY:
             newdata = numpy.flipud(newdata)
@@ -695,7 +698,8 @@ class FitsImageBase(Callback.Callbacks):
             newdata = numpy.fliplr(newdata)
 
         self.data = newdata
-        self.height, self.width = newdata.shape
+        self.width, self.height = self.get_dims(newdata)
+        print "new data shape is %dx%d" % (self.width, self.height)
 
     def apply_data_transforms2(self, data, vmin, vmax):
         # apply other transforms
@@ -770,6 +774,8 @@ class FitsImageBase(Callback.Callbacks):
             zoomlevel = max(1, int(math.floor(zoom)))
 
         # Constrain autoscaling to limits set
+        self.logger.debug("calculated zoomlevel is %d (min=%d, max=%d)" % (
+            zoomlevel, self.t_zoom_minauto, self.t_zoom_maxauto))
         zoomlevel = min(zoomlevel, self.t_zoom_maxauto)
         zoomlevel = max(zoomlevel, self.t_zoom_minauto)
         self.logger.debug("zoomx=%.2f zoomy=%.2f zoom=%.2f zoomlevel=%d" % (
@@ -973,7 +979,7 @@ class FitsImageBase(Callback.Callbacks):
 
     def histogram(self, x1, y1, x2, y2, numbins=2048):
         data = self.data[y1:y2, x1:x2]
-        height, width = data.shape
+        width, height = self.get_dims(data)
         self.logger.debug("Histogram analysis array is %dx%d" % (
             width, height))
 

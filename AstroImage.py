@@ -2,7 +2,7 @@
 # astro/image.py -- Abstraction of an astronomical data image.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Jun 22 13:38:34 HST 2012
+#  Last edit: Tue Aug 28 11:40:59 HST 2012
 #]
 # Takeshi Inagaki
 #
@@ -87,16 +87,25 @@ class AstroImage(object):
                 fitspath, str(e)))
 
         if numhdu == None:
-            hdu = fits_f[0]
-            # compressed FITS file?
-            if (hdu.data == None) and (len(fits_f) > 1):
-                i = 1
-                while (hdu.data == None) and (i < len(fits_f)):
-                    hdu = fits_f[i]
-                    i += 1
+            found_valid_hdu = False
+            for i in range(len(fits_f)):
+                hdu = fits_f[i]
                 if hdu.data == None:
-                    raise CalcError("No valid data HDU found in '%s'" % (
-                        filepath))
+                    # compressed FITS file or non-pixel data hdu?
+                    continue
+                if not isinstance(hdu.data, numpy.ndarray):
+                    # We need to open a numpy array
+                    continue
+                if len(hdu.data.shape) < 2:
+                    # Don't know what to make of 1D data
+                    continue
+                # Looks good, let's try it
+                found_valid_hdu = True
+                break
+            
+            if not found_valid_hdu:
+                raise CalcError("No data HDU found that Ginga can open in '%s'" % (
+                    filepath))
         else:
             numhdu = fits_f[numhdu]
             

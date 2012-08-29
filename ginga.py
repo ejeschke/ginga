@@ -3,7 +3,7 @@
 # ginga.py -- FITS image viewer and tool.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Jul 20 16:34:34 HST 2012
+#  Last edit: Tue Aug 28 11:52:09 HST 2012
 #]
 #
 """
@@ -90,6 +90,7 @@ global_plugins = [
     Bunch(module='Contents', tab='Contents', ws='right', raisekey='c'),
     Bunch(module='WBrowser', tab='Help', ws='right', raisekey='?'),
     Bunch(module='Debug', tab='Debug', ws='right'),
+    Bunch(module='Errors', tab='Errors', ws='right'),
     ]
 
 local_plugins = [

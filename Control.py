@@ -2,7 +2,7 @@
 # Control.py -- Controller for the Ginga FITS viewer.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Sat Jul 21 15:35:31 HST 2012
+#  Last edit: Tue Aug 28 17:07:07 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -15,15 +15,23 @@ import traceback
 import re, time
 import thread, threading
 import Queue
+import mimetypes
 
-import Bunch
-import Datasrc
-import Callback
+import numpy
+try:
+    # do we have Python Imaging Library available?
+    import Image as PIL
+    have_pil = True
+except ImportError:
+    have_pil = False
 
 # Local application imports
 import imap, cmap
 import Catalog
 import AstroImage
+import Bunch
+import Datasrc
+import Callback
 
 default_cmap = 'real'
 default_imap = 'ramp'
@@ -305,6 +313,11 @@ class GingaControl(Callback.Callbacks):
             self.logger.error("Unable to load global plugin '%s': %s" % (
                 name, str(e)))
 
+    def show_error(self, errmsg):
+        obj = self.gpmon.getPlugin('Errors')
+        obj.add_error(errmsg)
+        self.ds.raise_tab('Errors')
+        
     # BASIC IMAGE OPERATIONS
 
     def load_file(self, fitspath, chname=None, wait=True):
@@ -315,19 +328,43 @@ class GingaControl(Callback.Callbacks):
             chinfo = self.get_channelInfo(chname)
             chname = chinfo.name
 
+        # Sometimes there is a newline at the end of this..
+        fitspath = fitspath.strip()
+
+        # TODO: need progress bar or other visual indicator
         #self.gui_do(chinfo.fitsimage.onscreen_message, "Loading file...")
             
         # Create a bunch with the image params
         image = AstroImage.AstroImage()
         try:
             self.logger.info("Loading image from %s" % (fitspath))
-            image.load_file(fitspath)
+            is_open = False
+            if have_pil:
+                typ, enc = mimetypes.guess_type(fitspath)
+                if typ:
+                    typ, subtyp = typ.split('/')
+                    self.logger.info("MIME type is %s/%s" % (typ, subtyp))
+                    if (typ == 'image') and (subtyp != 'fits'):
+                        img_pil = PIL.open(fitspath)
+                        data = numpy.array(img_pil)
+                        image.set_data(data)
+                        is_open = True
+
+            if not is_open:
+                self.logger.debug("Loading file as FITS file.")
+                image.load_file(fitspath)
             #self.gui_do(chinfo.fitsimage.onscreen_message, "")
 
         except Exception, e:
             errmsg = "Failed to load file '%s': %s" % (
                 fitspath, str(e))
             self.logger.error(errmsg)
+            try:
+                (type, value, tb) = sys.exc_info()
+                tb_str = "\n".join(traceback.format_tb(tb))
+            except Exception, e:
+                tb_str = "Traceback information unavailable."
+            self.gui_do(self.show_error, errmsg + '\n' + tb_str)
             #chinfo.fitsimage.onscreen_message("Failed to load file", delay=1.0)
             raise FitsViewError(errmsg)
 

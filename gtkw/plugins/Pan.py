@@ -2,7 +2,7 @@
 # Pan.py -- Pan plugin for fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Jun 22 13:44:51 HST 2012
+#  Last edit: Mon Aug 27 14:25:44 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -51,13 +51,15 @@ class Pan(GingaPlugin.GlobalPlugin):
         #sfi = FitsImageCanvasGtk.FitsImageCanvas(logger=self.logger)
         sfi = FitsImageCanvasGtk.FitsImageCanvas(logger=None)
         sfi.enable_autoscale('on')
+        sfi.set_autoscale_limits(-200, 100)
+        sfi.set_zoom_limits(-200, 100)
+        sfi.enable_zoom(False)
         sfi.enable_autolevels('off')
         ## sfi.enable_draw(True)
         sfi.set_drawtype('rectangle')
         sfi.set_drawcolor('green')
         ## sfi.set_callback('draw-event', self.panzoom)
         sfi.define_cursor('pick', gtk.gdk.Cursor(gtk.gdk.FLEUR)) 
-        ## sfi.enable_zoom(False)
         ## sfi.enable_cuts(False)
         sfi.set_bg(0.4, 0.4, 0.4)
         sfi.set_callback('motion', self.panxy)

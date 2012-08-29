@@ -2,7 +2,7 @@
 # Pan.py -- Pan plugin for fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Jun 22 13:50:29 HST 2012
+#  Last edit: Wed Aug 29 12:53:11 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -42,13 +42,15 @@ class Pan(GingaPlugin.GlobalPlugin):
 
         sfi = FitsImageCanvasQt.FitsImageCanvas(logger=self.logger)
         sfi.enable_autoscale('on')
+        sfi.set_autoscale_limits(-200, 100)
+        sfi.set_zoom_limits(-200, 100)
+        sfi.enable_zoom(False)
         sfi.enable_autolevels('off')
         ## sfi.enable_draw(True)
         sfi.set_drawtype('rectangle')
         sfi.set_drawcolor('green')
         ## sfi.set_callback('draw-event', self.panzoom)
         sfi.define_cursor('pick', QtGui.QCursor(QtCore.Qt.OpenHandCursor))
-        ## sfi.enable_zoom(False)
         ## sfi.enable_cuts(False)
         sfi.set_bg(0.4, 0.4, 0.4)
         sfi.set_callback('motion', self.panxy)
