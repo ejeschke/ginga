@@ -2,7 +2,7 @@
 # ColorBar.py -- color bar widget
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Jun 22 13:41:31 HST 2012
+#  Last edit: Wed Sep  5 15:08:09 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -38,6 +38,15 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
         self.set_rgbmap(rgbmap)
 
         self._start_x = 0
+        # for drawing range
+        self.t_showrange = True
+        self.t_font = 'Sans Serif'
+        self.t_fontsize = 10
+        self.t_spacing = 40
+        self.loval = 0
+        self.hival = 0
+        self._interval = {}
+        self._avg_pixels_per_range_num = 70.0
         
         # For callbacks
         for name in ('motion', 'scroll'):
@@ -75,6 +84,17 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
     def set_imap(self, im, reset=False):
         self.rgbmap.set_imap(im)
         
+    def set_range(self, loval, hival, redraw=True):
+        self.loval = loval
+        self.hival = hival
+        # Calculate reasonable spacing for range numbers
+        cr = self.window.cairo_create()
+        text = "%d" % (int(hival))
+        a, b, _wd, _ht, _i, _j = cr.text_extents(text)
+        self._avg_pixels_per_range_num = self.t_spacing + _wd
+        if self.t_showrange and redraw:
+            self.redraw()
+        
     def configure_event(self, widget, event):
         self.pixmap = None
         x, y, width, height = widget.get_allocation()
@@ -84,6 +104,14 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
         self.pixmap = pixmap
         self.width = width
         self.height = height
+        # calculate intervals for range numbers
+        nums = width // self._avg_pixels_per_range_num
+        spacing = 256 // nums
+        self._interval = {}
+        for i in xrange(nums):
+            self._interval[i*spacing] = True
+        self.logger.debug("nums=%d spacing=%d intervals=%s" % (
+            nums, spacing, self._interval))
 
         self.redraw()
 
@@ -133,6 +161,7 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
         #    rect.width, rect.height, clr_wd, rem_px, ival)
 
         j = ival; off = 0
+        range_pts = []
         for i in range(256):
             
             wd = clr_wd    
@@ -151,8 +180,36 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
             cr.set_source_rgb(r, g, b)
             cr.rectangle(x, 0, wd, clr_ht)
             cr.fill()
+
+            # Draw range scale if we are supposed to
+            if self.t_showrange and self._interval.has_key(i):
+                pct = float(i) / 256.0
+                val = int(self.loval + pct * (self.hival - self.loval))
+                text = "%d" % (val)
+                a, b, _wd, _ht, _i, _j = cr.text_extents(text)
+
+                rx = x
+                ry = 4 + _ht
+                range_pts.append((rx, ry, text))
+                
             off += wd
 
+        # draw range
+        cr.select_font_face(self.t_font)
+        cr.set_font_size(self.t_fontsize)
+        cr.set_source_rgb(0.0, 0.0, 0.0)
+        cr.set_line_width(1)
+
+        for (x, y, text) in range_pts:
+            # tick
+            cr.move_to (x, 0)
+            cr.line_to (x, 2)
+            cr.close_path()
+            cr.stroke_preserve()
+            #cr.fill()
+            # number
+            cr.move_to(x, y)
+            cr.show_text(text)
 
     def draw(self, cr):
         return self._draw(cr)
@@ -229,8 +286,10 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
             #print "dx=%f wd=%d pct=%f" % (dx, wd, pct)
             self.shift_colormap(pct)
             return True
-        
-        return self.make_callback('motion', event)
+
+        pct = float(x) / float(self.width)
+        value = int(self.loval + pct * (self.hival - self.loval))
+        return self.make_callback('motion', value, event)
 
     def scroll_event(self, widget, event):
         # event.button, event.x, event.y

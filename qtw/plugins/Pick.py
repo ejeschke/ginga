@@ -2,7 +2,7 @@
 # Pick.py -- Pick plugin for fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Jun 22 13:50:29 HST 2012
+#  Last edit: Wed Sep  5 09:34:55 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -373,7 +373,11 @@ class Pick(GingaPlugin.LocalPlugin):
         self.fv.showStatus("Draw a rectangle with the right mouse button")
         
     def stop(self):
-        # remove the canvas from the image
+        # Delete previous peak marks
+        objs = self.fitsimage.getObjectsByTagpfx('peak')
+        self.fitsimage.deleteObjects(objs, redraw=False)
+
+        # deactivate the canvas 
         self.canvas.ui_setActive(False)
         try:
             self.fitsimage.deleteObjectByTag(self.layertag)
@@ -459,7 +463,6 @@ class Pick(GingaPlugin.LocalPlugin):
                 
             # Evaluate those peaks
             objlist = self.iqcalc.evaluate_peaks(peaks, data,
-                                                 bright_radius=radius,
                                                  fwhm_radius=radius)
             if len(objlist) == 0:
                 raise Exception("Error evaluating bright peaks")
@@ -489,6 +492,7 @@ class Pick(GingaPlugin.LocalPlugin):
             # Calculate X/Y of center of star
             obj_x = qs.objx
             obj_y = qs.objy
+            self.logger.info("object center is x,y=%f,%f" % (obj_x, obj_y))
             fwhm = qs.fwhm
             fwhm_x, fwhm_y = qs.fwhm_x, qs.fwhm_y
             rnd_x, rnd_y = int(round(qs.objx)), int(round(qs.objy))

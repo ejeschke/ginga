@@ -2,7 +2,7 @@
 # astro/image.py -- Abstraction of an astronomical data image.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Tue Aug 28 11:40:59 HST 2012
+#  Last edit: Wed Sep  5 18:15:38 HST 2012
 #]
 # Takeshi Inagaki
 #
@@ -12,11 +12,9 @@
 #
 import sys
 import math
-
+import time
 import iqcalc
 import wcs
-# TEMP
-#import qualsize
 
 import pyfits
 import numpy
@@ -33,7 +31,8 @@ class AstroImage(object):
     NOTE: this module is NOT thread-safe!
     """
 
-    def __init__(self, data_np=None, metadata=None, wcsclass=None):
+    def __init__(self, data_np=None, metadata=None, wcsclass=None,
+                 logger=None):
         if data_np == None:
             data_np = numpy.zeros((1, 1))
         self.data = data_np
@@ -45,7 +44,8 @@ class AstroImage(object):
             self.update_metadata(metadata)
 
         self.maximize_region()
-        self.iqcalc = iqcalc.IQCalc()
+        self.iqcalc = iqcalc.IQCalc(logger=logger)
+
 
     @property
     def width(self):
@@ -335,19 +335,23 @@ class AstroImage(object):
 
 
     def qualsize(self, x1=None, y1=None, x2=None, y2=None, radius=5,
-                 threshold=None):
+                 bright_radius=2, threshold=None):
         if x1 == None:
             x1 = self.x1
             y1 = self.y1
             x2 = self.x2
             y2 = self.y2
+
+        x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
         data = self.cutout_data(x1, y1, x2, y2, astype='float32')
 
-        qs = self.iqcalc.pick_field(data, radius=radius, bright_radius=radius,
+        start_time = time.time()
+        qs = self.iqcalc.pick_field(data, radius=radius,
+                                    bright_radius=bright_radius,
                                     threshold=threshold)
-        ## print "e: obj=%f,%f fwhm=%f" % (qs.objx, qs.objy, qs.fwhm)
-        ## (x, y, fwhm, brightness, skylevel, objx, objy) = qualsize.qualsize(data)
-        ## print "k: obj=%f,%f fwhm=%f" % (objx, objy, fwhm)
+        elapsed = time.time() - start_time
+        print "e: obj=%f,%f fwhm=%f sky=%f bright=%f (%f sec)" % (
+            qs.objx, qs.objy, qs.fwhm, qs.skylevel, qs.brightness, elapsed)
         
         # Add back in offsets into image to get correct values with respect
         # to the entire image

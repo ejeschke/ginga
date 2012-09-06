@@ -2,7 +2,7 @@
 # ColorBar.py -- color bar widget
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Jun 22 13:48:12 HST 2012
+#  Last edit: Wed Sep  5 18:18:02 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -24,6 +24,9 @@ class ColorBar(Callback.Callbacks, QtGui.QWidget):
 #class ColorBar(QtGui.QWidget):
 
     def __init__(self, logger, rgbmap=None):
+        QtGui.QWidget.__init__(self)
+        Callback.Callbacks.__init__(self)
+
         self.logger = logger
         self.pixmap = None
         
@@ -32,9 +35,15 @@ class ColorBar(Callback.Callbacks, QtGui.QWidget):
         self.set_rgbmap(rgbmap)
         
         self._start_x = 0
-
-        QtGui.QWidget.__init__(self)
-        Callback.Callbacks.__init__(self)
+        # for drawing range
+        self.t_showrange = True
+        self.t_font = 'Sans Serif'
+        self.t_fontsize = 8
+        self.t_spacing = 40
+        self.loval = 0
+        self.hival = 0
+        self._interval = {}
+        self._avg_pixels_per_range_num = 70.0
 
         # For callbacks
         for name in ('motion', 'scroll'):
@@ -44,6 +53,8 @@ class ColorBar(Callback.Callbacks, QtGui.QWidget):
         vpolicy = QtGui.QSizePolicy.MinimumExpanding
         self.setSizePolicy(hpolicy, vpolicy)
 
+        # in order to generate mouse events with no buttons down
+        self.setMouseTracking(True)
 
     def get_rgbmap(self):
         return self.rgbmap
@@ -61,6 +72,23 @@ class ColorBar(Callback.Callbacks, QtGui.QWidget):
     def set_imap(self, im, reset=False):
         self.rgbmap.set_imap(im)
 
+    def set_range(self, loval, hival, redraw=True):
+        self.loval = loval
+        self.hival = hival
+        # Calculate reasonable spacing for range numbers
+        cr = self.setup_cr()
+        text = "%d" % (int(hival))
+        rect = cr.boundingRect(0, 0, 1000, 1000, 0, text)
+        x1, y1, x2, y2 = rect.getCoords()
+        _wd = x2 - x1
+        _ht = y2 - y1
+        self._avg_pixels_per_range_num = self.t_spacing + _wd
+        # dereference this painter or we get an error redrawing
+        cr = None
+
+        if self.t_showrange and redraw:
+            self.redraw()
+        
     def get_size(self):
         rect = self.geometry()
         x1, y1, x2, y2 = rect.getCoords()
@@ -75,6 +103,14 @@ class ColorBar(Callback.Callbacks, QtGui.QWidget):
         pixmap = QtGui.QPixmap(width, height)
         #pixmap.fill(QtGui.QColor("black"))
         self.pixmap = pixmap
+        # calculate intervals for range numbers
+        nums = width // self._avg_pixels_per_range_num
+        spacing = 256 // nums
+        self._interval = {}
+        for i in xrange(nums):
+            self._interval[i*spacing] = True
+        self.logger.debug("nums=%d spacing=%d intervals=%s" % (
+            nums, spacing, self._interval))
 
         self.redraw()
        
@@ -125,6 +161,7 @@ class ColorBar(Callback.Callbacks, QtGui.QWidget):
         #    width, height, clr_wd, rem_px, ival)
 
         j = ival; off = 0
+        range_pts = []
         for i in range(256):
             
             wd = clr_wd    
@@ -140,7 +177,38 @@ class ColorBar(Callback.Callbacks, QtGui.QWidget):
 
             color = QtGui.QColor(r, g, b)
             cr.fillRect(QtCore.QRect(x, 0, wd, clr_ht), color)
+
+            # Draw range scale if we are supposed to
+            if self.t_showrange and self._interval.has_key(i):
+                pct = float(i) / 256.0
+                val = int(self.loval + pct * (self.hival - self.loval))
+                text = "%d" % (val)
+                rect = cr.boundingRect(0, 0, 1000, 1000, 0, text)
+                x1, y1, x2, y2 = rect.getCoords()
+                _wd = x2 - x1
+                _ht = y2 - y1
+                _ht = 14
+
+                rx = x
+                ry = _ht - 2
+                range_pts.append((rx, ry, text))
+                
             off += wd
+
+        # draw range
+        pen = cr.pen()
+        cr.setFont(QtGui.QFont(self.t_font, pointSize=self.t_fontsize))
+        color = QtGui.QColor()
+        color.setRgbF(0.0, 0.0, 0.0)
+        pen.setColor(color)
+        cr.setPen(pen)
+
+        for (x, y, text) in range_pts:
+            # tick
+            cr.drawLine(x, 0, x, 2)
+            # number
+            cr.drawText(x, y, text)
+
 
     def draw(self):
         cr = self.setup_cr()
@@ -200,8 +268,12 @@ class ColorBar(Callback.Callbacks, QtGui.QWidget):
             pct = float(dx) / float(wd)
             #print "dx=%f wd=%d pct=%f" % (dx, wd, pct)
             self.shift_colormap(pct)
-        
-        self.make_callback('motion', event)
+            return True
+
+        width, height = self.get_size()
+        pct = float(x) / float(width)
+        value = int(self.loval + pct * (self.hival - self.loval))
+        return self.make_callback('motion', value, event)
 
     def wheelEvent(self, event):
         delta = event.delta()

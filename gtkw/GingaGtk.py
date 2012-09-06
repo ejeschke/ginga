@@ -2,7 +2,7 @@
 # GingaGtk.py -- Gtk display handler for the Ginga FITS tool.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Jul 20 16:43:51 HST 2012
+#  Last edit: Tue Sep  4 18:12:39 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -275,6 +275,7 @@ class GingaView(GtkMain.GtkMain):
         cbar.show()
         self.colorbar = cbar
         self.add_callback('active-image', self.change_cbar, cbar)
+        cbar.add_callback('motion', self.cbar_value_cb)
 
         fr = gtk.Frame()
         fr.set_shadow_type(gtk.SHADOW_ETCHED_OUT)
@@ -285,6 +286,7 @@ class GingaView(GtkMain.GtkMain):
         fi = FitsImageCanvasGtk.FitsImageCanvas(logger=self.logger)
         fi.enable_autoscale(self.default_autoscale)
         fi.set_autoscale_limits(-20, 3)
+        fi.set_zoom_limits(-20, 50)
         fi.enable_autolevels(self.default_autolevels)
         fi.enable_zoom(True)
         fi.enable_cuts(True)
@@ -295,6 +297,7 @@ class GingaView(GtkMain.GtkMain):
         fi.add_callback('motion', self.motion_cb)
         fi.add_callback('key-press', self.keypress)
         fi.add_callback('drag-drop', self.dragdrop)
+        fi.add_callback('cut-set', self.change_range_cb, self.colorbar)
         rgbmap = fi.get_rgbmap()
         rgbmap.add_callback('changed', self.rgbmap_cb, fi)
         fi.set_bg(0.2, 0.2, 0.2)

@@ -2,7 +2,7 @@
 # iqcalc.py -- image quality calculations on FITS data
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Jun 22 13:38:38 HST 2012
+#  Last edit: Wed Sep  5 18:05:41 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -15,7 +15,6 @@ import logging
 import numpy
 import scipy.optimize as optimize
 import scipy.ndimage as ndimage
-#import scipy.ndimage.morphology as morph
 import scipy.ndimage.filters as filters
 
 import Bunch
@@ -32,6 +31,9 @@ class IQCalc(object):
             logger = logging.getLogger('IQCalc')
         self.logger = logger
 
+        # for adjustments to background level
+        self.skylevel_magnification = 1.05
+        self.skylevel_offset = 40.0
 
     ## def histogram(self, data, numbins=20):
     ##     height, width = data.shape
@@ -101,7 +103,8 @@ class IQCalc(object):
 
         # Now that we have the sdev from fitting, we can calculate FWHM
         fwhm = 2.0 * numpy.sqrt(2.0 * numpy.log(2.0)) * sdev
-        return (fwhm, mu, sdev, maxv)
+        #return (fwhm, mu, sdev, maxv)
+        return (float(fwhm), float(mu), float(sdev), maxv)
 
 
     def get_fwhm(self, x, y, radius, data, medv=None):
@@ -121,7 +124,7 @@ class IQCalc(object):
         ctr_y = y0 + cy
         self.logger.debug("fwhm_x,fwhm_y=%f,%f center=%f,%f" % (
             fwhm_x, fwhm_y, ctr_x, ctr_y))
-        return (fwhm_x, fwhm_y, ctr_x, ctr_y)
+        return (fwhm_x, fwhm_y, ctr_x, ctr_y, sdx, sdy)
 
 
     def starsize(self, fwhm_x, deg_pix_x, fwhm_y, deg_pix_y):
@@ -138,15 +141,49 @@ class IQCalc(object):
         # TODO
         return xc, yc
 
+    def get_threshold(self, data, sigma=3, iterations=3):
+        for i in xrange(iterations):
+            median = numpy.ma.median(data)
+            stdev = numpy.ma.std(data)
+            locut = median - (sigma*stdev)
+            hicut = median + (sigma*stdev)
+            print "locut=%f hicut=%f" % (locut, hicut)
+            data = numpy.ma.masked_outside(data, locut, hicut)
 
-    def find_bright_peaks(self, data, threshold=None, sigma=2, radius=5):
+        threshold = hicut
+        return threshold
+        
+    def get_threshold(self, data, sigma=5):
+        median = numpy.median(data)
+        # avoid dead pixels in threshold calculation
+        maxval = data.max()
+        dist = (data - median).clip(0, maxval)
+        #dist = numpy.sqrt(numpy.var(dist))
+        dist = numpy.fabs(data - median).mean()
+        # tanaka-san says to try median instead of mean, but so far for
+        # "real" images mean is working better
+        #dist = numpy.median(numpy.fabs(data - median))
+        threshold = median + sigma * dist
+        return threshold
+        
+    def find_bright_peaks(self, data, threshold=None, sigma=5, radius=5):
         """
+        Find bright peak candidates in (data).  (threshold) specifies a
+        threshold value below which an object is not considered a candidate.
+        If threshold is blank, a default is calculated using (sigma).
+        (radius) defines a pixel radius for determining local maxima--if the
+        desired objects are larger in size, specify a larger radius.
+
+        The routine returns a list of candidate object coordinate tuples
+        (x, y) in data.
         """
         if threshold == None:
             # set threshold to default if none provided
-            median = numpy.median(data)
-            dist = numpy.fabs(data - median).mean()
-            threshold = median + sigma * dist
+            threshold = self.get_threshold(data, sigma=sigma)
+            self.logger.debug("threshold defaults to %f (sigma=%f)" % (
+                threshold, sigma))
+            print ("threshold defaults to %f (sigma=%f)" % (
+                threshold, sigma))
 
         data_max = filters.maximum_filter(data, radius)
         maxima = (data == data_max)
@@ -197,7 +234,11 @@ class IQCalc(object):
         from (x, y) in (data).
         """
         x0, y0, arr = self.cut_region(x, y, radius, data)
-        return numpy.nanmax(arr)
+        res = numpy.nanmax(arr)
+        ## arr2 = numpy.sort(arr.flat)
+        ## idx = int(len(arr2) * 0.80)
+        ## res = arr2[idx]
+        return float(res)
 
 
     def fwhm_data(self, x, y, data, radius=10):
@@ -206,7 +247,7 @@ class IQCalc(object):
 
     # EVALUATION ON A FIELD
     
-    def evaluate_peaks(self, peaks, data, bright_radius=3, fwhm_radius=10):
+    def evaluate_peaks(self, peaks, data, bright_radius=2, fwhm_radius=10):
 
         height, width = data.shape
         hh = float(height) / 2.0
@@ -217,14 +258,18 @@ class IQCalc(object):
         w4 = float(width) * 4.0
 
         # Find the median (sky/background) level
-        skylevel = numpy.median(data)
+        median = float(numpy.median(data))
+
+        skylevel = median
+        # Old SOSS qualsize() applies this adjustment to skylevel
+        #skylevel = median * self.skylevel_magnification + self.skylevel_offset
 
         # Form a list of objects and their characteristics
         objlist = []
         for x, y in peaks:
             # Find the fwhm in x and y 
-            fwhm_x, fwhm_y, ctr_x, ctr_y = self.fwhm_data(x, y, data,
-                                                          radius=fwhm_radius)
+            (fwhm_x, fwhm_y, ctr_x, ctr_y,
+             sdx, sdy) = self.fwhm_data(x, y, data, radius=fwhm_radius)
             self.logger.debug("orig=%f,%f  ctr=%f,%f  fwhm=%f,%f" % (
                 x, y, ctr_x, ctr_y, fwhm_x, fwhm_y))
 
@@ -245,8 +290,9 @@ class IQCalc(object):
                 pos = 1.0 - dy2
 
             # brightness above background
-            maxv = self.brightness(int(x), int(y), bright_radius, data)
-            bright = maxv - skylevel
+            bv = self.brightness(int(x), int(y), bright_radius, data)
+            bright = bv - median
+            #bright = (maxx + maxy) / 2.0
             #print "brightness=%f" % bright
 
             obj = Bunch.Bunch(objx=ctr_x, objy=ctr_y, pos=pos, 
@@ -284,7 +330,7 @@ class IQCalc(object):
         raise IQCalcError("No object matches criteria")
 
 
-    def pick_field(self, data, bright_radius=3, radius=5,
+    def pick_field(self, data, bright_radius=2, radius=10,
                    threshold=None):
 
         height, width = data.shape
@@ -292,14 +338,15 @@ class IQCalc(object):
         # Find the bright peaks in the image
         peaks = self.find_bright_peaks(data, radius=radius,
                                        threshold=threshold)
-        print "peaks=", peaks
+        #print "peaks=", peaks
         self.logger.info("peaks=%s" % str(peaks))
         if len(peaks) == 0:
             raise IQCalcError("Cannot find bright peaks")
 
         # Evaluate those peaks
         objlist = self.evaluate_peaks(peaks, data,
-                                      bright_radius=bright_radius)
+                                      bright_radius=bright_radius,
+                                      fwhm_radius=radius)
         if len(objlist) == 0:
             raise IQCalcError("Error evaluating bright peaks")
         

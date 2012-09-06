@@ -2,7 +2,7 @@
 # RGBMap.py -- color mapping
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Tue Aug 28 10:43:42 HST 2012
+#  Last edit: Tue Sep  4 16:38:44 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -61,6 +61,8 @@ class RGBMapper(Callback.Callbacks):
         return tuple(self.arr[index])
 
     def get_rgbval(self, index):
+        assert (index >= 0) and (index < 256), \
+               RGBMapError("Index must be in range 0-255 !")
         return (self.arr[0][index],
                 self.arr[1][index],
                 self.arr[2][index])

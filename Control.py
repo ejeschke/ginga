@@ -2,7 +2,7 @@
 # Control.py -- Controller for the Ginga FITS viewer.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Tue Aug 28 17:07:07 HST 2012
+#  Last edit: Wed Sep  5 09:28:34 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -111,6 +111,7 @@ class GingaControl(Callback.Callbacks):
 
         # Initialize image server bank
         self.imgsrv = Catalog.ServerBank(self.logger)
+        self.dsscnt = 0
 
         try:
             gprefs = self.settings.getSettings('ginga')
@@ -133,7 +134,10 @@ class GingaControl(Callback.Callbacks):
         fits_x, fits_y = data_x + 1, data_y + 1
         # Get the value under the data coordinates
         try:
-            value = fitsimage.get_data(data_x, data_y)
+            #value = fitsimage.get_data(data_x, data_y)
+            # We report the value across the pixel, even though the coords
+            # change halfway across the pixel
+            value = fitsimage.get_data(int(data_x+0.5), int(data_y+0.5))
 
         except (Exception, FitsImage.FitsImageCoordsError):
             value = None
@@ -240,10 +244,25 @@ class GingaControl(Callback.Callbacks):
 
     def _match_cmap(self, fitsimage, colorbar):
         rgbmap = fitsimage.get_rgbmap()
+        loval, hival = fitsimage.get_cut_levels()
+        colorbar.set_range(loval, hival, redraw=False)
         colorbar.set_rgbmap(rgbmap)
         
     def change_cbar(self, viewer, fitsimage, cbar):
         self._match_cmap(fitsimage, cbar)
+        
+    def change_range_cb(self, fitsimage, loval, hival, cbar):
+        if fitsimage != self.getfocus_fitsimage():
+            return False
+        cbar.set_range(loval, hival)
+        
+    def cbar_value_cb(self, cbar, value, event):
+        #print "CBAR VALUE = %f" % (value)
+        chinfo = self.get_channelInfo()
+        readout = chinfo.readout
+        maxv = readout.maxv
+        text = "Value: %-*.*s" % (maxv, maxv, value)
+        readout.set_text(text)
         
     def rgbmap_cb(self, rgbmap, fitsimage):
         if fitsimage != self.getfocus_fitsimage():
@@ -752,7 +771,9 @@ class GingaControl(Callback.Callbacks):
     
     def get_sky_image(self, key, params):
 
-        filename = 'sky-' + str(time.time()).replace('.', '-') + '.fits'
+        #filename = 'sky-' + str(time.time()).replace('.', '-') + '.fits'
+        filename = 'sky-' + str(self.dsscnt) + '.fits'
+        self.dsscnt = (self.dsscnt + 1) % 5
         filepath = os.path.join("/tmp", filename)
         try:
             self.imgsrv.getImage(key, filepath, **params)

@@ -2,7 +2,7 @@
 # Pick.py -- Pick plugin for fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Jun 22 13:44:51 HST 2012
+#  Last edit: Fri Aug 31 23:56:41 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -339,13 +339,13 @@ class Pick(GingaPlugin.LocalPlugin):
             self.logger.error("Error making contour plot: %s" % (
                 str(e)))
 
-    def _plot_fwhm_axis(self, arr, medv, color1, color2, color3):
+    def _plot_fwhm_axis(self, arr, skybg, color1, color2, color3):
         N = len(arr)
         X = numpy.array(range(N))
         Y = arr
         # subtract sky background
-        ## medv = numpy.median(Y)
-        Y = Y - medv
+        ## skybg = numpy.median(Y)
+        Y = Y - skybg
         maxv = Y.max()
         # clamp to 0..max
         Y = Y.clip(0, maxv)
@@ -368,16 +368,16 @@ class Pick(GingaPlugin.LocalPlugin):
             x0, y0, xarr, yarr = image.cutout_cross(x, y, radius)
 
             # get median value from the cutout area
-            medv = numpy.median(self.pick_data)
+            skybg = numpy.median(self.pick_data)
             self.logger.debug("cutting x=%d y=%d r=%d med=%f" % (
-                x, y, radius, medv))
+                x, y, radius, skybg))
             
             self.logger.debug("xarr=%s" % (str(xarr)))
-            fwhm_x, mu, sdev, maxv = self._plot_fwhm_axis(xarr, medv,
+            fwhm_x, mu, sdev, maxv = self._plot_fwhm_axis(xarr, skybg,
                                                           'blue', 'blue', 'skyblue')
 
             self.logger.debug("yarr=%s" % (str(yarr)))
-            fwhm_y, mu, sdev, maxv = self._plot_fwhm_axis(yarr, medv,
+            fwhm_y, mu, sdev, maxv = self._plot_fwhm_axis(yarr, skybg,
                                                           'green', 'green', 'seagreen')
             
             self.w.fig2.canvas.draw()
@@ -415,7 +415,11 @@ class Pick(GingaPlugin.LocalPlugin):
         self.fv.showStatus("Draw a rectangle with the right mouse button")
         
     def stop(self):
-        # remove the canvas from the image
+        # Delete previous peak marks
+        objs = self.fitsimage.getObjectsByTagpfx('peak')
+        self.fitsimage.deleteObjects(objs, redraw=False)
+
+        # deactivate the canvas 
         self.canvas.ui_setActive(False)
         try:
             self.fitsimage.deleteObjectByTag(self.layertag)
@@ -501,7 +505,6 @@ class Pick(GingaPlugin.LocalPlugin):
                 
             # Evaluate those peaks
             objlist = self.iqcalc.evaluate_peaks(peaks, data,
-                                                 bright_radius=radius,
                                                  fwhm_radius=radius)
             if len(objlist) == 0:
                 raise Exception("Error evaluating bright peaks")
@@ -531,6 +534,7 @@ class Pick(GingaPlugin.LocalPlugin):
             # Calculate X/Y of center of star
             obj_x = qs.objx
             obj_y = qs.objy
+            self.logger.info("object center is x,y=%f,%f" % (obj_x, obj_y))
             fwhm = qs.fwhm
             fwhm_x, fwhm_y = qs.fwhm_x, qs.fwhm_y
             rnd_x, rnd_y = int(round(qs.objx)), int(round(qs.objy))
