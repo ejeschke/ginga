@@ -2,7 +2,7 @@
 # GingaQt.py -- Qt display handler for the Ginga FITS tool.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Wed Sep  5 09:34:56 HST 2012
+#  Last edit: Thu Sep 13 13:54:22 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -38,7 +38,7 @@ icon_path = os.path.abspath(os.path.join(moduleHome, '..', 'icons'))
 rc_file = os.path.join(moduleHome, "qt_rc")
 
 
-class FitsViewError(Exception):
+class GingaViewError(Exception):
     pass
 
 class GingaView(QtMain.QtMain):

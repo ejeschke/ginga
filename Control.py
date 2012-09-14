@@ -2,7 +2,7 @@
 # Control.py -- Controller for the Ginga FITS viewer.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Wed Sep  5 09:28:34 HST 2012
+#  Last edit: Thu Sep 13 12:57:02 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -14,6 +14,7 @@ import sys, os
 import traceback
 import re, time
 import thread, threading
+import logging
 import Queue
 import mimetypes
 
@@ -43,7 +44,7 @@ default_autocut_method = 'histogram'
 pluginconfpfx = None
 
 
-class FitsViewError(Exception):
+class ControlError(Exception):
     pass
 
 class GingaControl(Callback.Callbacks):
@@ -154,7 +155,7 @@ class GingaControl(Callback.Callbacks):
             ra_txt, dec_txt = image.pixtoradec(fits_x, fits_y,
                                                format='str', coords='fits')
         except Exception, e:
-            self.logger.error("Bad coordinate conversion: %s" % (
+            self.logger.warn("Bad coordinate conversion: %s" % (
                 str(e)))
             ra_txt  = 'BAD WCS'
             dec_txt = 'BAD WCS'
@@ -385,7 +386,7 @@ class GingaControl(Callback.Callbacks):
                 tb_str = "Traceback information unavailable."
             self.gui_do(self.show_error, errmsg + '\n' + tb_str)
             #chinfo.fitsimage.onscreen_message("Failed to load file", delay=1.0)
-            raise FitsViewError(errmsg)
+            raise ControlError(errmsg)
 
         (path, filename) = os.path.split(fitspath)
 
@@ -521,7 +522,7 @@ class GingaControl(Callback.Callbacks):
                 self.load_file(path, chname=chname)
 
             else:
-                raise FitsViewError("No image by the name '%s' found" % (
+                raise ControlError("No image by the name '%s' found" % (
                     imname))
 
             
@@ -776,12 +777,18 @@ class GingaControl(Callback.Callbacks):
         self.dsscnt = (self.dsscnt + 1) % 5
         filepath = os.path.join("/tmp", filename)
         try:
+            os.remove(filepath)
+        except Exception, e:
+            self.logger.error("failed to remove tmp file '%s': %s" % (
+                filepath, str(e)))
+        try:
             self.imgsrv.getImage(key, filepath, **params)
 
             return filepath
         except Exception, e:
             errmsg = "Failed to load sky image: %s" % (str(e))
-            raise FitsViewError(errmsg)
+            self.show_error(errmsg)
+            raise ControlError(errmsg)
 
     def get_catalog(self, key, params):
 
@@ -791,7 +798,7 @@ class GingaControl(Callback.Callbacks):
             
         except Exception, e:
             errmsg ="Failed to load catalog: %s" % (str(e))
-            raise FitsViewError(errmsg)
+            raise ControlError(errmsg)
 
 
     def save_file(self, filepath, format='png', quality=90):
@@ -818,9 +825,32 @@ class GingaControl(Callback.Callbacks):
         self.statusMsg("%s", text)
         # TODO: turn bar red
 
+    def logit(self, text):
+        try:
+            obj = self.gpmon.getPlugin('Log')
+            obj.log(text)
+        except:
+            pass
+            
+    def set_loglevel(self, level):
+        handlers = self.logger.handlers
+        for hdlr in handlers:
+            hdlr.setLevel(level)
+        
     def play_soundfile(self, filepath, format=None, priority=20):
         self.logger.debug("Subclass could override this to play sound file '%s'" % (
             filepath))
 
+
+class GuiLogHandler(logging.Handler):
+    """Logs to a pane in the GUI."""
+
+    def __init__(self, fv, level=logging.NOTSET):
+        self.fv = fv
+        logging.Handler.__init__(self, level=level)
+        
+    def emit(self, record):
+        text = self.format(record)
+        self.fv.logit(text)
 
 # END

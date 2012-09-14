@@ -2,7 +2,7 @@
 # astro/image.py -- Abstraction of an astronomical data image.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Wed Sep  5 18:15:38 HST 2012
+#  Last edit: Thu Sep 13 13:51:35 HST 2012
 #]
 # Takeshi Inagaki
 #
@@ -12,9 +12,11 @@
 #
 import sys
 import math
-import time
+
 import iqcalc
 import wcs
+# TEMP
+import time
 
 import pyfits
 import numpy
@@ -548,8 +550,24 @@ class AstroImage(object):
         radius_px = abs(x2 - x)
         return radius_px
         
+    def calc_offset_xy(self, x, y, delta_deg_x, delta_deg_y):
+        # calculate ra/dec of x,y pixel
+        ra_deg, dec_deg = self.pixtoradec(x, y)
+
+        # add delta in deg to ra and calculate new ra/dec
+        ra2_deg = ra_deg + delta_deg_x
+        if ra2_deg > 360.0:
+            ra2_deg = math.fmod(ra2_deg, 360.0)
+
+        dec2_deg = dec_deg + delta_deg_y
+        
+        # then back to new pixel coords
+        x2, y2 = self.radectopix(ra2_deg, dec2_deg)
+        
+        return (x2, y2)
+        
     def calc_dist_center(self, delta_deg):
-        return self.calc_dist_xy(self.width // 2, self.height // 2)
+        return self.calc_dist_xy(self.width // 2, self.height // 2, delta_deg)
         
         
     def calc_compass(self, x, y, len_deg_e, len_deg_n):

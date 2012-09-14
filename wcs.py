@@ -2,7 +2,7 @@
 # wcs.py -- "Bare Bones" WCS calculations.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Jun 22 16:33:59 HST 2012
+#  Last edit: Wed Sep 12 17:44:54 HST 2012
 #]
 # Takeshi Inagaki
 # Bruce Bon
@@ -442,6 +442,41 @@ class WcslibWCS(BaseWCS):
 if have_pywcs:
     class WCS(WcslibWCS):
         pass
+
+    def simple_wcs(px_x, px_y, ra_deg, dec_deg, px_scale_deg_px, pa_deg):
+        """Calculate a set of WCS keywords for a 2D simple instrument FITS
+        file with a 'standard' RA/DEC pixel projection.
+
+        Parameters:
+            px_x            : reference pixel of field in X (usually center of field)
+            px_y            : reference pixel of field in Y (usually center of field)
+            ra_deg          : RA (in deg) for the reference point
+            dec_deg         : DEC (in deg) for the reference point
+            px_scale_deg_px : pixel scale deg/pixel
+            pa_deg          : position angle of the instrument (in deg)
+
+        Returns a WCS object.  Use the to_header() method on it to get something
+        interesting that you can use.
+        """
+        wcsobj = pywcs.WCS()
+
+        # center of the projection
+        wcsobj.wcs.crpix = [px_x, px_y]  # pixel position
+        wcsobj.wcs.crval = [ra_deg, dec_deg]   # RA, Dec (degrees)
+
+        # image scale in deg/pix
+        wcsobj.wcs.cdelt = numpy.array([-1, 1]) * px_scale_deg_px
+
+        # Position angle of north (radians E of N)
+        pa = numpy.radians(pa_deg)
+        cpa = numpy.cos(pa)
+        spa = numpy.sin(pa)
+        #wcsobj.wcs.pc = numpy.array([[-cpa, -spa], [-spa, cpa]])
+        wcsobj.wcs.pc = numpy.array([[cpa, -spa], [spa, cpa]])
+
+        return wcsobj
+
+
 else:
     class WCS(BareBonesWCS):
         pass

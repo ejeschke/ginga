@@ -2,7 +2,7 @@
 # FitsImage.py -- abstract classes for the display of FITS files
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Tue Aug 28 17:08:48 HST 2012
+#  Last edit: Thu Sep 13 12:19:11 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -415,7 +415,7 @@ class FitsImageBase(Callback.Callbacks):
             # TODO: Not sure which is the fastest index type, might be 64-bit
             # on 64-bit systems?
             idx = self._prergb.astype('uint32')
-            self.logger.info("shape of index is %s" % (str(idx.shape)))
+            self.logger.debug("shape of index is %s" % (str(idx.shape)))
 
             # Apply colormap.  We produce three arrays, one for R, G and B,
             # then combine them for a NxMx3 array.

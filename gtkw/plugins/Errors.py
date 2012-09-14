@@ -2,7 +2,7 @@
 # Errors.py -- Error reporting plugin for fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Tue Aug 28 12:42:42 HST 2012
+#  Last edit: Thu Sep 13 11:28:24 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -36,10 +36,11 @@ class Errors(GingaPlugin.GlobalPlugin):
 
         container.pack_start(sw, fill=True, expand=True)
 
-        hbox = gtk.HBox()
+        hbox = gtk.HButtonBox()
+        hbox.set_layout(gtk.BUTTONBOX_END)
         btn = gtk.Button("Remove All")
         btn.connect('clicked', lambda w: self.remove_all())
-        hbox.pack_end(btn, fill=False, expand=False)
+        hbox.add(btn)
         container.pack_end(hbox, fill=False, expand=False)
 
 

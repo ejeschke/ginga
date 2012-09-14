@@ -2,7 +2,7 @@
 # Pick.py -- Pick plugin for fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Aug 31 23:56:41 HST 2012
+#  Last edit: Thu Sep  6 14:05:29 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -121,8 +121,6 @@ class Pick(GingaPlugin.LocalPlugin):
             self.w.fig = matplotlib.figure.Figure()
             self.w.ax = self.w.fig.add_subplot(111, axisbg='black')
             self.w.ax.set_aspect('equal', adjustable='box')
-            #self.w.ax.set_xlabel('X values')
-            #self.w.ax.set_ylabel('Y values')
             self.w.ax.set_title('Contours')
             #self.w.ax.grid(True)
             canvas = FigureCanvas(self.w.fig)
@@ -202,6 +200,7 @@ class Pick(GingaPlugin.LocalPlugin):
             ('Object_X', 'label', 'Object_Y', 'label'),
             ('RA', 'label', 'DEC', 'label'), ('Equinox', 'label'),
             ('Sky Level', 'label', 'Brightness', 'label'), 
+            ('FWHM X', 'label', 'FWHM Y', 'label'),
             ('FWHM', 'label', 'Star Size', 'label'),
             ('Sample Area', 'label', 'Default Region', 'button'),
             ('Sky cut', 'button', 'Delta sky', 'entry'),
@@ -379,7 +378,12 @@ class Pick(GingaPlugin.LocalPlugin):
             self.logger.debug("yarr=%s" % (str(yarr)))
             fwhm_y, mu, sdev, maxv = self._plot_fwhm_axis(yarr, skybg,
                                                           'green', 'green', 'seagreen')
-            
+            plt = self.w.ax2
+            plt.legend(('data x', 'gauss x', 'data y', 'gauss y'),
+                       'upper right', shadow=False, fancybox=False,
+                       prop={'size': 8}, labelspacing=0.2)
+            plt.set_title("FWHM X: %.2f  Y: %.2f" % (fwhm_x, fwhm_y))
+
             self.w.fig2.canvas.draw()
         except Exception, e:
             self.logger.error("Error making fwhm plot: %s" % (
@@ -541,6 +545,8 @@ class Pick(GingaPlugin.LocalPlugin):
             #point.x, point.y = rnd_x, rnd_y
             point.x, point.y = obj_x, obj_y
 
+            self.wdetail.fwhm_x.set_text('%.3f' % fwhm_x)
+            self.wdetail.fwhm_y.set_text('%.3f' % fwhm_y)
             self.wdetail.fwhm.set_text('%.3f' % fwhm)
             self.wdetail.object_x.set_text('%.3f' % (obj_x+1))
             self.wdetail.object_y.set_text('%.3f' % (obj_y+1))
@@ -593,7 +599,8 @@ class Pick(GingaPlugin.LocalPlugin):
         except Exception, e:
             self.logger.error("Error calculating quality metrics: %s" % (
                 str(e)))
-            for key in ('sky_level', 'brightness', 'star_size'):
+            for key in ('sky_level', 'brightness', 'star_size',
+                        'fwhm_x', 'fwhm_y'):
                 self.wdetail[key].set_text('')
             self.wdetail.fwhm.set_text('Failed')
             self.w.btn_sky_cut.set_sensitive(False)

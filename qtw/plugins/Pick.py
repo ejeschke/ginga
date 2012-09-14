@@ -2,7 +2,7 @@
 # Pick.py -- Pick plugin for fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Wed Sep  5 09:34:55 HST 2012
+#  Last edit: Thu Sep  6 14:05:50 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -117,8 +117,6 @@ class Pick(GingaPlugin.LocalPlugin):
             self.w.fig = matplotlib.figure.Figure()
             self.w.ax = self.w.fig.add_subplot(111, axisbg='black')
             self.w.ax.set_aspect('equal', adjustable='box')
-            #self.w.ax.set_xlabel('X values')
-            #self.w.ax.set_ylabel('Y values')
             self.w.ax.set_title('Contours')
             #self.w.ax.grid(True)
             canvas = MyFigureCanvas(self.w.fig)
@@ -340,6 +338,12 @@ class Pick(GingaPlugin.LocalPlugin):
             fwhm_y, mu, sdev, maxv = self._plot_fwhm_axis(yarr, medv,
                                                           'green', 'green', 'seagreen')
             
+            plt = self.w.ax2
+            plt.legend(('data x', 'gauss x', 'data y', 'gauss y'),
+                       'upper right', shadow=False, fancybox=False,
+                       prop={'size': 8}, labelspacing=0.2)
+            plt.set_title("FWHM X: %.2f  Y: %.2f" % (fwhm_x, fwhm_y))
+
             self.w.fig2.canvas.draw()
         except Exception, e:
             self.logger.error("Error making fwhm plot: %s" % (

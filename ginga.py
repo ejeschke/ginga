@@ -3,7 +3,7 @@
 # ginga.py -- FITS image viewer and tool.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Tue Aug 28 11:52:09 HST 2012
+#  Last edit: Thu Sep 13 11:52:20 HST 2012
 #]
 #
 """
@@ -55,7 +55,7 @@ import Task
 import ModuleManager
 import Datasrc
 import Settings
-from Control import GingaControl
+from Control import GingaControl, GuiLogHandler
 
 version = "20120510.0"
 
@@ -89,8 +89,9 @@ global_plugins = [
     Bunch(module='Thumbs', tab='Thumbs', ws='right', raisekey='t'),
     Bunch(module='Contents', tab='Contents', ws='right', raisekey='c'),
     Bunch(module='WBrowser', tab='Help', ws='right', raisekey='?'),
-    Bunch(module='Debug', tab='Debug', ws='right'),
     Bunch(module='Errors', tab='Errors', ws='right'),
+    Bunch(module='Log', tab='Log', ws='right'),
+    Bunch(module='Debug', tab='Debug', ws='right'),
     ]
 
 local_plugins = [
@@ -129,7 +130,7 @@ def main(options, args):
         stderrHdlr.setLevel(options.loglevel)
         stderrHdlr.setFormatter(fmt)
         logger.addHandler(stderrHdlr)
-
+        
     # Get settings (preferences)
     try:
         basedir = os.environ['GINGA_HOME']
@@ -190,6 +191,12 @@ def main(options, args):
     # Add desired global plugins
     for spec in global_plugins:
         ginga.add_global_plugin(spec)
+
+    # Add GUI log handler (for "Log" global plugin)
+    guiHdlr = GuiLogHandler(ginga)
+    guiHdlr.setLevel(options.loglevel)
+    guiHdlr.setFormatter(fmt)
+    logger.addHandler(guiHdlr)
 
     # Load any custom modules
     if options.modules:

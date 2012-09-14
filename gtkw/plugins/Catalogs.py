@@ -2,7 +2,7 @@
 # Catalogs.py -- Catalogs plugin for fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Thu Jul 19 16:18:07 HST 2012
+#  Last edit: Wed Sep 12 17:09:09 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -33,8 +33,13 @@ class Catalogs(GingaPlugin.LocalPlugin):
         self.limit_stars_to_area = False
         self.plot_max = 500
         self.plot_limit = 100
-        self.plot_pct = 0.0
+        self.plot_start = 0
 
+        # star list
+        self.starlist = []
+        # catalog listing
+        self.table = None
+        
         canvas = CanvasTypes.DrawingCanvas()
         canvas.enable_draw(True)
         canvas.set_drawtype('rectangle', color='cyan', linestyle='dash',
@@ -169,21 +174,16 @@ class Catalogs(GingaPlugin.LocalPlugin):
         self.table = CatalogListing(self.logger, vbox)
 
         hbox = gtk.HBox()
-        ## scale = GtkHelp.SpinButton()
-        ## adj = scale.get_adjustment()
-        ## adj.configure(0.0, 0.0, 1.0, 0.01, 0.10, 0.10)
-        adj = gtk.Adjustment(lower=0.0, upper=1.0)
-        adj.set_value(0.0)
-        scale = GtkHelp.HScale(adj)
+        scale = gtk.HScrollbar()
+        adj = scale.get_adjustment()
+        adj.configure(0, 0, 0, 1, 10, self.plot_limit)
         #scale.set_size_request(200, -1)
-        scale.set_digits(2)
-        scale.set_draw_value(False)
-        scale.set_value_pos(gtk.POS_BOTTOM)
         self.tooltips.set_tip(scale, "Choose subset of stars plotted")
-        #scale.set_update_policy(gtk.UPDATE_DISCONTINUOUS)
+        scale.set_update_policy(gtk.UPDATE_DELAYED)
+        #scale.set_update_policy(gtk.UPDATE_CONTINUOUS)
         self.w.plotgrp = scale
         scale.connect('value-changed', self.plot_pct_cb)
-        hbox.pack_start(scale, padding=0, fill=True, expand=True)
+        hbox.pack_start(scale, padding=2, fill=True, expand=True)
 
         sb = GtkHelp.SpinButton()
         adj = sb.get_adjustment()
@@ -191,7 +191,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
         self.w.plotnum = sb
         self.tooltips.set_tip(sb, "Adjust size of subset of stars plotted")
         sb.connect('value-changed', self.plot_limit_cb)
-        hbox.pack_start(sb, padding=0, fill=False, expand=False)
+        hbox.pack_start(sb, padding=2, fill=False, expand=False)
         vbox.pack_start(hbox, padding=0, fill=False, expand=False)
 
         #vbox1.pack_start(vbox, padding=4, fill=True, expand=True)
@@ -228,14 +228,24 @@ class Catalogs(GingaPlugin.LocalPlugin):
 
     def plot_pct_cb(self, rng):
         val = rng.get_value()
-        self.plot_pct = val
+        self.plot_start = val
         self.replot_stars()
         return True
+
+    def _update_plotscroll(self):
+        num_stars = len(self.starlist)
+        if num_stars > 0:
+            adj = self.w.plotgrp.get_adjustment()
+            page_size = self.plot_limit
+            self.plot_start = 0
+            adj.configure(0, 0, num_stars, 1, page_size, page_size)
+
+        self.replot_stars()
 
     def plot_limit_cb(self, rng):
         val = rng.get_value()
         self.plot_limit = val
-        self.replot_stars()
+        self._update_plotscroll()
         return True
 
     def set_message(self, msg):
@@ -571,11 +581,13 @@ class Catalogs(GingaPlugin.LocalPlugin):
 
         self.starlist = starlist
         self.table.show_table(self, info, starlist)
+
         # Raise the listing tab
         num = self.w.nb.page_num(self.w.listing)
         self.w.nb.set_current_page(num)
 
-        self.replot_stars()
+        self._update_plotscroll()
+        #self.replot_stars()
         return starlist
 
     def clear(self):
@@ -589,6 +601,26 @@ class Catalogs(GingaPlugin.LocalPlugin):
         self.clearAll()
         self.table.clear()
        
+    def plot_star(self, obj, image=None):
+        if not image:
+            image = self.fitsimage.get_image()
+        x, y = image.radectopix(obj['ra_deg'], obj['dec_deg'])
+        #print "STAR at %d,%d" % (x, y)
+        # TODO: auto-pick a decent radius
+        radius = 10
+        color = self.table.get_color(obj)
+        #print "color is %s" % str(color)
+        circle = CanvasTypes.Circle(x, y, radius, color=color)
+        point = CanvasTypes.Point(x, y, radius, color=color)
+        if obj.has_key('pick') and (not obj['pick']):
+            star = CanvasTypes.Canvas(circle, point)
+        else:
+            star = CanvasTypes.Canvas(circle)
+        star.set_data(star=obj)
+        obj.canvobj = star
+
+        self.canvas.add(star, tagpfx='star', redraw=False)
+
     def replot_stars(self, selected=[]):
         self.clear()
 
@@ -599,31 +631,35 @@ class Catalogs(GingaPlugin.LocalPlugin):
         if length <= self.plot_limit:
             i = 0
         else:
-            i = int(self.plot_pct * length)
+            #i = int(self.plot_start * length)
+            i = self.plot_start
             i = int(min(i, length - self.plot_limit))
             length = self.plot_limit
-        
-        #for obj in self.starlist:
+
+        # remove references to old objects before this range
+        for j in xrange(i):
+            obj = self.starlist[j]
+            obj.canvobj = None
+
+        # plot stars in range
         for j in xrange(length):
             obj = self.starlist[i]
             i += 1
-            x, y = image.radectopix(obj['ra_deg'], obj['dec_deg'])
-            #print "STAR at %d,%d" % (x, y)
-            # TODO: auto-pick a decent radius
-            radius = 10
-            color = self.table.get_color(obj)
-            #print "color is %s" % str(color)
-            circle = CanvasTypes.Circle(x, y, radius, color=color)
-            point = CanvasTypes.Point(x, y, radius, color=color)
-            if obj.has_key('pick') and (not obj['pick']):
-                star = CanvasTypes.Canvas(circle, point)
-            else:
-                star = CanvasTypes.Canvas(circle)
-            star.set_data(star=obj)
-            obj.canvobj = star
-            
-            canvas.add(star, tagpfx='star', redraw=False)
+            self.plot_star(obj, image=image)
 
+        # remove references to old objects after this range
+        for j in xrange(i, length):
+            obj = self.starlist[j]
+            obj.canvobj = None
+
+        # plot stars in selected list even if they are not in the range
+        #for obj in selected:
+        selected = self.table.get_selected()
+        for obj in selected:
+            if (not obj.has_key('canvobj')) or (obj.canvobj == None):
+                self.plot_star(obj, image=image)
+            self.highlight_object(obj.canvobj, 'selected', 'skyblue')
+            
         canvas.redraw(whence=3)
 
         
@@ -768,9 +804,12 @@ class CatalogListing(object):
         # Update the starlist info
         listmodel = gtk.ListStore(object)
         for star in starlist:
+            # TODO: find mag range
             listmodel.append([star])
 
         self.treeview.set_model(listmodel)
+
+        self.cbar.set_range(self.mag_min, self.mag_max)
 
         self.catalog = catalog
 
@@ -788,7 +827,7 @@ class CatalogListing(object):
         # calculate percentage in range
         point = float(mag) / float(self.mag_max - self.mag_min)
         # invert
-        point = 1.0 - point
+        #point = 1.0 - point
         # map to a 8-bit color range
         point = int(point * 255.0)
 
@@ -823,6 +862,10 @@ class CatalogListing(object):
                         self.logger.warn("Error unhilighting star: %s" % (str(e)))
             self.selected.append(star)
             try:
+                # If this star is not plotted, then plot it
+                if (not star.has_key('canvobj')) or (star.canvobj == None):
+                    self.catalog.plot_star(star)
+                    
                 self.catalog.highlight_object(star.canvobj, 'selected', 'skyblue')
             except Exception, e:
                 self.logger.warn("Error hilighting star: %s" % (str(e)))
@@ -857,6 +900,7 @@ class CatalogListing(object):
         model = treeview.get_model()
         iter = model.get_iter(path)
         star = model.get_value(iter, 0)
+        self.logger.debug("selected star: %s" % (str(star)))
         self.mark_selection(star)
         return True
     

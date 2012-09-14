@@ -2,7 +2,7 @@
 # GingaGtk.py -- Gtk display handler for the Ginga FITS tool.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Tue Sep  4 18:12:39 HST 2012
+#  Last edit: Thu Sep 13 13:54:23 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -61,7 +61,7 @@ default_width  = min(1600, screen_wd)
 #icon_ext = '.svg'
 icon_ext = '.png'
 
-class FitsViewError(Exception):
+class GingaViewError(Exception):
     pass
 
 class GingaView(GtkMain.GtkMain):

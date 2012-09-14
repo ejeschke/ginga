@@ -2,7 +2,7 @@
 # ColorBar.py -- color bar widget
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Wed Sep  5 15:08:09 HST 2012
+#  Last edit: Mon Sep 10 15:43:42 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -88,10 +88,14 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
         self.loval = loval
         self.hival = hival
         # Calculate reasonable spacing for range numbers
-        cr = self.window.cairo_create()
         text = "%d" % (int(hival))
-        a, b, _wd, _ht, _i, _j = cr.text_extents(text)
-        self._avg_pixels_per_range_num = self.t_spacing + _wd
+        try:
+            cr = self.window.cairo_create()
+            a, b, _wd, _ht, _i, _j = cr.text_extents(text)
+            self._avg_pixels_per_range_num = self.t_spacing + _wd
+        except Exception, e:
+            self.logger.error("Error getting text extents: %s" % (
+                str(e)))
         if self.t_showrange and redraw:
             self.redraw()
         
