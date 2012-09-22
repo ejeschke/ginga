@@ -2,7 +2,7 @@
 # Pick.py -- Pick plugin for fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Thu Sep  6 14:05:29 HST 2012
+#  Last edit: Thu Sep 20 11:26:40 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -15,6 +15,7 @@ import GtkHelp
 import iqcalc
 import Bunch
 
+import threading
 import numpy
 try:
     import matplotlib
@@ -45,24 +46,36 @@ class Pick(GingaPlugin.LocalPlugin):
         self.pick_qs = None
         self.picktag = None
         self.pickcolor = 'green'
+        self.candidate_color = 'purple'
 
         self.pick_x1 = 0
         self.pick_y1 = 0
         self.pick_data = None
         self.dx = region_default_width
         self.dy = region_default_height
-        # this is the maximum size a side can be
-        self.max_len = 1024
-        self.radius = 10
         self.show_candidates = False
+        self.serialnum = 0
+        self.lock = threading.RLock()
+        self.lock2 = threading.RLock()
+
+        # Peak finding parameters and selection criteria
+        # this is the maximum size a side can be
+        self.max_side = 1024
+        self.radius = 10
+        self.threshold = None
+        self.min_fwhm = 2.0
+        self.max_fwhm = 50.0
 
         self.plot_panx = 0.5
         self.plot_pany = 0.5
         self.plot_zoomlevel = 1.0
         self.num_contours = 8
+        self.contour_size_limit = 70
+        self.contour_data = None
         self.delta_sky = 0.0
         self.delta_bright = 0.0
         self.iqcalc = iqcalc.IQCalc(self.logger)
+        self.ev_intr = threading.Event()
 
         canvas = CanvasTypes.DrawingCanvas()
         canvas.enable_draw(True)
@@ -203,8 +216,6 @@ class Pick(GingaPlugin.LocalPlugin):
             ('FWHM X', 'label', 'FWHM Y', 'label'),
             ('FWHM', 'label', 'Star Size', 'label'),
             ('Sample Area', 'label', 'Default Region', 'button'),
-            ('Sky cut', 'button', 'Delta sky', 'entry'),
-            ('Bright cut', 'button', 'Delta bright', 'entry'),
             )
 
         w, b = GtkHelp.build_info(captions)
@@ -214,6 +225,125 @@ class Pick(GingaPlugin.LocalPlugin):
         b.default_region.connect('clicked', lambda w: self.reset_region())
         self.w.tooltips.set_tip(b.default_region,
                                    "Reset region size to default")
+
+        # Pick field evaluation status
+        label = gtk.Label()
+        label.set_alignment(0.05, 0.5)
+        self.w.eval_status = label
+        w.pack_start(self.w.eval_status, fill=False, expand=False, padding=2)
+
+        # Pick field evaluation progress bar and stop button
+        hbox = gtk.HBox()
+        btn = gtk.Button("Stop")
+        btn.connect('clicked', lambda w: self.eval_intr())
+        btn.set_sensitive(False)
+        self.w.btn_intr_eval = btn
+        hbox.pack_end(btn, fill=False, expand=False, padding=2)
+        self.w.eval_pgs = gtk.ProgressBar()
+        hbox.pack_start(self.w.eval_pgs, fill=True, expand=True, padding=4)
+        w.pack_start(hbox, fill=False, expand=False, padding=2)
+        
+        label = gtk.Label("Report")
+        label.show()
+        nb.append_page(w, label)
+        nb.set_tab_reorderable(w, True)
+        #nb.set_tab_detachable(w, True)
+
+        # Build settings panel
+        captions = (('Show Candidates', 'checkbutton'),
+                    ('Radius', 'xlabel', '@Radius', 'spinbutton'),
+                    ('Threshold', 'xlabel', '@Threshold', 'entry'),
+                    ('Min FWHM', 'xlabel', '@Min FWHM', 'spinbutton'),
+                    ('Max FWHM', 'xlabel', '@Max FWHM', 'spinbutton'),
+                    ('Max side', 'xlabel', '@Max side', 'spinbutton'),
+                    ('Redo Pick', 'button'),
+                    )
+
+        w, b = GtkHelp.build_info(captions)
+        self.w.update(b)
+        self.w.tooltips.set_tip(b.radius, "Radius for peak detection")
+        self.w.tooltips.set_tip(b.threshold, "Threshold for peak detection (blank=default)")
+        self.w.tooltips.set_tip(b.min_fwhm, "Minimum FWHM for selection")
+        self.w.tooltips.set_tip(b.max_fwhm, "Maximum FWHM for selection")
+        self.w.tooltips.set_tip(b.show_candidates,
+                                "Show all peak candidates")
+        # radius control
+        adj = b.radius.get_adjustment()
+        b.radius.set_digits(2)
+        b.radius.set_numeric(True)
+        adj.configure(self.radius, 5.0, 200.0, 1.0, 10.0, 0)
+        def chg_radius(w):
+            self.radius = float(w.get_text())
+            self.w.lbl_radius.set_text(str(self.radius))
+            return True
+        b.lbl_radius.set_text(str(self.radius))
+        b.radius.connect('value-changed', chg_radius)
+
+        # threshold control
+        def chg_threshold(w):
+            threshold = None
+            ths = w.get_text().strip()
+            if len(ths) > 0:
+                threshold = float(ths)
+            self.threshold = threshold
+            self.w.lbl_threshold.set_text(str(self.threshold))
+            return True
+        b.lbl_threshold.set_text(str(self.threshold))
+        b.threshold.connect('activate', chg_threshold)
+
+        # min fwhm
+        adj = b.min_fwhm.get_adjustment()
+        b.min_fwhm.set_digits(2)
+        b.min_fwhm.set_numeric(True)
+        adj.configure(self.min_fwhm, 0.1, 200.0, 0.1, 1, 0)
+        def chg_min(w):
+            self.min_fwhm = w.get_value()
+            self.w.lbl_min_fwhm.set_text(str(self.min_fwhm))
+            return True
+        b.lbl_min_fwhm.set_text(str(self.min_fwhm))
+        b.min_fwhm.connect('value-changed', chg_min)
+
+        # max fwhm
+        adj = b.max_fwhm.get_adjustment()
+        b.max_fwhm.set_digits(2)
+        b.max_fwhm.set_numeric(True)
+        adj.configure(self.max_fwhm, 0.1, 200.0, 0.1, 1, 0)
+        def chg_max(w):
+            self.max_fwhm = w.get_value()
+            self.w.lbl_max_fwhm.set_text(str(self.max_fwhm))
+            return True
+        b.lbl_max_fwhm.set_text(str(self.max_fwhm))
+        b.max_fwhm.connect('value-changed', chg_max)
+
+        adj = b.max_side.get_adjustment()
+        b.max_side.set_digits(0)
+        b.max_side.set_numeric(True)
+        adj.configure(self.max_side, 5, 10000, 10, 100, 0)
+        def chg_max_side(w):
+            self.max_side = int(w.get_value())
+            self.w.lbl_max_side.set_text(str(self.max_side))
+            return True
+        b.lbl_max_side.set_text(str(self.max_side))
+        b.max_side.connect('value-changed', chg_max_side)
+
+        b.redo_pick.connect('clicked', lambda w: self.redo())
+        b.show_candidates.set_active(self.show_candidates)
+        b.show_candidates.connect('toggled', self.show_candidates_cb)
+
+        label = gtk.Label("Settings")
+        label.show()
+        nb.append_page(w, label)
+        nb.set_tab_reorderable(w, True)
+        #nb.set_tab_detachable(w, True)
+
+        # Build controls panel
+        captions = (
+            ('Sky cut', 'button', 'Delta sky', 'xlabel', '@Delta sky', 'entry'),
+            ('Bright cut', 'button', 'Delta bright', 'xlabel', '@Delta bright', 'entry'),
+            )
+
+        w, b = GtkHelp.build_info(captions)
+        self.w.update(b)
         self.w.tooltips.set_tip(b.sky_cut, "Set image low cut to Sky Level")
         self.w.tooltips.set_tip(b.delta_sky, "Delta to apply to low cut")
         self.w.tooltips.set_tip(b.bright_cut,
@@ -224,35 +354,35 @@ class Pick(GingaPlugin.LocalPlugin):
         self.w.btn_sky_cut = b.sky_cut
         self.w.btn_sky_cut.connect('clicked', lambda w: self.sky_cut())
         self.w.sky_cut_delta = b.delta_sky
+        b.lbl_delta_sky.set_text(str(self.delta_sky))
         b.delta_sky.set_text(str(self.delta_sky))
+        def chg_delta_sky(w):
+            delta_sky = 0.0
+            val = w.get_text().strip()
+            if len(val) > 0:
+                delta_sky = float(val)
+            self.delta_sky = delta_sky
+            self.w.lbl_delta_sky.set_text(str(self.delta_sky))
+            return True
+        b.delta_sky.connect('activate', chg_delta_sky)
+        
         b.bright_cut.set_sensitive(False)
         self.w.btn_bright_cut = b.bright_cut
         self.w.btn_bright_cut.connect('clicked', lambda w: self.bright_cut())
         self.w.bright_cut_delta = b.delta_bright
+        b.lbl_delta_bright.set_text(str(self.delta_bright))
         b.delta_bright.set_text(str(self.delta_bright))
+        def chg_delta_bright(w):
+            delta_bright = 0.0
+            val = w.get_text().strip()
+            if len(val) > 0:
+                delta_bright = float(val)
+            self.delta_bright = delta_bright
+            self.w.lbl_delta_bright.set_text(str(self.delta_bright))
+            return True
+        b.delta_bright.connect('activate', chg_delta_bright)
 
-        label = gtk.Label("Report")
-        label.show()
-        nb.append_page(w, label)
-        nb.set_tab_reorderable(w, True)
-        #nb.set_tab_detachable(w, True)
-
-        # Build settings panel
-        captions = (('Show Candidates', 'checkbutton'),
-            ('Radius', 'entry', 'Threshold', 'entry'),
-            )
-
-        w, b = GtkHelp.build_info(captions)
-        self.w.update(b)
-        self.w.tooltips.set_tip(b.radius, "Radius for peak detection")
-        self.w.tooltips.set_tip(b.threshold, "Threshold for peak detection (blank=default)")
-        self.w.tooltips.set_tip(b.show_candidates,
-                                "Show all peak candidates")
-        b.radius.set_text(str(self.radius))
-        b.show_candidates.set_active(self.show_candidates)
-        b.show_candidates.connect('toggled', self.show_candidates_cb)
-
-        label = gtk.Label("Settings")
+        label = gtk.Label("Controls")
         label.show()
         nb.append_page(w, label)
         nb.set_tab_reorderable(w, True)
@@ -274,8 +404,17 @@ class Pick(GingaPlugin.LocalPlugin):
         
         container.pack_start(vpaned, padding=0, fill=True, expand=True)
 
+    def bump_serial(self):
+        with self.lock:
+            self.serialnum += 1
+            return self.serialnum
+        
+    def get_serial(self):
+        with self.lock:
+            return self.serialnum
+        
     def plot_panzoom(self):
-        ht, wd = self.pick_data.shape
+        ht, wd = self.contour_data.shape
         x = int(self.plot_panx * wd)
         y = int(self.plot_pany * ht)
 
@@ -318,16 +457,34 @@ class Pick(GingaPlugin.LocalPlugin):
 
     def plot_contours(self):
         # Make a contour plot
+
         ht, wd = self.pick_data.shape
+
+        # If size of pick region is too large, carve out a subset around
+        # the picked object coordinates for plotting contours
+        maxsize = max(ht, wd)
+        if maxsize > self.contour_size_limit:
+            image = self.fitsimage.get_image()
+            radius = int(self.contour_size_limit // 2)
+            x, y = self.pick_qs.x, self.pick_qs.y
+            data, x1, y1, x2, y2 = image.cutout_radius(x, y, radius)
+            x, y = x - x1, y - y1
+            ht, wd = data.shape
+        else:
+            data = self.pick_data
+            x, y = self.pickcenter.x, self.pickcenter.y
+        self.contour_data = data
+        # Set pan position in contour plot
+        self.plot_panx = float(x) / wd
+        self.plot_pany = float(y) / ht
+        
         self.w.ax.cla()
         try:
             # Create a contour plot
             xarr = numpy.arange(wd)
             yarr = numpy.arange(ht)
-            self.w.ax.contourf(xarr, yarr, self.pick_data,
-                               self.num_contours)
+            self.w.ax.contourf(xarr, yarr, data, self.num_contours)
             # Mark the center of the object
-            x, y = self.pickcenter.x, self.pickcenter.y
             self.w.ax.plot([x], [y], marker='x', ms=20.0,
                            color='black')
 
@@ -338,6 +495,9 @@ class Pick(GingaPlugin.LocalPlugin):
             self.logger.error("Error making contour plot: %s" % (
                 str(e)))
 
+    def clear_contours(self):
+        self.w.ax.cla()
+        
     def _plot_fwhm_axis(self, arr, skybg, color1, color2, color3):
         N = len(arr)
         X = numpy.array(range(N))
@@ -389,6 +549,9 @@ class Pick(GingaPlugin.LocalPlugin):
             self.logger.error("Error making fwhm plot: %s" % (
                 str(e)))
 
+    def clear_fwhm(self):
+        self.w.ax2.cla()
+        
     def close(self):
         chname = self.fv.get_channelName(self.fitsimage)
         self.fv.stop_operation_channel(chname, str(self))
@@ -432,12 +595,17 @@ class Pick(GingaPlugin.LocalPlugin):
         self.fv.showStatus("")
         
     def redo(self):
-        obj = self.canvas.getObjectByTag(self.picktag)
-        if obj.kind != 'compound':
+        serialnum = self.bump_serial()
+        self.ev_intr.set()
+        
+        fig = self.canvas.getObjectByTag(self.picktag)
+        if fig.kind != 'compound':
             return True
-        bbox  = obj.objects[0]
-        point = obj.objects[1]
+        bbox  = fig.objects[0]
+        point = fig.objects[1]
+        text = fig.objects[2]
         data_x, data_y = point.x, point.y
+        self.fitsimage.panset_xy(data_x, data_y, redraw=False)
 
         # set the pick image to have the same cut levels and transforms
         self.fitsimage.copy_attributes(self.pickimage,
@@ -451,10 +619,10 @@ class Pick(GingaPlugin.LocalPlugin):
             # sanity check on region
             width = bbox.x2 - bbox.x1
             height = bbox.y2 - bbox.y1
-            if (width > self.max_len) or (height > self.max_len):
+            if (width > self.max_side) or (height > self.max_side):
                 errmsg = "Image area (%dx%d) too large!" % (
                     width, height)
-                self.fv.showStatus(errmsg)
+                self.fv.show_error(errmsg)
                 raise Exception(errmsg)
         
             # Note: FITS coordinates are 1-based, whereas numpy FITS arrays
@@ -486,33 +654,109 @@ class Pick(GingaPlugin.LocalPlugin):
             self.wdetail.sample_area.set_text('%dx%d' % (x2-x1, y2-y1))
 
             point.color = 'red'
+            text.text = 'Pick: calc'
             self.pickcenter.x = xc
             self.pickcenter.y = yc
             self.pickcenter.color = 'red'
 
-            # Get parameters for peak finding
-            radius = int(self.w.radius.get_text())
-            threshold = None
-            ths = self.w.threshold.get_text().strip()
-            if len(ths) > 0:
-                threshold = float(ths)
-                
+            # clear contour and fwhm plots
+            if have_mpl:
+                self.clear_contours()
+                self.clear_fwhm()
+
             # Delete previous peak marks
             objs = self.fitsimage.getObjectsByTagpfx('peak')
-            self.fitsimage.deleteObjects(objs, redraw=False)
+            self.fitsimage.deleteObjects(objs, redraw=True)
 
-            # Find bright peaks in the cutout
-            peaks = self.iqcalc.find_bright_peaks(data, threshold=threshold,
-                                                  radius=radius)
-            if len(peaks) == 0:
-                raise Exception("Cannot find bright peaks")
-                
-            # Evaluate those peaks
-            objlist = self.iqcalc.evaluate_peaks(peaks, data,
-                                                 fwhm_radius=radius)
-            if len(objlist) == 0:
-                raise Exception("Error evaluating bright peaks")
+            # Offload this task to another thread so that GUI remains
+            # responsive
+            self.fv.nongui_do(self.search, serialnum, data,
+                              x1, y1, wd, ht, fig)
 
+        except Exception, e:
+            self.logger.error("Error calculating quality metrics: %s" % (
+                str(e)))
+            return True
+
+    def update_status(self, text):
+        self.fv.gui_do(self.w.eval_status.set_text, text)
+
+    def init_progress(self):
+        self.w.btn_intr_eval.set_sensitive(True)
+        self.w.eval_pgs.set_fraction(0.0)
+        self.w.eval_pgs.set_text("%.2f %%" % (0.0))
+            
+    def update_progress(self, pct):
+        self.w.eval_pgs.set_fraction(pct)
+        self.w.eval_pgs.set_text("%.2f %%" % (pct*100.0))
+        
+    def search(self, serialnum, data, x1, y1, wd, ht, fig):
+        if serialnum != self.get_serial():
+            return
+        with self.lock2:
+            self.pgs_cnt = 0
+            self.ev_intr.clear()
+            self.fv.gui_call(self.init_progress)
+            
+            msg, results, qs = None, None, None
+            try:
+                self.update_status("Finding bright peaks...")
+                # Find bright peaks in the cutout
+                peaks = self.iqcalc.find_bright_peaks(data,
+                                                      threshold=self.threshold,
+                                                      radius=self.radius)
+                num_peaks = len(peaks)
+                if num_peaks == 0:
+                    raise Exception("Cannot find bright peaks")
+
+                def cb_fn(obj):
+                    self.pgs_cnt += 1
+                    pct = float(self.pgs_cnt) / num_peaks
+                    self.fv.gui_do(self.update_progress, pct)
+                    
+                # Evaluate those peaks
+                self.update_status("Evaluating %d bright peaks..." % (
+                    num_peaks))
+                objlist = self.iqcalc.evaluate_peaks(peaks, data,
+                                                     fwhm_radius=self.radius,
+                                                     cb_fn=cb_fn,
+                                                     ev_intr=self.ev_intr)
+
+                num_candidates = len(objlist)
+                if num_candidates == 0:
+                    raise Exception("Error evaluating bright peaks: no candidates found")
+
+                self.update_status("Selecting from %d candidates..." % (
+                    num_candidates))
+                height, width = data.shape
+                results = self.iqcalc.objlist_select(objlist, width, height,
+                                                     minfwhm=self.min_fwhm,
+                                                     maxfwhm=self.max_fwhm)
+                if len(results) == 0:
+                    raise Exception("No object matches selection criteria")
+                qs = results[0]
+
+            except Exception, e:
+                msg = str(e)
+                self.update_status(msg)
+
+            if serialnum == self.get_serial():
+                self.fv.gui_do(self.update_pick, serialnum, results, qs,
+                               x1, y1, wd, ht, fig, msg)
+
+    def update_pick(self, serialnum, objlist, qs, x1, y1, wd, ht, fig, msg):
+        if serialnum != self.get_serial():
+            return
+        
+        try:
+            image = self.fitsimage.get_image()
+            point = fig.objects[1]
+            text = fig.objects[2]
+            text.text = "Pick"
+
+            if msg != None:
+                raise Exception(msg)
+            
             # Mark new peaks, if desired
             if self.show_candidates:
                 for obj in objlist:
@@ -520,11 +764,8 @@ class Pick(GingaPlugin.LocalPlugin):
                                                                y1+obj.objy,
                                                                5,
                                                                linewidth=1,
-                                                               color='purple'),
+                                                               color=self.candidate_color),
                                              tagpfx='peak', redraw=False)
-
-            height, width = data.shape
-            qs = self.iqcalc.objlist_select(objlist, width, height)
 
             # Add back in offsets into image to get correct values with respect
             # to the entire image
@@ -544,6 +785,7 @@ class Pick(GingaPlugin.LocalPlugin):
             rnd_x, rnd_y = int(round(qs.objx)), int(round(qs.objy))
             #point.x, point.y = rnd_x, rnd_y
             point.x, point.y = obj_x, obj_y
+            text.color = 'cyan'
 
             self.wdetail.fwhm_x.set_text('%.3f' % fwhm_x)
             self.wdetail.fwhm_y.set_text('%.3f' % fwhm_y)
@@ -555,7 +797,7 @@ class Pick(GingaPlugin.LocalPlugin):
 
             self.w.btn_sky_cut.set_sensitive(True)
             self.w.btn_bright_cut.set_sensitive(True)
-            
+
             # Mark center of object on pick image
             i1 = point.x - x1
             j1 = point.y - y1
@@ -563,6 +805,7 @@ class Pick(GingaPlugin.LocalPlugin):
             self.pickcenter.y = j1
             self.pickcenter.color = 'cyan'
             self.pick_qs = qs
+            self.pickimage.panset_xy(i1, j1, redraw=False)
 
             # Mark object center on image
             point.color = 'cyan'
@@ -587,18 +830,22 @@ class Pick(GingaPlugin.LocalPlugin):
                 self.wdetail.star_size.set_text('%.3f' % starsize)
             except Exception, e:
                 self.wdetail.star_size.set_text('ERROR')
-                self.fv.showStatus("Couldn't calculate star size: %s" % (
+                self.fv.show_error("Couldn't calculate star size: %s" % (
                     str(e)))
 
+            self.update_status("Done")
             self.plot_panx = float(i1) / wd
             self.plot_pany = float(j1) / ht
             if have_mpl:
                 self.plot_contours()
                 self.plot_fwhm(qs)
-            
+
         except Exception, e:
-            self.logger.error("Error calculating quality metrics: %s" % (
-                str(e)))
+            errmsg = "Error calculating quality metrics: %s" % (
+                str(e))
+            self.logger.error(errmsg)
+            self.fv.show_error(errmsg)
+            #self.update_status("Error")
             for key in ('sky_level', 'brightness', 'star_size',
                         'fwhm_x', 'fwhm_y'):
                 self.wdetail[key].set_text('')
@@ -606,17 +853,22 @@ class Pick(GingaPlugin.LocalPlugin):
             self.w.btn_sky_cut.set_sensitive(False)
             self.w.btn_bright_cut.set_sensitive(False)
             self.pick_qs = None
+            text.color = 'red'
 
             self.plot_panx = self.plot_pany = 0.5
-            self.plot_contours()
+            #self.plot_contours()
             # TODO: could calc background based on numpy calc
 
+        self.w.btn_intr_eval.set_sensitive(False)
         self.pickimage.redraw(whence=3)
         self.canvas.redraw(whence=3)
-        
+
         self.fv.showStatus("Click left mouse button to reposition pick")
         return True
-    
+
+    def eval_intr(self):
+        self.ev_intr.set()
+        
     def btndown(self, canvas, button, data_x, data_y):
         if not (button == 0x1):
             return
@@ -756,7 +1008,7 @@ class Pick(GingaPlugin.LocalPlugin):
             CanvasTypes.Rectangle(obj.x1, obj.y1, obj.x2, obj.y2,
                                   color=self.pickcolor),
             CanvasTypes.Point(x, y, 10, color='red'),
-            CanvasTypes.Text(obj.x1, obj.y2+4, "Pick",
+            CanvasTypes.Text(obj.x1, obj.y2+4, "Pick: calc",
                              color=self.pickcolor)),
                          redraw=False)
         self.picktag = tag
@@ -792,12 +1044,8 @@ class Pick(GingaPlugin.LocalPlugin):
             self.fv.showStatus("Please pick an object to set the sky level!")
             return
         loval = self.pick_qs.skylevel
-        delta = self.w.sky_cut_delta.get_text()
-        if len(delta) == 0:
-            delta = 0.0
         oldlo, hival = self.fitsimage.get_cut_levels()
         try:
-            self.delta_sky = float(delta)
             loval += self.delta_sky
             self.fitsimage.cut_levels(loval, hival)
             
@@ -810,12 +1058,8 @@ class Pick(GingaPlugin.LocalPlugin):
             return
         skyval = self.pick_qs.skylevel
         hival = self.pick_qs.brightness
-        delta = self.w.bright_cut_delta.get_text()
-        if len(delta) == 0:
-            delta = 0.0
         loval, oldhi = self.fitsimage.fitsimage.get_cut_levels()
         try:
-            self.delta_bright = float(delta)
             # brightness is measured ABOVE sky level
             hival = skyval + hival + self.delta_bright
             self.fitsimage.cut_levels(loval, hival)
@@ -856,6 +1100,10 @@ class Pick(GingaPlugin.LocalPlugin):
 
     def show_candidates_cb(self, w):
         self.show_candidates = w.get_active()
+        if not self.show_candidates:
+            # Delete previous peak marks
+            objs = self.fitsimage.getObjectsByTagpfx('peak')
+            self.fitsimage.deleteObjects(objs, redraw=True)
         
     def plot_scroll(self, widget, event):
         # event.button, event.x, event.y

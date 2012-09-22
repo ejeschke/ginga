@@ -2,7 +2,7 @@
 # GtkHelp.py -- customized Gtk widgets
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Jun 22 13:41:32 HST 2012
+#  Last edit: Wed Sep 19 17:20:22 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -650,16 +650,27 @@ def _name_mangle(name, pfx=''):
             newname.append(c)
     return pfx + ''.join(newname)
     
-def _make_widget(tup):
+def _make_widget(tup, ns):
+    swap = False
     title = tup[0]
-    name  = _name_mangle(title)
-    w1 = gtk.Label(title + ':')
-    w1.set_alignment(0.95, 0.5)
+    if not title.startswith('@'):
+        name  = _name_mangle(title)
+        w1 = gtk.Label(title + ':')
+        w1.set_alignment(0.95, 0.5)
+    else:
+        # invisible title
+        swap = True
+        name  = _name_mangle(title[1:])
+        w1 = gtk.Label('')
 
     wtype = tup[1]
     if wtype == 'label':
         w2 = gtk.Label('')
         w2.set_alignment(0.05, 0.5)
+    elif wtype == 'xlabel':
+        w2 = gtk.Label('')
+        w2.set_alignment(0.05, 0.5)
+        name = 'lbl_' + name
     elif wtype == 'entry':
         w2 = gtk.Entry()
         w2.set_width_chars(12)
@@ -671,20 +682,28 @@ def _make_widget(tup):
         w1 = gtk.Label('')
         w2 = CheckButton(title)
         w2.set_mode(True)
+        swap = True
     elif wtype == 'togglebutton':
         w1 = gtk.Label('')
         w2 = ToggleButton(name)
         w2.set_mode(True)
+        swap = True
     elif wtype == 'button':
         w1 = gtk.Label('')
         w2 = gtk.Button(title)
+        swap = True
     elif wtype == 'spacer':
         w1 = QtGui.QLabel('')
         w2 = QtGui.QLabel('')
     else:
         raise Exception("Bad wtype=%s" % wtype)
 
-    return (name, w1, w2)
+    if swap:
+        w1, w2 = w2, w1
+        ns[name] = w1
+    else:
+        ns[name] = w2
+    return (w1, w2)
 
 
 def build_info(captions):
@@ -704,8 +723,7 @@ def build_info(captions):
         while col < numcols:
             if col < len(tup):
                 tup1 = tup[col:col+2]
-                name, w1, w2 = _make_widget(tup1)
-                wb[name] = w2
+                w1, w2 = _make_widget(tup1, wb)
                 table.attach(w1, col, col+1, row, row+1,
                              xoptions=gtk.FILL, yoptions=gtk.FILL,
                              xpadding=1, ypadding=1)

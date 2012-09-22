@@ -2,7 +2,7 @@
 # Info.py -- FITS Info plugin for the Ginga fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Jun 22 15:35:38 HST 2012
+#  Last edit: Thu Sep 20 09:48:41 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -52,16 +52,16 @@ class Info(GingaPlugin.GlobalPlugin):
         sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
 
         vbox = gtk.VBox()
-        captions = (('Frame ID', 'label'), ('Object', 'label'),
+        captions = (('Name', 'label'), ('Object', 'label'),
                     ('X', 'label'), ('Y', 'label'), ('Value', 'label'),
                     ('RA', 'label'), ('DEC', 'label'),
                     ('Equinox', 'label'), ('Dimensions', 'label'),
                     #('Slices', 'label', 'MultiDim', 'button'),
                     ('Min', 'label'), ('Max', 'label'),
                     ('Zoom', 'label'), 
-                    ('Cut Low', 'entry'),
-                    ('Cut High', 'entry', 'Cut Levels', 'button'),
-                    ('Auto Levels', 'button'), 
+                    ('Cut Low', 'xlabel', '@Cut Low', 'entry'),
+                    ('Cut High', 'xlabel', '@Cut High', 'entry'),
+                    ('Auto Levels', 'button', 'Cut Levels', 'button'), 
                     ('Cut New', 'label'), ('Zoom New', 'label'), 
                     ('Preferences', 'button'), 
                     )
@@ -183,7 +183,9 @@ class Info(GingaPlugin.GlobalPlugin):
         
     def cutset_cb(self, fitsimage, loval, hival, info):
         info.winfo.cut_low.set_text('%.2f' % (loval))
+        info.winfo.lbl_cut_low.set_text('%.2f' % (loval))
         info.winfo.cut_high.set_text('%.2f' % (hival))
+        info.winfo.lbl_cut_high.set_text('%.2f' % (hival))
 
     def autocuts_cb(self, fitsimage, option, info):
         info.winfo.cut_new.set_text(option)
@@ -234,8 +236,8 @@ class Info(GingaPlugin.GlobalPlugin):
         header = image.get_header()
         
         # Update info panel
-        name = header.get('FRAMEID', 'Noname')
-        info.winfo.frame_id.set_text(name)
+        name = image.get('name', 'Noname')
+        info.winfo.name.set_text(name)
         objtext = header.get('OBJECT', 'UNKNOWN')
         info.winfo.object.set_text(objtext)
         equinox = header.get('EQUINOX', '')
@@ -250,7 +252,9 @@ class Info(GingaPlugin.GlobalPlugin):
         # Show cut levels
         loval, hival = fitsimage.get_cut_levels()
         info.winfo.cut_low.set_text('%.2f' % (loval))
+        info.winfo.lbl_cut_low.set_text('%.2f' % (loval))
         info.winfo.cut_high.set_text('%.2f' % (hival))
+        info.winfo.lbl_cut_high.set_text('%.2f' % (hival))
 
         # Show dimensions
         dim_txt = "%dx%d" % (width, height)

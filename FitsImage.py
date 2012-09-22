@@ -2,7 +2,7 @@
 # FitsImage.py -- abstract classes for the display of FITS files
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Thu Sep 13 12:19:11 HST 2012
+#  Last edit: Wed Sep 19 16:10:57 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -688,7 +688,7 @@ class FitsImageBase(Callback.Callbacks):
     
     def apply_data_transforms1(self):
         newdata = self._data_org
-        print "data shape is %s" % str(newdata.shape)
+        self.logger.debug("data shape is %s" % str(newdata.shape))
         
         if self._swapXY:
             newdata = newdata.swapaxes(0, 1)
@@ -699,7 +699,7 @@ class FitsImageBase(Callback.Callbacks):
 
         self.data = newdata
         self.width, self.height = self.get_dims(newdata)
-        print "new data shape is %dx%d" % (self.width, self.height)
+        self.logger.debug("new data shape is %dx%d" % (self.width, self.height))
 
     def apply_data_transforms2(self, data, vmin, vmax):
         # apply other transforms

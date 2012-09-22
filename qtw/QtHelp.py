@@ -2,7 +2,7 @@
 # QtHelp.py -- customized Qt widgets and convenience functions
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Jun 22 13:48:14 HST 2012
+#  Last edit: Thu Sep 20 13:10:56 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -538,16 +538,27 @@ def _name_mangle(name, pfx=''):
             newname.append(c)
     return pfx + ''.join(newname)
 
-def _make_widget(tup):
+def _make_widget(tup, ns):
+    swap = False
     title = tup[0]
-    name  = _name_mangle(title)
-    w1 = QtGui.QLabel(title + ':')
-    w1.setAlignment(QtCore.Qt.AlignRight)
+    if not title.startswith('@'):
+        name  = _name_mangle(title)
+        w1 = QtGui.QLabel(title + ':')
+        w1.setAlignment(QtCore.Qt.AlignRight)
+    else:
+        # invisible title
+        swap = True
+        name  = _name_mangle(title[1:])
+        w1 = QtGui.QLabel('')
 
     wtype = tup[1]
     if wtype == 'label':
         w2 = QtGui.QLabel('')
         w2.setAlignment(QtCore.Qt.AlignLeft)
+    elif wtype == 'xlabel':
+        w2 = QtGui.QLabel('')
+        w2.setAlignment(QtCore.Qt.AlignLeft)
+        name = 'lbl_' + name
     elif wtype == 'entry':
         w2 = QtGui.QLineEdit()
         w2.setMaxLength(12)
@@ -560,20 +571,28 @@ def _make_widget(tup):
     elif wtype == 'checkbutton':
         w1 = QtGui.QLabel('')
         w2 = QtGui.QCheckBox(title)
+        swap = True
     elif wtype == 'togglebutton':
         w1 = QtGui.QLabel('')
         w2 = QtGui.QPushButton(name)
         w2.setCheckable(True)
+        swap = True
     elif wtype == 'button':
         w1 = QtGui.QLabel('')
         w2 = QtGui.QPushButton(title)
+        swap = True
     elif wtype == 'spacer':
         w1 = QtGui.QLabel('')
         w2 = QtGui.QLabel('')
     else:
         raise Exception("Bad wtype=%s" % wtype)
 
-    return (name, w1, w2)
+    if swap:
+        w1, w2 = w2, w1
+        ns[name] = w1
+    else:
+        ns[name] = w2
+    return (w1, w2)
 
 def build_info(captions):
     numrows = len(captions)
@@ -593,8 +612,7 @@ def build_info(captions):
         while col < numcols:
             if col < len(tup):
                 tup1 = tup[col:col+2]
-                name, w1, w2 = _make_widget(tup1)
-                wb[name] = w2
+                w1, w2 = _make_widget(tup1, wb)
                 table.addWidget(w1, row, col)
                 table.addWidget(w2, row, col+1)
             col += 2

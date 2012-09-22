@@ -2,7 +2,7 @@
 # FitsImageCanvasTypesQt.py -- drawing classes for FitsImageCanvas widget
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Jun 22 13:48:13 HST 2012
+#  Last edit: Thu Sep 20 15:06:30 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -186,8 +186,19 @@ class Polygon(CanvasObject):
             self.draw_caps(cr, self.cap, cpoints)
 
     def contains(self, x, y):
-        # TODO!!!
-        return False
+        # NOTE: we use a version of the ray casting algorithm
+        # See: http://alienryderflex.com/polygon/
+        result = False
+        xj, yj = self.points[-1]
+        for (xi, yi) in self.points:
+            if ((((yi < y) and (yj >= y)) or
+                 ((yj < y) and (yi >= y))) and
+                ((xi <= x) or (xj <= x))):
+                cross = (xi + float(y - yi)/(yj - yi)*(xj - xi)) < x
+                result ^= cross
+            xj, yj = xi, yi
+
+        return result
 
     def rotate(self, theta, xoff=0, yoff=0):
         newpts = map(lambda p: self.rotate_pt(p[0], p[1], theta,

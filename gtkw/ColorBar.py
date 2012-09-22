@@ -46,7 +46,7 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
         self.loval = 0
         self.hival = 0
         self._interval = {}
-        self._avg_pixels_per_range_num = 70.0
+        self._avg_pixels_per_range_num = 70
         
         # For callbacks
         for name in ('motion', 'scroll'):
@@ -109,7 +109,7 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
         self.width = width
         self.height = height
         # calculate intervals for range numbers
-        nums = width // self._avg_pixels_per_range_num
+        nums = int(width // self._avg_pixels_per_range_num)
         spacing = 256 // nums
         self._interval = {}
         for i in xrange(nums):
@@ -166,7 +166,7 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
 
         j = ival; off = 0
         range_pts = []
-        for i in range(256):
+        for i in xrange(256):
             
             wd = clr_wd    
             if rem_px > 0:

@@ -2,7 +2,7 @@
 # iqcalc.py -- image quality calculations on FITS data
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Wed Sep  5 18:05:41 HST 2012
+#  Last edit: Fri Sep 21 14:53:53 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -182,8 +182,6 @@ class IQCalc(object):
             threshold = self.get_threshold(data, sigma=sigma)
             self.logger.debug("threshold defaults to %f (sigma=%f)" % (
                 threshold, sigma))
-            print ("threshold defaults to %f (sigma=%f)" % (
-                threshold, sigma))
 
         data_max = filters.maximum_filter(data, radius)
         maxima = (data == data_max)
@@ -247,7 +245,8 @@ class IQCalc(object):
 
     # EVALUATION ON A FIELD
     
-    def evaluate_peaks(self, peaks, data, bright_radius=2, fwhm_radius=10):
+    def evaluate_peaks(self, peaks, data, bright_radius=2, fwhm_radius=10,
+                       cb_fn=None, ev_intr=None):
 
         height, width = data.shape
         hh = float(height) / 2.0
@@ -267,6 +266,9 @@ class IQCalc(object):
         # Form a list of objects and their characteristics
         objlist = []
         for x, y in peaks:
+            if ev_intr and ev_intr.isSet():
+                raise IQCalcError("Evaluation interrupted!")
+            
             # Find the fwhm in x and y 
             (fwhm_x, fwhm_y, ctr_x, ctr_y,
              sdx, sdy) = self.fwhm_data(x, y, data, radius=fwhm_radius)
@@ -303,15 +305,26 @@ class IQCalc(object):
                               skylevel=skylevel)
             objlist.append(obj)
 
+            if cb_fn != None:
+                cb_fn(obj)
+
         return objlist
 
+    def _compare(self, obj1, obj2):
+        val1 = obj1.brightness * obj1.pos/math.sqrt(obj1.fwhm)
+        val2 = obj2.brightness * obj2.pos/math.sqrt(obj2.fwhm)
+        if val1 > val2:
+            return -1
+        elif val2 > val1:
+            return 1
+        else:
+            return 0
+            
     def objlist_select(self, objlist, width, height,
                         minfwhm=0.1, maxfwhm=50.0, minelipse=0.0,
                         edgew=0.01):
 
-        maxval = 0.0
-        best = None
-
+        results = []
         for obj in objlist:
             # If peak has a minfwhm < fwhm < maxfwhm and the object
             # is inside the frame by edgew pct
@@ -319,16 +332,10 @@ class IQCalc(object):
                 (minelipse < obj.elipse) and (width*edgew < obj.x) and
                 (height*edgew < obj.y) and (width*(1.0-edgew) > obj.x) and
                 (height*(1.0-edgew) > obj.y)):
-                # then check 
-                val = obj.brightness * obj.pos/math.sqrt(obj.fwhm)
-                if maxval < val:
-                    maxval = val
-                    best = obj
+                results.append(obj)
 
-        if best:
-            return best
-        raise IQCalcError("No object matches criteria")
-
+        results.sort(self._compare)
+        return results
 
     def pick_field(self, data, bright_radius=2, radius=10,
                    threshold=None):
@@ -350,8 +357,11 @@ class IQCalc(object):
         if len(objlist) == 0:
             raise IQCalcError("Error evaluating bright peaks")
         
-        bnch = self.objlist_select(objlist, width, height)
-        return bnch
+        results = self.objlist_select(objlist, width, height)
+        if len(results) == 0:
+            raise IQCalcError("No object matches selection criteria")
+
+        return results[0]
 
 
 #END

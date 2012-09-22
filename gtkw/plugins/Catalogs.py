@@ -2,7 +2,7 @@
 # Catalogs.py -- Catalogs plugin for fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Wed Sep 12 17:09:09 HST 2012
+#  Last edit: Fri Sep 21 14:45:35 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -31,6 +31,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
         self.color_cursor = 'red'
 
         self.limit_stars_to_area = False
+        self.use_dss_channel = False
         self.plot_max = 500
         self.plot_limit = 100
         self.plot_start = 0
@@ -98,11 +99,15 @@ class Catalogs(GingaPlugin.LocalPlugin):
         fr.set_label_align(0.5, 0.5)
         fr.add(vbox)
 
-        captions = (('Server', 'combobox'),
+        captions = (('Server', 'xlabel'),
+                    ('@Server', 'combobox'),
+                    ('Use DSS channel', 'checkbutton'),
                     ('Get Image', 'button'))
         w, self.w = GtkHelp.build_info(captions)
         self.w.nb = nb
-        self.w.get_image.connect('clicked', lambda w: self.getimage())
+        self.w.get_image.connect('clicked', lambda w: self.getimage_cb())
+        self.w.use_dss_channel.set_active(self.use_dss_channel)
+        self.w.use_dss_channel.connect('toggled', self.use_dss_channel_cb)
 
         vbox.pack_start(w, padding=4, fill=True, expand=False)
 
@@ -129,11 +134,12 @@ class Catalogs(GingaPlugin.LocalPlugin):
         fr.set_label_align(0.5, 0.5)
         fr.add(vbox)
 
-        captions = (('Server', 'combobox'),
+        captions = (('Server', 'xlabel'),
+                    ('@Server', 'combobox'),
                     ('Limit stars to area', 'checkbutton'),
                     ('Search', 'button'))
         w, self.w2 = GtkHelp.build_info(captions)
-        self.w2.search.connect('clicked', lambda w: self.getcatalog())
+        self.w2.search.connect('clicked', lambda w: self.getcatalog_cb())
         self.w2.limit_stars_to_area.set_active(self.limit_stars_to_area)
         self.w2.limit_stars_to_area.connect('toggled', self.limit_area_cb)
 
@@ -179,8 +185,8 @@ class Catalogs(GingaPlugin.LocalPlugin):
         adj.configure(0, 0, 0, 1, 10, self.plot_limit)
         #scale.set_size_request(200, -1)
         self.tooltips.set_tip(scale, "Choose subset of stars plotted")
-        scale.set_update_policy(gtk.UPDATE_DELAYED)
-        #scale.set_update_policy(gtk.UPDATE_CONTINUOUS)
+        #scale.set_update_policy(gtk.UPDATE_DELAYED)
+        scale.set_update_policy(gtk.UPDATE_CONTINUOUS)
         self.w.plotgrp = scale
         scale.connect('value-changed', self.plot_pct_cb)
         hbox.pack_start(scale, padding=2, fill=True, expand=True)
@@ -226,9 +232,13 @@ class Catalogs(GingaPlugin.LocalPlugin):
         self.limit_stars_to_area = w.get_active()
         return True
 
+    def use_dss_channel_cb(self, w):
+        self.use_dss_channel = w.get_active()
+        return True
+
     def plot_pct_cb(self, rng):
         val = rng.get_value()
-        self.plot_start = val
+        self.plot_start = int(val)
         self.replot_stars()
         return True
 
@@ -237,14 +247,15 @@ class Catalogs(GingaPlugin.LocalPlugin):
         if num_stars > 0:
             adj = self.w.plotgrp.get_adjustment()
             page_size = self.plot_limit
-            self.plot_start = 0
-            adj.configure(0, 0, num_stars, 1, page_size, page_size)
+            self.plot_start = min(self.plot_start, num_stars-1)
+            adj.configure(self.plot_start, 0, num_stars, 1,
+                          page_size, page_size)
 
         self.replot_stars()
 
     def plot_limit_cb(self, rng):
         val = rng.get_value()
-        self.plot_limit = val
+        self.plot_limit = int(val)
         self._update_plotscroll()
         return True
 
@@ -501,7 +512,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
         return params
 
         
-    def getimage(self):
+    def getimage_cb(self):
         params = self.get_params(self.image_server_params)
 
         index = self.w.server.get_active()
@@ -509,55 +520,40 @@ class Catalogs(GingaPlugin.LocalPlugin):
 
         self.clearAll()
 
-        # Offload this network task to a non-gui thread
-        future = Future.Future()
-        future.freeze(self.fv.get_sky_image, server, params)
+        if self.use_dss_channel:
+            chname = 'DSS'
+            if not self.fv.has_channel(chname):
+                self.fv.add_channel(chname)
+        else:
+            chname = self.fv.get_channelName(self.fitsimage)
 
-        future2 = Future.Future()
-        future2.freeze(self.fv.gui_do, self.getimage_cb, future)
-        future.add_callback('resolved', future2.thaw)
         self.fitsimage.onscreen_message("Querying image db...",
                                         delay=1.0)
-        self.fv.nongui_do_future(future)
 
-    def getimage_cb(self, future):
-        self.logger.debug("getimage_continuation 1.")
-        fitspath = future.get_value()
+        # Offload this network task to a non-gui thread
+        self.fv.nongui_do(self.getimage, server, params, chname)
 
-        chname = self.fv.get_channelName(self.fitsimage)
+    def getimage(self, server, params, chname):
+        fitspath = self.fv.get_sky_image(server, params)
+
         self.fv.load_file(fitspath, chname=chname)
 
-        self.setfromimage()
-        self.redo()
+        # Update the GUI
+        def getimage_update(self):
+            self.setfromimage()
+            self.redo()
 
-    def getcatalog(self):
+        self.fv.gui_do(getimage_update)
+
+    def getcatalog_cb(self):
         params = self.get_params(self.catalog_server_params)
 
         index = self.w2.server.get_active()
         server = self.catalog_server_options[index]
 
-        # Offload this network task to a non-gui thread
-        future = Future.Future()
-        future.freeze(self.fv.get_catalog, server, params)
-
-        future2 = Future.Future()
-        future2.freeze(self.fv.gui_do, self.getcatalog_cb, future)
-        future.add_callback('resolved', future2.thaw)
-
-        # Clear current plots and table
-        self.reset()
-        self.fitsimage.onscreen_message("Querying catalog db...",
-                                        delay=1.0)
-        self.fv.nongui_do_future(future)
-
-    def getcatalog_cb(self, future):
-        self.logger.debug("getcatalog continuation 1.")
-        starlist, info = future.get_value()
-        self.logger.debug("starlist=%s" % str(starlist))
-
         obj = None
         if self.limit_stars_to_area:
-            # Look for the defining rectangle to filter stars
+            # Look for the defining object to filter stars
             # If none, then use the visible image area
             try:
                 obj = self.canvas.getObjectByTag(self.areatag)
@@ -565,9 +561,32 @@ class Catalogs(GingaPlugin.LocalPlugin):
             except KeyError:
                 pass
             
-        self.filter_results(starlist, info, obj)
+        self.reset()
+        self.fitsimage.onscreen_message("Querying catalog db...",
+                                        delay=1.0)
+        # Offload this network task to a non-gui thread
+        self.fv.nongui_do(self.getcatalog, server, params, obj)
 
-    def filter_results(self, starlist, info, filter_obj):
+    def getcatalog(self, server, params, obj):
+        starlist, info = self.fv.get_catalog(server, params)
+        self.logger.debug("starlist=%s" % str(starlist))
+
+        starlist = self.filter_results(starlist, obj)
+
+        # Update the GUI
+        self.fv.gui_do(self.update_catalog, starlist, info)
+        
+    def update_catalog(self, starlist, info):
+        self.starlist = starlist
+        self.table.show_table(self, info, starlist)
+
+        # Raise the listing tab
+        num = self.w.nb.page_num(self.w.listing)
+        self.w.nb.set_current_page(num)
+
+        self._update_plotscroll()
+
+    def filter_results(self, starlist, filter_obj):
         image = self.fitsimage.get_image()
 
         # Filter starts by a containing object, if provided
@@ -579,15 +598,6 @@ class Catalogs(GingaPlugin.LocalPlugin):
                     stars.append(star)
             starlist = stars
 
-        self.starlist = starlist
-        self.table.show_table(self, info, starlist)
-
-        # Raise the listing tab
-        num = self.w.nb.page_num(self.w.listing)
-        self.w.nb.set_current_page(num)
-
-        self._update_plotscroll()
-        #self.replot_stars()
         return starlist
 
     def clear(self):
@@ -598,7 +608,8 @@ class Catalogs(GingaPlugin.LocalPlugin):
         self.canvas.deleteAllObjects()
        
     def reset(self):
-        self.clearAll()
+        #self.clearAll()
+        self.clear()
         self.table.clear()
        
     def plot_star(self, obj, image=None):
@@ -612,10 +623,18 @@ class Catalogs(GingaPlugin.LocalPlugin):
         #print "color is %s" % str(color)
         circle = CanvasTypes.Circle(x, y, radius, color=color)
         point = CanvasTypes.Point(x, y, radius, color=color)
-        if obj.has_key('pick') and (not obj['pick']):
-            star = CanvasTypes.Canvas(circle, point)
+        ## What is this from?
+        if obj.has_key('pick'):
+            # Some objects returned from the Gen2 star catalog are marked
+            # with the attribute 'pick'.  If present then we show the
+            # star with or without the cross, otherwise we always show the
+            # cross
+            if not obj['pick']:
+                star = CanvasTypes.Canvas(circle, point)
+            else:
+                star = CanvasTypes.Canvas(circle)
         else:
-            star = CanvasTypes.Canvas(circle)
+            star = CanvasTypes.Canvas(circle, point)
         star.set_data(star=obj)
         obj.canvobj = star
 
@@ -631,7 +650,6 @@ class Catalogs(GingaPlugin.LocalPlugin):
         if length <= self.plot_limit:
             i = 0
         else:
-            #i = int(self.plot_start * length)
             i = self.plot_start
             i = int(min(i, length - self.plot_limit))
             length = self.plot_limit
@@ -797,6 +815,7 @@ class CatalogListing(object):
 
     def show_table(self, catalog, info, starlist):
         self.starlist = starlist
+        self.catalog = catalog
         # info is ignored, for now
         #self.info = info
         self.selected = []
@@ -810,8 +829,6 @@ class CatalogListing(object):
         self.treeview.set_model(listmodel)
 
         self.cbar.set_range(self.mag_min, self.mag_max)
-
-        self.catalog = catalog
 
 
     def get_color(self, obj):
@@ -839,7 +856,10 @@ class CatalogListing(object):
         b = float(b) / 255.0
         return (r, g, b)
 
-    def mark_selection(self, star):
+    def mark_selection(self, star, fromtable=False):
+        """Mark or unmark a star as selected.  (fromtable)==True if the
+        selection action came from the table (instead of the star plot).
+        """
         self.logger.debug("star selected name=%s ra=%s dec=%s" % (
             star['name'], star['ra'], star['dec']))
 
@@ -847,6 +867,7 @@ class CatalogListing(object):
             # Item is already selected--so unselect it
             self.selected.remove(star)
             try:
+                self._unselect_tv(star)
                 self.catalog.unhighlight_object(star.canvobj, 'selected')
             except Exception, e:
                 self.logger.warn("Error unhilighting star: %s" % (str(e)))
@@ -857,6 +878,7 @@ class CatalogListing(object):
                 for star2 in self.selected:
                     self.selected.remove(star2)
                     try:
+                        self._unselect_tv(star2)
                         self.catalog.unhighlight_object(star2.canvobj, 'selected')
                     except Exception, e:
                         self.logger.warn("Error unhilighting star: %s" % (str(e)))
@@ -866,6 +888,7 @@ class CatalogListing(object):
                 if (not star.has_key('canvobj')) or (star.canvobj == None):
                     self.catalog.plot_star(star)
                     
+                self._select_tv(star, fromtable=fromtable)
                 self.catalog.highlight_object(star.canvobj, 'selected', 'skyblue')
             except Exception, e:
                 self.logger.warn("Error hilighting star: %s" % (str(e)))
@@ -873,12 +896,24 @@ class CatalogListing(object):
 
 
     def show_selection(self, star):
+        """This method is called when the user clicks on a plotted star in the
+        fitsviewer.
+        """
+        self.mark_selection(star)
+
+    def _select_tv(self, star, fromtable=False):
         treeselection = self.treeview.get_selection()
         star_idx = self.starlist.index(star)
         treeselection.select_path(star_idx)
-        self.treeview.scroll_to_cell(star_idx, use_align=True, row_align=0.5)
+        if not fromtable:
+            # If the user did not select the star from the table, scroll
+            # the table so they can see the selection
+            self.treeview.scroll_to_cell(star_idx, use_align=True, row_align=0.5)
 
-        self.mark_selection(star)
+    def _unselect_tv(self, star):
+        treeselection = self.treeview.get_selection()
+        star_idx = self.starlist.index(star)
+        treeselection.unselect_path(star_idx)
 
     def clear(self):
         try:
@@ -896,12 +931,14 @@ class CatalogListing(object):
         self.catalog.highlight_objects(canvobjs, 'selected', 'skyblue')
             
     def select_star(self, treeview):
+        """This method is called when the user selects a star from the table.
+        """
         path, column = treeview.get_cursor()
         model = treeview.get_model()
         iter = model.get_iter(path)
         star = model.get_value(iter, 0)
         self.logger.debug("selected star: %s" % (str(star)))
-        self.mark_selection(star)
+        self.mark_selection(star, fromtable=True)
         return True
     
 

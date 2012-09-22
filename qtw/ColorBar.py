@@ -2,7 +2,7 @@
 # ColorBar.py -- color bar widget
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Wed Sep  5 18:18:02 HST 2012
+#  Last edit: Thu Sep 20 14:09:23 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -43,7 +43,7 @@ class ColorBar(Callback.Callbacks, QtGui.QWidget):
         self.loval = 0
         self.hival = 0
         self._interval = {}
-        self._avg_pixels_per_range_num = 70.0
+        self._avg_pixels_per_range_num = 70
 
         # For callbacks
         for name in ('motion', 'scroll'):
@@ -104,7 +104,7 @@ class ColorBar(Callback.Callbacks, QtGui.QWidget):
         #pixmap.fill(QtGui.QColor("black"))
         self.pixmap = pixmap
         # calculate intervals for range numbers
-        nums = width // self._avg_pixels_per_range_num
+        nums = int(width // self._avg_pixels_per_range_num)
         spacing = 256 // nums
         self._interval = {}
         for i in xrange(nums):
@@ -162,7 +162,7 @@ class ColorBar(Callback.Callbacks, QtGui.QWidget):
 
         j = ival; off = 0
         range_pts = []
-        for i in range(256):
+        for i in xrange(256):
             
             wd = clr_wd    
             if rem_px > 0:
@@ -268,12 +268,11 @@ class ColorBar(Callback.Callbacks, QtGui.QWidget):
             pct = float(dx) / float(wd)
             #print "dx=%f wd=%d pct=%f" % (dx, wd, pct)
             self.shift_colormap(pct)
-            return True
 
         width, height = self.get_size()
         pct = float(x) / float(width)
         value = int(self.loval + pct * (self.hival - self.loval))
-        return self.make_callback('motion', value, event)
+        self.make_callback('motion', value, event)
 
     def wheelEvent(self, event):
         delta = event.delta()

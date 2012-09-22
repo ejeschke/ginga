@@ -2,13 +2,14 @@
 # Pan.py -- Pan plugin for fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Mon Aug 27 14:25:44 HST 2012
+#  Last edit: Thu Sep 20 11:09:15 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+import math
 import gtk
 
 import Bunch
@@ -55,13 +56,14 @@ class Pan(GingaPlugin.GlobalPlugin):
         sfi.set_zoom_limits(-200, 100)
         sfi.enable_zoom(False)
         sfi.enable_autolevels('off')
-        ## sfi.enable_draw(True)
-        sfi.set_drawtype('rectangle')
+        sfi.enable_draw(True)
+        sfi.set_drawtype('rectangle', linestyle='dash')
         sfi.set_drawcolor('green')
-        ## sfi.set_callback('draw-event', self.panzoom)
+        sfi.set_callback('draw-event', self.draw_cb)
         sfi.define_cursor('pick', gtk.gdk.Cursor(gtk.gdk.FLEUR)) 
         ## sfi.enable_cuts(False)
         sfi.set_bg(0.4, 0.4, 0.4)
+        sfi.set_callback('button-press', self.btndown)
         sfi.set_callback('motion', self.panxy)
         sfi.set_callback('scroll', self.zoom)
         sfi.set_callback('configure', self.reconfigure)
@@ -219,6 +221,10 @@ class Pan(GingaPlugin.GlobalPlugin):
 
         return False
 
+    def btndown(self, fitsimage, button, data_x, data_y):
+        if button == 0x21:
+            fitsimage = self.fv.getfocus_fitsimage()
+            fitsimage.panset_xy(data_x, data_y, redraw=False)
 
     def zoom(self, fitsimage, direction):
         """Scroll event in the small fits window.  Just zoom the large fits
@@ -233,6 +239,37 @@ class Pan(GingaPlugin.GlobalPlugin):
                                    delay=1.0)
         
         
+    def draw_cb(self, fitsimage, tag):
+        # Get and delete the drawn object
+        obj = fitsimage.getObjectByTag(tag)
+        fitsimage.deleteObjectByTag(tag, redraw=True)
+
+        # determine center of drawn rectangle and set pan position
+        if obj.kind != 'rectangle':
+            return True
+        xc = (obj.x1 + obj.x2) / 2.0
+        yc = (obj.y1 + obj.y2) / 2.0
+        fitsimage = self.fv.getfocus_fitsimage()
+        # note: fitsimage <-- referring to large non-pan image
+        fitsimage.panset_xy(xc, yc, redraw=False)
+
+        # Determine appropriate zoom level to fit this rect
+        wd = obj.x2 - obj.x1
+        ht = obj.y2 - obj.y1
+        wwidth, wheight = fitsimage.get_window_size()
+        wd_scale = float(wwidth) / float(wd)
+        ht_scale = float(wheight) / float(ht)
+        scale = min(wd_scale, ht_scale)
+        self.logger.debug("wd_scale=%f ht_scale=%f scale=%f" % (
+            wd_scale, ht_scale, scale))
+        if scale < 1.0:
+            zoomlevel = - max(2, int(math.ceil(1.0/scale)))
+        else:
+            zoomlevel = max(1, int(math.floor(scale)))
+        self.logger.debug("zoomlevel=%d" % (zoomlevel))
+
+        fitsimage.zoom_to(zoomlevel, redraw=True)
+
     def __str__(self):
         return 'pan'
     
