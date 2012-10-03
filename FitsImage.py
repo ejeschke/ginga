@@ -2,7 +2,7 @@
 # FitsImage.py -- abstract classes for the display of FITS files
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Wed Sep 19 16:10:57 HST 2012
+#  Last edit: Wed Oct  3 13:30:12 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -17,6 +17,7 @@ import time
 import Callback
 import Settings
 import RGBMap
+import AstroImage
 import AutoCuts
 import cmap, imap
 
@@ -60,12 +61,10 @@ class FitsImageBase(Callback.Callbacks):
         self.autocuts = AutoCuts.AutoCuts(self.logger)
         
         # actual image width and height (see set_data())
-        self._data_org = numpy.zeros((1, 1))
-        self.data = self._data_org.copy()
-        #self.data = None
+        self.image = AstroImage.AstroImage(numpy.zeros((1, 1)))
+        self.data = self.image.get_data()
         self.width  = 1
         self.height = 1
-        self.image = None
         # for debugging
         self.name = str(self)
         
@@ -164,8 +163,7 @@ class FitsImageBase(Callback.Callbacks):
         return (width, height)
 
     def get_data_size(self):
-        width, height = self.get_dims(self._data_org)
-        return (width, height)
+        return self.image.get_data_size()
 
     # TODO: deprecate these two?
     def set_cmap(self, cm, redraw=True):
@@ -197,27 +195,11 @@ class FitsImageBase(Callback.Callbacks):
         return self.image
     
     def set_image(self, image, redraw=True):
-        data = image.get_data()
-        self.set_data(data, image=image)
-
-        self.make_callback('image-set', image)
-
-    def set_data(self, data, image=None, redraw=True):
-        dims = data.shape
-        ## assert (len(dims) == 2), \
-        ##        FitsImageError("Only 2D images are supported!")
-        
-        # original data
-        self._data_org = data
-        self.maxval = numpy.nanmax(self._data_org)
-        self.minval = numpy.nanmin(self._data_org)
-
         #self.first_cuts(redraw=False)
         self.image = image
-        if self.image != None:
-            profile = self.image.get('profile', None)
-            if (profile != None) and (self.t_use_embedded_profile):
-                self.apply_profile(profile, redraw=False)
+        profile = self.image.get('profile', None)
+        if (profile != None) and (self.t_use_embedded_profile):
+            self.apply_profile(profile, redraw=False)
 
         # NOTE [A]
         self.apply_data_transforms1()
@@ -227,9 +209,21 @@ class FitsImageBase(Callback.Callbacks):
         if self.t_autolevels != 'off':
             self.auto_levels(redraw=False)
 
-        self.make_callback('data-set', data)
         if redraw:
             self.redraw()
+
+        data = image.get_data()
+        self.make_callback('data-set', data)
+        self.make_callback('image-set', image)
+
+    def set_data(self, data, image=None, redraw=True):
+        dims = data.shape
+        ## assert (len(dims) == 2), \
+        ##        FitsImageError("Only 2D images are supported!")
+        if image == None:
+            image = AstroImage.AstroImage(data)
+        self.set_image(image)
+        
 
     def clear(self, redraw=True):
         self.set_data(numpy.zeros((1, 1)), redraw=redraw)
@@ -260,27 +254,24 @@ class FitsImageBase(Callback.Callbacks):
         pass
 
     def copy_to_dst(self, target):
-        target.set_data(self._data_org.copy())
+        #target.set_data(self._data_org.copy())
+        target.set_image(self.image)
 
     def redraw(self, whence=0):
         self.redraw_data(whence=whence)
         
-        # finally update the window drawable from the pixmap
+        # finally update the window drawable from the offscreen surface
         self.update_image()
 
     def update_image(self):
         raise FitsImageError("Override this abstract method!")
     
     def redraw_data(self, whence=0):
-        arr = self.get_rgb_array(whence=whence)
-        (height, width, depth) = arr.shape
-        self.render_offscreen(arr, self._dst_x, self._dst_y, width, height)
+        rgbobj = self.get_rgb_object(whence=whence)
+        self.render_image(rgbobj, self._dst_x, self._dst_y)
         if whence <= 0:
             self.make_callback('pan-set')
 
-    def render_offscreen(self, dst_x, dst_y, width, height):
-        raise FitsImageError("Override this abstract method!")
-    
     def _calc_fit(self):
         width, height = self.width, self.height
             
@@ -386,7 +377,7 @@ class FitsImageBase(Callback.Callbacks):
     def get_canpan(self):
         return self.canpan
     
-    def get_rgb_array(self, whence=0):
+    def get_rgb_object(self, whence=0):
         """Create an RGB numpy array (NxMx3) representing the data that
         should be rendered at this zoom level and pan settings.
         """
@@ -417,14 +408,12 @@ class FitsImageBase(Callback.Callbacks):
             idx = self._prergb.astype('uint32')
             self.logger.debug("shape of index is %s" % (str(idx.shape)))
 
-            # Apply colormap.  We produce three arrays, one for R, G and B,
-            # then combine them for a NxMx3 array.
-            arr = self.rgbmap.get_rgbarray(idx)
-            self.logger.debug("after color map, size is %s" % (str(arr.shape)))
-            self._rgbarr = arr
+            # Apply color and intensity mapping.  We produce a dict of
+            # ARGB slices.
+            rgb = self.rgbmap.get_rgbarray(idx)
+            self._rgbarr = rgb
 
         return self._rgbarr
-
 
     def get_cutout(self):
         # get the approx coords of the actual data covered by the
@@ -575,8 +564,7 @@ class FitsImageBase(Callback.Callbacks):
         """Get the data value at position (data_x, data_y).  Indexes are
         0-based, as in numpy.
         """
-        # NOTE [A]
-        return self._data_org[data_y, data_x]
+        return self.image.get_data_xy(data_x, data_y)
 
     def get_canvas_xy(self, data_x, data_y, center=True):
         """Returns the closest x, y coordinates in the graphics space to the
@@ -663,7 +651,7 @@ class FitsImageBase(Callback.Callbacks):
         x, y = x1, y1
         while True:
             if getvalues:
-                val = self._data_org[y, x]
+                val = self.get_data(x, y)
                 res.append(val)
             else:
                 res.append((x, y))
@@ -687,7 +675,7 @@ class FitsImageBase(Callback.Callbacks):
         return dist
     
     def apply_data_transforms1(self):
-        newdata = self._data_org
+        newdata = self.image.get_data()
         self.logger.debug("data shape is %s" % str(newdata.shape))
         
         if self._swapXY:
@@ -866,11 +854,7 @@ class FitsImageBase(Callback.Callbacks):
         return (self._flipX, self._flipY, self._swapXY)
 
     def get_minmax(self):
-        ## data = self._data_org
-        ## loval = numpy.nanmin(data)
-        ## hival = numpy.nanmax(data)
-        ## return (loval, hival)
-        return (self.minval, self.maxval)
+        return self.image.get_minmax()
         
     def set_autolevel_params(self, method, pct=None, numbins=None,
                              usecrop=None, cropradius=None):

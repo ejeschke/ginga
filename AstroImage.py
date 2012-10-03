@@ -1,8 +1,8 @@
 #
-# astro/image.py -- Abstraction of an astronomical data image.
+# AstroImage.py -- Abstraction of an astronomical data image.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Thu Sep 13 13:51:35 HST 2012
+#  Last edit: Sun Sep 23 13:07:27 HST 2012
 #]
 # Takeshi Inagaki
 #
@@ -21,7 +21,6 @@ import time
 import pyfits
 import numpy
 
-wcs_offset = 0.5
 
 class CalcError(Exception):
     pass
@@ -38,6 +37,8 @@ class AstroImage(object):
         if data_np == None:
             data_np = numpy.zeros((1, 1))
         self.data = data_np
+        self.maxval = numpy.nanmax(self.data)
+        self.minval = numpy.nanmin(self.data)
         self.metadata = {}
         if not wcsclass:
             wcsclass = wcs.WCS
@@ -45,7 +46,6 @@ class AstroImage(object):
         if metadata:
             self.update_metadata(metadata)
 
-        self.maximize_region()
         self.iqcalc = iqcalc.IQCalc(logger=logger)
 
 
@@ -118,51 +118,23 @@ class AstroImage(object):
     def get_size(self):
         return (self.width, self.height)
     
-    def set_region(self, x1, y1, x2, y2):
-        assert x1 >=0 and x1 < self.width, \
-               CalcError("x1 value (%d) out of range (0..%d-1)" % (
-                   x1, self.width))
-        assert y1 >=0 and y1 < self.height, \
-               CalcError("y1 value (%d) out of range (0..%d-1)" % (
-                   y1, self.height))
-        assert x2 >=0 and x2 < self.width, \
-               CalcError("x2 value (%d) out of range (0..%d-1)" % (
-                   x2, self.width))
-        assert y2 >=0 and y2 < self.height, \
-               CalcError("y2 value (%d) out of range (0..%d-1)" % (
-                   y2, self.height))
-
-        self.x1 = x1
-        self.y1 = y1
-        self.x2 = x2
-        self.y2 = y2
-
-    def set_compatible_region(self, x1, y1, x2, y2):
-        """Sets the most compatible region consistent with the image size.
-        Returns the region set."""
-        (g1, h1, g2, h2) = self.get_max_region()
-        u1 = min(max(g1, x1), x2)
-        v1 = min(max(h1, y1), y2)
-        u2 = min(g2, x2)
-        v2 = min(h2, y2)
-        self.set_region(u1, v1, u2, v2)
-        return self.get_region()
-        
-    def copy_region(self, other):
-        other.set_region(self.x1, self.y1, self.x2, self.y2)
-        
-    def get_max_region(self):
-        return (0, 0, self.width-1, self.height-1)
-        
-    def maximize_region(self):
-        self.set_region(0, 0, self.width-1, self.height-1)
-        
-    def get_region(self):
-        return (self.x1, self.y1, self.x2, self.y2)
-        
     def get_data(self):
+        return self.data
+        
+    def copy_data(self):
         return self.data.copy()
         
+    def get_data_xy(self, x, y):
+        return self.data[y, x]
+        
+    def _get_dims(self, data):
+        height, width = data.shape[:2]
+        return (width, height)
+
+    def get_data_size(self):
+        width, height = self._get_dims(self.data)
+        return (width, height)
+
     def get_metadata(self):
         return self.metadata.copy()
         
@@ -236,13 +208,6 @@ class AstroImage(object):
         """Set an item in the fits header, if any."""
         return self.update_keywords(kwds)
         
-    def _update_region(self):
-        """Update region to reflect new size."""
-        self.set_region(min(self.x1, self.width-1),
-                        min(self.y1, self.height-1),
-                        min(self.x2, self.width-1),
-                        min(self.y2, self.height-1))
-
     def set_data(self, data_np, metadata=None, astype=None):
         """Use this method to SHARE (not copy) the incoming array.
         """
@@ -253,13 +218,20 @@ class AstroImage(object):
         if metadata:
             self.update_metadata(metadata)
             
-        self._update_region()
+        self.maxval = numpy.nanmax(self.data)
+        self.minval = numpy.nanmin(self.data)
         
     def update_data(self, data_np, metadata=None, astype=None):
         """Use this method to make a private copy of the incoming array.
         """
         self.set_data(data_np.copy(), metadata=metadata,
                       astype=astype)
+        
+    def get_minmax(self):
+        ## loval = numpy.nanmin(self.data)
+        ## hival = numpy.nanmax(self.data)
+        ## return (loval, hival)
+        return (self.minval, self.maxval)
         
     def update_metadata(self, keyDict):
         for key, val in keyDict.items():
@@ -281,7 +253,6 @@ class AstroImage(object):
     def transfer(self, other, astype=None):
         other.update_data(self.data, astype=astype)
         other.update_metadata(self.metadata)
-        self.copy_region(other)
         
     def copy(self, astype=None):
         other = AstroImage(self.data)
@@ -338,11 +309,6 @@ class AstroImage(object):
 
     def qualsize(self, x1=None, y1=None, x2=None, y2=None, radius=5,
                  bright_radius=2, threshold=None):
-        if x1 == None:
-            x1 = self.x1
-            y1 = self.y1
-            x2 = self.x2
-            y2 = self.y2
 
         x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
         data = self.cutout_data(x1, y1, x2, y2, astype='float32')

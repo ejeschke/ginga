@@ -2,7 +2,7 @@
 # RGBMap.py -- color mapping
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Tue Sep  4 16:38:44 HST 2012
+#  Last edit: Tue Oct  2 17:39:48 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -17,6 +17,10 @@ import Callback
 class RGBMapError(Exception):
     pass
 
+class RGBImage(object):
+    def __init__(self, **kwdargs):
+        self.__dict__.update(kwdargs)
+    
 class RGBMapper(Callback.Callbacks):
 
     def __init__(self):
@@ -118,8 +122,7 @@ class RGBMapper(Callback.Callbacks):
         ar = self.arr[0][idx]
         ag = self.arr[1][idx]
         ab = self.arr[2][idx]
-        arr = numpy.dstack((ar, ag, ab))
-        return arr
+        return (ar, ag, ab)
         
     def _get_rgbarray_rgb(self, idx_r, idx_g, idx_b):
         # NOTE: data is assumed to be in the range 0-255 at this point
@@ -130,15 +133,14 @@ class RGBMapper(Callback.Callbacks):
         ag = self.arr[1][idx_g]
         idx_b = idx_b.clip(0, 255)
         ab = self.arr[2][idx_b]
-        arr = numpy.dstack((ar, ag, ab))
-        return arr
+        return (ar, ag, ab)
 
     def get_rgbarray(self, idx):
         shape = idx.shape
         if len(shape) == 2:
             # 2D monochrome image
             idx = self.get_hasharray(idx)
-            arr = self._get_rgbarray(idx)
+            ar, ag, ab = self._get_rgbarray(idx)
         elif len(shape) == 3:
             # Assume 2D color image
             assert shape[2] in (3, 4), \
@@ -147,10 +149,16 @@ class RGBMapper(Callback.Callbacks):
             idx_g = self.get_hasharray(idx[:, :, 1])
             idx_b = self.get_hasharray(idx[:, :, 2])
             # alpha channel is usually 3
-            arr = self._get_rgbarray_rgb(idx_r, idx_g, idx_b)
-            
-        return arr
+            ar, ag, ab = self._get_rgbarray_rgb(idx_r, idx_g, idx_b)
+
+        ht, wd = ab.shape
+        aa = numpy.zeros((ht, wd), dtype=numpy.uint8)
+        aa.fill(255)
+
+        res = RGBImage(a=aa, r=ar, g=ag, b=ab)
+        return res
         
+    
     def get_hasharray(self, idx):
         # NOTE: data is assumed to be in the range 0-hashsize at this point
         # but clip as a precaution

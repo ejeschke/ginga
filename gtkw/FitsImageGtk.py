@@ -2,16 +2,18 @@
 # FitsImageGtk.py -- classes for the display of FITS files in Gtk widgets
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Jun 22 13:41:32 HST 2012
+#  Last edit: Wed Oct  3 13:30:11 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 
+import sys, re
 import gobject
 import gtk
 import cairo
+import numpy
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -30,15 +32,18 @@ class FitsImageGtk(FitsImage.FitsImageBase):
 
         imgwin = gtk.DrawingArea()
         imgwin.connect("expose_event", self.expose_event)
+        # GTK3?
+        #imgwin.connect("draw_event", self.draw_event)
         imgwin.connect("configure_event", self.configure_event)
         imgwin.set_events(gtk.gdk.EXPOSURE_MASK)
         self.imgwin = imgwin
-        self.gc = None
-        self.pixmap = None
+        self.surface = None
         self.imgwin.show_all()
 
         self.message = None
         self.msgtask = None
+        self.img_bg = None
+        self.img_fg = None
         self.set_bg(0.5, 0.5, 0.5, redraw=False)
         self.set_fg(1.0, 1.0, 1.0, redraw=False)
         
@@ -48,33 +53,43 @@ class FitsImageGtk(FitsImage.FitsImageBase):
     def get_widget(self):
         return self.imgwin
 
-    def _render_offscreen(self, drawable, gc, data, dst_x, dst_y,
+    def _render_offscreen(self, surface, data, dst_x, dst_y,
                           width, height):
         # NOTE [A]
         daht, dawd, depth = data.shape
         self.logger.debug("data shape is %dx%dx%d" % (dawd, daht, depth))
 
-        # Get RGB buffer for copying pixel data
-        rgb_buf = self._get_rgbbuf(data)
-                              
-        # fill pixmap with background color
+        cr = cairo.Context(surface)
+
+        # fill surface with background color
         imgwin_wd, imgwin_ht = self.get_window_size()
-        drawable.draw_rectangle(gc, True, 0, 0,
-                                imgwin_wd, imgwin_ht)
+        cr.rectangle(0, 0, imgwin_wd, imgwin_ht)
+        r, g, b = self.img_bg
+        cr.set_source_rgb(r, g, b)
+        cr.fill()
 
-        # draw image data from buffer to offscreen pixmap
-        drawable.draw_rgb_image(gc, dst_x, dst_y, width,
-                                height, gtk.gdk.RGB_DITHER_NORMAL,
-                                rgb_buf, dawd*3)
+        arr8 = data.astype(numpy.uint8).flatten()
+        stride = cairo.ImageSurface.format_stride_for_width(cairo.FORMAT_RGB24,
+                                                            width)
 
+        img_surface = cairo.ImageSurface.create_for_data(arr8,
+                                                         cairo.FORMAT_RGB24,
+                                                         dawd, daht, stride)
+        cr.set_source_surface(img_surface, dst_x, dst_y)
+        cr.set_operator(cairo.OPERATOR_SOURCE)
+        #cr.paint()
+        cr.rectangle(dst_x, dst_y, dawd, daht)
+        cr.fill()
+        
         # render self.message
         if self.message:
-            self.draw_message(drawable, imgwin_wd, imgwin_ht,
+            self.draw_message(cr, imgwin_wd, imgwin_ht,
                               self.message)
 
-    def draw_message(self, drawable, width, height, message):
-        cr = drawable.cairo_create()
-        cr.set_source_rgb(1.0, 1.0, 1.0)
+    def draw_message(self, cr, width, height, message):
+        r, g, b = self.img_fg
+        #cr.set_source_rgb(1.0, 1.0, 1.0)
+        cr.set_source_rgb(r, g, b)
         cr.select_font_face('Sans Serif')
         cr.set_font_size(24.0)
         a, b, wd, ht, i, j = cr.text_extents(message)
@@ -82,31 +97,49 @@ class FitsImageGtk(FitsImage.FitsImageBase):
         x = (width // 2) - (wd // 2)
         cr.move_to(x, y)
         cr.show_text(self.message)
-        
 
-    def render_offscreen(self, data, dst_x, dst_y, width, height):
-        self.logger.debug("redraw pixmap=%s gc=%s" % (self.pixmap, self.gc))
-        if (self.pixmap == None) or (self.gc == None):
+    def get_offscreen_context(self):
+        cr = cairo.Context(self.surface)
+        return cr
+
+    def render_image(self, rgbobj, dst_x, dst_y):
+        """Render the image represented by (rgbobj) at dst_x, dst_y
+        in the pixel space.
+        """
+        self.logger.debug("redraw surface=%s" % (self.surface))
+        if self.surface == None:
             return
-        self.logger.debug("drawing to pixmap")
-        return self._render_offscreen(self.pixmap, self.gc, data, dst_x, dst_y,
+
+        # Prepare array for Cairo rendering
+        if sys.byteorder == 'little':
+            arr = numpy.dstack((rgbobj.b, rgbobj.g, rgbobj.r, rgbobj.a))
+        else:
+            arr = numpy.dstack((rgbobj.a, rgbobj.r, rgbobj.g, rgbobj.b))
+
+        (height, width) = rgbobj.r.shape
+        return self._render_offscreen(self.surface, arr, dst_x, dst_y,
                                       width, height)
 
-
     def configure(self, width, height):
-        #pixmap = gtk.gdk.Pixmap(widget.window, width, height)
-        pixmap = gtk.gdk.Pixmap(None, width, height, 24)
-        self.gc = self._get_gc(pixmap)
-        pixmap.draw_rectangle(self.gc, True, 0, 0, width, height)
-        self.pixmap = pixmap
+        arr8 = numpy.zeros(height*width*4).astype(numpy.uint8)
+        stride = cairo.ImageSurface.format_stride_for_width(cairo.FORMAT_RGB24,
+                                                            width)
+
+        surface = cairo.ImageSurface.create_for_data(arr8,
+                                                     cairo.FORMAT_RGB24,
+                                                     width, height, stride)
+        self.surface = surface
         self.set_window_size(width, height, redraw=True)
         
     def get_image_as_pixbuf(self):
-        arr = self.get_rgb_array()
+        rgbobj = self.get_rgb_object()
+        arr = numpy.dstack((rgbobj.r, rgbobj.g, rgbobj.b))
+
         try:
             pixbuf = gtk.gdk.pixbuf_new_from_array(arr, gtk.gdk.COLORSPACE_RGB,
                                                    8)
         except Exception, e:
+            print "ERROR MAKING PIXBUF", str(e)
             # pygtk might have been compiled without numpy support
             daht, dawd, depth = arr.shape
             rgb_buf = self._get_rgbbuf(arr)
@@ -130,13 +163,11 @@ class FitsImageGtk(FitsImage.FitsImageBase):
         pixbuf.save(filepath, format, options)
     
     def update_image(self):
-        if not self.pixmap:
+        if not self.surface:
             return
-        if not self.gc:
-            self.gc = self._get_gc(self.pixmap)
             
         win = self.imgwin.window
-        if win != None and self.pixmap != None:
+        if win != None and self.surface != None:
             #imgwin_wd, imgwin_ht = self.get_window_size()
             win.invalidate_rect(None, True)
             # Process expose events right away so window is responsive
@@ -144,24 +175,35 @@ class FitsImageGtk(FitsImage.FitsImageBase):
             win.process_updates(True)
 
 
-    def expose_event(self, widget, event):
-        """When an area of the window is exposed, we just copy out of the
-        server-side, off-screen pixmap to that area.
+    def draw_event(self, widget, cr):
+        """GTK 3 event handler replacing expose_event().
         """
-        x , y, width, height = event.area
-        self.logger.debug("pixmap is %s" % self.pixmap)
-        if self.pixmap != None:
-            # redraw the screen from backing pixmap
-            if not self.gc:
-                self.gc = self._get_gc(widget)
-            self.logger.debug("updating window from pixmap")
-            widget.window.draw_drawable(self.gc, self.pixmap, x, y, x, y,
-                                        width, height)
+        self.logger.debug("updating window from surface")
+        # redraw the screen from backing surface
+        cr.set_source_surface(self.surface, 0, 0)
+        cr.set_operator(cairo.OPERATOR_SOURCE)
+        cr.paint()
         return False
         
-
+    def expose_event(self, widget, event):
+        """When an area of the window is exposed, we just copy out of the
+        server-side, off-screen surface to that area.
+        """
+        x , y, width, height = event.area
+        self.logger.debug("surface is %s" % self.surface)
+        if self.surface != None:
+            cr = widget.window.cairo_create()
+            # set clip area for exposed region
+            cr.rectangle(x, y, width, height)
+            cr.clip()
+            # Paint from off-screen surface
+            cr.set_source_surface(self.surface, 0, 0)
+            cr.set_operator(cairo.OPERATOR_SOURCE)
+            cr.paint()
+        return False
+        
     def configure_event(self, widget, event):
-        self.pixmap = None
+        self.surface = None
         x, y, width, height = widget.get_allocation()
         self.logger.debug("allocation is %d,%d %dx%d" % (
             x, y, width, height))
@@ -183,37 +225,18 @@ class FitsImageGtk(FitsImage.FitsImageBase):
         buf = data.tostring(order='C')
         return buf
 
-    def _get_gc(self, drawable, color=None):
-        if not color:
-            color = self.img_bg
-        gc = drawable.new_gc()
-        #cmap = drawable.get_colormap()
-        cmap = gtk.gdk.colormap_get_system()
-        clr = cmap.alloc_color(color)
-        gc.set_foreground(clr)
-        #gc.set_rgb_fg_color(self.img_bg)
-        self.logger.debug("returning gc=%s" % str(gc))
-        return gc
-
-    def _get_color(self, r, g, b):
-        n = 65535.0
-        clr = gtk.gdk.Color(int(r*n), int(g*n), int(b*n))
-        return clr
+    ## def _get_color(self, r, g, b):
+    ##     n = 65535.0
+    ##     clr = gtk.gdk.Color(int(r*n), int(g*n), int(b*n))
+    ##     return clr
         
     def set_bg(self, r, g, b, redraw=True):
-        self.img_bg = self._get_color(r, g, b)
-        if not self.pixmap:
-            return
-        self.gc = self.pixmap.new_gc()
-        cmap = self.pixmap.get_colormap()
-        clr = cmap.alloc_color(self.bg)
-        self.gc.set_foreground(clr)
-
+        self.img_bg = (r, g, b)
         if redraw:
             self.redraw(whence=3)
         
     def set_fg(self, r, g, b, redraw=True):
-        self.img_fg = self._get_color(r, g, b)
+        self.img_fg = (r, g, b)
         if redraw:
             self.redraw(whence=3)
         
@@ -477,38 +500,65 @@ class FitsImageZoom(FitsImageEvent, Mixins.FitsImageZoomMixin):
         
 class thinCrossCursor(object):
     def __init__(self, color='red'):
-        pm = gtk.gdk.Pixmap(None,16,16,1)
-        mask = gtk.gdk.Pixmap(None,16,16,1)
-        colormap = gtk.gdk.colormap_get_system()
-        black = colormap.alloc_color('black')
-        white = colormap.alloc_color('white')
-        
-        bgc = pm.new_gc(foreground=black)
-        wgc = pm.new_gc(foreground=white)
-        
-        mask.draw_rectangle(bgc,True,0,0,16,16)
-        pm.draw_rectangle(wgc,True,0,0,16,16)
-        
-        mask.draw_line(wgc,0,6,5,6)
-        mask.draw_line(wgc,0,8,5,8)
-        
-        mask.draw_line(wgc,10,6,15,6)
-        mask.draw_line(wgc,10,8,15,8)
-        
-        mask.draw_line(wgc,6,0,6,5)
-        mask.draw_line(wgc,8,0,8,5)
-        
-        mask.draw_line(wgc,6,10,6,15)
-        mask.draw_line(wgc,8,10,8,15)
-        
-        #mask.draw_line(wgc,0,5,0,9)
-        #mask.draw_line(wgc,15,5,15,9)
-        #mask.draw_line(wgc,5,0,9,0)
-        #mask.draw_line(wgc,5,15,9,15)
-        #mask.draw_arc(wgc,False,3,3,8,8,0,64*360)
         self.color = color
-        self.cur = gtk.gdk.Cursor(pm,mask,
-                                  gtk.gdk.color_parse(self.color),
-                                  gtk.gdk.Color(),8,8)
+        height = 16
+        width  = 16
+        arr8 = numpy.zeros(height*width*4).astype(numpy.uint8)
+        stride = cairo.ImageSurface.format_stride_for_width(cairo.FORMAT_ARGB32,
+                                                            width)
+
+        surface = cairo.ImageSurface.create_for_data(arr8,
+                                                     cairo.FORMAT_ARGB32,
+                                                     width, height, stride)
+        cr = cairo.Context(surface)
+        # Fill square with full transparency
+        cr.rectangle(0, 0, width, height)
+        cr.set_source_rgba(0.0, 0.0, 0.0, 0.0)
+        cr.fill()
+
+        # Set cursor color
+        color = gtk.gdk.color_parse(color)
+        rgb_s = color.to_string()
+        match = re.match(r'^#(\w{4})(\w{4})(\w{4})$', rgb_s)
+        r, g, b = map(lambda s: float(int(s, 16))/65535.0, match.groups())
+
+        # Something I don't get about Cairo--why do I have to specify
+        # BGRA for a method called set_source_RGBA &%^%*($ !!! 
+        #cr.set_source_rgba(r, g, b, 1.0)
+        cr.set_source_rgba(b, g, r, 1.0)
+        cr.set_line_width(1)
+
+        # NOTE: ".5" coordinates are to get sharp, single pixel lines
+        # due to the way Cairo renders--more ^&$%(*@ !!
+        # See http://cairographics.org/FAQ/#sharp_lines
+        cr.move_to(0, 6.5)
+        cr.line_to(5, 6.5)
+        cr.move_to(0, 8.5)
+        cr.line_to(5, 8.5)
         
+        cr.move_to(10, 6.5)
+        cr.line_to(15, 6.5)
+        cr.move_to(10, 8.5)
+        cr.line_to(15, 8.5)
+        
+        cr.move_to(6.5, 0)
+        cr.line_to(6.5, 5)
+        cr.move_to(8.5, 0)
+        cr.line_to(8.5, 5)
+        
+        cr.move_to(6.5, 10)
+        cr.line_to(6.5, 15)
+        cr.move_to(8.5, 10)
+        cr.line_to(8.5, 15)
+
+        cr.stroke()
+
+        data = arr8.reshape((height, width, 4))
+        pixbuf = gtk.gdk.pixbuf_new_from_array(data,
+                                               gtk.gdk.COLORSPACE_RGB, 8)
+        # Is this always going to be the correct display?  Does it matter?
+        display = gtk.gdk.display_get_default()
+        self.cur = gtk.gdk.Cursor(display, pixbuf, 8, 8)
+        
+
 #END

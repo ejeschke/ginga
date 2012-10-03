@@ -2,7 +2,7 @@
 # FitsImageQt.py -- classes for the display of FITS files in Qt widgets
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Jun 22 13:48:13 HST 2012
+#  Last edit: Wed Oct  3 13:30:10 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -164,12 +164,20 @@ class FitsImageQt(FitsImage.FitsImageBase):
         painter.drawText(x, y, message)
         
 
-    def render_offscreen(self, data, dst_x, dst_y, width, height):
+    def render_image(self, rgbobj, dst_x, dst_y):
+        """Render the image represented by (rgbobj) at dst_x, dst_y
+        in the pixel space.
+        """
         self.logger.debug("redraw pixmap=%s" % (self.pixmap))
         if self.pixmap == None:
             return
         self.logger.debug("drawing to pixmap")
-        return self._render_offscreen(self.pixmap, data, dst_x, dst_y,
+
+        # Prepare array for rendering
+        arr = numpy.dstack((rgbobj.r, rgbobj.g, rgbobj.b))
+        (height, width) = rgbobj.r.shape
+
+        return self._render_offscreen(self.pixmap, arr, dst_x, dst_y,
                                       width, height)
 
     def configure(self, width, height):
@@ -182,7 +190,8 @@ class FitsImageQt(FitsImage.FitsImageBase):
         self.set_window_size(width, height, redraw=True)
         
     def get_image_as_widget(self):
-        arr = self.get_rgb_array()
+        rgbobj = self.get_rgb_object(whence=3)
+        arr = numpy.dstack((rgbobj.r, rgbobj.g, rgbobj.b))
         image = self._get_qimage(arr)
         return image
     

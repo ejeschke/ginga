@@ -2,7 +2,7 @@
 # Pick.py -- Pick plugin for fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Thu Sep 20 11:26:40 HST 2012
+#  Last edit: Tue Oct  2 09:37:55 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -240,6 +240,9 @@ class Pick(GingaPlugin.LocalPlugin):
         self.w.btn_intr_eval = btn
         hbox.pack_end(btn, fill=False, expand=False, padding=2)
         self.w.eval_pgs = gtk.ProgressBar()
+        # GTK3
+        #self.w.eval_pgs.set_orientation(gtk.ORIENTATION_HORIZONTAL)
+        #self.w.eval_pgs.set_inverted(False)
         hbox.pack_start(self.w.eval_pgs, fill=True, expand=True, padding=4)
         w.pack_start(hbox, fill=False, expand=False, padding=2)
         

@@ -2,7 +2,7 @@
 # ColorBar.py -- color bar widget
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Mon Sep 10 15:43:42 HST 2012
+#  Last edit: Tue Oct  2 09:37:54 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -10,6 +10,7 @@
 # Please see the file LICENSE.txt for details.
 
 import math
+import numpy
 
 import gtk, gobject, cairo
 
@@ -29,8 +30,7 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
         gtk.DrawingArea.__init__(self)
         Callback.Callbacks.__init__(self)
         
-        self.pixmap = None
-        self.gc = None
+        self.surface = None
         self.logger = logger
 
         if not rgbmap:
@@ -53,6 +53,8 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
             self.enable_callback(name)
 
         self.connect("expose_event", self.expose_event)
+        # GTK3?
+        #self.connect("draw_event", self.draw_event)
         self.connect("configure_event", self.configure_event)
         self.connect("motion_notify_event", self.motion_notify_event)
         self.connect("button_press_event", self.button_press_event)
@@ -100,12 +102,15 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
             self.redraw()
         
     def configure_event(self, widget, event):
-        self.pixmap = None
+        self.surface = None
         x, y, width, height = widget.get_allocation()
-        pixmap = gtk.gdk.Pixmap(None, width, height, 24)
-        self.gc = pixmap.new_gc()
-        pixmap.draw_rectangle(self.gc, True, 0, 0, width, height)
-        self.pixmap = pixmap
+        arr8 = numpy.zeros(height*width*4).astype(numpy.uint8)
+        stride = cairo.ImageSurface.format_stride_for_width(cairo.FORMAT_RGB24,
+                                                            width)
+        surface = cairo.ImageSurface.create_for_data(arr8,
+                                                     cairo.FORMAT_RGB24,
+                                                     width, height, stride)
+        self.surface = surface
         self.width = width
         self.height = height
         # calculate intervals for range numbers
@@ -119,17 +124,29 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
 
         self.redraw()
 
+    # For Gtk3 eventually...
+    def draw_event(self, widget, cr):
+        if self.surface != None:
+            self.logger.debug("surface is %s" % self.surface)
+            cr.set_source_surface(self.surface, 0, 0)
+            cr.set_operator(cairo.OPERATOR_SOURCE)
+            cr.paint()
+        return False
+
     def expose_event(self, widget, event):
         # When an area of the window is exposed, we just copy out of the
         # server-side, off-screen pixmap to that area.
         x , y, width, height = event.area
-        self.logger.debug("pixmap is %s" % self.pixmap)
-        if self.pixmap != None:
-            # redraw the screen from backing pixmap
-            if not self.gc:
-                self.gc = widget.new_gc()
-            widget.window.draw_drawable(self.gc, self.pixmap, x, y, x, y,
-                                        width, height)
+        self.logger.debug("surface is %s" % self.surface)
+        if self.surface != None:
+            cr = widget.window.cairo_create()
+            # set clip area for exposed region
+            cr.rectangle(x, y, width, height)
+            cr.clip()
+            # repaint from off-screen surface
+            cr.set_source_surface(self.surface, 0, 0)
+            cr.set_operator(cairo.OPERATOR_SOURCE)
+            cr.paint()
         return False
 
     # Handle the expose-event by drawing
@@ -223,9 +240,9 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
         ## if not self.window:
         ##     return
         ## cr = self.window.cairo_create()
-        if not self.pixmap:
+        if not self.surface:
             return
-        cr = self.pixmap.cairo_create()
+        cr = cairo.Context(self.surface)
         self.draw(cr)
 
         win = self.window

@@ -2,7 +2,7 @@
 # AutoCuts.py -- class for calculating auto cut levels
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Aug 24 15:21:14 HST 2012
+#  Last edit: Sat Sep 22 15:58:08 HST 2012
 #]
 #
 # Copyright (c) 2012, Eric R. Jeschke.  All rights reserved.
@@ -63,6 +63,8 @@ class AutoCuts(object):
             loval, hival = fitsimage.get_minmax()
 
         else:
+            image = fitsimage.get_image()
+            data  = image.get_data()
             # Even with numpy, it's kind of slow to take the distribution
             # on a large image, so if usecrop==True we take
             # a crop of size (radius*2)x(radius*2) from the center of the
@@ -82,10 +84,10 @@ class AutoCuts(object):
                     y0 = 0
                     y1 = fitsimage.height-1
 
-                data = fitsimage.data[y0:y1, x0:x1]
+                data = data[y0:y1, x0:x1]
             else:
                 # Use the full data!
-                data = fitsimage.data
+                pass
                 
             if method == 'median':
                 length = 7

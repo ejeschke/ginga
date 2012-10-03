@@ -2,7 +2,7 @@
 # FitsImageCanvasTypesGtk.py -- drawing classes for FitsImageCanvas widget
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Thu Sep 20 15:04:15 HST 2012
+#  Last edit: Mon Oct  1 18:55:21 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -37,7 +37,7 @@ class CanvasObject(CanvasObjectBase):
         cr.set_source_rgb(r, g, b)
 
     def setup_cr(self):
-        cr = self.fitsimage.pixmap.cairo_create()
+        cr = self.fitsimage.get_offscreen_context()
 
         self.set_color(cr, self.color)
 
