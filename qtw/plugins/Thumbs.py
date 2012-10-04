@@ -2,7 +2,7 @@
 # Thumbs.py -- Thumbnail plugin for fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Thu Jul 12 09:50:52 HST 2012
+#  Last edit: Wed Oct  3 16:02:34 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -106,17 +106,19 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         if '.' in thumbname:
             thumbname = thumbname.split('.')[0]
             
-        # Is this thumbnail already in the list?
-        # TODO: does not handle two separate images with the same name!!
-        if self.thumbDict.has_key(name):
-            return
-
         # Is there a preference set to avoid making thumbnails?
         chinfo = self.fv.get_channelInfo(chname)
         prefs = chinfo.prefs
         if prefs.has_key('genthumb') and (not prefs['genthumb']):
             return
         
+        # Is this thumbnail already in the list?
+        # NOTE: does not handle two separate images with the same name
+        # in the same channel
+        thumbkey = (chname.lower(), name)
+        if self.thumbDict.has_key(thumbkey):
+            return
+
         data = image.get_data()
         # Get metadata for mouse-over tooltip
         header = image.get_header()
@@ -131,7 +133,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         imglbl.setPixmap(pixmap)
         imglbl.thumbs_cb = lambda: self.fv.switch_name(chname, name, path=path)
 
-        text = self.query_thumb(metadata)
+        text = self.query_thumb(thumbkey, metadata)
         imglbl.setToolTip(text)
 
         widget = QtGui.QWidget()
@@ -157,8 +159,8 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
         #self.w.thumbs.show()
         
-        self.thumbDict[name] = bnch
-        self.thumbList.append(name)
+        self.thumbDict[thumbkey] = bnch
+        self.thumbList.append(thumbkey)
         # force scroll to bottom of thumbs
         rect = self.w.thumbs_w.geometry()
         x1, y1, x2, y2 = rect.getCoords()
@@ -167,15 +169,15 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
     def rebuild_thumbs(self):
         # Remove widgets from grid
-        for name in self.thumbList:
-            bnch = self.thumbDict[name]
+        for thumbkey in self.thumbList:
+            bnch = self.thumbDict[thumbkey]
             self.w.thumbs.removeWidget(bnch.widget)
 
         # Add thumbs back in by rows
         self.thumbColCount = 0
         self.thumbRowCount = 0
-        for name in self.thumbList:
-            bnch = self.thumbDict[name]
+        for thumbkey in self.thumbList:
+            bnch = self.thumbDict[thumbkey]
             self.w.thumbs.addWidget(bnch.widget,
                                     self.thumbRowCount, self.thumbColCount)
             self.thumbColCount = (self.thumbColCount + 1) % self.thumbNumCols
@@ -190,9 +192,9 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         # Remove old thumbs that are not in the dataset
         invalid = set(self.thumbList) - set(nameList)
         if len(invalid) > 0:
-            for name in invalid:
-                self.thumbList.remove(name)
-                del self.thumbDict[name]
+            for thumbkey in invalid:
+                self.thumbList.remove(thumbkey)
+                del self.thumbDict[thumbkey]
 
             self.rebuild_thumbs()
 
@@ -211,7 +213,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         self.rebuild_thumbs()
         return False
         
-    def query_thumb(self, metadata):
+    def query_thumb(self, thumbkey, metadata):
         objtext = 'Object: UNKNOWN'
         try:
             objtext = 'Object: ' + metadata['OBJECT']
@@ -224,8 +226,9 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         except Exception, e:
             self.logger.error("Couldn't determine UT: %s" % str(e))
 
-        name = metadata.get('FRAMEID', 'Noname')
-        s = "%s\n%s\n%s" % (name, objtext, uttext)
+        chname, name = thumbkey
+
+        s = "%s\n%s\n%s\n%s" % (chname, name, objtext, uttext)
         return s
 
     def clear(self):
@@ -315,15 +318,26 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         bnch.imgwin = imgwin
         bnch.pixmap = pixmap
         bnch.imglbl.setPixmap(pixmap)
+        bnch.imglbl.repaint()
         self.w.thumbs_w.update()
+        self.logger.debug("update finished.")
         
     def delete_channel(self, viewer, chinfo):
         """Called when a channel is deleted from the main interface.
         Parameter is chinfo (a bunch)."""
-        chname = chinfo.name
+        chname_del = chinfo.name.lower()
         # TODO: delete thumbs for this channel!
-        self.logger.info("TODO: delete thumbs for channel '%s'" % (
-            chname))
+        self.logger.info("deleting thumbs for channel '%s'" % (
+            chname_del))
+        newThumbList = []
+        for thumbkey in self.thumbList:
+            chname, name = thumbkey
+            if chname != chname_del:
+                newThumbList.append(thumbkey)
+            else:
+                del self.thumbDict[thumbkey]
+        self.thumbList = newThumbList
+        self.rebuild_thumbs()
         
     def __str__(self):
         return 'thumbs'

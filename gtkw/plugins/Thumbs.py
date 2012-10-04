@@ -2,7 +2,7 @@
 # Thumbs.py -- Thumbnail plugin for fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Thu Jul 12 09:50:52 HST 2012
+#  Last edit: Wed Oct  3 16:02:34 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -83,17 +83,19 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         if '.' in thumbname:
             thumbname = thumbname.split('.')[0]
             
-        # Is this thumbnail already in the list?
-        # TODO: does not handle two separate images with the same name!!
-        if self.thumbDict.has_key(name):
-            return
-
         # Is there a preference set to avoid making thumbnails?
         chinfo = self.fv.get_channelInfo(chname)
         prefs = chinfo.prefs
         if prefs.has_key('genthumb') and (not prefs['genthumb']):
             return
         
+        # Is this thumbnail already in the list?
+        # NOTE: does not handle two separate images with the same name
+        # in the same channel
+        thumbkey = (chname.lower(), name)
+        if self.thumbDict.has_key(thumbkey):
+            return
+
         data = image.get_data()
         # Get metadata for mouse-over tooltip
         header = image.get_header()
@@ -106,7 +108,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         imgwin = self.thumb_generator.get_image_as_widget()
 
         imgwin.set_property("has-tooltip", True)
-        imgwin.connect("query-tooltip", lambda tw, x, y, kbmode, ttw: self.query_thumb(metadata, x, y, ttw))
+        imgwin.connect("query-tooltip", lambda tw, x, y, kbmode, ttw: self.query_thumb(thumbkey, metadata, x, y, ttw))
 
         vbox = gtk.VBox(spacing=0)
         vbox.pack_start(gtk.Label(thumbname), expand=False,
@@ -134,8 +136,8 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
         self.w.thumbs.show_all()
         
-        self.thumbDict[name] = bnch
-        self.thumbList.append(name)
+        self.thumbDict[thumbkey] = bnch
+        self.thumbList.append(thumbkey)
         # force scroll to bottom of thumbs
         adj_w = self.w.thumbs_scroll.get_vadjustment()
         max = adj_w.get_upper()
@@ -153,9 +155,10 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         self.thumbRowList = []
         colCount = 0
         hbox = None
-        for name in self.thumbList:
-            self.logger.debug("adding thumb for %s" % (name))
-            bnch = self.thumbDict[name]
+        for thumbkey in self.thumbList:
+            self.logger.debug("adding thumb for %s" % (str(thumbkey)))
+            chname, name = thumbkey
+            bnch = self.thumbDict[thumbkey]
             if colCount == 0:
                 hbox = gtk.HBox(homogeneous=True, spacing=self.thumbSep)
                 hbox.show()
@@ -174,9 +177,9 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         # Remove old thumbs that are not in the dataset
         invalid = set(self.thumbList) - set(nameList)
         if len(invalid) > 0:
-            for name in invalid:
-                self.thumbList.remove(name)
-                del self.thumbDict[name]
+            for thumbkey in invalid:
+                self.thumbList.remove(thumbkey)
+                del self.thumbDict[thumbkey]
 
             self.rebuild_thumbs()
 
@@ -196,7 +199,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         self.rebuild_thumbs()
         return False
         
-    def query_thumb(self, metadata, x, y, ttw):
+    def query_thumb(self, thumbkey, metadata, x, y, ttw):
         objtext = 'Object: UNKNOWN'
         try:
             objtext = 'Object: ' + metadata['OBJECT']
@@ -209,8 +212,9 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         except Exception, e:
             self.logger.error("Couldn't determine UT: %s" % str(e))
 
-        name = metadata.get('FRAMEID', 'Noname')
-        s = "%s\n%s\n%s" % (name, objtext, uttext)
+        chname, name = thumbkey
+
+        s = "%s\n%s\n%s\n%s" % (chname, name, objtext, uttext)
         ttw.set_text(s)
             
         return True
@@ -268,6 +272,8 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         if image == None:
             return
         
+        chname = self.fv.get_channelName(fitsimage)
+
         # Get metadata for mouse-over tooltip
         header = image.get_header()
         metadata = {}
@@ -279,7 +285,8 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         if name == None:
             return
         try:
-            bnch = self.thumbDict[name]
+            thumbkey = (chname, name)
+            bnch = self.thumbDict[thumbkey]
         except KeyError:
             return
 
@@ -298,7 +305,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         imgwin = self.thumb_generator.get_image_as_widget()
 
         imgwin.set_property("has-tooltip", True)
-        imgwin.connect("query-tooltip", lambda tw, x, y, kbmode, ttw: self.query_thumb(metadata, x, y, ttw))
+        imgwin.connect("query-tooltip", lambda tw, x, y, kbmode, ttw: self.query_thumb(thumbkey, metadata, x, y, ttw))
 
         # Replace thumbnail image widget
         child = bnch.evbox.get_child()
@@ -308,10 +315,19 @@ class Thumbs(GingaPlugin.GlobalPlugin):
     def delete_channel(self, viewer, chinfo):
         """Called when a channel is deleted from the main interface.
         Parameter is chinfo (a bunch)."""
-        chname = chinfo.name
+        chname_del = chinfo.name.lower()
         # TODO: delete thumbs for this channel!
-        self.logger.info("TODO: delete thumbs for channel '%s'" % (
-            chname))
+        self.logger.info("deleting thumbs for channel '%s'" % (
+            chname_del))
+        newThumbList = []
+        for thumbkey in self.thumbList:
+            chname, name = thumbkey
+            if chname != chname_del:
+                newThumbList.append(thumbkey)
+            else:
+                del self.thumbDict[thumbkey]
+        self.thumbList = newThumbList
+        self.rebuild_thumbs()
         
     def __str__(self):
         return 'thumbs'

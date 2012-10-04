@@ -2,7 +2,7 @@
 # Catalogs.py -- Catalogs plugin for fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Sep 21 14:45:34 HST 2012
+#  Last edit: Wed Oct  3 14:31:53 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -581,8 +581,8 @@ class Catalogs(GingaPlugin.LocalPlugin):
         self.canvas.deleteAllObjects()
        
     def reset(self):
-        #self.clearAll()
-        self.clear()
+        #self.clear()
+        self.clearAll()
         self.table.clear()
        
     def plot_star(self, obj, image=None):

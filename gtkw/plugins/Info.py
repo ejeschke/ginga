@@ -2,7 +2,7 @@
 # Info.py -- FITS Info plugin for the Ginga fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Thu Sep 20 09:48:41 HST 2012
+#  Last edit: Fri Sep 28 21:09:54 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -251,9 +251,9 @@ class Info(GingaPlugin.GlobalPlugin):
 
         # Show cut levels
         loval, hival = fitsimage.get_cut_levels()
-        info.winfo.cut_low.set_text('%.2f' % (loval))
+        #info.winfo.cut_low.set_text('%.2f' % (loval))
         info.winfo.lbl_cut_low.set_text('%.2f' % (loval))
-        info.winfo.cut_high.set_text('%.2f' % (hival))
+        #info.winfo.cut_high.set_text('%.2f' % (hival))
         info.winfo.lbl_cut_high.set_text('%.2f' % (hival))
 
         # Show dimensions

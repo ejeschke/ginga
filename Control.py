@@ -2,7 +2,7 @@
 # Control.py -- Controller for the Ginga FITS viewer.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Mon Sep 24 08:40:16 HST 2012
+#  Last edit: Wed Oct  3 15:36:20 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -388,6 +388,7 @@ class GingaControl(Callback.Callbacks):
             #chinfo.fitsimage.onscreen_message("Failed to load file", delay=1.0)
             raise ControlError(errmsg)
 
+        self.logger.debug("Successfully loaded file into image object.")
         (path, filename) = os.path.split(fitspath)
 
         image.set(name=filename, path=fitspath, chname=chname)
