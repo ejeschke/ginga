@@ -2,7 +2,7 @@
 # Control.py -- Controller for the Ginga FITS viewer.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Wed Oct  3 15:36:20 HST 2012
+#  Last edit: Thu Oct 11 14:11:44 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -19,17 +19,12 @@ import Queue
 import mimetypes
 
 import numpy
-try:
-    # do we have Python Imaging Library available?
-    import Image as PIL
-    have_pil = True
-except ImportError:
-    have_pil = False
 
 # Local application imports
 import imap, cmap
 import Catalog
 import AstroImage
+import PythonImage
 import Bunch
 import Datasrc
 import Callback
@@ -241,7 +236,8 @@ class GingaControl(Callback.Callbacks):
                 fitspath = match.group(1)
                 #self.load_file(fitspath)
                 chname = self.get_channelName(fitsimage)
-                self.nongui_do(self.load_file, fitspath, chname=chname)
+                self.nongui_do(self.load_file, fitspath, chname=chname,
+                               wait=False)
 
     def _match_cmap(self, fitsimage, colorbar):
         rgbmap = fitsimage.get_rgbmap()
@@ -340,7 +336,7 @@ class GingaControl(Callback.Callbacks):
         
     # BASIC IMAGE OPERATIONS
 
-    def load_file(self, fitspath, chname=None, wait=True):
+    def load_file(self, filepath, chname=None, wait=True):
         if not chname:
             chinfo = self.get_channelInfo()
             chname = chinfo.name
@@ -349,35 +345,29 @@ class GingaControl(Callback.Callbacks):
             chname = chinfo.name
 
         # Sometimes there is a newline at the end of this..
-        fitspath = fitspath.strip()
+        filepath = filepath.strip()
 
         # TODO: need progress bar or other visual indicator
         #self.gui_do(chinfo.fitsimage.onscreen_message, "Loading file...")
-            
-        # Create a bunch with the image params
-        image = AstroImage.AstroImage()
-        try:
-            self.logger.info("Loading image from %s" % (fitspath))
-            is_open = False
-            if have_pil:
-                typ, enc = mimetypes.guess_type(fitspath)
-                if typ:
-                    typ, subtyp = typ.split('/')
-                    self.logger.info("MIME type is %s/%s" % (typ, subtyp))
-                    if (typ == 'image') and (subtyp != 'fits'):
-                        img_pil = PIL.open(fitspath)
-                        data = numpy.array(img_pil)
-                        image.set_data(data)
-                        is_open = True
 
-            if not is_open:
-                self.logger.debug("Loading file as FITS file.")
-                image.load_file(fitspath)
+        # Create an image.  Assume type to be an AstroImage unless
+        # the MIME association says it is something different.
+        image = AstroImage.AstroImage(logger=self.logger)
+        try:
+            self.logger.info("Loading image from %s" % (filepath))
+            typ, enc = mimetypes.guess_type(filepath)
+            if typ:
+                typ, subtyp = typ.split('/')
+                self.logger.info("MIME type is %s/%s" % (typ, subtyp))
+                if (typ == 'image') and (subtyp != 'fits'):
+                    image = PythonImage.PythonImage(logger=self.logger)
+
+            image.load_file(filepath)
             #self.gui_do(chinfo.fitsimage.onscreen_message, "")
 
         except Exception, e:
             errmsg = "Failed to load file '%s': %s" % (
-                fitspath, str(e))
+                filepath, str(e))
             self.logger.error(errmsg)
             try:
                 (type, value, tb) = sys.exc_info()
@@ -389,16 +379,16 @@ class GingaControl(Callback.Callbacks):
             raise ControlError(errmsg)
 
         self.logger.debug("Successfully loaded file into image object.")
-        (path, filename) = os.path.split(fitspath)
+        (path, filename) = os.path.split(filepath)
 
-        image.set(name=filename, path=fitspath, chname=chname)
+        image.set(name=filename, path=filepath, chname=chname)
 
         # Display image.  If the wait parameter is False then don't wait
         # for the image to load into the viewer
         if wait:
             self.gui_call(self.add_image, filename, image, chname=chname)
         else:
-            self.gui_do(self.add_image, filename, image, chname=chname)
+            self.gui_do(self.bulk_add_image, filename, image, chname)
 
         # Return the image
         return image
@@ -468,16 +458,29 @@ class GingaControl(Callback.Callbacks):
 
         # add image to named channel
         if not self.has_channel(chname):
-            self.add_channel(chname)
-        chinfo = self.get_channelInfo(chname)
+            chinfo = self.add_channel(chname)
+        else:
+            chinfo = self.get_channelInfo(chname)
         chinfo.datasrc[imname] = image
 
-        self.make_callback('add-image', chname, image)
+        self.make_callback('add-image', chinfo.name, image)
 
+        self._add_image_update(chinfo, image)
+
+
+    def _add_image_update(self, chinfo, image):
+        current = chinfo.datasrc.youngest()
+        curname = current.get('name')
+        self.logger.debug("image=%s youngest=%s" % (image.get('name'), curname))
+        if current != image:
+            return
+
+        print "DISPLAYING IMAGE"
+        self.logger.debug("displaying image '%s'" % (curname))
         # switch to current image?
         if chinfo.prefs.switchnew:
             #and chinfo.switchfn(image):
-            self.logger.debug("switching to new image")
+            self.logger.debug("switching to new image '%s'" % (curname))
             self._switch_image(chinfo, image)
             
         if chinfo.prefs.raisenew:
@@ -486,6 +489,26 @@ class GingaControl(Callback.Callbacks):
                 self.change_channel(chname)
 
 
+    def bulk_add_image(self, imname, image, chname):
+        if not self.has_channel(chname):
+            chinfo = self.add_channel(chname)
+        else:
+            chinfo = self.get_channelInfo(chname)
+        chinfo.datasrc[imname] = image
+        current = chinfo.datasrc.youngest()
+        curname = current.get('name')
+        self.logger.debug("image=%s youngest=%s" % (image.get('name'), curname))
+
+        self.make_callback('add-image', chinfo.name, image)
+        self.update_pending(timeout=0)
+
+        # By delaying the update here, more images may be bulk added
+        # before the _add_image_update executes--it will then only
+        # update the gui for the latest image, which saves lots of work
+        #self.gui_do(self._add_image_update, chinfo, image)
+        self._add_image_update(chinfo, image)
+
+        
     def update_image(self, imname, image, chname):
         self.logger.debug("Updating image '%s' in channel %s" % (
             imname, chname))
@@ -632,16 +655,31 @@ class GingaControl(Callback.Callbacks):
                 return name
         return None
                 
+    def add_channel_internal(self, chname, num_images=None):
+        name = chname.lower()
+        with self.lock:
+            try:
+                chinfo = self.channel[name]
+            except KeyError:
+                self.logger.debug("Adding channel '%s'" % (chname))
+                if not num_images:
+                    num_images = self.default_datasrc_length
+                datasrc = Datasrc.Datasrc(num_images)
+
+                chinfo = Bunch.Bunch(datasrc=datasrc,
+                                 name=chname, cursor=0)
+            
+                self.channel[name] = chinfo
+        return chinfo
+
+        
     def add_channel(self, chname, datasrc=None, workspace=None,
                     num_images=None):
-        self.logger.debug("Adding channel '%s'" % (chname))
-        if not datasrc:
-            if not num_images:
-                num_images = self.default_datasrc_length
-            datasrc = Datasrc.Datasrc(num_images)
+
+        chinfo = self.add_channel_internal(chname, num_images=num_images)
 
         with self.lock:
-            name = chname.lower()
+            name = chinfo.name
             bnch = self.add_viewer(chname, self.cm, self.im,
                                    workspace=workspace)
 
@@ -674,17 +712,13 @@ class GingaControl(Callback.Callbacks):
                                           self.ds, self.mm)
             opmon.set_widget(self.w.optray)
             
-            chinfo = Bunch.Bunch(datasrc=datasrc,
-                                 widget=bnch.view,
-                                 readout=bnch.readout,
-                                 container=bnch.container,
-                                 fitsimage=bnch.fitsimage,
-                                 name=chname, cursor=0,
-                                 prefs=prefs,
-                                 opmon=opmon)
+            chinfo.setvals(widget=bnch.view,
+                           readout=bnch.readout,
+                           container=bnch.container,
+                           fitsimage=bnch.fitsimage,
+                           prefs=prefs,
+                           opmon=opmon)
             
-            self.channel[name] = chinfo
-
             # Update the channels control
             self.channelNames.append(chname)
             self.channelNames.sort()
@@ -696,7 +730,7 @@ class GingaControl(Callback.Callbacks):
             opmon.loadPlugin(opname, spec, chinfo=chinfo)
 
         self.make_callback('add-channel', chinfo)
-
+        return chinfo
             
     def delete_channel(self, chname):
         name = chname.lower()

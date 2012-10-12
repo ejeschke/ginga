@@ -2,7 +2,7 @@
 # FitsImageGtk.py -- classes for the display of FITS files in Gtk widgets
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Wed Oct  3 13:30:11 HST 2012
+#  Last edit: Mon Oct  8 22:21:41 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -99,6 +99,8 @@ class FitsImageGtk(FitsImage.FitsImageBase):
         cr.show_text(self.message)
 
     def get_offscreen_context(self):
+        if self.surface == None:
+            raise FitsImageGtkError("No offscreen surface defined")
         cr = cairo.Context(self.surface)
         return cr
 
@@ -106,7 +108,7 @@ class FitsImageGtk(FitsImage.FitsImageBase):
         """Render the image represented by (rgbobj) at dst_x, dst_y
         in the pixel space.
         """
-        self.logger.debug("redraw surface=%s" % (self.surface))
+        self.logger.debug("redraw surface")
         if self.surface == None:
             return
 

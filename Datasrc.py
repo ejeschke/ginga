@@ -1,6 +1,6 @@
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Jul 15 14:27:13 HST 2011
+#  Last edit: Sat Oct  6 14:56:57 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -67,7 +67,13 @@ class Datasrc(object):
     def index2key(self, index):
         with self.cond:
             return self.sortedkeys[index]
-        
+
+    def youngest(self):
+        return self.datums[self.history[-1]]
+    
+    def oldest(self):
+        return self.datums[self.history[0]]
+    
     def keys(self, sort='alpha'):
         with self.cond:
             if sort == 'alpha':

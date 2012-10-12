@@ -2,7 +2,7 @@
 # Thumbs.py -- Thumbnail plugin for fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Wed Oct  3 16:02:34 HST 2012
+#  Last edit: Thu Oct 11 13:20:19 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -55,7 +55,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         # max length of thumb on the long side
         self.thumbWidth = 150
 
-        self.cutstask = None
+        self.thmbtask = None
         self.lagtime = 1000
 
         self.keywords = ['OBJECT', 'FRAMEID', 'UT', 'DATE-OBS']
@@ -248,7 +248,8 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
     def focus_cb(self, viewer, fitsimage):
         # Reflect transforms, colormap, etc.
-        self.copy_attrs(fitsimage)
+        #self.copy_attrs(fitsimage)
+        self.redo_delay(fitsimage)
 
     def transform_cb(self, fitsimage):
         self.redo_delay(fitsimage)
@@ -273,13 +274,13 @@ class Thumbs(GingaPlugin.GlobalPlugin):
     def redo_delay(self, fitsimage):
         # Delay regeneration of thumbnail until most changes have propagated
         try:
-            self.cutstask.stop()
+            self.thmbtask.stop()
         except:
             pass
-        self.cutstask = QtCore.QTimer()
-        self.cutstask.setSingleShot(True)
-        self.cutstask.timeout.connect(lambda: self.redo_thumbnail(fitsimage))
-        self.cutstask.start(self.lagtime)
+        self.thmbtask = QtCore.QTimer()
+        self.thmbtask.setSingleShot(True)
+        self.thmbtask.timeout.connect(lambda: self.redo_thumbnail(fitsimage))
+        self.thmbtask.start(self.lagtime)
         #print "added delay task..."
         return True
 

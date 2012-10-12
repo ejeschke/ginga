@@ -2,7 +2,7 @@
 # Thumbs.py -- Thumbnail plugin for fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Wed Oct  3 16:02:34 HST 2012
+#  Last edit: Sat Oct  6 16:30:56 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -37,8 +37,8 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         # max length of thumb on the long side
         self.thumbWidth = 150
 
-        self.cutstask = None
-        self.lagtime = 1000
+        self.thmbtask = None
+        self.lagtime = 100
 
         self.keywords = ['OBJECT', 'FRAMEID', 'UT', 'DATE-OBS']
 
@@ -236,7 +236,8 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
     def focus_cb(self, viewer, fitsimage):
         # Reflect transforms, colormap, etc.
-        self.copy_attrs(fitsimage)
+        #self.copy_attrs(fitsimage)
+        self.redo_delay(fitsimage)
 
     def transform_cb(self, fitsimage):
         self.redo_delay(fitsimage)
@@ -260,9 +261,9 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
     def redo_delay(self, fitsimage):
         # Delay regeneration of thumbnail until most changes have propagated
-        if self.cutstask != None:
-            gobject.source_remove(self.cutstask)
-        self.cutstask = gobject.timeout_add(self.lagtime, self.redo_thumbnail,
+        if self.thmbtask != None:
+            gobject.source_remove(self.thmbtask)
+        self.thmbtask = gobject.timeout_add(self.lagtime, self.redo_thumbnail,
                                             fitsimage)
         return True
 
@@ -299,7 +300,8 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         data = image.get_data()
         self.thumb_generator.set_data(data)
         fitsimage.copy_attributes(self.thumb_generator,
-                                  ['transforms', 'cutlevels',
+                                  ['transforms',
+                                   'cutlevels',
                                    'rgbmap'],
                                   redraw=False)
         imgwin = self.thumb_generator.get_image_as_widget()

@@ -2,7 +2,7 @@
 # FitsImage.py -- abstract classes for the display of FITS files
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Wed Oct  3 13:30:12 HST 2012
+#  Last edit: Tue Oct  9 22:59:13 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -878,18 +878,15 @@ class FitsImageBase(Callback.Callbacks):
     
     def _cut_levels(self, data, loval, hival, vmin=0.0, vmax=255.0):
         self.logger.debug("loval=%.2f hival=%.2f" % (loval, hival))
-        data = data.clip(loval, hival)
-        #if have_scipy:
-        if False:
-            data = scipy.misc.bytescale(data, cmin=loval, cmax=hival,
-                                        high=vmax, low=vmin)
+        delta = hival - loval
+        if delta == 0:
+            f = (data - loval).clip(0.0, 1.0)
+            # threshold
+            f[numpy.nonzero(f)] = 1.0
         else:
-            delta = hival - loval
-            if delta == 0:
-                f = (data - loval)
-            else:
-                f = ((data - loval) / delta)
-            data = f.clip(0.0, 1.0) * vmax
+            data = data.clip(loval, hival)
+            f = ((data - loval) / delta)
+        data = f.clip(0.0, 1.0) * vmax
         return data
 
     def cut_levels(self, loval, hival, no_reset=False, redraw=True):

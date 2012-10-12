@@ -2,7 +2,7 @@
 # AutoCuts.py -- class for calculating auto cut levels
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Sat Sep 22 15:58:08 HST 2012
+#  Last edit: Mon Oct  8 21:53:30 HST 2012
 #]
 #
 # Copyright (c) 2012, Eric R. Jeschke.  All rights reserved.
@@ -70,19 +70,20 @@ class AutoCuts(object):
             # a crop of size (radius*2)x(radius*2) from the center of the
             # image and calculate the histogram on that
             if usecrop:
-                x, y = fitsimage.width // 2, fitsimage.height // 2
+                height, width = data.shape[:2]
+                x, y = width // 2, height // 2
                 if x > cropradius:
                     x0 = x - cropradius
                     x1 = x0 + cropradius*2
                 else:
                     x0 = 0
-                    x1 = fitsimage.width-1
+                    x1 = width-1
                 if y > cropradius:
                     y0 = y - cropradius
                     y1 = y0 + cropradius*2
                 else:
                     y0 = 0
-                    y1 = fitsimage.height-1
+                    y1 = height-1
 
                 data = data[y0:y1, x0:x1]
             else:
