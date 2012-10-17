@@ -321,7 +321,7 @@ class IQCalc(object):
             return 0
             
     def objlist_select(self, objlist, width, height,
-                        minfwhm=0.1, maxfwhm=50.0, minelipse=0.0,
+                        minfwhm=2.0, maxfwhm=150.0, minelipse=0.5,
                         edgew=0.01):
 
         results = []
@@ -338,7 +338,9 @@ class IQCalc(object):
         return results
 
     def pick_field(self, data, bright_radius=2, radius=10,
-                   threshold=None):
+                   threshold=None,
+                   minfwhm=2.0, maxfwhm=50.0, minelipse=0.5,
+                   edgew=0.01):
 
         height, width = data.shape
 
@@ -357,7 +359,9 @@ class IQCalc(object):
         if len(objlist) == 0:
             raise IQCalcError("Error evaluating bright peaks")
         
-        results = self.objlist_select(objlist, width, height)
+        results = self.objlist_select(objlist, width, height,
+                                      minfwhm=minfwhm, maxfwhm=maxfwhm,
+                                      minelipse=minelipse, edgew=edgew)
         if len(results) == 0:
             raise IQCalcError("No object matches selection criteria")
 

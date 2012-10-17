@@ -2,7 +2,7 @@
 # AutoCuts.py -- class for calculating auto cut levels
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Mon Oct  8 21:53:30 HST 2012
+#  Last edit: Tue Oct 16 12:40:11 HST 2012
 #]
 #
 # Copyright (c) 2012, Eric R. Jeschke.  All rights reserved.
@@ -119,17 +119,25 @@ class AutoCuts(object):
                     width, height))
 
                 total_px = width * height
-                minval = data.min()
-                if numpy.isnan(minval):
+                dsum = numpy.sum(data)
+                if numpy.isnan(dsum) or numpy.isinf(dsum):
+                    # Oh crap, the array has a NaN or Inf value.
+                    # We have to workaround this by making a copy of the array
+                    # and substituting for the problem values, otherwise numpy's
+                    # histogram() cannot handle it
                     self.logger.warn("NaN's found in data, using workaround for histogram")
+                    data = data.copy()
+                    # TODO: calculate a reasonable replacement value
+                    data[numpy.isinf(data)] = 0.0
                     minval = numpy.nanmin(data)
                     maxval = numpy.nanmax(data)
                     substval = (minval + maxval)/2.0
-                    # Oh crap, the array has a NaN value.  We have to workaround
-                    # this by making a copy of the array and substituting for
-                    # the NaNs, otherwise numpy's histogram() cannot handle it
-                    data = data.copy()
                     data[numpy.isnan(data)] = substval
+                    data[numpy.isinf(data)] = substval
+                    ## dsum = numpy.sum(data)
+                    ## if numpy.isnan(dsum) or numpy.isinf(dsum):
+                    ##     print "NaNs STILL PRESENT"
+                    
                     dist, bins = numpy.histogram(data, bins=numbins,
                                                  density=False)
                 else:
@@ -138,6 +146,7 @@ class AutoCuts(object):
                 cutoff = int((float(total_px)*(1.0-pct))/2.0)
                 top = len(dist)-1
                 self.logger.debug("top=%d cutoff=%d" % (top, cutoff))
+                #print "DIST: %s\nBINS: %s" % (str(dist), str(bins))
 
                 # calculate low cutoff
                 cumsum = numpy.cumsum(dist)

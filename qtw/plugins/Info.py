@@ -2,7 +2,7 @@
 # Info.py -- FITS Info plugin for fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Wed Oct  3 14:31:53 HST 2012
+#  Last edit: Tue Oct 16 13:01:22 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -243,7 +243,7 @@ class Info(GingaPlugin.GlobalPlugin):
 
         # Show min, max values
         width, height = fitsimage.get_data_size()
-        minval, maxval = fitsimage.get_minmax()
+        minval, maxval = fitsimage.get_minmax(noinf=False)
         info.winfo.max.setText(str(maxval))
         info.winfo.min.setText(str(minval))
 

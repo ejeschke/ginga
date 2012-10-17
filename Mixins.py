@@ -2,7 +2,7 @@
 # Mixins.py -- Mixin classes for FITS viewer.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Jun 22 13:38:36 HST 2012
+#  Last edit: Tue Oct 16 12:51:23 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.

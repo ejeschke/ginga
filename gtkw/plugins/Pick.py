@@ -2,7 +2,7 @@
 # Pick.py -- Pick plugin for fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Tue Oct  2 09:37:55 HST 2012
+#  Last edit: Tue Oct 16 14:21:55 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -53,10 +53,11 @@ class Pick(GingaPlugin.LocalPlugin):
         self.pick_data = None
         self.dx = region_default_width
         self.dy = region_default_height
-        self.show_candidates = False
+        # For offloading intensive calculation from graphics thread
         self.serialnum = 0
         self.lock = threading.RLock()
         self.lock2 = threading.RLock()
+        self.ev_intr = threading.Event()
 
         # Peak finding parameters and selection criteria
         # this is the maximum size a side can be
@@ -65,6 +66,9 @@ class Pick(GingaPlugin.LocalPlugin):
         self.threshold = None
         self.min_fwhm = 2.0
         self.max_fwhm = 50.0
+        self.min_ellipse = 0.5
+        self.edgew = 0.01
+        self.show_candidates = False
 
         self.plot_panx = 0.5
         self.plot_pany = 0.5
@@ -75,7 +79,6 @@ class Pick(GingaPlugin.LocalPlugin):
         self.delta_sky = 0.0
         self.delta_bright = 0.0
         self.iqcalc = iqcalc.IQCalc(self.logger)
-        self.ev_intr = threading.Event()
 
         canvas = CanvasTypes.DrawingCanvas()
         canvas.enable_draw(True)
@@ -258,6 +261,8 @@ class Pick(GingaPlugin.LocalPlugin):
                     ('Threshold', 'xlabel', '@Threshold', 'entry'),
                     ('Min FWHM', 'xlabel', '@Min FWHM', 'spinbutton'),
                     ('Max FWHM', 'xlabel', '@Max FWHM', 'spinbutton'),
+                    ('Ellipticity', 'xlabel', '@Ellipticity', 'entry'),
+                    ('Edge', 'xlabel', '@Edge', 'entry'),
                     ('Max side', 'xlabel', '@Max side', 'spinbutton'),
                     ('Redo Pick', 'button'),
                     )
@@ -268,6 +273,8 @@ class Pick(GingaPlugin.LocalPlugin):
         self.w.tooltips.set_tip(b.threshold, "Threshold for peak detection (blank=default)")
         self.w.tooltips.set_tip(b.min_fwhm, "Minimum FWHM for selection")
         self.w.tooltips.set_tip(b.max_fwhm, "Maximum FWHM for selection")
+        self.w.tooltips.set_tip(b.ellipticity, "Minimum ellipticity for selection")
+        self.w.tooltips.set_tip(b.edge, "Minimum edge distance for selection")
         self.w.tooltips.set_tip(b.show_candidates,
                                 "Show all peak candidates")
         # radius control
@@ -317,6 +324,30 @@ class Pick(GingaPlugin.LocalPlugin):
             return True
         b.lbl_max_fwhm.set_text(str(self.max_fwhm))
         b.max_fwhm.connect('value-changed', chg_max)
+
+        # Ellipticity control
+        def chg_ellipticity(w):
+            minellipse = None
+            val = w.get_text().strip()
+            if len(val) > 0:
+                minellipse = float(val)
+            self.min_ellipse = minellipse
+            self.w.lbl_ellipticity.set_text(str(self.min_ellipse))
+            return True
+        b.lbl_ellipticity.set_text(str(self.min_ellipse))
+        b.ellipticity.connect('activate', chg_ellipticity)
+
+        # Edge control
+        def chg_edgew(w):
+            edgew = None
+            val = w.get_text().strip()
+            if len(val) > 0:
+                edgew = float(val)
+            self.edgew = edgew
+            self.w.lbl_edge.set_text(str(self.edgew))
+            return True
+        b.lbl_edge.set_text(str(self.edgew))
+        b.edge.connect('activate', chg_edgew)
 
         adj = b.max_side.get_adjustment()
         b.max_side.set_digits(0)
@@ -734,7 +765,9 @@ class Pick(GingaPlugin.LocalPlugin):
                 height, width = data.shape
                 results = self.iqcalc.objlist_select(objlist, width, height,
                                                      minfwhm=self.min_fwhm,
-                                                     maxfwhm=self.max_fwhm)
+                                                     maxfwhm=self.max_fwhm,
+                                                     minelipse=self.min_ellipse,
+                                                     edgew=self.edgew)
                 if len(results) == 0:
                     raise Exception("No object matches selection criteria")
                 qs = results[0]
@@ -776,8 +809,6 @@ class Pick(GingaPlugin.LocalPlugin):
             qs.y += y1
             qs.objx += x1
             qs.objy += y1
-            ## qs = image.qualsize(x1, y1, x2, y2, radius=radius,
-            ##                     threshold=threshold)
 
             # Calculate X/Y of center of star
             obj_x = qs.objx

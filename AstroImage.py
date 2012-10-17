@@ -2,7 +2,7 @@
 # AstroImage.py -- Abstraction of an astronomical data image.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Sun Sep 23 13:07:27 HST 2012
+#  Last edit: Tue Oct 16 12:56:30 HST 2012
 #]
 # Takeshi Inagaki
 #
@@ -37,8 +37,6 @@ class AstroImage(object):
         if data_np == None:
             data_np = numpy.zeros((1, 1))
         self.data = data_np
-        self.maxval = numpy.nanmax(self.data)
-        self.minval = numpy.nanmin(self.data)
         self.metadata = {}
         if not wcsclass:
             wcsclass = wcs.WCS
@@ -48,6 +46,7 @@ class AstroImage(object):
 
         self.iqcalc = iqcalc.IQCalc(logger=logger)
 
+        self._set_minmax()
 
     @property
     def width(self):
@@ -217,9 +216,14 @@ class AstroImage(object):
             self.data = data_np
         if metadata:
             self.update_metadata(metadata)
-            
+
+        self._set_minmax()
+
+    def _set_minmax(self):
         self.maxval = numpy.nanmax(self.data)
         self.minval = numpy.nanmin(self.data)
+        self.maxval_noinf = numpy.nanmax(self.data[numpy.isfinite(self.data)])
+        self.minval_noinf = numpy.nanmin(self.data[numpy.isfinite(self.data)])
         
     def update_data(self, data_np, metadata=None, astype=None):
         """Use this method to make a private copy of the incoming array.
@@ -227,11 +231,11 @@ class AstroImage(object):
         self.set_data(data_np.copy(), metadata=metadata,
                       astype=astype)
         
-    def get_minmax(self):
-        ## loval = numpy.nanmin(self.data)
-        ## hival = numpy.nanmax(self.data)
-        ## return (loval, hival)
-        return (self.minval, self.maxval)
+    def get_minmax(self, noinf=False):
+        if not noinf:
+            return (self.minval, self.maxval)
+        else:
+            return (self.minval_noinf, self.maxval_noinf)
         
     def update_metadata(self, keyDict):
         for key, val in keyDict.items():
@@ -308,7 +312,8 @@ class AstroImage(object):
 
 
     def qualsize(self, x1=None, y1=None, x2=None, y2=None, radius=5,
-                 bright_radius=2, threshold=None):
+                 bright_radius=2, threshold=None, 
+                 minfwhm=None, maxfwhm=None, minelipse=None, edgew=None):
 
         x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
         data = self.cutout_data(x1, y1, x2, y2, astype='float32')
@@ -316,10 +321,11 @@ class AstroImage(object):
         start_time = time.time()
         qs = self.iqcalc.pick_field(data, radius=radius,
                                     bright_radius=bright_radius,
-                                    threshold=threshold)
+                                    threshold=threshold,
+                                    minfwhm=minfwhm, maxfwhm=maxfwhm,
+                                    minelipse=minelipse, edgew=edgew)
+
         elapsed = time.time() - start_time
-        print "e: obj=%f,%f fwhm=%f sky=%f bright=%f (%f sec)" % (
-            qs.objx, qs.objy, qs.fwhm, qs.skylevel, qs.brightness, elapsed)
         
         # Add back in offsets into image to get correct values with respect
         # to the entire image
@@ -327,6 +333,8 @@ class AstroImage(object):
         qs.y += y1
         qs.objx += x1
         qs.objy += y1
+        print "e: obj=%f,%f fwhm=%f sky=%f bright=%f (%f sec)" % (
+            qs.objx, qs.objy, qs.fwhm, qs.skylevel, qs.brightness, elapsed)
 
         return qs
      

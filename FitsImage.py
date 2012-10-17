@@ -2,7 +2,7 @@
 # FitsImage.py -- abstract classes for the display of FITS files
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Tue Oct  9 22:59:13 HST 2012
+#  Last edit: Tue Oct 16 12:51:22 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -853,8 +853,8 @@ class FitsImageBase(Callback.Callbacks):
     def get_transforms(self):
         return (self._flipX, self._flipY, self._swapXY)
 
-    def get_minmax(self):
-        return self.image.get_minmax()
+    def get_minmax(self, noinf=True):
+        return self.image.get_minmax(noinf=noinf)
         
     def set_autolevel_params(self, method, pct=None, numbins=None,
                              usecrop=None, cropradius=None):
