@@ -2,7 +2,7 @@
 # ColorBar.py -- color bar widget
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Tue Oct  2 09:37:54 HST 2012
+#  Last edit: Thu Oct 18 21:34:46 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -47,6 +47,7 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
         self.hival = 0
         self._interval = {}
         self._avg_pixels_per_range_num = 70
+        self.mark_pos = None
         
         # For callbacks
         for name in ('motion', 'scroll'):
@@ -226,11 +227,21 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
             cr.move_to (x, 0)
             cr.line_to (x, 2)
             cr.close_path()
-            cr.stroke_preserve()
+            cr.stroke()
             #cr.fill()
             # number
             cr.move_to(x, y)
             cr.show_text(text)
+
+        # Draw moving value wedge
+        if self.mark_pos != None:
+            cr.set_source_rgb(1.0, 0.0, 0.0)
+            cr.set_line_width(3)
+            cr.move_to (self.mark_pos-4, self.height)
+            cr.line_to (self.mark_pos, self.height//2)
+            cr.line_to (self.mark_pos+4, self.height)
+            cr.line_to (self.mark_pos-4, self.height)
+            cr.fill()
 
     def draw(self, cr):
         return self._draw(cr)
@@ -251,6 +262,18 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
         # to scrolling
         win.process_updates(True)
 
+    def set_current_value(self, value):
+        range = self.hival - self.loval
+        if value < self.loval:
+            value = self.loval
+        elif value > self.hival:
+            value = self.hival
+
+        pct = float(value - self.loval) / float(range)
+        self.mark_pos = int(pct * self.width)
+        #print "mark position is %d (%.2f)" % (self.mark_pos, pct)
+        self.redraw()
+        
     def shift_colormap(self, pct):
         if pct > 0.0:
             self.rgbmap.rshift(pct)

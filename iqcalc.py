@@ -13,6 +13,7 @@
 import math
 import logging
 import numpy
+import threading
 import scipy.optimize as optimize
 import scipy.ndimage as ndimage
 import scipy.ndimage.filters as filters
@@ -34,6 +35,9 @@ class IQCalc(object):
         # for adjustments to background level
         self.skylevel_magnification = 1.05
         self.skylevel_offset = 40.0
+
+        # for mutex around scipy.optimize, which seems to be non-threadsafe
+        self.lock = threading.RLock()
 
     ## def histogram(self, data, numbins=20):
     ##     height, width = data.shape
@@ -67,7 +71,6 @@ class IQCalc(object):
              numpy.exp(-(x - p[0])**2 / (2*p[1]**2))) * p[2]
         return y
 
-
     def calc_fwhm(self, arr1d, medv=None, gauss_fn=None):
         """FWHM calculation on a 1D array by using least square fitting of
         a gaussian function on the data.  arr1d is a 1D array cut in either
@@ -75,7 +78,7 @@ class IQCalc(object):
         """
         if not gauss_fn:
             gauss_fn = self.gaussian
-            
+
         N = len(arr1d)
         X = numpy.array(range(N))
         Y = arr1d
@@ -93,7 +96,13 @@ class IQCalc(object):
         # Distance to the target function
         errfunc = lambda p, x, y: gauss_fn(x, p) - y
         # Least square fit to the gaussian
-        p1, success = optimize.leastsq(errfunc, p0[:], args=(X, Y))
+        with self.lock:
+            # NOTE: without this mutex, optimize.leastsq causes a fatal error
+            # sometimes--it appears not to be thread safe.
+            # The error is:
+            # "SystemError: null argument to internal routine"
+            # "Fatal Python error: GC object already tracked"
+            p1, success = optimize.leastsq(errfunc, p0[:], args=(X, Y))
 
         if not success:
             raise IQCalcError("FWHM gaussian fitting failed")

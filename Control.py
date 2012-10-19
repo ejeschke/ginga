@@ -2,7 +2,7 @@
 # Control.py -- Controller for the Ginga FITS viewer.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Thu Oct 11 14:11:44 HST 2012
+#  Last edit: Fri Oct 19 13:32:55 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -177,6 +177,12 @@ class GingaControl(Callback.Callbacks):
         # TEMP: hack
         if readout.fitsimage != fitsimage:
             return
+
+        # If this is a multiband image, then average the values for the readout
+        if isinstance(value, numpy.ndarray):
+            avg = numpy.average(value)
+            value = avg
+            
         # Update the readout
         maxx = readout.maxx
         maxy = readout.maxy
@@ -187,6 +193,9 @@ class GingaControl(Callback.Callbacks):
             ra_txt, dec_txt, maxx, maxx, fits_x,
             maxy, maxy, fits_y, maxv, maxv, value)
         readout.set_text(text)
+
+        # Draw colorbar value wedge
+        #self.colorbar.set_current_value(value)
 
     def motion_cb(self, fitsimage, button, data_x, data_y):
         """Motion event in the big fits window.  Show the pointing
@@ -329,10 +338,11 @@ class GingaControl(Callback.Callbacks):
             self.logger.error("Unable to load global plugin '%s': %s" % (
                 name, str(e)))
 
-    def show_error(self, errmsg):
+    def show_error(self, errmsg, raisetab=True):
         obj = self.gpmon.getPlugin('Errors')
         obj.add_error(errmsg)
-        self.ds.raise_tab('Errors')
+        if raisetab:
+            self.ds.raise_tab('Errors')
         
     # BASIC IMAGE OPERATIONS
 
@@ -389,6 +399,7 @@ class GingaControl(Callback.Callbacks):
             self.gui_call(self.add_image, filename, image, chname=chname)
         else:
             self.gui_do(self.bulk_add_image, filename, image, chname)
+            #self.gui_do(self.add_image, filename, image, chname=chname)
 
         # Return the image
         return image
@@ -486,7 +497,7 @@ class GingaControl(Callback.Callbacks):
         if chinfo.prefs.raisenew:
             curinfo = self.get_channelInfo()
             if chinfo.name != curinfo.name:
-                self.change_channel(chname)
+                self.change_channel(chinfo.name)
 
 
     def bulk_add_image(self, imname, image, chname):

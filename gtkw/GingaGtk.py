@@ -2,7 +2,7 @@
 # GingaGtk.py -- Gtk display handler for the Ginga FITS tool.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Thu Sep 13 13:54:23 HST 2012
+#  Last edit: Fri Oct 19 13:00:50 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -536,7 +536,8 @@ class GingaView(GtkMain.GtkMain):
             chnames = self.get_channelNames()
             for chname in chnames:
                 chinfo = self.get_channelInfo(chname)
-                if chinfo.container == container:
+                if hasattr(chinfo, 'container') and \
+                       (chinfo.container == container):
                     fitsimage = chinfo.fitsimage
                     if fitsimage != self.getfocus_fitsimage():
                         self.logger.debug("Active channel switch to '%s'" % (

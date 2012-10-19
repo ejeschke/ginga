@@ -2,7 +2,7 @@
 # Pick.py -- Pick plugin for fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Tue Oct 16 14:21:55 HST 2012
+#  Last edit: Fri Oct 19 13:32:54 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -865,7 +865,7 @@ class Pick(GingaPlugin.LocalPlugin):
             except Exception, e:
                 self.wdetail.star_size.set_text('ERROR')
                 self.fv.show_error("Couldn't calculate star size: %s" % (
-                    str(e)))
+                    str(e)), raisetab=False)
 
             self.update_status("Done")
             self.plot_panx = float(i1) / wd
@@ -878,7 +878,7 @@ class Pick(GingaPlugin.LocalPlugin):
             errmsg = "Error calculating quality metrics: %s" % (
                 str(e))
             self.logger.error(errmsg)
-            self.fv.show_error(errmsg)
+            self.fv.show_error(errmsg, raisetab=False)
             #self.update_status("Error")
             for key in ('sky_level', 'brightness', 'star_size',
                         'fwhm_x', 'fwhm_y'):

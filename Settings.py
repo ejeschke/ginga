@@ -2,7 +2,7 @@
 # Settings.py -- Simple class to manage stateful user preferences.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Sat May 26 12:48:07 HST 2012
+#  Last edit: Thu Oct 18 15:28:21 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -18,10 +18,9 @@ class Settings(object):
     def __init__(self, basefolder="/tmp", create_folders=True):
         self.folder = basefolder
         self.create = create_folders
-        self.settings = Bunch.Bunch()
+        self.settings = Bunch.Bunch(caseless=True)
 
     def setDefaults(self, category, **kwdargs):
-        print "SET DEFAULTS FOR %s=%s" % (category, kwdargs)
         for key, val in kwdargs.items():
             self.settings[category].setdefault(key, val)
 
@@ -30,20 +29,22 @@ class Settings(object):
     
     def createCategory(self, category):
         if not self.settings.has_key(category):
-            self.settings[category] = Bunch.Bunch()
+            self.settings[category] = Bunch.Bunch(caseless=True)
         return self.settings[category]
 
     def load(self, category, filename):
+        category = category.lower()
         path = os.path.join(self.folder, category, filename)
         buf = None
         with open(path, 'r') as in_f:
             d = pickle.load(in_f)
-        self.settings[category] = Bunch.Bunch()
+        self.settings[category] = Bunch.Bunch(caseless=True)
         self.settings[category].update(d)
         print "%s settings are: %s" % (category, str(self.settings[category]))
         return self.settings[category]
         
     def save(self, category, filename):
+        category = category.lower()
         folder = os.path.join(self.folder, category)
         if (not os.path.exists(folder)) and self.create:
             os.mkdir(folder)

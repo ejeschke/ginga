@@ -2,7 +2,7 @@
 # PythonImage.py -- Abstraction of an generic data image.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Thu Oct 11 14:37:37 HST 2012
+#  Last edit: Thu Oct 18 22:59:50 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -33,6 +33,7 @@ class PythonImage(object):
         if metadata:
             self.update_metadata(metadata)
 
+        self._set_minmax()
 
     @property
     def width(self):
@@ -103,14 +104,19 @@ class PythonImage(object):
         if metadata:
             self.update_metadata(metadata)
             
-        self.maxval = numpy.nanmax(data)
-        self.minval = numpy.nanmin(data)
+        self._set_minmax()
+
+    def _set_minmax(self):
+        self.maxval = numpy.nanmax(self.data)
+        self.minval = numpy.nanmin(self.data)
+        self.maxval_noinf = numpy.nanmax(self.data[numpy.isfinite(self.data)])
+        self.minval_noinf = numpy.nanmin(self.data[numpy.isfinite(self.data)])
         
-    def get_minmax(self):
-        ## loval = numpy.nanmin(self.data)
-        ## hival = numpy.nanmax(self.data)
-        ## return (loval, hival)
-        return (self.minval, self.maxval)
+    def get_minmax(self, noinf=False):
+        if not noinf:
+            return (self.minval, self.maxval)
+        else:
+            return (self.minval_noinf, self.maxval_noinf)
 
     def load_file(self, filepath):
         kwds = {}

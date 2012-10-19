@@ -2,7 +2,7 @@
 # Thumbs.py -- Thumbnail plugin for fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Thu Oct 11 13:20:19 HST 2012
+#  Last edit: Fri Oct 19 13:08:09 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -56,7 +56,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         self.thumbWidth = 150
 
         self.thmbtask = None
-        self.lagtime = 1000
+        self.lagtime = 4000
 
         self.keywords = ['OBJECT', 'FRAMEID', 'UT', 'DATE-OBS']
 
