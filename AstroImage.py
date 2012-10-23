@@ -312,15 +312,16 @@ class AstroImage(object):
 
 
     def qualsize(self, x1=None, y1=None, x2=None, y2=None, radius=5,
-                 bright_radius=2, threshold=None, 
+                 bright_radius=2, fwhm_radius=15, threshold=None, 
                  minfwhm=None, maxfwhm=None, minelipse=None, edgew=None):
 
         x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
         data = self.cutout_data(x1, y1, x2, y2, astype='float32')
 
         start_time = time.time()
-        qs = self.iqcalc.pick_field(data, radius=radius,
+        qs = self.iqcalc.pick_field(data, peak_radius=radius,
                                     bright_radius=bright_radius,
+                                    fwhm_radius=fwhm_radius,
                                     threshold=threshold,
                                     minfwhm=minfwhm, maxfwhm=maxfwhm,
                                     minelipse=minelipse, edgew=edgew)

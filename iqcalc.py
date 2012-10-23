@@ -133,7 +133,7 @@ class IQCalc(object):
         ctr_y = y0 + cy
         self.logger.debug("fwhm_x,fwhm_y=%f,%f center=%f,%f" % (
             fwhm_x, fwhm_y, ctr_x, ctr_y))
-        return (fwhm_x, fwhm_y, ctr_x, ctr_y, sdx, sdy)
+        return (fwhm_x, fwhm_y, ctr_x, ctr_y, sdx, sdy, maxx, maxy)
 
 
     def starsize(self, fwhm_x, deg_pix_x, fwhm_y, deg_pix_y):
@@ -236,25 +236,24 @@ class IQCalc(object):
         return (x0, y0, xarr, yarr)
 
 
-    def brightness(self, x, y, radius, data):
-        """Return the maximum value found in a region (radius) pixels away
+    def brightness(self, x, y, radius, medv, data):
+        """Return the brightness value found in a region (radius) pixels away
         from (x, y) in (data).
         """
         x0, y0, arr = self.cut_region(x, y, radius, data)
-        res = numpy.nanmax(arr)
-        ## arr2 = numpy.sort(arr.flat)
-        ## idx = int(len(arr2) * 0.80)
-        ## res = arr2[idx]
+        arr2 = numpy.sort(arr.flat)
+        idx = int(len(arr2) * 0.8)
+        res = arr2[idx] - medv
         return float(res)
 
 
-    def fwhm_data(self, x, y, data, radius=10):
+    def fwhm_data(self, x, y, data, radius=15):
         return self.get_fwhm(x, y, radius, data)
 
 
     # EVALUATION ON A FIELD
     
-    def evaluate_peaks(self, peaks, data, bright_radius=2, fwhm_radius=10,
+    def evaluate_peaks(self, peaks, data, bright_radius=2, fwhm_radius=15,
                        cb_fn=None, ev_intr=None):
 
         height, width = data.shape
@@ -280,7 +279,8 @@ class IQCalc(object):
             
             # Find the fwhm in x and y 
             (fwhm_x, fwhm_y, ctr_x, ctr_y,
-             sdx, sdy) = self.fwhm_data(x, y, data, radius=fwhm_radius)
+             sdx, sdy, maxx, maxy) = self.fwhm_data(x, y, data,
+                                                    radius=fwhm_radius)
             self.logger.debug("orig=%f,%f  ctr=%f,%f  fwhm=%f,%f" % (
                 x, y, ctr_x, ctr_y, fwhm_x, fwhm_y))
 
@@ -301,10 +301,14 @@ class IQCalc(object):
                 pos = 1.0 - dy2
 
             # brightness above background
-            bv = self.brightness(int(x), int(y), bright_radius, data)
-            bright = bv - median
-            #bright = (maxx + maxy) / 2.0
-            #print "brightness=%f" % bright
+            ## bright = self.brightness(int(x), int(y), bright_radius,
+            ##                          median, data)
+            # Average the X and Y gaussian fitting near the peak
+            bx = self.gaussian(round(ctr_x), (ctr_x, sdx, maxx))
+            by = self.gaussian(round(ctr_y), (ctr_y, sdy, maxy))
+            ## bx = self.gaussian(ctr_x, (ctr_x, sdx, maxx))
+            ## by = self.gaussian(ctr_y, (ctr_y, sdy, maxy))
+            bright = (bx + by)/2.0
 
             obj = Bunch.Bunch(objx=ctr_x, objy=ctr_y, pos=pos, 
                               fwhm_x=fwhm_x, fwhm_y=fwhm_y,
@@ -334,7 +338,11 @@ class IQCalc(object):
                         edgew=0.01):
 
         results = []
+        count = 0
         for obj in objlist:
+            count += 1
+            self.logger.debug("%d obj x,y=%.2f,%.2f fwhm=%.2f bright=%.2f" % (
+                count, obj.objx, obj.objy, obj.fwhm, obj.brightness))
             # If peak has a minfwhm < fwhm < maxfwhm and the object
             # is inside the frame by edgew pct
             if ((minfwhm < obj.fwhm) and (obj.fwhm < maxfwhm) and
@@ -346,7 +354,7 @@ class IQCalc(object):
         results.sort(self._compare)
         return results
 
-    def pick_field(self, data, bright_radius=2, radius=10,
+    def pick_field(self, data, peak_radius=5, bright_radius=2, fwhm_radius=15,
                    threshold=None,
                    minfwhm=2.0, maxfwhm=50.0, minelipse=0.5,
                    edgew=0.01):
@@ -354,7 +362,7 @@ class IQCalc(object):
         height, width = data.shape
 
         # Find the bright peaks in the image
-        peaks = self.find_bright_peaks(data, radius=radius,
+        peaks = self.find_bright_peaks(data, radius=peak_radius,
                                        threshold=threshold)
         #print "peaks=", peaks
         self.logger.info("peaks=%s" % str(peaks))
@@ -364,7 +372,7 @@ class IQCalc(object):
         # Evaluate those peaks
         objlist = self.evaluate_peaks(peaks, data,
                                       bright_radius=bright_radius,
-                                      fwhm_radius=radius)
+                                      fwhm_radius=fwhm_radius)
         if len(objlist) == 0:
             raise IQCalcError("Error evaluating bright peaks")
         
