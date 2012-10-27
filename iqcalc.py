@@ -2,7 +2,7 @@
 # iqcalc.py -- image quality calculations on FITS data
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Sep 21 14:53:53 HST 2012
+#  Last edit: Thu Oct 25 13:51:50 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -39,25 +39,6 @@ class IQCalc(object):
         # for mutex around scipy.optimize, which seems to be non-threadsafe
         self.lock = threading.RLock()
 
-    ## def histogram(self, data, numbins=20):
-    ##     height, width = data.shape
-    ##     minval = data.min()
-    ##     if numpy.isnan(minval):
-    ##         minval = numpy.nanmin(data)
-    ##         maxval = numpy.nanmax(data)
-    ##         substval = (minval + maxval)/2.0
-    ##         # Oh crap, the array has a NaN value.  We have to workaround
-    ##         # this by making a copy of the array and substituting for
-    ##         # the NaNs, otherwise numpy's histogram() cannot handle it
-    ##         data = data.copy()
-    ##         data[numpy.isnan(data)] = substval
-    ##         dist, bins = numpy.histogram(data, bins=numbins,
-    ##                                      density=False)
-    ##     else:
-    ##         dist, bins = numpy.histogram(data, bins=numbins,
-    ##                                      density=False)
-    ##     return dist, bins
-
     # FWHM CALCULATION
 
     def gaussian(self, x, p):
@@ -66,7 +47,6 @@ class IQCalc(object):
 
         p[0]==mean, p[1]==sdev, p[2]=maxv
         """
-        #y = (1.0/(p[1]*numpy.sqrt(2*numpy.pi))*numpy.exp(-(x-p[0])**2/(2*p[1]**2))) * p[2]
         y = (1.0 / (p[1] * numpy.sqrt(2*numpy.pi)) *
              numpy.exp(-(x - p[0])**2 / (2*p[1]**2))) * p[2]
         return y
@@ -108,13 +88,13 @@ class IQCalc(object):
             raise IQCalcError("FWHM gaussian fitting failed")
 
         mu, sdev, maxv = p1
-        self.logger.debug("mu=%f sdev=%f" % (mu, sdev))
+        self.logger.debug("mu=%f sdev=%f maxv=%f" % (mu, sdev, maxv))
 
         # Now that we have the sdev from fitting, we can calculate FWHM
+        # (fwhm = sdev * sqrt(8*log(2)) ?)
         fwhm = 2.0 * numpy.sqrt(2.0 * numpy.log(2.0)) * sdev
         #return (fwhm, mu, sdev, maxv)
         return (float(fwhm), float(mu), float(sdev), maxv)
-
 
     def get_fwhm(self, x, y, radius, data, medv=None):
         """
@@ -128,7 +108,7 @@ class IQCalc(object):
         # Calculate FWHM in each direction
         fwhm_x, cx, sdx, maxx = self.calc_fwhm(xarr, medv=medv)
         fwhm_y, cy, sdy, maxy = self.calc_fwhm(yarr, medv=medv)
-        
+
         ctr_x = x0 + cx
         ctr_y = y0 + cy
         self.logger.debug("fwhm_x,fwhm_y=%f,%f center=%f,%f" % (
@@ -143,36 +123,23 @@ class IQCalc(object):
         fwhm = fwhm * 3600.0
         return fwhm
 
+    def centroid(self, data, xc, yc, radius):
+        x0, y0, arr = self.cut_region(self, xc, yc, radius, data)
+        cy, cx = ndimage.center_of_mass(arr)
+        return (cx, cy)
+
 
     # FINDING BRIGHT PEAKS
 
-    def centroid(self, data, xc, yc, radius):
-        # TODO
-        return xc, yc
-
-    def get_threshold(self, data, sigma=3, iterations=3):
-        for i in xrange(iterations):
-            median = numpy.ma.median(data)
-            stdev = numpy.ma.std(data)
-            locut = median - (sigma*stdev)
-            hicut = median + (sigma*stdev)
-            print "locut=%f hicut=%f" % (locut, hicut)
-            data = numpy.ma.masked_outside(data, locut, hicut)
-
-        threshold = hicut
-        return threshold
-        
-    def get_threshold(self, data, sigma=5):
+    def get_threshold(self, data, sigma=5.0):
         median = numpy.median(data)
-        # avoid dead pixels in threshold calculation
-        maxval = data.max()
-        dist = (data - median).clip(0, maxval)
-        #dist = numpy.sqrt(numpy.var(dist))
+        # NOTE: for this method a good default sigma is 5.0
         dist = numpy.fabs(data - median).mean()
-        # tanaka-san says to try median instead of mean, but so far for
-        # "real" images mean is working better
-        #dist = numpy.median(numpy.fabs(data - median))
         threshold = median + sigma * dist
+        # NOTE: for this method a good default sigma is 2.0
+        ## std = numpy.std(data - median)
+        ## threshold = median + sigma * std
+        self.logger.debug("calc threshold=%f" % (threshold))
         return threshold
         
     def find_bright_peaks(self, data, threshold=None, sigma=5, radius=5):
@@ -254,7 +221,7 @@ class IQCalc(object):
     # EVALUATION ON A FIELD
     
     def evaluate_peaks(self, peaks, data, bright_radius=2, fwhm_radius=15,
-                       cb_fn=None, ev_intr=None):
+                       fwhm_method=1, cb_fn=None, ev_intr=None):
 
         height, width = data.shape
         hh = float(height) / 2.0
@@ -277,15 +244,37 @@ class IQCalc(object):
             if ev_intr and ev_intr.isSet():
                 raise IQCalcError("Evaluation interrupted!")
             
-            # Find the fwhm in x and y 
-            (fwhm_x, fwhm_y, ctr_x, ctr_y,
-             sdx, sdy, maxx, maxy) = self.fwhm_data(x, y, data,
-                                                    radius=fwhm_radius)
-            self.logger.debug("orig=%f,%f  ctr=%f,%f  fwhm=%f,%f" % (
-                x, y, ctr_x, ctr_y, fwhm_x, fwhm_y))
+            # Find the fwhm in x and y
+            try:
+                if fwhm_method == 1:
+                    (fwhm_x, fwhm_y, ctr_x, ctr_y,
+                     sdx, sdy, maxx, maxy) = self.fwhm_data(x, y, data,
+                                                            radius=fwhm_radius)
 
-            # overall fwhm as a single value
-            fwhm = math.sqrt(fwhm_x*fwhm_x + fwhm_y*fwhm_y)
+                    ## # Average the X and Y gaussian fitting near the peak
+                    bx = self.gaussian(round(ctr_x), (ctr_x, sdx, maxx))
+                    by = self.gaussian(round(ctr_y), (ctr_y, sdy, maxy))
+                    ## ## bx = self.gaussian(ctr_x, (ctr_x, sdx, maxx))
+                    ## ## by = self.gaussian(ctr_y, (ctr_y, sdy, maxy))
+                    bright = float((bx + by)/2.0)
+
+                else:
+                    raise IQCalcError("Method (%d) not supported for fwhm calculation!" %(
+                        fwhm_method))
+
+            except Exception, e:
+                # Error doing FWHM, skip this object
+                self.logger.debug("Error doing FWHM on object at %.2f,%.2f: %s" % (
+                    x, y, str(e)))
+                continue
+
+            self.logger.debug("orig=%f,%f  ctr=%f,%f  fwhm=%f,%f bright=%f" % (
+                x, y, ctr_x, ctr_y, fwhm_x, fwhm_y, bright))
+            # overall measure of fwhm as a single value
+            #fwhm = math.sqrt(fwhm_x*fwhm_x + fwhm_y*fwhm_y)
+            #fwhm = (math.fabs(fwhm_x) + math.fabs(fwhm_y)) / 2.0
+            fwhm = (math.sqrt(fwhm_x*fwhm_x + fwhm_y*fwhm_y) *
+                    (1.0 / math.sqrt(2.0)) )
 
             # calculate a measure of ellipticity
             elipse = math.fabs(min(fwhm_x, fwhm_y) / max(fwhm_x, fwhm_y))
@@ -299,16 +288,6 @@ class IQCalc(object):
                 pos = 1.0 - dx2
             else:
                 pos = 1.0 - dy2
-
-            # brightness above background
-            ## bright = self.brightness(int(x), int(y), bright_radius,
-            ##                          median, data)
-            # Average the X and Y gaussian fitting near the peak
-            bx = self.gaussian(round(ctr_x), (ctr_x, sdx, maxx))
-            by = self.gaussian(round(ctr_y), (ctr_y, sdy, maxy))
-            ## bx = self.gaussian(ctr_x, (ctr_x, sdx, maxx))
-            ## by = self.gaussian(ctr_y, (ctr_y, sdy, maxy))
-            bright = (bx + by)/2.0
 
             obj = Bunch.Bunch(objx=ctr_x, objy=ctr_y, pos=pos, 
                               fwhm_x=fwhm_x, fwhm_y=fwhm_y,

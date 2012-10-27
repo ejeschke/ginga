@@ -2,7 +2,7 @@
 # FitsImageGtk.py -- classes for the display of FITS files in Gtk widgets
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Mon Oct  8 22:21:41 HST 2012
+#  Last edit: Fri Oct 26 21:23:47 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -14,6 +14,7 @@ import gobject
 import gtk
 import cairo
 import numpy
+import threading
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -49,6 +50,13 @@ class FitsImageGtk(FitsImage.FitsImageBase):
         
         # cursors
         self.cursor = {}
+
+        # optomization of redrawing
+        self._defer_whence = 0
+        self._defer_lock = threading.RLock()
+        self._defer_flag = False
+        self._defer_task = None
+        self.defer_lagtime = 50
 
     def get_widget(self):
         return self.imgwin
@@ -164,6 +172,38 @@ class FitsImageGtk(FitsImage.FitsImageBase):
             options['quality'] = quality
         pixbuf.save(filepath, format, options)
     
+    def redraw(self, whence=0):
+        # This adds a redraw optimization to the base class redraw()
+        # method. 
+        with self._defer_lock:
+            self._defer_whence = min(self._defer_whence, whence)
+            defer_flag = self._defer_flag
+            # indicate that a redraw is necessary
+            self._defer_flag = True
+            if not defer_flag:
+                # if no redraw was scheduled, then schedule one in
+                # defer_lagtime 
+                if self._defer_task != None:
+                    try:
+                        gobject.source_remove(self._defer_task)
+                    except:
+                        pass
+                self._defer_task = gobject.timeout_add(self.defer_lagtime,
+                                                       self._redraw)
+                
+    def _redraw(self):
+        # This is the optomized redraw method
+        with self._defer_lock:
+            # pick up the lowest necessary level of redrawing
+            whence = self._defer_whence
+            self._defer_whence = 3
+            flag = self._defer_flag
+            self._defer_flag = False
+
+        if flag:
+            # If a redraw was scheduled, do it now
+            super(FitsImageGtk, self).redraw(whence=whence)
+        
     def update_image(self):
         if not self.surface:
             return

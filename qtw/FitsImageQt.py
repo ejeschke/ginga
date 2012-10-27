@@ -2,7 +2,7 @@
 # FitsImageQt.py -- classes for the display of FITS files in Qt widgets
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Wed Oct  3 13:30:10 HST 2012
+#  Last edit: Fri Oct 26 21:25:38 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -12,6 +12,7 @@
 from PyQt4 import QtGui, QtCore
 
 import numpy
+import threading
 import FitsImage
 import Mixins
 
@@ -119,6 +120,14 @@ class FitsImageQt(FitsImage.FitsImageBase):
         # cursors
         self.cursor = {}
 
+        # optomization of redrawing
+        self._defer_whence = 0
+        self._defer_lock = threading.RLock()
+        self._defer_flag = False
+        self._defer_task = None
+        self.defer_lagtime = 50
+
+
     def get_widget(self):
         return self.imgwin
 
@@ -195,6 +204,40 @@ class FitsImageQt(FitsImage.FitsImageBase):
         image = self._get_qimage(arr)
         return image
     
+    def redraw(self, whence=0):
+        # This adds a redraw optimization to the base class redraw()
+        # method. 
+        with self._defer_lock:
+            self._defer_whence = min(self._defer_whence, whence)
+            defer_flag = self._defer_flag
+            # indicate that a redraw is necessary
+            self._defer_flag = True
+            if not defer_flag:
+                # if no redraw was scheduled, then schedule one in
+                # defer_lagtime 
+                if self._defer_task != None:
+                    try:
+                        self._defer_task.stop()
+                    except:
+                        pass
+                self._defer_task = QtCore.QTimer()
+                self._defer_task.setSingleShot(True)
+                self._defer_task.timeout.connect(self._redraw)
+                self._defer_task.start(self.defer_lagtime)
+                
+    def _redraw(self):
+        # This is the optomized redraw method
+        with self._defer_lock:
+            # pick up the lowest necessary level of redrawing
+            whence = self._defer_whence
+            self._defer_whence = 3
+            flag = self._defer_flag
+            self._defer_flag = False
+
+        if flag:
+            # If a redraw was scheduled, do it now
+            super(FitsImageQt, self).redraw(whence=whence)
+
     def update_image(self):
         if (not self.pixmap) or (not self.imgwin):
             return

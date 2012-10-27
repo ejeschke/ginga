@@ -313,7 +313,8 @@ class AstroImage(object):
 
     def qualsize(self, x1=None, y1=None, x2=None, y2=None, radius=5,
                  bright_radius=2, fwhm_radius=15, threshold=None, 
-                 minfwhm=None, maxfwhm=None, minelipse=None, edgew=None):
+                 minfwhm=2.0, maxfwhm=50.0, minelipse=0.5,
+                 edgew=0.01):
 
         x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
         data = self.cutout_data(x1, y1, x2, y2, astype='float32')
