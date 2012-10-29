@@ -52,6 +52,9 @@ class RenderGraphicsView(QtGui.QGraphicsView):
 
     def sizeHint(self):
         return QtCore.QSize(100, 100)
+
+    def set_pixmap(self, pixmap):
+        self.pixmap = pixmap
     
         
 class RenderWidget(QtGui.QWidget):
@@ -91,6 +94,9 @@ class RenderWidget(QtGui.QWidget):
     def sizeHint(self):
         return QtCore.QSize(100, 100)
 
+    def set_pixmap(self, pixmap):
+        self.pixmap = pixmap
+
 
 class FitsImageQt(FitsImage.FitsImageBase):
 
@@ -121,11 +127,12 @@ class FitsImageQt(FitsImage.FitsImageBase):
         self.cursor = {}
 
         # optomization of redrawing
+        self.defer_redraw = True
+        self.defer_lagtime = 25
         self._defer_whence = 0
         self._defer_lock = threading.RLock()
         self._defer_flag = False
         self._defer_task = None
-        self.defer_lagtime = 50
 
 
     def get_widget(self):
@@ -190,21 +197,32 @@ class FitsImageQt(FitsImage.FitsImageBase):
                                       width, height)
 
     def configure(self, width, height):
+        self.logger.debug("window size reconfigured to %dx%d" % (
+            width, height))
         if hasattr(self, 'scene'):
             self.scene.setSceneRect(0, 0, width, height)
-        pixmap = QtGui.QPixmap(width, height)
-        #pixmap.fill(QColor("black"))
-        self.pixmap = pixmap
-        self.imgwin.pixmap = pixmap
+        # If we need to build a new pixmap do it here.  We allocate one twice as big
+        # as necessary to prevent having to reinstantiate it all the time.  On Qt this
+        # causes unpleasant flashing in the display
+        if (self.pixmap == None) or (self.pixmap.width() < width) or \
+           (self.pixmap.height() < height):
+            pixmap = QtGui.QPixmap(width*2, height*2)
+            #pixmap.fill(QColor("black"))
+            self.pixmap = pixmap
+            self.imgwin.set_pixmap(pixmap)
         self.set_window_size(width, height, redraw=True)
         
     def get_image_as_widget(self):
-        rgbobj = self.get_rgb_object(whence=3)
+        rgbobj = self.get_rgb_object(whence=0)
         arr = numpy.dstack((rgbobj.r, rgbobj.g, rgbobj.b))
         image = self._get_qimage(arr)
         return image
     
     def redraw(self, whence=0):
+        if not self.defer_redraw:
+            super(FitsImageQt, self).redraw(whence=whence)
+            return
+        
         # This adds a redraw optimization to the base class redraw()
         # method. 
         with self._defer_lock:
@@ -347,10 +365,11 @@ class RenderMixin(object):
         self.fitsimage.scroll_event(self, event)
 
     def dragEnterEvent(self, event):
-        if event.mimeData().hasFormat('text/plain'):
-            event.accept()
-        else:
-            event.ignore() 
+#         if event.mimeData().hasFormat('text/plain'):
+#             event.accept()
+#         else:
+#             event.ignore() 
+        event.accept()
 
     def dropEvent(self, event):
         self.fitsimage.drop_event(self, event)
@@ -433,6 +452,8 @@ class FitsImageEvent(FitsImageQt):
             return 'shift_l'
         if keycode in [QtCore.Qt.Key_Escape]:
             return 'escape'
+        if keycode in [16777250]:
+            return 'meta_right'
         if keycode in self._fnkeycodes:
             index = self._fnkeycodes.index(keycode)
             return 'f%d' % (index+1)
@@ -556,13 +577,16 @@ class FitsImageEvent(FitsImageQt):
         return self.make_callback('scroll', direction)
 
     def drop_event(self, widget, event):
-        data = str(event.mimeData().text())
-        if '\r\n' in data:
-            paths = data.split('\r\n')
-        else:
-            paths = data.split('\n')
-        self.logger.debug("dropped filename(s): %s" % (str(paths)))
-        return self.make_callback('drag-drop', paths)
+        dropdata = event.mimeData()
+        formats = map(str, list(dropdata.formats()))
+        self.logger.debug("available formats of dropped data are %s" % (
+            formats))
+        if dropdata.hasUrls():
+            urls = list(dropdata.urls())
+            paths = [ str(url.toString()) for url in urls ]
+            event.acceptProposedAction()
+            self.logger.debug("dropped filename(s): %s" % (str(paths)))
+            self.make_callback('drag-drop', paths)
         
 
 class FitsImageZoom(FitsImageEvent, Mixins.FitsImageZoomMixin):

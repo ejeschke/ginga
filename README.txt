@@ -34,7 +34,7 @@ information for developers in the manual.
 
 ON THE WEB
 ----------
-http://subarutelescope.org/staff/eric/ginga
+http://ericjeschke.github.com/ginga
 
 ETYMOLOGY
 ---------

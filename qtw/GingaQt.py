@@ -66,6 +66,7 @@ class GingaView(QtMain.QtMain):
 
         self.font = QtGui.QFont('Monospace', 12)
         self.font11 = QtGui.QFont('Monospace', 11)
+        self.font14 = QtGui.QFont('Monospace', 14)
 
         self.w.tooltips = None
         QtGui.QToolTip.setFont(self.font11)
@@ -582,7 +583,7 @@ class GingaView(QtMain.QtMain):
             chnames = self.get_channelNames()
             for chname in chnames:
                 chinfo = self.get_channelInfo(chname)
-                if chinfo.container == container:
+                if chinfo.has_key('container') and (chinfo.container == container):
                     fitsimage = chinfo.fitsimage
                     if fitsimage != self.getfocus_fitsimage():
                         self.logger.debug("Active channel switch to '%s'" % (

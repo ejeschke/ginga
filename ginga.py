@@ -56,8 +56,7 @@ import ModuleManager
 import Datasrc
 import Settings
 from Control import GingaControl, GuiLogHandler
-
-version = "20120510.0"
+import version
 
 LOG_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcName)s) | %(message)s'
 
@@ -239,7 +238,8 @@ def main(options, args):
     if options.geometry:
         ginga.setGeometry(options.geometry)
 
-    ginga.banner()
+    if not options.nosplash:
+        ginga.banner()
     
     # Assume remaining arguments are fits files and load them.
     for imgfile in args:
@@ -267,7 +267,7 @@ if __name__ == "__main__":
     from optparse import OptionParser
 
     usage = "usage: %prog [options] cmd [args]"
-    optprs = OptionParser(usage=usage, version=('%%prog %s' % version))
+    optprs = OptionParser(usage=usage, version=('%%prog %s' % version.version))
     
     optprs.add_option("--bufsize", dest="bufsize", metavar="NUM",
                       type="int", default=25,
@@ -288,6 +288,9 @@ if __name__ == "__main__":
                       help="Set logging level to LEVEL")
     optprs.add_option("--modules", dest="modules", metavar="NAMES",
                       help="Specify additional modules to load")
+    optprs.add_option("--nosplash", dest="nosplash", default=False,
+                      action="store_true",
+                      help="Don't display the splash screen")
     optprs.add_option("--numthreads", dest="numthreads", type="int",
                       default=30, metavar="NUM",
                       help="Start NUM threads in thread pool")

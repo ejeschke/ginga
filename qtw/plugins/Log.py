@@ -91,7 +91,10 @@ class Log(GingaPlugin.GlobalPlugin):
 
         # scroll window to end of buffer
         #self.tw.setPosition()
-        self.tw.ensureCursorVisible()
+        #self.tw.ensureCursorVisible()
+        rect = self.tw.geometry()
+        x1, y1, x2, y2 = rect.getCoords()
+        self.tw.ensureVisible(x1, y1)
 
     def clear(self):
         self.tw.clear()

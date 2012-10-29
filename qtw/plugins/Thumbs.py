@@ -105,6 +105,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         thumbname = name
         if '.' in thumbname:
             thumbname = thumbname.split('.')[0]
+        print "MAKING THUMB for %s" % (thumbname)
             
         # Is there a preference set to avoid making thumbnails?
         chinfo = self.fv.get_channelInfo(chname)
@@ -137,19 +138,26 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         imglbl.setToolTip(text)
 
         widget = QtGui.QWidget()
-        vbox = QtGui.QGridLayout()
+        #vbox = QtGui.QGridLayout()
+        vbox = QtGui.QVBoxLayout()
         vbox.setContentsMargins(0, 0, 0, 0)
         vbox.setSpacing(0)
         widget.setLayout(vbox)
         namelbl = QtGui.QLabel(thumbname)
+        namelbl.setAlignment(QtCore.Qt.AlignLeft)
         namelbl.setAlignment(QtCore.Qt.AlignHCenter)
-        vbox.addWidget(namelbl, 0, 0)
-        vbox.addWidget(imglbl,  1, 0)
+        ## vbox.addWidget(namelbl, 0, 0)
+        ## vbox.addWidget(imglbl,  1, 0)
+        vbox.addWidget(namelbl, stretch=0)
+        vbox.addWidget(imglbl,  stretch=0)
         widget.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed))
         #widget.show()
         bnch = Bunch.Bunch(widget=widget, image=imgwin, layout=vbox,
                            imglbl=imglbl, name=name, chname=chname,
                            path=path, pixmap=pixmap)
+
+        self.thumbDict[thumbkey] = bnch
+        self.thumbList.append(thumbkey)
 
         self.w.thumbs.addWidget(widget,
                                 self.thumbRowCount, self.thumbColCount)
@@ -159,13 +167,12 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
         #self.w.thumbs.show()
         
-        self.thumbDict[thumbkey] = bnch
-        self.thumbList.append(thumbkey)
         # force scroll to bottom of thumbs
         rect = self.w.thumbs_w.geometry()
         x1, y1, x2, y2 = rect.getCoords()
         self.w.thumbs_scroll.ensureVisible(x1, y1)
         #self.w.thumbs_scroll.show()
+        print "ADDED THUMB for %s" % (thumbname)
 
     def rebuild_thumbs(self):
         # Remove widgets from grid
@@ -291,12 +298,21 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         if image == None:
             return
         
+        chname = self.fv.get_channelName(fitsimage)
+
+        # Get metadata for mouse-over tooltip
+        header = image.get_header()
+        metadata = {}
+        for kwd in self.keywords:
+            metadata[kwd] = header.get(kwd, 'N/A')
+
         # Look up our version of the thumb
         name = image.get('name', None)
         if name == None:
             return
         try:
-            bnch = self.thumbDict[name]
+            thumbkey = (chname, name)
+            bnch = self.thumbDict[thumbkey]
         except KeyError:
             return
 

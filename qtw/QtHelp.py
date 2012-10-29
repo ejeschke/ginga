@@ -648,6 +648,7 @@ def removeWidget(layout, widget):
         #layout.removeWidget(widget)
         print "removing item"
         layout.removeItem(w)
+        widget.setParent(None)
         #print "deleting widget"
         #widget.delete()
     else:

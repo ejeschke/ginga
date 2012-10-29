@@ -113,7 +113,7 @@ class GingaControl(Callback.Callbacks):
             gprefs = self.settings.getSettings('ginga')
         except KeyError:
             gprefs = self.settings.createCategory('ginga')
-        gprefs.setvals(color_map='idl4', intensity_map='ramp',
+        gprefs.setvals(color_map='ramp', intensity_map='ramp',
                        auto_scale='off')
         
 
@@ -486,8 +486,6 @@ class GingaControl(Callback.Callbacks):
         if current != image:
             return
 
-        print "DISPLAYING IMAGE"
-        self.logger.debug("displaying image '%s'" % (curname))
         # switch to current image?
         if chinfo.prefs.switchnew:
             #and chinfo.switchfn(image):
@@ -506,9 +504,6 @@ class GingaControl(Callback.Callbacks):
         else:
             chinfo = self.get_channelInfo(chname)
         chinfo.datasrc[imname] = image
-        current = chinfo.datasrc.youngest()
-        curname = current.get('name')
-        self.logger.debug("image=%s youngest=%s" % (image.get('name'), curname))
 
         self.make_callback('add-image', chinfo.name, image)
         self.update_pending(timeout=0)
@@ -516,8 +511,8 @@ class GingaControl(Callback.Callbacks):
         # By delaying the update here, more images may be bulk added
         # before the _add_image_update executes--it will then only
         # update the gui for the latest image, which saves lots of work
-        #self.gui_do(self._add_image_update, chinfo, image)
-        self._add_image_update(chinfo, image)
+        self.gui_do(self._add_image_update, chinfo, image)
+        #self._add_image_update(chinfo, image)
 
         
     def update_image(self, imname, image, chname):
@@ -853,7 +848,7 @@ class GingaControl(Callback.Callbacks):
                                             quality=quality)
         
     def banner(self):    
-        bannerFile = os.path.join(self.iconpath, 'ginga.fits')
+        bannerFile = os.path.join(self.iconpath, 'ginga-splash.ppm')
         self.add_channel('Ginga')
         self.nongui_do(self.load_file, bannerFile, chname='Ginga')
         self.change_channel('Ginga')

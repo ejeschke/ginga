@@ -25,7 +25,11 @@ class Errors(GingaPlugin.GlobalPlugin):
     def initialize(self, container):
         self.msgFont = QtGui.QFont("Fixed", 12)
 
-        self.msgList = QtHelp.VBox()
+        self.msgList = QtGui.QWidget()
+        vbox = QtGui.QGridLayout()
+        vbox.setContentsMargins(0, 0, 0, 0)
+        vbox.setSpacing(0)
+        self.msgList.setLayout(vbox)
         
         sw = QtGui.QScrollArea()
         sw.setWidgetResizable(True)
@@ -39,6 +43,8 @@ class Errors(GingaPlugin.GlobalPlugin):
         btn.clicked.connect(self.remove_all)
         hbox.addWidget(btn, stretch=0)
         container.addWidget(hbox, stretch=0)
+
+        self.widgetList = []
 
     def add_error(self, errmsg):
         vbox = QtHelp.VBox()
@@ -59,18 +65,30 @@ class Errors(GingaPlugin.GlobalPlugin):
         hbox.addWidget(lbl, stretch=0)
         vbox.addWidget(hbox, stretch=0)
         
-        self.msgList.addWidget(vbox, stretch=0)
+        layout = self.msgList.layout()
+        layout.addWidget(vbox, layout.rowCount(), 0,
+                         alignment=QtCore.Qt.AlignTop)
+        self.widgetList.append(vbox)
         # TODO: force scroll to bottom 
 
     def remove_error(self, child):
         layout = self.msgList.layout()
-        QtHelp.removeWidget(layout, child)
+        #QtHelp.removeWidget(layout, child)
+        layout.removeWidget(child)
+        #child.setVisible(False)
+        # This is necessary to actually delete the widget visibly
+        child.setParent(None)
+        try:
+            self.widgetList.remove(child)
+            child.delete()
+        except:
+            pass
         
     def remove_all(self):
         layout = self.msgList.layout()
-        for child in QtHelp.children(layout):
-            QtHelp.removeWidget(layout, child)
-        
+        for child in list(self.widgetList):
+            self.remove_error(child)
+            
     def __str__(self):
         return 'errors'
     

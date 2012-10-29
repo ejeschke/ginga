@@ -52,11 +52,11 @@ class FitsImageGtk(FitsImage.FitsImageBase):
         self.cursor = {}
 
         # optomization of redrawing
+        self.defer_redraw = True
+        self.defer_lagtime = 25
         self._defer_whence = 0
         self._defer_lock = threading.RLock()
         self._defer_flag = False
-        self._defer_task = None
-        self.defer_lagtime = 50
 
     def get_widget(self):
         return self.imgwin
@@ -173,6 +173,10 @@ class FitsImageGtk(FitsImage.FitsImageBase):
         pixbuf.save(filepath, format, options)
     
     def redraw(self, whence=0):
+        if not self.defer_redraw:
+            super(FitsImageGtk, self).redraw(whence=whence)
+            return
+        
         # This adds a redraw optimization to the base class redraw()
         # method. 
         with self._defer_lock:
@@ -183,11 +187,6 @@ class FitsImageGtk(FitsImage.FitsImageBase):
             if not defer_flag:
                 # if no redraw was scheduled, then schedule one in
                 # defer_lagtime 
-                if self._defer_task != None:
-                    try:
-                        gobject.source_remove(self._defer_task)
-                    except:
-                        pass
                 self._defer_task = gobject.timeout_add(self.defer_lagtime,
                                                        self._redraw)
                 
@@ -596,8 +595,16 @@ class thinCrossCursor(object):
         cr.stroke()
 
         data = arr8.reshape((height, width, 4))
-        pixbuf = gtk.gdk.pixbuf_new_from_array(data,
-                                               gtk.gdk.COLORSPACE_RGB, 8)
+        try:
+            pixbuf = gtk.gdk.pixbuf_new_from_array(data,
+                                                   gtk.gdk.COLORSPACE_RGB, 8)
+        except Exception, e:
+            #print "ERROR MAKING PIXBUF", str(e)
+            # pygtk might have been compiled without numpy support
+            daht, dawd, depth = data.shape
+            rgb_buf = data.tostring(order='C')
+            pixbuf = gtk.gdk.pixbuf_new_from_data(rgb_buf, gtk.gdk.COLORSPACE_RGB,
+                                                  False, 8, dawd, daht, dawd*3)
         # Is this always going to be the correct display?  Does it matter?
         display = gtk.gdk.display_get_default()
         self.cur = gtk.gdk.Cursor(display, pixbuf, 8, 8)

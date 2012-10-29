@@ -209,7 +209,11 @@ def open_ppm(filepath):
     #print header
 
     # Get image dimensions
-    header = infile.readline()
+    header = infile.readline().strip()
+    while header.startswith('#') or len(header) == 0:
+        header = infile.readline().strip()
+        
+    print header
     width, height = map(int, header.split())
     header = infile.readline()
 

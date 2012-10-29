@@ -73,6 +73,8 @@ class Pick(GingaPlugin.LocalPlugin):
         self.plot_pany = 0.5
         self.plot_zoomlevel = 1.0
         self.num_contours = 8
+        self.contour_size_limit = 70
+        self.contour_data = None
         self.delta_sky = 0.0
         self.delta_bright = 0.0
         self.iqcalc = iqcalc.IQCalc(self.logger)
@@ -187,6 +189,7 @@ class Pick(GingaPlugin.LocalPlugin):
             ('Object_X', 'label', 'Object_Y', 'label'),
             ('RA', 'label', 'DEC', 'label'), ('Equinox', 'label'),
             ('Sky Level', 'label', 'Brightness', 'label'), 
+            ('FWHM X', 'label', 'FWHM Y', 'label'),
             ('FWHM', 'label', 'Star Size', 'label'),
             ('Sample Area', 'label', 'Default Region', 'button'),
             )
@@ -384,7 +387,7 @@ class Pick(GingaPlugin.LocalPlugin):
             return self.serialnum
         
     def plot_panzoom(self):
-        ht, wd = self.pick_data.shape
+        ht, wd = self.contour_data.shape
         x = int(self.plot_panx * wd)
         y = int(self.plot_pany * ht)
 
@@ -427,14 +430,33 @@ class Pick(GingaPlugin.LocalPlugin):
 
     def plot_contours(self):
         # Make a contour plot
+
         ht, wd = self.pick_data.shape
+
+        # If size of pick region is too large, carve out a subset around
+        # the picked object coordinates for plotting contours
+        maxsize = max(ht, wd)
+        if maxsize > self.contour_size_limit:
+            image = self.fitsimage.get_image()
+            radius = int(self.contour_size_limit // 2)
+            x, y = self.pick_qs.x, self.pick_qs.y
+            data, x1, y1, x2, y2 = image.cutout_radius(x, y, radius)
+            x, y = x - x1, y - y1
+            ht, wd = data.shape
+        else:
+            data = self.pick_data
+            x, y = self.pickcenter.x, self.pickcenter.y
+        self.contour_data = data
+        # Set pan position in contour plot
+        self.plot_panx = float(x) / wd
+        self.plot_pany = float(y) / ht
+
         self.w.ax.cla()
         try:
             # Create a contour plot
             xarr = numpy.arange(wd)
             yarr = numpy.arange(ht)
-            self.w.ax.contourf(xarr, yarr, self.pick_data,
-                               self.num_contours)
+            self.w.ax.contourf(xarr, yarr, data, self.num_contours)
             # Mark the center of the object
             x, y = self.pickcenter.x, self.pickcenter.y
             self.w.ax.plot([x], [y], marker='x', ms=20.0,
@@ -737,6 +759,8 @@ class Pick(GingaPlugin.LocalPlugin):
             point.x, point.y = obj_x, obj_y
             text.color = 'cyan'
 
+            self.wdetail.fwhm_x.setText('%.3f' % fwhm_x)
+            self.wdetail.fwhm_y.setText('%.3f' % fwhm_y)
             self.wdetail.fwhm.setText('%.3f' % fwhm)
             self.wdetail.object_x.setText('%.3f' % (obj_x+1))
             self.wdetail.object_y.setText('%.3f' % (obj_y+1))
@@ -793,7 +817,8 @@ class Pick(GingaPlugin.LocalPlugin):
                 str(e))
             self.logger.error(errmsg)
             self.fv.show_error(errmsg, raisetab=False)
-            for key in ('sky_level', 'brightness', 'star_size'):
+            for key in ('sky_level', 'brightness', 'star_size',
+                        'fwhm_x', 'fwhm_y'):
                 self.wdetail[key].setText('')
             self.wdetail.fwhm.setText('Failed')
             self.w.btn_sky_cut.setEnabled(False)

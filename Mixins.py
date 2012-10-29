@@ -115,6 +115,7 @@ class FitsImageZoomMixin(object):
         self._ischgcmap = False
         self.isctrldown = False
         self.isshiftdown = False
+        self.isdrawdown = False
 
         # For panning
         self._pantype = 1
@@ -136,6 +137,7 @@ class FitsImageZoomMixin(object):
         self.keys.autozoom_override = ['singlequote']
         self.keys.ctrl = ['control_l', 'control_r']
         self.keys.shift = ['shift_l', 'shift_r']
+        self.keys.draw = ['meta_right']
         self.keys.pan1 = ['q']
         self.keys.pan2 = ['space']
         self.keys.panset = ['p']
@@ -182,6 +184,9 @@ class FitsImageZoomMixin(object):
         if (keyname in self.keys.shift):
             self.set_kbdmouse_mask(0x20)
             self.isshiftdown = True
+        if (keyname in self.keys.draw):
+            self.set_kbdmouse_mask(0x4)
+            self.isdrawdown = True
         if (keyname in self.keys.cancel):
             self.reset()
             
@@ -297,6 +302,9 @@ class FitsImageZoomMixin(object):
         if (keyname in self.keys.shift):
             self.reset_kbdmouse_mask(0x20)
             self.isshiftdown = False
+        if (keyname in self.keys.draw):
+            self.reset_kbdmouse_mask(0x4)
+            self.isdrawdown = False
 
 
     def reset(self):
