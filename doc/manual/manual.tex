@@ -476,18 +476,15 @@ Ginga can automatically set cut levels when you switch images;
 for example, when a new image is loaded into a channel or you click the
 thumbnail of an old image.
 This setting is on a per-channel basis, and is governed by three
-possible values for the ``Cut New'' setting (on, override, and off) plus
-the ``Use saved cuts'' checkbox setting.
-The idea of the ``Use saved cuts'' preference comes from the notion that
-if you previously manually set the cut levels on an image then you
-probably want to use the same cut levels if you visit that same image again.  
-So if the switched image is already loaded (e.g. you clicked a thumbnail of
-an older image) \emph{and} a \emph{manual} cut levels operation was
-previously applied to that image \emph{and} the use saved cuts checkbox
-is checked, then the previously saved cut levels for that image will be
-used.
-For images which never had a manually set cut levels, or new images, Ginga
-will set the levels according to the value of the ``Cut New'' setting.
+possible values for the ``Cut New'' setting (on, override, and off).
+%% The idea of the ``Use saved cuts'' preference comes from the notion that
+%% if you previously manually set the cut levels on an image then you
+%% probably want to use the same cut levels if you visit that same image again.  
+%% So if the switched image is already loaded (e.g. you clicked a thumbnail of
+%% an older image) \emph{and} a \emph{manual} cut levels operation was
+%% previously applied to that image \emph{and} the use saved cuts checkbox
+%% is checked, then the previously saved cut levels for that image will be
+%% used.
 In the \emph{on} mode, an auto cut levels is always applied to the
 new image.  
 In the \emph{off} mode, the current cut levels are applied to the new image.
@@ -506,31 +503,48 @@ This chapter explains how you can customize Ginga in various ways.
 \section{Workspace configuration}
 \label{sec:workspaceconfig}
 Ginga has a flexible table-driven layout scheme for dynamically creating
-workspaces and mapping the plugins to workspaces.  By changing two
-tables you can change the way Ginga looks and presents its content. 
+workspaces and mapping the plugins to workspaces.  By changing a couple
+of tables you can change the way Ginga looks and presents its content. 
 If you examine the top-level startup script {\tt ginga.py} you will find
-two tables: {\tt default\_layout} and {\tt default\_tabs}.
-default\_tabs defines the mapping of plugins to workspaces and the
-titles on the tabs in the workspaces (if the workspace has tabs--some
-don't).  
-Here is an example of default\_tabs:
+the tables: {\tt default\_layout}, {\tt global\_plugins} and
+{\tt local\_plugins}.
+global\_plugins and local_\plugins define the mapping of plugins to
+workspaces and the titles on the tabs in the workspaces (if the
+workspace has tabs--some don't).  
+Here is an example of these two tables:
 \begin{lstlisting}
-# (tabname, globalpluginname, workspacename), ...
-default_tabs = [('Pan', 'pan', 'uleft'),
-                ('Info', 'info', 'lleft'),
-                ('Header', 'header', 'left'),
-                ('Zoom', 'zoom', 'left'),
-                ('Thumbs', 'thumbs', 'right'),
-                ('Contents', 'contents', 'right'),
-                ('Help', 'wbrowser', 'right'),
-                ('Debug', 'debug', 'right'),
-                ]
+global_plugins = [
+    Bunch(module='Pan', tab='Pan', ws='uleft', raisekey='i'),
+    Bunch(module='Info', tab='Info', ws='lleft', raisekey='i'),
+    Bunch(module='Header', tab='Header', ws='left', raisekey='h'),
+    Bunch(module='Zoom', tab='Zoom', ws='left', raisekey='z'),
+    Bunch(module='Thumbs', tab='Thumbs', ws='right', raisekey='t'),
+    Bunch(module='Contents', tab='Contents', ws='right', raisekey='c'),
+    Bunch(module='WBrowser', tab='Help', ws='right', raisekey='?'),
+    Bunch(module='Errors', tab='Errors', ws='right'),
+    Bunch(module='Log', tab='Log', ws='right'),
+    Bunch(module='Debug', tab='Debug', ws='right'),
+    ]
+
+local_plugins = [
+    Bunch(module='Pick', ws='dialogs', shortkey='f1'),
+    Bunch(module='Ruler', ws='dialogs', shortkey='f2'),
+    Bunch(module='MultiDim', ws='dialogs', shortkey='f4'), 
+    Bunch(module='Cuts', ws='dialogs', shortkey='f5'),
+    Bunch(module='Histogram', ws='dialogs', shortkey='f6'),
+    Bunch(module='PixTable', ws='dialogs', shortkey='f7'),
+    Bunch(module='Preferences', ws='dialogs', shortkey='f9'),
+    Bunch(module='Catalogs', ws='dialogs', shortkey='f10'),
+    Bunch(module='Drawing', ws='dialogs', shortkey='f11'),
+    Bunch(module='FBrowser', ws='dialogs', shortkey='f12'), 
+    ]
 \end{lstlisting}
-The format of this table is simply a series of tuples, where each tuple
-specifies a title for the tab, the global plugin name and the workspace
-name that it should occupy.  We can see that the ``pan'' plugin will
-occupy the ``uleft'' workspace and have a tab name of ``Pan'' (if that
-workspace has tabs).
+The format of this table is simply a series of tuples''bunches''.
+In the case of global\_plugins, each bunch specifies a module 
+a title for the tab, the workspace that it should occupy, and an
+optional key to raise that tab when pressed.
+We can see that the ``Pan'' plugin will occupy the ``uleft'' workspace
+and have a tab name of ``Pan'' (if that workspace has tabs).
 
 Next we look at the default\_layout table:
 \begin{lstlisting}
@@ -746,7 +760,7 @@ and work up to more complicated examples like Pick or Catalogs.
 \label{sec:remotecontrol}
 You may find that you have a need to control Ginga remotely.  For
 example, you want to invoke the loading of images, or performing
-operations on images, etc.  Like all other aspects, Ginga delegates this
+operations on images, etc.  Like many other aspects, Ginga delegates this
 task to a plugin: RC.  
 Because remote control of Ginga is handled by a plugin, you can easily
 change the types of operations that can be done, or completely change
@@ -791,7 +805,11 @@ You can then control Ginga from the {\tt grc\.py} program located in the
 This chapter explains the secret inner workings of Ginga and its widgets
 so that you can subclass them and use them in your own applications.
 
+\bf{TBD}
+
 \section{Architecture}
+
+\bf{TBD}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \appendix    %>>>> this command starts appendixes
@@ -830,6 +848,10 @@ button) \\
 slash ({\tt /}) & Interactive shift colormap (with left mouse button) \\
 semicolon ({\tt ;}) & Set autocuts for new images to {\em override} \\
 colon ({\tt :}) & Set autocuts for new images to {\em on} \\
+Ctrl + Scroll wheel turned & Adjust \emph{both} high and low cut levels
+(coarse adjustment) \\
+Shift + Scroll wheel turned & Adjust \emph{both} high and low cut levels
+(fine adjustment) \\
 \end{tabularx}
 
 \subsection{Transform commands}
@@ -874,7 +896,7 @@ If there are one or more plugins active, additional mouse or keyboard
 bindings may be present.  In general, the left mouse button is used to
 select, pick or move, and the right mouse button is used to draw a
 shape for the operation.  
-%The Ctrl + left mouse button can also be used to draw. 
+On the Mac, control + mouse button can also be used to draw or right click.
 
 \chapter{Miscellanea}
 \section{Etymology}

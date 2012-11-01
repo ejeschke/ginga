@@ -2,7 +2,7 @@
 # Control.py -- Controller for the Ginga FITS viewer.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Oct 19 13:32:55 HST 2012
+#  Last edit: Wed Oct 31 17:08:34 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -682,6 +682,9 @@ class GingaControl(Callback.Callbacks):
     def add_channel(self, chname, datasrc=None, workspace=None,
                     num_images=None):
 
+        if self.has_channel(chname):
+            return self.get_channelInfo(chname)
+        
         chinfo = self.add_channel_internal(chname, num_images=num_images)
 
         with self.lock:
@@ -847,11 +850,12 @@ class GingaControl(Callback.Callbacks):
         chinfo.fitsimage.save_image_as_file(filepath, format,
                                             quality=quality)
         
-    def banner(self):    
+    def banner(self):
         bannerFile = os.path.join(self.iconpath, 'ginga-splash.ppm')
-        self.add_channel('Ginga')
-        self.nongui_do(self.load_file, bannerFile, chname='Ginga')
-        self.change_channel('Ginga')
+        chname = 'Ginga'
+        self.add_channel(chname)
+        self.nongui_do(self.load_file, bannerFile, chname=chname)
+        self.change_channel(chname)
 
     def followFocus(self, tf):
         self.channel_follows_focus = tf

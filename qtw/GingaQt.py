@@ -2,7 +2,7 @@
 # GingaQt.py -- Qt display handler for the Ginga FITS tool.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Thu Sep 13 13:54:22 HST 2012
+#  Last edit: Wed Oct 31 15:27:47 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -223,6 +223,13 @@ class GingaView(QtMain.QtMain):
         ## item = QtGui.QAction(QtCore.QString("Cascade Panes"), menubar)
         ## item.triggered.connect(self.cascade_panes_cb)
         ## wsmenu.addAction(item)
+        
+        # create a Help pulldown menu, and add it to the menu bar
+        helpmenu = menubar.addMenu("Help")
+
+        item = QtGui.QAction(QtCore.QString("About"), menubar)
+        item.triggered.connect(self.banner)
+        helpmenu.addAction(item)
         
 
     def add_dialogs(self):
@@ -595,4 +602,5 @@ class GingaView(QtMain.QtMain):
 
         return True
 
+        
 # END

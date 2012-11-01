@@ -2,7 +2,7 @@
 # GingaGtk.py -- Gtk display handler for the Ginga FITS tool.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Oct 19 13:00:50 HST 2012
+#  Last edit: Wed Oct 31 15:39:51 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -236,6 +236,16 @@ class GingaView(GtkMain.GtkMain):
         ## menubar.append(item)
         ## item.show()
         ## item.set_submenu(optionmenu)
+
+        helpmenu = gtk.Menu()
+        item = gtk.MenuItem(label="Help")
+        menubar.append(item)
+        item.show()
+        item.set_submenu(helpmenu)
+
+        w = gtk.MenuItem("About")
+        helpmenu.append(w)
+        w.connect("activate", lambda w: self.banner())
 
         menubar.show_all()
 

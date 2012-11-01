@@ -2,7 +2,7 @@
 # RC.py -- Remote Control plugin for Ginga fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Thu Jul 12 16:02:49 HST 2012
+#  Last edit: Mon Oct 29 15:11:42 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -19,6 +19,7 @@ import AstroImage
 import numpy
 import SimpleXMLRPCServer
 import binascii
+import bz2
 
 class RC(GingaPlugin.GlobalPlugin):
 
@@ -67,7 +68,7 @@ class GingaWrapper(object):
         self.logger = logger
 
     def display_fitsbuf(self, fitsname, chname, data, width, height, na_type,
-                        header, metadata):
+                        header, metadata, compressed):
         """Display a FITS image buffer.  Parameters:
         _fitsname_: name of the file
         _chname_: channel to display the data
@@ -76,6 +77,7 @@ class GingaWrapper(object):
         _na_type_: numpy data type (currently ignored)
         _header_: fits file header as a dictionary
         _metadata_: metadata about image to attach to image
+        _compressed_: True if the data is compressed
         """
 
         # Unpack the data
@@ -83,7 +85,12 @@ class GingaWrapper(object):
             # Decode binary data
             data = binascii.a2b_base64(data)
 
-            na_type = numpy.float32
+            # Uncompress data if necessary
+            if compressed:
+                data = bz2.decompress(data)
+
+            if na_type == 0:
+                na_type = numpy.float32
             data = numpy.fromstring(data, dtype=na_type)
             data.byteswap(True)
             data = data.reshape((height, width))

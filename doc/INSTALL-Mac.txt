@@ -1,0 +1,10 @@
+For the Mac, building from source is left as an exercise for the reader.
+For the non-adventurous, install the following packages:
+
+python-2.7.3-macosx10.6.dmg       
+numpy-1.6.1-py2.7-python.org-macosx10.6.dmg
+scipy-0.11.0-py2.7-python.org-macosx10.6.dmg
+matplotlib-1.1.1-py2.7-python.org-macosx10.6.dmg
+PyQtX+_py273_q482_pyqt494.pkg.mpkg.zip
+git-1.7.9.4-intel-universal-snow-leopard.dmg
+

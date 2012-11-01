@@ -24,8 +24,8 @@ Please see the file doc/INSTALL.txt
 
 MANUAL
 ------
-Please see the file doc/manual/manual.pdf.  You can find this online at
-http://subarutelescope.org/staff/eric/ginga/manual.pdf
+You can find copies of a PDF manual online at
+https://github.com/ejeschke/ginga/downloads
 
 DEVELOPERS
 ----------
@@ -34,7 +34,7 @@ information for developers in the manual.
 
 ON THE WEB
 ----------
-http://ericjeschke.github.com/ginga
+http://ejeschke.github.com/ginga
 
 ETYMOLOGY
 ---------

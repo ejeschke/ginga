@@ -7,10 +7,15 @@ Ginga is written entirely in Python, and only uses supporting Python
 packages.  There is nothing to compile, unless you need to compile one
 of the supporting packages.
 
-On recent (2012) Ubuntu or other Debian-derived Linux distributions, the
-following packages are sufficient for all functionality:
+On recent Linux, Mac and Windows versions, all of the packages are
+available in binary (installable) form; it should not be necessary to
+compile anything.  But as always, YMMV.
 
+You will need:
+
+python (v. 2.7 recommended)
 python-numpy
+python-scipy
 python-pyfits
 
 Also, depending on which GUI toolkit you prefer, you will need either
@@ -22,11 +27,13 @@ OR
 
 python-qt4
 
+(Mac and Windows platforms should probably install the Qt version,
+unless you are adventurous.  Either one works fine on Linux.)
+
 Certain plugins (or features of those plugins) will not work without the
 following packages:
 
 python-matplotlib (Pick, Cuts, Histogram)
-python-scipy (Pick)
 python-webkit (WBrowser (online help))
 
 It is highly recommended that you at least install matplotlib and scipy,
@@ -39,35 +46,24 @@ highly recommend installing
 
 python-pywcs
 
+
 INSTALLATION ON LINUX (& other *ix)
 ---------------------
-Install the necessary dependences.
-
-Unpack Ginga to a directory in the filesystem.  Set your PYTHONPATH
-environment variable to the top-level directory where you unpacked
-Ginga.  Run the program ginga.py from the directory or copy it to
-another location in your $PATH.
-
-INSTALLATION ON WINDOWS
------------------------
-Need help from someone who runs Windows and is skilled enough to get it
-installed!  Please contact eric@naoj.org if you can help.
+Please see the file INSTALL-Linux.txt
 
 INSTALLATION ON A MAC
 ---------------------
-Need help from someone who runs Macintosh and is skilled enough to get it
-installed!  Please contact eric@naoj.org if you can help.
+Please see the file INSTALL-Mac.txt
 
-RUNNING GINGA
--------------
-Ginga will show useful information in a log file.  Run it from a
-terminal like this:
+INSTALLATION ON WINDOWS
+-----------------------
+Please see the file INSTALL-Win.txt
 
-$ ginga.py --stderr --loglevel=20
+NOTE:
+We need help from someone who runs Mac and Windows and is skilled enough
+to make better (e.g. all-in-one) installation packages!
+Please contact eric@naoj.org if you can help.
 
-Change the level to 10 if you want debug information, and to 30 or 40 if
-you want only warnings and error messages.  A log file can be specified
-with --log=ginga.log if you prefer instead of --stderr.
+Install the necessary dependences.
 
-Please see the manual in doc/manual/manual.pdf for further information.
 

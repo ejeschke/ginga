@@ -2,13 +2,14 @@
 # WBrowser.py -- Web Browser plugin for fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Jun 22 13:44:53 HST 2012
+#  Last edit: Wed Oct 31 16:51:32 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+import sys, os
 import GingaPlugin
 
 import gtk
@@ -19,6 +20,8 @@ try:
     has_webkit = True
 except ImportError:
     pass
+
+moduleHome = os.path.split(sys.modules[__name__].__file__)[0]
 
 class WBrowser(GingaPlugin.GlobalPlugin):
 
@@ -46,8 +49,16 @@ class WBrowser(GingaPlugin.GlobalPlugin):
         container.pack_start(self.entry, fill=True, expand=False)
         self.entry.connect('activate', self.browse_cb)
          
+        if has_webkit:
+            helpfile = os.path.abspath(os.path.join(moduleHome, "..",
+                                                    "..", "doc", "manual",
+                                                    "quickref.html"))
+            helpurl = "file://%s" % (helpfile)
+            self.entry.set_text(helpurl)
+            self.browse(helpurl)
 
     def browse(self, url):
+        self.logger.debug("Browsing '%s'" % (url))
         self.browser.open(url)
         
     def browse_cb(self, w):
