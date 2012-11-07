@@ -212,7 +212,7 @@ class BaseWCS(object):
         header for problem FITS files.
         """
         pass
-    
+
     
 class BareBonesWCS(BaseWCS):
     """A very basic WCS.  Assumes J2000, units in degrees, projection TAN.
@@ -230,7 +230,7 @@ class BareBonesWCS(BaseWCS):
         super(BareBonesWCS, self).__init__()
         self.header = {}
 
-    def load_header(self, header):
+    def load_header(self, header, fobj=None):
         self.header = {}
         for key, value in header.items():
             self.header[key] = value
@@ -383,17 +383,28 @@ class WcslibWCS(BaseWCS):
         unit = self.header.get('CTYPE2', 'DEC--TAN')
         if unit.upper() == 'DEC---TAN':
             self.header.update('CTYPE2', 'DEC--TAN')
-       
-        
-    def load_header(self, header):
-        # pywcs only operates on pyfits headers
-        self.header = pyfits.Header()
-        for key, value in header.items():
-            self.header.update(key, value)
+
+    def load_header(self, header, fobj=None):
+        if isinstance(header, pyfits.Header):
+            self.header = header
+        else:
+            # pywcs only operates on pyfits headers
+            self.header = pyfits.Header()
+            for key, value in header.items():
+                try:
+                    self.header.update(key, value)
+                except Exception, e:
+                    # TEMP
+                    pass
 
         self.fix_bad_headers()
         
-        self.wcs = pywcs.WCS(self.header, relax=True)
+        #self.wcs = pywcs.WCS(self.header, relax=True)
+        try:
+            self.wcs = pywcs.WCS(self.header, fobj=fobj, relax=True)
+        except Exception, e:
+            print "Error making WCS object: %s" % (str(e))
+            self.wcs = None
 
     def get_keyword(self, key):
         return self.header[key]
@@ -405,7 +416,8 @@ class WcslibWCS(BaseWCS):
             origin = 1
         pixcrd = numpy.array([[x, y]], numpy.float_)
         try:
-            sky = self.wcs.wcs_pix2sky(pixcrd, origin)
+            #sky = self.wcs.wcs_pix2sky(pixcrd, origin)
+            sky = self.wcs.all_pix2sky(pixcrd, origin)
 
         except Exception, e:
             print ("Error calculating pixtoradec: %s" % (str(e)))
@@ -429,6 +441,8 @@ class WcslibWCS(BaseWCS):
         skycrd = numpy.array([[ra_deg, dec_deg]], numpy.float_)
         try:
             pix = self.wcs.wcs_sky2pix(skycrd, origin)
+            # Doesn't seem to be a all_sky2pix
+            #pix = self.wcs.all_sky2pix(skycrd, origin)
 
         except Exception, e:
             print ("Error calculating radectopix: %s" % (str(e)))

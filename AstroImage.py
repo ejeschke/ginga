@@ -58,7 +58,7 @@ class AstroImage(object):
         # NOTE: numpy stores data in column-major layout
         return self.data.shape[0]
 
-    def load_hdu(self, hdu, naxispath=None):
+    def load_hdu(self, hdu, fobj=None, naxispath=None):
         data = hdu.data
         if not naxispath:
             naxispath = ([0] * (len(data.shape)-2))
@@ -74,7 +74,7 @@ class AstroImage(object):
         self.set(keyorder=keyorder)
 
         # Try to make a wcs object on the header
-        self.wcs.load_header(hdu.header)
+        self.wcs.load_header(hdu.header, fobj=fobj)
 
     def load_file(self, filepath, numhdu=None, naxispath=None):
         self.set(path=filepath)
@@ -109,8 +109,8 @@ class AstroImage(object):
                     filepath))
         else:
             numhdu = fits_f[numhdu]
-            
-        self.load_hdu(hdu, naxispath=naxispath)
+        
+        self.load_hdu(hdu, fobj=fits_f, naxispath=naxispath)
         
         fits_f.close()
 
@@ -200,9 +200,6 @@ class AstroImage(object):
         for kwd, val in keyDict.items():
             hdr[kwd.upper()] = val
 
-        # refresh WCS
-        self.wcs.load_header(hdr)
-        
     def set_keywords(self, **kwds):
         """Set an item in the fits header, if any."""
         return self.update_keywords(kwds)
@@ -245,13 +242,16 @@ class AstroImage(object):
         header = self.get_header()
         self.wcs.load_header(header)
 
-    def update_hdu(self, hdu, astype=None):
+    def update_hdu(self, hdu, fobj=None, astype=None):
         self.update_data(hdu.data, astype=astype)
         self.update_keywords(hdu.header)
 
+        # Try to make a wcs object on the header
+        self.wcs.load_header(hdu.header, fobj=fobj)
+
     def update_file(self, path, index=0, astype=None):
         fits_f = pyfits.open(path, 'readonly')
-        self.update_hdu(fits_f[index], astype=astype)
+        self.update_hdu(fits_f[index], fobj=fits_f, astype=astype)
         fits_f.close()
 
     def transfer(self, other, astype=None):

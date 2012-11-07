@@ -9,6 +9,8 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+import time
+import threading
 from PyQt4 import QtGui, QtCore
 import QtHelp
 
@@ -24,7 +26,10 @@ class MultiDim(GingaPlugin.LocalPlugin):
         super(MultiDim, self).__init__(fv, fitsimage)
 
         self.curhdu = 0
+        self.fits_f = None
         self.naxispath = []
+        self.hdu_cache = {}
+        self._hdu_cache_lock = threading.RLock()
 
     def build_gui(self, container):
         sw = QtGui.QScrollArea()
@@ -152,20 +157,48 @@ class MultiDim(GingaPlugin.LocalPlugin):
             pass
         self.fv.showStatus("")
         
+    def hdu_cache_clear(self):
+        with self._hdu_cache_lock:
+            self.hdu_cache = {}
+
+    def add_cache_hdu(self, idx, image):
+        with self._hdu_cache_lock:
+            # TODO: limit size of cache to N items
+            self.hdu_cache[idx] = image
+
+    def fetch_cache_hdu(self, idx):
+        with self._hdu_cache_lock:
+            if self.hdu_cache.has_key(idx):
+                self.logger.debug("HDU cache hit for index %d" % (idx))
+                image, dims = self.hdu_cache[idx]
+                return dims, image
+            else:
+                hdu = self.fits_f[idx]
+            path = self.path
+
+        image = AstroImage()
+        image.set(path=path)
+        dims = list(hdu.data.shape)
+        dims.reverse()
+        image.load_hdu(hdu, fobj=self.fits_f)
+        # TODO: when we've added cache size limiting
+        #self.add_cache_hdu(idx, (image, dims))
+        return dims, image
+
     def set_hdu(self, idx):
         self.logger.debug("Loading fits hdu #%d" % (idx))
-        image = AstroImage()
-        image.set(path=self.path)
+        start_time = time.time()
         try:
-            hdu = self.fits_f[idx-1]
-            dims = list(hdu.data.shape)
-            dims.reverse()
-            image.load_hdu(hdu)
+            dims, image = self.fetch_cache_hdu(idx)
+            end_time = time.time()
+            self.logger.info("loading image time %.3f sec" % (end_time - start_time))
+            start_time = end_time
 
             self.fitsimage.set_image(image)
             self.build_naxis(dims)
-            self.curhdu = idx-1
-            self.logger.debug("hdu #%d loaded." % (idx))
+            self.curhdu = idx
+            self.logger.info("hdu #%d loaded (%.3f sec)." % (
+                    idx, end_time-start_time))
         except Exception, e:
             errmsg = "Error loading fits hdu #%d: %s" % (
                 idx, str(e))
@@ -181,17 +214,24 @@ class MultiDim(GingaPlugin.LocalPlugin):
             hdu = self.fits_f[self.curhdu]
             data = hdu.data
             self.logger.debug("HDU #%d has naxis=%s" % (
-                self.curhdu+1, str(data.shape)))
+                self.curhdu, str(data.shape)))
 
             # invert index
             m = len(data.shape) - (n+1)
             self.naxispath[m] = idx
             self.logger.debug("m=%d naxispath=%s" % (m, str(self.naxispath)))
         
-            image.load_hdu(hdu, naxispath=self.naxispath)
+            self.logger.info("loading image from pyfits")
+            start_time = time.time()
+            image.load_hdu(hdu, fobj=self.fits_f, naxispath=self.naxispath)
+            end_time = time.time()
+            self.logger.info("loading image time %.3f sec" % (end_time - start_time))
+            start_time = end_time
 
             self.fitsimage.set_image(image)
-            self.logger.debug("NAXIS%d slice %d loaded." % (n+1, idx+1))
+            end_time = time.time()
+            self.logger.debug("NAXIS%d slice %d loaded (%.3f sec)." % (
+                    n+1, idx+1, end_time-start_time))
         except Exception, e:
             errmsg = "Error loading NAXIS%d slice %d: %s" % (
                 n+1, idx+1, str(e))
@@ -207,15 +247,16 @@ class MultiDim(GingaPlugin.LocalPlugin):
 
         self.path = path
         self.fits_f = pyfits.open(path, 'readonly')
+        self.hdu_cache_clear()
 
-        lower = 1
-        upper = len(self.fits_f)
-        self.num_hdu = upper
-        self.logger.debug("there are %d hdus" % (upper))
-        self.w.numhdu.setText("%d" % (upper))
+        self.num_hdu = len(self.fits_f)
+        self.logger.debug("there are %d hdus" % (self.num_hdu))
+        self.w.numhdu.setText("%d" % (self.num_hdu))
 
+        lower = 0
+        upper = self.num_hdu - 1
         self.w.hdu.setRange(lower, upper)
-        self.w.hdu.setEnabled(upper > 1)
+        self.w.hdu.setEnabled(upper > 0)
 
         self.set_hdu(lower)
 
