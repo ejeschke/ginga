@@ -40,7 +40,7 @@ import thread, threading
 import logging
 import Queue
 
-from PyQt4 import QtGui, QtCore
+from QtHelp import QtGui, QtCore
 import Task
 import Future
 

@@ -2,7 +2,7 @@
 # Errors.py -- Error reporting plugin for fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Tue Aug 28 12:59:40 HST 2012
+#  Last edit: Fri Nov 16 13:11:05 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -13,7 +13,7 @@ import time
 
 import GingaPlugin
 
-from PyQt4 import QtGui, QtCore
+from QtHelp import QtGui, QtCore
 import QtHelp
 
 class Errors(GingaPlugin.GlobalPlugin):

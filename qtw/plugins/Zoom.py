@@ -2,14 +2,14 @@
 # Zoom.py -- Zoom plugin for Ginga fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Jun 22 13:50:31 HST 2012
+#  Last edit: Fri Nov 16 14:01:45 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-from PyQt4 import QtGui, QtCore
+from QtHelp import QtGui, QtCore
 import QtHelp
 
 import Bunch
@@ -118,7 +118,6 @@ class Zoom(GingaPlugin.GlobalPlugin):
         sw.show()
 
         container.addWidget(vpaned, stretch=1)
-
        
     def prepare(self, fitsimage):
         fitsimage.add_callback('image-set', self.new_image_cb)

@@ -2,7 +2,7 @@
 # Pan.py -- Pan plugin for fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Thu Sep 20 13:10:07 HST 2012
+#  Last edit: Fri Nov 16 13:11:06 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -10,7 +10,7 @@
 # Please see the file LICENSE.txt for details.
 #
 import math
-from PyQt4 import QtGui, QtCore
+from QtHelp import QtGui, QtCore
 
 import Bunch
 

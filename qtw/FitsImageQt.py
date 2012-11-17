@@ -2,14 +2,14 @@
 # FitsImageQt.py -- classes for the display of FITS files in Qt widgets
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Oct 26 21:25:38 HST 2012
+#  Last edit: Fri Nov 16 14:07:58 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-from PyQt4 import QtGui, QtCore
+from QtHelp import QtGui, QtCore
 
 import numpy
 import threading
@@ -396,10 +396,11 @@ class FitsImageEvent(FitsImageQt):
             
         imgwin.fitsimage = self
         self.imgwin = imgwin
-        imgwin.setFocusPolicy(QtCore.Qt.TabFocus |
+        imgwin.setFocusPolicy(QtCore.Qt.FocusPolicy(
+                              QtCore.Qt.TabFocus |
                               QtCore.Qt.ClickFocus |
                               QtCore.Qt.StrongFocus |
-                              QtCore.Qt.WheelFocus)
+                              QtCore.Qt.WheelFocus))
         imgwin.setMouseTracking(True)
         imgwin.setAcceptDrops(True)
         

@@ -2,7 +2,7 @@
 # Header.py -- FITS Header plugin for fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Jun 22 13:50:28 HST 2012
+#  Last edit: Fri Nov 16 13:06:37 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -12,7 +12,7 @@
 import GingaPlugin
 import Bunch
 
-from PyQt4 import QtGui, QtCore
+from QtHelp import QtGui, QtCore
 import QtHelp
 
 
@@ -83,7 +83,7 @@ class Header(GingaPlugin.GlobalPlugin):
         sw, tv = self._create_header_window()
         chname = chinfo.name
 
-        self.nb.addTab(sw, chname)
+        self.nb.addTab(sw, unicode(chname))
         index = self.nb.indexOf(sw)
         info = Bunch.Bunch(widget=sw, table=tv,
                            nbindex=index)

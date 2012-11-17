@@ -12,7 +12,7 @@
 import sys
 import threading
 import traceback
-from PyQt4 import QtGui, QtCore
+from QtHelp import QtGui, QtCore
 import QtHelp
 import Bunch
 import Future
@@ -109,7 +109,7 @@ class PluginManager(object):
             lbl = QtGui.QLabel(lblname)
             lbl.setAlignment(QtCore.Qt.AlignHCenter)
             lbl.setToolTip("Right click for menu")
-            lbl.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum))
+            lbl.setSizePolicy(QtGui.QSizePolicy.Minimum,QtGui.QSizePolicy.Minimum)
             lbl.setFrameStyle(QtGui.QFrame.Box | QtGui.QFrame.Raised)
             self.hbox.addWidget(lbl, stretch=0,
                                 alignment=QtCore.Qt.AlignLeft)
@@ -120,10 +120,10 @@ class PluginManager(object):
             lbl.mousePressEvent = lambda event: lbl.emit(QtCore.SIGNAL("clicked"))
 
             menu = QtGui.QMenu()
-            item = QtGui.QAction(QtCore.QString("Focus"), menu)
+            item = QtGui.QAction("Focus", menu)
             item.triggered.connect(lambda: self.set_focus(lname))
             menu.addAction(item)
-            item = QtGui.QAction(QtCore.QString("Stop"), menu)
+            item = QtGui.QAction("Stop", menu)
             item.triggered.connect(lambda: self.deactivate(lname))
             menu.addAction(item)
             

@@ -2,7 +2,7 @@
 # Pick.py -- Pick plugin for fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Oct 19 13:35:06 HST 2012
+#  Last edit: Fri Nov 16 13:11:06 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -10,7 +10,7 @@
 # Please see the file LICENSE.txt for details.
 #
 import threading
-from PyQt4 import QtGui, QtCore
+from QtHelp import QtGui, QtCore
 import QtHelp
 
 import iqcalc
@@ -139,7 +139,7 @@ class Pick(GingaPlugin.LocalPlugin):
             canvas.setDelegate(self)
             #canvas.resize(width, height)
             self.w.canvas = canvas
-            nb.addTab(canvas, "Contour")
+            nb.addTab(canvas, u"Contour")
 
             self.w.fig2 = matplotlib.figure.Figure()
             self.w.ax2 = self.w.fig2.add_subplot(111, axisbg='white')
@@ -150,7 +150,7 @@ class Pick(GingaPlugin.LocalPlugin):
             self.w.ax.grid(True)
             canvas = FigureCanvas(self.w.fig2)
             self.w.canvas2 = canvas
-            nb.addTab(canvas, "FWHM")
+            nb.addTab(canvas, u"FWHM")
 
         sw = QtGui.QScrollArea()
 

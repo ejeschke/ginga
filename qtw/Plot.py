@@ -15,7 +15,7 @@ import sys, os
 import numpy
 
 # GUI imports
-from PyQt4 import QtGui, QtCore
+from QtHelp import QtGui, QtCore
 import QtHelp
 
 import matplotlib

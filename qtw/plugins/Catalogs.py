@@ -2,14 +2,14 @@
 # Catalogs.py -- Catalogs plugin for fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Wed Oct  3 14:31:53 HST 2012
+#  Last edit: Fri Nov 16 13:06:40 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-from PyQt4 import QtGui, QtCore
+from QtHelp import QtGui, QtCore
 import QtHelp
 
 import FitsImageCanvasTypesQt as CanvasTypes
@@ -154,7 +154,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
         vbox0.addWidget(btns, stretch=0, alignment=QtCore.Qt.AlignTop)
 
         self.w.params = vbox0
-        nb.addTab(vbox0, "Params")
+        nb.addTab(vbox0, u"Params")
 
         vbox = QtHelp.VBox()
         self.table = CatalogListing(self.logger, vbox)
@@ -186,7 +186,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
 
         vbox.addWidget(hbox, stretch=0)
         self.w.listing = vbox
-        nb.addTab(vbox, "Listing")
+        nb.addTab(vbox, u"Listing")
 
         btns = QtHelp.HBox()
         btns.setSpacing(3)

@@ -11,7 +11,7 @@
 import sys, os
 import logging
 import pyfits
-from PyQt4 import QtGui, QtCore
+from QtHelp import QtGui, QtCore
 
 moduleHome = os.path.split(sys.modules[__name__].__file__)[0]
 widgetHome = os.path.join(moduleHome, '..')

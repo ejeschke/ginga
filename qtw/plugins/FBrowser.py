@@ -2,7 +2,7 @@
 # FBrowser.py -- File Browser plugin for fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Jun 22 16:27:37 HST 2012
+#  Last edit: Fri Nov 16 13:11:05 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -15,7 +15,7 @@ import stat, time
 import Bunch
 import GingaPlugin
 
-from PyQt4 import QtGui, QtCore
+from QtHelp import QtGui, QtCore
 import QtHelp
 import pyfits
 

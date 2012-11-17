@@ -2,14 +2,14 @@
 # Preferences.py -- Preferences plugin for fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Sat Jul 21 15:35:30 HST 2012
+#  Last edit: Fri Nov 16 13:11:06 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-from PyQt4 import QtGui, QtCore
+from QtHelp import QtGui, QtCore
 
 import cmap, imap
 import QtHelp

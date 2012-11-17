@@ -1,7 +1,7 @@
 import sys
 sys.path.insert(0, '..')
 sys.path.insert(0, '../..')
-from PyQt4 import QtGui, QtCore
+from QtHelp import QtGui, QtCore
 
 import ColorBar as ColorBar
 import cmap, imap

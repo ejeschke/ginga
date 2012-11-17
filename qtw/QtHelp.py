@@ -2,7 +2,7 @@
 # QtHelp.py -- customized Qt widgets and convenience functions
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Thu Sep 20 13:10:56 HST 2012
+#  Last edit: Fri Nov 16 13:42:38 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -10,8 +10,90 @@
 # Please see the file LICENSE.txt for details.
 #
 import time
-from PyQt4 import QtGui, QtCore
+import os
 
+# Available APIs.
+QT_API_PYQT = 'pyqt'
+QT_API_PYSIDE = 'pyside'
+
+API_NAMES = ["QDate", "QDateTime", "QString", "QTextStream", "QTime",
+             "QUrl", "QVariant"]
+API_VERSION = 2
+
+def prepare_pyqt4():
+    # For PySide compatibility, use the new-style string API that automatically
+    # converts QStrings to Unicode Python strings. Also, automatically unpack
+    # QVariants to their underlying objects.
+    import sip
+    for name in API_NAMES:
+        sip.setapi(name, API_VERSION)
+
+# Select Qt binding, using the QT_API environment variable if available.
+QT_API = os.environ.get('QT_API')
+if QT_API is None:
+    try:
+        import PySide
+        if PySide.__version__ < '1.0.3':
+            # old PySide, fallback on PyQt
+            raise ImportError
+        from PySide import QtCore, QtGui, QtSvg
+        try:
+            from PyQt4 import QtWebKit
+        except ImportError:
+            pass
+        QT_API = QT_API_PYSIDE
+    except ImportError:
+        try:
+            prepare_pyqt4()
+            import PyQt4
+            from PyQt4 import QtCore, QtGui, QtSvg
+            if QtCore.PYQT_VERSION_STR < '4.7':
+                # PyQt 4.6 has issues with null strings returning as None
+                raise ImportError
+            try:
+                from PyQt4 import QtWebKit
+            except ImportError:
+                pass
+            QT_API = QT_API_PYQT
+        except ImportError:
+            raise ImportError('Cannot import PySide >= 1.0.3 or PyQt4 >= 4.7')
+
+elif QT_API == QT_API_PYQT:
+    # Note: This must be called *before* PyQt4 is imported.
+    prepare_pyqt4()
+
+# Now peform the imports.
+if QT_API == QT_API_PYQT:
+    from PyQt4 import QtCore, QtGui, QtSvg
+    if QtCore.PYQT_VERSION_STR < '4.7':
+        raise ImportError("IPython requires PyQt4 >= 4.7, found %s" % QtCore.PYQT_VERSION_STR)
+
+    try:
+        from PyQt4 import QtWebKit
+    except ImportError:
+        pass
+
+    # Alias PyQt-specific functions for PySide compatibility.
+    QtCore.Signal = QtCore.pyqtSignal
+    QtCore.Slot = QtCore.pyqtSlot
+
+elif QT_API == QT_API_PYSIDE:
+    import PySide
+    if PySide.__version__ < '1.0.3':
+        raise ImportError("IPython requires PySide >= 1.0.3, found %s" % PySide.__version__)
+    from PySide import QtCore, QtGui, QtSvg
+
+    try:
+        from PyQt4 import QtWebKit
+    except ImportError:
+        pass
+
+else:
+    raise RuntimeError('Invalid Qt API %r, valid values are: %r or %r' %
+                       (QT_API, QT_API_PYQT, QT_API_PYSIDE))
+
+
+print "QT_API is %s" % (QT_API)
 import Bunch
 
 tabwidget_style = """

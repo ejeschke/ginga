@@ -9,7 +9,7 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-from PyQt4 import QtGui, QtCore
+from QtHelp import QtGui, QtCore
 import Bunch
 
 class Readout(object):

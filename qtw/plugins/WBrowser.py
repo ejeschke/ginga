@@ -2,7 +2,7 @@
 # WBrowser.py -- Web Browser plugin for fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Wed Oct 31 16:51:32 HST 2012
+#  Last edit: Fri Nov 16 13:34:16 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -12,11 +12,11 @@
 import sys, os
 import GingaPlugin
 
-from PyQt4 import QtGui, QtCore
+from QtHelp import QtGui, QtCore
 
 has_webkit = False
 try:
-    import PyQt4.QtWebKit as webkit
+    from QtHelp import QtWebKit as webkit
     has_webkit = True
 except ImportError:
     pass

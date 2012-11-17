@@ -2,7 +2,7 @@
 # Info.py -- FITS Info plugin for fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Tue Oct 16 13:01:22 HST 2012
+#  Last edit: Fri Nov 16 13:06:40 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -11,7 +11,7 @@
 #
 import GingaPlugin
 
-from PyQt4 import QtGui, QtCore
+from QtHelp import QtGui, QtCore
 import QtHelp
 
 import numpy
@@ -119,7 +119,7 @@ class Info(GingaPlugin.GlobalPlugin):
         sw, winfo = self._create_info_window()
         chname = chinfo.name
 
-        self.nb.addTab(sw, chname)
+        self.nb.addTab(sw, unicode(chname))
         sw.show()
         index = self.nb.indexOf(sw)
         info = Bunch.Bunch(widget=sw, winfo=winfo,
