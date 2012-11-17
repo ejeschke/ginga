@@ -2,7 +2,7 @@
 # FitsImageGtk.py -- classes for the display of FITS files in Gtk widgets
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Oct 26 21:23:47 HST 2012
+#  Last edit: Fri Nov 16 14:30:38 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -358,10 +358,11 @@ class FitsImageEvent(FitsImageGtk):
             'exclam': '!',
             'at': '@',
             'numbersign': '#',
-            'percent': '%%',
+            'percent': '%',
             'asciicircum': '^',
             'ampersand': '&',
             'asterisk': '*',
+            'dollar': '$',
             'parenleft': '(',
             'parenright': ')',
             'underscore': '_',

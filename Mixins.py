@@ -2,7 +2,7 @@
 # Mixins.py -- Mixin classes for FITS viewer.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Tue Oct 16 12:51:23 HST 2012
+#  Last edit: Fri Nov 16 14:33:44 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -131,7 +131,8 @@ class FitsImageZoomMixin(object):
         self.keys = Bunch.Bunch()
         self.keys.zoom_in = ['+', '=']
         self.keys.zoom_out = ['-', '_']
-        self.keys.zoom = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
+        self.keys.zoom = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']
+        self.keys.zoom_inv = ['!', '@', '#', '$', '%', '^', '&', '*', '(', ')']
         self.keys.zoom_fit = ['backquote']
         self.keys.autozoom_on = ['doublequote']
         self.keys.autozoom_override = ['singlequote']
@@ -224,11 +225,12 @@ class FitsImageZoomMixin(object):
                 self.onscreen_message(self.get_scale_text(), delay=1.0)
                 return True
             elif keyname in self.keys.zoom:
-                if keyname == '0':
-                    keyname = '10'
-                zoomval = int(keyname)
-                if self.isctrldown:
-                    zoomval = -zoomval
+                zoomval = (self.keys.zoom.index(keyname) + 1)
+                self.zoom_to(zoomval)
+                self.onscreen_message(self.get_scale_text(), delay=1.0)
+                return True
+            elif keyname in self.keys.zoom_inv:
+                zoomval = - (self.keys.zoom_inv.index(keyname) + 1)
                 self.zoom_to(zoomval)
                 self.onscreen_message(self.get_scale_text(), delay=1.0)
                 return True
