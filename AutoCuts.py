@@ -59,11 +59,12 @@ class AutoCuts(object):
 
         start_time = time.time()
 
+        image = fitsimage.get_image()
+
         if method == 'minmax':
-            loval, hival = fitsimage.get_minmax()
+            loval, hival = image.get_minmax()
 
         else:
-            image = fitsimage.get_image()
             data  = image.get_data()
             # Even with numpy, it's kind of slow to take the distribution
             # on a large image, so if usecrop==True we take

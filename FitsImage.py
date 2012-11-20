@@ -2,7 +2,7 @@
 # FitsImage.py -- abstract classes for the display of FITS files
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Tue Oct 16 12:51:22 HST 2012
+#  Last edit: Mon Nov 19 18:57:16 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -853,9 +853,6 @@ class FitsImageBase(Callback.Callbacks):
     def get_transforms(self):
         return (self._flipX, self._flipY, self._swapXY)
 
-    def get_minmax(self, noinf=True):
-        return self.image.get_minmax(noinf=noinf)
-        
     def set_autolevel_params(self, method, pct=None, numbins=None,
                              usecrop=None, cropradius=None):
         self.logger.debug("Setting autolevel params method=%s pct=%.4f" % (
@@ -958,30 +955,30 @@ class FitsImageBase(Callback.Callbacks):
         if redraw:
             self.redraw(whence=0)
 
-    def histogram(self, x1, y1, x2, y2, numbins=2048):
-        data = self.data[y1:y2, x1:x2]
-        width, height = self.get_dims(data)
-        self.logger.debug("Histogram analysis array is %dx%d" % (
-            width, height))
+    ## def histogram(self, x1, y1, x2, y2, numbins=2048):
+    ##     data = self.data[y1:y2, x1:x2]
+    ##     width, height = self.get_dims(data)
+    ##     self.logger.debug("Histogram analysis array is %dx%d" % (
+    ##         width, height))
 
-        minval = data.min()
-        if numpy.isnan(minval):
-            self.logger.warn("NaN's found in data, using workaround for histogram")
-            minval = numpy.nanmin(data)
-            maxval = numpy.nanmax(data)
-            substval = (minval + maxval)/2.0
-            # Oh crap, the array has a NaN value.  We have to workaround
-            # this by making a copy of the array and substituting for
-            # the NaNs, otherwise numpy's histogram() cannot handle it
-            data = data.copy()
-            data[numpy.isnan(data)] = substval
-            dist, bins = numpy.histogram(data, bins=numbins,
-                                         density=False)
-        else:
-            dist, bins = numpy.histogram(data, bins=numbins,
-                                         density=False)
+    ##     minval = data.min()
+    ##     if numpy.isnan(minval):
+    ##         self.logger.warn("NaN's found in data, using workaround for histogram")
+    ##         minval = numpy.nanmin(data)
+    ##         maxval = numpy.nanmax(data)
+    ##         substval = (minval + maxval)/2.0
+    ##         # Oh crap, the array has a NaN value.  We have to workaround
+    ##         # this by making a copy of the array and substituting for
+    ##         # the NaNs, otherwise numpy's histogram() cannot handle it
+    ##         data = data.copy()
+    ##         data[numpy.isnan(data)] = substval
+    ##         dist, bins = numpy.histogram(data, bins=numbins,
+    ##                                      density=False)
+    ##     else:
+    ##         dist, bins = numpy.histogram(data, bins=numbins,
+    ##                                      density=False)
 
-        return dist, bins
+    ##     return dist, bins
 
     def copy_attributes(self, dst_fi, attrlist, redraw=False):
         """Copy interesting attributes of our configuration to another

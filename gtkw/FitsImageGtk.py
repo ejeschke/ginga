@@ -149,7 +149,7 @@ class FitsImageGtk(FitsImage.FitsImageBase):
             pixbuf = gtk.gdk.pixbuf_new_from_array(arr, gtk.gdk.COLORSPACE_RGB,
                                                    8)
         except Exception, e:
-            print "ERROR MAKING PIXBUF", str(e)
+            #print "ERROR MAKING PIXBUF", str(e)
             # pygtk might have been compiled without numpy support
             daht, dawd, depth = arr.shape
             rgb_buf = self._get_rgbbuf(arr)
@@ -485,6 +485,9 @@ class FitsImageEvent(FitsImageGtk):
             
         data_x, data_y = self.get_data_xy(x, y)
         return self.make_callback('button-release', button, data_x, data_y)
+
+    def get_last_data_xy(self):
+        return (self.last_data_x, self.last_data_y)
 
     def motion_notify_event(self, widget, event):
         button = self.kbdmouse_mask

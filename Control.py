@@ -28,6 +28,7 @@ import PythonImage
 import Bunch
 import Datasrc
 import Callback
+import FitsImage
 
 default_cmap = 'real'
 default_imap = 'ramp'
@@ -168,7 +169,7 @@ class GingaControl(Callback.Callbacks):
         # Set size of coordinate areas (4 is "." + precision 3)
         readout.maxx = len(str(width)) + 4
         readout.maxy = len(str(height)) + 4
-        minval, maxval = fitsimage.get_minmax()
+        minval, maxval = image.get_minmax()
         readout.maxv = max(len(str(minval)), len(str(maxval)))
         return True
 
@@ -474,7 +475,7 @@ class GingaControl(Callback.Callbacks):
             chinfo = self.get_channelInfo(chname)
         chinfo.datasrc[imname] = image
 
-        self.make_callback('add-image', chinfo.name, image)
+        #self.make_callback('add-image', chinfo.name, image)
 
         self._add_image_update(chinfo, image)
 
@@ -497,6 +498,7 @@ class GingaControl(Callback.Callbacks):
             if chinfo.name != curinfo.name:
                 self.change_channel(chinfo.name)
 
+        self.make_callback('add-image', chinfo.name, image)
 
     def bulk_add_image(self, imname, image, chname):
         if not self.has_channel(chname):
@@ -505,8 +507,8 @@ class GingaControl(Callback.Callbacks):
             chinfo = self.get_channelInfo(chname)
         chinfo.datasrc[imname] = image
 
-        self.make_callback('add-image', chinfo.name, image)
-        self.update_pending(timeout=0)
+        #self.make_callback('add-image', chinfo.name, image)
+        #self.update_pending(timeout=0)
 
         # By delaying the update here, more images may be bulk added
         # before the _add_image_update executes--it will then only

@@ -213,8 +213,8 @@ class FitsImageZoomMixin(object):
             ##     self.pan_start(ptype=2)
             ##     return True
             elif (keyname in self.keys.panset):
-                self._panset(self.last_data_x, self.last_data_y,
-                             redraw=False)
+                last_x, last_y = self.get_last_data_xy()
+                self._panset(last_x, last_y, redraw=False)
                 return True
             elif keyname in self.keys.zoom_out:
                 self.zoom_out()
@@ -529,7 +529,8 @@ class FitsImageZoomMixin(object):
         self.shift_cmap(pct)
 
     def _cutlow_pct(self, pct):
-        minval, maxval = self.get_minmax()
+        image = self.get_image()
+        minval, maxval = image.get_minmax()
         spread = maxval - minval
         loval, hival = self.get_cut_levels()
         loval = loval + (pct * spread)
@@ -540,7 +541,8 @@ class FitsImageZoomMixin(object):
     def _cutlow_xy(self, x, y):
         win_wd, win_ht = self.get_window_size()
         pct = float(x) / float(win_wd)
-        minval, maxval = self.get_minmax()
+        image = self.get_image()
+        minval, maxval = image.get_minmax()
         spread = maxval - minval
         loval, hival = self.get_cut_levels()
         loval = minval + (pct * spread)
@@ -549,7 +551,8 @@ class FitsImageZoomMixin(object):
         self.cut_levels(loval, hival, redraw=True)
 
     def _cuthigh_pct(self, pct):
-        minval, maxval = self.get_minmax()
+        image = self.get_image()
+        minval, maxval = image.get_minmax()
         spread = maxval - minval
         loval, hival = self.get_cut_levels()
         hival = hival - (pct * spread)
@@ -560,7 +563,8 @@ class FitsImageZoomMixin(object):
     def _cuthigh_xy(self, x, y):
         win_wd, win_ht = self.get_window_size()
         pct = 1.0 - (float(x) / float(win_wd))
-        minval, maxval = self.get_minmax()
+        image = self.get_image()
+        minval, maxval = image.get_minmax()
         spread = maxval - minval
         loval, hival = self.get_cut_levels()
         hival = maxval - (pct * spread)
@@ -569,7 +573,8 @@ class FitsImageZoomMixin(object):
         self.cut_levels(loval, hival, redraw=True)
 
     def _cut_pct(self, pct):
-        minval, maxval = self.get_minmax()
+        image = self.get_image()
+        minval, maxval = image.get_minmax()
         spread = maxval - minval
         loval, hival = self.get_cut_levels()
         loval = loval + (pct * spread)

@@ -243,7 +243,7 @@ class Info(GingaPlugin.GlobalPlugin):
 
         # Show min, max values
         width, height = fitsimage.get_data_size()
-        minval, maxval = fitsimage.get_minmax(noinf=False)
+        minval, maxval = image.get_minmax(noinf=False)
         info.winfo.max.setText(str(maxval))
         info.winfo.min.setText(str(minval))
 

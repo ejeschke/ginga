@@ -1,9 +1,9 @@
 #! /usr/bin/env python
 #
-# example1.py -- Simple, configurable FITS viewer.
+# example2.py -- Simple, configurable FITS viewer.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Jun 22 13:41:34 HST 2012
+#  Last edit: Fri Nov 16 16:11:54 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -11,7 +11,7 @@
 # Please see the file LICENSE.txt for details.
 #
 import sys, os
-import logging
+import logging, logging.handlers
 import pyfits
 import gtk
 
@@ -133,11 +133,19 @@ class FitsViewer(object):
 def main(options, args):
 
     logger = logging.getLogger("example2")
-    logger.setLevel(logging.INFO)
+    logger.setLevel(options.loglevel)
     fmt = logging.Formatter(STD_FORMAT)
-    stderrHdlr = logging.StreamHandler()
-    stderrHdlr.setFormatter(fmt)
-    logger.addHandler(stderrHdlr)
+    if options.logfile:
+        fileHdlr  = logging.handlers.RotatingFileHandler(options.logfile)
+        fileHdlr.setLevel(options.loglevel)
+        fileHdlr.setFormatter(fmt)
+        logger.addHandler(fileHdlr)
+
+    if options.logstderr:
+        stderrHdlr = logging.StreamHandler()
+        stderrHdlr.setLevel(options.loglevel)
+        stderrHdlr.setFormatter(fmt)
+        logger.addHandler(stderrHdlr)
 
     fv = FitsViewer(logger)
     root = fv.get_widget()
@@ -148,7 +156,45 @@ def main(options, args):
 
     gtk.mainloop()
     
-if __name__ == '__main__':
-    main(None, sys.argv[1:])
+if __name__ == "__main__":
+   
+    # Parse command line options with nifty optparse module
+    from optparse import OptionParser
+
+    usage = "usage: %prog [options] cmd [args]"
+    optprs = OptionParser(usage=usage, version=('%%prog'))
+    
+    optprs.add_option("--debug", dest="debug", default=False, action="store_true",
+                      help="Enter the pdb debugger on main()")
+    optprs.add_option("--log", dest="logfile", metavar="FILE",
+                      help="Write logging output to FILE")
+    optprs.add_option("--loglevel", dest="loglevel", metavar="LEVEL",
+                      type='int', default=logging.INFO,
+                      help="Set logging level to LEVEL")
+    optprs.add_option("--stderr", dest="logstderr", default=False,
+                      action="store_true",
+                      help="Copy logging also to stderr")
+    optprs.add_option("--profile", dest="profile", action="store_true",
+                      default=False,
+                      help="Run the profiler on main()")
+
+    (options, args) = optprs.parse_args(sys.argv[1:])
+
+    # Are we debugging this?
+    if options.debug:
+        import pdb
+
+        pdb.run('main(options, args)')
+
+    # Are we profiling this?
+    elif options.profile:
+        import profile
+
+        print "%s profile:" % sys.argv[0]
+        profile.run('main(options, args)')
+
+
+    else:
+        main(options, args)
 
 # END

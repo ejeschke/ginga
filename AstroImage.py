@@ -2,7 +2,7 @@
 # AstroImage.py -- Abstraction of an astronomical data image.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Tue Oct 16 12:56:30 HST 2012
+#  Last edit: Mon Nov 19 17:40:25 HST 2012
 #]
 # Takeshi Inagaki
 #
@@ -60,11 +60,16 @@ class AstroImage(object):
 
     def load_hdu(self, hdu, fobj=None, naxispath=None):
         data = hdu.data
-        if not naxispath:
-            naxispath = ([0] * (len(data.shape)-2))
+        if len(data.shape) < 2:
+            # Expand 1D arrays into 1xN array
+            data = data.reshape((1, data.shape[0]))
+        else:
+            if not naxispath:
+                naxispath = ([0] * (len(data.shape)-2))
 
-        for idx in naxispath:
-            data = data[idx]
+            for idx in naxispath:
+                data = data[idx]
+
         self.set_data(data)
 
         # Load in FITS header
@@ -97,9 +102,10 @@ class AstroImage(object):
                 if not isinstance(hdu.data, numpy.ndarray):
                     # We need to open a numpy array
                     continue
-                if len(hdu.data.shape) < 2:
-                    # Don't know what to make of 1D data
-                    continue
+                #print "data type is %s" % hdu.data.dtype.kind
+                ## if len(hdu.data.shape) < 2:
+                ##     # Don't know what to make of 1D data
+                ##     continue
                 # Looks good, let's try it
                 found_valid_hdu = True
                 break
@@ -108,7 +114,7 @@ class AstroImage(object):
                 raise CalcError("No data HDU found that Ginga can open in '%s'" % (
                     filepath))
         else:
-            numhdu = fits_f[numhdu]
+            hdu = fits_f[numhdu]
         
         self.load_hdu(hdu, fobj=fits_f, naxispath=naxispath)
         
@@ -124,6 +130,9 @@ class AstroImage(object):
         return self.data.copy()
         
     def get_data_xy(self, x, y):
+        assert (x >= 0) and (y >= 0), \
+               CalcError("Indexes out of range: (x=%d, y=%d)" % (
+            x, y))
         return self.data[y, x]
         
     def _get_dims(self, data):
@@ -219,8 +228,17 @@ class AstroImage(object):
     def _set_minmax(self):
         self.maxval = numpy.nanmax(self.data)
         self.minval = numpy.nanmin(self.data)
-        self.maxval_noinf = numpy.nanmax(self.data[numpy.isfinite(self.data)])
-        self.minval_noinf = numpy.nanmin(self.data[numpy.isfinite(self.data)])
+
+        # TODO: see if there is a faster way to ignore infinity
+        if numpy.isfinite(self.maxval):
+            self.maxval_noinf = self.maxval
+        else:
+            self.maxval_noinf = numpy.nanmax(self.data[numpy.isfinite(self.data)])
+        
+        if numpy.isfinite(self.minval):
+            self.minval_noinf = self.minval
+        else:
+            self.minval_noinf = numpy.nanmin(self.data[numpy.isfinite(self.data)])
         
     def update_data(self, data_np, metadata=None, astype=None):
         """Use this method to make a private copy of the incoming array.

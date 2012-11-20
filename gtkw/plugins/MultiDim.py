@@ -2,7 +2,7 @@
 # MultiDim.py -- Multidimensional plugin for fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Jun 22 13:44:50 HST 2012
+#  Last edit: Mon Nov 19 17:40:23 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -238,7 +238,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
         image = self.fitsimage.get_image()
         md = image.get_metadata()
         path = md.get('path', 'NO PATH')
-        print "path=%s metadata: %s" % (path, str(md))
+        #print "path=%s metadata: %s" % (path, str(md))
 
         self.path = path
         self.fits_f = pyfits.open(path, 'readonly')
