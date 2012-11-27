@@ -3,7 +3,7 @@
 # example2.py -- Simple, configurable FITS viewer.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Nov 16 16:11:19 HST 2012
+#  Last edit: Mon Nov 26 15:33:19 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -42,6 +42,7 @@ class FitsViewer(QtGui.QMainWindow):
         fi.set_drawtype('ruler')
         fi.set_drawcolor('blue')
         fi.set_callback('drag-drop', self.drop_file)
+        fi.set_callback('motion', self.motion)
         self.fitsimage = fi
 
         w = fi.get_widget()
@@ -52,6 +53,10 @@ class FitsViewer(QtGui.QMainWindow):
         vbox.setSpacing(1)
         vbox.addWidget(w, stretch=1)
 
+        self.readout = QtGui.QLabel("")
+        vbox.addWidget(self.readout, stretch=0,
+                       alignment=QtCore.Qt.AlignCenter)
+        
         hbox = QtGui.QHBoxLayout()
         hbox.setContentsMargins(QtCore.QMargins(4, 2, 4, 2))
 
@@ -120,6 +125,41 @@ class FitsViewer(QtGui.QMainWindow):
     def drop_file(self, fitsimage, paths):
         fileName = paths[0]
         self.load_file(fileName)
+
+    def motion(self, fitsimage, button, data_x, data_y):
+        if button != 0:
+            return
+
+        # Get the value under the data coordinates
+        try:
+            #value = fitsimage.get_data(data_x, data_y)
+            # We report the value across the pixel, even though the coords
+            # change halfway across the pixel
+            value = fitsimage.get_data(int(data_x+0.5), int(data_y+0.5))
+
+        except Exception:
+            value = None
+
+        fits_x, fits_y = data_x + 1, data_y + 1
+
+        # Calculate WCS RA
+        try:
+            # NOTE: image function operates on DATA space coords
+            image = fitsimage.get_image()
+            if image == None:
+                # No image loaded
+                return
+            ra_txt, dec_txt = image.pixtoradec(fits_x, fits_y,
+                                               format='str', coords='fits')
+        except Exception, e:
+            self.logger.warn("Bad coordinate conversion: %s" % (
+                str(e)))
+            ra_txt  = 'BAD WCS'
+            dec_txt = 'BAD WCS'
+
+        text = "RA: %s  DEC: %s  X: %.2f  Y: %.2f  Value: %s" % (
+            ra_txt, dec_txt, fits_x, fits_y, value)
+        self.readout.setText(text)
 
 def main(options, args):
 

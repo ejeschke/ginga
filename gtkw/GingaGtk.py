@@ -2,7 +2,7 @@
 # GingaGtk.py -- Gtk display handler for the Ginga FITS tool.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Wed Oct 31 15:39:51 HST 2012
+#  Last edit: Mon Nov 26 16:14:34 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -79,7 +79,9 @@ class GingaView(GtkMain.GtkMain):
         self.font11 = pango.FontDescription('Monospace 11')
         self.w.tooltips = gtk.Tooltips()
         
-
+        self.window_is_fullscreen = False
+        self.w.fscreen = None
+        
     def build_toplevel(self, layout):
         # Hack to enable images in Buttons in recent versions of gnome.
         # Why did they change the default?  Grrr....
@@ -96,6 +98,7 @@ class GingaView(GtkMain.GtkMain):
         root.set_border_width(2)
         root.connect("destroy", self.quit)
         root.connect("delete_event", self.delete_event)
+        root.connect('window-state-event', self.window_state_change)
         
         self.w.root = root
 
@@ -259,6 +262,25 @@ class GingaView(GtkMain.GtkMain):
         self.w.mframe.pack_end(self.w.status, expand=False, fill=True,
                                padding=2)
 
+    def window_state_change(self, window, event):
+        self.window_is_fullscreen = bool(
+            gtk.gdk.WINDOW_STATE_FULLSCREEN & event.new_window_state)
+
+    def fullscreen(self):
+        self.w.root.fullscreen()
+            
+    def normal(self):
+        self.w.root.unfullscreen()
+            
+    def maximize(self):
+        self.w.root.maximize()
+            
+    def toggle_fullscreen(self):
+        if not self.window_is_fullscreen:
+            self.w.root.fullscreen()
+        else:
+            self.w.root.unfullscreen()
+
     def add_operation(self, title):
         cbox = self.w.operation
         cbox.append_text(title)
@@ -348,6 +370,37 @@ class GingaView(GtkMain.GtkMain):
         bnch = Bunch.Bunch(fitsimage=fi, view=iw, container=vbox,
                            readout=readout)
         return bnch
+
+    def build_fullscreen(self):
+        w = self.w.fscreen
+        self.w.fscreen = None
+        if w != None:
+            w.destroy()
+            return
+        
+        root = gtk.Window(gtk.WINDOW_TOPLEVEL)
+        fi = self.build_viewpane(self.cm, self.im)
+        iw = fi.get_widget()
+        root.add(iw)
+
+        # Get image from current focused channel
+        chinfo = self.get_channelInfo()
+        fitsimage = chinfo.fitsimage
+        image = fitsimage.get_image()
+        if image == None:
+            return
+        fi.set_image(image)
+
+        # Copy attributes of the frame
+        fitsimage.copy_attributes(fi,
+                                  ['transforms',
+                                   'cutlevels',
+                                   'rgbmap'],
+                                  redraw=False)
+
+        root.fullscreen()
+        self.w.fscreen = root
+        root.show()
 
     def mktextwidget(self, text):
         sw = gtk.ScrolledWindow()

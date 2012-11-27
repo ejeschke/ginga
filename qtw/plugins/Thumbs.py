@@ -2,7 +2,7 @@
 # Thumbs.py -- Thumbnail plugin for fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Oct 19 13:08:09 HST 2012
+#  Last edit: Mon Nov 26 21:43:05 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -14,6 +14,7 @@ import GingaPlugin
 
 from PyQt4 import QtGui, QtCore
 import time
+import os.path
 
 import Bunch
 
@@ -102,10 +103,12 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         noname = 'Noname' + str(time.time())
         name = image.get('name', noname)
         path = image.get('path', None)
+        if path != None:
+            path = os.path.abspath(path)
         thumbname = name
         if '.' in thumbname:
             thumbname = thumbname.split('.')[0]
-        print "MAKING THUMB for %s" % (thumbname)
+        self.logger.debug("making thumb for %s" % (thumbname))
             
         # Is there a preference set to avoid making thumbnails?
         chinfo = self.fv.get_channelInfo(chname)
@@ -116,25 +119,32 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         # Is this thumbnail already in the list?
         # NOTE: does not handle two separate images with the same name
         # in the same channel
-        thumbkey = (chname.lower(), name)
+        thumbkey = (chname.lower(), path)
         if self.thumbDict.has_key(thumbkey):
             return
 
-        data = image.get_data()
+        #data = image.get_data()
         # Get metadata for mouse-over tooltip
         header = image.get_header()
         metadata = {}
         for kwd in self.keywords:
             metadata[kwd] = header.get(kwd, 'N/A')
 
-        self.thumb_generator.set_data(data)
+        #self.thumb_generator.set_data(data)
+        self.thumb_generator.set_image(image)
         imgwin = self.thumb_generator.get_image_as_widget()
+
+        self.insert_thumbnail(imgwin, thumbkey, thumbname, chname, name, path,
+                              metadata)
+
+    def insert_thumbnail(self, imgwin, thumbkey, thumbname, chname, name, path,
+                         metadata):
         pixmap = QtGui.QPixmap.fromImage(imgwin)
         imglbl = MyLabel()
         imglbl.setPixmap(pixmap)
         imglbl.thumbs_cb = lambda: self.fv.switch_name(chname, name, path=path)
 
-        text = self.query_thumb(thumbkey, metadata)
+        text = self.query_thumb(thumbkey, name, metadata)
         imglbl.setToolTip(text)
 
         widget = QtGui.QWidget()
@@ -172,9 +182,9 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         x1, y1, x2, y2 = rect.getCoords()
         self.w.thumbs_scroll.ensureVisible(x1, y1)
         #self.w.thumbs_scroll.show()
-        print "ADDED THUMB for %s" % (thumbname)
+        self.logger.debug("added thumb for %s" % (thumbname))
 
-    def rebuild_thumbs(self):
+    def reorder_thumbs(self):
         # Remove widgets from grid
         for thumbkey in self.thumbList:
             bnch = self.thumbDict[thumbkey]
@@ -203,7 +213,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
                 self.thumbList.remove(thumbkey)
                 del self.thumbDict[thumbkey]
 
-            self.rebuild_thumbs()
+            self.reorder_thumbs()
 
 
     def thumbpane_resized(self, width, height):
@@ -217,10 +227,10 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         self.logger.debug("column count is now %d" % (cols))
         self.thumbNumCols = cols
 
-        self.rebuild_thumbs()
+        self.reorder_thumbs()
         return False
         
-    def query_thumb(self, thumbkey, metadata):
+    def query_thumb(self, thumbkey, name, metadata):
         objtext = 'Object: UNKNOWN'
         try:
             objtext = 'Object: ' + metadata['OBJECT']
@@ -233,7 +243,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         except Exception, e:
             self.logger.error("Couldn't determine UT: %s" % str(e))
 
-        chname, name = thumbkey
+        chname, path = thumbkey
 
         s = "%s\n%s\n%s\n%s" % (chname, name, objtext, uttext)
         return s
@@ -241,7 +251,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
     def clear(self):
         self.thumbList = []
         self.thumbDict = {}
-        self.rebuild_thumbs()
+        self.reorder_thumbs()
         
     def add_channel(self, viewer, chinfo):
         """Called when a channel is added from the main interface.
@@ -308,10 +318,12 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
         # Look up our version of the thumb
         name = image.get('name', None)
-        if name == None:
+        path = image.get('path', None)
+        if path == None:
             return
+        path = os.path.abspath(path)
         try:
-            thumbkey = (chname, name)
+            thumbkey = (chname, path)
             bnch = self.thumbDict[thumbkey]
         except KeyError:
             return
@@ -322,8 +334,9 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         ## timage = self.thumb_generator.get_image()
         ## if timage != image:
         ##     self.thumb_generator.set_image(image)
-        data = image.get_data()
-        self.thumb_generator.set_data(data)
+        #data = image.get_data()
+        #self.thumb_generator.set_data(data)
+        self.thumb_generator.set_image(image)
         fitsimage.copy_attributes(self.thumb_generator,
                                   ['transforms', 'cutlevels',
                                    'rgbmap'],
@@ -348,14 +361,61 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             chname_del))
         newThumbList = []
         for thumbkey in self.thumbList:
-            chname, name = thumbkey
+            chname, path = thumbkey
             if chname != chname_del:
                 newThumbList.append(thumbkey)
             else:
                 del self.thumbDict[thumbkey]
         self.thumbList = newThumbList
-        self.rebuild_thumbs()
+        self.reorder_thumbs()
         
+    def _make_thumb(self, chname, image, path, thumbkey):
+        # This is called by the make_thumbs() as a gui thread
+        self.thumb_generator.set_image(image)
+        imgwin = self.thumb_generator.get_image_as_widget()
+
+        # Get metadata for mouse-over tooltip
+        image = self.thumb_generator.get_image()
+        header = image.get_header()
+        metadata = {}
+        for kwd in self.keywords:
+            metadata[kwd] = header.get(kwd, 'N/A')
+
+        dirname, name = os.path.split(path)
+
+        thumbname = name
+        if '.' in thumbname:
+            thumbname = thumbname.split('.')[0]
+
+        self.insert_thumbnail(imgwin, thumbkey, thumbname,
+                              chname, name, path, metadata)
+        #self.fv.update_pending()
+        
+    def make_thumbs(self, chname, filelist):
+        # This is called by the FBrowser plugin, as a non-gui thread!
+        lcname = chname.lower()
+
+        for path in filelist:
+            self.logger.info("generating thumb for %s..." % (
+                path))
+
+            # Do we already have this thumb made?
+            path = os.path.abspath(path)
+            thumbkey = (lcname, path)
+            if self.thumbDict.has_key(thumbkey):
+                continue
+
+            try:
+                image = self.fv.load_image(path)
+                self.fv.gui_do(self._make_thumb, chname, image, path,
+                               thumbkey)
+                
+            except Exception, e:
+                self.logger.error("Error generating thumbnail for '%s': %s" % (
+                    name, str(e)))
+                # TODO: generate "broken thumb"?
+
+
     def __str__(self):
         return 'thumbs'
     

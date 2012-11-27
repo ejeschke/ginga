@@ -2,7 +2,7 @@
 # FBrowser.py -- File Browser plugin for fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Jun 22 16:27:37 HST 2012
+#  Last edit: Mon Nov 26 21:43:04 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -92,6 +92,9 @@ class FBrowser(GingaPlugin.LocalPlugin):
         btn = QtGui.QPushButton("Refresh")
         btn.clicked.connect(lambda w: self.refresh())
         layout.addWidget(btn, stretch=0, alignment=QtCore.Qt.AlignLeft)
+        ## btn = QtGui.QPushButton("Make Thumbs")
+        ## btn.clicked.connect(lambda w: self.make_thumbs())
+        ## layout.addWidget(btn, stretch=0, alignment=QtCore.Qt.AlignLeft)
 
         vbox.addWidget(btns, stretch=0, alignment=QtCore.Qt.AlignLeft)
 
@@ -236,6 +239,21 @@ class FBrowser(GingaPlugin.LocalPlugin):
             path = name
         self.open_file(path)
         
+    def make_thumbs(self):
+        path = self.curpath
+        self.logger.info("Generating thumbnails for '%s'..." % (
+            path))
+        filelist = glob.glob(path)
+        filelist.sort(key=str.lower)
+
+        # find out our channel
+        chname = self.fv.get_channelName(self.fitsimage)
+        
+        # Invoke the method in this channel's Thumbs plugin
+        # TODO: don't expose gpmon!
+        rsobj = self.fv.gpmon.getPlugin('Thumbs')
+        self.fv.nongui_do(rsobj.make_thumbs, chname, filelist)
+
     def start(self):
         self.win = None
         self.browse(self.curpath)

@@ -2,7 +2,7 @@
 # AstroImage.py -- Abstraction of an astronomical data image.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Mon Nov 19 17:40:25 HST 2012
+#  Last edit: Mon Nov 26 22:08:47 HST 2012
 #]
 # Takeshi Inagaki
 #
@@ -119,6 +119,14 @@ class AstroImage(object):
         self.load_hdu(hdu, fobj=fits_f, naxispath=naxispath)
         
         fits_f.close()
+
+    def load_buffer(self, data, dims, dtype, byteswap=False,
+                    metadata=None, redraw=True):
+        data = numpy.fromstring(data, dtype=dtype)
+        if byteswap:
+            data.byteswap(True)
+        data = data.reshape(dims)
+        self.set_data(data, metadata=metadata)
 
     def get_size(self):
         return (self.width, self.height)

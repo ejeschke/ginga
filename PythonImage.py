@@ -2,7 +2,7 @@
 # PythonImage.py -- Abstraction of an generic data image.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Thu Oct 18 22:59:50 HST 2012
+#  Last edit: Mon Nov 26 20:43:28 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -109,8 +109,17 @@ class PythonImage(object):
     def _set_minmax(self):
         self.maxval = numpy.nanmax(self.data)
         self.minval = numpy.nanmin(self.data)
-        self.maxval_noinf = numpy.nanmax(self.data[numpy.isfinite(self.data)])
-        self.minval_noinf = numpy.nanmin(self.data[numpy.isfinite(self.data)])
+
+        # TODO: see if there is a faster way to ignore infinity
+        if numpy.isfinite(self.maxval):
+            self.maxval_noinf = self.maxval
+        else:
+            self.maxval_noinf = numpy.nanmax(self.data[numpy.isfinite(self.data)])
+        
+        if numpy.isfinite(self.minval):
+            self.minval_noinf = self.minval
+        else:
+            self.minval_noinf = numpy.nanmin(self.data[numpy.isfinite(self.data)])
         
     def get_minmax(self, noinf=False):
         if not noinf:

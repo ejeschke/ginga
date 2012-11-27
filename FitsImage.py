@@ -2,7 +2,7 @@
 # FitsImage.py -- abstract classes for the display of FITS files
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Mon Nov 19 18:57:16 HST 2012
+#  Last edit: Mon Nov 26 22:08:46 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -216,14 +216,12 @@ class FitsImageBase(Callback.Callbacks):
         self.make_callback('data-set', data)
         self.make_callback('image-set', image)
 
-    def set_data(self, data, image=None, redraw=True):
+    def set_data(self, data, metadata=None, redraw=True):
         dims = data.shape
         ## assert (len(dims) == 2), \
         ##        FitsImageError("Only 2D images are supported!")
-        if image == None:
-            image = AstroImage.AstroImage(data)
-        self.set_image(image)
-        
+        image = AstroImage.AstroImage(data, metadata=metadata)
+        self.set_image(image, redraw=redraw)
 
     def clear(self, redraw=True):
         self.set_data(numpy.zeros((1, 1)), redraw=redraw)

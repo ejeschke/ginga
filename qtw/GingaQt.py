@@ -2,7 +2,7 @@
 # GingaQt.py -- Qt display handler for the Ginga FITS tool.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Wed Oct 31 15:27:47 HST 2012
+#  Last edit: Mon Nov 26 16:14:34 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -84,6 +84,7 @@ class GingaView(QtMain.QtMain):
         #root.set_border_width(2)
         
         self.w.root = root
+        self.w.fscreen = None
 
         self.ds = QtHelp.Desktop()
         
@@ -241,6 +242,56 @@ class GingaView(QtMain.QtMain):
     def add_statusbar(self):
         self.w.status = QtGui.QStatusBar()
         self.w.mframe.addWidget(self.w.status)
+
+    def fullscreen(self):
+        self.w.root.showFullScreen()
+            
+    def normal(self):
+        self.w.root.showNormal()
+            
+    def maximize(self):
+        self.w.root.showMaximized()
+            
+    def toggle_fullscreen(self):
+        if not self.w.root.isFullScreen():
+            self.w.root.showFullScreen()
+        else:
+            self.w.root.showNormal()
+
+    def build_fullscreen(self):
+        w = self.w.fscreen
+        self.w.fscreen = None
+        if w != None:
+            w.destroy()
+            return
+        
+        root = QtHelp.TopLevel()
+        vbox = QtGui.QVBoxLayout()
+        vbox.setContentsMargins(0, 0, 0, 0)
+        vbox.setSpacing(0)
+        root.setLayout(vbox)
+
+        fi = self.build_viewpane(self.cm, self.im)
+        iw = fi.get_widget()
+        vbox.addWidget(iw, stretch=1)
+
+        # Get image from current focused channel
+        chinfo = self.get_channelInfo()
+        fitsimage = chinfo.fitsimage
+        image = fitsimage.get_image()
+        if image == None:
+            return
+        fi.set_image(image)
+
+        # Copy attributes of the frame
+        fitsimage.copy_attributes(fi,
+                                  ['transforms',
+                                   'cutlevels',
+                                   'rgbmap'],
+                                  redraw=False)
+
+        root.showFullScreen()
+        self.w.fscreen = root
 
     def add_operation(self, title):
         cbox = self.w.operation

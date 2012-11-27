@@ -2,7 +2,7 @@
 # Control.py -- Controller for the Ginga FITS viewer.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Wed Oct 31 17:08:34 HST 2012
+#  Last edit: Mon Nov 26 20:06:50 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -225,6 +225,12 @@ class GingaControl(Callback.Callbacks):
             self.ds.raise_tab('Contents')
         elif keyname == 'd':
             self.ds.raise_tab('Dialogs')
+        elif keyname == 'f':
+            self.toggle_fullscreen()
+        elif keyname == 'F':
+            self.build_fullscreen()
+        elif keyname == 'm':
+            self.maximize()
         elif keyname == 'escape':
             chinfo = self.get_channelInfo(chname)
             opmon = chinfo.opmon
@@ -347,20 +353,7 @@ class GingaControl(Callback.Callbacks):
         
     # BASIC IMAGE OPERATIONS
 
-    def load_file(self, filepath, chname=None, wait=True):
-        if not chname:
-            chinfo = self.get_channelInfo()
-            chname = chinfo.name
-        else:
-            chinfo = self.get_channelInfo(chname)
-            chname = chinfo.name
-
-        # Sometimes there is a newline at the end of this..
-        filepath = filepath.strip()
-
-        # TODO: need progress bar or other visual indicator
-        #self.gui_do(chinfo.fitsimage.onscreen_message, "Loading file...")
-
+    def load_image(self, filepath):
         # Create an image.  Assume type to be an AstroImage unless
         # the MIME association says it is something different.
         image = AstroImage.AstroImage(logger=self.logger)
@@ -390,6 +383,23 @@ class GingaControl(Callback.Callbacks):
             raise ControlError(errmsg)
 
         self.logger.debug("Successfully loaded file into image object.")
+        return image
+
+    def load_file(self, filepath, chname=None, wait=True):
+        if not chname:
+            chinfo = self.get_channelInfo()
+            chname = chinfo.name
+        else:
+            chinfo = self.get_channelInfo(chname)
+            chname = chinfo.name
+
+        # Sometimes there is a newline at the end of this..
+        filepath = filepath.strip()
+
+        # TODO: need progress bar or other visual indicator
+        #self.gui_do(chinfo.fitsimage.onscreen_message, "Loading file...")
+        image = self.load_image(filepath)
+
         (path, filename) = os.path.split(filepath)
 
         image.set(name=filename, path=filepath, chname=chname)
