@@ -2,7 +2,7 @@
 # Zoom.py -- Zoom plugin for Ginga fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Jun 22 13:50:31 HST 2012
+#  Last edit: Tue Dec  4 14:47:26 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -128,6 +128,7 @@ class Zoom(GingaPlugin.GlobalPlugin):
         fitsimage.ui_setActive(True)
         fitsimage.add_callback('cut-set', self.cutset_cb)
         fitsimage.add_callback('transform', self.transform_cb)
+        fitsimage.add_callback('rotate', self.rotate_cb)
         fitsimage.add_callback('zoom-set', self.zoomset_cb)
 
     def add_channel(self, viewer, chinfo):
@@ -154,7 +155,7 @@ class Zoom(GingaPlugin.GlobalPlugin):
         # Reflect transforms, colormap, etc.
         fitsimage.copy_attributes(self.zoomimage,
                                   ['transforms', 'cutlevels',
-                                   'rgbmap'],
+                                   'rgbmap', 'rotation'],
                                   redraw=False)
 
         # TODO: redo cutout?
@@ -171,6 +172,12 @@ class Zoom(GingaPlugin.GlobalPlugin):
             return True
         flipx, flipy, swapxy = fitsimage.get_transforms()
         self.zoomimage.transform(flipx, flipy, swapxy)
+        return True
+        
+    def rotate_cb(self, fitsimage, deg):
+        if fitsimage != self.fitsimage_focus:
+            return True
+        self.zoomimage.rotate(deg)
         return True
         
     def _zoomset(self, fitsimage, zoomlevel):

@@ -52,11 +52,13 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         width, height = 300, 300
         cm, im = self.fv.cm, self.fv.im
 
-        self.thumb_generator = FitsImageGtk.FitsImageGtk(logger=self.logger)
-        self.thumb_generator.configure(200, 200)
-        self.thumb_generator.enable_autoscale('on')
-        self.thumb_generator.enable_autolevels('on')
-        self.thumb_generator.set_zoom_limits(-100, 10)
+        tg = FitsImageGtk.FitsImageGtk(logger=self.logger)
+        tg.configure(200, 200)
+        tg.enable_autoscale('on')
+        tg.enable_autolevels('on')
+        tg.set_zoom_limits(-100, 10)
+        tg.set_makebg(False)
+        self.thumb_generator = tg
 
         sw = gtk.ScrolledWindow()
         sw.set_border_width(2)
@@ -374,6 +376,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         # This is called by the FBrowser plugin, as a non-gui thread!
         lcname = chname.lower()
 
+        print filelist
         for path in filelist:
             self.logger.info("generating thumb for %s..." % (
                 path))
@@ -385,13 +388,16 @@ class Thumbs(GingaPlugin.GlobalPlugin):
                 continue
 
             try:
+                print "LOADING %s" % (path)
                 image = self.fv.load_image(path)
                 self.fv.gui_do(self._make_thumb, chname, image, path,
                                thumbkey)
                 
             except Exception, e:
+                print "Skipping %s ..." % (path)
                 self.logger.error("Error generating thumbnail for '%s': %s" % (
-                    name, str(e)))
+                    path, str(e)))
+                continue
                 # TODO: generate "broken thumb"?
 
 

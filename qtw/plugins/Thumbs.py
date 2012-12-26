@@ -72,11 +72,12 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         width, height = 300, 300
         cm, im = self.fv.cm, self.fv.im
 
-        self.thumb_generator = FitsImageQt.FitsImageQt(logger=self.logger)
-        self.thumb_generator.configure(200, 200)
-        self.thumb_generator.enable_autoscale('on')
-        self.thumb_generator.enable_autolevels('on')
-        self.thumb_generator.set_zoom_limits(-100, 10)
+        tg = FitsImageQt.FitsImageQt(logger=self.logger)
+        tg.configure(200, 200)
+        tg.enable_autoscale('on')
+        tg.enable_autolevels('on')
+        tg.set_makebg(False)
+        self.thumb_generator = tg
 
         sw = MyScrollArea()
         sw.setWidgetResizable(True)

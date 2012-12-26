@@ -2,7 +2,7 @@
 # Control.py -- Controller for the Ginga FITS viewer.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Mon Nov 26 20:06:50 HST 2012
+#  Last edit: Fri Dec 14 14:30:41 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -213,17 +213,17 @@ class GingaControl(Callback.Callbacks):
             keyname, chname))
         # TODO: keyboard accelerators to raise tabs need to be integrated into
         #   the desktop object
-        if keyname == 't':
+        if keyname == 'T':
             self.ds.raise_tab('Thumbs')
-        elif keyname == 'z':
+        elif keyname == 'Z':
             self.ds.raise_tab('Zoom')
-        elif keyname == 'i':
+        elif keyname == 'I':
             self.ds.raise_tab('Info')
-        elif keyname == 'h':
+        elif keyname == 'H':
             self.ds.raise_tab('Header')
-        elif keyname == 'c':
+        elif keyname == 'C':
             self.ds.raise_tab('Contents')
-        elif keyname == 'd':
+        elif keyname == 'D':
             self.ds.raise_tab('Dialogs')
         elif keyname == 'f':
             self.toggle_fullscreen()
@@ -818,6 +818,9 @@ class GingaControl(Callback.Callbacks):
         fitsimage.transform(prefs.flipX, prefs.flipY, prefs.swapXY,
                                  redraw=redraw)
 
+        revpan = fitsimage.get_pan_reverse()
+        prefs.reverse_pan = prefs.get('reverse_pan', revpan)
+        fitsimage.set_pan_reverse(revpan)
 
     def scale2text(self, scalefactor):
         if scalefactor >= 1.0:

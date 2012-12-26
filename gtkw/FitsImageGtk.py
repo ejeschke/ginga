@@ -2,7 +2,7 @@
 # FitsImageGtk.py -- classes for the display of FITS files in Gtk widgets
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Nov 16 14:30:38 HST 2012
+#  Last edit: Wed Dec 26 12:25:30 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -15,6 +15,7 @@ import gtk
 import cairo
 import numpy
 import threading
+import math
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -45,7 +46,8 @@ class FitsImageGtk(FitsImage.FitsImageBase):
         self.msgtask = None
         self.img_bg = None
         self.img_fg = None
-        self.set_bg(0.5, 0.5, 0.5, redraw=False)
+        #self.set_bg(0.5, 0.5, 0.5, redraw=False)
+        self.set_bg(0.0, 0.0, 0.0, redraw=False)
         self.set_fg(1.0, 1.0, 1.0, redraw=False)
         
         # cursors
@@ -58,6 +60,11 @@ class FitsImageGtk(FitsImage.FitsImageBase):
         self._defer_lock = threading.RLock()
         self._defer_flag = False
 
+        # For rotation of canvas
+        self.ctr_x = 0.0
+        self.ctr_y = 0.0
+        self.cr = None
+        
     def get_widget(self):
         return self.imgwin
 
@@ -68,6 +75,7 @@ class FitsImageGtk(FitsImage.FitsImageBase):
         self.logger.debug("data shape is %dx%dx%d" % (dawd, daht, depth))
 
         cr = cairo.Context(surface)
+        self.cr = cr
 
         # fill surface with background color
         imgwin_wd, imgwin_ht = self.get_window_size()
@@ -83,14 +91,25 @@ class FitsImageGtk(FitsImage.FitsImageBase):
         img_surface = cairo.ImageSurface.create_for_data(arr8,
                                                          cairo.FORMAT_RGB24,
                                                          dawd, daht, stride)
+
+        # Rotate to desired rotation
+        ## self.ctr_x, self.ctr_y = imgwin_wd / 2.0, imgwin_ht / 2.0
+        ## cr.translate(self.ctr_x, self.ctr_y)
+        ## cr.rotate(math.radians(self.rotation))
+
+        ## offx, offy = dst_x - self.ctr_x, dst_y - self.ctr_y
+        ## cr.set_source_surface(img_surface, offx, offy)
         cr.set_source_surface(img_surface, dst_x, dst_y)
         cr.set_operator(cairo.OPERATOR_SOURCE)
-        #cr.paint()
+
+        ## cr.rectangle(offx, offy, dawd, daht)
         cr.rectangle(dst_x, dst_y, dawd, daht)
         cr.fill()
         
         # render self.message
         if self.message:
+            ## cr.rotate(math.radians(-self.rotation))
+            ## cr.translate(-self.ctr_x, -self.ctr_y)
             self.draw_message(cr, imgwin_wd, imgwin_ht,
                               self.message)
 
@@ -234,13 +253,26 @@ class FitsImageGtk(FitsImage.FitsImageBase):
         self.logger.debug("surface is %s" % self.surface)
         if self.surface != None:
             cr = widget.window.cairo_create()
+
             # set clip area for exposed region
             cr.rectangle(x, y, width, height)
             cr.clip()
+
+            ## # Rotate if desired
+            ## self.ctr_x, self.ctr_y = width / 2.0, height / 2.0
+            ## cr.translate(self.ctr_x, self.ctr_y)
+            ## cr.rotate(math.radians(self.rotation))
+            
             # Paint from off-screen surface
+            ## imgwin_wd, imgwin_ht = self.get_window_size()
+            ## off_x, off_y = imgwin_wd, imgwin_ht
+            ## cr.translate(off_x, off_y)
             cr.set_source_surface(self.surface, 0, 0)
+            #cr.set_source_surface(self.surface, -off_x, -off_y)
+            ## cr.set_source_surface(self.surface, -self.ctr_x, -self.ctr_y)
             cr.set_operator(cairo.OPERATOR_SOURCE)
             cr.paint()
+
         return False
         
     def configure_event(self, widget, event):
@@ -248,6 +280,7 @@ class FitsImageGtk(FitsImage.FitsImageBase):
         x, y, width, height = widget.get_allocation()
         self.logger.debug("allocation is %d,%d %dx%d" % (
             x, y, width, height))
+        #width, height = width*2, height*2
         self.configure(width, height)
         return True
 
@@ -294,7 +327,15 @@ class FitsImageGtk(FitsImage.FitsImageBase):
             ms = int(delay * 1000.0)
             self.msgtask = gobject.timeout_add(ms, self.onscreen_message, None)
 
-
+    def pix2canvas(self, x, y):
+        x, y = self.cr.device_to_user(x, y)
+        return (x, y)
+        
+    def canvas2pix(self, x, y):
+        x, y = self.cr.user_to_device(x, y)
+        return (x, y)
+        
+        
 class FitsImageEvent(FitsImageGtk):
 
     def __init__(self, logger=None):

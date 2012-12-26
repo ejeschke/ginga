@@ -2,7 +2,7 @@
 # FitsImageCanvasGtk.py -- A FITS image widget with canvas drawing in Gtk
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Mon Oct  1 19:00:07 HST 2012
+#  Last edit: Fri Dec  7 16:35:02 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -31,9 +31,10 @@ class FitsImageCanvas(Mixins.UIMixin, FitsImageGtk.FitsImageZoom,
         self.setSurface(self)
         self.ui_setActive(True)
 
-    def canvascoords(self, x, y, center=True):
-        a, b = self.get_canvas_xy(x, y, center=center)
-        return (a, b)
+    def canvascoords(self, data_x, data_y, center=True):
+        # data->canvas space coordinate conversion
+        x, y = self.get_canvas_xy(data_x, data_y, center=center)
+        return (x, y)
 
     def redraw_data(self, whence=0):
         super(FitsImageCanvas, self).redraw_data(whence=whence)

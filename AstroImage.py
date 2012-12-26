@@ -2,7 +2,7 @@
 # AstroImage.py -- Abstraction of an astronomical data image.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Mon Nov 26 22:08:47 HST 2012
+#  Last edit: Tue Dec 18 13:26:48 HST 2012
 #]
 # Takeshi Inagaki
 #
@@ -12,6 +12,7 @@
 #
 import sys
 import math
+import logging
 
 import iqcalc
 import wcs
@@ -21,11 +22,9 @@ import time
 import pyfits
 import numpy
 
+from BaseImage import BaseImage, ImageError
 
-class CalcError(Exception):
-    pass
-
-class AstroImage(object):
+class AstroImage(BaseImage):
     """
     Abstraction of an astronomical data (image).
     
@@ -34,6 +33,10 @@ class AstroImage(object):
 
     def __init__(self, data_np=None, metadata=None, wcsclass=None,
                  logger=None):
+        if logger != None:
+            self.logger = logger
+        else:
+            self.logger = logging.Logger('AstroImage')
         if data_np == None:
             data_np = numpy.zeros((1, 1))
         self.data = data_np
@@ -48,15 +51,6 @@ class AstroImage(object):
 
         self._set_minmax()
 
-    @property
-    def width(self):
-        # NOTE: numpy stores data in column-major layout
-        return self.data.shape[1]
-        
-    @property
-    def height(self):
-        # NOTE: numpy stores data in column-major layout
-        return self.data.shape[0]
 
     def load_hdu(self, hdu, fobj=None, naxispath=None):
         data = hdu.data
@@ -89,7 +83,7 @@ class AstroImage(object):
         try:
             fits_f.verify('fix')
         except Exception, e:
-            raise CalcError("Error loading fits file '%s': %s" % (
+            raise ImageError("Error loading fits file '%s': %s" % (
                 fitspath, str(e)))
 
         if numhdu == None:
@@ -111,7 +105,7 @@ class AstroImage(object):
                 break
             
             if not found_valid_hdu:
-                raise CalcError("No data HDU found that Ginga can open in '%s'" % (
+                raise ImageError("No data HDU found that Ginga can open in '%s'" % (
                     filepath))
         else:
             hdu = fits_f[numhdu]
@@ -128,55 +122,19 @@ class AstroImage(object):
         data = data.reshape(dims)
         self.set_data(data, metadata=metadata)
 
-    def get_size(self):
-        return (self.width, self.height)
-    
-    def get_data(self):
-        return self.data
-        
     def copy_data(self):
         return self.data.copy()
         
     def get_data_xy(self, x, y):
         assert (x >= 0) and (y >= 0), \
-               CalcError("Indexes out of range: (x=%d, y=%d)" % (
+               ImageError("Indexes out of range: (x=%d, y=%d)" % (
             x, y))
         return self.data[y, x]
         
-    def _get_dims(self, data):
-        height, width = data.shape[:2]
-        return (width, height)
-
     def get_data_size(self):
         width, height = self._get_dims(self.data)
         return (width, height)
 
-    def get_metadata(self):
-        return self.metadata.copy()
-        
-    def get(self, kwd, *args):
-        if self.metadata.has_key(kwd):
-            return self.metadata[kwd]
-        else:
-            # return a default if there is one
-            if len(args) > 0:
-                return args[0]
-            raise KeyError(kwd)
-        
-    def get_list(self, *args):
-        return map(self.get, args)
-    
-    def __getitem__(self, kwd):
-        return self.metadata[kwd]
-        
-    def update(self, kwds):
-        self.metadata.update(kwds)
-        
-    def set(self, **kwds):
-        self.update(kwds)
-        
-    def __setitem__(self, kwd, value):
-        self.metadata[kwd] = value
         
     def get_header(self, create=True):
         try:
@@ -221,32 +179,6 @@ class AstroImage(object):
         """Set an item in the fits header, if any."""
         return self.update_keywords(kwds)
         
-    def set_data(self, data_np, metadata=None, astype=None):
-        """Use this method to SHARE (not copy) the incoming array.
-        """
-        if astype:
-            self.data = data_np.astype(astype)
-        else:
-            self.data = data_np
-        if metadata:
-            self.update_metadata(metadata)
-
-        self._set_minmax()
-
-    def _set_minmax(self):
-        self.maxval = numpy.nanmax(self.data)
-        self.minval = numpy.nanmin(self.data)
-
-        # TODO: see if there is a faster way to ignore infinity
-        if numpy.isfinite(self.maxval):
-            self.maxval_noinf = self.maxval
-        else:
-            self.maxval_noinf = numpy.nanmax(self.data[numpy.isfinite(self.data)])
-        
-        if numpy.isfinite(self.minval):
-            self.minval_noinf = self.minval
-        else:
-            self.minval_noinf = numpy.nanmin(self.data[numpy.isfinite(self.data)])
         
     def update_data(self, data_np, metadata=None, astype=None):
         """Use this method to make a private copy of the incoming array.
@@ -254,11 +186,6 @@ class AstroImage(object):
         self.set_data(data_np.copy(), metadata=metadata,
                       astype=astype)
         
-    def get_minmax(self, noinf=False):
-        if not noinf:
-            return (self.minval, self.maxval)
-        else:
-            return (self.minval_noinf, self.maxval_noinf)
         
     def update_metadata(self, keyDict):
         for key, val in keyDict.items():
@@ -289,40 +216,6 @@ class AstroImage(object):
         self.transfer(other, astype=astype)
         return other
         
-    def cutout_data(self, x1, y1, x2, y2, astype=None):
-        """cut out data area based on coords. 
-        """
-        data = self.data[y1:y2, x1:x2]
-        if astype:
-            data = data.astype(astype)
-        return data
-  
-    def cutout_adjust(self, x1, y1, x2, y2, astype=None):
-        dx = x2 - x1
-        dy = y2 - y1
-        
-        if x1 < 0:
-            x1 = 0; x2 = dx
-        else:
-            if x2 >= self.width:
-                x2 = self.width
-                x1 = x2 - dx
-                
-        if y1 < 0:
-            y1 = 0; y2 = dy
-        else:
-            if y2 >= self.height:
-                y2 = self.height
-                y1 = y2 - dy
-
-        data = self.cutout_data(x1, y1, x2, y2, astype=astype)
-        return (data, x1, y1, x2, y2)
-
-    def cutout_radius(self, x, y, radius, astype=None):
-        return self.cutout_adjust(x-radius, y-radius,
-                                  x+radius+1, y+radius+1,
-                                  astype=astype)
-
     def cutout_cross(self, x, y, radius):
         """Cut two data subarrays that have a center at (x, y) and with
         radius (radius) from (data).  Returns the starting pixel (x0, y0)

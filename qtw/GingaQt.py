@@ -2,7 +2,7 @@
 # GingaQt.py -- Qt display handler for the Ginga FITS tool.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Mon Nov 26 16:14:34 HST 2012
+#  Last edit: Wed Dec 26 12:26:56 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -369,6 +369,7 @@ class GingaView(QtMain.QtMain):
         fi.enable_autolevels(self.default_autolevels)
         fi.enable_zoom(True)
         fi.enable_cuts(True)
+        fi.enable_rotate(True)
         fi.enable_flip(True)
         fi.enable_draw(False)
         fi.set_cmap(cm, redraw=False)

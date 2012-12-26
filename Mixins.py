@@ -2,7 +2,7 @@
 # Mixins.py -- Mixin classes for FITS viewer.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Nov 16 14:33:44 HST 2012
+#  Last edit: Wed Dec 19 15:00:29 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -110,8 +110,10 @@ class FitsImageZoomMixin(object):
         self._ispanning = False
         self.cancut = False
         self.canflip = False
+        self.canrotate = False
         self._iscutlow = False
         self._iscuthigh = False
+        self._isrotate = False
         self._ischgcmap = False
         self.isctrldown = False
         self.isshiftdown = False
@@ -121,10 +123,8 @@ class FitsImageZoomMixin(object):
         self._pantype = 1
         self._start_x = 0
         self._start_y = 0
-        ## self._start_panx = 0
-        ## self._start_pany = 0
-        self._start_src_x = 0
-        self._start_src_y = 0
+        self._start_panx = 0
+        self._start_pany = 0
         self.t_autopanset = False
         
         # User defined keys
@@ -142,6 +142,7 @@ class FitsImageZoomMixin(object):
         self.keys.pan1 = ['q']
         self.keys.pan2 = ['space']
         self.keys.panset = ['p']
+        self.keys.center = ['c']
         self.keys.cut_low = [',']
         self.keys.cut_high = ['.']
         self.keys.autocuts_on = [':']
@@ -151,6 +152,8 @@ class FitsImageZoomMixin(object):
         self.keys.flipx = ['[', '{']
         self.keys.flipy = [']', '}']
         self.keys.swapxy = ['backslash', '|']
+        self.keys.rotate = ['r']
+        self.keys.rotate_reset = ['R']
         self.keys.cancel = ['escape']
 
         # Add callbacks for interesting events
@@ -215,6 +218,9 @@ class FitsImageZoomMixin(object):
             elif (keyname in self.keys.panset):
                 last_x, last_y = self.get_last_data_xy()
                 self._panset(last_x, last_y, redraw=False)
+                return True
+            elif (keyname in self.keys.center):
+                self.center_image()
                 return True
             elif keyname in self.keys.zoom_out:
                 self.zoom_out()
@@ -296,6 +302,16 @@ class FitsImageZoomMixin(object):
                 self.onscreen_message("Swap XY=%s" % swapxy, delay=1.0)
                 return True
 
+        if self.canrotate:
+            if (keyname in self.keys.rotate_reset):
+                self.rotate(0.0)
+                return True
+            elif (keyname in self.keys.rotate):
+                self._isrotate = True
+                self.set_kbdmouse_mask(0x1000)
+                self.onscreen_message("Rotate (drag mouse L-R)")
+                return True
+
 
     def window_key_release(self, fitsimage, keyname):
         if (keyname in self.keys.ctrl):
@@ -313,6 +329,7 @@ class FitsImageZoomMixin(object):
         self._iscutlow = False
         self._iscuthigh = False
         self._ischgcmap = False
+        self._isrotate = False
         self.pan_stop()
         self.reset_kbdmouse_mask(0x1000)
         self.onscreen_message(None)
@@ -332,6 +349,9 @@ class FitsImageZoomMixin(object):
             elif self._iscutlow or self._iscuthigh:
                 self._start_x = x
                 self._loval, self._hival = self.get_cut_levels()
+                return True
+            elif self._isrotate:
+                self._start_x = x
                 return True
             elif self.t_autopanset:
                 self._panset(data_x, data_y, redraw=False)
@@ -384,6 +404,12 @@ class FitsImageZoomMixin(object):
                 self._iscuthigh = False
                 self.reset_kbdmouse_mask(0x1000)
                 return True
+            elif self._isrotate:
+                #self._rotate_xy(x, y)
+                self.onscreen_message(None)
+                self._isrotate = False
+                self.reset_kbdmouse_mask(0x1000)
+                return True
 
         elif button & 0x2:
             if self._ispanning:
@@ -414,12 +440,16 @@ class FitsImageZoomMixin(object):
                 self._cuthigh_xy(x, y)
                 return True
             
+            elif self._isrotate:
+                self._rotate_xy(x, y)
+                return True
+            
         if self._ispanning:
             if self._pantype == 2:
                 if not (button & 0x1):
                     return False
-            panx, pany = self.get_new_pan(x, y, ptype=self._pantype)
-            self.set_pan(panx, pany, redraw=True)
+            data_x, data_y = self.get_new_pan(x, y, ptype=self._pantype)
+            self.set_pan(data_x, data_y, redraw=True)
             return True
 
 
@@ -458,17 +488,26 @@ class FitsImageZoomMixin(object):
             return True
 
         elif self.canzoom:
+            rev = self.get_pan_reverse()
             if direction == 'up':
-                self.zoom_in()
+                if not rev:
+                    self.zoom_in()
+                else:
+                    self.zoom_out()
             elif direction == 'down':
-                self.zoom_out()
+                if not rev:
+                    self.zoom_out()
+                else:
+                    self.zoom_in()
             self.onscreen_message(self.get_scale_text(), delay=1.0)
             return True
 
 
     def get_new_pan(self, win_x, win_y, ptype=1):
 
+        dat_wd, dat_ht = self.get_data_size()
         win_wd, win_ht = self.get_window_size()
+
         if ptype == 1:
             if (win_x >= win_wd):
                 win_x = win_wd - 1
@@ -480,36 +519,36 @@ class FitsImageZoomMixin(object):
             panx = float(win_x) / float(win_wd - 1)
             pany = 1.0 - (float(win_y) / float(win_ht - 1))
 
+            # Account for user preference
+            if self.get_pan_reverse():
+                panx = 1.0 - panx
+                pany = 1.0 - pany
+
+            data_x, data_y = panx * dat_wd, pany * dat_ht
+            return data_x, data_y
+
         elif ptype == 2:
+
             if self._start_x == 0:
                 # user has not held the mouse button yet
                 # return current pan values
                 return self.get_pan()
 
-            # OLD PAN 2 METHOD
-            ## panx = min(1.0, max(0.0, self._start_panx +
-            ##                     float(self._start_x - win_x) / float(win_wd)))
-            ## pany = min(1.0, max(0.0, self._start_pany +
-            ##                     float(win_y - self._start_y) / float(win_ht)))
             # NEW PAN 2 METHOD
             delta_x = self._start_x - win_x
             delta_y = win_y - self._start_y
-            pxwd, pxht, src_x, src_y = self.get_scaling_info()
-            panx = min(1.0, max(0.0, float(self._start_src_x + delta_x) /
-                                float(pxwd)))
-            pany = min(1.0, max(0.0, float(self._start_src_y + delta_y) /
-                                float(pxht)))
+            
+            pxwd, pxht = self.get_scaling_info()
+            ## panx = min(1.0, max(0.0, float(self._start_src_x + delta_x) /
+            ##                     float(pxwd)))
+            ## pany = min(1.0, max(0.0, float(self._start_src_y + delta_y) /
+            ##                     float(pxht)))
+            panx = float(self._start_panx + delta_x) / float(pxwd)
+            pany = float(self._start_pany + delta_y) / float(pxht)
 
-        # Account for user transformations
-        flipX, flipY, swapXY = self.get_transforms()
-        if flipX:
-            panx = 1.0 - panx
-        if flipY:
-            pany = 1.0 - pany
-        if swapXY:
-            panx, pany = pany, panx
-
-        return (panx, pany)
+            data_x, data_y = panx * dat_wd, pany * dat_ht
+            
+        return (data_x, data_y)
 
     def _panset(self, data_x, data_y, redraw=True):
         try:
@@ -583,6 +622,14 @@ class FitsImageZoomMixin(object):
             loval, hival), delay=1.0, redraw=False)
         self.cut_levels(loval, hival, redraw=True)
 
+    def _rotate_xy(self, x, y):
+        win_wd, win_ht = self.get_window_size()
+        pct = float(x) / float(win_wd)
+        deg = 360.0 * pct
+        self.onscreen_message("Rotate: %.2f" % (deg),
+                              redraw=False)
+        self.rotate(deg)
+
     def to_default_mode(self):
         self._ispanning = False
         self.switch_cursor('pick')
@@ -596,12 +643,7 @@ class FitsImageZoomMixin(object):
         self._ispanning = True
         
     def pan_set_origin(self, win_x, win_y):
-        #self._start_panx, self._start_pany = self.get_pan()
-        pxwd, pxht, src_x, src_y = self.get_scaling_info()
-        panx, pany = self.get_pan()
-        self._start_src_x = int(round(panx * pxwd))
-        self._start_src_y = int(round(pany * pxht))
-
+        self._start_panx, self._start_pany = self.get_pan()
         self._start_x = win_x
         self._start_y = win_y
         
@@ -620,5 +662,8 @@ class FitsImageZoomMixin(object):
         
     def enable_flip(self, tf):
         self.canflip = tf
+
+    def enable_rotate(self, tf):
+        self.canrotate = tf
 
 # END

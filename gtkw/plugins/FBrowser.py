@@ -1,9 +1,7 @@
 #
 # FBrowser.py -- File Browser plugin for fits viewer
 # 
-#[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Mon Nov 26 21:43:03 HST 2012
-#]
+# Eric Jeschke (eric@naoj.org) 
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
@@ -115,9 +113,9 @@ class FBrowser(GingaPlugin.LocalPlugin):
         btn = gtk.Button("Refresh")
         btn.connect('clicked', lambda w: self.refresh())
         btns.add(btn)
-        ## btn = gtk.Button("Make Thumbs")
-        ## btn.connect('clicked', lambda w: self.make_thumbs())
-        ## btns.add(btn)
+        btn = gtk.Button("Make Thumbs")
+        btn.connect('clicked', lambda w: self.make_thumbs())
+        btns.add(btn)
         rvbox.pack_start(btns, padding=4, fill=True, expand=False)
 
         container.pack_start(rvbox, padding=0, fill=True, expand=True)

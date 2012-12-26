@@ -2,7 +2,7 @@
 # FitsImageCanvasTypesQt.py -- drawing classes for FitsImageCanvas widget
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Thu Sep 20 15:06:30 HST 2012
+#  Last edit: Wed Dec 26 12:51:47 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -155,6 +155,10 @@ class Text(CanvasObject):
         cr.setFont(QtGui.QFont(self.font, pointSize=fontsize))
         cr.drawText(cx, cy, self.text)
 
+    def rotate(self, theta, xoff=0, yoff=0):
+        self.x, self.y = self.rotate_pt(self.x, self.y, theta,
+                                        xoff=xoff, yoff=yoff)
+
 class Polygon(CanvasObject):
     """Draws a polygon on a FitsImageCanvas.
     Parameters are:
@@ -177,8 +181,9 @@ class Polygon(CanvasObject):
         cpoints = map(lambda p: self.canvascoords(p[0], p[1]), self.points)
         cr = self.setup_cr()
 
-        qpoints = map(lambda p: QtCore.Qt.QPoint(p[0], p[1]), cpoints)
-        qpoly = QtCore.Qt.QPolygon(qpoints)
+        qpoints = map(lambda p: QtCore.QPoint(p[0], p[1]),
+                      cpoints + [cpoints[0]])
+        qpoly = QtGui.QPolygon(qpoints)
 
         cr.drawPolygon(qpoly)
 
@@ -233,21 +238,26 @@ class Rectangle(CanvasObject):
                                         drawdims=drawdims, font=font)
         
     def draw(self):
-        cx1, cy1 = self.canvascoords(self.x1, self.y1)
-        cx2, cy2 = self.canvascoords(self.x2, self.y2)
-        width  = cx2 - cx1 + 1
-        height = cy2 - cy1 + 1
+        cpoints = map(lambda p: self.canvascoords(p[0], p[1]),
+                      ((self.x1, self.y1), (self.x2, self.y1),
+                       (self.x2, self.y2), (self.x1, self.y2)))
+        #qpoints = map(lambda p: QtCore.QPoint(p[0], p[1]), cpoints)
+        qpoints = map(lambda p: QtCore.QPoint(p[0], p[1]),
+                      cpoints + [cpoints[0]])
+        qpoly = QtGui.QPolygon(qpoints)
 
         cr = self.setup_cr()
-        cr.drawRect(cx1, cy1, width, height)
+        cr.drawPolygon(qpoly)
 
         if self.cap:
-            self.draw_caps(cr, self.cap,
-                           ((cx1, cy1), (cx1, cy2), (cx2, cy1), (cx2, cy2)))
+            self.draw_caps(cr, self.cap, cpoints)
 
         if self.drawdims:
             fontsize = self.scale_font()
             cr.setFont(QtGui.QFont(self.font, pointSize=fontsize))
+
+            cx1, cy1 = cpoints[0]
+            cx2, cy2 = cpoints[2]
 
             # draw label on X dimension
             cx = cx1 + (cx2 - cx1) // 2
@@ -264,7 +274,22 @@ class Rectangle(CanvasObject):
             (y >= self.y1) and (y <= self.y2)):
             return True
         return False
-        
+
+    def rotate(self, theta, xoff=0, yoff=0):
+        x1, y1 = self.rotate_pt(self.x1, self.y1, theta,
+                                xoff=xoff, yoff=yoff)
+        x2, y2 = self.rotate_pt(self.x2, self.y2, theta,
+                                xoff=xoff, yoff=yoff)
+        self.x1, self.y1, self.x2, self.y2 = self.swapxy(x1, y1, x2, y2)
+
+    def toPolygon(self):
+        points = [(self.x1, self.y1), (self.x2, self.y1),
+                  (self.x2, self.y2), (self.x1, self.y2)]
+        p = Polygon(points, color=self.color,
+                    linewidth=self.linewidth, linestyle=self.linestyle,
+                    cap=self.cap, fill=self.fill, fillcolor=self.fillcolor)
+        return p
+
 
 class Square(Rectangle):
     """Draws a square on a FitsImageCanvas.
@@ -320,6 +345,10 @@ class Circle(CanvasObject):
             return True
         return False
 
+    def rotate(self, theta, xoff=0, yoff=0):
+        self.x, self.y = self.rotate_pt(self.x, self.y, theta,
+                                        xoff=xoff, yoff=yoff)
+
 class Point(CanvasObject):
     """Draws a point on a FitsImageCanvas.
     Parameters are:
@@ -340,8 +369,9 @@ class Point(CanvasObject):
                                     cap=cap)
         
     def draw(self):
-        cx1, cy1 = self.canvascoords(self.x - self.radius, self.y - self.radius)
-        cx2, cy2 = self.canvascoords(self.x + self.radius, self.y + self.radius)
+        cx, cy, cradius = self.calc_radius(self.x, self.y, self.radius)
+        cx1, cy1 = cx - cradius, cy - cradius
+        cx2, cy2 = cx + cradius, cy + cradius
 
         cr = self.setup_cr()
         cr.pen().setCapStyle(QtCore.Qt.RoundCap)
@@ -349,13 +379,16 @@ class Point(CanvasObject):
         cr.drawLine(cx1, cy2, cx2, cy1)
 
         if self.cap:
-            cx, cy = self.canvascoords(self.x, self.y)
             self.draw_caps(cr, self.cap, ((cx, cy), ))
 
     def contains(self, x, y):
         if (x == self.x) and (y == self.y):
             return True
         return False
+
+    def rotate(self, theta, xoff=0, yoff=0):
+        self.x, self.y = self.rotate_pt(self.x, self.y, theta,
+                                        xoff=xoff, yoff=yoff)
 
 class Line(CanvasObject):
     """Draws a line on a FitsImageCanvas.
@@ -383,6 +416,12 @@ class Line(CanvasObject):
 
         if self.cap:
             self.draw_caps(cr, self.cap, ((cx1, cy1), (cx2, cy2)))
+
+    def rotate(self, theta, xoff=0, yoff=0):
+        self.x1, self.y1 = self.rotate_pt(self.x1, self.y1, theta,
+                                          xoff=xoff, yoff=yoff)
+        self.x2, self.y2 = self.rotate_pt(self.x2, self.y2, theta,
+                                          xoff=xoff, yoff=yoff)
 
 class Compass(CanvasObject):
     """Draws a WCS compass on a FitsImageCanvas.

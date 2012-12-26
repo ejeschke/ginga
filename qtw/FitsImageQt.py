@@ -1,14 +1,13 @@
 #
 # FitsImageQt.py -- classes for the display of FITS files in Qt widgets
 # 
-#[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Oct 26 21:25:38 HST 2012
-#]
+# Eric Jeschke (eric@naoj.org) 
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+import math
 from PyQt4 import QtGui, QtCore
 
 import numpy
@@ -100,10 +99,12 @@ class RenderWidget(QtGui.QWidget):
 
 class FitsImageQt(FitsImage.FitsImageBase):
 
-    def __init__(self, logger=None, render='widget'):
+    def __init__(self, logger=None, render=None):
         #super(FitsImageQt, self).__init__(logger=logger)
         FitsImage.FitsImageBase.__init__(self, logger=logger)
 
+        if render == None:
+            render = 'widget'
         self.wtype = render
         if self.wtype == 'widget':
             self.imgwin = RenderWidget()
@@ -134,7 +135,7 @@ class FitsImageQt(FitsImage.FitsImageBase):
         self._defer_flag = False
         self._defer_task = None
 
-
+        
     def get_widget(self):
         return self.imgwin
 
@@ -148,6 +149,7 @@ class FitsImageQt(FitsImage.FitsImageBase):
         qimage = self._get_qimage(data)
 
         painter = QtGui.QPainter(drawable)
+        painter.setWorldMatrixEnabled(True)
 
         # fill pixmap with background color
         imgwin_wd, imgwin_ht = self.get_window_size()
@@ -201,9 +203,9 @@ class FitsImageQt(FitsImage.FitsImageBase):
             width, height))
         if hasattr(self, 'scene'):
             self.scene.setSceneRect(0, 0, width, height)
-        # If we need to build a new pixmap do it here.  We allocate one twice as big
-        # as necessary to prevent having to reinstantiate it all the time.  On Qt this
-        # causes unpleasant flashing in the display
+        # If we need to build a new pixmap do it here.  We allocate one
+        # twice as big as necessary to prevent having to reinstantiate it
+        # all the time.  On Qt this causes unpleasant flashing in the display.
         if (self.pixmap == None) or (self.pixmap.width() < width) or \
            (self.pixmap.height() < height):
             pixmap = QtGui.QPixmap(width*2, height*2)
@@ -328,6 +330,11 @@ class FitsImageQt(FitsImage.FitsImageBase):
     def onscreen_message_off(self, redraw=True):
         return self.onscreen_message(None, redraw=redraw)
     
+    def pix2canvas(self, x, y):
+        return (x, y)
+        
+    def canvas2pix(self, x, y):
+        return (x, y)
 
 class RenderMixin(object):
 
@@ -368,7 +375,14 @@ class RenderMixin(object):
 #         if event.mimeData().hasFormat('text/plain'):
 #             event.accept()
 #         else:
-#             event.ignore() 
+#             event.ignore()
+        event.accept()
+
+    def dragMoveEvent(self, event):
+#         if event.mimeData().hasFormat('text/plain'):
+#             event.accept()
+#         else:
+#             event.ignore()
         event.accept()
 
     def dropEvent(self, event):
@@ -383,12 +397,12 @@ class RenderGraphicsViewZoom(RenderGraphicsView, RenderMixin):
 
 class FitsImageEvent(FitsImageQt):
 
-    def __init__(self, logger=None, render='widget'):
+    def __init__(self, logger=None, render=None):
         #super(FitsImageEvent, self).__init__(logger=logger)
         FitsImageQt.__init__(self, logger=logger, render=render)
 
         # replace the widget our parent provided
-        if hasattr(self, 'scene'):
+        if self.wtype == 'scene':
             imgwin = RenderGraphicsViewZoom()
             imgwin.setScene(self.scene)
         else:

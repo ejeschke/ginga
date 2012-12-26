@@ -2,7 +2,7 @@
 # Pan.py -- Pan plugin for fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Thu Sep 20 11:09:15 HST 2012
+#  Last edit: Tue Dec  4 16:57:33 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -62,7 +62,8 @@ class Pan(GingaPlugin.GlobalPlugin):
         sfi.set_callback('draw-event', self.draw_cb)
         sfi.define_cursor('pick', gtk.gdk.Cursor(gtk.gdk.FLEUR)) 
         ## sfi.enable_cuts(False)
-        sfi.set_bg(0.4, 0.4, 0.4)
+        #sfi.set_bg(0.4, 0.4, 0.4)
+        sfi.set_bg(0.0, 0.0, 0.0)
         sfi.set_callback('button-press', self.btndown)
         sfi.set_callback('motion', self.panxy)
         sfi.set_callback('scroll', self.zoom)
@@ -93,21 +94,18 @@ class Pan(GingaPlugin.GlobalPlugin):
         panimage.set_rgbmap(rgbmap, redraw=False)
         rgbmap.add_callback('changed', self.rgbmap_cb, panimage)
         
-        fitsimage.copy_attributes(panimage, ['transforms', 'cutlevels'])
+        fitsimage.copy_attributes(panimage, ['transforms', 'cutlevels',
+                                             'rotation'])
         fitsimage.add_callback('image-set', self.new_image_cb, chinfo, paninfo)
         fitsimage.add_callback('pan-set', self.panset, chinfo, paninfo)
         fitsimage.add_callback('cut-set', self.cutset_cb, chinfo, paninfo)
         fitsimage.add_callback('transform', self.transform_cb, chinfo, paninfo)
+        fitsimage.add_callback('rotate', self.rotate_cb, chinfo, paninfo)
         self.logger.debug("channel %s added." % (chinfo.name))
 
     def delete_channel(self, viewer, chinfo):
         self.logger.debug("TODO: delete channel %s" % (chinfo.name))
         
-    ## def start(self):
-    ##     self.fv.showStatus("")
-        
-    ## def stop(self):
-    ##     self.fv.showStatus("")
         
     # CALLBACKS
 
@@ -119,8 +117,7 @@ class Pan(GingaPlugin.GlobalPlugin):
         loval, hival = fitsimage.get_cut_levels()
         paninfo.panimage.cut_levels(loval, hival, redraw=False)
         
-        data = image.get_data()
-        self.set_data(chinfo, paninfo, data)
+        self.set_image(chinfo, paninfo, image)
 
     def focus_cb(self, viewer, fitsimage):
         chname = self.fv.get_channelName(fitsimage)
@@ -153,13 +150,18 @@ class Pan(GingaPlugin.GlobalPlugin):
         paninfo.panimage.transform(flipx, flipy, swapxy)
         return True
         
+    def rotate_cb(self, fitsimage, deg, chinfo, paninfo):
+        paninfo.panimage.rotate(deg, redraw=True)
+        self.panset(fitsimage, chinfo, paninfo)
+        return True
+        
     # LOGIC
     
     def clear(self):
         self.info.panimage.clear()
 
-    def set_data(self, chinfo, paninfo, data):
-        paninfo.panimage.set_data(data)
+    def set_image(self, chinfo, paninfo, image):
+        paninfo.panimage.set_image(image)
 
         # remove old compass
         try:
@@ -168,9 +170,6 @@ class Pan(GingaPlugin.GlobalPlugin):
         except Exception:
             pass
 
-        fitsimage = chinfo.fitsimage
-        image = fitsimage.get_image()
-        
         # create compass
         try:
             (x, y, xn, yn, xe, ye) = image.calc_compass_center()
@@ -183,22 +182,29 @@ class Pan(GingaPlugin.GlobalPlugin):
             self.logger.warn("Can't calculate compass: %s" % (
                 str(e)))
 
-        self.panset(fitsimage, chinfo, paninfo)
+        self.panset(chinfo.fitsimage, chinfo, paninfo)
 
     def panset(self, fitsimage, chinfo, paninfo):
-        x1, y1, x2, y2 = fitsimage.get_data_rect()
+        #x1, y1, x2, y2 = fitsimage.get_pan_rect()
+        points = fitsimage.get_pan_rect()
         try:
             obj = paninfo.panimage.getObjectByTag(paninfo.panrect)
-            if obj.kind != 'rectangle':
+            ## if obj.kind != 'rectangle':
+            ##     return True
+            if obj.kind != 'polygon':
                 return True
             # Update current rectangle with new coords
-            if (obj.x1, obj.y1, obj.x2, obj.y2) != (x1, y1, x2, y2):
-                self.logger.debug("starting panset")
-                obj.x1, obj.y1, obj.x2, obj.y2 = x1, y1, x2, y2
-                paninfo.panimage.redraw(whence=3)
+            ## if (obj.x1, obj.y1, obj.x2, obj.y2) != (x1, y1, x2, y2):
+            ##     self.logger.debug("starting panset")
+            ##     obj.x1, obj.y1, obj.x2, obj.y2 = x1, y1, x2, y2
+            ##     paninfo.panimage.redraw(whence=3)
+            self.logger.debug("starting panset")
+            obj.points = points
+            paninfo.panimage.redraw(whence=3)
 
         except KeyError:
-            paninfo.panrect = paninfo.panimage.add(CanvasTypes.Rectangle(x1, y1, x2, y2))
+            ## paninfo.panrect = paninfo.panimage.add(CanvasTypes.Rectangle(x1, y1, x2, y2))
+            paninfo.panrect = paninfo.panimage.add(CanvasTypes.Polygon(points))
 
     def panxy(self, fitsimage, button, data_x, data_y):
         """Motion event in the small fits window.  This is usually a panning
@@ -212,12 +218,12 @@ class Pan(GingaPlugin.GlobalPlugin):
         elif button & 0x1:
             # If button1 is held down this is a panning move in the small
             # window for the big window
-            data_wd, data_ht = self.info.panimage.get_data_size()
-            panx = float(data_x) / float(data_wd)
-            pany = float(data_y) / float(data_ht)
+            ## data_wd, data_ht = self.info.panimage.get_data_size()
+            ## panx = float(data_x) / float(data_wd)
+            ## pany = float(data_y) / float(data_ht)
 
             bigimage = self.fv.getfocus_fitsimage()
-            return bigimage.set_pan(panx, pany)
+            return bigimage.set_pan(data_x, data_y)
 
         return False
 

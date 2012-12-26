@@ -2,7 +2,7 @@
 # Preferences.py -- Preferences plugin for fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Sat Jul 21 15:35:30 HST 2012
+#  Last edit: Thu Dec 13 19:39:32 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -207,24 +207,38 @@ class Preferences(GingaPlugin.LocalPlugin):
         fr.set_shadow_type(gtk.SHADOW_ETCHED_IN)
         fr.set_label_align(0.5, 0.5)
 
-        btns = gtk.HButtonBox()
-        btns.set_layout(gtk.BUTTONBOX_START)
-        btns.set_spacing(5)
+        captions = (('Flip X', 'checkbutton', 'Flip Y', 'checkbutton'),
+                    ('Swap XY', 'checkbutton', 'Rotate', 'spinbutton'),
+                    ('Restore', 'button', 'Center Image', 'button'),)
+        w, b = GtkHelp.build_info(captions)
+        self.w.update(b)
 
-        for name in ('Flip X', 'Flip Y', 'Swap XY' ):
-            btn = GtkHelp.CheckButton(name)
-            btn.sconnect("toggled", lambda w: self.set_transforms())
+        for btn in (b.flip_x, b.flip_y, b.swap_xy):
+            btn.sconnect("toggled", lambda w: self.set_transforms_cb())
             btn.set_mode(True)
-            self.w[GtkHelp._name_mangle(name, pfx='btn_')] = btn
-            btns.add(btn)
-        self.w.tooltips.set_tip(self.w.btn_flip_x,
+        self.w.tooltips.set_tip(b.flip_x,
                                 "Flip the image around the X axis")
-        self.w.tooltips.set_tip(self.w.btn_flip_y,
+        self.w.tooltips.set_tip(b.flip_y,
                                 "Flip the image around the Y axis")
-        self.w.tooltips.set_tip(self.w.btn_swap_xy,
+        self.w.tooltips.set_tip(b.swap_xy,
                                 "Swap the X and Y axes in the image")
+        b.rotate.set_range(0.00, 360.0)
+        b.rotate.set_value(0.00)
+        b.rotate.set_increments(1.00, 10.0)
+        b.rotate.set_digits(5)
+        b.rotate.set_numeric(True)
+        b.rotate.set_wrap(True)
+        b.rotate.sconnect('value-changed', lambda w: self.rotate_cb())
+        self.w.tooltips.set_tip(b.rotate,
+                                "Rotate image around the pan position")
+        self.w.tooltips.set_tip(b.restore,
+                                "Clear any transforms and center image")
+        b.restore.connect("clicked", lambda w: self.restore_cb())
+        self.w.tooltips.set_tip(b.center_image,
+                                "Set the pan position to center of the image")
+        b.center_image.connect("clicked", lambda w: self.center_image_cb())
 
-        fr.add(btns)
+        fr.add(w)
         vbox.pack_start(fr, padding=4, fill=True, expand=False)
         
         fr = gtk.Frame("New Images")
@@ -256,6 +270,26 @@ class Preferences(GingaPlugin.LocalPlugin):
         fr.add(w)
         vbox.pack_start(fr, padding=4, fill=True, expand=False)
 
+        fr = gtk.Frame("Miscellaneous")
+        fr.set_shadow_type(gtk.SHADOW_ETCHED_IN)
+        fr.set_label_align(0.5, 0.5)
+
+        btns = gtk.HButtonBox()
+        btns.set_layout(gtk.BUTTONBOX_START)
+        btns.set_spacing(5)
+
+        for name in ('Reverse Pan', ):
+            btn = GtkHelp.CheckButton(name)
+            btn.sconnect("toggled", lambda w: self.set_misc_cb())
+            btn.set_mode(True)
+            self.w[GtkHelp._name_mangle(name, pfx='btn_')] = btn
+            btns.add(btn)
+        self.w.tooltips.set_tip(self.w.btn_reverse_pan,
+                                "Reverse the pan direction")
+
+        fr.add(btns)
+        vbox.pack_start(fr, padding=4, fill=True, expand=False)
+        
         btns = gtk.HButtonBox()
         btns.set_layout(gtk.BUTTONBOX_START)
         btns.set_spacing(3)
@@ -403,15 +437,41 @@ class Preferences(GingaPlugin.LocalPlugin):
         if self.w.has_key('btn_cut_new'):
             self.w.btn_cut_new.set_active(index)
 
-    def set_transforms(self):
-        flipX = self.w.btn_flip_x.get_active()
-        flipY = self.w.btn_flip_y.get_active()
-        swapXY = self.w.btn_swap_xy.get_active()
+    def set_transforms_cb(self):
+        flipX = self.w.flip_x.get_active()
+        flipY = self.w.flip_y.get_active()
+        swapXY = self.w.swap_xy.get_active()
         self.prefs.flipX = flipX
         self.prefs.flipY = flipY
         self.prefs.swapXY = swapXY
 
         self.fitsimage.transform(flipX, flipY, swapXY)
+        return True
+
+    def rotate_cb(self):
+        deg = self.w.rotate.get_value()
+        self.prefs.rotate_deg = deg
+
+        self.fitsimage.rotate(deg)
+        return True
+
+    def center_image_cb(self):
+        self.fitsimage.center_image()
+        return True
+
+    def restore_cb(self):
+        self.w.flip_x.set_active(False)
+        self.w.flip_y.set_active(False)
+        self.w.swap_xy.set_active(False)
+        self.fitsimage.center_image(redraw=False)
+        self.fitsimage.rotate(0.0, redraw=False)
+        self.set_transforms_cb()
+        return True
+
+    def set_misc_cb(self):
+        revpan = self.w.btn_reverse_pan.get_active()
+        self.prefs.reverse_pan = revpan
+        self.fitsimage.set_pan_reverse(revpan)
         return True
 
     def controls_to_preferences(self):
@@ -447,6 +507,8 @@ class Preferences(GingaPlugin.LocalPlugin):
         prefs.zoom_min = zmin
         prefs.zoom_max = zmax
                 
+        prefs.reverse_pan = self.fitsimage.t_reversepan
+
     def preferences_to_controls(self):
         prefs = self.prefs
         #print "prefs=%s" % (str(prefs))
@@ -492,9 +554,12 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.w.max_zoom.set_value(zmax)
 
         (flipX, flipY, swapXY) = self.fitsimage.get_transforms()
-        self.w.btn_flip_x.set_active(flipX)
-        self.w.btn_flip_y.set_active(flipY)
-        self.w.btn_swap_xy.set_active(swapXY)
+        self.w.flip_x.set_active(flipX)
+        self.w.flip_y.set_active(flipY)
+        self.w.swap_xy.set_active(swapXY)
+
+        revpan = self.fitsimage.t_reversepan
+        self.w.btn_reverse_pan.set_active(revpan)
 
     def save_preferences(self):
         self.controls_to_preferences()
