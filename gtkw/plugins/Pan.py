@@ -2,7 +2,7 @@
 # Pan.py -- Pan plugin for fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Tue Dec  4 16:57:33 HST 2012
+#  Last edit: Thu Dec 27 11:59:06 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -62,8 +62,7 @@ class Pan(GingaPlugin.GlobalPlugin):
         sfi.set_callback('draw-event', self.draw_cb)
         sfi.define_cursor('pick', gtk.gdk.Cursor(gtk.gdk.FLEUR)) 
         ## sfi.enable_cuts(False)
-        #sfi.set_bg(0.4, 0.4, 0.4)
-        sfi.set_bg(0.0, 0.0, 0.0)
+        sfi.set_bg(0.4, 0.4, 0.4)
         sfi.set_callback('button-press', self.btndown)
         sfi.set_callback('motion', self.panxy)
         sfi.set_callback('scroll', self.zoom)

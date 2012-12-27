@@ -2,7 +2,7 @@
 # Preferences.py -- Preferences plugin for fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Sat Jul 21 15:35:30 HST 2012
+#  Last edit: Wed Dec 26 13:31:45 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -182,20 +182,30 @@ class Preferences(GingaPlugin.LocalPlugin):
 
         fr = QtHelp.Frame("Transform")
 
-        btns = QtHelp.HBox()
-        layout = btns.layout()
-        layout.setSpacing(5)
+        captions = (('Flip X', 'checkbutton', 'Flip Y', 'checkbutton'),
+                    ('Swap XY', 'checkbutton', 'Rotate', 'spinfloat'),
+                    ('Restore', 'button', 'Center Image', 'button'),)
+        w, b = QtHelp.build_info(captions)
+        self.w.update(b)
 
-        for name in ('Flip X', 'Flip Y', 'Swap XY' ):
-            btn = QtGui.QCheckBox(name)
-            btn.stateChanged.connect(lambda w: self.set_transforms())
-            self.w[QtHelp._name_mangle(name, pfx='btn_')] = btn
-            layout.addWidget(btn, stretch=0, alignment=QtCore.Qt.AlignLeft)
-        self.w.btn_flip_x.setToolTip("Flip the image around the X axis")
-        self.w.btn_flip_y.setToolTip("Flip the image around the Y axis")
-        self.w.btn_swap_xy.setToolTip("Swap the X and Y axes in the image")
+        for btn in (b.flip_x, b.flip_y, b.swap_xy):
+            btn.stateChanged.connect(lambda w: self.set_transforms_cb())
+        b.flip_x.setToolTip("Flip the image around the X axis")
+        b.flip_y.setToolTip("Flip the image around the Y axis")
+        b.swap_xy.setToolTip("Swap the X and Y axes in the image")
+        b.rotate.setToolTip("Rotate the image around the pan position")
+        b.restore.setToolTip("Clear any transforms and center image")
+        b.restore.clicked.connect(lambda w: self.restore_cb())
+        b.center_image.setToolTip("Set the pan position to center of the image")
+        b.center_image.clicked.connect(lambda w: self.center_image_cb())
 
-        fr.layout().addWidget(btns, stretch=0, alignment=QtCore.Qt.AlignLeft)
+        b.rotate.setRange(0.00, 360.0)
+        b.rotate.setValue(0.00)
+        b.rotate.setSingleStep(1.00)
+        b.rotate.setDecimals(5)
+        b.rotate.valueChanged.connect(lambda w: self.rotate_cb())
+
+        fr.layout().addWidget(w, stretch=1, alignment=QtCore.Qt.AlignLeft)
         vbox.addWidget(fr, stretch=0, alignment=QtCore.Qt.AlignTop)
         
         fr = QtHelp.Frame("New Images")
@@ -362,15 +372,35 @@ class Preferences(GingaPlugin.LocalPlugin):
         index = self.autocut_options.index(option)
         self.w.btn_cut_new.setCurrentIndex(index)
 
-    def set_transforms(self):
-        flipX = self.w.btn_flip_x.checkState()
-        flipY = self.w.btn_flip_y.checkState()
-        swapXY = self.w.btn_swap_xy.checkState()
+    def set_transforms_cb(self):
+        flipX = self.w.flip_x.checkState()
+        flipY = self.w.flip_y.checkState()
+        swapXY = self.w.swap_xy.checkState()
         self.prefs.flipX = flipX
         self.prefs.flipY = flipY
         self.prefs.swapXY = swapXY
 
         self.fitsimage.transform(flipX, flipY, swapXY)
+        return True
+
+    def rotate_cb(self):
+        deg = self.w.rotate.value()
+        self.prefs.rotate_deg = deg
+
+        self.fitsimage.rotate(deg)
+        return True
+
+    def center_image_cb(self):
+        self.fitsimage.center_image()
+        return True
+
+    def restore_cb(self):
+        self.w.flip_x.setChecked(False)
+        self.w.flip_y.setChecked(False)
+        self.w.swap_xy.setChecked(False)
+        self.fitsimage.center_image(redraw=False)
+        self.fitsimage.rotate(0.0, redraw=False)
+        self.set_transforms_cb()
         return True
 
     def controls_to_preferences(self):
@@ -451,9 +481,9 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.w.max_zoom.setValue(zmax)
 
         (flipX, flipY, swapXY) = self.fitsimage.get_transforms()
-        self.w.btn_flip_x.setChecked(flipX)
-        self.w.btn_flip_y.setChecked(flipY)
-        self.w.btn_swap_xy.setChecked(swapXY)
+        self.w.flip_x.setChecked(flipX)
+        self.w.flip_y.setChecked(flipY)
+        self.w.swap_xy.setChecked(swapXY)
 
     def save_preferences(self):
         self.controls_to_preferences()

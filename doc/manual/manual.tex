@@ -508,7 +508,7 @@ of tables you can change the way Ginga looks and presents its content.
 If you examine the top-level startup script {\tt ginga.py} you will find
 the tables: {\tt default\_layout}, {\tt global\_plugins} and
 {\tt local\_plugins}.
-global\_plugins and local_\plugins define the mapping of plugins to
+global\_plugins and local\_plugins define the mapping of plugins to
 workspaces and the titles on the tabs in the workspaces (if the
 workspace has tabs--some don't).  
 Here is an example of these two tables:
@@ -805,11 +805,11 @@ You can then control Ginga from the {\tt grc\.py} program located in the
 This chapter explains the secret inner workings of Ginga and its widgets
 so that you can subclass them and use them in your own applications.
 
-\bf{TBD}
+\emph{TBD}
 
 \section{Architecture}
 
-\bf{TBD}
+\emph{TBD}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \appendix    %>>>> this command starts appendixes
@@ -833,6 +833,7 @@ Equals, Plus ({\tt =+}) & Zoom in \\
 Middle (scroll) button drag & Pan image freely (when zoomed in) \\
 {\tt p} & Set pan position for zooming \\
 Shift + Left click & Set pan position for zooming \\
+{\tt c} & Set pan position to the center of the image \\
 {\tt q} & Pan image freely (when zoomed in); move mouse (no button press); left click to terminate) \\
 Ctrl + Left drag & Proportional pan (press and drag left mouse button) \\
 apostrophe ({\tt '}) & Set autozoom for new images to {\em override} \\
@@ -862,16 +863,18 @@ Right bracket ({\tt ]}) & Flip image in Y \\
 Right brace ({\tt \textbraceright{}}) & Restore image in Y \\
 Backslash ({\tt \textbackslash{}}) & Swap X and Y axes \\
 Vertical bar ({\tt \textbar{}}) & Restore X and Y axes \\
+{\tt r} & Interactive rotate (with left mouse button) \\
+{\tt R} & Restore rotation to 0 degrees \\
 \end{tabularx}
 
 \subsection{Tab Navigation}
 \begin{tabularx}{\textwidth}{lX}
-{\tt i} & Raise Info tab \\
-{\tt h} & Raise Header tab \\
-{\tt z} & Raise Zoom tab \\
-{\tt d} & Raise Dialogs tab \\
-{\tt t} & Raise Thumbs tab \\
-{\tt c} & Raise Contents tab \\
+{\tt I} & Raise Info tab \\
+{\tt H} & Raise Header tab \\
+{\tt Z} & Raise Zoom tab \\
+{\tt D} & Raise Dialogs tab \\
+{\tt T} & Raise Thumbs tab \\
+{\tt C} & Raise Contents tab \\
 {\tt ?} & Raise Help tab \\
 \end{tabularx}
 

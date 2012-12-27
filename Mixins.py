@@ -2,7 +2,7 @@
 # Mixins.py -- Mixin classes for FITS viewer.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Wed Dec 19 15:00:29 HST 2012
+#  Last edit: Wed Dec 26 16:44:45 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -121,8 +121,8 @@ class FitsImageZoomMixin(object):
 
         # For panning
         self._pantype = 1
-        self._start_x = 0
-        self._start_y = 0
+        self._start_x = None
+        self._start_y = None
         self._start_panx = 0
         self._start_pany = 0
         self.t_autopanset = False
@@ -341,7 +341,7 @@ class FitsImageZoomMixin(object):
 
         if button & 0x1:
             if self._ispanning:
-                self.pan_set_origin(x, y)
+                self.pan_set_origin(x, y, data_x, data_y)
                 return True
             elif self._ischgcmap:
                 self._start_x = x
@@ -359,7 +359,7 @@ class FitsImageZoomMixin(object):
                 self._panset(data_x, data_y, redraw=False)
                 #return True
             elif button == 0x11:
-                self.pan_set_origin(x, y)
+                self.pan_set_origin(x, y, data_x, data_y)
                 self.pan_start(ptype=2)
                 return True
 
@@ -368,7 +368,7 @@ class FitsImageZoomMixin(object):
                 if self.canzoom and self.canpan:
                     ptype = 1
                     if self.isshiftdown:
-                        self.pan_set_origin(x, y)
+                        self.pan_set_origin(x, y, data_x, data_y)
                         ptype = 2
                     self.pan_start(ptype=ptype)
                     return True
@@ -505,10 +505,12 @@ class FitsImageZoomMixin(object):
 
     def get_new_pan(self, win_x, win_y, ptype=1):
 
-        dat_wd, dat_ht = self.get_data_size()
-        win_wd, win_ht = self.get_window_size()
-
         if ptype == 1:
+            # This is a "free pan", similar to dragging the canvas
+            # under the "lens" or "viewport".
+            dat_wd, dat_ht = self.get_data_size()
+            win_wd, win_ht = self.get_window_size()
+
             if (win_x >= win_wd):
                 win_x = win_wd - 1
             if (win_y >= win_ht):
@@ -516,8 +518,12 @@ class FitsImageZoomMixin(object):
 
             # Figure out data x,y based on percentage of X axis
             # and Y axis
-            panx = float(win_x) / float(win_wd - 1)
-            pany = 1.0 - (float(win_y) / float(win_ht - 1))
+            off_x, off_y = self.canvas2offset(win_x, win_y)
+            max_x, max_y = self.canvas2offset(win_wd, win_ht)
+            wd_x = abs(max_x) * 2.0
+            ht_y = abs(max_y) * 2.0
+            panx = (off_x + abs(max_x)) / float(wd_x)
+            pany = (off_y + abs(max_y)) / float(ht_y)
 
             # Account for user preference
             if self.get_pan_reverse():
@@ -528,25 +534,20 @@ class FitsImageZoomMixin(object):
             return data_x, data_y
 
         elif ptype == 2:
-
-            if self._start_x == 0:
+            # This is a "porportional pan", similar to dragging the canvas
+            # under the "lens" or "viewport".
+            if self._start_x == None:
                 # user has not held the mouse button yet
                 # return current pan values
-                return self.get_pan()
+                return (self._start_panx, self._start_pany)
 
-            # NEW PAN 2 METHOD
-            delta_x = self._start_x - win_x
-            delta_y = win_y - self._start_y
+            scale_x, scale_y = self.get_scale_xy()
+            off_x, off_y = self.canvas2offset(win_x, win_y)
+            delta_x = (self._start_x - off_x) * scale_x
+            delta_y = (self._start_y - off_y) * scale_y
             
-            pxwd, pxht = self.get_scaling_info()
-            ## panx = min(1.0, max(0.0, float(self._start_src_x + delta_x) /
-            ##                     float(pxwd)))
-            ## pany = min(1.0, max(0.0, float(self._start_src_y + delta_y) /
-            ##                     float(pxht)))
-            panx = float(self._start_panx + delta_x) / float(pxwd)
-            pany = float(self._start_pany + delta_y) / float(pxht)
-
-            data_x, data_y = panx * dat_wd, pany * dat_ht
+            data_x = self._start_panx + delta_x
+            data_y = self._start_pany + delta_y
             
         return (data_x, data_y)
 
@@ -642,15 +643,14 @@ class FitsImageZoomMixin(object):
         self.switch_cursor('pan')
         self._ispanning = True
         
-    def pan_set_origin(self, win_x, win_y):
-        self._start_panx, self._start_pany = self.get_pan()
-        self._start_x = win_x
-        self._start_y = win_y
+    def pan_set_origin(self, win_x, win_y, data_x, data_y):
+        self._start_x, self._start_y = self.canvas2offset(win_x, win_y)
+        self._start_panx, self._start_pany = data_x, data_y
         
     def pan_stop(self):
         self._ispanning = False
         self.reset_kbdmouse_mask(0x1000)
-        self._start_x = 0
+        self._start_x = None
         self._pantype = 1
         self.to_default_mode()
         

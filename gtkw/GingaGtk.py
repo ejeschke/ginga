@@ -2,7 +2,7 @@
 # GingaGtk.py -- Gtk display handler for the Ginga FITS tool.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Thu Dec 20 10:17:31 HST 2012
+#  Last edit: Thu Dec 27 11:59:07 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -334,7 +334,6 @@ class GingaView(GtkMain.GtkMain):
         rgbmap = fi.get_rgbmap()
         rgbmap.add_callback('changed', self.rgbmap_cb, fi)
         fi.set_bg(0.2, 0.2, 0.2)
-        #fi.set_bg(0.0, 0.0, 0.0)
         return fi
 
     def add_viewer(self, name, cm, im, use_readout=True, workspace=None):

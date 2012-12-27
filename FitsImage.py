@@ -2,7 +2,7 @@
 # FitsImage.py -- abstract classes for the display of FITS files
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Mon Dec 24 17:17:56 HST 2012
+#  Last edit: Thu Dec 27 11:53:05 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -118,8 +118,6 @@ class FitsImageBase(Callback.Callbacks):
         self._flipY = False
         self._invertY = True
 
-        self._pxwd = 0
-        self._pxht = 0
         # Origin in the data array of what is currently displayed (LL, UR)
         self._org_x1 = 0
         self._org_y1 = 0
@@ -132,8 +130,13 @@ class FitsImageBase(Callback.Callbacks):
         self._off_x = 0
         self._off_y = 0
 
+        # desired scale factors
         self._scale_x = 1.0
         self._scale_y = 1.0
+        # actual scale factors produced from desired ones
+        self._org_scale_x = 0
+        self._org_scale_y = 0
+        # desired rotation angle
         self._rot_deg = 0.0
 
         self._cutout = None
@@ -156,7 +159,7 @@ class FitsImageBase(Callback.Callbacks):
         self._ctr_x = width // 2
         self._ctr_y = height // 2
         self._imgwin_set = True
-        self.logger.debug("image resized to %dx%d" % (width, height))
+        self.logger.info("image resized to %dx%d" % (width, height))
 
         self.make_callback('configure', width, height)
         if redraw:
@@ -212,6 +215,11 @@ class FitsImageBase(Callback.Callbacks):
 
         self._invertY = isinstance(image, AstroImage.AstroImage)
             
+        # Set pan position to middle of the image initially
+        width, height = image.get_size()
+        self._pan_x = float(width) / 2.0
+        self._pan_y = float(height) / 2.0
+        
         if self.t_autoscale != 'off':
             self.zoom_fit(redraw=False, no_reset=True)
         if self.t_autolevels != 'off':
@@ -221,11 +229,6 @@ class FitsImageBase(Callback.Callbacks):
             self.redraw()
 
         data = image.get_data()
-        # Set pan position to middle of the image initially
-        width, height = image.get_size()
-        self._pan_x = float(width) / 2.0
-        self._pan_y = float(height) / 2.0
-        
         self.make_callback('data-set', data)
         self.make_callback('image-set', image)
 
@@ -277,7 +280,6 @@ class FitsImageBase(Callback.Callbacks):
 
     def redraw_data(self, whence=0):
         rgbobj = self.get_rgb_object(whence=whence)
-        print "dst_x,dst_y=%d,%d" % (self._dst_x, self._dst_y)
         self.render_image(rgbobj, self._dst_x, self._dst_y)
         if whence <= 0:
             self.make_callback('pan-set')
@@ -292,9 +294,6 @@ class FitsImageBase(Callback.Callbacks):
         x1, y1, x2, y2 = self._org_x1, self._org_y1, self._org_x2, self._org_y2
         return (x1, y1, x2, y2)
 
-    def get_scaling_info(self):
-        return (self._pxwd, self._pxht)
-    
     def get_canpan(self):
         return self.canpan
     
@@ -349,61 +348,30 @@ class FitsImageBase(Callback.Callbacks):
     def get_scaled_cutout(self, image, scale_x, scale_y,
                           pan_x, pan_y, win_wd, win_ht):
 
-        width, height = image.get_size()
-
-        # pxwd, pxht: calculated width and height of a full (unrealized)
-        # image zoomed (scaled) to the desired setting.  This could be
-        # smaller or larger than the actual window.
-        pxwd = int(width * scale_x)
-        pxht = int(height * scale_y)
-        self._pxwd = pxwd
-        self._pxht = pxht
-
-        # calculate difference from actual window dimensions
-        diff_wd = win_wd - pxwd
-        diff_ht = win_ht - pxht
+        # It is necessary to store these so that the get_data_xy()
+        # (below) calculations can proceed, later these values may
+        # refined slightly by the dimensions of the actual cutout
+        self._org_x, self._org_y = pan_x, pan_y
+        self._org_scale_x, self._org_scale_y = scale_x, scale_y
 
         # calc minimum size of pixel image we will generate
         # necessary to fit the window in the desired size
-        ctr_x, ctr_y = self._ctr_x, self._ctr_y
-        min_wd, min_ht = win_wd, win_ht
-        # This is a speed optomization: don't generate extra large image
-        # if we won't be rotating it.
-        if self._rot_deg != 0:
-            # TODO: find optimal (minimum) expansion factor if rotating
-            factor = 2
-            min_wd, min_ht = int(win_wd * factor), int(win_ht * factor)
-        dst_wd = min(pxwd, min_wd)
-        dst_ht = min(pxht, min_ht)
 
-        iscale_x = 1.0/scale_x
-        iscale_y = 1.0/scale_y
+        # get the data points in the four corners
+        xul, yul = self.get_data_xy(0, 0)
+        xur, yur = self.get_data_xy(win_wd, 0)
+        xlr, ylr = self.get_data_xy(win_wd, win_ht)
+        xll, yll = self.get_data_xy(0, win_ht)
 
-        # Calculate optimal data cutout necessary to achieve this coverage
-        if self._rot_deg != 0:
-            #hwd = dst_wd // 2
-            #hht = dst_ht // 2
-            hwd = dst_wd
-            hht = dst_ht
-
-            a1 = pan_x - (hwd * iscale_x)
-            b1 = pan_y - (hht * iscale_y)
-            a2 = pan_x + (hwd * iscale_x)
-            b2 = pan_y + (hht * iscale_y)
-        else:
-            # (Optomization for a non-rotated image)
-            # First, calculate the minimum visible margin
-            panx_lm = min(pan_x * scale_x, ctr_x)
-            panx_rm = min((width - pan_x) * scale_x, ctr_x)
-            pany_bm = min(pan_y * scale_y, ctr_y)
-            pany_um = min((height - pan_y) * scale_y, ctr_y)
-            # scale these to the data space coords
-            a1 = pan_x - (panx_lm * iscale_x)
-            b1 = pan_y - (pany_bm * iscale_y)
-            a2 = pan_x + (panx_rm * iscale_x)
-            b2 = pan_y + (pany_um * iscale_y)
-
+        # determine bounding box
+        a1 = min(xul, xur, xlr, xll)
+        b1 = min(yul, yur, ylr, yll)
+        a2 = max(xul, xur, xlr, xll)
+        b2 = max(yul, yur, ylr, yll)
+        
         # constrain to image dimensions and integer indexes
+        width, height = image.get_size()
+
         x1, y1, x2, y2 = int(a1), int(b1), int(round(a2)), int(round(b2))
         x1 = max(0, x1)
         y1 = max(0, y1)
@@ -412,8 +380,6 @@ class FitsImageBase(Callback.Callbacks):
 
         # distance from start of cutout data to pan position
         xo, yo = pan_x - x1, pan_y - y1
-        self._org_x = pan_x
-        self._org_y = pan_y
 
         self.logger.info("approx area covered is %dx%d to %dx%d" % (
             x1, y1, x2, y2))
@@ -425,36 +391,35 @@ class FitsImageBase(Callback.Callbacks):
         # Cut out data and scale it appropriately
         res = image.get_scaled_cutout(x1, y1, x2, y2, scale_x, scale_y)
         data = res.data
-        self._org_scale_x = res.scale_x
-        self._org_scale_y = res.scale_y
+        # actual cutout may have changed scaling slightly
+        self._org_scale_x, self._org_scale_y = res.scale_x, res.scale_y
             
         # calculate dimensions of scaled cutout
         wd, ht = self.get_dims(data)
         ocx = int(xo * res.scale_x)
         ocy = int(yo * res.scale_y)
-        self.logger.info("ocx,ocy=%d,%d cutout=%dx%d render=%dx%d" % (
-            ocx, ocy, wd, ht, dst_wd, dst_ht))
+        self.logger.info("ocx,ocy=%d,%d cutout=%dx%d win=%dx%d" % (
+            ocx, ocy, wd, ht, win_wd, win_ht))
         ## assert (0 <= ocx) and (ocx < wd) and (0 <= ocy) and (ocy < ht), \
         ##     FitsImageError("calculated center not in cutout!")
         if not ((0 <= ocx) and (ocx < wd) and (0 <= ocy) and (ocy < ht)):
             self.logger.warn("calculated center (%d,%d) not in cutout (%dx%d)" % (
                 ocx, ocy, wd, ht))
         # offset from pan position (at center) in this array
-        self._org_xoff = ocx
-        self._org_yoff = ocy
+        self._org_xoff, self._org_yoff = ocx, ocy
 
+        # If there is no rotation, then we are done
         if not self.t_makebg and (self._rot_deg == 0.0):
             return data
 
-        # Make a square from the cutout, with room to rotate
-        #ocx, ocy = wd // 2, ht // 2
-        # Find center of new data array 
+        # Make a square from the scaled cutout, with room to rotate
         slop = 20
         side = int(math.sqrt(win_wd**2 + win_ht**2) + slop)
         new_wd = new_ht = side
         dims = (new_ht, new_wd) + data.shape[2:]
         # TODO: fill with a different background color?
         newdata = numpy.zeros(dims)
+        # Find center of new data array 
         ncx, ncy = new_wd // 2, new_ht // 2
 
         # Overlay the scaled cutout image on the window image
@@ -464,10 +429,7 @@ class FitsImageBase(Callback.Callbacks):
 
         newdata[ncy-bdy:ncy+tdy, ncx-ldx:ncx+rdx] = \
                                  data[ocy-bdy:ocy+tdy, ocx-ldx:ocx+rdx]
-        ## self._org_xoff = ncx-ldx
-        ## self._org_yoff = ncy-bdy
-        self._org_xoff = ncx
-        self._org_yoff = ncy
+        self._org_xoff, self._org_yoff = ncx, ncy
         return newdata
 
 
@@ -526,48 +488,14 @@ class FitsImageBase(Callback.Callbacks):
             split2_time - split_time, split2_time - start_time))
 
         ## assert (wd >= win_wd) and (ht >= win_ht), \
-        ##        FitsImageError("cutout is %dx%d  render=%dx%d" % (
+        ##        FitsImageError("scaled cutout is %dx%d  window=%dx%d" % (
         ##     wd, ht, win_wd, win_ht))
 
-        ## diff_wd = win_wd - wd
-        ## diff_ht = win_ht - ht
-        ## # calculate destination origin for drawing (TODO: deprecate)
-        ## if diff_wd > 0:
-        ##     # image window is wider than the zoom image
-        ##     dst_x = diff_wd // 2
-        ## elif diff_wd <= 0:
-        ##     # image window is narrower than the zoom image
-        ##     dst_x = - min(abs(diff_wd) // 2, win_wd // 2)
-        ## self._dst_x = dst_x
-
-        ## if diff_ht > 0:
-        ##     # image window is taller than the zoom image
-        ##     dst_y = diff_ht // 2
-        ## elif diff_ht <= 0:
-        ##     # image window is shorter than the zoom image
-        ##     dst_y = - min(abs(diff_ht) // 2, win_ht // 2)
-        ## self._dst_y = dst_y
-
-        ## # Record offsets for calculating mapping between screen and data
-        ## # These are the screen locations for self._org_x1 and self._org_y1
-        ## # Note [A]
-        ## fnwd, fnht = self.get_dims(data)
-        ## self._off_x = self._dst_x
-        ## self._off_y = self._imgwin_ht - (self._dst_y + fnht)
-        ## self._off_x += self._org_xoff
-        ## self._off_y += self._org_yoff
-        ## self.logger.debug("off_x=%d off_y=%d" % (self._off_x, self._off_y))
-
-        #org_x, org_y = x1 - 0.5, y2 + 0.5
-        #dst_x, dst_y = self.get_canvas_xy(org_x, org_y)
-        #self._dst_x, self._dst_y = dst_x, dst_y
-
         ctr_x, ctr_y = self._ctr_x, self._ctr_y
-        self._dst_x = ctr_x - xoff
-        self._dst_y = ctr_y - (ht - yoff)
-        print "ctr=%d,%d  off=%d,%d   dst=%d,%d" % (
-            ctr_x, ctr_y, xoff, yoff,
-            self._dst_x, self._dst_y)
+        dst_x, dst_y = ctr_x - xoff, ctr_y - (ht - yoff)
+        self._dst_x, self._dst_y = dst_x, dst_y
+        self.logger.info("ctr=%d,%d off=%d,%d dst=%d,%d cutout=%dx%d window=%d,%d" % (
+            ctr_x, ctr_y, xoff, yoff, dst_x, dst_y, wd, ht, win_wd, win_ht))
         return data
 
     def get_data_xy(self, win_x, win_y, center=True):
@@ -598,8 +526,7 @@ class FitsImageBase(Callback.Callbacks):
         self.logger.debug("data_x=%d data_y=%d" % (data_x, data_y))
         return (data_x, data_y)
 
-    def get_canvas_xy(self, data_x, data_y, center=True,
-                      transform=True):
+    def get_canvas_xy(self, data_x, data_y, center=True):
         """Returns the closest x, y coordinates in the graphics space to the
         x, y coordinates in the data.  data_x and data_y can be integer or
         floating point values.
@@ -620,20 +547,18 @@ class FitsImageBase(Callback.Callbacks):
         off_x *= self._org_scale_x
         off_y *= self._org_scale_y
 
-        win_x, win_y = self.offset2canvas(off_x, off_y,
-                                          transform=transform)
+        win_x, win_y = self.offset2canvas(off_x, off_y)
         self.logger.debug("win_x=%d win_y=%d" % (win_x, win_y))
 
         return (win_x, win_y)
         
-    def offset2canvas(self, off_x, off_y, asint=True,
-                      transform=True):
+    def offset2canvas(self, off_x, off_y, asint=True):
 
-        if transform and self._flipX:
+        if self._flipX:
             off_x = - off_x
-        if transform and self._flipY:
+        if self._flipY:
             off_y = - off_y
-        if transform and self._swapXY:
+        if self._swapXY:
             off_x, off_y = off_y, off_x
 
         if self._rot_deg != 0:
@@ -651,7 +576,7 @@ class FitsImageBase(Callback.Callbacks):
         
         return (win_x, win_y)
 
-    def canvas2offset(self, win_x, win_y, transform=True):
+    def canvas2offset(self, win_x, win_y):
         # make relative to center pixel to convert from canvas
         # graphics space to standard X/Y coordinate space
         off_x = win_x - self._ctr_x
@@ -660,11 +585,11 @@ class FitsImageBase(Callback.Callbacks):
         if self._rot_deg != 0:
             off_x, off_y = self._rotate_pt(off_x, off_y, -self._rot_deg)
 
-        if transform and self._swapXY:
+        if self._swapXY:
             off_x, off_y = off_y, off_x
-        if transform and self._flipY:
+        if self._flipY:
             off_y = - off_y
-        if transform and self._flipX:
+        if self._flipX:
             off_x = - off_x
 
         return (off_x, off_y)
@@ -849,6 +774,9 @@ class FitsImageBase(Callback.Callbacks):
         scalefactor = min(self._scale_x, self._scale_y)
         return scalefactor
 
+    def get_scale_xy(self):
+        return (self._scale_x, self._scale_y)
+
     def get_scale_text(self):
         scalefactor = self.get_scale()
         if scalefactor >= 1.0:
@@ -1008,7 +936,7 @@ class FitsImageBase(Callback.Callbacks):
 
         self.make_callback('transform')
         if redraw:
-            self.redraw(whence=0.5)
+            self.redraw(whence=0)
 
     def copy_attributes(self, dst_fi, attrlist, redraw=False):
         """Copy interesting attributes of our configuration to another
