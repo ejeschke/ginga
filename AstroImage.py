@@ -175,6 +175,9 @@ class AstroImage(BaseImage):
         for kwd, val in keyDict.items():
             hdr[kwd.upper()] = val
 
+        # Try to make a wcs object on the header
+        self.wcs.load_header(hdr)
+
     def set_keywords(self, **kwds):
         """Set an item in the fits header, if any."""
         return self.update_keywords(kwds)

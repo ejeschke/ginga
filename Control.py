@@ -2,7 +2,7 @@
 # Control.py -- Controller for the Ginga FITS viewer.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Dec 14 14:30:41 HST 2012
+#  Last edit: Thu Dec 27 15:16:13 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -888,7 +888,7 @@ class GingaControl(Callback.Callbacks):
     def logit(self, text):
         try:
             obj = self.gpmon.getPlugin('Log')
-            obj.log(text)
+            self.gui_do(obj.log, text)
         except:
             pass
             
