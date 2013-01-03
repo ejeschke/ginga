@@ -2,7 +2,7 @@
 # GtkHelp.py -- customized Gtk widgets
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Wed Sep 19 17:20:22 HST 2012
+#  Last edit: Wed Jan  2 14:27:09 HST 2013
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -13,6 +13,7 @@ import gtk
 import gobject
 
 import Bunch
+import Callback
 
 class Workspace(gtk.Layout):
     def __init__(self):
@@ -327,13 +328,18 @@ def combo_box_new_text():
     return combobox
 
 
-class Desktop(object):
+class Desktop(Callback.Callbacks):
 
     def __init__(self):
+        super(Desktop, self).__init__()
+        
         # for tabs
         self.tab = Bunch.caselessDict()
         self.tabcount = 0
         self.notebooks = Bunch.caselessDict()
+
+        for name in ('page-switch', 'page-select'):
+            self.enable_callback(name)
         
     # --- Tab Handling ---
     
@@ -370,7 +376,8 @@ class Desktop(object):
     def get_nb(self, name):
         return self.notebooks[name].nb
         
-    def add_tab(self, tab_w, widget, group, labelname, tabname=None):
+    def add_tab(self, tab_w, widget, group, labelname, tabname=None,
+                data=None):
         self.tabcount += 1
         if not tabname:
             tabname = labelname
@@ -378,10 +385,14 @@ class Desktop(object):
                 tabname = 'tab%d' % self.tabcount
             
         label = gtk.Label(labelname)
-        label.show()
-        tab_w.append_page(widget, label)
-        self.tab[tabname] = Bunch.Bunch(widget=widget, name=labelname,
-                                        tabname=tabname)
+        evbox = gtk.EventBox()
+        evbox.add(label)
+        evbox.show_all()
+        tab_w.append_page(widget, evbox)
+        bnch = Bunch.Bunch(widget=widget, name=labelname,
+                           tabname=tabname, data=data)
+        self.tab[tabname] = bnch
+        evbox.connect("button-press-event", self.select_cb, labelname, data)
         tab_w.set_tab_reorderable(widget, True)
         tab_w.set_tab_detachable(widget, True)
         return tabname
@@ -402,6 +413,9 @@ class Desktop(object):
                 return bnch
         return None
 
+    def select_cb(self, widget, event, name, data):
+        self.make_callback('page-select', name, data)
+        
     def raise_tab(self, tabname):
         nb, page_num = self._find_nb(tabname)
         if nb:
@@ -414,13 +428,18 @@ class Desktop(object):
             del self.tab[tabname]
             return
 
-    ## def highlight_tab(self, tabname, onoff):
-    ##     nb, page_num = self._find_nb(tabname)
-    ##     if nb:
-    ##         widget = self.tab[tabname].widget
-    ##         lbl = nb.get_tab_label(widget)
-    ##         txt = lbl.get_text()
-    ##         lbl.set_text(txt)
+    def highlight_tab(self, tabname, onoff):
+        nb, page_num = self._find_nb(tabname)
+        if nb:
+            widget = self.tab[tabname].widget
+            lbl = nb.get_tab_label(widget)
+            name = self.tab[tabname].name
+            if onoff:
+                lbl.modify_bg(gtk.STATE_NORMAL,
+                              gtk.gdk.color_parse('palegreen'))
+            else:
+                lbl.modify_bg(gtk.STATE_NORMAL,
+                              gtk.gdk.color_parse('grey'))
 
     def detach_page(self, source, widget, x, y, group):
         # Detach page to new top-level workspace
@@ -463,9 +482,10 @@ class Desktop(object):
     def switch_page(self, nbw, gptr, page_num):
         pagew = nbw.get_nth_page(page_num)
         bnch = self._find_tab(pagew)
-        #self.logger.debug("tab switched to %s" % (bnch.name))
+        print("tab switched to %s" % (bnch.name))
         # For now, do nothing.  Eventually this might be used to
         # change the channel
+        self.make_callback('page-switch', bnch.name, bnch.data)
         return False
 
     def make_desktop(self, layout, widgetDict=None):

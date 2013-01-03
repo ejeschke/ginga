@@ -2,7 +2,7 @@
 # GingaGtk.py -- Gtk display handler for the Ginga FITS tool.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Thu Dec 27 11:59:07 HST 2012
+#  Last edit: Wed Jan  2 14:40:21 HST 2013
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -118,7 +118,8 @@ class GingaView(GtkMain.GtkMain):
         self.w.vbox = self.w['main']
         bnch = self.ds.make_nb(name='main', group=1, wstype='nb')
         self.w.mnb = bnch.nb
-        self.w.mnb.connect("switch-page", self.page_switch_cb)
+        self.ds.add_callback("page-select", self.page_switch_cb)
+        #self.w.mnb.connect("switch-page", self.page_switch_cb)
         self.w.vbox.pack_start(bnch.widget, expand=True, fill=True)
         
         # bottom buttons
@@ -256,8 +257,11 @@ class GingaView(GtkMain.GtkMain):
         self.filesel = FileSelection.FileSelection(action=gtk.FILE_CHOOSER_ACTION_OPEN)
         
     def add_statusbar(self):
-        lbl = gtk.Label('')
-        lbl.set_justify(gtk.JUSTIFY_CENTER)
+        ## lbl = gtk.Label('')
+        ## lbl.set_justify(gtk.JUSTIFY_CENTER)
+        lbl = gtk.Statusbar()
+        lbl.set_has_resize_grip(True)
+        self.w.ctx_id = None
         self.w.status = lbl
         self.w.mframe.pack_end(self.w.status, expand=False, fill=True,
                                padding=2)
@@ -361,15 +365,16 @@ class GingaView(GtkMain.GtkMain):
             readout = None
         vbox.show_all()
 
+        bnch = Bunch.Bunch(fitsimage=fi, view=iw, container=vbox,
+                           readout=readout)
+
         # Add a page to the specified notebook
         if not workspace:
             workspace = 'main'
         nb = self.ds.get_nb(workspace)
-        self.ds.add_tab(nb, vbox, 1, name)
+        self.ds.add_tab(nb, vbox, 1, name, data=bnch)
 
         self.update_pending()
-        bnch = Bunch.Bunch(fitsimage=fi, view=iw, container=vbox,
-                           readout=readout)
         return bnch
 
     def build_fullscreen(self):
@@ -509,7 +514,14 @@ class GingaView(GtkMain.GtkMain):
         else:
             s = format % args
 
-        self.w.status.set_text(s)
+        ## self.w.status.set_text(s)
+        try:
+            self.w.status.remove_all(self.w.ctx_id)
+        except:
+            pass
+        self.w.ctx_id = self.w.status.get_context_id('status')
+        self.w.status.push(self.w.ctx_id, s)
+        
         # remove message in about 10 seconds
         if self.statustask:
             gobject.source_remove(self.statustask)
@@ -590,29 +602,21 @@ class GingaView(GtkMain.GtkMain):
         chname = model[index][0]
         return self.start_operation_channel(chname, name, None)
         
-    def page_switch_cb(self, nbw, page, index):
-        self.logger.debug("index switched to %d" % (index))
-        if index >= 0:
-            container = nbw.get_nth_page(index)
-            self.logger.debug("container is %s" % (container))
-
-            # Find the channel that contains this widget
-            chnames = self.get_channelNames()
-            for chname in chnames:
-                chinfo = self.get_channelInfo(chname)
-                if hasattr(chinfo, 'container') and \
-                       (chinfo.container == container):
-                    fitsimage = chinfo.fitsimage
-                    if fitsimage != self.getfocus_fitsimage():
-                        self.logger.debug("Active channel switch to '%s'" % (
-                            chname))
-                        self.change_channel(chname, raisew=False)
-                        # TODO: this is a hack to force the cursor change on the new
-                        # window--make this better
-                        fitsimage.to_default_mode()
+    def page_switch_cb(self, ds, name, data):
+        if data == None:
+            return
+        
+        fitsimage = data.fitsimage
+        if fitsimage != self.getfocus_fitsimage():
+            chname = self.get_channelName(fitsimage)
+            self.logger.debug("Active channel switch to '%s'" % (
+                chname))
+            self.change_channel(chname, raisew=False)
+            # TODO: this is a hack to force the cursor change on the new
+            # window--make this better
+            #fitsimage.to_default_mode()
 
         return True
-
 
 class MyDialog(gtk.Dialog):
     def __init__(self, title=None, flags=None, buttons=None,

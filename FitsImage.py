@@ -2,7 +2,7 @@
 # FitsImage.py -- abstract classes for the display of FITS files
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Thu Dec 27 11:53:05 HST 2012
+#  Last edit: Mon Dec 31 15:26:24 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -556,7 +556,7 @@ class FitsImageBase(Callback.Callbacks):
 
         if self._flipX:
             off_x = - off_x
-        if self._flipY:
+        if self._flipY or (not self._invertY):
             off_y = - off_y
         if self._swapXY:
             off_x, off_y = off_y, off_x
@@ -587,7 +587,7 @@ class FitsImageBase(Callback.Callbacks):
 
         if self._swapXY:
             off_x, off_y = off_y, off_x
-        if self._flipY:
+        if self._flipY or (not self._invertY):
             off_y = - off_y
         if self._flipX:
             off_x = - off_x

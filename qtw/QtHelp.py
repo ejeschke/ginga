@@ -2,7 +2,7 @@
 # QtHelp.py -- customized Qt widgets and convenience functions
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Thu Sep 20 13:10:56 HST 2012
+#  Last edit: Wed Jan  2 14:55:27 HST 2013
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -282,6 +282,18 @@ class Desktop(object):
         widget = self.tab[tabname].widget
         if (nb != None) and (index >= 0):
             nb.setCurrentIndex(index)
+
+    def highlight_tab(self, tabname, onoff):
+        nb, index = self._find_nb(tabname)
+        if nb:
+            widget = self.tab[tabname].widget
+            name = self.tab[tabname].name
+            ## if onoff:
+            ##     widget.modify_bg(gtk.STATE_NORMAL,
+            ##                   gtk.gdk.color_parse('palegreen'))
+            ## else:
+            ##     widget.modify_bg(gtk.STATE_NORMAL,
+            ##                   gtk.gdk.color_parse('grey'))
 
     def remove_tab(self, tabname):
         nb, index = self._find_nb(tabname)

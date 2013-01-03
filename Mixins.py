@@ -2,7 +2,7 @@
 # Mixins.py -- Mixin classes for FITS viewer.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Wed Dec 26 16:44:45 HST 2012
+#  Last edit: Mon Dec 31 15:40:49 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -543,8 +543,8 @@ class FitsImageZoomMixin(object):
 
             scale_x, scale_y = self.get_scale_xy()
             off_x, off_y = self.canvas2offset(win_x, win_y)
-            delta_x = (self._start_x - off_x) * scale_x
-            delta_y = (self._start_y - off_y) * scale_y
+            delta_x = (self._start_x - off_x) / scale_x
+            delta_y = (self._start_y - off_y) / scale_y
             
             data_x = self._start_panx + delta_x
             data_y = self._start_pany + delta_y

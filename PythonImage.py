@@ -2,7 +2,7 @@
 # PythonImage.py -- Abstraction of an generic data image.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Nov 30 13:56:25 HST 2012
+#  Last edit: Mon Dec 31 15:16:43 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -20,7 +20,11 @@ try:
 except ImportError:
     have_pil = False
 
-import scipy.misc.pilutil as pilutil
+try:
+    import scipy.misc.pilutil as pilutil
+    have_pilutil = True
+except ImportError:
+    have_pilutil = False
 
 try:
     # How about color management (ICC profile) support?
@@ -133,12 +137,13 @@ class PythonImage(BaseImage):
         return res
 
     def get_scaled_cutout(self, x1, y1, x2, y2, scale_x, scale_y,
-                          method='basic'):
+                          method='bicubic'):
         if method == 'basic':
             return self.get_scaled_cutout_basic(x1, y1, x2, y2,
-                                                 scale_x, scale_y)
+                                                scale_x, scale_y)
 
-        return self.get_scaled_cutout_pil(x1, y1, x2, y2, dst_wd, dst_ht,
+        return self.get_scaled_cutout_pil(x1, y1, x2, y2,
+                                          scale_x, scale_y,
                                           method=method)
 
 def open_ppm(filepath):

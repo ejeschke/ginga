@@ -2,7 +2,7 @@
 # Control.py -- Controller for the Ginga FITS viewer.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Thu Dec 27 15:16:13 HST 2012
+#  Last edit: Mon Dec 31 14:44:27 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -618,7 +618,8 @@ class GingaControl(Callback.Callbacks):
             oldchname = None
         else:
             oldchname = self.chinfo.name.lower()
-        
+
+        print "1"
         chinfo = self.get_channelInfo(name)
         if name != oldchname:
             with self.lock:
@@ -630,16 +631,24 @@ class GingaControl(Callback.Callbacks):
             # Update the channel control
             self.w.channel.show_text(chinfo.name)
 
+        print "2"
         if name != oldchname:
             # raise tab
             if raisew:
                 self.ds.raise_tab(name)
 
-            ## # Update title bar
-            ## header = image.get_header()
-            ## name = header.get('FRAMEID', 'Noname')
-            self.set_titlebar(chinfo.name)
+            if oldchname != None:
+                self.ds.highlight_tab(oldchname, False)
+            self.ds.highlight_tab(name, True)
 
+            ## # Update title bar
+            title = chinfo.name
+            ## if image != None:
+            ##     name = image.get('name', 'Noname')
+            ##     title += ": %s" % (name)
+            self.set_titlebar(title)
+
+        print "3"
         if image:
             self._switch_image(chinfo, image)
         
@@ -648,9 +657,12 @@ class GingaControl(Callback.Callbacks):
         ##     image = chinfo.datasrc[n]
         ##     self._switch_image(chinfo, image)
             
+        print "4"
         self.make_callback('active-image', chinfo.fitsimage)
 
+        print "5"
         self.update_pending()
+        print "6"
         return True
 
     def has_channel(self, chname):
