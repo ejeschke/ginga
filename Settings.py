@@ -2,7 +2,7 @@
 # Settings.py -- Simple class to manage stateful user preferences.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Thu Oct 18 15:28:21 HST 2012
+#  Last edit: Wed Jan 16 13:55:13 HST 2013
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -40,7 +40,7 @@ class Settings(object):
             d = pickle.load(in_f)
         self.settings[category] = Bunch.Bunch(caseless=True)
         self.settings[category].update(d)
-        print "%s settings are: %s" % (category, str(self.settings[category]))
+        #print "%s settings are: %s" % (category, str(self.settings[category]))
         return self.settings[category]
         
     def save(self, category, filename):
@@ -53,5 +53,8 @@ class Settings(object):
         d.update(self.settings[category])
         with open(path, 'w') as out_f:
             pickle.dump(d, out_f)
-        
+
+    def get_baseFolder(self):
+        return self.folder
+    
 #END

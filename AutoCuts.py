@@ -2,7 +2,7 @@
 # AutoCuts.py -- class for calculating auto cut levels
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Tue Oct 16 12:40:11 HST 2012
+#  Last edit: Wed Jan 16 09:42:12 HST 2013
 #]
 #
 # Copyright (c) 2012, Eric R. Jeschke.  All rights reserved.
@@ -11,6 +11,8 @@
 #
 import numpy
 import time
+
+import Bunch
 
 have_scipy = True
 autocut_methods = ('minmax', 'median', 'histogram', 'stddev')
@@ -113,83 +115,8 @@ class AutoCuts(object):
                 hival = hensa_hi_factor * sdev + mean
                 
             elif method == 'histogram':
-                self.logger.debug("Computing histogram, pct=%.4f numbins=%d" % (
-                pct, numbins))
-                height, width = data.shape[:2]
-                self.logger.debug("Median analysis array is %dx%d" % (
-                    width, height))
-
-                total_px = width * height
-                dsum = numpy.sum(data)
-                if numpy.isnan(dsum) or numpy.isinf(dsum):
-                    # Oh crap, the array has a NaN or Inf value.
-                    # We have to workaround this by making a copy of the array
-                    # and substituting for the problem values, otherwise numpy's
-                    # histogram() cannot handle it
-                    self.logger.warn("NaN's found in data, using workaround for histogram")
-                    data = data.copy()
-                    # TODO: calculate a reasonable replacement value
-                    data[numpy.isinf(data)] = 0.0
-                    minval = numpy.nanmin(data)
-                    maxval = numpy.nanmax(data)
-                    substval = (minval + maxval)/2.0
-                    data[numpy.isnan(data)] = substval
-                    data[numpy.isinf(data)] = substval
-                    ## dsum = numpy.sum(data)
-                    ## if numpy.isnan(dsum) or numpy.isinf(dsum):
-                    ##     print "NaNs STILL PRESENT"
-                    
-                    dist, bins = numpy.histogram(data, bins=numbins,
-                                                 density=False)
-                else:
-                    dist, bins = numpy.histogram(data, bins=numbins,
-                                                 density=False)
-                cutoff = int((float(total_px)*(1.0-pct))/2.0)
-                top = len(dist)-1
-                self.logger.debug("top=%d cutoff=%d" % (top, cutoff))
-                #print "DIST: %s\nBINS: %s" % (str(dist), str(bins))
-
-                # calculate low cutoff
-                cumsum = numpy.cumsum(dist)
-                i = numpy.flatnonzero(cumsum > cutoff)[0]
-                count_px = cumsum[i]
-                if i > 0:
-                    nprev = cumsum[i-1]
-                else:
-                    nprev = 0
-
-                # interpolate between last two low bins
-                val1, val2 = bins[i], bins[i+1]
-                divisor = float(count_px) - float(nprev)
-                if divisor > 0.0:
-                    interp = (float(cutoff)-float(nprev))/ divisor
-                else:
-                    interp = 0.0
-                loval = val1 + ((val2 - val1) * interp)
-                self.logger.debug("loval=%f val1=%f val2=%f interp=%f" % (
-                    loval, val1, val2, interp))
-
-                # calculate high cutoff
-                revdist = dist[::-1]
-                cumsum = numpy.cumsum(revdist)
-                i = numpy.flatnonzero(cumsum > cutoff)[0]
-                count_px = cumsum[i]
-                if i > 0:
-                    nprev = cumsum[i-1]
-                else:
-                    nprev = 0
-                j = top - i
-
-                # interpolate between last two high bins
-                val1, val2 = bins[j], bins[j+1]
-                divisor = float(count_px) - float(nprev)
-                if divisor > 0.0:
-                    interp = (float(cutoff)-float(nprev))/ divisor
-                else:
-                    interp = 0.0
-                hival = val1 + ((val2 - val1) * interp)
-                self.logger.debug("hival=%f val1=%f val2=%f interp=%f" % (
-                    hival, val1, val2, interp))
+                bnch = self.calc_histogram(data, pct=pct, numbins=numbins)
+                loval, hival = bnch.loval, bnch.hival
 
         end_time = time.time()
         self.logger.debug("cut levels calculation time=%.4f" % (
@@ -197,5 +124,90 @@ class AutoCuts(object):
 
         self.logger.debug("lo=%.2f hi=%.2f" % (loval, hival))
         return (loval, hival)
+
+    def calc_histogram(self, data, pct=1.0, numbins=2048):
+        self.logger.debug("Computing histogram, pct=%.4f numbins=%d" % (
+        pct, numbins))
+        height, width = data.shape[:2]
+        self.logger.debug("Median analysis array is %dx%d" % (
+            width, height))
+
+        total_px = width * height
+        dsum = numpy.sum(data)
+        if numpy.isnan(dsum) or numpy.isinf(dsum):
+            # Oh crap, the array has a NaN or Inf value.
+            # We have to workaround this by making a copy of the array
+            # and substituting for the problem values, otherwise numpy's
+            # histogram() cannot handle it
+            self.logger.warn("NaN's found in data, using workaround for histogram")
+            data = data.copy()
+            # TODO: calculate a reasonable replacement value
+            data[numpy.isinf(data)] = 0.0
+            minval = numpy.nanmin(data)
+            maxval = numpy.nanmax(data)
+            substval = (minval + maxval)/2.0
+            data[numpy.isnan(data)] = substval
+            data[numpy.isinf(data)] = substval
+            ## dsum = numpy.sum(data)
+            ## if numpy.isnan(dsum) or numpy.isinf(dsum):
+            ##     print "NaNs STILL PRESENT"
+
+            dist, bins = numpy.histogram(data, bins=numbins,
+                                         density=False)
+        else:
+            dist, bins = numpy.histogram(data, bins=numbins,
+                                         density=False)
+
+        cutoff = int((float(total_px)*(1.0-pct))/2.0)
+        top = len(dist)-1
+        self.logger.debug("top=%d cutoff=%d" % (top, cutoff))
+        #print "DIST: %s\nBINS: %s" % (str(dist), str(bins))
+
+        # calculate low cutoff
+        cumsum = numpy.cumsum(dist)
+        i = numpy.flatnonzero(cumsum > cutoff)[0]
+        count_px = cumsum[i]
+        if i > 0:
+            nprev = cumsum[i-1]
+        else:
+            nprev = 0
+        loidx = i
+
+        # interpolate between last two low bins
+        val1, val2 = bins[i], bins[i+1]
+        divisor = float(count_px) - float(nprev)
+        if divisor > 0.0:
+            interp = (float(cutoff)-float(nprev))/ divisor
+        else:
+            interp = 0.0
+        loval = val1 + ((val2 - val1) * interp)
+        self.logger.debug("loval=%f val1=%f val2=%f interp=%f" % (
+            loval, val1, val2, interp))
+
+        # calculate high cutoff
+        revdist = dist[::-1]
+        cumsum = numpy.cumsum(revdist)
+        i = numpy.flatnonzero(cumsum > cutoff)[0]
+        count_px = cumsum[i]
+        if i > 0:
+            nprev = cumsum[i-1]
+        else:
+            nprev = 0
+        j = top - i
+        hiidx = j+1
+
+        # interpolate between last two high bins
+        val1, val2 = bins[j], bins[j+1]
+        divisor = float(count_px) - float(nprev)
+        if divisor > 0.0:
+            interp = (float(cutoff)-float(nprev))/ divisor
+        else:
+            interp = 0.0
+        hival = val1 + ((val2 - val1) * interp)
+        self.logger.debug("hival=%f val1=%f val2=%f interp=%f" % (
+            hival, val1, val2, interp))
+
+        return Bunch.Bunch(dist=dist, bins=bins, loval=loval, hival=hival,
+                           loidx=loidx, hiidx=hiidx)
 
 # END

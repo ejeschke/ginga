@@ -1,11 +1,9 @@
 #
 # Histogram.py -- Histogram plugin for Ginga fits viewer
 # 
-#[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Jun 22 13:50:28 HST 2012
-#]
+# Eric Jeschke (eric@naoj.org)
 #
-# Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
+# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -30,12 +28,14 @@ class Histogram(GingaPlugin.LocalPlugin):
         canvas.enable_draw(True)
         canvas.set_drawtype('rectangle', color='cyan', linestyle='dash',
                             drawdims=True)
-        canvas.set_callback('draw-event', self.histogram)
+        canvas.set_callback('draw-event', self.draw_cb)
         canvas.set_callback('button-press', self.drag)
         canvas.set_callback('motion', self.drag)
         canvas.set_callback('button-release', self.update)
         canvas.setSurface(self.fitsimage)
         self.canvas = canvas
+
+        fitsimage.set_callback('cut-set', self.cutset_cb)
 
     def build_gui(self, container):
         # Splitter is just to provide a way to size the graph
@@ -63,6 +63,24 @@ class Histogram(GingaPlugin.LocalPlugin):
         w = self.plot.get_widget()
         vbox1.addWidget(w, stretch=1, alignment=QtCore.Qt.AlignTop)
 
+        captions = (('Cut Low', 'xlabel', '@Cut Low', 'entry'),
+                    ('Cut High', 'xlabel', '@Cut High', 'entry', 'Cut Levels', 'button'),
+                    ('Auto Levels', 'button'), 
+                    )
+
+        w, b = QtHelp.build_info(captions)
+        self.w.update(b)
+        b.cut_levels.setToolTip("Set cut levels manually")
+        b.auto_levels.setToolTip("Set cut levels by algorithm")
+        b.cut_low.setToolTip("Set low cut level (press Enter)")
+        b.cut_high.setToolTip("Set high cut level (press Enter)")
+        b.cut_low.returnPressed.connect(self.cut_levels)
+        b.cut_high.returnPressed.connect(self.cut_levels)
+        b.cut_levels.clicked.connect(self.cut_levels)
+        b.auto_levels.clicked.connect(self.auto_levels)
+
+        vbox1.addWidget(w, stretch=0, alignment=QtCore.Qt.AlignLeft)
+
         btns = QtHelp.HBox()
         layout= btns.layout()
         layout.setSpacing(3)
@@ -70,8 +88,11 @@ class Histogram(GingaPlugin.LocalPlugin):
 
         btn = QtGui.QPushButton("Close")
         btn.clicked.connect(lambda w: self.close())
-
         layout.addWidget(btn, stretch=0, alignment=QtCore.Qt.AlignLeft)
+        btn = QtGui.QPushButton("Full Image")
+        btn.clicked.connect(lambda w: self.full_image())
+        layout.addWidget(btn, stretch=0, alignment=QtCore.Qt.AlignLeft)
+
         vbox1.addWidget(btns, stretch=0, alignment=QtCore.Qt.AlignLeft)
 
         vpaned.addWidget(twidget)
@@ -125,6 +146,21 @@ class Histogram(GingaPlugin.LocalPlugin):
             pass
         self.fv.showStatus("")
         
+    def full_image(self):
+        canvas = self.canvas
+        try:
+            canvas.deleteObjectByTag(self.histtag, redraw=False)
+        except:
+            pass
+
+        image = self.fitsimage.get_image()
+        width, height = image.get_size()
+        x1, y1, x2, y2 = 0, 0, width-1, height-1
+        tag = canvas.add(CanvasTypes.Rectangle(x1, y1, x2, y2,
+                                               color='cyan',
+                                               linestyle='dash'))
+        self.draw_cb(canvas, tag)
+        
     def redo(self):
         obj = self.canvas.getObjectByTag(self.histtag)
         if obj.kind != 'compound':
@@ -132,12 +168,44 @@ class Histogram(GingaPlugin.LocalPlugin):
         bbox = obj.objects[0]
         
         # Do histogram on the points within the rect
-        y, x = self.fitsimage.histogram(int(bbox.x1), int(bbox.y1),
-                                        int(bbox.x2), int(bbox.y2))
-        x = x[:-1]
+        image = self.fitsimage.get_image()
         self.plot.clear()
-        self.plot.plot(x, y, xtitle="Pixel value", ytitle="Number",
-                           title="Pixel Value Distribution")
+
+        depth = image.get_depth()
+        if depth != 3:
+            res = image.histogram(int(bbox.x1), int(bbox.y1),
+                                  int(bbox.x2), int(bbox.y2),
+                                  numbins=2048)
+            y, x = res.dist, res.bins
+            ymax = y.max()
+            x = x[:-1]
+            self.plot.plot(x, y, xtitle="Pixel value", ytitle="Number",
+                           title="Pixel Value Distribution",
+                           color='blue', alpha=1.0)
+        else:
+            colors = ('red', 'green', 'blue')
+            ymax = 0
+            for z in xrange(depth):
+                res = image.histogram(int(bbox.x1), int(bbox.y1),
+                                      int(bbox.x2), int(bbox.y2),
+                                      z=z, numbins=2048)
+                y, x = res.dist, res.bins
+                ymax = max(ymax, y.max())
+                x = x[:-1]
+                self.plot.plot(x, y, xtitle="Pixel value", ytitle="Number",
+                               title="Pixel Value Distribution",
+                               color=colors[z], alpha=0.33)
+
+        # show cut levels
+        loval, hival = self.fitsimage.get_cut_levels()
+        self.loline = self.plot.ax.axvline(loval, 0.0, 0.99,
+                                           linestyle='-', color='black')
+        self.hiline = self.plot.ax.axvline(hival, 0.0, 0.99,
+                                            linestyle='-', color='black')
+        self.w.cut_low.setText(str(loval))
+        self.w.cut_high.setText(str(hival))
+        self.plot.fig.canvas.draw()
+
         self.fv.showStatus("Click or drag left mouse button to move region")
         return True
     
@@ -176,7 +244,7 @@ class Histogram(GingaPlugin.LocalPlugin):
                                                color='cyan',
                                                linestyle='dash'))
 
-        self.histogram(canvas, tag)
+        self.draw_cb(canvas, tag)
 
     def drag(self, canvas, button, data_x, data_y):
         if not (button == 0x1):
@@ -218,7 +286,7 @@ class Histogram(GingaPlugin.LocalPlugin):
             canvas.redraw(whence=3)
 
     
-    def histogram(self, canvas, tag):
+    def draw_cb(self, canvas, tag):
         obj = canvas.getObjectByTag(tag)
         if obj.kind != 'rectangle':
             return True
@@ -239,6 +307,31 @@ class Histogram(GingaPlugin.LocalPlugin):
 
         return self.redo()
     
+    def cut_levels(self):
+        try:
+            loval = float(self.w.cut_low.text())
+            hival = float(self.w.cut_high.text())
+
+            return self.fitsimage.cut_levels(loval, hival)
+        except Exception, e:
+            self.fv.showStatus("Error cutting levels: %s" % (str(e)))
+            
+        return True
+
+    def auto_levels(self):
+        self.fitsimage.auto_levels()
+
+    def cutset_cb(self, fitsimage, loval, hival):
+        self.loline.remove()
+        self.hiline.remove()
+        self.loline = self.plot.ax.axvline(loval, 0.0, 0.99,
+                                           linestyle='-', color='black')
+        self.hiline = self.plot.ax.axvline(hival, 0.0, 0.99,
+                                            linestyle='-', color='black')
+        self.w.cut_low.setText(str(loval))
+        self.w.cut_high.setText(str(hival))
+        self.plot.fig.canvas.draw()
+        
     def __str__(self):
         return 'histogram'
     

@@ -1,11 +1,9 @@
 #
 # FBrowser.py -- File Browser plugin for fits viewer
 # 
-#[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Mon Nov 26 21:43:04 HST 2012
-#]
+# Eric Jeschke (eric@naoj.org)
 #
-# Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
+# Copyright (c)  Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -92,9 +90,9 @@ class FBrowser(GingaPlugin.LocalPlugin):
         btn = QtGui.QPushButton("Refresh")
         btn.clicked.connect(lambda w: self.refresh())
         layout.addWidget(btn, stretch=0, alignment=QtCore.Qt.AlignLeft)
-        ## btn = QtGui.QPushButton("Make Thumbs")
-        ## btn.clicked.connect(lambda w: self.make_thumbs())
-        ## layout.addWidget(btn, stretch=0, alignment=QtCore.Qt.AlignLeft)
+        btn = QtGui.QPushButton("Make Thumbs")
+        btn.clicked.connect(lambda w: self.make_thumbs())
+        layout.addWidget(btn, stretch=0, alignment=QtCore.Qt.AlignLeft)
 
         vbox.addWidget(btns, stretch=0, alignment=QtCore.Qt.AlignLeft)
 

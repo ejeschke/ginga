@@ -2,7 +2,7 @@
 # Pan.py -- Pan plugin for fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Tue Dec  4 14:47:25 HST 2012
+#  Last edit: Mon Jan 14 00:37:34 HST 2013
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -45,6 +45,7 @@ class Pan(GingaPlugin.GlobalPlugin):
         sfi.enable_autoscale('on')
         sfi.set_autoscale_limits(-200, 100)
         sfi.set_zoom_limits(-200, 100)
+        sfi.enable_pan(False)
         sfi.enable_zoom(False)
         sfi.enable_autolevels('off')
         sfi.enable_draw(True)

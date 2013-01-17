@@ -1,11 +1,9 @@
 #
 # Thumbs.py -- Thumbnail plugin for fits viewer
 # 
-#[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Mon Nov 26 21:43:05 HST 2012
-#]
+# Eric Jeschke (eric@naoj.org)
 #
-# Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
+# Copyright (c)  Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -14,7 +12,8 @@ import GingaPlugin
 
 from PyQt4 import QtGui, QtCore
 import time
-import os.path
+import os
+import hashlib
 
 import Bunch
 
@@ -55,6 +54,11 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         self.thumbSep = 15
         # max length of thumb on the long side
         self.thumbWidth = 150
+        # should we cache thumbs on disk?
+        self.cacheThumbs = False
+        # where the cache is stored
+        settings = self.fv.get_settings()
+        self.thumbDir = os.path.join(settings.get_baseFolder(), 'thumbs')
 
         self.thmbtask = None
         self.lagtime = 4000
@@ -76,6 +80,8 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         tg.configure(200, 200)
         tg.enable_autoscale('on')
         tg.enable_autolevels('on')
+        tg.enable_auto_orient(True)
+        tg.set_zoom_limits(-100, 10)
         tg.set_makebg(False)
         self.thumb_generator = tg
 
@@ -133,6 +139,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
         #self.thumb_generator.set_data(data)
         self.thumb_generator.set_image(image)
+        self.copy_attrs(chinfo.fitsimage)
         imgwin = self.thumb_generator.get_image_as_widget()
 
         self.insert_thumbnail(imgwin, thumbkey, thumbname, chname, name, path,
@@ -218,7 +225,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
 
     def thumbpane_resized(self, width, height):
-        self.logger.debug("rebuilding thumbs width=%d" % (width))
+        self.logger.debug("reordering thumbs width=%d" % (width))
 
         cols = max(1, width // (self.thumbWidth + self.thumbSep))
         if self.thumbNumCols == cols:
@@ -302,12 +309,14 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         #print "added delay task..."
         return True
 
-    def redo_thumbnail(self, fitsimage):
+    def redo_thumbnail(self, fitsimage, save_thumb=None):
         self.logger.debug("redoing thumbnail...")
         # Get the thumbnail image 
         image = fitsimage.get_image()
         if image == None:
             return
+        if save_thumb == None:
+            save_thumb = self.cacheThumbs
         
         chname = self.fv.get_channelName(fitsimage)
 
@@ -342,6 +351,14 @@ class Thumbs(GingaPlugin.GlobalPlugin):
                                   ['transforms', 'cutlevels',
                                    'rgbmap'],
                                   redraw=False)
+
+        # Save a thumbnail for future browsing
+        if save_thumb:
+            thumbpath = self.get_thumbpath(path)
+            if thumbpath != None:
+                self.thumb_generator.save_image_as_file(thumbpath,
+                                                        format='jpeg')
+
         imgwin = self.thumb_generator.get_image_as_widget()
 
         self.logger.debug("generating pixmap.")
@@ -369,10 +386,18 @@ class Thumbs(GingaPlugin.GlobalPlugin):
                 del self.thumbDict[thumbkey]
         self.thumbList = newThumbList
         self.reorder_thumbs()
-        
-    def _make_thumb(self, chname, image, path, thumbkey):
+
+    def _make_thumb(self, chname, image, path, thumbkey,
+                    save_thumb=False):
         # This is called by the make_thumbs() as a gui thread
         self.thumb_generator.set_image(image)
+        # Save a thumbnail for future browsing
+        if save_thumb:
+            thumbpath = self.get_thumbpath(path)
+            if thumbpath != None:
+                self.thumb_generator.save_image_as_file(thumbpath,
+                                                        format='jpeg')
+        
         imgwin = self.thumb_generator.get_image_as_widget()
 
         # Get metadata for mouse-over tooltip
@@ -400,23 +425,68 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             self.logger.info("generating thumb for %s..." % (
                 path))
 
-            # Do we already have this thumb made?
+            # Do we already have this thumb loaded?
             path = os.path.abspath(path)
             thumbkey = (lcname, path)
             if self.thumbDict.has_key(thumbkey):
                 continue
 
+            # Is there a cached thumbnail image on disk we can use?
+            save_thumb = self.cacheThumbs
+            image = None
+            thumbpath = self.get_thumbpath(path)
+            if (thumbpath != None) and os.path.exists(thumbpath):
+                save_thumb = False
+                try:
+                    image = self.fv.load_image(thumbpath)
+                except Exception, e:
+                    pass
+
             try:
-                image = self.fv.load_image(path)
+                if image == None:
+                    image = self.fv.load_image(path)
                 self.fv.gui_do(self._make_thumb, chname, image, path,
-                               thumbkey)
+                               thumbkey, save_thumb=save_thumb)
                 
             except Exception, e:
                 self.logger.error("Error generating thumbnail for '%s': %s" % (
-                    name, str(e)))
+                    path, str(e)))
+                continue
                 # TODO: generate "broken thumb"?
 
 
+    def _gethex(self, s):
+        return hashlib.sha1(s).hexdigest()
+    
+    def get_thumbpath(self, path, makedir=True):
+        path = os.path.abspath(path)
+        dirpath, filename = os.path.split(path)
+        # Get thumb directory
+        thumbdir = os.path.join(self.thumbDir, self._gethex(dirpath))
+        if not os.path.exists(thumbdir):
+            if not makedir:
+                self.logger.error("Thumb directory does not exist: %s" % (
+                    thumbdir))
+                return None
+            
+            try:
+                os.mkdir(thumbdir)
+                # Write meta file
+                metafile = os.path.join(thumbdir, "meta")
+                with open(metafile, 'w') as out_f:
+                    out_f.write("srcdir: %s\n" % (dirpath))
+                    
+            except OSError, e:
+                self.logger.error("Could not make thumb directory '%s': %s" % (
+                    thumbdir, str(e)))
+                return None
+
+        # Get location of thumb
+        modtime = os.stat(path).st_mtime
+        thumbkey = self._gethex("%s.%s" % (filename, modtime))
+        thumbpath = os.path.join(thumbdir, thumbkey + ".jpg")
+        return thumbpath
+                                 
     def __str__(self):
         return 'thumbs'
     

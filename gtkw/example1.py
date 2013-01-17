@@ -3,7 +3,7 @@
 # example1.py -- Simple, configurable FITS viewer.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Jun 22 13:41:33 HST 2012
+#  Last edit: Wed Jan 16 14:58:58 HST 2013
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -44,6 +44,7 @@ class FitsViewer(object):
         fi.enable_zoom('on')
         fi.enable_cuts(True)
         fi.enable_flip(True)
+        fi.enable_rotate(True)
         fi.set_callback('drag-drop', self.drop_file)
         self.fitsimage = fi
 

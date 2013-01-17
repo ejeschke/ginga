@@ -2,7 +2,7 @@
 # GingaQt.py -- Qt display handler for the Ginga FITS tool.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Wed Dec 26 12:26:56 HST 2012
+#  Last edit: Tue Jan 15 16:52:18 HST 2013
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -122,19 +122,12 @@ class GingaView(QtMain.QtMain):
         cbox1.activated.connect(self.channel_select_cb)
         hbox.addWidget(cbox1, stretch=0)
 
-        cbox2 = QtHelp.ComboBox()
-        self.w.operation = cbox2
-        ## index = 0
-        ## for name in self.operations:
-        ##     cbox2.addItem(name, userData=index)
-        ##     index += 1
-        ## cbox2.setCurrentIndex(0)
-        cbox2.setToolTip("Select operation and press Start")
-        hbox.addWidget(cbox2, stretch=0)
-
-        btn = QtGui.QPushButton("Start")
-        btn.setToolTip("Start operation")
-        btn.clicked.connect(self.start_operation_cb)
+        opmenu = QtGui.QMenu()
+        self.w.operation = opmenu
+        btn = QtGui.QPushButton("Operation")
+        btn.clicked.connect(self.invoke_op_cb)
+        btn.setToolTip("Invoke operation")
+        self.w.opbtn = btn
         hbox.addWidget(btn, stretch=0)
 
         w = QtGui.QWidget()
@@ -204,6 +197,13 @@ class GingaView(QtMain.QtMain):
         item.triggered.connect(self.gui_delete_channel)
         chmenu.addAction(item)
 
+        # create a Window pulldown menu, and add it to the menu bar
+        winmenu = menubar.addMenu("Window")
+
+        item = QtGui.QAction(QtCore.QString("New Workspace"), menubar)
+        item.triggered.connect(self.gui_add_ws)
+        winmenu.addAction(item)
+        
         # create a Option pulldown menu, and add it to the menu bar
         ## optionmenu = menubar.addMenu("Option")
 
@@ -294,8 +294,10 @@ class GingaView(QtMain.QtMain):
         self.w.fscreen = root
 
     def add_operation(self, title):
-        cbox = self.w.operation
-        cbox.addItem(title)
+        opmenu = self.w.operation
+        item = QtGui.QAction(QtCore.QString(title), opmenu)
+        item.triggered.connect(lambda: self.start_operation_cb(title))
+        opmenu.addAction(item)
         self.operations.append(title)
         
     ####################################################
@@ -372,6 +374,7 @@ class GingaView(QtMain.QtMain):
         fi.enable_rotate(True)
         fi.enable_flip(True)
         fi.enable_draw(False)
+        fi.enable_auto_orient(True)
         fi.set_cmap(cm, redraw=False)
         fi.set_imap(im, redraw=False)
         fi.add_callback('motion', self.motion_cb)
@@ -509,6 +512,11 @@ class GingaView(QtMain.QtMain):
         layout.addWidget(lbl, stretch=0)
         dialog.show()
         
+    def gui_add_ws(self):
+        width, height = 700, 800
+        self.ds.create_toplevel_ws(width, height)
+        return True
+        
     def gui_load_file(self, initialdir=None):
         if self.filesel.exec_():
             fileNames = map(str, list(self.filesel.selectedFiles()))
@@ -613,9 +621,11 @@ class GingaView(QtMain.QtMain):
         self.delete_channel(chname)
         return True
         
-    def start_operation_cb(self):
-        index = self.w.operation.currentIndex()
-        name = self.operations[index]
+    def invoke_op_cb(self):
+        menu = self.w.operation
+        menu.popup(self.w.opbtn.mapToGlobal(QtCore.QPoint(0,0)))
+        
+    def start_operation_cb(self, name):
         index = self.w.channel.currentIndex()
         chname = str(self.w.channel.itemText(index))
         return self.start_operation_channel(chname, name, None)

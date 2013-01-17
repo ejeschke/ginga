@@ -1,11 +1,9 @@
 #
 # Plot.py -- Plotting function for Gen2 FITS viewer.
 #
-#[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Jun 22 13:41:33 HST 2012
-#]
+# Eric Jeschke (eric@naoj.org)
 #
-# Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
+# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -91,13 +89,15 @@ class Plot(Callback.Callbacks):
         self.fig.canvas.draw()
 
     def plot(self, xarr, yarr, xtitle=None, ytitle=None, title=None,
-             rtitle=None, color=None):
+             rtitle=None, color=None, alpha=0.0):
         self.set_titles(xtitle=xtitle, ytitle=ytitle, title=title,
                         rtitle=rtitle)
         if not color:
-            self.ax.plot(xarr, yarr, linewidth=1.0)
+            self.ax.plot(xarr, yarr, linewidth=1.0, alpha=alpha,
+                         linestyle='-')
         else:
-            self.ax.plot(xarr, yarr, linewidth=1.0, color=color)
+            self.ax.plot(xarr, yarr, linewidth=1.0, color=color,
+                         alpha=alpha, linestyle='-')
         self.ax.grid(True)
         self._draw()
         

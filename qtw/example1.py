@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Jun 22 13:48:15 HST 2012
+#  Last edit: Wed Jan 16 15:02:33 HST 2013
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -34,7 +34,9 @@ class FitsViewer(QtGui.QMainWindow):
         fi.enable_zoom('on')
         fi.enable_cuts(True)
         fi.enable_flip(True)
+        fi.enable_rotate(True)
         fi.set_callback('drag-drop', self.drop_file)
+        fi.set_bg(0.2, 0.2, 0.2)
         self.fitsimage = fi
 
         w = fi.get_widget()

@@ -3,7 +3,7 @@
 # 
 # Eric Jeschke (eric@naoj.org) 
 #
-# Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
+# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -219,6 +219,10 @@ class FitsImageQt(FitsImage.FitsImageBase):
         arr = numpy.dstack((rgbobj.r, rgbobj.g, rgbobj.b))
         image = self._get_qimage(arr)
         return image
+    
+    def save_image_as_file(self, filepath, format='png', quality=90):
+        qimage = self.get_image_as_widget()
+        res = qimage.save(filepath, format=format, quality=quality)
     
     def redraw(self, whence=0):
         if not self.defer_redraw:

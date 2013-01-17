@@ -1,11 +1,9 @@
 #
 # GingaGtk.py -- Gtk display handler for the Ginga FITS tool.
 #
-#[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Wed Jan  2 14:40:21 HST 2013
-#]
+# Eric Jeschke (eric@naoj.org)
 #
-# Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
+# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -131,19 +129,11 @@ class GingaView(GtkMain.GtkMain):
         cbox.connect("changed", self.channel_select_cb)
         hbox.pack_start(cbox, fill=False, expand=False, padding=4)
 
-        cbox = GtkHelp.combo_box_new_text()
-        self.w.operation = cbox
-        ## index = 0
-        ## for name in self.operations:
-        ##     cbox.insert_text(index, name)
-        ##     index += 1
-        ## cbox.set_active(0)
-        self.w.tooltips.set_tip(cbox, "Select operation and press Start")
-        hbox.pack_start(cbox, fill=False, expand=False, padding=4)
-
-        btn = gtk.Button("Start")
-        self.w.tooltips.set_tip(btn, "Start operation")
-        btn.connect("clicked", lambda w: self.start_operation_cb())
+        opmenu = gtk.Menu()
+        self.w.operation = opmenu
+        btn = gtk.Button("Operation")
+        btn.connect('button-press-event', self.invoke_op_cb)
+        self.w.tooltips.set_tip(btn, "Invoke operation")
         hbox.pack_start(btn, fill=False, expand=False, padding=2)
 
         self.w.optray = gtk.HBox()
@@ -234,6 +224,17 @@ class GingaView(GtkMain.GtkMain):
         chmenu.append(w)
         w.connect("activate", lambda w: self.gui_delete_channel())
 
+        # create a Window pulldown menu, and add it to the menu bar
+        winmenu = gtk.Menu()
+        item = gtk.MenuItem(label="Window")
+        menubar.append(item)
+        item.show()
+        item.set_submenu(winmenu)
+
+        w = gtk.MenuItem("New Workspace")
+        winmenu.append(w)
+        w.connect("activate", lambda w: self.gui_add_ws())
+
         # create a Option pulldown menu, and add it to the menu bar
         ## optionmenu = gtk.Menu()
         ## item = gtk.MenuItem(label="Option")
@@ -286,11 +287,14 @@ class GingaView(GtkMain.GtkMain):
             self.w.root.unfullscreen()
 
     def add_operation(self, title):
-        cbox = self.w.operation
-        cbox.append_text(title)
-        cbox.set_active(0)
+        menu = self.w.operation
+        item = gtk.MenuItem(label=title)
+        menu.append(item)
+        item.show()
+        item.connect_object ("activate", self.start_operation_cb, title)
         self.operations.append(title)
-        
+
+       
     ####################################################
     # THESE METHODS ARE CALLED FROM OTHER MODULES & OBJECTS
     ####################################################
@@ -327,6 +331,7 @@ class GingaView(GtkMain.GtkMain):
         fi.enable_zoom(True)
         fi.enable_cuts(True)
         fi.enable_flip(True)
+        fi.enable_auto_orient(True)
         fi.enable_rotate(True)
         fi.enable_draw(False)
         fi.set_cmap(cm, redraw=False)
@@ -491,6 +496,11 @@ class GingaView(GtkMain.GtkMain):
         box.pack_start(ent, True, True, 0)
         dialog.show_all()
         
+    def gui_add_ws(self):
+        width, height = 700, 800
+        self.ds.create_toplevel_ws(width, height, group=1)
+        return True
+        
     def gui_delete_channel(self):
         chinfo = self.get_channelInfo()
         chname = chinfo.name
@@ -594,9 +604,12 @@ class GingaView(GtkMain.GtkMain):
         self.delete_channel(chname)
         return True
         
-    def start_operation_cb(self):
-        index = self.w.operation.get_active()
-        name = self.operations[index]
+    def invoke_op_cb(self, button, event):
+        menu = self.w.operation
+        menu.show_all()
+        menu.popup(None, None, None, event.button, event.time)
+        
+    def start_operation_cb(self, name):
         index = self.w.channel.get_active()
         model = self.w.channel.get_model()
         chname = model[index][0]

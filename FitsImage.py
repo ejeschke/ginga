@@ -1,11 +1,9 @@
 #
 # FitsImage.py -- abstract classes for the display of FITS files
 # 
-#[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Mon Dec 31 15:26:24 HST 2012
-#]
+# Eric Jeschke (eric@naoj.org) 
 #
-# Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
+# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -51,7 +49,7 @@ class FitsImageBase(Callback.Callbacks):
         else:
             self.rgbmap = RGBMap.RGBMapper()
             # Set default color map and intensity map
-            cm = cmap.get_cmap('real')
+            cm = cmap.get_cmap('ramp')
             self.rgbmap.set_cmap(cm)
             im = imap.get_imap('ramp')
             self.rgbmap.set_imap(im)
@@ -79,6 +77,7 @@ class FitsImageBase(Callback.Callbacks):
         self.t_autocut_crop_radius = 512
         self.t_use_embedded_profile = True
         self.t_reversepan = False
+        self.t_auto_orient = False
 
         # for zoom levels
         self.autoscale_options = ('on', 'override', 'off')
@@ -92,7 +91,6 @@ class FitsImageBase(Callback.Callbacks):
         self.t_zoom_minauto = -20.0
 
         # for panning
-        self.canpan = True
         self.t_makebg = False
         self.auto_recenter = False
         
@@ -116,6 +114,7 @@ class FitsImageBase(Callback.Callbacks):
         self._swapXY = False
         self._flipX = False
         self._flipY = False
+        # don't change this, really
         self._invertY = True
 
         # Origin in the data array of what is currently displayed (LL, UR)
@@ -144,6 +143,18 @@ class FitsImageBase(Callback.Callbacks):
         self._prergb = None
         self._rgbarr = None
 
+        self.orientMap = {
+            # tag: (flipx, flipy, swapxy)
+            1: (False, False, False),
+            2: (True,  False, False),
+            3: (True,  True,  False),
+            4: (False, True,  False),
+            5: (False, True,  True),
+            6: (False, False, True),
+            7: (True,  True,  True),
+            8: (True,  False, True),
+            }
+        
         # For callbacks
         for name in ('cut-set', 'zoom-set', 'pan-set', 'transform',
                      'rotate', 'image-set', 'data-set', 'configure',
@@ -213,8 +224,6 @@ class FitsImageBase(Callback.Callbacks):
         if (profile != None) and (self.t_use_embedded_profile):
             self.apply_profile(profile, redraw=False)
 
-        self._invertY = isinstance(image, AstroImage.AstroImage)
-            
         # Set pan position to middle of the image initially
         width, height = image.get_size()
         self._pan_x = float(width) / 2.0
@@ -224,6 +233,8 @@ class FitsImageBase(Callback.Callbacks):
             self.zoom_fit(redraw=False, no_reset=True)
         if self.t_autolevels != 'off':
             self.auto_levels(redraw=False)
+        if self.t_auto_orient:
+            self.auto_orient(redraw=False)
 
         if redraw:
             self.redraw()
@@ -294,9 +305,6 @@ class FitsImageBase(Callback.Callbacks):
         x1, y1, x2, y2 = self._org_x1, self._org_y1, self._org_x2, self._org_y2
         return (x1, y1, x2, y2)
 
-    def get_canpan(self):
-        return self.canpan
-    
     def get_rgb_object(self, whence=0):
         """Create an RGB numpy array (NxMx3) representing the data that
         should be rendered at this zoom level and pan settings.
@@ -556,7 +564,7 @@ class FitsImageBase(Callback.Callbacks):
 
         if self._flipX:
             off_x = - off_x
-        if self._flipY or (not self._invertY):
+        if self._flipY:
             off_y = - off_y
         if self._swapXY:
             off_x, off_y = off_y, off_x
@@ -587,7 +595,7 @@ class FitsImageBase(Callback.Callbacks):
 
         if self._swapXY:
             off_x, off_y = off_y, off_x
-        if self._flipY or (not self._invertY):
+        if self._flipY:
             off_y = - off_y
         if self._flipX:
             off_x = - off_x
@@ -942,8 +950,6 @@ class FitsImageBase(Callback.Callbacks):
         """Copy interesting attributes of our configuration to another
         instance of a FitsImage."""
 
-        dst_fi.set_invertY(self._invertY)
-        
         if 'transforms' in attrlist:
             dst_fi.transform(self._flipX, self._flipY, self._swapXY,
                              redraw=False)
@@ -972,9 +978,6 @@ class FitsImageBase(Callback.Callbacks):
     def set_makebg(self, tf):
         self.t_makebg = tf
 
-    def set_invertY(self, tf):
-        self._invertY = tf
-
     def get_rotation(self):
         return self._rot_deg
 
@@ -999,4 +1002,36 @@ class FitsImageBase(Callback.Callbacks):
         bp = (a * sin_t) + (b * cos_t)
         return (ap + xoff, bp + yoff)
 
+    def enable_auto_orient(self, tf):
+        self.t_auto_orient = tf
+        
+    def auto_orient(self, redraw=True):
+        """Set the orientation for the image to a reasonable default.
+        """
+        flipx, flipy, swapxy = False, False, False
+        invertY = not isinstance(self.image, AstroImage.AstroImage)
+
+        # Check for various things to set based on metadata
+        header = self.image.get_header()
+        if header:
+            # Auto-orientation
+            orient = header.get('Orientation', None)
+            if orient:
+                try:
+                    orient = int(orient)
+                    print "setting orientation from %d" % (orient)
+                    flipx, flipy, swapxy = self.orientMap[orient]
+                except Exception, e:
+                    # problems figuring out orientation--let it be
+                    pass
+
+        # Flip vertically for non-astronomical images
+        if invertY:
+            if swapxy:
+                flipx = not flipx
+            else:
+                flipy = not flipy
+
+        self.transform(flipx, flipy, swapxy, redraw=redraw)
+            
 #END

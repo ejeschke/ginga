@@ -2,7 +2,7 @@
 # PythonImage.py -- Abstraction of an generic data image.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Mon Dec 31 15:16:43 HST 2012
+#  Last edit: Sun Jan 13 22:53:48 HST 2013
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.

@@ -2,7 +2,7 @@
 # GtkHelp.py -- customized Gtk widgets
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Wed Jan  2 14:27:09 HST 2013
+#  Last edit: Fri Jan  4 09:35:01 HST 2013
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -441,14 +441,8 @@ class Desktop(Callback.Callbacks):
                 lbl.modify_bg(gtk.STATE_NORMAL,
                               gtk.gdk.color_parse('grey'))
 
-    def detach_page(self, source, widget, x, y, group):
-        # Detach page to new top-level workspace
-        ## page = self.widgetToPage(widget)
-        ## if not page:
-        ##     return None
-        x, y, width, height = widget.get_allocation()
-        
-        ## self.logger.info("detaching page %s" % (page.name))
+    def create_toplevel_ws(self, width, height, group, x=None, y=None):
+        # create top level workspace
         root = gtk.Window(gtk.WINDOW_TOPLEVEL)
         ## root.set_title(title)
         # TODO: this needs to be more sophisticated
@@ -460,16 +454,49 @@ class Desktop(Callback.Callbacks):
         vbox = gtk.VBox()
         root.add(vbox)
 
+        menubar = gtk.MenuBar()
+        vbox.pack_start(menubar, fill=True, expand=False)
+
+        # create a Window pulldown menu, and add it to the menu bar
+        winmenu = gtk.Menu()
+        item = gtk.MenuItem(label="Window")
+        menubar.append(item)
+        item.show()
+        item.set_submenu(winmenu)
+
+        ## w = gtk.MenuItem("Take Tab")
+        ## winmenu.append(w)
+        #w.connect("activate", lambda w: self.gui_take_tab())
+
+        sep = gtk.SeparatorMenuItem()
+        winmenu.append(sep)
+        quit_item = gtk.MenuItem(label="Close")
+        winmenu.append(quit_item)
+        #quit_item.connect_object ("activate", self.quit, "file.exit")
+        quit_item.show()
+
         bnch = self.make_nb(group=group)
         vbox.pack_start(bnch.widget, padding=2, fill=True, expand=True)
         root.connect("delete_event", lambda w, e: self.close_page(bnch, root))
+
+        lbl = gtk.Statusbar()
+        lbl.set_has_resize_grip(True)
+        vbox.pack_end(lbl, expand=False, fill=True, padding=2)
+
         vbox.show_all()
-
-        # create main frame
         root.show_all()
-        if x:
+        if x != None:
             root.move(x, y)
+        return bnch
 
+    def detach_page(self, source, widget, x, y, group):
+        # Detach page to new top-level workspace
+        ## page = self.widgetToPage(widget)
+        ## if not page:
+        ##     return None
+        xo, yo, width, height = widget.get_allocation()
+        
+        bnch = self.create_toplevel_ws(width, height, group, x=x, y=y)
         return bnch.nb
 
     def close_page(self, bnch, root):
@@ -482,10 +509,8 @@ class Desktop(Callback.Callbacks):
     def switch_page(self, nbw, gptr, page_num):
         pagew = nbw.get_nth_page(page_num)
         bnch = self._find_tab(pagew)
-        print("tab switched to %s" % (bnch.name))
-        # For now, do nothing.  Eventually this might be used to
-        # change the channel
-        self.make_callback('page-switch', bnch.name, bnch.data)
+        if bnch != None:
+            self.make_callback('page-switch', bnch.name, bnch.data)
         return False
 
     def make_desktop(self, layout, widgetDict=None):

@@ -2,7 +2,7 @@
 # Mixins.py -- Mixin classes for FITS viewer.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Mon Dec 31 15:40:49 HST 2012
+#  Last edit: Sun Jan 13 23:29:57 HST 2013
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -106,6 +106,7 @@ class FitsImageZoomMixin(object):
 
     def __init__(self):
 
+        self.canpan = True
         self.canzoom = False
         self._ispanning = False
         self.cancut = False
@@ -355,10 +356,10 @@ class FitsImageZoomMixin(object):
                 return True
             elif self.t_autopanset:
                 self._panset(data_x, data_y, redraw=False)
-            elif button == 0x21:
+            elif self.canpan and (button == 0x21):
                 self._panset(data_x, data_y, redraw=False)
                 #return True
-            elif button == 0x11:
+            elif self.canpan and (button == 0x11):
                 self.pan_set_origin(x, y, data_x, data_y)
                 self.pan_start(ptype=2)
                 return True
@@ -653,6 +654,12 @@ class FitsImageZoomMixin(object):
         self._start_x = None
         self._pantype = 1
         self.to_default_mode()
+        
+    # def get_canpan(self):
+    #     return self.canpan
+    
+    def enable_pan(self, tf):
+        self.canpan = tf
         
     def enable_zoom(self, tf):
         self.canzoom = tf

@@ -1,11 +1,9 @@
 #
 # Control.py -- Controller for the Ginga FITS viewer.
 #
-#[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Mon Dec 31 14:44:27 HST 2012
-#]
+# Eric Jeschke (eric@naoj.org)
 #
-# Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
+# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -30,7 +28,7 @@ import Datasrc
 import Callback
 import FitsImage
 
-default_cmap = 'real'
+default_cmap = 'ramp'
 default_imap = 'ramp'
 default_autoscale = 'override'
 default_autolevels = 'on'
@@ -120,6 +118,9 @@ class GingaControl(Callback.Callbacks):
 
     def get_ServerBank(self):
         return self.imgsrv
+
+    def get_settings(self):
+        return self.settings
 
     ####################################################
     # CALLBACKS

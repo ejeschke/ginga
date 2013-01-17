@@ -1,11 +1,9 @@
 #
 # BaseImage.py -- Abstraction of an generic data image.
 #
-#[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Tue Dec 18 13:26:46 HST 2012
-#]
+# Eric Jeschke (eric@naoj.org) 
 #
-# Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
+# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -14,6 +12,7 @@ import numpy
 import logging
 
 import Bunch
+import AutoCuts
 
 class ImageError(Exception):
     pass
@@ -34,6 +33,8 @@ class BaseImage(object):
 
         self._set_minmax()
 
+        self.autocuts = AutoCuts.AutoCuts(self.logger)
+
     @property
     def width(self):
         # NOTE: numpy stores data in column-major layout
@@ -46,6 +47,14 @@ class BaseImage(object):
 
     def get_size(self):
         return (self.width, self.height)
+    
+    def get_depth(self):
+        if len(self.data.shape) > 2:
+            return self.data.shape[2]
+        return 1
+    
+    def get_shape(self):
+        return self.data.shape
     
     def get_data(self):
         return self.data
@@ -297,5 +306,14 @@ class BaseImage(object):
                                                  scale_x, scale_y)
 
         raise ImageError("Method not supported: '%s'" % (method))
+
     
+    def histogram(self, x1, y1, x2, y2, z=None, pct=1.0, numbins=2048):
+        if z != None:
+            data = self.data[y1:y2, x1:x2, z]
+        else:
+            data = self.data[y1:y2, x1:x2]
+
+        return self.autocuts.calc_histogram(data, pct=pct, numbins=numbins)
+
 #END

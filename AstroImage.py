@@ -1,12 +1,10 @@
 #
 # AstroImage.py -- Abstraction of an astronomical data image.
 #
-#[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Tue Dec 18 13:26:48 HST 2012
-#]
+# Eric Jeschke (eric@naoj.org) 
 # Takeshi Inagaki
 #
-# Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
+# Copyright (c)  Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -33,23 +31,14 @@ class AstroImage(BaseImage):
 
     def __init__(self, data_np=None, metadata=None, wcsclass=None,
                  logger=None):
-        if logger != None:
-            self.logger = logger
-        else:
-            self.logger = logging.Logger('AstroImage')
-        if data_np == None:
-            data_np = numpy.zeros((1, 1))
-        self.data = data_np
-        self.metadata = {}
         if not wcsclass:
             wcsclass = wcs.WCS
         self.wcs = wcsclass()
-        if metadata:
-            self.update_metadata(metadata)
 
+        BaseImage.__init__(self, data_np=data_np, metadata=metadata,
+                           logger=logger)
+        
         self.iqcalc = iqcalc.IQCalc(logger=logger)
-
-        self._set_minmax()
 
 
     def load_hdu(self, hdu, fobj=None, naxispath=None):
@@ -97,9 +86,6 @@ class AstroImage(BaseImage):
                     # We need to open a numpy array
                     continue
                 #print "data type is %s" % hdu.data.dtype.kind
-                ## if len(hdu.data.shape) < 2:
-                ##     # Don't know what to make of 1D data
-                ##     continue
                 # Looks good, let's try it
                 found_valid_hdu = True
                 break

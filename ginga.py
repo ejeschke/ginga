@@ -2,12 +2,10 @@
 #
 # ginga.py -- FITS image viewer and tool.
 #
-#[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Thu Sep 13 11:52:20 HST 2012
-#]
+# Eric Jeschke (eric@naoj.org)
 #
 """
-Copyright (c) 2011-2012, Eric R. Jeschke
+Copyright (c) 2011-2013  Eric R. Jeschke
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -140,6 +138,8 @@ def main(options, args):
 
     moduleHome = os.path.split(sys.modules[__name__].__file__)[0]
     childDir = os.path.join(moduleHome, 'misc', 'plugins')
+    sys.path.insert(0, childDir)
+    childDir = os.path.join(basedir, 'plugins')
     sys.path.insert(0, childDir)
 
     # Choose a toolkit
