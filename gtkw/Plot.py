@@ -89,7 +89,7 @@ class Plot(Callback.Callbacks):
         self.fig.canvas.draw()
 
     def plot(self, xarr, yarr, xtitle=None, ytitle=None, title=None,
-             rtitle=None, color=None, alpha=0.0):
+             rtitle=None, color=None, alpha=1.0):
         self.set_titles(xtitle=xtitle, ytitle=ytitle, title=title,
                         rtitle=rtitle)
         if not color:
