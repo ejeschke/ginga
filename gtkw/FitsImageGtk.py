@@ -58,10 +58,12 @@ class FitsImageGtk(FitsImage.FitsImageBase):
         self._defer_lock = threading.RLock()
         self._defer_flag = False
 
-        # For rotation of canvas
-        self.ctr_x = 0.0
-        self.ctr_y = 0.0
+        # # For rotation of canvas
+        # self.ctr_x = 0.0
+        # self.ctr_y = 0.0
         self.cr = None
+
+        self.t_showpanpos = False
         
     def get_widget(self):
         return self.imgwin
@@ -103,6 +105,18 @@ class FitsImageGtk(FitsImage.FitsImageBase):
         ## cr.rectangle(offx, offy, dawd, daht)
         cr.rectangle(dst_x, dst_y, dawd, daht)
         cr.fill()
+
+        # Draw a cross in the center of the window in debug mode
+        if self.t_showpanpos:
+            cr.set_source_rgb(1.0, 0.0, 0.0)
+            cr.set_line_width(1)
+            ctr_x, ctr_y = self.get_center()
+            cr.move_to(ctr_x - 10, ctr_y)
+            cr.line_to(ctr_x + 10, ctr_y)
+            cr.move_to(ctr_x, ctr_y - 10)
+            cr.line_to(ctr_x, ctr_y + 10)
+            cr.close_path()
+            cr.stroke_preserve()
         
         # render self.message
         if self.message:
@@ -325,6 +339,11 @@ class FitsImageGtk(FitsImage.FitsImageBase):
             ms = int(delay * 1000.0)
             self.msgtask = gobject.timeout_add(ms, self.onscreen_message, None)
 
+    def show_pan_mark(self, tf, redraw=True):
+        self.t_showpanpos = tf
+        if redraw:
+            self.redraw(whence=3)
+        
     def pix2canvas(self, x, y):
         x, y = self.cr.device_to_user(x, y)
         return (x, y)

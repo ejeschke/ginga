@@ -2,13 +2,14 @@
 # Preferences.py -- Preferences plugin for fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Thu Dec 13 19:39:32 HST 2012
+#  Last edit: Sat Jan 26 15:27:08 HST 2013
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+import math
 import gtk
 import GtkHelp
 
@@ -16,6 +17,7 @@ import cmap, imap
 import GingaPlugin
 
 import Bunch
+import AutoCuts
 
 
 class Preferences(GingaPlugin.LocalPlugin):
@@ -34,12 +36,27 @@ class Preferences(GingaPlugin.LocalPlugin):
         rgbmap = fitsimage.get_rgbmap()
         self.calg_names = rgbmap.get_hash_algorithms()
         self.calg_names.sort()
-        self.autozoom_options = self.fitsimage.get_autoscale_options()
+        self.autozoom_options = self.fitsimage.get_autozoom_options()
         self.autocut_options = self.fitsimage.get_autolevels_options()
 
         self.fitsimage.add_callback('autocuts', self.autocuts_changed_cb)
         self.fitsimage.add_callback('autozoom', self.autozoom_changed_cb)
+        self.fitsimage.add_callback('pan-set', self.pan_changed_cb)
 
+        self.t_ = self.fitsimage.get_settings()
+        self.t_.getSetting('zoomalg').add_callback('set', self.set_zoomalg_ext_cb)
+        self.t_.getSetting('zoomrate').add_callback('set', self.set_zoomrate_ext_cb)
+        self.t_.getSetting('rot_deg').add_callback('set', self.set_rotate_ext_cb)
+        for name in ('flipx', 'flipy', 'swapxy'):
+            self.t_.getSetting(name).add_callback('set', self.set_transform_ext_cb)
+
+        for name in ('flipx', 'flipy', 'swapxy'):
+            self.t_.getSetting(name).add_callback('set', self.set_transform_ext_cb)
+
+        for name in ('autolevels', 'autocut_method', 'autocut_hist_pct',
+                     'autocut_bins'):
+            self.t_.getSetting(name).add_callback('set', self.set_autolevels_ext_cb)
+            
     def build_gui(self, container):
         sw = gtk.ScrolledWindow()
         sw.set_border_width(2)
@@ -60,13 +77,13 @@ class Preferences(GingaPlugin.LocalPlugin):
 
         captions = (('Colormap', 'combobox', 'Intensity', 'combobox'),
                     ('Algorithm', 'combobox', 'Table Size', 'entry'),
-                    ('Defaults', 'button'))
+                    ('Color Defaults', 'button'))
         w, b = GtkHelp.build_info(captions)
         self.w.cmap_choice = b.colormap
         self.w.imap_choice = b.intensity
         self.w.calg_choice = b.algorithm
         self.w.table_size = b.table_size
-        b.defaults.connect('clicked', lambda w: self.set_default_maps())
+        b.color_defaults.connect('clicked', lambda w: self.set_default_maps())
         self.w.tooltips.set_tip(b.colormap,
                                 "Choose a color map for this image")
         self.w.tooltips.set_tip(b.intensity,
@@ -75,7 +92,7 @@ class Preferences(GingaPlugin.LocalPlugin):
                                 "Choose a color mapping algorithm")
         self.w.tooltips.set_tip(b.table_size,
                                 "Set size of the color mapping table")
-        self.w.tooltips.set_tip(b.defaults,
+        self.w.tooltips.set_tip(b.color_defaults,
                                 "Restore default color and intensity maps")
         fr.add(w)
         vbox.pack_start(fr, padding=4, fill=True, expand=False)
@@ -116,100 +133,100 @@ class Preferences(GingaPlugin.LocalPlugin):
         entry = b.table_size
         entry.connect('activate', self.set_tablesize_cb)
 
-        fr = gtk.Frame("Autozoom")
+        # ZOOM OPTIONS
+        fr = gtk.Frame("Zoom")
         fr.set_shadow_type(gtk.SHADOW_ETCHED_IN)
         fr.set_label_align(0.5, 0.5)
 
-        captions = (('Zoom New', 'combobox'),
-            ('Min Zoom', 'spinbutton', 'Max Zoom', 'spinbutton'))
+        captions = (('Zoom Alg', 'combobox', 'Zoom Rate', 'spinbutton'),
+                    ('Stretch XY', 'combobox', 'Stretch Factor', 'spinbutton'),
+                    ('Zoom Defaults', 'button'))
         w, b = GtkHelp.build_info(captions)
-        self.w.btn_zoom_new = b.zoom_new
-        combobox = b.zoom_new
-        index = 0
-        for name in self.autozoom_options:
-            combobox.insert_text(index, name)
-            index += 1
-        option = self.fitsimage.t_autoscale
-        index = self.autozoom_options.index(option)
-        combobox.set_active(index)
-        combobox.sconnect('changed', self.set_autoscale)
+        self.w.update(b)
 
-        self.w.min_zoom = b.min_zoom
-        self.w.max_zoom = b.max_zoom
-        b.min_zoom.set_range(-20, 20)
-        b.min_zoom.set_increments(1, 10)
-        b.min_zoom.set_numeric(True)
-        b.min_zoom.sconnect('value-changed', lambda w: self.set_zoom_minmax())
-        b.max_zoom.set_range(-20, 20)
-        b.max_zoom.set_increments(1, 10)
-        b.max_zoom.set_numeric(True)
-        b.max_zoom.sconnect('value-changed', lambda w: self.set_zoom_minmax())
-        self.w.tooltips.set_tip(b.zoom_new,
-                                "Automatically fit new images to window")
-        self.w.tooltips.set_tip(b.min_zoom,
-                                "Minimum zoom level for fitting to window")
-        self.w.tooltips.set_tip(b.max_zoom,
-                                "Maximum zoom level for fitting to window")
+        index = 0
+        for name in ('Step', 'Rate'):
+            b.zoom_alg.insert_text(index, name)
+            index += 1
+        b.zoom_alg.set_active(0)
+        self.w.tooltips.set_tip(b.zoom_alg,
+                                "Choose Zoom algorithm")
+        b.zoom_alg.sconnect('changed', lambda w: self.set_zoomalg_cb())
+            
+        index = 0
+        for name in ('X', 'Y'):
+            b.stretch_xy.insert_text(index, name)
+            index += 1
+        b.stretch_xy.set_active(0)
+        self.w.tooltips.set_tip(b.stretch_xy,
+                                "Stretch pixels in X or Y")
+        b.stretch_xy.sconnect('changed', lambda w: self.set_stretch_cb())
+            
+        b.stretch_factor.set_range(1.0, 10.0)
+        b.stretch_factor.set_value(1.0)
+        b.stretch_factor.set_increments(0.01, 0.1)
+        b.stretch_factor.set_digits(5)
+        b.stretch_factor.set_numeric(True)
+        b.stretch_factor.sconnect('value-changed', lambda w: self.set_stretch_cb())
+        self.w.tooltips.set_tip(b.stretch_factor,
+                                "Length of pixel relative to 1 on other side")
+        b.stretch_factor.set_sensitive(False)
+
+        b.zoom_rate.set_range(1.1, 3.0)
+        b.zoom_rate.set_value(math.sqrt(2.0))
+        b.zoom_rate.set_increments(0.1, 0.5)
+        b.zoom_rate.set_digits(5)
+        b.zoom_rate.set_numeric(True)
+        b.zoom_rate.set_sensitive(False)
+        self.w.tooltips.set_tip(b.zoom_rate,
+                                "Step rate of increase/decrease per zoom level")
+        b.zoom_rate.sconnect('value-changed', self.set_zoomrate_cb)
+        b.zoom_defaults.connect('clicked', self.set_zoom_defaults_cb)
+        
         fr.add(w)
         vbox.pack_start(fr, padding=4, fill=True, expand=False)
 
-        fr = gtk.Frame("Autocuts")
+        # PAN
+        fr = gtk.Frame("Panning")
         fr.set_shadow_type(gtk.SHADOW_ETCHED_IN)
         fr.set_label_align(0.5, 0.5)
 
-        captions = (('Cut New', 'combobox'),
-                    ('Auto Method', 'combobox'),
-                    ('Hist Pct', 'spinbutton'))
+        captions = (('Pan X', 'entry'),
+                    ('Pan Y', 'entry', 'Center Image', 'button'),
+                    ('Reverse Pan', 'checkbutton', 'Mark Center', 'checkbutton'))
         w, b = GtkHelp.build_info(captions)
-        self.w.tooltips.set_tip(b.cut_new,
-                                "Automatically set cut levels for new images")
-        self.w.tooltips.set_tip(b.auto_method,
-                                "Choose algorithm for auto levels")
-        self.w.tooltips.set_tip(b.hist_pct,
-                                "Percentage of image to save for Histogram algorithm")
+        self.w.update(b)
 
-        self.w.btn_cut_new = b.cut_new
-        combobox = b.cut_new
-        index = 0
-        for name in self.autocut_options:
-            combobox.insert_text(index, name)
-            index += 1
-        option = self.fitsimage.t_autolevels
-        index = self.autocut_options.index(option)
-        combobox.set_active(index)
-        combobox.sconnect('changed', self.set_autolevels)
+        pan_x, pan_y = self.fitsimage.get_pan()
+        self.w.tooltips.set_tip(b.pan_x,
+                                "Set the pan position in X axis")
+        b.pan_x.set_text(str(pan_x+0.5))
+        b.pan_x.connect("activate", lambda w: self.set_pan_cb())
+        self.w.tooltips.set_tip(b.pan_y,
+                                "Set the pan position in Y axis")
+        b.pan_y.set_text(str(pan_y+0.5))
+        b.pan_y.connect("activate", lambda w: self.set_pan_cb())
+        self.w.tooltips.set_tip(b.center_image,
+                                "Set the pan position to center of the image")
+        b.center_image.connect("clicked", lambda w: self.center_image_cb())
+        self.w.tooltips.set_tip(b.reverse_pan,
+                                "Reverse the pan direction")
+        b.reverse_pan.sconnect("toggled", lambda w: self.set_misc_cb())
+        self.w.tooltips.set_tip(b.mark_center,
+                                "Mark the center (pan locator)")
+        b.mark_center.sconnect("toggled", lambda w: self.set_misc_cb())
 
-        # Setup auto cuts method choice
-        self.w.auto_method = b.auto_method
-        combobox = b.auto_method
-        index = 0
-        self.autocut_method = self.fv.default_autocut_method
-        self.autocut_methods = self.fitsimage.get_autocut_methods()
-        for name in self.autocut_methods:
-            combobox.insert_text(index, name)
-            index += 1
-        index = self.autocut_methods.index(self.autocut_method)
-        combobox.set_active(index)
-        combobox.sconnect('changed', lambda w: self.set_autolevel_params())
-
-        self.w.hist_pct = b.hist_pct
-        b.hist_pct.set_range(0.90, 1.0)
-        b.hist_pct.set_value(0.995)
-        b.hist_pct.set_increments(0.001, 0.01)
-        b.hist_pct.set_digits(5)
-        b.hist_pct.set_numeric(True)
-        b.hist_pct.sconnect('value-changed', lambda w: self.set_autolevel_params())
-        b.hist_pct.set_sensitive(self.autocut_method == 'histogram')
         fr.add(w)
         vbox.pack_start(fr, padding=4, fill=True, expand=False)
 
+        # TRANSFORM OPTIONS
         fr = gtk.Frame("Transform")
         fr.set_shadow_type(gtk.SHADOW_ETCHED_IN)
         fr.set_label_align(0.5, 0.5)
 
-        captions = (('Flip X', 'checkbutton', 'Flip Y', 'checkbutton'),
-                    ('Swap XY', 'checkbutton', 'Rotate', 'spinbutton'),
-                    ('Restore', 'button', 'Center Image', 'button'),)
+        captions = (('Flip X', 'checkbutton', 'Flip Y', 'checkbutton', 
+                     'Swap XY', 'checkbutton'), ('Rotate', 'spinbutton'),
+                    ('Restore', 'button'),)
         w, b = GtkHelp.build_info(captions)
         self.w.update(b)
 
@@ -234,13 +251,99 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.w.tooltips.set_tip(b.restore,
                                 "Clear any transforms and center image")
         b.restore.connect("clicked", lambda w: self.restore_cb())
-        self.w.tooltips.set_tip(b.center_image,
-                                "Set the pan position to center of the image")
-        b.center_image.connect("clicked", lambda w: self.center_image_cb())
 
         fr.add(w)
         vbox.pack_start(fr, padding=4, fill=True, expand=False)
         
+        # AUTOCUTS OPTIONS
+        fr = gtk.Frame("Autocuts")
+        fr.set_shadow_type(gtk.SHADOW_ETCHED_IN)
+        fr.set_label_align(0.5, 0.5)
+
+        captions = (('Cut New', 'combobox'),
+                    ('Auto Method', 'combobox'),
+                    ('Hist Pct', 'spinbutton'))
+        w, b = GtkHelp.build_info(captions)
+        self.w.tooltips.set_tip(b.cut_new,
+                                "Automatically set cut levels for new images")
+        self.w.tooltips.set_tip(b.auto_method,
+                                "Choose algorithm for auto levels")
+        self.w.tooltips.set_tip(b.hist_pct,
+                                "Percentage of image to save for Histogram algorithm")
+
+        self.w.btn_cut_new = b.cut_new
+        combobox = b.cut_new
+        index = 0
+        for name in self.autocut_options:
+            combobox.insert_text(index, name)
+            index += 1
+        option = self.t_['autolevels']
+        index = self.autocut_options.index(option)
+        combobox.set_active(index)
+        combobox.sconnect('changed', self.set_autolevels)
+
+        # Setup auto cuts method choice
+        self.w.auto_method = b.auto_method
+        combobox = b.auto_method
+        index = 0
+        self.autocut_method = self.t_['autocut_method']
+        self.autocut_methods = self.fitsimage.get_autocut_methods()
+        for name in self.autocut_methods:
+            combobox.insert_text(index, name)
+            index += 1
+        index = self.autocut_methods.index(self.autocut_method)
+        combobox.set_active(index)
+        combobox.sconnect('changed', lambda w: self.set_autolevel_params())
+
+        self.w.hist_pct = b.hist_pct
+        b.hist_pct.set_range(0.90, 1.0)
+        b.hist_pct.set_value(0.995)
+        b.hist_pct.set_increments(0.001, 0.01)
+        b.hist_pct.set_digits(5)
+        b.hist_pct.set_numeric(True)
+        b.hist_pct.sconnect('value-changed', lambda w: self.set_autolevel_params())
+        b.hist_pct.set_sensitive(self.autocut_method == 'histogram')
+        fr.add(w)
+        vbox.pack_start(fr, padding=4, fill=True, expand=False)
+
+        # AUTOZOOM OPTIONS
+        fr = gtk.Frame("Autozoom")
+        fr.set_shadow_type(gtk.SHADOW_ETCHED_IN)
+        fr.set_label_align(0.5, 0.5)
+
+        captions = (('Zoom New', 'combobox'),
+            ('Min Zoom', 'spinbutton', 'Max Zoom', 'spinbutton'))
+        w, b = GtkHelp.build_info(captions)
+        self.w.btn_zoom_new = b.zoom_new
+        combobox = b.zoom_new
+        index = 0
+        for name in self.autozoom_options:
+            combobox.insert_text(index, name)
+            index += 1
+        option = self.t_['autozoom']
+        index = self.autozoom_options.index(option)
+        combobox.set_active(index)
+        combobox.sconnect('changed', self.set_autozoom)
+
+        self.w.min_zoom = b.min_zoom
+        self.w.max_zoom = b.max_zoom
+        b.min_zoom.set_range(-20, 20)
+        b.min_zoom.set_increments(1, 10)
+        b.min_zoom.set_numeric(True)
+        b.min_zoom.sconnect('value-changed', lambda w: self.set_zoom_minmax())
+        b.max_zoom.set_range(-20, 20)
+        b.max_zoom.set_increments(1, 10)
+        b.max_zoom.set_numeric(True)
+        b.max_zoom.sconnect('value-changed', lambda w: self.set_zoom_minmax())
+        self.w.tooltips.set_tip(b.zoom_new,
+                                "Automatically fit new images to window")
+        self.w.tooltips.set_tip(b.min_zoom,
+                                "Minimum zoom level for fitting to window")
+        self.w.tooltips.set_tip(b.max_zoom,
+                                "Maximum zoom level for fitting to window")
+        fr.add(w)
+        vbox.pack_start(fr, padding=4, fill=True, expand=False)
+
         fr = gtk.Frame("New Images")
         fr.set_shadow_type(gtk.SHADOW_ETCHED_IN)
         fr.set_label_align(0.5, 0.5)
@@ -270,26 +373,6 @@ class Preferences(GingaPlugin.LocalPlugin):
         fr.add(w)
         vbox.pack_start(fr, padding=4, fill=True, expand=False)
 
-        fr = gtk.Frame("Miscellaneous")
-        fr.set_shadow_type(gtk.SHADOW_ETCHED_IN)
-        fr.set_label_align(0.5, 0.5)
-
-        btns = gtk.HButtonBox()
-        btns.set_layout(gtk.BUTTONBOX_START)
-        btns.set_spacing(5)
-
-        for name in ('Reverse Pan', ):
-            btn = GtkHelp.CheckButton(name)
-            btn.sconnect("toggled", lambda w: self.set_misc_cb())
-            btn.set_mode(True)
-            self.w[GtkHelp._name_mangle(name, pfx='btn_')] = btn
-            btns.add(btn)
-        self.w.tooltips.set_tip(self.w.btn_reverse_pan,
-                                "Reverse the pan direction")
-
-        fr.add(btns)
-        vbox.pack_start(fr, padding=4, fill=True, expand=False)
-        
         btns = gtk.HButtonBox()
         btns.set_layout(gtk.BUTTONBOX_START)
         btns.set_spacing(3)
@@ -387,11 +470,54 @@ class Preferences(GingaPlugin.LocalPlugin):
         rgbmap = self.fitsimage.get_rgbmap()
         rgbmap.set_hash_size(hashsize)
         
-    def set_autoscale(self, w):
+    def set_zoomrate_cb(self, w):
+        rate = float(w.get_value())
+        self.t_.set(zoomrate=rate)
+        
+    def set_zoomrate_ext_cb(self, setting, value):
+        self.w.zoom_rate.set_value(value)
+        
+    def set_zoomalg_cb(self):
+        idx = self.w.zoom_alg.get_active()
+        values = ('step', 'rate')
+        self.t_.set(zoomalg=values[idx])
+        
+    def set_zoomalg_ext_cb(self, setting, value):
+        if value == 'step':
+            self.w.zoom_alg.set_active(0)
+            self.w.zoom_rate.set_sensitive(False)
+            self.w.stretch_factor.set_sensitive(False)
+        else:
+            self.w.zoom_alg.set_active(1)
+            self.w.zoom_rate.set_sensitive(True)
+            self.w.stretch_factor.set_sensitive(True)
+
+    def set_zoom_defaults_cb(self, w):
+        rate = math.sqrt(2.0)
+        self.w.stretch_factor.set_value(1.0)
+        self.t_.set(zoomalg='step', zoomrate=rate,
+                    scale_x_base=1.0, scale_y_base=1.0)
+        
+    def set_stretch_cb(self):
+        axis = self.w.stretch_xy.get_active()
+        value = self.w.stretch_factor.get_value()
+        if axis == 0:
+            self.t_.set(scale_x_base=value, scale_y_base=1.0)
+        else:
+            self.t_.set(scale_x_base=1.0, scale_y_base=value)
+        
+    def set_autozoom(self, w):
         idx = w.get_active()
         option = self.autozoom_options[idx]
-        self.fitsimage.enable_autoscale(option)
+        self.fitsimage.enable_autozoom(option)
         self.prefs.auto_scale = option
+
+    def pan_changed_cb(self, fitsimage):
+        if self.w.has_key('pan_x'):
+            pan_x, pan_y = fitsimage.get_pan()
+            fits_x, fits_y = pan_x + 0.5, pan_y + 0.5
+            self.w.pan_x.set_text(str(fits_x))
+            self.w.pan_y.set_text(str(fits_y))
 
     def autozoom_changed_cb(self, fitsimage, option):
         index = self.autozoom_options.index(option)
@@ -401,7 +527,7 @@ class Preferences(GingaPlugin.LocalPlugin):
     def set_zoom_minmax(self):
         zmin = self.w.min_zoom.get_value()
         zmax = self.w.max_zoom.get_value()
-        self.fitsimage.set_autoscale_limits(zmin, zmax)
+        self.fitsimage.set_autozoom_limits(zmin, zmax)
         self.prefs.zoom_min = zmin
         self.prefs.zoom_max = zmax
 
@@ -414,6 +540,11 @@ class Preferences(GingaPlugin.LocalPlugin):
         else:
             self.w.hist_pct.set_sensitive(True)
         
+    def set_autolevels_ext_cb(self, setting, value):
+        method = self.t_['autocuts_method']
+        pct = self.t_['autocuts_hist_pct']
+        self.config_autolevel_params(method, pct)
+
     def set_autolevel_params(self):
         pct = self.w.hist_pct.get_value()
         idx = self.w.auto_method.get_active()
@@ -438,25 +569,39 @@ class Preferences(GingaPlugin.LocalPlugin):
             self.w.btn_cut_new.set_active(index)
 
     def set_transforms_cb(self):
-        flipX = self.w.flip_x.get_active()
-        flipY = self.w.flip_y.get_active()
-        swapXY = self.w.swap_xy.get_active()
-        self.prefs.flipX = flipX
-        self.prefs.flipY = flipY
-        self.prefs.swapXY = swapXY
-
-        self.fitsimage.transform(flipX, flipY, swapXY)
+        flipx = self.w.flip_x.get_active()
+        flipy = self.w.flip_y.get_active()
+        swapxy = self.w.swap_xy.get_active()
+        self.t_.set(flipx=flipx, flipy=flipy, swapxy=swapxy)
         return True
 
+    def set_transform_ext_cb(self, setting, value):
+        flipx, flipy, swapxy = self.t_['flipx'], self.t_['flipy'], self.t_['swapxy']
+        self.w.flip_x.set_active(flipx)
+        self.w.flip_y.set_active(flipy)
+        self.w.swap_xy.set_active(swapxy)
+        self.prefs.flipX = flipx
+        self.prefs.flipY = flipy
+        self.prefs.swapXY = swapxy
+        
     def rotate_cb(self):
         deg = self.w.rotate.get_value()
-        self.prefs.rotate_deg = deg
+        self.t_.set(rot_deg=deg)
+        return True
 
-        self.fitsimage.rotate(deg)
+    def set_rotate_ext_cb(self, setting, value):
+        self.w.rotate.set_value(value)
+        self.prefs.rotate_deg = value
         return True
 
     def center_image_cb(self):
         self.fitsimage.center_image()
+        return True
+
+    def set_pan_cb(self):
+        pan_x = float(self.w.pan_x.get_text()) - 0.5
+        pan_y = float(self.w.pan_y.get_text()) - 0.5
+        self.fitsimage.set_pan(pan_x, pan_y)
         return True
 
     def restore_cb(self):
@@ -469,9 +614,13 @@ class Preferences(GingaPlugin.LocalPlugin):
         return True
 
     def set_misc_cb(self):
-        revpan = self.w.btn_reverse_pan.get_active()
+        revpan = self.w.reverse_pan.get_active()
         self.prefs.reverse_pan = revpan
         self.fitsimage.set_pan_reverse(revpan)
+
+        markc = self.w.mark_center.get_active()
+        self.prefs.mark_center = markc
+        self.fitsimage.show_pan_mark(markc)
         return True
 
     def controls_to_preferences(self):
@@ -498,16 +647,16 @@ class Preferences(GingaPlugin.LocalPlugin):
         im = rgbmap.get_imap()
         prefs.intensity_map = im.name
 
-        prefs.auto_levels = self.fitsimage.t_autolevels
-        prefs.autocut_method = self.fitsimage.t_autocut_method
-        prefs.autocut_hist_pct = self.fitsimage.t_autocut_hist_pct
+        prefs.auto_levels = self.t_['autolevels']
+        prefs.autocut_method = self.t_['autocut_method']
+        prefs.autocut_hist_pct = self.t_['autocut_hist_pct']
 
-        prefs.auto_scale = self.fitsimage.t_autoscale
-        zmin, zmax = self.fitsimage.get_autoscale_limits()
+        prefs.auto_scale = self.t_['autozoom']
+        zmin, zmax = self.fitsimage.get_autozoom_limits()
         prefs.zoom_min = zmin
         prefs.zoom_max = zmax
                 
-        prefs.reverse_pan = self.fitsimage.t_reversepan
+        prefs.reverse_pan = self.t_['reverse_pan']
 
     def preferences_to_controls(self):
         prefs = self.prefs
@@ -536,20 +685,20 @@ class Preferences(GingaPlugin.LocalPlugin):
         index = self.imap_names.index(im.name)
         self.w.imap_choice.set_active(index)
 
-        auto_levels = self.fitsimage.t_autolevels
+        auto_levels = self.t_['autolevels']
         index = self.autocut_options.index(auto_levels)
         self.w.btn_cut_new.set_active(index)
 
-        autocut_method = self.fitsimage.t_autocut_method
-        autocut_hist_pct = self.fitsimage.t_autocut_hist_pct
+        autocut_method = self.t_['autocut_method']
+        autocut_hist_pct = self.t_['autocut_hist_pct']
         self.config_autolevel_params(autocut_method,
                                      autocut_hist_pct)
                                              
-        auto_scale = self.fitsimage.t_autoscale
+        auto_scale = self.t_['autozoom']
         index = self.autozoom_options.index(auto_scale)
         self.w.btn_zoom_new.set_active(index)
 
-        zmin, zmax = self.fitsimage.get_autoscale_limits()
+        zmin, zmax = self.fitsimage.get_autozoom_limits()
         self.w.min_zoom.set_value(zmin)
         self.w.max_zoom.set_value(zmax)
 
@@ -558,8 +707,8 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.w.flip_y.set_active(flipY)
         self.w.swap_xy.set_active(swapXY)
 
-        revpan = self.fitsimage.t_reversepan
-        self.w.btn_reverse_pan.set_active(revpan)
+        revpan = self.t_['reverse_pan']
+        self.w.reverse_pan.set_active(revpan)
 
     def save_preferences(self):
         self.controls_to_preferences()

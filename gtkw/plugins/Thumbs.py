@@ -58,7 +58,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
         tg = FitsImageGtk.FitsImageGtk(logger=self.logger)
         tg.configure(200, 200)
-        tg.enable_autoscale('on')
+        tg.enable_autozoom('on')
         tg.enable_autolevels('on')
         tg.enable_auto_orient(True)
         tg.set_zoom_limits(-100, 10)

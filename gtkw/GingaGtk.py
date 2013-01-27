@@ -324,8 +324,8 @@ class GingaView(GtkMain.GtkMain):
     
     def build_viewpane(self, cm, im):
         fi = FitsImageCanvasGtk.FitsImageCanvas(logger=self.logger)
-        fi.enable_autoscale(self.default_autoscale)
-        fi.set_autoscale_limits(-20, 3)
+        fi.enable_autozoom(self.default_autozoom)
+        fi.set_autozoom_limits(-20, 3)
         fi.set_zoom_limits(-20, 50)
         fi.enable_autolevels(self.default_autolevels)
         fi.enable_zoom(True)

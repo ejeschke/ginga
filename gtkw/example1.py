@@ -3,7 +3,7 @@
 # example1.py -- Simple, configurable FITS viewer.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Wed Jan 16 14:58:58 HST 2013
+#  Last edit: Sat Jan 26 00:49:52 HST 2013
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -108,7 +108,7 @@ def main(options, args):
     root.show_all()
 
     if len(args) > 0:
-        load_file(fi, args[0])
+        fv.load_file(fi, args[0])
 
     gtk.mainloop()
 

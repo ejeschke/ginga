@@ -2,7 +2,7 @@
 # AutoCuts.py -- class for calculating auto cut levels
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Wed Jan 16 09:42:12 HST 2013
+#  Last edit: Fri Jan 25 09:57:55 HST 2013
 #]
 #
 # Copyright (c) 2012, Eric R. Jeschke.  All rights reserved.
@@ -22,6 +22,8 @@ try:
 except ImportError:
     have_scipy = False
     autocut_methods = ('minmax', 'histogram', 'stddev')
+
+default_autolevels_method = 'histogram'
 
 # Default number of bins to use in the calculation of the autolevels
 # histogram for algorithm "histogram"
@@ -45,23 +47,17 @@ class AutoCuts(object):
     def get_algorithms(self):
         return autocut_methods
     
-    def calc_cut_levels(self, fitsimage,
-                        method=None, pct=None, numbins=None,
-                        usecrop=None, cropradius=None):
+    def calc_cut_levels(self, image,
+                        method='histogram', pct=None, numbins=None,
+                        usecrop=True, cropradius=512):
         if not method:
-            method = fitsimage.t_autocut_method
+            method = default_autolevels_method
         if not pct:
-            pct = fitsimage.t_autocut_hist_pct
+            pct = default_autolevels_hist_pct
         if not numbins:
-            numbins = fitsimage.t_autocut_bins
-        if usecrop == None:
-            usecrop = fitsimage.t_autocut_usecrop
-        if not cropradius:
-            cropradius = fitsimage.t_autocut_crop_radius
+            numbins = default_autolevels_bins
 
         start_time = time.time()
-
-        image = fitsimage.get_image()
 
         if method == 'minmax':
             loval, hival = image.get_minmax()

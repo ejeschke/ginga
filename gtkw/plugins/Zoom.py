@@ -51,7 +51,7 @@ class Zoom(GingaPlugin.GlobalPlugin):
         # much noise in the main logger
         #zi = FitsImageCanvasGtk.FitsImageCanvas(logger=self.logger)
         zi = FitsImageCanvasGtk.FitsImageCanvas(logger=None)
-        zi.enable_autoscale('off')
+        zi.enable_autozoom('off')
         zi.enable_autolevels('off')
         zi.enable_zoom(False)
         zi.set_zoom_limits(1, 20)
@@ -226,9 +226,15 @@ class Zoom(GingaPlugin.GlobalPlugin):
         text = self.fv.scale2text(self.zoomimage.get_scale())
         return True
         
-    def zoomset_cb(self, fitsimage, zoomlevel, scalefactor):
+    def zoomset_cb(self, fitsimage, zoomlevel, scale_x, scale_y):
         """This method is called when a main FITS widget changes zoom level.
         """
+        fac_x, fac_y = fitsimage.get_scale_base_xy()
+        fac_x_me, fac_y_me = self.zoomimage.get_scale_base_xy()
+        if (fac_x != fac_x_me) or (fac_y != fac_y_me):
+            alg = fitsimage.get_zoom_algorithm()
+            self.zoomimage.set_zoom_algorithm(alg)
+            self.zoomimage.set_scale_base_xy(fac_x, fac_y)
         return self._zoomset(self.fitsimage_focus, zoomlevel)
         
     def set_amount_cb(self, rng):

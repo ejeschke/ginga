@@ -2,7 +2,7 @@
 # Mixins.py -- Mixin classes for FITS viewer.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Sun Jan 13 23:29:57 HST 2013
+#  Last edit: Fri Jan 25 17:53:27 HST 2013
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -246,11 +246,11 @@ class FitsImageZoomMixin(object):
                 self.onscreen_message(self.get_scale_text(), delay=1.0)
                 return True
             elif keyname in self.keys.autozoom_on:
-                self.enable_autoscale('on')
+                self.enable_autozoom('on')
                 self.onscreen_message('Autozoom On', delay=1.0)
                 return True
             elif keyname in self.keys.autozoom_override:
-                self.enable_autoscale('override')
+                self.enable_autozoom('override')
                 self.onscreen_message('Autozoom Override', delay=1.0)
                 return True
             
@@ -450,7 +450,7 @@ class FitsImageZoomMixin(object):
                 if not (button & 0x1):
                     return False
             data_x, data_y = self.get_new_pan(x, y, ptype=self._pantype)
-            self.set_pan(data_x, data_y, redraw=True)
+            self.panset_xy(data_x, data_y, redraw=True)
             return True
 
 

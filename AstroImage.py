@@ -8,7 +8,7 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-import sys
+import sys, os
 import math
 import logging
 
@@ -253,8 +253,8 @@ class AstroImage(BaseImage):
         fits_f = pyfits.HDUList()
         hdu = pyfits.PrimaryHDU()
         data = self.data
-        if sys.byteorder == 'little':
-            data = data.byteswap()
+        # if sys.byteorder == 'little':
+        #     data = data.byteswap()
         hdu.data = data
 
         deriver = self.get('deriver', None)
@@ -274,6 +274,8 @@ class AstroImage(BaseImage):
             try:
                 if deriver:
                     comment = deriver.get_comment(kwd)
+                else:
+                    comment = ""
                 hdu.header.update(kwd, header[kwd], comment=comment)
             except Exception, e:
                 errlist.append((kwd, str(e)))
@@ -498,5 +500,139 @@ class AstroImage(BaseImage):
 
         return self.calc_compass(x, y, len_deg_e, len_deg_n)
 
+
+    def mosaic1(self, imagelist):
+
+        image0 = imagelist[0]
+        xmin, ymin, xmax, ymax = 0, 0, 0, 0
+
+        idxs = []
+        for image in imagelist:
+            wd, ht = image.get_size()
+            # for each image calculate ra/dec in the corners
+            for x, y in ((0, 0), (wd-1, 0), (wd-1, ht-1), (0, ht-1)):
+                ra, dec = image.pixtoradec(x, y)
+                # and then calculate the pixel position relative to the
+                # base image
+                x0, y0 = image0.radectopix(ra, dec)
+                #x0, y0 = int(x0), int(y0)
+                x0, y0 = int(round(x0)), int(round(y0))
+
+                if (x == 0) and (y == 0):
+                    idxs.append((x0, y0, x0+wd, y0+ht))
+                
+                # running calculation of min and max pixel coordinates
+                xmin, ymin = min(xmin, x0), min(ymin, y0)
+                xmax, ymax = max(xmax, x0), max(ymax, y0)
+
+        # calc necessary dimensions of final image
+        width, height = xmax-xmin+1, ymax-ymin+1
+
+        # amount of offset to add to each image
+        xoff, yoff = abs(min(0, xmin)), abs(min(0, ymin))
+
+        self.logger.debug("new image=%dx%d offsets x=%f y=%f" % (
+            width, height, xoff, yoff))
+
+        # new array to hold the mosaic
+        newdata = numpy.zeros((height, width))
+        metadata = {}
+
+        # drop each image in the right place
+        cnt = 0
+        for image in imagelist:
+            wd, ht = image.get_size()
+            data = image.get_data()
+
+            (xi, yi, xj, yj) = idxs.pop(0)
+            xi, yi, xj, yj = xi+xoff, yi+yoff, xj+xoff, yj+yoff
+
+            #newdata[yi:yj, xi:xj] = data[0:ht, 0:wd]
+            newdata[yi:(yi+ht), xi:(xi+wd)] = data[0:ht, 0:wd]
+
+            if cnt == 0:
+                metadata = image.get_metadata()
+                crpix1 = image.get_keyword('CRPIX1') + xoff
+                crpix2 = image.get_keyword('CRPIX2') + yoff
+
+        # Create new image with reference pixel updated
+        newimage = AstroImage(newdata, metadata=metadata)
+        newimage.update_keywords({ 'CRPIX1': crpix1,
+                                   'CRPIX2': crpix2 })
+        return newimage
+    
+    def mosaic(self, imagelist):
+        """Creates a new mosaic image from the images in imagelist.
+        """
+
+        image0 = imagelist[0]
+        xmin, ymin, xmax, ymax = 0, 0, 0, 0
+
+        idxs = []
+        for image in imagelist:
+            wd, ht = image.get_size()
+            # for each image calculate ra/dec in the corners
+            for x, y in ((0, 0), (wd-1, 0), (wd-1, ht-1), (0, ht-1)):
+                ra, dec = image.pixtoradec(x, y)
+                # and then calculate the pixel position relative to the
+                # base image
+                x0, y0 = image0.radectopix(ra, dec)
+                x0, y0 = int(round(x0)), int(round(y0))
+
+                # running calculation of min and max pixel coordinates
+                xmin, ymin = min(xmin, x0), min(ymin, y0)
+                xmax, ymax = max(xmax, x0), max(ymax, y0)
+
+        # calc necessary dimensions of final image
+        width, height = xmax-xmin+1, ymax-ymin+1
+
+        # amount of offset to add to each image
+        xoff, yoff = abs(min(0, xmin)), abs(min(0, ymin))
+
+        metadata = image0.get_metadata()
+        
+        # new array to hold the mosaic
+        self.logger.debug("new image=%dx%d" % (width, height))
+        newdata = numpy.zeros((height, width))
+
+        # Create new image with empty data
+        mosaic = AstroImage(newdata, metadata=metadata, logger=self.logger)
+        mosaic.update_keywords({ 'NAXIS1': width,
+                                 'NAXIS2': height })
+
+        # Update the WCS reference pixel with the relocation info
+        crpix1 = mosaic.get_keyword('CRPIX1')
+        crpix2 = mosaic.get_keyword('CRPIX2')
+        crpix1n, crpix2n = crpix1 + xoff, crpix2 + yoff
+        self.logger.debug("CRPIX %f,%f -> %f,%f" % (
+            crpix1, crpix2, crpix1n, crpix2n))
+        mosaic.update_keywords({ 'CRPIX1': crpix1n,
+                                 'CRPIX2': crpix2n })
+
+        # drop each image in the right place in the new data array
+        mosaic.mosaic_inline(imagelist)
+        
+        return mosaic
+    
+    def mosaic_inline(self, imagelist):
+        """Drops new images into the current image (if there is room), relocating
+        them according the WCS between the two images.
+        """
+        # drop each image in the right place in the new data array
+        newdata = self.get_data()
+        cnt = 0
+        for image in imagelist:
+            ra, dec = image.pixtoradec(0, 0)
+            x0, y0 = self.radectopix(ra, dec)
+            #self.logger.debug("0,0 -> %f,%f" % (x0, y0))
+            # losing WCS precision!
+            x0, y0 = int(round(x0)), int(round(y0))
+            self.logger.debug("image %d: 0,0 -> %d,%d" % (cnt, x0, y0))
+            cnt += 1
+
+            wd, ht = image.get_size()
+            data = image.get_data()
+
+            newdata[y0:(y0+ht), x0:(x0+wd)] = data[0:ht, 0:wd]
     
 #END

@@ -171,12 +171,16 @@ class Info(GingaPlugin.GlobalPlugin):
         self.set_info(self.info, fitsimage)
         return True
         
-    def zoomset_cb(self, fitsimage, zoomlevel, scalefactor, info):
+    def zoomset_cb(self, fitsimage, zoomlevel, scale_x, scale_y, info):
         """This callback is called when the main window is zoomed.
         """
-        self.logger.debug("scalefactor = %.2f" % (scalefactor))
         # Set text showing zoom factor (1X, 2X, etc.)
-        text = self.fv.scale2text(scalefactor)
+        if scale_x == scale_y:
+            text = self.fv.scale2text(scale_x)
+        else:
+            textx = self.fv.scale2text(scale_x)
+            texty = self.fv.scale2text(scale_y)
+            text = "X: %s  Y: %s" % (textx, texty)
         info.winfo.zoom.set_text(text)
         
     def cutset_cb(self, fitsimage, loval, hival, info):
@@ -264,9 +268,9 @@ class Info(GingaPlugin.GlobalPlugin):
         info.winfo.zoom.set_text(text)
 
         # update cut new/zoom new indicators
-        info.winfo.cut_new.set_text(fitsimage.t_autolevels)
-        info.winfo.zoom_new.set_text(fitsimage.t_autoscale)
-        
+        t_ = fitsimage.get_settings()
+        info.winfo.cut_new.set_text(t_['autolevels'])
+        info.winfo.zoom_new.set_text(t_['autozoom'])
 
 
     def field_info(self, viewer, fitsimage,

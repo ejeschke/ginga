@@ -2,7 +2,7 @@
 # Zoom.py -- Zoom plugin for Ginga fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Tue Dec  4 14:47:26 HST 2012
+#  Last edit: Sat Jan 19 21:20:44 HST 2013
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -204,7 +204,7 @@ class Zoom(GingaPlugin.GlobalPlugin):
         text = self.fv.scale2text(self.zoomimage.get_scale())
         return True
         
-    def zoomset_cb(self, fitsimage, zoomlevel, scalefactor):
+    def zoomset_cb(self, fitsimage, zoomlevel, scale_x, scale_y):
         """This method is called when a main FITS widget changes zoom level.
         """
         return self._zoomset(self.fitsimage_focus, zoomlevel)

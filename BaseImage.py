@@ -13,13 +13,17 @@ import logging
 
 import Bunch
 import AutoCuts
+import Callback
 
 class ImageError(Exception):
     pass
 
-class BaseImage(object):
+class BaseImage(Callback.Callbacks):
 
     def __init__(self, data_np=None, metadata=None, logger=None):
+
+        Callback.Callbacks.__init__(self)
+        
         if logger != None:
             self.logger = logger
         else:
@@ -34,6 +38,10 @@ class BaseImage(object):
         self._set_minmax()
 
         self.autocuts = AutoCuts.AutoCuts(self.logger)
+
+        # For callbacks
+        for name in ('modified', ):
+            self.enable_callback(name)
 
     @property
     def width(self):

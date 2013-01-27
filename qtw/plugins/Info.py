@@ -2,7 +2,7 @@
 # Info.py -- FITS Info plugin for fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Tue Oct 16 13:01:22 HST 2012
+#  Last edit: Sat Jan 19 21:26:29 HST 2013
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -171,12 +171,16 @@ class Info(GingaPlugin.GlobalPlugin):
         self.set_info(self.info, fitsimage)
         return True
         
-    def zoomset_cb(self, fitsimage, zoomlevel, scalefactor, info):
+    def zoomset_cb(self, fitsimage, zoomlevel, scale_x, scale_y, info):
         """This callback is called when the main window is zoomed.
         """
-        self.logger.debug("scalefactor = %.2f" % (scalefactor))
         # Set text showing zoom factor (1X, 2X, etc.)
-        text = self.fv.scale2text(scalefactor)
+        if scale_x == scale_y:
+            text = self.fv.scale2text(scale_x)
+        else:
+            textx = self.fv.scale2text(scale_x)
+            texty = self.fv.scale2text(scale_y)
+            text = "X: %s  Y: %s" % (textx, texty)
         info.winfo.zoom.setText(text)
         
     def cutset_cb(self, fitsimage, loval, hival, info):

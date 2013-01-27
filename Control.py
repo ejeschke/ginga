@@ -30,7 +30,7 @@ import FitsImage
 
 default_cmap = 'ramp'
 default_imap = 'ramp'
-default_autoscale = 'override'
+default_autozoom = 'override'
 default_autolevels = 'on'
 default_autocut_method = 'histogram'
 
@@ -83,7 +83,7 @@ class GingaControl(Callback.Callbacks):
         # defaults
         self.default_cmap = default_cmap
         self.default_imap = default_imap
-        self.default_autoscale = default_autoscale
+        self.default_autozoom = default_autozoom
         self.default_autolevels = default_autolevels
         self.default_autocut_method = default_autocut_method
         # Number of images to keep around in memory
@@ -802,27 +802,27 @@ class GingaControl(Callback.Callbacks):
         im = imap.get_imap(prefs.intensity_map)
         fitsimage.set_imap(im, redraw=False)
 
+        t_ = fitsimage.get_settings()
         prefs.auto_levels = prefs.get('auto_levels',
-                                      fitsimage.t_autolevels)
+                                      t_['autolevels'])
         fitsimage.enable_autolevels(prefs.auto_levels)
         ## prefs.usesavedcuts = prefs.get('usesavedcuts',
-        ##                                fitsimage.t_use_saved_cuts)
-        ## fitsimage.t_use_saved_cuts = prefs.usesavedcuts
+        ##                                t_['use_saved_cuts'])
 
         prefs.autocut_method = prefs.get('autocut_method',
-                                      fitsimage.t_autocut_method)
+                                         t_['autocut_method'])
         prefs.autocut_hist_pct = prefs.get('autocut_hist_pct',
-                                        fitsimage.t_autocut_hist_pct)
+                                           t_['autocut_hist_pct'])
         fitsimage.set_autolevel_params(prefs.autocut_method,
-                                            pct=prefs.autocut_hist_pct)
+                                       pct=prefs.autocut_hist_pct)
                                              
-        prefs.auto_scale = prefs.get('auto_scale', fitsimage.t_autoscale)
-        fitsimage.enable_autoscale(prefs.auto_scale)
+        prefs.auto_scale = prefs.get('auto_zoom', t_['autozoom'])
+        fitsimage.enable_autozoom(prefs.auto_scale)
 
-        zmin, zmax = fitsimage.get_autoscale_limits()
+        zmin, zmax = fitsimage.get_autozoom_limits()
         prefs.zoom_min = prefs.get('zoom_min', zmin)
         prefs.zoom_max = prefs.get('zoom_max', zmax)
-        fitsimage.set_autoscale_limits(prefs.zoom_min, prefs.zoom_max)
+        fitsimage.set_autozoom_limits(prefs.zoom_min, prefs.zoom_max)
 
         (flipX, flipY, swapXY) = fitsimage.get_transforms()
         prefs.flipX = prefs.get('flipX', flipX)
@@ -837,9 +837,11 @@ class GingaControl(Callback.Callbacks):
 
     def scale2text(self, scalefactor):
         if scalefactor >= 1.0:
-            text = '%dx' % (int(scalefactor))
+            #text = '%dx' % (int(scalefactor))
+            text = '%.2fx' % (scalefactor)
         else:
-            text = '1/%dx' % (int(1.0/scalefactor))
+            #text = '1/%dx' % (int(1.0/scalefactor))
+            text = '1/%.2fx' % (1.0/scalefactor)
         return text
     
     def get_sky_image(self, key, params):
