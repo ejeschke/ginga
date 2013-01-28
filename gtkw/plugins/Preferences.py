@@ -1,11 +1,9 @@
 #
 # Preferences.py -- Preferences plugin for fits viewer
 # 
-#[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Sat Jan 26 15:27:08 HST 2013
-#]
+# Eric Jeschke (eric@naoj.org)
 #
-# Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
+# Copyright (c)  Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -71,6 +69,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         ## #lbl.modify_font(self.font11)
         ## vbox.pack_start(self.w.conftitle, padding=4, fill=True, expand=False)
 
+        # COLOR MAPPING OPTIONS
         fr = gtk.Frame("Colors")
         fr.set_shadow_type(gtk.SHADOW_ETCHED_IN)
         fr.set_label_align(0.5, 0.5)

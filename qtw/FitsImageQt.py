@@ -135,7 +135,8 @@ class FitsImageQt(FitsImage.FitsImageBase):
         self._defer_flag = False
         self._defer_task = None
 
-        
+        self.t_showpanpos = False
+
     def get_widget(self):
         return self.imgwin
 
@@ -161,6 +162,15 @@ class FitsImageQt(FitsImage.FitsImageBase):
                           qimage,
                           QtCore.QRect(0, 0, width, height))
 
+        # Draw a cross in the center of the window in debug mode
+        if self.t_showpanpos:
+            clr = QtGui.QColor()
+            clr.setRgbF(1.0, 0.0, 0.0)
+            painter.setPen(clr)
+            ctr_x, ctr_y = self.get_center()
+            painter.drawLine(ctr_x - 10, ctr_y, ctr_x + 10, ctr_y)
+            painter.drawLine(ctr_x, ctr_y - 10, ctr_x, ctr_y + 10)
+        
         # render self.message
         if self.message:
             self.draw_message(painter, imgwin_wd, imgwin_ht,
@@ -339,6 +349,12 @@ class FitsImageQt(FitsImage.FitsImageBase):
         
     def canvas2pix(self, x, y):
         return (x, y)
+
+    def show_pan_mark(self, tf, redraw=True):
+        self.t_showpanpos = tf
+        if redraw:
+            self.redraw(whence=3)
+        
 
 class RenderMixin(object):
 

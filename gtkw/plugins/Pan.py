@@ -2,7 +2,7 @@
 # Pan.py -- Pan plugin for fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Jan 25 17:53:26 HST 2013
+#  Last edit: Sun Jan 27 18:46:33 HST 2013
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -118,7 +118,6 @@ class Pan(GingaPlugin.GlobalPlugin):
         fitssettings.shareSettings(pansettings, ['rot_deg'])
         pansettings.getSetting('rot_deg').add_callback('set', self.redraw_cb,
                                                        fitsimage, chinfo, paninfo, 0)
-        #fitsimage.add_callback('rotate', self.rotate_cb, chinfo, paninfo)
         self.logger.debug("channel %s added." % (chinfo.name))
 
     def delete_channel(self, viewer, chinfo):
@@ -234,10 +233,6 @@ class Pan(GingaPlugin.GlobalPlugin):
         elif button & 0x1:
             # If button1 is held down this is a panning move in the small
             # window for the big window
-            ## data_wd, data_ht = self.info.panimage.get_data_size()
-            ## panx = float(data_x) / float(data_wd)
-            ## pany = float(data_y) / float(data_ht)
-
             bigimage = self.fv.getfocus_fitsimage()
             return bigimage.panset_xy(data_x, data_y)
 

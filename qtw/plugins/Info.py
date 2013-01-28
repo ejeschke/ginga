@@ -1,11 +1,9 @@
 #
 # Info.py -- FITS Info plugin for fits viewer
 # 
-#[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Sat Jan 19 21:26:29 HST 2013
-#]
+# Eric Jeschke (eric@naoj.org)
 #
-# Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
+# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -268,9 +266,9 @@ class Info(GingaPlugin.GlobalPlugin):
         info.winfo.zoom.setText(text)
 
         # update cut new/zoom new indicators
-        info.winfo.cut_new.setText(fitsimage.t_autolevels)
-        info.winfo.zoom_new.setText(fitsimage.t_autoscale)
-        
+        t_ = fitsimage.get_settings()
+        info.winfo.cut_new.setText(t_['autolevels'])
+        info.winfo.zoom_new.setText(t_['autoscale'])
 
 
     def field_info(self, viewer, fitsimage,

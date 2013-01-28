@@ -1,11 +1,9 @@
 #
 # GingaQt.py -- Qt display handler for the Ginga FITS tool.
 #
-#[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Tue Jan 15 16:52:18 HST 2013
-#]
+# Eric Jeschke (eric@naoj.org)
 #
-# Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
+# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -365,8 +363,8 @@ class GingaView(QtMain.QtMain):
     
     def build_viewpane(self, cm, im):
         fi = FitsImageCanvasQt.FitsImageCanvas(logger=self.logger)
-        fi.enable_autoscale(self.default_autoscale)
-        fi.set_autoscale_limits(-20, 3)
+        fi.enable_autozoom(self.default_autozoom)
+        fi.set_autozoom_limits(-20, 3)
         fi.set_zoom_limits(-20, 50)
         fi.enable_autolevels(self.default_autolevels)
         fi.enable_zoom(True)

@@ -1,11 +1,9 @@
 #
 # Zoom.py -- Zoom plugin for Ginga fits viewer
 # 
-#[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Sat Jan 19 21:20:44 HST 2013
-#]
+# Eric Jeschke (eric@naoj.org)
 #
-# Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
+# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -48,7 +46,7 @@ class Zoom(GingaPlugin.GlobalPlugin):
         width, height = 200, 200
 
         zi = FitsImageCanvasQt.FitsImageCanvas(logger=self.logger)
-        zi.enable_autoscale('off')
+        zi.enable_autozoom('off')
         zi.enable_autolevels('off')
         zi.enable_zoom(False)
         zi.set_zoom_limits(1, 20)
@@ -207,6 +205,12 @@ class Zoom(GingaPlugin.GlobalPlugin):
     def zoomset_cb(self, fitsimage, zoomlevel, scale_x, scale_y):
         """This method is called when a main FITS widget changes zoom level.
         """
+        fac_x, fac_y = fitsimage.get_scale_base_xy()
+        fac_x_me, fac_y_me = self.zoomimage.get_scale_base_xy()
+        if (fac_x != fac_x_me) or (fac_y != fac_y_me):
+            alg = fitsimage.get_zoom_algorithm()
+            self.zoomimage.set_zoom_algorithm(alg)
+            self.zoomimage.set_scale_base_xy(fac_x, fac_y)
         return self._zoomset(self.fitsimage_focus, zoomlevel)
         
     def set_amount_cb(self):

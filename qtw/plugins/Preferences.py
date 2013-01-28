@@ -1,14 +1,13 @@
 #
 # Preferences.py -- Preferences plugin for fits viewer
 # 
-#[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Wed Dec 26 13:31:45 HST 2012
-#]
+# Eric Jeschke (eric@naoj.org)
 #
-# Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
+# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+import math
 from PyQt4 import QtGui, QtCore
 
 import cmap, imap
@@ -16,6 +15,7 @@ import QtHelp
 import GingaPlugin
 
 import Bunch
+import AutoCuts
 
 
 class Preferences(GingaPlugin.LocalPlugin):
@@ -32,11 +32,26 @@ class Preferences(GingaPlugin.LocalPlugin):
         rgbmap = fitsimage.get_rgbmap()
         self.calg_names = rgbmap.get_hash_algorithms()
         self.calg_names.sort()
-        self.autozoom_options = self.fitsimage.get_autoscale_options()
+        self.autozoom_options = self.fitsimage.get_autozoom_options()
         self.autocut_options = self.fitsimage.get_autolevels_options()
 
         self.fitsimage.add_callback('autocuts', self.autocuts_changed_cb)
         self.fitsimage.add_callback('autozoom', self.autozoom_changed_cb)
+        self.fitsimage.add_callback('pan-set', self.pan_changed_cb)
+
+        self.t_ = self.fitsimage.get_settings()
+        self.t_.getSetting('zoomalg').add_callback('set', self.set_zoomalg_ext_cb)
+        self.t_.getSetting('zoomrate').add_callback('set', self.set_zoomrate_ext_cb)
+        self.t_.getSetting('rot_deg').add_callback('set', self.set_rotate_ext_cb)
+        for name in ('flipx', 'flipy', 'swapxy'):
+            self.t_.getSetting(name).add_callback('set', self.set_transform_ext_cb)
+
+        for name in ('flipx', 'flipy', 'swapxy'):
+            self.t_.getSetting(name).add_callback('set', self.set_transform_ext_cb)
+
+        for name in ('autolevels', 'autocut_method', 'autocut_hist_pct',
+                     'autocut_bins'):
+            self.t_.getSetting(name).add_callback('set', self.set_autolevels_ext_cb)
 
     def build_gui(self, container):
         sw = QtGui.QScrollArea()
@@ -51,22 +66,23 @@ class Preferences(GingaPlugin.LocalPlugin):
         sw.setWidgetResizable(True)
         sw.setWidget(twidget)
 
+        # COLOR MAPPING OPTIONS
         fr = QtHelp.Frame("Colors")
 
         captions = (('Colormap', 'combobox', 'Intensity', 'combobox'),
                     ('Algorithm', 'combobox', 'Table Size', 'entry'),
-                    ('Defaults', 'button'))
+                    ('Color Defaults', 'button'))
         w, b = QtHelp.build_info(captions)
         self.w.cmap_choice = b.colormap
         self.w.imap_choice = b.intensity
         self.w.calg_choice = b.algorithm
         self.w.table_size = b.table_size
-        b.defaults.clicked.connect(lambda w: self.set_default_maps())
+        b.color_defaults.clicked.connect(lambda w: self.set_default_maps())
         b.colormap.setToolTip("Choose a color map for this image")
         b.intensity.setToolTip("Choose an intensity map for this image")
         b.algorithm.setToolTip("Choose a color mapping algorithm")
         b.table_size.setToolTip("Set size of the color mapping table")
-        b.defaults.setToolTip("Restore default color and intensity maps")
+        b.color_defaults.setToolTip("Restore default color and intensity maps")
         fr.layout().addWidget(w, stretch=1, alignment=QtCore.Qt.AlignLeft)
         vbox.addWidget(fr, stretch=0, alignment=QtCore.Qt.AlignTop)
 
@@ -106,36 +122,105 @@ class Preferences(GingaPlugin.LocalPlugin):
         entry = b.table_size
         entry.returnPressed.connect(lambda: self.set_tablesize_cb(entry))
 
-        fr = QtHelp.Frame("Autozoom")
+        # ZOOM OPTIONS
+        fr = QtHelp.Frame("Zoom")
 
-        captions = (('Zoom New', 'combobox'),
-            ('Min Zoom', 'spinbutton', 'Max Zoom', 'spinbutton'))
+        captions = (('Zoom Alg', 'combobox', 'Zoom Rate', 'spinfloat'),
+                    ('Stretch XY', 'combobox', 'Stretch Factor', 'spinfloat'),
+                    ('Zoom Defaults', 'button'))
         w, b = QtHelp.build_info(captions)
-        self.w.btn_zoom_new = b.zoom_new
-        combobox = b.zoom_new
-        index = 0
-        for name in self.autozoom_options:
-            combobox.addItem(name)
-            index += 1
-        option = self.fitsimage.t_autoscale
-        index = self.autozoom_options.index(option)
-        combobox.setCurrentIndex(index)
-        combobox.activated.connect(self.set_autoscale)
+        self.w.update(b)
 
-        self.w.min_zoom = b.min_zoom
-        self.w.max_zoom = b.max_zoom
-        b.min_zoom.setRange(-20, 20)
-        b.min_zoom.setSingleStep(1)
-        b.min_zoom.valueChanged.connect(lambda w: self.set_zoom_minmax())
-        b.max_zoom.setRange(-20, 20)
-        b.max_zoom.setSingleStep(1)
-        b.max_zoom.valueChanged.connect(lambda w: self.set_zoom_minmax())
-        b.zoom_new.setToolTip("Automatically fit new images to window")
-        b.min_zoom.setToolTip("Minimum zoom level for fitting to window")
-        b.max_zoom.setToolTip("Maximum zoom level for fitting to window")
+        index = 0
+        for name in ('Step', 'Rate'):
+            b.zoom_alg.addItem(name)
+            index += 1
+        b.zoom_alg.setCurrentIndex(0)
+        b.zoom_alg.setToolTip("Choose Zoom algorithm")
+        b.zoom_alg.activated.connect(self.set_zoomalg_cb)
+            
+        index = 0
+        for name in ('X', 'Y'):
+            b.stretch_xy.addItem(name)
+            index += 1
+        b.stretch_xy.setCurrentIndex(0)
+        b.stretch_xy.setToolTip("Stretch pixels in X or Y")
+        b.stretch_xy.activated.connect(self.set_stretch_cb)
+            
+        b.stretch_factor.setRange(1.0, 10.0)
+        b.stretch_factor.setValue(1.0)
+        b.stretch_factor.setSingleStep(0.01)
+        b.stretch_factor.valueChanged.connect(self.set_stretch_cb)
+        b.stretch_factor.setToolTip("Length of pixel relative to 1 on other side")
+        b.stretch_factor.setEnabled(False)
+
+        b.zoom_rate.setRange(1.1, 3.0)
+        b.zoom_rate.setValue(math.sqrt(2.0))
+        b.zoom_rate.setSingleStep(0.1)
+        b.zoom_rate.setEnabled(False)
+        b.zoom_rate.setToolTip("Step rate of increase/decrease per zoom level")
+        b.zoom_rate.valueChanged.connect(self.set_zoomrate_cb)
+
+        b.zoom_defaults.clicked.connect(self.set_zoom_defaults_cb)
+        
         fr.layout().addWidget(w, stretch=1, alignment=QtCore.Qt.AlignLeft)
         vbox.addWidget(fr, stretch=0, alignment=QtCore.Qt.AlignTop)
 
+        # PAN OPTIONS
+        fr = QtHelp.Frame("Panning")
+
+        captions = (('Pan X', 'entry'),
+                    ('Pan Y', 'entry', 'Center Image', 'button'),
+                    ('Reverse Pan', 'checkbutton', 'Mark Center', 'checkbutton'))
+        w, b = QtHelp.build_info(captions)
+        self.w.update(b)
+
+        pan_x, pan_y = self.fitsimage.get_pan()
+        b.pan_x.setToolTip("Set the pan position in X axis")
+        b.pan_x.setText(str(pan_x+0.5))
+        b.pan_x.returnPressed.connect(self.set_pan_cb)
+        b.pan_y.setToolTip("Set the pan position in Y axis")
+        b.pan_y.setText(str(pan_y+0.5))
+        b.pan_y.returnPressed.connect(self.set_pan_cb)
+
+        b.center_image.setToolTip("Set the pan position to center of the image")
+        b.center_image.clicked.connect(self.center_image_cb)
+        b.reverse_pan.setToolTip("Reverse the pan direction")
+        b.reverse_pan.stateChanged.connect(self.set_misc_cb)
+        b.mark_center.setToolTip("Mark the center (pan locator)")
+        b.mark_center.stateChanged.connect(self.set_misc_cb)
+
+        fr.layout().addWidget(w, stretch=1, alignment=QtCore.Qt.AlignLeft)
+        vbox.addWidget(fr, stretch=0, alignment=QtCore.Qt.AlignTop)
+
+        # TRANSFORM OPTIONS
+        fr = QtHelp.Frame("Transform")
+
+        captions = (('Flip X', 'checkbutton', 'Flip Y', 'checkbutton',
+                     'Swap XY', 'checkbutton'), ('Rotate', 'spinfloat'),
+                    ('Restore', 'button'),)
+        w, b = QtHelp.build_info(captions)
+        self.w.update(b)
+
+        for btn in (b.flip_x, b.flip_y, b.swap_xy):
+            btn.stateChanged.connect(lambda w: self.set_transforms_cb())
+        b.flip_x.setToolTip("Flip the image around the X axis")
+        b.flip_y.setToolTip("Flip the image around the Y axis")
+        b.swap_xy.setToolTip("Swap the X and Y axes in the image")
+        b.rotate.setToolTip("Rotate the image around the pan position")
+        b.restore.setToolTip("Clear any transforms and center image")
+        b.restore.clicked.connect(lambda w: self.restore_cb())
+
+        b.rotate.setRange(0.00, 360.0)
+        b.rotate.setValue(0.00)
+        b.rotate.setSingleStep(1.00)
+        b.rotate.setDecimals(5)
+        b.rotate.valueChanged.connect(lambda w: self.rotate_cb())
+
+        fr.layout().addWidget(w, stretch=1, alignment=QtCore.Qt.AlignLeft)
+        vbox.addWidget(fr, stretch=0, alignment=QtCore.Qt.AlignTop)
+
+        # AUTOCUTS OPTIONS
         fr = QtHelp.Frame("Autocuts")
 
         captions = (('Cut New', 'combobox'),
@@ -152,7 +237,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         for name in self.autocut_options:
             combobox.addItem(name)
             index += 1
-        option = self.fitsimage.t_autolevels
+        option = self.t_['autolevels']
         index = self.autocut_options.index(option)
         combobox.setCurrentIndex(index)
         combobox.activated.connect(self.set_autolevels)
@@ -180,34 +265,37 @@ class Preferences(GingaPlugin.LocalPlugin):
         fr.layout().addWidget(w, stretch=1, alignment=QtCore.Qt.AlignLeft)
         vbox.addWidget(fr, stretch=0, alignment=QtCore.Qt.AlignTop)
 
-        fr = QtHelp.Frame("Transform")
+        # AUTOZOOM OPTIONS
+        fr = QtHelp.Frame("Autozoom")
 
-        captions = (('Flip X', 'checkbutton', 'Flip Y', 'checkbutton'),
-                    ('Swap XY', 'checkbutton', 'Rotate', 'spinfloat'),
-                    ('Restore', 'button', 'Center Image', 'button'),)
+        captions = (('Zoom New', 'combobox'),
+            ('Min Zoom', 'spinbutton', 'Max Zoom', 'spinbutton'))
         w, b = QtHelp.build_info(captions)
-        self.w.update(b)
+        self.w.btn_zoom_new = b.zoom_new
+        combobox = b.zoom_new
+        index = 0
+        for name in self.autozoom_options:
+            combobox.addItem(name)
+            index += 1
+        option = self.t_['autozoom']
+        index = self.autozoom_options.index(option)
+        combobox.setCurrentIndex(index)
+        combobox.activated.connect(self.set_autozoom)
 
-        for btn in (b.flip_x, b.flip_y, b.swap_xy):
-            btn.stateChanged.connect(lambda w: self.set_transforms_cb())
-        b.flip_x.setToolTip("Flip the image around the X axis")
-        b.flip_y.setToolTip("Flip the image around the Y axis")
-        b.swap_xy.setToolTip("Swap the X and Y axes in the image")
-        b.rotate.setToolTip("Rotate the image around the pan position")
-        b.restore.setToolTip("Clear any transforms and center image")
-        b.restore.clicked.connect(lambda w: self.restore_cb())
-        b.center_image.setToolTip("Set the pan position to center of the image")
-        b.center_image.clicked.connect(lambda w: self.center_image_cb())
-
-        b.rotate.setRange(0.00, 360.0)
-        b.rotate.setValue(0.00)
-        b.rotate.setSingleStep(1.00)
-        b.rotate.setDecimals(5)
-        b.rotate.valueChanged.connect(lambda w: self.rotate_cb())
-
+        self.w.min_zoom = b.min_zoom
+        self.w.max_zoom = b.max_zoom
+        b.min_zoom.setRange(-20, 20)
+        b.min_zoom.setSingleStep(1)
+        b.min_zoom.valueChanged.connect(lambda w: self.set_zoom_minmax())
+        b.max_zoom.setRange(-20, 20)
+        b.max_zoom.setSingleStep(1)
+        b.max_zoom.valueChanged.connect(lambda w: self.set_zoom_minmax())
+        b.zoom_new.setToolTip("Automatically fit new images to window")
+        b.min_zoom.setToolTip("Minimum zoom level for fitting to window")
+        b.max_zoom.setToolTip("Maximum zoom level for fitting to window")
         fr.layout().addWidget(w, stretch=1, alignment=QtCore.Qt.AlignLeft)
         vbox.addWidget(fr, stretch=0, alignment=QtCore.Qt.AlignTop)
-        
+
         fr = QtHelp.Frame("New Images")
 
         captions = (('Follow new images', 'checkbutton',
@@ -326,10 +414,51 @@ class Preferences(GingaPlugin.LocalPlugin):
         rgbmap = self.fitsimage.get_rgbmap()
         rgbmap.set_hash_size(hashsize)
         
-    def set_autoscale(self, index):
+    def set_zoomrate_cb(self):
+        rate = self.w.zoom_rate.value()
+        self.t_.set(zoomrate=rate)
+        
+    def set_zoomrate_ext_cb(self, setting, value):
+        self.w.zoom_rate.setValue(value)
+        
+    def set_zoomalg_cb(self, idx):
+        values = ('step', 'rate')
+        self.t_.set(zoomalg=values[idx])
+        
+    def set_zoomalg_ext_cb(self, setting, value):
+        if value == 'step':
+            self.w.zoom_alg.setCurrentIndex(0)
+            self.w.zoom_rate.setEnabled(False)
+            self.w.stretch_factor.setEnabled(False)
+        else:
+            self.w.zoom_alg.setCurrentIndex(1)
+            self.w.zoom_rate.setEnabled(True)
+            self.w.stretch_factor.setEnabled(True)
+
+    def set_zoom_defaults_cb(self):
+        rate = math.sqrt(2.0)
+        self.w.stretch_factor.setValue(1.0)
+        self.t_.set(zoomalg='step', zoomrate=rate,
+                    scale_x_base=1.0, scale_y_base=1.0)
+        
+    def set_stretch_cb(self, value):
+        axis = self.w.stretch_xy.currentIndex()
+        if axis == 0:
+            self.t_.set(scale_x_base=value, scale_y_base=1.0)
+        else:
+            self.t_.set(scale_x_base=1.0, scale_y_base=value)
+        
+    def set_autozoom(self, index):
         option = self.autozoom_options[index]
-        self.fitsimage.enable_autoscale(option)
+        self.fitsimage.enable_autozoom(option)
         self.prefs.auto_scale = option
+
+    def pan_changed_cb(self, fitsimage):
+        if self.w.has_key('pan_x'):
+            pan_x, pan_y = fitsimage.get_pan()
+            fits_x, fits_y = pan_x + 0.5, pan_y + 0.5
+            self.w.pan_x.setText(str(fits_x))
+            self.w.pan_y.setText(str(fits_y))
 
     def autozoom_changed_cb(self, fitsimage, option):
         index = self.autozoom_options.index(option)
@@ -338,7 +467,7 @@ class Preferences(GingaPlugin.LocalPlugin):
     def set_zoom_minmax(self):
         zmin = self.w.min_zoom.value()
         zmax = self.w.max_zoom.value()
-        self.fitsimage.set_autoscale_limits(zmin, zmax)
+        self.fitsimage.set_autozoom_limits(zmin, zmax)
         self.prefs.zoom_min = zmin
         self.prefs.zoom_max = zmax
 
@@ -351,6 +480,11 @@ class Preferences(GingaPlugin.LocalPlugin):
         else:
             self.w.hist_pct.setEnabled(True)
         
+    def set_autolevels_ext_cb(self, setting, value):
+        method = self.t_['autocuts_method']
+        pct = self.t_['autocuts_hist_pct']
+        self.config_autolevel_params(method, pct)
+
     def set_autolevel_params(self):
         pct = self.w.hist_pct.value()
         idx = self.w.auto_method.currentIndex()
@@ -373,25 +507,39 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.w.btn_cut_new.setCurrentIndex(index)
 
     def set_transforms_cb(self):
-        flipX = self.w.flip_x.checkState()
-        flipY = self.w.flip_y.checkState()
-        swapXY = self.w.swap_xy.checkState()
-        self.prefs.flipX = flipX
-        self.prefs.flipY = flipY
-        self.prefs.swapXY = swapXY
-
-        self.fitsimage.transform(flipX, flipY, swapXY)
+        flipx = self.w.flip_x.checkState()
+        flipy = self.w.flip_y.checkState()
+        swapxy = self.w.swap_xy.checkState()
+        self.t_.set(flipx=flipx, flipy=flipy, swapxy=swapxy)
         return True
 
+    def set_transform_ext_cb(self, setting, value):
+        flipx, flipy, swapxy = self.t_['flipx'], self.t_['flipy'], self.t_['swapxy']
+        self.w.flip_x.setChecked(flipx)
+        self.w.flip_y.setChecked(flipy)
+        self.w.swap_xy.setChecked(swapxy)
+        self.prefs.flipX = flipx
+        self.prefs.flipY = flipy
+        self.prefs.swapXY = swapxy
+        
     def rotate_cb(self):
         deg = self.w.rotate.value()
-        self.prefs.rotate_deg = deg
+        self.t_.set(rot_deg=deg)
+        return True
 
-        self.fitsimage.rotate(deg)
+    def set_rotate_ext_cb(self, setting, value):
+        self.w.rotate.setValue(value)
+        self.prefs.rotate_deg = value
         return True
 
     def center_image_cb(self):
         self.fitsimage.center_image()
+        return True
+
+    def set_pan_cb(self):
+        pan_x = float(self.w.pan_x.text()) - 0.5
+        pan_y = float(self.w.pan_y.text()) - 0.5
+        self.fitsimage.set_pan(pan_x, pan_y)
         return True
 
     def restore_cb(self):
@@ -401,6 +549,16 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.fitsimage.center_image(redraw=False)
         self.fitsimage.rotate(0.0, redraw=False)
         self.set_transforms_cb()
+        return True
+
+    def set_misc_cb(self):
+        revpan = self.w.reverse_pan.checkState()
+        self.prefs.reverse_pan = revpan
+        self.fitsimage.set_pan_reverse(revpan)
+
+        markc = self.w.mark_center.checkState()
+        self.prefs.mark_center = markc
+        self.fitsimage.show_pan_mark(markc)
         return True
 
     def controls_to_preferences(self):
@@ -427,15 +585,17 @@ class Preferences(GingaPlugin.LocalPlugin):
         im = rgbmap.get_imap()
         prefs.intensity_map = im.name
 
-        prefs.auto_levels = self.fitsimage.t_autolevels
-        prefs.autocut_method = self.fitsimage.t_autocut_method
-        prefs.autocut_hist_pct = self.fitsimage.t_autocut_hist_pct
+        prefs.auto_levels = self.t_['autolevels']
+        prefs.autocut_method = self.t_['autocut_method']
+        prefs.autocut_hist_pct = self.t_['autocut_hist_pct']
 
-        prefs.auto_scale = self.fitsimage.t_autoscale
-        zmin, zmax = self.fitsimage.get_autoscale_limits()
+        prefs.auto_scale = self.t_['autozoom']
+        zmin, zmax = self.fitsimage.get_autozoom_limits()
         prefs.zoom_min = zmin
         prefs.zoom_max = zmax
                 
+        prefs.reverse_pan = self.t_['reverse_pan']
+
     def preferences_to_controls(self):
         prefs = self.prefs
         #print "prefs=%s" % (str(prefs))
@@ -463,20 +623,20 @@ class Preferences(GingaPlugin.LocalPlugin):
         index = self.imap_names.index(im.name)
         self.w.imap_choice.setCurrentIndex(index)
 
-        auto_levels = self.fitsimage.t_autolevels
+        auto_levels = self.t_['autolevels']
         index = self.autocut_options.index(auto_levels)
         self.w.btn_cut_new.setCurrentIndex(index)
 
-        autocut_method = self.fitsimage.t_autocut_method
-        autocut_hist_pct = self.fitsimage.t_autocut_hist_pct
+        autocut_method = self.t_['autocut_method']
+        autocut_hist_pct = self.t_['autocut_hist_pct']
         self.config_autolevel_params(autocut_method,
                                      autocut_hist_pct)
                                              
-        auto_scale = self.fitsimage.t_autoscale
-        index = self.autozoom_options.index(auto_scale)
+        auto_zoom = self.t_['autozoom']
+        index = self.autozoom_options.index(auto_zoom)
         self.w.btn_zoom_new.setCurrentIndex(index)
 
-        zmin, zmax = self.fitsimage.get_autoscale_limits()
+        zmin, zmax = self.fitsimage.get_autozoom_limits()
         self.w.min_zoom.setValue(zmin)
         self.w.max_zoom.setValue(zmax)
 
@@ -484,6 +644,9 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.w.flip_x.setChecked(flipX)
         self.w.flip_y.setChecked(flipY)
         self.w.swap_xy.setChecked(swapXY)
+
+        revpan = self.t_['reverse_pan']
+        self.w.reverse_pan.setChecked(revpan)
 
     def save_preferences(self):
         self.controls_to_preferences()

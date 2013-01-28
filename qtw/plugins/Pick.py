@@ -1,11 +1,9 @@
 #
 # Pick.py -- Pick plugin for fits viewer
 # 
-#[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Oct 19 13:35:06 HST 2012
-#]
+# Eric Jeschke (eric@naoj.org)
 #
-# Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
+# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -108,7 +106,7 @@ class Pick(GingaPlugin.LocalPlugin):
         cm, im = self.fv.cm, self.fv.im
 
         di = FitsImageCanvasQt.FitsImageCanvas(logger=self.logger)
-        di.enable_autoscale('off')
+        di.enable_autozoom('off')
         di.enable_autolevels('off')
         di.enable_zoom(True)
         di.enable_cuts(True)
@@ -754,8 +752,6 @@ class Pick(GingaPlugin.LocalPlugin):
             self.logger.info("object center is x,y=%f,%f" % (obj_x, obj_y))
             fwhm = qs.fwhm
             fwhm_x, fwhm_y = qs.fwhm_x, qs.fwhm_y
-            rnd_x, rnd_y = int(round(qs.objx)), int(round(qs.objy))
-            #point.x, point.y = rnd_x, rnd_y
             point.x, point.y = obj_x, obj_y
             text.color = 'cyan'
 
@@ -781,7 +777,7 @@ class Pick(GingaPlugin.LocalPlugin):
 
             # Mark object center on image
             point.color = 'cyan'
-            self.fitsimage.panset_xy(rnd_x, rnd_y, redraw=False)
+            self.fitsimage.panset_xy(obj_x, obj_y, redraw=False)
 
             # Calc RA, DEC, EQUINOX of X/Y center pixel
             try:
