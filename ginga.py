@@ -10,19 +10,19 @@ All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
-met: 
+met:
 
     Redistributions of source code must retain the above copyright
-    notice, this list of conditions and the following disclaimer. 
+    notice, this list of conditions and the following disclaimer.
 
     Redistributions in binary form must reproduce the above copyright
     notice, this list of conditions and the following disclaimer in the
     documentation and/or other materials provided with the
-    distribution. 
+    distribution.
 
     Neither the name of the Eric R. Jeschke nor the names of its
     contributors may be used to endorse or promote products derived from
-    this software without specific prior written permission. 
+    this software without specific prior written permission.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 'AS IS' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
@@ -34,7 +34,7 @@ TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
 PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
 LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
 NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
 """
@@ -94,14 +94,14 @@ global_plugins = [
 local_plugins = [
     Bunch(module='Pick', ws='dialogs', shortkey='f1'),
     Bunch(module='Ruler', ws='dialogs', shortkey='f2'),
-    Bunch(module='MultiDim', ws='dialogs', shortkey='f4'), 
+    Bunch(module='MultiDim', ws='dialogs', shortkey='f4'),
     Bunch(module='Cuts', ws='dialogs', shortkey='f5'),
     Bunch(module='Histogram', ws='dialogs', shortkey='f6'),
     Bunch(module='PixTable', ws='dialogs', shortkey='f7'),
     Bunch(module='Preferences', ws='dialogs', shortkey='f9'),
     Bunch(module='Catalogs', ws='dialogs', shortkey='f10'),
     Bunch(module='Drawing', ws='dialogs', shortkey='f11'),
-    Bunch(module='FBrowser', ws='dialogs', shortkey='f12'), 
+    Bunch(module='FBrowser', ws='dialogs', shortkey='f12'),
     ]
 
 # max size of log file before rotating
@@ -127,7 +127,7 @@ def main(options, args):
         stderrHdlr.setLevel(options.loglevel)
         stderrHdlr.setFormatter(fmt)
         logger.addHandler(stderrHdlr)
-        
+
     # Get settings (preferences)
     try:
         basedir = os.environ['GINGA_HOME']
@@ -168,7 +168,7 @@ def main(options, args):
                                   settings, ev_quit=ev_quit,
                                   datasrc_length=datasrc_length,
                                   follow_focus=follow_focus)
-        
+
     # Create the dynamic module manager
     mm = ModuleManager.ModuleManager(logger)
 
@@ -238,9 +238,9 @@ def main(options, args):
     if options.geometry:
         ginga.setGeometry(options.geometry)
 
-    if not options.nosplash:
+    if not options.nosplash and len(args)==0:
         ginga.banner()
-    
+
     # Assume remaining arguments are fits files and load them.
     for imgfile in args:
         ginga.nongui_do(ginga.load_file, imgfile)
@@ -259,16 +259,16 @@ def main(options, args):
         ev_quit.set()
 
     sys.exit(0)
-        
+
 
 if __name__ == "__main__":
-   
+
     # Parse command line options with nifty optparse module
     from optparse import OptionParser
 
     usage = "usage: %prog [options] cmd [args]"
     optprs = OptionParser(usage=usage, version=('%%prog %s' % version.version))
-    
+
     optprs.add_option("--bufsize", dest="bufsize", metavar="NUM",
                       type="int", default=25,
                       help="Buffer length to NUM")
