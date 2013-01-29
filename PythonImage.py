@@ -21,7 +21,7 @@ except ImportError:
     have_pil = False
 
 try:
-    import scipy.misc.pilutil as pilutil
+    from  scipy.misc import pilutil
     have_pilutil = True
 except ImportError:
     have_pilutil = False
@@ -40,7 +40,7 @@ class PythonImage(BaseImage):
 
     def load_file(self, filepath):
         kwds = {}
-        metadata = { 'exif': {} }        
+        metadata = { 'exif': {} }
         typ, enc = mimetypes.guess_type(filepath)
         if not typ:
             typ = 'image/jpeg'
@@ -50,7 +50,7 @@ class PythonImage(BaseImage):
                                             'x-portable-greymap')):
             # Special opener for PPM files
             data_np = open_ppm(filepath)
-                
+
         elif have_pil:
             image = Image.open(filepath)
             ## if have_cms:
@@ -69,15 +69,15 @@ class PythonImage(BaseImage):
         else:
             raise Exception("No way to load image format '%s/%s'" % (
                 typ, subtyp))
-            
+
         self.set_data(data_np, metadata=metadata)
         self.set(exif=kwds)
-        
+
     def copy(self, astype=None):
         other = PythonImage()
         self.transfer(other, astype=astype)
         return other
-        
+
     def get_scaled_cutout_wdht(self, x1, y1, x2, y2, new_wd, new_ht,
                                   method='bicubic'):
         # calculate dimensions of NON-scaled cutout
@@ -161,7 +161,7 @@ def open_ppm(filepath):
     header = infile.readline().strip()
     while header.startswith('#') or len(header) == 0:
         header = infile.readline().strip()
-        
+
     print header
     width, height = map(int, header.split())
     header = infile.readline()
@@ -180,7 +180,7 @@ def open_ppm(filepath):
                                                            depth))
     else:
         arr = numpy.fromfile(infile, dtype=dtype).reshape((height, width))
-        
+
     if sys.byteorder == 'little':
         arr = arr.byteswap()
     return arr
