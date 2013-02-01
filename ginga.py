@@ -133,7 +133,7 @@ def main(options, args):
         basedir = os.environ['GINGA_HOME']
     except KeyError:
         basedir = os.path.join(os.environ['HOME'], '.ginga')
-    settings = Settings.Settings(basefolder=basedir)
+    settings = Settings.Preferences(basefolder=basedir, logger=logger)
     sys.path.insert(0, basedir)
 
     moduleHome = os.path.split(sys.modules[__name__].__file__)[0]

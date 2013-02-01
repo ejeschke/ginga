@@ -54,7 +54,7 @@ class Zoom(GingaPlugin.GlobalPlugin):
         zi.enable_autozoom('off')
         zi.enable_autolevels('off')
         zi.enable_zoom(False)
-        zi.set_zoom_limits(1, 20)
+        #zi.set_scale_limits(0.001, 1000.0)
         zi.zoom_to(self.default_zoom, redraw=False)
         zi.add_callback('zoom-set', self.zoomset)
         #zi.add_callback('motion', self.showxy)
@@ -98,8 +98,6 @@ class Zoom(GingaPlugin.GlobalPlugin):
 
         captions = (('Zoom', 'label'),
                     ("Relative Zoom", 'checkbutton'),
-                    ('Min Zoom', 'spinbutton'),
-                    ('Max Zoom', 'spinbutton'),
                     ("Lag Time", 'spinbutton'),
                     ('Defaults', 'button'),
                     )
@@ -117,19 +115,6 @@ class Zoom(GingaPlugin.GlobalPlugin):
         b.lag_time.set_wrap(True)
         b.lag_time.connect('value-changed', self.setlag_cb)
         vbox.pack_start(w, padding=4, fill=True, expand=False)
-
-        # Minimum and maximum zoom limits
-        minzoom, maxzoom = self.zoomimage.get_zoom_limits()
-        adj = b.min_zoom.get_adjustment()
-        adj.configure(-20, -20, 20, 1, 1, 1)
-        adj.set_value(minzoom)
-        b.min_zoom.connect('value-changed', self.setzoomlimits_cb)
-        b.min_zoom.set_digits(0)
-        adj = b.max_zoom.get_adjustment()
-        adj.configure(-20, -20, 20, 1, 1, 1)
-        adj.set_value(maxzoom)
-        b.max_zoom.connect('value-changed', self.setzoomlimits_cb)
-        b.max_zoom.set_digits(0)
 
         sw = gtk.ScrolledWindow()
         sw.set_border_width(2)
@@ -271,18 +256,6 @@ class Zoom(GingaPlugin.GlobalPlugin):
         val = w.get_value()
         self.logger.debug("Setting lag time to %d" % (val))
         self.lagtime = val
-        
-    def setzoomlimits_cb(self, w):
-        adj = self.wzoom.min_zoom.get_adjustment()
-        minzoom = adj.get_value()
-        adj = self.wzoom.max_zoom.get_adjustment()
-        maxzoom = adj.get_value()
-        self.logger.debug("Setting zoom limits min=%d max=%d" % (
-            minzoom, maxzoom))
-        try:
-            self.zoomimage.set_zoom_limits(minzoom, maxzoom)
-        except Exception, e:
-            pass
         
     def set_radius(self, val):
         self.logger.debug("Setting radius to %d" % val)

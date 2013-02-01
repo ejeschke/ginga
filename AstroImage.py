@@ -65,6 +65,7 @@ class AstroImage(BaseImage):
         self.wcs.load_header(hdu.header, fobj=fobj)
 
     def load_file(self, filepath, numhdu=None, naxispath=None):
+        self.logger.debug("Loading file '%s' ..." % (filepath))
         self.set(path=filepath)
         fits_f = pyfits.open(filepath, 'readonly')
 
@@ -97,6 +98,14 @@ class AstroImage(BaseImage):
             hdu = fits_f[numhdu]
         
         self.load_hdu(hdu, fobj=fits_f, naxispath=naxispath)
+
+        # Set the name to the filename (minus extension) if no name
+        # currently exists for this image
+        name = self.get('name', None)
+        if name == None:
+            dirpath, filename = os.path.split(filepath)
+            name, ext = os.path.splitext(filename)
+            self.set(name=name)
         
         fits_f.close()
 
@@ -561,18 +570,27 @@ class AstroImage(BaseImage):
                                    'CRPIX2': crpix2 })
         return newimage
     
-    def mosaic(self, imagelist):
-        """Creates a new mosaic image from the images in imagelist.
+    def mosaic(self, filelist):
+        """Creates a new mosaic image from the images in filelist.
         """
 
-        image0 = imagelist[0]
+        image0 = AstroImage(logger=self.logger)
+        image0.load_file(filelist[0])
+
         xmin, ymin, xmax, ymax = 0, 0, 0, 0
 
         idxs = []
-        for image in imagelist:
+        for filepath in filelist:
+            # Create and load the image
+            self.logger.debug("Examining file '%s' ..." % (filepath))
+            image = AstroImage(logger=self.logger)
+            image.load_file(filepath)
+            
             wd, ht = image.get_size()
             # for each image calculate ra/dec in the corners
             for x, y in ((0, 0), (wd-1, 0), (wd-1, ht-1), (0, ht-1)):
+
+                # for each image calculate ra/dec in the corners
                 ra, dec = image.pixtoradec(x, y)
                 # and then calculate the pixel position relative to the
                 # base image
@@ -582,7 +600,7 @@ class AstroImage(BaseImage):
                 # running calculation of min and max pixel coordinates
                 xmin, ymin = min(xmin, x0), min(ymin, y0)
                 xmax, ymax = max(xmax, x0), max(ymax, y0)
-
+                 
         # calc necessary dimensions of final image
         width, height = xmax-xmin+1, ymax-ymin+1
 
@@ -592,7 +610,9 @@ class AstroImage(BaseImage):
         metadata = image0.get_metadata()
         
         # new array to hold the mosaic
-        self.logger.debug("new image=%dx%d" % (width, height))
+        print "WIDTH=%d HEIGHT=%d" % (width, height)
+        self.logger.debug("Creating empty mosaic image of %dx%d" % (
+            (width, height)))
         newdata = numpy.zeros((height, width))
 
         # Create new image with empty data
@@ -610,29 +630,63 @@ class AstroImage(BaseImage):
                                  'CRPIX2': crpix2n })
 
         # drop each image in the right place in the new data array
-        mosaic.mosaic_inline(imagelist)
+        for filepath in filelist:
+            # Create and load the image
+            image = AstroImage(logger=self.logger)
+            image.load_file(filepath)
+            mosaic.mosaic_inline([ image ])
         
         return mosaic
     
     def mosaic_inline(self, imagelist):
-        """Drops new images into the current image (if there is room), relocating
-        them according the WCS between the two images.
+        """Drops new images into the current image (if there is room),
+        relocating them according the WCS between the two images.
         """
+        # For determining our orientation
+        ra0, dec0 = self.pixtoradec(0, 0)
+        ra1, dec1 = self.pixtoradec(self.width-1, self.height-1)
+
+        ra_l = (ra0 < ra1)
+        dec_l = (dec0 < dec1)
+        
         # drop each image in the right place in the new data array
         newdata = self.get_data()
-        cnt = 0
         for image in imagelist:
-            ra, dec = image.pixtoradec(0, 0)
+            name = image.get('name', 'NoName')
+            wd, ht = image.get_size()
+            data = image.get_data()
+
+            # Find orientation of image piece and orient it correctly to us
+            ra2, dec2 = image.pixtoradec(0, 0)
+            ra3, dec3 = image.pixtoradec(wd-1, ht-1)
+
+            # TODO: we need something much more sophisticated than this
+            # e.g. use a matrix transform
+            if ra_l != (ra2 < ra3):
+                data = numpy.fliplr(data)
+                ra = ra3
+            else:
+                ra = ra2
+                
+            if dec_l != (dec2 < dec3):
+                data = numpy.flipud(data)
+                dec = dec3
+            else:
+                dec = dec2
+                
             x0, y0 = self.radectopix(ra, dec)
             #self.logger.debug("0,0 -> %f,%f" % (x0, y0))
             # losing WCS precision!
             x0, y0 = int(round(x0)), int(round(y0))
-            self.logger.debug("image %d: 0,0 -> %d,%d" % (cnt, x0, y0))
-            cnt += 1
+            self.logger.debug("Fitting image '%s' into mosaic at %d,%d" % (
+                name, x0, y0))
 
-            wd, ht = image.get_size()
-            data = image.get_data()
+            try:
+                newdata[y0:(y0+ht), x0:(x0+wd)] = data[0:ht, 0:wd]
+            except Exception, e:
+                self.logger.error("Failed to place image '%s': %s" % (
+                    name, str(e)))
 
-            newdata[y0:(y0+ht), x0:(x0+wd)] = data[0:ht, 0:wd]
+        self.make_callback('modified')
     
 #END

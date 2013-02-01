@@ -39,8 +39,8 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         # should we cache thumbs on disk?
         self.cacheThumbs = False
         # where the cache is stored
-        settings = self.fv.get_settings()
-        self.thumbDir = os.path.join(settings.get_baseFolder(), 'thumbs')
+        prefs = self.fv.get_preferences()
+        self.thumbDir = os.path.join(prefs.get_baseFolder(), 'thumbs')
 
         self.thmbtask = None
         self.lagtime = 4000
@@ -61,7 +61,6 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         tg.enable_autozoom('on')
         tg.enable_autolevels('on')
         tg.enable_auto_orient(True)
-        tg.set_zoom_limits(-100, 10)
         tg.set_makebg(False)
         self.thumb_generator = tg
 
@@ -97,7 +96,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         # Is there a preference set to avoid making thumbnails?
         chinfo = self.fv.get_channelInfo(chname)
         prefs = chinfo.prefs
-        if prefs.has_key('genthumb') and (not prefs['genthumb']):
+        if not prefs.get('genthumb', False):
             return
         
         # Is this thumbnail already in the list?

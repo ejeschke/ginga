@@ -110,7 +110,6 @@ class Pick(GingaPlugin.LocalPlugin):
         di.enable_autolevels('off')
         di.enable_zoom(True)
         di.enable_cuts(True)
-        #di.set_zoom_limits(1, 20)
         di.zoom_to(3, redraw=False)
         di.set_callback('zoom-set', self.zoomset)
         di.set_cmap(cm, redraw=False)

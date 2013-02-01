@@ -41,8 +41,6 @@ class Pan(GingaPlugin.GlobalPlugin):
 
         sfi = FitsImageCanvasQt.FitsImageCanvas(logger=self.logger)
         sfi.enable_autozoom('on')
-        sfi.set_autozoom_limits(-200, 100)
-        sfi.set_zoom_limits(-200, 100)
         sfi.enable_pan(False)
         sfi.enable_zoom(False)
         sfi.enable_autolevels('off')

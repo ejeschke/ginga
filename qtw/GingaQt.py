@@ -361,11 +361,10 @@ class GingaView(QtMain.QtMain):
         layout.addWidget(cbar, stretch=1)
         return fr
     
-    def build_viewpane(self, cm, im):
-        fi = FitsImageCanvasQt.FitsImageCanvas(logger=self.logger)
+    def build_viewpane(self, cm, im, settings):
+        fi = FitsImageCanvasQt.FitsImageCanvas(logger=self.logger,
+                                               settings=settings)
         fi.enable_autozoom(self.default_autozoom)
-        fi.set_autozoom_limits(-20, 3)
-        fi.set_zoom_limits(-20, 50)
         fi.enable_autolevels(self.default_autolevels)
         fi.enable_zoom(True)
         fi.enable_cuts(True)
@@ -384,7 +383,8 @@ class GingaView(QtMain.QtMain):
         fi.set_bg(0.2, 0.2, 0.2)
         return fi
 
-    def add_viewer(self, name, cm, im, use_readout=True, workspace=None):
+    def add_viewer(self, name, cm, im, settings,
+                   use_readout=True, workspace=None):
 
         vwidget = QtGui.QWidget()
         vbox = QtGui.QVBoxLayout()
@@ -392,7 +392,7 @@ class GingaView(QtMain.QtMain):
         vbox.setSpacing(0)
         vwidget.setLayout(vbox)
         
-        fi = self.build_viewpane(cm, im)
+        fi = self.build_viewpane(cm, im, settings)
         iw = fi.get_widget()
 
         if self.channel_follows_focus:

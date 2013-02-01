@@ -108,18 +108,18 @@ class GingaControl(Callback.Callbacks):
         self.imgsrv = Catalog.ServerBank(self.logger)
         self.dsscnt = 0
 
-        try:
-            gprefs = self.settings.getSettings('ginga')
-        except KeyError:
-            gprefs = self.settings.createCategory('ginga')
-        gprefs.setvals(color_map='ramp', intensity_map='ramp',
-                       auto_scale='off')
+        # try:
+        #     gprefs = self.settings.getSettings('channel_ginga')
+        # except KeyError:
+        #     gprefs = self.settings.createCategory('channel_ginga')
+        # gprefs.set(color_map='ramp', intensity_map='ramp',
+        #            auto_scale='off')
         
 
     def get_ServerBank(self):
         return self.imgsrv
 
-    def get_settings(self):
+    def get_preferences(self):
         return self.settings
 
     ####################################################
@@ -499,12 +499,12 @@ class GingaControl(Callback.Callbacks):
             return
 
         # switch to current image?
-        if chinfo.prefs.switchnew:
+        if chinfo.prefs['switchnew']:
             #and chinfo.switchfn(image):
             self.logger.debug("switching to new image '%s'" % (curname))
             self._switch_image(chinfo, image)
             
-        if chinfo.prefs.raisenew:
+        if chinfo.prefs['raisenew']:
             curinfo = self.get_channelInfo()
             if chinfo.name != curinfo.name:
                 self.change_channel(chinfo.name)
@@ -712,35 +712,23 @@ class GingaControl(Callback.Callbacks):
         
         chinfo = self.add_channel_internal(chname, num_images=num_images)
 
+        name = chinfo.name
+        prefs = self.settings.createCategory('channel_'+name)
+        try:
+            prefs.load()
+            self.logger.warn("no saved preferences found for channel '%s': %s" % (
+                name, str(e)))
+
+        except Exception, e:
+            pass
+
+        # Make sure these preferences are at least defined
+        prefs.setDefaults(switchnew=True,
+                          raisenew=True, genthumb=True)
+
         with self.lock:
-            name = chinfo.name
-            bnch = self.add_viewer(chname, self.cm, self.im,
+            bnch = self.add_viewer(chname, self.cm, self.im, prefs,
                                    workspace=workspace)
-
-            prefs = None
-            try:
-                self.logger.debug("loading preferences for channel '%s'" % (
-                    name))
-                prefs = self.settings.load(name, "prefs")
-
-            except Exception, e:
-                self.logger.warn("no saved preferences found for channel '%s': %s" % (
-                    name, str(e)))
-                self.settings.createCategory(name)
-
-            # Make sure these preferences are at least defined
-            self.settings.setDefaults(name, switchnew=True,
-                                      raisenew=True,
-                                      genthumb=True)
-            prefs = self.settings.getSettings(name)
-            self.logger.debug("prefs for '%s' are %s" % (name, str(prefs)))
-
-            try:
-                self.preferences_to_fitsimage(prefs, bnch.fitsimage,
-                                                  redraw=False)
-            except Exception, e:
-                self.logger.error("failed to get or set preferences for channel '%s': %s" % (
-                    name, str(e)))
 
             opmon = self.getPluginManager(self.logger, self,
                                           self.ds, self.mm)
@@ -787,53 +775,53 @@ class GingaControl(Callback.Callbacks):
         with self.lock:
             return [ self.channel[key].name for key in self.channel.keys() ]
                 
-    def preferences_to_fitsimage(self, prefs, fitsimage, redraw=False):
-        print "prefs=%s" % (str(prefs))
+    # def preferences_to_fitsimage(self, prefs, fitsimage, redraw=False):
+    #     print "prefs=%s" % (str(prefs))
 
-        rgbmap = fitsimage.get_rgbmap()
+    #     rgbmap = fitsimage.get_rgbmap()
 
-        cm = rgbmap.get_cmap()
-        prefs.color_map = prefs.get('color_map', cm.name)
-        cm = cmap.get_cmap(prefs.color_map)
-        fitsimage.set_cmap(cm, redraw=False)
+    #     cm = rgbmap.get_cmap()
+    #     prefs.color_map = prefs.get('color_map', cm.name)
+    #     cm = cmap.get_cmap(prefs.color_map)
+    #     fitsimage.set_cmap(cm, redraw=False)
 
-        im = rgbmap.get_imap()
-        prefs.intensity_map = prefs.get('intensity_map', im.name)
-        im = imap.get_imap(prefs.intensity_map)
-        fitsimage.set_imap(im, redraw=False)
+    #     im = rgbmap.get_imap()
+    #     prefs.intensity_map = prefs.get('intensity_map', im.name)
+    #     im = imap.get_imap(prefs.intensity_map)
+    #     fitsimage.set_imap(im, redraw=False)
 
-        t_ = fitsimage.get_settings()
-        prefs.auto_levels = prefs.get('auto_levels',
-                                      t_['autolevels'])
-        fitsimage.enable_autolevels(prefs.auto_levels)
-        ## prefs.usesavedcuts = prefs.get('usesavedcuts',
-        ##                                t_['use_saved_cuts'])
+    #     t_ = fitsimage.get_settings()
+    #     prefs.auto_levels = prefs.get('auto_levels',
+    #                                   t_['autolevels'])
+    #     fitsimage.enable_autolevels(prefs.auto_levels)
+    #     ## prefs.usesavedcuts = prefs.get('usesavedcuts',
+    #     ##                                t_['use_saved_cuts'])
 
-        prefs.autocut_method = prefs.get('autocut_method',
-                                         t_['autocut_method'])
-        prefs.autocut_hist_pct = prefs.get('autocut_hist_pct',
-                                           t_['autocut_hist_pct'])
-        fitsimage.set_autolevel_params(prefs.autocut_method,
-                                       pct=prefs.autocut_hist_pct)
+    #     prefs.autocut_method = prefs.get('autocut_method',
+    #                                      t_['autocut_method'])
+    #     prefs.autocut_hist_pct = prefs.get('autocut_hist_pct',
+    #                                        t_['autocut_hist_pct'])
+    #     fitsimage.set_autolevel_params(prefs.autocut_method,
+    #                                    pct=prefs.autocut_hist_pct)
                                              
-        prefs.auto_scale = prefs.get('auto_zoom', t_['autozoom'])
-        fitsimage.enable_autozoom(prefs.auto_scale)
+    #     prefs.auto_scale = prefs.get('auto_zoom', t_['autozoom'])
+    #     fitsimage.enable_autozoom(prefs.auto_scale)
 
-        zmin, zmax = fitsimage.get_autozoom_limits()
-        prefs.zoom_min = prefs.get('zoom_min', zmin)
-        prefs.zoom_max = prefs.get('zoom_max', zmax)
-        fitsimage.set_autozoom_limits(prefs.zoom_min, prefs.zoom_max)
+    #     zmin, zmax = fitsimage.get_autozoom_limits()
+    #     prefs.zoom_min = prefs.get('zoom_min', zmin)
+    #     prefs.zoom_max = prefs.get('zoom_max', zmax)
+    #     fitsimage.set_autozoom_limits(prefs.zoom_min, prefs.zoom_max)
 
-        (flipX, flipY, swapXY) = fitsimage.get_transforms()
-        prefs.flipX = prefs.get('flipX', flipX)
-        prefs.flipY = prefs.get('flipY', flipY)
-        prefs.swapXY = prefs.get('swapXY', swapXY)
-        fitsimage.transform(prefs.flipX, prefs.flipY, prefs.swapXY,
-                                 redraw=redraw)
+    #     (flipX, flipY, swapXY) = fitsimage.get_transforms()
+    #     prefs.flipX = prefs.get('flipX', flipX)
+    #     prefs.flipY = prefs.get('flipY', flipY)
+    #     prefs.swapXY = prefs.get('swapXY', swapXY)
+    #     fitsimage.transform(prefs.flipX, prefs.flipY, prefs.swapXY,
+    #                              redraw=redraw)
 
-        revpan = fitsimage.get_pan_reverse()
-        prefs.reverse_pan = prefs.get('reverse_pan', revpan)
-        fitsimage.set_pan_reverse(revpan)
+    #     revpan = fitsimage.get_pan_reverse()
+    #     prefs.reverse_pan = prefs.get('reverse_pan', revpan)
+    #     fitsimage.set_pan_reverse(revpan)
 
     def scale2text(self, scalefactor):
         if scalefactor >= 1.0:

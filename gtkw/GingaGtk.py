@@ -322,11 +322,10 @@ class GingaView(GtkMain.GtkMain):
         fr.add(cbar)
         return fr
     
-    def build_viewpane(self, cm, im):
-        fi = FitsImageCanvasGtk.FitsImageCanvas(logger=self.logger)
+    def build_viewpane(self, cm, im, settings):
+        fi = FitsImageCanvasGtk.FitsImageCanvas(logger=self.logger,
+                                                settings=settings)
         fi.enable_autozoom(self.default_autozoom)
-        fi.set_autozoom_limits(-20, 3)
-        fi.set_zoom_limits(-20, 50)
         fi.enable_autolevels(self.default_autolevels)
         fi.enable_zoom(True)
         fi.enable_cuts(True)
@@ -345,11 +344,12 @@ class GingaView(GtkMain.GtkMain):
         fi.set_bg(0.2, 0.2, 0.2)
         return fi
 
-    def add_viewer(self, name, cm, im, use_readout=True, workspace=None):
+    def add_viewer(self, name, cm, im, settings,
+                   use_readout=True, workspace=None):
 
         vbox = gtk.VBox(spacing=0)
         
-        fi = self.build_viewpane(cm, im)
+        fi = self.build_viewpane(cm, im, settings)
         iw = fi.get_widget()
 
         if self.channel_follows_focus:

@@ -196,50 +196,6 @@ class BaseImage(Callback.Callbacks):
                                   x+radius+1, y+radius+1,
                                   astype=astype)
 
-    ## def get_scaled_cutout_basic(self, x1, y1, x2, y2, dst_wd, dst_ht):
-
-    ##     # calculate dimensions of NON-scaled cutout
-    ##     dx = x2 - x1 + 1
-    ##     dy = y2 - y1 + 1
-    ##     self.logger.debug("dx,dy=%d,%d" % (dx, dy))
-
-    ##     data = self.get_data()
-        
-    ##     # TODO: later we will scale in each dimension independently
-    ##     if (dx >= dst_wd) or (dy >= dst_ht):
-    ##         # data size is bigger, skip pixels
-    ##         xskip = max(1, dx // dst_wd)
-    ##         yskip = max(1, dy // dst_ht)
-    ##         skip = max(xskip, yskip)
-    ##         self.logger.debug("xskip=%d yskip=%d skip=%d" % (xskip, yskip, skip))
-
-    ##         # NOTE [A]
-    ##         newdata = data[y1:y2+1:skip, x1:x2+1:skip]
-    ##         self.logger.debug("intermediate shape %s" % str(newdata.shape))
-    ##         org_fac = - skip
-    ##     else:
-    ##         # data size is smaller, repeat pixels
-    ##         xrept = max(1, int(math.ceil(float(dst_wd) / float(dx))))
-    ##         yrept = max(1, int(math.ceil(float(dst_ht) / float(dy))))
-    ##         rept = max(xrept, yrept)
-    ##         self.logger.debug("xrept=%d yrept=%d rept=%d" % (xrept, yrept, rept))
-
-    ##         # Is there a more efficient way to do this?
-    ##         # NOTE [A]
-    ##         newdata = data[y1:y2+1, x1:x2+1]
-    ##         self.logger.debug("intermediate shape 1 %s" % str(newdata.shape))
-    ##         newdata = newdata.repeat(rept, axis=0)
-    ##         newdata = newdata.repeat(rept, axis=1)
-    ##         self.logger.debug("intermediate shape 2 %s" % str(newdata.shape))
-    ##         org_fac = rept
-
-    ##     ht, wd = newdata.shape[:2]
-    ##     scale_x = float(wd) / dx
-    ##     scale_y = float(ht) / dy
-    ##     res = Bunch.Bunch(data=newdata, org_fac=org_fac,
-    ##                       scale_x=scale_x, scale_y=scale_y)
-    ##     return res
-
     def get_scaled_cutout_wdht(self, x1, y1, x2, y2, new_wd, new_ht):
 
         # calculate dimensions of NON-scaled cutout

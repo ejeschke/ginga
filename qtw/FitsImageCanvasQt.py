@@ -2,7 +2,7 @@
 # FitsImageCanvasQt.py -- A FITS image widget with canvas drawing in Qt
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Wed Dec 26 13:00:56 HST 2012
+#  Last edit: Thu Jan 31 15:30:26 HST 2013
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -21,9 +21,10 @@ class FitsImageCanvasError(FitsImageQt.FitsImageQtError):
 class FitsImageCanvas(Mixins.UIMixin, FitsImageQt.FitsImageZoom,
                       DrawingMixin, CanvasMixin, CompoundMixin):
 
-    def __init__(self, logger=None, render=None):
-        #super(FitsImageCanvas, self).__init__(logger=logger)
+    def __init__(self, logger=None, settings=None, render=None):
+        #super(FitsImageCanvas, self).__init__(logger=logger, settings=settings)
         FitsImageQt.FitsImageZoom.__init__(self, logger=logger,
+                                           settings=settings,
                                            render=render)
         Mixins.UIMixin.__init__(self)
         CompoundMixin.__init__(self)

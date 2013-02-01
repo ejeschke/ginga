@@ -26,9 +26,10 @@ class FitsImageGtkError(FitsImage.FitsImageError):
 
 class FitsImageGtk(FitsImage.FitsImageBase):
 
-    def __init__(self, logger=None):
+    def __init__(self, logger=None, settings=None):
         #super(FitsImageGtk, self).__init__(logger=logger)
-        FitsImage.FitsImageBase.__init__(self, logger=logger)
+        FitsImage.FitsImageBase.__init__(self, logger=logger,
+                                         settings=settings)
 
         imgwin = gtk.DrawingArea()
         imgwin.connect("expose_event", self.expose_event)
@@ -355,9 +356,9 @@ class FitsImageGtk(FitsImage.FitsImageBase):
         
 class FitsImageEvent(FitsImageGtk):
 
-    def __init__(self, logger=None):
+    def __init__(self, logger=None, settings=None):
         #super(FitsImageEvent, self).__init__(logger=logger)
-        FitsImageGtk.__init__(self, logger=logger)
+        FitsImageGtk.__init__(self, logger=logger, settings=settings)
 
         imgwin = self.imgwin
         imgwin.set_flags(gtk.CAN_FOCUS)
@@ -596,8 +597,8 @@ class FitsImageEvent(FitsImageGtk):
 
 class FitsImageZoom(FitsImageEvent, Mixins.FitsImageZoomMixin):
 
-    def __init__(self, logger=None):
-        FitsImageEvent.__init__(self, logger=logger)
+    def __init__(self, logger=None, settings=None):
+        FitsImageEvent.__init__(self, logger=logger, settings=settings)
         Mixins.FitsImageZoomMixin.__init__(self)
         
         

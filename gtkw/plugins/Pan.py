@@ -2,7 +2,7 @@
 # Pan.py -- Pan plugin for fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Sun Jan 27 18:46:33 HST 2013
+#  Last edit: Wed Jan 30 15:20:27 HST 2013
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -52,8 +52,6 @@ class Pan(GingaPlugin.GlobalPlugin):
         #sfi = FitsImageCanvasGtk.FitsImageCanvas(logger=self.logger)
         sfi = FitsImageCanvasGtk.FitsImageCanvas(logger=None)
         sfi.enable_autozoom('on')
-        sfi.set_autozoom_limits(-200, 100)
-        sfi.set_zoom_limits(-200, 100)
         sfi.enable_pan(False)
         #sfi.set_zoom_algorithm('rate')
         sfi.enable_zoom(False)

@@ -2,7 +2,7 @@
 # FitsImageCanvasGtk.py -- A FITS image widget with canvas drawing in Gtk
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Dec  7 16:35:02 HST 2012
+#  Last edit: Tue Jan 29 14:42:34 HST 2013
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -21,8 +21,9 @@ class FitsImageCanvasError(FitsImageGtk.FitsImageGtkError):
 class FitsImageCanvas(Mixins.UIMixin, FitsImageGtk.FitsImageZoom,
                       DrawingMixin, CanvasMixin, CompoundMixin):
 
-    def __init__(self, logger=None):
-        FitsImageGtk.FitsImageZoom.__init__(self, logger=logger)
+    def __init__(self, logger=None, settings=None):
+        FitsImageGtk.FitsImageZoom.__init__(self, logger=logger,
+                                            settings=settings)
         Mixins.UIMixin.__init__(self)
         CompoundMixin.__init__(self)
         CanvasMixin.__init__(self)

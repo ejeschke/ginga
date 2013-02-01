@@ -2,7 +2,7 @@
 # Pick.py -- Pick plugin for fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Sun Jan 27 19:02:00 HST 2013
+#  Last edit: Wed Jan 30 15:22:30 HST 2013
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -115,7 +115,6 @@ class Pick(GingaPlugin.LocalPlugin):
         di.enable_autolevels('off')
         di.enable_zoom(True)
         di.enable_cuts(True)
-        #di.set_zoom_limits(1, 20)
         di.zoom_to(3, redraw=False)
         di.set_callback('zoom-set', self.zoomset)
         di.set_cmap(cm, redraw=False)

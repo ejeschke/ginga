@@ -49,7 +49,7 @@ class Zoom(GingaPlugin.GlobalPlugin):
         zi.enable_autozoom('off')
         zi.enable_autolevels('off')
         zi.enable_zoom(False)
-        zi.set_zoom_limits(1, 20)
+        #zi.set_scale_limits(0.001, 1000.0)
         zi.zoom_to(self.default_zoom, redraw=False)
         zi.add_callback('zoom-set', self.zoomset)
         #zi.add_callback('motion', self.showxy)

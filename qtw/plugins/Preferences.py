@@ -25,7 +25,6 @@ class Preferences(GingaPlugin.LocalPlugin):
         super(Preferences, self).__init__(fv, fitsimage)
 
         self.chname = self.fv.get_channelName(self.fitsimage)
-        self.prefs = self.fv.settings.getSettings(self.chname)
 
         self.cmap_names = cmap.get_names()
         self.imap_names = imap.get_names()
@@ -37,15 +36,15 @@ class Preferences(GingaPlugin.LocalPlugin):
 
         self.fitsimage.add_callback('autocuts', self.autocuts_changed_cb)
         self.fitsimage.add_callback('autozoom', self.autozoom_changed_cb)
-        self.fitsimage.add_callback('pan-set', self.pan_changed_cb)
+        self.fitsimage.add_callback('pan-set', self.pan_changed_ext_cb)
+        self.fitsimage.add_callback('zoom-set', self.scale_changed_ext_cb)
 
         self.t_ = self.fitsimage.get_settings()
         self.t_.getSetting('zoomalg').add_callback('set', self.set_zoomalg_ext_cb)
         self.t_.getSetting('zoomrate').add_callback('set', self.set_zoomrate_ext_cb)
+        for key in ['scale_x_base', 'scale_y_base']:
+            self.t_.getSetting(key).add_callback('set', self.scalebase_changed_ext_cb)
         self.t_.getSetting('rot_deg').add_callback('set', self.set_rotate_ext_cb)
-        for name in ('flipx', 'flipy', 'swapxy'):
-            self.t_.getSetting(name).add_callback('set', self.set_transform_ext_cb)
-
         for name in ('flipx', 'flipy', 'swapxy'):
             self.t_.getSetting(name).add_callback('set', self.set_transform_ext_cb)
 
@@ -127,6 +126,8 @@ class Preferences(GingaPlugin.LocalPlugin):
 
         captions = (('Zoom Alg', 'combobox', 'Zoom Rate', 'spinfloat'),
                     ('Stretch XY', 'combobox', 'Stretch Factor', 'spinfloat'),
+                    ('Scale X', 'entry', 'Scale Y', 'entry'),
+                    ('Scale Min', 'spinfloat', 'Scale Max', 'spinfloat'),
                     ('Zoom Defaults', 'button'))
         w, b = QtHelp.build_info(captions)
         self.w.update(b)
@@ -145,24 +146,49 @@ class Preferences(GingaPlugin.LocalPlugin):
             index += 1
         b.stretch_xy.setCurrentIndex(0)
         b.stretch_xy.setToolTip("Stretch pixels in X or Y")
-        b.stretch_xy.activated.connect(self.set_stretch_cb)
+        b.stretch_xy.activated.connect(lambda v: self.set_stretch_cb())
             
         b.stretch_factor.setRange(1.0, 10.0)
         b.stretch_factor.setValue(1.0)
-        b.stretch_factor.setSingleStep(0.01)
-        b.stretch_factor.valueChanged.connect(self.set_stretch_cb)
+        b.stretch_factor.setSingleStep(0.10)
+        b.stretch_factor.setDecimals(8)
+        b.stretch_factor.valueChanged.connect(lambda v: self.set_stretch_cb())
         b.stretch_factor.setToolTip("Length of pixel relative to 1 on other side")
         b.stretch_factor.setEnabled(False)
 
         b.zoom_rate.setRange(1.1, 3.0)
         b.zoom_rate.setValue(math.sqrt(2.0))
         b.zoom_rate.setSingleStep(0.1)
+        b.zoom_rate.setDecimals(8)
         b.zoom_rate.setEnabled(False)
         b.zoom_rate.setToolTip("Step rate of increase/decrease per zoom level")
         b.zoom_rate.valueChanged.connect(self.set_zoomrate_cb)
 
         b.zoom_defaults.clicked.connect(self.set_zoom_defaults_cb)
         
+        scale_x, scale_y = self.fitsimage.get_scale_xy()
+        b.scale_x.setToolTip("Set the scale in X axis")
+        b.scale_x.setText(str(scale_x))
+        b.scale_x.returnPressed.connect(self.set_scale_cb)
+        b.scale_y.setToolTip("Set the scale in Y axis")
+        b.scale_y.setText(str(scale_y))
+        b.scale_y.returnPressed.connect(self.set_scale_cb)
+
+        scale_min, scale_max = self.t_['scale_min'], self.t_['scale_max']
+        b.scale_min.setRange(0.00001, 1.0)
+        b.scale_min.setValue(scale_min)
+        b.scale_min.setDecimals(8)
+        b.scale_min.setSingleStep(1.0)
+        b.scale_min.valueChanged.connect(lambda w: self.set_scale_limit_cb())
+        b.scale_min.setToolTip("Set the minimum allowed scale in any axis")
+
+        b.scale_max.setRange(1.0, 10000.0)
+        b.scale_max.setValue(scale_max)
+        b.scale_max.setSingleStep(1.0)
+        b.scale_max.setDecimals(8)
+        b.scale_max.valueChanged.connect(lambda w: self.set_scale_limit_cb())
+        b.scale_min.setToolTip("Set the maximum allowed scale in any axis")
+
         fr.layout().addWidget(w, stretch=1, alignment=QtCore.Qt.AlignLeft)
         vbox.addWidget(fr, stretch=0, alignment=QtCore.Qt.AlignTop)
 
@@ -213,7 +239,7 @@ class Preferences(GingaPlugin.LocalPlugin):
 
         b.rotate.setRange(0.00, 360.0)
         b.rotate.setValue(0.00)
-        b.rotate.setSingleStep(1.00)
+        b.rotate.setSingleStep(10.0)
         b.rotate.setDecimals(5)
         b.rotate.valueChanged.connect(lambda w: self.rotate_cb())
 
@@ -269,7 +295,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         fr = QtHelp.Frame("Autozoom")
 
         captions = (('Zoom New', 'combobox'),
-            ('Min Zoom', 'spinbutton', 'Max Zoom', 'spinbutton'))
+                    )
         w, b = QtHelp.build_info(captions)
         self.w.btn_zoom_new = b.zoom_new
         combobox = b.zoom_new
@@ -280,19 +306,10 @@ class Preferences(GingaPlugin.LocalPlugin):
         option = self.t_['autozoom']
         index = self.autozoom_options.index(option)
         combobox.setCurrentIndex(index)
-        combobox.activated.connect(self.set_autozoom)
+        combobox.activated.connect(self.set_autozoom_cb)
 
-        self.w.min_zoom = b.min_zoom
-        self.w.max_zoom = b.max_zoom
-        b.min_zoom.setRange(-20, 20)
-        b.min_zoom.setSingleStep(1)
-        b.min_zoom.valueChanged.connect(lambda w: self.set_zoom_minmax())
-        b.max_zoom.setRange(-20, 20)
-        b.max_zoom.setSingleStep(1)
-        b.max_zoom.valueChanged.connect(lambda w: self.set_zoom_minmax())
         b.zoom_new.setToolTip("Automatically fit new images to window")
-        b.min_zoom.setToolTip("Minimum zoom level for fitting to window")
-        b.max_zoom.setToolTip("Maximum zoom level for fitting to window")
+
         fr.layout().addWidget(w, stretch=1, alignment=QtCore.Qt.AlignLeft)
         vbox.addWidget(fr, stretch=0, alignment=QtCore.Qt.AlignTop)
 
@@ -308,15 +325,15 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.w.btn_follow_new_images = b.follow_new_images
         self.w.btn_follow_new_images.setChecked(True)
         self.w.btn_follow_new_images.stateChanged.connect(
-            lambda w: self.controls_to_preferences())
+            lambda w: self.set_chprefs_cb())
         self.w.btn_raise_new_images = b.raise_new_images
         self.w.btn_raise_new_images.setChecked(True)
         self.w.btn_raise_new_images.stateChanged.connect(
-            lambda w: self.controls_to_preferences())
+            lambda w: self.set_chprefs_cb())
         self.w.btn_create_thumbnail = b.create_thumbnail
         self.w.btn_create_thumbnail.setChecked(True)
         self.w.btn_create_thumbnail.stateChanged.connect(
-            lambda w: self.controls_to_preferences())
+            lambda w: self.set_chprefs_cb())
 
         fr.layout().addWidget(w, stretch=1, alignment=QtCore.Qt.AlignLeft)
         vbox.addWidget(fr, stretch=0, alignment=QtCore.Qt.AlignTop)
@@ -342,7 +359,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         map from the preferences pane."""
         name = cmap.get_names()[index]
         self.set_cmap_byname(name)
-        self.prefs.color_map = name
+        self.t_.set(color_map=name)
 
     def set_cmap_byname(self, name, redraw=True):
         # Get colormap
@@ -359,7 +376,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         map from the preferences pane."""
         name = imap.get_names()[index]
         self.set_imap_byname(name)
-        self.prefs.intensity_map = name
+        self.t_.set(intensity_map=name)
 
     def set_imap_byname(self, name, redraw=True):
         # Get intensity map
@@ -393,7 +410,7 @@ class Preferences(GingaPlugin.LocalPlugin):
 
         if redraw:
             self.fitsimage.redraw(whence=2)
-        self.prefs.color_algorithm = name
+        self.t_.set(color_algorithm=name)
 
     def set_default_maps(self):
         index = self.cmap_names.index(self.fv.default_cmap)
@@ -401,14 +418,14 @@ class Preferences(GingaPlugin.LocalPlugin):
         index = self.imap_names.index(self.fv.default_imap)
         self.w.imap_choice.setCurrentIndex(index)
         self.set_cmap_byname(self.fv.default_cmap)
-        self.prefs.color_map = self.fv.default_cmap
+        self.t_.set(color_map=self.fv.default_cmap)
         self.set_imap_byname(self.fv.default_imap)
-        self.prefs.intensity_map = self.fv.default_imap
+        self.t_.set(intensity_map=self.fv.default_imap)
         name = 'linear'
         index = self.calg_names.index(name)
         self.w.calg_choice.setCurrentIndex(index)
         self.set_calg_byname(name)
-        self.prefs.color_algorithm = name
+        self.t_.set(color_algorithm=name)
         hashsize = 65535
         self.w.table_size.setText(str(hashsize))
         rgbmap = self.fitsimage.get_rgbmap()
@@ -435,41 +452,69 @@ class Preferences(GingaPlugin.LocalPlugin):
             self.w.zoom_rate.setEnabled(True)
             self.w.stretch_factor.setEnabled(True)
 
+    def scalebase_changed_ext_cb(self, setting, value):
+        scale_x_base, scale_y_base = self.fitsimage.get_scale_base_xy()
+
+        ratio = float(scale_x_base) / float(scale_y_base)
+        if ratio < 1.0:
+            # Y is stretched
+            idx = 1
+            ratio = 1.0 / ratio
+        elif ratio > 1.0:
+            # X is stretched
+            idx = 0
+        else:
+            idx = self.w.stretch_xy.get_active()
+
+        # Update stretch controls to reflect actual scale
+        self.w.stretch_xy.setCurrentIndex(idx)
+        self.w.stretch_factor.setValue(ratio)
+        
     def set_zoom_defaults_cb(self):
         rate = math.sqrt(2.0)
         self.w.stretch_factor.setValue(1.0)
         self.t_.set(zoomalg='step', zoomrate=rate,
                     scale_x_base=1.0, scale_y_base=1.0)
         
-    def set_stretch_cb(self, value):
+    def set_stretch_cb(self):
         axis = self.w.stretch_xy.currentIndex()
+        value = self.w.stretch_factor.value()
         if axis == 0:
             self.t_.set(scale_x_base=value, scale_y_base=1.0)
         else:
             self.t_.set(scale_x_base=1.0, scale_y_base=value)
         
-    def set_autozoom(self, index):
-        option = self.autozoom_options[index]
-        self.fitsimage.enable_autozoom(option)
-        self.prefs.auto_scale = option
-
-    def pan_changed_cb(self, fitsimage):
+    def pan_changed_ext_cb(self, fitsimage):
         if self.w.has_key('pan_x'):
             pan_x, pan_y = fitsimage.get_pan()
             fits_x, fits_y = pan_x + 0.5, pan_y + 0.5
             self.w.pan_x.setText(str(fits_x))
             self.w.pan_y.setText(str(fits_y))
 
+    def set_scale_cb(self):
+        scale_x = float(self.w.scale_x.text())
+        scale_y = float(self.w.scale_y.text())
+        self.fitsimage.scale_to(scale_x, scale_y)
+
+    def scale_changed_ext_cb(self, fitsimage, zoomlevel, scale_x, scale_y):
+        if not self.w.has_key('scale_x'):
+            return
+        self.w.scale_x.setText(str(scale_x))
+        self.w.scale_y.setText(str(scale_y))
+
+    def set_scale_limit_cb(self):
+        scale_min = float(self.w.scale_min.value())
+        scale_max = float(self.w.scale_max.value())
+        self.t_.set(scale_min=scale_min, scale_max=scale_max)
+
+    def set_autozoom_cb(self, idx):
+        option = self.autozoom_options[idx]
+        self.fitsimage.enable_autozoom(option)
+        self.t_.set(autozoom=option)
+
     def autozoom_changed_cb(self, fitsimage, option):
         index = self.autozoom_options.index(option)
         self.w.btn_zoom_new.setCurrentIndex(index)
-
-    def set_zoom_minmax(self):
-        zmin = self.w.min_zoom.value()
-        zmax = self.w.max_zoom.value()
-        self.fitsimage.set_autozoom_limits(zmin, zmax)
-        self.prefs.zoom_min = zmin
-        self.prefs.zoom_max = zmax
 
     def config_autolevel_params(self, method, pct):
         index = self.autocut_methods.index(method)
@@ -491,18 +536,15 @@ class Preferences(GingaPlugin.LocalPlugin):
         method = self.autocut_methods[idx]
         self.w.hist_pct.setEnabled(method == 'histogram')
         self.fitsimage.set_autolevel_params(method, pct=pct)
-        self.prefs.autocut_method = method
-        self.prefs.autocut_hist_pct = pct
+        self.t_.set(autocut_method=method, autocut_hist_pct=pct)
 
-        self.fitsimage.auto_levels()
-        
     def set_autolevels(self, index):
         option = self.autocut_options[index]
         self.fitsimage.enable_autolevels(option)
-        self.prefs.auto_levels = option
+        self.t_.set(autolevels=option)
 
     def autocuts_changed_cb(self, fitsimage, option):
-        print "autocuts changed to %s" % option
+        self.logger.debug("autocuts changed to %s" % option)
         index = self.autocut_options.index(option)
         self.w.btn_cut_new.setCurrentIndex(index)
 
@@ -518,9 +560,6 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.w.flip_x.setChecked(flipx)
         self.w.flip_y.setChecked(flipy)
         self.w.swap_xy.setChecked(swapxy)
-        self.prefs.flipX = flipx
-        self.prefs.flipY = flipy
-        self.prefs.swapXY = swapxy
         
     def rotate_cb(self):
         deg = self.w.rotate.value()
@@ -529,7 +568,6 @@ class Preferences(GingaPlugin.LocalPlugin):
 
     def set_rotate_ext_cb(self, setting, value):
         self.w.rotate.setValue(value)
-        self.prefs.rotate_deg = value
         return True
 
     def center_image_cb(self):
@@ -543,71 +581,39 @@ class Preferences(GingaPlugin.LocalPlugin):
         return True
 
     def restore_cb(self):
-        self.w.flip_x.setChecked(False)
-        self.w.flip_y.setChecked(False)
-        self.w.swap_xy.setChecked(False)
-        self.fitsimage.center_image(redraw=False)
-        self.fitsimage.rotate(0.0, redraw=False)
-        self.set_transforms_cb()
+        self.t_.set(flipx=False, flipy=False, swapxy=False,
+                    rot_deg=0.0)
+        self.fitsimage.center_image()
         return True
 
     def set_misc_cb(self):
         revpan = self.w.reverse_pan.checkState()
-        self.prefs.reverse_pan = revpan
+        self.t_.set(reverse_pan=revpan)
         self.fitsimage.set_pan_reverse(revpan)
 
         markc = self.w.mark_center.checkState()
-        self.prefs.mark_center = markc
+        self.t_.set(mark_center=markc)
         self.fitsimage.show_pan_mark(markc)
         return True
 
-    def controls_to_preferences(self):
-        prefs = self.prefs
-
-        prefs.switchnew = self.w.btn_follow_new_images.checkState()
-        prefs.raisenew = self.w.btn_raise_new_images.checkState()
-        prefs.genthumb = self.w.btn_create_thumbnail.checkState()
-
-        (flipX, flipY, swapXY) = self.fitsimage.get_transforms()
-        prefs.flipX = flipX
-        prefs.flipY = flipY
-        prefs.swapXY = swapXY
-        
-        ## loval, hival = self.fitsimage.get_cut_levels()
-        ## prefs.cutlo = loval
-        ## prefs.cuthi = hival
-
-        # Get the color and intensity maps
-        rgbmap = self.fitsimage.get_rgbmap()
-        cm = rgbmap.get_cmap()
-        prefs.color_map = cm.name
-        prefs.color_algorithm = rgbmap.get_hash_algorithm()
-        im = rgbmap.get_imap()
-        prefs.intensity_map = im.name
-
-        prefs.auto_levels = self.t_['autolevels']
-        prefs.autocut_method = self.t_['autocut_method']
-        prefs.autocut_hist_pct = self.t_['autocut_hist_pct']
-
-        prefs.auto_scale = self.t_['autozoom']
-        zmin, zmax = self.fitsimage.get_autozoom_limits()
-        prefs.zoom_min = zmin
-        prefs.zoom_max = zmax
-                
-        prefs.reverse_pan = self.t_['reverse_pan']
+    def set_chprefs_cb(self):
+        switchnew = self.w.follow_new_images.get_active()
+        raisenew = self.w.raise_new_images.get_active()
+        genthumb = self.w.create_thumb.get_active()
+        self.t_.set(switchnew=switchnew, raisenew=raisenew,
+                    genthumb=genthumb)
 
     def preferences_to_controls(self):
-        prefs = self.prefs
-        #print "prefs=%s" % (str(prefs))
+        prefs = self.t_
 
-        prefs.switchnew = prefs.get('switchnew', True)
-        self.w.btn_follow_new_images.setChecked(prefs.switchnew)
+        prefs.setdefault('switchnew', True)
+        self.w.btn_follow_new_images.setChecked(prefs['switchnew'])
         
-        prefs.raisenew = prefs.get('raisenew', True)
-        self.w.btn_raise_new_images.setChecked(prefs.raisenew)
+        prefs.setdefault('raisenew', True)
+        self.w.btn_raise_new_images.setChecked(prefs['raisenew'])
         
-        prefs.genthumb = prefs.get('genthumb', True)
-        self.w.btn_create_thumbnail.setChecked(prefs.genthumb)
+        prefs.setdefault('genthumb', True)
+        self.w.btn_create_thumbnail.setChecked(prefs['genthumb'])
 
         rgbmap = self.fitsimage.get_rgbmap()
         cm = rgbmap.get_cmap()
@@ -623,34 +629,29 @@ class Preferences(GingaPlugin.LocalPlugin):
         index = self.imap_names.index(im.name)
         self.w.imap_choice.setCurrentIndex(index)
 
-        auto_levels = self.t_['autolevels']
-        index = self.autocut_options.index(auto_levels)
+        autolevels = prefs['autolevels']
+        index = self.autocut_options.index(autolevels)
         self.w.btn_cut_new.setCurrentIndex(index)
 
-        autocut_method = self.t_['autocut_method']
-        autocut_hist_pct = self.t_['autocut_hist_pct']
+        autocut_method = prefs['autocut_method']
+        autocut_hist_pct = prefs['autocut_hist_pct']
         self.config_autolevel_params(autocut_method,
                                      autocut_hist_pct)
                                              
-        auto_zoom = self.t_['autozoom']
+        auto_zoom = prefs['autozoom']
         index = self.autozoom_options.index(auto_zoom)
         self.w.btn_zoom_new.setCurrentIndex(index)
-
-        zmin, zmax = self.fitsimage.get_autozoom_limits()
-        self.w.min_zoom.setValue(zmin)
-        self.w.max_zoom.setValue(zmax)
 
         (flipX, flipY, swapXY) = self.fitsimage.get_transforms()
         self.w.flip_x.setChecked(flipX)
         self.w.flip_y.setChecked(flipY)
         self.w.swap_xy.setChecked(swapXY)
 
-        revpan = self.t_['reverse_pan']
+        revpan = prefs['reverse_pan']
         self.w.reverse_pan.setChecked(revpan)
 
     def save_preferences(self):
-        self.controls_to_preferences()
-        self.fv.settings.save(self.chname, "prefs")
+        self.t_.save()
 
     def close(self):
         self.fv.stop_operation_channel(self.chname, str(self))

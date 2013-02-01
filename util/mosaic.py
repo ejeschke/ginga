@@ -20,13 +20,9 @@ import AstroImage
 STD_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcName)s) | %(message)s'
 
 def mosaic(paths, logger, outfile=None):
-    images = []
-    for p in paths:
-        image = AstroImage.AstroImage(logger=logger)
-        image.load_file(p)
-        images.append(image)
-
-    mosaic = image.mosaic(images)
+    logger.info("Mosaicing images...")
+    image = AstroImage.AstroImage(logger=logger)
+    mosaic = image.mosaic(paths)
 
     if outfile:
         try:

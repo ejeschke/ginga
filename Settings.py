@@ -1,62 +1,17 @@
 #
 # Settings.py -- Simple class to manage stateful user preferences.
 #
-#[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Thu Jan 24 15:34:18 HST 2013
-#]
+# Eric Jeschke (eric@naoj.org)
 #
-# Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
+# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
 import os
-import pickle
+import pprint
 
 import Callback
 import Bunch
-
-class Settings(object):
-    def __init__(self, basefolder="/tmp", create_folders=True):
-        self.folder = basefolder
-        self.create = create_folders
-        self.settings = Bunch.Bunch(caseless=True)
-
-    def setDefaults(self, category, **kwdargs):
-        for key, val in kwdargs.items():
-            self.settings[category].setdefault(key, val)
-
-    def getSettings(self, category):
-        return self.settings[category]
-    
-    def createCategory(self, category):
-        if not self.settings.has_key(category):
-            self.settings[category] = Bunch.Bunch(caseless=True)
-        return self.settings[category]
-
-    def load(self, category, filename):
-        category = category.lower()
-        path = os.path.join(self.folder, category, filename)
-        buf = None
-        with open(path, 'r') as in_f:
-            d = pickle.load(in_f)
-        self.settings[category] = Bunch.Bunch(caseless=True)
-        self.settings[category].update(d)
-        #print "%s settings are: %s" % (category, str(self.settings[category]))
-        return self.settings[category]
-        
-    def save(self, category, filename):
-        category = category.lower()
-        folder = os.path.join(self.folder, category)
-        if (not os.path.exists(folder)) and self.create:
-            os.mkdir(folder)
-        path = os.path.join(folder, filename)
-        d = {}
-        d.update(self.settings[category])
-        with open(path, 'w') as out_f:
-            pickle.dump(d, out_f)
-
-    def get_baseFolder(self):
-        return self.folder
 
 
 class Setting(Callback.Callbacks):
@@ -94,8 +49,10 @@ class Setting(Callback.Callbacks):
 
 class SettingGroup(object):
 
-    def __init__(self, logger=None):
+    def __init__(self, name=None, logger=None, preffile=None):
+        self.name = name
         self.logger = logger
+        self.preffile = preffile
 
         self.group = Bunch.Bunch()
 
@@ -128,17 +85,77 @@ class SettingGroup(object):
         for key, value in kwdargs.items():
             self.setdefault(key, value)
 
-    def get(self, key):
-        return self.group[key].value
-        
+    def setDefaults(self, **kwdargs):
+        return self.addDefaults(**kwdargs)
+    
+    def get(self, *args):
+        key = args[0]
+        if len(args) == 1:
+            return self.group[key].value
+        if len(args) == 2:
+            try:
+                return self.group[key].value
+            except KeyError:
+                return args[1]
+
+    def getDict(self):
+        return dict([[name, self.group[name].value] for name in self.group.keys()])
+            
     def set(self, **kwdargs):
         for key, value in kwdargs.items():
-            self.group[key].set(value)
+            if not self.group.has_key(key):
+                self.setdefault(key, value)
+            else:
+                self.group[key].set(value)
         
+    def load(self):
+        with open(self.preffile, 'r') as in_f:
+            buf = in_f.read()
+            d = eval(buf)
+            self.set(**d)
+        
+    def save(self):
+        d = self.getDict()
+        with open(self.preffile, 'w') as out_f:
+            pprint.pprint(d, out_f)
+
     def __getitem__(self, key):
         return self.group[key].value
         
     def __setitem__(self, key, value):
         self.group[key].set(value)
+
+    def has_key(self, key):
+        return self.group.has_key(key)
+
+
+class Preferences(object):
+
+    def __init__(self, basefolder="/tmp", logger=None):
+        self.folder = basefolder
+        self.logger = logger
+        self.settings = Bunch.Bunch(caseless=True)
+
+    def setDefaults(self, category, **kwdargs):
+        self.settings[category].addDefaults(**kwdargs)
+
+    def getSettings(self, category):
+        return self.settings[category]
+    
+    def getDict(self, category):
+        return self.settings[category].getDict()
+    
+    def createCategory(self, category):
+        if not self.settings.has_key(category):
+            path = os.path.join(self.folder, category + ".prefs")
+            self.settings[category] = SettingGroup(logger=self.logger,
+                                                   name=category,
+                                                   preffile=path)
+        return self.settings[category]
+
+    def get_baseFolder(self):
+        return self.folder
+
+
         
 #END

@@ -36,7 +36,7 @@ class FitsImageBase(Callback.Callbacks):
     that connect to an actual rendering surface.
     """
 
-    def __init__(self, logger=None, rgbmap=None):
+    def __init__(self, logger=None, rgbmap=None, settings=None):
         Callback.Callbacks.__init__(self)
 
         if logger != None:
@@ -59,14 +59,16 @@ class FitsImageBase(Callback.Callbacks):
         # Object that calculates auto cut levels
         self.autocuts = AutoCuts.AutoCuts(self.logger)
         
-        # actual image width and height (see set_data())
+        # Dummy 1-pixel image
         self.image = AstroImage.AstroImage(numpy.zeros((1, 1)),
                                            logger=self.logger)
         # for debugging
         self.name = str(self)
 
         # Create settings and set defaults
-        self.t_ = Settings.SettingGroup(logger=self.logger)
+        if settings == None:
+            settings = Settings.SettingGroup(logger=self.logger)
+        self.t_ = settings
         
         # for cut levels
         self.t_.addDefaults(locut=0.0, hicut=0.0)
@@ -89,10 +91,12 @@ class FitsImageBase(Callback.Callbacks):
         for name in ('zoomrate', 'zoomalg', 'scale_x_base', 'scale_y_base'):
             self.t_.getSetting(name).add_callback('set', self.zoomalg_change_cb)
 
+        # max/min scaling
+        self.t_.addDefaults(scale_max=500.0, scale_min=0.001)
+        
         # autozoom options
         self.autozoom_options = ('on', 'override', 'off')
-        self.t_.addDefaults(autozoom='on', zoom_max=20.0, zoom_min=-50.0,
-                            zoom_maxauto=3.0, zoom_minauto=-20.0)
+        self.t_.addDefaults(autozoom='on')
 
         # for panning
         self.t_makebg = False
@@ -270,19 +274,18 @@ class FitsImageBase(Callback.Callbacks):
     def clear(self, redraw=True):
         self.set_data(numpy.zeros((1, 1)), redraw=redraw)
         
-    def save_profile(self, category, **params):
+    def save_profile(self, **params):
         if self.image == None:
             return
         profile = self.image.get('profile', None)
         if (profile == None):
             # If image has no profile then create one
-            profile = Settings.Settings()
+            profile = Settings.SettingGroup()
             self.image.set(profile=profile) 
 
-        self.logger.debug("saving to image profile: cat='%s' params=%s" % (
-                category, str(params)))
-        section = profile.createCategory(category)
-        section.update(params)
+        self.logger.debug("saving to image profile: params=%s" % (
+                str(params)))
+        profile.set(**params)
             
     def apply_profile(self, profile, redraw=False):
         # If there is image metadata associated that has cut levels
@@ -301,7 +304,7 @@ class FitsImageBase(Callback.Callbacks):
 
     def redraw(self, whence=0):
         self.redraw_data(whence=whence)
-        
+            
         # finally update the window drawable from the offscreen surface
         self.update_image()
 
@@ -703,11 +706,41 @@ class FitsImageBase(Callback.Callbacks):
 
         
     def scale_to(self, scale_x, scale_y, no_reset=False, redraw=True):
+        ratio = float(scale_x) / float(scale_y)
+        if ratio < 1.0:
+            # Y is stretched
+            scale_x_base, scale_y_base = 1.0, 1.0 / ratio
+        else:
+            # X may be stretched
+            scale_x_base, scale_y_base = ratio, 1.0
+        if scale_x_base != scale_y_base:
+            zoomalg = 'rate'
+        else:
+            zoomalg = 'step'
+
+        self.t_.set(scale_x_base=scale_x_base, scale_y_base=scale_y_base,
+                    zoomalg=zoomalg)
+
+        self._scale_to(scale_x, scale_y, no_reset=no_reset, redraw=redraw)
+
+    def _scale_to(self, scale_x, scale_y, no_reset=False, redraw=True):
         self._scale_x = scale_x
         self._scale_y = scale_y
 
-        # TODO: avg, min?
-        scalefactor = max(scale_x, scale_y)
+        # Check scale limits
+        maxscale = max(scale_x, scale_y)
+        if (maxscale > self.t_['scale_max']):
+            self.logger.error("Scale (%.2f) exceeds max scale limit (%.2f)" % (
+                maxscale, self.t_['scale_max']))
+            # TODO: popup? exception?
+            return
+        
+        minscale = min(scale_x, scale_y)
+        if (minscale < self.t_['scale_min']):
+            self.logger.error("Scale (%.2f) exceeds min scale limit (%.2f)" % (
+                minscale, self.t_['scale_min']))
+            # TODO: popup? exception?
+            return
         
         # If user specified override for auto zoom, then turn off
         # auto zoom now that they have set the zoom manually
@@ -726,7 +759,7 @@ class FitsImageBase(Callback.Callbacks):
             #print "calc zoom_x=%f zoom_y=%f zoomlevel=%f" % (
             #    zoom_x, zoom_y, zoomlevel)
         else:
-            zoomlevel = scalefactor
+            zoomlevel = maxscale
             if zoomlevel < 1.0:
                 zoomlevel = - (1.0 / zoomlevel)
             #print "calc zoomlevel=%f" % (zoomlevel)
@@ -738,10 +771,12 @@ class FitsImageBase(Callback.Callbacks):
             self.redraw()
 
     def get_scale(self):
-        scalefactor = min(self._scale_x, self._scale_y)
+        #scalefactor = max(self._org_scale_x, self._org_scale_y)
+        scalefactor = max(self._scale_x, self._scale_y)
         return scalefactor
 
     def get_scale_xy(self):
+        #return (self._org_scale_x, self._org_scale_y)
         return (self._scale_x, self._scale_y)
 
     def get_scale_base_xy(self):
@@ -762,13 +797,6 @@ class FitsImageBase(Callback.Callbacks):
         return text
 
     def zoom_to(self, zoomlevel, no_reset=False, redraw=True):
-        if zoomlevel > self.t_['zoom_max']:
-            self.logger.debug("max zoom reached")
-            return
-        if zoomlevel < self.t_['zoom_min']:
-            self.logger.debug("min zoom reached")
-            return
-
         if self.t_['zoomalg'] == 'rate':
             scale_x = self.t_['scale_x_base'] * (
                 self.t_['zoomrate'] ** zoomlevel)
@@ -785,8 +813,8 @@ class FitsImageBase(Callback.Callbacks):
 
         #print "scale_x=%f scale_y=%f zoom=%f" % (
         #    scale_x, scale_y, zoomlevel)
-        self.scale_to(scale_x, scale_y,
-                      no_reset=no_reset, redraw=redraw)
+        self._scale_to(scale_x, scale_y,
+                       no_reset=no_reset, redraw=redraw)
 
     def zoom_in(self):
         if self.t_['zoomalg'] == 'rate':
@@ -836,14 +864,8 @@ class FitsImageBase(Callback.Callbacks):
             scalefactor = min(scale_x, scale_y)
             scale_x = scale_y = scalefactor
         
-        self.scale_to(scale_x, scale_y,
+        self._scale_to(scale_x, scale_y,
                       no_reset=no_reset, redraw=redraw)
-
-    def is_max_zoom(self):
-        return self.t_['zoomlevel'] >= self.t_['zoom_max']
-        
-    def is_min_zoom(self):
-        return self.t_['zoomlevel'] <= self.t_['zoom_min']
 
     def get_zoom(self):
         return self.t_['zoomlevel']
@@ -869,18 +891,12 @@ class FitsImageBase(Callback.Callbacks):
     def set_name(self, name):
         self.name = name
         
-    def get_zoom_limits(self):
-        return (self.t_['zoom_min'], self.t_['zoom_max'])
+    def get_scale_limits(self):
+        return (self.t_['scale_min'], self.t_['scale_max'])
 
-    def set_zoom_limits(self, zmin, zmax):
-        self.t_.set(zoom_min=zmin, zoom_max=zmax)
+    def set_scale_limits(self, scale_min, scale_max):
+        self.t_.set(scale_min=scale_min, scale_max=scale_max)
         
-    def set_autozoom_limits(self, zmin, zmax):
-        self.t_.set(zoom_minauto=zmin, zoom_maxauto=zmax)
-
-    def get_autozoom_limits(self):
-        return (self.t_['zoom_minauto'], self.t_['zoom_maxauto'])
-
     def enable_autozoom(self, option):
         option = option.lower()
         assert(option in self.autozoom_options), \
@@ -971,7 +987,7 @@ class FitsImageBase(Callback.Callbacks):
             self.make_callback('autocuts', value)
 
         # Save cut levels with this image embedded profile
-        self.save_profile('cut_levels', cutlo=loval, cuthi=hival)
+        self.save_profile(cutlo=loval, cuthi=hival)
             
     def auto_levels(self, method=None, pct=None,
                     numbins=None, redraw=True):
@@ -987,7 +1003,8 @@ class FitsImageBase(Callback.Callbacks):
         self.t_.set(locut=loval, hicut=hival)
 
     def auto_levels_cb(self, setting, value):
-        self.auto_levels()
+        if self.t_['autolevels'] != 'off':
+            self.auto_levels()
 
     def cut_levels_cb(self, setting, value):
         loval = self.t_['locut']

@@ -99,9 +99,10 @@ class RenderWidget(QtGui.QWidget):
 
 class FitsImageQt(FitsImage.FitsImageBase):
 
-    def __init__(self, logger=None, render=None):
-        #super(FitsImageQt, self).__init__(logger=logger)
-        FitsImage.FitsImageBase.__init__(self, logger=logger)
+    def __init__(self, logger=None, settings=None, render=None):
+        #super(FitsImageQt, self).__init__(logger=logger, settings=settings)
+        FitsImage.FitsImageBase.__init__(self, logger=logger,
+                                         settings=settings)
 
         if render == None:
             render = 'widget'
@@ -417,9 +418,10 @@ class RenderGraphicsViewZoom(RenderGraphicsView, RenderMixin):
 
 class FitsImageEvent(FitsImageQt):
 
-    def __init__(self, logger=None, render=None):
-        #super(FitsImageEvent, self).__init__(logger=logger)
-        FitsImageQt.__init__(self, logger=logger, render=render)
+    def __init__(self, logger=None, settings=None, render=None):
+        #super(FitsImageEvent, self).__init__(logger=logger, settings=settings)
+        FitsImageQt.__init__(self, logger=logger, settings=settings,
+                             render=render)
 
         # replace the widget our parent provided
         if self.wtype == 'scene':
@@ -625,9 +627,10 @@ class FitsImageEvent(FitsImageQt):
 
 class FitsImageZoom(FitsImageEvent, Mixins.FitsImageZoomMixin):
 
-    def __init__(self, logger=None, render='widget'):
+    def __init__(self, logger=None, settings=None, render='widget'):
         #super(FitsImageZoom, self).__init__()
-        FitsImageEvent.__init__(self, logger=logger, render=render)
+        FitsImageEvent.__init__(self, logger=logger, settings=settings,
+                                render=render)
         Mixins.FitsImageZoomMixin.__init__(self)
         
         
