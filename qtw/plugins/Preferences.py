@@ -256,29 +256,17 @@ class Preferences(GingaPlugin.LocalPlugin):
         vbox.addWidget(fr, stretch=0, alignment=QtCore.Qt.AlignTop)
 
         # AUTOCUTS OPTIONS
-        fr = QtHelp.Frame("Autocuts")
+        fr = QtHelp.Frame("Auto Cuts")
 
-        captions = (('Cut New', 'combobox'),
-                    ('Auto Method', 'combobox'),
+        captions = (('Auto Method', 'combobox'),
                     ('Hist Pct', 'spinfloat'))
         w, b = QtHelp.build_info(captions)
-        b.cut_new.setToolTip("Automatically set cut levels for new images")
+        self.w.update(b)
+
         b.auto_method.setToolTip("Choose algorithm for auto levels")
         b.hist_pct.setToolTip("Percentage of image to save for Histogram algorithm")
 
-        self.w.btn_cut_new = b.cut_new
-        combobox = b.cut_new
-        index = 0
-        for name in self.autocut_options:
-            combobox.addItem(name)
-            index += 1
-        option = self.t_.get('autocuts', "off")
-        index = self.autocut_options.index(option)
-        combobox.setCurrentIndex(index)
-        combobox.activated.connect(self.set_autocuts_cb)
-
         # Setup auto cuts method choice
-        self.w.auto_method = b.auto_method
         combobox = b.auto_method
         index = 0
         method = self.t_.get('autocut_method', "histogram")
@@ -289,23 +277,35 @@ class Preferences(GingaPlugin.LocalPlugin):
         combobox.setCurrentIndex(index)
         combobox.activated.connect(lambda w: self.set_autocut_params())
 
-        self.w.hist_pct = b.hist_pct
         b.hist_pct.setRange(0.90, 1.0)
         b.hist_pct.setValue(0.995)
         b.hist_pct.setSingleStep(0.001)
         b.hist_pct.setDecimals(5)
         b.hist_pct.valueChanged.connect(lambda w: self.set_autocut_params())
         b.hist_pct.setEnabled(method == 'histogram')
+
         fr.layout().addWidget(w, stretch=1, alignment=QtCore.Qt.AlignLeft)
         vbox.addWidget(fr, stretch=0, alignment=QtCore.Qt.AlignTop)
 
-        # AUTOZOOM OPTIONS
-        fr = QtHelp.Frame("Autozoom")
+        fr = QtHelp.Frame("New Images")
 
-        captions = (('Zoom New', 'combobox'),
-                    )
+        captions = (('Cut New', 'combobox', 'Zoom New', 'combobox'),
+                    ('Center New', 'checkbutton', 'Follow New', 'checkbutton'),
+                    ('Raise New', 'checkbutton', 'Create thumbnail', 'checkbutton'),)
         w, b = QtHelp.build_info(captions)
-        self.w.btn_zoom_new = b.zoom_new
+        self.w.update(b)
+
+        combobox = b.cut_new
+        index = 0
+        for name in self.autocut_options:
+            combobox.addItem(name)
+            index += 1
+        option = self.t_.get('autocuts', "off")
+        index = self.autocut_options.index(option)
+        combobox.setCurrentIndex(index)
+        combobox.activated.connect(self.set_autocuts_cb)
+        b.cut_new.setToolTip("Automatically set cut levels for new images")
+
         combobox = b.zoom_new
         index = 0
         for name in self.autozoom_options:
@@ -313,36 +313,26 @@ class Preferences(GingaPlugin.LocalPlugin):
             index += 1
         option = self.t_.get('autozoom', "off")
         index = self.autozoom_options.index(option)
-        print "1. AUTO_ZOOM=%s INDEX=%d" % (option, index)
         combobox.setCurrentIndex(index)
         combobox.activated.connect(self.set_autozoom_cb)
-
         b.zoom_new.setToolTip("Automatically fit new images to window")
 
-        fr.layout().addWidget(w, stretch=1, alignment=QtCore.Qt.AlignLeft)
-        vbox.addWidget(fr, stretch=0, alignment=QtCore.Qt.AlignTop)
-
-        fr = QtHelp.Frame("New Images")
-
-        captions = (('Follow new images', 'checkbutton',
-                     'Raise new images', 'checkbutton'),
-                    ('Create thumbnail', 'checkbutton'),)
-        w, b = QtHelp.build_info(captions)
-        b.follow_new_images.setToolTip("View new images as they arrive")
-        b.raise_new_images.setToolTip("Raise and focus tab for new images")
+        b.center_new.setToolTip("Automatically center new images")
+        b.follow_new.setToolTip("View new images as they arrive")
+        b.raise_new.setToolTip("Raise and focus tab for new images")
         b.create_thumbnail.setToolTip("Create thumbnail for new images")
 
-        self.w.btn_follow_new_images = b.follow_new_images
-        self.w.btn_follow_new_images.setChecked(True)
-        self.w.btn_follow_new_images.stateChanged.connect(
+        self.w.center_new.setChecked(True)
+        self.w.center_new.stateChanged.connect(
             lambda w: self.set_chprefs_cb())
-        self.w.btn_raise_new_images = b.raise_new_images
-        self.w.btn_raise_new_images.setChecked(True)
-        self.w.btn_raise_new_images.stateChanged.connect(
+        self.w.follow_new.setChecked(True)
+        self.w.follow_new.stateChanged.connect(
             lambda w: self.set_chprefs_cb())
-        self.w.btn_create_thumbnail = b.create_thumbnail
-        self.w.btn_create_thumbnail.setChecked(True)
-        self.w.btn_create_thumbnail.stateChanged.connect(
+        self.w.raise_new.setChecked(True)
+        self.w.raise_new.stateChanged.connect(
+            lambda w: self.set_chprefs_cb())
+        self.w.create_thumbnail.setChecked(True)
+        self.w.create_thumbnail.stateChanged.connect(
             lambda w: self.set_chprefs_cb())
 
         fr.layout().addWidget(w, stretch=1, alignment=QtCore.Qt.AlignLeft)
@@ -528,8 +518,8 @@ class Preferences(GingaPlugin.LocalPlugin):
 
     def autozoom_changed_cb(self, fitsimage, option):
         index = self.autozoom_options.index(option)
-        if self.w.has_key('btn_zoom_new'):
-            self.w.btn_zoom_new.setCurrentIndex(index)
+        if self.w.has_key('zoom_new'):
+            self.w.zoom_new.setCurrentIndex(index)
 
     def config_autocut_params(self, method, pct):
         index = self.autocut_methods.index(method)
@@ -561,8 +551,8 @@ class Preferences(GingaPlugin.LocalPlugin):
     def autocuts_changed_cb(self, fitsimage, option):
         self.logger.debug("autocuts changed to %s" % option)
         index = self.autocut_options.index(option)
-        if self.w.has_key('btn_cut_new'):
-            self.w.btn_cut_new.setCurrentIndex(index)
+        if self.w.has_key('cut_new'):
+            self.w.cut_new.setCurrentIndex(index)
 
     def set_transforms_cb(self):
         flip_x = (self.w.flip_x.checkState() != 0)
@@ -614,11 +604,12 @@ class Preferences(GingaPlugin.LocalPlugin):
         return True
 
     def set_chprefs_cb(self):
-        switchnew = (self.w.follow_new_images.checkState() != 0)
-        raisenew = (self.w.raise_new_images.checkState() != 0)
-        genthumb = (self.w.create_thumb.checkState() != 0)
+        autocenter = (self.w.center_new.checkState() != 0)
+        switchnew = (self.w.follow_new.checkState() != 0)
+        raisenew = (self.w.raise_new.checkState() != 0)
+        genthumb = (self.w.create_thumbnail.checkState() != 0)
         self.t_.set(switchnew=switchnew, raisenew=raisenew,
-                    genthumb=genthumb)
+                    autocenter=autocenter, genthumb=genthumb)
 
     def preferences_to_controls(self):
         prefs = self.t_
@@ -683,7 +674,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         # auto cuts settings
         autocuts = prefs.get('autocuts', 'off')
         index = self.autocut_options.index(autocuts)
-        self.w.btn_cut_new.setCurrentIndex(index)
+        self.w.cut_new.setCurrentIndex(index)
 
         autocut_method = prefs.get('autocut_method', 'histogram')
         autocut_hist_pct = prefs.get('autocut_hist_pct', 0.999)
@@ -693,16 +684,17 @@ class Preferences(GingaPlugin.LocalPlugin):
         # auto zoom settings
         #auto_zoom = prefs.get('autozoom', 'off')
         index = self.autozoom_options.index(auto_zoom)
-        print "3. AUTO_ZOOM=%s INDEX=%d" % (auto_zoom, index)
-        self.w.btn_zoom_new.setCurrentIndex(index)
+        self.w.zoom_new.setCurrentIndex(index)
 
         # misc settings
+        prefs.setdefault('autocenter', False)
+        self.w.center_new.setChecked(prefs['autocenter'])
         prefs.setdefault('switchnew', True)
-        self.w.btn_follow_new_images.setChecked(prefs['switchnew'])
+        self.w.follow_new.setChecked(prefs['switchnew'])
         prefs.setdefault('raisenew', True)
-        self.w.btn_raise_new_images.setChecked(prefs['raisenew'])
+        self.w.raise_new.setChecked(prefs['raisenew'])
         prefs.setdefault('genthumb', True)
-        self.w.btn_create_thumbnail.setChecked(prefs['genthumb'])
+        self.w.create_thumbnail.setChecked(prefs['genthumb'])
 
     def save_preferences(self):
         self.t_.save()

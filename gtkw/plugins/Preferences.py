@@ -291,22 +291,52 @@ class Preferences(GingaPlugin.LocalPlugin):
         vbox.pack_start(fr, padding=4, fill=True, expand=False)
         
         # AUTOCUTS OPTIONS
-        fr = gtk.Frame("Autocuts")
+        fr = gtk.Frame("Auto Cuts")
         fr.set_shadow_type(gtk.SHADOW_ETCHED_IN)
         fr.set_label_align(0.5, 0.5)
 
-        captions = (('Cut New', 'combobox'),
-                    ('Auto Method', 'combobox'),
-                    ('Hist Pct', 'spinbutton'))
+        captions = (('Auto Method', 'combobox'),
+                    ('Hist Pct', 'spinbutton'),)
         w, b = GtkHelp.build_info(captions)
-        self.w.tooltips.set_tip(b.cut_new,
-                                "Automatically set cut levels for new images")
+        self.w.update(b)
+
+        # Setup auto cuts method choice
+        combobox = b.auto_method
+        index = 0
+        method = self.t_.get('autocut_method', "histogram")
+        for name in self.autocut_methods:
+            combobox.insert_text(index, name)
+            index += 1
+        index = self.autocut_methods.index(method)
+        combobox.set_active(index)
+        combobox.sconnect('changed', lambda w: self.set_autocut_params())
         self.w.tooltips.set_tip(b.auto_method,
                                 "Choose algorithm for auto levels")
+
+        b.hist_pct.set_range(0.90, 1.0)
+        b.hist_pct.set_value(0.995)
+        b.hist_pct.set_increments(0.001, 0.01)
+        b.hist_pct.set_digits(5)
+        b.hist_pct.set_numeric(True)
+        b.hist_pct.sconnect('value-changed', lambda w: self.set_autocut_params())
+        b.hist_pct.set_sensitive(method == 'histogram')
         self.w.tooltips.set_tip(b.hist_pct,
                                 "Percentage of image to save for Histogram algorithm")
 
-        self.w.btn_cut_new = b.cut_new
+        fr.add(w)
+        vbox.pack_start(fr, padding=4, fill=True, expand=False)
+
+        # NEW IMAGES OPTIONS
+        fr = gtk.Frame("New Images")
+        fr.set_shadow_type(gtk.SHADOW_ETCHED_IN)
+        fr.set_label_align(0.5, 0.5)
+
+        captions = (('Cut New', 'combobox', 'Zoom New', 'combobox'),
+                    ('Center New', 'checkbutton', 'Follow New', 'checkbutton'),
+                    ('Raise New', 'checkbutton', 'Create thumbnail', 'checkbutton'),)
+        w, b = GtkHelp.build_info(captions)
+        self.w.update(b)
+
         combobox = b.cut_new
         index = 0
         for name in self.autocut_options:
@@ -317,38 +347,6 @@ class Preferences(GingaPlugin.LocalPlugin):
         combobox.set_active(index)
         combobox.sconnect('changed', self.set_autocuts_cb)
 
-        # Setup auto cuts method choice
-        self.w.auto_method = b.auto_method
-        combobox = b.auto_method
-        index = 0
-        method = self.t_.get('autocut_method', "histogram")
-        for name in self.autocut_methods:
-            combobox.insert_text(index, name)
-            index += 1
-        index = self.autocut_methods.index(method)
-        combobox.set_active(index)
-        combobox.sconnect('changed', lambda w: self.set_autocut_params())
-
-        self.w.hist_pct = b.hist_pct
-        b.hist_pct.set_range(0.90, 1.0)
-        b.hist_pct.set_value(0.995)
-        b.hist_pct.set_increments(0.001, 0.01)
-        b.hist_pct.set_digits(5)
-        b.hist_pct.set_numeric(True)
-        b.hist_pct.sconnect('value-changed', lambda w: self.set_autocut_params())
-        b.hist_pct.set_sensitive(method == 'histogram')
-        fr.add(w)
-        vbox.pack_start(fr, padding=4, fill=True, expand=False)
-
-        # AUTOZOOM OPTIONS
-        fr = gtk.Frame("Autozoom")
-        fr.set_shadow_type(gtk.SHADOW_ETCHED_IN)
-        fr.set_label_align(0.5, 0.5)
-
-        captions = (('Zoom New', 'combobox'),
-                    )
-        w, b = GtkHelp.build_info(captions)
-        self.w.btn_zoom_new = b.zoom_new
         combobox = b.zoom_new
         index = 0
         for name in self.autozoom_options:
@@ -361,35 +359,25 @@ class Preferences(GingaPlugin.LocalPlugin):
 
         self.w.tooltips.set_tip(b.zoom_new,
                                 "Automatically fit new images to window")
-        fr.add(w)
-        vbox.pack_start(fr, padding=4, fill=True, expand=False)
-
-        fr = gtk.Frame("New Images")
-        fr.set_shadow_type(gtk.SHADOW_ETCHED_IN)
-        fr.set_label_align(0.5, 0.5)
-
-        captions = (('Follow new images', 'checkbutton',
-                     'Raise new images', 'checkbutton'),
-                    ('Create thumbnail', 'checkbutton'),)
-        w, b = GtkHelp.build_info(captions)
-        self.w.tooltips.set_tip(b.follow_new_images,
+        self.w.tooltips.set_tip(b.cut_new,
+                                "Automatically set cut levels for new images")
+        self.w.tooltips.set_tip(b.center_new,
+                                "Automatically center new images")
+        self.w.tooltips.set_tip(b.follow_new,
                                 "View new images as they arrive")
-        self.w.tooltips.set_tip(b.raise_new_images,
+        self.w.tooltips.set_tip(b.raise_new,
                                 "Raise and focus tab for new images")
         self.w.tooltips.set_tip(b.create_thumbnail,
                                 "Create thumbnail for new images")
 
-        self.w.btn_follow_new_images = b.follow_new_images
-        self.w.btn_follow_new_images.set_active(True)
-        self.w.btn_follow_new_images.sconnect("toggled",
-                                              lambda w: self.set_chprefs_cb())
-        self.w.btn_raise_new_images = b.raise_new_images
-        self.w.btn_raise_new_images.set_active(True)
-        self.w.btn_raise_new_images.sconnect("toggled",
-                                              lambda w: self.set_chprefs_cb())
-        self.w.btn_create_thumbnail = b.create_thumbnail
-        self.w.btn_create_thumbnail.set_active(True)
-        self.w.btn_create_thumbnail.sconnect("toggled",
+        self.w.center_new.set_active(True)
+        self.w.center_new.sconnect("toggled", lambda w: self.set_chprefs_cb())
+        self.w.follow_new.set_active(True)
+        self.w.follow_new.sconnect("toggled", lambda w: self.set_chprefs_cb())
+        self.w.raise_new.set_active(True)
+        self.w.raise_new.sconnect("toggled", lambda w: self.set_chprefs_cb())
+        self.w.create_thumbnail.set_active(True)
+        self.w.create_thumbnail.sconnect("toggled",
                                               lambda w: self.set_chprefs_cb())
 
         fr.add(w)
@@ -580,8 +568,8 @@ class Preferences(GingaPlugin.LocalPlugin):
 
     def autozoom_changed_cb(self, fitsimage, option):
         index = self.autozoom_options.index(option)
-        if self.w.has_key('btn_zoom_new'):
-            self.w.btn_zoom_new.set_active(index)
+        if self.w.has_key('zoom_new'):
+            self.w.zoom_new.set_active(index)
 
     def config_autocut_params(self, method, pct):
         index = self.autocut_methods.index(method)
@@ -614,8 +602,8 @@ class Preferences(GingaPlugin.LocalPlugin):
     def autocuts_changed_cb(self, fitsimage, option):
         self.logger.debug("autocuts changed to %s" % option)
         index = self.autocut_options.index(option)
-        if self.w.has_key('btn_cut_new'):
-            self.w.btn_cut_new.set_active(index)
+        if self.w.has_key('cut_new'):
+            self.w.cut_new.set_active(index)
 
     def set_transforms_cb(self):
         flip_x = self.w.flip_x.get_active()
@@ -667,11 +655,12 @@ class Preferences(GingaPlugin.LocalPlugin):
         return True
 
     def set_chprefs_cb(self):
-        switchnew = self.w.follow_new_images.get_active()
-        raisenew = self.w.raise_new_images.get_active()
-        genthumb = self.w.create_thumb.get_active()
+        autocenter = self.w.center_new.get_active()
+        switchnew = self.w.follow_new.get_active()
+        raisenew = self.w.raise_new.get_active()
+        genthumb = self.w.create_thumbnail.get_active()
         self.t_.set(switchnew=switchnew, raisenew=raisenew,
-                    genthumb=genthumb)
+                    autocenter=autocenter, genthumb=genthumb)
 
     def preferences_to_controls(self):
         prefs = self.t_
@@ -731,7 +720,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         # auto cuts settings
         autocuts = prefs.get('autocuts', 'off')
         index = self.autocut_options.index(autocuts)
-        self.w.btn_cut_new.set_active(index)
+        self.w.cut_new.set_active(index)
 
         autocut_method = prefs.get('autocut_method', 'histogram')
         autocut_hist_pct = prefs.get('autocut_hist_pct', 0.999)
@@ -741,15 +730,17 @@ class Preferences(GingaPlugin.LocalPlugin):
         # auto zoom settings
         auto_zoom = prefs.get('autozoom', 'off')
         index = self.autozoom_options.index(auto_zoom)
-        self.w.btn_zoom_new.set_active(index)
+        self.w.zoom_new.set_active(index)
 
         # misc settings
+        prefs.setdefault('autocenter', False)
+        self.w.center_new.set_active(prefs['autocenter'])
         prefs.setdefault('switchnew', True)
-        self.w.btn_follow_new_images.set_active(prefs['switchnew'])
+        self.w.follow_new.set_active(prefs['switchnew'])
         prefs.setdefault('raisenew', True)
-        self.w.btn_raise_new_images.set_active(prefs['raisenew'])
+        self.w.raise_new.set_active(prefs['raisenew'])
         prefs.setdefault('genthumb', True)
-        self.w.btn_create_thumbnail.set_active(prefs['genthumb'])
+        self.w.create_thumbnail.set_active(prefs['genthumb'])
 
     def save_preferences(self):
         self.t_.save()

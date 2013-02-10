@@ -117,7 +117,7 @@ class FitsImageBase(Callback.Callbacks):
 
         # for panning
         self.t_makebg = False
-        self.t_.addDefaults(reverse_pan=False)
+        self.t_.addDefaults(reverse_pan=False, autocenter=True)
         
         # for transforms
         self.t_.addDefaults(flip_x=False, flip_y=False, swap_xy=False)
@@ -175,14 +175,14 @@ class FitsImageBase(Callback.Callbacks):
 
         self.orientMap = {
             # tag: (flip_x, flip_y, swap_xy)
-            1: (False, False, False),
-            2: (True,  False, False),
-            3: (True,  True,  False),
-            4: (False, True,  False),
-            5: (False, True,  True),
-            6: (False, False, True),
-            7: (True,  True,  True),
-            8: (True,  False, True),
+            1: (False, True,  False),
+            2: (True,  True,  False),
+            3: (True,  False, False),
+            4: (False, False, False),
+            5: (True,  False, True),
+            6: (True,  True,  True),
+            7: (False, True,  True),
+            8: (False, False, True),
             }
         
         # For callbacks
@@ -275,16 +275,17 @@ class FitsImageBase(Callback.Callbacks):
         if (profile != None) and (self.t_['use_embedded_profile']):
             self.apply_profile(profile, redraw=False)
 
-        # Set pan position to middle of the image initially
-        width, height = image.get_size()
-        self.panset_xy(float(width) / 2.0, float(height) / 2.0, redraw=False)
-        
-        if self.t_['autozoom'] != 'off':
-            self.zoom_fit(redraw=False, no_reset=True)
-        if self.t_['autocuts'] != 'off':
-            self.auto_levels(redraw=False)
         if self.t_['auto_orient']:
             self.auto_orient(redraw=False)
+
+        if self.t_['autozoom'] != 'off':
+            self.zoom_fit(redraw=False, no_reset=True)
+
+        if self.t_['autocenter']:
+            self.center_image(redraw=False)
+
+        if self.t_['autocuts'] != 'off':
+            self.auto_levels(redraw=False)
 
         if redraw:
             self.redraw()
@@ -1131,7 +1132,6 @@ class FitsImageBase(Callback.Callbacks):
     def auto_orient(self, redraw=True):
         """Set the orientation for the image to a reasonable default.
         """
-        flip_x, flip_y, swap_xy = self.get_transforms()
         invertY = not isinstance(self.image, AstroImage.AstroImage)
 
         # Check for various things to set based on metadata
@@ -1145,18 +1145,17 @@ class FitsImageBase(Callback.Callbacks):
                     self.logger.debug("setting orientation from metadata [%d]" % (
                         orient))
                     flip_x, flip_y, swap_xy = self.orientMap[orient]
+
+                    self.transform(flip_x, flip_y, swap_xy, redraw=redraw)
+                    invertY = False
+
                 except Exception, e:
                     # problems figuring out orientation--let it be
                     pass
 
-        # Flip vertically for non-astronomical images
         if invertY:
-            if swap_xy:
-                flip_x = not flip_x
-            else:
-                flip_y = not flip_y
-
-        self.transform(flip_x, flip_y, swap_xy, redraw=redraw)
-
+            flip_x, flip_y, swap_xy = self.get_transforms()
+            flip_y = not flip_y
+            self.transform(flip_x, flip_y, swap_xy, redraw=redraw)
 
 #END

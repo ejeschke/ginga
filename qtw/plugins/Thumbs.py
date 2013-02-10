@@ -414,7 +414,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
         self.insert_thumbnail(imgwin, thumbkey, thumbname,
                               chname, name, path, metadata)
-        #self.fv.update_pending()
+        self.fv.update_pending(timeout=0.001)
         
     def make_thumbs(self, chname, filelist):
         # This is called by the FBrowser plugin, as a non-gui thread!
