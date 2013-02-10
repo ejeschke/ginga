@@ -19,7 +19,7 @@ import mimetypes
 import numpy
 
 # Local application imports
-import imap, cmap
+import cmap, imap
 import Catalog
 import AstroImage
 import PythonImage
@@ -28,11 +28,6 @@ import Datasrc
 import Callback
 import FitsImage
 
-default_cmap = 'ramp'
-default_imap = 'ramp'
-default_autozoom = 'override'
-default_autolevels = 'on'
-default_autocut_method = 'histogram'
 
 #pluginconfpfx = 'plugins'
 pluginconfpfx = None
@@ -43,14 +38,14 @@ class ControlError(Exception):
 
 class GingaControl(Callback.Callbacks):
      
-    def __init__(self, logger, threadPool, module_manager, settings,
+    def __init__(self, logger, threadPool, module_manager, preferences,
                  ev_quit=None, datasrc_length=20, follow_focus=False):
         Callback.Callbacks.__init__(self)
 
         self.logger = logger
         self.threadPool = threadPool
         self.mm = module_manager
-        self.settings = settings
+        self.prefs = preferences
         # event for controlling termination of threads executing in this
         # object
         if not ev_quit:
@@ -76,21 +71,14 @@ class GingaControl(Callback.Callbacks):
         self.chncnt = 0
         self.statustask = None
 
-        # Preferences
         # Should channel change as mouse moves between windows
         self.channel_follows_focus = follow_focus
         
-        # defaults
-        self.default_cmap = default_cmap
-        self.default_imap = default_imap
-        self.default_autozoom = default_autozoom
-        self.default_autolevels = default_autolevels
-        self.default_autocut_method = default_autocut_method
         # Number of images to keep around in memory
         self.default_datasrc_length = datasrc_length
         
-        self.cm = cmap.get_cmap(self.default_cmap)
-        self.im = imap.get_imap(self.default_imap)
+        self.cm = cmap.get_cmap("ramp")
+        self.im = imap.get_imap("ramp")
 
         self.fn_keys = ('f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8',
                         'f9', 'f10', 'f11', 'f12')
@@ -108,19 +96,12 @@ class GingaControl(Callback.Callbacks):
         self.imgsrv = Catalog.ServerBank(self.logger)
         self.dsscnt = 0
 
-        # try:
-        #     gprefs = self.settings.getSettings('channel_ginga')
-        # except KeyError:
-        #     gprefs = self.settings.createCategory('channel_ginga')
-        # gprefs.set(color_map='ramp', intensity_map='ramp',
-        #            auto_scale='off')
-        
 
     def get_ServerBank(self):
         return self.imgsrv
 
     def get_preferences(self):
-        return self.settings
+        return self.prefs
 
     ####################################################
     # CALLBACKS
@@ -713,7 +694,7 @@ class GingaControl(Callback.Callbacks):
         chinfo = self.add_channel_internal(chname, num_images=num_images)
 
         name = chinfo.name
-        prefs = self.settings.createCategory('channel_'+name)
+        prefs = self.prefs.createCategory('channel_'+name)
         try:
             prefs.load()
             self.logger.warn("no saved preferences found for channel '%s': %s" % (
@@ -727,7 +708,7 @@ class GingaControl(Callback.Callbacks):
                           raisenew=True, genthumb=True)
 
         with self.lock:
-            bnch = self.add_viewer(chname, self.cm, self.im, prefs,
+            bnch = self.add_viewer(chname, prefs,
                                    workspace=workspace)
 
             opmon = self.getPluginManager(self.logger, self,
@@ -774,54 +755,6 @@ class GingaControl(Callback.Callbacks):
     def get_channelNames(self):
         with self.lock:
             return [ self.channel[key].name for key in self.channel.keys() ]
-                
-    # def preferences_to_fitsimage(self, prefs, fitsimage, redraw=False):
-    #     print "prefs=%s" % (str(prefs))
-
-    #     rgbmap = fitsimage.get_rgbmap()
-
-    #     cm = rgbmap.get_cmap()
-    #     prefs.color_map = prefs.get('color_map', cm.name)
-    #     cm = cmap.get_cmap(prefs.color_map)
-    #     fitsimage.set_cmap(cm, redraw=False)
-
-    #     im = rgbmap.get_imap()
-    #     prefs.intensity_map = prefs.get('intensity_map', im.name)
-    #     im = imap.get_imap(prefs.intensity_map)
-    #     fitsimage.set_imap(im, redraw=False)
-
-    #     t_ = fitsimage.get_settings()
-    #     prefs.auto_levels = prefs.get('auto_levels',
-    #                                   t_['autolevels'])
-    #     fitsimage.enable_autolevels(prefs.auto_levels)
-    #     ## prefs.usesavedcuts = prefs.get('usesavedcuts',
-    #     ##                                t_['use_saved_cuts'])
-
-    #     prefs.autocut_method = prefs.get('autocut_method',
-    #                                      t_['autocut_method'])
-    #     prefs.autocut_hist_pct = prefs.get('autocut_hist_pct',
-    #                                        t_['autocut_hist_pct'])
-    #     fitsimage.set_autolevel_params(prefs.autocut_method,
-    #                                    pct=prefs.autocut_hist_pct)
-                                             
-    #     prefs.auto_scale = prefs.get('auto_zoom', t_['autozoom'])
-    #     fitsimage.enable_autozoom(prefs.auto_scale)
-
-    #     zmin, zmax = fitsimage.get_autozoom_limits()
-    #     prefs.zoom_min = prefs.get('zoom_min', zmin)
-    #     prefs.zoom_max = prefs.get('zoom_max', zmax)
-    #     fitsimage.set_autozoom_limits(prefs.zoom_min, prefs.zoom_max)
-
-    #     (flipX, flipY, swapXY) = fitsimage.get_transforms()
-    #     prefs.flipX = prefs.get('flipX', flipX)
-    #     prefs.flipY = prefs.get('flipY', flipY)
-    #     prefs.swapXY = prefs.get('swapXY', swapXY)
-    #     fitsimage.transform(prefs.flipX, prefs.flipY, prefs.swapXY,
-    #                              redraw=redraw)
-
-    #     revpan = fitsimage.get_pan_reverse()
-    #     prefs.reverse_pan = prefs.get('reverse_pan', revpan)
-    #     fitsimage.set_pan_reverse(revpan)
 
     def scale2text(self, scalefactor):
         if scalefactor >= 1.0:

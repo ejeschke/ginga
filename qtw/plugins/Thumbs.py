@@ -79,7 +79,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         tg = FitsImageQt.FitsImageQt(logger=self.logger)
         tg.configure(200, 200)
         tg.enable_autozoom('on')
-        tg.enable_autolevels('on')
+        tg.enable_autocuts('on')
         tg.enable_auto_orient(True)
         tg.set_makebg(False)
         self.thumb_generator = tg

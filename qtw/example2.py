@@ -3,7 +3,7 @@
 # example2.py -- Simple, configurable FITS viewer.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Wed Jan 16 15:02:32 HST 2013
+#  Last edit: Sat Feb  9 13:17:02 HST 2013
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -34,7 +34,7 @@ class FitsViewer(QtGui.QMainWindow):
         self.drawcolors = ['white', 'black', 'red', 'yellow', 'blue', 'green']
 
         fi = FitsImageCanvas(logger, render='widget')
-        fi.enable_autolevels('on')
+        fi.enable_autocuts('on')
         fi.enable_zoom('on')
         fi.enable_cuts(True)
         fi.enable_flip(True)

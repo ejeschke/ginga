@@ -44,17 +44,12 @@ class FitsImageBase(Callback.Callbacks):
         else:
             self.logger = logging.Logger('FitsImageBase')
 
+        # RGB mapper
         if rgbmap:
             self.rgbmap = rgbmap
-            cm = rgbmap.get_cmap()
         else:
-            self.rgbmap = RGBMap.RGBMapper()
-            # Set default color map and intensity map
-            cm = cmap.get_cmap('ramp')
-            self.rgbmap.set_cmap(cm)
-            im = imap.get_imap('ramp')
-            self.rgbmap.set_imap(im)
-        self.rgbmap.add_callback('changed', self.rgbmap_cb)
+            rgbmap = RGBMap.RGBMapper()
+            self.rgbmap = rgbmap
 
         # Object that calculates auto cut levels
         self.autocuts = AutoCuts.AutoCuts(self.logger)
@@ -70,29 +65,51 @@ class FitsImageBase(Callback.Callbacks):
             settings = Settings.SettingGroup(logger=self.logger)
         self.t_ = settings
         
+        # for color mapping
+        self.t_.addDefaults(color_map='ramp', intensity_map='ramp',
+                            color_algorithm='linear',
+                            color_hashsize=65535)
+        for name in ('color_map', 'intensity_map', 'color_algorithm',
+                     'color_hashsize'):
+            self.t_.getSetting(name).add_callback('set', self.cmap_changed_cb)
+
+        # Initialize RGBMap
+        cmap_name = self.t_.get('color_map')
+        cm = cmap.get_cmap(cmap_name)
+        rgbmap.set_cmap(cm)
+        imap_name = self.t_.get('intensity_map')
+        im = imap.get_imap(imap_name)
+        rgbmap.set_imap(im)
+        hash_size = self.t_.get('color_hashsize')
+        rgbmap.set_hash_size(hash_size)
+        hash_alg = self.t_.get('color_algorithm')
+        rgbmap.set_hash_algorithm(hash_alg)
+
+        rgbmap.add_callback('changed', self.rgbmap_cb)
+
         # for cut levels
         self.t_.addDefaults(locut=0.0, hicut=0.0)
         for name in ('locut', 'hicut'):
             self.t_.getSetting(name).add_callback('set', self.cut_levels_cb)
 
         # for auto cut levels
-        self.autolevels_options = ('on', 'override', 'off')
-        self.t_.addDefaults(autolevels='override', autocut_method='histogram',
-                            autocut_hist_pct=AutoCuts.default_autolevels_hist_pct,
-                            autocut_bins=AutoCuts.default_autolevels_bins)
-        for name in ('autolevels', 'autocut_method', 'autocut_hist_pct',
+        self.autocuts_options = ('on', 'override', 'off')
+        self.t_.addDefaults(autocuts='override', autocut_method='histogram',
+                            autocut_hist_pct=AutoCuts.default_autocuts_hist_pct,
+                            autocut_bins=AutoCuts.default_autocuts_bins)
+        for name in ('autocuts', 'autocut_method', 'autocut_hist_pct',
                      'autocut_bins'):
             self.t_.getSetting(name).add_callback('set', self.auto_levels_cb)
 
         # for zooming
-        self.t_.addDefaults(zoomlevel=1.0, zoomalg='step',
+        self.t_.addDefaults(zoomlevel=1.0, zoom_algorithm='step',
                             scale_x_base=1.0, scale_y_base=1.0,
-                            zoomrate=math.sqrt(2.0))
-        for name in ('zoomrate', 'zoomalg', 'scale_x_base', 'scale_y_base'):
+                            zoom_rate=math.sqrt(2.0))
+        for name in ('zoom_rate', 'zoom_algorithm', 'scale_x_base', 'scale_y_base'):
             self.t_.getSetting(name).add_callback('set', self.zoomalg_change_cb)
 
         # max/min scaling
-        self.t_.addDefaults(scale_max=500.0, scale_min=0.001)
+        self.t_.addDefaults(scale_max=10000.0, scale_min=0.00001)
         
         # autozoom options
         self.autozoom_options = ('on', 'override', 'off')
@@ -103,8 +120,8 @@ class FitsImageBase(Callback.Callbacks):
         self.t_.addDefaults(reverse_pan=False)
         
         # for transforms
-        self.t_.addDefaults(flipx=False, flipy=False, swapxy=False)
-        for name in ('flipx', 'flipy', 'swapxy'):
+        self.t_.addDefaults(flip_x=False, flip_y=False, swap_xy=False)
+        for name in ('flip_x', 'flip_y', 'swap_xy'):
             self.t_.getSetting(name).add_callback('set', self.transform_cb)
 
         # desired rotation angle
@@ -157,7 +174,7 @@ class FitsImageBase(Callback.Callbacks):
         self._rgbarr = None
 
         self.orientMap = {
-            # tag: (flipx, flipy, swapxy)
+            # tag: (flip_x, flip_y, swap_xy)
             1: (False, False, False),
             2: (True,  False, False),
             3: (True,  True,  False),
@@ -223,6 +240,23 @@ class FitsImageBase(Callback.Callbacks):
         self.logger.info("RGB map has changed.")
         self.redraw(whence=1)
         
+    def cmap_changed_cb(self, setting, value):
+        self.logger.info("Color settings have changed.")
+
+        cmap_name = self.t_.get('color_map', "ramp")
+        cm = cmap.get_cmap(cmap_name)
+        self.rgbmap.set_cmap(cm, callback=False)
+        
+        imap_name = self.t_.get('intensity_map', "ramp")
+        im = imap.get_imap(imap_name)
+        self.rgbmap.set_imap(im, callback=False)
+        
+        hash_size = self.t_.get('color_hashsize', 65535)
+        self.rgbmap.set_hash_size(hash_size, callback=False)
+        
+        hash_alg = self.t_.get('color_algorithm', "linear")
+        self.rgbmap.set_hash_algorithm(hash_alg, callback=True)
+        
     def get_rgbmap(self):
         return self.rgbmap
 
@@ -247,7 +281,7 @@ class FitsImageBase(Callback.Callbacks):
         
         if self.t_['autozoom'] != 'off':
             self.zoom_fit(redraw=False, no_reset=True)
-        if self.t_['autolevels'] != 'off':
+        if self.t_['autocuts'] != 'off':
             self.auto_levels(redraw=False)
         if self.t_['auto_orient']:
             self.auto_orient(redraw=False)
@@ -468,15 +502,15 @@ class FitsImageBase(Callback.Callbacks):
         xoff, yoff = self._org_xoff, self._org_yoff
 
         # Do transforms as necessary
-        if self.t_['flipy']:
+        if self.t_['flip_y']:
             data = numpy.flipud(data)
             yoff = ht - yoff
 
-        if self.t_['flipx']:
+        if self.t_['flip_x']:
             data = numpy.fliplr(data)
             xoff = wd - xoff
 
-        if self.t_['swapxy']:
+        if self.t_['swap_xy']:
             data = data.swapaxes(0, 1)
             xoff, yoff = yoff, xoff
             
@@ -582,11 +616,11 @@ class FitsImageBase(Callback.Callbacks):
         
     def offset2canvas(self, off_x, off_y, asint=True):
 
-        if self.t_['flipx']:
+        if self.t_['flip_x']:
             off_x = - off_x
-        if self.t_['flipy']:
+        if self.t_['flip_y']:
             off_y = - off_y
-        if self.t_['swapxy']:
+        if self.t_['swap_xy']:
             off_x, off_y = off_y, off_x
 
         if self.t_['rot_deg'] != 0:
@@ -613,11 +647,11 @@ class FitsImageBase(Callback.Callbacks):
         if self.t_['rot_deg'] != 0:
             off_x, off_y = self._rotate_pt(off_x, off_y, -self.t_['rot_deg'])
 
-        if self.t_['swapxy']:
+        if self.t_['swap_xy']:
             off_x, off_y = off_y, off_x
-        if self.t_['flipy']:
+        if self.t_['flip_y']:
             off_y = - off_y
-        if self.t_['flipx']:
+        if self.t_['flip_x']:
             off_x = - off_x
 
         return (off_x, off_y)
@@ -719,7 +753,7 @@ class FitsImageBase(Callback.Callbacks):
             zoomalg = 'step'
 
         self.t_.set(scale_x_base=scale_x_base, scale_y_base=scale_y_base,
-                    zoomalg=zoomalg)
+                    zoom_algorithm=zoomalg)
 
         self._scale_to(scale_x, scale_y, no_reset=no_reset, redraw=redraw)
 
@@ -749,11 +783,11 @@ class FitsImageBase(Callback.Callbacks):
             self.t_['autozoom'] = value
             self.make_callback('autozoom', value)
 
-        if self.t_['zoomalg'] == 'rate':
+        if self.t_['zoom_algorithm'] == 'rate':
             zoom_x = math.log(scale_x / self.t_['scale_x_base'],
-                              self.t_['zoomrate'])
+                              self.t_['zoom_rate'])
             zoom_y = math.log(scale_y / self.t_['scale_y_base'],
-                              self.t_['zoomrate'])
+                              self.t_['zoom_rate'])
             # TODO: avg, max?
             zoomlevel = min(zoom_x, zoom_y)
             #print "calc zoom_x=%f zoom_y=%f zoomlevel=%f" % (
@@ -797,11 +831,11 @@ class FitsImageBase(Callback.Callbacks):
         return text
 
     def zoom_to(self, zoomlevel, no_reset=False, redraw=True):
-        if self.t_['zoomalg'] == 'rate':
+        if self.t_['zoom_algorithm'] == 'rate':
             scale_x = self.t_['scale_x_base'] * (
-                self.t_['zoomrate'] ** zoomlevel)
+                self.t_['zoom_rate'] ** zoomlevel)
             scale_y = self.t_['scale_y_base'] * (
-                self.t_['zoomrate'] ** zoomlevel)
+                self.t_['zoom_rate'] ** zoomlevel)
         else:
             if zoomlevel >= 1.0:
                 scalefactor = zoomlevel
@@ -817,7 +851,7 @@ class FitsImageBase(Callback.Callbacks):
                        no_reset=no_reset, redraw=redraw)
 
     def zoom_in(self):
-        if self.t_['zoomalg'] == 'rate':
+        if self.t_['zoom_algorithm'] == 'rate':
             self.zoom_to(self.t_['zoomlevel'] + 1)
         else:
             zl = int(self.t_['zoomlevel'])
@@ -827,7 +861,7 @@ class FitsImageBase(Callback.Callbacks):
                 self.zoom_to(1)
         
     def zoom_out(self):
-        if self.t_['zoomalg'] == 'rate':
+        if self.t_['zoom_algorithm'] == 'rate':
             self.zoom_to(self.t_['zoomlevel'] - 1)
         else:
             zl = int(self.t_['zoomlevel'])
@@ -842,14 +876,14 @@ class FitsImageBase(Callback.Callbacks):
         try:
             wwidth, wheight = self.get_window_size()
             self.logger.debug("Window size is %dx%d" % (wwidth, wheight))
-            if self.t_['swapxy']:
+            if self.t_['swap_xy']:
                 wwidth, wheight = wheight, wwidth
         except:
             return
 
         # Calculate optimum zoom level to still fit the window size
         width, height = self.get_data_size()
-        if self.t_['zoomalg'] == 'rate':
+        if self.t_['zoom_algorithm'] == 'rate':
             scale_x = float(wwidth) / (float(width) * self.t_['scale_x_base'])
             scale_y = float(wheight) / (float(height) * self.t_['scale_y_base'])
             
@@ -871,19 +905,19 @@ class FitsImageBase(Callback.Callbacks):
         return self.t_['zoomlevel']
         
     def get_zoomrate(self):
-        return self.t_['zoomrate']
+        return self.t_['zoom_rate']
         
     def set_zoomrate(self, zoomrate, redraw=True):
-        self.t_.set(zoomrate=zoomrate)
+        self.t_.set(zoom_rate=zoomrate)
         
     def get_zoom_algorithm(self):
-        return self.t_['zoomalg']
+        return self.t_['zoom_algorithm']
         
     def set_zoom_algorithm(self, name, redraw=True):
         name = name.lower()
         assert name in ('step', 'rate'), \
               FitsImageError("Alg '%s' must be one of: step, rate" % name)
-        self.t_.set(zoomalg=name)
+        self.t_.set(zoom_algorithm=name)
         
     def zoomalg_change_cb(self, setting, value):
         self.zoom_to(self.t_['zoomlevel'])
@@ -946,10 +980,10 @@ class FitsImageBase(Callback.Callbacks):
         return self.t_['reverse_pan']
         
     def get_transforms(self):
-        return (self.t_['flipx'], self.t_['flipy'], self.t_['swapxy'])
+        return (self.t_['flip_x'], self.t_['flip_y'], self.t_['swap_xy'])
 
-    def set_autolevel_params(self, method, pct=None, numbins=None):
-        self.logger.debug("Setting autolevel params method=%s pct=%.4f" % (
+    def set_autocut_params(self, method, pct=None, numbins=None):
+        self.logger.debug("Setting autocut params method=%s pct=%.4f" % (
             method, pct))
         self.t_.set(autocut_method=method)
         if pct:
@@ -981,9 +1015,9 @@ class FitsImageBase(Callback.Callbacks):
 
         # If user specified override for auto levels, then turn off
         # auto levels now that they have set the levels manually
-        if (not no_reset) and (self.t_['autolevels'] == 'override'):
+        if (not no_reset) and (self.t_['autocuts'] == 'override'):
             value = 'off'
-            self.t_.set(autolevels=value)
+            self.t_.set(autocuts=value)
             self.make_callback('autocuts', value)
 
         # Save cut levels with this image embedded profile
@@ -1003,7 +1037,7 @@ class FitsImageBase(Callback.Callbacks):
         self.t_.set(locut=loval, hicut=hival)
 
     def auto_levels_cb(self, setting, value):
-        if self.t_['autolevels'] != 'off':
+        if self.t_['autocuts'] != 'off':
             self.auto_levels()
 
     def cut_levels_cb(self, setting, value):
@@ -1013,22 +1047,22 @@ class FitsImageBase(Callback.Callbacks):
         self.make_callback('cut-set', loval, hival)
         self.redraw(whence=1)
 
-    def enable_autolevels(self, option):
+    def enable_autocuts(self, option):
         option = option.lower()
-        assert(option in self.autolevels_options), \
-                      FitsImageError("Bad autolevels option '%s': must be one of %s" % (
-            str(self.autolevels_options)))
-        self.t_.set(autolevels=option)
+        assert(option in self.autocuts_options), \
+                      FitsImageError("Bad autocuts option '%s': must be one of %s" % (
+            str(self.autocuts_options)))
+        self.t_.set(autocuts=option)
         
         self.make_callback('autocuts', option)
 
-    def get_autolevels_options(self):
-        return self.autolevels_options
+    def get_autocuts_options(self):
+        return self.autocuts_options
 
-    def transform(self, flipx, flipy, swapxy, redraw=True):
-        self.logger.debug("flipx=%s flipy=%s swapxy=%s" % (
-            flipx, flipy, swapxy))
-        self.t_.set(flipx=flipx, flipy=flipy, swapxy=swapxy)
+    def transform(self, flip_x, flip_y, swap_xy, redraw=True):
+        self.logger.debug("flip_x=%s flip_y=%s swap_xy=%s" % (
+            flip_x, flip_y, swap_xy))
+        self.t_.set(flip_x=flip_x, flip_y=flip_y, swap_xy=swap_xy)
 
     def transform_cb(self, setting, value):
         self.make_callback('transform')
@@ -1039,7 +1073,8 @@ class FitsImageBase(Callback.Callbacks):
         instance of a FitsImage."""
 
         if 'transforms' in attrlist:
-            dst_fi.transform(self.t_['flipx'], self.t_['flipy'], self.t_['swapxy'],
+            dst_fi.transform(self.t_['flip_x'], self.t_['flip_y'],
+                             self.t_['swap_xy'],
                              redraw=False)
 
         if 'rotation' in attrlist:
@@ -1096,7 +1131,7 @@ class FitsImageBase(Callback.Callbacks):
     def auto_orient(self, redraw=True):
         """Set the orientation for the image to a reasonable default.
         """
-        flipx, flipy, swapxy = False, False, False
+        flip_x, flip_y, swap_xy = self.get_transforms()
         invertY = not isinstance(self.image, AstroImage.AstroImage)
 
         # Check for various things to set based on metadata
@@ -1107,20 +1142,21 @@ class FitsImageBase(Callback.Callbacks):
             if orient:
                 try:
                     orient = int(orient)
-                    print "setting orientation from %d" % (orient)
-                    flipx, flipy, swapxy = self.orientMap[orient]
+                    self.logger.debug("setting orientation from metadata [%d]" % (
+                        orient))
+                    flip_x, flip_y, swap_xy = self.orientMap[orient]
                 except Exception, e:
                     # problems figuring out orientation--let it be
                     pass
 
         # Flip vertically for non-astronomical images
         if invertY:
-            if swapxy:
-                flipx = not flipx
+            if swap_xy:
+                flip_x = not flip_x
             else:
-                flipy = not flipy
+                flip_y = not flip_y
 
-        self.transform(flipx, flipy, swapxy, redraw=redraw)
+        self.transform(flip_x, flip_y, swap_xy, redraw=redraw)
 
 
 #END

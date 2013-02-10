@@ -107,7 +107,7 @@ class Pick(GingaPlugin.LocalPlugin):
 
         di = FitsImageCanvasQt.FitsImageCanvas(logger=self.logger)
         di.enable_autozoom('off')
-        di.enable_autolevels('off')
+        di.enable_autocuts('off')
         di.enable_zoom(True)
         di.enable_cuts(True)
         di.zoom_to(3, redraw=False)
@@ -1041,7 +1041,8 @@ class Pick(GingaPlugin.LocalPlugin):
         except Exception, e:
             self.fv.showStatus("No valid brightness level: '%s'" % (hival))
             
-    def zoomset(self, fitsimage, zoomlevel, scalefactor):
+    def zoomset(self, fitsimage, zoomlevel, scale_x, scale_y):
+        scalefactor = fitsimage.get_scale()
         self.logger.debug("scalefactor = %.2f" % (scalefactor))
         text = self.fv.scale2text(scalefactor)
         self.wdetail.zoom.setText(text)

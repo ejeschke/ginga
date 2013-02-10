@@ -1,11 +1,9 @@
 #
 # AutoCuts.py -- class for calculating auto cut levels
 # 
-#[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Jan 25 09:57:55 HST 2013
-#]
+# Eric Jeschke (eric@naoj.org)
 #
-# Copyright (c) 2012, Eric R. Jeschke.  All rights reserved.
+# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -23,15 +21,15 @@ except ImportError:
     have_scipy = False
     autocut_methods = ('minmax', 'histogram', 'stddev')
 
-default_autolevels_method = 'histogram'
+default_autocuts_method = 'histogram'
 
-# Default number of bins to use in the calculation of the autolevels
+# Default number of bins to use in the calculation of the autocuts
 # histogram for algorithm "histogram"
-default_autolevels_bins = 2048
+default_autocuts_bins = 2048
 
 # Default percentage of pixels to keep "inside" the cut, used in 
-# the calculation of the autolevels histogram for algorithm "histogram"
-default_autolevels_hist_pct = 0.999
+# the calculation of the autocuts histogram for algorithm "histogram"
+default_autocuts_hist_pct = 0.999
 
 # Constants used to calculate the lo and hi cut levels using the
 # "stddev" algorithm (from the old SOSS fits viewer)
@@ -51,11 +49,11 @@ class AutoCuts(object):
                         method='histogram', pct=None, numbins=None,
                         usecrop=True, cropradius=512):
         if not method:
-            method = default_autolevels_method
+            method = default_autocuts_method
         if not pct:
-            pct = default_autolevels_hist_pct
+            pct = default_autocuts_hist_pct
         if not numbins:
-            numbins = default_autolevels_bins
+            numbins = default_autocuts_bins
 
         start_time = time.time()
 

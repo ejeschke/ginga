@@ -79,11 +79,11 @@ default_layout = ['hpanel', {},
                   ]
 
 global_plugins = [
-    Bunch(module='Pan', tab='Pan', ws='uleft', raisekey='i'),
-    Bunch(module='Info', tab='Info', ws='lleft', raisekey='i'),
-    Bunch(module='Header', tab='Header', ws='left', raisekey='h'),
-    Bunch(module='Zoom', tab='Zoom', ws='left', raisekey='z'),
-    Bunch(module='Thumbs', tab='Thumbs', ws='right', raisekey='t'),
+    Bunch(module='Pan', tab='Pan', ws='uleft', raisekey='I'),
+    Bunch(module='Info', tab='Info', ws='lleft', raisekey='I'),
+    Bunch(module='Header', tab='Header', ws='left', raisekey='H'),
+    Bunch(module='Zoom', tab='Zoom', ws='left', raisekey='Z'),
+    Bunch(module='Thumbs', tab='Thumbs', ws='right', raisekey='T'),
     Bunch(module='Contents', tab='Contents', ws='right', raisekey='c'),
     Bunch(module='WBrowser', tab='Help', ws='right', raisekey='?'),
     Bunch(module='Errors', tab='Errors', ws='right'),
@@ -133,7 +133,7 @@ def main(options, args):
         basedir = os.environ['GINGA_HOME']
     except KeyError:
         basedir = os.path.join(os.environ['HOME'], '.ginga')
-    settings = Settings.Preferences(basefolder=basedir, logger=logger)
+    prefs = Settings.Preferences(basefolder=basedir, logger=logger)
     sys.path.insert(0, basedir)
 
     moduleHome = os.path.split(sys.modules[__name__].__file__)[0]
@@ -161,11 +161,11 @@ def main(options, args):
     # Define class dynamically based on toolkit choice
     class Ginga(GingaControl, GingaView):
 
-        def __init__(self, logger, threadPool, module_manager, settings,
+        def __init__(self, logger, threadPool, module_manager, prefs,
                      ev_quit=None, datasrc_length=20, follow_focus=False):
             GingaView.__init__(self, logger, ev_quit)
             GingaControl.__init__(self, logger, threadPool, module_manager,
-                                  settings, ev_quit=ev_quit,
+                                  prefs, ev_quit=ev_quit,
                                   datasrc_length=datasrc_length,
                                   follow_focus=follow_focus)
 
@@ -179,7 +179,7 @@ def main(options, args):
     threadPool.startall()
 
     # Create the Ginga main object
-    ginga = Ginga(logger, threadPool, mm, settings,
+    ginga = Ginga(logger, threadPool, mm, prefs,
                   datasrc_length=options.bufsize,
                   ev_quit=ev_quit)
     ginga.followFocus(False)

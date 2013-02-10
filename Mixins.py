@@ -1,11 +1,9 @@
 #
 # Mixins.py -- Mixin classes for FITS viewer.
 #
-#[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Jan 25 17:53:27 HST 2013
-#]
+# Eric Jeschke (eric@naoj.org)
 #
-# Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
+# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 
@@ -275,11 +273,11 @@ class FitsImageZoomMixin(object):
                 self.auto_levels()
                 return True
             elif keyname in self.keys.autocuts_on:
-                self.enable_autolevels('on')
+                self.enable_autocuts('on')
                 self.onscreen_message('Autocuts On', delay=1.0)
                 return True
             elif keyname in self.keys.autocuts_override:
-                self.enable_autolevels('override')
+                self.enable_autocuts('override')
                 self.onscreen_message('Autocuts Override', delay=1.0)
                 return True
 

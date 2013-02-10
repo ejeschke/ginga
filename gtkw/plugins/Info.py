@@ -269,7 +269,7 @@ class Info(GingaPlugin.GlobalPlugin):
 
         # update cut new/zoom new indicators
         t_ = fitsimage.get_settings()
-        info.winfo.cut_new.set_text(t_['autolevels'])
+        info.winfo.cut_new.set_text(t_['autocuts'])
         info.winfo.zoom_new.set_text(t_['autozoom'])
 
 

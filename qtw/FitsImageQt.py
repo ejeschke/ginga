@@ -136,7 +136,7 @@ class FitsImageQt(FitsImage.FitsImageBase):
         self._defer_flag = False
         self._defer_task = None
 
-        self.t_showpanpos = False
+        self.t_.setDefaults(show_pan_position=False)
 
     def get_widget(self):
         return self.imgwin
@@ -164,7 +164,7 @@ class FitsImageQt(FitsImage.FitsImageBase):
                           QtCore.QRect(0, 0, width, height))
 
         # Draw a cross in the center of the window in debug mode
-        if self.t_showpanpos:
+        if self.t_['show_pan_position']:
             clr = QtGui.QColor()
             clr.setRgbF(1.0, 0.0, 0.0)
             painter.setPen(clr)
@@ -352,7 +352,7 @@ class FitsImageQt(FitsImage.FitsImageBase):
         return (x, y)
 
     def show_pan_mark(self, tf, redraw=True):
-        self.t_showpanpos = tf
+        self.t_.set(show_pan_position=tf)
         if redraw:
             self.redraw(whence=3)
         

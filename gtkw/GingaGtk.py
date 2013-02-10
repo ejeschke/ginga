@@ -23,6 +23,7 @@ import Bunch
 
 # Local application imports
 import FitsImage
+import cmap, imap
 
 moduleHome = os.path.split(sys.modules[__name__].__file__)[0]
 sys.path.insert(0, moduleHome)
@@ -322,34 +323,38 @@ class GingaView(GtkMain.GtkMain):
         fr.add(cbar)
         return fr
     
-    def build_viewpane(self, cm, im, settings):
+    def build_viewpane(self, settings):
         fi = FitsImageCanvasGtk.FitsImageCanvas(logger=self.logger,
                                                 settings=settings)
-        fi.enable_autozoom(self.default_autozoom)
-        fi.enable_autolevels(self.default_autolevels)
         fi.enable_zoom(True)
         fi.enable_cuts(True)
         fi.enable_flip(True)
         fi.enable_auto_orient(True)
         fi.enable_rotate(True)
         fi.enable_draw(False)
-        fi.set_cmap(cm, redraw=False)
-        fi.set_imap(im, redraw=False)
         fi.add_callback('motion', self.motion_cb)
         fi.add_callback('key-press', self.keypress)
         fi.add_callback('drag-drop', self.dragdrop)
         fi.add_callback('cut-set', self.change_range_cb, self.colorbar)
+
+        cmap_name = settings.get('color_map', "ramp")
+        cm = cmap.get_cmap(cmap_name)
+        imap_name = settings.get('intensity_map', "ramp")
+        im = imap.get_imap(imap_name)
+        fi.set_cmap(cm, redraw=False)
+        fi.set_imap(im, redraw=False)
+
         rgbmap = fi.get_rgbmap()
         rgbmap.add_callback('changed', self.rgbmap_cb, fi)
         fi.set_bg(0.2, 0.2, 0.2)
         return fi
 
-    def add_viewer(self, name, cm, im, settings,
+    def add_viewer(self, name, settings,
                    use_readout=True, workspace=None):
 
         vbox = gtk.VBox(spacing=0)
         
-        fi = self.build_viewpane(cm, im, settings)
+        fi = self.build_viewpane(settings)
         iw = fi.get_widget()
 
         if self.channel_follows_focus:
@@ -389,14 +394,16 @@ class GingaView(GtkMain.GtkMain):
             w.destroy()
             return
         
-        root = gtk.Window(gtk.WINDOW_TOPLEVEL)
-        fi = self.build_viewpane(self.cm, self.im)
-        iw = fi.get_widget()
-        root.add(iw)
-
         # Get image from current focused channel
         chinfo = self.get_channelInfo()
         fitsimage = chinfo.fitsimage
+        settings = fitsimage.get_settings()
+
+        root = gtk.Window(gtk.WINDOW_TOPLEVEL)
+        fi = self.build_viewpane(settings)
+        iw = fi.get_widget()
+        root.add(iw)
+
         image = fitsimage.get_image()
         if image == None:
             return
@@ -404,8 +411,8 @@ class GingaView(GtkMain.GtkMain):
 
         # Copy attributes of the frame
         fitsimage.copy_attributes(fi,
-                                  ['transforms',
-                                   'cutlevels',
+                                  [#'transforms',
+                                   #'cutlevels',
                                    'rgbmap'],
                                   redraw=False)
 

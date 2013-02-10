@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Wed Jan 16 15:02:33 HST 2013
+#  Last edit: Sat Feb  9 13:17:02 HST 2013
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -30,7 +30,7 @@ class FitsViewer(QtGui.QMainWindow):
         self.logger = logger
 
         fi = FitsImageZoom(self.logger, render='widget')
-        fi.enable_autolevels('on')
+        fi.enable_autocuts('on')
         fi.enable_zoom('on')
         fi.enable_cuts(True)
         fi.enable_flip(True)

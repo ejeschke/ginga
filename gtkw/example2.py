@@ -3,7 +3,7 @@
 # example2.py -- Simple, configurable FITS viewer.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Wed Jan 16 15:00:39 HST 2013
+#  Last edit: Sat Feb  9 13:15:21 HST 2013
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -43,7 +43,7 @@ class FitsViewer(object):
         vbox = gtk.VBox(spacing=2)
 
         fi = FitsImageCanvas(logger)
-        fi.enable_autolevels('on')
+        fi.enable_autocuts('on')
         fi.enable_zoom('on')
         fi.enable_cuts(True)
         fi.enable_flip(True)

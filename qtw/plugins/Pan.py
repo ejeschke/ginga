@@ -43,7 +43,7 @@ class Pan(GingaPlugin.GlobalPlugin):
         sfi.enable_autozoom('on')
         sfi.enable_pan(False)
         sfi.enable_zoom(False)
-        sfi.enable_autolevels('off')
+        sfi.enable_autocuts('off')
         sfi.enable_draw(True)
         sfi.set_drawtype('rectangle', linestyle='dash')
         sfi.set_drawcolor('green')
@@ -87,13 +87,13 @@ class Pan(GingaPlugin.GlobalPlugin):
         fitssettings = fitsimage.get_settings()
         pansettings = panimage.get_settings()
         
-        zoomsettings = ['zoomalg', 'zoomrate', 'scale_x_base', 'scale_y_base']
+        zoomsettings = ['zoom_algorithm', 'zoom_rate', 'scale_x_base', 'scale_y_base']
         fitssettings.shareSettings(pansettings, zoomsettings)
         for key in zoomsettings:
             pansettings.getSetting(key).add_callback('set', self.zoom_cb,
                                                      fitsimage, chinfo, paninfo)
 
-        xfrmsettings = ['flipx', 'flipy', 'swapxy', 'locut', 'hicut']
+        xfrmsettings = ['flip_x', 'flip_y', 'swap_xy', 'locut', 'hicut']
         fitssettings.shareSettings(pansettings, xfrmsettings)
         for key in xfrmsettings:
             pansettings.getSetting(key).add_callback('set', self.redraw_cb,

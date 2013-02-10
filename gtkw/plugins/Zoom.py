@@ -52,7 +52,7 @@ class Zoom(GingaPlugin.GlobalPlugin):
         #zi = FitsImageCanvasGtk.FitsImageCanvas(logger=self.logger)
         zi = FitsImageCanvasGtk.FitsImageCanvas(logger=None)
         zi.enable_autozoom('off')
-        zi.enable_autolevels('off')
+        zi.enable_autocuts('off')
         zi.enable_zoom(False)
         #zi.set_scale_limits(0.001, 1000.0)
         zi.zoom_to(self.default_zoom, redraw=False)
@@ -177,8 +177,8 @@ class Zoom(GingaPlugin.GlobalPlugin):
     def transform_cb(self, fitsimage):
         if fitsimage != self.fitsimage_focus:
             return True
-        flipx, flipy, swapxy = fitsimage.get_transforms()
-        self.zoomimage.transform(flipx, flipy, swapxy)
+        flip_x, flip_y, swap_xy = fitsimage.get_transforms()
+        self.zoomimage.transform(flip_x, flip_y, swap_xy)
         return True
         
     def rotate_cb(self, fitsimage, deg):
@@ -198,12 +198,6 @@ class Zoom(GingaPlugin.GlobalPlugin):
             # Amount of zoom is a relative amount
             myzoomlevel = self.zoomimage.get_zoom()
             myzoomlevel = zoomlevel + self.zoom_amount
-
-        minz, maxz = self.zoomimage.get_zoom_limits()
-        if myzoomlevel < minz:
-            myzoomlevel = minz
-        if myzoomlevel > maxz:
-            myzoomlevel = maxz
 
         self.logger.debug("zoomlevel=%d myzoom=%d" % (
             zoomlevel, myzoomlevel))

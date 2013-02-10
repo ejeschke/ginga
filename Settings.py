@@ -14,12 +14,19 @@ import Callback
 import Bunch
 
 
+unset_value = ("^^UNSET^^")
+
+class SettingError(Exception):
+    pass
+
 class Setting(Callback.Callbacks):
 
-    def __init__(self, value=None, name=None, logger=None, check_fn=None):
+    def __init__(self, value=unset_value, name=None, logger=None,
+                 check_fn=None):
         Callback.Callbacks.__init__(self)
 
         self.value = value
+        self._unset = (value == unset_value)
         self.name = name
         self.logger = logger
         if check_fn == None:
@@ -33,11 +40,21 @@ class Setting(Callback.Callbacks):
     def _check_none(self, value):
         return value
     
-    def set(self, value):
+    def set(self, value, callback=True):
         self.value = self.check_fn(value)
-        self.make_callback('set', value)
+        if callback:
+            self.make_callback('set', value)
         
-    def get(self):
+    def get(self, *args):
+        if self._unset:
+            if len(args) == 0:
+                raise KeyError("setting['%s'] value is not set!" % (
+                    self.name))
+            else:
+                assert len(args) == 1, \
+                       SettingError("Illegal parameter use to get(): %s" % (
+                    str(args)))
+                return args[0]
         return self.value
     
     def __repr__(self):
@@ -75,11 +92,11 @@ class SettingGroup(object):
 
     def setdefault(self, key, value):
         if self.group.has_key(key):
-            return self.group[key].value
+            return self.group[key].get(value)
         else:
             d = { key: value }
             self.addSettings(**d)
-            return self.group[key].value
+            return self.group[key].get(value)
 
     def addDefaults(self, **kwdargs):
         for key, value in kwdargs.items():
@@ -91,12 +108,9 @@ class SettingGroup(object):
     def get(self, *args):
         key = args[0]
         if len(args) == 1:
-            return self.group[key].value
+            return self.group[key].get()
         if len(args) == 2:
-            try:
-                return self.group[key].value
-            except KeyError:
-                return args[1]
+            return self.setdefault(key, args[1])
 
     def getDict(self):
         return dict([[name, self.group[name].value] for name in self.group.keys()])
