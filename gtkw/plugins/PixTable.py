@@ -192,7 +192,7 @@ class PixTable(GingaPlugin.LocalPlugin):
         self.w.marks.append_text('None')
         self.w.marks.set_active(0)
         self.mark_selected = None
-        
+
     def plot(self, data, x1, y1, x2, y2, data_x, data_y, radius,
              maxv=9):
         width, height = self.fitsimage.get_dims(data)

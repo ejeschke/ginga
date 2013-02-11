@@ -2,7 +2,7 @@
 # PixTable.py -- Pixel Table plugin for fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Jun 22 13:50:29 HST 2012
+#  Last edit: Sun Feb 10 17:03:34 HST 2013
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -204,7 +204,7 @@ class PixTable(GingaPlugin.LocalPlugin):
     def plot(self, data, x1, y1, x2, y2, data_x, data_y, radius,
              maxv=9):
         
-        height, width = data.shape
+        width, height = self.fitsimage.get_dims(data)
 
         maxval = numpy.nanmax(data)
         minval = numpy.nanmin(data)

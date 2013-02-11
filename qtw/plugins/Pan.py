@@ -227,9 +227,9 @@ class Pan(GingaPlugin.GlobalPlugin):
         return False
 
     def btndown(self, fitsimage, button, data_x, data_y):
-        if button == 0x21:
-            fitsimage = self.fv.getfocus_fitsimage()
-            fitsimage.panset_xy(data_x, data_y, redraw=False)
+        bigimage = self.fv.getfocus_fitsimage()
+        if button == 0x1:
+            bigimage.panset_xy(data_x, data_y)
         elif button == 0x21:
             bigimage.panset_xy(data_x, data_y, redraw=False)
 

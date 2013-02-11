@@ -1142,7 +1142,7 @@ class FitsImageBase(Callback.Callbacks):
             if orient:
                 try:
                     orient = int(orient)
-                    self.logger.debug("setting orientation from metadata [%d]" % (
+                    self.logger.info("setting orientation from metadata [%d]" % (
                         orient))
                     flip_x, flip_y, swap_xy = self.orientMap[orient]
 
@@ -1155,7 +1155,8 @@ class FitsImageBase(Callback.Callbacks):
 
         if invertY:
             flip_x, flip_y, swap_xy = self.get_transforms()
-            flip_y = not flip_y
+            #flip_y = not flip_y
+            flip_y = True
             self.transform(flip_x, flip_y, swap_xy, redraw=redraw)
 
 #END
