@@ -143,7 +143,7 @@ class Pan(GingaPlugin.GlobalPlugin):
         
     def redraw_cb(self, setting, value, deg, chinfo, paninfo, whence):
         paninfo.panimage.redraw(whence=whence)
-        self.panset(fitsimage, chinfo, paninfo)
+        self.panset(chinfo.fitsimage, chinfo, paninfo)
         return True
         
     def zoom_cb(self, setting, value, fitsimage, chinfo, paninfo):

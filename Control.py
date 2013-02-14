@@ -128,10 +128,12 @@ class GingaControl(Callback.Callbacks):
             if image == None:
                 # No image loaded for this channel
                 return
-            ## ra_txt, dec_txt = image.pixtoradec(data_x, data_y,
-            ##                                    format='str')
-            ra_txt, dec_txt = image.pixtoradec(fits_x, fits_y,
-                                               format='str', coords='fits')
+            if hasattr(image, 'pixtoradec'):
+                ra_txt, dec_txt = image.pixtoradec(fits_x, fits_y,
+                                                   format='str', coords='fits')
+            else:
+                ra_txt  = 'BAD WCS'
+                dec_txt = 'BAD WCS'
         except Exception, e:
             self.logger.warn("Bad coordinate conversion: %s" % (
                 str(e)))
@@ -601,7 +603,6 @@ class GingaControl(Callback.Callbacks):
         else:
             oldchname = self.chinfo.name.lower()
 
-        print "1"
         chinfo = self.get_channelInfo(name)
         if name != oldchname:
             with self.lock:
@@ -613,7 +614,6 @@ class GingaControl(Callback.Callbacks):
             # Update the channel control
             self.w.channel.show_text(chinfo.name)
 
-        print "2"
         if name != oldchname:
             # raise tab
             if raisew:
@@ -630,7 +630,6 @@ class GingaControl(Callback.Callbacks):
             ##     title += ": %s" % (name)
             self.set_titlebar(title)
 
-        print "3"
         if image:
             self._switch_image(chinfo, image)
         
@@ -639,12 +638,9 @@ class GingaControl(Callback.Callbacks):
         ##     image = chinfo.datasrc[n]
         ##     self._switch_image(chinfo, image)
             
-        print "4"
         self.make_callback('active-image', chinfo.fitsimage)
 
-        print "5"
         self.update_pending()
-        print "6"
         return True
 
     def has_channel(self, chname):
@@ -807,6 +803,8 @@ class GingaControl(Callback.Callbacks):
         self.add_channel(chname)
         self.nongui_do(self.load_file, bannerFile, chname=chname)
         self.change_channel(chname)
+        chinfo = self.get_channelInfo()
+        chinfo.fitsimage.zoom_fit()
 
     def followFocus(self, tf):
         self.channel_follows_focus = tf

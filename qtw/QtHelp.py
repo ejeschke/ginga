@@ -51,6 +51,9 @@ class StackedWidget(QtGui.QStackedWidget):
     def addTab(self, widget, label):
         self.addWidget(widget)
 
+    def removeTab(self, index):
+        self.removeWidget(self.widget(index))
+
 class Workspace(QtGui.QMdiArea):
 
     def __init__(self):
@@ -411,7 +414,8 @@ class Desktop(Callback.Callbacks):
     def switch_page(self, page_num, nbw):
         pagew = nbw.currentWidget()
         bnch = self._find_tab(pagew)
-        self.make_callback('page-switch', bnch.name, bnch.data)
+        if bnch != None:
+            self.make_callback('page-switch', bnch.name, bnch.data)
         return False
 
     def make_desktop(self, layout, widgetDict=None):

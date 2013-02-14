@@ -35,7 +35,9 @@ class Histogram(GingaPlugin.LocalPlugin):
         canvas.setSurface(self.fitsimage)
         self.canvas = canvas
 
-        fitsimage.set_callback('cut-set', self.cutset_cb)
+        self.gui_up = False
+
+        fitsimage.set_callback('cut-set', self.cutset_ext_cb)
 
     def build_gui(self, container):
         # Splitter is just to provide a way to size the graph
@@ -100,6 +102,8 @@ class Histogram(GingaPlugin.LocalPlugin):
 
         container.addWidget(vpaned, stretch=1)
 
+        self.gui_up = True
+
     def close(self):
         chname = self.fv.get_channelName(self.fitsimage)
         self.fv.stop_operation_channel(chname, str(self))
@@ -144,6 +148,7 @@ class Histogram(GingaPlugin.LocalPlugin):
             self.fitsimage.deleteObjectByTag(self.layertag)
         except:
             pass
+        self.gui_up = False
         self.fv.showStatus("")
         
     def full_image(self):
@@ -321,7 +326,9 @@ class Histogram(GingaPlugin.LocalPlugin):
     def auto_levels(self):
         self.fitsimage.auto_levels()
 
-    def cutset_cb(self, fitsimage, loval, hival):
+    def cutset_ext_cb(self, fitsimage, loval, hival):
+        if not self.gui_up:
+            return
         self.loline.remove()
         self.hiline.remove()
         self.loline = self.plot.ax.axvline(loval, 0.0, 0.99,

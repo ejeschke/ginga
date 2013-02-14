@@ -30,6 +30,8 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.imap_names = imap.get_names()
         self.zoomalg_names = ('step', 'rate')
         
+        self.gui_up = False
+
         rgbmap = fitsimage.get_rgbmap()
         self.calg_names = rgbmap.get_hash_algorithms()
         self.calg_names.sort()
@@ -353,7 +355,9 @@ class Preferences(GingaPlugin.LocalPlugin):
 
         #container.addWidget(sw, stretch=1, alignment=QtCore.Qt.AlignTop)
         container.addWidget(sw, stretch=1)
-
+        
+        self.gui_up = True
+        
     def set_cmap_cb(self, index):
         """This callback is invoked when the user selects a new color
         map from the preferences pane."""
@@ -441,12 +445,16 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.t_.set(zoom_rate=rate)
         
     def set_zoomrate_ext_cb(self, setting, value):
+        if not self.gui_up:
+            return
         self.w.zoom_rate.setValue(value)
         
     def set_zoomalg_cb(self, idx):
         self.t_.set(zoom_algorithm=self.zoomalg_names[idx])
         
     def set_zoomalg_ext_cb(self, setting, value):
+        if not self.gui_up:
+            return
         if value == 'step':
             self.w.zoom_alg.setCurrentIndex(0)
             self.w.zoom_rate.setEnabled(False)
@@ -457,6 +465,8 @@ class Preferences(GingaPlugin.LocalPlugin):
             self.w.stretch_factor.setEnabled(True)
 
     def scalebase_changed_ext_cb(self, setting, value):
+        if not self.gui_up:
+            return
         scale_x_base, scale_y_base = self.fitsimage.get_scale_base_xy()
 
         ratio = float(scale_x_base) / float(scale_y_base)
@@ -489,11 +499,12 @@ class Preferences(GingaPlugin.LocalPlugin):
             self.t_.set(scale_x_base=1.0, scale_y_base=value)
         
     def pan_changed_ext_cb(self, fitsimage):
-        if self.w.has_key('pan_x'):
-            pan_x, pan_y = fitsimage.get_pan()
-            fits_x, fits_y = pan_x + 0.5, pan_y + 0.5
-            self.w.pan_x.setText(str(fits_x))
-            self.w.pan_y.setText(str(fits_y))
+        if not self.gui_up:
+            return
+        pan_x, pan_y = fitsimage.get_pan()
+        fits_x, fits_y = pan_x + 0.5, pan_y + 0.5
+        self.w.pan_x.setText(str(fits_x))
+        self.w.pan_y.setText(str(fits_y))
 
     def set_scale_cb(self):
         scale_x = float(self.w.scale_x.text())
@@ -501,7 +512,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.fitsimage.scale_to(scale_x, scale_y)
 
     def scale_changed_ext_cb(self, fitsimage, zoomlevel, scale_x, scale_y):
-        if not self.w.has_key('scale_x'):
+        if not self.gui_up:
             return
         self.w.scale_x.setText(str(scale_x))
         self.w.scale_y.setText(str(scale_y))
@@ -517,9 +528,10 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.t_.set(autozoom=option)
 
     def autozoom_changed_cb(self, fitsimage, option):
+        if not self.gui_up:
+            return
         index = self.autozoom_options.index(option)
-        if self.w.has_key('zoom_new'):
-            self.w.zoom_new.setCurrentIndex(index)
+        self.w.zoom_new.setCurrentIndex(index)
 
     def config_autocut_params(self, method, pct):
         index = self.autocut_methods.index(method)
@@ -531,6 +543,8 @@ class Preferences(GingaPlugin.LocalPlugin):
             self.w.hist_pct.setEnabled(True)
         
     def set_autocuts_ext_cb(self, setting, value):
+        if not self.gui_up:
+            return
         method = self.t_['autocuts_method']
         pct = self.t_['autocuts_hist_pct']
         self.config_autocut_params(method, pct)
@@ -549,10 +563,11 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.t_.set(autocuts=option)
 
     def autocuts_changed_cb(self, fitsimage, option):
+        if not self.gui_up:
+            return
         self.logger.debug("autocuts changed to %s" % option)
         index = self.autocut_options.index(option)
-        if self.w.has_key('cut_new'):
-            self.w.cut_new.setCurrentIndex(index)
+        self.w.cut_new.setCurrentIndex(index)
 
     def set_transforms_cb(self):
         flip_x = (self.w.flip_x.checkState() != 0)
@@ -562,6 +577,8 @@ class Preferences(GingaPlugin.LocalPlugin):
         return True
 
     def set_transform_ext_cb(self, setting, value):
+        if not self.gui_up:
+            return
         flip_x, flip_y, swap_xy = \
                 self.t_['flip_x'], self.t_['flip_y'], self.t_['swap_xy']
         self.w.flip_x.setChecked(flip_x)
@@ -574,6 +591,8 @@ class Preferences(GingaPlugin.LocalPlugin):
         return True
 
     def set_rotate_ext_cb(self, setting, value):
+        if not self.gui_up:
+            return
         self.w.rotate.setValue(value)
         return True
 
@@ -713,7 +732,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         pass
         
     def stop(self):
-        pass
+        self.gui_up = False
         
     def redo(self):
         pass

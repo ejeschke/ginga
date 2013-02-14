@@ -258,8 +258,10 @@ class Zoom(GingaPlugin.GlobalPlugin):
         fitsimage = self.fitsimage_focus
         if fitsimage == None:
             return True
-        val = fitsimage.get_data(self.zoom_x, self.zoom_y)
-        self.showxy(fitsimage, self.zoom_x, self.zoom_y)
+        image = fitsimage.get_image()
+        wd, ht = image.get_size()
+        data_x, data_y = wd // 2, ht // 2
+        self.showxy(fitsimage, data_x, data_y)
         
     def showxy(self, fitsimage, data_x, data_y):
         # Cut and show zoom image in zoom window

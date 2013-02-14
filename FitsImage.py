@@ -1035,6 +1035,7 @@ class FitsImageBase(Callback.Callbacks):
         image = self.get_image()
         loval, hival = self.autocuts.calc_cut_levels(image, method=method,
                                                      pct=pct, numbins=numbins)
+        # this will invoke cut_levels_cb()
         self.t_.set(locut=loval, hicut=hival)
 
     def auto_levels_cb(self, setting, value):
@@ -1045,8 +1046,8 @@ class FitsImageBase(Callback.Callbacks):
         loval = self.t_['locut']
         hival = self.t_['hicut']
 
-        self.make_callback('cut-set', loval, hival)
         self.redraw(whence=1)
+        self.make_callback('cut-set', loval, hival)
 
     def enable_autocuts(self, option):
         option = option.lower()
