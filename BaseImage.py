@@ -30,7 +30,7 @@ class BaseImage(Callback.Callbacks):
             self.logger = logging.Logger('AstroImage')
         if data_np == None:
             data_np = numpy.zeros((1, 1))
-        self.data = data_np
+        self._data = data_np
         self.metadata = {}
         if metadata:
             self.update_metadata(metadata)
@@ -46,32 +46,37 @@ class BaseImage(Callback.Callbacks):
     @property
     def width(self):
         # NOTE: numpy stores data in column-major layout
-        return self.data.shape[1]
+        data = self.get_data()
+        return data.shape[1]
         
     @property
     def height(self):
         # NOTE: numpy stores data in column-major layout
-        return self.data.shape[0]
+        data = self.get_data()
+        return data.shape[0]
 
     def get_size(self):
         return (self.width, self.height)
     
     def get_depth(self):
-        if len(self.data.shape) > 2:
-            return self.data.shape[2]
+        data = self.get_data()
+        if len(data.shape) > 2:
+            return data.shape[2]
         return 1
     
     def get_shape(self):
-        return self.data.shape
+        data = self.get_data()
+        return data.shape
     
     def get_data(self):
-        return self.data
+        return self._data
         
     def copy_data(self):
         return self.get_data()
         
     def get_data_xy(self, x, y):
-        val = self.data[y, x]
+        data = self.get_data()
+        val = data[y, x]
         return val
         
     def _get_dims(self, data):
@@ -82,7 +87,7 @@ class BaseImage(Callback.Callbacks):
         return self.metadata.copy()
         
     def get_header(self):
-        return self.get('exif')
+        return self.get('exif', {})
         
     def get(self, kwd, *args):
         if self.metadata.has_key(kwd):
@@ -115,23 +120,26 @@ class BaseImage(Callback.Callbacks):
             data = data_np.astype(astype)
         else:
             data = data_np
-        self.data = data
+        self._data = data
 
         if metadata:
             self.update_metadata(metadata)
             
         self._set_minmax()
 
+        self.make_callback('modified')
+
     def _set_minmax(self):
-        self.maxval = numpy.nanmax(self.data)
-        self.minval = numpy.nanmin(self.data)
+        data = self.get_data()
+        self.maxval = numpy.nanmax(data)
+        self.minval = numpy.nanmin(data)
 
         # TODO: see if there is a faster way to ignore infinity
         if numpy.isfinite(self.maxval):
             self.maxval_noinf = self.maxval
         else:
             try:
-                self.maxval_noinf = numpy.nanmax(self.data[numpy.isfinite(self.data)])
+                self.maxval_noinf = numpy.nanmax(data[numpy.isfinite(data)])
             except:
                 self.maxval_noinf = self.maxval
         
@@ -139,7 +147,7 @@ class BaseImage(Callback.Callbacks):
             self.minval_noinf = self.minval
         else:
             try:
-                self.minval_noinf = numpy.nanmin(self.data[numpy.isfinite(self.data)])
+                self.minval_noinf = numpy.nanmin(data[numpy.isfinite(data)])
             except:
                 self.minval_noinf = self.minval
         
@@ -154,7 +162,8 @@ class BaseImage(Callback.Callbacks):
             self.metadata[key] = val
 
     def transfer(self, other, astype=None):
-        other.set_data(self.data, metadata=self.metadata, astype=astype)
+        data = self.get_data()
+        other.set_data(data, metadata=self.metadata, astype=astype)
         
     def copy(self, astype=None):
         other = BaseImage()
@@ -273,11 +282,32 @@ class BaseImage(Callback.Callbacks):
 
     
     def histogram(self, x1, y1, x2, y2, z=None, pct=1.0, numbins=2048):
+        data = self.get_data()
         if z != None:
-            data = self.data[y1:y2, x1:x2, z]
+            data = data[y1:y2, x1:x2, z]
         else:
-            data = self.data[y1:y2, x1:x2]
+            data = data[y1:y2, x1:x2]
 
         return self.autocuts.calc_histogram(data, pct=pct, numbins=numbins)
+
+    def cut_levels(self, loval, hival, vmin=0.0, vmax=255.0):
+        data = self.get_data()
+        data = self.autocuts.cut_levels(data, loval, hival,
+                                        vmin=vmin, vmax=vmax)
+        self.set_data(data)
+
+    def transform(self, flip_x=False, flip_y=False, swap_xy=False):
+        data = self.get_data()
+
+        # Do transforms as necessary
+        if flip_y:
+            data = numpy.flipud(data)
+        if flip_x:
+            data = numpy.fliplr(data)
+        if swap_xy:
+            data = data.swapaxes(0, 1)
+            
+        self.set_data(data)
+            
 
 #END

@@ -1,11 +1,9 @@
 #
 # GtkHelp.py -- customized Gtk widgets
 # 
-#[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Jan  4 09:35:01 HST 2013
-#]
+# Eric Jeschke (eric@naoj.org)
 #
-# Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
+# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 import time
@@ -723,6 +721,14 @@ def _make_widget(tup, ns):
         w2 = combo_box_new_text()
     elif wtype == 'spinbutton':
         w2 = SpinButton()
+    elif wtype == 'vbox':
+        w2 = gtk.VBox()
+    elif wtype == 'hbox':
+        w2 = gtk.HBox()
+    elif wtype == 'hscale':
+        w2 = HScale()
+    elif wtype == 'vscale':
+        w2 = VScale()
     elif wtype == 'checkbutton':
         w1 = gtk.Label('')
         w2 = CheckButton(title)

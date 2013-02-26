@@ -204,4 +204,17 @@ class AutoCuts(object):
         return Bunch.Bunch(dist=dist, bins=bins, loval=loval, hival=hival,
                            loidx=loidx, hiidx=hiidx)
 
+    def cut_levels(self, data, loval, hival, vmin=0.0, vmax=255.0):
+        self.logger.debug("loval=%.2f hival=%.2f" % (loval, hival))
+        delta = hival - loval
+        if delta == 0:
+            f = (data - loval).clip(0.0, 1.0)
+            # threshold
+            f[numpy.nonzero(f)] = 1.0
+        else:
+            data = data.clip(loval, hival)
+            f = ((data - loval) / delta)
+        data = f.clip(0.0, 1.0) * vmax
+        return data
+
 # END

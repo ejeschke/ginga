@@ -144,6 +144,7 @@ class FitsImageZoomMixin(object):
         self.keys.center = ['c']
         self.keys.cut_low = [',']
         self.keys.cut_high = ['.']
+        self.keys.cut_fixed = ['s']
         self.keys.autocuts_on = [':']
         self.keys.autocuts_override = [';']
         self.keys.chgcmap = ['/']
@@ -262,6 +263,9 @@ class FitsImageZoomMixin(object):
                 self._iscuthigh = True
                 self.set_kbdmouse_mask(0x1000)
                 self.onscreen_message("Cut high (drag mouse L-R)")
+                return True
+            elif keyname in self.keys.cut_fixed:
+                self.cut_levels(0.0, 255.0, no_reset=True)
                 return True
             elif keyname in self.keys.chgcmap:
                 self._ischgcmap = True

@@ -118,16 +118,19 @@ class AstroImage(BaseImage):
         self.set_data(data, metadata=metadata)
 
     def copy_data(self):
-        return self.data.copy()
+        data = self.get_data()
+        return data.copy()
         
     def get_data_xy(self, x, y):
+        data = self.get_data()
         assert (x >= 0) and (y >= 0), \
                ImageError("Indexes out of range: (x=%d, y=%d)" % (
             x, y))
-        return self.data[y, x]
+        return data[y, x]
         
     def get_data_size(self):
-        width, height = self._get_dims(self.data)
+        data = self.get_data()
+        width, height = self._get_dims(data)
         return (width, height)
 
         
@@ -206,11 +209,13 @@ class AstroImage(BaseImage):
         fits_f.close()
 
     def transfer(self, other, astype=None):
-        other.update_data(self.data, astype=astype)
+        data = self.get_data()
+        other.update_data(data, astype=astype)
         other.update_metadata(self.metadata)
         
     def copy(self, astype=None):
-        other = AstroImage(self.data)
+        data = self.get_data()
+        other = AstroImage(data)
         self.transfer(other, astype=astype)
         return other
         
@@ -219,12 +224,13 @@ class AstroImage(BaseImage):
         radius (radius) from (data).  Returns the starting pixel (x0, y0)
         of each cut and the respective arrays (xarr, yarr).
         """
+        data = self.get_data()
         n = radius
         ht, wd = self.height, self.width
         x0, x1 = max(0, x-n), min(wd-1, x+n)
         y0, y1 = max(0, y-n), min(ht-1, y+n)
-        xarr = self.data[y, x0:x1+1]
-        yarr = self.data[y0:y1+1, x]
+        xarr = data[y, x0:x1+1]
+        yarr = data[y0:y1+1, x]
         return (x0, y0, xarr, yarr)
 
 
@@ -261,7 +267,7 @@ class AstroImage(BaseImage):
     def create_fits(self):
         fits_f = pyfits.HDUList()
         hdu = pyfits.PrimaryHDU()
-        data = self.data
+        data = self.get_data()
         # if sys.byteorder == 'little':
         #     data = data.byteswap()
         hdu.data = data
@@ -296,6 +302,9 @@ class AstroImage(BaseImage):
         fits_f = self.create_fits()
         return fits_f.writeto(path, output_verify=output_verify)
         
+    def save_file_as(self, filepath):
+        self.write_fits(filepath)
+
     def pixtoradec(self, x, y, format='deg', coords='data'):
         return self.wcs.pixtoradec(x, y, format=format, coords=coords)
     

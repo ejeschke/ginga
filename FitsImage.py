@@ -386,12 +386,13 @@ class FitsImageBase(Callback.Callbacks):
             newdata = self.apply_visuals(self._rotimg, 0, vmax)
 
             # Convert data to an index array
-            #self._prergb = newdata.astype('uint')
-            self._prergb = newdata
+            self._prergb = newdata.astype('uint')
+            #self._prergb = newdata
 
         time_split3 = time.time()
         if (whence <= 2) or (self._rgbarr == None):
-            idx = self._prergb.astype('uint32')
+            #idx = self._prergb.astype('uint32')
+            idx = self._prergb
             self.logger.debug("shape of index is %s" % (str(idx.shape)))
 
             # Apply color and intensity mapping.  We produce a group of
@@ -735,8 +736,9 @@ class FitsImageBase(Callback.Callbacks):
             data = numpy.flipud(data)
 
         # Apply cut levels
-        newdata = self._cut_levels(data, self.t_['locut'], self.t_['hicut'],
-                                   vmin=vmin, vmax=vmax)
+        newdata = self.autocuts.cut_levels(data, self.t_['locut'],
+                                           self.t_['hicut'],
+                                           vmin=vmin, vmax=vmax)
         return newdata
 
         
@@ -998,19 +1000,6 @@ class FitsImageBase(Callback.Callbacks):
     def get_cut_levels(self):
         return (self.t_['locut'], self.t_['hicut'])
     
-    def _cut_levels(self, data, loval, hival, vmin=0.0, vmax=255.0):
-        self.logger.debug("loval=%.2f hival=%.2f" % (loval, hival))
-        delta = hival - loval
-        if delta == 0:
-            f = (data - loval).clip(0.0, 1.0)
-            # threshold
-            f[numpy.nonzero(f)] = 1.0
-        else:
-            data = data.clip(loval, hival)
-            f = ((data - loval) / delta)
-        data = f.clip(0.0, 1.0) * vmax
-        return data
-
     def cut_levels(self, loval, hival, no_reset=False, redraw=True):
         self.t_.set(locut=loval, hicut=hival)
 

@@ -2,7 +2,7 @@
 # PythonImage.py -- Abstraction of an generic data image.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Sun Jan 13 22:53:48 HST 2013
+#  Last edit: Mon Feb 25 21:38:49 HST 2013
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -21,7 +21,7 @@ except ImportError:
     have_pil = False
 
 try:
-    from  scipy.misc import pilutil
+    from  scipy.misc import pilutil, imsave
     have_pilutil = True
 except ImportError:
     have_pilutil = False
@@ -40,7 +40,7 @@ class PythonImage(BaseImage):
 
     def load_file(self, filepath):
         kwds = {}
-        metadata = { 'exif': {} }
+        metadata = { 'exif': {}, 'path': filepath }
         typ, enc = mimetypes.guess_type(filepath)
         if not typ:
             typ = 'image/jpeg'
@@ -72,6 +72,14 @@ class PythonImage(BaseImage):
 
         self.set_data(data_np, metadata=metadata)
         self.set(exif=kwds)
+
+    def save_file_as(self, filepath):
+        if not have_pil:
+            raise ImageError("Install PIL to be able to save images")
+
+        data = self.get_data()
+        imsave(filepath, data)
+
 
     def copy(self, astype=None):
         other = PythonImage()
@@ -137,7 +145,13 @@ class PythonImage(BaseImage):
         return res
 
     def get_scaled_cutout(self, x1, y1, x2, y2, scale_x, scale_y,
-                          method='bicubic'):
+                          method=None):
+        if method == None:
+            if have_pilutil:
+                method = 'bicubic'
+            else:
+                method = 'basic'
+                
         if method == 'basic':
             return self.get_scaled_cutout_basic(x1, y1, x2, y2,
                                                 scale_x, scale_y)
