@@ -239,6 +239,7 @@ class BaseImage(Callback.Callbacks):
         # calculate dimensions of NON-scaled cutout
         old_wd = x2 - x1 + 1
         old_ht = y2 - y1 + 1
+        # calculate dimensions of scaled cutout
         new_wd = int(round(scale_x * old_wd))
         new_ht = int(round(scale_y * old_ht))
         self.logger.debug("old=%dx%d new=%dx%d" % (

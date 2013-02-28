@@ -412,6 +412,16 @@ class FitsImageBase(Callback.Callbacks):
     def get_scaled_cutout(self, image, scale_x, scale_y,
                           pan_x, pan_y, win_wd, win_ht):
 
+        # Sanity check on the scale
+        sx = float(win_wd) / scale_x
+        sy = float(win_ht) / scale_y
+        if (sx < 1.0) or (sy < 1.0):
+            new_scale_x = scale_x * sx
+            new_scale_y = scale_y * sy
+            self.logger.warn("scale adjusted downward X (%.4f -> %.4f), Y (%.4f -> %.4f)" % (
+                scale_x, new_scale_x, scale_y, new_scale_y))
+            scale_x, scale_y = new_scale_x, new_scale_y
+
         # It is necessary to store these so that the get_data_xy()
         # (below) calculations can proceed, later these values may
         # refined slightly by the dimensions of the actual cutout
@@ -447,6 +457,7 @@ class FitsImageBase(Callback.Callbacks):
 
         self.logger.info("approx area covered is %dx%d to %dx%d" % (
             x1, y1, x2, y2))
+
         self._org_x1 = x1
         self._org_y1 = y1
         self._org_x2 = x2
@@ -457,6 +468,7 @@ class FitsImageBase(Callback.Callbacks):
         data = res.data
         # actual cutout may have changed scaling slightly
         self._org_scale_x, self._org_scale_y = res.scale_x, res.scale_y
+        #self._scale_x, self._scale_y = res.scale_x, res.scale_y
             
         # calculate dimensions of scaled cutout
         wd, ht = self.get_dims(data)
@@ -761,9 +773,6 @@ class FitsImageBase(Callback.Callbacks):
         self._scale_to(scale_x, scale_y, no_reset=no_reset, redraw=redraw)
 
     def _scale_to(self, scale_x, scale_y, no_reset=False, redraw=True):
-        self._scale_x = scale_x
-        self._scale_y = scale_y
-
         # Check scale limits
         maxscale = max(scale_x, scale_y)
         if (maxscale > self.t_['scale_max']):
@@ -779,6 +788,23 @@ class FitsImageBase(Callback.Callbacks):
             # TODO: popup? exception?
             return
         
+        # Sanity check on the scale vs. window size
+        try:
+            win_wd, win_ht = self.get_window_size()
+            sx = float(win_wd) / scale_x
+            sy = float(win_ht) / scale_y
+            if (sx < 1.0) or (sy < 1.0):
+                new_scale_x = scale_x * sx
+                new_scale_y = scale_y * sy
+                self.logger.warn("scale adjusted downward X (%.4f -> %.4f), Y (%.4f -> %.4f)" % (
+                    scale_x, new_scale_x, scale_y, new_scale_y))
+                scale_x, scale_y = new_scale_x, new_scale_y
+        except:
+            pass
+
+        self._scale_x = scale_x
+        self._scale_y = scale_y
+
         # If user specified override for auto zoom, then turn off
         # auto zoom now that they have set the zoom manually
         if (not no_reset) and (self.t_['autozoom'] == 'override'):

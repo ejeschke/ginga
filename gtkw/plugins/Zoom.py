@@ -31,7 +31,6 @@ class Zoom(GingaPlugin.GlobalPlugin):
         self.zoom_amount = self.default_zoom
         self.zoom_x = 0
         self.zoom_y = 0
-        self.zoomcenter = None
         self.t_abszoom = True
         self.zoomtask = None
         self.fitsimage_focus = None
@@ -59,6 +58,7 @@ class Zoom(GingaPlugin.GlobalPlugin):
         zi.add_callback('zoom-set', self.zoomset)
         #zi.add_callback('motion', self.showxy)
         zi.set_bg(0.4, 0.4, 0.4)
+        zi.show_pan_mark(True, redraw=False)
         self.zoomimage = zi
 
         iw = zi.get_widget()
@@ -296,23 +296,6 @@ class Zoom(GingaPlugin.GlobalPlugin):
         x1, y1, x2, y2 = self.cutdetail_radius(image, self.zoomimage,
                                                data_x, data_y,
                                                self.zoom_radius, redraw=True)
-        # mark the pixel under the cursor
-        # TODO: use a contrast scheme with alternating colors in a 2-level rect
-        i1 = data_x - x1 - 0.5
-        j1 = data_y - y1 - 0.5
-        #self.logger.debug("i1,j1=%f,%f" % (i1, j1))
-        try:
-            self.zoomimage.deleteObjectByTag(self.zoomcenter, redraw=False)
-        except:
-            pass
-        ## self.zoomcenter = self.zoomimage.add(CanvasTypes.Rectangle(i1, j1,
-        ##                                                            i1+1, j1+1,
-        ##                                                            linewidth=1,
-        ##                                                            color='red'))
-        self.zoomcenter = self.zoomimage.add(CanvasTypes.Rectangle(i1, j1,
-                                                                   i1+1, j1+1,
-                                                                   linewidth=1,
-                                                                   color='red'))
         self.zoomtask = None
 
     def cutdetail_radius(self, image, dstimage, data_x, data_y,
