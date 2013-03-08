@@ -211,7 +211,8 @@ class Pick(GingaPlugin.LocalPlugin):
         # Build report panel
         captions = (('Zoom', 'label', 'Contour Zoom', 'label'),
             ('Object_X', 'label', 'Object_Y', 'label'),
-            ('RA', 'label', 'DEC', 'label'), ('Equinox', 'label'),
+            ('RA', 'label', 'DEC', 'label'),
+            ('Equinox', 'label', 'Background', 'label'),
             ('Sky Level', 'label', 'Brightness', 'label'), 
             ('FWHM X', 'label', 'FWHM Y', 'label'),
             ('FWHM', 'label', 'Star Size', 'label'),
@@ -822,6 +823,7 @@ class Pick(GingaPlugin.LocalPlugin):
             self.wdetail.object_x.set_text('%.3f' % (obj_x+1))
             self.wdetail.object_y.set_text('%.3f' % (obj_y+1))
             self.wdetail.sky_level.set_text('%.3f' % qs.skylevel)
+            self.wdetail.background.set_text('%.3f' % qs.background)
             self.wdetail.brightness.set_text('%.3f' % qs.brightness)
 
             self.w.btn_sky_cut.set_sensitive(True)
@@ -875,8 +877,8 @@ class Pick(GingaPlugin.LocalPlugin):
             self.logger.error(errmsg)
             self.fv.show_error(errmsg, raisetab=False)
             #self.update_status("Error")
-            for key in ('sky_level', 'brightness', 'star_size',
-                        'fwhm_x', 'fwhm_y'):
+            for key in ('sky_level', 'background', 'brightness',
+                        'star_size', 'fwhm_x', 'fwhm_y'):
                 self.wdetail[key].set_text('')
             self.wdetail.fwhm.set_text('Failed')
             self.w.btn_sky_cut.set_sensitive(False)

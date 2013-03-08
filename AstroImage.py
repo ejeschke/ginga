@@ -414,79 +414,83 @@ class AstroImage(BaseImage):
         delta_dec_deg = dec1_deg - dec2_deg
         return (delta_ra_deg, delta_dec_deg)
 
-    # # Is this one more accurate?
-    # def get_RaDecOffsets(self, ra1_deg, dec1_deg, ra2_deg, dec2_deg):
-    #     sep_ra = self.deltaStarsRaDecDeg(ra1_deg, dec1_deg,
-    #                                      ra2_deg, dec1_deg)
-    #     if ra1_deg - ra2_deg < 0.0:
-    #         sep_ra = -sep_ra
-
-    #     sep_dec = self.deltaStarsRaDecDeg(ra1_deg, dec1_deg,
-    #                                       ra1_deg, dec2_deg)
-    #     if dec1_deg - dec2_deg < 0.0:
-    #         sep_dec = -sep_dec
-    #     return (sep_ra, sep_dec)
-
-    def calc_dist_deg2pix(self, ra_deg, dec_deg, delta_deg, equinox=None):
-        x1, y1 = self.radectopix(ra_deg, dec_deg, equinox=equinox)
-
-        # add delta in deg to ra and calculate new ra/dec
-        ra2_deg = ra_deg + delta_deg
-        if ra2_deg > 360.0:
-            ra2_deg = math.fmod(ra2_deg, 360.0)
-        # then back to new pixel coords
-        x2, y2 = self.radectopix(ra2_deg, dec_deg)
-
-        radius_px = abs(x2 - x1)
-        return radius_px
-        
-    def calc_dist_xy(self, x, y, delta_deg):
+    def calc_radius_xy(self, x, y, radius_deg):
+        """Calculate a radius (in pixels) from the point (x, y) to a circle
+        defined by radius in degrees.
+        """
         # calculate ra/dec of x,y pixel
         ra_deg, dec_deg = self.pixtoradec(x, y)
 
-        # add delta in deg to ra and calculate new ra/dec
-        ra2_deg = ra_deg + delta_deg
-        if ra2_deg > 360.0:
+        # RA adjustment for declination
+        delta_ra_deg = 1.0 * (1.0 / math.cos(math.radians(dec_deg)))
+
+        # calculate new RA 1 degree E
+        ra2_deg = ra_deg + delta_ra_deg
+        if ra2_deg >= 360.0:
             ra2_deg = math.fmod(ra2_deg, 360.0)
-        # then back to new pixel coords
+
+        # Calculate the length of this segment--it is pixels/deg
         x2, y2 = self.radectopix(ra2_deg, dec_deg)
-        
-        radius_px = abs(x2 - x)
+        px_per_deg_e = math.sqrt(math.fabs(x2-x)**2 + math.fabs(y2-y)**2)
+
+        # calculate radius based on desired radius_deg
+        radius_px = px_per_deg_e * radius_deg
         return radius_px
         
-    def calc_offset_xy(self, x, y, delta_deg_x, delta_deg_y):
+    def calc_radius_deg2pix(self, ra_deg, dec_deg, delta_deg,
+                            equinox=None):
+        x, y = self.radectopix(ra_deg, dec_deg, equinox=equinox)
+        return self.calc_radius_xy(x, y, delta_deg)
+        
+    def add_offset_radec(self, ra_deg, dec_deg, delta_deg_ra, delta_deg_dec,
+                      adjust_ra=True):
+        if adjust_ra:
+            delta_deg_ra *= 1.0 / math.cos(math.radians(dec_deg))
+
+        # add delta in deg to ra and calculate new ra/dec
+        ra2_deg = ra_deg + delta_deg_ra
+        if ra2_deg > 360.0:
+            ra2_deg = math.fmod(ra2_deg, 360.0)
+        elif ra2_deg < 0.0:
+            ra2_deg = 360.0 + math.fmod(ra2_deg, 360.0)
+
+        dec2_deg = dec_deg + delta_deg_dec
+        if dec2_deg > 90.0:
+            dec2_deg = 90.0 - math.fmod(dec2_deg, 90.0)
+            ra2_deg = math.fmod(ra2_deg+180.0, 360.0)
+        elif dec2_deg < -90.0:
+            dec2_deg = -90.0 - math.fmod(dec2_deg, 90.0)
+            ra2_deg = math.fmod(ra2_deg+180.0, 360.0)
+
+        return (ra2_deg, dec2_deg)
+        
+    def add_offset_xy(self, x, y, delta_deg_x, delta_deg_y,
+                      adjust_ra=True):
         # calculate ra/dec of x,y pixel
         ra_deg, dec_deg = self.pixtoradec(x, y)
 
-        # add delta in deg to ra and calculate new ra/dec
-        ra2_deg = ra_deg + delta_deg_x
-        if ra2_deg > 360.0:
-            ra2_deg = math.fmod(ra2_deg, 360.0)
+        # add offsets
+        ra2_deg, dec2_deg = self.add_offset_radec(ra_deg, dec_deg,
+                                                  delta_deg_x, delta_deg_y)
 
-        dec2_deg = dec_deg + delta_deg_y
-        
         # then back to new pixel coords
         x2, y2 = self.radectopix(ra2_deg, dec2_deg)
         
         return (x2, y2)
-        
-    def calc_dist_center(self, delta_deg):
-        return self.calc_dist_xy(self.width // 2, self.height // 2, delta_deg)
+
+    def calc_radius_center(self, delta_deg):
+        return self.calc_radius_xy(float(self.width / 2.0),
+                                   float(self.height / 2.0),
+                                   delta_deg)
         
         
     def calc_compass(self, x, y, len_deg_e, len_deg_n):
-        ra_deg, dec_deg = self.pixtoradec(x, y)
-        
-        ra_e = ra_deg + len_deg_e
-        if ra_e > 360.0:
-            ra_e = math.fmod(ra_e, 360.0)
-        dec_n = dec_deg + len_deg_n
 
         # Get east and north coordinates
-        xe, ye = self.radectopix(ra_e, dec_deg)
+        xe, ye = self.add_offset_xy(x, y, len_deg_e, 0.0)
         xe = int(round(xe))
         ye = int(round(ye))
-        xn, yn = self.radectopix(ra_deg, dec_n)
+        xn, yn = self.add_offset_xy(x, y, 0.0, len_deg_n)
         xn = int(round(xn))
         yn = int(round(yn))
         
@@ -494,14 +498,11 @@ class AstroImage(BaseImage):
        
     def calc_compass_center(self):
         # calculate center of data
-        x = self.width // 2
-        y = self.height // 2
+        x = float(self.width) / 2.0
+        y = float(self.height) / 2.0
 
-        # calculate ra/dec at 1 deg East and 1 deg North
-        ra_deg, dec_deg = self.pixtoradec(x, y)
-        # TODO: need to correct for ra_deg+1 >= 360?  How about dec correction
-        xe, ye = self.radectopix(ra_deg+1.0, dec_deg)
-        xn, yn = self.radectopix(ra_deg, dec_deg+1.0)
+        xe, ye = self.add_offset_xy(x, y, 1.0, 0.0)
+        xn, yn = self.add_offset_xy(x, y, 0.0, 1.0)
 
         # now calculate the length in pixels of those arcs
         # (planar geometry is good enough here)
@@ -517,7 +518,6 @@ class AstroImage(BaseImage):
         len_deg_n = radius_px / px_per_deg_n
 
         return self.calc_compass(x, y, len_deg_e, len_deg_n)
-
 
     def mosaic1(self, imagelist):
 

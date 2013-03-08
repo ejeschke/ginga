@@ -183,13 +183,14 @@ class Pick(GingaPlugin.LocalPlugin):
 
         vbox2 = QtHelp.VBox()
         captions = (('Zoom', 'label', 'Contour Zoom', 'label'),
-            ('Object_X', 'label', 'Object_Y', 'label'),
-            ('RA', 'label', 'DEC', 'label'), ('Equinox', 'label'),
-            ('Sky Level', 'label', 'Brightness', 'label'), 
-            ('FWHM X', 'label', 'FWHM Y', 'label'),
-            ('FWHM', 'label', 'Star Size', 'label'),
-            ('Sample Area', 'label', 'Default Region', 'button'),
-            )
+                    ('Object_X', 'label', 'Object_Y', 'label'),
+                    ('RA', 'label', 'DEC', 'label'),
+                    ('Equinox', 'label', 'Background', 'label'),
+                    ('Sky Level', 'label', 'Brightness', 'label'), 
+                    ('FWHM X', 'label', 'FWHM Y', 'label'),
+                    ('FWHM', 'label', 'Star Size', 'label'),
+                    ('Sample Area', 'label', 'Default Region', 'button'),
+                    )
 
         w, b = QtHelp.build_info(captions)
         self.w.update(b)
@@ -760,6 +761,7 @@ class Pick(GingaPlugin.LocalPlugin):
             self.wdetail.object_x.setText('%.3f' % (obj_x+1))
             self.wdetail.object_y.setText('%.3f' % (obj_y+1))
             self.wdetail.sky_level.setText('%.3f' % qs.skylevel)
+            self.wdetail.background.setText('%.3f' % qs.background)
             self.wdetail.brightness.setText('%.3f' % qs.brightness)
 
             self.w.btn_sky_cut.setEnabled(True)
@@ -812,8 +814,8 @@ class Pick(GingaPlugin.LocalPlugin):
                 str(e))
             self.logger.error(errmsg)
             self.fv.show_error(errmsg, raisetab=False)
-            for key in ('sky_level', 'brightness', 'star_size',
-                        'fwhm_x', 'fwhm_y'):
+            for key in ('sky_level', 'background', 'brightness',
+                        'star_size', 'fwhm_x', 'fwhm_y'):
                 self.wdetail[key].setText('')
             self.wdetail.fwhm.setText('Failed')
             self.w.btn_sky_cut.setEnabled(False)

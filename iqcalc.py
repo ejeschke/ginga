@@ -1,9 +1,7 @@
 #
 # iqcalc.py -- image quality calculations on FITS data
 #
-#[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Thu Oct 25 13:51:50 HST 2012
-#]
+# Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
@@ -32,12 +30,12 @@ class IQCalc(object):
             logger = logging.getLogger('IQCalc')
         self.logger = logger
 
+        # for mutex around scipy.optimize, which seems to be non-threadsafe
+        self.lock = threading.RLock()
+
         # for adjustments to background level
         self.skylevel_magnification = 1.05
         self.skylevel_offset = 40.0
-
-        # for mutex around scipy.optimize, which seems to be non-threadsafe
-        self.lock = threading.RLock()
 
     # FWHM CALCULATION
 
@@ -233,10 +231,9 @@ class IQCalc(object):
 
         # Find the median (sky/background) level
         median = float(numpy.median(data))
-
-        skylevel = median
-        # Old SOSS qualsize() applies this adjustment to skylevel
-        #skylevel = median * self.skylevel_magnification + self.skylevel_offset
+        #skylevel = median
+        # Old SOSS qualsize() applied this calculation to skylevel
+        skylevel = median * self.skylevel_magnification + self.skylevel_offset
 
         # Form a list of objects and their characteristics
         objlist = []
@@ -294,7 +291,7 @@ class IQCalc(object):
                               fwhm=fwhm, fwhm_radius=fwhm_radius,
                               brightness=bright, elipse=elipse,
                               x=int(x), y=int(y),
-                              skylevel=skylevel)
+                              skylevel=skylevel, background=median)
             objlist.append(obj)
 
             if cb_fn != None:
