@@ -119,8 +119,9 @@ class FitsImageQt(FitsImage.FitsImageBase):
 
         self.message = None
         self.msgtimer = QtCore.QTimer()
-        QtCore.QObject.connect(self.msgtimer, QtCore.SIGNAL("timeout()"),
-                               self.onscreen_message_off)
+        # QtCore.QObject.connect(self.msgtimer, QtCore.SIGNAL("timeout()"),
+        #                        self.onscreen_message_off)
+        self.msgtimer.timeout.connect(self.onscreen_message_off)
         self.msgfont = QtGui.QFont('Sans Serif', pointSize=24)
         self.set_bg(0.5, 0.5, 0.5, redraw=False)
         self.set_fg(1.0, 1.0, 1.0, redraw=False)
@@ -134,7 +135,10 @@ class FitsImageQt(FitsImage.FitsImageBase):
         self._defer_whence = 0
         self._defer_lock = threading.RLock()
         self._defer_flag = False
-        self._defer_task = None
+        # self._defer_task = None
+        self._defer_task = QtCore.QTimer()
+        self._defer_task.setSingleShot(True)
+        self._defer_task.timeout.connect(self._redraw)
 
         self.t_.setDefaults(show_pan_position=False)
 
@@ -255,9 +259,9 @@ class FitsImageQt(FitsImage.FitsImageBase):
                         self._defer_task.stop()
                     except:
                         pass
-                self._defer_task = QtCore.QTimer()
-                self._defer_task.setSingleShot(True)
-                self._defer_task.timeout.connect(self._redraw)
+                # self._defer_task = QtCore.QTimer()
+                # self._defer_task.setSingleShot(True)
+                # self._defer_task.timeout.connect(self._redraw)
                 self._defer_task.start(self.defer_lagtime)
                 
     def _redraw(self):
@@ -582,6 +586,9 @@ class FitsImageEvent(FitsImageQt):
         data_x, data_y = self.get_data_xy(x, y)
         return self.make_callback('button-release', button, data_x, data_y)
 
+    def get_last_data_xy(self):
+        return (self.last_data_x, self.last_data_y)
+
     def motion_notify_event(self, widget, event):
         buttons = event.buttons()
         x, y = event.x(), event.y()
@@ -625,12 +632,13 @@ class FitsImageEvent(FitsImageQt):
             self.make_callback('drag-drop', paths)
         
 
-class FitsImageZoom(FitsImageEvent, Mixins.FitsImageZoomMixin):
+class FitsImageZoom(Mixins.UIMixin, FitsImageEvent,
+                    Mixins.FitsImageZoomMixin):
 
     def __init__(self, logger=None, settings=None, render='widget'):
-        #super(FitsImageZoom, self).__init__()
         FitsImageEvent.__init__(self, logger=logger, settings=settings,
                                 render=render)
+        Mixins.UIMixin.__init__(self)
         Mixins.FitsImageZoomMixin.__init__(self)
         
         
@@ -659,12 +667,6 @@ class thinCrossCursor(object):
         p1.drawLine(6,10,6,15)
         p1.drawLine(8,10,8,15)
         
-        #p1.drawLine(0,5,0,9)
-        #p1.drawLine(15,5,15,9)
-        #p1.drawLine(5,0,9,0)
-        #p1.drawLine(5,15,9,15)
-        #p1.drawArc(3,3,8,8,0,64*360)
-
         p1.end()
         pm.setAlphaChannel(mask)
         self.cur = QtGui.QCursor(pm, 8, 8)

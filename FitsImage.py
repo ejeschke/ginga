@@ -338,6 +338,7 @@ class FitsImageBase(Callback.Callbacks):
         target.set_image(self.image)
 
     def redraw(self, whence=0):
+        #print "REDRAWING %s whence=%d" % (str(self), whence)
         self.redraw_data(whence=whence)
             
         # finally update the window drawable from the offscreen surface

@@ -8,6 +8,7 @@
 # Please see the file LICENSE.txt for details.
 
 import Bunch
+import traceback
 
 class UIMixin(object):
 
@@ -24,6 +25,9 @@ class UIMixin(object):
         return self.ui_active
     
     def ui_setActive(self, tf):
+        # if tf:
+        #     print "Layer %s set to active" % str(self)
+        #     traceback.print_stack()            
         self.ui_active = tf
     
     ## def make_callback(self, name, *args, **kwdargs):

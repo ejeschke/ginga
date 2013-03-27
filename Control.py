@@ -108,40 +108,19 @@ class GingaControl(Callback.Callbacks):
     ####################################################
     
     def showxy(self, fitsimage, data_x, data_y):
-        # Note: FITS coordinates are 1-based, whereas numpy FITS arrays
-        # are 0-based
-        fits_x, fits_y = data_x + 1, data_y + 1
-        # Get the value under the data coordinates
         try:
-            #value = fitsimage.get_data(data_x, data_y)
-            # We report the value across the pixel, even though the coords
-            # change halfway across the pixel
-            value = fitsimage.get_data(int(data_x+0.5), int(data_y+0.5))
-
-        except (Exception, FitsImage.FitsImageCoordsError):
-            value = None
-
-        # Calculate WCS RA
-        try:
-            # NOTE: image function operates on DATA space coords
             image = fitsimage.get_image()
             if image == None:
                 # No image loaded for this channel
                 return
-            if hasattr(image, 'pixtoradec'):
-                ra_txt, dec_txt = image.pixtoradec(fits_x, fits_y,
-                                                   format='str', coords='fits')
-            else:
-                ra_txt  = 'BAD WCS'
-                dec_txt = 'BAD WCS'
-        except Exception, e:
-            self.logger.warn("Bad coordinate conversion: %s" % (
-                str(e)))
-            ra_txt  = 'BAD WCS'
-            dec_txt = 'BAD WCS'
+            info = image.info_xy(data_x, data_y)
 
-        self.make_callback('field-info', fitsimage,
-                           fits_x, fits_y, value, ra_txt, dec_txt)
+        except Exception, e:
+            self.logger.warn("Can't get info under the cursor: %s" % (
+                str(e)))
+            return
+
+        self.make_callback('field-info', fitsimage, info)
         
         self.update_pending()
         return True
@@ -157,13 +136,13 @@ class GingaControl(Callback.Callbacks):
         readout.maxv = max(len(str(minval)), len(str(maxval)))
         return True
 
-    def readout_cb(self, viewer, fitsimage,
-                   fits_x, fits_y, value, ra_txt, dec_txt, readout, name):
+    def readout_cb(self, viewer, fitsimage, info, readout, name):
         # TEMP: hack
         if readout.fitsimage != fitsimage:
             return
 
         # If this is a multiband image, then average the values for the readout
+        value = info.value
         if isinstance(value, numpy.ndarray):
             avg = numpy.average(value)
             value = avg
@@ -172,10 +151,10 @@ class GingaControl(Callback.Callbacks):
         maxx = readout.maxx
         maxy = readout.maxy
         maxv = readout.maxv
-        fits_x = "%.3f" % fits_x
-        fits_y = "%.3f" % fits_y
+        fits_x = "%.3f" % info.x
+        fits_y = "%.3f" % info.y
         text = "RA: %-12.12s  DEC: %-12.12s  X: %-*.*s  Y: %-*.*s  Value: %-*.*s" % (
-            ra_txt, dec_txt, maxx, maxx, fits_x,
+            info.ra_txt, info.dec_txt, maxx, maxx, fits_x,
             maxy, maxy, fits_y, maxv, maxv, value)
         readout.set_text(text)
 

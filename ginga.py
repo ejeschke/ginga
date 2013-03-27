@@ -94,7 +94,7 @@ global_plugins = [
 local_plugins = [
     Bunch(module='Pick', ws='dialogs', shortkey='f1'),
     Bunch(module='Ruler', ws='dialogs', shortkey='f2'),
-    #Bunch(module='Layers', ws='dialogs', shortkey='f3'),
+    Bunch(module='Layers', ws='dialogs', shortkey='f3'),
     Bunch(module='MultiDim', ws='dialogs', shortkey='f4'),
     Bunch(module='Cuts', ws='dialogs', shortkey='f5'),
     Bunch(module='Histogram', ws='dialogs', shortkey='f6'),
@@ -202,7 +202,8 @@ def main(options, args):
     if options.modules:
         modules = options.modules.split(',')
         for pluginName in modules:
-            spec = Bunch(name=pluginName, module=pluginName)
+            spec = Bunch(name=pluginName, module=pluginName,
+                         tab=pluginName, ws='right')
             ginga.add_global_plugin(spec)
 
     # Load modules for "local" (per-channel) plug ins
@@ -239,7 +240,7 @@ def main(options, args):
     if options.geometry:
         ginga.setGeometry(options.geometry)
 
-    if not options.nosplash and len(args)==0:
+    if (not options.nosplash) and (len(args) == 0):
         ginga.banner()
 
     # Assume remaining arguments are fits files and load them.

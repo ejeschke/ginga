@@ -595,10 +595,12 @@ class FitsImageEvent(FitsImageGtk):
         return self.make_callback('drag-drop', paths)
 
 
-class FitsImageZoom(FitsImageEvent, Mixins.FitsImageZoomMixin):
+class FitsImageZoom(Mixins.UIMixin, FitsImageEvent,
+                    Mixins.FitsImageZoomMixin):
 
     def __init__(self, logger=None, settings=None):
         FitsImageEvent.__init__(self, logger=logger, settings=settings)
+        Mixins.UIMixin.__init__(self)
         Mixins.FitsImageZoomMixin.__init__(self)
         
         

@@ -1,11 +1,9 @@
 #
 # FitsImageCanvasQt.py -- A FITS image widget with canvas drawing in Qt
 # 
-#[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Thu Jan 31 15:30:26 HST 2013
-#]
+# Eric Jeschke (eric@naoj.org)
 #
-# Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
+# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -18,23 +16,19 @@ from FitsImageCanvasTypesQt import *
 class FitsImageCanvasError(FitsImageQt.FitsImageQtError):
     pass
 
-class FitsImageCanvas(Mixins.UIMixin, FitsImageQt.FitsImageZoom,
+class FitsImageCanvas(FitsImageQt.FitsImageZoom,
                       DrawingMixin, CanvasMixin, CompoundMixin):
 
     def __init__(self, logger=None, settings=None, render=None):
-        #super(FitsImageCanvas, self).__init__(logger=logger, settings=settings)
         FitsImageQt.FitsImageZoom.__init__(self, logger=logger,
                                            settings=settings,
                                            render=render)
-        Mixins.UIMixin.__init__(self)
         CompoundMixin.__init__(self)
         CanvasMixin.__init__(self)
         DrawingMixin.__init__(self, drawCatalog)
 
         self.setSurface(self)
         self.ui_setActive(True)
-
-        self.drawbutton = 3
 
     def canvascoords(self, data_x, data_y, center=True):
         # data->canvas space coordinate conversion

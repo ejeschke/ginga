@@ -2,7 +2,7 @@
 # FitsImageCanvasTypesGtk.py -- drawing classes for FitsImageCanvas widget
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Wed Dec 26 12:46:30 HST 2012
+#  Last edit: Wed Mar 20 14:12:13 HST 2013
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.

@@ -21,6 +21,7 @@ import pyfits
 import numpy
 
 from BaseImage import BaseImage, ImageError
+import Bunch
 
 class AstroImage(BaseImage):
     """
@@ -698,4 +699,36 @@ class AstroImage(BaseImage):
 
         self.make_callback('modified')
     
+    def info_xy(self, data_x, data_y):
+        # Note: FITS coordinates are 1-based, whereas numpy FITS arrays
+        # are 0-based
+        fits_x, fits_y = data_x + 1, data_y + 1
+
+        # Get the value under the data coordinates
+        try:
+            # We report the value across the pixel, even though the coords
+            # change halfway across the pixel
+            value = self.get_data_xy(int(data_x+0.5), int(data_y+0.5))
+
+        except Exception, e:
+            value = None
+
+        # Calculate WCS RA, if available
+        try:
+            # NOTE: image function operates on FITS space coords?
+            ra_txt, dec_txt = self.pixtoradec(fits_x, fits_y,
+                                              format='str', coords='fits')
+        except Exception, e:
+            self.logger.warn("Bad coordinate conversion: %s" % (
+                str(e)))
+            ra_txt  = 'BAD WCS'
+            dec_txt = 'BAD WCS'
+
+        info = Bunch.Bunch(itype='astro', data_x=data_x, data_y=data_y,
+                           fits_x=fits_x, fits_y=fits_y,
+                           x=fits_x, y=fits_y,
+                           ra_txt=ra_txt, dec_txt=dec_txt,
+                           value=value)
+        return info
+                           
 #END

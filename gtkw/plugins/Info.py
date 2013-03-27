@@ -273,21 +273,18 @@ class Info(GingaPlugin.GlobalPlugin):
         info.winfo.zoom_new.set_text(t_['autozoom'])
 
 
-    def field_info(self, viewer, fitsimage,
-                   fits_x, fits_y, value, ra_txt, dec_txt):
+    def field_info(self, viewer, fitsimage, info):
         # TODO: can this be made more efficient?
         chname = self.fv.get_channelName(fitsimage)
         chinfo = self.fv.get_channelInfo(chname)
         chname = chinfo.name
-        info = self.channel[chname]
-        
-        #info.winfo.x.set_text(str(fits_x))
-        #info.winfo.y.set_text(str(fits_y))
-        info.winfo.x.set_text("%.3f" % fits_x)
-        info.winfo.y.set_text("%.3f" % fits_y)
-        info.winfo.value.set_text(str(value))
-        info.winfo.ra.set_text(ra_txt)
-        info.winfo.dec.set_text(dec_txt)
+        obj = self.channel[chname]
+
+        obj.winfo.x.set_text("%.3f" % info.x)
+        obj.winfo.y.set_text("%.3f" % info.y)
+        obj.winfo.value.set_text(str(info.value))
+        obj.winfo.ra.set_text(info.ra_txt)
+        obj.winfo.dec.set_text(info.dec_txt)
 
     def cut_levels(self, w, fitsimage, info):
         try:

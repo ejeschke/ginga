@@ -734,9 +734,13 @@ def _make_widget(tup, ns):
         w2 = CheckButton(title)
         w2.set_mode(True)
         swap = True
+    elif wtype == 'radiobutton':
+        w1 = gtk.Label('')
+        w2 = RadioButton(title)
+        swap = True
     elif wtype == 'togglebutton':
         w1 = gtk.Label('')
-        w2 = ToggleButton(name)
+        w2 = ToggleButton(title)
         w2.set_mode(True)
         swap = True
     elif wtype == 'button':

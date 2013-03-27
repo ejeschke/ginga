@@ -3,7 +3,7 @@
 # example2.py -- Simple, configurable FITS viewer.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Sat Feb  9 13:15:21 HST 2013
+#  Last edit: Wed Mar 20 14:23:12 HST 2013
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -54,7 +54,7 @@ class FitsViewer(object):
         fi.set_callback('drag-drop', self.drop_file)
         fi.set_callback('motion', self.motion)
         fi.set_bg(0.2, 0.2, 0.2)
-        #fi.ui_setActive(True)
+        fi.ui_setActive(True)
         self.fitsimage = fi
 
         w = fi.get_widget()

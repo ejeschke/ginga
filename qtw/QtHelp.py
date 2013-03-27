@@ -270,7 +270,8 @@ class Desktop(Callback.Callbacks):
         popmenu.exec_(nb.mapToGlobal(point))
         self.popmenu = popmenu
 
-    def add_tab(self, tab_w, widget, group, labelname, tabname=None):
+    def add_tab(self, tab_w, widget, group, labelname, tabname=None,
+                data=None):
         """NOTE: use add_page() instead."""
         self.tabcount += 1
         if not tabname:
@@ -280,7 +281,8 @@ class Desktop(Callback.Callbacks):
             
         tab_w.addTab(widget, labelname)
         self.tab[tabname] = Bunch.Bunch(widget=widget, name=labelname,
-                                        tabname=tabname, group=group)
+                                        tabname=tabname, data=data,
+                                        group=group)
         return tabname
 
     def add_page(self, nbname, widget, group, labelname, tabname=None):
@@ -649,13 +651,25 @@ def _make_widget(tup, ns):
         w2 = QtGui.QSpinBox()
     elif wtype == 'spinfloat':
         w2 = QtGui.QDoubleSpinBox()
+    elif wtype == 'vbox':
+        w2 = VBox()
+    elif wtype == 'hbox':
+        w2 = HBox()
+    elif wtype == 'hscale':
+        w2 = QtGui.QSlider(QtCore.Qt.Horizontal)
+    elif wtype == 'vscale':
+        w2 = QtGui.QSlider(QtCore.Qt.Vertical)
     elif wtype == 'checkbutton':
         w1 = QtGui.QLabel('')
         w2 = QtGui.QCheckBox(title)
         swap = True
+    elif wtype == 'radiobutton':
+        w1 = QtGui.QLabel('')
+        w2 = QtGui.QRadioButton(title)
+        swap = True
     elif wtype == 'togglebutton':
         w1 = QtGui.QLabel('')
-        w2 = QtGui.QPushButton(name)
+        w2 = QtGui.QPushButton(title)
         w2.setCheckable(True)
         swap = True
     elif wtype == 'button':

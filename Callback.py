@@ -2,7 +2,7 @@
 # Callback.py -- Mixin class for programmed callbacks.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Wed Feb 13 14:07:54 HST 2013
+#  Last edit: Wed Mar 27 12:26:23 HST 2013
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.

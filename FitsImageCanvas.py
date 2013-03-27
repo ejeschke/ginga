@@ -3,7 +3,7 @@
 # FitsImageCanvas.py -- Abstract base classes for FitsImageCanvas{Gtk,Qt}.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Wed Dec 26 11:32:00 HST 2012
+#  Last edit: Wed Mar 20 15:01:45 HST 2013
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -340,6 +340,9 @@ class DrawingMixin(object):
     def setSurface(self, fitsimage):
         self.fitsimage = fitsimage
         #self.ui_setActive(True)
+
+    def getSurface(self):
+        return self.fitsimage
 
     def draw(self):
         super(DrawingMixin, self).draw()

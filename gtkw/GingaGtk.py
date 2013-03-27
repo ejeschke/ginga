@@ -347,6 +347,7 @@ class GingaView(GtkMain.GtkMain):
         rgbmap = fi.get_rgbmap()
         rgbmap.add_callback('changed', self.rgbmap_cb, fi)
         fi.set_bg(0.2, 0.2, 0.2)
+        fi.ui_setActive(True)
         return fi
 
     def add_viewer(self, name, settings,

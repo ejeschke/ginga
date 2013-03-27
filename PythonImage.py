@@ -35,7 +35,7 @@ except ImportError:
     have_qtimage = False
 
 # For testing...
-# have_qtimage = False
+have_qtimage = False
 # have_pilutil = False
 # have_pil = False
 
@@ -270,6 +270,7 @@ def open_ppm(filepath):
 #
 def qimage2numpy(qimage):
     """Convert QImage to numpy.ndarray."""
+    #print "FORMAT IS %s" % str(qimage.format())
     result_shape = (qimage.height(), qimage.width())
     temp_shape = (qimage.height(),
                   qimage.bytesPerLine() * 8 / qimage.depth())

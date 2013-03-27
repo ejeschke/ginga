@@ -123,7 +123,6 @@ class Zoom(GingaPlugin.GlobalPlugin):
         #fitsimage.add_callback('focus', self.focus_cb)
         # TODO: should we add our own canvas instead?
         fitsimage.add_callback('motion', self.motion)
-        fitsimage.ui_setActive(True)
         fitsimage.add_callback('cut-set', self.cutset_cb)
         fitsimage.add_callback('transform', self.transform_cb)
         fitsimage.add_callback('rotate', self.rotate_cb)
