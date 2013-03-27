@@ -184,9 +184,9 @@ class Info(GingaPlugin.GlobalPlugin):
         info.winfo.zoom.set_text(text)
         
     def cutset_cb(self, fitsimage, loval, hival, info):
-        info.winfo.cut_low.set_text('%.2f' % (loval))
+        #info.winfo.cut_low.set_text('%.2f' % (loval))
         info.winfo.lbl_cut_low.set_text('%.2f' % (loval))
-        info.winfo.cut_high.set_text('%.2f' % (hival))
+        #info.winfo.cut_high.set_text('%.2f' % (hival))
         info.winfo.lbl_cut_high.set_text('%.2f' % (hival))
 
     def autocuts_cb(self, fitsimage, option, info):
