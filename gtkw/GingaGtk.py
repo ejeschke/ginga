@@ -337,12 +337,13 @@ class GingaView(GtkMain.GtkMain):
         fi.add_callback('drag-drop', self.dragdrop)
         fi.add_callback('cut-set', self.change_range_cb, self.colorbar)
 
-        cmap_name = settings.get('color_map', "ramp")
-        cm = cmap.get_cmap(cmap_name)
-        imap_name = settings.get('intensity_map', "ramp")
-        im = imap.get_imap(imap_name)
-        fi.set_cmap(cm, redraw=False)
-        fi.set_imap(im, redraw=False)
+        # these are now set in the base class
+        # cmap_name = settings.get('color_map', "ramp")
+        # cm = cmap.get_cmap(cmap_name)
+        # imap_name = settings.get('intensity_map', "ramp")
+        # im = imap.get_imap(imap_name)
+        # fi.set_cmap(cm, redraw=False)
+        # fi.set_imap(im, redraw=False)
 
         rgbmap = fi.get_rgbmap()
         rgbmap.add_callback('changed', self.rgbmap_cb, fi)
@@ -449,6 +450,7 @@ class GingaView(GtkMain.GtkMain):
             if wsName:
                 ws = self.ds.get_nb(wsName)
                 tabName = spec.get('tab', pInfo.name)
+                pInfo.tabname = tabName
 
                 vbox = gtk.VBox(spacing=2)
                 vbox.set_border_width(0)
@@ -476,6 +478,7 @@ class GingaView(GtkMain.GtkMain):
                 vbox.show_all()
 
         if vbox:
+            pInfo.widget = vbox
             self.ds.add_tab(ws, vbox, 2, tabName)
 
     def stop_global_plugin(self, pluginName):

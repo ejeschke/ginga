@@ -74,15 +74,21 @@ class FitsImageBase(Callback.Callbacks):
             self.t_.getSetting(name).add_callback('set', self.cmap_changed_cb)
 
         # Initialize RGBMap
-        cmap_name = self.t_.get('color_map')
-        cm = cmap.get_cmap(cmap_name)
+        cmap_name = self.t_.get('color_map', 'ramp')
+        try:
+            cm = cmap.get_cmap(cmap_name)
+        except KeyError:
+            cm = cmap.get_cmap('ramp')
         rgbmap.set_cmap(cm)
-        imap_name = self.t_.get('intensity_map')
-        im = imap.get_imap(imap_name)
+        imap_name = self.t_.get('intensity_map', 'ramp')
+        try:
+            im = imap.get_imap(imap_name)
+        except KeyError:
+            im = imap.get_imap('ramp')
         rgbmap.set_imap(im)
-        hash_size = self.t_.get('color_hashsize')
+        hash_size = self.t_.get('color_hashsize', 65535)
         rgbmap.set_hash_size(hash_size)
-        hash_alg = self.t_.get('color_algorithm')
+        hash_alg = self.t_.get('color_algorithm', 'linear')
         rgbmap.set_hash_algorithm(hash_alg)
 
         rgbmap.add_callback('changed', self.rgbmap_cb)

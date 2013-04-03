@@ -35,6 +35,7 @@ class IRAF(IRAFBase.IRAFBase):
         canvas.set_callback('motion', self.cursormotion)
         #canvas.set_callback('button-release', self.update)
         canvas.add_callback('key-press', self.window_key_press)
+        canvas.add_callback('key-release', self.window_key_release)
         self.canvas = canvas
 
         vbox1 = gtk.VBox()

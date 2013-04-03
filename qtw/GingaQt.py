@@ -379,12 +379,13 @@ class GingaView(QtMain.QtMain):
         fi.add_callback('drag-drop', self.dragdrop)
         fi.add_callback('cut-set', self.change_range_cb, self.colorbar)
 
-        cmap_name = settings.get('color_map', "ramp")
-        cm = cmap.get_cmap(cmap_name)
-        imap_name = settings.get('intensity_map', "ramp")
-        im = imap.get_imap(imap_name)
-        fi.set_cmap(cm, redraw=False)
-        fi.set_imap(im, redraw=False)
+        # these are now set in the base class
+        ## cmap_name = settings.get('color_map', "ramp")
+        ## cm = cmap.get_cmap(cmap_name)
+        ## imap_name = settings.get('intensity_map', "ramp")
+        ## im = imap.get_imap(imap_name)
+        ## fi.set_cmap(cm, redraw=False)
+        ## fi.set_imap(im, redraw=False)
 
         rgbmap = fi.get_rgbmap()
         rgbmap.add_callback('changed', self.rgbmap_cb, fi)
@@ -442,6 +443,7 @@ class GingaView(QtMain.QtMain):
             if wsName:
                 ws = self.ds.get_nb(wsName)
                 tabName = spec.get('tab', pInfo.name)
+                pInfo.tabname = tabName
 
                 widget = QtGui.QWidget()
                 vbox = QtGui.QVBoxLayout()
@@ -471,8 +473,10 @@ class GingaView(QtMain.QtMain):
                 textw.append(tb_str)
                 textw.setReadOnly(True)
                 vbox.addWidget(textw, stretch=1)
+                
         if vbox:
             self.ds.add_tab(ws, widget, 2, tabName)
+            pInfo.widget = widget
                 
     def stop_global_plugin(self, pluginName):
         self.logger.debug("Attempting to stop plugin '%s'" % (pluginName))

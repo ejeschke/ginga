@@ -187,6 +187,8 @@ def main(options, args):
 
     # Build desired layout
     ginga.build_toplevel(layout=default_layout)
+    # TEMP: FIX ME!
+    ginga.gpmon.ds = ginga.ds
 
     # Add desired global plugins
     for spec in global_plugins:

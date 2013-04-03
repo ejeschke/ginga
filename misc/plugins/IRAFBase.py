@@ -65,6 +65,7 @@ class IRAFBase(GingaPlugin.GlobalPlugin):
         self.keymap = {
             'comma': ',',
             }
+        self.ctrldown = False
 
         self.layertag = 'iraf-canvas'
         # this will be set in initialize()
@@ -145,6 +146,7 @@ class IRAFBase(GingaPlugin.GlobalPlugin):
             pass
         
         # start the data listener task, if appropriate
+        #ev_quit = threading.Event()
         self.dataTask = iis.IIS_DataListener(
             self.addr, controller=self,
             ev_quit=self.ev_quit, logger=self.logger)
@@ -166,15 +168,25 @@ class IRAFBase(GingaPlugin.GlobalPlugin):
         return l
     
     def new_image_cb(self, fitsimage, image, chinfo):
+        # check if this is an image we received from IRAF or
+        # one that was loaded locally.
+        ct = image.get('ct', None)
+        if ct != None:
+            # This image was sent by IRAF--we don't need to
+            # construct extra fb information for it
+            return
+        
         n = self.channel_to_frame(chinfo.name)
         if n == None:
             return
         self.logger.debug("new image, frame is %d" % (n))
         fb = self.get_frame(n)
-        image = fitsimage.get_image()
+        #image = fitsimage.get_image()
         newpath  = image.get('path', 'NO_PATH')
         host = socket.getfqdn()
         newhost  = image.get('host', host)
+        # protocol has a bizarre 16-char limit on hostname
+        newhost = newhost[:16]
 
         # this is just a placeholder so that IIS_RequestHandler will
         # report something in this buffer
@@ -184,6 +196,7 @@ class IRAFBase(GingaPlugin.GlobalPlugin):
 
         #print "filling wcs info"
         fb.ct = iis.coord_tran()
+        image.set(ct=ct)
         
         # iis version 1 data
         fb.ct.valid = 1
@@ -237,6 +250,7 @@ class IRAFBase(GingaPlugin.GlobalPlugin):
         """
         NOTE: this is called from the IIS_RequestHandler
         """
+        self.logger.debug("initializing frame %d" % (n))
         # create the frame, if needed
         try:
             fb = self.get_frame(n)
@@ -294,7 +308,7 @@ class IRAFBase(GingaPlugin.GlobalPlugin):
             dtype = numpy.uint8
             metadata = {}
 
-            image = IRAFAstroImage()
+            image = IRAF_AstroImage()
             #image.load_buffer(fb.buffer, dims, dtype, byteswap=byteswap,
             #                  metadata=metadata)
             data = numpy.fromstring(fb.buffer, dtype=dtype)
@@ -340,7 +354,7 @@ class IRAFBase(GingaPlugin.GlobalPlugin):
 
         # Correct for surrounding framebuffer
         image = fitsimage.get_image()
-        if isinstance(image, IRAFAstroImage):
+        if isinstance(image, IRAF_AstroImage):
             last_x, last_y = image.get_corrected_xy(last_x, last_y)
 
         res = Bunch.Bunch(x=last_x, y=last_y, frame=frame)
@@ -409,6 +423,10 @@ class IRAFBase(GingaPlugin.GlobalPlugin):
             if keyname in ('shift_l', 'shift_r'):
                 # ignore these keystrokes
                 return
+            elif keyname in ('control_l', 'control_r'):
+                # control key combination
+                self.ctrldown = True
+                return
             elif keyname == 'space':
                 self.toggleMode()
                 return
@@ -417,13 +435,18 @@ class IRAFBase(GingaPlugin.GlobalPlugin):
         if self.mode != 'iraf':
             return
 
+        if self.ctrldown:
+            if keyname == 'd':
+                # User typed ^D
+                keyname = chr(4)
+
         # Get cursor position
         fitsimage = canvas.getSurface()
         last_x, last_y = fitsimage.get_last_data_xy()
 
         # Correct for surrounding framebuffer
         image = fitsimage.get_image()
-        if isinstance(image, IRAFAstroImage):
+        if isinstance(image, IRAF_AstroImage):
             last_x, last_y = image.get_corrected_xy(last_x, last_y)
 
         # Get frame info
@@ -435,6 +458,15 @@ class IRAFBase(GingaPlugin.GlobalPlugin):
         self.keyqueue.put(Bunch.Bunch(x=last_x, y=last_y, key=keyname,
                                       frame=frame))
         self.keyevent.set()
+
+    def window_key_release(self, canvas, keyname):
+        if not self.imexam_active:
+            return
+        self.logger.info("key released: %s" % (keyname))
+        if len(keyname) > 1:
+            if keyname in ('control_l', 'control_r'):
+                # control key combination
+                self.ctrldown = False
 
     def cursormotion(self, canvas, button, data_x, data_y):
         if self.mode != 'iraf':
@@ -451,7 +483,7 @@ class IRAFBase(GingaPlugin.GlobalPlugin):
         return 'iraf'
 
     
-class IRAFAstroImage(AstroImage.AstroImage):
+class IRAF_AstroImage(AstroImage.AstroImage):
 
     def info_xy(self, data_x, data_y):
         ct = self.get('ct', None)

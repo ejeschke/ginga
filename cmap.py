@@ -1,11 +1,9 @@
 #
 # cmap.py -- color maps for fits viewing
 # 
-#[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Mon Feb 25 21:07:08 HST 2013
-#]
+# Eric Jeschke (eric@naoj.org)
 #
-# Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
+# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #

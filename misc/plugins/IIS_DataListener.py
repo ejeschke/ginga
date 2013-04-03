@@ -200,19 +200,49 @@ class IIS_RequestHandler(SocketServer.StreamRequestHandler):
     This class does the actual work of parsing the incoming streams and
     perform the necessary actions (display image, overlay regions
     and so on).
+
+                 		   IIS Header Packet Summary
+
+                      TID            Subunit     Tct   X   Y    Z   T    Data
+              +------------------+-------------+-----+---+---+----+---+--------+
+Read Data     | IIS_READ|PACKED  | MEMORY      | -NB | x | y | fr | - | nbytes |
+Write Data    | IIS_WRITE|PACKED | MEMORY      | -NB | x | y | fr | - | nbytes |
+Read Cursor   | IIS_READ         | IMCURSOR    |  -  | - | - | wcs| - | -      |
+Write Cursor  | IIS_WRITE        | IMCURSOR    |  -  | x | y | wcs| - | -      |
+Set Frame     | IIS_WRITE        | LUT|COMMAND | -1  | - | - | -  | - | 2      |
+Erase Frame   | IIS_WRITE | fb   | FEEDBACK    |  -  | - | - | fr | - | -      |
+              |                  |             |     |   |   |    |   |        |
+Old Read WCS  | IIS_READ         | WCS         |  -  | - | - | fr | - | 320    |
+Old Write WCS | IIS_WRITE|PACKED | WCS         | -N  | - | - | fr |fb | 320    |
+              |                  |             |     |   |   |    |   |        |
+WCS Version?  | IIS_READ         | WCS         |  -  | 1 | 1 | -  | - | 320    |
+WCS by Num.?  | IIS_READ         | WCS         |  -  | 1 | - | fr |wcs| 1024   |
+New Read WCS  | IIS_READ         | WCS         |  -  | 1 | - | fr | - | 1024   |
+New Write WCS | IIS_WRITE|PACKED | WCS         | -N  | 1 | - | fr |fb | 1024   |
+              +------------------+-------------+-----+---+---+----+---+--------+
+
+Where   nbytes | NB  = number of bytes expected or written
+        x            = x position of operation in frame buffer coords
+        y            = y position of operation in frame buffer coords
+        fr           = frame number (passed as bitflag (i.e. 1, 2 ,4 8, etc)
+        fb           = frame buffer config number (zero indexed)
+        N            = length of WCS string
+        wcs          = WCS number (usually zero)
+        Data         = the number of bytes of data to be read or written
+			following the header packet.
     """     
-    needs_update = 0
+    needs_update = False
     # these NEED to be set automatically
     # from the client interaction
     width = None
     height = None
     frame = 0
-    key = None
     x = 0
     y = 0
     y1 = -1
-    sequence = -1
-    got_key = None
+    #sequence = -1
+    #key = None
+    #got_key = None
     
     
     def decode_frameno(self, z):
@@ -353,6 +383,9 @@ class IIS_RequestHandler(SocketServer.StreamRequestHandler):
         #print "END RETURN CURSOR"
     
     def handle_feedback(self, pkt):
+        """This part of the protocol is used by IRAF to erase a frame in
+        the framebuffers.
+        """
         self.logger.debug("handle feedback")
         self.frame = self.decode_frameno(pkt.z & 07777) - 1
         
@@ -362,6 +395,8 @@ class IIS_RequestHandler(SocketServer.StreamRequestHandler):
     
     
     def handle_lut(self, pkt):
+        """This part of the protocol is used by IRAF to set the frame number.
+        """
         self.logger.debug("handle lut")
         if pkt.subunit & COMMAND:
             data_type = str(pkt.nbytes / 2) + 'h'
@@ -372,9 +407,9 @@ class IIS_RequestHandler(SocketServer.StreamRequestHandler):
                 return
             try:
                 x = struct.unpack(data_type, line)
-            except:
-                for exctn in sys.exc_info():
-                    print (exctn)
+            except Exception, e:
+                self.logger.error("Error unpacking struct: %s" % (str(e)))
+                return
             
             if len(x) < 14:
                 # pad it with zeroes
@@ -397,8 +432,11 @@ class IIS_RequestHandler(SocketServer.StreamRequestHandler):
                     return
                 
                 # init the framebuffer
-                self.server.controller.init_frame(self.frame)
-                
+                #self.server.controller.init_frame(self.frame)
+                try:
+                    fb = self.server.controller.get_frame(self.frame)
+                except KeyError:
+                    fb = self.server.controller.init_frame(self.frame)
                 return
             
             self.logger.error("unable to select a frame.")
@@ -409,6 +447,9 @@ class IIS_RequestHandler(SocketServer.StreamRequestHandler):
     
     def handle_wcs(self, pkt):
         """
+        This part of the protocol is used by IRAF to bidirectionally
+        communicate metadata about frames in the framebuffers.
+        
         IIS WCS format:
         name - title\n
         a b c d tx ty z1 z2 zt\n
@@ -471,6 +512,7 @@ class IIS_RequestHandler(SocketServer.StreamRequestHandler):
                         text = right_pad(text, SZ_OLD_WCSBUF)
             self.logger.debug("WCS: " + text)
             pkt.dataout.write(text)
+
         else:
             self.logger.debug("iis write")
             # Read the WCS information from the client
@@ -479,6 +521,7 @@ class IIS_RequestHandler(SocketServer.StreamRequestHandler):
             
             try:
                 fb = self.server.controller.get_frame(self.frame)
+
             except KeyError:
                 # the selected frame does not exist, create it
                 fb = self.server.controller.init_frame(self.frame)
@@ -487,10 +530,13 @@ class IIS_RequestHandler(SocketServer.StreamRequestHandler):
             fb_config = (pkt.t & 0777) + 1
             try:
                 (nframes, fb.width, fb.height) = fbconfigs [fb_config]
-            except:
-                self.logger.error('*** non existing framebuffer config (' + str(fb_config) + '). ***')
-                self.logger.error('*** adding a new framebuffer config (' + str(fb_config) + '). ***')
-                fbconfigs [fb_config] = [1, None, None]
+
+            except KeyError:
+                self.logger.warn('Non existing framebuffer config (%s)' % (
+                        str(fb_config)))
+                self.logger.info('Adding a new framebuffer config (%s)' % (
+                        str(fb_config)))
+                fbconfigs[fb_config] = [1, None, None]
                 fb.width = None
                 fb.height = None
             
@@ -510,61 +556,93 @@ class IIS_RequestHandler(SocketServer.StreamRequestHandler):
         # end of handle_wcs()
     
     def handle_memory(self, pkt):
+        """This part of the protocol is used by IRAF to read/write image data
+        in the framebuffers.
+        """
         self.logger.debug("handle memory")
+
+        # get the frame number, we start from 0
+        self.frame = self.decode_frameno(pkt.z & 07777) - 1
+        try:
+            fb = self.server.controller.get_frame(self.frame)
+        except KeyError:
+            # the selected frame does not exist, create it
+            fb = self.server.controller.init_frame(self.frame)
+
+        self.x = pkt.x & XYMASK
+        self.y = pkt.y & XYMASK
+        self.logger.debug("memory frame=%d x,y=%d,%d fb width=%s height=%s" % (
+            self.frame, self.x, self.y, fb.width, fb.height))
+
         if (pkt.tid & IIS_READ):
-            pass
+            self.logger.debug("start memory read")
+            
+            # read the data and send back to server
+            start = self.x + self.y * fb.width
+            end = start + pkt.nbytes
+            data = fb.buffer[start:end]
+            if len(data) != pkt.nbytes:
+                self.logger.warn("buffer length/packet size mismatch: %d != %d" % (
+                        len(data), pkt.nbytes))
+            #data.reverse()
+            #self.logger.debug("DATA=%s" % str(data))
+            buf = data.tostring()
+            pkt.dataout.write(buf)
+            pkt.dataout.flush()
+            self.logger.debug("end memory read")
+
         else:
-            # get the frame number, we start from 0
-            self.frame = self.decode_frameno(pkt.z & 07777) - 1
-            try:
-                fb = self.server.controller.get_frame(self.frame)
-            except KeyError:
-                # the selected frame does not exist, create it
-                fb = self.server.controller.init_frame(self.frame)
-            
-            # decode x and y
-            self.x = pkt.x & XYMASK
-            self.y = pkt.y & XYMASK
-            
-            # read the data
+            self.logger.debug("start memory write")
+            # read the data from socket
             t_bytes = 0
-            if (fb.width and fb.height):
+            self.logger.debug("data bytes=%d needs_update=%s" % (
+                pkt.nbytes, self.needs_update))
+            if (fb.width != None) and (fb.height != None):
                 if not self.needs_update:
-                    del fb.buffer
-                    fb.buffer = array.array('B', ' ' * fb.width * fb.height)
-                    self.needs_update = 1
+                    #del fb.buffer
+                    #fb.buffer = array.array('B', ' ' * fb.width * fb.height)
+                    if len(fb.buffer) != fb.width * fb.height:
+                        fb.buffer = array.array('B', ' ' * fb.width * fb.height)
+                        #self.needs_update = True
                 start = self.x + self.y * fb.width
                 end = start + pkt.nbytes
                 fb.buffer[start:end] = array.array('B', pkt.datain.read(pkt.nbytes))
-            else: 
+            else:
+                self.logger.warn("uninitialized framebuffer frame=%d" % (
+                        self.frame))
                 if not self.needs_update:
                     # init the framebuffer
                     fb.buffer.fromstring(pkt.datain.read(pkt.nbytes))
                     fb.buffer.reverse()
-                    self.needs_update = 1
+                    #self.needs_update = True
                 else:
                     data = array.array('B', pkt.datain.read(pkt.nbytes))
                     data.reverse()
                     fb.buffer += data
             
-            width = fb.width
-            
-            if (not width and self.y1 < 0):
-                self.y1 = self.y
-                if (VERBOSE):
-                    self.logger.debug('saved y coordinate.')
-            elif not width:
-                delta_y = self.y - self.y1
-                fb.width = int(abs(len(data) / delta_y))
-                # if we added a new fbconfigs entry, let's update
-                # the value for the framebuffer width!
-                if (fbconfigs.has_key(fb.config)):
-                    fbconfigs[fb.config][1] = width
-                if (VERBOSE):
-                    self.logger.debug('delta_x: ' + str(fb.width))
-        return
+            self.needs_update = True
+            self.logger.debug("end memory write")
+
+            # width = fb.width
+            # if (not width and self.y1 < 0):
+            #     self.y1 = self.y
+            #     self.logger.debug('saved y coordinate.')
+            # elif not width:
+            #     delta_y = self.y - self.y1
+            #     width = int(abs(len(data) / delta_y))
+            #     self.logger.debug('resetting framebuffer width=%d' % (
+            #             width))
+            #     fb.width = width
+            #     # if we added a new fbconfigs entry, let's update
+            #     # the value for the framebuffer width!
+            #     if fbconfigs.has_key(fb.config):
+            #         fbconfigs[fb.config][1] = width
+
     
     def handle_imcursor(self, pkt):
+        """This part of the protocol is used by IRAF to read the cursor
+        position and keystrokes from the display client.
+        """
         self.logger.debug("handle imcursor")
         done = 0
         
@@ -574,7 +652,7 @@ class IIS_RequestHandler(SocketServer.StreamRequestHandler):
                 # return the cursor position
                 wcsflag = int(pkt.z)
                 #wcsflag = 0
-                res = self.server.controller.get_cursor()
+                res = self.server.controller.get_keystroke()
                 
                 self.return_cursor(pkt.dataout, res.x, res.y,
                                    res.frame, wcsflag, '0', '')
@@ -589,7 +667,8 @@ class IIS_RequestHandler(SocketServer.StreamRequestHandler):
                 self.frame = res.frame
                 ## sy = self.y
                 ## frame = self.frame
-                wcsflag = 1
+                #wcsflag = 1
+                wcsflag = 0
 
                 #self.return_cursor(pkt.dataout, sx, sy, frame, 1, key, '')
                 self.return_cursor(pkt.dataout, res.x, res.y,
@@ -689,6 +768,9 @@ class IIS_RequestHandler(SocketServer.StreamRequestHandler):
             
             elif packet.subunit077 == MEMORY:
                 self.handle_memory(packet)
+                if self.needs_update:
+                    #self.display_image()
+                    pass
                 # read the next packet
                 line = packet.datain.read(size)
                 n = len(line)
@@ -707,7 +789,7 @@ class IIS_RequestHandler(SocketServer.StreamRequestHandler):
                 continue
             
             else:
-                self.logger.debug('NO OP (0%o)' % (packet.subunit077))
+                self.logger.debug('?NO OP (0%o)' % (packet.subunit077))
             
             if not (packet.tid & IIS_READ):
                 # OK, discard the rest of the data
@@ -731,11 +813,12 @@ class IIS_RequestHandler(SocketServer.StreamRequestHandler):
         # <--- end of the while (n) loop
         if self.needs_update:
             self.display_image()
-    
+            self.needs_update = False
+        
     
     def display_image(self, reset=1):
-        # get rid of the progress bar
-        # self.server.controller.updateProgressBar(100)
+        """Utility routine used to display an updated frame from a framebuffer.
+        """
         try:
             fb = self.server.controller.get_frame(self.frame)
         except KeyError:
