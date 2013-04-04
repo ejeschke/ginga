@@ -46,6 +46,7 @@ Usage:
 import sys, os
 import logging, logging.handlers
 import threading
+import traceback
 
 # Local application imports
 from Bunch import Bunch
@@ -185,10 +186,31 @@ def main(options, args):
                   ev_quit=ev_quit)
     ginga.followFocus(False)
 
+    # User configuration (custom star catalogs, etc.)
+    try:
+        import ginga_config
+
+        ginga_config.pre_gui_config(ginga)
+    except Exception, e:
+        try:
+            (type, value, tb) = sys.exc_info()
+            tb_str = "\n".join(traceback.format_tb(tb))
+
+        except Exception:
+            tb_str = "Traceback information unavailable."
+
+        logger.error("Error importing Ginga config file: %s" % (
+            str(e)))
+        logger.error("Traceback:\n%s" % (tb_str))
+
     # Build desired layout
     ginga.build_toplevel(layout=default_layout)
     # TEMP: FIX ME!
     ginga.gpmon.ds = ginga.ds
+
+    # Did user specify a particular geometry?
+    if options.geometry:
+        ginga.setGeometry(options.geometry)
 
     # Add desired global plugins
     for spec in global_plugins:
@@ -231,16 +253,18 @@ def main(options, args):
 
     # User configuration (custom star catalogs, etc.)
     try:
-        import ginga_config
+        ginga_config.post_gui_config(ginga)
+    except Exception, e:
+        try:
+            (type, value, tb) = sys.exc_info()
+            tb_str = "\n".join(traceback.format_tb(tb))
 
-        ginga_config.config(ginga)
-    except ImportError, e:
-        logger.error("Error importing Ginga config file: %s" % (
+        except Exception:
+            tb_str = "Traceback information unavailable."
+
+        logger.error("Error processing Ginga config file: %s" % (
             str(e)))
-
-    # Did user specify a particular geometry?
-    if options.geometry:
-        ginga.setGeometry(options.geometry)
+        logger.error("Traceback:\n%s" % (tb_str))
 
     if (not options.nosplash) and (len(args) == 0):
         ginga.banner()

@@ -104,7 +104,11 @@ class Preferences(GingaPlugin.LocalPlugin):
             options.append(name)
             combobox.insert_text(index, name)
             index += 1
-        index = self.cmap_names.index(self.t_.get('color_map', "ramp"))
+        cmap_name = self.t_.get('color_map', "ramp")
+        try:
+            index = self.cmap_names.index(cmap_name)
+        except Exception:
+            index = self.cmap_names.index('ramp')
         combobox.set_active(index)
         combobox.sconnect('changed', self.set_cmap_cb)
 
@@ -115,7 +119,11 @@ class Preferences(GingaPlugin.LocalPlugin):
             options.append(name)
             combobox.insert_text(index, name)
             index += 1
-        index = self.imap_names.index(self.t_.get('intensity_map', "ramp"))
+        imap_name = self.t_.get('intensity_map', "ramp")
+        try:
+            index = self.imap_names.index(imap_name)
+        except Exception:
+            index = self.imap_names.index('ramp')
         combobox.set_active(index)
         combobox.sconnect('changed', self.set_imap_cb)
 
@@ -686,7 +694,11 @@ class Preferences(GingaPlugin.LocalPlugin):
         # color map
         rgbmap = self.fitsimage.get_rgbmap()
         cm = rgbmap.get_cmap()
-        index = self.cmap_names.index(cm.name)
+        try:
+            index = self.cmap_names.index(cm.name)
+        except ValueError:
+            # may be a custom color map installed
+            index = 0
         self.w.cmap_choice.set_active(index)
 
         calg = rgbmap.get_hash_algorithm()
@@ -697,7 +709,11 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.w.table_size.set_text(str(size))
 
         im = rgbmap.get_imap()
-        index = self.imap_names.index(im.name)
+        try:
+            index = self.imap_names.index(im.name)
+        except ValueError:
+            # may be a custom intensity map installed
+            index = 0
         self.w.imap_choice.set_active(index)
 
         # zoom settings

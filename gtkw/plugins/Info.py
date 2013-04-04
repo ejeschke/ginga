@@ -135,12 +135,9 @@ class Info(GingaPlugin.GlobalPlugin):
                               chinfo.fitsimage, info)
         winfo.preferences.connect('clicked', self.preferences,
                                   chinfo)
-        #winfo.multidim.connect('clicked', self.multidim,
-        #                         chinfo, info)
 
         fitsimage = chinfo.fitsimage
         fitsimage.set_callback('image-set', self.new_image_cb, info)
-        #fitsimage.set_callback('motion', self.motion_cb, chinfo, info)
         fitsimage.set_callback('cut-set', self.cutset_cb, info)
         fitsimage.set_callback('zoom-set', self.zoomset_cb, info)
         fitsimage.set_callback('autocuts', self.autocuts_cb, info)
@@ -194,38 +191,6 @@ class Info(GingaPlugin.GlobalPlugin):
 
     def autozoom_cb(self, fitsimage, option, info):
         info.winfo.zoom_new.set_text(option)
-
-    def motion_cb(self, fitsimage, button, data_x, data_y, chinfo, info):
-        """Motion event in the big fits window.  Show the pointing
-        information under the cursor.
-        """
-        if button != 0:
-            return True
-        
-        # Note: FITS coordinates are 1-based, whereas numpy FITS arrays
-        # are 0-based
-        fits_x, fits_y = data_x + 1, data_y + 1
-        # Get the value under the data coordinates
-        try:
-            value = fitsimage.get_data(data_x, data_y)
-
-        except (Exception, FitsImage.FitsImageCoordsError):
-            value = None
-
-        # Calculate WCS RA
-        try:
-            # NOTE: image function operates on DATA space coords
-            image = fitsimage.get_image()
-            ra_txt, dec_txt = image.pixtoradec(data_x, data_y,
-                                               format='str')
-        except Exception, e:
-            self.logger.error("Bad coordinate conversion: %s" % (
-                str(e)))
-            ra_txt  = 'BAD WCS'
-            dec_txt = 'BAD WCS'
-
-        self.set_info(fits_x, fits_y, value, ra_txt, dec_txt)
-        return True
 
     # LOGIC
 

@@ -602,7 +602,7 @@ Where   nbytes | NB  = number of bytes expected or written
                     #del fb.buffer
                     #fb.buffer = array.array('B', ' ' * fb.width * fb.height)
                     if len(fb.buffer) != fb.width * fb.height:
-                        fb.buffer = array.array('B', ' ' * fb.width * fb.height)
+                        fb.buffer = array.array('B', '\000' * fb.width * fb.height)
                         #self.needs_update = True
                 start = self.x + self.y * fb.width
                 end = start + pkt.nbytes

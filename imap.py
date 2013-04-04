@@ -3383,7 +3383,7 @@ class IntensityMap(object):
         self.name = name
         #self.arr = numpy.array(ilst)
         arr = numpy.array(ilst) * 255.0
-        self.arr = arr.astype('uint8')
+        self.arr = numpy.round(arr).astype('uint')
 
 def add_imap(name, ilst):
     global imaps

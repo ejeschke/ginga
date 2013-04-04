@@ -115,12 +115,15 @@ class SettingGroup(object):
     def getDict(self):
         return dict([[name, self.group[name].value] for name in self.group.keys()])
             
-    def set(self, **kwdargs):
-        for key, value in kwdargs.items():
+    def setDict(self, d, callback=True):
+        for key, value in d.items():
             if not self.group.has_key(key):
                 self.setdefault(key, value)
             else:
-                self.group[key].set(value)
+                self.group[key].set(value, callback=callback)
+        
+    def set(self, **kwdargs):
+        self.setDict(kwdargs)
         
     def load(self):
         with open(self.preffile, 'r') as in_f:
