@@ -1,17 +1,15 @@
 #! /usr/bin/env python
 #
-#[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Sat Feb  9 13:17:02 HST 2013
-#]
+# Eric Jeschke (eric@naoj.org)
 #
-# Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
+# Copyright (c)  Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
 import sys, os
 import logging
 import pyfits
-from PyQt4 import QtGui, QtCore
+from QtHelp import QtGui, QtCore
 
 moduleHome = os.path.split(sys.modules[__name__].__file__)[0]
 widgetHome = os.path.join(moduleHome, '..')

@@ -1,11 +1,9 @@
 #
 # Log.py -- Debugging plugin for fits viewer
 # 
-#[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Mon Dec 31 09:40:01 HST 2012
-#]
+# Eric Jeschke (eric@naoj.org)
 #
-# Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
+# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -13,7 +11,7 @@ import logging
 
 import GingaPlugin
 
-from PyQt4 import QtGui, QtCore
+from QtHelp import QtGui, QtCore
 import QtHelp
 
 class Log(GingaPlugin.GlobalPlugin):

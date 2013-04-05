@@ -2,11 +2,9 @@
 #
 # Plot.py -- Plotting function for Ginga FITS viewer.
 #
-#[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Wed Jan 16 15:53:47 HST 2013
-#]
+# Eric Jeschke (eric@naoj.org)
 #
-# Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
+# Copyright (c)  Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -15,7 +13,7 @@ import sys, os
 import numpy
 
 # GUI imports
-from PyQt4 import QtGui, QtCore
+from QtHelp import QtGui, QtCore
 import QtHelp
 
 import matplotlib

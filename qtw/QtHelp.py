@@ -9,6 +9,10 @@
 #
 import time
 from PyQt4 import QtGui, QtCore
+try:
+    import PyQt4.QtWebKit as QtWebKit
+except ImportError:
+    pass
 
 import Bunch
 import Callback
@@ -17,6 +21,8 @@ tabwidget_style = """
 QTabWidget::pane { margin: 0px,0px,0px,0px; padding: 0px; }
 QMdiSubWindow { margin: 0px; padding: 2px; }
 """
+
+QString = QtCore.QString
 
 class TopLevel(QtGui.QWidget):
 

@@ -8,7 +8,7 @@
 # Please see the file LICENSE.txt for details.
 #
 import math
-from PyQt4 import QtGui, QtCore
+from QtHelp import QtGui, QtCore
 
 import cmap, imap
 import QtHelp

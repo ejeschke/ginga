@@ -1,17 +1,15 @@
 #
 # PixTable.py -- Pixel Table plugin for fits viewer
 # 
-#[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Sun Feb 10 17:03:34 HST 2013
-#]
+# Eric Jeschke (eric@naoj.org)
 #
-# Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
+# Copyright (c)  Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
 import numpy
 
-from PyQt4 import QtGui, QtCore
+from QtHelp import QtGui, QtCore
 import QtHelp
 
 import FitsImageCanvasTypesQt as CanvasTypes

@@ -9,7 +9,7 @@
 #
 import GingaPlugin
 
-from PyQt4 import QtGui, QtCore
+from QtHelp import QtGui, QtCore
 import QtHelp
 
 import numpy
