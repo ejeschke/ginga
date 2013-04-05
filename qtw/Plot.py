@@ -3,7 +3,7 @@
 # Plot.py -- Plotting function for Ginga FITS viewer.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Jun 22 13:48:14 HST 2012
+#  Last edit: Wed Jan 16 15:53:47 HST 2013
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -86,13 +86,15 @@ class Plot(Callback.Callbacks):
         self.fig.canvas.draw()
 
     def plot(self, xarr, yarr, xtitle=None, ytitle=None, title=None,
-             rtitle=None, color=None):
+             rtitle=None, color=None, alpha=1.0):
         self.set_titles(xtitle=xtitle, ytitle=ytitle, title=title,
                         rtitle=rtitle)
         if not color:
-            self.ax.plot(xarr, yarr, linewidth=1.0)
+            self.ax.plot(xarr, yarr, linewidth=1.0, alpha=alpha,
+                         linestyle='-')
         else:
-            self.ax.plot(xarr, yarr, linewidth=1.0, color=color)
+            self.ax.plot(xarr, yarr, linewidth=1.0, color=color,
+                         alpha=alpha, linestyle='-')
         self.ax.grid(True)
         self._draw()
         

@@ -2,7 +2,7 @@
 # Log.py -- Logging plugin for fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Mon Oct  8 22:38:20 HST 2012
+#  Last edit: Thu Dec 13 19:56:15 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -118,8 +118,8 @@ class Log(GingaPlugin.GlobalPlugin):
         #self.tw.scroll_to_iter(end, 0.5)
         # TODO: this is causing a segfault if the text widget is
         # not mapped yet!
-        ## self.buf.move_mark(mark, end)
-        ## res = self.tw.scroll_to_mark(mark, 0.2, True)
+        #self.buf.move_mark(mark, end)
+        #res = self.tw.scroll_to_mark(mark, 0.2, True)
 
     def clear(self):
         start = self.buf.get_start_iter()

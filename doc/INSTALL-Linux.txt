@@ -2,17 +2,33 @@ INSTALLATION ON LINUX (& other *ix)
 ---------------------
 Install the necessary dependences (see below).
 
+# apt-get install python-numpy python-scipy python-matplotlib \
+    python-pyfits python-pywcs python-gtk python-cairo python-webkit git
+
+OR
+
+# apt-get install python-numpy python-scipy python-matplotlib \
+    python-pyfits python-pywcs python-qt4 python-webkit git
+
+(if you want to use the Qt version)
+
+DOWNLOAD GINGA
+-------------
 Unpack Ginga to a directory in the filesystem.  Set your PYTHONPATH
 environment variable to the top-level directory where you unpacked
-Ginga.  Run the program ginga.py from the directory or copy it to
-another location in your $PATH.
+Ginga.  
+
+$ git clone https://github.com/ejeschke/ginga.git
+$ export PYTHONPATH=/where/you/cloned/ginga
 
 RUNNING GINGA
 -------------
-Ginga will show useful information in a log file.  Run it from a
-terminal like this:
+Run the program ginga.py from the directory where you unpacked it or
+copy it to another location in your $PATH.  Ginga will show useful
+information in a log file.  Run it from a terminal like this:
 
-$ ginga.py --stderr --loglevel=20
+$ cd /where/you/cloned/ginga
+$ ./ginga.py --stderr --loglevel=20
 
 Change the level to 10 if you want debug information, and to 30 or 40 if
 you want only warnings and error messages.  A log file can be specified

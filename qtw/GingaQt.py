@@ -1,11 +1,9 @@
 #
 # GingaQt.py -- Qt display handler for the Ginga FITS tool.
 #
-#[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Wed Oct 31 15:27:47 HST 2012
-#]
+# Eric Jeschke (eric@naoj.org)
 #
-# Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
+# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -15,11 +13,12 @@ import Queue
 import traceback
 
 # GUI imports
-from QtHelp import QtGui, QtCore
+from QtHelp import QtGui, QtCore, QString
 
 import Bunch
 
 # Local application imports
+import cmap, imap
 import FitsImage
 
 moduleHome = os.path.split(sys.modules[__name__].__file__)[0]
@@ -84,6 +83,7 @@ class GingaView(QtMain.QtMain):
         #root.set_border_width(2)
         
         self.w.root = root
+        self.w.fscreen = None
 
         self.ds = QtHelp.Desktop()
         
@@ -121,19 +121,12 @@ class GingaView(QtMain.QtMain):
         cbox1.activated.connect(self.channel_select_cb)
         hbox.addWidget(cbox1, stretch=0)
 
-        cbox2 = QtHelp.ComboBox()
-        self.w.operation = cbox2
-        ## index = 0
-        ## for name in self.operations:
-        ##     cbox2.addItem(name, userData=index)
-        ##     index += 1
-        ## cbox2.setCurrentIndex(0)
-        cbox2.setToolTip("Select operation and press Start")
-        hbox.addWidget(cbox2, stretch=0)
-
-        btn = QtGui.QPushButton("Start")
-        btn.setToolTip("Start operation")
-        btn.clicked.connect(self.start_operation_cb)
+        opmenu = QtGui.QMenu()
+        self.w.operation = opmenu
+        btn = QtGui.QPushButton("Operation")
+        btn.clicked.connect(self.invoke_op_cb)
+        btn.setToolTip("Invoke operation")
+        self.w.opbtn = btn
         hbox.addWidget(btn, stretch=0)
 
         w = QtGui.QWidget()
@@ -203,24 +196,31 @@ class GingaView(QtMain.QtMain):
         item.triggered.connect(self.gui_delete_channel)
         chmenu.addAction(item)
 
+        # create a Window pulldown menu, and add it to the menu bar
+        winmenu = menubar.addMenu("Window")
+
+        item = QtGui.QAction(QString("New Workspace"), menubar)
+        item.triggered.connect(self.gui_add_ws)
+        winmenu.addAction(item)
+        
         # create a Option pulldown menu, and add it to the menu bar
         ## optionmenu = menubar.addMenu("Option")
 
         ## # create a Workspace pulldown menu, and add it to the menu bar
         ## wsmenu = menubar.addMenu("Workspace")
 
-        ## item = QtGui.QAction(QtCore.QString("Panes as Tabs"), menubar)
+        ## item = QtGui.QAction(QString("Panes as Tabs"), menubar)
         ## item.triggered.connect(self.tabstoggle_cb)
         ## item.setCheckable(True)
         ## # TODO: check the state of the workspace first
         ## item.setChecked(True)
         ## wsmenu.addAction(item)
         
-        ## item = QtGui.QAction(QtCore.QString("Tile Panes"), menubar)
+        ## item = QtGui.QAction(QString("Tile Panes"), menubar)
         ## item.triggered.connect(self.tile_panes_cb)
         ## wsmenu.addAction(item)
         
-        ## item = QtGui.QAction(QtCore.QString("Cascade Panes"), menubar)
+        ## item = QtGui.QAction(QString("Cascade Panes"), menubar)
         ## item.triggered.connect(self.cascade_panes_cb)
         ## wsmenu.addAction(item)
         
@@ -242,9 +242,64 @@ class GingaView(QtMain.QtMain):
         self.w.status = QtGui.QStatusBar()
         self.w.mframe.addWidget(self.w.status)
 
+    def fullscreen(self):
+        self.w.root.showFullScreen()
+            
+    def normal(self):
+        self.w.root.showNormal()
+            
+    def maximize(self):
+        self.w.root.showMaximized()
+            
+    def toggle_fullscreen(self):
+        if not self.w.root.isFullScreen():
+            self.w.root.showFullScreen()
+        else:
+            self.w.root.showNormal()
+
+    def build_fullscreen(self):
+        w = self.w.fscreen
+        self.w.fscreen = None
+        if w != None:
+            w.destroy()
+            return
+        
+        # Get image from current focused channel
+        chinfo = self.get_channelInfo()
+        fitsimage = chinfo.fitsimage
+        settings = fitsimage.get_settings()
+
+        root = QtHelp.TopLevel()
+        vbox = QtGui.QVBoxLayout()
+        vbox.setContentsMargins(0, 0, 0, 0)
+        vbox.setSpacing(0)
+        root.setLayout(vbox)
+
+        fi = self.build_viewpane(settings)
+        iw = fi.get_widget()
+        vbox.addWidget(iw, stretch=1)
+
+        # Get image from current focused channel
+        image = fitsimage.get_image()
+        if image == None:
+            return
+        fi.set_image(image)
+
+        # Copy attributes of the frame
+        fitsimage.copy_attributes(fi,
+                                  [#'transforms',
+                                   #'cutlevels',
+                                   'rgbmap'],
+                                  redraw=False)
+
+        root.showFullScreen()
+        self.w.fscreen = root
+
     def add_operation(self, title):
-        cbox = self.w.operation
-        cbox.addItem(title)
+        opmenu = self.w.operation
+        item = QtGui.QAction(QString(title), opmenu)
+        item.triggered.connect(lambda: self.start_operation_cb(title))
+        opmenu.addAction(item)
         self.operations.append(title)
         
     ####################################################
@@ -310,28 +365,35 @@ class GingaView(QtMain.QtMain):
         layout.addWidget(cbar, stretch=1)
         return fr
     
-    def build_viewpane(self, cm, im):
-        fi = FitsImageCanvasQt.FitsImageCanvas(logger=self.logger)
-        fi.enable_autoscale(self.default_autoscale)
-        fi.set_autoscale_limits(-20, 3)
-        fi.set_zoom_limits(-20, 50)
-        fi.enable_autolevels(self.default_autolevels)
+    def build_viewpane(self, settings):
+        fi = FitsImageCanvasQt.FitsImageCanvas(logger=self.logger,
+                                               settings=settings)
         fi.enable_zoom(True)
         fi.enable_cuts(True)
+        fi.enable_rotate(True)
         fi.enable_flip(True)
         fi.enable_draw(False)
-        fi.set_cmap(cm, redraw=False)
-        fi.set_imap(im, redraw=False)
+        fi.enable_auto_orient(True)
         fi.add_callback('motion', self.motion_cb)
         fi.add_callback('key-press', self.keypress)
         fi.add_callback('drag-drop', self.dragdrop)
         fi.add_callback('cut-set', self.change_range_cb, self.colorbar)
+
+        # these are now set in the base class
+        ## cmap_name = settings.get('color_map', "ramp")
+        ## cm = cmap.get_cmap(cmap_name)
+        ## imap_name = settings.get('intensity_map', "ramp")
+        ## im = imap.get_imap(imap_name)
+        ## fi.set_cmap(cm, redraw=False)
+        ## fi.set_imap(im, redraw=False)
+
         rgbmap = fi.get_rgbmap()
         rgbmap.add_callback('changed', self.rgbmap_cb, fi)
         fi.set_bg(0.2, 0.2, 0.2)
         return fi
 
-    def add_viewer(self, name, cm, im, use_readout=True, workspace=None):
+    def add_viewer(self, name, settings,
+                   use_readout=True, workspace=None):
 
         vwidget = QtGui.QWidget()
         vbox = QtGui.QVBoxLayout()
@@ -339,7 +401,7 @@ class GingaView(QtMain.QtMain):
         vbox.setSpacing(0)
         vwidget.setLayout(vbox)
         
-        fi = self.build_viewpane(cm, im)
+        fi = self.build_viewpane(settings)
         iw = fi.get_widget()
 
         if self.channel_follows_focus:
@@ -381,6 +443,7 @@ class GingaView(QtMain.QtMain):
             if wsName:
                 ws = self.ds.get_nb(wsName)
                 tabName = spec.get('tab', pInfo.name)
+                pInfo.tabname = tabName
 
                 widget = QtGui.QWidget()
                 vbox = QtGui.QVBoxLayout()
@@ -410,8 +473,10 @@ class GingaView(QtMain.QtMain):
                 textw.append(tb_str)
                 textw.setReadOnly(True)
                 vbox.addWidget(textw, stretch=1)
+                
         if vbox:
             self.ds.add_tab(ws, widget, 2, tabName)
+            pInfo.widget = widget
                 
     def stop_global_plugin(self, pluginName):
         self.logger.debug("Attempting to stop plugin '%s'" % (pluginName))
@@ -456,6 +521,11 @@ class GingaView(QtMain.QtMain):
         box.setLayout(layout)
         layout.addWidget(lbl, stretch=0)
         dialog.show()
+        
+    def gui_add_ws(self):
+        width, height = 700, 800
+        self.ds.create_toplevel_ws(width, height)
+        return True
         
     def gui_load_file(self, initialdir=None):
         if self.filesel.exec_():
@@ -561,9 +631,11 @@ class GingaView(QtMain.QtMain):
         self.delete_channel(chname)
         return True
         
-    def start_operation_cb(self):
-        index = self.w.operation.currentIndex()
-        name = self.operations[index]
+    def invoke_op_cb(self):
+        menu = self.w.operation
+        menu.popup(self.w.opbtn.mapToGlobal(QtCore.QPoint(0,0)))
+        
+    def start_operation_cb(self, name):
         index = self.w.channel.currentIndex()
         chname = str(self.w.channel.itemText(index))
         return self.start_operation_channel(chname, name, None)

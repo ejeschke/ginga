@@ -1,15 +1,14 @@
 #
 # FitsImageQt.py -- classes for the display of FITS files in Qt widgets
 # 
-#[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Nov 16 14:07:58 HST 2012
-#]
+# Eric Jeschke (eric@naoj.org) 
 #
-# Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
+# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
 from QtHelp import QtGui, QtCore
+import math
 
 import numpy
 import threading
@@ -100,10 +99,13 @@ class RenderWidget(QtGui.QWidget):
 
 class FitsImageQt(FitsImage.FitsImageBase):
 
-    def __init__(self, logger=None, render='widget'):
-        #super(FitsImageQt, self).__init__(logger=logger)
-        FitsImage.FitsImageBase.__init__(self, logger=logger)
+    def __init__(self, logger=None, settings=None, render=None):
+        #super(FitsImageQt, self).__init__(logger=logger, settings=settings)
+        FitsImage.FitsImageBase.__init__(self, logger=logger,
+                                         settings=settings)
 
+        if render == None:
+            render = 'widget'
         self.wtype = render
         if self.wtype == 'widget':
             self.imgwin = RenderWidget()
@@ -117,8 +119,9 @@ class FitsImageQt(FitsImage.FitsImageBase):
 
         self.message = None
         self.msgtimer = QtCore.QTimer()
-        QtCore.QObject.connect(self.msgtimer, QtCore.SIGNAL("timeout()"),
-                               self.onscreen_message_off)
+        # QtCore.QObject.connect(self.msgtimer, QtCore.SIGNAL("timeout()"),
+        #                        self.onscreen_message_off)
+        self.msgtimer.timeout.connect(self.onscreen_message_off)
         self.msgfont = QtGui.QFont('Sans Serif', pointSize=24)
         self.set_bg(0.5, 0.5, 0.5, redraw=False)
         self.set_fg(1.0, 1.0, 1.0, redraw=False)
@@ -132,8 +135,12 @@ class FitsImageQt(FitsImage.FitsImageBase):
         self._defer_whence = 0
         self._defer_lock = threading.RLock()
         self._defer_flag = False
-        self._defer_task = None
+        # self._defer_task = None
+        self._defer_task = QtCore.QTimer()
+        self._defer_task.setSingleShot(True)
+        self._defer_task.timeout.connect(self._redraw)
 
+        self.t_.setDefaults(show_pan_position=False)
 
     def get_widget(self):
         return self.imgwin
@@ -148,6 +155,7 @@ class FitsImageQt(FitsImage.FitsImageBase):
         qimage = self._get_qimage(data)
 
         painter = QtGui.QPainter(drawable)
+        painter.setWorldMatrixEnabled(True)
 
         # fill pixmap with background color
         imgwin_wd, imgwin_ht = self.get_window_size()
@@ -159,6 +167,15 @@ class FitsImageQt(FitsImage.FitsImageBase):
                           qimage,
                           QtCore.QRect(0, 0, width, height))
 
+        # Draw a cross in the center of the window in debug mode
+        if self.t_['show_pan_position']:
+            clr = QtGui.QColor()
+            clr.setRgbF(1.0, 0.0, 0.0)
+            painter.setPen(clr)
+            ctr_x, ctr_y = self.get_center()
+            painter.drawLine(ctr_x - 10, ctr_y, ctr_x + 10, ctr_y)
+            painter.drawLine(ctr_x, ctr_y - 10, ctr_x, ctr_y + 10)
+        
         # render self.message
         if self.message:
             self.draw_message(painter, imgwin_wd, imgwin_ht,
@@ -201,9 +218,9 @@ class FitsImageQt(FitsImage.FitsImageBase):
             width, height))
         if hasattr(self, 'scene'):
             self.scene.setSceneRect(0, 0, width, height)
-        # If we need to build a new pixmap do it here.  We allocate one twice as big
-        # as necessary to prevent having to reinstantiate it all the time.  On Qt this
-        # causes unpleasant flashing in the display
+        # If we need to build a new pixmap do it here.  We allocate one
+        # twice as big as necessary to prevent having to reinstantiate it
+        # all the time.  On Qt this causes unpleasant flashing in the display.
         if (self.pixmap == None) or (self.pixmap.width() < width) or \
            (self.pixmap.height() < height):
             pixmap = QtGui.QPixmap(width*2, height*2)
@@ -217,6 +234,10 @@ class FitsImageQt(FitsImage.FitsImageBase):
         arr = numpy.dstack((rgbobj.r, rgbobj.g, rgbobj.b))
         image = self._get_qimage(arr)
         return image
+    
+    def save_image_as_file(self, filepath, format='png', quality=90):
+        qimage = self.get_image_as_widget()
+        res = qimage.save(filepath, format=format, quality=quality)
     
     def redraw(self, whence=0):
         if not self.defer_redraw:
@@ -238,9 +259,9 @@ class FitsImageQt(FitsImage.FitsImageBase):
                         self._defer_task.stop()
                     except:
                         pass
-                self._defer_task = QtCore.QTimer()
-                self._defer_task.setSingleShot(True)
-                self._defer_task.timeout.connect(self._redraw)
+                # self._defer_task = QtCore.QTimer()
+                # self._defer_task.setSingleShot(True)
+                # self._defer_task.timeout.connect(self._redraw)
                 self._defer_task.start(self.defer_lagtime)
                 
     def _redraw(self):
@@ -328,6 +349,17 @@ class FitsImageQt(FitsImage.FitsImageBase):
     def onscreen_message_off(self, redraw=True):
         return self.onscreen_message(None, redraw=redraw)
     
+    def pix2canvas(self, x, y):
+        return (x, y)
+        
+    def canvas2pix(self, x, y):
+        return (x, y)
+
+    def show_pan_mark(self, tf, redraw=True):
+        self.t_.set(show_pan_position=tf)
+        if redraw:
+            self.redraw(whence=3)
+        
 
 class RenderMixin(object):
 
@@ -368,7 +400,14 @@ class RenderMixin(object):
 #         if event.mimeData().hasFormat('text/plain'):
 #             event.accept()
 #         else:
-#             event.ignore() 
+#             event.ignore()
+        event.accept()
+
+    def dragMoveEvent(self, event):
+#         if event.mimeData().hasFormat('text/plain'):
+#             event.accept()
+#         else:
+#             event.ignore()
         event.accept()
 
     def dropEvent(self, event):
@@ -383,12 +422,13 @@ class RenderGraphicsViewZoom(RenderGraphicsView, RenderMixin):
 
 class FitsImageEvent(FitsImageQt):
 
-    def __init__(self, logger=None, render='widget'):
-        #super(FitsImageEvent, self).__init__(logger=logger)
-        FitsImageQt.__init__(self, logger=logger, render=render)
+    def __init__(self, logger=None, settings=None, render=None):
+        #super(FitsImageEvent, self).__init__(logger=logger, settings=settings)
+        FitsImageQt.__init__(self, logger=logger, settings=settings,
+                             render=render)
 
         # replace the widget our parent provided
-        if hasattr(self, 'scene'):
+        if self.wtype == 'scene':
             imgwin = RenderGraphicsViewZoom()
             imgwin.setScene(self.scene)
         else:
@@ -547,6 +587,9 @@ class FitsImageEvent(FitsImageQt):
         data_x, data_y = self.get_data_xy(x, y)
         return self.make_callback('button-release', button, data_x, data_y)
 
+    def get_last_data_xy(self):
+        return (self.last_data_x, self.last_data_y)
+
     def motion_notify_event(self, widget, event):
         buttons = event.buttons()
         x, y = event.x(), event.y()
@@ -590,11 +633,13 @@ class FitsImageEvent(FitsImageQt):
             self.make_callback('drag-drop', paths)
         
 
-class FitsImageZoom(FitsImageEvent, Mixins.FitsImageZoomMixin):
+class FitsImageZoom(Mixins.UIMixin, FitsImageEvent,
+                    Mixins.FitsImageZoomMixin):
 
-    def __init__(self, logger=None, render='widget'):
-        #super(FitsImageZoom, self).__init__()
-        FitsImageEvent.__init__(self, logger=logger, render=render)
+    def __init__(self, logger=None, settings=None, render='widget'):
+        FitsImageEvent.__init__(self, logger=logger, settings=settings,
+                                render=render)
+        Mixins.UIMixin.__init__(self)
         Mixins.FitsImageZoomMixin.__init__(self)
         
         
@@ -623,12 +668,6 @@ class thinCrossCursor(object):
         p1.drawLine(6,10,6,15)
         p1.drawLine(8,10,8,15)
         
-        #p1.drawLine(0,5,0,9)
-        #p1.drawLine(15,5,15,9)
-        #p1.drawLine(5,0,9,0)
-        #p1.drawLine(5,15,9,15)
-        #p1.drawArc(3,3,8,8,0,64*360)
-
         p1.end()
         pm.setAlphaChannel(mask)
         self.cur = QtGui.QCursor(pm, 8, 8)

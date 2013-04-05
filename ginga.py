@@ -2,29 +2,27 @@
 #
 # ginga.py -- FITS image viewer and tool.
 #
-#[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Thu Sep 13 11:52:20 HST 2012
-#]
+# Eric Jeschke (eric@naoj.org)
 #
 """
-Copyright (c) 2011-2012, Eric R. Jeschke
+Copyright (c) 2011-2013  Eric R. Jeschke
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
-met: 
+met:
 
     Redistributions of source code must retain the above copyright
-    notice, this list of conditions and the following disclaimer. 
+    notice, this list of conditions and the following disclaimer.
 
     Redistributions in binary form must reproduce the above copyright
     notice, this list of conditions and the following disclaimer in the
     documentation and/or other materials provided with the
-    distribution. 
+    distribution.
 
     Neither the name of the Eric R. Jeschke nor the names of its
     contributors may be used to endorse or promote products derived from
-    this software without specific prior written permission. 
+    this software without specific prior written permission.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 'AS IS' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
@@ -36,7 +34,7 @@ TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
 PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
 LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
 NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
 """
@@ -48,6 +46,7 @@ Usage:
 import sys, os
 import logging, logging.handlers
 import threading
+import traceback
 
 # Local application imports
 from Bunch import Bunch
@@ -81,11 +80,11 @@ default_layout = ['hpanel', {},
                   ]
 
 global_plugins = [
-    Bunch(module='Pan', tab='Pan', ws='uleft', raisekey='i'),
-    Bunch(module='Info', tab='Info', ws='lleft', raisekey='i'),
-    Bunch(module='Header', tab='Header', ws='left', raisekey='h'),
-    Bunch(module='Zoom', tab='Zoom', ws='left', raisekey='z'),
-    Bunch(module='Thumbs', tab='Thumbs', ws='right', raisekey='t'),
+    Bunch(module='Pan', tab='Pan', ws='uleft', raisekey='I'),
+    Bunch(module='Info', tab='Info', ws='lleft', raisekey='I'),
+    Bunch(module='Header', tab='Header', ws='left', raisekey='H'),
+    Bunch(module='Zoom', tab='Zoom', ws='left', raisekey='Z'),
+    Bunch(module='Thumbs', tab='Thumbs', ws='right', raisekey='T'),
     Bunch(module='Contents', tab='Contents', ws='right', raisekey='c'),
     Bunch(module='WBrowser', tab='Help', ws='right', raisekey='?'),
     Bunch(module='Errors', tab='Errors', ws='right'),
@@ -96,14 +95,15 @@ global_plugins = [
 local_plugins = [
     Bunch(module='Pick', ws='dialogs', shortkey='f1'),
     Bunch(module='Ruler', ws='dialogs', shortkey='f2'),
-    Bunch(module='MultiDim', ws='dialogs', shortkey='f4'), 
+    Bunch(module='Layers', ws='dialogs', shortkey='f3'),
+    Bunch(module='MultiDim', ws='dialogs', shortkey='f4'),
     Bunch(module='Cuts', ws='dialogs', shortkey='f5'),
     Bunch(module='Histogram', ws='dialogs', shortkey='f6'),
     Bunch(module='PixTable', ws='dialogs', shortkey='f7'),
     Bunch(module='Preferences', ws='dialogs', shortkey='f9'),
     Bunch(module='Catalogs', ws='dialogs', shortkey='f10'),
     Bunch(module='Drawing', ws='dialogs', shortkey='f11'),
-    Bunch(module='FBrowser', ws='dialogs', shortkey='f12'), 
+    Bunch(module='FBrowser', ws='dialogs', shortkey='f12'),
     ]
 
 # max size of log file before rotating
@@ -129,17 +129,19 @@ def main(options, args):
         stderrHdlr.setLevel(options.loglevel)
         stderrHdlr.setFormatter(fmt)
         logger.addHandler(stderrHdlr)
-        
+
     # Get settings (preferences)
     try:
         basedir = os.environ['GINGA_HOME']
     except KeyError:
         basedir = os.path.join(os.environ['HOME'], '.ginga')
-    settings = Settings.Settings(basefolder=basedir)
+    prefs = Settings.Preferences(basefolder=basedir, logger=logger)
     sys.path.insert(0, basedir)
 
     moduleHome = os.path.split(sys.modules[__name__].__file__)[0]
     childDir = os.path.join(moduleHome, 'misc', 'plugins')
+    sys.path.insert(0, childDir)
+    childDir = os.path.join(basedir, 'plugins')
     sys.path.insert(0, childDir)
 
     # Choose a toolkit
@@ -161,14 +163,14 @@ def main(options, args):
     # Define class dynamically based on toolkit choice
     class Ginga(GingaControl, GingaView):
 
-        def __init__(self, logger, threadPool, module_manager, settings,
+        def __init__(self, logger, threadPool, module_manager, prefs,
                      ev_quit=None, datasrc_length=20, follow_focus=False):
             GingaView.__init__(self, logger, ev_quit)
             GingaControl.__init__(self, logger, threadPool, module_manager,
-                                  settings, ev_quit=ev_quit,
+                                  prefs, ev_quit=ev_quit,
                                   datasrc_length=datasrc_length,
                                   follow_focus=follow_focus)
-        
+
     # Create the dynamic module manager
     mm = ModuleManager.ModuleManager(logger)
 
@@ -179,13 +181,36 @@ def main(options, args):
     threadPool.startall()
 
     # Create the Ginga main object
-    ginga = Ginga(logger, threadPool, mm, settings,
+    ginga = Ginga(logger, threadPool, mm, prefs,
                   datasrc_length=options.bufsize,
                   ev_quit=ev_quit)
     ginga.followFocus(False)
 
+    # User configuration (custom star catalogs, etc.)
+    try:
+        import ginga_config
+
+        ginga_config.pre_gui_config(ginga)
+    except Exception, e:
+        try:
+            (type, value, tb) = sys.exc_info()
+            tb_str = "\n".join(traceback.format_tb(tb))
+
+        except Exception:
+            tb_str = "Traceback information unavailable."
+
+        logger.error("Error importing Ginga config file: %s" % (
+            str(e)))
+        logger.error("Traceback:\n%s" % (tb_str))
+
     # Build desired layout
     ginga.build_toplevel(layout=default_layout)
+    # TEMP: FIX ME!
+    ginga.gpmon.ds = ginga.ds
+
+    # Did user specify a particular geometry?
+    if options.geometry:
+        ginga.setGeometry(options.geometry)
 
     # Add desired global plugins
     for spec in global_plugins:
@@ -201,7 +226,8 @@ def main(options, args):
     if options.modules:
         modules = options.modules.split(',')
         for pluginName in modules:
-            spec = Bunch(name=pluginName, module=pluginName)
+            spec = Bunch(name=pluginName, module=pluginName,
+                         tab=pluginName, ws='right')
             ginga.add_global_plugin(spec)
 
     # Load modules for "local" (per-channel) plug ins
@@ -227,20 +253,22 @@ def main(options, args):
 
     # User configuration (custom star catalogs, etc.)
     try:
-        import ginga_config
+        ginga_config.post_gui_config(ginga)
+    except Exception, e:
+        try:
+            (type, value, tb) = sys.exc_info()
+            tb_str = "\n".join(traceback.format_tb(tb))
 
-        ginga_config.config(ginga)
-    except ImportError, e:
-        logger.error("Error importing Ginga config file: %s" % (
+        except Exception:
+            tb_str = "Traceback information unavailable."
+
+        logger.error("Error processing Ginga config file: %s" % (
             str(e)))
+        logger.error("Traceback:\n%s" % (tb_str))
 
-    # Did user specify a particular geometry?
-    if options.geometry:
-        ginga.setGeometry(options.geometry)
-
-    if not options.nosplash:
+    if (not options.nosplash) and (len(args) == 0):
         ginga.banner()
-    
+
     # Assume remaining arguments are fits files and load them.
     for imgfile in args:
         ginga.nongui_do(ginga.load_file, imgfile)
@@ -259,16 +287,16 @@ def main(options, args):
         ev_quit.set()
 
     sys.exit(0)
-        
+
 
 if __name__ == "__main__":
-   
+
     # Parse command line options with nifty optparse module
     from optparse import OptionParser
 
     usage = "usage: %prog [options] cmd [args]"
     optprs = OptionParser(usage=usage, version=('%%prog %s' % version.version))
-    
+
     optprs.add_option("--bufsize", dest="bufsize", metavar="NUM",
                       type="int", default=25,
                       help="Buffer length to NUM")

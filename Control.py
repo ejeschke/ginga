@@ -1,11 +1,9 @@
 #
 # Control.py -- Controller for the Ginga FITS viewer.
 #
-#[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Wed Oct 31 17:08:34 HST 2012
-#]
+# Eric Jeschke (eric@naoj.org)
 #
-# Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
+# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -21,19 +19,15 @@ import mimetypes
 import numpy
 
 # Local application imports
-import imap, cmap
+import cmap, imap
 import Catalog
 import AstroImage
 import PythonImage
 import Bunch
 import Datasrc
 import Callback
+import FitsImage
 
-default_cmap = 'real'
-default_imap = 'ramp'
-default_autoscale = 'override'
-default_autolevels = 'on'
-default_autocut_method = 'histogram'
 
 #pluginconfpfx = 'plugins'
 pluginconfpfx = None
@@ -44,14 +38,14 @@ class ControlError(Exception):
 
 class GingaControl(Callback.Callbacks):
      
-    def __init__(self, logger, threadPool, module_manager, settings,
+    def __init__(self, logger, threadPool, module_manager, preferences,
                  ev_quit=None, datasrc_length=20, follow_focus=False):
         Callback.Callbacks.__init__(self)
 
         self.logger = logger
         self.threadPool = threadPool
         self.mm = module_manager
-        self.settings = settings
+        self.prefs = preferences
         # event for controlling termination of threads executing in this
         # object
         if not ev_quit:
@@ -77,21 +71,14 @@ class GingaControl(Callback.Callbacks):
         self.chncnt = 0
         self.statustask = None
 
-        # Preferences
         # Should channel change as mouse moves between windows
         self.channel_follows_focus = follow_focus
         
-        # defaults
-        self.default_cmap = default_cmap
-        self.default_imap = default_imap
-        self.default_autoscale = default_autoscale
-        self.default_autolevels = default_autolevels
-        self.default_autocut_method = default_autocut_method
         # Number of images to keep around in memory
         self.default_datasrc_length = datasrc_length
         
-        self.cm = cmap.get_cmap(self.default_cmap)
-        self.im = imap.get_imap(self.default_imap)
+        self.cm = cmap.get_cmap("ramp")
+        self.im = imap.get_imap("ramp")
 
         self.fn_keys = ('f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8',
                         'f9', 'f10', 'f11', 'f12')
@@ -109,54 +96,31 @@ class GingaControl(Callback.Callbacks):
         self.imgsrv = Catalog.ServerBank(self.logger)
         self.dsscnt = 0
 
-        try:
-            gprefs = self.settings.getSettings('ginga')
-        except KeyError:
-            gprefs = self.settings.createCategory('ginga')
-        gprefs.setvals(color_map='ramp', intensity_map='ramp',
-                       auto_scale='off')
-        
 
     def get_ServerBank(self):
         return self.imgsrv
+
+    def get_preferences(self):
+        return self.prefs
 
     ####################################################
     # CALLBACKS
     ####################################################
     
     def showxy(self, fitsimage, data_x, data_y):
-        # Note: FITS coordinates are 1-based, whereas numpy FITS arrays
-        # are 0-based
-        fits_x, fits_y = data_x + 1, data_y + 1
-        # Get the value under the data coordinates
         try:
-            #value = fitsimage.get_data(data_x, data_y)
-            # We report the value across the pixel, even though the coords
-            # change halfway across the pixel
-            value = fitsimage.get_data(int(data_x+0.5), int(data_y+0.5))
-
-        except (Exception, FitsImage.FitsImageCoordsError):
-            value = None
-
-        # Calculate WCS RA
-        try:
-            # NOTE: image function operates on DATA space coords
             image = fitsimage.get_image()
             if image == None:
                 # No image loaded for this channel
                 return
-            ## ra_txt, dec_txt = image.pixtoradec(data_x, data_y,
-            ##                                    format='str')
-            ra_txt, dec_txt = image.pixtoradec(fits_x, fits_y,
-                                               format='str', coords='fits')
-        except Exception, e:
-            self.logger.warn("Bad coordinate conversion: %s" % (
-                str(e)))
-            ra_txt  = 'BAD WCS'
-            dec_txt = 'BAD WCS'
+            info = image.info_xy(data_x, data_y)
 
-        self.make_callback('field-info', fitsimage,
-                           fits_x, fits_y, value, ra_txt, dec_txt)
+        except Exception, e:
+            self.logger.warn("Can't get info under the cursor: %s" % (
+                str(e)))
+            return
+
+        self.make_callback('field-info', fitsimage, info)
         
         self.update_pending()
         return True
@@ -168,17 +132,17 @@ class GingaControl(Callback.Callbacks):
         # Set size of coordinate areas (4 is "." + precision 3)
         readout.maxx = len(str(width)) + 4
         readout.maxy = len(str(height)) + 4
-        minval, maxval = fitsimage.get_minmax()
+        minval, maxval = image.get_minmax()
         readout.maxv = max(len(str(minval)), len(str(maxval)))
         return True
 
-    def readout_cb(self, viewer, fitsimage,
-                   fits_x, fits_y, value, ra_txt, dec_txt, readout, name):
+    def readout_cb(self, viewer, fitsimage, info, readout, name):
         # TEMP: hack
         if readout.fitsimage != fitsimage:
             return
 
         # If this is a multiband image, then average the values for the readout
+        value = info.value
         if isinstance(value, numpy.ndarray):
             avg = numpy.average(value)
             value = avg
@@ -187,10 +151,10 @@ class GingaControl(Callback.Callbacks):
         maxx = readout.maxx
         maxy = readout.maxy
         maxv = readout.maxv
-        fits_x = "%.3f" % fits_x
-        fits_y = "%.3f" % fits_y
+        fits_x = "%.3f" % info.x
+        fits_y = "%.3f" % info.y
         text = "RA: %-12.12s  DEC: %-12.12s  X: %-*.*s  Y: %-*.*s  Value: %-*.*s" % (
-            ra_txt, dec_txt, maxx, maxx, fits_x,
+            info.ra_txt, info.dec_txt, maxx, maxx, fits_x,
             maxy, maxy, fits_y, maxv, maxv, value)
         readout.set_text(text)
 
@@ -212,18 +176,24 @@ class GingaControl(Callback.Callbacks):
             keyname, chname))
         # TODO: keyboard accelerators to raise tabs need to be integrated into
         #   the desktop object
-        if keyname == 't':
+        if keyname == 'T':
             self.ds.raise_tab('Thumbs')
-        elif keyname == 'z':
+        elif keyname == 'Z':
             self.ds.raise_tab('Zoom')
-        elif keyname == 'i':
+        elif keyname == 'I':
             self.ds.raise_tab('Info')
-        elif keyname == 'h':
+        elif keyname == 'H':
             self.ds.raise_tab('Header')
-        elif keyname == 'c':
+        elif keyname == 'C':
             self.ds.raise_tab('Contents')
-        elif keyname == 'd':
+        elif keyname == 'D':
             self.ds.raise_tab('Dialogs')
+        elif keyname == 'f':
+            self.toggle_fullscreen()
+        elif keyname == 'F':
+            self.build_fullscreen()
+        elif keyname == 'm':
+            self.maximize()
         elif keyname == 'escape':
             chinfo = self.get_channelInfo(chname)
             opmon = chinfo.opmon
@@ -346,20 +316,7 @@ class GingaControl(Callback.Callbacks):
         
     # BASIC IMAGE OPERATIONS
 
-    def load_file(self, filepath, chname=None, wait=True):
-        if not chname:
-            chinfo = self.get_channelInfo()
-            chname = chinfo.name
-        else:
-            chinfo = self.get_channelInfo(chname)
-            chname = chinfo.name
-
-        # Sometimes there is a newline at the end of this..
-        filepath = filepath.strip()
-
-        # TODO: need progress bar or other visual indicator
-        #self.gui_do(chinfo.fitsimage.onscreen_message, "Loading file...")
-
+    def load_image(self, filepath):
         # Create an image.  Assume type to be an AstroImage unless
         # the MIME association says it is something different.
         image = AstroImage.AstroImage(logger=self.logger)
@@ -389,6 +346,23 @@ class GingaControl(Callback.Callbacks):
             raise ControlError(errmsg)
 
         self.logger.debug("Successfully loaded file into image object.")
+        return image
+
+    def load_file(self, filepath, chname=None, wait=True):
+        if not chname:
+            chinfo = self.get_channelInfo()
+            chname = chinfo.name
+        else:
+            chinfo = self.get_channelInfo(chname)
+            chname = chinfo.name
+
+        # Sometimes there is a newline at the end of this..
+        filepath = filepath.strip()
+
+        # TODO: need progress bar or other visual indicator
+        #self.gui_do(chinfo.fitsimage.onscreen_message, "Loading file...")
+        image = self.load_image(filepath)
+
         (path, filename) = os.path.split(filepath)
 
         image.set(name=filename, path=filepath, chname=chname)
@@ -474,7 +448,7 @@ class GingaControl(Callback.Callbacks):
             chinfo = self.get_channelInfo(chname)
         chinfo.datasrc[imname] = image
 
-        self.make_callback('add-image', chinfo.name, image)
+        #self.make_callback('add-image', chinfo.name, image)
 
         self._add_image_update(chinfo, image)
 
@@ -487,16 +461,17 @@ class GingaControl(Callback.Callbacks):
             return
 
         # switch to current image?
-        if chinfo.prefs.switchnew:
+        if chinfo.prefs['switchnew']:
             #and chinfo.switchfn(image):
             self.logger.debug("switching to new image '%s'" % (curname))
             self._switch_image(chinfo, image)
             
-        if chinfo.prefs.raisenew:
+        if chinfo.prefs['raisenew']:
             curinfo = self.get_channelInfo()
             if chinfo.name != curinfo.name:
                 self.change_channel(chinfo.name)
 
+        self.make_callback('add-image', chinfo.name, image)
 
     def bulk_add_image(self, imname, image, chname):
         if not self.has_channel(chname):
@@ -505,8 +480,8 @@ class GingaControl(Callback.Callbacks):
             chinfo = self.get_channelInfo(chname)
         chinfo.datasrc[imname] = image
 
-        self.make_callback('add-image', chinfo.name, image)
-        self.update_pending(timeout=0)
+        #self.make_callback('add-image', chinfo.name, image)
+        #self.update_pending(timeout=0)
 
         # By delaying the update here, more images may be bulk added
         # before the _add_image_update executes--it will then only
@@ -606,7 +581,7 @@ class GingaControl(Callback.Callbacks):
             oldchname = None
         else:
             oldchname = self.chinfo.name.lower()
-        
+
         chinfo = self.get_channelInfo(name)
         if name != oldchname:
             with self.lock:
@@ -623,10 +598,16 @@ class GingaControl(Callback.Callbacks):
             if raisew:
                 self.ds.raise_tab(name)
 
+            if oldchname != None:
+                self.ds.highlight_tab(oldchname, False)
+            self.ds.highlight_tab(name, True)
+
             ## # Update title bar
-            ## header = image.get_header()
-            ## name = header.get('FRAMEID', 'Noname')
-            self.set_titlebar(chinfo.name)
+            title = chinfo.name
+            ## if image != None:
+            ##     name = image.get('name', 'Noname')
+            ##     title += ": %s" % (name)
+            self.set_titlebar(title)
 
         if image:
             self._switch_image(chinfo, image)
@@ -687,35 +668,23 @@ class GingaControl(Callback.Callbacks):
         
         chinfo = self.add_channel_internal(chname, num_images=num_images)
 
+        name = chinfo.name
+        prefs = self.prefs.createCategory('channel_'+name)
+        try:
+            prefs.load()
+            self.logger.warn("no saved preferences found for channel '%s': %s" % (
+                name, str(e)))
+
+        except Exception, e:
+            pass
+
+        # Make sure these preferences are at least defined
+        prefs.setDefaults(switchnew=True,
+                          raisenew=True, genthumb=True)
+
         with self.lock:
-            name = chinfo.name
-            bnch = self.add_viewer(chname, self.cm, self.im,
+            bnch = self.add_viewer(chname, prefs,
                                    workspace=workspace)
-
-            prefs = None
-            try:
-                self.logger.debug("loading preferences for channel '%s'" % (
-                    name))
-                prefs = self.settings.load(name, "prefs")
-
-            except Exception, e:
-                self.logger.warn("no saved preferences found for channel '%s': %s" % (
-                    name, str(e)))
-                self.settings.createCategory(name)
-
-            # Make sure these preferences are at least defined
-            self.settings.setDefaults(name, switchnew=True,
-                                      raisenew=True,
-                                      genthumb=True)
-            prefs = self.settings.getSettings(name)
-            self.logger.debug("prefs for '%s' are %s" % (name, str(prefs)))
-
-            try:
-                self.preferences_to_fitsimage(prefs, bnch.fitsimage,
-                                                  redraw=False)
-            except Exception, e:
-                self.logger.error("failed to get or set preferences for channel '%s': %s" % (
-                    name, str(e)))
 
             opmon = self.getPluginManager(self.logger, self,
                                           self.ds, self.mm)
@@ -761,57 +730,14 @@ class GingaControl(Callback.Callbacks):
     def get_channelNames(self):
         with self.lock:
             return [ self.channel[key].name for key in self.channel.keys() ]
-                
-    def preferences_to_fitsimage(self, prefs, fitsimage, redraw=False):
-        print "prefs=%s" % (str(prefs))
-
-        rgbmap = fitsimage.get_rgbmap()
-
-        cm = rgbmap.get_cmap()
-        prefs.color_map = prefs.get('color_map', cm.name)
-        cm = cmap.get_cmap(prefs.color_map)
-        fitsimage.set_cmap(cm, redraw=False)
-
-        im = rgbmap.get_imap()
-        prefs.intensity_map = prefs.get('intensity_map', im.name)
-        im = imap.get_imap(prefs.intensity_map)
-        fitsimage.set_imap(im, redraw=False)
-
-        prefs.auto_levels = prefs.get('auto_levels',
-                                      fitsimage.t_autolevels)
-        fitsimage.enable_autolevels(prefs.auto_levels)
-        ## prefs.usesavedcuts = prefs.get('usesavedcuts',
-        ##                                fitsimage.t_use_saved_cuts)
-        ## fitsimage.t_use_saved_cuts = prefs.usesavedcuts
-
-        prefs.autocut_method = prefs.get('autocut_method',
-                                      fitsimage.t_autocut_method)
-        prefs.autocut_hist_pct = prefs.get('autocut_hist_pct',
-                                        fitsimage.t_autocut_hist_pct)
-        fitsimage.set_autolevel_params(prefs.autocut_method,
-                                            pct=prefs.autocut_hist_pct)
-                                             
-        prefs.auto_scale = prefs.get('auto_scale', fitsimage.t_autoscale)
-        fitsimage.enable_autoscale(prefs.auto_scale)
-
-        zmin, zmax = fitsimage.get_autoscale_limits()
-        prefs.zoom_min = prefs.get('zoom_min', zmin)
-        prefs.zoom_max = prefs.get('zoom_max', zmax)
-        fitsimage.set_autoscale_limits(prefs.zoom_min, prefs.zoom_max)
-
-        (flipX, flipY, swapXY) = fitsimage.get_transforms()
-        prefs.flipX = prefs.get('flipX', flipX)
-        prefs.flipY = prefs.get('flipY', flipY)
-        prefs.swapXY = prefs.get('swapXY', swapXY)
-        fitsimage.transform(prefs.flipX, prefs.flipY, prefs.swapXY,
-                                 redraw=redraw)
-
 
     def scale2text(self, scalefactor):
         if scalefactor >= 1.0:
-            text = '%dx' % (int(scalefactor))
+            #text = '%dx' % (int(scalefactor))
+            text = '%.2fx' % (scalefactor)
         else:
-            text = '1/%dx' % (int(1.0/scalefactor))
+            #text = '1/%dx' % (int(1.0/scalefactor))
+            text = '1/%.2fx' % (1.0/scalefactor)
         return text
     
     def get_sky_image(self, key, params):
@@ -856,6 +782,8 @@ class GingaControl(Callback.Callbacks):
         self.add_channel(chname)
         self.nongui_do(self.load_file, bannerFile, chname=chname)
         self.change_channel(chname)
+        chinfo = self.get_channelInfo()
+        chinfo.fitsimage.zoom_fit()
 
     def followFocus(self, tf):
         self.channel_follows_focus = tf
@@ -873,7 +801,7 @@ class GingaControl(Callback.Callbacks):
     def logit(self, text):
         try:
             obj = self.gpmon.getPlugin('Log')
-            obj.log(text)
+            self.gui_do(obj.log, text)
         except:
             pass
             

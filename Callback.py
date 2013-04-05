@@ -2,13 +2,14 @@
 # Callback.py -- Mixin class for programmed callbacks.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Tue Apr 10 16:49:36 HST 2012
+#  Last edit: Wed Mar 27 12:26:23 HST 2013
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+import sys, traceback
 
 class CallbackError(Exception):
     pass
@@ -68,10 +69,19 @@ class Callbacks(object):
                     result = True
                 
             except Exception, e:
-                # Need to iterate to the other callbacks
+                # Catch exception because we need to iterate to the other
+                # callbacks
+                try:
+                    (type, value, tb) = sys.exc_info()
+                    tb_str = "\n".join(traceback.format_tb(tb))
+
+                except Exception:
+                    tb_str = "Traceback information unavailable."
+
                 if hasattr(self, 'logger'):
                     self.logger.error("Error making callback '%s': %s" % (
                         name, str(e)))
+                    self.logger.error("Traceback:\n%s" % (tb_str))
 
         return result
     

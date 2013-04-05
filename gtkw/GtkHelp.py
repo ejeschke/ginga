@@ -1,11 +1,9 @@
 #
 # GtkHelp.py -- customized Gtk widgets
 # 
-#[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Wed Sep 19 17:20:22 HST 2012
-#]
+# Eric Jeschke (eric@naoj.org)
 #
-# Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
+# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 import time
@@ -13,6 +11,7 @@ import gtk
 import gobject
 
 import Bunch
+import Callback
 
 class Workspace(gtk.Layout):
     def __init__(self):
@@ -327,13 +326,18 @@ def combo_box_new_text():
     return combobox
 
 
-class Desktop(object):
+class Desktop(Callback.Callbacks):
 
     def __init__(self):
+        super(Desktop, self).__init__()
+        
         # for tabs
         self.tab = Bunch.caselessDict()
         self.tabcount = 0
         self.notebooks = Bunch.caselessDict()
+
+        for name in ('page-switch', 'page-select'):
+            self.enable_callback(name)
         
     # --- Tab Handling ---
     
@@ -370,7 +374,8 @@ class Desktop(object):
     def get_nb(self, name):
         return self.notebooks[name].nb
         
-    def add_tab(self, tab_w, widget, group, labelname, tabname=None):
+    def add_tab(self, tab_w, widget, group, labelname, tabname=None,
+                data=None):
         self.tabcount += 1
         if not tabname:
             tabname = labelname
@@ -378,10 +383,14 @@ class Desktop(object):
                 tabname = 'tab%d' % self.tabcount
             
         label = gtk.Label(labelname)
-        label.show()
-        tab_w.append_page(widget, label)
-        self.tab[tabname] = Bunch.Bunch(widget=widget, name=labelname,
-                                        tabname=tabname)
+        evbox = gtk.EventBox()
+        evbox.add(label)
+        evbox.show_all()
+        tab_w.append_page(widget, evbox)
+        bnch = Bunch.Bunch(widget=widget, name=labelname,
+                           tabname=tabname, data=data)
+        self.tab[tabname] = bnch
+        evbox.connect("button-press-event", self.select_cb, labelname, data)
         tab_w.set_tab_reorderable(widget, True)
         tab_w.set_tab_detachable(widget, True)
         return tabname
@@ -402,6 +411,9 @@ class Desktop(object):
                 return bnch
         return None
 
+    def select_cb(self, widget, event, name, data):
+        self.make_callback('page-select', name, data)
+        
     def raise_tab(self, tabname):
         nb, page_num = self._find_nb(tabname)
         if nb:
@@ -414,22 +426,21 @@ class Desktop(object):
             del self.tab[tabname]
             return
 
-    ## def highlight_tab(self, tabname, onoff):
-    ##     nb, page_num = self._find_nb(tabname)
-    ##     if nb:
-    ##         widget = self.tab[tabname].widget
-    ##         lbl = nb.get_tab_label(widget)
-    ##         txt = lbl.get_text()
-    ##         lbl.set_text(txt)
+    def highlight_tab(self, tabname, onoff):
+        nb, page_num = self._find_nb(tabname)
+        if nb:
+            widget = self.tab[tabname].widget
+            lbl = nb.get_tab_label(widget)
+            name = self.tab[tabname].name
+            if onoff:
+                lbl.modify_bg(gtk.STATE_NORMAL,
+                              gtk.gdk.color_parse('palegreen'))
+            else:
+                lbl.modify_bg(gtk.STATE_NORMAL,
+                              gtk.gdk.color_parse('grey'))
 
-    def detach_page(self, source, widget, x, y, group):
-        # Detach page to new top-level workspace
-        ## page = self.widgetToPage(widget)
-        ## if not page:
-        ##     return None
-        x, y, width, height = widget.get_allocation()
-        
-        ## self.logger.info("detaching page %s" % (page.name))
+    def create_toplevel_ws(self, width, height, group, x=None, y=None):
+        # create top level workspace
         root = gtk.Window(gtk.WINDOW_TOPLEVEL)
         ## root.set_title(title)
         # TODO: this needs to be more sophisticated
@@ -441,16 +452,49 @@ class Desktop(object):
         vbox = gtk.VBox()
         root.add(vbox)
 
+        menubar = gtk.MenuBar()
+        vbox.pack_start(menubar, fill=True, expand=False)
+
+        # create a Window pulldown menu, and add it to the menu bar
+        winmenu = gtk.Menu()
+        item = gtk.MenuItem(label="Window")
+        menubar.append(item)
+        item.show()
+        item.set_submenu(winmenu)
+
+        ## w = gtk.MenuItem("Take Tab")
+        ## winmenu.append(w)
+        #w.connect("activate", lambda w: self.gui_take_tab())
+
+        sep = gtk.SeparatorMenuItem()
+        winmenu.append(sep)
+        quit_item = gtk.MenuItem(label="Close")
+        winmenu.append(quit_item)
+        #quit_item.connect_object ("activate", self.quit, "file.exit")
+        quit_item.show()
+
         bnch = self.make_nb(group=group)
         vbox.pack_start(bnch.widget, padding=2, fill=True, expand=True)
         root.connect("delete_event", lambda w, e: self.close_page(bnch, root))
+
+        lbl = gtk.Statusbar()
+        lbl.set_has_resize_grip(True)
+        vbox.pack_end(lbl, expand=False, fill=True, padding=2)
+
         vbox.show_all()
-
-        # create main frame
         root.show_all()
-        if x:
+        if x != None:
             root.move(x, y)
+        return bnch
 
+    def detach_page(self, source, widget, x, y, group):
+        # Detach page to new top-level workspace
+        ## page = self.widgetToPage(widget)
+        ## if not page:
+        ##     return None
+        xo, yo, width, height = widget.get_allocation()
+        
+        bnch = self.create_toplevel_ws(width, height, group, x=x, y=y)
         return bnch.nb
 
     def close_page(self, bnch, root):
@@ -463,9 +507,8 @@ class Desktop(object):
     def switch_page(self, nbw, gptr, page_num):
         pagew = nbw.get_nth_page(page_num)
         bnch = self._find_tab(pagew)
-        #self.logger.debug("tab switched to %s" % (bnch.name))
-        # For now, do nothing.  Eventually this might be used to
-        # change the channel
+        if bnch != None:
+            self.make_callback('page-switch', bnch.name, bnch.data)
         return False
 
     def make_desktop(self, layout, widgetDict=None):
@@ -678,14 +721,26 @@ def _make_widget(tup, ns):
         w2 = combo_box_new_text()
     elif wtype == 'spinbutton':
         w2 = SpinButton()
+    elif wtype == 'vbox':
+        w2 = gtk.VBox()
+    elif wtype == 'hbox':
+        w2 = gtk.HBox()
+    elif wtype == 'hscale':
+        w2 = HScale()
+    elif wtype == 'vscale':
+        w2 = VScale()
     elif wtype == 'checkbutton':
         w1 = gtk.Label('')
         w2 = CheckButton(title)
         w2.set_mode(True)
         swap = True
+    elif wtype == 'radiobutton':
+        w1 = gtk.Label('')
+        w2 = RadioButton(title)
+        swap = True
     elif wtype == 'togglebutton':
         w1 = gtk.Label('')
-        w2 = ToggleButton(name)
+        w2 = ToggleButton(title)
         w2.set_mode(True)
         swap = True
     elif wtype == 'button':

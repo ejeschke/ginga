@@ -2,7 +2,7 @@
 # FitsImageCanvasTypesGtk.py -- drawing classes for FitsImageCanvas widget
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Mon Oct  1 18:55:21 HST 2012
+#  Last edit: Wed Mar 20 14:12:13 HST 2013
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -220,14 +220,18 @@ class Rectangle(CanvasObject):
                                         drawdims=drawdims, font=font)
         
     def draw(self):
-        cx1, cy1 = self.canvascoords(self.x1, self.y1)
-        cx2, cy2 = self.canvascoords(self.x2, self.y2)
-        width  = cx2 - cx1 + 1
-        height = cy2 - cy1 + 1
-        
         cr = self.setup_cr()
-        cr.rectangle(cx1, cy1, width, height)
+        cpoints = map(lambda p: self.canvascoords(p[0], p[1]),
+                      ((self.x1, self.y1), (self.x2, self.y1),
+                       (self.x2, self.y2), (self.x1, self.y2)))
+        (cx0, cy0) = cpoints[-1]
+        cr.move_to(cx0, cy0)
+        for cx, cy in cpoints:
+            cr.line_to(cx, cy)
+            #cr.move_to(cx, cy)
+        cr.close_path()
         cr.stroke_preserve()
+
         if self.fill:
             if self.fillcolor:
                 self.set_color(cr, self.fillcolor)
@@ -235,14 +239,15 @@ class Rectangle(CanvasObject):
             self.set_color(cr, self.color)
 
         if self.cap:
-            self.draw_caps(cr, self.cap,
-                           ((cx1, cy1), (cx1, cy2), (cx2, cy1), (cx2, cy2)))
+            self.draw_caps(cr, self.cap, cpoints)
 
         if self.drawdims:
             cr.select_font_face(self.font)
             fontsize = self.scale_font()
             cr.set_font_size(fontsize)
 
+            cx1, cy1 = cpoints[0]
+            cx2, cy2 = cpoints[2]
             # draw label on X dimension
             cx = cx1 + (cx2 - cx1) // 2
             cy = cy2 + -4
@@ -266,6 +271,14 @@ class Rectangle(CanvasObject):
         x2, y2 = self.rotate_pt(self.x2, self.y2, theta,
                                 xoff=xoff, yoff=yoff)
         self.x1, self.y1, self.x2, self.y2 = self.swapxy(x1, y1, x2, y2)
+
+    def toPolygon(self):
+        points = [(self.x1, self.y1), (self.x2, self.y1),
+                  (self.x2, self.y2), (self.x1, self.y2)]
+        p = Polygon(points, color=self.color,
+                    linewidth=self.linewidth, linestyle=self.linestyle,
+                    cap=self.cap, fill=self.fill, fillcolor=self.fillcolor)
+        return p
 
 
 class Square(Rectangle):
@@ -352,8 +365,9 @@ class Point(CanvasObject):
                                     cap=cap)
         
     def draw(self):
-        cx1, cy1 = self.canvascoords(self.x - self.radius, self.y - self.radius)
-        cx2, cy2 = self.canvascoords(self.x + self.radius, self.y + self.radius)
+        cx, cy, cradius = self.calc_radius(self.x, self.y, self.radius)
+        cx1, cy1 = cx - cradius, cy - cradius
+        cx2, cy2 = cx + cradius, cy + cradius
 
         cr = self.setup_cr()
         cr.set_line_cap(cairo.LINE_CAP_ROUND)
@@ -365,7 +379,6 @@ class Point(CanvasObject):
         cr.stroke()
 
         if self.cap:
-            cx, cy = self.canvascoords(self.x, self.y)
             self.draw_caps(cr, self.cap, ((cx, cy), ))
 
     def contains(self, x, y):

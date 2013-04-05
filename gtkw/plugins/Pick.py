@@ -1,11 +1,9 @@
 #
 # Pick.py -- Pick plugin for fits viewer
 # 
-#[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Oct 19 13:32:54 HST 2012
-#]
+# Eric Jeschke (eric@naoj.org)
 #
-# Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
+# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -111,11 +109,10 @@ class Pick(GingaPlugin.LocalPlugin):
         cm, im = self.fv.cm, self.fv.im
 
         di = FitsImageCanvasGtk.FitsImageCanvas(logger=self.logger)
-        di.enable_autoscale('off')
-        di.enable_autolevels('off')
+        di.enable_autozoom('off')
+        di.enable_autocuts('off')
         di.enable_zoom(True)
         di.enable_cuts(True)
-        #di.set_zoom_limits(1, 20)
         di.zoom_to(3, redraw=False)
         di.set_callback('zoom-set', self.zoomset)
         di.set_cmap(cm, redraw=False)
@@ -214,7 +211,8 @@ class Pick(GingaPlugin.LocalPlugin):
         # Build report panel
         captions = (('Zoom', 'label', 'Contour Zoom', 'label'),
             ('Object_X', 'label', 'Object_Y', 'label'),
-            ('RA', 'label', 'DEC', 'label'), ('Equinox', 'label'),
+            ('RA', 'label', 'DEC', 'label'),
+            ('Equinox', 'label', 'Background', 'label'),
             ('Sky Level', 'label', 'Brightness', 'label'), 
             ('FWHM X', 'label', 'FWHM Y', 'label'),
             ('FWHM', 'label', 'Star Size', 'label'),
@@ -639,7 +637,7 @@ class Pick(GingaPlugin.LocalPlugin):
         point = fig.objects[1]
         text = fig.objects[2]
         data_x, data_y = point.x, point.y
-        self.fitsimage.panset_xy(data_x, data_y, redraw=False)
+        #self.fitsimage.panset_xy(data_x, data_y, redraw=False)
 
         # set the pick image to have the same cut levels and transforms
         self.fitsimage.copy_attributes(self.pickimage,
@@ -816,8 +814,6 @@ class Pick(GingaPlugin.LocalPlugin):
             self.logger.info("object center is x,y=%f,%f" % (obj_x, obj_y))
             fwhm = qs.fwhm
             fwhm_x, fwhm_y = qs.fwhm_x, qs.fwhm_y
-            rnd_x, rnd_y = int(round(qs.objx)), int(round(qs.objy))
-            #point.x, point.y = rnd_x, rnd_y
             point.x, point.y = obj_x, obj_y
             text.color = 'cyan'
 
@@ -827,6 +823,7 @@ class Pick(GingaPlugin.LocalPlugin):
             self.wdetail.object_x.set_text('%.3f' % (obj_x+1))
             self.wdetail.object_y.set_text('%.3f' % (obj_y+1))
             self.wdetail.sky_level.set_text('%.3f' % qs.skylevel)
+            self.wdetail.background.set_text('%.3f' % qs.background)
             self.wdetail.brightness.set_text('%.3f' % qs.brightness)
 
             self.w.btn_sky_cut.set_sensitive(True)
@@ -843,7 +840,7 @@ class Pick(GingaPlugin.LocalPlugin):
 
             # Mark object center on image
             point.color = 'cyan'
-            self.fitsimage.panset_xy(rnd_x, rnd_y, redraw=False)
+            self.fitsimage.panset_xy(obj_x, obj_y, redraw=False)
 
             # Calc RA, DEC, EQUINOX of X/Y center pixel
             try:
@@ -880,8 +877,8 @@ class Pick(GingaPlugin.LocalPlugin):
             self.logger.error(errmsg)
             self.fv.show_error(errmsg, raisetab=False)
             #self.update_status("Error")
-            for key in ('sky_level', 'brightness', 'star_size',
-                        'fwhm_x', 'fwhm_y'):
+            for key in ('sky_level', 'background', 'brightness',
+                        'star_size', 'fwhm_x', 'fwhm_y'):
                 self.wdetail[key].set_text('')
             self.wdetail.fwhm.set_text('Failed')
             self.w.btn_sky_cut.set_sensitive(False)
@@ -1101,7 +1098,8 @@ class Pick(GingaPlugin.LocalPlugin):
         except Exception, e:
             self.fv.showStatus("No valid brightness level: '%s'" % (hival))
             
-    def zoomset(self, fitsimage, zoomlevel, scalefactor):
+    def zoomset(self, fitsimage, zoomlevel, scale_x, scale_y):
+        scalefactor = fitsimage.get_scale()
         self.logger.debug("scalefactor = %.2f" % (scalefactor))
         text = self.fv.scale2text(scalefactor)
         self.wdetail.zoom.set_text(text)

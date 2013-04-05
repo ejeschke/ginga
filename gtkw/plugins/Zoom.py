@@ -1,11 +1,9 @@
 #
 # Zoom.py -- Zoom plugin for fits viewer
 # 
-#[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Jun 22 13:44:53 HST 2012
-#]
+# Eric Jeschke (eric@naoj.org) 
 #
-# Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
+# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -33,7 +31,6 @@ class Zoom(GingaPlugin.GlobalPlugin):
         self.zoom_amount = self.default_zoom
         self.zoom_x = 0
         self.zoom_y = 0
-        self.zoomcenter = None
         self.t_abszoom = True
         self.zoomtask = None
         self.fitsimage_focus = None
@@ -53,14 +50,15 @@ class Zoom(GingaPlugin.GlobalPlugin):
         # much noise in the main logger
         #zi = FitsImageCanvasGtk.FitsImageCanvas(logger=self.logger)
         zi = FitsImageCanvasGtk.FitsImageCanvas(logger=None)
-        zi.enable_autoscale('off')
-        zi.enable_autolevels('off')
+        zi.enable_autozoom('off')
+        zi.enable_autocuts('off')
         zi.enable_zoom(False)
-        zi.set_zoom_limits(1, 20)
+        #zi.set_scale_limits(0.001, 1000.0)
         zi.zoom_to(self.default_zoom, redraw=False)
         zi.add_callback('zoom-set', self.zoomset)
         #zi.add_callback('motion', self.showxy)
         zi.set_bg(0.4, 0.4, 0.4)
+        zi.show_pan_mark(True, redraw=False)
         self.zoomimage = zi
 
         iw = zi.get_widget()
@@ -100,8 +98,6 @@ class Zoom(GingaPlugin.GlobalPlugin):
 
         captions = (('Zoom', 'label'),
                     ("Relative Zoom", 'checkbutton'),
-                    ('Min Zoom', 'spinbutton'),
-                    ('Max Zoom', 'spinbutton'),
                     ("Lag Time", 'spinbutton'),
                     ('Defaults', 'button'),
                     )
@@ -120,19 +116,6 @@ class Zoom(GingaPlugin.GlobalPlugin):
         b.lag_time.connect('value-changed', self.setlag_cb)
         vbox.pack_start(w, padding=4, fill=True, expand=False)
 
-        # Minimum and maximum zoom limits
-        minzoom, maxzoom = self.zoomimage.get_zoom_limits()
-        adj = b.min_zoom.get_adjustment()
-        adj.configure(-20, -20, 20, 1, 1, 1)
-        adj.set_value(minzoom)
-        b.min_zoom.connect('value-changed', self.setzoomlimits_cb)
-        b.min_zoom.set_digits(0)
-        adj = b.max_zoom.get_adjustment()
-        adj.configure(-20, -20, 20, 1, 1, 1)
-        adj.set_value(maxzoom)
-        b.max_zoom.connect('value-changed', self.setzoomlimits_cb)
-        b.max_zoom.set_digits(0)
-
         sw = gtk.ScrolledWindow()
         sw.set_border_width(2)
         sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
@@ -149,9 +132,9 @@ class Zoom(GingaPlugin.GlobalPlugin):
         #fitsimage.add_callback('focus', self.focus_cb)
         # TODO: should we add our own canvas instead?
         fitsimage.add_callback('motion', self.motion)
-        fitsimage.ui_setActive(True)
         fitsimage.add_callback('cut-set', self.cutset_cb)
         fitsimage.add_callback('transform', self.transform_cb)
+        fitsimage.add_callback('rotate', self.rotate_cb)
         fitsimage.add_callback('zoom-set', self.zoomset_cb)
 
     def add_channel(self, viewer, chinfo):
@@ -178,7 +161,7 @@ class Zoom(GingaPlugin.GlobalPlugin):
         # Reflect transforms, colormap, etc.
         fitsimage.copy_attributes(self.zoomimage,
                                   ['transforms', 'cutlevels',
-                                   'rgbmap'],
+                                   'rgbmap', 'rotation'],
                                   redraw=False)
 
         # TODO: redo cutout?
@@ -193,8 +176,14 @@ class Zoom(GingaPlugin.GlobalPlugin):
     def transform_cb(self, fitsimage):
         if fitsimage != self.fitsimage_focus:
             return True
-        flipx, flipy, swapxy = fitsimage.get_transforms()
-        self.zoomimage.transform(flipx, flipy, swapxy)
+        flip_x, flip_y, swap_xy = fitsimage.get_transforms()
+        self.zoomimage.transform(flip_x, flip_y, swap_xy)
+        return True
+        
+    def rotate_cb(self, fitsimage, deg):
+        if fitsimage != self.fitsimage_focus:
+            return True
+        self.zoomimage.rotate(deg)
         return True
         
     def _zoomset(self, fitsimage, zoomlevel):
@@ -209,21 +198,21 @@ class Zoom(GingaPlugin.GlobalPlugin):
             myzoomlevel = self.zoomimage.get_zoom()
             myzoomlevel = zoomlevel + self.zoom_amount
 
-        minz, maxz = self.zoomimage.get_zoom_limits()
-        if myzoomlevel < minz:
-            myzoomlevel = minz
-        if myzoomlevel > maxz:
-            myzoomlevel = maxz
-
         self.logger.debug("zoomlevel=%d myzoom=%d" % (
             zoomlevel, myzoomlevel))
         self.zoomimage.zoom_to(myzoomlevel, redraw=True)
         text = self.fv.scale2text(self.zoomimage.get_scale())
         return True
         
-    def zoomset_cb(self, fitsimage, zoomlevel, scalefactor):
+    def zoomset_cb(self, fitsimage, zoomlevel, scale_x, scale_y):
         """This method is called when a main FITS widget changes zoom level.
         """
+        fac_x, fac_y = fitsimage.get_scale_base_xy()
+        fac_x_me, fac_y_me = self.zoomimage.get_scale_base_xy()
+        if (fac_x != fac_x_me) or (fac_y != fac_y_me):
+            alg = fitsimage.get_zoom_algorithm()
+            self.zoomimage.set_zoom_algorithm(alg)
+            self.zoomimage.set_scale_base_xy(fac_x, fac_y)
         return self._zoomset(self.fitsimage_focus, zoomlevel)
         
     def set_amount_cb(self, rng):
@@ -261,18 +250,6 @@ class Zoom(GingaPlugin.GlobalPlugin):
         self.logger.debug("Setting lag time to %d" % (val))
         self.lagtime = val
         
-    def setzoomlimits_cb(self, w):
-        adj = self.wzoom.min_zoom.get_adjustment()
-        minzoom = adj.get_value()
-        adj = self.wzoom.max_zoom.get_adjustment()
-        maxzoom = adj.get_value()
-        self.logger.debug("Setting zoom limits min=%d max=%d" % (
-            minzoom, maxzoom))
-        try:
-            self.zoomimage.set_zoom_limits(minzoom, maxzoom)
-        except Exception, e:
-            pass
-        
     def set_radius(self, val):
         self.logger.debug("Setting radius to %d" % val)
 
@@ -280,8 +257,10 @@ class Zoom(GingaPlugin.GlobalPlugin):
         fitsimage = self.fitsimage_focus
         if fitsimage == None:
             return True
-        val = fitsimage.get_data(self.zoom_x, self.zoom_y)
-        self.showxy(fitsimage, self.zoom_x, self.zoom_y)
+        image = fitsimage.get_image()
+        wd, ht = image.get_size()
+        data_x, data_y = wd // 2, ht // 2
+        self.showxy(fitsimage, data_x, data_y)
         
     def showxy(self, fitsimage, data_x, data_y):
         # Cut and show zoom image in zoom window
@@ -316,23 +295,6 @@ class Zoom(GingaPlugin.GlobalPlugin):
         x1, y1, x2, y2 = self.cutdetail_radius(image, self.zoomimage,
                                                data_x, data_y,
                                                self.zoom_radius, redraw=True)
-        # mark the pixel under the cursor
-        # TODO: use a contrast scheme with alternating colors in a 2-level rect
-        i1 = data_x - x1 - 0.5
-        j1 = data_y - y1 - 0.5
-        #self.logger.debug("i1,j1=%f,%f" % (i1, j1))
-        try:
-            self.zoomimage.deleteObjectByTag(self.zoomcenter, redraw=False)
-        except:
-            pass
-        ## self.zoomcenter = self.zoomimage.add(CanvasTypes.Rectangle(i1, j1,
-        ##                                                            i1+1, j1+1,
-        ##                                                            linewidth=1,
-        ##                                                            color='red'))
-        self.zoomcenter = self.zoomimage.add(CanvasTypes.Rectangle(i1, j1,
-                                                                   i1+1, j1+1,
-                                                                   linewidth=1,
-                                                                   color='red'))
         self.zoomtask = None
 
     def cutdetail_radius(self, image, dstimage, data_x, data_y,

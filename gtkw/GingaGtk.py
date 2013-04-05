@@ -1,11 +1,9 @@
 #
 # GingaGtk.py -- Gtk display handler for the Ginga FITS tool.
 #
-#[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Wed Oct 31 15:39:51 HST 2012
-#]
+# Eric Jeschke (eric@naoj.org)
 #
-# Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
+# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -25,6 +23,7 @@ import Bunch
 
 # Local application imports
 import FitsImage
+import cmap, imap
 
 moduleHome = os.path.split(sys.modules[__name__].__file__)[0]
 sys.path.insert(0, moduleHome)
@@ -79,7 +78,9 @@ class GingaView(GtkMain.GtkMain):
         self.font11 = pango.FontDescription('Monospace 11')
         self.w.tooltips = gtk.Tooltips()
         
-
+        self.window_is_fullscreen = False
+        self.w.fscreen = None
+        
     def build_toplevel(self, layout):
         # Hack to enable images in Buttons in recent versions of gnome.
         # Why did they change the default?  Grrr....
@@ -96,6 +97,7 @@ class GingaView(GtkMain.GtkMain):
         root.set_border_width(2)
         root.connect("destroy", self.quit)
         root.connect("delete_event", self.delete_event)
+        root.connect('window-state-event', self.window_state_change)
         
         self.w.root = root
 
@@ -115,7 +117,8 @@ class GingaView(GtkMain.GtkMain):
         self.w.vbox = self.w['main']
         bnch = self.ds.make_nb(name='main', group=1, wstype='nb')
         self.w.mnb = bnch.nb
-        self.w.mnb.connect("switch-page", self.page_switch_cb)
+        self.ds.add_callback("page-select", self.page_switch_cb)
+        #self.w.mnb.connect("switch-page", self.page_switch_cb)
         self.w.vbox.pack_start(bnch.widget, expand=True, fill=True)
         
         # bottom buttons
@@ -127,19 +130,11 @@ class GingaView(GtkMain.GtkMain):
         cbox.connect("changed", self.channel_select_cb)
         hbox.pack_start(cbox, fill=False, expand=False, padding=4)
 
-        cbox = GtkHelp.combo_box_new_text()
-        self.w.operation = cbox
-        ## index = 0
-        ## for name in self.operations:
-        ##     cbox.insert_text(index, name)
-        ##     index += 1
-        ## cbox.set_active(0)
-        self.w.tooltips.set_tip(cbox, "Select operation and press Start")
-        hbox.pack_start(cbox, fill=False, expand=False, padding=4)
-
-        btn = gtk.Button("Start")
-        self.w.tooltips.set_tip(btn, "Start operation")
-        btn.connect("clicked", lambda w: self.start_operation_cb())
+        opmenu = gtk.Menu()
+        self.w.operation = opmenu
+        btn = gtk.Button("Operation")
+        btn.connect('button-press-event', self.invoke_op_cb)
+        self.w.tooltips.set_tip(btn, "Invoke operation")
         hbox.pack_start(btn, fill=False, expand=False, padding=2)
 
         self.w.optray = gtk.HBox()
@@ -230,6 +225,17 @@ class GingaView(GtkMain.GtkMain):
         chmenu.append(w)
         w.connect("activate", lambda w: self.gui_delete_channel())
 
+        # create a Window pulldown menu, and add it to the menu bar
+        winmenu = gtk.Menu()
+        item = gtk.MenuItem(label="Window")
+        menubar.append(item)
+        item.show()
+        item.set_submenu(winmenu)
+
+        w = gtk.MenuItem("New Workspace")
+        winmenu.append(w)
+        w.connect("activate", lambda w: self.gui_add_ws())
+
         # create a Option pulldown menu, and add it to the menu bar
         ## optionmenu = gtk.Menu()
         ## item = gtk.MenuItem(label="Option")
@@ -253,18 +259,43 @@ class GingaView(GtkMain.GtkMain):
         self.filesel = FileSelection.FileSelection(action=gtk.FILE_CHOOSER_ACTION_OPEN)
         
     def add_statusbar(self):
-        lbl = gtk.Label('')
-        lbl.set_justify(gtk.JUSTIFY_CENTER)
+        ## lbl = gtk.Label('')
+        ## lbl.set_justify(gtk.JUSTIFY_CENTER)
+        lbl = gtk.Statusbar()
+        lbl.set_has_resize_grip(True)
+        self.w.ctx_id = None
         self.w.status = lbl
         self.w.mframe.pack_end(self.w.status, expand=False, fill=True,
                                padding=2)
 
+    def window_state_change(self, window, event):
+        self.window_is_fullscreen = bool(
+            gtk.gdk.WINDOW_STATE_FULLSCREEN & event.new_window_state)
+
+    def fullscreen(self):
+        self.w.root.fullscreen()
+            
+    def normal(self):
+        self.w.root.unfullscreen()
+            
+    def maximize(self):
+        self.w.root.maximize()
+            
+    def toggle_fullscreen(self):
+        if not self.window_is_fullscreen:
+            self.w.root.fullscreen()
+        else:
+            self.w.root.unfullscreen()
+
     def add_operation(self, title):
-        cbox = self.w.operation
-        cbox.append_text(title)
-        cbox.set_active(0)
+        menu = self.w.operation
+        item = gtk.MenuItem(label=title)
+        menu.append(item)
+        item.show()
+        item.connect_object ("activate", self.start_operation_cb, title)
         self.operations.append(title)
-        
+
+       
     ####################################################
     # THESE METHODS ARE CALLED FROM OTHER MODULES & OBJECTS
     ####################################################
@@ -292,32 +323,40 @@ class GingaView(GtkMain.GtkMain):
         fr.add(cbar)
         return fr
     
-    def build_viewpane(self, cm, im):
-        fi = FitsImageCanvasGtk.FitsImageCanvas(logger=self.logger)
-        fi.enable_autoscale(self.default_autoscale)
-        fi.set_autoscale_limits(-20, 3)
-        fi.set_zoom_limits(-20, 50)
-        fi.enable_autolevels(self.default_autolevels)
+    def build_viewpane(self, settings):
+        fi = FitsImageCanvasGtk.FitsImageCanvas(logger=self.logger,
+                                                settings=settings)
         fi.enable_zoom(True)
         fi.enable_cuts(True)
         fi.enable_flip(True)
+        fi.enable_auto_orient(True)
+        fi.enable_rotate(True)
         fi.enable_draw(False)
-        fi.set_cmap(cm, redraw=False)
-        fi.set_imap(im, redraw=False)
         fi.add_callback('motion', self.motion_cb)
         fi.add_callback('key-press', self.keypress)
         fi.add_callback('drag-drop', self.dragdrop)
         fi.add_callback('cut-set', self.change_range_cb, self.colorbar)
+
+        # these are now set in the base class
+        # cmap_name = settings.get('color_map', "ramp")
+        # cm = cmap.get_cmap(cmap_name)
+        # imap_name = settings.get('intensity_map', "ramp")
+        # im = imap.get_imap(imap_name)
+        # fi.set_cmap(cm, redraw=False)
+        # fi.set_imap(im, redraw=False)
+
         rgbmap = fi.get_rgbmap()
         rgbmap.add_callback('changed', self.rgbmap_cb, fi)
         fi.set_bg(0.2, 0.2, 0.2)
+        fi.ui_setActive(True)
         return fi
 
-    def add_viewer(self, name, cm, im, use_readout=True, workspace=None):
+    def add_viewer(self, name, settings,
+                   use_readout=True, workspace=None):
 
         vbox = gtk.VBox(spacing=0)
         
-        fi = self.build_viewpane(cm, im)
+        fi = self.build_viewpane(settings)
         iw = fi.get_widget()
 
         if self.channel_follows_focus:
@@ -338,16 +377,50 @@ class GingaView(GtkMain.GtkMain):
             readout = None
         vbox.show_all()
 
+        bnch = Bunch.Bunch(fitsimage=fi, view=iw, container=vbox,
+                           readout=readout)
+
         # Add a page to the specified notebook
         if not workspace:
             workspace = 'main'
         nb = self.ds.get_nb(workspace)
-        self.ds.add_tab(nb, vbox, 1, name)
+        self.ds.add_tab(nb, vbox, 1, name, data=bnch)
 
         self.update_pending()
-        bnch = Bunch.Bunch(fitsimage=fi, view=iw, container=vbox,
-                           readout=readout)
         return bnch
+
+    def build_fullscreen(self):
+        w = self.w.fscreen
+        self.w.fscreen = None
+        if w != None:
+            w.destroy()
+            return
+        
+        # Get image from current focused channel
+        chinfo = self.get_channelInfo()
+        fitsimage = chinfo.fitsimage
+        settings = fitsimage.get_settings()
+
+        root = gtk.Window(gtk.WINDOW_TOPLEVEL)
+        fi = self.build_viewpane(settings)
+        iw = fi.get_widget()
+        root.add(iw)
+
+        image = fitsimage.get_image()
+        if image == None:
+            return
+        fi.set_image(image)
+
+        # Copy attributes of the frame
+        fitsimage.copy_attributes(fi,
+                                  [#'transforms',
+                                   #'cutlevels',
+                                   'rgbmap'],
+                                  redraw=False)
+
+        root.fullscreen()
+        self.w.fscreen = root
+        root.show()
 
     def mktextwidget(self, text):
         sw = gtk.ScrolledWindow()
@@ -377,6 +450,7 @@ class GingaView(GtkMain.GtkMain):
             if wsName:
                 ws = self.ds.get_nb(wsName)
                 tabName = spec.get('tab', pInfo.name)
+                pInfo.tabname = tabName
 
                 vbox = gtk.VBox(spacing=2)
                 vbox.set_border_width(0)
@@ -404,6 +478,7 @@ class GingaView(GtkMain.GtkMain):
                 vbox.show_all()
 
         if vbox:
+            pInfo.widget = vbox
             self.ds.add_tab(ws, vbox, 2, tabName)
 
     def stop_global_plugin(self, pluginName):
@@ -432,6 +507,11 @@ class GingaView(GtkMain.GtkMain):
         box.pack_start(ent, True, True, 0)
         dialog.show_all()
         
+    def gui_add_ws(self):
+        width, height = 700, 800
+        self.ds.create_toplevel_ws(width, height, group=1)
+        return True
+        
     def gui_delete_channel(self):
         chinfo = self.get_channelInfo()
         chname = chinfo.name
@@ -455,7 +535,14 @@ class GingaView(GtkMain.GtkMain):
         else:
             s = format % args
 
-        self.w.status.set_text(s)
+        ## self.w.status.set_text(s)
+        try:
+            self.w.status.remove_all(self.w.ctx_id)
+        except:
+            pass
+        self.w.ctx_id = self.w.status.get_context_id('status')
+        self.w.status.push(self.w.ctx_id, s)
+        
         # remove message in about 10 seconds
         if self.statustask:
             gobject.source_remove(self.statustask)
@@ -528,37 +615,32 @@ class GingaView(GtkMain.GtkMain):
         self.delete_channel(chname)
         return True
         
-    def start_operation_cb(self):
-        index = self.w.operation.get_active()
-        name = self.operations[index]
+    def invoke_op_cb(self, button, event):
+        menu = self.w.operation
+        menu.show_all()
+        menu.popup(None, None, None, event.button, event.time)
+        
+    def start_operation_cb(self, name):
         index = self.w.channel.get_active()
         model = self.w.channel.get_model()
         chname = model[index][0]
         return self.start_operation_channel(chname, name, None)
         
-    def page_switch_cb(self, nbw, page, index):
-        self.logger.debug("index switched to %d" % (index))
-        if index >= 0:
-            container = nbw.get_nth_page(index)
-            self.logger.debug("container is %s" % (container))
-
-            # Find the channel that contains this widget
-            chnames = self.get_channelNames()
-            for chname in chnames:
-                chinfo = self.get_channelInfo(chname)
-                if hasattr(chinfo, 'container') and \
-                       (chinfo.container == container):
-                    fitsimage = chinfo.fitsimage
-                    if fitsimage != self.getfocus_fitsimage():
-                        self.logger.debug("Active channel switch to '%s'" % (
-                            chname))
-                        self.change_channel(chname, raisew=False)
-                        # TODO: this is a hack to force the cursor change on the new
-                        # window--make this better
-                        fitsimage.to_default_mode()
+    def page_switch_cb(self, ds, name, data):
+        if data == None:
+            return
+        
+        fitsimage = data.fitsimage
+        if fitsimage != self.getfocus_fitsimage():
+            chname = self.get_channelName(fitsimage)
+            self.logger.debug("Active channel switch to '%s'" % (
+                chname))
+            self.change_channel(chname, raisew=False)
+            # TODO: this is a hack to force the cursor change on the new
+            # window--make this better
+            #fitsimage.to_default_mode()
 
         return True
-
 
 class MyDialog(gtk.Dialog):
     def __init__(self, title=None, flags=None, buttons=None,

@@ -1,11 +1,9 @@
 #
 # QtHelp.py -- customized Qt widgets and convenience functions
 # 
-#[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Nov 16 13:42:38 HST 2012
-#]
+# Eric Jeschke (eric@naoj.org)
 #
-# Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
+# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -77,6 +75,8 @@ if QT_API == QT_API_PYQT:
     QtCore.Signal = QtCore.pyqtSignal
     QtCore.Slot = QtCore.pyqtSlot
 
+    QString = QtCore.Qstring
+
 elif QT_API == QT_API_PYSIDE:
     import PySide
     if PySide.__version__ < '1.0.3':
@@ -88,6 +88,7 @@ elif QT_API == QT_API_PYSIDE:
     except ImportError:
         pass
 
+    QString = str
 else:
     raise RuntimeError('Invalid Qt API %r, valid values are: %r or %r' %
                        (QT_API, QT_API_PYQT, QT_API_PYSIDE))
@@ -95,6 +96,7 @@ else:
 
 print "QT_API is %s" % (QT_API)
 import Bunch
+import Callback
 
 tabwidget_style = """
 QTabWidget::pane { margin: 0px,0px,0px,0px; padding: 0px; }
@@ -133,6 +135,9 @@ class StackedWidget(QtGui.QStackedWidget):
 
     def addTab(self, widget, label):
         self.addWidget(widget)
+
+    def removeTab(self, index):
+        self.removeWidget(self.widget(index))
 
 class Workspace(QtGui.QMdiArea):
 
@@ -279,13 +284,19 @@ class Dialog(QtGui.QDialog):
         return self.content
 
 
-class Desktop(object):
+class Desktop(Callback.Callbacks):
 
     def __init__(self):
+        super(Desktop, self).__init__()
+        
         # for tabs
         self.tab = Bunch.caselessDict()
         self.tabcount = 0
         self.notebooks = Bunch.caselessDict()
+        
+        for name in ('page-switch', 'page-select'):
+            self.enable_callback(name)
+        self.popmenu = None
         
     # --- Tab Handling ---
     
@@ -303,30 +314,49 @@ class Desktop(object):
             nb.setTabPosition(tabpos)
             nb.setUsesScrollButtons(scrollable)
             nb.setTabsClosable(closeable)
-            nb.setMovable(True)   # reorderable and detachable
+            nb.setMovable(True)   # reorderable
             nb.setAcceptDrops(True)
+            nb.currentChanged.connect(lambda idx: self.switch_page(idx, nb))
+
+            tb = nb.tabBar()
+            ## tb.setAcceptDrops(True)
+            tb.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+            tb.connect(tb, QtCore.SIGNAL('customContextMenuRequested(const QPoint&)'),
+                       lambda point: self.on_context_menu(nb, point))
+
 
         else:
             nb = StackedWidget()
+            nb.currentChanged.connect(lambda idx: self.switch_page(idx, nb))
 
         nb.setStyleSheet (tabwidget_style)
         if not name:
             name = str(time.time())
         self.notebooks[name] = Bunch.Bunch(nb=nb, name=name, nbtype=wstype)
-        # Allows drag-and-drop between notebooks
-        ## nb.set_group_id(group)
-        ## if detachable:
-        ##     nb.connect("create-window", self.detach_page, group)
-        ## nb.connect("switch-page", self.switch_page)
-        #tb = nb.tabBar()
-        #tb.setAcceptDrops(True)
-        ## nb.set_show_border(show_border)
         return self.notebooks[name]
 
     def get_nb(self, name):
         return self.notebooks[name].nb
         
-    def add_tab(self, tab_w, widget, group, labelname, tabname=None):
+    def on_context_menu(self, nb, point):
+        # create context menu
+        popmenu = QtGui.QMenu(nb)
+        submenu = QtGui.QMenu(popmenu)
+        submenu.setTitle("Take Tab")
+        popmenu.addMenu(submenu)
+
+        tabnames = self.tab.keys()
+        tabnames.sort()
+        for tabname in tabnames:
+            item = QtGui.QAction(QString(tabname), nb)
+            item.triggered.connect(self._mk_take_tab_cb(tabname, nb))
+            submenu.addAction(item)
+
+        popmenu.exec_(nb.mapToGlobal(point))
+        self.popmenu = popmenu
+
+    def add_tab(self, tab_w, widget, group, labelname, tabname=None,
+                data=None):
         """NOTE: use add_page() instead."""
         self.tabcount += 1
         if not tabname:
@@ -336,7 +366,8 @@ class Desktop(object):
             
         tab_w.addTab(widget, labelname)
         self.tab[tabname] = Bunch.Bunch(widget=widget, name=labelname,
-                                        tabname=tabname, group=group)
+                                        tabname=tabname, data=data,
+                                        group=group)
         return tabname
 
     def add_page(self, nbname, widget, group, labelname, tabname=None):
@@ -359,17 +390,72 @@ class Desktop(object):
                 return bnch
         return None
 
+    def select_cb(self, widget, event, name, data):
+        self.make_callback('page-select', name, data)
+        
     def raise_tab(self, tabname):
         nb, index = self._find_nb(tabname)
         widget = self.tab[tabname].widget
         if (nb != None) and (index >= 0):
             nb.setCurrentIndex(index)
 
+    def highlight_tab(self, tabname, onoff):
+        nb, index = self._find_nb(tabname)
+        if nb:
+            tb = nb.tabBar()
+            widget = tb.tabButton(index, 1)
+            if widget == None:
+                return
+            name = self.tab[tabname].name
+            if onoff:
+                widget.setStyleSheet('QPushButton {color: palegreen}')
+            else:
+                widget.setStyleSheet('QPushButton {color: grey}')
+
     def remove_tab(self, tabname):
         nb, index = self._find_nb(tabname)
         widget = self.tab[tabname].widget
         if (nb != None) and (index >= 0):
             nb.removeTab(index)
+
+    def create_toplevel_ws(self, width, height, x=None, y=None):
+        # create main frame
+        root = TopLevel()
+        ## root.setTitle(title)
+        # TODO: this needs to be more sophisticated
+
+        layout = QtGui.QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        root.setLayout(layout)
+
+        menubar = QtGui.QMenuBar()
+        layout.addWidget(menubar, stretch=0)
+
+        # create a Window pulldown menu, and add it to the menu bar
+        winmenu = menubar.addMenu("Window")
+
+        ## item = QtGui.QAction(QString("Take Tab"), menubar)
+        ## item.triggered.connect(self.gui_load_file)
+        ## winmenu.addAction(item)
+
+        sep = QtGui.QAction(menubar)
+        sep.setSeparator(True)
+        winmenu.addAction(sep)
+        
+        quititem = QtGui.QAction(QString("Quit"), menubar)
+        winmenu.addAction(quititem)
+
+        bnch = self.make_ws(group=1)
+        bnch.root = root
+        layout.addWidget(bnch.nb, stretch=1)
+        root.closeEvent = lambda event: self.close_page(bnch, event)
+        quititem.triggered.connect(lambda: self._close_page(bnch))
+
+        root.show()
+        root.resize(width, height)
+        if x != None:
+            root.moveTo(x, y)
+        return True
 
     def detach_page(self, source, widget, x, y, group):
         # Detach page to new top-level workspace
@@ -379,45 +465,45 @@ class Desktop(object):
         width, height = widget.size()
         
         ## self.logger.info("detaching page %s" % (page.name))
-        root = QtGui.QApplication([])
-        root.connect(root, QtCore.SIGNAL('lastWindowClosed()'),
-                     root, QtCore.SLOT('quit()'))
-        ## root.set_title(title)
-        # TODO: this needs to be more sophisticated
-        root.set_border_width(2)
-        root.resize(width, height)
-        root.show()
-
-        parent = QtGui.QWidget()
-        layout = QtGui.QVBoxLayout()
-        parent.setLayout(layout)
-        parent.show()
-        root.addWidget(parent, stretch=1)
-
-        bnch = self.make_ws(group=group)
-        layout.addWidget(bnch.nb)
-        root.connect("delete_event", lambda w, e: self.close_page(bnch, root))
-
-        # create main frame
-        root.show()
-        if x:
-            root.move(x, y)
+        bnch = self.create_toplevel_ws(width, height, x=x, y=y)
 
         return bnch.nb
 
-    def close_page(self, bnch, root):
-        children = bnch.nb.get_children()
-        if len(children) == 0:
+    def _mk_take_tab_cb(self, tabname, to_nb):
+        def _foo():
+            nb, index = self._find_nb(tabname)
+            widget = self.tab[tabname].widget
+            if (nb != None) and (index >= 0):
+                nb.removeTab(index)
+                to_nb.addTab(widget, tabname)
+            
+        return _foo
+        
+    def _close_page(self, bnch):
+        num_children = bnch.nb.count()
+        if num_children == 0:
             del self.notebooks[bnch.name]
+            root = bnch.root
+            bnch.root = None
             root.destroy()
         return True
     
-    def switch_page(self, nbw, gptr, page_num):
-        pagew = nbw.get_nth_page(page_num)
+    def close_page(self, bnch, event):
+        num_children = bnch.nb.count()
+        if num_children == 0:
+            del self.notebooks[bnch.name]
+            #bnch.root.destroy()
+            event.accept()
+        else:
+            event.ignore()
+        return True
+    
+    def switch_page(self, page_num, nbw):
+        pagew = nbw.currentWidget()
         bnch = self._find_tab(pagew)
-        #self.logger.debug("tab switched to %s" % (bnch.name))
-        # For now, do nothing.  Eventually this might be used to
-        # change the channel
+        if bnch != None:
+            self.make_callback('page-switch', bnch.name, bnch.data)
+        return False
 
     def make_desktop(self, layout, widgetDict=None):
         if widgetDict == None:
@@ -650,13 +736,25 @@ def _make_widget(tup, ns):
         w2 = QtGui.QSpinBox()
     elif wtype == 'spinfloat':
         w2 = QtGui.QDoubleSpinBox()
+    elif wtype == 'vbox':
+        w2 = VBox()
+    elif wtype == 'hbox':
+        w2 = HBox()
+    elif wtype == 'hscale':
+        w2 = QtGui.QSlider(QtCore.Qt.Horizontal)
+    elif wtype == 'vscale':
+        w2 = QtGui.QSlider(QtCore.Qt.Vertical)
     elif wtype == 'checkbutton':
         w1 = QtGui.QLabel('')
         w2 = QtGui.QCheckBox(title)
         swap = True
+    elif wtype == 'radiobutton':
+        w1 = QtGui.QLabel('')
+        w2 = QtGui.QRadioButton(title)
+        swap = True
     elif wtype == 'togglebutton':
         w1 = QtGui.QLabel('')
-        w2 = QtGui.QPushButton(name)
+        w2 = QtGui.QPushButton(title)
         w2.setCheckable(True)
         swap = True
     elif wtype == 'button':

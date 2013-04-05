@@ -1,11 +1,9 @@
 #
 # Info.py -- FITS Info plugin for the Ginga fits viewer
 # 
-#[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Tue Oct 16 12:58:40 HST 2012
-#]
+# Eric Jeschke (eric@naoj.org)
 #
-# Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
+# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -137,12 +135,9 @@ class Info(GingaPlugin.GlobalPlugin):
                               chinfo.fitsimage, info)
         winfo.preferences.connect('clicked', self.preferences,
                                   chinfo)
-        #winfo.multidim.connect('clicked', self.multidim,
-        #                         chinfo, info)
 
         fitsimage = chinfo.fitsimage
         fitsimage.set_callback('image-set', self.new_image_cb, info)
-        #fitsimage.set_callback('motion', self.motion_cb, chinfo, info)
         fitsimage.set_callback('cut-set', self.cutset_cb, info)
         fitsimage.set_callback('zoom-set', self.zoomset_cb, info)
         fitsimage.set_callback('autocuts', self.autocuts_cb, info)
@@ -173,18 +168,22 @@ class Info(GingaPlugin.GlobalPlugin):
         self.set_info(self.info, fitsimage)
         return True
         
-    def zoomset_cb(self, fitsimage, zoomlevel, scalefactor, info):
+    def zoomset_cb(self, fitsimage, zoomlevel, scale_x, scale_y, info):
         """This callback is called when the main window is zoomed.
         """
-        self.logger.debug("scalefactor = %.2f" % (scalefactor))
         # Set text showing zoom factor (1X, 2X, etc.)
-        text = self.fv.scale2text(scalefactor)
+        if scale_x == scale_y:
+            text = self.fv.scale2text(scale_x)
+        else:
+            textx = self.fv.scale2text(scale_x)
+            texty = self.fv.scale2text(scale_y)
+            text = "X: %s  Y: %s" % (textx, texty)
         info.winfo.zoom.set_text(text)
         
     def cutset_cb(self, fitsimage, loval, hival, info):
-        info.winfo.cut_low.set_text('%.2f' % (loval))
+        #info.winfo.cut_low.set_text('%.2f' % (loval))
         info.winfo.lbl_cut_low.set_text('%.2f' % (loval))
-        info.winfo.cut_high.set_text('%.2f' % (hival))
+        #info.winfo.cut_high.set_text('%.2f' % (hival))
         info.winfo.lbl_cut_high.set_text('%.2f' % (hival))
 
     def autocuts_cb(self, fitsimage, option, info):
@@ -192,38 +191,6 @@ class Info(GingaPlugin.GlobalPlugin):
 
     def autozoom_cb(self, fitsimage, option, info):
         info.winfo.zoom_new.set_text(option)
-
-    def motion_cb(self, fitsimage, button, data_x, data_y, chinfo, info):
-        """Motion event in the big fits window.  Show the pointing
-        information under the cursor.
-        """
-        if button != 0:
-            return True
-        
-        # Note: FITS coordinates are 1-based, whereas numpy FITS arrays
-        # are 0-based
-        fits_x, fits_y = data_x + 1, data_y + 1
-        # Get the value under the data coordinates
-        try:
-            value = fitsimage.get_data(data_x, data_y)
-
-        except (Exception, FitsImage.FitsImageCoordsError):
-            value = None
-
-        # Calculate WCS RA
-        try:
-            # NOTE: image function operates on DATA space coords
-            image = fitsimage.get_image()
-            ra_txt, dec_txt = image.pixtoradec(data_x, data_y,
-                                               format='str')
-        except Exception, e:
-            self.logger.error("Bad coordinate conversion: %s" % (
-                str(e)))
-            ra_txt  = 'BAD WCS'
-            dec_txt = 'BAD WCS'
-
-        self.set_info(fits_x, fits_y, value, ra_txt, dec_txt)
-        return True
 
     # LOGIC
 
@@ -245,7 +212,7 @@ class Info(GingaPlugin.GlobalPlugin):
 
         # Show min, max values
         width, height = fitsimage.get_data_size()
-        minval, maxval = fitsimage.get_minmax(noinf=False)
+        minval, maxval = image.get_minmax(noinf=False)
         info.winfo.max.set_text(str(maxval))
         info.winfo.min.set_text(str(minval))
 
@@ -266,26 +233,23 @@ class Info(GingaPlugin.GlobalPlugin):
         info.winfo.zoom.set_text(text)
 
         # update cut new/zoom new indicators
-        info.winfo.cut_new.set_text(fitsimage.t_autolevels)
-        info.winfo.zoom_new.set_text(fitsimage.t_autoscale)
-        
+        t_ = fitsimage.get_settings()
+        info.winfo.cut_new.set_text(t_['autocuts'])
+        info.winfo.zoom_new.set_text(t_['autozoom'])
 
 
-    def field_info(self, viewer, fitsimage,
-                   fits_x, fits_y, value, ra_txt, dec_txt):
+    def field_info(self, viewer, fitsimage, info):
         # TODO: can this be made more efficient?
         chname = self.fv.get_channelName(fitsimage)
         chinfo = self.fv.get_channelInfo(chname)
         chname = chinfo.name
-        info = self.channel[chname]
-        
-        #info.winfo.x.set_text(str(fits_x))
-        #info.winfo.y.set_text(str(fits_y))
-        info.winfo.x.set_text("%.3f" % fits_x)
-        info.winfo.y.set_text("%.3f" % fits_y)
-        info.winfo.value.set_text(str(value))
-        info.winfo.ra.set_text(ra_txt)
-        info.winfo.dec.set_text(dec_txt)
+        obj = self.channel[chname]
+
+        obj.winfo.x.set_text("%.3f" % info.x)
+        obj.winfo.y.set_text("%.3f" % info.y)
+        obj.winfo.value.set_text(str(info.value))
+        obj.winfo.ra.set_text(info.ra_txt)
+        obj.winfo.dec.set_text(info.dec_txt)
 
     def cut_levels(self, w, fitsimage, info):
         try:

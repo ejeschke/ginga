@@ -1,5 +1,8 @@
 style "window"
 {
+GtkWindow::resize-grip-default = true
+GtkWindow::resize-grip-height = 15
+GtkWindow::resize-grip-width = 15
 }
 
 style "mybutton_bg"
@@ -51,8 +54,8 @@ style "text"
 
 widget_class "*GtkMenuBar" style "menubar-style"
 widget_class "*GtkStatusbar" style "statusbar-style"
-widget_class "GtkWindow" style "window"
-widget_class "GtkDialog" style "window"
+widget_class "GtkWidget*" style "window"
+widget_class "GtkDialog*" style "window"
 widget_class "GtkFileSelection" style "window"
 widget_class "*GtkButton*" style "mybutton_bg"
 widget_class "*GtkButton.GtkLabel" style "mybutton"

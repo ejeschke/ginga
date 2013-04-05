@@ -1,11 +1,9 @@
 #
 # Debug.py -- Debugging plugin for fits viewer
 # 
-#[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Jun 22 13:44:48 HST 2012
-#]
+# Eric Jeschke (eric@naoj.org)
 #
-# Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
+# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -57,8 +55,13 @@ class Debug(GingaPlugin.GlobalPlugin):
         return True
             
     def reloadGlobalPlugin(self, plname):
-        self.fv.mm.loadModule(plname)
-        self.fv.gpmon.reloadPlugin(plname)
+        gpmon = self.fv.gpmon
+        pInfo = gpmon.getPluginInfo(plname)
+        gpmon.stop_plugin(pInfo)
+        self.fv.update_pending(0.5)
+        #self.fv.mm.loadModule(plname)
+        gpmon.reloadPlugin(plname)
+        self.fv.start_global_plugin(plname)
         return True
 
     def command(self, cmdstr):

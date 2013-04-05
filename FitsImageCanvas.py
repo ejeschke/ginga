@@ -3,7 +3,7 @@
 # FitsImageCanvas.py -- Abstract base classes for FitsImageCanvas{Gtk,Qt}.
 #
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Jun 22 13:38:36 HST 2012
+#  Last edit: Wed Mar 20 15:01:45 HST 2013
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -71,8 +71,9 @@ class CanvasObjectBase(object):
     def calc_radius(self, x1, y1, radius):
         # scale radius
         cx1, cy1 = self.canvascoords(x1, y1)
-        cx2, cy2 = self.canvascoords(x1 + radius, y1 + radius)
-        cradius = abs(cy2 - cy1)
+        cx2, cy2 = self.canvascoords(x1, y1 + radius)
+        # TODO: the accuracy of this calculation of radius might be improved?
+        cradius = math.sqrt(abs(cy2 - cy1)**2 + abs(cx2 - cx1)**2)
         return (cx1, cy1, cradius)
     
     def swapxy(self, x1, y1, x2, y2):
@@ -340,6 +341,9 @@ class DrawingMixin(object):
         self.fitsimage = fitsimage
         #self.ui_setActive(True)
 
+    def getSurface(self):
+        return self.fitsimage
+
     def draw(self):
         super(DrawingMixin, self).draw()
         if self.drawObj:
@@ -406,8 +410,10 @@ class DrawingMixin(object):
                             **self.t_drawparams)
 
         elif self.t_drawtype == 'circle':
-            radius = max(abs(self._start_x - data_x),
-                         abs(self._start_y - data_y))
+            # radius = max(abs(self._start_x - data_x),
+            #              abs(self._start_y - data_y))
+            radius = math.sqrt(abs(self._start_x - data_x)**2 + 
+                               abs(self._start_y - data_y)**2 )
             obj = klass(self._start_x, self._start_y, radius,
                         **self.t_drawparams)
 

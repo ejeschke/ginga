@@ -1,11 +1,9 @@
 #
 # FBrowser.py -- File Browser plugin for fits viewer
 # 
-#[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Jun 22 16:27:38 HST 2012
-#]
+# Eric Jeschke (eric@naoj.org) 
 #
-# Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
+# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -114,6 +112,9 @@ class FBrowser(GingaPlugin.LocalPlugin):
         btns.add(btn)
         btn = gtk.Button("Refresh")
         btn.connect('clicked', lambda w: self.refresh())
+        btns.add(btn)
+        btn = gtk.Button("Make Thumbs")
+        btn.connect('clicked', lambda w: self.make_thumbs())
         btns.add(btn)
         rvbox.pack_start(btns, padding=4, fill=True, expand=False)
 
@@ -271,6 +272,22 @@ class FBrowser(GingaPlugin.LocalPlugin):
     def browse_cb(self, w):
         path = w.get_text().strip()
         self.browse(path)
+        
+    def make_thumbs(self):
+        path = self.curpath
+        self.logger.info("Generating thumbnails for '%s'..." % (
+            path))
+        filelist = glob.glob(path)
+        filelist.sort(key=str.lower)
+
+        # find out our channel
+        chname = self.fv.get_channelName(self.fitsimage)
+        
+        # Invoke the method in this channel's Thumbs plugin
+        # TODO: don't expose gpmon!
+        rsobj = self.fv.gpmon.getPlugin('Thumbs')
+        self.fv.nongui_do(rsobj.make_thumbs, chname, filelist)
+        
         
     def start(self):
         self.win = None

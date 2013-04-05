@@ -1,17 +1,16 @@
 #
 # AstroImage.py -- Abstraction of an astronomical data image.
 #
-#[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Tue Oct 16 12:56:30 HST 2012
-#]
+# Eric Jeschke (eric@naoj.org) 
 # Takeshi Inagaki
 #
-# Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
+# Copyright (c)  Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-import sys
+import sys, os
 import math
+import logging
 
 import iqcalc
 import wcs
@@ -21,11 +20,10 @@ import time
 import pyfits
 import numpy
 
+from BaseImage import BaseImage, ImageError
+import Bunch
 
-class CalcError(Exception):
-    pass
-
-class AstroImage(object):
+class AstroImage(BaseImage):
     """
     Abstraction of an astronomical data (image).
     
@@ -34,37 +32,28 @@ class AstroImage(object):
 
     def __init__(self, data_np=None, metadata=None, wcsclass=None,
                  logger=None):
-        if data_np == None:
-            data_np = numpy.zeros((1, 1))
-        self.data = data_np
-        self.metadata = {}
         if not wcsclass:
             wcsclass = wcs.WCS
         self.wcs = wcsclass()
-        if metadata:
-            self.update_metadata(metadata)
 
+        BaseImage.__init__(self, data_np=data_np, metadata=metadata,
+                           logger=logger)
+        
         self.iqcalc = iqcalc.IQCalc(logger=logger)
 
-        self._set_minmax()
-
-    @property
-    def width(self):
-        # NOTE: numpy stores data in column-major layout
-        return self.data.shape[1]
-        
-    @property
-    def height(self):
-        # NOTE: numpy stores data in column-major layout
-        return self.data.shape[0]
 
     def load_hdu(self, hdu, fobj=None, naxispath=None):
         data = hdu.data
-        if not naxispath:
-            naxispath = ([0] * (len(data.shape)-2))
+        if len(data.shape) < 2:
+            # Expand 1D arrays into 1xN array
+            data = data.reshape((1, data.shape[0]))
+        else:
+            if not naxispath:
+                naxispath = ([0] * (len(data.shape)-2))
 
-        for idx in naxispath:
-            data = data[idx]
+            for idx in naxispath:
+                data = data[idx]
+
         self.set_data(data)
 
         # Load in FITS header
@@ -77,6 +66,7 @@ class AstroImage(object):
         self.wcs.load_header(hdu.header, fobj=fobj)
 
     def load_file(self, filepath, numhdu=None, naxispath=None):
+        self.logger.debug("Loading file '%s' ..." % (filepath))
         self.set(path=filepath)
         fits_f = pyfits.open(filepath, 'readonly')
 
@@ -84,7 +74,7 @@ class AstroImage(object):
         try:
             fits_f.verify('fix')
         except Exception, e:
-            raise CalcError("Error loading fits file '%s': %s" % (
+            raise ImageError("Error loading fits file '%s': %s" % (
                 fitspath, str(e)))
 
         if numhdu == None:
@@ -97,69 +87,53 @@ class AstroImage(object):
                 if not isinstance(hdu.data, numpy.ndarray):
                     # We need to open a numpy array
                     continue
-                if len(hdu.data.shape) < 2:
-                    # Don't know what to make of 1D data
-                    continue
+                #print "data type is %s" % hdu.data.dtype.kind
                 # Looks good, let's try it
                 found_valid_hdu = True
                 break
             
             if not found_valid_hdu:
-                raise CalcError("No data HDU found that Ginga can open in '%s'" % (
+                raise ImageError("No data HDU found that Ginga can open in '%s'" % (
                     filepath))
         else:
-            numhdu = fits_f[numhdu]
+            hdu = fits_f[numhdu]
         
         self.load_hdu(hdu, fobj=fits_f, naxispath=naxispath)
+
+        # Set the name to the filename (minus extension) if no name
+        # currently exists for this image
+        name = self.get('name', None)
+        if name == None:
+            dirpath, filename = os.path.split(filepath)
+            name, ext = os.path.splitext(filename)
+            self.set(name=name)
         
         fits_f.close()
 
-    def get_size(self):
-        return (self.width, self.height)
-    
-    def get_data(self):
-        return self.data
-        
+    def load_buffer(self, data, dims, dtype, byteswap=False,
+                    metadata=None, redraw=True):
+        data = numpy.fromstring(data, dtype=dtype)
+        if byteswap:
+            data.byteswap(True)
+        data = data.reshape(dims)
+        self.set_data(data, metadata=metadata)
+
     def copy_data(self):
-        return self.data.copy()
+        data = self.get_data()
+        return data.copy()
         
     def get_data_xy(self, x, y):
-        return self.data[y, x]
+        data = self.get_data()
+        assert (x >= 0) and (y >= 0), \
+               ImageError("Indexes out of range: (x=%d, y=%d)" % (
+            x, y))
+        return data[y, x]
         
-    def _get_dims(self, data):
-        height, width = data.shape[:2]
-        return (width, height)
-
     def get_data_size(self):
-        width, height = self._get_dims(self.data)
+        data = self.get_data()
+        width, height = self._get_dims(data)
         return (width, height)
 
-    def get_metadata(self):
-        return self.metadata.copy()
-        
-    def get(self, kwd, *args):
-        if self.metadata.has_key(kwd):
-            return self.metadata[kwd]
-        else:
-            # return a default if there is one
-            if len(args) > 0:
-                return args[0]
-            raise KeyError(kwd)
-        
-    def get_list(self, *args):
-        return map(self.get, args)
-    
-    def __getitem__(self, kwd):
-        return self.metadata[kwd]
-        
-    def update(self, kwds):
-        self.metadata.update(kwds)
-        
-    def set(self, **kwds):
-        self.update(kwds)
-        
-    def __setitem__(self, kwd, value):
-        self.metadata[kwd] = value
         
     def get_header(self, create=True):
         try:
@@ -200,27 +174,13 @@ class AstroImage(object):
         for kwd, val in keyDict.items():
             hdr[kwd.upper()] = val
 
+        # Try to make a wcs object on the header
+        self.wcs.load_header(hdr)
+
     def set_keywords(self, **kwds):
         """Set an item in the fits header, if any."""
         return self.update_keywords(kwds)
         
-    def set_data(self, data_np, metadata=None, astype=None):
-        """Use this method to SHARE (not copy) the incoming array.
-        """
-        if astype:
-            self.data = data_np.astype(astype)
-        else:
-            self.data = data_np
-        if metadata:
-            self.update_metadata(metadata)
-
-        self._set_minmax()
-
-    def _set_minmax(self):
-        self.maxval = numpy.nanmax(self.data)
-        self.minval = numpy.nanmin(self.data)
-        self.maxval_noinf = numpy.nanmax(self.data[numpy.isfinite(self.data)])
-        self.minval_noinf = numpy.nanmin(self.data[numpy.isfinite(self.data)])
         
     def update_data(self, data_np, metadata=None, astype=None):
         """Use this method to make a private copy of the incoming array.
@@ -228,11 +188,6 @@ class AstroImage(object):
         self.set_data(data_np.copy(), metadata=metadata,
                       astype=astype)
         
-    def get_minmax(self, noinf=False):
-        if not noinf:
-            return (self.minval, self.maxval)
-        else:
-            return (self.minval_noinf, self.maxval_noinf)
         
     def update_metadata(self, keyDict):
         for key, val in keyDict.items():
@@ -255,59 +210,28 @@ class AstroImage(object):
         fits_f.close()
 
     def transfer(self, other, astype=None):
-        other.update_data(self.data, astype=astype)
+        data = self.get_data()
+        other.update_data(data, astype=astype)
         other.update_metadata(self.metadata)
         
     def copy(self, astype=None):
-        other = AstroImage(self.data)
+        data = self.get_data()
+        other = AstroImage(data)
         self.transfer(other, astype=astype)
         return other
         
-    def cutout_data(self, x1, y1, x2, y2, astype=None):
-        """cut out data area based on coords. 
-        """
-        data = self.data[y1:y2, x1:x2]
-        if astype:
-            data = data.astype(astype)
-        return data
-  
-    def cutout_adjust(self, x1, y1, x2, y2, astype=None):
-        dx = x2 - x1
-        dy = y2 - y1
-        
-        if x1 < 0:
-            x1 = 0; x2 = dx
-        else:
-            if x2 >= self.width:
-                x2 = self.width
-                x1 = x2 - dx
-                
-        if y1 < 0:
-            y1 = 0; y2 = dy
-        else:
-            if y2 >= self.height:
-                y2 = self.height
-                y1 = y2 - dy
-
-        data = self.cutout_data(x1, y1, x2, y2, astype=astype)
-        return (data, x1, y1, x2, y2)
-
-    def cutout_radius(self, x, y, radius, astype=None):
-        return self.cutout_adjust(x-radius, y-radius,
-                                  x+radius+1, y+radius+1,
-                                  astype=astype)
-
     def cutout_cross(self, x, y, radius):
         """Cut two data subarrays that have a center at (x, y) and with
         radius (radius) from (data).  Returns the starting pixel (x0, y0)
         of each cut and the respective arrays (xarr, yarr).
         """
+        data = self.get_data()
         n = radius
         ht, wd = self.height, self.width
         x0, x1 = max(0, x-n), min(wd-1, x+n)
         y0, y1 = max(0, y-n), min(ht-1, y+n)
-        xarr = self.data[y, x0:x1+1]
-        yarr = self.data[y0:y1+1, x]
+        xarr = data[y, x0:x1+1]
+        yarr = data[y0:y1+1, x]
         return (x0, y0, xarr, yarr)
 
 
@@ -344,9 +268,9 @@ class AstroImage(object):
     def create_fits(self):
         fits_f = pyfits.HDUList()
         hdu = pyfits.PrimaryHDU()
-        data = self.data
-        if sys.byteorder == 'little':
-            data = data.byteswap()
+        data = self.get_data()
+        # if sys.byteorder == 'little':
+        #     data = data.byteswap()
         hdu.data = data
 
         deriver = self.get('deriver', None)
@@ -366,6 +290,8 @@ class AstroImage(object):
             try:
                 if deriver:
                     comment = deriver.get_comment(kwd)
+                else:
+                    comment = ""
                 hdu.header.update(kwd, header[kwd], comment=comment)
             except Exception, e:
                 errlist.append((kwd, str(e)))
@@ -377,6 +303,9 @@ class AstroImage(object):
         fits_f = self.create_fits()
         return fits_f.writeto(path, output_verify=output_verify)
         
+    def save_file_as(self, filepath):
+        self.write_fits(filepath)
+
     def pixtoradec(self, x, y, format='deg', coords='data'):
         return self.wcs.pixtoradec(x, y, format=format, coords=coords)
     
@@ -486,79 +415,83 @@ class AstroImage(object):
         delta_dec_deg = dec1_deg - dec2_deg
         return (delta_ra_deg, delta_dec_deg)
 
-    # # Is this one more accurate?
-    # def get_RaDecOffsets(self, ra1_deg, dec1_deg, ra2_deg, dec2_deg):
-    #     sep_ra = self.deltaStarsRaDecDeg(ra1_deg, dec1_deg,
-    #                                      ra2_deg, dec1_deg)
-    #     if ra1_deg - ra2_deg < 0.0:
-    #         sep_ra = -sep_ra
-
-    #     sep_dec = self.deltaStarsRaDecDeg(ra1_deg, dec1_deg,
-    #                                       ra1_deg, dec2_deg)
-    #     if dec1_deg - dec2_deg < 0.0:
-    #         sep_dec = -sep_dec
-    #     return (sep_ra, sep_dec)
-
-    def calc_dist_deg2pix(self, ra_deg, dec_deg, delta_deg, equinox=None):
-        x1, y1 = self.radectopix(ra_deg, dec_deg, equinox=equinox)
-
-        # add delta in deg to ra and calculate new ra/dec
-        ra2_deg = ra_deg + delta_deg
-        if ra2_deg > 360.0:
-            ra2_deg = math.fmod(ra2_deg, 360.0)
-        # then back to new pixel coords
-        x2, y2 = self.radectopix(ra2_deg, dec_deg)
-
-        radius_px = abs(x2 - x1)
-        return radius_px
-        
-    def calc_dist_xy(self, x, y, delta_deg):
+    def calc_radius_xy(self, x, y, radius_deg):
+        """Calculate a radius (in pixels) from the point (x, y) to a circle
+        defined by radius in degrees.
+        """
         # calculate ra/dec of x,y pixel
         ra_deg, dec_deg = self.pixtoradec(x, y)
 
-        # add delta in deg to ra and calculate new ra/dec
-        ra2_deg = ra_deg + delta_deg
-        if ra2_deg > 360.0:
+        # RA adjustment for declination
+        delta_ra_deg = 1.0 * (1.0 / math.cos(math.radians(dec_deg)))
+
+        # calculate new RA 1 degree E
+        ra2_deg = ra_deg + delta_ra_deg
+        if ra2_deg >= 360.0:
             ra2_deg = math.fmod(ra2_deg, 360.0)
-        # then back to new pixel coords
+
+        # Calculate the length of this segment--it is pixels/deg
         x2, y2 = self.radectopix(ra2_deg, dec_deg)
-        
-        radius_px = abs(x2 - x)
+        px_per_deg_e = math.sqrt(math.fabs(x2-x)**2 + math.fabs(y2-y)**2)
+
+        # calculate radius based on desired radius_deg
+        radius_px = px_per_deg_e * radius_deg
         return radius_px
         
-    def calc_offset_xy(self, x, y, delta_deg_x, delta_deg_y):
+    def calc_radius_deg2pix(self, ra_deg, dec_deg, delta_deg,
+                            equinox=None):
+        x, y = self.radectopix(ra_deg, dec_deg, equinox=equinox)
+        return self.calc_radius_xy(x, y, delta_deg)
+        
+    def add_offset_radec(self, ra_deg, dec_deg, delta_deg_ra, delta_deg_dec,
+                      adjust_ra=True):
+        if adjust_ra:
+            delta_deg_ra *= 1.0 / math.cos(math.radians(dec_deg))
+
+        # add delta in deg to ra and calculate new ra/dec
+        ra2_deg = ra_deg + delta_deg_ra
+        if ra2_deg > 360.0:
+            ra2_deg = math.fmod(ra2_deg, 360.0)
+        elif ra2_deg < 0.0:
+            ra2_deg = 360.0 + math.fmod(ra2_deg, 360.0)
+
+        dec2_deg = dec_deg + delta_deg_dec
+        if dec2_deg > 90.0:
+            dec2_deg = 90.0 - math.fmod(dec2_deg, 90.0)
+            ra2_deg = math.fmod(ra2_deg+180.0, 360.0)
+        elif dec2_deg < -90.0:
+            dec2_deg = -90.0 - math.fmod(dec2_deg, 90.0)
+            ra2_deg = math.fmod(ra2_deg+180.0, 360.0)
+
+        return (ra2_deg, dec2_deg)
+        
+    def add_offset_xy(self, x, y, delta_deg_x, delta_deg_y,
+                      adjust_ra=True):
         # calculate ra/dec of x,y pixel
         ra_deg, dec_deg = self.pixtoradec(x, y)
 
-        # add delta in deg to ra and calculate new ra/dec
-        ra2_deg = ra_deg + delta_deg_x
-        if ra2_deg > 360.0:
-            ra2_deg = math.fmod(ra2_deg, 360.0)
+        # add offsets
+        ra2_deg, dec2_deg = self.add_offset_radec(ra_deg, dec_deg,
+                                                  delta_deg_x, delta_deg_y)
 
-        dec2_deg = dec_deg + delta_deg_y
-        
         # then back to new pixel coords
         x2, y2 = self.radectopix(ra2_deg, dec2_deg)
         
         return (x2, y2)
-        
-    def calc_dist_center(self, delta_deg):
-        return self.calc_dist_xy(self.width // 2, self.height // 2, delta_deg)
+
+    def calc_radius_center(self, delta_deg):
+        return self.calc_radius_xy(float(self.width / 2.0),
+                                   float(self.height / 2.0),
+                                   delta_deg)
         
         
     def calc_compass(self, x, y, len_deg_e, len_deg_n):
-        ra_deg, dec_deg = self.pixtoradec(x, y)
-        
-        ra_e = ra_deg + len_deg_e
-        if ra_e > 360.0:
-            ra_e = math.fmod(ra_e, 360.0)
-        dec_n = dec_deg + len_deg_n
 
         # Get east and north coordinates
-        xe, ye = self.radectopix(ra_e, dec_deg)
+        xe, ye = self.add_offset_xy(x, y, len_deg_e, 0.0)
         xe = int(round(xe))
         ye = int(round(ye))
-        xn, yn = self.radectopix(ra_deg, dec_n)
+        xn, yn = self.add_offset_xy(x, y, 0.0, len_deg_n)
         xn = int(round(xn))
         yn = int(round(yn))
         
@@ -566,14 +499,11 @@ class AstroImage(object):
        
     def calc_compass_center(self):
         # calculate center of data
-        x = self.width // 2
-        y = self.height // 2
+        x = float(self.width) / 2.0
+        y = float(self.height) / 2.0
 
-        # calculate ra/dec at 1 deg East and 1 deg North
-        ra_deg, dec_deg = self.pixtoradec(x, y)
-        # TODO: need to correct for ra_deg+1 >= 360?  How about dec correction
-        xe, ye = self.radectopix(ra_deg+1.0, dec_deg)
-        xn, yn = self.radectopix(ra_deg, dec_deg+1.0)
+        xe, ye = self.add_offset_xy(x, y, 1.0, 0.0)
+        xn, yn = self.add_offset_xy(x, y, 0.0, 1.0)
 
         # now calculate the length in pixels of those arcs
         # (planar geometry is good enough here)
@@ -590,5 +520,215 @@ class AstroImage(object):
 
         return self.calc_compass(x, y, len_deg_e, len_deg_n)
 
+    def mosaic1(self, imagelist):
+
+        image0 = imagelist[0]
+        xmin, ymin, xmax, ymax = 0, 0, 0, 0
+
+        idxs = []
+        for image in imagelist:
+            wd, ht = image.get_size()
+            # for each image calculate ra/dec in the corners
+            for x, y in ((0, 0), (wd-1, 0), (wd-1, ht-1), (0, ht-1)):
+                ra, dec = image.pixtoradec(x, y)
+                # and then calculate the pixel position relative to the
+                # base image
+                x0, y0 = image0.radectopix(ra, dec)
+                #x0, y0 = int(x0), int(y0)
+                x0, y0 = int(round(x0)), int(round(y0))
+
+                if (x == 0) and (y == 0):
+                    idxs.append((x0, y0, x0+wd, y0+ht))
+                
+                # running calculation of min and max pixel coordinates
+                xmin, ymin = min(xmin, x0), min(ymin, y0)
+                xmax, ymax = max(xmax, x0), max(ymax, y0)
+
+        # calc necessary dimensions of final image
+        width, height = xmax-xmin+1, ymax-ymin+1
+
+        # amount of offset to add to each image
+        xoff, yoff = abs(min(0, xmin)), abs(min(0, ymin))
+
+        self.logger.debug("new image=%dx%d offsets x=%f y=%f" % (
+            width, height, xoff, yoff))
+
+        # new array to hold the mosaic
+        newdata = numpy.zeros((height, width))
+        metadata = {}
+
+        # drop each image in the right place
+        cnt = 0
+        for image in imagelist:
+            wd, ht = image.get_size()
+            data = image.get_data()
+
+            (xi, yi, xj, yj) = idxs.pop(0)
+            xi, yi, xj, yj = xi+xoff, yi+yoff, xj+xoff, yj+yoff
+
+            #newdata[yi:yj, xi:xj] = data[0:ht, 0:wd]
+            newdata[yi:(yi+ht), xi:(xi+wd)] = data[0:ht, 0:wd]
+
+            if cnt == 0:
+                metadata = image.get_metadata()
+                crpix1 = image.get_keyword('CRPIX1') + xoff
+                crpix2 = image.get_keyword('CRPIX2') + yoff
+
+        # Create new image with reference pixel updated
+        newimage = AstroImage(newdata, metadata=metadata)
+        newimage.update_keywords({ 'CRPIX1': crpix1,
+                                   'CRPIX2': crpix2 })
+        return newimage
     
+    def mosaic(self, filelist):
+        """Creates a new mosaic image from the images in filelist.
+        """
+
+        image0 = AstroImage(logger=self.logger)
+        image0.load_file(filelist[0])
+
+        xmin, ymin, xmax, ymax = 0, 0, 0, 0
+
+        idxs = []
+        for filepath in filelist:
+            # Create and load the image
+            self.logger.debug("Examining file '%s' ..." % (filepath))
+            image = AstroImage(logger=self.logger)
+            image.load_file(filepath)
+            
+            wd, ht = image.get_size()
+            # for each image calculate ra/dec in the corners
+            for x, y in ((0, 0), (wd-1, 0), (wd-1, ht-1), (0, ht-1)):
+
+                # for each image calculate ra/dec in the corners
+                ra, dec = image.pixtoradec(x, y)
+                # and then calculate the pixel position relative to the
+                # base image
+                x0, y0 = image0.radectopix(ra, dec)
+                x0, y0 = int(round(x0)), int(round(y0))
+
+                # running calculation of min and max pixel coordinates
+                xmin, ymin = min(xmin, x0), min(ymin, y0)
+                xmax, ymax = max(xmax, x0), max(ymax, y0)
+                 
+        # calc necessary dimensions of final image
+        width, height = xmax-xmin+1, ymax-ymin+1
+
+        # amount of offset to add to each image
+        xoff, yoff = abs(min(0, xmin)), abs(min(0, ymin))
+
+        metadata = image0.get_metadata()
+        
+        # new array to hold the mosaic
+        print "WIDTH=%d HEIGHT=%d" % (width, height)
+        self.logger.debug("Creating empty mosaic image of %dx%d" % (
+            (width, height)))
+        newdata = numpy.zeros((height, width))
+
+        # Create new image with empty data
+        mosaic = AstroImage(newdata, metadata=metadata, logger=self.logger)
+        mosaic.update_keywords({ 'NAXIS1': width,
+                                 'NAXIS2': height })
+
+        # Update the WCS reference pixel with the relocation info
+        crpix1 = mosaic.get_keyword('CRPIX1')
+        crpix2 = mosaic.get_keyword('CRPIX2')
+        crpix1n, crpix2n = crpix1 + xoff, crpix2 + yoff
+        self.logger.debug("CRPIX %f,%f -> %f,%f" % (
+            crpix1, crpix2, crpix1n, crpix2n))
+        mosaic.update_keywords({ 'CRPIX1': crpix1n,
+                                 'CRPIX2': crpix2n })
+
+        # drop each image in the right place in the new data array
+        for filepath in filelist:
+            # Create and load the image
+            image = AstroImage(logger=self.logger)
+            image.load_file(filepath)
+            mosaic.mosaic_inline([ image ])
+        
+        return mosaic
+    
+    def mosaic_inline(self, imagelist):
+        """Drops new images into the current image (if there is room),
+        relocating them according the WCS between the two images.
+        """
+        # For determining our orientation
+        ra0, dec0 = self.pixtoradec(0, 0)
+        ra1, dec1 = self.pixtoradec(self.width-1, self.height-1)
+
+        ra_l = (ra0 < ra1)
+        dec_l = (dec0 < dec1)
+        
+        # drop each image in the right place in the new data array
+        newdata = self.get_data()
+        for image in imagelist:
+            name = image.get('name', 'NoName')
+            wd, ht = image.get_size()
+            data = image.get_data()
+
+            # Find orientation of image piece and orient it correctly to us
+            ra2, dec2 = image.pixtoradec(0, 0)
+            ra3, dec3 = image.pixtoradec(wd-1, ht-1)
+
+            # TODO: we need something much more sophisticated than this
+            # e.g. use a matrix transform
+            if ra_l != (ra2 < ra3):
+                data = numpy.fliplr(data)
+                ra = ra3
+            else:
+                ra = ra2
+                
+            if dec_l != (dec2 < dec3):
+                data = numpy.flipud(data)
+                dec = dec3
+            else:
+                dec = dec2
+                
+            x0, y0 = self.radectopix(ra, dec)
+            #self.logger.debug("0,0 -> %f,%f" % (x0, y0))
+            # losing WCS precision!
+            x0, y0 = int(round(x0)), int(round(y0))
+            self.logger.debug("Fitting image '%s' into mosaic at %d,%d" % (
+                name, x0, y0))
+
+            try:
+                newdata[y0:(y0+ht), x0:(x0+wd)] = data[0:ht, 0:wd]
+            except Exception, e:
+                self.logger.error("Failed to place image '%s': %s" % (
+                    name, str(e)))
+
+        self.make_callback('modified')
+    
+    def info_xy(self, data_x, data_y):
+        # Note: FITS coordinates are 1-based, whereas numpy FITS arrays
+        # are 0-based
+        fits_x, fits_y = data_x + 1, data_y + 1
+
+        # Get the value under the data coordinates
+        try:
+            # We report the value across the pixel, even though the coords
+            # change halfway across the pixel
+            value = self.get_data_xy(int(data_x+0.5), int(data_y+0.5))
+
+        except Exception, e:
+            value = None
+
+        # Calculate WCS RA, if available
+        try:
+            # NOTE: image function operates on FITS space coords?
+            ra_txt, dec_txt = self.pixtoradec(fits_x, fits_y,
+                                              format='str', coords='fits')
+        except Exception, e:
+            self.logger.warn("Bad coordinate conversion: %s" % (
+                str(e)))
+            ra_txt  = 'BAD WCS'
+            dec_txt = 'BAD WCS'
+
+        info = Bunch.Bunch(itype='astro', data_x=data_x, data_y=data_y,
+                           fits_x=fits_x, fits_y=fits_y,
+                           x=fits_x, y=fits_y,
+                           ra_txt=ra_txt, dec_txt=dec_txt,
+                           value=value)
+        return info
+                           
 #END

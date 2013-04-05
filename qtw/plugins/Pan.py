@@ -1,11 +1,9 @@
 #
 # Pan.py -- Pan plugin for fits viewer
 # 
-#[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Nov 16 13:11:06 HST 2012
-#]
+# Eric Jeschke (eric@naoj.org)
 #
-# Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
+# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -42,11 +40,10 @@ class Pan(GingaPlugin.GlobalPlugin):
         width, height = 300, 300
 
         sfi = FitsImageCanvasQt.FitsImageCanvas(logger=self.logger)
-        sfi.enable_autoscale('on')
-        sfi.set_autoscale_limits(-200, 100)
-        sfi.set_zoom_limits(-200, 100)
+        sfi.enable_autozoom('on')
+        sfi.enable_pan(False)
         sfi.enable_zoom(False)
-        sfi.enable_autolevels('off')
+        sfi.enable_autocuts('off')
         sfi.enable_draw(True)
         sfi.set_drawtype('rectangle', linestyle='dash')
         sfi.set_drawcolor('green')
@@ -83,12 +80,29 @@ class Pan(GingaPlugin.GlobalPlugin):
         panimage.set_rgbmap(rgbmap, redraw=False)
         rgbmap.add_callback('changed', self.rgbmap_cb, panimage)
         
-        fitsimage.copy_attributes(panimage, ['transforms', 'cutlevels'])
+        fitsimage.copy_attributes(panimage, ['cutlevels'])
         fitsimage.add_callback('image-set', self.new_image_cb, chinfo, paninfo)
         fitsimage.add_callback('pan-set', self.panset, chinfo, paninfo)
-        fitsimage.add_callback('cut-set', self.cutset_cb, chinfo, paninfo)
-        fitsimage.add_callback('transform', self.transform_cb, chinfo, paninfo)
-        self.logger.debug("channel %s added." % (chinfo.chname))
+
+        fitssettings = fitsimage.get_settings()
+        pansettings = panimage.get_settings()
+        
+        zoomsettings = ['zoom_algorithm', 'zoom_rate', 'scale_x_base', 'scale_y_base']
+        fitssettings.shareSettings(pansettings, zoomsettings)
+        for key in zoomsettings:
+            pansettings.getSetting(key).add_callback('set', self.zoom_cb,
+                                                     fitsimage, chinfo, paninfo)
+
+        xfrmsettings = ['flip_x', 'flip_y', 'swap_xy', 'locut', 'hicut']
+        fitssettings.shareSettings(pansettings, xfrmsettings)
+        for key in xfrmsettings:
+            pansettings.getSetting(key).add_callback('set', self.redraw_cb,
+                                                     fitsimage, chinfo, paninfo, 0.5)
+            
+        fitssettings.shareSettings(pansettings, ['rot_deg'])
+        pansettings.getSetting('rot_deg').add_callback('set', self.redraw_cb,
+                                                       fitsimage, chinfo, paninfo, 0)
+        self.logger.debug("channel %s added." % (chinfo.name))
 
     def delete_channel(self, viewer, chinfo):
         self.logger.debug("TODO: delete channel %s" % (chinfo.name))
@@ -104,8 +118,7 @@ class Pan(GingaPlugin.GlobalPlugin):
         loval, hival = fitsimage.get_cut_levels()
         paninfo.panimage.cut_levels(loval, hival, redraw=False)
         
-        data = image.get_data()
-        self.set_data(chinfo, paninfo, data)
+        self.set_image(chinfo, paninfo, image)
 
     def focus_cb(self, viewer, fitsimage):
         chname = self.fv.get_channelName(fitsimage)
@@ -128,14 +141,16 @@ class Pan(GingaPlugin.GlobalPlugin):
             width, height))
         fitsimage.zoom_fit()
         
-    # Match cut-levels to the ones in the "main" image
-    def cutset_cb(self, fitsimage, loval, hival, chinfo, paninfo):
-        paninfo.panimage.cut_levels(loval, hival)
+    def redraw_cb(self, setting, value, deg, chinfo, paninfo, whence):
+        paninfo.panimage.redraw(whence=whence)
+        self.panset(chinfo.fitsimage, chinfo, paninfo)
         return True
-
-    def transform_cb(self, fitsimage, chinfo, paninfo):
-        flipx, flipy, swapxy = chinfo.fitsimage.get_transforms()
-        paninfo.panimage.transform(flipx, flipy, swapxy)
+        
+    def zoom_cb(self, setting, value, fitsimage, chinfo, paninfo):
+        # refit the pan image, because scale factors may have changed
+        paninfo.panimage.zoom_fit(redraw=True)
+        # redraw pan info
+        self.panset(fitsimage, chinfo, paninfo)
         return True
         
     # LOGIC
@@ -143,8 +158,8 @@ class Pan(GingaPlugin.GlobalPlugin):
     def clear(self):
         self.info.panimage.clear()
 
-    def set_data(self, chinfo, paninfo, data):
-        paninfo.panimage.set_data(data)
+    def set_image(self, chinfo, paninfo, image):
+        paninfo.panimage.set_image(image)
 
         # remove old compass
         try:
@@ -153,9 +168,6 @@ class Pan(GingaPlugin.GlobalPlugin):
         except Exception:
             pass
 
-        fitsimage = chinfo.fitsimage
-        image = fitsimage.get_image()
-        
         # create compass
         try:
             (x, y, xn, yn, xe, ye) = image.calc_compass_center()
@@ -168,27 +180,34 @@ class Pan(GingaPlugin.GlobalPlugin):
             self.logger.warn("Can't calculate compass: %s" % (
                 str(e)))
 
-        self.panset(fitsimage, chinfo, paninfo)
+        self.panset(chinfo.fitsimage, chinfo, paninfo)
 
     def panset(self, fitsimage, chinfo, paninfo):
-        x1, y1, x2, y2 = fitsimage.get_data_rect()
+        x, y = fitsimage.get_pan()
+        points = fitsimage.get_pan_rect()
+
+        # calculate pan position point radius
+        image = paninfo.panimage.get_image()
+        width, height = image.get_size()
+        edgew = math.sqrt(width**2 + height**2)
+        radius = int(0.015 * edgew)
+
+        # Mark pan rectangle and pan position
         try:
             obj = paninfo.panimage.getObjectByTag(paninfo.panrect)
-            if obj.kind != 'rectangle':
+            if obj.kind != 'compound':
                 return True
-            # Update current rectangle with new coords
-            if (obj.x1, obj.y1, obj.x2, obj.y2) != (x1, y1, x2, y2):
-                self.logger.debug("starting panset")
-                obj.x1, obj.y1, obj.x2, obj.y2 = x1, y1, x2, y2
-                paninfo.panimage.redraw(whence=3)
+            point, bbox = obj.objects
+            self.logger.debug("starting panset")
+            point.x, point.y = x, y
+            point.radius = radius
+            bbox.points = points
+            paninfo.panimage.redraw(whence=3)
 
         except KeyError:
-            paninfo.panrect = paninfo.panimage.add(CanvasTypes.Rectangle(x1, y1, x2, y2))
-
-    def btndown(self, fitsimage, button, data_x, data_y):
-        if button == 0x21:
-            fitsimage = self.fv.getfocus_fitsimage()
-            fitsimage.panset_xy(data_x, data_y, redraw=False)
+            paninfo.panrect = paninfo.panimage.add(CanvasTypes.CompoundObject(
+                CanvasTypes.Point(x, y, radius=radius),
+                CanvasTypes.Polygon(points)))
 
     def panxy(self, fitsimage, button, data_x, data_y):
         """Motion event in the small fits window.  This is usually a panning
@@ -202,15 +221,30 @@ class Pan(GingaPlugin.GlobalPlugin):
         elif button & 0x1:
             # If button1 is held down this is a panning move in the small
             # window for the big window
-            data_wd, data_ht = self.info.panimage.get_data_size()
-            panx = float(data_x) / float(data_wd)
-            pany = float(data_y) / float(data_ht)
-
             bigimage = self.fv.getfocus_fitsimage()
-            return bigimage.set_pan(panx, pany)
+            return bigimage.set_pan(data_x, data_y)
 
         return False
 
+    def btndown(self, fitsimage, button, data_x, data_y):
+        bigimage = self.fv.getfocus_fitsimage()
+        if button == 0x1:
+            bigimage.panset_xy(data_x, data_y)
+        elif button == 0x21:
+            bigimage.panset_xy(data_x, data_y, redraw=False)
+
+    def zoom(self, fitsimage, direction):
+        """Scroll event in the small fits window.  Just zoom the large fits
+        window.
+        """
+        fitsimage = self.fv.getfocus_fitsimage()
+        if direction == 'up':
+            fitsimage.zoom_in()
+        elif direction == 'down':
+            fitsimage.zoom_out()
+        fitsimage.onscreen_message(fitsimage.get_scale_text(),
+                                   delay=1.0)
+        
     def draw_cb(self, fitsimage, tag):
         # Get and delete the drawn object
         obj = fitsimage.getObjectByTag(tag)
@@ -242,18 +276,6 @@ class Pan(GingaPlugin.GlobalPlugin):
 
         fitsimage.zoom_to(zoomlevel, redraw=True)
 
-    def zoom(self, fitsimage, direction):
-        """Scroll event in the small fits window.  Just zoom the large fits
-        window.
-        """
-        fitsimage = self.fv.getfocus_fitsimage()
-        if direction == 'up':
-            fitsimage.zoom_in()
-        elif direction == 'down':
-            fitsimage.zoom_out()
-        fitsimage.onscreen_message(fitsimage.get_scale_text(),
-                                   delay=1.0)
-        
         
     def __str__(self):
         return 'pan'

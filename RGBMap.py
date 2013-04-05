@@ -1,11 +1,9 @@
 #
 # RGBMap.py -- color mapping
 # 
-#[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Tue Oct  2 17:39:48 HST 2012
-#]
+# Eric Jeschke (eric@naoj.org)
 #
-# Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
+# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -58,7 +56,8 @@ class RGBMapper(Callback.Callbacks):
     def calc_cmap(self):
         clst = self.cmap.clst
         arr = numpy.array(clst).transpose() * 255.0
-        self.arr = arr.astype('uint8')
+        #self.arr = arr.astype('uint8')
+        self.arr = numpy.round(arr).astype('uint8')
         self.calc_imap()
 
     def get_rgb(self, index):
@@ -94,7 +93,7 @@ class RGBMapper(Callback.Callbacks):
         return self.hashsize
 
     def set_hash_size(self, size, callback=True):
-        assert (size > 255) and (size <= self.maxhashsize), \
+        assert (size >= 256) and (size <= self.maxhashsize), \
                RGBMapError("Bad hash size!")
         self.hashsize = size
         self.calc_hash()

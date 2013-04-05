@@ -2,7 +2,7 @@
 # RC.py -- Remote Control plugin for Ginga fits viewer
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Mon Oct 29 15:11:42 HST 2012
+#  Last edit: Mon Nov 26 22:22:13 HST 2012
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -67,14 +67,14 @@ class GingaWrapper(object):
         self.fv = fv
         self.logger = logger
 
-    def display_fitsbuf(self, fitsname, chname, data, width, height, na_type,
+    def display_fitsbuf(self, fitsname, chname, data, dims, dtype,
                         header, metadata, compressed):
         """Display a FITS image buffer.  Parameters:
         _fitsname_: name of the file
         _chname_: channel to display the data
         _data_: ascii encoded numpy containing image data
-        _width_, _height_: image dimensions in pixels
-        _na_type_: numpy data type (currently ignored)
+        _dims_: image dimensions in pixels (usually a (height, width) tuple)
+        _dtype_: numpy data type of encoding (e.g. 'float32')
         _header_: fits file header as a dictionary
         _metadata_: metadata about image to attach to image
         _compressed_: True if the data is compressed
@@ -89,14 +89,19 @@ class GingaWrapper(object):
             if compressed:
                 data = bz2.decompress(data)
 
-            if na_type == 0:
-                na_type = numpy.float32
-            data = numpy.fromstring(data, dtype=na_type)
-            data.byteswap(True)
-            data = data.reshape((height, width))
-            self.logger.debug("Received data: width=%d height=%d" % (
-                width, height))
+            if dtype == '':
+                dtype = numpy.float32
+            else:
+                # string to actual type
+                dtype = getattr(numpy, dtype)
 
+            # Create image container
+            image = AstroImage.AstroImage()
+            image.load_buffer(data, dims, dtype, byteswap=byteswap,
+                              metadata=metadata)
+            image.set(name=fitsname)
+            image.update_keywords(header)
+        
         except Exception, e:
             # Some kind of error unpacking the data
             errmsg = "Error creating image data for '%s': %s" % (
@@ -104,12 +109,6 @@ class GingaWrapper(object):
             self.logger.error(errmsg)
             raise GingaPlugin.PluginError(errmsg)
 
-        # Create image container
-        image = AstroImage.AstroImage(data, metadata=metadata,
-                                      wcsclass=wcs.BareBonesWCS)
-        image.set(name=fitsname)
-        image.update_keywords(header)
-        
         # Enqueue image to display datasrc
         self.fv.gui_do(self.fv.add_image, fitsname, image,
                             chname=chname)

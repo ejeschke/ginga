@@ -1,11 +1,9 @@
 #
 # Log.py -- Debugging plugin for fits viewer
 # 
-#[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Fri Nov 16 13:11:05 HST 2012
-#]
+# Eric Jeschke (eric@naoj.org)
 #
-# Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
+# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -90,11 +88,12 @@ class Log(GingaPlugin.GlobalPlugin):
         self.tw.appendPlainText(text)
 
         # scroll window to end of buffer
+        # TODO: need to figure out how to do this in Qt
         #self.tw.setPosition()
         #self.tw.ensureCursorVisible()
-        rect = self.tw.geometry()
-        x1, y1, x2, y2 = rect.getCoords()
-        self.tw.ensureVisible(x1, y1)
+        #rect = self.tw.geometry()
+        #x1, y1, x2, y2 = rect.getCoords()
+        #self.tw.ensureVisible(x1, y1)
 
     def clear(self):
         self.tw.clear()

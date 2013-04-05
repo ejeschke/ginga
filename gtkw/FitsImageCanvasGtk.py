@@ -2,7 +2,7 @@
 # FitsImageCanvasGtk.py -- A FITS image widget with canvas drawing in Gtk
 # 
 #[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Mon Oct  1 19:00:07 HST 2012
+#  Last edit: Wed Mar 27 13:07:29 HST 2013
 #]
 #
 # Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
@@ -18,12 +18,12 @@ from FitsImageCanvasTypesGtk import *
 class FitsImageCanvasError(FitsImageGtk.FitsImageGtkError):
     pass
 
-class FitsImageCanvas(Mixins.UIMixin, FitsImageGtk.FitsImageZoom,
+class FitsImageCanvas(FitsImageGtk.FitsImageZoom,
                       DrawingMixin, CanvasMixin, CompoundMixin):
 
-    def __init__(self, logger=None):
-        FitsImageGtk.FitsImageZoom.__init__(self, logger=logger)
-        Mixins.UIMixin.__init__(self)
+    def __init__(self, logger=None, settings=None):
+        FitsImageGtk.FitsImageZoom.__init__(self, logger=logger,
+                                            settings=settings)
         CompoundMixin.__init__(self)
         CanvasMixin.__init__(self)
         DrawingMixin.__init__(self, drawCatalog)
@@ -31,9 +31,10 @@ class FitsImageCanvas(Mixins.UIMixin, FitsImageGtk.FitsImageZoom,
         self.setSurface(self)
         self.ui_setActive(True)
 
-    def canvascoords(self, x, y, center=True):
-        a, b = self.get_canvas_xy(x, y, center=center)
-        return (a, b)
+    def canvascoords(self, data_x, data_y, center=True):
+        # data->canvas space coordinate conversion
+        x, y = self.get_canvas_xy(data_x, data_y, center=center)
+        return (x, y)
 
     def redraw_data(self, whence=0):
         super(FitsImageCanvas, self).redraw_data(whence=whence)
