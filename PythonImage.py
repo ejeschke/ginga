@@ -28,23 +28,23 @@ except ImportError:
     have_pilutil = False
 
 try:
-    from PyQt4.QtGui import QImage, QColor
-    from PyQt4 import QtCore
+    from qtw.QtHelp import QtCore, QtGui
+    QImage, QColor = QtGui.QImage, QtGui.QColor
     have_qtimage = True
-except ImportError:
+except ImportError, e:
     have_qtimage = False
 
 # For testing...
-have_qtimage = False
-# have_pilutil = False
-# have_pil = False
+#have_qtimage = False
+#have_pilutil = False
+#have_pil = False
 
-try:
-    # How about color management (ICC profile) support?
-    import ImageCms
-    have_cms = True
-except ImportError:
-    have_cms = False
+# try:
+#     # How about color management (ICC profile) support?
+#     import ImageCms
+#     have_cms = True
+# except ImportError:
+#     have_cms = False
 
 import Bunch
 from BaseImage import BaseImage, ImageError

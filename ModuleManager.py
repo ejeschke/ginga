@@ -1,11 +1,9 @@
 #
 # ModuleManager.py -- Simple class to dynamically manage module imports.
 #
-#[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Thu Apr  5 14:24:26 HST 2012
-#]
+# Eric Jeschke (eric@naoj.org)
 #
-# Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
+# Copyright (c)  Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #

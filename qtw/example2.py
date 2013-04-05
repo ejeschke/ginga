@@ -2,11 +2,9 @@
 #
 # example2.py -- Simple, configurable FITS viewer.
 #
-#[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Sat Feb  9 13:17:02 HST 2013
-#]
+# Eric Jeschke (eric@naoj.org)
 #
-# Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
+# Copyright (c)  Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #

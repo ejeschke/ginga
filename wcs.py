@@ -1,13 +1,11 @@
 #
 # wcs.py -- "Bare Bones" WCS calculations.
 #
-#[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Wed Sep 12 17:44:54 HST 2012
-#]
+# Eric Jeschke (eric@naoj.org)
 # Takeshi Inagaki
 # Bruce Bon
 #
-# Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
+# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #

@@ -20,7 +20,7 @@ See instructions for use in IRAFBase.
 """
 import IRAFBase
 
-from PyQt4 import QtGui, QtCore
+from QtHelp import QtGui, QtCore
 import QtHelp
 import FitsImageCanvasTypesQt as CanvasTypes
 

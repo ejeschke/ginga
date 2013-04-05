@@ -1,11 +1,9 @@
 #
 # FitsImageCanvasGtk.py -- A FITS image widget with canvas drawing in Gtk
 # 
-#[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Wed Mar 27 13:07:29 HST 2013
-#]
+# Eric Jeschke (eric@naoj.org)
 #
-# Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
+# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #

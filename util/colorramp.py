@@ -1,9 +1,8 @@
 #
 # Make an RGB colorramp from HS
 #
-#[ Eric Jeschke (eric@naoj.org) --
-#  Last edit: Sun Jun  5 16:33:43 HST 2011
-#]
+# Eric Jeschke (eric@naoj.org)
+#
 import sys
 import colorsys
 

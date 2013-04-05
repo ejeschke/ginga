@@ -168,11 +168,11 @@ class GingaView(QtMain.QtMain):
         # create a File pulldown menu, and add it to the menu bar
         filemenu = menubar.addMenu("File")
 
-        item = QtGui.QAction("Load Image", menubar)
+        item = QtGui.QAction(QString("Load Image"), menubar)
         item.triggered.connect(self.gui_load_file)
         filemenu.addAction(item)
 
-        item = QtGui.QAction("Save image as PNG", menubar)
+        item = QtGui.QAction(QString("Save image as PNG"), menubar)
         item.triggered.connect(lambda: self.save_file('/tmp/fitsimage.png',
                                                       'png'))
         filemenu.addAction(item)
@@ -181,18 +181,18 @@ class GingaView(QtMain.QtMain):
         sep.setSeparator(True)
         filemenu.addAction(sep)
         
-        item = QtGui.QAction("Quit", menubar)
+        item = QtGui.QAction(QString("Quit"), menubar)
         item.triggered.connect(self.windowClose)
         filemenu.addAction(item)
 
         # create a Channel pulldown menu, and add it to the menu bar
         chmenu = menubar.addMenu("Channel")
 
-        item = QtGui.QAction("Add Channel", menubar)
+        item = QtGui.QAction(QString("Add Channel"), menubar)
         item.triggered.connect(self.gui_add_channel)
         chmenu.addAction(item)
         
-        item = QtGui.QAction("Delete Channel", menubar)
+        item = QtGui.QAction(QString("Delete Channel"), menubar)
         item.triggered.connect(self.gui_delete_channel)
         chmenu.addAction(item)
 
@@ -227,7 +227,7 @@ class GingaView(QtMain.QtMain):
         # create a Help pulldown menu, and add it to the menu bar
         helpmenu = menubar.addMenu("Help")
 
-        item = QtGui.QAction("About", menubar)
+        item = QtGui.QAction(QString("About"), menubar)
         item.triggered.connect(self.banner)
         helpmenu.addAction(item)
         

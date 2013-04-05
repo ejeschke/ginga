@@ -7,8 +7,8 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-from QtHelp import QtGui, QtCore
 import math
+from QtHelp import QtGui, QtCore
 
 import cmap, imap
 import QtHelp
