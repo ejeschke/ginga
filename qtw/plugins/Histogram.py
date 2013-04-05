@@ -89,7 +89,7 @@ class Histogram(GingaPlugin.LocalPlugin):
         #btns.set_child_size(15, -1)
 
         btn = QtGui.QPushButton("Close")
-        btn.clicked.connect(lambda w: self.close())
+        btn.clicked.connect(self.close)
         layout.addWidget(btn, stretch=0, alignment=QtCore.Qt.AlignLeft)
         btn = QtGui.QPushButton("Full Image")
         btn.clicked.connect(lambda w: self.full_image())

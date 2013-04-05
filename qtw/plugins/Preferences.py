@@ -357,7 +357,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         btn.clicked.connect(lambda w: self.save_preferences())
         layout.addWidget(btn, stretch=0, alignment=QtCore.Qt.AlignLeft)
         btn = QtGui.QPushButton("Close")
-        btn.clicked.connect(lambda w: self.close())
+        btn.clicked.connect(self.close)
         layout.addWidget(btn, stretch=0, alignment=QtCore.Qt.AlignLeft)
         vbox.addWidget(btns, stretch=0, alignment=QtCore.Qt.AlignLeft)
 

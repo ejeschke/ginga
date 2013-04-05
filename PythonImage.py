@@ -35,7 +35,7 @@ except ImportError, e:
     have_qtimage = False
 
 # For testing...
-#have_qtimage = False
+have_qtimage = False
 #have_pilutil = False
 #have_pil = False
 

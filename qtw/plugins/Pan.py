@@ -48,7 +48,8 @@ class Pan(GingaPlugin.GlobalPlugin):
         sfi.set_drawtype('rectangle', linestyle='dash')
         sfi.set_drawcolor('green')
         sfi.set_callback('draw-event', self.draw_cb)
-        sfi.define_cursor('pick', QtGui.QCursor(QtCore.Qt.OpenHandCursor))
+        # Causes a segfault on Ubuntu 12.04 with PySide
+        #sfi.define_cursor('pick', QtGui.QCursor(QtCore.Qt.OpenHandCursor))
         ## sfi.enable_cuts(False)
         sfi.set_bg(0.4, 0.4, 0.4)
         sfi.set_callback('button-press', self.btndown)

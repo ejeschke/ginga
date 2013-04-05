@@ -192,7 +192,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
         self.w.buttons = btns
 
         btn = QtGui.QPushButton("Close")
-        btn.clicked.connect(lambda w: self.close())
+        btn.clicked.connect(self.close)
         btns.addWidget(btn, stretch=0, alignment=QtCore.Qt.AlignLeft)
 
         if future:
@@ -721,7 +721,7 @@ class CatalogListing(object):
 
         self.btn.plot.clicked.connect(lambda w: self.replot_stars())
         self.btn.clear.clicked.connect(lambda w: self.clear())
-        #self.btn.close.clicked.connect(lambda w: self.close())
+        #self.btn.close.clicked.connect(self.close)
 
         vbox.addWidget(btns, stretch=0, alignment=QtCore.Qt.AlignTop)
         

@@ -379,12 +379,14 @@ class RenderMixin(object):
         self.fitsimage.leave_notify_event(self, event)
     
     def keyPressEvent(self, event):
+        print "key press event"
         self.fitsimage.key_press_event(self, event)
         
     def keyReleaseEvent(self, event):
         self.fitsimage.key_release_event(self, event)
         
     def mousePressEvent(self, event):
+        print "mouse down event", event
         self.fitsimage.button_press_event(self, event)
 
     def mouseReleaseEvent(self, event):
@@ -401,6 +403,7 @@ class RenderMixin(object):
 #             event.accept()
 #         else:
 #             event.ignore()
+        print "drag enter accept event"
         event.accept()
 
     def dragMoveEvent(self, event):
@@ -408,16 +411,17 @@ class RenderMixin(object):
 #             event.accept()
 #         else:
 #             event.ignore()
+        print "drag move accept event"
         event.accept()
 
     def dropEvent(self, event):
         self.fitsimage.drop_event(self, event)
 
     
-class RenderWidgetZoom(RenderWidget, RenderMixin):
+class RenderWidgetZoom(RenderMixin, RenderWidget):
     pass
 
-class RenderGraphicsViewZoom(RenderGraphicsView, RenderMixin):
+class RenderGraphicsViewZoom(RenderMixin, RenderGraphicsView):
     pass
 
 class FitsImageEvent(FitsImageQt):
@@ -457,9 +461,11 @@ class FitsImageEvent(FitsImageQt):
         self.kbdmouse_mask = 0
 
         # Define cursors for pick and pan
-        self.define_cursor('pan', QtGui.QCursor(QtCore.Qt.OpenHandCursor))
+        # Causes a segfault on Ubuntu 12.04 with PySide
+        #self.define_cursor('pan', QtGui.QCursor(QtCore.Qt.OpenHandCursor))
         co = thinCrossCursor('aquamarine')
         self.define_cursor('pick', co.cur)
+        self.define_cursor('pan', co.cur)
 
         # @$%&^(_)*&^ qt!!
         self._keytbl = {
@@ -482,7 +488,6 @@ class FitsImageEvent(FitsImageQt):
                      'scroll', 'map', 'focus', 'enter', 'leave',
                      ):
             self.enable_callback(name)
-
 
     def transkey(self, keycode, keyname):
         self.logger.debug("keycode=%d keyname='%s'" % (
@@ -621,6 +626,7 @@ class FitsImageEvent(FitsImageQt):
         return self.make_callback('scroll', direction)
 
     def drop_event(self, widget, event):
+        print "DROPEVENT"
         dropdata = event.mimeData()
         formats = map(str, list(dropdata.formats()))
         self.logger.debug("available formats of dropped data are %s" % (
@@ -641,7 +647,7 @@ class FitsImageZoom(Mixins.UIMixin, FitsImageEvent,
                                 render=render)
         Mixins.UIMixin.__init__(self)
         Mixins.FitsImageZoomMixin.__init__(self)
-        
+
         
 class thinCrossCursor(object):
     def __init__(self, color='red'):

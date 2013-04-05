@@ -43,6 +43,7 @@ class FitsViewer(QtGui.QMainWindow):
         fi.set_callback('drag-drop', self.drop_file)
         fi.set_callback('motion', self.motion)
         fi.set_bg(0.2, 0.2, 0.2)
+        fi.ui_setActive(True)
         self.fitsimage = fi
 
         w = fi.get_widget()
@@ -118,12 +119,17 @@ class FitsViewer(QtGui.QMainWindow):
         self.setWindowTitle(filepath)
 
     def open_file(self):
-        fileName = QtGui.QFileDialog.getOpenFileName(self, "Open FITS file",
+        res = QtGui.QFileDialog.getOpenFileName(self, "Open FITS file",
                                                      ".", "FITS files (*.fits)")
-        self.load_file(str(fileName))
+        if isinstance(res, tuple):
+            fileName = res[0].encode('ascii')
+        else:
+            fileName = str(res)
+        self.load_file(fileName)
 
     def drop_file(self, fitsimage, paths):
         fileName = paths[0]
+        print fileName
         self.load_file(fileName)
 
     def motion(self, fitsimage, button, data_x, data_y):

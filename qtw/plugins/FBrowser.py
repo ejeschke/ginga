@@ -85,7 +85,7 @@ class FBrowser(GingaPlugin.LocalPlugin):
         layout.setSpacing(3)
 
         btn = QtGui.QPushButton("Close")
-        btn.clicked.connect(lambda w: self.close())
+        btn.clicked.connect(self.close)
         layout.addWidget(btn, stretch=0, alignment=QtCore.Qt.AlignLeft)
         btn = QtGui.QPushButton("Refresh")
         btn.clicked.connect(lambda w: self.refresh())

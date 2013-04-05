@@ -95,7 +95,7 @@ global_plugins = [
 local_plugins = [
     Bunch(module='Pick', ws='dialogs', shortkey='f1'),
     Bunch(module='Ruler', ws='dialogs', shortkey='f2'),
-    Bunch(module='Layers', ws='dialogs', shortkey='f3'),
+    #Bunch(module='Layers', ws='dialogs', shortkey='f3'),
     Bunch(module='MultiDim', ws='dialogs', shortkey='f4'),
     Bunch(module='Cuts', ws='dialogs', shortkey='f5'),
     Bunch(module='Histogram', ws='dialogs', shortkey='f6'),
