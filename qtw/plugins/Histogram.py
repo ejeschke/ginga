@@ -92,7 +92,7 @@ class Histogram(GingaPlugin.LocalPlugin):
         btn.clicked.connect(self.close)
         layout.addWidget(btn, stretch=0, alignment=QtCore.Qt.AlignLeft)
         btn = QtGui.QPushButton("Full Image")
-        btn.clicked.connect(lambda w: self.full_image())
+        btn.clicked.connect(self.full_image)
         layout.addWidget(btn, stretch=0, alignment=QtCore.Qt.AlignLeft)
 
         vbox1.addWidget(btns, stretch=0, alignment=QtCore.Qt.AlignLeft)

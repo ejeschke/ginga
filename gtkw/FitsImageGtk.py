@@ -300,10 +300,13 @@ class FitsImageGtk(FitsImage.FitsImageBase):
     def set_cursor(self, cursor):
         win = self.imgwin.window
         if win != None:
-            win.set_cursor(cursor)
+            win.set_cursor(cursor.cur)
         
     def define_cursor(self, ctype, cursor):
         self.cursor[ctype] = cursor
+        
+    def get_cursor(self, ctype):
+        return self.cursor[ctype]
         
     def switch_cursor(self, ctype):
         self.set_cursor(self.cursor[ctype])
@@ -463,9 +466,10 @@ class FitsImageEvent(FitsImageGtk):
             }
         
         # Define cursors for pick and pan
-        self.define_cursor('pan', gtk.gdk.Cursor(gtk.gdk.FLEUR))
-        co = thinCrossCursor('aquamarine')
-        self.define_cursor('pick', co.cur)
+        hand = openHandCursor()
+        self.define_cursor('pan', hand)
+        cross = thinCrossCursor('aquamarine')
+        self.define_cursor('pick', cross)
 
         for name in ('motion', 'button-press', 'button-release',
                      'key-press', 'key-release', 'drag-drop', 
@@ -674,5 +678,36 @@ class thinCrossCursor(object):
         display = gtk.gdk.display_get_default()
         self.cur = gtk.gdk.Cursor(display, pixbuf, 8, 8)
         
+
+class openHandCursor(object):
+    def __init__(self, color='red'):
+
+        self.xpm_data = [
+            "16 16 3 1 ",
+            "  c black",
+            ". c gray100",
+            "X c None",
+            "XXXXXXX  XXXXXXX",
+            "XXX  X ..   XXXX",
+            "XX ..  .. .. XXX",
+            "XX ..  .. .. X X",
+            "XXX .. .. ..  . ",
+            "XXX .. .. .. .. ",
+            "X  . ....... .. ",
+            " ..  .......... ",
+            " ... ......... X",
+            "X ............ X",
+            "XX ........... X",
+            "XX .......... XX",
+            "XXX ......... XX",
+            "XXXX ....... XXX",
+            "XXXXX ...... XXX",
+            "XXXXXXXXXXXXXXXX"
+            ]
+        pixbuf = gtk.gdk.pixbuf_new_from_xpm_data(self.xpm_data)
+
+        # Is this always going to be the correct display?  Does it matter?
+        display = gtk.gdk.display_get_default()
+        self.cur = gtk.gdk.Cursor(display, pixbuf, 8, 8)
 
 #END

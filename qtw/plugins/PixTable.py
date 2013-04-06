@@ -104,12 +104,12 @@ class PixTable(GingaPlugin.LocalPlugin):
         layout.addWidget(cbox2, stretch=0, alignment=QtCore.Qt.AlignLeft)
 
         btn1 = QtGui.QPushButton("Delete")
-        btn1.clicked.connect(lambda w: self.clear_mark_cb())
+        btn1.clicked.connect(self.clear_mark_cb)
         btn1.setToolTip("Delete selected mark")
         layout.addWidget(btn1, stretch=0, alignment=QtCore.Qt.AlignLeft)
         
         btn2 = QtGui.QPushButton("Delete All")
-        btn2.clicked.connect(lambda w: self.clear_all())
+        btn2.clicked.connect(self.clear_all)
         btn2.setToolTip("Clear all marks")
         layout.addWidget(btn2, stretch=0, alignment=QtCore.Qt.AlignLeft)
 

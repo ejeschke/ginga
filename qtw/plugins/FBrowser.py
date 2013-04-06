@@ -88,10 +88,10 @@ class FBrowser(GingaPlugin.LocalPlugin):
         btn.clicked.connect(self.close)
         layout.addWidget(btn, stretch=0, alignment=QtCore.Qt.AlignLeft)
         btn = QtGui.QPushButton("Refresh")
-        btn.clicked.connect(lambda w: self.refresh())
+        btn.clicked.connect(self.refresh)
         layout.addWidget(btn, stretch=0, alignment=QtCore.Qt.AlignLeft)
         btn = QtGui.QPushButton("Make Thumbs")
-        btn.clicked.connect(lambda w: self.make_thumbs())
+        btn.clicked.connect(self.make_thumbs)
         layout.addWidget(btn, stretch=0, alignment=QtCore.Qt.AlignLeft)
 
         vbox.addWidget(btns, stretch=0, alignment=QtCore.Qt.AlignLeft)

@@ -93,7 +93,7 @@ class Drawing(GingaPlugin.LocalPlugin):
         combobox.setCurrentIndex(index)
         combobox.activated.connect(self.set_drawparams)
 
-        b.clear_canvas.clicked.connect(lambda w: self.clear_canvas())
+        b.clear_canvas.clicked.connect(self.clear_canvas)
 
         fr.layout().addWidget(w, stretch=1, alignment=QtCore.Qt.AlignLeft)
         vbox1.addWidget(fr, stretch=0, alignment=QtCore.Qt.AlignTop)

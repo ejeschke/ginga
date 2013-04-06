@@ -167,7 +167,8 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         ## vbox.addWidget(imglbl,  1, 0)
         vbox.addWidget(namelbl, stretch=0)
         vbox.addWidget(imglbl,  stretch=0)
-        widget.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed))
+        widget.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed,
+                                               QtGui.QSizePolicy.Fixed))
         #widget.show()
         bnch = Bunch.Bunch(widget=widget, image=imgwin, layout=vbox,
                            imglbl=imglbl, name=name, chname=chname,

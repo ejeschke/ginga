@@ -28,7 +28,8 @@ if toolkit in ('pyqt4', 'choose'):
             pass
 
         QString = QtCore.QString
-        os.environ['QT_API'] = 'pyqt4'
+        # for Matplotlib
+        os.environ['QT_API'] = 'pyqt'
     except ImportError:
         pass
 
@@ -42,6 +43,7 @@ if toolkit in ('pyside', 'choose') and (not has_pyqt4):
             pass
 
         QString = str
+        # for Matplotlib
         os.environ['QT_API'] = 'pyside'
     except ImportError:
         pass
@@ -68,22 +70,6 @@ class TopLevel(QtGui.QWidget):
     
 class TabWidget(QtGui.QTabWidget):
     pass
-
-    ## def mousePressEvent(*args):
-    ##     print "mouse press", args
-        
-    ## def mouseMoveEvent(*args):
-    ##     print "mouse move", args
-        
-    ## def dragEnterEvent(*args):
-    ##     print "drag enter", args
-        
-    ## def dropEvent(*args):
-    ##     print "drop", args
-        
-    ## def tabCloseRequested(*args):
-    ##     print "close", args
-        
 
 class StackedWidget(QtGui.QStackedWidget):
 

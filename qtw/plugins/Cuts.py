@@ -84,12 +84,12 @@ class Cuts(GingaPlugin.LocalPlugin):
         hbox.addWidget(combobox)
 
         btn = QtGui.QPushButton("Delete")
-        btn.clicked.connect(lambda w: self.delete_cut_cb())
+        btn.clicked.connect(self.delete_cut_cb)
         btn.setToolTip("Delete selected cut")
         hbox.addWidget(btn)
         
         btn = QtGui.QPushButton("Delete All")
-        btn.clicked.connect(lambda w: self.delete_all())
+        btn.clicked.connect(self.delete_all)
         btn.setToolTip("Clear all cuts")
         hbox.addWidget(btn)
         

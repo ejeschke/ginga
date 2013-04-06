@@ -292,10 +292,13 @@ class FitsImageQt(FitsImage.FitsImageBase):
 
     def set_cursor(self, cursor):
         if self.imgwin:
-            self.imgwin.setCursor(cursor)
+            self.imgwin.setCursor(cursor.cur)
         
     def define_cursor(self, ctype, cursor):
         self.cursor[ctype] = cursor
+        
+    def get_cursor(self, ctype):
+        return self.cursor[ctype]
         
     def switch_cursor(self, ctype):
         self.set_cursor(self.cursor[ctype])
@@ -316,6 +319,7 @@ class FitsImageQt(FitsImage.FitsImageBase):
 		fmt = QtGui.QImage.Format_ARGB32
 
 	result = QtGui.QImage(bgra.data, w, h, fmt)
+        # Need to hang on to a reference to the array
 	result.ndarray = bgra
         return result
 
@@ -379,14 +383,12 @@ class RenderMixin(object):
         self.fitsimage.leave_notify_event(self, event)
     
     def keyPressEvent(self, event):
-        print "key press event"
         self.fitsimage.key_press_event(self, event)
         
     def keyReleaseEvent(self, event):
         self.fitsimage.key_release_event(self, event)
         
     def mousePressEvent(self, event):
-        print "mouse down event", event
         self.fitsimage.button_press_event(self, event)
 
     def mouseReleaseEvent(self, event):
@@ -403,7 +405,6 @@ class RenderMixin(object):
 #             event.accept()
 #         else:
 #             event.ignore()
-        print "drag enter accept event"
         event.accept()
 
     def dragMoveEvent(self, event):
@@ -411,7 +412,6 @@ class RenderMixin(object):
 #             event.accept()
 #         else:
 #             event.ignore()
-        print "drag move accept event"
         event.accept()
 
     def dropEvent(self, event):
@@ -461,11 +461,10 @@ class FitsImageEvent(FitsImageQt):
         self.kbdmouse_mask = 0
 
         # Define cursors for pick and pan
-        # Causes a segfault on Ubuntu 12.04 with PySide
-        #self.define_cursor('pan', QtGui.QCursor(QtCore.Qt.OpenHandCursor))
-        co = thinCrossCursor('aquamarine')
-        self.define_cursor('pick', co.cur)
-        self.define_cursor('pan', co.cur)
+        hand = openHandCursor()
+        self.define_cursor('pan', hand)
+        cross = thinCrossCursor('aquamarine')
+        self.define_cursor('pick', cross)
 
         # @$%&^(_)*&^ qt!!
         self._keytbl = {
@@ -626,7 +625,6 @@ class FitsImageEvent(FitsImageQt):
         return self.make_callback('scroll', direction)
 
     def drop_event(self, widget, event):
-        print "DROPEVENT"
         dropdata = event.mimeData()
         formats = map(str, list(dropdata.formats()))
         self.logger.debug("available formats of dropped data are %s" % (
@@ -678,5 +676,18 @@ class thinCrossCursor(object):
         pm.setAlphaChannel(mask)
         self.cur = QtGui.QCursor(pm, 8, 8)
         
+
+class openHandCursor(object):
+    def __init__(self, color='red'):
+
+        self.png_data = "\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x10\x00\x00\x00\x10\x08\x04\x00\x00\x00\xb5\xfa7\xea\x00\x00\x00\tpHYs\x00\x00\x0b\x89\x00\x00\x0b\x89\x017\xc9\xcb\xad\x00\x00\x00RIDAT(\xcf\x85\xd0\xe1\x0e\x00\x10\x08\x85\xd1\xef\xfd_\xfa\xfa\x81tW\x96&\x9b\x0e\x1aD\x0e\x84\xeaN\x14\x90t\xeb\x06^a\xaf'\xcf`O#9#\xe5V*\x88~\xae\xf5\x11\xc0\xdfWa`'\xca-$\xf2\x05\x7f2\x00d_=\x80J\xec\xab;\xd2\x80>\x16x0t\x9a\xaf\x1e\xaab\x00\x00\x00\x00IEND\xaeB`\x82"
+        pm = QtGui.QPixmap(16,16)
+        mask = QtGui.QBitmap(16,16)
+        white = QtCore.Qt.color0
+
+        pm.loadFromData(self.png_data)
+        mask.fill(white)
+        pm.setAlphaChannel(mask)
+        self.cur = QtGui.QCursor(pm, 8, 8)
 
 #END

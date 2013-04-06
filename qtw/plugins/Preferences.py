@@ -81,7 +81,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.w.imap_choice = b.intensity
         self.w.calg_choice = b.algorithm
         self.w.table_size = b.table_size
-        b.color_defaults.clicked.connect(lambda w: self.set_default_maps())
+        b.color_defaults.clicked.connect(self.set_default_maps)
         b.colormap.setToolTip("Choose a color map for this image")
         b.intensity.setToolTip("Choose an intensity map for this image")
         b.algorithm.setToolTip("Choose a color mapping algorithm")
@@ -254,7 +254,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         b.swap_xy.setToolTip("Swap the X and Y axes in the image")
         b.rotate.setToolTip("Rotate the image around the pan position")
         b.restore.setToolTip("Clear any transforms and center image")
-        b.restore.clicked.connect(lambda w: self.restore_cb())
+        b.restore.clicked.connect(self.restore_cb)
 
         b.rotate.setRange(0.00, 359.99999999)
         b.rotate.setValue(0.00)
@@ -354,7 +354,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         #layout.set_child_size(15, -1)
 
         btn = QtGui.QPushButton("Save Settings")
-        btn.clicked.connect(lambda w: self.save_preferences())
+        btn.clicked.connect(self.save_preferences)
         layout.addWidget(btn, stretch=0, alignment=QtCore.Qt.AlignLeft)
         btn = QtGui.QPushButton("Close")
         btn.clicked.connect(self.close)

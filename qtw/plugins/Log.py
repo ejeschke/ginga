@@ -63,7 +63,7 @@ class Log(GingaPlugin.GlobalPlugin):
         hbox.addWidget(spinbox, stretch=0)
         
         btn = QtGui.QPushButton("Clear")
-        btn.clicked.connect(lambda w: self.clear())
+        btn.clicked.connect(self.clear)
         hbox.addWidget(btn, stretch=0)
         container.addWidget(hbox, stretch=0)
 

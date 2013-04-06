@@ -89,7 +89,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
                     ('Get Image', 'button'))
         w, b = QtHelp.build_info(captions)
         self.w.update(b)
-        self.w.get_image.clicked.connect(lambda w: self.getimage_cb())
+        self.w.get_image.clicked.connect(self.getimage_cb)
         self.w.use_dss_channel.setChecked(self.use_dss_channel)
         self.w.use_dss_channel.stateChanged.connect(self.use_dss_channel_cb)
 
@@ -121,7 +121,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
                     ('Limit stars to area', 'checkbutton'),
                     ('Search', 'button'))
         w, self.w2 = QtHelp.build_info(captions)
-        self.w2.search.clicked.connect(lambda w: self.getcatalog_cb())
+        self.w2.search.clicked.connect(self.getcatalog_cb)
         self.w2.limit_stars_to_area.setChecked(self.limit_stars_to_area)
         self.w2.limit_stars_to_area.stateChanged.connect(self.limit_area_cb)
 
@@ -147,7 +147,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
         btns.setSpacing(5)
         
         btn = QtGui.QPushButton("Set parameters from entire image")
-        btn.clicked.connect(lambda w: self.setfromimage())
+        btn.clicked.connect(self.setfromimage)
         btns.addWidget(btn, stretch=0, alignment=QtCore.Qt.AlignCenter)
         vbox0.addWidget(btns, stretch=0, alignment=QtCore.Qt.AlignTop)
 
@@ -719,8 +719,8 @@ class CatalogListing(object):
             btns.addWidget(btn, stretch=0, alignment=QtCore.Qt.AlignCenter)
             self.btn[name.lower()] = btn
 
-        self.btn.plot.clicked.connect(lambda w: self.replot_stars())
-        self.btn.clear.clicked.connect(lambda w: self.clear())
+        self.btn.plot.clicked.connect(self.replot_stars)
+        self.btn.clear.clicked.connect(self.clear)
         #self.btn.close.clicked.connect(self.close)
 
         vbox.addWidget(btns, stretch=0, alignment=QtCore.Qt.AlignTop)

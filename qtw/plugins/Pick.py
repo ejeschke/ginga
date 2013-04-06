@@ -196,7 +196,7 @@ class Pick(GingaPlugin.LocalPlugin):
         self.w.update(b)
         b.zoom.setText(self.fv.scale2text(di.get_scale()))
         self.wdetail = b
-        b.default_region.clicked.connect(lambda w: self.reset_region())
+        b.default_region.clicked.connect(self.reset_region)
         b.default_region.setToolTip("Reset region size to default")
 
         vbox2.addWidget(w, stretch=1)
@@ -330,7 +330,7 @@ class Pick(GingaPlugin.LocalPlugin):
         b.lbl_max_side.setText(str(self.max_side))
         b.max_side.valueChanged.connect(chg_max_side)
 
-        b.redo_pick.clicked.connect(lambda w: self.redo())
+        b.redo_pick.clicked.connect(self.redo)
 
         nb.addTab(w, "Settings")
 
@@ -349,12 +349,12 @@ class Pick(GingaPlugin.LocalPlugin):
 
         b.sky_cut.setEnabled(False)
         self.w.btn_sky_cut = b.sky_cut
-        self.w.btn_sky_cut.clicked.connect(lambda w: self.sky_cut())
+        self.w.btn_sky_cut.clicked.connect(self.sky_cut)
         self.w.sky_cut_delta = b.delta_sky
         b.delta_sky.setText(str(self.delta_sky))
         b.bright_cut.setEnabled(False)
         self.w.btn_bright_cut = b.bright_cut
-        self.w.btn_bright_cut.clicked.connect(lambda w: self.bright_cut())
+        self.w.btn_bright_cut.clicked.connect(self.bright_cut)
         self.w.bright_cut_delta = b.delta_bright
         b.delta_bright.setText(str(self.delta_bright))
 
