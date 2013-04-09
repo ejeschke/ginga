@@ -20,6 +20,10 @@ has_pyside = False
 
 if toolkit in ('pyqt4', 'choose'):
     try:
+        import sip
+        for cl in ('QString', ):
+            sip.setapi(cl, 2)
+
         from PyQt4 import QtCore, QtGui
         has_pyqt4 = True
         try:
@@ -27,7 +31,6 @@ if toolkit in ('pyqt4', 'choose'):
         except ImportError:
             pass
 
-        QString = QtCore.QString
         # for Matplotlib
         os.environ['QT_API'] = 'pyqt'
     except ImportError:
@@ -42,7 +45,6 @@ if toolkit in ('pyside', 'choose') and (not has_pyqt4):
         except ImportError:
             pass
 
-        QString = str
         # for Matplotlib
         os.environ['QT_API'] = 'pyside'
     except ImportError:
@@ -288,7 +290,7 @@ class Desktop(Callback.Callbacks):
         tabnames = self.tab.keys()
         tabnames.sort()
         for tabname in tabnames:
-            item = QtGui.QAction(QString(tabname), nb)
+            item = QtGui.QAction(tabname, nb)
             item.triggered.connect(self._mk_take_tab_cb(tabname, nb))
             submenu.addAction(item)
 
@@ -374,7 +376,7 @@ class Desktop(Callback.Callbacks):
         # create a Window pulldown menu, and add it to the menu bar
         winmenu = menubar.addMenu("Window")
 
-        ## item = QtGui.QAction(QString("Take Tab"), menubar)
+        ## item = QtGui.QAction("Take Tab", menubar)
         ## item.triggered.connect(self.gui_load_file)
         ## winmenu.addAction(item)
 
@@ -382,7 +384,7 @@ class Desktop(Callback.Callbacks):
         sep.setSeparator(True)
         winmenu.addAction(sep)
         
-        quititem = QtGui.QAction(QString("Quit"), menubar)
+        quititem = QtGui.QAction("Quit", menubar)
         winmenu.addAction(quititem)
 
         bnch = self.make_ws(group=1)

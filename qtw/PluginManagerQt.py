@@ -10,7 +10,7 @@
 import sys
 import threading
 import traceback
-from QtHelp import QtGui, QtCore, QString
+from QtHelp import QtGui, QtCore
 import QtHelp
 import Bunch
 import Future
@@ -118,10 +118,10 @@ class PluginManager(object):
             lbl.mousePressEvent = lambda event: lbl.emit(QtCore.SIGNAL("clicked"))
 
             menu = QtGui.QMenu()
-            item = QtGui.QAction(QString("Focus"), menu)
+            item = QtGui.QAction("Focus", menu)
             item.triggered.connect(lambda: self.set_focus(lname))
             menu.addAction(item)
-            item = QtGui.QAction(QString("Stop"), menu)
+            item = QtGui.QAction("Stop", menu)
             item.triggered.connect(lambda: self.deactivate(lname))
             menu.addAction(item)
             

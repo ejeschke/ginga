@@ -13,7 +13,7 @@ import Queue
 import traceback
 
 # GUI imports
-from QtHelp import QtGui, QtCore, QString
+from QtHelp import QtGui, QtCore
 
 import Bunch
 
@@ -168,11 +168,11 @@ class GingaView(QtMain.QtMain):
         # create a File pulldown menu, and add it to the menu bar
         filemenu = menubar.addMenu("File")
 
-        item = QtGui.QAction(QString("Load Image"), menubar)
+        item = QtGui.QAction("Load Image", menubar)
         item.triggered.connect(self.gui_load_file)
         filemenu.addAction(item)
 
-        item = QtGui.QAction(QString("Save image as PNG"), menubar)
+        item = QtGui.QAction("Save image as PNG", menubar)
         item.triggered.connect(lambda: self.save_file('/tmp/fitsimage.png',
                                                       'png'))
         filemenu.addAction(item)
@@ -181,25 +181,25 @@ class GingaView(QtMain.QtMain):
         sep.setSeparator(True)
         filemenu.addAction(sep)
         
-        item = QtGui.QAction(QString("Quit"), menubar)
+        item = QtGui.QAction("Quit", menubar)
         item.triggered.connect(self.windowClose)
         filemenu.addAction(item)
 
         # create a Channel pulldown menu, and add it to the menu bar
         chmenu = menubar.addMenu("Channel")
 
-        item = QtGui.QAction(QString("Add Channel"), menubar)
+        item = QtGui.QAction("Add Channel", menubar)
         item.triggered.connect(self.gui_add_channel)
         chmenu.addAction(item)
         
-        item = QtGui.QAction(QString("Delete Channel"), menubar)
+        item = QtGui.QAction("Delete Channel", menubar)
         item.triggered.connect(self.gui_delete_channel)
         chmenu.addAction(item)
 
         # create a Window pulldown menu, and add it to the menu bar
         winmenu = menubar.addMenu("Window")
 
-        item = QtGui.QAction(QString("New Workspace"), menubar)
+        item = QtGui.QAction("New Workspace", menubar)
         item.triggered.connect(self.gui_add_ws)
         winmenu.addAction(item)
         
@@ -209,25 +209,25 @@ class GingaView(QtMain.QtMain):
         ## # create a Workspace pulldown menu, and add it to the menu bar
         ## wsmenu = menubar.addMenu("Workspace")
 
-        ## item = QtGui.QAction(QString("Panes as Tabs"), menubar)
+        ## item = QtGui.QAction("Panes as Tabs", menubar)
         ## item.triggered.connect(self.tabstoggle_cb)
         ## item.setCheckable(True)
         ## # TODO: check the state of the workspace first
         ## item.setChecked(True)
         ## wsmenu.addAction(item)
         
-        ## item = QtGui.QAction(QString("Tile Panes"), menubar)
+        ## item = QtGui.QAction("Tile Panes", menubar)
         ## item.triggered.connect(self.tile_panes_cb)
         ## wsmenu.addAction(item)
         
-        ## item = QtGui.QAction(QString("Cascade Panes"), menubar)
+        ## item = QtGui.QAction("Cascade Panes", menubar)
         ## item.triggered.connect(self.cascade_panes_cb)
         ## wsmenu.addAction(item)
         
         # create a Help pulldown menu, and add it to the menu bar
         helpmenu = menubar.addMenu("Help")
 
-        item = QtGui.QAction(QString("About"), menubar)
+        item = QtGui.QAction("About", menubar)
         item.triggered.connect(self.banner)
         helpmenu.addAction(item)
         
@@ -297,7 +297,7 @@ class GingaView(QtMain.QtMain):
 
     def add_operation(self, title):
         opmenu = self.w.operation
-        item = QtGui.QAction(QString(title), opmenu)
+        item = QtGui.QAction(title, opmenu)
         item.triggered.connect(lambda: self.start_operation_cb(title))
         opmenu.addAction(item)
         self.operations.append(title)
@@ -603,11 +603,9 @@ class GingaView(QtMain.QtMain):
         """
         self.stop()
 
-        # NOTE: root doesn't actually have a close() method, but this
-        # seems to work around a segfault at exit in PyQt4 4.7.2
         root = self.w.root
         self.w.root = None
-        root.close()
+        root.deleteLater()
 
     def channel_select_cb(self, index):
         if index >= 0:

@@ -10,6 +10,8 @@
 import sys, time
 import numpy
 import mimetypes
+import os
+import hashlib
 
 try:
     # do we have Python Imaging Library available?
@@ -34,20 +36,28 @@ try:
 except ImportError, e:
     have_qtimage = False
 
+try:
+    # How about color management (ICC profile) support?
+    import ImageCms
+    have_cms = True
+except ImportError:
+    have_cms = False
+
 # For testing...
-have_qtimage = False
+#have_qtimage = False
 #have_pilutil = False
 #have_pil = False
-
-# try:
-#     # How about color management (ICC profile) support?
-#     import ImageCms
-#     have_cms = True
-# except ImportError:
-#     have_cms = False
+#have_cms = False
 
 import Bunch
 from BaseImage import BaseImage, ImageError
+
+try:
+    basedir = os.environ['GINGA_HOME']
+except KeyError:
+    basedir = os.path.join(os.environ['HOME'], '.ginga')
+working_profile = os.path.join(basedir, "working.icc")
+
 
 class PythonImage(BaseImage):
 
@@ -57,9 +67,6 @@ class PythonImage(BaseImage):
 
         data_np = self._imload(filepath, kwds)
 
-        ## if have_cms:
-        ##     image = ImageCms.profileToProfile(image, in_profile,
-        ##                                       working_profile)
         self.set_data(data_np, metadata=metadata)
         self.set(exif=kwds)
 
@@ -156,15 +163,45 @@ class PythonImage(BaseImage):
             # return EXIF info, where QImage will not.
             means = 'PIL'
             image = Image.open(filepath)
-            data_np = numpy.array(image)
 
             try:
                 info = image._getexif()
                 for tag, value in info.items():
                     kwd = TAGS.get(tag, tag)
                     kwds[kwd] = value
+
             except Exception, e:
                 self.logger.warn("Failed to get image metadata: %s" % (str(e)))
+
+            # handle embedded color profile, if possible
+            if have_cms and os.path.exists(working_profile):
+                self.logger.debug("checking metadata for profile: %s" % (
+                    str(image.info.keys())))
+                # TODO: If there is no embedded profile we could still
+                # read the metadata for the color space (kwds['ColorSpace']).
+                # I don't know if there is a standard for the value.
+                if image.info.has_key('icc_profile'):
+                    buf_profile = image.info['icc_profile']
+                    self.logger.debug("image has embedded color profile")
+                    try:
+                        # Write out embedded profile (if needed) and convert
+                        # image to working profile
+                        prof_md5 = hashlib.md5(buf_profile).hexdigest()
+                        in_profile = "/tmp/_image_%d_%s.icc" % (
+                            os.getpid(), prof_md5)
+                        if not os.path.exists(in_profile):
+                            with open(in_profile, 'w') as icc_f:
+                                icc_f.write(buf_profile)
+
+                        image = convert_profile_pil(image, in_profile,
+                                                    working_profile)
+                        self.logger.debug("converted to profile '%s'" % (
+                            working_profile))
+                    except Exception, e:
+                        self.logger.error("Error converting from embedded color profile: %s" % (str(e)))
+                        self.logger.warn("Leaving image unprofiled.")
+                        
+            data_np = numpy.array(image)
 
         elif have_qtimage:
             means = 'QImage'
@@ -180,6 +217,9 @@ class PythonImage(BaseImage):
         self.logger.debug("loading (%s) time %.4f sec" % (
             means, end_time - start_time))
         return data_np
+
+    def imload(self, filepath, kwds):
+        return self._imload(filepath, kwds)
 
     def _imresize(self, data, new_wd, new_ht, method='bilinear'):
         """Scale an image in numpy array _data_ to the specified width and
@@ -284,7 +324,13 @@ def qimage2numpy(qimage):
         raise ValueError("qimage2numpy only supports 32bit and 8bit images")
 
     # FIXME: raise error if alignment does not match
-    buf = qimage.bits().asstring(qimage.numBytes())
+    buf = qimage.bits()
+    if hasattr(buf, 'asstring'):
+        # Qt4
+        buf = buf.asstring(qimage.numBytes())
+    else:
+        # PySide
+        buf = bytes(buf)
     result = numpy.frombuffer(buf, dtype).reshape(temp_shape)
     if result_shape != temp_shape:
         result = result[:,:result_shape[1]]
@@ -361,5 +407,21 @@ def rgb2qimage(rgb):
     return result
 
 # --- end QImage to numpy conversion functions ---
+
+def convert_profile_pil(image_pil, inprof_path, outprof_path):
+    image_out = ImageCms.profileToProfile(image_pil, inprof_path,
+                                          outprof_path)
+    return image_out
+
+def convert_profile_numpy(image_np, inprof_path, outprof_path):
+    if not have_pilutil:
+        return image_np
+
+    in_image_pil = pilutil.toimage(image_np)
+    out_image_pil = pilutil.convert_profile_pil(in_image_pil,
+                                                inprof_path, outprof_path)
+    image_np = pilutil.fromimage(out_image_pil)
+    return image_out
+
 
 #END
