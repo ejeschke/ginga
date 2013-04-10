@@ -22,7 +22,7 @@ def make_release():
         out_f.write("minor = %d\n" % minor)
         out_f.write("release = '%s'\n" % release)
         out_f.write("\n")
-        out_f.write("version = '%d.%d.%s' % (major, minor, release)\n")
+        out_f.write("version = '%d.%d-%s' % (major, minor, release)\n")
         out_f.write("\n")
     
 if __name__ == "__main__":

@@ -6,6 +6,7 @@
 # Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
+#
 import time
 import gtk
 import gobject
@@ -568,8 +569,9 @@ class Desktop(Callback.Callbacks):
                 # to the workspace as tabs.
                 for tabname, layout in args[0]:
                     def pack(w):
+                        nb = self.get_nb(params.name)
                         # ?why should group be the same as parent group?
-                        self.add_tab(widget, w, group,
+                        self.add_tab(nb, w, group,
                                      tabname, tabname.lower())
 
                     make(layout, pack)

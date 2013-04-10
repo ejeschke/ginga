@@ -56,7 +56,7 @@ try:
     basedir = os.environ['GINGA_HOME']
 except KeyError:
     basedir = os.path.join(os.environ['HOME'], '.ginga')
-working_profile = os.path.join(basedir, "working.icc")
+working_profile = os.path.join(basedir, "profiles", "working.icc")
 
 
 class PythonImage(BaseImage):
@@ -173,19 +173,16 @@ class PythonImage(BaseImage):
             except Exception, e:
                 self.logger.warn("Failed to get image metadata: %s" % (str(e)))
 
-            # handle embedded color profile, if possible
+            # If we have a working color profile then handle any embedded
+            # profile or color space information, if possible
             if have_cms and os.path.exists(working_profile):
-                self.logger.debug("checking metadata for profile: %s" % (
-                    str(image.info.keys())))
-                # TODO: If there is no embedded profile we could still
-                # read the metadata for the color space (kwds['ColorSpace']).
-                # I don't know if there is a standard for the value.
-                if image.info.has_key('icc_profile'):
-                    buf_profile = image.info['icc_profile']
-                    self.logger.debug("image has embedded color profile")
-                    try:
-                        # Write out embedded profile (if needed) and convert
-                        # image to working profile
+                # Assume sRGB image, unless we learn to the contrary
+                in_profile = os.path.join(basedir, "profiles", "sRGB.icc")
+                try:
+                    if image.info.has_key('icc_profile'):
+                        self.logger.debug("image has embedded color profile")
+                        buf_profile = image.info['icc_profile']
+                        # Write out embedded profile (if needed)
                         prof_md5 = hashlib.md5(buf_profile).hexdigest()
                         in_profile = "/tmp/_image_%d_%s.icc" % (
                             os.getpid(), prof_md5)
@@ -193,13 +190,34 @@ class PythonImage(BaseImage):
                             with open(in_profile, 'w') as icc_f:
                                 icc_f.write(buf_profile)
 
+                    # see if there is any EXIF tag about the colorspace
+                    elif kwds.has_key('ColorSpace'):
+                        csp = kwds['ColorSpace']
+                        iop = kwds.get('InteroperabilityIndex', None)
+                        if (csp == 0x2) or (csp == 0xffff):
+                            # NOTE: 0xffff is really "undefined" and should be
+                            # combined with a test of EXIF tag 0x0001
+                            # ('InteropIndex') == 'R03', but PIL _getexif()
+                            # does not return the InteropIndex
+                            in_profile = os.path.join(basedir, "profiles",
+                                                      "AdobeRGB.icc")
+                            self.logger.debug("hmm..this looks like an AdobeRGB image")
+                        elif csp == 0x1:
+                            self.logger.debug("hmm..this looks like a sRGB image")
+                            in_profile = os.path.join(basedir, "profiles",
+                                                      "sRGB.icc")
+                        else:
+                            self.logger.debug("no color space metadata, assuming this is an sRGB image")
+
+                    # if we have a valid input profile, try the conversion
+                    if in_profile:
                         image = convert_profile_pil(image, in_profile,
                                                     working_profile)
-                        self.logger.debug("converted to profile '%s'" % (
-                            working_profile))
-                    except Exception, e:
-                        self.logger.error("Error converting from embedded color profile: %s" % (str(e)))
-                        self.logger.warn("Leaving image unprofiled.")
+                        self.logger.info("converted from profile (%s) to profile (%s)" % (
+                            in_profile, working_profile))
+                except Exception, e:
+                    self.logger.error("Error converting from embedded color profile: %s" % (str(e)))
+                    self.logger.warn("Leaving image unprofiled.")
                         
             data_np = numpy.array(image)
 

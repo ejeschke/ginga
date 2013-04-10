@@ -73,9 +73,6 @@ class GingaView(QtMain.QtMain):
 
     def build_toplevel(self, layout):
         # Create root window and add delete/destroy callbacks
-        #root = QtGui.QWidget()
-        #root.connect(root, QtCore.SIGNAL('closed()'), 
-        #             self.foo)
         root = QtHelp.TopLevel()
         root.setApp(self)
         root.resize(self.default_width, self.default_height)
@@ -103,7 +100,8 @@ class GingaView(QtMain.QtMain):
         # Create main (center) FITS image pane
         self.w.vbox = self.w['main'].layout()
         self.w.vbox.setSpacing(0)
-        #self.w.mnb = self.ds.make_ws(name='main', group=1, wstype='mdi').nb
+        # self.w.mnb = self.ds.make_ws(name='main', group=1, wstype='mdi').nb
+        # self.w.mnb.subWindowActivated.connect(self.page_switch_mdi_cb)
         self.w.mnb = self.ds.make_ws(name='main', group=1).nb
         self.w.mnb.currentChanged.connect(self.page_switch_cb)
         self.w.vbox.addWidget(self.w.mnb, stretch=1)
@@ -203,26 +201,26 @@ class GingaView(QtMain.QtMain):
         item.triggered.connect(self.gui_add_ws)
         winmenu.addAction(item)
         
-        # create a Option pulldown menu, and add it to the menu bar
-        ## optionmenu = menubar.addMenu("Option")
+        # # create a Option pulldown menu, and add it to the menu bar
+        # optionmenu = menubar.addMenu("Option")
 
-        ## # create a Workspace pulldown menu, and add it to the menu bar
-        ## wsmenu = menubar.addMenu("Workspace")
+        # # create a Workspace pulldown menu, and add it to the menu bar
+        # wsmenu = menubar.addMenu("Workspace")
 
-        ## item = QtGui.QAction("Panes as Tabs", menubar)
-        ## item.triggered.connect(self.tabstoggle_cb)
-        ## item.setCheckable(True)
-        ## # TODO: check the state of the workspace first
-        ## item.setChecked(True)
-        ## wsmenu.addAction(item)
+        # item = QtGui.QAction("Panes as Tabs", menubar)
+        # item.triggered.connect(self.tabstoggle_cb)
+        # item.setCheckable(True)
+        # # TODO: check the state of the workspace first
+        # item.setChecked(True)
+        # wsmenu.addAction(item)
         
-        ## item = QtGui.QAction("Tile Panes", menubar)
-        ## item.triggered.connect(self.tile_panes_cb)
-        ## wsmenu.addAction(item)
+        # item = QtGui.QAction("Tile Panes", menubar)
+        # item.triggered.connect(self.tile_panes_cb)
+        # wsmenu.addAction(item)
         
-        ## item = QtGui.QAction("Cascade Panes", menubar)
-        ## item.triggered.connect(self.cascade_panes_cb)
-        ## wsmenu.addAction(item)
+        # item = QtGui.QAction("Cascade Panes", menubar)
+        # item.triggered.connect(self.cascade_panes_cb)
+        # wsmenu.addAction(item)
         
         # create a Help pulldown menu, and add it to the menu bar
         helpmenu = menubar.addMenu("Help")
@@ -671,6 +669,11 @@ class GingaView(QtMain.QtMain):
                         fitsimage.to_default_mode()
 
         return True
+
+    def page_switch_mdi_cb(self, w):
+        if w != None:
+            index = self.w.mnb.indexOf(w)
+            return self.page_switch_cb(index)
 
         
 # END

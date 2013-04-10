@@ -101,11 +101,21 @@ class Workspace(QtGui.QMdiArea):
 
     def indexOf(self, widget):
         try:
-            l = list(self.subWindowList())
-            return l.index(widget)
+            wl = list(self.subWindowList())
+            #l = [ sw.widget() for sw in wl ]
+            return wl.index(widget)
         except (IndexError, ValueError), e:
             return -1
 
+    def widget(self, index):
+        l = list(self.subWindowList())
+        sw = l[index]
+        #return sw.widget()
+        return sw.widget()
+
+    def tabBar(self):
+        return None
+    
     def setCurrentIndex(self, index):
         l = list(self.subWindowList())
         w = l[index]
@@ -345,6 +355,8 @@ class Desktop(Callback.Callbacks):
         nb, index = self._find_nb(tabname)
         if nb:
             tb = nb.tabBar()
+            if tb == None:
+                return
             widget = tb.tabButton(index, QtGui.QTabBar.RightSide)
             if widget == None:
                 return

@@ -92,7 +92,7 @@ class Log(GingaPlugin.GlobalPlugin):
         # remove some lines to keep us within our history limit
         numlines = self.buf.get_line_count()
         if numlines > self.histlimit:
-            rmcount = numlines - self.histlimit
+            rmcount = int(numlines - self.histlimit)
             start = self.buf.get_iter_at_line(0)
             end   = self.buf.get_iter_at_line(rmcount)
             self.buf.delete(start, end)
