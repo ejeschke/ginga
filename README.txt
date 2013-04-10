@@ -14,23 +14,35 @@ windows, star catalog access, cuts, star pick/fwhm, thumbnails, etc.
 
 COPYRIGHT AND LICENSE
 ---------------------
-Copyright (c) 2011-2012  Eric R. Jeschke.  All rights reserved.
+Copyright (c) 2011-2013  Eric R. Jeschke.  All rights reserved.
 Ginga is distributed under an open-source BSD licence.  Please see the
 file LICENSE.txt in the top-level directory for details.
 
 BUILDING AND INSTALLATION
 -------------------------
-Please see the file doc/INSTALL.txt
+Ginga uses a standard distutils based install, e.g.
+
+    $ python setup.py build
+
+or
+
+    $ python setup.py install
+
+The program can then be run using the command "ginga.py"
+
+For further information please see the file ginga/doc/INSTALL.txt
 
 MANUAL
 ------
 You can find copies of a PDF manual online at
 https://github.com/ejeschke/ginga/downloads
 
+Also look in ginga/doc/manual
+
 DEVELOPERS
 ----------
-See gtkw/example{1,2}.py and qtw/example{1,2}.py .  There is more
-information for developers in the manual.
+See examples/example{1,2}_gtk.py and examples/example{1,2}_qt.py .
+There is more information for developers in the manual.
 
 ON THE WEB
 ----------
@@ -50,6 +62,4 @@ Ginga the viewer may be pronounced "ging-ga" (proper japanese) or
 "jing-ga" (perhaps easier for western tongues).  The latter
 pronunciation has meaning in the Brazilian dance/martial art capoeira:
 a fundamental rocking or back and forth swinging motion.
-
-
 

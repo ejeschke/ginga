@@ -2,7 +2,7 @@
 #
 # ginga.py -- FITS image viewer and tool.
 #
-# Eric Jeschke (eric@naoj.org)
+# Eric Jeschke (eric@naoj.org, eric@redskiesatnight.com)
 #
 """
 Copyright (c) 2011-2013  Eric R. Jeschke
