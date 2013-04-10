@@ -49,13 +49,10 @@ import threading
 import traceback
 
 # Local application imports
-from Bunch import Bunch
-import Task
-import ModuleManager
-import Datasrc
-import Settings
-from Control import GingaControl, GuiLogHandler
-import version
+from ginga.misc.Bunch import Bunch
+from ginga.misc import Task, ModuleManager, Datasrc, Settings
+from ginga.Control import GingaControl, GuiLogHandler
+import ginga.version as version
 
 LOG_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcName)s) | %(message)s'
 
@@ -138,24 +135,25 @@ def main(options, args):
     prefs = Settings.Preferences(basefolder=basedir, logger=logger)
     sys.path.insert(0, basedir)
 
+    # So we can find our plugins
     moduleHome = os.path.split(sys.modules[__name__].__file__)[0]
-    childDir = os.path.join(moduleHome, 'misc', 'plugins')
+    childDir = os.path.join(moduleHome, 'ginga', 'misc', 'plugins')
     sys.path.insert(0, childDir)
     childDir = os.path.join(basedir, 'plugins')
     sys.path.insert(0, childDir)
 
     # Choose a toolkit
     if options.toolkit == 'gtk':
-        from gtkw.GingaGtk import GingaView
+        from ginga.gtkw.GingaGtk import GingaView
     elif options.toolkit == 'qt':
-        from qtw.GingaQt import GingaView
+        from ginga.qtw.GingaQt import GingaView
     else:
         try:
             import gtk
-            from gtkw.GingaGtk import GingaView
+            from ginga.gtkw.GingaGtk import GingaView
         except ImportError:
             try:
-                from qtw.GingaQt import GingaView
+                from ginga.qtw.GingaQt import GingaView
             except ImportError:
                 print "You need python-gtk or python-qt4 to run Ginga!"
                 sys.exit(1)
