@@ -17,7 +17,10 @@ setup(
                 'ginga.misc', 'ginga.misc.plugins',
                 'ginga.icons', 'ginga.util',
                 'ginga.doc'],
-    package_data = { 'icons': ['*.ppm', '*.png'], 'doc': ['manual/*.html'], },
+    package_data = { 'ginga.icons': ['*.ppm', '*.png'],
+                     'ginga.doc': ['manual/*.html'],
+                     'ginga.gtkw': ['gtk_rc']
+                     },
     scripts = ['ginga.py'],
     classifiers = [
         "Development Status :: 5 - Stable",
