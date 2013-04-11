@@ -21,7 +21,7 @@ class Errors(GingaPlugin.GlobalPlugin):
         super(Errors, self).__init__(fv)
 
 
-    def initialize(self, container):
+    def build_gui(self, container):
         self.msgFont = pango.FontDescription("Fixed 12")
 
         self.msgList = gtk.VBox(spacing=2)

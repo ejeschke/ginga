@@ -33,7 +33,7 @@ class Header(GingaPlugin.GlobalPlugin):
         fv.set_callback('active-image', self.focus_cb)
         
 
-    def initialize(self, container):
+    def build_gui(self, container):
         nb = QtHelp.StackedWidget()
         self.nb = nb
         container.addWidget(nb, stretch=0)

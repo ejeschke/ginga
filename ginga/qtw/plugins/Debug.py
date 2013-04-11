@@ -18,7 +18,7 @@ class Debug(GingaPlugin.GlobalPlugin):
         super(Debug, self).__init__(fv)
 
 
-    def initialize(self, container):
+    def build_gui(self, container):
         rvbox = container
 
         self.msgFont = QtGui.QFont("Fixed", 14)

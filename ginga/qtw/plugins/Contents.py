@@ -29,7 +29,7 @@ class Contents(GingaPlugin.GlobalPlugin):
         fv.set_callback('add-image', self.add_image)
         fv.set_callback('delete-channel', self.delete_channel)
 
-    def initialize(self, container):
+    def build_gui(self, container):
         rvbox = container
 
         # create the Treeview

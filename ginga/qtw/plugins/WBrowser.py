@@ -29,7 +29,7 @@ class WBrowser(GingaPlugin.GlobalPlugin):
 
         self.browser = None
 
-    def initialize(self, container):
+    def build_gui(self, container):
         rvbox = container
 
         if not has_webkit:

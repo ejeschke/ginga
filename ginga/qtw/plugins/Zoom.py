@@ -38,7 +38,7 @@ class Zoom(GingaPlugin.GlobalPlugin):
         fv.add_callback('add-channel', self.add_channel)
         fv.add_callback('active-image', self.focus_cb)
 
-    def initialize(self, container):
+    def build_gui(self, container):
         vpaned = QtGui.QSplitter()
         vpaned.setOrientation(QtCore.Qt.Vertical)
         

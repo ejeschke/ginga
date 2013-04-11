@@ -19,7 +19,7 @@ class Debug(GingaPlugin.GlobalPlugin):
         super(Debug, self).__init__(fv)
 
 
-    def initialize(self, container):
+    def build_gui(self, container):
         self.msgFont = pango.FontDescription("Fixed 14")
         tw = gtk.TextView()
         tw.set_wrap_mode(gtk.WRAP_WORD)

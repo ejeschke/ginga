@@ -31,7 +31,7 @@ class Pan(GingaPlugin.GlobalPlugin):
         fv.add_callback('delete-channel', self.delete_channel)
         fv.set_callback('active-image', self.focus_cb)
 
-    def initialize(self, container):
+    def build_gui(self, container):
         nb = gtk.Notebook()
         nb.set_group_id(-30)
         nb.set_tab_pos(gtk.POS_BOTTOM)

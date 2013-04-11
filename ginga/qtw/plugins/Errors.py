@@ -20,7 +20,7 @@ class Errors(GingaPlugin.GlobalPlugin):
         # superclass defines some variables for us, like logger
         super(Errors, self).__init__(fv)
 
-    def initialize(self, container):
+    def build_gui(self, container):
         self.msgFont = QtGui.QFont("Fixed", 12)
 
         self.msgList = QtGui.QWidget()

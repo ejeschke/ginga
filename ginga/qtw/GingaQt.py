@@ -434,7 +434,7 @@ class GingaView(QtMain.QtMain):
         vbox = None
         try:
             wsName = spec.get('ws', None)
-            if wsName:
+            if wsName and hasattr(pInfo.obj, 'build_gui'):
                 ws = self.ds.get_nb(wsName)
                 tabName = spec.get('tab', pInfo.name)
                 pInfo.tabname = tabName
@@ -445,7 +445,7 @@ class GingaView(QtMain.QtMain):
                 vbox.setSpacing(2)
                 widget.setLayout(vbox)
 
-                pInfo.obj.initialize(vbox)
+                pInfo.obj.build_gui(vbox)
 
             pInfo.obj.start()
 

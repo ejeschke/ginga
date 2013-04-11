@@ -28,7 +28,7 @@ class Log(GingaPlugin.GlobalPlugin):
                        ('Debug', logging.DEBUG))
 
         
-    def initialize(self, container):
+    def build_gui(self, container):
         self.msgFont = pango.FontDescription("Fixed 10")
         tw = gtk.TextView()
         tw.set_wrap_mode(gtk.WRAP_NONE)

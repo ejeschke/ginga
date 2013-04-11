@@ -441,7 +441,7 @@ class GingaView(GtkMain.GtkMain):
         vbox = None
         try:
             wsName = spec.get('ws', None)
-            if wsName:
+            if wsName and hasattr(pInfo.obj, 'build_gui'):
                 ws = self.ds.get_nb(wsName)
                 tabName = spec.get('tab', pInfo.name)
                 pInfo.tabname = tabName
@@ -449,7 +449,7 @@ class GingaView(GtkMain.GtkMain):
                 vbox = gtk.VBox(spacing=2)
                 vbox.set_border_width(0)
         
-                pInfo.obj.initialize(vbox)
+                pInfo.obj.build_gui(vbox)
                 vbox.show_all()
 
             pInfo.obj.start()

@@ -32,9 +32,9 @@ class RC(GingaPlugin.GlobalPlugin):
 
         self.ev_quit = fv.ev_quit
 
-    def initialize(self, container):
-        # NO GUI
-        pass
+    # NO GUI...yet
+    #def build_gui(self, container):
+    #    pass
     
     def start(self):
         self.robj = GingaWrapper(self.fv, self.logger)

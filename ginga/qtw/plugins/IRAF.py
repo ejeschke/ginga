@@ -27,7 +27,7 @@ from ginga.qtw import FitsImageCanvasTypesQt as CanvasTypes
 
 class IRAF(IRAFBase.IRAFBase):
 
-    def initialize(self, container):
+    def build_gui(self, container):
 
         canvas = CanvasTypes.DrawingCanvas()
         canvas.enable_draw(False)

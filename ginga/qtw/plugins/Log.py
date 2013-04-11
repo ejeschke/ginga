@@ -27,7 +27,7 @@ class Log(GingaPlugin.GlobalPlugin):
                        ('Info',  logging.INFO),
                        ('Debug', logging.DEBUG))
 
-    def initialize(self, container):
+    def build_gui(self, container):
         #self.msgFont = QtGui.QFont("Fixed", 10)
         tw = QtGui.QPlainTextEdit()
         tw.setReadOnly(True)

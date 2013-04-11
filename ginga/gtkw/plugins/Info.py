@@ -33,7 +33,7 @@ class Info(GingaPlugin.GlobalPlugin):
         fv.set_callback('field-info', self.field_info)
         fv.set_callback('active-image', self.focus_cb)
         
-    def initialize(self, container):
+    def build_gui(self, container):
         nb = gtk.Notebook()
         nb.set_group_id(-30)
         nb.set_tab_pos(gtk.POS_BOTTOM)

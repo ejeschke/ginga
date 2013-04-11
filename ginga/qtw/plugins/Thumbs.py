@@ -70,7 +70,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         fv.set_callback('delete-channel', self.delete_channel)
         fv.add_callback('active-image', self.focus_cb)
 
-    def initialize(self, container):
+    def build_gui(self, container):
         rvbox = container
 
         width, height = 300, 300

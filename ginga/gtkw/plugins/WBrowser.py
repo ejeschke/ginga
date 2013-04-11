@@ -29,7 +29,7 @@ class WBrowser(GingaPlugin.GlobalPlugin):
 
         self.browser = None
 
-    def initialize(self, container):
+    def build_gui(self, container):
         if not has_webkit:
             self.browser = gtk.Label("Please install the python-webkit package to enable this plugin")
         else:

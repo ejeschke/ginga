@@ -32,7 +32,7 @@ class Contents(GingaPlugin.GlobalPlugin):
         fv.set_callback('add-image', self.add_image)
         fv.set_callback('delete-channel', self.delete_channel)
 
-    def initialize(self, container):
+    def build_gui(self, container):
         sw = gtk.ScrolledWindow()
         sw.set_border_width(2)
         sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
