@@ -21,14 +21,14 @@ setup(
                      'ginga.doc': ['manual/*.html'],
                      'ginga.gtkw': ['gtk_rc']
                      },
-    scripts = ['ginga.py'],
+    scripts = ['scripts/ginga'],
     classifiers = [
         "Development Status :: 5 - Stable",
-        "Topic :: Utilities",
         "License :: OSI Approved :: BSD License",
         "Operating System :: MacOS :: MacOS X",
         "Operating System :: Microsoft :: Windows",
         "Operating System :: POSIX",
+        "Topic :: Scientific/Engineering :: Astronomy",
     ],
 )
 
