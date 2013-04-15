@@ -41,7 +41,7 @@ Also look in ginga/doc/manual
 
 DEVELOPERS
 ----------
-See examples/example{1,2}_gtk.py and examples/example{1,2}_qt.py .
+See scripts/example{1,2}_gtk.py and scripts/example{1,2}_qt.py .
 There is more information for developers in the manual.
 
 ON THE WEB
