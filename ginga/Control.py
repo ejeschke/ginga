@@ -448,6 +448,8 @@ class GingaControl(Callback.Callbacks):
 
 
     def _add_image_update(self, chinfo, image):
+        self.make_callback('add-image', chinfo.name, image)
+
         current = chinfo.datasrc.youngest()
         curname = current.get('name')
         self.logger.debug("image=%s youngest=%s" % (image.get('name'), curname))
@@ -465,7 +467,7 @@ class GingaControl(Callback.Callbacks):
             if chinfo.name != curinfo.name:
                 self.change_channel(chinfo.name)
 
-        self.make_callback('add-image', chinfo.name, image)
+        #self.make_callback('add-image', chinfo.name, image)
 
     def bulk_add_image(self, imname, image, chname):
         if not self.has_channel(chname):

@@ -54,11 +54,9 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         self.thumbSep = 15
         # max length of thumb on the long side
         self.thumbWidth = 150
-        # should we cache thumbs on disk?
-        self.cacheThumbs = False
-        # where the cache is stored
         prefs = self.fv.get_preferences()
-        self.thumbDir = os.path.join(prefs.get_baseFolder(), 'thumbs')
+        self.settings = prefs.createCategory('plugin_Thumbs')
+        self.settings.load()
 
         self.thmbtask = None
         self.lagtime = 4000
@@ -186,9 +184,9 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         #self.w.thumbs.show()
         
         # force scroll to bottom of thumbs
-        rect = self.w.thumbs_w.geometry()
-        x1, y1, x2, y2 = rect.getCoords()
-        self.w.thumbs_scroll.ensureVisible(x1, y1)
+        ## rect = self.w.thumbs_w.geometry()
+        ## x1, y1, x2, y2 = rect.getCoords()
+        ## self.w.thumbs_scroll.ensureVisible(x1, y1)
         #self.w.thumbs_scroll.show()
         self.logger.debug("added thumb for %s" % (thumbname))
 
@@ -316,7 +314,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         if image == None:
             return
         if save_thumb == None:
-            save_thumb = self.cacheThumbs
+            save_thumb = self.settings.get('cacheThumbs', False)
         
         chname = self.fv.get_channelName(fitsimage)
 
@@ -388,15 +386,15 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         self.reorder_thumbs()
 
     def _make_thumb(self, chname, image, path, thumbkey,
-                    save_thumb=False):
+                    save_thumb=False, thumbpath=None):
         # This is called by the make_thumbs() as a gui thread
         self.thumb_generator.set_image(image)
         # Save a thumbnail for future browsing
-        if save_thumb:
-            thumbpath = self.get_thumbpath(path)
-            if thumbpath != None:
-                self.thumb_generator.save_image_as_file(thumbpath,
-                                                        format='jpeg')
+        self.logger.debug("_MAKE_THUMB save_thumb=%s thumbpath=%s" % (
+                save_thumb, thumbpath))
+        if save_thumb and (thumbpath != None):
+            self.thumb_generator.save_image_as_file(thumbpath,
+                                                    format='jpeg')
         
         imgwin = self.thumb_generator.get_image_as_widget()
 
@@ -421,6 +419,8 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         # This is called by the FBrowser plugin, as a non-gui thread!
         lcname = chname.lower()
 
+        cacheThumbs = self.settings.get('cacheThumbs', False)
+
         for path in filelist:
             self.logger.info("generating thumb for %s..." % (
                 path))
@@ -432,7 +432,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
                 continue
 
             # Is there a cached thumbnail image on disk we can use?
-            save_thumb = self.cacheThumbs
+            save_thumb = cacheThumbs
             image = None
             thumbpath = self.get_thumbpath(path)
             if (thumbpath != None) and os.path.exists(thumbpath):
@@ -445,13 +445,14 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             try:
                 if image == None:
                     image = self.fv.load_image(path)
+
                 self.fv.gui_do(self._make_thumb, chname, image, path,
-                               thumbkey, save_thumb=save_thumb)
+                               thumbkey, save_thumb=save_thumb,
+                               thumbpath=thumbpath)
                 
             except Exception, e:
                 self.logger.error("Error generating thumbnail for '%s': %s" % (
                     path, str(e)))
-                continue
                 # TODO: generate "broken thumb"?
 
 
@@ -462,7 +463,16 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         path = os.path.abspath(path)
         dirpath, filename = os.path.split(path)
         # Get thumb directory
-        thumbdir = os.path.join(self.thumbDir, self._gethex(dirpath))
+        cacheLocation = self.settings.get('cacheLocation', 'local')
+        if cacheLocation == 'ginga':
+            # thumbs in .ginga cache
+            prefs = self.fv.get_preferences()
+            thumbDir = os.path.join(prefs.get_baseFolder(), 'thumbs')
+            thumbdir = os.path.join(thumbDir, self._gethex(dirpath))
+        else:
+            # thumbs in .thumbs subdirectory of image folder
+            thumbdir = os.path.join(dirpath, '.thumbs')
+
         if not os.path.exists(thumbdir):
             if not makedir:
                 self.logger.error("Thumb directory does not exist: %s" % (

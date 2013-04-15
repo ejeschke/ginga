@@ -14,28 +14,28 @@ OR
 
 DOWNLOAD GINGA
 -------------
-Unpack Ginga to a directory in the filesystem.  Set your PYTHONPATH
-environment variable to the top-level directory where you unpacked
-Ginga.  
+Unpack Ginga to a directory in the filesystem.
 
-$ git clone https://github.com/ejeschke/ginga.git
-$ export PYTHONPATH=/where/you/cloned/ginga
+$ git clone https://github.com/ejeschke/ginga.git ginga
+
+Or you can download a zip file, tar file, etc. and unpack it.  If you
+clone the git repo, however, you can easily track bug fixes and updates.
+
+BUILD AND INSTALL GINGA
+-----------------------
+$ cd ginga
+$ python setup.py install
 
 RUNNING GINGA
 -------------
-Run the program ginga.py from the directory where you unpacked it or
-copy it to another location in your $PATH.  Ginga will show useful
-information in a log file.  Run it from a terminal like this:
-
-$ cd /where/you/cloned/ginga
-$ ./ginga.py --stderr --loglevel=20
+$ ginga --stderr --loglevel=20
 
 Change the level to 10 if you want debug information, and to 30 or 40 if
 you want only warnings and error messages.  A log file can be specified
 with --log=ginga.log if you prefer instead of --stderr.
 
 Type 
-$ ginga.py --help
+$ ginga --help
 
 for a list of command line options.
 

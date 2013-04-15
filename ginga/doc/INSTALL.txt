@@ -29,7 +29,7 @@ python-qt4
 
 OR
 
-python-pyside
+python-pyside (qt4 alternative)
 
 (Mac and Windows platforms should probably install the Qt version,
 unless you are adventurous.  Either one works fine on Linux.)

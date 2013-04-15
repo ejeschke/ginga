@@ -28,7 +28,7 @@ or
 
     $ python setup.py install
 
-The program can then be run using the command "ginga.py"
+The program can then be run using the command "ginga"
 
 For further information please see the file ginga/doc/INSTALL.txt
 

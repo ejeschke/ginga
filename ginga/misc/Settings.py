@@ -126,10 +126,14 @@ class SettingGroup(object):
         self.setDict(kwdargs)
         
     def load(self):
-        with open(self.preffile, 'r') as in_f:
-            buf = in_f.read()
-            d = eval(buf)
-            self.set(**d)
+        try:
+            with open(self.preffile, 'r') as in_f:
+                buf = in_f.read()
+                d = eval(buf)
+                self.set(**d)
+        except IOError, e:
+            self.logger.warn("Error opening settings file (%s): %s" % (
+                    self.preffile, str(e)))
         
     def save(self):
         d = self.getDict()

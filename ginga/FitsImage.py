@@ -10,6 +10,7 @@
 import numpy
 import math
 import logging
+import sys, traceback
 import time
 
 from ginga.misc import Callback, Settings
@@ -341,10 +342,22 @@ class FitsImageBase(Callback.Callbacks):
 
     def redraw(self, whence=0):
         #print "REDRAWING %s whence=%d" % (str(self), whence)
-        self.redraw_data(whence=whence)
+        try:
+            self.redraw_data(whence=whence)
             
-        # finally update the window drawable from the offscreen surface
-        self.update_image()
+            # finally update the window drawable from the offscreen surface
+            self.update_image()
+
+        except Exception, e:
+            self.logger.error("Error redrawing image: %s" % (str(e)))
+            try:
+                # log traceback, if possible
+                (type, value, tb) = sys.exc_info()
+                tb_str = "".join(traceback.format_tb(tb))
+                self.logger.error("Traceback:\n%s" % (tb_str))
+            except Exception:
+                tb_str = "Traceback information unavailable."
+                self.logger.error(tb_str)
 
     def redraw_data(self, whence=0):
         rgbobj = self.get_rgb_object(whence=whence)

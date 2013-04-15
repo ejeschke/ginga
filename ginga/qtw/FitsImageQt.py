@@ -128,7 +128,7 @@ class FitsImageQt(FitsImage.FitsImageBase):
         # cursors
         self.cursor = {}
 
-        # optomization of redrawing
+        # optimization of redrawing
         self.defer_redraw = True
         self.defer_lagtime = 25
         self._defer_whence = 0
