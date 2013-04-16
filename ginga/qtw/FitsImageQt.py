@@ -303,23 +303,23 @@ class FitsImageQt(FitsImage.FitsImageBase):
         self.set_cursor(self.cursor[ctype])
         
     def _get_qimage(self, rgb):
-	h, w, channels = rgb.shape
+        h, w, channels = rgb.shape
 
-	# Qt expects 32bit BGRA data for color images:
-	bgra = numpy.empty((h, w, 4), numpy.uint8, 'C')
-	bgra[...,0] = rgb[...,2]
-	bgra[...,1] = rgb[...,1]
-	bgra[...,2] = rgb[...,0]
-	if rgb.shape[2] == 3:
-		bgra[...,3].fill(255)
-		fmt = QtGui.QImage.Format_RGB32
-	else:
-		bgra[...,3] = rgb[...,3]
-		fmt = QtGui.QImage.Format_ARGB32
+        # Qt expects 32bit BGRA data for color images:
+        bgra = numpy.empty((h, w, 4), numpy.uint8, 'C')
+        bgra[...,0] = rgb[...,2]
+        bgra[...,1] = rgb[...,1]
+        bgra[...,2] = rgb[...,0]
+        if rgb.shape[2] == 3:
+                bgra[...,3].fill(255)
+                fmt = QtGui.QImage.Format_RGB32
+        else:
+                bgra[...,3] = rgb[...,3]
+                fmt = QtGui.QImage.Format_ARGB32
 
-	result = QtGui.QImage(bgra.data, w, h, fmt)
+        result = QtGui.QImage(bgra.data, w, h, fmt)
         # Need to hang on to a reference to the array
-	result.ndarray = bgra
+        result.ndarray = bgra
         return result
 
     def _get_color(self, r, g, b):

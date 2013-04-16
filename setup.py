@@ -4,6 +4,11 @@ from distutils.core import setup
 from ginga.version import version
 import os
 
+try:  # Python 3.x
+    from distutils.command.build_py import build_py_2to3 as build_py
+except ImportError:  # Python 2.x
+    from distutils.command.build_py import build_py
+
 def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
@@ -35,5 +40,6 @@ setup(
         "Operating System :: POSIX",
         "Topic :: Scientific/Engineering :: Astronomy",
     ],
+    cmdclass={'build_py': build_py}
 )
 
