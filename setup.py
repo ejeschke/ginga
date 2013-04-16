@@ -8,7 +8,7 @@ def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
 setup(
-    name = "Ginga",
+    name = "ginga",
     version = version,
     author = "Eric Jeschke",
     author_email = "eric@naoj.org",
@@ -29,7 +29,6 @@ setup(
     data_files = [('', ['LICENSE.txt', 'README.txt'])],
     scripts = ['scripts/ginga'],
     classifiers = [
-        "Development Status :: 5 - Stable",
         "License :: OSI Approved :: BSD License",
         "Operating System :: MacOS :: MacOS X",
         "Operating System :: Microsoft :: Windows",
