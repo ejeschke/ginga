@@ -31,7 +31,7 @@ FEEDBACK          = 05              # used for frame clears
 IMCURSOR          = 020             # logical image cursor
 WCS               = 021             # used to set WCS
 
-IIS_VERSION	  = 10              # version 1.0
+IIS_VERSION       = 10              # version 1.0
 
 PACKED            = 0040000
 COMMAND           = 0100000
@@ -201,7 +201,7 @@ class IIS_RequestHandler(SocketServer.StreamRequestHandler):
     perform the necessary actions (display image, overlay regions
     and so on).
 
-                 		   IIS Header Packet Summary
+                                    IIS Header Packet Summary
 
                       TID            Subunit     Tct   X   Y    Z   T    Data
               +------------------+-------------+-----+---+---+----+---+--------+
@@ -229,7 +229,7 @@ Where   nbytes | NB  = number of bytes expected or written
         N            = length of WCS string
         wcs          = WCS number (usually zero)
         Data         = the number of bytes of data to be read or written
-			following the header packet.
+                       following the header packet.
     """     
     needs_update = False
     # these NEED to be set automatically
@@ -458,13 +458,13 @@ Where   nbytes | NB  = number of bytes expected or written
 
         where the new parameters are defined as 
         
-            region_name	      - user-defined name for the region (e.g. 'image',
-        			'subras1', 'ccd3', etc).
+            region_name       - user-defined name for the region (e.g. 'image',
+                                'subras1', 'ccd3', etc).
             sx, sy, snx, sny  - source rect in the object
             dx, dy, dnx, dny  - dest rect in the display frame buffer
-            object_ref	      - full node!/path/image[sec] image name, same as
-        			was immap'd when the image was displayed.  Used
-        			for access after the display
+            object_ref        - full node!/path/image[sec] image name, same as
+                                was immap'd when the image was displayed.  Used
+                                for access after the display
         """
         self.logger.debug("handle wcs")
         if pkt.tid & IIS_READ:

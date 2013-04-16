@@ -36,7 +36,7 @@ Usage:
 import sys, traceback
 import thread, threading
 import logging
-import Queue
+from Queue import Queue
 
 from ginga.qtw.QtHelp import QtGui, QtCore
 from ginga.misc import Task, Future
@@ -46,7 +46,7 @@ class QtMain(object):
     def __init__(self, queue=None, logger=None, ev_quit=None):
         # You can pass in a queue if you prefer to do so
         if not queue:
-            queue = Queue.Queue()
+            queue = Queue()
         self.gui_queue = queue
         # You can pass in a logger if you prefer to do so
         if not logger:

@@ -4,6 +4,9 @@
 #
 # Eric Jeschke (eric@naoj.org, eric@redskiesatnight.com)
 #
+
+from __future__ import print_function
+
 """
 Copyright (c) 2011-2013  Eric R. Jeschke
 All rights reserved.
@@ -155,7 +158,7 @@ def main(options, args):
             try:
                 from ginga.qtw.GingaQt import GingaView
             except ImportError:
-                print "You need python-gtk or python-qt4 to run Ginga!"
+                print("You need python-gtk or python-qt4 to run Ginga!")
                 sys.exit(1)
 
     # Define class dynamically based on toolkit choice
@@ -189,7 +192,7 @@ def main(options, args):
         import ginga_config
 
         ginga_config.pre_gui_config(ginga)
-    except Exception, e:
+    except Exception as e:
         try:
             (type, value, tb) = sys.exc_info()
             tb_str = "\n".join(traceback.format_tb(tb))
@@ -252,7 +255,7 @@ def main(options, args):
     # User configuration (custom star catalogs, etc.)
     try:
         ginga_config.post_gui_config(ginga)
-    except Exception, e:
+    except Exception as e:
         try:
             (type, value, tb) = sys.exc_info()
             tb_str = "\n".join(traceback.format_tb(tb))
@@ -346,7 +349,7 @@ if __name__ == "__main__":
     elif options.profile:
         import profile
 
-        print "%s profile:" % sys.argv[0]
+        print("%s profile:" % sys.argv[0])
         profile.run('main(options, args)')
 
 
