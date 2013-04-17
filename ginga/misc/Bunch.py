@@ -252,25 +252,23 @@ class Bunch(object):
         self.tbl = eval(pickled_state)
 
     def __iter__(self):
-        self.iterPosition = 0
-        self.keyList = self.tbl.keys()
-        return(self)
+        return iter(self.tbl.keys())
 
-    def next(self):
-        if self.iterPosition >= len(self.keyList):
-            raise StopIteration
-        x = self.tbl[self.keyList[self.iterPosition]][0]
-        self.iterPosition += 1
-        return x
+    ## def next(self):
+    ##     if self.iterPosition >= len(self.keyList):
+    ##         raise StopIteration
+    ##     x = self.tbl[self.keyList[self.iterPosition]][0]
+    ##     self.iterPosition += 1
+    ##     return x
 
-    def iteritems(self):
-        return iter(self.items())
+    ## def iteritems(self):
+    ##     return iter(self.items())
 
-    def iterkeys(self):
-        return iter(self.keys())
+    ## def iterkeys(self):
+    ##     return iter(self.keys())
 
-    def itervalues(self):
-        return iter(self.values())
+    ## def itervalues(self):
+    ##     return iter(self.values())
 
     def update(self, dict2):
         return self.tbl.update(dict2)

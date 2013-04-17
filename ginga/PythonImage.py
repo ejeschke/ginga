@@ -280,19 +280,19 @@ class PythonImage(BaseImage):
 # UTILITY FUNCTIONS
 
 def open_ppm(filepath):
-    infile = open(filepath,'r')
+    infile = open(filepath,'rb')
     # Get type: PPM or PGM
     header = infile.readline()
     ptype = header.strip().upper()
-    if ptype == 'P5':
+    if ptype == b'P5':
         depth = 1
-    elif ptype == 'P6':
+    elif ptype == b'P6':
         depth = 3
     #print header
 
     # Get image dimensions
     header = infile.readline().strip()
-    while header.startswith('#') or len(header) == 0:
+    while header.startswith(b'#') or len(header) == 0:
         header = infile.readline().strip()
 
     print header
@@ -345,7 +345,7 @@ def qimage2numpy(qimage):
     buf = qimage.bits()
     if hasattr(buf, 'asstring'):
         # Qt4
-        buf = buf.asstring(qimage.numBytes())
+        buf = bytes(buf.asstring(qimage.numBytes()))
     else:
         # PySide
         buf = bytes(buf)

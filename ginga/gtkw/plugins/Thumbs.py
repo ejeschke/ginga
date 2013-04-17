@@ -434,7 +434,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
 
     def _gethex(self, s):
-        return hashlib.sha1(s).hexdigest()
+        return hashlib.sha1(s.encode()).hexdigest()
     
     def get_thumbpath(self, path, makedir=True):
         path = os.path.abspath(path)

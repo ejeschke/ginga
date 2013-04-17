@@ -124,7 +124,7 @@ class FitsViewer(QtGui.QMainWindow):
 
     def drop_file(self, fitsimage, paths):
         fileName = paths[0]
-        print fileName
+        #print(fileName)
         self.load_file(fileName)
 
     def motion(self, fitsimage, button, data_x, data_y):
@@ -152,7 +152,7 @@ class FitsViewer(QtGui.QMainWindow):
                 return
             ra_txt, dec_txt = image.pixtoradec(fits_x, fits_y,
                                                format='str', coords='fits')
-        except Exception, e:
+        except Exception as e:
             self.logger.warn("Bad coordinate conversion: %s" % (
                 str(e)))
             ra_txt  = 'BAD WCS'
@@ -228,7 +228,7 @@ if __name__ == "__main__":
     elif options.profile:
         import profile
 
-        print "%s profile:" % sys.argv[0]
+        print("%s profile:" % sys.argv[0])
         profile.run('main(options, args)')
 
 
