@@ -1,0 +1,78 @@
+# TODO: once ginga is in the astropy affiliated package format we should
+# switch to the package-template .travis.yml file and change the tests
+# to run like this:
+# python setup.py test
+# python setup.py build_sphinx
+
+language: python
+
+python:
+  - 2.7
+  - 3.2
+
+env:
+  - ASTROPY_VERSION=stable
+  - ASTROPY_VERSION=development
+
+before_install:
+  # Check if we are running Python 2 or 3. This is needed for the apt-get package names
+  - if [[ $TRAVIS_PYTHON_VERSION == '3.2' ]]; then export P="3"; fi
+
+  - export PYTHONIOENCODING=UTF8 # just in case
+
+  # This is needed to be able to start the ginga GUI application
+  # http://about.travis-ci.org/docs/user/gui-and-headless-browsers/
+  - export DISPLAY=:99.0
+  - sh -e /etc/init.d/xvfb start
+
+  # Use system python, not virtualenv, because building the dependencies from source takes too long
+  - deactivate # the virtualenv
+
+install:
+  # Get most of the required dependencies via apt-get
+  - sudo apt-get update -qq
+  #libatlas-dev liblapack-dev gfortran
+  - sudo apt-get install -qq python${P} python${P}-numpy
+
+
+  # Note: cython3 will only appear in Ubuntu 13.04: cython${P}
+  # So for now we install it from source
+  - curl -L https://pypi.python.org/packages/source/C/Cython/Cython-0.18.tar.gz > Cython-0.18.tar.gz
+  - tar zxf Cython-0.18.tar.gz
+  - cd Cython-0.18
+  - sudo python${P} setup.py install
+  - cd ..
+
+  # GTK is not available for Python 3, so we test QT only for now ...
+  # python${PYTHON_SUFFIX}-gtk2
+  - sudo apt-get install -qq python${P}-pyside
+
+  # No apt-get install python3-pip before Ubuntu 13.04 ... python${P}-pip 
+  #- if [[ $ASTROPY_VERSION == stable ]]; then sudo pip${P} -q install astropy --use-mirrors; fi
+  #- if [[ $ASTROPY_VERSION == development ]]; then sudo pip${P} -q install git+http://github.com/astropy/astropy.git#egg=astropy --use-mirrors; fi
+
+  # ... so for now use setup.py to install astropy
+  - git clone git://github.com/astropy/astropy.git
+  - cd astropy
+  - if [[ $ASTROPY_VERSION == stable ]]; then git checkout v0.2.1; fi
+  - sudo python${P} setup.py install
+  - cd ..
+
+script:
+  # Install ginga
+  - sudo python${P} setup.py install
+
+  - python${P} -c 'import ginga'
+  - which ginga
+
+  # Try to start ginga and kill it after some time ...
+  # http://stackoverflow.com/questions/601543/command-line-command-to-auto-kill-a-command-after-a-certain-amount-of-time
+  # TODO: Exceptions that don't crash ginga are simply printed on the consolue,
+  # they don't lead to a non-zero exit code and thus won't break the build
+  # ... I think we do want them to break the build ... how can we achieve this?
+  - ( ginga ) & sleep 20 ; kill $!
+
+  # TODO: run unit tests
+
+  # TODO: build documentation
+  #- python setup.py build_sphinx
