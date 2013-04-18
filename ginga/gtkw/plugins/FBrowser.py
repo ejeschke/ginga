@@ -11,10 +11,9 @@ import os, glob
 import stat, time
 
 from ginga.misc import Bunch
-from ginga import GingaPlugin
+from ginga import AstroImage, GingaPlugin
 
 import gtk
-import pyfits
 
 #icon_ext = '.svg'
 icon_ext = '.png'
@@ -252,7 +251,7 @@ class FBrowser(GingaPlugin.LocalPlugin):
                 continue
             if not bnch.has_key('kwds'):
                 try:
-                    in_f = pyfits.open(bnch.path, 'readonly')
+                    in_f = AstroImage.pyfits.open(bnch.path, 'readonly')
                     try:
                         kwds = {}
                         for kwd in self.keywords:

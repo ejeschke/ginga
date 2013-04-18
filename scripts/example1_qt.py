@@ -8,7 +8,7 @@
 #
 import sys, os
 import logging
-import pyfits
+from ginga.AstroImage import pyfits
 from ginga.qtw.QtHelp import QtGui, QtCore
 
 from ginga.qtw.FitsImageQt import FitsImageZoom

@@ -11,15 +11,22 @@
 #
 import math
 
-import pyfits
+try:
+    from astropy.io import fits as pyfits
+except ImportError:
+    import pyfits
 import numpy
 
 have_pywcs = False
 try:
-    import pywcs
+    import astropy.wcs as pywcs
     have_pywcs = True
 except ImportError:
-    pass
+    try:
+        import pywcs
+        have_pywcs = True
+    except ImportError:
+        pass
 
 class WCSError(Exception):
     pass

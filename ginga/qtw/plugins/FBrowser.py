@@ -15,7 +15,7 @@ from ginga import GingaPlugin
 
 from ginga.qtw.QtHelp import QtGui, QtCore
 from ginga.qtw import QtHelp
-import pyfits
+from ginga import AstroImage
 
 
 class FBrowser(GingaPlugin.LocalPlugin):
@@ -205,7 +205,7 @@ class FBrowser(GingaPlugin.LocalPlugin):
                 continue
             if not bnch.has_key('kwds'):
                 try:
-                    in_f = pyfits.open(bnch.path, 'readonly')
+                    in_f = AstroImage.pyfits.open(bnch.path, 'readonly')
                     try:
                         kwds = {}
                         for kwd in self.keywords:

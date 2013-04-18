@@ -7,13 +7,11 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-import pyfits
 import gtk
 import pango
 from ginga.gtkw import GtkHelp
 
-from ginga.AstroImage import AstroImage
-
+from ginga import AstroImage
 from ginga.gtkw import GtkHelp
 from ginga import GingaPlugin
 
@@ -186,7 +184,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
         
     def set_hdu(self, idx):
         self.logger.debug("Loading fits hdu #%d" % (idx))
-        image = AstroImage()
+        image = AstroImage.AstroImage()
         image.set(path=self.path)
         try:
             hdu = self.fits_f[idx-1]
@@ -208,7 +206,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
         idx = int(w.get_value()) - 1
         self.logger.debug("naxis %d index is %d" % (n+1, idx+1))
 
-        image = AstroImage()
+        image = AstroImage.AstroImage()
         image.set(path=self.path)
         try:
             hdu = self.fits_f[self.curhdu]
@@ -239,7 +237,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
         #print "path=%s metadata: %s" % (path, str(md))
 
         self.path = path
-        self.fits_f = pyfits.open(path, 'readonly')
+        self.fits_f = AstroImage.pyfits.open(path, 'readonly')
 
         lower = 1
         upper = len(self.fits_f)

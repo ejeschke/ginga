@@ -11,11 +11,8 @@ import time
 import threading
 from ginga.qtw.QtHelp import QtGui, QtCore
 from ginga.qtw import QtHelp
+from ginga import AstroImage, GingaPlugin
 
-import pyfits
-from ginga.AstroImage import AstroImage
-
-from ginga import GingaPlugin
 
 class MultiDim(GingaPlugin.LocalPlugin):
 
@@ -174,7 +171,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
                 hdu = self.fits_f[idx]
             path = self.path
 
-        image = AstroImage()
+        image = AstroImage.AstroImage()
         image.set(path=path)
         dims = list(hdu.data.shape)
         dims.reverse()
@@ -206,7 +203,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
     def set_naxis_cb(self, idx, n):
         self.logger.debug("naxis %d index is %d" % (n+1, idx+1))
 
-        image = AstroImage()
+        image = AstroImage.AstroImage()
         image.set(path=self.path)
         try:
             hdu = self.fits_f[self.curhdu]
@@ -244,7 +241,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
         self.logger.debug("path=%s metadata: %s" % (path, str(md)))
 
         self.path = path
-        self.fits_f = pyfits.open(path, 'readonly')
+        self.fits_f = AstroImage.pyfits.open(path, 'readonly')
         self.hdu_cache_clear()
 
         self.num_hdu = len(self.fits_f)

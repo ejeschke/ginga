@@ -16,7 +16,10 @@ from ginga import iqcalc, wcs
 # TEMP
 import time
 
-import pyfits
+try:
+    from astropy.io import fits as pyfits
+except ImportError:
+    import pyfits
 import numpy
 
 from ginga.BaseImage import BaseImage, ImageError

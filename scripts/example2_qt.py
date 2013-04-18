@@ -10,7 +10,6 @@
 #
 import sys, os
 import logging, logging.handlers
-import pyfits
 from ginga.qtw.QtHelp import QtGui, QtCore
 
 from ginga import AstroImage

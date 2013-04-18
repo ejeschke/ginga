@@ -10,11 +10,11 @@
 #
 import sys, os
 import logging
-import pyfits
 import gtk
 
 from ginga.gtkw.FitsImageGtk import FitsImageZoom
 from ginga.gtkw import FileSelection
+from ginga.AstroImage import pyfits
 
 
 STD_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcName)s) | %(message)s'

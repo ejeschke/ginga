@@ -10,7 +10,6 @@
 #
 import sys, os
 import logging, logging.handlers
-import pyfits
 import gtk
 
 from ginga import AstroImage
