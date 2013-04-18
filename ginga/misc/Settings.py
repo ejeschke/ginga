@@ -125,16 +125,22 @@ class SettingGroup(object):
     def set(self, **kwdargs):
         self.setDict(kwdargs)
         
-    def load(self):
+    def load(self, onError='raise'):
         try:
             with open(self.preffile, 'r') as in_f:
                 buf = in_f.read()
                 d = eval(buf)
                 self.set(**d)
         except IOError, e:
-            self.logger.warn("Error opening settings file (%s): %s" % (
-                    self.preffile, str(e)))
-        
+            errmsg = "Error opening settings file (%s): %s" % (
+                self.preffile, str(e))
+            if onError == 'silent':
+                pass
+            elif onError == 'warn':
+                self.logger.warn(errmsg)
+            else:
+                raise SettingError(errmsg)
+            
     def save(self):
         d = self.getDict()
         with open(self.preffile, 'w') as out_f:

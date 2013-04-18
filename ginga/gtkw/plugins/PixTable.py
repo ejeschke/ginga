@@ -15,6 +15,7 @@ from ginga.gtkw import GtkHelp
 from ginga.gtkw import FitsImageCanvasTypesGtk as CanvasTypes
 from ginga import GingaPlugin
 
+
 class PixTable(GingaPlugin.LocalPlugin):
 
     def __init__(self, fv, fitsimage):

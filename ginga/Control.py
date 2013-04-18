@@ -147,9 +147,14 @@ class GingaControl(Callback.Callbacks):
         maxv = readout.maxv
         fits_x = "%.3f" % info.x
         fits_y = "%.3f" % info.y
-        text = "RA: %-12.12s  DEC: %-12.12s  X: %-*.*s  Y: %-*.*s  Value: %-*.*s" % (
-            info.ra_txt, info.dec_txt, maxx, maxx, fits_x,
-            maxy, maxy, fits_y, maxv, maxv, value)
+        if info.has_key('ra_txt'):
+            text = "RA: %-12.12s  DEC: %-12.12s  X: %-*.*s  Y: %-*.*s  Value: %-*.*s" % (
+                info.ra_txt, info.dec_txt, maxx, maxx, fits_x,
+                maxy, maxy, fits_y, maxv, maxv, value)
+        else:
+            text = "RA: %-12.12s  DEC: %-12.12s  X: %-*.*s  Y: %-*.*s  Value: %-*.*s" % (
+                'None', 'None', maxx, maxx, fits_x,
+                maxy, maxy, fits_y, maxv, maxv, value)
         readout.set_text(text)
 
         # Draw colorbar value wedge

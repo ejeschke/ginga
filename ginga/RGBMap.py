@@ -159,9 +159,9 @@ class RGBMapper(Callback.Callbacks):
         
     
     def get_hasharray(self, idx):
-        # NOTE: data is assumed to be in the range 0-hashsize at this point
+        # NOTE: data is assumed to be in the range 0..hashsize-1 at this point
         # but clip as a precaution
-        idx = idx.clip(0, self.hashsize)
+        idx = idx.clip(0, self.hashsize-1)
         arr = self.hash[idx]
         return arr
         

@@ -11425,7 +11425,7 @@ def get_cmap(name):
     return cmaps[name]
 
 def get_names():
-    res = cmaps.keys()
+    res = list(cmaps.keys())
     res.sort()
     return res
 

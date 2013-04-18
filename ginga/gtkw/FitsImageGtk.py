@@ -683,26 +683,26 @@ class openHandCursor(object):
     def __init__(self, color='red'):
 
         self.xpm_data = [
-            "16 16 3 1 ",
-            "  c black",
-            ". c gray100",
-            "X c None",
-            "XXXXXXX  XXXXXXX",
-            "XXX  X ..   XXXX",
-            "XX ..  .. .. XXX",
-            "XX ..  .. .. X X",
-            "XXX .. .. ..  . ",
-            "XXX .. .. .. .. ",
-            "X  . ....... .. ",
-            " ..  .......... ",
-            " ... ......... X",
-            "X ............ X",
-            "XX ........... X",
-            "XX .......... XX",
-            "XXX ......... XX",
-            "XXXX ....... XXX",
-            "XXXXX ...... XXX",
-            "XXXXXXXXXXXXXXXX"
+            b"16 16 3 1 ",
+            b"  c black",
+            b". c gray100",
+            b"X c None",
+            b"XXXXXXX  XXXXXXX",
+            b"XXX  X ..   XXXX",
+            b"XX ..  .. .. XXX",
+            b"XX ..  .. .. X X",
+            b"XXX .. .. ..  . ",
+            b"XXX .. .. .. .. ",
+            b"X  . ....... .. ",
+            b" ..  .......... ",
+            b" ... ......... X",
+            b"X ............ X",
+            b"XX ........... X",
+            b"XX .......... XX",
+            b"XXX ......... XX",
+            b"XXXX ....... XXX",
+            b"XXXXX ...... XXX",
+            b"XXXXXXXXXXXXXXXX"
             ]
         pixbuf = gtk.gdk.pixbuf_new_from_xpm_data(self.xpm_data)
 

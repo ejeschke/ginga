@@ -128,7 +128,8 @@ class PythonImage(BaseImage):
     def get_scaled_cutout(self, x1, y1, x2, y2, scale_x, scale_y,
                           method=None):
         if method == None:
-            if (have_pilutil or have_qtimage):
+            #if (have_pilutil or have_qtimage):
+            if (have_pilutil):
                 method = 'bicubic'
             else:
                 method = 'basic'

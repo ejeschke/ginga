@@ -9,11 +9,12 @@
 #
 import numpy
 
-from QtHelp import QtGui, QtCore
-import QtHelp
+from ginga.qtw.QtHelp import QtGui, QtCore
+from ginga.qtw import QtHelp
 
-import FitsImageCanvasTypesQt as CanvasTypes
-import GingaPlugin
+from ginga.qtw import FitsImageCanvasTypesQt as CanvasTypes
+from ginga import GingaPlugin
+
 
 class PixTable(GingaPlugin.LocalPlugin):
 

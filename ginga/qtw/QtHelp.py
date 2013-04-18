@@ -296,7 +296,7 @@ class Desktop(Callback.Callbacks):
         submenu.setTitle("Take Tab")
         popmenu.addMenu(submenu)
 
-        tabnames = self.tab.keys()
+        tabnames = list(self.tab.keys())
         tabnames.sort()
         for tabname in tabnames:
             item = QtGui.QAction(tabname, nb)

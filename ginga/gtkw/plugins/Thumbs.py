@@ -38,7 +38,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         self.thumbWidth = 150
         prefs = self.fv.get_preferences()
         self.settings = prefs.createCategory('plugin_Thumbs')
-        self.settings.load()
+        self.settings.load(onError='silent')
 
         self.thmbtask = None
         self.lagtime = 4000

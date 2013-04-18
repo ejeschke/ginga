@@ -826,6 +826,7 @@ class CatalogListing(object):
 
     def _update_selections(self):
 
+        maxcol = len(self.columns)-1
         # Go through all selections in the table and ensure that the
         # ones in self.selected are highlighted and the others are not.
         checked = set()
@@ -847,7 +848,6 @@ class CatalogListing(object):
         self._update_selections()
         
         star_idx = self.starlist.index(star)
-        maxcol = len(self.columns)-1
         item = self.table.item(star_idx, 0)
 
         if not fromtable:

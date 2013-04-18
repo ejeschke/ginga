@@ -248,8 +248,9 @@ class Info(GingaPlugin.GlobalPlugin):
         obj.winfo.x.set_text("%.3f" % info.x)
         obj.winfo.y.set_text("%.3f" % info.y)
         obj.winfo.value.set_text(str(info.value))
-        obj.winfo.ra.set_text(info.ra_txt)
-        obj.winfo.dec.set_text(info.dec_txt)
+        if info.has_key('ra_txt'):
+            obj.winfo.ra.set_text(info.ra_txt)
+            obj.winfo.dec.set_text(info.dec_txt)
 
     def cut_levels(self, w, fitsimage, info):
         try:

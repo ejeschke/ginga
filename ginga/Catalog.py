@@ -61,7 +61,6 @@ class URLServer(object):
 
         try:
             self.logger.info("Opening url=%s" % (url))
-            print url
             try:
                 response = urllib2.urlopen(req)
 
@@ -81,6 +80,7 @@ class URLServer(object):
             self.logger.debug("getting data")
             data = response.read()
             self.logger.debug("fetched %d bytes" % (len(data)))
+            #data = data.decode('ascii')
 
         except Exception, e:
             self.logger.error("Error reading data from '%s': %s" % (
@@ -88,7 +88,7 @@ class URLServer(object):
             raise e
 
         if filepath:
-            with open(filepath, 'w') as out_f:
+            with open(filepath, 'wb') as out_f:
                 out_f.write(data)
             return None
 
@@ -133,6 +133,12 @@ class Star(object):
     def __getitem__(self, key):
         return self.starInfo[key]
         
+    def __contains__(self, key):
+        return key in self.starInfo.keys()
+        
+    def __setitem__(self, key, value):
+        self.starInfo[key] = value
+        
     def has_key(self, key):
         return self.starInfo.has_key(key)
         
@@ -154,6 +160,7 @@ class CatalogServer(URLServer):
         url = self.base_url % params
 
         data = self.fetch(url, filepath=None)
+        data = data.decode("utf8")
 
         lines = data.split('\n')
         offset = 0
@@ -163,9 +170,8 @@ class CatalogServer(URLServer):
             offset += 1
             if line.startswith('-'):
                 break
-        print "offset=%d" % (offset)
+        self.logger.debug("offset=%d" % (offset))
 
-        print "iterating data"
         results = []
         table = [lines[offset-2]]
         
@@ -204,8 +210,8 @@ class CatalogServer(URLServer):
                 ra_txt = wcs.raDegToString(ra_deg, format='%02d:%02d:%06.3f')
                 dec_txt = wcs.decDegToString(dec_deg,
                                                format='%s%02d:%02d:%05.2f')
-                print "STAR %s AT ra=%s dec=%s mag=%f" % (
-                    name, ra_txt, dec_txt, mag)
+                self.logger.debug("STAR %s AT ra=%s dec=%s mag=%f" % (
+                    name, ra_txt, dec_txt, mag))
 
                 results.append(Star(name=name, ra_deg=ra_deg, dec_deg=dec_deg,
                                     ra=ra_txt, dec=dec_txt, mag=mag,
@@ -243,6 +249,7 @@ class ServerBank(object):
             keys = self.imbank.keys()
         else:
             keys = self.ctbank.keys()
+        keys = list(keys)
         keys.sort()
         return keys
 

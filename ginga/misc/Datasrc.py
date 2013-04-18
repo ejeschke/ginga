@@ -54,7 +54,7 @@ class Datasrc(object):
             oldest = self.history.pop(0)
             del self.datums[oldest]
 
-        self.sortedkeys = self.datums.keys()
+        self.sortedkeys = list(self.datums.keys())
         self.sortedkeys.sort()
 
 

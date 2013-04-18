@@ -3396,7 +3396,7 @@ def get_imap(name):
     return imaps[name]
 
 def get_names():
-    res = imaps.keys()
+    res = list(imaps.keys())
     res.sort()
     return res
 

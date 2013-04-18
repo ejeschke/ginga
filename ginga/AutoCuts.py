@@ -159,8 +159,13 @@ class AutoCuts(object):
 
         # calculate low cutoff
         cumsum = numpy.cumsum(dist)
-        i = numpy.flatnonzero(cumsum > cutoff)[0]
-        count_px = cumsum[i]
+        li = numpy.flatnonzero(cumsum > cutoff)
+        if len(li) > 0:
+            i = li[0]
+            count_px = cumsum[i]
+        else:
+            i = 0
+            count_px = 0
         if i > 0:
             nprev = cumsum[i-1]
         else:
@@ -181,8 +186,13 @@ class AutoCuts(object):
         # calculate high cutoff
         revdist = dist[::-1]
         cumsum = numpy.cumsum(revdist)
-        i = numpy.flatnonzero(cumsum > cutoff)[0]
-        count_px = cumsum[i]
+        li = numpy.flatnonzero(cumsum > cutoff)
+        if len(li) > 0:
+            i = li[0]
+            count_px = cumsum[i]
+        else:
+            i = 0
+            count_px = 0
         if i > 0:
             nprev = cumsum[i-1]
         else:

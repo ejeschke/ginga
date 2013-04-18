@@ -88,7 +88,7 @@ class Contents(GingaPlugin.GlobalPlugin):
     
     def recreate_toc(self):
         self.logger.debug("Recreating table of contents...")
-        toclist = self.nameDict.keys()
+        toclist = list(self.nameDict.keys())
         toclist.sort()
 
         self.treeview.clear()
@@ -99,7 +99,7 @@ class Contents(GingaPlugin.GlobalPlugin):
             self.treeview.addTopLevelItem(chitem)
 
             fileDict = self.nameDict[key]
-            filelist = fileDict.keys()
+            filelist = list(fileDict.keys())
             filelist.remove('_chitem')
             fileDict['_chitem'] = chitem
             filelist.sort(key=str.lower)

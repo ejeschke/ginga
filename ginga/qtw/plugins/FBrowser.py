@@ -160,7 +160,7 @@ class FBrowser(GingaPlugin.LocalPlugin):
 
         # Make a directory listing
         self.logger.debug("globbing path: %s" % (path))
-        filelist = glob.glob(path)
+        filelist = list(glob.glob(path))
         filelist.sort(key=str.lower)
         filelist.insert(0, os.path.join(dirname, '..'))
 

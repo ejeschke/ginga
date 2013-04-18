@@ -299,15 +299,19 @@ class IQCalc(object):
 
         return objlist
 
-    def _compare(self, obj1, obj2):
-        val1 = obj1.brightness * obj1.pos/math.sqrt(obj1.fwhm)
-        val2 = obj2.brightness * obj2.pos/math.sqrt(obj2.fwhm)
-        if val1 > val2:
-            return -1
-        elif val2 > val1:
-            return 1
-        else:
-            return 0
+    # def _compare(self, obj1, obj2):
+    #     val1 = obj1.brightness * obj1.pos/math.sqrt(obj1.fwhm)
+    #     val2 = obj2.brightness * obj2.pos/math.sqrt(obj2.fwhm)
+    #     if val1 > val2:
+    #         return -1
+    #     elif val2 > val1:
+    #         return 1
+    #     else:
+    #         return 0
+
+    def _sortkey(self, obj):
+        val = obj.brightness * obj.pos/math.sqrt(obj.fwhm)
+        return val
             
     def objlist_select(self, objlist, width, height,
                         minfwhm=2.0, maxfwhm=150.0, minelipse=0.5,
@@ -327,7 +331,8 @@ class IQCalc(object):
                 (height*(1.0-edgew) > obj.y)):
                 results.append(obj)
 
-        results.sort(self._compare)
+        #results.sort(cmp=self._compare)
+        results.sort(key=self._sortkey, reverse=True)
         return results
 
     def pick_field(self, data, peak_radius=5, bright_radius=2, fwhm_radius=15,
