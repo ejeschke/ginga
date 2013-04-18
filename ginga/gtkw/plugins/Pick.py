@@ -92,6 +92,9 @@ class Pick(GingaPlugin.LocalPlugin):
         self.w.tooltips = self.fv.w.tooltips
 
     def build_gui(self, container):
+        assert iqcalc.have_scipy == True, \
+               Exception("Please install python-scipy to use this plugin")
+        
         self.pickcenter = None
 
         vpaned = gtk.VPaned()

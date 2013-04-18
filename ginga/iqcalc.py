@@ -12,10 +12,14 @@ import math
 import logging
 import numpy
 import threading
-import scipy.optimize as optimize
-import scipy.ndimage as ndimage
-import scipy.ndimage.filters as filters
-
+try:
+    import scipy.optimize as optimize
+    import scipy.ndimage as ndimage
+    import scipy.ndimage.filters as filters
+    have_scipy = True
+except ImportError:
+    have_scipy = False
+    
 from ginga.misc import Bunch
 
 class IQCalcError(Exception):

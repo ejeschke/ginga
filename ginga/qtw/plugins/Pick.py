@@ -90,6 +90,9 @@ class Pick(GingaPlugin.LocalPlugin):
 
 
     def build_gui(self, container):
+        assert iqcalc.have_scipy == True, \
+               Exception("Please install python-scipy to use this plugin")
+
         self.pickcenter = None
 
         # Splitter is just to provide a way to size the graph
