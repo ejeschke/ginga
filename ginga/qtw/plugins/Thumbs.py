@@ -7,15 +7,17 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-from ginga.qtw import FitsImageQt as FitsImageQt
-from ginga import GingaPlugin
-
-from ginga.qtw.QtHelp import QtGui, QtCore
 import time
 import os
 import hashlib
 
+from ginga.qtw import FitsImageQt as FitsImageQt
+from ginga import GingaPlugin
+
+from ginga.qtw.QtHelp import QtGui, QtCore
+from ginga.qtw import QtHelp
 from ginga.misc import Bunch
+
 
 class MyScrollArea(QtGui.QScrollArea):
 
@@ -103,6 +105,15 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         rvbox.addWidget(sw, stretch=1)
         sw.show()
 
+        captions = (('Auto scroll', 'checkbutton'),)
+        w, b = QtHelp.build_info(captions)
+        self.w.update(b)
+
+        b.auto_scroll.setToolTip("Scroll the thumbs window when new images arrive")
+        autoScroll = self.settings.get('autoScroll', True)
+        b.auto_scroll.setChecked(autoScroll)
+        rvbox.addWidget(w, stretch=0)
+
     def add_image(self, viewer, chname, image):
         noname = 'Noname' + str(time.time())
         name = image.get('name', noname)
@@ -183,10 +194,13 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
         #self.w.thumbs.show()
         
-        # force scroll to bottom of thumbs
-        ## rect = self.w.thumbs_w.geometry()
-        ## x1, y1, x2, y2 = rect.getCoords()
-        ## self.w.thumbs_scroll.ensureVisible(x1, y1)
+        # force scroll to bottom of thumbs, if checkbox is set
+        scrollp = self.w.auto_scroll.isChecked()
+        if scrollp:
+            # TODO: this doesn't work!
+            rect = self.w.thumbs_w.geometry()
+            x1, y1, x2, y2 = rect.getCoords()
+            self.w.thumbs_scroll.ensureVisible(x1, y1)
         #self.w.thumbs_scroll.show()
         self.logger.debug("added thumb for %s" % (thumbname))
 
@@ -290,7 +304,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
     def copy_attrs(self, fitsimage):
         # Reflect transforms, colormap, etc.
         fitsimage.copy_attributes(self.thumb_generator,
-                                  ['transforms', 'cutlevels',
+                                  ['transforms', #'cutlevels',
                                    'rgbmap'],
                                   redraw=False)
 

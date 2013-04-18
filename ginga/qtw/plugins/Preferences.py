@@ -553,8 +553,8 @@ class Preferences(GingaPlugin.LocalPlugin):
     def set_autocuts_ext_cb(self, setting, value):
         if not self.gui_up:
             return
-        method = self.t_['autocuts_method']
-        pct = self.t_['autocuts_hist_pct']
+        method = self.t_['autocut_method']
+        pct = self.t_['autocut_hist_pct']
         self.config_autocut_params(method, pct)
 
     def set_autocut_params(self):

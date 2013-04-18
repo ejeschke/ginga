@@ -8,6 +8,7 @@
 # Please see the file LICENSE.txt for details.
 #
 from ginga.gtkw import FitsImageGtk as FitsImageGtk
+from ginga.gtkw import GtkHelp
 from ginga import GingaPlugin
 
 import os
@@ -24,6 +25,8 @@ class Thumbs(GingaPlugin.GlobalPlugin):
     def __init__(self, fv):
         # superclass defines some variables for us, like logger
         super(Thumbs, self).__init__(fv)
+
+        self.w.tooltips = self.fv.w.tooltips
 
         # For thumbnail pane
         self.thumbDict = {}
@@ -79,6 +82,16 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         # TODO: should this even have it's own scrolled window?
         container.pack_start(sw, fill=True, expand=True)
 
+        captions = (('Auto scroll', 'checkbutton'),)
+        w, b = GtkHelp.build_info(captions)
+        self.w.update(b)
+
+        self.w.tooltips.set_tip(b.auto_scroll,
+                                "Scroll the thumbs window when new images arrive")
+        autoScroll = self.settings.get('autoScroll', True)
+        b.auto_scroll.set_active(autoScroll)
+
+        container.pack_start(w, fill=True, expand=False)
 
     def add_image(self, viewer, chname, image):
         noname = 'Noname' + str(time.time())
@@ -154,10 +167,12 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         
         self.thumbDict[thumbkey] = bnch
         self.thumbList.append(thumbkey)
-        # force scroll to bottom of thumbs
-        # adj_w = self.w.thumbs_scroll.get_vadjustment()
-        # max = adj_w.get_upper()
-        # adj_w.set_value(max)
+        # force scroll to bottom of thumbs, if checkbox is set
+        scrollp = self.w.auto_scroll.get_active()
+        if scrollp:
+            adj_w = self.w.thumbs_scroll.get_vadjustment()
+            max = adj_w.get_upper()
+            adj_w.set_value(max)
         self.logger.debug("added thumb for %s" % (thumbname))
 
     def reorder_thumbs(self):
@@ -272,7 +287,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
     def copy_attrs(self, fitsimage):
         # Reflect transforms, colormap, etc.
         fitsimage.copy_attributes(self.thumb_generator,
-                                  ['transforms', 'cutlevels',
+                                  ['transforms', #'cutlevels',
                                    'rgbmap'],
                                   redraw=False)
 
