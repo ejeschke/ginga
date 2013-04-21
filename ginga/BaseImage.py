@@ -309,7 +309,7 @@ class BaseImage(Callback.Callbacks):
             
         self.set_data(data)
             
-    def info_xy(self, data_x, data_y):
+    def info_xy(self, data_x, data_y, settings):
         # Get the value under the data coordinates
         try:
             value = self.get_data_xy(int(data_x), int(data_y))

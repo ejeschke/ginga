@@ -308,6 +308,9 @@ class AstroImage(BaseImage):
     def save_file_as(self, filepath):
         self.write_fits(filepath)
 
+    def pixtocoords(self, x, y, system=None, coords='data'):
+        return self.wcs.pixtocoords(x, y, system=system, coords=coords)
+    
     def pixtoradec(self, x, y, format='deg', coords='data'):
         return self.wcs.pixtoradec(x, y, format=format, coords=coords)
     
@@ -701,7 +704,7 @@ class AstroImage(BaseImage):
 
         self.make_callback('modified')
     
-    def info_xy(self, data_x, data_y):
+    def info_xy(self, data_x, data_y, settings):
         # Note: FITS coordinates are 1-based, whereas numpy FITS arrays
         # are 0-based
         fits_x, fits_y = data_x + 1, data_y + 1
@@ -715,11 +718,63 @@ class AstroImage(BaseImage):
         except Exception, e:
             value = None
 
-        # Calculate WCS RA, if available
+        system = settings.get('wcs_coords', 'icrs')
+        format = settings.get('wcs_display', 'sexagesimal')
+        ra_lbl, dec_lbl = unichr(945), unichr(948)
+                    
+        # Calculate WCS coords, if available
         try:
-            # NOTE: image function operates on FITS space coords?
-            ra_txt, dec_txt = self.pixtoradec(fits_x, fits_y,
-                                              format='str', coords='fits')
+            if wcs.have_astropy:
+                c = self.pixtocoords(fits_x, fits_y,
+                                     system=system, coords='fits')
+
+                if system in ('galactic', ):
+                    deg, min, sec = c.lonangle.dms
+                    if c.lonangle.degrees < 0:
+                        sign = '-'
+                        deg, min, sec = -deg, -min, -sec
+                    else:
+                        sign = '+'
+                    ra_txt = '%s%d:%02d:%06.3f' % (sign, deg, min, sec)
+
+                    deg, min, sec = c.latangle.dms
+                    if c.latangle.degrees < 0:
+                        sign = '-'
+                        deg, min, sec = -deg, -min, -sec
+                    else:
+                        sign = '+'
+                    dec_txt = '%s%d:%02d:%06.3f' % (sign, deg, min, sec)
+                    ra_lbl, dec_lbl = "l", "b"
+
+                    if format == 'degrees':
+                        ra_txt = '%+10.7f' % c.lonangle.degrees
+                        dec_txt = '%+10.7f' % c.latangle.degrees
+
+                elif system in ('icrs', 'fk5', 'fk4'):
+                    hr, min, sec = c.ra.hms
+                    ra_txt = '%02d:%02d:%06.3f' % (hr, min, sec)
+
+                    deg, min, sec = c.dec.dms
+                    if c.dec.degrees < 0:
+                        sign = '-'
+                        deg, min, sec = -deg, -min, -sec
+                    else:
+                        sign = '+'
+                    dec_txt = '%s%02d:%02d:%05.2f' % (sign, deg, min, sec)
+
+                    if format == 'degrees':
+                        ra_txt = '%+10.7f' % c.lonangle.degrees
+                        dec_txt = '%+10.7f' % c.latangle.degrees
+
+            else:
+                if format == 'degrees':
+                    ra_deg, dec_deg = self.pixtoradec(fits_x, fits_y,
+                                                      format='deg', coords='fits')
+                    ra_txt = '%+10.7f' % ra_deg
+                    dec_txt = '%+10.7f' % dec_deg
+                else:
+                    ra_txt, dec_txt = self.pixtoradec(fits_x, fits_y,
+                                                      format='str', coords='fits')
         except Exception, e:
             self.logger.warn("Bad coordinate conversion: %s" % (
                 str(e)))
@@ -730,6 +785,7 @@ class AstroImage(BaseImage):
                            fits_x=fits_x, fits_y=fits_y,
                            x=fits_x, y=fits_y,
                            ra_txt=ra_txt, dec_txt=dec_txt,
+                           ra_lbl=ra_lbl, dec_lbl=dec_lbl,
                            value=value)
         return info
                            

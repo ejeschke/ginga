@@ -13,7 +13,7 @@ from ginga.qtw import QtHelp
 
 from ginga import cmap, imap
 from ginga import GingaPlugin
-from ginga import AutoCuts
+from ginga import AutoCuts, wcs
 
 from ginga.misc import Bunch
 
@@ -56,6 +56,9 @@ class Preferences(GingaPlugin.LocalPlugin):
         for name in ('autocuts', 'autocut_method', 'autocut_hist_pct',
                      'autocut_bins'):
             self.t_.getSetting(name).add_callback('set', self.set_autocuts_ext_cb)
+
+        self.t_.setdefault('wcs_coords', 'icrs')
+        self.t_.setdefault('wcs_display', 'sexagesimal')
 
     def build_gui(self, container):
         sw = QtGui.QScrollArea()
@@ -293,6 +296,48 @@ class Preferences(GingaPlugin.LocalPlugin):
         b.hist_pct.setDecimals(5)
         b.hist_pct.valueChanged.connect(lambda w: self.set_autocut_params())
         b.hist_pct.setEnabled(method == 'histogram')
+
+        fr.layout().addWidget(w, stretch=1, alignment=QtCore.Qt.AlignLeft)
+        vbox.addWidget(fr, stretch=0, alignment=QtCore.Qt.AlignTop)
+
+        # WCS OPTIONS
+        fr = QtHelp.Frame("WCS")
+
+        captions = (('WCS Coords', 'combobox', 'WCS Display', 'combobox'),
+                    )
+        w, b = QtHelp.build_info(captions)
+        self.w.update(b)
+
+        b.wcs_coords.setToolTip("Set WCS coordinate system")
+        b.wcs_display.setToolTip("Set WCS display format")
+
+        # Setup WCS coords method choice
+        combobox = b.wcs_coords
+        index = 0
+        for name in wcs.coord_types:
+            combobox.addItem(name)
+            index += 1
+        method = self.t_.get('wcs_coords', "")
+        try:
+            index = wcs.coord_types.index(method)
+            combobox.setCurrentIndex(index)
+        except ValueError:
+            pass
+        combobox.activated.connect(lambda w: self.set_wcs_params_cb())
+
+        # Setup WCS display format method choice
+        combobox = b.wcs_display
+        index = 0
+        for name in wcs.display_types:
+            combobox.addItem(name)
+            index += 1
+        method = self.t_.get('wcs_display', "sexagesimal")
+        try:
+            index = wcs.display_types.index(method)
+            combobox.setCurrentIndex(index)
+        except ValueError:
+            pass
+        combobox.activated.connect(lambda w: self.set_wcs_params_cb())
 
         fr.layout().addWidget(w, stretch=1, alignment=QtCore.Qt.AlignLeft)
         vbox.addWidget(fr, stretch=0, alignment=QtCore.Qt.AlignTop)
@@ -638,6 +683,16 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.t_.set(switchnew=switchnew, raisenew=raisenew,
                     autocenter=autocenter, genthumb=genthumb)
 
+    def set_wcs_params_cb(self):
+        idx = self.w.wcs_coords.currentIndex()
+        try:
+            ctype = wcs.coord_types[idx]
+        except IndexError:
+            ctype = 'icrs'
+        idx = self.w.wcs_display.currentIndex()
+        dtype = wcs.display_types[idx]
+        self.t_.set(wcs_coords=ctype, wcs_display=dtype)
+
     def preferences_to_controls(self):
         prefs = self.t_
 
@@ -720,6 +775,21 @@ class Preferences(GingaPlugin.LocalPlugin):
         #auto_zoom = prefs.get('autozoom', 'off')
         index = self.autozoom_options.index(auto_zoom)
         self.w.zoom_new.setCurrentIndex(index)
+
+        # wcs settings
+        method = prefs.get('wcs_coords', "icrs")
+        try:
+            index = wcs.coord_types.index(method)
+            self.w.wcs_coords.setCurrentIndex(index)
+        except ValueError:
+            pass
+
+        method = prefs.get('wcs_display', "sexagesimal")
+        try:
+            index = wcs.display_types.index(method)
+            self.w.wcs_display.setCurrentIndex(index)
+        except ValueError:
+            pass
 
         # misc settings
         prefs.setdefault('autocenter', False)

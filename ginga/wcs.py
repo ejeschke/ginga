@@ -28,6 +28,26 @@ except ImportError:
     except ImportError:
         pass
 
+try:
+    from astropy import coordinates
+    from astropy import units
+    have_astropy = True
+    coord_types = ['icrs', 'fk5', 'fk4', 'galactic']
+    coord_table = {
+        'icrs': coordinates.ICRSCoordinates,
+        'fk5': coordinates.FK5Coordinates,
+        'fk4': coordinates.FK4Coordinates,
+        'galactic': coordinates.GalacticCoordinates,
+        #'azel': coordinates.HorizontalCoordinates,
+        }
+
+except ImportError:
+    have_astropy = False
+    coord_types = [ ]
+    coord_table = { }
+
+display_types = ['sexagesimal', 'degrees']
+
 class WCSError(Exception):
     pass
 
@@ -353,12 +373,15 @@ class BareBonesWCS(BaseWCS):
             x, y = x - 1, y - 1
         return (x, y)
 
+    def pixtocoords(self, x, y, system='icrs', coords='data'):
+        return None
+    
 
 class WcslibWCS(BaseWCS):
     """A WCS interface for pywcs (a wrapper for Mark Calabretta's WCSLIB).
-    You need to install python module 'pywcs':
+    You need to install python module 'astropy':
 
-        http://pypi.python.org/pypi/pywcs
+        http://pypi.python.org/pypi/astropy
 
     If you want to use this version.
     """
@@ -421,8 +444,10 @@ class WcslibWCS(BaseWCS):
             origin = 1
         pixcrd = numpy.array([[x, y]], numpy.float_)
         try:
-            #sky = self.wcs.wcs_pix2sky(pixcrd, origin)
-            sky = self.wcs.all_pix2sky(pixcrd, origin)
+            sky = self.wcs.wcs_pix2sky(pixcrd, origin)
+            #sky = self.wcs.all_pix2sky(pixcrd, origin)
+            # astropy only?
+            #sky = self.wcs.all_pix2world(pixcrd, origin)
 
         except Exception, e:
             print ("Error calculating pixtoradec: %s" % (str(e)))
@@ -448,6 +473,8 @@ class WcslibWCS(BaseWCS):
             pix = self.wcs.wcs_sky2pix(skycrd, origin)
             # Doesn't seem to be a all_sky2pix
             #pix = self.wcs.all_sky2pix(skycrd, origin)
+            # astropy only?
+            #pix = self.wcs.wcs_world2pix(skycrd, origin)
 
         except Exception, e:
             print ("Error calculating radectopix: %s" % (str(e)))
@@ -456,6 +483,24 @@ class WcslibWCS(BaseWCS):
         x = float(pix[0, 0])
         y = float(pix[0, 1])
         return (x, y)
+
+    def pixtocoords(self, x, y, system='icrs', coords='data'):
+
+        # Get a coordinates object based on ra/dec wcs transform
+        ra_deg, dec_deg = self.pixtoradec(x, y, format='deg',
+                                          coords=coords)
+        # convert to astropy coord
+        try:
+            coordclass = coord_table[system]
+        except KeyError:
+            coordclass = coord_table['icrs']
+            
+        coord = coordclass(ra_deg, dec_deg,
+                           unit=(units.degree, units.degree))
+        # Now give it back to the user in the format requested
+        ## if system:
+        ##     coord = getattr(coord, system)
+        return coord
 
 # Supply a WCS depending on what is installed
 if have_pywcs:

@@ -107,7 +107,9 @@ class GingaControl(Callback.Callbacks):
             if image == None:
                 # No image loaded for this channel
                 return
-            info = image.info_xy(data_x, data_y)
+
+            prefs = fitsimage.get_settings()
+            info = image.info_xy(data_x, data_y, prefs)
 
         except Exception, e:
             self.logger.warn("Can't get info under the cursor: %s" % (
@@ -148,13 +150,13 @@ class GingaControl(Callback.Callbacks):
         fits_x = "%.3f" % info.x
         fits_y = "%.3f" % info.y
         if info.has_key('ra_txt'):
-            text = "RA: %-12.12s  DEC: %-12.12s  X: %-*.*s  Y: %-*.*s  Value: %-*.*s" % (
-                info.ra_txt, info.dec_txt, maxx, maxx, fits_x,
-                maxy, maxy, fits_y, maxv, maxv, value)
+            text = "%1.1s: %-12.12s  %1.1s: %-12.12s  X: %-*.*s  Y: %-*.*s  Value: %-*.*s" % (
+                info.ra_lbl, info.ra_txt, info.dec_lbl, info.dec_txt,
+                maxx, maxx, fits_x, maxy, maxy, fits_y, maxv, maxv, value)
         else:
-            text = "RA: %-12.12s  DEC: %-12.12s  X: %-*.*s  Y: %-*.*s  Value: %-*.*s" % (
-                'None', 'None', maxx, maxx, fits_x,
-                maxy, maxy, fits_y, maxv, maxv, value)
+            text = "%1.1s: %-12.12s  %1.1s: %-12.12s  X: %-*.*s  Y: %-*.*s  Value: %-*.*s" % (
+                '', '', '', '',
+                maxx, maxx, fits_x, maxy, maxy, fits_y, maxv, maxv, value)
         readout.set_text(text)
 
         # Draw colorbar value wedge

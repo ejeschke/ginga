@@ -755,11 +755,14 @@ def _make_widget(tup, ns):
     else:
         raise Exception("Bad wtype=%s" % wtype)
 
+    lblname = 'lbl_%s' % (name)
     if swap:
         w1, w2 = w2, w1
         ns[name] = w1
+        ns[lblname] = w2
     else:
         ns[name] = w2
+        ns[lblname] = w1
     return (w1, w2)
 
 
