@@ -38,8 +38,18 @@ class CanvasObjectBase(object):
         else:
             self.data.update(kwdargs)
             
-    def get_data(self):
-        return self.data
+    def get_data(self, *args):
+        if len(args) == 0:
+            return self.data
+        elif len(args) == 1:
+            return self.data[args[0]]
+        elif len(args) == 2:
+            try:
+                return self.data[args[0]]
+            except KeyError:
+                return args[1]
+        else:
+            raise CanvasObjectError("method get_data() takes at most 2 arguments")
 
     def redraw(self, whence=3):
         self.fitsimage.redraw(whence=whence)
@@ -101,6 +111,35 @@ class CanvasObjectBase(object):
         bp = (a * sin_t) + (b * cos_t)
         return (ap + xoff, bp + yoff)
 
+    def moveDelta(self, xoff, yoff):
+        if hasattr(self, 'x'):
+            self.x, self.y = self.x + xoff, self.y + yoff
+        if hasattr(self, 'x1'):
+            self.x1, self.y1 = self.x1 + xoff, self.y1 + yoff
+        if hasattr(self, 'x2'):
+            self.x2, self.y2 = self.x2 + xoff, self.y2 + yoff
+        if hasattr(self, 'x3'):
+            self.x3, self.y3 = self.x3 + xoff, self.y3 + yoff
+            
+        if hasattr(self, 'points'):
+            for i in xrange(len(self.points)):
+                (x, y) = self.points[i]
+                x, y = x + xoff, y + yoff
+                self.points[i] = (x, y)
+
+    def getReference(self):
+        if hasattr(self, 'x'):
+            return (self.x, self.y)
+        if hasattr(self, 'x1'):
+            return (self.x1, self.y1)
+        if hasattr(self, 'points'):
+            return self.points[0]
+        raise CanvasObjectError("No point of reference in object")
+
+    def moveTo(self, xdst, ydst):
+        x, y = self.getReference()
+        return self.moveDelta(xdst - x, ydst - y)
+        
 
 class CompoundMixin(object):
     """A CompoundMixin makes an object that is an aggregation of other objects.
@@ -197,6 +236,23 @@ class CompoundMixin(object):
         for obj in self.objects:
             obj.rotate(theta, xoff=xoff, yoff=yoff)
             
+    def moveDelta(self, xoff, yoff):
+        for obj in self.objects:
+            obj.moveDelta(xoff, yoff)
+
+    def getReference(self):
+        for obj in self.objects:
+            try:
+                x, y = obj.getReference()
+                return (x, y)
+            except CanvasObjectError:
+                continue
+        raise CanvasObjectError("No point of reference in object")
+
+    def moveTo(self, xdst, ydst):
+        x, y = self.getReference()
+        for obj in self.objects:
+            obj.moveDelta(xdst - x, ydst - y)
 
 class CanvasMixin(object):
     """A CanvasMixin is combined with the CompoundMixin to make a
