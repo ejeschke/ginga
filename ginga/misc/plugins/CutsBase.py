@@ -1,0 +1,220 @@
+#
+# CutsBase.py -- Cuts plugin base class for Ginga
+# 
+# Eric Jeschke (eric@naoj.org)
+#
+# Copyright (c) Eric R. Jeschke.  All rights reserved.
+# This is open-source software licensed under a BSD license.
+# Please see the file LICENSE.txt for details.
+#
+from ginga import GingaPlugin
+import numpy
+
+class CutsBase(GingaPlugin.LocalPlugin):
+
+    def __init__(self, fv, fitsimage):
+        # superclass defines some variables for us, like logger
+        super(CutsBase, self).__init__(fv, fitsimage)
+
+        self.cutscolor = 'green'
+        self.layertag = 'cuts-canvas'
+        self.cutstag = None
+        self.tags = ['None']
+        self.count = 0
+        self.colors = ['green', 'red', 'blue', 'cyan', 'pink', 'magenta',
+                       'orange', 'violet', 'turquoise', 'yellow']
+        self.cuttypes = ['free', 'horizontal', 'vertical', 'cross']
+        self.cuttype = 'free'
+
+
+    def close(self):
+        chname = self.fv.get_channelName(self.fitsimage)
+        self.fv.stop_operation_channel(chname, str(self))
+        return True
+        
+    def start(self):
+        # start line cuts operation
+        self.instructions()
+        self.plot.set_titles(rtitle="Cuts")
+
+        # insert canvas, if not already
+        try:
+            obj = self.fitsimage.getObjectByTag(self.layertag)
+
+        except KeyError:
+            # Add ruler layer
+            self.fitsimage.add(self.canvas, tag=self.layertag)
+
+        #self.canvas.deleteAllObjects()
+        self.resume()
+
+    def pause(self):
+        self.canvas.ui_setActive(False)
+        
+    def resume(self):
+        self.canvas.ui_setActive(True)
+        self.fv.showStatus("Draw a line with the right mouse button")
+        self.redo()
+
+    def stop(self):
+        # remove the canvas from the image
+        try:
+            self.fitsimage.deleteObjectByTag(self.layertag)
+        except:
+            pass
+        self.fv.showStatus("")
+
+    def replaceCutsTag(self, oldtag, newtag, select=False):
+        self.addCutsTag(newtag, select=select)
+        self.deleteCutsTag(oldtag)
+
+    def _plotpoints(self, line, color):
+        # Get points on the line
+        points = self.fitsimage.get_pixels_on_line(int(line.x1), int(line.y1),
+                                                   int(line.x2), int(line.y2))
+        points = numpy.array(points)
+        self.plot.cuts(points, xtitle="Line Index", ytitle="Pixel Value",
+                       color=color)
+        
+    def _redo(self, lines, colors):
+        for idx in xrange(len(lines)):
+            line, color = lines[idx], colors[idx]
+            line.color = color
+            #text = obj.objects[1]
+            #text.color = color
+            self._plotpoints(line, color)
+        return True
+    
+    def redo(self):
+        self.plot.clear()
+        idx = 0
+        for cutstag in self.tags:
+            if cutstag == 'None':
+                continue
+            obj = self.canvas.getObjectByTag(cutstag)
+            if obj.kind != 'compound':
+                continue
+            lines = self._getlines(obj)
+            n = len(lines)
+            colors = self.colors[idx:idx+n]
+            self._redo(lines, colors)
+            idx = (idx+n) % len(self.colors)
+
+        self.canvas.redraw(whence=3)
+        self.fv.showStatus("Click or drag left mouse button to reposition cuts")
+        return True
+
+    def _movecut(self, obj, data_x, data_y):
+        obj.moveTo(data_x, data_y)
+
+    def _append_lists(self, l):
+        if len(l) == 0:
+            return []
+        elif len(l) == 1:
+            return l[0]
+        else:
+            res = l[0]
+            res.extend(self._append_lists(l[1:]))
+            return res
+        
+    def _getlines(self, obj):
+        if obj.kind == 'compound':
+            return self._append_lists(map(self._getlines, obj.objects))
+        elif obj.kind == 'line':
+            return [obj]
+        else:
+            return []
+        
+    def buttondown_cb(self, canvas, button, data_x, data_y):
+        return self.motion_cb(canvas, button, data_x, data_y)
+    
+    def motion_cb(self, canvas, button, data_x, data_y):
+        if not (button == 0x1):
+            return
+
+        obj = self.canvas.getObjectByTag(self.cutstag)
+        lines = self._getlines(obj)
+        for line in lines:
+            line.linestyle = 'dash'
+        self._movecut(obj, data_x, data_y)
+
+        canvas.redraw(whence=3)
+    
+    def buttonup_cb(self, canvas, button, data_x, data_y):
+        if not (button == 0x1):
+            return
+        
+        obj = self.canvas.getObjectByTag(self.cutstag)
+        lines = self._getlines(obj)
+        for line in lines:
+            line.linestyle = 'solid'
+        self._movecut(obj, data_x, data_y)
+        
+        self.redo()
+
+    def keydown(self, canvas, keyname):
+        if keyname == 'space':
+            self.select_cut(None)
+
+    def draw_cb(self, canvas, tag):
+        obj = canvas.getObjectByTag(tag)
+        if obj.kind not in ('line', 'rectangle'):
+            return True
+        canvas.deleteObjectByTag(tag, redraw=False)
+
+        # calculate center of line
+        wd = obj.x2 - obj.x1
+        dw = wd // 2
+        ht = obj.y2 - obj.y1
+        dh = ht // 2
+        x, y = obj.x1 + dw + 4, obj.y1 + dh + 4
+
+        if self.cutstag:
+            # Replacing a cut
+            self.logger.debug("replacing cut position")
+            cutobj = canvas.getObjectByTag(self.cutstag)
+            canvas.deleteObjectByTag(self.cutstag, redraw=False)
+            count = cutobj.get_data('count')
+        else:
+            self.logger.debug("adding cut position")
+            self.count += 1
+            count = self.count
+            
+        tag = "cuts%d" % (count)
+        if obj.kind == 'line':
+            cut = self._create_cut(x, y, count,
+                                   obj.x1, obj.y1, obj.x2, obj.y2,
+                                   color='cyan')
+
+        elif obj.kind == 'rectangle':
+            if self.cuttype == 'horizontal':
+                # add horizontal cut at midpoints of rectangle
+                cut = self._create_cut(x, y, count,
+                                       obj.x1, obj.y1+dh, obj.x2, obj.y1+dh,
+                                       color='cyan')
+
+            elif self.cuttype == 'vertical':
+                # add vertical cut at midpoints of rectangle
+                cut = self._create_cut(x, y, count,
+                                       obj.x1+dw, obj.y1, obj.x1+dw, obj.y2,
+                                       color='cyan')
+
+            elif self.cuttype == 'cross':
+                x, y = obj.x1 + dw//2, obj.y1 + dh - 4
+                cut_h = self._create_cut(x, y, count,
+                                         obj.x1, obj.y1+dh, obj.x2, obj.y1+dh,
+                                         color='cyan')
+                x, y = obj.x1 + dw + 4, obj.y1 + dh//2
+                cut_v = self._create_cut(x, y, count,
+                                       obj.x1+dw, obj.y1, obj.x1+dw, obj.y2,
+                                       color='cyan')
+                cut = self._combine_cuts(cut_h, cut_v)
+
+        cut.set_data(count=count)
+        canvas.add(cut, tag=tag)
+        self.addCutsTag(tag, select=True)
+
+        self.logger.debug("redoing cut plots")
+        return self.redo()
+    
+#END
