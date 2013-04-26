@@ -7,29 +7,25 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 
-import sys, re
 import gobject
 import gtk
 import cairo
 import numpy
 import threading
-import math
 
-import warnings
-warnings.filterwarnings("ignore")
-
-from ginga import FitsImage
+from ginga.cairow import FitsImageCairo
 from ginga import Mixins
+from ginga import colors
 
-class FitsImageGtkError(FitsImage.FitsImageError):
+class FitsImageGtkError(FitsImageCairo.FitsImageCairoError):
     pass
 
-class FitsImageGtk(FitsImage.FitsImageBase):
+class FitsImageGtk(FitsImageCairo.FitsImageCairo):
 
     def __init__(self, logger=None, settings=None):
         #super(FitsImageGtk, self).__init__(logger=logger)
-        FitsImage.FitsImageBase.__init__(self, logger=logger,
-                                         settings=settings)
+        FitsImageCairo.FitsImageCairo.__init__(self, logger=logger,
+                                               settings=settings)
 
         imgwin = gtk.DrawingArea()
         imgwin.connect("expose_event", self.expose_event)
@@ -38,16 +34,9 @@ class FitsImageGtk(FitsImage.FitsImageBase):
         imgwin.connect("configure_event", self.configure_event)
         imgwin.set_events(gtk.gdk.EXPOSURE_MASK)
         self.imgwin = imgwin
-        self.surface = None
         self.imgwin.show_all()
 
-        self.message = None
         self.msgtask = None
-        self.img_bg = None
-        self.img_fg = None
-        #self.set_bg(0.5, 0.5, 0.5, redraw=False)
-        self.set_bg(0.0, 0.0, 0.0, redraw=False)
-        self.set_fg(1.0, 1.0, 1.0, redraw=False)
         
         # cursors
         self.cursor = {}
@@ -59,110 +48,10 @@ class FitsImageGtk(FitsImage.FitsImageBase):
         self._defer_lock = threading.RLock()
         self._defer_flag = False
 
-        self.cr = None
 
-        self.t_.setDefaults(show_pan_position=False)
-        
     def get_widget(self):
         return self.imgwin
 
-    def _render_offscreen(self, surface, data, dst_x, dst_y,
-                          width, height):
-        # NOTE [A]
-        daht, dawd, depth = data.shape
-        self.logger.debug("data shape is %dx%dx%d" % (dawd, daht, depth))
-
-        cr = cairo.Context(surface)
-        self.cr = cr
-
-        # fill surface with background color
-        imgwin_wd, imgwin_ht = self.get_window_size()
-        cr.rectangle(0, 0, imgwin_wd, imgwin_ht)
-        r, g, b = self.img_bg
-        cr.set_source_rgb(r, g, b)
-        cr.fill()
-
-        arr8 = data.astype(numpy.uint8).flatten()
-        stride = cairo.ImageSurface.format_stride_for_width(cairo.FORMAT_RGB24,
-                                                            width)
-
-        img_surface = cairo.ImageSurface.create_for_data(arr8,
-                                                         cairo.FORMAT_RGB24,
-                                                         dawd, daht, stride)
-
-        cr.set_source_surface(img_surface, dst_x, dst_y)
-        cr.set_operator(cairo.OPERATOR_SOURCE)
-
-        cr.rectangle(dst_x, dst_y, dawd, daht)
-        cr.fill()
-
-        # Draw a cross in the center of the window in debug mode
-        if self.t_['show_pan_position']:
-            cr.set_source_rgb(1.0, 0.0, 0.0)
-            cr.set_line_width(1)
-            ctr_x, ctr_y = self.get_center()
-            cr.move_to(ctr_x - 10, ctr_y)
-            cr.line_to(ctr_x + 10, ctr_y)
-            cr.move_to(ctr_x, ctr_y - 10)
-            cr.line_to(ctr_x, ctr_y + 10)
-            cr.close_path()
-            cr.stroke_preserve()
-        
-        # render self.message
-        if self.message:
-            self.draw_message(cr, imgwin_wd, imgwin_ht,
-                              self.message)
-
-    def draw_message(self, cr, width, height, message):
-        r, g, b = self.img_fg
-        #cr.set_source_rgb(1.0, 1.0, 1.0)
-        cr.set_source_rgb(r, g, b)
-        cr.select_font_face('Sans Serif')
-        cr.set_font_size(24.0)
-        a, b, wd, ht, i, j = cr.text_extents(message)
-        y = ((height // 3) * 2) - (ht // 2)
-        x = (width // 2) - (wd // 2)
-        cr.move_to(x, y)
-        cr.show_text(self.message)
-
-    def get_offscreen_context(self):
-        if self.surface == None:
-            raise FitsImageGtkError("No offscreen surface defined")
-        cr = cairo.Context(self.surface)
-        return cr
-
-    def get_offscreen_surface(self):
-        return self.surface
-
-    def render_image(self, rgbobj, dst_x, dst_y):
-        """Render the image represented by (rgbobj) at dst_x, dst_y
-        in the pixel space.
-        """
-        self.logger.debug("redraw surface")
-        if self.surface == None:
-            return
-
-        # Prepare array for Cairo rendering
-        if sys.byteorder == 'little':
-            arr = numpy.dstack((rgbobj.b, rgbobj.g, rgbobj.r, rgbobj.a))
-        else:
-            arr = numpy.dstack((rgbobj.a, rgbobj.r, rgbobj.g, rgbobj.b))
-
-        (height, width) = rgbobj.r.shape
-        return self._render_offscreen(self.surface, arr, dst_x, dst_y,
-                                      width, height)
-
-    def configure(self, width, height):
-        arr8 = numpy.zeros(height*width*4).astype(numpy.uint8)
-        stride = cairo.ImageSurface.format_stride_for_width(cairo.FORMAT_RGB24,
-                                                            width)
-
-        surface = cairo.ImageSurface.create_for_data(arr8,
-                                                     cairo.FORMAT_RGB24,
-                                                     width, height, stride)
-        self.surface = surface
-        self.set_window_size(width, height, redraw=True)
-        
     def get_image_as_pixbuf(self):
         rgbobj = self.get_rgb_object()
         arr = numpy.dstack((rgbobj.r, rgbobj.g, rgbobj.b))
@@ -295,21 +184,6 @@ class FitsImageGtk(FitsImage.FitsImageBase):
         buf = data.tostring(order='C')
         return buf
 
-    ## def _get_color(self, r, g, b):
-    ##     n = 65535.0
-    ##     clr = gtk.gdk.Color(int(r*n), int(g*n), int(b*n))
-    ##     return clr
-        
-    def set_bg(self, r, g, b, redraw=True):
-        self.img_bg = (r, g, b)
-        if redraw:
-            self.redraw(whence=3)
-        
-    def set_fg(self, r, g, b, redraw=True):
-        self.img_fg = (r, g, b)
-        if redraw:
-            self.redraw(whence=3)
-        
     def onscreen_message(self, text, delay=None, redraw=True):
         if self.msgtask:
             try:
@@ -323,19 +197,6 @@ class FitsImageGtk(FitsImage.FitsImageBase):
             ms = int(delay * 1000.0)
             self.msgtask = gobject.timeout_add(ms, self.onscreen_message, None)
 
-    def show_pan_mark(self, tf, redraw=True):
-        self.t_.set(show_pan_position=tf)
-        if redraw:
-            self.redraw(whence=3)
-        
-    def pix2canvas(self, x, y):
-        x, y = self.cr.device_to_user(x, y)
-        return (x, y)
-        
-    def canvas2pix(self, x, y):
-        x, y = self.cr.user_to_device(x, y)
-        return (x, y)
-        
         
 class FitsImageEvent(FitsImageGtk):
 
@@ -607,10 +468,7 @@ class thinCrossCursor(object):
         cr.fill()
 
         # Set cursor color
-        color = gtk.gdk.color_parse(color)
-        rgb_s = color.to_string()
-        match = re.match(r'^#(\w{4})(\w{4})(\w{4})$', rgb_s)
-        r, g, b = map(lambda s: float(int(s, 16))/65535.0, match.groups())
+        r, g, b = colors.lookup_color(color)
 
         # Something I don't get about Cairo--why do I have to specify
         # BGRA for a method called set_source_RGBA &%^%*($ !!! 

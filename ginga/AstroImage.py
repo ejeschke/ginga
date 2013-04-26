@@ -724,7 +724,10 @@ class AstroImage(BaseImage):
                     
         # Calculate WCS coords, if available
         try:
-            if wcs.have_astropy:
+            if (self.wcs == None) or (self.wcs.coordsys == 'raw'):
+                ra_txt = dec_txt = 'NO WCS'
+                
+            elif wcs.have_astropy:
                 c = self.pixtocoords(fits_x, fits_y,
                                      system=system, coords='fits')
 

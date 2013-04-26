@@ -34,6 +34,7 @@ class FitsImageCairo(FitsImage.FitsImageBase):
         self.set_fg(1.0, 1.0, 1.0, redraw=False)
         
         self.cr = None
+        self.message = None
 
         self.t_.setDefaults(show_pan_position=False)
         
@@ -79,9 +80,23 @@ class FitsImageCairo(FitsImage.FitsImageBase):
             cr.close_path()
             cr.stroke_preserve()
         
+        # render self.message
+        if self.message:
+            self.draw_message(cr, imgwin_wd, imgwin_ht,
+                              self.message)
+
 
     def draw_message(self, cr, width, height, message):
-        pass
+        r, g, b = self.img_fg
+        #cr.set_source_rgb(1.0, 1.0, 1.0)
+        cr.set_source_rgb(r, g, b)
+        cr.select_font_face('Sans Serif')
+        cr.set_font_size(24.0)
+        a, b, wd, ht, i, j = cr.text_extents(message)
+        y = ((height // 3) * 2) - (ht // 2)
+        x = (width // 2) - (wd // 2)
+        cr.move_to(x, y)
+        cr.show_text(self.message)
 
     def get_offscreen_context(self):
         if self.surface == None:

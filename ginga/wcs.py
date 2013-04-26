@@ -95,7 +95,7 @@ class BareBonesWCS(BaseWCS):
     def __init__(self):
         super(BareBonesWCS, self).__init__()
         self.header = {}
-        self.coordsys = 'fk5'
+        self.coordsys = 'raw'
 
     def load_header(self, header, fobj=None):
         self.header = {}
@@ -221,22 +221,22 @@ class BareBonesWCS(BaseWCS):
     
 
 class WcslibWCS(BaseWCS):
-    """A WCS interface for pywcs (a wrapper for Mark Calabretta's WCSLIB).
-    You need to install python module 'astropy':
+    """A WCS interface for astropy.wcs (a wrapper for Mark Calabretta's
+    WCSLIB).   You need to install python module 'astropy'
 
         http://pypi.python.org/pypi/astropy
 
-    If you want to use this version.
+    or the older library 'pywcs' if you want to use this version.
     """
 
     def __init__(self):
         super(WcslibWCS, self).__init__()
 
         if not have_pywcs:
-            raise WCSError("Please install module pywcs first!")
+            raise WCSError("Please install module 'astropy' first!")
         self.header = None
         self.wcs = None
-        self.coordsys = 'fk5'
+        self.coordsys = 'raw'
 
     def fix_bad_headers(self):
         """Fix up bad headers that cause problems for pywcs/wcslib.
@@ -274,11 +274,11 @@ class WcslibWCS(BaseWCS):
         #self.wcs = pywcs.WCS(self.header, relax=True)
         try:
             self.wcs = pywcs.WCS(self.header, fobj=fobj, relax=True)
+
+            self.coordsys = choose_coord_system(self.header)
         except Exception, e:
             print("Error making WCS object: %s" % (str(e)))
             self.wcs = None
-
-        self.coordsys = choose_coord_system(self.header)
 
     def get_keyword(self, key):
         return self.header[key]
@@ -332,6 +332,9 @@ class WcslibWCS(BaseWCS):
 
     def pixtocoords(self, x, y, system='icrs', coords='data'):
 
+        if self.coordsys == 'raw':
+            raise WCSError("No usable WCS")
+            
         # Get a coordinates object based on ra/dec wcs transform
         ra_deg, dec_deg = self.pixtoradec(x, y, format='deg',
                                           coords=coords)
@@ -417,7 +420,12 @@ def choose_coord_system(header):
     """Return an appropriate key code for the axes coordinate system by
     examining the FITS header.
     """
-    ctype = header['CTYPE1'].strip().upper()
+    try:
+        ctype = header['CTYPE1'].strip().upper()
+    except KeyError:
+        return 'raw'
+        #raise WCSError("Cannot determine appropriate coordinate system from FITS header")
+    
     match = re.match(r'^GLON\-.*$', ctype)
     if match:
         return 'galactic'
