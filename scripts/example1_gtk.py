@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 #
-# example1.py -- Simple, configurable FITS viewer.
+# example1_gtk.py -- Simple, configurable FITS viewer.
 #
 # Eric Jeschke (eric@naoj.org)
 #

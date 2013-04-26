@@ -59,9 +59,6 @@ class FitsImageGtk(FitsImage.FitsImageBase):
         self._defer_lock = threading.RLock()
         self._defer_flag = False
 
-        # # For rotation of canvas
-        # self.ctr_x = 0.0
-        # self.ctr_y = 0.0
         self.cr = None
 
         self.t_.setDefaults(show_pan_position=False)
@@ -93,17 +90,9 @@ class FitsImageGtk(FitsImage.FitsImageBase):
                                                          cairo.FORMAT_RGB24,
                                                          dawd, daht, stride)
 
-        # Rotate to desired rotation
-        ## self.ctr_x, self.ctr_y = imgwin_wd / 2.0, imgwin_ht / 2.0
-        ## cr.translate(self.ctr_x, self.ctr_y)
-        ## cr.rotate(math.radians(self.rotation))
-
-        ## offx, offy = dst_x - self.ctr_x, dst_y - self.ctr_y
-        ## cr.set_source_surface(img_surface, offx, offy)
         cr.set_source_surface(img_surface, dst_x, dst_y)
         cr.set_operator(cairo.OPERATOR_SOURCE)
 
-        ## cr.rectangle(offx, offy, dawd, daht)
         cr.rectangle(dst_x, dst_y, dawd, daht)
         cr.fill()
 
@@ -121,8 +110,6 @@ class FitsImageGtk(FitsImage.FitsImageBase):
         
         # render self.message
         if self.message:
-            ## cr.rotate(math.radians(-self.rotation))
-            ## cr.translate(-self.ctr_x, -self.ctr_y)
             self.draw_message(cr, imgwin_wd, imgwin_ht,
                               self.message)
 
@@ -143,6 +130,9 @@ class FitsImageGtk(FitsImage.FitsImageBase):
             raise FitsImageGtkError("No offscreen surface defined")
         cr = cairo.Context(self.surface)
         return cr
+
+    def get_offscreen_surface(self):
+        return self.surface
 
     def render_image(self, rgbobj, dst_x, dst_y):
         """Render the image represented by (rgbobj) at dst_x, dst_y
@@ -271,18 +261,8 @@ class FitsImageGtk(FitsImage.FitsImageBase):
             cr.rectangle(x, y, width, height)
             cr.clip()
 
-            ## # Rotate if desired
-            ## self.ctr_x, self.ctr_y = width / 2.0, height / 2.0
-            ## cr.translate(self.ctr_x, self.ctr_y)
-            ## cr.rotate(math.radians(self.rotation))
-            
             # Paint from off-screen surface
-            ## imgwin_wd, imgwin_ht = self.get_window_size()
-            ## off_x, off_y = imgwin_wd, imgwin_ht
-            ## cr.translate(off_x, off_y)
             cr.set_source_surface(self.surface, 0, 0)
-            #cr.set_source_surface(self.surface, -off_x, -off_y)
-            ## cr.set_source_surface(self.surface, -self.ctr_x, -self.ctr_y)
             cr.set_operator(cairo.OPERATOR_SOURCE)
             cr.paint()
 

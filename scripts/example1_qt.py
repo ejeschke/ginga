@@ -1,5 +1,7 @@
 #! /usr/bin/env python
 #
+# example1_qt.py -- Simple, configurable FITS viewer.
+#
 # Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c)  Eric R. Jeschke.  All rights reserved.

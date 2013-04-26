@@ -23,7 +23,8 @@ class CutsBase(GingaPlugin.LocalPlugin):
         self.count = 0
         self.colors = ['green', 'red', 'blue', 'cyan', 'pink', 'magenta',
                        'orange', 'violet', 'turquoise', 'yellow']
-        self.cuttypes = ['free', 'horizontal', 'vertical', 'cross']
+        #self.cuttypes = ['free', 'horizontal', 'vertical', 'cross']
+        self.cuttypes = ['free', 'cross']
         self.cuttype = 'free'
 
 
@@ -155,6 +156,68 @@ class CutsBase(GingaPlugin.LocalPlugin):
     def keydown(self, canvas, keyname):
         if keyname == 'space':
             self.select_cut(None)
+        elif keyname == 'h':
+            self.cut_at('horizontal')
+        elif keyname == 'v':
+            self.cut_at('vertical')
+        elif keyname == 'u':
+            self.cut_at('cross')
+
+    def cut_at(self, cuttype):
+        """Perform a cut at the last mouse position in the image.
+        $cuttype$ determines the type of cut made.
+        """
+        data_x, data_y = self.fitsimage.get_last_data_xy()
+        image = self.fitsimage.get_image()
+        wd, ht = image.get_size()
+
+        coords = []
+        if cuttype == 'horizontal':
+            coords.append((0, data_y, wd-1, data_y))
+        elif cuttype == 'vertical':
+            coords.append((data_x, 0, data_x, ht-1))
+        elif cuttype == 'cross':
+            # calculate largest cross cut that centers plots on the point
+            n = min(data_x, wd-data_x, data_y, ht-data_y)
+            coords.append((data_x-n, data_y, data_x+n, data_y))
+            coords.append((data_x, data_y-n, data_x, data_y+n))
+
+        if self.cutstag:
+            # Replacing a cut
+            self.logger.debug("replacing cut position")
+            cutobj = self.canvas.getObjectByTag(self.cutstag)
+            self.canvas.deleteObjectByTag(self.cutstag, redraw=False)
+            count = cutobj.get_data('count')
+        else:
+            self.logger.debug("adding cut position")
+            self.count += 1
+            count = self.count
+            
+        tag = "cuts%d" % (count)
+        cuts = []
+        for (x1, y1, x2, y2) in coords:
+            # calculate center of line
+            wd = x2 - x1
+            dw = wd // 2
+            ht = y2 - y1
+            dh = ht // 2
+            x, y = x1 + dw + 4, y1 + dh + 4
+
+            cut = self._create_cut(x, y, count, x1, y1, x2, y2,
+                                   color='cyan')
+            cuts.append(cut)
+
+        if len(cuts) == 1:
+            cut = cuts[0]
+        else:
+            cut = self._combine_cuts(*cuts)
+            
+        cut.set_data(count=count)
+        self.canvas.add(cut, tag=tag)
+        self.addCutsTag(tag, select=True)
+
+        self.logger.debug("redoing cut plots")
+        return self.redo()
 
     def draw_cb(self, canvas, tag):
         obj = canvas.getObjectByTag(tag)

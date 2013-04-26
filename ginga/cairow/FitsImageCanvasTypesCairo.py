@@ -1,15 +1,14 @@
 #
-# FitsImageCanvasTypesQt.py -- drawing classes for FitsImageCanvas widget
+# FitsImageCanvasTypesCairo.py -- drawing classes for FitsImageCanvas widget
 # 
 # Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
-#
-import math
 
-from ginga.qtw.QtHelp import QtGui, QtCore
+import math
+import cairo
 
 from ginga.FitsImageCanvas import *
 from ginga import Mixins
@@ -18,89 +17,55 @@ from ginga import colors
 
 class CanvasObject(CanvasObjectBase):
 
-    def __get_color(self, color):
-        clr = QtGui.QColor()
-        if isinstance(color, tuple):
-            clr.setRgbF(color[0], color[1], color[2])
-        else:
-            r, g, b = colors.lookup_color(color)
-            clr.setRgbF(r, g, b)
-        return clr
-        
     def set_color(self, cr, color):
-        clr = self.__get_color(color)
-        pen = cr.pen()
-        pen.setColor(clr)
-        cr.setPen(pen)
-
-    def fill(self, cr, onoff, color=None):
-        if onoff:
-            if color == None:
-                color = self.color
-            color = self.__get_color(color)
-            cr.setBrush(color)
+        if isinstance(color, str):
+            r, g, b = colors.lookup_color(color)
+        elif isinstance(color, tuple):
+            # color is assumed to be a 3-tuple of RGB values as floats
+            # between 0 and 1
+            r, g, b = color
         else:
-            cr.setBrush(QtCore.Qt.NoBrush)
-            
+            r, g, b = 1.0, 1.0, 1.0
+
+        cr.set_source_rgb(r, g, b)
+
     def setup_cr(self):
-        cr = QtGui.QPainter(self.fitsimage.pixmap)
+        cr = self.fitsimage.get_offscreen_context()
 
-        pen = QtGui.QPen()
+        self.set_color(cr, self.color)
+
         if hasattr(self, 'linewidth'):
-            pen.setWidth(self.linewidth)
+            cr.set_line_width(self.linewidth)
         else:
-            pen.setWidth(1)
+            cr.set_line_width(1)
 
         if hasattr(self, 'linestyle'):
             if self.linestyle == 'dash':
-                pen.setDashPattern([ 3.0, 4.0, 6.0, 4.0])
-                pen.setDashOffset(5.0)
-
-        color = self.__get_color(self.color)
-        pen.setColor(color)
-        cr.setPen(pen)
-
-        if hasattr(self, 'fill') and self.fill:
-            if hasattr(self, 'fillcolor') and self.fillcolor:
-                color = self.fillcolor
-            else:
-                color = self.color
-            if not color:
-                cr.setBrush(QtCore.Qt.NoBrush)
-            else:
-                color = self.__get_color(color)
-                cr.setBrush(color)
-        else:
-            cr.setBrush(QtCore.Qt.NoBrush)
-            
+                cr.set_dash([ 3.0, 4.0, 6.0, 4.0], 5.0)
+                
         return cr
 
     def draw_arrowhead(self, cr, x1, y1, x2, y2):
         i1, j1, i2, j2 = self.calcVertexes(x1, y1, x2, y2)
-        self.fill(cr, True)
-        cr.pen().setJoinStyle(QtCore.Qt.MiterJoin)
-        cr.drawPolygon(QtGui.QPolygonF([QtCore.QPointF(x2, y2),
-                                        QtCore.QPointF(i1, j1),
-                                        QtCore.QPointF(i2, j2)]))
-        cr.pen().setJoinStyle(QtCore.Qt.BevelJoin)
-        self.fill(cr, False)
+        cr.move_to (x2, y2)
+        cr.line_to (i1, j1)
+        cr.line_to (i2, j2)
+        cr.close_path()
+        cr.stroke_preserve()
+        cr.fill()
         
     def draw_cap(self, cr, cap, x, y, radius=2):
         if cap == 'ball':
-            self.fill(cr, True)
-            cr.drawEllipse(x-radius, y-radius, radius*2, radius*2)
-            self.fill(cr, False)
+            cr.arc(x, y, radius, 0, 2*math.pi)
+            cr.fill()
         
     def draw_caps(self, cr, cap, points, radius=2):
         for x, y in points:
             self.draw_cap(cr, cap, x, y, radius=radius)
         
     def text_extents(self, cr, text):
-        rect = cr.boundingRect(0, 0, 1000, 1000, 0, text)
-        x1, y1, x2, y2 = rect.getCoords()
-        width = x2 - x1
-        height = y2 - y1
-        return width, height
+        a, b, wd, ht, i, j = cr.text_extents(text)
+        return wd, ht
 
 
 class CompoundObject(CompoundMixin, CanvasObject):
@@ -119,7 +84,7 @@ class CompoundObject(CompoundMixin, CanvasObject):
         CompoundMixin.__init__(self)
         self.kind = 'compound'
         self.objects = list(objects)
-        
+
 class Canvas(CanvasMixin, CompoundObject, CanvasObject):
     def __init__(self, *objects):
         CanvasObject.__init__(self)
@@ -127,7 +92,7 @@ class Canvas(CanvasMixin, CompoundObject, CanvasObject):
         CanvasMixin.__init__(self)
         self.kind = 'canvas'
 
-        
+
 class Text(CanvasObject):
     """Draws text on a FitsImageCanvas.
     Parameters are:
@@ -147,12 +112,14 @@ class Text(CanvasObject):
         cx, cy = self.canvascoords(self.x, self.y)
 
         cr = self.setup_cr()
+        cr.select_font_face(self.font)
         if not self.fontsize:
             fontsize = self.scale_font()
         else:
             fontsize = self.fontsize
-        cr.setFont(QtGui.QFont(self.font, pointSize=fontsize))
-        cr.drawText(cx, cy, self.text)
+        cr.set_font_size(fontsize)
+        cr.move_to(cx, cy)
+        cr.show_text(self.text)
 
     def rotate(self, theta, xoff=0, yoff=0):
         self.x, self.y = self.rotate_pt(self.x, self.y, theta,
@@ -180,11 +147,19 @@ class Polygon(CanvasObject):
         cpoints = map(lambda p: self.canvascoords(p[0], p[1]), self.points)
         cr = self.setup_cr()
 
-        qpoints = map(lambda p: QtCore.QPoint(p[0], p[1]),
-                      cpoints + [cpoints[0]])
-        qpoly = QtGui.QPolygon(qpoints)
+        (cx0, cy0) = cpoints[-1]
+        cr.move_to(cx0, cy0)
+        for cx, cy in cpoints:
+            cr.line_to(cx, cy)
+            #cr.move_to(cx, cy)
+        cr.close_path()
+        cr.stroke_preserve()
 
-        cr.drawPolygon(qpoly)
+        if self.fill:
+            if self.fillcolor:
+                self.set_color(cr, self.fillcolor)
+            cr.fill()
+            self.set_color(cr, self.color)
 
         if self.cap:
             self.draw_caps(cr, self.cap, cpoints)
@@ -203,12 +178,13 @@ class Polygon(CanvasObject):
             xj, yj = xi, yi
 
         return result
-
+            
     def rotate(self, theta, xoff=0, yoff=0):
         newpts = map(lambda p: self.rotate_pt(p[0], p[1], theta,
                                               xoff=xoff, yoff=yoff),
                      self.points)
         self.points = newpts
+
 
 class Rectangle(CanvasObject):
     """Draws a rectangle on a FitsImageCanvas.
@@ -237,36 +213,44 @@ class Rectangle(CanvasObject):
                                         drawdims=drawdims, font=font)
         
     def draw(self):
+        cr = self.setup_cr()
         cpoints = map(lambda p: self.canvascoords(p[0], p[1]),
                       ((self.x1, self.y1), (self.x2, self.y1),
                        (self.x2, self.y2), (self.x1, self.y2)))
-        #qpoints = map(lambda p: QtCore.QPoint(p[0], p[1]), cpoints)
-        qpoints = map(lambda p: QtCore.QPoint(p[0], p[1]),
-                      cpoints + [cpoints[0]])
-        qpoly = QtGui.QPolygon(qpoints)
+        (cx0, cy0) = cpoints[-1]
+        cr.move_to(cx0, cy0)
+        for cx, cy in cpoints:
+            cr.line_to(cx, cy)
+            #cr.move_to(cx, cy)
+        cr.close_path()
+        cr.stroke_preserve()
 
-        cr = self.setup_cr()
-        cr.drawPolygon(qpoly)
+        if self.fill:
+            if self.fillcolor:
+                self.set_color(cr, self.fillcolor)
+            cr.fill()
+            self.set_color(cr, self.color)
 
         if self.cap:
             self.draw_caps(cr, self.cap, cpoints)
 
         if self.drawdims:
+            cr.select_font_face(self.font)
             fontsize = self.scale_font()
-            cr.setFont(QtGui.QFont(self.font, pointSize=fontsize))
+            cr.set_font_size(fontsize)
 
             cx1, cy1 = cpoints[0]
             cx2, cy2 = cpoints[2]
-
             # draw label on X dimension
             cx = cx1 + (cx2 - cx1) // 2
             cy = cy2 + -4
-            cr.drawText(cx, cy, "%d" % (self.x2 - self.x1))
+            cr.move_to(cx, cy)
+            cr.show_text("%d" % (self.x2 - self.x1))
 
-            # draw label on Y dimension
             cy = cy1 + (cy2 - cy1) // 2
             cx = cx2 + 4
-            cr.drawText(cx, cy, "%d" % (self.y2 - self.y1))
+            cr.move_to(cx, cy)
+            cr.show_text("%d" % (self.y2 - self.y1))
 
     def contains(self, x, y):
         if ((x >= self.x1) and (x <= self.x2) and
@@ -322,18 +306,24 @@ class Circle(CanvasObject):
     def __init__(self, x, y, radius, color='yellow',
                  linewidth=1, linestyle='solid', cap=None,
                  fill=False, fillcolor=None):
-        self.kind = 'circle'
         super(Circle, self).__init__(color=color,
                                      linewidth=linewidth, cap=cap,
                                      linestyle=linestyle,
                                      fill=fill, fillcolor=fillcolor,
                                      x=x, y=y, radius=radius)
+        self.kind = 'circle'
 
     def draw(self):
         cx1, cy1, cradius = self.calc_radius(self.x, self.y, self.radius)
 
         cr = self.setup_cr()
-        cr.drawEllipse(cx1-cradius, cy1-cradius, cradius*2, cradius*2)
+        cr.arc(cx1, cy1, cradius, 0, 2*math.pi)
+        cr.stroke_preserve()
+        if self.fill:
+            if self.fillcolor:
+                self.set_color(cr, self.fillcolor)
+            cr.fill()
+            self.set_color(cr, self.color)
 
         if self.cap:
             self.draw_caps(cr, self.cap, ((cx1, cy1), ))
@@ -373,9 +363,13 @@ class Point(CanvasObject):
         cx2, cy2 = cx + cradius, cy + cradius
 
         cr = self.setup_cr()
-        cr.pen().setCapStyle(QtCore.Qt.RoundCap)
-        cr.drawLine(cx1, cy1, cx2, cy2)
-        cr.drawLine(cx1, cy2, cx2, cy1)
+        cr.set_line_cap(cairo.LINE_CAP_ROUND)
+        cr.move_to(cx1, cy1)
+        cr.line_to(cx2, cy2)
+        cr.stroke()
+        cr.move_to(cx1, cy2)
+        cr.line_to(cx2, cy1)
+        cr.stroke()
 
         if self.cap:
             self.draw_caps(cr, self.cap, ((cx, cy), ))
@@ -410,8 +404,10 @@ class Line(CanvasObject):
         cx2, cy2 = self.canvascoords(self.x2, self.y2)
 
         cr = self.setup_cr()
-        cr.pen().setCapStyle(QtCore.Qt.RoundCap)
-        cr.drawLine(cx1, cy1, cx2, cy2)
+        cr.set_line_cap(cairo.LINE_CAP_ROUND)
+        cr.move_to(cx1, cy1)
+        cr.line_to(cx2, cy2)
+        cr.stroke()
 
         if self.cap:
             self.draw_caps(cr, self.cap, ((cx1, cy1), (cx2, cy2)))
@@ -447,24 +443,33 @@ class Compass(CanvasObject):
         cr = self.setup_cr()
 
         # draw North line and arrowhead
-        cr.pen().setCapStyle(QtCore.Qt.RoundCap)
-        cr.drawLine(cx1, cy1, cx2, cy2)
+        cr.set_line_cap(cairo.LINE_CAP_ROUND)
+        cr.move_to(cx1, cy1)
+        cr.line_to(cx2, cy2)
+        cr.stroke()
         self.draw_arrowhead(cr, cx1, cy1, cx2, cy2)
 
         # draw East line and arrowhead
-        cr.drawLine(cx1, cy1, cx3, cy3)
+        cr.move_to(cx1, cy1)
+        cr.line_to(cx3, cy3)
+        cr.stroke()
         self.draw_arrowhead(cr, cx1, cy1, cx3, cy3)
 
         # draw "N" & "E"
+        cr.select_font_face('Sans Serif')
         if not self.fontsize:
             fontsize = self.scale_font()
         else:
             fontsize = self.fontsize
-        cr.setFont(QtGui.QFont('Sans Serif', pointSize=fontsize))
+        cr.set_font_size(fontsize)
         cx, cy = self.get_textpos(cr, 'N', cx1, cy1, cx2, cy2)
-        cr.drawText(cx, cy, 'N')
+#        cr.move_to(cx2, cy2)
+        cr.move_to(cx, cy)
+        cr.show_text('N')
         cx, cy = self.get_textpos(cr, 'E', cx1, cy1, cx3, cy3)
-        cr.drawText(cx, cy, 'E')
+#        cr.move_to(cx3, cy3)
+        cr.move_to(cx, cy)
+        cr.show_text('E')
 
         if self.cap:
             self.draw_caps(cr, self.cap, ((cx1, cy1), ))
@@ -527,10 +532,18 @@ class Triangle(CanvasObject):
 
         cr = self.setup_cr()
 
-        cr.pen().setCapStyle(QtCore.Qt.RoundCap)
-        cr.drawLine(cx1, cy1, cx2, cy2)
-        cr.drawLine(cx1, cy1, cx2, cy1)
-        cr.drawLine(cx2, cy1, cx2, cy2)
+        cr.set_line_cap(cairo.LINE_CAP_ROUND)
+        cr.move_to(cx1, cy1)
+        cr.line_to(cx2, cy2)
+        cr.stroke()
+
+        cr.move_to(cx1, cy1)
+        cr.line_to(cx2, cy1)
+        cr.stroke()
+
+        cr.move_to(cx2, cy1)
+        cr.line_to(cx2, cy2)
+        cr.stroke()
 
         if self.cap:
             self.draw_caps(cr, self.cap,
@@ -562,18 +575,21 @@ class Ruler(CanvasObject):
 
         cr = self.setup_cr()
         
+        cr.select_font_face(self.font)
         if not self.fontsize:
             fontsize = self.scale_font()
         else:
             fontsize = self.fontsize
-        cr.setFont(QtGui.QFont(self.font, pointSize=fontsize))
+        cr.set_font_size(fontsize)
 
-        cr.pen().setCapStyle(QtCore.Qt.RoundCap)
-        cr.drawLine(cx1, cy1, cx2, cy2)
+        cr.set_line_cap(cairo.LINE_CAP_ROUND)
+        cr.move_to(cx1, cy1)
+        cr.line_to(cx2, cy2)
+        cr.stroke()
         self.draw_arrowhead(cr, cx1, cy1, cx2, cy2)
         self.draw_arrowhead(cr, cx2, cy2, cx1, cy1)
 
-        pen = cr.pen()
+        cr.set_dash([ 3.0, 4.0, 6.0, 4.0], 5.0)
 
         # calculate offsets and positions for drawing labels
         # try not to cover anything up
@@ -612,30 +628,33 @@ class Ruler(CanvasObject):
 
         xd = xh + diag_xoffset
         yd = yh + diag_yoffset
-        cr.drawText(xd, yd, self.text_h)
+        cr.move_to(xd, yd)
+        cr.show_text(self.text_h)
 
-        pen.setDashPattern([ 3.0, 4.0, 6.0, 4.0])
-        pen.setDashOffset(5.0)
-        cr.setPen(pen)
         if self.color2:
             self.set_color(cr, self.color2)
-                
+            
         # draw X plumb line
-        cr.drawLine(cx1, cy1, cx2, cy1)
+        cr.move_to(cx1, cy1)
+        cr.line_to(cx2, cy1)
+        cr.stroke()
 
         # draw Y plumb line
-        cr.drawLine(cx2, cy1, cx2, cy2)
+        cr.move_to(cx2, cy1)
+        cr.line_to(cx2, cy2)
+        cr.stroke()
 
         # draw X plum line label
         xh -= xtwd // 2
-        cr.drawText(xh, y, self.text_x)
+        cr.move_to(xh, y)
+        cr.show_text(self.text_x)
 
         # draw Y plum line label
-        cr.drawText(x, yh, self.text_y)
+        cr.move_to(x, yh)
+        cr.show_text(self.text_y)
 
         if self.cap:
             self.draw_caps(cr, self.cap, ((cx2, cy1), ))
-
 
 drawCatalog = {
     'rectangle': Rectangle,
@@ -657,5 +676,5 @@ class DrawingCanvas(DrawingMixin, CanvasMixin, CompoundMixin, CanvasObject,
         DrawingMixin.__init__(self, drawCatalog)
         self.kind = 'drawingcanvas'
 
-
+        
 #END
