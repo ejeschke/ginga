@@ -130,8 +130,12 @@ class BaseImage(Callback.Callbacks):
 
     def _set_minmax(self):
         data = self.get_data()
-        self.maxval = numpy.nanmax(data)
-        self.minval = numpy.nanmin(data)
+        try:
+            self.maxval = numpy.nanmax(data)
+            self.minval = numpy.nanmin(data)
+        except Exception:
+            self.maxval = 0
+            self.minval = 0
 
         # TODO: see if there is a faster way to ignore infinity
         if numpy.isfinite(self.maxval):

@@ -16,7 +16,7 @@ from ginga import Mixins
 from ginga.misc import Callback, Bunch
 from ginga import colors
 
-class CanvasObject(CanvasObjectBase):
+class QtCanvasMixin(object):
 
     def __get_color(self, color):
         clr = QtGui.QColor()
@@ -103,45 +103,7 @@ class CanvasObject(CanvasObjectBase):
         return width, height
 
 
-class CompoundObject(CompoundMixin, CanvasObject):
-    """Compound object on a FitsImageCanvas.
-    Parameters are:
-    the child objects making up the compound object.  Objects are drawn
-    in the order listed.
-    Example:
-      CompoundObject(Point(x, y, radius, ...),
-      Circle(x, y, radius, ...))
-    This makes a point inside a circle.
-    """
-
-    def __init__(self, *objects):
-        CanvasObject.__init__(self)
-        CompoundMixin.__init__(self)
-        self.kind = 'compound'
-        self.objects = list(objects)
-        
-class Canvas(CanvasMixin, CompoundObject, CanvasObject):
-    def __init__(self, *objects):
-        CanvasObject.__init__(self)
-        CompoundObject.__init__(self, *objects)
-        CanvasMixin.__init__(self)
-        self.kind = 'canvas'
-
-        
-class Text(CanvasObject):
-    """Draws text on a FitsImageCanvas.
-    Parameters are:
-    x, y: 0-based coordinates in the data space
-    text: the text to draw
-    Optional parameters for fontsize, color, etc.
-    """
-
-    def __init__(self, x, y, text, font='Sans Serif', fontsize=None,
-                 color='yellow'):
-        self.kind = 'text'
-        super(Text, self).__init__(color=color,
-                                   x=x, y=y, font=font, fontsize=fontsize,
-                                   text=text)
+class Text(TextBase, QtCanvasMixin):
 
     def draw(self):
         cx, cy = self.canvascoords(self.x, self.y)
@@ -154,28 +116,9 @@ class Text(CanvasObject):
         cr.setFont(QtGui.QFont(self.font, pointSize=fontsize))
         cr.drawText(cx, cy, self.text)
 
-    def rotate(self, theta, xoff=0, yoff=0):
-        self.x, self.y = self.rotate_pt(self.x, self.y, theta,
-                                        xoff=xoff, yoff=yoff)
 
-class Polygon(CanvasObject):
-    """Draws a polygon on a FitsImageCanvas.
-    Parameters are:
-    List of (x, y) points in the polygon.  The last one is assumed to
-    be connected to the first.
-    Optional parameters for linesize, color, etc.
-    """
+class Polygon(PolygonBase, QtCanvasMixin):
 
-    def __init__(self, points, color='red',
-                 linewidth=1, linestyle='solid', cap=None,
-                 fill=False, fillcolor=None):
-        self.kind = 'polygon'
-        
-        super(Polygon, self).__init__(points=points, color=color,
-                                      linewidth=linewidth, cap=cap,
-                                      linestyle=linestyle,
-                                      fill=fill, fillcolor=fillcolor)
-        
     def draw(self):
         cpoints = map(lambda p: self.canvascoords(p[0], p[1]), self.points)
         cr = self.setup_cr()
@@ -189,52 +132,8 @@ class Polygon(CanvasObject):
         if self.cap:
             self.draw_caps(cr, self.cap, cpoints)
 
-    def contains(self, x, y):
-        # NOTE: we use a version of the ray casting algorithm
-        # See: http://alienryderflex.com/polygon/
-        result = False
-        xj, yj = self.points[-1]
-        for (xi, yi) in self.points:
-            if ((((yi < y) and (yj >= y)) or
-                 ((yj < y) and (yi >= y))) and
-                ((xi <= x) or (xj <= x))):
-                cross = (xi + float(y - yi)/(yj - yi)*(xj - xi)) < x
-                result ^= cross
-            xj, yj = xi, yi
 
-        return result
-
-    def rotate(self, theta, xoff=0, yoff=0):
-        newpts = map(lambda p: self.rotate_pt(p[0], p[1], theta,
-                                              xoff=xoff, yoff=yoff),
-                     self.points)
-        self.points = newpts
-
-class Rectangle(CanvasObject):
-    """Draws a rectangle on a FitsImageCanvas.
-    Parameters are:
-    x1, y1: 0-based coordinates of one corner in the data space
-    x2, y2: 0-based coordinates of the opposing corner in the data space
-    Optional parameters for linesize, color, etc.
-
-    PLEASE NOTE: that the coordinates will be arranged in the final
-    object such that x1, y1 always refers to the lower-left corner.
-    """
-
-    def __init__(self, x1, y1, x2, y2, color='red',
-                 linewidth=1, linestyle='solid', cap=None,
-                 fill=False, fillcolor=None,
-                 drawdims=False, font='Sans Serif'):
-        self.kind = 'rectangle'
-        # ensure that rectangles are always bounded LL to UR
-        x1, y1, x2, y2 = self.swapxy(x1, y1, x2, y2)
-        
-        super(Rectangle, self).__init__(color=color,
-                                        x1=x1, y1=y1, x2=x2, y2=y2,
-                                        linewidth=linewidth, cap=cap,
-                                        linestyle=linestyle,
-                                        fill=fill, fillcolor=fillcolor,
-                                        drawdims=drawdims, font=font)
+class Rectangle(RectangleBase, QtCanvasMixin):
         
     def draw(self):
         cpoints = map(lambda p: self.canvascoords(p[0], p[1]),
@@ -268,66 +167,12 @@ class Rectangle(CanvasObject):
             cx = cx2 + 4
             cr.drawText(cx, cy, "%d" % (self.y2 - self.y1))
 
-    def contains(self, x, y):
-        if ((x >= self.x1) and (x <= self.x2) and
-            (y >= self.y1) and (y <= self.y2)):
-            return True
-        return False
 
-    def rotate(self, theta, xoff=0, yoff=0):
-        x1, y1 = self.rotate_pt(self.x1, self.y1, theta,
-                                xoff=xoff, yoff=yoff)
-        x2, y2 = self.rotate_pt(self.x2, self.y2, theta,
-                                xoff=xoff, yoff=yoff)
-        self.x1, self.y1, self.x2, self.y2 = self.swapxy(x1, y1, x2, y2)
-
-    def toPolygon(self):
-        points = [(self.x1, self.y1), (self.x2, self.y1),
-                  (self.x2, self.y2), (self.x1, self.y2)]
-        p = Polygon(points, color=self.color,
-                    linewidth=self.linewidth, linestyle=self.linestyle,
-                    cap=self.cap, fill=self.fill, fillcolor=self.fillcolor)
-        return p
+class Square(SquareBase, Rectangle):
+    pass
 
 
-class Square(Rectangle):
-    """Draws a square on a FitsImageCanvas.
-    Parameters are:
-    x, y: 0-based coordinates of the center in the data space
-    length: size of a side (pixels in data space)
-    Optional parameters for linesize, color, etc.
-    """
-
-    def __init__(self, x, y, length, color='red',
-                 linewidth=1, linestyle='solid', cap=None,
-                 fill=False, fillcolor=None,
-                 drawdims=False, font='Sans Serif'):
-        super(Square, self).__init__(x1=x, y1=y, x2=x-length, y2=y-length,
-                                     color=color,
-                                     linewidth=linewidth, cap=cap,
-                                     linestyle=linestyle,
-                                     fill=fill, fillcolor=fillcolor,
-                                     drawdims=drawdims, font=font)
-        self.kind = 'square'
-        
-
-class Circle(CanvasObject):
-    """Draws a circle on a FitsImageCanvas.
-    Parameters are:
-    x, y: 0-based coordinates of the center in the data space
-    radius: radius based on the number of pixels in data space
-    Optional parameters for linesize, color, etc.
-    """
-
-    def __init__(self, x, y, radius, color='yellow',
-                 linewidth=1, linestyle='solid', cap=None,
-                 fill=False, fillcolor=None):
-        self.kind = 'circle'
-        super(Circle, self).__init__(color=color,
-                                     linewidth=linewidth, cap=cap,
-                                     linestyle=linestyle,
-                                     fill=fill, fillcolor=fillcolor,
-                                     x=x, y=y, radius=radius)
+class Circle(CircleBase, QtCanvasMixin):
 
     def draw(self):
         cx1, cy1, cradius = self.calc_radius(self.x, self.y, self.radius)
@@ -338,35 +183,9 @@ class Circle(CanvasObject):
         if self.cap:
             self.draw_caps(cr, self.cap, ((cx1, cy1), ))
 
-    def contains(self, x, y):
-        radius = math.sqrt(math.fabs(x - self.x)**2 + math.fabs(y - self.y)**2)
-        if radius <= self.radius:
-            return True
-        return False
 
-    def rotate(self, theta, xoff=0, yoff=0):
-        self.x, self.y = self.rotate_pt(self.x, self.y, theta,
-                                        xoff=xoff, yoff=yoff)
+class Point(PointBase, QtCanvasMixin):
 
-class Point(CanvasObject):
-    """Draws a point on a FitsImageCanvas.
-    Parameters are:
-    x, y: 0-based coordinates of the center in the data space
-    radius: radius based on the number of pixels in data space
-    Optional parameters for linesize, color, etc.
-
-    PLEASE NOTE: currently on the 'cross' style of point is drawn.
-    """
-
-    def __init__(self, x, y, radius, style='cross', color='yellow',
-                 linewidth=1, linestyle='solid', cap=None):
-        self.kind = 'point'
-        super(Point, self).__init__(color=color,
-                                    linewidth=linewidth,
-                                    linestyle=linestyle,
-                                    x=x, y=y, radius=radius,
-                                    cap=cap)
-        
     def draw(self):
         cx, cy, cradius = self.calc_radius(self.x, self.y, self.radius)
         cx1, cy1 = cx - cradius, cy - cradius
@@ -380,30 +199,8 @@ class Point(CanvasObject):
         if self.cap:
             self.draw_caps(cr, self.cap, ((cx, cy), ))
 
-    def contains(self, x, y):
-        if (x == self.x) and (y == self.y):
-            return True
-        return False
 
-    def rotate(self, theta, xoff=0, yoff=0):
-        self.x, self.y = self.rotate_pt(self.x, self.y, theta,
-                                        xoff=xoff, yoff=yoff)
-
-class Line(CanvasObject):
-    """Draws a line on a FitsImageCanvas.
-    Parameters are:
-    x1, y1: 0-based coordinates of one end in the data space
-    x2, y2: 0-based coordinates of the opposing end in the data space
-    Optional parameters for linesize, color, etc.
-    """
-
-    def __init__(self, x1, y1, x2, y2, color='red',
-                 linewidth=1, linestyle='solid', cap=None):
-        self.kind = 'line'
-        super(Line, self).__init__(color=color,
-                                   linewidth=linewidth, cap=cap,
-                                   linestyle=linestyle,
-                                   x1=x1, y1=y1, x2=x2, y2=y2)
+class Line(LineBase, QtCanvasMixin):
         
     def draw(self):
         cx1, cy1 = self.canvascoords(self.x1, self.y1)
@@ -416,28 +213,8 @@ class Line(CanvasObject):
         if self.cap:
             self.draw_caps(cr, self.cap, ((cx1, cy1), (cx2, cy2)))
 
-    def rotate(self, theta, xoff=0, yoff=0):
-        self.x1, self.y1 = self.rotate_pt(self.x1, self.y1, theta,
-                                          xoff=xoff, yoff=yoff)
-        self.x2, self.y2 = self.rotate_pt(self.x2, self.y2, theta,
-                                          xoff=xoff, yoff=yoff)
 
-class Compass(CanvasObject):
-    """Draws a WCS compass on a FitsImageCanvas.
-    Parameters are:
-    x1, y1: 0-based coordinates of the center in the data space
-    x2, y2: 0-based coordinates of the 'North' end in the data space
-    x3, y3: 0-based coordinates of the 'East' end in the data space
-    Optional parameters for linesize, color, etc.
-    """
-
-    def __init__(self, x1, y1, x2, y2, x3, y3, color='skyblue',
-                 linewidth=1, fontsize=None, cap='ball'):
-        self.kind = 'compass'
-        super(Compass, self).__init__(color=color,
-                                      linewidth=linewidth, cap=cap,
-                                      x1=x1, y1=y1, x2=x2, y2=y2, x3=x3, y3=y3,
-                                      fontsize=fontsize)
+class Compass(CompassBase, QtCanvasMixin):
 
     def draw(self):
         cx1, cy1 = self.canvascoords(self.x1, self.y1)
@@ -505,21 +282,7 @@ class Compass(CanvasObject):
         return (xd, yd)
 
         
-class Triangle(CanvasObject):
-    """Draws a right triangle on a FitsImageCanvas.
-    Parameters are:
-    x1, y1: 0-based coordinates of one end of the diagonal in the data space
-    x2, y2: 0-based coordinates of the opposite end of the diagonal
-    Optional parameters for linesize, color, etc.
-    """
-
-    def __init__(self, x1, y1, x2, y2, color='pink',
-                 linewidth=1, linestyle='solid', cap=None):
-        self.kind='triangle'
-        super(Triangle, self).__init__(color=color,
-                                       linewidth=linewidth, cap=cap,
-                                       linestyle=linestyle,
-                                       x1=x1, y1=y1, x2=x2, y2=y2)
+class Triangle(TriangleBase, QtCanvasMixin):
 
     def draw(self):
         cx1, cy1 = self.canvascoords(self.x1, self.y1)
@@ -536,25 +299,7 @@ class Triangle(CanvasObject):
             self.draw_caps(cr, self.cap,
                            ((cx1, cy1), (cx2, cy2), (cx2, cy1)))
 
-class Ruler(CanvasObject):
-    """Draws a WCS ruler (like a right triangle) on a FitsImageCanvas.
-    Parameters are:
-    x1, y1: 0-based coordinates of one end of the diagonal in the data space
-    x2, y2: 0-based coordinates of the opposite end of the diagonal
-    Optional parameters for linesize, color, etc.
-    """
-
-    def __init__(self, x1, y1, x2, y2, color='red', color2='yellow',
-                 linewidth=1, cap='ball', units='arcsec',
-                 font='Sans Serif', fontsize=None,
-                 text_x='kon', text_y='ban', text_h='wa'):
-        self.kind = 'ruler'
-        super(Ruler, self).__init__(color=color, color2=color2,
-                                    linewidth=linewidth, cap=cap,
-                                    x1=x1, y1=y1, x2=x2, y2=y2,
-                                    font=font, fontsize=fontsize,
-                                    text_x=text_x, text_y=text_y,
-                                    text_h=text_h)
+class Ruler(RulerBase, QtCanvasMixin):
 
     def draw(self):
         cx1, cy1 = self.canvascoords(self.x1, self.y1)
@@ -646,10 +391,12 @@ drawCatalog = {
     'triangle': Triangle,
     }
 
-class DrawingCanvas(DrawingMixin, CanvasMixin, CompoundMixin, CanvasObject, 
+class DrawingCanvas(DrawingMixin, CanvasMixin, CompoundMixin,
+                    CanvasObjectBase, QtCanvasMixin,
                     Mixins.UIMixin, Callback.Callbacks):
     def __init__(self):
-        CanvasObject.__init__(self)
+        CanvasObjectBase.__init__(self)
+        QtCanvasMixin.__init__(self)
         CompoundMixin.__init__(self)
         CanvasMixin.__init__(self)
         Callback.Callbacks.__init__(self)
