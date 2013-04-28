@@ -86,6 +86,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
         sw = MyScrollArea()
         sw.setWidgetResizable(True)
+        #sw.setEnabled(True)
         sw.thumbs_cb = self.thumbpane_resized
 
         # Create thumbnails pane
@@ -178,7 +179,6 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         vbox.addWidget(imglbl,  stretch=0)
         widget.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed,
                                                QtGui.QSizePolicy.Fixed))
-        #widget.show()
         bnch = Bunch.Bunch(widget=widget, image=imgwin, layout=vbox,
                            imglbl=imglbl, name=name, chname=chname,
                            path=path, pixmap=pixmap)
@@ -197,11 +197,9 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         # force scroll to bottom of thumbs, if checkbox is set
         scrollp = self.w.auto_scroll.isChecked()
         if scrollp:
-            # TODO: this doesn't work!
-            rect = self.w.thumbs_w.geometry()
-            x1, y1, x2, y2 = rect.getCoords()
-            self.w.thumbs_scroll.ensureVisible(x1, y1)
-        #self.w.thumbs_scroll.show()
+            self.fv.update_pending()
+            area = self.w.thumbs_scroll
+            area.verticalScrollBar().setValue(area.verticalScrollBar().maximum())
         self.logger.debug("added thumb for %s" % (thumbname))
 
     def reorder_thumbs(self):
