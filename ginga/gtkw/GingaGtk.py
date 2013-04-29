@@ -123,6 +123,7 @@ class GingaView(GtkMain.GtkMain):
         self.w.tooltips.set_tip(cbox, "Select a channel")
         cbox.connect("changed", self.channel_select_cb)
         hbox.pack_start(cbox, fill=False, expand=False, padding=4)
+        cbox.hide()
 
         opmenu = gtk.Menu()
         self.w.operation = opmenu
