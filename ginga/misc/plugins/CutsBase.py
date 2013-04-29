@@ -1,6 +1,6 @@
 #
 # CutsBase.py -- Cuts plugin base class for Ginga
-# 
+#
 # Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c) Eric R. Jeschke.  All rights reserved.
@@ -32,7 +32,7 @@ class CutsBase(GingaPlugin.LocalPlugin):
         chname = self.fv.get_channelName(self.fitsimage)
         self.fv.stop_operation_channel(chname, str(self))
         return True
-        
+
     def start(self):
         # start line cuts operation
         self.instructions()
@@ -51,7 +51,7 @@ class CutsBase(GingaPlugin.LocalPlugin):
 
     def pause(self):
         self.canvas.ui_setActive(False)
-        
+
     def resume(self):
         self.canvas.ui_setActive(True)
         self.fv.showStatus("Draw a line with the right mouse button")
@@ -75,8 +75,8 @@ class CutsBase(GingaPlugin.LocalPlugin):
                                                    int(line.x2), int(line.y2))
         points = numpy.array(points)
         self.plot.cuts(points, xtitle="Line Index", ytitle="Pixel Value",
-                       color=color)
-        
+                       color=color, drawstyle='steps-mid')
+
     def _redo(self, lines, colors):
         for idx in xrange(len(lines)):
             line, color = lines[idx], colors[idx]
@@ -85,7 +85,7 @@ class CutsBase(GingaPlugin.LocalPlugin):
             #text.color = color
             self._plotpoints(line, color)
         return True
-    
+
     def redo(self):
         self.plot.clear()
         idx = 0
@@ -117,7 +117,7 @@ class CutsBase(GingaPlugin.LocalPlugin):
             res = l[0]
             res.extend(self._append_lists(l[1:]))
             return res
-        
+
     def _getlines(self, obj):
         if obj.kind == 'compound':
             return self._append_lists(map(self._getlines, obj.objects))
@@ -125,10 +125,10 @@ class CutsBase(GingaPlugin.LocalPlugin):
             return [obj]
         else:
             return []
-        
+
     def buttondown_cb(self, canvas, button, data_x, data_y):
         return self.motion_cb(canvas, button, data_x, data_y)
-    
+
     def motion_cb(self, canvas, button, data_x, data_y):
         if not (button == 0x1):
             return
@@ -140,17 +140,17 @@ class CutsBase(GingaPlugin.LocalPlugin):
         self._movecut(obj, data_x, data_y)
 
         canvas.redraw(whence=3)
-    
+
     def buttonup_cb(self, canvas, button, data_x, data_y):
         if not (button == 0x1):
             return
-        
+
         obj = self.canvas.getObjectByTag(self.cutstag)
         lines = self._getlines(obj)
         for line in lines:
             line.linestyle = 'solid'
         self._movecut(obj, data_x, data_y)
-        
+
         self.redo()
 
     def keydown(self, canvas, keyname):
@@ -192,7 +192,7 @@ class CutsBase(GingaPlugin.LocalPlugin):
             self.logger.debug("adding cut position")
             self.count += 1
             count = self.count
-            
+
         tag = "cuts%d" % (count)
         cuts = []
         for (x1, y1, x2, y2) in coords:
@@ -211,7 +211,7 @@ class CutsBase(GingaPlugin.LocalPlugin):
             cut = cuts[0]
         else:
             cut = self._combine_cuts(*cuts)
-            
+
         cut.set_data(count=count)
         self.canvas.add(cut, tag=tag)
         self.addCutsTag(tag, select=True)
@@ -242,7 +242,7 @@ class CutsBase(GingaPlugin.LocalPlugin):
             self.logger.debug("adding cut position")
             self.count += 1
             count = self.count
-            
+
         tag = "cuts%d" % (count)
         if obj.kind == 'line':
             cut = self._create_cut(x, y, count,
@@ -279,5 +279,5 @@ class CutsBase(GingaPlugin.LocalPlugin):
 
         self.logger.debug("redoing cut plots")
         return self.redo()
-    
+
 #END

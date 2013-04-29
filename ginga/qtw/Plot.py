@@ -42,7 +42,7 @@ class Plot(Callback.Callbacks):
 
     def get_widget(self):
         return self.canvas
-    
+
     def _sanity_check_window(self):
         pass
 
@@ -83,19 +83,20 @@ class Plot(Callback.Callbacks):
     def _draw(self):
         self.fig.canvas.draw()
 
-    def plot(self, xarr, yarr, xtitle=None, ytitle=None, title=None,
-             rtitle=None, color=None, alpha=1.0):
-        self.set_titles(xtitle=xtitle, ytitle=ytitle, title=title,
-                        rtitle=rtitle)
-        if not color:
-            self.ax.plot(xarr, yarr, linewidth=1.0, alpha=alpha,
-                         linestyle='-')
-        else:
-            self.ax.plot(xarr, yarr, linewidth=1.0, color=color,
-                         alpha=alpha, linestyle='-')
+    def plot(self, xarr, yarr, **kwargs):
+        self.set_titles(xtitle=kwargs.pop('xtitle', None),
+                        ytitle=kwargs.pop('ytitle', None),
+                        title=kwargs.pop('title', None),
+                        rtitle=kwargs.pop('rtitle', None))
+
+        kwargs.setdefault('color', None)
+        kwargs.setdefault('alpha', 1.0)
+
+        self.ax.plot(xarr, yarr, **kwargs)
+
         self.ax.grid(True)
         self._draw()
-        
+
 
 class Histogram(Plot):
 
@@ -119,17 +120,12 @@ class Histogram(Plot):
 
 class Cuts(Plot):
 
-    def cuts(self, data,
-             xtitle=None, ytitle=None, title=None, rtitle=None,
-             color=None):
+    def cuts(self, data, **kwargs):
         """data: pixel values along a line.
         """
         y = data
         x = numpy.arange(len(data))
-        #self.clear()
-        self.set_titles(xtitle=xtitle, ytitle=ytitle, title=title,
-                        rtitle=rtitle)
-        self.plot(x, y, color=color)
+        self.plot(x, y, **kwargs)
 
 
 #END
