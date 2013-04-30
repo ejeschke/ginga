@@ -84,15 +84,10 @@ class Plot(Callback.Callbacks):
         self.fig.canvas.draw()
 
     def plot(self, xarr, yarr, xtitle=None, ytitle=None, title=None,
-             rtitle=None, color=None, alpha=1.0):
+             rtitle=None, **kwdargs):
         self.set_titles(xtitle=xtitle, ytitle=ytitle, title=title,
                         rtitle=rtitle)
-        if not color:
-            self.ax.plot(xarr, yarr, linewidth=1.0, alpha=alpha,
-                         linestyle='-')
-        else:
-            self.ax.plot(xarr, yarr, linewidth=1.0, color=color,
-                         alpha=alpha, linestyle='-')
+        self.ax.plot(xarr, yarr, **kwdargs)
         self.ax.grid(True)
         self._draw()
         
@@ -114,7 +109,7 @@ class Histogram(Plot):
         self.clear()
         self.set_titles(xtitle=xtitle, ytitle=ytitle, title=title,
                         rtitle=rtitle)
-        self.plot(x, y)
+        self.plot(x, y, alpha=1.0, linewidth=1.0, linestyle='-')
 
 
 class Cuts(Plot):
@@ -129,7 +124,8 @@ class Cuts(Plot):
         #self.clear()
         self.set_titles(xtitle=xtitle, ytitle=ytitle, title=title,
                         rtitle=rtitle)
-        self.plot(x, y, color=color)
+        self.plot(x, y, color=color, drawstyle='steps-mid',
+                  alpha=1.0, linewidth=1.0, linestyle='-')
 
 
 #END
