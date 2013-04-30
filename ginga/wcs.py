@@ -441,8 +441,15 @@ def choose_coord_system(header):
                 hdkey = 'RADESYS'
                 radecsys = header[hdkey]
             except KeyError:
-                # missing FITS keyword--default to FK5
-                radecsys = 'FK5'
+                # missing keyword
+                # RADESYS defaults to IRCS unless EQUINOX is given
+                # alone, in which case it defaults to FK4 prior to 1984
+                # and FK5 after 1984.
+                try:
+                    equinox = header['EQUINOX']
+                    radecsys = 'FK5'
+                except KeyError:
+                    radecsys = 'ICRS'
 
         radecsys = radecsys.strip()
 

@@ -584,7 +584,45 @@ class AstroImage(BaseImage):
         newimage.update_keywords({ 'CRPIX1': crpix1,
                                    'CRPIX2': crpix2 })
         return newimage
+
+    def get_wcs_rotation_deg(self):
+        try:
+            v = self.get_keyword('PC1_1')
+        except KeyError:
+            try:
+                v = self.get_keyword('PC001001')
+            except KeyError:
+                v = self.get_keyword('CD1_1')
+                d = self.get_keyword('CDELT1')
+                v = v / d
+
+        # Position angle of north (radians E of N)
+        #v = -v
+        theta_rad = math.acos(v)
+        theta_deg = math.degrees(theta_rad)
+        return theta_deg
     
+
+    def rotate(self, deg):
+        old_deg = self.get_wcs_rotation_deg()
+
+        super(AstroImage, self).rotate(deg)
+
+        wd, ht = self.get_size()
+        
+        new_deg = old_deg + deg
+
+        # Reset WCS rotation matrix to account for rotation
+        pa = numpy.radians(new_deg)
+        cpa = numpy.cos(pa)
+        spa = numpy.sin(pa)
+        #wcsobj.wcs.pc = numpy.array([[-cpa, -spa], [-spa, cpa]])
+        self.update_keywords({
+            'NAXIS1': wd, 'NAXIS2': ht,
+            'PC1_1': -cpa, 'PC1_2': -spa, 'PC2_1': -spa, 'PC2_2': cpa,
+            })
+
+        
     def mosaic(self, filelist):
         """Creates a new mosaic image from the images in filelist.
         """
@@ -600,7 +638,7 @@ class AstroImage(BaseImage):
             self.logger.debug("Examining file '%s' ..." % (filepath))
             image = AstroImage(logger=self.logger)
             image.load_file(filepath)
-            
+
             wd, ht = image.get_size()
             # for each image calculate ra/dec in the corners
             for x, y in ((0, 0), (wd-1, 0), (wd-1, ht-1), (0, ht-1)):
@@ -618,22 +656,39 @@ class AstroImage(BaseImage):
                  
         # calc necessary dimensions of final image
         width, height = xmax-xmin+1, ymax-ymin+1
+        slop = 0
+        width, height = width+slop, height+slop
 
         # amount of offset to add to each image
         xoff, yoff = abs(min(0, xmin)), abs(min(0, ymin))
 
+        pa_deg = image0.get_wcs_rotation_deg()
+
         metadata = image0.get_metadata()
+        header = image0.get_header()
+        ## for kwd in ('CD1_1', 'CD1_2', 'CD2_1', 'CD2_2'):
+        ##     try:
+        ##         del header[kwd]
+        ##     except KeyError:
+        ##         pass
         
         # new array to hold the mosaic
-        print "WIDTH=%d HEIGHT=%d" % (width, height)
         self.logger.debug("Creating empty mosaic image of %dx%d" % (
             (width, height)))
         newdata = numpy.zeros((height, width))
 
         # Create new image with empty data
         mosaic = AstroImage(newdata, metadata=metadata, logger=self.logger)
+        pa = numpy.radians(pa_deg)
+        cpa = numpy.cos(pa)
+        spa = numpy.sin(pa)
         mosaic.update_keywords({ 'NAXIS1': width,
-                                 'NAXIS2': height })
+                                 'NAXIS2': height,
+                                 ## 'PC1_1': -cpa,
+                                 ## 'PC1_2': -spa,
+                                 ## 'PC2_1': -spa,
+                                 ## 'PC2_2': cpa,
+                                 })
 
         # Update the WCS reference pixel with the relocation info
         crpix1 = mosaic.get_keyword('CRPIX1')
@@ -649,8 +704,12 @@ class AstroImage(BaseImage):
             # Create and load the image
             image = AstroImage(logger=self.logger)
             image.load_file(filepath)
+
             mosaic.mosaic_inline([ image ])
         
+        header = mosaic.get_header()
+        kwds = list(header.keys())
+        kwds.sort()
         return mosaic
     
     def mosaic_inline(self, imagelist):
@@ -668,26 +727,34 @@ class AstroImage(BaseImage):
         newdata = self.get_data()
         for image in imagelist:
             name = image.get('name', 'NoName')
+
+            # Rotate image into place, according to wcs
+            ## rot_deg = image.get_wcs_rotation_deg()
+            ## rot_deg = - rot_deg
+            ## self.logger.debug("rotating %s by %f deg" % (name, rot_deg))
+            ## image.rotate(rot_deg)
+
             wd, ht = image.get_size()
             data = image.get_data()
 
             # Find orientation of image piece and orient it correctly to us
-            ra2, dec2 = image.pixtoradec(0, 0)
-            ra3, dec3 = image.pixtoradec(wd-1, ht-1)
+            ## ra2, dec2 = image.pixtoradec(0, 0)
+            ## ra3, dec3 = image.pixtoradec(wd-1, ht-1)
 
-            # TODO: we need something much more sophisticated than this
-            # e.g. use a matrix transform
-            if ra_l != (ra2 < ra3):
-                data = numpy.fliplr(data)
-                ra = ra3
-            else:
-                ra = ra2
+            ## # TODO: we need something much more sophisticated than this
+            ## # e.g. use a matrix transform
+            ## if ra_l != (ra2 < ra3):
+            ##     data = numpy.fliplr(data)
+            ##     ra = ra3
+            ## else:
+            ##     ra = ra2
                 
-            if dec_l != (dec2 < dec3):
-                data = numpy.flipud(data)
-                dec = dec3
-            else:
-                dec = dec2
+            ## if dec_l != (dec2 < dec3):
+            ##     data = numpy.flipud(data)
+            ##     dec = dec3
+            ## else:
+            ##     dec = dec2
+            ra, dec = image.pixtoradec(0, 0)
                 
             x0, y0 = self.radectopix(ra, dec)
             #self.logger.debug("0,0 -> %f,%f" % (x0, y0))
@@ -697,7 +764,7 @@ class AstroImage(BaseImage):
                 name, x0, y0))
 
             try:
-                newdata[y0:(y0+ht), x0:(x0+wd)] = data[0:ht, 0:wd]
+                newdata[y0:(y0+ht), x0:(x0+wd)] += data[0:ht, 0:wd]
             except Exception, e:
                 self.logger.error("Failed to place image '%s': %s" % (
                     name, str(e)))
