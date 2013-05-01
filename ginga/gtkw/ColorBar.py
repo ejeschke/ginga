@@ -273,11 +273,8 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
         self.redraw()
         
     def shift_colormap(self, pct):
-        if pct > 0.0:
-            self.rgbmap.rshift(pct)
-        else:
-            self.rgbmap.lshift(math.fabs(pct))
-
+        self.rgbmap.set_sarr(self._sarr, callback=False)
+        self.rgbmap.shift(pct)
         self.redraw()
 
     def rgbmap_cb(self, rgbmap):
@@ -290,6 +287,8 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
         ## print "button event at %dx%d, button=%d" % (x, y, button)
         if button == 1:
             self._start_x = x
+            sarr = self.rgbmap.get_sarr()
+            self._sarr = sarr.copy()
             return True
                 
         ## return self.make_callback('button-press', event)

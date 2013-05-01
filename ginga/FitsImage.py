@@ -233,11 +233,11 @@ class FitsImageBase(Callback.Callbacks):
     def set_imap(self, im, redraw=True):
         self.rgbmap.set_imap(im, callback=redraw)
 
-    def shift_cmap(self, pct):
-        if pct > 0.0:
-            self.rgbmap.rshift(pct)
-        else:
-            self.rgbmap.lshift(math.fabs(pct))
+    def shift_cmap(self, pct, redraw=True):
+        self.rgbmap.shift(pct, callback=redraw)
+
+    def scaleNshift_cmap(self, scale_pct, shift_pct, redraw=True):
+        self.rgbmap.scaleNshift(scale_pct, shift_pct, callback=redraw)
 
     def rgbmap_cb(self, rgbmap):
         self.logger.info("RGB map has changed.")

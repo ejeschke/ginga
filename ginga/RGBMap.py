@@ -28,6 +28,9 @@ class RGBMapper(Callback.Callbacks):
         self.cmap = None
         self.imap = None
         self.arr = None
+        self.iarr = None
+        self.carr = None
+        self.sarr = None
 
         # For color scale algorithms
         self.hashalgs = { 'linear': self.calc_linear_hash,
@@ -47,8 +50,7 @@ class RGBMapper(Callback.Callbacks):
     def set_cmap(self, cmap, callback=True):
         self.cmap = cmap
         self.calc_cmap()
-        if callback:
-            self.make_callback('changed')
+        self.recalc(callback=callback)
 
     def get_cmap(self):
         return self.cmap
@@ -56,9 +58,8 @@ class RGBMapper(Callback.Callbacks):
     def calc_cmap(self):
         clst = self.cmap.clst
         arr = numpy.array(clst).transpose() * 255.0
-        #self.arr = arr.astype('uint8')
-        self.arr = numpy.round(arr).astype('uint8')
-        self.calc_imap()
+        #self.carr = arr.astype('uint8')
+        self.carr = numpy.round(arr).astype('uint8')
 
     def get_rgb(self, index):
         return tuple(self.arr[index])
@@ -66,28 +67,50 @@ class RGBMapper(Callback.Callbacks):
     def get_rgbval(self, index):
         assert (index >= 0) and (index < 256), \
                RGBMapError("Index must be in range 0-255 !")
+        index = self.sarr[index].clip(0, 255)
         return (self.arr[0][index],
                 self.arr[1][index],
                 self.arr[2][index])
 
     def set_imap(self, imap, callback=True):
         self.imap = imap
-        # Reset colormap (TODO: we shouldn't have to do this?)
-        self.calc_cmap()
-        #self.calc_imap()
-        if callback:
-            self.make_callback('changed')
+        self.calc_imap()
+        self.recalc(callback=callback)
 
     def get_imap(self):
         return self.imap
     
     def calc_imap(self):
-        if self.imap != None:
-            # Apply intensity map to rearrange colors
-            idx = self.imap.arr
+        arr = numpy.array(self.imap.ilst) * 255.0
+        self.iarr = numpy.round(arr).astype('uint')
+
+    def reset_sarr(self):
+        self.sarr = numpy.array(range(256))
+
+    def set_sarr(self, sarr, callback=True):
+        assert len(sarr) == 256, \
+               RGBMapError("shift map length %d != 256" % (len(sarr)))
+        self.sarr = sarr.astype('uint')
+
+        if callback:
+            self.make_callback('changed')
+
+    def get_sarr(self):
+        return self.sarr
+    
+    def recalc(self, callback=True):
+        self.arr = numpy.copy(self.carr)
+        # Apply intensity map to rearrange colors
+        if self.iarr != None:
+            idx = self.iarr
             self.arr[0] = self.arr[0][idx]
             self.arr[1] = self.arr[1][idx]
             self.arr[2] = self.arr[2][idx]
+
+        self.reset_sarr()
+        
+        if callback:
+            self.make_callback('changed')
         
     def get_hash_size(self):
         return self.hashsize
@@ -108,7 +131,7 @@ class RGBMapper(Callback.Callbacks):
     
     def set_hash_algorithm(self, name, callback=True):
         if not name in self.hashalgs.keys():
-            raise ColorMapError("Invalid hash algorithm '%s'" % (name))
+            raise RGBMapError("Invalid hash algorithm '%s'" % (name))
         self.hashalg = name
         self.calc_hash()
         if callback:
@@ -118,6 +141,8 @@ class RGBMapper(Callback.Callbacks):
         # NOTE: data is assumed to be in the range 0-255 at this point
         # but clip as a precaution
         idx = idx.clip(0, 255)
+        # run it through the shift array
+        idx = self.sarr[idx].clip(0, 255)
         ar = self.arr[0][idx]
         ag = self.arr[1][idx]
         ab = self.arr[2][idx]
@@ -127,10 +152,13 @@ class RGBMapper(Callback.Callbacks):
         # NOTE: data is assumed to be in the range 0-255 at this point
         # but clip as a precaution
         idx_r = idx_r.clip(0, 255)
+        idx_r = self.sarr[idx_r].clip(0, 255)
         ar = self.arr[0][idx_r]
         idx_g = idx_g.clip(0, 255)
+        idx_g = self.sarr[idx_g].clip(0, 255)
         ag = self.arr[1][idx_g]
         idx_b = idx_b.clip(0, 255)
+        idx_b = self.sarr[idx_b].clip(0, 255)
         ab = self.arr[2][idx_b]
         return (ar, ag, ab)
 
@@ -165,38 +193,93 @@ class RGBMapper(Callback.Callbacks):
         arr = self.hash[idx]
         return arr
         
-    def rshift(self, pct, callback=True):
-        self.calc_cmap()
-        pct = 1.0 - pct
-        num = int(255.0 * pct)
-        pfx = self.arr.transpose()
-        #print "len1=%d" % (len(pfx))
-        pfx = pfx[:num]
-        #print "n=%d len2=%d" % (num, len(pfx))
-        zarr = numpy.ones(len(pfx))
-        zarr[0] = 257 - num
-        pfx = pfx.repeat(list(zarr), axis=0)
-        #print "len3=%d" % len(pfx)
-        self.arr = pfx.transpose()
-        if callback:
-            self.make_callback('changed')
+    # def rshift(self, pct, callback=True):
+    #     self.reset_sarr()
+    #     num = int(255.0 * pct)
+    #     arr = numpy.roll(self.sarr, num)
+    #     arr[0:num] = 0
+    #     self.sarr = arr
+    #     if callback:
+    #         self.make_callback('changed')
             
-    def lshift(self, pct, callback=True):
-        self.calc_cmap()
-        num = int(255.0 * pct)
-        pfx = self.arr.transpose()
-        #print "len1=%d" % (len(pfx))
-        pfx = pfx[num:]
-        #print "n=%d len2=%d" % (num, len(pfx))
-        zarr = numpy.ones(len(pfx))
-        zarr[-1] = num+1
-        #print "len(zarr)=%d" % (len(zarr))
-        pfx = pfx.repeat(list(zarr), axis=0)
-        #print "len3=%d" % len(pfx)
-        self.arr = pfx.transpose()
+    # def lshift(self, pct, callback=True):
+    #     self.reset_sarr()
+    #     num = int(255.0 * pct)
+    #     arr = numpy.roll(self.sarr, -num)
+    #     arr[256-num:256] = 255
+    #     self.sarr = arr
+    #     if callback:
+    #         self.make_callback('changed')
+
+    def _shift(self, sarr, pct, rotate=False):
+        n = len(sarr)
+        num = int(n * pct)
+        arr = numpy.roll(sarr, num)
+        if not rotate:
+            if num > 0:
+                arr[0:num] = sarr[0]
+            elif num < 0:
+                arr[n+num:n] = sarr[-1]
+        return arr
+
+    def _stretch(self, sarr, scale):
+        old_wd = len(sarr)
+        new_wd = int(round(scale * old_wd))
+
+        # Is there a more efficient way to do this?
+        xi = numpy.mgrid[0:new_wd]
+        iscale_x = float(old_wd) / float(new_wd)
+            
+        xi *= iscale_x 
+        xi = xi.astype('int').clip(0, old_wd-1)
+        newdata = sarr[xi]
+        return newdata
+    
+    def shift(self, pct, rotate=False, callback=True):
+        work = self._shift(self.sarr, pct, rotate=rotate)
+        assert len(work) == 256, \
+               RGBMapError("shifted shift map is != 256")
+        self.sarr = work
         if callback:
             self.make_callback('changed')
-    
+        
+    def scaleNshift(self, scale_pct, shift_pct, callback=True):
+        """Stretch and/or shrink the color map via altering the shift map.
+        """
+        self.reset_sarr()
+        
+        print "amount=%.2f location=%.2f" % (scale_pct, shift_pct)
+        # limit shrinkage to 10% of original size
+        scale = max(scale_pct, 0.10)
+
+        work = self._stretch(self.sarr, scale)
+        n = len(work)
+        if n < 256:
+            # pad on the lowest and highest values of the shift map
+            m = (256 - n) // 2 + 1
+            barr = numpy.array([0]*m)
+            tarr = numpy.array([255]*m)
+            work = numpy.concatenate([barr, work, tarr])
+            work = work[:256]
+
+        # we are mimicing ds9's stretch and shift algorithm here.
+        # ds9 seems to cut the center out of the stretched array
+        # BEFORE shifting
+        n = len(work) // 2
+        work = work[n-128:n+128].astype('uint')
+        assert len(work) == 256, \
+               RGBMapError("scaled shift map is != 256")
+
+        # shift map according to the shift_pct
+        work = self._shift(work, shift_pct)
+        assert len(work) == 256, \
+               RGBMapError("shifted shift map is != 256")
+
+        self.sarr = work
+        if callback:
+            self.make_callback('changed')
+
+
     # Color scale distribution algorithms are all based on similar
     # algorithms in skycat
     
@@ -209,7 +292,7 @@ class RGBMapper(Callback.Callbacks):
         self.hash = numpy.array(l)
         hashlen = len(self.hash)
         assert hashlen == self.hashsize, \
-               ColorMapError("Computed hash table size (%d) != specified size (%d)" % (hashlen, self.hashsize))
+               RGBMapError("Computed hash table size (%d) != specified size (%d)" % (hashlen, self.hashsize))
             
 
     def calc_logarithmic_hash(self):
@@ -233,7 +316,7 @@ class RGBMapper(Callback.Callbacks):
         self.hash = numpy.array(l)
         hashlen = len(self.hash)
         assert hashlen == self.hashsize, \
-               ColorMapError("Computed hash table size (%d) != specified size (%d)" % (hashlen, self.hashsize))
+               RGBMapError("Computed hash table size (%d) != specified size (%d)" % (hashlen, self.hashsize))
 
     def calc_exponential_hash(self):
         l = []
@@ -248,7 +331,7 @@ class RGBMapper(Callback.Callbacks):
         self.hash = numpy.array(l)
         hashlen = len(self.hash)
         assert hashlen == self.hashsize, \
-               ColorMapError("Computed hash table size (%d) != specified size (%d)" % (hashlen, self.hashsize))
+               RGBMapError("Computed hash table size (%d) != specified size (%d)" % (hashlen, self.hashsize))
 
     def calc_hash(self):
         method = self.hashalgs[self.hashalg]
@@ -260,6 +343,6 @@ class RGBMapper(Callback.Callbacks):
         dst_rgbmap.set_hash_algorithm(self.hashalg)
 
     def reset_cmap(self):
-        self.set_cmap(self.cmap)
+        self.recalc()
         
 #END

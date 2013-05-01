@@ -224,11 +224,8 @@ class ColorBar(Callback.Callbacks, QtGui.QWidget):
         self.update()
         
     def shift_colormap(self, pct):
-        if pct > 0.0:
-            self.rgbmap.rshift(pct)
-        else:
-            self.rgbmap.lshift(math.fabs(pct))
-
+        self.rgbmap.set_sarr(self._sarr, callback=False)
+        self.rgbmap.shift(pct)
         self.redraw()
 
     def rgbmap_cb(self, rgbmap):
@@ -240,6 +237,8 @@ class ColorBar(Callback.Callbacks, QtGui.QWidget):
 
         if buttons & QtCore.Qt.LeftButton:
             self._start_x = x
+            sarr = self.rgbmap.get_sarr()
+            self._sarr = sarr.copy()
                 
     def mouseReleaseEvent(self, event):
         # note: for mouseRelease this needs to be button(), not buttons()!

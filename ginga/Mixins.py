@@ -8,6 +8,7 @@
 # Please see the file LICENSE.txt for details.
 
 import traceback
+import math
 
 from ginga.misc import Bunch
 
@@ -275,7 +276,7 @@ class FitsImageZoomMixin(object):
             elif keyname in self.keys.chgcmap:
                 self._ischgcmap = True
                 self.set_kbdmouse_mask(0x1000)
-                self.onscreen_message("Shift colormap (drag mouse L-R)")
+                self.onscreen_message("Shift and stretch colormap (drag mouse)")
                 return True
             elif keyname in self.keys.cut_auto:
                 self.onscreen_message("Auto cut levels", delay=1.0)
@@ -352,10 +353,10 @@ class FitsImageZoomMixin(object):
                 self.pan_set_origin(x, y, data_x, data_y)
                 return True
             elif self._ischgcmap:
-                self._start_x = x
+                self._start_x, self._start_y = x, y
                 return True
             elif self._iscutlow or self._iscuthigh:
-                self._start_x = x
+                self._start_x, self._start_y = x, y
                 self._loval, self._hival = self.get_cut_levels()
                 return True
             elif self._isrotate:
@@ -571,10 +572,21 @@ class FitsImageZoomMixin(object):
             pass
 
     def _tweak_colormap(self, x, y, mode):
-        dx = x - self._start_x
         win_wd, win_ht = self.get_window_size()
-        pct = float(dx) / float(win_wd)
-        self.shift_cmap(pct)
+
+        # translate Y cursor position as a percentage of the window
+        # height into a scaling factor
+        y_pct = (win_ht - y) / float(win_ht)
+        # I tried to mimic ds9's exponential scale feel along the Y-axis
+        def exp_scale(i):
+            return (1.0/(i**3))*0.0002 + (1.0/i)*0.085
+        scale_pct = exp_scale(1.0 - y_pct)
+        
+        # translate X cursor position as a percentage of the window
+        # width into a shifting factor
+        shift_pct = x / float(win_wd) - 0.5
+
+        self.scaleNshift_cmap(scale_pct, shift_pct)
 
     def _cutlow_pct(self, pct):
         image = self.get_image()
@@ -618,6 +630,25 @@ class FitsImageZoomMixin(object):
         hival = maxval - (pct * spread)
         self.onscreen_message("Cut high: %.4f" % (hival),
                               redraw=False)
+        self.cut_levels(loval, hival, redraw=True)
+
+    def _cutboth_xy(self, x, y):
+        win_wd, win_ht = self.get_window_size()
+        xpct = 1.0 - (float(x) / float(win_wd))
+        #ypct = 1.0 - (float(y) / float(win_ht))
+        ypct = (float(y) / float(win_ht))
+        if self.isctrldown:
+            xpct, ypct = xpct*0.9, ypct*0.9
+        if self.isshiftdown:
+            xpct, ypct = xpct*0.75, ypct*0.75
+        image = self.get_image()
+        minval, maxval = image.get_minmax()
+        spread = maxval - minval
+        loval, hival = self.get_cut_levels()
+        hival = maxval - (xpct * spread)
+        loval = minval - (ypct * spread)
+        self.onscreen_message("Cut low: %.4f  high: %.4f" % (
+            loval, hival), redraw=False)
         self.cut_levels(loval, hival, redraw=True)
 
     def _cut_pct(self, pct):
