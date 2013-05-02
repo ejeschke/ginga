@@ -10,7 +10,7 @@ except ImportError:  # Python 2.x
     from distutils.command.build_py import build_py
 
 def read(fname):
-    buf = open(os.path.join(os.path.dirname(__file__), fname), 'rb').read()
+    buf = open(os.path.join(os.path.dirname(__file__), fname), 'r').read()
     return buf
 
 setup(
