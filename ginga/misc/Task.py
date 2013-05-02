@@ -26,6 +26,9 @@ class TaskTimeout(TaskError):
     """Exception generated when timing out waiting on a task"""
     pass
 
+class UserTaskException(Exception):
+    pass
+
 
 # ------------ BASIC TASKS ------------
 
@@ -357,6 +360,7 @@ class FuncTask(Task):
 
         try:
             res = self.func(*self.args, **self.kwdargs)
+            self.done(res)
 
             if self.logger:
                 self.logger.debug("Function returned %s" % (
@@ -372,8 +376,9 @@ class FuncTask(Task):
                                       "".join(traceback.format_tb(tb)))
 
                     tb = None
-                except Exception, e:
+                except Exception:
                     self.logger.error("Traceback information unavailable.")
+            self.done(e)
 
 
 class FuncTask2(FuncTask):
@@ -957,6 +962,9 @@ class WorkerThread(object):
             try:
                 res = task.execute()
 
+            except UserTaskException, e:
+                res = e
+                
             except Exception, e:
                 self.logger.error("Task '%s' raised exception: %s" % \
                                   (str(task), str(e)))

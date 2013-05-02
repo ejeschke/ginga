@@ -539,6 +539,7 @@ class DrawingMixin(object):
         self.t_drawparams['color'] = colorname
         
     def set_drawtype(self, drawtype, **drawparams):
+        drawtype = drawtype.lower()
         assert drawtype in self.drawtypes, \
                CanvasObjectError("Bad drawing type '%s': must be one of %s" % (
             drawtype, self.drawtypes))
@@ -551,6 +552,11 @@ class DrawingMixin(object):
     def get_drawtype(self):
         return self.t_drawtype
 
+    def getDrawClass(self, drawtype):
+        drawtype = drawtype.lower()
+        klass = self.drawDict[drawtype]
+        return klass
+        
     def get_drawparams(self):
         return self.t_drawparams.copy()
 

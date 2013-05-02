@@ -27,7 +27,7 @@ childDir = os.path.join(moduleHome, 'plugins')
 sys.path.insert(0, childDir)
 
 from ginga.qtw import FitsImageCanvasQt, ColorBar, Readout, PluginManagerQt, \
-     QtHelp, QtMain
+     QtHelp, QtMain, FitsImageCanvasTypesQt
 
 icon_path = os.path.abspath(os.path.join(moduleHome, '..', 'icons'))
 rc_file = os.path.join(moduleHome, "qt_rc")
@@ -340,6 +340,10 @@ class GingaView(QtMain.QtMain):
         readout.set_font(self.font11)
         return readout
 
+    def getDrawClass(self, drawtype):
+        drawtype = drawtype.lower()
+        return FitsImageCanvasTypesQt.drawCatalog[drawtype]
+    
     def build_colorbar(self):
         cbar = ColorBar.ColorBar(self.logger)
         cbar.set_cmap(self.cm)
@@ -374,14 +378,6 @@ class GingaView(QtMain.QtMain):
         fi.add_callback('key-press', self.keypress)
         fi.add_callback('drag-drop', self.dragdrop)
         fi.add_callback('cut-set', self.change_range_cb, self.colorbar)
-
-        # these are now set in the base class
-        ## cmap_name = settings.get('color_map', "ramp")
-        ## cm = cmap.get_cmap(cmap_name)
-        ## imap_name = settings.get('intensity_map', "ramp")
-        ## im = imap.get_imap(imap_name)
-        ## fi.set_cmap(cm, redraw=False)
-        ## fi.set_imap(im, redraw=False)
 
         rgbmap = fi.get_rgbmap()
         rgbmap.add_callback('changed', self.rgbmap_cb, fi)

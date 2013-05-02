@@ -400,15 +400,6 @@ class Ruler(RulerBase, CairoCanvasMixin):
             self.draw_caps(cr, self.cap, ((cx2, cy1), ))
 
 
-drawCatalog = {
-    'rectangle': Rectangle,
-    'circle': Circle,
-    'line': Line,
-    'point': Point,
-    'ruler': Ruler,
-    'triangle': Triangle,
-    }
-
 class DrawingCanvas(DrawingMixin, CanvasMixin, CompoundMixin,
                     CanvasObjectBase, CairoCanvasMixin, 
                     Mixins.UIMixin, Callback.Callbacks):
@@ -421,6 +412,13 @@ class DrawingCanvas(DrawingMixin, CanvasMixin, CompoundMixin,
         Mixins.UIMixin.__init__(self)
         DrawingMixin.__init__(self, drawCatalog)
         self.kind = 'drawingcanvas'
+
+
+drawCatalog = dict(text=Text, rectangle=Rectangle, circle=Circle,
+                   line=Line, point=Point, polygon=Polygon,
+                   triangle=Triangle, ruler=Ruler, compass=Compass,
+                   compoundobject=CompoundObject, canvas=Canvas,
+                   drawingcanvas=DrawingCanvas)
 
         
 #END

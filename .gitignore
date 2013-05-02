@@ -1,0 +1,18 @@
+# ignore some commonly problematic files
+
+# python compiled files
+*.pyc
+*.pyo
+
+# emacs backups
+*~
+\#*\#
+
+# TeX products
+*.aux
+*.log
+*.pdf
+*.toc
+
+
+

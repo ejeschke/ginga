@@ -138,21 +138,21 @@ class BaseImage(Callback.Callbacks):
             self.minval = 0
 
         # TODO: see if there is a faster way to ignore infinity
-        if numpy.isfinite(self.maxval):
-            self.maxval_noinf = self.maxval
-        else:
-            try:
-                self.maxval_noinf = numpy.nanmax(data[numpy.isfinite(data)])
-            except:
+        try:
+            if numpy.isfinite(self.maxval):
                 self.maxval_noinf = self.maxval
+            else:
+                self.maxval_noinf = numpy.nanmax(data[numpy.isfinite(data)])
+        except:
+            self.maxval_noinf = self.maxval
         
-        if numpy.isfinite(self.minval):
-            self.minval_noinf = self.minval
-        else:
-            try:
-                self.minval_noinf = numpy.nanmin(data[numpy.isfinite(data)])
-            except:
+        try:
+            if numpy.isfinite(self.minval):
                 self.minval_noinf = self.minval
+            else:
+                self.minval_noinf = numpy.nanmin(data[numpy.isfinite(data)])
+        except:
+            self.minval_noinf = self.minval
         
     def get_minmax(self, noinf=False):
         if not noinf:

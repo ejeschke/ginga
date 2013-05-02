@@ -65,6 +65,11 @@ class GingaControl(Callback.Callbacks):
         self.chncnt = 0
         self.statustask = None
 
+        # Create general preferences
+        self.settings = self.prefs.createCategory('general')
+        self.settings.load(onError='silent')
+        self.settings.addDefaults(anticipateLoads=True)
+
         # Should channel change as mouse moves between windows
         self.channel_follows_focus = follow_focus
         
@@ -435,7 +440,7 @@ class GingaControl(Callback.Callbacks):
         
     # CHANNEL MANAGEMENT
 
-    def add_image(self, imname, image, chname=None):
+    def add_image(self, imname, image, chname=None, silent=False):
         if not chname:
             # no channel name provided, so add to current channel
             chname = self.chinfo.name
@@ -451,7 +456,8 @@ class GingaControl(Callback.Callbacks):
 
         #self.make_callback('add-image', chinfo.name, image)
 
-        self._add_image_update(chinfo, image)
+        if not silent:
+            self._add_image_update(chinfo, image)
 
 
     def _add_image_update(self, chinfo, image):
