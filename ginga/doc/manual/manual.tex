@@ -652,28 +652,46 @@ class Foo(GingaPlugin.GlobalPlugin):
     def initialize(self, container):
         """This method will be called with a container widget if the global
         plugin was requested to be loaded into a workspace.  The plugin should
-        construct its GUI and pack it into the container.
+        construct its GUI and pack it into the container.  If there is
+        no GUI for the global plugin this method can be omitted.
         """
         pass
 
-   def start(self):
-        """This method is reserved for future use.
+    def start(self):
+        """This method is called just after build_gui() when the plugin is
+        activated (for global plugins this is usually at program start up).
+        For global plugins this method can often be omitted.
         """
         pass
 
-   def stop(self):
-        """This method is reserved for future use.
+    def stop(self):
+        """This method is called when the plugin is deactivated.
+        For global plugins this method can usually be omitted.
+        """
+        pass
+
+    def pause(self):
+        """If present, this method can be called to defocus the plugin
+        without stopping it.  
+        For global plugins this method can usually be omitted.
+        """
+        pass
+
+    def resume(self):
+        """If present, this method can be called to focus the plugin
+        subsequent to a previous pause() call.  
+        For global plugins this method can usually be omitted.
         """
         pass
 \end{lstlisting}
-There is the object constructor, an {\tt initialize} method and 
+There is the object constructor, an {\tt build\_gui} method and 
 {\tt start} and {\tt stop} methods.  
 Global plugins register with the main ginga object for events they
 are interested in, like when a channel is added, or a new image arrives
 in a channel, and define their own callbacks to deal with them.  This is
 typically done in the constructor, although it can also be done in the
-{\tt initialize} method.  The start and stop methods are currently 
-reserved for future use and can be omitted. 
+{\tt build\_gui} method.  The start, stop, pause and resume methods are
+currently reserved for future use and can be omitted. 
 
 The best way to learn how a global plugin interacts with the main Ginga
 control object (represented by the {\tt fv} parameter in the
@@ -846,7 +864,7 @@ doublequote ({\tt ''}) & Set autozoom for new images to {\em on} \\
 comma, left angle ({\tt ,\textgreater{}}) & Interactive cut low (with left mouse button) \\ 
 period, right angle ({\tt .\textless{}}) & Interactive cut high (with left mouse
 button) \\ 
-slash ({\tt /}) & Interactive shift colormap (with left mouse button) \\
+slash ({\tt /}) & Interactive warp colormap (with left mouse button) \\
 semicolon ({\tt ;}) & Set autocuts for new images to {\em override} \\
 colon ({\tt :}) & Set autocuts for new images to {\em on} \\
 Ctrl + Scroll wheel turned & Adjust \emph{both} high and low cut levels
