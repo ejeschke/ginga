@@ -79,12 +79,12 @@ class Pick(GingaPlugin.LocalPlugin):
 
         canvas = CanvasTypes.DrawingCanvas()
         canvas.enable_draw(True)
-        canvas.set_callback('button-press', self.btndown)
-        canvas.set_callback('motion', self.drag)
-        canvas.set_callback('button-release', self.update)
+        canvas.add_callback('button-press', self.btndown)
+        canvas.add_callback('motion', self.drag)
+        canvas.add_callback('button-release', self.update)
         canvas.set_drawtype('rectangle', color='cyan', linestyle='dash',
                             drawdims=True)
-        canvas.set_callback('draw-event', self.setpickregion)
+        canvas.add_callback('draw-event', self.setpickregion)
         canvas.setSurface(self.fitsimage)
         self.canvas = canvas
 
@@ -649,7 +649,7 @@ class Pick(GingaPlugin.LocalPlugin):
         except Exception, e:
             self.logger.error("Error calculating quality metrics: %s" % (
                 str(e)))
-            return True
+        return True
 
     def update_status(self, text):
         self.fv.gui_do(self.w.eval_status.setText, text)
@@ -874,6 +874,7 @@ class Pick(GingaPlugin.LocalPlugin):
         self.picktag = tag
 
         #self.setpickregion(self.canvas, tag)
+        return True
         
     def update(self, canvas, button, data_x, data_y):
         if not (button == 0x1):

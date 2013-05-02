@@ -263,6 +263,7 @@ class Histogram(GingaPlugin.LocalPlugin):
                                                linestyle='dash'))
 
         self.draw_cb(canvas, tag)
+        return True
 
     def drag(self, canvas, button, data_x, data_y):
         if not (button == 0x1):
@@ -302,6 +303,8 @@ class Histogram(GingaPlugin.LocalPlugin):
         else:
             bbox.x1, bbox.y1, bbox.x2, bbox.y2 = x1, y1, x2, y2
             canvas.redraw(whence=3)
+
+        return True
 
     
     def draw_cb(self, canvas, tag):

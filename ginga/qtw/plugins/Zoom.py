@@ -47,6 +47,7 @@ class Zoom(GingaPlugin.GlobalPlugin):
         zi = FitsImageCanvasQt.FitsImageCanvas(logger=self.logger)
         zi.enable_autozoom('off')
         zi.enable_autocuts('off')
+        zi.enable_pan(False)
         zi.enable_zoom(False)
         #zi.set_scale_limits(0.001, 1000.0)
         zi.zoom_to(self.default_zoom, redraw=False)

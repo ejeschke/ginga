@@ -217,13 +217,15 @@ class Pan(GingaPlugin.GlobalPlugin):
         """
         if button == 0:
             bigimage = self.fv.getfocus_fitsimage()
-            return self.fv.showxy(bigimage, data_x, data_y)
+            self.fv.showxy(bigimage, data_x, data_y)
+            return True
 
         elif button & 0x1:
             # If button1 is held down this is a panning move in the small
             # window for the big window
             bigimage = self.fv.getfocus_fitsimage()
-            return bigimage.set_pan(data_x, data_y)
+            bigimage.set_pan(data_x, data_y)
+            return True
 
         return False
 
@@ -231,8 +233,10 @@ class Pan(GingaPlugin.GlobalPlugin):
         bigimage = self.fv.getfocus_fitsimage()
         if button == 0x1:
             bigimage.panset_xy(data_x, data_y)
+            return True
         elif button == 0x21:
             bigimage.panset_xy(data_x, data_y, redraw=False)
+            return True
 
     def zoom(self, fitsimage, direction):
         """Scroll event in the small fits window.  Just zoom the large fits
@@ -276,6 +280,7 @@ class Pan(GingaPlugin.GlobalPlugin):
         self.logger.debug("zoomlevel=%d" % (zoomlevel))
 
         fitsimage.zoom_to(zoomlevel, redraw=True)
+        return True
 
         
     def __str__(self):

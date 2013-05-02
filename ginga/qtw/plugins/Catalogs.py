@@ -36,6 +36,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
         canvas.enable_draw(True)
         canvas.set_drawtype('rectangle', color='cyan', linestyle='dash',
                             drawdims=True)
+        canvas.set_callback('button-press', self.btndown)
         canvas.set_callback('button-release', self.btnup)
         canvas.set_callback('draw-event', self.getarea)
         canvas.setSurface(self.fitsimage)
@@ -395,6 +396,11 @@ class Catalogs(GingaPlugin.LocalPlugin):
 
         return True
     
+    def btndown(self, canvas, button, data_x, data_y):
+        if not (button == 0x1):
+            return
+        return True
+
     def btnup(self, canvas, button, data_x, data_y):
         if not (button == 0x1):
             return
@@ -405,6 +411,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
                 info = obj.get_data()
                 self.table.show_selection(info.star)
                 return True
+        return True
     
     def highlight_object(self, obj, tag, color, redraw=True):
         x = obj.objects[0].x

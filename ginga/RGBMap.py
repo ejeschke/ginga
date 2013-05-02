@@ -84,8 +84,10 @@ class RGBMapper(Callback.Callbacks):
         arr = numpy.array(self.imap.ilst) * 255.0
         self.iarr = numpy.round(arr).astype('uint')
 
-    def reset_sarr(self):
+    def reset_sarr(self, callback=True):
         self.sarr = numpy.array(range(256))
+        if callback:
+            self.make_callback('changed')
 
     def set_sarr(self, sarr, callback=True):
         assert len(sarr) == 256, \
@@ -107,10 +109,7 @@ class RGBMapper(Callback.Callbacks):
             self.arr[1] = self.arr[1][idx]
             self.arr[2] = self.arr[2][idx]
 
-        self.reset_sarr()
-        
-        if callback:
-            self.make_callback('changed')
+        self.reset_sarr(callback=callback)
         
     def get_hash_size(self):
         return self.hashsize
@@ -246,7 +245,7 @@ class RGBMapper(Callback.Callbacks):
     def scaleNshift(self, scale_pct, shift_pct, callback=True):
         """Stretch and/or shrink the color map via altering the shift map.
         """
-        self.reset_sarr()
+        self.reset_sarr(callback=False)
         
         print "amount=%.2f location=%.2f" % (scale_pct, shift_pct)
         # limit shrinkage to 10% of original size

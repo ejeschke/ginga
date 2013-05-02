@@ -140,6 +140,7 @@ class CutsBase(GingaPlugin.LocalPlugin):
         self._movecut(obj, data_x, data_y)
 
         canvas.redraw(whence=3)
+        return True
     
     def buttonup_cb(self, canvas, button, data_x, data_y):
         if not (button == 0x1):
@@ -152,16 +153,21 @@ class CutsBase(GingaPlugin.LocalPlugin):
         self._movecut(obj, data_x, data_y)
         
         self.redo()
+        return True
 
     def keydown(self, canvas, keyname):
         if keyname == 'space':
             self.select_cut(None)
+            return True
         elif keyname == 'h':
             self.cut_at('horizontal')
+            return True
         elif keyname == 'v':
             self.cut_at('vertical')
+            return True
         elif keyname == 'u':
             self.cut_at('cross')
+            return True
 
     def cut_at(self, cuttype):
         """Perform a cut at the last mouse position in the image.

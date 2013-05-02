@@ -283,9 +283,9 @@ class PixTable(GingaPlugin.LocalPlugin):
         self.pixtbl_radius = self.sizes[index]
         
     def motion(self, canvas, button, data_x, data_y):
-        if self.plot == None:
-            return
         if (button != 0) or (self.mark_selected != None):
+            return
+        if self.plot == None:
             return
         self.lastx, self.lasty = data_x, data_y
         self.redo()
@@ -294,6 +294,7 @@ class PixTable(GingaPlugin.LocalPlugin):
         if not (button == 0x1):
             return
         self.add_mark(data_x, data_y)
+        return True
 
     def add_mark(self, data_x, data_y, radius=None, color=None, style=None):
         if not radius:

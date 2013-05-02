@@ -504,6 +504,7 @@ class DrawingMixin(object):
             self._start_y = data_y
             self._draw_update(data_x, data_y)
             self.processDrawing()
+            return True
 
     def draw_stop(self, canvas, button, data_x, data_y):
         if self.candraw and self._isdrawing:
@@ -522,6 +523,7 @@ class DrawingMixin(object):
     def draw_motion(self, canvas, button, data_x, data_y):
         if self._isdrawing:
             self._draw_update(data_x, data_y)
+            return True
 
     def processDrawing(self):
         self.processTime = time.time()

@@ -281,6 +281,7 @@ class PixTable(GingaPlugin.LocalPlugin):
         if not (button == 0x1):
             return
         self.add_mark(data_x, data_y)
+        return True
 
     def add_mark(self, data_x, data_y, radius=None, color=None, style=None):
         if not radius:

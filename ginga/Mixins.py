@@ -114,6 +114,7 @@ class FitsImageZoomMixin(object):
         self.canzoom = False
         self._ispanning = False
         self.cancut = False
+        self.cancmap = False
         self.canflip = False
         self.canrotate = False
         self._iscutlow = False
@@ -130,7 +131,10 @@ class FitsImageZoomMixin(object):
         self._start_y = None
         self._start_panx = 0
         self._start_pany = 0
-        self.t_autopanset = False
+
+        settings = self.get_settings()
+        self.t_autopanset = settings.get('autoPanSet', True)
+        self.t_autocmapchg = settings.get('autoCmapScaleNShift', True)
         
         # User defined keys
         self.keys = Bunch.Bunch()
@@ -153,7 +157,8 @@ class FitsImageZoomMixin(object):
         self.keys.cut_fixed = ['s']
         self.keys.autocuts_on = [':']
         self.keys.autocuts_override = [';']
-        self.keys.chgcmap = ['/']
+        self.keys.cmap_warp = ['/']
+        self.keys.cmap_restore = ['space']
         self.keys.cut_auto = ['a']
         self.keys.flipx = ['[', '{']
         self.keys.flipy = [']', '}']
@@ -273,11 +278,13 @@ class FitsImageZoomMixin(object):
             elif keyname in self.keys.cut_fixed:
                 self.cut_levels(0.0, 255.0, no_reset=True)
                 return True
-            elif keyname in self.keys.chgcmap:
+            elif keyname in self.keys.cmap_warp:
                 self._ischgcmap = True
                 self.set_kbdmouse_mask(0x1000)
                 self.onscreen_message("Shift and stretch colormap (drag mouse)")
                 return True
+            elif keyname in self.keys.cmap_restore:
+                return self.restore_colormap()
             elif keyname in self.keys.cut_auto:
                 self.onscreen_message("Auto cut levels", delay=1.0)
                 self.auto_levels()
@@ -290,6 +297,15 @@ class FitsImageZoomMixin(object):
                 self.enable_autocuts('override')
                 self.onscreen_message('Autocuts Override', delay=1.0)
                 return True
+
+        if self.cancmap:
+            if keyname in self.keys.cmap_warp:
+                self._ischgcmap = True
+                self.set_kbdmouse_mask(0x1000)
+                self.onscreen_message("Shift and stretch colormap (drag mouse)")
+                return True
+            elif keyname in self.keys.cmap_restore:
+                return self.restore_colormap()
 
         if self.canflip:
             if keyname in self.keys.flipx:
@@ -362,15 +378,20 @@ class FitsImageZoomMixin(object):
             elif self._isrotate:
                 self._start_x = x
                 return True
-            elif self.t_autopanset:
-                self._panset(data_x, data_y, redraw=False)
-            elif self.canpan and (button == 0x21):
-                self._panset(data_x, data_y, redraw=False)
-                #return True
-            elif self.canpan and (button == 0x11):
-                self.pan_set_origin(x, y, data_x, data_y)
-                self.pan_start(ptype=2)
-                return True
+            if self.canpan:
+                if button == 0x1:
+                    ## if self.t_autopanset:
+                    ##     self._panset(data_x, data_y, redraw=False)
+                    self.pan_set_origin(x, y, data_x, data_y)
+                    self.pan_start(ptype=2)
+                    return True
+                elif button == 0x21:
+                    self._panset(data_x, data_y, redraw=False)
+                    return True
+                elif button == 0x11:
+                    self.pan_set_origin(x, y, data_x, data_y)
+                    self.pan_start(ptype=2)
+                    return True
 
         elif button & 0x2:
             if not self.isctrldown:
@@ -383,7 +404,14 @@ class FitsImageZoomMixin(object):
                     return True
 
         elif button & 0x4:
-            pass
+            if self.cancmap:
+                if (button == 0x4) and self.t_autocmapchg:
+                    self._ischgcmap = True
+                    self.set_kbdmouse_mask(0x1000)
+                    self.onscreen_message("Shift and stretch colormap (drag mouse)")
+                    return True
+                elif (button == 0x14):
+                    return self.restore_colormap()
 
 
     def window_button_release(self, fitsimage, button, data_x, data_y):
@@ -424,11 +452,17 @@ class FitsImageZoomMixin(object):
             if self._ispanning:
                 self.pan_stop()
                 return True
-            elif self.isctrldown:
-                self.rgbmap.reset_cmap()
-                return True
+            ## elif self.cancmap and self.isctrldown:
+            ##     self.rgbmap.reset_cmap()
+            ##     return True
             
         elif button & 0x4:
+            if self._ischgcmap:
+                #self._tweak_colormap(x, y, 'set')
+                self.onscreen_message(None)
+                self._ischgcmap = False
+                self.reset_kbdmouse_mask(0x1000)
+                return True
             pass
             
 
@@ -453,6 +487,11 @@ class FitsImageZoomMixin(object):
                 self._rotate_xy(x, y)
                 return True
             
+        elif button & 0x4:
+            if self._ischgcmap:
+                self._tweak_colormap(x, y, 'preview')
+                return True
+
         if self._ispanning:
             if self._pantype == 2:
                 if not (button & 0x1):
@@ -692,7 +731,13 @@ class FitsImageZoomMixin(object):
         self._start_x = None
         self._pantype = 1
         self.to_default_mode()
-        
+
+    def restore_colormap(self):
+        rgbmap = self.get_rgbmap()
+        rgbmap.reset_sarr()
+        self.onscreen_message("Restored color map", delay=1.0)
+        return True
+    
     # def get_canpan(self):
     #     return self.canpan
     
@@ -704,6 +749,9 @@ class FitsImageZoomMixin(object):
         
     def enable_cuts(self, tf):
         self.cancut = tf
+        
+    def enable_cmap(self, tf):
+        self.cancmap = tf
         
     def enable_flip(self, tf):
         self.canflip = tf

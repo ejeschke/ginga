@@ -290,6 +290,7 @@ class Histogram(GingaPlugin.LocalPlugin):
             bbox.x1, bbox.y1, bbox.x2, bbox.y2 = x1, y1, x2, y2
             canvas.redraw(whence=3)
 
+        return True
     
     def draw_cb(self, canvas, tag):
         obj = canvas.getObjectByTag(tag)

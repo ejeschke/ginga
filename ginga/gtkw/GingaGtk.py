@@ -320,12 +320,14 @@ class GingaView(GtkMain.GtkMain):
     def build_viewpane(self, settings):
         fi = FitsImageCanvasGtk.FitsImageCanvas(logger=self.logger,
                                                 settings=settings)
+        fi.enable_pan(True)
         fi.enable_zoom(True)
         fi.enable_cuts(True)
         fi.enable_flip(True)
         fi.enable_auto_orient(True)
         fi.enable_rotate(True)
         fi.enable_draw(False)
+        fi.enable_cmap(True)
         fi.add_callback('motion', self.motion_cb)
         fi.add_callback('key-press', self.keypress)
         fi.add_callback('drag-drop', self.dragdrop)
