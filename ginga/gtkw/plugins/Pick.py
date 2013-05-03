@@ -228,9 +228,9 @@ class Pick(PickBase.PickBase):
         adj.configure(self.radius, 5.0, 200.0, 1.0, 10.0, 0)
         def chg_radius(w):
             self.radius = float(w.get_text())
-            self.w.lbl_radius.set_text(str(self.radius))
+            self.w.xlbl_radius.set_text(str(self.radius))
             return True
-        b.lbl_radius.set_text(str(self.radius))
+        b.xlbl_radius.set_text(str(self.radius))
         b.radius.connect('value-changed', chg_radius)
 
         # threshold control
@@ -240,9 +240,9 @@ class Pick(PickBase.PickBase):
             if len(ths) > 0:
                 threshold = float(ths)
             self.threshold = threshold
-            self.w.lbl_threshold.set_text(str(self.threshold))
+            self.w.xlbl_threshold.set_text(str(self.threshold))
             return True
-        b.lbl_threshold.set_text(str(self.threshold))
+        b.xlbl_threshold.set_text(str(self.threshold))
         b.threshold.connect('activate', chg_threshold)
 
         # min fwhm
@@ -252,9 +252,9 @@ class Pick(PickBase.PickBase):
         adj.configure(self.min_fwhm, 0.1, 200.0, 0.1, 1, 0)
         def chg_min(w):
             self.min_fwhm = w.get_value()
-            self.w.lbl_min_fwhm.set_text(str(self.min_fwhm))
+            self.w.xlbl_min_fwhm.set_text(str(self.min_fwhm))
             return True
-        b.lbl_min_fwhm.set_text(str(self.min_fwhm))
+        b.xlbl_min_fwhm.set_text(str(self.min_fwhm))
         b.min_fwhm.connect('value-changed', chg_min)
 
         # max fwhm
@@ -264,9 +264,9 @@ class Pick(PickBase.PickBase):
         adj.configure(self.max_fwhm, 0.1, 200.0, 0.1, 1, 0)
         def chg_max(w):
             self.max_fwhm = w.get_value()
-            self.w.lbl_max_fwhm.set_text(str(self.max_fwhm))
+            self.w.xlbl_max_fwhm.set_text(str(self.max_fwhm))
             return True
-        b.lbl_max_fwhm.set_text(str(self.max_fwhm))
+        b.xlbl_max_fwhm.set_text(str(self.max_fwhm))
         b.max_fwhm.connect('value-changed', chg_max)
 
         # Ellipticity control
@@ -276,9 +276,9 @@ class Pick(PickBase.PickBase):
             if len(val) > 0:
                 minellipse = float(val)
             self.min_ellipse = minellipse
-            self.w.lbl_ellipticity.set_text(str(self.min_ellipse))
+            self.w.xlbl_ellipticity.set_text(str(self.min_ellipse))
             return True
-        b.lbl_ellipticity.set_text(str(self.min_ellipse))
+        b.xlbl_ellipticity.set_text(str(self.min_ellipse))
         b.ellipticity.connect('activate', chg_ellipticity)
 
         # Edge control
@@ -288,9 +288,9 @@ class Pick(PickBase.PickBase):
             if len(val) > 0:
                 edgew = float(val)
             self.edgew = edgew
-            self.w.lbl_edge.set_text(str(self.edgew))
+            self.w.xlbl_edge.set_text(str(self.edgew))
             return True
-        b.lbl_edge.set_text(str(self.edgew))
+        b.xlbl_edge.set_text(str(self.edgew))
         b.edge.connect('activate', chg_edgew)
 
         adj = b.max_side.get_adjustment()
@@ -299,9 +299,9 @@ class Pick(PickBase.PickBase):
         adj.configure(self.max_side, 5, 10000, 10, 100, 0)
         def chg_max_side(w):
             self.max_side = int(w.get_value())
-            self.w.lbl_max_side.set_text(str(self.max_side))
+            self.w.xlbl_max_side.set_text(str(self.max_side))
             return True
-        b.lbl_max_side.set_text(str(self.max_side))
+        b.xlbl_max_side.set_text(str(self.max_side))
         b.max_side.connect('value-changed', chg_max_side)
 
         b.redo_pick.connect('clicked', lambda w: self.redo())
@@ -332,7 +332,7 @@ class Pick(PickBase.PickBase):
         self.w.btn_sky_cut = b.sky_cut
         self.w.btn_sky_cut.connect('clicked', lambda w: self.sky_cut())
         self.w.sky_cut_delta = b.delta_sky
-        b.lbl_delta_sky.set_text(str(self.delta_sky))
+        b.xlbl_delta_sky.set_text(str(self.delta_sky))
         b.delta_sky.set_text(str(self.delta_sky))
         def chg_delta_sky(w):
             delta_sky = 0.0
@@ -340,7 +340,7 @@ class Pick(PickBase.PickBase):
             if len(val) > 0:
                 delta_sky = float(val)
             self.delta_sky = delta_sky
-            self.w.lbl_delta_sky.set_text(str(self.delta_sky))
+            self.w.xlbl_delta_sky.set_text(str(self.delta_sky))
             return True
         b.delta_sky.connect('activate', chg_delta_sky)
         
@@ -348,7 +348,7 @@ class Pick(PickBase.PickBase):
         self.w.btn_bright_cut = b.bright_cut
         self.w.btn_bright_cut.connect('clicked', lambda w: self.bright_cut())
         self.w.bright_cut_delta = b.delta_bright
-        b.lbl_delta_bright.set_text(str(self.delta_bright))
+        b.xlbl_delta_bright.set_text(str(self.delta_bright))
         b.delta_bright.set_text(str(self.delta_bright))
         def chg_delta_bright(w):
             delta_bright = 0.0
@@ -356,7 +356,7 @@ class Pick(PickBase.PickBase):
             if len(val) > 0:
                 delta_bright = float(val)
             self.delta_bright = delta_bright
-            self.w.lbl_delta_bright.set_text(str(self.delta_bright))
+            self.w.xlbl_delta_bright.set_text(str(self.delta_bright))
             return True
         b.delta_bright.connect('activate', chg_delta_bright)
 

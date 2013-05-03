@@ -199,9 +199,9 @@ class Pick(PickBase.PickBase):
         adj.setValue(self.radius)
         def chg_radius(val):
             self.radius = val
-            self.w.lbl_radius.setText(str(self.radius))
+            self.w.xlbl_radius.setText(str(self.radius))
             return True
-        b.lbl_radius.setText(str(self.radius))
+        b.xlbl_radius.setText(str(self.radius))
         b.radius.valueChanged.connect(chg_radius)
 
         # threshold control
@@ -211,9 +211,9 @@ class Pick(PickBase.PickBase):
             if len(ths) > 0:
                 threshold = float(ths)
             self.threshold = threshold
-            self.w.lbl_threshold.setText(str(self.threshold))
+            self.w.xlbl_threshold.setText(str(self.threshold))
             return True
-        b.lbl_threshold.setText(str(self.threshold))
+        b.xlbl_threshold.setText(str(self.threshold))
         b.threshold.returnPressed.connect(chg_threshold)
 
         # min fwhm
@@ -223,9 +223,9 @@ class Pick(PickBase.PickBase):
         adj.setValue(self.min_fwhm)
         def chg_min(val):
             self.min_fwhm = val
-            self.w.lbl_min_fwhm.setText(str(self.min_fwhm))
+            self.w.xlbl_min_fwhm.setText(str(self.min_fwhm))
             return True
-        b.lbl_min_fwhm.setText(str(self.min_fwhm))
+        b.xlbl_min_fwhm.setText(str(self.min_fwhm))
         b.min_fwhm.valueChanged.connect(chg_min)
 
         # max fwhm
@@ -235,9 +235,9 @@ class Pick(PickBase.PickBase):
         adj.setValue(self.max_fwhm)
         def chg_max(val):
             self.max_fwhm = val
-            self.w.lbl_max_fwhm.setText(str(self.max_fwhm))
+            self.w.xlbl_max_fwhm.setText(str(self.max_fwhm))
             return True
-        b.lbl_max_fwhm.setText(str(self.max_fwhm))
+        b.xlbl_max_fwhm.setText(str(self.max_fwhm))
         b.max_fwhm.valueChanged.connect(chg_max)
 
         # Ellipticity control
@@ -247,9 +247,9 @@ class Pick(PickBase.PickBase):
             if len(val) > 0:
                 minellipse = float(val)
             self.min_ellipse = minellipse
-            self.w.lbl_ellipticity.setText(str(self.min_ellipse))
+            self.w.xlbl_ellipticity.setText(str(self.min_ellipse))
             return True
-        b.lbl_ellipticity.setText(str(self.min_ellipse))
+        b.xlbl_ellipticity.setText(str(self.min_ellipse))
         b.ellipticity.returnPressed.connect(chg_ellipticity)
 
         # Edge control
@@ -259,9 +259,9 @@ class Pick(PickBase.PickBase):
             if len(val) > 0:
                 edgew = float(val)
             self.edgew = edgew
-            self.w.lbl_edge.setText(str(self.edgew))
+            self.w.xlbl_edge.setText(str(self.edgew))
             return True
-        b.lbl_edge.setText(str(self.edgew))
+        b.xlbl_edge.setText(str(self.edgew))
         b.edge.returnPressed.connect(chg_edgew)
 
         adj = b.max_side
@@ -270,9 +270,9 @@ class Pick(PickBase.PickBase):
         adj.setValue(self.max_side)
         def chg_max_side(val):
             self.max_side = val
-            self.w.lbl_max_side.setText(str(self.max_side))
+            self.w.xlbl_max_side.setText(str(self.max_side))
             return True
-        b.lbl_max_side.setText(str(self.max_side))
+        b.xlbl_max_side.setText(str(self.max_side))
         b.max_side.valueChanged.connect(chg_max_side)
 
         b.redo_pick.clicked.connect(self.redo)

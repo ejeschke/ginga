@@ -715,7 +715,7 @@ def _make_widget(tup, ns):
     elif wtype == 'xlabel':
         w2 = gtk.Label('')
         w2.set_alignment(0.05, 0.5)
-        name = 'lbl_' + name
+        name = 'xlbl_' + name
     elif wtype == 'entry':
         w2 = gtk.Entry()
         w2.set_width_chars(12)

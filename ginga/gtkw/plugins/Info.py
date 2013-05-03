@@ -182,9 +182,9 @@ class Info(GingaPlugin.GlobalPlugin):
         
     def cutset_cb(self, fitsimage, loval, hival, info):
         #info.winfo.cut_low.set_text('%.2f' % (loval))
-        info.winfo.lbl_cut_low.set_text('%.2f' % (loval))
+        info.winfo.xlbl_cut_low.set_text('%.2f' % (loval))
         #info.winfo.cut_high.set_text('%.2f' % (hival))
-        info.winfo.lbl_cut_high.set_text('%.2f' % (hival))
+        info.winfo.xlbl_cut_high.set_text('%.2f' % (hival))
 
     def autocuts_cb(self, fitsimage, option, info):
         info.winfo.cut_new.set_text(option)
@@ -219,9 +219,9 @@ class Info(GingaPlugin.GlobalPlugin):
         # Show cut levels
         loval, hival = fitsimage.get_cut_levels()
         #info.winfo.cut_low.set_text('%.2f' % (loval))
-        info.winfo.lbl_cut_low.set_text('%.2f' % (loval))
+        info.winfo.xlbl_cut_low.set_text('%.2f' % (loval))
         #info.winfo.cut_high.set_text('%.2f' % (hival))
-        info.winfo.lbl_cut_high.set_text('%.2f' % (hival))
+        info.winfo.xlbl_cut_high.set_text('%.2f' % (hival))
 
         # Show dimensions
         dim_txt = "%dx%d" % (width, height)

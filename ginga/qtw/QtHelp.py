@@ -679,7 +679,7 @@ def _make_widget(tup, ns):
     elif wtype == 'xlabel':
         w2 = QtGui.QLabel('')
         w2.setAlignment(QtCore.Qt.AlignLeft)
-        name = 'lbl_' + name
+        name = 'xlbl_' + name
     elif wtype == 'entry':
         w2 = QtGui.QLineEdit()
         w2.setMaxLength(12)
