@@ -306,6 +306,10 @@ class GingaView(GtkMain.GtkMain):
         drawtype = drawtype.lower()
         return FitsImageCanvasTypesGtk.drawCatalog[drawtype]
     
+    def getDrawClasses(self):
+        return Bunch.Bunch(FitsImageCanvasTypesGtk.drawCatalog,
+                           caseless=True)
+        
     def build_colorbar(self):
         cbar = ColorBar.ColorBar(self.logger)
         cbar.set_cmap(self.cm)

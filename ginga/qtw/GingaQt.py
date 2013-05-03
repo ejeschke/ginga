@@ -344,6 +344,10 @@ class GingaView(QtMain.QtMain):
         drawtype = drawtype.lower()
         return FitsImageCanvasTypesQt.drawCatalog[drawtype]
     
+    def getDrawClasses(self):
+        return Bunch.Bunch(FitsImageCanvasTypesQt.drawCatalog,
+                           caseless=True)
+        
     def build_colorbar(self):
         cbar = ColorBar.ColorBar(self.logger)
         cbar.set_cmap(self.cm)
