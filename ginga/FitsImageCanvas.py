@@ -370,7 +370,9 @@ class DrawingMixin(object):
         self.candraw = False
         self._isdrawing = False
         self.drawDict = drawDict
-        self.drawtypes = drawDict.keys()
+        #self.drawtypes = drawDict.keys()
+        self.drawtypes = ['point', 'circle', 'rectangle', 'triangle',
+                          'line', 'ruler']
         self.t_drawtype = 'point'
         self.t_drawparams = {}
         self._start_x = 0
@@ -384,15 +386,16 @@ class DrawingMixin(object):
         self.drawbuttonmask = 0x4
 
         # NOTE: must be mixed in with a Callback.Callbacks
-        for name in ('draw-event',):
+        for name in ('draw-event', 'draw-down', 'draw-move', 'draw-up'):
             self.enable_callback(name)
-
-        self.set_callback('button-press', self.draw_start)
-        self.set_callback('motion', self.draw_motion)
-        self.set_callback('button-release', self.draw_stop)
 
     def setSurface(self, fitsimage):
         self.fitsimage = fitsimage
+
+        self.set_callback('draw-down', self.draw_start)
+        self.set_callback('draw-move', self.draw_motion)
+        self.set_callback('draw-up', self.draw_stop)
+
         #self.ui_setActive(True)
 
     def getSurface(self):
@@ -448,7 +451,8 @@ class DrawingMixin(object):
                         **self.t_drawparams)
 
         elif self.t_drawtype == 'rectangle':
-            if not self.fitsimage.isshiftdown:
+            bd = self.fitsimage.get_bindings()
+            if not bd.isshiftdown:
                 obj = klass(self._start_x, self._start_y,
                             data_x, data_y, **self.t_drawparams)
                 
@@ -498,7 +502,7 @@ class DrawingMixin(object):
             
     def draw_start(self, canvas, button, data_x, data_y):
         #if self.candraw and ((button == 0x4) or (button == 0x11)):
-        if self.candraw and (button & 0x4):
+        if self.candraw:
             self._isdrawing = True
             self._start_x = data_x
             self._start_y = data_y

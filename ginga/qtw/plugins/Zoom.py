@@ -47,15 +47,18 @@ class Zoom(GingaPlugin.GlobalPlugin):
         zi = FitsImageCanvasQt.FitsImageCanvas(logger=self.logger)
         zi.enable_autozoom('off')
         zi.enable_autocuts('off')
-        zi.enable_pan(False)
-        zi.enable_zoom(False)
         #zi.set_scale_limits(0.001, 1000.0)
         zi.zoom_to(self.default_zoom, redraw=False)
         zi.add_callback('zoom-set', self.zoomset)
-        #zi.add_callback('motion', self.showxy)
+        #zi.add_callback('none-move', self.showxy)
         zi.set_bg(0.4, 0.4, 0.4)
         zi.show_pan_mark(True, redraw=False)
         self.zoomimage = zi
+
+        bd = zi.get_bindings()
+        bd.enable_zoom(False)
+        bd.enable_pan(False)
+        bd.enable_cmap(False)
 
         iw = zi.get_widget()
         #iw.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.MinimumExpanding))
@@ -122,7 +125,7 @@ class Zoom(GingaPlugin.GlobalPlugin):
         fitsimage.add_callback('image-set', self.new_image_cb)
         #fitsimage.add_callback('focus', self.focus_cb)
         # TODO: should we add our own canvas instead?
-        fitsimage.add_callback('motion', self.motion)
+        fitsimage.add_callback('motion', self.motion_cb)
         fitsimage.add_callback('cut-set', self.cutset_cb)
         fitsimage.add_callback('transform', self.transform_cb)
         fitsimage.add_callback('rotate', self.rotate_cb)
@@ -279,9 +282,10 @@ class Zoom(GingaPlugin.GlobalPlugin):
         self.zoomtask.start(self.lagtime)
         return True
 
-    def motion(self, fitsimage, button, data_x, data_y):
+    def motion_cb(self, fitsimage, button, data_x, data_y):
         # TODO: pass _canvas_ and cut from that
         self.showxy(fitsimage, data_x, data_y)
+        return False
 
     def showzoom_timer(self):
         self.showzoom(self._image, self._data_x, self._data_y)

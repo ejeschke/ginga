@@ -10,7 +10,6 @@
 from ginga.qtw.QtHelp import QtGui, QtCore
 from ginga.qtw import QtHelp
 
-from ginga.qtw import FitsImageCanvasTypesQt as CanvasTypes
 from ginga import GingaPlugin
 
 class Ruler(GingaPlugin.LocalPlugin):
@@ -23,11 +22,12 @@ class Ruler(GingaPlugin.LocalPlugin):
         self.layertag = 'ruler-canvas'
         self.ruletag = None
 
-        canvas = CanvasTypes.DrawingCanvas()
+        self.dc = fv.getDrawClasses()
+        canvas = self.dc.DrawingCanvas()
         canvas.enable_draw(True)
         canvas.set_drawtype('ruler', color='cyan')
         canvas.set_callback('draw-event', self.wcsruler)
-        canvas.set_callback('button-press', self.clear)
+        canvas.set_callback('cursor-down', self.clear)
         canvas.setSurface(self.fitsimage)
         self.canvas = canvas
 
@@ -148,8 +148,7 @@ class Ruler(GingaPlugin.LocalPlugin):
         self.canvas.redraw(whence=3)
 
     def clear(self, canvas, button, data_x, data_y):
-        if (button == 0x4) or (button == 0x21):
-            self.canvas.deleteAllObjects()
+        self.canvas.deleteAllObjects()
         return False
 
     def wcsruler(self, surface, tag):

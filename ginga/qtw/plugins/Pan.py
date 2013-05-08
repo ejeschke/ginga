@@ -41,8 +41,6 @@ class Pan(GingaPlugin.GlobalPlugin):
 
         sfi = FitsImageCanvasQt.FitsImageCanvas(logger=self.logger)
         sfi.enable_autozoom('on')
-        sfi.enable_pan(False)
-        sfi.enable_zoom(False)
         sfi.enable_autocuts('off')
         sfi.enable_draw(True)
         sfi.set_drawtype('rectangle', linestyle='dash')
@@ -52,10 +50,15 @@ class Pan(GingaPlugin.GlobalPlugin):
         sfi.define_cursor('pick', hand)
         ## sfi.enable_cuts(False)
         sfi.set_bg(0.4, 0.4, 0.4)
-        sfi.set_callback('button-press', self.btndown)
-        sfi.set_callback('motion', self.panxy)
+        sfi.set_callback('cursor-down', self.btndown)
+        sfi.set_callback('cursor-move', self.drag_cb)
+        sfi.set_callback('none-move', self.motion_cb)
         sfi.set_callback('scroll', self.zoom)
         sfi.set_callback('configure', self.reconfigure)
+
+        bd = sfi.get_bindings()
+        bd.enable_pan(False)
+        bd.enable_zoom(False)
 
         iw = sfi.get_widget()
         iw.resize(width, height)
@@ -210,24 +213,18 @@ class Pan(GingaPlugin.GlobalPlugin):
                 CanvasTypes.Point(x, y, radius=radius),
                 CanvasTypes.Polygon(points)))
 
-    def panxy(self, fitsimage, button, data_x, data_y):
-        """Motion event in the small fits window.  This is usually a panning
-        control for the big window, but if the button is not held down then
-        we just show the pointing information as usual.
-        """
-        if button == 0:
-            bigimage = self.fv.getfocus_fitsimage()
-            self.fv.showxy(bigimage, data_x, data_y)
-            return True
+    def motion_cb(self, fitsimage, button, data_x, data_y):
+        bigimage = self.fv.getfocus_fitsimage()
+        self.fv.showxy(bigimage, data_x, data_y)
+        return True
 
-        elif button & 0x1:
-            # If button1 is held down this is a panning move in the small
-            # window for the big window
-            bigimage = self.fv.getfocus_fitsimage()
-            bigimage.set_pan(data_x, data_y)
-            return True
-
-        return False
+    def drag_cb(self, fitsimage, button, data_x, data_y):
+        # this is a panning move in the small
+        # window for the big window
+        bigimage = self.fv.getfocus_fitsimage()
+        #bigimage.set_pan(data_x, data_y)
+        bigimage.panset_xy(data_x, data_y)
+        return True
 
     def btndown(self, fitsimage, button, data_x, data_y):
         bigimage = self.fv.getfocus_fitsimage()

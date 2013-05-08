@@ -11,7 +11,6 @@ import gtk
 import pango
 from ginga.gtkw import GtkHelp
 
-from ginga.gtkw import FitsImageCanvasTypesGtk as CanvasTypes
 from ginga.gtkw import Plot
 from ginga.misc.plugins import CutsBase
 
@@ -21,17 +20,6 @@ class Cuts(CutsBase.CutsBase):
     def __init__(self, fv, fitsimage):
         # superclass defines some variables for us, like logger
         super(Cuts, self).__init__(fv, fitsimage)
-
-        canvas = CanvasTypes.DrawingCanvas()
-        canvas.enable_draw(True)
-        canvas.set_drawtype('line', color='cyan', linestyle='dash')
-        canvas.set_callback('draw-event', self.draw_cb)
-        canvas.set_callback('button-press', self.buttondown_cb)
-        canvas.set_callback('motion', self.motion_cb)
-        canvas.set_callback('button-release', self.buttonup_cb)
-        canvas.set_callback('key-press', self.keydown)
-        canvas.setSurface(self.fitsimage)
-        self.canvas = canvas
 
         self.w.tooltips = self.fv.w.tooltips
 
@@ -216,19 +204,6 @@ class Cuts(CutsBase.CutsBase):
             self.cutstag = tag
             self.w.cuts.show_text(tag)
             #self.highlightTag(self.cutstag)
-        
-    def _create_cut(self, x, y, count, x1, y1, x2, y2, color='cyan'):
-        text = "cuts%d" % (count)
-        obj = CanvasTypes.CompoundObject(
-            CanvasTypes.Line(x1, y1, x2, y2,
-                             color=color,
-                             cap='ball'),
-            CanvasTypes.Text(x, y, text, color=color))
-        obj.set_data(cuts=True)
-        return obj
-
-    def _combine_cuts(self, *args):
-        return CanvasTypes.CompoundObject(*args)
         
     def __str__(self):
         return 'cuts'

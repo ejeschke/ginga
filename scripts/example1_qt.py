@@ -26,14 +26,17 @@ class FitsViewer(QtGui.QMainWindow):
 
         fi = FitsImageZoom(self.logger, render='widget')
         fi.enable_autocuts('on')
-        fi.enable_zoom('on')
-        fi.enable_cuts(True)
-        fi.enable_flip(True)
-        fi.enable_rotate(True)
+        fi.set_autocut_params('zscale')
+        fi.enable_autozoom('on')
         fi.set_callback('drag-drop', self.drop_file)
         fi.set_bg(0.2, 0.2, 0.2)
         fi.ui_setActive(True)
         self.fitsimage = fi
+
+        bd = fi.get_bindings()
+        bd.enable_zoom(True)
+        bd.enable_cuts(True)
+        bd.enable_flip(True)
 
         w = fi.get_widget()
         w.resize(512, 512)

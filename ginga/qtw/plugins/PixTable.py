@@ -21,7 +21,6 @@ class PixTable(GingaPlugin.LocalPlugin):
     def __init__(self, fv, fitsimage):
         # superclass defines some variables for us, like logger
         super(PixTable, self).__init__(fv, fitsimage)
-        #fitsimage.set_callback('motion', self.motion)
 
         self.layertag = 'pixtable-canvas'
         self.pan2mark = False
@@ -30,8 +29,8 @@ class PixTable(GingaPlugin.LocalPlugin):
         ## canvas.enable_draw(True)
         ## canvas.set_drawtype('point', color='pink')
         ## canvas.set_callback('draw-event', self.draw_cb)
-        canvas.set_callback('button-press', self.btndown)
-        canvas.set_callback('motion', self.motion)
+        canvas.set_callback('cursor-down', self.btndown_cb)
+        canvas.set_callback('none-move', self.motion_cb)
         canvas.setSurface(self.fitsimage)
         self.canvas = canvas
 
@@ -282,17 +281,16 @@ class PixTable(GingaPlugin.LocalPlugin):
         index = w.currentIndex()
         self.pixtbl_radius = self.sizes[index]
         
-    def motion(self, canvas, button, data_x, data_y):
-        if (button != 0) or (self.mark_selected != None):
-            return
+    def motion_cb(self, canvas, button, data_x, data_y):
+        if self.mark_selected != None:
+            return False
         if self.plot == None:
             return
         self.lastx, self.lasty = data_x, data_y
         self.redo()
+        return False
         
-    def btndown(self, canvas, button, data_x, data_y):
-        if not (button == 0x1):
-            return
+    def btndown_cb(self, canvas, button, data_x, data_y):
         self.add_mark(data_x, data_y)
         return True
 

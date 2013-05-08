@@ -42,13 +42,13 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
         self.catalog_server_options = []
         self.catalog_server_params = None
 
-        DrawingCanvas = self.fv.getDrawClass('DrawingCanvas')
-        canvas = DrawingCanvas()
+        self.dc = fv.getDrawClasses()
+        canvas = self.dc.DrawingCanvas()
         canvas.enable_draw(True)
         canvas.set_drawtype('rectangle', color='cyan', linestyle='dash',
                             drawdims=True)
-        canvas.set_callback('button-press', self.btndown)
-        canvas.set_callback('button-release', self.btnup)
+        canvas.set_callback('cursor-down', self.btndown)
+        canvas.set_callback('cursor-up', self.btnup)
         canvas.set_callback('draw-event', self.getarea)
         canvas.setSurface(self.fitsimage)
         self.canvas = canvas
@@ -157,13 +157,9 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
         return True
     
     def btndown(self, canvas, button, data_x, data_y):
-        if not (button == 0x1):
-            return
         return True
 
     def btnup(self, canvas, button, data_x, data_y):
-        if not (button == 0x1):
-            return
         
         objs = self.canvas.getItemsAt(data_x, data_y)
         for obj in objs:
@@ -179,8 +175,7 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
         delta = 10
         radius = obj.objects[0].radius + delta
 
-        Circle = self.canvas.getDrawClass('Circle')
-        hilite = Circle(x, y, radius, linewidth=4, color=color)
+        hilite = self.dc.Circle(x, y, radius, linewidth=4, color=color)
         obj.add(hilite, tag=tag, redraw=redraw)
         
     def highlight_objects(self, objs, tag, color, redraw=True):
@@ -343,10 +338,6 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
        
     def plot_star(self, obj, image=None):
 
-        Circle = self.canvas.getDrawClass('Circle')
-        Point = self.canvas.getDrawClass('Point')
-        Canvas = self.canvas.getDrawClass('Canvas')
-
         if not image:
             image = self.fitsimage.get_image()
         x, y = image.radectopix(obj['ra_deg'], obj['dec_deg'])
@@ -356,8 +347,8 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
         color = self.table.get_color(obj)
         #print "color is %s" % str(color)
 
-        circle = Circle(x, y, radius, color=color)
-        point = Point(x, y, radius, color=color)
+        circle = self.dc.Circle(x, y, radius, color=color)
+        point = self.dc.Point(x, y, radius, color=color)
 
         ## What is this from?
         if obj.has_key('pick'):
@@ -366,11 +357,11 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
             # star with or without the cross, otherwise we always show the
             # cross
             if not obj['pick']:
-                star = Canvas(circle, point)
+                star = self.dc.Canvas(circle, point)
             else:
-                star = Canvas(circle)
+                star = self.dc.Canvas(circle)
         else:
-            star = Canvas(circle, point)
+            star = self.dc.Canvas(circle, point)
 
         star.set_data(star=obj)
         obj.canvobj = star

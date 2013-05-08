@@ -68,9 +68,9 @@ class PickBase(GingaPlugin.LocalPlugin):
 
         canvas = self.dc.DrawingCanvas()
         canvas.enable_draw(True)
-        canvas.set_callback('button-press', self.btndown)
-        canvas.set_callback('motion', self.drag)
-        canvas.set_callback('button-release', self.update)
+        canvas.set_callback('cursor-down', self.btndown)
+        canvas.set_callback('cursor-move', self.drag)
+        canvas.set_callback('cursor-up', self.update)
         canvas.set_drawtype('rectangle', color='cyan', linestyle='dash',
                             drawdims=True)
         canvas.set_callback('draw-event', self.setpickregion)
@@ -526,9 +526,6 @@ class PickBase(GingaPlugin.LocalPlugin):
         self.ev_intr.set()
         
     def btndown(self, canvas, button, data_x, data_y):
-        if not (button == 0x1):
-            return
-        
         try:
             obj = self.canvas.getObjectByTag(self.picktag)
             if obj.kind == 'rectangle':
@@ -562,9 +559,6 @@ class PickBase(GingaPlugin.LocalPlugin):
         return True
         
     def update(self, canvas, button, data_x, data_y):
-        if not (button == 0x1):
-            return
-        
         try:
             obj = self.canvas.getObjectByTag(self.picktag)
             if obj.kind == 'rectangle':
@@ -605,8 +599,6 @@ class PickBase(GingaPlugin.LocalPlugin):
 
         
     def drag(self, canvas, button, data_x, data_y):
-        if not (button == 0x1):
-            return
 
         obj = self.canvas.getObjectByTag(self.picktag)
         if obj.kind == 'compound':

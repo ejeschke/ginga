@@ -53,15 +53,18 @@ class Pick(PickBase.PickBase):
         di = FitsImageCanvasQt.FitsImageCanvas(logger=self.logger)
         di.enable_autozoom('off')
         di.enable_autocuts('off')
-        di.enable_zoom(True)
-        di.enable_cuts(True)
         di.zoom_to(3, redraw=False)
         di.set_callback('zoom-set', self.zoomset)
         di.set_cmap(cm, redraw=False)
         di.set_imap(im, redraw=False)
-        di.set_callback('motion', self.detailxy)
+        di.set_callback('none-move', self.detailxy)
         di.set_bg(0.4, 0.4, 0.4)
         self.pickimage = di
+
+        bd = di.get_bindings()
+        bd.enable_pan(True)
+        bd.enable_zoom(True)
+        bd.enable_cuts(True)
 
         iw = di.get_widget()
         sp = QtGui.QSizePolicy(QtGui.QSizePolicy.MinimumExpanding,

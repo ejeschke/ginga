@@ -14,8 +14,7 @@ import numpy
 import threading
 
 from ginga.cairow import FitsImageCairo
-from ginga import Mixins
-from ginga import colors
+from ginga import Mixins, Bindings, colors
 
 class FitsImageGtkError(FitsImageCairo.FitsImageCairoError):
     pass
@@ -247,9 +246,6 @@ class FitsImageEvent(FitsImageGtk):
         # Does widget accept focus when mouse enters window
         self.follow_focus = True
 
-        # User-defined keyboard mouse mask
-        self.kbdmouse_mask = 0
-
         # @$%&^(_)*&^ gnome!!
         self._keytbl = {
             'shift_l': 'shift_l',
@@ -325,18 +321,9 @@ class FitsImageEvent(FitsImageGtk):
         except KeyError:
             return keyname
 
-    def set_kbdmouse_mask(self, mask):
-        self.kbdmouse_mask |= mask
-        
-    def reset_kbdmouse_mask(self, mask):
-        self.kbdmouse_mask &= ~mask
-        
-    def get_kbdmouse_mask(self):
-        return self.kbdmouse_mask
-        
-    def clear_kbdmouse_mask(self):
-        self.kbdmouse_mask = 0
-        
+    def get_keyTable(self):
+        return self._keytbl
+    
     def set_followfocus(self, tf):
         self.followfocus = tf
         
@@ -371,7 +358,7 @@ class FitsImageEvent(FitsImageGtk):
     def button_press_event(self, widget, event):
         # event.button, event.x, event.y
         x = event.x; y = event.y
-        button = self.kbdmouse_mask
+        button = 0
         if event.button != 0:
             button |= 0x1 << (event.button - 1)
         self.logger.debug("button event at %dx%d, button=%x" % (x, y, button))
@@ -382,7 +369,7 @@ class FitsImageEvent(FitsImageGtk):
     def button_release_event(self, widget, event):
         # event.button, event.x, event.y
         x = event.x; y = event.y
-        button = self.kbdmouse_mask
+        button = 0
         if event.button != 0:
             button |= 0x1 << (event.button - 1)
         self.logger.debug("button release at %dx%d button=%x" % (x, y, button))
@@ -390,11 +377,14 @@ class FitsImageEvent(FitsImageGtk):
         data_x, data_y = self.get_data_xy(x, y)
         return self.make_callback('button-release', button, data_x, data_y)
 
+    def get_last_win_xy(self):
+        return (self.last_win_x, self.last_win_y)
+
     def get_last_data_xy(self):
         return (self.last_data_x, self.last_data_y)
 
     def motion_notify_event(self, widget, event):
-        button = self.kbdmouse_mask
+        button = 0
         if event.is_hint:
             x, y, state = event.window.get_pointer()
         else:
@@ -440,14 +430,32 @@ class FitsImageEvent(FitsImageGtk):
         return self.make_callback('drag-drop', paths)
 
 
-class FitsImageZoom(Mixins.UIMixin, FitsImageEvent,
-                    Mixins.FitsImageZoomMixin):
+class FitsImageZoom(Mixins.UIMixin, FitsImageEvent):
 
-    def __init__(self, logger=None, settings=None):
+    def __init__(self, logger=None, settings=None, bindmap=None,
+                 bindings=None):
         FitsImageEvent.__init__(self, logger=logger, settings=settings)
         Mixins.UIMixin.__init__(self)
-        Mixins.FitsImageZoomMixin.__init__(self)
 
+        if bindmap == None:
+            bindmap = Bindings.BindingMapper(self.logger)
+        self.bindmap = bindmap
+        bindmap.register_for_events(self)
+
+        if bindings == None:
+            bindings = Bindings.FitsImageBindings(self.logger)
+        self.set_bindings(bindings)
+
+    def get_bindmap(self):
+        return self.bindmap
+    
+    def get_bindings(self):
+        return self.bindings
+    
+    def set_bindings(self, bindings):
+        self.bindings = bindings
+        bindings.set_bindings(self)
+    
         
 class thinCrossCursor(object):
     def __init__(self, color='red'):

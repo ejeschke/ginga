@@ -27,6 +27,18 @@ class CutsBase(GingaPlugin.LocalPlugin):
         self.cuttypes = ['free', 'cross']
         self.cuttype = 'free'
 
+        self.dc = fv.getDrawClasses()
+        canvas = self.dc.DrawingCanvas()
+        canvas.enable_draw(True)
+        canvas.set_drawtype('line', color='cyan', linestyle='dash')
+        canvas.set_callback('draw-event', self.draw_cb)
+        canvas.set_callback('cursor-down', self.buttondown_cb)
+        canvas.set_callback('cursor-move', self.motion_cb)
+        canvas.set_callback('cursor-up', self.buttonup_cb)
+        canvas.set_callback('key-press', self.keydown)
+        canvas.setSurface(self.fitsimage)
+        self.canvas = canvas
+
 
     def close(self):
         chname = self.fv.get_channelName(self.fitsimage)
@@ -108,6 +120,19 @@ class CutsBase(GingaPlugin.LocalPlugin):
     def _movecut(self, obj, data_x, data_y):
         obj.moveTo(data_x, data_y)
 
+    def _create_cut(self, x, y, count, x1, y1, x2, y2, color='cyan'):
+        text = "cuts%d" % (count)
+        obj = self.dc.CompoundObject(
+            self.dc.Line(x1, y1, x2, y2,
+                         color=color,
+                         cap='ball'),
+            self.dc.Text(x, y, text, color=color))
+        obj.set_data(cuts=True)
+        return obj
+
+    def _combine_cuts(self, *args):
+        return self.dc.CompoundObject(*args)
+        
     def _append_lists(self, l):
         if len(l) == 0:
             return []
@@ -130,8 +155,6 @@ class CutsBase(GingaPlugin.LocalPlugin):
         return self.motion_cb(canvas, button, data_x, data_y)
     
     def motion_cb(self, canvas, button, data_x, data_y):
-        if not (button == 0x1):
-            return
 
         obj = self.canvas.getObjectByTag(self.cutstag)
         lines = self._getlines(obj)
@@ -143,9 +166,7 @@ class CutsBase(GingaPlugin.LocalPlugin):
         return True
     
     def buttonup_cb(self, canvas, button, data_x, data_y):
-        if not (button == 0x1):
-            return
-        
+
         obj = self.canvas.getObjectByTag(self.cutstag)
         lines = self._getlines(obj)
         for line in lines:

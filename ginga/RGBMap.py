@@ -247,9 +247,9 @@ class RGBMapper(Callback.Callbacks):
         """
         self.reset_sarr(callback=False)
         
-        print "amount=%.2f location=%.2f" % (scale_pct, shift_pct)
-        # limit shrinkage to 10% of original size
-        scale = max(scale_pct, 0.10)
+        #print "amount=%.2f location=%.2f" % (scale_pct, shift_pct)
+        # limit shrinkage to 5% of original size
+        scale = max(scale_pct, 0.050)
 
         work = self._stretch(self.sarr, scale)
         n = len(work)

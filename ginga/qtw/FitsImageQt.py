@@ -12,7 +12,7 @@ import numpy
 import threading
 
 from ginga.qtw.QtHelp import QtGui, QtCore
-from ginga import FitsImage, Mixins
+from ginga import FitsImage, Mixins, Bindings
 
 class FitsImageQtError(FitsImage.FitsImageError):
     pass
@@ -456,9 +456,6 @@ class FitsImageEvent(FitsImageQt):
         # Does widget accept focus when mouse enters window
         self.follow_focus = True
 
-        # User-defined keyboard mouse mask
-        self.kbdmouse_mask = 0
-
         # Define cursors for pick and pan
         hand = openHandCursor()
         self.define_cursor('pan', hand)
@@ -508,18 +505,9 @@ class FitsImageEvent(FitsImageQt):
         except KeyError:
             return keyname
         
-    def set_kbdmouse_mask(self, mask):
-        self.kbdmouse_mask |= mask
-        
-    def reset_kbdmouse_mask(self, mask):
-        self.kbdmouse_mask &= ~mask
-        
-    def get_kbdmouse_mask(self):
-        return self.kbdmouse_mask
-        
-    def clear_kbdmouse_mask(self):
-        self.kbdmouse_mask = 0
-        
+    def get_keyTable(self):
+        return self._keytbl
+    
     def set_followfocus(self, tf):
         self.followfocus = tf
         
@@ -562,7 +550,7 @@ class FitsImageEvent(FitsImageQt):
         buttons = event.buttons()
         x, y = event.x(), event.y()
 
-        button = self.kbdmouse_mask
+        button = 0
         if buttons & QtCore.Qt.LeftButton:
             button |= 0x1
         if buttons & QtCore.Qt.MidButton:
@@ -579,7 +567,7 @@ class FitsImageEvent(FitsImageQt):
         buttons = event.button()
         x, y = event.x(), event.y()
         
-        button = self.kbdmouse_mask
+        button = 0
         if buttons & QtCore.Qt.LeftButton:
             button |= 0x1
         if buttons & QtCore.Qt.MidButton:
@@ -590,6 +578,9 @@ class FitsImageEvent(FitsImageQt):
         data_x, data_y = self.get_data_xy(x, y)
         return self.make_callback('button-release', button, data_x, data_y)
 
+    def get_last_win_xy(self):
+        return (self.last_win_x, self.last_win_y)
+
     def get_last_data_xy(self):
         return (self.last_data_x, self.last_data_y)
 
@@ -598,7 +589,7 @@ class FitsImageEvent(FitsImageQt):
         x, y = event.x(), event.y()
         self.last_win_x, self.last_win_y = x, y
         
-        button = self.kbdmouse_mask
+        button = 0
         if buttons & QtCore.Qt.LeftButton:
             button |= 0x1
         if buttons & QtCore.Qt.MidButton:
@@ -636,14 +627,32 @@ class FitsImageEvent(FitsImageQt):
             self.make_callback('drag-drop', paths)
         
 
-class FitsImageZoom(Mixins.UIMixin, FitsImageEvent,
-                    Mixins.FitsImageZoomMixin):
+class FitsImageZoom(Mixins.UIMixin, FitsImageEvent):
 
-    def __init__(self, logger=None, settings=None, render='widget'):
+    def __init__(self, logger=None, settings=None, render='widget',
+                 bindmap=None, bindings=None):
         FitsImageEvent.__init__(self, logger=logger, settings=settings,
                                 render=render)
         Mixins.UIMixin.__init__(self)
-        Mixins.FitsImageZoomMixin.__init__(self)
+
+        if bindmap == None:
+            bindmap = Bindings.BindingMapper(self.logger)
+        self.bindmap = bindmap
+        bindmap.register_for_events(self)
+
+        if bindings == None:
+            bindings = Bindings.FitsImageBindings(self.logger)
+        self.set_bindings(bindings)
+
+    def get_bindmap(self):
+        return self.bindmap
+    
+    def get_bindings(self):
+        return self.bindings
+    
+    def set_bindings(self, bindings):
+        self.bindings = bindings
+        bindings.set_bindings(self)
 
         
 class thinCrossCursor(object):

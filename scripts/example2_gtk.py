@@ -36,18 +36,24 @@ class FitsViewer(object):
 
         fi = FitsImageCanvas(logger)
         fi.enable_autocuts('on')
-        fi.enable_zoom('on')
-        fi.enable_cuts(True)
-        fi.enable_flip(True)
-        fi.enable_rotate(True)
+        fi.set_autocut_params('zscale')
+        fi.enable_autozoom('on')
         fi.enable_draw(True)
         fi.set_drawtype('ruler')
         fi.set_drawcolor('blue')
         fi.set_callback('drag-drop', self.drop_file)
-        fi.set_callback('motion', self.motion)
+        fi.set_callback('none-move', self.motion)
         fi.set_bg(0.2, 0.2, 0.2)
         fi.ui_setActive(True)
         self.fitsimage = fi
+
+        bd = fi.get_bindings()
+        bd.enable_pan(True)
+        bd.enable_zoom(True)
+        bd.enable_cuts(True)
+        bd.enable_flip(True)
+        bd.enable_rotate(True)
+        bd.enable_cmap(True)
 
         w = fi.get_widget()
         w.set_size_request(512, 512)
@@ -124,8 +130,6 @@ class FitsViewer(object):
         self.load_file(fileName)
 
     def motion(self, fitsimage, button, data_x, data_y):
-        if button != 0:
-            return
 
         # Get the value under the data coordinates
         try:

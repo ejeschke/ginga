@@ -33,7 +33,8 @@ class FitsImageBase(Callback.Callbacks):
     that connect to an actual rendering surface.
     """
 
-    def __init__(self, logger=None, rgbmap=None, settings=None):
+    def __init__(self, logger=None, rgbmap=None, settings=None,
+                 bindings=None):
         Callback.Callbacks.__init__(self)
 
         if logger != None:
@@ -196,7 +197,6 @@ class FitsImageBase(Callback.Callbacks):
                      'autocuts', 'autozoom'):
             self.enable_callback(name)
 
-        
     def set_window_size(self, width, height, redraw=True):
         """This is called by the subclass when the actual dimensions of the
         window are known."""
@@ -1028,8 +1028,8 @@ class FitsImageBase(Callback.Callbacks):
         return (self.t_['flip_x'], self.t_['flip_y'], self.t_['swap_xy'])
 
     def set_autocut_params(self, method, pct=None, numbins=None):
-        self.logger.debug("Setting autocut params method=%s pct=%.4f" % (
-            method, pct))
+        self.logger.debug("Setting autocut params method=%s pct=%s" % (
+            method, str(pct)))
         self.t_.set(autocut_method=method)
         if pct:
             self.t_.set(autocut_hist_pct=pct)

@@ -209,6 +209,7 @@ class GingaControl(Callback.Callbacks):
             if (index >= 0) and (index < len(self.operations)):
                 opname = self.operations[index]
                 self.start_operation_channel(chname, opname, None)
+        return True
 
     def dragdrop(self, fitsimage, urls):
         """Called when a drop operation is performed on our main window.
@@ -223,6 +224,7 @@ class GingaControl(Callback.Callbacks):
                 chname = self.get_channelName(fitsimage)
                 self.nongui_do(self.load_file, fitspath, chname=chname,
                                wait=False)
+        return True
 
     def _match_cmap(self, fitsimage, colorbar):
         rgbmap = fitsimage.get_rgbmap()

@@ -37,6 +37,8 @@ class Callbacks(object):
 
     # TODO: to be deprecated
     def set_callback(self, name, fn, *args, **kwdargs):
+        if not self.has_callback(name):
+            self.enable_callback(name)
         return self.add_callback(name, fn, *args, **kwdargs)
     
     def make_callback(self, name, *args, **kwdargs):

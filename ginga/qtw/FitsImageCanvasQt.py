@@ -18,10 +18,13 @@ class FitsImageCanvasError(FitsImageQt.FitsImageQtError):
 class FitsImageCanvas(FitsImageQt.FitsImageZoom,
                       DrawingMixin, CanvasMixin, CompoundMixin):
 
-    def __init__(self, logger=None, settings=None, render=None):
+    def __init__(self, logger=None, settings=None, render=None,
+                 bindmap=None, bindings=None):
         FitsImageQt.FitsImageZoom.__init__(self, logger=logger,
                                            settings=settings,
-                                           render=render)
+                                           render=render,
+                                           bindmap=bindmap,
+                                           bindings=bindings)
         CompoundMixin.__init__(self)
         CanvasMixin.__init__(self)
         DrawingMixin.__init__(self, drawCatalog)

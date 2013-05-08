@@ -27,9 +27,9 @@ class HistogramBase(GingaPlugin.LocalPlugin):
         canvas.set_drawtype('rectangle', color='cyan', linestyle='dash',
                             drawdims=True)
         canvas.set_callback('draw-event', self.draw_cb)
-        canvas.set_callback('button-press', self.drag)
-        canvas.set_callback('motion', self.drag)
-        canvas.set_callback('button-release', self.update)
+        canvas.set_callback('cursor-down', self.drag)
+        canvas.set_callback('cursor-move', self.drag)
+        canvas.set_callback('cursor-up', self.update)
         canvas.setSurface(self.fitsimage)
         self.canvas = canvas
 
@@ -150,8 +150,6 @@ class HistogramBase(GingaPlugin.LocalPlugin):
         return True
     
     def update(self, canvas, button, data_x, data_y):
-        if not (button == 0x1):
-            return
         
         obj = self.canvas.getObjectByTag(self.histtag)
         if obj.kind == 'compound':
@@ -188,8 +186,6 @@ class HistogramBase(GingaPlugin.LocalPlugin):
         return True
 
     def drag(self, canvas, button, data_x, data_y):
-        if not (button == 0x1):
-            return
         
         obj = self.canvas.getObjectByTag(self.histtag)
         if obj.kind == 'compound':
