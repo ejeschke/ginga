@@ -256,9 +256,15 @@ class Info(GingaPlugin.GlobalPlugin):
             obj.winfo.lbl_dec.set_text(info.dec_lbl+':')
 
     def cut_levels(self, w, fitsimage, info):
+        loval, hival = fitsimage.get_cut_levels()
         try:
-            loval = float(info.winfo.cut_low.get_text())
-            hival = float(info.winfo.cut_high.get_text())
+            lostr = info.winfo.cut_low.get_text().strip()
+            if lostr != '':
+                loval = float(lostr)
+
+            histr = info.winfo.cut_high.get_text().strip()
+            if histr != '':
+                hival = float(histr)
 
             return fitsimage.cut_levels(loval, hival)
         except Exception, e:

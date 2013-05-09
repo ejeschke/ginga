@@ -200,8 +200,8 @@ class FitsImageBindings(object):
         bindmap.map_event('ctrl', 'middle', 'cmaprest')
         # NOTE: name 'scroll' is hardwired for the scrolling action
         bindmap.map_event(None, 'scroll', 'zoom')
-        bindmap.map_event('shift', 'scroll', 'contrast-fine')
-        bindmap.map_event('ctrl', 'scroll', 'contrast-coarse')
+        bindmap.map_event('shift', 'scroll', 'zoom-fine')
+        bindmap.map_event('ctrl', 'scroll', 'zoom-coarse')
 
         # Mouse operations that are invoked by a preceeding key
         for name in ('rotate', 'cmapwarp', 'cutlo', 'cuthi', 'cutall',
@@ -219,9 +219,9 @@ class FitsImageBindings(object):
         fitsimage.set_callback('cmaprest-down', self.ms_cmaprest)
 
         fitsimage.set_callback('zoom-scroll', self.ms_zoom)
-        fitsimage.set_callback('contrast-coarse-scroll',
-                               self.ms_contrast_coarse)
-        fitsimage.set_callback('contrast-fine-scroll', self.ms_contrast_fine)
+        fitsimage.set_callback('zoom-coarse-scroll',
+                               self.ms_zoom_coarse)
+        fitsimage.set_callback('zoom-fine-scroll', self.ms_zoom_fine)
 
     def reset(self, fitsimage):
         self.reset_modifier(fitsimage)
@@ -401,6 +401,30 @@ class FitsImageBindings(object):
         fitsimage.onscreen_message("Cut low: %.4f  high: %.4f" % (
             loval, hival), delay=1.0, redraw=False)
         fitsimage.cut_levels(loval, hival, redraw=True)
+
+    def _adjust_contrast(self, fitsimage, direction, pct):
+        if direction in ('up', 'left'):
+            self._cut_pct(fitsimage, pct)
+        elif direction in ('down', 'right'):
+            self._cut_pct(fitsimage, -pct)
+
+    def _scale_image(self, fitsimage, direction, factor):
+        rev = fitsimage.get_pan_reverse()
+        scale_x, scale_y = fitsimage.get_scale_xy()
+        if direction == 'up':
+            if not rev:
+                mult = 1.0 + factor
+            else:
+                mult = 1.0 - factor
+        elif direction == 'down':
+            if not rev:
+                mult = 1.0 - factor
+            else:
+                mult = 1.0 + factor
+        scale_x, scale_y = scale_x * mult, scale_y * mult
+        fitsimage.scale_to(scale_x, scale_y)
+        fitsimage.onscreen_message(fitsimage.get_scale_text(),
+                                   delay=1.0)
 
     def _rotate_xy(self, fitsimage, x, y):
         win_wd, win_ht = fitsimage.get_window_size()
@@ -762,26 +786,21 @@ class FitsImageBindings(object):
         """Adjust contrast interactively by setting the low AND high cut
         levels.  This function adjusts it coarsely.
         """
-        pct = 0.01
-        if direction in ('up', 'left'):
-            self._cut_pct(fitsimage, pct)
-        elif direction in ('down', 'right'):
-            self._cut_pct(fitsimage, -pct)
+        if self.cancut:
+            self._adjust_contrast(fitsimage, direction, 0.01)
         return True
 
     def ms_contrast_fine(self, fitsimage, direction, data_x, data_y):
         """Adjust contrast interactively by setting the low AND high cut
         levels.  This function adjusts it finely.
         """
-        pct = 0.001
-        if direction in ('up', 'left'):
-            self._cut_pct(fitsimage, pct)
-        elif direction in ('down', 'right'):
-            self._cut_pct(fitsimage, -pct)
+        if self.cancut:
+            self._adjust_contrast(fitsimage, direction, 0.001)
         return True
 
     def ms_zoom(self, fitsimage, direction, data_x, data_y):
         """Interactively zoom the image by scrolling motion.
+        This zooms by the zoom steps configured under Preferences.
         """
         if self.canzoom:
             rev = fitsimage.get_pan_reverse()
@@ -797,6 +816,22 @@ class FitsImageBindings(object):
                     fitsimage.zoom_in()
             fitsimage.onscreen_message(fitsimage.get_scale_text(),
                                        delay=1.0)
+        return True
+
+    def ms_zoom_coarse(self, fitsimage, direction, data_x, data_y):
+        """Interactively zoom the image by scrolling motion.
+        This zooms by adjusting the scale in x and y coarsely.
+        """
+        if self.canzoom:
+            self._scale_image(fitsimage, direction, 0.20)
+        return True
+
+    def ms_zoom_fine(self, fitsimage, direction, data_x, data_y):
+        """Interactively zoom the image by scrolling motion.
+        This zooms by adjusting the scale in x and y coarsely.
+        """
+        if self.canzoom:
+            self._scale_image(fitsimage, direction, 0.08)
         return True
 
 

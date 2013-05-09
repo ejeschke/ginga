@@ -784,7 +784,8 @@ class FitsImageBase(Callback.Callbacks):
             zoomalg = 'step'
 
         self.t_.set(scale_x_base=scale_x_base, scale_y_base=scale_y_base,
-                    zoom_algorithm=zoomalg)
+                    #zoom_algorithm=zoomalg)
+                    )
 
         self._scale_to(scale_x, scale_y, no_reset=no_reset, redraw=redraw)
 
