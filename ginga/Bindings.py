@@ -8,6 +8,7 @@
 # Please see the file LICENSE.txt for details.
 
 from ginga.misc import Bunch
+from ginga import AutoCuts
 
 class FitsImageBindings(object):
     """
@@ -78,9 +79,6 @@ class FitsImageBindings(object):
         self.canflip = False
         self.canrotate = False
 
-        self.isctrldown = False
-        self.isshiftdown = False
-
         # For panning
         self._pantype = 1
         self._start_x = None
@@ -107,12 +105,12 @@ class FitsImageBindings(object):
         self.keys.cut_low = [',']
         self.keys.cut_high = ['.']
         self.keys.cut_all = ['>']
-        self.keys.cut_255 = ['s']
+        self.keys.cut_255 = ['A']
         self.keys.cut_auto = ['a']
         self.keys.autocuts_on = [':']
         self.keys.autocuts_override = [';']
         self.keys.cmap_warp = ['/']
-        self.keys.cmap_restore = ['space']
+        self.keys.cmap_restore = ['?']
         self.keys.flip_x = ['[', '{']
         self.keys.flip_y = [']', '}']
         self.keys.swap_xy = ['backslash', '|']
@@ -123,6 +121,8 @@ class FitsImageBindings(object):
         # User defined buttons
         #self.btns = Bunch.Bunch()
 
+        self.autocuts = AutoCuts.AutoCuts(self.logger)
+
     def window_map(self, fitsimage):
         self.to_default_mode(fitsimage)
 
@@ -130,11 +130,14 @@ class FitsImageBindings(object):
 
         fitsimage.add_callback('map', self.window_map)
 
-        # Set up key mapping
-        self.setup_default_keymap(fitsimage)
+        bindmap = fitsimage.get_bindmap()
+        bindmap.clear_event_map()
 
-        # Set up button mapping
-        self.setup_default_btnmap(fitsimage)
+        # Set up key mapping
+        self.setup_default_keymap(fitsimage, bindmap)
+
+        # Set up pointer mapping
+        self.setup_default_btnmap(fitsimage, bindmap)
         
     def set_modifier(self, fitsimage, name, modtype='oneshot'):
         bindmap = fitsimage.get_bindmap()
@@ -149,14 +152,12 @@ class FitsImageBindings(object):
     def set_key_bindings(self, featkey, symlist):
         self.keys[featkey] = symlist
 
-    def setup_default_keymap(self, fitsimage):
-        evtmap = Bunch.Bunch()
+    def setup_default_keymap(self, fitsimage, bindmap):
+
         for name in self.keys.keys():
             
-            #bnch = Bunch.Bunch(press=None, release=None, name=name)
-            bnch = Bunch.Bunch(name=name)
             for key in self.keys[name]:
-                evtmap[(None, key)] = bnch
+                bindmap.map_event(None, key, name)
 
             # Register for this symbolic event if we have a handler for it
             try:
@@ -166,28 +167,23 @@ class FitsImageBindings(object):
             except AttributeError:
                 pass
 
-        bindmap = fitsimage.get_bindmap()
-        bindmap.update_eventmap(evtmap)
-            
 
-    def setup_default_btnmap(self, fitsimage):
-        
-        bindmap = fitsimage.get_bindmap()
+    def setup_default_btnmap(self, fitsimage, bindmap):
         
         # Establish our names for the mouse or trackpad bindings
         # e.g. left btn == 'index', scroll wheel == 'middle', right == 'ring'
         # NOTE: just make sure these names don't overlap with any of the
         # key names.  You can get a list of the key names by doing
         # fitsimage.get_keyTable().values()
-        bindmap.set_button_map({0x0: 'nobtn', 0x1: 'index',
-                                0x2: 'middle', 0x4: 'ring'})
+        bindmap.map_button(0x0, 'nobtn')
+        bindmap.map_button(0x1, 'index')
+        bindmap.map_button(0x2, 'middle')
+        bindmap.map_button(0x4, 'ring')
         
         # Establish our modifier keys.
         # Here we could change the meaning of standard modifiers
         # (i.e. shift becomes ctrl, etc.) or define new modifiers.
         ## bindmap.set_modifier_map(modmap)
-        
-        evtmap = {}
         
         # Generate standard symbolic mouse events for unmodified buttons:
         # xxxxx-{down, move, up}
@@ -195,70 +191,32 @@ class FitsImageBindings(object):
         # with no button pressed generates 'none-move', etc.
         for btnname, evtname in (('nobtn', 'none'), ('index', 'cursor'),
                                  ('middle', 'wheel'), ('ring', 'draw')):
-            idx = (None, btnname)
-            evtmap[idx] = Bunch.Bunch(name=evtname)
+            bindmap.map_event(None, btnname, evtname)
 
-        evtmap[('shift', 'index')] = Bunch.Bunch(name='panset')
-        evtmap[('ctrl', 'index')] = Bunch.Bunch(name='pan')
-        evtmap[(None, 'middle')] = Bunch.Bunch(name='freepan')
-        evtmap[('ctrl', 'ring')] = Bunch.Bunch(name='cmapwarp')
-        evtmap[('ctrl', 'middle')] = Bunch.Bunch(name='cmaprest')
+        bindmap.map_event('shift', 'index', 'panset')
+        bindmap.map_event('ctrl', 'index', 'pan')
+        bindmap.map_event(None, 'middle', 'freepan')
+        bindmap.map_event('ctrl', 'ring', 'cmapwarp')
+        bindmap.map_event('ctrl', 'middle', 'cmaprest')
         # NOTE: name 'scroll' is hardwired for the scrolling action
-        evtmap[(None, 'scroll')] = Bunch.Bunch(name='zoom')
-        evtmap[('shift', 'scroll')] = Bunch.Bunch(name='contrast-fine')
-        evtmap[('ctrl', 'scroll')] = Bunch.Bunch(name='contrast-coarse')
+        bindmap.map_event(None, 'scroll', 'zoom')
+        bindmap.map_event('shift', 'scroll', 'contrast-fine')
+        bindmap.map_event('ctrl', 'scroll', 'contrast-coarse')
 
         # Mouse operations that are invoked by a preceeding key
-        for modname in ('rotate', 'cmapwarp', 'cutlo', 'cuthi', 'cutall',
+        for name in ('rotate', 'cmapwarp', 'cutlo', 'cuthi', 'cutall',
                         'pan', 'freepan'):
-            evtmap[(modname, 'index')] = Bunch.Bunch(name=modname)
-
-        # Update the binding mapper with these event mappings
-        bindmap.update_eventmap(evtmap)
+            bindmap.map_event(name, 'index', name)
 
         # Now register our actions (below) for these symbolic events
-        fitsimage.set_callback('cursor-down', self.ms_cursor)
-        fitsimage.set_callback('cursor-move', self.ms_cursor)
-        fitsimage.set_callback('cursor-up', self.ms_cursor)
-        
-        fitsimage.set_callback('wheel-down', self.ms_wheel)
-        fitsimage.set_callback('wheel-move', self.ms_wheel)
-        fitsimage.set_callback('wheel-up', self.ms_wheel)
-        
-        fitsimage.set_callback('draw-down', self.ms_draw)
-        fitsimage.set_callback('draw-move', self.ms_draw)
-        fitsimage.set_callback('draw-up', self.ms_draw)
+        for name in ('cursor', 'wheel', 'draw', 'rotate', 'cmapwarp',
+                     'pan', 'freepan', 'cutlo', 'cuthi', 'cutall'):
+            method = getattr(self, 'ms_'+name)
+            for action in ('down', 'move', 'up'):
+                fitsimage.set_callback('%s-%s' % (name, action), method)
 
-        fitsimage.set_callback('rotate-down', self.ms_rotate)
-        fitsimage.set_callback('rotate-move', self.ms_rotate)
-        fitsimage.set_callback('rotate-up', self.ms_rotate)
-        
-        fitsimage.set_callback('cmapwarp-down', self.ms_cmapwarp)
-        fitsimage.set_callback('cmapwarp-move', self.ms_cmapwarp)
-        fitsimage.set_callback('cmapwarp-up', self.ms_cmapwarp)
-        
-        fitsimage.set_callback('pan-down', self.ms_pan)
-        fitsimage.set_callback('pan-move', self.ms_pan)
-        fitsimage.set_callback('pan-up', self.ms_pan)
-        
-        fitsimage.set_callback('freepan-down', self.ms_freepan)
-        fitsimage.set_callback('freepan-move', self.ms_freepan)
-        fitsimage.set_callback('freepan-up', self.ms_freepan)
-        
-        fitsimage.set_callback('cutlo-down', self.ms_cutlo)
-        fitsimage.set_callback('cutlo-move', self.ms_cutlo)
-        fitsimage.set_callback('cutlo-up', self.ms_cutlo)
-        
-        fitsimage.set_callback('cuthi-down', self.ms_cuthi)
-        fitsimage.set_callback('cuthi-move', self.ms_cuthi)
-        fitsimage.set_callback('cuthi-up', self.ms_cuthi)
-        
-        fitsimage.set_callback('cutall-down', self.ms_cutboth)
-        fitsimage.set_callback('cutall-move', self.ms_cutboth)
-        fitsimage.set_callback('cutall-up', self.ms_cutboth)
-        
         fitsimage.set_callback('panset-down', self.ms_panset)
-        fitsimage.set_callback('cmaprest-down', self.ms_restcmap)
+        fitsimage.set_callback('cmaprest-down', self.ms_cmaprest)
 
         fitsimage.set_callback('zoom-scroll', self.ms_zoom)
         fitsimage.set_callback('contrast-coarse-scroll',
@@ -423,14 +381,12 @@ class FitsImageBindings(object):
 
     def _cutboth_xy(self, fitsimage, x, y):
         win_wd, win_ht = fitsimage.get_window_size()
-        xpct = float(x) / float(win_wd)
+        xpct = 1.0 - (float(x) / float(win_wd))
         #ypct = 1.0 - (float(y) / float(win_ht))
         ypct = (float(win_ht - y) / float(win_ht))
-        image = fitsimage.get_image()
-        minval, maxval = image.get_minmax()
-        spread = maxval - minval
-        hival = minval + (xpct * spread)
-        loval = minval + (ypct * spread)
+        spread = self._hival - self._loval
+        hival = self._hival - (xpct * spread)
+        loval = self._loval + (ypct * spread)
         fitsimage.onscreen_message("Cut low: %.4f  high: %.4f" % (
             loval, hival), redraw=False)
         fitsimage.cut_levels(loval, hival, redraw=True)
@@ -493,7 +449,7 @@ class FitsImageBindings(object):
 
     def kp_pan_set(self, fitsimage, action, data_x, data_y):
         if self.canpan:
-            self._panset(fitsimage, data_x, data_y, redraw=False)
+            self._panset(fitsimage, data_x, data_y, redraw=True)
         return True
 
     def kp_center(self, fitsimage, action, data_x, data_y):
@@ -593,7 +549,7 @@ class FitsImageBindings(object):
                                        delay=1.0)
         return True
 
-    def kp_cmp_restore(self, fitsimage, action, data_x, data_y):
+    def kp_cmap_restore(self, fitsimage, action, data_x, data_y):
         if self.cancmap:
             self.restore_colormap(fitsimage)
         return True
@@ -686,6 +642,15 @@ class FitsImageBindings(object):
         return True
 
             
+    def ms_cmaprest(self, fitsimage, action, data_x, data_y):
+        """An interactive way to restore the colormap settings after
+        a warp operation.
+        """
+        if self.cancmap:
+            self.restore_colormap(fitsimage)
+            return True
+
+
     def ms_pan(self, fitsimage, action, data_x, data_y):
         """A 'drag' or proportional pan, where the image is panned by
         'dragging the canvas' up or down.  The amount of the pan is
@@ -765,7 +730,7 @@ class FitsImageBindings(object):
             fitsimage.onscreen_message(None)
         return True
             
-    def ms_cutboth(self, fitsimage, action, data_x, data_y):
+    def ms_cutall(self, fitsimage, action, data_x, data_y):
         """An interactive way to set the low AND high cut levels.
         """
         if not self.cancut:
@@ -777,7 +742,9 @@ class FitsImageBindings(object):
             
         elif action == 'down':
             self._start_x, self._start_y = x, y
-            self._loval, self._hival = fitsimage.get_cut_levels()
+            image = fitsimage.get_image()
+            self._loval, self._hival = self.autocuts.calc_cut_levels(image,
+                                                                     'zscale')
 
         else:
             fitsimage.onscreen_message(None)
@@ -785,21 +752,16 @@ class FitsImageBindings(object):
             
     def ms_panset(self, fitsimage, action, data_x, data_y):
         """An interactive way to set the future pan position.  On the next
-        zoom operation the selected area will be centered in the window.
+        zoom operation the selected position will be centered in the window.
         """
         if self.canpan:
-            self._panset(fitsimage, data_x, data_y, redraw=False)
+            self._panset(fitsimage, data_x, data_y, redraw=True)
         return True
 
-    def ms_restcmap(self, fitsimage, action, data_x, data_y):
-        """An interactive way to restore the colormap settings after
-        a warp operation.
-        """
-        if self.cancmap:
-            self.restore_colormap(fitsimage)
-            return True
-
     def ms_contrast_coarse(self, fitsimage, direction, data_x, data_y):
+        """Adjust contrast interactively by setting the low AND high cut
+        levels.  This function adjusts it coarsely.
+        """
         pct = 0.01
         if direction in ('up', 'left'):
             self._cut_pct(fitsimage, pct)
@@ -808,6 +770,9 @@ class FitsImageBindings(object):
         return True
 
     def ms_contrast_fine(self, fitsimage, direction, data_x, data_y):
+        """Adjust contrast interactively by setting the low AND high cut
+        levels.  This function adjusts it finely.
+        """
         pct = 0.001
         if direction in ('up', 'left'):
             self._cut_pct(fitsimage, pct)
@@ -816,6 +781,8 @@ class FitsImageBindings(object):
         return True
 
     def ms_zoom(self, fitsimage, direction, data_x, data_y):
+        """Interactively zoom the image by scrolling motion.
+        """
         if self.canzoom:
             rev = fitsimage.get_pan_reverse()
             if direction == 'up':
@@ -856,19 +823,25 @@ class BindingMapper(object):
         # Set up button mapping
         if btnmap == None:
             btnmap = { 0x1: 'cursor', 0x2: 'wheel', 0x4: 'draw' }
-        self.set_button_map(btnmap)
+        self.btnmap = btnmap
 
         # Set up modifier mapping
         if modmap == None:
-            bnch = Bunch.Bunch(name='shift', type='held')
-            modmap = {}
-            for name in ('shift_l', 'shift_r'):
-                modmap[name] = bnch
-            bnch = Bunch.Bunch(name='ctrl', type='held')
-            for name in ('control_l', 'control_r'):
-                modmap[name] = bnch
-        self.set_modifier_map(modmap)
+            self.modmap = {}
+            for keyname in ('shift_l', 'shift_r'):
+                self.add_modifier(keyname, 'shift')
+            for keyname in ('control_l', 'control_r'):
+                self.add_modifier(keyname, 'ctrl')
+        else:
+            self.modmap = modmap
 
+    def clear_modifier_map(self):
+        self.modmap = {}
+
+    def add_modifier(self, keyname, modname, modtype='held'):
+        bnch = Bunch.Bunch(name=modname, type=modtype)
+        self.modmap[keyname] = bnch
+        
     def set_modifier(self, name, modtype='oneshot'):
         assert modtype in self._kbdmod_types, \
                ValueError("Bad modifier type '%s': must be one of %s" % (
@@ -880,20 +853,23 @@ class BindingMapper(object):
         self._kbdmod = None
         self._kbdmod_type = 'held'
         
-    def set_button_map(self, btnmap):
-        """For remapping the buttons to different names. 'btnmap' is a
-        dictionary mapping numbers (button codes) to logical names.
-        """
-        self.btnmap = btnmap
+    def clear_button_map(self):
+        self.btnmap = {}
         
+    def map_button(self, btncode, alias):
+        """For remapping the buttons to different names. 'btncode' is a
+        fixed button code and 'alias' is a logical name.
+        """
+        self.btnmap[btncode] = alias
+
     def set_modifier_map(self, modmap):
         self.modmap = modmap
         
-    def set_eventmap(self, evtmap):
-        self.eventmap = evtmap
+    def clear_event_map(self):
+        self.eventmap = {}
         
-    def update_eventmap(self, d):
-        self.eventmap.update(d)
+    def map_event(self, modifier, alias, eventname):
+        self.eventmap[(modifier, alias)] = Bunch.Bunch(name=eventname)
         
     def register_for_events(self, fitsimage):
         # Add callbacks for interesting events
