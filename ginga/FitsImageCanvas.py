@@ -451,8 +451,10 @@ class DrawingMixin(object):
                         **self.t_drawparams)
 
         elif self.t_drawtype == 'rectangle':
-            bd = self.fitsimage.get_bindings()
-            if not bd.isshiftdown:
+            # TODO: this method of testing for shift is no longer valid
+            #bd = self.fitsimage.get_bindings()
+            #if not bd.isshiftdown:
+            if True:
                 obj = klass(self._start_x, self._start_y,
                             data_x, data_y, **self.t_drawparams)
                 
