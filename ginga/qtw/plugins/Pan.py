@@ -218,22 +218,17 @@ class Pan(GingaPlugin.GlobalPlugin):
         self.fv.showxy(bigimage, data_x, data_y)
         return True
 
-    def drag_cb(self, fitsimage, button, data_x, data_y):
+    def drag_cb(self, fitsimage, action, data_x, data_y):
         # this is a panning move in the small
         # window for the big window
         bigimage = self.fv.getfocus_fitsimage()
-        #bigimage.set_pan(data_x, data_y)
         bigimage.panset_xy(data_x, data_y)
         return True
 
-    def btndown(self, fitsimage, button, data_x, data_y):
+    def btndown(self, fitsimage, action, data_x, data_y):
         bigimage = self.fv.getfocus_fitsimage()
-        if button == 0x1:
-            bigimage.panset_xy(data_x, data_y)
-            return True
-        elif button == 0x21:
-            bigimage.panset_xy(data_x, data_y, redraw=False)
-            return True
+        bigimage.panset_xy(data_x, data_y)
+        return True
 
     def zoom(self, fitsimage, direction):
         """Scroll event in the small fits window.  Just zoom the large fits

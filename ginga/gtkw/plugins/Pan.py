@@ -236,8 +236,6 @@ class Pan(GingaPlugin.GlobalPlugin):
     def btndown(self, fitsimage, action, data_x, data_y):
         bigimage = self.fv.getfocus_fitsimage()
         bigimage.panset_xy(data_x, data_y)
-        #elif button == 0x21:
-        #    bigimage.panset_xy(data_x, data_y, redraw=False)
         return True
     
     def zoom(self, fitsimage, direction):
