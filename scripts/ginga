@@ -135,6 +135,14 @@ def main(options, args):
         basedir = os.environ['GINGA_HOME']
     except KeyError:
         basedir = os.path.join(os.environ['HOME'], '.ginga')
+    if not os.path.exists(basedir):
+        try:
+            os.mkdir(basedir)
+        except OSError as e:
+            logger.warn("Couldn't create ginga settings area (%s): %s" % (
+                basedir, str(e)))
+            logger.warn("Preferences will not be able to be saved")
+            
     prefs = Settings.Preferences(basefolder=basedir, logger=logger)
     sys.path.insert(0, basedir)
 

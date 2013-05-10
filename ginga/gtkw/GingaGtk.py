@@ -634,9 +634,6 @@ class GingaView(GtkMain.GtkMain):
             self.logger.debug("Active channel switch to '%s'" % (
                 chname))
             self.change_channel(chname, raisew=False)
-            # TODO: this is a hack to force the cursor change on the new
-            # window--make this better
-            #fitsimage.to_default_mode()
 
         return True
 

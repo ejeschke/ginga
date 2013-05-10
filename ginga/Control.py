@@ -260,11 +260,6 @@ class GingaControl(Callback.Callbacks):
         if tf:
             if fitsimage != self.getfocus_fitsimage():
                 self.change_channel(name, raisew=False)
-                # TODO: this is a hack to force the cursor change on the new
-                # window--make this better
-                fitsimage.to_default_mode()
-
-            #self._match_cmap(fitsimage, self.colorbar)
 
         return True
 
