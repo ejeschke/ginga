@@ -131,7 +131,7 @@ class AutoCuts(object):
             end_time - start_time))
 
         self.logger.debug("lo=%.2f hi=%.2f" % (loval, hival))
-        return (loval, hival)
+        return (float(loval), float(hival))
 
     def calc_histogram(self, data, pct=1.0, numbins=2048):
         self.logger.debug("Computing histogram, pct=%.4f numbins=%d" % (
