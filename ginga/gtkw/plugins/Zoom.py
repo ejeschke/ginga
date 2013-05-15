@@ -142,6 +142,12 @@ class Zoom(GingaPlugin.GlobalPlugin):
     def add_channel(self, viewer, chinfo):
         self.prepare(chinfo.fitsimage)
 
+    def start(self):
+        names = self.fv.get_channelNames()
+        for name in names:
+            chinfo = self.fv.get_channelInfo(name)
+            self.add_channel(self.fv, chinfo)
+        
     # CALLBACKS
 
     def new_image_cb(self, fitsimage, image):

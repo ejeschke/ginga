@@ -112,6 +112,12 @@ class Pan(GingaPlugin.GlobalPlugin):
         self.logger.debug("TODO: delete channel %s" % (chinfo.name))
         #del self.channel[chinfo.name]
 
+    def start(self):
+        names = self.fv.get_channelNames()
+        for name in names:
+            chinfo = self.fv.get_channelInfo(name)
+            self.add_channel(self.fv, chinfo)
+        
     # CALLBACKS
 
     def rgbmap_cb(self, rgbmap, panimage):

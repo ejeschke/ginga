@@ -59,7 +59,7 @@ class Debug(GingaPlugin.GlobalPlugin):
         pInfo = gpmon.getPluginInfo(plname)
         gpmon.stop_plugin(pInfo)
         self.fv.update_pending(0.5)
-        #self.fv.mm.loadModule(plname)
+        self.fv.mm.loadModule(plname)
         gpmon.reloadPlugin(plname)
         self.fv.start_global_plugin(plname)
         return True

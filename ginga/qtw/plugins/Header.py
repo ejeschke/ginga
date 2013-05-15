@@ -93,6 +93,12 @@ class Header(GingaPlugin.GlobalPlugin):
     def delete_channel(self, viewer, chinfo):
         self.logger.debug("TODO: delete channel %s" % (chinfo.name))
 
+    def start(self):
+        names = self.fv.get_channelNames()
+        for name in names:
+            chinfo = self.fv.get_channelInfo(name)
+            self.add_channel(self.fv, chinfo)
+        
     def new_image_cb(self, fitsimage, image, tv):
         self.set_header(tv, image)
         

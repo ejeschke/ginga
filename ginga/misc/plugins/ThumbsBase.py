@@ -114,6 +114,10 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
     def load_file(self, thumbkey, chname, name, path):
         self.fv.switch_name(chname, name, path=path)
 
+        preload = self.settings.get('preloadImages', False)
+        if not preload:
+            return
+        
         index = self.thumbList.index(thumbkey)
         prevkey = nextkey = None
         if index > 0:
@@ -128,18 +132,15 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         
     def preload_file(self, chname, imname, path):
 
-        print "preload: checking %s" % (imname)
         chinfo = self.fv.get_channelInfo(chname)
         datasrc = chinfo.datasrc
         print datasrc.keys(sort='time')
         print datasrc.datums.keys()
-        print "has item: %s" % datasrc.has_key(imname)
         if not chinfo.datasrc.has_key(imname):
             self.logger.info("preloading image %s" % (path))
             image = self.fv.load_image(path)
             self.fv.gui_do(self.fv.add_image, imname, image,
                            chname=chname, silent=True)
-        print "end preload"
     
     def clear(self):
         self.thumbList = []
@@ -156,6 +157,14 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         rgbmap = fitsimage.get_rgbmap()
         rgbmap.add_callback('changed', self.rgbmap_cb, fitsimage)
 
+    def start(self):
+        names = self.fv.get_channelNames()
+        for name in names:
+            chinfo = self.fv.get_channelInfo(name)
+            self.add_channel(self.fv, chinfo)
+
+        # TODO: regenerate thumbs
+        
     def focus_cb(self, viewer, fitsimage):
         # Reflect transforms, colormap, etc.
         #self.copy_attrs(fitsimage)

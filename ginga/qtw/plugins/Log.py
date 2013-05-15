@@ -20,7 +20,7 @@ class Log(GingaPlugin.GlobalPlugin):
         # superclass defines some variables for us, like logger
         super(Log, self).__init__(fv)
 
-        self.histlimit = 100
+        self.histlimit = 1000
         self.histmax = 10000
         self.levels = (('Error', logging.ERROR),
                        ('Warn',  logging.WARN),

@@ -43,6 +43,7 @@ class FitsViewer(object):
         self.fitsimage = fi
 
         bd = fi.get_bindings()
+        bd.enable_pan(True)
         bd.enable_zoom(True)
         bd.enable_cuts(True)
         bd.enable_flip(True)

@@ -491,8 +491,15 @@ class FitsImageEvent(FitsImageQt):
             return 'control_l'
         if keycode in [QtCore.Qt.Key_Shift]:
             return 'shift_l'
+        if keycode in [QtCore.Qt.Key_Alt]:
+            return 'alt_l'
+        # if keycode in [QtCore.Qt.Key_Super_L]:
+        #     return 'super_l'
+        # if keycode in [QtCore.Qt.Key_Super_R]:
+        #     return 'super_r'
         if keycode in [QtCore.Qt.Key_Escape]:
             return 'escape'
+        # Conttrol key on Mac keyboards and "Windows" key under Linux
         if keycode in [16777250]:
             return 'meta_right'
         if keycode in self._fnkeycodes:

@@ -177,7 +177,7 @@ class CutsBase(GingaPlugin.LocalPlugin):
         return True
 
     def keydown(self, canvas, keyname):
-        if keyname == 'space':
+        if keyname == 'n':
             self.select_cut(None)
             return True
         elif keyname == 'h':
