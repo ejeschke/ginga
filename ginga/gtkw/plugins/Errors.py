@@ -12,7 +12,6 @@ import time
 from ginga import GingaPlugin
 
 import gtk
-import pango
 
 class Errors(GingaPlugin.GlobalPlugin):
 
@@ -22,7 +21,7 @@ class Errors(GingaPlugin.GlobalPlugin):
 
 
     def build_gui(self, container):
-        self.msgFont = pango.FontDescription("Fixed 12")
+        self.msgFont = self.fv.getFont("fixedFont", 12)
 
         self.msgList = gtk.VBox(spacing=2)
         

@@ -21,7 +21,7 @@ class Debug(GingaPlugin.GlobalPlugin):
     def build_gui(self, container):
         rvbox = container
 
-        self.msgFont = QtGui.QFont("Fixed", 14)
+        self.msgFont = self.fv.getFont("fixedFont", 14)
         tw = QtGui.QTextEdit()
         #tw.setLineWrapMode(??)
         ## tw.set_left_margin(4)

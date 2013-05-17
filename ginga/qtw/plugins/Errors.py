@@ -21,7 +21,7 @@ class Errors(GingaPlugin.GlobalPlugin):
         super(Errors, self).__init__(fv)
 
     def build_gui(self, container):
-        self.msgFont = QtGui.QFont("Fixed", 12)
+        self.msgFont = self.fv.getFont("fixedFont", 12)
 
         self.msgList = QtGui.QWidget()
         vbox = QtGui.QGridLayout()

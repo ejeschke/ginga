@@ -12,7 +12,6 @@ import logging
 from ginga import GingaPlugin
 from ginga.gtkw import GtkHelp
 import gtk
-import pango
 
 class Log(GingaPlugin.GlobalPlugin):
 
@@ -29,7 +28,7 @@ class Log(GingaPlugin.GlobalPlugin):
 
         
     def build_gui(self, container):
-        self.msgFont = pango.FontDescription("Fixed 10")
+        self.msgFont = self.fv.getFont("fixedFont", 10)
         tw = gtk.TextView()
         tw.set_wrap_mode(gtk.WRAP_NONE)
         tw.set_left_margin(4)

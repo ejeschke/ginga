@@ -10,7 +10,6 @@
 from ginga import GingaPlugin
 
 import gtk
-import pango
 
 class Debug(GingaPlugin.GlobalPlugin):
 
@@ -20,7 +19,7 @@ class Debug(GingaPlugin.GlobalPlugin):
 
 
     def build_gui(self, container):
-        self.msgFont = pango.FontDescription("Fixed 14")
+        self.msgFont = self.fv.getFont("fixedFont", 14)
         tw = gtk.TextView()
         tw.set_wrap_mode(gtk.WRAP_WORD)
         tw.set_left_margin(4)
