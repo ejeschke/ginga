@@ -14,7 +14,6 @@ from ginga.misc.plugins import CatalogsBase
 
 import gobject
 import gtk
-import pango
 
 class Catalogs(CatalogsBase.CatalogsBase):
 
@@ -26,7 +25,7 @@ class Catalogs(CatalogsBase.CatalogsBase):
     def build_gui(self, container, future=None):
         vbox1 = gtk.VBox()
 
-        self.msgFont = pango.FontDescription("Sans 12")
+        self.msgFont = self.fv.getFont('sansFont', 12)
         tw = gtk.TextView()
         tw.set_wrap_mode(gtk.WRAP_WORD)
         tw.set_left_margin(4)
@@ -315,8 +314,6 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
         sw.set_border_width(2)
         sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
 
-        #self.font = pango.FontDescription('Monospace 10')
-        
         # create the TreeView
         treeview = gtk.TreeView()
         self.treeview = treeview

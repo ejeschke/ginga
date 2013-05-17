@@ -19,10 +19,12 @@ class FitsImageCanvasError(FitsImageGtk.FitsImageGtkError):
 class FitsImageCanvas(FitsImageGtk.FitsImageZoom,
                       DrawingMixin, CanvasMixin, CompoundMixin):
 
-    def __init__(self, logger=None, settings=None, bindmap=None,
-                 bindings=None):
+    def __init__(self, logger=None, rgbmap=None, settings=None,
+                 bindmap=None, bindings=None):
         FitsImageGtk.FitsImageZoom.__init__(self, logger=logger,
+                                            rgbmap=rgbmap,
                                             settings=settings,
+                                            bindmap=bindmap,
                                             bindings=bindings)
         CompoundMixin.__init__(self)
         CanvasMixin.__init__(self)

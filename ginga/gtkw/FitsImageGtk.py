@@ -21,9 +21,9 @@ class FitsImageGtkError(FitsImageCairo.FitsImageCairoError):
 
 class FitsImageGtk(FitsImageCairo.FitsImageCairo):
 
-    def __init__(self, logger=None, settings=None):
-        #super(FitsImageGtk, self).__init__(logger=logger)
+    def __init__(self, logger=None, rgbmap=None, settings=None):
         FitsImageCairo.FitsImageCairo.__init__(self, logger=logger,
+                                               rgbmap=rgbmap,
                                                settings=settings)
 
         imgwin = gtk.DrawingArea()
@@ -199,9 +199,9 @@ class FitsImageGtk(FitsImageCairo.FitsImageCairo):
         
 class FitsImageEvent(FitsImageGtk):
 
-    def __init__(self, logger=None, settings=None):
-        #super(FitsImageEvent, self).__init__(logger=logger)
-        FitsImageGtk.__init__(self, logger=logger, settings=settings)
+    def __init__(self, logger=None, rgbmap=None, settings=None):
+        FitsImageGtk.__init__(self, logger=logger, rgbmap=rgbmap,
+                              settings=settings)
 
         imgwin = self.imgwin
         imgwin.set_flags(gtk.CAN_FOCUS)
@@ -437,9 +437,10 @@ class FitsImageEvent(FitsImageGtk):
 
 class FitsImageZoom(Mixins.UIMixin, FitsImageEvent):
 
-    def __init__(self, logger=None, settings=None, bindmap=None,
-                 bindings=None):
-        FitsImageEvent.__init__(self, logger=logger, settings=settings)
+    def __init__(self, logger=None, rgbmap=None, settings=None,
+                 bindmap=None, bindings=None):
+        FitsImageEvent.__init__(self, logger=logger, rgbmap=rgbmap,
+                                settings=settings)
         Mixins.UIMixin.__init__(self)
 
         if bindmap == None:

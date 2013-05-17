@@ -1172,9 +1172,13 @@ class FitsImageBase(Callback.Callbacks):
         if header:
             # Auto-orientation
             orient = header.get('Orientation', None)
+            if not orient:
+                orient = header.get('Image Orientation', None)
+                self.logger.info("orientation [%s]" % (
+                        orient))
             if orient:
                 try:
-                    orient = int(orient)
+                    orient = int(str(orient))
                     self.logger.info("setting orientation from metadata [%d]" % (
                         orient))
                     flip_x, flip_y, swap_xy = self.orientMap[orient]
@@ -1184,6 +1188,7 @@ class FitsImageBase(Callback.Callbacks):
 
                 except Exception, e:
                     # problems figuring out orientation--let it be
+                    self.logger.error("orientation error: %s" % str(e))
                     pass
 
         if invertY:

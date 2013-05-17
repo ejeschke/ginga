@@ -98,10 +98,9 @@ class RenderWidget(QtGui.QWidget):
 
 class FitsImageQt(FitsImage.FitsImageBase):
 
-    def __init__(self, logger=None, settings=None, render=None):
-        #super(FitsImageQt, self).__init__(logger=logger, settings=settings)
+    def __init__(self, logger=None, rgbmap=None, settings=None, render=None):
         FitsImage.FitsImageBase.__init__(self, logger=logger,
-                                         settings=settings)
+                                         rgbmap=rgbmap, settings=settings)
 
         if render == None:
             render = 'widget'
@@ -425,10 +424,9 @@ class RenderGraphicsViewZoom(RenderMixin, RenderGraphicsView):
 
 class FitsImageEvent(FitsImageQt):
 
-    def __init__(self, logger=None, settings=None, render=None):
-        #super(FitsImageEvent, self).__init__(logger=logger, settings=settings)
-        FitsImageQt.__init__(self, logger=logger, settings=settings,
-                             render=render)
+    def __init__(self, logger=None, rgbmap=None, settings=None, render=None):
+        FitsImageQt.__init__(self, logger=logger, rgbmap=rgbmap,
+                             settings=settings, render=render)
 
         # replace the widget our parent provided
         if self.wtype == 'scene':
@@ -636,10 +634,11 @@ class FitsImageEvent(FitsImageQt):
 
 class FitsImageZoom(Mixins.UIMixin, FitsImageEvent):
 
-    def __init__(self, logger=None, settings=None, render='widget',
+    def __init__(self, logger=None, settings=None, rgbmap=None,
+                 render='widget',
                  bindmap=None, bindings=None):
         FitsImageEvent.__init__(self, logger=logger, settings=settings,
-                                render=render)
+                                rgbmap=rgbmap, render=render)
         Mixins.UIMixin.__init__(self)
 
         if bindmap == None:

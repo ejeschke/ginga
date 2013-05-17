@@ -104,8 +104,10 @@ class SettingGroup(object):
             other.group[key] = self.group[key]
 
     def copySettings(self, other, keylist):
+        d = {}
         for key in keylist:
-            other.set(key, self.get(key))
+            d[key] = self.get(key)
+        other.setDict(d)
 
     def setdefault(self, key, value):
         if self.group.has_key(key):

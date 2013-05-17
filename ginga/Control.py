@@ -64,11 +64,13 @@ class GingaControl(Callback.Callbacks):
         self.chinfo = None
         self.chncnt = 0
         self.statustask = None
+        self.preloadLock = threading.RLock()
+        self.preloadList = []
 
         # Create general preferences
         self.settings = self.prefs.createCategory('general')
         self.settings.load(onError='silent')
-        self.settings.addDefaults(anticipateLoads=True)
+        self.settings.addDefaults(fixedFont='Monospace', sansFont='Sans')
 
         # Should channel change as mouse moves between windows
         self.channel_follows_focus = follow_focus
@@ -194,16 +196,16 @@ class GingaControl(Callback.Callbacks):
             self.ds.raise_tab('Contents')
         elif keyname == 'D':
             self.ds.raise_tab('Dialogs')
-        elif keyname == 'f':
-            self.toggle_fullscreen()
         elif keyname == 'F':
             self.build_fullscreen()
+        elif keyname == 'f':
+            self.toggle_fullscreen()
+        elif keyname == 'v':
+            self.build_view()
         elif keyname == 'm':
             self.maximize()
         elif keyname == 'escape':
-            chinfo = self.get_channelInfo(chname)
-            opmon = chinfo.opmon
-            opmon.deactivate_focused()
+            self.reset_viewer()
         elif keyname in self.fn_keys:
             index = self.fn_keys.index(keyname)
             if (index >= 0) and (index < len(self.operations)):
@@ -266,6 +268,12 @@ class GingaControl(Callback.Callbacks):
     def stop(self):
         self.ev_quit.set()
 
+    def reset_viewer(self):
+        chinfo = self.get_channelInfo()
+        opmon = chinfo.opmon
+        opmon.deactivate_focused()
+        self.normalsize()
+        
     # PLUGIN MANAGEMENT
 
     def start_operation(self, opname):
@@ -381,6 +389,36 @@ class GingaControl(Callback.Callbacks):
         # Return the image
         return image
 
+    def add_preload(self, chname, imname, path):
+        bnch = Bunch.Bunch(chname=chname, imname=imname, path=path)
+        with self.preloadLock:
+            self.preloadList.append(bnch)
+        self.nongui_do(self.preload_scan)
+        
+    def preload_scan(self):
+        # preload any pending files
+        # TODO: do we need any throttling of loading here?
+        with self.preloadLock:
+            while len(self.preloadList) > 0:
+                bnch = self.preloadList.pop(0)
+                self.nongui_do(self.preload_file, bnch.chname,
+                                  bnch.imname, bnch.path)
+
+    def preload_file(self, chname, imname, path):
+        # sanity check to see if the file is already in memory
+        self.logger.debug("preload: checking %s in %s" % (imname, chname))
+        chinfo = self.get_channelInfo(chname)
+        datasrc = chinfo.datasrc
+        self.logger.debug("has item: %s" % datasrc.has_key(imname))
+        if not chinfo.datasrc.has_key(imname):
+            # not there--load image in a non-gui thread, then have the
+            # gui add it to the channel silently
+            self.logger.info("preloading image %s" % (path))
+            image = self.load_image(path)
+            self.gui_do(self.add_image, imname, image,
+                           chname=chname, silent=True)
+        self.logger.debug("end preload")
+    
     def zoom_in(self):
         fitsimage = self.getfocus_fitsimage()
         fitsimage.zoom_in()

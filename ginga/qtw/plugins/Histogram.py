@@ -32,7 +32,7 @@ class Histogram(HistogramBase.HistogramBase):
         vbox1.setContentsMargins(4, 4, 4, 4)
         vbox1.setSpacing(2)
 
-        msgFont = QtGui.QFont("Sans", 14)
+        msgFont = self.fv.getFont("sansFont", 14)
         tw = QtGui.QLabel()
         tw.setFont(msgFont)
         tw.setWordWrap(True)

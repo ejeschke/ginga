@@ -21,7 +21,7 @@ class Catalogs(CatalogsBase.CatalogsBase):
     def build_gui(self, container, future=None):
         vbox1 = QtHelp.VBox()
 
-        msgFont = QtGui.QFont("Sans", 14)
+        msgFont = self.fv.getFont("sansFont", 14)
         tw = QtGui.QLabel()
         tw.setFont(msgFont)
         tw.setWordWrap(True)

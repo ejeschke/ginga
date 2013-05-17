@@ -38,6 +38,12 @@ class MyLabel(QtGui.QLabel):
     
 class Thumbs(ThumbsBase.ThumbsBase):
 
+    def __init__(self, fv):
+        # superclass defines some variables for us, like logger
+        super(Thumbs, self).__init__(fv)
+
+        self.thumbRowCount = 0
+
     def build_gui(self, container):
         rvbox = container
 
@@ -83,13 +89,12 @@ class Thumbs(ThumbsBase.ThumbsBase):
         b.auto_scroll.setChecked(autoScroll)
         rvbox.addWidget(w, stretch=0)
 
-
     def insert_thumbnail(self, imgwin, thumbkey, thumbname, chname, name, path,
                          metadata):
         pixmap = QtGui.QPixmap.fromImage(imgwin)
         imglbl = MyLabel()
         imglbl.setPixmap(pixmap)
-        imglbl.thumbs_cb = lambda: self.fv.switch_name(chname, name, path=path)
+        imglbl.thumbs_cb = lambda: self.load_file(thumbkey, chname, name, path)
 
         text = self.query_thumb(thumbkey, name, metadata)
         imglbl.setToolTip(text)

@@ -10,9 +10,9 @@
 #
 import sys, os
 import logging
+
 from ginga.AstroImage import pyfits
 from ginga.qtw.QtHelp import QtGui, QtCore
-
 from ginga.qtw.FitsImageQt import FitsImageZoom
 
 STD_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcName)s) | %(message)s'
@@ -51,9 +51,10 @@ class FitsViewer(QtGui.QMainWindow):
         hbox.setContentsMargins(QtCore.QMargins(4, 2, 4, 2))
 
         wopen = QtGui.QPushButton("Open File")
-        self.connect(wopen, QtCore.SIGNAL("clicked()"), self.open_file)
+        wopen.clicked.connect(self.open_file)
         wquit = QtGui.QPushButton("Quit")
-        self.connect(wquit, QtCore.SIGNAL("clicked()"),
+        self.connect(wquit,
+                     QtCore.SIGNAL("clicked()"),
                      self, QtCore.SLOT("close()"))
 
         hbox.addStretch(1)

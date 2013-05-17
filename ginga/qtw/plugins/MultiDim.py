@@ -39,7 +39,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
         sw.setWidgetResizable(True)
         sw.setWidget(twidget)
 
-        msgFont = QtGui.QFont("Sans", 14)
+        msgFont = self.fv.getFont("sansFont", 14)
         tw = QtGui.QLabel()
         tw.setFont(msgFont)
         tw.setWordWrap(True)

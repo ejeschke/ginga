@@ -8,7 +8,6 @@
 # Please see the file LICENSE.txt for details.
 #
 import gtk
-import pango
 from ginga.gtkw import GtkHelp
 from ginga import GingaPlugin
 
@@ -27,7 +26,7 @@ class Ruler(GingaPlugin.LocalPlugin):
         canvas.enable_draw(True)
         canvas.set_drawtype('ruler', color='cyan')
         canvas.set_callback('draw-event', self.wcsruler)
-        canvas.set_callback('cursor-down', self.clear)
+        canvas.set_callback('draw-down', self.clear)
         canvas.setSurface(self.fitsimage)
         self.canvas = canvas
 
@@ -38,7 +37,7 @@ class Ruler(GingaPlugin.LocalPlugin):
     def build_gui(self, container):
         vbox1 = gtk.VBox()
 
-        self.msgFont = pango.FontDescription("Sans 14")
+        self.msgFont = self.fv.getFont("sansFont", 14)
         tw = gtk.TextView()
         tw.set_wrap_mode(gtk.WRAP_WORD)
         tw.set_left_margin(4)

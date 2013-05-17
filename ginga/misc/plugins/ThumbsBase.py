@@ -10,6 +10,7 @@
 import os
 import time
 import hashlib
+import threading
 
 from ginga import GingaPlugin
 from ginga.misc import Bunch
@@ -32,6 +33,8 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         self.thumbSep = 15
         # max length of thumb on the long side
         self.thumbWidth = 150
+        self.cursor = 0
+
         prefs = self.fv.get_preferences()
         self.settings = prefs.createCategory('plugin_Thumbs')
         self.settings.load(onError='silent')
@@ -112,36 +115,46 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         return False
         
     def load_file(self, thumbkey, chname, name, path):
+        self.logger.debug("loading image: %s" % (str(thumbkey)))
         self.fv.switch_name(chname, name, path=path)
+
+        # remember the last file we loaded
+        index = self.thumbList.index(thumbkey)
+        self.cursor = index
 
         preload = self.settings.get('preloadImages', False)
         if not preload:
             return
         
-        index = self.thumbList.index(thumbkey)
-        prevkey = nextkey = None
-        if index > 0:
-            prevkey = self.thumbList[index-1]
+        # TODO: clear any existing files waiting to be preloaded?
+
+        # queue next and previous files for preloading
         if index < len(self.thumbList)-1:
             nextkey = self.thumbList[index+1]
-
-        if nextkey != None:
             bnch = self.thumbDict[nextkey]
-            self.fv.nongui_do(self.preload_file, bnch.chname,
-                              bnch.imname, bnch.path)
-        
-    def preload_file(self, chname, imname, path):
+            self.fv.add_preload(bnch.chname, bnch.imname, bnch.path)
 
-        chinfo = self.fv.get_channelInfo(chname)
-        datasrc = chinfo.datasrc
-        print datasrc.keys(sort='time')
-        print datasrc.datums.keys()
-        if not chinfo.datasrc.has_key(imname):
-            self.logger.info("preloading image %s" % (path))
-            image = self.fv.load_image(path)
-            self.fv.gui_do(self.fv.add_image, imname, image,
-                           chname=chname, silent=True)
-    
+        if index > 0:
+            prevkey = self.thumbList[index-1]
+            bnch = self.thumbDict[prevkey]
+            self.fv.add_preload(bnch.chname, bnch.imname, bnch.path)
+
+    def load_next(self):
+        index = self.cursor + 1
+        if index < len(self.thumbList)-1:
+            nextkey = self.thumbList[index+1]
+            bnch = self.thumbDict[nextkey]
+            self.gui_do(self.load_file, nextkey,
+                        bnch.chname, bnch.imname, bnch.path)
+        
+    def load_previous(self):
+        index = self.cursor - 1
+        if index > 0:
+            prevkey = self.thumbList[index+1]
+            bnch = self.thumbDict[prevkey]
+            self.gui_do(self.load_file, prevkey,
+                        bnch.chname, bnch.imname, bnch.path)
+        
     def clear(self):
         self.thumbList = []
         self.thumbDict = {}
@@ -157,14 +170,6 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         rgbmap = fitsimage.get_rgbmap()
         rgbmap.add_callback('changed', self.rgbmap_cb, fitsimage)
 
-    def start(self):
-        names = self.fv.get_channelNames()
-        for name in names:
-            chinfo = self.fv.get_channelInfo(name)
-            self.add_channel(self.fv, chinfo)
-
-        # TODO: regenerate thumbs
-        
     def focus_cb(self, viewer, fitsimage):
         # Reflect transforms, colormap, etc.
         #self.copy_attrs(fitsimage)

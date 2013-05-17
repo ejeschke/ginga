@@ -19,10 +19,11 @@ class FitsImageCanvas(FitsImageQt.FitsImageZoom,
                       DrawingMixin, CanvasMixin, CompoundMixin):
 
     def __init__(self, logger=None, settings=None, render=None,
-                 bindmap=None, bindings=None):
+                 rgbmap=None, bindmap=None, bindings=None):
         FitsImageQt.FitsImageZoom.__init__(self, logger=logger,
                                            settings=settings,
                                            render=render,
+                                           rgbmap=rgbmap,
                                            bindmap=bindmap,
                                            bindings=bindings)
         CompoundMixin.__init__(self)

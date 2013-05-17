@@ -64,7 +64,7 @@ class PixTable(GingaPlugin.LocalPlugin):
         fr = QtHelp.Frame("Pixel Values")
         
         # Make the cuts plot
-        msgFont = QtGui.QFont("Courier", 10)
+        msgFont = self.fv.getFont('fixedFont', 10)
         tw = QtGui.QLabel()
         tw.setFont(msgFont)
         tw.setWordWrap(False)

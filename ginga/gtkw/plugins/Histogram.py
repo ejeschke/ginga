@@ -8,7 +8,6 @@
 # Please see the file LICENSE.txt for details.
 #
 import gtk
-import pango
 
 from ginga.misc.plugins import HistogramBase
 from ginga.gtkw import GtkHelp
@@ -32,7 +31,7 @@ class Histogram(HistogramBase.HistogramBase):
         # Make the histogram plot
         vbox = gtk.VBox()
 
-        self.msgFont = pango.FontDescription("Sans 14")
+        self.msgFont = self.fv.getFont("sansFont", 14)
         tw = gtk.TextView()
         tw.set_wrap_mode(gtk.WRAP_WORD)
         tw.set_left_margin(4)

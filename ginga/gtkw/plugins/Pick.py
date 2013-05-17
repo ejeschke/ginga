@@ -8,7 +8,6 @@
 # Please see the file LICENSE.txt for details.
 #
 import gtk
-import pango
 from ginga.gtkw import GtkHelp
 from ginga import iqcalc
 from ginga.misc.plugins import PickBase
@@ -125,7 +124,7 @@ class Pick(PickBase.PickBase):
         vbox = gtk.VBox()
         sw.add_with_viewport(vbox)
 
-        self.msgFont = pango.FontDescription("Sans 14")
+        self.msgFont = self.fv.getFont("sansFont", 14)
         tw = gtk.TextView()
         tw.set_wrap_mode(gtk.WRAP_WORD)
         tw.set_left_margin(4)

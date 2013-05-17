@@ -116,7 +116,6 @@ class FitsImageBindings(object):
         self.keys.swap_xy = ['backslash', '|']
         self.keys.rotate = ['r']
         self.keys.rotate_reset = ['R']
-        self.keys.draw = ['space']
         self.keys.cancel = ['escape']
 
         # User defined buttons
@@ -129,6 +128,8 @@ class FitsImageBindings(object):
 
     def set_bindings(self, fitsimage):
 
+        fitsimage.add_callback('map', self.window_map)
+
         bindmap = fitsimage.get_bindmap()
         bindmap.clear_event_map()
 
@@ -137,10 +138,6 @@ class FitsImageBindings(object):
 
         # Set up pointer mapping
         self.setup_default_btnmap(fitsimage, bindmap)
-        
-        # Set up default callbacks
-        self.setup_default_callbacks(fitsimage)
-
         
     def set_modifier(self, fitsimage, name, modtype='oneshot'):
         bindmap = fitsimage.get_bindmap()
@@ -208,14 +205,10 @@ class FitsImageBindings(object):
 
         # Mouse operations that are invoked by a preceeding key
         for name in ('rotate', 'cmapwarp', 'cutlo', 'cuthi', 'cutall',
-                     'draw', 'pan', 'freepan'):
+                        'draw', 'pan', 'freepan'):
             bindmap.map_event(name, 'index', name)
 
-    def setup_default_callbacks(self, fitsimage):
-
-        fitsimage.add_callback('map', self.window_map)
-
-        # register our actions (below) for these symbolic events
+        # Now register our actions (below) for these symbolic events
         for name in ('cursor', 'wheel', 'draw', 'rotate', 'cmapwarp',
                      'pan', 'freepan', 'cutlo', 'cuthi', 'cutall'):
             method = getattr(self, 'ms_'+name)
@@ -231,8 +224,7 @@ class FitsImageBindings(object):
         fitsimage.set_callback('zoom-fine-scroll', self.ms_zoom_fine)
 
     def reset(self, fitsimage):
-        bd = fitsimage.get_bindmap()
-        bd.reset_modifier()
+        self.reset_modifier(fitsimage)
         self.pan_stop(fitsimage)
         fitsimage.onscreen_message(None)
 
@@ -479,12 +471,6 @@ class FitsImageBindings(object):
             fitsimage.onscreen_message("Free panning (drag mouse)", delay=1.0)
         return True
 
-    def kp_pan_drag(self, fitsimage, action, data_x, data_y):
-        if self.canpan:
-            self.set_modifier(fitsimage, 'pan')
-            fitsimage.onscreen_message("Drag panning (drag mouse)", delay=1.0)
-        return True
-
     def kp_pan_set(self, fitsimage, action, data_x, data_y):
         if self.canpan:
             self._panset(fitsimage, data_x, data_y, redraw=True)
@@ -628,16 +614,6 @@ class FitsImageBindings(object):
                                        delay=1.0)
         return True
 
-    def kp_cancel(self, fitsimage, action, data_x, data_y):
-        self.reset(fitsimage)
-        return True
-
-    def kp_draw(self, fitsimage, action, data_x, data_y):
-        self.set_modifier(fitsimage, 'draw')
-        # TODO: change cursor?
-        #fitsimage.onscreen_message("Draw!")
-        print "DRAW!"
-        return True
 
     #####  MOUSE ACTION CALLBACKS #####
 
@@ -887,12 +863,12 @@ class BindingMapper(object):
         # Set up modifier mapping
         if modmap == None:
             self.modmap = {}
-            for keyname, modname in (('shift_l', 'shift'),
-                                     ('shift_r', 'shift'),
-                                     ('control_l', 'ctrl'),
-                                     ('control_r', 'ctrl'),
-                                     ):
-                self.add_modifier(keyname, modname)
+            for keyname in ('shift_l', 'shift_r'):
+                self.add_modifier(keyname, 'shift')
+            for keyname in ('control_l', 'control_r'):
+                self.add_modifier(keyname, 'ctrl')
+            for keyname in ('meta_right',):
+                self.add_modifier(keyname, 'draw')
         else:
             self.modmap = modmap
 
@@ -1013,6 +989,7 @@ class BindingMapper(object):
         try:
             button = self.btnmap[btncode]
             idx = (self._kbdmod, button)
+            self.logger.debug("Event map for %s" % (str(idx)))
             emap = self.eventmap[idx]
 
         except KeyError:

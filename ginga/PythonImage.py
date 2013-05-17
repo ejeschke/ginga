@@ -43,6 +43,12 @@ try:
 except ImportError:
     have_cms = False
 
+try:
+    import EXIF
+    have_exif = True
+except ImportError:
+    have_exif = False
+
 # For testing...
 #have_qtimage = False
 #have_pilutil = False
@@ -223,6 +229,12 @@ class PythonImage(BaseImage):
             data_np = numpy.array(image)
 
         elif have_qtimage:
+            # QImage doesn't give EXIF info, so use 3rd-party lib if available
+            if have_exif:
+                with open(filepath, 'rb') as in_f:
+                    d = EXIF.process_file(in_f)
+                kwds.update(d)
+
             means = 'QImage'
             qimage = QImage()
             qimage.load(filepath)

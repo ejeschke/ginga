@@ -27,7 +27,7 @@ class Ruler(GingaPlugin.LocalPlugin):
         canvas.enable_draw(True)
         canvas.set_drawtype('ruler', color='cyan')
         canvas.set_callback('draw-event', self.wcsruler)
-        canvas.set_callback('cursor-down', self.clear)
+        canvas.set_callback('draw-down', self.clear)
         canvas.setSurface(self.fitsimage)
         self.canvas = canvas
 
@@ -48,7 +48,7 @@ class Ruler(GingaPlugin.LocalPlugin):
         sw.setWidgetResizable(True)
         sw.setWidget(twidget)
 
-        msgFont = QtGui.QFont("Sans", 14)
+        msgFont = self.fv.getFont("sansFont", 14)
         tw = QtGui.QLabel()
         tw.setFont(msgFont)
         tw.setWordWrap(True)

@@ -22,6 +22,7 @@ import pango
 # Local application imports
 from ginga import FitsImage
 from ginga import cmap, imap
+from ginga import Bindings
 from ginga.misc import Bunch
 
 moduleHome = os.path.split(sys.modules[__name__].__file__)[0]
@@ -68,14 +69,16 @@ class GingaView(GtkMain.GtkMain):
         self.w = Bunch.Bunch()
         self.iconpath = icon_path
 
-        self.font = pango.FontDescription('Monospace 12')
-        self.font11 = pango.FontDescription('Monospace 11')
-        self.w.tooltips = gtk.Tooltips()
-        
         self.window_is_fullscreen = False
         self.w.fscreen = None
         
     def build_toplevel(self, layout):
+
+        self.w.tooltips = gtk.Tooltips()
+        
+        self.font = self.getFont('fixedFont', 12)
+        self.font11 = self.getFont('fixedFont', 11)
+
         # Hack to enable images in Buttons in recent versions of gnome.
         # Why did they change the default?  Grrr....
         s = gtk.settings_get_default()
@@ -269,7 +272,7 @@ class GingaView(GtkMain.GtkMain):
     def fullscreen(self):
         self.w.root.fullscreen()
             
-    def normal(self):
+    def normalsize(self):
         self.w.root.unfullscreen()
             
     def maximize(self):
@@ -325,8 +328,11 @@ class GingaView(GtkMain.GtkMain):
         fr.add(cbar)
         return fr
     
-    def build_viewpane(self, settings):
+    def build_viewpane(self, settings, rgbmap=None):
+        bindings = Bindings.FitsImageBindings(self.logger)
         fi = FitsImageCanvasGtk.FitsImageCanvas(logger=self.logger,
+                                                rgbmap=rgbmap,
+                                                bindings=bindings,
                                                 settings=settings)
         fi.add_callback('motion', self.motion_cb)
         fi.add_callback('key-press', self.keypress)
@@ -398,9 +404,10 @@ class GingaView(GtkMain.GtkMain):
         chinfo = self.get_channelInfo()
         fitsimage = chinfo.fitsimage
         settings = fitsimage.get_settings()
+        rgbmap = fitsimage.get_rgbmap()
 
         root = gtk.Window(gtk.WINDOW_TOPLEVEL)
-        fi = self.build_viewpane(settings)
+        fi = self.build_viewpane(settings, rgbmap=rgbmap)
         iw = fi.get_widget()
         root.add(iw)
 
@@ -577,6 +584,11 @@ class GingaView(GtkMain.GtkMain):
             coords = map(int, coords)
             self.setPos(*coords)
 
+    def getFont(self, fontType, pointSize):
+        fontFamily = self.settings.get(fontType)
+        font = pango.FontDescription('%s %d' % (fontFamily, pointSize))
+        return font
+    
     ####################################################
     # CALLBACKS
     ####################################################

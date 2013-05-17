@@ -20,9 +20,9 @@ class FitsImageCairoError(FitsImage.FitsImageError):
 
 class FitsImageCairo(FitsImage.FitsImageBase):
 
-    def __init__(self, logger=None, settings=None):
-        #super(FitsImageCairo, self).__init__(logger=logger)
+    def __init__(self, logger=None, rgbmap=None, settings=None):
         FitsImage.FitsImageBase.__init__(self, logger=logger,
+                                         rgbmap=rgbmap,
                                          settings=settings)
 
         self.surface = None
@@ -206,8 +206,8 @@ class FitsImageCairo(FitsImage.FitsImageBase):
 # class FitsImageCanvas(FitsImageCairo,
 #                       CanvasMixin, CompoundMixin):
 
-#     def __init__(self, logger=None, settings=None):
-#         FitsImageCairo.__init__(self, logger=logger,
+#     def __init__(self, logger=None, rgbmap=None, settings=None):
+#         FitsImageCairo.__init__(self, logger=logger, rgbmap=rgbmap,
 #                                 settings=settings)
 #         CompoundMixin.__init__(self)
 #         CanvasMixin.__init__(self)

@@ -8,7 +8,6 @@
 # Please see the file LICENSE.txt for details.
 #
 import gtk
-import pango
 import numpy
 
 from ginga.gtkw import GtkHelp
@@ -60,7 +59,7 @@ class PixTable(GingaPlugin.LocalPlugin):
         # Make the histogram plot
         vbox = gtk.VBox()
 
-        self.msgFont = pango.FontDescription("Monospace 10")
+        self.msgFont = self.fv.getFont('fixedFont', 10)
         tw = gtk.TextView()
         tw.set_wrap_mode(gtk.WRAP_NONE)
         tw.set_left_margin(4)

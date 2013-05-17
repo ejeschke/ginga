@@ -18,6 +18,7 @@ from ginga.qtw.QtHelp import QtGui, QtCore
 # Local application imports
 from ginga import cmap, imap
 from ginga import FitsImage
+from ginga import Bindings
 from ginga.misc import Bunch
 
 
@@ -59,15 +60,16 @@ class GingaView(QtMain.QtMain):
         self.w = Bunch.Bunch()
         self.iconpath = icon_path
 
-        self.font = QtGui.QFont('Monospace', 12)
-        self.font11 = QtGui.QFont('Monospace', 11)
-        self.font14 = QtGui.QFont('Monospace', 14)
+
+    def build_toplevel(self, layout):
+
+        self.font = self.getFont('fixedFont', 12)
+        self.font11 = self.getFont('fixedFont', 11)
+        self.font14 = self.getFont('fixedFont', 14)
 
         self.w.tooltips = None
         QtGui.QToolTip.setFont(self.font11)
-        
 
-    def build_toplevel(self, layout):
         # Create root window and add delete/destroy callbacks
         root = QtHelp.TopLevel()
         root.setApp(self)
@@ -239,7 +241,7 @@ class GingaView(QtMain.QtMain):
     def fullscreen(self):
         self.w.root.showFullScreen()
             
-    def normal(self):
+    def normalsize(self):
         self.w.root.showNormal()
             
     def maximize(self):
@@ -262,6 +264,7 @@ class GingaView(QtMain.QtMain):
         chinfo = self.get_channelInfo()
         fitsimage = chinfo.fitsimage
         settings = fitsimage.get_settings()
+        rgbmap = fitsimage.get_rgbmap()
 
         root = QtHelp.TopLevel()
         vbox = QtGui.QVBoxLayout()
@@ -269,7 +272,7 @@ class GingaView(QtMain.QtMain):
         vbox.setSpacing(0)
         root.setLayout(vbox)
 
-        fi = self.build_viewpane(settings)
+        fi = self.build_viewpane(settings, rgbmap=rgbmap)
         iw = fi.get_widget()
         vbox.addWidget(iw, stretch=1)
 
@@ -367,8 +370,11 @@ class GingaView(QtMain.QtMain):
         layout.addWidget(cbar, stretch=1)
         return fr
     
-    def build_viewpane(self, settings):
+    def build_viewpane(self, settings, rgbmap=None):
+        bindings = Bindings.FitsImageBindings(self.logger)
         fi = FitsImageCanvasQt.FitsImageCanvas(logger=self.logger,
+                                               rgbmap=rgbmap,
+                                               bindings=bindings,
                                                settings=settings)
         fi.enable_draw(False)
         fi.enable_auto_orient(True)
@@ -587,6 +593,11 @@ class GingaView(QtMain.QtMain):
             coords = map(int, coords)
             self.setPos(*coords)
 
+    def getFont(self, fontType, pointSize):
+        fontFamily = self.settings.get(fontType)
+        font = QtGui.QFont(fontFamily, pointSize)
+        return font
+    
     ####################################################
     # CALLBACKS
     ####################################################
