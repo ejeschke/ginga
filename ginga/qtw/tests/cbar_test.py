@@ -5,12 +5,13 @@ from ginga.qtw import ColorBar
 from ginga import cmap, imap
 import logging
 
-app = QtGui.QApplication([])
+if __name__ == "__main__":
+    app = QtGui.QApplication([])
 
-logger = logging.getLogger('cbar')
-w = ColorBar.ColorBar(logger)
-w.set_cmap(cmap.get_cmap('rainbow'))
-w.set_imap(imap.get_imap('ramp'))
-w.show()
+    logger = logging.getLogger('cbar')
+    w = ColorBar.ColorBar(logger)
+    w.set_cmap(cmap.get_cmap('rainbow'))
+    w.set_imap(imap.get_imap('ramp'))
+    w.show()
 
-app.exec_()
+    app.exec_()

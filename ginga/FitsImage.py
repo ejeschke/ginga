@@ -24,8 +24,8 @@ class FitsImageCoordsError(FitsImageError):
     pass
 
 class FitsImageBase(Callback.Callbacks):
-    """An abstract base class for displaying FITS images represented by
-    numpy data arrays, such as loaded by the pyfits module.
+    """An abstract base class for displaying images represented by
+    numpy data arrays.
 
     This class attempts to do as much of the image handling using numpy
     array manipulations (even color and intensity mapping) so that only
@@ -198,8 +198,10 @@ class FitsImageBase(Callback.Callbacks):
             self.enable_callback(name)
 
     def set_window_size(self, width, height, redraw=True):
-        """This is called by the subclass when the actual dimensions of the
-        window are known."""
+        """
+        This is called by the subclass with `width` and `height` when the
+        actual dimensions of the allocated window are known.   
+        """
         self._imgwin_wd = width
         self._imgwin_ht = height
         self._ctr_x = width // 2
@@ -212,18 +214,34 @@ class FitsImageBase(Callback.Callbacks):
             self.redraw(whence=0)
 
     def get_window_size(self):
+        """
+        Returns the window size in the underlying implementation as a tuple
+        of (width, height).
+        """
         if not self._imgwin_set:
             raise FitsImageError("Dimensions of actual window are not yet determined")
         return (self._imgwin_wd, self._imgwin_ht)
 
     def get_dims(self, data):
+        """
+        Returns the dimensions of numpy array `data` as a tuple of
+        (width, height).  `data` may have more dimensions, but they are not
+        reported.
+        """
         height, width = data.shape[:2]
         return (width, height)
 
     def get_data_size(self):
+        """
+        Returns the dimensions of the image currently being displayed as a
+        tuple of (width, height).
+        """
         return self.image.get_size()
 
     def get_settings(self):
+        """
+        Returns the Settings object used by this instance.
+        """
         return self.t_
     
     # TODO: deprecate these two?
@@ -244,8 +262,11 @@ class FitsImageBase(Callback.Callbacks):
         self.redraw(whence=1)
         
     def cmap_changed_cb(self, setting, value):
+        # This method is a callback that is invoked when the color settings
+        # have changed in some way.
         self.logger.info("Color settings have changed.")
 
+        # Update our RGBMapper with any changes
         cmap_name = self.t_.get('color_map', "ramp")
         cm = cmap.get_cmap(cmap_name)
         self.rgbmap.set_cmap(cm, callback=False)
@@ -261,18 +282,39 @@ class FitsImageBase(Callback.Callbacks):
         self.rgbmap.set_hash_algorithm(hash_alg, callback=True)
         
     def get_rgbmap(self):
+        """
+        Returns the RGBMapper object used by this instance.
+        """
         return self.rgbmap
 
     def set_rgbmap(self, rgbmap, redraw=False):
+        """
+        Set the RGBMapper object used by this instance.  The RGBMapper
+        controls how the values in the image are mapped to color.
+
+        See RGBMap module.
+        """
         self.rgbmap = rgbmap
         rgbmap.add_callback('changed', self.rgbmap_cb)
         if redraw:
             self.redraw(whence=2)
         
     def get_image(self):
+        """
+        Returns the image currently being displayed.  The object returned 
+        will be a subclass of BaseImage.
+        """
         return self.image
     
     def set_image(self, image, redraw=True):
+        """
+        Sets an image to be displayed.
+
+        `image` should be a subclass of BaseImage.
+        If `redraw` is True then the associated widget will be redrawn.
+        If there is no error, this method will invoke the 'image-set'
+        callback.
+        """
         self.image = image
         profile = self.image.get('profile', None)
         if (profile != None) and (self.t_['use_embedded_profile']):
@@ -302,6 +344,15 @@ class FitsImageBase(Callback.Callbacks):
         self.redraw(whence=0)
         
     def set_data(self, data, metadata=None, redraw=True):
+        """
+        Sets an image to be displayed by providing raw data.
+
+        This is a convenience method for first constructing an image
+        with AstroImage and then calling set_image().
+        
+        `data` should be at least a 2D numpy array.
+        `metadata` can be a dictionary (map-like) of image metadata.
+        """
         dims = data.shape
         ## assert (len(dims) == 2), \
         ##        FitsImageError("Only 2D images are supported!")
@@ -310,6 +361,11 @@ class FitsImageBase(Callback.Callbacks):
         self.set_image(image, redraw=redraw)
 
     def clear(self, redraw=True):
+        """
+        Clear the displayed image by setting it to a 1x1 black image.
+
+        If `redraw` is True then the associated widget will be redrawn.
+        """
         self.set_data(numpy.zeros((1, 1)), redraw=redraw)
         
     def save_profile(self, **params):
@@ -337,10 +393,18 @@ class FitsImageBase(Callback.Callbacks):
         pass
 
     def copy_to_dst(self, target):
+        """
+        Extract our image and call set_image() on the target with it.
+        """
         #target.set_data(self._data_org.copy())
         target.set_image(self.image)
 
     def redraw(self, whence=0):
+        """
+        Redraw the displayed image.
+
+        For the meaning of `whence`, see get_rgb_object().
+        """
         #print "REDRAWING %s whence=%d" % (str(self), whence)
         try:
             self.redraw_data(whence=whence)
@@ -360,6 +424,9 @@ class FitsImageBase(Callback.Callbacks):
                 self.logger.error(tb_str)
 
     def redraw_data(self, whence=0):
+        """
+        Do not call this method unless you are implementing a subclass.
+        """
         rgbobj = self.get_rgb_object(whence=whence)
         self.render_image(rgbobj, self._dst_x, self._dst_y)
         # TODO: see if we can deprecate this fake callback
@@ -367,18 +434,32 @@ class FitsImageBase(Callback.Callbacks):
             self.make_callback('pan-set')
 
     def render_image(self, rgbobj, dst_x, dst_y):
-        self.logger.warn("Subclass needs to override this method!")
+        self.logger.warn("Subclass needs to override this abstract method!")
         
     def update_image(self):
         self.logger.warn("Subclass should override this abstract method!")
     
     def get_datarect(self):
+        """
+        Returns the approximate bounding box of the displayed image in
+        data coordinates (x1, y1, x2, y2).
+        """
         x1, y1, x2, y2 = self._org_x1, self._org_y1, self._org_x2, self._org_y2
         return (x1, y1, x2, y2)
 
     def get_rgb_object(self, whence=0):
-        """Create an RGB numpy array (NxMx3) representing the data that
-        should be rendered at this zoom level and pan settings.
+        """
+        Create and return an RGB numpy array (NxMx3) representing the data
+        that should be rendered at this zoom level and pan settings.
+
+        `whence` is an optimization flag that reduces the time to create
+        the object by only recalculating what is necessary:
+
+        0   = new image or pan/scale has changed, recalculate everything
+        0.5 = transform or rotation has changed
+        1   = cut levels or similar has changed
+        2   = color mapping has changed
+        3   = graphical overlays have changed
         """
         time_start = time.time()
         if (whence <= 0) or (self._cutout == None):

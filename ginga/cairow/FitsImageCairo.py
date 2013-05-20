@@ -36,7 +36,8 @@ class FitsImageCairo(FitsImage.FitsImageBase):
         self.cr = None
         self.message = None
 
-        self.t_.setDefaults(show_pan_position=False)
+        self.t_.setDefaults(show_pan_position=False,
+                            onscreen_ff='Sans Serif')
         
     def _render_offscreen(self, surface, data, dst_x, dst_y,
                           width, height):
@@ -90,7 +91,7 @@ class FitsImageCairo(FitsImage.FitsImageBase):
         r, g, b = self.img_fg
         #cr.set_source_rgb(1.0, 1.0, 1.0)
         cr.set_source_rgb(r, g, b)
-        cr.select_font_face('Sans Serif')
+        cr.select_font_face(self.t_['onscreen_ff'])
         cr.set_font_size(24.0)
         a, b, wd, ht, i, j = cr.text_extents(message)
         y = ((height // 3) * 2) - (ht // 2)

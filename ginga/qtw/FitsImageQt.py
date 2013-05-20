@@ -115,12 +115,14 @@ class FitsImageQt(FitsImage.FitsImageBase):
         self.imgwin.fitsimage = self
         self.pixmap = None
 
+        self.t_.setDefaults(show_pan_position=False,
+                            onscreen_ff='Sans Serif')
+
         self.message = None
         self.msgtimer = QtCore.QTimer()
-        # QtCore.QObject.connect(self.msgtimer, QtCore.SIGNAL("timeout()"),
-        #                        self.onscreen_message_off)
         self.msgtimer.timeout.connect(self.onscreen_message_off)
-        self.msgfont = QtGui.QFont('Sans Serif', pointSize=24)
+        self.msgfont = QtGui.QFont(self.t_['onscreen_ff'],
+                                   pointSize=24)
         self.set_bg(0.5, 0.5, 0.5, redraw=False)
         self.set_fg(1.0, 1.0, 1.0, redraw=False)
 
@@ -138,7 +140,6 @@ class FitsImageQt(FitsImage.FitsImageBase):
         self._defer_task.setSingleShot(True)
         self._defer_task.timeout.connect(self._redraw)
 
-        self.t_.setDefaults(show_pan_position=False)
 
     def get_widget(self):
         return self.imgwin

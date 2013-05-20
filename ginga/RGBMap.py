@@ -48,11 +48,20 @@ class RGBMapper(Callback.Callbacks):
             self.enable_callback(name)
 
     def set_cmap(self, cmap, callback=True):
+        """
+        Set the color map used by this RGBMapper.
+
+        `cmap` specifies a ColorMap object.  If `callback` is True, then
+        any callbacks associated with this change will be invoked.
+        """
         self.cmap = cmap
         self.calc_cmap()
         self.recalc(callback=callback)
 
     def get_cmap(self):
+        """
+        Return the color map used by this RGBMapper.
+        """
         return self.cmap
     
     def calc_cmap(self):
@@ -62,9 +71,17 @@ class RGBMapper(Callback.Callbacks):
         self.carr = numpy.round(arr).astype('uint8')
 
     def get_rgb(self, index):
+        """
+        Return a tuple of (R, G, B) values in the 0-255 range associated
+        mapped by the value of `index`.
+        """
         return tuple(self.arr[index])
 
     def get_rgbval(self, index):
+        """
+        Return a tuple of (R, G, B) values in the 0-255 range associated
+        mapped by the value of `index`.
+        """
         assert (index >= 0) and (index < 256), \
                RGBMapError("Index must be in range 0-255 !")
         index = self.sarr[index].clip(0, 255)
@@ -73,11 +90,20 @@ class RGBMapper(Callback.Callbacks):
                 self.arr[2][index])
 
     def set_imap(self, imap, callback=True):
+        """
+        Set the intensity map used by this RGBMapper.
+
+        `imap` specifies an IntensityMap object.  If `callback` is True, then
+        any callbacks associated with this change will be invoked.
+        """
         self.imap = imap
         self.calc_imap()
         self.recalc(callback=callback)
 
     def get_imap(self):
+        """
+        Return the intensity map used by this RGBMapper.
+        """
         return self.imap
     
     def calc_imap(self):
