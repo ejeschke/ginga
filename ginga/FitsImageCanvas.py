@@ -502,8 +502,7 @@ class DrawingMixin(object):
             
         return True
             
-    def draw_start(self, canvas, button, data_x, data_y):
-        #if self.candraw and ((button == 0x4) or (button == 0x11)):
+    def draw_start(self, canvas, action, data_x, data_y):
         if self.candraw:
             self._isdrawing = True
             self._start_x = data_x
@@ -520,7 +519,8 @@ class DrawingMixin(object):
 
             if obj:
                 objtag = self.add(obj, redraw=True)
-                return self.make_callback('draw-event', objtag)
+                self.make_callback('draw-event', objtag)
+                return True
             else:
                 self.processDrawing()
                 

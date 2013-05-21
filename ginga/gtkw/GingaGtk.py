@@ -22,7 +22,6 @@ import pango
 # Local application imports
 from ginga import FitsImage
 from ginga import cmap, imap
-from ginga import Bindings
 from ginga.misc import Bunch
 
 moduleHome = os.path.split(sys.modules[__name__].__file__)[0]
@@ -329,10 +328,8 @@ class GingaView(GtkMain.GtkMain):
         return fr
     
     def build_viewpane(self, settings, rgbmap=None):
-        bindings = Bindings.FitsImageBindings(self.logger)
         fi = FitsImageCanvasGtk.FitsImageCanvas(logger=self.logger,
                                                 rgbmap=rgbmap,
-                                                bindings=bindings,
                                                 settings=settings)
         fi.add_callback('motion', self.motion_cb)
         fi.add_callback('key-press', self.keypress)

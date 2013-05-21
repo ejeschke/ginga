@@ -635,6 +635,18 @@ class FitsImageEvent(FitsImageQt):
 
 class FitsImageZoom(Mixins.UIMixin, FitsImageEvent):
 
+    # class variables for binding map and bindings can be set
+    bindmapClass = Bindings.BindingMapper
+    bindingsClass = Bindings.FitsImageBindings
+
+    @classmethod
+    def set_bindingsClass(cls, klass):
+        cls.bindingsClass = klass
+        
+    @classmethod
+    def set_bindmapClass(cls, klass):
+        cls.bindmapClass = klass
+        
     def __init__(self, logger=None, settings=None, rgbmap=None,
                  render='widget',
                  bindmap=None, bindings=None):
@@ -643,12 +655,12 @@ class FitsImageZoom(Mixins.UIMixin, FitsImageEvent):
         Mixins.UIMixin.__init__(self)
 
         if bindmap == None:
-            bindmap = Bindings.BindingMapper(self.logger)
+            bindmap = FitsImageZoom.bindmapClass(self.logger)
         self.bindmap = bindmap
         bindmap.register_for_events(self)
 
         if bindings == None:
-            bindings = Bindings.FitsImageBindings(self.logger)
+            bindings = FitsImageZoom.bindingsClass(self.logger)
         self.set_bindings(bindings)
 
     def get_bindmap(self):

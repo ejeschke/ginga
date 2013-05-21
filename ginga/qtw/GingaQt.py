@@ -18,7 +18,6 @@ from ginga.qtw.QtHelp import QtGui, QtCore
 # Local application imports
 from ginga import cmap, imap
 from ginga import FitsImage
-from ginga import Bindings
 from ginga.misc import Bunch
 
 
@@ -371,10 +370,8 @@ class GingaView(QtMain.QtMain):
         return fr
     
     def build_viewpane(self, settings, rgbmap=None):
-        bindings = Bindings.FitsImageBindings(self.logger)
         fi = FitsImageCanvasQt.FitsImageCanvas(logger=self.logger,
                                                rgbmap=rgbmap,
-                                               bindings=bindings,
                                                settings=settings)
         fi.enable_draw(False)
         fi.enable_auto_orient(True)

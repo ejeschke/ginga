@@ -22,6 +22,7 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
         self.color_cursor = 'red'
 
         self.limit_stars_to_area = False
+        self.pan_to_selected = False
         self.use_dss_channel = False
         self.plot_max = 500
         self.plot_limit = 100
@@ -368,6 +369,12 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
 
         self.canvas.add(star, tagpfx='star', redraw=False)
 
+    def pan_to_star(self, star):
+        # Set pan position to star
+        image = self.fitsimage.get_image()
+        x, y = image.radectopix(star['ra_deg'], star['dec_deg'])
+        self.fitsimage.panset_xy(x, y)
+                    
     def replot_stars(self, selected=[]):
         self.clear()
 
@@ -511,6 +518,8 @@ class CatalogListingBase(object):
                     
                 self._select_tv(star, fromtable=fromtable)
                 self.catalog.highlight_object(star.canvobj, 'selected', 'skyblue')
+                if self.catalog.pan_to_selected:
+                    self.catalog.pan_to_star(star)
             except Exception, e:
                 self.logger.warn("Error hilighting star: %s" % (str(e)))
             return True

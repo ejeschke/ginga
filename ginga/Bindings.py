@@ -133,11 +133,17 @@ class FitsImageBindings(object):
         bindmap = fitsimage.get_bindmap()
         bindmap.clear_event_map()
 
-        # Set up key mapping
-        self.setup_default_keymap(fitsimage, bindmap)
+        # Set up modifier mapping
+        self.setup_default_modmap(fitsimage, bindmap)
 
-        # Set up pointer mapping
+        # Set up mouse button mapping
         self.setup_default_btnmap(fitsimage, bindmap)
+        
+        # Set up key bindings
+        self.setup_default_key_events(fitsimage, bindmap)
+
+        # Set up pointer bindings
+        self.setup_default_btn_events(fitsimage, bindmap)
         
     def set_modifier(self, fitsimage, name, modtype='oneshot'):
         bindmap = fitsimage.get_bindmap()
@@ -152,7 +158,32 @@ class FitsImageBindings(object):
     def set_key_bindings(self, featkey, symlist):
         self.keys[featkey] = symlist
 
-    def setup_default_keymap(self, fitsimage, bindmap):
+    def setup_default_modmap(self, fitsimage, bindmap):
+
+        # Establish our modifier keys.
+        bindmap.clear_modifier_map()
+
+        # Here we could change the meaning of standard modifiers
+        # (i.e. shift becomes ctrl, etc.) or define new modifiers.
+        for keyname in ('shift_l', 'shift_r'):
+            bindmap.add_modifier(keyname, 'shift')
+        for keyname in ('control_l', 'control_r'):
+            bindmap.add_modifier(keyname, 'ctrl')
+        for keyname in ('meta_right',):
+            bindmap.add_modifier(keyname, 'draw')
+        
+    def setup_default_btnmap(self, fitsimage, bindmap):
+        
+        # Establish our names for the mouse or trackpad bindings
+        bindmap.clear_button_map()
+
+        # e.g. left btn == 'left', scroll wheel == 'middle', right == 'right'
+        bindmap.map_button(0x0, 'nobtn')
+        bindmap.map_button(0x1, 'left')
+        bindmap.map_button(0x2, 'middle')
+        bindmap.map_button(0x4, 'right')
+        
+    def setup_default_key_events(self, fitsimage, bindmap):
 
         for name in self.keys.keys():
             
@@ -167,36 +198,20 @@ class FitsImageBindings(object):
             except AttributeError:
                 pass
 
-
-    def setup_default_btnmap(self, fitsimage, bindmap):
-        
-        # Establish our names for the mouse or trackpad bindings
-        # e.g. left btn == 'index', scroll wheel == 'middle', right == 'ring'
-        # NOTE: just make sure these names don't overlap with any of the
-        # key names.  You can get a list of the key names by doing
-        # fitsimage.get_keyTable().values()
-        bindmap.map_button(0x0, 'nobtn')
-        bindmap.map_button(0x1, 'index')
-        bindmap.map_button(0x2, 'middle')
-        bindmap.map_button(0x4, 'ring')
-        
-        # Establish our modifier keys.
-        # Here we could change the meaning of standard modifiers
-        # (i.e. shift becomes ctrl, etc.) or define new modifiers.
-        ## bindmap.set_modifier_map(modmap)
+    def setup_default_btn_events(self, fitsimage, bindmap):
         
         # Generate standard symbolic mouse events for unmodified buttons:
         # xxxxx-{down, move, up}
-        # e.g. 'index' button down generates 'cursor-down', moving the mouse
+        # e.g. 'left' button down generates 'cursor-down', moving the mouse
         # with no button pressed generates 'none-move', etc.
-        for btnname, evtname in (('nobtn', 'none'), ('index', 'cursor'),
-                                 ('middle', 'wheel'), ('ring', 'draw')):
+        for btnname, evtname in (('nobtn', 'none'), ('left', 'cursor'),
+                                 ('middle', 'wheel'), ('right', 'draw')):
             bindmap.map_event(None, btnname, evtname)
 
-        bindmap.map_event('shift', 'index', 'panset')
-        bindmap.map_event('ctrl', 'index', 'pan')
+        bindmap.map_event('shift', 'left', 'panset')
+        bindmap.map_event('ctrl', 'left', 'pan')
         bindmap.map_event(None, 'middle', 'freepan')
-        bindmap.map_event('ctrl', 'ring', 'cmapwarp')
+        bindmap.map_event('ctrl', 'right', 'cmapwarp')
         bindmap.map_event('ctrl', 'middle', 'cmaprest')
         # NOTE: name 'scroll' is hardwired for the scrolling action
         bindmap.map_event(None, 'scroll', 'zoom')
@@ -206,7 +221,7 @@ class FitsImageBindings(object):
         # Mouse operations that are invoked by a preceeding key
         for name in ('rotate', 'cmapwarp', 'cutlo', 'cuthi', 'cutall',
                         'draw', 'pan', 'freepan'):
-            bindmap.map_event(name, 'index', name)
+            bindmap.map_event(name, 'left', name)
 
         # Now register our actions (below) for these symbolic events
         for name in ('cursor', 'wheel', 'draw', 'rotate', 'cmapwarp',
@@ -307,9 +322,10 @@ class FitsImageBindings(object):
             
         return (data_x, data_y)
 
-    def _panset(self, fitsimage, data_x, data_y, redraw=True):
+    def _panset(self, fitsimage, data_x, data_y, msg=True, redraw=True):
         try:
-            fitsimage.onscreen_message("Pan position set", delay=1.0)
+            if msg:
+                fitsimage.onscreen_message("Pan position set", delay=1.0)
 
             res = fitsimage.panset_xy(data_x, data_y, redraw=redraw)
             return res
@@ -335,17 +351,18 @@ class FitsImageBindings(object):
 
         fitsimage.scaleNshift_cmap(scale_pct, shift_pct)
 
-    def _cutlow_pct(self, fitsimage, pct):
+    def _cutlow_pct(self, fitsimage, pct, msg=True):
         image = fitsimage.get_image()
         minval, maxval = image.get_minmax()
         spread = maxval - minval
         loval, hival = fitsimage.get_cut_levels()
         loval = loval + (pct * spread)
-        fitsimage.onscreen_message("Cut low: %.4f" % (loval),
+        if msg:
+            fitsimage.onscreen_message("Cut low: %.4f" % (loval),
                                    redraw=False)
         fitsimage.cut_levels(loval, hival, redraw=True)
 
-    def _cutlow_xy(self, fitsimage, x, y):
+    def _cutlow_xy(self, fitsimage, x, y, msg=True):
         win_wd, win_ht = fitsimage.get_window_size()
         pct = float(x) / float(win_wd)
         image = fitsimage.get_image()
@@ -353,21 +370,23 @@ class FitsImageBindings(object):
         spread = maxval - minval
         loval, hival = fitsimage.get_cut_levels()
         loval = minval + (pct * spread)
-        fitsimage.onscreen_message("Cut low: %.4f" % (loval),
-                                   redraw=False)
+        if msg:
+            fitsimage.onscreen_message("Cut low: %.4f" % (loval),
+                                       redraw=False)
         fitsimage.cut_levels(loval, hival, redraw=True)
 
-    def _cuthigh_pct(self, fitsimage, pct):
+    def _cuthigh_pct(self, fitsimage, pct, msg=True):
         image = fitsimage.get_image()
         minval, maxval = image.get_minmax()
         spread = maxval - minval
         loval, hival = fitsimage.get_cut_levels()
         hival = hival - (pct * spread)
-        fitsimage.onscreen_message("Cut high: %.4f" % (hival),
-                                   redraw=False)
+        if msg:
+            fitsimage.onscreen_message("Cut high: %.4f" % (hival),
+                                       redraw=False)
         fitsimage.cut_levels(loval, hival, redraw=True)
 
-    def _cuthigh_xy(self, fitsimage, x, y):
+    def _cuthigh_xy(self, fitsimage, x, y, msg=True):
         win_wd, win_ht = fitsimage.get_window_size()
         pct = 1.0 - (float(x) / float(win_wd))
         image = fitsimage.get_image()
@@ -375,11 +394,12 @@ class FitsImageBindings(object):
         spread = maxval - minval
         loval, hival = fitsimage.get_cut_levels()
         hival = maxval - (pct * spread)
-        fitsimage.onscreen_message("Cut high: %.4f" % (hival),
-                                   redraw=False)
+        if msg:
+            fitsimage.onscreen_message("Cut high: %.4f" % (hival),
+                                       redraw=False)
         fitsimage.cut_levels(loval, hival, redraw=True)
 
-    def _cutboth_xy(self, fitsimage, x, y):
+    def _cutboth_xy(self, fitsimage, x, y, msg=True):
         win_wd, win_ht = fitsimage.get_window_size()
         xpct = 1.0 - (float(x) / float(win_wd))
         #ypct = 1.0 - (float(y) / float(win_ht))
@@ -387,19 +407,21 @@ class FitsImageBindings(object):
         spread = self._hival - self._loval
         hival = self._hival - (xpct * spread)
         loval = self._loval + (ypct * spread)
-        fitsimage.onscreen_message("Cut low: %.4f  high: %.4f" % (
-            loval, hival), redraw=False)
+        if msg:
+            fitsimage.onscreen_message("Cut low: %.4f  high: %.4f" % (
+                loval, hival), redraw=False)
         fitsimage.cut_levels(loval, hival, redraw=True)
 
-    def _cut_pct(self, fitsimage, pct):
+    def _cut_pct(self, fitsimage, pct, msg=True):
         image = fitsimage.get_image()
         minval, maxval = image.get_minmax()
         spread = maxval - minval
         loval, hival = fitsimage.get_cut_levels()
         loval = loval + (pct * spread)
         hival = hival - (pct * spread)
-        fitsimage.onscreen_message("Cut low: %.4f  high: %.4f" % (
-            loval, hival), delay=1.0, redraw=False)
+        if msg:
+            fitsimage.onscreen_message("Cut low: %.4f  high: %.4f" % (
+                loval, hival), delay=1.0, redraw=False)
         fitsimage.cut_levels(loval, hival, redraw=True)
 
     def _adjust_contrast(self, fitsimage, direction, pct):
@@ -408,7 +430,7 @@ class FitsImageBindings(object):
         elif direction in ('down', 'right'):
             self._cut_pct(fitsimage, -pct)
 
-    def _scale_image(self, fitsimage, direction, factor):
+    def _scale_image(self, fitsimage, direction, factor, msg=True):
         rev = fitsimage.get_pan_reverse()
         scale_x, scale_y = fitsimage.get_scale_xy()
         if direction == 'up':
@@ -423,15 +445,17 @@ class FitsImageBindings(object):
                 mult = 1.0 + factor
         scale_x, scale_y = scale_x * mult, scale_y * mult
         fitsimage.scale_to(scale_x, scale_y)
-        fitsimage.onscreen_message(fitsimage.get_scale_text(),
-                                   delay=1.0)
+        if msg:
+            fitsimage.onscreen_message(fitsimage.get_scale_text(),
+                                       delay=1.0)
 
-    def _rotate_xy(self, fitsimage, x, y):
+    def _rotate_xy(self, fitsimage, x, y, msg=True):
         win_wd, win_ht = fitsimage.get_window_size()
         pct = float(x) / float(win_wd)
         deg = 360.0 * pct
-        fitsimage.onscreen_message("Rotate: %.2f" % (deg),
-                                   redraw=False)
+        if msg:
+            fitsimage.onscreen_message("Rotate: %.2f" % (deg),
+                                       redraw=False)
         fitsimage.rotate(deg)
 
     def to_default_mode(self, fitsimage):
@@ -456,150 +480,176 @@ class FitsImageBindings(object):
         self._pantype = 1
         self.to_default_mode(fitsimage)
 
-    def restore_colormap(self, fitsimage):
+    def restore_colormap(self, fitsimage, msg=True):
         rgbmap = fitsimage.get_rgbmap()
         rgbmap.reset_sarr()
-        fitsimage.onscreen_message("Restored color map", delay=1.0)
+        if msg:
+            fitsimage.onscreen_message("Restored color map", delay=1.0)
         return True
 
 
     #####  KEYBOARD ACTION CALLBACKS #####
 
-    def kp_pan_free(self, fitsimage, action, data_x, data_y):
+    def kp_pan_free(self, fitsimage, action, data_x, data_y, msg=True):
         if self.canpan:
             self.set_modifier(fitsimage, 'freepan')
-            fitsimage.onscreen_message("Free panning (drag mouse)", delay=1.0)
+            if msg:
+                fitsimage.onscreen_message("Free panning (drag mouse)",
+                                           delay=1.0)
         return True
 
-    def kp_pan_set(self, fitsimage, action, data_x, data_y):
+    def kp_pan_set(self, fitsimage, action, data_x, data_y, msg=True):
         if self.canpan:
-            self._panset(fitsimage, data_x, data_y, redraw=True)
+            self._panset(fitsimage, data_x, data_y, redraw=True,
+                         msg=msg)
         return True
 
-    def kp_center(self, fitsimage, action, data_x, data_y):
+    def kp_center(self, fitsimage, action, data_x, data_y, msg=True):
         if self.canpan:
             fitsimage.center_image()
         return True
 
-    def kp_zoom_out(self, fitsimage, action, data_x, data_y):
+    def kp_zoom_out(self, fitsimage, action, data_x, data_y, msg=True):
         if self.canzoom:
             fitsimage.zoom_out()
-            fitsimage.onscreen_message(fitsimage.get_scale_text(), delay=1.0)
+            if msg:
+                fitsimage.onscreen_message(fitsimage.get_scale_text(),
+                                           delay=1.0)
         return True
 
-    def kp_zoom_in(self, fitsimage, action, data_x, data_y):
+    def kp_zoom_in(self, fitsimage, action, data_x, data_y, msg=True):
         if self.canzoom:
             fitsimage.zoom_in()
-            fitsimage.onscreen_message(fitsimage.get_scale_text(), delay=1.0)
+            if msg:
+                fitsimage.onscreen_message(fitsimage.get_scale_text(),
+                                           delay=1.0)
         return True
 
-    def kp_zoom(self, fitsimage, keyname, data_x, data_y):
+    def kp_zoom(self, fitsimage, keyname, data_x, data_y, msg=True):
         if self.canzoom:
             zoomval = (self.keys.zoom.index(keyname) + 1)
             fitsimage.zoom_to(zoomval)
-            fitsimage.onscreen_message(fitsimage.get_scale_text(), delay=1.0)
+            if msg:
+                fitsimage.onscreen_message(fitsimage.get_scale_text(),
+                                           delay=1.0)
         return True
 
-    def kp_zoom_inv(self, fitsimage, keyname, data_x, data_y):
+    def kp_zoom_inv(self, fitsimage, keyname, data_x, data_y, msg=True):
         if self.canzoom:
             zoomval = - (self.keys.zoom_inv.index(keyname) + 1)
             fitsimage.zoom_to(zoomval)
-            fitsimage.onscreen_message(fitsimage.get_scale_text(), delay=1.0)
+            if msg:
+                fitsimage.onscreen_message(fitsimage.get_scale_text(),
+                                           delay=1.0)
         return True
 
-    def kp_zoom_fit(self, fitsimage, action, data_x, data_y):
+    def kp_zoom_fit(self, fitsimage, action, data_x, data_y, msg=True):
         if self.canzoom:
             fitsimage.zoom_fit()
-            fitsimage.onscreen_message(fitsimage.get_scale_text(), delay=1.0)
+            if msg:
+                fitsimage.onscreen_message(fitsimage.get_scale_text(),
+                                           delay=1.0)
         return True
 
-    def kp_autozoom_on(self, fitsimage, action, data_x, data_y):
+    def kp_autozoom_on(self, fitsimage, action, data_x, data_y, msg=True):
         if self.canzoom:
             fitsimage.enable_autozoom('on')
-            fitsimage.onscreen_message('Autozoom On', delay=1.0)
+            if msg:
+                fitsimage.onscreen_message('Autozoom On', delay=1.0)
         return True
 
-    def kp_autozoom_override(self, fitsimage, action, data_x, data_y):
+    def kp_autozoom_override(self, fitsimage, action, data_x, data_y, msg=True):
         if self.canzoom:
             fitsimage.enable_autozoom('override')
-            fitsimage.onscreen_message('Autozoom Override', delay=1.0)
+            if msg:
+                fitsimage.onscreen_message('Autozoom Override', delay=1.0)
         return True
             
-    def kp_cut_low(self, fitsimage, action, data_x, data_y):
+    def kp_cut_low(self, fitsimage, action, data_x, data_y, msg=True):
         if self.cancut:
             self.set_modifier(fitsimage, 'cutlo')
-            fitsimage.onscreen_message("Cut low (drag mouse L-R)")
+            if msg:
+                fitsimage.onscreen_message("Cut low (drag mouse L-R)")
         return True
 
-    def kp_cut_high(self, fitsimage, action, data_x, data_y):
+    def kp_cut_high(self, fitsimage, action, data_x, data_y, msg=True):
         if self.cancut:
             self.set_modifier(fitsimage, 'cuthi')
-            fitsimage.onscreen_message("Cut high (drag mouse L-R)")
+            if msg:
+                fitsimage.onscreen_message("Cut high (drag mouse L-R)")
         return True
 
-    def kp_cut_all(self, fitsimage, action, data_x, data_y):
+    def kp_cut_all(self, fitsimage, action, data_x, data_y, msg=True):
         if self.cancut:
             self.set_modifier(fitsimage, 'cutall')
-            fitsimage.onscreen_message("Set cut levels (drag mouse)")
+            if msg:
+                fitsimage.onscreen_message("Set cut levels (drag mouse)")
         return True
 
-    def kp_cut_255(self, fitsimage, action, data_x, data_y):
+    def kp_cut_255(self, fitsimage, action, data_x, data_y, msg=True):
         if self.cancut:
             fitsimage.cut_levels(0.0, 255.0, no_reset=True)
         return True
 
-    def kp_cut_auto(self, fitsimage, action, data_x, data_y):
+    def kp_cut_auto(self, fitsimage, action, data_x, data_y, msg=True):
         if self.cancut:
-            fitsimage.onscreen_message("Auto cut levels", delay=1.0)
+            if msg:
+                fitsimage.onscreen_message("Auto cut levels", delay=1.0)
             fitsimage.auto_levels()
         return True
 
-    def kp_autocuts_on(self, fitsimage, action, data_x, data_y):
+    def kp_autocuts_on(self, fitsimage, action, data_x, data_y, msg=True):
         if self.cancut:
             fitsimage.enable_autocuts('on')
-            fitsimage.onscreen_message('Autocuts On', delay=1.0)
+            if msg:
+                fitsimage.onscreen_message('Autocuts On', delay=1.0)
         return True
 
-    def kp_autocuts_override(self, fitsimage, action, data_x, data_y):
+    def kp_autocuts_override(self, fitsimage, action, data_x, data_y, msg=True):
         if self.cancut:
             fitsimage.enable_autocuts('override')
-            fitsimage.onscreen_message('Autocuts Override', delay=1.0)
+            if msg:
+                fitsimage.onscreen_message('Autocuts Override', delay=1.0)
         return True
 
-    def kp_cmap_warp(self, fitsimage, action, data_x, data_y):
+    def kp_cmap_warp(self, fitsimage, action, data_x, data_y, msg=True):
         if self.cancmap:
             self.set_modifier(fitsimage, 'cmapwarp')
-            fitsimage.onscreen_message("Shift and stretch colormap (drag mouse)",
-                                       delay=1.0)
+            if msg:
+                fitsimage.onscreen_message("Shift and stretch colormap (drag mouse)",
+                                           delay=1.0)
         return True
 
-    def kp_cmap_restore(self, fitsimage, action, data_x, data_y):
+    def kp_cmap_restore(self, fitsimage, action, data_x, data_y, msg=True):
         if self.cancmap:
-            self.restore_colormap(fitsimage)
+            self.restore_colormap(fitsimage, msg=msg)
         return True
 
-    def kp_flip_x(self, fitsimage, keyname, data_x, data_y):
+    def kp_flip_x(self, fitsimage, keyname, data_x, data_y, msg=True):
         if self.canflip:
             flipx = (keyname == '[')
             flipX, flipY, swapXY = fitsimage.get_transforms()
             fitsimage.transform(flipx, flipY, swapXY)
-            fitsimage.onscreen_message("Flip X=%s" % flipx, delay=1.0)
+            if msg:
+                fitsimage.onscreen_message("Flip X=%s" % flipx, delay=1.0)
         return True
 
-    def kp_flip_y(self, fitsimage, keyname, data_x, data_y):
+    def kp_flip_y(self, fitsimage, keyname, data_x, data_y, msg=True):
         if self.canflip:
             flipy = (keyname == ']')
             flipX, flipY, swapXY = fitsimage.get_transforms()
             fitsimage.transform(flipX, flipy, swapXY)
-            fitsimage.onscreen_message("Flip Y=%s" % flipy, delay=1.0)
+            if msg:
+                fitsimage.onscreen_message("Flip Y=%s" % flipy, delay=1.0)
         return True
 
-    def kp_swap_xy(self, fitsimage, keyname, data_x, data_y):
+    def kp_swap_xy(self, fitsimage, keyname, data_x, data_y, msg=True):
         if self.canflip:
             swapxy = (keyname == 'backslash')
             flipX, flipY, swapXY = fitsimage.get_transforms()
             fitsimage.transform(flipX, flipY, swapxy)
-            fitsimage.onscreen_message("Swap XY=%s" % swapxy, delay=1.0)
+            if msg:
+                fitsimage.onscreen_message("Swap XY=%s" % swapxy, delay=1.0)
         return True
 
     def kp_rotate_reset(self, fitsimage, action, data_x, data_y):
@@ -607,11 +657,12 @@ class FitsImageBindings(object):
             fitsimage.rotate(0.0)
         return True
 
-    def kp_rotate(self, fitsimage, action, data_x, data_y):
+    def kp_rotate(self, fitsimage, action, data_x, data_y, msg=True):
         if self.canrotate:
             self.set_modifier(fitsimage, 'rotate')
-            fitsimage.onscreen_message("Rotate (drag mouse L-R)",
-                                       delay=1.0)
+            if msg:
+                fitsimage.onscreen_message("Rotate (drag mouse L-R)",
+                                           delay=1.0)
         return True
 
 
@@ -626,7 +677,7 @@ class FitsImageBindings(object):
     def ms_draw(self, fitsimage, action, data_x, data_y):
         return True
 
-    def ms_rotate(self, fitsimage, action, data_x, data_y):
+    def ms_rotate(self, fitsimage, action, data_x, data_y, msg=True):
         """Rotate the image by dragging the cursor left or right.
         """
         if not self.canrotate:
@@ -637,8 +688,9 @@ class FitsImageBindings(object):
             self._rotate_xy(fitsimage, x, y)
             
         elif action == 'down':
-            fitsimage.onscreen_message("Rotate (drag mouse L-R)",
-                                       delay=1.0)
+            if msg:
+                fitsimage.onscreen_message("Rotate (drag mouse L-R)",
+                                           delay=1.0)
             self._start_x = x
             
         else:
@@ -646,7 +698,7 @@ class FitsImageBindings(object):
         return True
 
 
-    def ms_cmapwarp(self, fitsimage, action, data_x, data_y):
+    def ms_cmapwarp(self, fitsimage, action, data_x, data_y, msg=True):
         """Shift the colormap by dragging the cursor left or right.
         Stretch the colormap by dragging the cursor up or down.
         """
@@ -659,19 +711,20 @@ class FitsImageBindings(object):
             
         elif action == 'down':
             self._start_x, self._start_y = x, y
-            fitsimage.onscreen_message("Shift and stretch colormap (drag mouse)",
-                                       delay=1.0)
+            if msg:
+                fitsimage.onscreen_message("Shift and stretch colormap (drag mouse)",
+                                           delay=1.0)
         else:
             fitsimage.onscreen_message(None)
         return True
 
             
-    def ms_cmaprest(self, fitsimage, action, data_x, data_y):
+    def ms_cmaprest(self, fitsimage, action, data_x, data_y, msg=True):
         """An interactive way to restore the colormap settings after
         a warp operation.
         """
         if self.cancmap:
-            self.restore_colormap(fitsimage)
+            self.restore_colormap(fitsimage, msg=msg)
             return True
 
 
@@ -774,31 +827,35 @@ class FitsImageBindings(object):
             fitsimage.onscreen_message(None)
         return True
             
-    def ms_panset(self, fitsimage, action, data_x, data_y):
-        """An interactive way to set the future pan position.  On the next
-        zoom operation the selected position will be centered in the window.
+    def ms_panset(self, fitsimage, action, data_x, data_y,
+                  msg=True):
+        """An interactive way to set the pan position.  The location
+        (data_x, data_y) will be centered in the window.
         """
         if self.canpan:
-            self._panset(fitsimage, data_x, data_y, redraw=True)
+            self._panset(fitsimage, data_x, data_y, redraw=True,
+                         msg=msg)
         return True
 
-    def ms_contrast_coarse(self, fitsimage, direction, data_x, data_y):
+    def ms_contrast_coarse(self, fitsimage, direction, data_x, data_y,
+                           msg=True):
         """Adjust contrast interactively by setting the low AND high cut
         levels.  This function adjusts it coarsely.
         """
         if self.cancut:
-            self._adjust_contrast(fitsimage, direction, 0.01)
+            self._adjust_contrast(fitsimage, direction, 0.01, msg=msg)
         return True
 
-    def ms_contrast_fine(self, fitsimage, direction, data_x, data_y):
+    def ms_contrast_fine(self, fitsimage, direction, data_x, data_y,
+                         msg=True):
         """Adjust contrast interactively by setting the low AND high cut
         levels.  This function adjusts it finely.
         """
         if self.cancut:
-            self._adjust_contrast(fitsimage, direction, 0.001)
+            self._adjust_contrast(fitsimage, direction, 0.001, msg=msg)
         return True
 
-    def ms_zoom(self, fitsimage, direction, data_x, data_y):
+    def ms_zoom(self, fitsimage, direction, data_x, data_y, msg=True):
         """Interactively zoom the image by scrolling motion.
         This zooms by the zoom steps configured under Preferences.
         """
@@ -814,24 +871,27 @@ class FitsImageBindings(object):
                     fitsimage.zoom_out()
                 else:
                     fitsimage.zoom_in()
-            fitsimage.onscreen_message(fitsimage.get_scale_text(),
-                                       delay=1.0)
+            if msg:
+                fitsimage.onscreen_message(fitsimage.get_scale_text(),
+                                           delay=1.0)
         return True
 
-    def ms_zoom_coarse(self, fitsimage, direction, data_x, data_y):
+    def ms_zoom_coarse(self, fitsimage, direction, data_x, data_y,
+                       msg=True):
         """Interactively zoom the image by scrolling motion.
         This zooms by adjusting the scale in x and y coarsely.
         """
         if self.canzoom:
-            self._scale_image(fitsimage, direction, 0.20)
+            self._scale_image(fitsimage, direction, 0.20, msg=msg)
         return True
 
-    def ms_zoom_fine(self, fitsimage, direction, data_x, data_y):
+    def ms_zoom_fine(self, fitsimage, direction, data_x, data_y,
+                     msg=True):
         """Interactively zoom the image by scrolling motion.
         This zooms by adjusting the scale in x and y coarsely.
         """
         if self.canzoom:
-            self._scale_image(fitsimage, direction, 0.08)
+            self._scale_image(fitsimage, direction, 0.08, msg=msg)
         return True
 
 
