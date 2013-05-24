@@ -325,7 +325,7 @@ class FitsImageBindings(object):
     def _panset(self, fitsimage, data_x, data_y, msg=True, redraw=True):
         try:
             if msg:
-                fitsimage.onscreen_message("Pan position set", delay=1.0)
+                fitsimage.onscreen_message("Pan position set", delay=0.4)
 
             res = fitsimage.panset_xy(data_x, data_y, redraw=redraw)
             return res
@@ -447,7 +447,7 @@ class FitsImageBindings(object):
         fitsimage.scale_to(scale_x, scale_y)
         if msg:
             fitsimage.onscreen_message(fitsimage.get_scale_text(),
-                                       delay=1.0)
+                                       delay=0.4)
 
     def _rotate_xy(self, fitsimage, x, y, msg=True):
         win_wd, win_ht = fitsimage.get_window_size()
@@ -484,7 +484,7 @@ class FitsImageBindings(object):
         rgbmap = fitsimage.get_rgbmap()
         rgbmap.reset_sarr()
         if msg:
-            fitsimage.onscreen_message("Restored color map", delay=1.0)
+            fitsimage.onscreen_message("Restored color map", delay=0.5)
         return True
 
 
@@ -873,7 +873,7 @@ class FitsImageBindings(object):
                     fitsimage.zoom_in()
             if msg:
                 fitsimage.onscreen_message(fitsimage.get_scale_text(),
-                                           delay=1.0)
+                                           delay=0.4)
         return True
 
     def ms_zoom_coarse(self, fitsimage, direction, data_x, data_y,

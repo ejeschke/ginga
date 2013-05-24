@@ -461,11 +461,11 @@ class PickBase(GingaPlugin.LocalPlugin):
             self.pickcenter.y = j1
             self.pickcenter.color = 'cyan'
             self.pick_qs = qs
-            self.pickimage.panset_xy(i1, j1, redraw=False)
+            self.pickimage.panset_xy(i1, j1, redraw=True)
 
             # Mark object center on image
             point.color = 'cyan'
-            self.fitsimage.panset_xy(obj_x, obj_y, redraw=False)
+            #self.fitsimage.panset_xy(obj_x, obj_y, redraw=False)
 
             # Calc RA, DEC, EQUINOX of X/Y center pixel
             try:
@@ -719,7 +719,7 @@ class PickBase(GingaPlugin.LocalPlugin):
         except Exception, e:
             self.fv.showStatus("No valid brightness level: '%s'" % (hival))
             
-    def zoomset(self, fitsimage, zoomlevel, scale_x, scale_y):
+    def zoomset(self, setting, zoomlevel, fitsimage):
         scalefactor = fitsimage.get_scale()
         self.logger.debug("scalefactor = %.2f" % (scalefactor))
         text = self.fv.scale2text(scalefactor)

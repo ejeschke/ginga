@@ -11,6 +11,7 @@
 import sys, os
 import math
 import logging
+from collections import OrderedDict
 
 from ginga import iqcalc, wcs
 # TEMP
@@ -145,7 +146,7 @@ class AstroImage(BaseImage):
         except KeyError, e:
             if not create:
                 raise e
-            hdr = {}
+            hdr = OrderedDict({})
             self.metadata['header'] = hdr
         return hdr
         

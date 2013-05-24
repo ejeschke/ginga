@@ -378,7 +378,9 @@ class GingaView(QtMain.QtMain):
         fi.add_callback('motion', self.motion_cb)
         fi.add_callback('key-press', self.keypress)
         fi.add_callback('drag-drop', self.dragdrop)
-        fi.add_callback('cut-set', self.change_range_cb, self.colorbar)
+        for name in ['cuts']:
+            settings.getSetting(name).add_callback('set',
+                               self.change_range_cb, fi, self.colorbar)
 
         bd = fi.get_bindings()
         bd.enable_pan(True)

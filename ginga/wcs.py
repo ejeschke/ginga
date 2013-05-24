@@ -41,6 +41,8 @@ try:
         'fk4-no-e': coordinates.FK4NoETermCoordinates,
         'galactic': coordinates.GalacticCoordinates,
         #'azel': coordinates.HorizontalCoordinates,
+        # TODO:
+        #'elliptic': ??,
         }
 
 except ImportError:
@@ -429,6 +431,10 @@ def choose_coord_system(header):
     match = re.match(r'^GLON\-.*$', ctype)
     if match:
         return 'galactic'
+
+    match = re.match(r'^ELON\-.*$', ctype)
+    if match:
+        return 'elliptic'
 
     match = re.match(r'^RA\-\-\-.*$', ctype)
     if match:

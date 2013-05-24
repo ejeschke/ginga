@@ -41,12 +41,17 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.autocut_options = self.fitsimage.get_autocuts_options()
         self.autocut_methods = self.fitsimage.get_autocut_methods()
 
-        self.fitsimage.add_callback('autocuts', self.autocuts_changed_cb)
-        self.fitsimage.add_callback('autozoom', self.autozoom_changed_cb)
-        self.fitsimage.add_callback('pan-set', self.pan_changed_ext_cb)
-        self.fitsimage.add_callback('zoom-set', self.scale_changed_ext_cb)
-
-        self.t_ = self.fitsimage.get_settings()
+        self.t_ = fitsimage.get_settings()
+        self.t_.getSetting('autocuts').add_callback('set',
+                                               self.autocuts_changed_cb)
+        self.t_.getSetting('autozoom').add_callback('set',
+                                               self.autozoom_changed_cb)
+        for key in ['scale']:
+            self.t_.getSetting(key).add_callback('set',
+                                          self.scale_changed_ext_cb)
+        for key in ['pan']:
+            self.t_.getSetting(key).add_callback('set',
+                                          self.pan_changed_ext_cb)
         self.t_.getSetting('zoom_algorithm').add_callback('set', self.set_zoomalg_ext_cb)
         self.t_.getSetting('zoom_rate').add_callback('set', self.set_zoomrate_ext_cb)
         
@@ -602,10 +607,10 @@ class Preferences(GingaPlugin.LocalPlugin):
         else:
             self.t_.set(scale_x_base=1.0, scale_y_base=value)
         
-    def pan_changed_ext_cb(self, fitsimage):
+    def pan_changed_ext_cb(self, setting, value):
         if not self.gui_up:
             return
-        pan_x, pan_y = fitsimage.get_pan()
+        pan_x, pan_y = value
         fits_x, fits_y = pan_x + 0.5, pan_y + 0.5
         self.w.pan_x.set_text(str(fits_x))
         self.w.pan_y.set_text(str(fits_y))
@@ -615,9 +620,10 @@ class Preferences(GingaPlugin.LocalPlugin):
         scale_y = float(self.w.scale_y.get_text())
         self.fitsimage.scale_to(scale_x, scale_y)
 
-    def scale_changed_ext_cb(self, fitsimage, zoomlevel, scale_x, scale_y):
+    def scale_changed_ext_cb(self, setting, value):
         if not self.gui_up:
             return
+        scale_x, scale_y = value
         self.w.scale_x.set_text(str(scale_x))
         self.w.scale_y.set_text(str(scale_y))
 
@@ -632,7 +638,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.fitsimage.enable_autozoom(option)
         self.t_.set(autozoom=option)
 
-    def autozoom_changed_cb(self, fitsimage, option):
+    def autozoom_changed_cb(self, setting, option):
         if not self.gui_up:
             return
         index = self.autozoom_options.index(option)
@@ -668,7 +674,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.fitsimage.enable_autocuts(option)
         self.t_.set(autocuts=option)
 
-    def autocuts_changed_cb(self, fitsimage, option):
+    def autocuts_changed_cb(self, setting, option):
         self.logger.debug("autocuts changed to %s" % option)
         index = self.autocut_options.index(option)
         if self.gui_up:

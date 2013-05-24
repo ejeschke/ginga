@@ -12,6 +12,7 @@ import numpy
 import mimetypes
 import os
 import hashlib
+from collections import OrderedDict
 
 try:
     # do we have Python Imaging Library available?
@@ -68,7 +69,7 @@ working_profile = os.path.join(basedir, "profiles", "working.icc")
 class PythonImage(BaseImage):
 
     def load_file(self, filepath):
-        kwds = {}
+        kwds = OrderedDict({})
         metadata = { 'exif': {}, 'path': filepath }
 
         data_np = self._imload(filepath, kwds)

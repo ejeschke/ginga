@@ -137,11 +137,18 @@ class Info(GingaPlugin.GlobalPlugin):
         #                         chinfo, info)
 
         fitsimage = chinfo.fitsimage
+        fitssettings = fitsimage.get_settings()
         fitsimage.set_callback('image-set', self.new_image_cb, info)
-        fitsimage.set_callback('cut-set', self.cutset_cb, info)
-        fitsimage.set_callback('zoom-set', self.zoomset_cb, info)
-        fitsimage.set_callback('autocuts', self.autocuts_cb, info)
-        fitsimage.set_callback('autozoom', self.autozoom_cb, info)
+        for name in ['cuts']:
+            fitssettings.getSetting(name).add_callback('set',
+                               self.cutset_cb, fitsimage, info)
+        for name in ['scale']:
+            fitssettings.getSetting(name).add_callback('set',
+                               self.zoomset_cb, fitsimage, info)
+        fitssettings.getSetting('autocuts').add_callback('set',
+                               self.autocuts_cb, fitsimage, info)
+        fitssettings.getSetting('autozoom').add_callback('set',
+                               self.autozoom_cb, fitsimage, info)
 
     def delete_channel(self, viewer, chinfo):
         self.logger.debug("TODO: delete channel %s" % (chinfo.name))
@@ -167,10 +174,11 @@ class Info(GingaPlugin.GlobalPlugin):
         self.set_info(self.info, fitsimage)
         return True
         
-    def zoomset_cb(self, fitsimage, zoomlevel, scale_x, scale_y, info):
+    def zoomset_cb(self, setting, value, fitsimage, info):
         """This callback is called when the main window is zoomed.
         """
         # Set text showing zoom factor (1X, 2X, etc.)
+        scale_x, scale_y = value
         if scale_x == scale_y:
             text = self.fv.scale2text(scale_x)
         else:
@@ -179,16 +187,17 @@ class Info(GingaPlugin.GlobalPlugin):
             text = "X: %s  Y: %s" % (textx, texty)
         info.winfo.zoom.setText(text)
         
-    def cutset_cb(self, fitsimage, loval, hival, info):
+    def cutset_cb(self, setting, value, fitsimage, info):
+        loval, hival = value
         #info.winfo.cut_low.setText('%.2f' % (loval))
         info.winfo.xlbl_cut_low.setText('%.2f' % (loval))
         #info.winfo.cut_high.setText('%.2f' % (hival))
         info.winfo.xlbl_cut_high.setText('%.2f' % (hival))
 
-    def autocuts_cb(self, fitsimage, option, info):
+    def autocuts_cb(self, setting, option, fitsimage, info):
         info.winfo.cut_new.setText(option)
 
-    def autozoom_cb(self, fitsimage, option, info):
+    def autozoom_cb(self, setting, option, fitsimage, info):
         info.winfo.zoom_new.setText(option)
 
     # LOGIC

@@ -54,7 +54,9 @@ class Pick(PickBase.PickBase):
         di.enable_autozoom('off')
         di.enable_autocuts('off')
         di.zoom_to(3, redraw=False)
-        di.set_callback('zoom-set', self.zoomset)
+        settings = di.get_settings()
+        settings.getSetting('zoomlevel').add_callback('set',
+                               self.zoomset, di)
         di.set_cmap(cm, redraw=False)
         di.set_imap(im, redraw=False)
         di.set_callback('none-move', self.detailxy)

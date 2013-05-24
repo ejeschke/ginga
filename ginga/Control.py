@@ -237,9 +237,10 @@ class GingaControl(Callback.Callbacks):
     def change_cbar(self, viewer, fitsimage, cbar):
         self._match_cmap(fitsimage, cbar)
         
-    def change_range_cb(self, fitsimage, loval, hival, cbar):
+    def change_range_cb(self, setting, value, fitsimage, cbar):
         if fitsimage != self.getfocus_fitsimage():
             return False
+        loval, hival = value
         cbar.set_range(loval, hival)
         
     def cbar_value_cb(self, cbar, value, event):

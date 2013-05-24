@@ -33,7 +33,10 @@ class HistogramBase(GingaPlugin.LocalPlugin):
         canvas.setSurface(self.fitsimage)
         self.canvas = canvas
 
-        fitsimage.set_callback('cut-set', self.cutset_ext_cb)
+        fitssettings = fitsimage.get_settings()
+        for name in ['cuts']:
+            fitssettings.getSetting(name).add_callback('set',
+                               self.cutset_ext_cb, fitsimage)
 
 
     def close(self):
@@ -260,9 +263,11 @@ class HistogramBase(GingaPlugin.LocalPlugin):
     def auto_levels(self):
         self.fitsimage.auto_levels()
 
-    def cutset_ext_cb(self, fitsimage, loval, hival):
+    def cutset_ext_cb(self, setting, value, fitsimage):
         if not self.gui_up:
             return
+        t_ = fitsimage.get_settings()
+        loval, hival = t_['cuts']
         
         self.loline.remove()
         self.hiline.remove()

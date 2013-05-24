@@ -141,8 +141,8 @@ class SettingGroup(object):
             else:
                 self.group[key].set(value, callback=callback)
         
-    def set(self, **kwdargs):
-        self.setDict(kwdargs)
+    def set(self, callback=True, **kwdargs):
+        self.setDict(kwdargs, callback=callback)
         
     def __getitem__(self, key):
         return self.group[key].value
@@ -203,7 +203,7 @@ class SettingGroup(object):
                 return 0.0
             elif numpy.isinf(d):
                 return 0.0
-        except NotImplementedError:
+        except Exception:
             pass
         return d
         

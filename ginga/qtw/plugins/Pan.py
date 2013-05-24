@@ -86,7 +86,7 @@ class Pan(GingaPlugin.GlobalPlugin):
         
         fitsimage.copy_attributes(panimage, ['cutlevels'])
         fitsimage.add_callback('image-set', self.new_image_cb, chinfo, paninfo)
-        fitsimage.add_callback('pan-set', self.panset, chinfo, paninfo)
+        fitsimage.add_callback('redraw', self.panset, chinfo, paninfo)
 
         fitssettings = fitsimage.get_settings()
         pansettings = panimage.get_settings()
@@ -97,7 +97,7 @@ class Pan(GingaPlugin.GlobalPlugin):
             pansettings.getSetting(key).add_callback('set', self.zoom_cb,
                                                      fitsimage, chinfo, paninfo)
 
-        xfrmsettings = ['flip_x', 'flip_y', 'swap_xy', 'locut', 'hicut']
+        xfrmsettings = ['flip_x', 'flip_y', 'swap_xy', 'cuts']
         fitssettings.shareSettings(pansettings, xfrmsettings)
         for key in xfrmsettings:
             pansettings.getSetting(key).add_callback('set', self.redraw_cb,

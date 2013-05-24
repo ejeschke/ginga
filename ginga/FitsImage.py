@@ -91,9 +91,19 @@ class FitsImageBase(Callback.Callbacks):
 
         rgbmap.add_callback('changed', self.rgbmap_cb)
 
+        # for scale
+        self.t_.addDefaults(scale=(1.0, 1.0))
+        for name in ['scale']:
+            self.t_.getSetting(name).add_callback('set', self.scale_cb)
+
+        # for pan
+        self.t_.addDefaults(pan=(1.0, 1.0))
+        for name in ['pan']:
+            self.t_.getSetting(name).add_callback('set', self.pan_cb)
+
         # for cut levels
-        self.t_.addDefaults(locut=0.0, hicut=0.0)
-        for name in ('locut', 'hicut'):
+        self.t_.addDefaults(cuts=(0.0, 0.0))
+        for name in ['cuts']:
             self.t_.getSetting(name).add_callback('set', self.cut_levels_cb)
 
         # for auto cut levels
@@ -190,11 +200,7 @@ class FitsImageBase(Callback.Callbacks):
             }
         
         # For callbacks
-        # TODO: we should be able to deprecate a lot of these with the new
-        # settings callbacks
-        for name in ('cut-set', 'zoom-set', 'pan-set', 'transform',
-                     'rotate', 'image-set', 'configure',
-                     'autocuts', 'autozoom'):
+        for name in ('transform', 'image-set', 'configure', 'redraw', ):
             self.enable_callback(name)
 
     def set_window_size(self, width, height, redraw=True):
@@ -431,7 +437,7 @@ class FitsImageBase(Callback.Callbacks):
         self.render_image(rgbobj, self._dst_x, self._dst_y)
         # TODO: see if we can deprecate this fake callback
         if whence <= 0:
-            self.make_callback('pan-set')
+            self.make_callback('redraw')
 
     def render_image(self, rgbobj, dst_x, dst_y):
         self.logger.warn("Subclass needs to override this abstract method!")
@@ -845,8 +851,8 @@ class FitsImageBase(Callback.Callbacks):
             data = numpy.flipud(data)
 
         # Apply cut levels
-        newdata = self.autocuts.cut_levels(data, self.t_['locut'],
-                                           self.t_['hicut'],
+        loval, hival = self.t_['cuts']
+        newdata = self.autocuts.cut_levels(data, loval, hival,
                                            vmin=vmin, vmax=vmax)
         return newdata
 
@@ -900,15 +906,17 @@ class FitsImageBase(Callback.Callbacks):
         except:
             pass
 
-        self._scale_x = scale_x
-        self._scale_y = scale_y
+        self.t_.set(scale=(scale_x, scale_y))
 
         # If user specified override for auto zoom, then turn off
         # auto zoom now that they have set the zoom manually
         if (not no_reset) and (self.t_['autozoom'] == 'override'):
-            value = 'off'
-            self.t_['autozoom'] = value
-            self.make_callback('autozoom', value)
+            self.t_.set(autozoom='off')
+
+    def scale_cb(self, setting, value):
+        scale_x, scale_y = self.t_['scale']
+        self._scale_x = scale_x
+        self._scale_y = scale_y
 
         if self.t_['zoom_algorithm'] == 'rate':
             zoom_x = math.log(scale_x / self.t_['scale_x_base'],
@@ -920,6 +928,7 @@ class FitsImageBase(Callback.Callbacks):
             #print "calc zoom_x=%f zoom_y=%f zoomlevel=%f" % (
             #    zoom_x, zoom_y, zoomlevel)
         else:
+            maxscale = max(scale_x, scale_y)
             zoomlevel = maxscale
             if zoomlevel < 1.0:
                 zoomlevel = - (1.0 / zoomlevel)
@@ -927,9 +936,7 @@ class FitsImageBase(Callback.Callbacks):
             
         self.t_.set(zoomlevel=zoomlevel)
 
-        self.make_callback('zoom-set', zoomlevel, scale_x, scale_y)
-        if redraw:
-            self.redraw()
+        self.redraw(whence=0)
 
     def get_scale(self):
         #scalefactor = max(self._org_scale_x, self._org_scale_y)
@@ -1065,19 +1072,19 @@ class FitsImageBase(Callback.Callbacks):
             str(self.autozoom_options)))
         self.t_.set(autozoom=option)
         
-        self.make_callback('autozoom', option)
         
     def get_autozoom_options(self):
         return self.autozoom_options
     
     def set_pan(self, pan_x, pan_y, redraw=True):
+        self.t_.set(pan=(pan_x, pan_y))
+
+    def pan_cb(self, setting, value):
+        pan_x, pan_y = self.t_['pan']
         self._pan_x = pan_x
         self._pan_y = pan_y
-        self.logger.info("pan set to %.2f,%.2f" % (
-            pan_x, pan_y))
-        self.make_callback('pan-set')
-        if redraw:
-            self.redraw(whence=0)
+        self.logger.info("pan set to %.2f,%.2f" % (pan_x, pan_y))
+        self.redraw(whence=0)
 
     def get_pan(self):
         return (self._pan_x, self._pan_y)
@@ -1122,17 +1129,15 @@ class FitsImageBase(Callback.Callbacks):
         return self.autocuts.get_algorithms()
     
     def get_cut_levels(self):
-        return (self.t_['locut'], self.t_['hicut'])
+        return self.t_['cuts']
     
     def cut_levels(self, loval, hival, no_reset=False, redraw=True):
-        self.t_.set(locut=loval, hicut=hival)
+        self.t_.set(cuts=(loval, hival))
 
         # If user specified override for auto levels, then turn off
         # auto levels now that they have set the levels manually
         if (not no_reset) and (self.t_['autocuts'] == 'override'):
-            value = 'off'
-            self.t_.set(autocuts=value)
-            self.make_callback('autocuts', value)
+            self.t_.set(autocuts='off')
 
         # Save cut levels with this image embedded profile
         self.save_profile(cutlo=loval, cuthi=hival)
@@ -1149,18 +1154,14 @@ class FitsImageBase(Callback.Callbacks):
         loval, hival = self.autocuts.calc_cut_levels(image, method=method,
                                                      pct=pct, numbins=numbins)
         # this will invoke cut_levels_cb()
-        self.t_.set(locut=loval, hicut=hival)
+        self.t_.set(cuts=(loval, hival))
 
     def auto_levels_cb(self, setting, value):
         if self.t_['autocuts'] != 'off':
             self.auto_levels()
 
     def cut_levels_cb(self, setting, value):
-        loval = self.t_['locut']
-        hival = self.t_['hicut']
-
         self.redraw(whence=1)
-        self.make_callback('cut-set', loval, hival)
 
     def enable_autocuts(self, option):
         option = option.lower()
@@ -1169,8 +1170,6 @@ class FitsImageBase(Callback.Callbacks):
             str(self.autocuts_options)))
         self.t_.set(autocuts=option)
         
-        self.make_callback('autocuts', option)
-
     def get_autocuts_options(self):
         return self.autocuts_options
 
@@ -1196,8 +1195,8 @@ class FitsImageBase(Callback.Callbacks):
             dst_fi.rotate(self.t_['rot_deg'], redraw=False)
 
         if 'cutlevels' in attrlist:
-            dst_fi.cut_levels(self.t_['locut'], self.t_['hicut'],
-                              redraw=False)
+            loval, hival = self.t_['cuts']
+            dst_fi.cut_levels(loval, hival, redraw=False)
 
         if 'rgbmap' in attrlist:
             #dst_fi.set_rgbmap(self.rgbmap, redraw=False)
@@ -1219,10 +1218,10 @@ class FitsImageBase(Callback.Callbacks):
         return self.t_['rot_deg']
 
     def rotate(self, deg, redraw=True):
+        """Convenience method for rotating the image by `deg` degrees."""
         self.t_.set(rot_deg=deg)
 
     def rotation_change_cb(self, setting, value):
-        self.make_callback('rotate', value)
         self.redraw(whence=0)
         
     def get_center(self):

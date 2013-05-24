@@ -98,18 +98,21 @@ class Pan(GingaPlugin.GlobalPlugin):
         fitsimage.copy_attributes(panimage, ['cutlevels'])
         
         fitsimage.add_callback('image-set', self.new_image_cb, chinfo, paninfo)
-        fitsimage.add_callback('pan-set', self.panset, chinfo, paninfo)
+        fitsimage.add_callback('redraw', self.panset, chinfo, paninfo)
 
         fitssettings = fitsimage.get_settings()
         pansettings = panimage.get_settings()
         
-        zoomsettings = ['zoom_algorithm', 'zoom_rate', 'scale_x_base', 'scale_y_base']
+        zoomsettings = ['zoom_algorithm', 'zoom_rate',
+                        'scale_x_base', 'scale_y_base']
         fitssettings.shareSettings(pansettings, zoomsettings)
         for key in zoomsettings:
             pansettings.getSetting(key).add_callback('set', self.zoom_cb,
                                                      fitsimage, chinfo, paninfo)
+        ## fitssettings.getSetting('zoomlevel').add_callback('set', self.redraw_cb,
+        ##                                              fitsimage, chinfo, paninfo, 3)
 
-        xfrmsettings = ['flip_x', 'flip_y', 'swap_xy', 'locut', 'hicut']
+        xfrmsettings = ['flip_x', 'flip_y', 'swap_xy', 'cuts']
         fitssettings.shareSettings(pansettings, xfrmsettings)
         for key in xfrmsettings:
             pansettings.getSetting(key).add_callback('set', self.redraw_cb,
@@ -227,6 +230,9 @@ class Pan(GingaPlugin.GlobalPlugin):
                 CanvasTypes.Point(x, y, radius=radius),
                 CanvasTypes.Polygon(points)))
 
+    def zoomset_cb(self, setting, value, fitsimage, chinfo, paninfo):
+        self.panset(fitsimage, chinfo, paninfo)
+        
     def motion_cb(self, fitsimage, button, data_x, data_y):
         bigimage = self.fv.getfocus_fitsimage()
         self.fv.showxy(bigimage, data_x, data_y)

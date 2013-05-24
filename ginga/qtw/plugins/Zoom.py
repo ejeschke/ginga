@@ -49,7 +49,9 @@ class Zoom(GingaPlugin.GlobalPlugin):
         zi.enable_autocuts('off')
         #zi.set_scale_limits(0.001, 1000.0)
         zi.zoom_to(self.default_zoom, redraw=False)
-        zi.add_callback('zoom-set', self.zoomset)
+        settings = zi.get_settings()
+        settings.getSetting('zoomlevel').add_callback('set',
+                               self.zoomset, zi)
         #zi.add_callback('none-move', self.showxy)
         zi.set_bg(0.4, 0.4, 0.4)
         zi.show_pan_mark(True, redraw=False)
@@ -122,14 +124,20 @@ class Zoom(GingaPlugin.GlobalPlugin):
         container.addWidget(vpaned, stretch=1)
        
     def prepare(self, fitsimage):
+        fitssettings = fitsimage.get_settings()
+        zoomsettings = self.zoomimage.get_settings()
         fitsimage.add_callback('image-set', self.new_image_cb)
         #fitsimage.add_callback('focus', self.focus_cb)
         # TODO: should we add our own canvas instead?
         fitsimage.add_callback('motion', self.motion_cb)
-        fitsimage.add_callback('cut-set', self.cutset_cb)
+        for name in ['cuts']:
+            fitssettings.getSetting(name).add_callback('set',
+                               self.cutset_cb, fitsimage)
         fitsimage.add_callback('transform', self.transform_cb)
-        fitsimage.add_callback('rotate', self.rotate_cb)
-        fitsimage.add_callback('zoom-set', self.zoomset_cb)
+        fitssettings.shareSettings(zoomsettings, ['rot_deg'])
+        zoomsettings.getSetting('rot_deg').add_callback('set', self.rotate_cb, fitsimage)
+        fitssettings.getSetting('zoomlevel').add_callback('set',
+                               self.zoomset_cb, fitsimage)
 
     def add_channel(self, viewer, chinfo):
         self.prepare(chinfo.fitsimage)
@@ -167,9 +175,11 @@ class Zoom(GingaPlugin.GlobalPlugin):
         # TODO: redo cutout?
         
     # Match cut-levels to the ones in the "main" image
-    def cutset_cb(self, fitsimage, loval, hival):
+    def cutset_cb(self, setting, value, fitsimage):
         if fitsimage != self.fitsimage_focus:
             return True
+
+        loval, hival = value
         self.zoomimage.cut_levels(loval, hival)
         return True
 
@@ -180,7 +190,7 @@ class Zoom(GingaPlugin.GlobalPlugin):
         self.zoomimage.transform(flip_x, flip_y, swap_xy)
         return True
         
-    def rotate_cb(self, fitsimage, deg):
+    def rotate_cb(self, setting, deg, fitsimage):
         if fitsimage != self.fitsimage_focus:
             return True
         self.zoomimage.rotate(deg)
@@ -203,7 +213,7 @@ class Zoom(GingaPlugin.GlobalPlugin):
         text = self.fv.scale2text(self.zoomimage.get_scale())
         return True
         
-    def zoomset_cb(self, fitsimage, zoomlevel, scale_x, scale_y):
+    def zoomset_cb(self, setting, zoomlevel, fitsimage):
         """This method is called when a main FITS widget changes zoom level.
         """
         fac_x, fac_y = fitsimage.get_scale_base_xy()
@@ -236,7 +246,7 @@ class Zoom(GingaPlugin.GlobalPlugin):
         
     # LOGIC
     
-    def zoomset(self, fitsimage, zoomlevel, scale_x, scale_y):
+    def zoomset(self, setting, zoomlevel, fitsimage):
         scalefactor = fitsimage.get_scale()
         self.logger.debug("scalefactor = %.2f" % (scalefactor))
         text = self.fv.scale2text(scalefactor)

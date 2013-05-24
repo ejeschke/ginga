@@ -164,7 +164,10 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         """Called when a channel is added from the main interface.
         Parameter is chinfo (a bunch)."""
         fitsimage = chinfo.fitsimage
-        fitsimage.add_callback('cut-set', self.cutset_cb)
+        fitssettings = fitsimage.get_settings()
+        for name in ['cuts']:
+            fitssettings.getSetting(name).add_callback('set',
+                               self.cutset_cb, fitsimage)
         fitsimage.add_callback('transform', self.transform_cb)
 
         rgbmap = fitsimage.get_rgbmap()
@@ -179,7 +182,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         self.redo_delay(fitsimage)
         return True
         
-    def cutset_cb(self, fitsimage, loval, hival):
+    def cutset_cb(self, setting, value, fitsimage):
         self.redo_delay(fitsimage)
         return True
 
