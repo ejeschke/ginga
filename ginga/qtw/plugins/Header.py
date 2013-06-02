@@ -75,7 +75,8 @@ class Header(GingaPlugin.GlobalPlugin):
                 table.setItem(row, 0, item1)
                 table.setItem(row, 1, item2)
             row += 1
-        table.setSortingEnabled(True)
+        # TODO: get sorting working
+        #table.setSortingEnabled(True)
 
     def add_channel(self, viewer, chinfo):
         sw, tv = self._create_header_window()

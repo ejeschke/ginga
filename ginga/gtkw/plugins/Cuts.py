@@ -160,9 +160,13 @@ class Cuts(CutsBase.CutsBase):
         del model[index]
         self.tags.remove(tag)
         idx = len(self.tags) - 1
+        self.cutstag = None
         tag = self.tags[idx]
+        if tag == 'None':
+            tag = None
         self.select_cut(tag)
-        self.redo()
+        if tag != None:
+            self.redo()
         
     def delete_all(self):
         self.canvas.deleteAllObjects()

@@ -304,8 +304,7 @@ class PluginManager(object):
                 #raise PluginManagerError(e)
 
         if vbox != None:
-            nb = self.ds.get_nb('Dialogs')
-            self.ds.add_tab(nb, widget, 2, pInfo.tabname, pInfo.tabname)
+            self.ds.add_tab('Dialogs', widget, 2, pInfo.tabname, pInfo.tabname)
             pInfo.widget = widget
             
             self.activate(pInfo)

@@ -99,11 +99,15 @@ class SettingGroup(object):
     def getSetting(self, key):
         return self.group[key]
 
-    def shareSettings(self, other, keylist):
+    def shareSettings(self, other, keylist=None):
+        if keylist == None:
+            keylist = self.group.keys()
         for key in keylist:
             other.group[key] = self.group[key]
 
-    def copySettings(self, other, keylist):
+    def copySettings(self, other, keylist=None):
+        if keylist == None:
+            keylist = self.group.keys()
         d = {}
         for key in keylist:
             d[key] = self.get(key)
@@ -160,6 +164,8 @@ class SettingGroup(object):
                 obj = configobj.ConfigObj(self.preffile, unrepr=True)
                 # Reuse configobj, so we save comments
                 self._cfgobj = obj
+                if not os.path.exists(self.preffile):
+                    raise OSError("File does not exist: %s" % (self.preffile))
                 for key, value in obj.items():
                     d[key] = value
 

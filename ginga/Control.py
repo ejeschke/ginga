@@ -63,6 +63,7 @@ class GingaControl(Callback.Callbacks):
         self.channelNames = []
         self.chinfo = None
         self.chncnt = 0
+        self.wscount = 0
         self.statustask = None
         self.preloadLock = threading.RLock()
         self.preloadList = []
@@ -173,8 +174,9 @@ class GingaControl(Callback.Callbacks):
         """Motion event in the big fits window.  Show the pointing
         information under the cursor.
         """
-        if button == 0:
-            self.showxy(fitsimage, data_x, data_y)
+        ## if button == 0:
+        ##     self.showxy(fitsimage, data_x, data_y)
+        self.showxy(fitsimage, data_x, data_y)
         return True
 
     def keypress(self, fitsimage, keyname):
@@ -256,9 +258,21 @@ class GingaControl(Callback.Callbacks):
             return False
         self.change_cbar(self, fitsimage, self.colorbar)
         
+    def force_focus_cb(self, fitsimage, action, data_x, data_y):
+        chname = self.get_channelName(fitsimage)
+        self.change_channel(chname, raisew=True)
+        return True
+
     def focus_cb(self, fitsimage, tf, name):
         """Called when _fitsimage_ gets (tf==True) or loses (tf==False)
         the focus."""
+        if tf:
+            self.readout.fitsimage = fitsimage
+            image = fitsimage.get_image()
+            self.readout_config(fitsimage, image, self.readout)
+
+        if not self.channel_follows_focus:
+            return True
         self.logger.debug("Focus %s=%s" % (name, tf))
         if tf:
             if fitsimage != self.getfocus_fitsimage():
@@ -474,6 +488,13 @@ class GingaControl(Callback.Callbacks):
         return True
 
         
+    def add_workspace(self, wsname, wstype, inSpace='main'):
+        ## width, height = 700, 800
+        ## self.ds.create_toplevel_ws(width, height, group=1)
+        bnch = self.ds.make_ws(name=wsname, group=1, wstype=wstype)
+        self.ds.add_tab(inSpace, bnch.widget, 1, bnch.name)
+        return True
+        
     # CHANNEL MANAGEMENT
 
     def add_image(self, imname, image, chname=None, silent=False):
@@ -516,8 +537,6 @@ class GingaControl(Callback.Callbacks):
             if chinfo.name != curinfo.name:
                 self.change_channel(chinfo.name)
 
-        #self.make_callback('add-image', chinfo.name, image)
-
     def bulk_add_image(self, imname, image, chname):
         if not self.has_channel(chname):
             chinfo = self.add_channel(chname)
@@ -525,14 +544,12 @@ class GingaControl(Callback.Callbacks):
             chinfo = self.get_channelInfo(chname)
         chinfo.datasrc[imname] = image
 
-        #self.make_callback('add-image', chinfo.name, image)
         #self.update_pending(timeout=0)
 
         # By delaying the update here, more images may be bulk added
         # before the _add_image_update executes--it will then only
-        # update the gui for the latest image, which saves lots of work
+        # update the gui for the latest image, which saves wasted work
         self.gui_do(self._add_image_update, chinfo, image)
-        #self._add_image_update(chinfo, image)
 
         
     def update_image(self, imname, image, chname):
@@ -641,10 +658,15 @@ class GingaControl(Callback.Callbacks):
         if name != oldchname:
             # raise tab
             if raisew:
+                #self.ds.raise_tab(chinfo.workspace)
                 self.ds.raise_tab(name)
 
             if oldchname != None:
-                self.ds.highlight_tab(oldchname, False)
+                try:
+                    self.ds.highlight_tab(oldchname, False)
+                except:
+                    # old channel may not exist!
+                    pass
             self.ds.highlight_tab(name, True)
 
             ## # Update title bar
@@ -716,12 +738,16 @@ class GingaControl(Callback.Callbacks):
         name = chinfo.name
         prefs = self.prefs.createCategory('channel_'+name)
         try:
-            prefs.load()
-            self.logger.warn("no saved preferences found for channel '%s': %s" % (
-                name, str(e)))
+            prefs.load(onError='raise')
 
         except Exception, e:
-            pass
+            self.logger.warn("no saved preferences found for channel '%s': %s" % (
+                name, str(e)))
+            # copy "Image" prefs to new channel
+            oprefs = self.prefs.getSettings('channel_Image')
+            self.logger.debug("Copying settings from 'Image' to '%s'" % (
+                name))
+            oprefs.copySettings(prefs)
 
         # Make sure these preferences are at least defined
         prefs.setDefaults(switchnew=True,
@@ -738,6 +764,7 @@ class GingaControl(Callback.Callbacks):
             chinfo.setvals(widget=bnch.view,
                            readout=bnch.readout,
                            container=bnch.container,
+                           workspace=bnch.workspace,
                            fitsimage=bnch.fitsimage,
                            prefs=prefs,
                            opmon=opmon)
@@ -757,10 +784,10 @@ class GingaControl(Callback.Callbacks):
             
     def delete_channel(self, chname):
         name = chname.lower()
+        # TODO: need to close plugins open on this channel
+            
         with self.lock:
             chinfo = self.channel[name]
-            self.ds.remove_tab(chname)
-            del self.channel[name]
 
             # Update the channels control
             self.channelNames.remove(chname)
@@ -768,8 +795,9 @@ class GingaControl(Callback.Callbacks):
             #print "CHANNELS ARE %s" % self.channelNames
             self.w.channel.delete_alpha(chname)
 
-        # TODO: need to close plugins open on this channel
-            
+            self.ds.remove_tab(chname)
+            del self.channel[name]
+
         self.make_callback('delete-channel', chinfo)
         
     def get_channelNames(self):
@@ -816,18 +844,14 @@ class GingaControl(Callback.Callbacks):
             raise ControlError(errmsg)
 
 
-    def save_file(self, filepath, format='png', quality=90):
-        chinfo = self.get_channelInfo()
-        chinfo.fitsimage.save_image_as_file(filepath, format,
-                                            quality=quality)
-        
-    def banner(self):
+    def banner(self, raiseTab=True):
         bannerFile = os.path.join(self.iconpath, 'ginga-splash.ppm')
         chname = 'Ginga'
         self.add_channel(chname)
         self.nongui_do(self.load_file, bannerFile, chname=chname)
-        self.change_channel(chname)
-        chinfo = self.get_channelInfo()
+        if raiseTab:
+            self.change_channel(chname)
+        chinfo = self.get_channelInfo(chname)
         chinfo.fitsimage.zoom_fit()
 
     def followFocus(self, tf):

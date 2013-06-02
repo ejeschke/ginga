@@ -14,7 +14,7 @@ class Readout(object):
 
     def __init__(self, width, height):
         readout = QtGui.QLabel('')
-        readout.resize(width, height)
+        #readout.resize(width, height)
         readout.setStyleSheet("QLabel { background-color: #202030; color: lightgreen; }");
         readout.setAlignment(QtCore.Qt.AlignHCenter | QtCore.Qt.AlignVCenter)
 

@@ -58,7 +58,7 @@ class GingaView(QtMain.QtMain):
 
         self.w = Bunch.Bunch()
         self.iconpath = icon_path
-
+        self._lastwsname = 'main'
 
     def build_toplevel(self, layout):
 
@@ -97,12 +97,18 @@ class GingaView(QtMain.QtMain):
         # Create main (center) FITS image pane
         self.w.vbox = self.w['main'].layout()
         self.w.vbox.setSpacing(0)
-        # self.w.mnb = self.ds.make_ws(name='main', group=1, wstype='mdi').nb
-        # self.w.mnb.subWindowActivated.connect(self.page_switch_mdi_cb)
+        #self.w.mnb = self.ds.make_ws(name='main', group=1, wstype='grid').nb
+        ## self.w.mnb.subWindowActivated.connect(self.page_switch_mdi_cb)
         self.w.mnb = self.ds.make_ws(name='main', group=1).nb
         self.w.mnb.currentChanged.connect(self.page_switch_cb)
         self.w.vbox.addWidget(self.w.mnb, stretch=1)
         
+        # readout
+        self.readout = self.build_readout()
+        self.add_callback('field-info', self.readout_cb, self.readout, None)
+        rw = self.readout.get_widget()
+        self.w.vbox.addWidget(rw, stretch=0)
+            
         # bottom buttons
         plw = QtGui.QWidget()
         hbox = QtGui.QHBoxLayout()
@@ -167,11 +173,6 @@ class GingaView(QtMain.QtMain):
         item.triggered.connect(self.gui_load_file)
         filemenu.addAction(item)
 
-        item = QtGui.QAction("Save image as PNG", menubar)
-        item.triggered.connect(lambda: self.save_file('/tmp/fitsimage.png',
-                                                      'png'))
-        filemenu.addAction(item)
-
         sep = QtGui.QAction(menubar)
         sep.setSeparator(True)
         filemenu.addAction(sep)
@@ -187,43 +188,47 @@ class GingaView(QtMain.QtMain):
         item.triggered.connect(self.gui_add_channel)
         chmenu.addAction(item)
         
+        item = QtGui.QAction("Add Channels", menubar)
+        item.triggered.connect(self.gui_add_channels)
+        chmenu.addAction(item)
+        
         item = QtGui.QAction("Delete Channel", menubar)
         item.triggered.connect(self.gui_delete_channel)
         chmenu.addAction(item)
 
         # create a Window pulldown menu, and add it to the menu bar
-        winmenu = menubar.addMenu("Window")
+        winmenu = menubar.addMenu("Workspace")
 
-        item = QtGui.QAction("New Workspace", menubar)
+        item = QtGui.QAction("Add Workspace", menubar)
         item.triggered.connect(self.gui_add_ws)
         winmenu.addAction(item)
         
         # # create a Option pulldown menu, and add it to the menu bar
         # optionmenu = menubar.addMenu("Option")
 
-        # # create a Workspace pulldown menu, and add it to the menu bar
-        # wsmenu = menubar.addMenu("Workspace")
+        ## # create a Workspace pulldown menu, and add it to the menu bar
+        ## wsmenu = menubar.addMenu("Workspace")
 
-        # item = QtGui.QAction("Panes as Tabs", menubar)
-        # item.triggered.connect(self.tabstoggle_cb)
-        # item.setCheckable(True)
-        # # TODO: check the state of the workspace first
-        # item.setChecked(True)
-        # wsmenu.addAction(item)
+        ## item = QtGui.QAction("Panes as Tabs", menubar)
+        ## item.triggered.connect(self.tabstoggle_cb)
+        ## item.setCheckable(True)
+        ## # TODO: check the state of the workspace first
+        ## item.setChecked(True)
+        ## wsmenu.addAction(item)
         
-        # item = QtGui.QAction("Tile Panes", menubar)
-        # item.triggered.connect(self.tile_panes_cb)
-        # wsmenu.addAction(item)
+        ## item = QtGui.QAction("Tile Panes", menubar)
+        ## item.triggered.connect(self.tile_panes_cb)
+        ## wsmenu.addAction(item)
         
-        # item = QtGui.QAction("Cascade Panes", menubar)
-        # item.triggered.connect(self.cascade_panes_cb)
-        # wsmenu.addAction(item)
+        ## item = QtGui.QAction("Cascade Panes", menubar)
+        ## item.triggered.connect(self.cascade_panes_cb)
+        ## wsmenu.addAction(item)
         
         # create a Help pulldown menu, and add it to the menu bar
         helpmenu = menubar.addMenu("Help")
 
         item = QtGui.QAction("About", menubar)
-        item.triggered.connect(self.banner)
+        item.triggered.connect(lambda: self.banner(raiseTab=True))
         helpmenu.addAction(item)
         
 
@@ -376,6 +381,7 @@ class GingaView(QtMain.QtMain):
         fi.enable_draw(False)
         fi.enable_auto_orient(True)
         fi.add_callback('motion', self.motion_cb)
+        fi.add_callback('cursor-down', self.force_focus_cb)
         fi.add_callback('key-press', self.keypress)
         fi.add_callback('drag-drop', self.dragdrop)
         for name in ['cuts']:
@@ -396,19 +402,18 @@ class GingaView(QtMain.QtMain):
         return fi
 
     def add_viewer(self, name, settings,
-                   use_readout=True, workspace=None):
+                   use_readout=False, workspace=None):
 
         vwidget = QtGui.QWidget()
         vbox = QtGui.QVBoxLayout()
-        vbox.setContentsMargins(4, 4, 4, 4)
+        vbox.setContentsMargins(1, 1, 1, 1)
         vbox.setSpacing(0)
         vwidget.setLayout(vbox)
         
         fi = self.build_viewpane(settings)
         iw = fi.get_widget()
 
-        if self.channel_follows_focus:
-            fi.add_callback('focus', self.focus_cb, name)
+        fi.add_callback('focus', self.focus_cb, name)
         vbox.addWidget(iw, stretch=1)
         fi.set_name(name)
 
@@ -419,19 +424,20 @@ class GingaView(QtMain.QtMain):
             fi.add_callback('image-set', self.readout_config, readout)
             self.add_callback('field-info', self.readout_cb, readout, name)
             rw = readout.get_widget()
-            vbox.addWidget(rw, stretch=0)
+            rw.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed,
+                                               QtGui.QSizePolicy.Fixed))
+            vbox.addWidget(rw, stretch=0, alignment=QtCore.Qt.AlignLeft)
         else:
             readout = None
 
         # Add a page to the specified notebook
         if not workspace:
             workspace = 'main'
-        nb = self.ds.get_nb(workspace)
-        self.ds.add_tab(nb, vwidget, 1, name)
+        self.ds.add_tab(workspace, vwidget, 1, name)
 
         self.update_pending()
         bnch = Bunch.Bunch(fitsimage=fi, view=iw, container=vwidget,
-                           readout=readout)
+                           readout=readout, workspace=workspace)
         return bnch
 
 
@@ -444,7 +450,6 @@ class GingaView(QtMain.QtMain):
         try:
             wsName = spec.get('ws', None)
             if wsName and hasattr(pInfo.obj, 'build_gui'):
-                ws = self.ds.get_nb(wsName)
                 tabName = spec.get('tab', pInfo.name)
                 pInfo.tabname = tabName
 
@@ -478,7 +483,7 @@ class GingaView(QtMain.QtMain):
                 vbox.addWidget(textw, stretch=1)
                 
         if vbox:
-            self.ds.add_tab(ws, widget, 2, tabName)
+            self.ds.add_tab(wsName, widget, 2, tabName)
             pInfo.widget = widget
                 
     def stop_global_plugin(self, pluginName):
@@ -495,22 +500,65 @@ class GingaView(QtMain.QtMain):
             self.chncnt += 1
             chname = "Image%d" % self.chncnt
         lbl = QtGui.QLabel('New channel name:')
-        
         ent = QtGui.QLineEdit()
         ent.setText(chname)
-        #ent.set_activates_default(True)
-        dialog = QtHelp.Dialog("New Channel",
+        lbl2 = QtGui.QLabel('Workspace:')
+        cbox = QtHelp.ComboBox()
+        names = self.ds.get_wsnames()
+        try:
+            idx = names.index(self._lastwsname)
+        except:
+            idx = 0
+        for name in names:
+            cbox.append_text(name)
+        cbox.setCurrentIndex(idx)
+        dialog = QtHelp.Dialog("Add Channel",
                                0,
                                [['Cancel', 0], ['Ok', 1]],
-                               lambda w, rsp: self.new_channel_cb(w, rsp, ent))
+                               lambda w, rsp: self.add_channel_cb(w, rsp, ent, cbox, names))
         box = dialog.get_content_area()
         layout = QtGui.QVBoxLayout()
         box.setLayout(layout)
         
         layout.addWidget(lbl, stretch=0)
         layout.addWidget(ent, stretch=0)
+        layout.addWidget(lbl2, stretch=0)
+        layout.addWidget(cbox, stretch=0)
         dialog.show()
         
+    def gui_add_channels(self):
+        captions = (('Prefix', 'entry'),
+                    ('Number', 'spinbutton'),
+                    ('Workspace', 'combobox'),
+                    )
+        w, b = QtHelp.build_info(captions)
+        b.prefix.setText("Image")
+        b.number.setRange(1, 12)
+        b.number.setSingleStep(1)
+        b.number.setValue(1)
+        
+        cbox = b.workspace
+        names = self.ds.get_wsnames()
+        try:
+            idx = names.index('main')
+        except:
+            idx = 0
+        for name in names:
+            cbox.append_text(name)
+        cbox.setCurrentIndex(idx)
+
+        dialog = QtHelp.Dialog("Add Channels",
+                               0,
+                               [['Cancel', 0], ['Ok', 1]],
+                               lambda w, rsp: self.add_channels_cb(w, rsp,
+                                                                   b, names))
+        box = dialog.get_content_area()
+        layout = QtGui.QVBoxLayout()
+        box.setLayout(layout)
+        
+        layout.addWidget(w, stretch=1)
+        dialog.show()
+
     def gui_delete_channel(self):
         chinfo = self.get_channelInfo()
         chname = chinfo.name
@@ -526,8 +574,41 @@ class GingaView(QtMain.QtMain):
         dialog.show()
         
     def gui_add_ws(self):
-        width, height = 700, 800
-        self.ds.create_toplevel_ws(width, height)
+        lbl = QtGui.QLabel('New workspace name:')
+        ent = QtGui.QLineEdit()
+        self.wscount += 1
+        wsname = "ws%d" % (self.wscount)
+        ent.setText(wsname)
+        lbl2 = QtGui.QLabel('Workspace type:')
+        cbox = QtHelp.ComboBox()
+        cbox.append_text("Grid")
+        cbox.append_text("Tabs")
+        cbox.setCurrentIndex(0)
+        dialog = QtHelp.Dialog("Add Workspace",
+                               0,
+                               [['Cancel', 0], ['Ok', 1]],
+                               lambda w, rsp: self.new_ws_cb(w, rsp, ent, cbox))
+        box = dialog.get_content_area()
+        layout = QtGui.QVBoxLayout()
+        box.setLayout(layout)
+        
+        layout.addWidget(lbl, stretch=0)
+        layout.addWidget(ent, stretch=0)
+        layout.addWidget(lbl2, stretch=0)
+        layout.addWidget(cbox, stretch=0)
+        dialog.show()
+
+    def new_ws_cb(self, w, rsp, ent, cbox):
+        w.close()
+        wsname = str(ent.text())
+        idx = cbox.currentIndex()
+        if rsp == 0:
+            return
+        d = { 0: 'grid', 1: 'nb' }
+        wstype = d[idx]
+        inSpace = 'main'
+        
+        self.add_workspace(wsname, wstype, inSpace=inSpace)
         return True
         
     def gui_load_file(self, initialdir=None):
@@ -535,19 +616,6 @@ class GingaView(QtMain.QtMain):
             fileNames = map(str, list(self.filesel.selectedFiles()))
             self.load_file(fileNames[0])
         #self.start_operation('FBrowser')
-        
-    # def build_dialogpane(self):
-    #     nb = self.ds.make_nb(name="dialogs", group=3).nb
-    #     nb.show_all()
-    #     self.w.dialogs = nb
-    #     return nb
-        
-    # def add_dialogpane(self, name, nbw):
-    #     w = self.build_dialogpane()
-
-    #     # Add the Dialogs page to the LH notebook
-    #     self.ds.add_tab(nbw, w, 2, "Dialogs")
-    #     return w
         
     def statusMsg(self, format, *args):
         if not format:
@@ -557,9 +625,6 @@ class GingaView(QtMain.QtMain):
 
         # remove message in about 10 seconds
         self.w.status.showMessage(s, 10000)
-        ## if self.statustask:
-        ##     gobject.source_remove(self.statustask)
-        ## self.statustask = gobject.timeout_add(10000, self.statusMsg, '')
 
 
     def setPos(self, x, y):
@@ -622,12 +687,32 @@ class GingaView(QtMain.QtMain):
                 index, chname))
             self.change_channel(chname)
         
-    def new_channel_cb(self, w, rsp, ent):
-        w.close()
+    def add_channel_cb(self, w, rsp, ent, cbox, names):
         chname = str(ent.text())
+        idx = cbox.currentIndex()
+        wsname = names[idx]
+        w.close()
+        # save name for next add
+        self._lastwsname = wsname
         if rsp == 0:
             return
-        self.add_channel(chname)
+        self.add_channel(chname, workspace=wsname)
+        return True
+        
+    def add_channels_cb(self, w, rsp, b, names):
+        chpfx = b.prefix.text()
+        idx = b.workspace.currentIndex()
+        wsname = names[idx]
+        num = int(b.number.value())
+        w.close()
+        if (rsp == 0) or (num <= 0):
+            return
+
+        chbase = self.chncnt
+        self.chncnt += num
+        for i in xrange(num):
+            chname = "%s%d" % (chpfx, chbase+i)
+            self.add_channel(chname, workspace=wsname)
         return True
         
     def delete_channel_cb(self, w, rsp, chname):

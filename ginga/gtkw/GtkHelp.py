@@ -8,15 +8,19 @@
 # Please see the file LICENSE.txt for details.
 #
 import time
+import math
 import gtk
 import gobject
 
 from ginga.misc import Bunch, Callback
 
 
-class Workspace(gtk.Layout):
+class MDIWorkspace(gtk.Layout):
+    """
+    This is a work in progress!
+    """
     def __init__(self):
-        super(Workspace, self).__init__()
+        super(MDIWorkspace, self).__init__()
 
         self.children = []
         self.selected_child = None
@@ -146,6 +150,75 @@ class Workspace(gtk.Layout):
             bnch.cr.rectangle(x, y, bnch.wd, bnch.ht)
             bnch.cr.stroke_preserve()
 
+class GridWorkspace(gtk.Table):
+
+    def __init__(self):
+        super(GridWorkspace, self).__init__()
+        
+        self.set_row_spacings(2)
+        self.set_col_spacings(2)
+        self.widgets = []
+        self.labels = {}
+
+    def _relayout(self):
+        # calculate number of rows and cols, try to maintain a square
+        # TODO: take into account the window geometry
+        num_widgets = len(self.widgets)
+        rows = int(round(math.sqrt(num_widgets)))
+        cols = rows
+        if rows**2 < num_widgets:
+            cols += 1
+
+        # remove all the old widgets
+        for w in self.widgets:
+            self.remove(w)
+
+        self.resize(rows, cols)
+
+        # add them back in, in a grid
+        for i in xrange(0, rows):
+            for j in xrange(0, cols):
+                index = i*cols + j
+                if index < num_widgets:
+                    widget = self.widgets[index]
+                self.attach(widget, j, j+1, i, i+1,
+                            xoptions=gtk.FILL|gtk.EXPAND,
+                            yoptions=gtk.FILL|gtk.EXPAND,
+                            xpadding=0, ypadding=0)
+
+    def append_page(self, widget, label):
+        self.widgets.append(widget)
+        self.labels[widget] = label
+        self._relayout()
+
+    def remove_page(self, idx):
+        widget = self.getWidget(idx)
+        del self.labels[widget]
+        self.widgets.remove(widget)
+        self.remove(widget)
+        self._relayout()
+
+    def page_num(self, widget):
+        try:
+            return self.widgets.index(widget)
+        except (IndexError, ValueError), e:
+            return -1
+
+    def getWidget(self, index):
+        return self.widgets[index]
+
+    def set_tab_reorderable(self, w, tf):
+        pass
+    def set_tab_detachable(self, w, tf):
+        pass
+
+    def get_tab_label(self, widget):
+        return self.labels[widget]
+
+    def set_current_page(self, idx):
+        widget = self.getWidget(idx)
+        self.set_focus_child(widget)
+        
 
 class WidgetMask(object):
     def __init__(self, *args):
@@ -342,7 +415,7 @@ class Desktop(Callback.Callbacks):
         
     # --- Tab Handling ---
     
-    def make_nb(self, name=None, group=1, show_tabs=True, show_border=False,
+    def make_ws(self, name=None, group=1, show_tabs=True, show_border=False,
                 detachable=True, tabpos=None, scrollable=True, wstype='nb'):
         if not name:
             name = str(time.time())
@@ -353,14 +426,19 @@ class Desktop(Callback.Callbacks):
             # Allows drag-and-drop between notebooks
             nb.set_group_id(group)
             if detachable:
-                nb.connect("create-window", self.detach_page, group)
-            nb.connect("switch-page", self.switch_page)
+                nb.connect("create-window", self.detach_page_cb, group)
+            nb.connect("switch-page", self.switch_page_cb)
             nb.set_tab_pos(tabpos)
             nb.set_scrollable(scrollable)
             nb.set_show_tabs(show_tabs)
             nb.set_show_border(show_border)
             #nb.set_border_width(2)
             widget = nb
+
+        elif wstype == 'grid':
+            nb = GridWorkspace()
+            widget = nb
+
         else:
             nb = Workspace()
             widget = gtk.ScrolledWindow()
@@ -368,15 +446,26 @@ class Desktop(Callback.Callbacks):
             widget.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
             widget.add(nb)
 
-        bnch = Bunch.Bunch(nb=nb, name=name, widget=widget)
+        bnch = Bunch.Bunch(nb=nb, name=name, widget=widget, group=group)
         self.notebooks[name] = bnch
         return bnch
 
     def get_nb(self, name):
         return self.notebooks[name].nb
         
-    def add_tab(self, tab_w, widget, group, labelname, tabname=None,
+    def get_wsnames(self, group=1):
+        res = []
+        for name in self.notebooks.keys():
+            bnch = self.notebooks[name]
+            if group == None:
+                res.append(name)
+            elif group == bnch.group:
+                res.append(name)
+        return res
+    
+    def add_tab(self, wsname, widget, group, labelname, tabname=None,
                 data=None):
+        tab_w = self.get_nb(wsname)
         self.tabcount += 1
         if not tabname:
             tabname = labelname
@@ -394,6 +483,7 @@ class Desktop(Callback.Callbacks):
         evbox.connect("button-press-event", self.select_cb, labelname, data)
         tab_w.set_tab_reorderable(widget, True)
         tab_w.set_tab_detachable(widget, True)
+        widget.show()
         return tabname
 
     def _find_nb(self, tabname):
@@ -422,6 +512,7 @@ class Desktop(Callback.Callbacks):
 
     def remove_tab(self, tabname):
         nb, page_num = self._find_nb(tabname)
+        print "removing tab %s from %s at index %d" % (tabname, nb, page_num)
         if nb:
             nb.remove_page(page_num)
             del self.tab[tabname]
@@ -474,9 +565,9 @@ class Desktop(Callback.Callbacks):
         #quit_item.connect_object ("activate", self.quit, "file.exit")
         quit_item.show()
 
-        bnch = self.make_nb(group=group)
+        bnch = self.make_ws(group=group)
         vbox.pack_start(bnch.widget, padding=2, fill=True, expand=True)
-        root.connect("delete_event", lambda w, e: self.close_page(bnch, root))
+        root.connect("delete_event", lambda w, e: self.close_page_cb(bnch, root))
 
         lbl = gtk.Statusbar()
         lbl.set_has_resize_grip(True)
@@ -488,7 +579,14 @@ class Desktop(Callback.Callbacks):
             root.move(x, y)
         return bnch
 
-    def detach_page(self, source, widget, x, y, group):
+    def close_page_cb(self, bnch, root):
+        children = bnch.nb.get_children()
+        if len(children) == 0:
+            del self.notebooks[bnch.name]
+            root.destroy()
+        return True
+    
+    def detach_page_cb(self, source, widget, x, y, group):
         # Detach page to new top-level workspace
         ## page = self.widgetToPage(widget)
         ## if not page:
@@ -498,14 +596,7 @@ class Desktop(Callback.Callbacks):
         bnch = self.create_toplevel_ws(width, height, group, x=x, y=y)
         return bnch.nb
 
-    def close_page(self, bnch, root):
-        children = bnch.nb.get_children()
-        if len(children) == 0:
-            del self.notebooks[bnch.name]
-            root.destroy()
-        return True
-    
-    def switch_page(self, nbw, gptr, page_num):
+    def switch_page_cb(self, nbw, gptr, page_num):
         pagew = nbw.get_nth_page(page_num)
         bnch = self._find_tab(pagew)
         if bnch != None:
@@ -543,7 +634,7 @@ class Desktop(Callback.Callbacks):
 
             elif kind == 'ws':
                 group = int(params.group)
-                widget = self.make_nb(name=params.name, group=group,
+                widget = self.make_ws(name=params.name, group=group,
                                       show_tabs=params.show_tabs,
                                       show_border=params.show_border,
                                       detachable=params.detachable,
@@ -569,9 +660,8 @@ class Desktop(Callback.Callbacks):
                 # to the workspace as tabs.
                 for tabname, layout in args[0]:
                     def pack(w):
-                        nb = self.get_nb(params.name)
                         # ?why should group be the same as parent group?
-                        self.add_tab(nb, w, group,
+                        self.add_tab(params.name, w, group,
                                      tabname, tabname.lower())
 
                     make(layout, pack)

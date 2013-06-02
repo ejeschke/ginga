@@ -9,6 +9,7 @@
 #
 import time
 import os
+import math
 
 # PySide or PyQt4: choose one or the other, but not both
 toolkit = 'choose'
@@ -80,10 +81,10 @@ class StackedWidget(QtGui.QStackedWidget):
     def removeTab(self, index):
         self.removeWidget(self.widget(index))
 
-class Workspace(QtGui.QMdiArea):
+class MDIWorkspace(QtGui.QMdiArea):
 
     def __init__(self):
-        super(Workspace, self).__init__()
+        super(MDIWorkspace, self).__init__()
         self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
         self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
         self.setViewMode(QtGui.QMdiArea.TabbedView)
@@ -122,6 +123,74 @@ class Workspace(QtGui.QMdiArea):
 
     def sizeHint(self):
         return QtCore.QSize(300, 300)
+
+
+class GridWorkspace(QtGui.QWidget):
+
+    def __init__(self):
+        super(GridWorkspace, self).__init__()
+
+        self.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.MinimumExpanding,
+                                             QtGui.QSizePolicy.MinimumExpanding))
+
+        layout = QtGui.QGridLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        self.setLayout(layout)
+        self.layout = layout
+        self.widgets = []
+
+    def _relayout(self):
+        # calculate number of rows and cols, try to maintain a square
+        # TODO: take into account the window geometry
+        num_widgets = len(self.widgets)
+        rows = int(round(math.sqrt(num_widgets)))
+        cols = rows
+        if rows**2 < num_widgets:
+            cols += 1
+
+        # remove all the old widgets
+        for w in self.widgets:
+            self.layout.removeWidget(w)
+
+        # add them back in, in a grid
+        for i in xrange(0, rows):
+            for j in xrange(0, cols):
+                index = i*cols + j
+                if index < num_widgets:
+                    widget = self.widgets[index]
+                self.layout.addWidget(widget, i, j)
+        
+    def addTab(self, widget, label):
+        widget.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.MinimumExpanding,
+                                               QtGui.QSizePolicy.MinimumExpanding))
+        self.widgets.append(widget)
+        self._relayout()
+
+    def removeTab(self, idx):
+        widget = self.getWidget(idx)
+        self.widgets.remove(widget)
+        self.layout.removeWidget(widget)
+        self._relayout()
+
+    def indexOf(self, widget):
+        try:
+            return self.widgets.index(widget)
+        except (IndexError, ValueError), e:
+            return -1
+
+    def getWidget(self, index):
+        return self.widgets[index]
+
+    def tabBar(self):
+        return None
+    
+    def setCurrentIndex(self, index):
+        widget = self.getWidget(index)
+        # TODO: focus widget
+
+    def sizeHint(self):
+        return QtCore.QSize(20, 20)
 
 class ComboBox(QtGui.QComboBox):
 
@@ -260,6 +329,9 @@ class Desktop(Callback.Callbacks):
         if wstype == 'mdi':
             nb = Workspace()
 
+        elif wstype == 'grid':
+            nb = GridWorkspace()
+
         elif show_tabs:
             nb = TabWidget()
             nb.setTabPosition(tabpos)
@@ -267,7 +339,7 @@ class Desktop(Callback.Callbacks):
             nb.setTabsClosable(closeable)
             nb.setMovable(True)   # reorderable
             nb.setAcceptDrops(True)
-            nb.currentChanged.connect(lambda idx: self.switch_page(idx, nb))
+            nb.currentChanged.connect(lambda idx: self.switch_page_cb(idx, nb))
 
             tb = nb.tabBar()
             ## tb.setAcceptDrops(True)
@@ -278,17 +350,29 @@ class Desktop(Callback.Callbacks):
 
         else:
             nb = StackedWidget()
-            nb.currentChanged.connect(lambda idx: self.switch_page(idx, nb))
+            nb.currentChanged.connect(lambda idx: self.switch_page_cb(idx, nb))
 
         nb.setStyleSheet (tabwidget_style)
         if not name:
             name = str(time.time())
-        self.notebooks[name] = Bunch.Bunch(nb=nb, name=name, nbtype=wstype)
-        return self.notebooks[name]
+        bnch = Bunch.Bunch(nb=nb, name=name, nbtype=wstype,
+                           widget=nb, group=group)
+        self.notebooks[name] = bnch
+        return bnch
 
     def get_nb(self, name):
         return self.notebooks[name].nb
-        
+
+    def get_wsnames(self, group=1):
+        res = []
+        for name in self.notebooks.keys():
+            bnch = self.notebooks[name]
+            if group == None:
+                res.append(name)
+            elif group == bnch.group:
+                res.append(name)
+        return res
+    
     def on_context_menu(self, nb, point):
         # create context menu
         popmenu = QtGui.QMenu(nb)
@@ -306,9 +390,9 @@ class Desktop(Callback.Callbacks):
         popmenu.exec_(nb.mapToGlobal(point))
         self.popmenu = popmenu
 
-    def add_tab(self, tab_w, widget, group, labelname, tabname=None,
+    def add_tab(self, wsname, widget, group, labelname, tabname=None,
                 data=None):
-        """NOTE: use add_page() instead."""
+        tab_w = self.get_nb(wsname)
         self.tabcount += 1
         if not tabname:
             tabname = labelname
@@ -320,10 +404,6 @@ class Desktop(Callback.Callbacks):
                                         tabname=tabname, data=data,
                                         group=group)
         return tabname
-
-    def add_page(self, nbname, widget, group, labelname, tabname=None):
-        tab_w = self.get_nb(nbname)
-        return self.add_tab(tab_w, widget, group, labelname, tabname=tabname)
 
     def _find_nb(self, tabname):
         widget = self.tab[tabname].widget
@@ -350,6 +430,12 @@ class Desktop(Callback.Callbacks):
         if (nb != None) and (index >= 0):
             nb.setCurrentIndex(index)
 
+    def remove_tab(self, tabname):
+        nb, index = self._find_nb(tabname)
+        widget = self.tab[tabname].widget
+        if (nb != None) and (index >= 0):
+            nb.removeTab(index)
+
     def highlight_tab(self, tabname, onoff):
         nb, index = self._find_nb(tabname)
         if nb:
@@ -365,13 +451,7 @@ class Desktop(Callback.Callbacks):
             else:
                 widget.setStyleSheet('QPushButton {color: grey}')
 
-    def remove_tab(self, tabname):
-        nb, index = self._find_nb(tabname)
-        widget = self.tab[tabname].widget
-        if (nb != None) and (index >= 0):
-            nb.removeTab(index)
-
-    def create_toplevel_ws(self, width, height, x=None, y=None):
+    def create_toplevel_ws(self, width, height, group, x=None, y=None):
         # create main frame
         root = TopLevel()
         ## root.setTitle(title)
@@ -401,7 +481,7 @@ class Desktop(Callback.Callbacks):
         bnch = self.make_ws(group=1)
         bnch.root = root
         layout.addWidget(bnch.nb, stretch=1)
-        root.closeEvent = lambda event: self.close_page(bnch, event)
+        root.closeEvent = lambda event: self.close_page_cb(bnch, event)
         quititem.triggered.connect(lambda: self._close_page(bnch))
 
         root.show()
@@ -410,7 +490,7 @@ class Desktop(Callback.Callbacks):
             root.moveTo(x, y)
         return True
 
-    def detach_page(self, source, widget, x, y, group):
+    def detach_page_cb(self, source, widget, x, y, group):
         # Detach page to new top-level workspace
         ## page = self.widgetToPage(widget)
         ## if not page:
@@ -441,7 +521,7 @@ class Desktop(Callback.Callbacks):
             root.destroy()
         return True
     
-    def close_page(self, bnch, event):
+    def close_page_cb(self, bnch, event):
         num_children = bnch.nb.count()
         if num_children == 0:
             del self.notebooks[bnch.name]
@@ -451,7 +531,7 @@ class Desktop(Callback.Callbacks):
             event.ignore()
         return True
     
-    def switch_page(self, page_num, nbw):
+    def switch_page_cb(self, page_num, nbw):
         pagew = nbw.currentWidget()
         bnch = self._find_tab(pagew)
         if bnch != None:
@@ -519,7 +599,7 @@ class Desktop(Callback.Callbacks):
 
             process_common_params(widget, params)
             
-            if (kind in ('ws', 'mdi')) and (len(args) > 0):
+            if (kind in ('ws', 'mdi', 'grid')) and (len(args) > 0):
                 # <-- Notebook ws specified a sub-layout.  We expect a list
                 # of tabname, layout pairs--iterate over these and add them
                 # to the workspace as tabs.
@@ -527,7 +607,7 @@ class Desktop(Callback.Callbacks):
                 for tabname, layout in args[0]:
                     def pack(w):
                         # ?why should group be the same as parent group?
-                        self.add_tab(widget, w, group,
+                        self.add_tab(params.name, w, group,
                                      tabname, tabname.lower())
 
                     make(layout, pack)

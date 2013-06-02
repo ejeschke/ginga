@@ -11,7 +11,6 @@
 import sys, os
 import math
 import logging
-from collections import OrderedDict
 
 from ginga import iqcalc, wcs
 # TEMP
@@ -146,7 +145,7 @@ class AstroImage(BaseImage):
         except KeyError, e:
             if not create:
                 raise e
-            hdr = OrderedDict({})
+            hdr = {}
             self.metadata['header'] = hdr
         return hdr
         
@@ -620,7 +619,8 @@ class AstroImage(BaseImage):
         #wcsobj.wcs.pc = numpy.array([[-cpa, -spa], [-spa, cpa]])
         self.update_keywords({
             'NAXIS1': wd, 'NAXIS2': ht,
-            'PC1_1': -cpa, 'PC1_2': -spa, 'PC2_1': -spa, 'PC2_2': cpa,
+            #'PC1_1': -cpa, 'PC1_2': -spa, 'PC2_1': -spa, 'PC2_2': cpa,
+            'PC1_1': cpa, 'PC1_2': -spa, 'PC2_1': spa, 'PC2_2': cpa,
             })
 
         
@@ -685,10 +685,10 @@ class AstroImage(BaseImage):
         spa = numpy.sin(pa)
         mosaic.update_keywords({ 'NAXIS1': width,
                                  'NAXIS2': height,
-                                 ## 'PC1_1': -cpa,
-                                 ## 'PC1_2': -spa,
-                                 ## 'PC2_1': -spa,
-                                 ## 'PC2_2': cpa,
+                                 'PC1_1': cpa,
+                                 'PC1_2': -spa,
+                                 'PC2_1': spa,
+                                 'PC2_2': cpa,
                                  })
 
         # Update the WCS reference pixel with the relocation info
