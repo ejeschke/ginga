@@ -179,8 +179,8 @@ class FitsImageBase(Callback.Callbacks):
         self._scale_x = 1.0
         self._scale_y = 1.0
         # actual scale factors produced from desired ones
-        self._org_scale_x = 0
-        self._org_scale_y = 0
+        self._org_scale_x = 1.0
+        self._org_scale_y = 1.0
 
         self._cutout = None
         self._rotimg = None

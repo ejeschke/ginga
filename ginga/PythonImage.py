@@ -264,7 +264,11 @@ class PythonImage(BaseImage):
             # result than PIL
             means = 'QImage'
             qimage = numpy2qimage(data)
-            qimage = qimage.scaled(new_wd, new_ht,
+            if (old_wd != new_wd) or (old_ht != new_ht):
+                # NOTE: there is a strange bug in qimage.scaled if the new
+                # dimensions are exactly the same--so we check and only
+                # scale if there is some difference
+                qimage = qimage.scaled(new_wd, new_ht,
                                    transformMode=QtCore.Qt.SmoothTransformation)
             newdata = qimage2numpy(qimage)
 
@@ -385,7 +389,7 @@ def gray2qimage(gray):
     """Convert the 2D numpy array `gray` into a 8-bit QImage with a gray
     colormap.  The first dimension represents the vertical image axis.
 
-    ATTENTION: This QImage carries an attribute `ndimage` with a
+    ATTENTION: This QImage carries an attribute `ndarray` with a
     reference to the underlying numpy array that holds the data. On
     Windows, the conversion into a QPixmap does not copy the data, so
     that you have to take care that the QImage does not get garbage
@@ -394,21 +398,22 @@ def gray2qimage(gray):
     if len(gray.shape) != 2:
         raise ValueError("gray2QImage can only convert 2D arrays")
 
-    gray = numpy.require(gray, numpy.uint8, 'C')
-
     h, w = gray.shape
-
-    result = QImage(gray.data, w, h, QImage.Format_Indexed8)
-    result.ndarray = gray
-    for i in range(256):
-        result.setColor(i, QColor(i, i, i).rgb())
-        return result
+    bgra = numpy.empty((h, w, 4), numpy.uint8, 'C')
+    bgra[...,0] = gray
+    bgra[...,1] = gray
+    bgra[...,2] = gray
+    bgra[...,3].fill(255)
+    fmt = QImage.Format_RGB32
+    result = QImage(bgra.data, w, h, fmt)
+    result.ndarray = bgra
+    return result
 
 def rgb2qimage(rgb):
     """Convert the 3D numpy array `rgb` into a 32-bit QImage.  `rgb` must
     have three dimensions with the vertical, horizontal and RGB image axes.
 
-    ATTENTION: This QImage carries an attribute `ndimage` with a
+    ATTENTION: This QImage carries an attribute `ndarray` with a
     reference to the underlying numpy array that holds the data. On
     Windows, the conversion into a QPixmap does not copy the data, so
     that you have to take care that the QImage does not get garbage
