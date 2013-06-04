@@ -91,7 +91,8 @@ class Pan(GingaPlugin.GlobalPlugin):
         fitssettings = fitsimage.get_settings()
         pansettings = panimage.get_settings()
         
-        zoomsettings = ['zoom_algorithm', 'zoom_rate', 'scale_x_base', 'scale_y_base']
+        zoomsettings = ['zoom_algorithm', 'zoom_rate',
+                        'scale_x_base', 'scale_y_base']
         fitssettings.shareSettings(pansettings, zoomsettings)
         for key in zoomsettings:
             pansettings.getSetting(key).add_callback('set', self.zoom_cb,
@@ -134,16 +135,12 @@ class Pan(GingaPlugin.GlobalPlugin):
         chname = self.fv.get_channelName(fitsimage)
         chinfo = self.fv.get_channelInfo(chname)
         chname = chinfo.name
-        print "pan focus cb: chname=%s" % (chname)
 
         if self.active != chname:
-            print "Channel is %s" % chname
-            print "Current channels are %s" % self.channel.keys()
             index = self.channel[chname].nbindex
             self.nb.setCurrentIndex(index)
             self.active = chname
             self.info = self.channel[self.active]
-            print "Switched page to %d" % (index)
        
         
     def reconfigure(self, fitsimage, width, height):

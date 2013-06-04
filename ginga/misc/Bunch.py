@@ -254,6 +254,9 @@ class Bunch(object):
     def __iter__(self):
         return iter(self.tbl.keys())
 
+    def __contains__(self, key):
+        return self.tbl.has_key(key)
+
     ## def next(self):
     ##     if self.iterPosition >= len(self.keyList):
     ##         raise StopIteration
@@ -370,12 +373,8 @@ class threadSafeBunch(object):
         """Maps dictionary keys to values.
         Called for dictionary style access of this object.
         """
-        self.lock.acquire()
-        try:
+        with self.lock:
             return self.tbl[key]
-
-        finally:
-            self.lock.release()
 
 
     def __getitem__(self, key):
@@ -385,51 +384,35 @@ class threadSafeBunch(object):
     def fetch(self, keyDict):
         """Like update(), but for retrieving values.
         """
-        self.lock.acquire()
-        try:
+        with self.lock:
             for key in keyDict.keys():
                 keyDict[key] = self.tbl[key]
 
-        finally:
-            self.lock.release()
-
 
     def fetchDict(self, keyDict):
-        self.lock.acquire()
-        try:
+        with self.lock:
             res = {}
             for key in keyDict.keys():
                 res[key] = self.tbl[key]
 
             return res
         
-        finally:
-            self.lock.release()
-
 
     def fetchList(self, keySeq):
-        self.lock.acquire()
-        try:
+        with self.lock:
             res = []
             for key in keySeq:
                 res.append(self.tbl[key])
 
             return res
 
-        finally:
-            self.lock.release()
-
 
     def setitem(self, key, value):
         """Maps dictionary keys to values for assignment.  Called for
         dictionary style access with assignment.
         """
-        self.lock.acquire()
-        try:
+        with self.lock:
             self.tbl[key] = value
-
-        finally:
-            self.lock.release()
 
 
     def __setitem__(self, key, value):
@@ -443,14 +426,13 @@ class threadSafeBunch(object):
     def delitem(self, key):
         """Deletes key/value pairs from object.
         """
-        self.lock.acquire()
-        try:
+        with self.lock:
             del self.tbl[key]
 
-        finally:
-            self.lock.release()
-
-
+    def __contains__(self, key):
+        with self.lock:
+            return self.tbl.has_key(key)
+    
     def __delitem__(self, key):
         return self.delitem(key)
     
@@ -475,67 +457,41 @@ class threadSafeBunch(object):
             self.__dict__[key] = value
 
         else:
-            self.lock.acquire()
-            try:
+            with self.lock:
                 # Any normal attributes are handled normally
                 if self.__dict__.has_key(key):
                     self.__dict__[key] = value
                 # Others are entries in the table
                 else:
                     self.tbl[key] = value
-
-            finally:
-                self.lock.release()
             
 
     def __delattr__(self, key):
         """Deletes key/value pairs from object.
         """
-        self.lock.acquire()
-        try:
+        with self.lock:
             del self.tbl[key]
-
-        finally:
-            self.lock.release()
 
 
     def __str__(self):
-        self.lock.acquire()
-        try:
+        with self.lock:
             return self.tbl.__str__()
-
-        finally:
-            self.lock.release()
 
 
     def __len__(self):
-        self.lock.acquire()
-        try:
+        with self.lock:
             return len(self.tbl)
-
-        finally:
-            self.lock.release()
 
 
     def __repr__(self):
-        self.lock.acquire()
-        try:
+        with self.lock:
             return self.tbl.__repr__()
-
-        finally:
-            self.lock.release()
-
 
     def clear(self):
         """Clears all key/value pairs.
         """
-        self.lock.acquire()
-        try:
+        with self.lock:
             self.tbl.clear()
-
-        finally:
-            self.lock.release()
-
 
     ##############################################################
     # the following methods are inherited by subclasses
@@ -544,74 +500,49 @@ class threadSafeBunch(object):
     def has_key(self, key):
         """Checks for membership of dictionary key.
         """
-        self.lock.acquire()
-        try:
+        with self.lock:
             return self.tbl.has_key(key)
-
-        finally:
-            self.lock.release()
 
 
     def keys(self):
         """Returns list of keys.
         """
-        self.lock.acquire()
-        try:
+        with self.lock:
             return self.tbl.keys()
-
-        finally:
-            self.lock.release()
 
 
     def values(self):
         """Returns list of values.
         """
-        self.lock.acquire()
-        try:
+        with self.lock:
             return self.tbl.values()
-
-        finally:
-            self.lock.release()
-
 
     def update(self, updict):
         """Updates key/value pairs in dictionary from _updict_.
         """
-
-        self.lock.acquire()
-        try:
+        
+        with self.lock:
             for (key, value) in updict.items():
                 self.setitem(key, value)
-                
-        finally:
-            self.lock.release()
 
 
     def items(self):
         """Returns list of items.
         """
-        self.lock.acquire()
-        try:
+        with self.lock:
             return self.tbl.items()
-
-        finally:
-            self.lock.release()
 
 
     def get(self, key, alt=None):
         """If dictionary contains _key_ return the associated value,
         otherwise return _alt_. 
         """
-        self.lock.acquire()
-        try:
+        with self.lock:
             if self.has_key(key):
                 return self.getitem(key)
             
             else:
                 return alt
-
-        finally:
-            self.lock.release()
 
 
     def setdefault(self, key, value):
@@ -619,18 +550,13 @@ class threadSafeBunch(object):
         at _key_, but only if _key_ does not already exist in the dictionary.
         Returns the old value found or the new value.
         """
-        self.lock.acquire()
-        try:
+        with self.lock:
             if self.has_key(key):
                 return self.getitem(key)
 
             else:
                 self.setitem(key, value)
                 return value
-
-        finally:
-            self.lock.release()
-
 
     def getsetitem(self, key, klass, args=None, kwdargs=None):
         """This is similar to setdefault(), except that the new value is
@@ -639,8 +565,7 @@ class threadSafeBunch(object):
         there is already a dictionary item of that type.
         """
 
-        self.lock.acquire()
-        try:
+        with self.lock:
             if self.has_key(key):
                 return self.getitem(key)
 
@@ -653,9 +578,6 @@ class threadSafeBunch(object):
 
             self.setitem(key, value)
             return value
-        
-        finally:
-            self.lock.release()
 
 
 # Undoubtedly there are more dictionary interface methods ...
@@ -671,32 +593,17 @@ class threadSafeList(object):
 
 
     def append(self, item):
-        self.lock.acquire()
-        try:
+        with self.lock:
             self.list.append(item)
-            
-        finally:
-            self.lock.release()
-        
         
     def extend(self, list2):
-        self.lock.acquire()
-        try:
+        with self.lock:
             self.list.extend(list2)
-            
-        finally:
-            self.lock.release()
-        
         
     def prepend(self, item):
-        self.lock.acquire()
-        try:
+        with self.lock:
             self.list = [item].extend(self.list)
             return self.list
-            
-        finally:
-            self.lock.release()
-        
         
     def cons(self, item):
         return self.prepend(item)

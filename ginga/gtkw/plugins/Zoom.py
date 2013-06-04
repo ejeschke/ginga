@@ -142,8 +142,8 @@ class Zoom(GingaPlugin.GlobalPlugin):
             fitssettings.getSetting(name).add_callback('set',
                                self.cutset_cb, fitsimage)
         fitsimage.add_callback('transform', self.transform_cb)
-        fitssettings.shareSettings(zoomsettings, ['rot_deg'])
-        zoomsettings.getSetting('rot_deg').add_callback('set', self.rotate_cb, fitsimage)
+        fitssettings.copySettings(zoomsettings, ['rot_deg'])
+        fitssettings.getSetting('rot_deg').add_callback('set', self.rotate_cb, fitsimage)
         fitssettings.getSetting('zoomlevel').add_callback('set',
                                self.zoomset_cb, fitsimage)
 
