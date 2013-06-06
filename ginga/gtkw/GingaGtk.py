@@ -121,10 +121,11 @@ class GingaView(GtkMain.GtkMain):
         self.w.vbox.pack_start(bnch.widget, expand=True, fill=True)
 
         # readout
-        self.readout = self.build_readout()
-        self.add_callback('field-info', self.readout_cb, self.readout, None)
-        rw = self.readout.get_widget()
-        self.w.vbox.pack_start(rw, padding=0, fill=True, expand=False)
+        if self.settings.get('shareReadout', True):
+            self.readout = self.build_readout()
+            self.add_callback('field-info', self.readout_cb, self.readout, None)
+            rw = self.readout.get_widget()
+            self.w.vbox.pack_start(rw, padding=0, fill=True, expand=False)
             
         # bottom buttons
         hbox = gtk.HBox()

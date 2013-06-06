@@ -33,7 +33,7 @@ class ControlError(Exception):
 class GingaControl(Callback.Callbacks):
      
     def __init__(self, logger, threadPool, module_manager, preferences,
-                 ev_quit=None, datasrc_length=20, follow_focus=False):
+                 ev_quit=None):
         Callback.Callbacks.__init__(self)
 
         self.logger = logger
@@ -71,14 +71,16 @@ class GingaControl(Callback.Callbacks):
         # Create general preferences
         self.settings = self.prefs.createCategory('general')
         self.settings.load(onError='silent')
-        self.settings.addDefaults(fixedFont='Monospace', sansFont='Sans')
+
+        self.settings.addDefaults(fixedFont='Monospace',
+                                  sansFont='Sans',
+                                  channelFollowsFocus=False,
+                                  shareReadout=True,
+                                  numImages=10)
 
         # Should channel change as mouse moves between windows
-        self.channel_follows_focus = follow_focus
-        
-        # Number of images to keep around in memory
-        self.default_datasrc_length = datasrc_length
-        
+        self.channel_follows_focus = self.settings['channelFollowsFocus']
+
         self.cm = cmap.get_cmap("ramp")
         self.im = imap.get_imap("ramp")
 
@@ -709,16 +711,15 @@ class GingaControl(Callback.Callbacks):
                 return name
         return None
                 
-    def add_channel_internal(self, chname, num_images=None):
+    def add_channel_internal(self, chname, datasrc=None, num_images=1):
         name = chname.lower()
         with self.lock:
             try:
                 chinfo = self.channel[name]
             except KeyError:
                 self.logger.debug("Adding channel '%s'" % (chname))
-                if not num_images:
-                    num_images = self.default_datasrc_length
-                datasrc = Datasrc.Datasrc(num_images)
+                if datasrc == None:
+                    datasrc = Datasrc.Datasrc(num_images)
 
                 chinfo = Bunch.Bunch(datasrc=datasrc,
                                  name=chname, cursor=0)
@@ -733,9 +734,7 @@ class GingaControl(Callback.Callbacks):
         if self.has_channel(chname):
             return self.get_channelInfo(chname)
         
-        chinfo = self.add_channel_internal(chname, num_images=num_images)
-
-        name = chinfo.name
+        name = chname
         prefs = self.prefs.createCategory('channel_'+name)
         try:
             prefs.load(onError='raise')
@@ -749,12 +748,19 @@ class GingaControl(Callback.Callbacks):
                 name))
             oprefs.copySettings(prefs)
 
+        num_images = self.settings.get('numImages', 1)
+        use_readout = not self.settings.get('shareReadout', True)
+        
         # Make sure these preferences are at least defined
-        prefs.setDefaults(switchnew=True,
+        prefs.setDefaults(switchnew=True, numImages=num_images,
                           raisenew=True, genthumb=True)
+
+        chinfo = self.add_channel_internal(name,
+                                           num_images=prefs['numImages'])
 
         with self.lock:
             bnch = self.add_viewer(chname, prefs,
+                                   use_readout=use_readout,
                                    workspace=workspace)
 
             opmon = self.getPluginManager(self.logger, self,

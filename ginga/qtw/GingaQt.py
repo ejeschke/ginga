@@ -104,10 +104,11 @@ class GingaView(QtMain.QtMain):
         self.w.vbox.addWidget(self.w.mnb, stretch=1)
         
         # readout
-        self.readout = self.build_readout()
-        self.add_callback('field-info', self.readout_cb, self.readout, None)
-        rw = self.readout.get_widget()
-        self.w.vbox.addWidget(rw, stretch=0)
+        if self.settings.get('shareReadout', True):
+            self.readout = self.build_readout()
+            self.add_callback('field-info', self.readout_cb, self.readout, None)
+            rw = self.readout.get_widget()
+            self.w.vbox.addWidget(rw, stretch=0)
             
         # bottom buttons
         plw = QtGui.QWidget()

@@ -41,6 +41,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
 
         self.thmbtask = None
         self.lagtime = 4000
+        self.thmblock = threading.RLock()
 
         self.keywords = ['OBJECT', 'FRAMEID', 'UT', 'DATE-OBS']
 
@@ -70,8 +71,9 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         # NOTE: does not handle two separate images with the same name
         # in the same channel
         thumbkey = (chname.lower(), path)
-        if self.thumbDict.has_key(thumbkey):
-            return
+        with self.thmblock:
+            if self.thumbDict.has_key(thumbkey):
+                return
 
         #data = image.get_data()
         # Get metadata for mouse-over tooltip
@@ -81,9 +83,10 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
             metadata[kwd] = header.get(kwd, 'N/A')
 
         #self.thumb_generator.set_data(data)
-        self.thumb_generator.set_image(image)
-        self.copy_attrs(chinfo.fitsimage)
-        imgwin = self.thumb_generator.get_image_as_widget()
+        with self.thmblock:
+            self.thumb_generator.set_image(image)
+            self.copy_attrs(chinfo.fitsimage)
+            imgwin = self.thumb_generator.get_image_as_widget()
 
         self.insert_thumbnail(imgwin, thumbkey, thumbname, chname, name, path,
                               metadata)
@@ -93,9 +96,10 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         # Remove old thumbs that are not in the dataset
         invalid = set(self.thumbList) - set(nameList)
         if len(invalid) > 0:
-            for thumbkey in invalid:
-                self.thumbList.remove(thumbkey)
-                del self.thumbDict[thumbkey]
+            with self.thmblock:
+                for thumbkey in invalid:
+                    self.thumbList.remove(thumbkey)
+                    del self.thumbDict[thumbkey]
 
             self.reorder_thumbs()
 
@@ -103,13 +107,14 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
     def thumbpane_resized(self, width, height):
         self.logger.debug("reordering thumbs width=%d" % (width))
 
-        cols = max(1, width // (self.thumbWidth + self.thumbSep))
-        if self.thumbNumCols == cols:
-            # If we have not actually changed the possible number of columns
-            # then don't do anything
-            return False
-        self.logger.debug("column count is now %d" % (cols))
-        self.thumbNumCols = cols
+        with self.thmblock:
+            cols = max(1, width // (self.thumbWidth + self.thumbSep))
+            if self.thumbNumCols == cols:
+                # If we have not actually changed the possible number of columns
+                # then don't do anything
+                return False
+            self.logger.debug("column count is now %d" % (cols))
+            self.thumbNumCols = cols
 
         self.reorder_thumbs()
         return False
@@ -119,45 +124,49 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         self.fv.switch_name(chname, name, path=path)
 
         # remember the last file we loaded
-        index = self.thumbList.index(thumbkey)
-        self.cursor = index
+        with self.thmblock:
+            index = self.thumbList.index(thumbkey)
+            self.cursor = index
 
-        preload = self.settings.get('preloadImages', False)
-        if not preload:
-            return
-        
-        # TODO: clear any existing files waiting to be preloaded?
+            preload = self.settings.get('preloadImages', False)
+            if not preload:
+                return
 
-        # queue next and previous files for preloading
-        if index < len(self.thumbList)-1:
-            nextkey = self.thumbList[index+1]
-            bnch = self.thumbDict[nextkey]
-            self.fv.add_preload(bnch.chname, bnch.imname, bnch.path)
+            # TODO: clear any existing files waiting to be preloaded?
 
-        if index > 0:
-            prevkey = self.thumbList[index-1]
-            bnch = self.thumbDict[prevkey]
-            self.fv.add_preload(bnch.chname, bnch.imname, bnch.path)
+            # queue next and previous files for preloading
+            if index < len(self.thumbList)-1:
+                nextkey = self.thumbList[index+1]
+                bnch = self.thumbDict[nextkey]
+                self.fv.add_preload(bnch.chname, bnch.imname, bnch.path)
+
+            if index > 0:
+                prevkey = self.thumbList[index-1]
+                bnch = self.thumbDict[prevkey]
+                self.fv.add_preload(bnch.chname, bnch.imname, bnch.path)
 
     def load_next(self):
-        index = self.cursor + 1
-        if index < len(self.thumbList)-1:
-            nextkey = self.thumbList[index+1]
-            bnch = self.thumbDict[nextkey]
-            self.gui_do(self.load_file, nextkey,
-                        bnch.chname, bnch.imname, bnch.path)
+        with self.thmblock:
+            index = self.cursor + 1
+            if index < len(self.thumbList)-1:
+                nextkey = self.thumbList[index+1]
+                bnch = self.thumbDict[nextkey]
+                self.gui_do(self.load_file, nextkey,
+                            bnch.chname, bnch.imname, bnch.path)
         
     def load_previous(self):
-        index = self.cursor - 1
-        if index > 0:
-            prevkey = self.thumbList[index+1]
-            bnch = self.thumbDict[prevkey]
-            self.gui_do(self.load_file, prevkey,
-                        bnch.chname, bnch.imname, bnch.path)
+        with self.thmblock:
+            index = self.cursor - 1
+            if index > 0:
+                prevkey = self.thumbList[index+1]
+                bnch = self.thumbDict[prevkey]
+                self.gui_do(self.load_file, prevkey,
+                            bnch.chname, bnch.imname, bnch.path)
         
     def clear(self):
-        self.thumbList = []
-        self.thumbDict = {}
+        with self.thmblock:
+            self.thumbList = []
+            self.thumbDict = {}
         self.reorder_thumbs()
         
     def add_channel(self, viewer, chinfo):
@@ -222,31 +231,32 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
             return
         path = os.path.abspath(path)
         thumbkey = (chname, path)
-        if not self.thumbDict.has_key(thumbkey):
-            return
+        with self.thmblock:
+            if not self.thumbDict.has_key(thumbkey):
+                return
 
-        # Generate new thumbnail
-        # TODO: Can't use set_image() because we will override the saved
-        # cuts settings...should look into fixing this...
-        ## timage = self.thumb_generator.get_image()
-        ## if timage != image:
-        ##     self.thumb_generator.set_image(image)
-        #data = image.get_data()
-        #self.thumb_generator.set_data(data)
-        self.thumb_generator.set_image(image)
-        fitsimage.copy_attributes(self.thumb_generator,
-                                  ['transforms', 'cutlevels',
-                                   'rgbmap'],
-                                  redraw=False)
+            # Generate new thumbnail
+            # TODO: Can't use set_image() because we will override the saved
+            # cuts settings...should look into fixing this...
+            ## timage = self.thumb_generator.get_image()
+            ## if timage != image:
+            ##     self.thumb_generator.set_image(image)
+            #data = image.get_data()
+            #self.thumb_generator.set_data(data)
+            self.thumb_generator.set_image(image)
+            fitsimage.copy_attributes(self.thumb_generator,
+                                      ['transforms', 'cutlevels',
+                                       'rgbmap'],
+                                      redraw=False)
 
-        # Save a thumbnail for future browsing
-        if save_thumb:
-            thumbpath = self.get_thumbpath(path)
-            if thumbpath != None:
-                self.thumb_generator.save_image_as_file(thumbpath,
-                                                        format='jpeg')
+            # Save a thumbnail for future browsing
+            if save_thumb:
+                thumbpath = self.get_thumbpath(path)
+                if thumbpath != None:
+                    self.thumb_generator.save_image_as_file(thumbpath,
+                                                            format='jpeg')
 
-        imgwin = self.thumb_generator.get_image_as_widget()
+            imgwin = self.thumb_generator.get_image_as_widget()
 
         self.update_thumbnail(thumbkey, imgwin, name, metadata)
 
@@ -257,29 +267,32 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         # TODO: delete thumbs for this channel!
         self.logger.info("deleting thumbs for channel '%s'" % (
             chname_del))
-        newThumbList = []
-        for thumbkey in self.thumbList:
-            chname, path = thumbkey
-            if chname != chname_del:
-                newThumbList.append(thumbkey)
-            else:
-                del self.thumbDict[thumbkey]
-        self.thumbList = newThumbList
+        with self.thmblock:
+            newThumbList = []
+            for thumbkey in self.thumbList:
+                chname, path = thumbkey
+                if chname != chname_del:
+                    newThumbList.append(thumbkey)
+                else:
+                    del self.thumbDict[thumbkey]
+            self.thumbList = newThumbList
         self.reorder_thumbs()
 
     def _make_thumb(self, chname, image, path, thumbkey,
                     save_thumb=False, thumbpath=None):
         # This is called by the make_thumbs() as a gui thread
-        self.thumb_generator.set_image(image)
-        # Save a thumbnail for future browsing
-        if save_thumb and (thumbpath != None):
-            self.thumb_generator.save_image_as_file(thumbpath,
-                                                    format='jpeg')
+        with self.thmblock:
+            self.thumb_generator.set_image(image)
+            # Save a thumbnail for future browsing
+            if save_thumb and (thumbpath != None):
+                self.thumb_generator.save_image_as_file(thumbpath,
+                                                        format='jpeg')
         
-        imgwin = self.thumb_generator.get_image_as_widget()
+            imgwin = self.thumb_generator.get_image_as_widget()
 
-        # Get metadata for mouse-over tooltip
-        image = self.thumb_generator.get_image()
+            # Get metadata for mouse-over tooltip
+            image = self.thumb_generator.get_image()
+
         header = image.get_header()
         metadata = {}
         for kwd in self.keywords:
@@ -296,7 +309,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         self.fv.update_pending(timeout=0.001)
         
     def make_thumbs(self, chname, filelist):
-        # This is called by the FBrowser plugin, as a non-gui thread!
+        # NOTE: this is called by the FBrowser plugin, as a non-gui thread!
         lcname = chname.lower()
 
         cacheThumbs = self.settings.get('cacheThumbs', False)
@@ -308,8 +321,9 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
             # Do we already have this thumb loaded?
             path = os.path.abspath(path)
             thumbkey = (lcname, path)
-            if self.thumbDict.has_key(thumbkey):
-                continue
+            with self.thmblock:
+                if self.thumbDict.has_key(thumbkey):
+                    continue
 
             # Is there a cached thumbnail image on disk we can use?
             save_thumb = cacheThumbs

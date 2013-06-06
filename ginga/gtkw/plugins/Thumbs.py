@@ -88,21 +88,23 @@ class Thumbs(ThumbsBase.ThumbsBase):
         bnch = Bunch.Bunch(widget=vbox, evbox=evbox, imname=name,
                            thumbname=thumbname, chname=chname, path=path)
 
-        if self.thumbColCount == 0:
-            hbox = gtk.HBox(homogeneous=True, spacing=self.thumbSep)
-            self.w.thumbs.pack_start(hbox)
-            self.thumbRowList.append(hbox)
+        with self.thmblock:
+            if self.thumbColCount == 0:
+                hbox = gtk.HBox(homogeneous=True, spacing=self.thumbSep)
+                self.w.thumbs.pack_start(hbox)
+                self.thumbRowList.append(hbox)
 
-        else:
-            hbox = self.thumbRowList[-1]
+            else:
+                hbox = self.thumbRowList[-1]
 
-        hbox.pack_start(bnch.widget)
-        self.thumbColCount = (self.thumbColCount + 1) % self.thumbNumCols
+            hbox.pack_start(bnch.widget)
+            self.thumbColCount = (self.thumbColCount + 1) % self.thumbNumCols
 
-        self.w.thumbs.show_all()
-        
-        self.thumbDict[thumbkey] = bnch
-        self.thumbList.append(thumbkey)
+            self.w.thumbs.show_all()
+
+            self.thumbDict[thumbkey] = bnch
+            self.thumbList.append(thumbkey)
+
         # force scroll to bottom of thumbs, if checkbox is set
         scrollp = self.w.auto_scroll.get_active()
         if scrollp:
@@ -112,33 +114,34 @@ class Thumbs(ThumbsBase.ThumbsBase):
         self.logger.debug("added thumb for %s" % (thumbname))
 
     def reorder_thumbs(self):
-        # Remove old rows
-        for hbox in self.thumbRowList:
-            children = hbox.get_children()
-            for child in children:
-                hbox.remove(child)
-            self.w.thumbs.remove(hbox)
+        with self.thmblock:
+            # Remove old rows
+            for hbox in self.thumbRowList:
+                children = hbox.get_children()
+                for child in children:
+                    hbox.remove(child)
+                self.w.thumbs.remove(hbox)
 
-        # Add thumbs back in by rows
-        self.thumbRowList = []
-        colCount = 0
-        hbox = None
-        for thumbkey in self.thumbList:
-            self.logger.debug("adding thumb for %s" % (str(thumbkey)))
-            chname, name = thumbkey
-            bnch = self.thumbDict[thumbkey]
-            if colCount == 0:
-                hbox = gtk.HBox(homogeneous=True, spacing=self.thumbSep)
-                hbox.show()
-                self.w.thumbs.pack_start(hbox)
-                self.thumbRowList.append(hbox)
+            # Add thumbs back in by rows
+            self.thumbRowList = []
+            colCount = 0
+            hbox = None
+            for thumbkey in self.thumbList:
+                self.logger.debug("adding thumb for %s" % (str(thumbkey)))
+                chname, name = thumbkey
+                bnch = self.thumbDict[thumbkey]
+                if colCount == 0:
+                    hbox = gtk.HBox(homogeneous=True, spacing=self.thumbSep)
+                    hbox.show()
+                    self.w.thumbs.pack_start(hbox)
+                    self.thumbRowList.append(hbox)
 
-            hbox.pack_start(bnch.widget)
-            hbox.show_all()
-            colCount = (colCount + 1) % self.thumbNumCols
+                hbox.pack_start(bnch.widget)
+                hbox.show_all()
+                colCount = (colCount + 1) % self.thumbNumCols
 
-        self.thumbColCount = colCount
-        self.w.thumbs.show_all()
+            self.thumbColCount = colCount
+            self.w.thumbs.show_all()
         
     def thumbpane_resized_cb(self, widget, allocation):
         x, y, width, height = self.w.thumbs_scroll.get_allocation()
@@ -173,18 +176,20 @@ class Thumbs(ThumbsBase.ThumbsBase):
         return True
 
     def update_thumbnail(self, thumbkey, imgwin, name, metadata):
-        try:
-            bnch = self.thumbDict[thumbkey]
-        except KeyError:
-            return
+        with self.thmblock:
+            try:
+                bnch = self.thumbDict[thumbkey]
+            except KeyError:
+                return
 
-        imgwin.set_property("has-tooltip", True)
-        imgwin.connect("query-tooltip", self._mktt(thumbkey, name, metadata))
+            imgwin.set_property("has-tooltip", True)
+            imgwin.connect("query-tooltip", self._mktt(thumbkey, name, metadata))
 
-        # Replace thumbnail image widget
-        child = bnch.evbox.get_child()
-        bnch.evbox.remove(child)
-        bnch.evbox.add(imgwin)
+            # Replace thumbnail image widget
+            child = bnch.evbox.get_child()
+            bnch.evbox.remove(child)
+            bnch.evbox.add(imgwin)
+        self.logger.debug("update finished.")
                                  
     def __str__(self):
         return 'thumbs'

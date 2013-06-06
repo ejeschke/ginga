@@ -65,6 +65,9 @@ class Info(GingaPlugin.GlobalPlugin):
                     )
 
         w, b = GtkHelp.build_info(captions)
+        # TODO: need a more general solution to gtk labels resizing their
+        # parent window
+        b.object.set_width_chars(12)
         self.w.tooltips.set_tip(b.cut_levels, "Set cut levels manually")
         self.w.tooltips.set_tip(b.auto_levels, "Set cut levels by algorithm")
         self.w.tooltips.set_tip(b.cut_low, "Set low cut level (press Enter)")

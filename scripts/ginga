@@ -173,12 +173,10 @@ def main(options, args):
     class Ginga(GingaControl, GingaView):
 
         def __init__(self, logger, threadPool, module_manager, prefs,
-                     ev_quit=None, datasrc_length=20, follow_focus=False):
+                     ev_quit=None):
             GingaView.__init__(self, logger, ev_quit)
             GingaControl.__init__(self, logger, threadPool, module_manager,
-                                  prefs, ev_quit=ev_quit,
-                                  datasrc_length=datasrc_length,
-                                  follow_focus=follow_focus)
+                                  prefs, ev_quit=ev_quit)
 
     # Create the dynamic module manager
     mm = ModuleManager.ModuleManager(logger)
@@ -190,10 +188,7 @@ def main(options, args):
     threadPool.startall()
 
     # Create the Ginga main object
-    ginga = Ginga(logger, threadPool, mm, prefs,
-                  datasrc_length=options.bufsize,
-                  ev_quit=ev_quit)
-    ginga.followFocus(False)
+    ginga = Ginga(logger, threadPool, mm, prefs, ev_quit=ev_quit)
 
     # User configuration (custom star catalogs, etc.)
     try:
