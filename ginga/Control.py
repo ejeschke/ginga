@@ -743,11 +743,14 @@ class GingaControl(Callback.Callbacks):
             self.logger.warn("no saved preferences found for channel '%s': %s" % (
                 name, str(e)))
             # copy "Image" prefs to new channel
-            oprefs = self.prefs.getSettings('channel_Image')
-            self.logger.debug("Copying settings from 'Image' to '%s'" % (
-                name))
-            oprefs.copySettings(prefs)
-
+            try:
+                oprefs = self.prefs.getSettings('channel_Image')
+                self.logger.debug("Copying settings from 'Image' to '%s'" % (
+                    name))
+                oprefs.copySettings(prefs)
+            except KeyError:
+                pass
+            
         num_images = self.settings.get('numImages', 1)
         use_readout = not self.settings.get('shareReadout', True)
         
