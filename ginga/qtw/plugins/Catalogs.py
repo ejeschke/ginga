@@ -12,12 +12,98 @@ from ginga.qtw import QtHelp
 from ginga.qtw import ColorBar
 from ginga.misc import Bunch, Future
 from ginga.misc.plugins import CatalogsBase
+from ginga import wcs
+from ginga.Catalog import Star
+
+import pyvo 
+import os
+_dot_ginga_dir = os.path.join(os.environ.get('HOME', '/tmp'), ".ginga")
+_def_cat_config_file = os.path.join(_dot_ginga_dir, "catalogs")
 
 class Catalogs(CatalogsBase.CatalogsBase):
 
     def __init__(self, fv, fitsimage):
         super(Catalogs, self).__init__(fv, fitsimage)
 
+        self.logger.info("initializing SCS parameters")
+        self._scs_params = {}
+        for label in "ra dec r".split():
+            self._scs_params[label] = Bunch.Bunch(name=label, convert=str)
+
+        self.catalog_services = {}
+        self._load_def_catalogs()
+
+    def _load_def_catalogs(self, configfile=None):
+        self.logger.info("initializing default catalogs")
+
+        # PLEASE REPLACE: integrate into config framework, format?
+        if not configfile:
+            configfile = _def_cat_config_file
+            if not os.path.exists(configfile): return
+
+        try:
+            with open(configfile) as cnf:
+                # for now, format has each line being a 2-tuple giving label 
+                # and base url
+                for line in cnf:
+                    line = line.strip()
+                    if line.startswith('#'):
+                        continue
+                    pair = eval(line)
+                    self.catalog_services[pair[0]] = pair[1]
+                    self.catalog_server_options.append(pair[0])
+        except Exception, ex:
+            self.fv.show_error(str(ex))
+
+    def getcatalog(self, server, params, obj):
+        # initialize our query object with the service's base URL
+        try:
+            self.logger.debug("ra=%s, dec=%s, sr=%s" % 
+                             (params['ra'], params['dec'], params['r']))
+            self.logger.debug("ra=%d, dec=%d, sr=%d" % 
+                              (wcs.hmsStrToDeg(params['ra']), 
+                               wcs.dmsStrToDeg(params['dec']), 
+                               float(params['r'])))
+            # self.fv.show_error("za")
+            query = pyvo.scs.SCSQuery(self.catalog_services[server])
+            query.ra = wcs.hmsStrToDeg(params['ra'])
+            query.dec = wcs.dmsStrToDeg(params['dec'])
+            query.radius = float(params['r'])/60.0
+            self.logger.info("Will query: %s" % query.getqueryurl(True))
+
+            results = query.execute()
+            self.logger.info("Found %d sources" % len(results))
+
+            starlist = []
+            for source in results:
+                starlist.append(self.toStar(source))
+
+            self.logger.debug("starlist=%s" % str(starlist))
+
+            starlist = self.filter_results(starlist, obj)
+            info = {}
+            self.logger.info("Filtered down to %d sources" % len(starlist))
+
+            ## Update the GUI
+            self.fv.gui_do(self.update_catalog, starlist, info)
+        except Exception, ex:
+            self.fv.gui_do(self.fv.show_error, "Trouble building query")
+            print str(ex)
+
+    def toStar(self, sourcerec):
+        data = { 'name':         sourcerec.id,
+                 'ra_deg':       float(sourcerec.ra),
+                 'dec_deg':      float(sourcerec.dec),
+                 'mag':          18.0,
+                 'preference':   0,
+                 'priority':     0,
+                 'description':  'fake magnitude' }
+        data['ra'] = wcs.raDegToString(data['ra_deg'])
+        data['dec'] = wcs.decDegToString(data['dec_deg'])
+        return Star(**data)
+
+
+        
     def build_gui(self, container, future=None):
         vbox1 = QtHelp.VBox()
 
@@ -99,15 +185,15 @@ class Catalogs(CatalogsBase.CatalogsBase):
         
         combobox = self.w2.server
         index = 0
-        self.catalog_server_options = self.fv.imgsrv.getServerNames(kind='catalog')
-        for name in self.catalog_server_options:
+
+        for name in self.catalog_services.keys():
             combobox.addItem(name)
             index += 1
         index = 0
         combobox.setCurrentIndex(index)
         combobox.activated.connect(self.setup_params_catalog)
         if len(self.catalog_server_options) > 0:
-            self.setup_params_catalog(index, redo=False)
+           self.setup_params_catalog(index, redo=False)
 
         btns = QtHelp.HBox()
         btns.setSpacing(5)
@@ -215,8 +301,19 @@ class Catalogs(CatalogsBase.CatalogsBase):
     def _get_cbidx(self, w):
         return w.currentIndex()
         
-    def _setup_params(self, obj, container):
-        params = obj.getParams()
+    def setup_params_catalog(self, index, redo=True):
+        key = self.catalog_server_options[index]
+
+        # Get the parameter list and adjust the widget
+        # obj = self.fv.imgsrv.getCatalogServer(key)
+        b = self._setup_params(self._scs_params, self.w2.cat_params)
+        self.catalog_server_params = b
+
+        if redo:
+            self.redo()
+
+    def _setup_params(self, params, container):
+        self.logger.info("loading service parameter")
         captions = []
         for key, bnch in params.items():
             text = key
@@ -243,17 +340,6 @@ class Catalogs(CatalogsBase.CatalogsBase):
         obj = self.fv.imgsrv.getImageServer(key)
         b = self._setup_params(obj, self.w.img_params)
         self.image_server_params = b
-
-        if redo:
-            self.redo()
-
-    def setup_params_catalog(self, index, redo=True):
-        key = self.catalog_server_options[index]
-
-        # Get the parameter list and adjust the widget
-        obj = self.fv.imgsrv.getCatalogServer(key)
-        b = self._setup_params(obj, self.w2.cat_params)
-        self.catalog_server_params = b
 
         if redo:
             self.redo()
