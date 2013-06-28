@@ -22,7 +22,7 @@ import array
 import re
 import string
 
-import Bunch
+from ginga.misc import Bunch
 
 # internal globals
 MEMORY            = 01              # frame buffer i/o
