@@ -10,8 +10,8 @@
 import numpy
 import time
 
-import Bunch
-import BaseImage
+from ginga import BaseImage
+from ginga.misc import Bunch
 
 class LayerImage(object):
     """Mixin class for BaseImage subclasses.  Adds layers and alpha/rgb

@@ -151,7 +151,7 @@ class BareBonesWCS(BaseWCS):
         - if 'deg', then returns ra, dec as a 2-tuple of floats (in degrees)
         - if 'hms', then returns a 7-tuple of
                (rahr, ramin, rasec, decsign, decdeg, decmin, decsec)
-        - if 'txt', then returns ra, dec as a 2-tuple of strings in traditional
+        - if 'str', then returns ra, dec as a 2-tuple of strings in traditional
             ra/dec notation
 
         Parameter (coords):
@@ -350,6 +350,9 @@ class WcslibWCS(BaseWCS):
         coord = fromclass(ra_deg, dec_deg,
                           unit=(units.degree, units.degree))
 
+        if (system == None) or (system == self.coordsys):
+            return coord
+            
         # Now give it back to the user in the system requested
         try:
             toclass = coord_table[system]
