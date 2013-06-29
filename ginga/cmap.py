@@ -7,6 +7,8 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+import numpy
+
 # Some built in colormaps
 
 cmap_soss = (
@@ -11426,9 +11428,36 @@ def get_cmap(name):
 
 def get_names():
     res = list(cmaps.keys())
-    res.sort()
+    res = sorted(res, key=lambda s: s.lower())
     return res
 
+def matplotlib_to_ginga_cmap(cm, name=None):
+    if name == None:
+        name = cm.name
+    arr = cm(numpy.arange(256))
+    clst = tuple(map(lambda rec: tuple(rec)[:3], arr))
+    return ColorMap(name, clst)
+    
+def add_matplotlib_cmap(cm, name=None):
+    global cmaps
+    cmap = matplotlib_to_ginga_cmap(cm, name=name)
+    cmaps[cmap.name] = cmap
+    
+def add_matplotlib_cmaps():
+    import matplotlib.pyplot as plt
+
+    for name in plt.cm.datad.keys():
+        if not isinstance(name, str):
+            continue
+        cm = plt.get_cmap(name)
+        try:
+            add_matplotlib_cmap(cm, name=name)
+        except Exception, e:
+            print "Error adding colormap '%s': %s" % (
+                name, str(e))
+            #pass
+
+# Add colormaps from this file
 cmaps = {}
 for name, value in globals().items():
     if name.startswith('cmap_'):

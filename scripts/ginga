@@ -142,11 +142,16 @@ def main(options, args):
             logger.warn("Couldn't create ginga settings area (%s): %s" % (
                 basedir, str(e)))
             logger.warn("Preferences will not be able to be saved")
-            
+
+    # Set up preferences
     prefs = Settings.Preferences(basefolder=basedir, logger=logger)
-    sys.path.insert(0, basedir)
+    settings = prefs.createCategory('general')
+    settings.load(onError='silent')
+    settings.setDefaults(useMatplotlibColormaps=False,
+                         showBanner=True)
 
     # So we can find our plugins
+    sys.path.insert(0, basedir)
     moduleHome = os.path.split(sys.modules[__name__].__file__)[0]
     childDir = os.path.join(moduleHome, 'ginga', 'misc', 'plugins')
     sys.path.insert(0, childDir)
@@ -177,6 +182,15 @@ def main(options, args):
             GingaView.__init__(self, logger, ev_quit)
             GingaControl.__init__(self, logger, threadPool, module_manager,
                                   prefs, ev_quit=ev_quit)
+
+    if settings.get('useMatplotlibColormaps', False):
+        # Add matplotlib color maps if matplotlib is installed
+        try:
+            import matplotlib.pyplot as plt
+            from ginga import cmap
+            cmap.add_matplotlib_cmaps()
+        except Exception, e:
+            logger.warn("failed to load matplotlib colormaps: %s" % (str(e)))
 
     # Create the dynamic module manager
     mm = ModuleManager.ModuleManager(logger)
@@ -270,7 +284,9 @@ def main(options, args):
             str(e)))
         logger.error("Traceback:\n%s" % (tb_str))
 
-    if (not options.nosplash) and (len(args) == 0):
+    # Display banner, unless suppressed
+    showBanner = settings.get('showBanner', True)
+    if (not options.nosplash) and (len(args) == 0) and showBanner:
         ginga.banner(raiseTab=False)
 
     # Assume remaining arguments are fits files and load them.
