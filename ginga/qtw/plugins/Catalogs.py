@@ -19,6 +19,7 @@ import pyvo
 import os
 _dot_ginga_dir = os.path.join(os.environ.get('HOME', '/tmp'), ".ginga")
 _def_cat_config_file = os.path.join(_dot_ginga_dir, "catalogs")
+_def_im_config_file = os.path.join(_dot_ginga_dir, "image_archives")
 
 class Catalogs(CatalogsBase.CatalogsBase):
 
@@ -29,9 +30,14 @@ class Catalogs(CatalogsBase.CatalogsBase):
         self._scs_params = {}
         for label in "ra dec r".split():
             self._scs_params[label] = Bunch.Bunch(name=label, convert=str)
+        self._sia_params = {}
+        for label in "ra dec width height".split():
+            self._sia_params[label] = Bunch.Bunch(name=label, convert=str)
 
         self.catalog_services = {}
+        self.image_services = {}
         self._load_def_catalogs()
+        self._load_def_image_archives()
 
     def _load_def_catalogs(self, configfile=None):
         self.logger.info("initializing default catalogs")
@@ -40,6 +46,22 @@ class Catalogs(CatalogsBase.CatalogsBase):
         if not configfile:
             configfile = _def_cat_config_file
             if not os.path.exists(configfile): return
+
+        self._load_def_servers(configfile, self.catalog_services, 
+                               self.catalog_server_options)
+
+    def _load_def_image_archives(self, configfile=None):
+        self.logger.info("initializing default catalogs")
+
+        # PLEASE REPLACE: integrate into config framework, format?
+        if not configfile:
+            configfile = _def_im_config_file
+            if not os.path.exists(configfile): return
+
+        self._load_def_servers(configfile, self.image_services, 
+                               self.image_server_options)
+
+    def _load_def_servers(self, configfile, services, names):
 
         try:
             with open(configfile) as cnf:
@@ -50,21 +72,22 @@ class Catalogs(CatalogsBase.CatalogsBase):
                     if line.startswith('#'):
                         continue
                     pair = eval(line)
-                    self.catalog_services[pair[0]] = pair[1]
-                    self.catalog_server_options.append(pair[0])
+                    services[pair[0]] = pair[1]
+                    names.append(pair[0])
         except Exception, ex:
             self.fv.show_error(str(ex))
 
     def getcatalog(self, server, params, obj):
-        # initialize our query object with the service's base URL
         try:
             self.logger.debug("ra=%s, dec=%s, sr=%s" % 
                              (params['ra'], params['dec'], params['r']))
             self.logger.debug("ra=%d, dec=%d, sr=%d" % 
                               (wcs.hmsStrToDeg(params['ra']), 
                                wcs.dmsStrToDeg(params['dec']), 
-                               float(params['r'])))
+                               float(params['r'])/60.0))
             # self.fv.show_error("za")
+
+            # initialize our query object with the service's base URL
             query = pyvo.scs.SCSQuery(self.catalog_services[server])
             query.ra = wcs.hmsStrToDeg(params['ra'])
             query.dec = wcs.dmsStrToDeg(params['dec'])
@@ -89,6 +112,56 @@ class Catalogs(CatalogsBase.CatalogsBase):
         except Exception, ex:
             self.fv.gui_do(self.fv.show_error, "Trouble building query")
             print str(ex)
+
+    def getimage(self, server, params, chname):
+        try:
+            self.logger.debug("ra=%s, dec=%s, width=%s height=%s" % 
+                             (params['ra'], params['dec'], 
+                              params['width'], params['height']))
+            self.logger.debug("pos=(%d, %d), size=(%d, %d)" % 
+                              (wcs.hmsStrToDeg(params['ra']), 
+                               wcs.dmsStrToDeg(params['dec']), 
+                               float(params['width'])/60.0, 
+                               float(params['height'])/60.0))
+
+            # initialize our query object with the service's base URL
+            query = pyvo.sia.SIAQuery(self.image_services[server])
+            query.ra = wcs.hmsStrToDeg(params['ra'])
+            query.dec = wcs.dmsStrToDeg(params['dec'])
+            query.size = (float(params['width'])/60.0, 
+                          float(params['height'])/60.0)
+            query.format = 'image/fits'
+            self.logger.info("Will query: %s" % query.getqueryurl(True))
+
+            results = query.execute()
+            if len(results) > 0:
+                self.logger.info("Found %d images" % len(results))
+            else:
+                self.logger.warn("Found no images in this area" % len(results))
+                return
+
+            # For now, we pick the first one found
+
+            # REQUIRES FIX IN PYVO:
+            # imfile = results[0].cachedataset(dir="/tmp")
+            #
+            # Workaround:
+            fitspath = results[0].make_dataset_filename(dir="/tmp")
+            results[0].cachedataset(fitspath)
+
+            self.fv.load_file(fitspath, chname=chname)
+
+            # Update the GUI
+            def getimage_update(self):
+                self.setfromimage()
+                self.redo()
+
+            self.fv.gui_do(getimage_update)
+
+        except Exception, ex:
+            self.fv.gui_do(self.fv.show_error, "Trouble building query")
+            print str(ex)
+
 
     def toStar(self, sourcerec):
         data = { 'name':         sourcerec.id,
@@ -153,8 +226,7 @@ class Catalogs(CatalogsBase.CatalogsBase):
         
         combobox = self.w.server
         index = 0
-        self.image_server_options = self.fv.imgsrv.getServerNames(kind='image')
-        for name in self.image_server_options:
+        for name in self.image_services.keys():
             combobox.addItem(name)
             index += 1
         index = 0
@@ -312,6 +384,17 @@ class Catalogs(CatalogsBase.CatalogsBase):
         if redo:
             self.redo()
 
+    def setup_params_image(self, index, redo=True):
+        key = self.image_server_options[index]
+
+        # Get the parameter list and adjust the widget
+        # obj = self.fv.imgsrv.getImageServer(key)
+        b = self._setup_params(self._sia_params, self.w.img_params)
+        self.image_server_params = b
+
+        if redo:
+            self.redo()
+
     def _setup_params(self, params, container):
         self.logger.info("loading service parameter")
         captions = []
@@ -332,17 +415,6 @@ class Catalogs(CatalogsBase.CatalogsBase):
         # add new widgets
         container.insertWidget(0, w)
         return b
-
-    def setup_params_image(self, index, redo=True):
-        key = self.image_server_options[index]
-
-        # Get the parameter list and adjust the widget
-        obj = self.fv.imgsrv.getImageServer(key)
-        b = self._setup_params(obj, self.w.img_params)
-        self.image_server_params = b
-
-        if redo:
-            self.redo()
 
     def _update_widgets(self, d):
         for bnch in (self.image_server_params,

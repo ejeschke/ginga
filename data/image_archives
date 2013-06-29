@@ -1,0 +1,4 @@
+# Place this in file under ~/.ginga with the name "image_archives"
+# 
+('DSS2', 'http://skyview.gsfc.nasa.gov/cgi-bin/vo/sia.pl?survey=dss2&')
+('FIRST', 'http://skyview.gsfc.nasa.gov/cgi-bin/vo/sia.pl?survey=first&')
