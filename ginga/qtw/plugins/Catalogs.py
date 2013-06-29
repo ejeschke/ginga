@@ -26,6 +26,10 @@ class Catalogs(CatalogsBase.CatalogsBase):
     def __init__(self, fv, fitsimage):
         super(Catalogs, self).__init__(fv, fitsimage)
 
+        prefs = self.fv.get_preferences()
+        self.settings = prefs.createCategory('plugin_Catalogs')
+        self.settings.load(onError='silent')
+
         self.logger.info("initializing SCS parameters")
         self._scs_params = {}
         for label in "ra dec r".split():
@@ -44,7 +48,8 @@ class Catalogs(CatalogsBase.CatalogsBase):
 
         # PLEASE REPLACE: integrate into config framework, format?
         if not configfile:
-            configfile = _def_cat_config_file
+            configfile = self.settings.get('vo_catalog_servers', 
+                                           _def_cat_config_file)
             if not os.path.exists(configfile): return
 
         self._load_def_servers(configfile, self.catalog_services, 
@@ -55,7 +60,8 @@ class Catalogs(CatalogsBase.CatalogsBase):
 
         # PLEASE REPLACE: integrate into config framework, format?
         if not configfile:
-            configfile = _def_im_config_file
+            configfile = self.settings.get('vo_image_servers',
+                                           _def_im_config_file)
             if not os.path.exists(configfile): return
 
         self._load_def_servers(configfile, self.image_services, 
