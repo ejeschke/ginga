@@ -189,7 +189,7 @@ def main(options, args):
             import matplotlib.pyplot as plt
             from ginga import cmap
             cmap.add_matplotlib_cmaps()
-        except Exception, e:
+        except Exception as e:
             logger.warn("failed to load matplotlib colormaps: %s" % (str(e)))
 
     # Create the dynamic module manager
