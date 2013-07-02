@@ -455,7 +455,7 @@ class FitsImageBase(Callback.Callbacks):
 
     def get_rgb_object(self, whence=0):
         """
-        Create and return an RGB numpy array (NxMx3) representing the data
+        Create and return an RGB slices object representing the data
         that should be rendered at this zoom level and pan settings.
 
         `whence` is an optimization flag that reduces the time to create

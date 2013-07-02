@@ -12,6 +12,7 @@ import cairo
 import numpy
 import threading
 import math
+import StringIO
 
 from ginga import FitsImage
 
@@ -144,6 +145,13 @@ class FitsImageCairo(FitsImage.FitsImageBase):
 
         finally:
             self.dst_surface = None
+    
+    def get_png_image_as_buffer(self, output=None):
+        ibuf = output
+        if ibuf == None:
+            ibuf = StringIO.StringIO()
+        qimg = self.surface.write_to_png(ibuf)
+        return ibuf
     
     def update_image(self):
         if not self.surface:

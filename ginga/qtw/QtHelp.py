@@ -22,7 +22,7 @@ has_pyside = False
 if toolkit in ('pyqt4', 'choose'):
     try:
         import sip
-        for cl in ('QString', ):
+        for cl in ('QString', 'QVariant'):
             sip.setapi(cl, 2)
 
         from PyQt4 import QtCore, QtGui

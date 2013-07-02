@@ -376,11 +376,14 @@ class GingaControl(Callback.Callbacks):
         self.logger.debug("Successfully loaded file into image object.")
         return image
 
-    def load_file(self, filepath, chname=None, wait=True):
+    def load_file(self, filepath, chname=None, wait=True,
+                  create_channel=True):
         if not chname:
             chinfo = self.get_channelInfo()
             chname = chinfo.name
         else:
+            if not self.has_channel(chname) and create_channel:
+                self.gui_call(self.add_channel, chname)
             chinfo = self.get_channelInfo(chname)
             chname = chinfo.name
 
@@ -573,6 +576,12 @@ class GingaControl(Callback.Callbacks):
 
     def getfocus_fitsimage(self):
         chinfo = self.get_channelInfo()
+        if chinfo == None:
+            return None
+        return chinfo.fitsimage
+        
+    def get_fitsimage(self, chname):
+        chinfo = self.get_channelInfo(chname)
         if chinfo == None:
             return None
         return chinfo.fitsimage

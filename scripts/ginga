@@ -152,8 +152,8 @@ def main(options, args):
 
     # So we can find our plugins
     sys.path.insert(0, basedir)
-    moduleHome = os.path.split(sys.modules[__name__].__file__)[0]
-    childDir = os.path.join(moduleHome, 'ginga', 'misc', 'plugins')
+    moduleHome = os.path.split(sys.modules['ginga.version'].__file__)[0]
+    childDir = os.path.join(moduleHome, 'misc', 'plugins')
     sys.path.insert(0, childDir)
     childDir = os.path.join(basedir, 'plugins')
     sys.path.insert(0, childDir)

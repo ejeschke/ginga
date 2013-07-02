@@ -18,6 +18,10 @@ class RGBMapError(Exception):
 class RGBImage(object):
     def __init__(self, **kwdargs):
         self.__dict__.update(kwdargs)
+
+    def get_array(self, order):
+        l = [ self.__dict__[c.lower()] for c in order ]
+        return numpy.dstack(l)
     
 class RGBMapper(Callback.Callbacks):
 

@@ -10,6 +10,7 @@
 import math
 import numpy
 import threading
+import StringIO
 
 from ginga.qtw.QtHelp import QtGui, QtCore
 from ginga import FitsImage, Mixins, Bindings
@@ -228,15 +229,51 @@ class FitsImageQt(FitsImage.FitsImageBase):
             self.imgwin.set_pixmap(pixmap)
         self.set_window_size(width, height, redraw=True)
         
+    def get_rgb_image_as_buffer(self, output=None, format='png',
+                                quality=90):
+        ibuf = output
+        if ibuf == None:
+            ibuf = StringIO.StringIO()
+        imgwin_wd, imgwin_ht = self.get_window_size()
+        qpix = self.pixmap.copy(0, 0,
+                                imgwin_wd, imgwin_ht)
+        qbuf = QtCore.QBuffer()
+        qbuf.open(QtCore.QIODevice.ReadWrite)
+        qpix.save(qbuf, format=format, quality=quality)
+        ibuf.write(bytes(qbuf.data()))
+        qbuf.close()
+        return ibuf
+    
+    def get_rgb_image_as_bytes(self, format='png', quality=90):
+        ibuf = self.get_rgb_image_as_buffer(format=format, quality=quality)
+        return bytes(ibuf.getvalue())
+        
+    def get_rgb_image_as_widget(self, output=None, format='png',
+                                quality=90):
+        imgwin_wd, imgwin_ht = self.get_window_size()
+        qpix = self.pixmap.copy(0, 0,
+                                imgwin_wd, imgwin_ht)
+        return qpix.toImage()
+    
+    def save_rgb_image_as_file(self, filepath, format='png', quality=90):
+        qimg = self.get_rgb_image_as_widget()
+        res = qimg.save(filepath, format=format, quality=quality)
+    
     def get_image_as_widget(self):
+        """Used for generating thumbnails.  Does not include overlaid
+        graphics.
+        """
         rgbobj = self.get_rgb_object(whence=0)
         arr = numpy.dstack((rgbobj.r, rgbobj.g, rgbobj.b))
         image = self._get_qimage(arr)
         return image
-    
+
     def save_image_as_file(self, filepath, format='png', quality=90):
-        qimage = self.get_image_as_widget()
-        res = qimage.save(filepath, format=format, quality=quality)
+        """Used for generating thumbnails.  Does not include overlaid
+        graphics.
+        """
+        qimg = self.get_image_as_widget()
+        res = qimg.save(filepath, format=format, quality=quality)
     
     def redraw(self, whence=0):
         if not self.defer_redraw:

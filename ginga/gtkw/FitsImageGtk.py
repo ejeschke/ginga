@@ -69,6 +69,9 @@ class FitsImageGtk(FitsImageCairo.FitsImageCairo):
         return pixbuf
 
     def get_image_as_widget(self):
+        """Used for generating thumbnails.  Does not include overlaid
+        graphics.
+        """
         pixbuf = self.get_image_as_pixbuf()
         image = gtk.Image()
         image.set_from_pixbuf(pixbuf)
@@ -76,7 +79,26 @@ class FitsImageGtk(FitsImageCairo.FitsImageCairo):
         return image
 
     def save_image_as_file(self, filepath, format='png', quality=90):
+        """Used for generating thumbnails.  Does not include overlaid
+        graphics.
+        """
         pixbuf = self.get_image_as_pixbuf()
+        options = {}
+        if format == 'jpeg':
+            options['quality'] = str(quality)
+        pixbuf.save(filepath, format, options)
+    
+    def get_rgb_image_as_pixbuf(self):
+        dawd = self.surface.get_width()
+        daht = self.surface.get_height()
+        rgb_buf = bytes(self.surface.get_data())
+        pixbuf = gtk.gdk.pixbuf_new_from_data(rgb_buf, gtk.gdk.COLORSPACE_RGB,
+                                              False, 8, dawd, daht, dawd*3)
+            
+        return pixbuf
+
+    def save_rgb_image_as_file(self, filepath, format='png', quality=90):
+        pixbuf = self.get_rgb_image_as_pixbuf()
         options = {}
         if format == 'jpeg':
             options['quality'] = str(quality)

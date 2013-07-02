@@ -12,10 +12,11 @@ import numpy
 import mimetypes
 import os
 import hashlib
+import StringIO
 
 try:
     # do we have Python Imaging Library available?
-    import PIL.Image as Image
+    import PIL.Image as PILimage
     from PIL.ExifTags import TAGS
     have_pil = True
 except ImportError:
@@ -89,6 +90,22 @@ class PythonImage(BaseImage):
         self.transfer(other, astype=astype)
         return other
 
+    def get_buffer(self, format, output=None):
+        """Get image as a buffer in (format).
+        Format should be 'jpeg', 'png', etc.
+        """
+        if not have_pil:
+            raise Exception("Install PIL to use this method")
+        image = PILimage.fromarray(self.get_data())
+        buf = output
+        if buf == None:
+            buf = StringIO.StringIO()
+        image.save(buf, format)
+        contents = buf.getvalue()
+        if output == None:
+            buf.close()
+        return contents
+    
     def get_scaled_cutout_wdht(self, x1, y1, x2, y2, new_wd, new_ht,
                                   method='bicubic'):
         # calculate dimensions of NON-scaled cutout
@@ -169,7 +186,7 @@ class PythonImage(BaseImage):
             # PIL seems to be the faster loader than QImage, and can
             # return EXIF info, where QImage will not.
             means = 'PIL'
-            image = Image.open(filepath)
+            image = PILimage.open(filepath)
 
             try:
                 info = image._getexif()
