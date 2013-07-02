@@ -1,0 +1,4 @@
+# Place this in file under ~/.ginga with the name "plugin_Catalogs"
+# 
+# vo_catalog_servers = 'data/catalogs'
+# vo_image_servers = 'data/image_archives'
