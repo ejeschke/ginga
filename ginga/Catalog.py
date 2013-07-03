@@ -1,5 +1,5 @@
 #
-# Catalog.py -- DSS and star catalog interfaces for the Gen2 fits viewer
+# Catalog.py -- DSS and star catalog interfaces for the Ginga fits viewer
 # 
 # Eric Jeschke (eric@naoj.org)
 #
@@ -35,11 +35,13 @@ class URLServer(object):
         params = {}
         regex = r'^.*?\%\((\w+)\)([sfd])(.*)$'
         match = re.match(regex, url)
+        count = 0
         while match:
             key, typ, sfx = match.groups()
             idx = ['s', 'd', 'f'].index(typ)
             cvt = (str, int, float)[idx]
-            params[key] = Bunch.Bunch(name=key, convert=cvt)
+            params[key] = Bunch.Bunch(name=key, convert=cvt, order=count)
+            count += 1
             match = re.match(regex, sfx)
 
         return params
@@ -110,9 +112,11 @@ class URLServer(object):
         ## else:
         ##     raise Exception("Don't know how to handle a request of type '%s'" % (
         ##         self.reqtype))
+
         url = self.base_url % params
         
-        return self.fetch(url, filepath=filepath)
+        self.fetch(url, filepath=filepath)
+        return filepath
 
 
 class ImageServer(URLServer):

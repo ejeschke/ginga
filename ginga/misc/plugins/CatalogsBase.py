@@ -37,6 +37,10 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
         self.areatag = None
         self.curstar = None
 
+        prefs = self.fv.get_preferences()
+        self.settings = prefs.createCategory('plugin_Catalogs')
+        self.settings.load(onError='silent')
+
         self.image_server_options = []
         self.image_server_params = None
 
@@ -144,6 +148,7 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
             ht = deg*60.0 + float(mn) + sec/60.0
             sgn, deg, mn, sec = wcs.degToDms(radius_deg)
             radius = deg*60.0 + float(mn) + sec/60.0
+            #wd, ht, radius = wd_deg, ht_deg, radius_deg
             
         except Exception, e:
             self.fv.showStatus('BAD WCS: %s' % str(e))
@@ -260,8 +265,16 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
         self.fv.nongui_do(self.getimage, server, params, chname)
 
     def getimage(self, server, params, chname):
-        fitspath = self.fv.get_sky_image(server, params)
+        try:
+            fitspath = self.fv.get_sky_image(server, params)
 
+        except Exception as e:
+            errmsg = "Query exception: %s" % (str(e))
+            self.logger.error(errmsg)
+            # pop up the error in the GUI under "Errors" tab
+            self.fv.gui_do(self.fv.show_error, errmsg)
+            return
+            
         self.fv.load_file(fitspath, chname=chname)
 
         # Update the GUI
@@ -294,14 +307,21 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
         self.fv.nongui_do(self.getcatalog, server, params, obj)
 
     def getcatalog(self, server, params, obj):
-        starlist, info = self.fv.get_catalog(server, params)
-        self.logger.debug("starlist=%s" % str(starlist))
+        try:
+            starlist, info = self.fv.get_catalog(server, params)
+            self.logger.debug("starlist=%s" % str(starlist))
 
-        starlist = self.filter_results(starlist, obj)
+            starlist = self.filter_results(starlist, obj)
 
-        # Update the GUI
-        self.fv.gui_do(self.update_catalog, starlist, info)
+            # Update the GUI
+            self.fv.gui_do(self.update_catalog, starlist, info)
         
+        except Exception as e:
+            errmsg = "Query exception: %s" % (str(e))
+            self.logger.error(errmsg)
+            # pop up the error in the GUI under "Errors" tab
+            self.fv.gui_do(self.fv.show_error, errmsg)
+            
     def update_catalog(self, starlist, info):
         self.starlist = starlist
         self.table.show_table(self, info, starlist)

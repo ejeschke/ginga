@@ -235,11 +235,13 @@ class Catalogs(CatalogsBase.CatalogsBase):
     def _setup_params(self, obj, container):
         params = obj.getParams()
         captions = []
-        for key, bnch in params.items():
-            text = key
+        paramList = sorted(params.values(), key=lambda b: b.order)
+        for bnch in paramList:
+            text = bnch.name
             if bnch.has_key('label'):
                 text = bnch.label
-            captions.append((text, 'entry'))
+            #captions.append((text, 'entry'))
+            captions.append((text, 'xlabel', '@'+bnch.name, 'entry'))
 
         # TODO: put RA/DEC first, and other stuff not in random orders
         w, b = GtkHelp.build_info(captions)

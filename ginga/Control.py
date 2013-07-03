@@ -843,9 +843,9 @@ class GingaControl(Callback.Callbacks):
             self.logger.error("failed to remove tmp file '%s': %s" % (
                 filepath, str(e)))
         try:
-            self.imgsrv.getImage(key, filepath, **params)
+            dstpath = self.imgsrv.getImage(key, filepath, **params)
+            return dstpath
 
-            return filepath
         except Exception, e:
             errmsg = "Failed to load sky image: %s" % (str(e))
             self.show_error(errmsg)
