@@ -1,4 +1,0 @@
-# Place this in file under ~/.ginga with the name "catalogs"
-# 
-('USNO-B1', 'http://www.nofs.navy.mil/cgi-bin/vo_cone.cgi?CAT=USNO-B1&')
-('Kepler Targets', 'http://archive.stsci.edu/kepler/kepler_fov/search.php?')
