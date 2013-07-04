@@ -378,6 +378,24 @@ class GingaControl(Callback.Callbacks):
 
     def load_file(self, filepath, chname=None, wait=True,
                   create_channel=True):
+        """Load a file from filesystem and display it.
+
+        Parameters
+        ----------
+        `filepath`: string
+            the path of the file to load
+        `chname`: string (optional)
+            the name of the channel in which to display the image
+        `wait`: boolean (optional)
+            if True, then wait for the file to be loaded before returning
+              (synchronous behavior)
+        `create_channel`: boolean (optional)
+            if not False, then will create the channel if it does not exist
+        Returns
+        -------
+        image:
+            the image object that was loaded
+        """
         if not chname:
             chinfo = self.get_channelInfo()
             chname = chinfo.name
@@ -739,7 +757,18 @@ class GingaControl(Callback.Callbacks):
         
     def add_channel(self, chname, datasrc=None, workspace=None,
                     num_images=None):
+        """Create a new Ginga channel.
 
+        Parameters
+        ----------
+        `chname`: string
+            the name of the channel to create.
+
+        Returns
+        -------
+        chinfo: bunch
+            the channel info bunch
+        """
         if self.has_channel(chname):
             return self.get_channelInfo(chname)
         
@@ -900,6 +929,36 @@ class GingaControl(Callback.Callbacks):
     def play_soundfile(self, filepath, format=None, priority=20):
         self.logger.debug("Subclass could override this to play sound file '%s'" % (
             filepath))
+
+    def get_color_maps(self):
+        """Get the list of named color maps.
+
+        Parameters
+        ----------
+        None
+            
+        Returns
+        -------
+        `names`: list
+            A list of all named colormaps installed
+
+        """
+        return cmap.get_names()
+
+    def get_intensity_maps(self):
+        """Get the list of named intensity maps.
+
+        Parameters
+        ----------
+        None
+            
+        Returns
+        -------
+        `names`: list
+            A list of all named intensity maps installed
+
+        """
+        return imap.get_names()
 
 
 class GuiLogHandler(logging.Handler):

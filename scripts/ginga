@@ -147,8 +147,7 @@ def main(options, args):
     prefs = Settings.Preferences(basefolder=basedir, logger=logger)
     settings = prefs.createCategory('general')
     settings.load(onError='silent')
-    settings.setDefaults(useMatplotlibColormaps=False,
-                         showBanner=True)
+    settings.setDefaults(useMatplotlibColormaps=False)
 
     # So we can find our plugins
     sys.path.insert(0, basedir)
@@ -284,10 +283,18 @@ def main(options, args):
             str(e)))
         logger.error("Traceback:\n%s" % (tb_str))
 
-    # Display banner, unless suppressed
-    showBanner = settings.get('showBanner', True)
+    # Display banner the first time run, unless suppressed
+    showBanner = True
+    try:
+        showBanner = settings.get('showBanner')
+        
+    except KeyError:
+        # disable for subsequent runs
+        settings.set(showBanner=False)
+        settings.save()
+        
     if (not options.nosplash) and (len(args) == 0) and showBanner:
-        ginga.banner(raiseTab=False)
+        ginga.banner()
 
     # Assume remaining arguments are fits files and load them.
     for imgfile in args:

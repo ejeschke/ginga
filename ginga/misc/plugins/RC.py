@@ -10,14 +10,64 @@
 """
 The RC plugin implements a remote control interface for the Ginga FITS
 viewer.
-"""
-from ginga import GingaPlugin
-from ginga import AstroImage
 
+ Show example usage:
+ $ grc help
+
+ Show help for a specific ginga method:
+ $ grc help ginga <method>
+
+ Show help for a specific channel method:
+ $ grc help channel <chname> <method>
+
+Ginga methods can be called like this:
+
+ $ grc ginga <method> <arg1> <arg2> ...
+
+Channel methods can be called like this:
+
+ $ grc channel <chname> <method> <arg1> <arg2> ...
+
+Calls can be made from a remote host by adding the options
+   --host=<hostname> --port=9000
+
+Examples:
+
+ Create a new channel:
+ $ grc ginga add_channel FOO
+ 
+ Load a file:
+ $ grc ginga load FOO /home/eric/testdata/SPCAM/SUPA01118797.fits
+
+ Cut levels:
+ $ grc channel FOO cut_levels 163 1300
+
+ Auto cut levels:
+ $ grc channel FOO auto_levels
+
+ Zoom to a specific level:
+ $ grc -- channel FOO zoom -7
+ 
+ Zoom to fit:
+ $ grc channel FOO zoom_fit
+ 
+ Transform:
+ $ grc channel FOO transform 1 0 1
+
+ 
+"""
+import sys
 import numpy
 import SimpleXMLRPCServer
 import binascii
 import bz2
+
+from ginga import GingaPlugin
+from ginga import AstroImage
+from ginga import cmap
+
+help_msg = sys.modules[__name__].__doc__
+
 
 class RC(GingaPlugin.GlobalPlugin):
 
@@ -65,17 +115,79 @@ class GingaWrapper(object):
         self.fv = fv
         self.logger = logger
 
-    def display_fitsbuf(self, fitsname, chname, data, dims, dtype,
-                        header, metadata, compressed):
-        """Display a FITS image buffer.  Parameters:
-        _fitsname_: name of the file
-        _chname_: channel to display the data
-        _data_: ascii encoded numpy containing image data
-        _dims_: image dimensions in pixels (usually a (height, width) tuple)
-        _dtype_: numpy data type of encoding (e.g. 'float32')
-        _header_: fits file header as a dictionary
-        _metadata_: metadata about image to attach to image
-        _compressed_: True if the data is compressed
+        # List of XML-RPC acceptable return types
+        self.ok_types = map(type, [str, int, float, bool, list, tuple])
+        
+    def help(self, *args):
+        """Get help for a remote interface method.
+
+        Examples
+        --------
+        help('ginga', `method`)
+           name of the method for which you want help
+
+        help('channel', `chname`, `method`)
+           name of the method in the channel for which you want help
+
+        Returns
+        -------
+        help: string
+          a help message
+        """
+        if len(args) == 0:
+            return help_msg
+
+        which = args[0].lower()
+        
+        if which == 'ginga':
+            method = args[1]
+            _method = getattr(self.fv, method)
+            return _method.__doc__
+
+        elif which == 'channel':
+            chname = args[1]
+            method = args[2]
+            chinfo = self.fv.get_channelInfo(chname)
+            _method = getattr(chinfo.fitsimage, method)
+            return _method.__doc__
+
+        else:
+            return "Please use 'help ginga <method>' or 'help channel <chname> <method>'"
+
+    def load_buffer(self, imname, chname, data, dims, dtype,
+                    header, metadata, compressed):
+        """Display a FITS image buffer.
+
+        Parameters
+        ----------
+        `imname`: string
+            a name to use for the image in Ginga
+        `chname`: string
+            channel in which to load the image
+        `data`: string
+            the image data, encoded as a base64 ascii encoded string
+        `dims`: tuple
+            image dimensions in pixels (usually (height, width))
+        `dtype`: string
+            numpy data type of encoding (e.g. 'float32')
+        `header`: dict
+            fits file header as a dictionary
+        `metadata`: dict
+            other metadata about image to attach to image
+        `compressed`: boolean
+            True if `data` is bz2 compressed before ascii encoding
+
+        Returns
+        -------
+        0
+
+        Notes
+        -----
+        * Get array dims: data.shape
+        * Get array dtype: str(data.dtype)
+        * Make a string from a numpy array: buf = data.tostring()
+        * Compress the buffer: buf = bz2.compress(buf)
+        * Convert buffer to ascii-encoding: buf = binascii.b2a_base64(buf)
         """
 
         # Unpack the data
@@ -97,7 +209,7 @@ class GingaWrapper(object):
             image = AstroImage.AstroImage()
             image.load_buffer(data, dims, dtype, byteswap=byteswap,
                               metadata=metadata)
-            image.set(name=fitsname)
+            image.set(name=imname)
             image.update_keywords(header)
         
         except Exception, e:
@@ -112,56 +224,38 @@ class GingaWrapper(object):
                             chname=chname)
         return 0
 
-    def add_channel(self, chname):
-        """Create a new channel with name (chname).
+    def _cleanse(self, res):
+        """Transform results into XML-RPC friendy ones.
         """
-        self.fv.gui_do(self.fv.add_channel, chname)
-        return 0
+        ptype = type(res)
+        
+        if ptype in self.ok_types:
+            return res
 
-    def display_fitsfile(self, chname, fitspath, dowait):
-        """Load (fitspath) into channel (chname).  If (dowait) is True
-        then wait for the file to be loaded before returning (synchronous).
-        """
-        self.fv.load_file(fitspath, chname=chname, wait=dowait)
-        return 0
-
-    def cut_levels(self, chname, loval, hival):
-        """Cut levels on channel (chname) with (loval) and (hival).
-        """
+        return str(res)
+        
+    def _prep_arg(self, arg):
+        try:
+            return float(arg)
+        except ValueError:
+            try:
+                return int(arg)
+            except ValueError:
+                return arg
+        
+    def _prep_args(self, args):
+        return map(self._prep_arg, args)
+    
+    def channel(self, chname, method, *args):
         chinfo = self.fv.get_channelInfo(chname)
-        self.fv.gui_do(chinfo.fitsimage.cut_levels, float(loval), float(hival))
-        return 0
-
-    def autocuts(self, chname):
-        """Auto cut levels on channel (chname).
-        """
-        chinfo = self.fv.get_channelInfo(chname)
-        self.fv.gui_do(chinfo.fitsimage.auto_levels)
-        return 0
-
-    def zoom(self, chname, zoomlevel):
-        """Set zoom level on channel (chname) to (zoomlevel).
-        """
-        chinfo = self.fv.get_channelInfo(chname)
-        self.fv.gui_do(chinfo.fitsimage.zoom_to, int(zoomlevel))
-        return 0
-
-    def zoom_fit(self, chname):
-        """Zoom to fit on channel (chname).
-        """
-        chinfo = self.fv.get_channelInfo(chname)
-        self.fv.gui_do(chinfo.fitsimage.zoom_fit)
-        return 0
-
-    def transform(self, chname, flipx, flipy, swapxy):
-        """Transforms on channel (chname).  (flipx), (flipy) and
-        (swapxy) are boolean values which determine the transform.
-        """
-        chinfo = self.fv.get_channelInfo(chname)
-        self.fv.gui_do(chinfo.fitsimage.transform,
-                       bool(int(flipx)), bool(int(flipy)), bool(int(swapxy)))
-        return 0
-
+        _method = getattr(chinfo.fitsimage, method)
+        res = self.fv.gui_call(_method, *self._prep_args(args))
+        return self._cleanse(res)
+    
+    def ginga(self, method, *args):
+        _method = getattr(self.fv, method)
+        res = self.fv.gui_call(_method, *self._prep_args(args))
+        return self._cleanse(res)
     
 #END
                                 

@@ -30,6 +30,7 @@ try:
 except ImportError:
     have_pilutil = False
 
+# Qt can be used as a replacement for PIL
 try:
     from ginga.qtw.QtHelp import QtCore, QtGui
     QImage, QColor = QtGui.QImage, QtGui.QColor
@@ -37,13 +38,14 @@ try:
 except ImportError, e:
     have_qtimage = False
 
+# How about color management (ICC profile) support?
 try:
-    # How about color management (ICC profile) support?
-    import ImageCms
+    import PIL.ImageCms as ImageCms
     have_cms = True
 except ImportError:
     have_cms = False
 
+# EXIF library for getting metadata, in the case that we don't have PIL
 try:
     import EXIF
     have_exif = True

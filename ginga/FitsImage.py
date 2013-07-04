@@ -1,5 +1,5 @@
 #
-# FitsImage.py -- abstract classes for the display of FITS files
+# FitsImage.py -- base class for the display of image files
 # 
 # Eric Jeschke (eric@naoj.org) 
 #
@@ -250,7 +250,28 @@ class FitsImageBase(Callback.Callbacks):
         """
         return self.t_
     
-    # TODO: deprecate these two?
+    def set_color_map(self, cmap_name):
+        """Sets the color map.
+
+        Parameters
+        ----------
+        `cmap_name`:  string
+            the name of a color map
+        """
+        cm = cmap.get_cmap(cmap_name)
+        self.set_cmap(cm)
+
+    def set_intensity_map(self, imap_name):
+        """Sets the intensity map.
+
+        Parameters
+        ----------
+        `imap_name`:  string
+            the name of an intensity map
+        """
+        im = imap.get_imap(imap_name)
+        self.set_imap(im)
+
     def set_cmap(self, cm, redraw=True):
         self.rgbmap.set_cmap(cm, callback=redraw)
 
@@ -858,6 +879,25 @@ class FitsImageBase(Callback.Callbacks):
 
         
     def scale_to(self, scale_x, scale_y, no_reset=False, redraw=True):
+        """Scale the image in a channel.
+
+        Parameters
+        ----------
+        `chname`: string
+            the name of the channel containing the image
+        `scale_x`: float
+            the scaling factor for the image in the X axis
+        `scale_y`: float
+            the scaling factor for the image in the Y axis
+
+        Returns
+        -------
+        0
+        
+        See Also
+        --------
+        zoom_to
+        """
         ratio = float(scale_x) / float(scale_y)
         if ratio < 1.0:
             # Y is stretched
@@ -965,6 +1005,26 @@ class FitsImageBase(Callback.Callbacks):
         return text
 
     def zoom_to(self, zoomlevel, no_reset=False, redraw=True):
+        """Set zoom level on channel.
+
+        Parameters
+        ----------
+        `zoomlevel`: int
+            the zoom level to zoom the image: negative is out, positive is in
+
+        Returns
+        -------
+        0
+        
+        Notes
+        -----
+        The zoom level is an integer that calculates a zoom level based on
+        the zoom settings defined for the channel in preferences.
+
+        See Also
+        --------
+        scale
+        """
         if self.t_['zoom_algorithm'] == 'rate':
             scale_x = self.t_['scale_x_base'] * (
                 self.t_['zoom_rate'] ** zoomlevel)
@@ -1132,6 +1192,21 @@ class FitsImageBase(Callback.Callbacks):
         return self.t_['cuts']
     
     def cut_levels(self, loval, hival, no_reset=False, redraw=True):
+        """Cut levels on the image in a channel.
+
+        Parameters
+        ----------
+        `chname`: string
+            the name of the channel containing the image
+        `loval`: float
+            the low value of the cut levels
+        `hival`: float
+            the high value of the cut levels
+
+        Returns
+        -------
+        0
+        """
         self.t_.set(cuts=(loval, hival))
 
         # If user specified override for auto levels, then turn off
@@ -1144,6 +1219,18 @@ class FitsImageBase(Callback.Callbacks):
             
     def auto_levels(self, method=None, pct=None,
                     numbins=None, redraw=True):
+        """Auto cut levels on image view.
+
+        Parameters
+        ----------
+        `method`: string
+        `pct`: float
+        `numbins`: int
+
+        Returns
+        -------
+        0
+        """
         if method == None:
             method = self.t_['autocut_method']
         if pct == None:
@@ -1174,6 +1261,30 @@ class FitsImageBase(Callback.Callbacks):
         return self.autocuts_options
 
     def transform(self, flip_x, flip_y, swap_xy, redraw=True):
+        """Transforms view of image.
+
+        Parameters
+        ----------
+        `flipx`:  boolean
+            if True, flip the image in the X axis
+        `flipy`:  boolean
+            if True, flip the image in the Y axis
+        `swapxy`:  boolean
+            if True, swap the X and Y axes
+            
+        Returns
+        -------
+        0
+
+        Notes
+        -----
+        Transforming the image is generally faster than rotating,
+        if rotating in 90 degree increments.
+
+        See Also
+        --------
+        rotate
+        """
         self.logger.debug("flip_x=%s flip_y=%s swap_xy=%s" % (
             flip_x, flip_y, swap_xy))
         self.t_.set(flip_x=flip_x, flip_y=flip_y, swap_xy=swap_xy)
@@ -1218,7 +1329,26 @@ class FitsImageBase(Callback.Callbacks):
         return self.t_['rot_deg']
 
     def rotate(self, deg, redraw=True):
-        """Convenience method for rotating the image by `deg` degrees."""
+        """Rotates the view of image in channel.
+
+        Parameters
+        ----------
+        `deg`:  float
+            degrees to rotate the image
+            
+        Returns
+        -------
+        0
+
+        Notes
+        -----
+        Transforming the image is generally faster than rotating,
+        if rotating in 90 degree increments.
+
+        See Also
+        --------
+        transform
+        """
         self.t_.set(rot_deg=deg)
 
     def rotation_change_cb(self, setting, value):
