@@ -33,7 +33,7 @@ setup(
                      'ginga.gtkw': ['gtk_rc'],
                      },
     data_files = [('', ['LICENSE.txt', 'README.txt'])],
-    scripts = ['scripts/ginga'],
+    scripts = ['scripts/ginga', 'scripts/grc'],
     classifiers = [
         "License :: OSI Approved :: BSD License",
         "Operating System :: MacOS :: MacOS X",

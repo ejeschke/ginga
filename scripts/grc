@@ -10,6 +10,8 @@
 #
 """
  See the plugin RC.py for details of the server side.
+
+ Start ginga with the --modules=RC option to enable Ginga remote control.
  
  Show example usage:
  $ grc help
@@ -26,13 +28,13 @@ def main(options, args):
     url = "http://%s:%d" % (options.host, options.port)
     ginga = xmlrpclib.ServerProxy(url)
 
-    ## if len(args) == 0:
-    ##     print ginga('help')
-    ##     sys.exit(0)
-
-    # Lookup and invoke method on rest of parameters
-    method = getattr(ginga, args[0])
-    args = args[1:]
+    if len(args) == 0:
+        method = getattr(ginga, 'help')
+    else:
+        method = getattr(ginga, args[0])
+        args = args[1:]
+        
+    # invoke method on rest of parameters
     res = method(*args)
     print res
     
