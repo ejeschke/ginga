@@ -444,8 +444,12 @@ class CatalogListingBase(object):
         self.logger = logger
         self.tag = None
         self.mycolor = 'skyblue'
-        self.magmap = 'stairs8'
+        self.cmap_names = cmap.get_names()
+        self.imap_names = imap.get_names()
+        self.magcmap = 'stairs8'
+        self.magimap = 'ramp'
 
+        self.mag_field = 'mag'
         self.mag_max = 25.0
         self.mag_min = 0.0
 
@@ -457,9 +461,6 @@ class CatalogListingBase(object):
                         ('Mag', 'mag'),
                         ('Preference', 'preference'),
                         ('Priority', 'priority'),
-                        ('Flag', 'flag'),
-                        ('b-r', 'b_r'),
-                        ('Dst', 'dst'),
                         ('Description', 'description'),
                         ]
 
@@ -473,7 +474,7 @@ class CatalogListingBase(object):
 
         self.btn = Bunch.Bunch()
 
-        self.cmap = cmap.get_cmap(self.magmap)
+        self.cmap = cmap.get_cmap(self.magcmap)
         self.imap = imap.get_imap('ramp')
 
         self._build_gui(container)
@@ -481,7 +482,7 @@ class CatalogListingBase(object):
 
     def get_color(self, obj):
         try:
-            mag = obj['mag']
+            mag = obj[self.mag_field]
         except:
             return self.mycolor
 
@@ -566,4 +567,27 @@ class CatalogListingBase(object):
         canvobjs = map(lambda star: star.canvobj, self.selected)
         self.catalog.highlight_objects(canvobjs, 'selected', 'skyblue')
             
+    def set_cmap_byname(self, name):
+        # Get colormap
+        cm = cmap.get_cmap(name)
+        self.cbar.set_cmap(cm)
+        
+    def set_imap_byname(self, name):
+        # Get intensity map
+        im = imap.get_imap(name)
+        self.cbar.set_imap(im)
+
+    def set_field(self, name):
+        # select new field to use for color plotting
+        self.mag_field = name
+
+        # determine the range of the values
+        values = map(lambda star: float(star[self.mag_field]),
+                     self.catalog.starlist)
+        self.mag_max = max(values)
+        self.mag_min = min(values)
+        self.cbar.set_range(self.mag_min, self.mag_max)
+
+        self.replot_stars()
+        
 # END

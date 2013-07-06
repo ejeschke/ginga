@@ -381,8 +381,6 @@ class FitsImageBase(Callback.Callbacks):
         `metadata` can be a dictionary (map-like) of image metadata.
         """
         dims = data.shape
-        ## assert (len(dims) == 2), \
-        ##        FitsImageError("Only 2D images are supported!")
         image = AstroImage.AstroImage(data, metadata=metadata,
                                       logger=self.logger)
         self.set_image(image, redraw=redraw)

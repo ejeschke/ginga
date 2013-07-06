@@ -290,16 +290,8 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
 
         # create the table
         table = QtGui.QTableWidget()
-        table.setColumnCount(len(self.columns))
         table.cellClicked.connect(self.select_star_cb)
         self.table = table
-        
-        col = 0
-        for hdr, kwd in self.columns:
-            item = QtGui.QTableWidgetItem(hdr)
-            table.setHorizontalHeaderItem(col, item)
-            col += 1
-
         vbox.addWidget(table, stretch=1)
 
         self.cbar = ColorBar.ColorBar(self.logger)
@@ -312,19 +304,99 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
         btns = QtHelp.HBox()
         btns.setSpacing(5)
 
+        combobox = QtHelp.ComboBox()
+        options = []
+        index = 0
+        for name in self.cmap_names:
+            options.append(name)
+            combobox.addItem(name)
+            index += 1
+        cmap_name = self.magcmap
+        try:
+            index = self.cmap_names.index(cmap_name)
+        except Exception:
+            index = self.cmap_names.index('ramp')
+        combobox.setCurrentIndex(index)
+        combobox.activated.connect(self.set_cmap_cb)
+        self.btn['cmap'] = combobox
+        btns.addWidget(combobox, stretch=0, alignment=QtCore.Qt.AlignRight)
+
+        combobox = QtHelp.ComboBox()
+        options = []
+        index = 0
+        for name in self.imap_names:
+            options.append(name)
+            combobox.addItem(name)
+            index += 1
+        imap_name = self.magimap
+        try:
+            index = self.imap_names.index(imap_name)
+        except Exception:
+            index = self.imap_names.index('ramp')
+        combobox.setCurrentIndex(index)
+        combobox.activated.connect(self.set_imap_cb)
+        self.btn['imap'] = combobox
+        btns.addWidget(combobox, stretch=0, alignment=QtCore.Qt.AlignRight)
+
+        vbox.addWidget(btns, stretch=0, alignment=QtCore.Qt.AlignTop)
+
+        btns = QtHelp.HBox()
+        btns.setSpacing(5)
+
         for name in ('Plot', 'Clear', #'Close'
                      ):
             btn = QtGui.QPushButton(name)
-            btns.addWidget(btn, stretch=0, alignment=QtCore.Qt.AlignCenter)
+            btns.addWidget(btn, stretch=0, alignment=QtCore.Qt.AlignLeft)
             self.btn[name.lower()] = btn
 
         self.btn.plot.clicked.connect(self.replot_stars)
         self.btn.clear.clicked.connect(self.clear)
         #self.btn.close.clicked.connect(self.close)
 
+        combobox = QtHelp.ComboBox()
+        options = []
+        index = 0
+        for name in ['Mag']:
+            options.append(name)
+            combobox.addItem(name)
+            index += 1
+        combobox.setCurrentIndex(0)
+        combobox.activated.connect(self.set_field_cb)
+        self.btn['field'] = combobox
+        btns.addWidget(combobox, stretch=0, alignment=QtCore.Qt.AlignLeft)
+
         vbox.addWidget(btns, stretch=0, alignment=QtCore.Qt.AlignTop)
         
+        # create the table
+        info = Bunch.Bunch(columns=self.columns, color='Mag')
+        self.build_table(info)
+        
         self.mframe.addWidget(vbox, stretch=1)
+
+    def build_table(self, info):
+        columns = info.columns
+        self.columns = columns
+
+        table = self.table
+        table.clear()
+        table.setColumnCount(len(columns))
+        
+        # Set up the field selector
+        fidx = 0
+        combobox = self.btn['field']
+        combobox.clear()
+        
+        col = 0
+        for hdr, kwd in columns:
+            item = QtGui.QTableWidgetItem(hdr)
+            table.setHorizontalHeaderItem(col, item)
+            col += 1
+
+            combobox.addItem(hdr)
+            if hdr == info.color:
+                fidx = col
+
+        combobox.setCurrentIndex(fidx)
 
     def show_table(self, catalog, info, starlist):
         self.starlist = starlist
@@ -333,6 +405,9 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
         #self.info = info
         self.selected = []
 
+        # rebuild table according to metadata
+        self.build_table(info)
+        
         table = self.table
         table.clearContents()
         table.setSortingEnabled(False)
@@ -394,5 +469,17 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
         self.mark_selection(star, fromtable=True)
         return True
     
+    def set_cmap_cb(self, index):
+        name = self.cmap_names[index]
+        self.set_cmap_byname(name)
+
+    def set_imap_cb(self, index):
+        name = self.imap_names[index]
+        self.set_imap_byname(name)
+
+    def set_field_cb(self, index):
+        fieldname = self.columns[index][1]
+        self.set_field(fieldname)
+
 
 # END

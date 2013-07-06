@@ -219,14 +219,26 @@ class CatalogServer(URLServer):
 
                 results.append(Star(name=name, ra_deg=ra_deg, dec_deg=dec_deg,
                                     ra=ra_txt, dec=dec_txt, mag=mag,
-                                    flag=0, description=''))
+                                    preference=0.0, priority=0,
+                                    description=''))
 
             except Exception, e:
                 print str(e)
                 self.logger.error("Error parsing catalog query results: %s" % (
                     str(e)))
 
-        return results, table
+        # metadata about the list
+        columns = [('Name', 'name'),
+                   ('RA', 'ra'),
+                   ('DEC', 'dec'),
+                   ('Mag', 'mag'),
+                   ('Preference', 'preference'),
+                   ('Priority', 'priority'),
+                   ('Description', 'description'),
+                   ]
+        info = Bunch.Bunch(columns=columns, color='Mag')
+
+        return (results, info)
         
 
 class ServerBank(object):

@@ -81,9 +81,11 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
     # TODO: deprecate these two?
     def set_cmap(self, cm):
         self.rgbmap.set_cmap(cm)
+        self.redraw()
 
     def set_imap(self, im, reset=False):
         self.rgbmap.set_imap(im)
+        self.redraw()
         
     def set_range(self, loval, hival, redraw=True):
         self.loval = loval

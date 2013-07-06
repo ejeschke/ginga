@@ -306,26 +306,127 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
     def _build_gui(self, container):
         self.mframe = container
 
-        self.cell_sort_funcs = []
-        for kwd, key in self.columns:
-            self.cell_sort_funcs.append(self._mksrtfnN(key))
-
         vbox = gtk.VBox()
 
         sw = gtk.ScrolledWindow()
         sw.set_border_width(2)
         sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+        self.sw = sw
+
+        vbox.pack_start(sw, fill=True, expand=True)
+
+        self.cbar = ColorBar.ColorBar(self.logger)
+        self.cbar.set_cmap(self.cmap)
+        self.cbar.set_imap(self.imap)
+        self.cbar.set_size_request(-1, 20)
+
+        vbox.pack_start(self.cbar, padding=4, fill=True, expand=False)
+
+        btns = gtk.HBox()
+        btns.set_spacing(2)
+
+        combobox = GtkHelp.combo_box_new_text()
+        options = []
+        index = 0
+        for name in self.cmap_names:
+            options.append(name)
+            combobox.insert_text(index, name)
+            index += 1
+        cmap_name = self.magcmap
+        try:
+            index = self.cmap_names.index(cmap_name)
+        except Exception:
+            index = self.cmap_names.index('ramp')
+        combobox.set_active(index)
+        combobox.sconnect('changed', self.set_cmap_cb)
+        self.btn['cmap'] = combobox
+        btns.add(combobox)
+
+        combobox = GtkHelp.combo_box_new_text()
+        options = []
+        index = 0
+        for name in self.imap_names:
+            options.append(name)
+            combobox.insert_text(index, name)
+            index += 1
+        imap_name = self.magimap
+        try:
+            index = self.imap_names.index(imap_name)
+        except Exception:
+            index = self.imap_names.index('ramp')
+        combobox.set_active(index)
+        combobox.sconnect('changed', self.set_imap_cb)
+        self.btn['imap'] = combobox
+        btns.add(combobox)
+
+        vbox.pack_start(btns, padding=4, fill=True, expand=False)
+
+        btns = gtk.HBox()
+        btns.set_spacing(2)
+
+        for name in ('Plot', 'Clear', #'Close'
+                     ):
+            btn = gtk.Button(name)
+            btns.add(btn)
+            self.btn[name.lower()] = btn
+            
+        combobox = GtkHelp.combo_box_new_text()
+        options = []
+        index = 0
+        for name in ['Mag']:
+            options.append(name)
+            combobox.insert_text(index, name)
+            index += 1
+        combobox.set_active(0)
+        combobox.sconnect('changed', self.set_field_cb)
+        self.btn['field'] = combobox
+        btns.add(combobox)
+
+        self.btn.plot.connect('clicked', lambda w: self.replot_stars())
+        self.btn.clear.connect('clicked', lambda w: self.clear())
+        #self.btn.close.connect('clicked', lambda w: self.close())
+
+        vbox.pack_start(btns, padding=4, fill=True, expand=False)
+        vbox.show_all()
+        
+        # create the table
+        info = Bunch.Bunch(columns=self.columns, color='Mag')
+        self.build_table(info)
+
+        self.mframe.pack_start(vbox, expand=True, fill=True)
+        self.mframe.show_all()
+
+    def build_table(self, info):
+        columns = info.columns
+        self.columns = columns
+        
+        # remove old treeviews, if any
+        children = self.sw.get_children()
+        for child in children:
+            self.sw.remove(child)
 
         # create the TreeView
         treeview = gtk.TreeView()
         self.treeview = treeview
         
+        self.cell_sort_funcs = []
+        for kwd, key in columns:
+            self.cell_sort_funcs.append(self._mksrtfnN(key))
+
+        # Set up the field selector
+        fidx = 0
+        combobox = self.btn['field']
+        try:
+            combobox.clear()
+        except Exception, e:
+            print "Error clearing: ", str(e)
+
         # create the TreeViewColumns to display the data
-        tvcolumn = [None] * len(self.columns)
-        for n in range(0, len(self.columns)):
+        tvcolumn = [None] * len(columns)
+        for n in range(0, len(columns)):
             cell = gtk.CellRendererText()
             cell.set_padding(2, 0)
-            header, kwd = self.columns[n]
+            header, kwd = columns[n]
             tvc = gtk.TreeViewColumn(header, cell)
             tvc.set_spacing(4)
             tvc.set_resizable(True)
@@ -336,37 +437,15 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
             tvcolumn[n].set_cell_data_func(cell, fn_data)
             treeview.append_column(tvcolumn[n])
 
-        sw.add(treeview)
-        self.treeview.connect('cursor-changed', self.select_star_cb)
-        sw.show_all()
-        vbox.pack_start(sw, fill=True, expand=True)
+            combobox.insert_text(n, header)
+            if header == info.color:
+                fidx = n
 
-        self.cbar = ColorBar.ColorBar(self.logger)
-        self.cbar.set_cmap(self.cmap)
-        self.cbar.set_imap(self.imap)
-        self.cbar.set_size_request(-1, 20)
-
-        vbox.pack_start(self.cbar, padding=4, fill=True, expand=False)
-
-        btns = gtk.HButtonBox()
-        btns.set_layout(gtk.BUTTONBOX_CENTER)
-        btns.set_spacing(5)
-
-        for name in ('Plot', 'Clear', #'Close'
-                     ):
-            btn = gtk.Button(name)
-            btns.add(btn)
-            self.btn[name.lower()] = btn
-
-        self.btn.plot.connect('clicked', lambda w: self.replot_stars())
-        self.btn.clear.connect('clicked', lambda w: self.clear())
-        #self.btn.close.connect('clicked', lambda w: self.close())
-
-        vbox.pack_start(btns, padding=4, fill=True, expand=False)
-        vbox.show_all()
+        combobox.set_active(fidx)
         
-        self.mframe.pack_start(vbox, expand=True, fill=True)
-        self.mframe.show_all()
+        self.sw.add(treeview)
+        self.treeview.connect('cursor-changed', self.select_star_cb)
+        self.sw.show_all()
 
     def _mkcolfnN(self, kwd):
         def fn(column, cell, model, iter):
@@ -401,6 +480,9 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
         #self.info = info
         self.selected = []
 
+        # rebuild the table
+        self.build_table(info)
+        
         # Update the starlist info
         listmodel = gtk.ListStore(object)
         for star in starlist:
@@ -437,5 +519,20 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
         self.mark_selection(star, fromtable=True)
         return True
     
+    def set_cmap_cb(self, w):
+        index = w.get_active()
+        name = self.cmap_names[index]
+        self.set_cmap_byname(name)
+
+    def set_imap_cb(self, w):
+        index = w.get_active()
+        name = self.imap_names[index]
+        self.set_imap_byname(name)
+
+    def set_field_cb(self, w):
+        index = w.get_active()
+        fieldname = self.columns[index][1]
+        self.set_field(fieldname)
+
 
 # END

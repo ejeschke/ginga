@@ -4,7 +4,7 @@
 # Raymond Plante
 # Eric Jeschke (eric@naoj.org)
 #
-# Copyright (c)  Eric R. Jeschke.  All rights reserved.
+# Copyright (c)  Eric R. Jeschke, et. al.   All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -22,14 +22,6 @@ class CatalogServer(object):
         self.short_name = key
         self.description = description
         self.kind = 'pyvo-catalog'
-        # {name} {ra} {dec} {mag} {flag} {b_r} {preference} {priority} {dst}
-        self.index = { 'name': 'name',
-                       'ra': 'ra', 'dec': 'dec',
-                       'mag': 'mag', 'flag': 'flag',
-                       'b-r': 'b_r', 'preference': 'preference',
-                       'priority': 'priority', 'dst': 'dst',
-                       }
-        self.format = 'deg'
         self.url = url
 
         # For compatibility with URL catalog servers
@@ -44,13 +36,17 @@ class CatalogServer(object):
         return self.params
 
     def toStar(self, sourcerec):
-        data = { 'name':         sourcerec.id,
-                 'ra_deg':       float(sourcerec.ra),
-                 'dec_deg':      float(sourcerec.dec),
-                 'mag':          18.0,
-                 'preference':   0,
-                 'priority':     0,
-                 'description':  'fake magnitude' }
+        data = {}
+        data.update(dict(sourcerec.items()))
+        # Make sure we have at least these Ginga standard fields defined
+        d = { 'name':         sourcerec.id,
+              'ra_deg':       float(sourcerec.ra),
+              'dec_deg':      float(sourcerec.dec),
+              'mag':          18.0,
+              'preference':   0.0,
+              'priority':     0,
+              'description':  'fake magnitude' }
+        data.update(d)
         data['ra'] = wcs.raDegToString(data['ra_deg'])
         data['dec'] = wcs.decDegToString(data['dec_deg'])
         return Catalog.Star(**data)
@@ -89,7 +85,27 @@ class CatalogServer(object):
             starlist.append(self.toStar(source))
 
         # metadata about the list
-        info = {}
+        columns = [('Name', 'name'),
+                   ('RA', 'ra'),
+                   ('DEC', 'dec'),
+                   ('Mag', 'mag'),
+                   ('Preference', 'preference'),
+                   ('Priority', 'priority'),
+                   ('Description', 'description'),
+                   ]
+        # Append extra columns returned by search to table header 
+        # TODO: what if not all sources have same record structure?
+        # is this possible with VO?
+        cols = list(source.keys())
+        cols.remove('RA')
+        cols.remove('DEC')
+        cols.remove('id')
+        columns.extend(zip(cols, cols))
+
+        # which column is the likely one to color source circles
+        colorCode = 'Mag'
+        
+        info = Bunch.Bunch(columns=columns, color=colorCode)
         return starlist, info
 
 
@@ -101,17 +117,9 @@ class ImageServer(object):
         self.short_name = key
         self.description = description
         self.kind = 'pyvo-image'
-        # {name} {ra} {dec} {mag} {flag} {b_r} {preference} {priority} {dst}
-        self.index = { 'name': 'name',
-                       'ra': 'ra', 'dec': 'dec',
-                       'mag': 'mag', 'flag': 'flag',
-                       'b-r': 'b_r', 'preference': 'preference',
-                       'priority': 'priority', 'dst': 'dst',
-                       }
-        self.format = 'deg'
         self.url = url
 
-        # For compatibility with URL catalog servers
+        # For compatibility with other Ginga catalog servers
         self.params = {}
         count = 0
         for label, key in (('RA', 'ra'), ('DEC', 'dec'),

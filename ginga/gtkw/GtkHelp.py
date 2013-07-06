@@ -383,6 +383,10 @@ class ComboBox(WidgetMask, gtk.ComboBox):
                 del model[i]
                 return
 
+    def clear(self):
+        model = self.get_model()
+        model.clear()
+
     def show_text(self, text):
         model = self.get_model()
         for i in xrange(len(model)):

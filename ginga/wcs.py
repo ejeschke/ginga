@@ -346,7 +346,6 @@ class WcslibWCS(BaseWCS):
         # Get a coordinates object based on ra/dec wcs transform
         ra_deg, dec_deg = self.pixtoradec(idxs, format='deg',
                                           coords=coords)
-        print ("ra, dec = %f, %f" % (ra_deg, dec_deg))
         self.logger.debug("ra, dec = %f, %f" % (ra_deg, dec_deg))
         
         # convert to astropy coord
