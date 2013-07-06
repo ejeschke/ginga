@@ -94,8 +94,9 @@ class BareBonesWCS(BaseWCS):
     correctness of the FITS WCS headers.
     """
 
-    def __init__(self):
+    def __init__(self, logger):
         super(BareBonesWCS, self).__init__()
+        self.logger = logger
         self.header = {}
         self.coordsys = 'raw'
 
@@ -143,7 +144,7 @@ class BareBonesWCS(BaseWCS):
 
         return (cd11, cd12, cd21, cd22)
 
-    def pixtoradec(self, x, y, format='deg', coords='data'):
+    def pixtoradec(self, idxs, format='deg', coords='data'):
         """Convert a (x, y) pixel coordinate on the image to a (ra, dec)
         coordinate in space.
 
@@ -158,6 +159,8 @@ class BareBonesWCS(BaseWCS):
         - if 'data' then x, y coordinates are interpreted as 0-based
         - otherwise coordinates are interpreted as 1-based (traditional FITS)
         """
+        x, y = idxs[:2]
+        
         # account for DATA->FITS coordinate space
         if coords == 'data':
             x, y = x + 1, y + 1
@@ -218,7 +221,7 @@ class BareBonesWCS(BaseWCS):
             x, y = x - 1, y - 1
         return (x, y)
 
-    def pixtocoords(self, x, y, system='icrs', coords='data'):
+    def pixtocoords(self, idxs, system='icrs', coords='data'):
         return None
     
 
@@ -231,11 +234,12 @@ class WcslibWCS(BaseWCS):
     or the older library 'pywcs' if you want to use this version.
     """
 
-    def __init__(self):
+    def __init__(self, logger):
         super(WcslibWCS, self).__init__()
 
         if not have_pywcs:
             raise WCSError("Please install module 'astropy' first!")
+        self.logger = logger
         self.header = None
         self.wcs = None
         self.coordsys = 'raw'
@@ -279,18 +283,19 @@ class WcslibWCS(BaseWCS):
 
             self.coordsys = choose_coord_system(self.header)
         except Exception, e:
-            print("Error making WCS object: %s" % (str(e)))
+            self.logger.error("Error making WCS object: %s" % (str(e)))
             self.wcs = None
 
     def get_keyword(self, key):
         return self.header[key]
         
-    def pixtoradec(self, x, y, format='deg', coords='data'):
+    def pixtoradec(self, idxs, format='deg', coords='data'):
+
         if coords == 'data':
             origin = 0
         else:
             origin = 1
-        pixcrd = numpy.array([[x, y]], numpy.float_)
+        pixcrd = numpy.array([idxs], numpy.float_)
         try:
             sky = self.wcs.wcs_pix2sky(pixcrd, origin)
             #sky = self.wcs.all_pix2sky(pixcrd, origin)
@@ -298,7 +303,7 @@ class WcslibWCS(BaseWCS):
             #sky = self.wcs.all_pix2world(pixcrd, origin)
 
         except Exception, e:
-            print("Error calculating pixtoradec: %s" % (str(e)))
+            self.logger.error("Error calculating pixtoradec: %s" % (str(e)))
             raise WCSError(e)
         
         ra_deg = float(sky[0, 0])
@@ -311,6 +316,7 @@ class WcslibWCS(BaseWCS):
             return self.deg2fmt(ra_deg, dec_deg, format)
     
     def radectopix(self, ra_deg, dec_deg, coords='data'):
+
         if coords == 'data':
             origin = 0
         else:
@@ -332,14 +338,17 @@ class WcslibWCS(BaseWCS):
         y = float(pix[0, 1])
         return (x, y)
 
-    def pixtocoords(self, x, y, system='icrs', coords='data'):
+    def pixtocoords(self, idxs, system='icrs', coords='data'):
 
         if self.coordsys == 'raw':
             raise WCSError("No usable WCS")
             
         # Get a coordinates object based on ra/dec wcs transform
-        ra_deg, dec_deg = self.pixtoradec(x, y, format='deg',
+        ra_deg, dec_deg = self.pixtoradec(idxs, format='deg',
                                           coords=coords)
+        print ("ra, dec = %f, %f" % (ra_deg, dec_deg))
+        self.logger.debug("ra, dec = %f, %f" % (ra_deg, dec_deg))
+        
         # convert to astropy coord
         try:
             fromclass = coord_table[self.coordsys]

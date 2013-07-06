@@ -36,13 +36,14 @@ class AstroImage(BaseImage):
                  logger=None):
         if not wcsclass:
             wcsclass = wcs.WCS
-        self.wcs = wcsclass()
+        self.wcs = wcsclass(logger)
 
         BaseImage.__init__(self, data_np=data_np, metadata=metadata,
                            logger=logger)
         
         self.iqcalc = iqcalc.IQCalc(logger=logger)
-
+        self.naxispath = []
+        self.revnaxis = []
 
     def load_hdu(self, hdu, fobj=None, naxispath=None):
         data = hdu.data
@@ -50,8 +51,12 @@ class AstroImage(BaseImage):
             # Expand 1D arrays into 1xN array
             data = data.reshape((1, data.shape[0]))
         else:
+            # Drill down to 2D data slice
             if not naxispath:
                 naxispath = ([0] * (len(data.shape)-2))
+            self.naxispath = naxispath
+            self.revnaxis = list(naxispath)
+            self.revnaxis.reverse()
 
             for idx in naxispath:
                 data = data[idx]
@@ -309,10 +314,12 @@ class AstroImage(BaseImage):
         self.write_fits(filepath)
 
     def pixtocoords(self, x, y, system=None, coords='data'):
-        return self.wcs.pixtocoords(x, y, system=system, coords=coords)
+        args = [x, y] + self.revnaxis
+        return self.wcs.pixtocoords(args, system=system, coords=coords)
     
     def pixtoradec(self, x, y, format='deg', coords='data'):
-        return self.wcs.pixtoradec(x, y, format=format, coords=coords)
+        args = [x, y] + self.revnaxis
+        return self.wcs.pixtoradec(args, format=format, coords=coords)
     
     def radectopix(self, ra_deg, dec_deg, coords='data'):
         return self.wcs.radectopix(ra_deg, dec_deg, coords=coords)
