@@ -106,7 +106,6 @@ class PluginManager(object):
             bnch.widget.show()
 
     def activate(self, pInfo, exclusive=True):
-        print "PINFO: ", pInfo
         name = pInfo.tabname
         lname = pInfo.name.lower()
         if not self.active.has_key(lname):
@@ -162,19 +161,18 @@ class PluginManager(object):
         return False
 
     def deactivate(self, name):
-        print "deactivating %s" % (name)
+        self.logger.debug("deactivating %s" % (name))
         lname = name.lower()
         if lname in self.focus:
             self.clear_focus(lname)
             
         if self.active.has_key(lname):
             bnch = self.active[lname]
-            print "stopping plugin"
+            self.logger.debug("stopping plugin")
             self.stop_plugin(bnch.pInfo)
-            print "removing widget"
             if bnch.widget != None:
+                self.logger.debug("removing widget")
                 self.hbox.remove(bnch.widget)
-            print "removing from dict"
             del self.active[lname]
 
         # Set focus to another plugin if one is running
@@ -334,7 +332,6 @@ class PluginManager(object):
             # plug in
             if pInfo.chinfo != None:
                 itab = pInfo.chinfo.name
-                print "raising tab %s" % itab
                 self.ds.raise_tab(itab)
             
     def stop_plugin(self, pInfo):

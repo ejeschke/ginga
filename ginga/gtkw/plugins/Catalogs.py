@@ -419,7 +419,8 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
         try:
             combobox.clear()
         except Exception, e:
-            print "Error clearing: ", str(e)
+            self.logger.error("Error clearing field selector: %s" % (
+                str(e)))
 
         # create the TreeViewColumns to display the data
         tvcolumn = [None] * len(columns)
@@ -446,6 +447,10 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
         self.sw.add(treeview)
         self.treeview.connect('cursor-changed', self.select_star_cb)
         self.sw.show_all()
+
+        if self.catalog != None:
+            fieldname = self.columns[fidx][1]
+            self._set_field(fieldname)
 
     def _mkcolfnN(self, kwd):
         def fn(column, cell, model, iter):
@@ -490,8 +495,6 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
             listmodel.append([star])
 
         self.treeview.set_model(listmodel)
-
-        self.cbar.set_range(self.mag_min, self.mag_max)
 
 
     def _select_tv(self, star, fromtable=False):

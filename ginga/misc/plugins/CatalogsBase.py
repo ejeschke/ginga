@@ -486,14 +486,22 @@ class CatalogListingBase(object):
         except:
             return self.mycolor
 
+        # calculate range of values
+        rng = float(self.mag_max - self.mag_min)
+
         # clip magnitude to the range we have defined
         mag = max(self.mag_min, mag)
         mag = min(self.mag_max, mag)
 
-        # calculate percentage in range
-        point = float(mag) / float(self.mag_max - self.mag_min)
-        # invert
-        #point = 1.0 - point
+        if rng != 0.0:
+            point = float(mag - self.mag_min) / rng
+        else:
+            point = 1.0
+
+        # sanity check: clip to 0-1 range
+        point = max(0.0, point)
+        point = min(1.0, point)
+        
         # map to a 8-bit color range
         point = int(point * 255.0)
 
@@ -577,7 +585,7 @@ class CatalogListingBase(object):
         im = imap.get_imap(name)
         self.cbar.set_imap(im)
 
-    def set_field(self, name):
+    def _set_field(self, name):
         # select new field to use for color plotting
         self.mag_field = name
 
@@ -587,7 +595,9 @@ class CatalogListingBase(object):
         self.mag_max = max(values)
         self.mag_min = min(values)
         self.cbar.set_range(self.mag_min, self.mag_max)
-
+        
+    def set_field(self, name):
+        self._set_field(name)
         self.replot_stars()
         
 # END

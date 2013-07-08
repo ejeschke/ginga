@@ -166,14 +166,12 @@ class Info(GingaPlugin.GlobalPlugin):
         chname = self.fv.get_channelName(fitsimage)
         chinfo = self.fv.get_channelInfo(chname)
         chname = chinfo.name
-        print "info focus cb: chname=%s" % (chname)
 
         if self.active != chname:
             index = self.channel[chname].nbindex
             self.nb.set_current_page(index)
             self.active = chname
             self.info = self.channel[self.active]
-            print "Switched page to %d" % (index)
 
         self.set_info(self.info, fitsimage)
         return True

@@ -562,7 +562,6 @@ class Desktop(Callback.Callbacks):
                 widget.resize(width, height)
             
         def make_widget(kind, paramdict, args, pack):
-            #print "ARGS ARE ", args
             kind = kind.lower()
             
             # Process workspace parameters
@@ -572,7 +571,6 @@ class Desktop(Callback.Callbacks):
                                  detachable=True, wstype='nb',
                                  tabpos=QtGui.QTabWidget.North)
             params.update(paramdict)
-            #print "PARAMS ARE", params
 
             if kind == 'widget':
                 widget = args[0]
@@ -603,7 +601,6 @@ class Desktop(Callback.Callbacks):
                 # <-- Notebook ws specified a sub-layout.  We expect a list
                 # of tabname, layout pairs--iterate over these and add them
                 # to the workspace as tabs.
-                print "ws args=", args
                 for tabname, layout in args[0]:
                     def pack(w):
                         # ?why should group be the same as parent group?
@@ -854,21 +851,18 @@ def children(layout):
     return res
 
 def removeWidget(layout, widget):
-    print "removing %s from list" % widget
     kids = children(layout)
     kids2 = map(lambda item: item.widget(), kids)
-    print "children are", kids2
     if widget in kids2:
         idx = kids2.index(widget)
         w = kids[idx]
         #layout.removeWidget(widget)
-        print "removing item"
         layout.removeItem(w)
         widget.setParent(None)
-        #print "deleting widget"
         #widget.delete()
     else:
-        print "widget is not present"
+        #print "widget is not present"
+        pass
         
 
 #END

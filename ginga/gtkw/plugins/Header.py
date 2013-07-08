@@ -146,14 +146,12 @@ class Header(GingaPlugin.GlobalPlugin):
         chname = self.fv.get_channelName(fitsimage)
         chinfo = self.fv.get_channelInfo(chname)
         chname = chinfo.name
-        print "header focus cb: chname=%s" % (chname)
 
         if self.active != chname:
             index = self.channel[chname].nbindex
             self.nb.set_current_page(index)
             self.active = chname
             self.info = self.channel[self.active]
-            print "Switched page to %d" % (index)
 
         image = fitsimage.get_image()
         self.set_header(self.info.treeview, image)

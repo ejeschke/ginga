@@ -390,13 +390,18 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
         for hdr, kwd in columns:
             item = QtGui.QTableWidgetItem(hdr)
             table.setHorizontalHeaderItem(col, item)
-            col += 1
 
             combobox.addItem(hdr)
             if hdr == info.color:
                 fidx = col
+            col += 1
 
         combobox.setCurrentIndex(fidx)
+
+        if self.catalog != None:
+            fieldname = self.columns[fidx][1]
+            self._set_field(fieldname)
+
 
     def show_table(self, catalog, info, starlist):
         self.starlist = starlist
@@ -425,9 +430,6 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
                 col += 1
             row += 1
         table.setSortingEnabled(True)
-
-        # TODO: fix.  This is raising a segfault!
-        #self.cbar.set_range(self.mag_min, self.mag_max)
 
 
     def _update_selections(self):

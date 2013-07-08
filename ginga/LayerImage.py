@@ -135,7 +135,7 @@ class LayerImage(object):
         
         self.set_data(result)
         end_time = time.time()
-        print "alpha compose=%.4f sec" % (end_time - start_time)
+        self.logger.debug("alpha compose=%.4f sec" % (end_time - start_time))
 
     # def rgb_compose(self):
     #     slices = []
@@ -170,8 +170,8 @@ class LayerImage(object):
         end_time = time.time()
 
         self.set_data(result)
-        print "rgb_compose  total=%.4f sec" % (
-            end_time - start_time)
+        self.logger.debug("rgb_compose  total=%.4f sec" % (
+            end_time - start_time))
 
     def rgb_decompose(self, image):
         data = image.get_data()
@@ -185,7 +185,6 @@ class LayerImage(object):
             alphas = (0.292, 0.594, 0.114)
 
             for i in xrange(shape[2]):
-                print "count = %d" % i
                 imgslice = data[:, :, i]
                 #img = BaseImage.BaseImage(data_np=imgslice, logger=self.logger)
                 # Create the same type of image as we are decomposing
@@ -198,9 +197,7 @@ class LayerImage(object):
                     alpha = 0.0
                 self._insertLayer(i, img, name=name, alpha=alpha)
 
-        print "composing layers"
         self.compose_layers()
-        print "rgb decompose done"
 
     def setComposeType(self, ctype):
         assert ctype in self.compose_types, \

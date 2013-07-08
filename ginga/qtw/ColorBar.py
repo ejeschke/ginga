@@ -19,7 +19,6 @@ class ColorBarError(Exception):
 
 # Create a QWidget widget on which we will draw
 class ColorBar(Callback.Callbacks, QtGui.QWidget):
-#class ColorBar(QtGui.QWidget):
 
     def __init__(self, logger, rgbmap=None):
         QtGui.QWidget.__init__(self)
@@ -63,7 +62,6 @@ class ColorBar(Callback.Callbacks, QtGui.QWidget):
         #rgbmap.add_callback('changed', self.rgbmap_cb)
         self.redraw()
 
-    # TODO: deprecate these two?
     def set_cmap(self, cm):
         self.rgbmap.set_cmap(cm)
         self.redraw()
@@ -76,18 +74,19 @@ class ColorBar(Callback.Callbacks, QtGui.QWidget):
         self.loval = loval
         self.hival = hival
         # Calculate reasonable spacing for range numbers
-        cr = self.setup_cr()
-        text = "%d" % (int(hival))
-        rect = cr.boundingRect(0, 0, 1000, 1000, 0, text)
-        x1, y1, x2, y2 = rect.getCoords()
-        _wd = x2 - x1
-        _ht = y2 - y1
-        self._avg_pixels_per_range_num = self.t_spacing + _wd
-        # dereference this painter or we get an error redrawing
-        cr = None
+        if self.pixmap != None:
+            cr = self.setup_cr()
+            text = "%d" % (int(hival))
+            rect = cr.boundingRect(0, 0, 1000, 1000, 0, text)
+            x1, y1, x2, y2 = rect.getCoords()
+            _wd = x2 - x1
+            _ht = y2 - y1
+            self._avg_pixels_per_range_num = self.t_spacing + _wd
+            # dereference this painter or we get an error redrawing
+            cr = None
 
-        if self.t_showrange and redraw:
-            self.redraw()
+            if self.t_showrange and redraw:
+                self.redraw()
         
     def get_size(self):
         rect = self.geometry()
