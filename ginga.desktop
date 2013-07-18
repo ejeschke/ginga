@@ -1,0 +1,8 @@
+[Desktop Entry]
+Encoding=UTF-8
+Name=Ginga
+Comment=The Ginga astronomical FITS file viewer
+Exec=ginga
+Type=Application
+Categories=Education;Science;Astronomy;
+StartupNotify=true
