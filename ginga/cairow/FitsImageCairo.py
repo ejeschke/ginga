@@ -28,10 +28,7 @@ class FitsImageCairo(FitsImage.FitsImageBase):
 
         self.surface = None
         self.dst_surface = None
-        self.img_bg = None
         self.img_fg = None
-        #self.set_bg(0.5, 0.5, 0.5, redraw=False)
-        self.set_bg(0.0, 0.0, 0.0, redraw=False)
         self.set_fg(1.0, 1.0, 1.0, redraw=False)
         
         self.cr = None
@@ -52,7 +49,7 @@ class FitsImageCairo(FitsImage.FitsImageBase):
         # fill surface with background color
         imgwin_wd, imgwin_ht = self.get_window_size()
         cr.rectangle(0, 0, imgwin_wd, imgwin_ht)
-        r, g, b = self.img_bg
+        r, g, b = self.get_bg()
         cr.set_source_rgb(r, g, b)
         cr.fill()
 
@@ -98,7 +95,7 @@ class FitsImageCairo(FitsImage.FitsImageBase):
         y = ((height // 3) * 2) - (ht // 2)
         x = (width // 2) - (wd // 2)
         cr.move_to(x, y)
-        cr.show_text(self.message)
+        cr.show_text(message)
 
     def get_offscreen_context(self):
         if self.surface == None:
@@ -119,16 +116,16 @@ class FitsImageCairo(FitsImage.FitsImageBase):
 
         # Prepare array for Cairo rendering
         if sys.byteorder == 'little':
-            arr = numpy.dstack((rgbobj.b, rgbobj.g, rgbobj.r, rgbobj.a))
+            arr = rgbobj.get_array('BGRA')
         else:
-            arr = numpy.dstack((rgbobj.a, rgbobj.r, rgbobj.g, rgbobj.b))
+            arr = rgbobj.get_array('ARGB')
 
         (height, width) = rgbobj.r.shape
         return self._render_offscreen(self.surface, arr, dst_x, dst_y,
                                       width, height)
 
     def configure(self, width, height):
-        arr8 = numpy.zeros(height*width*4).astype(numpy.uint8)
+        arr8 = numpy.zeros(height*width*4, dtype=numpy.uint8)
         stride = cairo.ImageSurface.format_stride_for_width(cairo.FORMAT_RGB24,
                                                             width)
 
@@ -181,11 +178,6 @@ class FitsImageCairo(FitsImage.FitsImageBase):
         
     def switch_cursor(self, ctype):
         self.set_cursor(self.cursor[ctype])
-        
-    def set_bg(self, r, g, b, redraw=True):
-        self.img_bg = (r, g, b)
-        if redraw:
-            self.redraw(whence=3)
         
     def set_fg(self, r, g, b, redraw=True):
         self.img_fg = (r, g, b)

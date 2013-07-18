@@ -751,6 +751,11 @@ color_list = {
 def lookup_color(name):
     return color_list[name]
 
+def get_colors():
+    colors = color_list.keys()
+    colors.sort()
+    return colors
+    
 def scan_rgbtxt(filepath):
     with open(filepath, 'r') as in_f:
         buf = in_f.read()

@@ -104,6 +104,9 @@ class GingaControl(Callback.Callbacks):
     def get_ServerBank(self):
         return self.imgsrv
 
+    def get_threadPool(self):
+        return self.threadPool
+
     def get_preferences(self):
         return self.prefs
 

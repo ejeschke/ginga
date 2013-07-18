@@ -845,24 +845,95 @@ def children(layout):
     res = []
     child = layout.itemAt(i)
     while child != None:
-        res.append(child)
+        res.append(child.widget())
         i += 1
         child = layout.itemAt(i)
     return res
 
 def removeWidget(layout, widget):
     kids = children(layout)
-    kids2 = map(lambda item: item.widget(), kids)
-    if widget in kids2:
-        idx = kids2.index(widget)
+    if widget in kids:
+        idx = kids.index(widget)
         w = kids[idx]
         #layout.removeWidget(widget)
-        layout.removeItem(w)
+        #layout.removeItem(w)
         widget.setParent(None)
+        widget.deleteLater()
         #widget.delete()
     else:
         #print "widget is not present"
         pass
+        
+class ParamSet(Callback.Callbacks):
+    def __init__(self, logger, params):
+        super(ParamSet, self).__init__()
+        
+        self.logger = logger
+        self.paramlst = []
+        self.params = params
+        self.widgets = {}
+
+        for name in ('changed', ):
+            self.enable_callback(name)
+        
+    def build_params(self, paramlst):
+        # construct a set of widgets for the parameters
+        captions = []
+        for param in paramlst:
+            title = param.get('time', param.name)
+
+            captions.append((title, 'xlabel', '@'+param.name, 'entry'))
+
+        w, b = build_info(captions)
+
+        # fill with default values and tool tips
+        for param in paramlst:
+            name = param.name
+
+            # if we have a cached value for the parameter, use it
+            if self.params.has_key(name):
+                value = self.params[name]
+                b[name].setText(str(value))
+
+            # otherwise initialize to the default value, if available
+            elif param.has_key('default'):
+                value = param.default
+                b[name].setText(str(value))
+                self.params[name] = value
+
+            if param.has_key('description'):
+                b[name].setToolTip(param.description)
+
+            b[name].returnPressed.connect(self._value_changed_cb)
+            
+        self.paramlst = paramlst
+        self.widgets = b
+
+        return w
+
+    def _get_params(self):
+        for param in self.paramlst:
+            w = self.widgets[param.name]
+            value = w.text()
+            if param.has_key('type'):
+                value = param.type(value)
+            self.params[param.name] = value
+
+    def sync_params(self):
+        for param in self.paramlst:
+            key = param.name
+            w = self.widgets[key]
+            if self.params.has_key(key):
+                value = self.params[key]
+                w.setText(str(value))
+
+    def get_params(self):
+        self._get_params()
+        return self.params
+    
+    def _value_changed_cb(self):
+        self._get_params()
+        self.make_callback('changed', self.params)
         
 
 #END

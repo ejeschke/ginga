@@ -36,7 +36,7 @@ class BaseImage(Callback.Callbacks):
 
         self._set_minmax()
 
-        self.autocuts = AutoCuts.AutoCuts(self.logger)
+        self.autocuts = AutoCuts.Histogram(self.logger)
 
         # For callbacks
         for name in ('modified', ):

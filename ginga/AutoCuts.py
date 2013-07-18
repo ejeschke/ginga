@@ -25,115 +25,125 @@ except ImportError:
     have_scipy = False
     autocut_methods = ('minmax', 'histogram', 'stddev')
 
-default_autocuts_method = 'histogram'
-
-# Default number of bins to use in the calculation of the autocuts
-# histogram for algorithm "histogram"
-default_autocuts_bins = 2048
-
-# Default percentage of pixels to keep "inside" the cut, used in 
-# the calculation of the autocuts histogram for algorithm "histogram"
-default_autocuts_hist_pct = 0.999
-
-# Constants used to calculate the lo and hi cut levels using the
-# "stddev" algorithm (from the old SOSS fits viewer)
-hensa_lo = 35.0
-hensa_hi = 90.0
+# Lock to work around a non-threadsafe bug in scipy
+_lock = threading.RLock()
 
 class AutoCutsError(Exception):
     pass
 
-class AutoCuts(object):
+class AutoCutsBase(object):
 
     def __init__(self, logger):
-        self.logger = logger
-        self.lock = threading.RLock()
+        super(AutoCutsBase, self).__init__()
 
+        self.logger = logger
+        self.kind = 'base'
+        self.params = {}
+
+        # funky boolean converter
+        self._bool = lambda st: str(st).lower() == 'true'
+
+    def get_params_metadata(self):
+        return []
+    
     def get_algorithms(self):
         return autocut_methods
     
-    def calc_cut_levels(self, image,
-                        method='histogram', pct=None, numbins=None,
-                        usecrop=True, cropradius=512, contrast=None):
-        if not method:
-            method = default_autocuts_method
-        if not pct:
-            pct = default_autocuts_hist_pct
-        if not numbins:
-            numbins = default_autocuts_bins
+    def get_autocut_levels(self, image, settings):
+        params = settings.get('autocut_params', self.params)
+        
+        loval, hival = self.calc_cut_levels(image, params=params)
+        return loval, hival
 
-        start_time = time.time()
+    def get_crop(self, data, cropradius=512):
+        # Even with numpy, it's kind of slow for some of the autocut
+        # methods on a large image, so in those cases we can optionally
+        # take a crop of size (radius*2)x(radius*2) from the center of
+        # the image and calculate the cut levels on that
 
-        if method == 'minmax':
-            loval, hival = image.get_minmax()
-
-        elif method == 'zscale':
-            data = image.get_data()
-            loval, hival = self.calc_zscale(data,
-                                            contrast=contrast,
-                                            num_points=600,
-                                            num_per_row=120)
+        height, width = data.shape[:2]
+        x, y = width // 2, height // 2
+        if x > cropradius:
+            x0 = x - cropradius
+            x1 = x0 + cropradius*2
         else:
-            data = image.get_data()
-            # Even with numpy, it's kind of slow to take the distribution
-            # on a large image, so if usecrop==True we take
-            # a crop of size (radius*2)x(radius*2) from the center of the
-            # image and calculate the histogram on that
-            if usecrop:
-                height, width = data.shape[:2]
-                x, y = width // 2, height // 2
-                if x > cropradius:
-                    x0 = x - cropradius
-                    x1 = x0 + cropradius*2
-                else:
-                    x0 = 0
-                    x1 = width-1
-                if y > cropradius:
-                    y0 = y - cropradius
-                    y1 = y0 + cropradius*2
-                else:
-                    y0 = 0
-                    y1 = height-1
+            x0 = 0
+            x1 = width-1
+        if y > cropradius:
+            y0 = y - cropradius
+            y1 = y0 + cropradius*2
+        else:
+            y0 = 0
+            y1 = height-1
 
-                data = data[y0:y1, x0:x1]
-            else:
-                # Use the full data!
-                pass
-                
-            if method == 'median':
-                length = 7
-                xout = scipy.ndimage.filters.median_filter(data, size=length)
-                #data_f = numpy.ravel(data)
-                #xout = medfilt1(data_f, length)
+        data = data[y0:y1, x0:x1]
+        return data
 
-                loval = numpy.nanmin(xout)
-                hival = numpy.nanmax(xout)
+    def cut_levels(self, data, loval, hival, vmin=0.0, vmax=255.0):
+        self.logger.debug("loval=%.2f hival=%.2f" % (loval, hival))
+        delta = hival - loval
+        if delta == 0:
+            f = (data - loval).clip(0.0, 1.0)
+            # threshold
+            f[numpy.nonzero(f)] = 1.0
+        else:
+            data = data.clip(loval, hival)
+            f = ((data - loval) / delta)
+        data = f.clip(0.0, 1.0) * vmax
+        return data
 
-            elif method == 'stddev':
-                # This is the method used in the old SOSS fits viewer
-                mdata = numpy.ma.masked_array(data, numpy.isnan(data))
-                mean = numpy.mean(mdata)
-                sdev = numpy.std(mdata)
+    def __str__(self):
+        return self.kind
 
-                hensa_lo_factor = (hensa_lo - 50.0) / 10.0
-                hensa_hi_factor = (hensa_hi - 50.0) / 10.0
-                
-                loval = hensa_lo_factor * sdev + mean
-                hival = hensa_hi_factor * sdev + mean
-                
-            elif method == 'histogram':
-                bnch = self.calc_histogram(data, pct=pct, numbins=numbins)
-                loval, hival = bnch.loval, bnch.hival
+class Minmax(AutoCutsBase):
 
+    def __init__(self, logger):
+        super(Minmax, self).__init__(logger)
+        self.kind = 'minmax'
 
-        end_time = time.time()
-        self.logger.debug("cut levels calculation time=%.4f" % (
-            end_time - start_time))
+    def calc_cut_levels(self, image, params=None):
+        loval, hival = image.get_minmax()
 
-        self.logger.debug("lo=%.2f hi=%.2f" % (loval, hival))
         return (float(loval), float(hival))
 
-    def calc_histogram(self, data, pct=1.0, numbins=2048):
+class Histogram(AutoCutsBase):
+
+    def __init__(self, logger):
+        super(Histogram, self).__init__(logger)
+
+        self.kind = 'histogram'
+        self.params.update(usecrop=True, pct=0.999, numbins=2048)
+        
+    def get_params_metadata(self):
+        return [
+            Bunch.Bunch(name='usecrop', type=self._bool,
+                        valid=set([True, False]),
+                        default=True,
+                        description="Use center crop of image for speed"),
+            Bunch.Bunch(name='pct', type=float,
+                        min=0.0, max=1.0,
+                        default=0.999,
+                        description="Percentage of the histogram to retain"),
+            Bunch.Bunch(name='numbins', type=int,
+                        min=100, max=10000,
+                        default=2048,
+                        description="Number of bins for the histogram"),
+            ]
+    
+    def calc_cut_levels(self, image, params=None):
+        data = image.get_data()
+        if params == None:
+            params = self.params
+        
+        bnch = self.calc_histogram(data, **params)
+        loval, hival = bnch.loval, bnch.hival
+
+        return loval, hival    
+
+    def calc_histogram(self, data, usecrop=True, pct=1.0, numbins=2048):
+        if usecrop:
+            data = self.get_crop(data)
+
         self.logger.debug("Computing histogram, pct=%.4f numbins=%d" % (
             pct, numbins))
         height, width = data.shape[:2]
@@ -228,9 +238,129 @@ class AutoCuts(object):
         return Bunch.Bunch(dist=dist, bins=bins, loval=loval, hival=hival,
                            loidx=loidx, hiidx=hiidx)
 
+class StdDev(AutoCutsBase):
+
+    def __init__(self, logger):
+        super(StdDev, self).__init__(logger)
+
+        self.kind = 'stddev'
+        # Constants used to calculate the lo and hi cut levels using the
+        # "stddev" algorithm (from the old SOSS fits viewer)
+        self.params.update(usecrop=True,
+                           #hensa_lo=35.0, hensa_hi=90.0,
+                           )
+
+    def get_params_metadata(self):
+        return [
+            Bunch.Bunch(name='usecrop', type=self._bool,
+                        valid=set([True, False]),
+                        default=True,
+                        description="Use center crop of image for speed"),
+            ## Bunch.Bunch(name='hensa_lo', type=float, default=35.0,
+            ##             description="Low subtraction factor"),
+            ## Bunch.Bunch(name='hensa_hi', type=float, default=90.0,
+            ##             description="High subtraction factor"),
+            ]
+
+    def calc_cut_levels(self, image, params=None):
+        data = image.get_data()
+        if params == None:
+            params = self.params
+        loval, hival = self.calc_stddev(data, **params)
+        return loval, hival
+
+    def calc_stddev(self, data, usecrop=True, hensa_lo=35.0, hensa_hi=90.0):
+        if usecrop:
+            data = self.get_crop(data)
+
+        # This is the method used in the old SOSS fits viewer
+        mdata = numpy.ma.masked_array(data, numpy.isnan(data))
+        mean = numpy.mean(mdata)
+        sdev = numpy.std(mdata)
+        self.logger.debug("mean=%f std=%f" % (mean, sdev))
+
+        hensa_lo_factor = (hensa_lo - 50.0) / 10.0
+        hensa_hi_factor = (hensa_hi - 50.0) / 10.0
+        
+        loval = hensa_lo_factor * sdev + mean
+        hival = hensa_hi_factor * sdev + mean
+
+        return loval, hival    
+
+
+class MedianFilter(AutoCutsBase):
+
+    def __init__(self, logger):
+        super(MedianFilter, self).__init__(logger)
+
+        self.kind = 'median'
+        self.params.update(length=7)
+
+    def get_params_metadata(self):
+        return [
+            Bunch.Bunch(name='usecrop', type=self._bool,
+                        valid=set([True, False]),
+                        default=True,
+                        description="Use center crop of image for speed"),
+            Bunch.Bunch(name='length', type=int,
+                        default=7,
+                        description="Median kernel length"),
+            ]
+
+    def calc_cut_levels(self, image, params=None):
+        data = image.get_data()
+        if params == None:
+            params = self.params
+        loval, hival = self.calc_medianfilter(data, **params)
+        return loval, hival
+
+    def calc_medianfilter(self, data, usecrop=True, length=7):
+        if usecrop:
+            data = self.get_crop(data)
+
+        xout = scipy.ndimage.filters.median_filter(data, size=length)
+        #data_f = numpy.ravel(data)
+        #xout = medfilt1(data_f, length)
+            
+        loval = numpy.nanmin(xout)
+        hival = numpy.nanmax(xout)
+
+        return loval, hival
+
+
+class ZScale(AutoCutsBase):
+
+    def __init__(self, logger):
+        super(ZScale, self).__init__(logger)
+
+        self.kind = 'zscale'
+        self.params.update(contrast=None, num_points=None, 
+                           num_per_row=None)
+        
+    def get_params_metadata(self):
+        return [
+            Bunch.Bunch(name='contrast', type=float,
+                        default=0.25, allow_none=True,
+                        description="Contrast"),
+            Bunch.Bunch(name='num_points', type=int,
+                        default=600, allow_none=True,
+                        description="Number of points to sample"),
+            Bunch.Bunch(name='num_per_row', type=int,
+                        default=120, allow_none=True,
+                        description="Number of points to sample"),
+            ]
+
+    def calc_cut_levels(self, image, params=None):
+        data = image.get_data()
+        if params == None:
+            params = self.params
+        loval, hival = self.calc_zscale(data, **params)
+        return loval, hival
+
     def calc_zscale(self, data, contrast=None,
                     num_points=None, num_per_row=None):
-        """From the IRAF documentation:
+        """
+        From the IRAF documentation:
         
         The zscale algorithm is designed to display the  image  values
         near the median  image value  without the  time consuming process of
@@ -293,8 +423,8 @@ class AutoCuts(object):
         # calculate num_points parameter, if omitted
         total_points = numpy.size(data)
         if num_points == None:
-            num_points = min(max(int(total_points * 0.0002), 600),
-                             total_points)
+            num_points = max(int(total_points * 0.0002), 600)
+        num_points = min(num_points, total_points)
 
         assert (0 < num_points <= total_points), \
                AutoCutsError("num_points not in range 0-%d" % (total_points))
@@ -353,7 +483,7 @@ class AutoCuts(object):
         guess = numpy.array([0.0, 0.0])
 
         # Curve fit
-        with self.lock:
+        with _lock:
             # NOTE: without this mutex, optimize.curvefit causes a fatal error
             # sometimes--it appears not to be thread safe.
             # The error is:
@@ -394,18 +524,19 @@ class AutoCuts(object):
 
         return (locut, hicut)
 
-    def cut_levels(self, data, loval, hival, vmin=0.0, vmax=255.0):
-        self.logger.debug("loval=%.2f hival=%.2f" % (loval, hival))
-        delta = hival - loval
-        if delta == 0:
-            f = (data - loval).clip(0.0, 1.0)
-            # threshold
-            f[numpy.nonzero(f)] = 1.0
-        else:
-            data = data.clip(loval, hival)
-            f = ((data - loval) / delta)
-        data = f.clip(0.0, 1.0) * vmax
-        return data
 
+autocuts_table = {
+    'minmax': Minmax,
+    'stddev': StdDev,
+    'histogram': Histogram,
+    'median': MedianFilter,
+    'zscale': ZScale,
+    }
+
+def get_autocuts(name):
+    if not name in autocut_methods:
+        raise AutoCutsError("Method '%s' is not supported" % (name))
+
+    return autocuts_table[name]
 
 # END

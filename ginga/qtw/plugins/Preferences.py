@@ -30,6 +30,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.imap_names = imap.get_names()
         self.zoomalg_names = ('step', 'rate')
         
+        self.autocuts_cache = {}
         self.gui_up = False
 
         rgbmap = fitsimage.get_rgbmap()
@@ -41,9 +42,9 @@ class Preferences(GingaPlugin.LocalPlugin):
 
         self.t_ = self.fitsimage.get_settings()
         self.t_.getSetting('autocuts').add_callback('set',
-                                               self.autocuts_changed_cb)
+                                               self.autocuts_changed_ext_cb)
         self.t_.getSetting('autozoom').add_callback('set',
-                                               self.autozoom_changed_cb)
+                                               self.autozoom_changed_ext_cb)
         for key in ['pan']:
             self.t_.getSetting(key).add_callback('set',
                                           self.pan_changed_ext_cb)
@@ -59,8 +60,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         for name in ('flip_x', 'flip_y', 'swap_xy'):
             self.t_.getSetting(name).add_callback('set', self.set_transform_ext_cb)
 
-        for name in ('autocuts', 'autocut_method', 'autocut_hist_pct',
-                     'autocut_bins'):
+        for name in ('autocut_method', 'autocut_params'):
             self.t_.getSetting(name).add_callback('set', self.set_autocuts_ext_cb)
 
         self.t_.setdefault('wcs_coords', 'icrs')
@@ -278,12 +278,9 @@ class Preferences(GingaPlugin.LocalPlugin):
         fr = QtHelp.Frame("Auto Cuts")
 
         captions = (('Auto Method', 'combobox'),
-                    ('Hist Pct', 'spinfloat'))
+                    )
         w, b = QtHelp.build_info(captions)
         self.w.update(b)
-
-        b.auto_method.setToolTip("Choose algorithm for auto levels")
-        b.hist_pct.setToolTip("Percentage of image to save for Histogram algorithm")
 
         # Setup auto cuts method choice
         combobox = b.auto_method
@@ -294,16 +291,14 @@ class Preferences(GingaPlugin.LocalPlugin):
             index += 1
         index = self.autocut_methods.index(method)
         combobox.setCurrentIndex(index)
-        combobox.activated.connect(lambda w: self.set_autocut_params())
-
-        b.hist_pct.setRange(0.90, 1.0)
-        b.hist_pct.setValue(0.995)
-        b.hist_pct.setSingleStep(0.001)
-        b.hist_pct.setDecimals(5)
-        b.hist_pct.valueChanged.connect(lambda w: self.set_autocut_params())
-        b.hist_pct.setEnabled(method == 'histogram')
+        combobox.activated.connect(lambda w: self.set_autocut_method_cb())
+        b.auto_method.setToolTip("Choose algorithm for auto levels")
 
         fr.layout().addWidget(w, stretch=1, alignment=QtCore.Qt.AlignLeft)
+        self.w.acvbox = QtHelp.VBox()
+        fr.layout().addWidget(self.w.acvbox, stretch=1,
+                              alignment=QtCore.Qt.AlignLeft)
+
         vbox.addWidget(fr, stretch=0, alignment=QtCore.Qt.AlignTop)
 
         # WCS OPTIONS
@@ -587,7 +582,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.fitsimage.enable_autozoom(option)
         self.t_.set(autozoom=option)
 
-    def autozoom_changed_cb(self, setting, option):
+    def autozoom_changed_ext_cb(self, setting, option):
         if not self.gui_up:
             return
         index = self.autozoom_options.index(option)
@@ -609,25 +604,64 @@ class Preferences(GingaPlugin.LocalPlugin):
         pct = self.t_['autocut_hist_pct']
         self.config_autocut_params(method, pct)
 
-    def set_autocut_params(self):
-        pct = self.w.hist_pct.value()
+    def config_autocut_params(self, method):
+        index = self.autocut_methods.index(method)
+        self.w.auto_method.setCurrentIndex(index)
+        
+        # remove old params
+        layout = self.w.acvbox.layout()
+        for child in QtHelp.children(layout):
+            QtHelp.removeWidget(layout, child)
+
+        # Create new autocuts object of the right kind
+        ac = AutoCuts.get_autocuts(method)(self.logger)
+
+        # Build up a set of control widgets for the autocuts
+        # algorithm tweakable parameters
+        paramlst = ac.get_params_metadata()
+
+        params = self.autocuts_cache.setdefault(method, {})
+        self.ac_params = QtHelp.ParamSet(self.logger, params)
+
+        w = self.ac_params.build_params(paramlst)
+        self.ac_params.add_callback('changed', self.autocut_params_changed_cb)
+
+        self.w.acvbox.layout().addWidget(w, stretch=1)
+
+    def set_autocuts_ext_cb(self, settings, option):
+        if not self.gui_up:
+            return
+        if setting.name == 'autocut_method':
+            self.config_autocut_params(value)
+        elif setting.name == 'autocut_params':
+            params = dict(value)
+            self.ac_params.params.update(params)
+            self.ac_params.sync_params()
+
+    def set_autocut_method_cb(self):
         idx = self.w.auto_method.currentIndex()
         method = self.autocut_methods[idx]
-        self.w.hist_pct.setEnabled(method == 'histogram')
-        self.fitsimage.set_autocut_params(method, pct=pct)
-        self.t_.set(autocut_method=method, autocut_hist_pct=pct)
 
+        self.config_autocut_params(method)
+
+        params = self.ac_params.get_params()
+        params = list(params.items())
+        self.t_.set(autocut_method=method, autocut_params=params)
+
+    def autocut_params_changed_cb(self, paramObj, params):
+        params = list(params.items())
+        self.t_.set(autocut_params=params)
+        
     def set_autocuts_cb(self, index):
         option = self.autocut_options[index]
         self.fitsimage.enable_autocuts(option)
         self.t_.set(autocuts=option)
 
-    def autocuts_changed_cb(self, settings, option):
-        if not self.gui_up:
-            return
+    def autocuts_changed_ext_cb(self, setting, option):
         self.logger.debug("autocuts changed to %s" % option)
         index = self.autocut_options.index(option)
-        self.w.cut_new.setCurrentIndex(index)
+        if self.gui_up:
+            self.w.cut_new.setCurrentIndex(index)
 
     def set_transforms_cb(self):
         flip_x = (self.w.flip_x.checkState() != 0)
@@ -773,13 +807,18 @@ class Preferences(GingaPlugin.LocalPlugin):
         index = self.autocut_options.index(autocuts)
         self.w.cut_new.setCurrentIndex(index)
 
-        autocut_method = prefs.get('autocut_method', 'histogram')
-        autocut_hist_pct = prefs.get('autocut_hist_pct', 0.999)
-        self.config_autocut_params(autocut_method,
-                                     autocut_hist_pct)
+        autocut_method = prefs.get('autocut_method', None)
+        if autocut_method == None:
+            autocut_method = 'histogram'
+        else:
+            params = prefs.get('autocut_params', {})
+            p = self.autocuts_cache.setdefault(autocut_method, {})
+            p.update(params)
+
+        self.config_autocut_params(autocut_method)
 
         # auto zoom settings
-        #auto_zoom = prefs.get('autozoom', 'off')
+        auto_zoom = prefs.get('autozoom', 'off')
         index = self.autozoom_options.index(auto_zoom)
         self.w.zoom_new.setCurrentIndex(index)
 

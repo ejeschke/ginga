@@ -12,9 +12,9 @@ from ginga.gtkw import GtkHelp
 
 from ginga.gtkw import FitsImageCanvasTypesGtk as CanvasTypes
 from ginga import GingaPlugin
+from ginga import colors
 
-draw_colors = ['white', 'black', 'red', 'yellow', 'blue', 'green', 'pink',
-               'cyan', 'magenta', 'turquoise', 'aquamarine', 'purple']
+draw_colors = colors.get_colors()
 
 default_drawtype = 'point'
 default_drawcolor = 'blue'

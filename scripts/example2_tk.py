@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 #
-# example2_gtk.py -- Simple, configurable FITS viewer.
+# example2_tk.py -- Simple, configurable FITS viewer.
 #
 # Eric Jeschke (eric@naoj.org)
 #
@@ -9,13 +9,13 @@
 # Please see the file LICENSE.txt for details.
 #
 import sys, os
-import logging, logging.handlers
-import gtk
+import logging
+import Tkinter
+from tkFileDialog import askopenfilename
 
 from ginga import AstroImage
-from ginga.gtkw.FitsImageCanvasGtk import FitsImageCanvas
-from ginga.gtkw import FileSelection
-from ginga import colors
+from ginga.tkw.FitsImageCanvasTk import FitsImageCanvas
+
 
 STD_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcName)s) | %(message)s'
 
@@ -24,28 +24,33 @@ class FitsViewer(object):
     def __init__(self, logger):
 
         self.logger = logger
-        self.drawcolors = colors.get_colors()
-        self.select = FileSelection.FileSelection()
+        self.drawcolors = ['white', 'black', 'red', 'yellow', 'blue', 'green']
 
-        root = gtk.Window(gtk.WINDOW_TOPLEVEL)
-        root.set_title("FitsImageCanvas Example")
-        root.set_border_width(2)
-        root.connect("delete_event", lambda w, e: quit(w))
+        root = Tkinter.Tk()
+        root.title("FitsImageTk Example")
+        #root.set_border_width(2)
+        #root.connect("delete_event", lambda w, e: self.quit(w))
         self.root = root
+        
+        #self.select = FileSelection.FileSelection()
+        
+        vbox = Tkinter.Frame(root, relief=Tkinter.RAISED, borderwidth=1)
+        vbox.pack(side=Tkinter.TOP, fill=Tkinter.BOTH, expand=1)
 
-        vbox = gtk.VBox(spacing=2)
+        canvas = Tkinter.Canvas(vbox, bg="grey", height=512, width=512)
+        canvas.pack(side=Tkinter.TOP, fill=Tkinter.BOTH, expand=1)
 
         fi = FitsImageCanvas(logger)
         fi.enable_autocuts('on')
         fi.set_autocut_params('zscale')
         fi.enable_autozoom('on')
         fi.enable_draw(True)
-        fi.set_drawtype('ruler')
+        fi.set_drawtype('rectangle')
         fi.set_drawcolor('blue')
-        fi.set_callback('drag-drop', self.drop_file)
         fi.set_callback('none-move', self.motion)
         fi.set_bg(0.2, 0.2, 0.2)
         fi.ui_setActive(True)
+        fi.show_pan_mark(True)
         self.fitsimage = fi
 
         bd = fi.get_bindings()
@@ -56,64 +61,55 @@ class FitsViewer(object):
         bd.enable_rotate(True)
         bd.enable_cmap(True)
 
-        w = fi.get_widget()
-        w.set_size_request(512, 512)
+        fi.set_widget(canvas)
+        fi.configure(512, 512)
 
-        vbox.pack_start(w, fill=True, expand=True)
+        hbox = Tkinter.Frame(root)
+        hbox.pack(side=Tkinter.BOTTOM, fill=Tkinter.X, expand=0)
 
-        self.readout = gtk.Label("")
-        vbox.pack_start(self.readout, fill=True, expand=False)
+        self.readout = Tkinter.Label(root, text='')
+        self.readout.pack(side=Tkinter.BOTTOM, fill=Tkinter.X, expand=0)
         
-        hbox = gtk.HBox(spacing=5)
-
-        wdrawtype = gtk.combo_box_new_text()
         self.drawtypes = fi.get_drawtypes()
-        index = 0
-        for name in self.drawtypes:
-            wdrawtype.insert_text(index, name)
-            index += 1
-        index = self.drawtypes.index('ruler')
-        wdrawtype.set_active(index)
-        wdrawtype.connect('changed', self.set_drawparams)
+        ## wdrawtype = ttk.Combobox(root, values=self.drawtypes,
+        ##                          command=self.set_drawparams)
+        ## index = self.drawtypes.index('ruler')
+        ## wdrawtype.current(index)
+        wdrawtype = Tkinter.Entry(hbox, width=12)
+        wdrawtype.insert(0, 'rectangle')
+        wdrawtype.bind("<Return>", self.set_drawparams)
         self.wdrawtype = wdrawtype
 
-        wdrawcolor = gtk.combo_box_new_text()
-        index = 0
-        for name in self.drawcolors:
-            wdrawcolor.insert_text(index, name)
-            index += 1
-        index = self.drawcolors.index('blue')
-        wdrawcolor.set_active(index)
-        wdrawcolor.connect('changed', self.set_drawparams)
+        # wdrawcolor = ttk.Combobox(root, values=self.drawcolors,
+        #                           command=self.set_drawparams)
+        # index = self.drawcolors.index('blue')
+        # wdrawcolor.current(index)
+        wdrawcolor = Tkinter.Entry(hbox, width=12)
+        wdrawcolor.insert(0, 'blue')
+        wdrawcolor.bind("<Return>", self.set_drawparams)
         self.wdrawcolor = wdrawcolor
 
-        wclear = gtk.Button("Clear Canvas")
-        wclear.connect('clicked', self.clear_canvas)
-
-        wopen = gtk.Button("Open File")
-        wopen.connect('clicked', self.open_file)
-        wquit = gtk.Button("Quit")
-        wquit.connect('clicked', quit)
-
+        wclear = Tkinter.Button(hbox, text="Clear Canvas",
+                            command=self.clear_canvas)
+        wopen = Tkinter.Button(hbox, text="Open File",
+                               command=self.open_file)
+        wquit = Tkinter.Button(hbox, text="Quit",
+                               command=lambda: self.quit(root))
         for w in (wquit, wclear, wdrawcolor, wdrawtype, wopen):
-            hbox.pack_end(w, fill=False, expand=False)
+            w.pack(side=Tkinter.RIGHT)
 
-        vbox.pack_start(hbox, fill=False, expand=False)
-
-        root.add(vbox)
 
     def get_widget(self):
         return self.root
 
-    def set_drawparams(self, w):
-        index = self.wdrawtype.get_active()
-        kind = self.drawtypes[index]
-        index = self.wdrawcolor.get_active()
+    def set_drawparams(self, evt):
+        kind = self.wdrawtype.get()
+        color = self.wdrawcolor.get()
 
-        params = { 'color': self.drawcolors[index], }
+        params = { 'color': color, }
         self.fitsimage.set_drawtype(kind, **params)
 
-    def clear_canvas(self, w):
+    def clear_canvas(self):
         self.fitsimage.deleteAllObjects()
 
     def load_file(self, filepath):
@@ -121,14 +117,12 @@ class FitsViewer(object):
         image.load_file(filepath)
 
         self.fitsimage.set_image(image)
-        self.root.set_title(filepath)
+        self.root.title(filepath)
 
-    def open_file(self, w):
-        self.select.popup("Open FITS file", self.load_file)
-
-    def drop_file(self, fitsimage, paths):
-        fileName = paths[0]
-        self.load_file(fileName)
+    def open_file(self):
+        filename = askopenfilename(filetypes=[("allfiles","*"),
+                                              ("fitsfiles","*.fits")])
+        self.load_file(filename)
 
     def motion(self, fitsimage, button, data_x, data_y):
 
@@ -161,38 +155,30 @@ class FitsViewer(object):
 
         text = "RA: %s  DEC: %s  X: %.2f  Y: %.2f  Value: %s" % (
             ra_txt, dec_txt, fits_x, fits_y, value)
-        self.readout.set_text(text)
+        self.readout.config(text=text)
 
-    def quit(self, w):
-        gtk.main_quit()
+    def quit(self, root):
+        root.destroy()
         return True
 
         
 def main(options, args):
 
-    logger = logging.getLogger("example2")
-    logger.setLevel(options.loglevel)
+    logger = logging.getLogger("example1")
+    logger.setLevel(logging.INFO)
     fmt = logging.Formatter(STD_FORMAT)
-    if options.logfile:
-        fileHdlr  = logging.handlers.RotatingFileHandler(options.logfile)
-        fileHdlr.setLevel(options.loglevel)
-        fileHdlr.setFormatter(fmt)
-        logger.addHandler(fileHdlr)
-
-    if options.logstderr:
-        stderrHdlr = logging.StreamHandler()
-        stderrHdlr.setLevel(options.loglevel)
-        stderrHdlr.setFormatter(fmt)
-        logger.addHandler(stderrHdlr)
+    stderrHdlr = logging.StreamHandler()
+    stderrHdlr.setFormatter(fmt)
+    logger.addHandler(stderrHdlr)
 
     fv = FitsViewer(logger)
-    root = fv.get_widget()
-    root.show_all()
+    top = fv.get_widget()
 
     if len(args) > 0:
         fv.load_file(args[0])
 
-    gtk.mainloop()
+    top.mainloop()
+
     
 if __name__ == "__main__":
    

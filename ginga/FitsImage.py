@@ -33,8 +33,21 @@ class FitsImageBase(Callback.Callbacks):
     that connect to an actual rendering surface.
     """
 
-    def __init__(self, logger=None, rgbmap=None, settings=None,
-                 bindings=None):
+    def __init__(self, logger=None, rgbmap=None, settings=None):
+        """
+        Constructor for an image display object.
+
+        Parameters
+        ----------
+        logger: logging-module compatible logger object, or None
+            a logger for tracing and debugging; if None, one will be created
+
+        rgbmap: a ginga.RGBMap.RGBMapper object, or None
+            an RGB mapper object; if None, one will be created
+
+        settings: a ginga.Settings.SettingGroup object, or None
+            viewer preferences; if None, one will be created
+        """
         Callback.Callbacks.__init__(self)
 
         if logger != None:
@@ -50,7 +63,8 @@ class FitsImageBase(Callback.Callbacks):
             self.rgbmap = rgbmap
 
         # Object that calculates auto cut levels
-        self.autocuts = AutoCuts.AutoCuts(self.logger)
+        klass = AutoCuts.get_autocuts('histogram')
+        self.autocuts = klass(self.logger)
         
         # Dummy 1-pixel image
         self.image = AstroImage.AstroImage(numpy.zeros((1, 1)),
@@ -109,17 +123,16 @@ class FitsImageBase(Callback.Callbacks):
         # for auto cut levels
         self.autocuts_options = ('on', 'override', 'off')
         self.t_.addDefaults(autocuts='override', autocut_method='histogram',
-                            autocut_hist_pct=AutoCuts.default_autocuts_hist_pct,
-                            autocut_bins=AutoCuts.default_autocuts_bins)
-        for name in ('autocuts', 'autocut_method', 'autocut_hist_pct',
-                     'autocut_bins'):
+                            autocut_params={})
+        for name in ('autocuts', 'autocut_method', 'autocut_params'):
             self.t_.getSetting(name).add_callback('set', self.auto_levels_cb)
 
         # for zooming
         self.t_.addDefaults(zoomlevel=1.0, zoom_algorithm='step',
                             scale_x_base=1.0, scale_y_base=1.0,
                             zoom_rate=math.sqrt(2.0))
-        for name in ('zoom_rate', 'zoom_algorithm', 'scale_x_base', 'scale_y_base'):
+        for name in ('zoom_rate', 'zoom_algorithm',
+                     'scale_x_base', 'scale_y_base'):
             self.t_.getSetting(name).add_callback('set', self.zoomalg_change_cb)
 
         # max/min scaling
@@ -171,6 +184,7 @@ class FitsImageBase(Callback.Callbacks):
         self._dst_x = 0
         self._dst_y = 0
         self._invertY = True
+        self._originUpper = True
         # offsets in the screen image (in data coords)
         self._off_x = 0
         self._off_y = 0
@@ -185,7 +199,9 @@ class FitsImageBase(Callback.Callbacks):
         self._cutout = None
         self._rotimg = None
         self._prergb = None
-        self._rgbarr = None
+        self._rgbobj = None
+
+        self.img_bg = (0.2, 0.2, 0.2)
 
         self.orientMap = {
             # tag: (flip_x, flip_y, swap_xy)
@@ -204,9 +220,27 @@ class FitsImageBase(Callback.Callbacks):
             self.enable_callback(name)
 
     def set_window_size(self, width, height, redraw=True):
-        """
-        This is called by the subclass with `width` and `height` when the
-        actual dimensions of the allocated window are known.   
+        """Report the size of the window to display the image.
+        
+        Parameters
+        ----------
+        width: int
+            the width of the window in pixels
+        height: int
+            the height of the window in pixels
+        redraw: boolean, optional, default==True
+            if True, will redraw the the image in the new dimensions
+
+        Notes
+        -----
+        This is called by the subclass with width and height as soon as
+        the actual dimensions of the allocated window are known.
+
+        Callbacks
+        ---------
+        Will call any callbacks registered for the 'configure' event.
+        Callbacks should have a method signature of
+            (fitsimage, width, height, ...)
         """
         self._imgwin_wd = width
         self._imgwin_ht = height
@@ -219,6 +253,9 @@ class FitsImageBase(Callback.Callbacks):
         if redraw:
             self.redraw(whence=0)
 
+    def configure(self, width, height):
+        self.set_window_size(width, height)
+
     def get_window_size(self):
         """
         Returns the window size in the underlying implementation as a tuple
@@ -230,8 +267,8 @@ class FitsImageBase(Callback.Callbacks):
 
     def get_dims(self, data):
         """
-        Returns the dimensions of numpy array `data` as a tuple of
-        (width, height).  `data` may have more dimensions, but they are not
+        Returns the dimensions of numpy array data as a tuple of
+        (width, height).  data may have more dimensions, but they are not
         reported.
         """
         height, width = data.shape[:2]
@@ -255,7 +292,7 @@ class FitsImageBase(Callback.Callbacks):
 
         Parameters
         ----------
-        `cmap_name`:  string
+        cmap_name:  string
             the name of a color map
         """
         cm = cmap.get_cmap(cmap_name)
@@ -266,7 +303,7 @@ class FitsImageBase(Callback.Callbacks):
 
         Parameters
         ----------
-        `imap_name`:  string
+        imap_name:  string
             the name of an intensity map
         """
         im = imap.get_imap(imap_name)
@@ -337,8 +374,8 @@ class FitsImageBase(Callback.Callbacks):
         """
         Sets an image to be displayed.
 
-        `image` should be a subclass of BaseImage.
-        If `redraw` is True then the associated widget will be redrawn.
+        image should be a subclass of BaseImage.
+        If redraw is True then the associated widget will be redrawn.
         If there is no error, this method will invoke the 'image-set'
         callback.
         """
@@ -377,8 +414,8 @@ class FitsImageBase(Callback.Callbacks):
         This is a convenience method for first constructing an image
         with AstroImage and then calling set_image().
         
-        `data` should be at least a 2D numpy array.
-        `metadata` can be a dictionary (map-like) of image metadata.
+        data should be at least a 2D numpy array.
+        metadata can be a dictionary (map-like) of image metadata.
         """
         dims = data.shape
         image = AstroImage.AstroImage(data, metadata=metadata,
@@ -389,7 +426,7 @@ class FitsImageBase(Callback.Callbacks):
         """
         Clear the displayed image by setting it to a 1x1 black image.
 
-        If `redraw` is True then the associated widget will be redrawn.
+        If redraw is True then the associated widget will be redrawn.
         """
         self.set_data(numpy.zeros((1, 1)), redraw=redraw)
         
@@ -428,7 +465,7 @@ class FitsImageBase(Callback.Callbacks):
         """
         Redraw the displayed image.
 
-        For the meaning of `whence`, see get_rgb_object().
+        For the meaning of whence, see get_rgb_object().
         """
         #print "REDRAWING %s whence=%d" % (str(self), whence)
         try:
@@ -459,7 +496,67 @@ class FitsImageBase(Callback.Callbacks):
             self.make_callback('redraw')
 
     def render_image(self, rgbobj, dst_x, dst_y):
-        self.logger.warn("Subclass needs to override this abstract method!")
+        self.logger.warn("Subclass should override this abstract method!")
+
+    def getwin_array(self, order='RGB', alpha=1.0):
+        order = order.upper()
+        depth = len(order)
+
+        # Prepare data array for rendering
+        data = self._rgbobj.get_array(order)
+
+        # NOTE [A]
+        height, width, depth = data.shape
+
+        # fill image array with the background color
+        imgwin_wd, imgwin_ht = self.get_window_size()
+
+        # create RGBA array for output
+        outarr = numpy.zeros((imgwin_ht, imgwin_wd, depth), dtype='uint8')
+        
+        r, g, b = self.img_bg
+        bgval = dict(A=int(255*alpha), R=int(255*r), G=int(255*g), B=int(255*b))
+
+        for i in xrange(len(order)):
+            outarr[:, :, i] = bgval[order[i]]
+
+        dst_x, dst_y = self._dst_x, self._dst_y
+
+        # Trim off parts of data that would be "hidden"
+        # to the left and above the window edge.
+        if dst_y < 0:
+            dy = abs(dst_y)
+            data = data[dy:, :, :]
+            height -= dy
+            dst_y = 0
+            
+        if dst_x < 0:
+            dx = abs(dst_x)
+            data = data[:, dx:, :]
+            width -= dx
+            dst_x = 0
+            
+        # Trim off parts of data that would be "hidden"
+        # to the right and below the window edge.
+        ex = dst_y + height - imgwin_ht
+        if ex > 0:
+            data = data[:imgwin_ht, :, :]
+            height -= ex
+            
+        ex = dst_x + width - imgwin_wd
+        if ex > 0:
+            data = data[:, :imgwin_wd, :]
+            width -= ex
+            
+        # Place our data into this background array at dst offsets
+        outarr[dst_y:dst_y+height, dst_x:dst_x+width] = data[0:height, 0:width]
+
+        return outarr
+
+    def getwin_buffer(self, order='RGB'):
+        outarr = self.getwin_array(order=order)
+
+        return outarr.tostring(order='C')
         
     def update_image(self):
         self.logger.warn("Subclass should override this abstract method!")
@@ -477,7 +574,7 @@ class FitsImageBase(Callback.Callbacks):
         Create and return an RGB slices object representing the data
         that should be rendered at this zoom level and pan settings.
 
-        `whence` is an optimization flag that reduces the time to create
+        whence is an optimization flag that reduces the time to create
         the object by only recalculating what is necessary:
 
         0   = new image or pan/scale has changed, recalculate everything
@@ -512,7 +609,7 @@ class FitsImageBase(Callback.Callbacks):
             #self._prergb = newdata
 
         time_split3 = time.time()
-        if (whence <= 2) or (self._rgbarr == None):
+        if (whence <= 2) or (self._rgbobj == None):
             #idx = self._prergb.astype('uint32')
             idx = self._prergb
             self.logger.debug("shape of index is %s" % (str(idx.shape)))
@@ -520,7 +617,7 @@ class FitsImageBase(Callback.Callbacks):
             # Apply color and intensity mapping.  We produce a group of
             # ARGB slices.
             rgb = self.rgbmap.get_rgbarray(idx)
-            self._rgbarr = rgb
+            self._rgbobj = rgb
 
         time_end = time.time()
         self.logger.info("times: total=%.4f 0=%.4f 1=%.4f 2=%.4f" % (
@@ -529,7 +626,7 @@ class FitsImageBase(Callback.Callbacks):
             (time_split3 - time_split2),
             (time_end - time_split3),
             ))
-        return self._rgbarr
+        return self._rgbobj
 
     def get_scaled_cutout(self, image, scale_x, scale_y,
                           pan_x, pan_y, win_wd, win_ht):
@@ -765,7 +862,10 @@ class FitsImageBase(Callback.Callbacks):
         # add center pixel to convert from X/Y coordinate space to
         # canvas graphics space
         win_x = off_x + self._ctr_x
-        win_y = self._ctr_y - off_y
+        if self._originUpper:
+            win_y = self._ctr_y - off_y
+        else:
+            win_y = off_y + self._ctr_y
 
         # round to pixel units
         if asint:
@@ -778,7 +878,10 @@ class FitsImageBase(Callback.Callbacks):
         # make relative to center pixel to convert from canvas
         # graphics space to standard X/Y coordinate space
         off_x = win_x - self._ctr_x
-        off_y = self._ctr_y - win_y
+        if self._originUpper:
+            off_y = self._ctr_y - win_y
+        else:
+            off_y = win_y - self._ctr_y
 
         if self.t_['rot_deg'] != 0:
             off_x, off_y = self._rotate_pt(off_x, off_y, -self.t_['rot_deg'])
@@ -881,11 +984,11 @@ class FitsImageBase(Callback.Callbacks):
 
         Parameters
         ----------
-        `chname`: string
+        chname: string
             the name of the channel containing the image
-        `scale_x`: float
+        scale_x: float
             the scaling factor for the image in the X axis
-        `scale_y`: float
+        scale_y: float
             the scaling factor for the image in the Y axis
 
         Returns
@@ -1007,7 +1110,7 @@ class FitsImageBase(Callback.Callbacks):
 
         Parameters
         ----------
-        `zoomlevel`: int
+        zoomlevel: int
             the zoom level to zoom the image: negative is out, positive is in
 
         Returns
@@ -1174,36 +1277,18 @@ class FitsImageBase(Callback.Callbacks):
     def get_transforms(self):
         return (self.t_['flip_x'], self.t_['flip_y'], self.t_['swap_xy'])
 
-    def set_autocut_params(self, method, pct=None, numbins=None):
-        self.logger.debug("Setting autocut params method=%s pct=%s" % (
-            method, str(pct)))
-        self.t_.set(autocut_method=method)
-        if pct:
-            self.t_.set(autocut_hist_pct=pct)
-        if numbins:
-            self.t_.set(autocut_bins=numbins)
-
-    def get_autocut_methods(self):
-        return self.autocuts.get_algorithms()
-    
     def get_cut_levels(self):
         return self.t_['cuts']
     
     def cut_levels(self, loval, hival, no_reset=False, redraw=True):
-        """Cut levels on the image in a channel.
+        """Apply cut levels on the image view.
 
         Parameters
         ----------
-        `chname`: string
-            the name of the channel containing the image
-        `loval`: float
+        loval : float
             the low value of the cut levels
-        `hival`: float
+        hival : float
             the high value of the cut levels
-
-        Returns
-        -------
-        0
         """
         self.t_.set(cuts=(loval, hival))
 
@@ -1215,33 +1300,39 @@ class FitsImageBase(Callback.Callbacks):
         # Save cut levels with this image embedded profile
         self.save_profile(cutlo=loval, cuthi=hival)
             
-    def auto_levels(self, method=None, pct=None,
-                    numbins=None, redraw=True):
-        """Auto cut levels on image view.
+    def auto_levels(self, autocuts=None, redraw=True):
+        """
+        Apply an auto cut levels on the image view.
 
         Parameters
         ----------
-        `method`: string
-        `pct`: float
-        `numbins`: int
+        autocuts : a ginga.AutoCuts.* compatible object
+            An object that implements the auto cuts algorithms
+        redraw : boolean, optional
+            If True, will redraw the image with the cut levels applied
 
-        Returns
-        -------
-        0
         """
-        if method == None:
-            method = self.t_['autocut_method']
-        if pct == None:
-            pct = self.t_['autocut_hist_pct']
-        if numbins == None:
-            numbins = self.t_['autocut_bins']
+        if autocuts == None:
+            autocuts = self.autocuts
+            
         image = self.get_image()
-        loval, hival = self.autocuts.calc_cut_levels(image, method=method,
-                                                     pct=pct, numbins=numbins)
+        params = self.t_.get('autocut_params', None)
+        if params != None:
+            # TEMP: params is stored as a list of tuples
+            params = dict(params)
+        
+        loval, hival = autocuts.calc_cut_levels(image, params=params)
+        
         # this will invoke cut_levels_cb()
         self.t_.set(cuts=(loval, hival))
 
     def auto_levels_cb(self, setting, value):
+        # Did we change the method?
+        method = self.t_['autocut_method']
+        if method != str(self.autocuts):
+            self.autocuts = AutoCuts.get_autocuts(method)(self.logger)
+
+        # Redo the auto levels if the user doesn't have it turned off
         if self.t_['autocuts'] != 'off':
             self.auto_levels()
 
@@ -1258,16 +1349,25 @@ class FitsImageBase(Callback.Callbacks):
     def get_autocuts_options(self):
         return self.autocuts_options
 
+    def set_autocut_params(self, method, **params):
+        self.logger.debug("Setting autocut params method=%s params=%s" % (
+            method, str(params)))
+        params = list(params.items())
+        self.t_.set(autocut_method=method, autocut_params=params)
+
+    def get_autocut_methods(self):
+        return self.autocuts.get_algorithms()
+    
     def transform(self, flip_x, flip_y, swap_xy, redraw=True):
         """Transforms view of image.
 
         Parameters
         ----------
-        `flipx`:  boolean
+        flipx:  boolean
             if True, flip the image in the X axis
-        `flipy`:  boolean
+        flipy:  boolean
             if True, flip the image in the Y axis
-        `swapxy`:  boolean
+        swapxy:  boolean
             if True, swap the X and Y axes
             
         Returns
@@ -1331,7 +1431,7 @@ class FitsImageBase(Callback.Callbacks):
 
         Parameters
         ----------
-        `deg`:  float
+        deg:  float
             degrees to rotate the image
             
         Returns
@@ -1405,4 +1505,15 @@ class FitsImageBase(Callback.Callbacks):
             flip_y = True
             self.transform(flip_x, flip_y, swap_xy, redraw=redraw)
 
+    def set_bg(self, r, g, b, redraw=True):
+        """Set the background color.  Values r, g, b should be between
+        0 and 1 inclusive.
+        """
+        self.img_bg = (r, g, b)
+        if redraw:
+            self.redraw(whence=3)
+        
+    def get_bg(self):
+        return self.img_bg
+    
 #END

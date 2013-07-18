@@ -12,9 +12,9 @@ from ginga.qtw import QtHelp
 
 from ginga.qtw import FitsImageCanvasTypesQt as CanvasTypes
 from ginga import GingaPlugin
+from ginga import colors
 
-draw_colors = ['white', 'black', 'red', 'yellow', 'blue', 'green', 'pink',
-               'cyan', 'magenta', 'turquoise', 'aquamarine', 'purple']
+draw_colors = colors.get_colors()
 
 default_drawtype = 'point'
 default_drawcolor = 'blue'

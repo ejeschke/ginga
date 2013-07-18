@@ -159,8 +159,9 @@ class FitsImageQt(FitsImage.FitsImageBase):
 
         # fill pixmap with background color
         imgwin_wd, imgwin_ht = self.get_window_size()
+        bgclr = self._get_color(*self.get_bg())
         painter.fillRect(QtCore.QRect(0, 0, imgwin_wd, imgwin_ht),
-                         self.img_bg)
+                         bgclr)
 
         # draw image data from buffer to offscreen pixmap
         painter.drawImage(QtCore.QRect(dst_x, dst_y, width, height),
@@ -364,11 +365,6 @@ class FitsImageQt(FitsImage.FitsImageBase):
         clr = QtGui.QColor(int(r*n), int(g*n), int(b*n))
         return clr
         
-    def set_bg(self, r, g, b, redraw=True):
-        self.img_bg = self._get_color(r, g, b)
-        if redraw:
-            self.redraw(whence=3)
-        
     def set_fg(self, r, g, b, redraw=True):
         self.img_fg = self._get_color(r, g, b)
         if redraw:
@@ -389,12 +385,6 @@ class FitsImageQt(FitsImage.FitsImageBase):
     def onscreen_message_off(self, redraw=True):
         return self.onscreen_message(None, redraw=redraw)
     
-    def pix2canvas(self, x, y):
-        return (x, y)
-        
-    def canvas2pix(self, x, y):
-        return (x, y)
-
     def show_pan_mark(self, tf, redraw=True):
         self.t_.set(show_pan_position=tf)
         if redraw:

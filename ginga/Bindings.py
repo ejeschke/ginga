@@ -121,7 +121,7 @@ class FitsImageBindings(object):
         # User defined buttons
         #self.btns = Bunch.Bunch()
 
-        self.autocuts = AutoCuts.AutoCuts(self.logger)
+        self.autocuts = AutoCuts.ZScale(self.logger)
 
     def window_map(self, fitsimage):
         self.to_default_mode(fitsimage)
@@ -820,8 +820,7 @@ class FitsImageBindings(object):
         elif action == 'down':
             self._start_x, self._start_y = x, y
             image = fitsimage.get_image()
-            self._loval, self._hival = self.autocuts.calc_cut_levels(image,
-                                                                     'zscale')
+            self._loval, self._hival = self.autocuts.calc_cut_levels(image)
 
         else:
             fitsimage.onscreen_message(None)

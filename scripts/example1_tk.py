@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 #
-# example1_gtk.py -- Simple, configurable FITS viewer.
+# example1_tk.py -- Simple, configurable FITS viewer.
 #
 # Eric Jeschke (eric@naoj.org)
 #
@@ -10,10 +10,10 @@
 #
 import sys, os
 import logging
-import gtk
+import Tkinter
+from tkFileDialog import askopenfilename
 
-from ginga.gtkw.FitsImageGtk import FitsImageZoom
-from ginga.gtkw import FileSelection
+from ginga.tkw.FitsImageTk import FitsImageZoom
 from ginga.AstroImage import pyfits
 
 
@@ -24,22 +24,23 @@ class FitsViewer(object):
     def __init__(self, logger):
 
         self.logger = logger
-        root = gtk.Window(gtk.WINDOW_TOPLEVEL)
-        root.set_title("FitsImageZoom Example")
-        root.set_border_width(2)
-        root.connect("delete_event", lambda w, e: self.quit(w))
+        root = Tkinter.Tk()
+        root.title("FitsImageTk Example")
         self.root = root
         
-        self.select = FileSelection.FileSelection()
-        vbox = gtk.VBox(spacing=2)
+        vbox = Tkinter.Frame(root, relief=Tkinter.RAISED, borderwidth=1)
+        vbox.pack(side=Tkinter.TOP, fill=Tkinter.BOTH, expand=1)
+
+        canvas = Tkinter.Canvas(vbox, bg="grey", height=512, width=512)
+        canvas.pack(side=Tkinter.TOP, fill=Tkinter.BOTH, expand=1)
 
         fi = FitsImageZoom(logger)
         fi.enable_autocuts('on')
         fi.set_autocut_params('zscale')
         fi.enable_autozoom('on')
-        fi.set_callback('drag-drop', self.drop_file)
         fi.set_bg(0.2, 0.2, 0.2)
         fi.ui_setActive(True)
+        fi.show_pan_mark(True)
         self.fitsimage = fi
 
         bd = fi.get_bindings()
@@ -47,25 +48,22 @@ class FitsViewer(object):
         bd.enable_zoom(True)
         bd.enable_cuts(True)
         bd.enable_flip(True)
+        bd.enable_cmap(True)
+        bd.enable_rotate(True)
 
-        w = fi.get_widget()
-        w.set_size_request(512, 512)
+        fi.set_widget(canvas)
+        fi.configure(512, 512)
 
-        vbox.pack_start(w, fill=True, expand=True)
+        hbox = Tkinter.Frame(root)
+        hbox.pack(side=Tkinter.BOTTOM, fill=Tkinter.X, expand=0)
 
-        hbox = gtk.HButtonBox()
-        hbox.set_layout(gtk.BUTTONBOX_END)
+        wopen = Tkinter.Button(hbox, text="Open File",
+                               command=self.open_file)
+        wquit = Tkinter.Button(hbox, text="Quit",
+                               command=lambda: self.quit(root))
+        for w in (wquit, wopen):
+            w.pack(side=Tkinter.RIGHT)
 
-        wopen = gtk.Button("Open File")
-        wopen.connect('clicked', self.open_file)
-        wquit = gtk.Button("Quit")
-        wquit.connect('clicked', self.quit)
-
-        for w in (wopen, wquit):
-            hbox.add(w)
-
-        vbox.pack_start(hbox, fill=False, expand=False)
-        root.add(vbox)
 
     def get_widget(self):
         return self.root
@@ -80,17 +78,15 @@ class FitsViewer(object):
         in_f.close()
 
         self.fitsimage.set_data(data)
-        self.root.set_title(filepath)
+        self.root.title(filepath)
 
-    def open_file(self, w):
-        self.select.popup("Open FITS file", self.load_file)
+    def open_file(self):
+        filename = askopenfilename(filetypes=[("allfiles","*"),
+                                              ("fitsfiles","*.fits")])
+        self.load_file(filename)
 
-    def drop_file(self, fitsimage, paths):
-        fileName = paths[0]
-        self.load_file(fileName)
-        
-    def quit(self, w):
-        gtk.main_quit()
+    def quit(self, root):
+        root.destroy()
         return True
 
         
@@ -104,13 +100,12 @@ def main(options, args):
     logger.addHandler(stderrHdlr)
 
     fv = FitsViewer(logger)
-    root = fv.get_widget()
-    root.show_all()
+    top = fv.get_widget()
 
     if len(args) > 0:
         fv.load_file(args[0])
 
-    gtk.mainloop()
+    top.mainloop()
 
     
 if __name__ == '__main__':
