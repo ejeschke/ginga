@@ -216,6 +216,9 @@ class AstroImage(BaseImage):
         self.update_hdu(fits_f[index], fobj=fits_f, astype=astype)
         fits_f.close()
 
+    def get_iqcalc(self):
+        return self.iqcalc
+    
     def transfer(self, other, astype=None):
         data = self.get_data()
         other.update_data(data, astype=astype)
