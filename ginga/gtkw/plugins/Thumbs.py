@@ -23,8 +23,6 @@ class Thumbs(ThumbsBase.ThumbsBase):
         # superclass defines some variables for us, like logger
         super(Thumbs, self).__init__(fv)
 
-        self.w.tooltips = self.fv.w.tooltips
-
     def build_gui(self, container):
         width, height = 300, 300
         cm, im = self.fv.cm, self.fv.im
@@ -54,12 +52,14 @@ class Thumbs(ThumbsBase.ThumbsBase):
         # TODO: should this even have it's own scrolled window?
         container.pack_start(sw, fill=True, expand=True)
 
-        captions = (('Auto scroll', 'checkbutton'),)
+        captions = (('Auto scroll', 'checkbutton', 'Clear', 'button'),)
         w, b = GtkHelp.build_info(captions)
         self.w.update(b)
 
-        self.w.tooltips.set_tip(b.auto_scroll,
-                                "Scroll the thumbs window when new images arrive")
+        b.auto_scroll.set_tooltip_text(
+            "Scroll the thumbs window when new images arrive")
+        b.clear.set_tooltip_text("Remove all current thumbnails")
+        b.clear.connect("clicked", lambda w: self.clear())
         autoScroll = self.settings.get('autoScroll', True)
         b.auto_scroll.set_active(autoScroll)
 
@@ -113,7 +113,10 @@ class Thumbs(ThumbsBase.ThumbsBase):
             adj_w.set_value(max)
         self.logger.debug("added thumb for %s" % (thumbname))
 
-    def reorder_thumbs(self):
+    def clearWidget(self):
+        """Clears the thumbnail display widget of all thumbnails, but does
+        not remove them from the thumbDict or thumbList.
+        """
         with self.thmblock:
             # Remove old rows
             for hbox in self.thumbRowList:
@@ -121,9 +124,14 @@ class Thumbs(ThumbsBase.ThumbsBase):
                 for child in children:
                     hbox.remove(child)
                 self.w.thumbs.remove(hbox)
+            self.thumbRowList = []
+            self.thumbColCount = 0
+        
+    def reorder_thumbs(self):
+        with self.thmblock:
+            self.clearWidget()
 
             # Add thumbs back in by rows
-            self.thumbRowList = []
             colCount = 0
             hbox = None
             for thumbkey in self.thumbList:

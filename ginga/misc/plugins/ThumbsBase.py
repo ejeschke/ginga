@@ -54,6 +54,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         noname = 'Noname' + str(time.time())
         name = image.get('name', noname)
         path = image.get('path', None)
+        nothumb = image.get('nothumb', False)
         if path != None:
             path = os.path.abspath(path)
         thumbname = name
@@ -72,7 +73,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         # in the same channel
         thumbkey = (chname.lower(), path)
         with self.thmblock:
-            if self.thumbDict.has_key(thumbkey):
+            if self.thumbDict.has_key(thumbkey) or nothumb:
                 return
 
         #data = image.get_data()
@@ -138,12 +139,14 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
             if index < len(self.thumbList)-1:
                 nextkey = self.thumbList[index+1]
                 bnch = self.thumbDict[nextkey]
-                self.fv.add_preload(bnch.chname, bnch.imname, bnch.path)
+                if bnch.path != None:
+                    self.fv.add_preload(bnch.chname, bnch.imname, bnch.path)
 
             if index > 0:
                 prevkey = self.thumbList[index-1]
                 bnch = self.thumbDict[prevkey]
-                self.fv.add_preload(bnch.chname, bnch.imname, bnch.path)
+                if bnch.path != None:
+                    self.fv.add_preload(bnch.chname, bnch.imname, bnch.path)
 
     def load_next(self):
         with self.thmblock:
@@ -165,6 +168,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         
     def clear(self):
         with self.thmblock:
+            self.clearWidget()
             self.thumbList = []
             self.thumbDict = {}
         self.reorder_thumbs()
@@ -184,7 +188,15 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
 
     def focus_cb(self, viewer, fitsimage):
         # Reflect transforms, colormap, etc.
-        #self.copy_attrs(fitsimage)
+        image = fitsimage.get_image()
+        if not self.have_thumbnail(fitsimage, image):
+            # No memory of this thumbnail, so regenerate it
+            chname = viewer.get_channelName(fitsimage)
+            self.add_image(viewer, chname, image)
+            return
+
+        # Else schedule an update of the thumbnail for changes to
+        # cut levels, etc.
         self.redo_delay(fitsimage)
 
     def transform_cb(self, fitsimage):
@@ -203,9 +215,25 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
     def copy_attrs(self, fitsimage):
         # Reflect transforms, colormap, etc.
         fitsimage.copy_attributes(self.thumb_generator,
-                                  ['transforms', #'cutlevels',
+                                  ['transforms', 'cutlevels',
                                    'rgbmap'],
                                   redraw=False)
+
+    def have_thumbnail(self, fitsimage, image):
+        """Returns True if we already have a thumbnail version of this image
+        cached, False otherwise.
+        """
+        chname = self.fv.get_channelName(fitsimage)
+
+        # Look up our version of the thumb
+        path = image.get('path', None)
+        if path == None:
+            # No path, so no way to find key for cached image
+            return False
+        path = os.path.abspath(path)
+        thumbkey = (chname, path)
+        with self.thmblock:
+            return self.thumbDict.has_key(thumbkey)
 
     def redo_thumbnail(self, fitsimage, save_thumb=None):
         self.logger.debug("redoing thumbnail...")
@@ -233,6 +261,8 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         thumbkey = (chname, path)
         with self.thmblock:
             if not self.thumbDict.has_key(thumbkey):
+                # No memory of this thumbnail, so regenerate it
+                self.add_image(self.fv, chname, image)
                 return
 
             # Generate new thumbnail

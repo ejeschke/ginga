@@ -97,7 +97,7 @@ class FitsImageBindings(object):
         self.keys.autozoom_override = ['singlequote']
         # self.keys.ctrl = ['control_l', 'control_r']
         # self.keys.shift = ['shift_l', 'shift_r']
-        # self.keys.draw = ['meta_right']
+        self.keys.draw = ['space']
         self.keys.pan_free = ['q']
         self.keys.pan_drag = []
         self.keys.pan_set = ['p']
@@ -472,7 +472,7 @@ class FitsImageBindings(object):
         
     def pan_set_origin(self, fitsimage, win_x, win_y, data_x, data_y):
         self._start_x, self._start_y = fitsimage.canvas2offset(win_x, win_y)
-        self._start_panx, self._start_pany = data_x, data_y
+        self._start_panx, self._start_pany = fitsimage.get_pan()
         
     def pan_stop(self, fitsimage):
         self._ispanning = False
@@ -489,6 +489,11 @@ class FitsImageBindings(object):
 
 
     #####  KEYBOARD ACTION CALLBACKS #####
+
+    def kp_draw(self, fitsimage, action, data_x, data_y, msg=True):
+        # Used to set up drawing for one-button devices
+        self.set_modifier(fitsimage, 'draw')
+        return True
 
     def kp_pan_free(self, fitsimage, action, data_x, data_y, msg=True):
         if self.canpan:

@@ -69,6 +69,8 @@ class FitsImageBase(Callback.Callbacks):
         # Dummy 1-pixel image
         self.image = AstroImage.AstroImage(numpy.zeros((1, 1)),
                                            logger=self.logger)
+        self.image.set(nothumb=True)
+        
         # for debugging
         self.name = str(self)
 

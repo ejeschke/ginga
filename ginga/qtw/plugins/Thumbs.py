@@ -80,11 +80,13 @@ class Thumbs(ThumbsBase.ThumbsBase):
         rvbox.addWidget(sw, stretch=1)
         sw.show()
 
-        captions = (('Auto scroll', 'checkbutton'),)
+        captions = (('Auto scroll', 'checkbutton', 'Clear', 'button'),)
         w, b = QtHelp.build_info(captions)
         self.w.update(b)
 
         b.auto_scroll.setToolTip("Scroll the thumbs window when new images arrive")
+        b.clear.setToolTip("Remove all current thumbnails")
+        b.clear.clicked.connect(self.clear)
         autoScroll = self.settings.get('autoScroll', True)
         b.auto_scroll.setChecked(autoScroll)
         rvbox.addWidget(w, stretch=0)
@@ -138,6 +140,19 @@ class Thumbs(ThumbsBase.ThumbsBase):
             area.verticalScrollBar().setValue(area.verticalScrollBar().maximum())
         self.logger.debug("added thumb for %s" % (thumbname))
 
+    def clearWidget(self):
+        """Clears the thumbnail display widget of all thumbnails, but does
+        not remove them from the thumbDict or thumbList.
+        """
+        with self.thmblock:
+            # Remove widgets from grid
+            for thumbkey in self.thumbList:
+                bnch = self.thumbDict[thumbkey]
+                self.w.thumbs.removeWidget(bnch.widget)
+                bnch.widget.setParent(None)
+                bnch.widget.deleteLater()
+        self.w.thumbs_w.update()
+        
     def reorder_thumbs(self):
         with self.thmblock:
             # Remove widgets from grid
