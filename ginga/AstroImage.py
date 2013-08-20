@@ -355,7 +355,7 @@ class AstroImage(BaseImage):
         cd0 = math.cos(del0)
         cd = math.cos(del_)
         cosda = math.cos(alf - alf0)
-        cosd = sd0*sd+cd0*cd*cosda
+        cosd = sd0*sd + cd0*cd*cosda
         dist = math.acos(cosd)
         phi = 0.0
         if dist > 0.0000004:
@@ -395,6 +395,7 @@ class AstroImage(BaseImage):
         res = math.degrees(sep_rad)
         return res
 
+    # Use spherical triangulation
     deltaStarsRaDecDeg = deltaStarsRaDecDeg1
     
     def get_starsep_RaDecDeg(self, ra1_deg, dec1_deg, ra2_deg, dec2_deg):
@@ -437,16 +438,13 @@ class AstroImage(BaseImage):
         # calculate ra/dec of x,y pixel
         ra_deg, dec_deg = self.pixtoradec(x, y)
 
-        # RA adjustment for declination
-        delta_ra_deg = 1.0 * (1.0 / math.cos(math.radians(dec_deg)))
-
-        # calculate new RA 1 degree E
-        ra2_deg = ra_deg + delta_ra_deg
-        if ra2_deg >= 360.0:
-            ra2_deg = math.fmod(ra2_deg, 360.0)
+        # Calculate position 1 degree from the given one
+        # NOTE: this needs to add in DEC, not RA
+        ra2_deg, dec2_deg = self.add_offset_radec(ra_deg, dec_deg,
+                                                  0.0, 1.0)
 
         # Calculate the length of this segment--it is pixels/deg
-        x2, y2 = self.radectopix(ra2_deg, dec_deg)
+        x2, y2 = self.radectopix(ra2_deg, dec2_deg)
         px_per_deg_e = math.sqrt(math.fabs(x2-x)**2 + math.fabs(y2-y)**2)
 
         # calculate radius based on desired radius_deg
@@ -459,25 +457,34 @@ class AstroImage(BaseImage):
         return self.calc_radius_xy(x, y, delta_deg)
         
     def add_offset_radec(self, ra_deg, dec_deg, delta_deg_ra, delta_deg_dec,
-                      adjust_ra=True):
-        if adjust_ra:
-            delta_deg_ra *= 1.0 / math.cos(math.radians(dec_deg))
+                         adjust_ra=True):
+        """
+        Algorithm to compute RA/Dec from RA/Dec base position plus tangent
+        plane offsets.
+        """
+        # To radians
+        x = math.radians(delta_deg_ra)
+        y = math.radians(delta_deg_dec)
+        raz = math.radians(ra_deg)
+        decz = math.radians(dec_deg)
 
-        # add delta in deg to ra and calculate new ra/dec
-        ra2_deg = ra_deg + delta_deg_ra
-        if ra2_deg > 360.0:
-            ra2_deg = math.fmod(ra2_deg, 360.0)
-        elif ra2_deg < 0.0:
-            ra2_deg = 360.0 + math.fmod(ra2_deg, 360.0)
+        sdecz = math.sin(decz)
+        cdecz = math.cos(decz)
 
-        dec2_deg = dec_deg + delta_deg_dec
-        if dec2_deg > 90.0:
-            dec2_deg = 90.0 - math.fmod(dec2_deg, 90.0)
-            ra2_deg = math.fmod(ra2_deg+180.0, 360.0)
-        elif dec2_deg < -90.0:
-            dec2_deg = -90.0 - math.fmod(dec2_deg, 90.0)
-            ra2_deg = math.fmod(ra2_deg+180.0, 360.0)
+        d = cdecz - y * sdecz
 
+        ra2 = math.atan2(x, d) + raz
+        # Normalize ra into the range 0 to 2*pi
+        twopi = math.pi * 2
+        ra2 = math.fmod(ra2, twopi)
+        if ra2 < 0.0:
+            ra2 += twopi
+        dec2 = math.atan2(sdecz + y * cdecz, math.sqrt(x*x + d*d))
+
+        # back to degrees
+        ra2_deg = math.degrees(ra2)
+        dec2_deg = math.degrees(dec2)
+        
         return (ra2_deg, dec2_deg)
         
     def add_offset_xy(self, x, y, delta_deg_x, delta_deg_y,
@@ -487,7 +494,8 @@ class AstroImage(BaseImage):
 
         # add offsets
         ra2_deg, dec2_deg = self.add_offset_radec(ra_deg, dec_deg,
-                                                  delta_deg_x, delta_deg_y)
+                                                  delta_deg_x, delta_deg_y,
+                                                  adjust_ra=adjust_ra)
 
         # then back to new pixel coords
         x2, y2 = self.radectopix(ra2_deg, dec2_deg)
