@@ -884,10 +884,9 @@ class GingaControl(Callback.Callbacks):
             raise ControlError(errmsg)
 
     def get_catalog(self, key, params):
-
         try:
-            starlist = self.imgsrv.getCatalog(key, None, **params)
-            return starlist
+            starlist, info = self.imgsrv.getCatalog(key, None, **params)
+            return starlist, info
             
         except Exception, e:
             errmsg ="Failed to load catalog: %s" % (str(e))

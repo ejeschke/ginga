@@ -395,12 +395,7 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
         x, y = image.radectopix(star['ra_deg'], star['dec_deg'])
         self.fitsimage.panset_xy(x, y)
                     
-    def replot_stars(self, selected=[]):
-        self.clear()
-
-        image = self.fitsimage.get_image()
-        canvas = self.canvas
-
+    def get_plot_range(self):
         length = len(self.starlist)
         if length <= self.plot_limit:
             i = 0
@@ -408,6 +403,18 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
             i = self.plot_start
             i = int(min(i, length - self.plot_limit))
             length = self.plot_limit
+        return (i, length)
+
+    def replot_stars(self, selected=[]):
+        self.clear()
+
+        image = self.fitsimage.get_image()
+        canvas = self.canvas
+
+        # Set the color bar and plot color range based on the stars
+        # we are plotting
+        i, length = self.get_plot_range()
+        self.table.set_minmax(i, length)
 
         # remove references to old objects before this range
         for j in xrange(i):
@@ -579,22 +586,29 @@ class CatalogListingBase(object):
         # Get colormap
         cm = cmap.get_cmap(name)
         self.cbar.set_cmap(cm)
+        self.replot_stars()
         
     def set_imap_byname(self, name):
         # Get intensity map
         im = imap.get_imap(name)
         self.cbar.set_imap(im)
+        self.replot_stars()
+
+    def set_minmax(self, i, length):
+        values = map(lambda star: float(star[self.mag_field]),
+                     self.catalog.starlist[i:i+length])
+        self.mag_max = max(values)
+        self.mag_min = min(values)
+        self.cbar.set_range(self.mag_min, self.mag_max)
 
     def _set_field(self, name):
         # select new field to use for color plotting
         self.mag_field = name
 
         # determine the range of the values
-        values = map(lambda star: float(star[self.mag_field]),
-                     self.catalog.starlist)
-        self.mag_max = max(values)
-        self.mag_min = min(values)
-        self.cbar.set_range(self.mag_min, self.mag_max)
+        if self.catalog != None:
+            i, length = self.catalog.get_plot_range()
+            self.set_minmax(i, length)
         
     def set_field(self, name):
         self._set_field(name)
