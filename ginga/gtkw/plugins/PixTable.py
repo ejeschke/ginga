@@ -33,8 +33,6 @@ class PixTable(GingaPlugin.LocalPlugin):
         canvas.setSurface(self.fitsimage)
         self.canvas = canvas
 
-        self.w.tooltips = self.fv.w.tooltips
-
         # For pixel table
         self.pixtbl_radius = 2
         self.sizes = [ 1, 2, 3, 4 ]
@@ -88,7 +86,7 @@ class PixTable(GingaPlugin.LocalPlugin):
         index = self.sizes.index(self.pixtbl_radius)
         combobox.set_active(index)
         combobox.sconnect('changed', self.set_cutout_size)
-        self.w.tooltips.set_tip(combobox, "Select size of pixel table")
+        combobox.set_tooltip_text("Select size of pixel table")
         hbox.pack_start(combobox, fill=False, expand=False)
 
         # control for selecting a mark
@@ -101,23 +99,23 @@ class PixTable(GingaPlugin.LocalPlugin):
             combobox.show_text(self.mark_selected)
         combobox.sconnect("changed", self.mark_select_cb)
         self.w.marks = combobox
-        self.w.tooltips.set_tip(combobox, "Select a mark")
+        combobox.set_tooltip_text("Select a mark")
         hbox.pack_start(combobox, fill=False, expand=False)
 
         btn = gtk.Button("Delete")
         btn.connect('clicked', lambda w: self.clear_mark_cb())
-        self.w.tooltips.set_tip(btn, "Delete selected mark")
+        btn.set_tooltip_text("Delete selected mark")
         hbox.pack_start(btn, fill=False, expand=False)
         
         btn = gtk.Button("Delete All")
         btn.connect('clicked', lambda w: self.clear_all())
-        self.w.tooltips.set_tip(btn, "Clear all marks")
+        btn.set_tooltip_text("Clear all marks")
         hbox.pack_start(btn, fill=False, expand=False)
         
         btn = GtkHelp.CheckButton("Pan to mark")
         btn.set_active(self.pan2mark)
         btn.sconnect('toggled', self.pan2mark_cb)
-        self.w.tooltips.set_tip(btn, "Pan follows selected mark")
+        btn.set_tooltip_text("Pan follows selected mark")
         hbox.pack_start(btn, fill=False, expand=False)
         
         vbox.pack_start(hbox, fill=True, expand=False)

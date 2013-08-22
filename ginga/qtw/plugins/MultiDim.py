@@ -171,7 +171,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
                 hdu = self.fits_f[idx]
             path = self.path
 
-        image = AstroImage.AstroImage()
+        image = AstroImage.AstroImage(logger=self.logger)
         image.set(path=path)
         dims = list(hdu.data.shape)
         dims.reverse()
@@ -203,7 +203,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
     def set_naxis_cb(self, idx, n):
         self.logger.debug("naxis %d index is %d" % (n+1, idx+1))
 
-        image = AstroImage.AstroImage()
+        image = AstroImage.AstroImage(logger=self.logger)
         image.set(path=self.path)
         try:
             hdu = self.fits_f[self.curhdu]

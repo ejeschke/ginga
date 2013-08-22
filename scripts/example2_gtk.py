@@ -117,7 +117,7 @@ class FitsViewer(object):
         self.fitsimage.deleteAllObjects()
 
     def load_file(self, filepath):
-        image = AstroImage.AstroImage()
+        image = AstroImage.AstroImage(logger=self.logger)
         image.load_file(filepath)
 
         self.fitsimage.set_image(image)

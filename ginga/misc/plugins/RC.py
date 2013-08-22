@@ -206,7 +206,7 @@ class GingaWrapper(object):
                 dtype = getattr(numpy, dtype)
 
             # Create image container
-            image = AstroImage.AstroImage()
+            image = AstroImage.AstroImage(logger=self.logger)
             image.load_buffer(data, dims, dtype, byteswap=byteswap,
                               metadata=metadata)
             image.set(name=imname)

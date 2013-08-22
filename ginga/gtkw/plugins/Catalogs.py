@@ -20,8 +20,6 @@ class Catalogs(CatalogsBase.CatalogsBase):
     def __init__(self, fv, fitsimage):
         super(Catalogs, self).__init__(fv, fitsimage)
 
-        self.tooltips = self.fv.w.tooltips
-
     def build_gui(self, container, future=None):
         vbox1 = gtk.VBox()
 
@@ -143,9 +141,10 @@ class Catalogs(CatalogsBase.CatalogsBase):
         hbox = gtk.HBox()
         scale = gtk.HScrollbar()
         adj = scale.get_adjustment()
-        adj.configure(0, 0, 0, 1, 10, self.plot_limit)
+        #adj.configure(0, 0, 0, 1, 10, self.plot_limit)
+        adj.configure(0, 0, 0, 1, 10, 0)
         #scale.set_size_request(200, -1)
-        self.tooltips.set_tip(scale, "Choose subset of stars plotted")
+        scale.set_tooltip_text("Choose subset of stars plotted")
         #scale.set_update_policy(gtk.UPDATE_DELAYED)
         scale.set_update_policy(gtk.UPDATE_CONTINUOUS)
         self.w.plotgrp = scale
@@ -154,9 +153,9 @@ class Catalogs(CatalogsBase.CatalogsBase):
 
         sb = GtkHelp.SpinButton()
         adj = sb.get_adjustment()
-        adj.configure(self.plot_limit, 10, self.plot_max, 10, 100, 100)
+        adj.configure(self.plot_limit, 10, self.plot_max, 10, 100, 0)
         self.w.plotnum = sb
-        self.tooltips.set_tip(sb, "Adjust size of subset of stars plotted")
+        sb.set_tooltip_text("Adjust size of subset of stars plotted")
         sb.connect('value-changed', self.plot_limit_cb)
         hbox.pack_start(sb, padding=2, fill=False, expand=False)
         vbox.pack_start(hbox, padding=0, fill=False, expand=False)
@@ -210,7 +209,7 @@ class Catalogs(CatalogsBase.CatalogsBase):
             page_size = self.plot_limit
             self.plot_start = min(self.plot_start, num_stars-1)
             adj.configure(self.plot_start, 0, num_stars, 1,
-                          page_size, page_size)
+                          page_size, 0)
 
         self.replot_stars()
 

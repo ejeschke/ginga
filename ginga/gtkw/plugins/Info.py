@@ -26,8 +26,6 @@ class Info(GingaPlugin.GlobalPlugin):
         self.info = None
 
         #self.w = Bunch.Bunch()
-        self.w.tooltips = self.fv.w.tooltips
-
         fv.set_callback('add-channel', self.add_channel)
         fv.set_callback('delete-channel', self.delete_channel)
         fv.set_callback('field-info', self.field_info)
@@ -68,12 +66,12 @@ class Info(GingaPlugin.GlobalPlugin):
         # TODO: need a more general solution to gtk labels resizing their
         # parent window
         b.object.set_width_chars(12)
-        self.w.tooltips.set_tip(b.cut_levels, "Set cut levels manually")
-        self.w.tooltips.set_tip(b.auto_levels, "Set cut levels by algorithm")
-        self.w.tooltips.set_tip(b.cut_low, "Set low cut level (press Enter)")
-        self.w.tooltips.set_tip(b.cut_high, "Set high cut level (press Enter)")
-        self.w.tooltips.set_tip(b.preferences, "Set preferences for this channel")
-        #self.w.tooltips.set_tip(b.multidim, "View other HDUs or slices")
+        b.cut_levels.set_tooltip_text("Set cut levels manually")
+        b.auto_levels.set_tooltip_text("Set cut levels by algorithm")
+        b.cut_low.set_tooltip_text("Set low cut level (press Enter)")
+        b.cut_high.set_tooltip_text("Set high cut level (press Enter)")
+        b.preferences.set_tooltip_text("Set preferences for this channel")
+        #b.multidim.set_tooltip_text("View other HDUs or slices")
         vbox.pack_start(w, padding=0, fill=True, expand=True)
 
         # Convenience navigation buttons
@@ -97,7 +95,7 @@ class Info(GingaPlugin.GlobalPlugin):
             btn = self.fv.make_button(*tup)
             name = tup[0]
             if tup[3]:
-                self.w.tooltips.set_tip(btn, tup[3])
+                btn.set_tooltip_text(tup[3])
                 
             bw[GtkHelp._name_mangle(name, pfx='btn_')] = btn
             btns.pack_end(btn, padding=4)

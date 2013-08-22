@@ -24,8 +24,6 @@ class Preferences(GingaPlugin.LocalPlugin):
         # superclass defines some variables for us, like logger
         super(Preferences, self).__init__(fv, fitsimage)
 
-        self.w.tooltips = self.fv.w.tooltips
-
         self.chname = self.fv.get_channelName(self.fitsimage)
 
         self.cmap_names = cmap.get_names()
@@ -92,16 +90,11 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.w.calg_choice = b.algorithm
         self.w.table_size = b.table_size
         b.color_defaults.connect('clicked', lambda w: self.set_default_maps())
-        self.w.tooltips.set_tip(b.colormap,
-                                "Choose a color map for this image")
-        self.w.tooltips.set_tip(b.intensity,
-                                "Choose an intensity map for this image")
-        self.w.tooltips.set_tip(b.algorithm,
-                                "Choose a color mapping algorithm")
-        self.w.tooltips.set_tip(b.table_size,
-                                "Set size of the color mapping table")
-        self.w.tooltips.set_tip(b.color_defaults,
-                                "Restore default color and intensity maps")
+        b.colormap.set_tooltip_text("Choose a color map for this image")
+        b.intensity.set_tooltip_text("Choose an intensity map for this image")
+        b.algorithm.set_tooltip_text("Choose a color mapping algorithm")
+        b.table_size.set_tooltip_text("Set size of the color mapping table")
+        b.color_defaults.set_tooltip_text("Restore default color and intensity maps")
         fr.add(w)
         vbox.pack_start(fr, padding=4, fill=True, expand=False)
 
@@ -170,8 +163,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         zoomalg = self.t_.get('zoom_algorithm', "step")            
         index = self.zoomalg_names.index(zoomalg)
         b.zoom_alg.set_active(index)
-        self.w.tooltips.set_tip(b.zoom_alg,
-                                "Choose Zoom algorithm")
+        b.zoom_alg.set_tooltip_text("Choose Zoom algorithm")
         b.zoom_alg.sconnect('changed', lambda w: self.set_zoomalg_cb())
             
         index = 0
@@ -179,8 +171,7 @@ class Preferences(GingaPlugin.LocalPlugin):
             b.stretch_xy.insert_text(index, name)
             index += 1
         b.stretch_xy.set_active(0)
-        self.w.tooltips.set_tip(b.stretch_xy,
-                                "Stretch pixels in X or Y")
+        b.stretch_xy.set_tooltip_text("Stretch pixels in X or Y")
         b.stretch_xy.sconnect('changed', lambda w: self.set_stretch_cb())
             
         b.stretch_factor.set_range(1.0, 10.0)
@@ -189,8 +180,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         b.stretch_factor.set_digits(5)
         b.stretch_factor.set_numeric(True)
         b.stretch_factor.sconnect('value-changed', lambda w: self.set_stretch_cb())
-        self.w.tooltips.set_tip(b.stretch_factor,
-                                "Length of pixel relative to 1 on other side")
+        b.stretch_factor.set_tooltip_text("Length of pixel relative to 1 on other side")
         b.stretch_factor.set_sensitive(zoomalg!='step')
 
         zoomrate = self.t_.get('zoom_rate', math.sqrt(2.0))
@@ -200,18 +190,15 @@ class Preferences(GingaPlugin.LocalPlugin):
         b.zoom_rate.set_digits(5)
         b.zoom_rate.set_numeric(True)
         b.zoom_rate.set_sensitive(zoomalg!='step')
-        self.w.tooltips.set_tip(b.zoom_rate,
-                                "Step rate of increase/decrease per zoom level")
+        b.zoom_rate.set_tooltip_text("Step rate of increase/decrease per zoom level")
         b.zoom_rate.sconnect('value-changed', self.set_zoomrate_cb)
         b.zoom_defaults.connect('clicked', self.set_zoom_defaults_cb)
         
         scale_x, scale_y = self.fitsimage.get_scale_xy()
-        self.w.tooltips.set_tip(b.scale_x,
-                                "Set the scale in X axis")
+        b.scale_x.set_tooltip_text("Set the scale in X axis")
         b.scale_x.set_text(str(scale_x))
         b.scale_x.connect("activate", lambda w: self.set_scale_cb())
-        self.w.tooltips.set_tip(b.scale_y,
-                                "Set the scale in Y axis")
+        b.scale_y.set_tooltip_text("Set the scale in Y axis")
         b.scale_y.set_text(str(scale_y))
         b.scale_y.connect("activate", lambda w: self.set_scale_cb())
 
@@ -222,8 +209,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         b.scale_min.set_digits(5)
         b.scale_min.set_numeric(True)
         b.scale_min.sconnect('value-changed', lambda w: self.set_scale_limit_cb())
-        self.w.tooltips.set_tip(b.scale_min,
-                                "Set the minimum allowed scale in any axis")
+        b.scale_min.set_tooltip_text("Set the minimum allowed scale in any axis")
 
         b.scale_max.set_range(1.0, 10000.0)
         b.scale_max.set_value(scale_max)
@@ -231,8 +217,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         b.scale_max.set_digits(5)
         b.scale_max.set_numeric(True)
         b.scale_max.sconnect('value-changed', lambda w: self.set_scale_limit_cb())
-        self.w.tooltips.set_tip(b.scale_min,
-                                "Set the maximum allowed scale in any axis")
+        b.scale_min.set_tooltip_text("Set the maximum allowed scale in any axis")
 
         fr.add(w)
         vbox.pack_start(fr, padding=4, fill=True, expand=False)
@@ -249,22 +234,17 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.w.update(b)
 
         pan_x, pan_y = self.fitsimage.get_pan()
-        self.w.tooltips.set_tip(b.pan_x,
-                                "Set the pan position in X axis")
+        b.pan_x.set_tooltip_text("Set the pan position in X axis")
         b.pan_x.set_text(str(pan_x+0.5))
         b.pan_x.connect("activate", lambda w: self.set_pan_cb())
-        self.w.tooltips.set_tip(b.pan_y,
-                                "Set the pan position in Y axis")
+        b.pan_y.set_tooltip_text("Set the pan position in Y axis")
         b.pan_y.set_text(str(pan_y+0.5))
         b.pan_y.connect("activate", lambda w: self.set_pan_cb())
-        self.w.tooltips.set_tip(b.center_image,
-                                "Set the pan position to center of the image")
+        b.center_image.set_tooltip_text("Set the pan position to center of the image")
         b.center_image.connect("clicked", lambda w: self.center_image_cb())
-        self.w.tooltips.set_tip(b.reverse_pan,
-                                "Reverse the pan direction")
+        b.reverse_pan.set_tooltip_text("Reverse the pan direction")
         b.reverse_pan.sconnect("toggled", lambda w: self.set_misc_cb())
-        self.w.tooltips.set_tip(b.mark_center,
-                                "Mark the center (pan locator)")
+        b.mark_center.set_tooltip_text("Mark the center (pan locator)")
         b.mark_center.sconnect("toggled", lambda w: self.set_misc_cb())
 
         fr.add(w)
@@ -286,12 +266,9 @@ class Preferences(GingaPlugin.LocalPlugin):
             btn.set_active(self.t_.get(name, False))
             btn.sconnect("toggled", lambda w: self.set_transforms_cb())
             btn.set_mode(True)
-        self.w.tooltips.set_tip(b.flip_x,
-                                "Flip the image around the X axis")
-        self.w.tooltips.set_tip(b.flip_y,
-                                "Flip the image around the Y axis")
-        self.w.tooltips.set_tip(b.swap_xy,
-                                "Swap the X and Y axes in the image")
+        b.flip_x.set_tooltip_text("Flip the image around the X axis")
+        b.flip_y.set_tooltip_text("Flip the image around the Y axis")
+        b.swap_xy.set_tooltip_text("Swap the X and Y axes in the image")
         b.rotate.set_range(0.00, 359.99999999)
         b.rotate.set_value(self.t_.get('rot_deg', 0.00))
         b.rotate.set_increments(10.0, 30.0)
@@ -299,10 +276,8 @@ class Preferences(GingaPlugin.LocalPlugin):
         b.rotate.set_numeric(True)
         b.rotate.set_wrap(True)
         b.rotate.sconnect('value-changed', lambda w: self.rotate_cb())
-        self.w.tooltips.set_tip(b.rotate,
-                                "Rotate image around the pan position")
-        self.w.tooltips.set_tip(b.restore,
-                                "Clear any transforms and center image")
+        b.rotate.set_tooltip_text("Rotate image around the pan position")
+        b.restore.set_tooltip_text("Clear any transforms and center image")
         b.restore.connect("clicked", lambda w: self.restore_cb())
 
         fr.add(w)
@@ -328,8 +303,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         index = self.autocut_methods.index(method)
         combobox.set_active(index)
         combobox.sconnect('changed', lambda w: self.set_autocut_method_cb())
-        self.w.tooltips.set_tip(b.auto_method,
-                                "Choose algorithm for auto levels")
+        b.auto_method.set_tooltip_text("Choose algorithm for auto levels")
 
         self.w.acvbox = gtk.VBox()
         w.pack_end(self.w.acvbox, fill=True, expand=True)
@@ -347,8 +321,8 @@ class Preferences(GingaPlugin.LocalPlugin):
         w, b = GtkHelp.build_info(captions)
         self.w.update(b)
 
-        self.w.tooltips.set_tip(b.wcs_coords, "Set WCS coordinate system")
-        self.w.tooltips.set_tip(b.wcs_display, "Set WCS display format")
+        b.wcs_coords.set_tooltip_text("Set WCS coordinate system")
+        b.wcs_display.set_tooltip_text("Set WCS display format")
 
         # Setup WCS coords method choice
         combobox = b.wcs_coords
@@ -412,18 +386,12 @@ class Preferences(GingaPlugin.LocalPlugin):
         combobox.set_active(index)
         combobox.sconnect('changed', self.set_autozoom_cb)
 
-        self.w.tooltips.set_tip(b.zoom_new,
-                                "Automatically fit new images to window")
-        self.w.tooltips.set_tip(b.cut_new,
-                                "Automatically set cut levels for new images")
-        self.w.tooltips.set_tip(b.center_new,
-                                "Automatically center new images")
-        self.w.tooltips.set_tip(b.follow_new,
-                                "View new images as they arrive")
-        self.w.tooltips.set_tip(b.raise_new,
-                                "Raise and focus tab for new images")
-        self.w.tooltips.set_tip(b.create_thumbnail,
-                                "Create thumbnail for new images")
+        b.zoom_new.set_tooltip_text("Automatically fit new images to window")
+        b.cut_new.set_tooltip_text("Automatically set cut levels for new images")
+        b.center_new.set_tooltip_text("Automatically center new images")
+        b.follow_new.set_tooltip_text("View new images as they arrive")
+        b.raise_new.set_tooltip_text("Raise and focus tab for new images")
+        b.create_thumbnail.set_tooltip_text("Create thumbnail for new images")
 
         self.w.center_new.set_active(True)
         self.w.center_new.sconnect("toggled", lambda w: self.set_chprefs_cb())

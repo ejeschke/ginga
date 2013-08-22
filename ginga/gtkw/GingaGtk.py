@@ -75,8 +75,6 @@ class GingaView(GtkMain.GtkMain):
         
     def build_toplevel(self, layout):
 
-        self.w.tooltips = gtk.Tooltips()
-        
         self.font = self.getFont('fixedFont', 12)
         self.font11 = self.getFont('fixedFont', 11)
 
@@ -132,7 +130,7 @@ class GingaView(GtkMain.GtkMain):
 
         cbox = GtkHelp.combo_box_new_text()
         self.w.channel = cbox
-        self.w.tooltips.set_tip(cbox, "Select a channel")
+        cbox.set_tooltip_text("Select a channel")
         cbox.connect("changed", self.channel_select_cb)
         hbox.pack_start(cbox, fill=False, expand=False, padding=4)
 
@@ -140,7 +138,7 @@ class GingaView(GtkMain.GtkMain):
         self.w.operation = opmenu
         btn = gtk.Button("Operation")
         btn.connect('button-press-event', self.invoke_op_cb)
-        self.w.tooltips.set_tip(btn, "Invoke operation")
+        btn.set_tooltip_text("Invoke operation")
         hbox.pack_start(btn, fill=False, expand=False, padding=2)
 
         self.w.optray = gtk.HBox()
@@ -544,7 +542,7 @@ class GingaView(GtkMain.GtkMain):
         adj = b.number.get_adjustment()
         lower = 1
         upper = 12
-        adj.configure(lower, lower, upper, 1, 1, 1)
+        adj.configure(lower, lower, upper, 1, 1, 0)
         adj.set_value(lower)
         
         cbox = b.workspace

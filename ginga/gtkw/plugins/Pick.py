@@ -30,7 +30,6 @@ class Pick(PickBase.PickBase):
         # superclass defines some variables for us, like logger
         super(Pick, self).__init__(fv, fitsimage)
 
-        self.w.tooltips = self.fv.w.tooltips
         self.have_mpl = have_mpl
 
     def build_gui(self, container):
@@ -174,8 +173,7 @@ class Pick(PickBase.PickBase):
         b.zoom.set_text(self.fv.scale2text(di.get_scale()))
         self.wdetail = b
         b.default_region.connect('clicked', lambda w: self.reset_region())
-        self.w.tooltips.set_tip(b.default_region,
-                                   "Reset region size to default")
+        b.default_region.set_tooltip_text("Reset region size to default")
 
         # Pick field evaluation status
         label = gtk.Label()
@@ -217,14 +215,13 @@ class Pick(PickBase.PickBase):
 
         w, b = GtkHelp.build_info(captions)
         self.w.update(b)
-        self.w.tooltips.set_tip(b.radius, "Radius for peak detection")
-        self.w.tooltips.set_tip(b.threshold, "Threshold for peak detection (blank=default)")
-        self.w.tooltips.set_tip(b.min_fwhm, "Minimum FWHM for selection")
-        self.w.tooltips.set_tip(b.max_fwhm, "Maximum FWHM for selection")
-        self.w.tooltips.set_tip(b.ellipticity, "Minimum ellipticity for selection")
-        self.w.tooltips.set_tip(b.edge, "Minimum edge distance for selection")
-        self.w.tooltips.set_tip(b.show_candidates,
-                                "Show all peak candidates")
+        b.radius.set_tooltip_text("Radius for peak detection")
+        b.threshold.set_tooltip_text("Threshold for peak detection (blank=default)")
+        b.min_fwhm.set_tooltip_text("Minimum FWHM for selection")
+        b.max_fwhm.set_tooltip_text("Maximum FWHM for selection")
+        b.ellipticity.set_tooltip_text("Minimum ellipticity for selection")
+        b.edge.set_tooltip_text("Minimum edge distance for selection")
+        b.show_candidates.set_tooltip_text("Show all peak candidates")
         # radius control
         adj = b.radius.get_adjustment()
         b.radius.set_digits(2)
@@ -326,11 +323,10 @@ class Pick(PickBase.PickBase):
 
         w, b = GtkHelp.build_info(captions)
         self.w.update(b)
-        self.w.tooltips.set_tip(b.sky_cut, "Set image low cut to Sky Level")
-        self.w.tooltips.set_tip(b.delta_sky, "Delta to apply to low cut")
-        self.w.tooltips.set_tip(b.bright_cut,
-                                "Set image high cut to Sky Level+Brightness")
-        self.w.tooltips.set_tip(b.delta_bright, "Delta to apply to high cut")
+        b.sky_cut.set_tooltip_text("Set image low cut to Sky Level")
+        b.delta_sky.set_tooltip_text("Delta to apply to low cut")
+        b.bright_cut.set_tooltip_text("Set image high cut to Sky Level+Brightness")
+        b.delta_bright.set_tooltip_text("Delta to apply to high cut")
 
         b.sky_cut.set_sensitive(False)
         self.w.btn_sky_cut = b.sky_cut

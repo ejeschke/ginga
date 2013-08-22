@@ -113,8 +113,7 @@ class PluginManager(object):
             lblname = ' ' + tup[0] + ':\n' + tup[1] + ' '
             lbl = gtk.Label(lblname)
             lbl.set_justify(gtk.JUSTIFY_CENTER)
-            self.fv.w.tooltips.set_tip(lbl,
-                                       "Right click for menu")
+            lbl.set_tooltip_text("Right click for menu")
             evbox = gtk.EventBox()
             evbox.add(lbl)
             fr = gtk.Frame()

@@ -113,7 +113,7 @@ class Zoom(GingaPlugin.GlobalPlugin):
         b.relative_zoom.sconnect("toggled", self.set_absrel_cb)
         b.defaults.connect("clicked", lambda w: self.set_defaults())
         adj = b.lag_time.get_adjustment()
-        adj.configure(0, 0, 20, 1, 1, 1)
+        adj.configure(0, 0, 20, 1, 1, 0)
         adj.set_value(self.lagtime)
         b.lag_time.set_digits(0)
         b.lag_time.set_wrap(True)

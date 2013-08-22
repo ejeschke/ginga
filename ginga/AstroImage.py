@@ -226,7 +226,7 @@ class AstroImage(BaseImage):
         
     def copy(self, astype=None):
         data = self.get_data()
-        other = AstroImage(data)
+        other = AstroImage(data, logger=self.logger)
         self.transfer(other, astype=astype)
         return other
         
@@ -598,7 +598,8 @@ class AstroImage(BaseImage):
                 crpix2 = image.get_keyword('CRPIX2') + yoff
 
         # Create new image with reference pixel updated
-        newimage = AstroImage(newdata, metadata=metadata)
+        newimage = AstroImage(newdata, metadata=metadata,
+                              logger=self.logger)
         newimage.update_keywords({ 'CRPIX1': crpix1,
                                    'CRPIX2': crpix2 })
         return newimage
@@ -697,7 +698,8 @@ class AstroImage(BaseImage):
         newdata = numpy.zeros((height, width))
 
         # Create new image with empty data
-        mosaic = AstroImage(newdata, metadata=metadata, logger=self.logger)
+        mosaic = AstroImage(newdata, metadata=metadata,
+                            logger=self.logger)
         pa = numpy.radians(pa_deg)
         cpa = numpy.cos(pa)
         spa = numpy.sin(pa)

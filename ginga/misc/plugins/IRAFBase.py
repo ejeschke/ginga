@@ -312,7 +312,7 @@ class IRAFBase(GingaPlugin.GlobalPlugin):
             dtype = numpy.uint8
             metadata = {}
 
-            image = IRAF_AstroImage()
+            image = IRAF_AstroImage(logger=self.logger)
             #image.load_buffer(fb.buffer, dims, dtype, byteswap=byteswap,
             #                  metadata=metadata)
             data = numpy.fromstring(fb.buffer, dtype=dtype)

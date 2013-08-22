@@ -53,6 +53,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
         self.w.update(b)
         self.w.numhdu = b.num_hdus
         self.w.hdu = b.choose_hdu
+        self.w.hdu.set_tooltip_text("Choose which HDU to view")
         self.w.hdu.set_update_policy(gtk.UPDATE_DISCONTINUOUS)
         self.w.hdu.connect('value-changed', self.set_hdu_cb)
         
@@ -99,7 +100,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
     def _make_spin(self, lower, upper):
         #adj = gtk.Adjustment(lower=lower, upper=upper)
         adj = gtk.Adjustment()
-        adj.configure(lower, lower, upper, 1, 1, 1)
+        adj.configure(lower, lower, upper, 1, 1, 0)
         adj.set_value(lower)
         scale = GtkHelp.SpinButton(adj)
         scale.set_digits(0)
@@ -137,7 +138,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
                 adj = slider.get_adjustment()
                 lower = 1
                 upper = maxn
-                adj.configure(lower, lower, upper, 1, 1, 1)
+                adj.configure(lower, lower, upper, 1, 1, 0)
                 adj.set_value(lower)
                 slider.set_digits(0)
                 slider.set_wrap(True)
@@ -183,7 +184,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
         
     def set_hdu(self, idx):
         self.logger.debug("Loading fits hdu #%d" % (idx))
-        image = AstroImage.AstroImage()
+        image = AstroImage.AstroImage(logger=self.logger)
         image.set(path=self.path)
         try:
             hdu = self.fits_f[idx-1]
@@ -205,7 +206,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
         idx = int(w.get_value()) - 1
         self.logger.debug("naxis %d index is %d" % (n+1, idx+1))
 
-        image = AstroImage.AstroImage()
+        image = AstroImage.AstroImage(logger=self.logger)
         image.set(path=self.path)
         try:
             hdu = self.fits_f[self.curhdu]
@@ -245,7 +246,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
         self.logger.debug("there are %d hdus" % (upper))
         self.w.numhdu.set_text("%d" % (upper))
         adj = self.w.hdu.get_adjustment()
-        adj.configure(lower, lower, upper, 1, 1, 1)
+        adj.configure(lower, lower, upper, 1, 1, 0)
         self.w.hdu.set_sensitive(upper > 1)
         ## self.w.hdu.clear_marks()
         ## self.w.hdu.add_mark(lower, gtk.POS_BOTTOM, "%d" % lower)

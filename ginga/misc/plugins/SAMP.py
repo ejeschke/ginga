@@ -24,7 +24,6 @@ except ImportError:
     import sampy
 
 from ginga import GingaPlugin
-from ginga import AstroImage
 from ginga import Catalog
 
 class SAMPError(Exception):

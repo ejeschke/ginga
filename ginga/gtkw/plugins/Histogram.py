@@ -19,7 +19,6 @@ class Histogram(HistogramBase.HistogramBase):
         # superclass defines some variables for us, like logger
         super(Histogram, self).__init__(fv, fitsimage)
 
-        self.w.tooltips = self.fv.w.tooltips
         self.gui_up = False
 
     def build_gui(self, container):
@@ -59,10 +58,10 @@ class Histogram(HistogramBase.HistogramBase):
 
         w, b = GtkHelp.build_info(captions)
         self.w.update(b)
-        self.w.tooltips.set_tip(b.cut_levels, "Set cut levels manually")
-        self.w.tooltips.set_tip(b.auto_levels, "Set cut levels by algorithm")
-        self.w.tooltips.set_tip(b.cut_low, "Set low cut level (press Enter)")
-        self.w.tooltips.set_tip(b.cut_high, "Set high cut level (press Enter)")
+        b.cut_levels.set_tooltip_text("Set cut levels manually")
+        b.auto_levels.set_tooltip_text("Set cut levels by algorithm")
+        b.cut_low.set_tooltip_text("Set low cut level (press Enter)")
+        b.cut_high.set_tooltip_text("Set high cut level (press Enter)")
         b.cut_low.connect('activate', lambda w: self.cut_levels())
         b.cut_high.connect('activate', lambda w: self.cut_levels())
         b.cut_levels.connect('clicked', lambda w: self.cut_levels())

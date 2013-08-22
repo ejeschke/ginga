@@ -20,9 +20,6 @@ class Cuts(CutsBase.CutsBase):
         # superclass defines some variables for us, like logger
         super(Cuts, self).__init__(fv, fitsimage)
 
-        self.w.tooltips = self.fv.w.tooltips
-
-
     def build_gui(self, container):
         # Paned container is just to provide a way to size the graph
         # to a reasonable size
@@ -65,17 +62,17 @@ class Cuts(CutsBase.CutsBase):
             combobox.show_text(self.cutstag)
         combobox.sconnect('changed', self.cut_select_cb)
         self.w.cuts = combobox
-        self.w.tooltips.set_tip(combobox, "Select a cut")
+        combobox.set_tooltip_text("Select a cut")
         hbox.pack_start(combobox, fill=False, expand=False)
 
         btn = gtk.Button("Delete")
         btn.connect('clicked', lambda w: self.delete_cut_cb())
-        self.w.tooltips.set_tip(btn, "Delete selected cut")
+        btn.set_tooltip_text("Delete selected cut")
         hbox.pack_start(btn, fill=False, expand=False)
         
         btn = gtk.Button("Delete All")
         btn.connect('clicked', lambda w: self.delete_all())
-        self.w.tooltips.set_tip(btn, "Clear all cuts")
+        btn.set_tooltip_text("Clear all cuts")
         hbox.pack_start(btn, fill=False, expand=False)
         
         combobox = GtkHelp.combo_box_new_text()
@@ -85,7 +82,7 @@ class Cuts(CutsBase.CutsBase):
         index = self.cuttypes.index(self.cuttype)
         combobox.set_active(index)
         combobox.sconnect('changed', self.set_cutsdrawtype_cb)
-        self.w.tooltips.set_tip(combobox, "Choose the cut type")
+        combobox.set_tooltip_text("Choose the cut type")
         hbox.pack_start(combobox, fill=False, expand=False)
         
         vbox.pack_start(hbox, fill=True, expand=False)
