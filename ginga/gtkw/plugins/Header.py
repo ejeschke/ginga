@@ -105,12 +105,12 @@ class Header(GingaPlugin.GlobalPlugin):
         header = image.get_header()
         # Update the header info
         listmodel = gtk.ListStore(object)
-        keyorder = image.get('keyorder', header.keys())
+        keyorder = header.keys()
         for key in keyorder:
-            if header.has_key(key):
-                val = str(header[key])
-                bnch = Bunch.Bunch(kwd=key, value=val, comment='')
-                listmodel.append([bnch])
+            card = header.get_card(key)
+            bnch = Bunch.Bunch(kwd=key, value=str(card.value),
+                               comment=card.comment)
+            listmodel.append([bnch])
 
         treeview.set_fixed_height_mode(False)
         treeview.set_model(listmodel)

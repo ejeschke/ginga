@@ -10,6 +10,7 @@
 import math
 import numpy
 
+from ginga import PythonImage
 from ginga.misc import Callback
 
 class RGBMapError(Exception):
@@ -189,6 +190,14 @@ class RGBMapper(Callback.Callbacks):
         idx_b = idx_b.clip(0, 255)
         idx_b = self.sarr[idx_b].clip(0, 255)
         ab = self.arr[2][idx_b]
+
+        # convert to monitor profile, if one is available
+        # TODO: this conversion doesn't really belong here!
+        if PythonImage.has_monitor_profile():
+            arr = numpy.dstack((ar, ag, ab))
+            arr = PythonImage.convert_profile_monitor(arr)
+            return (arr[:, :, 0], arr[:, :, 1], arr[:, :, 2])
+
         return (ar, ag, ab)
 
     def get_rgbarray(self, idx):

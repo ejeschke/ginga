@@ -92,7 +92,7 @@ class Thumbs(ThumbsBase.ThumbsBase):
         rvbox.addWidget(w, stretch=0)
 
     def insert_thumbnail(self, imgwin, thumbkey, thumbname, chname, name, path,
-                         metadata):
+                         thumbpath, metadata):
         pixmap = QtGui.QPixmap.fromImage(imgwin)
         imglbl = MyLabel()
         imglbl.setPixmap(pixmap)
@@ -118,7 +118,8 @@ class Thumbs(ThumbsBase.ThumbsBase):
                                                QtGui.QSizePolicy.Fixed))
         bnch = Bunch.Bunch(widget=widget, image=imgwin, layout=vbox,
                            imglbl=imglbl, name=name, imname=name,
-                           chname=chname, path=path, pixmap=pixmap)
+                           chname=chname, path=path, thumbpath=thumbpath,
+                           pixmap=pixmap)
 
         with self.thmblock:
             self.thumbDict[thumbkey] = bnch

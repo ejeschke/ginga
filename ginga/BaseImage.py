@@ -86,7 +86,7 @@ class BaseImage(Callback.Callbacks):
         return self.metadata.copy()
         
     def get_header(self):
-        return self.get('exif', {})
+        return self.get('exif', Header())
         
     def get(self, kwd, *args):
         if self.metadata.has_key(kwd):
@@ -379,5 +379,51 @@ class BaseImage(Callback.Callbacks):
                            x=data_x, y=data_y,
                            value=value)
         return info
+
+
+class Header(dict):
+
+    def __init__(self, *args, **kwdargs):
+        super(Header, self).__init__(*args, **kwdargs)
+        self.keyorder = []
+
+    def __getitem__(self, key):
+        bnch = super(Header, self).__getitem__(key)
+        return bnch.value
+
+    def __setitem__(self, key, value):
+        try:
+            bnch = super(Header, self).__getitem__(key)
+            bnch.value = value
+        except KeyError:
+            bnch = Bunch.Bunch(key=key, value=value, comment='')
+            self.keyorder.append(key)
+            super(Header, self).__setitem__(key, bnch)
+        return bnch
+
+    def __delitem__(self, key):
+        super(Header, self).__delitem__(key)
+        self.keyorder.remove(key)
+
+    def get_card(self, key):
+        bnch = super(Header, self).__getitem__(key)
+        return bnch
+    
+    def get_keyorder(self):
+        return self.keyorder
+    
+    def keys(self):
+        return self.keyorder
+    
+    def get(self, key, alt=None):
+        try:
+            return self.__getitem__(key)
+        except KeyError:
+            return alt
+
+    def update(self, mapKind):
+        for key, value in mapKind.items():
+            self.__setitem__(key, value)
+    
 
 #END

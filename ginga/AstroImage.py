@@ -22,7 +22,7 @@ except ImportError:
     import pyfits
 import numpy
 
-from ginga.BaseImage import BaseImage, ImageError
+from ginga.BaseImage import BaseImage, ImageError, Header
 from ginga.misc import Bunch
 
 class AstroImage(BaseImage):
@@ -64,11 +64,10 @@ class AstroImage(BaseImage):
         self.set_data(data)
 
         # Load in FITS header
-        self.update_keywords(hdu.header)
-        # Preserve the ordering of the FITS keywords in the FITS file
-        keyorder = [ key for key, val in hdu.header.items() ]
-        self.set(keyorder=keyorder)
-
+        self.clear_metadata()
+        hdr = self.get_header()
+        hdr.fromHDU(hdu)
+        
         # Try to make a wcs object on the header
         self.wcs.load_header(hdu.header, fobj=fobj)
 
@@ -150,7 +149,8 @@ class AstroImage(BaseImage):
         except KeyError, e:
             if not create:
                 raise e
-            hdr = {}
+            #hdr = {}
+            hdr = AstroHeader()
             self.metadata['header'] = hdr
         return hdr
         
@@ -204,9 +204,14 @@ class AstroImage(BaseImage):
         header = self.get_header()
         self.wcs.load_header(header)
 
+    def clear_metadata(self):
+        self.metadata = {}
+
     def update_hdu(self, hdu, fobj=None, astype=None):
         self.update_data(hdu.data, astype=astype)
-        self.update_keywords(hdu.header)
+        #self.update_keywords(hdu.header)
+        hdr = self.get_header(create=True)
+        hdr.fromHDU(hdu)
 
         # Try to make a wcs object on the header
         self.wcs.load_header(hdu.header, fobj=fobj)
@@ -283,14 +288,14 @@ class AstroImage(BaseImage):
         #     data = data.byteswap()
         hdu.data = data
 
+        header = self.get_header()
+
         deriver = self.get('deriver', None)
         if deriver:
             deriver.deriveAll(self)
             keylist = deriver.get_keylist()
         else:
-            keylist = self.get('keyorder', None)
-
-        header = self.get_header()
+            keylist = header.get_keyorder()
 
         if not keylist:
             keylist = header.keys()
@@ -344,7 +349,7 @@ class AstroImage(BaseImage):
         """
         radian = 180.0/math.pi
 
-        # coo transformed in radiants 
+        # coord transformed in radians 
         alf = dra / radian
         alf0 = dra0 / radian
         del_ = decd / radian
@@ -456,8 +461,7 @@ class AstroImage(BaseImage):
         x, y = self.radectopix(ra_deg, dec_deg, equinox=equinox)
         return self.calc_radius_xy(x, y, delta_deg)
         
-    def add_offset_radec(self, ra_deg, dec_deg, delta_deg_ra, delta_deg_dec,
-                         adjust_ra=True):
+    def add_offset_radec(self, ra_deg, dec_deg, delta_deg_ra, delta_deg_dec):
         """
         Algorithm to compute RA/Dec from RA/Dec base position plus tangent
         plane offsets.
@@ -487,15 +491,13 @@ class AstroImage(BaseImage):
         
         return (ra2_deg, dec2_deg)
         
-    def add_offset_xy(self, x, y, delta_deg_x, delta_deg_y,
-                      adjust_ra=True):
+    def add_offset_xy(self, x, y, delta_deg_x, delta_deg_y):
         # calculate ra/dec of x,y pixel
         ra_deg, dec_deg = self.pixtoradec(x, y)
 
         # add offsets
         ra2_deg, dec2_deg = self.add_offset_radec(ra_deg, dec_deg,
-                                                  delta_deg_x, delta_deg_y,
-                                                  adjust_ra=adjust_ra)
+                                                  delta_deg_x, delta_deg_y)
 
         # then back to new pixel coords
         x2, y2 = self.radectopix(ra2_deg, dec2_deg)
@@ -880,4 +882,13 @@ class AstroImage(BaseImage):
                            value=value)
         return info
                            
+
+class AstroHeader(Header):
+
+    def fromHDU(self, hdu):
+        header = hdu.header
+        for card in header.ascardlist():
+            bnch = self.__setitem__(card.key, card.value)
+            bnch.comment = card.comment
+
 #END

@@ -498,7 +498,7 @@ class ZScale(AutoCutsBase):
             
         if cov == None:
             self.logger.debug("curve fitting failed")
-            return (data_min, data_max)
+            return (float(data_min), float(data_max))
 
         slope, intercept = p
 
@@ -522,7 +522,7 @@ class ZScale(AutoCutsBase):
             locut = data_min
             hicut = data_max
 
-        return (locut, hicut)
+        return (float(locut), float(hicut))
 
 
 autocuts_table = {

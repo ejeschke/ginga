@@ -59,19 +59,21 @@ except ImportError:
 #have_cms = False
 
 from ginga.misc import Bunch
-from ginga.BaseImage import BaseImage, ImageError
+from ginga.BaseImage import BaseImage, ImageError, Header
 
 try:
     basedir = os.environ['GINGA_HOME']
 except KeyError:
     basedir = os.path.join(os.environ['HOME'], '.ginga')
+
 working_profile = os.path.join(basedir, "profiles", "working.icc")
+monitor_profile = os.path.join(basedir, "profiles", "monitor.icc")
 
 
 class PythonImage(BaseImage):
 
     def load_file(self, filepath):
-        kwds = {}
+        kwds = Header()
         metadata = { 'exif': {}, 'path': filepath }
 
         data_np = self._imload(filepath, kwds)
@@ -464,19 +466,29 @@ def rgb2qimage(rgb):
 # --- end QImage to numpy conversion functions ---
 
 def convert_profile_pil(image_pil, inprof_path, outprof_path):
+    if not have_cms:
+        return image_pil
+    
     image_out = ImageCms.profileToProfile(image_pil, inprof_path,
                                           outprof_path)
     return image_out
 
 def convert_profile_numpy(image_np, inprof_path, outprof_path):
-    if not have_pilutil:
+    if (not have_pilutil) or (not have_cms):
         return image_np
 
     in_image_pil = pilutil.toimage(image_np)
-    out_image_pil = pilutil.convert_profile_pil(in_image_pil,
-                                                inprof_path, outprof_path)
-    image_np = pilutil.fromimage(out_image_pil)
+    out_image_pil = convert_profile_pil(in_image_pil,
+                                        inprof_path, outprof_path)
+    image_out = pilutil.fromimage(out_image_pil)
     return image_out
 
+def convert_profile_monitor(image_np):
+    if not os.path.exists(monitor_profile):
+        return image_np
+    return convert_profile_numpy(image_np, working_profile, monitor_profile)
+
+def has_monitor_profile():
+    return have_cms and os.path.exists(monitor_profile)
 
 #END

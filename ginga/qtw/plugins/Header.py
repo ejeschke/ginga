@@ -24,7 +24,7 @@ class Header(GingaPlugin.GlobalPlugin):
         self.active = None
         self.info = None
 
-        self.columns = [('Keyword', 'kwd'),
+        self.columns = [('Keyword', 'key'),
                         ('Value', 'value'),
                         ('Comment', 'comment'),
                         ]
@@ -44,39 +44,33 @@ class Header(GingaPlugin.GlobalPlugin):
         vbox.setContentsMargins(2, 2, 2, 2)
         widget.setLayout(vbox)
 
-        table = QtGui.QTableWidget()
-        table.setColumnCount(len(self.columns))
-        col = 0
-        for hdr, kwd in self.columns:
-            item = QtGui.QTableWidgetItem(hdr)
-            table.setHorizontalHeaderItem(col, item)
-            col += 1
+        table = QtGui.QTableView()
+        self.table = table
+        table.setSelectionBehavior(QtGui.QAbstractItemView.SelectRows)
+        table.setShowGrid(False)
+        vh = table.verticalHeader()
+        # Hack to make the rows in a TableView all have a
+        # reasonable height for the data
+        vh.setResizeMode(QtGui.QHeaderView.ResizeToContents)
+        # Hide vertical header
+        vh.setVisible(False)
 
         vbox.addWidget(table, stretch=1)
         return widget, table
 
     def set_header(self, table, image):
         header = image.get_header()
-        # Update the header info
-        table.clearContents()
-        keyorder = image.get('keyorder', header.keys())
-        row = 0
-        table.setRowCount(len(keyorder))
 
-        table.setSortingEnabled(False)
-        for key in keyorder:
-            if header.has_key(key):
-                val = str(header[key])
-                bnch = Bunch.Bunch(kwd=key, value=val, comment='')
-                item1 = QtGui.QTableWidgetItem(key)
-                item1.setFlags(item1.flags() & ~QtCore.Qt.ItemIsEditable)
-                item2 = QtGui.QTableWidgetItem(val)
-                item2.setFlags(item2.flags() & ~QtCore.Qt.ItemIsEditable)
-                table.setItem(row, 0, item1)
-                table.setItem(row, 1, item2)
-            row += 1
-        # TODO: get sorting working
-        #table.setSortingEnabled(True)
+        model = HeaderTableModel(self.columns, header)
+        table.setModel(model)
+        selectionModel = QtGui.QItemSelectionModel(model, table)
+        table.setSelectionModel(selectionModel)
+        
+        # set column width to fit contents
+        table.resizeColumnsToContents()
+        table.resizeRowsToContents()
+
+        table.setSortingEnabled(True)
 
     def add_channel(self, viewer, chinfo):
         sw, tv = self._create_header_window()
@@ -119,5 +113,62 @@ class Header(GingaPlugin.GlobalPlugin):
         
     def __str__(self):
         return 'header'
+
+
+class HeaderTableModel(QtCore.QAbstractTableModel):
+
+    def __init__(self, columns, header):
+        super(HeaderTableModel, self).__init__(None)
+
+        self.columns = columns
+        self.header = []
+        # Copy cards from header into a local list
+        # TODO: what if the header changes underneath us?
+        for key in header.keys():
+            self.header.append(header.get_card(key))
+
+    def rowCount(self, parent): 
+        return len(self.header) 
+ 
+    def columnCount(self, parent): 
+        return len(self.columns) 
+ 
+    def data(self, index, role): 
+        if not index.isValid(): 
+            return None 
+        elif role != QtCore.Qt.DisplayRole: 
+            return None
+
+        card = self.header[index.row()]
+        field = self.columns[index.column()][1]
+        return str(card[field])
+
+    def headerData(self, col, orientation, role):
+        if (orientation == QtCore.Qt.Horizontal) and \
+               (role == QtCore.Qt.DisplayRole):
+            return self.columns[col][0]
+        
+        # Hack to make the rows in a TableView all have a
+        # reasonable height for the data
+        elif (role == QtCore.Qt.SizeHintRole) and \
+                 (orientation == QtCore.Qt.Vertical):
+            return 1
+        return None
+
+    def sort(self, Ncol, order):
+        """Sort table by given column number.
+        """
+        def sortfn(card):
+            field = self.columns[Ncol][1]
+            return card[field]
+        
+        self.emit(QtCore.SIGNAL("layoutAboutToBeChanged()"))
+
+        self.header = sorted(self.header, key=sortfn)        
+
+        if order == QtCore.Qt.DescendingOrder:
+            self.header.reverse()
+        self.emit(QtCore.SIGNAL("layoutChanged()"))
+        
     
 #END

@@ -208,7 +208,8 @@ class FitsImageQt(FitsImage.FitsImageBase):
         self.logger.debug("drawing to pixmap")
 
         # Prepare array for rendering
-        arr = numpy.dstack((rgbobj.r, rgbobj.g, rgbobj.b))
+        #arr = numpy.dstack((rgbobj.r, rgbobj.g, rgbobj.b))
+        arr = rgbobj.get_array('RGB')
         (height, width) = rgbobj.r.shape
 
         return self._render_offscreen(self.pixmap, arr, dst_x, dst_y,
@@ -265,7 +266,8 @@ class FitsImageQt(FitsImage.FitsImageBase):
         graphics.
         """
         rgbobj = self.get_rgb_object(whence=0)
-        arr = numpy.dstack((rgbobj.r, rgbobj.g, rgbobj.b))
+        #arr = numpy.dstack((rgbobj.r, rgbobj.g, rgbobj.b))
+        arr = rgbobj.get_array('RGB')
         image = self._get_qimage(arr)
         return image
 

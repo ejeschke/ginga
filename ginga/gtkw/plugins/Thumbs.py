@@ -70,7 +70,7 @@ class Thumbs(ThumbsBase.ThumbsBase):
         return lambda tw, x, y, kbmode, ttw: self.query_thumb(thumbkey, name, metadata, x, y, ttw)
     
     def insert_thumbnail(self, imgwin, thumbkey, thumbname, chname, name, path,
-                         metadata):
+                         thumbpath, metadata):
 
         imgwin.set_property("has-tooltip", True)
         imgwin.connect("query-tooltip", self._mktt(thumbkey, name, metadata))
@@ -86,7 +86,8 @@ class Thumbs(ThumbsBase.ThumbsBase):
         vbox.show_all()
 
         bnch = Bunch.Bunch(widget=vbox, evbox=evbox, imname=name,
-                           thumbname=thumbname, chname=chname, path=path)
+                           thumbname=thumbname, chname=chname, path=path,
+                           thumbpath=thumbpath)
 
         with self.thmblock:
             if self.thumbColCount == 0:

@@ -353,8 +353,8 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
         self.canvas.deleteAllObjects()
        
     def reset(self):
-        #self.clear()
-        self.clearAll()
+        self.clear()
+        #self.clearAll()
         self.table.clear()
        
     def plot_star(self, obj, image=None):
@@ -416,21 +416,15 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
         i, length = self.get_plot_range()
         self.table.set_minmax(i, length)
 
-        # remove references to old objects before this range
-        for j in xrange(i):
+        # remove references to old plot objects from starlist
+        for j in xrange(len(self.starlist)):
             obj = self.starlist[j]
             obj.canvobj = None
 
         # plot stars in range
-        for j in xrange(length):
-            obj = self.starlist[i]
-            i += 1
+        subset = self.table.get_subset_from_starlist(i, i+length)
+        for obj in subset:
             self.plot_star(obj, image=image)
-
-        # remove references to old objects after this range
-        for j in xrange(i, length):
-            obj = self.starlist[j]
-            obj.canvobj = None
 
         # plot stars in selected list even if they are not in the range
         #for obj in selected:
@@ -531,7 +525,9 @@ class CatalogListingBase(object):
             # Item is already selected--so unselect it
             self.selected.remove(star)
             try:
-                self._unselect_tv(star)
+                # remove selection from table
+                self._unselect_tv(star, fromtable=fromtable)
+                # unhighlight star in plot
                 self.catalog.unhighlight_object(star.canvobj, 'selected')
             except Exception, e:
                 self.logger.warn("Error unhilighting star: %s" % (str(e)))
@@ -542,7 +538,7 @@ class CatalogListingBase(object):
                 for star2 in self.selected:
                     self.selected.remove(star2)
                     try:
-                        self._unselect_tv(star2)
+                        self._unselect_tv(star2, fromtable=fromtable)
                         self.catalog.unhighlight_object(star2.canvobj, 'selected')
                     except Exception, e:
                         self.logger.warn("Error unhilighting star: %s" % (str(e)))
@@ -551,8 +547,10 @@ class CatalogListingBase(object):
                 # If this star is not plotted, then plot it
                 if (not star.has_key('canvobj')) or (star.canvobj == None):
                     self.catalog.plot_star(star)
-                    
+
+                # highlight line in table
                 self._select_tv(star, fromtable=fromtable)
+                # highlight the plot object
                 self.catalog.highlight_object(star.canvobj, 'selected', 'skyblue')
                 if self.catalog.pan_to_selected:
                     self.catalog.pan_to_star(star)
@@ -595,8 +593,9 @@ class CatalogListingBase(object):
         self.replot_stars()
 
     def set_minmax(self, i, length):
+        subset = self.get_subset_from_starlist(i, i+length)
         values = map(lambda star: float(star[self.mag_field]),
-                     self.catalog.starlist[i:i+length])
+                     subset)
         self.mag_max = max(values)
         self.mag_min = min(values)
         self.cbar.set_range(self.mag_min, self.mag_max)

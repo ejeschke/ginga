@@ -289,9 +289,18 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
         vbox = QtHelp.VBox()
 
         # create the table
-        table = QtGui.QTableWidget()
-        table.cellClicked.connect(self.select_star_cb)
+        table = QtGui.QTableView()
         self.table = table
+        table.setSelectionBehavior(QtGui.QAbstractItemView.SelectRows)
+        table.setSelectionMode(QtGui.QAbstractItemView.SingleSelection)
+        table.setShowGrid(False)
+        vh = table.verticalHeader()
+        # Hack to make the rows in a TableView all have a
+        # reasonable height for the data
+        vh.setResizeMode(QtGui.QHeaderView.ResizeToContents)
+        # Hide vertical header
+        vh.setVisible(False)
+
         vbox.addWidget(table, stretch=1)
 
         self.cbar = ColorBar.ColorBar(self.logger)
@@ -377,10 +386,6 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
         columns = info.columns
         self.columns = columns
 
-        table = self.table
-        table.clear()
-        table.setColumnCount(len(columns))
-        
         # Set up the field selector
         fidx = 0
         combobox = self.btn['field']
@@ -388,8 +393,8 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
         
         col = 0
         for hdr, kwd in columns:
-            item = QtGui.QTableWidgetItem(hdr)
-            table.setHorizontalHeaderItem(col, item)
+            #item = QtGui.QTableWidgetItem(hdr)
+            #table.setHorizontalHeaderItem(col, item)
 
             combobox.addItem(hdr)
             if hdr == info.color:
@@ -398,10 +403,8 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
 
         combobox.setCurrentIndex(fidx)
 
-        if self.catalog != None:
-            fieldname = self.columns[fidx][1]
-            self._set_field(fieldname)
-
+        fieldname = self.columns[fidx][1]
+        self.mag_field = fieldname
 
     def show_table(self, catalog, info, starlist):
         self.starlist = starlist
@@ -414,59 +417,77 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
         self.build_table(info)
         
         table = self.table
-        table.clearContents()
-        table.setSortingEnabled(False)
-        # Update the starlist info
-        row = 0
-        table.setRowCount(len(starlist))
+        model = CatalogTableModel(info.columns, self.starlist)
+        table.setModel(model)
+        selectionModel = QtGui.QItemSelectionModel(model, table)
+        table.setSelectionModel(selectionModel)
+        selectionModel.currentRowChanged.connect(self.select_star_cb)
+        model.layoutChanged.connect(self.sort_cb)
         
-        for star in starlist:
-            col = 0
-            for hdr, kwd in self.columns:
-                val = str(star.starInfo.get(kwd, ''))
-                item = QtGui.QTableWidgetItem(val)
-                item.setFlags(item.flags() & ~QtCore.Qt.ItemIsEditable)
-                table.setItem(row, col, item)
-                col += 1
-            row += 1
-        table.setSortingEnabled(True)
+        # set column width to fit contents
+        table.resizeColumnsToContents()
+        table.resizeRowsToContents()
 
+        table.setSortingEnabled(True)
 
     def _update_selections(self):
 
-        maxcol = len(self.columns)-1
-        # Go through all selections in the table and ensure that the
-        # ones in self.selected are highlighted and the others are not.
-        checked = set()
-        for modelidx in self.table.selectedIndexes():
-            idx = modelidx.row()
-            star2 = self.starlist[idx]
-            checked.add(star2)
-            isSelected = star2 in self.selected
-            _range = QtGui.QTableWidgetSelectionRange(idx, 0, idx, maxcol)
-            self.table.setRangeSelected(_range, isSelected)
+        self.table.clearSelection()
 
-        # Mark any other selected stars that are not highlighted
-        for star2 in set(self.selected) - checked:
-            idx = self.starlist.index(star2)
-            _range = QtGui.QTableWidgetSelectionRange(idx, 0, idx, maxcol)
-            self.table.setRangeSelected(_range, True)
+        # Mark any selected stars
+        for star in self.selected:
+            idx = self.starlist.index(star)
+            self.table.selectRow(idx)
+
+    def _get_star_path(self, star):
+        model = self.table.model()
+        starlist = model.starlist
+        star_idx = starlist.index(star)
+        return star_idx
+
+    def get_subset_from_starlist(self, fromidx, toidx):
+        model = self.table.model()
+        starlist = model.starlist
+        res = []
+        for idx in xrange(fromidx, toidx):
+            star = starlist[idx]
+            res.append(star)
+        return res
 
     def _select_tv(self, star, fromtable=False):
         self._update_selections()
-        
-        star_idx = self.starlist.index(star)
-        item = self.table.item(star_idx, 0)
+
+        star_idx = self._get_star_path(star)
+        midx = self.table.indexAt(QtCore.QPoint(star_idx, 0))
 
         if not fromtable:
-            self.table.scrollToItem(item)
+            self.table.scrollTo(midx)
 
-    def _unselect_tv(self, star):
+    def _unselect_tv(self, star, fromtable=False):
         self._update_selections()
 
-    def select_star_cb(self, row, col):
+    def select_star_cb(self, selected, deselected):
         """This method is called when the user selects a star from the table.
         """
+        srows = set()
+        dsrows = set()
+        for midx in selected.indexes():
+            srows.add(midx.row())
+        for midx in deselected.indexes():
+            dsrows.add(midx.row())
+        print "selected: %s  deselected: %s" % (srows, dsrows)
+        if len(srows) > 0:
+            row = srows.pop()
+        else:
+            row = dsrows.pop()
+        star = self.starlist[row]
+        #self.mark_selection(star, fromtable=True)
+        return True
+    
+    def select_star_cb(self, midx_to, midx_from):
+        """This method is called when the user selects a star from the table.
+        """
+        row = midx_to.row()
         star = self.starlist[row]
         self.mark_selection(star, fromtable=True)
         return True
@@ -483,5 +504,60 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
         fieldname = self.columns[index][1]
         self.set_field(fieldname)
 
+    def sort_cb(self):
+        self.replot_stars()
+        
 
+class CatalogTableModel(QtCore.QAbstractTableModel):
+
+    def __init__(self, columns, starlist):
+        super(CatalogTableModel, self).__init__(None)
+
+        self.columns = columns
+        self.starlist = starlist
+
+    def rowCount(self, parent): 
+        return len(self.starlist) 
+ 
+    def columnCount(self, parent): 
+        return len(self.columns) 
+ 
+    def data(self, index, role): 
+        if not index.isValid(): 
+            return None 
+        elif role != QtCore.Qt.DisplayRole: 
+            return None
+
+        star = self.starlist[index.row()]
+        field = self.columns[index.column()][1]
+        return str(star[field])
+
+    def headerData(self, col, orientation, role):
+        if (orientation == QtCore.Qt.Horizontal) and \
+               (role == QtCore.Qt.DisplayRole):
+            return self.columns[col][0]
+        
+        # Hack to make the rows in a TableView all have a
+        # reasonable height for the data
+        elif (role == QtCore.Qt.SizeHintRole) and \
+                 (orientation == QtCore.Qt.Vertical):
+            return 1
+        return None
+
+    def sort(self, Ncol, order):
+        """Sort table by given column number.
+        """
+        def sortfn(star):
+            field = self.columns[Ncol][1]
+            return star[field]
+        
+        self.emit(QtCore.SIGNAL("layoutAboutToBeChanged()"))
+
+        self.starlist = sorted(self.starlist, key=sortfn)        
+
+        if order == QtCore.Qt.DescendingOrder:
+            self.starlist.reverse()
+        self.emit(QtCore.SIGNAL("layoutChanged()"))
+        
+    
 # END

@@ -53,7 +53,8 @@ class FitsImageGtk(FitsImageCairo.FitsImageCairo):
 
     def get_image_as_pixbuf(self):
         rgbobj = self.get_rgb_object()
-        arr = numpy.dstack((rgbobj.r, rgbobj.g, rgbobj.b))
+        #arr = numpy.dstack((rgbobj.r, rgbobj.g, rgbobj.b))
+        arr = rgbobj.get_array('RGB')
 
         try:
             pixbuf = gtk.gdk.pixbuf_new_from_array(arr, gtk.gdk.COLORSPACE_RGB,

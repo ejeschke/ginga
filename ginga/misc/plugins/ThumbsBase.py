@@ -83,6 +83,8 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         for kwd in self.keywords:
             metadata[kwd] = header.get(kwd, 'N/A')
 
+        thumbpath = self.get_thumbpath(path)
+        
         #self.thumb_generator.set_data(data)
         with self.thmblock:
             self.thumb_generator.set_image(image)
@@ -90,7 +92,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
             imgwin = self.thumb_generator.get_image_as_widget()
 
         self.insert_thumbnail(imgwin, thumbkey, thumbname, chname, name, path,
-                              metadata)
+                              thumbpath, metadata)
 
     def update_thumbs(self, nameList):
         
@@ -335,7 +337,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
             thumbname = thumbname.split('.')[0]
 
         self.insert_thumbnail(imgwin, thumbkey, thumbname,
-                              chname, name, path, metadata)
+                              chname, name, path, thumbpath, metadata)
         self.fv.update_pending(timeout=0.001)
         
     def make_thumbs(self, chname, filelist):
@@ -351,14 +353,21 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
             # Do we already have this thumb loaded?
             path = os.path.abspath(path)
             thumbkey = (lcname, path)
+            thumbpath = self.get_thumbpath(path)
+
             with self.thmblock:
-                if self.thumbDict.has_key(thumbkey):
-                    continue
+                try:
+                    bnch = self.thumbDict[thumbkey]
+                    # if these are not equal then the mtime must have
+                    # changed on the file, better reload and regenerate
+                    if bnch.thumbpath == thumbpath:
+                        continue
+                except KeyError:
+                    pass
 
             # Is there a cached thumbnail image on disk we can use?
             save_thumb = cacheThumbs
             image = None
-            thumbpath = self.get_thumbpath(path)
             if (thumbpath != None) and os.path.exists(thumbpath):
                 save_thumb = False
                 try:
@@ -384,6 +393,9 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         return hashlib.sha1(s.encode()).hexdigest()
     
     def get_thumbpath(self, path, makedir=True):
+        if path == None:
+            return None
+        
         path = os.path.abspath(path)
         dirpath, filename = os.path.split(path)
         # Get thumb directory

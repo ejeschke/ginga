@@ -608,12 +608,11 @@ class FitsImageBase(Callback.Callbacks):
             newdata = self.apply_visuals(self._rotimg, 0, vmax)
 
             # Convert data to an index array
+            # Q?: default 'uint' will be the fastest index type?
             self._prergb = newdata.astype('uint')
-            #self._prergb = newdata
 
         time_split3 = time.time()
         if (whence <= 2) or (self._rgbobj == None):
-            #idx = self._prergb.astype('uint32')
             idx = self._prergb
             self.logger.debug("shape of index is %s" % (str(idx.shape)))
 

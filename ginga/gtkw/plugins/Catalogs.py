@@ -447,9 +447,8 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
         self.treeview.connect('cursor-changed', self.select_star_cb)
         self.sw.show_all()
 
-        if self.catalog != None:
-            fieldname = self.columns[fidx][1]
-            self._set_field(fieldname)
+        fieldname = self.columns[fidx][1]
+        self.mag_field = fieldname
 
     def _mkcolfnN(self, kwd):
         def fn(column, cell, model, iter):
@@ -463,6 +462,7 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
         model.set_sort_column_id(idx, gtk.SORT_ASCENDING)
         fn = self.cell_sort_funcs[idx]
         model.set_sort_func(idx, fn)
+        self.replot_stars()
         return True
 
     def _mksrtfnN(self, key):
@@ -495,19 +495,43 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
 
         self.treeview.set_model(listmodel)
 
+    def _get_star_path(self, star):
+        model = self.treeview.get_model()
+        # find path containing this star in the treeview
+        # TODO: is there a more efficient way to do this?
+        for path in xrange(len(self.starlist)):
+            iter = model.get_iter(path)
+            cstar = model.get_value(iter, 0)
+            if cstar == star:
+                return path
+        return None
+
+    def get_subset_from_starlist(self, fromidx, toidx):
+        model = self.treeview.get_model()
+        res = []
+        for idx in xrange(fromidx, toidx):
+            iter = model.get_iter(idx)
+            star = model.get_value(iter, 0)
+            res.append(star)
+        return res
 
     def _select_tv(self, star, fromtable=False):
         treeselection = self.treeview.get_selection()
-        star_idx = self.starlist.index(star)
+        star_idx = self._get_star_path(star)
+        if star_idx == None:
+            return
         treeselection.select_path(star_idx)
         if not fromtable:
             # If the user did not select the star from the table, scroll
             # the table so they can see the selection
-            self.treeview.scroll_to_cell(star_idx, use_align=True, row_align=0.5)
+            self.treeview.scroll_to_cell(star_idx, use_align=True,
+                                         row_align=0.5)
 
-    def _unselect_tv(self, star):
+    def _unselect_tv(self, star, fromtable=False):
         treeselection = self.treeview.get_selection()
-        star_idx = self.starlist.index(star)
+        star_idx = self._get_star_path(star)
+        if star_idx == None:
+            return
         treeselection.unselect_path(star_idx)
 
     def select_star_cb(self, treeview):

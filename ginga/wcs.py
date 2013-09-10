@@ -137,10 +137,16 @@ class BareBonesWCS(BaseWCS):
         except Exception as e:
             cdelt1 = float(self.get_keyword('CDELT1'))
             cdelt2 = float(self.get_keyword('CDELT2'))
-            cd11 = float(self.get_keyword('PC001001')) * cdelt1
-            cd12 = float(self.get_keyword('PC001002')) * cdelt1
-            cd21 = float(self.get_keyword('PC002001')) * cdelt2
-            cd22 = float(self.get_keyword('PC002002')) * cdelt2
+            try:
+                cd11 = float(self.get_keyword('PC1_1')) * cdelt1
+                cd12 = float(self.get_keyword('PC1_2')) * cdelt1
+                cd21 = float(self.get_keyword('PC2_1')) * cdelt2
+                cd22 = float(self.get_keyword('PC2_2')) * cdelt2
+            except KeyError:
+                cd11 = float(self.get_keyword('PC001001')) * cdelt1
+                cd12 = float(self.get_keyword('PC001002')) * cdelt1
+                cd21 = float(self.get_keyword('PC002001')) * cdelt2
+                cd22 = float(self.get_keyword('PC002002')) * cdelt2
 
         return (cd11, cd12, cd21, cd22)
 
