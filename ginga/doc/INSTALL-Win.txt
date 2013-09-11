@@ -1,2 +1,0 @@
-For MS Windows, building from source is left as an exercise for the reader.
-

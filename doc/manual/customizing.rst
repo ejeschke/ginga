@@ -6,6 +6,28 @@ Customizing Ginga
 This chapter explains how you can customize the Ginga reference viewer
 in various ways. 
 
+=====================
+Configuration Options
+=====================
+
+Ginga creates a `.ginga` subdirectory in the user's home directory in
+which various configuration settings can be saved.
+
+general.cfg::
+
+    # General preferences
+    
+    # Preference for fixed and sans fonts
+    fixedFont = 'Monospace'
+    sansFont = 'Sans Serif'
+    
+    # Import matplotlib colormaps in addition to our own set if matplotlib
+    # is installed
+    useMatplotlibColormaps = True
+    channelFollowsFocus = False
+    showBanner = False
+    numImages = 10
+
 .. _sec-bindings:
 
 ==================

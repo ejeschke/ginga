@@ -9,22 +9,26 @@ achieved through the use of plugins.  This modular approach allows a
 large degree of flexiblity and customization, as well as making overall
 design and maintenance of the program simpler.
 
-Plugins are divided into two types: global and local.  A global plugin
-has a single instance shared by all channels, while a local plugin
-creates a unique instance for each channel.  If you switch channels, a
-global plugin will respond to the change by updating itself,
+Plugins are divided into two types: *global* and *local*.
+A global plugin has a single instance shared by all channels, while a
+local plugin creates a unique instance for each channel.  If you switch
+channels, a global plugin will respond to the change by updating itself,
 while a local plugin will remain unchanged if the channel is switched,
-because its operation is specific to a given channel.
+because its operation is specific to a given channel.  (Ginga's concept
+of channels is discussed in :ref:`concepts-channels`.)
 
 This chapter describes the set of plugins that come with Ginga.  Those
-interested in writing their own custom plugins should refer to chapter
-:ref:`sec-writingplugins`. 
+interested in writing their own custom plugins should refer to
+:ref:`sec-writing-global-plugins` or :ref:`sec-writing-local-plugins`.
 
 .. _sec-globalplugins:
 
 ==============
 Global plugins
 ==============
+
+Pan
+===
 
 .. image:: figures/pan-plugin.png
    :align: center
@@ -41,6 +45,9 @@ when they are changed in the corresponding channel image.
 The Pan image also displays the World Coordinate System compass, if
 valid WCS metadata is present in the FITS HDU being viewed in the
 channel.
+
+The Pan plugin usually appears as a sub-pane under the "Info" tab, next
+to the Info plugin.
 
 .. _sec-plugin_info:
 
@@ -78,7 +85,7 @@ Header
 The Header plugin shows the FITS keyword metadata from the image.
 Initially only the primary HDU metadata is shown.  However, in
 conjunction with the MultiDim plugin the metadata for other HDUs will be
-shown.  See the MultiDim plugin description for details.
+shown.  See :ref:`plugins-multidim` for details.
 
 Clicking on a column header will sort the table by values in that
 column, which may be useful for quickly locating a particular keyword.
@@ -117,9 +124,16 @@ and the channel image is zoomed to 10X then the zoom image shown will be
 10+3=13X.  Note that the zoom amount setting can be negative, so a
 setting of -3X with a 10X zoom in the channel image will produce a
 10-3=7X zoom image.
-In both modes the minimum and maximum zoom level of the zoom image is
-limited by the Min Zoom and Max Zoom settings, which are
-user-adjustable.  
+
+The `Lag Time` setting controls how quickly the Zoom plugin responds to
+the movement of the cursor in updating the zoom image.  The value is
+specified in milliseconds.
+
+.. tip:: Usually setting a small lag time *improves* the overall
+	 responsiveness of the Zoom image, and the default value of 2 is
+	 a reasonable one.  You can experiment with the value if the zoom
+	 image seems too jerky or out of sync with the mouse movement in
+	 the channel image window.
 
 .. _sec-plugin_thumbs:
 
@@ -158,41 +172,49 @@ graphically, or using the keyboard shortcuts.  The plugin manager
 toolbar at the bottom of the center pane is the graphical way to start
 an operation.  
 
-.. _sec-plugin_pick:
+.. _plugins_pick:
 
 Pick
 ====
 
 TBD
 
-.. _sec-plugin_header:
+.. _plugins-ruler:
 
 Ruler
 =====
 
 TBD
 
+.. _plugins-multidim:
+
 MultiDim
 ========
 
 TBD
+
+.. _plugins-cuts:
 
 Cuts
 ====
 
 TBD
 
+.. _plugins-histogram:
+
 Histogram
 =========
 
 TBD
+
+.. _plugins-pixtable:
 
 PixTable
 ========
 
 TBD
 
-.. _sec-preferences:
+.. _plugins-preferences:
 
 Preferences
 ===========
@@ -200,6 +222,8 @@ Preferences
 The Preferences plugin sets the preferences on a per-channel basis.
 The preferences for a given channel are inherited from the "Image"
 channel until they are explicitly set and saved using this plugin.
+
+.. _preferences-color:
 
 Color Preferences
 -----------------
@@ -211,25 +235,27 @@ intensity map, color mapping algorithm and color hash table size.
 Together these control the mapping of data values into a 24-bpp RGB
 visual representation.
 
-The "Colormap" control selects which color map should be loaded and
+The `Colormap` control selects which color map should be loaded and
 used.  Click the control to show the list, or simply scroll the mouse
 wheel while hovering the cursor over the control.
 
-The "Intensity" control selects which intensity map should be used
+The `Intensity` control selects which intensity map should be used
 with the color map.  The intensity map is applied just before the color
 map, and can be used to change the standard linear scale of values into
 an inverted scale, logarithmic, etc.
 
-The "Algorithm" control is used to set the initial mapping of pixel
+The `Algorithm` control is used to set the initial mapping of pixel
 values into a hash table.
 
-The "Table Size" control sets the size of the hash table used to map
+The `Table Size` control sets the size of the hash table used to map
 pixel values.
 
 Ginga comes with a good selection of color maps, but should you want
 more you can add custom ones or, if matplotlib is installed, you
 can load all the ones that it has installed.  
 See :ref:`ch-customization` for details.
+
+.. _preferences-zoom:
 
 Zoom Preferences
 ----------------
@@ -239,13 +265,13 @@ Zoom Preferences
 
 The Zoom preferences control Ginga's zooming/scaling behavior.
 
-Ginga supports two zoom algorithms, chosen using the "Zoom Alg" control:
+Ginga supports two zoom algorithms, chosen using the `Zoom Alg` control:
 
 * The *step* algorithm zooms the image inwards in discrete
   steps of 1X, 2X, 3X, etc. or outwards in steps of 1/2X, 1/3X, 1/4X,
   etc.  This algorithm results in the least artifacts visually, but is a
   bit slower to zoom over wide ranges when using a scrolling motion
-  because more "throw" is required to achieve a large zoom change
+  because more `throw` is required to achieve a large zoom change
   (this is not the case if one uses of the shortcut zoom keys, such as
   the digit keys). 
 
@@ -260,21 +286,23 @@ Note that regardless of which method is chosen for the zoom algorithm,
 the zoom can be controlled by holding down Ctrl (coarse) or Shift
 (fine) while scrolling to constrain the zoom rate.
 
-The "Stretch XY" control can be used to stretch one of the axes (X or
+The `Stretch XY` control can be used to stretch one of the axes (X or
 Y) relative to the other.  Select an axis with this control and roll the
-scroll wheel while hovering over the "Stretch Factor" control to
+scroll wheel while hovering over the `Stretch Factor` control to
 stretch the pixels in the selected axis.
 
-The "Scale X" and "Scale Y" controls offer direct access to the
+The `Scale X` and `Scale Y` controls offer direct access to the
 underlying scaling, bypassing the discrete zoom steps.  Here exact
 values can be typed to scale the image.  Conversely, you will see these
 values change as the image is zoomed.
 
-The "Scale Min" and "Scale Max" controls can be used to place a
+The `Scale Min` and `Scale Max` controls can be used to place a
 limit on how much the image can be scaled.
 
-The "Zoom Defaults" button will restore the controls to the Ginga
+The `Zoom Defaults` button will restore the controls to the Ginga
 default values. 
+
+.. _preferences-pan:
 
 Pan Preferences
 ---------------
@@ -284,23 +312,25 @@ Pan Preferences
 
 The Pan preferences control Ginga's panning behavior.
 
-The "Pan X" and "Pan Y" controls offer direct access to set the pan
+The `Pan X` and `Pan Y` controls offer direct access to set the pan
 position in the image (the part of the image located at the center of
 the window)--you can see them change as you pan around the image.
 
-The "Center Image" button sets the pan position to the center of the
+The `Center Image` button sets the pan position to the center of the
 image, as calculated by halving the dimensions in X and Y.
 
-Checking the "Reverse Pan" box reverses the sense of zooming and
+Checking the `Reverse Pan` box reverses the sense of zooming and
 panning in Ginga: the scroll wheel will zoom the image in the opposite
 direction of normal, and when free panning you move to the opposite
 corner of the window to pan to the corner that you want to see.  
 This control is largely for the benefit of those used to the scrolling
 and zooming behavior of some older FITS viewers.
 
-The "Mark Center" check box, when checked, will cause Ginga to draw a
+The `Mark Center` check box, when checked, will cause Ginga to draw a
 small reticle in the center of the image.  This is useful for knowing
 the pan position and for debugging.
+
+.. _preferences-transform:
 
 Transform Preferences
 ---------------------
@@ -312,20 +342,22 @@ The Transform preferences provide for transforming the view of the image
 by flipping the view in X or Y, swapping the X and Y axes, or rotating
 the image in arbitrary amounts. 
 
-The "Flip X" and "Flip Y" checkboxes cause the image view to be
+The `Flip X` and `Flip Y` checkboxes cause the image view to be
 flipped in the corresponding axis.
 
-The "Swap XY" checkbox causes the image view to be altered by swapping
+The `Swap XY` checkbox causes the image view to be altered by swapping
 the X and Y axes.  This can be combined with Flip X and Flip Y to rotate
 the image in 90 degree increments.  These views will render more quickly
 than arbitrary rotations using the Rotate control. 
 
-The "Rotate" control will rotate the image view an arbitrary amount.
+The `Rotate` control will rotate the image view the specified amount.
 The value should be specified in degrees.  Rotate can be specified in
 conjunction with flipping and swapping.
 
-The "Restore" button will restore the view to the default view, which
+The `Restore` button will restore the view to the default view, which
 is unflipped, unswapped and unrotated.
+
+.. _preferences-autocuts:
 
 Auto Cuts Preferences
 ---------------------
@@ -337,10 +369,14 @@ The Auto Cuts preferences control the calculation of auto cut levels for
 the view when the auto cut levels button or key is pressed, or when
 loading a new image with auto cuts enabled. 
 
-The "Auto Method" control is used to choose which auto cuts algorithm
+The `Auto Method` control is used to choose which auto cuts algorithm
 used: "minmax" (minimum maximum values), "histogram" (based on an image
 histogram), "stddev" (based on the standard deviation of pixel values), or 
 "zscale" (based on the ZSCALE algorithm popularized by IRAF).
+As the algorithm is changed, the boxes under it may also change to
+allow changes to parameters particular to each algorithm.
+
+.. _preferences-wcs:
 
 WCS Preferences
 ---------------
@@ -352,11 +388,13 @@ The WCS preferences control the display preferences for the World
 Coordinate System calculations used to report the cursor position in the
 image. 
 
-The "WCS Coords" control is used to select the coordinate system in
+The `WCS Coords` control is used to select the coordinate system in
 which to display the result.
 
-The "WCS Display" control is used to select a sexagesimal (H:M:S)
+The `WCS Display` control is used to select a sexagesimal (H:M:S)
 readout or a decimal degrees readout.
+
+.. _preferences-newimages:
 
 New Image Preferences
 ---------------------
@@ -368,48 +406,46 @@ The New Images preferences determine how Ginga reacts when a new image
 is loaded into the channel.  This includes when an older image is
 revisited by clicking on its thumbnail in the Thumbs plugin pane.
 
-The "Cut New" setting controls whether an automatic cut levels
+The `Cut New` setting controls whether an automatic cut levels
 calculation should be performed on the new image, or whether the
 currently set cut levels should be applied.  The possible settings are:
 
 * on: calculate a new cut levels always;
-
 * override: calculate a new cut levels until the user overrides
-  it by manually setting a cut levels, then turn `off'; or
-
+  it by manually setting a cut levels, then turn "off"; or
 * off: always use the currently set cut levels.
 
-The *override* setting is provided for the convenience of having an
-automatic cut levels, while preventing a manually set cuts from being
-overrided when a new image is ingested.  When typed in the image window, 
-the semicolon key can be used to toggle the mode back to override (from
-"off"), while colon will set the preference to *on*.  The global plugin
-Info panel shows the state of this setting.
+.. tip:: The *override* setting is provided for the convenience of
+	 having an automatic cut levels, while preventing a manually set
+	 cuts from being overrided when a new image is ingested.  When
+	 typed in the image window, the semicolon key can be used to
+	 toggle the mode back to override (from "off"), while colon will
+	 set the preference to *on*.  The global plugin Info panel shows
+	 the state of this setting. 
 
-The "Zoom New" setting controls whether a newly visited image should
+The `Zoom New` setting controls whether a newly visited image should
 be zoomed to fit the window.  There are three possible values: on,
 override, and off:
 
 * on: the new image is always zoomed to fit;
-
 * override: images are automatically fitted until the zoom level is
-  changed manually--then the mode automatically changes to `off', or
-
+  changed manually--then the mode automatically changes to "off", or
 * off: always use the currently set zoom levels.
 
-The *override* setting is provided for the convenience of having an
-automatic zoom, while preventing a manually set zoom level from being
-overrided when a new image is ingested.  When typed in the image window, 
-the apostrophe (aka "single quote") key can be used to toggle the mode
-back to override (from "off"), while quote (aka double quote) will set
-the preference to *on*.  The global plugin Info panel shows the state of
-this setting. 
+.. tip:: The *override* setting is provided for the convenience of
+	 having an automatic zoom, while preventing a manually set zoom
+	 level from being overrided when a new image is ingested.  When
+	 typed in the image window,  the apostrophe (aka "single quote")
+	 key can be used to toggle the mode back to override (from
+	 "off"), while quote (aka double quote) will set the preference
+	 to "on".  The global plugin Info panel shows the state of this
+	 setting.  
 
-The "Center New" box, if checked, will cause newly visited images to
+The `Center New` box, if checked, will cause newly visited images to
 always have the pan position reset to the center of the image.  If
 unchecked, the pan position is unchanged from the previous image.
 
-The "Follow New" setting is used to control whether Ginga will change
+The `Follow New` setting is used to control whether Ginga will change
 the display if a new image is loaded into the channel.  If unchecked,
 the image is loaded (as seen, for example, by its appearance in the
 Thumbs tab), but the display will not change to the new image.  This
@@ -417,30 +453,38 @@ setting is useful in cases where new images are being loaded by some
 automated means into a channel and the user wishes to study the current
 image without being interrupted.
 
-The "Raise New" setting controls whether Ginga will raise the tab of a
+The `Raise New` setting controls whether Ginga will raise the tab of a
 channel when an image is loaded into that channel.  If unchecked then
 Ginga will not raise the tab when an image is loaded into that
 particular channel.
 
-The "Create Thumbnail" setting controls whether Ginga will create a
+The `Create Thumbnail` setting controls whether Ginga will create a
 thumbnail for images loaded into that channel.  In cases where many
 images are being loaded into a channel frequently (e.g. a low frequency
 video feed) it may be undesirable to create thumbnails for all of them.
+
+.. _plugins-catalog:
 
 Catalog
 -------
 
 TBD
 
+.. _plugins-drawing:
+
 Drawing
 -------
 
 TBD
 
+.. _plugins-fbrowser:
+
 FBrowser
 --------
 
 TBD
+
+.. _plugins-wbrowser:
 
 WBrowser
 --------
@@ -453,6 +497,8 @@ Optional Plugins
 There are a number of plugins distributed with Ginga that are not loaded
 by default.  In keeping with the "small is beautiful" mantra, these
 plugins can be loaded when needed.
+
+.. _plugins-rc:
 
 Remote Control
 --------------
@@ -467,49 +513,62 @@ the protocol used.
 
 The remote control module is not loaded by default.  To load it, specify
 the command line option::
+
     --modules=RC
 
 You can then control Ginga from the `grc` program located in the 
 `scripts` directory (and installed with ginga).  Some examples:
 
 Create a new channel::
+
     $ grc ginga add_channel FOO
  
 Load a file::
+
     $ grc ginga load FOO /home/eric/testdata/SPCAM/SUPA01118797.fits
 
 Cut levels::
+
     $ grc channel FOO cut_levels 163 1300
 
 Auto cut levels::
+
     $ grc channel FOO auto_levels
 
 Zoom to fit::
+
     $ grc channel FOO zoom_fit
  
 Transform::
+
     $ grc channel FOO transform 1 0 1
 
 Almost any method on the Ginga shell or a channel can be invoked from
 the remote plugin.  Methods on the shell can be called like this::
+
     $ grc ginga <method> <arg1> <arg2> ...
 
 Channel methods can be called like this::
+
     $ grc channel <chname> <method> <arg1> <arg2> ...
 
 Built in help is available for showing method docstrings.
 
 Show example usage::
+
     $ grc help
 
 Show help for a specific ginga method::
+
     $ grc help ginga <method>
 
 Show help for a specific channel method::
+
     $ grc help channel <chname> <method>
 
 
 Calls can be made from a remote host by simply adding the options::
+
     --host=<hostname> --port=9000
 
 to the command line.
@@ -518,7 +577,10 @@ In some cases, you may need to resort to shell escapes to be able to
 pass certain characters to Ginga.  For example, a leading dash character is
 usually interpreted as a program option.  In order to pass a signed
 integer you may need to do something like::
+
     $ grc -- channel FOO zoom -7
+
+.. _plugins-SAMP:
 
 SAMP Control
 ------------
@@ -529,10 +591,13 @@ interoperate with other astronomical desktop applications.
 
 The SAMP module is not loaded by default.  To load it, specify
 the command line option::
+
     --modules=SAMP
 
 There is no GUI for this plugin.
 Currently, SAMP support is limited to `image.load.fits` messages.
+
+.. _plugins-IRAF:
 
 IRAF Interaction
 ----------------
@@ -546,6 +611,7 @@ similar to IRAF and ds9.  The following IRAF commands are supported:
 
 To use the IRAF plugin, first make sure the environment variable IMTDEV
 is set appropriately, e.g.::
+
     $ export IMTDEV=inet:45005
 
 or::
@@ -557,6 +623,7 @@ by IRAF.
     
 Then start Ginga and IRAF.  For Ginga, the IRAF module is not loaded by
 default.  To load it, specify the command line option::
+
     --modules=IRAF
 
 In Ginga a GUI for the IRAF plugin will appear in the tabs on the right.

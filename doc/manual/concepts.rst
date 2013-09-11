@@ -1,3 +1,5 @@
+.. _ch-core-concepts:
+
 +++++++++++++
 Core Concepts
 +++++++++++++
@@ -5,6 +7,8 @@ Core Concepts
 Ginga operation and documentation is organized around a few core
 concepts and associated nomenclature.  Knowing these may aid in
 understanding the rest of the documentation. 
+
+.. _concepts-workspaces:
 
 ==========
 Workspaces
@@ -25,20 +29,18 @@ forming a new, detached workspace.
 
 In its default configuration, Ginga starts up with a
 single row (horizontal) panel of three workspaces, as shown in
-:ref:`fig-gingadefault`.
+the image below.
 This panel is sandwiched vertically between a menu bar and a status bar.
 
-.. _fig-gingadefault:
-
-.. figure:: figures/gingadefault.png
-   :figwidth: 100%
+.. image:: figures/gingadefault.png
+   :width: 100%
    :align: center
-
-The Ginga reference viewer
 
 The layout of the workspaces is controlled by a table in the Ginga
 startup script.  By changing this table the layout can be substantially
 altered. 
+
+.. _concepts-channels:
 
 ========
 Channels
@@ -51,11 +53,8 @@ category under which similar types of images might be organized.
 Examples: 
 
 * a channel for each type of instrument at a telescope;
-
 * a channel for each observation or calibration target;
-
 * channels based on time or program or proposal identifier;
-
 * etc.
 
 If no channels are specified when Ginga starts up it simply creates a
@@ -81,6 +80,8 @@ Many preferences in Ginga are set on a per-channel basis.  A new channel
 will generally "inherit" the settings for the generic "Image"
 channel until new preferences are defined and saved.
 
+.. _concepts_plugins:
+
 =======
 Plugins
 =======
@@ -92,14 +93,14 @@ a plugin.  For example, a pick operation would invoke and use the Pick
 plugin.  The plugins are each described in more detail in Chapter 
 :ref:`ch-plugins`.  Plugins are written as encapsulated Python modules
 that are loaded dynamically when Ginga starts.  There is an API for
-programming plugins (see Chapter :ref:`sec-writingplugins`).  
+programming plugins (see :ref:`ch-programming-ginga`).  
 
 A plugin may or may not have an associated Graphical User Interface (GUI).
 For those that do have a visible interface, the Ginga startup script
 can map them to certain workspaces.  By manipulating this mapping (along
 with the workspace layout) extremely customized and flexible layouts can
 be achieved.  
-In :ref:`fig-gingadefault` the left workspace contains three
+In the image at the top, the left workspace contains three
 global plugin UIs: the Info, Header and Zoom panes.  The middle workspace
 holds all the viewing panes for each channel.  The right workspace has
 the Dialogs, Thumbs, Contents and Help panes.  The operation of these

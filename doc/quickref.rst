@@ -1,7 +1,10 @@
-#####################
-Ginga Quick Reference
-#####################
+.. _ginga-quick-reference:
 
++++++++++++++++++++++
+Ginga Quick Reference
++++++++++++++++++++++
+
+=================
 Main image window
 =================
 
@@ -9,7 +12,7 @@ These keyboard and mouse operations are available when the main image
 window has the focus.
 
 Panning and Zooming commands
-----------------------------
+============================
 
 +----------------------+--------------------------------------------------+
 | Scroll wheel turned  | Zoom in or out                                   |
@@ -53,7 +56,7 @@ Panning and Zooming commands
 +----------------------+--------------------------------------------------+
 
 Cut levels and colormap commands
---------------------------------
+================================
 
 +----------------------+--------------------------------------------------+
 | a                    | Auto cut levels                                  |
@@ -76,7 +79,7 @@ Cut levels and colormap commands
 +----------------------+--------------------------------------------------+
 
 Transform commands
-------------------
+==================
 
 +----------------------+--------------------------------------------------+
 | Left bracket ([)     | Flip image in X                                  |
@@ -97,7 +100,8 @@ Transform commands
 +----------------------+--------------------------------------------------+
 
 Tab Navigation
---------------
+==============
+
 +----------------------+--------------------------------------------------+
 | I                    | Raise Info tab                                   |
 +----------------------+--------------------------------------------------+
@@ -112,14 +116,14 @@ Tab Navigation
 | C                    | Raise Contents tab                               |
 +----------------------+--------------------------------------------------+
 
-If there are one or more plugins active, additional mouse or keyboard
-bindings may be present.  In general, the left mouse button is used to
-select, pick or move, and the right mouse button is used to draw a
-shape for the operation.  
+.. note:: If there are one or more plugins active, additional mouse
+	  or keyboard bindings may be present.  In general, the left
+	  mouse button is used to select, pick or move, and the right
+	  mouse button is used to draw a shape for the operation.  
 
-On the Mac, control + mouse button can also be used to draw or right
-click.  You can also press and release the space bar to make the next
-drag operation a drawing operation.
+	  On the Mac, control + mouse button can also be used to draw
+	  or right click.  You can also press and release the space bar
+	  to make the next drag operation a drawing operation.
 
 
 

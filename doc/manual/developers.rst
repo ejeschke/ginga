@@ -1,3 +1,5 @@
+.. _ch-programming-ginga:
+
 +++++++++++++++++++++
 Developing with Ginga
 +++++++++++++++++++++
@@ -8,7 +10,7 @@ Developing with Ginga
 Using the basic widget in new programs
 ======================================
 
-.. _sec-globalplugins:
+.. _sec-writing-global-plugins:
 
 =======================
 Writing a global plugin
@@ -89,7 +91,7 @@ constructor) is to examine some of the global plugins that ship with
 Ginga.  Start with a simple one, like Header, and work up to more
 complicated examples like Info.
 
-.. _sec-localplugins:
+.. _sec-writing-local-plugins:
 
 ======================
 Writing a local plugin
