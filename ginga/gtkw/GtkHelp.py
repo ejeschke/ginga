@@ -9,6 +9,8 @@
 #
 import time
 import math
+
+from ginga.gtkw import gtksel
 import gtk
 import gobject
 
@@ -129,7 +131,6 @@ class MDIWorkspace(gtk.Layout):
     def motion_notify_event(self, widget, event):
         button = self.kbdmouse_mask
         if event.is_hint:
-            x, y, state = event.window.get_pointer()
             return
         else:
             x, y, state = event.x, event.y, event.state
@@ -376,6 +377,11 @@ class ComboBox(WidgetMask, gtk.ComboBox):
                 return
         model.insert(j+1, tup)
 
+    def insert_text(self, idx, text):
+        model = self.get_model()
+        tup = (text, )
+        model.insert(idx, tup)
+
     def delete_alpha(self, text):
         model = self.get_model()
         for i in xrange(len(model)):
@@ -394,10 +400,16 @@ class ComboBox(WidgetMask, gtk.ComboBox):
                 self.set_active(i)
                 return
 
+class Notebook(gtk.Notebook):
+    def set_group_id(self, id):
+        if not gtksel.have_gtk3:
+            super(Notebook, self).set_group_id(id)
+
     
 def combo_box_new_text():
     liststore = gtk.ListStore(gobject.TYPE_STRING)
-    combobox = ComboBox(liststore)
+    combobox = ComboBox()
+    combobox.set_model(liststore)
     cell = gtk.CellRendererText()
     combobox.pack_start(cell, True)
     combobox.add_attribute(cell, 'text', 0)
@@ -428,7 +440,8 @@ class Desktop(Callback.Callbacks):
             if tabpos == None:
                 tabpos = gtk.POS_TOP
             # Allows drag-and-drop between notebooks
-            nb.set_group_id(group)
+            if not gtksel.have_gtk3:
+                nb.set_group_id(group)
             if detachable:
                 nb.connect("create-window", self.detach_page_cb, group)
             nb.connect("switch-page", self.switch_page_cb)

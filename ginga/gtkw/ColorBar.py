@@ -10,6 +10,7 @@
 import math
 import numpy
 
+from ginga.gtkw import gtksel
 import gtk, gobject, cairo
 
 from ginga.misc import Callback
@@ -51,9 +52,10 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
         for name in ('motion', 'scroll'):
             self.enable_callback(name)
 
-        self.connect("expose_event", self.expose_event)
-        # GTK3?
-        #self.connect("draw_event", self.draw_event)
+        if not gtksel.have_gtk3:
+            self.connect("expose_event", self.expose_event)
+        else:
+            self.connect("draw", self.draw_event)
         self.connect("configure_event", self.configure_event)
         self.connect("motion_notify_event", self.motion_notify_event)
         self.connect("button_press_event", self.button_press_event)
@@ -93,7 +95,8 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
         # Calculate reasonable spacing for range numbers
         text = "%d" % (int(hival))
         try:
-            cr = self.window.cairo_create()
+            win = self.get_window()
+            cr = win.cairo_create()
             a, b, _wd, _ht, _i, _j = cr.text_extents(text)
             self._avg_pixels_per_range_num = self.t_spacing + _wd
         except Exception, e:
@@ -104,7 +107,8 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
         
     def configure_event(self, widget, event):
         self.surface = None
-        x, y, width, height = widget.get_allocation()
+        rect = widget.get_allocation()
+        x, y, width, height = rect.x, rect.y, rect.width, rect.height
         arr8 = numpy.zeros(height*width*4).astype(numpy.uint8)
         stride = cairo.ImageSurface.format_stride_for_width(cairo.FORMAT_RGB24,
                                                             width)
@@ -125,7 +129,7 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
 
         self.redraw()
 
-    # For Gtk3 eventually...
+    # For Gtk3
     def draw_event(self, widget, cr):
         if self.surface != None:
             self.logger.debug("surface is %s" % self.surface)
@@ -140,7 +144,8 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
         x , y, width, height = event.area
         self.logger.debug("surface is %s" % self.surface)
         if self.surface != None:
-            cr = widget.window.cairo_create()
+            win = widget.get_window()
+            cr = win.cairo_create()
             # set clip area for exposed region
             cr.rectangle(x, y, width, height)
             cr.clip()
@@ -154,7 +159,8 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
     def do_expose_event(self, event):
 
         # Create the cairo context
-        cr = self.window.cairo_create()
+        win = self.get_window()
+        cr = win.cairo_create()
 
         # TODO:
         ## # Restrict Cairo to the exposed area; avoid extra work
@@ -162,7 +168,8 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
         ##              event.area.width, event.area.height)
         ## cr.clip()
 
-        ## self.draw(cr, *self.window.get_size())
+        ## win = self.get_window()
+        ## self.draw(cr, *win.get_size())
         self.draw(cr)
 
 
@@ -248,15 +255,15 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
 
 
     def redraw(self):
-        ## if not self.window:
+        win = self.get_window()
+        ## if not win:
         ##     return
-        ## cr = self.window.cairo_create()
+        ## cr = win.cairo_create()
         if not self.surface:
             return
         cr = cairo.Context(self.surface)
         self.draw(cr)
 
-        win = self.window
         win.invalidate_rect(None, True)
         # Process expose events right away so window is responsive
         # to scrolling
@@ -299,10 +306,11 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
         # event.button, event.x, event.y
         x = event.x; y = event.y
         button = event.button
+        win = self.get_window()
         #print "button release at %dx%d button=%d" % (x, y, button)
         if button == 1:
             dx = x - self._start_x
-            wd, ht = self.window.get_size()
+            wd, ht = win.get_size()
             pct = float(dx) / float(wd)
             #print "dx=%f wd=%d pct=%f" % (dx, wd, pct)
             self.shift_colormap(pct)
@@ -317,14 +325,19 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
     def motion_notify_event(self, widget, event):
         button = 0
         if event.is_hint:
-            x, y, state = event.window.get_pointer()
+            tup = event.window.get_pointer()
+            if gtksel.have_gtk3:
+                xx, x, y, state = tup
+            else:
+                x, y, state = tup
         else:
             x, y, state = event.x, event.y, event.state
 
         btn1_down = state & gtk.gdk.BUTTON1_MASK
         if btn1_down:
+            win = self.get_window()
             dx = x - self._start_x
-            wd, ht = self.window.get_size()
+            wd, ht = win.get_size()
             pct = float(dx) / float(wd)
             #print "dx=%f wd=%d pct=%f" % (dx, wd, pct)
             self.shift_colormap(pct)

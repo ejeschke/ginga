@@ -40,7 +40,7 @@ class Pick(PickBase.PickBase):
 
         vpaned = gtk.VPaned()
 
-        nb = gtk.Notebook()
+        nb = GtkHelp.Notebook()
         #nb.set_group_id(group)
         #nb.connect("create-window", self.detach_page, group)
         nb.set_tab_pos(gtk.POS_RIGHT)
@@ -146,7 +146,7 @@ class Pick(PickBase.PickBase):
         fr.set_shadow_type(gtk.SHADOW_ETCHED_OUT)
         fr.set_label_align(0.1, 0.5)
 
-        nb = gtk.Notebook()
+        nb = GtkHelp.Notebook()
         #nb.set_group_id(group)
         #nb.connect("create-window", self.detach_page, group)
         nb.set_tab_pos(gtk.POS_BOTTOM)

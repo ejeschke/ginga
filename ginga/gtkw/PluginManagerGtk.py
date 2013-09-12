@@ -11,6 +11,7 @@ import sys
 import threading
 import traceback
 
+from ginga.gtkw import gtksel
 import gtk
 
 from ginga.misc import Bunch, Future
@@ -152,10 +153,14 @@ class PluginManager(object):
         bnch = self.active[name]
         if event.button == 1:
             return self.set_focus(name)
-            #return bnch.menu.popup(None, None, None, event.button, event.time)
 
         elif event.button == 3:
-            return bnch.menu.popup(None, None, None, event.button, event.time)
+            if gtksel.have_gtk3:
+                return bnch.menu.popup(None, None, None, None,
+                                       event.button, event.time)
+            else:
+                return bnch.menu.popup(None, None, None,
+                                       event.button, event.time)
 
         return False
 

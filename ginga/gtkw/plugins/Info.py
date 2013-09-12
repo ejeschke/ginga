@@ -32,7 +32,7 @@ class Info(GingaPlugin.GlobalPlugin):
         fv.set_callback('active-image', self.focus_cb)
         
     def build_gui(self, container):
-        nb = gtk.Notebook()
+        nb = GtkHelp.Notebook()
         nb.set_group_id(-30)
         nb.set_tab_pos(gtk.POS_BOTTOM)
         nb.set_scrollable(False)

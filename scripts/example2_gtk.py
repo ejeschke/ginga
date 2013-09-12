@@ -10,12 +10,13 @@
 #
 import sys, os
 import logging, logging.handlers
-import gtk
 
 from ginga import AstroImage
 from ginga.gtkw.FitsImageCanvasGtk import FitsImageCanvas
-from ginga.gtkw import FileSelection
+from ginga.gtkw import FileSelection, GtkHelp
 from ginga import colors
+
+import gtk
 
 STD_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcName)s) | %(message)s'
 
@@ -66,7 +67,7 @@ class FitsViewer(object):
         
         hbox = gtk.HBox(spacing=5)
 
-        wdrawtype = gtk.combo_box_new_text()
+        wdrawtype = GtkHelp.combo_box_new_text()
         self.drawtypes = fi.get_drawtypes()
         index = 0
         for name in self.drawtypes:
@@ -77,7 +78,7 @@ class FitsViewer(object):
         wdrawtype.connect('changed', self.set_drawparams)
         self.wdrawtype = wdrawtype
 
-        wdrawcolor = gtk.combo_box_new_text()
+        wdrawcolor = GtkHelp.combo_box_new_text()
         index = 0
         for name in self.drawcolors:
             wdrawcolor.insert_text(index, name)
@@ -192,7 +193,7 @@ def main(options, args):
     if len(args) > 0:
         fv.load_file(args[0])
 
-    gtk.mainloop()
+    gtk.main()
     
 if __name__ == "__main__":
    

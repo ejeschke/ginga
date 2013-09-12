@@ -10,11 +10,12 @@
 #
 import sys, os
 import logging
-import gtk
 
 from ginga.gtkw.FitsImageGtk import FitsImageZoom
 from ginga.gtkw import FileSelection
 from ginga.AstroImage import pyfits
+
+import gtk
 
 
 STD_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcName)s) | %(message)s'
@@ -110,8 +111,7 @@ def main(options, args):
     if len(args) > 0:
         fv.load_file(args[0])
 
-    gtk.mainloop()
-
+    gtk.main()
     
 if __name__ == '__main__':
     main(None, sys.argv[1:])

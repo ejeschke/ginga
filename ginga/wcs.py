@@ -263,23 +263,19 @@ class WcslibWCS(BaseWCS):
         if unit.upper() == 'DEGREE':
             self.header.update('CUNIT2', 'deg')
 
-        # HICIAO makes a bad CTYPE2 keyword
-        unit = self.header.get('CTYPE2', 'DEC--TAN')
-        if unit.upper() == 'DEC---TAN':
-            self.header.update('CTYPE2', 'DEC--TAN')
-
     def load_header(self, header, fobj=None):
         if isinstance(header, pyfits.Header):
             self.header = header
         else:
             # pywcs only operates on pyfits headers
             self.header = pyfits.Header()
-            for key, value in header.items():
+            for kwd in header.keys():
                 try:
-                    self.header.update(key, value)
+                    bnch = header.get_card(kwd)
+                    self.header.update(kwd, bnch.value, comment=bnch.comment)
                 except Exception, e:
-                    # TEMP
-                    pass
+                    self.logger.warn("Error setting keyword '%s': %s" % (
+                            kwd, str(e)))
 
         self.fix_bad_headers()
         

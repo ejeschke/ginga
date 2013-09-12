@@ -13,8 +13,7 @@ import Queue
 import traceback
 
 # GUI imports
-import pygtk
-pygtk.require('2.0')
+from ginga.gtkw import gtksel
 import gtk
 import gobject
 import pango
@@ -264,7 +263,8 @@ class GingaView(GtkMain.GtkMain):
         ## lbl = gtk.Label('')
         ## lbl.set_justify(gtk.JUSTIFY_CENTER)
         lbl = gtk.Statusbar()
-        lbl.set_has_resize_grip(True)
+        if not gtksel.have_gtk3:
+            lbl.set_has_resize_grip(True)
         self.w.ctx_id = None
         self.w.status = lbl
         self.w.mframe.pack_end(self.w.status, expand=False, fill=True,
@@ -747,7 +747,10 @@ class GingaView(GtkMain.GtkMain):
     def invoke_op_cb(self, button, event):
         menu = self.w.operation
         menu.show_all()
-        menu.popup(None, None, None, event.button, event.time)
+        if gtksel.have_gtk3:
+            menu.popup(None, None, None, None, event.button, event.time)
+        else:
+            menu.popup(None, None, None, event.button, event.time)
         
     def start_operation_cb(self, name):
         index = self.w.channel.get_active()

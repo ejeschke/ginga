@@ -164,7 +164,7 @@ def main(options, args):
         from ginga.qtw.GingaQt import GingaView
     else:
         try:
-            import gtk
+            #import gtk
             from ginga.gtkw.GingaGtk import GingaView
         except ImportError:
             try:

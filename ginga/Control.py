@@ -17,11 +17,16 @@ import Queue
 import mimetypes
 
 import numpy
+try:
+    import magic
+    have_magic = True
+
+except ImportError:
+    have_magic = False
 
 # Local application imports
 from ginga import cmap, imap, Catalog, AstroImage, PythonImage, FitsImage
 from ginga.misc import Bunch, Datasrc, Callback
-
 
 #pluginconfpfx = 'plugins'
 pluginconfpfx = None
@@ -228,7 +233,7 @@ class GingaControl(Callback.Callbacks):
         for url in urls:
             match = re.match(r"^file://(.+)$", url)
             if match:
-                fitspath = match.group(1)
+                fitspath = match.group(1).strip()
                 #self.load_file(fitspath)
                 chname = self.get_channelName(fitsimage)
                 self.nongui_do(self.load_file, fitspath, chname=chname,
@@ -347,19 +352,44 @@ class GingaControl(Callback.Callbacks):
         
     # BASIC IMAGE OPERATIONS
 
+    def guess_filetype(self, filepath):
+        # If we have python-magic, use it to determine file type
+        typ = None
+        if have_magic:
+            try:
+                typ = magic.from_file(filepath, mime=True)
+            except Exception, e:
+                pass
+
+        if typ == None:
+            try:
+                typ, enc = mimetypes.guess_type(filepath)
+            except Exception, e:
+                pass
+
+        if typ:
+            typ, subtyp = typ.split('/')
+            self.logger.debug("MIME type is %s/%s" % (typ, subtyp))
+            return (typ, subtyp)
+
+        raise ControlError("Can't determine file type of '%s'" % (filepath))
+
     def load_image(self, filepath):
         # Create an image.  Assume type to be an AstroImage unless
         # the MIME association says it is something different.
-        image = AstroImage.AstroImage(logger=self.logger)
+        try:
+            typ, subtyp = self.guess_filetype(filepath)
+        except Exception:
+            # Can't determine file type: assume and attempt FITS
+            typ, subtyp = 'image', 'fits'
+        
+        if (typ == 'image') and (subtyp != 'fits'):
+            image = PythonImage.PythonImage(logger=self.logger)
+        else:
+            image = AstroImage.AstroImage(logger=self.logger)
+
         try:
             self.logger.info("Loading image from %s" % (filepath))
-            typ, enc = mimetypes.guess_type(filepath)
-            if typ:
-                typ, subtyp = typ.split('/')
-                self.logger.info("MIME type is %s/%s" % (typ, subtyp))
-                if (typ == 'image') and (subtyp != 'fits'):
-                    image = PythonImage.PythonImage(logger=self.logger)
-
             image.load_file(filepath)
             #self.gui_do(chinfo.fitsimage.onscreen_message, "")
 

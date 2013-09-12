@@ -66,7 +66,8 @@ class GtkMain(object):
         # Process "out-of-band" GTK events
         try:
             while gtk.events_pending():
-                gtk.main_iteration(False)
+                #gtk.main_iteration(False)
+                gtk.main_iteration()
         finally:
             pass
 
@@ -107,7 +108,8 @@ class GtkMain(object):
         # Process "out-of-band" GTK events again
         try:
             while gtk.events_pending():
-                gtk.main_iteration(False)
+                #gtk.main_iteration(False)
+                gtk.main_iteration()
         finally:
             pass
 

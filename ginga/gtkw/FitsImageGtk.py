@@ -7,14 +7,21 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 
-import gobject
+import sys, os
+import threading
+
+from ginga.gtkw import gtksel
 import gtk
+import gobject
 import cairo
 import numpy
-import threading
 
 from ginga.cairow import FitsImageCairo
 from ginga import Mixins, Bindings, colors
+
+moduleHome = os.path.split(sys.modules[__name__].__file__)[0]
+icon_dir = os.path.abspath(os.path.join(moduleHome, '..', 'icons'))
+
 
 class FitsImageGtkError(FitsImageCairo.FitsImageCairoError):
     pass
@@ -27,9 +34,10 @@ class FitsImageGtk(FitsImageCairo.FitsImageCairo):
                                                settings=settings)
 
         imgwin = gtk.DrawingArea()
-        imgwin.connect("expose_event", self.expose_event)
-        # GTK3?
-        #imgwin.connect("draw_event", self.draw_event)
+        if not gtksel.have_gtk3:
+            imgwin.connect("expose_event", self.expose_event)
+        else:
+            imgwin.connect("draw", self.draw_event)
         imgwin.connect("configure_event", self.configure_event)
         imgwin.set_events(gtk.gdk.EXPOSURE_MASK)
         self.imgwin = imgwin
@@ -57,15 +65,16 @@ class FitsImageGtk(FitsImageCairo.FitsImageCairo):
         arr = rgbobj.get_array('RGB')
 
         try:
-            pixbuf = gtk.gdk.pixbuf_new_from_array(arr, gtk.gdk.COLORSPACE_RGB,
-                                                   8)
+            pixbuf = gtksel.pixbuf_new_from_array(arr, gtk.gdk.COLORSPACE_RGB,
+                                                  8)
         except Exception, e:
             #print "ERROR MAKING PIXBUF", str(e)
             # pygtk might have been compiled without numpy support
             daht, dawd, depth = arr.shape
             rgb_buf = self._get_rgbbuf(arr)
-            pixbuf = gtk.gdk.pixbuf_new_from_data(rgb_buf, gtk.gdk.COLORSPACE_RGB,
-                                                  False, 8, dawd, daht, dawd*3)
+            pixbuf = gtksel.pixbuf_new_from_data(rgb_buf,
+                                                 gtk.gdk.COLORSPACE_RGB,
+                                                 False, 8, dawd, daht, dawd*3)
             
         return pixbuf
 
@@ -93,8 +102,8 @@ class FitsImageGtk(FitsImageCairo.FitsImageCairo):
         dawd = self.surface.get_width()
         daht = self.surface.get_height()
         rgb_buf = bytes(self.surface.get_data())
-        pixbuf = gtk.gdk.pixbuf_new_from_data(rgb_buf, gtk.gdk.COLORSPACE_RGB,
-                                              False, 8, dawd, daht, dawd*3)
+        pixbuf = gtksel.pixbuf_new_from_data(rgb_buf, gtk.gdk.COLORSPACE_RGB,
+                                             False, 8, dawd, daht, dawd*3)
             
         return pixbuf
 
@@ -140,7 +149,7 @@ class FitsImageGtk(FitsImageCairo.FitsImageCairo):
         if not self.surface:
             return
             
-        win = self.imgwin.window
+        win = self.imgwin.get_window()
         if win != None and self.surface != None:
             #imgwin_wd, imgwin_ht = self.get_window_size()
             win.invalidate_rect(None, True)
@@ -166,7 +175,8 @@ class FitsImageGtk(FitsImageCairo.FitsImageCairo):
         x , y, width, height = event.area
         self.logger.debug("surface is %s" % self.surface)
         if self.surface != None:
-            cr = widget.window.cairo_create()
+            win = widget.get_window()
+            cr = win.cairo_create()
 
             # set clip area for exposed region
             cr.rectangle(x, y, width, height)
@@ -181,7 +191,8 @@ class FitsImageGtk(FitsImageCairo.FitsImageCairo):
         
     def configure_event(self, widget, event):
         self.surface = None
-        x, y, width, height = widget.get_allocation()
+        rect = widget.get_allocation()
+        x, y, width, height = rect.x, rect.y, rect.width, rect.height
         self.logger.debug("allocation is %d,%d %dx%d" % (
             x, y, width, height))
         #width, height = width*2, height*2
@@ -189,9 +200,9 @@ class FitsImageGtk(FitsImageCairo.FitsImageCairo):
         return True
 
     def set_cursor(self, cursor):
-        win = self.imgwin.window
+        win = self.imgwin.get_window()
         if win != None:
-            win.set_cursor(cursor.cur)
+            win.set_cursor(cursor)
         
     def define_cursor(self, ctype, cursor):
         self.cursor[ctype] = cursor
@@ -227,7 +238,8 @@ class FitsImageEvent(FitsImageGtk):
                               settings=settings)
 
         imgwin = self.imgwin
-        imgwin.set_flags(gtk.CAN_FOCUS)
+        imgwin.set_can_focus(True)
+        #imgwin.set_double_buffered(False)
         imgwin.connect("map_event", self.map_event)
         imgwin.connect("focus_in_event", self.focus_event, True)
         imgwin.connect("focus_out_event", self.focus_event, False)
@@ -254,11 +266,17 @@ class FitsImageEvent(FitsImageGtk):
                          | gtk.gdk.SCROLL_MASK)
 
         # Set up widget as a drag and drop destination
-        self.TARGET_TYPE_TEXT = 80
-        toImage = [ ( "text/plain", 0, self.TARGET_TYPE_TEXT ) ]
-        imgwin.connect("drag_data_received", self.drop_event)
-        imgwin.drag_dest_set(gtk.DEST_DEFAULT_ALL,
-                             toImage, gtk.gdk.ACTION_COPY)
+        imgwin.connect("drag-data-received", self.drop_event)
+        if gtksel.have_gtk3:
+            self.TARGET_TYPE_TEXT = 0
+            imgwin.drag_dest_set(gtk.DestDefaults.ALL,
+                                 [], gtk.gdk.DragAction.COPY)
+            imgwin.drag_dest_add_text_targets()
+        else:
+            self.TARGET_TYPE_TEXT = 80
+            toImage = [ ( "text/plain", 0, self.TARGET_TYPE_TEXT ) ]
+            imgwin.drag_dest_set(gtk.DEST_DEFAULT_ALL,
+                                 toImage, gtk.gdk.ACTION_COPY)
         
         # last known window mouse position
         self.last_win_x = 0
@@ -330,11 +348,12 @@ class FitsImageEvent(FitsImageGtk):
             'f12': 'f12',
             }
         
-        # Define cursors for pick and pan
-        hand = openHandCursor()
-        self.define_cursor('pan', hand)
-        cross = thinCrossCursor('aquamarine')
-        self.define_cursor('pick', cross)
+        # Define cursors
+        for curname, filename in (('pan', 'openHandCursor.png'),
+                               ('pick', 'thinCrossCursor.png')):
+            path = os.path.join(icon_dir, filename)
+            cur = gtksel.make_cursor(self.imgwin, path, 8, 8)
+            self.define_cursor(curname, cur)
 
         for name in ('motion', 'button-press', 'button-release',
                      'key-press', 'key-release', 'drag-drop', 
@@ -414,7 +433,11 @@ class FitsImageEvent(FitsImageGtk):
     def motion_notify_event(self, widget, event):
         button = 0
         if event.is_hint:
-            x, y, state = event.window.get_pointer()
+            tup = event.window.get_pointer()
+            if gtksel.have_gtk3:
+                xx, x, y, state = tup
+            else:
+                x, y, state = tup
         else:
             x, y, state = event.x, event.y, event.state
         self.last_win_x, self.last_win_y = x, y
@@ -453,7 +476,7 @@ class FitsImageEvent(FitsImageGtk):
                    time):
         if targetType != self.TARGET_TYPE_TEXT:
             return False
-        paths = selection.data.split('\n')
+        paths = selection.get_text().split('\n')
         self.logger.debug("dropped filename(s): %s" % (str(paths)))
         return self.make_callback('drag-drop', paths)
 
@@ -498,103 +521,4 @@ class FitsImageZoom(Mixins.UIMixin, FitsImageEvent):
         bindings.set_bindings(self)
     
         
-class thinCrossCursor(object):
-    def __init__(self, color='red'):
-        self.color = color
-        height = 16
-        width  = 16
-        arr8 = numpy.zeros(height*width*4).astype(numpy.uint8)
-        stride = cairo.ImageSurface.format_stride_for_width(cairo.FORMAT_ARGB32,
-                                                            width)
-
-        surface = cairo.ImageSurface.create_for_data(arr8,
-                                                     cairo.FORMAT_ARGB32,
-                                                     width, height, stride)
-        cr = cairo.Context(surface)
-        # Fill square with full transparency
-        cr.rectangle(0, 0, width, height)
-        cr.set_source_rgba(0.0, 0.0, 0.0, 0.0)
-        cr.fill()
-
-        # Set cursor color
-        r, g, b = colors.lookup_color(color)
-
-        # Something I don't get about Cairo--why do I have to specify
-        # BGRA for a method called set_source_RGBA &%^%*($ !!! 
-        #cr.set_source_rgba(r, g, b, 1.0)
-        cr.set_source_rgba(b, g, r, 1.0)
-        cr.set_line_width(1)
-
-        # NOTE: ".5" coordinates are to get sharp, single pixel lines
-        # due to the way Cairo renders--more ^&$%(*@ !!
-        # See http://cairographics.org/FAQ/#sharp_lines
-        cr.move_to(0, 6.5)
-        cr.line_to(5, 6.5)
-        cr.move_to(0, 8.5)
-        cr.line_to(5, 8.5)
-        
-        cr.move_to(10, 6.5)
-        cr.line_to(15, 6.5)
-        cr.move_to(10, 8.5)
-        cr.line_to(15, 8.5)
-        
-        cr.move_to(6.5, 0)
-        cr.line_to(6.5, 5)
-        cr.move_to(8.5, 0)
-        cr.line_to(8.5, 5)
-        
-        cr.move_to(6.5, 10)
-        cr.line_to(6.5, 15)
-        cr.move_to(8.5, 10)
-        cr.line_to(8.5, 15)
-
-        cr.stroke()
-
-        data = arr8.reshape((height, width, 4))
-        try:
-            pixbuf = gtk.gdk.pixbuf_new_from_array(data,
-                                                   gtk.gdk.COLORSPACE_RGB, 8)
-        except Exception, e:
-            #print "ERROR MAKING PIXBUF", str(e)
-            # pygtk might have been compiled without numpy support
-            daht, dawd, depth = data.shape
-            rgb_buf = data.tostring(order='C')
-            pixbuf = gtk.gdk.pixbuf_new_from_data(rgb_buf, gtk.gdk.COLORSPACE_RGB,
-                                                  False, 8, dawd, daht, dawd*3)
-        # Is this always going to be the correct display?  Does it matter?
-        display = gtk.gdk.display_get_default()
-        self.cur = gtk.gdk.Cursor(display, pixbuf, 8, 8)
-        
-
-class openHandCursor(object):
-    def __init__(self, color='red'):
-
-        self.xpm_data = [
-            b"16 16 3 1 ",
-            b"  c black",
-            b". c gray100",
-            b"X c None",
-            b"XXXXXXX  XXXXXXX",
-            b"XXX  X ..   XXXX",
-            b"XX ..  .. .. XXX",
-            b"XX ..  .. .. X X",
-            b"XXX .. .. ..  . ",
-            b"XXX .. .. .. .. ",
-            b"X  . ....... .. ",
-            b" ..  .......... ",
-            b" ... ......... X",
-            b"X ............ X",
-            b"XX ........... X",
-            b"XX .......... XX",
-            b"XXX ......... XX",
-            b"XXXX ....... XXX",
-            b"XXXXX ...... XXX",
-            b"XXXXXXXXXXXXXXXX"
-            ]
-        pixbuf = gtk.gdk.pixbuf_new_from_xpm_data(self.xpm_data)
-
-        # Is this always going to be the correct display?  Does it matter?
-        display = gtk.gdk.display_get_default()
-        self.cur = gtk.gdk.Cursor(display, pixbuf, 8, 8)
-
 #END
