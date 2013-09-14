@@ -7,6 +7,7 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+import sys, os
 import math
 import numpy
 import threading
@@ -14,6 +15,10 @@ import StringIO
 
 from ginga.qtw.QtHelp import QtGui, QtCore
 from ginga import FitsImage, Mixins, Bindings
+
+moduleHome = os.path.split(sys.modules[__name__].__file__)[0]
+icon_dir = os.path.abspath(os.path.join(moduleHome, '..', 'icons'))
+
 
 class FitsImageQtError(FitsImage.FitsImageError):
     pass
@@ -331,7 +336,7 @@ class FitsImageQt(FitsImage.FitsImageBase):
 
     def set_cursor(self, cursor):
         if self.imgwin:
-            self.imgwin.setCursor(cursor.cur)
+            self.imgwin.setCursor(cursor)
         
     def define_cursor(self, ctype, cursor):
         self.cursor[ctype] = cursor
@@ -484,11 +489,12 @@ class FitsImageEvent(FitsImageQt):
         # Does widget accept focus when mouse enters window
         self.follow_focus = True
 
-        # Define cursors for pick and pan
-        hand = openHandCursor()
-        self.define_cursor('pan', hand)
-        cross = thinCrossCursor('aquamarine')
-        self.define_cursor('pick', cross)
+        # Define cursors
+        for curname, filename in (('pan', 'openHandCursor.png'),
+                               ('pick', 'thinCrossCursor.png')):
+            path = os.path.join(icon_dir, filename)
+            cur = make_cursor(path, 8, 8)
+            self.define_cursor(curname, cur)
 
         # @$%&^(_)*&^ qt!!
         self._keytbl = {
@@ -703,47 +709,12 @@ class FitsImageZoom(Mixins.UIMixin, FitsImageEvent):
         bindings.set_bindings(self)
 
         
-class thinCrossCursor(object):
-    def __init__(self, color='red'):
-        pm = QtGui.QPixmap(16,16)
-        mask = QtGui.QBitmap(16,16)
-        black = QtCore.Qt.color1
-        white = QtCore.Qt.color0
-        clr = QtGui.QColor(color)
+def make_cursor(iconpath, x, y):
 
-        pm.fill(clr)
-        mask.fill(black)
-        p1 = QtGui.QPainter(mask)
-        p1.setPen(white)
-        
-        p1.drawLine(0,6,5,6)
-        p1.drawLine(0,8,5,8)
-        
-        p1.drawLine(10,6,15,6)
-        p1.drawLine(10,8,15,8)
-        
-        p1.drawLine(6,0,6,5)
-        p1.drawLine(8,0,8,5)
-        
-        p1.drawLine(6,10,6,15)
-        p1.drawLine(8,10,8,15)
-        
-        p1.end()
-        pm.setAlphaChannel(mask)
-        self.cur = QtGui.QCursor(pm, 8, 8)
-        
+    image = QtGui.QImage()
+    image.load(iconpath)
+    pm = QtGui.QPixmap(image)
+    return QtGui.QCursor(pm, x, y)
 
-class openHandCursor(object):
-    def __init__(self, color='red'):
-
-        self.png_data = b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x10\x00\x00\x00\x10\x08\x04\x00\x00\x00\xb5\xfa7\xea\x00\x00\x00\tpHYs\x00\x00\x0b\x89\x00\x00\x0b\x89\x017\xc9\xcb\xad\x00\x00\x00RIDAT(\xcf\x85\xd0\xe1\x0e\x00\x10\x08\x85\xd1\xef\xfd_\xfa\xfa\x81tW\x96&\x9b\x0e\x1aD\x0e\x84\xeaN\x14\x90t\xeb\x06^a\xaf'\xcf`O#9#\xe5V*\x88~\xae\xf5\x11\xc0\xdfWa`'\xca-$\xf2\x05\x7f2\x00d_=\x80J\xec\xab;\xd2\x80>\x16x0t\x9a\xaf\x1e\xaab\x00\x00\x00\x00IEND\xaeB`\x82"
-        pm = QtGui.QPixmap(16,16)
-        mask = QtGui.QBitmap(16,16)
-        white = QtCore.Qt.color0
-
-        pm.loadFromData(self.png_data)
-        mask.fill(white)
-        pm.setAlphaChannel(mask)
-        self.cur = QtGui.QCursor(pm, 8, 8)
 
 #END

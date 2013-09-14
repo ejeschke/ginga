@@ -55,16 +55,10 @@ class FitsImageBase(Callback.Callbacks):
         else:
             self.logger = logging.Logger('FitsImageBase')
 
-        # RGB mapper
-        if rgbmap:
-            self.rgbmap = rgbmap
-        else:
-            rgbmap = RGBMap.RGBMapper()
-            self.rgbmap = rgbmap
-
-        # Object that calculates auto cut levels
-        klass = AutoCuts.get_autocuts('histogram')
-        self.autocuts = klass(self.logger)
+        # Create settings and set defaults
+        if settings == None:
+            settings = Settings.SettingGroup(logger=self.logger)
+        self.t_ = settings
         
         # Dummy 1-pixel image
         self.image = AstroImage.AstroImage(numpy.zeros((1, 1)),
@@ -72,14 +66,16 @@ class FitsImageBase(Callback.Callbacks):
                                            )
         self.image.set(nothumb=True)
         
+        # RGB mapper
+        if rgbmap:
+            self.rgbmap = rgbmap
+        else:
+            rgbmap = RGBMap.RGBMapper()
+            self.rgbmap = rgbmap
+
         # for debugging
         self.name = str(self)
 
-        # Create settings and set defaults
-        if settings == None:
-            settings = Settings.SettingGroup(logger=self.logger)
-        self.t_ = settings
-        
         # for color mapping
         self.t_.addDefaults(color_map='ramp', intensity_map='ramp',
                             color_algorithm='linear',
@@ -161,6 +157,11 @@ class FitsImageBase(Callback.Callbacks):
         # misc
         self.t_.addDefaults(use_embedded_profile=True, auto_orient=False)
 
+        # Object that calculates auto cut levels
+        name = self.t_.get('autocut_method', 'histogram')
+        klass = AutoCuts.get_autocuts(name)
+        self.autocuts = klass(self.logger)
+        
         # PRIVATE IMPLEMENTATION STATE
         
         # image window width and height (see set_window_dimensions())
@@ -221,6 +222,7 @@ class FitsImageBase(Callback.Callbacks):
         # For callbacks
         for name in ('transform', 'image-set', 'configure', 'redraw', ):
             self.enable_callback(name)
+
 
     def set_window_size(self, width, height, redraw=True):
         """Report the size of the window to display the image.

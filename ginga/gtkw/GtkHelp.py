@@ -404,6 +404,8 @@ class Notebook(gtk.Notebook):
     def set_group_id(self, id):
         if not gtksel.have_gtk3:
             super(Notebook, self).set_group_id(id)
+        else:
+            super(Notebook, self).set_group_name(str(id))
 
     
 def combo_box_new_text():
@@ -529,7 +531,6 @@ class Desktop(Callback.Callbacks):
 
     def remove_tab(self, tabname):
         nb, page_num = self._find_nb(tabname)
-        print "removing tab %s from %s at index %d" % (tabname, nb, page_num)
         if nb:
             nb.remove_page(page_num)
             del self.tab[tabname]
@@ -635,7 +636,6 @@ class Desktop(Callback.Callbacks):
                 widget.set_size_request(params.width, params.height)
 
         def make_widget(kind, paramdict, args, pack):
-            #print "ARGS ARE ", args
             kind = kind.lower()
 
             # Process workspace parameters
@@ -644,7 +644,6 @@ class Desktop(Callback.Callbacks):
                                  show_border=False, scrollable=True,
                                  detachable=True, tabpos=gtk.POS_TOP)
             params.update(paramdict)
-            #print "PARAMS ARE", params
 
             if kind == 'widget':
                 widget = args[0]
@@ -702,7 +701,7 @@ class Desktop(Callback.Callbacks):
 
             elif len(cols) == 1:
                 hpaned = gtk.HBox()
-                make(cols[0], lambda w: hpaned.pack_start(w, expand=True, fill=True))
+                make(cols[0], lambda w: hpaned.pack_start(w, expand=True, fill=True)) #?
                 pack(hpaned)
 
         # Vertical adjustable panel
@@ -722,7 +721,7 @@ class Desktop(Callback.Callbacks):
 
             elif len(rows) == 1:
                 vpaned = gtk.VBox()
-                make(rows[0], lambda w: vpaned.pack_start(w, expand=True, fill=True))
+                make(rows[0], lambda w: vpaned.pack_start(w, expand=True, fill=True))  #?
                 pack(vpaned)
 
         # Horizontal fixed array
@@ -732,7 +731,7 @@ class Desktop(Callback.Callbacks):
             for dct in cols:
                 if isinstance(dct, dict):
                     fill = dct.get('fill', True)
-                    expand = dct.get('expand', True)
+                    expand = dct.get('expand', True)  #?
                     col = dct.get('col', None)
                 else:
                     # assume a list defining the col
@@ -754,7 +753,7 @@ class Desktop(Callback.Callbacks):
             for dct in rows:
                 if isinstance(dct, dict):
                     fill = dct.get('fill', True)
-                    expand = dct.get('expand', True)
+                    expand = dct.get('expand', True)  #?
                     row = dct.get('row', None)
                 else:
                     # assume a list defining the row
@@ -762,7 +761,7 @@ class Desktop(Callback.Callbacks):
                     row = dct
                 if row != None:
                     make(row, lambda w: widget.pack_start(w,
-                                                         fill=fill,
+                                                          fill=fill,
                                                           expand=expand))
             process_common_params(widget, params)
 

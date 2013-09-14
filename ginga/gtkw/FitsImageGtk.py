@@ -40,6 +40,12 @@ class FitsImageGtk(FitsImageCairo.FitsImageCairo):
             imgwin.connect("draw", self.draw_event)
         imgwin.connect("configure_event", self.configure_event)
         imgwin.set_events(gtk.gdk.EXPOSURE_MASK)
+        # prevents some flickering
+        imgwin.set_double_buffered(True)
+        imgwin.set_app_paintable(True)
+        # prevents extra redraws, because we manually redraw on a size
+        # change
+        imgwin.set_redraw_on_allocate(False)
         self.imgwin = imgwin
         self.imgwin.show_all()
 
@@ -68,7 +74,7 @@ class FitsImageGtk(FitsImageCairo.FitsImageCairo):
             pixbuf = gtksel.pixbuf_new_from_array(arr, gtk.gdk.COLORSPACE_RGB,
                                                   8)
         except Exception, e:
-            #print "ERROR MAKING PIXBUF", str(e)
+            print "ERROR MAKING PIXBUF", str(e)
             # pygtk might have been compiled without numpy support
             daht, dawd, depth = arr.shape
             rgb_buf = self._get_rgbbuf(arr)
@@ -151,8 +157,12 @@ class FitsImageGtk(FitsImageCairo.FitsImageCairo):
             
         win = self.imgwin.get_window()
         if win != None and self.surface != None:
-            #imgwin_wd, imgwin_ht = self.get_window_size()
-            win.invalidate_rect(None, True)
+            imgwin_wd, imgwin_ht = self.get_window_size()
+
+            if gtksel.have_gtk3:
+                self.imgwin.queue_draw_area(0, 0, imgwin_wd, imgwin_ht)
+            else:
+                win.invalidate_rect(None, True)
             # Process expose events right away so window is responsive
             # to scrolling
             win.process_updates(True)
@@ -190,9 +200,20 @@ class FitsImageGtk(FitsImageCairo.FitsImageCairo):
         return False
         
     def configure_event(self, widget, event):
-        self.surface = None
         rect = widget.get_allocation()
         x, y, width, height = rect.x, rect.y, rect.width, rect.height
+
+        if self.surface != None:
+            # This is a workaround for a strange bug in Gtk 3
+            # where we get multiple configure callbacks even though
+            # the size hasn't changed.  We avoid creating a new surface
+            # if there is an old surface with the exact same size.
+            # This prevents some flickering of the display on focus events.
+            wwd, wht = self.get_window_size()
+            if (wwd == width) and (wht == height):
+                return True
+        
+        #self.surface = None
         self.logger.debug("allocation is %d,%d %dx%d" % (
             x, y, width, height))
         #width, height = width*2, height*2
@@ -239,7 +260,6 @@ class FitsImageEvent(FitsImageGtk):
 
         imgwin = self.imgwin
         imgwin.set_can_focus(True)
-        #imgwin.set_double_buffered(False)
         imgwin.connect("map_event", self.map_event)
         imgwin.connect("focus_in_event", self.focus_event, True)
         imgwin.connect("focus_out_event", self.focus_event, False)

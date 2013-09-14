@@ -8,7 +8,7 @@
 # Please see the file LICENSE.txt for details.
 #
 from ginga.gtkw import ColorBar
-from ginga.gtkw import GtkHelp
+from ginga.gtkw import GtkHelp, gtksel
 from ginga.misc import Bunch, Future
 from ginga.misc.plugins import CatalogsBase
 
@@ -34,7 +34,7 @@ class Catalogs(CatalogsBase.CatalogsBase):
         tw.modify_font(self.msgFont)
         self.tw = tw
 
-        fr = gtk.Frame(" Instructions ")
+        fr = gtk.Frame(label=" Instructions ")
         fr.set_shadow_type(gtk.SHADOW_ETCHED_OUT)
         fr.set_label_align(0.1, 0.5)
         fr.add(tw)
@@ -53,7 +53,7 @@ class Catalogs(CatalogsBase.CatalogsBase):
         hbox = gtk.HBox(spacing=4)
 
         vbox = gtk.VBox()
-        fr = gtk.Frame(" Image Server ")
+        fr = gtk.Frame(label=" Image Server ")
         fr.set_shadow_type(gtk.SHADOW_ETCHED_IN)
         fr.set_label_align(0.5, 0.5)
         fr.add(vbox)
@@ -88,7 +88,7 @@ class Catalogs(CatalogsBase.CatalogsBase):
         hbox.pack_start(fr, fill=True, expand=True)
 
         vbox = gtk.VBox()
-        fr = gtk.Frame(" Catalog Server ")
+        fr = gtk.Frame(label=" Catalog Server ")
         fr.set_shadow_type(gtk.SHADOW_ETCHED_IN)
         fr.set_label_align(0.5, 0.5)
         fr.add(vbox)
@@ -145,8 +145,9 @@ class Catalogs(CatalogsBase.CatalogsBase):
         adj.configure(0, 0, 0, 1, 10, 0)
         #scale.set_size_request(200, -1)
         scale.set_tooltip_text("Choose subset of stars plotted")
-        #scale.set_update_policy(gtk.UPDATE_DELAYED)
-        scale.set_update_policy(gtk.UPDATE_CONTINUOUS)
+        if not gtksel.have_gtk3:
+            #scale.set_update_policy(gtk.UPDATE_DELAYED)
+            scale.set_update_policy(gtk.UPDATE_CONTINUOUS)
         self.w.plotgrp = scale
         scale.connect('value-changed', self.plot_pct_cb)
         hbox.pack_start(scale, padding=2, fill=True, expand=True)
@@ -168,7 +169,7 @@ class Catalogs(CatalogsBase.CatalogsBase):
         btns = gtk.HButtonBox()
         btns.set_layout(gtk.BUTTONBOX_START)
         btns.set_spacing(3)
-        btns.set_child_size(15, -1)
+        #btns.set_child_size(15, -1)
         self.w.buttons = btns
 
         btn = gtk.Button("Close")
@@ -451,7 +452,8 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
         self.mag_field = fieldname
 
     def _mkcolfnN(self, kwd):
-        def fn(column, cell, model, iter):
+        def fn(*args):
+            column, cell, model, iter = args[:4]
             bnch = model.get_value(iter, 0)
             cell.set_property('text', bnch[kwd])
         return fn
@@ -466,7 +468,8 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
         return True
 
     def _mksrtfnN(self, key):
-        def fn(model, iter1, iter2):
+        def fn(*args):
+            model, iter1, iter2 = args[:3]
             bnch1 = model.get_value(iter1, 0)
             bnch2 = model.get_value(iter2, 0)
             val1, val2 = bnch1[key], bnch2[key]

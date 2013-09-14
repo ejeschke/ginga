@@ -7,11 +7,10 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+from ginga.gtkw import GtkHelp, gtksel
 import gtk
-from ginga.gtkw import GtkHelp
 
 from ginga import AstroImage
-from ginga.gtkw import GtkHelp
 from ginga import GingaPlugin
 
 class MultiDim(GingaPlugin.LocalPlugin):
@@ -37,14 +36,14 @@ class MultiDim(GingaPlugin.LocalPlugin):
         tw.modify_font(self.msgFont)
         self.tw = tw
 
-        fr = gtk.Frame(" Instructions ")
+        fr = gtk.Frame(label=" Instructions ")
         fr.set_shadow_type(gtk.SHADOW_ETCHED_OUT)
         fr.set_label_align(0.1, 0.5)
         fr.add(tw)
         fr.show_all()
         vbox1.pack_start(fr, padding=4, fill=True, expand=False)
         
-        fr = gtk.Frame("HDU")
+        fr = gtk.Frame(label="HDU")
         fr.set_shadow_type(gtk.SHADOW_ETCHED_IN)
         fr.set_label_align(0.5, 0.5)
 
@@ -54,13 +53,14 @@ class MultiDim(GingaPlugin.LocalPlugin):
         self.w.numhdu = b.num_hdus
         self.w.hdu = b.choose_hdu
         self.w.hdu.set_tooltip_text("Choose which HDU to view")
-        self.w.hdu.set_update_policy(gtk.UPDATE_DISCONTINUOUS)
+        if not gtksel.have_gtk3:
+            self.w.hdu.set_update_policy(gtk.UPDATE_DISCONTINUOUS)
         self.w.hdu.connect('value-changed', self.set_hdu_cb)
         
         fr.add(w)
         vbox1.pack_start(fr, padding=4, fill=True, expand=False)
 
-        fr = gtk.Frame("NAXIS")
+        fr = gtk.Frame(label="NAXIS")
         fr.set_shadow_type(gtk.SHADOW_ETCHED_IN)
         fr.set_label_align(0.5, 0.5)
 
@@ -70,7 +70,6 @@ class MultiDim(GingaPlugin.LocalPlugin):
         btns = gtk.HButtonBox()
         btns.set_layout(gtk.BUTTONBOX_START)
         btns.set_spacing(3)
-        btns.set_child_size(15, -1)
 
         btn = gtk.Button("Close")
         btn.connect('clicked', lambda w: self.close())
@@ -92,7 +91,8 @@ class MultiDim(GingaPlugin.LocalPlugin):
         scale.set_digits(0)
         scale.set_draw_value(True)
         scale.set_value_pos(gtk.POS_BOTTOM)
-        #scale.set_update_policy(gtk.UPDATE_DISCONTINUOUS)
+        # if not gtksel.have_gtk3:
+        #     scale.set_update_policy(gtk.UPDATE_DISCONTINUOUS)
         scale.add_mark(lower, gtk.POS_BOTTOM, "%d" % lower)
         scale.add_mark(upper, gtk.POS_BOTTOM, "%d" % upper)
         return scale
@@ -106,7 +106,8 @@ class MultiDim(GingaPlugin.LocalPlugin):
         scale.set_digits(0)
         scale.set_wrap(True)
         scale.set_snap_to_ticks(True)
-        #scale.set_update_policy(gtk.UPDATE_DISCONTINUOUS)
+        # if not gtksel.have_gtk3:
+        #     scale.set_update_policy(gtk.UPDATE_DISCONTINUOUS)
         return scale
 
     def build_naxis(self, dims):
@@ -144,7 +145,8 @@ class MultiDim(GingaPlugin.LocalPlugin):
                 slider.set_wrap(True)
                 slider.set_snap_to_ticks(True)
                 slider.connect('value-changed', self.set_naxis_cb, n)
-                slider.set_update_policy(gtk.UPDATE_DISCONTINUOUS)
+                if not gtksel.have_gtk3:
+                    slider.set_update_policy(gtk.UPDATE_DISCONTINUOUS)
 
         # Add vbox of naxis controls to gui
         try:

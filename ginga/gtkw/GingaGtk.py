@@ -163,7 +163,7 @@ class GingaView(GtkMain.GtkMain):
         if icon:
             iconfile = os.path.join(self.iconpath, icon+icon_ext)
             try:
-                pixbuf = gtk.gdk.pixbuf_new_from_file_at_size(iconfile, 24, 24)
+                pixbuf = gtksel.pixbuf_new_from_file_at_size(iconfile, 24, 24)
                 if pixbuf != None:
                     image = gtk.image_new_from_pixbuf(pixbuf)
             except:

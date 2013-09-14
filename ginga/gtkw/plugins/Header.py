@@ -10,6 +10,7 @@
 from ginga import GingaPlugin
 from ginga.misc import Bunch
 
+from ginga.gtkw import gtksel, GtkHelp
 import gtk
 
 
@@ -37,7 +38,7 @@ class Header(GingaPlugin.GlobalPlugin):
         
 
     def build_gui(self, container):
-        nb = gtk.Notebook()
+        nb = GtkHelp.Notebook()
         nb.set_group_id(-30)
         nb.set_tab_pos(gtk.POS_BOTTOM)
         nb.set_scrollable(False)
@@ -84,13 +85,15 @@ class Header(GingaPlugin.GlobalPlugin):
         return True
 
     def _mkcolfnN(self, kwd):
-        def fn(column, cell, model, iter):
+        def fn(*args):
+            column, cell, model, iter = args[:4]
             bnch = model.get_value(iter, 0)
             cell.set_property('text', bnch[kwd])
         return fn
 
     def _mksrtfnN(self, key):
-        def fn(model, iter1, iter2):
+        def fn(*args):
+            model, iter1, iter2 = args[:3]
             bnch1 = model.get_value(iter1, 0)
             bnch2 = model.get_value(iter2, 0)
             val1, val2 = bnch1[key], bnch2[key]

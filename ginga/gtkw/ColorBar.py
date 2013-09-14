@@ -310,7 +310,9 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
         #print "button release at %dx%d button=%d" % (x, y, button)
         if button == 1:
             dx = x - self._start_x
-            wd, ht = win.get_size()
+            #wd, ht = win.get_size()
+            geom = win.get_geometry()
+            wd, ht = geom[2], geom[3]
             pct = float(dx) / float(wd)
             #print "dx=%f wd=%d pct=%f" % (dx, wd, pct)
             self.shift_colormap(pct)
@@ -337,7 +339,9 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
         if btn1_down:
             win = self.get_window()
             dx = x - self._start_x
-            wd, ht = win.get_size()
+            #wd, ht = win.get_size()
+            geom = win.get_geometry()
+            wd, ht = geom[2], geom[3]
             pct = float(dx) / float(wd)
             #print "dx=%f wd=%d pct=%f" % (dx, wd, pct)
             self.shift_colormap(pct)

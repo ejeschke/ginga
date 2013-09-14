@@ -66,7 +66,7 @@ class PixTable(GingaPlugin.LocalPlugin):
         tw.modify_font(self.msgFont)
         self.tw = tw
 
-        fr = gtk.Frame(" Pixel Values ")
+        fr = gtk.Frame(label=" Pixel Values ")
         fr.set_shadow_type(gtk.SHADOW_ETCHED_OUT)
         fr.set_label_align(0.1, 0.5)
         fr.add(tw)
@@ -123,7 +123,6 @@ class PixTable(GingaPlugin.LocalPlugin):
         btns = gtk.HButtonBox()
         btns.set_layout(gtk.BUTTONBOX_START)
         btns.set_spacing(3)
-        btns.set_child_size(15, -1)
 
         btn = gtk.Button("Close")
         btn.connect('clicked', lambda w: self.close())

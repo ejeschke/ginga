@@ -10,7 +10,7 @@
 import gtk
 import numpy
 
-from ginga.gtkw import GtkHelp
+from ginga.gtkw import GtkHelp, gtksel
 from ginga.misc import Bunch
 from ginga import GingaPlugin
 
@@ -78,7 +78,8 @@ class Info(GingaPlugin.GlobalPlugin):
         btns = gtk.HButtonBox()
         btns.set_layout(gtk.BUTTONBOX_CENTER)
         btns.set_spacing(3)
-        btns.set_child_size(15, -1)
+        if not gtksel.have_gtk3:
+            btns.set_child_size(15, -1)
 
         bw = Bunch.Bunch()
         for tup in (

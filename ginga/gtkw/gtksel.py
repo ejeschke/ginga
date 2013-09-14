@@ -16,7 +16,8 @@
 have_gtk3 = False
 try:
     import pygtk
-
+    pygtk.require('2.0')
+    
 except ImportError:
     # Try to import Gtk 2->3 compatibility layer
     from gi import pygtkcompat
@@ -53,7 +54,14 @@ def pixbuf_new_from_data(rgb_buf, rgbtype, hasAlpha, bpp, dawd, daht, stride):
         return gtk.gdk.pixbuf_new_from_data(rgb_buf, rgbtype, hasAlpha, bpp,
                                             dawd, daht, stride)
 
-
+def pixbuf_new_from_file_at_size(foldericon, width, height):
+    if have_gtk3:
+        return GdkPixbuf.Pixbuf.new_from_file_at_size(foldericon,
+                                                      width, height)
+    else:
+        return gtk.gdk.pixbuf_new_from_file_at_size(foldericon,
+                                                    width, height)
+        
 def make_cursor(widget, iconpath, x, y):
     if have_gtk3:
         image = gtk.Image()
@@ -62,7 +70,6 @@ def make_cursor(widget, iconpath, x, y):
     else:
         pixbuf = gtk.gdk.pixbuf_new_from_file(iconpath)
         
-    # Is this always going to be the correct display?  Does it matter?
     screen = widget.get_screen()
     display = screen.get_display()
     return gtk.gdk.Cursor(display, pixbuf, x, y)

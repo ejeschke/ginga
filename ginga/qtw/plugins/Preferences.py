@@ -628,7 +628,7 @@ class Preferences(GingaPlugin.LocalPlugin):
 
         self.w.acvbox.layout().addWidget(w, stretch=1)
 
-    def set_autocuts_ext_cb(self, settings, option):
+    def set_autocuts_ext_cb(self, setting, value):
         if not self.gui_up:
             return
         if setting.name == 'autocut_method':

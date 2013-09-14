@@ -28,6 +28,8 @@ class Readout(object):
         self.maxy = 0
         self.maxv = 0
 
+        self.fitsimage = None
+
     def get_widget(self):
         return self.evbox
 

@@ -153,7 +153,8 @@ class Thumbs(ThumbsBase.ThumbsBase):
             self.w.thumbs.show_all()
         
     def thumbpane_resized_cb(self, widget, allocation):
-        x, y, width, height = self.w.thumbs_scroll.get_allocation()
+        rect = widget.get_allocation()
+        x, y, width, height = rect.x, rect.y, rect.width, rect.height
         return self.thumbpane_resized(width, height)
         
     def query_thumb(self, thumbkey, name, metadata, x, y, ttw):

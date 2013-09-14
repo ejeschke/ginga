@@ -9,7 +9,7 @@
 #
 import gtk
 import gobject
-from ginga.gtkw import GtkHelp
+from ginga.gtkw import GtkHelp, gtksel
 
 from ginga.misc import Bunch
 
@@ -80,7 +80,8 @@ class Zoom(GingaPlugin.GlobalPlugin):
         scale.set_digits(0)
         scale.set_draw_value(True)
         scale.set_value_pos(gtk.POS_BOTTOM)
-        #scale.set_update_policy(gtk.UPDATE_DISCONTINUOUS)
+        if not gtksel.have_gtk3:
+            scale.set_update_policy(gtk.UPDATE_DISCONTINUOUS)
         self.w_radius = scale
         scale.connect('value-changed', self.set_radius_cb)
         vbox.pack_start(scale, padding=0, fill=True, expand=False)
@@ -95,7 +96,8 @@ class Zoom(GingaPlugin.GlobalPlugin):
         scale.set_digits(0)
         scale.set_draw_value(True)
         scale.set_value_pos(gtk.POS_BOTTOM)
-        #scale.set_update_policy(gtk.UPDATE_DISCONTINUOUS)
+        # if not gtksel.have_gtk3:
+        #     scale.set_update_policy(gtk.UPDATE_DISCONTINUOUS)
         self.w_amount = scale
         scale.connect('value-changed', self.set_amount_cb)
         vbox.pack_start(scale, padding=0, fill=True, expand=False)

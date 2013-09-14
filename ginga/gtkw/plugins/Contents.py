@@ -81,7 +81,8 @@ class Contents(GingaPlugin.GlobalPlugin):
         return True
 
     def _mksrtfnN(self, key):
-        def fn(model, iter1, iter2):
+        def fn(*args):
+            model, iter1, iter2 = args[:3]
             bnch1 = model.get_value(iter1, 0)
             bnch2 = model.get_value(iter2, 0)
             if isinstance(bnch1, str):
@@ -97,7 +98,8 @@ class Contents(GingaPlugin.GlobalPlugin):
         return fn
 
     def _mkcolfn0(self, kwd):
-        def fn(column, cell, model, iter):
+        def fn(*args):
+            column, cell, model, iter = args[:4]
             bnch = model.get_value(iter, 0)
             if isinstance(bnch, str):
                 cell.set_property('text', bnch)
@@ -106,7 +108,8 @@ class Contents(GingaPlugin.GlobalPlugin):
         return fn
 
     def _mkcolfnN(self, kwd):
-        def fn(column, cell, model, iter):
+        def fn(*args):
+            column, cell, model, iter = args[:4]
             bnch = model.get_value(iter, 0)
             if isinstance(bnch, str):
                 cell.set_property('text', '')

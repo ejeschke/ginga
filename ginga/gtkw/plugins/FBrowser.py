@@ -12,6 +12,7 @@ import stat, time
 
 from ginga.misc import Bunch
 from ginga import AstroImage, GingaPlugin
+from ginga.gtkw import gtksel
 
 import gtk
 
@@ -44,11 +45,11 @@ class FBrowser(GingaPlugin.LocalPlugin):
 
         icondir = self.fv.iconpath
         foldericon = os.path.join(icondir, 'folder'+icon_ext)
-        self.folderpb = gtk.gdk.pixbuf_new_from_file_at_size(foldericon, 24, 24)
+        self.folderpb = gtksel.pixbuf_new_from_file_at_size(foldericon, 24, 24)
         fileicon = os.path.join(icondir, 'file'+icon_ext)
-        self.filepb = gtk.gdk.pixbuf_new_from_file_at_size(fileicon, 24, 24)
+        self.filepb = gtksel.pixbuf_new_from_file_at_size(fileicon, 24, 24)
         fitsicon = os.path.join(icondir, 'fits'+icon_ext)
-        self.fitspb = gtk.gdk.pixbuf_new_from_file_at_size(fitsicon, 24, 24)
+        self.fitspb = gtksel.pixbuf_new_from_file_at_size(fitsicon, 24, 24)
 
 
     def build_gui(self, container):
@@ -104,7 +105,6 @@ class FBrowser(GingaPlugin.LocalPlugin):
         btns = gtk.HButtonBox()
         btns.set_layout(gtk.BUTTONBOX_START)
         btns.set_spacing(3)
-        btns.set_child_size(15, -1)
 
         btn = gtk.Button("Close")
         btn.connect('clicked', lambda w: self.close())
@@ -144,7 +144,8 @@ class FBrowser(GingaPlugin.LocalPlugin):
             return res
         return fn
 
-    def file_pixbuf(self, column, cell, model, iter):
+    def file_pixbuf(self, *args):
+        column, cell, model, iter = args[:4]
         bnch = model.get_value(iter, 0)
         if bnch.type == 'dir':
             pb = self.folderpb
@@ -154,19 +155,23 @@ class FBrowser(GingaPlugin.LocalPlugin):
             pb = self.filepb
         cell.set_property('pixbuf', pb)
 
-    def file_name(self, column, cell, model, iter):
+    def file_name(self, *args):
+        column, cell, model, iter = args[:4]
         bnch = model.get_value(iter, 0)
         cell.set_property('text', bnch.name)
 
-    def file_size(self, column, cell, model, iter):
+    def file_size(self, *args):
+        column, cell, model, iter = args[:4]
         bnch = model.get_value(iter, 0)
         cell.set_property('text', str(bnch.st_size))
 
-    def file_mode(self, column, cell, model, iter):
+    def file_mode(self, *args):
+        column, cell, model, iter = args[:4]
         bnch = model.get_value(iter, 0)
         cell.set_property('text', oct(stat.S_IMODE(bnch.st_mode)))
 
-    def file_last_changed(self, column, cell, model, iter):
+    def file_last_changed(self, *args):
+        column, cell, model, iter = args[:4]
         bnch = model.get_value(iter, 0)
         cell.set_property('text', time.ctime(bnch.st_mtime))
 

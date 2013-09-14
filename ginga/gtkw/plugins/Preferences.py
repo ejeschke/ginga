@@ -77,7 +77,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         sw.add_with_viewport(vbox)
 
        # COLOR MAPPING OPTIONS
-        fr = gtk.Frame("Colors")
+        fr = gtk.Frame(label="Colors")
         fr.set_shadow_type(gtk.SHADOW_ETCHED_IN)
         fr.set_label_align(0.5, 0.5)
 
@@ -144,7 +144,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         entry.connect('activate', self.set_tablesize_cb)
 
         # ZOOM OPTIONS
-        fr = gtk.Frame("Zoom")
+        fr = gtk.Frame(label="Zoom")
         fr.set_shadow_type(gtk.SHADOW_ETCHED_IN)
         fr.set_label_align(0.5, 0.5)
 
@@ -223,7 +223,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         vbox.pack_start(fr, padding=4, fill=True, expand=False)
 
         # PAN OPTIONS
-        fr = gtk.Frame("Panning")
+        fr = gtk.Frame(label="Panning")
         fr.set_shadow_type(gtk.SHADOW_ETCHED_IN)
         fr.set_label_align(0.5, 0.5)
 
@@ -251,7 +251,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         vbox.pack_start(fr, padding=4, fill=True, expand=False)
 
         # TRANSFORM OPTIONS
-        fr = gtk.Frame("Transform")
+        fr = gtk.Frame(label="Transform")
         fr.set_shadow_type(gtk.SHADOW_ETCHED_IN)
         fr.set_label_align(0.5, 0.5)
 
@@ -284,7 +284,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         vbox.pack_start(fr, padding=4, fill=True, expand=False)
         
         # AUTOCUTS OPTIONS
-        fr = gtk.Frame("Auto Cuts")
+        fr = gtk.Frame(label="Auto Cuts")
         fr.set_shadow_type(gtk.SHADOW_ETCHED_IN)
         fr.set_label_align(0.5, 0.5)
 
@@ -312,7 +312,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         vbox.pack_start(fr, padding=4, fill=True, expand=False)
 
         # WCS OPTIONS
-        fr = gtk.Frame("WCS")
+        fr = gtk.Frame(label="WCS")
         fr.set_shadow_type(gtk.SHADOW_ETCHED_IN)
         fr.set_label_align(0.5, 0.5)
 
@@ -356,7 +356,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         vbox.pack_start(fr, padding=4, fill=True, expand=False)
 
         # NEW IMAGES OPTIONS
-        fr = gtk.Frame("New Images")
+        fr = gtk.Frame(label="New Images")
         fr.set_shadow_type(gtk.SHADOW_ETCHED_IN)
         fr.set_label_align(0.5, 0.5)
 
@@ -409,7 +409,6 @@ class Preferences(GingaPlugin.LocalPlugin):
         btns = gtk.HButtonBox()
         btns.set_layout(gtk.BUTTONBOX_START)
         btns.set_spacing(3)
-        btns.set_child_size(15, -1)
 
         btn = gtk.Button("Save Settings")
         btn.connect('clicked', lambda w: self.save_preferences())

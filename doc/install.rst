@@ -41,18 +41,51 @@ OR
 
 * python-Tkinter
 
-*NOTE*
-
-* Mac and Windows platforms should probably install the Qt version,
-unless you are adventurous.  Either one works fine on Linux.
-* The Tk version of Ginga supports only the widget and example programs,
-not the full reference viewer.
-
 Certain plugins in the reference viewer (or features of those plugins)
 will not work without the following packages:
 
 * python-matplotlib (Pick, Cuts, Histogram)
 * python-webkit (WBrowser (online help))
+
+==============================
+Notes on Supported Widget Sets
+==============================
+
+In the discussion below, we differentiate between the Ginga viewing
+widget, such as used in the scripts/example*.py programs and the full
+reference viewer, which includes many plugins (scripts/ginga).
+
+.. note:: For the full reference viewer, Mac and Windows users
+	  should probably install the Qt version, unless you are
+	  the tinkering sort.  Linux can use either Qt or Gtk fine.
+
+Qt/PySide
+=========
+
+Ginga can use either PyQt or PySide, version 4.  It will auto-detect
+which one is installed.
+  
+.. note:: If you have both installed and you want to use a specific one
+	  then set the environment variable QT_API to either "pyqt" or
+	  "pyside".  This is the same procedure as for Matplotlib.
+
+
+Gtk
+===
+
+Ginga can use Gtk version 2  or 3, but at the present time only Gtk 2 is
+supported for the full reference viewer, due to some dependences in the
+plugins to version 2.  The viewing widget by itself is fine with either
+version.  Ginga will auto-detect which versions are installed and
+default to version 2 if available.
+
+Tk
+===
+
+Ginga's Tk support is limited to the viewing widget itself.  For
+overplotting (graphics) support you also need to build and install the
+"aggdraw" module, which you can find 
+`here <http://ejeschke.github.io/aggdraw/>`_.
 
 ========================
 Installation from Source
@@ -93,7 +126,8 @@ Or::
 (if you want to use the Qt version)
 
 .. note:: `astropy` is preferred over pyfits + pywcs, but was not in the
-	  default repositories as of this writing.
+	  default repositories as of this writing.  Use "pip install
+	  astropy" to install it if you like.
 
 Then install ginga with pip::
 
@@ -107,9 +141,9 @@ Mac
 
 The three recommended ways to install on the Mac are:
 
-* Install the Enthought python distribution
-* Install the Anaconda python distribution
-* Install from macports
+* Install the `Enthought python distribution <https://www.enthought.com/products/epd/free/>`_
+* Install the `Anaconda python distribution <http://www.continuum.io/downloads>`_
+* Install from `macports <http://www.macports.org/>`_
 
 The first two methods should provide all the modules necessary to run
 Ginga.  Then install Ginga from source as described above.

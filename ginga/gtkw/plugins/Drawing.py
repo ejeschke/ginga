@@ -53,13 +53,13 @@ class Drawing(GingaPlugin.LocalPlugin):
         tw.modify_font(self.msgFont)
         self.tw = tw
 
-        fr = gtk.Frame(" Instructions ")
+        fr = gtk.Frame(label=" Instructions ")
         fr.set_shadow_type(gtk.SHADOW_ETCHED_OUT)
         fr.set_label_align(0.1, 0.5)
         fr.add(tw)
         vbox1.pack_start(fr, padding=4, fill=True, expand=False)
         
-        fr = gtk.Frame("Drawing")
+        fr = gtk.Frame(label="Drawing")
         fr.set_shadow_type(gtk.SHADOW_ETCHED_IN)
         fr.set_label_align(0.5, 0.5)
 
@@ -99,7 +99,6 @@ class Drawing(GingaPlugin.LocalPlugin):
         btns = gtk.HButtonBox()
         btns.set_layout(gtk.BUTTONBOX_START)
         btns.set_spacing(3)
-        btns.set_child_size(15, -1)
 
         btn = gtk.Button("Close")
         btn.connect('clicked', lambda w: self.close())
