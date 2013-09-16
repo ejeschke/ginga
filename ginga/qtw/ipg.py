@@ -14,7 +14,7 @@ from ginga.qtw.QtHelp import QtGui, QtCore
 from ginga.qtw.FitsImageCanvasQt import FitsImageCanvas
 
 from IPython.lib.kernel import connect_qtconsole
-from IPython.zmq.ipkernel import IPKernelApp
+from IPython.kernel.zmq.kernelapp import IPKernelApp
 
 STD_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcName)s) | %(message)s'
 
