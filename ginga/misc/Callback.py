@@ -28,6 +28,9 @@ class Callbacks(object):
         #return self.cb.has_key(name) and (len(self.cb[name]) > 0)
         return self.cb.has_key(name)
         
+    def delete_callback(self, name):
+        del self.cb[name]
+        
     def add_callback(self, name, fn, *args, **kwdargs):
         try:
             self.cb[name].append((fn, args, kwdargs))
@@ -35,7 +38,7 @@ class Callbacks(object):
             raise CallbackError("No callback category of '%s'" % (
                 name))
 
-    # TODO: to be deprecated
+    # TODO: to be deprecated ?
     def set_callback(self, name, fn, *args, **kwdargs):
         if not self.has_callback(name):
             self.enable_callback(name)

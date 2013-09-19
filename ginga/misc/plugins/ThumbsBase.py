@@ -39,8 +39,9 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         self.settings = prefs.createCategory('plugin_Thumbs')
         self.settings.load(onError='silent')
 
-        self.thmbtask = None
-        self.lagtime = 4000
+        self.thmbtask = fv.get_timer()
+        self.thmbtask.set_callback('expired', self.redo_delay_timer)
+        self.lagtime = 4.0
         self.thmblock = threading.RLock()
 
         self.keywords = ['OBJECT', 'FRAMEID', 'UT', 'DATE-OBS']
@@ -214,6 +215,15 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         self.redo_delay(fitsimage)
         return True
 
+    def redo_delay(self, fitsimage):
+        # Delay regeneration of thumbnail until most changes have propagated
+        self.thmbtask.data.setvals(fitsimage=fitsimage)
+        self.thmbtask.set(self.lagtime)
+        return True
+
+    def redo_delay_timer(self, timer):
+        self.fv.gui_do(self.redo_thumbnail, timer.data.fitsimage)
+        
     def copy_attrs(self, fitsimage):
         # Reflect transforms, colormap, etc.
         fitsimage.copy_attributes(self.thumb_generator,

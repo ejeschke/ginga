@@ -189,9 +189,6 @@ class FitsImageQt(FitsImage.FitsImageBase):
 
     def draw_message(self, painter, width, height, message):
         painter.setPen(self.img_fg)
-        ## pen = QtGui.QPen()
-        ## pen.setColor(self.img_fg)
-        ## painter.setPen(pen)
         painter.setBrush(self.img_fg)
         painter.setFont(self.msgfont)
         rect = painter.boundingRect(0, 0, 1000, 1000, 0, message)
@@ -213,7 +210,6 @@ class FitsImageQt(FitsImage.FitsImageBase):
         self.logger.debug("drawing to pixmap")
 
         # Prepare array for rendering
-        #arr = numpy.dstack((rgbobj.r, rgbobj.g, rgbobj.b))
         arr = rgbobj.get_array('RGB')
         (height, width) = rgbobj.r.shape
 

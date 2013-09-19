@@ -119,7 +119,24 @@ class FitsImageBindings(object):
         self.keys.cancel = ['escape']
 
         # User defined buttons
-        #self.btns = Bunch.Bunch()
+        self.btns = Bunch.Bunch()
+        self.btns.rotate = []
+        self.btns.cmapwarp = []
+        self.btns.cmaprest = []
+        self.btns.pan = []
+        self.btns.freepan = []
+        self.btns.cutlo = []
+        self.btns.cuthi = []
+        self.btns.cutall = []
+        self.btns.panset = []
+
+        # User defined scrolls
+        self.scrs = Bunch.Bunch()
+        self.scrs.contrast_coarse = []
+        self.scrs.contrast_fine = []
+        self.scrs.zoom = []
+        self.scrs.zoom_coarse = []
+        self.scrs.zoom_fine = []
 
         self.autocuts = AutoCuts.ZScale(self.logger)
 
@@ -185,9 +202,9 @@ class FitsImageBindings(object):
         
     def setup_default_key_events(self, fitsimage, bindmap):
 
-        for name in self.keys.keys():
+        for name in self.get_key_features():
             
-            for key in self.keys[name]:
+            for key in self.get_key_bindings(name):
                 bindmap.map_event(None, key, name)
 
             # Register for this symbolic event if we have a handler for it
@@ -233,10 +250,10 @@ class FitsImageBindings(object):
         fitsimage.set_callback('panset-down', self.ms_panset)
         fitsimage.set_callback('cmaprest-down', self.ms_cmaprest)
 
-        fitsimage.set_callback('zoom-scroll', self.ms_zoom)
+        fitsimage.set_callback('zoom-scroll', self.sc_zoom)
         fitsimage.set_callback('zoom-coarse-scroll',
-                               self.ms_zoom_coarse)
-        fitsimage.set_callback('zoom-fine-scroll', self.ms_zoom_fine)
+                               self.sc_zoom_coarse)
+        fitsimage.set_callback('zoom-fine-scroll', self.sc_zoom_fine)
 
     def reset(self, fitsimage):
         self.reset_modifier(fitsimage)
@@ -841,7 +858,9 @@ class FitsImageBindings(object):
                          msg=msg)
         return True
 
-    def ms_contrast_coarse(self, fitsimage, direction, data_x, data_y,
+    #####  SCROLL ACTION CALLBACKS #####
+
+    def sc_contrast_coarse(self, fitsimage, direction, data_x, data_y,
                            msg=True):
         """Adjust contrast interactively by setting the low AND high cut
         levels.  This function adjusts it coarsely.
@@ -850,7 +869,7 @@ class FitsImageBindings(object):
             self._adjust_contrast(fitsimage, direction, 0.01, msg=msg)
         return True
 
-    def ms_contrast_fine(self, fitsimage, direction, data_x, data_y,
+    def sc_contrast_fine(self, fitsimage, direction, data_x, data_y,
                          msg=True):
         """Adjust contrast interactively by setting the low AND high cut
         levels.  This function adjusts it finely.
@@ -859,7 +878,7 @@ class FitsImageBindings(object):
             self._adjust_contrast(fitsimage, direction, 0.001, msg=msg)
         return True
 
-    def ms_zoom(self, fitsimage, direction, data_x, data_y, msg=True):
+    def sc_zoom(self, fitsimage, direction, data_x, data_y, msg=True):
         """Interactively zoom the image by scrolling motion.
         This zooms by the zoom steps configured under Preferences.
         """
@@ -880,7 +899,7 @@ class FitsImageBindings(object):
                                            delay=0.4)
         return True
 
-    def ms_zoom_coarse(self, fitsimage, direction, data_x, data_y,
+    def sc_zoom_coarse(self, fitsimage, direction, data_x, data_y,
                        msg=True):
         """Interactively zoom the image by scrolling motion.
         This zooms by adjusting the scale in x and y coarsely.
@@ -889,7 +908,7 @@ class FitsImageBindings(object):
             self._scale_image(fitsimage, direction, 0.20, msg=msg)
         return True
 
-    def ms_zoom_fine(self, fitsimage, direction, data_x, data_y,
+    def sc_zoom_fine(self, fitsimage, direction, data_x, data_y,
                      msg=True):
         """Interactively zoom the image by scrolling motion.
         This zooms by adjusting the scale in x and y coarsely.
@@ -898,6 +917,9 @@ class FitsImageBindings(object):
             self._scale_image(fitsimage, direction, 0.08, msg=msg)
         return True
 
+
+class BindingMapError(Exception):
+    pass
 
 class BindingMapper(object):
     """The BindingMapper class maps physical events (key presses, button
@@ -936,10 +958,23 @@ class BindingMapper(object):
         else:
             self.modmap = modmap
 
+    def set_modifier_map(self, modmap):
+        self.modmap = modmap
+        
     def clear_modifier_map(self):
         self.modmap = {}
 
+    def get_modifiers(self):
+        res = set([])
+        for keyname, bnch in self.modmap.items():
+            res.add(bnch.name)
+        return res
+
     def add_modifier(self, keyname, modname, modtype='held'):
+        assert modtype in self._kbdmod_types, \
+               ValueError("Bad modifier type '%s': must be one of %s" % (
+            modtype, self._kbdmod_types))
+
         bnch = Bunch.Bunch(name=modname, type=modtype)
         self.modmap[keyname] = bnch
         
@@ -963,8 +998,11 @@ class BindingMapper(object):
         """
         self.btnmap[btncode] = alias
 
-    def set_modifier_map(self, modmap):
-        self.modmap = modmap
+    def get_buttons(self):
+        res = set([])
+        for keyname, alias in self.btnmap.items():
+            res.add(alias)
+        return res
         
     def clear_event_map(self):
         self.eventmap = {}

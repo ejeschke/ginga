@@ -177,14 +177,6 @@ class Thumbs(ThumbsBase.ThumbsBase):
             
         return True
 
-    def redo_delay(self, fitsimage):
-        # Delay regeneration of thumbnail until most changes have propagated
-        if self.thmbtask != None:
-            gobject.source_remove(self.thmbtask)
-        self.thmbtask = gobject.timeout_add(self.lagtime, self.redo_thumbnail,
-                                            fitsimage)
-        return True
-
     def update_thumbnail(self, thumbkey, imgwin, name, metadata):
         with self.thmblock:
             try:

@@ -198,19 +198,6 @@ class Thumbs(ThumbsBase.ThumbsBase):
         s = "%s\n%s\n%s\n%s" % (chname, name, objtext, uttext)
         return s
 
-    def redo_delay(self, fitsimage):
-        # Delay regeneration of thumbnail until most changes have propagated
-        try:
-            self.thmbtask.stop()
-        except:
-            pass
-        self.thmbtask = QtCore.QTimer()
-        self.thmbtask.setSingleShot(True)
-        self.thmbtask.timeout.connect(lambda: self.redo_thumbnail(fitsimage))
-        self.thmbtask.start(self.lagtime)
-        #print "added delay task..."
-        return True
-
     def update_thumbnail(self, thumbkey, imgwin, name, metadata):
         with self.thmblock:
             try:

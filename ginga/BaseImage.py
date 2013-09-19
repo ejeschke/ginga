@@ -425,5 +425,7 @@ class Header(dict):
         for key, value in mapKind.items():
             self.__setitem__(key, value)
     
+    def asdict(self):
+        return dict([(key, self[key]) for key in self.keys()])
 
 #END

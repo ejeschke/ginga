@@ -26,7 +26,7 @@ except ImportError:
 
 # Local application imports
 from ginga import cmap, imap, Catalog, AstroImage, PythonImage, FitsImage
-from ginga.misc import Bunch, Datasrc, Callback
+from ginga.misc import Bunch, Datasrc, Callback, Timer, Task
 
 #pluginconfpfx = 'plugins'
 pluginconfpfx = None
@@ -63,6 +63,11 @@ class GingaControl(Callback.Callbacks):
         self.tag = 'master'
         self.shares = ['threadPool', 'logger']
 
+        # Initialize the timer factory
+        self.timer_factory = Timer.TimerFactory(ev_quit=self.ev_quit)
+        task = Task.FuncTask2(self.timer_factory.mainloop)
+        task.init_and_start(self)
+        
         self.lock = threading.RLock()
         self.channel = {}
         self.channelNames = []
@@ -114,6 +119,9 @@ class GingaControl(Callback.Callbacks):
 
     def get_preferences(self):
         return self.prefs
+
+    def get_timer(self):
+        return self.timer_factory.timer()
 
     ####################################################
     # CALLBACKS
