@@ -1,4 +1,5 @@
 #
+
 # RGBMap.py -- color mapping
 # 
 # Eric Jeschke (eric@naoj.org)
@@ -17,14 +18,39 @@ class RGBMapError(Exception):
     pass
 
 class RGBImage(object):
-    def __init__(self, **kwdargs):
-        self.__dict__.update(kwdargs)
+
+    def __init__(self, rgbarr, order):
+        self.rgbarr = rgbarr
+        order = order.upper()
+        self.order = order
+        self.hasAlpha = 'A' in order
+
+    def get_slice(self, ch):
+        return self.rgbarr[..., self.order.index(ch.upper())]
+
+    def get_order(self):
+        return self.order
 
     def get_array(self, order):
-        l = [ self.__dict__[c.lower()] for c in order ]
+        order = order.upper()
+        if order == self.order:
+            return self.rgbarr
+        l = [ self.get_slice(c) for c in order ]
         return numpy.dstack(l)
+
+    def get_size(self):
+        """Returns (height, width) tuple of slice size."""
+        return self.get_slice('R').shape
     
 class RGBMapper(Callback.Callbacks):
+
+    ############################################################
+    # CODE NOTES
+    #
+    # [A] Some numpy routines have been optomized by using the out=
+    # parameter, which avoids having to allocate a new array for the
+    # result 
+    #
 
     def __init__(self):
         Callback.Callbacks.__init__(self)
@@ -167,62 +193,73 @@ class RGBMapper(Callback.Callbacks):
         if callback:
             self.make_callback('changed')
     
-    def _get_rgbarray(self, idx):
+    def get_order_indexes(self, order, cs):
+        order = order.upper()
+        if order == '':
+            # assume standard RGB order if we don't find an order
+            # explicitly set
+            return [0, 1, 2]
+        cs = cs.upper()
+        return [ order.index(c) for c in cs ]
+
+    def _get_rgbarray(self, idx, rgbobj, image_order):
         # NOTE: data is assumed to be in the range 0-255 at this point
         # but clip as a precaution
-        idx = idx.clip(0, 255)
-        # run it through the shift array
-        idx = self.sarr[idx].clip(0, 255)
-        ar = self.arr[0][idx]
-        ag = self.arr[1][idx]
-        ab = self.arr[2][idx]
-        return (ar, ag, ab)
+        # See NOTE [A]: idx is always an array calculated in the caller and
+        #    discarded afterwards
+        # idx = idx.clip(0, 255)
+        idx.clip(0, 255, out=idx)
+
+        # run it through the shift array and clip the result
+        # See NOTE [A]
+        # idx = self.sarr[idx].clip(0, 255)
+        idx = self.sarr[idx]
+        idx.clip(0, 255, out=idx)
+
+        ri, gi, bi = self.get_order_indexes(rgbobj.get_order(), 'RGB')
+        out = rgbobj.rgbarr
         
-    def _get_rgbarray_rgb(self, idx_r, idx_g, idx_b):
-        # NOTE: data is assumed to be in the range 0-255 at this point
-        # but clip as a precaution
-        idx_r = idx_r.clip(0, 255)
-        idx_r = self.sarr[idx_r].clip(0, 255)
-        ar = self.arr[0][idx_r]
-        idx_g = idx_g.clip(0, 255)
-        idx_g = self.sarr[idx_g].clip(0, 255)
-        ag = self.arr[1][idx_g]
-        idx_b = idx_b.clip(0, 255)
-        idx_b = self.sarr[idx_b].clip(0, 255)
-        ab = self.arr[2][idx_b]
+        if len(idx.shape) == 2:
+            out[..., ri] = self.arr[0][idx]
+            out[..., gi] = self.arr[1][idx]
+            out[..., bi] = self.arr[2][idx]
+        else:
+            rj, gj, bj = self.get_order_indexes(image_order, 'RGB')
+            out[..., ri] = self.arr[0][idx[..., rj]]
+            out[..., gi] = self.arr[1][idx[..., gj]]
+            out[..., bi] = self.arr[2][idx[..., bj]]
 
-        # convert to monitor profile, if one is available
-        # TODO: this conversion doesn't really belong here!
-        if PythonImage.has_monitor_profile():
-            arr = numpy.dstack((ar, ag, ab))
-            arr = PythonImage.convert_profile_monitor(arr)
-            return (arr[:, :, 0], arr[:, :, 1], arr[:, :, 2])
+            # convert to monitor profile, if one is available
+            # TODO: this conversion doesn't really belong here!
+            # if PythonImage.has_monitor_profile():
+            #     out = PythonImage.convert_profile_monitor(out)
+        
 
-        return (ar, ag, ab)
-
-    def get_rgbarray(self, idx):
+    def get_rgbarray(self, idx, out=None, order='RGB', image_order='RGB'):
+        # prepare output array
         shape = idx.shape
-        if len(shape) == 2:
-            # 2D monochrome image
-            idx = self.get_hasharray(idx)
-            ar, ag, ab = self._get_rgbarray(idx)
-        elif len(shape) == 3:
-            # Assume 2D color image
-            assert shape[2] in (3, 4), \
-                   RGBMapError("Number of color channels != 3")
-            idx_r = self.get_hasharray(idx[:, :, 0])
-            idx_g = self.get_hasharray(idx[:, :, 1])
-            idx_b = self.get_hasharray(idx[:, :, 2])
-            # alpha channel is usually 3
-            ar, ag, ab = self._get_rgbarray_rgb(idx_r, idx_g, idx_b)
+        depth = len(order)
+        res_shape = (shape[0], shape[1], depth)
+        if out == None:
+            out = numpy.empty(res_shape, dtype=numpy.uint8, order='C')
+        else:
+            # TODO: assertion check on shape of out
+            assert res_shape == out.shape, \
+                   RGBMapError("Output array shape %s doesn't match result shape %s" % (
+                str(out.shape), str(res_shape)))
 
-        ht, wd = ab.shape
-        aa = numpy.zeros((ht, wd), dtype=numpy.uint8)
-        aa.fill(255)
+        res = RGBImage(out, order)
 
-        res = RGBImage(a=aa, r=ar, g=ag, b=ab)
+        # set alpha channel
+        if res.hasAlpha:
+            aa = res.get_slice('A')
+            aa.fill(255)
+
+        idx = self.get_hasharray(idx)
+
+        self._get_rgbarray(idx, res, image_order)
+
         return res
-        
     
     def get_hasharray(self, idx):
         # NOTE: data is assumed to be in the range 0..hashsize-1 at this point
@@ -231,24 +268,6 @@ class RGBMapper(Callback.Callbacks):
         arr = self.hash[idx]
         return arr
         
-    # def rshift(self, pct, callback=True):
-    #     self.reset_sarr()
-    #     num = int(255.0 * pct)
-    #     arr = numpy.roll(self.sarr, num)
-    #     arr[0:num] = 0
-    #     self.sarr = arr
-    #     if callback:
-    #         self.make_callback('changed')
-            
-    # def lshift(self, pct, callback=True):
-    #     self.reset_sarr()
-    #     num = int(255.0 * pct)
-    #     arr = numpy.roll(self.sarr, -num)
-    #     arr[256-num:256] = 255
-    #     self.sarr = arr
-    #     if callback:
-    #         self.make_callback('changed')
-
     def _shift(self, sarr, pct, rotate=False):
         n = len(sarr)
         num = int(n * pct)
@@ -382,5 +401,45 @@ class RGBMapper(Callback.Callbacks):
 
     def reset_cmap(self):
         self.recalc()
+
+
+class PassThruRGBMapper(RGBMapper):
+
+    def __init__(self):
+        super(PassThruRGBMapper, self).__init__()
+
+        self.hashalg = 'linear'
+        self.maxhashsize = 256
+        self.hashsize = 256
+            
+    def get_rgbarray(self, idx, out=None, order='RGB', image_order='RGB'):
+        # prepare output array
+        shape = idx.shape
+        depth = len(order)
+        res_shape = (shape[0], shape[1], depth)
+        if out == None:
+            out = numpy.empty(res_shape, dtype=numpy.uint8, order='C')
+        else:
+            # TODO: assertion check on shape of out
+            assert res_shape == out.shape, \
+                   RGBMapError("Output array shape %s doesn't match result shape %s" % (
+                str(out.shape), str(res_shape)))
+
+        res = RGBImage(out, order)
+
+        # set alpha channel
+        if res.hasAlpha:
+            aa = res.get_slice('A')
+            aa.fill(255)
+
+        # skip color mapping, index is the final data
+        ri, gi, bi = self.get_order_indexes(res.get_order(), 'RGB')
+        rj, gj, bj = self.get_order_indexes(image_order, 'RGB')
+        out[..., ri] = idx[..., rj]
+        out[..., gi] = idx[..., gj]
+        out[..., bi] = idx[..., bj]
+
+        return res
+    
         
 #END

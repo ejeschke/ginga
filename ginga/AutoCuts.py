@@ -78,22 +78,44 @@ class AutoCutsBase(object):
 
         data = data[y0:y1, x0:x1]
         return data
-
+    
     def cut_levels(self, data, loval, hival, vmin=0.0, vmax=255.0):
         self.logger.debug("loval=%.2f hival=%.2f" % (loval, hival))
         delta = hival - loval
-        if delta == 0:
-            f = (data - loval).clip(0.0, 1.0)
-            # threshold
-            f[numpy.nonzero(f)] = 1.0
-        else:
+        if delta != 0.0:
             data = data.clip(loval, hival)
             f = ((data - loval) / delta)
-        data = f.clip(0.0, 1.0) * vmax
-        return data
+        else:
+            #f = (data - loval).clip(0.0, 1.0)
+            f = data - loval
+            f.clip(0.0, 1.0, out=f)
+            # threshold
+            f[numpy.nonzero(f)] = 1.0
+
+        # f = f.clip(0.0, 1.0) * vmax
+        # NOTE: optimization using in-place outputs for speed
+        f.clip(0.0, 1.0, out=f)
+        numpy.multiply(f, vmax, out=f)
+        return f
 
     def __str__(self):
         return self.kind
+
+
+class Clip(AutoCutsBase):
+
+    def __init__(self, logger):
+        super(Clip, self).__init__(logger)
+        self.kind = 'clip'
+
+    def calc_cut_levels(self, image, params=None):
+        loval, hival = image.get_minmax()
+
+        return (float(loval), float(hival))
+
+    def cut_levels(self, data, loval, hival, vmin=0.0, vmax=255.0):
+        return data.clip(vmin, vmax)
+
 
 class Minmax(AutoCutsBase):
 
@@ -526,6 +548,7 @@ class ZScale(AutoCutsBase):
 
 
 autocuts_table = {
+    'clip': Clip,
     'minmax': Minmax,
     'stddev': StdDev,
     'histogram': Histogram,

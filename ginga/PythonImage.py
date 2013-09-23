@@ -109,6 +109,10 @@ class PythonImage(BaseImage):
         if output == None:
             buf.close()
         return contents
+
+    def has_alpha(self):
+        order = self.get_order()
+        return order.has_key('A')
     
     def get_scaled_cutout_wdht(self, x1, y1, x2, y2, new_wd, new_ht,
                                   method='bicubic'):
@@ -291,7 +295,9 @@ class PythonImage(BaseImage):
                 # scale if there is some difference
                 qimage = qimage.scaled(new_wd, new_ht,
                                    transformMode=QtCore.Qt.SmoothTransformation)
-            newdata = qimage2numpy(qimage)
+                newdata = qimage2numpy(qimage)
+            else:
+                newdata = data
 
         elif have_pilutil:
             means = 'PIL'

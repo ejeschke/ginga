@@ -56,7 +56,8 @@ class FitsImageGtk(FitsImageCairo.FitsImageCairo):
 
         # optimization of redrawing
         self.defer_redraw = True
-        self.defer_lagtime = 25
+        self.defer_lagtime = 0.025
+        self.defer_lagtime_ms = int(self.defer_lagtime * 1000)
         self._defer_whence = 0
         self._defer_lock = threading.RLock()
         self._defer_flag = False
@@ -65,6 +66,12 @@ class FitsImageGtk(FitsImageCairo.FitsImageCairo):
     def get_widget(self):
         return self.imgwin
 
+    def set_redraw_lag(self, lag_sec):
+        self.defer_redraw = (lag_sec > 0.0)
+        if self.defer_redraw:
+            self.defer_lagtime = lag_sec
+            self.defer_lagtime_ms = int(self.defer_lagtime * 1000)
+            
     def get_image_as_pixbuf(self):
         rgbobj = self.get_rgb_object()
         #arr = numpy.dstack((rgbobj.r, rgbobj.g, rgbobj.b))
@@ -135,7 +142,7 @@ class FitsImageGtk(FitsImageCairo.FitsImageCairo):
             if not defer_flag:
                 # if no redraw was scheduled, then schedule one in
                 # defer_lagtime 
-                self._defer_task = gobject.timeout_add(self.defer_lagtime,
+                self._defer_task = gobject.timeout_add(self.defer_lagtime_ms,
                                                        self._redraw)
                 
     def _redraw(self):

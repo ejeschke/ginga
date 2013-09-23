@@ -120,7 +120,9 @@ class FitsImageQt(FitsImage.FitsImageBase):
             raise FitsImageQtError("Undefined render type: '%s'" % (render))
         self.imgwin.fitsimage = self
         self.pixmap = None
-
+        # Qt expects 32bit BGRA data for color images
+        self._rgb_order = 'BGRA'
+        
         self.t_.setDefaults(show_pan_position=False,
                             onscreen_ff='Sans Serif')
 
@@ -137,7 +139,8 @@ class FitsImageQt(FitsImage.FitsImageBase):
 
         # optimization of redrawing
         self.defer_redraw = True
-        self.defer_lagtime = 25
+        self.defer_lagtime = 0.025
+        self.defer_lagtime_ms = int(self.defer_lagtime * 1000)
         self._defer_whence = 0
         self._defer_lock = threading.RLock()
         self._defer_flag = False
@@ -150,6 +153,12 @@ class FitsImageQt(FitsImage.FitsImageBase):
     def get_widget(self):
         return self.imgwin
 
+    def set_redraw_lag(self, lag_sec):
+        self.defer_redraw = (lag_sec > 0.0)
+        if self.defer_redraw:
+            self.defer_lagtime = lag_sec
+            self.defer_lagtime_ms = int(self.defer_lagtime * 1000)
+            
     def _render_offscreen(self, drawable, data, dst_x, dst_y,
                           width, height):
         # NOTE [A]
@@ -210,8 +219,8 @@ class FitsImageQt(FitsImage.FitsImageBase):
         self.logger.debug("drawing to pixmap")
 
         # Prepare array for rendering
-        arr = rgbobj.get_array('RGB')
-        (height, width) = rgbobj.r.shape
+        arr = rgbobj.get_array(self._rgb_order)
+        (height, width) = arr.shape[:2]
 
         return self._render_offscreen(self.pixmap, arr, dst_x, dst_y,
                                       width, height)
@@ -267,8 +276,7 @@ class FitsImageQt(FitsImage.FitsImageBase):
         graphics.
         """
         rgbobj = self.get_rgb_object(whence=0)
-        #arr = numpy.dstack((rgbobj.r, rgbobj.g, rgbobj.b))
-        arr = rgbobj.get_array('RGB')
+        arr = rgbobj.get_array(self._rgb_order)
         image = self._get_qimage(arr)
         return image
 
@@ -299,10 +307,7 @@ class FitsImageQt(FitsImage.FitsImageBase):
                         self._defer_task.stop()
                     except:
                         pass
-                # self._defer_task = QtCore.QTimer()
-                # self._defer_task.setSingleShot(True)
-                # self._defer_task.timeout.connect(self._redraw)
-                self._defer_task.start(self.defer_lagtime)
+                self._defer_task.start(self.defer_lagtime_ms)
                 
     def _redraw(self):
         # This is the optomized redraw method
@@ -340,24 +345,36 @@ class FitsImageQt(FitsImage.FitsImageBase):
     def get_cursor(self, ctype):
         return self.cursor[ctype]
         
+    def get_rgb_order(self):
+        return self._rgb_order
+        
     def switch_cursor(self, ctype):
         self.set_cursor(self.cursor[ctype])
         
-    def _get_qimage(self, rgb):
-        h, w, channels = rgb.shape
+    # def _get_qimage(self, rgb):
+    #     h, w, channels = rgb.shape
 
-        # Qt expects 32bit BGRA data for color images:
-        bgra = numpy.empty((h, w, 4), numpy.uint8, 'C')
-        bgra[...,0] = rgb[...,2]
-        bgra[...,1] = rgb[...,1]
-        bgra[...,2] = rgb[...,0]
-        if rgb.shape[2] == 3:
-                bgra[...,3].fill(255)
-                fmt = QtGui.QImage.Format_RGB32
-        else:
-                bgra[...,3] = rgb[...,3]
-                fmt = QtGui.QImage.Format_ARGB32
+    #     # Qt expects 32bit BGRA data for color images:
+    #     bgra = numpy.empty((h, w, 4), numpy.uint8, 'C')
+    #     bgra[...,0] = rgb[...,2]
+    #     bgra[...,1] = rgb[...,1]
+    #     bgra[...,2] = rgb[...,0]
+    #     if channels == 3:
+    #             bgra[...,3].fill(255)
+    #             fmt = QtGui.QImage.Format_RGB32
+    #     else:
+    #             bgra[...,3] = rgb[...,3]
+    #             fmt = QtGui.QImage.Format_ARGB32
 
+    #     result = QtGui.QImage(bgra.data, w, h, fmt)
+    #     # Need to hang on to a reference to the array
+    #     result.ndarray = bgra
+    #     return result
+
+    def _get_qimage(self, bgra):
+        h, w, channels = bgra.shape
+
+        fmt = QtGui.QImage.Format_ARGB32
         result = QtGui.QImage(bgra.data, w, h, fmt)
         # Need to hang on to a reference to the array
         result.ndarray = bgra

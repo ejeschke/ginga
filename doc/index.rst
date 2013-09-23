@@ -84,6 +84,7 @@ Documentation
 .. toctree::
    :maxdepth: 1
 
+   WhatsNew
    quickref
    FAQ
    manual/index

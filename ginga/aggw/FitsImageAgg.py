@@ -36,6 +36,7 @@ class FitsImageAgg(FitsImage.FitsImageBase):
         self.surface = None
         self.img_fg = None
         self.set_fg(1.0, 1.0, 1.0, redraw=False)
+        self._rgb_order = 'RGBA'
         
         self.message = None
 
@@ -58,7 +59,7 @@ class FitsImageAgg(FitsImage.FitsImageBase):
         self.logger.debug("redraw surface")
 
         # get window contents as a buffer and load it into the AGG surface
-        rgb_buf = self.getwin_buffer(order='RGBA')
+        rgb_buf = self.getwin_buffer(order=self._rgb_order)
         canvas.fromstring(rgb_buf)
 
         cr = AggHelp.AggContext(canvas)
@@ -143,6 +144,9 @@ class FitsImageAgg(FitsImage.FitsImageBase):
         
     def switch_cursor(self, ctype):
         self.set_cursor(self.cursor[ctype])
+        
+    def get_rgb_order(self):
+        return self._rgb_order
         
     def set_fg(self, r, g, b, redraw=True):
         self.img_fg = (r, g, b)

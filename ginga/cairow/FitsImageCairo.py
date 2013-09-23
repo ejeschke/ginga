@@ -31,6 +31,11 @@ class FitsImageCairo(FitsImage.FitsImageBase):
         self.img_fg = None
         self.set_fg(1.0, 1.0, 1.0, redraw=False)
         
+        if sys.byteorder == 'little':
+            self._rgb_order = 'BGRA'
+        else:
+            self._rgb_order = 'ARGB'
+
         self.cr = None
         self.message = None
 
@@ -53,7 +58,8 @@ class FitsImageCairo(FitsImage.FitsImageBase):
         cr.set_source_rgb(r, g, b)
         cr.fill()
 
-        arr8 = data.astype(numpy.uint8).flatten()
+        #arr8 = data.astype(numpy.uint8).flatten()
+        arr8 = data
         stride = cairo.ImageSurface.format_stride_for_width(cairo.FORMAT_RGB24,
                                                             width)
 
@@ -115,12 +121,9 @@ class FitsImageCairo(FitsImage.FitsImageBase):
             return
 
         # Prepare array for Cairo rendering
-        if sys.byteorder == 'little':
-            arr = rgbobj.get_array('BGRA')
-        else:
-            arr = rgbobj.get_array('ARGB')
+        arr = rgbobj.get_array(self._rgb_order)
 
-        (height, width) = rgbobj.r.shape
+        (height, width) = arr.shape[:2]
         return self._render_offscreen(self.surface, arr, dst_x, dst_y,
                                       width, height)
 
@@ -178,6 +181,9 @@ class FitsImageCairo(FitsImage.FitsImageBase):
         
     def switch_cursor(self, ctype):
         self.set_cursor(self.cursor[ctype])
+        
+    def get_rgb_order(self):
+        return self._rgb_order
         
     def set_fg(self, r, g, b, redraw=True):
         self.img_fg = (r, g, b)

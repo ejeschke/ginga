@@ -252,7 +252,7 @@ class FitsImageBase(Callback.Callbacks):
         self._ctr_x = width // 2
         self._ctr_y = height // 2
         self._imgwin_set = True
-        self.logger.info("image resized to %dx%d" % (width, height))
+        self.logger.info("widget resized to %dx%d" % (width, height))
 
         self.make_callback('configure', width, height)
         if redraw:
@@ -327,13 +327,13 @@ class FitsImageBase(Callback.Callbacks):
         self.rgbmap.scaleNshift(scale_pct, shift_pct, callback=redraw)
 
     def rgbmap_cb(self, rgbmap):
-        self.logger.info("RGB map has changed.")
-        self.redraw(whence=1)
+        self.logger.debug("RGB map has changed.")
+        self.redraw(whence=2)
         
     def cmap_changed_cb(self, setting, value):
         # This method is a callback that is invoked when the color settings
         # have changed in some way.
-        self.logger.info("Color settings have changed.")
+        self.logger.debug("Color settings have changed.")
 
         # Update our RGBMapper with any changes
         cmap_name = self.t_.get('color_map', "ramp")
@@ -472,12 +472,15 @@ class FitsImageBase(Callback.Callbacks):
 
         For the meaning of whence, see get_rgb_object().
         """
-        #print "REDRAWING %s whence=%d" % (str(self), whence)
         try:
+            time_start = time.time()
             self.redraw_data(whence=whence)
             
             # finally update the window drawable from the offscreen surface
             self.update_image()
+            time_done = time.time()
+            self.logger.info("widget redraw %s (whence=%d) %.4f sec" % (
+                str(self), whence, time_done - time_start))
 
         except Exception, e:
             self.logger.error("Error redrawing image: %s" % (str(e)))
@@ -605,28 +608,34 @@ class FitsImageBase(Callback.Callbacks):
             
         time_split2 = time.time()
         if (whence <= 1) or (self._prergb == None):
-            # apply visual changes prior to color mapping (cut levels, etc)
+            # Apply visual changes prior to color mapping (cut levels, etc)
             vmax = self.rgbmap.get_hash_size() - 1
             newdata = self.apply_visuals(self._rotimg, 0, vmax)
 
-            # Convert data to an index array
-            # Q?: default 'uint' will be the fastest index type?
-            self._prergb = newdata.astype('uint')
-
+            # Result becomes an index array fed to the RGB mapper
+            if not numpy.issubdtype(newdata.dtype, numpy.dtype('uint')):
+                newdata = newdata.astype(numpy.uint)
+            self._prergb = newdata
+                
         time_split3 = time.time()
         if (whence <= 2) or (self._rgbobj == None):
             idx = self._prergb
             self.logger.debug("shape of index is %s" % (str(idx.shape)))
 
             # Apply color and intensity mapping.  We produce a group of
-            # ARGB slices.
-            rgb = self.rgbmap.get_rgbarray(idx)
-            self._rgbobj = rgb
+            # ARGB slices which are then rendered by the widget-specific
+            # front end.
+            rgb_order = self.get_rgb_order()
+            image_order = self.image.get_order()
+            rgbobj = self.rgbmap.get_rgbarray(idx, order=rgb_order,
+                                              image_order=image_order)
+            self._rgbobj = rgbobj
 
         time_end = time.time()
-        self.logger.info("times: total=%.4f 0=%.4f 1=%.4f 2=%.4f" % (
+        self.logger.info("times: total=%.4f cutout=%.4f transform=%.4f index=%.4f rgbmap=%.4f" % (
             (time_end - time_start),
-            (time_split2 - time_start),
+            (time_split1 - time_start),
+            (time_split2 - time_split1),
             (time_split3 - time_split2),
             (time_end - time_split3),
             ))
@@ -678,7 +687,7 @@ class FitsImageBase(Callback.Callbacks):
         # distance from start of cutout data to pan position
         xo, yo = pan_x - x1, pan_y - y1
 
-        self.logger.info("approx area covered is %dx%d to %dx%d" % (
+        self.logger.debug("approx area covered is %dx%d to %dx%d" % (
             x1, y1, x2, y2))
 
         self._org_x1 = x1
@@ -697,7 +706,7 @@ class FitsImageBase(Callback.Callbacks):
         wd, ht = self.get_dims(data)
         ocx = int(xo * res.scale_x)
         ocy = int(yo * res.scale_y)
-        self.logger.info("ocx,ocy=%d,%d cutout=%dx%d win=%dx%d" % (
+        self.logger.debug("ocx,ocy=%d,%d cutout=%dx%d win=%dx%d" % (
             ocx, ocy, wd, ht, win_wd, win_ht))
         ## assert (0 <= ocx) and (ocx < wd) and (0 <= ocy) and (ocy < ht), \
         ##     FitsImageError("calculated center not in cutout!")
@@ -752,7 +761,7 @@ class FitsImageBase(Callback.Callbacks):
             xoff, yoff = yoff, xoff
             
         split_time = time.time()
-        self.logger.info("reshape time %.3f sec" % (
+        self.logger.debug("reshape time %.3f sec" % (
             split_time - start_time))
 
         wd, ht = self.get_dims(data)
@@ -763,16 +772,22 @@ class FitsImageBase(Callback.Callbacks):
             # TODO: this is the slowest part of the rendering
             # need to find a way to speed it up!
             yi, xi = numpy.mgrid[0:ht, 0:wd]
-            xi = xi - rotctr_x
-            yi = yi - rotctr_y
+            xi -= rotctr_x
+            yi -= rotctr_y
             cos_t = numpy.cos(numpy.radians(-rot_deg))
             sin_t = numpy.sin(numpy.radians(-rot_deg))
             ap = (xi * cos_t) - (yi * sin_t) + rotctr_x
             bp = (xi * sin_t) + (yi * cos_t) + rotctr_y
-            ## ap = numpy.rint(ap).astype('int').clip(0, wd-1)
-            ## bp = numpy.rint(bp).astype('int').clip(0, ht-1)
-            ap = ap.astype('int').clip(0, wd-1)
-            bp = bp.astype('int').clip(0, ht-1)
+            #ap = numpy.rint(ap).astype('int').clip(0, wd-1)
+            #bp = numpy.rint(bp).astype('int').clip(0, ht-1)
+            # Optomizations to reuse existing intermediate arrays
+            numpy.rint(ap, out=ap)
+            ap = ap.astype('int')
+            ap.clip(0, wd-1, out=ap)
+            numpy.rint(bp, out=bp)
+            bp = bp.astype('int')
+            bp.clip(0, ht-1, out=bp)
+            
             newdata = data[bp, ap]
             new_wd, new_ht = self.get_dims(newdata)
             self.logger.debug("rotated shape is %dx%d" % (new_wd, new_ht))
@@ -783,7 +798,7 @@ class FitsImageBase(Callback.Callbacks):
             wd, ht, data = new_wd, new_ht, newdata
 
         split2_time = time.time()
-        self.logger.info("rotate time %.3f sec, total reshape %.3f sec" % (
+        self.logger.debug("rotate time %.3f sec, total reshape %.3f sec" % (
             split2_time - split_time, split2_time - start_time))
 
         ## assert (wd >= win_wd) and (ht >= win_ht), \
@@ -793,7 +808,7 @@ class FitsImageBase(Callback.Callbacks):
         ctr_x, ctr_y = self._ctr_x, self._ctr_y
         dst_x, dst_y = ctr_x - xoff, ctr_y - (ht - yoff)
         self._dst_x, self._dst_y = dst_x, dst_y
-        self.logger.info("ctr=%d,%d off=%d,%d dst=%d,%d cutout=%dx%d window=%d,%d" % (
+        self.logger.debug("ctr=%d,%d off=%d,%d dst=%d,%d cutout=%dx%d window=%d,%d" % (
             ctr_x, ctr_y, xoff, yoff, dst_x, dst_y, wd, ht, win_wd, win_ht))
         return data
 
@@ -1248,7 +1263,7 @@ class FitsImageBase(Callback.Callbacks):
         pan_x, pan_y = self.t_['pan']
         self._pan_x = pan_x
         self._pan_y = pan_y
-        self.logger.info("pan set to %.2f,%.2f" % (pan_x, pan_y))
+        self.logger.debug("pan set to %.2f,%.2f" % (pan_x, pan_y))
         self.redraw(whence=0)
 
     def get_pan(self):
@@ -1362,6 +1377,13 @@ class FitsImageBase(Callback.Callbacks):
     def get_autocut_methods(self):
         return self.autocuts.get_algorithms()
     
+    def set_autocuts(self, autocuts):
+        """
+        Set the autocuts class instance that determines the algorithm used
+        for calculating cut levels.
+        """
+        self.autocuts = autocuts
+    
     def transform(self, flip_x, flip_y, swap_xy, redraw=True):
         """Transforms view of image.
 
@@ -1458,6 +1480,9 @@ class FitsImageBase(Callback.Callbacks):
         
     def get_center(self):
         return (self._ctr_x, self._ctr_y)
+        
+    def get_rgb_order(self):
+        return 'RGB'
         
     def get_rotation_info(self):
         return (self._ctr_x, self._ctr_y, self.t_['rot_deg'])

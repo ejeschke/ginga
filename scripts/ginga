@@ -93,7 +93,6 @@ global_plugins = [
     ]
 
 local_plugins = [
-    Bunch(module='UIMap', ws='dialogs', shortkey='f1'),
     Bunch(module='Pick', ws='dialogs', shortkey='f1'),
     Bunch(module='Ruler', ws='dialogs', shortkey='f2'),
     #Bunch(module='Layers', ws='dialogs', shortkey='f3'),

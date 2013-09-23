@@ -33,6 +33,7 @@ class BaseImage(Callback.Callbacks):
         self.metadata = {}
         if metadata:
             self.update_metadata(metadata)
+        self.order = ''
 
         self._set_minmax()
 
@@ -53,6 +54,10 @@ class BaseImage(Callback.Callbacks):
         # NOTE: numpy stores data in column-major layout
         data = self.get_data()
         return data.shape[0]
+
+    @property
+    def depth(self):
+        return self.get_depth()
 
     def get_size(self):
         return (self.width, self.height)
@@ -128,6 +133,27 @@ class BaseImage(Callback.Callbacks):
 
         self.make_callback('modified')
 
+    def get_slice(self, c):
+        data = self.get_data()
+        return data[..., self.order.index(c.upper())]
+
+    def get_array(self, order):
+        order = order.upper()
+        if order == self.order:
+            return self.get_data()
+        l = [ self.get_slice(c) for c in order ]
+        return numpy.dstack(l)
+
+    def set_order(self, order):
+        self.order = order.upper()
+        
+    def get_order(self):
+        return self.order
+        
+    def get_order_indexes(self, cs):
+        cs = cs.upper()
+        return [ self.order.index(c) for c in cs ]
+        
     def _set_minmax(self):
         data = self.get_data()
         try:
@@ -218,23 +244,33 @@ class BaseImage(Callback.Callbacks):
 
         data = self.get_data()
         
-        # Is there a more efficient way to do this?
-        yi, xi = numpy.mgrid[0:new_ht, 0:new_wd]
-        iscale_x = float(old_wd) / float(new_wd)
-        iscale_y = float(old_ht) / float(new_ht)
+        if (new_wd != old_wd) or (new_ht != old_ht):
+            # Is there a more efficient way to do this?
+            # Make indexes and scale them
+            yi, xi = numpy.mgrid[0:new_ht, 0:new_wd]
+            iscale_x = float(old_wd) / float(new_wd)
+            iscale_y = float(old_ht) / float(new_ht)
+
+            xi *= iscale_x 
+            yi *= iscale_y
+
+            # Cut out the data according to region desired
+            cutout = data[y1:y2+1, x1:x2+1]
+
+            # Now index cutout by scaled indexes
+            ht, wd = cutout.shape[:2]
+            xi = xi.astype('int').clip(0, wd-1)
+            yi = yi.astype('int').clip(0, ht-1)
+            newdata = cutout[yi, xi]
+
+        else:
+            newdata = data[y1:y2+1, x1:x2+1]
             
-        xi *= iscale_x 
-        yi *= iscale_y
-        cutout = data[y1:y2+1, x1:x2+1]
-        ht, wd = cutout.shape[:2]
-        xi = xi.astype('int').clip(0, wd-1)
-        yi = yi.astype('int').clip(0, ht-1)
-        newdata = cutout[yi, xi]
         ht, wd = newdata.shape[:2]
-        scale_x = float(wd) / dx
-        scale_y = float(ht) / dy
-        res = Bunch.Bunch(data=newdata, org_fac=1,
-                          scale_x=scale_x, scale_y=scale_y)
+        # Calculate actual scale used (vs. desired)
+        scale_x = float(wd) / old_wd
+        scale_y = float(ht) / old_ht
+        res = Bunch.Bunch(data=newdata, scale_x=scale_x, scale_y=scale_y)
         return res
 
     def get_scaled_cutout_basic(self, x1, y1, x2, y2, scale_x, scale_y):
@@ -245,29 +281,8 @@ class BaseImage(Callback.Callbacks):
         # calculate dimensions of scaled cutout
         new_wd = int(round(scale_x * old_wd))
         new_ht = int(round(scale_y * old_ht))
-        self.logger.debug("old=%dx%d new=%dx%d" % (
-            old_wd, old_ht, new_wd, new_ht))
 
-        data = self.get_data()
-        
-        # Is there a more efficient way to do this?
-        yi, xi = numpy.mgrid[0:new_ht, 0:new_wd]
-        iscale_x = float(old_wd) / float(new_wd)
-        iscale_y = float(old_ht) / float(new_ht)
-            
-        xi *= iscale_x 
-        yi *= iscale_y
-        cutout = data[y1:y2+1, x1:x2+1]
-        ht, wd = cutout.shape[:2]
-        xi = xi.astype('int').clip(0, wd-1)
-        yi = yi.astype('int').clip(0, ht-1)
-        newdata = cutout[yi, xi]
-        ht, wd = newdata.shape[:2]
-        scale_x = float(wd) / old_wd
-        scale_y = float(ht) / old_ht
-        res = Bunch.Bunch(data=newdata, org_fac=1,
-                          scale_x=scale_x, scale_y=scale_y)
-        return res
+        return self.get_scaled_cutout_wdht(x1, y1, x2, y2, new_wd, new_ht)
 
     def get_scaled_cutout_by_dims(self, x1, y1, x2, y2, dst_wd, dst_ht,
                                   method='basic'):

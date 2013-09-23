@@ -267,9 +267,10 @@ class GingaControl(Callback.Callbacks):
         #print "CBAR VALUE = %f" % (value)
         chinfo = self.get_channelInfo()
         readout = chinfo.readout
-        maxv = readout.maxv
-        text = "Value: %-*.*s" % (maxv, maxv, value)
-        readout.set_text(text)
+        if readout != None:
+            maxv = readout.maxv
+            text = "Value: %-*.*s" % (maxv, maxv, value)
+            readout.set_text(text)
         
     def rgbmap_cb(self, rgbmap, fitsimage):
         if fitsimage != self.getfocus_fitsimage():
