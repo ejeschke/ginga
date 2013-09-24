@@ -3,6 +3,7 @@
 # 
 # Eric Jeschke (eric@naoj.org)
 #
+
 # try:
 #     # Try to import Gtk 2->3 compatibility layer
 #     from gi import pygtkcompat
@@ -31,6 +32,10 @@ if have_gtk3:
 import gtk
 import gobject
 
+if have_gtk3:
+    # TEMP: until this is fixed or some other acceptable workaround
+    #   there is no good way to run on Gtk3
+    raise Exception("Cairo.ImageSurface.create_for_data is not yet implemented in Gtk3")
 
 def pixbuf_new_from_xpm_data(xpm_data):
     if have_gtk3:
@@ -42,7 +47,15 @@ def pixbuf_new_from_xpm_data(xpm_data):
 
 def pixbuf_new_from_array(data, rgbtype, bpp):
     if have_gtk3:
-        return GdkPixbuf.Pixbuf.new_from_array(data, rgbtype, bpp)
+        # Seems Gtk3 Pixbufs do not have the new_from_array() method!
+        #return GdkPixbuf.Pixbuf.new_from_array(data, rgbtype, bpp)
+        daht, dawd, depth = data.shape
+        stride = dawd * 4 * bpp
+        rgb_buf = data.tostring(order='C')
+        hasAlpha = False
+        rgbtype = GdkPixbuf.Colorspace.RGB
+        return GdkPixbuf.Pixbuf.new_from_data(rgb_buf, rgbtype, hasAlpha, 8,
+                                       dawd, daht, stride, None, None)
     else:
         return gtk.gdk.pixbuf_new_from_array(data, rgbtype, bpp)
     

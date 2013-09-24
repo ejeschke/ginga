@@ -12,6 +12,7 @@ import logging
 from ginga import AstroImage
 from ginga.qtw.QtHelp import QtGui, QtCore
 from ginga.qtw.FitsImageCanvasQt import FitsImageCanvas
+from ginga.misc import NullLogger
 
 from IPython.lib.kernel import connect_qtconsole
 try:
@@ -19,7 +20,7 @@ try:
     from IPython.zmq.ipkernel import IPKernelApp
     
 except ImportError:
-    # newer 
+    # newer releases
     from IPython.kernel.zmq.kernelapp import IPKernelApp
 
 STD_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcName)s) | %(message)s'
@@ -27,6 +28,9 @@ STD_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcNa
 # global ref to keep an object from being collected
 app_ref = None
 
+# workaround for suppressing logging to stdout in ipython notebook
+# on Macs
+use_null_logger = True
 
 class SimpleKernelApp(object):
     """A minimal object that uses an IPython kernel and has a few methods
@@ -38,6 +42,7 @@ class SimpleKernelApp(object):
 
     def __init__(self, gui, shell):
         self.shell = shell
+        self.logger = None
         
         if shell == None:
             # Start IPython kernel with GUI event loop support
@@ -58,11 +63,17 @@ class SimpleKernelApp(object):
 
     def new_qt_console(self, evt=None):
         """start a new qtconsole connected to our kernel"""
-        if hasattr(self.ipkernel, 'profile'):
-            return connect_qtconsole(self.ipkernel.connection_file, 
-                                     profile=self.ipkernel.profile)
-        else:
-            return connect_qtconsole(self.ipkernel.connection_file)
+        try:
+            if hasattr(self.ipkernel, 'profile'):
+                return connect_qtconsole(self.ipkernel.connection_file, 
+                                         profile=self.ipkernel.profile)
+            else:
+                return connect_qtconsole(self.ipkernel.connection_file)
+
+        except Exception as e:
+            if self.logger:
+                self.logger.error("Couldn't start QT Console: %s" % (
+                    str(e)))
 
     def cleanup_consoles(self, evt=None):
         for c in self.consoles:
@@ -264,15 +275,19 @@ def start(kapp):
                 app, QtCore.SLOT('quit()'))
 
     # create a logger
-    logger = logging.getLogger("example1")
-    logger.setLevel(logging.INFO)
-    fmt = logging.Formatter(STD_FORMAT)
-    # stderrHdlr = logging.StreamHandler()
-    # stderrHdlr.setFormatter(fmt)
-    # logger.addHandler(stderrHdlr)
-    fileHdlr = logging.FileHandler("/dev/null")
-    fileHdlr.setFormatter(fmt)
-    logger.addHandler(fileHdlr)
+    if use_null_logger:
+        logger = NullLogger.NullLogger()
+    else:
+        logger = logging.getLogger("ipg")
+        logger.setLevel(logging.INFO)
+        fmt = logging.Formatter(STD_FORMAT)
+        #stderrHdlr = logging.StreamHandler()
+        #stderrHdlr.setFormatter(fmt)
+        #logger.addHandler(stderrHdlr)
+        fileHdlr = logging.FileHandler("ipg.log")
+        fileHdlr.setFormatter(fmt)
+        logger.addHandler(fileHdlr)
+    kapp.logger = logger
 
     # here is our little launcher
     w = StartMenu(logger, app, kapp)

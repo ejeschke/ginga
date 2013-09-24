@@ -36,7 +36,7 @@ Usage:
 import sys, traceback
 import thread, threading
 import logging
-import Queue
+import Queue as que
 
 import gtk
 from ginga.misc import Task, Future
@@ -47,7 +47,7 @@ class GtkMain(object):
     def __init__(self, queue=None, logger=None, ev_quit=None):
         # You can pass in a queue if you prefer to do so
         if not queue:
-            queue = Queue.Queue()
+            queue = que.Queue()
         self.gui_queue = queue
         # You can pass in a logger if you prefer to do so
         if logger == None:
@@ -99,7 +99,7 @@ class GtkMain(object):
                     pass
 
                     
-            except Queue.Empty:
+            except que.Empty:
                 done = True
                 
             except Exception, e:
