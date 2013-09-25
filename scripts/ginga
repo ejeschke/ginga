@@ -164,11 +164,10 @@ def main(options, args):
         from ginga.qtw.GingaQt import GingaView
     else:
         try:
-            #import gtk
-            from ginga.gtkw.GingaGtk import GingaView
+            from ginga.qtw.GingaQt import GingaView
         except ImportError:
             try:
-                from ginga.qtw.GingaQt import GingaView
+                from ginga.gtkw.GingaGtk import GingaView
             except ImportError:
                 print("You need python-gtk or python-qt4 to run Ginga!")
                 sys.exit(1)
