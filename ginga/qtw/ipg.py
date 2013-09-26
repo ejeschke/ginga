@@ -4,7 +4,13 @@
 #
 # Eric Jeschke (eric@naoj.org)
 #
+# Copyright (c) Eric R. Jeschke.  All rights reserved.
+# This is open-source software licensed under a BSD license.
+# Please see the file LICENSE.txt for details.
+#
+# CREDIT:
 # Contains code from IPython tutorial programs "qtapp_ip.py" and "kapp.py".
+# Author not listed.
 #
 import sys, os
 import logging
@@ -23,6 +29,15 @@ except ImportError:
     # newer releases
     from IPython.kernel.zmq.kernelapp import IPKernelApp
 
+import matplotlib
+# Hack to force matplotlib to not use any Xwindows backend.
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
+from IPython.display import Image
+import StringIO
+
+
 STD_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcName)s) | %(message)s'
 
 # global ref to keep an object from being collected
@@ -32,6 +47,20 @@ app_ref = None
 # on Macs
 use_null_logger = True
 
+
+class IPyNbFitsImage(FitsImageCanvas):
+
+    def show(self):
+        return Image(data=bytes(self.get_rgb_image_as_bytes(format='png')),
+                     format='png', embed=True)
+
+    def load(self, filepath):
+        image = AstroImage.AstroImage(logger=self.logger)
+        image.load_file(filepath)
+
+        self.set_image(image)
+
+    
 class SimpleKernelApp(object):
     """A minimal object that uses an IPython kernel and has a few methods
     to manipulate a namespace and open Qt consoles tied to the kernel.
@@ -125,6 +154,9 @@ class StartMenu(QtGui.QMainWindow):
         self.setCentralWidget(vw)
         vw.setLayout(vbox)
         self.setWindowTitle("Ginga IPython Console")
+        self.showNormal()
+        self.raise_()
+        self.activateWindow()
 
     def new_viewer(self, name=None):
         if not name:
@@ -132,7 +164,7 @@ class StartMenu(QtGui.QMainWindow):
             name = 'v%d' % self.count
 
         # create a ginga basic object for user interaction
-        fi = FitsImageCanvas(self.logger, render='widget')
+        fi = IPyNbFitsImage(self.logger, render='widget')
         fi.enable_autocuts('on')
         fi.set_autocut_params('zscale')
         fi.enable_autozoom('on')
@@ -196,14 +228,17 @@ class StartMenu(QtGui.QMainWindow):
         vw.resize(524, 540)
         vw.setWindowTitle("Ginga: %s" % name)
         self.viewers[name] = vw
-        vw.show()
+        vw.showNormal()
+        vw.raise_()
+        vw.activateWindow()
 
     def close_viewer(self, name):
         w = self.viewers[name]
         del self.viewers[name]
         # remove variable from namespace
         del self.kapp.namespace[name]
-        w.close()
+        w.setParent(None)
+        w.deleteLater()
         
     def load_file(self, filepath, name):
         image = AstroImage.AstroImage(logger=self.logger)
@@ -263,7 +298,8 @@ class StartMenu(QtGui.QMainWindow):
         for name in names:
             self.close_viewer(name)
         self.kapp.cleanup_consoles()
-        self.close()
+        self.setParent(None)
+        self.deleteLater()
 
         
 def start(kapp):
@@ -281,9 +317,9 @@ def start(kapp):
         logger = logging.getLogger("ipg")
         logger.setLevel(logging.INFO)
         fmt = logging.Formatter(STD_FORMAT)
-        #stderrHdlr = logging.StreamHandler()
-        #stderrHdlr.setFormatter(fmt)
-        #logger.addHandler(stderrHdlr)
+        stderrHdlr = logging.StreamHandler()
+        stderrHdlr.setFormatter(fmt)
+        logger.addHandler(stderrHdlr)
         fileHdlr = logging.FileHandler("ipg.log")
         fileHdlr.setFormatter(fmt)
         logger.addHandler(fileHdlr)
@@ -300,6 +336,17 @@ def start(kapp):
     # integration going, and it replaces calling app.exec_()
     kapp.start()
     return w
+
+# Some boilderplate to display matplotlib plots in notebook
+# If QT GUI could interact nicely with --pylab=inline we wouldn't need this
+
+def showplt():
+    buf = StringIO.StringIO()
+    plt.savefig(buf, bbox_inches=0)
+    img = Image(data=bytes(buf.getvalue()),
+                   format='png', embed=True)
+    buf.close()
+    return img
 
 def nb_start():
     """Call this function if importing from Qt notebook."""
