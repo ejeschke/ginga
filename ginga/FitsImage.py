@@ -482,7 +482,7 @@ class FitsImageBase(Callback.Callbacks):
             self.logger.info("widget redraw %s (whence=%d) %.4f sec" % (
                 str(self), whence, time_done - time_start))
 
-        except Exception, e:
+        except Exception as e:
             self.logger.error("Error redrawing image: %s" % (str(e)))
             try:
                 # log traceback, if possible
@@ -1523,7 +1523,7 @@ class FitsImageBase(Callback.Callbacks):
                     self.transform(flip_x, flip_y, swap_xy, redraw=redraw)
                     invertY = False
 
-                except Exception, e:
+                except Exception as e:
                     # problems figuring out orientation--let it be
                     self.logger.error("orientation error: %s" % str(e))
                     pass
