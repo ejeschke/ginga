@@ -72,12 +72,14 @@ for filename in ('working.icc', 'monitor.icc', 'sRGB.icc', 'AdobeRGB.icc'):
     profname, ext = os.path.splitext(filename)
     profile[profname] = os.path.join(basedir, "profiles", filename)
 
-rendering_intent = ImageCms.INTENT_PERCEPTUAL
+rendering_intent = 0
 
 # Prepare common transforms
 transform = {}
 # Build transforms for profile conversions for which we have profiles
 if have_cms:
+    rendering_intent = ImageCms.INTENT_PERCEPTUAL
+
     for inprof, outprof in [('sRGB', 'working'), ('AdobeRGB', 'working'), ('working', 'monitor')]:
         if os.path.exists(profile[inprof]) and os.path.exists(profile[outprof]):
             transform[(inprof, outprof)] = ImageCms.buildTransform(profile[inprof],
@@ -547,4 +549,17 @@ def convert_profile_monitor(image_np):
     out_np = convert_profile_numpy_transform(image_np, output_transform)
     return out_np
 
+def set_rendering_intent(intent):
+    """
+    Sets the color management attribute rendering intent.
+
+    Parameters
+    ----------
+    intent: integer
+      0: perceptual, 1: relative colorimetric, 2: saturation,
+      3: absolute colorimetric
+    """
+    global rendering_intent
+    rendering_intent = intent
+    
 #END
