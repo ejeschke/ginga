@@ -66,9 +66,25 @@ try:
 except KeyError:
     basedir = os.path.join(os.environ['HOME'], '.ginga')
 
-working_profile = os.path.join(basedir, "profiles", "working.icc")
-monitor_profile = os.path.join(basedir, "profiles", "monitor.icc")
+# Color Management configuration
+profile = {}
+for filename in ('working.icc', 'monitor.icc', 'sRGB.icc', 'AdobeRGB.icc'):
+    profname, ext = os.path.splitext(filename)
+    profile[profname] = os.path.join(basedir, "profiles", filename)
 
+rendering_intent = ImageCms.INTENT_PERCEPTUAL
+
+# Prepare common transforms
+transform = {}
+# Build transforms for profile conversions for which we have profiles
+if have_cms:
+    for inprof, outprof in [('sRGB', 'working'), ('AdobeRGB', 'working'), ('working', 'monitor')]:
+        if os.path.exists(profile[inprof]) and os.path.exists(profile[outprof]):
+            transform[(inprof, outprof)] = ImageCms.buildTransform(profile[inprof],
+                                                                   profile[outprof],
+                                                                   'RGB', 'RGB',
+                                                                   rendering_intent,
+                                                                   0)
 
 class PythonImage(BaseImage):
 
@@ -112,7 +128,7 @@ class PythonImage(BaseImage):
 
     def has_alpha(self):
         order = self.get_order()
-        return order.has_key('A')
+        return 'A' in order
     
     def get_scaled_cutout_wdht(self, x1, y1, x2, y2, new_wd, new_ht,
                                   method='bicubic'):
@@ -207,9 +223,9 @@ class PythonImage(BaseImage):
 
             # If we have a working color profile then handle any embedded
             # profile or color space information, if possible
-            if have_cms and os.path.exists(working_profile):
+            if have_cms and os.path.exists(profile['working']):
                 # Assume sRGB image, unless we learn to the contrary
-                in_profile = os.path.join(basedir, "profiles", "sRGB.icc")
+                in_profile = 'sRGB'
                 try:
                     if image.info.has_key('icc_profile'):
                         self.logger.debug("image has embedded color profile")
@@ -231,22 +247,28 @@ class PythonImage(BaseImage):
                             # combined with a test of EXIF tag 0x0001
                             # ('InteropIndex') == 'R03', but PIL _getexif()
                             # does not return the InteropIndex
-                            in_profile = os.path.join(basedir, "profiles",
-                                                      "AdobeRGB.icc")
+                            in_profile = 'AdobeRGB'
                             self.logger.debug("hmm..this looks like an AdobeRGB image")
                         elif csp == 0x1:
                             self.logger.debug("hmm..this looks like a sRGB image")
-                            in_profile = os.path.join(basedir, "profiles",
-                                                      "sRGB.icc")
+                            in_profile = 'sRGB'
                         else:
                             self.logger.debug("no color space metadata, assuming this is an sRGB image")
 
-                    # if we have a valid input profile, try the conversion
-                    if in_profile:
+                    # if we have a valid profile, try the conversion
+                    tr_key = (in_profile, 'working')
+                    if tr_key in transform:
+                        # We have am in-core transform already for this (faster)
+                        image = convert_profile_pil_transform(image, transform[tr_key],
+                                                              inPlace=True)
+                    else:
+                        # Convert using profiles on disk (slower)
+                        if in_profile in profile:
+                            in_profile = profile[in_profile]
                         image = convert_profile_pil(image, in_profile,
-                                                    working_profile)
-                        self.logger.info("converted from profile (%s) to profile (%s)" % (
-                            in_profile, working_profile))
+                                                    profile['working'])
+                    self.logger.info("converted from profile (%s) to profile (%s)" % (
+                        in_profile, profile['working']))
                 except Exception, e:
                     self.logger.error("Error converting from embedded color profile: %s" % (str(e)))
                     self.logger.warn("Leaving image unprofiled.")
@@ -471,12 +493,23 @@ def rgb2qimage(rgb):
 
 # --- end QImage to numpy conversion functions ---
 
+# --- Color Management conversion functions ---
+
 def convert_profile_pil(image_pil, inprof_path, outprof_path):
     if not have_cms:
         return image_pil
     
     image_out = ImageCms.profileToProfile(image_pil, inprof_path,
                                           outprof_path)
+    return image_out
+
+def convert_profile_pil_transform(image_pil, transform, inPlace=False):
+    if not have_cms:
+        return image_pil
+    
+    image_out = ImageCms.applyTransform(image_pil, transform, inPlace)
+    if inPlace:
+        return image_pil
     return image_out
 
 def convert_profile_numpy(image_np, inprof_path, outprof_path):
@@ -489,12 +522,21 @@ def convert_profile_numpy(image_np, inprof_path, outprof_path):
     image_out = pilutil.fromimage(out_image_pil)
     return image_out
 
-def convert_profile_monitor(image_np):
-    if not os.path.exists(monitor_profile):
+def convert_profile_numpy_transform(image_np, transform):
+    if (not have_pilutil) or (not have_cms):
         return image_np
-    return convert_profile_numpy(image_np, working_profile, monitor_profile)
 
-def has_monitor_profile():
-    return have_cms and os.path.exists(monitor_profile)
+    in_image_pil = pilutil.toimage(image_np)
+    convert_profile_pil_transform(in_image_pil, transform, inPlace=True)
+    image_out = pilutil.fromimage(in_image_pil)
+    return image_out
+
+def have_monitor_profile():
+    return ('working', 'monitor') in transform
+
+def convert_profile_monitor(image_np):
+    output_transform = transform[('working', 'monitor')]
+    out_np = convert_profile_numpy_transform(image_np, output_transform)
+    return out_np
 
 #END

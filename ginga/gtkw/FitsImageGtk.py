@@ -74,14 +74,13 @@ class FitsImageGtk(FitsImageCairo.FitsImageCairo):
             
     def get_image_as_pixbuf(self):
         rgbobj = self.get_rgb_object()
-        #arr = numpy.dstack((rgbobj.r, rgbobj.g, rgbobj.b))
         arr = rgbobj.get_array('RGB')
 
         try:
             pixbuf = gtksel.pixbuf_new_from_array(arr, gtk.gdk.COLORSPACE_RGB,
                                                   8)
         except Exception, e:
-            print "ERROR MAKING PIXBUF", str(e)
+            self.logger.warn("Error making pixbuf: %s" % (str(e)))
             # pygtk might have been compiled without numpy support
             daht, dawd, depth = arr.shape
             rgb_buf = self._get_rgbbuf(arr)

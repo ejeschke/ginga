@@ -11,13 +11,12 @@ import time
 import os
 import math
 
-# PySide or PyQt4: choose one or the other, but not both
-toolkit = 'choose'
-#toolkit = 'pyside'
-#toolkit = 'pyqt4'
+import ginga.toolkit
 
-has_pyqt4 = False
-has_pyside = False
+have_pyqt4 = False
+have_pyside = False
+
+toolkit = ginga.toolkit.toolkit
 
 if toolkit in ('pyqt4', 'choose'):
     try:
@@ -26,7 +25,7 @@ if toolkit in ('pyqt4', 'choose'):
             sip.setapi(cl, 2)
 
         from PyQt4 import QtCore, QtGui
-        has_pyqt4 = True
+        have_pyqt4 = True
         try:
             from PyQt4 import QtWebKit
         except ImportError:
@@ -37,10 +36,10 @@ if toolkit in ('pyqt4', 'choose'):
     except ImportError:
         pass
 
-if toolkit in ('pyside', 'choose') and (not has_pyqt4):
+if toolkit in ('pyside', 'choose') and (not have_pyqt4):
     try:
         from PySide import QtCore, QtGui
-        has_pyside = True
+        have_pyside = True
         try:
             from PySide import QtWebKit
         except ImportError:
@@ -51,7 +50,11 @@ if toolkit in ('pyside', 'choose') and (not has_pyqt4):
     except ImportError:
         pass
     
-if (not has_pyside) and (not has_pyqt4):
+if have_pyqt4:
+    ginga.toolkit.use('qt4')
+elif have_pyside:
+    ginga.toolkit.use('pyside')
+else:
     raise ImportError("Please install pyqt4 or pyside")
 
 from ginga.misc import Bunch, Callback

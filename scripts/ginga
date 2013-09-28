@@ -56,6 +56,7 @@ from ginga.misc.Bunch import Bunch
 from ginga.misc import Task, ModuleManager, Datasrc, Settings
 from ginga.Control import GingaControl, GuiLogHandler
 import ginga.version as version
+import ginga.toolkit as ginga_toolkit
 
 LOG_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcName)s) | %(message)s'
 
@@ -158,9 +159,12 @@ def main(options, args):
     sys.path.insert(0, childDir)
 
     # Choose a toolkit
-    if options.toolkit == 'gtk':
+    ginga_toolkit.use(options.toolkit)
+    tkname = ginga_toolkit.get_family()
+    
+    if tkname == 'gtk':
         from ginga.gtkw.GingaGtk import GingaView
-    elif options.toolkit == 'qt':
+    elif tkname == 'qt':
         from ginga.qtw.GingaQt import GingaView
     else:
         try:
@@ -357,6 +361,7 @@ if __name__ == "__main__":
                       default=False,
                       help="Run the profiler on main()")
     optprs.add_option("-t", "--toolkit", dest="toolkit", metavar="NAME",
+                      default='choose',
                       help="Prefer GUI toolkit (gtk|qt)")
 
     (options, args) = optprs.parse_args(sys.argv[1:])

@@ -1,5 +1,4 @@
 #
-
 # RGBMap.py -- color mapping
 # 
 # Eric Jeschke (eric@naoj.org)
@@ -30,6 +29,10 @@ class RGBImage(object):
 
     def get_order(self):
         return self.order
+
+    def get_order_indexes(self, cs):
+        cs = cs.upper()
+        return [ self.order.index(c) for c in cs ]
 
     def get_array(self, order):
         order = order.upper()
@@ -202,6 +205,16 @@ class RGBMapper(Callback.Callbacks):
         cs = cs.upper()
         return [ order.index(c) for c in cs ]
 
+    def convert_profile_monitor(self, rgbobj):
+        inp = rgbobj.get_array('RGB')
+        arr = PythonImage.convert_profile_monitor(inp)
+        out = rgbobj.rgbarr
+
+        ri, gi, bi = rgbobj.get_order_indexes('RGB')
+        out[..., ri] = arr[..., 0]
+        out[..., gi] = arr[..., 1]
+        out[..., bi] = arr[..., 2]
+    
     def _get_rgbarray(self, idx, rgbobj, image_order):
         # NOTE: data is assumed to be in the range 0-255 at this point
         # but clip as a precaution
@@ -231,9 +244,8 @@ class RGBMapper(Callback.Callbacks):
 
             # convert to monitor profile, if one is available
             # TODO: this conversion doesn't really belong here!
-            # if PythonImage.has_monitor_profile():
-            #     out = PythonImage.convert_profile_monitor(out)
-        
+            if PythonImage.have_monitor_profile():
+                self.convert_profile_monitor(rgbobj)
 
     def get_rgbarray(self, idx, out=None, order='RGB', image_order='RGB'):
         # prepare output array
@@ -247,7 +259,7 @@ class RGBMapper(Callback.Callbacks):
             assert res_shape == out.shape, \
                    RGBMapError("Output array shape %s doesn't match result shape %s" % (
                 str(out.shape), str(res_shape)))
-
+            
         res = RGBImage(out, order)
 
         # set alpha channel
