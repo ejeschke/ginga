@@ -55,9 +55,11 @@ class RGBMapper(Callback.Callbacks):
     # result 
     #
 
-    def __init__(self):
+    def __init__(self, logger):
         Callback.Callbacks.__init__(self)
 
+        self.logger = logger
+        
         # For color and intensity maps
         self.cmap = None
         self.imap = None
@@ -245,6 +247,7 @@ class RGBMapper(Callback.Callbacks):
             # convert to monitor profile, if one is available
             # TODO: this conversion doesn't really belong here!
             if PythonImage.have_monitor_profile():
+                self.logger.debug("Converting to monitor profile.")
                 self.convert_profile_monitor(rgbobj)
 
     def get_rgbarray(self, idx, out=None, order='RGB', image_order='RGB'):
@@ -417,8 +420,8 @@ class RGBMapper(Callback.Callbacks):
 
 class PassThruRGBMapper(RGBMapper):
 
-    def __init__(self):
-        super(PassThruRGBMapper, self).__init__()
+    def __init__(self, logger):
+        super(PassThruRGBMapper, self).__init__(logger)
 
         self.hashalg = 'linear'
         self.maxhashsize = 256

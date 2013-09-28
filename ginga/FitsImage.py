@@ -70,7 +70,7 @@ class FitsImageBase(Callback.Callbacks):
         if rgbmap:
             self.rgbmap = rgbmap
         else:
-            rgbmap = RGBMap.RGBMapper()
+            rgbmap = RGBMap.RGBMapper(self.logger)
             self.rgbmap = rgbmap
 
         # for debugging

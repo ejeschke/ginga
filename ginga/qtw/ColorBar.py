@@ -28,7 +28,7 @@ class ColorBar(Callback.Callbacks, QtGui.QWidget):
         self.pixmap = None
         
         if not rgbmap:
-            rgbmap = RGBMap.RGBMapper()
+            rgbmap = RGBMap.RGBMapper(logger)
         self.set_rgbmap(rgbmap)
         
         self._start_x = 0

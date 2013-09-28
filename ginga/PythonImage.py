@@ -83,8 +83,9 @@ if have_cms:
             transform[(inprof, outprof)] = ImageCms.buildTransform(profile[inprof],
                                                                    profile[outprof],
                                                                    'RGB', 'RGB',
-                                                                   rendering_intent,
-                                                                   0)
+                                                                   renderingIntent=rendering_intent,
+                                                                   flags=0)
+
 
 class PythonImage(BaseImage):
 
@@ -144,6 +145,7 @@ class PythonImage(BaseImage):
         newdata = self._imresize(newdata, new_wd, new_ht, method=method)
 
         ht, wd = newdata.shape[:2]
+        old_wd, old_ht = max(old_wd, 1), max(old_ht, 1)
         scale_x = float(wd) / old_wd
         scale_y = float(ht) / old_ht
         res = Bunch.Bunch(data=newdata, org_fac=1,
@@ -166,6 +168,7 @@ class PythonImage(BaseImage):
         newdata = self._imresize(newdata, new_wd, new_ht, method=method)
 
         ht, wd = newdata.shape[:2]
+        old_wd, old_ht = max(old_wd, 1), max(old_ht, 1)
         scale_x = float(wd) / old_wd
         scale_y = float(ht) / old_ht
         res = Bunch.Bunch(data=newdata, org_fac=1,
@@ -495,12 +498,17 @@ def rgb2qimage(rgb):
 
 # --- Color Management conversion functions ---
 
-def convert_profile_pil(image_pil, inprof_path, outprof_path):
+def convert_profile_pil(image_pil, inprof_path, outprof_path, inPlace=False):
     if not have_cms:
         return image_pil
     
     image_out = ImageCms.profileToProfile(image_pil, inprof_path,
-                                          outprof_path)
+                                          outprof_path, 
+                                          renderingIntent=rendering_intent,
+                                          outputMode='RGB', inPlace=inPlace,
+                                          flags=0)
+    if inPlace:
+        return image_pil
     return image_out
 
 def convert_profile_pil_transform(image_pil, transform, inPlace=False):

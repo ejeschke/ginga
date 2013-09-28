@@ -87,7 +87,7 @@ class GingaVision(QtGui.QMainWindow):
         #fi.set_redraw_lag(0.0)
         fi._invertY = False
         # PassThruRGBMapper doesn't color map data--data is already colored
-        rgbmap = RGBMap.PassThruRGBMapper()
+        rgbmap = RGBMap.PassThruRGBMapper(self.logger)
         fi.set_rgbmap(rgbmap)
         # Clip cuts assumes data does not need to be scaled in cut levels--
         # only clipped

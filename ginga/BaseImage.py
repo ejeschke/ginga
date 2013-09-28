@@ -268,6 +268,7 @@ class BaseImage(Callback.Callbacks):
             
         ht, wd = newdata.shape[:2]
         # Calculate actual scale used (vs. desired)
+        old_wd, old_ht = max(old_wd, 1), max(old_ht, 1)
         scale_x = float(wd) / old_wd
         scale_y = float(ht) / old_ht
         res = Bunch.Bunch(data=newdata, scale_x=scale_x, scale_y=scale_y)
