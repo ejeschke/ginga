@@ -35,14 +35,19 @@ class CatalogServer(object):
     def getParams(self):
         return self.params
 
-    def toStar(self, sourcerec):
+    def toStar(self, sourcerec, magfield):
         data = {}
         data.update(dict(sourcerec.items()))
+        try:
+            mag = float(sourcerec[magfield])
+        except:
+            mag = 0.0
+            
         # Make sure we have at least these Ginga standard fields defined
         d = { 'name':         sourcerec.id,
               'ra_deg':       float(sourcerec.ra),
               'dec_deg':      float(sourcerec.dec),
-              'mag':          18.0,
+              'mag':          mag,
               'preference':   0.0,
               'priority':     0,
               'description':  'fake magnitude' }
@@ -78,11 +83,25 @@ class CatalogServer(object):
         self.logger.info("Will query: %s" % query.getqueryurl(True))
 
         results = query.execute()
+
+        # Scan the returned fields for ones that have a UCD containing 'phot'
+        mags = []
+        fields = results.fielddesc()
+        for field in fields:
+            ucd = str(field.ucd).lower()
+            if ('phot_' in ucd) or ('phot.' in ucd):
+                mags.append(field.name)
+        self.logger.debug("possible magnitude fields: %s" % str(mags))
+        if len(mags) > 0:
+            magfield = mags[0]
+        else:
+            magfield = None
+            
         self.logger.info("Found %d sources" % len(results))
 
         starlist = []
         for source in results:
-            starlist.append(self.toStar(source))
+            starlist.append(self.toStar(source, magfield))
 
         # metadata about the list
         columns = [('Name', 'name'),

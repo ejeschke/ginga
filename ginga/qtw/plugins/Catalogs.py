@@ -307,6 +307,8 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
         self.cbar.set_cmap(self.cmap)
         self.cbar.set_imap(self.imap)
         #self.cbar.set_size_request(-1, 20)
+        rgbmap = self.cbar.get_rgbmap()
+        rgbmap.add_callback('changed', lambda *args: self.replot_stars())
 
         vbox.addWidget(self.cbar, stretch=0)
 

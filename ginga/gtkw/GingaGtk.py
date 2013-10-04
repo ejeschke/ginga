@@ -69,10 +69,16 @@ class GingaView(GtkMain.GtkMain):
 
         self.window_is_fullscreen = False
         self.w.fscreen = None
-        self._lastwsname = 'main'
-
+        self._lastwsname = 'channels'
+        self.layout = None
         
-    def build_toplevel(self, layout):
+    def get_screen_dimensions(self):
+        return (screen_wd, screen_ht)
+        
+    def set_layout(self, layout):
+        self.layout = layout
+        
+    def build_toplevel(self):
 
         self.font = self.getFont('fixedFont', 12)
         self.font11 = self.getFont('fixedFont', 11)
@@ -85,37 +91,29 @@ class GingaView(GtkMain.GtkMain):
         except:
             pass
 
-        # Create root window and add delete/destroy callbacks
-        root = gtk.Window(gtk.WINDOW_TOPLEVEL)
-        root.set_size_request(self.default_width, self.default_height)
-        root.set_title("Ginga")
-        root.set_border_width(2)
-        root.connect("destroy", self.quit)
-        root.connect("delete_event", self.delete_event)
-        root.connect('window-state-event', self.window_state_change)
+        self.ds = GtkHelp.Desktop()
+        self.ds.make_desktop(self.layout, widgetDict=self.w)
+        # TEMP: FIX ME!
+        self.gpmon.ds = self.ds
+
+        for root in self.ds.toplevels:
+            # Create root window and add delete/destroy callbacks
+            root.set_title("Ginga")
+            root.set_border_width(2)
+            root.connect("destroy", self.quit)
+            root.connect("delete_event", self.delete_event)
+            root.connect('window-state-event', self.window_state_change)
         
         self.w.root = root
 
-        self.ds = GtkHelp.Desktop()
-        
-        # create main frame
-        self.w.mframe = gtk.VBox(spacing=2)
-        root.add(self.w.mframe)
-
-        self.add_menus()
-
-        self.w.mvbox = self.ds.make_desktop(layout, widgetDict=self.w)
-        self.w.mvbox.show_all()
-        self.w.mframe.pack_start(self.w.mvbox, expand=True)
+        menuholder = self.w['menu']
+        self.add_menus(menuholder)
 
         # Create main (center) FITS image pane
         self.w.vbox = self.w['main']
-        bnch = self.ds.make_ws(name='main', group=1, wstype='nb')
+        #bnch = self.ds.make_ws(name='main', group=1, wstype='nb')
         #bnch = self.ds.make_ws(name='main', group=1, wstype='grid')
-        self.w.mnb = bnch.nb
         self.ds.add_callback("page-select", self.page_switch_cb)
-        #self.w.mnb.connect("switch-page", self.page_switch_cb)
-        self.w.vbox.pack_start(bnch.widget, expand=True, fill=True)
 
         # readout
         if self.settings.get('shareReadout', True):
@@ -149,8 +147,11 @@ class GingaView(GtkMain.GtkMain):
         cbar = self.build_colorbar()
         self.w.vbox.pack_start(cbar, padding=0, fill=True, expand=False)
 
+        self.w.vbox.show_all()
+
         self.add_dialogs()
-        self.add_statusbar()
+        statusholder = self.w['status']
+        self.add_statusbar(statusholder)
 
         self.w.root.show_all()
 
@@ -184,10 +185,10 @@ class GingaView(GtkMain.GtkMain):
 
         return w
 
-    def add_menus(self):
+    def add_menus(self, menuholder):
 
         menubar = gtk.MenuBar()
-        self.w.mframe.pack_start(menubar, expand=False)
+        menuholder.pack_start(menubar, expand=False)
 
         # create a File pulldown menu, and add it to the menu bar
         filemenu = gtk.Menu()
@@ -254,12 +255,12 @@ class GingaView(GtkMain.GtkMain):
         helpmenu.append(w)
         w.connect("activate", lambda w: self.banner(raiseTab=True))
 
-        menubar.show_all()
+        menuholder.show_all()
 
     def add_dialogs(self):
         self.filesel = FileSelection.FileSelection(action=gtk.FILE_CHOOSER_ACTION_OPEN)
         
-    def add_statusbar(self):
+    def add_statusbar(self, statusholder):
         ## lbl = gtk.Label('')
         ## lbl.set_justify(gtk.JUSTIFY_CENTER)
         lbl = gtk.Statusbar()
@@ -267,8 +268,9 @@ class GingaView(GtkMain.GtkMain):
             lbl.set_has_resize_grip(True)
         self.w.ctx_id = None
         self.w.status = lbl
-        self.w.mframe.pack_end(self.w.status, expand=False, fill=True,
-                               padding=2)
+        statusholder.pack_end(self.w.status, expand=False, fill=True,
+                              padding=2)
+        statusholder.show_all()
 
     def window_state_change(self, window, event):
         self.window_is_fullscreen = bool(
@@ -388,7 +390,7 @@ class GingaView(GtkMain.GtkMain):
 
         # Add a page to the specified notebook
         if not workspace:
-            workspace = 'main'
+            workspace = 'channels'
 
         bnch = Bunch.Bunch(fitsimage=fi, view=iw, container=vbox,
                            readout=readout, workspace=workspace)
@@ -548,7 +550,7 @@ class GingaView(GtkMain.GtkMain):
         cbox = b.workspace
         names = self.ds.get_wsnames()
         try:
-            idx = names.index('main')
+            idx = names.index('channels')
         except:
             idx = 0
         for name in names:
@@ -581,39 +583,75 @@ class GingaView(GtkMain.GtkMain):
         dialog.show_all()
         
     def gui_add_ws(self):
-        lbl = gtk.Label('New workspace name:')
-        ent = gtk.Entry()
+        captions = (('Workspace name', 'entry'),
+                    ('Workspace type', 'combobox'),
+                    ('In workspace', 'combobox'),
+                    ('Channel prefix', 'entry'),
+                    ('Number of channels', 'spinbutton'))
+        w, b = GtkHelp.build_info(captions)
+
         self.wscount += 1
         wsname = "ws%d" % (self.wscount)
-        ent.set_text(wsname)
-        ent.set_activates_default(True)
-        lbl2 = gtk.Label('Workspace type:')
-        cbox = gtk.combo_box_new_text()
-        cbox.append_text("Grid")
+        b.workspace_name.set_text(wsname)
+
+        cbox = b.workspace_type
         cbox.append_text("Tabs")
+        cbox.append_text("Grid")
         cbox.set_active(0)
+
+        cbox = b.in_workspace
+        names = self.ds.get_wsnames()
+        names.insert(0, 'top level')
+        try:
+            idx = names.index('top level')
+        except:
+            idx = 0
+        for name in names:
+            cbox.append_text(name)
+        cbox.set_active(idx)
+
+        b.channel_prefix.set_text("Image")
+        adj = b.number_of_channels.get_adjustment()
+        lower = 0
+        upper = 12
+        adj.configure(lower, lower, upper, 1, 1, 0)
+        adj.set_value(1)
+
         dialog = MyDialog("Add Workspace",
                           gtk.DIALOG_DESTROY_WITH_PARENT,
                           [['Cancel', 0], ['Ok', 1]],
-                          lambda w, rsp: self.new_ws_cb(w, rsp, ent, cbox))
+                          lambda w, rsp: self.new_ws_cb(w, rsp, b, names))
         box = dialog.get_content_area()
-        box.pack_start(lbl, True, False, 0)
-        box.pack_start(ent, True, True, 0)
-        box.pack_start(lbl2, True, False, 0)
-        box.pack_start(cbox, True, True, 0)
+        box.pack_start(w, expand=True, fill=True)
         dialog.show_all()
         
-    def new_ws_cb(self, w, rsp, ent, cbox):
-        wsname = ent.get_text()
-        idx = cbox.get_active()
-        w.destroy()
+    def new_ws_cb(self, w, rsp, b, names):
+        wsname = b.workspace_name.get_text()
+        idx = b.workspace_type.get_active()
         if rsp == 0:
+            w.destroy()
             return
-        d = { 0: 'grid', 1: 'nb' }
+        d = { 0: 'nb', 1: 'grid', }
         wstype = d[idx]
-        inSpace = 'main'
+
+        idx = b.in_workspace.get_active()
+        inSpace = names[idx]
         
         self.add_workspace(wsname, wstype, inSpace=inSpace)
+
+        chpfx = b.channel_prefix.get_text()
+        num = int(b.number_of_channels.get_value())
+
+        w.destroy()
+        if num <= 0:
+            return
+
+        chbase = self.chncnt
+        self.chncnt += num
+        for i in xrange(num):
+            chname = "%s%d" % (chpfx, chbase+i)
+            self.add_channel(chname, workspace=wsname)
+        
         return True
         
     def gui_delete_channel(self):

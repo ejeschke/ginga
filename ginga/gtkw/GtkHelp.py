@@ -255,6 +255,10 @@ class WidgetMask(object):
         return self.cb_fn(*newargs, **kwdargs)
 
 
+class TopLevel(gtk.Window):
+    def __init__(self):
+        gtk.Window.__init__(self, gtk.WINDOW_TOPLEVEL)
+
 class CheckButton(WidgetMask, gtk.CheckButton):
     def __init__(self, *args, **kwdargs):
         WidgetMask.__init__(self)
@@ -428,6 +432,8 @@ class Desktop(Callback.Callbacks):
         self.tabcount = 0
         self.notebooks = Bunch.caselessDict()
 
+        self.toplevels = []
+
         for name in ('page-switch', 'page-select'):
             self.enable_callback(name)
         
@@ -549,6 +555,17 @@ class Desktop(Callback.Callbacks):
                 lbl.modify_bg(gtk.STATE_NORMAL,
                               gtk.gdk.color_parse('grey'))
 
+    def add_toplevel(self, widget, wsname, width=700, height=700):
+        topw = TopLevel()
+        topw.set_size_request(width, height)
+        self.toplevels.append(topw)
+        topw.set_title(wsname)
+        topw.set_border_width(2)
+
+        topw.add(widget)
+        topw.show_all()
+        return topw
+
     def create_toplevel_ws(self, width, height, group, x=None, y=None):
         # create top level workspace
         root = gtk.Window(gtk.WINDOW_TOPLEVEL)
@@ -594,7 +611,8 @@ class Desktop(Callback.Callbacks):
         vbox.show_all()
         root.show_all()
         if x != None:
-            root.move(x, y)
+            win = root.get_window()
+            win.move(x, y)
         return bnch
 
     def close_page_cb(self, bnch, root):
@@ -626,7 +644,7 @@ class Desktop(Callback.Callbacks):
             widgetDict = {}
             
         def process_common_params(widget, inparams):
-            params = Bunch.Bunch(name=None, height=-1, width=-1)
+            params = Bunch.Bunch(name=None, height=-1, width=-1, xpos=-1, ypos=-1)
             params.update(inparams)
             
             if params.name:
@@ -634,6 +652,15 @@ class Desktop(Callback.Callbacks):
 
             if (params.width >= 0) or (params.height >= 0):
                 widget.set_size_request(params.width, params.height)
+
+            # User wants to place window somewhere
+            if params.xpos >= 0:
+                #widget.show()
+                win = widget.get_window()
+                if win != None:
+                    win.move(params.xpos, params.ypos)
+
+            return params
 
         def make_widget(kind, paramdict, args, pack):
             kind = kind.lower()
@@ -681,7 +708,8 @@ class Desktop(Callback.Callbacks):
                                      tabname, tabname.lower())
 
                     make(layout, pack)
-                
+
+            widget.show_all()
             return widget
 
         # Horizontal adjustable panel
@@ -704,6 +732,8 @@ class Desktop(Callback.Callbacks):
                 make(cols[0], lambda w: hpaned.pack_start(w, expand=True, fill=True)) #?
                 pack(hpaned)
 
+            hpaned.show_all()
+
         # Vertical adjustable panel
         def vert(params, rows, pack):
             if len(rows) > 2:
@@ -724,14 +754,18 @@ class Desktop(Callback.Callbacks):
                 make(rows[0], lambda w: vpaned.pack_start(w, expand=True, fill=True))  #?
                 pack(vpaned)
 
+            vpaned.show_all()
+
         # Horizontal fixed array
         def hbox(params, cols, pack):
             widget = gtk.HBox()
 
             for dct in cols:
                 if isinstance(dct, dict):
-                    fill = dct.get('fill', True)
-                    expand = dct.get('expand', True)  #?
+                    #fill = dct.get('fill', True)
+                    #expand = dct.get('expand', True)  #?
+                    fill = True
+                    expand = (dct.get('stretch', 1) == 1)
                     col = dct.get('col', None)
                 else:
                     # assume a list defining the col
@@ -743,7 +777,7 @@ class Desktop(Callback.Callbacks):
                                                           expand=expand))
             process_common_params(widget, params)
             
-            widget.show()
+            widget.show_all()
             pack(widget)
 
         # Vertical fixed array
@@ -752,8 +786,10 @@ class Desktop(Callback.Callbacks):
 
             for dct in rows:
                 if isinstance(dct, dict):
-                    fill = dct.get('fill', True)
-                    expand = dct.get('expand', True)  #?
+                    #fill = dct.get('fill', True)
+                    #expand = dct.get('expand', True)  #?
+                    fill = True
+                    expand = (dct.get('stretch', 1) == 1)
                     row = dct.get('row', None)
                 else:
                     # assume a list defining the row
@@ -765,8 +801,36 @@ class Desktop(Callback.Callbacks):
                                                           expand=expand))
             process_common_params(widget, params)
 
-            widget.show()
+            widget.show_all()
             pack(widget)
+
+        # Sequence of separate items
+        def seq(params, cols, pack):
+            def mypack(w):
+                topw = TopLevel()
+                ## topw.set_title(title)
+                topw.set_border_width(2)
+                topw.add(w)
+                self.toplevels.append(topw)
+                topw.show_all()
+                
+            for dct in cols:
+                if isinstance(dct, dict):
+                    #fill = dct.get('fill', True)
+                    #expand = dct.get('expand', True)  #?
+                    fill = True
+                    expand = (dct.get('stretch', 1) == 1)
+                    col = dct.get('col', None)
+                else:
+                    # assume a list defining the col
+                    fill = expand = True
+                    col = dct
+                if col != None:
+                    make(col, mypack)
+
+            widget = gtk.Label("Placeholder")
+            pack(widget)
+            
 
         def make(constituents, pack):
             kind = constituents[0]
@@ -784,13 +848,12 @@ class Desktop(Callback.Callbacks):
                 vbox(params, rest, pack)
             elif kind == 'hbox':
                 hbox(params, rest, pack)
+            elif kind == 'seq':
+                seq(params, rest, pack)
             elif kind in ('ws', 'widget'):
                 make_widget(kind, params, rest, pack)
 
-        vbox33 = gtk.VBox(spacing=0)
-        make(layout, lambda w: vbox33.pack_start(w, padding=2, fill=True,
-                                             expand=True))
-        return vbox33
+        make(layout, lambda w: None)
 
 def _name_mangle(name, pfx=''):
     newname = []

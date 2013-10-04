@@ -96,9 +96,10 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
         text = "%d" % (int(hival))
         try:
             win = self.get_window()
-            cr = win.cairo_create()
-            a, b, _wd, _ht, _i, _j = cr.text_extents(text)
-            self._avg_pixels_per_range_num = self.t_spacing + _wd
+            if win != None:
+                cr = win.cairo_create()
+                a, b, _wd, _ht, _i, _j = cr.text_extents(text)
+                self._avg_pixels_per_range_num = self.t_spacing + _wd
         except Exception, e:
             self.logger.error("Error getting text extents: %s" % (
                 str(e)))
@@ -119,7 +120,7 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
         self.width = width
         self.height = height
         # calculate intervals for range numbers
-        nums = int(width // self._avg_pixels_per_range_num)
+        nums = max(int(width // self._avg_pixels_per_range_num), 1)
         spacing = 256 // nums
         self._interval = {}
         for i in xrange(nums):

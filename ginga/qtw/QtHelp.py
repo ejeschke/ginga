@@ -316,6 +316,8 @@ class Desktop(Callback.Callbacks):
         self.tab = Bunch.caselessDict()
         self.tabcount = 0
         self.notebooks = Bunch.caselessDict()
+
+        self.toplevels = []
         
         for name in ('page-switch', 'page-select'):
             self.enable_callback(name)
@@ -454,7 +456,21 @@ class Desktop(Callback.Callbacks):
             else:
                 widget.setStyleSheet('QPushButton {color: grey}')
 
-    def create_toplevel_ws(self, width, height, group, x=None, y=None):
+    def add_toplevel(self, widget, wsname, width=700, height=700):
+        topw = TopLevel()
+        topw.resize(width, height)
+        self.toplevels.append(topw)
+        #topw.setTitle(wsname)
+
+        layout = QtGui.QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        topw.setLayout(layout)
+
+        layout.addWidget(widget, stretch=1)
+        topw.showNormal()
+        return topw
+
+    def create_toplevel_ws(self, width, height, group=2, x=None, y=None):
         # create main frame
         root = TopLevel()
         ## root.setTitle(title)
@@ -546,12 +562,13 @@ class Desktop(Callback.Callbacks):
             widgetDict = {}
 
         def process_common_params(widget, inparams):
-            params = Bunch.Bunch(name=None, height=-1, width=-1)
+            params = Bunch.Bunch(name=None, height=-1, width=-1, xpos=-1, ypos=-1)
             params.update(inparams)
             
             if params.name:
                 widgetDict[params.name] = widget
 
+            # User is specifying the size of the widget
             if ((params.width >= 0) or (params.height >= 0)) and \
                    isinstance(widget, QtGui.QWidget):
                 if params.width < 0:
@@ -563,6 +580,10 @@ class Desktop(Callback.Callbacks):
                 else:
                     height = params.height
                 widget.resize(width, height)
+
+            # User wants to place window somewhere
+            if (params.xpos >= 0) and isinstance(widget, QtGui.QWidget):
+                widget.move(params.xpos, params.ypos)
             
         def make_widget(kind, paramdict, args, pack):
             kind = kind.lower()
@@ -612,7 +633,7 @@ class Desktop(Callback.Callbacks):
 
                     make(layout, pack)
                 
-            return widget
+            #return widget
 
         # Horizontal adjustable panel
         def horz(params, cols, pack):
@@ -635,7 +656,6 @@ class Desktop(Callback.Callbacks):
             process_common_params(widget, params)
             pack(widget)
             
-
         # Vertical adjustable panel
         def vert(params, rows, pack):
             if len(rows) >= 2:
@@ -677,7 +697,6 @@ class Desktop(Callback.Callbacks):
                                                          stretch=stretch))
             process_common_params(widget, params)
             
-            #widget.show()
             pack(widget)
 
         # Vertical fixed array
@@ -700,7 +719,26 @@ class Desktop(Callback.Callbacks):
                                                          stretch=stretch))
             process_common_params(widget, params)
 
-            #widget.show()
+            pack(widget)
+
+        # Sequence of separate items
+        def seq(params, cols, pack):
+            def mypack(w):
+                self.toplevels.append(w)
+                w.showNormal()
+                
+            for dct in cols:
+                if isinstance(dct, dict):
+                    stretch = dct.get('stretch', 0)
+                    col = dct.get('col', None)
+                else:
+                    # assume a list defining the col
+                    stretch = align = 0
+                    col = dct
+                if col != None:
+                    make(col, mypack)
+
+            widget = QtGui.QLabel("Placeholder")
             pack(widget)
 
         def make(constituents, pack):
@@ -719,16 +757,12 @@ class Desktop(Callback.Callbacks):
                 vbox(params, rest, pack)
             elif kind == 'hbox':
                 hbox(params, rest, pack)
+            elif kind == 'seq':
+                seq(params, rest, pack)
             elif kind in ('ws', 'mdi', 'widget'):
                 make_widget(kind, params, rest, pack)
 
-        widget33 = QtGui.QWidget()
-        layout33 = QtGui.QVBoxLayout()
-        layout33.setContentsMargins(0, 0, 0, 0)
-        widget33.setLayout(layout33)
-        make(layout, lambda w: layout33.addWidget(w, stretch=1))
-        #widget33.show()
-        return widget33
+        make(layout, lambda w: None)
 
 def _name_mangle(name, pfx=''):
     newname = []

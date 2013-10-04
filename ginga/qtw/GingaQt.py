@@ -58,9 +58,16 @@ class GingaView(QtMain.QtMain):
 
         self.w = Bunch.Bunch()
         self.iconpath = icon_path
-        self._lastwsname = 'main'
+        self._lastwsname = 'channels'
+        self.layout = None
 
-    def build_toplevel(self, layout):
+    def set_layout(self, layout):
+        self.layout = layout
+        
+    def get_screen_dimensions(self):
+        return (self.screen_wd, self.screen_ht)
+        
+    def build_toplevel(self):
 
         self.font = self.getFont('fixedFont', 12)
         self.font11 = self.getFont('fixedFont', 11)
@@ -69,39 +76,32 @@ class GingaView(QtMain.QtMain):
         self.w.tooltips = None
         QtGui.QToolTip.setFont(self.font11)
 
-        # Create root window and add delete/destroy callbacks
-        root = QtHelp.TopLevel()
-        root.setApp(self)
-        root.resize(self.default_width, self.default_height)
-        root.setWindowTitle("Ginga")
-        #root.set_border_width(2)
+        self.ds = QtHelp.Desktop()
+        self.ds.make_desktop(self.layout, widgetDict=self.w)
+        # TEMP: FIX ME!
+        self.gpmon.ds = self.ds
+
+        for root in self.ds.toplevels:
+            # add delete/destroy callbacks
+            #root.setApp(self)
+            root.setWindowTitle("Ginga")
         
         self.w.root = root
         self.w.fscreen = None
 
-        self.ds = QtHelp.Desktop()
-        
-        # create main frame
-        vbox = QtGui.QVBoxLayout()
-        vbox.setContentsMargins(2, 2, 2, 2)
-        vbox.setSpacing(2)
-        root.setLayout(vbox)
-        self.w.mframe = vbox
-
-        self.add_menus()
-
-        self.w.mvbox = self.ds.make_desktop(layout, widgetDict=self.w)
-        #self.w.mvbox.show_all()
-        self.w.mframe.addWidget(self.w.mvbox, stretch=1)
+        # NOTE: On Mac OS X we seem to need to use 'top' and not 'menu'
+        # otherwise the menus do not get added to the global OS X menu
+        menuholder = self.w['menu']
+        self.add_menus(menuholder)
 
         # Create main (center) FITS image pane
         self.w.vbox = self.w['main'].layout()
         self.w.vbox.setSpacing(0)
         #self.w.mnb = self.ds.make_ws(name='main', group=1, wstype='grid').nb
         ## self.w.mnb.subWindowActivated.connect(self.page_switch_mdi_cb)
-        self.w.mnb = self.ds.make_ws(name='main', group=1).nb
+        #self.w.mnb = self.ds.make_ws(name='main', group=1).nb
+        self.w.mnb = self.w['channels']
         self.w.mnb.currentChanged.connect(self.page_switch_cb)
-        self.w.vbox.addWidget(self.w.mnb, stretch=1)
         
         # readout
         if self.settings.get('shareReadout', True):
@@ -142,11 +142,12 @@ class GingaView(QtMain.QtMain):
 
         # Add colormap bar
         cbar = self.build_colorbar()
-        cbar.show()
+        #cbar.show()
         self.w.vbox.addWidget(cbar, stretch=0)
 
         self.add_dialogs()
-        self.add_statusbar()
+        statusholder = self.w['status']
+        self.add_statusbar(statusholder)
 
         self.w.root.show()
 
@@ -162,10 +163,10 @@ class GingaView(QtMain.QtMain):
                 newname.append(c)
         return pfx + ''.join(newname)
     
-    def add_menus(self):
+    def add_menus(self, holder):
 
         menubar = QtGui.QMenuBar()
-        self.w.mframe.addWidget(menubar, stretch=0)
+        holder.layout().addWidget(menubar, stretch=1)
 
         # create a File pulldown menu, and add it to the menu bar
         filemenu = menubar.addMenu("File")
@@ -231,7 +232,7 @@ class GingaView(QtMain.QtMain):
         item = QtGui.QAction("About", menubar)
         item.triggered.connect(lambda: self.banner(raiseTab=True))
         helpmenu.addAction(item)
-        
+        return menubar
 
     def add_dialogs(self):
         filesel = QtGui.QFileDialog(self.w.root)
@@ -239,9 +240,9 @@ class GingaView(QtMain.QtMain):
         filesel.setViewMode(QtGui.QFileDialog.Detail)
         self.filesel = filesel
 
-    def add_statusbar(self):
+    def add_statusbar(self, holder):
         self.w.status = QtGui.QStatusBar()
-        self.w.mframe.addWidget(self.w.status)
+        holder.layout().addWidget(self.w.status, stretch=1)
 
     def fullscreen(self):
         self.w.root.showFullScreen()
@@ -433,7 +434,7 @@ class GingaView(QtMain.QtMain):
 
         # Add a page to the specified notebook
         if not workspace:
-            workspace = 'main'
+            workspace = 'channels'
         self.ds.add_tab(workspace, vwidget, 1, name)
 
         self.update_pending()
@@ -541,7 +542,7 @@ class GingaView(QtMain.QtMain):
         cbox = b.workspace
         names = self.ds.get_wsnames()
         try:
-            idx = names.index('main')
+            idx = names.index('channels')
         except:
             idx = 0
         for name in names:
@@ -575,41 +576,74 @@ class GingaView(QtMain.QtMain):
         dialog.show()
         
     def gui_add_ws(self):
-        lbl = QtGui.QLabel('New workspace name:')
-        ent = QtGui.QLineEdit()
+        captions = (('Workspace name', 'entry'),
+                    ('Workspace type', 'combobox'),
+                    ('In workspace', 'combobox'),
+                    ('Channel prefix', 'entry'),
+                    ('Number of channels', 'spinbutton'))
+        w, b = QtHelp.build_info(captions)
+
         self.wscount += 1
         wsname = "ws%d" % (self.wscount)
-        ent.setText(wsname)
-        lbl2 = QtGui.QLabel('Workspace type:')
-        cbox = QtHelp.ComboBox()
-        cbox.append_text("Grid")
+        b.workspace_name.setText(wsname)
+
+        cbox = b.workspace_type
         cbox.append_text("Tabs")
+        cbox.append_text("Grid")
         cbox.setCurrentIndex(0)
+
+        cbox = b.in_workspace
+        names = self.ds.get_wsnames()
+        names.insert(0, 'top level')
+        try:
+            idx = names.index('top level')
+        except:
+            idx = 0
+        for name in names:
+            cbox.append_text(name)
+        cbox.setCurrentIndex(idx)
+
+        b.channel_prefix.setText("Image")
+        spnbtn = b.number_of_channels
+        spnbtn.setRange(0, 12)
+        spnbtn.setSingleStep(1)
+        spnbtn.setValue(1)
+
         dialog = QtHelp.Dialog("Add Workspace",
                                0,
                                [['Cancel', 0], ['Ok', 1]],
-                               lambda w, rsp: self.new_ws_cb(w, rsp, ent, cbox))
+                               lambda w, rsp: self.new_ws_cb(w, rsp, b, names))
         box = dialog.get_content_area()
         layout = QtGui.QVBoxLayout()
         box.setLayout(layout)
         
-        layout.addWidget(lbl, stretch=0)
-        layout.addWidget(ent, stretch=0)
-        layout.addWidget(lbl2, stretch=0)
-        layout.addWidget(cbox, stretch=0)
+        layout.addWidget(w, stretch=1)
         dialog.show()
 
-    def new_ws_cb(self, w, rsp, ent, cbox):
+    def new_ws_cb(self, w, rsp, b, names):
         w.close()
-        wsname = str(ent.text())
-        idx = cbox.currentIndex()
+        wsname = str(b.workspace_name.text())
+        idx = b.workspace_type.currentIndex()
         if rsp == 0:
             return
-        d = { 0: 'grid', 1: 'nb' }
+        d = { 0: 'nb', 1: 'grid' }
         wstype = d[idx]
-        inSpace = 'main'
+        idx = b.in_workspace.currentIndex()
+        inSpace = names[idx]
         
         self.add_workspace(wsname, wstype, inSpace=inSpace)
+
+        chpfx = b.channel_prefix.text()
+        num = int(b.number_of_channels.value())
+        if num <= 0:
+            return
+
+        chbase = self.chncnt
+        self.chncnt += num
+        for i in xrange(num):
+            chname = "%s%d" % (chpfx, chbase+i)
+            self.add_channel(chname, workspace=wsname)
+        
         return True
         
     def gui_load_file(self, initialdir=None):

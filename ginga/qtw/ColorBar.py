@@ -103,7 +103,7 @@ class ColorBar(Callback.Callbacks, QtGui.QWidget):
         #pixmap.fill(QtGui.QColor("black"))
         self.pixmap = pixmap
         # calculate intervals for range numbers
-        nums = int(width // self._avg_pixels_per_range_num)
+        nums = max(int(width // self._avg_pixels_per_range_num), 1)
         spacing = 256 // nums
         self._interval = {}
         for i in xrange(nums):
@@ -266,6 +266,7 @@ class ColorBar(Callback.Callbacks, QtGui.QWidget):
             pct = float(dx) / float(wd)
             #print "dx=%f wd=%d pct=%f" % (dx, wd, pct)
             self.shift_colormap(pct)
+            return
 
         width, height = self.get_size()
         pct = float(x) / float(width)

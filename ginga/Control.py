@@ -553,11 +553,15 @@ class GingaControl(Callback.Callbacks):
         return True
 
         
-    def add_workspace(self, wsname, wstype, inSpace='main'):
-        ## width, height = 700, 800
-        ## self.ds.create_toplevel_ws(width, height, group=1)
+    def add_workspace(self, wsname, wstype, inSpace='channels'):
+
         bnch = self.ds.make_ws(name=wsname, group=1, wstype=wstype)
-        self.ds.add_tab(inSpace, bnch.widget, 1, bnch.name)
+        if inSpace != 'top level':
+            self.ds.add_tab(inSpace, bnch.widget, 1, bnch.name)
+        else:
+            #width, height = 700, 800
+            #self.ds.create_toplevel_ws(width, height, group=1)
+            self.ds.add_toplevel(bnch.widget, bnch.name)
         return True
         
     # CHANNEL MANAGEMENT
