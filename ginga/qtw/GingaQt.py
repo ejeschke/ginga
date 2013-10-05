@@ -11,7 +11,9 @@
 import sys, os
 import Queue
 import traceback
-
+# TEMP:
+import platform
+        
 # GUI imports
 from ginga.qtw.QtHelp import QtGui, QtCore
 
@@ -89,8 +91,6 @@ class GingaView(QtMain.QtMain):
         self.w.root = root
         self.w.fscreen = None
 
-        # NOTE: On Mac OS X we seem to need to use 'top' and not 'menu'
-        # otherwise the menus do not get added to the global OS X menu
         menuholder = self.w['menu']
         self.add_menus(menuholder)
 
@@ -142,7 +142,6 @@ class GingaView(QtMain.QtMain):
 
         # Add colormap bar
         cbar = self.build_colorbar()
-        #cbar.show()
         self.w.vbox.addWidget(cbar, stretch=0)
 
         self.add_dialogs()
@@ -166,7 +165,14 @@ class GingaView(QtMain.QtMain):
     def add_menus(self, holder):
 
         menubar = QtGui.QMenuBar()
-        holder.layout().addWidget(menubar, stretch=1)
+
+        # NOTE: Special hack for Mac OS X, otherwise the menus
+        # do not get added to the global OS X menu
+        macos_ver = platform.mac_ver()[0]
+        if len(macos_ver) > 0:
+            self.w['top'].layout().addWidget(menubar, stretch=0)
+        else:
+            holder.layout().addWidget(menubar, stretch=1)
 
         # create a File pulldown menu, and add it to the menu bar
         filemenu = menubar.addMenu("File")

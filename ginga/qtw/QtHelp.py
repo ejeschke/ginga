@@ -434,6 +434,11 @@ class Desktop(Callback.Callbacks):
         widget = self.tab[tabname].widget
         if (nb != None) and (index >= 0):
             nb.setCurrentIndex(index)
+            # bring window to the user's attention
+            win = nb.window()
+            if win != None:
+                win.raise_()
+                win.activateWindow()
 
     def remove_tab(self, tabname):
         nb, index = self._find_nb(tabname)

@@ -535,6 +535,16 @@ class Desktop(Callback.Callbacks):
         if nb:
             nb.set_current_page(page_num)
 
+            # bring this window to the user's attention
+            win = nb.get_window()
+            if win:
+                if hasattr(win, 'present'):
+                    # gtk3 ?
+                    win.present()
+                else:
+                    # gtk2
+                    win.show()
+
     def remove_tab(self, tabname):
         nb, page_num = self._find_nb(tabname)
         if nb:
