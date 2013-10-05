@@ -18,7 +18,7 @@ import logging
 from ginga import AstroImage
 from ginga.qtw.QtHelp import QtGui, QtCore
 from ginga.qtw.FitsImageCanvasQt import FitsImageCanvas
-from ginga.misc import NullLogger
+from ginga.misc import NullLogger, Settings
 
 from IPython.lib.kernel import connect_qtconsole
 try:
@@ -115,9 +115,10 @@ class SimpleKernelApp(object):
 
 class StartMenu(QtGui.QMainWindow):
 
-    def __init__(self, logger, app, kapp):
+    def __init__(self, logger, app, kapp, prefs):
         super(StartMenu, self).__init__()
         self.logger = logger
+        self.preferences = prefs
         self.count = 0
         self.viewers = {}
         self.app = app
@@ -158,18 +159,21 @@ class StartMenu(QtGui.QMainWindow):
         self.raise_()
         self.activateWindow()
 
-    def new_viewer(self, name=None):
+    def new_viewer(self, name=None, settings=None):
         if not name:
             self.count += 1
             name = 'v%d' % self.count
 
+        if settings == None:
+            settings = self.preferences.createCategory('ipg_viewer')
+            settings.load(onError='silent')
+            settings.addDefaults(autocut_method='zscale')
+            
         # create a ginga basic object for user interaction
-        fi = IPyNbFitsImage(self.logger, render='widget')
-        fi.enable_autocuts('on')
-        fi.set_autocut_params('zscale')
-        fi.enable_autozoom('on')
+        fi = IPyNbFitsImage(self.logger, settings=settings,
+                            render='widget')
         fi.enable_draw(True)
-        fi.set_drawtype('ruler')
+        fi.set_drawtype('point')
         fi.set_drawcolor('blue')
         fi.set_callback('drag-drop', self.drop_file, name)
         fi.set_bg(0.2, 0.2, 0.2)
@@ -305,11 +309,6 @@ class StartMenu(QtGui.QMainWindow):
 def start(kapp):
     global app_ref
     
-    # create Qt app
-    app = QtGui.QApplication([])
-    app.connect(app, QtCore.SIGNAL('lastWindowClosed()'),
-                app, QtCore.SLOT('quit()'))
-
     # create a logger
     if use_null_logger:
         logger = NullLogger.NullLogger()
@@ -325,8 +324,57 @@ def start(kapp):
         logger.addHandler(fileHdlr)
     kapp.logger = logger
 
+    # Get settings (preferences)
+    try:
+        basedir = os.environ['GINGA_HOME']
+    except KeyError:
+        basedir = os.path.join(os.environ['HOME'], '.ginga')
+    if not os.path.exists(basedir):
+        try:
+            os.mkdir(basedir)
+        except OSError as e:
+            logger.warn("Couldn't create ginga settings area (%s): %s" % (
+                basedir, str(e)))
+            logger.warn("Preferences will not be able to be saved")
+
+    # Set up preferences
+    prefs = Settings.Preferences(basefolder=basedir, logger=logger)
+    settings = prefs.createCategory('general')
+    settings.load(onError='silent')
+    settings.setDefaults(useMatplotlibColormaps=False)
+
+    # So we can find our plugins
+    sys.path.insert(0, basedir)
+    moduleHome = os.path.split(sys.modules['ginga.version'].__file__)[0]
+    childDir = os.path.join(moduleHome, 'misc', 'plugins')
+    sys.path.insert(0, childDir)
+    childDir = os.path.join(basedir, 'plugins')
+    sys.path.insert(0, childDir)
+
+    # User configuration (custom star catalogs, etc.)
+    try:
+        import ipg_config
+
+        ipg_config.pre_gui_config(kapp)
+    except Exception as e:
+        try:
+            (type, value, tb) = sys.exc_info()
+            tb_str = "\n".join(traceback.format_tb(tb))
+
+        except Exception:
+            tb_str = "Traceback information unavailable."
+
+        logger.error("Error importing Ginga config file: %s" % (
+            str(e)))
+        logger.error("Traceback:\n%s" % (tb_str))
+
+    # create Qt app
+    app = QtGui.QApplication([])
+    app.connect(app, QtCore.SIGNAL('lastWindowClosed()'),
+                app, QtCore.SLOT('quit()'))
+
     # here is our little launcher
-    w = StartMenu(logger, app, kapp)
+    w = StartMenu(logger, app, kapp, prefs)
     app_ref = w
     w.show()
     app.setActiveWindow(w)
