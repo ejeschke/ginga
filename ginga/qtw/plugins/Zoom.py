@@ -75,9 +75,9 @@ class Zoom(ZoomBase.ZoomBase):
 
         captions = (('Zoom', 'label'),
                     ("Relative Zoom", 'checkbutton'),
-                    ("Lag Time", 'spinbutton'),
+                    ("Refresh Interval", 'spinbutton'),
                     ('Defaults', 'button'),
-            )
+                    )
 
         w, b = QtHelp.build_info(captions)
         b.zoom.setText(self.fv.scale2text(zi.get_scale()))
@@ -85,11 +85,11 @@ class Zoom(ZoomBase.ZoomBase):
         b.relative_zoom.setChecked(not self.t_abszoom)
         b.relative_zoom.stateChanged.connect(self.set_absrel_cb)
         b.defaults.clicked.connect(self.set_defaults)
-        b.lag_time.setRange(0, 20)
-        b.lag_time.setSingleStep(1)
-        b.lag_time.setWrapping(True)
-        b.lag_time.setValue(self.lagtime * 1000)
-        b.lag_time.valueChanged.connect(self.setlag_cb)
+        b.refresh_interval.setRange(0, 200)
+        b.refresh_interval.setSingleStep(1)
+        b.refresh_interval.setWrapping(True)
+        b.refresh_interval.setValue(int(self.refresh_interval * 1000))
+        b.refresh_interval.valueChanged.connect(self.set_refresh_cb)
         vbox.addWidget(w, stretch=0)
 
         sw = QtGui.QScrollArea()
@@ -136,9 +136,10 @@ class Zoom(ZoomBase.ZoomBase):
         val = self.w_radius.value()
         self.set_radius(val)
         
-    def setlag_cb(self, val):
-        self.logger.debug("Setting lag time to %d" % (val))
-        self.lagtime = val / 1000.0
+    def set_refresh_cb(self, val):
+        self.refresh_interval = val / 1000.0
+        self.logger.debug("Setting refresh time to %.4f sec" % (
+            self.refresh_interval))
         
     
 #END

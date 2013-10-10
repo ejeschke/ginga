@@ -78,7 +78,7 @@ class Zoom(ZoomBase.ZoomBase):
 
         captions = (('Zoom', 'label'),
                     ("Relative Zoom", 'checkbutton'),
-                    ("Lag Time", 'spinbutton'),
+                    ("Refresh Interval", 'spinbutton'),
                     ('Defaults', 'button'),
                     )
 
@@ -88,12 +88,12 @@ class Zoom(ZoomBase.ZoomBase):
         b.relative_zoom.set_active(not self.t_abszoom)
         b.relative_zoom.sconnect("toggled", self.set_absrel_cb)
         b.defaults.connect("clicked", lambda w: self.set_defaults())
-        adj = b.lag_time.get_adjustment()
-        adj.configure(0, 0, 20, 1, 1, 0)
-        adj.set_value(int(self.lagtime * 1000))
-        b.lag_time.set_digits(0)
-        b.lag_time.set_wrap(True)
-        b.lag_time.connect('value-changed', self.setlag_cb)
+        adj = b.refresh_interval.get_adjustment()
+        adj.configure(0, 0, 200, 1, 1, 0)
+        adj.set_value(int(self.refresh_interval * 1000))
+        b.refresh_interval.set_digits(0)
+        b.refresh_interval.set_wrap(True)
+        b.refresh_interval.connect('value-changed', self.set_refresh_cb)
         vbox.pack_start(w, padding=4, fill=True, expand=False)
 
         sw = gtk.ScrolledWindow()
@@ -155,10 +155,11 @@ class Zoom(ZoomBase.ZoomBase):
         val = rng.get_value()
         self.set_radius(val)
         
-    def setlag_cb(self, w):
+    def set_refresh_cb(self, w):
         val = w.get_value()
-        self.logger.debug("Setting lag time to %d" % (val))
-        self.lagtime = val / 1000.0
+        self.refresh_interval = val / 1000.0
+        self.logger.debug("Setting refresh time to %.4f sec" % (
+            self.refresh_interval))
         
     
 #END

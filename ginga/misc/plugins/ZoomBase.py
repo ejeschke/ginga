@@ -7,6 +7,8 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+import time
+
 from ginga.misc import Bunch
 from ginga import GingaPlugin
 
@@ -28,7 +30,8 @@ class ZoomBase(GingaPlugin.GlobalPlugin):
         self.zoomtask = fv.get_timer()
         self.zoomtask.set_callback('expired', self.showzoom_timer)
         self.fitsimage_focus = None
-        self.lagtime = 0.002
+        self.refresh_interval = 0.02
+        self.update_time = time.time()
 
         fv.add_callback('add-channel', self.add_channel)
         fv.add_callback('active-image', self.focus_cb)
@@ -161,10 +164,22 @@ class ZoomBase(GingaPlugin.GlobalPlugin):
         if self.fitsimage_focus != fitsimage:
             self.focus_cb(self.fv, fitsimage)
             
-        # Cut out and show the zoom detail
-        #self.showzoom(image, data_x, data_y)
-        self.zoomtask.data.setvals(image=image, data_x=data_x, data_y=data_y)
-        self.zoomtask.set(self.lagtime)
+        # If the refresh interval has expired then update the zoom image;
+        # otherwise (re)set the timer until the end of the interval.
+        cur_time = time.time()
+        elapsed = cur_time - self.update_time
+        if elapsed > self.refresh_interval:
+            # cancel timer
+            self.zoomtask.clear()
+            self.showzoom(image, data_x, data_y)
+        else:
+            # store needed data into the timer
+            self.zoomtask.data.setvals(image=image,
+                                       data_x=data_x, data_y=data_y)
+            # calculate delta until end of refresh interval 
+            period = self.refresh_interval - elapsed
+            # set timer
+            self.zoomtask.set(period)
         return True
 
     def motion_cb(self, fitsimage, button, data_x, data_y):
@@ -177,9 +192,10 @@ class ZoomBase(GingaPlugin.GlobalPlugin):
         self.showzoom(data.image, data.data_x, data.data_y)
         
     def showzoom(self, image, data_x, data_y):
-        # cut out and set the zoom image
+        # cut out detail area and set the zoom image
         data, x1, y1, x2, y2 = image.cutout_radius(int(data_x), int(data_y),
                                                    self.zoom_radius)
+        self.update_time = time.time()
         self.fv.gui_do(self.zoomimage.set_data, data)
 
     def __str__(self):

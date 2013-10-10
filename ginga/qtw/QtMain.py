@@ -17,9 +17,7 @@ Usage:
    # See constructor for QtMain for options
    self.myqt = QtMain.QtMain()
 
-   # NOT THIS
-   #gtk.main()
-   # INSTEAD, main thread calls this:
+   # main thread calls this:
    self.myqt.mainloop()
    
    # (asynchronous call)
@@ -63,6 +61,7 @@ class QtMain(object):
         
     def update_pending(self, timeout=0.0):
 
+        #print "1. PROCESSING OUT-BAND"
         try:
             self.app.processEvents()
         except Exception, e:
@@ -71,7 +70,7 @@ class QtMain(object):
         
         done = False
         while not done:
-            #print "PROCESSING IN-BAND"
+            #print "2. PROCESSING IN-BAND len=%d" % self.gui_queue.qsize()
             # Process "in-band" Qt events
             try:
                 future = self.gui_queue.get(block=True, 
@@ -106,7 +105,7 @@ class QtMain(object):
                 #pass
                 
         # Process "out-of-band" events
-        #print "PROCESSING OUT-BAND"
+        #print "3. PROCESSING OUT-BAND"
         try:
             self.app.processEvents()
         except Exception, e:

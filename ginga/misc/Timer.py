@@ -69,6 +69,8 @@ class TimerFactory(object):
         """
         with self.lock:
             # remove from timer dict
+            if not timer in self.waiters:
+                return
             self.waiters.remove(timer)
             self.waiters = sorted(self.waiters, key=lambda t: t.deadline)
             self.ev_timer.set()
