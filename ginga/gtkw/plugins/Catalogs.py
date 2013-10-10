@@ -318,7 +318,6 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
         self.cbar = ColorBar.ColorBar(self.logger)
         self.cbar.set_cmap(self.cmap)
         self.cbar.set_imap(self.imap)
-        self.cbar.set_size_request(-1, 20)
 
         vbox.pack_start(self.cbar, padding=4, fill=True, expand=False)
 

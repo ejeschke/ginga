@@ -14,7 +14,7 @@ class Readout(object):
 
     def __init__(self, width, height):
         readout = gtk.Label('')
-        readout.set_size_request(width, height)
+        #readout.set_size_request(width, height)
         readout.modify_fg(gtk.STATE_NORMAL, gtk.gdk.color_parse("green"))
         self.readout = readout
         evbox = gtk.EventBox()

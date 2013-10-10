@@ -21,12 +21,13 @@ class Zoom(ZoomBase.ZoomBase):
 
         vpaned = gtk.VPaned()
     
-        width, height = 200, 200
+        width, height = 300, 300
 
         # Uncomment to debug; passing parent logger generates too
         # much noise in the main logger
         #zi = FitsImageCanvasGtk.FitsImageCanvas(logger=self.logger)
         zi = FitsImageCanvasGtk.FitsImageCanvas(logger=None)
+        zi.set_desired_size(width, height)
         zi.enable_autozoom('off')
         zi.enable_autocuts('off')
         #zi.set_scale_limits(0.001, 1000.0)
@@ -44,7 +45,6 @@ class Zoom(ZoomBase.ZoomBase):
         bd.enable_cmap(False)
 
         iw = zi.get_widget()
-        iw.set_size_request(width, height)
         vpaned.pack1(iw, resize=True, shrink=True)
 
         vbox = gtk.VBox()
@@ -54,7 +54,7 @@ class Zoom(ZoomBase.ZoomBase):
         adj = gtk.Adjustment(lower=1, upper=100)
         adj.set_value(self.zoom_radius)
         scale = GtkHelp.HScale(adj)
-        scale.set_size_request(200, -1)
+        #scale.set_size_request(width, -1)
         scale.set_digits(0)
         scale.set_draw_value(True)
         scale.set_value_pos(gtk.POS_BOTTOM)
@@ -68,7 +68,7 @@ class Zoom(ZoomBase.ZoomBase):
         adj = gtk.Adjustment(lower=-20, upper=30)
         adj.set_value(self.zoom_amount)
         scale = GtkHelp.HScale(adj)
-        scale.set_size_request(200, -1)
+        #scale.set_size_request(width, -1)
         scale.set_digits(0)
         scale.set_draw_value(True)
         scale.set_value_pos(gtk.POS_BOTTOM)

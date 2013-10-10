@@ -12,8 +12,8 @@ import sys, os
 import logging, logging.handlers
 
 from ginga import AstroImage
-from ginga.gtkw.FitsImageCanvasGtk import FitsImageCanvas
 from ginga.gtkw import FileSelection, GtkHelp
+from ginga.gtkw.FitsImageCanvasGtk import FitsImageCanvas
 from ginga import colors
 
 import gtk

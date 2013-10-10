@@ -33,6 +33,8 @@ class FitsImageTk(FitsImageAgg):
         self.tkphoto = None
 
         self.msgtask = None
+        # desired size
+        self.desired_size = (300, 300)
 
         # optimization of redrawing
         self.defer_redraw = True
@@ -55,6 +57,12 @@ class FitsImageTk(FitsImageAgg):
 
     def get_widget(self):
         return self.tkcanvas
+
+    def set_desired_size(self, width, height):
+        self.desired_size = (width, height)
+
+    def get_desired_size(self):
+        return self.desired_size
 
     def set_redraw_lag(self, lag_sec):
         self.defer_redraw = (lag_sec > 0.0)

@@ -324,7 +324,6 @@ class GingaView(GtkMain.GtkMain):
         cbar = ColorBar.ColorBar(self.logger)
         cbar.set_cmap(self.cm)
         cbar.set_imap(self.im)
-        cbar.set_size_request(-1, 15)
         cbar.show()
         self.colorbar = cbar
         self.add_callback('active-image', self.change_cbar, cbar)

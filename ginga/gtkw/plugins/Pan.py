@@ -50,6 +50,7 @@ class Pan(GingaPlugin.GlobalPlugin):
         # much noise in the main logger
         #sfi = FitsImageCanvasGtk.FitsImageCanvas(logger=self.logger)
         sfi = FitsImageCanvasGtk.FitsImageCanvas(logger=None)
+        sfi.set_desired_size(width, height)
         sfi.enable_autozoom('on')
         #sfi.set_zoom_algorithm('rate')
         sfi.enable_autocuts('off')
@@ -72,7 +73,6 @@ class Pan(GingaPlugin.GlobalPlugin):
         bd.enable_zoom(False)
 
         iw = sfi.get_widget()
-        iw.set_size_request(width, height)
         iw.show()
         return sfi
 

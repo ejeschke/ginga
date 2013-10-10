@@ -51,6 +51,7 @@ class Pick(PickBase.PickBase):
         cm, im = self.fv.cm, self.fv.im
 
         di = FitsImageCanvasQt.FitsImageCanvas(logger=self.logger)
+        di.set_desired_size(200, 200)
         di.enable_autozoom('off')
         di.enable_autocuts('off')
         di.zoom_to(3, redraw=False)

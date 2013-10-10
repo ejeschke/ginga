@@ -113,7 +113,7 @@ class Info(GingaPlugin.GlobalPlugin):
         vbox.show_all()
 
         sw.add_with_viewport(vbox)
-        sw.set_size_request(-1, 420)
+        #sw.set_size_request(-1, 420)
         sw.show_all()
         return sw, b
 

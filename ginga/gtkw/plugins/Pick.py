@@ -53,6 +53,8 @@ class Pick(PickBase.PickBase):
         cm, im = self.fv.cm, self.fv.im
 
         di = FitsImageCanvasGtk.FitsImageCanvas(logger=self.logger)
+        width, height = 200, 200
+        di.set_desired_size(width, height)
         di.enable_autozoom('off')
         di.enable_autocuts('off')
         di.zoom_to(3, redraw=False)
@@ -71,8 +73,6 @@ class Pick(PickBase.PickBase):
         bd.enable_cuts(True)
 
         iw = di.get_widget()
-        width, height = 200, 200
-        iw.set_size_request(width, height)
         label = gtk.Label('Image')
         label.show()
         nb.append_page(iw, label)

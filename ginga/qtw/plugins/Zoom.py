@@ -21,7 +21,7 @@ class Zoom(ZoomBase.ZoomBase):
         vpaned = QtGui.QSplitter()
         vpaned.setOrientation(QtCore.Qt.Vertical)
         
-        width, height = 200, 200
+        width, height = 300, 300
 
         zi = FitsImageCanvasQt.FitsImageCanvas(logger=self.logger)
         zi.enable_autozoom('off')

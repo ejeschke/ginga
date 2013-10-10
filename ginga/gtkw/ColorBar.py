@@ -57,6 +57,7 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
         else:
             self.connect("draw", self.draw_event)
         self.connect("configure_event", self.configure_event)
+        self.connect("size-request", self.size_request)
         self.connect("motion_notify_event", self.motion_notify_event)
         self.connect("button_press_event", self.button_press_event)
         self.connect("button_release_event", self.button_release_event)
@@ -129,6 +130,13 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
             nums, spacing, self._interval))
 
         self.redraw()
+
+    def size_request(self, widget, requisition):
+        """Callback function to request our desired size.
+        """
+        requisition.width = -1
+        requisition.height = 15
+        return True
 
     # For Gtk3
     def draw_event(self, widget, cr):

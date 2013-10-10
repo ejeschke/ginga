@@ -55,7 +55,10 @@ class RenderGraphicsView(QtGui.QGraphicsView):
         self.fitsimage.configure(width, height)
 
     def sizeHint(self):
-        return QtCore.QSize(100, 100)
+        width, height = 300, 300
+        if self.fitsimage != None:
+            width, height = self.fitsimage.get_desired_size()
+        return QtCore.QSize(width, height)
 
     def set_pixmap(self, pixmap):
         self.pixmap = pixmap
@@ -96,7 +99,10 @@ class RenderWidget(QtGui.QWidget):
         #self.update()
 
     def sizeHint(self):
-        return QtCore.QSize(100, 100)
+        width, height = 300, 300
+        if self.fitsimage != None:
+            width, height = self.fitsimage.get_desired_size()
+        return QtCore.QSize(width, height)
 
     def set_pixmap(self, pixmap):
         self.pixmap = pixmap
@@ -133,6 +139,8 @@ class FitsImageQt(FitsImage.FitsImageBase):
                                    pointSize=24)
         self.set_bg(0.5, 0.5, 0.5, redraw=False)
         self.set_fg(1.0, 1.0, 1.0, redraw=False)
+        # desired size
+        self.desired_size = (300, 300)
 
         # cursors
         self.cursor = {}
@@ -152,6 +160,12 @@ class FitsImageQt(FitsImage.FitsImageBase):
 
     def get_widget(self):
         return self.imgwin
+
+    def set_desired_size(self, width, height):
+        self.desired_size = (width, height)
+
+    def get_desired_size(self):
+        return self.desired_size
 
     def set_redraw_lag(self, lag_sec):
         self.defer_redraw = (lag_sec > 0.0)

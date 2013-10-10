@@ -38,7 +38,8 @@ class FitsImageGtk(FitsImageCairo.FitsImageCairo):
             imgwin.connect("expose_event", self.expose_event)
         else:
             imgwin.connect("draw", self.draw_event)
-        imgwin.connect("configure_event", self.configure_event)
+        imgwin.connect("configure-event", self.configure_event)
+        imgwin.connect("size-request", self.size_request)
         imgwin.set_events(gtk.gdk.EXPOSURE_MASK)
         # prevents some flickering
         imgwin.set_double_buffered(True)
@@ -50,6 +51,8 @@ class FitsImageGtk(FitsImageCairo.FitsImageCairo):
         self.imgwin.show_all()
 
         self.msgtask = None
+        # desired size
+        self.desired_size = (300, 300)
         
         # cursors
         self.cursor = {}
@@ -65,6 +68,12 @@ class FitsImageGtk(FitsImageCairo.FitsImageCairo):
 
     def get_widget(self):
         return self.imgwin
+
+    def set_desired_size(self, width, height):
+        self.desired_size = (width, height)
+
+    def get_desired_size(self):
+        return self.desired_size
 
     def set_redraw_lag(self, lag_sec):
         self.defer_redraw = (lag_sec > 0.0)
@@ -224,6 +233,12 @@ class FitsImageGtk(FitsImageCairo.FitsImageCairo):
             x, y, width, height))
         #width, height = width*2, height*2
         self.configure(width, height)
+        return True
+
+    def size_request(self, widget, requisition):
+        """Callback function to request our desired size.
+        """
+        requisition.width, requisition.height = self.desired_size
         return True
 
     def set_cursor(self, cursor):

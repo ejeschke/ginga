@@ -60,7 +60,6 @@ class MDIWorkspace(gtk.Layout):
         fr.add(vbox)
         #fr.set_resize_mode(gtk.RESIZE_IMMEDIATE)
         fr.show_all()
-        fr.set_size_request(300, 300)
         
         evbox.connect("button_press_event", self.select_child_cb, fr)
         
@@ -567,7 +566,7 @@ class Desktop(Callback.Callbacks):
 
     def add_toplevel(self, widget, wsname, width=700, height=700):
         topw = TopLevel()
-        topw.set_size_request(width, height)
+        topw.set_default_size(width, height)
         self.toplevels.append(topw)
         topw.set_title(wsname)
         topw.set_border_width(2)
@@ -582,7 +581,7 @@ class Desktop(Callback.Callbacks):
         ## root.set_title(title)
         # TODO: this needs to be more sophisticated
         root.set_border_width(2)
-        root.set_size_request(width, height)
+        root.set_default_size(width, height)
         root.show()
         #self.update_pending()
 
@@ -662,6 +661,7 @@ class Desktop(Callback.Callbacks):
 
             if (params.width >= 0) or (params.height >= 0):
                 widget.set_size_request(params.width, params.height)
+                #pass
 
             # User wants to place window somewhere
             if params.xpos >= 0:
