@@ -41,6 +41,8 @@ class FitsViewer(object):
         canvas.pack(side=Tkinter.TOP, fill=Tkinter.BOTH, expand=1)
 
         fi = FitsImageCanvas(logger)
+        fi.set_widget(canvas)
+        #fi.set_redraw_lag(0.0)
         fi.enable_autocuts('on')
         fi.set_autocut_params('zscale')
         fi.enable_autozoom('on')
@@ -61,7 +63,6 @@ class FitsViewer(object):
         bd.enable_rotate(True)
         bd.enable_cmap(True)
 
-        fi.set_widget(canvas)
         fi.configure(512, 512)
 
         hbox = Tkinter.Frame(root)

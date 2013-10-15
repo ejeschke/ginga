@@ -17,9 +17,8 @@ Caveats:
     1. There is no sound.  This is due to the lack of a decent python module
     that can read video files and provide _both_ audio and video streams.
 
-    2. Currently, it expects an AVI file encoded at 30 fps.  I hope to
-    support other formats eventually, I just need to add the code for
-    finding out the video rate.
+    2. Currently, it expects an AVI file as a command line parameter.
+    Only AVI formats supported by OpenCV can be used (typically JPEG encoded).
     
 Requirements:
     To run this example you will need the OpenCV bindings for Python installed.
@@ -44,7 +43,7 @@ from ginga import PythonImage
 from ginga import AutoCuts, RGBMap
 
 try:
-    import cv2
+    import cv, cv2
 except ImportError:
     print "You need to install the OpenCV python module to run this example"
     sys.exit(1)
@@ -61,7 +60,7 @@ class GingaVision(QtGui.QMainWindow):
         self.ev_quit = ev_quit
 
         self.card = 'default'
-        # define a playback rate
+        # playback rate; changed when we know the actual rate
         self.fps = 30
         self.playback_rate = 1.0 / self.fps
 
@@ -132,9 +131,17 @@ class GingaVision(QtGui.QMainWindow):
 
     def quit(self):
         self.logger.info("quit called")
-        self.close()
+        self.deleteLater()
         self.ev_quit.set()
 
+    def closeEvent(self, event):
+        self.quit()
+
+    def set_playback_rate(self, fps):
+        self.fps = fps
+        self.playback_rate = 1.0 / self.fps
+        self.fitsimage.set_redraw_lag(self.playback_rate)
+        
     def show_frame(self, img):
         self.logger.debug("updating image")
         try:
@@ -156,21 +163,39 @@ class GingaVision(QtGui.QMainWindow):
         self.logger.info("capture video loop starting...")
         cap = cv2.VideoCapture(device)
 
+        # Get width and height of frames and resize window
+        width = cap.get(cv.CV_CAP_PROP_FRAME_WIDTH)
+        height = cap.get(cv.CV_CAP_PROP_FRAME_HEIGHT)
+        self.logger.info("Video is %dx%d resolution" % (width, height))
+        bd = 50
+        self.resize(width+bd, height+bd)
+
+        # Get the frame rate
+        fps = cap.get(cv.CV_CAP_PROP_FPS)
+        self.logger.info("Video rate is %d fps" % (fps))
+        self.set_playback_rate(fps)
+
+        # Get the frame count
+        num_frames = cap.get(cv.CV_CAP_PROP_FRAME_COUNT)
+
         # video frames seem to be returned with blue channel in LSByte
         self.pimage.set_order('BGR')
 
+        frame = 0
         while not self.ev_quit.isSet():
             start_time = time.time()
             self.logger.debug("capture frame")
+            frame += 1
             f, img = cap.read()
-            self.logger.debug("capture time: %.4f" % (time.time() - start_time))
+            self.logger.debug("frame %d: capture time: %.4f" % (
+                frame, time.time() - start_time))
 
             split_time = time.time()
             if img != None:
                 self.show_frame(img)
                         
             end_time = time.time()
-            self.logger.info("redraw time %.4f sec" % (end_time-split_time))
+            self.logger.debug("redraw time %.4f sec" % (end_time-split_time))
             elapsed_time = end_time - start_time
             sleep_time = self.playback_rate - elapsed_time
             if sleep_time < 0:
@@ -178,7 +203,7 @@ class GingaVision(QtGui.QMainWindow):
 
             else:
                 sleep_time = max(sleep_time, 0.0)
-                self.logger.info("sleeping for %.4f sec" % (sleep_time))
+                self.logger.debug("sleeping for %.4f sec" % (sleep_time))
                 time.sleep(sleep_time)
             #cv2.waitKey(1)
 

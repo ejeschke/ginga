@@ -10,7 +10,6 @@
 import sys, os
 import math
 import numpy
-import threading
 import StringIO
 
 from ginga.qtw.QtHelp import QtGui, QtCore
@@ -145,17 +144,10 @@ class FitsImageQt(FitsImage.FitsImageBase):
         # cursors
         self.cursor = {}
 
-        # optimization of redrawing
-        self.defer_redraw = True
-        self.defer_lagtime = 0.025
-        self.defer_lagtime_ms = int(self.defer_lagtime * 1000)
-        self._defer_whence = 0
-        self._defer_lock = threading.RLock()
-        self._defer_flag = False
-        # self._defer_task = None
+        # For optomized redrawing
         self._defer_task = QtCore.QTimer()
         self._defer_task.setSingleShot(True)
-        self._defer_task.timeout.connect(self._redraw)
+        self._defer_task.timeout.connect(self.delayed_redraw)
 
 
     def get_widget(self):
@@ -167,12 +159,6 @@ class FitsImageQt(FitsImage.FitsImageBase):
     def get_desired_size(self):
         return self.desired_size
 
-    def set_redraw_lag(self, lag_sec):
-        self.defer_redraw = (lag_sec > 0.0)
-        if self.defer_redraw:
-            self.defer_lagtime = lag_sec
-            self.defer_lagtime_ms = int(self.defer_lagtime * 1000)
-            
     def _render_offscreen(self, drawable, data, dst_x, dst_y,
                           width, height):
         # NOTE [A]
@@ -301,40 +287,14 @@ class FitsImageQt(FitsImage.FitsImageBase):
         qimg = self.get_image_as_widget()
         res = qimg.save(filepath, format=format, quality=quality)
     
-    def redraw(self, whence=0):
-        if not self.defer_redraw:
-            super(FitsImageQt, self).redraw(whence=whence)
-            return
-        
-        # This adds a redraw optimization to the base class redraw()
-        # method. 
-        with self._defer_lock:
-            self._defer_whence = min(self._defer_whence, whence)
-            defer_flag = self._defer_flag
-            # indicate that a redraw is necessary
-            self._defer_flag = True
-            if not defer_flag:
-                # if no redraw was scheduled, then schedule one in
-                # defer_lagtime 
-                if self._defer_task != None:
-                    try:
-                        self._defer_task.stop()
-                    except:
-                        pass
-                self._defer_task.start(self.defer_lagtime_ms)
-                
-    def _redraw(self):
-        # This is the optomized redraw method
-        with self._defer_lock:
-            # pick up the lowest necessary level of redrawing
-            whence = self._defer_whence
-            self._defer_whence = 3
-            flag = self._defer_flag
-            self._defer_flag = False
+    def reschedule_redraw(self, time_sec):
+        try:
+            self._defer_task.stop()
+        except:
+            pass
 
-        if flag:
-            # If a redraw was scheduled, do it now
-            super(FitsImageQt, self).redraw(whence=whence)
+        time_ms = int(time_sec * 1000)
+        self._defer_task.start(time_ms)
 
     def update_image(self):
         if (not self.pixmap) or (not self.imgwin):
@@ -737,7 +697,6 @@ class FitsImageZoom(Mixins.UIMixin, FitsImageEvent):
 
         
 def make_cursor(iconpath, x, y):
-
     image = QtGui.QImage()
     image.load(iconpath)
     pm = QtGui.QPixmap(image)

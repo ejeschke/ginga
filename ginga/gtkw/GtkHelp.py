@@ -569,7 +569,7 @@ class Desktop(Callback.Callbacks):
         topw.set_default_size(width, height)
         self.toplevels.append(topw)
         topw.set_title(wsname)
-        topw.set_border_width(2)
+        topw.set_border_width(0)
 
         topw.add(widget)
         topw.show_all()
@@ -819,7 +819,7 @@ class Desktop(Callback.Callbacks):
             def mypack(w):
                 topw = TopLevel()
                 ## topw.set_title(title)
-                topw.set_border_width(2)
+                topw.set_border_width(0)
                 topw.add(w)
                 self.toplevels.append(topw)
                 topw.show_all()

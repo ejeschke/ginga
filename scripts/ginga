@@ -61,11 +61,11 @@ import ginga.toolkit as ginga_toolkit
 LOG_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcName)s) | %(message)s'
 
 default_layout = ['seq', {},
-                   ['vbox', dict(name='top', width=1600, height=900),
+                   ['vbox', dict(name='top', width=1400, height=900),
                     dict(row=['hbox', dict(name='menu')],
                          stretch=0),
                     dict(row=['hpanel', {},
-                     ['ws', dict(name='left', width=350, group=2),
+                     ['ws', dict(name='left', width=340, group=2),
                       # (tabname, layout), ...
                       [("Info", ['vpanel', {},
                                  ['ws', dict(name='uleft', height=300,
@@ -76,7 +76,7 @@ default_layout = ['seq', {},
                         )]],
                      ['vbox', dict(name='main', width=700),
                       dict(row=['ws', dict(name='channels', group=1)], stretch=1)],
-                     ['ws', dict(name='right', width=400, group=2),
+                     ['ws', dict(name='right', width=350, group=2),
                       # (tabname, layout), ...
                       [("Dialogs", ['ws', dict(name='dialogs', group=2)
                                     ]

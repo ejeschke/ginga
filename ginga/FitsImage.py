@@ -10,6 +10,7 @@
 import numpy
 import math
 import logging
+import threading
 import sys, traceback
 import time
 
@@ -162,6 +163,8 @@ class FitsImageBase(Callback.Callbacks):
         klass = AutoCuts.get_autocuts(name)
         self.autocuts = klass(self.logger)
         
+        self.time_last_redraw = time.time()
+
         # PRIVATE IMPLEMENTATION STATE
         
         # image window width and height (see set_window_dimensions())
@@ -204,6 +207,13 @@ class FitsImageBase(Callback.Callbacks):
         self._rotimg = None
         self._prergb = None
         self._rgbobj = None
+
+        # optimization of redrawing
+        self.defer_redraw = True
+        self.defer_lagtime = 0.025
+        self._defer_whence = 0
+        self._defer_lock = threading.RLock()
+        self._defer_flag = False
 
         self.img_bg = (0.2, 0.2, 0.2)
 
@@ -467,6 +477,54 @@ class FitsImageBase(Callback.Callbacks):
         target.set_image(self.image)
 
     def redraw(self, whence=0):
+        if not self.defer_redraw:
+            self.redraw_now(whence=whence)
+            return
+        
+        # This adds a redraw optimization to the base class redraw()
+        # method. 
+        with self._defer_lock:
+            whence = min(self._defer_whence, whence)
+            # If there is no redraw scheduled:
+            if not self._defer_flag:
+                elapsed = time.time() - self.time_last_redraw
+                # If more time than defer_lagtime has passed since the 
+                # last redraw then just do the redraw immediately
+                if elapsed > self.defer_lagtime:
+                    self._defer_whence = 3
+                    self.redraw_now(whence=whence)
+                    return
+                
+                # Indicate that a redraw is necessary and record whence
+                self._defer_flag = True
+                self._defer_whence = whence
+
+                # schedule a redraw by the end of the defer_lagtime
+                self.reschedule_redraw(self.defer_lagtime - elapsed)
+
+            else:
+                # A redraw is already scheduled.  Just record whence.
+                self._defer_whence = whence
+
+    def delayed_redraw(self):
+        # This is the optomized redraw method
+        with self._defer_lock:
+            # pick up the lowest necessary level of redrawing
+            whence = self._defer_whence
+            self._defer_whence = 3
+            flag = self._defer_flag
+            self._defer_flag = False
+
+        if flag:
+            # If a redraw was scheduled, do it now
+            self.redraw_now(whence=whence)
+
+    def set_redraw_lag(self, lag_sec):
+        self.defer_redraw = (lag_sec > 0.0)
+        if self.defer_redraw:
+            self.defer_lagtime = lag_sec
+            
+    def redraw_now(self, whence=0):
         """
         Redraw the displayed image.
 
@@ -479,7 +537,8 @@ class FitsImageBase(Callback.Callbacks):
             # finally update the window drawable from the offscreen surface
             self.update_image()
             time_done = time.time()
-            self.logger.info("widget redraw %s (whence=%d) %.4f sec" % (
+            self.time_last_redraw = time_done
+            self.logger.debug("widget redraw %s (whence=%d) %.4f sec" % (
                 str(self), whence, time_done - time_start))
 
         except Exception as e:
@@ -632,7 +691,7 @@ class FitsImageBase(Callback.Callbacks):
             self._rgbobj = rgbobj
 
         time_end = time.time()
-        self.logger.info("times: total=%.4f cutout=%.4f transform=%.4f index=%.4f rgbmap=%.4f" % (
+        self.logger.debug("times: total=%.4f cutout=%.4f transform=%.4f index=%.4f rgbmap=%.4f" % (
             (time_end - time_start),
             (time_split1 - time_start),
             (time_split2 - time_split1),

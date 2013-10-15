@@ -8,7 +8,6 @@
 # Please see the file LICENSE.txt for details.
 
 import sys, os
-import threading
 
 from ginga.gtkw import gtksel
 import gtk
@@ -57,13 +56,8 @@ class FitsImageGtk(FitsImageCairo.FitsImageCairo):
         # cursors
         self.cursor = {}
 
-        # optimization of redrawing
-        self.defer_redraw = True
-        self.defer_lagtime = 0.025
-        self.defer_lagtime_ms = int(self.defer_lagtime * 1000)
-        self._defer_whence = 0
-        self._defer_lock = threading.RLock()
-        self._defer_flag = False
+        # see reschedule_redraw() method
+        self._defer_task = 0
 
 
     def get_widget(self):
@@ -75,12 +69,6 @@ class FitsImageGtk(FitsImageCairo.FitsImageCairo):
     def get_desired_size(self):
         return self.desired_size
 
-    def set_redraw_lag(self, lag_sec):
-        self.defer_redraw = (lag_sec > 0.0)
-        if self.defer_redraw:
-            self.defer_lagtime = lag_sec
-            self.defer_lagtime_ms = int(self.defer_lagtime * 1000)
-            
     def get_image_as_pixbuf(self):
         rgbobj = self.get_rgb_object()
         arr = rgbobj.get_array('RGB')
@@ -135,37 +123,14 @@ class FitsImageGtk(FitsImageCairo.FitsImageCairo):
             options['quality'] = str(quality)
         pixbuf.save(filepath, format, options)
     
-    def redraw(self, whence=0):
-        if not self.defer_redraw:
-            super(FitsImageGtk, self).redraw(whence=whence)
-            return
-        
-        # This adds a redraw optimization to the base class redraw()
-        # method. 
-        with self._defer_lock:
-            self._defer_whence = min(self._defer_whence, whence)
-            defer_flag = self._defer_flag
-            # indicate that a redraw is necessary
-            self._defer_flag = True
-            if not defer_flag:
-                # if no redraw was scheduled, then schedule one in
-                # defer_lagtime 
-                self._defer_task = gobject.timeout_add(self.defer_lagtime_ms,
-                                                       self._redraw)
+    def reschedule_redraw(self, time_sec):
+        time_ms = int(time_sec * 1000)
+        try:
+            gobject.source_remove(self._defer_task)
+        except:
+            pass
+        self._defer_task = gobject.timeout_add(time_ms, self.delayed_redraw)
                 
-    def _redraw(self):
-        # This is the optomized redraw method
-        with self._defer_lock:
-            # pick up the lowest necessary level of redrawing
-            whence = self._defer_whence
-            self._defer_whence = 3
-            flag = self._defer_flag
-            self._defer_flag = False
-
-        if flag:
-            # If a redraw was scheduled, do it now
-            super(FitsImageGtk, self).redraw(whence=whence)
-        
     def update_image(self):
         if not self.surface:
             return
