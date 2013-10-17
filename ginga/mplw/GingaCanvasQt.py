@@ -1,5 +1,5 @@
 #
-# FitsImageMplQt.py -- classes for the display of FITS files in
+# GingaCanvasQt.py -- classes for the display of FITS files in
 #                             Matplotlib FigureCanvas
 # 
 # Eric Jeschke (eric@naoj.org)
@@ -26,14 +26,14 @@ class GingaCanvas(FigureCanvas):
         self._defer_timer = QtCore.QTimer()
         self._defer_timer.setSingleShot(True)
 
-        ## w = self
-        ## w.setFocusPolicy(QtCore.Qt.FocusPolicy(
-        ##     QtCore.Qt.TabFocus |
-        ##     QtCore.Qt.ClickFocus |
-        ##     QtCore.Qt.StrongFocus |
-        ##     QtCore.Qt.WheelFocus))
-        ## w.setMouseTracking(True)
-        ## w.setAcceptDrops(True)
+        w = self
+        w.setFocusPolicy(QtCore.Qt.FocusPolicy(
+            QtCore.Qt.TabFocus |
+            QtCore.Qt.ClickFocus |
+            QtCore.Qt.StrongFocus |
+            QtCore.Qt.WheelFocus))
+        w.setMouseTracking(True)
+        w.setAcceptDrops(True)
 
         self.setParent(parent)
         
@@ -50,7 +50,7 @@ class GingaCanvas(FigureCanvas):
         height = y2 - y1
 
         if self.fitsimage != None:
-            print "RESIZE %dx%d" % (width, height)
+            #print "RESIZE %dx%d" % (width, height)
             self.fitsimage.configure(width, height)
         
         return super(GingaCanvas, self).resizeEvent(event)

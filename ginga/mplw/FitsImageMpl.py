@@ -34,7 +34,7 @@ class FitsImageMpl(FitsImage.FitsImageBase):
                                          rgbmap=rgbmap,
                                          settings=settings)
         # Our FigureCanvas
-        self.surface = None
+        self.widget = None
         # Our Figure
         self.figure = None
         # Our Axes
@@ -64,7 +64,7 @@ class FitsImageMpl(FitsImage.FitsImageBase):
         self.t_.setDefaults(show_pan_position=True,
                             onscreen_ff='Sans Serif')
         
-    def set_surface(self, figure):
+    def set_figure(self, figure):
         """Call this with the matplotlib Figure() object."""
         self.figure = figure
 
@@ -95,15 +95,15 @@ class FitsImageMpl(FitsImage.FitsImageBase):
         ## connect = figure.canvas.mpl_connect
         ## connect("resize_event", self._resize_cb)
 
-    def get_surface(self):
+    def get_figure(self):
         return self.figure
 
-    def get_widget(self):
-        return self.surface
-
     def set_widget(self, canvas):
-        self.surface = canvas
+        self.widget = canvas
         canvas.set_fitsimage(self)
+
+    def get_widget(self):
+        return self.widget
 
     def set_desired_size(self, width, height):
         self.desired_size = (width, height)
@@ -257,8 +257,8 @@ class FitsImageMpl(FitsImage.FitsImageBase):
         pass
         
     def reschedule_redraw(self, time_sec):
-        if self.surface != None:
-            self.surface.reschedule_redraw(time_sec)
+        if self.widget != None:
+            self.widget.reschedule_redraw(time_sec)
 
     def set_cursor(self, cursor):
         pass
@@ -278,8 +278,8 @@ class FitsImageMpl(FitsImage.FitsImageBase):
             self.redraw(whence=3)
         
     def onscreen_message(self, text, delay=None, redraw=True):
-        if self.surface != None:
-            self.surface.onscreen_message(text, delay=delay,
+        if self.widget != None:
+            self.widget.onscreen_message(text, delay=delay,
                                           redraw=redraw)
 
     def onscreen_message_off(self, redraw=True):
@@ -350,8 +350,8 @@ class FitsImageEvent(FitsImageMpl):
                      ):
             self.enable_callback(name)
 
-    def set_surface(self, figure):
-        super(FitsImageEvent, self).set_surface(figure)
+    def set_figure(self, figure):
+        super(FitsImageEvent, self).set_figure(figure)
 
         connect = figure.canvas.mpl_connect
         #connect("map_event", self.map_event)
