@@ -20,12 +20,13 @@ class ColorBarError(Exception):
 # Create a QWidget widget on which we will draw
 class ColorBar(Callback.Callbacks, QtGui.QWidget):
 
-    def __init__(self, logger, rgbmap=None):
+    def __init__(self, logger, rgbmap=None, link=False):
         QtGui.QWidget.__init__(self)
         Callback.Callbacks.__init__(self)
 
         self.logger = logger
         self.pixmap = None
+        self.link_rgbmap = link
         
         if not rgbmap:
             rgbmap = RGBMap.RGBMapper(logger)
@@ -58,8 +59,9 @@ class ColorBar(Callback.Callbacks, QtGui.QWidget):
         
     def set_rgbmap(self, rgbmap):
         self.rgbmap = rgbmap
-        # TODO
-        #rgbmap.add_callback('changed', self.rgbmap_cb)
+        # TODO: figure out if we can get rid of this link option
+        if self.link_rgbmap:
+            rgbmap.add_callback('changed', self.rgbmap_cb)
         self.redraw()
 
     def set_cmap(self, cm):

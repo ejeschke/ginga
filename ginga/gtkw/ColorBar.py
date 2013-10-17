@@ -25,12 +25,13 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
     # Draw in response to an expose-event
     #__gsignals__ = { "expose-event": "override" }
 
-    def __init__(self, logger, rgbmap=None):
+    def __init__(self, logger, rgbmap=None, link=False):
         gtk.DrawingArea.__init__(self)
         Callback.Callbacks.__init__(self)
         
         self.surface = None
         self.logger = logger
+        self.link_rgbmap = link
 
         if not rgbmap:
             rgbmap = RGBMap.RGBMapper(logger)
@@ -77,8 +78,9 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
         
     def set_rgbmap(self, rgbmap):
         self.rgbmap = rgbmap
-        # TODO
-        #rgbmap.add_callback('changed', self.rgbmap_cb)
+        # TODO: figure out if we can get rid of this link option
+        if self.link_rgbmap:
+            rgbmap.add_callback('changed', self.rgbmap_cb)
         self.redraw()
 
     # TODO: deprecate these two?
