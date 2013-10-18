@@ -372,7 +372,7 @@ class DrawingMixin(object):
         self.drawDict = drawDict
         #self.drawtypes = drawDict.keys()
         self.drawtypes = ['point', 'circle', 'rectangle', 'triangle',
-                          'line', 'ruler']
+                          'line', 'ruler', 'compass']
         self.t_drawtype = 'point'
         self.t_drawparams = {}
         self._start_x = 0
@@ -409,7 +409,7 @@ class DrawingMixin(object):
     def get_ruler_distances(self, x1, y1, x2, y2):
         mode = self.t_drawparams.get('units', 'arcmin')
         try:
-            image = self.fitsimage.image
+            image = self.fitsimage.get_image()
             if mode == 'arcmin':
                 # Calculate RA and DEC for the three points
                 # origination point
@@ -449,6 +449,15 @@ class DrawingMixin(object):
                          abs(self._start_y - data_y))
             obj = klass(self._start_x, self._start_y, radius,
                         **self.t_drawparams)
+
+        elif self.t_drawtype == 'compass':
+            radius = max(abs(self._start_x - data_x),
+                         abs(self._start_y - data_y))
+            image = self.fitsimage.get_image()
+            x, y, xn, yn, xe, ye = image.calc_compass_radius(self._start_x,
+                                                             self._start_y,
+                                                             radius)
+            obj = klass(x, y, xn, yn, xe, ye, **self.t_drawparams)
 
         elif self.t_drawtype == 'rectangle':
             # TODO: this method of testing for shift is no longer valid
@@ -791,12 +800,13 @@ class CompassBase(CanvasObjectBase):
     """
 
     def __init__(self, x1, y1, x2, y2, x3, y3, color='skyblue',
-                 linewidth=1, fontsize=None, cap='ball'):
+                 linewidth=1, fontsize=None, font='Sans Serif',
+                 cap='ball'):
         self.kind = 'compass'
         super(CompassBase, self).__init__(color=color,
                                           linewidth=linewidth, cap=cap,
                                           x1=x1, y1=y1, x2=x2, y2=y2, x3=x3, y3=y3,
-                                          fontsize=fontsize)
+                                          font=font, fontsize=fontsize)
 
         
 class TriangleBase(CanvasObjectBase):
@@ -808,11 +818,13 @@ class TriangleBase(CanvasObjectBase):
     """
 
     def __init__(self, x1, y1, x2, y2, color='pink',
-                 linewidth=1, linestyle='solid', cap=None):
+                 linewidth=1, linestyle='solid', cap=None,
+                 fill=False, fillcolor=None):
         self.kind='triangle'
         super(TriangleBase, self).__init__(color=color,
                                            linewidth=linewidth, cap=cap,
                                            linestyle=linestyle,
+                                           fill=fill, fillcolor=fillcolor,
                                            x1=x1, y1=y1, x2=x2, y2=y2)
 
 

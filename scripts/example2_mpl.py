@@ -37,7 +37,7 @@ class FitsViewer(QtGui.QMainWindow):
         fi.set_autocut_params('zscale')
         fi.enable_autozoom('on')
         fi.enable_draw(True)
-        fi.set_drawtype('rectangle')
+        fi.set_drawtype('ruler')
         fi.set_drawcolor('blue')
         fi.set_callback('drag-drop', self.drop_file)
         fi.set_callback('none-move', self.motion)

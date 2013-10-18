@@ -34,8 +34,7 @@ class FitsImageCanvas(FitsImageMpl.FitsImageZoom,
     def canvascoords(self, data_x, data_y, center=True):
         # data->canvas space coordinate conversion
         x, y = self.get_canvas_xy(data_x, data_y, center=center)
-        # matplotlib usually plots in data coordinates
-        return (float(x) / self._imgwin_wd, float(y) / self._imgwin_ht)
+        return (x, y)
 
     def redraw_data(self, whence=0):
         super(FitsImageCanvas, self).redraw_data(whence=whence)

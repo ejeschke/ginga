@@ -728,6 +728,8 @@ class FitsImageBindings(object):
             return True
         
         x, y = fitsimage.get_last_win_xy()
+        if not fitsimage._originUpper:
+            y = fitsimage._imgwin_ht - y
         if action == 'move':
             self._tweak_colormap(fitsimage, x, y, 'preview')
             
@@ -836,6 +838,8 @@ class FitsImageBindings(object):
             return True
         
         x, y = fitsimage.get_last_win_xy()
+        if not fitsimage._originUpper:
+            y = fitsimage._imgwin_ht - y
         if action == 'move':
             self._cutboth_xy(fitsimage, x, y)
             

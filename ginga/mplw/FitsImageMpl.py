@@ -17,7 +17,7 @@ import StringIO
 # Matplotlib imports
 from matplotlib.image import FigureImage
 from matplotlib.figure import Figure
-import matplotlib.patches as patches
+import matplotlib.lines as lines
 from matplotlib.path import Path
 
 from ginga import FitsImage
@@ -80,7 +80,7 @@ class FitsImageMpl(FitsImage.FitsImageBase):
         #ax.autoscale(enable=True, tight=True)
         ax.autoscale(enable=False)
 
-        # Add an overlapped axis for utility drawing
+        # Add an overlapped axis for drawing graphics
         newax = self.figure.add_axes(self.ax_img.get_position(),
                                      frameon=False)
         newax.hold(True)
@@ -88,9 +88,12 @@ class FitsImageMpl(FitsImage.FitsImageBase):
         self.ax_util = newax
 
         # marker drawn at the center of the image for debugging
-        self.cross = patches.Circle((0.5, 0.5), 0.01,
+        self.cross1 = lines.Line2D((0.49, 0.51), (0.50, 0.50),
+                                   transform=newax.transAxes,
+                                   color='red', alpha=1.0)
+        self.cross2 = lines.Line2D((0.50, 0.50), (0.49, 0.51),
                                     transform=newax.transAxes,
-                                    facecolor='red', alpha=0.75)
+                                    color='red', alpha=1.0)
 
         ## connect = figure.canvas.mpl_connect
         ## connect("resize_event", self._resize_cb)
@@ -158,7 +161,8 @@ class FitsImageMpl(FitsImage.FitsImageBase):
         
         # Draw a cross in the center of the window in debug mode
         if self.t_['show_pan_position']:
-            self.ax_util.add_patch(self.cross)
+            self.ax_util.add_line(self.cross1)
+            self.ax_util.add_line(self.cross2)
         
         # render self.message
         if self.message:
@@ -181,7 +185,6 @@ class FitsImageMpl(FitsImage.FitsImageBase):
         # matplotlib figure axis
         arr = self.getwin_array(order='RGB')
 
-        print "WOO!"
         # force aspect ratio of plot to match ginga
         wd, ht = self.get_window_size()
 
@@ -219,7 +222,8 @@ class FitsImageMpl(FitsImage.FitsImageBase):
         
         # Draw a cross in the center of the window in debug mode
         if self.t_['show_pan_position']:
-            self.ax_util.add_patch(self.cross)
+            self.ax_util.add_line(self.cross1)
+            self.ax_util.add_line(self.cross2)
         
         # render self.message
         if self.message:
@@ -229,8 +233,11 @@ class FitsImageMpl(FitsImage.FitsImageBase):
         self.figure.canvas.draw()
 
     def render_image(self, rgbobj, dst_x, dst_y):
-        # render_image1() seems a little faster
-        return self.render_image1(rgbobj, dst_x, dst_y)
+        # render_image1() currently seems a little faster
+        if self.in_axes:
+            return self.render_image2(rgbobj, dst_x, dst_y)
+        else:
+            return self.render_image1(rgbobj, dst_x, dst_y)
 
     def draw_message(self, message):
         # r, g, b = self.img_fg

@@ -522,11 +522,7 @@ class AstroImage(BaseImage):
         
         return (x, y, xn, yn, xe, ye)
        
-    def calc_compass_center(self):
-        # calculate center of data
-        x = float(self.width) / 2.0
-        y = float(self.height) / 2.0
-
+    def calc_compass_radius(self, x, y, radius_px):
         xe, ye = self.add_offset_xy(x, y, 1.0, 0.0)
         xn, yn = self.add_offset_xy(x, y, 0.0, 1.0)
 
@@ -535,15 +531,22 @@ class AstroImage(BaseImage):
         px_per_deg_e = math.sqrt(math.fabs(ye - y)**2 + math.fabs(xe - x)**2)
         px_per_deg_n = math.sqrt(math.fabs(yn - y)**2 + math.fabs(xn - x)**2)
 
-        # radius we want the arms to be (approx 1/4 the smallest dimension)
-        radius_px = float(min(self.width, self.height)) / 4.0
-
         # now calculate the arm length in degrees for each arm
         # (this produces same-length arms)
         len_deg_e = radius_px / px_per_deg_e
         len_deg_n = radius_px / px_per_deg_n
 
         return self.calc_compass(x, y, len_deg_e, len_deg_n)
+       
+    def calc_compass_center(self):
+        # calculate center of data
+        x = float(self.width) / 2.0
+        y = float(self.height) / 2.0
+
+        # radius we want the arms to be (approx 1/4 the smallest dimension)
+        radius_px = float(min(self.width, self.height)) / 4.0
+
+        return self.calc_compass_radius(x, y, radius_px)
 
     def mosaic1(self, imagelist):
 
