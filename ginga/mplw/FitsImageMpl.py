@@ -61,6 +61,10 @@ class FitsImageMpl(FitsImage.FitsImageBase):
         # cursors
         self.cursor = {}
 
+        # For timing events
+        self._msg_timer = None
+        self._defer_timer = None
+
         self.t_.setDefaults(show_pan_position=True,
                             onscreen_ff='Sans Serif')
         
@@ -87,6 +91,15 @@ class FitsImageMpl(FitsImage.FitsImageBase):
         newax.autoscale(enable=False)
         self.ax_util = newax
 
+        # Create timers
+        self._msg_timer = figure.canvas.new_timer()
+        self._msg_timer.single_shot = True
+        self._msg_timer.add_callback(self.onscreen_message_off)
+        
+        self._defer_timer = figure.canvas.new_timer()
+        self._defer_timer.single_shot = True
+        self._defer_timer.add_callback(self.delayed_redraw)
+
         # marker drawn at the center of the image for debugging
         self.cross1 = lines.Line2D((0.49, 0.51), (0.50, 0.50),
                                    transform=newax.transAxes,
@@ -95,15 +108,23 @@ class FitsImageMpl(FitsImage.FitsImageBase):
                                     transform=newax.transAxes,
                                     color='red', alpha=1.0)
 
-        ## connect = figure.canvas.mpl_connect
-        ## connect("resize_event", self._resize_cb)
+        canvas = figure.canvas
+        canvas.mpl_connect("resize_event", self._resize_cb)
+
+        # Because we don't know if resize callback works with all backends
+        left, bottom, wd, ht = self.ax_img.bbox.bounds
+        self.configure(wd, ht)
 
     def get_figure(self):
         return self.figure
 
     def set_widget(self, canvas):
         self.widget = canvas
-        canvas.set_fitsimage(self)
+        if hasattr(canvas, 'fitsimage'):
+            canvas.set_fitsimage(self)
+            self.use_gingacanvas = True
+        else:
+            self.use_gingacanvas = False
 
     def get_widget(self):
         return self.widget
@@ -131,6 +152,8 @@ class FitsImageMpl(FitsImage.FitsImageBase):
         self.logger.debug("redraw surface")
         if self.figure == None:
             return
+        ## left, bottom, width, height = self.ax_img.bbox.bounds
+        ## self._imgwin_wd, self._imgwin_ht = width, height
 
         # Grab the RGB array for the current image and place it in the
         # matplotlib figure axis
@@ -138,8 +161,6 @@ class FitsImageMpl(FitsImage.FitsImageBase):
 
         dst_x = dst_y = 0
         
-        wd, ht = self.get_window_size()
-
         # fill background color
         ## rect = self.figure.patch
         ## rect.set_facecolor(self.img_bg)
@@ -181,16 +202,14 @@ class FitsImageMpl(FitsImage.FitsImageBase):
         if self.figure == None:
             return
 
+        ## left, bottom, width, height = self.ax_img.bbox.bounds
+        ## self._imgwin_wd, self._imgwin_ht = width, height
+
         # Grab the RGB array for the current image and place it in the
         # matplotlib figure axis
         arr = self.getwin_array(order='RGB')
 
-        # force aspect ratio of plot to match ginga
-        wd, ht = self.get_window_size()
-
         # Get the data extents
-        ## x0, y0 = self.get_data_xy(0, 0)
-        ## x1, y1 = self.get_data_xy(wd-1, ht-1)
         x0, y0 = 0, 0
         y1, x1 = arr.shape[:2] 
         flipx, flipy, swapxy = self.get_transforms()
@@ -198,7 +217,7 @@ class FitsImageMpl(FitsImage.FitsImageBase):
             x0, x1, y0, y1 = y0, y1, x0, x1
             
         extent = (x0, x1, y1, y0)
-        print "extent=%s" % (str(extent))
+        self.logger.debug("extent=%s" % (str(extent)))
 
         # Calculate aspect ratio
         aspect = self.calculate_aspect(arr.shape, extent)
@@ -251,7 +270,9 @@ class FitsImageMpl(FitsImage.FitsImageBase):
         self.set_window_size(width, height, redraw=True)
 
     def _resize_cb(self, event):
-        self.configure(event.width, event.height)
+        wd, ht = event.width, event.height
+        self.logger.debug("canvas resized %dx%d" % (wd, ht))
+        self.configure(wd, ht)
         
     def get_png_image_as_buffer(self, output=None):
         ibuf = output
@@ -263,10 +284,6 @@ class FitsImageMpl(FitsImage.FitsImageBase):
     def update_image(self):
         pass
         
-    def reschedule_redraw(self, time_sec):
-        if self.widget != None:
-            self.widget.reschedule_redraw(time_sec)
-
     def set_cursor(self, cursor):
         pass
         
@@ -285,13 +302,39 @@ class FitsImageMpl(FitsImage.FitsImageBase):
             self.redraw(whence=3)
         
     def onscreen_message(self, text, delay=None, redraw=True):
-        if self.widget != None:
-            self.widget.onscreen_message(text, delay=delay,
-                                          redraw=redraw)
+        try:
+            self._msg_timer.stop()
+        except:
+            pass
+
+        self.message = text
+        if redraw:
+            self.redraw(whence=3)
+
+        if delay:
+            time_ms = int(delay * 1000.0)
+            self._msg_timer.interval = time_ms
+            self._msg_timer.start()
 
     def onscreen_message_off(self, redraw=True):
         return self.onscreen_message(None, redraw=redraw)
     
+    def reschedule_redraw(self, time_sec):
+        try:
+            self._defer_timer.stop()
+        except:
+            pass
+
+        time_ms = int(time_sec * 1000)
+        try:
+            self._defer_timer.interval = time_ms
+            self._defer_timer.start()
+
+        except Exception as e:
+            self.logger.warn("Exception starting timer: %s; "
+                             "using unoptomized redraw" % (str(e)))
+            self.delayed_redraw()
+
     def show_pan_mark(self, tf, redraw=True):
         self.t_.set(show_pan_position=tf)
         if redraw:
@@ -461,7 +504,7 @@ class FitsImageEvent(FitsImageMpl):
     def scroll_event(self, event):
         x, y = event.x, event.y
         direction = event.button
-        self.logger.debug("scroll at %dx%d event=%s" % (x, y, str(event)))
+        self.logger.debug("scroll at %dx%d (%s)" % (x, y, str(direction)))
 
         # TODO: how about amount of scroll?
         return self.make_callback('scroll', direction)

@@ -651,19 +651,20 @@ class FitsImageBase(Callback.Callbacks):
         3   = graphical overlays have changed
         """
         time_start = time.time()
+        win_wd, win_ht = self.get_window_size()
+        
         if (whence <= 0) or (self._cutout == None):
             # Get the smallest slice of data that will fit our display needs.
             self._cutout = self.get_scaled_cutout(self.image,
                   self._scale_x, self._scale_y,
-                  self._pan_x, self._pan_y,
-                  self._imgwin_wd, self._imgwin_ht)
+                  self._pan_x, self._pan_y, win_wd, win_ht)
 
         time_split1 = time.time()
         if (whence <= 0.5) or (self._rotimg == None):
             # Apply any viewing transformations or rotations
             self._rotimg = self.apply_transforms(self._cutout,
                               self.t_['rot_deg'], 
-                              self._imgwin_wd, self._imgwin_ht)
+                              win_wd, win_ht)
             
         time_split2 = time.time()
         if (whence <= 1) or (self._prergb == None):

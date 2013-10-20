@@ -1,6 +1,7 @@
 #! /usr/bin/env python
 #
-# example2_mpl.py -- Simple, configurable FITS viewer.
+# example2_mpl.py -- Simple, configurable FITS viewer using a matplotlib
+#                      QtAgg backend for Ginga and embedded in a Qt program.
 #
 # Eric Jeschke (eric@naoj.org)
 #
@@ -15,7 +16,8 @@ from ginga.qtw.QtHelp import QtGui, QtCore
 from ginga import AstroImage
 from matplotlib.figure import Figure
 from ginga.mplw.FitsImageCanvasMpl import FitsImageCanvas
-from ginga.mplw.GingaCanvasQt import GingaCanvas
+from ginga.mplw.GingaCanvasQt import FigureCanvas
+#from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from ginga import colors
 
 STD_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcName)s) | %(message)s'
@@ -29,7 +31,8 @@ class FitsViewer(QtGui.QMainWindow):
         self.drawcolors = colors.get_colors()
 
         fig = Figure()
-        w = GingaCanvas(fig)
+        #w = GingaCanvas(fig)
+        w = FigureCanvas(fig)
         
         fi = FitsImageCanvas(logger)
         fi.set_widget(w)
@@ -104,6 +107,16 @@ class FitsViewer(QtGui.QMainWindow):
         vw = QtGui.QWidget()
         self.setCentralWidget(vw)
         vw.setLayout(vbox)
+
+    ## def resizeEvent(self, event):
+    ##     rect = self.geometry()
+    ##     x1, y1, x2, y2 = rect.getCoords()
+    ##     width = x2 - x1
+    ##     height = y2 - y1
+
+    ##     if self.fitsimage != None:
+    ##         print "RESIZE %dx%d" % (width, height)
+    ##         self.fitsimage.configure(width, height)
 
     def set_drawparams(self, kind):
         index = self.wdrawtype.currentIndex()

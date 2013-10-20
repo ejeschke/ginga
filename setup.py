@@ -41,10 +41,12 @@ setup(
                 'ginga.qtw', 'ginga.qtw.plugins', 'ginga.qtw.tests',
                 # Tk version (widget only)
                 'ginga.tkw', 'ginga.aggw',
+                # Matplotlib version
+                'ginga.mplw',
                 # Common stuff
                 'ginga.misc', 'ginga.misc.plugins',
                 # Misc
-                'ginga.util',
+                'ginga.util', 'ginga.icons', 'ginga.doc'
                 ],
     package_data = { 'ginga.icons': ['*.ppm', '*.png'],
                      'ginga.gtkw': ['gtk_rc'],
