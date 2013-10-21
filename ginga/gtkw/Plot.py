@@ -16,6 +16,7 @@ import gtk
 
 import matplotlib
 matplotlib.use('GTKCairo')
+matplotlib.rcParams.update(matplotlib.rcParamsDefault)
 from  matplotlib.backends.backend_gtkcairo import FigureCanvasGTKCairo \
      as FigureCanvas
 import pango
