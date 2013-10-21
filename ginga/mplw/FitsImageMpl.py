@@ -22,6 +22,7 @@ from matplotlib.path import Path
 
 from ginga import FitsImage
 from ginga import Mixins, Bindings, colors
+import transform
 
 
 class FitsImageMplError(FitsImage.FitsImageError):
@@ -33,8 +34,6 @@ class FitsImageMpl(FitsImage.FitsImageBase):
         FitsImage.FitsImageBase.__init__(self, logger=logger,
                                          rgbmap=rgbmap,
                                          settings=settings)
-        # Our FigureCanvas
-        self.widget = None
         # Our Figure
         self.figure = None
         # Our Axes
@@ -65,7 +64,7 @@ class FitsImageMpl(FitsImage.FitsImageBase):
         self._msg_timer = None
         self._defer_timer = None
 
-        self.t_.setDefaults(show_pan_position=True,
+        self.t_.setDefaults(show_pan_position=False,
                             onscreen_ff='Sans Serif')
         
     def set_figure(self, figure):
@@ -77,18 +76,22 @@ class FitsImageMpl(FitsImage.FitsImageBase):
         self.ax_img = ax
         # We don't want the axes cleared every time plot() is called
         ax.hold(False)
+        # TODO: is this needed, since frame_on == False?
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
-        ax.patch.set_alpha(0.0)
+        #ax.patch.set_alpha(0.0)
         ax.patch.set_visible(False)
         #ax.autoscale(enable=True, tight=True)
         ax.autoscale(enable=False)
 
         # Add an overlapped axis for drawing graphics
         newax = self.figure.add_axes(self.ax_img.get_position(),
+                                     sharex=ax, sharey=ax,
                                      frameon=False)
         newax.hold(True)
         newax.autoscale(enable=False)
+        # newax.get_xaxis().set_visible(False)
+        # newax.get_yaxis().set_visible(False)
         self.ax_util = newax
 
         # Create timers
@@ -109,7 +112,10 @@ class FitsImageMpl(FitsImage.FitsImageBase):
                                     color='red', alpha=1.0)
 
         canvas = figure.canvas
-        canvas.mpl_connect("resize_event", self._resize_cb)
+        if hasattr(canvas, 'fitsimage'):
+            canvas.set_fitsimage(self)
+        else:
+            canvas.mpl_connect("resize_event", self._resize_cb)
 
         # Because we don't know if resize callback works with all backends
         left, bottom, wd, ht = self.ax_img.bbox.bounds
@@ -119,15 +125,11 @@ class FitsImageMpl(FitsImage.FitsImageBase):
         return self.figure
 
     def set_widget(self, canvas):
-        self.widget = canvas
         if hasattr(canvas, 'fitsimage'):
             canvas.set_fitsimage(self)
-            self.use_gingacanvas = True
-        else:
-            self.use_gingacanvas = False
 
     def get_widget(self):
-        return self.widget
+        return self.figure.canvas
 
     def set_desired_size(self, width, height):
         self.desired_size = (width, height)
@@ -177,21 +179,6 @@ class FitsImageMpl(FitsImage.FitsImageBase):
             self.mpimage.oy = dst_y
             self.mpimage.set_data(data)
 
-        # clear utility axis
-        self.ax_util.cla()
-        
-        # Draw a cross in the center of the window in debug mode
-        if self.t_['show_pan_position']:
-            self.ax_util.add_line(self.cross1)
-            self.ax_util.add_line(self.cross2)
-        
-        # render self.message
-        if self.message:
-            self.draw_message(self.message)
-
-        # force an update of the figure
-        self.figure.canvas.draw()
-
     def render_image2(self, rgbobj, dst_x, dst_y):
         """Render the image represented by (rgbobj) at dst_x, dst_y
         in the pixel space.
@@ -236,6 +223,26 @@ class FitsImageMpl(FitsImage.FitsImageBase):
             self.mpimage.set_extent(extent)
             #self.ax_img.relim()
 
+    def render_image(self, rgbobj, dst_x, dst_y):
+
+        # Ugly, ugly hack copied from matplotlib.lines to cause line
+        # objects to recompute their cached transformed_path
+        # Other mpl artists don't seem to have this affliction
+        for ax in self.figure.axes:
+            if not (ax in (self.ax_img, self.ax_util)):
+                if hasattr(ax, "lines"):
+                    for line in ax.lines:
+                        try:
+                            line._transformed_path.invalidate()
+                        except AttributeError:
+                            pass
+
+        # render_image1() currently seems a little faster
+        if self.in_axes:
+            self.render_image2(rgbobj, dst_x, dst_y)
+        else:
+            self.render_image1(rgbobj, dst_x, dst_y)
+
         # clear utility axis
         self.ax_util.cla()
         
@@ -244,19 +251,21 @@ class FitsImageMpl(FitsImage.FitsImageBase):
             self.ax_util.add_line(self.cross1)
             self.ax_util.add_line(self.cross2)
         
-        # render self.message
+        # render message if there is one currently
         if self.message:
             self.draw_message(self.message)
 
         # force an update of the figure
         self.figure.canvas.draw()
 
-    def render_image(self, rgbobj, dst_x, dst_y):
-        # render_image1() currently seems a little faster
-        if self.in_axes:
-            return self.render_image2(rgbobj, dst_x, dst_y)
-        else:
-            return self.render_image1(rgbobj, dst_x, dst_y)
+        # Set the axis limits
+        wd, ht = self.get_window_size()
+        x0, y0 = self.get_data_xy(0, 0)
+        x1, tm = self.get_data_xy(0, wd-1)
+        tm, y1 = self.get_data_xy(0, ht-1)
+        for ax in self.figure.axes:
+            ax.set_xlim(x0, x1)
+            ax.set_ylim(y0, y1)
 
     def draw_message(self, message):
         # r, g, b = self.img_fg
@@ -273,7 +282,17 @@ class FitsImageMpl(FitsImage.FitsImageBase):
         wd, ht = event.width, event.height
         self.logger.debug("canvas resized %dx%d" % (wd, ht))
         self.configure(wd, ht)
-        
+
+    def add_axes(self):
+        ax = self.figure.add_axes(self.ax_img.get_position(),
+                                  #sharex=self.ax_img, sharey=self.ax_img,
+                                  frameon=False,
+                                  fitsimage=self,
+                                  projection='ginga')
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
+        return ax
+
     def get_png_image_as_buffer(self, output=None):
         ibuf = output
         if ibuf == None:

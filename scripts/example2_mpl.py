@@ -9,18 +9,19 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+"""
+Usage:
+   example2_mpl.py [fits file]
+"""
 import sys, os
-import logging, logging.handlers
 from ginga.qtw.QtHelp import QtGui, QtCore
 
 from ginga import AstroImage
 from matplotlib.figure import Figure
 from ginga.mplw.FitsImageCanvasMpl import FitsImageCanvas
-from ginga.mplw.GingaCanvasQt import FigureCanvas
-#from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
+from ginga.mplw.FigureCanvasQt import FigureCanvas
+from ginga.misc import log
 from ginga import colors
-
-STD_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcName)s) | %(message)s'
 
 
 class FitsViewer(QtGui.QMainWindow):
@@ -31,11 +32,9 @@ class FitsViewer(QtGui.QMainWindow):
         self.drawcolors = colors.get_colors()
 
         fig = Figure()
-        #w = GingaCanvas(fig)
         w = FigureCanvas(fig)
         
         fi = FitsImageCanvas(logger)
-        fi.set_widget(w)
         fi.enable_autocuts('on')
         fi.set_autocut_params('zscale')
         fi.enable_autozoom('on')
@@ -49,15 +48,8 @@ class FitsViewer(QtGui.QMainWindow):
         self.fitsimage = fi
         fi.set_figure(fig)
 
-        bd = fi.get_bindings()
-        bd.enable_pan(True)
-        bd.enable_zoom(True)
-        bd.enable_cuts(True)
-        bd.enable_flip(True)
-        bd.enable_rotate(True)
-        bd.enable_cmap(True)
+        fi.get_bindings().enable_all(True)
 
-        #w = fi.get_widget()
         w.resize(512, 512)
 
         vbox = QtGui.QVBoxLayout()
@@ -107,16 +99,6 @@ class FitsViewer(QtGui.QMainWindow):
         vw = QtGui.QWidget()
         self.setCentralWidget(vw)
         vw.setLayout(vbox)
-
-    ## def resizeEvent(self, event):
-    ##     rect = self.geometry()
-    ##     x1, y1, x2, y2 = rect.getCoords()
-    ##     width = x2 - x1
-    ##     height = y2 - y1
-
-    ##     if self.fitsimage != None:
-    ##         print "RESIZE %dx%d" % (width, height)
-    ##         self.fitsimage.configure(width, height)
 
     def set_drawparams(self, kind):
         index = self.wdrawtype.currentIndex()
@@ -190,21 +172,7 @@ def main(options, args):
     app.connect(app, QtCore.SIGNAL('lastWindowClosed()'),
                 app, QtCore.SLOT('quit()'))
 
-    logger = logging.getLogger("example2")
-    logger.setLevel(options.loglevel)
-    fmt = logging.Formatter(STD_FORMAT)
-    if options.logfile:
-        fileHdlr  = logging.handlers.RotatingFileHandler(options.logfile)
-        fileHdlr.setLevel(options.loglevel)
-        fileHdlr.setFormatter(fmt)
-        logger.addHandler(fileHdlr)
-
-    if options.logstderr:
-        stderrHdlr = logging.StreamHandler()
-        stderrHdlr.setLevel(options.loglevel)
-        stderrHdlr.setFormatter(fmt)
-        logger.addHandler(stderrHdlr)
-
+    logger = log.get_logger(name="example2", options=options)
     w = FitsViewer(logger)
     w.resize(524, 540)
     w.show()
@@ -228,7 +196,7 @@ if __name__ == "__main__":
     optprs.add_option("--log", dest="logfile", metavar="FILE",
                       help="Write logging output to FILE")
     optprs.add_option("--loglevel", dest="loglevel", metavar="LEVEL",
-                      type='int', default=logging.INFO,
+                      type='int', default=None,
                       help="Set logging level to LEVEL")
     optprs.add_option("--stderr", dest="logstderr", default=False,
                       action="store_true",

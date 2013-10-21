@@ -140,6 +140,12 @@ class FitsImageBindings(object):
 
         self.autocuts = AutoCuts.ZScale(self.logger)
 
+        self.features = dict(
+            # name, attr pairs
+            pan='canpan', zoom='canzoom', cuts='cancut', cmap='cancmap',
+            flip='canflip', rotate='canrotate')
+
+
     def window_map(self, fitsimage):
         self.to_default_mode(fitsimage)
 
@@ -288,6 +294,26 @@ class FitsImageBindings(object):
         """Enable the image to be rotated interactively (True/False)."""
         self.canrotate = tf
 
+    def enable(self, **kwdargs):
+        """
+        General enable function encompassing all user interface features.
+        Usage (e.g.):
+            fitsimage.enable(rotate=False, flip=True)
+        """
+        for feat, value in kwdargs:
+            feat = feat.lower()
+            if not feat in self.features:
+                raise ValueError("'%s' is not a feature. Must be one of %s" % (
+                    feat, str(self.features)))
+
+            attr = self.features[feat]
+            setattr(self, attr, bool(value))
+
+    def enable_all(self, tf):
+        for feat, attr in self.features.items():
+            setattr(self, attr, bool(tf))
+            
+        
     #####  Help methods #####
     # Methods used by the callbacks to do actions.
 

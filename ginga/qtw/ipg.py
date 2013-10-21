@@ -18,7 +18,7 @@ import logging
 from ginga import AstroImage
 from ginga.qtw.QtHelp import QtGui, QtCore
 from ginga.qtw.FitsImageCanvasQt import FitsImageCanvas
-from ginga.misc import NullLogger, Settings
+from ginga.misc import log, Settings
 
 from IPython.lib.kernel import connect_qtconsole
 try:
@@ -309,9 +309,8 @@ class StartMenu(QtGui.QMainWindow):
 def start(kapp):
     global app_ref
     
-    # create a logger
     if use_null_logger:
-        logger = NullLogger.NullLogger()
+        logger = log.NullLogger()
     else:
         logger = logging.getLogger("ipg")
         logger.setLevel(logging.INFO)

@@ -11,10 +11,9 @@
 #
 #
 """
-   $ ./example1_mpl.py <fitsfile>
+   $ ./example3_mpl.py [fits file]
 """
 import sys, os
-import logging
 import numpy
 
 from ginga.qtw.FitsImageCanvasQt import FitsImageCanvas
@@ -22,6 +21,7 @@ from ginga.qtw import ColorBar
 from ginga.qtw.QtHelp import QtGui, QtCore
 from ginga import AstroImage
 from ginga import cmap, imap
+from ginga.misc import log
 
 import matplotlib
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
@@ -400,21 +400,7 @@ def main(options, args):
     app.connect(app, QtCore.SIGNAL('lastWindowClosed()'),
                 app, QtCore.SLOT('quit()'))
 
-    logger = logging.getLogger("example1_mpl.py")
-    logger.setLevel(options.loglevel)
-    fmt = logging.Formatter(STD_FORMAT)
-    if options.logfile:
-        fileHdlr  = logging.handlers.RotatingFileHandler(options.logfile)
-        fileHdlr.setLevel(options.loglevel)
-        fileHdlr.setFormatter(fmt)
-        logger.addHandler(fileHdlr)
-
-    if options.logstderr:
-        stderrHdlr = logging.StreamHandler()
-        stderrHdlr.setLevel(options.loglevel)
-        stderrHdlr.setFormatter(fmt)
-        logger.addHandler(stderrHdlr)
-
+    logger = log.get_logger(name="example3", options=options)
     w = FitsViewer(logger)
     w.resize(1024, 540)
     w.show()
@@ -438,7 +424,7 @@ if __name__ == "__main__":
     optprs.add_option("--log", dest="logfile", metavar="FILE",
                       help="Write logging output to FILE")
     optprs.add_option("--loglevel", dest="loglevel", metavar="LEVEL",
-                      type='int', default=logging.INFO,
+                      type='int', default=None,
                       help="Set logging level to LEVEL")
     optprs.add_option("--stderr", dest="logstderr", default=False,
                       action="store_true",

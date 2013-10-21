@@ -9,16 +9,18 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+"""
+Usage:
+   example1_mpl.py [fits file]
+"""
 import sys, os
-import logging
 
 from ginga import AstroImage
 from ginga.qtw.QtHelp import QtGui, QtCore
 from matplotlib.figure import Figure
 from ginga.mplw.FitsImageMpl import FitsImageZoom
-from ginga.mplw.GingaCanvasQt import GingaCanvas
-
-STD_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcName)s) | %(message)s'
+from ginga.mplw.FigureCanvasQt import FigureCanvas
+from ginga.misc import log
 
 
 class FitsViewer(QtGui.QMainWindow):
@@ -28,10 +30,9 @@ class FitsViewer(QtGui.QMainWindow):
         self.logger = logger
 
         fig = Figure()
-        w = GingaCanvas(fig)
+        w = FigureCanvas(fig)
         
         fi = FitsImageZoom(self.logger)
-        fi.set_widget(w)
         fi.enable_autocuts('on')
         fi.set_autocut_params('zscale')
         fi.enable_autozoom('on')
@@ -39,16 +40,10 @@ class FitsViewer(QtGui.QMainWindow):
         fi.set_callback('none-move', self.motion)
         fi.set_bg(0.2, 0.2, 0.2)
         fi.ui_setActive(True)
-        self.fitsimage = fi
         fi.set_figure(fig)
+        self.fitsimage = fi
 
-        bd = fi.get_bindings()
-        bd.enable_pan(True)
-        bd.enable_zoom(True)
-        bd.enable_cuts(True)
-        bd.enable_flip(True)
-        bd.enable_rotate(True)
-        bd.enable_cmap(True)
+        fi.get_bindings().enable_all(True)
 
         vbox = QtGui.QVBoxLayout()
         vbox.setContentsMargins(QtCore.QMargins(2, 2, 2, 2))
@@ -145,21 +140,7 @@ def main(options, args):
     app.connect(app, QtCore.SIGNAL('lastWindowClosed()'),
                 app, QtCore.SLOT('quit()'))
 
-    logger = logging.getLogger("example2")
-    logger.setLevel(options.loglevel)
-    fmt = logging.Formatter(STD_FORMAT)
-    if options.logfile:
-        fileHdlr  = logging.handlers.RotatingFileHandler(options.logfile)
-        fileHdlr.setLevel(options.loglevel)
-        fileHdlr.setFormatter(fmt)
-        logger.addHandler(fileHdlr)
-
-    if options.logstderr:
-        stderrHdlr = logging.StreamHandler()
-        stderrHdlr.setLevel(options.loglevel)
-        stderrHdlr.setFormatter(fmt)
-        logger.addHandler(stderrHdlr)
-
+    logger = log.get_logger(name="example1", options=options)
     viewer = FitsViewer(logger)
     viewer.resize(524, 540)
     viewer.show()
@@ -184,7 +165,7 @@ if __name__ == "__main__":
     optprs.add_option("--log", dest="logfile", metavar="FILE",
                       help="Write logging output to FILE")
     optprs.add_option("--loglevel", dest="loglevel", metavar="LEVEL",
-                      type='int', default=logging.INFO,
+                      type='int', default=None,
                       help="Set logging level to LEVEL")
     optprs.add_option("--stderr", dest="logstderr", default=False,
                       action="store_true",

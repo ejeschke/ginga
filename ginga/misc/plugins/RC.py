@@ -37,7 +37,7 @@ Examples:
  $ grc ginga add_channel FOO
  
  Load a file:
- $ grc ginga load FOO /home/eric/testdata/SPCAM/SUPA01118797.fits
+ $ grc ginga load_file FOO /home/eric/testdata/SPCAM/SUPA01118797.fits
 
  Cut levels:
  $ grc channel FOO cut_levels 163 1300

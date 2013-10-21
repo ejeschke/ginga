@@ -53,7 +53,7 @@ import traceback
 
 # Local application imports
 from ginga.misc.Bunch import Bunch
-from ginga.misc import Task, ModuleManager, Datasrc, Settings
+from ginga.misc import Task, ModuleManager, Datasrc, Settings, log
 from ginga.Control import GingaControl, GuiLogHandler
 import ginga.version as version
 import ginga.toolkit as ginga_toolkit
@@ -112,29 +112,10 @@ local_plugins = [
     Bunch(module='FBrowser', ws='dialogs', shortkey='f12'),
     ]
 
-# max size of log file before rotating
-log_maxsize = 20 * 1024*1024
-log_backups = 4
-
 def main(options, args):
 
     # Create a logger
-    logger = logging.Logger('ginga')
-
-    fmt = logging.Formatter(LOG_FORMAT)
-    if options.logfile:
-        fileHdlr  = logging.handlers.RotatingFileHandler(options.logfile,
-                                                         maxBytes=log_maxsize,
-                                                         backupCount=log_backups)
-        fileHdlr.setLevel(options.loglevel)
-        fileHdlr.setFormatter(fmt)
-        logger.addHandler(fileHdlr)
-
-    if options.logstderr:
-        stderrHdlr = logging.StreamHandler()
-        stderrHdlr.setLevel(options.loglevel)
-        stderrHdlr.setFormatter(fmt)
-        logger.addHandler(stderrHdlr)
+    logger = log.get_logger(name='ginga', options=options)
 
     # Get settings (preferences)
     try:
@@ -243,7 +224,7 @@ def main(options, args):
     # Add GUI log handler (for "Log" global plugin)
     guiHdlr = GuiLogHandler(ginga)
     guiHdlr.setLevel(options.loglevel)
-    guiHdlr.setFormatter(fmt)
+    guiHdlr.setFormatter(log.LOG_FORMAT)
     logger.addHandler(guiHdlr)
 
     # Load any custom modules
