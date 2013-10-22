@@ -890,8 +890,14 @@ class AstroHeader(Header):
 
     def fromHDU(self, hdu):
         header = hdu.header
-        for card in header.cards:
-            bnch = self.__setitem__(card.key, card.value)
-            bnch.comment = card.comment
+        if hasattr(header, 'cards'):
+            #newer astropy.io.fits don't have ascardlist
+            for card in header.cards:
+                bnch = self.__setitem__(card.key, card.value)
+                bnch.comment = card.comment
+        else:
+            for card in header.ascardlist():
+                bnch = self.__setitem__(card.key, card.value)
+                bnch.comment = card.comment
 
 #END
