@@ -890,7 +890,7 @@ class AstroHeader(Header):
 
     def fromHDU(self, hdu):
         header = hdu.header
-        for card in header.ascardlist():
+        for card in header.cards:
             bnch = self.__setitem__(card.key, card.value)
             bnch.comment = card.comment
 
