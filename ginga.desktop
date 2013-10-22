@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Ginga
+Comment=The Ginga astronomical FITS file viewer
+Exec=ginga
+Categories=Education;Science;Astronomy;
+MimeType=image/x-fits;
