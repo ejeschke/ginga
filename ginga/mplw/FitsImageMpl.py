@@ -15,6 +15,7 @@ import math
 import StringIO
 
 # Matplotlib imports
+import matplotlib
 from matplotlib.image import FigureImage
 from matplotlib.figure import Figure
 import matplotlib.lines as lines
@@ -23,6 +24,24 @@ from matplotlib.path import Path
 from ginga import FitsImage
 from ginga import Mixins, Bindings, colors
 import transform
+
+# Override some matplotlib keyboard UI defaults
+rc = matplotlib.rcParams
+# TODO: figure out how to keep from overriding the user's desirable
+# rcParams
+rc.update(matplotlib.rcParamsDefault)
+rc['keymap.fullscreen'] = 'f'    # toggling full screen
+rc['keymap.home'] = 'home'       # home or reset mnemonic
+rc['keymap.back'] = 'left'       # forward / backward keys to enable
+rc['keymap.forward'] = 'right'   #   left handed quick navigation
+rc['keymap.pan'] = []            # pan mnemonic
+rc['keymap.zoom'] = []           # zoom mnemonic
+rc['keymap.save'] = 'ctrl+s'     # saving current figure
+#rc['keymap.quit'] = 'ctrl+w'     # close the current figure
+rc['keymap.grid'] = 'ctrl+g'     # switching on/off a grid in current axes
+rc['keymap.yscale'] = []         # toggle scaling of y-axes ('log'/'linear')
+rc['keymap.xscale'] = []         # toggle scaling of x-axes ('log'/'linear')
+rc['keymap.all_axes'] = []       # enable all axes
 
 
 class FitsImageMplError(FitsImage.FitsImageError):

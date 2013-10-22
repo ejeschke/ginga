@@ -5,19 +5,42 @@
 #
 # Eric Jeschke (eric@naoj.org)
 #
+# Copyright (c)  Eric R. Jeschke.  All rights reserved.
+# This is open-source software licensed under a BSD license.
+# Please see the file LICENSE.txt for details.
+#
+#
 """
-   $ ./example4_mpl.py <fitsfile>
+   $ ./example4_mpl.py [fits file]
+
+A Ginga object rendering to a generic matplotlib Figure.  In short,
+this allows you to have all the interactive UI goodness of a Ginga widget
+window in a matplotlib figure.  You can interactively flip, rotate, pan, zoom,
+set cut levels and color map warp a FITS image.  Furthermore, you can plot
+using matplotlib plotting on top of the image and the plots will follow all
+the transformations.
+
+See the Ginga quick reference
+(http://ginga.readthedocs.org/en/latest/quickref.html)
+for a list of the interactive features in the standard ginga widget.
+
+example4 produces a simple matplotlib fits view with a couple of overplots.
+This shows how you can use the functionality with straight python/matplotlib
+sessions.  Run this by supplying a single FITS file on the command line.
 """
-import sys
+import sys, os
+# just in case you want to use qt
+os.environ['QT_API'] = 'pyqt'
+
 import matplotlib
 options = ['Qt4Agg', 'GTK', 'GTKAgg', 'MacOSX', 'GTKCairo', 'WXAgg',
            'TkAgg', 'QtAgg', 'FltkAgg', 'WX']
 # Force a specific toolkit, if you leave commented matplotlib will choose
 # an appropriate one for your system
-#matplotlib.use('QtAgg')
-import numpy as np
+#matplotlib.use('Qt4Agg')
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+import numpy as np
 
 from ginga.mplw.FitsImageCanvasMpl import FitsImageCanvas
 from ginga.misc import log

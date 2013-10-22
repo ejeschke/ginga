@@ -12,6 +12,8 @@
 """
 Usage:
    example2_mpl.py [fits file]
+
+You need Qt4 with python bindings (or pyside) installed to run this example.
 """
 import sys, os
 from ginga.qtw.QtHelp import QtGui, QtCore

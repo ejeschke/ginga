@@ -12,8 +12,20 @@
 #
 """
    $ ./example3_mpl.py [fits file]
+
+example3 displays a native ginga widget beside a matplotlib figure as two
+panes.  A fits file can be dropped into the left pane and manipulated using
+the standard Ginga interactive controls
+see (http://ginga.readthedocs.org/en/latest/quickref.html).
+Drop down boxes allow the color map to be changed.
+
+The right pane has two buttons under it: pressing each button sets up a
+different kind of plot in the mpl pane based on the current state of the
+ginga pane.
+
+You need Qt4 with python bindings (or pyside) installed to run this example.
 """
-import sys, os
+import sys
 import numpy
 
 from ginga.qtw.FitsImageCanvasQt import FitsImageCanvas
