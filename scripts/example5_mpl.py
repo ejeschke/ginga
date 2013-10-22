@@ -24,17 +24,16 @@ While in 'capture mode' you can draw points with the right mouse button.
 Press 'c' to clear the canvas of drawn points.
 """
 import sys
-import logging
 import matplotlib
 # Force a choice of GUI toolkit if you like
-#matplotlib.use('TkAgg')
+# NOTE: 'macosx' currently has an issue that causes a segfault
+matplotlib.use('GtkAgg')
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
 from ginga.mplw.FitsImageCanvasMpl import FitsImageCanvas
 from ginga.mplw.FitsImageCanvasTypesMpl import DrawingCanvas
-from ginga.misc.NullLogger import NullLogger
 from ginga.AstroImage import AstroImage
 from ginga.misc import log
 from ginga import cmap
@@ -42,7 +41,7 @@ from ginga import cmap
 # Turn this on to get diagnostic logging output
 use_logger = False
 
-class Foo(object):
+class MyGingaFigure(object):
     def __init__(self, logger, fig):
         self.logger = logger
         # create a ginga object and tell it about the figure
@@ -159,7 +158,7 @@ fig = plt.figure()
 
 # Here is our object
 logger = log.get_logger(null=not use_logger, log_stderr=True)
-foo = Foo(logger, fig)
+foo = MyGingaFigure(logger, fig)
 
 # load an image, if one was provided
 if len(sys.argv) > 1:

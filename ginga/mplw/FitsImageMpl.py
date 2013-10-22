@@ -261,7 +261,7 @@ class FitsImageMpl(FitsImage.FitsImageBase):
         # Set the axis limits
         wd, ht = self.get_window_size()
         x0, y0 = self.get_data_xy(0, 0)
-        x1, tm = self.get_data_xy(0, wd-1)
+        x1, tm = self.get_data_xy(wd-1, 0)
         tm, y1 = self.get_data_xy(0, ht-1)
         for ax in self.figure.axes:
             ax.set_xlim(x0, x1)
