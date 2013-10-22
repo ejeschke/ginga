@@ -1,12 +1,12 @@
 #! /usr/bin/env python
 #
-# example5_mpl.py -- Load a fits file into a Ginga widget with a
+# example4_mpl.py -- Load a fits file into a Ginga widget with a
 #          matplotlib backend.
 #
 # Eric Jeschke (eric@naoj.org)
 #
 """
-   $ ./example5_mpl.py <fitsfile>
+   $ ./example4_mpl.py <fitsfile>
 """
 import sys
 import matplotlib

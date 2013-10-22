@@ -742,6 +742,8 @@ class Desktop(Callback.Callbacks):
                 make(cols[0], lambda w: hpaned.pack_start(w, expand=True, fill=True)) #?
                 pack(hpaned)
 
+            process_common_params(hpaned, params)
+            
             hpaned.show_all()
 
         # Vertical adjustable panel
@@ -764,6 +766,8 @@ class Desktop(Callback.Callbacks):
                 make(rows[0], lambda w: vpaned.pack_start(w, expand=True, fill=True))  #?
                 pack(vpaned)
 
+            process_common_params(vpaned, params)
+            
             vpaned.show_all()
 
         # Horizontal fixed array
