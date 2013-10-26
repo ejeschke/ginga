@@ -56,6 +56,8 @@ class QtMain(object):
         
         QtGui.QApplication.setGraphicsSystem('raster')
         app = QtGui.QApplication([])
+        app.connect(app, QtCore.SIGNAL('lastWindowClosed()'),
+                    app, QtCore.SLOT('quit()'))
         self.app = app
         self.gui_thread_id = None
         
@@ -184,6 +186,7 @@ class QtMain(object):
 
     def gui_quit(self):
         "Call this to cause the GUI thread to quit the mainloop."""
+        print "QUIT CALLED"
         self.ev_quit.set()
         
 

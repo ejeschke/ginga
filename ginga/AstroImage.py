@@ -796,7 +796,16 @@ class AstroImage(BaseImage):
                     name, str(e)))
 
         self.make_callback('modified')
-    
+
+    def _deg(self, coord):
+        # AstroPy changed the API (grr) so now we have to support more 
+        # than one--we don't know what version the user has installed!
+        if hasattr(coord, 'degrees'):
+            return coord.degrees
+        else:
+            return coord.degree
+        #return coord.degrees
+        
     def info_xy(self, data_x, data_y, settings):
         # Note: FITS coordinates are 1-based, whereas numpy FITS arrays
         # are 0-based
@@ -826,41 +835,41 @@ class AstroImage(BaseImage):
 
                 if system in ('galactic', ):
                     deg, min, sec = c.lonangle.dms
-                    if c.lonangle.degrees < 0:
+                    if self._deg(c.lonangle) < 0:
                         sign = '-'
-                        deg, min, sec = -deg, -min, -sec
+                        deg, min, sec = abs(deg), abs(min), abs(sec)
                     else:
                         sign = '+'
                     ra_txt = '%s%d:%02d:%06.3f' % (sign, deg, min, sec)
 
                     deg, min, sec = c.latangle.dms
-                    if c.latangle.degrees < 0:
+                    if self._deg(c.latangle) < 0:
                         sign = '-'
-                        deg, min, sec = -deg, -min, -sec
+                        deg, min, sec = abs(deg), abs(min), abs(sec)
                     else:
                         sign = '+'
                     dec_txt = '%s%d:%02d:%06.3f' % (sign, deg, min, sec)
                     ra_lbl, dec_lbl = "l", "b"
 
                     if format == 'degrees':
-                        ra_txt = '%+10.7f' % c.lonangle.degrees
-                        dec_txt = '%+10.7f' % c.latangle.degrees
+                        ra_txt = '%+10.7f' % self._deg(c.lonangle)
+                        dec_txt = '%+10.7f' % self._deg(c.latangle)
 
                 elif system in ('icrs', 'fk5', 'fk4'):
                     hr, min, sec = c.ra.hms
                     ra_txt = '%02d:%02d:%06.3f' % (hr, min, sec)
 
                     deg, min, sec = c.dec.dms
-                    if c.dec.degrees < 0:
+                    if self._deg(c.dec) < 0:
                         sign = '-'
-                        deg, min, sec = -deg, -min, -sec
+                        deg, min, sec = abs(deg), abs(min), abs(sec)
                     else:
                         sign = '+'
                     dec_txt = '%s%02d:%02d:%05.2f' % (sign, deg, min, sec)
 
                     if format == 'degrees':
-                        ra_txt = '%+10.7f' % c.lonangle.degrees
-                        dec_txt = '%+10.7f' % c.latangle.degrees
+                        ra_txt = '%+10.7f' % self._deg(c.lonangle)
+                        dec_txt = '%+10.7f' % self._deg(c.latangle)
 
             else:
                 if format == 'degrees':

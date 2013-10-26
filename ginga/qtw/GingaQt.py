@@ -85,6 +85,8 @@ class GingaView(QtMain.QtMain):
 
         for root in self.ds.toplevels:
             # add delete/destroy callbacks
+            root.connect(root, QtCore.SIGNAL('closeEvent()'),
+                         self.quit)
             #root.setApp(self)
             root.setWindowTitle("Ginga")
         
@@ -715,11 +717,14 @@ class GingaView(QtMain.QtMain):
     def quit(self, *args):
         """Quit the application.
         """
+        self.logger.info("Attempting to shut down the application...")
         self.stop()
 
         root = self.w.root
         self.w.root = None
-        root.deleteLater()
+        while len(self.ds.toplevels) > 0:
+            w = self.ds.toplevels.pop()
+            w.deleteLater()
 
     def channel_select_cb(self, index):
         if index >= 0:

@@ -34,6 +34,7 @@ class Zoom(ZoomBase.ZoomBase):
         #zi.add_callback('none-move', self.showxy)
         zi.set_bg(0.4, 0.4, 0.4)
         zi.show_pan_mark(True, redraw=False)
+        zi.set_desired_size(width, height)
         self.zoomimage = zi
 
         bd = zi.get_bindings()

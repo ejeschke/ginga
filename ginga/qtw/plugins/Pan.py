@@ -50,6 +50,7 @@ class Pan(GingaPlugin.GlobalPlugin):
         sfi.define_cursor('pick', hand)
         ## sfi.enable_cuts(False)
         sfi.set_bg(0.4, 0.4, 0.4)
+        sfi.set_desired_size(width, height)
         sfi.set_callback('cursor-down', self.btndown)
         sfi.set_callback('cursor-move', self.drag_cb)
         sfi.set_callback('none-move', self.motion_cb)

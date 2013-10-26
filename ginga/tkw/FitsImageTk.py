@@ -32,8 +32,6 @@ class FitsImageTk(FitsImageAgg):
         self.tkphoto = None
 
         self.msgtask = None
-        # desired size
-        self.desired_size = (300, 300)
 
         # see reschedule_redraw() method
         self._defer_task = None
@@ -51,12 +49,6 @@ class FitsImageTk(FitsImageAgg):
 
     def get_widget(self):
         return self.tkcanvas
-
-    def set_desired_size(self, width, height):
-        self.desired_size = (width, height)
-
-    def get_desired_size(self):
-        return self.desired_size
 
     def update_image(self):
         if self.tkcanvas == None:

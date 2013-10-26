@@ -73,8 +73,6 @@ class FitsImageMpl(FitsImage.FitsImageBase):
         self.in_axes = False
         # Matplotlib expects RGB data for color images
         self._rgb_order = 'RGB'
-        # desired size
-        self.desired_size = (300, 300)
         
         # cursors
         self.cursor = {}
@@ -149,12 +147,6 @@ class FitsImageMpl(FitsImage.FitsImageBase):
 
     def get_widget(self):
         return self.figure.canvas
-
-    def set_desired_size(self, width, height):
-        self.desired_size = (width, height)
-
-    def get_desired_size(self):
-        return self.desired_size
 
     def get_rgb_order(self):
         return self._rgb_order

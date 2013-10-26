@@ -18,8 +18,22 @@ from ginga.misc import Callback, Settings
 from ginga import RGBMap, AstroImage, AutoCuts
 from ginga import cmap, imap, version
 
+try:
+    # optional numexpr package speeds up certain combined numpy array
+    # operations, especially rotation
+    import numexpr as ne
+    have_numexpr = True
+
+except ImportError:
+    have_numexpr = False
+
+# For testing
+#have_numexpr = False
+
 
 class FitsImageError(Exception):
+    pass
+class NoImageError(FitsImageError):
     pass
 class FitsImageCoordsError(FitsImageError):
     pass
@@ -62,6 +76,7 @@ class FitsImageBase(Callback.Callbacks):
         self.t_ = settings
         
         # Dummy 1-pixel image
+        # self.image = None
         self.image = AstroImage.AstroImage(numpy.zeros((1, 1)),
                                            #logger=self.logger
                                            )
@@ -171,6 +186,8 @@ class FitsImageBase(Callback.Callbacks):
         self._imgwin_wd = 1
         self._imgwin_ht = 1
         self._imgwin_set = False
+        # desired size
+        self._desired_size = (300, 300)
         # center (and reference) pixel in the screen image (in pixel coords)
         self._ctr_x = 1
         self._ctr_y = 1
@@ -270,6 +287,14 @@ class FitsImageBase(Callback.Callbacks):
 
     def configure(self, width, height):
         self.set_window_size(width, height)
+
+    def set_desired_size(self, width, height):
+        self._desired_size = (width, height)
+        if not self._imgwin_set:
+            self.set_window_size(width, height)
+            
+    def get_desired_size(self):
+        return self._desired_size
 
     def get_window_size(self):
         """
@@ -541,6 +566,9 @@ class FitsImageBase(Callback.Callbacks):
             self.logger.debug("widget redraw %s (whence=%d) %.4f sec" % (
                 str(self), whence, time_done - time_start))
 
+        except NoImageError:
+            self.logger.warn("There is no image set")
+
         except Exception as e:
             self.logger.error("Error redrawing image: %s" % (str(e)))
             try:
@@ -650,6 +678,9 @@ class FitsImageBase(Callback.Callbacks):
         2   = color mapping has changed
         3   = graphical overlays have changed
         """
+        if self.image is None:
+            raise NoImageError("No image has been set!")
+        
         time_start = time.time()
         win_wd, win_ht = self.get_window_size()
         
@@ -836,8 +867,16 @@ class FitsImageBase(Callback.Callbacks):
             yi -= rotctr_y
             cos_t = numpy.cos(numpy.radians(-rot_deg))
             sin_t = numpy.sin(numpy.radians(-rot_deg))
-            ap = (xi * cos_t) - (yi * sin_t) + rotctr_x
-            bp = (xi * sin_t) + (yi * cos_t) + rotctr_y
+
+            #t1 = time.time()
+            if have_numexpr:
+                ap = ne.evaluate("(xi * cos_t) - (yi * sin_t) + rotctr_x")
+                bp = ne.evaluate("(xi * sin_t) + (yi * cos_t) + rotctr_y")
+            else:
+                ap = (xi * cos_t) - (yi * sin_t) + rotctr_x
+                bp = (xi * sin_t) + (yi * cos_t) + rotctr_y
+            #print "rotation in %.5f sec" % (time.time() - t1)
+
             #ap = numpy.rint(ap).astype('int').clip(0, wd-1)
             #bp = numpy.rint(bp).astype('int').clip(0, ht-1)
             # Optomizations to reuse existing intermediate arrays
@@ -1571,7 +1610,7 @@ class FitsImageBase(Callback.Callbacks):
             orient = header.get('Orientation', None)
             if not orient:
                 orient = header.get('Image Orientation', None)
-                self.logger.info("orientation [%s]" % (
+                self.logger.debug("orientation [%s]" % (
                         orient))
             if orient:
                 try:

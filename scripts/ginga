@@ -61,7 +61,7 @@ import ginga.toolkit as ginga_toolkit
 LOG_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcName)s) | %(message)s'
 
 default_layout = ['seq', {},
-                   ['vbox', dict(name='top', width=1400, height=900),
+                   ['vbox', dict(name='top', width=1500, height=900),
                     dict(row=['hbox', dict(name='menu')],
                          stretch=0),
                     dict(row=['hpanel', {},
@@ -174,7 +174,6 @@ def main(options, args):
     if settings.get('useMatplotlibColormaps', False):
         # Add matplotlib color maps if matplotlib is installed
         try:
-            import matplotlib.pyplot as plt
             from ginga import cmap
             cmap.add_matplotlib_cmaps()
         except Exception as e:

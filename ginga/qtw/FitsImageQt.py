@@ -138,8 +138,6 @@ class FitsImageQt(FitsImage.FitsImageBase):
                                    pointSize=24)
         self.set_bg(0.5, 0.5, 0.5, redraw=False)
         self.set_fg(1.0, 1.0, 1.0, redraw=False)
-        # desired size
-        self.desired_size = (300, 300)
 
         # cursors
         self.cursor = {}
@@ -152,12 +150,6 @@ class FitsImageQt(FitsImage.FitsImageBase):
 
     def get_widget(self):
         return self.imgwin
-
-    def set_desired_size(self, width, height):
-        self.desired_size = (width, height)
-
-    def get_desired_size(self):
-        return self.desired_size
 
     def _render_offscreen(self, drawable, data, dst_x, dst_y,
                           width, height):

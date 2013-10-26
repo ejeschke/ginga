@@ -66,8 +66,12 @@ QMdiSubWindow { margin: 0px; padding: 2px; }
 
 class TopLevel(QtGui.QWidget):
 
+    app = None
+    ## def __init__(self, *args, **kwdargs):
+    ##     return super(TopLevel, self).__init__(self, *args, **kwdargs)
+        
     def closeEvent(self, event):
-        if hasattr(self, 'app') and self.app:
+        if not (self.app is None):
             self.app.quit()
 
     def setApp(self, app):
@@ -277,7 +281,7 @@ class Dialog(QtGui.QDialog):
     def __init__(self, title=None, flags=None, buttons=None,
                  callback=None):
         QtGui.QDialog.__init__(self)
-        self.setModal(False)
+        self.setModal(True)
 
         vbox = QtGui.QVBoxLayout()
         self.setLayout(vbox)

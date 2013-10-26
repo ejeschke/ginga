@@ -50,8 +50,6 @@ class FitsImageGtk(FitsImageCairo.FitsImageCairo):
         self.imgwin.show_all()
 
         self.msgtask = None
-        # desired size
-        self.desired_size = (300, 300)
         
         # cursors
         self.cursor = {}
@@ -62,12 +60,6 @@ class FitsImageGtk(FitsImageCairo.FitsImageCairo):
 
     def get_widget(self):
         return self.imgwin
-
-    def set_desired_size(self, width, height):
-        self.desired_size = (width, height)
-
-    def get_desired_size(self):
-        return self.desired_size
 
     def get_image_as_pixbuf(self):
         rgbobj = self.get_rgb_object()
@@ -203,7 +195,7 @@ class FitsImageGtk(FitsImageCairo.FitsImageCairo):
     def size_request(self, widget, requisition):
         """Callback function to request our desired size.
         """
-        requisition.width, requisition.height = self.desired_size
+        requisition.width, requisition.height = self.get_desired_size()
         return True
 
     def set_cursor(self, cursor):
