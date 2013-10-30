@@ -1,5 +1,5 @@
 #
-# FitsImageCairo.py -- classes for the display of FITS files in Cairo surfaces
+# ImageViewCairo.py -- classes for the display of FITS files in Cairo surfaces
 # 
 # Eric Jeschke (eric@naoj.org)
 #
@@ -14,15 +14,15 @@ import threading
 import math
 import StringIO
 
-from ginga import FitsImage
+from ginga import ImageView
 
-class FitsImageCairoError(FitsImage.FitsImageError):
+class ImageViewCairoError(ImageView.ImageViewError):
     pass
 
-class FitsImageCairo(FitsImage.FitsImageBase):
+class ImageViewCairo(ImageView.ImageViewBase):
 
     def __init__(self, logger=None, rgbmap=None, settings=None):
-        FitsImage.FitsImageBase.__init__(self, logger=logger,
+        ImageView.ImageViewBase.__init__(self, logger=logger,
                                          rgbmap=rgbmap,
                                          settings=settings)
 
@@ -105,7 +105,7 @@ class FitsImageCairo(FitsImage.FitsImageBase):
 
     def get_offscreen_context(self):
         if self.surface == None:
-            raise FitsImageCairoError("No offscreen surface defined")
+            raise ImageViewCairoError("No offscreen surface defined")
         cr = cairo.Context(self.surface)
         return cr
 
@@ -157,7 +157,7 @@ class FitsImageCairo(FitsImage.FitsImageBase):
         if not self.surface:
             return
         if not self.dst_surface:
-            #raise FitsImageCairoError("Please set up the output destination")
+            #raise ImageViewCairoError("Please set up the output destination")
             self.logger.error("Please set up the output destination")
             return
         
@@ -207,14 +207,14 @@ class FitsImageCairo(FitsImage.FitsImageBase):
         return (x, y)
         
 
-# class FitsImageCanvasError(FitsImageCairoError):
+# class ImageViewCanvasError(ImageViewCairoError):
 #     pass
 
-# class FitsImageCanvas(FitsImageCairo,
+# class ImageViewCanvas(ImageViewCairo,
 #                       CanvasMixin, CompoundMixin):
 
 #     def __init__(self, logger=None, rgbmap=None, settings=None):
-#         FitsImageCairo.__init__(self, logger=logger, rgbmap=rgbmap,
+#         ImageViewCairo.__init__(self, logger=logger, rgbmap=rgbmap,
 #                                 settings=settings)
 #         CompoundMixin.__init__(self)
 #         CanvasMixin.__init__(self)
@@ -227,7 +227,7 @@ class FitsImageCairo(FitsImage.FitsImageBase):
 #         return (x, y)
 
 #     def redraw_data(self, whence=0):
-#         super(FitsImageCanvas, self).redraw_data(whence=whence)
+#         super(ImageViewCanvas, self).redraw_data(whence=whence)
 
 #         if not self.surface:
 #             return

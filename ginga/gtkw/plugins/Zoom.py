@@ -10,8 +10,8 @@
 import gtk
 from ginga.gtkw import GtkHelp, gtksel
 
-from ginga.gtkw import FitsImageCanvasGtk
-from ginga.gtkw import FitsImageCanvasTypesGtk as CanvasTypes
+from ginga.gtkw import ImageViewCanvasGtk
+from ginga.gtkw import ImageViewCanvasTypesGtk as CanvasTypes
 from ginga.misc.plugins import ZoomBase
 
 
@@ -25,8 +25,8 @@ class Zoom(ZoomBase.ZoomBase):
 
         # Uncomment to debug; passing parent logger generates too
         # much noise in the main logger
-        #zi = FitsImageCanvasGtk.FitsImageCanvas(logger=self.logger)
-        zi = FitsImageCanvasGtk.FitsImageCanvas(logger=None)
+        #zi = ImageViewCanvasGtk.ImageViewCanvas(logger=self.logger)
+        zi = ImageViewCanvasGtk.ImageViewCanvas(logger=None)
         zi.set_desired_size(width, height)
         zi.enable_autozoom('off')
         zi.enable_autocuts('off')

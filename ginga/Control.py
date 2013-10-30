@@ -25,7 +25,7 @@ except ImportError:
     have_magic = False
 
 # Local application imports
-from ginga import cmap, imap, Catalog, AstroImage, PythonImage, FitsImage
+from ginga import cmap, imap, Catalog, AstroImage, RGBImage, ImageView
 from ginga.misc import Bunch, Datasrc, Callback, Timer, Task
 
 #pluginconfpfx = 'plugins'
@@ -393,7 +393,7 @@ class GingaControl(Callback.Callbacks):
             typ, subtyp = 'image', 'fits'
         
         if (typ == 'image') and (subtyp != 'fits'):
-            image = PythonImage.PythonImage(logger=self.logger)
+            image = RGBImage.RGBImage(logger=self.logger)
         else:
             image = AstroImage.AstroImage(logger=self.logger)
 

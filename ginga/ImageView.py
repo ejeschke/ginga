@@ -1,5 +1,5 @@
 #
-# FitsImage.py -- base class for the display of image files
+# ImageView.py -- base class for the display of image files
 # 
 # Eric Jeschke (eric@naoj.org) 
 #
@@ -31,14 +31,14 @@ except ImportError:
 #have_numexpr = False
 
 
-class FitsImageError(Exception):
+class ImageViewError(Exception):
     pass
-class NoImageError(FitsImageError):
+class NoImageError(ImageViewError):
     pass
-class FitsImageCoordsError(FitsImageError):
+class ImageViewCoordsError(ImageViewError):
     pass
 
-class FitsImageBase(Callback.Callbacks):
+class ImageViewBase(Callback.Callbacks):
     """An abstract base class for displaying images represented by
     numpy data arrays.
 
@@ -68,7 +68,7 @@ class FitsImageBase(Callback.Callbacks):
         if logger != None:
             self.logger = logger
         else:
-            self.logger = logging.Logger('FitsImageBase')
+            self.logger = logging.Logger('ImageViewBase')
 
         # Create settings and set defaults
         if settings == None:
@@ -302,7 +302,7 @@ class FitsImageBase(Callback.Callbacks):
         of (width, height).
         """
         if not self._imgwin_set:
-            raise FitsImageError("Dimensions of actual window are not yet determined")
+            raise ImageViewError("Dimensions of actual window are not yet determined")
         return (self._imgwin_wd, self._imgwin_ht)
 
     def get_dims(self, data):
@@ -800,7 +800,7 @@ class FitsImageBase(Callback.Callbacks):
         self.logger.debug("ocx,ocy=%d,%d cutout=%dx%d win=%dx%d" % (
             ocx, ocy, wd, ht, win_wd, win_ht))
         ## assert (0 <= ocx) and (ocx < wd) and (0 <= ocy) and (ocy < ht), \
-        ##     FitsImageError("calculated center not in cutout!")
+        ##     ImageViewError("calculated center not in cutout!")
         if not ((0 <= ocx) and (ocx < wd) and (0 <= ocy) and (ocy < ht)):
             self.logger.warn("calculated center (%d,%d) not in cutout (%dx%d)" % (
                 ocx, ocy, wd, ht))
@@ -892,7 +892,7 @@ class FitsImageBase(Callback.Callbacks):
             self.logger.debug("rotated shape is %dx%d" % (new_wd, new_ht))
 
             assert (wd == new_wd) and (ht == new_ht), \
-                   FitsImageError("rotated cutout is %dx%d original=%dx%d" % (
+                   ImageViewError("rotated cutout is %dx%d original=%dx%d" % (
                 new_wd, new_ht, wd, ht))
             wd, ht, data = new_wd, new_ht, newdata
 
@@ -901,7 +901,7 @@ class FitsImageBase(Callback.Callbacks):
             split2_time - split_time, split2_time - start_time))
 
         ## assert (wd >= win_wd) and (ht >= win_ht), \
-        ##        FitsImageError("scaled cutout is %dx%d  window=%dx%d" % (
+        ##        ImageViewError("scaled cutout is %dx%d  window=%dx%d" % (
         ##     wd, ht, win_wd, win_ht))
 
         ctr_x, ctr_y = self._ctr_x, self._ctr_y
@@ -1329,7 +1329,7 @@ class FitsImageBase(Callback.Callbacks):
     def set_zoom_algorithm(self, name, redraw=True):
         name = name.lower()
         assert name in ('step', 'rate'), \
-              FitsImageError("Alg '%s' must be one of: step, rate" % name)
+              ImageViewError("Alg '%s' must be one of: step, rate" % name)
         self.t_.set(zoom_algorithm=name)
         
     def zoomalg_change_cb(self, setting, value):
@@ -1347,7 +1347,7 @@ class FitsImageBase(Callback.Callbacks):
     def enable_autozoom(self, option):
         option = option.lower()
         assert(option in self.autozoom_options), \
-                      FitsImageError("Bad autozoom option '%s': must be one of %s" % (
+                      ImageViewError("Bad autozoom option '%s': must be one of %s" % (
             str(self.autozoom_options)))
         self.t_.set(autozoom=option)
         
@@ -1460,7 +1460,7 @@ class FitsImageBase(Callback.Callbacks):
     def enable_autocuts(self, option):
         option = option.lower()
         assert(option in self.autocuts_options), \
-                      FitsImageError("Bad autocuts option '%s': must be one of %s" % (
+                      ImageViewError("Bad autocuts option '%s': must be one of %s" % (
             str(self.autocuts_options)))
         self.t_.set(autocuts=option)
         
@@ -1518,7 +1518,7 @@ class FitsImageBase(Callback.Callbacks):
 
     def copy_attributes(self, dst_fi, attrlist, redraw=False):
         """Copy interesting attributes of our configuration to another
-        instance of a FitsImage."""
+        instance of a ImageView."""
 
         if 'transforms' in attrlist:
             dst_fi.transform(self.t_['flip_x'], self.t_['flip_y'],

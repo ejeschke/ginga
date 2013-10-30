@@ -14,7 +14,7 @@ import Tkinter
 from tkFileDialog import askopenfilename
 
 from ginga import AstroImage
-from ginga.tkw.FitsImageCanvasTk import FitsImageCanvas
+from ginga.tkw.ImageViewCanvasTk import ImageViewCanvas
 
 
 STD_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcName)s) | %(message)s'
@@ -27,7 +27,7 @@ class FitsViewer(object):
         self.drawcolors = ['white', 'black', 'red', 'yellow', 'blue', 'green']
 
         root = Tkinter.Tk()
-        root.title("FitsImageTk Example")
+        root.title("ImageViewTk Example")
         #root.set_border_width(2)
         #root.connect("delete_event", lambda w, e: self.quit(w))
         self.root = root
@@ -40,7 +40,7 @@ class FitsViewer(object):
         canvas = Tkinter.Canvas(vbox, bg="grey", height=512, width=512)
         canvas.pack(side=Tkinter.TOP, fill=Tkinter.BOTH, expand=1)
 
-        fi = FitsImageCanvas(logger)
+        fi = ImageViewCanvas(logger)
         fi.set_widget(canvas)
         #fi.set_redraw_lag(0.0)
         fi.enable_autocuts('on')

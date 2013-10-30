@@ -26,7 +26,7 @@ Ver 1.4.20130718005402
 
 New Agg backend
 ---------------
-There is now an Agg rendering version of the FitsImage object.
+There is now an Agg rendering version of the ImageView object.
 
 * uses the python "aggdraw" module for drawing; get it here  -->
   https://github.com/ejeschke/aggdraw 
@@ -38,9 +38,9 @@ There is now an Agg rendering version of the FitsImage object.
 
 New Tk backend
 --------------
-There is now a Tk rendering version of the FitsImage object.
+There is now a Tk rendering version of the ImageView object.
 
-* see ginga.tkw.FitsImageTk
+* see ginga.tkw.ImageViewTk
 * renders on a Tk canvas
 * see example code in /scripts/example{1,2}_tk.py
 * you will need the aggdraw module (see above) to use it

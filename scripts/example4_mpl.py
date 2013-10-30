@@ -42,7 +42,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import numpy as np
 
-from ginga.mplw.FitsImageCanvasMpl import FitsImageCanvas
+from ginga.mplw.ImageViewCanvasMpl import ImageViewCanvas
 from ginga.misc import log
 from ginga.AstroImage import AstroImage
 from ginga import cmap
@@ -58,7 +58,7 @@ fig = plt.figure()
 
 # create a ginga object, initialize some defaults and
 # tell it about the figure
-fi = FitsImageCanvas(logger)
+fi = ImageViewCanvas(logger)
 fi.enable_autocuts('on')
 fi.set_autocut_params('zscale')
 #fi.set_cmap(cmap.get_cmap('rainbow3'))

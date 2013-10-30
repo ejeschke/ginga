@@ -1,5 +1,5 @@
 #
-# FitsImageTk.py -- classes for the display of FITS files in Tk surfaces
+# ImageViewTk.py -- classes for the display of FITS files in Tk surfaces
 # 
 # Eric Jeschke (eric@naoj.org)
 #
@@ -12,19 +12,19 @@ import numpy
 import PIL.Image as PILimage
 import PIL.ImageTk as PILimageTk
 
-from ginga import FitsImage
+from ginga import ImageView
 from ginga import Mixins, Bindings, colors
 
-from ginga.aggw.FitsImageAgg import FitsImageAgg
+from ginga.aggw.ImageViewAgg import ImageViewAgg
 
 
-class FitsImageTkError(FitsImage.FitsImageError):
+class ImageViewTkError(ImageView.ImageViewError):
     pass
 
-class FitsImageTk(FitsImageAgg):
+class ImageViewTk(ImageViewAgg):
 
     def __init__(self, logger=None, rgbmap=None, settings=None):
-        FitsImageAgg.__init__(self, logger=logger,
+        ImageViewAgg.__init__(self, logger=logger,
                               rgbmap=rgbmap,
                               settings=settings)
 
@@ -114,10 +114,10 @@ class FitsImageTk(FitsImageAgg):
                                               lambda: self.onscreen_message(None))
 
 
-class FitsImageEvent(FitsImageTk):
+class ImageViewEvent(ImageViewTk):
 
     def __init__(self, logger=None, rgbmap=None, settings=None):
-        FitsImageTk.__init__(self, logger=logger, rgbmap=rgbmap,
+        ImageViewTk.__init__(self, logger=logger, rgbmap=rgbmap,
                              settings=settings)
 
         # last known window mouse position
@@ -206,7 +206,7 @@ class FitsImageEvent(FitsImageTk):
             self.enable_callback(name)
 
     def set_widget(self, canvas):
-        super(FitsImageEvent, self).set_widget(canvas)
+        super(ImageViewEvent, self).set_widget(canvas)
 
         canvas.bind("<Enter>", self.enter_notify_event)
         canvas.bind("<Leave>", self.leave_notify_event)
@@ -328,11 +328,11 @@ class FitsImageEvent(FitsImageTk):
     ##     return self.make_callback('drag-drop', paths)
 
 
-class FitsImageZoom(Mixins.UIMixin, FitsImageEvent):
+class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
 
     # class variables for binding map and bindings can be set
     bindmapClass = Bindings.BindingMapper
-    bindingsClass = Bindings.FitsImageBindings
+    bindingsClass = Bindings.ImageViewBindings
 
     @classmethod
     def set_bindingsClass(cls, klass):
@@ -344,17 +344,17 @@ class FitsImageZoom(Mixins.UIMixin, FitsImageEvent):
         
     def __init__(self, logger=None, rgbmap=None, settings=None,
                  bindmap=None, bindings=None):
-        FitsImageEvent.__init__(self, logger=logger, rgbmap=rgbmap,
+        ImageViewEvent.__init__(self, logger=logger, rgbmap=rgbmap,
                                 settings=settings)
         Mixins.UIMixin.__init__(self)
 
         if bindmap == None:
-            bindmap = FitsImageZoom.bindmapClass(self.logger)
+            bindmap = ImageViewZoom.bindmapClass(self.logger)
         self.bindmap = bindmap
         bindmap.register_for_events(self)
 
         if bindings == None:
-            bindings = FitsImageZoom.bindingsClass(self.logger)
+            bindings = ImageViewZoom.bindingsClass(self.logger)
         self.set_bindings(bindings)
 
     def get_bindmap(self):

@@ -11,7 +11,7 @@ import os
 import gtk
 import gobject
 
-from ginga.gtkw import FitsImageGtk as FitsImageGtk
+from ginga.gtkw import ImageViewGtk as ImageViewGtk
 from ginga.gtkw import GtkHelp
 from ginga.misc.plugins import ThumbsBase
 from ginga.misc import Bunch
@@ -27,7 +27,7 @@ class Thumbs(ThumbsBase.ThumbsBase):
         width, height = 300, 300
         cm, im = self.fv.cm, self.fv.im
 
-        tg = FitsImageGtk.FitsImageGtk(logger=self.logger)
+        tg = ImageViewGtk.ImageViewGtk(logger=self.logger)
         tg.configure(200, 200)
         tg.enable_autozoom('on')
         tg.enable_autocuts('on')

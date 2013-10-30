@@ -10,8 +10,8 @@
 from ginga.qtw.QtHelp import QtGui, QtCore
 from ginga.qtw import QtHelp
 
-from ginga.qtw import FitsImageCanvasQt
-from ginga.qtw import FitsImageCanvasTypesQt as CanvasTypes
+from ginga.qtw import ImageViewCanvasQt
+from ginga.qtw import ImageViewCanvasTypesQt as CanvasTypes
 from ginga.misc.plugins import ZoomBase
 
 
@@ -23,7 +23,7 @@ class Zoom(ZoomBase.ZoomBase):
         
         width, height = 300, 300
 
-        zi = FitsImageCanvasQt.FitsImageCanvas(logger=self.logger)
+        zi = ImageViewCanvasQt.ImageViewCanvas(logger=self.logger)
         zi.enable_autozoom('off')
         zi.enable_autocuts('off')
         #zi.set_scale_limits(0.001, 1000.0)

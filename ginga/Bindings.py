@@ -10,11 +10,11 @@
 from ginga.misc import Bunch
 from ginga import AutoCuts
 
-class FitsImageBindings(object):
+class ImageViewBindings(object):
     """
     Mouse Operation and Bindings
 
-    In a FitsImageEvent-based window with an instance of this bindings class:
+    In a ImageViewEvent-based window with an instance of this bindings class:
 
     * the left mouse button is used for controlling the current "operation";
     * the middle wheel/button is used for zooming (scroll) and panning (press
@@ -22,7 +22,7 @@ class FitsImageBindings(object):
 
     Key Bindings
 
-    In a FitsImageEvent-based window the following command keys are active
+    In a ImageViewEvent-based window the following command keys are active
     by default:
 
     * 1,2,3,...,9,0: zoom to 1x, 2x, ... 9x, 10x. If you hold down Shift
@@ -67,7 +67,7 @@ class FitsImageBindings(object):
     """
 
     def __init__(self, logger):
-        super(FitsImageBindings, self).__init__()
+        super(ImageViewBindings, self).__init__()
 
         self.logger = logger
         
@@ -268,7 +268,7 @@ class FitsImageBindings(object):
 
     #####  ENABLERS #####
     # These methods are a quick way to enable or disable certain user
-    # interface features in a FitsImage window
+    # interface features in a ImageView window
 
     def enable_pan(self, tf):
         """Enable the image to be panned interactively (True/False)."""
@@ -373,7 +373,7 @@ class FitsImageBindings(object):
             res = fitsimage.panset_xy(data_x, data_y, redraw=redraw)
             return res
 
-        except FitsImage.FitsImageCoordsError, e:
+        except ImageView.ImageViewCoordsError, e:
             # coords are not within the data area
             pass
 

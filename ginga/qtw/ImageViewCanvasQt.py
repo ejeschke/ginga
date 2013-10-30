@@ -1,5 +1,5 @@
 #
-# FitsImageCanvasMpl.py -- A FITS image widget with canvas drawing in Matplotlib
+# ImageViewCanvasQt.py -- A FITS image widget with canvas drawing in Qt
 # 
 # Eric Jeschke (eric@naoj.org)
 #
@@ -7,21 +7,23 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-from ginga.mplw import FitsImageMpl
-from ginga.mplw.FitsImageCanvasTypesMpl import *
+from ginga import ImageView, Mixins
+from ginga.qtw import ImageViewQt
+from ginga.qtw.ImageViewCanvasTypesQt import *
 
 
-class FitsImageCanvasError(FitsImageMpl.FitsImageMplError):
+class ImageViewCanvasError(ImageViewQt.ImageViewQtError):
     pass
 
-class FitsImageCanvas(FitsImageMpl.FitsImageZoom,
+class ImageViewCanvas(ImageViewQt.ImageViewZoom,
                       DrawingMixin, CanvasMixin, CompoundMixin):
 
-    def __init__(self, logger=None, rgbmap=None, settings=None,
-                 bindmap=None, bindings=None):
-        FitsImageMpl.FitsImageZoom.__init__(self, logger=logger,
-                                           rgbmap=rgbmap,
+    def __init__(self, logger=None, settings=None, render=None,
+                 rgbmap=None, bindmap=None, bindings=None):
+        ImageViewQt.ImageViewZoom.__init__(self, logger=logger,
                                            settings=settings,
+                                           render=render,
+                                           rgbmap=rgbmap,
                                            bindmap=bindmap,
                                            bindings=bindings)
         CompoundMixin.__init__(self)
@@ -37,14 +39,11 @@ class FitsImageCanvas(FitsImageMpl.FitsImageZoom,
         return (x, y)
 
     def redraw_data(self, whence=0):
-        super(FitsImageCanvas, self).redraw_data(whence=whence)
+        super(ImageViewCanvas, self).redraw_data(whence=whence)
 
-        if not self.figure:
+        if not self.pixmap:
             return
         self.draw()
 
-        # refresh the matplotlib canvas
-        self.figure.canvas.draw()
-
-
+        
 #END

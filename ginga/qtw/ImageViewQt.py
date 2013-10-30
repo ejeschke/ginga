@@ -1,5 +1,5 @@
 #
-# FitsImageQt.py -- classes for the display of FITS files in Qt widgets
+# ImageViewQt.py -- classes for the display of FITS files in Qt widgets
 # 
 # Eric Jeschke (eric@naoj.org) 
 #
@@ -13,13 +13,13 @@ import numpy
 import StringIO
 
 from ginga.qtw.QtHelp import QtGui, QtCore
-from ginga import FitsImage, Mixins, Bindings
+from ginga import ImageView, Mixins, Bindings
 
 moduleHome = os.path.split(sys.modules[__name__].__file__)[0]
 icon_dir = os.path.abspath(os.path.join(moduleHome, '..', 'icons'))
 
 
-class FitsImageQtError(FitsImage.FitsImageError):
+class ImageViewQtError(ImageView.ImageViewError):
     pass
 
     
@@ -107,10 +107,10 @@ class RenderWidget(QtGui.QWidget):
         self.pixmap = pixmap
 
 
-class FitsImageQt(FitsImage.FitsImageBase):
+class ImageViewQt(ImageView.ImageViewBase):
 
     def __init__(self, logger=None, rgbmap=None, settings=None, render=None):
-        FitsImage.FitsImageBase.__init__(self, logger=logger,
+        ImageView.ImageViewBase.__init__(self, logger=logger,
                                          rgbmap=rgbmap, settings=settings)
 
         if render == None:
@@ -122,7 +122,7 @@ class FitsImageQt(FitsImage.FitsImageBase):
             self.scene = QtGui.QGraphicsScene()
             self.imgwin = RenderGraphicsView(self.scene)
         else:
-            raise FitsImageQtError("Undefined render type: '%s'" % (render))
+            raise ImageViewQtError("Undefined render type: '%s'" % (render))
         self.imgwin.fitsimage = self
         self.pixmap = None
         # Qt expects 32bit BGRA data for color images
@@ -436,10 +436,10 @@ class RenderWidgetZoom(RenderMixin, RenderWidget):
 class RenderGraphicsViewZoom(RenderMixin, RenderGraphicsView):
     pass
 
-class FitsImageEvent(FitsImageQt):
+class ImageViewEvent(ImageViewQt):
 
     def __init__(self, logger=None, rgbmap=None, settings=None, render=None):
-        FitsImageQt.__init__(self, logger=logger, rgbmap=rgbmap,
+        ImageViewQt.__init__(self, logger=logger, rgbmap=rgbmap,
                              settings=settings, render=render)
 
         # replace the widget our parent provided
@@ -647,11 +647,11 @@ class FitsImageEvent(FitsImageQt):
             self.make_callback('drag-drop', paths)
         
 
-class FitsImageZoom(Mixins.UIMixin, FitsImageEvent):
+class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
 
     # class variables for binding map and bindings can be set
     bindmapClass = Bindings.BindingMapper
-    bindingsClass = Bindings.FitsImageBindings
+    bindingsClass = Bindings.ImageViewBindings
 
     @classmethod
     def set_bindingsClass(cls, klass):
@@ -664,17 +664,17 @@ class FitsImageZoom(Mixins.UIMixin, FitsImageEvent):
     def __init__(self, logger=None, settings=None, rgbmap=None,
                  render='widget',
                  bindmap=None, bindings=None):
-        FitsImageEvent.__init__(self, logger=logger, settings=settings,
+        ImageViewEvent.__init__(self, logger=logger, settings=settings,
                                 rgbmap=rgbmap, render=render)
         Mixins.UIMixin.__init__(self)
 
         if bindmap == None:
-            bindmap = FitsImageZoom.bindmapClass(self.logger)
+            bindmap = ImageViewZoom.bindmapClass(self.logger)
         self.bindmap = bindmap
         bindmap.register_for_events(self)
 
         if bindings == None:
-            bindings = FitsImageZoom.bindingsClass(self.logger)
+            bindings = ImageViewZoom.bindingsClass(self.logger)
         self.set_bindings(bindings)
 
     def get_bindmap(self):

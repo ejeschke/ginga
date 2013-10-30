@@ -1,5 +1,5 @@
 #
-# FitsImageCanvasTypesCairo.py -- drawing classes for FitsImageCanvas widget
+# ImageViewCanvasTypesCairo.py -- drawing classes for ImageViewCanvas widget
 # 
 # Eric Jeschke (eric@naoj.org)
 #
@@ -10,7 +10,7 @@
 import math
 import cairo
 
-from ginga.FitsImageCanvas import *
+from ginga.ImageViewCanvas import *
 from ginga import Mixins
 from ginga.misc import Callback, Bunch
 from ginga import colors

@@ -10,13 +10,13 @@
 import math
 import numpy
 
-from ginga import PythonImage
+from ginga import RGBImage
 from ginga.misc import Callback
 
 class RGBMapError(Exception):
     pass
 
-class RGBImage(object):
+class RGBPlanes(object):
 
     def __init__(self, rgbarr, order):
         self.rgbarr = rgbarr
@@ -209,7 +209,7 @@ class RGBMapper(Callback.Callbacks):
 
     def convert_profile_monitor(self, rgbobj):
         inp = rgbobj.get_array('RGB')
-        arr = PythonImage.convert_profile_monitor(inp)
+        arr = RGBImage.convert_profile_monitor(inp)
         out = rgbobj.rgbarr
 
         ri, gi, bi = rgbobj.get_order_indexes('RGB')
@@ -246,7 +246,7 @@ class RGBMapper(Callback.Callbacks):
 
             # convert to monitor profile, if one is available
             # TODO: this conversion doesn't really belong here!
-            if PythonImage.have_monitor_profile():
+            if RGBImage.have_monitor_profile():
                 self.logger.debug("Converting to monitor profile.")
                 self.convert_profile_monitor(rgbobj)
 
@@ -263,7 +263,7 @@ class RGBMapper(Callback.Callbacks):
                    RGBMapError("Output array shape %s doesn't match result shape %s" % (
                 str(out.shape), str(res_shape)))
             
-        res = RGBImage(out, order)
+        res = RGBPlanes(out, order)
 
         # set alpha channel
         if res.hasAlpha:
@@ -440,7 +440,7 @@ class PassThruRGBMapper(RGBMapper):
                    RGBMapError("Output array shape %s doesn't match result shape %s" % (
                 str(out.shape), str(res_shape)))
 
-        res = RGBImage(out, order)
+        res = RGBPlanes(out, order)
 
         # set alpha channel
         if res.hasAlpha:

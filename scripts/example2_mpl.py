@@ -20,7 +20,7 @@ from ginga.qtw.QtHelp import QtGui, QtCore
 
 from ginga import AstroImage
 from matplotlib.figure import Figure
-from ginga.mplw.FitsImageCanvasMpl import FitsImageCanvas
+from ginga.mplw.ImageViewCanvasMpl import ImageViewCanvas
 from ginga.mplw.FigureCanvasQt import FigureCanvas
 from ginga.misc import log
 from ginga import colors
@@ -36,7 +36,7 @@ class FitsViewer(QtGui.QMainWindow):
         fig = Figure()
         w = FigureCanvas(fig)
         
-        fi = FitsImageCanvas(logger)
+        fi = ImageViewCanvas(logger)
         fi.enable_autocuts('on')
         fi.set_autocut_params('zscale')
         fi.enable_autozoom('on')

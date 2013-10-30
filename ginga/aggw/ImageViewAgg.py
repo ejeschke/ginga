@@ -1,5 +1,5 @@
 #
-# FitsImageAgg.py -- classes for the display of FITS files on AGG surfaces
+# ImageViewAgg.py -- classes for the display of FITS files on AGG surfaces
 # 
 # Eric Jeschke (eric@naoj.org)
 #
@@ -13,9 +13,9 @@ import StringIO
 import aggdraw as agg
 import AggHelp
 
-from ginga import FitsImage
+from ginga import ImageView
 
-from ginga.aggw.FitsImageCanvasTypesAgg import *
+from ginga.aggw.ImageViewCanvasTypesAgg import *
 try:
     import PIL.Image as PILimage
     have_PIL = True
@@ -23,13 +23,13 @@ except ImportError:
     have_PIL = False
     
 
-class FitsImageAggError(FitsImage.FitsImageError):
+class ImageViewAggError(ImageView.ImageViewError):
     pass
 
-class FitsImageAgg(FitsImage.FitsImageBase):
+class ImageViewAgg(ImageView.ImageViewBase):
 
     def __init__(self, logger=None, rgbmap=None, settings=None):
-        FitsImage.FitsImageBase.__init__(self, logger=logger,
+        ImageView.ImageViewBase.__init__(self, logger=logger,
                                          rgbmap=rgbmap,
                                          settings=settings)
 
@@ -92,10 +92,10 @@ class FitsImageAgg(FitsImage.FitsImageBase):
         
     def save_rgb_image_as_buffer(self, output=None, format='png', quality=90):
         if not have_PIL:
-            raise FitsImageAggError("Please install PIL to use this method")
+            raise ImageViewAggError("Please install PIL to use this method")
         
         if self.surface == None:
-            raise FitsImageAggError("No AGG surface defined")
+            raise ImageViewAggError("No AGG surface defined")
 
         ibuf = output
         if ibuf == None:
@@ -116,9 +116,9 @@ class FitsImageAgg(FitsImage.FitsImageBase):
     
     def save_rgb_image_as_file(self, filepath, format='png', quality=90):
         if not have_PIL:
-            raise FitsImageAggError("Please install PIL to use this method")
+            raise ImageViewAggError("Please install PIL to use this method")
         if self.surface == None:
-            raise FitsImageAggError("No AGG surface defined")
+            raise ImageViewAggError("No AGG surface defined")
 
         with open(filepath, 'w') as out_f:
             self.save_rgb_image_as_buffer(output=out_f, format=format,

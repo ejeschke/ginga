@@ -28,7 +28,7 @@ You need Qt4 with python bindings (or pyside) installed to run this example.
 import sys
 import numpy
 
-from ginga.qtw.FitsImageCanvasQt import FitsImageCanvas
+from ginga.qtw.ImageViewCanvasQt import ImageViewCanvas
 from ginga.qtw import ColorBar
 from ginga.qtw.QtHelp import QtGui, QtCore
 from ginga import AstroImage
@@ -72,7 +72,7 @@ class FitsViewer(QtGui.QMainWindow):
         wd, ht = 500, 500
 
         # Create a Ginga widget
-        fi = FitsImageCanvas(logger, render='widget')
+        fi = ImageViewCanvas(logger, render='widget')
         fi.enable_autocuts('on')
         fi.set_autocut_params('zscale')
         fi.enable_autozoom('on')

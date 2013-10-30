@@ -12,8 +12,8 @@ import gtk
 
 from ginga.misc import Bunch
 
-from ginga.gtkw import FitsImageCanvasGtk
-from ginga.gtkw import FitsImageCanvasTypesGtk as CanvasTypes
+from ginga.gtkw import ImageViewCanvasGtk
+from ginga.gtkw import ImageViewCanvasTypesGtk as CanvasTypes
 from ginga.gtkw import GtkHelp
 from ginga import GingaPlugin
 
@@ -48,8 +48,8 @@ class Pan(GingaPlugin.GlobalPlugin):
 
         # Uncomment to debug; passing parent logger generates too
         # much noise in the main logger
-        #sfi = FitsImageCanvasGtk.FitsImageCanvas(logger=self.logger)
-        sfi = FitsImageCanvasGtk.FitsImageCanvas(logger=None)
+        #sfi = ImageViewCanvasGtk.ImageViewCanvas(logger=self.logger)
+        sfi = ImageViewCanvasGtk.ImageViewCanvas(logger=None)
         sfi.set_desired_size(width, height)
         sfi.enable_autozoom('on')
         #sfi.set_zoom_algorithm('rate')

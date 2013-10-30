@@ -37,9 +37,9 @@ import numpy
 
 from ginga.qtw.QtHelp import QtGui, QtCore
 from ginga.qtw import QtMain
-from ginga.qtw.FitsImageQt import FitsImageZoom
+from ginga.qtw.ImageViewQt import ImageViewZoom
 from ginga import AstroImage
-from ginga import PythonImage
+from ginga import RGBImage
 from ginga import AutoCuts, RGBMap
 
 try:
@@ -64,12 +64,12 @@ class GingaVision(QtGui.QMainWindow):
         self.fps = 30
         self.playback_rate = 1.0 / self.fps
 
-        # Use an AstroImage, not PythonImage for now because we get a
+        # Use an AstroImage, not RGBImage for now because we get a
         # different default (faster) scaling algorithm
         self.pimage = AstroImage.AstroImage()
         self.pdata = None
 
-        fi = FitsImageZoom(self.logger, render='widget')
+        fi = ImageViewZoom(self.logger, render='widget')
         fi.enable_autocuts('off')
         fi.set_autocut_params('histogram')
         fi.enable_autozoom('off')

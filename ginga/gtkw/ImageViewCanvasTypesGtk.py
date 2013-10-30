@@ -1,5 +1,5 @@
 #
-# FitsImageCanvasTypesGtk.py -- drawing classes for FitsImageCanvas widget
+# ImageViewCanvasTypesGtk.py -- drawing classes for ImageViewCanvas widget
 # 
 # Eric Jeschke (eric@naoj.org)
 #
@@ -8,7 +8,7 @@
 # Please see the file LICENSE.txt for details.
 
 # All gtk drawing in Ginga is done with cairo
-from ginga.cairow.FitsImageCanvasTypesCairo import *
+from ginga.cairow.ImageViewCanvasTypesCairo import *
 
 
 #END

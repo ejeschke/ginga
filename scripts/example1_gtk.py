@@ -11,7 +11,7 @@
 import sys, os
 import logging
 
-from ginga.gtkw.FitsImageGtk import FitsImageZoom
+from ginga.gtkw.ImageViewGtk import ImageViewZoom
 from ginga.gtkw import FileSelection
 from ginga.AstroImage import pyfits
 
@@ -26,7 +26,7 @@ class FitsViewer(object):
 
         self.logger = logger
         root = gtk.Window(gtk.WINDOW_TOPLEVEL)
-        root.set_title("FitsImageZoom Example")
+        root.set_title("ImageViewZoom Example")
         root.set_border_width(2)
         root.connect("delete_event", lambda w, e: self.quit(w))
         self.root = root
@@ -34,7 +34,7 @@ class FitsViewer(object):
         self.select = FileSelection.FileSelection()
         vbox = gtk.VBox(spacing=2)
 
-        fi = FitsImageZoom(logger)
+        fi = ImageViewZoom(logger)
         fi.enable_autocuts('on')
         fi.set_autocut_params('zscale')
         fi.enable_autozoom('on')

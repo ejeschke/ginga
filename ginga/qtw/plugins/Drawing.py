@@ -10,7 +10,7 @@
 from ginga.qtw.QtHelp import QtGui, QtCore
 from ginga.qtw import QtHelp
 
-from ginga.qtw import FitsImageCanvasTypesQt as CanvasTypes
+from ginga.qtw import ImageViewCanvasTypesQt as CanvasTypes
 from ginga import GingaPlugin
 from ginga import colors
 

@@ -11,7 +11,7 @@ import gtk
 import numpy
 
 from ginga.gtkw import GtkHelp
-from ginga.gtkw import FitsImageCanvasTypesGtk as CanvasTypes
+from ginga.gtkw import ImageViewCanvasTypesGtk as CanvasTypes
 from ginga import GingaPlugin
 
 

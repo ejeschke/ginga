@@ -13,7 +13,7 @@ import logging
 import Tkinter
 from tkFileDialog import askopenfilename
 
-from ginga.tkw.FitsImageTk import FitsImageZoom
+from ginga.tkw.ImageViewTk import ImageViewZoom
 from ginga.AstroImage import pyfits
 
 
@@ -25,7 +25,7 @@ class FitsViewer(object):
 
         self.logger = logger
         root = Tkinter.Tk()
-        root.title("FitsImageTk Example")
+        root.title("ImageViewTk Example")
         self.root = root
         
         vbox = Tkinter.Frame(root, relief=Tkinter.RAISED, borderwidth=1)
@@ -34,7 +34,7 @@ class FitsViewer(object):
         canvas = Tkinter.Canvas(vbox, bg="grey", height=512, width=512)
         canvas.pack(side=Tkinter.TOP, fill=Tkinter.BOTH, expand=1)
 
-        fi = FitsImageZoom(logger)
+        fi = ImageViewZoom(logger)
         fi.set_widget(canvas)
         fi.enable_autocuts('on')
         fi.set_autocut_params('zscale')

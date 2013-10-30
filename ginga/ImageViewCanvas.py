@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# FitsImageCanvas.py -- Abstract base classes for FitsImageCanvas{Gtk,Qt}.
+# ImageViewCanvas.py -- Abstract base classes for ImageViewCanvas{Gtk,Qt}.
 #
 # Eric Jeschke (eric@naoj.org)
 #
@@ -18,7 +18,7 @@ class CanvasObjectError(Exception):
 
 class CanvasObjectBase(object):
     """This is the abstract base class for a CanvasObject.  A CanvasObject
-    is an item that can be placed on a FitsImageCanvas.
+    is an item that can be placed on a ImageViewCanvas.
 
     This class defines common methods used by all such objects.
     """
@@ -362,7 +362,7 @@ class CanvasMixin(object):
 class DrawingMixin(object):
     """The DrawingMixin is a mixin class that adds drawing capability for
     some of the basic CanvasObject-derived types.  The setSurface method is
-    used to associate a FitsImageCanvas object for layering on.
+    used to associate a ImageViewCanvas object for layering on.
     """
 
     def __init__(self, drawDict):
@@ -579,7 +579,7 @@ class DrawingMixin(object):
 #   ==== BASE CLASSES FOR GRAPHICS OBJECTS ====
 #
 class TextBase(CanvasObjectBase):
-    """Draws text on a FitsImageCanvas.
+    """Draws text on a ImageViewCanvas.
     Parameters are:
     x, y: 0-based coordinates in the data space
     text: the text to draw
@@ -598,7 +598,7 @@ class TextBase(CanvasObjectBase):
                                         xoff=xoff, yoff=yoff)
 
 class PolygonBase(CanvasObjectBase):
-    """Draws a polygon on a FitsImageCanvas.
+    """Draws a polygon on a ImageViewCanvas.
     Parameters are:
     List of (x, y) points in the polygon.  The last one is assumed to
     be connected to the first.
@@ -638,7 +638,7 @@ class PolygonBase(CanvasObjectBase):
 
 
 class RectangleBase(CanvasObjectBase):
-    """Draws a rectangle on a FitsImageCanvas.
+    """Draws a rectangle on a ImageViewCanvas.
     Parameters are:
     x1, y1: 0-based coordinates of one corner in the data space
     x2, y2: 0-based coordinates of the opposing corner in the data space
@@ -686,7 +686,7 @@ class RectangleBase(CanvasObjectBase):
 
 
 class SquareBase(RectangleBase):
-    """Draws a square on a FitsImageCanvas.
+    """Draws a square on a ImageViewCanvas.
     Parameters are:
     x, y: 0-based coordinates of the center in the data space
     length: size of a side (pixels in data space)
@@ -707,7 +707,7 @@ class SquareBase(RectangleBase):
         
 
 class CircleBase(CanvasObjectBase):
-    """Draws a circle on a FitsImageCanvas.
+    """Draws a circle on a ImageViewCanvas.
     Parameters are:
     x, y: 0-based coordinates of the center in the data space
     radius: radius based on the number of pixels in data space
@@ -735,7 +735,7 @@ class CircleBase(CanvasObjectBase):
                                         xoff=xoff, yoff=yoff)
 
 class PointBase(CanvasObjectBase):
-    """Draws a point on a FitsImageCanvas.
+    """Draws a point on a ImageViewCanvas.
     Parameters are:
     x, y: 0-based coordinates of the center in the data space
     radius: radius based on the number of pixels in data space
@@ -763,7 +763,7 @@ class PointBase(CanvasObjectBase):
                                         xoff=xoff, yoff=yoff)
 
 class LineBase(CanvasObjectBase):
-    """Draws a line on a FitsImageCanvas.
+    """Draws a line on a ImageViewCanvas.
     Parameters are:
     x1, y1: 0-based coordinates of one end in the data space
     x2, y2: 0-based coordinates of the opposing end in the data space
@@ -791,7 +791,7 @@ class LineBase(CanvasObjectBase):
         return (x, y)
 
 class CompassBase(CanvasObjectBase):
-    """Draws a WCS compass on a FitsImageCanvas.
+    """Draws a WCS compass on a ImageViewCanvas.
     Parameters are:
     x1, y1: 0-based coordinates of the center in the data space
     x2, y2: 0-based coordinates of the 'North' end in the data space
@@ -810,7 +810,7 @@ class CompassBase(CanvasObjectBase):
 
         
 class TriangleBase(CanvasObjectBase):
-    """Draws a right triangle on a FitsImageCanvas.
+    """Draws a right triangle on a ImageViewCanvas.
     Parameters are:
     x1, y1: 0-based coordinates of one end of the diagonal in the data space
     x2, y2: 0-based coordinates of the opposite end of the diagonal
@@ -829,7 +829,7 @@ class TriangleBase(CanvasObjectBase):
 
 
 class RulerBase(CanvasObjectBase):
-    """Draws a WCS ruler (like a right triangle) on a FitsImageCanvas.
+    """Draws a WCS ruler (like a right triangle) on a ImageViewCanvas.
     Parameters are:
     x1, y1: 0-based coordinates of one end of the diagonal in the data space
     x2, y2: 0-based coordinates of the opposite end of the diagonal
@@ -850,7 +850,7 @@ class RulerBase(CanvasObjectBase):
 
 
 class CompoundObject(CompoundMixin, CanvasObjectBase):
-    """Compound object on a FitsImageCanvas.
+    """Compound object on a ImageViewCanvas.
     Parameters are:
     the child objects making up the compound object.  Objects are drawn
     in the order listed.

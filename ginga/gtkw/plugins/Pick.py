@@ -21,7 +21,7 @@ try:
 except ImportError:
     have_mpl = False
 
-from ginga.gtkw import FitsImageCanvasGtk
+from ginga.gtkw import ImageViewCanvasGtk
 
 
 class Pick(PickBase.PickBase):
@@ -52,7 +52,7 @@ class Pick(PickBase.PickBase):
         
         cm, im = self.fv.cm, self.fv.im
 
-        di = FitsImageCanvasGtk.FitsImageCanvas(logger=self.logger)
+        di = ImageViewCanvasGtk.ImageViewCanvas(logger=self.logger)
         width, height = 200, 200
         di.set_desired_size(width, height)
         di.enable_autozoom('off')

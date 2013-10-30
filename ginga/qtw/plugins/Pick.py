@@ -19,7 +19,7 @@ try:
 except ImportError:
     have_mpl = False
 
-from ginga.qtw import FitsImageCanvasQt
+from ginga.qtw import ImageViewCanvasQt
 
 
 class Pick(PickBase.PickBase):
@@ -50,7 +50,7 @@ class Pick(PickBase.PickBase):
         
         cm, im = self.fv.cm, self.fv.im
 
-        di = FitsImageCanvasQt.FitsImageCanvas(logger=self.logger)
+        di = ImageViewCanvasQt.ImageViewCanvas(logger=self.logger)
         di.set_desired_size(200, 200)
         di.enable_autozoom('off')
         di.enable_autocuts('off')

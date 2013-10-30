@@ -12,8 +12,8 @@ from ginga.qtw.QtHelp import QtGui, QtCore
 
 from ginga.misc import Bunch
 
-from ginga.qtw import FitsImageCanvasQt
-from ginga.qtw import FitsImageCanvasTypesQt as CanvasTypes
+from ginga.qtw import ImageViewCanvasQt
+from ginga.qtw import ImageViewCanvasTypesQt as CanvasTypes
 from ginga import GingaPlugin
 
 
@@ -39,7 +39,7 @@ class Pan(GingaPlugin.GlobalPlugin):
     def _create_pan_image(self):
         width, height = 300, 300
 
-        sfi = FitsImageCanvasQt.FitsImageCanvas(logger=self.logger)
+        sfi = ImageViewCanvasQt.ImageViewCanvas(logger=self.logger)
         sfi.enable_autozoom('on')
         sfi.enable_autocuts('off')
         sfi.enable_draw(True)

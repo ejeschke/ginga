@@ -437,7 +437,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         try:
             cm = cmap.get_cmap(name)
         except KeyError:
-            raise FitsImageError("No such color map name: '%s'" % (name))
+            raise ValueError("No such color map name: '%s'" % (name))
 
         rgbmap = self.fitsimage.get_rgbmap()
         rgbmap.set_cmap(cm)
@@ -455,7 +455,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         try:
             im = imap.get_imap(name)
         except KeyError:
-            raise FitsImageError("No such intensity map name: '%s'" % (name))
+            raise ValueError("No such intensity map name: '%s'" % (name))
 
         rgbmap = self.fitsimage.get_rgbmap()
         rgbmap.set_imap(im)
@@ -479,7 +479,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         try:
             rgbmap.set_hash_algorithm(name)
         except KeyError:
-            raise FitsImageError("No such color algorithm name: '%s'" % (name))
+            raise ValueError("No such color algorithm name: '%s'" % (name))
 
         # Doesn't this force a redraw?  Following redraw should be unecessary.
         self.t_.set(color_algorithm=name)

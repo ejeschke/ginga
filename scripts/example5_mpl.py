@@ -37,8 +37,8 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import numpy as np
 
-from ginga.mplw.FitsImageCanvasMpl import FitsImageCanvas
-from ginga.mplw.FitsImageCanvasTypesMpl import DrawingCanvas
+from ginga.mplw.ImageViewCanvasMpl import ImageViewCanvas
+from ginga.mplw.ImageViewCanvasTypesMpl import DrawingCanvas
 from ginga.AstroImage import AstroImage
 from ginga.misc import log
 from ginga import cmap
@@ -50,7 +50,7 @@ class MyGingaFigure(object):
     def __init__(self, logger, fig):
         self.logger = logger
         # create a ginga object and tell it about the figure
-        fi = FitsImageCanvas(logger)
+        fi = ImageViewCanvas(logger)
         fi.enable_autocuts('on')
         fi.set_autocut_params('zscale')
         fi.add_callback('key-press', self.key_press_ginga)

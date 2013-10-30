@@ -1,5 +1,5 @@
 #
-# PythonImage.py -- Abstraction of an generic data image.
+# RGBImage.py -- Abstraction of an generic data image.
 #
 # Eric Jeschke (eric@naoj.org) 
 #
@@ -89,7 +89,7 @@ if have_cms:
                                                                    flags=0)
 
 
-class PythonImage(BaseImage):
+class RGBImage(BaseImage):
 
     def load_file(self, filepath):
         kwds = Header()
@@ -109,7 +109,7 @@ class PythonImage(BaseImage):
 
 
     def copy(self, astype=None):
-        other = PythonImage()
+        other = RGBImage()
         self.transfer(other, astype=astype)
         return other
 

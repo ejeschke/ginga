@@ -1,5 +1,5 @@
 #
-# FitsImageCanvasGtk.py -- A FITS image widget with canvas drawing in Gtk
+# ImageViewCanvasMpl.py -- A FITS image widget with canvas drawing in Matplotlib
 # 
 # Eric Jeschke (eric@naoj.org)
 #
@@ -7,25 +7,23 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-from ginga import FitsImage
-from ginga import Mixins
-from ginga.gtkw import FitsImageGtk
-from ginga.gtkw.FitsImageCanvasTypesGtk import *
+from ginga.mplw import ImageViewMpl
+from ginga.mplw.ImageViewCanvasTypesMpl import *
 
-    
-class FitsImageCanvasError(FitsImageGtk.FitsImageGtkError):
+
+class ImageViewCanvasError(ImageViewMpl.ImageViewMplError):
     pass
 
-class FitsImageCanvas(FitsImageGtk.FitsImageZoom,
+class ImageViewCanvas(ImageViewMpl.ImageViewZoom,
                       DrawingMixin, CanvasMixin, CompoundMixin):
 
     def __init__(self, logger=None, rgbmap=None, settings=None,
                  bindmap=None, bindings=None):
-        FitsImageGtk.FitsImageZoom.__init__(self, logger=logger,
-                                            rgbmap=rgbmap,
-                                            settings=settings,
-                                            bindmap=bindmap,
-                                            bindings=bindings)
+        ImageViewMpl.ImageViewZoom.__init__(self, logger=logger,
+                                           rgbmap=rgbmap,
+                                           settings=settings,
+                                           bindmap=bindmap,
+                                           bindings=bindings)
         CompoundMixin.__init__(self)
         CanvasMixin.__init__(self)
         DrawingMixin.__init__(self, drawCatalog)
@@ -39,11 +37,14 @@ class FitsImageCanvas(FitsImageGtk.FitsImageZoom,
         return (x, y)
 
     def redraw_data(self, whence=0):
-        super(FitsImageCanvas, self).redraw_data(whence=whence)
+        super(ImageViewCanvas, self).redraw_data(whence=whence)
 
-        if not self.surface:
+        if not self.figure:
             return
         self.draw()
+
+        # refresh the matplotlib canvas
+        self.figure.canvas.draw()
 
 
 #END

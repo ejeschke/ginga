@@ -1,5 +1,5 @@
 #
-# FitsImageMpl.py -- classes for the display of FITS files in a
+# ImageViewMpl.py -- classes for the display of FITS files in a
 #                             Matplotlib FigureCanvas
 # 
 # Eric Jeschke (eric@naoj.org)
@@ -21,7 +21,7 @@ from matplotlib.figure import Figure
 import matplotlib.lines as lines
 from matplotlib.path import Path
 
-from ginga import FitsImage
+from ginga import ImageView
 from ginga import Mixins, Bindings, colors
 import transform
 
@@ -44,13 +44,13 @@ rc['keymap.xscale'] = []         # toggle scaling of x-axes ('log'/'linear')
 rc['keymap.all_axes'] = []       # enable all axes
 
 
-class FitsImageMplError(FitsImage.FitsImageError):
+class ImageViewMplError(ImageView.ImageViewError):
     pass
 
-class FitsImageMpl(FitsImage.FitsImageBase):
+class ImageViewMpl(ImageView.ImageViewBase):
 
     def __init__(self, logger=None, rgbmap=None, settings=None):
-        FitsImage.FitsImageBase.__init__(self, logger=logger,
+        ImageView.ImageViewBase.__init__(self, logger=logger,
                                          rgbmap=rgbmap,
                                          settings=settings)
         # Our Figure
@@ -370,10 +370,10 @@ class FitsImageMpl(FitsImage.FitsImageBase):
         if redraw:
             self.redraw(whence=3)
         
-class FitsImageEvent(FitsImageMpl):
+class ImageViewEvent(ImageViewMpl):
 
     def __init__(self, logger=None, rgbmap=None, settings=None):
-        FitsImageMpl.__init__(self, logger=logger, rgbmap=rgbmap,
+        ImageViewMpl.__init__(self, logger=logger, rgbmap=rgbmap,
                               settings=settings)
 
         # last known window mouse position
@@ -431,7 +431,7 @@ class FitsImageEvent(FitsImageMpl):
             self.enable_callback(name)
 
     def set_figure(self, figure):
-        super(FitsImageEvent, self).set_figure(figure)
+        super(ImageViewEvent, self).set_figure(figure)
 
         connect = figure.canvas.mpl_connect
         #connect("map_event", self.map_event)
@@ -539,11 +539,11 @@ class FitsImageEvent(FitsImageMpl):
         # TODO: how about amount of scroll?
         return self.make_callback('scroll', direction)
 
-class FitsImageZoom(Mixins.UIMixin, FitsImageEvent):
+class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
 
     # class variables for binding map and bindings can be set
     bindmapClass = Bindings.BindingMapper
-    bindingsClass = Bindings.FitsImageBindings
+    bindingsClass = Bindings.ImageViewBindings
 
     @classmethod
     def set_bindingsClass(cls, klass):
@@ -555,17 +555,17 @@ class FitsImageZoom(Mixins.UIMixin, FitsImageEvent):
         
     def __init__(self, logger=None, rgbmap=None, settings=None,
                  bindmap=None, bindings=None):
-        FitsImageEvent.__init__(self, logger=logger, rgbmap=rgbmap,
+        ImageViewEvent.__init__(self, logger=logger, rgbmap=rgbmap,
                                 settings=settings)
         Mixins.UIMixin.__init__(self)
 
         if bindmap == None:
-            bindmap = FitsImageZoom.bindmapClass(self.logger)
+            bindmap = ImageViewZoom.bindmapClass(self.logger)
         self.bindmap = bindmap
         bindmap.register_for_events(self)
 
         if bindings == None:
-            bindings = FitsImageZoom.bindingsClass(self.logger)
+            bindings = ImageViewZoom.bindingsClass(self.logger)
         self.set_bindings(bindings)
 
     def get_bindmap(self):

@@ -1,5 +1,5 @@
 #
-# FitsImageCanvasQt.py -- A FITS image widget with canvas drawing in Qt
+# ImageViewCanvasTk.py -- A FITS image widget with canvas drawing in Tk
 # 
 # Eric Jeschke (eric@naoj.org)
 #
@@ -7,23 +7,21 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-from ginga import FitsImage, Mixins
-from ginga.qtw import FitsImageQt
-from ginga.qtw.FitsImageCanvasTypesQt import *
+from ginga.tkw import ImageViewTk
+from ginga.aggw.ImageViewCanvasTypesAgg import *
 
-
-class FitsImageCanvasError(FitsImageQt.FitsImageQtError):
+    
+class ImageViewCanvasError(ImageViewTk.ImageViewTkError):
     pass
 
-class FitsImageCanvas(FitsImageQt.FitsImageZoom,
+class ImageViewCanvas(ImageViewTk.ImageViewZoom,
                       DrawingMixin, CanvasMixin, CompoundMixin):
 
-    def __init__(self, logger=None, settings=None, render=None,
-                 rgbmap=None, bindmap=None, bindings=None):
-        FitsImageQt.FitsImageZoom.__init__(self, logger=logger,
-                                           settings=settings,
-                                           render=render,
+    def __init__(self, logger=None, rgbmap=None, settings=None,
+                 bindmap=None, bindings=None):
+        ImageViewTk.ImageViewZoom.__init__(self, logger=logger,
                                            rgbmap=rgbmap,
+                                           settings=settings,
                                            bindmap=bindmap,
                                            bindings=bindings)
         CompoundMixin.__init__(self)
@@ -39,11 +37,11 @@ class FitsImageCanvas(FitsImageQt.FitsImageZoom,
         return (x, y)
 
     def redraw_data(self, whence=0):
-        super(FitsImageCanvas, self).redraw_data(whence=whence)
+        super(ImageViewCanvas, self).redraw_data(whence=whence)
 
-        if not self.pixmap:
+        if not self.surface:
             return
         self.draw()
 
-        
+
 #END

@@ -14,7 +14,7 @@
 import sys, os
 import logging
 
-from ginga.cairow.FitsImageCairo import FitsImageCairo
+from ginga.cairow.ImageViewCairo import ImageViewCairo
 import cairo
 from ginga import AstroImage
 
@@ -33,7 +33,7 @@ def main(options, args):
     stderrHdlr.setFormatter(fmt)
     logger.addHandler(stderrHdlr)
 
-    fi = FitsImageCairo(logger)
+    fi = ImageViewCairo(logger)
     fi.configure(500, 1000)
 
     # Load fits file

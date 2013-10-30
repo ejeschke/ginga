@@ -19,7 +19,7 @@ from ginga.qtw.QtHelp import QtGui, QtCore
 
 # Local application imports
 from ginga import cmap, imap
-from ginga import FitsImage
+from ginga import ImageView
 from ginga.misc import Bunch
 
 
@@ -28,8 +28,8 @@ sys.path.insert(0, moduleHome)
 childDir = os.path.join(moduleHome, 'plugins')
 sys.path.insert(0, childDir)
 
-from ginga.qtw import FitsImageCanvasQt, ColorBar, Readout, PluginManagerQt, \
-     QtHelp, QtMain, FitsImageCanvasTypesQt
+from ginga.qtw import ImageViewCanvasQt, ColorBar, Readout, PluginManagerQt, \
+     QtHelp, QtMain, ImageViewCanvasTypesQt
 
 icon_path = os.path.abspath(os.path.join(moduleHome, '..', 'icons'))
 rc_file = os.path.join(moduleHome, "qt_rc")
@@ -359,10 +359,10 @@ class GingaView(QtMain.QtMain):
 
     def getDrawClass(self, drawtype):
         drawtype = drawtype.lower()
-        return FitsImageCanvasTypesQt.drawCatalog[drawtype]
+        return ImageViewCanvasTypesQt.drawCatalog[drawtype]
     
     def getDrawClasses(self):
-        return Bunch.Bunch(FitsImageCanvasTypesQt.drawCatalog,
+        return Bunch.Bunch(ImageViewCanvasTypesQt.drawCatalog,
                            caseless=True)
         
     def build_colorbar(self):
@@ -385,7 +385,7 @@ class GingaView(QtMain.QtMain):
         return fr
     
     def build_viewpane(self, settings, rgbmap=None):
-        fi = FitsImageCanvasQt.FitsImageCanvas(logger=self.logger,
+        fi = ImageViewCanvasQt.ImageViewCanvas(logger=self.logger,
                                                rgbmap=rgbmap,
                                                settings=settings)
         fi.enable_draw(False)

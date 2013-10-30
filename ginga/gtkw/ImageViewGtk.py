@@ -1,5 +1,5 @@
 #
-# FitsImageGtk.py -- classes for the display of FITS files in Gtk widgets
+# ImageViewGtk.py -- classes for the display of FITS files in Gtk widgets
 # 
 # Eric Jeschke (eric@naoj.org)
 #
@@ -15,20 +15,20 @@ import gobject
 import cairo
 import numpy
 
-from ginga.cairow import FitsImageCairo
+from ginga.cairow import ImageViewCairo
 from ginga import Mixins, Bindings, colors
 
 moduleHome = os.path.split(sys.modules[__name__].__file__)[0]
 icon_dir = os.path.abspath(os.path.join(moduleHome, '..', 'icons'))
 
 
-class FitsImageGtkError(FitsImageCairo.FitsImageCairoError):
+class ImageViewGtkError(ImageViewCairo.ImageViewCairoError):
     pass
 
-class FitsImageGtk(FitsImageCairo.FitsImageCairo):
+class ImageViewGtk(ImageViewCairo.ImageViewCairo):
 
     def __init__(self, logger=None, rgbmap=None, settings=None):
-        FitsImageCairo.FitsImageCairo.__init__(self, logger=logger,
+        ImageViewCairo.ImageViewCairo.__init__(self, logger=logger,
                                                rgbmap=rgbmap,
                                                settings=settings)
 
@@ -230,10 +230,10 @@ class FitsImageGtk(FitsImageCairo.FitsImageCairo):
             self.msgtask = gobject.timeout_add(ms, self.onscreen_message, None)
 
         
-class FitsImageEvent(FitsImageGtk):
+class ImageViewEvent(ImageViewGtk):
 
     def __init__(self, logger=None, rgbmap=None, settings=None):
-        FitsImageGtk.__init__(self, logger=logger, rgbmap=rgbmap,
+        ImageViewGtk.__init__(self, logger=logger, rgbmap=rgbmap,
                               settings=settings)
 
         imgwin = self.imgwin
@@ -373,7 +373,7 @@ class FitsImageEvent(FitsImageGtk):
         self.followfocus = tf
         
     def map_event(self, widget, event):
-        super(FitsImageZoom, self).configure_event(widget, event)
+        super(ImageViewZoom, self).configure_event(widget, event)
         return self.make_callback('map')
             
     def focus_event(self, widget, event, hasFocus):
@@ -479,11 +479,11 @@ class FitsImageEvent(FitsImageGtk):
         return self.make_callback('drag-drop', paths)
 
 
-class FitsImageZoom(Mixins.UIMixin, FitsImageEvent):
+class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
 
     # class variables for binding map and bindings can be set
     bindmapClass = Bindings.BindingMapper
-    bindingsClass = Bindings.FitsImageBindings
+    bindingsClass = Bindings.ImageViewBindings
 
     @classmethod
     def set_bindingsClass(cls, klass):
@@ -495,17 +495,17 @@ class FitsImageZoom(Mixins.UIMixin, FitsImageEvent):
         
     def __init__(self, logger=None, rgbmap=None, settings=None,
                  bindmap=None, bindings=None):
-        FitsImageEvent.__init__(self, logger=logger, rgbmap=rgbmap,
+        ImageViewEvent.__init__(self, logger=logger, rgbmap=rgbmap,
                                 settings=settings)
         Mixins.UIMixin.__init__(self)
 
         if bindmap == None:
-            bindmap = FitsImageZoom.bindmapClass(self.logger)
+            bindmap = ImageViewZoom.bindmapClass(self.logger)
         self.bindmap = bindmap
         bindmap.register_for_events(self)
 
         if bindings == None:
-            bindings = FitsImageZoom.bindingsClass(self.logger)
+            bindings = ImageViewZoom.bindingsClass(self.logger)
         self.set_bindings(bindings)
 
     def get_bindmap(self):

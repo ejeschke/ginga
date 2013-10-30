@@ -1,5 +1,5 @@
 #
-# FitsImageCanvasTk.py -- A FITS image widget with canvas drawing in Tk
+# ImageViewCanvasGtk.py -- A FITS image widget with canvas drawing in Gtk
 # 
 # Eric Jeschke (eric@naoj.org)
 #
@@ -7,23 +7,25 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-from ginga.tkw import FitsImageTk
-from ginga.aggw.FitsImageCanvasTypesAgg import *
+from ginga import ImageView
+from ginga import Mixins
+from ginga.gtkw import ImageViewGtk
+from ginga.gtkw.ImageViewCanvasTypesGtk import *
 
     
-class FitsImageCanvasError(FitsImageTk.FitsImageTkError):
+class ImageViewCanvasError(ImageViewGtk.ImageViewGtkError):
     pass
 
-class FitsImageCanvas(FitsImageTk.FitsImageZoom,
+class ImageViewCanvas(ImageViewGtk.ImageViewZoom,
                       DrawingMixin, CanvasMixin, CompoundMixin):
 
     def __init__(self, logger=None, rgbmap=None, settings=None,
                  bindmap=None, bindings=None):
-        FitsImageTk.FitsImageZoom.__init__(self, logger=logger,
-                                           rgbmap=rgbmap,
-                                           settings=settings,
-                                           bindmap=bindmap,
-                                           bindings=bindings)
+        ImageViewGtk.ImageViewZoom.__init__(self, logger=logger,
+                                            rgbmap=rgbmap,
+                                            settings=settings,
+                                            bindmap=bindmap,
+                                            bindings=bindings)
         CompoundMixin.__init__(self)
         CanvasMixin.__init__(self)
         DrawingMixin.__init__(self, drawCatalog)
@@ -37,7 +39,7 @@ class FitsImageCanvas(FitsImageTk.FitsImageZoom,
         return (x, y)
 
     def redraw_data(self, whence=0):
-        super(FitsImageCanvas, self).redraw_data(whence=whence)
+        super(ImageViewCanvas, self).redraw_data(whence=whence)
 
         if not self.surface:
             return

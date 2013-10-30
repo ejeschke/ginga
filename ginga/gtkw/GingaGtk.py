@@ -19,7 +19,7 @@ import gobject
 import pango
 
 # Local application imports
-from ginga import FitsImage
+from ginga import ImageView
 from ginga import cmap, imap
 from ginga.misc import Bunch
 
@@ -28,8 +28,8 @@ sys.path.insert(0, moduleHome)
 childDir = os.path.join(moduleHome, 'plugins')
 sys.path.insert(0, childDir)
 
-from ginga.gtkw import FitsImageCanvasGtk, ColorBar, Readout, FileSelection, \
-     PluginManagerGtk, GtkHelp, GtkMain, FitsImageCanvasTypesGtk
+from ginga.gtkw import ImageViewCanvasGtk, ColorBar, Readout, FileSelection, \
+     PluginManagerGtk, GtkHelp, GtkMain, ImageViewCanvasTypesGtk
 
 icon_path = os.path.abspath(os.path.join(moduleHome, '..', 'icons'))
 rc_file = os.path.join(moduleHome, "gtk_rc")
@@ -314,10 +314,10 @@ class GingaView(GtkMain.GtkMain):
 
     def getDrawClass(self, drawtype):
         drawtype = drawtype.lower()
-        return FitsImageCanvasTypesGtk.drawCatalog[drawtype]
+        return ImageViewCanvasTypesGtk.drawCatalog[drawtype]
     
     def getDrawClasses(self):
-        return Bunch.Bunch(FitsImageCanvasTypesGtk.drawCatalog,
+        return Bunch.Bunch(ImageViewCanvasTypesGtk.drawCatalog,
                            caseless=True)
         
     def build_colorbar(self):
@@ -335,7 +335,7 @@ class GingaView(GtkMain.GtkMain):
         return fr
     
     def build_viewpane(self, settings, rgbmap=None):
-        fi = FitsImageCanvasGtk.FitsImageCanvas(logger=self.logger,
+        fi = ImageViewCanvasGtk.ImageViewCanvas(logger=self.logger,
                                                 rgbmap=rgbmap,
                                                 settings=settings)
         fi.add_callback('motion', self.motion_cb)

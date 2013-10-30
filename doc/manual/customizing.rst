@@ -50,15 +50,15 @@ standard events used for plugins are not disrupted.
 
 ::
 
-    from ginga.Bindings import FitsImageBindings
+    from ginga.Bindings import ImageViewBindings
     # uncomment the right one for your platform
-    #from ginga.gtkw.FitsImageGtk import FitsImageZoom
-    from ginga.qtw.FitsImageQt import FitsImageZoom
+    #from ginga.gtkw.ImageViewGtk import ImageViewZoom
+    from ginga.qtw.ImageViewQt import ImageViewZoom
     
     # subclass the standard bindings and rewire some things
     # changes are NOTED
     
-    class MyGingaBindings(FitsImageBindings):
+    class MyGingaBindings(ImageViewBindings):
     
         def setup_default_btn_events(self, fitsimage, bindmap):
     
@@ -127,7 +127,7 @@ standard events used for plugins are not disrupted.
     def pre_gui_config(ginga):
         # this method is called before the GUI is brought up
         # custom configuration can be done here
-        FitsImageZoom.set_bindingsClass(MyGingaBindings)
+        ImageViewZoom.set_bindingsClass(MyGingaBindings)
 
 
 .. _sec-workspaceconfig:

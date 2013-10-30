@@ -17,7 +17,7 @@ import logging
 
 from ginga import AstroImage
 from ginga.qtw.QtHelp import QtGui, QtCore
-from ginga.qtw.FitsImageCanvasQt import FitsImageCanvas
+from ginga.qtw.ImageViewCanvasQt import ImageViewCanvas
 from ginga.misc import log, Settings
 
 from IPython.lib.kernel import connect_qtconsole
@@ -48,7 +48,7 @@ app_ref = None
 use_null_logger = True
 
 
-class IPyNbFitsImage(FitsImageCanvas):
+class IPyNbImageView(ImageViewCanvas):
 
     def show(self):
         return Image(data=bytes(self.get_rgb_image_as_bytes(format='png')),
@@ -170,7 +170,7 @@ class StartMenu(QtGui.QMainWindow):
             settings.addDefaults(autocut_method='zscale')
             
         # create a ginga basic object for user interaction
-        fi = IPyNbFitsImage(self.logger, settings=settings,
+        fi = IPyNbImageView(self.logger, settings=settings,
                             render='widget')
         fi.enable_draw(True)
         fi.set_drawtype('point')

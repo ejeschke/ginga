@@ -22,7 +22,7 @@ from ginga.misc.plugins import IRAFBase
 
 from ginga.qtw.QtHelp import QtGui, QtCore
 from ginga.qtw import QtHelp
-from ginga.qtw import FitsImageCanvasTypesQt as CanvasTypes
+from ginga.qtw import ImageViewCanvasTypesQt as CanvasTypes
 
 
 class IRAF(IRAFBase.IRAFBase):
