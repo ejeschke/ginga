@@ -1,5 +1,5 @@
 #
-# wcs.py -- "Bare Bones" WCS calculations.
+# wcs.py -- WCS calculations.
 #
 # Eric Jeschke (eric@naoj.org)
 # Takeshi Inagaki
@@ -9,51 +9,123 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+"""
+We are lucky to have several possible choices for a python WCS package
+compatible with Ginga: astlib, kapteyn and astropy.
+kapteyn and astropy wrap Doug Calabretta's "WCSLIB", astLib wraps
+Doug Mink's "wcstools".  Note that astlib requires pyfits (or astropy)
+in order to create a WCS object.
+
+To force the use of one, do:
+
+    from ginga import wcs
+    wcs.use('kapteyn')
+
+before you load any images.  Otherwise Ginga will try to pick one for
+you.
+"""
+
 import math
 import re
 
-try:
-    from astropy.io import fits as pyfits
-except ImportError:
-    import pyfits
 import numpy
 
-have_pywcs = False
+have_pyfits = False
 try:
-    import astropy.wcs as pywcs
-    have_pywcs = True
+    from astropy.io import fits as pyfits
+    have_pyfits = True
 except ImportError:
     try:
-        import pywcs
-        have_pywcs = True
+        import pyfits
+        have_pyfits = True
     except ImportError:
         pass
 
-try:
-    from astropy import coordinates
-    from astropy import units
-    have_astropy = True
-    coord_types = ['icrs', 'fk5', 'fk4', 'fk4-no-e', 'galactic']
-    coord_table = {
-        'icrs': coordinates.ICRSCoordinates,
-        'fk5': coordinates.FK5Coordinates,
-        'fk4': coordinates.FK4Coordinates,
-        'fk4-no-e': coordinates.FK4NoETermCoordinates,
-        'galactic': coordinates.GalacticCoordinates,
-        #'azel': coordinates.HorizontalCoordinates,
-        # TODO:
-        #'elliptic': ??,
-        }
+coord_types = []
+wcs_configured = False
 
-except ImportError:
-    have_astropy = False
-    coord_types = [ ]
-    coord_table = { }
 
-display_types = ['sexagesimal', 'degrees']
+have_kapteyn = False
+have_astlib = False
+have_pywcs = False
+have_astropy = False
+WCS = None
 
 class WCSError(Exception):
     pass
+
+
+def use(wcspkg):
+    global coord_types, wcs_configured, WCS, \
+           have_kapteyn, kapwcs, \
+           have_astlib, astWCS, astCoords, \
+           have_astropy, pywcs, coordinates, units
+    
+    if wcspkg == 'kapteyn':
+        try:
+            from kapteyn import wcs as kapwcs
+            coord_types = ['icrs', 'fk5', 'fk4', 'fk4-no-e', 'galactic']
+            have_kapteyn = True
+            wcs_configured = True
+            WCS = KapteynWCS
+            return True
+
+        except ImportError:
+            pass
+        return False
+    
+    elif wcspkg == 'astlib':
+        try:
+            if not have_pyfits:
+                raise WCSError("Need pyfits module to use astLib WCS")
+            from astLib import astWCS, astCoords
+            astWCS.NUMPY_MODE = True
+            coord_types = ['j2000', 'b1950', 'galactic']
+            have_astlib = True
+            wcs_configured = True
+            WCS = AstLibWCS
+            return True
+
+        except ImportError:
+            pass
+        return False
+
+    elif wcspkg == 'astropy':
+        # Assume we should have pyfits if we have astropy
+        #if not have_pyfits:
+        #    raise WCSError("Need pyfits module to use astLib WCS")
+        try:
+            import astropy.wcs as pywcs
+            have_pywcs = True
+        except ImportError:
+            try:
+                import pywcs
+                have_pywcs = True
+            except ImportError:
+                pass
+
+        try:
+            from astropy import coordinates
+            from astropy import units
+            have_astropy = True
+            wcs_configured = True
+            coord_types = ['icrs', 'fk5', 'fk4', 'fk4-no-e', 'galactic']
+            WCS = AstropyWCS
+            return True
+
+        except ImportError:
+            pass
+        return False
+
+    elif wcspkg == 'barebones':
+        WCS = BareBonesWCS
+        
+display_types = ['sexagesimal', 'degrees']
+
+# for testing
+#have_kapteyn = False
+#have_astlib = False
+#have_pywcs = False
 
 
 class BaseWCS(object):
@@ -76,22 +148,26 @@ class BaseWCS(object):
             return ra_txt, dec_txt
 
     def fix_bad_headers(self):
-        """Subclass can override this method to fix up issues with the
+        """Fix up bad headers that cause problems for WCSLIB.
+        Subclass can override this method to fix up issues with the
         header for problem FITS files.
         """
-        pass
+        # WCSLIB doesn't like "nonstandard" units
+        unit = self.header.get('CUNIT1', 'deg')
+        if unit.upper() == 'DEGREE':
+            self.header.update('CUNIT1', 'deg')
+        unit = self.header.get('CUNIT2', 'deg')
+        if unit.upper() == 'DEGREE':
+            self.header.update('CUNIT2', 'deg')
 
     
 class BareBonesWCS(BaseWCS):
     """A very basic WCS.  Assumes J2000, units in degrees, projection TAN.
 
-    We recommend that you install python module 'pywcs':
-
-        http://pypi.python.org/pypi/pywcs
-
-    and then you can use the class WcslibWCS (below) instead, which supports
-    many more projections.  Note that pywcs is much more strict about the
-    correctness of the FITS WCS headers.
+    ***** NOTE *****:
+    We strongly recommend that you install one of the 3rd party python
+    WCS modules referred to at the top of this module, all of which are
+    much more capable than BareBonesWCS.
     """
 
     def __init__(self, logger):
@@ -99,6 +175,7 @@ class BareBonesWCS(BaseWCS):
         self.logger = logger
         self.header = {}
         self.coordsys = 'raw'
+        self.kind = 'barebones'
 
     def load_header(self, header, fobj=None):
         self.header = {}
@@ -181,7 +258,6 @@ class BareBonesWCS(BaseWCS):
 
         if format == 'deg':
             return ra_deg, dec_deg
-
         else:
             return self.deg2fmt(ra_deg, dec_deg, format)
     
@@ -231,37 +307,33 @@ class BareBonesWCS(BaseWCS):
         return None
     
 
-class WcslibWCS(BaseWCS):
-    """A WCS interface for astropy.wcs (a wrapper for Mark Calabretta's
-    WCSLIB).   You need to install python module 'astropy'
+class AstropyWCS(BaseWCS):
+    """A WCS interface for astropy.wcs
+    You need to install python module 'astropy'
 
         http://pypi.python.org/pypi/astropy
 
-    or the older library 'pywcs' if you want to use this version.
+    if you want to use this version.
     """
 
     def __init__(self, logger):
-        super(WcslibWCS, self).__init__()
+        super(AstropyWCS, self).__init__()
 
-        if not have_pywcs:
+        if not have_astropy:
             raise WCSError("Please install module 'astropy' first!")
         self.logger = logger
         self.header = None
         self.wcs = None
         self.coordsys = 'raw'
-
-    def fix_bad_headers(self):
-        """Fix up bad headers that cause problems for pywcs/wcslib.
-        Subclass can override this method to fix up issues with the
-        header for problem FITS files.
-        """
-        # WCSLIB doesn't like "nonstandard" units
-        unit = self.header.get('CUNIT1', 'deg')
-        if unit.upper() == 'DEGREE':
-            self.header.update('CUNIT1', 'deg')
-        unit = self.header.get('CUNIT2', 'deg')
-        if unit.upper() == 'DEGREE':
-            self.header.update('CUNIT2', 'deg')
+        self.coord_table = {
+            'icrs': coordinates.ICRSCoordinates,
+            'fk5': coordinates.FK5Coordinates,
+            'fk4': coordinates.FK4Coordinates,
+            'fk4-no-e': coordinates.FK4NoETermCoordinates,
+            'galactic': coordinates.GalacticCoordinates,
+            #'azel': coordinates.HorizontalCoordinates,
+            }
+        self.kind = 'astropy/WCSLIB'
 
     def load_header(self, header, fobj=None):
         if isinstance(header, pyfits.Header):
@@ -279,7 +351,6 @@ class WcslibWCS(BaseWCS):
 
         self.fix_bad_headers()
         
-        #self.wcs = pywcs.WCS(self.header, relax=True)
         try:
             self.wcs = pywcs.WCS(self.header, fobj=fobj, relax=True)
 
@@ -340,10 +411,13 @@ class WcslibWCS(BaseWCS):
         y = float(pix[0, 1])
         return (x, y)
 
-    def pixtocoords(self, idxs, system='icrs', coords='data'):
+    def pixtocoords(self, idxs, system=None, coords='data'):
 
         if self.coordsys == 'raw':
             raise WCSError("No usable WCS")
+
+        if system == None:
+            system = 'icrs'
             
         # Get a coordinates object based on ra/dec wcs transform
         ra_deg, dec_deg = self.pixtoradec(idxs, format='deg',
@@ -352,7 +426,7 @@ class WcslibWCS(BaseWCS):
         
         # convert to astropy coord
         try:
-            fromclass = coord_table[self.coordsys]
+            fromclass = self.coord_table[self.coordsys]
         except KeyError:
             raise WCSError("No such coordinate system available: '%s'" % (
                 self.coordsys))
@@ -365,7 +439,7 @@ class WcslibWCS(BaseWCS):
             
         # Now give it back to the user in the system requested
         try:
-            toclass = coord_table[system]
+            toclass = self.coord_table[system]
         except KeyError:
             raise WCSError("No such coordinate system available: '%s'" % (
                 system))
@@ -373,48 +447,274 @@ class WcslibWCS(BaseWCS):
         coord = coord.transform_to(toclass)
         return coord
 
-# Supply a WCS depending on what is installed
-if have_pywcs:
-    class WCS(WcslibWCS):
-        pass
+    def _deg(self, coord):
+        # AstroPy changed the API so now we have to support more 
+        # than one--we don't know what version the user has installed!
+        if hasattr(coord, 'degrees'):
+            return coord.degrees
+        else:
+            return coord.degree
+        
+    def pixtosystem(self, idxs, system=None, coords='data'):
+        c = self.pixtocoords(idxs, system=system, coords=coords)
+       
+        return (self._deg(c.lonangle), self._deg(c.latangle))
 
-    def simple_wcs(px_x, px_y, ra_deg, dec_deg, px_scale_deg_px, pa_deg):
-        """Calculate a set of WCS keywords for a 2D simple instrument FITS
-        file with a 'standard' RA/DEC pixel projection.
 
-        Parameters:
-            px_x            : reference pixel of field in X (usually center of field)
-            px_y            : reference pixel of field in Y (usually center of field)
-            ra_deg          : RA (in deg) for the reference point
-            dec_deg         : DEC (in deg) for the reference point
-            px_scale_deg_px : pixel scale deg/pixel
-            pa_deg          : position angle of the instrument (in deg)
+class AstLibWCS(BaseWCS):
+    """A WCS interface for astLib.astWCS.WCS
+    You need to install python module 'astLib'
 
-        Returns a WCS object.  Use the to_header() method on it to get something
-        interesting that you can use.
+        http://sourceforge.net/projects/astlib
+
+    if you want to use this version.
+    """
+
+    def __init__(self, logger):
+        super(AstLibWCS, self).__init__()
+
+        if not have_astlib:
+            raise WCSError("Please install package 'astLib' first!")
+        self.logger = logger
+        self.header = None
+        self.wcs = None
+        self.coordsys = 'raw'
+        self.kind = 'astlib/wcstools'
+
+    def load_header(self, header, fobj=None):
+        if isinstance(header, pyfits.Header):
+            self.header = header
+        else:
+            # astLib stores internally as pyfits header
+            self.header = pyfits.Header()
+            for kwd in header.keys():
+                try:
+                    bnch = header.get_card(kwd)
+                    self.header.update(kwd, bnch.value, comment=bnch.comment)
+                except Exception, e:
+                    self.logger.warn("Error setting keyword '%s': %s" % (
+                            kwd, str(e)))
+
+        self.fix_bad_headers()
+        
+        try:
+            self.wcs = astWCS.WCS(self.header, mode='pyfits')
+
+            self.coordsys = self.choose_coord_system(self.header)
+        except Exception, e:
+            self.logger.error("Error making WCS object: %s" % (str(e)))
+            self.wcs = None
+
+    def choose_coord_system(self, header):
+        """Return an appropriate key code for the axes coordinate system by
+        examining the FITS header.
         """
-        wcsobj = pywcs.WCS()
+        try:
+            ctype = header['CTYPE1'].strip().upper()
+        except KeyError:
+            return 'raw'
+            #raise WCSError("Cannot determine appropriate coordinate system from FITS header")
 
-        # center of the projection
-        wcsobj.wcs.crpix = [px_x, px_y]  # pixel position
-        wcsobj.wcs.crval = [ra_deg, dec_deg]   # RA, Dec (degrees)
+        match = re.match(r'^GLON\-.*$', ctype)
+        if match:
+            return 'galactic'
 
-        # image scale in deg/pix
-        wcsobj.wcs.cdelt = numpy.array([-1, 1]) * px_scale_deg_px
+        ## match = re.match(r'^ELON\-.*$', ctype)
+        ## if match:
+        ##     return 'elliptic'
 
-        # Position angle of north (radians E of N)
-        pa = numpy.radians(pa_deg)
-        cpa = numpy.cos(pa)
-        spa = numpy.sin(pa)
-        #wcsobj.wcs.pc = numpy.array([[-cpa, -spa], [-spa, cpa]])
-        wcsobj.wcs.pc = numpy.array([[cpa, -spa], [spa, cpa]])
+        match = re.match(r'^RA\-\-\-.*$', ctype)
+        if match:
+            hdkey = 'RADECSYS'
+            try:
+                radecsys = header[hdkey]
 
-        return wcsobj
+            except KeyError:
+                try:
+                    hdkey = 'RADESYS'
+                    radecsys = header[hdkey]
+                except KeyError:
+                    # missing keyword
+                    # RADESYS defaults to IRCS unless EQUINOX is given
+                    # alone, in which case it defaults to FK4 prior to 1984
+                    # and FK5 after 1984.
+                    try:
+                        equinox = header['EQUINOX']
+                        radecsys = 'FK5'
+                    except KeyError:
+                        radecsys = 'ICRS'
+
+            radecsys = radecsys.strip().upper()
+            if radecsys in ('IRCS', 'FK5'):
+                return 'j2000'
+
+            return 'b1950'
+
+        #raise WCSError("Cannot determine appropriate coordinate system from FITS header")
+        return 'j2000'
+
+    def get_keyword(self, key):
+        return self.header[key]
+        
+    def pixtoradec(self, idxs, format='deg', coords='data'):
+        if coords == 'fits':
+            # Via astWCS.NUMPY_MODE, we've forced pixels referenced from 0
+            idxs = tuple(map(lambda x: x-1, idxs))
+
+        try:
+            ra_deg, dec_deg = self.wcs.pix2wcs(idxs[0], idxs[1])
+            
+        except Exception, e:
+            self.logger.error("Error calculating pixtoradec: %s" % (str(e)))
+            raise WCSError(e)
+        
+        if format == 'deg':
+            return ra_deg, dec_deg
+        else:
+            return self.deg2fmt(ra_deg, dec_deg, format)
+    
+    def radectopix(self, ra_deg, dec_deg, coords='data'):
+        try:
+            x, y = self.wcs.wcs2pix(ra_deg, dec_deg)
+
+        except Exception, e:
+            print ("Error calculating radectopix: %s" % (str(e)))
+            raise WCSError(e)
+
+        if coords == 'fits':
+            # Via astWCS.NUMPY_MODE, we've forced pixels referenced from 0
+            x, y = x+1, y+1
+
+        return (x, y)
+
+    def pixtosystem(self, idxs, system=None, coords='data'):
+
+        if self.coordsys == 'raw':
+            raise WCSError("No usable WCS")
+
+        if system == None:
+            system = 'j2000'
+            
+        # Get a coordinates object based on ra/dec wcs transform
+        ra_deg, dec_deg = self.pixtoradec(idxs, format='deg',
+                                          coords=coords)
+        self.logger.debug("ra, dec = %f, %f" % (ra_deg, dec_deg))
+        
+        # convert to alternate coord
+        try:
+            fromsys = self.coordsys.upper()
+            tosys = system.upper()
+            if fromsys == 'B1950':
+                equinox = 1950.0
+            else:
+                equinox = 2000.0
+
+            lon_deg, lat_deg = astCoords.convertCoords(fromsys, tosys,
+                                                       ra_deg, dec_deg,
+                                                       equinox)
+        except Exception as e:
+            raise WCSError("Error converting between coordinate systems '%s' and '%s': %s" % (
+                fromsys, tosys, str(e)))
+            
+        return (lon_deg, lat_deg)
 
 
-else:
-    class WCS(BareBonesWCS):
-        pass
+class KapteynWCS(BaseWCS):
+    """A WCS interface for kapteyn.wcs.Projection
+    You need to install python module 'kapteyn'
+
+        http://www.astro.rug.nl/software/kapteyn/
+
+    if you want to use this version.
+    """
+
+    def __init__(self, logger):
+        super(KapteynWCS, self).__init__()
+
+        if not have_kapteyn:
+            raise WCSError("Please install package 'kapteyn' first!")
+        self.logger = logger
+        self.header = None
+        self.wcs = None
+        self.coordsys = 'raw'
+        self.kind = 'kapteyn/WCSLIB'
+        self._skyout = "equatorial icrs J2000.0"
+
+    def load_header(self, header, fobj=None):
+        # For kapteyn, header just needs to be duck-typed like a dict
+        self.header = header
+        self.fix_bad_headers()
+        
+        try:
+            self.wcs = kapwcs.Projection(self.header,
+                                         skyout=self._skyout)
+
+            self.coordsys = choose_coord_system(self.header)
+        except Exception, e:
+            self.logger.error("Error making WCS object: %s" % (str(e)))
+            self.wcs = None
+
+    def get_keyword(self, key):
+        return self.header[key]
+        
+    def pixtoradec(self, idxs, format='deg', coords='data'):
+        # Kapteyn's WCS needs pixels referenced from 1
+        if coords == 'data':
+            idxs = tuple(map(lambda x: x+1, idxs))
+        else:
+            idxs = tuple(idxs)
+            
+        try:
+            res = self.wcs.toworld(idxs)
+            ra_deg, dec_deg = res[0], res[1]
+            
+        except Exception, e:
+            self.logger.error("Error calculating pixtoradec: %s" % (str(e)))
+            raise WCSError(e)
+        
+        if format == 'deg':
+            return ra_deg, dec_deg
+        else:
+            return self.deg2fmt(ra_deg, dec_deg, format)
+    
+    def radectopix(self, ra_deg, dec_deg, coords='data'):
+        try:
+            pix = self.wcs.topixel((ra_deg, dec_deg))
+
+        except Exception, e:
+            print ("Error calculating radectopix: %s" % (str(e)))
+            raise WCSError(e)
+
+        if coords == 'data':
+            # Kapteyn's WCS returns pixels referenced from 1
+            pix = map(lambda x: x-1, pix)
+            
+        x, y = pix[0], pix[1]
+        return (x, y)
+
+    def pixtosystem(self, idxs, system=None, coords='data'):
+
+        if self.coordsys == 'raw':
+            raise WCSError("No usable WCS")
+
+        if system == None:
+            system = 'icrs'
+            
+        # Get a coordinates object based on ra/dec wcs transform
+        ra_deg, dec_deg = self.pixtoradec(idxs, format='deg',
+                                          coords=coords)
+        self.logger.debug("ra, dec = %f, %f" % (ra_deg, dec_deg))
+        
+        # convert to alternate coord
+        tran = kapwcs.Transformation(self._skyout, system)
+        lon_deg, lat_deg = tran((ra_deg, dec_deg))
+
+        return lon_deg, lat_deg
+
+
+class WcslibWCS(AstropyWCS):
+    """DO NOT USE--this class name to be deprecated."""
+    pass
 
 # HELP FUNCTIONS
 
@@ -465,6 +765,8 @@ def choose_coord_system(header):
                 # alone, in which case it defaults to FK4 prior to 1984
                 # and FK5 after 1984.
                 try:
+                    # EQUINOX defaults to 2000 unless RADESYS is FK4,
+                    # in which case it defaults to 1950.
                     equinox = header['EQUINOX']
                     radecsys = 'FK5'
                 except KeyError:
@@ -477,7 +779,39 @@ def choose_coord_system(header):
     #raise WCSError("Cannot determine appropriate coordinate system from FITS header")
     return 'icrs'
 
-# TODO: refactor all of this to use astropy module
+def simple_wcs(px_x, px_y, ra_deg, dec_deg, px_scale_deg_px, pa_deg):
+    """Calculate a set of WCS keywords for a 2D simple instrument FITS
+    file with a 'standard' RA/DEC pixel projection.
+
+    Parameters:
+        px_x            : reference pixel of field in X (usually center of field)
+        px_y            : reference pixel of field in Y (usually center of field)
+        ra_deg          : RA (in deg) for the reference point
+        dec_deg         : DEC (in deg) for the reference point
+        px_scale_deg_px : pixel scale deg/pixel
+        pa_deg          : position angle of the instrument (in deg)
+
+    Returns a WCS object.  Use the to_header() method on it to get something
+    interesting that you can use.
+    """
+    wcsobj = pywcs.WCS()
+
+    # center of the projection
+    wcsobj.wcs.crpix = [px_x, px_y]  # pixel position
+    wcsobj.wcs.crval = [ra_deg, dec_deg]   # RA, Dec (degrees)
+
+    # image scale in deg/pix
+    wcsobj.wcs.cdelt = numpy.array([-1, 1]) * px_scale_deg_px
+
+    # Position angle of north (radians E of N)
+    pa = numpy.radians(pa_deg)
+    cpa = numpy.cos(pa)
+    spa = numpy.sin(pa)
+    #wcsobj.wcs.pc = numpy.array([[-cpa, -spa], [-spa, cpa]])
+    wcsobj.wcs.pc = numpy.array([[cpa, -spa], [spa, cpa]])
+
+    return wcsobj
+
 
 degPerHMSHour = 15.0      #360/24
 degPerHMSMin  = 0.25      #360.0/24/60
@@ -639,5 +973,13 @@ def eqToEq2000(ra_deg, dec_deg, eq):
     new_dec_deg = new_dec * 180.0 / math.pi
  
     return (new_ra_deg, new_dec_deg)
+
+# default
+WCS = BareBonesWCS
+
+# try to use them in this order
+for name in ('kapteyn', 'pyast', 'astropy'):
+    if use(name):
+        break
 
 #END

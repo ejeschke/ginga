@@ -797,15 +797,6 @@ class AstroImage(BaseImage):
 
         self.make_callback('modified')
 
-    def _deg(self, coord):
-        # AstroPy changed the API (grr) so now we have to support more 
-        # than one--we don't know what version the user has installed!
-        if hasattr(coord, 'degrees'):
-            return coord.degrees
-        else:
-            return coord.degree
-        #return coord.degrees
-        
     def info_xy(self, data_x, data_y, settings):
         # Note: FITS coordinates are 1-based, whereas numpy FITS arrays
         # are 0-based
@@ -820,71 +811,47 @@ class AstroImage(BaseImage):
         except Exception, e:
             value = None
 
-        system = settings.get('wcs_coords', 'icrs')
+        system = settings.get('wcs_coords', None)
         format = settings.get('wcs_display', 'sexagesimal')
         ra_lbl, dec_lbl = unichr(945), unichr(948)
                     
         # Calculate WCS coords, if available
+        ts = time.time()
         try:
             if (self.wcs == None) or (self.wcs.coordsys == 'raw'):
                 ra_txt = dec_txt = 'NO WCS'
-                
-            elif wcs.have_astropy:
-                c = self.pixtocoords(fits_x, fits_y,
-                                     system=system, coords='fits')
 
-                if system in ('galactic', ):
-                    deg, min, sec = c.lonangle.dms
-                    if self._deg(c.lonangle) < 0:
-                        sign = '-'
-                        deg, min, sec = abs(deg), abs(min), abs(sec)
-                    else:
-                        sign = '+'
-                    ra_txt = '%s%d:%02d:%06.3f' % (sign, deg, min, sec)
+            else:
+                lon_deg, lat_deg = self.wcs.pixtosystem((data_x, data_y),
+                                                        system=system,
+                                                        coords='data')
 
-                    deg, min, sec = c.latangle.dms
-                    if self._deg(c.latangle) < 0:
+                if format == 'sexagesimal':
+                    deg, min, sec = wcs.degToHms(lon_deg)
+                    ra_txt = '%d:%02d:%06.3f' % (deg, min, sec)
+
+                    sign, deg, min, sec = wcs.degToDms(lat_deg)
+                    if sign < 0:
                         sign = '-'
-                        deg, min, sec = abs(deg), abs(min), abs(sec)
                     else:
                         sign = '+'
                     dec_txt = '%s%d:%02d:%06.3f' % (sign, deg, min, sec)
+
+                else:
+                    ra_txt = '%+10.7f' % (lon_deg)
+                    dec_txt = '%+10.7f' % (lat_deg)
+
+                if system in ('galactic'):
                     ra_lbl, dec_lbl = "l", "b"
 
-                    if format == 'degrees':
-                        ra_txt = '%+10.7f' % self._deg(c.lonangle)
-                        dec_txt = '%+10.7f' % self._deg(c.latangle)
-
-                elif system in ('icrs', 'fk5', 'fk4'):
-                    hr, min, sec = c.ra.hms
-                    ra_txt = '%02d:%02d:%06.3f' % (hr, min, sec)
-
-                    deg, min, sec = c.dec.dms
-                    if self._deg(c.dec) < 0:
-                        sign = '-'
-                        deg, min, sec = abs(deg), abs(min), abs(sec)
-                    else:
-                        sign = '+'
-                    dec_txt = '%s%02d:%02d:%05.2f' % (sign, deg, min, sec)
-
-                    if format == 'degrees':
-                        ra_txt = '%+10.7f' % self._deg(c.lonangle)
-                        dec_txt = '%+10.7f' % self._deg(c.latangle)
-
-            else:
-                if format == 'degrees':
-                    ra_deg, dec_deg = self.pixtoradec(fits_x, fits_y,
-                                                      format='deg', coords='fits')
-                    ra_txt = '%+10.7f' % ra_deg
-                    dec_txt = '%+10.7f' % dec_deg
-                else:
-                    ra_txt, dec_txt = self.pixtoradec(fits_x, fits_y,
-                                                      format='str', coords='fits')
         except Exception, e:
             self.logger.warn("Bad coordinate conversion: %s" % (
                 str(e)))
             ra_txt  = 'BAD WCS'
             dec_txt = 'BAD WCS'
+
+        te = time.time() - ts
+        #print "time elapsed: %.4f" % te
 
         info = Bunch.Bunch(itype='astro', data_x=data_x, data_y=data_y,
                            fits_x=fits_x, fits_y=fits_y,
@@ -893,7 +860,7 @@ class AstroImage(BaseImage):
                            ra_lbl=ra_lbl, dec_lbl=dec_lbl,
                            value=value)
         return info
-                           
+
 
 class AstroHeader(Header):
 

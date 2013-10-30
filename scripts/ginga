@@ -58,8 +58,6 @@ from ginga.Control import GingaControl, GuiLogHandler
 import ginga.version as version
 import ginga.toolkit as ginga_toolkit
 
-LOG_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcName)s) | %(message)s'
-
 default_layout = ['seq', {},
                    ['vbox', dict(name='top', width=1500, height=900),
                     dict(row=['hbox', dict(name='menu')],
@@ -224,7 +222,8 @@ def main(options, args):
     guiHdlr = GuiLogHandler(ginga)
     guiHdlr.setLevel(options.loglevel)
     guiHdlr.setFormatter(log.LOG_FORMAT)
-    logger.addHandler(guiHdlr)
+    # TODO: GUI log is broken!
+    #logger.addHandler(guiHdlr)
 
     # Load any custom modules
     if options.modules:
