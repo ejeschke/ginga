@@ -45,8 +45,9 @@ Requirements and Supported Platforms
 
 Because Ginga is written in pure python, it can run on any platform that
 has the required python modules and has a supported widget set.
-The basic Ginga display widget supports the Qt, Gtk and Tk widget sets,
-while the full reference viewer supports Qt and Gtk.
+The basic Ginga display widget supports the Qt, Gtk, Tk widget sets
+natively as well an any matplotlib Figure, while the full reference
+viewer supports Qt and Gtk. 
 
 ==================
 Getting the source
@@ -117,7 +118,8 @@ Developer Info
 ==============
 
 In the source code `scripts` directory, see example{1,2}_gtk.py (Gtk),
-example{1,2}_qt.py (Qt) or example{1,2}_tk.py (Tk).
+example{1,2}_qt.py (Qt), example{1,2}_tk.py (Tk) or
+example{1,2,3,4,5}_mpl.py (matplotlib).
 There is more information for developers in the manual.  
 
 See the Module Index at the bottom of this document.

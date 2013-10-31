@@ -17,12 +17,22 @@ compile anything.  But as always, YMMV.
 You will need:
 
 * python (v. 2.7 or higher)
-* python-numpy
+* numpy
 
 Highly recommended, because some features will not work without them:
 
-* python-scipy
-* python-astropy
+* scipy
+
+For opening FITS files you will need ONE of
+
+* astropy
+* pyfits
+
+For WCS resolution you will need ONE of 
+
+* astropy
+* kapteyn
+* astLib
 
 Also, depending on which GUI toolkit you prefer, you will need either:
 
@@ -41,11 +51,15 @@ OR
 
 * python-Tkinter
 
+OR
+
+* matplotlib
+
 Certain plugins in the reference viewer (or features of those plugins)
 will not work without the following packages:
 
-* python-matplotlib (Pick, Cuts, Histogram)
-* python-webkit (WBrowser (online help))
+* matplotlib (Pick, Cuts, Histogram)
+* webkit (WBrowser (online help))
 
 ==============================
 Notes on Supported Widget Sets
@@ -63,7 +77,8 @@ Qt/PySide
 =========
 
 Ginga can use either PyQt or PySide, version 4.  It will auto-detect
-which one is installed.
+which one is installed.  There is support for both the basic widget and
+the full reference viewer.
   
 .. note:: If you have both installed and you want to use a specific one
 	  then set the environment variable QT_API to either "pyqt" or
@@ -87,6 +102,15 @@ overplotting (graphics) support you also need to build and install the
 "aggdraw" module, which you can find 
 `here <http://ejeschke.github.io/aggdraw/>`_.
 
+Matplotlib
+==========
+
+Ginga can render directly into a Matplotlib figure.  Support is limited
+to the viewing widget itself.  Any of the backends that Matplotlib
+supports is usable.  Performance is not as good as to one of the
+"native" backends listed above, but oh, the overplot options!
+
+
 ========================
 Installation from Source
 ========================
@@ -104,9 +128,9 @@ Unpack, go into the top level directory and::
 
 The reference viewer can then be run using the command "ginga"
 
-====================
-Binary Installations
-====================
+======================
+"Binary" Installations
+======================
 
 Linux
 =====
@@ -148,8 +172,16 @@ The three recommended ways to install on the Mac are:
 The first two methods should provide all the modules necessary to run
 Ginga.  Then install Ginga from source as described above.
 
-With macports you will need to install the necessary packages as
-described in the Linux section.
+With macports you will need to install the necessary packages.  Assuming 
+that you have a working macports installed, it will be something like:
+
+    port install python27 
+    port install py27-numpy py27-matplotlib py27-pil py27-scipy 
+    port install py27-astropy py27-pyqt4 py27-pip
+    pip install ginga
+
+Have a cup of your favorite beverage.  It takes a while to compile all these!
+
 
 Windows
 =======
