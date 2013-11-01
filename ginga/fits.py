@@ -1,0 +1,255 @@
+#
+# fits.py -- Module wrapper for loading FITS files.
+#
+# Eric Jeschke (eric@naoj.org)
+#
+# Copyright (c) Eric R. Jeschke.  All rights reserved.
+# This is open-source software licensed under a BSD license.
+# Please see the file LICENSE.txt for details.
+#
+"""
+There are two possible choices for a python FITS file reading package
+compatible with Ginga: astropy/pyfits and fitsio.  Both are based on
+the CFITSIO library, although it seems that astropy's version has
+changed quite a bit from the original, while fitsio is still tracking
+the current version. 
+
+To force the use of one, do:
+
+    from ginga import fits
+    fits.use('fitsio')
+
+before you load any images.  Otherwise Ginga will try to pick one for
+you.
+"""
+import numpy
+
+fits_configured = False
+fitsLoaderClass = None
+have_pyfits = False
+have_fitsio = False
+
+class FITSError(Exception):
+    pass
+
+def use(fitspkg):
+    global fits_configured, fitsLoaderClass, \
+           have_pyfits, pyfits, \
+           have_fitsio, fitsio
+    
+    if fitspkg == 'astropy':
+        try:
+            from astropy.io import fits as pyfits
+            have_pyfits = True
+            fitsLoaderClass = PyFitsFileHandler
+        except ImportError:
+            try:
+                # maybe they have a standalone version of pyfits?
+                import pyfits
+                have_pyfits = True
+                fitsLoaderClass = PyFitsFileHandler
+            except ImportError:
+                pass
+        return False
+
+    elif fitspkg == 'fitsio':
+        try:
+            import fitsio
+            have_fitsio = True
+            fitsLoaderClass = FitsioFileHandler
+        except ImportError:
+            pass
+        return False
+
+    return False
+
+
+class BaseFitsFileHandler(object):
+    pass
+
+class PyFitsFileHandler(BaseFitsFileHandler):
+
+    def __init__(self, logger):
+        super(PyFitsFileHandler, self).__init__()
+
+        if not have_pyfits:
+            raise FITSError("Need astropy or pyfits module installed to use this file handler")
+        self.logger = logger
+        self.kind = 'pyfits'
+
+    def fromHDU(self, hdu, ahdr):
+        header = hdu.header
+        if hasattr(header, 'cards'):
+            #newer astropy.io.fits don't have ascardlist
+            for card in header.cards:
+                bnch = ahdr.__setitem__(card.key, card.value)
+                bnch.comment = card.comment
+        else:
+            for card in header.ascardlist():
+                bnch = ahdr.__setitem__(card.key, card.value)
+                bnch.comment = card.comment
+
+    def load_hdu(self, hdu, ahdr, fobj=None, naxispath=None):
+        data = hdu.data
+        if len(data.shape) < 2:
+            # Expand 1D arrays into 1xN array
+            data = data.reshape((1, data.shape[0]))
+        else:
+            # Drill down to 2D data slice
+            if not naxispath:
+                naxispath = ([0] * (len(data.shape)-2))
+
+            for idx in naxispath:
+                data = data[idx]
+
+        self.fromHDU(hdu, ahdr)
+        return data
+
+    def load_file(self, filepath, ahdr, numhdu=None, naxispath=None):
+        self.logger.info("Loading file '%s' ..." % (filepath))
+        fits_f = pyfits.open(filepath, 'readonly')
+
+        # this seems to be necessary now for some fits files...
+        try:
+            fits_f.verify('fix')
+        except Exception, e:
+            raise FITSError("Error loading fits file '%s': %s" % (
+                fitspath, str(e)))
+
+        if numhdu == None:
+            found_valid_hdu = False
+            for i in range(len(fits_f)):
+                hdu = fits_f[i]
+                if hdu.data == None:
+                    # compressed FITS file or non-pixel data hdu?
+                    continue
+                if not isinstance(hdu.data, numpy.ndarray):
+                    # We need to open a numpy array
+                    continue
+                #print "data type is %s" % hdu.data.dtype.kind
+                # Looks good, let's try it
+                found_valid_hdu = True
+                break
+
+            if not found_valid_hdu:
+                raise FITSError("No data HDU found that Ginga can open in '%s'" % (
+                    filepath))
+        else:
+            hdu = fits_f[numhdu]
+
+        data = self.load_hdu(hdu, ahdr, fobj=fits_f,
+                             naxispath=naxispath)
+        fits_f.close()
+        return data
+
+    def create_fits(self, data, header):
+        fits_f = pyfits.HDUList()
+        hdu = pyfits.PrimaryHDU()
+        hdu.data = data
+
+        for kwd in header.keys():
+            card = header.get_card(kwd)
+            hdu.header.update(card.key, card.value, comment=card.comment)
+
+        fits_f.append(hdu)
+        return fits_f
+    
+    def write_fits(self, path, data, header):
+        fits_f = self.create_fits(data, header)
+        fits_f.writeto(path, output_verify='fix')
+        fits_f.close()
+
+        
+class FitsioFileHandler(BaseFitsFileHandler):
+
+    def __init__(self, logger):
+        super(FitsioFileHandler, self).__init__()
+
+        if not have_fitsio:
+            raise FITSError("Need fitsio module installed to use this file handler")
+        self.logger = logger
+        self.kind = 'fitsio'
+
+    def fromHDU(self, hdu, ahdr):
+        header = hdu.read_header()
+        for d in header.records():
+            bnch = ahdr.__setitem__(d['name'], d['value'])
+            bnch.comment = d['comment']
+
+    def load_hdu(self, hdu, ahdr, fobj=None, naxispath=None):
+        data = hdu.read()
+        if len(data.shape) < 2:
+            # Expand 1D arrays into 1xN array
+            data = data.reshape((1, data.shape[0]))
+        else:
+            # Drill down to 2D data slice
+            if not naxispath:
+                naxispath = ([0] * (len(data.shape)-2))
+
+            for idx in naxispath:
+                data = data[idx]
+
+        self.fromHDU(hdu, ahdr)
+        return data
+        
+    def load_file(self, filepath, ahdr, numhdu=None, naxispath=None):
+        self.logger.info("Loading file '%s' ..." % (filepath))
+        fits_f = fitsio.FITS(filepath)
+
+        if numhdu == None:
+            found_valid_hdu = False
+            for i in range(len(fits_f)):
+                hdu = fits_f[i]
+                info = hdu.get_info()
+                if not ('ndims' in info) or (info['ndims'] == 0):
+                    # compressed FITS file or non-pixel data hdu?
+                    continue
+                #print "data type is %s" % hdu.data.dtype.kind
+                # Looks good, let's try it
+                found_valid_hdu = True
+                break
+
+            if not found_valid_hdu:
+                raise FITSError("No data HDU found that Ginga can open in '%s'" % (
+                    filepath))
+        else:
+            hdu = fits_f[numhdu]
+
+        data = self.load_hdu(hdu, ahdr, fobj=fits_f,
+                             naxispath=naxispath)
+        fits_f.close()
+        return data
+
+    def create_fits(self, data, header):
+        fits_f = pyfits.HDUList()
+        hdu = pyfits.PrimaryHDU()
+        hdu.data = data
+
+        for kwd in header.keys():
+            card = header.get_card(kwd)
+            hdu.header.update(card.key, card.value, comment=card.comment)
+
+        fits_f.append(hdu)
+        return fits_f
+    
+    def write_fits(self, path, data, header):
+        fits_f = fitsio.FITS(path, 'rw')
+        
+        fits_f = self.create_fits(data, header)
+        fits_f.writeto(path, output_verify='fix')
+        fits_f.close()
+        
+
+# default
+fitsLoaderClass = PyFitsFileHandler
+
+# try to use them in this order
+# astropy is faster
+for name in ('astropy', 'fitsio'):
+    if use(name):
+        break
+
+def get_fitsloader(kind=None, logger=None):
+    return fitsLoaderClass(logger)
+
+#END

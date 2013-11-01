@@ -16,15 +16,15 @@ actually represents.
 
 So the renaming went like this:
 
-    FitsImage -> ImageView
-    FitsImage{XYZ} -> ImageView{XYZ}
-    PythonImage -> RGBImage
+* FitsImage -> ImageView
+* FitsImage{XYZ} -> ImageView{XYZ}
+* PythonImage -> RGBImage
 
 So we have:
 
-   M: BaseImage, AstroImage, RGBImage
-   V: ImageView{XYZ}
-   C: Bindings, BindMap
+* M: BaseImage, AstroImage, RGBImage
+* V: ImageView{XYZ}
+* C: Bindings, BindMap
 
 I did this in the brand new 2.0 version so at least devs have a heads up
 that things will not be backward compatible.

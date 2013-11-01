@@ -1,5 +1,5 @@
 #
-# wcs.py -- WCS calculations.
+# wcs.py -- module wrapper for WCS calculations.
 #
 # Eric Jeschke (eric@naoj.org)
 # Takeshi Inagaki
@@ -11,10 +11,11 @@
 #
 """
 We are lucky to have several possible choices for a python WCS package
-compatible with Ginga: astlib, kapteyn and astropy.
+compatible with Ginga: astlib, kapteyn, starlink and astropy.
 kapteyn and astropy wrap Doug Calabretta's "WCSLIB", astLib wraps
-Doug Mink's "wcstools".  Note that astlib requires pyfits (or astropy)
-in order to create a WCS object.
+Doug Mink's "wcstools", and I'm not sure what starlink uses (their own?).
+Note that astlib and starlink require pyfits (or astropy) in order to
+create a WCS object. 
 
 To force the use of one, do:
 
@@ -49,6 +50,7 @@ have_kapteyn = False
 have_astlib = False
 have_pywcs = False
 have_astropy = False
+have_starlink = False
 WCS = None
 
 class WCSError(Exception):
@@ -59,15 +61,30 @@ def use(wcspkg):
     global coord_types, wcs_configured, WCS, \
            have_kapteyn, kapwcs, \
            have_astlib, astWCS, astCoords, \
+           have_starlink, Ast, Atl, \
            have_astropy, pywcs, coordinates, units
     
     if wcspkg == 'kapteyn':
         try:
             from kapteyn import wcs as kapwcs
-            coord_types = ['icrs', 'fk5', 'fk4', 'fk4-no-e', 'galactic']
+            coord_types = ['icrs', 'fk5', 'fk4', 'galactic', 'ecliptic']
             have_kapteyn = True
             wcs_configured = True
             WCS = KapteynWCS
+            return True
+
+        except ImportError:
+            pass
+        return False
+    
+    elif wcspkg == 'starlink':
+        try:
+            import starlink.Ast as Ast
+            import starlink.Atl as Atl
+            coord_types = ['icrs', 'fk5', 'fk4', 'galactic', 'ecliptic']
+            have_starlink = True
+            wcs_configured = True
+            WCS = StarlinkWCS
             return True
 
         except ImportError:
@@ -109,7 +126,7 @@ def use(wcspkg):
             from astropy import units
             have_astropy = True
             wcs_configured = True
-            coord_types = ['icrs', 'fk5', 'fk4', 'fk4-no-e', 'galactic']
+            coord_types = ['icrs', 'fk5', 'fk4', 'galactic']
             WCS = AstropyWCS
             return True
 
@@ -118,34 +135,14 @@ def use(wcspkg):
         return False
 
     elif wcspkg == 'barebones':
+        coord_types = ['fk5']
         WCS = BareBonesWCS
+    return False
         
 display_types = ['sexagesimal', 'degrees']
 
-# for testing
-#have_kapteyn = False
-#have_astlib = False
-#have_pywcs = False
-
 
 class BaseWCS(object):
-
-    def deg2fmt(self, ra_deg, dec_deg, format):
-
-        rhr, rmn, rsec = degToHms(ra_deg)
-        dsgn, ddeg, dmn, dsec = degToDms(dec_deg)
-
-        if format == 'hms':
-            return rhr, rmn, rsec, dsgn, ddeg, dmn, dsec
-
-        elif format == 'str':
-            ra_txt = '%02d:%02d:%06.3f' % (rhr, rmn, rsec)
-            if dsgn < 0:
-                dsgn = '-'
-            else:
-                dsgn = '+'
-            dec_txt = '%s%02d:%02d:%05.2f' % (dsgn, ddeg, dmn, dsec)
-            return ra_txt, dec_txt
 
     def fix_bad_headers(self):
         """Fix up bad headers that cause problems for WCSLIB.
@@ -155,158 +152,14 @@ class BaseWCS(object):
         # WCSLIB doesn't like "nonstandard" units
         unit = self.header.get('CUNIT1', 'deg')
         if unit.upper() == 'DEGREE':
-            self.header.update('CUNIT1', 'deg')
+            #self.header.update('CUNIT1', 'deg')
+            self.header['CUNIT1'] = 'deg'
         unit = self.header.get('CUNIT2', 'deg')
         if unit.upper() == 'DEGREE':
-            self.header.update('CUNIT2', 'deg')
+            #self.header.update('CUNIT2', 'deg')
+            self.header['CUNIT2'] = 'deg'
 
     
-class BareBonesWCS(BaseWCS):
-    """A very basic WCS.  Assumes J2000, units in degrees, projection TAN.
-
-    ***** NOTE *****:
-    We strongly recommend that you install one of the 3rd party python
-    WCS modules referred to at the top of this module, all of which are
-    much more capable than BareBonesWCS.
-    """
-
-    def __init__(self, logger):
-        super(BareBonesWCS, self).__init__()
-        self.logger = logger
-        self.header = {}
-        self.coordsys = 'raw'
-        self.kind = 'barebones'
-
-    def load_header(self, header, fobj=None):
-        self.header = {}
-        for key, value in header.items():
-            self.header[key] = value
-
-        self.fix_bad_headers()
-        self.coordsys = choose_coord_system(self.header)
-
-    def get_keyword(self, key):
-        return self.header[key]
-        
-    # WCS calculations
-    def get_reference_pixel(self):
-        x = float(self.get_keyword('CRPIX1'))
-        y = float(self.get_keyword('CRPIX2'))
-        return x, y
-
-    def get_physical_reference_pixel(self):
-        xv = float(self.get_keyword('CRVAL1'))
-        yv = float(self.get_keyword('CRVAL2'))
-        assert 0.0 <= xv < 360.0, \
-               WCSError("CRVAL1 out of range: %f" % (xv))
-        
-        assert -90.0 <= yv <= 90.0, \
-               WCSError("CRVAL2 out of range: %f" % (yv))
-        return xv, yv
-
-    def get_pixel_coordinates(self):
-        try:
-            cd11 = float(self.get_keyword('CD1_1'))
-            cd12 = float(self.get_keyword('CD1_2'))
-            cd21 = float(self.get_keyword('CD2_1'))
-            cd22 = float(self.get_keyword('CD2_2'))
-
-        except Exception as e:
-            cdelt1 = float(self.get_keyword('CDELT1'))
-            cdelt2 = float(self.get_keyword('CDELT2'))
-            try:
-                cd11 = float(self.get_keyword('PC1_1')) * cdelt1
-                cd12 = float(self.get_keyword('PC1_2')) * cdelt1
-                cd21 = float(self.get_keyword('PC2_1')) * cdelt2
-                cd22 = float(self.get_keyword('PC2_2')) * cdelt2
-            except KeyError:
-                cd11 = float(self.get_keyword('PC001001')) * cdelt1
-                cd12 = float(self.get_keyword('PC001002')) * cdelt1
-                cd21 = float(self.get_keyword('PC002001')) * cdelt2
-                cd22 = float(self.get_keyword('PC002002')) * cdelt2
-
-        return (cd11, cd12, cd21, cd22)
-
-    def pixtoradec(self, idxs, format='deg', coords='data'):
-        """Convert a (x, y) pixel coordinate on the image to a (ra, dec)
-        coordinate in space.
-
-        Parameter (format):
-        - if 'deg', then returns ra, dec as a 2-tuple of floats (in degrees)
-        - if 'hms', then returns a 7-tuple of
-               (rahr, ramin, rasec, decsign, decdeg, decmin, decsec)
-        - if 'str', then returns ra, dec as a 2-tuple of strings in traditional
-            ra/dec notation
-
-        Parameter (coords):
-        - if 'data' then x, y coordinates are interpreted as 0-based
-        - otherwise coordinates are interpreted as 1-based (traditional FITS)
-        """
-        x, y = idxs[:2]
-        
-        # account for DATA->FITS coordinate space
-        if coords == 'data':
-            x, y = x + 1, y + 1
-
-        crpix1, crpix2 = self.get_reference_pixel()
-        crval1, crval2 = self.get_physical_reference_pixel()
-        cd11, cd12, cd21, cd22 = self.get_pixel_coordinates()
-
-        ra_deg = (cd11 * (x - crpix1) + cd12 * 
-                 (y - crpix2)) / math.cos(math.radians(crval2)) + crval1
-        dec_deg = cd21 * (x - crpix1) + cd22 * (y - crpix2) + crval2
-
-        if format == 'deg':
-            return ra_deg, dec_deg
-        else:
-            return self.deg2fmt(ra_deg, dec_deg, format)
-    
-   
-    def radectopix(self, ra_deg, dec_deg, coords='data'):
-        """Convert a (ra_deg, dec_deg) space coordinates to (x, y) pixel
-        coordinates on the image.  ra and dec are expected as floats in
-        degrees.
-
-        Parameter (coords):
-        - if 'data' then x, y coordinates are returned as 0-based
-        - otherwise coordinates are returned as 1-based (traditional FITS)
-        """
-        crpix1, crpix2 = self.get_reference_pixel()
-        crval1, crval2 = self.get_physical_reference_pixel()
-        cd11, cd12, cd21, cd22 = self.get_pixel_coordinates()
-
-        # reverse matrix
-        rmatrix = (cd11 * cd22) - (cd12 * cd21)
-
-        if not cmp(rmatrix, 0.0):
-            raise WCSError("WCS Matrix Error: check values")
-
-        # Adjust RA as necessary
-        if (ra_deg - crval1) > 180.0:
-            ra_deg -= 360.0
-        elif (ra_deg - crval1) < -180.0:
-            ra_deg += 360.0
-
-        try:
-            x = (cd22 * math.cos(crval2 * math.pi/180.0) *
-                 (ra_deg - crval1) - cd12 *
-                 (dec_deg - crval2))/rmatrix + crpix1
-            y = (cd11 * (dec_deg - crval2) - cd21 *
-                 math.cos(crval2 * math.pi/180.0) *
-                 (ra_deg - crval1))/rmatrix + crpix2
-
-        except Exception, e:
-            raise WCSError("radectopix calculation error: %s" % str(e))
-
-        # account for FITS->DATA space
-        if coords == 'data':
-            x, y = x - 1, y - 1
-        return (x, y)
-
-    def pixtocoords(self, idxs, system='icrs', coords='data'):
-        return None
-    
-
 class AstropyWCS(BaseWCS):
     """A WCS interface for astropy.wcs
     You need to install python module 'astropy'
@@ -329,7 +182,6 @@ class AstropyWCS(BaseWCS):
             'icrs': coordinates.ICRSCoordinates,
             'fk5': coordinates.FK5Coordinates,
             'fk4': coordinates.FK4Coordinates,
-            'fk4-no-e': coordinates.FK4NoETermCoordinates,
             'galactic': coordinates.GalacticCoordinates,
             #'azel': coordinates.HorizontalCoordinates,
             }
@@ -362,7 +214,7 @@ class AstropyWCS(BaseWCS):
     def get_keyword(self, key):
         return self.header[key]
         
-    def pixtoradec(self, idxs, format='deg', coords='data'):
+    def pixtoradec(self, idxs, coords='data'):
 
         if coords == 'data':
             origin = 0
@@ -370,10 +222,10 @@ class AstropyWCS(BaseWCS):
             origin = 1
         pixcrd = numpy.array([idxs], numpy.float_)
         try:
-            sky = self.wcs.wcs_pix2sky(pixcrd, origin)
+            #sky = self.wcs.wcs_pix2sky(pixcrd, origin)
             #sky = self.wcs.all_pix2sky(pixcrd, origin)
             # astropy only?
-            #sky = self.wcs.all_pix2world(pixcrd, origin)
+            sky = self.wcs.all_pix2world(pixcrd, origin)
 
         except Exception, e:
             self.logger.error("Error calculating pixtoradec: %s" % (str(e)))
@@ -382,11 +234,7 @@ class AstropyWCS(BaseWCS):
         ra_deg = float(sky[0, 0])
         dec_deg = float(sky[0, 1])
 
-        if format == 'deg':
-            return ra_deg, dec_deg
-
-        else:
-            return self.deg2fmt(ra_deg, dec_deg, format)
+        return ra_deg, dec_deg
     
     def radectopix(self, ra_deg, dec_deg, coords='data'):
 
@@ -401,7 +249,7 @@ class AstropyWCS(BaseWCS):
             # Doesn't seem to be a all_sky2pix
             #pix = self.wcs.all_sky2pix(skycrd, origin)
             # astropy only?
-            #pix = self.wcs.wcs_world2pix(skycrd, origin)
+            pix = self.wcs.wcs_world2pix(skycrd, origin)
 
         except Exception, e:
             print ("Error calculating radectopix: %s" % (str(e)))
@@ -420,8 +268,7 @@ class AstropyWCS(BaseWCS):
             system = 'icrs'
             
         # Get a coordinates object based on ra/dec wcs transform
-        ra_deg, dec_deg = self.pixtoradec(idxs, format='deg',
-                                          coords=coords)
+        ra_deg, dec_deg = self.pixtoradec(idxs, coords=coords)
         self.logger.debug("ra, dec = %f, %f" % (ra_deg, dec_deg))
         
         # convert to astropy coord
@@ -519,9 +366,9 @@ class AstLibWCS(BaseWCS):
         if match:
             return 'galactic'
 
-        ## match = re.match(r'^ELON\-.*$', ctype)
-        ## if match:
-        ##     return 'elliptic'
+        # match = re.match(r'^ELON\-.*$', ctype)
+        # if match:
+        #     return 'ecliptic'
 
         match = re.match(r'^RA\-\-\-.*$', ctype)
         if match:
@@ -556,7 +403,7 @@ class AstLibWCS(BaseWCS):
     def get_keyword(self, key):
         return self.header[key]
         
-    def pixtoradec(self, idxs, format='deg', coords='data'):
+    def pixtoradec(self, idxs, coords='data'):
         if coords == 'fits':
             # Via astWCS.NUMPY_MODE, we've forced pixels referenced from 0
             idxs = tuple(map(lambda x: x-1, idxs))
@@ -568,10 +415,7 @@ class AstLibWCS(BaseWCS):
             self.logger.error("Error calculating pixtoradec: %s" % (str(e)))
             raise WCSError(e)
         
-        if format == 'deg':
-            return ra_deg, dec_deg
-        else:
-            return self.deg2fmt(ra_deg, dec_deg, format)
+        return ra_deg, dec_deg
     
     def radectopix(self, ra_deg, dec_deg, coords='data'):
         try:
@@ -596,8 +440,7 @@ class AstLibWCS(BaseWCS):
             system = 'j2000'
             
         # Get a coordinates object based on ra/dec wcs transform
-        ra_deg, dec_deg = self.pixtoradec(idxs, format='deg',
-                                          coords=coords)
+        ra_deg, dec_deg = self.pixtoradec(idxs, coords=coords)
         self.logger.debug("ra, dec = %f, %f" % (ra_deg, dec_deg))
         
         # convert to alternate coord
@@ -640,9 +483,16 @@ class KapteynWCS(BaseWCS):
         self.kind = 'kapteyn/WCSLIB'
         self._skyout = "equatorial icrs J2000.0"
 
+        # see: https://github.com/astropy/coordinates-benchmark/blob/master/kapteyn/convert.py
+        self.conv_d = dict(fk5='fk5', fk4='fk4,J2000_OBS', icrs='icrs',
+                           galactic='galactic', ecliptic='ecliptic,J2000')
+
     def load_header(self, header, fobj=None):
         # For kapteyn, header just needs to be duck-typed like a dict
-        self.header = header
+        self.header = {}
+        for key, value in header.items():
+            self.header[key] = value
+
         self.fix_bad_headers()
         
         try:
@@ -657,7 +507,7 @@ class KapteynWCS(BaseWCS):
     def get_keyword(self, key):
         return self.header[key]
         
-    def pixtoradec(self, idxs, format='deg', coords='data'):
+    def pixtoradec(self, idxs, coords='data'):
         # Kapteyn's WCS needs pixels referenced from 1
         if coords == 'data':
             idxs = tuple(map(lambda x: x+1, idxs))
@@ -672,10 +522,7 @@ class KapteynWCS(BaseWCS):
             self.logger.error("Error calculating pixtoradec: %s" % (str(e)))
             raise WCSError(e)
         
-        if format == 'deg':
-            return ra_deg, dec_deg
-        else:
-            return self.deg2fmt(ra_deg, dec_deg, format)
+        return ra_deg, dec_deg
     
     def radectopix(self, ra_deg, dec_deg, coords='data'):
         try:
@@ -701,16 +548,276 @@ class KapteynWCS(BaseWCS):
             system = 'icrs'
             
         # Get a coordinates object based on ra/dec wcs transform
-        ra_deg, dec_deg = self.pixtoradec(idxs, format='deg',
-                                          coords=coords)
+        ra_deg, dec_deg = self.pixtoradec(idxs, coords=coords)
         self.logger.debug("ra, dec = %f, %f" % (ra_deg, dec_deg))
         
         # convert to alternate coord
-        tran = kapwcs.Transformation(self._skyout, system)
+        spec = self.conv_d[system]
+        tran = kapwcs.Transformation(self._skyout, spec)
         lon_deg, lat_deg = tran((ra_deg, dec_deg))
 
         return lon_deg, lat_deg
 
+
+class StarlinkWCS(BaseWCS):
+    """A WCS interface for Starlink
+    You need to install python module 'starlink-pyast'
+
+        http://www.astro.rug.nl/software/kapteyn/
+
+    if you want to use this version.
+    """
+
+    def __init__(self, logger):
+        super(StarlinkWCS, self).__init__()
+
+        if not have_starlink:
+            raise WCSError("Please install package 'starlink-pyast' first!")
+        self.logger = logger
+        self.header = None
+        self.wcs = None
+        self.coordsys = 'raw'
+        self.kind = 'starlink'
+
+    def load_header(self, header, fobj=None):
+        # For starlink, header is pulled in via pyfits adapter
+        hdu = pyfits.PrimaryHDU()
+        self.header = hdu.header
+        for key, value in header.items():
+            self.header[key] = value
+
+        self.fix_bad_headers()
+
+        # following https://gist.github.com/dsberry/4171277 to get a
+        # usable WCS in Ast
+
+        try:
+            # read in the header and create the default WCS transform
+            adapter = Atl.PyFITSAdapter(hdu)
+            fitschan = Ast.FitsChan(adapter)
+            self.wcs = fitschan.read()
+            # self.wcs is a FrameSet, with a Mapping
+            #self.wcs.Report = True
+
+            self.coordsys = choose_coord_system(self.header)
+
+            # define a transform from this destination frame to icrs/j2000
+            refframe = self.wcs.getframe(2)
+            toframe = Ast.SkyFrame("System=ICRS, Equinox=J2000")
+            self.icrs_trans = refframe.convert(toframe)
+
+        except Exception, e:
+            self.logger.error("Error making WCS object: %s" % (str(e)))
+            self.wcs = None
+
+    def get_keyword(self, key):
+        return self.header[key]
+        
+    def pixtoradec(self, idxs, coords='data'):
+        # Starlink's WCS needs pixels referenced from 1
+        if coords == 'data':
+            idxs = numpy.array(map(lambda x: x+1, idxs))
+        else:
+            idxs = numpy.array(idxs)
+            
+        try:
+            # pixel to sky coords (in the WCS specified transform)
+            xs, ys = [idxs[0]], [idxs[1]]
+            res = self.wcs.tran([ xs, ys ], 1)
+            ra_rad, dec_rad = res[0][0], res[1][0]
+
+            # whatever sky coords to icrs coords
+            res = self.icrs_trans.tran([[ra_rad], [dec_rad]], 1)
+            ra_rad, dec_rad = res[0][0], res[1][0]
+            ra_deg, dec_deg = math.degrees(ra_rad), math.degrees(dec_rad)
+            #print ra_deg, dec_deg
+            
+        except Exception, e:
+            self.logger.error("Error calculating pixtoradec: %s" % (str(e)))
+            raise WCSError(e)
+        
+        return ra_deg, dec_deg
+    
+    def radectopix(self, ra_deg, dec_deg, coords='data'):
+        try:
+            # sky coords to pixel (in the WCS specified transform)
+            ra_rad, dec_rad = math.radians(ra_deg), math.radians(dec_deg)
+            xs, ys = [ra_rad], [dec_rad]
+            # 0 as second arg -> inverse transform
+            res = self.wcs.tran([ xs, ys ], 0)
+            x, y = res[0][0], res[1][0]
+
+        except Exception, e:
+            print ("Error calculating radectopix: %s" % (str(e)))
+            raise WCSError(e)
+
+        if coords == 'data':
+            # Starlink's WCS returns pixels referenced from 1
+            x, y = x-1, y-1
+
+        return (x, y)
+
+    def pixtosystem(self, idxs, system=None, coords='data'):
+
+        if self.coordsys == 'raw':
+            raise WCSError("No usable WCS")
+
+        if system == None:
+            system = 'icrs'
+            
+        # define a transform from reference (icrs/j2000) to user's end choice
+        refframe = self.icrs_trans.getframe(2)
+        toframe = Ast.SkyFrame("System=%s, Epoch=2000.0" % (system.upper()))
+        end_trans = refframe.convert(toframe)
+
+        # Get a coordinates object based on ra/dec wcs transform
+        ra_deg, dec_deg = self.pixtoradec(idxs, coords=coords)
+        self.logger.debug("ra, dec = %f, %f" % (ra_deg, dec_deg))
+        
+        # convert to alternate coord
+        ra_rad, dec_rad = math.radians(ra_deg), math.radians(dec_deg)
+        res = end_trans.tran([[ra_rad], [dec_rad]], 1)
+        lon_rad, lat_rad = res[0][0], res[1][0]
+        lon_deg, lat_deg = math.degrees(lon_rad), math.degrees(lat_rad)
+
+        return lon_deg, lat_deg
+
+
+class BareBonesWCS(BaseWCS):
+    """A very basic WCS.  Assumes J2000, units in degrees, projection TAN.
+
+    ***** NOTE *****:
+    We strongly recommend that you install one of the 3rd party python
+    WCS modules referred to at the top of this module, all of which are
+    much more capable than BareBonesWCS.
+    ****************
+    """
+
+    def __init__(self, logger):
+        super(BareBonesWCS, self).__init__()
+        self.logger = logger
+        self.header = {}
+        self.coordsys = 'raw'
+        self.kind = 'barebones'
+
+    def load_header(self, header, fobj=None):
+        self.header = {}
+        for key, value in header.items():
+            self.header[key] = value
+
+        self.fix_bad_headers()
+        self.coordsys = choose_coord_system(self.header)
+
+    def get_keyword(self, key):
+        return self.header[key]
+        
+    # WCS calculations
+    def get_reference_pixel(self):
+        x = float(self.get_keyword('CRPIX1'))
+        y = float(self.get_keyword('CRPIX2'))
+        return x, y
+
+    def get_physical_reference_pixel(self):
+        xv = float(self.get_keyword('CRVAL1'))
+        yv = float(self.get_keyword('CRVAL2'))
+        assert 0.0 <= xv < 360.0, \
+               WCSError("CRVAL1 out of range: %f" % (xv))
+        
+        assert -90.0 <= yv <= 90.0, \
+               WCSError("CRVAL2 out of range: %f" % (yv))
+        return xv, yv
+
+    def get_pixel_coordinates(self):
+        try:
+            cd11 = float(self.get_keyword('CD1_1'))
+            cd12 = float(self.get_keyword('CD1_2'))
+            cd21 = float(self.get_keyword('CD2_1'))
+            cd22 = float(self.get_keyword('CD2_2'))
+
+        except Exception as e:
+            cdelt1 = float(self.get_keyword('CDELT1'))
+            cdelt2 = float(self.get_keyword('CDELT2'))
+            try:
+                cd11 = float(self.get_keyword('PC1_1')) * cdelt1
+                cd12 = float(self.get_keyword('PC1_2')) * cdelt1
+                cd21 = float(self.get_keyword('PC2_1')) * cdelt2
+                cd22 = float(self.get_keyword('PC2_2')) * cdelt2
+            except KeyError:
+                cd11 = float(self.get_keyword('PC001001')) * cdelt1
+                cd12 = float(self.get_keyword('PC001002')) * cdelt1
+                cd21 = float(self.get_keyword('PC002001')) * cdelt2
+                cd22 = float(self.get_keyword('PC002002')) * cdelt2
+
+        return (cd11, cd12, cd21, cd22)
+
+    def pixtoradec(self, idxs, coords='data'):
+        """Convert a (x, y) pixel coordinate on the image to a (ra, dec)
+        coordinate in space.
+
+        Parameter (coords):
+        - if 'data' then x, y coordinates are interpreted as 0-based
+        - otherwise coordinates are interpreted as 1-based (traditional FITS)
+        """
+        x, y = idxs[:2]
+        
+        # account for DATA->FITS coordinate space
+        if coords == 'data':
+            x, y = x + 1, y + 1
+
+        crpix1, crpix2 = self.get_reference_pixel()
+        crval1, crval2 = self.get_physical_reference_pixel()
+        cd11, cd12, cd21, cd22 = self.get_pixel_coordinates()
+
+        ra_deg = (cd11 * (x - crpix1) + cd12 * 
+                 (y - crpix2)) / math.cos(math.radians(crval2)) + crval1
+        dec_deg = cd21 * (x - crpix1) + cd22 * (y - crpix2) + crval2
+
+        return ra_deg, dec_deg
+   
+    def radectopix(self, ra_deg, dec_deg, coords='data'):
+        """Convert a (ra_deg, dec_deg) space coordinates to (x, y) pixel
+        coordinates on the image.  ra and dec are expected as floats in
+        degrees.
+
+        Parameter (coords):
+        - if 'data' then x, y coordinates are returned as 0-based
+        - otherwise coordinates are returned as 1-based (traditional FITS)
+        """
+        crpix1, crpix2 = self.get_reference_pixel()
+        crval1, crval2 = self.get_physical_reference_pixel()
+        cd11, cd12, cd21, cd22 = self.get_pixel_coordinates()
+
+        # reverse matrix
+        rmatrix = (cd11 * cd22) - (cd12 * cd21)
+
+        if not cmp(rmatrix, 0.0):
+            raise WCSError("WCS Matrix Error: check values")
+
+        # Adjust RA as necessary
+        if (ra_deg - crval1) > 180.0:
+            ra_deg -= 360.0
+        elif (ra_deg - crval1) < -180.0:
+            ra_deg += 360.0
+
+        try:
+            x = (cd22 * math.cos(crval2 * math.pi/180.0) *
+                 (ra_deg - crval1) - cd12 *
+                 (dec_deg - crval2))/rmatrix + crpix1
+            y = (cd11 * (dec_deg - crval2) - cd21 *
+                 math.cos(crval2 * math.pi/180.0) *
+                 (ra_deg - crval1))/rmatrix + crpix2
+
+        except Exception, e:
+            raise WCSError("radectopix calculation error: %s" % str(e))
+
+        # account for FITS->DATA space
+        if coords == 'data':
+            x, y = x - 1, y - 1
+        return (x, y)
+
+    def pixtocoords(self, idxs, system='icrs', coords='data'):
+        return None
+    
 
 class WcslibWCS(AstropyWCS):
     """DO NOT USE--this class name to be deprecated."""
@@ -747,7 +854,7 @@ def choose_coord_system(header):
 
     match = re.match(r'^ELON\-.*$', ctype)
     if match:
-        return 'elliptic'
+        return 'ecliptic'
 
     match = re.match(r'^RA\-\-\-.*$', ctype)
     if match:
@@ -848,17 +955,18 @@ def degToHms(ra):
     """
     assert (ra >= 0.0), WCSError("RA (%f) is negative" % (ra))
     assert ra < 360.0, WCSError("RA (%f) > 360.0" % (ra))
-    rah   = ra/degPerHMSHour
+    rah   = ra / degPerHMSHour
     ramin = (ra % degPerHMSHour) * HMSMinPerDeg
     rasec = (ra % degPerHMSMin)  * HMSSecPerDeg
     return  (int(rah), int(ramin), rasec)
 
-def degToDms(dec):
+def degToDms(dec, isLatitude=True):
     """Convert the dec, in degrees, to an (sign,D,M,S) tuple.
     D and M are integer, and sign and S are float.
     """
-    assert dec <= 90, WCSError("DEC (%f) > 90.0" % (dec))
-    assert dec >= -90, WCSError("DEC (%f) < -90.0" % (dec))
+    if isLatitude:
+        assert dec <= 90, WCSError("DEC (%f) > 90.0" % (dec))
+        assert dec >= -90, WCSError("DEC (%f) < -90.0" % (dec))
 
     if dec < 0.0:
         sign = -1.0
@@ -974,11 +1082,12 @@ def eqToEq2000(ra_deg, dec_deg, eq):
  
     return (new_ra_deg, new_dec_deg)
 
+
 # default
 WCS = BareBonesWCS
 
 # try to use them in this order
-for name in ('kapteyn', 'pyast', 'astropy'):
+for name in ('kapteyn', 'starlink', 'pyast', 'astropy'):
     if use(name):
         break
 

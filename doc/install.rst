@@ -19,7 +19,7 @@ You will need:
 * python (v. 2.7 or higher)
 * numpy
 
-Highly recommended, because some features will not work without them:
+Highly recommended, because some features will not be available without it:
 
 * scipy
 
@@ -27,6 +27,7 @@ For opening FITS files you will need ONE of
 
 * astropy
 * pyfits
+* fitsio
 
 For WCS resolution you will need ONE of 
 
@@ -128,9 +129,9 @@ Unpack, go into the top level directory and::
 
 The reference viewer can then be run using the command "ginga"
 
-======================
-"Binary" Installations
-======================
+==============================
+Platform Specific Instructions
+==============================
 
 Linux
 =====
@@ -173,7 +174,7 @@ The first two methods should provide all the modules necessary to run
 Ginga.  Then install Ginga from source as described above.
 
 With macports you will need to install the necessary packages.  Assuming 
-that you have a working macports installed, it will be something like:
+that you have a working macports installed, it will be something like::
 
     port install python27 
     port install py27-numpy py27-matplotlib py27-pil py27-scipy 

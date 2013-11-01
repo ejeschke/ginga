@@ -10,7 +10,7 @@
 from ginga.gtkw import GtkHelp, gtksel
 import gtk
 
-from ginga import AstroImage
+from ginga import AstroImage, wcs
 from ginga import GingaPlugin
 
 class MultiDim(GingaPlugin.LocalPlugin):
@@ -239,7 +239,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
         #print "path=%s metadata: %s" % (path, str(md))
 
         self.path = path
-        self.fits_f = AstroImage.pyfits.open(path, 'readonly')
+        self.fits_f = wcs.pyfits.open(path, 'readonly')
 
         lower = 1
         upper = len(self.fits_f)

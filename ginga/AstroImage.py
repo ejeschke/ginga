@@ -11,19 +11,15 @@
 import sys, os
 import math
 import logging
-
-from ginga import iqcalc, wcs
 # TEMP
 import time
 
-try:
-    from astropy.io import fits as pyfits
-except ImportError:
-    import pyfits
 import numpy
 
+from ginga import iqcalc, wcs, fits
 from ginga.BaseImage import BaseImage, ImageError, Header
 from ginga.misc import Bunch
+
 
 class AstroImage(BaseImage):
     """
@@ -73,38 +69,23 @@ class AstroImage(BaseImage):
 
     def load_file(self, filepath, numhdu=None, naxispath=None):
         self.logger.debug("Loading file '%s' ..." % (filepath))
+        self.clear_metadata()
+
         self.set(path=filepath)
-        fits_f = pyfits.open(filepath, 'readonly')
+        ahdr = self.get_header()
 
-        # this seems to be necessary now for some fits files...
-        try:
-            fits_f.verify('fix')
-        except Exception, e:
-            raise ImageError("Error loading fits file '%s': %s" % (
-                fitspath, str(e)))
+        loader = fits.get_fitsloader(logger=self.logger)
 
-        if numhdu == None:
-            found_valid_hdu = False
-            for i in range(len(fits_f)):
-                hdu = fits_f[i]
-                if hdu.data == None:
-                    # compressed FITS file or non-pixel data hdu?
-                    continue
-                if not isinstance(hdu.data, numpy.ndarray):
-                    # We need to open a numpy array
-                    continue
-                #print "data type is %s" % hdu.data.dtype.kind
-                # Looks good, let's try it
-                found_valid_hdu = True
-                break
-            
-            if not found_valid_hdu:
-                raise ImageError("No data HDU found that Ginga can open in '%s'" % (
-                    filepath))
-        else:
-            hdu = fits_f[numhdu]
+        data = loader.load_file(filepath, ahdr, numhdu=numhdu,
+                                naxispath=naxispath)
+        self.set_data(data)
         
-        self.load_hdu(hdu, fobj=fits_f, naxispath=naxispath)
+        # Try to make a wcs object on the header
+        # TODO: in order to do more sophisticated WCS (e.g. distortion
+        #   correction) that requires info in additional headers we need
+        #   to pass additional information to the wcs class
+        #self.wcs.load_header(hdu.header, fobj=fobj)
+        self.wcs.load_header(ahdr)
 
         # Set the name to the filename (minus extension) if no name
         # currently exists for this image
@@ -114,7 +95,6 @@ class AstroImage(BaseImage):
             name, ext = os.path.splitext(filename)
             self.set(name=name)
         
-        fits_f.close()
 
     def load_buffer(self, data, dims, dtype, byteswap=False,
                     metadata=None, redraw=True):
@@ -325,9 +305,32 @@ class AstroImage(BaseImage):
         args = [x, y] + self.revnaxis
         return self.wcs.pixtocoords(args, system=system, coords=coords)
     
+    def deg2fmt(self, ra_deg, dec_deg, format):
+
+        rhr, rmn, rsec = wcs.degToHms(ra_deg)
+        dsgn, ddeg, dmn, dsec = wcs.degToDms(dec_deg)
+
+        if format == 'hms':
+            return rhr, rmn, rsec, dsgn, ddeg, dmn, dsec
+
+        elif format == 'str':
+            #ra_txt = '%02d:%02d:%06.3f' % (rhr, rmn, rsec)
+            ra_txt = '%d:%02d:%06.3f' % (rhr, rmn, rsec)
+            if dsgn < 0:
+                dsgn = '-'
+            else:
+                dsgn = '+'
+            #dec_txt = '%s%02d:%02d:%05.2f' % (dsgn, ddeg, dmn, dsec)
+            dec_txt = '%s%d:%02d:%05.2f' % (dsgn, ddeg, dmn, dsec)
+            return ra_txt, dec_txt
+
     def pixtoradec(self, x, y, format='deg', coords='data'):
         args = [x, y] + self.revnaxis
-        return self.wcs.pixtoradec(args, format=format, coords=coords)
+        ra_deg, dec_deg = self.wcs.pixtoradec(args, coords=coords)
+
+        if format == 'deg':
+            return ra_deg, dec_deg
+        return self.deg2fmt(ra_deg, dec_deg, format)
     
     def radectopix(self, ra_deg, dec_deg, coords='data'):
         return self.wcs.radectopix(ra_deg, dec_deg, coords=coords)
@@ -827,22 +830,29 @@ class AstroImage(BaseImage):
                                                         coords='data')
 
                 if format == 'sexagesimal':
-                    deg, min, sec = wcs.degToHms(lon_deg)
-                    ra_txt = '%d:%02d:%06.3f' % (deg, min, sec)
+                    if system in ('galactic', 'ecliptic'):
+                        sign, deg, min, sec = wcs.degToDms(lon_deg,
+                                                           isLatitude=False)
+                        ra_txt = '+%03d:%02d:%06.3f' % (deg, min, sec)
+                    else:
+                        deg, min, sec = wcs.degToHms(lon_deg)
+                        ra_txt = '%02d:%02d:%06.3f' % (deg, min, sec)
 
                     sign, deg, min, sec = wcs.degToDms(lat_deg)
                     if sign < 0:
                         sign = '-'
                     else:
                         sign = '+'
-                    dec_txt = '%s%d:%02d:%06.3f' % (sign, deg, min, sec)
+                    dec_txt = '%s%02d:%02d:%06.3f' % (sign, deg, min, sec)
 
                 else:
                     ra_txt = '%+10.7f' % (lon_deg)
                     dec_txt = '%+10.7f' % (lat_deg)
 
-                if system in ('galactic'):
+                if system == 'galactic':
                     ra_lbl, dec_lbl = "l", "b"
+                elif system == 'ecliptic':
+                    ra_lbl, dec_lbl = u"\u03BB", u"\u03B2"
 
         except Exception, e:
             self.logger.warn("Bad coordinate conversion: %s" % (
@@ -875,5 +885,6 @@ class AstroHeader(Header):
             for card in header.ascardlist():
                 bnch = self.__setitem__(card.key, card.value)
                 bnch.comment = card.comment
+
 
 #END

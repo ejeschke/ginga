@@ -11,7 +11,7 @@ import time
 import threading
 from ginga.qtw.QtHelp import QtGui, QtCore
 from ginga.qtw import QtHelp
-from ginga import AstroImage, GingaPlugin
+from ginga import AstroImage, GingaPlugin, wcs
 
 
 class MultiDim(GingaPlugin.LocalPlugin):
@@ -241,7 +241,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
         self.logger.debug("path=%s metadata: %s" % (path, str(md)))
 
         self.path = path
-        self.fits_f = AstroImage.pyfits.open(path, 'readonly')
+        self.fits_f = wcs.pyfits.open(path, 'readonly')
         self.hdu_cache_clear()
 
         self.num_hdu = len(self.fits_f)

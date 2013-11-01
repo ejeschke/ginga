@@ -431,6 +431,9 @@ class Header(dict):
     def keys(self):
         return self.keyorder
     
+    def items(self):
+        return [(key, self[key]) for key in self.keys()]
+    
     def get(self, key, alt=None):
         try:
             return self.__getitem__(key)
