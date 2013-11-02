@@ -103,7 +103,7 @@ class PyFitsFileHandler(BaseFitsFileHandler):
                 data = data[idx]
 
         self.fromHDU(hdu, ahdr)
-        return data
+        return (data, naxispath)
 
     def load_file(self, filepath, ahdr, numhdu=None, naxispath=None):
         self.logger.info("Loading file '%s' ..." % (filepath))
@@ -137,10 +137,10 @@ class PyFitsFileHandler(BaseFitsFileHandler):
         else:
             hdu = fits_f[numhdu]
 
-        data = self.load_hdu(hdu, ahdr, fobj=fits_f,
-                             naxispath=naxispath)
+        data, naxispath = self.load_hdu(hdu, ahdr, fobj=fits_f,
+                                        naxispath=naxispath)
         fits_f.close()
-        return data
+        return (data, naxispath)
 
     def create_fits(self, data, header):
         fits_f = pyfits.HDUList()
@@ -190,7 +190,7 @@ class FitsioFileHandler(BaseFitsFileHandler):
                 data = data[idx]
 
         self.fromHDU(hdu, ahdr)
-        return data
+        return (data, naxispath)
         
     def load_file(self, filepath, ahdr, numhdu=None, naxispath=None):
         self.logger.info("Loading file '%s' ..." % (filepath))
@@ -215,10 +215,10 @@ class FitsioFileHandler(BaseFitsFileHandler):
         else:
             hdu = fits_f[numhdu]
 
-        data = self.load_hdu(hdu, ahdr, fobj=fits_f,
-                             naxispath=naxispath)
+        data, naxispath = self.load_hdu(hdu, ahdr, fobj=fits_f,
+                                        naxispath=naxispath)
         fits_f.close()
-        return data
+        return (data, naxispath)
 
     def create_fits(self, data, header):
         fits_f = pyfits.HDUList()

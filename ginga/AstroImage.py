@@ -42,6 +42,9 @@ class AstroImage(BaseImage):
         self.revnaxis = []
 
     def load_hdu(self, hdu, fobj=None, naxispath=None):
+        self.naxispath = []
+        self.revnaxis = []
+
         data = hdu.data
         if len(data.shape) < 2:
             # Expand 1D arrays into 1xN array
@@ -76,8 +79,12 @@ class AstroImage(BaseImage):
 
         loader = fits.get_fitsloader(logger=self.logger)
 
-        data = loader.load_file(filepath, ahdr, numhdu=numhdu,
-                                naxispath=naxispath)
+        data, naxispath = loader.load_file(filepath, ahdr, numhdu=numhdu,
+                                           naxispath=naxispath)
+        self.naxispath = naxispath
+        self.revnaxis = list(naxispath)
+        self.revnaxis.reverse()
+
         self.set_data(data)
         
         # Try to make a wcs object on the header
@@ -333,7 +340,8 @@ class AstroImage(BaseImage):
         return self.deg2fmt(ra_deg, dec_deg, format)
     
     def radectopix(self, ra_deg, dec_deg, coords='data'):
-        return self.wcs.radectopix(ra_deg, dec_deg, coords=coords)
+        return self.wcs.radectopix(ra_deg, dec_deg, coords=coords,
+                                   naxispath=self.revnaxis)
 
     def dispos(self, dra0, decd0, dra, decd):
         """
@@ -825,7 +833,10 @@ class AstroImage(BaseImage):
                 ra_txt = dec_txt = 'NO WCS'
 
             else:
-                lon_deg, lat_deg = self.wcs.pixtosystem((data_x, data_y),
+                args = [data_x, data_y] + self.revnaxis
+    
+                lon_deg, lat_deg = self.wcs.pixtosystem(#(data_x, data_y),
+                    args,
                                                         system=system,
                                                         coords='data')
 

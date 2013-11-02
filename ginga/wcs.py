@@ -236,16 +236,20 @@ class AstropyWCS(BaseWCS):
 
         return ra_deg, dec_deg
     
-    def radectopix(self, ra_deg, dec_deg, coords='data'):
+    def radectopix(self, ra_deg, dec_deg, coords='data', naxispath=None):
 
         if coords == 'data':
             origin = 0
         else:
             origin = 1
 
-        skycrd = numpy.array([[ra_deg, dec_deg]], numpy.float_)
+        args = [ra_deg, dec_deg]
+        if naxispath:
+            args += [0] * len(naxispath)
+        skycrd = numpy.array([args], numpy.float_)
+
         try:
-            pix = self.wcs.wcs_sky2pix(skycrd, origin)
+            #pix = self.wcs.wcs_sky2pix(skycrd, origin)
             # Doesn't seem to be a all_sky2pix
             #pix = self.wcs.all_sky2pix(skycrd, origin)
             # astropy only?
@@ -392,10 +396,9 @@ class AstLibWCS(BaseWCS):
                         radecsys = 'ICRS'
 
             radecsys = radecsys.strip().upper()
-            if radecsys in ('IRCS', 'FK5'):
-                return 'j2000'
-
-            return 'b1950'
+            if radecsys in ('FK4', ):
+                return 'b1950'
+            return 'j2000'
 
         #raise WCSError("Cannot determine appropriate coordinate system from FITS header")
         return 'j2000'
@@ -417,7 +420,7 @@ class AstLibWCS(BaseWCS):
         
         return ra_deg, dec_deg
     
-    def radectopix(self, ra_deg, dec_deg, coords='data'):
+    def radectopix(self, ra_deg, dec_deg, coords='data', naxispath=None):
         try:
             x, y = self.wcs.wcs2pix(ra_deg, dec_deg)
 
@@ -446,6 +449,7 @@ class AstLibWCS(BaseWCS):
         # convert to alternate coord
         try:
             fromsys = self.coordsys.upper()
+
             tosys = system.upper()
             if fromsys == 'B1950':
                 equinox = 1950.0
@@ -513,6 +517,7 @@ class KapteynWCS(BaseWCS):
             idxs = tuple(map(lambda x: x+1, idxs))
         else:
             idxs = tuple(idxs)
+        print "indexes=%s" % (str(idxs))
             
         try:
             res = self.wcs.toworld(idxs)
@@ -524,9 +529,14 @@ class KapteynWCS(BaseWCS):
         
         return ra_deg, dec_deg
     
-    def radectopix(self, ra_deg, dec_deg, coords='data'):
+    def radectopix(self, ra_deg, dec_deg, coords='data', naxispath=None):
+        args = [ra_deg, dec_deg]
+        if naxispath:
+            args += [0] * len(naxispath)
+        args = tuple(args)
+
         try:
-            pix = self.wcs.topixel((ra_deg, dec_deg))
+            pix = self.wcs.topixel(args)
 
         except Exception, e:
             print ("Error calculating radectopix: %s" % (str(e)))
@@ -638,7 +648,7 @@ class StarlinkWCS(BaseWCS):
         
         return ra_deg, dec_deg
     
-    def radectopix(self, ra_deg, dec_deg, coords='data'):
+    def radectopix(self, ra_deg, dec_deg, coords='data', naxispath=None):
         try:
             # sky coords to pixel (in the WCS specified transform)
             ra_rad, dec_rad = math.radians(ra_deg), math.radians(dec_deg)
@@ -774,7 +784,7 @@ class BareBonesWCS(BaseWCS):
 
         return ra_deg, dec_deg
    
-    def radectopix(self, ra_deg, dec_deg, coords='data'):
+    def radectopix(self, ra_deg, dec_deg, coords='data', naxispath=None):
         """Convert a (ra_deg, dec_deg) space coordinates to (x, y) pixel
         coordinates on the image.  ra and dec are expected as floats in
         degrees.
