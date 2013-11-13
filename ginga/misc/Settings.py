@@ -14,21 +14,6 @@ import numpy
 import Callback
 import Bunch
 
-have_configobj = False
-try:
-    # use astropy's version of ConfigObj class if available
-    from astropy.config.configuration import configobj
-    have_configobj = True
-
-except ImportError:
-    try:
-        import configobj
-        have_configobj = True
-    except ImportError:
-        pass
-
-# for testing
-#have_configobj = False
 
 unset_value = ("^^UNSET^^")
 
@@ -160,33 +145,23 @@ class SettingGroup(object):
     def load(self, onError='raise'):
         try:
             d = {}
-            if have_configobj:
-                obj = configobj.ConfigObj(self.preffile, unrepr=True)
-                # Reuse configobj, so we save comments
-                self._cfgobj = obj
-                if not os.path.exists(self.preffile):
-                    raise OSError("File does not exist: %s" % (self.preffile))
-                for key, value in obj.items():
-                    d[key] = value
-
-            else:
-                with open(self.preffile, 'r') as in_f:
-                    buf = in_f.read()
-                for line in buf.split('\n'):
-                    line = line.strip()
-                    # skip comments and anything that doesn't look like an
-                    # assignment
-                    if line.startswith('#') or (not ('=' in line)):
+            with open(self.preffile, 'r') as in_f:
+                buf = in_f.read()
+            for line in buf.split('\n'):
+                line = line.strip()
+                # skip comments and anything that doesn't look like an
+                # assignment
+                if line.startswith('#') or (not ('=' in line)):
+                    continue
+                else:
+                    try:
+                        i = line.index('=')
+                        key = line[:i].strip()
+                        val = eval(line[i+1:].strip())
+                        d[key] = val
+                    except Exception, e:
+                        # silently skip parse errors, for now
                         continue
-                    else:
-                        try:
-                            i = line.index('=')
-                            key = line[:i].strip()
-                            val = eval(line[i+1:].strip())
-                            d[key] = val
-                        except Exception, e:
-                            # silently skip parse errors, for now
-                            continue
                         
             self.setDict(d)
         except Exception, e:
@@ -218,21 +193,12 @@ class SettingGroup(object):
         # sanitize data -- hard to parse NaN or Inf
         self._check(d)
         try:
-            if have_configobj:
-                if self._cfgobj != None:
-                    obj = self._cfgobj
-                else:
-                    obj = configobj.ConfigObj(unrepr=True)
-                    obj.filename = self.preffile
-                obj.update(d)
-                obj.write()
-            else:
-                # sort keys for easy reading/editing
-                keys = list(d.keys())
-                keys.sort()
-                with open(self.preffile, 'w') as out_f:
-                    for key in keys:
-                        out_f.write("%s = %s\n" % (key, repr(d[key])))
+            # sort keys for easy reading/editing
+            keys = list(d.keys())
+            keys.sort()
+            with open(self.preffile, 'w') as out_f:
+                for key in keys:
+                    out_f.write("%s = %s\n" % (key, repr(d[key])))
                         
         except Exception, e:
             errmsg = "Error opening settings file (%s): %s" % (

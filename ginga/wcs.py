@@ -28,6 +28,7 @@ you.
 
 import math
 import re
+from collections import OrderedDict
 
 import numpy
 
@@ -142,8 +143,171 @@ def use(wcspkg):
 display_types = ['sexagesimal', 'degrees']
 
 
+def get_rotation_and_scale(header):
+    """
+    CREDIT: See IDL code at
+    # http://www.astro.washington.edu/docs/idl/cgi-bin/getpro/library32.html?GETROT
+    """
+    # TODO: need to do the right thing if only PC?_? and CDELT?
+    # keywords are given
+    #
+    cd1_1 = header['CD1_1']
+    cd1_2 = header['CD1_2']
+    cd2_1 = header['CD2_1']
+    cd2_2 = header['CD2_2']
+
+    try:
+        # Image has plate scale keywords?
+        cdelt1 = header['CDELT1']
+        cdelt2 = header['CDELT2']
+        s = float(cdelt1) / float(cdelt2)
+        xrot = math.atan2(cd2_1*s, cd1_1)
+        yrot = math.atan2(-cd1_2/s, cd2_2)
+
+    except KeyError:
+        # No, calculate them
+        det = cd1_1*cd2_2 - cd1_2*cd2_1
+        if det < 0:
+            sgn = -1
+        else:
+            sgn = 1
+        ## if det > 0:
+        ##     print 'WARNING - Astrometry is for a right-handed coordinate system'
+
+        if (cd2_1 == 0.0) or (cd1_2 == 0.0):
+            # Unrotated coordinates?
+            xrot = 0.0
+            yrot = 0.0
+            cdelt1 = cd1_1
+            cdelt2 = cd2_2
+        else:
+            cdelt1 = sgn * math.sqrt(cd1_1**2 + cd2_1**2)
+            cdelt2 = math.sqrt(cd1_2**2 + cd2_2**2)
+            if cdelt1 > 0:
+                sgn1 = 1
+            else:
+                sgn1 = -1
+            xrot  = math.atan2(-cd2_1, sgn1*cd1_1) 
+            yrot = math.atan2(sgn1*cd1_2, cd2_2) 
+
+    xrot, yrot = math.degrees(xrot), math.degrees(yrot)
+    if xrot != yrot:
+        print 'X axis rotation: %f Y axis rotation: %f' % (
+            math.degrees(xrot), math.degrees(yrot))
+        rot = (xrot + yrot) / 2.0
+    else:
+        rot = xrot
+
+    cdelt1, cdelt2 = math.degrees(cdelt1), math.degrees(cdelt2)
+    return (rot, cdelt1, cdelt2)
+
+
+class WcsMatch(object):
+    """
+    CREDIT: Code modified from
+      http://www.astropython.org/snippet/2011/1/Fix-the-WCS-for-a-FITS-image-file
+    """
+    def __init__(self, header, wcsClass, xy_coords, ref_coords):
+        # Image 
+        self.hdr = header
+        from ginga.misc.log import NullLogger
+        self.wcs = wcsClass(NullLogger())
+        self.wcs.load_header(self.hdr)
+
+        # Reference (correct) source positions in RA, Dec
+        self.ref_coords = numpy.array(ref_coords)
+
+        # Get source pixel positions from reference coords
+        #xy_coords = map(lambda args: self.wcs.radectopix(*args), img_coords)
+        self.pix0 = numpy.array(xy_coords).flatten()
+
+        # Copy the original WCS CRVAL and CD values
+        self.has_cd = False
+        self.crval = numpy.array(self.wcs.get_keywords('CRVAL1', 'CRVAL2'))
+        try:
+            cd = numpy.array(self.wcs.get_keywords('CD1_1', 'CD1_2',
+                                                   'CD2_1', 'CD2_2'))
+            self.cd = cd.reshape((2, 2))
+            self.has_cd = True
+        except KeyError:
+            cd = numpy.array(self.wcs.get_keywords('PC1_1', 'PC1_2',
+                                                   'PC2_1', 'PC2_2'))
+            self.cd = cd.reshape((2, 2))
+
+    def rotate(self, degs):
+        rads = numpy.radians(degs)
+        s = numpy.sin(rads)
+        c = numpy.cos(rads)
+        return numpy.array([[c, -s],
+                            [s, c]])
+
+    def calc_pix(self, pars):
+        """For the given d_ra, d_dec, and d_theta pars, update the WCS
+        transformation and calculate the new pixel coordinates for each
+        reference source position.
+        """
+        # calculate updated ra/dec and rotation
+        d_ra, d_dec, d_theta = pars
+        crval = self.crval + numpy.array([d_ra, d_dec]) / 3600.0
+        cd = numpy.dot(self.rotate(d_theta), self.cd)
+
+        # temporarily assign to the WCS
+        d = self.hdr
+        d.update(dict(CRVAL1=crval[0], CRVAL2=crval[1]))
+        if self.has_cd:
+            d.update(dict(CD1_1=cd[0,0], CD1_2=cd[0,1], CD2_1=cd[1,0], CD2_2=cd[1,1]))
+        else:
+            d.update(dict(PC1_1=cd[0,0], PC1_2=cd[0,1], PC2_1=cd[1,0], PC2_2=cd[1,1]))
+        self.wcs.load_header(self.hdr)
+
+        # calculate the new pixel values based on this wcs
+        pix = numpy.array(map(lambda args: self.wcs.radectopix(*args),
+                              self.ref_coords)).flatten()
+
+        #print 'pix =', pix
+        #print 'pix0 =', self.pix0
+        return pix
+
+    def calc_resid2(self, pars):
+        """Return the squared sum of the residual difference between the
+        original pixel coordinates and the new pixel coords (given offset
+        specified in ``pars``)
+        
+        This gets called by the scipy.optimize.fmin function.
+        """
+        pix = self.calc_pix(pars)
+        resid2 = numpy.sum((self.pix0 - pix) ** 2) # assumes uniform errors
+        #print 'resid2 =', resid2
+        return resid2
+
+    def calc_match(self):
+        from scipy.optimize import fmin
+        x0 = numpy.array([0.0, 0.0, 0.0])
+
+        d_ra, d_dec, d_theta = fmin(self.calc_resid2, x0)
+
+        crval = self.crval + numpy.array([d_ra, d_dec]) / 3600.0
+        cd = numpy.dot(self.rotate(d_theta), self.cd)
+
+        d = self.hdr
+        d.update(dict(CRVAL1=crval[0], CRVAL2=crval[1]))
+        if self.has_cd:
+            d.update(dict(CD1_1=cd[0,0], CD1_2=cd[0,1], CD2_1=cd[1,0], CD2_2=cd[1,1]))
+        else:
+            d.update(dict(PC1_1=cd[0,0], PC1_2=cd[0,1], PC2_1=cd[1,0], PC2_2=cd[1,1]))
+        self.wcs.load_header(self.hdr)
+        
+        # return delta ra/dec and delta rotation
+        return (d_ra, d_dec, d_theta)
+
 class BaseWCS(object):
 
+    def get_keyword(self, key):
+        return self.header[key]
+        
+    def get_keywords(self, *args):
+        return map(lambda key: self.header[key], args)
+        
     def fix_bad_headers(self):
         """Fix up bad headers that cause problems for WCSLIB.
         Subclass can override this method to fix up issues with the
@@ -188,18 +352,23 @@ class AstropyWCS(BaseWCS):
         self.kind = 'astropy/WCSLIB'
 
     def load_header(self, header, fobj=None):
-        if isinstance(header, pyfits.Header):
-            self.header = header
-        else:
-            # pywcs only operates on pyfits headers
-            self.header = pyfits.Header()
-            for kwd in header.keys():
-                try:
-                    bnch = header.get_card(kwd)
-                    self.header.update(kwd, bnch.value, comment=bnch.comment)
-                except Exception, e:
-                    self.logger.warn("Error setting keyword '%s': %s" % (
-                            kwd, str(e)))
+        ## if isinstance(header, pyfits.Header):
+        ##     self.header = header
+        ## else:
+        ##     # pywcs only operates on pyfits headers
+        ##     self.header = pyfits.Header()
+        ##     for kwd in header.keys():
+        ##         try:
+        ##             bnch = header.get_card(kwd)
+        ##             self.header.update(kwd, bnch.value, comment=bnch.comment)
+        ##         except Exception, e:
+        ##             self.logger.warn("Error setting keyword '%s': %s" % (
+        ##                     kwd, str(e)))
+        self.header = {}
+        # Seems pyfits header objects are not perfectly duck-typed as dicts
+        #self.header.update(header)
+        for key, value in header.items():
+            self.header[key] = value
 
         self.fix_bad_headers()
         
@@ -211,9 +380,6 @@ class AstropyWCS(BaseWCS):
             self.logger.error("Error making WCS object: %s" % (str(e)))
             self.wcs = None
 
-    def get_keyword(self, key):
-        return self.header[key]
-        
     def pixtoradec(self, idxs, coords='data'):
 
         if coords == 'data':
@@ -333,18 +499,11 @@ class AstLibWCS(BaseWCS):
         self.kind = 'astlib/wcstools'
 
     def load_header(self, header, fobj=None):
-        if isinstance(header, pyfits.Header):
-            self.header = header
-        else:
-            # astLib stores internally as pyfits header
-            self.header = pyfits.Header()
-            for kwd in header.keys():
-                try:
-                    bnch = header.get_card(kwd)
-                    self.header.update(kwd, bnch.value, comment=bnch.comment)
-                except Exception, e:
-                    self.logger.warn("Error setting keyword '%s': %s" % (
-                            kwd, str(e)))
+        self.header = {}
+        # Seems pyfits header objects are not perfectly duck-typed as dicts
+        #self.header.update(header)
+        for key, value in header.items():
+            self.header[key] = value
 
         self.fix_bad_headers()
         
@@ -403,9 +562,6 @@ class AstLibWCS(BaseWCS):
         #raise WCSError("Cannot determine appropriate coordinate system from FITS header")
         return 'j2000'
 
-    def get_keyword(self, key):
-        return self.header[key]
-        
     def pixtoradec(self, idxs, coords='data'):
         if coords == 'fits':
             # Via astWCS.NUMPY_MODE, we've forced pixels referenced from 0
@@ -494,6 +650,8 @@ class KapteynWCS(BaseWCS):
     def load_header(self, header, fobj=None):
         # For kapteyn, header just needs to be duck-typed like a dict
         self.header = {}
+        # Seems pyfits header objects are not perfectly duck-typed as dicts
+        #self.header.update(header)
         for key, value in header.items():
             self.header[key] = value
 
@@ -508,16 +666,13 @@ class KapteynWCS(BaseWCS):
             self.logger.error("Error making WCS object: %s" % (str(e)))
             self.wcs = None
 
-    def get_keyword(self, key):
-        return self.header[key]
-        
     def pixtoradec(self, idxs, coords='data'):
         # Kapteyn's WCS needs pixels referenced from 1
         if coords == 'data':
             idxs = tuple(map(lambda x: x+1, idxs))
         else:
             idxs = tuple(idxs)
-        print "indexes=%s" % (str(idxs))
+        #print "indexes=%s" % (str(idxs))
             
         try:
             res = self.wcs.toworld(idxs)
@@ -591,20 +746,30 @@ class StarlinkWCS(BaseWCS):
 
     def load_header(self, header, fobj=None):
         # For starlink, header is pulled in via pyfits adapter
-        hdu = pyfits.PrimaryHDU()
-        self.header = hdu.header
+        ## hdu = pyfits.PrimaryHDU()
+        ## self.header = hdu.header
+        ## for key, value in header.items():
+        ##     self.header[key] = value
+        self.header = {}
+        # Seems pyfits header objects are not perfectly duck-typed
+        # as dicts so we can't use update()
         for key, value in header.items():
             self.header[key] = value
 
         self.fix_bad_headers()
+
+        source = []
+        for key, value in header.items():
+            source.append("%-8.8s= %-70.70s" % (key, repr(value)))
 
         # following https://gist.github.com/dsberry/4171277 to get a
         # usable WCS in Ast
 
         try:
             # read in the header and create the default WCS transform
-            adapter = Atl.PyFITSAdapter(hdu)
-            fitschan = Ast.FitsChan(adapter)
+            #adapter = Atl.PyFITSAdapter(hdu)
+            #fitschan = Ast.FitsChan(adapter)
+            fitschan = Ast.FitsChan(source)
             self.wcs = fitschan.read()
             # self.wcs is a FrameSet, with a Mapping
             #self.wcs.Report = True
@@ -620,9 +785,6 @@ class StarlinkWCS(BaseWCS):
             self.logger.error("Error making WCS object: %s" % (str(e)))
             self.wcs = None
 
-    def get_keyword(self, key):
-        return self.header[key]
-        
     def pixtoradec(self, idxs, coords='data'):
         # Starlink's WCS needs pixels referenced from 1
         if coords == 'data':
@@ -718,9 +880,6 @@ class BareBonesWCS(BaseWCS):
         self.fix_bad_headers()
         self.coordsys = choose_coord_system(self.header)
 
-    def get_keyword(self, key):
-        return self.header[key]
-        
     # WCS calculations
     def get_reference_pixel(self):
         x = float(self.get_keyword('CRPIX1'))

@@ -172,7 +172,7 @@ class Pick(PickBase.PickBase):
         hbox.addWidget(btn, stretch=0)
         vbox2.addWidget(hbox, stretch=0)
 
-        nb.addTab(vbox2, "Report")
+        nb.addTab(vbox2, "Readout")
 
         # Build settings panel
         captions = (('Show Candidates', 'checkbutton'),
@@ -311,6 +311,44 @@ class Pick(PickBase.PickBase):
 
         nb.addTab(w, "Controls")
 
+        vbox3 = QtHelp.VBox()
+        tw = QtGui.QPlainTextEdit()
+        self.w.report = tw
+        tw.setLineWrapMode(QtGui.QPlainTextEdit.NoWrap)
+        vbox3.addWidget(self.w.report, stretch=1)
+        self._appendText(tw, self._mkreport_header())
+        
+        btns = QtHelp.HBox()
+        layout = btns.layout()
+        layout.setSpacing(3)
+
+        btn = QtGui.QPushButton("Add Pick")
+        btn.clicked.connect(self.add_pick_cb)
+        layout.addWidget(btn, stretch=0, alignment=QtCore.Qt.AlignLeft)
+        btn = QtGui.QCheckBox("Record Picks")
+        btn.setChecked(self.do_record)
+        btn.stateChanged.connect(self.record_cb)
+        layout.addWidget(btn, stretch=0, alignment=QtCore.Qt.AlignLeft)
+        vbox3.addWidget(btns, stretch=0, alignment=QtCore.Qt.AlignLeft)
+        nb.addTab(vbox3, "Report")
+
+        ## vbox4 = QtHelp.VBox()
+        ## tw = QtGui.QPlainTextEdit()
+        ## self.w.correct = tw
+        ## tw.setLineWrapMode(QtGui.QPlainTextEdit.NoWrap)
+        ## self._appendText(tw, "# paste a reference report here")
+        ## vbox4.addWidget(self.w.correct, stretch=1)
+        
+        ## btns = QtHelp.HBox()
+        ## layout = btns.layout()
+        ## layout.setSpacing(3)
+
+        ## btn = QtGui.QPushButton("Correct WCS")
+        ## btn.clicked.connect(self.correct_wcs)
+        ## layout.addWidget(btn, stretch=0, alignment=QtCore.Qt.AlignLeft)
+        ## vbox4.addWidget(btns, stretch=0, alignment=QtCore.Qt.AlignLeft)
+        ## nb.addTab(vbox4, "Correct")
+
         btns = QtHelp.HBox()
         layout = btns.layout()
         layout.setSpacing(3)
@@ -329,8 +367,20 @@ class Pick(PickBase.PickBase):
     def _setText(self, w, text):
         w.setText(text)
         
+    def _appendText(self, w, text):
+        w.appendPlainText(text)
+        
+    def _copyText(self, w):
+        return w.toPlainText()
+        
+    def _getText(self, w):
+        return w.toPlainText()
+        
     def _setEnabled(self, w, tf):
         w.setEnabled(tf)
+        
+    def record_cb(self, do_record):
+        self.do_record = bool(do_record)
         
     def instructions(self):
         self.tw.setText("""Left-click to place region.  Left-drag to position region.  Redraw region with the right mouse button.""")
@@ -353,6 +403,33 @@ class Pick(PickBase.PickBase):
             # Delete previous peak marks
             objs = self.fitsimage.getObjectsByTagpfx('peak')
             self.fitsimage.deleteObjects(objs, redraw=True)
+        
+    def adjust_wcs(self, image, wcs_m, tup):
+        d_ra, d_dec, d_theta = tup
+        msg = "Calculated shift: dra, ddec = %f, %f\n" % (
+            d_ra/3600.0, d_dec/3600.0)
+        msg += "Calculated rotation: %f deg\n" % (d_theta)
+        msg += "\nAdjust WCS?"
+        
+        dialog = QtHelp.Dialog("Adjust WCS",
+                               0,
+                               [['Cancel', 0], ['Ok', 1]],
+                               lambda w, rsp: self.adjust_wcs_cb(w, rsp, image, wcs_m))
+        box = dialog.get_content_area()
+        layout = QtGui.QVBoxLayout()
+        box.setLayout(layout)
+        
+        layout.addWidget(QtGui.QLabel(msg), stretch=1)
+        dialog.show()
+
+    def adjust_wcs_cb(self, w, rsp, image, wcs_m):
+        w.close()
+        if rsp == 0:
+            return
+
+        #image.wcs = wcs_m.wcs
+        image.update_keywords(wcs_m.hdr)
+        return True
         
     def plot_scroll(self, event):
         delta = event.delta()

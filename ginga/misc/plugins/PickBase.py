@@ -53,6 +53,8 @@ class PickBase(GingaPlugin.LocalPlugin):
         self.min_ellipse = 0.5
         self.edgew = 0.01
         self.show_candidates = False
+        self.do_record = False
+        self.last_report = None
 
         self.plot_panx = 0.5
         self.plot_pany = 0.5
@@ -403,6 +405,19 @@ class PickBase(GingaPlugin.LocalPlugin):
                 self.fv.gui_do(self.update_pick, serialnum, results, qs,
                                x1, y1, wd, ht, fig, msg)
 
+    def _mkreport_header(self):
+        rpt = "# ra, dec, eq, x, y, fwhm, fwhm_x, fwhm_y, ellip, bg, sky, bright"
+        return rpt
+    
+    def _mkreport(self, image, qs):
+        equinox = 2000.0
+        ra_deg, dec_deg = image.pixtoradec(qs.objx, qs.objy, coords='data')
+        rpt = "%f, %f, %6.1f, %f, %f, %f, %f, %f, %f, %f, %f, %f" % (
+            ra_deg, dec_deg, equinox, qs.objx, qs.objy,
+            qs.fwhm, qs.fwhm_x, qs.fwhm_y, qs.elipse,
+            qs.background, qs.skylevel, qs.brightness)
+        return rpt
+    
     def update_pick(self, serialnum, objlist, qs, x1, y1, wd, ht, fig, msg):
         if serialnum != self.get_serial():
             return
@@ -467,16 +482,20 @@ class PickBase(GingaPlugin.LocalPlugin):
             point.color = 'cyan'
             #self.fitsimage.panset_xy(obj_x, obj_y, redraw=False)
 
+            equinox = float(image.get_keyword('EQUINOX', 2000.0))
             # Calc RA, DEC, EQUINOX of X/Y center pixel
             try:
                 ra_txt, dec_txt = image.pixtoradec(obj_x, obj_y, format='str')
+                self.last_rpt = self._mkreport(image, qs)
+                if self.do_record:
+                    self._appendText(self.w.report, self.last_rpt)
+
             except Exception, e:
                 ra_txt = 'WCS ERROR'
                 dec_txt = 'WCS ERROR'
             self._setText(self.wdetail.ra, ra_txt)
             self._setText(self.wdetail.dec, dec_txt)
 
-            equinox = image.get_keyword('EQUINOX', 'UNKNOWN')
             self._setText(self.wdetail.equinox, str(equinox))
 
             # TODO: Get separate FWHM for X and Y
@@ -751,13 +770,6 @@ class PickBase(GingaPlugin.LocalPlugin):
 
         return (x1, y1, x2, y2, data)
 
-    def show_candidates_cb(self, w):
-        self.show_candidates = w.get_active()
-        if not self.show_candidates:
-            # Delete previous peak marks
-            objs = self.fitsimage.getObjectsByTagpfx('peak')
-            self.fitsimage.deleteObjects(objs, redraw=True)
-        
     def pan_plot(self, xdelta, ydelta):
         x1, x2 = self.w.ax.get_xlim()
         y1, y2 = self.w.ax.get_ylim()
@@ -766,5 +778,45 @@ class PickBase(GingaPlugin.LocalPlugin):
         self.w.ax.set_ylim(y1+ydelta, y2+ydelta)
         self.w.canvas.draw()
         
+    def add_pick_cb(self):
+        if self.last_rpt != None:
+            self._appendText(self.w.report, self.last_rpt)
+
+    def correct_wcs(self):
+        # small local function to strip comment and blank lines
+        def _flt(line):
+            line = line.strip()
+            if line.startswith('#'):
+                return False
+            if len(line) == 0:
+                return False
+            return True
+
+        # extract image and reference coords from text widgets
+        txt1 = self._getText(self.w.report)
+        lines1 = filter(_flt, txt1.split('\n'))
+        txt2 = self._getText(self.w.correct)
+        lines2 = filter(_flt, txt2.split('\n'))
+        assert len(lines1) == len(lines2), \
+               Exception("Number of lines don't match in reports")
+
+        img_coords = map(lambda l: map(float, l.split(',')[3:5]), lines1)
+        #print "img coords:", img_coords
+        ref_coords = map(lambda l: map(float, l.split(',')[0:2]), lines2)
+        #print "ref coords:", ref_coords
+
+        image = self.fitsimage.get_image()
+        self.fv.nongui_do(self._calc_match, image, img_coords, ref_coords)
+
+    def _calc_match(self, image, img_coords, ref_coords):
+        # NOTE: this function is run in a non-gui thread!
+        try:
+            wcs_m, tup = image.match_wcs(img_coords, ref_coords)
+            self.fv.gui_do(self.adjust_wcs, image, wcs_m, tup)
+
+        except Exception as e:
+            errmsg = "Error calculating WCS match: %s" % (str(e))
+            self.fv.gui_do(self.fv.show_error, errmsg)
+            return
 
 #END

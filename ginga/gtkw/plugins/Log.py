@@ -34,8 +34,6 @@ class Log(GingaPlugin.GlobalPlugin):
         tw.set_left_margin(4)
         tw.set_right_margin(4)
         tw.set_editable(False)
-        tw.set_left_margin(4)
-        tw.set_right_margin(4)
         tw.modify_font(self.msgFont)
         self.tw = tw
         self.buf = self.tw.get_buffer()

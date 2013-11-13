@@ -421,6 +421,21 @@ def combo_box_new_text():
     return combobox
 
 
+class Dialog(gtk.Dialog):
+    def __init__(self, title=None, flags=None, buttons=None,
+                 callback=None):
+
+        button_list = []
+        for name, val in buttons:
+            button_list.extend([name, val])
+
+        super(Dialog, self).__init__(title=title, flags=flags,
+                                     buttons=tuple(button_list))
+        #self.w.connect("close", self.close)
+        if callback:
+            self.connect("response", callback)
+
+        
 class Desktop(Callback.Callbacks):
 
     def __init__(self):

@@ -16,19 +16,7 @@ import time
 
 from ginga.misc import Callback, Settings
 from ginga import RGBMap, AstroImage, AutoCuts
-from ginga import cmap, imap, version
-
-try:
-    # optional numexpr package speeds up certain combined numpy array
-    # operations, especially rotation
-    import numexpr as ne
-    have_numexpr = True
-
-except ImportError:
-    have_numexpr = False
-
-# For testing
-#have_numexpr = False
+from ginga import cmap, imap, trcalc, version
 
 
 class ImageViewError(Exception):
@@ -855,54 +843,18 @@ class ImageViewBase(Callback.Callbacks):
         self.logger.debug("reshape time %.3f sec" % (
             split_time - start_time))
 
+        # dimensions may have changed in a swap axes
         wd, ht = self.get_dims(data)
 
         # Rotate the image as necessary
-        rotctr_x, rotctr_y = wd // 2, ht // 2
         if rot_deg != 0:
             # TODO: this is the slowest part of the rendering
             # need to find a way to speed it up!
-            yi, xi = numpy.mgrid[0:ht, 0:wd]
-            xi -= rotctr_x
-            yi -= rotctr_y
-            cos_t = numpy.cos(numpy.radians(-rot_deg))
-            sin_t = numpy.sin(numpy.radians(-rot_deg))
-
-            #t1 = time.time()
-            if have_numexpr:
-                ap = ne.evaluate("(xi * cos_t) - (yi * sin_t) + rotctr_x")
-                bp = ne.evaluate("(xi * sin_t) + (yi * cos_t) + rotctr_y")
-            else:
-                ap = (xi * cos_t) - (yi * sin_t) + rotctr_x
-                bp = (xi * sin_t) + (yi * cos_t) + rotctr_y
-            #print "rotation in %.5f sec" % (time.time() - t1)
-
-            #ap = numpy.rint(ap).astype('int').clip(0, wd-1)
-            #bp = numpy.rint(bp).astype('int').clip(0, ht-1)
-            # Optomizations to reuse existing intermediate arrays
-            numpy.rint(ap, out=ap)
-            ap = ap.astype('int')
-            ap.clip(0, wd-1, out=ap)
-            numpy.rint(bp, out=bp)
-            bp = bp.astype('int')
-            bp.clip(0, ht-1, out=bp)
-            
-            newdata = data[bp, ap]
-            new_wd, new_ht = self.get_dims(newdata)
-            self.logger.debug("rotated shape is %dx%d" % (new_wd, new_ht))
-
-            assert (wd == new_wd) and (ht == new_ht), \
-                   ImageViewError("rotated cutout is %dx%d original=%dx%d" % (
-                new_wd, new_ht, wd, ht))
-            wd, ht, data = new_wd, new_ht, newdata
+            data = trcalc.rotate_nd(data, -rot_deg)
 
         split2_time = time.time()
         self.logger.debug("rotate time %.3f sec, total reshape %.3f sec" % (
             split2_time - split_time, split2_time - start_time))
-
-        ## assert (wd >= win_wd) and (ht >= win_ht), \
-        ##        ImageViewError("scaled cutout is %dx%d  window=%dx%d" % (
-        ##     wd, ht, win_wd, win_ht))
 
         ctr_x, ctr_y = self._ctr_x, self._ctr_y
         dst_x, dst_y = ctr_x - xoff, ctr_y - (ht - yoff)
@@ -975,7 +927,8 @@ class ImageViewBase(Callback.Callbacks):
             off_x, off_y = off_y, off_x
 
         if self.t_['rot_deg'] != 0:
-            off_x, off_y = self._rotate_pt(off_x, off_y, self.t_['rot_deg'])
+            off_x, off_y = trcalc.rotate_pt(off_x, off_y,
+                                            self.t_['rot_deg'])
 
         # add center pixel to convert from X/Y coordinate space to
         # canvas graphics space
@@ -1002,7 +955,8 @@ class ImageViewBase(Callback.Callbacks):
             off_y = win_y - self._ctr_y
 
         if self.t_['rot_deg'] != 0:
-            off_x, off_y = self._rotate_pt(off_x, off_y, -self.t_['rot_deg'])
+            off_x, off_y = trcalc.rotate_pt(off_x, off_y,
+                                            -self.t_['rot_deg'])
 
         if self.t_['swap_xy']:
             off_x, off_y = off_y, off_x
@@ -1586,15 +1540,6 @@ class ImageViewBase(Callback.Callbacks):
     def get_rotation_info(self):
         return (self._ctr_x, self._ctr_y, self.t_['rot_deg'])
         
-    def _rotate_pt(self, x, y, theta, xoff=0, yoff=0):
-        a = x - xoff
-        b = y - yoff
-        cos_t = math.cos(math.radians(theta))
-        sin_t = math.sin(math.radians(theta))
-        ap = (a * cos_t) - (b * sin_t)
-        bp = (a * sin_t) + (b * cos_t)
-        return (ap + xoff, bp + yoff)
-
     def enable_auto_orient(self, tf):
         self.t_.set(auto_orient=tf)
         

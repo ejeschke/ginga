@@ -518,10 +518,10 @@ class GingaView(GtkMain.GtkMain):
         for name in names:
             cbox.append_text(name)
         cbox.set_active(idx)
-        dialog = MyDialog("Add Channel",
-                          gtk.DIALOG_DESTROY_WITH_PARENT,
-                          [['Cancel', 0], ['Ok', 1]],
-                          lambda w, rsp: self.add_channel_cb(w, rsp, ent, cbox, names))
+        dialog = GtkHelp.Dialog("Add Channel",
+                                gtk.DIALOG_DESTROY_WITH_PARENT,
+                                [['Cancel', 0], ['Ok', 1]],
+                                lambda w, rsp: self.add_channel_cb(w, rsp, ent, cbox, names))
         box = dialog.get_content_area()
         box.pack_start(lbl, True, False, 0)
         box.pack_start(ent, True, True, 0)
@@ -572,11 +572,11 @@ class GingaView(GtkMain.GtkMain):
         ## for name in d.keys():
         ##     cbox.append_text(name)
             
-        dialog = MyDialog("Add Channels",
-                          gtk.DIALOG_DESTROY_WITH_PARENT,
-                          [['Cancel', 0], ['Ok', 1]],
-                          lambda w, rsp: self.add_channels_cb(w, rsp,
-                                                              b, names))
+        dialog = GtkHelp.Dialog("Add Channels",
+                                gtk.DIALOG_DESTROY_WITH_PARENT,
+                                [['Cancel', 0], ['Ok', 1]],
+                                lambda w, rsp: self.add_channels_cb(w, rsp,
+                                                                    b, names))
         box = dialog.get_content_area()
         box.pack_start(w, True, True, 0)
         dialog.show_all()
@@ -616,10 +616,10 @@ class GingaView(GtkMain.GtkMain):
         adj.configure(lower, lower, upper, 1, 1, 0)
         adj.set_value(1)
 
-        dialog = MyDialog("Add Workspace",
-                          gtk.DIALOG_DESTROY_WITH_PARENT,
-                          [['Cancel', 0], ['Ok', 1]],
-                          lambda w, rsp: self.new_ws_cb(w, rsp, b, names))
+        dialog = GtkHelp.Dialog("Add Workspace",
+                                gtk.DIALOG_DESTROY_WITH_PARENT,
+                                [['Cancel', 0], ['Ok', 1]],
+                                lambda w, rsp: self.new_ws_cb(w, rsp, b, names))
         box = dialog.get_content_area()
         box.pack_start(w, expand=True, fill=True)
         dialog.show_all()
@@ -657,10 +657,10 @@ class GingaView(GtkMain.GtkMain):
         chinfo = self.get_channelInfo()
         chname = chinfo.name
         lbl = gtk.Label("Really delete channel '%s' ?" % (chname))
-        dialog = MyDialog("Delete Channel",
-                          gtk.DIALOG_DESTROY_WITH_PARENT,
-                          [['Cancel', 0], ['Ok', 1]],
-                          lambda w, rsp: self.delete_channel_cb(w, rsp, chname))
+        dialog = GtkHelp.Dialog("Delete Channel",
+                                gtk.DIALOG_DESTROY_WITH_PARENT,
+                                [['Cancel', 0], ['Ok', 1]],
+                                lambda w, rsp: self.delete_channel_cb(w, rsp, chname))
         box = dialog.get_content_area()
         box.pack_start(lbl, True, False, 0)
         dialog.show_all()
@@ -807,20 +807,5 @@ class GingaView(GtkMain.GtkMain):
             self.change_channel(chname, raisew=False)
 
         return True
-
-class MyDialog(gtk.Dialog):
-    def __init__(self, title=None, flags=None, buttons=None,
-                 callback=None):
-
-        button_list = []
-        for name, val in buttons:
-            button_list.extend([name, val])
-
-        super(MyDialog, self).__init__(title=title, flags=flags,
-                                       buttons=tuple(button_list))
-        #self.w.connect("close", self.close)
-        if callback:
-            self.connect("response", callback)
-        
 
 # END

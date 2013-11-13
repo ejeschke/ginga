@@ -204,7 +204,7 @@ class AstroImage(BaseImage):
         self.wcs.load_header(hdu.header, fobj=fobj)
 
     def update_file(self, path, index=0, astype=None):
-        fits_f = pyfits.open(path, 'readonly')
+        fits_f = wcs.pyfits.open(path, 'readonly')
         self.update_hdu(fits_f[index], fobj=fits_f, astype=astype)
         fits_f.close()
 
@@ -268,8 +268,8 @@ class AstroImage(BaseImage):
      
 
     def create_fits(self):
-        fits_f = pyfits.HDUList()
-        hdu = pyfits.PrimaryHDU()
+        fits_f = wcs.pyfits.HDUList()
+        hdu = wcs.pyfits.PrimaryHDU()
         data = self.get_data()
         # if sys.byteorder == 'little':
         #     data = data.byteswap()
@@ -621,43 +621,34 @@ class AstroImage(BaseImage):
         return newimage
 
     def get_wcs_rotation_deg(self):
-        try:
-            v = self.get_keyword('PC1_1')
-        except KeyError:
-            try:
-                v = self.get_keyword('PC001001')
-            except KeyError:
-                v = self.get_keyword('CD1_1')
-                d = self.get_keyword('CDELT1')
-                v = v / d
+        header = self.get_header()
+        rot, cdelt1, cdelt2 = wcs.get_rotation_and_scale(header)
+        return rot
 
-        # Position angle of north (radians E of N)
-        #v = -v
-        theta_rad = math.acos(v)
-        theta_deg = math.degrees(theta_rad)
-        return theta_deg
-    
-
-    def rotate(self, deg):
-        old_deg = self.get_wcs_rotation_deg()
+    def rotate(self, deg, update_wcs=False):
+        #old_deg = self.get_wcs_rotation_deg()
 
         super(AstroImage, self).rotate(deg)
 
-        wd, ht = self.get_size()
-        
-        new_deg = old_deg + deg
+        if update_wcs:
+            self.wcs.rotate(deg)
 
-        # Reset WCS rotation matrix to account for rotation
-        pa = numpy.radians(new_deg)
-        cpa = numpy.cos(pa)
-        spa = numpy.sin(pa)
-        #wcsobj.wcs.pc = numpy.array([[-cpa, -spa], [-spa, cpa]])
-        self.update_keywords({
-            'NAXIS1': wd, 'NAXIS2': ht,
-            #'PC1_1': -cpa, 'PC1_2': -spa, 'PC2_1': -spa, 'PC2_2': cpa,
-            'PC1_1': cpa, 'PC1_2': -spa, 'PC2_1': spa, 'PC2_2': cpa,
-            })
+    def match_wcs(self, img_coords, ref_coords):
+        """Adjust WCS (CRVAL{1,2} and CD{1,2}_{1,2}) using a rotation
+        and linear offset so that ``img_coords`` matches ``ref_coords``.
 
+        Parameters
+        ----------
+        img_coords: seq like
+            list of (ra, dec) coords in input image
+        ref_coords: seq like
+            list of reference coords to match
+        """
+        header = self.get_header()
+        wcsClass = self.wcs.__class__
+        wcs_m = wcs.WcsMatch(header, wcsClass, img_coords, ref_coords)
+        res = wcs_m.calc_match()
+        return wcs_m, res
         
     def mosaic(self, filelist):
         """Creates a new mosaic image from the images in filelist.
@@ -757,40 +748,24 @@ class AstroImage(BaseImage):
         ra0, dec0 = self.pixtoradec(0, 0)
         ra1, dec1 = self.pixtoradec(self.width-1, self.height-1)
 
-        ra_l = (ra0 < ra1)
-        dec_l = (dec0 < dec1)
-        
+        rot_ref = self.get_wcs_rotation_deg()
+
         # drop each image in the right place in the new data array
         newdata = self.get_data()
         for image in imagelist:
             name = image.get('name', 'NoName')
 
-            # Rotate image into place, according to wcs
-            ## rot_deg = image.get_wcs_rotation_deg()
-            ## rot_deg = - rot_deg
+            # Rotate image into our orientation, according to wcs
+            rot_deg = image.get_wcs_rotation_deg()
+            rot_deg = rot_ref - rot_deg
             ## self.logger.debug("rotating %s by %f deg" % (name, rot_deg))
-            ## image.rotate(rot_deg)
+            image.rotate(rot_deg, update_wcs=True)
 
+            # Get size and data of new image
             wd, ht = image.get_size()
             data = image.get_data()
 
-            # Find orientation of image piece and orient it correctly to us
-            ## ra2, dec2 = image.pixtoradec(0, 0)
-            ## ra3, dec3 = image.pixtoradec(wd-1, ht-1)
-
-            ## # TODO: we need something much more sophisticated than this
-            ## # e.g. use a matrix transform
-            ## if ra_l != (ra2 < ra3):
-            ##     data = numpy.fliplr(data)
-            ##     ra = ra3
-            ## else:
-            ##     ra = ra2
-                
-            ## if dec_l != (dec2 < dec3):
-            ##     data = numpy.flipud(data)
-            ##     dec = dec3
-            ## else:
-            ##     dec = dec2
+            # Find location of image piece and place it correctly in ours
             ra, dec = image.pixtoradec(0, 0)
                 
             x0, y0 = self.radectopix(ra, dec)

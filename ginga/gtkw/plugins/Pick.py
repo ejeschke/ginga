@@ -195,7 +195,7 @@ class Pick(PickBase.PickBase):
         hbox.pack_start(self.w.eval_pgs, fill=True, expand=True, padding=4)
         w.pack_start(hbox, fill=False, expand=False, padding=2)
         
-        label = gtk.Label("Report")
+        label = gtk.Label("Readout")
         label.show()
         nb.append_page(w, label)
         nb.set_tab_reorderable(w, True)
@@ -366,6 +366,77 @@ class Pick(PickBase.PickBase):
         nb.set_tab_reorderable(w, True)
         #nb.set_tab_detachable(w, True)
 
+        vbox3 = gtk.VBox()
+        msgFont = self.fv.getFont("fixedFont", 10)
+        tw = gtk.TextView()
+        tw.set_wrap_mode(gtk.WRAP_NONE)
+        tw.set_left_margin(4)
+        tw.set_right_margin(4)
+        tw.set_editable(True)
+        tw.modify_font(msgFont)
+        self.w.report = tw
+        sw1 = gtk.ScrolledWindow()
+        sw1.set_border_width(2)
+        sw1.set_policy(gtk.POLICY_AUTOMATIC,
+                       gtk.POLICY_AUTOMATIC)
+        sw1.add(tw)
+        vbox3.pack_start(sw1, fill=True, expand=True)
+        self._appendText(tw, self._mkreport_header())
+        
+        btns = gtk.HButtonBox()
+        btns.set_layout(gtk.BUTTONBOX_START)
+        btns.set_spacing(3)
+        btns.set_child_size(15, -1)
+
+        btn = gtk.Button("Add Pick")
+        btn.connect('clicked', lambda w: self.add_pick_cb())
+        btns.add(btn)
+        btn = gtk.CheckButton("Record Picks")
+        btn.set_active(self.do_record)
+        btn.connect('toggled', self.record_cb)
+        btns.add(btn)
+        vbox3.pack_start(btns, fill=True, expand=False)
+        vbox3.show_all()
+
+        label = gtk.Label("Report")
+        label.show()
+        nb.append_page(vbox3, label)
+        nb.set_tab_reorderable(vbox3, True)
+        #nb.set_tab_detachable(vbox3, True)
+
+        ## vbox4 = gtk.VBox()
+        ## tw = gtk.TextView()
+        ## tw.set_wrap_mode(gtk.WRAP_NONE)
+        ## tw.set_left_margin(4)
+        ## tw.set_right_margin(4)
+        ## tw.set_editable(True)
+        ## tw.modify_font(msgFont)
+        ## self.w.correct = tw
+        ## sw1 = gtk.ScrolledWindow()
+        ## sw1.set_border_width(2)
+        ## sw1.set_policy(gtk.POLICY_AUTOMATIC,
+        ##                gtk.POLICY_AUTOMATIC)
+        ## sw1.add(tw)
+        ## vbox4.pack_start(sw1, fill=True, expand=True)
+        ## self._appendText(tw, "# paste a reference report here")
+        
+        ## btns = gtk.HButtonBox()
+        ## btns.set_layout(gtk.BUTTONBOX_START)
+        ## btns.set_spacing(3)
+        ## btns.set_child_size(15, -1)
+
+        ## btn = gtk.Button("Correct WCS")
+        ## btn.connect('clicked', lambda w: self.correct_wcs())
+        ## btns.add(btn)
+        ## vbox4.pack_start(btns, fill=True, expand=False)
+        ## vbox4.show_all()
+
+        ## label = gtk.Label("Correct")
+        ## label.show()
+        ## nb.append_page(vbox4, label)
+        ## nb.set_tab_reorderable(vbox4, True)
+        ## #nb.set_tab_detachable(vbox4, True)
+
         btns = gtk.HButtonBox()
         btns.set_layout(gtk.BUTTONBOX_START)
         btns.set_spacing(3)
@@ -385,8 +456,27 @@ class Pick(PickBase.PickBase):
     def _setText(self, w, text):
         w.set_text(text)
         
+    def _appendText(self, w, text):
+        buf = w.get_buffer()
+        end = buf.get_end_iter()
+        buf.insert(end, text + '\n')
+        
+    def _copyText(self, w):
+        text = self._getText(w)
+        # TODO: put it in the clipboard
+        
+    def _getText(self, w):
+        buf = w.get_buffer()
+        start = buf.get_start_iter()
+        end = buf.get_end_iter()
+        return buf.get_text(start, end)
+        
     def _setEnabled(self, w, tf):
         w.set_sensitive(tf)
+        
+    def record_cb(self, w):
+        self.do_record = w.get_active()
+        return True
         
     def instructions(self):
         buf = self.tw.get_buffer()
@@ -411,6 +501,32 @@ class Pick(PickBase.PickBase):
             # Delete previous peak marks
             objs = self.fitsimage.getObjectsByTagpfx('peak')
             self.fitsimage.deleteObjects(objs, redraw=True)
+        
+    def adjust_wcs(self, image, wcs_m, tup):
+        d_ra, d_dec, d_theta = tup
+        msg = "Calculated shift: dra, ddec = %f, %f\n" % (
+            d_ra/3600.0, d_dec/3600.0)
+        msg += "Calculated rotation: %f deg\n" % (d_theta)
+        msg += "\nAdjust WCS?"
+        
+        dialog = GtkHelp.Dialog("Adjust WCS",
+                                gtk.DIALOG_DESTROY_WITH_PARENT,
+                                [['Cancel', 0], ['Ok', 1]],
+                                lambda w, rsp: self.adjust_wcs_cb(w, rsp,
+                                                                  image, wcs_m))
+        box = dialog.get_content_area()
+        w = gtk.Label(msg)
+        box.pack_start(w, expand=True, fill=True)
+        dialog.show_all()
+        
+    def adjust_wcs_cb(self, w, rsp, image, wcs_m):
+        w.destroy()
+        if rsp == 0:
+            return
+
+        #image.wcs = wcs_m.wcs
+        image.update_keywords(wcs_m.hdr)
+        return True
         
     def plot_scroll(self, widget, event):
         # event.button, event.x, event.y

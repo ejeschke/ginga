@@ -970,11 +970,13 @@ class BindingMapper(object):
         self._kbdmod = None
         self._kbdmod_types = ('held', 'oneshot', 'locked')
         self._kbdmod_type = 'held'
+        self._delayed_reset = False
 
         # Set up button mapping
         if btnmap == None:
             btnmap = { 0x1: 'cursor', 0x2: 'wheel', 0x4: 'draw' }
         self.btnmap = btnmap
+        self._button = 0
 
         # Set up modifier mapping
         if modmap == None:
@@ -1018,6 +1020,7 @@ class BindingMapper(object):
     def reset_modifier(self):
         self._kbdmod = None
         self._kbdmod_type = 'held'
+        self._delayed_reset = False
         
     def clear_button_map(self):
         self.btnmap = {}
@@ -1076,6 +1079,10 @@ class BindingMapper(object):
                     self.reset_modifier()
                 return True
                 
+            if self._delayed_reset:
+                if bnch.name == self._kbdmod:
+                    self._delayed_reset = False
+                return False
             self._kbdmod = bnch.name
             self._kbdmod_type = bnch.type
             return True
@@ -1099,7 +1106,10 @@ class BindingMapper(object):
         if keyname in self.modmap:
             bnch = self.modmap[keyname]
             if (self._kbdmod == bnch.name) and (bnch.type == 'held'):
-                self.reset_modifier()
+                if self._button == 0:
+                    self.reset_modifier()
+                else:
+                    self._delayed_reset = True
             return True
         
         try:
@@ -1119,6 +1129,7 @@ class BindingMapper(object):
         self.logger.debug("x,y=%d,%d btncode=%s" % (data_x, data_y,
                                                    hex(btncode)))
         try:
+            self._button |= btncode
             button = self.btnmap[btncode]
             idx = (self._kbdmod, button)
             self.logger.debug("Event map for %s" % (str(idx)))
@@ -1149,10 +1160,11 @@ class BindingMapper(object):
         self.logger.debug("x,y=%d,%d button=%s" % (data_x, data_y,
                                                    hex(btncode)))
         try:
+            self._button &= ~btncode
             button = self.btnmap[btncode]
             idx = (self._kbdmod, button)
             # release modifier if this is a oneshot modifier
-            if (self._kbdmod_type == 'oneshot'):
+            if (self._kbdmod_type == 'oneshot') or (self._delayed_reset):
                 self.reset_modifier()
             emap = self.eventmap[idx]
 
