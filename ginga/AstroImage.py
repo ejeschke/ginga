@@ -74,7 +74,6 @@ class AstroImage(BaseImage):
         self.logger.debug("Loading file '%s' ..." % (filepath))
         self.clear_metadata()
 
-        self.set(path=filepath)
         ahdr = self.get_header()
 
         loader = fits.get_fitsloader(logger=self.logger)
@@ -101,6 +100,7 @@ class AstroImage(BaseImage):
             dirpath, filename = os.path.split(filepath)
             name, ext = os.path.splitext(filename)
             self.set(name=name)
+        self.set(path=filepath)
         
 
     def load_buffer(self, data, dims, dtype, byteswap=False,

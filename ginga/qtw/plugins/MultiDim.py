@@ -172,10 +172,10 @@ class MultiDim(GingaPlugin.LocalPlugin):
             path = self.path
 
         image = AstroImage.AstroImage(logger=self.logger)
-        image.set(path=path)
         dims = list(hdu.data.shape)
         dims.reverse()
         image.load_hdu(hdu, fobj=self.fits_f)
+        image.set(path=path)
         # TODO: when we've added cache size limiting
         #self.add_cache_hdu(idx, (image, dims))
         return dims, image
@@ -204,7 +204,6 @@ class MultiDim(GingaPlugin.LocalPlugin):
         self.logger.debug("naxis %d index is %d" % (n+1, idx+1))
 
         image = AstroImage.AstroImage(logger=self.logger)
-        image.set(path=self.path)
         try:
             hdu = self.fits_f[self.curhdu]
             data = hdu.data
@@ -219,6 +218,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
             self.logger.info("loading image from pyfits")
             start_time = time.time()
             image.load_hdu(hdu, fobj=self.fits_f, naxispath=self.naxispath)
+            image.set(path=self.path)
             end_time = time.time()
             self.logger.info("loading image time %.3f sec" % (end_time - start_time))
             start_time = end_time
@@ -237,7 +237,9 @@ class MultiDim(GingaPlugin.LocalPlugin):
     def redo(self):
         image = self.fitsimage.get_image()
         md = image.get_metadata()
-        path = md.get('path', 'NO PATH')
+        path = md.get('path', None)
+        if path == None:
+            self.fv.show_error("Cannot open image: no value for metadata key 'path'")
         self.logger.debug("path=%s metadata: %s" % (path, str(md)))
 
         self.path = path

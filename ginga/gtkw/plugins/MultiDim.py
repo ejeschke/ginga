@@ -187,12 +187,12 @@ class MultiDim(GingaPlugin.LocalPlugin):
     def set_hdu(self, idx):
         self.logger.debug("Loading fits hdu #%d" % (idx))
         image = AstroImage.AstroImage(logger=self.logger)
-        image.set(path=self.path)
         try:
             hdu = self.fits_f[idx-1]
             dims = list(hdu.data.shape)
             dims.reverse()
             image.load_hdu(hdu)
+            image.set(path=self.path)
 
             self.fitsimage.set_image(image)
             self.build_naxis(dims)
@@ -209,7 +209,6 @@ class MultiDim(GingaPlugin.LocalPlugin):
         self.logger.debug("naxis %d index is %d" % (n+1, idx+1))
 
         image = AstroImage.AstroImage(logger=self.logger)
-        image.set(path=self.path)
         try:
             hdu = self.fits_f[self.curhdu]
             data = hdu.data
@@ -222,6 +221,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
             self.logger.debug("m=%d naxispath=%s" % (m, str(self.naxispath)))
         
             image.load_hdu(hdu, naxispath=self.naxispath)
+            image.set(path=self.path)
 
             self.fitsimage.set_image(image)
             self.logger.debug("NAXIS%d slice %d loaded." % (n+1, idx+1))
@@ -235,7 +235,10 @@ class MultiDim(GingaPlugin.LocalPlugin):
     def redo(self):
         image = self.fitsimage.get_image()
         md = image.get_metadata()
-        path = md.get('path', 'NO PATH')
+        path = md.get('path', None)
+        if path == None:
+            self.fv.show_error("Cannot open image: no value for metadata key 'path'")
+            return
         #print "path=%s metadata: %s" % (path, str(md))
 
         self.path = path
