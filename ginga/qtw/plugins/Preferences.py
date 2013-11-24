@@ -81,8 +81,8 @@ class Preferences(GingaPlugin.LocalPlugin):
         # COLOR MAPPING OPTIONS
         fr = QtHelp.Frame("Colors")
 
-        captions = (('Colormap', 'combobox', 'Intensity', 'combobox'),
-                    ('Algorithm', 'combobox', 'Table Size', 'entry'),
+        captions = (('Colormap', 'combobox'), ('Intensity', 'combobox'),
+                    ('Algorithm', 'combobox'), ('Table Size', 'entry'),
                     ('Color Defaults', 'button'))
         w, b = QtHelp.build_info(captions)
         self.w.cmap_choice = b.colormap
@@ -146,10 +146,10 @@ class Preferences(GingaPlugin.LocalPlugin):
         # ZOOM OPTIONS
         fr = QtHelp.Frame("Zoom")
 
-        captions = (('Zoom Alg', 'combobox', 'Zoom Rate', 'spinfloat'),
-                    ('Stretch XY', 'combobox', 'Stretch Factor', 'spinfloat'),
-                    ('Scale X', 'entry', 'Scale Y', 'entry'),
-                    ('Scale Min', 'spinfloat', 'Scale Max', 'spinfloat'),
+        captions = (('Zoom Alg', 'combobox'), ('Zoom Rate', 'spinfloat'),
+                    ('Stretch XY', 'combobox'), ('Stretch Factor', 'spinfloat'),
+                    ('Scale X', 'entry'), ('Scale Y', 'entry'),
+                    ('Scale Min', 'spinfloat'), ('Scale Max', 'spinfloat'),
                     ('Zoom Defaults', 'button'))
         w, b = QtHelp.build_info(captions)
         self.w.update(b)
@@ -220,10 +220,11 @@ class Preferences(GingaPlugin.LocalPlugin):
         # PAN OPTIONS
         fr = QtHelp.Frame("Panning")
 
-        captions = (('Pan X', 'entry'),
-                    ('Pan Y', 'entry', 'Center Image', 'button'),
+        captions = (('Pan X:', 'label', 'Pan X', 'entry'),
+                    ('Pan Y:', 'label', 'Pan Y', 'entry'),
+                    ('Center Image', 'button'),
                     ('Reverse Pan', 'checkbutton', 'Mark Center', 'checkbutton'))
-        w, b = QtHelp.build_info(captions)
+        w, b = QtHelp.build_info2(captions)
         self.w.update(b)
 
         pan_x, pan_y = self.fitsimage.get_pan()
@@ -248,9 +249,10 @@ class Preferences(GingaPlugin.LocalPlugin):
         fr = QtHelp.Frame("Transform")
 
         captions = (('Flip X', 'checkbutton', 'Flip Y', 'checkbutton',
-                     'Swap XY', 'checkbutton'), ('Rotate', 'spinfloat'),
+                    'Swap XY', 'checkbutton'),
+                    ('Rotate:', 'label', 'Rotate', 'spinfloat'),
                     ('Restore', 'button'),)
-        w, b = QtHelp.build_info(captions)
+        w, b = QtHelp.build_info2(captions)
         self.w.update(b)
 
         for name in ('flip_x', 'flip_y', 'swap_xy'):
@@ -303,7 +305,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         # WCS OPTIONS
         fr = QtHelp.Frame("WCS")
 
-        captions = (('WCS Coords', 'combobox', 'WCS Display', 'combobox'),
+        captions = (('WCS Coords', 'combobox'), ('WCS Display', 'combobox'),
                     )
         w, b = QtHelp.build_info(captions)
         self.w.update(b)
@@ -344,10 +346,11 @@ class Preferences(GingaPlugin.LocalPlugin):
 
         fr = QtHelp.Frame("New Images")
 
-        captions = (('Cut New', 'combobox', 'Zoom New', 'combobox'),
+        captions = (('Cut New:', 'label', 'Cut New', 'combobox'),
+                    ('Zoom New:', 'label', 'Zoom New', 'combobox'),
                     ('Center New', 'checkbutton', 'Follow New', 'checkbutton'),
                     ('Raise New', 'checkbutton', 'Create thumbnail', 'checkbutton'),)
-        w, b = QtHelp.build_info(captions)
+        w, b = QtHelp.build_info2(captions)
         self.w.update(b)
 
         combobox = b.cut_new

@@ -221,9 +221,9 @@ def main(options, args):
     # Add GUI log handler (for "Log" global plugin)
     guiHdlr = GuiLogHandler(ginga)
     guiHdlr.setLevel(options.loglevel)
-    guiHdlr.setFormatter(log.LOG_FORMAT)
-    # TODO: GUI log is broken!
-    #logger.addHandler(guiHdlr)
+    fmt = logging.Formatter(log.LOG_FORMAT)
+    guiHdlr.setFormatter(fmt)
+    logger.addHandler(guiHdlr)
 
     # Load any custom modules
     if options.modules:

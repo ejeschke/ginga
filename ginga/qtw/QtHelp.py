@@ -841,7 +841,7 @@ def _make_widget(tup, ns):
         w1 = QtGui.QLabel('')
         w2 = QtGui.QLabel('')
     else:
-        raise Exception("Bad wtype=%s" % wtype)
+        raise ValueError("Bad wtype=%s" % wtype)
 
     lblname = 'lbl_%s' % (name)
     if swap:
@@ -875,6 +875,79 @@ def build_info(captions):
                 table.addWidget(w1, row, col)
                 table.addWidget(w2, row, col+1)
             col += 2
+        row += 1
+
+    return widget, wb
+
+def _get_widget(title, wtype):
+    if wtype == 'label':
+        w = QtGui.QLabel(title)
+        w.setAlignment(QtCore.Qt.AlignRight)
+    elif wtype == 'llabel':
+        w = QtGui.QLabel(title)
+        w.setAlignment(QtCore.Qt.AlignLeft)
+    elif wtype == 'entry':
+        w = QtGui.QLineEdit()
+        w.setMaxLength(12)
+    elif wtype == 'combobox':
+        w = ComboBox()
+    elif wtype == 'spinbutton':
+        w = QtGui.QSpinBox()
+    elif wtype == 'spinfloat':
+        w = QtGui.QDoubleSpinBox()
+    elif wtype == 'vbox':
+        w = VBox()
+    elif wtype == 'hbox':
+        w = HBox()
+    elif wtype == 'hscale':
+        w = QtGui.QSlider(QtCore.Qt.Horizontal)
+    elif wtype == 'vscale':
+        w = QtGui.QSlider(QtCore.Qt.Vertical)
+    elif wtype == 'checkbutton':
+        w = QtGui.QCheckBox(title)
+    elif wtype == 'radiobutton':
+        w = QtGui.QRadioButton(title)
+    elif wtype == 'togglebutton':
+        w = QtGui.QPushButton(title)
+        w.setCheckable(True)
+    elif wtype == 'button':
+        w = QtGui.QPushButton(title)
+    elif wtype == 'spacer':
+        w = QtGui.QLabel('')
+    else:
+        raise ValueError("Bad wtype=%s" % wtype)
+    return w
+
+def build_info2(captions):
+    numrows = len(captions)
+    numcols = reduce(lambda acc, tup: max(acc, len(tup)), captions, 0)
+    if (numcols % 2) != 0:
+        raise ValueError("Column spec is not an even number")
+    numcols /= 2
+
+    widget = QtGui.QWidget()
+    table = QtGui.QGridLayout()
+    widget.setLayout(table)
+    table.setVerticalSpacing(2)
+    table.setHorizontalSpacing(4)
+    table.setContentsMargins(2, 2, 2, 2)
+
+    wb = Bunch.Bunch()
+    row = 0
+    for tup in captions:
+        col = 0
+        while col < numcols:
+            idx = col * 2
+            if idx < len(tup):
+                title, wtype = tup[idx:idx+2]
+                if not title.endswith(':'):
+                    name = _name_mangle(title)
+                else:
+                    name = _name_mangle('lbl_'+title[:-1])
+                w = _get_widget(title, wtype)
+                table.addWidget(w, row, col)
+                wb[name] = w
+            col += 1
         row += 1
 
     return widget, wb

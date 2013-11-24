@@ -81,8 +81,8 @@ class Preferences(GingaPlugin.LocalPlugin):
         fr.set_shadow_type(gtk.SHADOW_ETCHED_IN)
         fr.set_label_align(0.5, 0.5)
 
-        captions = (('Colormap', 'combobox', 'Intensity', 'combobox'),
-                    ('Algorithm', 'combobox', 'Table Size', 'entry'),
+        captions = (('Colormap', 'combobox'), ('Intensity', 'combobox'),
+                    ('Algorithm', 'combobox'), ('Table Size', 'entry'),
                     ('Color Defaults', 'button'))
         w, b = GtkHelp.build_info(captions)
         self.w.cmap_choice = b.colormap
@@ -148,10 +148,10 @@ class Preferences(GingaPlugin.LocalPlugin):
         fr.set_shadow_type(gtk.SHADOW_ETCHED_IN)
         fr.set_label_align(0.5, 0.5)
 
-        captions = (('Zoom Alg', 'combobox', 'Zoom Rate', 'spinbutton'),
-                    ('Stretch XY', 'combobox', 'Stretch Factor', 'spinbutton'),
-                    ('Scale X', 'entry', 'Scale Y', 'entry'),
-                    ('Scale Min', 'spinbutton', 'Scale Max', 'spinbutton'),
+        captions = (('Zoom Alg', 'combobox'), ('Zoom Rate', 'spinbutton'),
+                    ('Stretch XY', 'combobox'), ('Stretch Factor', 'spinbutton'),
+                    ('Scale X', 'entry'), ('Scale Y', 'entry'),
+                    ('Scale Min', 'spinbutton'), ('Scale Max', 'spinbutton'),
                     ('Zoom Defaults', 'button'))
         w, b = GtkHelp.build_info(captions)
         self.w.update(b)
@@ -227,10 +227,11 @@ class Preferences(GingaPlugin.LocalPlugin):
         fr.set_shadow_type(gtk.SHADOW_ETCHED_IN)
         fr.set_label_align(0.5, 0.5)
 
-        captions = (('Pan X', 'entry'),
-                    ('Pan Y', 'entry', 'Center Image', 'button'),
+        captions = (('Pan X:', 'label', 'Pan X', 'entry'),
+                    ('Pan Y:', 'label', 'Pan Y', 'entry'),
+                    ('Center Image', 'button'),
                     ('Reverse Pan', 'checkbutton', 'Mark Center', 'checkbutton'))
-        w, b = GtkHelp.build_info(captions)
+        w, b = GtkHelp.build_info2(captions)
         self.w.update(b)
 
         pan_x, pan_y = self.fitsimage.get_pan()
@@ -256,9 +257,10 @@ class Preferences(GingaPlugin.LocalPlugin):
         fr.set_label_align(0.5, 0.5)
 
         captions = (('Flip X', 'checkbutton', 'Flip Y', 'checkbutton', 
-                     'Swap XY', 'checkbutton'), ('Rotate', 'spinbutton'),
+                     'Swap XY', 'checkbutton'),
+                    ('Rotate:', 'label', 'Rotate', 'spinbutton'),
                     ('Restore', 'button'),)
-        w, b = GtkHelp.build_info(captions)
+        w, b = GtkHelp.build_info2(captions)
         self.w.update(b)
 
         for name in ('flip_x', 'flip_y', 'swap_xy'):
@@ -316,7 +318,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         fr.set_shadow_type(gtk.SHADOW_ETCHED_IN)
         fr.set_label_align(0.5, 0.5)
 
-        captions = (('WCS Coords', 'combobox', 'WCS Display', 'combobox'),
+        captions = (('WCS Coords', 'combobox'), ('WCS Display', 'combobox'),
                     )
         w, b = GtkHelp.build_info(captions)
         self.w.update(b)
@@ -360,10 +362,11 @@ class Preferences(GingaPlugin.LocalPlugin):
         fr.set_shadow_type(gtk.SHADOW_ETCHED_IN)
         fr.set_label_align(0.5, 0.5)
 
-        captions = (('Cut New', 'combobox', 'Zoom New', 'combobox'),
+        captions = (('Cut New:', 'label', 'Cut New', 'combobox'),
+                    ('Zoom New:', 'label', 'Zoom New', 'combobox'),
                     ('Center New', 'checkbutton', 'Follow New', 'checkbutton'),
                     ('Raise New', 'checkbutton', 'Create thumbnail', 'checkbutton'),)
-        w, b = GtkHelp.build_info(captions)
+        w, b = GtkHelp.build_info2(captions)
         self.w.update(b)
 
         combobox = b.cut_new

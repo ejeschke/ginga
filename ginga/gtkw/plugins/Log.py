@@ -46,31 +46,32 @@ class Log(GingaPlugin.GlobalPlugin):
 
         container.pack_start(sw, fill=True, expand=True)
 
-        hbox = gtk.HBox()
+        captions = (('Level', 'combobox', 'History', 'spinbutton'),
+                    ('Auto scroll', 'checkbutton', 'Clear', 'button')
+                    )
+        w, b = GtkHelp.build_info(captions)
+        self.w.update(b)
 
-        lbl = gtk.Label('Level:')
-        hbox.pack_start(lbl, fill=False, expand=False)
-        combobox = GtkHelp.combo_box_new_text()
+        combobox = b.level
         for (name, level) in self.levels:
             combobox.append_text(name)
         combobox.set_active(1)
         combobox.sconnect('changed', self.set_loglevel_cb)
-        hbox.pack_start(combobox, fill=False, expand=False,
-                        padding=4)
+        combobox.set_tooltip_text("Set the logging level")
         
-        lbl = gtk.Label('History:')
-        hbox.pack_start(lbl, fill=False, expand=False)
-        spinbox = GtkHelp.SpinButton()
+        spinbox = b.history
         adj = spinbox.get_adjustment()
         adj.configure(self.histlimit, 100, self.histmax, 10, 100, 0)
         spinbox.sconnect('value-changed', self.set_history_cb)
-        hbox.pack_start(spinbox, fill=False, expand=False,
-                        padding=4)
+        spinbox.set_tooltip_text("Set the logging history line limit")
         
-        btn = gtk.Button("Clear")
+        btn = b.auto_scroll
+        btn.set_tooltip_text("Scroll the log window automatically")
+
+        btn = b.clear
         btn.connect('clicked', lambda w: self.clear())
-        hbox.pack_end(btn, fill=False, expand=False)
-        container.pack_end(hbox, fill=False, expand=False)
+        btn.set_tooltip_text("Clear the log history")
+        container.pack_end(w, fill=False, expand=False)
 
     def set_history(self, histlimit):
         assert histlimit <= self.histmax, \
@@ -105,15 +106,20 @@ class Log(GingaPlugin.GlobalPlugin):
         self.buf.insert(end, text + '\n')
 
         self.history_housekeeping()
-        
-        # scroll window to end of buffer
-        end = self.buf.get_end_iter()
-        mark = self.buf.get_insert()
-        #self.tw.scroll_to_iter(end, 0.5)
-        # TODO: this is causing a segfault if the text widget is
-        # not mapped yet!
-        #self.buf.move_mark(mark, end)
-        #res = self.tw.scroll_to_mark(mark, 0.2, True)
+
+        if not self.w.has_key('auto_scroll'):
+            return
+        scrollp = self.w.auto_scroll.get_active()
+        if scrollp:
+            # scroll window to end of buffer
+            end = self.buf.get_end_iter()
+            mark = self.buf.get_insert()
+            #self.tw.scroll_to_iter(end, 0.5)
+            # NOTE: this was causing a segfault if the text widget is
+            # not mapped yet!  Seems to be fixed in recent versions of
+            # gtk
+            self.buf.move_mark(mark, end)
+            res = self.tw.scroll_to_mark(mark, 0.2, True)
 
     def clear(self):
         start = self.buf.get_start_iter()

@@ -41,31 +41,35 @@ class Log(GingaPlugin.GlobalPlugin):
         sw.setWidget(self.tw)
 
         container.addWidget(sw, stretch=1)
-        sw.show()
+        #sw.show()
 
-        hbox = QtHelp.HBox()
+        captions = (('Level', 'combobox', 'History', 'spinbutton'),
+                    ('Auto scroll', 'checkbutton', 'Clear', 'button')
+                    )
+        w, b = QtHelp.build_info(captions)
+        self.w.update(b)
 
-        lbl = QtGui.QLabel('Level:')
-        hbox.addWidget(lbl, stretch=0)
-        combobox = QtHelp.ComboBox()
+        combobox = b.level
         for (name, level) in self.levels:
             combobox.addItem(name)
         combobox.setCurrentIndex(1)
         combobox.activated.connect(self.set_loglevel_cb)
-        hbox.addWidget(combobox, stretch=0)
+        combobox.setToolTip("Set the logging level")
         
-        lbl = QtGui.QLabel('History:')
-        hbox.addWidget(lbl, stretch=0)
-        spinbox = QtGui.QSpinBox()
+        spinbox = b.history
         spinbox.setRange(100, self.histmax)
         spinbox.setSingleStep(10)
+        spinbox.setValue(self.histlimit)
         spinbox.valueChanged.connect(self.set_history_cb)
-        hbox.addWidget(spinbox, stretch=0)
+        spinbox.setToolTip("Set the logging history line limit")
         
-        btn = QtGui.QPushButton("Clear")
+        btn = b.auto_scroll
+        btn.setToolTip("Scroll the log window automatically")
+
+        btn = b.clear
         btn.clicked.connect(self.clear)
-        hbox.addWidget(btn, stretch=0)
-        container.addWidget(hbox, stretch=0)
+        btn.setToolTip("Clear the log history")
+        container.addWidget(w, stretch=0)
 
     def set_history(self, histlimit):
         assert histlimit <= self.histmax, \
@@ -87,13 +91,13 @@ class Log(GingaPlugin.GlobalPlugin):
     def log(self, text):
         self.tw.appendPlainText(text)
 
-        # scroll window to end of buffer
-        # TODO: need to figure out how to do this in Qt
-        #self.tw.setPosition()
-        #self.tw.ensureCursorVisible()
-        #rect = self.tw.geometry()
-        #x1, y1, x2, y2 = rect.getCoords()
-        #self.tw.ensureVisible(x1, y1)
+        if not self.w.has_key('auto_scroll'):
+            return
+        scrollp = self.w.auto_scroll.isChecked()
+        if scrollp:
+            self.tw.moveCursor(QtGui.QTextCursor.End)
+            self.tw.moveCursor(QtGui.QTextCursor.StartOfLine)
+            self.tw.ensureCursorVisible()
 
     def clear(self):
         self.tw.clear()

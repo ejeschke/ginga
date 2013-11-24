@@ -951,7 +951,7 @@ def _make_widget(tup, ns):
         w1 = QtGui.QLabel('')
         w2 = QtGui.QLabel('')
     else:
-        raise Exception("Bad wtype=%s" % wtype)
+        raise ValueError("Bad wtype=%s" % wtype)
 
     lblname = 'lbl_%s' % (name)
     if swap:
@@ -989,6 +989,84 @@ def build_info(captions):
                              xoptions=gtk.FILL, yoptions=gtk.FILL,
                              xpadding=1, ypadding=1)
             col += 2
+        row += 1
+
+    vbox.show_all()
+
+    return vbox, wb
+
+
+def _get_widget(title, wtype):
+    if wtype == 'label':
+        w = gtk.Label(title)
+        w.set_alignment(0.95, 0.5)
+    elif wtype == 'llabel':
+        w = gtk.Label(title)
+        w.set_alignment(0.05, 0.95)
+    elif wtype == 'entry':
+        w = gtk.Entry()
+        w.set_width_chars(12)
+    elif wtype == 'combobox':
+        w = combo_box_new_text()
+    elif wtype == 'spinbutton':
+        w = SpinButton()
+    elif wtype == 'vbox':
+        w = gtk.VBox()
+    elif wtype == 'hbox':
+        w = gtk.HBox()
+    elif wtype == 'hscale':
+        w = HScale()
+    elif wtype == 'vscale':
+        w = VScale()
+    elif wtype == 'checkbutton':
+        w = CheckButton(title)
+        w.set_mode(True)
+    elif wtype == 'radiobutton':
+        w = RadioButton(title)
+    elif wtype == 'togglebutton':
+        w = ToggleButton(title)
+        w.set_mode(True)
+    elif wtype == 'button':
+        w = gtk.Button(title)
+    elif wtype == 'spacer':
+        w = QtGui.QLabel('')
+    else:
+        raise ValueError("Bad wtype=%s" % wtype)
+
+    return w
+
+
+def build_info2(captions):
+    vbox = gtk.VBox(spacing=2)
+
+    numrows = len(captions)
+    numcols = reduce(lambda acc, tup: max(acc, len(tup)), captions, 0)
+    if (numcols % 2) != 0:
+        raise ValueError("Column spec is not an even number")
+    numcols /= 2
+    table = gtk.Table(rows=numrows, columns=numcols)
+    table.set_row_spacings(2)
+    table.set_col_spacings(4)
+    vbox.pack_start(table, expand=False)
+
+    wb = Bunch.Bunch()
+    row = 0
+    for tup in captions:
+        col = 0
+        while col < numcols:
+            idx = col * 2
+            if idx < len(tup):
+                title, wtype = tup[idx:idx+2]
+                if not title.endswith(':'):
+                    name = _name_mangle(title)
+                else:
+                    name = _name_mangle('lbl_'+title[:-1])
+                w = _get_widget(title, wtype)
+                table.attach(w, col, col+1, row, row+1,
+                             xoptions=gtk.FILL, yoptions=gtk.FILL,
+                             xpadding=1, ypadding=1)
+                wb[name] = w
+            col += 1
         row += 1
 
     vbox.show_all()
