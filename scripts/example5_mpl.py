@@ -82,9 +82,6 @@ class MyGingaFigure(object):
         """
         Insert our canvas so that we intercept all events before they reach
         processing by the bindings layer of Ginga.
-        
-        NOTE: Matplotlib bindings are NOT affected by this.  I don't know of
-        any way to turn them off.
         """
         # insert the canvas 
         self.fitsimage.add(self.canvas, tag='mycanvas')

@@ -101,6 +101,6 @@ elif have_gtk2:
         return gtk.gdk.Cursor(display, pixbuf, x, y)
 
 else:
-    raise ImportError("Please install pygtk 2.x")
+    raise ImportError("Failed to import gtk. There may be an issue with the toolkit module or it is not installed")
 
 #END

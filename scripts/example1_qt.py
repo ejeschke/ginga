@@ -11,7 +11,7 @@
 import sys, os
 import logging
 
-from ginga.AstroImage import pyfits
+from ginga import AstroImage
 from ginga.qtw.QtHelp import QtGui, QtCore
 from ginga.qtw.ImageViewQt import ImageViewZoom
 
@@ -70,15 +70,9 @@ class FitsViewer(QtGui.QMainWindow):
         vw.setLayout(vbox)
 
     def load_file(self, filepath):
-        fitsobj = pyfits.open(filepath, 'readonly')
-        data = fitsobj[0].data
-        # compressed FITS file?
-        if (data == None) and (len(fitsobj) > 1) and \
-           isinstance(fitsobj[1], pyfits.core.CompImageHDU):
-            data = fitsobj[1].data
-        fitsobj.close()
-
-        self.fitsimage.set_data(data)
+        image = AstroImage.AstroImage(logger=self.logger)
+        image.load_file(filepath)
+        self.fitsimage.set_image(image)
         self.setWindowTitle(filepath)
 
     def open_file(self):

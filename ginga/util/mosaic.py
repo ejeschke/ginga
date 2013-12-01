@@ -11,6 +11,8 @@
 import sys, os
 import logging
 from ginga import AstroImage
+from ginga.util import io_fits
+io_fits.use('astropy')
 
 STD_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcName)s) | %(message)s'
 

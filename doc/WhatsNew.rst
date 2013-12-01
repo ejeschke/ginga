@@ -2,6 +2,21 @@
 What's New in Ginga?
 ++++++++++++++++++++
 
+Ver 2.0.20131201230846
+======================
+Ginga gets trackpad gestures!  The Qt rendering class gets support for
+pinch and pan gestures:
+
+* The pinch/rotate gesture works as expected on a Mac trackpad
+* The pan gesture is not a two-finger pan but a "non-standard", Qt-specific
+  one-finger pan.  These are experimental for now, but are enabled by
+  default in this release.
+
+Also in this release there has been a lot of updates to the
+documentation.  The developer and internals sections in particular have
+a lot of new material.
+ 
+
 Ver 2.0.20131030190529
 ======================
 The great renaming
@@ -46,6 +61,7 @@ See scripts/example{1,2,3,4,5}_mpl.py
 
 Also merges in bug fixes for recent changes to astropy, and support for
 other python WCS packages such as kapteyn and astLib.
+
 
 Ver 1.5-20130923184124
 ======================

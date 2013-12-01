@@ -86,6 +86,10 @@ class ImageViewBindings(object):
         self._start_panx = 0
         self._start_pany = 0
 
+        self._start_scale_x = 0
+        self._start_scale_y = 0
+        self._start_rot = 0
+
         # User defined keys
         self.keys = Bunch.Bunch()
         self.keys.zoom_in = ['+', '=']
@@ -260,6 +264,13 @@ class ImageViewBindings(object):
         fitsimage.set_callback('zoom-coarse-scroll',
                                self.sc_zoom_coarse)
         fitsimage.set_callback('zoom-fine-scroll', self.sc_zoom_fine)
+
+        if fitsimage.has_callback('pinch'):
+            fitsimage.set_callback('pinch', self.gs_pinch)
+        if fitsimage.has_callback('pan'):
+            fitsimage.set_callback('pan', self.gs_pan)
+        # if fitsimage.has_callback('swipe'):
+        #     fitsimage.set_callback('swipe', self.gs_swipe)
 
     def reset(self, fitsimage):
         self.reset_modifier(fitsimage)
@@ -947,6 +958,49 @@ class ImageViewBindings(object):
             self._scale_image(fitsimage, direction, 0.08, msg=msg)
         return True
 
+    ##### GESTURE ACTION CALLBACKS #####
+
+    def gs_pinch(self, fitsimage, state, rot_deg, scale, msg=True):
+        if state == 'start':
+            self._start_scale_x, self._start_scale_y = fitsimage.get_scale_xy()
+            self._start_rot = fitsimage.get_rotation()
+        else:
+            msg_str = None
+            if self.canzoom:
+                scale_x, scale_y = (self._start_scale_x * scale,
+                                    self._start_scale_y * scale)
+                fitsimage.scale_to(scale_x, scale_y, redraw=False)
+                msg_str = fitsimage.get_scale_text()
+                
+            if self.canrotate:
+                deg = self._start_rot - rot_deg
+                fitsimage.rotate(deg)
+                if msg_str == None:
+                    msg_str = "Rotate: %.2f" % (deg)
+                
+            if msg and (msg_str != None):
+                fitsimage.onscreen_message(msg_str, delay=0.4)
+        return True        
+
+    def gs_pan(self, fitsimage, state, dx, dy, msg=True):
+        if not self.canpan:
+            return True
+        
+        x, y = fitsimage.get_last_win_xy()
+        if state == 'move':
+            data_x, data_y = self.get_new_pan(fitsimage, x, y,
+                                              ptype=self._pantype)
+            fitsimage.panset_xy(data_x, data_y, redraw=True)
+            
+        elif state == 'start':
+            data_x, data_y = fitsimage.get_last_data_xy()
+            self.pan_set_origin(fitsimage, x, y, data_x, data_y)
+            self.pan_start(fitsimage, ptype=2)
+
+        else:
+            self.pan_stop(fitsimage)
+        return True
+        
 
 class BindingMapError(Exception):
     pass

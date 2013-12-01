@@ -10,7 +10,7 @@
 import math
 import numpy
 
-from ginga import RGBImage
+from ginga.util import io_rgb
 from ginga.misc import Callback
 
 class RGBMapError(Exception):
@@ -209,7 +209,7 @@ class RGBMapper(Callback.Callbacks):
 
     def convert_profile_monitor(self, rgbobj):
         inp = rgbobj.get_array('RGB')
-        arr = RGBImage.convert_profile_monitor(inp)
+        arr = io_rgb.convert_profile_monitor(inp)
         out = rgbobj.rgbarr
 
         ri, gi, bi = rgbobj.get_order_indexes('RGB')
@@ -246,7 +246,7 @@ class RGBMapper(Callback.Callbacks):
 
             # convert to monitor profile, if one is available
             # TODO: this conversion doesn't really belong here!
-            if RGBImage.have_monitor_profile():
+            if io_rgb.have_monitor_profile():
                 self.logger.debug("Converting to monitor profile.")
                 self.convert_profile_monitor(rgbobj)
 

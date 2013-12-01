@@ -1,5 +1,5 @@
 #
-# fits.py -- Module wrapper for loading FITS files.
+# io_fits.py -- Module wrapper for loading FITS files.
 #
 # Eric Jeschke (eric@naoj.org)
 #
@@ -16,11 +16,11 @@ the current version.
 
 To force the use of one, do:
 
-    from ginga import fits
-    fits.use('fitsio')
+    from ginga.util import io_fits
+    io_fits.use('package')
 
-before you load any images.  Otherwise Ginga will try to pick one for
-you.
+(replace 'package' with one of {'astropy', 'fitsio'}) before you load
+any images.  Otherwise Ginga will try to pick one for you.
 """
 import numpy
 
@@ -32,7 +32,7 @@ have_fitsio = False
 class FITSError(Exception):
     pass
 
-def use(fitspkg):
+def use(fitspkg, raise_err=True):
     global fits_configured, fitsLoaderClass, \
            have_pyfits, pyfits, \
            have_fitsio, fitsio
@@ -42,14 +42,19 @@ def use(fitspkg):
             from astropy.io import fits as pyfits
             have_pyfits = True
             fitsLoaderClass = PyFitsFileHandler
+            return True
+        
         except ImportError:
             try:
                 # maybe they have a standalone version of pyfits?
                 import pyfits
                 have_pyfits = True
                 fitsLoaderClass = PyFitsFileHandler
-            except ImportError:
-                pass
+                return True
+
+            except ImportError as e:
+                if raise_err:
+                    raise
         return False
 
     elif fitspkg == 'fitsio':
@@ -57,8 +62,11 @@ def use(fitspkg):
             import fitsio
             have_fitsio = True
             fitsLoaderClass = FitsioFileHandler
-        except ImportError:
-            pass
+            return True
+        
+        except ImportError as e:
+            if raise_err:
+                raise
         return False
 
     return False
@@ -105,7 +113,8 @@ class PyFitsFileHandler(BaseFitsFileHandler):
         self.fromHDU(hdu, ahdr)
         return (data, naxispath)
 
-    def load_file(self, filepath, ahdr, numhdu=None, naxispath=None):
+    def load_file(self, filespec, ahdr, numhdu=None, naxispath=None):
+        filepath = get_path(filespec)
         self.logger.info("Loading file '%s' ..." % (filepath))
         fits_f = pyfits.open(filepath, 'readonly')
 
@@ -154,10 +163,13 @@ class PyFitsFileHandler(BaseFitsFileHandler):
         fits_f.append(hdu)
         return fits_f
     
-    def write_fits(self, path, data, header):
+    def write_fits(self, path, data, header, **kwdargs):
         fits_f = self.create_fits(data, header)
-        fits_f.writeto(path, output_verify='fix')
+        fits_f.writeto(path, **kwdargs)
         fits_f.close()
+
+    def save_as_file(self, path, data, header, **kwdargs):
+        self.write_fits(filepath, data, header, **kwdargs)
 
         
 class FitsioFileHandler(BaseFitsFileHandler):
@@ -192,7 +204,8 @@ class FitsioFileHandler(BaseFitsFileHandler):
         self.fromHDU(hdu, ahdr)
         return (data, naxispath)
         
-    def load_file(self, filepath, ahdr, numhdu=None, naxispath=None):
+    def load_file(self, filespec, ahdr, numhdu=None, naxispath=None):
+        filepath = get_path(filespec)
         self.logger.info("Loading file '%s' ..." % (filepath))
         fits_f = fitsio.FITS(filepath)
 
@@ -238,7 +251,19 @@ class FitsioFileHandler(BaseFitsFileHandler):
         fits_f = self.create_fits(data, header)
         fits_f.writeto(path, output_verify='fix')
         fits_f.close()
+
+    def save_as_file(self, path, data, header, **kwdargs):
+        self.write_fits(filepath, data, header, **kwdargs)
+
         
+
+def get_path(fileSpec):
+    path = fileSpec
+    if fileSpec.startswith('file://'):
+        path = fileSpec[7:]
+
+    # TODO: handle web references by fetching the file
+    return path
 
 # default
 fitsLoaderClass = PyFitsFileHandler
@@ -246,7 +271,7 @@ fitsLoaderClass = PyFitsFileHandler
 # try to use them in this order
 # astropy is faster
 for name in ('astropy', 'fitsio'):
-    if use(name):
+    if use(name, raise_err=True):
         break
 
 def get_fitsloader(kind=None, logger=None):

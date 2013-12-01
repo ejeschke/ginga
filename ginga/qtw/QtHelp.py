@@ -18,7 +18,7 @@ have_pyside = False
 
 toolkit = ginga.toolkit.toolkit
 
-if toolkit in ('pyqt4', 'choose'):
+if toolkit in ('qt4', 'choose'):
     try:
         import sip
         for cl in ('QString', 'QVariant'):
@@ -33,7 +33,7 @@ if toolkit in ('pyqt4', 'choose'):
 
         # for Matplotlib
         os.environ['QT_API'] = 'pyqt'
-    except ImportError:
+    except ImportError as e:
         pass
 
 if toolkit in ('pyside', 'choose') and (not have_pyqt4):
@@ -55,7 +55,7 @@ if have_pyqt4:
 elif have_pyside:
     ginga.toolkit.use('pyside')
 else:
-    raise ImportError("Please install pyqt4 or pyside")
+    raise ImportError("Failed to import qt4 or pyside. There may be an issue with the toolkit module or it is not installed")
 
 from ginga.misc import Bunch, Callback
 

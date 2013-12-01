@@ -16,10 +16,13 @@ import time
 
 import numpy
 
-from ginga import iqcalc, wcs, fits
+from ginga import iqcalc
+from ginga.util import wcs, io_fits
 from ginga.BaseImage import BaseImage, ImageError, Header
 from ginga.misc import Bunch
 
+class AstroHeader(Header):
+    pass
 
 class AstroImage(BaseImage):
     """
@@ -27,46 +30,49 @@ class AstroImage(BaseImage):
     
     NOTE: this module is NOT thread-safe!
     """
+    # class variables for WCS and IO can be set
+    wcsClass = wcs.WCS
+    ioClass = io_fits.fitsLoaderClass
 
-    def __init__(self, data_np=None, metadata=None, wcsclass=None,
-                 logger=None):
-        if not wcsclass:
-            wcsclass = wcs.WCS
-        self.wcs = wcsclass(logger)
+    @classmethod
+    def set_wcsClass(cls, klass):
+        cls.wcsClass = klass
+        
+    @classmethod
+    def set_ioClass(cls, klass):
+        cls.ioClass = klass
+        
+
+    def __init__(self, data_np=None, metadata=None, logger=None,
+                 wcsclass=wcsClass, ioclass=ioClass):
 
         BaseImage.__init__(self, data_np=data_np, metadata=metadata,
                            logger=logger)
+        
+        # wcsclass specifies a pluggable WCS module
+        self.wcs = wcsclass(self.logger)
+
+        # wcsclass specifies a pluggable IO module
+        self.io = ioclass(self.logger)
         
         self.iqcalc = iqcalc.IQCalc(logger=logger)
         self.naxispath = []
         self.revnaxis = []
 
     def load_hdu(self, hdu, fobj=None, naxispath=None):
-        self.naxispath = []
-        self.revnaxis = []
+        self.clear_metadata()
 
-        data = hdu.data
-        if len(data.shape) < 2:
-            # Expand 1D arrays into 1xN array
-            data = data.reshape((1, data.shape[0]))
-        else:
-            # Drill down to 2D data slice
-            if not naxispath:
-                naxispath = ([0] * (len(data.shape)-2))
-            self.naxispath = naxispath
-            self.revnaxis = list(naxispath)
-            self.revnaxis.reverse()
+        ahdr = self.get_header()
 
-            for idx in naxispath:
-                data = data[idx]
+        loader = io_fits.PyFitsFileHandler(self.logger)
+        data, naxispath = loader.load_hdu(hdu, ahdr, naxispath=naxispath)
+        self.naxispath = naxispath
+        self.revnaxis = list(naxispath)
+        self.revnaxis.reverse()
 
         self.set_data(data)
+        self.set(path=None)
 
-        # Load in FITS header
-        self.clear_metadata()
-        hdr = self.get_header()
-        hdr.fromHDU(hdu)
-        
         # Try to make a wcs object on the header
         self.wcs.load_header(hdu.header, fobj=fobj)
 
@@ -75,24 +81,15 @@ class AstroImage(BaseImage):
         self.clear_metadata()
 
         ahdr = self.get_header()
-
-        loader = fits.get_fitsloader(logger=self.logger)
-
-        data, naxispath = loader.load_file(filepath, ahdr, numhdu=numhdu,
-                                           naxispath=naxispath)
+        
+        data, naxispath = self.io.load_file(filepath, ahdr, numhdu=numhdu,
+                                            naxispath=naxispath)
         self.naxispath = naxispath
         self.revnaxis = list(naxispath)
         self.revnaxis.reverse()
 
         self.set_data(data)
         
-        # Try to make a wcs object on the header
-        # TODO: in order to do more sophisticated WCS (e.g. distortion
-        #   correction) that requires info in additional headers we need
-        #   to pass additional information to the wcs class
-        #self.wcs.load_header(hdu.header, fobj=fobj)
-        self.wcs.load_header(ahdr)
-
         # Set the name to the filename (minus extension) if no name
         # currently exists for this image
         name = self.get('name', None)
@@ -102,6 +99,13 @@ class AstroImage(BaseImage):
             self.set(name=name)
         self.set(path=filepath)
         
+        # Try to make a wcs object on the header
+        # TODO: in order to do more sophisticated WCS (e.g. distortion
+        #   correction) that requires info in additional headers we need
+        #   to pass additional information to the wcs class
+        #self.wcs.load_header(hdu.header, fobj=fobj)
+        self.wcs.load_header(ahdr)
+
 
     def load_buffer(self, data, dims, dtype, byteswap=False,
                     metadata=None, redraw=True):
@@ -111,6 +115,12 @@ class AstroImage(BaseImage):
         data = data.reshape(dims)
         self.set_data(data, metadata=metadata)
 
+    def set_wcs(self, wcs):
+        self.wcs = wcs
+        
+    def set_io(self, io):
+        self.io = io
+        
     def copy_data(self):
         data = self.get_data()
         return data.copy()
@@ -175,13 +185,11 @@ class AstroImage(BaseImage):
         """Set an item in the fits header, if any."""
         return self.update_keywords(kwds)
         
-        
     def update_data(self, data_np, metadata=None, astype=None):
-        """Use this method to make a private copy of the incoming array.
+        """DO NOT USE: this method will be deprecated!
         """
         self.set_data(data_np.copy(), metadata=metadata,
                       astype=astype)
-        
         
     def update_metadata(self, keyDict):
         for key, val in keyDict.items():
@@ -193,20 +201,6 @@ class AstroImage(BaseImage):
 
     def clear_metadata(self):
         self.metadata = {}
-
-    def update_hdu(self, hdu, fobj=None, astype=None):
-        self.update_data(hdu.data, astype=astype)
-        #self.update_keywords(hdu.header)
-        hdr = self.get_header(create=True)
-        hdr.fromHDU(hdu)
-
-        # Try to make a wcs object on the header
-        self.wcs.load_header(hdu.header, fobj=fobj)
-
-    def update_file(self, path, index=0, astype=None):
-        fits_f = wcs.pyfits.open(path, 'readonly')
-        self.update_hdu(fits_f[index], fobj=fits_f, astype=astype)
-        fits_f.close()
 
     def get_iqcalc(self):
         return self.iqcalc
@@ -222,6 +216,11 @@ class AstroImage(BaseImage):
         self.transfer(other, astype=astype)
         return other
         
+    def save_as_file(self, filepath, **kwdargs):
+        data = self.get_data()
+        header = self.get_header()
+        self.io.save_as_file(filepath, data, header, **kwdargs)
+
     def cutout_cross(self, x, y, radius):
         """Cut two data subarrays that have a center at (x, y) and with
         radius (radius) from (data).  Returns the starting pixel (x0, y0)
@@ -266,48 +265,6 @@ class AstroImage(BaseImage):
 
         return qs
      
-
-    def create_fits(self):
-        fits_f = wcs.pyfits.HDUList()
-        hdu = wcs.pyfits.PrimaryHDU()
-        data = self.get_data()
-        # if sys.byteorder == 'little':
-        #     data = data.byteswap()
-        hdu.data = data
-
-        header = self.get_header()
-
-        deriver = self.get('deriver', None)
-        if deriver:
-            deriver.deriveAll(self)
-            keylist = deriver.get_keylist()
-        else:
-            keylist = header.get_keyorder()
-
-        if not keylist:
-            keylist = header.keys()
-
-        errlist = []
-        for kwd in keylist:
-            try:
-                if deriver:
-                    comment = deriver.get_comment(kwd)
-                else:
-                    comment = ""
-                hdu.header.update(kwd, header[kwd], comment=comment)
-            except Exception, e:
-                errlist.append((kwd, str(e)))
-
-        fits_f.append(hdu)
-        return fits_f
-    
-    def write_fits(self, path, output_verify='fix'):
-        fits_f = self.create_fits()
-        return fits_f.writeto(path, output_verify=output_verify)
-        
-    def save_file_as(self, filepath):
-        self.write_fits(filepath)
-
     def pixtocoords(self, x, y, system=None, coords='data'):
         args = [x, y] + self.revnaxis
         return self.wcs.pixtocoords(args, system=system, coords=coords)
@@ -856,21 +813,6 @@ class AstroImage(BaseImage):
                            ra_lbl=ra_lbl, dec_lbl=dec_lbl,
                            value=value)
         return info
-
-
-class AstroHeader(Header):
-
-    def fromHDU(self, hdu):
-        header = hdu.header
-        if hasattr(header, 'cards'):
-            #newer astropy.io.fits don't have ascardlist
-            for card in header.cards:
-                bnch = self.__setitem__(card.key, card.value)
-                bnch.comment = card.comment
-        else:
-            for card in header.ascardlist():
-                bnch = self.__setitem__(card.key, card.value)
-                bnch.comment = card.comment
 
 
 #END

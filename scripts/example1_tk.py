@@ -14,7 +14,7 @@ import Tkinter
 from tkFileDialog import askopenfilename
 
 from ginga.tkw.ImageViewTk import ImageViewZoom
-from ginga.AstroImage import pyfits
+from ginga import AstroImage
 
 
 STD_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcName)s) | %(message)s'
@@ -69,15 +69,9 @@ class FitsViewer(object):
         return self.root
 
     def load_file(self, filepath):
-        in_f = pyfits.open(filepath, 'readonly')
-        data = in_f[0].data
-        # compressed FITS file?
-        if (data == None) and (len(in_f) > 1) and \
-           isinstance(in_f[1], pyfits.core.CompImageHDU):
-            data = in_f[1].data
-        in_f.close()
-
-        self.fitsimage.set_data(data)
+        image = AstroImage.AstroImage(logger=self.logger)
+        image.load_file(filepath)
+        self.fitsimage.set_image(image)
         self.root.title(filepath)
 
     def open_file(self):

@@ -25,5 +25,6 @@ windows, star catalog access, cuts, star pick/fwhm, thumbnails, etc.
    plugins
    customizing
    developers
+   internals
 
 

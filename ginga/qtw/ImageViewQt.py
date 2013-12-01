@@ -412,6 +412,15 @@ class RenderMixin(object):
     def wheelEvent(self, event):
         self.fitsimage.scroll_event(self, event)
 
+    def event(self, event):
+        # This method is a hack necessary to support trackpad gestures
+        # on Qt4 because it does not support specific method overrides.
+        # Instead we have to override the generic event handler, look
+        # explicitly for gesture events.
+        if event.type() == QtCore.QEvent.Gesture:
+            return self.fitsimage.gesture_event(self, event)
+        return super(RenderMixin, self).event(event)
+
     def dragEnterEvent(self, event):
 #         if event.mimeData().hasFormat('text/plain'):
 #             event.accept()
@@ -458,6 +467,12 @@ class ImageViewEvent(ImageViewQt):
                               QtCore.Qt.WheelFocus))
         imgwin.setMouseTracking(True)
         imgwin.setAcceptDrops(True)
+        # enable gesture handling
+        imgwin.grabGesture(QtCore.Qt.PanGesture)
+        imgwin.grabGesture(QtCore.Qt.PinchGesture)
+        imgwin.grabGesture(QtCore.Qt.SwipeGesture)
+        # imgwin.grabGesture(QtCore.Qt.TapGesture)
+        # imgwin.grabGesture(QtCore.Qt.TapAndHoldGesture)
         
         # last known window mouse position
         self.last_win_x = 0
@@ -494,7 +509,7 @@ class ImageViewEvent(ImageViewQt):
         for name in ('motion', 'button-press', 'button-release',
                      'key-press', 'key-release', 'drag-drop', 
                      'scroll', 'map', 'focus', 'enter', 'leave',
-                     ):
+                     'pinch', 'pan', 'swipe', 'tap'):
             self.enable_callback(name)
 
     def transkey(self, keycode, keyname):
@@ -512,7 +527,7 @@ class ImageViewEvent(ImageViewQt):
         #     return 'super_r'
         if keycode in [QtCore.Qt.Key_Escape]:
             return 'escape'
-        # Conttrol key on Mac keyboards and "Windows" key under Linux
+        # Control key on Mac keyboards and "Windows" key under Linux
         if keycode in [16777250]:
             return 'meta_right'
         if keycode in self._fnkeycodes:
@@ -633,6 +648,95 @@ class ImageViewEvent(ImageViewQt):
             delta, direction))
 
         return self.make_callback('scroll', direction)
+
+    def gesture_event(self, widget, event):
+        gesture = event.gestures()[0]
+        state = gesture.state()
+        if state == QtCore.Qt.GestureStarted:
+            gstate = 'start'
+        elif state == QtCore.Qt.GestureUpdated:
+            gstate = 'move'
+        elif state == QtCore.Qt.GestureFinished:
+            gstate = 'end'
+        elif state == QtCore.Qt.GestureCancelled:
+            gstate = 'end'
+
+        # dispatch on gesture type
+        gtype = event.gesture(QtCore.Qt.SwipeGesture)
+        if gtype:
+            self.gs_swiping(event, gesture, gstate)
+            return True
+        gtype = event.gesture(QtCore.Qt.PanGesture)
+        if gtype:
+            self.gs_panning(event, gesture, gstate)
+            return True
+        gtype = event.gesture(QtCore.Qt.PinchGesture)
+        if gtype:
+            self.gs_pinching(event, gesture, gstate)
+            return True
+        # gtype = event.gesture(QtCore.Qt.TapGesture)
+        # if gtype:
+        #     self.gs_tapping(event, gesture, gstate)
+        #     return True
+        # gtype = event.gesture(QtCore.Qt.TapAndHoldGesture)
+        # if gtype:
+        #     self.gs_taphold(event, gesture, gstate)
+        #     return True
+        return True
+
+    def gs_swiping(self, event, gesture, gstate):
+        #print "SWIPING"
+        if gstate == 'end':
+            _hd = gesture.horizontalDirection()
+            hdir = None
+            if _hd == QtGui.QSwipeGesture.Left:
+                hdir = 'left'
+            elif _hd == QtGui.QSwipeGesture.Right:
+                hdir = 'right'
+
+            _vd = gesture.verticalDirection()
+            vdir = None
+            if _vd == QtGui.QSwipeGesture.Up:
+                vdir = 'up'
+            elif _vd == QtGui.QSwipeGesture.Down:
+                vdir = 'down'
+
+            self.logger.debug("swipe gesture hdir=%s vdir=%s" % (
+                hdir, vdir))
+
+            return self.make_callback('swipe', gstate, hdir, vdir)
+
+    def gs_pinching(self, event, gesture, gstate):
+        #print "PINCHING"
+        rot = gesture.rotationAngle()
+        scale = gesture.scaleFactor()
+        self.logger.debug("pinch gesture rot=%f scale=%f state=%s" % (
+            rot, scale, gstate))
+
+        return self.make_callback('pinch', gstate, rot, scale)
+
+    def gs_panning(self, event, gesture, gstate):
+        #print "PANNING"
+        # x, y = event.x(), event.y()
+        # self.last_win_x, self.last_win_y = x, y
+
+        # data_x, data_y = self.get_data_xy(x, y)
+        # self.last_data_x, self.last_data_y = data_x, data_y
+
+        d = gesture.delta()
+        dx, dy = d.x(), d.y()
+        self.logger.debug("pan gesture dx=%f dy=%f state=%s" % (
+            dx, dy, gstate))
+
+        return self.make_callback('pan', gstate, dx, dy)
+
+    def gs_tapping(self, event, gesture, gstate):
+        #print "TAPPING", gstate
+        pass
+
+    def gs_taphold(self, event, gesture, gstate):
+        #print "TAP/HOLD", gstate
+        pass
 
     def drop_event(self, widget, event):
         dropdata = event.mimeData()

@@ -35,15 +35,11 @@ ds9 is a "everything including kitchen sink" kind of viewer, whereas
 ginga reference viewer is more like a "take what you need from the
 pantry and whip it up" type viewer.  
 
-How easy is it for Ginga to support new file formats or a new WCS?
-------------------------------------------------------------------
-The file format (e.g. FITS) and coordinate mapping (WCS) is encapsulated
-entirely within the AstroImage class, so that new types of scientific or
-astronomical formats not based on traditional FITS+WCS can be easily
-accommodated.  Basically, if you can get your data into a numpy array,
-you should be able to get the widget to display it. 
+How easy is it for Ginga to support a custom WCS?
+-------------------------------------------------
+Pretty easy.  See Section :ref:`sec-custom-wcs`.
 
-The key is to either subclass AstroImage and override the methods that
-involve FITS/WCS related bits, or subclass BaseImage.  BaseImage is the
-base class of all images that can be displayed by Ginga and is based on
-the idea of a numpy-like data interface.
+How easy is it for Ginga to support a new file formats besides FITS?
+--------------------------------------------------------------------
+Pretty easy.  See Section :ref:`sec-custom-io`.
+

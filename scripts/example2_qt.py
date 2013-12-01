@@ -12,6 +12,8 @@ import sys, os
 import logging, logging.handlers
 from ginga.qtw.QtHelp import QtGui, QtCore
 
+from ginga.util import io_fits
+io_fits.use('fitsio')
 from ginga import AstroImage
 from ginga.qtw.ImageViewCanvasQt import ImageViewCanvas
 from ginga import colors

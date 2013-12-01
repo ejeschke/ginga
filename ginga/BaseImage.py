@@ -26,7 +26,7 @@ class BaseImage(Callback.Callbacks):
         if logger != None:
             self.logger = logger
         else:
-            self.logger = logging.Logger('AstroImage')
+            self.logger = logging.Logger('BaseImage')
         if data_np == None:
             data_np = numpy.zeros((1, 1))
         self._data = data_np
@@ -91,7 +91,7 @@ class BaseImage(Callback.Callbacks):
         return self.metadata.copy()
         
     def get_header(self):
-        return self.get('exif', Header())
+        return self.get('header', Header())
         
     def get(self, kwd, *args):
         if self.metadata.has_key(kwd):
@@ -332,7 +332,7 @@ class BaseImage(Callback.Callbacks):
     def rotate(self, rot_deg):
         data = self.get_data()
         wd, ht = self._get_dims(data)
-        # TODO: ocx, ocy need to be based on CRPIX1/2 ?
+        # TODO: allow off-center rotations
         ocx, ocy = wd // 2, ht // 2
 
         # If there is no rotation, then we are done

@@ -578,9 +578,6 @@ class ImageViewBase(Callback.Callbacks):
         if whence <= 0:
             self.make_callback('redraw')
 
-    def render_image(self, rgbobj, dst_x, dst_y):
-        self.logger.warn("Subclass should override this abstract method!")
-
     def getwin_array(self, order='RGB', alpha=1.0):
         order = order.upper()
         depth = len(order)
@@ -641,9 +638,6 @@ class ImageViewBase(Callback.Callbacks):
 
         return outarr.tostring(order='C')
         
-    def update_image(self):
-        self.logger.warn("Subclass should override this abstract method!")
-    
     def get_datarect(self):
         """
         Returns the approximate bounding box of the displayed image in
@@ -1589,4 +1583,13 @@ class ImageViewBase(Callback.Callbacks):
     def get_bg(self):
         return self.img_bg
     
+    def update_image(self):
+        self.logger.warn("Subclass should override this abstract method!")
+    
+    def render_image(self, rgbobj, dst_x, dst_y):
+        self.logger.warn("Subclass should override this abstract method!")
+
+    def reschedule_redraw(self, time_sec):
+        self.logger.warn("Subclass should override this abstract method!")
+
 #END
