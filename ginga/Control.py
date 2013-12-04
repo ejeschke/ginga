@@ -25,8 +25,9 @@ except ImportError:
     have_magic = False
 
 # Local application imports
-from ginga import cmap, imap, Catalog, AstroImage, RGBImage, ImageView
+from ginga import cmap, imap, AstroImage, RGBImage, ImageView
 from ginga.misc import Bunch, Datasrc, Callback, Timer, Task
+from ginga.util import catalog
 
 #pluginconfpfx = 'plugins'
 pluginconfpfx = None
@@ -106,8 +107,8 @@ class GingaControl(Callback.Callbacks):
         self.gpmon = self.getPluginManager(self.logger, self,
                                            None, self.mm)
 
-        # Initialize image server bank
-        self.imgsrv = Catalog.ServerBank(self.logger)
+        # Initialize catalog and image server bank
+        self.imgsrv = catalog.ServerBank(self.logger)
         self.dsscnt = 0
 
 
@@ -264,7 +265,6 @@ class GingaControl(Callback.Callbacks):
         cbar.set_range(loval, hival)
         
     def cbar_value_cb(self, cbar, value, event):
-        #print "CBAR VALUE = %f" % (value)
         chinfo = self.get_channelInfo()
         readout = chinfo.readout
         if readout != None:
@@ -285,7 +285,7 @@ class GingaControl(Callback.Callbacks):
     def focus_cb(self, fitsimage, tf, name):
         """Called when _fitsimage_ gets (tf==True) or loses (tf==False)
         the focus."""
-        if tf:
+        if tf and hasattr(self, 'readout') and (self.readout != None):
             self.readout.fitsimage = fitsimage
             image = fitsimage.get_image()
             self.readout_config(fitsimage, image, self.readout)

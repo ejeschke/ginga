@@ -24,7 +24,7 @@ except ImportError:
     import sampy
 
 from ginga import GingaPlugin
-from ginga import Catalog
+from ginga.util import catalog
 
 class SAMPError(Exception):
     pass
@@ -44,7 +44,7 @@ class SAMP(GingaPlugin.GlobalPlugin):
         self.ev_quit = fv.ev_quit
 
         # Used to fetch data
-        self.fetcher = Catalog.ImageServer(self.logger, "SAMP Image Fetcher",
+        self.fetcher = catalog.ImageServer(self.logger, "SAMP Image Fetcher",
                                            "SAMP", "none", "SAMP handler")
 
     # NO GUI...yet

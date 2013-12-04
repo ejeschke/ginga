@@ -11,7 +11,7 @@
 import sys, os
 import math
 import logging
-# TEMP
+import Bunch
 import time
 
 import numpy
@@ -54,7 +54,11 @@ class AstroImage(BaseImage):
 
         # wcsclass specifies a pluggable IO module
         self.io = ioclass(self.logger)
-        
+
+        if metadata != None:
+            header = self.get_header()
+            self.wcs.load_header(header)
+
         self.iqcalc = iqcalc.IQCalc(logger=logger)
         self.naxispath = []
         self.revnaxis = []
@@ -179,8 +183,9 @@ class AstroImage(BaseImage):
             hdr[kwd.upper()] = val
 
         # Try to make a wcs object on the header
-        self.wcs.load_header(hdr)
-
+        if hasattr(self, 'wcs'):
+            self.wcs.load_header(hdr)
+        
     def set_keywords(self, **kwds):
         """Set an item in the fits header, if any."""
         return self.update_keywords(kwds)
@@ -196,8 +201,9 @@ class AstroImage(BaseImage):
             self.metadata[key] = val
 
         # refresh the WCS
-        header = self.get_header()
-        self.wcs.load_header(header)
+        if hasattr(self, 'wcs'):
+            header = self.get_header()
+            self.wcs.load_header(header)
 
     def clear_metadata(self):
         self.metadata = {}
@@ -813,6 +819,5 @@ class AstroImage(BaseImage):
                            ra_lbl=ra_lbl, dec_lbl=dec_lbl,
                            value=value)
         return info
-
 
 #END
