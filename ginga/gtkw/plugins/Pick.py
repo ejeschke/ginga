@@ -9,7 +9,7 @@
 #
 import gtk
 from ginga.gtkw import GtkHelp
-from ginga import iqcalc
+from ginga.util import iqcalc
 from ginga.misc.plugins import PickBase
 
 try:

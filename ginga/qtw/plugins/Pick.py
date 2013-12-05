@@ -9,7 +9,7 @@
 #
 from ginga.qtw.QtHelp import QtGui, QtCore
 from ginga.qtw import QtHelp
-from ginga import iqcalc
+from ginga.util import iqcalc
 from ginga.misc.plugins import PickBase
 
 try:

@@ -370,4 +370,30 @@ class IQCalc(object):
         return results[0]
 
 
+    def qualsize(self, image, x1=None, y1=None, x2=None, y2=None,
+                 radius=5, bright_radius=2, fwhm_radius=15, threshold=None, 
+                 minfwhm=2.0, maxfwhm=50.0, minelipse=0.5,
+                 edgew=0.01):
+        
+        x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
+        data = image.cutout_data(x1, y1, x2, y2, astype='float32')
+
+        qs = self.pick_field(data, peak_radius=radius,
+                             bright_radius=bright_radius,
+                             fwhm_radius=fwhm_radius,
+                             threshold=threshold,
+                             minfwhm=minfwhm, maxfwhm=maxfwhm,
+                             minelipse=minelipse, edgew=edgew)
+
+        # Add back in offsets into image to get correct values with respect
+        # to the entire image
+        qs.x += x1
+        qs.y += y1
+        qs.objx += x1
+        qs.objy += y1
+        self.logger.debug("obj=%f,%f fwhm=%f sky=%f bright=%f" % (
+            qs.objx, qs.objy, qs.fwhm, qs.skylevel, qs.brightness))
+
+        return qs
+     
 #END

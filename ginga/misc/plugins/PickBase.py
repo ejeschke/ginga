@@ -7,9 +7,9 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-from ginga import iqcalc
 from ginga import GingaPlugin
 from ginga.misc import Bunch
+from ginga.util import iqcalc
 
 import threading
 import numpy

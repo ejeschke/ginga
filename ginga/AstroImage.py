@@ -16,7 +16,6 @@ import time
 
 import numpy
 
-from ginga import iqcalc
 from ginga.util import wcs, io_fits
 from ginga.BaseImage import BaseImage, ImageError, Header
 from ginga.misc import Bunch
@@ -59,7 +58,6 @@ class AstroImage(BaseImage):
             header = self.get_header()
             self.wcs.load_header(header)
 
-        self.iqcalc = iqcalc.IQCalc(logger=logger)
         self.naxispath = []
         self.revnaxis = []
 
@@ -208,9 +206,6 @@ class AstroImage(BaseImage):
     def clear_metadata(self):
         self.metadata = {}
 
-    def get_iqcalc(self):
-        return self.iqcalc
-    
     def transfer(self, other, astype=None):
         data = self.get_data()
         other.update_data(data, astype=astype)
@@ -242,35 +237,6 @@ class AstroImage(BaseImage):
         return (x0, y0, xarr, yarr)
 
 
-    def qualsize(self, x1=None, y1=None, x2=None, y2=None, radius=5,
-                 bright_radius=2, fwhm_radius=15, threshold=None, 
-                 minfwhm=2.0, maxfwhm=50.0, minelipse=0.5,
-                 edgew=0.01):
-
-        x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
-        data = self.cutout_data(x1, y1, x2, y2, astype='float32')
-
-        start_time = time.time()
-        qs = self.iqcalc.pick_field(data, peak_radius=radius,
-                                    bright_radius=bright_radius,
-                                    fwhm_radius=fwhm_radius,
-                                    threshold=threshold,
-                                    minfwhm=minfwhm, maxfwhm=maxfwhm,
-                                    minelipse=minelipse, edgew=edgew)
-
-        elapsed = time.time() - start_time
-        
-        # Add back in offsets into image to get correct values with respect
-        # to the entire image
-        qs.x += x1
-        qs.y += y1
-        qs.objx += x1
-        qs.objy += y1
-        print "e: obj=%f,%f fwhm=%f sky=%f bright=%f (%f sec)" % (
-            qs.objx, qs.objy, qs.fwhm, qs.skylevel, qs.brightness, elapsed)
-
-        return qs
-     
     def pixtocoords(self, x, y, system=None, coords='data'):
         args = [x, y] + self.revnaxis
         return self.wcs.pixtocoords(args, system=system, coords=coords)
