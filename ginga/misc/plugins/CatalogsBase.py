@@ -10,7 +10,7 @@
 from ginga.misc import Bunch, Future
 from ginga import GingaPlugin
 from ginga import cmap, imap
-from ginga import wcs
+from ginga.util import wcs
 
 
 class CatalogsBase(GingaPlugin.LocalPlugin):

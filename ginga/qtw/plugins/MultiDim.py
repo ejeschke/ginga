@@ -11,7 +11,8 @@ import time
 import threading
 from ginga.qtw.QtHelp import QtGui, QtCore
 from ginga.qtw import QtHelp
-from ginga import AstroImage, GingaPlugin, wcs
+from ginga import AstroImage, GingaPlugin
+from ginga.util import wcs
 
 
 class MultiDim(GingaPlugin.LocalPlugin):

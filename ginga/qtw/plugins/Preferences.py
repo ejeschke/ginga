@@ -13,7 +13,8 @@ from ginga.qtw import QtHelp
 
 from ginga import cmap, imap
 from ginga import GingaPlugin
-from ginga import AutoCuts, wcs
+from ginga import AutoCuts
+from ginga.util import wcs
 
 from ginga.misc import Bunch
 

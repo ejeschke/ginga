@@ -10,7 +10,8 @@
 from ginga.gtkw import GtkHelp, gtksel
 import gtk
 
-from ginga import AstroImage, wcs
+from ginga import AstroImage
+from ginga.util import wcs
 from ginga import GingaPlugin
 
 class MultiDim(GingaPlugin.LocalPlugin):
