@@ -458,17 +458,26 @@ class ImageViewEvent(ImageViewGtk):
         x = event.x; y = event.y
         direction = None
         if event.direction == gtk.gdk.SCROLL_UP:
-            direction = 'up'
+            direction = 0.0
         elif event.direction == gtk.gdk.SCROLL_DOWN:
-            direction = 'down'
+            direction = 180.0
         elif event.direction == gtk.gdk.SCROLL_LEFT:
-            direction = 'left'
+            direction = 270.0
         elif event.direction == gtk.gdk.SCROLL_RIGHT:
-            direction = 'right'
+            direction = 90.0
         self.logger.debug("scroll at %dx%d event=%s" % (x, y, str(event)))
 
-        # TODO: how about amount of scroll?
-        return self.make_callback('scroll', direction)
+        # TODO: does Gtk encode the amount of scroll?
+        # 15 deg is standard 1-click turn for a wheel mouse
+        amount = 15.0
+        self.logger.debug("scroll deg=%f direction=%f" % (
+            amount, direction))
+        
+        data_x, data_y = self.get_data_xy(x, y)
+        self.last_data_x, self.last_data_y = data_x, data_y
+
+        return self.make_callback('scroll', direction, amount,
+                                  data_x, data_y)
 
     def drop_event(self, widget, context, x, y, selection, targetType,
                    time):

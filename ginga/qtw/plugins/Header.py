@@ -38,7 +38,7 @@ class Header(GingaPlugin.GlobalPlugin):
         self.nb = nb
         container.addWidget(nb, stretch=0)
 
-    def _create_header_window(self):
+    def _create_header_window(self, info):
         widget = QtGui.QWidget()
         vbox = QtGui.QVBoxLayout()
         vbox.setContentsMargins(2, 2, 2, 2)
@@ -56,10 +56,20 @@ class Header(GingaPlugin.GlobalPlugin):
         vh.setVisible(False)
 
         vbox.addWidget(table, stretch=1)
-        return widget, table
 
-    def set_header(self, table, image):
+        # create sort toggle
+        cb = QtGui.QCheckBox("Sortable")
+        cb.stateChanged.connect(lambda tf: self.set_sortable_cb(info))
+        hbox = QtHelp.HBox()
+        hbox.addWidget(cb, stretch=0)
+        vbox.addWidget(hbox, stretch=0)
+        
+        info.setvals(widget=widget, table=table, sortw=cb)
+        return widget
+
+    def set_header(self, info, image):
         header = image.get_header()
+        table = info.table
 
         model = HeaderTableModel(self.columns, header)
         table.setModel(model)
@@ -70,20 +80,21 @@ class Header(GingaPlugin.GlobalPlugin):
         table.resizeColumnsToContents()
         table.resizeRowsToContents()
 
-        table.setSortingEnabled(True)
+        sorted = info.sortw.isChecked()
+        table.setSortingEnabled(sorted)
 
     def add_channel(self, viewer, chinfo):
-        sw, tv = self._create_header_window()
         chname = chinfo.name
+        info = Bunch.Bunch(chname=chname)
+        sw = self._create_header_window(info)
 
         self.nb.addTab(sw, unicode(chname))
         index = self.nb.indexOf(sw)
-        info = Bunch.Bunch(widget=sw, table=tv,
-                           nbindex=index)
+        info.setvals(nbindex=index)
         self.channel[chname] = info
 
         fitsimage = chinfo.fitsimage
-        fitsimage.set_callback('image-set', self.new_image_cb, tv)
+        fitsimage.set_callback('image-set', self.new_image_cb, info)
 
     def delete_channel(self, viewer, chinfo):
         self.logger.debug("TODO: delete channel %s" % (chinfo.name))
@@ -94,8 +105,13 @@ class Header(GingaPlugin.GlobalPlugin):
             chinfo = self.fv.get_channelInfo(name)
             self.add_channel(self.fv, chinfo)
         
-    def new_image_cb(self, fitsimage, image, tv):
-        self.set_header(tv, image)
+    def new_image_cb(self, fitsimage, image, info):
+        self.set_header(info, image)
+        
+    def set_sortable_cb(self, info):
+        chinfo = self.fv.get_channelInfo(info.chname)
+        image = chinfo.fitsimage.get_image()
+        self.set_header(info, image)
         
     def focus_cb(self, viewer, fitsimage):
         chname = self.fv.get_channelName(fitsimage)
@@ -109,7 +125,7 @@ class Header(GingaPlugin.GlobalPlugin):
             self.info = self.channel[self.active]
 
         image = fitsimage.get_image()
-        self.set_header(self.info.table, image)
+        self.set_header(self.info, image)
         
     def __str__(self):
         return 'header'

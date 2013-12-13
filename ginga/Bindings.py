@@ -7,6 +7,8 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 
+import math
+
 from ginga.misc import Bunch
 from ginga import AutoCuts
 
@@ -265,10 +267,10 @@ class ImageViewBindings(object):
                                self.sc_zoom_coarse)
         fitsimage.set_callback('zoom-fine-scroll', self.sc_zoom_fine)
 
-        if fitsimage.has_callback('pinch'):
-            fitsimage.set_callback('pinch', self.gs_pinch)
-        if fitsimage.has_callback('pan'):
-            fitsimage.set_callback('pan', self.gs_pan)
+        # if fitsimage.has_callback('pinch'):
+        #     fitsimage.set_callback('pinch', self.gs_pinch)
+        # if fitsimage.has_callback('pan'):
+        #     fitsimage.set_callback('pan', self.gs_pan)
         # if fitsimage.has_callback('swipe'):
         #     fitsimage.set_callback('swipe', self.gs_swipe)
 
@@ -331,8 +333,8 @@ class ImageViewBindings(object):
     def get_new_pan(self, fitsimage, win_x, win_y, ptype=1):
 
         if ptype == 1:
-            # This is a "free pan", similar to dragging the canvas
-            # under the "lens" or "viewport".
+            # This is a "free pan", similar to dragging the "lens"
+            # over the canvas.
             dat_wd, dat_ht = fitsimage.get_data_size()
             win_wd, win_ht = fitsimage.get_window_size()
 
@@ -487,12 +489,12 @@ class ImageViewBindings(object):
     def _scale_image(self, fitsimage, direction, factor, msg=True):
         rev = fitsimage.get_pan_reverse()
         scale_x, scale_y = fitsimage.get_scale_xy()
-        if direction == 'up':
+        if (direction < 90.0) or (direction > 270.0):
             if not rev:
                 mult = 1.0 + factor
             else:
                 mult = 1.0 - factor
-        elif direction == 'down':
+        elif (90.0 < direction < 270.0):
             if not rev:
                 mult = 1.0 - factor
             else:
@@ -901,7 +903,7 @@ class ImageViewBindings(object):
 
     #####  SCROLL ACTION CALLBACKS #####
 
-    def sc_contrast_coarse(self, fitsimage, direction, data_x, data_y,
+    def sc_contrast_coarse(self, fitsimage, direction, amount, data_x, data_y,
                            msg=True):
         """Adjust contrast interactively by setting the low AND high cut
         levels.  This function adjusts it coarsely.
@@ -910,7 +912,7 @@ class ImageViewBindings(object):
             self._adjust_contrast(fitsimage, direction, 0.01, msg=msg)
         return True
 
-    def sc_contrast_fine(self, fitsimage, direction, data_x, data_y,
+    def sc_contrast_fine(self, fitsimage, direction, amount, data_x, data_y,
                          msg=True):
         """Adjust contrast interactively by setting the low AND high cut
         levels.  This function adjusts it finely.
@@ -919,18 +921,18 @@ class ImageViewBindings(object):
             self._adjust_contrast(fitsimage, direction, 0.001, msg=msg)
         return True
 
-    def sc_zoom(self, fitsimage, direction, data_x, data_y, msg=True):
+    def sc_zoom(self, fitsimage, direction, amount, data_x, data_y, msg=True):
         """Interactively zoom the image by scrolling motion.
         This zooms by the zoom steps configured under Preferences.
         """
         if self.canzoom:
             rev = fitsimage.get_pan_reverse()
-            if direction == 'up':
+            if (direction < 90.0) or (direction > 270.0):
                 if not rev:
                     fitsimage.zoom_in()
                 else:
                     fitsimage.zoom_out()
-            elif direction == 'down':
+            elif (90.0 < direction < 270.0):
                 if not rev:
                     fitsimage.zoom_out()
                 else:
@@ -940,7 +942,7 @@ class ImageViewBindings(object):
                                            delay=0.4)
         return True
 
-    def sc_zoom_coarse(self, fitsimage, direction, data_x, data_y,
+    def sc_zoom_coarse(self, fitsimage, direction, amount, data_x, data_y,
                        msg=True):
         """Interactively zoom the image by scrolling motion.
         This zooms by adjusting the scale in x and y coarsely.
@@ -949,7 +951,7 @@ class ImageViewBindings(object):
             self._scale_image(fitsimage, direction, 0.20, msg=msg)
         return True
 
-    def sc_zoom_fine(self, fitsimage, direction, data_x, data_y,
+    def sc_zoom_fine(self, fitsimage, direction, amount, data_x, data_y,
                      msg=True):
         """Interactively zoom the image by scrolling motion.
         This zooms by adjusting the scale in x and y coarsely.
@@ -957,6 +959,61 @@ class ImageViewBindings(object):
         if self.canzoom:
             self._scale_image(fitsimage, direction, 0.08, msg=msg)
         return True
+
+    def sc_pan(self, fitsimage, direction, amount, data_x, data_y, msg=True):
+        """Interactively pan the image by scrolling motion.
+        """
+        if not self.canpan:
+            return True
+
+        # User has "Reverse Pan" preference set?
+        rev = fitsimage.get_pan_reverse()
+        if rev:
+            direction = math.fmod(direction + 180.0, 360.0)
+
+        num_degrees = amount
+        ang_rad = math.radians(90.0 - direction)
+
+        # Calculate distance of pan amount, based on current scale
+        wd, ht = fitsimage.get_data_size()
+        # pageSize = min(wd, ht)
+        ((x0, y0), (x1, y1), (x2, y2), (x3, y3)) = fitsimage.get_pan_rect()
+        page_size = min(abs(x2 - x0), abs(y2 - y0))
+        distance = (num_degrees / 360.0) * page_size
+        self.logger.debug("angle=%f ang_rad=%f distance=%f" % (
+            direction, ang_rad, distance))
+        
+        # Calculate new pan position
+        pan_x, pan_y = fitsimage.get_pan()
+        new_x = pan_x + math.cos(ang_rad) * distance
+        new_y = pan_y + math.sin(ang_rad) * distance
+
+        # cap pan position
+        new_x = min(max(new_x, 0.0), wd)
+        new_y = min(max(new_y, 0.0), ht)
+        
+        # Because pan position is reported +0.5
+        new_x, new_y = new_x - 0.5, new_y - 0.5
+        #print "data x,y=%f,%f   new x, y=%f,%f" % (pan_x, pan_y, new_x, new_y)
+
+        fitsimage.panset_xy(new_x, new_y, redraw=True)
+
+        # For checking result
+        #pan_x, pan_y = fitsimage.get_pan()
+        #print "new pan x,y=%f, %f" % (pan_x, pan_y)
+        return True
+
+    def sc_pan_coarse(self, fitsimage, direction, amount, data_x, data_y,
+                      msg=True):
+        amount = amount / 2.0
+        return self.sc_pan(fitsimage, direction, amount, data_x, data_y,
+                           msg=msg)
+
+    def sc_pan_fine(self, fitsimage, direction, amount, data_x, data_y,
+                      msg=True):
+        amount = amount / 5.0
+        return self.sc_pan(fitsimage, direction, amount, data_x, data_y,
+                           msg=msg)
 
     ##### GESTURE ACTION CALLBACKS #####
 
@@ -1230,7 +1287,7 @@ class BindingMapper(object):
         return fitsimage.make_callback(cbname, 'up', data_x, data_y)
             
 
-    def window_scroll(self, fitsimage, direction):
+    def window_scroll(self, fitsimage, direction, amount, data_x, data_y):
         try:
             idx = (self._kbdmod, 'scroll')
             emap = self.eventmap[idx]
@@ -1238,10 +1295,9 @@ class BindingMapper(object):
         except KeyError:
             return False
 
-        data_x, data_y = fitsimage.get_last_data_xy()
-
         cbname = '%s-scroll' % (emap.name)
-        return fitsimage.make_callback(cbname, direction, data_x, data_y)
+        return fitsimage.make_callback(cbname, direction, amount,
+                                       data_x, data_y)
 
 
 #END

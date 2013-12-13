@@ -471,8 +471,8 @@ class ImageViewEvent(ImageViewQt):
         imgwin.grabGesture(QtCore.Qt.PanGesture)
         imgwin.grabGesture(QtCore.Qt.PinchGesture)
         imgwin.grabGesture(QtCore.Qt.SwipeGesture)
-        # imgwin.grabGesture(QtCore.Qt.TapGesture)
-        # imgwin.grabGesture(QtCore.Qt.TapAndHoldGesture)
+        #imgwin.grabGesture(QtCore.Qt.TapGesture)
+        #imgwin.grabGesture(QtCore.Qt.TapAndHoldGesture)
         
         # last known window mouse position
         self.last_win_x = 0
@@ -638,16 +638,33 @@ class ImageViewEvent(ImageViewQt):
         return self.make_callback('motion', button, data_x, data_y)
 
     def scroll_event(self, widget, event):
-        delta = event.delta()
-        direction = None
-        if delta > 0:
-            direction = 'up'
-        elif delta < 0:
-            direction = 'down'
-        self.logger.debug("scroll delta=%f direction=%s" % (
-            delta, direction))
+        x, y = event.x(), event.y()
+        self.last_win_x, self.last_win_y = x, y
 
-        return self.make_callback('scroll', direction)
+        # 15 deg is standard 1-click turn for a wheel mouse
+        # delta() usually returns 120
+        delta = event.delta()
+        numDegrees = abs(delta) / 8.0
+
+        direction = None
+        if event.orientation() == QtCore.Qt.Horizontal:
+            if delta > 0:
+                direction = 270.0
+            elif delta < 0:
+                direction = 90.0
+        else:
+            if delta > 0:
+                direction = 0.0
+            elif delta < 0:
+                direction = 180.0
+        self.logger.debug("scroll deg=%f direction=%f" % (
+            numDegrees, direction))
+
+        data_x, data_y = self.get_data_xy(x, y)
+        self.last_data_x, self.last_data_y = data_x, data_y
+
+        return self.make_callback('scroll', direction, numDegrees,
+                                  data_x, data_y)
 
     def gesture_event(self, widget, event):
         gesture = event.gestures()[0]

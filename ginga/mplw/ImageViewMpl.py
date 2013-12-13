@@ -533,11 +533,25 @@ class ImageViewEvent(ImageViewMpl):
 
     def scroll_event(self, event):
         x, y = event.x, event.y
-        direction = event.button
-        self.logger.debug("scroll at %dx%d (%s)" % (x, y, str(direction)))
 
-        # TODO: how about amount of scroll?
-        return self.make_callback('scroll', direction)
+        # Matplotlib only gives us the number of steps of the scroll,
+        # positive for up and negative for down.  No horizontal scrolling.
+        direction = None
+        if event.step > 0:
+            direction = 0.0
+        elif event.step < 0:
+            direction = 180.0
+
+        amount = abs(event.step) * 15.0
+            
+        self.logger.debug("scroll deg=%f direction=%f" % (
+            amount, direction))
+
+        data_x, data_y = self.get_data_xy(x, y)
+        self.last_data_x, self.last_data_y = data_x, data_y
+
+        return self.make_callback('scroll', direction, amount,
+                                  data_x, data_y)
 
 class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
 

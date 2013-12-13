@@ -354,14 +354,14 @@ class Desktop(Callback.Callbacks):
             ## tb.setAcceptDrops(True)
             tb.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
             tb.connect(tb, QtCore.SIGNAL('customContextMenuRequested(const QPoint&)'),
-                       lambda point: self.on_context_menu(nb, point))
+                       lambda point: self.on_context_menu(nb, group, point))
 
 
         else:
             nb = StackedWidget()
             nb.currentChanged.connect(lambda idx: self.switch_page_cb(idx, nb))
 
-        nb.setStyleSheet (tabwidget_style)
+        nb.setStyleSheet(tabwidget_style)
         if not name:
             name = str(time.time())
         bnch = Bunch.Bunch(nb=nb, name=name, nbtype=wstype,
@@ -382,14 +382,24 @@ class Desktop(Callback.Callbacks):
                 res.append(name)
         return res
     
-    def on_context_menu(self, nb, point):
+    def get_tabnames(self, group=1):
+        res = []
+        for name in self.tab.keys():
+            bnch = self.tab[name]
+            if group == None:
+                res.append(name)
+            elif group == bnch.group:
+                res.append(name)
+        return res
+    
+    def on_context_menu(self, nb, group, point):
         # create context menu
         popmenu = QtGui.QMenu(nb)
         submenu = QtGui.QMenu(popmenu)
         submenu.setTitle("Take Tab")
         popmenu.addMenu(submenu)
 
-        tabnames = list(self.tab.keys())
+        tabnames = self.get_tabnames(group=group)
         tabnames.sort()
         for tabname in tabnames:
             item = QtGui.QAction(tabname, nb)
