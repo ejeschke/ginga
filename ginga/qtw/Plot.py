@@ -40,9 +40,12 @@ class Plot(Callback.Callbacks):
         self.ax.grid(True)
         self.canvas = FigureCanvas(self.fig)
 
+        self.logx = False
+        self.logy = False
+
     def get_widget(self):
         return self.canvas
-    
+
     def _sanity_check_window(self):
         pass
 
@@ -89,8 +92,14 @@ class Plot(Callback.Callbacks):
                         rtitle=rtitle)
         self.ax.plot(xarr, yarr, **kwdargs)
         self.ax.grid(True)
+
+        if self.logx:
+            self.ax.set_xscale('log')
+        if self.logy:
+            self.ax.set_yscale('log')
+
         self._draw()
-        
+
 
 class Histogram(Plot):
 
