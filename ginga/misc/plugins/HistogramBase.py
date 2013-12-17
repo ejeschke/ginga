@@ -119,15 +119,17 @@ class HistogramBase(GingaPlugin.LocalPlugin):
             res = image.histogram(int(bbox.x1), int(bbox.y1),
                                   int(bbox.x2), int(bbox.y2),
                                   pct=1.0, numbins=numbins)
-            y, x = res.dist, res.bins
-            x = x[:-1]
+            # used with 'steps-post' drawstyle, this x and y assignment
+                # gives correct histogram-steps
+            x = res.bins
+            y = numpy.append(res.dist, res.dist[-1])
             ## y, x = y[i:j+1], x[i:j+1]
             ymax = y.max()
             if self.plot.logy:
                 y = numpy.choose(y > 0, (.1, y))
             self.plot.plot(x, y, xtitle="Pixel value", ytitle="Number",
                            title="Pixel Value Distribution",
-                           color='blue', alpha=1.0)
+                           color='blue', alpha=1.0, drawstyle='steps-post')
         else:
             colors = ('red', 'green', 'blue')
             ymax = 0
@@ -135,15 +137,17 @@ class HistogramBase(GingaPlugin.LocalPlugin):
                 res = image.histogram(int(bbox.x1), int(bbox.y1),
                                       int(bbox.x2), int(bbox.y2),
                                       z=z, pct=1.0, numbins=numbins)
-                y, x = res.dist, res.bins
-                x = x[:-1]
+                # used with 'steps-post' drawstyle, this x and y assignment
+                # gives correct histogram-steps
+                x = res.bins
+                y = numpy.append(res.dist, res.dist[-1])
                 ## y, x = y[i:j+1], x[i:j+1]
                 ymax = max(ymax, y.max())
                 if self.plot.logy:
                     y = numpy.choose(y > 0, (.1, y))
                 self.plot.plot(x, y, xtitle="Pixel value", ytitle="Number",
                                title="Pixel Value Distribution",
-                               color=colors[z], alpha=0.33)
+                               color=colors[z], alpha=0.33, drawstyle='steps-post')
 
         # show cut levels
         loval, hival = self.fitsimage.get_cut_levels()

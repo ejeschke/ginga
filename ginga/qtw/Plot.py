@@ -113,12 +113,14 @@ class Histogram(Plot):
 
         dist, bins = numpy.histogram(data, bins=numbins, density=False)
 
-        x = bins[:-1]
-        y = dist
+        # used with 'steps-post' drawstyle, this gives correct histogram-steps
+        x = bins
+        y = numpy.append(dist, dist[-1])
+
         self.clear()
         self.set_titles(xtitle=xtitle, ytitle=ytitle, title=title,
                         rtitle=rtitle)
-        self.plot(x, y, alpha=1.0, linewidth=1.0, linestyle='-')
+        self.plot(x, y, alpha=1.0, linewidth=1.0, linestyle='-', drawstyle='steps-post')
 
 
 class Cuts(Plot):
