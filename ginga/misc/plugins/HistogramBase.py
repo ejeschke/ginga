@@ -1,7 +1,7 @@
 #
 # HistogramBase.py -- Histogram base class plugin for Ginga fits viewer
-# 
-# Eric Jeschke (eric@naoj.org) 
+#
+# Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
@@ -19,6 +19,8 @@ class HistogramBase(GingaPlugin.LocalPlugin):
         self.layertag = 'histogram-canvas'
         self.histtag = None
         self.histcolor = 'aquamarine'
+
+        self.xlimbycuts = False
 
         self.dc = self.fv.getDrawClasses()
 
@@ -43,7 +45,7 @@ class HistogramBase(GingaPlugin.LocalPlugin):
         chname = self.fv.get_channelName(self.fitsimage)
         self.fv.stop_operation_channel(chname, str(self))
         return True
-        
+
     def start(self):
         self.instructions()
         self.plot.set_titles(rtitle="Histogram")
@@ -62,11 +64,11 @@ class HistogramBase(GingaPlugin.LocalPlugin):
 
     def pause(self):
         self.canvas.ui_setActive(False)
-        
+
     def resume(self):
         self.canvas.ui_setActive(True)
         self.fv.showStatus("Draw a rectangle with the right mouse button")
-        
+
     def stop(self):
         # remove the rect from the canvas
         ## try:
@@ -96,13 +98,13 @@ class HistogramBase(GingaPlugin.LocalPlugin):
                                            color='cyan',
                                            linestyle='dash'))
         self.draw_cb(canvas, tag)
-        
+
     def redo(self):
         obj = self.canvas.getObjectByTag(self.histtag)
         if obj.kind != 'compound':
             return True
         bbox = obj.objects[0]
-        
+
         # Do histogram on the points within the rect
         image = self.fitsimage.get_image()
         self.plot.clear()
@@ -117,13 +119,17 @@ class HistogramBase(GingaPlugin.LocalPlugin):
             res = image.histogram(int(bbox.x1), int(bbox.y1),
                                   int(bbox.x2), int(bbox.y2),
                                   pct=1.0, numbins=numbins)
-            y, x = res.dist, res.bins
-            x = x[:-1]
+            # used with 'steps-post' drawstyle, this x and y assignment
+                # gives correct histogram-steps
+            x = res.bins
+            y = numpy.append(res.dist, res.dist[-1])
             ## y, x = y[i:j+1], x[i:j+1]
             ymax = y.max()
+            if self.plot.logy:
+                y = numpy.choose(y > 0, (.1, y))
             self.plot.plot(x, y, xtitle="Pixel value", ytitle="Number",
                            title="Pixel Value Distribution",
-                           color='blue', alpha=1.0)
+                           color='blue', alpha=1.0, drawstyle='steps-post')
         else:
             colors = ('red', 'green', 'blue')
             ymax = 0
@@ -131,13 +137,17 @@ class HistogramBase(GingaPlugin.LocalPlugin):
                 res = image.histogram(int(bbox.x1), int(bbox.y1),
                                       int(bbox.x2), int(bbox.y2),
                                       z=z, pct=1.0, numbins=numbins)
-                y, x = res.dist, res.bins
-                x = x[:-1]
+                # used with 'steps-post' drawstyle, this x and y assignment
+                # gives correct histogram-steps
+                x = res.bins
+                y = numpy.append(res.dist, res.dist[-1])
                 ## y, x = y[i:j+1], x[i:j+1]
                 ymax = max(ymax, y.max())
+                if self.plot.logy:
+                    y = numpy.choose(y > 0, (.1, y))
                 self.plot.plot(x, y, xtitle="Pixel value", ytitle="Number",
                                title="Pixel Value Distribution",
-                               color=colors[z], alpha=0.33)
+                               color=colors[z], alpha=0.33, drawstyle='steps-post')
 
         # show cut levels
         loval, hival = self.fitsimage.get_cut_levels()
@@ -145,15 +155,17 @@ class HistogramBase(GingaPlugin.LocalPlugin):
                                            linestyle='-', color='black')
         self.hiline = self.plot.ax.axvline(hival, 0.0, 0.99,
                                             linestyle='-', color='black')
+        if self.xlimbycuts:
+            self.plot.ax.set_xlim(loval, hival)
         self._setText(self.w.cut_low, str(loval))
         self._setText(self.w.cut_high, str(hival))
         self.plot.fig.canvas.draw()
 
         self.fv.showStatus("Click or drag left mouse button to move region")
         return True
-    
+
     def update(self, canvas, button, data_x, data_y):
-        
+
         obj = self.canvas.getObjectByTag(self.histtag)
         if obj.kind == 'compound':
             bbox = obj.objects[0]
@@ -175,7 +187,7 @@ class HistogramBase(GingaPlugin.LocalPlugin):
 
         # calculate new coords
         x1, y1, x2, y2 = bbox.x1+dx, bbox.y1+dy, bbox.x2+dx, bbox.y2+dy
-        
+
         try:
             canvas.deleteObjectByTag(self.histtag, redraw=False)
         except:
@@ -189,7 +201,7 @@ class HistogramBase(GingaPlugin.LocalPlugin):
         return True
 
     def drag(self, canvas, button, data_x, data_y):
-        
+
         obj = self.canvas.getObjectByTag(self.histtag)
         if obj.kind == 'compound':
             bbox = obj.objects[0]
@@ -227,7 +239,6 @@ class HistogramBase(GingaPlugin.LocalPlugin):
 
         return True
 
-    
     def draw_cb(self, canvas, tag):
         obj = canvas.getObjectByTag(tag)
         if obj.kind != 'rectangle':
@@ -248,17 +259,20 @@ class HistogramBase(GingaPlugin.LocalPlugin):
         self.histtag = tag
 
         return self.redo()
-    
+
     def cut_levels(self):
         try:
             loval = float(self._getText(self.w.cut_low))
             hival = float(self._getText(self.w.cut_high))
 
-            return self.fitsimage.cut_levels(loval, hival)
+            reslvls = self.fitsimage.cut_levels(loval, hival)
         except Exception, e:
             self.fv.showStatus("Error cutting levels: %s" % (str(e)))
-            
-        return True
+
+        if self.xlimbycuts:
+            self.redo()
+
+        return reslvls
 
     def auto_levels(self):
         self.fitsimage.auto_levels()
@@ -268,7 +282,7 @@ class HistogramBase(GingaPlugin.LocalPlugin):
             return
         t_ = fitsimage.get_settings()
         loval, hival = t_['cuts']
-        
+
         self.loline.remove()
         self.hiline.remove()
         self.loline = self.plot.ax.axvline(loval, 0.0, 0.99,
@@ -278,5 +292,5 @@ class HistogramBase(GingaPlugin.LocalPlugin):
         self._setText(self.w.cut_low, str(loval))
         self._setText(self.w.cut_high, str(hival))
         self.plot.fig.canvas.draw()
-        
+
 # END
