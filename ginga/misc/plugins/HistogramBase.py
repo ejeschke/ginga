@@ -19,8 +19,8 @@ class HistogramBase(GingaPlugin.LocalPlugin):
         self.layertag = 'histogram-canvas'
         self.histtag = None
         self.histcolor = 'aquamarine'
-
-        self.xlimbycuts = False
+        # If True, limits X axis to lo/hi cut levels
+        self.xlimbycuts = True
 
         self.dc = self.fv.getDrawClasses()
 
@@ -283,14 +283,18 @@ class HistogramBase(GingaPlugin.LocalPlugin):
         t_ = fitsimage.get_settings()
         loval, hival = t_['cuts']
 
-        self.loline.remove()
-        self.hiline.remove()
+        try:
+            self.loline.remove()
+            self.hiline.remove()
+        except:
+            pass
         self.loline = self.plot.ax.axvline(loval, 0.0, 0.99,
                                            linestyle='-', color='black')
         self.hiline = self.plot.ax.axvline(hival, 0.0, 0.99,
                                             linestyle='-', color='black')
         self._setText(self.w.cut_low, str(loval))
         self._setText(self.w.cut_high, str(hival))
-        self.plot.fig.canvas.draw()
+        #self.plot.fig.canvas.draw()
+        self.redo()
 
 # END

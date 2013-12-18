@@ -64,7 +64,10 @@ class Histogram(HistogramBase.HistogramBase):
         b.cut_high.returnPressed.connect(self.cut_levels)
         b.cut_levels.clicked.connect(self.cut_levels)
         b.auto_levels.clicked.connect(self.auto_levels)
+        b.log_histogram.setChecked(self.plot.logy)
         b.log_histogram.stateChanged.connect(lambda w: self.log_histogram_cb(b.log_histogram))
+        b.plot_by_cuts.setChecked(self.xlimbycuts)
+
         b.plot_by_cuts.stateChanged.connect(lambda w: self.plot_by_cuts_cb(b.plot_by_cuts))
 
         vbox1.addWidget(w, stretch=0, alignment=QtCore.Qt.AlignLeft)
@@ -72,7 +75,6 @@ class Histogram(HistogramBase.HistogramBase):
         btns = QtHelp.HBox()
         layout= btns.layout()
         layout.setSpacing(3)
-        #btns.set_child_size(15, -1)
 
         btn = QtGui.QPushButton("Close")
         btn.clicked.connect(self.close)
@@ -101,14 +103,14 @@ class Histogram(HistogramBase.HistogramBase):
 
     def log_histogram_cb(self, w):
         self.plot.logy = w.checkState()
-        if self.histtag is not None:
-            #self.histtag == None means no data is loaded yet
+        if (self.histtag is not None) and self.gui_up:
+            # self.histtag == None means no data is loaded yet
             self.redo()
 
     def plot_by_cuts_cb(self, w):
         self.xlimbycuts = w.checkState()
-        if self.histtag is not None:
-            #self.histtag == None means no data is loaded yet
+        if (self.histtag is not None) and self.gui_up:
+            # self.histtag == None means no data is loaded yet
             self.redo()
 
     def __str__(self):
