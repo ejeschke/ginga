@@ -89,7 +89,11 @@ class Log(GingaPlugin.GlobalPlugin):
             name))
 
     def log(self, text):
-        self.tw.appendPlainText(text)
+        try:
+            self.tw.appendPlainText(text)
+        except Exception as e:
+            # widget may be destroyed
+            return
 
         if not self.w.has_key('auto_scroll'):
             return

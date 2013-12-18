@@ -236,18 +236,6 @@ class ImageViewBindings(object):
                 btnname = name[4:]
                 bindmap.map_button(value, btnname)
                 
-        for name, value in d.items():
-            if name.startswith('defmod_'):
-                evname = name[7:]
-                (combos, msg) = value
-                for combo in combos:
-                    modifier, trigger = self._parse_combo(combo)
-                    bindmap.map_event(modifier, trigger, evname)
-                event = 'keydown-%s' % (evname)
-                fitsimage.enable_callback(event)
-                cb_method = self.make_modifier_cb(evname, msg)
-                fitsimage.add_callback(event, cb_method)
-
         # Add events
         for name, value in d.items():
             if len(name) <= 3:
@@ -403,6 +391,7 @@ class ImageViewBindings(object):
 
     def _panset(self, fitsimage, data_x, data_y, msg=True, redraw=True):
         try:
+            msg = self.settings.get('msg_panset', msg)
             if msg:
                 fitsimage.onscreen_message("Pan position set", delay=0.4)
 
@@ -431,6 +420,7 @@ class ImageViewBindings(object):
         fitsimage.scaleNshift_cmap(scale_pct, shift_pct)
 
     def _cutlow_pct(self, fitsimage, pct, msg=True):
+        msg = self.settings.get('msg_cuts', msg)
         image = fitsimage.get_image()
         minval, maxval = image.get_minmax()
         spread = maxval - minval
@@ -442,6 +432,7 @@ class ImageViewBindings(object):
         fitsimage.cut_levels(loval, hival, redraw=True)
 
     def _cutlow_xy(self, fitsimage, x, y, msg=True):
+        msg = self.settings.get('msg_cuts', msg)
         win_wd, win_ht = fitsimage.get_window_size()
         pct = float(x) / float(win_wd)
         image = fitsimage.get_image()
@@ -455,6 +446,7 @@ class ImageViewBindings(object):
         fitsimage.cut_levels(loval, hival, redraw=True)
 
     def _cuthigh_pct(self, fitsimage, pct, msg=True):
+        msg = self.settings.get('msg_cuts', msg)
         image = fitsimage.get_image()
         minval, maxval = image.get_minmax()
         spread = maxval - minval
@@ -466,6 +458,7 @@ class ImageViewBindings(object):
         fitsimage.cut_levels(loval, hival, redraw=True)
 
     def _cuthigh_xy(self, fitsimage, x, y, msg=True):
+        msg = self.settings.get('msg_cuts', msg)
         win_wd, win_ht = fitsimage.get_window_size()
         pct = 1.0 - (float(x) / float(win_wd))
         image = fitsimage.get_image()
@@ -479,6 +472,7 @@ class ImageViewBindings(object):
         fitsimage.cut_levels(loval, hival, redraw=True)
 
     def _cutboth_xy(self, fitsimage, x, y, msg=True):
+        msg = self.settings.get('msg_cuts', msg)
         win_wd, win_ht = fitsimage.get_window_size()
         xpct = 1.0 - (float(x) / float(win_wd))
         #ypct = 1.0 - (float(y) / float(win_ht))
@@ -492,6 +486,7 @@ class ImageViewBindings(object):
         fitsimage.cut_levels(loval, hival, redraw=True)
 
     def _cut_pct(self, fitsimage, pct, msg=True):
+        msg = self.settings.get('msg_cuts', msg)
         image = fitsimage.get_image()
         minval, maxval = image.get_minmax()
         spread = maxval - minval
@@ -510,6 +505,7 @@ class ImageViewBindings(object):
             self._cut_pct(fitsimage, -pct)
 
     def _scale_image(self, fitsimage, direction, factor, msg=True):
+        msg = self.settings.get('msg_zoom', msg)
         rev = self.settings.get('zoom_scroll_reverse', False)
         scale_x, scale_y = fitsimage.get_scale_xy()
         if (direction < 90.0) or (direction > 270.0):
@@ -530,6 +526,7 @@ class ImageViewBindings(object):
                                        delay=0.4)
 
     def _rotate_xy(self, fitsimage, x, y, msg=True):
+        msg = self.settings.get('msg_rotate', msg)
         win_wd, win_ht = fitsimage.get_window_size()
         pct = float(x) / float(win_wd)
         deg = 360.0 * pct
@@ -561,6 +558,7 @@ class ImageViewBindings(object):
         self.to_default_mode(fitsimage)
 
     def restore_colormap(self, fitsimage, msg=True):
+        msg = self.settings.get('msg_cmap', msg)
         rgbmap = fitsimage.get_rgbmap()
         rgbmap.reset_sarr()
         if msg:
@@ -578,12 +576,13 @@ class ImageViewBindings(object):
 
     #####  KEYBOARD ACTION CALLBACKS #####
 
-    def kp_draw(self, fitsimage, action, data_x, data_y, msg=True):
+    def kp_draw(self, fitsimage, action, data_x, data_y):
         # Used to set up drawing for one-button devices
         self.set_modifier(fitsimage, 'draw')
         return True
 
     def kp_freepan(self, fitsimage, action, data_x, data_y, msg=True):
+        msg = self.settings.get('msg_pan', msg)
         if self.canpan:
             self.set_modifier(fitsimage, 'freepan')
             if msg:
@@ -597,13 +596,14 @@ class ImageViewBindings(object):
                          msg=msg)
         return True
 
-    def kp_center(self, fitsimage, action, data_x, data_y, msg=True):
+    def kp_center(self, fitsimage, action, data_x, data_y):
         if self.canpan:
             fitsimage.center_image()
         return True
 
     def kp_zoom_out(self, fitsimage, action, data_x, data_y, msg=True):
         if self.canzoom:
+            msg = self.settings.get('msg_zoom', msg)
             fitsimage.zoom_out()
             if msg:
                 fitsimage.onscreen_message(fitsimage.get_scale_text(),
@@ -612,6 +612,7 @@ class ImageViewBindings(object):
 
     def kp_zoom_in(self, fitsimage, action, data_x, data_y, msg=True):
         if self.canzoom:
+            msg = self.settings.get('msg_zoom', msg)
             fitsimage.zoom_in()
             if msg:
                 fitsimage.onscreen_message(fitsimage.get_scale_text(),
@@ -620,6 +621,7 @@ class ImageViewBindings(object):
 
     def kp_zoom(self, fitsimage, keyname, data_x, data_y, msg=True):
         if self.canzoom:
+            msg = self.settings.get('msg_zoom', msg)
             keylist = self.settings.get('kp_zoom')
             zoomval = (keylist.index(keyname) + 1)
             fitsimage.zoom_to(zoomval)
@@ -630,6 +632,7 @@ class ImageViewBindings(object):
 
     def kp_zoom_inv(self, fitsimage, keyname, data_x, data_y, msg=True):
         if self.canzoom:
+            msg = self.settings.get('msg_zoom', msg)
             keylist = self.settings.get('kp_zoom_inv')
             zoomval = - (keylist.index(keyname) + 1)
             fitsimage.zoom_to(zoomval)
@@ -640,6 +643,7 @@ class ImageViewBindings(object):
 
     def kp_zoom_fit(self, fitsimage, action, data_x, data_y, msg=True):
         if self.canzoom:
+            msg = self.settings.get('msg_zoom', msg)
             fitsimage.zoom_fit()
             if msg:
                 fitsimage.onscreen_message(fitsimage.get_scale_text(),
@@ -648,6 +652,7 @@ class ImageViewBindings(object):
 
     def kp_autozoom_on(self, fitsimage, action, data_x, data_y, msg=True):
         if self.canzoom:
+            msg = self.settings.get('msg_zoom', msg)
             fitsimage.enable_autozoom('on')
             if msg:
                 fitsimage.onscreen_message('Autozoom On', delay=1.0)
@@ -655,6 +660,7 @@ class ImageViewBindings(object):
 
     def kp_autozoom_override(self, fitsimage, action, data_x, data_y, msg=True):
         if self.canzoom:
+            msg = self.settings.get('msg_zoom', msg)
             fitsimage.enable_autozoom('override')
             if msg:
                 fitsimage.onscreen_message('Autozoom Override', delay=1.0)
@@ -662,6 +668,7 @@ class ImageViewBindings(object):
             
     def kp_cut_low(self, fitsimage, action, data_x, data_y, msg=True):
         if self.cancut:
+            msg = self.settings.get('msg_cuts', msg)
             self.set_modifier(fitsimage, 'cutlo')
             if msg:
                 fitsimage.onscreen_message("Cut low (drag mouse L-R)")
@@ -669,6 +676,7 @@ class ImageViewBindings(object):
 
     def kp_cut_high(self, fitsimage, action, data_x, data_y, msg=True):
         if self.cancut:
+            msg = self.settings.get('msg_cuts', msg)
             self.set_modifier(fitsimage, 'cuthi')
             if msg:
                 fitsimage.onscreen_message("Cut high (drag mouse L-R)")
@@ -676,6 +684,7 @@ class ImageViewBindings(object):
 
     def kp_cut_all(self, fitsimage, action, data_x, data_y, msg=True):
         if self.cancut:
+            msg = self.settings.get('msg_cuts', msg)
             self.set_modifier(fitsimage, 'cutall')
             if msg:
                 fitsimage.onscreen_message("Set cut levels (drag mouse)")
@@ -683,11 +692,13 @@ class ImageViewBindings(object):
 
     def kp_cut_255(self, fitsimage, action, data_x, data_y, msg=True):
         if self.cancut:
+            msg = self.settings.get('msg_cuts', msg)
             fitsimage.cut_levels(0.0, 255.0, no_reset=True)
         return True
 
     def kp_cut_auto(self, fitsimage, action, data_x, data_y, msg=True):
         if self.cancut:
+            msg = self.settings.get('msg_cuts', msg)
             if msg:
                 fitsimage.onscreen_message("Auto cut levels", delay=1.0)
             fitsimage.auto_levels()
@@ -695,6 +706,7 @@ class ImageViewBindings(object):
 
     def kp_autocuts_on(self, fitsimage, action, data_x, data_y, msg=True):
         if self.cancut:
+            msg = self.settings.get('msg_cuts', msg)
             fitsimage.enable_autocuts('on')
             if msg:
                 fitsimage.onscreen_message('Autocuts On', delay=1.0)
@@ -702,6 +714,7 @@ class ImageViewBindings(object):
 
     def kp_autocuts_override(self, fitsimage, action, data_x, data_y, msg=True):
         if self.cancut:
+            msg = self.settings.get('msg_cuts', msg)
             fitsimage.enable_autocuts('override')
             if msg:
                 fitsimage.onscreen_message('Autocuts Override', delay=1.0)
@@ -709,6 +722,7 @@ class ImageViewBindings(object):
 
     def kp_cmap_warp(self, fitsimage, action, data_x, data_y, msg=True):
         if self.cancmap:
+            msg = self.settings.get('msg_cmap', msg)
             self.set_modifier(fitsimage, 'cmapwarp')
             if msg:
                 fitsimage.onscreen_message("Shift and stretch colormap (drag mouse)",
@@ -717,11 +731,13 @@ class ImageViewBindings(object):
 
     def kp_cmap_restore(self, fitsimage, action, data_x, data_y, msg=True):
         if self.cancmap:
+            msg = self.settings.get('msg_cmap', msg)
             self.restore_colormap(fitsimage, msg=msg)
         return True
 
     def kp_flip_x(self, fitsimage, keyname, data_x, data_y, msg=True):
         if self.canflip:
+            msg = self.settings.get('msg_transform', msg)
             flipx = (keyname == '[')
             flipX, flipY, swapXY = fitsimage.get_transforms()
             fitsimage.transform(flipx, flipY, swapXY)
@@ -731,6 +747,7 @@ class ImageViewBindings(object):
 
     def kp_flip_y(self, fitsimage, keyname, data_x, data_y, msg=True):
         if self.canflip:
+            msg = self.settings.get('msg_transform', msg)
             flipy = (keyname == ']')
             flipX, flipY, swapXY = fitsimage.get_transforms()
             fitsimage.transform(flipX, flipy, swapXY)
@@ -740,6 +757,7 @@ class ImageViewBindings(object):
 
     def kp_swap_xy(self, fitsimage, keyname, data_x, data_y, msg=True):
         if self.canflip:
+            msg = self.settings.get('msg_transform', msg)
             swapxy = (keyname == 'backslash')
             flipX, flipY, swapXY = fitsimage.get_transforms()
             fitsimage.transform(flipX, flipY, swapxy)
@@ -754,13 +772,14 @@ class ImageViewBindings(object):
 
     def kp_rotate(self, fitsimage, action, data_x, data_y, msg=True):
         if self.canrotate:
+            msg = self.settings.get('msg_rotate', msg)
             self.set_modifier(fitsimage, 'rotate')
             if msg:
                 fitsimage.onscreen_message("Rotate (drag mouse L-R)",
                                            delay=1.0)
         return True
 
-    def kp_reset(self, fitsimage, action, data_x, data_y, msg=True):
+    def kp_reset(self, fitsimage, action, data_x, data_y):
         self.reset(fitsimage)
         return True
 
@@ -783,6 +802,7 @@ class ImageViewBindings(object):
         """
         if not self.canrotate:
             return True
+        msg = self.settings.get('msg_rotate', msg)
 
         x, y = fitsimage.get_last_win_xy()
         if action == 'move':
@@ -805,6 +825,7 @@ class ImageViewBindings(object):
         """
         if not self.cancmap:
             return True
+        msg = self.settings.get('msg_cmap', msg)
         
         x, y = fitsimage.get_last_win_xy()
         if not fitsimage._originUpper:
@@ -966,6 +987,7 @@ class ImageViewBindings(object):
         This zooms by the zoom steps configured under Preferences.
         """
         if self.canzoom:
+            msg = self.settings.get('msg_zoom', msg)
             rev = self.settings.get('zoom_scroll_reverse', False)
             if (direction < 90.0) or (direction > 270.0):
                 if not rev:
@@ -1076,6 +1098,7 @@ class ImageViewBindings(object):
                                     self._start_scale_y * scale)
                 fitsimage.scale_to(scale_x, scale_y, redraw=False)
                 msg_str = fitsimage.get_scale_text()
+                msg = self.settings.get('msg_zoom', True)
                 
             if self.canrotate and ('rotate' in pinch_actions):
                 deg = self._start_rot - rot_deg
@@ -1084,12 +1107,13 @@ class ImageViewBindings(object):
                 fitsimage.rotate(deg)
                 if msg_str == None:
                     msg_str = "Rotate: %.2f" % (deg)
+                    msg = self.settings.get('msg_rotate', msg)
                 
             if msg and (msg_str != None):
                 fitsimage.onscreen_message(msg_str, delay=0.4)
         return True        
 
-    def gs_pan(self, fitsimage, state, dx, dy, msg=True):
+    def gs_pan(self, fitsimage, state, dx, dy):
         if not self.canpan:
             return True
         

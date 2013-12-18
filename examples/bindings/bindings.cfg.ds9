@@ -94,11 +94,11 @@ ms_rotate = ['rotate+left']
 ms_cmapwarp = ['cmapwarp+left', 'right']
 ms_cmaprest = ['ctrl+middle']
 ms_pan = ['ctrl+left']
-ms_freepan = ['freepan+left']
+ms_freepan = ['freepan+left', 'shift+middle']
 ms_cutlo = ['cutlo+left']
 ms_cuthi = ['cuthi+left']
 ms_cutall = ['cutall+left']
-ms_panset = ['middle']
+ms_panset = ['shift+left', 'middle']
 
 # GESTURES (Qt version only)
 # Uncomment to enable pinch gensture on touchpads.
@@ -119,5 +119,9 @@ pan_reverse = True
 
 # ds9 uses opposite sense of zooming scroll wheel
 zoom_scroll_reverse = True
+
+# No messages for color map warps or setting pan position
+msg_cmap = False
+msg_panset = False
 
 #END
