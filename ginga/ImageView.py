@@ -147,7 +147,7 @@ class ImageViewBase(Callback.Callbacks):
 
         # for panning
         self.t_makebg = False
-        self.t_.addDefaults(reverse_pan=False, autocenter=True)
+        self.t_.addDefaults(autocenter=True)
         
         # for transforms
         self.t_.addDefaults(flip_x=False, flip_y=False, swap_xy=False)
@@ -314,6 +314,12 @@ class ImageViewBase(Callback.Callbacks):
         Returns the Settings object used by this instance.
         """
         return self.t_
+    
+    def get_logger(self):
+        """
+        Returns the logger object used by this instance.
+        """
+        return self.logger
     
     def set_color_map(self, cmap_name):
         """Sets the color map.
@@ -1327,18 +1333,12 @@ class ImageViewBase(Callback.Callbacks):
         data_x, data_y = width * pct_x, height * pct_y
         self.panset_xy(data_x, data_y, redraw=redraw)
 
-    def set_pan_reverse(self, tf):
-        self.t_.set(reverse_pan=tf)
-        
     def center_image(self, redraw=True):
         width, height = self.get_data_size()
         data_x, data_y = float(width) / 2.0, float(height) / 2.0
         self.panset_xy(data_x, data_y)
         if redraw:
             self.redraw(whence=0)
-        
-    def get_pan_reverse(self):
-        return self.t_['reverse_pan']
         
     def get_transforms(self):
         return (self.t_['flip_x'], self.t_['flip_y'], self.t_['swap_xy'])

@@ -1,0 +1,123 @@
+#
+# bindings.cfg -- Ginga user interface bindings customization
+#
+# Put this in your $HOME/.ginga directory
+#
+# Troubleshooting:
+# Run the scripts/example2_xyz.py, where "xyz" is the toolkit you want
+# to use.  Run it from a terminal like this:
+#    ./scripts/example2_.py --loglevel=10 --stderr
+# Further commentary in sections below.
+#
+
+# BUTTON SET UP
+# You should rarely have to change these, but if you have a non-standard
+# mouse or setup it might be useful.
+# To find out what buttons are generating what codes, start up things as
+# described in "Troubleshooting" above and look for messages like this as
+# you click around in the window:
+#  ... | D | Bindings.py:1260 (window_button_press) | x,y=70,-69 btncode=0x1
+btn_nobtn = 0x0
+btn_left  = 0x1
+btn_middle= 0x2
+btn_right = 0x4
+
+# Set up our standard modifiers.
+# These should not contain "normal" keys--they should be valid modifier
+# keys for your platform.
+# To find out what symbol is used for a keystroke on your platform,
+# start up things as described above in "Troubleshooting" and look for
+# messages like this as you press keys while focus is in the window:
+#  ... | D | Bindings.py:1203 (window_key_press) | keyname=shift_l
+mod_shift = ['shift_l', 'shift_r']
+# same setting ends up as "Ctrl" on a pc and "Command" on a mac:
+mod_ctrl = ['control_l', 'control_r']
+# "Control" key on a mac:
+mod_draw = ['meta_right']
+
+# KEYPRESS commands
+kp_zoom_in = ['+', '=']
+kp_zoom_out = ['-', '_']
+kp_zoom = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']
+kp_zoom_inv = ['!', '@', '#', '$', '%', '^', '&', '*', '(', ')']
+kp_zoom_fit = ['backquote']
+kp_autozoom_on = ['doublequote']
+kp_autozoom_override = ['singlequote']
+kp_draw = ['space']
+kp_freepan = ['q']
+kp_pan_set = ['p']
+kp_center = ['c']
+kp_cut_low = ['<']
+kp_cut_high = ['>']
+kp_cut_all = ['.']
+kp_cut_255 = ['A']
+kp_cut_auto = ['a']
+kp_autocuts_on = [':']
+kp_autocuts_override = [';']
+kp_cmap_warp = ['/']
+kp_cmap_restore = ['?']
+kp_flip_x = ['[', '{']
+kp_flip_y = [']', '}']
+kp_swap_xy = ['backslash', '|']
+#kp_rotate = ['r']
+kp_rotate_reset = ['R']
+kp_reset = ['escape']
+
+# SCROLLING/WHEEL commands
+sc_pan = ['ctrl+scroll', 'shift+scroll']
+sc_pan_fine = []
+sc_pan_coarse = []
+sc_zoom = ['scroll']
+sc_zoom_fine = []
+sc_zoom_coarse = []
+sc_contrast_fine = []
+sc_contrast_coarse = []
+
+# This controls how fast panning occurs with the sc_pan* functions.
+# Increase to speed up panning
+scroll_pan_acceleration = 1.0
+# For trackpads you can adjust this down if it seems too sensitive.
+scroll_zoom_acceleration = 1.0
+
+
+# MOUSE/BUTTON commands
+# NOTE: most plugins in the reference viewer need "none", "cursor" and "draw"
+# events to work!  If you want to use them you need to provide a valid
+# non-conflicting binding
+ms_none = ['nobtn']
+ms_cursor = ['left']
+ms_wheel = []
+ms_draw = ['draw+left']
+
+# mouse commands initiated by a preceeding keystroke (see above)
+ms_rotate = ['rotate+left']
+ms_cmapwarp = ['cmapwarp+left', 'right']
+ms_cmaprest = ['ctrl+middle']
+ms_pan = ['ctrl+left']
+ms_freepan = ['freepan+left']
+ms_cutlo = ['cutlo+left']
+ms_cuthi = ['cuthi+left']
+ms_cutall = ['cutall+left']
+ms_panset = ['middle']
+
+# GESTURES (Qt version only)
+# Uncomment to enable pinch gensture on touchpads.
+# NOTE: if you enable this, it is *highly* recommended to disable any
+# "scroll zoom" (sc_zoom*) features above because the two kinds don't play
+# well together.  A good combination for trackpads is enabling pinch with
+# zoom and the sc_pan functions.
+#gs_pinch = ['pinch']
+
+# This controls what operations the pinch gesture controls.  Possibilities are
+# (empty list or) some combination of 'zoom' and 'rotate'.
+pinch_actions = ['zoom']
+pinch_zoom_acceleration = 1.0
+pinch_rotate_acceleration = 1.0
+
+# ds9 uses opposite sense of panning direction
+pan_reverse = True
+
+# ds9 uses opposite sense of zooming scroll wheel
+zoom_scroll_reverse = True
+
+#END

@@ -8,6 +8,8 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+import os.path
+import tempfile
 import re
 import urllib
 import urllib2
@@ -463,6 +465,36 @@ class URLServer(object):
 
         else:
             return data
+
+
+    def retrieve(self, url, filepath=None, cb_fn=None):
+        ofilepath = filepath
+        if (filepath == None) or os.path.isdir(filepath):
+            with tempfile.NamedTemporaryFile(dir=filepath,
+                                             delete=False) as out_f:
+                filepath = out_f.name
+
+        try:
+            self.logger.info("Opening url=%s" % (url))
+
+            if cb_fn != None:
+                localpath, info = urllib.urlretrieve(url, filepath,
+                                                            cb_fn)
+            else:
+                localpath, info = urllib.urlretrieve(url, filepath)
+
+        except urllib.ContentTooShortError as e:
+            self.logger.error("Content doesn't match length")
+            raise e
+        except Exception as e:
+            self.logger.error("URL fetch failure: %s" % (str(e)))
+            raise e
+
+        if ofilepath != None:
+            return localpath
+
+        with open(filepath, 'r') as in_f:
+            return in_f.read()
 
 
     def search(self, filepath, **params):

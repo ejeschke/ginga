@@ -9,7 +9,7 @@
 
 import math
 
-from ginga.misc import Bunch
+from ginga.misc import Bunch, Settings
 from ginga import AutoCuts
 
 class ImageViewBindings(object):
@@ -68,7 +68,7 @@ class ImageViewBindings(object):
          The image will be panned in the direction you drag.
     """
 
-    def __init__(self, logger):
+    def __init__(self, logger, settings=None):
         super(ImageViewBindings, self).__init__()
 
         self.logger = logger
@@ -92,58 +92,12 @@ class ImageViewBindings(object):
         self._start_scale_y = 0
         self._start_rot = 0
 
-        # User defined keys
-        self.keys = Bunch.Bunch()
-        self.keys.zoom_in = ['+', '=']
-        self.keys.zoom_out = ['-', '_']
-        self.keys.zoom = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']
-        self.keys.zoom_inv = ['!', '@', '#', '$', '%', '^', '&', '*', '(', ')']
-        self.keys.zoom_fit = ['backquote']
-        self.keys.autozoom_on = ['doublequote']
-        self.keys.autozoom_override = ['singlequote']
-        # self.keys.ctrl = ['control_l', 'control_r']
-        # self.keys.shift = ['shift_l', 'shift_r']
-        self.keys.draw = ['space']
-        self.keys.pan_free = ['q']
-        self.keys.pan_drag = []
-        self.keys.pan_set = ['p']
-        self.keys.center = ['c']
-        self.keys.cut_low = ['<']
-        self.keys.cut_high = ['>']
-        self.keys.cut_all = ['.']
-        self.keys.cut_255 = ['A']
-        self.keys.cut_auto = ['a']
-        self.keys.autocuts_on = [':']
-        self.keys.autocuts_override = [';']
-        self.keys.cmap_warp = ['/']
-        self.keys.cmap_restore = ['?']
-        self.keys.flip_x = ['[', '{']
-        self.keys.flip_y = [']', '}']
-        self.keys.swap_xy = ['backslash', '|']
-        self.keys.rotate = ['r']
-        self.keys.rotate_reset = ['R']
-        self.keys.cancel = ['escape']
-
-        # User defined buttons
-        self.btns = Bunch.Bunch()
-        self.btns.rotate = []
-        self.btns.cmapwarp = []
-        self.btns.cmaprest = []
-        self.btns.pan = []
-        self.btns.freepan = []
-        self.btns.cutlo = []
-        self.btns.cuthi = []
-        self.btns.cutall = []
-        self.btns.panset = []
-
-        # User defined scrolls
-        self.scrs = Bunch.Bunch()
-        self.scrs.contrast_coarse = []
-        self.scrs.contrast_fine = []
-        self.scrs.zoom = []
-        self.scrs.zoom_coarse = []
-        self.scrs.zoom_fine = []
-
+        if settings == None:
+            # No settings passed.  Set up defaults.
+            settings = Settings.SettingGroup(name='bindings',
+                                             logger=self.logger)
+            self.initialize_settings(settings)
+        self.settings = settings
         self.autocuts = AutoCuts.ZScale(self.logger)
 
         self.features = dict(
@@ -151,6 +105,84 @@ class ImageViewBindings(object):
             pan='canpan', zoom='canzoom', cuts='cancut', cmap='cancmap',
             flip='canflip', rotate='canrotate')
 
+    def initialize_settings(self, settings):
+        settings.addSettings(
+            # You should rarely have to change these.
+            btn_nobtn = 0x0,
+            btn_left  = 0x1,
+            btn_middle= 0x2,
+            btn_right = 0x4,
+            
+            # Set up our standard modifiers
+            mod_shift = ['shift_l', 'shift_r'],
+            mod_ctrl = ['control_l', 'control_r'],
+            mod_draw = ['meta_right'],
+            
+            # KEYBOARD
+            kp_zoom_in = ['+', '='],
+            kp_zoom_out = ['-', '_'],
+            kp_zoom = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'],
+            kp_zoom_inv = ['!', '@', '#', '$', '%', '^', '&', '*', '(', ')'],
+            kp_zoom_fit = ['backquote'],
+            kp_autozoom_on = ['doublequote'],
+            kp_autozoom_override = ['singlequote'],
+            kp_draw = ['space'],
+            kp_freepan = ['q'],
+            kp_pan_set = ['p'],
+            kp_center = ['c'],
+            kp_cut_low = ['<'],
+            kp_cut_high = ['>'],
+            kp_cut_all = ['.'],
+            kp_cut_255 = ['A'],
+            kp_cut_auto = ['a'],
+            kp_autocuts_on = [':'],
+            kp_autocuts_override = [';'],
+            kp_cmap_warp = ['/'],
+            kp_cmap_restore = ['?'],
+            kp_flip_x = ['[', '{'],
+            kp_flip_y = [']', '}'],
+            kp_swap_xy = ['backslash', '|'],
+            kp_rotate = ['r'],
+            kp_rotate_reset = ['R'],
+            kp_reset = ['escape'],
+            
+            # SCROLLING/WHEEL
+            sc_pan = [],
+            sc_pan_fine = [],
+            sc_pan_coarse = [],
+            sc_zoom = ['scroll'],
+            sc_zoom_fine = ['shift+scroll'],
+            sc_zoom_coarse = ['ctrl+scroll'],
+            sc_contrast_fine = [],
+            sc_contrast_coarse = [],
+            
+            scroll_pan_acceleration = 1.0,
+            scroll_zoom_acceleration = 1.0,
+            pan_reverse = False,
+            zoom_scroll_reverse = False,
+            
+            # MOUSE/BUTTON
+            ms_none = ['nobtn'],
+            ms_cursor = ['left'],
+            ms_wheel = [],
+            ms_draw = ['draw+left', 'right'],
+            
+            ms_rotate = ['rotate+left'],
+            ms_cmapwarp = ['cmapwarp+left', 'ctrl+right'],
+            ms_cmaprest = ['ctrl+middle'],
+            ms_pan = ['ctrl+left'],
+            ms_freepan = ['freepan+left', 'middle'],
+            ms_cutlo = ['cutlo+left'],
+            ms_cuthi = ['cuthi+left'],
+            ms_cutall = ['cutall+left'],
+            ms_panset = ['shift+left'],
+            
+            # GESTURES (Qt version only)
+            gs_pinch = [],
+            pinch_actions = ['zoom'],
+            pinch_zoom_acceleration = 1.0,
+            pinch_rotate_acceleration = 1.0,
+            )
 
     def window_map(self, fitsimage):
         self.to_default_mode(fitsimage)
@@ -160,122 +192,113 @@ class ImageViewBindings(object):
         fitsimage.add_callback('map', self.window_map)
 
         bindmap = fitsimage.get_bindmap()
+        bindmap.clear_button_map()
         bindmap.clear_event_map()
 
-        # Set up modifier mapping
-        self.setup_default_modmap(fitsimage, bindmap)
-
-        # Set up mouse button mapping
-        self.setup_default_btnmap(fitsimage, bindmap)
-        
-        # Set up key bindings
-        self.setup_default_key_events(fitsimage, bindmap)
-
-        # Set up pointer bindings
-        self.setup_default_btn_events(fitsimage, bindmap)
+        # Set up bindings
+        self.setup_settings_events(fitsimage, bindmap)
         
     def set_modifier(self, fitsimage, name, modtype='oneshot'):
         bindmap = fitsimage.get_bindmap()
         bindmap.set_modifier(name, modtype=modtype)
         
-    def get_key_bindings(self, featkey):
-        return self.keys[featkey]
-    
-    def get_key_features(self):
-        return self.keys.keys()
-    
-    def set_key_bindings(self, featkey, symlist):
-        self.keys[featkey] = symlist
+    def _parse_combo(self, combo):
+        modifier, trigger = None, combo
+        if '+' in combo:
+            if combo.endswith('+'):
+                if not combo.startswith('+'):
+                    # special case: probably contains the keystroke '+'
+                    idx = combo.index['+']
+                    modifier, trigger = combo[:idx], combo[idx+1:]
+            else:
+                modifier, trigger = combo.split('+')
+        return (modifier, trigger)
 
-    def setup_default_modmap(self, fitsimage, bindmap):
+    def setup_settings_events(self, fitsimage, bindmap):
 
-        # Establish our modifier keys.
+        d = self.settings.getDict()
+        if len(d) == 0:
+            self.initialize_settings(self.settings)
+            d = self.settings.getDict()
+
+        # First scan settings for buttons and modifiers
         bindmap.clear_modifier_map()
 
-        # Here we could change the meaning of standard modifiers
-        # (i.e. shift becomes ctrl, etc.) or define new modifiers.
-        for keyname in ('shift_l', 'shift_r'):
-            bindmap.add_modifier(keyname, 'shift')
-        for keyname in ('control_l', 'control_r'):
-            bindmap.add_modifier(keyname, 'ctrl')
-        for keyname in ('meta_right',):
-            bindmap.add_modifier(keyname, 'draw')
-        
-    def setup_default_btnmap(self, fitsimage, bindmap):
-        
-        # Establish our names for the mouse or trackpad bindings
-        bindmap.clear_button_map()
+        for name, value in d.items():
+            if name.startswith('mod_'):
+                modname = name[4:]
+                for combo in value:
+                    # NOTE: for now no chorded combinations
+                    keyname = combo
+                    bindmap.add_modifier(keyname, modname)
 
-        # e.g. left btn == 'left', scroll wheel == 'middle', right == 'right'
-        bindmap.map_button(0x0, 'nobtn')
-        bindmap.map_button(0x1, 'left')
-        bindmap.map_button(0x2, 'middle')
-        bindmap.map_button(0x4, 'right')
-        
-    def setup_default_key_events(self, fitsimage, bindmap):
+            elif name.startswith('btn_'):
+                btnname = name[4:]
+                bindmap.map_button(value, btnname)
+                
+        for name, value in d.items():
+            if name.startswith('defmod_'):
+                evname = name[7:]
+                (combos, msg) = value
+                for combo in combos:
+                    modifier, trigger = self._parse_combo(combo)
+                    bindmap.map_event(modifier, trigger, evname)
+                event = 'keydown-%s' % (evname)
+                fitsimage.enable_callback(event)
+                cb_method = self.make_modifier_cb(evname, msg)
+                fitsimage.add_callback(event, cb_method)
 
-        for name in self.get_key_features():
+        # Add events
+        for name, value in d.items():
+            if len(name) <= 3:
+                continue
+
+            pfx = name[:3]
+            if not pfx in ('kp_', 'ms_', 'sc_', 'gs_'):
+                continue
             
-            for key in self.get_key_bindings(name):
-                bindmap.map_event(None, key, name)
+            evname = name[3:]
+            for combo in value:
+                modifier, trigger = self._parse_combo(combo)
+                bindmap.map_event(modifier, trigger, evname)
 
             # Register for this symbolic event if we have a handler for it
             try:
-                cb_method = getattr(self, 'kp_%s' % name)
+                cb_method = getattr(self, name)
 
-                fitsimage.set_callback('keydown-%s' % name, cb_method)
             except AttributeError:
-                pass
+                self.logger.warn("No method found matching '%s'" % (name))
+                cb_method = None
 
-    def setup_default_btn_events(self, fitsimage, bindmap):
-        
-        # Generate standard symbolic mouse events for unmodified buttons:
-        # xxxxx-{down, move, up}
-        # e.g. 'left' button down generates 'cursor-down', moving the mouse
-        # with no button pressed generates 'none-move', etc.
-        for btnname, evtname in (('nobtn', 'none'), ('left', 'cursor'),
-                                 ('middle', 'wheel'), ('right', 'draw')):
-            bindmap.map_event(None, btnname, evtname)
+            if pfx == 'kp_':
+                # keyboard event
+                event = 'keydown-%s' % (evname)
+                fitsimage.enable_callback(event)
+                if cb_method:
+                    fitsimage.add_callback(event, cb_method)
+            
+            elif pfx == 'ms_':
+                # mouse/button event
+                for action in ('down', 'move', 'up'):
+                    event = '%s-%s' % (evname, action)
+                    fitsimage.enable_callback(event)
+                    if cb_method:
+                        fitsimage.add_callback(event, cb_method)
 
-        bindmap.map_event('shift', 'left', 'panset')
-        bindmap.map_event('ctrl', 'left', 'pan')
-        bindmap.map_event(None, 'middle', 'freepan')
-        bindmap.map_event('ctrl', 'right', 'cmapwarp')
-        bindmap.map_event('ctrl', 'middle', 'cmaprest')
-        # NOTE: name 'scroll' is hardwired for the scrolling action
-        bindmap.map_event(None, 'scroll', 'zoom')
-        bindmap.map_event('shift', 'scroll', 'zoom-fine')
-        bindmap.map_event('ctrl', 'scroll', 'zoom-coarse')
+            elif pfx == 'sc_':
+                # scrolling event
+                event = '%s-scroll' % evname
+                fitsimage.enable_callback(event)
+                if cb_method:
+                    fitsimage.add_callback(event, cb_method)
 
-        # Mouse operations that are invoked by a preceeding key
-        for name in ('rotate', 'cmapwarp', 'cutlo', 'cuthi', 'cutall',
-                        'draw', 'pan', 'freepan'):
-            bindmap.map_event(name, 'left', name)
-
-        # Now register our actions (below) for these symbolic events
-        for name in ('cursor', 'wheel', 'draw', 'rotate', 'cmapwarp',
-                     'pan', 'freepan', 'cutlo', 'cuthi', 'cutall'):
-            method = getattr(self, 'ms_'+name)
-            for action in ('down', 'move', 'up'):
-                fitsimage.set_callback('%s-%s' % (name, action), method)
-
-        fitsimage.set_callback('panset-down', self.ms_panset)
-        fitsimage.set_callback('cmaprest-down', self.ms_cmaprest)
-
-        fitsimage.set_callback('zoom-scroll', self.sc_zoom)
-        fitsimage.set_callback('zoom-coarse-scroll',
-                               self.sc_zoom_coarse)
-        fitsimage.set_callback('zoom-fine-scroll', self.sc_zoom_fine)
-
-        # if fitsimage.has_callback('pinch'):
-        #     fitsimage.set_callback('pinch', self.gs_pinch)
-        # if fitsimage.has_callback('pan'):
-        #     fitsimage.set_callback('pan', self.gs_pan)
-        # if fitsimage.has_callback('swipe'):
-        #     fitsimage.set_callback('swipe', self.gs_swipe)
-
+            elif pfx == 'gs_':
+                if evname == 'pinch':
+                    fitsimage.set_callback('pinch', cb_method)
+                
     def reset(self, fitsimage):
-        self.reset_modifier(fitsimage)
+        bindmap = fitsimage.get_bindmap()
+        bindmap.reset_modifier()
         self.pan_stop(fitsimage)
         fitsimage.onscreen_message(None)
 
@@ -353,7 +376,7 @@ class ImageViewBindings(object):
             pany = (off_y + abs(max_y)) / float(ht_y)
 
             # Account for user preference
-            if fitsimage.get_pan_reverse():
+            if self.settings.get('pan_reverse', False):
                 panx = 1.0 - panx
                 pany = 1.0 - pany
 
@@ -487,14 +510,15 @@ class ImageViewBindings(object):
             self._cut_pct(fitsimage, -pct)
 
     def _scale_image(self, fitsimage, direction, factor, msg=True):
-        rev = fitsimage.get_pan_reverse()
+        rev = self.settings.get('zoom_scroll_reverse', False)
         scale_x, scale_y = fitsimage.get_scale_xy()
         if (direction < 90.0) or (direction > 270.0):
             if not rev:
                 mult = 1.0 + factor
             else:
                 mult = 1.0 - factor
-        elif (90.0 < direction < 270.0):
+        #else (90.0 < direction < 270.0):
+        else:
             if not rev:
                 mult = 1.0 - factor
             else:
@@ -543,6 +567,14 @@ class ImageViewBindings(object):
             fitsimage.onscreen_message("Restored color map", delay=0.5)
         return True
 
+    def make_modifier_cb(self, evname, msg):
+        def cb_fn(fitsimage, action, data_x, data_y):
+            self.set_modifier(fitsimage, evname)
+            if msg != None:
+                fitsimage.onscreen_message(msg, delay=1.0)
+            return True
+        return cb_fn
+
 
     #####  KEYBOARD ACTION CALLBACKS #####
 
@@ -551,7 +583,7 @@ class ImageViewBindings(object):
         self.set_modifier(fitsimage, 'draw')
         return True
 
-    def kp_pan_free(self, fitsimage, action, data_x, data_y, msg=True):
+    def kp_freepan(self, fitsimage, action, data_x, data_y, msg=True):
         if self.canpan:
             self.set_modifier(fitsimage, 'freepan')
             if msg:
@@ -588,7 +620,8 @@ class ImageViewBindings(object):
 
     def kp_zoom(self, fitsimage, keyname, data_x, data_y, msg=True):
         if self.canzoom:
-            zoomval = (self.keys.zoom.index(keyname) + 1)
+            keylist = self.settings.get('kp_zoom')
+            zoomval = (keylist.index(keyname) + 1)
             fitsimage.zoom_to(zoomval)
             if msg:
                 fitsimage.onscreen_message(fitsimage.get_scale_text(),
@@ -597,7 +630,8 @@ class ImageViewBindings(object):
 
     def kp_zoom_inv(self, fitsimage, keyname, data_x, data_y, msg=True):
         if self.canzoom:
-            zoomval = - (self.keys.zoom_inv.index(keyname) + 1)
+            keylist = self.settings.get('kp_zoom_inv')
+            zoomval = - (keylist.index(keyname) + 1)
             fitsimage.zoom_to(zoomval)
             if msg:
                 fitsimage.onscreen_message(fitsimage.get_scale_text(),
@@ -726,17 +760,23 @@ class ImageViewBindings(object):
                                            delay=1.0)
         return True
 
+    def kp_reset(self, fitsimage, action, data_x, data_y, msg=True):
+        self.reset(fitsimage)
+        return True
 
     #####  MOUSE ACTION CALLBACKS #####
 
-    def ms_cursor(self, fitsimage, action, data_x, data_y):
-        return True
+    # def ms_none(self, fitsimage, action, data_x, data_y):
+    #     return False
 
-    def ms_wheel(self, fitsimage, action, data_x, data_y):
-        return True
+    # def ms_cursor(self, fitsimage, action, data_x, data_y):
+    #     return False
 
-    def ms_draw(self, fitsimage, action, data_x, data_y):
-        return True
+    # def ms_wheel(self, fitsimage, action, data_x, data_y):
+    #     return False
+
+    # def ms_draw(self, fitsimage, action, data_x, data_y):
+    #     return False
 
     def ms_rotate(self, fitsimage, action, data_x, data_y, msg=True):
         """Rotate the image by dragging the cursor left or right.
@@ -786,7 +826,7 @@ class ImageViewBindings(object):
         """An interactive way to restore the colormap settings after
         a warp operation.
         """
-        if self.cancmap:
+        if self.cancmap and (action == 'down'):
             self.restore_colormap(fitsimage, msg=msg)
             return True
 
@@ -896,7 +936,7 @@ class ImageViewBindings(object):
         """An interactive way to set the pan position.  The location
         (data_x, data_y) will be centered in the window.
         """
-        if self.canpan:
+        if self.canpan and (action == 'down'):
             self._panset(fitsimage, data_x, data_y, redraw=True,
                          msg=msg)
         return True
@@ -926,7 +966,7 @@ class ImageViewBindings(object):
         This zooms by the zoom steps configured under Preferences.
         """
         if self.canzoom:
-            rev = fitsimage.get_pan_reverse()
+            rev = self.settings.get('zoom_scroll_reverse', False)
             if (direction < 90.0) or (direction > 270.0):
                 if not rev:
                     fitsimage.zoom_in()
@@ -948,7 +988,9 @@ class ImageViewBindings(object):
         This zooms by adjusting the scale in x and y coarsely.
         """
         if self.canzoom:
-            self._scale_image(fitsimage, direction, 0.20, msg=msg)
+            zoom_accel = self.settings.get('scroll_zoom_acceleration', 1.0)
+            amount = zoom_accel * 0.20
+            self._scale_image(fitsimage, direction, amount, msg=msg)
         return True
 
     def sc_zoom_fine(self, fitsimage, direction, amount, data_x, data_y,
@@ -957,6 +999,8 @@ class ImageViewBindings(object):
         This zooms by adjusting the scale in x and y coarsely.
         """
         if self.canzoom:
+            zoom_accel = self.settings.get('scroll_zoom_acceleration', 1.0)
+            amount = zoom_accel * 0.08
             self._scale_image(fitsimage, direction, 0.08, msg=msg)
         return True
 
@@ -966,12 +1010,13 @@ class ImageViewBindings(object):
         if not self.canpan:
             return True
 
-        # User has "Reverse Pan" preference set?
-        rev = fitsimage.get_pan_reverse()
+        # User has "Pan Reverse" preference set?
+        rev = self.settings.get('pan_reverse', False)
         if rev:
             direction = math.fmod(direction + 180.0, 360.0)
 
-        num_degrees = amount
+        pan_accel = self.settings.get('scroll_pan_acceleration', 1.0)
+        num_degrees = amount * pan_accel
         ang_rad = math.radians(90.0 - direction)
 
         # Calculate distance of pan amount, based on current scale
@@ -1018,19 +1063,24 @@ class ImageViewBindings(object):
     ##### GESTURE ACTION CALLBACKS #####
 
     def gs_pinch(self, fitsimage, state, rot_deg, scale, msg=True):
+        pinch_actions = self.settings.get('pinch_actions', [])
         if state == 'start':
             self._start_scale_x, self._start_scale_y = fitsimage.get_scale_xy()
             self._start_rot = fitsimage.get_rotation()
         else:
             msg_str = None
-            if self.canzoom:
+            if self.canzoom and ('zoom' in pinch_actions):
+                scale_accel = self.settings.get('pinch_zoom_acceleration', 1.0)
+                scale = scale * scale_accel
                 scale_x, scale_y = (self._start_scale_x * scale,
                                     self._start_scale_y * scale)
                 fitsimage.scale_to(scale_x, scale_y, redraw=False)
                 msg_str = fitsimage.get_scale_text()
                 
-            if self.canrotate:
+            if self.canrotate and ('rotate' in pinch_actions):
                 deg = self._start_rot - rot_deg
+                rotate_accel = self.settings.get('pinch_rotate_acceleration', 1.0)
+                deg = rotate_accel * deg
                 fitsimage.rotate(deg)
                 if msg_str == None:
                     msg_str = "Rotate: %.2f" % (deg)

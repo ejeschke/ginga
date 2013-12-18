@@ -106,6 +106,8 @@ def main(options, args):
     w.resize(524, 540)
     w.show()
     app.setActiveWindow(w)
+    w.raise_()
+    w.activateWindow()
 
     if len(args) > 0:
         w.load_file(args[0])

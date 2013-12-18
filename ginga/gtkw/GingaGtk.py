@@ -335,9 +335,15 @@ class GingaView(GtkMain.GtkMain):
         return fr
     
     def build_viewpane(self, settings, rgbmap=None):
+        # instantiate bindings loaded with users preferences
+        bclass = ImageViewCanvasGtk.ImageViewCanvas.bindingsClass
+        bindprefs = self.prefs.createCategory('bindings')
+        bd = bclass(self.logger, settings=bindprefs)
+        
         fi = ImageViewCanvasGtk.ImageViewCanvas(logger=self.logger,
                                                 rgbmap=rgbmap,
-                                                settings=settings)
+                                                settings=settings,
+                                                bindings=bd)
         fi.add_callback('motion', self.motion_cb)
         fi.add_callback('cursor-down', self.force_focus_cb)
         fi.add_callback('key-press', self.keypress)

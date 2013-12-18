@@ -385,9 +385,15 @@ class GingaView(QtMain.QtMain):
         return fr
     
     def build_viewpane(self, settings, rgbmap=None):
+        # instantiate bindings loaded with users preferences
+        bclass = ImageViewCanvasQt.ImageViewCanvas.bindingsClass
+        bindprefs = self.prefs.createCategory('bindings')
+        bd = bclass(self.logger, settings=bindprefs)
+        
         fi = ImageViewCanvasQt.ImageViewCanvas(logger=self.logger,
                                                rgbmap=rgbmap,
-                                               settings=settings)
+                                               settings=settings,
+                                               bindings=bd)
         fi.enable_draw(False)
         fi.enable_auto_orient(True)
         fi.add_callback('motion', self.motion_cb)

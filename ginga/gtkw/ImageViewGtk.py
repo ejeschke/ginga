@@ -483,7 +483,7 @@ class ImageViewEvent(ImageViewGtk):
                    time):
         if targetType != self.TARGET_TYPE_TEXT:
             return False
-        paths = selection.get_text().split('\n')
+        paths = selection.get_text().strip().split('\n')
         self.logger.debug("dropped filename(s): %s" % (str(paths)))
         return self.make_callback('drag-drop', paths)
 

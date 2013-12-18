@@ -169,9 +169,14 @@ class StartMenu(QtGui.QMainWindow):
             settings.load(onError='silent')
             settings.addDefaults(autocut_method='zscale')
             
+        # instantiate bindings loaded with users preferences
+        bclass = IPyNbImageView.bindingsClass
+        bindprefs = self.preferences.createCategory('bindings')
+        bd = bclass(self.logger, settings=bindprefs)
+        
         # create a ginga basic object for user interaction
         fi = IPyNbImageView(self.logger, settings=settings,
-                            render='widget')
+                            render='widget', bindings=bd)
         fi.enable_draw(True)
         fi.set_drawtype('point')
         fi.set_drawcolor('blue')
@@ -341,6 +346,8 @@ def start(kapp):
     settings = prefs.createCategory('general')
     settings.load(onError='silent')
     settings.setDefaults(useMatplotlibColormaps=False)
+    bindprefs = prefs.createCategory('bindings')
+    bindprefs.load(onError='silent')
 
     # So we can find our plugins
     sys.path.insert(0, basedir)

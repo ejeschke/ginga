@@ -82,6 +82,9 @@ class GingaControl(Callback.Callbacks):
         # Create general preferences
         self.settings = self.prefs.createCategory('general')
         self.settings.load(onError='silent')
+        # Load bindings preferences
+        bindprefs = self.prefs.createCategory('bindings')
+        bindprefs.load(onError='silent')
 
         self.settings.addDefaults(fixedFont='Monospace',
                                   sansFont='Sans',
@@ -109,7 +112,6 @@ class GingaControl(Callback.Callbacks):
 
         # Initialize catalog and image server bank
         self.imgsrv = catalog.ServerBank(self.logger)
-        self.dsscnt = 0
 
 
     def get_ServerBank(self):
@@ -221,12 +223,14 @@ class GingaControl(Callback.Callbacks):
             self.build_fullscreen()
         elif keyname == 'f':
             self.toggle_fullscreen()
-        elif keyname == 'v':
-            self.build_view()
         elif keyname == 'm':
             self.maximize()
-        elif keyname == 'escape':
-            self.reset_viewer()
+        ## elif keyname == 'escape':
+        ##     self.reset_viewer()
+        elif keyname in ('left', 'up'):
+            self.prev_img()
+        elif keyname in ('right', 'down'):
+            self.next_img()
         elif keyname in self.fn_keys:
             index = self.fn_keys.index(keyname)
             if (index >= 0) and (index < len(self.operations)):
@@ -240,13 +244,10 @@ class GingaControl(Callback.Callbacks):
         names a file.
         """
         for url in urls:
-            match = re.match(r"^file://(.+)$", url)
-            if match:
-                fitspath = match.group(1).strip()
-                #self.load_file(fitspath)
-                chname = self.get_channelName(fitsimage)
-                self.nongui_do(self.load_file, fitspath, chname=chname,
-                               wait=False)
+            #self.load_file(url)
+            chname = self.get_channelName(fitsimage)
+            self.nongui_do(self.load_file, url, chname=chname,
+                           wait=False)
         return True
 
     def _match_cmap(self, fitsimage, colorbar):
@@ -425,7 +426,7 @@ class GingaControl(Callback.Callbacks):
         Parameters
         ----------
         `filepath`: string
-            the path of the file to load
+            the path of the file to load (can be a URL)
         `chname`: string (optional)
             the name of the channel in which to display the image
         `wait`: boolean (optional)
@@ -447,11 +448,31 @@ class GingaControl(Callback.Callbacks):
             chinfo = self.get_channelInfo(chname)
             chname = chinfo.name
 
-        # Sometimes there is a newline at the end of this..
-        filepath = filepath.strip()
+        match = re.match(r"^file://(.+)$", filepath)
+        if match:
+            # filesystem
+            filepath = match.group(1).strip()
 
-        # TODO: need progress bar or other visual indicator
-        #self.gui_do(chinfo.fitsimage.onscreen_message, "Loading file...")
+        else:
+            # If this looks like a URL, try to fetch it, otherwise
+            # assume it is a standard filesystem path
+            match = re.match(r"^(\w+)://(.+)$", filepath)
+            if match:
+                def  _dl_indicator(count, blksize, totalsize):
+                    pct = float(count * blksize) / float(totalsize)
+                    msg = "Downloading: %%%.2f complete" % (pct*100.0)
+                    self.gui_do(chinfo.fitsimage.onscreen_message, msg)
+
+                # Try to download the URL.  We press our generic URL server
+                # into use as a generic file downloader.
+                try:
+                    dl = catalog.URLServer(self.logger, "downloader", "dl",
+                                           filepath, "")
+                    filepath = dl.retrieve(filepath, filepath="/tmp",
+                                           cb_fn=_dl_indicator)
+                finally:
+                    self.gui_do(chinfo.fitsimage.onscreen_message, None)
+
         image = self.load_image(filepath)
 
         (path, filename) = os.path.split(filepath)
@@ -906,36 +927,6 @@ class GingaControl(Callback.Callbacks):
             text = '1/%.2fx' % (1.0/scalefactor)
         return text
     
-    def get_sky_image(self, key, params):
-
-        #filename = 'sky-' + str(time.time()).replace('.', '-') + '.fits'
-        filename = 'sky-' + str(self.dsscnt) + '.fits'
-        self.dsscnt = (self.dsscnt + 1) % 5
-        filepath = os.path.join("/tmp", filename)
-        try:
-            os.remove(filepath)
-        except Exception, e:
-            self.logger.error("failed to remove tmp file '%s': %s" % (
-                filepath, str(e)))
-        try:
-            dstpath = self.imgsrv.getImage(key, filepath, **params)
-            return dstpath
-
-        except Exception, e:
-            errmsg = "Failed to load sky image: %s" % (str(e))
-            self.show_error(errmsg)
-            raise ControlError(errmsg)
-
-    def get_catalog(self, key, params):
-        try:
-            starlist, info = self.imgsrv.getCatalog(key, None, **params)
-            return starlist, info
-            
-        except Exception, e:
-            errmsg ="Failed to load catalog: %s" % (str(e))
-            raise ControlError(errmsg)
-
-
     def banner(self, raiseTab=True):
         bannerFile = os.path.join(self.iconpath, 'ginga-splash.ppm')
         chname = 'Ginga'

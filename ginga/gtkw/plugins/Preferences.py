@@ -231,7 +231,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         captions = (('Pan X:', 'label', 'Pan X', 'entry'),
                     ('Pan Y:', 'label', 'Pan Y', 'entry'),
                     ('Center Image', 'button'),
-                    ('Reverse Pan', 'checkbutton', 'Mark Center', 'checkbutton'))
+                    ('Mark Center', 'checkbutton'))
         w, b = GtkHelp.build_info2(captions)
         self.w.update(b)
 
@@ -244,8 +244,6 @@ class Preferences(GingaPlugin.LocalPlugin):
         b.pan_y.connect("activate", lambda w: self.set_pan_cb())
         b.center_image.set_tooltip_text("Set the pan position to center of the image")
         b.center_image.connect("clicked", lambda w: self.center_image_cb())
-        b.reverse_pan.set_tooltip_text("Reverse the pan direction")
-        b.reverse_pan.sconnect("toggled", lambda w: self.set_misc_cb())
         b.mark_center.set_tooltip_text("Mark the center (pan locator)")
         b.mark_center.sconnect("toggled", lambda w: self.set_misc_cb())
 
@@ -711,10 +709,6 @@ class Preferences(GingaPlugin.LocalPlugin):
         return True
 
     def set_misc_cb(self):
-        revpan = self.w.reverse_pan.get_active()
-        self.t_.set(reverse_pan=revpan)
-        self.fitsimage.set_pan_reverse(revpan)
-
         markc = self.w.mark_center.get_active()
         self.t_.set(show_pan_position=markc)
         self.fitsimage.show_pan_mark(markc)
@@ -792,7 +786,6 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.w.pan_x.set_text(str(pan_x+0.5))
         self.w.pan_y.set_text(str(pan_y+0.5))
 
-        self.w.reverse_pan.set_active(prefs.get('reverse_pan', False))
         self.w.mark_center.set_active(prefs.get('show_pan_position', False))
 
         # transform settings

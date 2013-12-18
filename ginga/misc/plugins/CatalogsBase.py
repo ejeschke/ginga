@@ -7,6 +7,8 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+import os
+
 from ginga.misc import Bunch, Future
 from ginga import GingaPlugin
 from ginga import cmap, imap
@@ -24,6 +26,7 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
         self.limit_stars_to_area = False
         self.pan_to_selected = False
         self.use_dss_channel = False
+        self.dsscnt = 0
         self.plot_max = 500
         self.plot_limit = 100
         self.plot_start = 0
@@ -264,9 +267,29 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
         # Offload this network task to a non-gui thread
         self.fv.nongui_do(self.getimage, server, params, chname)
 
+    def get_sky_image(self, key, params):
+
+        srvbank = self.fv.get_ServerBank()
+        #filename = 'sky-' + str(time.time()).replace('.', '-') + '.fits'
+        filename = 'sky-' + str(self.dsscnt) + '.fits'
+        self.dsscnt = (self.dsscnt + 1) % 5
+        filepath = os.path.join("/tmp", filename)
+        try:
+            os.remove(filepath)
+        except Exception as e:
+            self.logger.error("failed to remove tmp file '%s': %s" % (
+                filepath, str(e)))
+        try:
+            dstpath = srvbank.getImage(key, filepath, **params)
+            return dstpath
+
+        except Exception as e:
+            errmsg = "Failed to load sky image: %s" % (str(e))
+            raise Exception(errmsg)
+
     def getimage(self, server, params, chname):
         try:
-            fitspath = self.fv.get_sky_image(server, params)
+            fitspath = self.get_sky_image(server, params)
 
         except Exception as e:
             errmsg = "Query exception: %s" % (str(e))
@@ -306,9 +329,19 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
         # Offload this network task to a non-gui thread
         self.fv.nongui_do(self.getcatalog, server, params, obj)
 
+    def _get_catalog(self, srvbank, key, params):
+        try:
+            starlist, info = srvbank.getCatalog(key, None, **params)
+            return starlist, info
+            
+        except Exception as e:
+            errmsg ="Failed to load catalog: %s" % (str(e))
+            raise Exception(errmsg)
+
     def getcatalog(self, server, params, obj):
         try:
-            starlist, info = self.fv.get_catalog(server, params)
+            srvbank = self.fv.get_ServerBank()
+            starlist, info = self._get_catalog(srvbank, server, params)
             self.logger.debug("starlist=%s" % str(starlist))
 
             starlist = self.filter_results(starlist, obj)

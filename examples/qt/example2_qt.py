@@ -1,7 +1,6 @@
 #! /usr/bin/env python
 #
-# example2_mpl.py -- Simple, configurable FITS viewer using a matplotlib
-#                      QtAgg backend for Ginga and embedded in a Qt program.
+# example2_qt.py -- Simple, configurable FITS viewer.
 #
 # Eric Jeschke (eric@naoj.org)
 #
@@ -9,21 +8,16 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-"""
-Usage:
-   example2_mpl.py [fits file]
-
-You need Qt4 with python bindings (or pyside) installed to run this example.
-"""
 import sys, os
+import logging, logging.handlers
 from ginga.qtw.QtHelp import QtGui, QtCore
 
+from ginga.util import io_fits
 from ginga import AstroImage
-from matplotlib.figure import Figure
-from ginga.mplw.ImageViewCanvasMpl import ImageViewCanvas
-from ginga.mplw.FigureCanvasQt import FigureCanvas
-from ginga.misc import log
+from ginga.qtw.ImageViewCanvasQt import ImageViewCanvas
 from ginga import colors
+
+STD_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcName)s) | %(message)s'
 
 
 class FitsViewer(QtGui.QMainWindow):
@@ -33,10 +27,7 @@ class FitsViewer(QtGui.QMainWindow):
         self.logger = logger
         self.drawcolors = colors.get_colors()
 
-        fig = Figure()
-        w = FigureCanvas(fig)
-        
-        fi = ImageViewCanvas(logger)
+        fi = ImageViewCanvas(logger, render='widget')
         fi.enable_autocuts('on')
         fi.set_autocut_params('zscale')
         fi.enable_autozoom('on')
@@ -48,10 +39,16 @@ class FitsViewer(QtGui.QMainWindow):
         fi.set_bg(0.2, 0.2, 0.2)
         fi.ui_setActive(True)
         self.fitsimage = fi
-        fi.set_figure(fig)
 
-        fi.get_bindings().enable_all(True)
+        bd = fi.get_bindings()
+        bd.enable_pan(True)
+        bd.enable_zoom(True)
+        bd.enable_cuts(True)
+        bd.enable_flip(True)
+        bd.enable_rotate(True)
+        bd.enable_cmap(True)
 
+        w = fi.get_widget()
         w.resize(512, 512)
 
         vbox = QtGui.QVBoxLayout()
@@ -72,7 +69,8 @@ class FitsViewer(QtGui.QMainWindow):
             wdrawtype.addItem(name)
         index = self.drawtypes.index('ruler')
         wdrawtype.setCurrentIndex(index)
-        wdrawtype.activated.connect(self.set_drawparams)
+        self.connect(wdrawtype, QtCore.SIGNAL("activated(QString)"),
+                     self.set_drawparams)
         self.wdrawtype = wdrawtype
 
         wdrawcolor = QtGui.QComboBox()
@@ -80,15 +78,17 @@ class FitsViewer(QtGui.QMainWindow):
             wdrawcolor.addItem(name)
         index = self.drawcolors.index('blue')
         wdrawcolor.setCurrentIndex(index)
-        wdrawcolor.activated.connect(self.set_drawparams)
+        self.connect(wdrawcolor, QtCore.SIGNAL("activated(QString)"),
+                     self.set_drawparams)
         self.wdrawcolor = wdrawcolor
 
         wclear = QtGui.QPushButton("Clear Canvas")
-        wclear.clicked.connect(self.clear_canvas)
+        self.connect(wclear, QtCore.SIGNAL("clicked()"), self.clear_canvas)
         wopen = QtGui.QPushButton("Open File")
-        wopen.clicked.connect(self.open_file)
+        self.connect(wopen, QtCore.SIGNAL("clicked()"), self.open_file)
         wquit = QtGui.QPushButton("Quit")
-        wquit.clicked.connect(self.close)
+        self.connect(wquit, QtCore.SIGNAL("clicked()"),
+                     self, QtCore.SLOT("close()"))
 
         hbox.addStretch(1)
         for w in (wopen, wdrawtype, wdrawcolor, wclear, wquit):
@@ -174,11 +174,27 @@ def main(options, args):
     app.connect(app, QtCore.SIGNAL('lastWindowClosed()'),
                 app, QtCore.SLOT('quit()'))
 
-    logger = log.get_logger(name="example2", options=options)
+    logger = logging.getLogger("example2")
+    logger.setLevel(options.loglevel)
+    fmt = logging.Formatter(STD_FORMAT)
+    if options.logfile:
+        fileHdlr  = logging.handlers.RotatingFileHandler(options.logfile)
+        fileHdlr.setLevel(options.loglevel)
+        fileHdlr.setFormatter(fmt)
+        logger.addHandler(fileHdlr)
+
+    if options.logstderr:
+        stderrHdlr = logging.StreamHandler()
+        stderrHdlr.setLevel(options.loglevel)
+        stderrHdlr.setFormatter(fmt)
+        logger.addHandler(stderrHdlr)
+
     w = FitsViewer(logger)
     w.resize(524, 540)
     w.show()
     app.setActiveWindow(w)
+    w.raise_()
+    w.activateWindow()
 
     if len(args) > 0:
         w.load_file(args[0])
@@ -198,7 +214,7 @@ if __name__ == "__main__":
     optprs.add_option("--log", dest="logfile", metavar="FILE",
                       help="Write logging output to FILE")
     optprs.add_option("--loglevel", dest="loglevel", metavar="LEVEL",
-                      type='int', default=None,
+                      type='int', default=logging.INFO,
                       help="Set logging level to LEVEL")
     optprs.add_option("--stderr", dest="logstderr", default=False,
                       action="store_true",

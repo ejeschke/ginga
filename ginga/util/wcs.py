@@ -917,6 +917,7 @@ def simple_wcs(px_x, px_y, ra_deg, dec_deg, px_scale_deg_px, pa_deg):
     Returns a WCS object.  Use the to_header() method on it to get something
     interesting that you can use.
     """
+    import astropy.wcs as pywcs
     wcsobj = pywcs.WCS()
 
     # center of the projection

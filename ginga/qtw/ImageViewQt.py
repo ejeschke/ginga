@@ -468,9 +468,11 @@ class ImageViewEvent(ImageViewQt):
         imgwin.setMouseTracking(True)
         imgwin.setAcceptDrops(True)
         # enable gesture handling
-        imgwin.grabGesture(QtCore.Qt.PanGesture)
         imgwin.grabGesture(QtCore.Qt.PinchGesture)
-        imgwin.grabGesture(QtCore.Qt.SwipeGesture)
+        # Some of these are not well supported (read "just don't get recognized")
+        # by Qt and aren't the same as Mac trackpad gestures anyway
+        #imgwin.grabGesture(QtCore.Qt.PanGesture)
+        #imgwin.grabGesture(QtCore.Qt.SwipeGesture)
         #imgwin.grabGesture(QtCore.Qt.TapGesture)
         #imgwin.grabGesture(QtCore.Qt.TapAndHoldGesture)
         
@@ -521,6 +523,14 @@ class ImageViewEvent(ImageViewQt):
             return 'shift_l'
         if keycode in [QtCore.Qt.Key_Alt]:
             return 'alt_l'
+        if keycode in [QtCore.Qt.Key_Up]:
+            return 'up'
+        if keycode in [QtCore.Qt.Key_Down]:
+            return 'down'
+        if keycode in [QtCore.Qt.Key_Left]:
+            return 'left'
+        if keycode in [QtCore.Qt.Key_Right]:
+            return 'right'
         # if keycode in [QtCore.Qt.Key_Super_L]:
         #     return 'super_l'
         # if keycode in [QtCore.Qt.Key_Super_R]:
@@ -702,7 +712,6 @@ class ImageViewEvent(ImageViewQt):
         return True
 
     def gs_swiping(self, event, gesture, gstate):
-        #print "SWIPING"
         if gstate == 'end':
             _hd = gesture.horizontalDirection()
             hdir = None

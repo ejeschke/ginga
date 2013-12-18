@@ -224,7 +224,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         captions = (('Pan X:', 'label', 'Pan X', 'entry'),
                     ('Pan Y:', 'label', 'Pan Y', 'entry'),
                     ('Center Image', 'button'),
-                    ('Reverse Pan', 'checkbutton', 'Mark Center', 'checkbutton'))
+                    ('Mark Center', 'checkbutton'))
         w, b = QtHelp.build_info2(captions)
         self.w.update(b)
 
@@ -238,8 +238,6 @@ class Preferences(GingaPlugin.LocalPlugin):
 
         b.center_image.setToolTip("Set the pan position to center of the image")
         b.center_image.clicked.connect(self.center_image_cb)
-        b.reverse_pan.setToolTip("Reverse the pan direction")
-        b.reverse_pan.stateChanged.connect(self.set_misc_cb)
         b.mark_center.setToolTip("Mark the center (pan locator)")
         b.mark_center.stateChanged.connect(self.set_misc_cb)
 
@@ -710,10 +708,6 @@ class Preferences(GingaPlugin.LocalPlugin):
         return True
 
     def set_misc_cb(self):
-        revpan = (self.w.reverse_pan.checkState() != 0)
-        self.t_.set(reverse_pan=revpan)
-        self.fitsimage.set_pan_reverse(revpan)
-
         markc = (self.w.mark_center.checkState() != 0)
         self.t_.set(show_pan_position=markc)
         self.fitsimage.show_pan_mark(markc)
@@ -796,7 +790,6 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.w.pan_x.setText(str(pan_x+0.5))
         self.w.pan_y.setText(str(pan_y+0.5))
 
-        self.w.reverse_pan.setChecked(prefs.get('reverse_pan', False))
         self.w.mark_center.setChecked(prefs.get('show_pan_position', False))
 
         # transform settings

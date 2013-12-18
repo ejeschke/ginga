@@ -71,7 +71,6 @@ class SettingGroup(object):
         self.name = name
         self.logger = logger
         self.preffile = preffile
-        self._cfgobj = None
 
         self.group = Bunch.Bunch()
 
