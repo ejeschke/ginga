@@ -2,6 +2,17 @@
 What's New in Ginga?
 ++++++++++++++++++++
 
+Ver 2.0.20131218034517
+======================
+The user interface mapping just got a bit easier to use.  Ginga now
+provides a way to do most UI remapping just by placing a simple config
+file in your ~/.ginga directory.  An example for ds9 users is in the
+new "examples" folder.
+
+Many simple examples were moved out of "scripts" and stored under
+subdirectories (by GUI toolkit) in "examples".
+
+
 Ver 2.0.20131201230846
 ======================
 Ginga gets trackpad gestures!  The Qt rendering class gets support for
