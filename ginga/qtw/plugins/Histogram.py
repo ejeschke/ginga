@@ -64,10 +64,10 @@ class Histogram(HistogramBase.HistogramBase):
         b.cut_high.returnPressed.connect(self.cut_levels)
         b.cut_levels.clicked.connect(self.cut_levels)
         b.auto_levels.clicked.connect(self.auto_levels)
+
         b.log_histogram.setChecked(self.plot.logy)
         b.log_histogram.stateChanged.connect(lambda w: self.log_histogram_cb(b.log_histogram))
         b.plot_by_cuts.setChecked(self.xlimbycuts)
-
         b.plot_by_cuts.stateChanged.connect(lambda w: self.plot_by_cuts_cb(b.plot_by_cuts))
 
         vbox1.addWidget(w, stretch=0, alignment=QtCore.Qt.AlignLeft)
