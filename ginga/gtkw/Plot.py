@@ -44,10 +44,10 @@ class Plot(Callback.Callbacks):
 
     def get_widget(self):
         return self.canvas
-    
+
     def getAxis(self):
         return self.ax
-    
+
     def _sanity_check_window(self):
         pass
 
@@ -77,7 +77,7 @@ class Plot(Callback.Callbacks):
         self._sanity_check_window()
         self.logger.debug('hiding window...')
         pass
-    
+
     def close(self):
         self.logger.debug('closing window....')
         self.canvas.destroy()
@@ -95,7 +95,7 @@ class Plot(Callback.Callbacks):
         self.ax.plot(xarr, yarr, **kwdargs)
         self.ax.grid(True)
         self._draw()
-        
+
 
 class Histogram(Plot):
 
