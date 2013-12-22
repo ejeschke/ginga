@@ -51,29 +51,33 @@ class Histogram(HistogramBase.HistogramBase):
         w = self.plot.get_widget()
         vbox.pack_start(w, padding=4, fill=True, expand=True)
 
-        captions = (('Cut Low', 'xlabel', '@Cut Low', 'entry'),
-                    ('Cut High', 'xlabel', '@Cut High', 'entry', 'Cut Levels', 'button'),
+        captions = (('Cut Low:', 'label', 'Cut Low', 'entry'),
+                    ('Cut High:', 'label', 'Cut High', 'entry', 'Cut Levels', 'button'),
                     ('Auto Levels', 'button'),
-                    ('Log Histogram', 'checkbutton', 'Plot By Cuts', 'checkbutton')
+                    ('Log Histogram', 'checkbutton', 'Plot By Cuts', 'checkbutton'),
+                    ('NumBins:', 'label', 'NumBins', 'entry'),
                     )
 
-        w, b = GtkHelp.build_info(captions)
+        w, b = GtkHelp.build_info2(captions)
         self.w.update(b)
         b.cut_levels.set_tooltip_text("Set cut levels manually")
         b.auto_levels.set_tooltip_text("Set cut levels by algorithm")
         b.cut_low.set_tooltip_text("Set low cut level (press Enter)")
         b.cut_high.set_tooltip_text("Set high cut level (press Enter)")
-        b.log_histogram.setToolTip("Use the log of the pixel values for the histogram (empty bins map to 10^-1)")
-        b.plot_by_cuts.setToolTip("Only show the part of the histogram between the cuts")
+        b.log_histogram.set_tooltip_text("Use the log of the pixel values for the histogram (empty bins map to 10^-1)")
+        b.plot_by_cuts.set_tooltip_text("Only show the part of the histogram between the cuts")
+        b.numbins.set_tooltip_text("Number of bins for the histogram")
+        b.numbins.set_text(str(self.numbins))
         b.cut_low.connect('activate', lambda w: self.cut_levels())
         b.cut_high.connect('activate', lambda w: self.cut_levels())
         b.cut_levels.connect('clicked', lambda w: self.cut_levels())
         b.auto_levels.connect('clicked', lambda w: self.auto_levels())
+        b.numbins.connect('activate', lambda w: self.set_numbins_cb())
 
         b.log_histogram.set_active(self.plot.logy)
-        b.log_histogram.connect('toggled', lambda w: self.log_histogram_cb(w))
+        b.log_histogram.connect('toggled', self.log_histogram_cb)
         b.plot_by_cuts.set_active(self.xlimbycuts)
-        b.plot_by_cuts.connect('toggled', lambda w: self.plot_by_cuts_cb(w))
+        b.plot_by_cuts.connect('toggled', self.plot_by_cuts_cb)
 
         vbox.pack_start(w, padding=4, fill=True, expand=False)
         box.pack1(vbox, resize=True, shrink=True)
@@ -107,13 +111,13 @@ class Histogram(HistogramBase.HistogramBase):
         self.tw.modify_font(self.msgFont)
 
     def log_histogram_cb(self, w):
-        self.plot.logy = w.checkState()
+        self.plot.logy = w.get_active()
         if (self.histtag is not None) and self.gui_up:
             # self.histtag == None means no data is loaded yet
             self.redo()
 
     def plot_by_cuts_cb(self, w):
-        self.xlimbycuts = w.checkState()
+        self.xlimbycuts = w.get_active()
         if (self.histtag is not None) and self.gui_up:
             # self.histtag == None means no data is loaded yet
             self.redo()

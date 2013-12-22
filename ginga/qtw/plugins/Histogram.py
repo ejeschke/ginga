@@ -46,13 +46,14 @@ class Histogram(HistogramBase.HistogramBase):
         w = self.plot.get_widget()
         vbox1.addWidget(w, stretch=1, alignment=QtCore.Qt.AlignTop)
 
-        captions = (('Cut Low', 'xlabel', '@Cut Low', 'entry'),
-                    ('Cut High', 'xlabel', '@Cut High', 'entry', 'Cut Levels', 'button'),
+        captions = (('Cut Low:', 'label', 'Cut Low', 'entry'),
+                    ('Cut High:', 'label', 'Cut High', 'entry', 'Cut Levels', 'button'),
                     ('Auto Levels', 'button'),
-                    ('Log Histogram', 'checkbutton', 'Plot By Cuts', 'checkbutton')
+                    ('Log Histogram', 'checkbutton', 'Plot By Cuts', 'checkbutton'),
+                    ('NumBins:', 'label', 'NumBins', 'entry'),
                     )
 
-        w, b = QtHelp.build_info(captions)
+        w, b = QtHelp.build_info2(captions)
         self.w.update(b)
         b.cut_levels.setToolTip("Set cut levels manually")
         b.auto_levels.setToolTip("Set cut levels by algorithm")
@@ -60,6 +61,8 @@ class Histogram(HistogramBase.HistogramBase):
         b.cut_high.setToolTip("Set high cut level (press Enter)")
         b.log_histogram.setToolTip("Use the log of the pixel values for the histogram (empty bins map to 10^-1)")
         b.plot_by_cuts.setToolTip("Only show the part of the histogram between the cuts")
+        b.numbins.setToolTip("Number of bins for the histogram")
+        b.numbins.setText(str(self.numbins))
         b.cut_low.returnPressed.connect(self.cut_levels)
         b.cut_high.returnPressed.connect(self.cut_levels)
         b.cut_levels.clicked.connect(self.cut_levels)
@@ -69,6 +72,7 @@ class Histogram(HistogramBase.HistogramBase):
         b.log_histogram.stateChanged.connect(lambda w: self.log_histogram_cb(b.log_histogram))
         b.plot_by_cuts.setChecked(self.xlimbycuts)
         b.plot_by_cuts.stateChanged.connect(lambda w: self.plot_by_cuts_cb(b.plot_by_cuts))
+        b.numbins.returnPressed.connect(self.set_numbins_cb)
 
         vbox1.addWidget(w, stretch=0, alignment=QtCore.Qt.AlignLeft)
 

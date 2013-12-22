@@ -21,6 +21,8 @@ class HistogramBase(GingaPlugin.LocalPlugin):
         self.histcolor = 'aquamarine'
         # If True, limits X axis to lo/hi cut levels
         self.xlimbycuts = True
+        # Number of histogram bins
+        self.numbins = 2048
 
         self.dc = self.fv.getDrawClasses()
 
@@ -109,7 +111,7 @@ class HistogramBase(GingaPlugin.LocalPlugin):
         image = self.fitsimage.get_image()
         self.plot.clear()
 
-        numbins = 2048
+        numbins = self.numbins
         ## pct = 1.0
         ## i = int(numbins * (1.0 - pct))
         ## j = int(numbins * pct)
@@ -297,4 +299,8 @@ class HistogramBase(GingaPlugin.LocalPlugin):
         #self.plot.fig.canvas.draw()
         self.redo()
 
+    def set_numbins_cb(self):
+        self.numbins = int(self._getText(self.w.numbins))
+        self.redo()
+        
 # END
