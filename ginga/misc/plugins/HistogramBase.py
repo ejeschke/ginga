@@ -154,11 +154,17 @@ class HistogramBase(GingaPlugin.LocalPlugin):
         # show cut levels
         loval, hival = self.fitsimage.get_cut_levels()
         self.loline = self.plot.ax.axvline(loval, 0.0, 0.99,
-                                           linestyle='-', color='black')
+                                           linestyle='-', color='red')
         self.hiline = self.plot.ax.axvline(hival, 0.0, 0.99,
-                                            linestyle='-', color='black')
+                                            linestyle='-', color='green')
         if self.xlimbycuts:
             self.plot.ax.set_xlim(loval, hival)
+
+        # Make x axis labels a little more readable
+        lbls = self.plot.ax.xaxis.get_ticklabels()
+        for lbl in lbls:
+            lbl.set(rotation=45, horizontalalignment='right')
+        
         self._setText(self.w.cut_low, str(loval))
         self._setText(self.w.cut_high, str(hival))
         self.plot.fig.canvas.draw()
