@@ -44,7 +44,7 @@ setup(
                 # Matplotlib version
                 'ginga.mplw',
                 # Common stuff
-                'ginga.misc', 'ginga.misc.plugins',
+                'ginga.misc', 'ginga.misc.plugins', 'ginga.base',
                 # Misc
                 'ginga.util', 'ginga.icons', 'ginga.doc'
                 ],
