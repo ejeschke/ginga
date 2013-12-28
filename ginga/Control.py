@@ -315,6 +315,10 @@ class GingaControl(Callback.Callbacks):
     def start_operation(self, opname):
         return self.start_local_plugin(None, opname, None)
 
+    def stop_operation_channel(self, chname, opname):
+        self.logger.warn("Do not use this method name--it will be deprecated!")
+        return self.stop_local_plugin(chname, opname)
+    
     def start_local_plugin(self, chname, opname, future):
         chinfo = self.get_channelInfo(chname)
         opmon = chinfo.opmon
@@ -326,10 +330,6 @@ class GingaControl(Callback.Callbacks):
         opmon = chinfo.opmon
         opmon.deactivate(opname)
             
-    def stop_operation_channel(self, chname, opname):
-        self.logger.warn("Do not use this method name--it will be deprecated!")
-        return self.stop_local_plugin(chname, opname)
-    
     def start_global_plugin(self, pluginName, raise_tab=False):
         self.gpmon.start_plugin_future(None, pluginName, None)
         if raise_tab:

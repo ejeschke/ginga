@@ -80,7 +80,7 @@ class Pick(PickBase.PickBase):
         #nb.set_tab_detachable(iw, True)
 
         if have_mpl:
-            self.w.fig = matplotlib.figure.Figure()
+            self.w.fig = matplotlib.figure.Figure(figsize=(2, 2), dpi=100)
             self.w.ax = self.w.fig.add_subplot(111, axisbg='black')
             self.w.ax.set_aspect('equal', adjustable='box')
             self.w.ax.set_title('Contours')
@@ -101,7 +101,7 @@ class Pick(PickBase.PickBase):
             nb.set_tab_reorderable(canvas, True)
             #nb.set_tab_detachable(canvas, True)
 
-            self.w.fig2 = matplotlib.figure.Figure()
+            self.w.fig2 = matplotlib.figure.Figure(figsize=(2, 2), dpi=100)
             self.w.ax2 = self.w.fig2.add_subplot(111, axisbg='white')
             #self.w.ax2.set_aspect('equal', adjustable='box')
             self.w.ax2.set_ylabel('brightness')

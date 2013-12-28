@@ -78,7 +78,7 @@ class Pick(PickBase.PickBase):
         nb.addTab(iw, 'Image')
 
         if have_mpl:
-            self.w.fig = matplotlib.figure.Figure()
+            self.w.fig = matplotlib.figure.Figure(figsize=(2, 2), dpi=100)
             self.w.ax = self.w.fig.add_subplot(111, axisbg='black')
             self.w.ax.set_aspect('equal', adjustable='box')
             self.w.ax.set_title('Contours')
@@ -89,7 +89,7 @@ class Pick(PickBase.PickBase):
             self.w.canvas = canvas
             nb.addTab(canvas, u"Contour")
 
-            self.w.fig2 = matplotlib.figure.Figure()
+            self.w.fig2 = matplotlib.figure.Figure(figsize=(2, 2), dpi=100)
             self.w.ax2 = self.w.fig2.add_subplot(111, axisbg='white')
             #self.w.ax2.set_aspect('equal', adjustable='box')
             self.w.ax2.set_ylabel('brightness')
@@ -112,7 +112,7 @@ class Pick(PickBase.PickBase):
         sw.setWidgetResizable(True)
         sw.setWidget(twidget)
 
-        msgFont = self.fv.getFont('sansFont', 14)
+        msgFont = self.fv.getFont('sansFont', 12)
         tw = QtGui.QLabel()
         tw.setFont(msgFont)
         tw.setWordWrap(True)

@@ -402,6 +402,23 @@ class ImageViewBindings(object):
             # coords are not within the data area
             pass
 
+    def get_direction(self, direction, rev=False):
+        """
+        Translate a direction in compass degrees into 'up' or 'down'.
+        """
+        if (direction < 90.0) or (direction > 270.0):
+            if not rev:
+                return 'up'
+            else:
+                return 'down'
+        elif (90.0 < direction < 270.0):
+            if not rev:
+                return 'down'
+            else:
+                return 'up'
+        else:
+            return 'none'
+        
     def _tweak_colormap(self, fitsimage, x, y, mode):
         win_wd, win_ht = fitsimage.get_window_size()
 
@@ -498,27 +515,22 @@ class ImageViewBindings(object):
                 loval, hival), delay=1.0, redraw=False)
         fitsimage.cut_levels(loval, hival, redraw=True)
 
-    def _adjust_contrast(self, fitsimage, direction, pct):
-        if direction in ('up', 'left'):
-            self._cut_pct(fitsimage, pct)
-        elif direction in ('down', 'right'):
-            self._cut_pct(fitsimage, -pct)
+    def _adjust_contrast(self, fitsimage, direction, pct, msg=True):
+        direction = self.get_direction(direction)
+        if direction == 'up':
+            self._cut_pct(fitsimage, pct, msg=msg)
+        elif direction == 'down':
+            self._cut_pct(fitsimage, -pct, msg=msg)
 
     def _scale_image(self, fitsimage, direction, factor, msg=True):
         msg = self.settings.get('msg_zoom', msg)
         rev = self.settings.get('zoom_scroll_reverse', False)
         scale_x, scale_y = fitsimage.get_scale_xy()
-        if (direction < 90.0) or (direction > 270.0):
-            if not rev:
+        direction = self.get_direction(direction, rev=rev)
+        if direction == 'up':
                 mult = 1.0 + factor
-            else:
+        elif direction == 'down':
                 mult = 1.0 - factor
-        #else (90.0 < direction < 270.0):
-        else:
-            if not rev:
-                mult = 1.0 - factor
-            else:
-                mult = 1.0 + factor
         scale_x, scale_y = scale_x * mult, scale_y * mult
         fitsimage.scale_to(scale_x, scale_y)
         if msg:
@@ -989,16 +1001,11 @@ class ImageViewBindings(object):
         if self.canzoom:
             msg = self.settings.get('msg_zoom', msg)
             rev = self.settings.get('zoom_scroll_reverse', False)
-            if (direction < 90.0) or (direction > 270.0):
-                if not rev:
-                    fitsimage.zoom_in()
-                else:
-                    fitsimage.zoom_out()
-            elif (90.0 < direction < 270.0):
-                if not rev:
-                    fitsimage.zoom_out()
-                else:
-                    fitsimage.zoom_in()
+            direction = self.get_direction(direction, rev=rev)
+            if direction == 'up':
+                fitsimage.zoom_in()
+            elif direction == 'down':
+                fitsimage.zoom_out()
             if msg:
                 fitsimage.onscreen_message(fitsimage.get_scale_text(),
                                            delay=0.4)
