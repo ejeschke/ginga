@@ -29,8 +29,8 @@ class AstroImage(BaseImage):
     NOTE: this module is NOT thread-safe!
     """
     # class variables for WCS and IO can be set
-    wcsClass = wcs.WCS
-    ioClass = io_fits.fitsLoaderClass
+    wcsClass = None
+    ioClass = None
 
     @classmethod
     def set_wcsClass(cls, klass):
@@ -48,9 +48,13 @@ class AstroImage(BaseImage):
                            logger=logger)
         
         # wcsclass specifies a pluggable WCS module
+        if wcsclass == None:
+            wcsclass = wcs.WCS
         self.wcs = wcsclass(self.logger)
 
         # wcsclass specifies a pluggable IO module
+        if ioclass == None:
+            ioclass = io_fits.fitsLoaderClass
         self.io = ioclass(self.logger)
 
         if metadata != None:

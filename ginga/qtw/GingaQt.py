@@ -74,6 +74,7 @@ class GingaView(QtMain.QtMain):
         self.font = self.getFont('fixedFont', 12)
         self.font11 = self.getFont('fixedFont', 11)
         self.font14 = self.getFont('fixedFont', 14)
+        self.font18 = self.getFont('fixedFont', 18)
 
         self.w.tooltips = None
         QtGui.QToolTip.setFont(self.font11)
@@ -240,6 +241,19 @@ class GingaView(QtMain.QtMain):
         item = QtGui.QAction("About", menubar)
         item.triggered.connect(lambda: self.banner(raiseTab=True))
         helpmenu.addAction(item)
+
+        item = QtGui.QAction("Documentation", menubar)
+        item.triggered.connect(lambda: self.help())
+        helpmenu.addAction(item)
+
+        item = QtGui.QAction("Debug Plugin", menubar)
+        item.triggered.connect(lambda: self.start_global_plugin('Debug'))
+        helpmenu.addAction(item)
+
+        item = QtGui.QAction("Log Plugin", menubar)
+        item.triggered.connect(lambda: self.start_global_plugin('Log'))
+        helpmenu.addAction(item)
+
         return menubar
 
     def add_dialogs(self):
@@ -354,7 +368,13 @@ class GingaView(QtMain.QtMain):
         
     def build_readout(self):
         readout = Readout.Readout(-1, 20)
-        readout.set_font(self.font11)
+        # NOTE: Special hack for Mac OS X, otherwise the font on the readout
+        # is too small
+        macos_ver = platform.mac_ver()[0]
+        if len(macos_ver) > 0:
+            readout.set_font(self.font14)
+        else:
+            readout.set_font(self.font11)
         return readout
 
     def getDrawClass(self, drawtype):
@@ -456,60 +476,6 @@ class GingaView(QtMain.QtMain):
                            readout=readout, workspace=workspace)
         return bnch
 
-
-    def start_global_plugin(self, pluginName):
-
-        pInfo = self.gpmon.getPluginInfo(pluginName)
-        spec = pInfo.spec
-
-        vbox = None
-        try:
-            wsName = spec.get('ws', None)
-            if wsName and hasattr(pInfo.obj, 'build_gui'):
-                tabName = spec.get('tab', pInfo.name)
-                pInfo.tabname = tabName
-
-                widget = QtGui.QWidget()
-                vbox = QtGui.QVBoxLayout()
-                vbox.setContentsMargins(4, 4, 4, 4)
-                vbox.setSpacing(2)
-                widget.setLayout(vbox)
-
-                pInfo.obj.build_gui(vbox)
-
-            pInfo.obj.start()
-
-        except Exception, e:
-            errmsg = "Failed to load global plugin '%s': %s" % (
-                pluginName, str(e))
-            try:
-                (type, value, tb) = sys.exc_info()
-                tb_str = "\n".join(traceback.format_tb(tb))
-                
-            except Exception, e:
-                tb_str = "Traceback information unavailable."
-                
-            self.logger.error(errmsg)
-            self.logger.error("Traceback:\n%s" % (tb_str))
-            if vbox:
-                textw = QtGui.QTextEdit()
-                textw.append(str(e) + '\n')
-                textw.append(tb_str)
-                textw.setReadOnly(True)
-                vbox.addWidget(textw, stretch=1)
-                
-        if vbox:
-            self.ds.add_tab(wsName, widget, 2, tabName)
-            pInfo.widget = widget
-                
-    def stop_global_plugin(self, pluginName):
-        self.logger.debug("Attempting to stop plugin '%s'" % (pluginName))
-        try:
-            pluginObj = self.gpmon.getPlugin(pluginName)
-            pluginObj.stop()
-        except Exception, e:
-            self.logger.error("Failed to stop global plugin '%s': %s" % (
-                pluginName, str(e)))
 
     def gui_add_channel(self, chname=None):
         if not chname:
@@ -781,7 +747,7 @@ class GingaView(QtMain.QtMain):
     def start_operation_cb(self, name):
         index = self.w.channel.currentIndex()
         chname = str(self.w.channel.itemText(index))
-        return self.start_operation_channel(chname, name, None)
+        return self.start_local_plugin(chname, name, None)
         
     def tile_panes_cb(self):
         self.w.mnb.tileSubWindows()

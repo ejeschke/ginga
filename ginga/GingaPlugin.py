@@ -40,6 +40,7 @@ class GlobalPlugin(object):
         """
         pass
 
+
 class LocalPlugin(object):
 
     def __init__(self, fv, fitsimage):

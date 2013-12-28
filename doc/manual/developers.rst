@@ -64,7 +64,7 @@ viewer built using the subclass ``ImageViewZoom`` from the module
 ``ginga.qtw`` (screenshot in Figure :ref:`fig1`) written in around 100
 or so lines of Python.  It creates a window containing an image view and
 two buttons.  This example, included with the Ginga source (look in the
-``scripts`` directory), will open FITS files dragged and dropped on the 
+``examples`` directory), will open FITS files dragged and dropped on the 
 image window or via a dialog popped up when clicking the "Open File"
 button.   
 
@@ -205,9 +205,9 @@ passes this object to the viewer via the set_image() method.
 AstroImage objects have methods for ingesting data via a file path, an
 ``Astropy``/``pyfits`` HDU or a bare ``Numpy`` data array. 
 
-Many of these sorts of examples are contained in the ``scripts``
+Many of these sorts of examples are contained in the ``examples``
 directory in the source distribution.  Look for files with names
-matching scripts/example*_*.py
+matching example*_*.py
 
 .. _sec-plotting:
 
@@ -229,8 +229,8 @@ including lines, circles, rectangles, points, polygons, text, rulers,
 compasses, etc.  Plotted objects scale, transform and rotate seamlessly
 with the image. 
 
-See the scripts prefaced with "example2" scripts in the package source
-for details.  
+See the scripts prefaced with "example2" (under "examples") in the
+package source for details.  
 
 Rendering into Matplotlib Figures
 ---------------------------------

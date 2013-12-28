@@ -37,98 +37,140 @@ Rebinding Controls
 Example: ds9 bindings
 ---------------------
 
-This example shows some code you can use to give ds9-like mouse bindings
-to for colormap stretch (right mouse button) and setting pan position
-(scroll button). This code can be added to the startup customization
-script in $HOME/.ginga/ginga_config.py .
+This example shows a way to use ds9-like mouse bindings for colormap
+stretch (right mouse button) and setting pan position (scroll
+button). This is taken verbatim from a file called "bindings.cfg.ds9"
+in the "examples/bindings" directory in the source download.  This file
+can be installed in the user's $HOME/.ginga folder as "bindings.cfg".
 
-The standard Bindings class is subclassed, and we override the method
-for the setup of the standard button events.  Two new methods are
-provided for doing colormap tweaking and setting the pan position, both
-without the usual onscreen message.  Care is taken to make sure that the
-standard events used for plugins are not disrupted.
-
-::
-
-    from ginga.Bindings import ImageViewBindings
-    # uncomment the right one for your platform
-    #from ginga.gtkw.ImageViewGtk import ImageViewZoom
-    from ginga.qtw.ImageViewQt import ImageViewZoom
+bindings.cfg::
+    #
+    # bindings.cfg -- Ginga user interface bindings customization
+    #
+    # Put this in your $HOME/.ginga directory as "bindings.cfg"
+    #
+    # Troubleshooting:
+    # Run the scripts/example2_xyz.py, where "xyz" is the toolkit you want
+    # to use.  Run it from a terminal like this:
+    #    ./examples/xyz/example2_xyz.py --loglevel=10 --stderr
+    # Further commentary in sections below.
+    #
     
-    # subclass the standard bindings and rewire some things
-    # changes are NOTED
+    # BUTTON SET UP
+    # You should rarely have to change these, but if you have a non-standard
+    # mouse or setup it might be useful.
+    # To find out what buttons are generating what codes, start up things as
+    # described in "Troubleshooting" above and look for messages like this as
+    # you click around in the window:
+    #  ... | D | Bindings.py:1260 (window_button_press) | x,y=70,-69 btncode=0x1
+    btn_nobtn = 0x0
+    btn_left  = 0x1
+    btn_middle= 0x2
+    btn_right = 0x4
     
-    class MyGingaBindings(ImageViewBindings):
+    # Set up our standard modifiers.
+    # These should not contain "normal" keys--they should be valid modifier
+    # keys for your platform.
+    # To find out what symbol is used for a keystroke on your platform,
+    # start up things as described above in "Troubleshooting" and look for
+    # messages like this as you press keys while focus is in the window:
+    #  ... | D | Bindings.py:1203 (window_key_press) | keyname=shift_l
+    mod_shift = ['shift_l', 'shift_r']
+    # same setting ends up as "Ctrl" on a pc and "Command" on a mac:
+    mod_ctrl = ['control_l', 'control_r']
+    # "Control" key on a mac:
+    mod_draw = ['meta_right']
     
-        def setup_default_btn_events(self, fitsimage, bindmap):
+    # KEYPRESS commands
+    kp_zoom_in = ['+', '=']
+    kp_zoom_out = ['-', '_']
+    kp_zoom = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']
+    kp_zoom_inv = ['!', '@', '#', '$', '%', '^', '&', '*', '(', ')']
+    kp_zoom_fit = ['backquote']
+    kp_autozoom_on = ['doublequote']
+    kp_autozoom_override = ['singlequote']
+    kp_draw = ['space']
+    kp_freepan = ['q']
+    kp_pan_set = ['p']
+    kp_center = ['c']
+    kp_cut_low = ['<']
+    kp_cut_high = ['>']
+    kp_cut_all = ['.']
+    kp_cut_255 = ['A']
+    kp_cut_auto = ['a']
+    kp_autocuts_on = [':']
+    kp_autocuts_override = [';']
+    kp_cmap_warp = ['/']
+    kp_cmap_restore = ['?']
+    kp_flip_x = ['[', '{']
+    kp_flip_y = [']', '}']
+    kp_swap_xy = ['backslash', '|']
+    #kp_rotate = ['r']
+    kp_rotate_reset = ['R']
+    kp_reset = ['escape']
     
-            # Generate standard symbolic mouse events for unmodified buttons:
-            # xxxxx-{down, move, up}
-            # e.g. 'left' button down generates 'cursor-down', moving the mouse
-            # with no button pressed generates 'none-move', etc.
-            for btnname, evtname in (('nobtn', 'none'), ('left', 'cursor'),
-                                     ('middle', 'wheel'), ('right', 'draw')):
-                bindmap.map_event(None, btnname, evtname)
+    # SCROLLING/WHEEL commands
+    sc_pan = ['ctrl+scroll', 'shift+scroll']
+    sc_pan_fine = []
+    sc_pan_coarse = []
+    sc_zoom = ['scroll']
+    sc_zoom_fine = []
+    sc_zoom_coarse = []
+    sc_contrast_fine = []
+    sc_contrast_coarse = []
     
-            # standard bindings
-            bindmap.map_event('shift', 'left', 'panset')
-            bindmap.map_event('ctrl', 'left', 'pan')
-            # NOTE: disable standard free panning, because we want middle click
-            # to set pan position
-            #bindmap.map_event(None, 'middle', 'freepan')
-            bindmap.map_event(None, 'middle', 'panset')
-            bindmap.map_event('ctrl', 'right', 'cmapwarp')
-            bindmap.map_event('ctrl', 'middle', 'cmaprest')
-            # name 'scroll' is hardwired for the scrolling action
-            bindmap.map_event(None, 'scroll', 'zoom')
-            bindmap.map_event('shift', 'scroll', 'zoom-fine')
-            bindmap.map_event('ctrl', 'scroll', 'zoom-coarse')
+    # This controls how fast panning occurs with the sc_pan* functions.
+    # Increase to speed up panning
+    scroll_pan_acceleration = 1.0
+    # For trackpads you can adjust this down if it seems too sensitive.
+    scroll_zoom_acceleration = 1.0
     
-            # Mouse operations that are invoked by a preceeding key
-            for name in ('rotate', 'cmapwarp', 'cutlo', 'cuthi', 'cutall',
-                            'draw', 'pan', 'freepan'):
-                bindmap.map_event(name, 'left', name)
     
-            # Now register our actions for these symbolic events
-            # NOTE: disable standard cmapwarp, we want to call our own callback
-            for name in ('cursor', 'wheel', 'draw', 'rotate', #'cmapwarp',
-                         'pan', 'freepan', 'cutlo', 'cuthi', 'cutall'):
-                method = getattr(self, 'ms_'+name)
-                for action in ('down', 'move', 'up'):
-                    fitsimage.set_callback('%s-%s' % (name, action), method)
-            # NOTE:
-            # 1. bind draw to color map warp when it isn't captured by a plugin
-            # 2. color warping is bound to my callback (below) to
-            #    disable onscreen message
-            for action in ('down', 'move', 'up'):
-                fitsimage.set_callback('draw-%s' % (action), self.my_cmapwarp)
-                # bind normal cmapwarp to my version (sans message)
-                fitsimage.set_callback('cmapwarp-%s' % (action), self.my_cmapwarp)
+    # MOUSE/BUTTON commands
+    # NOTE: most plugins in the reference viewer need "none", "cursor" and "draw"
+    # events to work!  If you want to use them you need to provide a valid
+    # non-conflicting binding
+    ms_none = ['nobtn']
+    ms_cursor = ['left']
+    ms_wheel = []
+    ms_draw = ['draw+left']
     
-            # NOTE: I don't want to see the onscreen pan position set message
-            fitsimage.set_callback('panset-down', self.my_panset)
-            fitsimage.set_callback('cmaprest-down', self.ms_cmaprest)
+    # mouse commands initiated by a preceeding keystroke (see above)
+    ms_rotate = ['rotate+left']
+    ms_cmapwarp = ['cmapwarp+left', 'right']
+    ms_cmaprest = ['ctrl+middle']
+    ms_pan = ['ctrl+left']
+    ms_freepan = ['freepan+left', 'shift+middle']
+    ms_cutlo = ['cutlo+left']
+    ms_cuthi = ['cuthi+left']
+    ms_cutall = ['cutall+left']
+    ms_panset = ['shift+left', 'middle']
     
-            fitsimage.set_callback('zoom-scroll', self.ms_zoom)
-            fitsimage.set_callback('zoom-coarse-scroll',
-                                   self.ms_zoom_coarse)
-            fitsimage.set_callback('zoom-fine-scroll', self.ms_zoom_fine)
+    # GESTURES (Qt version only)
+    # Uncomment to enable pinch gensture on touchpads.
+    # NOTE: if you enable this, it is *highly* recommended to disable any
+    # "scroll zoom" (sc_zoom*) features above because the two kinds don't play
+    # well together.  A good combination for trackpads is enabling pinch with
+    # zoom and the sc_pan functions.
+    #gs_pinch = ['pinch']
     
-        def my_panset(self, fitsimage, action, data_x, data_y):
-            # set pan position, but suppress onscreen message
-            return self.ms_panset(fitsimage, action, data_x, data_y,
-                                  msg=False)
+    # This controls what operations the pinch gesture controls.  Possibilities are
+    # (empty list or) some combination of 'zoom' and 'rotate'.
+    pinch_actions = ['zoom']
+    pinch_zoom_acceleration = 1.0
+    pinch_rotate_acceleration = 1.0
     
-        def my_cmapwarp(self, fitsimage, action, data_x, data_y):
-            # warp color map, but suppress onscreen message
-            return self.ms_cmapwarp(fitsimage, action, data_x, data_y,
-                                    msg=False)
+    # ds9 uses opposite sense of panning direction
+    pan_reverse = True
     
-    def pre_gui_config(ginga):
-        # this method is called before the GUI is brought up
-        # custom configuration can be done here
-        ImageViewZoom.set_bindingsClass(MyGingaBindings)
-
+    # ds9 uses opposite sense of zooming scroll wheel
+    zoom_scroll_reverse = True
+    
+    # No messages for color map warps or setting pan position
+    msg_cmap = False
+    msg_panset = False
+    
+    #END
 
 .. _sec-workspaceconfig:
 
@@ -148,11 +190,11 @@ workspace has tabs--some don't).
 Here is an example of these two tables::
 
     global_plugins = [
-        Bunch(module='Pan', tab='Pan', ws='uleft', raisekey='i'),
-        Bunch(module='Info', tab='Info', ws='lleft', raisekey='i'),
-        Bunch(module='Header', tab='Header', ws='left', raisekey='h'),
-        Bunch(module='Zoom', tab='Zoom', ws='left', raisekey='z'),
-        Bunch(module='Thumbs', tab='Thumbs', ws='right', raisekey='t'),
+        Bunch(module='Pan', tab='Pan', ws='uleft', raisekey='I'),
+        Bunch(module='Info', tab='Info', ws='lleft', raisekey='I'),
+        Bunch(module='Header', tab='Header', ws='left', raisekey='H'),
+        Bunch(module='Zoom', tab='Zoom', ws='left', raisekey='Z'),
+        Bunch(module='Thumbs', tab='Thumbs', ws='right', raisekey='T'),
         Bunch(module='Contents', tab='Contents', ws='right', raisekey='c'),
         Bunch(module='WBrowser', tab='Help', ws='right', raisekey='?'),
         Bunch(module='Errors', tab='Errors', ws='right'),
@@ -163,14 +205,14 @@ Here is an example of these two tables::
     local_plugins = [
         Bunch(module='Pick', ws='dialogs', shortkey='f1'),
         Bunch(module='Ruler', ws='dialogs', shortkey='f2'),
-        Bunch(module='MultiDim', ws='dialogs', shortkey='f4'), 
+        Bunch(module='MultiDim', ws='dialogs', shortkey='f4'),
         Bunch(module='Cuts', ws='dialogs', shortkey='f5'),
         Bunch(module='Histogram', ws='dialogs', shortkey='f6'),
         Bunch(module='PixTable', ws='dialogs', shortkey='f7'),
         Bunch(module='Preferences', ws='dialogs', shortkey='f9'),
         Bunch(module='Catalogs', ws='dialogs', shortkey='f10'),
         Bunch(module='Drawing', ws='dialogs', shortkey='f11'),
-        Bunch(module='FBrowser', ws='dialogs', shortkey='f12'), 
+        Bunch(module='FBrowser', ws='dialogs', shortkey='f12'),
         ]
 
 The format of this table is simply a series of tuples"bunches".
@@ -182,25 +224,31 @@ and have a tab name of "Pan" (if that workspace has tabs).
 
 Next we look at the default_layout table::
 
-    default_layout = ['hpanel', {},
-                      ['ws', dict(name='left', width=320),
-                       # (tabname, layout), ...
-                       [("Info", ['vpanel', {},
-                                  ['ws', dict(name='uleft', height=300,
-                                              show_tabs=False)],
-                                  ['ws', dict(name='lleft', height=430,
-                                              show_tabs=False)],
-                                  ]
-                         )]
-                         ],
-                      ['vbox', dict(name='main', width=700)],
-                      ['ws', dict(name='right', width=400),
-                       # (tabname, layout), ...
-                       [("Dialogs", ['ws', dict(name='dialogs')
+    default_layout = ['seq', {},
+                       ['vbox', dict(name='top', width=1500, height=900),
+                        dict(row=['hbox', dict(name='menu')],
+                             stretch=0),
+                        dict(row=['hpanel', {},
+                         ['ws', dict(name='left', width=340, group=2),
+                          # (tabname, layout), ...
+                          [("Info", ['vpanel', {},
+                                     ['ws', dict(name='uleft', height=300,
+                                                 show_tabs=False, group=3)],
+                                     ['ws', dict(name='lleft', height=430,
+                                                 show_tabs=False, group=3)],
                                      ]
-                         )]
-                        ],
-                      ]
+                            )]],
+                         ['vbox', dict(name='main', width=700),
+                          dict(row=['ws', dict(name='channels', group=1)], stretch=1)],
+                         ['ws', dict(name='right', width=350, group=2),
+                          # (tabname, layout), ...
+                          [("Dialogs", ['ws', dict(name='dialogs', group=2)
+                                        ]
+                            )]
+                          ],
+                         ], stretch=1),
+                        dict(row=['hbox', dict(name='status')], stretch=0),
+                        ]]
 
 This table defines how many workspaces we will have, their
 characteristics, how they are organized, and their names.

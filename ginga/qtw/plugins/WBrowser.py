@@ -11,6 +11,8 @@ import sys, os
 from ginga import GingaPlugin
 
 from ginga.qtw.QtHelp import QtGui, QtCore
+from ginga.qtw import QtHelp
+from ginga.Control import packageHome
 
 has_webkit = False
 try:
@@ -19,8 +21,6 @@ try:
 except ImportError:
     pass
 
-moduleHome = os.path.split(sys.modules[__name__].__file__)[0]
-        
 class WBrowser(GingaPlugin.GlobalPlugin):
 
     def __init__(self, fv):
@@ -49,23 +49,38 @@ class WBrowser(GingaPlugin.GlobalPlugin):
         rvbox.addWidget(self.entry, stretch=0)
         self.entry.returnPressed.connect(self.browse_cb)
 
+        btns = QtHelp.HBox()
+        layout = btns.layout()
+        layout.setSpacing(3)
+
+        btn = QtGui.QPushButton("Close")
+        btn.clicked.connect(self.close)
+        layout.addWidget(btn, stretch=0, alignment=QtCore.Qt.AlignLeft)
+        rvbox.addWidget(btns, stretch=0, alignment=QtCore.Qt.AlignLeft)
+
         if has_webkit:
-            helpfile = os.path.abspath(os.path.join(moduleHome, "..",
-                                                    "..", "doc", "manual",
-                                                    "quickref.html"))
+            helpfile = os.path.abspath(os.path.join(packageHome,
+                                                    "doc", "help.html"))
             helpurl = "file://%s" % (helpfile)
-            self.entry.setText(helpurl)
             self.browse(helpurl)
 
     def browse(self, url):
         self.logger.debug("Browsing '%s'" % (url))
-        self.browser.load(QtCore.QUrl(url))
-        self.browser.show()
+        try:
+            self.browser.load(QtCore.QUrl(url))
+            self.entry.setText(url)
+            self.browser.show()
+        except Exception as e:
+            self.fv.show_error("Couldn't load web page: %s" % (str(e)))
         
     def browse_cb(self):
         url = str(self.entry.text()).strip()
         self.browse(url)
         
+    def close(self):
+        self.fv.stop_global_plugin(str(self))
+        return True
+
     def __str__(self):
         return 'wbrowser'
     

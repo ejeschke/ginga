@@ -25,6 +25,7 @@ class Log(GingaPlugin.GlobalPlugin):
                        ('Warn',  logging.WARN),
                        ('Info',  logging.INFO),
                        ('Debug', logging.DEBUG))
+        self.buf = None
 
         
     def build_gui(self, container):
@@ -71,7 +72,17 @@ class Log(GingaPlugin.GlobalPlugin):
         btn = b.clear
         btn.connect('clicked', lambda w: self.clear())
         btn.set_tooltip_text("Clear the log history")
-        container.pack_end(w, fill=False, expand=False)
+        container.pack_start(w, fill=False, expand=False)
+
+        btns = gtk.HButtonBox()
+        btns.set_layout(gtk.BUTTONBOX_START)
+        btns.set_spacing(3)
+        btns.set_child_size(15, -1)
+
+        btn = gtk.Button("Close")
+        btn.connect('clicked', lambda w: self.close())
+        btns.add(btn)
+        container.pack_start(btns, padding=4, fill=True, expand=False)
 
     def set_history(self, histlimit):
         assert histlimit <= self.histmax, \
@@ -102,6 +113,8 @@ class Log(GingaPlugin.GlobalPlugin):
             name))
 
     def log(self, text):
+        if self.buf == None:
+            return
         end = self.buf.get_end_iter()
         self.buf.insert(end, text + '\n')
 
@@ -127,6 +140,10 @@ class Log(GingaPlugin.GlobalPlugin):
         self.buf.delete(start, end)
         return True
         
+    def close(self):
+        self.fv.stop_global_plugin(str(self))
+        return True
+
     def __str__(self):
         return 'log'
     

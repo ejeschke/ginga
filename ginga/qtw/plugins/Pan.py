@@ -234,15 +234,26 @@ class Pan(GingaPlugin.GlobalPlugin):
         bigimage.panset_xy(data_x, data_y)
         return True
 
-    def zoom(self, fitsimage, direction):
+    def zoom(self, fitsimage, direction, amount, data_x, data_y):
         """Scroll event in the small fits window.  Just zoom the large fits
         window.
         """
         fitsimage = self.fv.getfocus_fitsimage()
-        if direction == 'up':
-            fitsimage.zoom_in()
-        elif direction == 'down':
-            fitsimage.zoom_out()
+
+        prefs = self.fv.get_preferences()
+        settings = prefs.getSettings('general')
+        rev = settings.get('zoom_scroll_reverse', False)
+
+        if (direction < 90.0) or (direction > 270.0):
+            if not rev:
+                fitsimage.zoom_in()
+            else:
+                fitsimage.zoom_out()
+        elif (90.0 < direction < 270.0):
+            if not rev:
+                fitsimage.zoom_out()
+            else:
+                fitsimage.zoom_in()
         fitsimage.onscreen_message(fitsimage.get_scale_text(),
                                    delay=1.0)
         

@@ -117,12 +117,12 @@ debugging.
 Developer Info
 ==============
 
-In the source code `scripts` directory, see example{1,2}_gtk.py (Gtk),
+In the source code `examples/*` directories, see example{1,2}_gtk.py (Gtk),
 example{1,2}_qt.py (Qt), example{1,2}_tk.py (Tk) or
 example{1,2,3,4,5}_mpl.py (matplotlib).
-There is more information for developers in the manual.  
+There is more information for developers in the `manual <manual/index>`_.  
 
-See the Module Index at the bottom of this document.
+See also the Module Index at the bottom of this document.
 
 =========
 Etymology

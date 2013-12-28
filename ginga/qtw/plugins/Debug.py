@@ -10,6 +10,7 @@
 from ginga import GingaPlugin
 
 from ginga.qtw.QtHelp import QtGui, QtCore
+from ginga.qtw import QtHelp
 
 class Debug(GingaPlugin.GlobalPlugin):
 
@@ -40,11 +41,21 @@ class Debug(GingaPlugin.GlobalPlugin):
         sw.setWidget(self.tw)
 
         rvbox.addWidget(sw, stretch=1)
+
         sw.show()
 
         self.entry = QtGui.QLineEdit()
         rvbox.addWidget(self.entry, stretch=0)
         self.entry.returnPressed.connect(self.command_cb)
+
+        btns = QtHelp.HBox()
+        layout = btns.layout()
+        layout.setSpacing(3)
+
+        btn = QtGui.QPushButton("Close")
+        btn.clicked.connect(self.close)
+        layout.addWidget(btn, stretch=0, alignment=QtCore.Qt.AlignLeft)
+        rvbox.addWidget(btns, stretch=0, alignment=QtCore.Qt.AlignLeft)
 
 
     def reloadLocalPlugin(self, plname):
@@ -88,6 +99,10 @@ class Debug(GingaPlugin.GlobalPlugin):
         self.command(cmdstr)
         w.setText("")
         
+    def close(self):
+        self.fv.stop_global_plugin(str(self))
+        return True
+
     def __str__(self):
         return 'debug'
     

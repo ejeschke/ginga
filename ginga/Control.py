@@ -32,6 +32,7 @@ from ginga.util import catalog
 #pluginconfpfx = 'plugins'
 pluginconfpfx = None
 
+packageHome = os.path.split(sys.modules[__name__].__file__)[0]
 
 class ControlError(Exception):
     pass
@@ -312,19 +313,32 @@ class GingaControl(Callback.Callbacks):
     # PLUGIN MANAGEMENT
 
     def start_operation(self, opname):
-        return self.start_operation_channel(None, opname, None)
+        return self.start_local_plugin(None, opname, None)
 
-    def start_operation_channel(self, chname, opname, future):
+    def start_local_plugin(self, chname, opname, future):
         chinfo = self.get_channelInfo(chname)
         opmon = chinfo.opmon
         opmon.start_plugin_future(chinfo.name, opname, future)
         chinfo.fitsimage.onscreen_message(opname, delay=1.0)
             
-    def stop_operation_channel(self, chname, opname):
+    def stop_local_plugin(self, chname, opname):
         chinfo = self.get_channelInfo(chname)
         opmon = chinfo.opmon
         opmon.deactivate(opname)
             
+    def stop_operation_channel(self, chname, opname):
+        self.logger.warn("Do not use this method name--it will be deprecated!")
+        return self.stop_local_plugin(chname, opname)
+    
+    def start_global_plugin(self, pluginName, raise_tab=False):
+        self.gpmon.start_plugin_future(None, pluginName, None)
+        if raise_tab:
+            pInfo = self.gpmon.getPluginInfo(pluginName)
+            self.ds.raise_tab(pInfo.tabname)
+
+    def stop_global_plugin(self, pluginName):
+        self.gpmon.deactivate(pluginName)
+
     def add_local_plugin(self, spec):
         try:
             name = spec.setdefault('name', spec.get('klass', spec.module))
@@ -348,7 +362,10 @@ class GingaControl(Callback.Callbacks):
             self.mm.loadModule(spec.module, pfx=pluginconfpfx)
 
             self.gpmon.loadPlugin(name, spec)
-            self.start_global_plugin(name)
+
+            start = spec.get('start', True)
+            if start:
+                self.start_global_plugin(name, raise_tab=False)
                 
         except Exception, e:
             self.logger.error("Unable to load global plugin '%s': %s" % (
@@ -359,6 +376,21 @@ class GingaControl(Callback.Callbacks):
         obj.add_error(errmsg)
         if raisetab:
             self.ds.raise_tab('Errors')
+
+    def help(self):
+        self.start_global_plugin('WBrowser')
+        
+        localDoc = os.path.join(packageHome, 'doc', 'help.html')
+        if not os.path.exists(localDoc):
+            url = "https://readthedocs.org/docs/ginga/en/latest"
+        else:
+            url = "file:/%s" % (os.path.abspath(localDoc))
+
+        # TODO: need to let GUI finish processing, it seems
+        self.update_pending()
+        
+        obj = self.gpmon.getPlugin('WBrowser')
+        obj.browse(url)
         
     # BASIC IMAGE OPERATIONS
 
@@ -931,11 +963,13 @@ class GingaControl(Callback.Callbacks):
         bannerFile = os.path.join(self.iconpath, 'ginga-splash.ppm')
         chname = 'Ginga'
         self.add_channel(chname)
-        self.nongui_do(self.load_file, bannerFile, chname=chname)
+        #self.nongui_do(self.load_file, bannerFile, chname=chname)
+        self.load_file(bannerFile, chname=chname)
         if raiseTab:
             self.change_channel(chname)
         chinfo = self.get_channelInfo(chname)
         chinfo.fitsimage.zoom_fit()
+        chinfo.fitsimage.auto_levels()
 
     def followFocus(self, tf):
         self.channel_follows_focus = tf

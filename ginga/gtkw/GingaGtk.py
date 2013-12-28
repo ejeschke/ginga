@@ -255,6 +255,18 @@ class GingaView(GtkMain.GtkMain):
         helpmenu.append(w)
         w.connect("activate", lambda w: self.banner(raiseTab=True))
 
+        w = gtk.MenuItem("Documentation")
+        helpmenu.append(w)
+        w.connect("activate", lambda w: self.help())
+
+        w = gtk.MenuItem("Debug Plugin")
+        helpmenu.append(w)
+        w.connect("activate", lambda w: self.start_global_plugin('Debug'))
+
+        w = gtk.MenuItem("Log Plugin")
+        helpmenu.append(w)
+        w.connect("activate", lambda w: self.start_global_plugin('Log'))
+
         menuholder.show_all()
 
     def add_dialogs(self):
@@ -455,56 +467,6 @@ class GingaView(GtkMain.GtkMain):
         sw.add(tw)
         sw.show_all()
         return Bunch.Bunch(widget=sw, textw=tw, buf=buf)
-
-    def start_global_plugin(self, pluginName):
-
-        pInfo = self.gpmon.getPluginInfo(pluginName)
-        spec = pInfo.spec
-
-        vbox = None
-        try:
-            wsName = spec.get('ws', None)
-            if wsName and hasattr(pInfo.obj, 'build_gui'):
-                tabName = spec.get('tab', pInfo.name)
-                pInfo.tabname = tabName
-
-                vbox = gtk.VBox(spacing=2)
-                vbox.set_border_width(0)
-        
-                pInfo.obj.build_gui(vbox)
-                vbox.show_all()
-
-            pInfo.obj.start()
-
-        except Exception, e:
-            errmsg = "Failed to load global plugin '%s': %s" % (
-                pluginName, str(e))
-            try:
-                (type, value, tb) = sys.exc_info()
-                tb_str = "\n".join(traceback.format_tb(tb))
-
-            except Exception, e:
-                tb_str = "Traceback information unavailable."
-
-            self.logger.error(errmsg)
-            self.logger.error("Traceback:\n%s" % (tb_str))
-            if vbox:
-                bnch = self.mktextwidget(errmsg + '\n' + tb_str)
-                vbox.pack_start(bnch.widget, fill=True, expand=True)
-                vbox.show_all()
-
-        if vbox:
-            pInfo.widget = vbox
-            self.ds.add_tab(wsName, vbox, 2, tabName)
-
-    def stop_global_plugin(self, pluginName):
-        self.logger.debug("Attempting to stop plugin '%s'" % (pluginName))
-        try:
-            pluginObj = self.gpmon.getPlugin(pluginName)
-            pluginObj.stop()
-        except Exception, e:
-            self.logger.error("Failed to stop global plugin '%s': %s" % (
-                pluginName, str(e)))
 
     def gui_add_channel(self, chname=None):
         if not chname:
@@ -799,7 +761,7 @@ class GingaView(GtkMain.GtkMain):
         index = self.w.channel.get_active()
         model = self.w.channel.get_model()
         chname = model[index][0]
-        return self.start_operation_channel(chname, name, None)
+        return self.start_local_plugin(chname, name, None)
         
     def page_switch_cb(self, ds, name, data):
         if data == None:

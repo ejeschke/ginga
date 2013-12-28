@@ -1,7 +1,7 @@
 #
 # bindings.cfg -- Ginga user interface bindings customization
 #
-# Put this in your $HOME/.ginga directory
+# Put this in your $HOME/.ginga directory as "bindings.cfg"
 #
 # Troubleshooting:
 # Run the scripts/example2_xyz.py, where "xyz" is the toolkit you want
@@ -59,7 +59,7 @@ kp_cmap_restore = ['?']
 kp_flip_x = ['[', '{']
 kp_flip_y = [']', '}']
 kp_swap_xy = ['backslash', '|']
-#kp_rotate = ['r']
+kp_rotate = ['r']
 kp_rotate_reset = ['R']
 kp_reset = ['escape']
 

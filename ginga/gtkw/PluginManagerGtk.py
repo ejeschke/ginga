@@ -64,7 +64,8 @@ class PluginManager(object):
             ##     obj.build_gui(vbox)
             vbox = None
 
-            # Prepare configuration for module
+            # Prepare configuration for module.  This becomes the pInfo
+            # object referred to in later code.
             opname = name.lower()
             self.plugin[opname] = Bunch.Bunch(klass=klass, obj=obj,
                                               widget=vbox, name=name,
@@ -110,33 +111,39 @@ class PluginManager(object):
         name = pInfo.tabname
         lname = pInfo.name.lower()
         if not self.active.has_key(lname):
-            tup = name.split(':')
-            lblname = ' ' + tup[0] + ':\n' + tup[1] + ' '
-            lbl = gtk.Label(lblname)
-            lbl.set_justify(gtk.JUSTIFY_CENTER)
-            lbl.set_tooltip_text("Right click for menu")
-            evbox = gtk.EventBox()
-            evbox.add(lbl)
-            fr = gtk.Frame()
-            fr.set_shadow_type(gtk.SHADOW_OUT)
-            fr.add(evbox)
-            #fr = evbox
-            fr.show_all()
-            self.hbox.pack_start(fr, expand=False, fill=False)
+            if pInfo.chinfo != None:
+                tup = name.split(':')
+                lblname = ' ' + tup[0] + ':\n' + tup[1] + ' '
+                lbl = gtk.Label(lblname)
+                lbl.set_justify(gtk.JUSTIFY_CENTER)
+                lbl.set_tooltip_text("Right click for menu")
+                evbox = gtk.EventBox()
+                evbox.add(lbl)
+                fr = gtk.Frame()
+                fr.set_shadow_type(gtk.SHADOW_OUT)
+                fr.add(evbox)
+                #fr = evbox
+                fr.show_all()
+                self.hbox.pack_start(fr, expand=False, fill=False)
 
-            menu = gtk.Menu()
-            item = gtk.MenuItem("Focus")
-            item.show()
-            item.connect("activate", lambda w: self.set_focus(lname))
-            menu.append(item)
-            item = gtk.MenuItem("Unfocus")
-            item.show()
-            item.connect("activate", lambda w: self.clear_focus(lname))
-            menu.append(item)
-            item = gtk.MenuItem("Stop")
-            item.show()
-            item.connect("activate", lambda w: self.deactivate(lname))
-            menu.append(item)
+                menu = gtk.Menu()
+                item = gtk.MenuItem("Focus")
+                item.show()
+                item.connect("activate", lambda w: self.set_focus(lname))
+                menu.append(item)
+                item = gtk.MenuItem("Unfocus")
+                item.show()
+                item.connect("activate", lambda w: self.clear_focus(lname))
+                menu.append(item)
+                item = gtk.MenuItem("Stop")
+                item.show()
+                item.connect("activate", lambda w: self.deactivate(lname))
+                menu.append(item)
+                evbox.connect("button_press_event", self.button_press_event,
+                              lname)
+            else:
+                exclusive = False
+                lbl = lblname = menu = evbox = fr = None
             
             bnch = Bunch.Bunch(widget=fr, label=lbl, lblname=lblname,
                                evbox=evbox,
@@ -144,8 +151,6 @@ class PluginManager(object):
             self.active[lname] = bnch
             if exclusive:
                 self.exclusive.add(lname)
-            evbox.connect("button_press_event", self.button_press_event,
-                          lname)
 
     
     def button_press_event(self, widget, event, name):
@@ -205,7 +210,7 @@ class PluginManager(object):
         return self.active[lname]
 
     def set_focus(self, name):
-        self.logger.info("Focusing plugin '%s'" % (name))
+        self.logger.debug("Focusing plugin '%s'" % (name))
         lname = name.lower()
         bnch = self.active[lname]
         if bnch.exclusive:
@@ -224,27 +229,35 @@ class PluginManager(object):
             self.logger.debug("raising tab %s" % (itab))
             self.ds.raise_tab(itab)
             
-        pInfo.obj.resume()
-        self.focus.add(lname)
-        ## bnch.label.set_markup('<span background="green">%s</span>' % (
-        ##     bnch.lblname))
-        bnch.evbox.modify_bg(gtk.STATE_NORMAL,
-                             gtk.gdk.color_parse(self.focuscolor))
-        if pInfo.widget != None:
+            self.logger.debug("resuming plugin %s" % (name))
+            pInfo.obj.resume()
+            bnch.evbox.modify_bg(gtk.STATE_NORMAL,
+                                 gtk.gdk.color_parse(self.focuscolor))
+            ## bnch.label.set_markup('<span background="green">%s</span>' % (
+            ##     bnch.lblname))
+            # TODO: Need to account for the fact that not all plugins
+            # end up in the workspace "Dialogs"
             self.ds.raise_tab('Dialogs')
+
+        self.focus.add(lname)
+        if pInfo.widget != None:
+            self.logger.debug("raising tab %s" % (pInfo.tabname))
             self.ds.raise_tab(pInfo.tabname)
 
     def clear_focus(self, name):
         self.logger.debug("Unfocusing plugin '%s'" % (name))
         lname = name.lower()
         bnch = self.active[lname]
+        pInfo = bnch.pInfo
         try:
             self.focus.remove(lname)
-            bnch.pInfo.obj.pause()
+
+            if pInfo.chinfo != None:
+                bnch.pInfo.obj.pause()
+                bnch.evbox.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse("grey"))
+                ## bnch.label.set_markup('<span>%s</span>' % (bnch.lblname))
         except:
             pass
-        bnch.evbox.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse("grey"))
-        ## bnch.label.set_markup('<span>%s</span>' % (bnch.lblname))
 
     def start_plugin(self, chname, opname, alreadyOpenOk=False):
         return self.start_plugin_future(chname, opname, None,
@@ -253,7 +266,12 @@ class PluginManager(object):
     def start_plugin_future(self, chname, opname, future,
                             alreadyOpenOk=False):
         pInfo = self.getPluginInfo(opname)
-        plname = chname.upper() + ': ' + pInfo.name
+        if chname != None:
+            # local plugin
+            plname = chname.upper() + ': ' + pInfo.name
+        else:
+            # global plugin
+            plname = pInfo.name
         lname = pInfo.name.lower()
         if self.active.has_key(lname):
             if alreadyOpenOk:
@@ -326,7 +344,8 @@ class PluginManager(object):
 
         if vbox != None:
             vbox.show_all()
-            self.ds.add_tab('Dialogs', vbox, 2, pInfo.tabname, pInfo.tabname)
+            ws = pInfo.spec.ws
+            self.ds.add_tab(ws, vbox, 2, pInfo.tabname, pInfo.tabname)
             pInfo.widget = vbox
 
             self.activate(pInfo)

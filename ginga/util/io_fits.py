@@ -265,14 +265,15 @@ def get_path(fileSpec):
     # TODO: handle web references by fetching the file
     return path
 
-# default
-fitsLoaderClass = PyFitsFileHandler
+if not fits_configured:
+    # default
+    fitsLoaderClass = PyFitsFileHandler
 
-# try to use them in this order
-# astropy is faster
-for name in ('astropy', 'fitsio'):
-    if use(name, raise_err=True):
-        break
+    # try to use them in this order
+    # astropy is faster
+    for name in ('astropy', 'fitsio'):
+        if use(name, raise_err=True):
+            break
 
 def get_fitsloader(kind=None, logger=None):
     return fitsLoaderClass(logger)

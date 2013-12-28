@@ -45,6 +45,19 @@ class Debug(GingaPlugin.GlobalPlugin):
         container.pack_start(self.entry, fill=True, expand=False)
         self.entry.connect('activate', self.command_cb)
 
+        btns = gtk.HButtonBox()
+        btns.set_layout(gtk.BUTTONBOX_START)
+        btns.set_spacing(3)
+        btns.set_child_size(15, -1)
+
+        btn = gtk.Button("Close")
+        btn.connect('clicked', lambda w: self.close())
+        btns.add(btn)
+        container.pack_start(btns, padding=4, fill=True, expand=False)
+
+    def close(self):
+        self.fv.stop_global_plugin(str(self))
+        return True
 
     def reloadLocalPlugin(self, plname):
         self.fv.mm.loadModule(plname)

@@ -67,7 +67,7 @@ Notes on Supported Widget Sets
 ==============================
 
 In the discussion below, we differentiate between the Ginga viewing
-widget, such as used in the scripts/example*.py programs and the full
+widget, such as used in the examples/*/example*.py programs and the full
 reference viewer, which includes many plugins (scripts/ginga).
 
 .. note:: For the full reference viewer, Mac and Windows users

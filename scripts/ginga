@@ -57,6 +57,7 @@ from ginga.misc import Task, ModuleManager, Datasrc, Settings, log
 from ginga.Control import GingaControl, GuiLogHandler
 import ginga.version as version
 import ginga.toolkit as ginga_toolkit
+from ginga import AstroImage
 
 default_layout = ['seq', {},
                    ['vbox', dict(name='top', width=1500, height=900),
@@ -91,10 +92,10 @@ global_plugins = [
     Bunch(module='Zoom', tab='Zoom', ws='left', raisekey='Z'),
     Bunch(module='Thumbs', tab='Thumbs', ws='right', raisekey='T'),
     Bunch(module='Contents', tab='Contents', ws='right', raisekey='c'),
-    Bunch(module='WBrowser', tab='Help', ws='right', raisekey='?'),
-    Bunch(module='Errors', tab='Errors', ws='right'),
-    Bunch(module='Log', tab='Log', ws='right'),
-    Bunch(module='Debug', tab='Debug', ws='right'),
+    Bunch(module='WBrowser', tab='Help', ws='channels', raisekey='?', start=False),
+    Bunch(module='Errors', tab='Errors', ws='right', start=True),
+    Bunch(module='Log', tab='Log', ws='right', start=False),
+    Bunch(module='Debug', tab='Debug', ws='right', start=False),
     ]
 
 local_plugins = [
@@ -132,7 +133,9 @@ def main(options, args):
     prefs = Settings.Preferences(basefolder=basedir, logger=logger)
     settings = prefs.createCategory('general')
     settings.load(onError='silent')
-    settings.setDefaults(useMatplotlibColormaps=False)
+    settings.setDefaults(useMatplotlibColormaps=False,
+                         widgetSet='choose',
+                         WCSpkg='choose', FITSpkg='choose')
 
     # So we can find our plugins
     sys.path.insert(0, basedir)
@@ -143,7 +146,12 @@ def main(options, args):
     sys.path.insert(0, childDir)
 
     # Choose a toolkit
-    ginga_toolkit.use(options.toolkit)
+    if options.toolkit:
+        toolkit = options.toolkit
+    else:
+        toolkit = settings.get('widgetSet', 'choose')
+
+    ginga_toolkit.use(toolkit)
     tkname = ginga_toolkit.get_family()
     
     if tkname == 'gtk':
@@ -176,6 +184,30 @@ def main(options, args):
             cmap.add_matplotlib_cmaps()
         except Exception as e:
             logger.warn("failed to load matplotlib colormaps: %s" % (str(e)))
+
+    # User wants to customize the WCS package?
+    if options.wcs:
+        wcspkg = options.wcs
+    else:
+        wcspkg = settings.get('WCSpkg', 'choose')
+
+    try:
+        from ginga.util import wcs
+        assert wcs.use(wcspkg) == True
+    except Exception as e:
+        logger.warn("failed to set WCS package preference: %s" % (str(e)))
+
+    # User wants to customize the FITS package?
+    if options.fits:
+        fitspkg = options.fits
+    else:
+        fitspkg = settings.get('FITSpkg', 'choose')
+
+    try:
+        from ginga.util import io_fits
+        assert io_fits.use(fitspkg) == True
+    except Exception as e:
+        logger.warn("failed to set FITS package preference: %s" % (str(e)))
 
     # Create the dynamic module manager
     mm = ModuleManager.ModuleManager(logger)
@@ -319,6 +351,9 @@ if __name__ == "__main__":
                       help="Enter the pdb debugger on main()")
     optprs.add_option("--display", dest="display", metavar="HOST:N",
                       help="Use X display on HOST:N")
+    optprs.add_option("--fits", dest="fits", metavar="NAME",
+                      default=None,
+                      help="Prefer FITS I/O module NAME")
     optprs.add_option("-g", "--geometry", dest="geometry",
                       metavar="GEOM", 
                       help="X geometry for initial size and placement")
@@ -344,8 +379,11 @@ if __name__ == "__main__":
                       default=False,
                       help="Run the profiler on main()")
     optprs.add_option("-t", "--toolkit", dest="toolkit", metavar="NAME",
-                      default='choose',
+                      default=None,
                       help="Prefer GUI toolkit (gtk|qt)")
+    optprs.add_option("--wcs", dest="wcs", metavar="NAME",
+                      default=None,
+                      help="Prefer WCS module NAME")
 
     (options, args) = optprs.parse_args(sys.argv[1:])
 

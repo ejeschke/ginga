@@ -71,6 +71,15 @@ class Log(GingaPlugin.GlobalPlugin):
         btn.setToolTip("Clear the log history")
         container.addWidget(w, stretch=0)
 
+        btns = QtHelp.HBox()
+        layout = btns.layout()
+        layout.setSpacing(3)
+
+        btn = QtGui.QPushButton("Close")
+        btn.clicked.connect(self.close)
+        layout.addWidget(btn, stretch=0, alignment=QtCore.Qt.AlignLeft)
+        container.addWidget(btns, stretch=0, alignment=QtCore.Qt.AlignLeft)
+
     def set_history(self, histlimit):
         assert histlimit <= self.histmax, \
                Exception("Limit exceeds maximum value of %d" % (self.histmax))
@@ -107,6 +116,10 @@ class Log(GingaPlugin.GlobalPlugin):
         self.tw.clear()
         return True
         
+    def close(self):
+        self.fv.stop_global_plugin(str(self))
+        return True
+
     def __str__(self):
         return 'log'
     

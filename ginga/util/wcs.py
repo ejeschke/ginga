@@ -1257,13 +1257,14 @@ class WcsMatch(object):
         return (d_ra, d_dec, d_theta)
 
 
+if not wcs_configured:
+    # default
+    WCS = BareBonesWCS
 
-# default
-WCS = BareBonesWCS
+    # try to use them in this order
+    for name in ('kapteyn', 'starlink', 'pyast', 'astropy'):
+        if use(name, raise_err=False):
+            break
 
-# try to use them in this order
-for name in ('kapteyn', 'starlink', 'pyast', 'astropy'):
-    if use(name, raise_err=False):
-        break
 
 #END

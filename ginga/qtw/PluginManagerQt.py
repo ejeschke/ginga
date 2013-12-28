@@ -54,7 +54,8 @@ class PluginManager(object):
                 fitsimage = chinfo.fitsimage
                 obj = klass(self.fv, fitsimage)
 
-            # Prepare configuration for module
+            # Prepare configuration for module.  This becomes the pInfo
+            # object referred to in later code.
             opname = name.lower()
             self.plugin[opname] = Bunch.Bunch(klass=klass, obj=obj,
                                               widget=None, name=name,
@@ -101,39 +102,45 @@ class PluginManager(object):
         name = pInfo.tabname
         lname = pInfo.name.lower()
         if not self.active.has_key(lname):
-            tup = name.split(':')
-            lblname = ' ' + tup[0] + ':\n' + tup[1] + ' '
-            lbl = QtGui.QLabel(lblname)
-            lbl.setAlignment(QtCore.Qt.AlignHCenter)
-            lbl.setToolTip("Right click for menu")
-            lbl.setSizePolicy(QtGui.QSizePolicy.Minimum,QtGui.QSizePolicy.Minimum)
-            lbl.setFrameStyle(QtGui.QFrame.Box | QtGui.QFrame.Raised)
-            self.hbox.addWidget(lbl, stretch=0,
-                                alignment=QtCore.Qt.AlignLeft)
+            if pInfo.chinfo != None:
+                # local plugin
+                tup = name.split(':')
+                lblname = ' ' + tup[0] + ':\n' + tup[1] + ' '
+                lbl = QtGui.QLabel(lblname)
+                lbl.setAlignment(QtCore.Qt.AlignHCenter)
+                lbl.setToolTip("Right click for menu")
+                lbl.setSizePolicy(QtGui.QSizePolicy.Minimum,QtGui.QSizePolicy.Minimum)
+                lbl.setFrameStyle(QtGui.QFrame.Box | QtGui.QFrame.Raised)
+                self.hbox.addWidget(lbl, stretch=0,
+                                    alignment=QtCore.Qt.AlignLeft)
 
-            lbl.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-            # better than making a whole new subclass just to get a label to
-            # respond to a mouse click
-            lbl.mousePressEvent = lambda event: lbl.emit(QtCore.SIGNAL("clicked"))
+                lbl.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+                # better than making a whole new subclass just to get a label to
+                # respond to a mouse click
+                lbl.mousePressEvent = lambda event: lbl.emit(QtCore.SIGNAL("clicked"))
 
-            menu = QtGui.QMenu()
-            item = QtGui.QAction("Focus", menu)
-            item.triggered.connect(lambda: self.set_focus(lname))
-            menu.addAction(item)
-            item = QtGui.QAction("Unfocus", menu)
-            item.triggered.connect(lambda: self.clear_focus(lname))
-            menu.addAction(item)
-            item = QtGui.QAction("Stop", menu)
-            item.triggered.connect(lambda: self.deactivate(lname))
-            menu.addAction(item)
-            
-            def on_context_menu(point):
-                menu.exec_(lbl.mapToGlobal(point))
+                menu = QtGui.QMenu()
+                item = QtGui.QAction("Focus", menu)
+                item.triggered.connect(lambda: self.set_focus(lname))
+                menu.addAction(item)
+                item = QtGui.QAction("Unfocus", menu)
+                item.triggered.connect(lambda: self.clear_focus(lname))
+                menu.addAction(item)
+                item = QtGui.QAction("Stop", menu)
+                item.triggered.connect(lambda: self.deactivate(lname))
+                menu.addAction(item)
 
-            lbl.connect(lbl, QtCore.SIGNAL('customContextMenuRequested(const QPoint&)'), on_context_menu)
-            lbl.connect(lbl, QtCore.SIGNAL('clicked'),
-                        lambda: self.set_focus(lname))
+                def on_context_menu(point):
+                    menu.exec_(lbl.mapToGlobal(point))
 
+                lbl.connect(lbl, QtCore.SIGNAL('customContextMenuRequested(const QPoint&)'), on_context_menu)
+                lbl.connect(lbl, QtCore.SIGNAL('clicked'),
+                            lambda: self.set_focus(lname))
+
+            else:
+                exclusive = False
+                lbl = lblname = menu = None
+                
             bnch = Bunch.Bunch(widget=lbl, label=lbl, lblname=lblname,
                                menu=menu, pInfo=pInfo, exclusive=exclusive)
             self.active[lname] = bnch
@@ -151,9 +158,10 @@ class PluginManager(object):
             self.logger.debug("stopping plugin")
             self.stop_plugin(bnch.pInfo)
             self.logger.debug("removing from tray")
-            QtHelp.removeWidget(self.hbox, bnch.widget)
-            bnch.widget = None
-            bnch.label = None
+            if bnch.widget != None:
+                QtHelp.removeWidget(self.hbox, bnch.widget)
+                bnch.widget = None
+                bnch.label = None
             self.logger.debug("removing from dict")
             del self.active[lname]
             
@@ -183,7 +191,7 @@ class PluginManager(object):
         return self.active[lname]
 
     def set_focus(self, name):
-        self.logger.info("Focusing plugin '%s'" % (name))
+        self.logger.debug("Focusing plugin '%s'" % (name))
         lname = name.lower()
         bnch = self.active[lname]
         if bnch.exclusive:
@@ -202,28 +210,33 @@ class PluginManager(object):
             self.logger.debug("raising tab %s" % (itab))
             self.ds.raise_tab(itab)
 
-        self.logger.debug("resuming plugin %s" % (name))
-        pInfo.obj.resume()
+            self.logger.debug("resuming plugin %s" % (name))
+            pInfo.obj.resume()
+            bnch.label.setStyleSheet("QLabel { background-color: %s; }" % (
+                self.focuscolor))
+            # TODO: Need to account for the fact that not all plugins
+            # end up in the workspace "Dialogs"
+            self.ds.raise_tab('Dialogs')
+
         self.logger.debug("adding focus %s" % (lname))
         self.focus.add(lname)
-        bnch.label.setStyleSheet("QLabel { background-color: %s; }" % (
-            self.focuscolor))
         if pInfo.widget != None:
-            self.ds.raise_tab('Dialogs')
             self.logger.debug("raising tab %s" % (pInfo.tabname))
             self.ds.raise_tab(pInfo.tabname)
 
     def clear_focus(self, name):
-        self.logger.debug("unfocusing %s" % name)
-        self.logger.info("Unfocusing plugin '%s'" % (name))
+        self.logger.debug("Unfocusing plugin '%s'" % (name))
         lname = name.lower()
         bnch = self.active[lname]
+        pInfo = bnch.pInfo
         try:
             self.focus.remove(lname)
-            bnch.pInfo.obj.pause()
+
+            if pInfo.chinfo != None:
+                bnch.pInfo.obj.pause()
+                bnch.label.setStyleSheet("QLabel { background-color: grey; }")
         except:
             pass
-        bnch.label.setStyleSheet("QLabel { background-color: grey; }")
 
     def start_plugin(self, chname, opname, alreadyOpenOk=False):
         return self.start_plugin_future(chname, opname, None,
@@ -232,7 +245,12 @@ class PluginManager(object):
     def start_plugin_future(self, chname, opname, future,
                             alreadyOpenOk=False):
         pInfo = self.getPluginInfo(opname)
-        plname = chname.upper() + ': ' + pInfo.name
+        if chname != None:
+            # local plugin
+            plname = chname.upper() + ': ' + pInfo.name
+        else:
+            # global plugin
+            plname = pInfo.name
         lname = pInfo.name.lower()
         if self.active.has_key(lname):
             if alreadyOpenOk:
@@ -253,6 +271,7 @@ class PluginManager(object):
                     pInfo.obj.build_gui(vbox, future=future)
                 else:
                     pInfo.obj.build_gui(vbox)
+
         except Exception, e:
             had_error = True
             errstr = "Plugin UI failed to initialize: %s" % (str(e))
@@ -304,7 +323,8 @@ class PluginManager(object):
                 #raise PluginManagerError(e)
 
         if vbox != None:
-            self.ds.add_tab('Dialogs', widget, 2, pInfo.tabname, pInfo.tabname)
+            ws = pInfo.spec.ws
+            self.ds.add_tab(ws, widget, 2, pInfo.tabname, pInfo.tabname)
             pInfo.widget = widget
             
             self.activate(pInfo)

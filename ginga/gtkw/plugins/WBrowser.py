@@ -8,7 +8,6 @@
 # Please see the file LICENSE.txt for details.
 #
 import sys, os
-from ginga import GingaPlugin
 
 import gtk
 
@@ -19,7 +18,8 @@ try:
 except ImportError:
     pass
 
-moduleHome = os.path.split(sys.modules[__name__].__file__)[0]
+from ginga import GingaPlugin
+from ginga.Control import packageHome
 
 class WBrowser(GingaPlugin.GlobalPlugin):
 
@@ -48,21 +48,38 @@ class WBrowser(GingaPlugin.GlobalPlugin):
         self.entry.connect('activate', self.browse_cb)
          
         if has_webkit:
-            helpfile = os.path.abspath(os.path.join(moduleHome, "..",
-                                                    "..", "doc", "manual",
-                                                    "quickref.html"))
+            helpfile = os.path.abspath(os.path.join(packageHome,
+                                                    "doc", "help.html"))
             helpurl = "file://%s" % (helpfile)
-            self.entry.set_text(helpurl)
             self.browse(helpurl)
+
+        btns = gtk.HButtonBox()
+        btns.set_layout(gtk.BUTTONBOX_START)
+        btns.set_spacing(3)
+        btns.set_child_size(15, -1)
+
+        btn = gtk.Button("Close")
+        btn.connect('clicked', lambda w: self.close())
+        btns.add(btn)
+        container.pack_start(btns, padding=4, fill=True, expand=False)
+
 
     def browse(self, url):
         self.logger.debug("Browsing '%s'" % (url))
-        self.browser.open(url)
+        try:
+            self.browser.open(url)
+            self.entry.set_text(url)
+        except Exception as e:
+            self.fv.show_error("Couldn't load web page: %s" % (str(e)))
         
     def browse_cb(self, w):
         url = w.get_text().strip()
         self.browse(url)
         
+    def close(self):
+        self.fv.stop_global_plugin(str(self))
+        return True
+
     def __str__(self):
         return 'wbrowser'
     
