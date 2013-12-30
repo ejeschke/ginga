@@ -7,9 +7,8 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-import gtk
-from ginga.gtkw import GtkHelp
 from ginga import GingaPlugin
+from ginga.misc import Widgets, CanvasTypes
 
 class Ruler(GingaPlugin.LocalPlugin):
 
@@ -35,60 +34,54 @@ class Ruler(GingaPlugin.LocalPlugin):
         self.units = 'arcmin'
 
     def build_gui(self, container):
-        vbox1 = gtk.VBox()
+        sw = Widgets.ScrollArea()
+
+        vbox1 = Widgets.VBox()
+        vbox1.set_margins(4, 4, 4, 4)
+        vbox1.set_spacing(2)
 
         self.msgFont = self.fv.getFont("sansFont", 14)
-        tw = gtk.TextView()
-        tw.set_wrap_mode(gtk.WRAP_WORD)
-        tw.set_left_margin(4)
-        tw.set_right_margin(4)
-        tw.set_editable(False)
-        tw.set_left_margin(4)
-        tw.set_right_margin(4)
-        tw.modify_font(self.msgFont)
+        tw = Widgets.TextArea(wrap=True, editable=False)
+        tw.set_font(self.msgFont)
         self.tw = tw
 
-        fr = gtk.Frame(label=" Instructions ")
-        fr.set_shadow_type(gtk.SHADOW_ETCHED_OUT)
-        fr.set_label_align(0.1, 0.5)
-        fr.add(tw)
-        fr.show_all()
-        vbox1.pack_start(fr, padding=4, fill=True, expand=False)
+        fr = Widgets.Frame("Instructions")
+        fr.set_widget(tw)
+        vbox1.add_widget(fr, stretch=0)
         
-        fr = gtk.Frame(label="Ruler")
-        fr.set_shadow_type(gtk.SHADOW_ETCHED_IN)
-        fr.set_label_align(0.5, 0.5)
+        fr = Widgets.Frame("Ruler")
 
-        captions = (('Units', 'combobox'),)
-        w, b = GtkHelp.build_info(captions)
+        captions = (('Units:', 'label', 'Units', 'combobox'),)
+        w, b = Widgets.build_info(captions)
         self.w = b
 
         combobox = b.units
-        index = 0
         for name in self.unittypes:
-            combobox.insert_text(index, name)
-            index += 1
+            combobox.append_text(name)
         index = self.unittypes.index(self.units)
-        combobox.set_active(index)
-        combobox.sconnect('changed', lambda w: self.set_units())
+        combobox.set_index(index)
+        combobox.add_callback('activated', lambda w, idx: self.set_units())
 
-        fr.add(w)
-        vbox1.pack_start(fr, padding=4, fill=True, expand=False)
+        fr.set_widget(w)
+        vbox1.add_widget(fr, stretch=0)
 
-        btns = gtk.HButtonBox()
-        btns.set_layout(gtk.BUTTONBOX_START)
+        spacer = Widgets.Label('')
+        vbox1.add_widget(spacer, stretch=1)
+        
+        btns = Widgets.HBox()
         btns.set_spacing(3)
 
-        btn = gtk.Button("Close")
-        btn.connect('clicked', lambda w: self.close())
-        btns.add(btn)
-        vbox1.pack_start(btns, padding=4, fill=True, expand=False)
+        btn = Widgets.Button("Close")
+        btn.add_callback('activated', lambda w: self.close())
+        btns.add_widget(btn, stretch=0)
+        vbox1.add_widget(btns, stretch=0)
 
-        vbox1.show_all()
-        container.pack_start(vbox1, padding=0, fill=True, expand=False)
+        sw.set_widget(vbox1)
+        #container.addWidget(sw.get_widget(), stretch=1)
+        container.pack_start(sw.get_widget(), fill=True, expand=True)
 
     def set_units(self):
-        index = self.w.units.get_active()
+        index = self.w.units.get_index()
         units = self.unittypes[index]
         self.canvas.set_drawtype('ruler', color='cyan', units=units)
         self.redo()
@@ -100,9 +93,7 @@ class Ruler(GingaPlugin.LocalPlugin):
         return True
         
     def instructions(self):
-        buf = self.tw.get_buffer()
-        buf.set_text("""Draw (or redraw) a line with the right mouse button.  Display the Zoom tab to precisely see detail.""")
-        self.tw.modify_font(self.msgFont)
+        self.tw.set_text("""Draw (or redraw) a line with the right mouse button.  Display the Zoom tab to precisely see detail.""")
             
     def start(self):
         self.instructions()

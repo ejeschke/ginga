@@ -7,12 +7,9 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-from ginga.qtw.QtHelp import QtGui, QtCore
-from ginga.qtw import QtHelp
-
-from ginga.qtw import ImageViewCanvasTypesQt as CanvasTypes
 from ginga import GingaPlugin
 from ginga import colors
+from ginga.misc import Widgets, CanvasTypes
 
 draw_colors = colors.get_colors()
 
@@ -40,33 +37,27 @@ class Drawing(GingaPlugin.LocalPlugin):
 
 
     def build_gui(self, container):
-        sw = QtGui.QScrollArea()
+        sw = Widgets.ScrollArea()
 
-        twidget = QtHelp.VBox()
-        sp = QtGui.QSizePolicy(QtGui.QSizePolicy.MinimumExpanding,
-                               QtGui.QSizePolicy.Fixed)
-        twidget.setSizePolicy(sp)
-        vbox1 = twidget.layout()
-        vbox1.setContentsMargins(4, 4, 4, 4)
-        vbox1.setSpacing(2)
-        sw.setWidgetResizable(True)
-        sw.setWidget(twidget)
+        vbox1 = Widgets.VBox()
+        vbox1.set_margins(4, 4, 4, 4)
+        vbox1.set_spacing(2)
 
         msgFont = self.fv.getFont("sansFont", 14)
-        tw = QtGui.QLabel()
-        tw.setFont(msgFont)
-        tw.setWordWrap(True)
+        tw = Widgets.TextArea(wrap=True, editable=False)
+        tw.set_font(msgFont)
         self.tw = tw
 
-        fr = QtHelp.Frame("Instructions")
-        fr.layout().addWidget(tw, stretch=1, alignment=QtCore.Qt.AlignTop)
-        vbox1.addWidget(fr, stretch=0, alignment=QtCore.Qt.AlignTop)
+        fr = Widgets.Frame("Instructions")
+        fr.set_widget(tw)
+        vbox1.add_widget(fr, stretch=0)
         
-        fr = QtHelp.Frame("Drawing")
+        fr = Widgets.Frame("Drawing")
 
-        captions = (('Draw type', 'combobox'), ('Draw color', 'combobox'),
+        captions = (('Draw type:', 'label', 'Draw type', 'combobox'),
+                    ('Draw color:', 'label', 'Draw color', 'combobox'),
                     ('Clear canvas', 'button'))
-        w, b = QtHelp.build_info(captions)
+        w, b = Widgets.build_info(captions)
         self.w = b
 
         combobox = b.draw_type
@@ -74,11 +65,11 @@ class Drawing(GingaPlugin.LocalPlugin):
         index = 0
         for name in self.drawtypes:
             options.append(name)
-            combobox.addItem(name)
+            combobox.append_text(name)
             index += 1
         index = self.drawtypes.index(default_drawtype)
-        combobox.setCurrentIndex(index)
-        combobox.activated.connect(self.set_drawparams)
+        combobox.set_index(index)
+        combobox.add_callback('activated', lambda w, idx: self.set_drawparams())
 
         self.w.draw_color = b.draw_color
         combobox = b.draw_color
@@ -87,33 +78,37 @@ class Drawing(GingaPlugin.LocalPlugin):
         self.drawcolors = draw_colors
         for name in self.drawcolors:
             options.append(name)
-            combobox.addItem(name)
+            combobox.append_text(name)
             index += 1
         index = self.drawcolors.index(default_drawcolor)
-        combobox.setCurrentIndex(index)
-        combobox.activated.connect(self.set_drawparams)
+        combobox.set_index(index)
+        combobox.add_callback('activated', lambda w, idx: self.set_drawparams())
 
-        b.clear_canvas.clicked.connect(self.clear_canvas)
+        b.clear_canvas.add_callback('activated', lambda w: self.clear_canvas())
 
-        fr.layout().addWidget(w, stretch=1, alignment=QtCore.Qt.AlignLeft)
-        vbox1.addWidget(fr, stretch=0, alignment=QtCore.Qt.AlignTop)
+        fr.set_widget(w)
+        vbox1.add_widget(fr, stretch=0)
 
-        btns = QtHelp.HBox()
-        layout = btns.layout()
-        layout.setSpacing(3)
+        spacer = Widgets.Label('')
+        vbox1.add_widget(spacer, stretch=1)
+        
+        btns = Widgets.HBox()
+        btns.set_spacing(3)
 
-        btn = QtGui.QPushButton("Close")
-        btn.clicked.connect(self.close)
-        layout.addWidget(btn, stretch=0, alignment=QtCore.Qt.AlignLeft)
-        vbox1.addWidget(btns, stretch=0, alignment=QtCore.Qt.AlignLeft)
+        btn = Widgets.Button("Close")
+        btn.add_callback('activated', lambda w: self.close())
+        btns.add_widget(btn, stretch=0)
+        vbox1.add_widget(btns, stretch=0)
 
-        container.addWidget(sw, stretch=1)
+        sw.set_widget(vbox1)
+        #container.addWidget(sw.get_widget(), stretch=1)
+        container.pack_start(sw.get_widget(), fill=True, expand=True)
 
 
     def set_drawparams(self):
-        index = self.w.draw_type.currentIndex()
+        index = self.w.draw_type.get_index()
         kind = self.drawtypes[index]
-        index = self.w.draw_color.currentIndex()
+        index = self.w.draw_color.get_index()
         drawparams = { 'color': self.drawcolors[index],
                        }
         self.canvas.set_drawtype(kind, **drawparams)
@@ -123,11 +118,11 @@ class Drawing(GingaPlugin.LocalPlugin):
         
     def close(self):
         chname = self.fv.get_channelName(self.fitsimage)
-        self.fv.stop_operation_channel(chname, str(self))
+        self.fv.stop_local_plugin(chname, str(self))
         return True
         
     def instructions(self):
-        self.tw.setText("""Draw a figure with the right mouse button.""")
+        self.tw.set_text("""Draw a figure with the right mouse button.""")
             
     def start(self):
         self.instructions()

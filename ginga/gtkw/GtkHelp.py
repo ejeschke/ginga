@@ -948,8 +948,8 @@ def _make_widget(tup, ns):
         w2 = gtk.Button(title)
         swap = True
     elif wtype == 'spacer':
-        w1 = QtGui.QLabel('')
-        w2 = QtGui.QLabel('')
+        w1 = gtk.Label('')
+        w2 = gtk.Label('')
     else:
         raise ValueError("Bad wtype=%s" % wtype)
 
@@ -1029,7 +1029,7 @@ def _get_widget(title, wtype):
     elif wtype == 'button':
         w = gtk.Button(title)
     elif wtype == 'spacer':
-        w = QtGui.QLabel('')
+        w = gtk.Label('')
     else:
         raise ValueError("Bad wtype=%s" % wtype)
 
