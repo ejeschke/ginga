@@ -40,7 +40,8 @@ class Log(GingaPlugin.GlobalPlugin):
         sw.setWidgetResizable(True)
         sw.setWidget(self.tw)
 
-        container.addWidget(sw, stretch=1)
+        cw = container.get_widget()
+        cw.addWidget(sw, stretch=1)
         #sw.show()
 
         captions = (('Level', 'combobox', 'History', 'spinbutton'),
@@ -69,7 +70,7 @@ class Log(GingaPlugin.GlobalPlugin):
         btn = b.clear
         btn.clicked.connect(self.clear)
         btn.setToolTip("Clear the log history")
-        container.addWidget(w, stretch=0)
+        cw.addWidget(w, stretch=0)
 
         btns = QtHelp.HBox()
         layout = btns.layout()
@@ -78,7 +79,7 @@ class Log(GingaPlugin.GlobalPlugin):
         btn = QtGui.QPushButton("Close")
         btn.clicked.connect(self.close)
         layout.addWidget(btn, stretch=0, alignment=QtCore.Qt.AlignLeft)
-        container.addWidget(btns, stretch=0, alignment=QtCore.Qt.AlignLeft)
+        cw.addWidget(btns, stretch=0, alignment=QtCore.Qt.AlignLeft)
 
     def set_history(self, histlimit):
         assert histlimit <= self.histmax, \

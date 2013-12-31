@@ -30,8 +30,6 @@ class Contents(GingaPlugin.GlobalPlugin):
         fv.set_callback('delete-channel', self.delete_channel)
 
     def build_gui(self, container):
-        rvbox = container
-
         # create the Treeview
         treeview = QtGui.QTreeWidget()
         treeview.setColumnCount(len(self.columns))
@@ -50,8 +48,8 @@ class Contents(GingaPlugin.GlobalPlugin):
         treeview.setHeaderLabels(l)
 
         #self.treeview.connect('cursor-changed', self.switch_image2)
-
-        rvbox.addWidget(treeview, stretch=1)
+        cw = container.get_widget()
+        cw.addWidget(treeview, stretch=1)
 
 
     def switch_image(self, chname, imname):

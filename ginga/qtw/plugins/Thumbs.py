@@ -45,8 +45,6 @@ class Thumbs(ThumbsBase.ThumbsBase):
         self.thumbRowCount = 0
 
     def build_gui(self, container):
-        rvbox = container
-
         width, height = 300, 300
         cm, im = self.fv.cm, self.fv.im
 
@@ -77,7 +75,8 @@ class Thumbs(ThumbsBase.ThumbsBase):
         #self.w.thumbs_scroll.connect("size_allocate", self.thumbpane_resized_cb)
 
         # TODO: should this even have it's own scrolled window?
-        rvbox.addWidget(sw, stretch=1)
+        cw = container.get_widget()
+        cw.addWidget(sw, stretch=1)
         sw.show()
 
         captions = (('Auto scroll', 'checkbutton', 'Clear', 'button'),)
@@ -89,7 +88,7 @@ class Thumbs(ThumbsBase.ThumbsBase):
         b.clear.clicked.connect(self.clear)
         autoScroll = self.settings.get('autoScroll', True)
         b.auto_scroll.setChecked(autoScroll)
-        rvbox.addWidget(w, stretch=0)
+        cw.addWidget(w, stretch=0)
 
     def insert_thumbnail(self, imgwin, thumbkey, thumbname, chname, name, path,
                          thumbpath, metadata):

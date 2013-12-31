@@ -140,7 +140,8 @@ class PixTable(GingaPlugin.LocalPlugin):
         vpaned.addWidget(twidget)
         vpaned.addWidget(QtGui.QLabel(''))
 
-        container.addWidget(vpaned, stretch=1)
+        cw = container.get_widget()
+        cw.addWidget(vpaned, stretch=1)
 
     def select_mark(self, tag, pan=True):
         # deselect the current selected mark, if there is one

@@ -11,7 +11,7 @@ import sys
 import threading
 import traceback
 
-from ginga.misc import Bunch, Future
+from ginga.misc import Bunch, Future, Widgets
 
 
 class PluginManagerError(Exception):
@@ -217,7 +217,7 @@ class PluginManagerBase(object):
         had_error = False
         try:
             if hasattr(pInfo.obj, 'build_gui'):
-                vbox = self.make_plugin_container()
+                vbox = Widgets.VBox()
                 if future:
                     pInfo.obj.build_gui(vbox, future=future)
                 else:
@@ -266,8 +266,10 @@ class PluginManagerBase(object):
         if vbox != None:
             self.finish_gui(pInfo, vbox)
             ws = pInfo.spec.ws
-            self.ds.add_tab(ws, vbox, 2, pInfo.tabname, pInfo.tabname)
-            pInfo.widget = vbox
+            child_w = vbox.get_widget()
+            self.ds.add_tab(ws, child_w, 2, pInfo.tabname, pInfo.tabname)
+            #pInfo.widget = vbox
+            pInfo.widget = child_w
 
             self.activate(pInfo)
             self.set_focus(pInfo.name)
@@ -314,5 +316,10 @@ class PluginManagerBase(object):
         if wasError:
             raise PluginManagerError(e)
         
+    def plugin_build_error(self, box, text):
+        textw = Widgets.TextArea(editable=False, wrap=True)
+        textw.append_text(text)
+        box.add_widget(textw, stretch=1)
+
 
 #END

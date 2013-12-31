@@ -11,7 +11,6 @@ from ginga.gtkw import gtksel
 import gtk
 from ginga.misc.PluginManager import PluginManagerBase, PluginManagerError
 
-
 class PluginManager(PluginManagerBase):
     """
     This provides the GUI support methods for the PluginManager.
@@ -82,19 +81,8 @@ class PluginManager(PluginManagerBase):
         bnch.evbox.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse("grey"))
         ## bnch.label.set_markup('<span>%s</span>' % (bnch.lblname))
 
-    def make_plugin_container(self):
-        return gtk.VBox()
-
-    def plugin_build_error(self, box, text):
-        textw = gtk.TextView()
-        buf = textw.get_buffer()
-        buf.set_text(text)
-        textw.set_editable(False)
-        box.pack_start(textw, fill=True, expand=True)
-        box.show_all()
-
     def finish_gui(self, pInfo, vbox):
-        vbox.show_all()
+        vbox.get_widget().show_all()
         
     def dispose_gui(self, pInfo):
         pInfo.widget.destroy()

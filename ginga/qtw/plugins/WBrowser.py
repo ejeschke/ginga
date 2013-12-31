@@ -30,8 +30,6 @@ class WBrowser(GingaPlugin.GlobalPlugin):
         self.browser = None
 
     def build_gui(self, container):
-        rvbox = container
-
         if not has_webkit:
             self.browser = QtGui.QLabel("Please install the python-webkit package to enable this plugin")
         else:
@@ -42,11 +40,12 @@ class WBrowser(GingaPlugin.GlobalPlugin):
         #sw.set_border_width(2)
         sw.setWidget(self.browser)
 
-        rvbox.addWidget(sw, stretch=1)
+        cw = container.get_widget()
+        cw.addWidget(sw, stretch=1)
         sw.show()
 
         self.entry = QtGui.QLineEdit()
-        rvbox.addWidget(self.entry, stretch=0)
+        cw.addWidget(self.entry, stretch=0)
         self.entry.returnPressed.connect(self.browse_cb)
 
         btns = QtHelp.HBox()
@@ -56,7 +55,7 @@ class WBrowser(GingaPlugin.GlobalPlugin):
         btn = QtGui.QPushButton("Close")
         btn.clicked.connect(self.close)
         layout.addWidget(btn, stretch=0, alignment=QtCore.Qt.AlignLeft)
-        rvbox.addWidget(btns, stretch=0, alignment=QtCore.Qt.AlignLeft)
+        cw.addWidget(btns, stretch=0, alignment=QtCore.Qt.AlignLeft)
 
         if has_webkit:
             helpfile = os.path.abspath(os.path.join(packageHome,

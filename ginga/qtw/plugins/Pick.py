@@ -361,7 +361,8 @@ class Pick(PickBase.PickBase):
 
         vpaned.addWidget(sw)
         
-        container.addWidget(vpaned, stretch=1)
+        cw = container.get_widget()
+        cw.addWidget(vpaned, stretch=1)
         #vpaned.moveSplitter(260, 1)
 
     def _setText(self, w, text):

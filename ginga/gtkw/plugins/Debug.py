@@ -39,10 +39,11 @@ class Debug(GingaPlugin.GlobalPlugin):
                       gtk.POLICY_AUTOMATIC)
         sw.add(self.tw)
 
-        container.pack_start(sw, fill=True, expand=True)
+        cw = container.get_widget()
+        cw.pack_start(sw, fill=True, expand=True)
 
         self.entry = gtk.Entry()
-        container.pack_start(self.entry, fill=True, expand=False)
+        cw.pack_start(self.entry, fill=True, expand=False)
         self.entry.connect('activate', self.command_cb)
 
         btns = gtk.HButtonBox()
@@ -53,7 +54,7 @@ class Debug(GingaPlugin.GlobalPlugin):
         btn = gtk.Button("Close")
         btn.connect('clicked', lambda w: self.close())
         btns.add(btn)
-        container.pack_start(btns, padding=4, fill=True, expand=False)
+        cw.pack_start(btns, padding=4, fill=True, expand=False)
 
     def close(self):
         self.fv.stop_global_plugin(str(self))

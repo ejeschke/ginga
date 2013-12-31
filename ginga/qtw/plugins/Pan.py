@@ -34,7 +34,8 @@ class Pan(GingaPlugin.GlobalPlugin):
     def build_gui(self, container):
         nb = QtGui.QStackedWidget()
         self.nb = nb
-        container.addWidget(self.nb, stretch=1)
+        cw = container.get_widget()
+        cw.addWidget(self.nb, stretch=1)
 
     def _create_pan_image(self):
         width, height = 300, 300

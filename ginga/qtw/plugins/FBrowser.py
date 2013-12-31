@@ -96,7 +96,8 @@ class FBrowser(GingaPlugin.LocalPlugin):
 
         vbox.addWidget(btns, stretch=0, alignment=QtCore.Qt.AlignLeft)
 
-        container.addWidget(widget, stretch=1)
+        cw = container.get_widget()
+        cw.addWidget(widget, stretch=1)
 
     def close(self):
         chname = self.fv.get_channelName(self.fitsimage)

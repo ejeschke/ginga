@@ -52,16 +52,16 @@ class TextArea(WidgetBase):
     def __init__(self, wrap=False, editable=False):
         super(TextArea, self).__init__()
 
-        tw = QtGui.QPlainTextEdit()
+        tw = QtGui.QTextEdit()
         tw.setReadOnly(not editable)
         if wrap:
-            tw.setLineWrapMode(QtGui.QPlainTextEdit.WrapWord)
+            tw.setLineWrapMode(QtGui.QTextEdit.WidgetWidth)
         else:
-            tw.setLineWrapMode(QtGui.QPlainTextEdit.NoWrap)
+            tw.setLineWrapMode(QtGui.QTextEdit.NoWrap)
         self.widget = tw
 
     def append_text(self, text, autoscroll=True):
-        self.widget.appendPlainText(text)
+        self.widget.append(text)
         if not autoscroll:
             return
 
@@ -87,9 +87,9 @@ class TextArea(WidgetBase):
         
     def set_wrap(self, tf):
         if tf:
-            self.widget.setLineWrapMode(QtGui.QPlainTextEdit.WrapWord)
+            self.widget.setLineWrapMode(QtGui.QTextEdit.WidgetWidth)
         else:
-            self.widget.setLineWrapMode(QtGui.QPlainTextEdit.NoWrap)
+            self.widget.setLineWrapMode(QtGui.QTextEdit.NoWrap)
     
 class Label(WidgetBase):
     def __init__(self, text=''):
@@ -113,7 +113,8 @@ class Button(WidgetBase):
         
         self.enable_callback('activated')
 
-    def _cb_redirect(self):
+    def _cb_redirect(self, *args):
+        print "_CB", args
         self.make_callback('activated')
 
     
@@ -261,11 +262,7 @@ class HBox(WidgetBase, BoxMixin):
     def __init__(self):
         super(HBox, self).__init__()
 
-        self.widget = QtGui.QWidget()
-        layout = QtGui.QHBoxLayout()
-        # because of ridiculous defaults
-        layout.setContentsMargins(0, 0, 0, 0)
-        self.widget.setLayout(layout)
+        self.widget = QtHelp.HBox()
 
     def add_widget(self, child, stretch=0.0):
         child_w = child.get_widget()
@@ -276,11 +273,7 @@ class VBox(WidgetBase, BoxMixin):
     def __init__(self):
         super(VBox, self).__init__()
 
-        self.widget = QtGui.QWidget()
-        layout = QtGui.QVBoxLayout()
-        # because of ridiculous defaults
-        layout.setContentsMargins(0, 0, 0, 0)
-        self.widget.setLayout(layout)
+        self.widget = QtHelp.VBox()
 
     def add_widget(self, child, stretch=0.0):
         child_w = child.get_widget()

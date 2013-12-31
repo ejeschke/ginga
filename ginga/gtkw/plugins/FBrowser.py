@@ -117,7 +117,8 @@ class FBrowser(GingaPlugin.LocalPlugin):
         btns.add(btn)
         rvbox.pack_start(btns, padding=4, fill=True, expand=False)
 
-        container.pack_start(rvbox, padding=0, fill=True, expand=True)
+        cw = container.get_widget()
+        cw.pack_start(rvbox, padding=0, fill=True, expand=True)
 
     def sort_cb(self, column, idx):
         treeview = column.get_tree_view()

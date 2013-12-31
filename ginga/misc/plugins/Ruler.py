@@ -77,8 +77,7 @@ class Ruler(GingaPlugin.LocalPlugin):
         vbox1.add_widget(btns, stretch=0)
 
         sw.set_widget(vbox1)
-        #container.addWidget(sw.get_widget(), stretch=1)
-        container.pack_start(sw.get_widget(), fill=True, expand=True)
+        container.add_widget(sw, stretch=1)
 
     def set_units(self):
         index = self.w.units.get_index()
@@ -89,7 +88,7 @@ class Ruler(GingaPlugin.LocalPlugin):
 
     def close(self):
         chname = self.fv.get_channelName(self.fitsimage)
-        self.fv.stop_operation_channel(chname, str(self))
+        self.fv.stop_local_plugin(chname, str(self))
         return True
         
     def instructions(self):

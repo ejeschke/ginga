@@ -69,7 +69,8 @@ class Contents(GingaPlugin.GlobalPlugin):
         # This speeds up rendering of TreeViews
         self.treeview.set_fixed_height_mode(True)
 
-        container.pack_start(sw, fill=True, expand=True)
+        cw = container.get_widget()
+        cw.pack_start(sw, fill=True, expand=True)
 
 
     def sort_cb(self, column, idx):

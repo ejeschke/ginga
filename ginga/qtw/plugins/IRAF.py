@@ -71,7 +71,8 @@ class IRAF(IRAFBase.IRAFBase):
         fr.layout().addWidget(lbl, stretch=1, alignment=QtCore.Qt.AlignLeft)
         vbox.addWidget(fr, stretch=0, alignment=QtCore.Qt.AlignTop)
 
-        container.addWidget(vbox, stretch=0, alignment=QtCore.Qt.AlignTop)
+        cw = container.get_widget()
+        cw.addWidget(vbox, stretch=0, alignment=QtCore.Qt.AlignTop)
 
     def update_chinfo(self, fmap):
         # Update the GUI with the new frame/channel mapping

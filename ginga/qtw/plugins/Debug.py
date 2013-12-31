@@ -20,8 +20,6 @@ class Debug(GingaPlugin.GlobalPlugin):
 
 
     def build_gui(self, container):
-        rvbox = container
-
         self.msgFont = self.fv.getFont("fixedFont", 14)
         tw = QtGui.QTextEdit()
         #tw.setLineWrapMode(??)
@@ -40,12 +38,13 @@ class Debug(GingaPlugin.GlobalPlugin):
         #sw.set_border_width(2)
         sw.setWidget(self.tw)
 
-        rvbox.addWidget(sw, stretch=1)
+        cw = container.get_widget()
+        cw.addWidget(sw, stretch=1)
 
         sw.show()
 
         self.entry = QtGui.QLineEdit()
-        rvbox.addWidget(self.entry, stretch=0)
+        cw.addWidget(self.entry, stretch=0)
         self.entry.returnPressed.connect(self.command_cb)
 
         btns = QtHelp.HBox()
@@ -55,7 +54,7 @@ class Debug(GingaPlugin.GlobalPlugin):
         btn = QtGui.QPushButton("Close")
         btn.clicked.connect(self.close)
         layout.addWidget(btn, stretch=0, alignment=QtCore.Qt.AlignLeft)
-        rvbox.addWidget(btns, stretch=0, alignment=QtCore.Qt.AlignLeft)
+        cw.addWidget(btns, stretch=0, alignment=QtCore.Qt.AlignLeft)
 
 
     def reloadLocalPlugin(self, plname):

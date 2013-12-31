@@ -34,7 +34,8 @@ class Info(GingaPlugin.GlobalPlugin):
     def build_gui(self, container):
         nb = QtHelp.StackedWidget()
         self.nb = nb
-        container.addWidget(nb, stretch=0)
+        cw = container.get_widget()
+        cw.addWidget(nb, stretch=0)
 
     def _create_info_window(self):
         sw = QtGui.QScrollArea()

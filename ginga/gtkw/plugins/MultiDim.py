@@ -78,7 +78,8 @@ class MultiDim(GingaPlugin.LocalPlugin):
         vbox1.pack_start(btns, padding=4, fill=True, expand=False)
 
         vbox1.show_all()
-        container.pack_start(vbox1, padding=0, fill=True, expand=False)
+        cw = container.get_widget()
+        cw.pack_start(vbox1, padding=0, fill=True, expand=True)
 
     def set_hdu_cb(self, w):
         idx = int(w.get_value())

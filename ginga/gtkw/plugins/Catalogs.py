@@ -186,7 +186,8 @@ class Catalogs(CatalogsBase.CatalogsBase):
         vbox1.pack_start(btns, padding=4, fill=True, expand=False)
 
         vbox1.show_all()
-        container.pack_start(vbox1, padding=0, fill=True, expand=True)
+        cw = container.get_widget()
+        cw.pack_start(vbox1, padding=0, fill=True, expand=True)
         
 
     def limit_area_cb(self, w):

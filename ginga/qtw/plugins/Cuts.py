@@ -98,7 +98,8 @@ class Cuts(CutsBase.CutsBase):
         vpaned.addWidget(twidget)
         vpaned.addWidget(QtGui.QLabel(''))
 
-        container.addWidget(vpaned, stretch=1)
+        cw = container.get_widget()
+        cw.addWidget(vpaned, stretch=1)
 
     def instructions(self):
         self.tw.setText("""Draw (or redraw) a line with the right mouse button.  Click or drag left button to reposition line.""")

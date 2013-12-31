@@ -69,7 +69,8 @@ class IRAF(IRAFBase.IRAFBase):
         vbox1.pack_start(fr, padding=4, fill=True, expand=False)
 
         vbox1.show_all()
-        container.pack_start(vbox1, padding=0, fill=True, expand=False)
+        cw = container.get_widget()
+        cw.pack_start(vbox1, padding=0, fill=True, expand=False)
 
     def update_chinfo(self, fmap):
         # Update the GUI with the new frame/channel mapping

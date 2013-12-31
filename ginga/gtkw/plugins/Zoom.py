@@ -105,7 +105,8 @@ class Zoom(ZoomBase.ZoomBase):
         vpaned.show_all()
         vpaned.set_position(height)
         
-        container.pack_start(vpaned, padding=0, fill=True, expand=True)
+        cw = container.get_widget()
+        cw.pack_start(vpaned, padding=0, fill=True, expand=True)
 
     def prepare(self, fitsimage):
         fitssettings = fitsimage.get_settings()

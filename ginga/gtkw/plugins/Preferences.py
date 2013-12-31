@@ -422,8 +422,9 @@ class Preferences(GingaPlugin.LocalPlugin):
 
         vbox.show_all()
 
-        container.pack_start(sw, padding=0, fill=True, expand=True)
-
+        cw = container.get_widget()
+        cw.pack_start(sw, padding=0, fill=True, expand=True)
+        
         self.gui_up = True
 
     def set_cmap_cb(self, w):

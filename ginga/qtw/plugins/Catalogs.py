@@ -171,7 +171,8 @@ class Catalogs(CatalogsBase.CatalogsBase):
 
         vbox1.addWidget(btns, stretch=0)
 
-        container.addWidget(vbox1, stretch=1)
+        cw = container.get_widget()
+        cw.addWidget(vbox1, stretch=1)
         
 
     def limit_area_cb(self, tf):

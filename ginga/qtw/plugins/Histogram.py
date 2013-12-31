@@ -92,7 +92,8 @@ class Histogram(HistogramBase.HistogramBase):
         vpaned.addWidget(twidget)
         vpaned.addWidget(QtGui.QLabel(''))
 
-        container.addWidget(vpaned, stretch=1)
+        cw = container.get_widget()
+        cw.addWidget(vpaned, stretch=1)
 
         self.gui_up = True
 

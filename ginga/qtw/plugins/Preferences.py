@@ -408,8 +408,9 @@ class Preferences(GingaPlugin.LocalPlugin):
         layout.addWidget(btn, stretch=0, alignment=QtCore.Qt.AlignLeft)
         vbox.addWidget(btns, stretch=0, alignment=QtCore.Qt.AlignLeft)
 
-        #container.addWidget(sw, stretch=1, alignment=QtCore.Qt.AlignTop)
-        container.addWidget(sw, stretch=1)
+        cw = container.get_widget()
+        #cw.addWidget(sw, stretch=1, alignment=QtCore.Qt.AlignTop)
+        cw.addWidget(sw, stretch=1)
         
         self.gui_up = True
         

@@ -34,13 +34,14 @@ class Errors(GingaPlugin.GlobalPlugin):
         #sw.set_border_width(2)
         sw.setWidget(self.msgList)
 
-        container.addWidget(sw, stretch=1)
+        cw = container.get_widget()
+        cw.addWidget(sw, stretch=1)
 
         hbox = QtHelp.HBox()
         btn = QtGui.QPushButton("Remove All")
         btn.clicked.connect(self.remove_all)
         hbox.addWidget(btn, stretch=0)
-        container.addWidget(hbox, stretch=0)
+        cw.addWidget(hbox, stretch=0)
 
         self.widgetList = []
 

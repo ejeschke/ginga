@@ -451,7 +451,8 @@ class Pick(PickBase.PickBase):
         vpaned.set_position(280)
         vpaned.show_all()
         
-        container.pack_start(vpaned, padding=0, fill=True, expand=True)
+        cw = container.get_widget()
+        cw.pack_start(vpaned, padding=0, fill=True, expand=True)
 
     def _setText(self, w, text):
         w.set_text(text)

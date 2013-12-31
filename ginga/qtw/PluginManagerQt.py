@@ -82,17 +82,6 @@ class PluginManager(PluginManagerBase):
         self.logger.debug("unhighlighting widget")
         bnch.label.setStyleSheet("QLabel { background-color: grey; }")
 
-    def make_plugin_container(self):
-        return QtHelp.VBox()
-
-    def plugin_build_error(self, box, text):
-        textw = QtGui.QTextEdit()
-        #textw.append(errstr + '\n')
-        #textw.append(tb_str)
-        textw.append(text)
-        textw.setReadOnly(True)
-        box.layout().addWidget(textw, stretch=1)
-
     def finish_gui(self, pInfo, vbox):
         pass
         

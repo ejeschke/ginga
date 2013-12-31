@@ -79,7 +79,8 @@ class MultiDim(GingaPlugin.LocalPlugin):
         layout.addWidget(btn, stretch=0, alignment=QtCore.Qt.AlignLeft)
         vbox1.addWidget(btns, stretch=0, alignment=QtCore.Qt.AlignLeft)
 
-        container.addWidget(sw, stretch=1)
+        cw = container.get_widget()
+        cw.addWidget(sw, stretch=1)
 
     def set_hdu_cb(self, idx):
         #idx = int(w.currentIndex())

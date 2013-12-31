@@ -101,7 +101,8 @@ class Zoom(ZoomBase.ZoomBase):
         vpaned.addWidget(sw)
         sw.show()
 
-        container.addWidget(vpaned, stretch=1)
+        cw = container.get_widget()
+        cw.addWidget(vpaned, stretch=1)
        
     # CALLBACKS
 

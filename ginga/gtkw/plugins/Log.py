@@ -45,7 +45,8 @@ class Log(GingaPlugin.GlobalPlugin):
                       gtk.POLICY_AUTOMATIC)
         sw.add(self.tw)
 
-        container.pack_start(sw, fill=True, expand=True)
+        cw = container.get_widget()
+        cw.pack_start(sw, fill=True, expand=True)
 
         captions = (('Level', 'combobox', 'History', 'spinbutton'),
                     ('Auto scroll', 'checkbutton', 'Clear', 'button')
@@ -72,7 +73,7 @@ class Log(GingaPlugin.GlobalPlugin):
         btn = b.clear
         btn.connect('clicked', lambda w: self.clear())
         btn.set_tooltip_text("Clear the log history")
-        container.pack_start(w, fill=False, expand=False)
+        cw.pack_start(w, fill=False, expand=False)
 
         btns = gtk.HButtonBox()
         btns.set_layout(gtk.BUTTONBOX_START)
@@ -82,7 +83,8 @@ class Log(GingaPlugin.GlobalPlugin):
         btn = gtk.Button("Close")
         btn.connect('clicked', lambda w: self.close())
         btns.add(btn)
-        container.pack_start(btns, padding=4, fill=True, expand=False)
+
+        cw.pack_start(btns, fill=True, expand=False)
 
     def set_history(self, histlimit):
         assert histlimit <= self.histmax, \

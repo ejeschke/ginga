@@ -24,7 +24,8 @@ class Cuts(CutsBase.CutsBase):
         # Paned container is just to provide a way to size the graph
         # to a reasonable size
         box = gtk.VPaned()
-        container.pack_start(box, expand=True, fill=True)
+        cw = container.get_widget()
+        cw.pack_start(box, fill=True, expand=True)
         
         # Make the cuts plot
         vbox = gtk.VBox()
@@ -98,7 +99,7 @@ class Cuts(CutsBase.CutsBase):
         btn = gtk.Button("Close")
         btn.connect('clicked', lambda w: self.close())
         btns.add(btn)
-        container.pack_start(btns, padding=4, fill=True, expand=False)
+        cw.pack_start(btns, padding=4, fill=True, expand=False)
 
     def instructions(self):
         buf = self.tw.get_buffer()

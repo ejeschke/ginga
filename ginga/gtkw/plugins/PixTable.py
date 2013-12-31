@@ -52,7 +52,8 @@ class PixTable(GingaPlugin.LocalPlugin):
         # Paned container is just to provide a way to size the graph
         # to a reasonable size
         box = gtk.VPaned()
-        container.pack_start(box, expand=True, fill=True)
+        cw = container.get_widget()
+        cw.pack_start(box, expand=True, fill=True)
         
         # Make the histogram plot
         vbox = gtk.VBox()

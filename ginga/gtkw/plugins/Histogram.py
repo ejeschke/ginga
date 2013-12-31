@@ -25,7 +25,8 @@ class Histogram(HistogramBase.HistogramBase):
         # Paned container is just to provide a way to size the graph
         # to a reasonable size
         box = gtk.VPaned()
-        container.pack_start(box, expand=True, fill=True)
+        cw = container.get_widget()
+        cw.pack_start(box, fill=True, expand=True)
 
         # Make the histogram plot
         vbox = gtk.VBox()
@@ -95,7 +96,7 @@ class Histogram(HistogramBase.HistogramBase):
         btn = gtk.Button("Full Image")
         btn.connect('clicked', lambda w: self.full_image())
         btns.add(btn)
-        container.pack_start(btns, padding=4, fill=True, expand=False)
+        cw.pack_start(btns, padding=4, fill=True, expand=False)
 
         self.gui_up = True
 

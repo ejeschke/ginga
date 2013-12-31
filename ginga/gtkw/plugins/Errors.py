@@ -31,15 +31,16 @@ class Errors(GingaPlugin.GlobalPlugin):
                       gtk.POLICY_AUTOMATIC)
         sw.add_with_viewport(self.msgList)
 
-        container.pack_start(sw, fill=True, expand=True)
+        cw = container.get_widget()
+        cw.pack_start(sw, fill=True, expand=True)
 
         hbox = gtk.HButtonBox()
         hbox.set_layout(gtk.BUTTONBOX_END)
         btn = gtk.Button("Remove All")
         btn.connect('clicked', lambda w: self.remove_all())
         hbox.add(btn)
-        container.pack_end(hbox, fill=False, expand=False)
-
+        cw.pack_end(hbox, fill=False, expand=False)
+        
 
     def add_error(self, errmsg):
         vbox = gtk.VBox()

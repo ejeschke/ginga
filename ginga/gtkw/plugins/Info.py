@@ -40,7 +40,8 @@ class Info(GingaPlugin.GlobalPlugin):
         nb.set_show_border(False)
         nb.show()
         self.nb = nb
-        container.pack_start(self.nb, fill=True, expand=True)
+        cw = container.get_widget()
+        cw.pack_start(self.nb, fill=True, expand=True)
 
     def _create_info_window(self):
         sw = gtk.ScrolledWindow()

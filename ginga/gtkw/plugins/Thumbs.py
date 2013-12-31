@@ -50,7 +50,8 @@ class Thumbs(ThumbsBase.ThumbsBase):
         #nb.connect("size_allocate", self.thumbpane_resized_cb)
 
         # TODO: should this even have it's own scrolled window?
-        container.pack_start(sw, fill=True, expand=True)
+        cw = container.get_widget()
+        cw.pack_start(sw, fill=True, expand=True)
 
         captions = (('Auto scroll', 'checkbutton', 'Clear', 'button'),)
         w, b = GtkHelp.build_info(captions)
@@ -63,7 +64,7 @@ class Thumbs(ThumbsBase.ThumbsBase):
         autoScroll = self.settings.get('autoScroll', True)
         b.auto_scroll.set_active(autoScroll)
 
-        container.pack_start(w, fill=True, expand=False)
+        cw.pack_start(w, fill=True, expand=False)
 
 
     def _mktt(self, thumbkey, name, metadata):
