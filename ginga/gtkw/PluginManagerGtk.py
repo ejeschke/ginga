@@ -85,7 +85,9 @@ class PluginManager(PluginManagerBase):
         vbox.get_widget().show_all()
         
     def dispose_gui(self, pInfo):
-        pInfo.widget.destroy()
+        vbox = pInfo.widget
+        pInfo.widget = None
+        vbox.get_widget().destroy()
         
     def button_press_event(self, widget, event, name):
         # event.button, event.x, event.y

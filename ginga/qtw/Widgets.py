@@ -22,6 +22,9 @@ class WidgetBase(Callback.Callbacks):
     def get_widget(self):
         return self.widget
 
+    def set_tooltip(self, text):
+        self.widget.setToolTip(text)
+
 # BASIC WIDGETS
 
 class TextEntry(WidgetBase):
@@ -34,9 +37,8 @@ class TextEntry(WidgetBase):
         
         self.enable_callback('activated')
 
-    def _cb_redirect(self):
-        value = self.widget.text()
-        self.make_callback('activated', value)
+    def _cb_redirect(self, *args):
+        self.make_callback('activated')
 
     def get_text(self):
         return self.widget.text()
@@ -48,11 +50,29 @@ class TextEntry(WidgetBase):
         self.widget.setMaxLength(numchars)
     
     
+class GrowingTextEdit(QtGui.QTextEdit):
+
+    def __init__(self, *args, **kwargs):
+        super(GrowingTextEdit, self).__init__(*args, **kwargs)  
+        self.document().documentLayout().documentSizeChanged.connect(
+            self.sizeChange)
+        self.heightMin = 0
+        self.heightMax = 65000
+
+    def sizeChange(self):
+        docHeight = self.document().size().height()
+        # add some margin to prevent auto scrollbars
+        docHeight += 8
+        if self.heightMin <= docHeight <= self.heightMax:
+            self.setMaximumHeight(docHeight)
+
+
 class TextArea(WidgetBase):
     def __init__(self, wrap=False, editable=False):
         super(TextArea, self).__init__()
 
-        tw = QtGui.QTextEdit()
+        #tw = QtGui.QTextEdit()
+        tw = GrowingTextEdit()
         tw.setReadOnly(not editable)
         if wrap:
             tw.setLineWrapMode(QtGui.QTextEdit.WidgetWidth)
@@ -114,7 +134,7 @@ class Button(WidgetBase):
         self.enable_callback('activated')
 
     def _cb_redirect(self, *args):
-        print "_CB", args
+        print "_CB BUTTON", args
         self.make_callback('activated')
 
     
@@ -166,32 +186,62 @@ class SpinBox(WidgetBase):
         super(SpinBox, self).__init__()
 
         if dtype == float:
-            self.widget = QtGui.QDoubleSpinBox()
+            w = QtGui.QDoubleSpinBox()
         else:
-            self.widget = QtGui.QSpinBox()
-        self.widget.valueChanged.connect(self._cb_redirect)
+            w = QtGui.QSpinBox()
+        w.valueChanged.connect(self._cb_redirect)
+        # should values wrap around
+        w.setWrapping(False)
+        self.widget = w
         
-        self.enable_callback('activated')
+        self.enable_callback('value-changed')
 
     def _cb_redirect(self, val):
-        self.make_callback('activated', val)
+        self.make_callback('value-changed', val)
 
+    def get_value(self):
+        return self.widget.value()
+    
+    def set_value(self, val):
+        self.widget.setValue(val)
+
+    def set_limits(self, minval, maxval, incr_value=1):
+        adj = self.widget
+        adj.setRange(minval, maxval)
+        adj.setSingleStep(incr_value)
+        
     
 class Slider(WidgetBase):
     def __init__(self, orientation='horizontal'):
         super(Slider, self).__init__()
 
         if orientation == 'horizontal':
-            self.widget = QtGui.QSlider(QtCore.Qt.Horizontal)
+            w = QtGui.QSlider(QtCore.Qt.Horizontal)
         else:
-            self.widget = QtGui.QSlider(QtCore.Qt.Vertical)
-        self.widget.activated.connect(self._cb_redirect)
+            w = QtGui.QSlider(QtCore.Qt.Vertical)
+        # this controls whether the callbacks are made *as the user
+        # moves the slider* or afterwards
+        w.setTracking(True)
+        w.setTickPosition(QtGui.QSlider.TicksBelow)
+        self.widget = w
+        w.valueChanged.connect(self._cb_redirect)
         
-        self.enable_callback('activated')
+        self.enable_callback('value-changed')
 
     def _cb_redirect(self, val):
-        self.make_callback('activated', val)
+        self.make_callback('value-changed', val)
     
+    def get_value(self):
+        return self.widget.value()
+    
+    def set_value(self, val):
+        self.widget.setValue(val)
+
+    def set_limits(self, minval, maxval, incr_value=1):
+        adj = self.widget
+        adj.setRange(minval, maxval)
+        adj.setSingleStep(incr_value)
+        
 
 class ScrollBar(WidgetBase):
     def __init__(self, orientation='horizontal'):
@@ -218,9 +268,15 @@ class CheckBox(WidgetBase):
         
         self.enable_callback('activated')
 
-    def _cb_redirect(self, val):
+    def _cb_redirect(self, *args):
+        val = self.get_state()
         self.make_callback('activated', val)
-    
+
+    def set_state(self, tf):
+        self.widget.setChecked(tf)
+
+    def get_state(self):
+        return self.widget.checkState()
 
 class ToggleButton(WidgetBase):
     def __init__(self, text=''):
@@ -250,37 +306,52 @@ class RadioButton(WidgetBase):
 
 # CONTAINERS
 
-class BoxMixin(object):
+class ContainerBase(WidgetBase):
+    def __init__(self):
+        super(ContainerBase, self).__init__()
+        self.refs = []
+
+    def add_ref(self, ref):
+        # TODO: should this be a weakref?
+        self.refs.append(ref)
+
+class Box(ContainerBase):
+    def __init__(self, orientation='horizontal'):
+        super(Box, self).__init__()
+
+        self.orientation = orientation
+        if orientation == 'horizontal':
+            self.widget = QtHelp.HBox()
+            self.default_alignment = QtCore.Qt.AlignLeft
+        else:
+            self.widget = QtHelp.VBox()
+            self.default_alignment = QtCore.Qt.AlignTop
+        
+    def add_widget(self, child, stretch=0.0):
+        self.add_ref(child)
+        child_w = child.get_widget()
+        self.widget.layout().addWidget(child_w, stretch=stretch,
+                                       alignment=self.default_alignment)
+
     def set_spacing(self, val):
         self.widget.layout().setSpacing(val)
 
     def set_margins(self, left, right, top, bottom):
         self.widget.layout().setContentsMargins(left, right, top, bottom)
         
+    def set_border_width(self, pix):
+        self.widget.layout().setContentsMargins(pix, pix, pix, pix)
+        
 
-class HBox(WidgetBase, BoxMixin):
+class HBox(Box):
     def __init__(self):
-        super(HBox, self).__init__()
+        super(HBox, self).__init__(orientation='horizontal')
 
-        self.widget = QtHelp.HBox()
-
-    def add_widget(self, child, stretch=0.0):
-        child_w = child.get_widget()
-        self.widget.layout().addWidget(child_w, stretch=stretch,
-                                       alignment=QtCore.Qt.AlignLeft)
-
-class VBox(WidgetBase, BoxMixin):
+class VBox(Box):
     def __init__(self):
-        super(VBox, self).__init__()
+        super(VBox, self).__init__(orientation='vertical')
 
-        self.widget = QtHelp.VBox()
-
-    def add_widget(self, child, stretch=0.0):
-        child_w = child.get_widget()
-        self.widget.layout().addWidget(child_w, stretch=stretch,
-                                       alignment=QtCore.Qt.AlignTop)
-
-class Frame(WidgetBase):
+class Frame(ContainerBase):
     def __init__(self, title=None):
         super(Frame, self).__init__()
 
@@ -299,17 +370,24 @@ class Frame(WidgetBase):
             self.label = None
 
     def set_widget(self, child):
+        self.add_ref(child)
         self.widget.layout().addWidget(child.get_widget())
     
-class TabWidget(WidgetBase):
+class TabWidget(ContainerBase):
     def __init__(self):
         super(TabWidget, self).__init__()
 
-        self.widget = QtGui.QTabWidget()
+        nb = QtGui.QTabWidget()
+        nb.currentChanged.connect(self._cb_redirect)
+        self.widget = nb
 
-    def add_tab(self, tab_title, child):
+    def _cb_redirect(self, index):
+        self.make_callback('activated', index)
+        
+    def add_widget(self, child, title=''):
+        self.add_ref(child)
         child_w = child.get_widget()
-        self.widget.addTab(child_w, tab_title)
+        self.widget.addTab(child_w, title)
 
     def get_index(self):
         return self.widget.getCurrentIndex()
@@ -317,7 +395,31 @@ class TabWidget(WidgetBase):
     def set_index(self, idx):
         self.widget.setCurrentIndex(idx)
 
-class ScrollArea(WidgetBase):
+    def index_of(self, child):
+        return self.widget.indexOf(child.get_widget())
+
+class StackWidget(ContainerBase):
+    def __init__(self):
+        super(StackWidget, self).__init__()
+
+        self.widget = QtHelp.StackedWidget()
+
+    def add_widget(self, child, title=''):
+        self.add_ref(child)
+        child_w = child.get_widget()
+        self.widget.addTab(child_w, title)
+
+    def get_index(self):
+        return self.widget.getCurrentIndex()
+
+    def set_index(self, idx):
+        self.widget.setCurrentIndex(idx)
+
+    def index_of(self, child):
+        return self.widget.indexOf(child.get_widget())
+        
+
+class ScrollArea(ContainerBase):
     def __init__(self):
         super(ScrollArea, self).__init__()
 
@@ -325,12 +427,32 @@ class ScrollArea(WidgetBase):
         self.widget.setWidgetResizable(True)
 
     def set_widget(self, child):
+        self.add_ref(child)
         self.widget.setWidget(child.get_widget())
+
+class Splitter(ContainerBase):
+    def __init__(self, orientation='horizontal'):
+        super(Splitter, self).__init__()
+
+        w = QtGui.QSplitter()
+        self.orientation = orientation
+        if orientation == 'horizontal':
+            w.setOrientation(QtCore.Qt.Horizontal)
+        else:
+            w.setOrientation(QtCore.Qt.Vertical)
+        self.widget = w
+        w.setStretchFactor(0, 0.5)
+        w.setStretchFactor(1, 0.5)
+
+    def add_widget(self, child):
+        self.add_ref(child)
+        child_w = child.get_widget()
+        self.widget.addWidget(child_w)
 
 
 # MODULE FUNCTIONS
 
-def _name_mangle(name, pfx=''):
+def name_mangle(name, pfx=''):
     newname = []
     for c in name.lower():
         if not (c.isalpha() or c.isdigit() or (c == '_')):
@@ -339,7 +461,7 @@ def _name_mangle(name, pfx=''):
             newname.append(c)
     return pfx + ''.join(newname)
 
-def _get_widget(title, wtype):
+def make_widget(title, wtype):
     if wtype == 'label':
         w = Label(title)
         w.widget.setAlignment(QtCore.Qt.AlignRight)
@@ -347,7 +469,7 @@ def _get_widget(title, wtype):
         w = Label(title)
         w.widget.setAlignment(QtCore.Qt.AlignLeft)
     elif wtype == 'entry':
-        w = Entry()
+        w = TextEntry()
         w.widget.setMaxLength(12)
     elif wtype == 'combobox':
         w = ComboBox()
@@ -356,9 +478,9 @@ def _get_widget(title, wtype):
     elif wtype == 'spinfloat':
         w = SpinBox(dtype=float)
     elif wtype == 'vbox':
-        w = QtHelp.VBox()
+        w = VBox()
     elif wtype == 'hbox':
-        w = QtHelp.HBox()
+        w = HBox()
     elif wtype == 'hscale':
         w = Slider(orientation='horizontal')
     elif wtype == 'vscale':
@@ -372,7 +494,7 @@ def _get_widget(title, wtype):
     elif wtype == 'button':
         w = Button(title)
     elif wtype == 'spacer':
-        w = QtGui.QLabel('')
+        w = Label('')
     else:
         raise ValueError("Bad wtype=%s" % wtype)
     return w
@@ -400,17 +522,20 @@ def build_info(captions):
             if idx < len(tup):
                 title, wtype = tup[idx:idx+2]
                 if not title.endswith(':'):
-                    name = _name_mangle(title)
+                    name = name_mangle(title)
                 else:
-                    name = _name_mangle('lbl_'+title[:-1])
-                w = _get_widget(title, wtype)
+                    name = name_mangle('lbl_'+title[:-1])
+                w = make_widget(title, wtype)
                 table.addWidget(w.widget, row, col)
                 wb[name] = w
             col += 1
         row += 1
 
+    return wrap(widget), wb
+
+def wrap(native_widget):
     wrapper = WidgetBase()
-    wrapper.widget = widget
-    return wrapper, wb
+    wrapper.widget = native_widget
+    return wrapper
 
 #END

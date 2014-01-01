@@ -34,7 +34,7 @@ star catalog access, cuts, star pick/fwhm, thumbnails, etc.
 Copyright and License
 =====================
 
-Copyright (c) 2011-2013 Eric R. Jeschke. All rights reserved.
+Copyright (c) 2011-2014 Eric R. Jeschke. All rights reserved.
 
 Ginga is distributed under an open-source BSD licence. Please see the
 file LICENSE.txt in the top-level directory for details. 

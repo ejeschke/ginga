@@ -1,7 +1,7 @@
 #
-# ZoomBase.py -- Zoom plugin base class for Ginga fits viewer
+# Zoom.py -- Zoom plugin for fits viewer
 # 
-# Eric Jeschke (eric@naoj.org)
+# Eric Jeschke (eric@naoj.org) 
 #
 # Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
@@ -9,15 +9,15 @@
 #
 import time
 
-from ginga.misc import Bunch
+from ginga.misc import Widgets, CanvasTypes, Bunch
 from ginga import GingaPlugin
 
 
-class ZoomBase(GingaPlugin.GlobalPlugin):
+class Zoom(GingaPlugin.GlobalPlugin):
 
     def __init__(self, fv):
         # superclass defines some variables for us, like logger
-        super(ZoomBase, self).__init__(fv)
+        super(Zoom, self).__init__(fv)
 
         self.zoomimage = None
         self.default_radius = 30
@@ -35,6 +35,81 @@ class ZoomBase(GingaPlugin.GlobalPlugin):
 
         fv.add_callback('add-channel', self.add_channel)
         fv.add_callback('active-image', self.focus_cb)
+
+    def build_gui(self, container):
+
+        vpaned = Widgets.Splitter(orientation='vertical')
+    
+        width, height = 300, 300
+
+        # Uncomment to debug; passing parent logger generates too
+        # much noise in the main logger
+        #zi = CanvasTypes.ImageViewCanvas(logger=self.logger)
+        zi = CanvasTypes.ImageViewCanvas(logger=None)
+        zi.set_desired_size(width, height)
+        zi.enable_autozoom('off')
+        zi.enable_autocuts('off')
+        #zi.set_scale_limits(0.001, 1000.0)
+        zi.zoom_to(self.default_zoom, redraw=False)
+        settings = zi.get_settings()
+        settings.getSetting('zoomlevel').add_callback('set',
+                               self.zoomset, zi)
+        zi.set_bg(0.4, 0.4, 0.4)
+        zi.show_pan_mark(True, redraw=False)
+        self.zoomimage = zi
+
+        bd = zi.get_bindings()
+        bd.enable_zoom(False)
+        bd.enable_pan(False)
+        bd.enable_cmap(False)
+
+        iw = Widgets.wrap(zi.get_widget())
+        vpaned.add_widget(iw)
+
+        vbox = Widgets.VBox()
+        captions = (("Zoom Radius:", 'label', 'Zoom Radius', 'hscale'),
+                    ("Zoom Amount:", 'label', 'Zoom Amount', 'hscale'),
+                    )
+        w, b = Widgets.build_info(captions)
+        self.w.update(b)
+        vbox.add_widget(w, stretch=0)
+
+        self.w.zoom_radius.set_limits(1, 100, incr_value=1)
+        self.w.zoom_radius.set_value(self.zoom_radius)
+        self.w.zoom_radius.add_callback('value-changed', self.set_radius_cb)
+
+        self.w.zoom_amount.set_limits(-20, 30, incr_value=1)
+        self.w.zoom_amount.set_value(self.zoom_amount)
+        self.w.zoom_amount.add_callback('value-changed', self.set_amount_cb)
+
+        captions = (("Zoom:", 'label', 'Zoom', 'label'),
+                    ("Relative Zoom", 'checkbutton'),
+                    ("Refresh Interval", 'label',
+                     'Refresh Interval', 'spinbutton'),
+                    ("Defaults", 'button'),
+                    )
+        w, b = Widgets.build_info(captions)
+        self.w.update(b)
+
+        b.zoom.set_text(self.fv.scale2text(zi.get_scale()))
+        b.relative_zoom.set_state(not self.t_abszoom)
+        b.relative_zoom.add_callback("activated", self.set_absrel_cb)
+        b.defaults.add_callback("activated", lambda w: self.set_defaults())
+        b.refresh_interval.set_limits(0, 200, incr_value=1)
+        b.refresh_interval.set_value(int(self.refresh_interval * 1000))
+        b.refresh_interval.add_callback('value-changed', self.set_refresh_cb)
+
+        row = Widgets.HBox()
+        row.add_widget(w, stretch=0)
+        row.add_widget(Widgets.Label(''), stretch=1)
+        vbox.add_widget(row, stretch=0)
+        
+        sw = Widgets.ScrollArea()
+        sw.set_widget(vbox)
+
+        vpaned.add_widget(sw)
+        
+        container.add_widget(vpaned, stretch=1)
 
     def prepare(self, fitsimage):
         fitssettings = fitsimage.get_settings()
@@ -198,6 +273,37 @@ class ZoomBase(GingaPlugin.GlobalPlugin):
         self.update_time = time.time()
         self.fv.gui_do(self.zoomimage.set_data, data)
 
+    def set_amount_cb(self, widget, val):
+        """This method is called when 'Zoom Amount' control is adjusted.
+        """
+        self.zoom_amount = val
+        zoomlevel = self.fitsimage_focus.get_zoom()
+        self._zoomset(self.fitsimage_focus, zoomlevel)
+        
+    def set_absrel_cb(self, w, val):
+        self.t_abszoom = not val
+        zoomlevel = self.fitsimage_focus.get_zoom()
+        return self._zoomset(self.fitsimage_focus, zoomlevel)
+        
+    def set_defaults(self):
+        self.t_abszoom = True
+        self.w.relative_zoom.set_state(not self.t_abszoom)
+        self.w.zoom_radius.set_value(self.default_radius)
+        self.w.zoom_amount.set_value(self.default_zoom)
+        self.zoomimage.zoom_to(self.default_zoom, redraw=False)
+        
+    def zoomset(self, setting, zoomlevel, fitsimage):
+        text = self.fv.scale2text(self.zoomimage.get_scale())
+        self.w.zoom.set_text(text)
+        
+    def set_radius_cb(self, w, val):
+        self.set_radius(val)
+        
+    def set_refresh_cb(self, w, val):
+        self.refresh_interval = val / 1000.0
+        self.logger.debug("Setting refresh time to %.4f sec" % (
+            self.refresh_interval))
+        
     def __str__(self):
         return 'zoom'
     

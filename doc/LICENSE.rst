@@ -1,6 +1,6 @@
 :orphan:
 
-Copyright (c) 2011-2013, Eric R. Jeschke
+Copyright (c) 2011-2014, Eric R. Jeschke
 
 All rights reserved.
 

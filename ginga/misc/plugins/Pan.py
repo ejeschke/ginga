@@ -8,15 +8,8 @@
 # Please see the file LICENSE.txt for details.
 #
 import math
-import gtk
-
-from ginga.misc import Bunch
-
-from ginga.gtkw import ImageViewCanvasGtk
-from ginga.gtkw import ImageViewCanvasTypesGtk as CanvasTypes
-from ginga.gtkw import GtkHelp
+from ginga.misc import Widgets, CanvasTypes, Bunch
 from ginga import GingaPlugin
-
 
 class Pan(GingaPlugin.GlobalPlugin):
 
@@ -33,27 +26,15 @@ class Pan(GingaPlugin.GlobalPlugin):
         fv.set_callback('active-image', self.focus_cb)
 
     def build_gui(self, container):
-        nb = GtkHelp.Notebook()
-        nb.set_group_id(-30)
-        nb.set_tab_pos(gtk.POS_BOTTOM)
-        nb.set_scrollable(False)
-        nb.set_show_tabs(False)
-        nb.set_show_border(False)
-        nb.show()
+        nb = Widgets.StackWidget()
         self.nb = nb
-        cw = container.get_widget()
-        cw.pack_start(self.nb, fill=True, expand=True)
+        container.add_widget(self.nb, stretch=1)
 
     def _create_pan_image(self):
         width, height = 300, 300
 
-        # Uncomment to debug; passing parent logger generates too
-        # much noise in the main logger
-        #sfi = ImageViewCanvasGtk.ImageViewCanvas(logger=self.logger)
-        sfi = ImageViewCanvasGtk.ImageViewCanvas(logger=None)
-        sfi.set_desired_size(width, height)
+        sfi = CanvasTypes.ImageViewCanvas(logger=self.logger)
         sfi.enable_autozoom('on')
-        #sfi.set_zoom_algorithm('rate')
         sfi.enable_autocuts('off')
         sfi.enable_draw(True)
         sfi.set_drawtype('rectangle', linestyle='dash')
@@ -63,6 +44,7 @@ class Pan(GingaPlugin.GlobalPlugin):
         sfi.define_cursor('pick', hand)
         ## sfi.enable_cuts(False)
         sfi.set_bg(0.4, 0.4, 0.4)
+        sfi.set_desired_size(width, height)
         sfi.set_callback('cursor-down', self.btndown)
         sfi.set_callback('cursor-move', self.drag_cb)
         sfi.set_callback('none-move', self.motion_cb)
@@ -74,7 +56,7 @@ class Pan(GingaPlugin.GlobalPlugin):
         bd.enable_zoom(False)
 
         iw = sfi.get_widget()
-        iw.show()
+        sfi.configure(width, height)
         return sfi
 
     def add_channel(self, viewer, chinfo):
@@ -82,9 +64,10 @@ class Pan(GingaPlugin.GlobalPlugin):
         chname = chinfo.name
         
         iw = panimage.get_widget()
-        iw.show()
-        self.nb.append_page(iw, gtk.Label(chname))
-        index = self.nb.page_num(iw)
+        # wrap widget
+        iw = Widgets.wrap(iw)
+        self.nb.add_widget(iw)
+        index = self.nb.index_of(iw)
         paninfo = Bunch.Bunch(panimage=panimage, widget=iw,
                               pancompass=None, panrect=None,
                               nbindex=index)
@@ -96,9 +79,8 @@ class Pan(GingaPlugin.GlobalPlugin):
         rgbmap = fitsimage.get_rgbmap()
         panimage.set_rgbmap(rgbmap, redraw=False)
         rgbmap.add_callback('changed', self.rgbmap_cb, panimage)
-
-        fitsimage.copy_attributes(panimage, ['cutlevels'])
         
+        fitsimage.copy_attributes(panimage, ['cutlevels'])
         fitsimage.add_callback('image-set', self.new_image_cb, chinfo, paninfo)
         fitsimage.add_callback('redraw', self.panset, chinfo, paninfo)
 
@@ -111,8 +93,6 @@ class Pan(GingaPlugin.GlobalPlugin):
         for key in zoomsettings:
             pansettings.getSetting(key).add_callback('set', self.zoom_cb,
                                                      fitsimage, chinfo, paninfo)
-        ## fitssettings.getSetting('zoomlevel').add_callback('set', self.redraw_cb,
-        ##                                              fitsimage, chinfo, paninfo, 3)
 
         xfrmsettings = ['flip_x', 'flip_y', 'swap_xy', 'cuts']
         fitssettings.shareSettings(pansettings, xfrmsettings)
@@ -127,13 +107,13 @@ class Pan(GingaPlugin.GlobalPlugin):
 
     def delete_channel(self, viewer, chinfo):
         self.logger.debug("TODO: delete channel %s" % (chinfo.name))
-        
+        #del self.channel[chinfo.name]
+
     def start(self):
         names = self.fv.get_channelNames()
         for name in names:
             chinfo = self.fv.get_channelInfo(name)
             self.add_channel(self.fv, chinfo)
-        
         
     # CALLBACKS
 
@@ -154,7 +134,7 @@ class Pan(GingaPlugin.GlobalPlugin):
 
         if self.active != chname:
             index = self.channel[chname].nbindex
-            self.nb.set_current_page(index)
+            self.nb.set_index(index)
             self.active = chname
             self.info = self.channel[self.active]
        
@@ -232,9 +212,6 @@ class Pan(GingaPlugin.GlobalPlugin):
                 CanvasTypes.Point(x, y, radius=radius),
                 CanvasTypes.Polygon(points)))
 
-    def zoomset_cb(self, setting, value, fitsimage, chinfo, paninfo):
-        self.panset(fitsimage, chinfo, paninfo)
-        
     def motion_cb(self, fitsimage, button, data_x, data_y):
         bigimage = self.fv.getfocus_fitsimage()
         self.fv.showxy(bigimage, data_x, data_y)
@@ -251,7 +228,7 @@ class Pan(GingaPlugin.GlobalPlugin):
         bigimage = self.fv.getfocus_fitsimage()
         bigimage.panset_xy(data_x, data_y)
         return True
-    
+
     def zoom(self, fitsimage, direction, amount, data_x, data_y):
         """Scroll event in the small fits window.  Just zoom the large fits
         window.
@@ -274,7 +251,6 @@ class Pan(GingaPlugin.GlobalPlugin):
                 fitsimage.zoom_in()
         fitsimage.onscreen_message(fitsimage.get_scale_text(),
                                    delay=1.0)
-        
         
     def draw_cb(self, fitsimage, tag):
         # Get and delete the drawn object
@@ -306,7 +282,9 @@ class Pan(GingaPlugin.GlobalPlugin):
         self.logger.debug("zoomlevel=%d" % (zoomlevel))
 
         fitsimage.zoom_to(zoomlevel, redraw=True)
+        return True
 
+        
     def __str__(self):
         return 'pan'
     

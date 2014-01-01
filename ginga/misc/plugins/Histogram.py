@@ -1,5 +1,5 @@
 #
-# HistogramBase.py -- Histogram base class plugin for Ginga fits viewer
+# Histogram.py -- Histogram plugin for Ginga fits viewer
 #
 # Eric Jeschke (eric@naoj.org)
 #
@@ -8,13 +8,15 @@
 # Please see the file LICENSE.txt for details.
 #
 import numpy
+
+from ginga.misc import Widgets, Plot
 from ginga import GingaPlugin
 
-class HistogramBase(GingaPlugin.LocalPlugin):
+class Histogram(GingaPlugin.LocalPlugin):
 
     def __init__(self, fv, fitsimage):
         # superclass defines some variables for us, like logger
-        super(HistogramBase, self).__init__(fv, fitsimage)
+        super(Histogram, self).__init__(fv, fitsimage)
 
         self.layertag = 'histogram-canvas'
         self.histtag = None
@@ -41,11 +43,95 @@ class HistogramBase(GingaPlugin.LocalPlugin):
         for name in ['cuts']:
             fitssettings.getSetting(name).add_callback('set',
                                self.cutset_ext_cb, fitsimage)
+        self.gui_up = False
 
+    def build_gui(self, container):
+        # Splitter is just to provide a way to size the graph
+        # to a reasonable size
+        vpaned = Widgets.Splitter(orientation='vertical')
+
+        # Make the cuts plot
+        vbox1 = Widgets.VBox()
+        vbox1.set_margins(4, 4, 4, 4)
+        vbox1.set_spacing(2)
+
+        msgFont = self.fv.getFont("sansFont", 12)
+        tw = Widgets.TextArea(wrap=True, editable=False)
+        tw.set_font(msgFont)
+        self.tw = tw
+
+        fr = Widgets.Frame("Instructions")
+        fr.set_widget(tw)
+        vbox1.add_widget(fr, stretch=0)
+
+        self.plot = Plot.Plot(self.logger)
+        self.plot.fig.set_dpi(100)
+        self.plot.fig.set_figwidth(2)
+        self.plot.fig.set_figheight(2)
+        
+        # for now we need to wrap this native widget
+        w = Widgets.wrap(self.plot.get_widget())
+        vbox1.add_widget(w, stretch=1)
+
+        captions = (('Cut Low:', 'label', 'Cut Low', 'entry'),
+                    ('Cut High:', 'label', 'Cut High', 'entry', 'Cut Levels', 'button'),
+                    ('Auto Levels', 'button'),
+                    ('Log Histogram', 'checkbutton', 'Plot By Cuts', 'checkbutton'),
+                    ('NumBins:', 'label', 'NumBins', 'entry'),
+                    ('Full Image', 'button'),
+                    )
+
+        w, b = Widgets.build_info(captions)
+        self.w.update(b)
+        b.cut_levels.set_tooltip("Set cut levels manually")
+        b.auto_levels.set_tooltip("Set cut levels by algorithm")
+        b.cut_low.set_tooltip("Set low cut level (press Enter)")
+        b.cut_high.set_tooltip("Set high cut level (press Enter)")
+        b.log_histogram.set_tooltip("Use the log of the pixel values for the histogram (empty bins map to 10^-1)")
+        b.plot_by_cuts.set_tooltip("Only show the part of the histogram between the cuts")
+        b.numbins.set_tooltip("Number of bins for the histogram")
+        b.full_image.set_tooltip("Use the full image for calculating the histogram")
+        b.numbins.set_text(str(self.numbins))
+        b.cut_low.add_callback('activated', lambda w: self.cut_levels())
+        b.cut_high.add_callback('activated', lambda w: self.cut_levels())
+        b.cut_levels.add_callback('activated', lambda w: self.cut_levels())
+        b.auto_levels.add_callback('activated', lambda w: self.auto_levels())
+
+        b.log_histogram.set_state(self.plot.logy)
+        b.log_histogram.add_callback('activated', self.log_histogram_cb)
+        b.plot_by_cuts.set_state(self.xlimbycuts)
+        b.plot_by_cuts.add_callback('activated', self.plot_by_cuts_cb)
+        b.numbins.add_callback('activated', lambda w: self.set_numbins_cb())
+        b.full_image.add_callback('activated', lambda w: self.full_image_cb())
+
+        vbox1.add_widget(w, stretch=0)
+
+        vpaned.add_widget(vbox1)
+
+        vbox2 = Widgets.VBox()
+        # spacer
+        vbox2.add_widget(Widgets.Label(''), stretch=1)
+
+        btns = Widgets.HBox()
+        btns.set_border_width(4)
+        btns.set_spacing(3)
+
+        btn = Widgets.Button("Close")
+        btn.add_callback('activated', lambda w: self.close())
+        btns.add_widget(btn, stretch=0)
+
+        vbox2.add_widget(btns, stretch=0)
+        vpaned.add_widget(vbox2)
+
+        container.add_widget(vpaned, stretch=1)
+        self.gui_up = True
+
+    def instructions(self):
+        self.tw.set_text("""Draw (or redraw) a region with the right mouse button.  Click or drag left mouse button to reposition region.""")
 
     def close(self):
         chname = self.fv.get_channelName(self.fitsimage)
-        self.fv.stop_operation_channel(chname, str(self))
+        self.fv.stop_local_plugin(chname, str(self))
         return True
 
     def start(self):
@@ -86,7 +172,7 @@ class HistogramBase(GingaPlugin.LocalPlugin):
         self.gui_up = False
         self.fv.showStatus("")
 
-    def full_image(self):
+    def full_image_cb(self):
         canvas = self.canvas
         try:
             canvas.deleteObjectByTag(self.histtag, redraw=False)
@@ -165,8 +251,8 @@ class HistogramBase(GingaPlugin.LocalPlugin):
         for lbl in lbls:
             lbl.set(rotation=45, horizontalalignment='right')
         
-        self._setText(self.w.cut_low, str(loval))
-        self._setText(self.w.cut_high, str(hival))
+        self.w.cut_low.set_text(str(loval))
+        self.w.cut_high.set_text(str(hival))
         self.plot.fig.canvas.draw()
 
         self.fv.showStatus("Click or drag left mouse button to move region")
@@ -270,8 +356,8 @@ class HistogramBase(GingaPlugin.LocalPlugin):
 
     def cut_levels(self):
         try:
-            loval = float(self._getText(self.w.cut_low))
-            hival = float(self._getText(self.w.cut_high))
+            loval = float(self.w.cut_low.get_text())
+            hival = float(self.w.cut_high.get_text())
 
             reslvls = self.fitsimage.cut_levels(loval, hival)
         except Exception, e:
@@ -306,7 +392,22 @@ class HistogramBase(GingaPlugin.LocalPlugin):
         self.redo()
 
     def set_numbins_cb(self):
-        self.numbins = int(self._getText(self.w.numbins))
+        self.numbins = int(self.w.numbins.get_text())
         self.redo()
         
+    def log_histogram_cb(self, w, val):
+        self.plot.logy = val
+        if (self.histtag is not None) and self.gui_up:
+            # self.histtag == None means no data is loaded yet
+            self.redo()
+
+    def plot_by_cuts_cb(self, w, val):
+        self.xlimbycuts = val
+        if (self.histtag is not None) and self.gui_up:
+            # self.histtag == None means no data is loaded yet
+            self.redo()
+
+    def __str__(self):
+        return 'histogram'
+
 # END

@@ -86,8 +86,8 @@ class PluginManager(PluginManagerBase):
         pass
         
     def dispose_gui(self, pInfo):
-        widget = pInfo.widget
+        vbox = pInfo.widget
         pInfo.widget = None
-        #widget.destroyLater()
+        #vbox.get_widget().destroyLater()
 
 #END

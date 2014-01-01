@@ -17,7 +17,8 @@ from ginga.misc import Callback
 
 class PlotBase(Callback.Callbacks):
 
-    def __init__(self, logger, figureCanvasClass):
+    def __init__(self, logger, figureCanvasClass, dpi=100,
+                 width=2, height=2):
         Callback.Callbacks.__init__(self)
 
         self.logger = logger
@@ -26,7 +27,8 @@ class PlotBase(Callback.Callbacks):
         for name in ('close', ):
             self.enable_callback(name)
 
-        self.fig = matplotlib.figure.Figure()
+        self.fig = matplotlib.figure.Figure(figsize=(width, height),
+                                            dpi=dpi)
         self.ax = self.fig.add_subplot(111)
         self.ax.set_xlabel('X values')
         self.ax.set_ylabel('Y values')

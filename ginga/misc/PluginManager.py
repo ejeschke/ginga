@@ -268,8 +268,7 @@ class PluginManagerBase(object):
             ws = pInfo.spec.ws
             child_w = vbox.get_widget()
             self.ds.add_tab(ws, child_w, 2, pInfo.tabname, pInfo.tabname)
-            #pInfo.widget = vbox
-            pInfo.widget = child_w
+            pInfo.widget = vbox
 
             self.activate(pInfo)
             self.set_focus(pInfo.name)

@@ -1,20 +1,23 @@
 #
-# CutsBase.py -- Cuts plugin base class for Ginga
+# Cuts.py -- Cuts plugin for Ginga fits viewer
 # 
 # Eric Jeschke (eric@naoj.org)
 #
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
+# Copyright (c)  Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-from ginga import GingaPlugin
 import numpy
 
-class CutsBase(GingaPlugin.LocalPlugin):
+from ginga.misc import Widgets, Plot
+from ginga import GingaPlugin
+
+
+class Cuts(GingaPlugin.LocalPlugin):
 
     def __init__(self, fv, fitsimage):
         # superclass defines some variables for us, like logger
-        super(CutsBase, self).__init__(fv, fitsimage)
+        super(Cuts, self).__init__(fv, fitsimage)
 
         self.cutscolor = 'green'
         self.layertag = 'cuts-canvas'
@@ -39,10 +42,192 @@ class CutsBase(GingaPlugin.LocalPlugin):
         canvas.setSurface(self.fitsimage)
         self.canvas = canvas
 
+        self.gui_up = False
 
+    def build_gui(self, container):
+        # Splitter is just to provide a way to size the graph
+        # to a reasonable size
+        vpaned = Widgets.Splitter(orientation='vertical')
+
+        # Make the cuts plot
+        vbox1 = Widgets.VBox()
+        vbox1.set_margins(4, 4, 4, 4)
+        vbox1.set_spacing(2)
+
+        msgFont = self.fv.getFont("sansFont", 12)
+        tw = Widgets.TextArea(wrap=True, editable=False)
+        tw.set_font(msgFont)
+        self.tw = tw
+
+        fr = Widgets.Frame("Instructions")
+        fr.set_widget(tw)
+        vbox1.add_widget(fr, stretch=0)
+
+        self.plot = Plot.Cuts(self.logger)
+        # for now we need to wrap this native widget
+        w = Widgets.wrap(self.plot.get_widget())
+        vbox1.add_widget(w, stretch=1)
+
+        hbox = Widgets.HBox()
+        hbox.set_spacing(4)
+        hbox.set_border_width(4)
+
+        # control for selecting a cut
+        combobox = Widgets.ComboBox()
+        for tag in self.tags:
+            combobox.append_text(tag)
+        if self.cutstag == None:
+            combobox.set_index(0)
+        else:
+            combobox.show_text(self.cutstag)
+        combobox.add_callback('activated', self.cut_select_cb)
+        self.w.cuts = combobox
+        combobox.set_tooltip("Select a cut")
+        hbox.add_widget(combobox)
+
+        btn = Widgets.Button("Delete")
+        btn.add_callback('activated', self.delete_cut_cb)
+        btn.set_tooltip("Delete selected cut")
+        hbox.add_widget(btn)
+        
+        btn = Widgets.Button("Delete All")
+        btn.add_callback('activated', self.delete_all_cb)
+        btn.set_tooltip("Clear all cuts")
+        hbox.add_widget(btn)
+        
+        combobox = Widgets.ComboBox()
+        for cuttype in self.cuttypes:
+            combobox.append_text(cuttype)
+        self.w.cuts_type = combobox
+        index = self.cuttypes.index(self.cuttype)
+        combobox.set_index(index)
+        combobox.add_callback('activated', self.set_cutsdrawtype_cb)
+        combobox.set_tooltip("Choose the cut type")
+        hbox.add_widget(combobox)
+
+        vbox1.add_widget(hbox, stretch=0)
+ 
+        vpaned.add_widget(vbox1)
+
+        vbox2 = Widgets.VBox()
+        # spacer
+        vbox2.add_widget(Widgets.Label(''), stretch=1)
+
+        btns = Widgets.HBox()
+        btns.set_border_width(4)
+        btns.set_spacing(3)
+
+        btn = Widgets.Button("Close")
+        btn.add_callback('activated', lambda w: self.close())
+        btns.add_widget(btn, stretch=0)
+
+        vbox2.add_widget(btns, stretch=0)
+        vpaned.add_widget(vbox2)
+
+        container.add_widget(vpaned, stretch=1)
+        self.gui_up = True
+
+    def instructions(self):
+        self.tw.set_text("""Draw (or redraw) a line with the right mouse button.  Click or drag left button to reposition line.""")
+            
+    def select_cut(self, tag):
+        # deselect the current selected cut, if there is one
+        if self.cutstag != None:
+            try:
+                obj = self.canvas.getObjectByTag(self.cutstag)
+                #obj.setAttrAll(color=self.mark_color)
+            except:
+                # old object may have been deleted
+                pass
+            
+        self.cutstag = tag
+        if tag == None:
+            self.w.cuts.show_text('None')
+            self.canvas.redraw(whence=3)
+            return
+
+        self.w.cuts.show_text(tag)
+        obj = self.canvas.getObjectByTag(tag)
+        #obj.setAttrAll(color=self.select_color)
+
+        #self.redo()
+        
+    def cut_select_cb(self, w, index):
+        tag = self.tags[index]
+        if index == 0:
+            tag = None
+        self.select_cut(tag)
+
+    def pan2mark_cb(self, w):
+        self.pan2mark = w.get_state()
+        
+    def set_cutsdrawtype_cb(self, w, index):
+        self.cuttype = self.cuttypes[index]
+        if self.cuttype in ('free', ):
+            self.canvas.set_drawtype('line', color='cyan', linestyle='dash')
+        else:
+            self.canvas.set_drawtype('rectangle', color='cyan',
+                                     linestyle='dash')
+
+    def delete_cut_cb(self, w):
+        tag = self.cutstag
+        if tag == None:
+            return
+        index = self.tags.index(tag)
+        self.canvas.deleteObjectByTag(tag)
+        self.w.cuts.removeItem(index)
+        self.tags.remove(tag)
+        idx = len(self.tags) - 1
+        tag = self.tags[idx]
+        if tag == 'None':
+            tag = None
+        self.select_cut(tag)
+        if tag != None:
+            self.redo()
+        
+    def delete_all_cb(self, w):
+        self.canvas.deleteAllObjects()
+        self.w.cuts.clear()
+        self.tags = ['None']
+        self.w.cuts.append_text('None')
+        self.w.cuts.setCurrentIndex(0)
+        self.cutstag = None
+        self.redo()
+        
+    def deleteCutsTag(self, tag, redraw=False):
+        try:
+            self.canvas.deleteObjectByTag(tag, redraw=redraw)
+        except:
+            pass
+        try:
+            self.tags.remove(tag)
+        except:
+            pass
+        if tag == self.cutstag:
+            #self.unhighlightTag(tag)
+            if len(self.tags) == 0:
+                self.cutstag = None
+            else:
+                self.cutstag = self.tags[0]
+                #self.highlightTag(self.cutstag)
+        
+    def addCutsTag(self, tag, select=False):
+        if not tag in self.tags:
+            self.tags.append(tag)
+            self.w.cuts.append_text(tag)
+
+        if select:
+            if self.cutstag != None:
+                #self.unhighlightTag(self.cutstag)
+                pass
+            self.cutstag = tag
+            self.w.cuts.show_text(tag)
+            #self.highlightTag(self.cutstag)
+        
     def close(self):
         chname = self.fv.get_channelName(self.fitsimage)
-        self.fv.stop_operation_channel(chname, str(self))
+        self.fv.stop_local_plugin(chname, str(self))
+        self.gui_up = False
         return True
         
     def start(self):
@@ -306,5 +491,8 @@ class CutsBase(GingaPlugin.LocalPlugin):
 
         self.logger.debug("redoing cut plots")
         return self.redo()
+    
+    def __str__(self):
+        return 'cuts'
     
 #END

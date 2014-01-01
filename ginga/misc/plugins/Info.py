@@ -7,11 +7,9 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-import gtk
 import numpy
 
-from ginga.gtkw import GtkHelp, gtksel
-from ginga.misc import Bunch
+from ginga.misc import Widgets, Bunch
 from ginga import GingaPlugin
 
 
@@ -32,55 +30,58 @@ class Info(GingaPlugin.GlobalPlugin):
         fv.set_callback('active-image', self.focus_cb)
         
     def build_gui(self, container):
-        nb = GtkHelp.Notebook()
-        nb.set_group_id(-30)
-        nb.set_tab_pos(gtk.POS_BOTTOM)
-        nb.set_scrollable(False)
-        nb.set_show_tabs(False)
-        nb.set_show_border(False)
-        nb.show()
+        nb = Widgets.StackWidget()
         self.nb = nb
-        cw = container.get_widget()
-        cw.pack_start(self.nb, fill=True, expand=True)
+        container.add_widget(self.nb, stretch=1)
 
     def _create_info_window(self):
-        sw = gtk.ScrolledWindow()
-        sw.set_border_width(2)
-        sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+        sw = Widgets.ScrollArea()
 
-        vbox = gtk.VBox()
-        captions = (('Name', 'label'), ('Object', 'label'),
-                    ('X', 'label'), ('Y', 'label'), ('Value', 'label'),
-                    ('RA', 'label'), ('DEC', 'label'),
-                    ('Equinox', 'label'), ('Dimensions', 'label'),
-                    #('Slices', 'label', 'MultiDim', 'button'),
-                    ('Min', 'label'), ('Max', 'label'),
-                    ('Zoom', 'label'), 
-                    ('Cut Low', 'xlabel', '@Cut Low', 'entry'),
-                    ('Cut High', 'xlabel', '@Cut High', 'entry'),
-                    ('Auto Levels', 'button', 'Cut Levels', 'button'), 
-                    ('Cut New', 'label'), ('Zoom New', 'label'), 
+        vbox = Widgets.VBox()
+        captions = (('Name:', 'label', 'Name', 'llabel'),
+                    ('Object:', 'label', 'Object', 'llabel'),
+                    ('X:', 'label', 'X', 'llabel'),
+                    ('Y:', 'label', 'Y', 'llabel'),
+                    ('Value:', 'label', 'Value', 'llabel'),
+                    ('RA:', 'label', 'RA', 'llabel'),
+                    ('DEC:', 'label', 'DEC', 'llabel'),
+                    ('Equinox:', 'label', 'Equinox', 'llabel'),
+                    ('Dimensions:', 'label', 'Dimensions', 'llabel'),
+                    ('Min:', 'label', 'Min', 'llabel'),
+                    ('Max:', 'label', 'Max', 'llabel'),
+                    ('Zoom:', 'label', 'Zoom', 'llabel'), 
+                    ('Cut Low:', 'label', 'Cut Low Value', 'llabel',
+                     'Cut Low', 'entry'),
+                    ('Cut High:', 'label', 'Cut High Value', 'llabel',
+                     'Cut High', 'entry'),
+                    ('Auto Levels', 'button', 'spacer1', 'spacer',
+                     'Cut Levels', 'button'), 
+                    ('Cut New:', 'label', 'Cut New', 'llabel'),
+                    ('Zoom New:', 'label', 'Zoom New', 'llabel'), 
                     ('Preferences', 'button'), 
                     )
 
-        w, b = GtkHelp.build_info(captions)
+        w, b = Widgets.build_info(captions)
         # TODO: need a more general solution to gtk labels resizing their
         # parent window
-        b.object.set_width_chars(12)
-        b.cut_levels.set_tooltip_text("Set cut levels manually")
-        b.auto_levels.set_tooltip_text("Set cut levels by algorithm")
-        b.cut_low.set_tooltip_text("Set low cut level (press Enter)")
-        b.cut_high.set_tooltip_text("Set high cut level (press Enter)")
-        b.preferences.set_tooltip_text("Set preferences for this channel")
-        #b.multidim.set_tooltip_text("View other HDUs or slices")
-        vbox.pack_start(w, padding=0, fill=True, expand=True)
+        #b.object.set_length(12)
+        b.cut_levels.set_tooltip("Set cut levels manually")
+        b.auto_levels.set_tooltip("Set cut levels by algorithm")
+        b.cut_low.set_tooltip("Set low cut level (press Enter)")
+        b.cut_high.set_tooltip("Set high cut level (press Enter)")
+        b.preferences.set_tooltip("Set preferences for this channel")
+
+        row = Widgets.HBox()
+        row.set_spacing(0)
+        row.set_border_width(0)
+        row.add_widget(w, stretch=0)
+        row.add_widget(Widgets.Label(''), stretch=0)
+        vbox.add_widget(row, stretch=1)
 
         # Convenience navigation buttons
-        btns = gtk.HButtonBox()
-        btns.set_layout(gtk.BUTTONBOX_CENTER)
-        btns.set_spacing(3)
-        if not gtksel.have_gtk3:
-            btns.set_child_size(15, -1)
+        btns = Widgets.HBox()
+        btns.set_spacing(4)
+        btns.set_border_width(4)
 
         bw = Bunch.Bunch()
         for tup in (
@@ -94,50 +95,51 @@ class Info(GingaPlugin.GlobalPlugin):
             #("Quit", 'button', 'exit_48', "Quit the program"),
             ):
 
-            btn = self.fv.make_button(*tup)
+            btn = Widgets.Button('')
+            # TEMP: hack
+            btn.widget = self.fv.make_button(*tup)
             name = tup[0]
             if tup[3]:
-                btn.set_tooltip_text(tup[3])
+                btn.set_tooltip(tup[3])
                 
-            bw[GtkHelp._name_mangle(name, pfx='btn_')] = btn
-            btns.pack_end(btn, padding=4)
+            bw[Widgets.name_mangle(name, pfx='btn_')] = btn
+            btns.add_widget(btn, stretch=1)
 
         #self.w.btn_load.connect("clicked", lambda w: self.gui_load_file())
-        bw.btn_prev.connect("clicked", lambda w: self.fv.prev_img())
-        bw.btn_next.connect("clicked", lambda w: self.fv.next_img())
-        bw.btn_zoom_in.connect("clicked", lambda w: self.fv.zoom_in())
-        bw.btn_zoom_out.connect("clicked", lambda w: self.fv.zoom_out())
-        bw.btn_zoom_fit.connect("clicked", lambda w: self.fv.zoom_fit())
-        bw.btn_zoom_1_1.connect("clicked", lambda w: self.fv.zoom_1_to_1())
+        bw.btn_prev.add_callback('activated', lambda w: self.fv.prev_img())
+        bw.btn_next.add_callback('activated', lambda w: self.fv.next_img())
+        bw.btn_zoom_in.add_callback('activated', lambda w: self.fv.zoom_in())
+        bw.btn_zoom_out.add_callback('activated', lambda w: self.fv.zoom_out())
+        bw.btn_zoom_fit.add_callback('activated', lambda w: self.fv.zoom_fit())
+        bw.btn_zoom_1_1.add_callback('activated', lambda w: self.fv.zoom_1_to_1())
 
-        vbox.pack_start(btns, padding=4, fill=True, expand=False)
-        vbox.show_all()
+        vbox.add_widget(btns, stretch=0)
 
-        sw.add_with_viewport(vbox)
+        sw.set_widget(vbox)
         #sw.set_size_request(-1, 420)
-        sw.show_all()
+        #sw.show_all()
         return sw, b
 
     def add_channel(self, viewer, chinfo):
         sw, winfo = self._create_info_window()
         chname = chinfo.name
 
-        self.nb.append_page(sw, gtk.Label(chname))
-        index = self.nb.page_num(sw)
+        self.nb.add_widget(sw, title=chname)
+        index = self.nb.index_of(sw)
         info = Bunch.Bunch(widget=sw, winfo=winfo,
                            nbindex=index)
         self.channel[chname] = info
 
-        winfo.cut_low.connect('activate', self.cut_levels,
-                              chinfo.fitsimage, info)
-        winfo.cut_high.connect('activate', self.cut_levels,
-                              chinfo.fitsimage, info)
-        winfo.cut_levels.connect('clicked', self.cut_levels,
-                              chinfo.fitsimage, info)
-        winfo.auto_levels.connect('clicked', self.auto_levels,
-                              chinfo.fitsimage, info)
-        winfo.preferences.connect('clicked', self.preferences,
-                                  chinfo)
+        winfo.cut_low.add_callback('activated', self.cut_levels,
+                                   chinfo.fitsimage, info)
+        winfo.cut_high.add_callback('activated', self.cut_levels,
+                                    chinfo.fitsimage, info)
+        winfo.cut_levels.add_callback('activated', self.cut_levels,
+                                      chinfo.fitsimage, info)
+        winfo.auto_levels.add_callback('activated', self.auto_levels,
+                                       chinfo.fitsimage, info)
+        winfo.preferences.add_callback('activated', self.preferences,
+                                       chinfo)
 
         fitsimage = chinfo.fitsimage
         fitssettings = fitsimage.get_settings()
@@ -169,7 +171,7 @@ class Info(GingaPlugin.GlobalPlugin):
 
         if self.active != chname:
             index = self.channel[chname].nbindex
-            self.nb.set_current_page(index)
+            self.nb.set_index(index)
             self.active = chname
             self.info = self.channel[self.active]
 
@@ -194,9 +196,9 @@ class Info(GingaPlugin.GlobalPlugin):
     def cutset_cb(self, setting, value, fitsimage, info):
         loval, hival = value
         #info.winfo.cut_low.set_text('%.2f' % (loval))
-        info.winfo.xlbl_cut_low.set_text('%.2f' % (loval))
+        info.winfo.cut_low_value.set_text('%.2f' % (loval))
         #info.winfo.cut_high.set_text('%.2f' % (hival))
-        info.winfo.xlbl_cut_high.set_text('%.2f' % (hival))
+        info.winfo.cut_high_value.set_text('%.2f' % (hival))
 
     def autocuts_cb(self, setting, option, fitsimage, info):
         info.winfo.cut_new.set_text(option)
@@ -231,9 +233,9 @@ class Info(GingaPlugin.GlobalPlugin):
         # Show cut levels
         loval, hival = fitsimage.get_cut_levels()
         #info.winfo.cut_low.set_text('%.2f' % (loval))
-        info.winfo.xlbl_cut_low.set_text('%.2f' % (loval))
+        info.winfo.cut_low_value.set_text('%.2f' % (loval))
         #info.winfo.cut_high.set_text('%.2f' % (hival))
-        info.winfo.xlbl_cut_high.set_text('%.2f' % (hival))
+        info.winfo.cut_high_value.set_text('%.2f' % (hival))
 
         # Show dimensions
         dim_txt = "%dx%d" % (width, height)

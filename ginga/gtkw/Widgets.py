@@ -13,6 +13,10 @@ import gobject
 
 from ginga.misc import Callback, Bunch
 
+class WidgetError(Exception):
+    """For errors thrown in this module."""
+    pass
+
 class WidgetBase(Callback.Callbacks):
 
     def __init__(self):
@@ -22,6 +26,9 @@ class WidgetBase(Callback.Callbacks):
 
     def get_widget(self):
         return self.widget
+
+    def set_tooltip(self, text):
+        self.widget.set_tooltip_text(text)
 
 # BASIC WIDGETS
 
@@ -36,9 +43,8 @@ class TextEntry(WidgetBase):
         
         self.enable_callback('activated')
 
-    def _cb_redirect(self):
-        value = self.widget.text()
-        self.make_callback('activated', value)
+    def _cb_redirect(self, *args):
+        self.make_callback('activated')
 
     def get_text(self):
         return self.widget.get_text()
@@ -122,12 +128,12 @@ class Button(WidgetBase):
         super(Button, self).__init__()
 
         w = gtk.Button(text)
-        w.connect('clicked', self._cb_redirect)
         self.widget = w
+        w.connect('clicked', self._cb_redirect)
         
         self.enable_callback('activated')
 
-    def _cb_redirect(self, w):
+    def _cb_redirect(self, *args):
         self.make_callback('activated')
 
     
@@ -204,28 +210,53 @@ class SpinBox(WidgetBase):
         self.widget = gtk.SpinButton()
         self.widget.connect('value-changed', self._cb_redirect)
         
-        self.enable_callback('activated')
+        self.enable_callback('value-changed')
 
     def _cb_redirect(self, val):
-        self.make_callback('activated', val)
+        self.make_callback('value-changed', val)
 
+    def get_value(self):
+        return self.widget.get_value()
+    
+    def set_value(self, val):
+        self.widget.set_value(val)
+
+    def set_limits(self, minval, maxval, incr_value=1):
+        adj = self.widget.get_adjustment()
+        adj.configure(minval, minval, maxval, incr_value, incr_value, 0)
     
 class Slider(WidgetBase):
     def __init__(self, orientation='horizontal'):
         super(Slider, self).__init__()
 
         if orientation == 'horizontal':
-            self.widget = gtk.HScale()
+            w = gtk.HScale()
+            # TEMP: hack because scales don't seem to expand as expected
+            w.set_size_request(200, -1)
         else:
-            self.widget = gtk.VScale()
-        self.widget.connect('value-changed', self._cb_redirect)
+            w = gtk.VScale()
+            w.set_size_request(-1, 200)
+        w.set_draw_value(True)
+        w.set_value_pos(gtk.POS_BOTTOM)
+        self.widget = w
+        w.connect('value-changed', self._cb_redirect)
         
-        self.enable_callback('activated')
+        self.enable_callback('value-changed')
 
     def _cb_redirect(self, range):
         val = range.get_value()
-        self.make_callback('activated', val)
+        self.make_callback('value-changed', val)
     
+    def get_value(self):
+        return self.widget.get_value()
+    
+    def set_value(self, val):
+        self.widget.set_value(val)
+
+    def set_limits(self, minval, maxval, incr_value=1):
+        adj = self.widget.get_adjustment()
+        adj.configure(minval, minval, maxval, incr_value, incr_value, 0)
+        
 
 class ScrollBar(WidgetBase):
     def __init__(self, orientation='horizontal'):
@@ -257,6 +288,12 @@ class CheckBox(WidgetBase):
         val = widget.get_active()
         self.make_callback('activated', val)
     
+    def set_state(self, tf):
+        self.widget.set_active(tf)
+
+    def get_state(self):
+        self.widget.get_active()
+
 
 class ToggleButton(WidgetBase):
     def __init__(self, text=''):
@@ -289,7 +326,24 @@ class RadioButton(WidgetBase):
 
 # CONTAINERS
 
-class BoxMixin(object):
+class ContainerBase(WidgetBase):
+    def __init__(self):
+        super(ContainerBase, self).__init__()
+        self.refs = []
+
+    def add_ref(self, ref):
+        # TODO: should this be a weakref?
+        self.refs.append(ref)
+
+class Box(ContainerBase):
+    def __init__(self, orientation='horizontal'):
+        super(Box, self).__init__()
+
+        if orientation == 'horizontal':
+            self.widget = gtk.HBox()
+        else:
+            self.widget = gtk.VBox()
+
     def set_spacing(self, val):
         self.widget.set_spacing(val)
 
@@ -297,26 +351,26 @@ class BoxMixin(object):
         # TODO: can this be made more accurate?
         self.widget.set_border_width(left)
         
+    def set_border_width(self, pix):
+        self.widget.set_border_width(pix)
+
     def add_widget(self, child, stretch=0.0):
+        self.add_ref(child)
         child_w = child.get_widget()
         # TODO: can this be made more accurate?
         expand = (float(stretch) != 0.0)
         self.widget.pack_start(child_w, expand=expand, fill=True)
+        self.widget.show_all()
 
-
-class HBox(WidgetBase, BoxMixin):
+class VBox(Box):
     def __init__(self):
-        super(HBox, self).__init__()
+        super(VBox, self).__init__(orientation='vertical')
 
-        self.widget = gtk.HBox()
-
-class VBox(WidgetBase, BoxMixin):
+class HBox(Box):
     def __init__(self):
-        super(VBox, self).__init__()
+        super(HBox, self).__init__(orientation='horizontal')
 
-        self.widget = gtk.VBox()
-
-class Frame(WidgetBase):
+class Frame(ContainerBase):
     def __init__(self, title=None):
         super(Frame, self).__init__()
 
@@ -326,27 +380,49 @@ class Frame(WidgetBase):
         self.widget = fr
 
     def set_widget(self, child):
+        self.add_ref(child)
         self.widget.add(child.get_widget())
-    
-class TabWidget(WidgetBase):
+        self.widget.show_all()
+
+class TabWidget(ContainerBase):
     def __init__(self):
         super(TabWidget, self).__init__()
 
-        self.widget = gtk.Notebook()
+        nb = gtk.Notebook()
+        nb.connect("switch-page", self._cb_redirect)
+        self.widget = nb
 
-    def add_tab(self, tab_title, child):
+        self.enable_callback('activated')
+
+    def _cb_redirect(self, nbw, gptr, index):
+        self.make_callback('activated', index)
+
+    def add_widget(self, child, title=''):
+        self.add_ref(child)
         child_w = child.get_widget()
-        label = gtk.Label(tab_title)
-        tab_w.append_page(widget, label)
-        self.widget.addTab(child_w, label)
+        label = gtk.Label(title)
+        self.widget.append_page(child_w, label)
+        self.widget.show_all()
 
     def get_index(self):
-        return self.widget.get_active()
+        return self.widget.get_current_page()
 
     def set_index(self, idx):
-        self.widget.set_active(idx)
+        self.widget.set_current_page(idx)
 
-class ScrollArea(WidgetBase):
+    def index_of(self, child):
+        return self.widget.page_num(child.get_widget())
+
+class StackWidget(TabWidget):
+    def __init__(self):
+        super(StackWidget, self).__init__()
+
+        nb = self.widget
+        #nb.set_scrollable(False)
+        nb.set_show_tabs(False)
+        nb.set_show_border(False)
+
+class ScrollArea(ContainerBase):
     def __init__(self):
         super(ScrollArea, self).__init__()
 
@@ -356,12 +432,38 @@ class ScrollArea(WidgetBase):
         self.widget = sw
 
     def set_widget(self, child):
+        self.add_ref(child)
         self.widget.add_with_viewport(child.get_widget())
+        self.widget.show_all()
+
+class Splitter(ContainerBase):
+    def __init__(self, orientation='horizontal'):
+        super(Splitter, self).__init__()
+
+        self.orientation = orientation
+        if orientation == 'horizontal':
+            w = gtk.HPaned()
+        else:
+            w = gtk.VPaned()
+        self.widget = w
+        self.count = 0
+
+    def add_widget(self, child):
+        self.add_ref(child)
+        child_w = child.get_widget()
+        if self.count == 0:
+            #self.widget.pack1(child_w, resize=True, shrink=True)
+            self.widget.pack1(child_w)
+            
+        else:
+            self.widget.pack2(child_w)
+        self.count += 1
+        self.widget.show_all()
 
 
 # MODULE FUNCTIONS
 
-def _name_mangle(name, pfx=''):
+def name_mangle(name, pfx=''):
     newname = []
     for c in name.lower():
         if not (c.isalpha() or c.isdigit() or (c == '_')):
@@ -370,7 +472,7 @@ def _name_mangle(name, pfx=''):
             newname.append(c)
     return pfx + ''.join(newname)
 
-def _get_widget(title, wtype):
+def make_widget(title, wtype):
     if wtype == 'label':
         w = Label(title)
         w.get_widget().set_alignment(0.95, 0.5)
@@ -378,7 +480,7 @@ def _get_widget(title, wtype):
         w = Label(title)
         w.get_widget().set_alignment(0.05, 0.95)
     elif wtype == 'entry':
-        w = Entry()
+        w = TextEntry()
         w.get_widget().set_width_chars(12)
     elif wtype == 'combobox':
         w = ComboBox()
@@ -387,9 +489,9 @@ def _get_widget(title, wtype):
     elif wtype == 'spinfloat':
         w = SpinBox(dtype=float)
     elif wtype == 'vbox':
-        w = QtHelp.VBox()
+        w = VBox()
     elif wtype == 'hbox':
-        w = QtHelp.HBox()
+        w = HBox()
     elif wtype == 'hscale':
         w = Slider(orientation='horizontal')
     elif wtype == 'vscale':
@@ -403,7 +505,7 @@ def _get_widget(title, wtype):
     elif wtype == 'button':
         w = Button(title)
     elif wtype == 'spacer':
-        w = gtk.Label('')
+        w = Label('')
     else:
         raise ValueError("Bad wtype=%s" % wtype)
     return w
@@ -430,10 +532,10 @@ def build_info(captions):
             if idx < len(tup):
                 title, wtype = tup[idx:idx+2]
                 if not title.endswith(':'):
-                    name = _name_mangle(title)
+                    name = name_mangle(title)
                 else:
-                    name = _name_mangle('lbl_'+title[:-1])
-                w = _get_widget(title, wtype)
+                    name = name_mangle('lbl_'+title[:-1])
+                w = make_widget(title, wtype)
                 table.attach(w.get_widget(), col, col+1, row, row+1,
                              xoptions=gtk.FILL, yoptions=gtk.FILL,
                              xpadding=1, ypadding=1)
@@ -443,9 +545,12 @@ def build_info(captions):
 
     vbox.show_all()
 
+    return wrap(vbox), wb
+
+def wrap(native_widget):
     wrapper = WidgetBase()
-    wrapper.widget = vbox
-    return wrapper, wb
+    wrapper.widget = native_widget
+    return wrapper
 
 
 #END
