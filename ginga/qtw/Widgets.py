@@ -25,6 +25,9 @@ class WidgetBase(Callback.Callbacks):
     def set_tooltip(self, text):
         self.widget.setToolTip(text)
 
+    def set_enabled(self, tf):
+        self.widget.setEnabled(tf)
+
 # BASIC WIDGETS
 
 class TextEntry(WidgetBase):
@@ -134,7 +137,6 @@ class Button(WidgetBase):
         self.enable_callback('activated')
 
     def _cb_redirect(self, *args):
-        print "_CB BUTTON", args
         self.make_callback('activated')
 
     
@@ -304,6 +306,18 @@ class RadioButton(WidgetBase):
     def _cb_redirect(self, val):
         self.make_callback('activated', val)
 
+class ProgressBar(WidgetBase):
+    def __init__(self):
+        super(ProgressBar, self).__init__()
+
+        w = QtGui.QProgressBar()
+        w.setRange(0, 100)
+        w.setTextVisible(True)
+        self.widget = w
+
+    def set_value(self, pct):
+        self.widget.setValue(int(pct * 100.0))
+
 # CONTAINERS
 
 class ContainerBase(WidgetBase):
@@ -322,16 +336,13 @@ class Box(ContainerBase):
         self.orientation = orientation
         if orientation == 'horizontal':
             self.widget = QtHelp.HBox()
-            self.default_alignment = QtCore.Qt.AlignLeft
         else:
             self.widget = QtHelp.VBox()
-            self.default_alignment = QtCore.Qt.AlignTop
         
     def add_widget(self, child, stretch=0.0):
         self.add_ref(child)
         child_w = child.get_widget()
-        self.widget.layout().addWidget(child_w, stretch=stretch,
-                                       alignment=self.default_alignment)
+        self.widget.layout().addWidget(child_w, stretch=stretch)
 
     def set_spacing(self, val):
         self.widget.layout().setSpacing(val)
@@ -369,15 +380,23 @@ class Frame(ContainerBase):
         else:
             self.label = None
 
-    def set_widget(self, child):
+    def set_widget(self, child, stretch=1):
         self.add_ref(child)
-        self.widget.layout().addWidget(child.get_widget())
+        self.widget.layout().addWidget(child.get_widget(), stretch=stretch)
     
 class TabWidget(ContainerBase):
-    def __init__(self):
+    def __init__(self, tabpos='top'):
         super(TabWidget, self).__init__()
 
         nb = QtGui.QTabWidget()
+        if tabpos == 'top':
+            nb.setTabPosition(QtGui.QTabWidget.North)
+        elif tabpos == 'bottom':
+            nb.setTabPosition(QtGui.QTabWidget.South)
+        elif tabpos == 'left':
+            nb.setTabPosition(QtGui.QTabWidget.West)
+        elif tabpos == 'right':
+            nb.setTabPosition(QtGui.QTabWidget.East)
         nb.currentChanged.connect(self._cb_redirect)
         self.widget = nb
 

@@ -1,5 +1,5 @@
 #
-# PickBase.py -- Pick plugin base class for Ginga fits viewer
+# Pick.py -- Pick plugin for Ginga fits viewer
 # 
 # Eric Jeschke (eric@naoj.org)
 #
@@ -7,22 +7,28 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-from ginga import GingaPlugin
-from ginga.misc import Bunch
-from ginga.util import iqcalc
-
 import threading
 import numpy
+
+from ginga.misc import Widgets, CanvasTypes, Bunch
+from ginga.util import iqcalc
+from ginga import GingaPlugin
+
+try:
+    from ginga.misc import Plot
+    have_mpl = True
+except ImportError:
+    have_mpl = False
 
 region_default_width = 30
 region_default_height = 30
 
 
-class PickBase(GingaPlugin.LocalPlugin):
+class Pick(GingaPlugin.LocalPlugin):
 
     def __init__(self, fv, fitsimage):
         # superclass defines some variables for us, like logger
-        super(PickBase, self).__init__(fv, fitsimage)
+        super(Pick, self).__init__(fv, fitsimage)
 
         self.layertag = 'pick-canvas'
         self.pickimage = None
@@ -79,6 +85,470 @@ class PickBase(GingaPlugin.LocalPlugin):
         canvas.setSurface(self.fitsimage)
         self.canvas = canvas
 
+        self.have_mpl = have_mpl
+
+    def build_gui(self, container):
+        assert iqcalc.have_scipy == True, \
+               Exception("Please install python-scipy to use this plugin")
+        
+        self.pickcenter = None
+
+        vtop = Widgets.VBox()
+        vpaned = Widgets.Splitter(orientation='vertical')
+
+        nb = Widgets.TabWidget(tabpos='bottom')
+        #nb.set_scrollable(True)
+        self.w.nb1 = nb
+        vpaned.add_widget(nb)
+        
+        cm, im = self.fv.cm, self.fv.im
+
+        di = CanvasTypes.ImageViewCanvas(logger=self.logger)
+        width, height = 200, 200
+        di.set_desired_size(width, height)
+        di.enable_autozoom('off')
+        di.enable_autocuts('off')
+        di.zoom_to(3, redraw=False)
+        settings = di.get_settings()
+        settings.getSetting('zoomlevel').add_callback('set',
+                               self.zoomset, di)
+        di.set_cmap(cm, redraw=False)
+        di.set_imap(im, redraw=False)
+        di.set_callback('none-move', self.detailxy)
+        di.set_bg(0.4, 0.4, 0.4)
+        self.pickimage = di
+
+        bd = di.get_bindings()
+        bd.enable_pan(True)
+        bd.enable_zoom(True)
+        bd.enable_cuts(True)
+
+        iw = Widgets.wrap(di.get_widget())
+        nb.add_widget(iw, title="Image")
+
+        if have_mpl:
+            self.plot1 = Plot.Plot(logger=self.logger,
+                                   width=2, height=3, dpi=72)
+            self.w.canvas = self.plot1.canvas
+            self.w.fig = self.plot1.fig
+            self.w.ax = self.w.fig.add_subplot(111, axisbg='black')
+            self.w.ax.set_aspect('equal', adjustable='box')
+            self.w.ax.set_title('Contours')
+            #self.w.ax.grid(True)
+
+            canvas = self.w.canvas
+            connect = canvas.mpl_connect
+            # These are not ready for prime time...
+            # connect("motion_notify_event", self.plot_motion_notify)
+            # connect("button_press_event", self.plot_button_press)
+            connect("scroll_event", self.plot_scroll)
+            nb.add_widget(Widgets.wrap(canvas), title="Contour")
+
+            self.plot2 = Plot.Plot(logger=self.logger,
+                                   width=2, height=3, dpi=72)
+            self.w.canvas2 = self.plot2.canvas
+            self.w.fig2 = self.plot2.fig
+            self.w.ax2 = self.w.fig2.add_subplot(111, axisbg='white')
+            #self.w.ax2.set_aspect('equal', adjustable='box')
+            self.w.ax2.set_ylabel('brightness')
+            self.w.ax2.set_xlabel('pixels')
+            self.w.ax2.set_title('FWHM')
+            self.w.ax.grid(True)
+            canvas = self.w.canvas2
+            nb.add_widget(Widgets.wrap(canvas), title="FWHM")
+
+        sw = Widgets.ScrollArea()
+        vbox = Widgets.VBox()
+        sw.set_widget(vbox)
+
+        self.msgFont = self.fv.getFont("sansFont", 12)
+        tw = Widgets.TextArea(wrap=True, editable=False)
+        tw.set_font(self.msgFont)
+        self.tw = tw
+
+        fr = Widgets.Frame(" Instructions ")
+        fr.set_widget(tw)
+        vbox.add_widget(fr, stretch=0)
+        
+        fr = Widgets.Frame("Pick")
+
+        nb = Widgets.TabWidget(tabpos='bottom')
+        self.w.nb2 = nb
+        fr.set_widget(nb)
+        vbox.add_widget(fr, stretch=0)
+
+        # Build report panel
+        captions = (('Zoom:', 'label', 'Zoom', 'llabel',
+                     'Contour Zoom:', 'label', 'Contour Zoom', 'llabel'),
+                    ('Object_X', 'label', 'Object_X', 'llabel',
+                     'Object_Y', 'label', 'Object_Y', 'llabel'),
+                    ('RA:', 'label', 'RA', 'llabel',
+                     'DEC:', 'label', 'DEC', 'llabel'),
+                    ('Equinox:', 'label', 'Equinox', 'llabel',
+                     'Background:', 'label', 'Background', 'llabel'),
+                    ('Sky Level:', 'label', 'Sky Level', 'llabel',
+                     'Brightness:', 'label', 'Brightness', 'llabel'), 
+                    ('FWHM X:', 'label', 'FWHM X', 'llabel',
+                     'FWHM Y:', 'label', 'FWHM Y', 'llabel'),
+                    ('FWHM:', 'label', 'FWHM', 'llabel',
+                     'Star Size:', 'label', 'Star Size', 'llabel'),
+                    ('Sample Area:', 'label', 'Sample Area', 'llabel',
+                     'Default Region', 'button'),
+                    )
+
+        w, b = Widgets.build_info(captions)
+        self.w.update(b)
+        b.zoom.set_text(self.fv.scale2text(di.get_scale()))
+        self.wdetail = b
+        b.default_region.add_callback('activated',
+                                      lambda w: self.reset_region())
+        b.default_region.set_tooltip("Reset region size to default")
+
+        vbox1 = Widgets.VBox()
+        vbox1.add_widget(w, stretch=0)
+
+        # spacer
+        vbox1.add_widget(Widgets.Label(''), stretch=0)
+        
+        # Pick field evaluation status
+        hbox = Widgets.HBox()
+        hbox.set_spacing(4)
+        hbox.set_border_width(4)
+        label = Widgets.Label()
+        #label.set_alignment(0.05, 0.5)
+        self.w.eval_status = label
+        hbox.add_widget(self.w.eval_status, stretch=0)
+        hbox.add_widget(Widgets.Label(''), stretch=1)                
+        vbox1.add_widget(hbox, stretch=0)
+
+        # Pick field evaluation progress bar and stop button
+        hbox = Widgets.HBox()
+        hbox.set_spacing(4)
+        hbox.set_border_width(4)
+        btn = Widgets.Button("Stop")
+        btn.add_callback('activated', lambda w: self.eval_intr())
+        btn.set_enabled(False)
+        self.w.btn_intr_eval = btn
+        hbox.add_widget(btn, stretch=0)
+
+        self.w.eval_pgs = Widgets.ProgressBar()
+        hbox.add_widget(self.w.eval_pgs, stretch=1)
+        vbox1.add_widget(hbox, stretch=0)
+        
+        nb.add_widget(vbox1, title="Readout")
+
+        # Build settings panel
+        captions = (('Show Candidates', 'checkbutton'),
+                    ('Radius:', 'label', 'xlbl_radius', 'label',
+                     'Radius', 'spinbutton'),
+                    ('Threshold:', 'label', 'xlbl_threshold', 'label',
+                     'Threshold', 'entry'),
+                    ('Min FWHM:', 'label', 'xlbl_min_fwhm', 'label',
+                     'Min FWHM', 'spinbutton'),
+                    ('Max FWHM:', 'label', 'xlbl_max_fwhm', 'label',
+                     'Max FWHM', 'spinbutton'),
+                    ('Ellipticity:', 'label', 'xlbl_ellipticity', 'label',
+                     'Ellipticity', 'entry'),
+                    ('Edge:', 'label', 'xlbl_edge', 'label',
+                     'Edge', 'entry'),
+                    ('Max side:', 'label', 'xlbl_max_side', 'label',
+                     'Max side', 'spinbutton'),
+                    ('Redo Pick', 'button'),
+                    )
+
+        w, b = Widgets.build_info(captions)
+        self.w.update(b)
+        b.radius.set_tooltip("Radius for peak detection")
+        b.threshold.set_tooltip("Threshold for peak detection (blank=default)")
+        b.min_fwhm.set_tooltip("Minimum FWHM for selection")
+        b.max_fwhm.set_tooltip("Maximum FWHM for selection")
+        b.ellipticity.set_tooltip("Minimum ellipticity for selection")
+        b.edge.set_tooltip("Minimum edge distance for selection")
+        b.show_candidates.set_tooltip("Show all peak candidates")
+        # radius control
+        #b.radius.set_digits(2)
+        #b.radius.set_numeric(True)
+        b.radius.set_limits(5.0, 200.0, incr_value=1.0)
+        b.radius.set_value(self.radius)
+        def chg_radius(w, val):
+            self.radius = float(val)
+            self.w.xlbl_radius.set_text(str(self.radius))
+            return True
+        b.xlbl_radius.set_text(str(self.radius))
+        b.radius.add_callback('value-changed', chg_radius)
+
+        # threshold control
+        def chg_threshold(w):
+            threshold = None
+            ths = w.get_text().strip()
+            if len(ths) > 0:
+                threshold = float(ths)
+            self.threshold = threshold
+            self.w.xlbl_threshold.set_text(str(self.threshold))
+            return True
+        b.xlbl_threshold.set_text(str(self.threshold))
+        b.threshold.add_callback('activated', chg_threshold)
+
+        # min fwhm
+        #b.min_fwhm.set_digits(2)
+        #b.min_fwhm.set_numeric(True)
+        b.min_fwhm.set_limits(0.1, 200.0, incr_value=0.1)
+        b.min_fwhm.set_value(self.min_fwhm)
+        def chg_min(w, val):
+            self.min_fwhm = float(val)
+            self.w.xlbl_min_fwhm.set_text(str(self.min_fwhm))
+            return True
+        b.xlbl_min_fwhm.set_text(str(self.min_fwhm))
+        b.min_fwhm.add_callback('value-changed', chg_min)
+
+        # max fwhm
+        #b.max_fwhm.set_digits(2)
+        #b.max_fwhm.set_numeric(True)
+        b.max_fwhm.set_limits(0.1, 200.0, incr_value=0.1)
+        b.max_fwhm.set_value(self.max_fwhm)
+        def chg_max(w, val):
+            self.max_fwhm = float(val)
+            self.w.xlbl_max_fwhm.set_text(str(self.max_fwhm))
+            return True
+        b.xlbl_max_fwhm.set_text(str(self.max_fwhm))
+        b.max_fwhm.add_callback('value-changed', chg_max)
+
+        # Ellipticity control
+        def chg_ellipticity(w):
+            minellipse = None
+            val = w.get_text().strip()
+            if len(val) > 0:
+                minellipse = float(val)
+            self.min_ellipse = minellipse
+            self.w.xlbl_ellipticity.set_text(str(self.min_ellipse))
+            return True
+        b.xlbl_ellipticity.set_text(str(self.min_ellipse))
+        b.ellipticity.add_callback('activated', chg_ellipticity)
+
+        # Edge control
+        def chg_edgew(w):
+            edgew = None
+            val = w.get_text().strip()
+            if len(val) > 0:
+                edgew = float(val)
+            self.edgew = edgew
+            self.w.xlbl_edge.set_text(str(self.edgew))
+            return True
+        b.xlbl_edge.set_text(str(self.edgew))
+        b.edge.add_callback('activated', chg_edgew)
+
+        #b.max_side.set_digits(0)
+        #b.max_side.set_numeric(True)
+        b.max_side.set_limits(5, 10000, incr_value=10)
+        b.max_side.set_value(self.max_side)
+        def chg_max_side(w, val):
+            self.max_side = int(val)
+            self.w.xlbl_max_side.set_text(str(self.max_side))
+            return True
+        b.xlbl_max_side.set_text(str(self.max_side))
+        b.max_side.add_callback('value-changed', chg_max_side)
+
+        b.redo_pick.add_callback('activated', lambda w: self.redo())
+        b.show_candidates.set_state(self.show_candidates)
+        b.show_candidates.add_callback('activated', self.show_candidates_cb)
+
+        nb.add_widget(w, title="Settings")
+
+        # Build controls panel
+        captions = (
+            ('Sky cut', 'button', 'Delta sky:', 'label',
+             'xlbl_delta_sky', 'label', 'Delta sky', 'entry'),
+            ('Bright cut', 'button', 'Delta bright:', 'label',
+             'xlbl_delta_bright', 'label', 'Delta bright', 'entry'),
+            )
+
+        w, b = Widgets.build_info(captions)
+        self.w.update(b)
+        b.sky_cut.set_tooltip("Set image low cut to Sky Level")
+        b.delta_sky.set_tooltip("Delta to apply to low cut")
+        b.bright_cut.set_tooltip("Set image high cut to Sky Level+Brightness")
+        b.delta_bright.set_tooltip("Delta to apply to high cut")
+
+        b.sky_cut.set_enabled(False)
+        self.w.btn_sky_cut = b.sky_cut
+        self.w.btn_sky_cut.add_callback('activated', lambda w: self.sky_cut())
+        self.w.sky_cut_delta = b.delta_sky
+        b.xlbl_delta_sky.set_text(str(self.delta_sky))
+        b.delta_sky.set_text(str(self.delta_sky))
+        def chg_delta_sky(w):
+            delta_sky = 0.0
+            val = w.get_text().strip()
+            if len(val) > 0:
+                delta_sky = float(val)
+            self.delta_sky = delta_sky
+            self.w.xlbl_delta_sky.set_text(str(self.delta_sky))
+            return True
+        b.delta_sky.add_callback('activated', chg_delta_sky)
+        
+        b.bright_cut.set_enabled(False)
+        self.w.btn_bright_cut = b.bright_cut
+        self.w.btn_bright_cut.add_callback('activated',
+                                           lambda w: self.bright_cut())
+        self.w.bright_cut_delta = b.delta_bright
+        b.xlbl_delta_bright.set_text(str(self.delta_bright))
+        b.delta_bright.set_text(str(self.delta_bright))
+        def chg_delta_bright(w):
+            delta_bright = 0.0
+            val = w.get_text().strip()
+            if len(val) > 0:
+                delta_bright = float(val)
+            self.delta_bright = delta_bright
+            self.w.xlbl_delta_bright.set_text(str(self.delta_bright))
+            return True
+        b.delta_bright.add_callback('activated', chg_delta_bright)
+
+        nb.add_widget(w, title="Controls")
+
+        vbox3 = Widgets.VBox()
+        msgFont = self.fv.getFont("fixedFont", 10)
+        tw = Widgets.TextArea(wrap=False, editable=True)
+        tw.set_font(msgFont)
+        self.w.report = tw
+        sw1 = Widgets.ScrollArea()
+        sw1.set_widget(tw)
+        vbox3.add_widget(sw1, stretch=1)
+        tw.append_text(self._mkreport_header())
+        
+        btns = Widgets.HBox()
+        btns.set_spacing(4)
+
+        btn = Widgets.Button("Add Pick")
+        btn.add_callback('activated', lambda w: self.add_pick_cb())
+        btns.add_widget(btn)
+        btn = Widgets.CheckBox("Record Picks")
+        btn.set_state(self.do_record)
+        btn.add_callback('activated', self.record_cb)
+        btns.add_widget(btn)
+        btns.add_widget(Widgets.Label(''), stretch=1)
+        vbox3.add_widget(btns, stretch=0)
+
+        nb.add_widget(vbox3, title="Report")
+
+        ## vbox4 = Widgets.VBox()
+        ## tw = Widgets.TextArea(wrap=False, editable=True)
+        ## tw.set_font(msgFont)
+        ## self.w.correct = tw
+        ## sw1 = Widgets.ScrollArea()
+        ## sw1.set_widget(tw)
+        ## vbox4.add_widget(sw1, stretch=1)
+        ## tw.append_text("# paste a reference report here")
+        
+        ## btns = Widgets.HBox()
+        ## btns.set_spacing(4)
+
+        ## btn = Widgets.Button("Correct WCS")
+        ## btn.add_callback('activated', lambda w: self.correct_wcs())
+        ## btns.add_widget(btn)
+        ## vbox4.add_widget(btns, stretch=0)
+
+        ## nb.add_widget(vbox4, title="Correct")
+
+        vbox.add_widget(Widgets.Label(''), stretch=1)
+        
+        vpaned.add_widget(sw)
+        vtop.add_widget(vpaned, stretch=1)
+
+        btns = Widgets.HBox()
+        btns.set_spacing(4)
+
+        btn = Widgets.Button("Close")
+        btn.add_callback('activated', lambda w: self.close())
+        btns.add_widget(btn)
+        btns.add_widget(Widgets.Label(''), stretch=1)
+        vtop.add_widget(btns, stretch=0)
+
+        container.add_widget(vtop, stretch=1)
+
+    def copyText(self, w):
+        text = w.get_text()
+        # TODO: put it in the clipboard
+        
+    def record_cb(self, w, tf):
+        self.do_record = tf
+        return True
+        
+    def instructions(self):
+        self.tw.set_text("""Left-click to place region.  Left-drag to position region.  Redraw region with the right mouse button.""")
+        self.tw.set_font(self.msgFont)
+            
+    def update_status(self, text):
+        self.fv.gui_do(self.w.eval_status.set_text, text)
+
+    def init_progress(self):
+        self.w.btn_intr_eval.set_enabled(True)
+        self.w.eval_pgs.set_value(0.0)
+            
+    def update_progress(self, pct):
+        self.w.eval_pgs.set_value(pct)
+        
+    def show_candidates_cb(self, w, state):
+        self.show_candidates = state
+        if not self.show_candidates:
+            # Delete previous peak marks
+            objs = self.fitsimage.getObjectsByTagpfx('peak')
+            self.fitsimage.deleteObjects(objs, redraw=True)
+        
+    def adjust_wcs(self, image, wcs_m, tup):
+        d_ra, d_dec, d_theta = tup
+        msg = "Calculated shift: dra, ddec = %f, %f\n" % (
+            d_ra/3600.0, d_dec/3600.0)
+        msg += "Calculated rotation: %f deg\n" % (d_theta)
+        msg += "\nAdjust WCS?"
+        
+        dialog = GtkHelp.Dialog("Adjust WCS",
+                                gtk.DIALOG_DESTROY_WITH_PARENT,
+                                [['Cancel', 0], ['Ok', 1]],
+                                lambda w, rsp: self.adjust_wcs_cb(w, rsp,
+                                                                  image, wcs_m))
+        box = dialog.get_content_area()
+        w = gtk.Label(msg)
+        box.pack_start(w, expand=True, fill=True)
+        dialog.show_all()
+        
+    def adjust_wcs_cb(self, w, rsp, image, wcs_m):
+        w.destroy()
+        if rsp == 0:
+            return
+
+        #image.wcs = wcs_m.wcs
+        image.update_keywords(wcs_m.hdr)
+        return True
+        
+    def plot_scroll(self, event):
+        # Matplotlib only gives us the number of steps of the scroll,
+        # positive for up and negative for down.
+        direction = None
+        if event.step > 0:
+            #delta = 0.9
+            self.plot_zoomlevel += 1.0
+        elif event.step < 0:
+            #delta = 1.1
+            self.plot_zoomlevel -= 1.0
+
+        self.plot_panzoom()
+        
+        # x1, x2 = self.w.ax.get_xlim()
+        # y1, y2 = self.w.ax.get_ylim()
+        # self.w.ax.set_xlim(x1*delta, x2*delta)
+        # self.w.ax.set_ylim(y1*delta, y2*delta)
+        # self.w.canvas.draw()
+        
+    def plot_button_press(self, event):
+        if event.button == 1:
+            self.plot_x, self.plot_y = event.x, event.y
+        return True
+
+    def plot_motion_notify(self, event):
+        if event.button == 1:
+            xdelta = event.x - self.plot_x
+            #ydelta = event.y - self.plot_y
+            ydelta = self.plot_y - event.y
+            self.pan_plot(xdelta, ydelta)
 
     def bump_serial(self):
         with self.lock:
@@ -105,7 +575,7 @@ class PickBase(GingaPlugin.LocalPlugin):
 
         # Show contour zoom level
         text = self.fv.scale2text(1.0/scalefactor)
-        self._setText(self.wdetail.contour_zoom, text)
+        self.wdetail.contour_zoom.set_text(text)
 
         xdelta = int(scalefactor * (wd/2.0))
         ydelta = int(scalefactor * (ht/2.0))
@@ -322,7 +792,7 @@ class PickBase(GingaPlugin.LocalPlugin):
             
             self.pick_x1, self.pick_y1 = x1, y1
             self.pick_data = data
-            self._setText(self.wdetail.sample_area, '%dx%d' % (x2-x1, y2-y1))
+            self.wdetail.sample_area.set_text('%dx%d' % (x2-x1, y2-y1))
 
             point.color = 'red'
             text.text = 'Pick: calc'
@@ -457,17 +927,17 @@ class PickBase(GingaPlugin.LocalPlugin):
             point.x, point.y = obj_x, obj_y
             text.color = 'cyan'
 
-            self._setText(self.wdetail.fwhm_x, '%.3f' % fwhm_x)
-            self._setText(self.wdetail.fwhm_y, '%.3f' % fwhm_y)
-            self._setText(self.wdetail.fwhm, '%.3f' % fwhm)
-            self._setText(self.wdetail.object_x, '%.3f' % (obj_x+1))
-            self._setText(self.wdetail.object_y, '%.3f' % (obj_y+1))
-            self._setText(self.wdetail.sky_level, '%.3f' % qs.skylevel)
-            self._setText(self.wdetail.background, '%.3f' % qs.background)
-            self._setText(self.wdetail.brightness, '%.3f' % qs.brightness)
+            self.wdetail.fwhm_x.set_text('%.3f' % fwhm_x)
+            self.wdetail.fwhm_y.set_text('%.3f' % fwhm_y)
+            self.wdetail.fwhm.set_text('%.3f' % fwhm)
+            self.wdetail.object_x.set_text('%.3f' % (obj_x+1))
+            self.wdetail.object_y.set_text('%.3f' % (obj_y+1))
+            self.wdetail.sky_level.set_text('%.3f' % qs.skylevel)
+            self.wdetail.background.set_text('%.3f' % qs.background)
+            self.wdetail.brightness.set_text('%.3f' % qs.brightness)
 
-            self._setEnabled(self.w.btn_sky_cut, True)
-            self._setEnabled(self.w.btn_bright_cut, True)
+            self.w.btn_sky_cut.set_enabled(True)
+            self.w.btn_bright_cut.set_enabled(True)
 
             # Mark center of object on pick image
             i1 = point.x - x1
@@ -488,23 +958,23 @@ class PickBase(GingaPlugin.LocalPlugin):
                 ra_txt, dec_txt = image.pixtoradec(obj_x, obj_y, format='str')
                 self.last_rpt = self._mkreport(image, qs)
                 if self.do_record:
-                    self._appendText(self.w.report, self.last_rpt)
+                    self.w.report.append_text(self.last_rpt)
 
             except Exception, e:
                 ra_txt = 'WCS ERROR'
                 dec_txt = 'WCS ERROR'
-            self._setText(self.wdetail.ra, ra_txt)
-            self._setText(self.wdetail.dec, dec_txt)
+            self.wdetail.ra.set_text(ra_txt)
+            self.wdetail.dec.set_text(dec_txt)
 
-            self._setText(self.wdetail.equinox, str(equinox))
+            self.wdetail.equinox.set_text(str(equinox))
 
             # TODO: Get separate FWHM for X and Y
             try:
                 cdelt1, cdelt2 = image.get_keywords_list('CDELT1', 'CDELT2')
                 starsize = self.iqcalc.starsize(fwhm_x, cdelt1, fwhm_y, cdelt2)
-                self._setText(self.wdetail.star_size, '%.3f' % starsize)
+                self.wdetail.star_size.set_text('%.3f' % starsize)
             except Exception, e:
-                self._setText(self.wdetail.star_size, 'ERROR')
+                self.wdetail.star_size.set_text('ERROR')
                 self.fv.show_error("Couldn't calculate star size: %s" % (
                     str(e)), raisetab=False)
 
@@ -523,10 +993,10 @@ class PickBase(GingaPlugin.LocalPlugin):
             #self.update_status("Error")
             for key in ('sky_level', 'background', 'brightness',
                         'star_size', 'fwhm_x', 'fwhm_y'):
-                self._setText(self.wdetail[key], '')
-            self._setText(self.wdetail.fwhm, 'Failed')
-            self._setEnabled(self.w.btn_sky_cut, False)
-            self._setEnabled(self.w.btn_bright_cut, False)
+                self.wdetail[key].set_text('')
+            self.wdetail.fwhm.set_text('Failed')
+            self.w.btn_sky_cut.set_enabled(False)
+            self.w.btn_bright_cut.set_enabled(False)
             self.pick_qs = None
             text.color = 'red'
 
@@ -534,7 +1004,7 @@ class PickBase(GingaPlugin.LocalPlugin):
             #self.plot_contours()
             # TODO: could calc background based on numpy calc
 
-        self._setEnabled(self.w.btn_intr_eval, False)
+        self.w.btn_intr_eval.set_enabled(False)
         self.pickimage.redraw(whence=3)
         self.canvas.redraw(whence=3)
 
@@ -742,7 +1212,7 @@ class PickBase(GingaPlugin.LocalPlugin):
         scalefactor = fitsimage.get_scale()
         self.logger.debug("scalefactor = %.2f" % (scalefactor))
         text = self.fv.scale2text(scalefactor)
-        self._setText(self.wdetail.zoom, text)
+        self.wdetail.zoom.set_text(text)
 
     def detailxy(self, canvas, button, data_x, data_y):
         """Motion event in the pick fits window.  Show the pointing
@@ -780,7 +1250,7 @@ class PickBase(GingaPlugin.LocalPlugin):
         
     def add_pick_cb(self):
         if self.last_rpt != None:
-            self._appendText(self.w.report, self.last_rpt)
+            self.w.report.append_text(self.last_rpt)
 
     def correct_wcs(self):
         # small local function to strip comment and blank lines
@@ -793,9 +1263,9 @@ class PickBase(GingaPlugin.LocalPlugin):
             return True
 
         # extract image and reference coords from text widgets
-        txt1 = self._getText(self.w.report)
+        txt1 = self.w.report.get_text()
         lines1 = filter(_flt, txt1.split('\n'))
-        txt2 = self._getText(self.w.correct)
+        txt2 = self.w.correct.get_text()
         lines2 = filter(_flt, txt2.split('\n'))
         assert len(lines1) == len(lines2), \
                Exception("Number of lines don't match in reports")
@@ -819,4 +1289,7 @@ class PickBase(GingaPlugin.LocalPlugin):
             self.fv.gui_do(self.fv.show_error, errmsg)
             return
 
+    def __str__(self):
+        return 'pick'
+    
 #END

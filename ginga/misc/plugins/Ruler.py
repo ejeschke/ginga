@@ -74,6 +74,7 @@ class Ruler(GingaPlugin.LocalPlugin):
         btn = Widgets.Button("Close")
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn, stretch=0)
+        btns.add_widget(Widgets.Label(''), stretch=1)
         vbox1.add_widget(btns, stretch=0)
 
         sw.set_widget(vbox1)

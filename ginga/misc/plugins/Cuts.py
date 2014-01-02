@@ -63,7 +63,10 @@ class Cuts(GingaPlugin.LocalPlugin):
         fr.set_widget(tw)
         vbox1.add_widget(fr, stretch=0)
 
-        self.plot = Plot.Cuts(self.logger)
+        self.plot = Plot.Cuts(self.logger, width=2, height=3, dpi=100)
+        ax = self.plot.add_axis()
+        ax.grid(True)
+
         # for now we need to wrap this native widget
         w = Widgets.wrap(self.plot.get_widget())
         vbox1.add_widget(w, stretch=1)
@@ -120,6 +123,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         btn = Widgets.Button("Close")
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn, stretch=0)
+        btns.add_widget(Widgets.Label(''), stretch=1)
 
         vbox2.add_widget(btns, stretch=0)
         vpaned.add_widget(vbox2)
@@ -281,6 +285,11 @@ class Cuts(GingaPlugin.LocalPlugin):
             #text = obj.objects[1]
             #text.color = color
             self._plotpoints(line, color)
+
+        # Make x axis labels a little more readable
+        lbls = self.plot.ax.xaxis.get_ticklabels()
+        for lbl in lbls:
+            lbl.set(rotation=45, horizontalalignment='right')
         return True
     
     def redo(self):

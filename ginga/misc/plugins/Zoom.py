@@ -103,6 +103,9 @@ class Zoom(GingaPlugin.GlobalPlugin):
         row.add_widget(w, stretch=0)
         row.add_widget(Widgets.Label(''), stretch=1)
         vbox.add_widget(row, stretch=0)
+
+        # vertical stretch
+        vbox.add_widget(Widgets.Label(''), stretch=1)
         
         sw = Widgets.ScrollArea()
         sw.set_widget(vbox)

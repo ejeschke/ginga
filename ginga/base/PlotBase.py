@@ -29,12 +29,8 @@ class PlotBase(Callback.Callbacks):
 
         self.fig = matplotlib.figure.Figure(figsize=(width, height),
                                             dpi=dpi)
-        self.ax = self.fig.add_subplot(111)
-        self.ax.set_xlabel('X values')
-        self.ax.set_ylabel('Y values')
-        self.ax.set_title('')
-        self.ax.grid(True)
         self.canvas = figureCanvasClass(self.fig)
+        self.ax = None
 
         self.logx = False
         self.logy = False
@@ -42,11 +38,15 @@ class PlotBase(Callback.Callbacks):
     def get_widget(self):
         return self.canvas
 
-    def getAxis(self):
-        return self.ax
-
     def _sanity_check_window(self):
         pass
+
+    def add_axis(self, **kwdargs):
+        self.ax = self.fig.add_subplot(111, **kwdargs)
+        return self.ax
+        
+    def get_axis(self):
+        return self.ax
 
     def set_titles(self, xtitle=None, ytitle=None, title=None,
                    rtitle=None):
@@ -117,8 +117,6 @@ class HistogramMixin(object):
         y = numpy.append(dist, dist[-1])
 
         self.clear()
-        ## self.set_titles(xtitle=xtitle, ytitle=ytitle, title=title,
-        ##                 rtitle=rtitle)
         self.plot(x, y, alpha=1.0, linewidth=1.0, linestyle='-',
                   xtitle=xtitle, ytitle=ytitle, title=title, rtitle=rtitle,
                   drawstyle='steps-post')
@@ -133,7 +131,7 @@ class CutsMixin(object):
         """
         y = data
         x = numpy.arange(len(data))
-        #self.clear()
+
         self.plot(x, y, color=color, drawstyle='steps-mid',
                   xtitle=xtitle, ytitle=ytitle, title=title, rtitle=rtitle,
                   alpha=1.0, linewidth=1.0, linestyle='-')

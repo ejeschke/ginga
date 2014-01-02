@@ -30,6 +30,9 @@ class WidgetBase(Callback.Callbacks):
     def set_tooltip(self, text):
         self.widget.set_tooltip_text(text)
 
+    def set_enabled(self, tf):
+        self.widget.set_sensitive(tf)
+
 # BASIC WIDGETS
 
 class TextEntry(WidgetBase):
@@ -324,6 +327,21 @@ class RadioButton(WidgetBase):
         val = widget.get_active()
         self.make_callback('activated', val)
 
+class ProgressBar(WidgetBase):
+    def __init__(self):
+        super(ProgressBar, self).__init__()
+
+        w = gtk.ProgressBar()
+        # GTK3
+        #w.set_orientation(gtk.ORIENTATION_HORIZONTAL)
+        #w.set_inverted(False)
+        self.widget = w
+
+    def set_value(self, pct):
+        pct = float(pct)
+        self.widget.set_fraction(pct)
+        self.widget.set_text("%.2f %%" % (pct * 100.0))
+
 # CONTAINERS
 
 class ContainerBase(WidgetBase):
@@ -385,10 +403,20 @@ class Frame(ContainerBase):
         self.widget.show_all()
 
 class TabWidget(ContainerBase):
-    def __init__(self):
+    def __init__(self, tabpos='top'):
         super(TabWidget, self).__init__()
 
         nb = gtk.Notebook()
+        nb.set_show_border(False)
+        nb.set_scrollable(True)
+        if tabpos == 'top':
+            nb.set_tab_pos(gtk.POS_TOP)
+        elif tabpos == 'bottom':
+            nb.set_tab_pos(gtk.POS_BOTTOM)
+        elif tabpos == 'left':
+            nb.set_tab_pos(gtk.POS_LEFT)
+        elif tabpos == 'right':
+            nb.set_tab_pos(gtk.POS_RIGHT)
         nb.connect("switch-page", self._cb_redirect)
         self.widget = nb
 

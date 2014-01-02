@@ -64,10 +64,9 @@ class Histogram(GingaPlugin.LocalPlugin):
         fr.set_widget(tw)
         vbox1.add_widget(fr, stretch=0)
 
-        self.plot = Plot.Plot(self.logger)
-        self.plot.fig.set_dpi(100)
-        self.plot.fig.set_figwidth(2)
-        self.plot.fig.set_figheight(2)
+        self.plot = Plot.Plot(self.logger, width=2, height=3, dpi=100)
+        ax = self.plot.add_axis()
+        ax.grid(True)
         
         # for now we need to wrap this native widget
         w = Widgets.wrap(self.plot.get_widget())
@@ -109,7 +108,7 @@ class Histogram(GingaPlugin.LocalPlugin):
         vpaned.add_widget(vbox1)
 
         vbox2 = Widgets.VBox()
-        # spacer
+        # spacer (stretch space)
         vbox2.add_widget(Widgets.Label(''), stretch=1)
 
         btns = Widgets.HBox()
@@ -119,6 +118,7 @@ class Histogram(GingaPlugin.LocalPlugin):
         btn = Widgets.Button("Close")
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn, stretch=0)
+        btns.add_widget(Widgets.Label(''), stretch=1)
 
         vbox2.add_widget(btns, stretch=0)
         vpaned.add_widget(vbox2)
@@ -386,8 +386,8 @@ class Histogram(GingaPlugin.LocalPlugin):
                                            linestyle='-', color='black')
         self.hiline = self.plot.ax.axvline(hival, 0.0, 0.99,
                                             linestyle='-', color='black')
-        self._setText(self.w.cut_low, str(loval))
-        self._setText(self.w.cut_high, str(hival))
+        self.w.cut_low.set_text(str(loval))
+        self.w.cut_high.set_text(str(hival))
         #self.plot.fig.canvas.draw()
         self.redo()
 

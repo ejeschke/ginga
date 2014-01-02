@@ -55,8 +55,8 @@ class Pan(GingaPlugin.GlobalPlugin):
         bd.enable_pan(False)
         bd.enable_zoom(False)
 
-        iw = sfi.get_widget()
-        sfi.configure(width, height)
+        #iw = sfi.get_widget()
+        sfi.set_desired_size(width, height)
         return sfi
 
     def add_channel(self, viewer, chinfo):

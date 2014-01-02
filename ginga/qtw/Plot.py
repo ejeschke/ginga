@@ -18,8 +18,9 @@ from ginga.base.PlotBase import PlotBase, HistogramMixin, CutsMixin
 
 class Plot(PlotBase):
 
-    def __init__(self, logger):
-        PlotBase.__init__(self, logger, FigureCanvas)
+    def __init__(self, logger, width=300, height=300, dpi=100):
+        PlotBase.__init__(self, logger, FigureCanvas,
+                          width=width, height=height, dpi=dpi)
 
 class Histogram(Plot, HistogramMixin):
     pass

@@ -93,11 +93,12 @@ class Drawing(GingaPlugin.LocalPlugin):
         vbox1.add_widget(spacer, stretch=1)
         
         btns = Widgets.HBox()
-        btns.set_spacing(3)
+        btns.set_spacing(4)
 
         btn = Widgets.Button("Close")
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn, stretch=0)
+        btns.add_widget(Widgets.Label(''), stretch=1)
         vbox1.add_widget(btns, stretch=0)
 
         sw.set_widget(vbox1)
