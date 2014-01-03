@@ -323,11 +323,26 @@ class ProgressBar(WidgetBase):
 class ContainerBase(WidgetBase):
     def __init__(self):
         super(ContainerBase, self).__init__()
-        self.refs = []
+        self.children = []
 
     def add_ref(self, ref):
         # TODO: should this be a weakref?
-        self.refs.append(ref)
+        self.children.append(ref)
+
+    def _remove(self, childw):
+        self.widget.layout().removeWidget(childw)
+        #childw.parent = None
+        childw.setParent(None)
+        
+    def remove(self, w):
+        if not w in self.children:
+            raise KeyError("Widget is not a child of this container")
+        self.children.remove(w)
+
+        self._remove(w.get_widget())
+
+    def get_children(self):
+        return self.children
 
 class Box(ContainerBase):
     def __init__(self, orientation='horizontal'):

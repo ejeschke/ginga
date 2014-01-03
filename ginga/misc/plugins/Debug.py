@@ -7,9 +7,9 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+from ginga.misc import Widgets
 from ginga import GingaPlugin
 
-import gtk
 
 class Debug(GingaPlugin.GlobalPlugin):
 
@@ -19,46 +19,37 @@ class Debug(GingaPlugin.GlobalPlugin):
 
 
     def build_gui(self, container):
-        self.msgFont = self.fv.getFont("fixedFont", 14)
-        tw = gtk.TextView()
-        tw.set_wrap_mode(gtk.WRAP_WORD)
-        tw.set_left_margin(4)
-        tw.set_right_margin(4)
-        tw.set_editable(False)
-        tw.set_left_margin(4)
-        tw.set_right_margin(4)
-        tw.modify_font(self.msgFont)
+
+        vbox = Widgets.VBox()
+        
+        self.msgFont = self.fv.getFont("fixedFont", 12)
+        tw = Widgets.TextArea(wrap=False, editable=False)
+        tw.set_font(self.msgFont)
         self.tw = tw
-        self.buf = self.tw.get_buffer()
         self.history = []
         self.histmax = 10
          
-        sw = gtk.ScrolledWindow()
-        sw.set_border_width(2)
-        sw.set_policy(gtk.POLICY_AUTOMATIC,
-                      gtk.POLICY_AUTOMATIC)
-        sw.add(self.tw)
+        sw = Widgets.ScrollArea()
+        sw.set_widget(self.tw)
 
-        cw = container.get_widget()
-        cw.pack_start(sw, fill=True, expand=True)
+        vbox.add_widget(sw, stretch=1)
 
-        self.entry = gtk.Entry()
-        cw.pack_start(self.entry, fill=True, expand=False)
-        self.entry.connect('activate', self.command_cb)
+        self.entry = Widgets.TextEntry()
+        vbox.add_widget(self.entry, stretch=0)
+        self.entry.add_callback('activated', self.command_cb)
 
-        btns = gtk.HButtonBox()
-        btns.set_layout(gtk.BUTTONBOX_START)
-        btns.set_spacing(3)
-        btns.set_child_size(15, -1)
+        btns = Widgets.HBox()
+        btns.set_spacing(4)
+        btns.set_border_width(4)
 
-        btn = gtk.Button("Close")
-        btn.connect('clicked', lambda w: self.close())
-        btns.add(btn)
-        cw.pack_start(btns, padding=4, fill=True, expand=False)
+        btn = Widgets.Button("Close")
+        btn.add_callback('activated', lambda w: self.close())
+        btns.add_widget(btn)
+        btns.add_widget(Widgets.Label(''), stretch=1)
+        vbox.add_widget(btns)
 
-    def close(self):
-        self.fv.stop_global_plugin(str(self))
-        return True
+        container.add_widget(vbox, stretch=1)
+
 
     def reloadLocalPlugin(self, plname):
         self.fv.mm.loadModule(plname)
@@ -92,14 +83,18 @@ class Debug(GingaPlugin.GlobalPlugin):
         # Remove all history past history size
         self.history = self.history[-self.histmax:]
         # Update text widget
-        self.buf.set_text('\n'.join(self.history))
+        self.tw.set_text('\n'.join(self.history))
         
     def command_cb(self, w):
         # TODO: implement a readline editing widget
-        cmdstr = w.get_text().strip()
+        cmdstr = str(w.get_text()).strip()
         self.command(cmdstr)
         w.set_text("")
         
+    def close(self):
+        self.fv.stop_global_plugin(str(self))
+        return True
+
     def __str__(self):
         return 'debug'
     

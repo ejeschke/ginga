@@ -166,7 +166,7 @@ class Pick(GingaPlugin.LocalPlugin):
         tw.set_font(self.msgFont)
         self.tw = tw
 
-        fr = Widgets.Frame(" Instructions ")
+        fr = Widgets.Frame("Instructions")
         fr.set_widget(tw)
         vbox.add_widget(fr, stretch=0)
         

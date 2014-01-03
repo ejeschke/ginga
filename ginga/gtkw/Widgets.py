@@ -211,11 +211,14 @@ class SpinBox(WidgetBase):
         super(SpinBox, self).__init__()
 
         self.widget = gtk.SpinButton()
+        # if not gtksel.have_gtk3:
+        #     self.widget.set_update_policy(gtk.UPDATE_DISCONTINUOUS)
         self.widget.connect('value-changed', self._cb_redirect)
         
         self.enable_callback('value-changed')
 
-    def _cb_redirect(self, val):
+    def _cb_redirect(self, w):
+        val = w.get_value()
         self.make_callback('value-changed', val)
 
     def get_value(self):
@@ -227,6 +230,7 @@ class SpinBox(WidgetBase):
     def set_limits(self, minval, maxval, incr_value=1):
         adj = self.widget.get_adjustment()
         adj.configure(minval, minval, maxval, incr_value, incr_value, 0)
+
     
 class Slider(WidgetBase):
     def __init__(self, orientation='horizontal'):
@@ -347,11 +351,25 @@ class ProgressBar(WidgetBase):
 class ContainerBase(WidgetBase):
     def __init__(self):
         super(ContainerBase, self).__init__()
-        self.refs = []
+        self.children = []
 
     def add_ref(self, ref):
         # TODO: should this be a weakref?
-        self.refs.append(ref)
+        self.children.append(ref)
+
+    def _remove(self, childw):
+        self.widget.remove(childw)
+
+    def remove(self, w):
+        if not w in self.children:
+            raise KeyError("Widget is not a child of this container")
+        self.children.remove(w)
+
+        self._remove(w.get_widget())
+
+    def get_children(self):
+        return self.children
+
 
 class Box(ContainerBase):
     def __init__(self, orientation='horizontal'):
@@ -388,6 +406,7 @@ class HBox(Box):
     def __init__(self):
         super(HBox, self).__init__(orientation='horizontal')
 
+
 class Frame(ContainerBase):
     def __init__(self, title=None):
         super(Frame, self).__init__()
@@ -398,9 +417,12 @@ class Frame(ContainerBase):
         self.widget = fr
 
     def set_widget(self, child):
+        if len(self.children) > 0:
+            self.remove(self.children[0])
         self.add_ref(child)
         self.widget.add(child.get_widget())
         self.widget.show_all()
+
 
 class TabWidget(ContainerBase):
     def __init__(self, tabpos='top'):
@@ -441,6 +463,7 @@ class TabWidget(ContainerBase):
     def index_of(self, child):
         return self.widget.page_num(child.get_widget())
 
+
 class StackWidget(TabWidget):
     def __init__(self):
         super(StackWidget, self).__init__()
@@ -460,9 +483,12 @@ class ScrollArea(ContainerBase):
         self.widget = sw
 
     def set_widget(self, child):
+        if len(self.children) > 0:
+            self.remove(self.children[0])
         self.add_ref(child)
         self.widget.add_with_viewport(child.get_widget())
         self.widget.show_all()
+
 
 class Splitter(ContainerBase):
     def __init__(self, orientation='horizontal'):
@@ -474,18 +500,16 @@ class Splitter(ContainerBase):
         else:
             w = gtk.VPaned()
         self.widget = w
-        self.count = 0
 
     def add_widget(self, child):
         self.add_ref(child)
         child_w = child.get_widget()
-        if self.count == 0:
+        if len(self.children) == 1:
             #self.widget.pack1(child_w, resize=True, shrink=True)
             self.widget.pack1(child_w)
             
         else:
             self.widget.pack2(child_w)
-        self.count += 1
         self.widget.show_all()
 
 
