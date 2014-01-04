@@ -329,18 +329,23 @@ class ContainerBase(WidgetBase):
         # TODO: should this be a weakref?
         self.children.append(ref)
 
-    def _remove(self, childw):
+    def _remove(self, childw, delete=False):
         self.widget.layout().removeWidget(childw)
-        #childw.parent = None
         childw.setParent(None)
+        if delete:
+            childw.deleteLater()
         
-    def remove(self, w):
+    def remove(self, w, delete=False):
         if not w in self.children:
             raise KeyError("Widget is not a child of this container")
         self.children.remove(w)
 
-        self._remove(w.get_widget())
+        self._remove(w.get_widget(), delete=delete)
 
+    def remove_all(self):
+        for w in list(self.children):
+            self.remove(w)
+            
     def get_children(self):
         return self.children
 
@@ -396,6 +401,7 @@ class Frame(ContainerBase):
             self.label = None
 
     def set_widget(self, child, stretch=1):
+        self.remove_all()
         self.add_ref(child)
         self.widget.layout().addWidget(child.get_widget(), stretch=stretch)
     

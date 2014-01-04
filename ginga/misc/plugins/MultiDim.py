@@ -51,7 +51,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
         
         fr = Widgets.Frame("HDU")
 
-        captions = [("Num HDUs:", 'label', "Num HDUs", 'label'),
+        captions = [("Num HDUs:", 'label', "Num HDUs", 'llabel'),
                     ("Choose HDU", 'spinbutton')]
         w, b = Widgets.build_info(captions)
         self.w.update(b)
@@ -87,8 +87,8 @@ class MultiDim(GingaPlugin.LocalPlugin):
 
     def build_naxis(self, dims):
         # build a vbox of NAXIS controls
-        captions = [("NAXIS1:", 'label', 'NAXIS1', 'label'),
-                    ("NAXIS2:", 'label', 'NAXIS2', 'label')]
+        captions = [("NAXIS1:", 'label', 'NAXIS1', 'llabel'),
+                    ("NAXIS2:", 'label', 'NAXIS2', 'llabel')]
 
         self.naxispath = []
         for n in xrange(2, len(dims)):
@@ -98,9 +98,9 @@ class MultiDim(GingaPlugin.LocalPlugin):
             maxn = int(dims[n])
             self.logger.debug("NAXIS%d=%d" % (n+1, maxn))
             if maxn <= 1:
-                captions.append((title+':', 'label', title, 'label'))
+                captions.append((title+':', 'label', title, 'llabel'))
             else:
-                captions.append((title+':', 'label', title, 'label',
+                captions.append((title+':', 'label', title, 'llabel',
                                  "Choose %s" % (title), 'spinbutton'))
 
         w, b = Widgets.build_info(captions)
@@ -201,8 +201,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
     def redo(self):
         image = self.fitsimage.get_image()
         md = image.get_metadata()
-        #path = md.get('path', None)
-        path = md.get('foo', None)
+        path = md.get('path', None)
         if path == None:
             self.fv.show_error("Cannot open image: no value for metadata key 'path'")
             return

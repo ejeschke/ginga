@@ -212,7 +212,7 @@ class PluginManagerBase(object):
                 plname))
 
         # Raise tab with GUI
-        pInfo.tabname = plname
+        pInfo.tabname = pInfo.spec.get('tab', plname)
         vbox = None
         had_error = False
         try:

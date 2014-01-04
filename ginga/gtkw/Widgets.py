@@ -367,6 +367,10 @@ class ContainerBase(WidgetBase):
 
         self._remove(w.get_widget())
 
+    def remove_all(self):
+        for w in list(self.children):
+            self.remove(w)
+
     def get_children(self):
         return self.children
 
@@ -417,8 +421,7 @@ class Frame(ContainerBase):
         self.widget = fr
 
     def set_widget(self, child):
-        if len(self.children) > 0:
-            self.remove(self.children[0])
+        self.remove_all()
         self.add_ref(child)
         self.widget.add(child.get_widget())
         self.widget.show_all()
@@ -483,8 +486,7 @@ class ScrollArea(ContainerBase):
         self.widget = sw
 
     def set_widget(self, child):
-        if len(self.children) > 0:
-            self.remove(self.children[0])
+        self.remove_all()
         self.add_ref(child)
         self.widget.add_with_viewport(child.get_widget())
         self.widget.show_all()
