@@ -969,7 +969,7 @@ class GingaControl(Callback.Callbacks):
             self.change_channel(chname)
         chinfo = self.get_channelInfo(chname)
         chinfo.fitsimage.zoom_fit()
-        chinfo.fitsimage.auto_levels()
+        chinfo.fitsimage.cut_levels(0, 255)
 
     def followFocus(self, tf):
         self.channel_follows_focus = tf

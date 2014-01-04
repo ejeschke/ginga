@@ -80,6 +80,7 @@ class AutoCutsBase(object):
         return data
     
     def cut_levels(self, data, loval, hival, vmin=0.0, vmax=255.0):
+        loval, hival = float(loval), float(hival)
         self.logger.debug("loval=%.2f hival=%.2f" % (loval, hival))
         delta = hival - loval
         if delta != 0.0:

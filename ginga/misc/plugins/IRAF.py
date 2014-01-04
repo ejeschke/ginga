@@ -1,12 +1,3 @@
-#
-# IRAFBase.py -- IRAF plugin base class for Ginga fits viewer
-# 
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
-# This is open-source software licensed under a BSD license.
-# Please see the file LICENSE.txt for details.
-#
 """
 The IRAF plugin implements a remote control interface for the Ginga FITS
 viewer from an IRAF session.  In particular it supports the use of the
@@ -48,17 +39,17 @@ import time
 
 from ginga import GingaPlugin, AstroImage
 from ginga import cmap, imap
-from ginga.misc import Bunch
+from ginga.misc import Widgets, CanvasTypes, Bunch
 
 # XImage protocol support
 import IIS_DataListener as iis
 
 
-class IRAFBase(GingaPlugin.GlobalPlugin):
+class IRAF(GingaPlugin.GlobalPlugin):
 
     def __init__(self, fv):
         # superclass defines some variables for us, like logger
-        super(IRAFBase, self).__init__(fv)
+        super(IRAF, self).__init__(fv)
 
         self.keyqueue = Queue.Queue()
         self.keyevent = threading.Event()
@@ -83,6 +74,80 @@ class IRAFBase(GingaPlugin.GlobalPlugin):
         fv.add_callback('add-channel', self.add_channel)
         fv.add_callback('delete-channel', self.delete_channel)
         #fv.set_callback('active-image', self.focus_cb)
+
+
+    def build_gui(self, container):
+
+        canvas = CanvasTypes.DrawingCanvas()
+        canvas.enable_draw(False)
+        canvas.set_callback('none-move', self.cursormotion)
+        canvas.add_callback('key-press', self.window_key_press)
+        canvas.add_callback('key-release', self.window_key_release)
+        self.canvas = canvas
+
+        vbox = Widgets.VBox()
+
+        fr = Widgets.Frame("IRAF")
+
+        captions = [("Control", 'hbox'),
+                    ("Channel:", 'label', 'Channel', 'llabel'),
+                    ]
+        w, b = Widgets.build_info(captions)
+        self.w.update(b)
+
+        self.w.mode_d = {}
+        btn1 = Widgets.RadioButton("Ginga")
+        btn1.add_callback('activated', lambda w, val: self.switchMode('ginga'))
+        self.w.mode_d['ginga'] = btn1
+        self.w.control.add_widget(btn1)
+        btn2 = Widgets.RadioButton("IRAF", group=btn1)
+        btn2.add_callback('activated', lambda w: self.switchMode('iraf'))
+        self.w.mode_d['iraf'] = btn2
+        self.w.control.add_widget(btn2)
+
+        fr.set_widget(w)
+        vbox.add_widget(fr, stretch=0)
+
+        fr = Widgets.Frame("Frame/Channel")
+
+        lbl = Widgets.Label("")
+        self.w.frch = lbl
+
+        fr.set_widget(lbl)
+        vbox.add_widget(fr, stretch=0)
+
+        # stretch
+        vbox.add_widget(Widgets.Label(''), stretch=1)
+
+        container.add_widget(vbox, stretch=1)
+
+    def update_chinfo(self, fmap):
+        # Update the GUI with the new frame/channel mapping
+        fmap.sort(lambda x, y: x[1] - y[1])
+
+        s = ["%2d: %s" % (num, name) for (name, num) in fmap]
+        self.w.frch.set_text("\n".join(s))
+
+    def _setMode(self, modeStr, chname):
+        modeStr = modeStr.lower()
+        self.w.mode_d[modeStr].set_state(True)
+        self.w.channel.set_text(chname)
+
+        self.switchMode(modeStr)
+        
+    def setMode(self, modeStr, chname):
+        self.imexam_chname = chname
+        self.fv.gui_do(self._setMode, modeStr, chname)
+        
+    def toggleMode(self):
+        isIRAF = self.w.mode_d['iraf'].get_state()
+        chname = self.imexam_chname
+        if isIRAF:
+            print "setting mode to Ginga"
+            self.setMode('Ginga', chname)
+        else:
+            print "setting mode to IRAF"
+            self.setMode('IRAF', chname)
 
 
     def add_channel(self, viewer, chinfo):
@@ -113,10 +178,6 @@ class IRAFBase(GingaPlugin.GlobalPlugin):
         fmap = self.get_channel_frame_mapping()
         self.fv.gui_do(self.update_chinfo, fmap)
 
-    def setMode(self, modeStr, chname):
-        self.imexam_chname = chname
-        self.fv.gui_do(self._setMode, modeStr, chname)
-        
     def switchMode(self, modeStr):
         modeStr = modeStr.lower()
         chname = self.imexam_chname

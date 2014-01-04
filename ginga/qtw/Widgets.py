@@ -84,6 +84,8 @@ class TextArea(WidgetBase):
         self.widget = tw
 
     def append_text(self, text, autoscroll=True):
+        if text.endswith('\n'):
+            text = text[:-1]
         self.widget.append(text)
         if not autoscroll:
             return
@@ -103,7 +105,8 @@ class TextArea(WidgetBase):
         self.append_text(text)
 
     def set_limit(self, numlines):
-        self.widget.setMaximumBlockCount(numlines)
+        #self.widget.setMaximumBlockCount(numlines)
+        pass
     
     def set_font(self, font):
         self.widget.setCurrentFont(font)
@@ -295,11 +298,11 @@ class ToggleButton(WidgetBase):
     
 
 class RadioButton(WidgetBase):
-    def __init__(self, text=''):
+    def __init__(self, text='', group=None):
         super(RadioButton, self).__init__()
 
         self.widget = QtGui.QRadioButton(text)
-        self.widget.stateChanged.connect(self._cb_redirect)
+        self.widget.toggled.connect(self._cb_redirect)
         
         self.enable_callback('activated')
 

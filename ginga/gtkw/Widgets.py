@@ -69,11 +69,15 @@ class TextArea(WidgetBase):
             tw.set_wrap_mode(gtk.WRAP_NONE)
         tw.set_editable(editable)
         self.widget = tw
+        self.histlimit = 0
 
     def append_text(self, text, autoscroll=True):
         buf = self.widget.get_buffer()
         end = buf.get_end_iter()
         buf.insert(end, text)
+
+        if self.histlimit > 0:
+            self._history_housekeeping()
         if not autoscroll:
             return
 
@@ -90,6 +94,16 @@ class TextArea(WidgetBase):
         buf = self.widget.get_buffer()
         return buf.get_text()
     
+    def _history_housekeeping(self):
+        # remove some lines to keep us within our history limit
+        buf = self.widget.get_buffer()
+        numlines = buf.get_line_count()
+        if numlines > self.histlimit:
+            rmcount = int(numlines - self.histlimit)
+            start = buf.get_iter_at_line(0)
+            end   = buf.get_iter_at_line(rmcount)
+            buf.delete(start, end)
+
     def clear(self):
         buf = self.widget.get_buffer()
         start = buf.get_start_iter()
@@ -101,8 +115,8 @@ class TextArea(WidgetBase):
         self.append_text(text)
 
     def set_limit(self, numlines):
-        # TODO
-        pass
+        self.histlimit = numlines
+        self._history_housekeeping()
     
     def set_font(self, font):
         self.widget.modify_font(font)
@@ -322,6 +336,8 @@ class RadioButton(WidgetBase):
     def __init__(self, text='', group=None):
         super(RadioButton, self).__init__()
 
+        if group != None:
+            group = group.get_widget()
         self.widget = gtk.RadioButton(group, text)
         self.widget.connect('toggled', self._cb_redirect)
         
