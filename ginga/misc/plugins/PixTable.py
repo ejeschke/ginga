@@ -7,11 +7,9 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-import gtk
 import numpy
 
-from ginga.gtkw import GtkHelp
-from ginga.gtkw import ImageViewCanvasTypesGtk as CanvasTypes
+from ginga.misc import Widgets, CanvasTypes
 from ginga import GingaPlugin
 
 
@@ -49,88 +47,94 @@ class PixTable(GingaPlugin.LocalPlugin):
         self.mark_selected = None
 
     def build_gui(self, container):
-        # Paned container is just to provide a way to size the graph
-        # to a reasonable size
-        box = gtk.VPaned()
-        cw = container.get_widget()
-        cw.pack_start(box, expand=True, fill=True)
-        
-        # Make the histogram plot
-        vbox = gtk.VBox()
+        # Make the PixTable plot
+        vbox1 = Widgets.VBox()
+        vbox1.set_border_width(4)
+        vbox1.set_spacing(2)
 
-        self.msgFont = self.fv.getFont('fixedFont', 10)
-        tw = gtk.TextView()
-        tw.set_wrap_mode(gtk.WRAP_NONE)
-        tw.set_left_margin(4)
-        tw.set_right_margin(4)
-        tw.set_editable(False)
-        tw.modify_font(self.msgFont)
+        fr = Widgets.Frame("Pixel Values")
+        
+        # Make the cuts plot
+        msgFont = self.fv.getFont('fixedFont', 10)
+        tw = Widgets.TextArea(wrap=False, editable=False)
+        tw.set_font(msgFont)
         self.tw = tw
 
-        fr = gtk.Frame(label=" Pixel Values ")
-        fr.set_shadow_type(gtk.SHADOW_ETCHED_OUT)
-        fr.set_label_align(0.1, 0.5)
-        fr.add(tw)
-        fr.show_all()
-        vbox.pack_start(fr, padding=4, fill=True, expand=False)
-        
-        box.pack1(vbox, resize=True, shrink=True)
+        sw = Widgets.ScrollArea()
+        sw.set_widget(self.tw)
 
-        hbox = gtk.HBox(spacing=4)
-        combobox = GtkHelp.combo_box_new_text()
+        fr.set_widget(sw)
+        vbox1.add_widget(fr, stretch=1)
+
+        btns = Widgets.HBox()
+        btns.set_border_width(4)
+        btns.set_spacing(4)
+
+        cbox1 = Widgets.ComboBox()
         index = 0
         for i in self.sizes:
             j = 1 + i*2
             name = "%dx%d" % (j, j)
-            combobox.insert_text(index, name)
+            cbox1.append_text(name)
             index += 1
         index = self.sizes.index(self.pixtbl_radius)
-        combobox.set_active(index)
-        combobox.sconnect('changed', self.set_cutout_size)
-        combobox.set_tooltip_text("Select size of pixel table")
-        hbox.pack_start(combobox, fill=False, expand=False)
+        cbox1.set_index(index)
+        cbox1.add_callback('activated', self.set_cutout_size)
+        cbox1.set_tooltip("Select size of pixel table")
+        btns.add_widget(cbox1, stretch=0)
 
         # control for selecting a mark
-        combobox = GtkHelp.combo_box_new_text()
+        cbox2 = Widgets.ComboBox()
         for tag in self.marks:
-            combobox.append_text(tag)
+            cbox2.append_text(tag)
         if self.mark_selected == None:
-            combobox.set_active(0)
+            cbox2.set_index(0)
         else:
-            combobox.show_text(self.mark_selected)
-        combobox.sconnect("changed", self.mark_select_cb)
-        self.w.marks = combobox
-        combobox.set_tooltip_text("Select a mark")
-        hbox.pack_start(combobox, fill=False, expand=False)
+            cbox2.show_text(self.mark_selected)
+        cbox2.add_callback('activated', self.mark_select_cb)
+        self.w.marks = cbox2
+        cbox2.set_tooltip("Select a mark")
+        #cbox2.setMinimumContentsLength(8)
+        btns.add_widget(cbox2, stretch=0)
 
-        btn = gtk.Button("Delete")
-        btn.connect('clicked', lambda w: self.clear_mark_cb())
-        btn.set_tooltip_text("Delete selected mark")
-        hbox.pack_start(btn, fill=False, expand=False)
+        btn1 = Widgets.Button("Delete")
+        btn1.add_callback('activated', lambda w: self.clear_mark_cb())
+        btn1.set_tooltip("Delete selected mark")
+        btns.add_widget(btn1, stretch=0)
         
-        btn = gtk.Button("Delete All")
-        btn.connect('clicked', lambda w: self.clear_all())
-        btn.set_tooltip_text("Clear all marks")
-        hbox.pack_start(btn, fill=False, expand=False)
-        
-        btn = GtkHelp.CheckButton("Pan to mark")
-        btn.set_active(self.pan2mark)
-        btn.sconnect('toggled', self.pan2mark_cb)
-        btn.set_tooltip_text("Pan follows selected mark")
-        hbox.pack_start(btn, fill=False, expand=False)
-        
-        vbox.pack_start(hbox, fill=True, expand=False)
-        
-        btns = gtk.HButtonBox()
-        btns.set_layout(gtk.BUTTONBOX_START)
-        btns.set_spacing(3)
+        btn2 = Widgets.Button("Delete All")
+        btn2.add_callback('activated', lambda w: self.clear_all())
+        btn2.set_tooltip("Clear all marks")
+        btns.add_widget(btn2, stretch=0)
+        btns.add_widget(Widgets.Label(''), stretch=1)
 
-        btn = gtk.Button("Close")
-        btn.connect('clicked', lambda w: self.close())
-        btns.add(btn)
-        vbox.pack_start(btns, padding=4, fill=True, expand=False)
+        vbox1.add_widget(btns, stretch=0)
+        
+        btns = Widgets.HBox()
+        btns.set_border_width(4)
+        btns.set_spacing(4)
 
-        box.pack2(gtk.Label(), resize=True, shrink=True)
+        btn3 = Widgets.CheckBox("Pan to mark")
+        btn3.set_state(self.pan2mark)
+        btn3.add_callback('activated', self.pan2mark_cb)
+        btn3.set_tooltip("Pan follows selected mark")
+        btns.add_widget(btn3)
+        btns.add_widget(Widgets.Label(''), stretch=1)
+        
+        vbox1.add_widget(btns, stretch=0)
+        vbox1.add_widget(Widgets.Label(''), stretch=1)
+
+        btns = Widgets.HBox()
+        btns.set_border_width(4)
+        btns.set_spacing(4)
+
+        btn = Widgets.Button("Close")
+        btn.add_callback('activated', lambda w: self.close())
+        btns.add_widget(btn)
+        btns.add_widget(Widgets.Label(''), stretch=1)
+
+        vbox1.add_widget(btns, stretch=0)
+        container.add_widget(vbox1, stretch=1)
 
     def select_mark(self, tag, pan=True):
         # deselect the current selected mark, if there is one
@@ -159,39 +163,37 @@ class PixTable(GingaPlugin.LocalPlugin):
 
         self.redo()
         
-    def mark_select_cb(self, w):
-        index = w.get_active()
+    def mark_select_cb(self, w, index):
         tag = self.marks[index]
         if index == 0:
             tag = None
         self.select_mark(tag)
 
-    def pan2mark_cb(self, w):
-        self.pan2mark = w.get_active()
+    def pan2mark_cb(self, w, val):
+        self.pan2mark = val
         
     def clear_mark_cb(self):
         tag = self.mark_selected
         if tag == None:
             return
-        index = self.marks.index(tag)
         self.canvas.deleteObjectByTag(tag)
-        model = self.w.marks.get_model()
-        del model[index]
+        self.w.marks.delete_alpha(tag)
         self.marks.remove(tag)
-        self.w.marks.set_active(0)
+        self.w.marks.set_index(0)
         self.mark_selected = None
         
     def clear_all(self):
         self.canvas.deleteAllObjects()
-        model = self.w.marks.get_model()
-        model.clear()
+        for name in self.marks:
+            self.w.marks.delete_alpha(name)
         self.marks = ['None']
         self.w.marks.append_text('None')
-        self.w.marks.set_active(0)
+        self.w.marks.set_index(0)
         self.mark_selected = None
-
+        
     def plot(self, data, x1, y1, x2, y2, data_x, data_y, radius,
              maxv=9):
+        
         width, height = self.fitsimage.get_dims(data)
 
         maxval = numpy.nanmax(data)
@@ -222,12 +224,11 @@ class PixTable(GingaPlugin.LocalPlugin):
         l.append(fmt_stat % (minval, maxval, avgval))
 
         # update the text widget
-        clear_tv(self.tw)
-        append_tv(self.tw, '\n'.join(l))
-
+        self.tw.set_text('\n'.join(l))
+    
     def close(self):
         chname = self.fv.get_channelName(self.fitsimage)
-        self.fv.stop_operation_channel(chname, str(self))
+        self.fv.stop_local_plugin(chname, str(self))
         return True
         
     def start(self):
@@ -247,6 +248,7 @@ class PixTable(GingaPlugin.LocalPlugin):
             self.fitsimage.deleteObjectByTag(self.layertag)
         except:
             pass
+        self.plot = None
         
     def pause(self):
         self.canvas.ui_setActive(False)
@@ -256,6 +258,8 @@ class PixTable(GingaPlugin.LocalPlugin):
         self.redo()
         
     def redo(self):
+        if self.plot == None:
+            return
         # cut out and set the pixel table data
         image = self.fitsimage.get_image()
         data, x1, y1, x2, y2 = image.cutout_radius(self.lastx, self.lasty,
@@ -263,12 +267,14 @@ class PixTable(GingaPlugin.LocalPlugin):
         self.plot(data, x1, y1, x2, y2, self.lastx, self.lasty,
                   self.pixtbl_radius, maxv=9)
 
-    def set_cutout_size(self, w):
-        index = w.get_active()
+    def set_cutout_size(self, w, val):
+        index = w.get_index()
         self.pixtbl_radius = self.sizes[index]
         
     def motion_cb(self, canvas, button, data_x, data_y):
         if self.mark_selected != None:
+            return False
+        if self.plot == None:
             return
         self.lastx, self.lasty = data_x, data_y
         self.redo()
@@ -304,22 +310,5 @@ class PixTable(GingaPlugin.LocalPlugin):
     def __str__(self):
         return 'pixtable'
     
-
-def append_tv(widget, text):
-    txtbuf = widget.get_buffer()
-    enditer = txtbuf.get_end_iter()
-    txtbuf.place_cursor(enditer)
-    txtbuf.insert_at_cursor(text)
-    enditer = txtbuf.get_end_iter()
-    txtbuf.place_cursor(enditer)
-#    widget.scroll_to_iter(enditer, False, 0, 0)
-
-def clear_tv(widget):
-    txtbuf = widget.get_buffer()
-    startiter = txtbuf.get_start_iter()
-    enditer = txtbuf.get_end_iter()
-    txtbuf.delete(startiter, enditer)
-
-
 #END
         

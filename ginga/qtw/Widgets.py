@@ -65,7 +65,7 @@ class GrowingTextEdit(QtGui.QTextEdit):
     def sizeChange(self):
         docHeight = self.document().size().height()
         # add some margin to prevent auto scrollbars
-        docHeight += 8
+        docHeight += 20
         if self.heightMin <= docHeight <= self.heightMax:
             self.setMaximumHeight(docHeight)
 
@@ -210,6 +210,9 @@ class SpinBox(WidgetBase):
     def set_value(self, val):
         self.widget.setValue(val)
 
+    def set_decimals(self, num):
+        self.widget.setDecimals(num)
+
     def set_limits(self, minval, maxval, incr_value=1):
         adj = self.widget
         adj.setRange(minval, maxval)
@@ -281,7 +284,9 @@ class CheckBox(WidgetBase):
         self.widget.setChecked(tf)
 
     def get_state(self):
-        return self.widget.checkState()
+        val = self.widget.checkState()
+        print "CHECKSTATE %s" % val
+        return val
 
 class ToggleButton(WidgetBase):
     def __init__(self, text=''):
@@ -580,5 +585,6 @@ def wrap(native_widget):
     wrapper = WidgetBase()
     wrapper.widget = native_widget
     return wrapper
+
 
 #END

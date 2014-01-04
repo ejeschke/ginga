@@ -158,14 +158,14 @@ class ComboBox(WidgetBase):
     def __init__(self):
         super(ComboBox, self).__init__()
 
-        cb = gtk.ComboBox()
+        cb = GtkHelp.ComboBox()
         liststore = gtk.ListStore(gobject.TYPE_STRING)
         cb.set_model(liststore)
         cell = gtk.CellRendererText()
         cb.pack_start(cell, True)
         cb.add_attribute(cell, 'text', 0)
         self.widget = cb
-        self.widget.connect('changed', self._cb_redirect)
+        self.widget.sconnect('changed', self._cb_redirect)
         
         self.enable_callback('activated')
 
@@ -224,10 +224,10 @@ class SpinBox(WidgetBase):
     def __init__(self, dtype=int):
         super(SpinBox, self).__init__()
 
-        self.widget = gtk.SpinButton()
+        self.widget = GtkHelp.SpinButton()
         # if not gtksel.have_gtk3:
         #     self.widget.set_update_policy(gtk.UPDATE_DISCONTINUOUS)
-        self.widget.connect('value-changed', self._cb_redirect)
+        self.widget.sconnect('value-changed', self._cb_redirect)
         
         self.enable_callback('value-changed')
 
@@ -241,6 +241,9 @@ class SpinBox(WidgetBase):
     def set_value(self, val):
         self.widget.set_value(val)
 
+    def set_decimals(self, num):
+        self.widget.set_digits(num)
+
     def set_limits(self, minval, maxval, incr_value=1):
         adj = self.widget.get_adjustment()
         adj.configure(minval, minval, maxval, incr_value, incr_value, 0)
@@ -251,16 +254,16 @@ class Slider(WidgetBase):
         super(Slider, self).__init__()
 
         if orientation == 'horizontal':
-            w = gtk.HScale()
+            w = GtkHelp.HScale()
             # TEMP: hack because scales don't seem to expand as expected
             w.set_size_request(200, -1)
         else:
-            w = gtk.VScale()
+            w = GtkHelp.VScale()
             w.set_size_request(-1, 200)
         w.set_draw_value(True)
         w.set_value_pos(gtk.POS_BOTTOM)
         self.widget = w
-        w.connect('value-changed', self._cb_redirect)
+        w.sconnect('value-changed', self._cb_redirect)
         
         self.enable_callback('value-changed')
 
@@ -300,8 +303,8 @@ class CheckBox(WidgetBase):
     def __init__(self, text=''):
         super(CheckBox, self).__init__()
 
-        self.widget = gtk.CheckButton(text)
-        self.widget.connect('toggled', self._cb_redirect)
+        self.widget = GtkHelp.CheckButton(text)
+        self.widget.sconnect('toggled', self._cb_redirect)
         
         self.enable_callback('activated')
 
@@ -313,17 +316,17 @@ class CheckBox(WidgetBase):
         self.widget.set_active(tf)
 
     def get_state(self):
-        self.widget.get_active()
+        return self.widget.get_active()
 
 
 class ToggleButton(WidgetBase):
     def __init__(self, text=''):
         super(ToggleButton, self).__init__()
 
-        w = gtk.ToggleButton(text)
+        w = GtkHelp.ToggleButton(text)
         w.set_mode(True)
         self.widget = w
-        self.widget.connect('toggled', self._cb_redirect)
+        self.widget.sconnect('toggled', self._cb_redirect)
         
         self.enable_callback('activated')
 
@@ -338,7 +341,7 @@ class RadioButton(WidgetBase):
 
         if group != None:
             group = group.get_widget()
-        self.widget = gtk.RadioButton(group, text)
+        self.widget = GtkHelp.RadioButton(group, text)
         self.widget.connect('toggled', self._cb_redirect)
         
         self.enable_callback('activated')
