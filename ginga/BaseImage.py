@@ -76,7 +76,8 @@ class BaseImage(Callback.Callbacks):
         return self._data
         
     def copy_data(self):
-        return self.get_data()
+        data = self.get_data()
+        return data.copy()
         
     def get_data_xy(self, x, y):
         data = self.get_data()
@@ -195,8 +196,9 @@ class BaseImage(Callback.Callbacks):
         other.set_data(data, metadata=self.metadata, astype=astype)
         
     def copy(self, astype=None):
-        other = BaseImage()
-        self.transfer(other, astype=astype)
+        data = self.copy_data()
+        metadata = self.get_metadata()
+        other = self.__class__(data_np=data, metadata=metadata)
         return other
         
     def cutout_data(self, x1, y1, x2, y2, astype=None):

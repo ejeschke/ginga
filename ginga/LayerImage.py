@@ -24,7 +24,7 @@ class LayerImage(object):
         self.compose_types = ('alpha', 'rgb')
         self.compose = 'alpha'
 
-    def _insertLayer(self, idx, image, alpha=None, name=None):
+    def _insert_layer(self, idx, image, alpha=None, name=None):
         if alpha == None:
             alpha = 1.0
         if name == None:
@@ -33,21 +33,22 @@ class LayerImage(object):
         bnch = Bunch.Bunch(image=image, alpha=alpha, name=name)
         self._layer.insert(idx, bnch)
 
-    def insertLayer(self, idx, image, alpha=None, name=None,
+    def insert_layer(self, idx, image, alpha=None, name=None,
                     compose=True):
-        self._insertLayer(idx, image, alpha=alpha, name=name)
+        self._insert_layer(idx, image, alpha=alpha, name=name)
 
         if compose:
             self.compose_layers()
         
-    def getLayer(self, idx):
+    def get_layer(self, idx):
         return self._layer[idx]
 
-    def numLayers(self):
+    def num_layers(self):
         return len(self._layer)
 
-    def getShape(self, entity='image'):
+    def get_max_shape(self, entity='image'):
         maxdim = -1
+        maxshape = ()
         for layer in self._layer:
             if entity == 'image':
                 shape = layer[entity].get_shape()
@@ -108,14 +109,15 @@ class LayerImage(object):
     
     def alpha_compose(self):
         start_time = time.time()
-        shape = self.getShape()
+        shape = self.get_max_shape()
         ht, wd = shape[:2]
         # alpha can be a scalar or an array, prepare for the appropriate kind
-        ashape = self.getShape(entity='alpha')
+        ashape = self.get_max_shape(entity='alpha')
         if len(ashape) == 0:
             alpha_used = 0.0
         else:
             alpha_used = numpy.zeros((ht, wd))
+
         # result holds the result of the composition
         result = numpy.zeros(shape)
 
@@ -141,7 +143,7 @@ class LayerImage(object):
     #     slices = []
     #     start_time = time.time()
     #     for i in xrange(len(self._layer)):
-    #         layer = self.getLayer(i)
+    #         layer = self.get_layer(i)
     #         data = self.alpha_multiply(layer.alpha, layer.image.get_data())
     #         slices.append(data)
     #     split_time = time.time()
@@ -154,14 +156,14 @@ class LayerImage(object):
     #         end_time - start_time)
 
     def rgb_compose(self):
-        num = self.numLayers()
-        layer = self.getLayer(0)
+        num = self.num_layers()
+        layer = self.get_layer(0)
         wd, ht = layer.image.get_size()
         result = numpy.empty((ht, wd, num))
 
         start_time = time.time()
         for i in xrange(len(self._layer)):
-            layer = self.getLayer(i)
+            layer = self.get_layer(i)
             alpha = layer.alpha
             if isinstance(alpha, BaseImage.BaseImage):
                 alpha = alpha.get_data()
@@ -178,7 +180,7 @@ class LayerImage(object):
 
         shape = data.shape
         if len(shape) == 2:
-            self._insertLayer(0, image)
+            self._insert_layer(0, image)
 
         else:
             names = ("Red", "Green", "Blue")
@@ -195,11 +197,11 @@ class LayerImage(object):
                 else:
                     name = "layer%d" % i
                     alpha = 0.0
-                self._insertLayer(i, img, name=name, alpha=alpha)
+                self._insert_layer(i, img, name=name, alpha=alpha)
 
         self.compose_layers()
 
-    def setComposeType(self, ctype):
+    def set_compose_type(self, ctype):
         assert ctype in self.compose_types, \
                BaseImage.ImageError("Bad compose type '%s': must be one of %s" % (
             ctype, str(self.compose_types)))
@@ -207,13 +209,13 @@ class LayerImage(object):
 
         self.compose_layers()
 
-    def setAlpha(self, lidx, val):
+    def set_alpha(self, lidx, val):
         layer = self._layer[lidx]
         layer.alpha = val
 
         self.compose_layers()
 
-    def setAlphas(self, vals):
+    def set_alphas(self, vals):
         for lidx in xrange(len(vals)):
             layer = self._layer[lidx]
             layer.alpha = vals[lidx]

@@ -126,10 +126,6 @@ class AstroImage(BaseImage):
     def set_io(self, io):
         self.io = io
         
-    def copy_data(self):
-        data = self.get_data()
-        return data.copy()
-        
     def get_data_xy(self, x, y):
         data = self.get_data()
         assert (x >= 0) and (y >= 0), \

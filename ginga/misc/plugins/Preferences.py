@@ -74,7 +74,11 @@ class Preferences(GingaPlugin.LocalPlugin):
         vbox = Widgets.VBox()
         #vbox.set_border_width(4)
         vbox.set_spacing(2)
-        sw.set_widget(vbox)
+
+        hbox = Widgets.HBox()
+        hbox.add_widget(vbox)
+        hbox.add_widget(Widgets.Label(''), stretch=1)
+        sw.set_widget(hbox)
 
         # COLOR MAPPING OPTIONS
         fr = Widgets.Frame("Colors")

@@ -51,7 +51,7 @@ class WBrowser(GingaPlugin.GlobalPlugin):
         if has_webkit:
             helpfile = os.path.abspath(os.path.join(packageHome,
                                                     "doc", "help.html"))
-            helpurl = "file://%s" % (helpfile)
+            helpurl = "file:%s" % (helpfile)
             self.browse(helpurl)
 
         btns = gtk.HButtonBox()

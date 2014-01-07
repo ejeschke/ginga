@@ -384,7 +384,7 @@ class GingaControl(Callback.Callbacks):
         if not os.path.exists(localDoc):
             url = "https://readthedocs.org/docs/ginga/en/latest"
         else:
-            url = "file:/%s" % (os.path.abspath(localDoc))
+            url = "file:%s" % (os.path.abspath(localDoc))
 
         # TODO: need to let GUI finish processing, it seems
         self.update_pending()

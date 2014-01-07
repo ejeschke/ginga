@@ -220,7 +220,7 @@ class SpinBox(WidgetBase):
         
     
 class Slider(WidgetBase):
-    def __init__(self, orientation='horizontal'):
+    def __init__(self, orientation='horizontal', track=False):
         super(Slider, self).__init__()
 
         if orientation == 'horizontal':
@@ -229,7 +229,7 @@ class Slider(WidgetBase):
             w = QtGui.QSlider(QtCore.Qt.Vertical)
         # this controls whether the callbacks are made *as the user
         # moves the slider* or afterwards
-        w.setTracking(True)
+        w.setTracking(track)
         w.setTickPosition(QtGui.QSlider.TicksBelow)
         self.widget = w
         w.valueChanged.connect(self._cb_redirect)
@@ -244,6 +244,9 @@ class Slider(WidgetBase):
     
     def set_value(self, val):
         self.widget.setValue(val)
+
+    def set_tracking(self, tf):
+        self.widget.setTracking(tf)
 
     def set_limits(self, minval, maxval, incr_value=1):
         adj = self.widget
@@ -285,8 +288,8 @@ class CheckBox(WidgetBase):
 
     def get_state(self):
         val = self.widget.checkState()
-        print "CHECKSTATE %s" % val
-        return val
+        # returns 0 (unchecked) or 2 (checked)
+        return (val != 0)
 
 class ToggleButton(WidgetBase):
     def __init__(self, text=''):

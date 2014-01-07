@@ -37,10 +37,10 @@ class Ruler(GingaPlugin.LocalPlugin):
         sw = Widgets.ScrollArea()
 
         vbox1 = Widgets.VBox()
-        vbox1.set_margins(4, 4, 4, 4)
+        vbox1.set_border_width(4)
         vbox1.set_spacing(2)
 
-        self.msgFont = self.fv.getFont("sansFont", 14)
+        self.msgFont = self.fv.getFont("sansFont", 12)
         tw = Widgets.TextArea(wrap=True, editable=False)
         tw.set_font(self.msgFont)
         self.tw = tw

@@ -74,13 +74,15 @@ class Zoom(GingaPlugin.GlobalPlugin):
         self.w.update(b)
         vbox.add_widget(w, stretch=0)
 
-        self.w.zoom_radius.set_limits(1, 100, incr_value=1)
+        self.w.zoom_radius.set_limits(1, 300, incr_value=1)
         self.w.zoom_radius.set_value(self.zoom_radius)
         self.w.zoom_radius.add_callback('value-changed', self.set_radius_cb)
+        self.w.zoom_radius.set_tracking(True)
 
         self.w.zoom_amount.set_limits(-20, 30, incr_value=1)
         self.w.zoom_amount.set_value(self.zoom_amount)
         self.w.zoom_amount.add_callback('value-changed', self.set_amount_cb)
+        self.w.zoom_amount.set_tracking(True)
 
         captions = (("Zoom:", 'label', 'Zoom', 'label'),
                     ("Relative Zoom", 'checkbutton'),

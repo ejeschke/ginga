@@ -250,7 +250,7 @@ class SpinBox(WidgetBase):
 
     
 class Slider(WidgetBase):
-    def __init__(self, orientation='horizontal'):
+    def __init__(self, orientation='horizontal', track=False):
         super(Slider, self).__init__()
 
         if orientation == 'horizontal':
@@ -260,9 +260,11 @@ class Slider(WidgetBase):
         else:
             w = GtkHelp.VScale()
             w.set_size_request(-1, 200)
+        self.widget = w
+            
         w.set_draw_value(True)
         w.set_value_pos(gtk.POS_BOTTOM)
-        self.widget = w
+        self.set_tracking(track)
         w.sconnect('value-changed', self._cb_redirect)
         
         self.enable_callback('value-changed')
@@ -276,6 +278,12 @@ class Slider(WidgetBase):
     
     def set_value(self, val):
         self.widget.set_value(val)
+
+    def set_tracking(self, tf):
+        if tf:
+            self.widget.set_update_policy(gtk.UPDATE_CONTINUOUS)
+        else:
+            self.widget.set_update_policy(gtk.UPDATE_DISCONTINUOUS)
 
     def set_limits(self, minval, maxval, incr_value=1):
         adj = self.widget.get_adjustment()

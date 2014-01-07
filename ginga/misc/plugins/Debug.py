@@ -34,6 +34,19 @@ class Debug(GingaPlugin.GlobalPlugin):
 
         vbox.add_widget(sw, stretch=1)
 
+        captions = (('Local plugin:', 'label', 'Local plugin', 'entry',
+                     'Reload', 'button'),
+                    ('Global plugin:', 'label', 'Global plugin', 'entry',
+                     'ReloadG', 'button'),
+                    )
+        w, b = Widgets.build_info(captions)
+        self.w.update(b)
+        b.local_plugin.set_tooltip("Name of a local plugin to reload")
+        b.reload.add_callback('activated', self.reload_local_cb)
+        b.global_plugin.set_tooltip("Name of a global plugin to reload")
+        b.reloadg.add_callback('activated', self.reload_global_cb)
+        vbox.add_widget(w, stretch=1)
+        
         self.entry = Widgets.TextEntry()
         vbox.add_widget(self.entry, stretch=0)
         self.entry.add_callback('activated', self.command_cb)
@@ -58,6 +71,10 @@ class Debug(GingaPlugin.GlobalPlugin):
             chinfo.opmon.reloadPlugin(plname, chinfo=chinfo)
         return True
             
+    def reload_local_cb(self, w):
+        plname = self.w.local_plugin.get_text().strip()
+        self.reloadLocalPlugin(plname)
+        
     def reloadGlobalPlugin(self, plname):
         gpmon = self.fv.gpmon
         pInfo = gpmon.getPluginInfo(plname)
@@ -68,6 +85,10 @@ class Debug(GingaPlugin.GlobalPlugin):
         self.fv.start_global_plugin(plname)
         return True
 
+    def reload_global_cb(self, w):
+        plname = self.w.global_plugin.get_text().strip()
+        self.reloadLocalPlugin(plname)
+        
     def command(self, cmdstr):
         # Evaluate command
         try:

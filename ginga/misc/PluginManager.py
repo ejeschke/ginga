@@ -32,7 +32,7 @@ class PluginManagerBase(object):
         self.active = {}
         self.focus  = set([])
         self.exclusive = set([])
-        self.focuscolor = "green"
+        self.focuscolor = "lightgreen"
         
         self.hbox = None
 
