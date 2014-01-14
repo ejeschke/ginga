@@ -30,6 +30,7 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
         self.plot_max = 500
         self.plot_limit = 100
         self.plot_start = 0
+        self.drawtype = 'circle'
 
         # star list
         self.starlist = []
@@ -53,8 +54,9 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
         self.dc = fv.getDrawClasses()
         canvas = self.dc.DrawingCanvas()
         canvas.enable_draw(True)
-        canvas.set_drawtype('rectangle', color='cyan', linestyle='dash',
-                            drawdims=True)
+        canvas.set_drawtype(self.drawtype, color='cyan', linestyle='dash',
+                            #drawdims=True
+                            )
         canvas.set_callback('cursor-down', self.btndown)
         canvas.set_callback('cursor-up', self.btnup)
         canvas.set_callback('draw-event', self.getarea)
@@ -116,34 +118,65 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
         
     def redo(self):
         obj = self.canvas.getObjectByTag(self.areatag)
-        if obj.kind != 'rectangle':
+        if not obj.kind in ('rectangle', 'circle'):
+            # !!?
             self.stop()
             return True
         
         try:
             image = self.fitsimage.get_image()
 
-            # calculate center of bbox
-            wd = obj.x2 - obj.x1
-            dw = wd // 2
-            ht = obj.y2 - obj.y1
-            dh = ht // 2
-            ctr_x, ctr_y = obj.x1 + dw, obj.y1 + dh
-            ra_ctr, dec_ctr = image.pixtoradec(ctr_x, ctr_y, format='str')
+            if obj.kind == 'rectangle':
+                # if  the object drawn is a rectangle, calculate the radius
+                # of a circle necessary to cover the area
+                # calculate center of bbox
+                wd = obj.x2 - obj.x1
+                dw = wd // 2
+                ht = obj.y2 - obj.y1
+                dh = ht // 2
+                ctr_x, ctr_y = obj.x1 + dw, obj.y1 + dh
+                ra_ctr, dec_ctr = image.pixtoradec(ctr_x, ctr_y, format='str')
 
-            # Calculate RA and DEC for the three points
-            # origination point
-            ra_org, dec_org = image.pixtoradec(obj.x1, obj.y1)
+                # Calculate RA and DEC for the three points
+                # origination point
+                ra_org, dec_org = image.pixtoradec(obj.x1, obj.y1)
 
-            # destination point
-            ra_dst, dec_dst = image.pixtoradec(obj.x2, obj.y2)
+                # destination point
+                ra_dst, dec_dst = image.pixtoradec(obj.x2, obj.y2)
 
-            # "heel" point making a right triangle
-            ra_heel, dec_heel = image.pixtoradec(obj.x1, obj.y2)
+                # "heel" point making a right triangle
+                ra_heel, dec_heel = image.pixtoradec(obj.x1, obj.y2)
 
-            ht_deg = image.deltaStarsRaDecDeg(ra_org, dec_org, ra_heel, dec_heel)
-            wd_deg = image.deltaStarsRaDecDeg(ra_heel, dec_heel, ra_dst, dec_dst)
-            radius_deg = image.deltaStarsRaDecDeg(ra_heel, dec_heel, ra_dst, dec_dst)
+                ht_deg = image.deltaStarsRaDecDeg(ra_org, dec_org,
+                                                  ra_heel, dec_heel)
+                wd_deg = image.deltaStarsRaDecDeg(ra_heel, dec_heel,
+                                                  ra_dst, dec_dst)
+                radius_deg = image.deltaStarsRaDecDeg(ra_heel, dec_heel,
+                                                      ra_dst, dec_dst)
+            else:
+                # if the object drawn is a circle, calculate the box
+                # enclosed by the circle
+                ctr_x, ctr_y = obj.x, obj.y
+                ra_ctr, dec_ctr = image.pixtoradec(ctr_x, ctr_y)
+                ra_dst, dec_dst = image.pixtoradec(ctr_x + obj.radius, ctr_y)
+                radius_deg = image.deltaStarsRaDecDeg(ra_ctr, dec_ctr,
+                                                      ra_dst, dec_dst)
+                # redo as str format for widget
+                ra_ctr, dec_ctr = image.pixtoradec(ctr_x, ctr_y, format='str')
+
+                wd = ht = obj.radius * 2.0
+                dw = wd // 2
+                dh = ht // 2
+
+                ra_org, dec_org = image.pixtoradec(ctr_x, ctr_y - dh)
+                ra_dst, dec_dst = image.pixtoradec(ctr_x, ctr_y + dh)
+                ht_deg = image.deltaStarsRaDecDeg(ra_org, dec_org,
+                                                  ra_dst, dec_dst)
+                ra_org, dec_org = image.pixtoradec(ctr_x - dw, ctr_y)
+                ra_dst, dec_dst = image.pixtoradec(ctr_x + dw, ctr_y)
+                wd_deg = image.deltaStarsRaDecDeg(ra_org, dec_org,
+                                                  ra_dst, dec_dst)
+                
             # width and height are specified in arcmin
             sgn, deg, mn, sec = wcs.degToDms(wd_deg)
             wd = deg*60.0 + float(mn) + sec/60.0
@@ -228,7 +261,7 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
         
     def getarea(self, canvas, tag):
         obj = canvas.getObjectByTag(tag)
-        if obj.kind != 'rectangle':
+        if not obj.kind in ('rectangle', 'circle'):
             return True
 
         if self.areatag:
@@ -267,7 +300,7 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
         # Offload this network task to a non-gui thread
         self.fv.nongui_do(self.getimage, server, params, chname)
 
-    def get_sky_image(self, key, params):
+    def get_sky_image(self, servername, params):
 
         srvbank = self.fv.get_ServerBank()
         #filename = 'sky-' + str(time.time()).replace('.', '-') + '.fits'
@@ -280,7 +313,7 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
             self.logger.error("failed to remove tmp file '%s': %s" % (
                 filepath, str(e)))
         try:
-            dstpath = srvbank.getImage(key, filepath, **params)
+            dstpath = srvbank.getImage(servername, filepath, **params)
             return dstpath
 
         except Exception as e:

@@ -235,6 +235,21 @@ class GingaView(QtMain.QtMain):
         ## item.triggered.connect(self.cascade_panes_cb)
         ## wsmenu.addAction(item)
         
+        # create a Plugins pulldown menu, and add it to the menu bar
+        plugmenu = menubar.addMenu("Plugins")
+
+        item = QtGui.QAction("Start Debug", menubar)
+        item.triggered.connect(lambda: self.start_global_plugin('Debug'))
+        plugmenu.addAction(item)
+
+        item = QtGui.QAction("Start Log", menubar)
+        item.triggered.connect(lambda: self.start_global_plugin('Log'))
+        plugmenu.addAction(item)
+
+        item = QtGui.QAction("Start SAMP", menubar)
+        item.triggered.connect(lambda: self.start_global_plugin('SAMP'))
+        plugmenu.addAction(item)
+
         # create a Help pulldown menu, and add it to the menu bar
         helpmenu = menubar.addMenu("Help")
 
@@ -244,14 +259,6 @@ class GingaView(QtMain.QtMain):
 
         item = QtGui.QAction("Documentation", menubar)
         item.triggered.connect(lambda: self.help())
-        helpmenu.addAction(item)
-
-        item = QtGui.QAction("Debug Plugin", menubar)
-        item.triggered.connect(lambda: self.start_global_plugin('Debug'))
-        helpmenu.addAction(item)
-
-        item = QtGui.QAction("Log Plugin", menubar)
-        item.triggered.connect(lambda: self.start_global_plugin('Log'))
         helpmenu.addAction(item)
 
         return menubar

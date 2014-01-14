@@ -123,17 +123,32 @@ class Catalogs(CatalogsBase.CatalogsBase):
         vbox0.pack_start(hbox, fill=True, expand=True)
 
         btns = gtk.HButtonBox()
-        btns.set_layout(gtk.BUTTONBOX_CENTER)
-        btns.set_spacing(5)
+        btns.set_layout(gtk.BUTTONBOX_START)
+        btns.set_spacing(4)
 
-        btn = gtk.Button("Set parameters from entire image")
+        btn = gtk.RadioButton(None, "Rectangle")
+        if self.drawtype == 'rectangle':
+            btn.set_active(True)
+        btn.connect('toggled', self.set_drawtype_cb, 'rectangle')
+        btns.add(btn)
+        btn = gtk.RadioButton(btn, "Circle")
+        if self.drawtype == 'circle':
+            btn.set_active(True)
+        btn.connect('toggled', self.set_drawtype_cb, 'circle')
+        btns.add(btn)
+        btn = gtk.Button("Entire image")
         btn.connect('clicked', lambda w: self.setfromimage())
         btns.add(btn)
         vbox0.pack_start(btns, padding=4, fill=True, expand=False)
 
+        sw = gtk.ScrolledWindow()
+        sw.set_border_width(2)
+        sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+        sw.add_with_viewport(vbox0)
+        
         lbl = gtk.Label("Params")
-        self.w.params = vbox0
-        nb.append_page(vbox0, lbl)
+        self.w.params = sw
+        nb.append_page(sw, lbl)
 
         vbox = gtk.VBox()
         self.table = CatalogListing(self.logger, vbox)
@@ -282,7 +297,7 @@ class Catalogs(CatalogsBase.CatalogsBase):
             self.redo()
             
     def instructions(self):
-        self.set_message("""TBD.""")
+        self.set_message("""Draw a rectangle or circle to enclose search area.""")
 
     def _update_widgets(self, d):
         for bnch in (self.image_server_params,
@@ -297,6 +312,13 @@ class Catalogs(CatalogsBase.CatalogsBase):
         for key in bnch.keys():
             params[key] = bnch[key].get_text()
         return params
+        
+    def set_drawtype_cb(self, w, drawtype):
+        tf = w.get_active()
+        if tf:
+            self.drawtype = drawtype
+            self.canvas.set_drawtype(self.drawtype, color='cyan',
+                                     linestyle='dash')
         
     def __str__(self):
         return 'catalogs'

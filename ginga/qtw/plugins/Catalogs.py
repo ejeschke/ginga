@@ -112,13 +112,28 @@ class Catalogs(CatalogsBase.CatalogsBase):
         btns = QtHelp.HBox()
         btns.setSpacing(5)
         
-        btn = QtGui.QPushButton("Set parameters from entire image")
+        btn = QtGui.QRadioButton("Rectangle")
+        if self.drawtype == 'rectangle':
+            btn.setChecked(True)
+        btn.toggled.connect(lambda tf: self.set_drawtype_cb(tf, 'rectangle'))
+        btns.addWidget(btn, stretch=0, alignment=QtCore.Qt.AlignLeft)
+        btn = QtGui.QRadioButton("Circle")
+        if self.drawtype == 'circle':
+            btn.setChecked(True)
+        btn.toggled.connect(lambda tf: self.set_drawtype_cb(tf, 'circle'))
+        btns.addWidget(btn, stretch=0, alignment=QtCore.Qt.AlignLeft)
+        btn = QtGui.QPushButton("Entire image")
         btn.clicked.connect(self.setfromimage)
-        btns.addWidget(btn, stretch=0, alignment=QtCore.Qt.AlignCenter)
+        btns.addWidget(btn, stretch=0, alignment=QtCore.Qt.AlignLeft)
         vbox0.addWidget(btns, stretch=0, alignment=QtCore.Qt.AlignTop)
 
         self.w.params = vbox0
-        nb.addTab(vbox0, u"Params")
+
+        sw = QtGui.QScrollArea()
+        sw.setWidgetResizable(True)
+        sw.setWidget(vbox0)
+        
+        nb.addTab(sw, u"Params")
 
         vbox = QtHelp.VBox()
         self.table = CatalogListing(self.logger, vbox)
@@ -277,6 +292,12 @@ class Catalogs(CatalogsBase.CatalogsBase):
 
     def instructions(self):
         self.set_message("""TBD.""")
+        
+    def set_drawtype_cb(self, tf, drawtype):
+        if tf:
+            self.drawtype = drawtype
+            self.canvas.set_drawtype(self.drawtype, color='cyan',
+                                     linestyle='dash')
         
     def __str__(self):
         return 'catalogs'

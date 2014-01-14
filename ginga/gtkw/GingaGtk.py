@@ -245,6 +245,24 @@ class GingaView(GtkMain.GtkMain):
         ## item.show()
         ## item.set_submenu(optionmenu)
 
+        plugmenu = gtk.Menu()
+        item = gtk.MenuItem(label="Plugins")
+        menubar.append(item)
+        item.show()
+        item.set_submenu(plugmenu)
+
+        w = gtk.MenuItem("Start Debug")
+        plugmenu.append(w)
+        w.connect("activate", lambda w: self.start_global_plugin('Debug'))
+
+        w = gtk.MenuItem("Start Log")
+        plugmenu.append(w)
+        w.connect("activate", lambda w: self.start_global_plugin('Log'))
+
+        w = gtk.MenuItem("Start SAMP")
+        plugmenu.append(w)
+        w.connect("activate", lambda w: self.start_global_plugin('SAMP'))
+
         helpmenu = gtk.Menu()
         item = gtk.MenuItem(label="Help")
         menubar.append(item)
@@ -258,14 +276,6 @@ class GingaView(GtkMain.GtkMain):
         w = gtk.MenuItem("Documentation")
         helpmenu.append(w)
         w.connect("activate", lambda w: self.help())
-
-        w = gtk.MenuItem("Debug Plugin")
-        helpmenu.append(w)
-        w.connect("activate", lambda w: self.start_global_plugin('Debug'))
-
-        w = gtk.MenuItem("Log Plugin")
-        helpmenu.append(w)
-        w.connect("activate", lambda w: self.start_global_plugin('Log'))
 
         menuholder.show_all()
 
