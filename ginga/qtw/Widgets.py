@@ -519,7 +519,7 @@ class GridBox(ContainerBase):
     def add_widget(self, child, row, col, stretch=0):
         self.add_ref(child)
         w = child.get_widget()
-        self.widget.layout().addWidget(w, row, col, stretch=stretch)
+        self.widget.layout().addWidget(w, row, col)
 
 
 # MODULE FUNCTIONS

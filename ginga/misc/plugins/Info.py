@@ -95,9 +95,7 @@ class Info(GingaPlugin.GlobalPlugin):
             #("Quit", 'button', 'exit_48', "Quit the program"),
             ):
 
-            btn = Widgets.Button('')
-            # TEMP: hack
-            btn.widget = self.fv.make_button(*tup)
+            btn = self.fv.make_button(*tup)
             name = tup[0]
             if tup[3]:
                 btn.set_tooltip(tup[3])

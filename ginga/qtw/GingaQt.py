@@ -16,6 +16,7 @@ import platform
         
 # GUI imports
 from ginga.qtw.QtHelp import QtGui, QtCore
+from ginga.qtw import Widgets
 
 # Local application imports
 from ginga import cmap, imap
@@ -347,20 +348,20 @@ class GingaView(QtMain.QtMain):
 
         if wtyp == 'button':
             if picon:
-                w = QtGui.QPushButton()
-                w.setIconSize(qsize)
-                w.setIcon(picon)
+                w = Widgets.Button()
+                _w = w.get_widget()
+                _w.setIconSize(qsize)
+                _w.setIcon(picon)
             else:
-                w = QtGui.QPushButton(name)
+                w = Widgets.Button(name)
         elif wtyp == 'toggle':
             if picon:
-                w = QtGui.QPushButton()
-                w.setCheckable(True)
-                w.setIconSize(qsize)
-                w.setIcon(picon)
+                w = Widgets.ToggleButton()
+                _w = w.get_widget()
+                _w.setIconSize(qsize)
+                _w.setIcon(picon)
             else:
-                w = QtGui.QPushButton(name)
-                w.setCheckable(True)
+                w = Widgets.ToggleButton()
 
         return w
 

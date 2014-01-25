@@ -13,7 +13,7 @@ import Queue
 import traceback
 
 # GUI imports
-from ginga.gtkw import gtksel
+from ginga.gtkw import gtksel, Widgets
 import gtk
 import gobject
 import pango
@@ -172,16 +172,18 @@ class GingaView(GtkMain.GtkMain):
 
         if wtyp == 'button':
             if image:
-                w = gtk.Button()
-                w.set_image(image)
+                w = Widgets.Button()
+                _w = w.get_widget()
+                _w.set_image(image)
             else:
-                w = gtk.Button(name)
+                w = Widgets.Button(name)
         elif wtyp == 'toggle':
             if image:
-                w = gtk.ToggleButton()
-                w.set_image(image)
+                w = Widgets.ToggleButton()
+                _w = w.get_widget()
+                _w.set_image(image)
             else:
-                w = gtk.ToggleButton(name)
+                w = Widgets.ToggleButton(name)
 
         return w
 
