@@ -56,6 +56,8 @@ class Zoom(GingaPlugin.GlobalPlugin):
                                self.zoomset, zi)
         zi.set_bg(0.4, 0.4, 0.4)
         zi.show_pan_mark(True, redraw=False)
+        # for debugging
+        zi.set_name('zoomimage')
         self.zoomimage = zi
 
         bd = zi.get_bindings()

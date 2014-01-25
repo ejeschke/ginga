@@ -48,6 +48,10 @@ pantry and whip it up" type viewer.
 
 Please send a pull request!
 
+Is it possible to control Ginga remotely?
+-----------------------------------------
+Yes.  See Section :ref:`sec-plugins_rc`.
+
 -----------------------
 World Coordinate System
 -----------------------

@@ -250,18 +250,7 @@ class GingaView(GtkMain.GtkMain):
         menubar.append(item)
         item.show()
         item.set_submenu(plugmenu)
-
-        w = gtk.MenuItem("Start Debug")
-        plugmenu.append(w)
-        w.connect("activate", lambda w: self.start_global_plugin('Debug'))
-
-        w = gtk.MenuItem("Start Log")
-        plugmenu.append(w)
-        w.connect("activate", lambda w: self.start_global_plugin('Log'))
-
-        w = gtk.MenuItem("Start SAMP")
-        plugmenu.append(w)
-        w.connect("activate", lambda w: self.start_global_plugin('SAMP'))
+        self.w.menu_plug = plugmenu
 
         helpmenu = gtk.Menu()
         item = gtk.MenuItem(label="Help")
@@ -281,6 +270,12 @@ class GingaView(GtkMain.GtkMain):
 
     def add_dialogs(self):
         self.filesel = FileSelection.FileSelection(action=gtk.FILE_CHOOSER_ACTION_OPEN)
+        
+    def add_plugin_menu(self, name):
+        w = gtk.MenuItem("Start %s" % (name))
+        self.w.menu_plug.append(w)
+        w.connect("activate", lambda w: self.start_global_plugin(name))
+        w.show()
         
     def add_statusbar(self, statusholder):
         ## lbl = gtk.Label('')

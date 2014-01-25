@@ -89,11 +89,17 @@ class IRAF(GingaPlugin.GlobalPlugin):
 
         fr = Widgets.Frame("IRAF")
 
-        captions = [("Control", 'hbox'),
-                    ("Channel:", 'label', 'Channel', 'llabel'),
-                    ]
+        captions = [
+            ("Addr:", 'label', "Addr", 'entry'),
+            ("Control", 'hbox'),
+            ("Channel:", 'label', 'Channel', 'llabel'),
+            ]
         w, b = Widgets.build_info(captions)
         self.w.update(b)
+
+        b.addr.set_length(150)
+        b.addr.set_text(str(self.addr.name))
+        b.addr.set_tooltip("Address to run remote control server")
 
         self.w.mode_d = {}
         btn1 = Widgets.RadioButton("Ginga")
@@ -118,6 +124,16 @@ class IRAF(GingaPlugin.GlobalPlugin):
 
         # stretch
         vbox.add_widget(Widgets.Label(''), stretch=1)
+
+        btns = Widgets.HBox()
+        btns.set_spacing(4)
+        btns.set_border_width(4)
+
+        btn = Widgets.Button("Close")
+        btn.add_callback('activated', lambda w: self.close())
+        btns.add_widget(btn)
+        btns.add_widget(Widgets.Label(''), stretch=1)
+        vbox.add_widget(btns)
 
         container.add_widget(vbox, stretch=1)
 
@@ -211,10 +227,10 @@ class IRAF(GingaPlugin.GlobalPlugin):
             pass
         
         # start the data listener task, if appropriate
-        #ev_quit = threading.Event()
+        ev_quit = threading.Event()
         self.dataTask = iis.IIS_DataListener(
             self.addr, controller=self,
-            ev_quit=self.ev_quit, logger=self.logger)
+            ev_quit=ev_quit, logger=self.logger)
         self.fv.nongui_do(self.dataTask.mainloop)
 
         
@@ -569,6 +585,10 @@ class IRAF(GingaPlugin.GlobalPlugin):
             return self.fv.showxy(fitsimage, data_x, data_y)
 
         return False
+
+    def close(self):
+        self.fv.stop_global_plugin(str(self))
+        return True
 
     def __str__(self):
         return 'iraf'

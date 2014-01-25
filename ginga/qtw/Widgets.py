@@ -501,6 +501,27 @@ class Splitter(ContainerBase):
         self.widget.addWidget(child_w)
 
 
+class GridBox(ContainerBase):
+    def __init__(self, rows=1, columns=1):
+        super(GridBox, self).__init__()
+
+        w = QtGui.QWidget()
+        layout = QtGui.QGridLayout()
+        w.setLayout(layout)
+        self.widget = w
+
+    def set_row_spacing(self, val):
+        self.widget.layout().setVerticalSpacing(val)
+
+    def set_column_spacing(self, val):
+        self.widget.layout().setHorizontalSpacing(val)
+
+    def add_widget(self, child, row, col, stretch=0):
+        self.add_ref(child)
+        w = child.get_widget()
+        self.widget.layout().addWidget(w, row, col, stretch=stretch)
+
+
 # MODULE FUNCTIONS
 
 def name_mangle(name, pfx=''):

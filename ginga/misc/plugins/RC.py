@@ -30,6 +30,9 @@ Channel methods can be called like this:
 
 Calls can be made from a remote host by adding the options
    --host=<hostname> --port=9000
+   
+(in the plugin GUI be sure to remove the 'localhost' prefix
+from the addr, but leave the colon and port)
 
 Examples:
 
@@ -64,6 +67,7 @@ import bz2
 
 from ginga import GingaPlugin
 from ginga import AstroImage
+from ginga.misc import Widgets
 from ginga import cmap
 
 help_msg = sys.modules[__name__].__doc__
@@ -78,13 +82,50 @@ class RC(GingaPlugin.GlobalPlugin):
         # What port to listen for requests
         self.port = 9000
         # If blank, listens on all interfaces
-        self.host = ''
+        self.host = 'localhost'
 
         self.ev_quit = fv.ev_quit
 
-    # NO GUI...yet
-    #def build_gui(self, container):
-    #    pass
+    def build_gui(self, container):
+        vbox = Widgets.VBox()
+
+        fr = Widgets.Frame("Remote Control")
+
+        captions = [
+            ("Addr:", 'label', "Addr", 'llabel', 'Restart', 'button'),
+            ("Set Addr:", 'label', "Set Addr", 'entry'),
+            ]
+        w, b = Widgets.build_info(captions)
+        self.w.update(b)
+
+        addr = self.host + ':' + str(self.port)
+        b.addr.set_text(addr)
+        b.restart.set_tooltip("Restart the server")
+        b.restart.add_callback('activated', self.restart_cb)
+        
+        b.set_addr.set_length(100)
+        b.set_addr.set_text(addr)
+        b.set_addr.set_tooltip("Set address to run remote control server")
+        b.set_addr.add_callback('activated', self.set_addr_cb)
+
+        fr.set_widget(w)
+        vbox.add_widget(fr, stretch=0)
+
+        # stretch
+        vbox.add_widget(Widgets.Label(''), stretch=1)
+
+        btns = Widgets.HBox()
+        btns.set_spacing(4)
+        btns.set_border_width(4)
+
+        btn = Widgets.Button("Close")
+        btn.add_callback('activated', lambda w: self.close())
+        btns.add_widget(btn)
+        btns.add_widget(Widgets.Label(''), stretch=1)
+        vbox.add_widget(btns)
+
+        container.add_widget(vbox, stretch=1)
+
     
     def start(self):
         self.robj = GingaWrapper(self.fv, self.logger)
@@ -98,12 +139,29 @@ class RC(GingaPlugin.GlobalPlugin):
     def stop(self):
         self.server.shutdown()
 
+    def restart_cb(self, w):
+        # restart server
+        self.server.shutdown()
+        self.start()
+
+    def set_addr_cb(self, w):
+        # get and parse address
+        addr = w.get_text()
+        host, port = addr.split(':')
+        self.host = host
+        self.port = int(port)
+        self.w.addr.set_text(addr)
+
     def monitor_shutdown(self):
         # the thread running this method waits until the entire viewer
         # is exiting and then shuts down the XML-RPC server which is
         # running in a different thread
         self.ev_quit.wait()
         self.server.shutdown()
+
+    def close(self):
+        self.fv.stop_global_plugin(str(self))
+        return True
 
     def __str__(self):
         return 'rc'

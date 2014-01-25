@@ -116,6 +116,8 @@ class Pick(GingaPlugin.LocalPlugin):
         di.set_imap(im, redraw=False)
         di.set_callback('none-move', self.detailxy)
         di.set_bg(0.4, 0.4, 0.4)
+        # for debugging
+        di.set_name('pickimage')
         self.pickimage = di
 
         bd = di.get_bindings()

@@ -542,6 +542,30 @@ class Splitter(ContainerBase):
         self.widget.show_all()
 
 
+class GridBox(ContainerBase):
+    def __init__(self, rows=1, columns=1):
+        super(GridBox, self).__init__()
+
+        w = gtk.Table(rows=rows, columns=columns)
+        self.widget = w
+
+    def set_row_spacing(self, val):
+        self.widget.set_row_spacings(val)
+
+    def set_column_spacing(self, val):
+        self.widget.set_col_spacings(val)
+
+    def add_widget(self, child, row, col, stretch=0):
+        self.add_ref(child)
+        w = child.get_widget()
+        if stretch > 0:
+            xoptions = gtk.EXPAND|gtk.FILL
+        else:
+            xoptions = gtk.FILL
+        self.widget.attach(w, col, col+1, row, row+1, xoptions=xoptions)
+        self.widget.show_all()
+
+
 # MODULE FUNCTIONS
 
 def name_mangle(name, pfx=''):

@@ -50,6 +50,8 @@ class Pan(GingaPlugin.GlobalPlugin):
         sfi.set_callback('none-move', self.motion_cb)
         sfi.set_callback('scroll', self.zoom)
         sfi.set_callback('configure', self.reconfigure)
+        # for debugging
+        sfi.set_name('panimage')
 
         bd = sfi.get_bindings()
         bd.enable_pan(False)

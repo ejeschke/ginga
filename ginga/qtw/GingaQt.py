@@ -95,7 +95,7 @@ class GingaView(QtMain.QtMain):
         self.w.fscreen = None
 
         menuholder = self.w['menu']
-        self.add_menus(menuholder)
+        self.w.menubar = self.add_menus(menuholder)
 
         # Create main (center) FITS image pane
         self.w.vbox = self.w['main'].layout()
@@ -237,18 +237,7 @@ class GingaView(QtMain.QtMain):
         
         # create a Plugins pulldown menu, and add it to the menu bar
         plugmenu = menubar.addMenu("Plugins")
-
-        item = QtGui.QAction("Start Debug", menubar)
-        item.triggered.connect(lambda: self.start_global_plugin('Debug'))
-        plugmenu.addAction(item)
-
-        item = QtGui.QAction("Start Log", menubar)
-        item.triggered.connect(lambda: self.start_global_plugin('Log'))
-        plugmenu.addAction(item)
-
-        item = QtGui.QAction("Start SAMP", menubar)
-        item.triggered.connect(lambda: self.start_global_plugin('SAMP'))
-        plugmenu.addAction(item)
+        self.w.menu_plug = plugmenu
 
         # create a Help pulldown menu, and add it to the menu bar
         helpmenu = menubar.addMenu("Help")
@@ -268,6 +257,11 @@ class GingaView(QtMain.QtMain):
         filesel.setFileMode(QtGui.QFileDialog.ExistingFile)
         filesel.setViewMode(QtGui.QFileDialog.Detail)
         self.filesel = filesel
+
+    def add_plugin_menu(self, name):
+        item = QtGui.QAction("Start %s" % (name), self.w.menubar)
+        item.triggered.connect(lambda: self.start_global_plugin(name))
+        self.w.menu_plug.addAction(item)
 
     def add_statusbar(self, holder):
         self.w.status = QtGui.QStatusBar()

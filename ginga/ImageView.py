@@ -159,7 +159,8 @@ class ImageViewBase(Callback.Callbacks):
         self.t_.getSetting('rot_deg').add_callback('set', self.rotation_change_cb)
 
         # misc
-        self.t_.addDefaults(use_embedded_profile=True, auto_orient=False)
+        self.t_.addDefaults(use_embedded_profile=True, auto_orient=False,
+                            defer_redraw=True, defer_lagtime=0.025)
 
         # Object that calculates auto cut levels
         name = self.t_.get('autocut_method', 'histogram')
@@ -214,8 +215,8 @@ class ImageViewBase(Callback.Callbacks):
         self._rgbobj = None
 
         # optimization of redrawing
-        self.defer_redraw = True
-        self.defer_lagtime = 0.025
+        self.defer_redraw = self.t_.get('defer_redraw', True)
+        self.defer_lagtime = self.t_.get('defer_lagtime', 0.025)
         self._defer_whence = 0
         self._defer_lock = threading.RLock()
         self._defer_flag = False
@@ -556,12 +557,14 @@ class ImageViewBase(Callback.Callbacks):
             # finally update the window drawable from the offscreen surface
             self.update_image()
             time_done = time.time()
+            time_delta = time_start - self.time_last_redraw
+            time_elapsed = time_done - time_start
             self.time_last_redraw = time_done
-            self.logger.debug("widget redraw %s (whence=%d) %.4f sec" % (
-                str(self), whence, time_done - time_start))
+            self.logger.debug("widget '%s' redraw (whence=%d) delta=%.4f elapsed=%.4f sec" % (
+                self.name, whence, time_delta, time_elapsed))
 
         except NoImageError:
-            self.logger.warn("There is no image set")
+            self.logger.warn("There is no image set to view")
 
         except Exception as e:
             self.logger.error("Error redrawing image: %s" % (str(e)))

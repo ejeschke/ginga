@@ -362,6 +362,7 @@ class GingaControl(Callback.Callbacks):
             self.mm.loadModule(spec.module, pfx=pluginconfpfx)
 
             self.gpmon.loadPlugin(name, spec)
+            self.add_plugin_menu(name)
 
             start = spec.get('start', True)
             if start:
@@ -902,6 +903,8 @@ class GingaControl(Callback.Callbacks):
             bnch = self.add_viewer(chname, prefs,
                                    use_readout=use_readout,
                                    workspace=workspace)
+            # for debugging
+            bnch.fitsimage.set_name('channel:%s' % (chname))
 
             opmon = self.getPluginManager(self.logger, self,
                                           self.ds, self.mm)

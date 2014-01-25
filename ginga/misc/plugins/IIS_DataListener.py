@@ -1075,7 +1075,8 @@ def get_interface():
         uid = os.getuid()
         path = '/tmp/.IMT' + str(uid)
         prot = 'unix'
-        return Bunch.Bunch(prot=prot, path=path)
+        name = "%s:%s" % (prot, path)
+        return Bunch.Bunch(prot=prot, path=path, name=name)
 
     n, match = 1, re.match(r'^(inet)\:(\d+)\:([\w\._\-]+)$', imtdev)
     if not match:
@@ -1091,22 +1092,22 @@ def get_interface():
     if n == 1:
         prot, port, host = match.groups()
         port = int(port)
-        return Bunch.Bunch(prot=prot, port=port, host=host)
+        return Bunch.Bunch(prot=prot, port=port, host=host, name=imtdev)
 
     elif n == 2:
         prot, port = match.groups()
         port = int(port)
-        return Bunch.Bunch(prot=prot, port=port, host='')
+        return Bunch.Bunch(prot=prot, port=port, host='', name=imtdev)
 
     elif n == 3:
         prot, path = match.groups()
-        return Bunch.Bunch(prot=prot, path=path)
+        return Bunch.Bunch(prot=prot, path=path, name=imtdev)
 
     elif n == 4:
         port = match.group(1)
         port = int(port)
         prot = 'inet'
-        return Bunch.Bunch(prot=prot, port=port, host='')
+        return Bunch.Bunch(prot=prot, port=port, host='', name=imtdev)
         
         
 #END
