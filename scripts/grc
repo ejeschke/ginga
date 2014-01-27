@@ -11,16 +11,19 @@
 """
  See the plugin RC.py for details of the server side.
 
- Start ginga with the --modules=RC option to enable Ginga remote control.
+ In Ginga, start the RC plugin to enable Ginga remote control
+  (Plugins->Start RC).
  
- Show example usage:
+ Show example usage (plugin must be started):
  $ grc help
+
+ 
 """
 import sys
 import xmlrpclib
 from optparse import OptionParser
 
-version = '20130703'
+version = '20140127'
 
 def main(options, args):
 

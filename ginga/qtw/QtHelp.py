@@ -323,7 +323,7 @@ class Desktop(Callback.Callbacks):
 
         self.toplevels = []
         
-        for name in ('page-switch', 'page-select'):
+        for name in ('page-switch', 'page-select', 'all-closed'):
             self.enable_callback(name)
         self.popmenu = None
         
@@ -744,6 +744,14 @@ class Desktop(Callback.Callbacks):
         def seq(params, cols, pack):
             def mypack(w):
                 self.toplevels.append(w)
+                def closeEvent(*args):
+                    #self.logger.debug("window %s closed" % str(w))
+                    self.toplevels.remove(w)
+                    w.deleteLater()
+                    if len(self.toplevels) == 0:
+                        self.make_callback('all-closed')
+                        
+                w.closeEvent = closeEvent
                 w.showNormal()
                 
             for dct in cols:

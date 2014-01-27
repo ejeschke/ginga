@@ -219,7 +219,11 @@ Create a new channel::
  
 Load a file::
 
-    $ grc ginga load_file FOO /home/eric/testdata/SPCAM/SUPA01118797.fits
+    $ grc ginga load_file /home/eric/testdata/SPCAM/SUPA01118797.fits
+
+Load a file into a specific channel::
+
+    $ grc ginga load_file /home/eric/testdata/SPCAM/SUPA01118797.fits FOO
 
 Cut levels::
 
@@ -231,7 +235,7 @@ Auto cut levels::
 
 Zoom to a specific level::
 
-    $ grc -- channel FOO zoom -7
+    $ grc -- channel FOO zoom_to -7
 
 (note the use of -- to allow us to pass a parameter beginning with "-").
  
@@ -242,6 +246,10 @@ Zoom to fit::
 Transform::
 
     $ grc channel FOO transform 1 0 1
+
+Rotate::
+
+    $ grc channel FOO rotate 37.5
 
 .. _sec-localplugins:
 

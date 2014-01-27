@@ -59,6 +59,18 @@ class GtkMain(object):
         
         self.gui_thread_id = None
         
+        try:
+            screen = gtk.gdk.screen_get_default()
+            self.screen_ht = screen.get_height()
+            self.screen_wd = screen.get_width()
+        except:
+            self.screen_wd = 1600
+            self.screen_ht = 1200
+        #print "screen dimensions %dx%d" % (self.screen_wd, self.screen_ht)
+
+    def get_screen_size(self):
+        return (self.screen_wd, self.screen_ht)
+    
     def update_pending(self, timeout=0.0):
         """Process all pending GTK events and return.  _timeout_ is a tuning
         parameter for performance.

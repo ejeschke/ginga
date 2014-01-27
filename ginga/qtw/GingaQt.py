@@ -47,17 +47,9 @@ class GingaView(QtMain.QtMain):
         if os.path.exists(rc_file):
             self.app.setStyleSheet(rc_file)
         
-        # Get screen size
-        desktop = self.app.desktop()
-        #rect = desktop.screenGeometry()
-        rect = desktop.availableGeometry()
-        size = rect.size()
-        self.screen_wd = size.width()
-        self.screen_ht = size.height()
-
         # defaults for height and width
-        self.default_height = min(900, self.screen_ht - 100)
-        self.default_width  = min(1600, self.screen_wd)
+        #self.default_height = min(900, self.screen_ht - 100)
+        #self.default_width  = min(1600, self.screen_wd)
 
         self.w = Bunch.Bunch()
         self.iconpath = icon_path
@@ -91,6 +83,7 @@ class GingaView(QtMain.QtMain):
                          self.quit)
             #root.setApp(self)
             root.setWindowTitle("Ginga")
+        self.ds.add_callback('all-closed', self.quit)
         
         self.w.root = root
         self.w.fscreen = None

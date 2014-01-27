@@ -36,18 +36,7 @@ rc_file = os.path.join(moduleHome, "gtk_rc")
 if os.path.exists(rc_file):
     gtk.rc_parse(rc_file) 
 
-try:
-    screen = gtk.gdk.screen_get_default()
-    screen_ht = screen.get_height()
-    screen_wd = screen.get_width()
-    root = None
-except:
-    screen_wd = 1600
-    screen_ht = 1200
-#print "screen dimensions %dx%d" % (screen_wd, screen_ht)
-
-default_height = min(900, screen_ht - 100)
-default_width  = min(1600, screen_wd)
+root = None
 
 # svg not supported well on pygtk/MacOSX yet
 #icon_ext = '.svg'
@@ -61,8 +50,8 @@ class GingaView(GtkMain.GtkMain):
     def __init__(self, logger, ev_quit):
         GtkMain.GtkMain.__init__(self, logger=logger, ev_quit=ev_quit)
         # defaults
-        self.default_height = default_height
-        self.default_width  = default_width
+        #self.default_height = min(900, self.screen_ht - 100)
+        #self.default_width  = min(1600, self.screen_wd)
 
         self.w = Bunch.Bunch()
         self.iconpath = icon_path

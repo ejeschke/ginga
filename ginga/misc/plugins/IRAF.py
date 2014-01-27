@@ -67,6 +67,21 @@ class IRAF(GingaPlugin.GlobalPlugin):
         self.ev_quit = self.fv.ev_quit
         self.dataTask = None
 
+        # Holds frame buffers
+        self.fb = {}
+        self.current_frame = 0
+        
+        # cursor position
+        self.cursor_x = 1.0
+        self.cursor_y = 1.0
+        
+        self.mode = 'ginga'
+        self.imexam_active = False
+        self.imexam_chname = None
+
+        # init the first frame(frame 0)
+        self.init_frame(0)
+
         # colormap for use with IRAF displays
         self.cm_iis = cmap.ColorMap('iis_iraf', cmap_iis_iraf)
         self.im_iis = imap.get_imap('ultrasmooth')
@@ -75,6 +90,7 @@ class IRAF(GingaPlugin.GlobalPlugin):
         fv.add_callback('delete-channel', self.delete_channel)
         #fv.set_callback('active-image', self.focus_cb)
 
+        self.gui_up = False
 
     def build_gui(self, container):
 
@@ -136,8 +152,15 @@ class IRAF(GingaPlugin.GlobalPlugin):
         vbox.add_widget(btns)
 
         container.add_widget(vbox, stretch=1)
+        self.gui_up = True
+
+        fmap = self.get_channel_frame_mapping()
+        self.update_chinfo(fmap)
+
 
     def update_chinfo(self, fmap):
+        if not self.gui_up:
+            return
         # Update the GUI with the new frame/channel mapping
         fmap.sort(lambda x, y: x[1] - y[1])
 
@@ -159,10 +182,10 @@ class IRAF(GingaPlugin.GlobalPlugin):
         isIRAF = self.w.mode_d['iraf'].get_state()
         chname = self.imexam_chname
         if isIRAF:
-            print "setting mode to Ginga"
+            self.logger.info("setting mode to Ginga")
             self.setMode('Ginga', chname)
         else:
-            print "setting mode to IRAF"
+            self.logger.info("setting mode to IRAF")
             self.setMode('IRAF', chname)
 
 
@@ -205,18 +228,6 @@ class IRAF(GingaPlugin.GlobalPlugin):
             self.ui_enable(chinfo.fitsimage)
 
     def start(self):
-        # holds frame buffers
-        self.fb = {}
-        self.current_frame = 0
-        
-        # cursor position
-        self.cursor_x = 1.0
-        self.cursor_y = 1.0
-        
-        self.mode = 'ginga'
-        self.imexam_active = False
-        self.imexam_chname = None
-
         # init the first frame(frame 0)
         self.init_frame(0)
 
@@ -237,6 +248,7 @@ class IRAF(GingaPlugin.GlobalPlugin):
     def stop(self):
         if self.dataTask:
             self.dataTask.stop()
+        self.gui_up = False
 
     def channel_to_frame(self, chname):
         for n, fb in self.fb.items():
@@ -249,6 +261,8 @@ class IRAF(GingaPlugin.GlobalPlugin):
         return l
     
     def new_image_cb(self, fitsimage, image, chinfo):
+        if not self.gui_up:
+            return
         # check if this is an image we received from IRAF or
         # one that was loaded locally.
         ct = image.get('ct', None)

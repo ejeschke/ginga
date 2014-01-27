@@ -39,8 +39,11 @@ Examples:
  Create a new channel:
  $ grc ginga add_channel FOO
  
- Load a file:
- $ grc ginga load_file FOO /home/eric/testdata/SPCAM/SUPA01118797.fits
+ Load a file into current channel:
+ $ grc ginga load_file /home/eric/testdata/SPCAM/SUPA01118797.fits
+
+ Load a file into a specific channel:
+ $ grc ginga load_file /home/eric/testdata/SPCAM/SUPA01118797.fits FOO
 
  Cut levels:
  $ grc channel FOO cut_levels 163 1300
@@ -49,13 +52,16 @@ Examples:
  $ grc channel FOO auto_levels
 
  Zoom to a specific level:
- $ grc -- channel FOO zoom -7
+ $ grc -- channel FOO zoom_to -7
  
  Zoom to fit:
  $ grc channel FOO zoom_fit
  
  Transform:
  $ grc channel FOO transform 1 0 1
+
+ Rotate:
+ $ grc channel FOO rotate 37.5
 
  
 """

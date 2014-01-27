@@ -61,6 +61,17 @@ class QtMain(object):
         self.app = app
         self.gui_thread_id = None
         
+        # Get screen size
+        desktop = self.app.desktop()
+        #rect = desktop.screenGeometry()
+        rect = desktop.availableGeometry()
+        size = rect.size()
+        self.screen_wd = size.width()
+        self.screen_ht = size.height()
+
+    def get_screen_size(self):
+        return (self.screen_wd, self.screen_ht)
+    
     def update_pending(self, timeout=0.0):
 
         #print "1. PROCESSING OUT-BAND"

@@ -116,6 +116,9 @@ local_plugins = [
 
 def main(options, args):
 
+    # default of 1000 is a little too small
+    sys.setrecursionlimit(2000)
+    
     # Create a logger
     logger = log.get_logger(name='ginga', options=options)
 

@@ -40,6 +40,20 @@ class LayerImage(object):
         if compose:
             self.compose_layers()
         
+    def set_layer(self, idx, image, alpha=None, name=None,
+                    compose=True):
+        self.delete_layer(idx, compose=False)
+        self._insert_layer(idx, image, alpha=alpha, name=name)
+
+        if compose:
+            self.compose_layers()
+        
+    def delete_layer(self, idx, compose=True):
+        self._layer.pop(idx)
+
+        if compose:
+            self.compose_layers()
+        
     def get_layer(self, idx):
         return self._layer[idx]
 
