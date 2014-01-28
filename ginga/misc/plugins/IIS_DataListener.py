@@ -1066,17 +1066,21 @@ def right_pad (strg, length, ch=' '):
     return (strg + ch * (length - len(strg)))
 
 
-def get_interface():
-    try:
-        imtdev = os.environ['IMTDEV']
+def get_interface(addr=None):
+    if addr:
+        imtdev = addr
 
-    except KeyError:
-        #port = 5137
-        uid = os.getuid()
-        path = '/tmp/.IMT' + str(uid)
-        prot = 'unix'
-        name = "%s:%s" % (prot, path)
-        return Bunch.Bunch(prot=prot, path=path, name=name)
+    else:
+        try:
+            imtdev = os.environ['IMTDEV']
+
+        except KeyError:
+            #port = 5137
+            uid = os.getuid()
+            path = '/tmp/.IMT' + str(uid)
+            prot = 'unix'
+            name = "%s:%s" % (prot, path)
+            return Bunch.Bunch(prot=prot, path=path, name=name)
 
     n, match = 1, re.match(r'^(inet)\:(\d+)\:([\w\._\-]+)$', imtdev)
     if not match:
@@ -1087,7 +1091,7 @@ def get_interface():
         n, match = 4, re.match(r'^(\d+)$', imtdev)
     if not match:
         # Error
-        raise socketError("I don't understand the format of env var IMTDEV: '%s'" % (imtdev))
+        raise socketError("I don't understand the format of addr IMTDEV: '%s'" % (imtdev))
 
     if n == 1:
         prot, port, host = match.groups()

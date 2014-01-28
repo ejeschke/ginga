@@ -3,20 +3,16 @@ The IRAF plugin implements a remote control interface for the Ginga FITS
 viewer from an IRAF session.  In particular it supports the use of the
 IRAF 'display' and 'imexamine' commands.
 
-The IRAFBase class is a non-GUI specific base class for the plugin.
-
 Instructions for use:
 
 Set the environment variable IMTDEV appropriately, e.g.
 
     $ export IMTDEV=inet:45005         (or)
     $ export IMTDEV=unix:/tmp/.imtg45
+
+Ginga will try to use the default value if none is assigned.
     
-Start Ginga with an option to load the IRAF plugin as a global:
-
-$ ./ginga.py --modules=IRAF
-
-Start IRAF.
+Start IRAF plugin (Plugins->Start IRAF).
 
 From Ginga you can load images and then use 'imexamine' from IRAF to load
 them, do photometry, etc.  You can also use the 'display' command from IRAF
@@ -27,6 +23,8 @@ When using imexamine, the plugin disables normal UI processing on the
 channel image so that keystrokes, etc. are passed through to IRAF.  You can
 toggle back and forth between local Ginga control and IRAF control using
 the radio buttons at the top of the tab or using the space bar.
+
+IRAF commands that have been tested: display, imexam, rimcur and tvmark.
 """
 import sys, os
 import logging
@@ -106,19 +104,27 @@ class IRAF(GingaPlugin.GlobalPlugin):
         fr = Widgets.Frame("IRAF")
 
         captions = [
-            ("Addr:", 'label', "Addr", 'entry'),
+            ("Addr:", 'label', "Addr", 'llabel', 'Restart', 'button'),
+            ("Set Addr:", 'label', "Set Addr", 'entry'),
             ("Control", 'hbox'),
             ("Channel:", 'label', 'Channel', 'llabel'),
             ]
         w, b = Widgets.build_info(captions)
         self.w.update(b)
 
-        b.addr.set_length(150)
-        b.addr.set_text(str(self.addr.name))
-        b.addr.set_tooltip("Address to run remote control server")
+        addr = str(self.addr.name)
+        b.addr.set_text(addr)
+        b.restart.set_tooltip("Restart the server")
+        b.restart.add_callback('activated', self.restart_cb)
+        
+        b.set_addr.set_length(100)
+        b.addr.set_text(addr)
+        b.set_addr.set_tooltip("Set address to run remote control server")
+        b.set_addr.add_callback('activated', self.set_addr_cb)
 
         self.w.mode_d = {}
         btn1 = Widgets.RadioButton("Ginga")
+        btn1.set_state(True)
         btn1.add_callback('activated', lambda w, val: self.switchMode('ginga'))
         self.w.mode_d['ginga'] = btn1
         self.w.control.add_widget(btn1)
@@ -228,9 +234,6 @@ class IRAF(GingaPlugin.GlobalPlugin):
             self.ui_enable(chinfo.fitsimage)
 
     def start(self):
-        # init the first frame(frame 0)
-        self.init_frame(0)
-
         try:
             if self.addr.prot == 'unix':
                 os.remove(self.addr.path)
@@ -244,11 +247,23 @@ class IRAF(GingaPlugin.GlobalPlugin):
             ev_quit=ev_quit, logger=self.logger)
         self.fv.nongui_do(self.dataTask.mainloop)
 
-        
     def stop(self):
         if self.dataTask:
             self.dataTask.stop()
         self.gui_up = False
+
+    def restart_cb(self, w):
+        # restart server
+        if self.dataTask:
+            self.dataTask.stop()
+        self.start()
+
+    def set_addr_cb(self, w):
+        # get and parse address
+        addr = w.get_text()
+        self.addr = iis.get_interface(addr=addr)
+        addr = str(self.addr.name)
+        self.w.addr.set_text(addr)
 
     def channel_to_frame(self, chname):
         for n, fb in self.fb.items():
@@ -516,6 +531,7 @@ class IRAF(GingaPlugin.GlobalPlugin):
         self.mode = 'ginga'
 
     def start_imexamine(self, fitsimage, chname):
+        self.logger.debug("STARTING")
         # Turn off regular UI processing in the frame
         self.canvas.setSurface(fitsimage)
         # insert layer if it is not already
@@ -531,10 +547,13 @@ class IRAF(GingaPlugin.GlobalPlugin):
         self.imexam_active = True
         self.setMode('IRAF', chname)
         self.fv.gui_do(self.fv.ds.raise_tab, 'IRAF')
+        self.logger.debug("FINISHING")
 
     def stop_imexamine(self, fitsimage, chname):
+        self.logger.debug("STARTING")
         self.imexam_active = False
         self.setMode('Ginga', chname)
+        self.logger.debug("FINISHING")
 
     def window_key_press(self, canvas, keyname):
         if not self.imexam_active:
@@ -610,7 +629,7 @@ class IRAF(GingaPlugin.GlobalPlugin):
     
 class IRAF_AstroImage(AstroImage.AstroImage):
 
-    def info_xy(self, data_x, data_y):
+    def info_xy(self, data_x, data_y, settings):
         ct = self.get('ct', None)
         # Get the value under the data coordinates
         try:
@@ -647,12 +666,14 @@ class IRAF_AstroImage(AstroImage.AstroImage):
 
         # Note: FITS coordinates are 1-based, whereas numpy FITS arrays
         # are 0-based
+        ra_lbl, dec_lbl = unichr(945), unichr(948)
         fits_x, fits_y = data_x + 1, data_y + 1
 
         info = Bunch.Bunch(itype='astro', data_x=data_x, data_y=data_y,
                            fits_x=fits_x, fits_y=fits_y,
                            x=fits_x, y=fits_y,
                            ra_txt=ra_txt, dec_txt=dec_txt,
+                           ra_lbl=ra_lbl, dec_lbl=dec_lbl,
                            value=value)
         return info
 

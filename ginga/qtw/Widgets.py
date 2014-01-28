@@ -304,6 +304,12 @@ class ToggleButton(WidgetBase):
     def _cb_redirect(self, val):
         self.make_callback('activated', val)
     
+    def set_state(self, tf):
+        self.widget.setChecked(tf)
+
+    def get_state(self):
+        return self.widget.isChecked()
+
 
 class RadioButton(WidgetBase):
     def __init__(self, text='', group=None):
@@ -316,6 +322,13 @@ class RadioButton(WidgetBase):
 
     def _cb_redirect(self, val):
         self.make_callback('activated', val)
+
+    def set_state(self, tf):
+        self.widget.setChecked(tf)
+
+    def get_state(self):
+        return self.widget.isChecked()
+
 
 class ProgressBar(WidgetBase):
     def __init__(self):
