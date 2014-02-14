@@ -22,16 +22,21 @@ class Zoom(GingaPlugin.GlobalPlugin):
         self.zoomimage = None
         self.default_radius = 30
         self.default_zoom = 3
-        self.zoom_radius = self.default_radius
-        self.zoom_amount = self.default_zoom
         self.zoom_x = 0
         self.zoom_y = 0
         self.t_abszoom = True
         self.zoomtask = fv.get_timer()
         self.zoomtask.set_callback('expired', self.showzoom_timer)
         self.fitsimage_focus = None
-        self.refresh_interval = 0.02
         self.update_time = time.time()
+
+        # read preferences for this plugin
+        prefs = self.fv.get_preferences()
+        self.settings = prefs.createCategory('plugin_Zoom')
+        self.settings.load(onError='silent')
+        self.zoom_radius = self.settings.get('zoom_radius', self.default_radius)
+        self.zoom_amount = self.settings.get('zoom_amount', self.default_zoom)
+        self.refresh_interval = self.settings.get('refresh_interval', 0.02)
 
         fv.add_callback('add-channel', self.add_channel)
         fv.add_callback('active-image', self.focus_cb)

@@ -12,7 +12,7 @@ class TimeoutError(Exception):
 
 class Datasrc(object):
 
-    def __init__(self, length=20):
+    def __init__(self, length=None):
         self.length = length
         self.cursor = -1
         self.datums = {}
@@ -21,16 +21,21 @@ class Datasrc(object):
         self.cond = threading.Condition()
         self.newdata = threading.Event()
 
-
     def __getitem__(self, key):
         with self.cond:
-            if isinstance(key, int):
-                return self.datums[self.sortedkeys[key]]
-            else:
-                return self.datums[key]
+            return self.datums[key]
 
-        
     def __setitem__(self, key, value):
+        self.push(key, value)
+        
+    def __delitem__(self, key):
+        self.remove(key)
+
+    def __len__(self):
+        with self.cond:
+            return len(self.history)
+
+    def push(self, key, value):
         with self.cond:
             if key in self.history:
                 self.history.remove(key)
@@ -44,12 +49,31 @@ class Datasrc(object):
             self.cond.notify()
         
 
-    def __len__(self):
-        with self.cond:
-            return len(self.sortedkeys)
+    def pop_one(self):
+        return self.remove(self.history[0])
+    
+    def pop(self, *args):
+        if len(args) == 0:
+            return self.remove(self.history[0])
 
+        assert len(args) == 1, \
+               ValueError("Too many parameters to pop()")
+        return self.remove(args[0])
+
+    def remove(self, key):
+        with self.cond:
+            val = self.datums[key]
+            self.history.remove(key)
+            del self.datums[key]
+
+            self.sortedkeys = list(self.datums.keys())
+            self.sortedkeys.sort()
+            return val
 
     def _eject_old(self):
+        if self.length == None:
+            # no limit
+            return
         while len(self.history) > self.length:
             oldest = self.history.pop(0)
             del self.datums[oldest]
@@ -60,17 +84,27 @@ class Datasrc(object):
 
     def index(self, key):
         with self.cond:
-            return self.sortedkeys.index(key)
+            return self.history.index(key)
 
     def index2key(self, index):
         with self.cond:
-            return self.sortedkeys[index]
+            return self.history[index]
+
+    def index2value(self, index):
+        with self.cond:
+            return self.datums[self.history[index]]
 
     def youngest(self):
         return self.datums[self.history[-1]]
     
     def oldest(self):
         return self.datums[self.history[0]]
+    
+    def pop_oldest(self):
+        return self.pop(self.history[0])
+    
+    def pop_youngest(self):
+        return self.pop(self.history[-1])
     
     def keys(self, sort='alpha'):
         with self.cond:

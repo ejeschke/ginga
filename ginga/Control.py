@@ -586,7 +586,7 @@ class GingaControl(Callback.Callbacks):
                 self.logger.error("No previous image!")
             else:
                 chinfo.cursor -= 1
-                image = chinfo.datasrc[chinfo.cursor]
+                image = chinfo.datasrc.index2value(chinfo.cursor)
                 self._switch_image(chinfo, image)
             
         return True
@@ -601,7 +601,7 @@ class GingaControl(Callback.Callbacks):
                 self.logger.error("No next image!")
             else:
                 chinfo.cursor += 1
-                image = chinfo.datasrc[chinfo.cursor]
+                image = chinfo.datasrc.index2value(chinfo.cursor)
                 self._switch_image(chinfo, image)
 
         return True
@@ -615,7 +615,7 @@ class GingaControl(Callback.Callbacks):
         else:
             #width, height = 700, 800
             #self.ds.create_toplevel_ws(width, height, group=1)
-            self.ds.add_toplevel(bnch.widget, bnch.name)
+            self.ds.add_toplevel(bnch, bnch.name)
         return True
         
     # CHANNEL MANAGEMENT
@@ -810,7 +810,7 @@ class GingaControl(Callback.Callbacks):
         
         ## elif len(chinfo.datasrc) > 0:
         ##     n = chinfo.cursor
-        ##     image = chinfo.datasrc[n]
+        ##     image = chinfo.datasrc.index2value(n)
         ##     self._switch_image(chinfo, image)
             
         self.make_callback('active-image', chinfo.fitsimage)

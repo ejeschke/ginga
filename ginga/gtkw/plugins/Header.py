@@ -49,8 +49,10 @@ class Header(GingaPlugin.GlobalPlugin):
         cw = container.get_widget()
         cw.pack_start(self.nb, fill=True, expand=True)
 
-    def _create_header_window(self):
+    def _create_header_window(self, info):
         width, height = 300, -1
+        vbox = gtk.VBox()
+        
         sw = gtk.ScrolledWindow()
         sw.set_border_width(2)
         sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
@@ -74,8 +76,18 @@ class Header(GingaPlugin.GlobalPlugin):
             treeview.append_column(tvcolumn[n])
 
         sw.add(treeview)
-        sw.show_all()
-        return sw, treeview
+        vbox.pack_start(sw, fill=True, expand=True)
+        
+        # create sort toggle
+        cb = GtkHelp.CheckButton("Sortable")
+        cb.sconnect('toggled', lambda w: self.set_sortable_cb(info))
+        hbox = gtk.HBox()
+        hbox.pack_start(cb, fill=True, expand=False)
+        vbox.pack_start(hbox, fill=True, expand=False)
+        vbox.show_all()
+        
+        info.setvals(widget=vbox, treeview=treeview, sortw=cb)
+        return vbox
 
     def sort_cb(self, column, idx):
         treeview = column.get_tree_view()
@@ -105,11 +117,18 @@ class Header(GingaPlugin.GlobalPlugin):
             return res
         return fn
 
-    def set_header(self, treeview, image):
+    def set_header(self, info, image):
+        treeview = info.treeview
+        
         header = image.get_header()
         # Update the header info
         listmodel = gtk.ListStore(object)
-        keyorder = header.keys()
+        keyorder = list(header.keys())
+
+        sorted = info.sortw.get_active()
+        if sorted:
+            keyorder.sort()
+            
         for key in keyorder:
             card = header.get_card(key)
             bnch = Bunch.Bunch(kwd=key, value=str(card.value),
@@ -122,17 +141,17 @@ class Header(GingaPlugin.GlobalPlugin):
         treeview.set_fixed_height_mode(True)
 
     def add_channel(self, viewer, chinfo):
-        sw, tv = self._create_header_window()
         chname = chinfo.name
+        info = Bunch.Bunch(chname=chname)
+        widget = self._create_header_window(info)
 
-        self.nb.append_page(sw, gtk.Label(chname))
-        index = self.nb.page_num(sw)
-        info = Bunch.Bunch(widget=sw, treeview=tv,
-                           nbindex=index)
+        self.nb.append_page(widget, gtk.Label(chname))
+        index = self.nb.page_num(widget)
+        info.setvals(nbindex=index)
         self.channel[chname] = info
 
         fitsimage = chinfo.fitsimage
-        fitsimage.set_callback('image-set', self.new_image_cb, tv)
+        fitsimage.set_callback('image-set', self.new_image_cb, info)
 
     def delete_channel(self, viewer, chinfo):
         self.logger.debug("TODO: delete channel %s" % (chinfo.name))
@@ -143,8 +162,13 @@ class Header(GingaPlugin.GlobalPlugin):
             chinfo = self.fv.get_channelInfo(name)
             self.add_channel(self.fv, chinfo)
         
-    def new_image_cb(self, fitsimage, image, tv):
-        self.set_header(tv, image)
+    def new_image_cb(self, fitsimage, image, info):
+        self.set_header(info, image)
+        
+    def set_sortable_cb(self, info):
+        chinfo = self.fv.get_channelInfo(info.chname)
+        image = chinfo.fitsimage.get_image()
+        self.set_header(info, image)
         
     def focus_cb(self, viewer, fitsimage):
         chname = self.fv.get_channelName(fitsimage)
@@ -158,7 +182,7 @@ class Header(GingaPlugin.GlobalPlugin):
             self.info = self.channel[self.active]
 
         image = fitsimage.get_image()
-        self.set_header(self.info.treeview, image)
+        self.set_header(self.info, image)
         
     def __str__(self):
         return 'header'

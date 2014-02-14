@@ -168,7 +168,7 @@ class PyFitsFileHandler(BaseFitsFileHandler):
         fits_f.writeto(path, **kwdargs)
         fits_f.close()
 
-    def save_as_file(self, path, data, header, **kwdargs):
+    def save_as_file(self, filepath, data, header, **kwdargs):
         self.write_fits(filepath, data, header, **kwdargs)
 
         
@@ -252,7 +252,7 @@ class FitsioFileHandler(BaseFitsFileHandler):
         fits_f.writeto(path, output_verify='fix')
         fits_f.close()
 
-    def save_as_file(self, path, data, header, **kwdargs):
+    def save_as_file(self, filepath, data, header, **kwdargs):
         self.write_fits(filepath, data, header, **kwdargs)
 
         

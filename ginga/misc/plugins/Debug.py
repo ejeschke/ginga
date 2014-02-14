@@ -1,5 +1,5 @@
 #
-# Debug.py -- Debugging plugin for fits viewer
+# Debug.py -- Debugging plugin for Ginga
 # 
 # Eric Jeschke (eric@naoj.org)
 #

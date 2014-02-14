@@ -18,6 +18,8 @@ import numpy
 from ginga.util import wcs, io_fits
 from ginga.BaseImage import BaseImage, ImageError, Header
 from ginga.misc import Bunch
+from ginga import trcalc
+
 
 class AstroHeader(Header):
     pass
@@ -550,8 +552,13 @@ class AstroImage(BaseImage):
 
     def get_wcs_rotation_deg(self):
         header = self.get_header()
-        rot, cdelt1, cdelt2 = wcs.get_rotation_and_scale(header)
-        return rot
+        ((xrot, yrot),
+         (cdelt1, cdelt2)) = wcs.get_rotation_and_scale(header)
+
+        if xrot != yrot:
+            self.logger.warn('X axis rotation: %f Y axis rotation: %f' % (
+                xrot, yrot))
+        return xrot
 
     def rotate(self, deg, update_wcs=False):
         #old_deg = self.get_wcs_rotation_deg()
@@ -676,40 +683,76 @@ class AstroImage(BaseImage):
         ra0, dec0 = self.pixtoradec(0, 0)
         ra1, dec1 = self.pixtoradec(self.width-1, self.height-1)
 
-        rot_ref = self.get_wcs_rotation_deg()
+        header = self.get_header()
+        ((xrot_ref, yrot_ref),
+         (cdelt1, cdelt2)) = wcs.get_rotation_and_scale(header)
+        ref_rot = yrot_ref
 
         # drop each image in the right place in the new data array
-        newdata = self.get_data()
-        for image in imagelist:
-            name = image.get('name', 'NoName')
+        mydata = self.get_data()
 
+        count = 1
+        for image in imagelist:
+            name = image.get('name', 'image%d' % (count))
+            count += 1
+
+            data_np = image.get_data()
+            ctr_x, ctr_y = trcalc.get_center(data_np)
+            ra, dec = image.pixtoradec(ctr_x, ctr_y)
+            
             # Rotate image into our orientation, according to wcs
-            rot_deg = image.get_wcs_rotation_deg()
-            rot_deg = rot_ref - rot_deg
-            ## self.logger.debug("rotating %s by %f deg" % (name, rot_deg))
-            image.rotate(rot_deg, update_wcs=True)
+            header = image.get_header()
+            ((xrot, yrot),
+             (cdelt1, cdelt2)) = wcs.get_rotation_and_scale(header)
+            self.logger.debug("image(%s) xrot=%f yrot=%f cdelt1=%f cdelt2=%f" % (
+                name, xrot, yrot, cdelt1, cdelt2))
+
+            # Optomization for 180 rotations
+            rot_dx, rot_dy = xrot - xrot_ref, yrot - yrot_ref
+            flip_x = False
+            if math.fabs(rot_dx) == 180.0:
+                flip_x = True
+                rot_dx = 0.0
+            flip_y = False
+            if math.fabs(rot_dy) == 180.0:
+                flip_y = True
+                rot_dy = 0.0
+            self.logger.debug("flip_x=%s flip_y=%s" % (flip_x, flip_y))
+            rotdata = trcalc.transform(data_np, flip_x=flip_x, flip_y=flip_y)
+
+            if rot_dy != 0.0:
+                rot_deg = rot_dy
+                self.logger.debug("rotating %s by %f deg" % (name, rot_deg))
+                rotdata = trcalc.rotate(data_np, -rot_deg,
+                                        #rotctr_x=ctr_x, rotctr_y=ctr_y
+                                        )
 
             # Get size and data of new image
-            wd, ht = image.get_size()
-            data = image.get_data()
+            ht, wd = rotdata.shape[:2]
+            ctr_x, ctr_y = trcalc.get_center(rotdata)
 
-            # Find location of image piece and place it correctly in ours
-            ra, dec = image.pixtoradec(0, 0)
-                
+            # Find location of image piece in our array
             x0, y0 = self.radectopix(ra, dec)
+            
             #self.logger.debug("0,0 -> %f,%f" % (x0, y0))
             # losing WCS precision!
             x0, y0 = int(round(x0)), int(round(y0))
             self.logger.debug("Fitting image '%s' into mosaic at %d,%d" % (
                 name, x0, y0))
 
-            try:
-                newdata[y0:(y0+ht), x0:(x0+wd)] += data[0:ht, 0:wd]
-            except Exception, e:
-                self.logger.error("Failed to place image '%s': %s" % (
-                    name, str(e)))
+            xlo, xhi = x0 - ctr_x, x0 + wd - ctr_x
+            ylo, yhi = y0 - ctr_y, y0 + ht - ctr_y
+            assert (xhi - xlo == wd), \
+                   Exception("Width differential %d != %d" % (xhi - xlo, wd))
+            assert (yhi - ylo == ht), \
+                   Exception("Height differential %d != %d" % (yhi - ylo, ht))
+            
+            # merge image piece into our array
+            mydata[ylo:yhi, xlo:xhi, ...] += rotdata[0:ht, 0:wd, ...]
 
         self.make_callback('modified')
+
+        return (xlo, ylo, xhi, yhi)
 
     def info_xy(self, data_x, data_y, settings):
         # Note: FITS coordinates are 1-based, whereas numpy FITS arrays

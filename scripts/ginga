@@ -280,7 +280,7 @@ def main(options, args):
         plugins = options.plugins.split(',')
         for pluginName in plugins:
             spec = Bunch(module=pluginName, ws='dialogs',
-                         hidden=True)
+                         hidden=False)
             ginga.add_local_plugin(spec)
 
     ginga.update_pending()
@@ -353,7 +353,7 @@ if __name__ == "__main__":
     optprs = OptionParser(usage=usage, version=('%%prog %s' % version.version))
 
     optprs.add_option("--bufsize", dest="bufsize", metavar="NUM",
-                      type="int", default=25,
+                      type="int", default=10,
                       help="Buffer length to NUM")
     optprs.add_option("--channels", dest="channels", default="Image",
                       help="Specify list of channels to create")

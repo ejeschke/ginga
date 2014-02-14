@@ -579,14 +579,14 @@ class Desktop(Callback.Callbacks):
                 lbl.modify_bg(gtk.STATE_NORMAL,
                               gtk.gdk.color_parse('grey'))
 
-    def add_toplevel(self, widget, wsname, width=700, height=700):
+    def add_toplevel(self, bnch, wsname, width=700, height=700):
         topw = TopLevel()
         topw.set_default_size(width, height)
         self.toplevels.append(topw)
         topw.set_title(wsname)
         topw.set_border_width(0)
 
-        topw.add(widget)
+        topw.add(bnch.widget)
         topw.show_all()
         return topw
 

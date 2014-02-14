@@ -170,7 +170,7 @@ class BaseWCS(object):
             #self.header.update('CUNIT2', 'deg')
             self.header['CUNIT2'] = 'deg'
 
-    
+
 class AstropyWCS(BaseWCS):
     """A WCS interface for astropy.wcs
     You need to install python module 'astropy'
@@ -902,7 +902,8 @@ def choose_coord_system(header):
     #raise WCSError("Cannot determine appropriate coordinate system from FITS header")
     return 'icrs'
 
-def simple_wcs(px_x, px_y, ra_deg, dec_deg, px_scale_deg_px, pa_deg):
+def simple_wcs(px_x, px_y, ra_deg, dec_deg, px_scale_deg_px, rot_deg,
+               cdbase=[-1, 1]):
     """Calculate a set of WCS keywords for a 2D simple instrument FITS
     file with a 'standard' RA/DEC pixel projection.
 
@@ -912,7 +913,7 @@ def simple_wcs(px_x, px_y, ra_deg, dec_deg, px_scale_deg_px, pa_deg):
         ra_deg          : RA (in deg) for the reference point
         dec_deg         : DEC (in deg) for the reference point
         px_scale_deg_px : pixel scale deg/pixel
-        pa_deg          : position angle of the instrument (in deg)
+        rot_deg         : rotation angle of the field (in deg)
 
     Returns a WCS object.  Use the to_header() method on it to get something
     interesting that you can use.
@@ -921,16 +922,16 @@ def simple_wcs(px_x, px_y, ra_deg, dec_deg, px_scale_deg_px, pa_deg):
     wcsobj = pywcs.WCS()
 
     # center of the projection
-    wcsobj.wcs.crpix = [px_x, px_y]  # pixel position
+    wcsobj.wcs.crpix = [px_x+1, px_y+1]  # pixel position (WCS is 1 based)
     wcsobj.wcs.crval = [ra_deg, dec_deg]   # RA, Dec (degrees)
 
     # image scale in deg/pix
-    wcsobj.wcs.cdelt = numpy.array([-1, 1]) * px_scale_deg_px
+    wcsobj.wcs.cdelt = numpy.array(cdbase) * px_scale_deg_px
 
     # Position angle of north (radians E of N)
-    pa = numpy.radians(pa_deg)
-    cpa = numpy.cos(pa)
-    spa = numpy.sin(pa)
+    rot_rad = numpy.radians(rot_deg)
+    cpa = numpy.cos(rot_rad)
+    spa = numpy.sin(rot_rad)
     #wcsobj.wcs.pc = numpy.array([[-cpa, -spa], [-spa, cpa]])
     wcsobj.wcs.pc = numpy.array([[cpa, -spa], [spa, cpa]])
 
@@ -1104,58 +1105,80 @@ def get_rotation_and_scale(header):
     CREDIT: See IDL code at
     # http://www.astro.washington.edu/docs/idl/cgi-bin/getpro/library32.html?GETROT
     """
-    # TODO: need to do the right thing if only PC?_? and CDELT?
-    # keywords are given
-    #
-    cd1_1 = header['CD1_1']
-    cd1_2 = header['CD1_2']
-    cd2_1 = header['CD2_1']
-    cd2_2 = header['CD2_2']
 
-    try:
-        # Image has plate scale keywords?
+    def calc_from_cd(cd1_1, cd1_2, cd2_1, cd2_2):
+        try:
+            # Image has plate scale keywords?
+            cdelt1 = header['CDELT1']
+            cdelt2 = header['CDELT2']
+            s = float(cdelt1) / float(cdelt2)
+            xrot = math.atan2(cd2_1*s, cd1_1)
+            yrot = math.atan2(-cd1_2/s, cd2_2)
+
+        except KeyError:
+            # No, calculate them
+            det = cd1_1*cd2_2 - cd1_2*cd2_1
+            if det < 0:
+                sgn = -1
+            else:
+                sgn = 1
+            ## if det > 0:
+            ##     print 'WARNING - Astrometry is for a right-handed coordinate system'
+
+            if (cd2_1 == 0.0) or (cd1_2 == 0.0):
+                # Unrotated coordinates?
+                xrot = 0.0
+                yrot = 0.0
+                cdelt1 = cd1_1
+                cdelt2 = cd2_2
+            else:
+                cdelt1 = sgn * math.sqrt(cd1_1**2 + cd2_1**2)
+                cdelt2 = math.sqrt(cd1_2**2 + cd2_2**2)
+                if cdelt1 > 0:
+                    sgn1 = 1
+                else:
+                    sgn1 = -1
+                xrot = math.atan2(-cd2_1, sgn1*cd1_1) 
+                yrot = math.atan2(sgn1*cd1_2, cd2_2)
+
+        return xrot, yrot, cdelt1, cdelt2
+
+    def calc_from_pc(pc1_1, pc1_2, pc2_1, pc2_2):
+
         cdelt1 = header['CDELT1']
         cdelt2 = header['CDELT2']
         s = float(cdelt1) / float(cdelt2)
-        xrot = math.atan2(cd2_1*s, cd1_1)
-        yrot = math.atan2(-cd1_2/s, cd2_2)
+        xrot = math.atan2(pc2_1*s, pc1_1)
+        yrot = math.atan2(-pc1_2/s, pc2_2)
 
+        return xrot, yrot, cdelt1, cdelt2
+
+    try:
+        cd1_1 = header['CD1_1']
+        cd1_2 = header['CD1_2']
+        cd2_1 = header['CD2_1']
+        cd2_2 = header['CD2_2']
+        xrot, yrot, cdelt1, cdelt2 = calc_from_cd(cd1_1, cd1_2, cd2_1, cd2_2)
+        
     except KeyError:
-        # No, calculate them
-        det = cd1_1*cd2_2 - cd1_2*cd2_1
-        if det < 0:
-            sgn = -1
-        else:
-            sgn = 1
-        ## if det > 0:
-        ##     print 'WARNING - Astrometry is for a right-handed coordinate system'
+        pc1_1 = header['PC1_1']
+        pc1_2 = header['PC1_2']
+        pc2_1 = header['PC2_1']
+        pc2_2 = header['PC2_2']
 
-        if (cd2_1 == 0.0) or (cd1_2 == 0.0):
-            # Unrotated coordinates?
-            xrot = 0.0
-            yrot = 0.0
-            cdelt1 = cd1_1
-            cdelt2 = cd2_2
-        else:
-            cdelt1 = sgn * math.sqrt(cd1_1**2 + cd2_1**2)
-            cdelt2 = math.sqrt(cd1_2**2 + cd2_2**2)
-            if cdelt1 > 0:
-                sgn1 = 1
-            else:
-                sgn1 = -1
-            xrot  = math.atan2(-cd2_1, sgn1*cd1_1) 
-            yrot = math.atan2(sgn1*cd1_2, cd2_2) 
+        #xrot, yrot, cdelt1, cdelt2 = calc_from_pc(pc1_1, pc1_2, pc2_1, pc2_2)
+        cdelt1 = header['CDELT1']
+        cdelt2 = header['CDELT2']
 
+        cd1_1 = pc1_1 * cdelt1
+        cd1_2 = pc1_2 * cdelt1
+        cd2_1 = pc2_1 * cdelt2
+        cd2_2 = pc2_2 * cdelt2
+        xrot, yrot, cdelt1, cdelt2 = calc_from_cd(cd1_1, cd1_2, cd2_1, cd2_2)
+    
     xrot, yrot = math.degrees(xrot), math.degrees(yrot)
-    if xrot != yrot:
-        print 'X axis rotation: %f Y axis rotation: %f' % (
-            math.degrees(xrot), math.degrees(yrot))
-        rot = (xrot + yrot) / 2.0
-    else:
-        rot = xrot
 
-    cdelt1, cdelt2 = math.degrees(cdelt1), math.degrees(cdelt2)
-    return (rot, cdelt1, cdelt2)
+    return ((xrot, yrot), (cdelt1, cdelt2))
 
 
 class WcsMatch(object):

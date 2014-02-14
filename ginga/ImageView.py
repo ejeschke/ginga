@@ -830,16 +830,16 @@ class ImageViewBase(Callback.Callbacks):
         xoff, yoff = self._org_xoff, self._org_yoff
 
         # Do transforms as necessary
-        if self.t_['flip_y']:
-            data = numpy.flipud(data)
+        flip_x, flip_y = self.t_['flip_x'], self.t_['flip_y']
+        swap_xy = self.t_['swap_xy']
+
+        data = trcalc.transform(data, flip_x=flip_x, flip_y=flip_y,
+                                swap_xy=swap_xy)
+        if flip_y:
             yoff = ht - yoff
-
-        if self.t_['flip_x']:
-            data = numpy.fliplr(data)
+        if flip_x:
             xoff = wd - xoff
-
-        if self.t_['swap_xy']:
-            data = data.swapaxes(0, 1)
+        if swap_xy:
             xoff, yoff = yoff, xoff
             
         split_time = time.time()
@@ -853,7 +853,7 @@ class ImageViewBase(Callback.Callbacks):
         if rot_deg != 0:
             # TODO: this is the slowest part of the rendering
             # need to find a way to speed it up!
-            data = trcalc.rotate_nd(data, -rot_deg)
+            data = trcalc.rotate_clip(data, -rot_deg, out=data)
 
         split2_time = time.time()
         self.logger.debug("rotate time %.3f sec, total reshape %.3f sec" % (

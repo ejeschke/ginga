@@ -409,6 +409,21 @@ class Desktop(Callback.Callbacks):
         popmenu.exec_(nb.mapToGlobal(point))
         self.popmenu = popmenu
 
+
+    def take_tab_cb(self, nb, args):
+        popmenu = QtGui.QMenu(nb)
+
+        group = 1
+        tabnames = self.get_tabnames(group=group)
+        tabnames.sort()
+        for tabname in tabnames:
+            item = QtGui.QAction(tabname, nb)
+            item.triggered.connect(self._mk_take_tab_cb(tabname, nb))
+            popmenu.addAction(item)
+
+        point = QtCore.QPoint(100, 100)
+        popmenu.exec_(nb.mapToGlobal(point))
+
     def add_tab(self, wsname, widget, group, labelname, tabname=None,
                 data=None):
         tab_w = self.get_nb(wsname)
@@ -475,7 +490,7 @@ class Desktop(Callback.Callbacks):
             else:
                 widget.setStyleSheet('QPushButton {color: grey}')
 
-    def add_toplevel(self, widget, wsname, width=700, height=700):
+    def add_toplevel(self, bnch, wsname, width=700, height=700):
         topw = TopLevel()
         topw.resize(width, height)
         self.toplevels.append(topw)
@@ -485,7 +500,26 @@ class Desktop(Callback.Callbacks):
         layout.setContentsMargins(0, 0, 0, 0)
         topw.setLayout(layout)
 
-        layout.addWidget(widget, stretch=1)
+        menubar = QtGui.QMenuBar()
+        layout.addWidget(menubar, stretch=0)
+
+        # create a Workspace pulldown menu, and add it to the menu bar
+        winmenu = menubar.addMenu("Workspace")
+
+        item = QtGui.QAction("Take Tab", menubar)
+        item.triggered.connect(lambda *args: self.take_tab_cb(bnch.nb, args))
+        winmenu.addAction(item)
+
+        sep = QtGui.QAction(menubar)
+        sep.setSeparator(True)
+        winmenu.addAction(sep)
+        
+        closeitem = QtGui.QAction("Close", menubar)
+        bnch.widget.closeEvent = lambda event: self.close_page_cb(bnch, event)
+        closeitem.triggered.connect(lambda: self._close_page(bnch))
+        winmenu.addAction(closeitem)
+
+        layout.addWidget(bnch.widget, stretch=1)
         topw.showNormal()
         return topw
 
@@ -556,7 +590,8 @@ class Desktop(Callback.Callbacks):
             del self.notebooks[bnch.name]
             root = bnch.root
             bnch.root = None
-            root.destroy()
+            #root.destroy()
+            root.deleteLater()
         return True
     
     def close_page_cb(self, bnch, event):

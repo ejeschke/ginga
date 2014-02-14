@@ -12,7 +12,7 @@ import numpy
 import logging
 
 from ginga.misc import Bunch, Callback
-from ginga import AutoCuts
+from ginga import trcalc, AutoCuts
 
 class ImageError(Exception):
     pass
@@ -238,54 +238,25 @@ class BaseImage(Callback.Callbacks):
 
     def get_scaled_cutout_wdht(self, x1, y1, x2, y2, new_wd, new_ht):
 
-        # calculate dimensions of NON-scaled cutout
-        old_wd = x2 - x1 + 1
-        old_ht = y2 - y1 + 1
-        self.logger.debug("old=%dx%d new=%dx%d" % (
-            old_wd, old_ht, new_wd, new_ht))
-
         data = self.get_data()
         
-        if (new_wd != old_wd) or (new_ht != old_ht):
-            # Is there a more efficient way to do this?
-            # Make indexes and scale them
-            yi, xi = numpy.mgrid[0:new_ht, 0:new_wd]
-            iscale_x = float(old_wd) / float(new_wd)
-            iscale_y = float(old_ht) / float(new_ht)
+        (newdata, (scale_x, scale_y)) = \
+                  trcalc.get_scaled_cutout_wdht(data, x1, y1, x2, y2,
+                                                new_wd, new_ht)
 
-            xi *= iscale_x 
-            yi *= iscale_y
-
-            # Cut out the data according to region desired
-            cutout = data[y1:y2+1, x1:x2+1]
-
-            # Now index cutout by scaled indexes
-            ht, wd = cutout.shape[:2]
-            xi = xi.astype('int').clip(0, wd-1)
-            yi = yi.astype('int').clip(0, ht-1)
-            newdata = cutout[yi, xi]
-
-        else:
-            newdata = data[y1:y2+1, x1:x2+1]
-            
-        ht, wd = newdata.shape[:2]
-        # Calculate actual scale used (vs. desired)
-        old_wd, old_ht = max(old_wd, 1), max(old_ht, 1)
-        scale_x = float(wd) / old_wd
-        scale_y = float(ht) / old_ht
         res = Bunch.Bunch(data=newdata, scale_x=scale_x, scale_y=scale_y)
         return res
 
     def get_scaled_cutout_basic(self, x1, y1, x2, y2, scale_x, scale_y):
 
-        # calculate dimensions of NON-scaled cutout
-        old_wd = x2 - x1 + 1
-        old_ht = y2 - y1 + 1
-        # calculate dimensions of scaled cutout
-        new_wd = int(round(scale_x * old_wd))
-        new_ht = int(round(scale_y * old_ht))
+        data = self.get_data()
+        
+        (newdata, (scale_x, scale_y)) = \
+                  trcalc.get_scaled_cutout_basic(data, x1, y1, x2, y2,
+                                                 scale_x, scale_y)
 
-        return self.get_scaled_cutout_wdht(x1, y1, x2, y2, new_wd, new_ht)
+        res = Bunch.Bunch(data=newdata, scale_x=scale_x, scale_y=scale_y)
+        return res
 
     def get_scaled_cutout_by_dims(self, x1, y1, x2, y2, dst_wd, dst_ht,
                                   method='basic'):
@@ -321,14 +292,8 @@ class BaseImage(Callback.Callbacks):
     def transform(self, flip_x=False, flip_y=False, swap_xy=False):
         data = self.get_data()
 
-        # Do transforms as necessary
-        if flip_y:
-            data = numpy.flipud(data)
-        if flip_x:
-            data = numpy.fliplr(data)
-        if swap_xy:
-            data = data.swapaxes(0, 1)
-            
+        data = trcalc.transform(data, flip_x=flip_x, flip_y=flip_y,
+                                swap_xy=swap_xy)
         self.set_data(data)
             
     def rotate(self, rot_deg):
