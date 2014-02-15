@@ -115,7 +115,7 @@ class PyFitsFileHandler(BaseFitsFileHandler):
 
     def load_file(self, filespec, ahdr, numhdu=None, naxispath=None):
         filepath = get_path(filespec)
-        self.logger.info("Loading file '%s' ..." % (filepath))
+        self.logger.debug("Loading file '%s' ..." % (filepath))
         fits_f = pyfits.open(filepath, 'readonly')
 
         # this seems to be necessary now for some fits files...
@@ -206,7 +206,7 @@ class FitsioFileHandler(BaseFitsFileHandler):
         
     def load_file(self, filespec, ahdr, numhdu=None, naxispath=None):
         filepath = get_path(filespec)
-        self.logger.info("Loading file '%s' ..." % (filepath))
+        self.logger.debug("Loading file '%s' ..." % (filepath))
         fits_f = fitsio.FITS(filepath)
 
         if numhdu == None:

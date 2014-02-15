@@ -8,6 +8,7 @@
 # Please see the file LICENSE.txt for details.
 #
 import logging
+import logging.handlers
 
 LOG_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcName)s) | %(message)s'
 

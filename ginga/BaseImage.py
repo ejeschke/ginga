@@ -72,6 +72,11 @@ class BaseImage(Callback.Callbacks):
         data = self.get_data()
         return data.shape
     
+    def get_center(self):
+        wd, ht = self.get_size()
+        ctr_x, ctr_y = wd // 2, ht // 2
+        return (ctr_x, ctr_y)
+    
     def get_data(self):
         return self._data
         

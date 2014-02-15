@@ -1311,7 +1311,7 @@ class BindingMapper(object):
         except KeyError:
             return False
 
-        cbname = 'keyup%s' % (emap.name)
+        cbname = 'keyup-%s' % (emap.name)
         last_x, last_y = fitsimage.get_last_data_xy()
 
         return fitsimage.make_callback(cbname, keyname, last_x, last_y)

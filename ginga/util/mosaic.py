@@ -8,50 +8,139 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+"""
+Usage:
+   $ ./mosaic.py -o output.fits input1.fits input2.fits ... inputN.fits
+"""
 import sys, os
-import logging
+import math
+from collections import OrderedDict
+
+import numpy
+
 from ginga import AstroImage
-from ginga.util import io_fits
-io_fits.use('astropy')
-
-STD_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcName)s) | %(message)s'
+from ginga.util import wcs, io_fits
+from ginga.misc import log
 
 
-def mosaic(paths, logger, outfile=None):
-    logger.info("Mosaicing images...")
-    image = AstroImage.AstroImage(logger=logger)
-    mosaic = image.mosaic(paths)
+def create_blank_image(ra_deg, dec_deg, fov_deg, px_scale, rot_deg,
+                       cdbase=[1, 1]):
+
+    # ra and dec in traditional format
+    ra_txt = wcs.raDegToString(ra_deg, format='%02d:%02d:%06.3f')
+    dec_txt = wcs.decDegToString(dec_deg, format='%s%02d:%02d:%05.2f')
+
+    # Create a dummy sh image
+    imagesize = int(round(fov_deg / px_scale))
+    # round to even size
+    if imagesize % 2 != 0:
+        imagesize += 1
+    width = height = imagesize
+    data = numpy.zeros((height, width), dtype=numpy.float32)
+
+    crpix = float(imagesize // 2)
+    # header = {
+    #     'SIMPLE': True,
+    #     'BITPIX': -32,
+    #     'EXTEND': True,
+    #     'NAXIS': 2,
+    #     'NAXIS1': imagesize,
+    #     'NAXIS2': imagesize,
+    #     'RA': ra_txt,
+    #     'DEC': dec_txt,
+    #     'EQUINOX': 2000.0,
+    #     'OBJECT': 'MOSAIC',
+    #     'LONPOLE': 180.0,
+    #     }
+    header = OrderedDict((('SIMPLE', True),
+                          ('BITPIX', -32),
+                          ('EXTEND', True),
+                          ('NAXIS', 2),
+                          ('NAXIS1', imagesize),
+                          ('NAXIS2', imagesize),
+                          ('RA', ra_txt),
+                          ('DEC', dec_txt),
+                          ('EQUINOX', 2000.0),
+                          ('OBJECT', 'MOSAIC'),
+                          ('LONPOLE', 180.0),
+                          ))
+
+    # Add basic WCS keywords
+    ## if rot_deg < 0.0:
+    ##     rot_deg = 360.0 + math.fmod(rot_deg, 360.0)
+    wcshdr = wcs.simple_wcs(crpix, crpix, ra_deg, dec_deg, px_scale,
+                            rot_deg, cdbase=cdbase)
+    header.update(wcshdr)
+
+    # Create image container
+    image = AstroImage.AstroImage(data, wcsclass=wcs.WCS)
+    image.update_keywords(header)
+
+    return image
+
+
+def mosaic(logger, filelist, outfile=None, fov_deg=None):
+
+    filepath = filelist[0]
+    logger.info("Reading file '%s' ..." % (filepath))
+    image0 = AstroImage.AstroImage(logger=logger)
+    image0.load_file(filelist[0])
+
+    ra_deg, dec_deg = image0.get_keywords_list('CRVAL1', 'CRVAL2')
+    header = image0.get_header()
+    ((xrot, yrot), (cdelt1, cdelt2)) = wcs.get_rotation_and_scale(header)
+    logger.debug("image0 xrot=%f yrot=%f cdelt1=%f cdelt2=%f" % (xrot, yrot,
+                                                                 cdelt1, cdelt2))
+
+    px_scale = math.fabs(cdelt1)
+    rot_deg = yrot
+    if fov_deg == None:
+        # TODO: calculate fov!
+        fov_deg = 1.0
+        
+    cdbase = [numpy.sign(cdelt1), numpy.sign(cdelt2)]
+    img_mosaic = create_blank_image(ra_deg, dec_deg,
+                                    fov_deg, px_scale, rot_deg,
+                                    cdbase=cdbase)
+    header = img_mosaic.get_header()
+    ((xrot, yrot), (cdelt1, cdelt2)) = wcs.get_rotation_and_scale(header)
+    logger.debug("mosaic xrot=%f yrot=%f cdelt1=%f cdelt2=%f" % (xrot, yrot,
+                                                                 cdelt1, cdelt2))
+
+    logger.info("Processing '%s' ..." % (filepath))
+    tup = img_mosaic.mosaic_inline([ image0 ])
+    logger.debug("placement %s" % (str(tup)))
+
+    for filepath in filelist[1:]:
+        # Create and load the image
+        logger.debug("Reading file '%s' ..." % (filepath))
+        image = AstroImage.AstroImage(logger=logger)
+        image.load_file(filepath)
+
+        logger.debug("Inlining '%s' ..." % (filepath))
+        tup = img_mosaic.mosaic_inline([ image ])
+        logger.debug("placement %s" % (str(tup)))
 
     if outfile:
+        io_fits.use('astropy')
+        logger.info("Writing output to '%s'..." % (outfile))
         try:
             os.remove(outfile)
-        except:
+        except OSError:
             pass
-        logger.info("Writing mosaic file to %s ..." % (outfile))
-        mosaic.write_fits(outfile)
-        
-        
-def main(options, args):
+        img_mosaic.save_as_file(outfile)
 
-    logger = logging.getLogger("mosaic")
-    logger.setLevel(options.loglevel)
-    fmt = logging.Formatter(STD_FORMAT)
-    if options.logfile:
-        fileHdlr  = logging.handlers.RotatingFileHandler(options.logfile)
-        fileHdlr.setLevel(options.loglevel)
-        fileHdlr.setFormatter(fmt)
-        logger.addHandler(fileHdlr)
-
-    if options.logstderr:
-        stderrHdlr = logging.StreamHandler()
-        stderrHdlr.setLevel(options.loglevel)
-        stderrHdlr.setFormatter(fmt)
-        logger.addHandler(stderrHdlr)
-
-    if len(args) > 0:
-        mosaic(args, logger, outfile=options.outfile)
+    logger.info("Done.")
         
     
+def main(options, args):
+
+    logger = log.get_logger(name="mosaic", options=options)
+
+    mosaic(logger, args, fov_deg=options.fov,
+           outfile=options.outfile)
+        
+
 if __name__ == "__main__":
    
     # Parse command line options with nifty optparse module
@@ -62,10 +151,13 @@ if __name__ == "__main__":
     
     optprs.add_option("--debug", dest="debug", default=False, action="store_true",
                       help="Enter the pdb debugger on main()")
+    optprs.add_option("--fov", dest="fov", metavar="DEG",
+                      type='float', 
+                      help="Set output field of view")
     optprs.add_option("--log", dest="logfile", metavar="FILE",
                       help="Write logging output to FILE")
     optprs.add_option("--loglevel", dest="loglevel", metavar="LEVEL",
-                      type='int', default=logging.INFO,
+                      type='int', 
                       help="Set logging level to LEVEL")
     optprs.add_option("-o", "--outfile", dest="outfile", metavar="FILE",
                       help="Write mosaic output to FILE")

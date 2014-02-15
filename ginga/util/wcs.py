@@ -14,8 +14,9 @@ We are lucky to have several possible choices for a python WCS package
 compatible with Ginga: astlib, kapteyn, starlink and astropy.
 kapteyn and astropy wrap Doug Calabretta's "WCSLIB", astLib wraps
 Doug Mink's "wcstools", and I'm not sure what starlink uses (their own?).
-Note that astlib and starlink require pyfits (or astropy) in order to
-create a WCS object from a FITS header. 
+
+Note that astlib requires pyfits (or astropy) in order to create a WCS
+object from a FITS header. 
 
 To force the use of one, do:
 
@@ -28,23 +29,15 @@ you.
 
 import math
 import re
+from collections import OrderedDict
 
 import numpy
 
-have_pyfits = False
-try:
-    from astropy.io import fits as pyfits
-    have_pyfits = True
-except ImportError:
-    try:
-        import pyfits
-        have_pyfits = True
-    except ImportError:
-        pass
-
+# Module variables that get configured at module load time
+# or when use() is called
 coord_types = []
+display_types = ['sexagesimal', 'degrees']
 wcs_configured = False
-
 
 have_kapteyn = False
 have_astlib = False
@@ -95,9 +88,17 @@ def use(wcspkg, raise_err=True):
     
     elif wcspkg == 'astlib':
         try:
-            if not have_pyfits:
-                raise WCSError("Need pyfits module to use astLib WCS")
             from astLib import astWCS, astCoords
+            # astlib requires pyfits (or astropy) in order
+            # to create a WCS object from a FITS header.
+            try:
+                from astropy.io import fits as pyfits
+            except ImportError:
+                try:
+                    import pyfits
+                except ImportError:
+                    raise ImportError("Need pyfits module to use astLib WCS")
+
             astWCS.NUMPY_MODE = True
             coord_types = ['j2000', 'b1950', 'galactic']
             have_astlib = True
@@ -111,11 +112,9 @@ def use(wcspkg, raise_err=True):
         return False
 
     elif wcspkg == 'astropy':
-        # Assume we should have pyfits if we have astropy
-        #if not have_pyfits:
-        #    raise WCSError("Need pyfits module to use astLib WCS")
         try:
             import astropy.wcs as pywcs
+            from astropy.io import fits as pyfits
             have_pywcs = True
         except ImportError:
             try:
@@ -144,8 +143,6 @@ def use(wcspkg, raise_err=True):
         WCS = BareBonesWCS
     return False
         
-display_types = ['sexagesimal', 'degrees']
-
 
 class BaseWCS(object):
 
@@ -839,104 +836,19 @@ class WcslibWCS(AstropyWCS):
     """DO NOT USE--this class name to be deprecated."""
     pass
 
-# HELP FUNCTIONS
+if not wcs_configured:
+    # default
+    WCS = BareBonesWCS
 
-def choose_coord_units(header):
-    """Return the appropriate key code for the units value for the axes by
-    examining the FITS header.
-    """
-    cunit = header['CUNIT1']
-    match = re.match(r'^deg\s*$', cunit)
-    if match:
-        return 'degree'
+    # try to use them in this order
+    for name in ('kapteyn', 'starlink', 'pyast', 'astropy'):
+        if use(name, raise_err=False):
+            break
 
-    #raise WCSError("Don't understand units '%s'" % (cunit))
-    return 'degree'
-    
 
-def choose_coord_system(header):
-    """Return an appropriate key code for the axes coordinate system by
-    examining the FITS header.
-    """
-    try:
-        ctype = header['CTYPE1'].strip().upper()
-    except KeyError:
-        return 'raw'
-        #raise WCSError("Cannot determine appropriate coordinate system from FITS header")
-    
-    match = re.match(r'^GLON\-.*$', ctype)
-    if match:
-        return 'galactic'
-
-    match = re.match(r'^ELON\-.*$', ctype)
-    if match:
-        return 'ecliptic'
-
-    match = re.match(r'^RA\-\-\-.*$', ctype)
-    if match:
-        hdkey = 'RADECSYS'
-        try:
-            radecsys = header[hdkey]
-            
-        except KeyError:
-            try:
-                hdkey = 'RADESYS'
-                radecsys = header[hdkey]
-            except KeyError:
-                # missing keyword
-                # RADESYS defaults to IRCS unless EQUINOX is given
-                # alone, in which case it defaults to FK4 prior to 1984
-                # and FK5 after 1984.
-                try:
-                    # EQUINOX defaults to 2000 unless RADESYS is FK4,
-                    # in which case it defaults to 1950.
-                    equinox = header['EQUINOX']
-                    radecsys = 'FK5'
-                except KeyError:
-                    radecsys = 'ICRS'
-
-        radecsys = radecsys.strip()
-
-        return radecsys.lower()
-
-    #raise WCSError("Cannot determine appropriate coordinate system from FITS header")
-    return 'icrs'
-
-def simple_wcs(px_x, px_y, ra_deg, dec_deg, px_scale_deg_px, rot_deg,
-               cdbase=[-1, 1]):
-    """Calculate a set of WCS keywords for a 2D simple instrument FITS
-    file with a 'standard' RA/DEC pixel projection.
-
-    Parameters:
-        px_x            : reference pixel of field in X (usually center of field)
-        px_y            : reference pixel of field in Y (usually center of field)
-        ra_deg          : RA (in deg) for the reference point
-        dec_deg         : DEC (in deg) for the reference point
-        px_scale_deg_px : pixel scale deg/pixel
-        rot_deg         : rotation angle of the field (in deg)
-
-    Returns a WCS object.  Use the to_header() method on it to get something
-    interesting that you can use.
-    """
-    import astropy.wcs as pywcs
-    wcsobj = pywcs.WCS()
-
-    # center of the projection
-    wcsobj.wcs.crpix = [px_x+1, px_y+1]  # pixel position (WCS is 1 based)
-    wcsobj.wcs.crval = [ra_deg, dec_deg]   # RA, Dec (degrees)
-
-    # image scale in deg/pix
-    wcsobj.wcs.cdelt = numpy.array(cdbase) * px_scale_deg_px
-
-    # Position angle of north (radians E of N)
-    rot_rad = numpy.radians(rot_deg)
-    cpa = numpy.cos(rot_rad)
-    spa = numpy.sin(rot_rad)
-    #wcsobj.wcs.pc = numpy.array([[-cpa, -spa], [-spa, cpa]])
-    wcsobj.wcs.pc = numpy.array([[cpa, -spa], [spa, cpa]])
-
-    return wcsobj
-
+#############################################################
+#    UTILITY FUNCTIONS
+#############################################################
 
 degPerHMSHour = 15.0      #360/24
 degPerHMSMin  = 0.25      #360.0/24/60
@@ -1181,113 +1093,123 @@ def get_rotation_and_scale(header):
     return ((xrot, yrot), (cdelt1, cdelt2))
 
 
-class WcsMatch(object):
+def choose_coord_units(header):
+    """Return the appropriate key code for the units value for the axes by
+    examining the FITS header.
     """
-    CREDIT: Code modified from
-      http://www.astropython.org/snippet/2011/1/Fix-the-WCS-for-a-FITS-image-file
+    cunit = header['CUNIT1']
+    match = re.match(r'^deg\s*$', cunit)
+    if match:
+        return 'degree'
+
+    #raise WCSError("Don't understand units '%s'" % (cunit))
+    return 'degree'
+    
+
+def choose_coord_system(header):
+    """Return an appropriate key code for the axes coordinate system by
+    examining the FITS header.
     """
-    def __init__(self, header, wcsClass, xy_coords, ref_coords):
-        # Image 
-        self.hdr = header
-        from ginga.misc.log import NullLogger
-        self.wcs = wcsClass(NullLogger())
-        self.wcs.load_header(self.hdr)
+    try:
+        ctype = header['CTYPE1'].strip().upper()
+    except KeyError:
+        return 'raw'
+        #raise WCSError("Cannot determine appropriate coordinate system from FITS header")
+    
+    match = re.match(r'^GLON\-.*$', ctype)
+    if match:
+        return 'galactic'
 
-        # Reference (correct) source positions in RA, Dec
-        self.ref_coords = numpy.array(ref_coords)
+    match = re.match(r'^ELON\-.*$', ctype)
+    if match:
+        return 'ecliptic'
 
-        # Get source pixel positions from reference coords
-        #xy_coords = map(lambda args: self.wcs.radectopix(*args), img_coords)
-        self.pix0 = numpy.array(xy_coords).flatten()
-
-        # Copy the original WCS CRVAL and CD values
-        self.has_cd = False
-        self.crval = numpy.array(self.wcs.get_keywords('CRVAL1', 'CRVAL2'))
+    match = re.match(r'^RA\-\-\-.*$', ctype)
+    if match:
+        hdkey = 'RADECSYS'
         try:
-            cd = numpy.array(self.wcs.get_keywords('CD1_1', 'CD1_2',
-                                                   'CD2_1', 'CD2_2'))
-            self.cd = cd.reshape((2, 2))
-            self.has_cd = True
+            radecsys = header[hdkey]
+            
         except KeyError:
-            cd = numpy.array(self.wcs.get_keywords('PC1_1', 'PC1_2',
-                                                   'PC2_1', 'PC2_2'))
-            self.cd = cd.reshape((2, 2))
+            try:
+                hdkey = 'RADESYS'
+                radecsys = header[hdkey]
+            except KeyError:
+                # missing keyword
+                # RADESYS defaults to IRCS unless EQUINOX is given
+                # alone, in which case it defaults to FK4 prior to 1984
+                # and FK5 after 1984.
+                try:
+                    # EQUINOX defaults to 2000 unless RADESYS is FK4,
+                    # in which case it defaults to 1950.
+                    equinox = header['EQUINOX']
+                    radecsys = 'FK5'
+                except KeyError:
+                    radecsys = 'ICRS'
 
-    def rotate(self, degs):
-        rads = numpy.radians(degs)
-        s = numpy.sin(rads)
-        c = numpy.cos(rads)
-        return numpy.array([[c, -s],
-                            [s, c]])
+        radecsys = radecsys.strip()
 
-    def calc_pix(self, pars):
-        """For the given d_ra, d_dec, and d_theta pars, update the WCS
-        transformation and calculate the new pixel coordinates for each
-        reference source position.
-        """
-        # calculate updated ra/dec and rotation
-        d_ra, d_dec, d_theta = pars
-        crval = self.crval + numpy.array([d_ra, d_dec]) / 3600.0
-        cd = numpy.dot(self.rotate(d_theta), self.cd)
+        return radecsys.lower()
 
-        # temporarily assign to the WCS
-        d = self.hdr
-        d.update(dict(CRVAL1=crval[0], CRVAL2=crval[1]))
-        if self.has_cd:
-            d.update(dict(CD1_1=cd[0,0], CD1_2=cd[0,1], CD2_1=cd[1,0], CD2_2=cd[1,1]))
-        else:
-            d.update(dict(PC1_1=cd[0,0], PC1_2=cd[0,1], PC2_1=cd[1,0], PC2_2=cd[1,1]))
-        self.wcs.load_header(self.hdr)
+    #raise WCSError("Cannot determine appropriate coordinate system from FITS header")
+    return 'icrs'
 
-        # calculate the new pixel values based on this wcs
-        pix = numpy.array(map(lambda args: self.wcs.radectopix(*args),
-                              self.ref_coords)).flatten()
+def simple_wcs(px_x, px_y, ra_deg, dec_deg, px_scale_deg_px, rot_deg,
+               cdbase=[1, 1]):
+    """Calculate a set of WCS keywords for a 2D simple instrument FITS
+    file with a 'standard' RA/DEC pixel projection.
 
-        #print 'pix =', pix
-        #print 'pix0 =', self.pix0
-        return pix
+    Parameters:
+        px_x            : (ZERO-based) reference pixel of field in X
+                                (usually center of field)
+        px_y            : (ZERO-based) reference pixel of field in Y
+                                (usually center of field)
+        ra_deg          : RA (in deg) for the reference point
+        dec_deg         : DEC (in deg) for the reference point
+        px_scale_deg_px : pixel scale (deg/pixel)
+        rot_deg         : rotation angle of the field (in deg)
 
-    def calc_resid2(self, pars):
-        """Return the squared sum of the residual difference between the
-        original pixel coordinates and the new pixel coords (given offset
-        specified in ``pars``)
-        
-        This gets called by the scipy.optimize.fmin function.
-        """
-        pix = self.calc_pix(pars)
-        resid2 = numpy.sum((self.pix0 - pix) ** 2) # assumes uniform errors
-        #print 'resid2 =', resid2
-        return resid2
+    Returns an ordered dictionary object containing WCS headers.
+    """
+    # center of the projection
+    crpix = (px_x+1, px_y+1)  # pixel position (WCS is 1 based)
+    crval = (ra_deg, dec_deg) # RA, Dec (degrees)
 
-    def calc_match(self):
-        from scipy.optimize import fmin
-        x0 = numpy.array([0.0, 0.0, 0.0])
+    # image scale in deg/pix
+    cdelt = numpy.array(cdbase) * px_scale_deg_px
 
-        d_ra, d_dec, d_theta = fmin(self.calc_resid2, x0)
+    # Position angle of north (radians E of N)
+    rot_rad = numpy.radians(rot_deg)
+    cpa = numpy.cos(rot_rad)
+    spa = numpy.sin(rot_rad)
+    # clockwise rotation
+    #pc = numpy.array([[cpa, spa], [-spa, cpa]])
+    # counter clockwise
+    pc = numpy.array([[cpa, -spa], [spa, cpa]])
 
-        crval = self.crval + numpy.array([d_ra, d_dec]) / 3600.0
-        cd = numpy.dot(self.rotate(d_theta), self.cd)
+    cd = pc * cdelt
 
-        d = self.hdr
-        d.update(dict(CRVAL1=crval[0], CRVAL2=crval[1]))
-        if self.has_cd:
-            d.update(dict(CD1_1=cd[0,0], CD1_2=cd[0,1], CD2_1=cd[1,0], CD2_2=cd[1,1]))
-        else:
-            d.update(dict(PC1_1=cd[0,0], PC1_2=cd[0,1], PC2_1=cd[1,0], PC2_2=cd[1,1]))
-        self.wcs.load_header(self.hdr)
-        
-        # return delta ra/dec and delta rotation
-        return (d_ra, d_dec, d_theta)
-
-
-if not wcs_configured:
-    # default
-    WCS = BareBonesWCS
-
-    # try to use them in this order
-    for name in ('kapteyn', 'starlink', 'pyast', 'astropy'):
-        if use(name, raise_err=False):
-            break
-
+    res = OrderedDict((('CRVAL1', crval[0]),
+                       ('CRVAL2', crval[1]),
+                       ('CRPIX1', crpix[0]),
+                       ('CRPIX2', crpix[1]),
+                       ('CUNIT1', 'deg'),
+                       ('CUNIT2', 'deg'),
+                       ('CTYPE1', 'RA---TAN'),
+                       ('CTYPE2', 'DEC--TAN'),
+                       ('RADECSYS', 'FK5'),
+                       # Either PC + CDELT or CD should appear
+                       ('CDELT1', cdelt[0]),
+                       ('CDELT2', cdelt[1]),
+                       ('PC1_1' , pc[0, 0]),
+                       ('PC1_2' , pc[0, 1]),
+                       ('PC2_1' , pc[1, 0]),
+                       ('PC2_2' , pc[1, 1])
+                       #('CD1_1' , cd[0, 0]),
+                       #('CD1_2' , cd[0, 1]),
+                       #('CD2_1' , cd[1, 0]),
+                       #('CD2_2' , cd[1, 1]),
+                       ))
+    return res
 
 #END

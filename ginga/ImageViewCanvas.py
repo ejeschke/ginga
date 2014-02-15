@@ -386,7 +386,8 @@ class DrawingMixin(object):
         self.drawbuttonmask = 0x4
 
         # NOTE: must be mixed in with a Callback.Callbacks
-        for name in ('draw-event', 'draw-down', 'draw-move', 'draw-up'):
+        for name in ('draw-event', 'draw-down', 'draw-move', 'draw-up',
+                     'drag-drop'):
             self.enable_callback(name)
 
     def setSurface(self, fitsimage):
