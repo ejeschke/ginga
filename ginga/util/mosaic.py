@@ -24,8 +24,9 @@ from ginga.misc import log
 
 
 def create_blank_image(ra_deg, dec_deg, fov_deg, px_scale, rot_deg,
-                       cdbase=[1, 1]):
+                       cdbase=[1, 1], logger=None):
 
+    print "0. ROTATION %f" % (rot_deg)
     # ra and dec in traditional format
     ra_txt = wcs.raDegToString(ra_deg, format='%02d:%02d:%06.3f')
     dec_txt = wcs.decDegToString(dec_deg, format='%s%02d:%02d:%05.2f')
@@ -39,19 +40,6 @@ def create_blank_image(ra_deg, dec_deg, fov_deg, px_scale, rot_deg,
     data = numpy.zeros((height, width), dtype=numpy.float32)
 
     crpix = float(imagesize // 2)
-    # header = {
-    #     'SIMPLE': True,
-    #     'BITPIX': -32,
-    #     'EXTEND': True,
-    #     'NAXIS': 2,
-    #     'NAXIS1': imagesize,
-    #     'NAXIS2': imagesize,
-    #     'RA': ra_txt,
-    #     'DEC': dec_txt,
-    #     'EQUINOX': 2000.0,
-    #     'OBJECT': 'MOSAIC',
-    #     'LONPOLE': 180.0,
-    #     }
     header = OrderedDict((('SIMPLE', True),
                           ('BITPIX', -32),
                           ('EXTEND', True),
@@ -68,12 +56,14 @@ def create_blank_image(ra_deg, dec_deg, fov_deg, px_scale, rot_deg,
     # Add basic WCS keywords
     ## if rot_deg < 0.0:
     ##     rot_deg = 360.0 + math.fmod(rot_deg, 360.0)
+    print "1. ROTATION %f" % (rot_deg)
     wcshdr = wcs.simple_wcs(crpix, crpix, ra_deg, dec_deg, px_scale,
                             rot_deg, cdbase=cdbase)
     header.update(wcshdr)
 
     # Create image container
-    image = AstroImage.AstroImage(data, wcsclass=wcs.WCS)
+    image = AstroImage.AstroImage(data, wcsclass=wcs.WCS,
+                                  logger=logger)
     image.update_keywords(header)
 
     return image
@@ -101,7 +91,8 @@ def mosaic(logger, filelist, outfile=None, fov_deg=None):
     cdbase = [numpy.sign(cdelt1), numpy.sign(cdelt2)]
     img_mosaic = create_blank_image(ra_deg, dec_deg,
                                     fov_deg, px_scale, rot_deg,
-                                    cdbase=cdbase)
+                                    cdbase=cdbase,
+                                    logger=logger)
     header = img_mosaic.get_header()
     ((xrot, yrot), (cdelt1, cdelt2)) = wcs.get_rotation_and_scale(header)
     logger.debug("mosaic xrot=%f yrot=%f cdelt1=%f cdelt2=%f" % (xrot, yrot,

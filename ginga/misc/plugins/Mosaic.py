@@ -59,11 +59,12 @@ class Mosaic(GingaPlugin.LocalPlugin):
         
         fr = Widgets.Frame("Mosaic")
 
-        captions = [("FOV (deg):", 'label', 'Fov', 'llabel'),
-                    ("Set FOV:", 'label', 'Set FOV', 'entry'),
-                    ("New Mosaic", 'button'),
-                    ("Label images", 'checkbutton'),
-                    ]
+        captions = [
+            ("FOV (deg):", 'label', 'Fov', 'llabel'),
+            ("Set FOV:", 'label', 'Set FOV', 'entry'),
+            ("New Mosaic", 'button'),
+            ("Label images", 'checkbutton'),
+            ]
         w, b = Widgets.build_info(captions)
         self.w = b
 
@@ -101,7 +102,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
         """
         header = image.get_header()
         import pprint
-        print "NORMAL HEADER"
+        print "IMAGE0 HEADER"
         pprint.pprint(header)
         ra_deg, dec_deg = header['CRVAL1'], header['CRVAL2']
 
@@ -113,16 +114,18 @@ class Mosaic(GingaPlugin.LocalPlugin):
 
         # TODO: handle differing pixel scale for each axis?
         px_scale = math.fabs(cdelt1)
-        cdbase = [numpy.sign(cdelt1), numpy.sign(cdelt2)]
+        cdbase = [1, 1]
         # TODO: handle differing rotation for each axis?
-        rot_deg = yrot
+        # why need to negate here?!
+        rot_deg = -yrot
 
         self.logger.debug("creating blank image to hold mosaic")
         self.fv.gui_do(self._prepare_mosaic1)
 
         img_mosaic = mosaic.create_blank_image(ra_deg, dec_deg,
                                                fov_deg, px_scale,
-                                               rot_deg, cdbase=cdbase)
+                                               rot_deg, cdbase=cdbase,
+                                               logger=self.logger)
 
         imname = 'mosaic%d' % (self.count)
         img_mosaic.set(name=imname)
@@ -164,6 +167,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
         
 
     def close(self):
+        self.img_mosaic = None
         chname = self.fv.get_channelName(self.fitsimage)
         self.fv.stop_local_plugin(chname, str(self))
         return True

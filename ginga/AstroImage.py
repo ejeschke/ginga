@@ -518,7 +518,7 @@ class AstroImage(BaseImage):
 
         header = self.get_header()
         ((xrot_ref, yrot_ref),
-         (cdelt1, cdelt2)) = wcs.get_rotation_and_scale(header)
+         (cdelt1_ref, cdelt2_ref)) = wcs.get_rotation_and_scale(header)
         ref_rot = yrot_ref
 
         # drop each image in the right place in the new data array
@@ -540,23 +540,34 @@ class AstroImage(BaseImage):
             self.logger.debug("image(%s) xrot=%f yrot=%f cdelt1=%f cdelt2=%f" % (
                 name, xrot, yrot, cdelt1, cdelt2))
 
-            # Optomization for 180 rotations
             rot_dx, rot_dy = xrot - xrot_ref, yrot - yrot_ref
+
             flip_x = False
-            if math.fabs(rot_dx) == 180.0:
-                flip_x = True
-                rot_dx = 0.0
             flip_y = False
+
+            ## # Flip X due to negative CDELT1
+            ## if numpy.sign(cdelt1) < 0:
+            ##     flip_x = True
+
+            ## # Flip Y due to negative CDELT2
+            ## if numpy.sign(cdelt2) < 0:
+            ##     flip_y = True
+
+            # Optomization for 180 rotations
+            if math.fabs(rot_dx) == 180.0:
+                flip_x = not flip_x
+                rot_dx = 0.0
             if math.fabs(rot_dy) == 180.0:
-                flip_y = True
+                flip_y = not flip_y
                 rot_dy = 0.0
+
             self.logger.debug("flip_x=%s flip_y=%s" % (flip_x, flip_y))
             rotdata = trcalc.transform(data_np, flip_x=flip_x, flip_y=flip_y)
 
             if rot_dy != 0.0:
                 rot_deg = rot_dy
                 self.logger.debug("rotating %s by %f deg" % (name, rot_deg))
-                rotdata = trcalc.rotate(data_np, -rot_deg,
+                rotdata = trcalc.rotate(data_np, rot_deg,
                                         #rotctr_x=ctr_x, rotctr_y=ctr_y
                                         )
 
