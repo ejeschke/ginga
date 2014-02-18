@@ -12,7 +12,7 @@ import numpy
 import os.path
 
 from ginga import AstroImage
-from ginga.util import wcs, mosaic
+from ginga.util import wcs, mosaic, iqcalc
 from ginga import GingaPlugin
 from ginga.misc import Widgets, CanvasTypes
 
@@ -24,11 +24,12 @@ class Mosaic(GingaPlugin.LocalPlugin):
 
         self.count = 0
         self.img_mosaic = None
+        self.bg_ref = 0.0
         
         self.dc = self.fv.getDrawClasses()
 
         canvas = self.dc.DrawingCanvas()
-        canvas.enable_draw(True)
+        canvas.enable_draw(False)
         canvas.add_callback('drag-drop', self.drop_cb)
         canvas.setSurface(fitsimage)
         self.canvas = canvas
@@ -37,7 +38,8 @@ class Mosaic(GingaPlugin.LocalPlugin):
         # Set preferences for destination channel
         prefs = self.fv.get_preferences()
         self.settings = prefs.createCategory('plugin_Mosaic')
-        self.settings.setDefaults(annotate_images=True, fov_deg=1.0)
+        self.settings.setDefaults(annotate_images=True, fov_deg=1.0,
+                                  match_bg=False, trim_px=0)
         self.settings.load(onError='silent')
 
 
@@ -63,19 +65,34 @@ class Mosaic(GingaPlugin.LocalPlugin):
             ("FOV (deg):", 'label', 'Fov', 'llabel'),
             ("Set FOV:", 'label', 'Set FOV', 'entry'),
             ("New Mosaic", 'button'),
-            ("Label images", 'checkbutton'),
+            ("Label images", 'checkbutton', "Match bg", 'checkbutton'),
+            ("Trim Pixels:", 'label', 'Trim Px', 'llabel'),
+            ("Set Trim Pixels:", 'label', 'Trim Pixels', 'entry')
             ]
         w, b = Widgets.build_info(captions)
         self.w = b
 
         fov_deg = self.settings.get('fov_deg', 1.0)
         b.fov.set_text(str(fov_deg))
+        b.set_fov.set_length(8)
         b.set_fov.set_text(str(fov_deg))
         b.set_fov.add_callback('activated', self.set_fov_cb)
+        b.set_fov.set_tooltip("Set size of mosaic FOV (deg)")
         b.new_mosaic.add_callback('activated', lambda w: self.new_mosaic_cb())
         labelem = self.settings.get('annotate_images', False)
         b.label_images.set_state(labelem)
+        b.label_images.set_tooltip("Label tiles with their names")
         b.label_images.add_callback('activated', self.annotate_cb)
+
+        trim_px = self.settings.get('trim_px', 0)
+        match_bg = self.settings.get('match_bg', False)
+        b.match_bg.set_tooltip("Try to match background levels")
+        b.match_bg.set_state(match_bg)
+        b.match_bg.add_callback('activated', self.match_bg_cb)
+        b.trim_pixels.set_tooltip("Set number of pixels to trim from each edge")
+        b.trim_px.set_text(str(trim_px))
+        b.trim_pixels.add_callback('activated', self.trim_pixels_cb)
+        b.trim_pixels.set_length(8)
 
         fr.set_widget(w)
         vbox1.add_widget(fr, stretch=0)
@@ -106,6 +123,9 @@ class Mosaic(GingaPlugin.LocalPlugin):
         pprint.pprint(header)
         ra_deg, dec_deg = header['CRVAL1'], header['CRVAL2']
 
+        data_np = image.get_data()
+        self.bg_ref = iqcalc.get_mean(data_np)
+            
         ((xrot, yrot), (cdelt1, cdelt2)) = wcs.get_rotation_and_scale(header)
         self.logger.debug("image0 xrot=%f yrot=%f cdelt1=%f cdelt2=%f" % (
             xrot, yrot, cdelt1, cdelt2))
@@ -154,9 +174,18 @@ class Mosaic(GingaPlugin.LocalPlugin):
     def ingest_one(self, image):
         imname = image.get('name', 'image')
         imname, ext = os.path.splitext(imname)
+
+        # Get optional parameters
+        trim_px = self.settings.get('trim_px', 0)
+        match_bg = self.settings.get('match_bg', False)
+        bg_ref = None
+        if match_bg:
+            bg_ref = self.bg_ref
         
         self.logger.info("Processing '%s' ..." % (imname))
-        loc = self.img_mosaic.mosaic_inline([ image ])
+        loc = self.img_mosaic.mosaic_inline([ image ],
+                                            bg_ref=bg_ref,
+                                            trim_px=trim_px)
 
         (xlo, ylo, xhi, yhi) = loc
 
@@ -251,6 +280,14 @@ class Mosaic(GingaPlugin.LocalPlugin):
         fov_deg = float(w.get_text())
         self.settings.set(fov_deg=fov_deg)
         self.w.fov.set_text(str(fov_deg))
+        
+    def trim_pixels_cb(self, w):
+        trim_px = int(w.get_text())
+        self.w.trim_px.set_text(str(trim_px))
+        self.settings.set(trim_px=trim_px)
+        
+    def match_bg_cb(self, w, tf):
+        self.settings.set(match_bg=tf)
         
     def __str__(self):
         return 'mosaic'

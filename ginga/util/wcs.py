@@ -506,6 +506,7 @@ class KapteynWCS(BaseWCS):
                                          skyout=self._skyout)
 
             self.coordsys = choose_coord_system(self.header)
+
         except Exception, e:
             self.logger.error("Error making WCS object: %s" % (str(e)))
             self.wcs = None
@@ -1056,12 +1057,29 @@ def get_rotation_and_scale(header):
         return xrot, yrot, cdelt1, cdelt2
 
     def calc_from_pc(pc1_1, pc1_2, pc2_1, pc2_2):
-
-        cdelt1 = header['CDELT1']
-        cdelt2 = header['CDELT2']
+        cdelt1 = float(header['CDELT1'])
+        cdelt2 = float(header['CDELT2'])
         s = float(cdelt1) / float(cdelt2)
         xrot = math.atan2(pc2_1*s, pc1_1)
         yrot = math.atan2(-pc1_2/s, pc2_2)
+
+        return xrot, yrot, cdelt1, cdelt2
+
+    def calc_from_crota():
+        try:
+            crota1 = float(header['CROTA1'])
+            xrot = crota1
+        except KeyError:
+            xrot = 0.0
+
+        try:
+            crota2 = float(header['CROTA2'])
+            yrot = crota2
+        except KeyError:
+            yrot = 0.0
+
+        cdelt1 = float(header['CDELT1'])
+        cdelt2 = float(header['CDELT2'])
 
         return xrot, yrot, cdelt1, cdelt2
 
@@ -1073,21 +1091,24 @@ def get_rotation_and_scale(header):
         xrot, yrot, cdelt1, cdelt2 = calc_from_cd(cd1_1, cd1_2, cd2_1, cd2_2)
         
     except KeyError:
-        pc1_1 = header['PC1_1']
-        pc1_2 = header['PC1_2']
-        pc2_1 = header['PC2_1']
-        pc2_2 = header['PC2_2']
+        try:
+            pc1_1 = header['PC1_1']
+            pc1_2 = header['PC1_2']
+            pc2_1 = header['PC2_1']
+            pc2_2 = header['PC2_2']
 
-        #xrot, yrot, cdelt1, cdelt2 = calc_from_pc(pc1_1, pc1_2, pc2_1, pc2_2)
-        cdelt1 = header['CDELT1']
-        cdelt2 = header['CDELT2']
+            #xrot, yrot, cdelt1, cdelt2 = calc_from_pc(pc1_1, pc1_2, pc2_1, pc2_2)
+            cdelt1 = header['CDELT1']
+            cdelt2 = header['CDELT2']
 
-        cd1_1 = pc1_1 * cdelt1
-        cd1_2 = pc1_2 * cdelt1
-        cd2_1 = pc2_1 * cdelt2
-        cd2_2 = pc2_2 * cdelt2
-        xrot, yrot, cdelt1, cdelt2 = calc_from_cd(cd1_1, cd1_2, cd2_1, cd2_2)
-    
+            cd1_1 = pc1_1 * cdelt1
+            cd1_2 = pc1_2 * cdelt1
+            cd2_1 = pc2_1 * cdelt2
+            cd2_2 = pc2_2 * cdelt2
+            xrot, yrot, cdelt1, cdelt2 = calc_from_cd(cd1_1, cd1_2, cd2_1, cd2_2)
+        except KeyError:
+            xrot, yrot, cdelt1, cdelt2 = calc_from_crota()
+            
     xrot, yrot = math.degrees(xrot), math.degrees(yrot)
 
     return ((xrot, yrot), (cdelt1, cdelt2))

@@ -26,6 +26,9 @@ class IQCalcError(Exception):
     """Base exception for raising errors in this module."""
     pass
 
+def get_mean(data_np):
+    mdata = numpy.ma.masked_array(data_np, numpy.isnan(data_np))
+    return numpy.mean(mdata)
 
 class IQCalc(object):
 

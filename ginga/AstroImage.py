@@ -13,9 +13,9 @@ import math
 import logging
 import time
 
-import numpy
+import numpy, numpy.ma
 
-from ginga.util import wcs, io_fits
+from ginga.util import wcs, io_fits, iqcalc
 from ginga.BaseImage import BaseImage, ImageError, Header
 from ginga.misc import Bunch
 from ginga import trcalc
@@ -508,7 +508,7 @@ class AstroImage(BaseImage):
         ## if update_wcs:
         ##     self.wcs.rotate(deg)
 
-    def mosaic_inline(self, imagelist):
+    def mosaic_inline(self, imagelist, bg_ref=None, trim_px=None):
         """Drops new images into the current image (if there is room),
         relocating them according the WCS between the two images.
         """
@@ -516,11 +516,14 @@ class AstroImage(BaseImage):
         ra0, dec0 = self.pixtoradec(0, 0)
         ra1, dec1 = self.pixtoradec(self.width-1, self.height-1)
 
+        # Get our own (mosaic) rotation and scale
         header = self.get_header()
         ((xrot_ref, yrot_ref),
          (cdelt1_ref, cdelt2_ref)) = wcs.get_rotation_and_scale(header)
         ref_rot = yrot_ref
 
+        scale_x, scale_y = math.fabs(cdelt1_ref), math.fabs(cdelt2_ref)
+        
         # drop each image in the right place in the new data array
         mydata = self.get_data()
 
@@ -530,28 +533,59 @@ class AstroImage(BaseImage):
             count += 1
 
             data_np = image.get_data()
+
+            # Calculate sky position at the center of the piece
             ctr_x, ctr_y = trcalc.get_center(data_np)
             ra, dec = image.pixtoradec(ctr_x, ctr_y)
-            
-            # Rotate image into our orientation, according to wcs
+
+            # User specified a trim?  If so, trim edge pixels from each
+            # side of the array
+            ht, wd = data_np.shape[:2]
+            if trim_px != None:
+                xlo, xhi = trim_px, wd - trim_px
+                ylo, yhi = trim_px, ht - trim_px
+                data_np = data_np[ylo:yhi, xlo:xhi, ...]
+                ht, wd = data_np.shape[:2]
+
+            # If caller asked us to match background of pieces then
+            # get the mean of this piece
+            if bg_ref != None:
+                bg = iqcalc.get_mean(data_np)
+                bg_inc = bg_ref - bg
+                print "bg=%f inc=%f" % (bg, bg_inc)
+                data_np = data_np + bg_inc
+
+            # Get rotation and scale of piece
             header = image.get_header()
             ((xrot, yrot),
              (cdelt1, cdelt2)) = wcs.get_rotation_and_scale(header)
             self.logger.debug("image(%s) xrot=%f yrot=%f cdelt1=%f cdelt2=%f" % (
                 name, xrot, yrot, cdelt1, cdelt2))
 
+            # scale if necessary
+            # TODO: combine with rotation?
+            if ((math.fabs(cdelt1) != scale_x) or
+                (math.fabs(cdelt2) != scale_y)):
+                nscale_x = math.fabs(cdelt1) / scale_x
+                nscale_y = math.fabs(cdelt2) / scale_y
+                self.logger.debug("scaling piece by x(%f), y(%f)" % (
+                    nscale_x, nscale_y))
+                data_np, (ascale_x, ascale_y) = trcalc.get_scaled_cutout_basic(
+                    data_np, 0, 0, wd-1, ht-1, nscale_x, nscale_y)
+
+            # Rotate piece into our orientation, according to wcs
             rot_dx, rot_dy = xrot - xrot_ref, yrot - yrot_ref
 
             flip_x = False
             flip_y = False
 
-            ## # Flip X due to negative CDELT1
-            ## if numpy.sign(cdelt1) < 0:
-            ##     flip_x = True
+            # Flip X due to negative CDELT1
+            if numpy.sign(cdelt1) < 0:
+                flip_x = True
 
-            ## # Flip Y due to negative CDELT2
-            ## if numpy.sign(cdelt2) < 0:
-            ##     flip_y = True
+            # Flip Y due to negative CDELT2
+            if numpy.sign(cdelt2) < 0:
+                flip_y = True
 
             # Optomization for 180 rotations
             if math.fabs(rot_dx) == 180.0:
@@ -564,10 +598,11 @@ class AstroImage(BaseImage):
             self.logger.debug("flip_x=%s flip_y=%s" % (flip_x, flip_y))
             rotdata = trcalc.transform(data_np, flip_x=flip_x, flip_y=flip_y)
 
+            # Finish with any necessary rotation of piece
             if rot_dy != 0.0:
                 rot_deg = rot_dy
                 self.logger.debug("rotating %s by %f deg" % (name, rot_deg))
-                rotdata = trcalc.rotate(data_np, rot_deg,
+                rotdata = trcalc.rotate(rotdata, rot_deg,
                                         #rotctr_x=ctr_x, rotctr_y=ctr_y
                                         )
 
@@ -575,24 +610,35 @@ class AstroImage(BaseImage):
             ht, wd = rotdata.shape[:2]
             ctr_x, ctr_y = trcalc.get_center(rotdata)
 
-            # Find location of image piece in our array
+            # Find location of image piece (center) in our array
             x0, y0 = self.radectopix(ra, dec)
             
-            #self.logger.debug("0,0 -> %f,%f" % (x0, y0))
-            # losing WCS precision!
+            # Merge piece as closely as possible into our array
+            # Unfortunately we lose a little precision rounding to the
+            # nearest pixel--can't be helped with this approach
             x0, y0 = int(round(x0)), int(round(y0))
             self.logger.debug("Fitting image '%s' into mosaic at %d,%d" % (
                 name, x0, y0))
 
+            # Sanity check piece placement
             xlo, xhi = x0 - ctr_x, x0 + wd - ctr_x
             ylo, yhi = y0 - ctr_y, y0 + ht - ctr_y
             assert (xhi - xlo == wd), \
                    Exception("Width differential %d != %d" % (xhi - xlo, wd))
             assert (yhi - ylo == ht), \
                    Exception("Height differential %d != %d" % (yhi - ylo, ht))
-            
-            # merge image piece into our array
-            mydata[ylo:yhi, xlo:xhi, ...] += rotdata[0:ht, 0:wd, ...]
+
+            # fit image piece into our array, not overwriting any data
+            # already written
+            try:
+                #mydata[ylo:yhi, xlo:xhi, ...] += rotdata[0:ht, 0:wd, ...]
+                idx = (mydata[ylo:yhi, xlo:xhi, ...] == 0.0)
+                #print idx.shape, rotdata.shape
+                mydata[ylo:yhi, xlo:xhi, ...][idx] = rotdata[0:ht, 0:wd, ...][idx]
+
+            except Exception as e:
+                self.logger.error("Error fitting tile: %s" % (str(e)))
+                raise
 
         self.make_callback('modified')
 

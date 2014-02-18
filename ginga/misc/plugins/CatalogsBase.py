@@ -334,7 +334,7 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
         self.fv.load_file(fitspath, chname=chname)
 
         # Update the GUI
-        def getimage_update(self):
+        def getimage_update():
             self.setfromimage()
             self.redo()
 
