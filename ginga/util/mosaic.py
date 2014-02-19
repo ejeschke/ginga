@@ -26,16 +26,18 @@ from ginga.misc import log
 def create_blank_image(ra_deg, dec_deg, fov_deg, px_scale, rot_deg,
                        cdbase=[1, 1], logger=None):
 
-    print "0. ROTATION %f" % (rot_deg)
     # ra and dec in traditional format
     ra_txt = wcs.raDegToString(ra_deg, format='%02d:%02d:%06.3f')
     dec_txt = wcs.decDegToString(dec_deg, format='%s%02d:%02d:%05.2f')
 
     # Create a dummy sh image
     imagesize = int(round(fov_deg / px_scale))
-    # round to even size
+    # round to an even size
     if imagesize % 2 != 0:
         imagesize += 1
+    ## # round to an odd size
+    ## if imagesize % 2 == 0:
+    ##     imagesize += 1
     width = height = imagesize
     data = numpy.zeros((height, width), dtype=numpy.float32)
 
@@ -54,9 +56,6 @@ def create_blank_image(ra_deg, dec_deg, fov_deg, px_scale, rot_deg,
                           ))
 
     # Add basic WCS keywords
-    ## if rot_deg < 0.0:
-    ##     rot_deg = 360.0 + math.fmod(rot_deg, 360.0)
-    print "1. ROTATION %f" % (rot_deg)
     wcshdr = wcs.simple_wcs(crpix, crpix, ra_deg, dec_deg, px_scale,
                             rot_deg, cdbase=cdbase)
     header.update(wcshdr)
@@ -88,7 +87,8 @@ def mosaic(logger, filelist, outfile=None, fov_deg=None):
         # TODO: calculate fov!
         fov_deg = 1.0
         
-    cdbase = [numpy.sign(cdelt1), numpy.sign(cdelt2)]
+    #cdbase = [numpy.sign(cdelt1), numpy.sign(cdelt2)]
+    cdbase = [1, 1]
     img_mosaic = create_blank_image(ra_deg, dec_deg,
                                     fov_deg, px_scale, rot_deg,
                                     cdbase=cdbase,

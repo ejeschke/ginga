@@ -131,20 +131,22 @@ class Mosaic(GingaPlugin.LocalPlugin):
             xrot, yrot, cdelt1, cdelt2))
         print("image0 xrot=%f yrot=%f cdelt1=%f cdelt2=%f" % (
             xrot, yrot, cdelt1, cdelt2))
+        print("image0 check rot=%f" % (wcs.get_rotation(header)))
 
         # TODO: handle differing pixel scale for each axis?
         px_scale = math.fabs(cdelt1)
+        #cdbase = [numpy.sign(cdelt1), numpy.sign(cdelt2)]
         cdbase = [1, 1]
         # TODO: handle differing rotation for each axis?
-        # why need to negate here?!
-        rot_deg = -yrot
+        rot_deg = yrot
 
         self.logger.debug("creating blank image to hold mosaic")
         self.fv.gui_do(self._prepare_mosaic1)
 
         img_mosaic = mosaic.create_blank_image(ra_deg, dec_deg,
                                                fov_deg, px_scale,
-                                               rot_deg, cdbase=cdbase,
+                                               rot_deg, 
+                                               cdbase=cdbase,
                                                logger=self.logger)
 
         imname = 'mosaic%d' % (self.count)
@@ -160,6 +162,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
             xrot, yrot, cdelt1, cdelt2))
         print("mosaic xrot=%f yrot=%f cdelt1=%f cdelt2=%f" % (
             xrot, yrot, cdelt1, cdelt2))
+        print("mosaic check rot=%f" % (wcs.get_rotation(header)))
 
         self.img_mosaic = img_mosaic
         chname = self.fv.get_channelName(self.fitsimage)

@@ -1020,39 +1020,31 @@ def get_rotation_and_scale(header):
     """
 
     def calc_from_cd(cd1_1, cd1_2, cd2_1, cd2_2):
-        try:
-            # Image has plate scale keywords?
-            cdelt1 = header['CDELT1']
-            cdelt2 = header['CDELT2']
-            s = float(cdelt1) / float(cdelt2)
-            xrot = math.atan2(cd2_1*s, cd1_1)
-            yrot = math.atan2(-cd1_2/s, cd2_2)
+        # Ignore CDELT1 and CDELT2 keywords if using CD keywords
+        # and calculate them
+        det = cd1_1*cd2_2 - cd1_2*cd2_1
+        if det < 0:
+            sgn = -1
+        else:
+            sgn = 1
+        ## if det > 0:
+        ##     raise ValueError("Astrometry is for a right-handed coordinate system")
 
-        except KeyError:
-            # No, calculate them
-            det = cd1_1*cd2_2 - cd1_2*cd2_1
-            if det < 0:
-                sgn = -1
+        if (cd2_1 == 0.0) or (cd1_2 == 0.0):
+            # Unrotated coordinates?
+            xrot = 0.0
+            yrot = 0.0
+            cdelt1 = cd1_1
+            cdelt2 = cd2_2
+        else:
+            cdelt1 = sgn * math.sqrt(cd1_1**2 + cd2_1**2)
+            cdelt2 = math.sqrt(cd1_2**2 + cd2_2**2)
+            if cdelt1 > 0:
+                sgn1 = 1
             else:
-                sgn = 1
-            ## if det > 0:
-            ##     print 'WARNING - Astrometry is for a right-handed coordinate system'
-
-            if (cd2_1 == 0.0) or (cd1_2 == 0.0):
-                # Unrotated coordinates?
-                xrot = 0.0
-                yrot = 0.0
-                cdelt1 = cd1_1
-                cdelt2 = cd2_2
-            else:
-                cdelt1 = sgn * math.sqrt(cd1_1**2 + cd2_1**2)
-                cdelt2 = math.sqrt(cd1_2**2 + cd2_2**2)
-                if cdelt1 > 0:
-                    sgn1 = 1
-                else:
-                    sgn1 = -1
-                xrot = math.atan2(-cd2_1, sgn1*cd1_1) 
-                yrot = math.atan2(sgn1*cd1_2, cd2_2)
+                sgn1 = -1
+            xrot = math.atan2(-cd2_1, sgn1*cd1_1) 
+            yrot = math.atan2(sgn1*cd1_2, cd2_2)
 
         return xrot, yrot, cdelt1, cdelt2
 
@@ -1070,13 +1062,16 @@ def get_rotation_and_scale(header):
             crota1 = float(header['CROTA1'])
             xrot = crota1
         except KeyError:
-            xrot = 0.0
+            xrot = None
 
         try:
             crota2 = float(header['CROTA2'])
             yrot = crota2
         except KeyError:
             yrot = 0.0
+
+        if xrot == None:
+            xrot = yrot
 
         cdelt1 = float(header['CDELT1'])
         cdelt2 = float(header['CDELT2'])
@@ -1113,6 +1108,67 @@ def get_rotation_and_scale(header):
 
     return ((xrot, yrot), (cdelt1, cdelt2))
 
+def get_rotation(header):
+    """
+    CREDIT: See Perl code at
+    # http://cpansearch.perl.org/src/BRADC/Astro-FITS-HdrTrans-1.50/lib/Astro/FITS/HdrTrans/FITS.pm
+    """
+    # Try the IRAF-style headers.
+    # Use the defaults prescribed in WCS Paper I, Section 2.1.2.
+    def calc_from_cd(cd1_1, cd1_2, cd2_1, cd2_2):
+        sgn1 = 1
+        if cd1_2 < 0.0:
+            sgn1 = -1
+        
+        sgn2 = 1
+        if cd2_1 < 0.0:
+            sgn2 = -1
+
+        rot_rad = 0.5 * ( math.atan2(math.radians(sgn1 * cd2_1),
+                                     math.radians(sgn1 * cd1_1)) +
+                          math.atan2(math.radians(sgn2 * cd1_2),
+                                     math.radians(-sgn2 * cd2_2)) )
+        return math.degrees(rot_rad)
+
+    # try the FITS WCS PC matrix.
+    # Use the defaults prescribed in WCS Paper I, Section 2.1.2.
+    def calc_from_pc(pc1_1, pc1_2, pc2_1, pc2_2):
+
+        rot_rad = 0.5 * ( math.atan2(math.radians(-pc2_1),
+                                     math.radians(pc1_1)) +
+                          math.atan2(math.radians(pc1_2),
+                                     math.radians(pc2_2)) )
+        return math.degrees(rot_rad)
+
+    def calc_from_crota():
+        try:
+            crota2 = float(header['CROTA2'])
+            rot_deg = crota2
+        except KeyError:
+            rot_deg = 0.0
+
+        return rot_deg
+
+    try:
+        cd1_1 = float(header['CD1_1'])
+        cd1_2 = float(header['CD1_2'])
+        cd2_1 = float(header['CD2_1'])
+        cd2_2 = float(header['CD2_2'])
+        rot_deg = calc_from_cd(cd1_1, cd1_2, cd2_1, cd2_2)
+        
+    except KeyError:
+        try:
+            pc1_1 = float(header['PC1_1'])
+            pc1_2 = float(header['PC1_2'])
+            pc2_1 = float(header['PC2_1'])
+            pc2_2 = float(header['PC2_2'])
+
+            rot_deg = calc_from_pc(pc1_1, pc1_2, pc2_1, pc2_2)
+            
+        except KeyError:
+            rot_deg = calc_from_crota()
+            
+    return rot_deg
 
 def choose_coord_units(header):
     """Return the appropriate key code for the units value for the axes by
@@ -1199,15 +1255,25 @@ def simple_wcs(px_x, px_y, ra_deg, dec_deg, px_scale_deg_px, rot_deg,
     # image scale in deg/pix
     cdelt = numpy.array(cdbase) * px_scale_deg_px
 
-    # Position angle of north (radians E of N)
-    print "3. ROTATION %f" % (rot_deg)
+    # Create rotation matrix for position angle of north (radians E of N)
+
+    # TODO: why do we need to do this?
+    rot_deg = -rot_deg
+    
     rot_rad = numpy.radians(rot_deg)
     cpa = numpy.cos(rot_rad)
     spa = numpy.sin(rot_rad)
-    # clockwise rotation
+    # a) clockwise rotation
     #pc = numpy.array([[cpa, spa], [-spa, cpa]])
-    # counter clockwise
-    pc = numpy.array([[cpa, -spa], [spa, cpa]])
+    # b) counter clockwise
+    #pc = numpy.array([[cpa, -spa], [spa, cpa]])
+
+    # c)
+    #pc = numpy.array([[cpa, spa], [-spa * sgn, cpa * sgn]])
+
+    # d)
+    pc = numpy.array([[cpa, -(cdelt[1]/cdelt[0]) * spa],
+                      [(cdelt[0]/cdelt[1]) * spa, cpa]])
 
     cd = pc * cdelt
 
