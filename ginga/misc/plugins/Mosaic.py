@@ -118,9 +118,6 @@ class Mosaic(GingaPlugin.LocalPlugin):
         the parameter image
         """
         header = image.get_header()
-        import pprint
-        print "IMAGE0 HEADER"
-        pprint.pprint(header)
         ra_deg, dec_deg = header['CRVAL1'], header['CRVAL2']
 
         data_np = image.get_data()
@@ -129,9 +126,6 @@ class Mosaic(GingaPlugin.LocalPlugin):
         ((xrot, yrot), (cdelt1, cdelt2)) = wcs.get_rotation_and_scale(header)
         self.logger.debug("image0 xrot=%f yrot=%f cdelt1=%f cdelt2=%f" % (
             xrot, yrot, cdelt1, cdelt2))
-        print("image0 xrot=%f yrot=%f cdelt1=%f cdelt2=%f" % (
-            xrot, yrot, cdelt1, cdelt2))
-        print("image0 check rot=%f" % (wcs.get_rotation(header)))
 
         # TODO: handle differing pixel scale for each axis?
         px_scale = math.fabs(cdelt1)
@@ -156,13 +150,8 @@ class Mosaic(GingaPlugin.LocalPlugin):
         header = img_mosaic.get_header()
         ((xrot, yrot),
          (cdelt1, cdelt2)) = wcs.get_rotation_and_scale(header)
-        print "MOSAIC HEADER"
-        pprint.pprint(header)
         self.logger.debug("mosaic xrot=%f yrot=%f cdelt1=%f cdelt2=%f" % (
             xrot, yrot, cdelt1, cdelt2))
-        print("mosaic xrot=%f yrot=%f cdelt1=%f cdelt2=%f" % (
-            xrot, yrot, cdelt1, cdelt2))
-        print("mosaic check rot=%f" % (wcs.get_rotation(header)))
 
         self.img_mosaic = img_mosaic
         chname = self.fv.get_channelName(self.fitsimage)

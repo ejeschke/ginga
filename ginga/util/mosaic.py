@@ -98,13 +98,13 @@ def mosaic(logger, filelist, outfile=None, fov_deg=None):
     logger.debug("mosaic xrot=%f yrot=%f cdelt1=%f cdelt2=%f" % (xrot, yrot,
                                                                  cdelt1, cdelt2))
 
-    logger.info("Processing '%s' ..." % (filepath))
+    logger.debug("Processing '%s' ..." % (filepath))
     tup = img_mosaic.mosaic_inline([ image0 ])
     logger.debug("placement %s" % (str(tup)))
 
     for filepath in filelist[1:]:
         # Create and load the image
-        logger.debug("Reading file '%s' ..." % (filepath))
+        logger.info("Reading file '%s' ..." % (filepath))
         image = AstroImage.AstroImage(logger=logger)
         image.load_file(filepath)
 
