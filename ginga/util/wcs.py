@@ -1013,7 +1013,7 @@ def eqToEq2000(ra_deg, dec_deg, eq):
  
     return (new_ra_deg, new_dec_deg)
 
-def get_rotation_and_scale(header):
+def get_xy_rotation_and_scale(header):
     """
     CREDIT: See IDL code at
     # http://www.astro.washington.edu/docs/idl/cgi-bin/getpro/library32.html?GETROT
@@ -1046,13 +1046,6 @@ def get_rotation_and_scale(header):
             cdelt1 = sgn * math.sqrt(cd1_1**2 + cd1_2**2)
             cdelt2 = math.sqrt(cd1_1**2 + cd2_1**2)
 
-        ## lonpole = float(header.get('LONPOLE', 180.0))
-        ## if lonpole != 180.0:
-        ##     rot = rot + (180.0 - lonpole)
-
-        ## print "xrot=%f yrot=%f cdelt1=%f cdelt2=%f" % (
-        ##     xrot, yrot, cdelt1, cdelt2)
-        
         return xrot, yrot, cdelt1, cdelt2
 
     def calc_from_crota():
@@ -1110,6 +1103,23 @@ def get_rotation_and_scale(header):
     xrot, yrot = math.degrees(xrot), math.degrees(yrot)
 
     return ((xrot, yrot), (cdelt1, cdelt2))
+
+
+def get_rotation_and_scale(header):
+
+    ((xrot, yrot),
+     (cdelt1, cdelt2)) = get_xy_rotation_and_scale(header)
+
+    if xrot != yrot:
+        raise ValueError("Skew detected: xrot=%.4f yrot=%.4f" % (
+            xrot, yrot))
+    rot = yrot
+    
+    lonpole = float(header.get('LONPOLE', 180.0))
+    if lonpole != 180.0:
+        rot += 180.0 - lonpole
+
+    return (rot, cdelt1, cdelt2)
 
 
 def choose_coord_units(header):

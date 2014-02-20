@@ -491,13 +491,8 @@ class AstroImage(BaseImage):
 
     def get_wcs_rotation_deg(self):
         header = self.get_header()
-        ((xrot, yrot),
-         (cdelt1, cdelt2)) = wcs.get_rotation_and_scale(header)
-
-        if xrot != yrot:
-            self.logger.warn('X axis rotation: %f Y axis rotation: %f' % (
-                xrot, yrot))
-        return xrot
+        (rot, cdelt1, cdelt2) = wcs.get_rotation_and_scale(header)
+        return rot
 
     def rotate(self, deg, update_wcs=False):
         #old_deg = self.get_wcs_rotation_deg()
@@ -508,7 +503,8 @@ class AstroImage(BaseImage):
         ## if update_wcs:
         ##     self.wcs.rotate(deg)
 
-    def mosaic_inline(self, imagelist, bg_ref=None, trim_px=None):
+    def mosaic_inline(self, imagelist, bg_ref=None, trim_px=None,
+                      merge=False):
         """Drops new images into the current image (if there is room),
         relocating them according the WCS between the two images.
         """
@@ -519,7 +515,7 @@ class AstroImage(BaseImage):
         # Get our own (mosaic) rotation and scale
         header = self.get_header()
         ((xrot_ref, yrot_ref),
-         (cdelt1_ref, cdelt2_ref)) = wcs.get_rotation_and_scale(header)
+         (cdelt1_ref, cdelt2_ref)) = wcs.get_xy_rotation_and_scale(header)
         ref_rot = yrot_ref
 
         scale_x, scale_y = math.fabs(cdelt1_ref), math.fabs(cdelt2_ref)
@@ -541,7 +537,7 @@ class AstroImage(BaseImage):
             # User specified a trim?  If so, trim edge pixels from each
             # side of the array
             ht, wd = data_np.shape[:2]
-            if trim_px != None:
+            if trim_px:
                 xlo, xhi = trim_px, wd - trim_px
                 ylo, yhi = trim_px, ht - trim_px
                 data_np = data_np[ylo:yhi, xlo:xhi, ...]
@@ -558,7 +554,7 @@ class AstroImage(BaseImage):
             # Get rotation and scale of piece
             header = image.get_header()
             ((xrot, yrot),
-             (cdelt1, cdelt2)) = wcs.get_rotation_and_scale(header)
+             (cdelt1, cdelt2)) = wcs.get_xy_rotation_and_scale(header)
             self.logger.debug("image(%s) xrot=%f yrot=%f cdelt1=%f cdelt2=%f" % (
                 name, xrot, yrot, cdelt1, cdelt2))
 
@@ -631,10 +627,13 @@ class AstroImage(BaseImage):
             # fit image piece into our array, not overwriting any data
             # already written
             try:
-                #mydata[ylo:yhi, xlo:xhi, ...] += rotdata[0:ht, 0:wd, ...]
-                idx = (mydata[ylo:yhi, xlo:xhi, ...] == 0.0)
-                #print idx.shape, rotdata.shape
-                mydata[ylo:yhi, xlo:xhi, ...][idx] = rotdata[0:ht, 0:wd, ...][idx]
+                if merge:
+                    mydata[ylo:yhi, xlo:xhi, ...] += rotdata[0:ht, 0:wd, ...]
+                else:
+                    idx = (mydata[ylo:yhi, xlo:xhi, ...] == 0.0)
+                    #print idx.shape, rotdata.shape
+                    mydata[ylo:yhi, xlo:xhi, ...][idx] = \
+                                    rotdata[0:ht, 0:wd, ...][idx]
 
             except Exception as e:
                 self.logger.error("Error fitting tile: %s" % (str(e)))

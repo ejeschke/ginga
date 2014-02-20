@@ -77,12 +77,11 @@ def mosaic(logger, filelist, outfile=None, fov_deg=None):
 
     ra_deg, dec_deg = image0.get_keywords_list('CRVAL1', 'CRVAL2')
     header = image0.get_header()
-    ((xrot, yrot), (cdelt1, cdelt2)) = wcs.get_rotation_and_scale(header)
-    logger.debug("image0 xrot=%f yrot=%f cdelt1=%f cdelt2=%f" % (xrot, yrot,
-                                                                 cdelt1, cdelt2))
+    (rot_deg, cdelt1, cdelt2) = wcs.get_rotation_and_scale(header)
+    logger.debug("image0 rot=%f cdelt1=%f cdelt2=%f" % (rot_deg,
+                                                        cdelt1, cdelt2))
 
     px_scale = math.fabs(cdelt1)
-    rot_deg = yrot
     if fov_deg == None:
         # TODO: calculate fov!
         fov_deg = 1.0
@@ -94,9 +93,8 @@ def mosaic(logger, filelist, outfile=None, fov_deg=None):
                                     cdbase=cdbase,
                                     logger=logger)
     header = img_mosaic.get_header()
-    ((xrot, yrot), (cdelt1, cdelt2)) = wcs.get_rotation_and_scale(header)
-    logger.debug("mosaic xrot=%f yrot=%f cdelt1=%f cdelt2=%f" % (xrot, yrot,
-                                                                 cdelt1, cdelt2))
+    (rot, cdelt1, cdelt2) = wcs.get_rotation_and_scale(header)
+    logger.debug("mosaic rot=%f cdelt1=%f cdelt2=%f" % (rot, cdelt1, cdelt2))
 
     logger.debug("Processing '%s' ..." % (filepath))
     tup = img_mosaic.mosaic_inline([ image0 ])

@@ -378,6 +378,16 @@ class GingaControl(Callback.Callbacks):
         if raisetab:
             self.ds.raise_tab('Errors')
 
+    def error_wrap(self, method, *args, **kwdargs):
+        try:
+            return method(*args, **kwdargs)
+
+        except Exception as e:
+            errmsg = str(e)
+            # TODO: include traceback
+            self.logger.error(errmsg)
+            self.gui_do(self.show_error, errmsg, raise_tab=True)
+            
     def help(self):
         self.start_global_plugin('WBrowser')
         
