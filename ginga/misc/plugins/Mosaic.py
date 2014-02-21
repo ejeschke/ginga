@@ -18,6 +18,9 @@ from ginga.util import wcs, mosaic, iqcalc
 from ginga import GingaPlugin
 from ginga.misc import Widgets, CanvasTypes
 
+def split_n(lst, sz):
+    return [ lst[i:i+sz] for i in range(0, len(lst), sz) ]
+
 class Mosaic(GingaPlugin.LocalPlugin):
 
     def __init__(self, fv, fitsimage):
@@ -27,7 +30,13 @@ class Mosaic(GingaPlugin.LocalPlugin):
         self.count = 0
         self.img_mosaic = None
         self.bg_ref = 0.0
+
         self.ev_intr = threading.Event()
+        self.lock = threading.RLock()
+        self.read_elapsed = 0.0
+        self.process_elapsed = 0.0
+        self.count = 0
+        self.total_files = 0
         
         self.dc = self.fv.getDrawClasses()
 
@@ -42,7 +51,8 @@ class Mosaic(GingaPlugin.LocalPlugin):
         prefs = self.fv.get_preferences()
         self.settings = prefs.createCategory('plugin_Mosaic')
         self.settings.setDefaults(annotate_images=True, fov_deg=1.0,
-                                  match_bg=False, trim_px=0)
+                                  match_bg=False, trim_px=0,
+                                  merge=False, num_threads=4)
         self.settings.load(onError='silent')
 
 
@@ -65,12 +75,13 @@ class Mosaic(GingaPlugin.LocalPlugin):
         fr = Widgets.Frame("Mosaic")
 
         captions = [
-            ("FOV (deg):", 'label', 'Fov', 'llabel'),
-            ("Set FOV:", 'label', 'Set FOV', 'entry'),
+            ("FOV (deg):", 'label', 'Fov', 'llabel', 'set_fov', 'entry'),
             ("New Mosaic", 'button'),
             ("Label images", 'checkbutton', "Match bg", 'checkbutton'),
-            ("Trim Pixels:", 'label', 'Trim Px', 'llabel'),
-            ("Set Trim Pixels:", 'label', 'Trim Pixels', 'entry'),
+            ("Trim Pixels:", 'label', 'Trim Px', 'llabel',
+             'trim_pixels', 'entry'),
+            ("Num Threads:", 'label', 'Num Threads', 'llabel',
+             'set_num_threads', 'entry'),
             ("Merge data", 'checkbutton'),
             ]
         w, b = Widgets.build_info(captions)
@@ -97,7 +108,14 @@ class Mosaic(GingaPlugin.LocalPlugin):
         b.trim_px.set_text(str(trim_px))
         b.trim_pixels.add_callback('activated', self.trim_pixels_cb)
         b.trim_pixels.set_length(8)
+        b.trim_pixels.set_text(str(trim_px))
 
+        num_threads = self.settings.get('num_threads', 4)
+        b.num_threads.set_text(str(num_threads))
+        b.set_num_threads.set_length(8)
+        b.set_num_threads.set_text(str(num_threads))
+        b.set_num_threads.set_tooltip("Number of threads to use for mosaicing")
+        b.set_num_threads.add_callback('activated', self.set_num_threads_cb)
         merge = self.settings.get('merge', False)
         b.merge_data.set_tooltip("Merge data instead of overlay")
         b.merge_data.set_state(merge)
@@ -194,6 +212,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
         self.update_status("Creating blank image...")
 
     def ingest_one(self, image):
+        time_intr1 = time.time()
         imname = image.get('name', 'image')
         imname, ext = os.path.splitext(imname)
 
@@ -220,6 +239,8 @@ class Mosaic(GingaPlugin.LocalPlugin):
             x, y = (xlo+xhi)//2, (ylo+yhi)//2
             self.canvas.add(self.dc.Text(x, y, imname, color='red'))
         
+        time_intr2 = time.time()
+        self.process_elapsed += time_intr2 - time_intr1
 
     def close(self):
         self.img_mosaic = None
@@ -269,24 +290,42 @@ class Mosaic(GingaPlugin.LocalPlugin):
     def annotate_cb(self, widget, tf):
         self.settings.set(annotate_images=tf)
 
+    def mosaic_some(self, paths):
+        for url in paths:
+            if self.ev_intr.isSet():
+                break
+            image = self.fv.load_image(url)
+
+            with self.lock:
+                self.fv.gui_call(self.fv.error_wrap, self.ingest_one, image)
+                self.count += 1
+                count = self.count
+
+                self.update_progress(float(count)/self.total_files)
+
+        if count >= self.total_files:
+            self.end_progress()
+            total_elapsed = time.time() - self.start_time
+            msg = "Done. Total=%.2f Process=%.2f (sec)" % (
+                total_elapsed, self.process_elapsed)
+            self.update_status(msg)
+            print msg
+
+
     def mosaic(self, paths):
         # NOTE: this runs in a non-gui thread
 
         # Initialize progress bar
-        total_files = len(paths)
-        count = 1
+        self.total_files = len(paths)
+        self.count = 1
         self.ev_intr.clear()
-        self.read_elapsed = 0.0
         self.process_elapsed = 0.0
         self.fv.gui_do(self.init_progress)
         self.start_time = time.time()
 
-        first = paths[0]
-        image = self.fv.load_image(first)
-
+        image = self.fv.load_image(paths[0])
         time_intr1 = time.time()
-        self.read_elapsed += time_intr1 - self.start_time
-        
+
         fov_deg = self.settings.get('fov_deg', 1.0)
 
         # If there is no current mosaic then prepare a new one
@@ -309,30 +348,15 @@ class Mosaic(GingaPlugin.LocalPlugin):
                 self.prepare_mosaic(image, fov_deg)
 
         self.fv.gui_call(self.fv.error_wrap, self.ingest_one, image)
-        self.update_progress(float(count)/total_files)
+        self.update_progress(float(self.count)/self.total_files)
 
         time_intr2 = time.time()
         self.process_elapsed += time_intr2 - time_intr1
 
-        for url in paths[1:]:
-            if self.ev_intr.isSet():
-                break
-            time_intr1 = time.time()
-            image = self.fv.load_image(url)
-
-            time_intr2 = time.time()
-            self.read_elapsed += time_intr2 - time_intr1
-
-            self.fv.gui_call(self.fv.error_wrap, self.ingest_one, image)
-            count += 1
-            self.update_progress(float(count)/total_files)
-
-            time_intr1 = time.time()
-            self.process_elapsed += time_intr1 - time_intr2
-
-        self.end_progress()
-        self.update_status("Done. Read=%.2f Process=%.2f (sec)" % (
-            self.read_elapsed, self.process_elapsed))
+        num_threads = self.settings.get('num_threads', 4)
+        groups = split_n(paths[1:], num_threads)
+        for group in groups:
+            self.fv.nongui_do(self.mosaic_some, group)
 
     def set_fov_cb(self, w):
         fov_deg = float(w.get_text())
@@ -349,6 +373,11 @@ class Mosaic(GingaPlugin.LocalPlugin):
         
     def merge_cb(self, w, tf):
         self.settings.set(merge=tf)
+        
+    def set_num_threads_cb(self, w):
+        num_threads = int(w.get_text())
+        self.w.num_threads.set_text(str(num_threads))
+        self.settings.set(num_threads=num_threads)
         
     def update_status(self, text):
         self.fv.gui_do(self.w.eval_status.set_text, text)
@@ -369,4 +398,5 @@ class Mosaic(GingaPlugin.LocalPlugin):
     def __str__(self):
         return 'mosaic'
     
+
 #END
