@@ -77,7 +77,7 @@ class TimerFactory(object):
 
         timer.make_callback('cancelled')
 
-    def clearAll(self):
+    def clear_all(self):
         """Clears all pending timers.
         """
         with self.lock:
@@ -98,6 +98,12 @@ class TimerFactory(object):
             #print [timer.deadline for timer in self.waiters]
             self.ev_timer.set()
         
+    def is_set(self, timer):
+        """Returns True if `timer` is set.
+        """
+        with self.lock:
+            return timer in self.waiters
+
     def release_expired(self):
         """Internal routine to release expired timers and make callbacks.
         """
@@ -198,19 +204,35 @@ class Timer(Callback.Callbacks):
             self.enable_callback(name)
 
     def clear(self):
-        """Clear a pending expiration event.
+        """
+        Clear a pending expiration event.
         """
         self.tfact.clear(self)
 
     def set(self, time_sec):
-        """Set the timer for time_sec.   Any callbacks registered for the
+        """
+        Set the timer for time_sec.   Any callbacks registered for the
         'expired' event will be called when the timer reaches the deadline.
         """
         cur_time = time.time()
         self.deadline = cur_time + time_sec
         self.tfact.add_timer(self)
 
-        
+    def is_set(self):
+        """
+        Returns True if this timer is set.
+        """
+        return self.tfact.is_set(timer)        
+
+    def time_left(self):
+        """
+        Returns the amount of time left before this timer expires.
+        May be negative if the timer has already expired.
+        """
+        delta = self.deadline - time.time()
+        return delta
+
+
 def main():
 
     tfact = TimerFactory()

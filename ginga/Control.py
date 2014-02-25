@@ -141,7 +141,7 @@ class GingaControl(Callback.Callbacks):
             prefs = fitsimage.get_settings()
             info = image.info_xy(data_x, data_y, prefs)
 
-        except Exception, e:
+        except Exception as e:
             self.logger.warn("Can't get info under the cursor: %s" % (
                 str(e)))
             return
@@ -350,7 +350,7 @@ class GingaControl(Callback.Callbacks):
             if not hidden:
                 self.add_operation(name)
 
-        except Exception, e:
+        except Exception as e:
             self.logger.error("Unable to load local plugin '%s': %s" % (
                 name, str(e)))
         
@@ -368,7 +368,7 @@ class GingaControl(Callback.Callbacks):
             if start:
                 self.start_global_plugin(name, raise_tab=False)
                 
-        except Exception, e:
+        except Exception as e:
             self.logger.error("Unable to load global plugin '%s': %s" % (
                 name, str(e)))
 
@@ -384,9 +384,14 @@ class GingaControl(Callback.Callbacks):
 
         except Exception as e:
             errmsg = str(e)
-            # TODO: include traceback
+            try:
+                (type, value, tb) = sys.exc_info()
+                tb_str = "\n".join(traceback.format_tb(tb))
+            except Exception as e:
+                tb_str = "Traceback information unavailable."
+            errmsg += tb_str
             self.logger.error(errmsg)
-            self.gui_do(self.show_error, errmsg, raise_tab=True)
+            self.gui_do(self.show_error, errmsg, raisetab=True)
             
     def help(self):
         self.start_global_plugin('WBrowser')
@@ -411,13 +416,13 @@ class GingaControl(Callback.Callbacks):
         if have_magic:
             try:
                 typ = magic.from_file(filepath, mime=True)
-            except Exception, e:
+            except Exception as e:
                 pass
 
         if typ == None:
             try:
                 typ, enc = mimetypes.guess_type(filepath)
-            except Exception, e:
+            except Exception as e:
                 pass
 
         if typ:
@@ -446,14 +451,14 @@ class GingaControl(Callback.Callbacks):
             image.load_file(filepath)
             #self.gui_do(chinfo.fitsimage.onscreen_message, "")
 
-        except Exception, e:
+        except Exception as e:
             errmsg = "Failed to load file '%s': %s" % (
                 filepath, str(e))
             self.logger.error(errmsg)
             try:
                 (type, value, tb) = sys.exc_info()
                 tb_str = "\n".join(traceback.format_tb(tb))
-            except Exception, e:
+            except Exception as e:
                 tb_str = "Traceback information unavailable."
             self.gui_do(self.show_error, errmsg + '\n' + tb_str)
             #chinfo.fitsimage.onscreen_message("Failed to load file", delay=1.0)
@@ -737,7 +742,7 @@ class GingaControl(Callback.Callbacks):
         try:
             name = image.get('name')
             chinfo.cursor = chinfo.datasrc.index(name)
-        except Exception, e:
+        except Exception as e:
             self.logger.warn("Couldn't find index: %s" % (str(e)))
             chinfo.cursor = 0
 
@@ -757,7 +762,7 @@ class GingaControl(Callback.Callbacks):
                         obj = opmon.getPlugin(key)
                         try:
                             obj.redo()
-                        except Exception, e:
+                        except Exception as e:
                             self.logger.error("Failed to continue operation: %s" % (
                                 str(e)))
 
@@ -887,7 +892,7 @@ class GingaControl(Callback.Callbacks):
         try:
             prefs.load(onError='raise')
 
-        except Exception, e:
+        except Exception as e:
             self.logger.warn("no saved preferences found for channel '%s': %s" % (
                 name, str(e)))
             # copy "Image" prefs to new channel

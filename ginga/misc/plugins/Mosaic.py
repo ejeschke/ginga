@@ -18,8 +18,6 @@ from ginga.util import wcs, mosaic, iqcalc
 from ginga import GingaPlugin
 from ginga.misc import Widgets, CanvasTypes
 
-def split_n(lst, sz):
-    return [ lst[i:i+sz] for i in range(0, len(lst), sz) ]
 
 class Mosaic(GingaPlugin.LocalPlugin):
 
@@ -50,10 +48,18 @@ class Mosaic(GingaPlugin.LocalPlugin):
         # Set preferences for destination channel
         prefs = self.fv.get_preferences()
         self.settings = prefs.createCategory('plugin_Mosaic')
-        self.settings.setDefaults(annotate_images=True, fov_deg=1.0,
+        self.settings.setDefaults(annotate_images=False, fov_deg=1.0,
                                   match_bg=False, trim_px=0,
                                   merge=False, num_threads=4)
         self.settings.load(onError='silent')
+
+        # channel where mosaic should appear (default=ours)
+        self.mosaic_chname = self.fv.get_channelName(self.fitsimage)
+
+        # hook to allow special processing before inlining
+        self.preprocess = lambda x: x
+
+        self.gui_up = False
 
 
     def build_gui(self, container):
@@ -85,7 +91,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
             ("Merge data", 'checkbutton'),
             ]
         w, b = Widgets.build_info(captions)
-        self.w = b
+        self.w.update(b)
 
         fov_deg = self.settings.get('fov_deg', 1.0)
         b.fov.set_text(str(fov_deg))
@@ -162,8 +168,15 @@ class Mosaic(GingaPlugin.LocalPlugin):
 
         sw.set_widget(vbox1)
         container.add_widget(sw, stretch=1)
+        self.gui_up = True
 
 
+    def set_preprocess(self, fn):
+        if fn == None:
+            fn = lambda x: x
+        self.preprocess = fn
+
+        
     def prepare_mosaic(self, image, fov_deg):
         """Prepare a new (blank) mosaic image based on the pointing of
         the parameter image
@@ -203,9 +216,8 @@ class Mosaic(GingaPlugin.LocalPlugin):
             rot, cdelt1, cdelt2))
 
         self.img_mosaic = img_mosaic
-        chname = self.fv.get_channelName(self.fitsimage)
         self.fv.gui_call(self.fv.add_image, imname, img_mosaic,
-                         chname=chname)
+                         chname=self.mosaic_chname)
         
     def _prepare_mosaic1(self):
         self.canvas.deleteAllObjects()
@@ -224,9 +236,14 @@ class Mosaic(GingaPlugin.LocalPlugin):
         if match_bg:
             bg_ref = self.bg_ref
 
+        # Any special processing before inlining
         msg = "Processing '%s' ..." % (imname)
         self.update_status(msg)
         self.logger.info(msg)
+
+        image = self.preprocess(image)
+
+        # Inline the image
         loc = self.img_mosaic.mosaic_inline([ image ],
                                             bg_ref=bg_ref,
                                             trim_px=trim_px,
@@ -246,6 +263,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
         self.img_mosaic = None
         chname = self.fv.get_channelName(self.fitsimage)
         self.fv.stop_local_plugin(chname, str(self))
+        self.gui_up = False
         return True
         
     def instructions(self):
@@ -312,7 +330,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
             print msg
 
 
-    def mosaic(self, paths):
+    def mosaic(self, paths, new_mosaic=False):
         # NOTE: this runs in a non-gui thread
 
         # Initialize progress bar
@@ -329,7 +347,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
         fov_deg = self.settings.get('fov_deg', 1.0)
 
         # If there is no current mosaic then prepare a new one
-        if self.img_mosaic == None:
+        if new_mosaic or (self.img_mosaic == None):
             self.prepare_mosaic(image, fov_deg)
         else:
             # get our center position
@@ -398,5 +416,8 @@ class Mosaic(GingaPlugin.LocalPlugin):
     def __str__(self):
         return 'mosaic'
     
+
+def split_n(lst, sz):
+    return [ lst[i:i+sz] for i in range(0, len(lst), sz) ]
 
 #END
