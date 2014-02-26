@@ -1209,14 +1209,12 @@ def simple_wcs(px_x, px_y, ra_deg, dec_deg, px_scale_deg_px, rot_deg,
 
     # Create rotation matrix for position angle of north (radians E of N)
 
-    # TODO: why do we need to do this?
-    rot_deg = -rot_deg
-    
+    #print "rotation=%f" % rot_deg
     rot_rad = numpy.radians(rot_deg)
     cpa = numpy.cos(rot_rad)
     spa = numpy.sin(rot_rad)
     # a) clockwise rotation
-    #pc = numpy.array([[cpa, spa], [-spa, cpa]])
+    pc = numpy.array([[cpa, spa], [-spa, cpa]])
     # b) counter clockwise
     #pc = numpy.array([[cpa, -spa], [spa, cpa]])
 
@@ -1224,8 +1222,8 @@ def simple_wcs(px_x, px_y, ra_deg, dec_deg, px_scale_deg_px, rot_deg,
     #pc = numpy.array([[cpa, spa], [-spa * sgn, cpa * sgn]])
 
     # d)
-    pc = numpy.array([[cpa, -(cdelt[1]/cdelt[0]) * spa],
-                      [(cdelt[0]/cdelt[1]) * spa, cpa]])
+    #pc = numpy.array([[cpa, -(cdelt[1]/cdelt[0]) * spa],
+    #                  [(cdelt[0]/cdelt[1]) * spa, cpa]])
 
     cd = pc * cdelt
 
@@ -1239,16 +1237,16 @@ def simple_wcs(px_x, px_y, ra_deg, dec_deg, px_scale_deg_px, rot_deg,
                        ('CTYPE2', 'DEC--TAN'),
                        ('RADECSYS', 'FK5'),
                        # Either PC + CDELT or CD should appear
-                       ## ('CDELT1', cdelt[0]),
-                       ## ('CDELT2', cdelt[1]),
-                       ## ('PC1_1' , pc[0, 0]),
-                       ## ('PC1_2' , pc[0, 1]),
-                       ## ('PC2_1' , pc[1, 0]),
-                       ## ('PC2_2' , pc[1, 1])
-                       ('CD1_1' , cd[0, 0]),
-                       ('CD1_2' , cd[0, 1]),
-                       ('CD2_1' , cd[1, 0]),
-                       ('CD2_2' , cd[1, 1]),
+                       ('CDELT1', cdelt[0]),
+                       ('CDELT2', cdelt[1]),
+                       ('PC1_1' , pc[0, 0]),
+                       ('PC1_2' , pc[0, 1]),
+                       ('PC2_1' , pc[1, 0]),
+                       ('PC2_2' , pc[1, 1])
+                       ## ('CD1_1' , cd[0, 0]),
+                       ## ('CD1_2' , cd[0, 1]),
+                       ## ('CD2_1' , cd[1, 0]),
+                       ## ('CD2_2' , cd[1, 1]),
                        ))
     return res
 

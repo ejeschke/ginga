@@ -194,8 +194,8 @@ class Mosaic(GingaPlugin.LocalPlugin):
 
         # TODO: handle differing pixel scale for each axis?
         px_scale = math.fabs(cdelt1)
-        #cdbase = [numpy.sign(cdelt1), numpy.sign(cdelt2)]
-        cdbase = [1, 1]
+        cdbase = [numpy.sign(cdelt1), numpy.sign(cdelt2)]
+        #cdbase = [1, 1]
 
         self.logger.debug("creating blank image to hold mosaic")
         self.fv.gui_do(self._prepare_mosaic1)

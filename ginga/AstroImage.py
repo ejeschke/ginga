@@ -575,13 +575,13 @@ class AstroImage(BaseImage):
             flip_x = False
             flip_y = False
 
-            # Flip X due to negative CDELT1
-            if numpy.sign(cdelt1) < 0:
-                flip_x = True
+            ## # Flip X due to negative CDELT1
+            ## if numpy.sign(cdelt1) < 0:
+            ##     flip_x = True
 
-            # Flip Y due to negative CDELT2
-            if numpy.sign(cdelt2) < 0:
-                flip_y = True
+            ## # Flip Y due to negative CDELT2
+            ## if numpy.sign(cdelt2) < 0:
+            ##     flip_y = True
 
             # Optomization for 180 rotations
             if math.fabs(rot_dx) == 180.0:
