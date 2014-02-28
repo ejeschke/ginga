@@ -14,58 +14,12 @@ Usage:
 """
 import sys, os
 import math
-from collections import OrderedDict
 
 import numpy
 
 from ginga import AstroImage
-from ginga.util import wcs, io_fits
+from ginga.util import wcs, io_fits, dp
 from ginga.misc import log
-
-
-def create_blank_image(ra_deg, dec_deg, fov_deg, px_scale, rot_deg,
-                       cdbase=[1, 1], logger=None):
-
-    # ra and dec in traditional format
-    ra_txt = wcs.raDegToString(ra_deg, format='%02d:%02d:%06.3f')
-    dec_txt = wcs.decDegToString(dec_deg, format='%s%02d:%02d:%05.2f')
-
-    # Create a dummy sh image
-    imagesize = int(round(fov_deg / px_scale))
-    # round to an even size
-    if imagesize % 2 != 0:
-        imagesize += 1
-    ## # round to an odd size
-    ## if imagesize % 2 == 0:
-    ##     imagesize += 1
-    width = height = imagesize
-    data = numpy.zeros((height, width), dtype=numpy.float32)
-
-    crpix = float(imagesize // 2)
-    header = OrderedDict((('SIMPLE', True),
-                          ('BITPIX', -32),
-                          ('EXTEND', True),
-                          ('NAXIS', 2),
-                          ('NAXIS1', imagesize),
-                          ('NAXIS2', imagesize),
-                          ('RA', ra_txt),
-                          ('DEC', dec_txt),
-                          ('EQUINOX', 2000.0),
-                          ('OBJECT', 'MOSAIC'),
-                          ('LONPOLE', 180.0),
-                          ))
-
-    # Add basic WCS keywords
-    wcshdr = wcs.simple_wcs(crpix, crpix, ra_deg, dec_deg, px_scale,
-                            rot_deg, cdbase=cdbase)
-    header.update(wcshdr)
-
-    # Create image container
-    image = AstroImage.AstroImage(data, wcsclass=wcs.WCS,
-                                  logger=logger)
-    image.update_keywords(header)
-
-    return image
 
 
 def mosaic(logger, filelist, outfile=None, fov_deg=None):
@@ -88,10 +42,10 @@ def mosaic(logger, filelist, outfile=None, fov_deg=None):
         
     #cdbase = [numpy.sign(cdelt1), numpy.sign(cdelt2)]
     cdbase = [1, 1]
-    img_mosaic = create_blank_image(ra_deg, dec_deg,
-                                    fov_deg, px_scale, rot_deg,
-                                    cdbase=cdbase,
-                                    logger=logger)
+    img_mosaic = dp.create_blank_image(ra_deg, dec_deg,
+                                       fov_deg, px_scale, rot_deg,
+                                       cdbase=cdbase,
+                                       logger=logger)
     header = img_mosaic.get_header()
     (rot, cdelt1, cdelt2) = wcs.get_rotation_and_scale(header)
     logger.debug("mosaic rot=%f cdelt1=%f cdelt2=%f" % (rot, cdelt1, cdelt2))

@@ -22,13 +22,20 @@ except ImportError:
     
 from ginga.misc import Bunch
 
-class IQCalcError(Exception):
-    """Base exception for raising errors in this module."""
-    pass
 
 def get_mean(data_np):
     mdata = numpy.ma.masked_array(data_np, numpy.isnan(data_np))
     return numpy.mean(mdata)
+
+def get_median(data_np):
+    mdata = numpy.ma.masked_array(data_np, numpy.isnan(data_np))
+    return numpy.median(mdata)
+
+
+class IQCalcError(Exception):
+    """Base exception for raising errors in this module."""
+    pass
+
 
 class IQCalc(object):
 

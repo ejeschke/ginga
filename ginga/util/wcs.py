@@ -1208,8 +1208,6 @@ def simple_wcs(px_x, px_y, ra_deg, dec_deg, px_scale_deg_px, rot_deg,
     cdelt = numpy.array(cdbase) * px_scale_deg_px
 
     # Create rotation matrix for position angle of north (radians E of N)
-
-    #print "rotation=%f" % rot_deg
     rot_rad = numpy.radians(rot_deg)
     cpa = numpy.cos(rot_rad)
     spa = numpy.sin(rot_rad)
@@ -1217,13 +1215,6 @@ def simple_wcs(px_x, px_y, ra_deg, dec_deg, px_scale_deg_px, rot_deg,
     pc = numpy.array([[cpa, spa], [-spa, cpa]])
     # b) counter clockwise
     #pc = numpy.array([[cpa, -spa], [spa, cpa]])
-
-    # c)
-    #pc = numpy.array([[cpa, spa], [-spa * sgn, cpa * sgn]])
-
-    # d)
-    #pc = numpy.array([[cpa, -(cdelt[1]/cdelt[0]) * spa],
-    #                  [(cdelt[0]/cdelt[1]) * spa, cpa]])
 
     cd = pc * cdelt
 
@@ -1237,6 +1228,8 @@ def simple_wcs(px_x, px_y, ra_deg, dec_deg, px_scale_deg_px, rot_deg,
                        ('CTYPE2', 'DEC--TAN'),
                        ('RADECSYS', 'FK5'),
                        # Either PC + CDELT or CD should appear
+                       # PC + CDELT seems to be the preferred approach
+                       # according to the Calabretta papers
                        ('CDELT1', cdelt[0]),
                        ('CDELT2', cdelt[1]),
                        ('PC1_1' , pc[0, 0]),

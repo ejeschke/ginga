@@ -73,6 +73,7 @@ def use(fitspkg, raise_err=True):
 
 
 class BaseFitsFileHandler(object):
+    # Reserved for future use
     pass
 
 class PyFitsFileHandler(BaseFitsFileHandler):
@@ -90,10 +91,14 @@ class PyFitsFileHandler(BaseFitsFileHandler):
         if hasattr(header, 'cards'):
             #newer astropy.io.fits don't have ascardlist
             for card in header.cards:
+                if len(card.key) == 0:
+                    continue
                 bnch = ahdr.__setitem__(card.key, card.value)
                 bnch.comment = card.comment
         else:
             for card in header.ascardlist():
+                if len(card.key) == 0:
+                    continue
                 bnch = ahdr.__setitem__(card.key, card.value)
                 bnch.comment = card.comment
 
@@ -185,6 +190,8 @@ class FitsioFileHandler(BaseFitsFileHandler):
     def fromHDU(self, hdu, ahdr):
         header = hdu.read_header()
         for d in header.records():
+            if len(d['name']) == 0:
+                continue
             bnch = ahdr.__setitem__(d['name'], d['value'])
             bnch.comment = d['comment']
 

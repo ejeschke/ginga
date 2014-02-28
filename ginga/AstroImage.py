@@ -544,11 +544,11 @@ class AstroImage(BaseImage):
                 ht, wd = data_np.shape[:2]
 
             # If caller asked us to match background of pieces then
-            # get the mean of this piece
+            # get the median of this piece
             if bg_ref != None:
-                bg = iqcalc.get_mean(data_np)
+                bg = iqcalc.get_median(data_np)
                 bg_inc = bg_ref - bg
-                print "bg=%f inc=%f" % (bg, bg_inc)
+                #print "bg=%f inc=%f" % (bg, bg_inc)
                 data_np = data_np + bg_inc
 
             # Get rotation and scale of piece

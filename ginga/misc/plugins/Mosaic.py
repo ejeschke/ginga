@@ -14,7 +14,8 @@ import os.path
 import threading
 
 from ginga import AstroImage
-from ginga.util import wcs, mosaic, iqcalc
+from ginga.util import mosaic
+from ginga.util import wcs, iqcalc, dp
 from ginga import GingaPlugin
 from ginga.misc import Widgets, CanvasTypes
 
@@ -25,7 +26,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
         # superclass defines some variables for us, like logger
         super(Mosaic, self).__init__(fv, fitsimage)
 
-        self.count = 0
+        self.mosaic_count = 0
         self.img_mosaic = None
         self.bg_ref = 0.0
 
@@ -33,7 +34,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
         self.lock = threading.RLock()
         self.read_elapsed = 0.0
         self.process_elapsed = 0.0
-        self.count = 0
+        self.ingest_count = 0
         self.total_files = 0
         
         self.dc = self.fv.getDrawClasses()
@@ -45,12 +46,13 @@ class Mosaic(GingaPlugin.LocalPlugin):
         self.canvas = canvas
         self.layertag = 'mosaic-canvas'
 
-        # Set preferences for destination channel
+        # Load plugin preferences
         prefs = self.fv.get_preferences()
         self.settings = prefs.createCategory('plugin_Mosaic')
         self.settings.setDefaults(annotate_images=False, fov_deg=1.0,
                                   match_bg=False, trim_px=0,
-                                  merge=False, num_threads=4)
+                                  merge=False, num_threads=4,
+                                  drop_creates_new_mosaic=True)
         self.settings.load(onError='silent')
 
         # channel where mosaic should appear (default=ours)
@@ -88,7 +90,8 @@ class Mosaic(GingaPlugin.LocalPlugin):
              'trim_pixels', 'entry'),
             ("Num Threads:", 'label', 'Num Threads', 'llabel',
              'set_num_threads', 'entry'),
-            ("Merge data", 'checkbutton'),
+            ("Merge data", 'checkbutton', "Drop new",
+             'checkbutton'),
             ]
         w, b = Widgets.build_info(captions)
         self.w.update(b)
@@ -126,6 +129,10 @@ class Mosaic(GingaPlugin.LocalPlugin):
         b.merge_data.set_tooltip("Merge data instead of overlay")
         b.merge_data.set_state(merge)
         b.merge_data.add_callback('activated', self.merge_cb)
+        drop_new = self.settings.get('drop_creates_new_mosaic', False)
+        b.drop_new.set_tooltip("Dropping files on image starts a new mosaic")
+        b.drop_new.set_state(drop_new)
+        b.drop_new.add_callback('activated', self.drop_new_cb)
 
         fr.set_widget(w)
         vbox1.add_widget(fr, stretch=0)
@@ -153,7 +160,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
         self.w.eval_pgs = Widgets.ProgressBar()
         hbox.add_widget(self.w.eval_pgs, stretch=1)
         vbox1.add_widget(hbox, stretch=0)
-        
+
         spacer = Widgets.Label('')
         vbox1.add_widget(spacer, stretch=1)
         
@@ -185,7 +192,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
         ra_deg, dec_deg = header['CRVAL1'], header['CRVAL2']
 
         data_np = image.get_data()
-        self.bg_ref = iqcalc.get_mean(data_np)
+        self.bg_ref = iqcalc.get_median(data_np)
             
         # TODO: handle skew (differing rotation for each axis)?
         (rot_deg, cdelt1, cdelt2) = wcs.get_rotation_and_scale(header)
@@ -200,15 +207,17 @@ class Mosaic(GingaPlugin.LocalPlugin):
         self.logger.debug("creating blank image to hold mosaic")
         self.fv.gui_do(self._prepare_mosaic1)
 
-        img_mosaic = mosaic.create_blank_image(ra_deg, dec_deg,
-                                               fov_deg, px_scale,
-                                               rot_deg, 
-                                               cdbase=cdbase,
-                                               logger=self.logger)
+        img_mosaic = dp.create_blank_image(ra_deg, dec_deg,
+                                           fov_deg, px_scale,
+                                           rot_deg, 
+                                           cdbase=cdbase,
+                                           logger=self.logger,
+                                           pfx='mosaic')
 
-        imname = 'mosaic%d' % (self.count)
-        img_mosaic.set(name=imname)
-        self.count += 1
+        ## imname = 'mosaic%d' % (self.mosaic_count)
+        ## img_mosaic.set(name=imname)
+        ## self.mosaic_count += 1
+        imname = img_mosaic.get('name', "NoName")
 
         header = img_mosaic.get_header()
         (rot, cdelt1, cdelt2) = wcs.get_rotation_and_scale(header)
@@ -256,6 +265,8 @@ class Mosaic(GingaPlugin.LocalPlugin):
             x, y = (xlo+xhi)//2, (ylo+yhi)//2
             self.canvas.add(self.dc.Text(x, y, imname, color='red'))
         
+        self.ingest_count += 1
+        
         time_intr2 = time.time()
         self.process_elapsed += time_intr2 - time_intr1
 
@@ -302,7 +313,9 @@ class Mosaic(GingaPlugin.LocalPlugin):
         
     def drop_cb(self, canvas, paths):
         self.logger.info("files dropped: %s" % str(paths))
-        self.fv.nongui_do(self.fv.error_wrap, self.mosaic, paths)
+        new_mosaic = self.settings.get('drop_creates_new_mosaic', False)
+        self.fv.nongui_do(self.fv.error_wrap, self.mosaic, paths,
+                          new_mosaic=new_mosaic)
         return True
         
     def annotate_cb(self, widget, tf):
@@ -316,18 +329,16 @@ class Mosaic(GingaPlugin.LocalPlugin):
 
             with self.lock:
                 self.fv.gui_call(self.fv.error_wrap, self.ingest_one, image)
-                self.count += 1
-                count = self.count
+                count = self.ingest_count
 
                 self.update_progress(float(count)/self.total_files)
 
-        if count >= self.total_files:
+        if count == self.total_files:
             self.end_progress()
             total_elapsed = time.time() - self.start_time
             msg = "Done. Total=%.2f Process=%.2f (sec)" % (
                 total_elapsed, self.process_elapsed)
             self.update_status(msg)
-            print msg
 
 
     def mosaic(self, paths, new_mosaic=False):
@@ -335,7 +346,10 @@ class Mosaic(GingaPlugin.LocalPlugin):
 
         # Initialize progress bar
         self.total_files = len(paths)
-        self.count = 1
+        if self.total_files == 0:
+            return
+        
+        self.ingest_count = 0
         self.ev_intr.clear()
         self.process_elapsed = 0.0
         self.fv.gui_do(self.init_progress)
@@ -366,7 +380,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
                 self.prepare_mosaic(image, fov_deg)
 
         self.fv.gui_call(self.fv.error_wrap, self.ingest_one, image)
-        self.update_progress(float(self.count)/self.total_files)
+        self.update_progress(float(self.ingest_count)/self.total_files)
 
         time_intr2 = time.time()
         self.process_elapsed += time_intr2 - time_intr1
@@ -391,6 +405,9 @@ class Mosaic(GingaPlugin.LocalPlugin):
         
     def merge_cb(self, w, tf):
         self.settings.set(merge=tf)
+        
+    def drop_new_cb(self, w, tf):
+        self.settings.set(drop_creates_new_mosaic=tf)
         
     def set_num_threads_cb(self, w):
         num_threads = int(w.get_text())

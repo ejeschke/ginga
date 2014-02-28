@@ -467,6 +467,35 @@ class GingaControl(Callback.Callbacks):
         self.logger.debug("Successfully loaded file into image object.")
         return image
 
+    def get_filepath(self, filepath, dldir='/tmp'):
+        match = re.match(r"^file://(.+)$", filepath)
+        if match:
+            # filesystem
+            filepath = match.group(1).strip()
+
+        else:
+            # If this looks like a URL, try to fetch it, otherwise
+            # assume it is a standard filesystem path
+            match = re.match(r"^(\w+)://(.+)$", filepath)
+            if match:
+                def  _dl_indicator(count, blksize, totalsize):
+                    pct = float(count * blksize) / float(totalsize)
+                    msg = "Downloading: %%%.2f complete" % (pct*100.0)
+                    self.gui_do(chinfo.fitsimage.onscreen_message, msg)
+
+                # Try to download the URL.  We press our generic URL server
+                # into use as a generic file downloader.
+                try:
+                    dl = catalog.URLServer(self.logger, "downloader", "dl",
+                                           filepath, "")
+                    filepath = dl.retrieve(filepath, filepath=dldir,
+                                           cb_fn=_dl_indicator)
+                finally:
+                    self.gui_do(chinfo.fitsimage.onscreen_message, None)
+
+        return filepath
+
+
     def load_file(self, filepath, chname=None, wait=True,
                   create_channel=True):
         """Load a file from filesystem and display it.
@@ -496,31 +525,8 @@ class GingaControl(Callback.Callbacks):
             chinfo = self.get_channelInfo(chname)
             chname = chinfo.name
 
-        match = re.match(r"^file://(.+)$", filepath)
-        if match:
-            # filesystem
-            filepath = match.group(1).strip()
-
-        else:
-            # If this looks like a URL, try to fetch it, otherwise
-            # assume it is a standard filesystem path
-            match = re.match(r"^(\w+)://(.+)$", filepath)
-            if match:
-                def  _dl_indicator(count, blksize, totalsize):
-                    pct = float(count * blksize) / float(totalsize)
-                    msg = "Downloading: %%%.2f complete" % (pct*100.0)
-                    self.gui_do(chinfo.fitsimage.onscreen_message, msg)
-
-                # Try to download the URL.  We press our generic URL server
-                # into use as a generic file downloader.
-                try:
-                    dl = catalog.URLServer(self.logger, "downloader", "dl",
-                                           filepath, "")
-                    filepath = dl.retrieve(filepath, filepath="/tmp",
-                                           cb_fn=_dl_indicator)
-                finally:
-                    self.gui_do(chinfo.fitsimage.onscreen_message, None)
-
+        filepath = self.get_filepath(filepath)
+        
         image = self.load_image(filepath)
 
         (path, filename) = os.path.split(filepath)

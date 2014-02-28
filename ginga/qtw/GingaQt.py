@@ -251,6 +251,9 @@ class GingaView(QtMain.QtMain):
         filesel.setFileMode(QtGui.QFileDialog.ExistingFile)
         filesel.setViewMode(QtGui.QFileDialog.Detail)
         self.filesel = filesel
+        filesel = QtGui.QFileDialog(self.w.root)
+        filesel.setViewMode(QtGui.QFileDialog.Detail)
+        self.filesave = filesel
 
     def add_plugin_menu(self, name):
         item = QtGui.QAction("Start %s" % (name), self.w.menubar)
@@ -626,6 +629,11 @@ class GingaView(QtMain.QtMain):
             fileNames = map(str, list(self.filesel.selectedFiles()))
             self.load_file(fileNames[0])
         #self.start_operation('FBrowser')
+        
+    def gui_save_file(self, initialdir=None):
+        if self.filesave.exec_():
+            fileNames = map(str, list(self.filesave.selectedFiles()))
+            self.save_file(fileNames[0])
         
     def statusMsg(self, format, *args):
         if not format:
