@@ -68,7 +68,7 @@ class Pipeline(GingaPlugin.LocalPlugin):
         fr.set_widget(w)
         vbox1.add_widget(fr, stretch=0)
 
-        #b.subtract_bias.add_callback('activated', self.subtract_bias_cb)
+        b.subtract_bias.add_callback('activated', self.subtract_bias_cb)
         b.subtract_bias.set_tooltip("Subtract a bias image")
         bias_name = 'None'
         if self.bias != None:
@@ -140,7 +140,7 @@ class Pipeline(GingaPlugin.LocalPlugin):
         w, b = Widgets.build_info(captions)
         self.w.update(b)
 
-        fr = Widgets.Frame("Bias")
+        fr = Widgets.Frame("Bias Subtraction")
         fr.set_widget(w)
         vbox1.add_widget(fr, stretch=0)
 
@@ -164,20 +164,6 @@ class Pipeline(GingaPlugin.LocalPlugin):
         b.make_flat_field.set_tooltip("Makes a flat field from a stack of individual flats")
         b.set_flat_field.add_callback('activated', self.set_flat_cb)
         b.set_flat_field.set_tooltip("Set the currently loaded image as the flat field")
-
-        # Saving/loading
-        captions = [
-            ("Load File", 'button', "Save File", 'button'),
-            ]
-        w, b = Widgets.build_info(captions)
-        self.w.update(b)
-
-        b.save_file.set_enabled(False)
-        b.load_file.set_enabled(False)
-
-        fr = Widgets.Frame("Files")
-        fr.set_widget(w)
-        vbox1.add_widget(fr, stretch=0)
 
         spacer = Widgets.Label('')
         vbox1.add_widget(spacer, stretch=1)
@@ -235,12 +221,19 @@ class Pipeline(GingaPlugin.LocalPlugin):
         self.update_stack_gui()
         self.update_status("Cleared image stack.")
 
+    def show_result(self, image):
+        chname = self.fv.get_channelName(self.fitsimage)
+        name = dp.get_image_name(image)
+        self.imglist.insert(0, image)
+        self.update_stack_gui()
+        self.fv.add_image(name, image, chname=chname)
+        
     # BIAS
 
     def _make_bias(self):
         image = dp.make_bias(self.imglist)
-        # TODO: add as a regular image using self.fv
-        self.fv.gui_do(self.fitsimage.set_image, image)
+        self.imglist = []
+        self.fv.gui_do(self.show_result, image)
         self.update_status("Made bias image.")
 
     def make_bias_cb(self, w):
@@ -249,14 +242,11 @@ class Pipeline(GingaPlugin.LocalPlugin):
 
     def subtract_bias_cb(self, w):
         image = self.fitsimage.get_image()
-
-        data_np = image.get_data()
-        bias_np = self.bias.get_data()
-        try:
-            data_np -= bias_np
-            image.set_data(data_np)
-        except Exception as e:
-            print "Error subtracting bias: %s" % (str(e))
+        if self.bias == None:
+            self.fv.show_error("Please set a bias image first")
+        else:
+            result = self.fv.error_wrap(dp.subtract, image, self.bias)
+            self.fv.gui_do(self.show_result, result)
 
     def set_bias_cb(self, w):
         # Current image is a bias image we should set
@@ -268,9 +258,9 @@ class Pipeline(GingaPlugin.LocalPlugin):
     # FLAT FIELDING
 
     def _make_flat_field(self):
-        image = dp.make_flat(self.imglist)
-        # TODO: add as a regular image using self.fv
-        self.fv.gui_do(self.fitsimage.set_image, image)
+        result = dp.make_flat(self.imglist)
+        self.imglist = []
+        self.show_result(result)
         self.update_status("Made flat field.")
 
     def make_flat_cb(self, w):
@@ -279,14 +269,12 @@ class Pipeline(GingaPlugin.LocalPlugin):
 
     def apply_flat_cb(self, w):
         image = self.fitsimage.get_image()
-
-        data_np = image.get_data()
-        flat_np = self.flat.get_data()
-        try:
-            data_np /= flat_np
-            image.set_data(data_np)
-        except Exception as e:
-            print "Error applying flat: %s" % (str(e))
+        if self.flat == None:
+            self.fv.show_error("Please set a flat field image first")
+        else:
+            result = self.fv.error_wrap(dp.divide, image, self.flat)
+            print result, image
+            self.fv.gui_do(self.show_result, result)
 
     def set_flat_cb(self, w):
         # Current image is a flat field we should set
@@ -294,12 +282,6 @@ class Pipeline(GingaPlugin.LocalPlugin):
         flatname = dp.get_image_name(self.flat, pfx='flat')
         self.w.flat_image.set_text(flatname)
         self.update_status("Set flat field.")
-
-    ## def save_flat_cb(self, w):
-    ##     self.update_status("Saving flat field...")
-    ##     self.fv.nongui_do(self.fv.error_wrap, self.flat.save_as_file,
-    ##                       self.flat_path)
-    ##     self.update_status("")
 
     def __str__(self):
         return 'pipeline'

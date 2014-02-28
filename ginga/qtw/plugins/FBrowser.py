@@ -80,6 +80,15 @@ class FBrowser(GingaPlugin.LocalPlugin):
         vbox.addWidget(self.entry, stretch=0, alignment=QtCore.Qt.AlignTop)
         self.entry.returnPressed.connect(self.browse_cb)
 
+        hbox = QtHelp.HBox()
+        btn = QtGui.QPushButton("Save Image As")
+        hbox.addWidget(btn, stretch=0)
+        self.entry2 = QtGui.QLineEdit()
+        hbox.addWidget(self.entry2, stretch=1)
+        vbox.addWidget(hbox, stretch=0, alignment=QtCore.Qt.AlignTop)
+        self.entry2.returnPressed.connect(self.save_as_cb)
+        btn.clicked.connect(lambda w: self.save_as_cb())
+
         btns = QtHelp.HBox()
         layout = btns.layout()
         layout.setSpacing(3)
@@ -226,6 +235,14 @@ class FBrowser(GingaPlugin.LocalPlugin):
     def browse_cb(self):
         path = str(self.entry.text()).strip()
         self.browse(path)
+        
+    def save_as_cb(self):
+        path = str(self.entry2.text()).strip()
+        if not path.startswith('/'):
+            path = os.path.join(self.curpath, path)
+
+        image = self.fitsimage.get_image()
+        self.fv.error_wrap(image.save_as_file, path)
         
     def itemclicked_cb(self, item):
         row = item.row()

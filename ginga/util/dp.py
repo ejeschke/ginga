@@ -121,4 +121,31 @@ def make_bias(imglist):
     return img_bias
 
 
+def add(image1, image2):
+    data1_np = image1.get_data()
+    data2_np = image2.get_data()
+
+    result = data1_np + data2_np
+    image = make_image(result, image1, {}, pfx='add')
+    return image
+    
+
+def subtract(image1, image2):
+    data1_np = image1.get_data()
+    data2_np = image2.get_data()
+
+    result = data1_np - data2_np
+    image = make_image(result, image1, {}, pfx='sub')
+    return image
+    
+
+def divide(image1, image2):
+    data1_np = image1.get_data()
+    data2_np = image2.get_data()
+
+    result = data1_np / data2_np
+    image = make_image(result, image1, {}, pfx='div')
+    return image
+
+    
 # END

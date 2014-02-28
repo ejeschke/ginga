@@ -102,6 +102,18 @@ class FBrowser(GingaPlugin.LocalPlugin):
         rvbox.pack_start(self.entry, fill=True, expand=False)
         self.entry.connect('activate', self.browse_cb)
 
+        hbox = gtk.HBox()
+        btn = gtk.Button("Load")
+        btn.connect('clicked', lambda w: self.load_cb())
+        hbox.pack_start(btn, fill=False, expand=False)
+        btn = gtk.Button("Save Image As")
+        btn.connect('clicked', lambda w: self.save_as_cb())
+        hbox.pack_start(btn, fill=False, expand=False)
+        self.entry2 = gtk.Entry()
+        self.entry.connect('activate', self.browse_cb)
+        hbox.pack_start(self.entry2, fill=True, expand=True)
+        rvbox.pack_start(hbox, fill=True, expand=False)
+
         btns = gtk.HButtonBox()
         btns.set_layout(gtk.BUTTONBOX_START)
         btns.set_spacing(3)
@@ -277,6 +289,14 @@ class FBrowser(GingaPlugin.LocalPlugin):
     def browse_cb(self, w):
         path = w.get_text().strip()
         self.browse(path)
+        
+    def save_as_cb(self):
+        path = self.entry2.get_text()
+        if not path.startswith('/'):
+            path = os.path.join(self.curpath, path)
+
+        image = self.fitsimage.get_image()
+        self.fv.error_wrap(image.save_as_file, path)
         
     def make_thumbs(self):
         path = self.curpath
