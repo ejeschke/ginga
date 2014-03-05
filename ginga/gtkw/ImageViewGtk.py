@@ -271,8 +271,10 @@ class ImageViewEvent(ImageViewGtk):
                                  [], gtk.gdk.DragAction.COPY)
             imgwin.drag_dest_add_text_targets()
         else:
-            self.TARGET_TYPE_TEXT = 80
-            toImage = [ ( "text/plain", 0, self.TARGET_TYPE_TEXT ) ]
+            self.TARGET_TYPE_TEXT = 0
+            toImage = [ ( "text/plain", 0, self.TARGET_TYPE_TEXT ),
+                        #( "text/uri-list", 0, self.TARGET_TYPE_TEXT ),
+                        ]
             imgwin.drag_dest_set(gtk.DEST_DEFAULT_ALL,
                                  toImage, gtk.gdk.ACTION_COPY)
         

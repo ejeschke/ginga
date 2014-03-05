@@ -62,7 +62,10 @@ class FBrowser(GingaPlugin.LocalPlugin):
         widget.setLayout(vbox)
 
         # create the table
-        table = QtGui.QTableWidget()
+        #table = QtGui.QTableWidget()
+        #table.setSelectionBehavior(QtGui.QAbstractItemView.SelectRows)
+        #table.setDragEnabled(True)
+        table = DragTable(plugin=self)
         table.setShowGrid(False)
         table.verticalHeader().hide()
         table.setColumnCount(len(self.columns))
@@ -81,6 +84,9 @@ class FBrowser(GingaPlugin.LocalPlugin):
         self.entry.returnPressed.connect(self.browse_cb)
 
         hbox = QtHelp.HBox()
+        btn = QtGui.QPushButton("Load")
+        btn.clicked.connect(lambda w: self.load_cb())
+        hbox.addWidget(btn, stretch=0)
         btn = QtGui.QPushButton("Save Image As")
         hbox.addWidget(btn, stretch=0)
         self.entry2 = QtGui.QLineEdit()
@@ -134,11 +140,23 @@ class FBrowser(GingaPlugin.LocalPlugin):
             self.browse(path)
 
         elif os.path.exists(path):
-            self.fv.load_file(path)
+            #self.fv.load_file(path)
+            uri = "file://%s" % (path)
+            self.fitsimage.make_callback('drag-drop', [uri])
 
         else:
             self.browse(path)
 
+    def load_cb(self):
+        curdir, curglob = os.path.split(self.curpath)
+        sm = self.treeview.selectionModel()
+        paths = [ os.path.join(curdir,
+                               self.treeview.model().data(row, 0))
+                  for row in sm.selectedRows() ]
+        #self.fv.dragdrop(self.fitsimage, paths)
+        self.fv.gui_do(self.fitsimage.make_callback, 'drag-drop',
+                       paths)
+        
     def get_info(self, path):
         dirname, filename = os.path.split(path)
         name, ext = os.path.splitext(filename)
@@ -244,8 +262,7 @@ class FBrowser(GingaPlugin.LocalPlugin):
         image = self.fitsimage.get_image()
         self.fv.error_wrap(image.save_as_file, path)
         
-    def itemclicked_cb(self, item):
-        row = item.row()
+    def get_path_at_row(self, row):
         item2 = self.treeview.item(row, 0)
         name = str(item2.text())
         if name != '..':
@@ -253,6 +270,10 @@ class FBrowser(GingaPlugin.LocalPlugin):
             path = os.path.join(curdir, name)
         else:
             path = name
+        return path
+
+    def itemclicked_cb(self, item):
+        path = self.get_path_at_row(item.row())
         self.open_file(path)
         
     def make_thumbs(self):
@@ -288,5 +309,47 @@ class FBrowser(GingaPlugin.LocalPlugin):
     
     def __str__(self):
         return 'fbrowser'
+
+
+class DragTable(QtGui.QTableWidget):
+    # This class exists only to let us drag and drop files from the
+    # file pane into the Ginga widget.
     
+    def __init__(self, parent=None, plugin=None):
+        super(DragTable, self).__init__(parent)
+        self.setDragEnabled(True)
+        self.setSelectionBehavior(QtGui.QAbstractItemView.SelectRows)
+        self.plugin = plugin
+
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasFormat("text/uri-list"):
+            event.setDropAction(QtCore.Qt.MoveAction)
+            event.accept()
+        else:
+            event.ignore()
+
+    def startDrag(self, event):
+        indices = self.selectedIndexes()
+        selected = set()
+        for index in indices:
+            selected.add(index.row())
+
+        urls = []
+        for row in selected:
+            path = "file://" + self.plugin.get_path_at_row(row)
+            url = QtCore.QUrl(path)
+            urls.append(url)
+
+        mimeData = QtCore.QMimeData()
+        mimeData.setUrls(urls)
+        drag = QtGui.QDrag(self)
+        drag.setMimeData(mimeData)
+        ## pixmap = QPixmap(":/drag.png")
+        ## drag.setHotSpot(QPoint(pixmap.width()/3, pixmap.height()/3))
+        ## drag.setPixmap(pixmap)
+        result = drag.start(QtCore.Qt.MoveAction)
+
+    def mouseMoveEvent(self, event):
+        self.startDrag(event)
+        
 #END

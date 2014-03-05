@@ -61,7 +61,8 @@ class FBrowser(GingaPlugin.LocalPlugin):
                       gtk.POLICY_AUTOMATIC)
 
         # create the TreeView
-        self.treeview = gtk.TreeView()
+        #self.treeview = gtk.TreeView()
+        self.treeview = MultiDragDropTreeView()
         
         # create the TreeViewColumns to display the data
         self.tvcolumn = [None] * len(self.columns)
@@ -95,6 +96,15 @@ class FBrowser(GingaPlugin.LocalPlugin):
 
         sw.add(self.treeview)
         self.treeview.connect('row-activated', self.open_file)
+        # enable multiple selection
+        treeselection = self.treeview.get_selection()
+        treeselection.set_mode(gtk.SELECTION_MULTIPLE)
+
+        # enable drag from this widget
+        toImage = [ ( "text/plain", 0, 0 ) ]
+        self.treeview.enable_model_drag_source(gtk.gdk.BUTTON1_MASK,
+                                               toImage, gtk.gdk.ACTION_COPY)
+        self.treeview.connect("drag-data-get", self.drag_data_get_cb)
 
         rvbox.pack_start(sw, fill=True, expand=True)
 
@@ -102,7 +112,7 @@ class FBrowser(GingaPlugin.LocalPlugin):
         rvbox.pack_start(self.entry, fill=True, expand=False)
         self.entry.connect('activate', self.browse_cb)
 
-        hbox = gtk.HBox()
+        hbox = gtk.HBox(spacing=2)
         btn = gtk.Button("Load")
         btn.connect('clicked', lambda w: self.load_cb())
         hbox.pack_start(btn, fill=False, expand=False)
@@ -204,11 +214,36 @@ class FBrowser(GingaPlugin.LocalPlugin):
             self.browse(path)
 
         elif os.path.exists(path):
-            self.fv.load_file(path)
+            #self.fv.load_file(path)
+            uri = "file://%s" % (path)
+            self.fitsimage.make_callback('drag-drop', [uri])
 
         else:
             self.browse(path)
 
+    def get_selected_paths(self):
+        treeselection = self.treeview.get_selection()
+        model, pathlist = treeselection.get_selected_rows()
+        paths = []
+        for path in pathlist:
+            tree_iter = model.get_iter(path)
+            bnch = model.get_value(tree_iter, 0)
+            uri = "file://%s" % (bnch.path)
+            paths.append(uri)
+        return paths
+
+    def load_cb(self):
+        paths = self.get_selected_paths()
+        #self.fv.dragdrop(self.fitsimage, paths)
+        self.fv.gui_do(self.fitsimage.make_callback, 'drag-drop',
+                       paths)
+        
+    def drag_data_get_cb(self, treeview, context, selection,
+                         info, timestamp):
+        paths = self.get_selected_paths()
+        #selection.set_uris(paths)
+        selection.set("text/plain", 0, '\n'.join(paths))
+    
     def get_info(self, path):
         dirname, filename = os.path.split(path)
         name, ext = os.path.splitext(filename)
@@ -332,5 +367,43 @@ class FBrowser(GingaPlugin.LocalPlugin):
     
     def __str__(self):
         return 'fbrowser'
-    
+
+
+class MultiDragDropTreeView(gtk.TreeView):
+    '''TreeView that captures mouse events to make drag and drop work
+    properly
+    See: https://gist.github.com/kevinmehall/278480#file-multiple-selection-dnd-class-py
+    '''
+ 
+    def __init__(self):
+        super(MultiDragDropTreeView, self).__init__()
+
+        self.connect('button_press_event', self.on_button_press)
+        self.connect('button_release_event', self.on_button_release)
+        self.defer_select = False
+
+    def on_button_press(self, widget, event):
+        # Here we intercept mouse clicks on selected items so that we can
+        # drag multiple items without the click selecting only one
+        target = self.get_path_at_pos(int(event.x), int(event.y))
+        if (target 
+           and event.type == gtk.gdk.BUTTON_PRESS
+           and not (event.state & (gtk.gdk.CONTROL_MASK|gtk.gdk.SHIFT_MASK))
+           and self.get_selection().path_is_selected(target[0])):
+            # disable selection
+            self.get_selection().set_select_function(lambda *ignore: False)
+            self.defer_select = target[0]
+
+    def on_button_release(self, widget, event):
+        # re-enable selection
+        self.get_selection().set_select_function(lambda *ignore: True)
+
+        target = self.get_path_at_pos(int(event.x), int(event.y))	
+        if (self.defer_select and target 
+           and self.defer_select == target[0]
+           and not (event.x==0 and event.y==0)): # certain drag and drop
+            self.set_cursor(target[0], target[1], False)
+
+        self.defer_select=False
+
 #END

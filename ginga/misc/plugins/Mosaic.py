@@ -301,7 +301,10 @@ class Mosaic(GingaPlugin.LocalPlugin):
         self.fv.showStatus("")
 
     def pause(self):
-        self.canvas.ui_setActive(False)
+        # NOTE: purposely we don't disable the UI for this plugin
+        # when it loses focus
+        #self.canvas.ui_setActive(False)
+        pass
         
     def resume(self):
         self.canvas.ui_setActive(True)
