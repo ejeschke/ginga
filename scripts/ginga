@@ -60,11 +60,11 @@ import ginga.toolkit as ginga_toolkit
 from ginga import AstroImage
 
 default_layout = ['seq', {},
-                   ['vbox', dict(name='top', width=1500, height=900),
+                   ['vbox', dict(name='top', width=1440, height=900),
                     dict(row=['hbox', dict(name='menu')],
                          stretch=0),
                     dict(row=['hpanel', {},
-                     ['ws', dict(name='left', width=340, group=2),
+                     ['ws', dict(name='left', width=300, group=2),
                       # (tabname, layout), ...
                       [("Info", ['vpanel', {},
                                  ['ws', dict(name='uleft', height=300,

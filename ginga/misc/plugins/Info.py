@@ -22,6 +22,8 @@ class Info(GingaPlugin.GlobalPlugin):
         self.channel = {}
         self.active = None
         self.info = None
+        # truncate names after this size
+        self.maxstr = 60
 
         #self.w = Bunch.Bunch()
         fv.set_callback('add-channel', self.add_channel)
@@ -49,7 +51,22 @@ class Info(GingaPlugin.GlobalPlugin):
                     ('Dimensions:', 'label', 'Dimensions', 'llabel'),
                     ('Min:', 'label', 'Min', 'llabel'),
                     ('Max:', 'label', 'Max', 'llabel'),
-                    ('Zoom:', 'label', 'Zoom', 'llabel'), 
+                    )
+        w, b = Widgets.build_info(captions)
+
+        col = Widgets.VBox()
+        row = Widgets.HBox()
+        row.set_spacing(0)
+        row.set_border_width(0)
+        row.add_widget(w, stretch=0)
+        row.add_widget(Widgets.Label(''), stretch=1)
+        col.add_widget(row, stretch=1)
+        col.add_widget(Widgets.Label(''), stretch=1)
+        sw2 = Widgets.ScrollArea()
+        sw2.set_widget(col)
+        vbox.add_widget(sw2, stretch=2)
+        
+        captions = (('Zoom:', 'label', 'Zoom', 'llabel'), 
                     ('Cut Low:', 'label', 'Cut Low Value', 'llabel',
                      'Cut Low', 'entry'),
                     ('Cut High:', 'label', 'Cut High Value', 'llabel',
@@ -61,7 +78,8 @@ class Info(GingaPlugin.GlobalPlugin):
                     ('Preferences', 'button'), 
                     )
 
-        w, b = Widgets.build_info(captions)
+        w, b2 = Widgets.build_info(captions)
+        b.update(b2)
         # TODO: need a more general solution to gtk labels resizing their
         # parent window
         #b.object.set_length(12)
@@ -75,8 +93,11 @@ class Info(GingaPlugin.GlobalPlugin):
         row.set_spacing(0)
         row.set_border_width(0)
         row.add_widget(w, stretch=0)
-        row.add_widget(Widgets.Label(''), stretch=0)
+        row.add_widget(Widgets.Label(''), stretch=1)
         vbox.add_widget(row, stretch=1)
+
+        # stretcher
+        vbox.add_widget(Widgets.Label(''), stretch=0)
 
         # Convenience navigation buttons
         btns = Widgets.HBox()
@@ -209,15 +230,21 @@ class Info(GingaPlugin.GlobalPlugin):
     def preferences(self, w, chinfo):
         self.fv.start_operation('Preferences')
         return True
+
+    def trunc(self, s):
+        if len(s) > self.maxstr:
+            return s[:self.maxstr-3] + '...'
+        else:
+            return s
         
     def set_info(self, info, fitsimage):
         image = fitsimage.get_image()
         header = image.get_header()
         
         # Update info panel
-        name = image.get('name', 'Noname')
+        name = self.trunc(image.get('name', 'Noname'))
         info.winfo.name.set_text(name)
-        objtext = header.get('OBJECT', 'UNKNOWN')
+        objtext = self.trunc(header.get('OBJECT', 'UNKNOWN'))
         info.winfo.object.set_text(objtext)
         equinox = header.get('EQUINOX', '')
         info.winfo.equinox.set_text(str(equinox))

@@ -22,12 +22,26 @@ from ginga.util import wcs, io_fits, dp
 from ginga.misc import log
 
 
-def mosaic(logger, filelist, outfile=None, fov_deg=None):
+def mosaic(logger, itemlist, fov_deg=None):
+    """
+    Parameters
+    ----------
+    logger : logger object
+        a logger object passed to created AstroImage instances
+    itemlist : sequence like
+        a sequence of either filenames or AstroImage instances
+    """
 
-    filepath = filelist[0]
-    logger.info("Reading file '%s' ..." % (filepath))
-    image0 = AstroImage.AstroImage(logger=logger)
-    image0.load_file(filelist[0])
+    if isinstance(itemlist[0], AstroImage.AstroImage):
+        image0 = itemlist[0]
+        name = image0.get('name', 'image0')
+    else:
+        # Assume it is a file and load it
+        filepath = itemlist[0]
+        logger.info("Reading file '%s' ..." % (filepath))
+        image0 = AstroImage.AstroImage(logger=logger)
+        image0.load_file(filelist[0])
+        name = filepath
 
     ra_deg, dec_deg = image0.get_keywords_list('CRVAL1', 'CRVAL2')
     header = image0.get_header()
@@ -40,8 +54,7 @@ def mosaic(logger, filelist, outfile=None, fov_deg=None):
         # TODO: calculate fov!
         fov_deg = 1.0
         
-    #cdbase = [numpy.sign(cdelt1), numpy.sign(cdelt2)]
-    cdbase = [1, 1]
+    cdbase = [numpy.sign(cdelt1), numpy.sign(cdelt2)]
     img_mosaic = dp.create_blank_image(ra_deg, dec_deg,
                                        fov_deg, px_scale, rot_deg,
                                        cdbase=cdbase,
@@ -50,39 +63,49 @@ def mosaic(logger, filelist, outfile=None, fov_deg=None):
     (rot, cdelt1, cdelt2) = wcs.get_rotation_and_scale(header)
     logger.debug("mosaic rot=%f cdelt1=%f cdelt2=%f" % (rot, cdelt1, cdelt2))
 
-    logger.debug("Processing '%s' ..." % (filepath))
+    logger.debug("Processing '%s' ..." % (name))
     tup = img_mosaic.mosaic_inline([ image0 ])
     logger.debug("placement %s" % (str(tup)))
 
-    for filepath in filelist[1:]:
-        # Create and load the image
-        logger.info("Reading file '%s' ..." % (filepath))
-        image = AstroImage.AstroImage(logger=logger)
-        image.load_file(filepath)
+    count = 1
+    for item in itemlist[1:]:
+        if isinstance(item, AstroImage.AstroImage):
+            image = item
+            name = image.get('name', 'image%d' % (count))
+        else:
+            # Create and load the image
+            filepath = item
+            logger.info("Reading file '%s' ..." % (filepath))
+            image = AstroImage.AstroImage(logger=logger)
+            image.load_file(filepath)
 
-        logger.debug("Inlining '%s' ..." % (filepath))
+        logger.debug("Inlining '%s' ..." % (name))
         tup = img_mosaic.mosaic_inline([ image ])
         logger.debug("placement %s" % (str(tup)))
-
-    if outfile:
-        io_fits.use('astropy')
-        logger.info("Writing output to '%s'..." % (outfile))
-        try:
-            os.remove(outfile)
-        except OSError:
-            pass
-        img_mosaic.save_as_file(outfile)
+        count += 1
 
     logger.info("Done.")
+    return img_mosaic
         
     
 def main(options, args):
 
     logger = log.get_logger(name="mosaic", options=options)
 
-    mosaic(logger, args, fov_deg=options.fov,
-           outfile=options.outfile)
-        
+    img_mosaic = mosaic(logger, args, fov_deg=options.fov)
+
+    if options.outfile:
+        outfile = options.outfile
+        io_fits.use('astropy')
+
+        logger.info("Writing output to '%s'..." % (outfile))
+        try:
+            os.remove(outfile)
+        except OSError:
+            pass
+
+        img_mosaic.save_as_file(outfile)
+
 
 if __name__ == "__main__":
    
