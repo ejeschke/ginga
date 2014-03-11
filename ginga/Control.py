@@ -174,11 +174,11 @@ class GingaControl(Callback.Callbacks):
             value = avg
             
         # Update the readout
-        maxx = readout.maxx
-        maxy = readout.maxy
-        maxv = readout.maxv
         fits_x = "%.3f" % info.x
         fits_y = "%.3f" % info.y
+        maxx = max(readout.maxx, len(str(fits_x)))
+        maxy = max(readout.maxy, len(str(fits_y)))
+        maxv = max(readout.maxv, len(str(value)))
         if info.has_key('ra_txt'):
             text = "%1.1s: %-14.14s  %1.1s: %-14.14s  X: %-*.*s  Y: %-*.*s  Value: %-*.*s" % (
                 info.ra_lbl, info.ra_txt, info.dec_lbl, info.dec_txt,

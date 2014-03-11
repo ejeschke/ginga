@@ -639,6 +639,12 @@ class AstroImage(BaseImage):
                 self.logger.error("Error fitting tile: %s" % (str(e)))
                 raise
 
+        # TODO: recalculate min and max values
+        # Can't use usual techniques because it adds too much time to the
+        # mosacing
+        #self._set_minmax()
+
+        # Notify watchers that our data has changed
         self.make_callback('modified')
 
         return (xlo, ylo, xhi, yhi)

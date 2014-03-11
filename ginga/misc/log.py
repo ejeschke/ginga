@@ -58,10 +58,11 @@ def get_logger(name='ginga', level=None, null=False,
     # Create a logger
     logger = logging.Logger('ginga')
 
-    if (level == None) and (options != None) and (options.loglevel != None):
-        level = options.loglevel
-    else:
-        level = logging.WARN
+    if level == None:
+        if (options != None) and (options.loglevel != None):
+            level = options.loglevel
+        else:
+            level = logging.WARN
 
     fmt = logging.Formatter(LOG_FORMAT)
     if (not log_file) and (options != None) and (options.logfile != None):
