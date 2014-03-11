@@ -177,8 +177,15 @@ class GingaControl(Callback.Callbacks):
         fits_x = "%.3f" % info.x
         fits_y = "%.3f" % info.y
         maxx = max(readout.maxx, len(str(fits_x)))
+        if maxx > readout.maxx:
+            readout.maxx = maxx
         maxy = max(readout.maxy, len(str(fits_y)))
+        if maxy > readout.maxy:
+            readout.maxy = maxy
         maxv = max(readout.maxv, len(str(value)))
+        if maxv > readout.maxv:
+            readout.maxv = maxv
+
         if info.has_key('ra_txt'):
             text = "%1.1s: %-14.14s  %1.1s: %-14.14s  X: %-*.*s  Y: %-*.*s  Value: %-*.*s" % (
                 info.ra_lbl, info.ra_txt, info.dec_lbl, info.dec_txt,

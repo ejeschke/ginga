@@ -1110,7 +1110,8 @@ def get_rotation_and_scale(header):
     ((xrot, yrot),
      (cdelt1, cdelt2)) = get_xy_rotation_and_scale(header)
 
-    if xrot != yrot:
+    #if xrot != yrot:
+    if math.fabs(xrot - yrot) > 0.001:
         raise ValueError("Skew detected: xrot=%.4f yrot=%.4f" % (
             xrot, yrot))
     rot = yrot

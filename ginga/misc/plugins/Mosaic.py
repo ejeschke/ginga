@@ -161,6 +161,9 @@ class Mosaic(GingaPlugin.LocalPlugin):
         hbox.add_widget(self.w.eval_pgs, stretch=1)
         vbox1.add_widget(hbox, stretch=0)
 
+        self.w.vbox = Widgets.VBox()
+        vbox1.add_widget(self.w.vbox, stretch=0)
+        
         spacer = Widgets.Label('')
         vbox1.add_widget(spacer, stretch=1)
         
@@ -233,6 +236,8 @@ class Mosaic(GingaPlugin.LocalPlugin):
         self.update_status("Creating blank image...")
 
     def ingest_one(self, image):
+        self.fv.assert_gui_thread()
+
         time_intr1 = time.time()
         imname = image.get('name', 'image')
         imname, ext = os.path.splitext(imname)
@@ -269,6 +274,11 @@ class Mosaic(GingaPlugin.LocalPlugin):
         
         time_intr2 = time.time()
         self.process_elapsed += time_intr2 - time_intr1
+
+        # special hack for GUI responsiveness during entire ingestion
+        # process
+        self.fv.update_pending(timeout=0.0)
+            
 
     def close(self):
         self.img_mosaic = None
@@ -345,6 +355,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
 
     def mosaic(self, paths, new_mosaic=False):
         # NOTE: this runs in a non-gui thread
+        self.fv.assert_nongui_thread()
 
         # Initialize progress bar
         self.total_files = len(paths)
@@ -354,7 +365,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
         self.ingest_count = 0
         self.ev_intr.clear()
         self.process_elapsed = 0.0
-        self.fv.gui_do(self.init_progress)
+        self.init_progress()
         self.start_time = time.time()
 
         image = self.fv.load_image(paths[0])
@@ -388,7 +399,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
         self.process_elapsed += time_intr2 - time_intr1
 
         num_threads = self.settings.get('num_threads', 4)
-        groups = split_n(paths[1:], num_threads)
+        groups = self.split_n(paths[1:], num_threads)
         for group in groups:
             self.fv.nongui_do(self.mosaic_some, group)
 
@@ -420,8 +431,10 @@ class Mosaic(GingaPlugin.LocalPlugin):
         self.fv.gui_do(self.w.eval_status.set_text, text)
 
     def init_progress(self):
-        self.w.btn_intr_eval.set_enabled(True)
-        self.w.eval_pgs.set_value(0.0)
+        def _foo():
+            self.w.btn_intr_eval.set_enabled(True)
+            self.w.eval_pgs.set_value(0.0)
+        self.fv.gui_do(_foo)
             
     def update_progress(self, pct):
         self.fv.gui_do(self.w.eval_pgs.set_value, pct)
@@ -432,11 +445,11 @@ class Mosaic(GingaPlugin.LocalPlugin):
     def eval_intr(self):
         self.ev_intr.set()
         
+    def split_n(self, lst, sz):
+        return [ lst[i:i+sz] for i in range(0, len(lst), sz) ]
+
     def __str__(self):
         return 'mosaic'
     
-
-def split_n(lst, sz):
-    return [ lst[i:i+sz] for i in range(0, len(lst), sz) ]
 
 #END
