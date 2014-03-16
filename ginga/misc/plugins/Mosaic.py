@@ -386,8 +386,8 @@ class Mosaic(GingaPlugin.LocalPlugin):
             ra2_deg, dec2_deg = image.pixtoradec(ctr_x, ctr_y)
 
             # distance between our center and new image's center
-            dist = image.deltaStarsRaDecDeg(ra1_deg, dec1_deg,
-                                            ra2_deg, dec2_deg)
+            dist = wcs.deltaStarsRaDecDeg(ra1_deg, dec1_deg,
+                                          ra2_deg, dec2_deg)
             # if distance is greater than current fov, start a new mosaic
             if dist > fov_deg:
                 self.prepare_mosaic(image, fov_deg)

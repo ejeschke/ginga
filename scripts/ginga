@@ -200,8 +200,8 @@ def main(options, args):
         wcspkg = settings.get('WCSpkg', 'choose')
 
     try:
-        from ginga.util import wcs
-        assert wcs.use(wcspkg) == True
+        from ginga.util import wcsmod
+        assert wcsmod.use(wcspkg) == True
     except Exception as e:
         logger.warn("failed to set WCS package preference: %s" % (str(e)))
 

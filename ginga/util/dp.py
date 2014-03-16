@@ -83,8 +83,7 @@ def create_blank_image(ra_deg, dec_deg, fov_deg, px_scale, rot_deg,
     header.update(wcshdr)
 
     # Create image container
-    image = AstroImage.AstroImage(data, wcsclass=wcs.WCS,
-                                  logger=logger)
+    image = AstroImage.AstroImage(data, logger=logger)
     image.update_keywords(header)
     # give the image a name
     get_image_name(image, pfx=pfx)
@@ -146,6 +145,21 @@ def divide(image1, image2):
     result = data1_np / data2_np
     image = make_image(result, image1, {}, pfx='div')
     return image
+
+
+def cutout_cross(image, x, y, radius):
+    """Cut two data subarrays that have a center at (x, y) and with
+    radius (radius) from (image).  Returns the starting pixel (x0, y0)
+    of each cut and the respective arrays (xarr, yarr).
+    """
+    data = image.get_data()
+    n = radius
+    wd, ht = image.get_size()
+    x0, x1 = max(0, x-n), min(wd-1, x+n)
+    y0, y1 = max(0, y-n), min(ht-1, y+n)
+    xarr = data[y, x0:x1+1]
+    yarr = data[y0:y1+1, x]
+    return (x0, y0, xarr, yarr)
 
     
 # END

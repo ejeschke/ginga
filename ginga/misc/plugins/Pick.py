@@ -11,7 +11,7 @@ import threading
 import numpy
 
 from ginga.misc import Widgets, CanvasTypes, Bunch
-from ginga.util import iqcalc
+from ginga.util import iqcalc, dp, wcs
 from ginga import GingaPlugin
 
 try:
@@ -672,7 +672,7 @@ class Pick(GingaPlugin.LocalPlugin):
         x, y, radius = qs.x, qs.y, qs.fwhm_radius
         try:
             image = self.fitsimage.get_image()
-            x0, y0, xarr, yarr = image.cutout_cross(x, y, radius)
+            x0, y0, xarr, yarr = dp.cutout_cross(image, x, y, radius)
 
             # get median value from the cutout area
             skybg = numpy.median(self.pick_data)
@@ -970,9 +970,12 @@ class Pick(GingaPlugin.LocalPlugin):
 
             self.wdetail.equinox.set_text(str(equinox))
 
-            # TODO: Get separate FWHM for X and Y
+            # Calculate star size from pixel pitch
             try:
-                cdelt1, cdelt2 = image.get_keywords_list('CDELT1', 'CDELT2')
+                #cdelt1, cdelt2 = image.get_keywords_list('CDELT1', 'CDELT2')
+                header = image.get_header()
+                ((xrot, yrot),
+                 (cdelt1, cdelt2)) = wcs.get_xy_rotation_and_scale(header)
                 starsize = self.iqcalc.starsize(fwhm_x, cdelt1, fwhm_y, cdelt2)
                 self.wdetail.star_size.set_text('%.3f' % starsize)
             except Exception, e:

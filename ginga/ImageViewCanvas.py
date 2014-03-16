@@ -12,6 +12,7 @@ import math
 import time
 
 from ginga.misc import Bunch
+from ginga.util import wcs
 
 class CanvasObjectError(Exception):
     pass
@@ -422,9 +423,12 @@ class DrawingMixin(object):
                 # "heel" point making a right triangle
                 ra_heel, dec_heel = image.pixtoradec(x2, y1)
 
-                text_h = image.get_starsep_RaDecDeg(ra_org, dec_org, ra_dst, dec_dst)
-                text_x = image.get_starsep_RaDecDeg(ra_org, dec_org, ra_heel, dec_heel)
-                text_y = image.get_starsep_RaDecDeg(ra_heel, dec_heel, ra_dst, dec_dst)
+                text_h = wcs.get_starsep_RaDecDeg(ra_org, dec_org,
+                                                  ra_dst, dec_dst)
+                text_x = wcs.get_starsep_RaDecDeg(ra_org, dec_org,
+                                                  ra_heel, dec_heel)
+                text_y = wcs.get_starsep_RaDecDeg(ra_heel, dec_heel,
+                                                  ra_dst, dec_dst)
             else:
                 dx = abs(x2 - x1)
                 dy = abs(y2 - y1)

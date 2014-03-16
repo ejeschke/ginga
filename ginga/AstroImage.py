@@ -2,7 +2,6 @@
 # AstroImage.py -- Abstraction of an astronomical data image.
 #
 # Eric Jeschke (eric@naoj.org) 
-# Takeshi Inagaki
 #
 # Copyright (c)  Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
@@ -15,7 +14,8 @@ import time
 
 import numpy, numpy.ma
 
-from ginga.util import wcs, io_fits, iqcalc
+from ginga.util import wcsmod, io_fits
+from ginga.util import wcs, iqcalc
 from ginga.BaseImage import BaseImage, ImageError, Header
 from ginga.misc import Bunch
 from ginga import trcalc
@@ -51,7 +51,7 @@ class AstroImage(BaseImage):
         
         # wcsclass specifies a pluggable WCS module
         if wcsclass == None:
-            wcsclass = wcs.WCS
+            wcsclass = wcsmod.WCS
         self.wcs = wcsclass(self.logger)
 
         # wcsclass specifies a pluggable IO module
@@ -223,138 +223,24 @@ class AstroImage(BaseImage):
         header = self.get_header()
         self.io.save_as_file(filepath, data, header, **kwdargs)
 
-    def cutout_cross(self, x, y, radius):
-        """Cut two data subarrays that have a center at (x, y) and with
-        radius (radius) from (data).  Returns the starting pixel (x0, y0)
-        of each cut and the respective arrays (xarr, yarr).
-        """
-        data = self.get_data()
-        n = radius
-        ht, wd = self.height, self.width
-        x0, x1 = max(0, x-n), min(wd-1, x+n)
-        y0, y1 = max(0, y-n), min(ht-1, y+n)
-        xarr = data[y, x0:x1+1]
-        yarr = data[y0:y1+1, x]
-        return (x0, y0, xarr, yarr)
-
-
     def pixtocoords(self, x, y, system=None, coords='data'):
         args = [x, y] + self.revnaxis
         return self.wcs.pixtocoords(args, system=system, coords=coords)
     
-    def deg2fmt(self, ra_deg, dec_deg, format):
-
-        rhr, rmn, rsec = wcs.degToHms(ra_deg)
-        dsgn, ddeg, dmn, dsec = wcs.degToDms(dec_deg)
-
-        if format == 'hms':
-            return rhr, rmn, rsec, dsgn, ddeg, dmn, dsec
-
-        elif format == 'str':
-            #ra_txt = '%02d:%02d:%06.3f' % (rhr, rmn, rsec)
-            ra_txt = '%d:%02d:%06.3f' % (rhr, rmn, rsec)
-            if dsgn < 0:
-                dsgn = '-'
-            else:
-                dsgn = '+'
-            #dec_txt = '%s%02d:%02d:%05.2f' % (dsgn, ddeg, dmn, dsec)
-            dec_txt = '%s%d:%02d:%05.2f' % (dsgn, ddeg, dmn, dsec)
-            return ra_txt, dec_txt
-
     def pixtoradec(self, x, y, format='deg', coords='data'):
         args = [x, y] + self.revnaxis
         ra_deg, dec_deg = self.wcs.pixtoradec(args, coords=coords)
 
         if format == 'deg':
             return ra_deg, dec_deg
-        return self.deg2fmt(ra_deg, dec_deg, format)
+        return wcs.deg2fmt(ra_deg, dec_deg, format)
     
     def radectopix(self, ra_deg, dec_deg, coords='data'):
         return self.wcs.radectopix(ra_deg, dec_deg, coords=coords,
                                    naxispath=self.revnaxis)
 
-    def dispos(self, dra0, decd0, dra, decd):
-        """
-        Source/credit: Skycat
-        
-        dispos computes distance and position angle solving a spherical 
-        triangle (no approximations)
-        INPUT        :coords in decimal degrees
-        OUTPUT       :dist in arcmin, returns phi in degrees (East of North)
-        AUTHOR       :a.p.martinez
-        Parameters:
-          dra0: center RA  decd0: center DEC  dra: point RA  decd: point DEC
-
-        Returns:
-          distance in arcmin
-        """
-        radian = 180.0/math.pi
-
-        # coord transformed in radians 
-        alf = dra / radian
-        alf0 = dra0 / radian
-        del_ = decd / radian
-        del0 = decd0 / radian
-
-        sd0 = math.sin(del0)
-        sd = math.sin(del_)
-        cd0 = math.cos(del0)
-        cd = math.cos(del_)
-        cosda = math.cos(alf - alf0)
-        cosd = sd0*sd + cd0*cd*cosda
-        dist = math.acos(cosd)
-        phi = 0.0
-        if dist > 0.0000004:
-            sind = math.sin(dist)
-            cospa = (sd*cd0 - cd*sd0*cosda)/sind
-            #if cospa > 1.0:
-            #    cospa=1.0
-            if math.fabs(cospa) > 1.0:
-                # 2005-06-02: fix from awicenec@eso.org
-                cospa = cospa/math.fabs(cospa) 
-            sinpa = cd*math.sin(alf-alf0)/sind
-            phi = math.acos(cospa)*radian
-            if sinpa < 0.0:
-                phi = 360.0-phi
-        dist *= radian
-        dist *= 60.0
-        if decd0 == 90.0:
-            phi = 180.0
-        if decd0 == -90.0:
-            phi = 0.0
-        return (phi, dist)
-
-
-    def deltaStarsRaDecDeg1(self, ra1_deg, dec1_deg, ra2_deg, dec2_deg):
-        phi, dist = self.dispos(ra1_deg, dec1_deg, ra2_deg, dec2_deg)
-        return wcs.arcsecToDeg(dist*60.0)
-
-    def deltaStarsRaDecDeg2(self, ra1_deg, dec1_deg, ra2_deg, dec2_deg):
-        ra1_rad = math.radians(ra1_deg)
-        dec1_rad = math.radians(dec1_deg)
-        ra2_rad = math.radians(ra2_deg)
-        dec2_rad = math.radians(dec2_deg)
-        
-        sep_rad = math.acos(math.cos(90.0-dec1_rad) * math.cos(90.0-dec2_rad) +
-                            math.sin(90.0-dec1_rad) * math.sin(90.0-dec2_rad) *
-                            math.cos(ra1_rad - ra2_rad))
-        res = math.degrees(sep_rad)
-        return res
-
-    # Use spherical triangulation
-    deltaStarsRaDecDeg = deltaStarsRaDecDeg1
-    
-    def get_starsep_RaDecDeg(self, ra1_deg, dec1_deg, ra2_deg, dec2_deg):
-        sep = self.deltaStarsRaDecDeg(ra1_deg, dec1_deg, ra2_deg, dec2_deg)
-        ## self.logger.debug("sep=%.3f ra1=%f dec1=%f ra2=%f dec2=%f" % (
-        ##     sep, ra1_deg, dec1_deg, ra2_deg, dec2_deg))
-        sgn, deg, mn, sec = wcs.degToDms(sep)
-        if deg != 0:
-            txt = '%02d:%02d:%06.3f' % (deg, mn, sec)
-        else:
-            txt = '%02d:%06.3f' % (mn, sec)
-        return txt
-        
+    #-----> TODO: merge into wcs.py ?
+    #
     def get_starsep_XY(self, x1, y1, x2, y2):
         # source point
         ra_org, dec_org = self.pixtoradec(x1, y1)
@@ -362,20 +248,7 @@ class AstroImage(BaseImage):
         # destination point
         ra_dst, dec_dst = self.pixtoradec(x2, y2)
 
-        return self.get_starsep_RaDecDeg(ra_org, dec_org, ra_dst, dec_dst)
-
-    def get_RaDecOffsets(self, ra1_deg, dec1_deg, ra2_deg, dec2_deg):
-        delta_ra_deg = ra1_deg - ra2_deg
-        adj = math.cos(math.radians(dec2_deg))
-        if delta_ra_deg > 180.0:
-            delta_ra_deg = (delta_ra_deg - 360.0) * adj
-        elif delta_ra_deg < -180.0:
-            delta_ra_deg = (delta_ra_deg + 360.0) * adj
-        else:
-            delta_ra_deg *= adj
-
-        delta_dec_deg = dec1_deg - dec2_deg
-        return (delta_ra_deg, delta_dec_deg)
+        return wcs.get_starsep_RaDecDeg(ra_org, dec_org, ra_dst, dec_dst)
 
     def calc_radius_xy(self, x, y, radius_deg):
         """Calculate a radius (in pixels) from the point (x, y) to a circle
@@ -386,8 +259,8 @@ class AstroImage(BaseImage):
 
         # Calculate position 1 degree from the given one
         # NOTE: this needs to add in DEC, not RA
-        ra2_deg, dec2_deg = self.add_offset_radec(ra_deg, dec_deg,
-                                                  0.0, 1.0)
+        ra2_deg, dec2_deg = wcs.add_offset_radec(ra_deg, dec_deg,
+                                                 0.0, 1.0)
 
         # Calculate the length of this segment--it is pixels/deg
         x2, y2 = self.radectopix(ra2_deg, dec2_deg)
@@ -396,61 +269,31 @@ class AstroImage(BaseImage):
         # calculate radius based on desired radius_deg
         radius_px = px_per_deg_e * radius_deg
         return radius_px
-        
+
     def calc_radius_deg2pix(self, ra_deg, dec_deg, delta_deg,
                             equinox=None):
         x, y = self.radectopix(ra_deg, dec_deg, equinox=equinox)
         return self.calc_radius_xy(x, y, delta_deg)
-        
-    def add_offset_radec(self, ra_deg, dec_deg, delta_deg_ra, delta_deg_dec):
-        """
-        Algorithm to compute RA/Dec from RA/Dec base position plus tangent
-        plane offsets.
-        """
-        # To radians
-        x = math.radians(delta_deg_ra)
-        y = math.radians(delta_deg_dec)
-        raz = math.radians(ra_deg)
-        decz = math.radians(dec_deg)
 
-        sdecz = math.sin(decz)
-        cdecz = math.cos(decz)
-
-        d = cdecz - y * sdecz
-
-        ra2 = math.atan2(x, d) + raz
-        # Normalize ra into the range 0 to 2*pi
-        twopi = math.pi * 2
-        ra2 = math.fmod(ra2, twopi)
-        if ra2 < 0.0:
-            ra2 += twopi
-        dec2 = math.atan2(sdecz + y * cdecz, math.sqrt(x*x + d*d))
-
-        # back to degrees
-        ra2_deg = math.degrees(ra2)
-        dec2_deg = math.degrees(dec2)
-        
-        return (ra2_deg, dec2_deg)
-        
     def add_offset_xy(self, x, y, delta_deg_x, delta_deg_y):
         # calculate ra/dec of x,y pixel
         ra_deg, dec_deg = self.pixtoradec(x, y)
 
         # add offsets
-        ra2_deg, dec2_deg = self.add_offset_radec(ra_deg, dec_deg,
-                                                  delta_deg_x, delta_deg_y)
+        ra2_deg, dec2_deg = wcs.add_offset_radec(ra_deg, dec_deg,
+                                                 delta_deg_x, delta_deg_y)
 
         # then back to new pixel coords
         x2, y2 = self.radectopix(ra2_deg, dec2_deg)
-        
+
         return (x2, y2)
 
     def calc_radius_center(self, delta_deg):
         return self.calc_radius_xy(float(self.width / 2.0),
                                    float(self.height / 2.0),
                                    delta_deg)
-        
-        
+
+
     def calc_compass(self, x, y, len_deg_e, len_deg_n):
 
         # Get east and north coordinates
@@ -460,9 +303,9 @@ class AstroImage(BaseImage):
         xn, yn = self.add_offset_xy(x, y, 0.0, len_deg_n)
         xn = int(round(xn))
         yn = int(round(yn))
-        
+
         return (x, y, xn, yn, xe, ye)
-       
+
     def calc_compass_radius(self, x, y, radius_px):
         xe, ye = self.add_offset_xy(x, y, 1.0, 0.0)
         xn, yn = self.add_offset_xy(x, y, 0.0, 1.0)
@@ -478,7 +321,7 @@ class AstroImage(BaseImage):
         len_deg_n = radius_px / px_per_deg_n
 
         return self.calc_compass(x, y, len_deg_e, len_deg_n)
-       
+
     def calc_compass_center(self):
         # calculate center of data
         x = float(self.width) / 2.0
@@ -488,7 +331,9 @@ class AstroImage(BaseImage):
         radius_px = float(min(self.width, self.height)) / 4.0
 
         return self.calc_compass_radius(x, y, radius_px)
-
+    #
+    #<----- TODO: merge this into wcs.py ?
+    
     def get_wcs_rotation_deg(self):
         header = self.get_header()
         (rot, cdelt1, cdelt2) = wcs.get_rotation_and_scale(header)
@@ -678,13 +523,13 @@ class AstroImage(BaseImage):
     
                 lon_deg, lat_deg = self.wcs.pixtosystem(#(data_x, data_y),
                     args,
-                                                        system=system,
-                                                        coords='data')
+                    system=system,
+                    coords='data')
 
                 if format == 'sexagesimal':
                     if system in ('galactic', 'ecliptic'):
                         sign, deg, min, sec = wcs.degToDms(lon_deg,
-                                                           isLatitude=False)
+                                                               isLatitude=False)
                         ra_txt = '+%03d:%02d:%06.3f' % (deg, min, sec)
                     else:
                         deg, min, sec = wcs.degToHms(lon_deg)

@@ -147,20 +147,20 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
                 # "heel" point making a right triangle
                 ra_heel, dec_heel = image.pixtoradec(obj.x1, obj.y2)
 
-                ht_deg = image.deltaStarsRaDecDeg(ra_org, dec_org,
-                                                  ra_heel, dec_heel)
-                wd_deg = image.deltaStarsRaDecDeg(ra_heel, dec_heel,
-                                                  ra_dst, dec_dst)
-                radius_deg = image.deltaStarsRaDecDeg(ra_heel, dec_heel,
-                                                      ra_dst, dec_dst)
+                ht_deg = wcs.deltaStarsRaDecDeg(ra_org, dec_org,
+                                                ra_heel, dec_heel)
+                wd_deg = wcs.deltaStarsRaDecDeg(ra_heel, dec_heel,
+                                                ra_dst, dec_dst)
+                radius_deg = wcs.deltaStarsRaDecDeg(ra_heel, dec_heel,
+                                                    ra_dst, dec_dst)
             else:
                 # if the object drawn is a circle, calculate the box
                 # enclosed by the circle
                 ctr_x, ctr_y = obj.x, obj.y
                 ra_ctr, dec_ctr = image.pixtoradec(ctr_x, ctr_y)
                 ra_dst, dec_dst = image.pixtoradec(ctr_x + obj.radius, ctr_y)
-                radius_deg = image.deltaStarsRaDecDeg(ra_ctr, dec_ctr,
-                                                      ra_dst, dec_dst)
+                radius_deg = wcs.deltaStarsRaDecDeg(ra_ctr, dec_ctr,
+                                                    ra_dst, dec_dst)
                 # redo as str format for widget
                 ra_ctr, dec_ctr = image.pixtoradec(ctr_x, ctr_y, format='str')
 
@@ -170,12 +170,12 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
 
                 ra_org, dec_org = image.pixtoradec(ctr_x, ctr_y - dh)
                 ra_dst, dec_dst = image.pixtoradec(ctr_x, ctr_y + dh)
-                ht_deg = image.deltaStarsRaDecDeg(ra_org, dec_org,
-                                                  ra_dst, dec_dst)
+                ht_deg = wcs.deltaStarsRaDecDeg(ra_org, dec_org,
+                                                ra_dst, dec_dst)
                 ra_org, dec_org = image.pixtoradec(ctr_x - dw, ctr_y)
                 ra_dst, dec_dst = image.pixtoradec(ctr_x + dw, ctr_y)
-                wd_deg = image.deltaStarsRaDecDeg(ra_org, dec_org,
-                                                  ra_dst, dec_dst)
+                wd_deg = wcs.deltaStarsRaDecDeg(ra_org, dec_org,
+                                                ra_dst, dec_dst)
                 
             # width and height are specified in arcmin
             sgn, deg, mn, sec = wcs.degToDms(wd_deg)
