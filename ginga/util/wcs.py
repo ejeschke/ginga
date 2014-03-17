@@ -480,7 +480,7 @@ def add_offset_radec(ra_deg, dec_deg, delta_deg_ra, delta_deg_dec):
 
     return (ra2_deg, dec2_deg)
 
-def get_RaDecOffsets(self, ra1_deg, dec1_deg, ra2_deg, dec2_deg):
+def get_RaDecOffsets(ra1_deg, dec1_deg, ra2_deg, dec2_deg):
     delta_ra_deg = ra1_deg - ra2_deg
     adj = math.cos(math.radians(dec2_deg))
     if delta_ra_deg > 180.0:

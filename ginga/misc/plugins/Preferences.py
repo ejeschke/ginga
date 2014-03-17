@@ -13,7 +13,7 @@ from ginga.misc import Widgets, ParamSet
 from ginga import cmap, imap
 from ginga import GingaPlugin
 from ginga import AutoCuts
-from ginga.util import wcs
+from ginga.util import wcsmod
 
 from ginga.misc import Bunch
 
@@ -321,12 +321,12 @@ class Preferences(GingaPlugin.LocalPlugin):
         # Setup WCS coords method choice
         combobox = b.wcs_coords
         index = 0
-        for name in wcs.coord_types:
+        for name in wcsmod.coord_types:
             combobox.append_text(name)
             index += 1
         method = self.t_.get('wcs_coords', "")
         try:
-            index = wcs.coord_types.index(method)
+            index = wcsmod.coord_types.index(method)
             combobox.set_index(index)
         except ValueError:
             pass
@@ -335,12 +335,12 @@ class Preferences(GingaPlugin.LocalPlugin):
         # Setup WCS display format method choice
         combobox = b.wcs_display
         index = 0
-        for name in wcs.display_types:
+        for name in wcsmod.display_types:
             combobox.append_text(name)
             index += 1
         method = self.t_.get('wcs_display', "sexagesimal")
         try:
-            index = wcs.display_types.index(method)
+            index = wcsmod.display_types.index(method)
             combobox.set_index(index)
         except ValueError:
             pass
@@ -724,11 +724,11 @@ class Preferences(GingaPlugin.LocalPlugin):
     def set_wcs_params_cb(self, *args):
         idx = self.w.wcs_coords.get_index()
         try:
-            ctype = wcs.coord_types[idx]
+            ctype = wcsmod.coord_types[idx]
         except IndexError:
             ctype = 'icrs'
         idx = self.w.wcs_display.get_index()
-        dtype = wcs.display_types[idx]
+        dtype = wcsmod.display_types[idx]
         self.t_.set(wcs_coords=ctype, wcs_display=dtype)
 
     def preferences_to_controls(self):
@@ -821,14 +821,14 @@ class Preferences(GingaPlugin.LocalPlugin):
         # wcs settings
         method = prefs.get('wcs_coords', "icrs")
         try:
-            index = wcs.coord_types.index(method)
+            index = wcsmod.coord_types.index(method)
             self.w.wcs_coords.set_index(index)
         except ValueError:
             pass
 
         method = prefs.get('wcs_display', "sexagesimal")
         try:
-            index = wcs.display_types.index(method)
+            index = wcsmod.display_types.index(method)
             self.w.wcs_display.set_index(index)
         except ValueError:
             pass

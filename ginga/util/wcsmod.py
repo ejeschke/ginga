@@ -8,7 +8,7 @@
 # Please see the file LICENSE.txt for details.
 #
 """
-We are lucky to have several possible choices for a python WCS package
+We are fortunate to have several possible choices for a python WCS package
 compatible with Ginga: astlib, kapteyn, starlink and astropy.
 kapteyn and astropy wrap Doug Calabretta's "WCSLIB", astLib wraps
 Doug Mink's "wcstools", and I'm not sure what starlink uses (their own?).
@@ -50,7 +50,7 @@ def use(wcspkg, raise_err=True):
            have_kapteyn, kapwcs, \
            have_astlib, astWCS, astCoords, \
            have_starlink, Ast, Atl, \
-           have_astropy, pywcs, coordinates, units
+           have_astropy, pywcs, pyfits, coordinates, units
     
     if wcspkg == 'kapteyn':
         try:
@@ -191,23 +191,8 @@ class AstropyWCS(BaseWCS):
         self.kind = 'astropy/WCSLIB'
 
     def load_header(self, header, fobj=None):
-        ## if isinstance(header, pyfits.Header):
-        ##     self.header = header
-        ## else:
-        ##     # pywcs only operates on pyfits headers
-        ##     self.header = pyfits.Header()
-        ##     for kwd in header.keys():
-        ##         try:
-        ##             bnch = header.get_card(kwd)
-        ##             self.header.update(kwd, bnch.value, comment=bnch.comment)
-        ##         except Exception, e:
-        ##             self.logger.warn("Error setting keyword '%s': %s" % (
-        ##                     kwd, str(e)))
         self.header = {}
-        # Seems pyfits header objects are not perfectly duck-typed as dicts
-        #self.header.update(header)
-        for key, value in header.items():
-            self.header[key] = value
+        self.header.update(header.items())
 
         self.fix_bad_headers()
         
@@ -339,15 +324,14 @@ class AstLibWCS(BaseWCS):
 
     def load_header(self, header, fobj=None):
         self.header = {}
-        # Seems pyfits header objects are not perfectly duck-typed as dicts
-        #self.header.update(header)
-        for key, value in header.items():
-            self.header[key] = value
+        self.header.update(header.items())
 
         self.fix_bad_headers()
-        
+
+        # reconstruct a pyfits header
+        hdr = pyfits.Header(header.items())
         try:
-            self.wcs = astWCS.WCS(self.header, mode='pyfits')
+            self.wcs = astWCS.WCS(hdr, mode='pyfits')
 
             self.coordsys = self.choose_coord_system(self.header)
         except Exception, e:
@@ -489,10 +473,7 @@ class KapteynWCS(BaseWCS):
     def load_header(self, header, fobj=None):
         # For kapteyn, header just needs to be duck-typed like a dict
         self.header = {}
-        # Seems pyfits header objects are not perfectly duck-typed as dicts
-        #self.header.update(header)
-        for key, value in header.items():
-            self.header[key] = value
+        self.header.update(header.items())
 
         self.fix_bad_headers()
         
@@ -585,16 +566,8 @@ class StarlinkWCS(BaseWCS):
         self.kind = 'starlink'
 
     def load_header(self, header, fobj=None):
-        # For starlink, header is pulled in via pyfits adapter
-        ## hdu = pyfits.PrimaryHDU()
-        ## self.header = hdu.header
-        ## for key, value in header.items():
-        ##     self.header[key] = value
         self.header = {}
-        # Seems pyfits header objects are not perfectly duck-typed
-        # as dicts so we can't use update()
-        for key, value in header.items():
-            self.header[key] = value
+        self.header.update(header.items())
 
         self.fix_bad_headers()
 
@@ -714,8 +687,7 @@ class BareBonesWCS(BaseWCS):
 
     def load_header(self, header, fobj=None):
         self.header = {}
-        for key, value in header.items():
-            self.header[key] = value
+        self.header.update(header.items())
 
         self.fix_bad_headers()
         self.coordsys = choose_coord_system(self.header)
@@ -902,7 +874,8 @@ if not wcs_configured:
     WCS = BareBonesWCS
 
     # try to use them in this order
-    for name in ('kapteyn', 'starlink', 'pyast', 'astropy'):
+    order = ('kapteyn', 'starlink', 'astlib', 'astropy')
+    for name in order:
         if use(name, raise_err=False):
             break
 
