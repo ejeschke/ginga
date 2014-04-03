@@ -98,7 +98,11 @@ def dmsStrToDeg(dec):
     """Convert a string representation of DEC into a float in degrees."""
     sign_deg, min, sec = dec.split(':')
     sign = sign_deg[0:1]
-    deg = sign_deg[1:] 
+    if not sign in ('+', '-'):
+        sign = '+'
+        deg = sign_deg
+    else:
+        deg = sign_deg[1:] 
     dec_deg = decTimeToDeg(sign, int(deg), int(min), float(sec))
     return dec_deg
 

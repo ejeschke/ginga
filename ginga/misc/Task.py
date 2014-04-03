@@ -521,8 +521,7 @@ class oldConcurrentAndTaskset(Task):
         self.numtasks = self.count
         
         # Now start each child task.
-        self.regcond.acquire()
-        try:
+        with self.regcond:
             for task in self.taskset:
                 task.initialize(self)
 
@@ -535,9 +534,6 @@ class oldConcurrentAndTaskset(Task):
             # task to terminate.
             while self.count > 0:
                 self.regcond.wait()
-
-        finally:
-            self.regcond.release()
 
         # Scan results for errors (exceptions) and raise the first one we find
         for key in self.results.keys():
@@ -556,8 +552,7 @@ class oldConcurrentAndTaskset(Task):
         Decrement the thread count.  If we are the last thread to
         finish, release compound task thread, which is blocked in execute().
         """
-        self.regcond.acquire()
-        try:
+        with self.regcond:
             self.logger.debug('Concurrent task %d/%d has completed' % (
                 self.count, self.numtasks))
             self.count -= 1
@@ -566,8 +561,6 @@ class oldConcurrentAndTaskset(Task):
             self.results[(count, task)] = result
             if self.count <= 0:
                 self.regcond.notifyAll()
-        finally:
-            self.regcond.release()
 
 
     def stop(self):
@@ -586,16 +579,12 @@ class oldConcurrentAndTaskset(Task):
     def addTask(self, task):
         """Add a task to the task set.
         """
-        self.regcond.acquire()
-        try:
+        with self.regcond:
             self.taskset.append(task)
             task.register_callback(self.child_done, args=[self.numtasks, task])
             self.numtasks += 1
             self.count += 1
 
-        finally:
-            self.regcond.release()
-            
         task.initialize(self)
         task.start()
 
@@ -801,11 +790,8 @@ class QueueTaskset(Task):
 
                 task.register_callback(self.child_done, args=[task])
 
-                self.lock.acquire()
-                try:
+                with self.lock:
                     self.count += 1
-                finally:
-                    self.lock.release()
 
                 self.ev_cancel.clear()
                 try:
@@ -850,13 +836,10 @@ class QueueTaskset(Task):
             
 
     def child_done(self, result, task):
-        self.lock.acquire()
-        try:
+        with self.lock:
             self.count -= 1
             self.totaltime += task.getExecutionTime()
             self.result = result
-        finally:
-            self.lock.release()
 
 
     def cancel(self):
@@ -870,30 +853,8 @@ class QueueTaskset(Task):
             
 # ------------ PRIORITY QUEUES ------------
 
-## This doesn't appear to work in Python 2.4.4!
-## class PriorityQueue(Queue.Queue):
-##     "Thread-safe priority queue"
-
-##     def _put(self, item):
-##         # insert in order
-##         bisect.insort(self.queue, item)
-
-class PriorityQueue(Queue.Queue):
+class PriorityQueue(Queue.PriorityQueue):
     pass
-
-## queue = PriorityQueue(0)
-
-## # add items out of order
-## queue.put((20, "second"))
-## queue.put((10, "first"))
-## queue.put((30, "third"))
-
-## # print queue contents
-## try:
-##     while 1:
-##         print queue.get_nowait()
-## except Empty:
-##     pass
 
 # ------------ WORKER THREADS ------------
 
@@ -929,21 +890,15 @@ class WorkerThread(object):
         Set of status:
           starting, idle
         """
-        self.lock.acquire()
-        try:
+        with self.lock:
             self.status = status
-        finally:
-            self.lock.release()
         
 
     def getstatus(self):
         """Returns our status--a string describing what we are doing.
         """
-        self.lock.acquire()
-        try:
+        with self.lock:
             return (self.status, self.time_start)
-        finally:
-            self.lock.release()
         
 
     def execute(self, task):
@@ -1095,8 +1050,7 @@ class ThreadPool(object):
         keyword arguments are passed to the worker thread constructor.
         """
         self.logger.debug("startall called")
-        self.regcond.acquire()
-        try:
+        with self.regcond:
             while self.status != 'down':
                 if self.status in ('start', 'up') or self.ev_quit.isSet():
                     # For now, abandon additional request to start
@@ -1134,14 +1088,12 @@ class ThreadPool(object):
                     self.logger.debug("waiting for threads: count=%d" % \
                                       self.runningcount)
                     self.regcond.wait()
-        finally:
-            self.regcond.release()
+
             self.logger.debug("startall done")
 
 
     def addThreads(self, numthreads, **kwdargs):
-        self.regcond.acquire()
-        try:
+        with self.regcond:
             # Start all worker threads
             self.logger.debug("adding %d threads to thread pool" % (
                 numthreads))
@@ -1153,16 +1105,13 @@ class ThreadPool(object):
                 t.start()
 
             self.numthreads += numthreads
-        finally:
-            self.regcond.release()
 
     def stopall(self, wait=False):
         """Stop all threads in the worker pool.  If _wait_ is True
         then don't return until all threads are down.
         """
         self.logger.debug("stopall called")
-        self.regcond.acquire()
-        try:
+        with self.regcond:
             while self.status != 'up':
                 if self.status in ('stop', 'down') or self.ev_quit.isSet():
                     # For now, silently abandon additional request to stop
@@ -1185,8 +1134,7 @@ class ThreadPool(object):
                     self.logger.debug("waiting for threads: count=%d" % \
                                       self.runningcount)
                     self.regcond.wait()
-        finally:
-            self.regcond.release()
+
             self.logger.debug("stopall done")
 
 
@@ -1226,8 +1174,7 @@ class ThreadPool(object):
         start, set status to 'up'.  This allows startall() to complete
         if it was called with wait=True.
         """
-        self.regcond.acquire()
-        try:
+        with self.regcond:
             self.runningcount += 1
             tid = thread.get_ident()
             self.tids.append(tid)
@@ -1236,8 +1183,6 @@ class ThreadPool(object):
             if self.runningcount == self.numthreads:
                 self.status = 'up'
             self.regcond.notify()
-        finally:
-            self.regcond.release()
 
 
     def register_dn(self):
@@ -1247,8 +1192,7 @@ class ThreadPool(object):
         Decrement the running-thread count.  If we are the last thread to
         start, release the ThreadPool thread, which is stuck in start()
         """
-        self.regcond.acquire()
-        try:
+        with self.regcond:
             self.runningcount -= 1
             tid = thread.get_ident()
             self.tids.remove(tid)
@@ -1257,8 +1201,6 @@ class ThreadPool(object):
             if self.runningcount == 0:
                 self.status = 'down'
             self.regcond.notify()
-        finally:
-            self.regcond.release()
 
 # ------------ THREADING MODS ------------
     
@@ -1317,12 +1259,9 @@ _count_seqnum = 0
 
 def get_tag(taskParent):
     global _count_seqnum
-    _lock_seqnum.acquire()
-    try:
+    with _lock_seqnum:
         generic_id = 'task%d' % (_count_seqnum)
         _count_seqnum += 1
-    finally:
-        _lock_seqnum.release()
         
     if taskParent:
         tag = str(taskParent) + '.' + generic_id

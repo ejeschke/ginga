@@ -178,10 +178,10 @@ class TimerFactory(object):
                 self.release_expired()
 
 
-    def wind(self, useThread=True):
+    def wind(self, use_thread=True):
         """Start a thread in the TimerFactory mainloop().
         """
-        if useThread:
+        if use_thread:
             t = threading.Thread(target=self.mainloop, args=[])
             t.start()
 
@@ -199,6 +199,7 @@ class Timer(Callback.Callbacks):
         self.data = Bunch.Bunch()
 
         self.deadline = 0.0
+        self.interval = 0.0
 
         for name in ('expired', 'cancelled'):
             self.enable_callback(name)
@@ -216,6 +217,7 @@ class Timer(Callback.Callbacks):
         """
         cur_time = time.time()
         self.deadline = cur_time + time_sec
+        self.interval = time_sec
         self.tfact.add_timer(self)
 
     def is_set(self):
