@@ -12,7 +12,7 @@ from ginga.misc import Widgets, ParamSet
 
 from ginga import cmap, imap
 from ginga import GingaPlugin
-from ginga import AutoCuts
+from ginga import AutoCuts, Scale
 from ginga.util import wcsmod
 
 from ginga.misc import Bunch
@@ -32,9 +32,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.autocuts_cache = {}
         self.gui_up = False
 
-        rgbmap = fitsimage.get_rgbmap()
-        self.calg_names = rgbmap.get_hash_algorithms()
-        self.calg_names.sort()
+        self.calg_names = Scale.get_scaler_names()
         self.autozoom_options = self.fitsimage.get_autozoom_options()
         self.autocut_options = self.fitsimage.get_autocuts_options()
         self.autocut_methods = self.fitsimage.get_autocut_methods()
@@ -80,26 +78,54 @@ class Preferences(GingaPlugin.LocalPlugin):
         hbox.add_widget(Widgets.Label(''), stretch=1)
         sw.set_widget(hbox)
 
+        # DATA SCALING OPTIONS
+        fr = Widgets.Frame("Mapping")
+
+        captions = (('Algorithm:', 'label', 'Algorithm', 'combobox'),
+                    ('Table Size:', 'label', 'Table Size', 'entry'),
+                    ('Mapping Defaults', 'button'))
+
+        w, b = Widgets.build_info(captions)
+        self.w.update(b)
+        self.w.calg_choice = b.algorithm
+        self.w.table_size = b.table_size
+        b.algorithm.set_tooltip("Choose a data mapping algorithm")
+        b.table_size.set_tooltip("Set size of the data mapping table")
+        b.mapping_defaults.add_callback('activated',
+                                        lambda w: self.set_default_maps())
+
+        combobox = b.algorithm
+        options = []
+        index = 0
+        for name in self.calg_names:
+            options.append(name)
+            combobox.append_text(name)
+            index += 1
+        index = self.calg_names.index(self.t_.get('color_algorithm', "linear"))
+        combobox.set_index(index)
+        combobox.add_callback('activated', self.set_calg_cb)
+
+        entry = b.table_size
+        entry.set_text(str(self.t_.get('color_hashsize', 65535)))
+        entry.add_callback('activated', self.set_tablesize_cb)
+
+        fr.set_widget(w)
+        vbox.add_widget(fr)
+
         # COLOR MAPPING OPTIONS
         fr = Widgets.Frame("Colors")
 
         captions = (('Colormap:', 'label', 'Colormap', 'combobox'),
                     ('Intensity:', 'label', 'Intensity', 'combobox'),
-                    ('Algorithm:', 'label', 'Algorithm', 'combobox'),
-                    ('Table Size:', 'label', 'Table Size', 'entry'),
                     ('Color Defaults', 'button'))
         w, b = Widgets.build_info(captions)
         self.w.update(b)
         self.w.cmap_choice = b.colormap
         self.w.imap_choice = b.intensity
-        self.w.calg_choice = b.algorithm
-        self.w.table_size = b.table_size
         b.color_defaults.add_callback('activated',
-                                      lambda w: self.set_default_maps())
+                                      lambda w: self.set_default_cmaps())
         b.colormap.set_tooltip("Choose a color map for this image")
         b.intensity.set_tooltip("Choose an intensity map for this image")
-        b.algorithm.set_tooltip("Choose a color mapping algorithm")
-        b.table_size.set_tooltip("Set size of the color mapping table")
         b.color_defaults.set_tooltip("Restore default color and intensity maps")
         fr.set_widget(w)
         vbox.add_widget(fr)
@@ -133,21 +159,6 @@ class Preferences(GingaPlugin.LocalPlugin):
             index = self.imap_names.index('ramp')
         combobox.set_index(index)
         combobox.add_callback('activated', self.set_imap_cb)
-
-        combobox = b.algorithm
-        options = []
-        index = 0
-        for name in self.calg_names:
-            options.append(name)
-            combobox.append_text(name)
-            index += 1
-        index = self.calg_names.index(self.t_.get('color_algorithm', "linear"))
-        combobox.set_index(index)
-        combobox.add_callback('activated', self.set_calg_cb)
-
-        entry = b.table_size
-        entry.set_text(str(self.t_.get('color_hashsize', 65535)))
-        entry.add_callback('activated', self.set_tablesize_cb)
 
         # ZOOM OPTIONS
         fr = Widgets.Frame("Zoom")
@@ -476,7 +487,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         if redraw:
             self.fitsimage.redraw(whence=2)
 
-    def set_default_maps(self):
+    def set_default_cmaps(self):
         cmap_name = "ramp"
         imap_name = "ramp"
         index = self.cmap_names.index(cmap_name)
@@ -487,6 +498,8 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.t_.set(color_map=cmap_name)
         self.set_imap_byname(imap_name)
         self.t_.set(intensity_map=imap_name)
+        
+    def set_default_maps(self):
         name = 'linear'
         index = self.calg_names.index(name)
         self.w.calg_choice.set_index(index)

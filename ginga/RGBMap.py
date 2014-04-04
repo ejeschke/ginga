@@ -12,6 +12,8 @@ import numpy
 
 from ginga.util import io_rgb
 from ginga.misc import Callback
+from ginga import Scale
+
 
 class RGBMapError(Exception):
     pass
@@ -55,7 +57,7 @@ class RGBMapper(Callback.Callbacks):
     # result 
     #
 
-    def __init__(self, logger):
+    def __init__(self, logger, scaler=None):
         Callback.Callbacks.__init__(self)
 
         self.logger = logger
@@ -68,16 +70,11 @@ class RGBMapper(Callback.Callbacks):
         self.carr = None
         self.sarr = None
 
-        # For color scale algorithms
-        self.hashalgs = { 'linear': self.calc_linear_hash,
-                          'logarithmic': self.calc_logarithmic_hash,
-                          'exponential': self.calc_exponential_hash,
-                          }
-        self.hashalg = 'linear'
-        self.maxhashsize = 1024*1024
-        self.hashsize = 65536
-        self.expo = 10.0
-        self.calc_hash()
+        # For scaling algorithms
+        hashsize = 65536
+        if scaler == None:
+            scaler = Scale.LinearScale(hashsize)
+        self.scale = scaler
 
         # For callbacks
         for name in ('changed', ):
@@ -174,27 +171,23 @@ class RGBMapper(Callback.Callbacks):
         self.reset_sarr(callback=callback)
         
     def get_hash_size(self):
-        return self.hashsize
+        return self.scale.get_hash_size()
 
     def set_hash_size(self, size, callback=True):
-        assert (size >= 256) and (size <= self.maxhashsize), \
-               RGBMapError("Bad hash size!")
-        self.hashsize = size
-        self.calc_hash()
+        self.scale.set_hash_size(size)
         if callback:
             self.make_callback('changed')
     
     def get_hash_algorithms(self):
-        return self.hashalgs.keys()
+        return Scale.get_scaler_names()
     
     def get_hash_algorithm(self):
-        return self.hashalg
+        return str(self.scale)
     
     def set_hash_algorithm(self, name, callback=True):
-        if not name in self.hashalgs.keys():
-            raise RGBMapError("Invalid hash algorithm '%s'" % (name))
-        self.hashalg = name
-        self.calc_hash()
+        hashsize = self.scale.get_hash_size()
+        scaler = Scale.get_scaler(name)
+        self.scale = scaler(hashsize)
         if callback:
             self.make_callback('changed')
     
@@ -277,11 +270,7 @@ class RGBMapper(Callback.Callbacks):
         return res
     
     def get_hasharray(self, idx):
-        # NOTE: data is assumed to be in the range 0..hashsize-1 at this point
-        # but clip as a precaution
-        idx = idx.clip(0, self.hashsize-1)
-        arr = self.hash[idx]
-        return arr
+        return self.scale.hash_array(idx)
         
     def _shift(self, sarr, pct, rotate=False):
         n = len(sarr)
@@ -352,67 +341,10 @@ class RGBMapper(Callback.Callbacks):
             self.make_callback('changed')
 
 
-    # Color scale distribution algorithms are all based on similar
-    # algorithms in skycat
-    
-    def calc_linear_hash(self):
-        l = []
-        step = int(round(self.hashsize / 256.0))
-        for i in xrange(int(self.hashsize / step) + 1):
-            l.extend([i]*step)
-        l = l[:self.hashsize]
-        self.hash = numpy.array(l)
-        hashlen = len(self.hash)
-        assert hashlen == self.hashsize, \
-               RGBMapError("Computed hash table size (%d) != specified size (%d)" % (hashlen, self.hashsize))
-            
-
-    def calc_logarithmic_hash(self):
-        if self.expo >= 0:
-            scale = float(self.hashsize) / (math.exp(self.expo) - 1.0)
-        else:
-            scale = float(self.hashsize) / (1.0 - math.exp(self.expo))
-
-        l = []
-        prevstep = 0
-        for i in xrange(256+1):
-            if self.expo > 0:
-                step = int(((math.exp((float(i) / 256.0) * self.expo) - 1.0) * scale) + 0.5)
-            else:
-                step = int((1.0 - math.exp((float(i) / 256.0) * self.expo) * scale) + 0.5)
-            #print "step is %d delta=%d" % (step, step-prevstep)
-            l.extend([i] * (step - prevstep))
-            prevstep = step
-        #print "length of l=%d" % (len(l))
-        l = l[:self.hashsize]
-        self.hash = numpy.array(l)
-        hashlen = len(self.hash)
-        assert hashlen == self.hashsize, \
-               RGBMapError("Computed hash table size (%d) != specified size (%d)" % (hashlen, self.hashsize))
-
-    def calc_exponential_hash(self):
-        l = []
-        prevstep = 0
-        for i in xrange(256+1):
-            step = int((math.pow((float(i) / 256.0), self.expo) * self.hashsize) + 0.5)
-            #print "step is %d delta=%d" % (step, step-prevstep)
-            l.extend([i] * (step - prevstep))
-            prevstep = step
-        #print "length of l=%d" % (len(l))
-        l = l[:self.hashsize]
-        self.hash = numpy.array(l)
-        hashlen = len(self.hash)
-        assert hashlen == self.hashsize, \
-               RGBMapError("Computed hash table size (%d) != specified size (%d)" % (hashlen, self.hashsize))
-
-    def calc_hash(self):
-        method = self.hashalgs[self.hashalg]
-        method()
-
     def copy_attributes(self, dst_rgbmap):
         dst_rgbmap.set_cmap(self.cmap)
         dst_rgbmap.set_imap(self.imap)
-        dst_rgbmap.set_hash_algorithm(self.hashalg)
+        dst_rgbmap.set_hash_algorithm(str(self.scale))
 
     def reset_cmap(self):
         self.recalc()
@@ -420,12 +352,11 @@ class RGBMapper(Callback.Callbacks):
 
 class PassThruRGBMapper(RGBMapper):
 
-    def __init__(self, logger):
+    def __init__(self, logger, scaler=None):
         super(PassThruRGBMapper, self).__init__(logger)
 
-        self.hashalg = 'linear'
-        self.maxhashsize = 256
-        self.hashsize = 256
+        # ignore passed in scaler 
+        self.scale = Scale.LinearScale(256)
             
     def get_rgbarray(self, idx, out=None, order='RGB', image_order='RGB'):
         # prepare output array
