@@ -195,7 +195,7 @@ def add_scaler(name, scaleClass):
     
 def get_scaler_names():
     #return scaler.keys()
-    return ['linear', 'log', 'power', 'sqrt', 'asinh', 'sinh']
+    return ['linear', 'log', 'power', 'sqrt', 'squared', 'asinh', 'sinh']
     
 def get_scaler(name):
     if not name in scaler:
