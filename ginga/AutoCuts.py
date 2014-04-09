@@ -526,8 +526,8 @@ class ZScale(AutoCutsBase):
         slope, intercept = p
 
         num_chosen = 0
-        self.logger.debug("intercept=%f slope=%f chosen=%d" % (
-            intercept, slope, num_chosen))
+        self.logger.debug("intercept=%f slope=%f" % (
+            intercept, slope))
 
         ## if num_chosen < (num_pix // 2):
         ##     self.logger.debug("more than half pixels rejected--falling back to min/max of sample")

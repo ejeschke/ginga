@@ -63,6 +63,7 @@ class LinearScale(ScaleBase):
 
     def calc_hash(self):
         base = numpy.arange(0.0, float(self.hashsize), 1.0) / self.hashsize
+        # normalize to color range
         l = base * (self.colorlen - 1)
         self.hash = l.astype(numpy.uint)
         
@@ -81,6 +82,7 @@ class LogScale(ScaleBase):
     def calc_hash(self):
         base = numpy.arange(0.0, float(self.hashsize), 1.0) / self.hashsize
         l = numpy.log(self.exp * base + 1.0) / numpy.log(self.exp)
+        # normalize to color range
         l = l.clip(0.0, 1.0) * (self.colorlen - 1)
         self.hash = l.astype(numpy.uint)
         
@@ -99,6 +101,7 @@ class PowerScale(ScaleBase):
     def calc_hash(self):
         base = numpy.arange(0.0, float(self.hashsize), 1.0) / self.hashsize
         l = (self.exp ** base) / self.exp
+        # normalize to color range
         l = l.clip(0.0, 1.0) * (self.colorlen - 1)
         self.hash = l.astype(numpy.uint)
         
@@ -116,6 +119,7 @@ class SqrtScale(ScaleBase):
     def calc_hash(self):
         base = numpy.arange(0.0, float(self.hashsize), 1.0) / self.hashsize
         l = numpy.sqrt(base)
+        # normalize to color range
         l = l.clip(0.0, 1.0) * (self.colorlen - 1)
         self.hash = l.astype(numpy.uint)
         
@@ -132,6 +136,7 @@ class SquaredScale(ScaleBase):
 
     def calc_hash(self):
         base = numpy.arange(0.0, float(self.hashsize), 1.0) / self.hashsize
+        # normalize to color range
         l = (base ** 2.0) * (self.colorlen - 1)
         self.hash = l.astype(numpy.uint)
         
@@ -151,6 +156,7 @@ class AsinhScale(ScaleBase):
     def calc_hash(self):
         base = numpy.arange(0.0, float(self.hashsize), 1.0) / self.hashsize
         l = numpy.arcsinh(self.factor * base) / self.nonlinearity
+        # normalize to color range
         l = l.clip(0.0, 1.0) * (self.colorlen - 1)
         self.hash = l.astype(numpy.uint)
 
@@ -179,6 +185,44 @@ class SinhScale(ScaleBase):
         return 'sinh'
 
 
+class HistogramEqualizationScale(ScaleBase):
+    
+    def __init__(self, hashsize):
+        super(HistogramEqualizationScale, self).__init__(hashsize)
+
+    def calc_hash(self):
+        pass
+
+    # TODO: this method has a lot more overhead compared to the other
+    # scaling methods because the hash array must be computed each time
+    # the data is delivered to hash_array()--in the other scaling
+    # methods it is precomputed in calc_hash().  Investigate whether
+    # there is a way to make this more efficient.
+    #
+    def hash_array(self, idx):
+        # NOTE: data could be assumed to be in the range 0..hashsize-1
+        # at this point but clip as a precaution
+        idx = idx.clip(0, self.hashsize-1)
+        
+        #get image histogram
+        hist, bins = numpy.histogram(idx.flatten(),
+                                     self.hashsize, density=False)
+        cdf = hist.cumsum()
+
+        # normalize to color range
+        l = (cdf - cdf.min()) * (self.colorlen - 1) / (
+            cdf.max() - cdf.min())
+        self.hash = l.astype(numpy.uint)
+        self.check_hash()
+
+        arr = self.hash[idx]
+        return arr
+        
+    def __str__(self):
+        return 'histeq'
+
+
+
 scaler = {
     'linear': LinearScale,
     'log': LogScale,
@@ -187,6 +231,7 @@ scaler = {
     'squared': SquaredScale,
     'asinh': AsinhScale,
     'sinh': SinhScale,
+    'histeq': HistogramEqualizationScale,
     }
     
 def add_scaler(name, scaleClass):
@@ -195,7 +240,8 @@ def add_scaler(name, scaleClass):
     
 def get_scaler_names():
     #return scaler.keys()
-    return ['linear', 'log', 'power', 'sqrt', 'squared', 'asinh', 'sinh']
+    return ['linear', 'log', 'power', 'sqrt', 'squared', 'asinh', 'sinh',
+            'histeq']
     
 def get_scaler(name):
     if not name in scaler:
