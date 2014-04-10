@@ -55,8 +55,15 @@ class ScaleBase(object):
     def calc_hash(self):
         raise ScaleError("Subclass needs to override this method")
 
+    def get_scale_pct(self, pct):
+        raise ScaleError("Subclass needs to override this method")
+
 
 class LinearScale(ScaleBase):
+    """
+    y = x
+        where x in (0..1)
+    """
     
     def __init__(self, hashsize):
         super(LinearScale, self).__init__(hashsize)
@@ -69,11 +76,19 @@ class LinearScale(ScaleBase):
         
         self.check_hash()
         
+    def get_scale_pct(self, pct):
+        val = min(max(float(pct), 0.0), 1.0)
+        return val
+
     def __str__(self):
         return 'linear'
 
 
 class LogScale(ScaleBase):
+    """
+    y = log(a*x + 1) / log(a)
+        where x in (0..1)
+    """
     
     def __init__(self, hashsize, exp=1000.0):
         self.exp = exp
@@ -81,18 +96,28 @@ class LogScale(ScaleBase):
 
     def calc_hash(self):
         base = numpy.arange(0.0, float(self.hashsize), 1.0) / self.hashsize
-        l = numpy.log(self.exp * base + 1.0) / numpy.log(self.exp)
+        base = numpy.log(self.exp * base + 1.0) / numpy.log(self.exp)
+        base = base.clip(0.0, 1.0)
         # normalize to color range
-        l = l.clip(0.0, 1.0) * (self.colorlen - 1)
+        l = base * (self.colorlen - 1)
         self.hash = l.astype(numpy.uint)
         
         self.check_hash()
+
+    def get_scale_pct(self, pct):
+        val_inv = (math.exp(pct * math.log(self.exp)) - 1) / self.exp
+        val = min(max(float(val_inv), 0.0), 1.0)
+        return val
 
     def __str__(self):
         return 'log'
 
 
 class PowerScale(ScaleBase):
+    """
+    y = ((a ** x) - 1) / a
+        where x in (0..1)
+    """
     
     def __init__(self, hashsize, exp=1000.0):
         self.exp = exp
@@ -100,53 +125,83 @@ class PowerScale(ScaleBase):
 
     def calc_hash(self):
         base = numpy.arange(0.0, float(self.hashsize), 1.0) / self.hashsize
-        l = (self.exp ** base) / self.exp
+        base = (self.exp ** base) / self.exp
+        base = base.clip(0.0, 1.0)
         # normalize to color range
-        l = l.clip(0.0, 1.0) * (self.colorlen - 1)
+        l = base * (self.colorlen - 1)
         self.hash = l.astype(numpy.uint)
         
         self.check_hash()
+
+    def get_scale_pct(self, pct):
+        val_inv = math.log(self.exp * pct + 1, self.exp)
+        val = min(max(float(val_inv), 0.0), 1.0)
+        return val
 
     def __str__(self):
         return 'power'
 
 
 class SqrtScale(ScaleBase):
+    """
+    y = sqrt(x)
+        where x in (0..1)
+    """
     
     def __init__(self, hashsize):
         super(SqrtScale, self).__init__(hashsize)
 
     def calc_hash(self):
         base = numpy.arange(0.0, float(self.hashsize), 1.0) / self.hashsize
-        l = numpy.sqrt(base)
+        base = numpy.sqrt(base)
+        base = base.clip(0.0, 1.0)
         # normalize to color range
-        l = l.clip(0.0, 1.0) * (self.colorlen - 1)
+        l = base * (self.colorlen - 1)
         self.hash = l.astype(numpy.uint)
         
         self.check_hash()
+
+    def get_scale_pct(self, pct):
+        val_inv = pct ** 2.0
+        val = min(max(float(val_inv), 0.0), 1.0)
+        return val
 
     def __str__(self):
         return 'sqrt'
 
 
 class SquaredScale(ScaleBase):
+    """
+    y = x ** 2
+        where x in (0..1)
+    """
     
     def __init__(self, hashsize):
         super(SquaredScale, self).__init__(hashsize)
 
     def calc_hash(self):
         base = numpy.arange(0.0, float(self.hashsize), 1.0) / self.hashsize
+        base = (base ** 2.0)
         # normalize to color range
-        l = (base ** 2.0) * (self.colorlen - 1)
+        l = base * (self.colorlen - 1)
         self.hash = l.astype(numpy.uint)
         
         self.check_hash()
+
+    def get_scale_pct(self, pct):
+        val_inv = math.sqrt(pct)
+        val = min(max(float(val_inv), 0.0), 1.0)
+        return val
 
     def __str__(self):
         return 'squared'
 
 
 class AsinhScale(ScaleBase):
+    """
+    y = asinh(nonlinearity * x) / factor
+        where x in (0..1)
+    """
     
     def __init__(self, hashsize, factor=10.0, nonlinearity=3.0):
         self.factor = factor
@@ -155,18 +210,29 @@ class AsinhScale(ScaleBase):
 
     def calc_hash(self):
         base = numpy.arange(0.0, float(self.hashsize), 1.0) / self.hashsize
-        l = numpy.arcsinh(self.factor * base) / self.nonlinearity
+        base = numpy.arcsinh(self.factor * base) / self.nonlinearity
+        base = base.clip(0.0, 1.0)
         # normalize to color range
-        l = l.clip(0.0, 1.0) * (self.colorlen - 1)
+        l = base * (self.colorlen - 1)
         self.hash = l.astype(numpy.uint)
 
         self.check_hash()
+
+    def get_scale_pct(self, pct):
+        # calculate inverse of scale fn
+        val_inv = math.sinh(self.nonlinearity * pct) / self.factor
+        val = min(max(float(val_inv), 0.0), 1.0)
+        return val
 
     def __str__(self):
         return 'asinh'
 
 
 class SinhScale(ScaleBase):
+    """
+    y = sinh(factor * x) / nonlinearity
+        where x in (0..1)
+    """
     
     def __init__(self, hashsize, factor=3.0, nonlinearity=10.0):
         self.factor = factor
@@ -175,17 +241,29 @@ class SinhScale(ScaleBase):
 
     def calc_hash(self):
         base = numpy.arange(0.0, float(self.hashsize), 1.0) / self.hashsize
-        l = numpy.sinh(self.factor * base) / self.nonlinearity
-        l = l.clip(0.0, 1.0) * (self.colorlen - 1)
+        base = numpy.sinh(self.factor * base) / self.nonlinearity
+        base = base.clip(0.0, 1.0)
+        # normalize to color range
+        l = base * (self.colorlen - 1)
         self.hash = l.astype(numpy.uint)
 
         self.check_hash()
+
+    def get_scale_pct(self, pct):
+        # calculate inverse of scale fn
+        val_inv = math.asinh(self.nonlinearity * pct) / self.factor
+        val = min(max(float(val_inv), 0.0), 1.0)
+        return val
 
     def __str__(self):
         return 'sinh'
 
 
 class HistogramEqualizationScale(ScaleBase):
+    """
+    The histogram equalization scale function distributes colors based
+    on the frequency of each data value.
+    """
     
     def __init__(self, hashsize):
         super(HistogramEqualizationScale, self).__init__(hashsize)
@@ -218,6 +296,10 @@ class HistogramEqualizationScale(ScaleBase):
         arr = self.hash[idx]
         return arr
         
+    def get_scale_pct(self, pct):
+        # TODO: this is wrong but we need a way to invert the hash
+        return pct
+
     def __str__(self):
         return 'histeq'
 

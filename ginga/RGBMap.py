@@ -184,6 +184,12 @@ class RGBMapper(Callback.Callbacks):
     def get_hash_algorithm(self):
         return str(self.scale)
     
+    def get_scale(self):
+        """
+        Return the scale map used by this RGBMapper.
+        """
+        return self.scale
+    
     def set_hash_algorithm(self, name, callback=True):
         hashsize = self.scale.get_hash_size()
         scaler = Scale.get_scaler(name)
