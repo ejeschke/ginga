@@ -127,8 +127,8 @@ class ImageViewBindings(object):
             kp_autozoom_on = ['doublequote'],
             kp_autozoom_override = ['singlequote'],
             kp_draw = ['space'],
-            kp_mapping = ['s'],
-            kp_mapping_reset = ['S'],
+            kp_dist = ['s'],
+            kp_dist_reset = ['S'],
             kp_freepan = ['q'],
             kp_pan_set = ['p'],
             kp_center = ['c'],
@@ -157,7 +157,7 @@ class ImageViewBindings(object):
             sc_zoom_coarse = ['ctrl+scroll'],
             sc_contrast_fine = [],
             sc_contrast_coarse = [],
-            sc_mapping = [],
+            sc_dist = [],
             
             scroll_pan_acceleration = 1.0,
             scroll_zoom_acceleration = 1.0,
@@ -540,9 +540,9 @@ class ImageViewBindings(object):
             fitsimage.onscreen_message(fitsimage.get_scale_text(),
                                        delay=0.4)
 
-    def _cycle_mapping(self, fitsimage, msg):
+    def _cycle_dist(self, fitsimage, msg):
         if self.cancmap:
-            msg = self.settings.get('msg_scale', msg)
+            msg = self.settings.get('msg_dist', msg)
             rgbmap = fitsimage.get_rgbmap()
             algs = rgbmap.get_hash_algorithms()
             algname = rgbmap.get_hash_algorithm()
@@ -551,17 +551,17 @@ class ImageViewBindings(object):
             algname = algs[idx]
             rgbmap.set_hash_algorithm(algname)
             if msg:
-                fitsimage.onscreen_message("Mapping: %s" % (algname),
+                fitsimage.onscreen_message("Color dist: %s" % (algname),
                                            delay=1.0)
 
-    def _reset_mapping(self, fitsimage, msg):
+    def _reset_dist(self, fitsimage, msg):
         if self.cancmap:
-            msg = self.settings.get('msg_scale', msg)
+            msg = self.settings.get('msg_dist', msg)
             rgbmap = fitsimage.get_rgbmap()
             algname = 'linear'
             rgbmap.set_hash_algorithm(algname)
             if msg:
-                fitsimage.onscreen_message("Mapping: %s" % (algname),
+                fitsimage.onscreen_message("Color dist: %s" % (algname),
                                            delay=1.0)
 
     def _rotate_xy(self, fitsimage, x, y, msg=True):
@@ -813,12 +813,12 @@ class ImageViewBindings(object):
                 fitsimage.onscreen_message("Swap XY=%s" % swapxy, delay=1.0)
         return True
 
-    def kp_mapping(self, fitsimage, keyname, data_x, data_y, msg=True):
-        self._cycle_mapping(fitsimage, msg)
+    def kp_dist(self, fitsimage, keyname, data_x, data_y, msg=True):
+        self._cycle_dist(fitsimage, msg)
         return True
 
-    def kp_mapping_reset(self, fitsimage, keyname, data_x, data_y, msg=True):
-        self._reset_mapping(fitsimage, msg)
+    def kp_dist_reset(self, fitsimage, keyname, data_x, data_y, msg=True):
+        self._reset_dist(fitsimage, msg)
         return True
 
     def kp_rotate_reset(self, fitsimage, action, data_x, data_y):
@@ -1133,9 +1133,9 @@ class ImageViewBindings(object):
         return self.sc_pan(fitsimage, direction, amount, data_x, data_y,
                            msg=msg)
 
-    def sc_mapping(self, fitsimage, direction, amount, data_x, data_y,
+    def sc_dist(self, fitsimage, direction, amount, data_x, data_y,
                    msg=True):
-        self._cycle_mapping(fitsimage, msg)
+        self._cycle_dist(fitsimage, msg)
         return True
 
     ##### GESTURE ACTION CALLBACKS #####

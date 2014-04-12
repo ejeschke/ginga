@@ -314,18 +314,18 @@ The Preferences plugin sets the preferences on a per-channel basis.
 The preferences for a given channel are inherited from the "Image"
 channel until they are explicitly set and saved using this plugin.
 
-.. _preferences-mapping:
+.. _preferences-color-distribution:
 
-Mapping Preferences
--------------------
-.. image:: figures/mapping-prefs.png
+Color Distribution Preferences
+------------------------------
+.. image:: figures/cdist-prefs.png
    :align: center
 
-The Mapping preferences controls the preferences used for the data value to 
-color index conversion that occurs after cut levels are applied and
-just before final color mapping is performed.  It concerns how the
-values between the low and high cut levels are distributed to the color
-and intensity mapping phase. 
+The Color Distribution preferences controls the preferences used for the
+data value to color index conversion that occurs after cut levels are
+applied and just before final color mapping is performed.  It concerns
+how the values between the low and high cut levels are distributed to
+the color and intensity mapping phase. 
 
 The `Algorithm` control is used to set the algorithm used for the
 mapping.  Click the control to show the list, or simply scroll the mouse
@@ -335,21 +335,17 @@ and histeq.  The name of each algorithm is indicative of how
 the data is mapped to the colors in the color map.  `linear` is the 
 default.
 
-The `Table Size` control sets the size of the hash table constructed to
-handle this phase of the mapping.  The effect of this control is
-typically not significant on the outcome unless a very small value is used.
+.. _preferences-color-mapping:
 
-.. _preferences-color:
-
-Color Preferences
------------------
+Color Mapping Preferences
+-------------------------
 .. image:: figures/cmap-prefs.png
    :align: center
 
-The Colors preferences controls the preferences used for the color map
-and intensity map, used during the final phase of the color mapping process.
-Together with the Mapping preferences, these control the mapping of data
-values into a 24-bpp RGB visual representation.
+The Color Mapping preferences controls the preferences used for the
+color map and intensity map, used during the final phase of the color
+mapping process. Together with the Color Distribution preferences, these
+control the mapping of data values into a 24-bpp RGB visual representation.
 
 The `Colormap` control selects which color map should be loaded and
 used.  Click the control to show the list, or simply scroll the mouse
@@ -394,7 +390,8 @@ Ginga supports two zoom algorithms, chosen using the `Zoom Alg` control:
 
 Note that regardless of which method is chosen for the zoom algorithm,
 the zoom can be controlled by holding down Ctrl (coarse) or Shift
-(fine) while scrolling to constrain the zoom rate.
+(fine) while scrolling to constrain the zoom rate (assuming the default
+mouse bindings).
 
 The `Stretch XY` control can be used to stretch one of the axes (X or
 Y) relative to the other.  Select an axis with this control and roll the
@@ -428,13 +425,6 @@ the window)--you can see them change as you pan around the image.
 
 The `Center Image` button sets the pan position to the center of the
 image, as calculated by halving the dimensions in X and Y.
-
-Checking the `Reverse Pan` box reverses the sense of zooming and
-panning in Ginga: the scroll wheel will zoom the image in the opposite
-direction of normal, and when free panning you move to the opposite
-corner of the window to pan to the corner that you want to see.  
-This control is largely for the benefit of those used to the scrolling
-and zooming behavior of some older FITS viewers.
 
 The `Mark Center` check box, when checked, will cause Ginga to draw a
 small reticle in the center of the image.  This is useful for knowing
@@ -621,13 +611,14 @@ Because remote control of Ginga is handled by a plugin, you can easily
 change the types of operations that can be done, or completely change
 the protocol used.
 
-The remote control module is not loaded by default.  To load it, specify
+The remote control module is not activated by default.  To start it, specify
 the command line option::
 
     --modules=RC
 
-You can then control Ginga from the `grc` program located in the 
-`scripts` directory (and installed with ginga).  Some examples:
+or start it from `Start RC` under the `Plugins` menu.  You can then
+control Ginga from the `grc` program located in the  `scripts` directory
+(and installed with ginga).  Some examples: 
 
 Create a new channel::
 
@@ -649,9 +640,25 @@ Zoom to fit::
 
     $ grc channel FOO zoom_fit
  
-Transform::
+Transform (args are boolean triplet: flipx flipy swapxy)::
 
     $ grc channel FOO transform 1 0 1
+
+Rotate::
+
+    $ grc channel FOO rotate 37.5
+
+Change color map::
+
+    $ grc channel FOO set_color_map rainbow3
+ 
+Change color distribution algorithm::
+
+    $ grc channel FOO set_color_algorithm log
+ 
+Change intensity map::
+
+    $ grc channel FOO set_intensity_map neg
 
 Almost any method on the Ginga shell or a channel can be invoked from
 the remote plugin.  Methods on the shell can be called like this::

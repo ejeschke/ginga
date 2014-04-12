@@ -12,7 +12,7 @@ from ginga.misc import Widgets, ParamSet
 
 from ginga import cmap, imap
 from ginga import GingaPlugin
-from ginga import AutoCuts, Scale
+from ginga import AutoCuts, ColorDist
 from ginga.util import wcsmod
 
 from ginga.misc import Bunch
@@ -32,7 +32,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.autocuts_cache = {}
         self.gui_up = False
 
-        self.calg_names = Scale.get_scaler_names()
+        self.calg_names = ColorDist.get_dist_names()
         self.autozoom_options = self.fitsimage.get_autozoom_options()
         self.autocut_options = self.fitsimage.get_autocuts_options()
         self.autocut_methods = self.fitsimage.get_autocut_methods()
@@ -60,6 +60,10 @@ class Preferences(GingaPlugin.LocalPlugin):
         for name in ('autocut_method', 'autocut_params'):
             self.t_.getSetting(name).add_callback('set', self.set_autocuts_ext_cb)
 
+        ## for key in ['color_algorithm', 'color_hashsize', 'color_map',
+        ##             'intensity_map']:
+        ##     self.t_.getSetting(key).add_callback('set', self.cmap_changed_ext_cb)
+            
         self.t_.setdefault('wcs_coords', 'icrs')
         self.t_.setdefault('wcs_display', 'sexagesimal')
 
@@ -78,21 +82,22 @@ class Preferences(GingaPlugin.LocalPlugin):
         hbox.add_widget(Widgets.Label(''), stretch=1)
         sw.set_widget(hbox)
 
-        # DATA SCALING OPTIONS
-        fr = Widgets.Frame("Mapping")
+        # COLOR DISTRIBUTION OPTIONS
+        fr = Widgets.Frame("Color Distribution")
 
         captions = (('Algorithm:', 'label', 'Algorithm', 'combobox'),
-                    ('Table Size:', 'label', 'Table Size', 'entry'),
-                    ('Mapping Defaults', 'button'))
+                    #('Table Size:', 'label', 'Table Size', 'entry'),
+                    ('Dist Defaults', 'button'))
 
         w, b = Widgets.build_info(captions)
         self.w.update(b)
         self.w.calg_choice = b.algorithm
-        self.w.table_size = b.table_size
-        b.algorithm.set_tooltip("Choose a data mapping algorithm")
-        b.table_size.set_tooltip("Set size of the data mapping table")
-        b.mapping_defaults.add_callback('activated',
-                                        lambda w: self.set_default_maps())
+        #self.w.table_size = b.table_size
+        b.algorithm.set_tooltip("Choose a color distribution algorithm")
+        #b.table_size.set_tooltip("Set size of the distribution hash table")
+        b.dist_defaults.set_tooltip("Restore color distribution defaults")
+        b.dist_defaults.add_callback('activated',
+                                     lambda w: self.set_default_distmaps())
 
         combobox = b.algorithm
         options = []
@@ -105,15 +110,15 @@ class Preferences(GingaPlugin.LocalPlugin):
         combobox.set_index(index)
         combobox.add_callback('activated', self.set_calg_cb)
 
-        entry = b.table_size
-        entry.set_text(str(self.t_.get('color_hashsize', 65535)))
-        entry.add_callback('activated', self.set_tablesize_cb)
+        ## entry = b.table_size
+        ## entry.set_text(str(self.t_.get('color_hashsize', 65535)))
+        ## entry.add_callback('activated', self.set_tablesize_cb)
 
         fr.set_widget(w)
         vbox.add_widget(fr)
 
         # COLOR MAPPING OPTIONS
-        fr = Widgets.Frame("Colors")
+        fr = Widgets.Frame("Color Mapping")
 
         captions = (('Colormap:', 'label', 'Colormap', 'combobox'),
                     ('Intensity:', 'label', 'Intensity', 'combobox'),
@@ -159,6 +164,106 @@ class Preferences(GingaPlugin.LocalPlugin):
             index = self.imap_names.index('ramp')
         combobox.set_index(index)
         combobox.add_callback('activated', self.set_imap_cb)
+
+        # AUTOCUTS OPTIONS
+        fr = Widgets.Frame("Auto Cuts")
+        vbox2 = Widgets.VBox()
+        fr.set_widget(vbox2)
+
+        captions = (('Auto Method:', 'label', 'Auto Method', 'combobox'),
+                    )
+        w, b = Widgets.build_info(captions)
+        self.w.update(b)
+
+        # Setup auto cuts method choice
+        combobox = b.auto_method
+        index = 0
+        method = self.t_.get('autocut_method', "histogram")
+        for name in self.autocut_methods:
+            combobox.append_text(name)
+            index += 1
+        index = self.autocut_methods.index(method)
+        combobox.set_index(index)
+        combobox.add_callback('activated', self.set_autocut_method_cb)
+        b.auto_method.set_tooltip("Choose algorithm for auto levels")
+        vbox2.add_widget(w, stretch=0)
+
+        self.w.acvbox = Widgets.VBox()
+        vbox2.add_widget(self.w.acvbox, stretch=1)
+
+        vbox.add_widget(fr, stretch=0)
+
+        # TRANSFORM OPTIONS
+        fr = Widgets.Frame("Transform")
+
+        captions = (('Flip X', 'checkbutton', 'Flip Y', 'checkbutton',
+                    'Swap XY', 'checkbutton'),
+                    ('Rotate:', 'label', 'Rotate', 'spinfloat'),
+                    ('Restore', 'button'),)
+        w, b = Widgets.build_info(captions)
+        self.w.update(b)
+
+        for name in ('flip_x', 'flip_y', 'swap_xy'):
+            btn = b[name]
+            btn.set_state(self.t_.get(name, False))
+            btn.add_callback('activated', self.set_transforms_cb)
+        b.flip_x.set_tooltip("Flip the image around the X axis")
+        b.flip_y.set_tooltip("Flip the image around the Y axis")
+        b.swap_xy.set_tooltip("Swap the X and Y axes in the image")
+        b.rotate.set_tooltip("Rotate the image around the pan position")
+        b.restore.set_tooltip("Clear any transforms and center image")
+        b.restore.add_callback('activated', self.restore_cb)
+
+        b.rotate.set_limits(0.00, 359.99999999, incr_value=10.0)
+        b.rotate.set_value(0.00)
+        b.rotate.set_decimals(8)
+        b.rotate.add_callback('value-changed', self.rotate_cb)
+
+        fr.set_widget(w)
+        vbox.add_widget(fr, stretch=0)
+
+        # WCS OPTIONS
+        fr = Widgets.Frame("WCS")
+
+        captions = (('WCS Coords:', 'label', 'WCS Coords', 'combobox'),
+                    ('WCS Display:', 'label', 'WCS Display', 'combobox'),
+                    )
+        w, b = Widgets.build_info(captions)
+        self.w.update(b)
+
+        b.wcs_coords.set_tooltip("Set WCS coordinate system")
+        b.wcs_display.set_tooltip("Set WCS display format")
+
+        # Setup WCS coords method choice
+        combobox = b.wcs_coords
+        index = 0
+        for name in wcsmod.coord_types:
+            combobox.append_text(name)
+            index += 1
+        method = self.t_.get('wcs_coords', "")
+        try:
+            index = wcsmod.coord_types.index(method)
+            combobox.set_index(index)
+        except ValueError:
+            pass
+        combobox.add_callback('activated', self.set_wcs_params_cb)
+
+        # Setup WCS display format method choice
+        combobox = b.wcs_display
+        index = 0
+        for name in wcsmod.display_types:
+            combobox.append_text(name)
+            index += 1
+        method = self.t_.get('wcs_display', "sexagesimal")
+        try:
+            index = wcsmod.display_types.index(method)
+            combobox.set_index(index)
+        except ValueError:
+            pass
+        combobox.add_callback('activated', self.set_wcs_params_cb)
+
+        fr.set_widget(w)
+        vbox.add_widget(fr, stretch=0)
 
         # ZOOM OPTIONS
         fr = Widgets.Frame("Zoom")
@@ -256,106 +361,6 @@ class Preferences(GingaPlugin.LocalPlugin):
         b.center_image.add_callback('activated', self.center_image_cb)
         b.mark_center.set_tooltip("Mark the center (pan locator)")
         b.mark_center.add_callback('activated', self.set_misc_cb)
-
-        fr.set_widget(w)
-        vbox.add_widget(fr, stretch=0)
-
-        # TRANSFORM OPTIONS
-        fr = Widgets.Frame("Transform")
-
-        captions = (('Flip X', 'checkbutton', 'Flip Y', 'checkbutton',
-                    'Swap XY', 'checkbutton'),
-                    ('Rotate:', 'label', 'Rotate', 'spinfloat'),
-                    ('Restore', 'button'),)
-        w, b = Widgets.build_info(captions)
-        self.w.update(b)
-
-        for name in ('flip_x', 'flip_y', 'swap_xy'):
-            btn = b[name]
-            btn.set_state(self.t_.get(name, False))
-            btn.add_callback('activated', self.set_transforms_cb)
-        b.flip_x.set_tooltip("Flip the image around the X axis")
-        b.flip_y.set_tooltip("Flip the image around the Y axis")
-        b.swap_xy.set_tooltip("Swap the X and Y axes in the image")
-        b.rotate.set_tooltip("Rotate the image around the pan position")
-        b.restore.set_tooltip("Clear any transforms and center image")
-        b.restore.add_callback('activated', self.restore_cb)
-
-        b.rotate.set_limits(0.00, 359.99999999, incr_value=10.0)
-        b.rotate.set_value(0.00)
-        b.rotate.set_decimals(8)
-        b.rotate.add_callback('value-changed', self.rotate_cb)
-
-        fr.set_widget(w)
-        vbox.add_widget(fr, stretch=0)
-
-        # AUTOCUTS OPTIONS
-        fr = Widgets.Frame("Auto Cuts")
-        vbox2 = Widgets.VBox()
-        fr.set_widget(vbox2)
-
-        captions = (('Auto Method:', 'label', 'Auto Method', 'combobox'),
-                    )
-        w, b = Widgets.build_info(captions)
-        self.w.update(b)
-
-        # Setup auto cuts method choice
-        combobox = b.auto_method
-        index = 0
-        method = self.t_.get('autocut_method', "histogram")
-        for name in self.autocut_methods:
-            combobox.append_text(name)
-            index += 1
-        index = self.autocut_methods.index(method)
-        combobox.set_index(index)
-        combobox.add_callback('activated', self.set_autocut_method_cb)
-        b.auto_method.set_tooltip("Choose algorithm for auto levels")
-        vbox2.add_widget(w, stretch=0)
-
-        self.w.acvbox = Widgets.VBox()
-        vbox2.add_widget(self.w.acvbox, stretch=1)
-
-        vbox.add_widget(fr, stretch=0)
-
-        # WCS OPTIONS
-        fr = Widgets.Frame("WCS")
-
-        captions = (('WCS Coords:', 'label', 'WCS Coords', 'combobox'),
-                    ('WCS Display:', 'label', 'WCS Display', 'combobox'),
-                    )
-        w, b = Widgets.build_info(captions)
-        self.w.update(b)
-
-        b.wcs_coords.set_tooltip("Set WCS coordinate system")
-        b.wcs_display.set_tooltip("Set WCS display format")
-
-        # Setup WCS coords method choice
-        combobox = b.wcs_coords
-        index = 0
-        for name in wcsmod.coord_types:
-            combobox.append_text(name)
-            index += 1
-        method = self.t_.get('wcs_coords', "")
-        try:
-            index = wcsmod.coord_types.index(method)
-            combobox.set_index(index)
-        except ValueError:
-            pass
-        combobox.add_callback('activated', self.set_wcs_params_cb)
-
-        # Setup WCS display format method choice
-        combobox = b.wcs_display
-        index = 0
-        for name in wcsmod.display_types:
-            combobox.append_text(name)
-            index += 1
-        method = self.t_.get('wcs_display', "sexagesimal")
-        try:
-            index = wcsmod.display_types.index(method)
-            combobox.set_index(index)
-        except ValueError:
-            pass
-        combobox.add_callback('activated', self.set_wcs_params_cb)
 
         fr.set_widget(w)
         vbox.add_widget(fr, stretch=0)
@@ -499,7 +504,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.set_imap_byname(imap_name)
         self.t_.set(intensity_map=imap_name)
         
-    def set_default_maps(self):
+    def set_default_distmaps(self):
         name = 'linear'
         index = self.calg_names.index(name)
         self.w.calg_choice.set_index(index)
@@ -507,7 +512,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.t_.set(color_algorithm=name)
         hashsize = 65535
         self.t_.set(color_hashsize=hashsize)
-        self.w.table_size.set_text(str(hashsize))
+        ## self.w.table_size.set_text(str(hashsize))
         rgbmap = self.fitsimage.get_rgbmap()
         rgbmap.set_hash_size(hashsize)
         
@@ -757,13 +762,15 @@ class Preferences(GingaPlugin.LocalPlugin):
             index = 0
         self.w.cmap_choice.set_index(index)
 
+        # color dist algorithm
         calg = rgbmap.get_hash_algorithm()
         index = self.calg_names.index(calg)
         self.w.calg_choice.set_index(index)
 
-        size = rgbmap.get_hash_size()
-        self.w.table_size.set_text(str(size))
+        ## size = rgbmap.get_hash_size()
+        ## self.w.table_size.set_text(str(size))
 
+        # intensity map
         im = rgbmap.get_imap()
         try:
             index = self.imap_names.index(im.name)

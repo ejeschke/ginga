@@ -15,7 +15,7 @@ import sys, traceback
 import time
 
 from ginga.misc import Callback, Settings
-from ginga import RGBMap, AstroImage, AutoCuts, Scale
+from ginga import RGBMap, AstroImage, AutoCuts, ColorDist
 from ginga import cmap, imap, trcalc, version
 
 
@@ -352,10 +352,10 @@ class ImageViewBase(Callback.Callbacks):
         calg_name:  string
             the name of a color distribution algorithm
         """
-        scaleClass = Scale.get_scaler(calg_name)
+        distClass = ColorDist.get_dist(calg_name)
         hashsize = self.rgbmap.get_hash_size()
-        scaler = scaleClass(hashsize, **kwdargs)
-        self.set_calg(scaler)
+        dist = distClass(hashsize, **kwdargs)
+        self.set_calg(dist)
 
     def set_cmap(self, cm, redraw=True):
         self.rgbmap.set_cmap(cm, callback=redraw)
@@ -363,8 +363,8 @@ class ImageViewBase(Callback.Callbacks):
     def set_imap(self, im, redraw=True):
         self.rgbmap.set_imap(im, callback=redraw)
 
-    def set_calg(self, calg, redraw=True):
-        self.rgbmap.set_scale(calg, callback=redraw)
+    def set_calg(self, dist, redraw=True):
+        self.rgbmap.set_dist(dist, callback=redraw)
 
     def shift_cmap(self, pct, redraw=True):
         self.rgbmap.shift(pct, callback=redraw)

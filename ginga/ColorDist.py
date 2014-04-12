@@ -1,5 +1,5 @@
 #
-# Scale.py -- Data scaling
+# ColorDist.py -- Color Distribution algorithms
 # 
 # Eric Jeschke (eric@naoj.org)
 #
@@ -8,7 +8,7 @@
 # Please see the file LICENSE.txt for details.
 #
 """
-Scaling algorithms are modeled after the ones described for ds9 here:
+These algorithms are modeled after the ones described for ds9 here:
 
     http://ds9.si.edu/doc/ref/how.html
     
@@ -16,13 +16,13 @@ Scaling algorithms are modeled after the ones described for ds9 here:
 import math
 import numpy
 
-class ScaleError(Exception):
+class ColorDistError(Exception):
     pass
 
-class ScaleBase(object):
+class ColorDistBase(object):
 
     def __init__(self, hashsize, colorlen=None):
-        super(ScaleBase, self).__init__()
+        super(ColorDistBase, self).__init__()
 
         self.hashsize = hashsize
         if colorlen == None:
@@ -45,30 +45,30 @@ class ScaleBase(object):
     
     def set_hash_size(self, size):
         assert (size >= self.colorlen) and (size <= self.maxhashsize), \
-               ScaleError("Bad hash size!")
+               ColorDistError("Bad hash size!")
         self.hashsize = size
         self.calc_hash()
 
     def check_hash(self):
         hashlen = len(self.hash)
         assert hashlen == self.hashsize, \
-               ScaleError("Computed hash table size (%d) != specified size (%d)" % (hashlen, self.hashsize))
+               ColorDistError("Computed hash table size (%d) != specified size (%d)" % (hashlen, self.hashsize))
 
     def calc_hash(self):
-        raise ScaleError("Subclass needs to override this method")
+        raise ColorDistError("Subclass needs to override this method")
 
-    def get_scale_pct(self, pct):
-        raise ScaleError("Subclass needs to override this method")
+    def get_dist_pct(self, pct):
+        raise ColorDistError("Subclass needs to override this method")
 
 
-class LinearScale(ScaleBase):
+class LinearDist(ColorDistBase):
     """
     y = x
         where x in (0..1)
     """
     
     def __init__(self, hashsize, colorlen=None):
-        super(LinearScale, self).__init__(hashsize, colorlen=colorlen)
+        super(LinearDist, self).__init__(hashsize, colorlen=colorlen)
 
     def calc_hash(self):
         base = numpy.arange(0.0, float(self.hashsize), 1.0) / self.hashsize
@@ -78,7 +78,7 @@ class LinearScale(ScaleBase):
         
         self.check_hash()
         
-    def get_scale_pct(self, pct):
+    def get_dist_pct(self, pct):
         val = min(max(float(pct), 0.0), 1.0)
         return val
 
@@ -86,7 +86,7 @@ class LinearScale(ScaleBase):
         return 'linear'
 
 
-class LogScale(ScaleBase):
+class LogDist(ColorDistBase):
     """
     y = log(a*x + 1) / log(a)
         where x in (0..1)
@@ -94,7 +94,7 @@ class LogScale(ScaleBase):
     
     def __init__(self, hashsize, colorlen=None, exp=1000.0):
         self.exp = exp
-        super(LogScale, self).__init__(hashsize, colorlen=colorlen)
+        super(LogDist, self).__init__(hashsize, colorlen=colorlen)
 
     def calc_hash(self):
         base = numpy.arange(0.0, float(self.hashsize), 1.0) / self.hashsize
@@ -106,7 +106,7 @@ class LogScale(ScaleBase):
         
         self.check_hash()
 
-    def get_scale_pct(self, pct):
+    def get_dist_pct(self, pct):
         val_inv = (math.exp(pct * math.log(self.exp)) - 1) / self.exp
         val = min(max(float(val_inv), 0.0), 1.0)
         return val
@@ -115,7 +115,7 @@ class LogScale(ScaleBase):
         return 'log'
 
 
-class PowerScale(ScaleBase):
+class PowerDist(ColorDistBase):
     """
     y = ((a ** x) - 1) / a
         where x in (0..1)
@@ -123,7 +123,7 @@ class PowerScale(ScaleBase):
     
     def __init__(self, hashsize, colorlen=None, exp=1000.0):
         self.exp = exp
-        super(PowerScale, self).__init__(hashsize, colorlen=colorlen)
+        super(PowerDist, self).__init__(hashsize, colorlen=colorlen)
 
     def calc_hash(self):
         base = numpy.arange(0.0, float(self.hashsize), 1.0) / self.hashsize
@@ -135,7 +135,7 @@ class PowerScale(ScaleBase):
         
         self.check_hash()
 
-    def get_scale_pct(self, pct):
+    def get_dist_pct(self, pct):
         val_inv = math.log(self.exp * pct + 1, self.exp)
         val = min(max(float(val_inv), 0.0), 1.0)
         return val
@@ -144,14 +144,14 @@ class PowerScale(ScaleBase):
         return 'power'
 
 
-class SqrtScale(ScaleBase):
+class SqrtDist(ColorDistBase):
     """
     y = sqrt(x)
         where x in (0..1)
     """
     
     def __init__(self, hashsize, colorlen=None):
-        super(SqrtScale, self).__init__(hashsize, colorlen=colorlen)
+        super(SqrtDist, self).__init__(hashsize, colorlen=colorlen)
 
     def calc_hash(self):
         base = numpy.arange(0.0, float(self.hashsize), 1.0) / self.hashsize
@@ -163,7 +163,7 @@ class SqrtScale(ScaleBase):
         
         self.check_hash()
 
-    def get_scale_pct(self, pct):
+    def get_dist_pct(self, pct):
         val_inv = pct ** 2.0
         val = min(max(float(val_inv), 0.0), 1.0)
         return val
@@ -172,14 +172,14 @@ class SqrtScale(ScaleBase):
         return 'sqrt'
 
 
-class SquaredScale(ScaleBase):
+class SquaredDist(ColorDistBase):
     """
     y = x ** 2
         where x in (0..1)
     """
     
     def __init__(self, hashsize, colorlen=None):
-        super(SquaredScale, self).__init__(hashsize, colorlen=colorlen)
+        super(SquaredDist, self).__init__(hashsize, colorlen=colorlen)
 
     def calc_hash(self):
         base = numpy.arange(0.0, float(self.hashsize), 1.0) / self.hashsize
@@ -190,7 +190,7 @@ class SquaredScale(ScaleBase):
         
         self.check_hash()
 
-    def get_scale_pct(self, pct):
+    def get_dist_pct(self, pct):
         val_inv = math.sqrt(pct)
         val = min(max(float(val_inv), 0.0), 1.0)
         return val
@@ -199,7 +199,7 @@ class SquaredScale(ScaleBase):
         return 'squared'
 
 
-class AsinhScale(ScaleBase):
+class AsinhDist(ColorDistBase):
     """
     y = asinh(nonlinearity * x) / factor
         where x in (0..1)
@@ -209,7 +209,7 @@ class AsinhScale(ScaleBase):
                  nonlinearity=3.0):
         self.factor = factor
         self.nonlinearity = nonlinearity
-        super(AsinhScale, self).__init__(hashsize, colorlen=colorlen)
+        super(AsinhDist, self).__init__(hashsize, colorlen=colorlen)
 
     def calc_hash(self):
         base = numpy.arange(0.0, float(self.hashsize), 1.0) / self.hashsize
@@ -221,8 +221,8 @@ class AsinhScale(ScaleBase):
 
         self.check_hash()
 
-    def get_scale_pct(self, pct):
-        # calculate inverse of scale fn
+    def get_dist_pct(self, pct):
+        # calculate inverse of dist fn
         val_inv = math.sinh(self.nonlinearity * pct) / self.factor
         val = min(max(float(val_inv), 0.0), 1.0)
         return val
@@ -231,7 +231,7 @@ class AsinhScale(ScaleBase):
         return 'asinh'
 
 
-class SinhScale(ScaleBase):
+class SinhDist(ColorDistBase):
     """
     y = sinh(factor * x) / nonlinearity
         where x in (0..1)
@@ -241,7 +241,7 @@ class SinhScale(ScaleBase):
                  nonlinearity=10.0):
         self.factor = factor
         self.nonlinearity = nonlinearity
-        super(SinhScale, self).__init__(hashsize, colorlen=colorlen)
+        super(SinhDist, self).__init__(hashsize, colorlen=colorlen)
 
     def calc_hash(self):
         base = numpy.arange(0.0, float(self.hashsize), 1.0) / self.hashsize
@@ -253,8 +253,8 @@ class SinhScale(ScaleBase):
 
         self.check_hash()
 
-    def get_scale_pct(self, pct):
-        # calculate inverse of scale fn
+    def get_dist_pct(self, pct):
+        # calculate inverse of dist fn
         val_inv = math.asinh(self.nonlinearity * pct) / self.factor
         val = min(max(float(val_inv), 0.0), 1.0)
         return val
@@ -263,14 +263,14 @@ class SinhScale(ScaleBase):
         return 'sinh'
 
 
-class HistogramEqualizationScale(ScaleBase):
+class HistogramEqualizationDist(ColorDistBase):
     """
-    The histogram equalization scale function distributes colors based
-    on the frequency of each data value.
+    The histogram equalization distribution function distributes colors
+    based on the frequency of each data value.
     """
     
     def __init__(self, hashsize, colorlen=None):
-        super(HistogramEqualizationScale, self).__init__(hashsize,
+        super(HistogramEqualizationDist, self).__init__(hashsize,
                                                          colorlen=colorlen)
 
     def calc_hash(self):
@@ -301,7 +301,7 @@ class HistogramEqualizationScale(ScaleBase):
         arr = self.hash[idx]
         return arr
         
-    def get_scale_pct(self, pct):
+    def get_dist_pct(self, pct):
         # TODO: this is wrong but we need a way to invert the hash
         return pct
 
@@ -310,29 +310,29 @@ class HistogramEqualizationScale(ScaleBase):
 
 
 
-scaler = {
-    'linear': LinearScale,
-    'log': LogScale,
-    'power': PowerScale,
-    'sqrt': SqrtScale,
-    'squared': SquaredScale,
-    'asinh': AsinhScale,
-    'sinh': SinhScale,
-    'histeq': HistogramEqualizationScale,
+distributions = {
+    'linear': LinearDist,
+    'log': LogDist,
+    'power': PowerDist,
+    'sqrt': SqrtDist,
+    'squared': SquaredDist,
+    'asinh': AsinhDist,
+    'sinh': SinhDist,
+    'histeq': HistogramEqualizationDist,
     }
     
-def add_scaler(name, scaleClass):
-    global scaler
-    scaler[name.lower()] = scaleClass
+def add_dist(name, distClass):
+    global distributions
+    distributions[name.lower()] = distClass
     
-def get_scaler_names():
-    #return scaler.keys()
+def get_dist_names():
+    #return distributions.keys()
     return ['linear', 'log', 'power', 'sqrt', 'squared', 'asinh', 'sinh',
             'histeq']
     
-def get_scaler(name):
-    if not name in scaler:
-        raise ScaleError("Invalid scale algorithm '%s'" % (name))
-    return scaler[name]
+def get_dist(name):
+    if not name in distributions:
+        raise ColorDistError("Invalid distribution algorithm '%s'" % (name))
+    return distributions[name]
     
 #END

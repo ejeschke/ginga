@@ -161,7 +161,7 @@ class ColorBar(Callback.Callbacks, QtGui.QWidget):
         #print "clr is %dx%d width=%d rem=%d ival=%d" % (
         #    width, height, clr_wd, rem_px, ival)
 
-        scale = self.rgbmap.get_scale()
+        dist = self.rgbmap.get_dist()
         
         j = ival; off = 0
         range_pts = []
@@ -184,9 +184,9 @@ class ColorBar(Callback.Callbacks, QtGui.QWidget):
             # Draw range scale if we are supposed to
             if self.t_showrange and self._interval.has_key(i):
                 cb_pct = float(i) / 256.0
-                # get inverse of scaling function and calculate value
+                # get inverse of distribution function and calculate value
                 # at this position
-                rng_pct = scale.get_scale_pct(cb_pct)
+                rng_pct = dist.get_dist_pct(cb_pct)
                 val = int(self.loval + (rng_pct * (self.hival - self.loval)))
                 text = "%d" % (val)
                 rect = cr.boundingRect(0, 0, 1000, 1000, 0, text)

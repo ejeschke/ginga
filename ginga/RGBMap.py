@@ -12,7 +12,7 @@ import numpy
 
 from ginga.util import io_rgb
 from ginga.misc import Callback
-from ginga import Scale
+from ginga import ColorDist
 
 
 class RGBMapError(Exception):
@@ -57,7 +57,7 @@ class RGBMapper(Callback.Callbacks):
     # result 
     #
 
-    def __init__(self, logger, scaler=None):
+    def __init__(self, logger, dist=None):
         Callback.Callbacks.__init__(self)
 
         self.logger = logger
@@ -72,9 +72,9 @@ class RGBMapper(Callback.Callbacks):
 
         # For scaling algorithms
         hashsize = 65536
-        if scaler == None:
-            scaler = Scale.LinearScale(hashsize)
-        self.scale = scaler
+        if dist == None:
+            dist = ColorDist.LinearDist(hashsize)
+        self.dist = dist
 
         # For callbacks
         for name in ('changed', ):
@@ -171,34 +171,34 @@ class RGBMapper(Callback.Callbacks):
         self.reset_sarr(callback=callback)
         
     def get_hash_size(self):
-        return self.scale.get_hash_size()
+        return self.dist.get_hash_size()
 
     def set_hash_size(self, size, callback=True):
-        self.scale.set_hash_size(size)
+        self.dist.set_hash_size(size)
         if callback:
             self.make_callback('changed')
     
     def get_hash_algorithms(self):
-        return Scale.get_scaler_names()
+        return ColorDist.get_dist_names()
     
     def get_hash_algorithm(self):
-        return str(self.scale)
+        return str(self.dist)
     
-    def get_scale(self):
+    def get_dist(self):
         """
-        Return the scale map used by this RGBMapper.
+        Return the color distribution used by this RGBMapper.
         """
-        return self.scale
+        return self.dist
     
-    def set_scale(self, scale, callback=True):
-        self.scale = scale
+    def set_dist(self, dist, callback=True):
+        self.dist = dist
         if callback:
             self.make_callback('changed')
     
     def set_hash_algorithm(self, name, callback=True, **kwdargs):
-        hashsize = self.scale.get_hash_size()
-        scaler = Scale.get_scaler(name)(hashsize, **kwdargs)
-        self.set_scale(scaler, callback=callback)
+        hashsize = self.dist.get_hash_size()
+        dist = ColorDist.get_dist(name)(hashsize, **kwdargs)
+        self.set_dist(dist, callback=callback)
     
     def get_order_indexes(self, order, cs):
         order = order.upper()
@@ -279,7 +279,7 @@ class RGBMapper(Callback.Callbacks):
         return res
     
     def get_hasharray(self, idx):
-        return self.scale.hash_array(idx)
+        return self.dist.hash_array(idx)
         
     def _shift(self, sarr, pct, rotate=False):
         n = len(sarr)
@@ -353,7 +353,7 @@ class RGBMapper(Callback.Callbacks):
     def copy_attributes(self, dst_rgbmap):
         dst_rgbmap.set_cmap(self.cmap)
         dst_rgbmap.set_imap(self.imap)
-        dst_rgbmap.set_hash_algorithm(str(self.scale))
+        dst_rgbmap.set_hash_algorithm(str(self.dist))
 
     def reset_cmap(self):
         self.recalc()
@@ -361,11 +361,11 @@ class RGBMapper(Callback.Callbacks):
 
 class PassThruRGBMapper(RGBMapper):
 
-    def __init__(self, logger, scaler=None):
+    def __init__(self, logger, dist=None):
         super(PassThruRGBMapper, self).__init__(logger)
 
-        # ignore passed in scaler 
-        self.scale = Scale.LinearScale(256)
+        # ignore passed in distribution 
+        self.dist = ColorDist.LinearDist(256)
             
     def get_rgbarray(self, idx, out=None, order='RGB', image_order='RGB'):
         # prepare output array
