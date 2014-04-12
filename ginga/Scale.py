@@ -21,10 +21,12 @@ class ScaleError(Exception):
 
 class ScaleBase(object):
 
-    def __init__(self, hashsize, colorlen=256):
+    def __init__(self, hashsize, colorlen=None):
         super(ScaleBase, self).__init__()
 
         self.hashsize = hashsize
+        if colorlen == None:
+            colorlen = 256
         self.colorlen = colorlen
         self.maxhashsize = 1024*1024
         # this actually holds the hash array
@@ -65,8 +67,8 @@ class LinearScale(ScaleBase):
         where x in (0..1)
     """
     
-    def __init__(self, hashsize):
-        super(LinearScale, self).__init__(hashsize)
+    def __init__(self, hashsize, colorlen=None):
+        super(LinearScale, self).__init__(hashsize, colorlen=colorlen)
 
     def calc_hash(self):
         base = numpy.arange(0.0, float(self.hashsize), 1.0) / self.hashsize
@@ -90,9 +92,9 @@ class LogScale(ScaleBase):
         where x in (0..1)
     """
     
-    def __init__(self, hashsize, exp=1000.0):
+    def __init__(self, hashsize, colorlen=None, exp=1000.0):
         self.exp = exp
-        super(LogScale, self).__init__(hashsize)
+        super(LogScale, self).__init__(hashsize, colorlen=colorlen)
 
     def calc_hash(self):
         base = numpy.arange(0.0, float(self.hashsize), 1.0) / self.hashsize
@@ -119,9 +121,9 @@ class PowerScale(ScaleBase):
         where x in (0..1)
     """
     
-    def __init__(self, hashsize, exp=1000.0):
+    def __init__(self, hashsize, colorlen=None, exp=1000.0):
         self.exp = exp
-        super(PowerScale, self).__init__(hashsize)
+        super(PowerScale, self).__init__(hashsize, colorlen=colorlen)
 
     def calc_hash(self):
         base = numpy.arange(0.0, float(self.hashsize), 1.0) / self.hashsize
@@ -148,8 +150,8 @@ class SqrtScale(ScaleBase):
         where x in (0..1)
     """
     
-    def __init__(self, hashsize):
-        super(SqrtScale, self).__init__(hashsize)
+    def __init__(self, hashsize, colorlen=None):
+        super(SqrtScale, self).__init__(hashsize, colorlen=colorlen)
 
     def calc_hash(self):
         base = numpy.arange(0.0, float(self.hashsize), 1.0) / self.hashsize
@@ -176,8 +178,8 @@ class SquaredScale(ScaleBase):
         where x in (0..1)
     """
     
-    def __init__(self, hashsize):
-        super(SquaredScale, self).__init__(hashsize)
+    def __init__(self, hashsize, colorlen=None):
+        super(SquaredScale, self).__init__(hashsize, colorlen=colorlen)
 
     def calc_hash(self):
         base = numpy.arange(0.0, float(self.hashsize), 1.0) / self.hashsize
@@ -203,10 +205,11 @@ class AsinhScale(ScaleBase):
         where x in (0..1)
     """
     
-    def __init__(self, hashsize, factor=10.0, nonlinearity=3.0):
+    def __init__(self, hashsize, colorlen=None, factor=10.0,
+                 nonlinearity=3.0):
         self.factor = factor
         self.nonlinearity = nonlinearity
-        super(AsinhScale, self).__init__(hashsize)
+        super(AsinhScale, self).__init__(hashsize, colorlen=colorlen)
 
     def calc_hash(self):
         base = numpy.arange(0.0, float(self.hashsize), 1.0) / self.hashsize
@@ -234,10 +237,11 @@ class SinhScale(ScaleBase):
         where x in (0..1)
     """
     
-    def __init__(self, hashsize, factor=3.0, nonlinearity=10.0):
+    def __init__(self, hashsize, colorlen=None, factor=3.0,
+                 nonlinearity=10.0):
         self.factor = factor
         self.nonlinearity = nonlinearity
-        super(SinhScale, self).__init__(hashsize)
+        super(SinhScale, self).__init__(hashsize, colorlen=colorlen)
 
     def calc_hash(self):
         base = numpy.arange(0.0, float(self.hashsize), 1.0) / self.hashsize
@@ -265,8 +269,9 @@ class HistogramEqualizationScale(ScaleBase):
     on the frequency of each data value.
     """
     
-    def __init__(self, hashsize):
-        super(HistogramEqualizationScale, self).__init__(hashsize)
+    def __init__(self, hashsize, colorlen=None):
+        super(HistogramEqualizationScale, self).__init__(hashsize,
+                                                         colorlen=colorlen)
 
     def calc_hash(self):
         pass

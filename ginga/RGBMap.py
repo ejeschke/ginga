@@ -190,12 +190,15 @@ class RGBMapper(Callback.Callbacks):
         """
         return self.scale
     
-    def set_hash_algorithm(self, name, callback=True):
-        hashsize = self.scale.get_hash_size()
-        scaler = Scale.get_scaler(name)
-        self.scale = scaler(hashsize)
+    def set_scale(self, scale, callback=True):
+        self.scale = scale
         if callback:
             self.make_callback('changed')
+    
+    def set_hash_algorithm(self, name, callback=True, **kwdargs):
+        hashsize = self.scale.get_hash_size()
+        scaler = Scale.get_scaler(name)(hashsize, **kwdargs)
+        self.set_scale(scaler, callback=callback)
     
     def get_order_indexes(self, order, cs):
         order = order.upper()

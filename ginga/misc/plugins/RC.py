@@ -57,12 +57,20 @@ Examples:
  Zoom to fit:
  $ grc channel FOO zoom_fit
  
- Transform:
+ Transform (args are boolean triplet: (flipx flipy swapxy)):
  $ grc channel FOO transform 1 0 1
 
  Rotate:
  $ grc channel FOO rotate 37.5
 
+ Change color map:
+ $ grc channel FOO set_color_map rainbow3
+ 
+ Change color distribution algorithm:
+ $ grc channel FOO set_color_algorithm log
+ 
+ Change intensity map:
+ $ grc channel FOO set_intensity_map neg
  
 """
 import sys
