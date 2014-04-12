@@ -61,6 +61,10 @@ Cut levels and colormap commands
 +----------------------+--------------------------------------------------+
 | a                    | Auto cut levels                                  |
 +----------------------+--------------------------------------------------+
+| s                    | Cycle color distribution algorithm               |
++----------------------+--------------------------------------------------+
+| S                    | Reset color distribution algorithm to "linear"   |
++----------------------+--------------------------------------------------+
 | left angle (<)       | Interactive cut low (with left mouse button)     | 
 +----------------------+--------------------------------------------------+
 | right angle (>)      | Interactive cut high (with left mouse button)    | 
@@ -82,17 +86,17 @@ Transform commands
 ==================
 
 +----------------------+--------------------------------------------------+
-| Left bracket ([)     | Flip image in X                                  |
+| Left bracket ([)     | Toggle flip image in X                           |
 +----------------------+--------------------------------------------------+
-| Left brace ({)       | Restore image in X                               |
+| Left brace ({)       | Reset to no flip of image in X                   |
 +----------------------+--------------------------------------------------+
-| Right bracket (])    | Flip image in Y                                  |
+| Right bracket (])    | Toggle flip image in Y                           |
 +----------------------+--------------------------------------------------+
-| Right brace (})      | Restore image in Y                               |
+| Right brace (})      | Reset to no flip image in Y                      |
 +----------------------+--------------------------------------------------+
 | Backslash (\\)       | Swap X and Y axes                                |
 +----------------------+--------------------------------------------------+
-| Vertical bar (|)     | Restore X and Y axes                             |
+| Vertical bar (|)     | Reset to no swap of X and Y axes                 |
 +----------------------+--------------------------------------------------+
 | r                    | Interactive rotate (with left mouse button)      |
 +----------------------+--------------------------------------------------+
