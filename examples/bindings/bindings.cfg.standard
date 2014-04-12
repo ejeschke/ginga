@@ -66,12 +66,12 @@ kp_rotate_reset = ['R']
 kp_reset = ['escape']
 
 # SCROLLING/WHEEL commands
-sc_pan = ['ctrl+scroll', 'shift+scroll']
+sc_pan = []
 sc_pan_fine = []
 sc_pan_coarse = []
 sc_zoom = ['scroll']
-sc_zoom_fine = []
-sc_zoom_coarse = []
+sc_zoom_fine = ['shift+scroll']
+sc_zoom_coarse = ['ctrl+scroll']
 sc_contrast_fine = []
 sc_contrast_coarse = []
 sc_mapping = []
@@ -90,18 +90,18 @@ scroll_zoom_acceleration = 1.0
 ms_none = ['nobtn']
 ms_cursor = ['left']
 ms_wheel = []
-ms_draw = ['draw+left']
+ms_draw = ['draw+left', 'right']
 
 # mouse commands initiated by a preceeding keystroke (see above)
 ms_rotate = ['rotate+left']
-ms_cmapwarp = ['cmapwarp+left', 'right']
+ms_cmapwarp = ['cmapwarp+left', 'ctrl+right']
 ms_cmaprest = ['ctrl+middle']
 ms_pan = ['ctrl+left']
-ms_freepan = ['freepan+left', 'shift+middle']
+ms_freepan = ['freepan+left', 'middle']
 ms_cutlo = ['cutlo+left']
 ms_cuthi = ['cuthi+left']
 ms_cutall = ['cutall+left']
-ms_panset = ['shift+left', 'middle']
+ms_panset = ['shift+left']
 
 # GESTURES (Qt version only)
 # Uncomment to enable pinch gensture on touchpads.
@@ -117,14 +117,14 @@ pinch_actions = ['zoom']
 pinch_zoom_acceleration = 1.0
 pinch_rotate_acceleration = 1.0
 
-# ds9 uses opposite sense of panning direction
-pan_reverse = True
+# Use opposite sense of panning direction
+pan_reverse = False
 
-# ds9 uses opposite sense of zooming scroll wheel
-zoom_scroll_reverse = True
+# Use opposite sense of zooming scroll wheel
+zoom_scroll_reverse = False
 
 # No messages for color map warps or setting pan position
-msg_cmap = False
-msg_panset = False
+#msg_cmap = False
+#msg_panset = False
 
 #END

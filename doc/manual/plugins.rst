@@ -314,6 +314,31 @@ The Preferences plugin sets the preferences on a per-channel basis.
 The preferences for a given channel are inherited from the "Image"
 channel until they are explicitly set and saved using this plugin.
 
+.. _preferences-mapping:
+
+Mapping Preferences
+-------------------
+.. image:: figures/mapping-prefs.png
+   :align: center
+
+The Mapping preferences controls the preferences used for the data value to 
+color index conversion that occurs after cut levels are applied and
+just before final color mapping is performed.  It concerns how the
+values between the low and high cut levels are distributed to the color
+and intensity mapping phase. 
+
+The `Algorithm` control is used to set the algorithm used for the
+mapping.  Click the control to show the list, or simply scroll the mouse
+wheel while hovering the cursor over the control.  There are eight
+algorithms available: linear, log, power, sqrt, squared, asinh, sinh,
+and histeq.  The name of each algorithm is indicative of how 
+the data is mapped to the colors in the color map.  `linear` is the 
+default.
+
+The `Table Size` control sets the size of the hash table constructed to
+handle this phase of the mapping.  The effect of this control is
+typically not significant on the outcome unless a very small value is used.
+
 .. _preferences-color:
 
 Color Preferences
@@ -321,10 +346,10 @@ Color Preferences
 .. image:: figures/cmap-prefs.png
    :align: center
 
-The Colors preferences controls the preferences used for the color map,
-intensity map, color mapping algorithm and color hash table size.
-Together these control the mapping of data values into a 24-bpp RGB
-visual representation.
+The Colors preferences controls the preferences used for the color map
+and intensity map, used during the final phase of the color mapping process.
+Together with the Mapping preferences, these control the mapping of data
+values into a 24-bpp RGB visual representation.
 
 The `Colormap` control selects which color map should be loaded and
 used.  Click the control to show the list, or simply scroll the mouse
@@ -334,12 +359,6 @@ The `Intensity` control selects which intensity map should be used
 with the color map.  The intensity map is applied just before the color
 map, and can be used to change the standard linear scale of values into
 an inverted scale, logarithmic, etc.
-
-The `Algorithm` control is used to set the initial mapping of pixel
-values into a hash table.
-
-The `Table Size` control sets the size of the hash table used to map
-pixel values.
 
 Ginga comes with a good selection of color maps, but should you want
 more you can add custom ones or, if matplotlib is installed, you

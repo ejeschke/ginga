@@ -127,6 +127,8 @@ class ImageViewBindings(object):
             kp_autozoom_on = ['doublequote'],
             kp_autozoom_override = ['singlequote'],
             kp_draw = ['space'],
+            kp_mapping = ['s'],
+            kp_mapping_reset = ['S'],
             kp_freepan = ['q'],
             kp_pan_set = ['p'],
             kp_center = ['c'],
@@ -155,6 +157,7 @@ class ImageViewBindings(object):
             sc_zoom_coarse = ['ctrl+scroll'],
             sc_contrast_fine = [],
             sc_contrast_coarse = [],
+            sc_mapping = [],
             
             scroll_pan_acceleration = 1.0,
             scroll_zoom_acceleration = 1.0,
@@ -537,6 +540,30 @@ class ImageViewBindings(object):
             fitsimage.onscreen_message(fitsimage.get_scale_text(),
                                        delay=0.4)
 
+    def _cycle_mapping(self, fitsimage, msg):
+        if self.cancmap:
+            msg = self.settings.get('msg_scale', msg)
+            rgbmap = fitsimage.get_rgbmap()
+            algs = rgbmap.get_hash_algorithms()
+            algname = rgbmap.get_hash_algorithm()
+            idx = algs.index(algname)
+            idx = (idx + 1) % len(algs)
+            algname = algs[idx]
+            rgbmap.set_hash_algorithm(algname)
+            if msg:
+                fitsimage.onscreen_message("Mapping: %s" % (algname),
+                                           delay=1.0)
+
+    def _reset_mapping(self, fitsimage, msg):
+        if self.cancmap:
+            msg = self.settings.get('msg_scale', msg)
+            rgbmap = fitsimage.get_rgbmap()
+            algname = 'linear'
+            rgbmap.set_hash_algorithm(algname)
+            if msg:
+                fitsimage.onscreen_message("Mapping: %s" % (algname),
+                                           delay=1.0)
+
     def _rotate_xy(self, fitsimage, x, y, msg=True):
         msg = self.settings.get('msg_rotate', msg)
         win_wd, win_ht = fitsimage.get_window_size()
@@ -750,8 +777,11 @@ class ImageViewBindings(object):
     def kp_flip_x(self, fitsimage, keyname, data_x, data_y, msg=True):
         if self.canflip:
             msg = self.settings.get('msg_transform', msg)
-            flipx = (keyname == '[')
             flipX, flipY, swapXY = fitsimage.get_transforms()
+            if keyname == '[':
+                flipx = not flipX
+            else:
+                flipx = False
             fitsimage.transform(flipx, flipY, swapXY)
             if msg:
                 fitsimage.onscreen_message("Flip X=%s" % flipx, delay=1.0)
@@ -760,8 +790,11 @@ class ImageViewBindings(object):
     def kp_flip_y(self, fitsimage, keyname, data_x, data_y, msg=True):
         if self.canflip:
             msg = self.settings.get('msg_transform', msg)
-            flipy = (keyname == ']')
             flipX, flipY, swapXY = fitsimage.get_transforms()
+            if keyname == ']':
+                flipy = not flipY
+            else:
+                flipy = False
             fitsimage.transform(flipX, flipy, swapXY)
             if msg:
                 fitsimage.onscreen_message("Flip Y=%s" % flipy, delay=1.0)
@@ -770,11 +803,22 @@ class ImageViewBindings(object):
     def kp_swap_xy(self, fitsimage, keyname, data_x, data_y, msg=True):
         if self.canflip:
             msg = self.settings.get('msg_transform', msg)
-            swapxy = (keyname == 'backslash')
             flipX, flipY, swapXY = fitsimage.get_transforms()
+            if keyname == 'backslash':
+                swapxy = not swapXY
+            else:
+                swapxy = False
             fitsimage.transform(flipX, flipY, swapxy)
             if msg:
                 fitsimage.onscreen_message("Swap XY=%s" % swapxy, delay=1.0)
+        return True
+
+    def kp_mapping(self, fitsimage, keyname, data_x, data_y, msg=True):
+        self._cycle_mapping(fitsimage, msg)
+        return True
+
+    def kp_mapping_reset(self, fitsimage, keyname, data_x, data_y, msg=True):
+        self._reset_mapping(fitsimage, msg)
         return True
 
     def kp_rotate_reset(self, fitsimage, action, data_x, data_y):
@@ -1088,6 +1132,11 @@ class ImageViewBindings(object):
         amount = amount / 5.0
         return self.sc_pan(fitsimage, direction, amount, data_x, data_y,
                            msg=msg)
+
+    def sc_mapping(self, fitsimage, direction, amount, data_x, data_y,
+                   msg=True):
+        self._cycle_mapping(fitsimage, msg)
+        return True
 
     ##### GESTURE ACTION CALLBACKS #####
 

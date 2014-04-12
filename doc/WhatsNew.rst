@@ -2,6 +2,26 @@
 What's New in Ginga?
 ++++++++++++++++++++
 
+Ver 2.0.20140412025038
+======================
+Major update for scale (mapping) algorithms
+    
+The scale mapping algorithms (for mapping data values during rendering) 
+havebeen completely refactored.  They are now separated from the RGBMap
+class and are pluggable.  Furthermore I have redone them modeled after
+the ds9 algorithms.
+    
+There are now eight algorithms available: linear, log, power, sqrt, squared,
+asinh, sinh, histeq.  You can choose the mapping from the Preferences plugin
+or cycle through them using the binding to the 's' key (Use 'S' to reset to
+linear).  There is also a mouse wheel mapping than can be assigned to
+this function if you customize your bindings.  It is not enabled by default.
+    
+The Preferences plugin has been updated to make the function a little
+clearer, since there was some confusion also with the intensity map feature
+that is also part of the final color mapping process.
+
+
 Ver 2.0.20140114070809
 ======================
 - The SAMP plugin has been updated to work with the new astropy.vo.samp
