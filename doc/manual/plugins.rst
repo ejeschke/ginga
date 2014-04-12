@@ -49,7 +49,7 @@ channel.
 The Pan plugin usually appears as a sub-pane under the "Info" tab, next
 to the Info plugin.
 
-.. _sec-plugin_info:
+.. _sec-plugins_info:
 
 Info
 ====
@@ -74,7 +74,7 @@ the user interface.  Below the Info plugin appear several buttons that
 can be used to zoom the image or to navigate between images in the
 history of the current channel.
 
-.. _sec-plugin_header:
+.. _sec-plugins_header:
 
 Header
 ======
@@ -90,7 +90,7 @@ shown.  See :ref:`plugins-multidim` for details.
 Clicking on a column header will sort the table by values in that
 column, which may be useful for quickly locating a particular keyword.
 
-.. _sec-plugin_zoom:
+.. _sec-plugins_zoom:
 
 Zoom
 ====
@@ -135,7 +135,7 @@ specified in milliseconds.
 	 image seems too jerky or out of sync with the mouse movement in
 	 the channel image window.
 
-.. _sec-plugin_thumbs:
+.. _sec-plugins_thumbs:
 
 Thumbs
 ======
@@ -150,7 +150,7 @@ newest images at the bottom and the oldest at the top.  Hovering the
 cursor over a thumbnail will show a tooltip that contains a couple of
 useful pieces of metadata from the image.
 
-.. _sec-plugin_contents:
+.. _sec-plugins_contents:
 
 Contents
 ========
@@ -160,7 +160,7 @@ the images viewed since the program was started.  Unlike Thumbs,
 Contents is sorted by channel, and then by image name.  The contents
 also shows some common metadata from the image.
 
-.. _sec-plugin_rc:
+.. _sec-plugins_rc:
 
 RC
 ==
@@ -243,13 +243,26 @@ Zoom to fit::
 
     $ grc channel FOO zoom_fit
  
-Transform::
+Transform (args are boolean triplet: flipx flipy swapxy)::
 
     $ grc channel FOO transform 1 0 1
 
 Rotate::
 
     $ grc channel FOO rotate 37.5
+
+Change color map::
+
+    $ grc channel FOO set_color_map rainbow3
+ 
+Change color distribution algorithm::
+
+    $ grc channel FOO set_color_algorithm log
+ 
+Change intensity map::
+
+    $ grc channel FOO set_intensity_map neg
+
 
 .. _sec-localplugins:
 
