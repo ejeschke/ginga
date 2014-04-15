@@ -218,6 +218,10 @@ class PluginManagerBase(object):
         try:
             if hasattr(pInfo.obj, 'build_gui'):
                 vbox = Widgets.VBox()
+                # attach size of workspace to container so plugin
+                # can plan for how to configure itself
+                wd, ht = self.ds.get_ws_size(pInfo.spec.ws)
+                vbox.size = (wd, ht)
                 if future:
                     pInfo.obj.build_gui(vbox, future=future)
                 else:

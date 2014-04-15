@@ -31,14 +31,20 @@ class MultiDim(GingaPlugin.LocalPlugin):
         self.curhdu = 0
         self.naxispath = []
         self.refs = []
+        self.orientation = 'vertical'
 
     def build_gui(self, container):
         assert have_pyfits == True, \
                Exception("Please install astropy/pyfits to use this plugin")
 
-        vbox1 = Widgets.VBox()
-        vbox1.set_border_width(4)
-        vbox1.set_spacing(4)
+        top = Widgets.VBox()
+        top.set_border_width(4)
+
+        vbox, sw, orientation = Widgets.get_oriented_box(container,
+                                                         scrolled=False)
+        self.orientation = orientation
+        vbox.set_border_width(4)
+        vbox.set_spacing(2)
 
         self.msgFont = self.fv.getFont("sansFont", 12)
         tw = Widgets.TextArea(wrap=True, editable=False)
@@ -46,14 +52,17 @@ class MultiDim(GingaPlugin.LocalPlugin):
         self.tw = tw
 
         fr = Widgets.Frame("Instructions")
-        fr.set_widget(tw)
-        vbox1.add_widget(fr, stretch=0)
+        vbox2 = Widgets.VBox()
+        vbox2.add_widget(tw)
+        vbox2.add_widget(Widgets.Label(''), stretch=1)
+        fr.set_widget(vbox2)
+        vbox.add_widget(fr, stretch=0)
         
         fr = Widgets.Frame("HDU")
 
         captions = [("Num HDUs:", 'label', "Num HDUs", 'llabel'),
                     ("Choose HDU", 'spinbutton')]
-        w, b = Widgets.build_info(captions)
+        w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
         self.w.numhdu = b.num_hdus
         self.w.hdu = b.choose_hdu
@@ -61,14 +70,16 @@ class MultiDim(GingaPlugin.LocalPlugin):
         self.w.hdu.add_callback('value-changed', self.set_hdu_cb)
         
         fr.set_widget(w)
-        vbox1.add_widget(fr, stretch=0)
+        vbox.add_widget(fr, stretch=0)
 
         fr = Widgets.Frame("NAXIS")
         self.naxisfr = fr
-        vbox1.add_widget(fr, stretch=0)
+        vbox.add_widget(fr, stretch=0)
 
-        # FIX: somehow this is not working correctly with Qt 
-        vbox1.add_widget(Widgets.Label(''), stretch=1)
+        spacer = Widgets.Label('')
+        vbox.add_widget(spacer, stretch=1)
+        
+        top.add_widget(sw, stretch=0)
 
         btns = Widgets.HBox()
         btns.set_spacing(4)
@@ -77,9 +88,9 @@ class MultiDim(GingaPlugin.LocalPlugin):
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn)
         btns.add_widget(Widgets.Label(''), stretch=1)
-        vbox1.add_widget(btns, stretch=0)
+        top.add_widget(btns, stretch=0)
 
-        container.add_widget(vbox1, stretch=1)
+        container.add_widget(top, stretch=0)
 
     def set_hdu_cb(self, w, val):
         idx = int(val)
@@ -103,7 +114,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
                 captions.append((title+':', 'label', title, 'llabel',
                                  "Choose %s" % (title), 'spinbutton'))
 
-        w, b = Widgets.build_info(captions)
+        w, b = Widgets.build_info(captions, orientation=self.orientation)
         self.w.update(b)
         for n in xrange(0, len(dims)):
             key = 'naxis%d' % (n+1)

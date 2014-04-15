@@ -584,7 +584,17 @@ def make_widget(title, wtype):
         raise ValueError("Bad wtype=%s" % wtype)
     return w
 
-def build_info(captions):
+
+def hadjust(w, orientation):
+    if orientation != 'horizontal':
+        return w
+    vbox = VBox()
+    vbox.add_widget(w)
+    vbox.add_widget(Label(''), stretch=1)
+    return vbox
+        
+
+def build_info(captions, orientation='vertical'):
     numrows = len(captions)
     numcols = reduce(lambda acc, tup: max(acc, len(tup)), captions, 0)
     if (numcols % 2) != 0:
@@ -616,12 +626,43 @@ def build_info(captions):
             col += 1
         row += 1
 
-    return wrap(widget), wb
+    w = wrap(widget)
+    w = hadjust(w, orientation=orientation)
+
+    return w, wb
 
 def wrap(native_widget):
     wrapper = WidgetBase()
     wrapper.widget = native_widget
     return wrapper
 
+def get_orientation(container):
+    if not hasattr(container, 'size'):
+        return 'vertical'
+    (wd, ht) = container.size
+    if wd < ht:
+        return 'vertical'
+    else:
+        return 'horizontal'
 
+def get_oriented_box(container, scrolled=True, fill=False):
+    orientation = get_orientation(container)
+
+    if orientation == 'vertical':
+        box1 = VBox()
+        box2 = VBox()
+    else:
+        box1 = HBox()
+        box2 = VBox()
+
+    box2.add_widget(box1)
+    if scrolled:
+        box2.add_widget(Label(''), stretch=1)
+        sw = ScrollArea()
+        sw.set_widget(box2)
+    else:
+        sw = box2
+
+    return box1, sw, orientation
+    
 #END

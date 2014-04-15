@@ -43,8 +43,11 @@ class Zoom(GingaPlugin.GlobalPlugin):
 
     def build_gui(self, container):
 
-        vpaned = Widgets.Splitter(orientation='vertical')
-    
+        vbox, sw, orientation = Widgets.get_oriented_box(container,
+                                                         scrolled=False)
+        vbox.set_border_width(4)
+        vbox.set_spacing(2)
+
         width, height = 300, 300
 
         # Uncomment to debug; passing parent logger generates too
@@ -71,15 +74,18 @@ class Zoom(GingaPlugin.GlobalPlugin):
         bd.enable_cmap(False)
 
         iw = Widgets.wrap(zi.get_widget())
+        vpaned = Widgets.Splitter(orientation=orientation)
         vpaned.add_widget(iw)
+        vpaned.add_widget(Widgets.Label(''))
+        vbox.add_widget(vpaned, stretch=1)
 
-        vbox = Widgets.VBox()
+        vbox2 = Widgets.VBox()
         captions = (("Zoom Radius:", 'label', 'Zoom Radius', 'hscale'),
                     ("Zoom Amount:", 'label', 'Zoom Amount', 'hscale'),
                     )
-        w, b = Widgets.build_info(captions)
+        w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
-        vbox.add_widget(w, stretch=0)
+        vbox2.add_widget(w, stretch=0)
 
         self.w.zoom_radius.set_limits(1, 300, incr_value=1)
         self.w.zoom_radius.set_value(self.zoom_radius)
@@ -97,7 +103,7 @@ class Zoom(GingaPlugin.GlobalPlugin):
                      'Refresh Interval', 'spinbutton'),
                     ("Defaults", 'button'),
                     )
-        w, b = Widgets.build_info(captions)
+        w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
 
         b.zoom.set_text(self.fv.scale2text(zi.get_scale()))
@@ -111,17 +117,16 @@ class Zoom(GingaPlugin.GlobalPlugin):
         row = Widgets.HBox()
         row.add_widget(w, stretch=0)
         row.add_widget(Widgets.Label(''), stretch=1)
-        vbox.add_widget(row, stretch=0)
+        vbox2.add_widget(row, stretch=0)
 
-        # vertical stretch
+        # stretch
+        spacer = Widgets.Label('')
+        vbox2.add_widget(spacer, stretch=1)
+        
+        vbox.add_widget(vbox2, stretch=0)
         vbox.add_widget(Widgets.Label(''), stretch=1)
         
-        sw = Widgets.ScrollArea()
-        sw.set_widget(vbox)
-
-        vpaned.add_widget(sw)
-        
-        container.add_widget(vpaned, stretch=1)
+        container.add_widget(sw, stretch=1)
 
     def prepare(self, fitsimage):
         fitssettings = fitsimage.get_settings()

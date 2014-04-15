@@ -39,9 +39,10 @@ class Pipeline(GingaPlugin.LocalPlugin):
 
 
     def build_gui(self, container):
-        sw = Widgets.ScrollArea()
+        top = Widgets.VBox()
+        top.set_border_width(4)
 
-        vbox1 = Widgets.VBox()
+        vbox1, sw, orientation = Widgets.get_oriented_box(container)
         vbox1.set_border_width(4)
         vbox1.set_spacing(2)
 
@@ -51,7 +52,10 @@ class Pipeline(GingaPlugin.LocalPlugin):
         self.tw = tw
 
         fr = Widgets.Frame("Instructions")
-        fr.set_widget(tw)
+        vbox2 = Widgets.VBox()
+        vbox2.add_widget(tw)
+        vbox2.add_widget(Widgets.Label(''), stretch=1)
+        fr.set_widget(vbox2)
         vbox1.add_widget(fr, stretch=0)
         
         # Main pipeline control area
@@ -61,7 +65,7 @@ class Pipeline(GingaPlugin.LocalPlugin):
             ("Apply Flat Field", 'button', "Flat Image:", 'label',
              'flat_image', 'llabel'),
             ]
-        w, b = Widgets.build_info(captions)
+        w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
 
         fr = Widgets.Frame("Pipeline")
@@ -82,6 +86,7 @@ class Pipeline(GingaPlugin.LocalPlugin):
             flat_name = self.flat.get('name', "NoName")
         b.flat_image.set_text(flat_name)
 
+        vbox2 = Widgets.VBox()
         # Pipeline status
         hbox = Widgets.HBox()
         hbox.set_spacing(4)
@@ -90,7 +95,7 @@ class Pipeline(GingaPlugin.LocalPlugin):
         self.w.eval_status = label
         hbox.add_widget(self.w.eval_status, stretch=0)
         hbox.add_widget(Widgets.Label(''), stretch=1)                
-        vbox1.add_widget(hbox, stretch=0)
+        vbox2.add_widget(hbox, stretch=0)
 
         # progress bar and stop button
         hbox = Widgets.HBox()
@@ -104,13 +109,15 @@ class Pipeline(GingaPlugin.LocalPlugin):
 
         self.w.eval_pgs = Widgets.ProgressBar()
         hbox.add_widget(self.w.eval_pgs, stretch=1)
-        vbox1.add_widget(hbox, stretch=0)
+        vbox2.add_widget(hbox, stretch=0)
+        vbox2.add_widget(Widgets.Label(''), stretch=1)
+        vbox1.add_widget(vbox2, stretch=0)
 
         # Image list 
         captions = [
             ("Append", 'button', "Prepend", 'button', "Clear", 'button'),
             ]
-        w, b = Widgets.build_info(captions)
+        w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
 
         fr = Widgets.Frame("Image Stack")
@@ -137,7 +144,7 @@ class Pipeline(GingaPlugin.LocalPlugin):
         captions = [
             ("Make Bias", 'button', "Set Bias", 'button'),
             ]
-        w, b = Widgets.build_info(captions)
+        w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
 
         fr = Widgets.Frame("Bias Subtraction")
@@ -153,7 +160,7 @@ class Pipeline(GingaPlugin.LocalPlugin):
         captions = [
             ("Make Flat Field", 'button', "Set Flat Field", 'button'),
             ]
-        w, b = Widgets.build_info(captions)
+        w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
 
         fr = Widgets.Frame("Flat Fielding")
@@ -168,6 +175,8 @@ class Pipeline(GingaPlugin.LocalPlugin):
         spacer = Widgets.Label('')
         vbox1.add_widget(spacer, stretch=1)
         
+        top.add_widget(sw, stretch=1)
+        
         btns = Widgets.HBox()
         btns.set_spacing(3)
 
@@ -175,10 +184,9 @@ class Pipeline(GingaPlugin.LocalPlugin):
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
-        vbox1.add_widget(btns, stretch=0)
+        top.add_widget(btns, stretch=0)
 
-        sw.set_widget(vbox1)
-        container.add_widget(sw, stretch=1)
+        container.add_widget(top, stretch=1)
         self.gui_up = True
 
 

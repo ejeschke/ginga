@@ -46,14 +46,13 @@ class Histogram(GingaPlugin.LocalPlugin):
         self.gui_up = False
 
     def build_gui(self, container):
-        # Splitter is just to provide a way to size the graph
-        # to a reasonable size
-        vpaned = Widgets.Splitter(orientation='vertical')
+        top = Widgets.VBox()
+        top.set_border_width(4)
 
         # Make the cuts plot
-        vbox1 = Widgets.VBox()
-        vbox1.set_margins(4, 4, 4, 4)
-        vbox1.set_spacing(2)
+        vbox, sw, orientation = Widgets.get_oriented_box(container)
+        vbox.set_border_width(4)
+        vbox.set_spacing(2)
 
         msgFont = self.fv.getFont("sansFont", 12)
         tw = Widgets.TextArea(wrap=True, editable=False)
@@ -61,8 +60,11 @@ class Histogram(GingaPlugin.LocalPlugin):
         self.tw = tw
 
         fr = Widgets.Frame("Instructions")
-        fr.set_widget(tw)
-        vbox1.add_widget(fr, stretch=0)
+        vbox2 = Widgets.VBox()
+        vbox2.add_widget(tw)
+        vbox2.add_widget(Widgets.Label(''), stretch=1)
+        fr.set_widget(vbox2)
+        vbox.add_widget(fr, stretch=0)
 
         self.plot = Plot.Plot(self.logger, width=2, height=3, dpi=100)
         ax = self.plot.add_axis()
@@ -70,7 +72,7 @@ class Histogram(GingaPlugin.LocalPlugin):
         
         # for now we need to wrap this native widget
         w = Widgets.wrap(self.plot.get_widget())
-        vbox1.add_widget(w, stretch=1)
+        vbox.add_widget(w, stretch=1)
 
         captions = (('Cut Low:', 'label', 'Cut Low', 'entry'),
                     ('Cut High:', 'label', 'Cut High', 'entry', 'Cut Levels', 'button'),
@@ -80,7 +82,7 @@ class Histogram(GingaPlugin.LocalPlugin):
                     ('Full Image', 'button'),
                     )
 
-        w, b = Widgets.build_info(captions)
+        w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
         b.cut_levels.set_tooltip("Set cut levels manually")
         b.auto_levels.set_tooltip("Set cut levels by algorithm")
@@ -103,13 +105,12 @@ class Histogram(GingaPlugin.LocalPlugin):
         b.numbins.add_callback('activated', lambda w: self.set_numbins_cb())
         b.full_image.add_callback('activated', lambda w: self.full_image_cb())
 
-        vbox1.add_widget(w, stretch=0)
+        vbox.add_widget(w, stretch=0)
 
-        vpaned.add_widget(vbox1)
-
-        vbox2 = Widgets.VBox()
-        # spacer (stretch space)
-        vbox2.add_widget(Widgets.Label(''), stretch=1)
+        ## spacer = Widgets.Label('')
+        ## vbox.add_widget(spacer, stretch=1)
+        
+        top.add_widget(sw, stretch=1)
 
         btns = Widgets.HBox()
         btns.set_border_width(4)
@@ -120,10 +121,9 @@ class Histogram(GingaPlugin.LocalPlugin):
         btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
 
-        vbox2.add_widget(btns, stretch=0)
-        vpaned.add_widget(vbox2)
+        top.add_widget(btns, stretch=0)
 
-        container.add_widget(vpaned, stretch=1)
+        container.add_widget(top, stretch=1)
         self.gui_up = True
 
     def instructions(self):
@@ -247,9 +247,9 @@ class Histogram(GingaPlugin.LocalPlugin):
             self.plot.ax.set_xlim(loval, hival)
 
         # Make x axis labels a little more readable
-        lbls = self.plot.ax.xaxis.get_ticklabels()
-        for lbl in lbls:
-            lbl.set(rotation=45, horizontalalignment='right')
+        ## lbls = self.plot.ax.xaxis.get_ticklabels()
+        ## for lbl in lbls:
+        ##     lbl.set(rotation=45, horizontalalignment='right')
         
         self.w.cut_low.set_text(str(loval))
         self.w.cut_high.set_text(str(hival))

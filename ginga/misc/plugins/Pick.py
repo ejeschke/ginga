@@ -94,7 +94,13 @@ class Pick(GingaPlugin.LocalPlugin):
         self.pickcenter = None
 
         vtop = Widgets.VBox()
-        vpaned = Widgets.Splitter(orientation='vertical')
+        vtop.set_border_width(4)
+
+        vbox, sw, orientation = Widgets.get_oriented_box(container)
+        vbox.set_border_width(4)
+        vbox.set_spacing(2)
+
+        vpaned = Widgets.Splitter(orientation=orientation)
 
         nb = Widgets.TabWidget(tabpos='bottom')
         #nb.set_scrollable(True)
@@ -159,25 +165,25 @@ class Pick(GingaPlugin.LocalPlugin):
             canvas = self.w.canvas2
             nb.add_widget(Widgets.wrap(canvas), title="FWHM")
 
-        sw = Widgets.ScrollArea()
-        vbox = Widgets.VBox()
-        sw.set_widget(vbox)
-
         self.msgFont = self.fv.getFont("sansFont", 12)
         tw = Widgets.TextArea(wrap=True, editable=False)
         tw.set_font(self.msgFont)
         self.tw = tw
 
         fr = Widgets.Frame("Instructions")
-        fr.set_widget(tw)
+        vbox2 = Widgets.VBox()
+        vbox2.add_widget(tw)
+        vbox2.add_widget(Widgets.Label(''), stretch=1)
+        fr.set_widget(vbox2)
         vbox.add_widget(fr, stretch=0)
+        
+        vpaned.add_widget(Widgets.Label(''))
+        vbox.add_widget(vpaned, stretch=1)
         
         fr = Widgets.Frame("Pick")
 
         nb = Widgets.TabWidget(tabpos='bottom')
         self.w.nb2 = nb
-        fr.set_widget(nb)
-        vbox.add_widget(fr, stretch=0)
 
         # Build report panel
         captions = (('Zoom:', 'label', 'Zoom', 'llabel',
@@ -198,7 +204,7 @@ class Pick(GingaPlugin.LocalPlugin):
                      'Default Region', 'button'),
                     )
 
-        w, b = Widgets.build_info(captions)
+        w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
         b.zoom.set_text(self.fv.scale2text(di.get_scale()))
         self.wdetail = b
@@ -258,7 +264,7 @@ class Pick(GingaPlugin.LocalPlugin):
                     ('Redo Pick', 'button'),
                     )
 
-        w, b = Widgets.build_info(captions)
+        w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
         b.radius.set_tooltip("Radius for peak detection")
         b.threshold.set_tooltip("Threshold for peak detection (blank=default)")
@@ -364,7 +370,7 @@ class Pick(GingaPlugin.LocalPlugin):
              'xlbl_delta_bright', 'label', 'Delta bright', 'entry'),
             )
 
-        w, b = Widgets.build_info(captions)
+        w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
         b.sky_cut.set_tooltip("Set image low cut to Sky Level")
         b.delta_sky.set_tooltip("Delta to apply to low cut")
@@ -450,11 +456,14 @@ class Pick(GingaPlugin.LocalPlugin):
 
         ## nb.add_widget(vbox4, title="Correct")
 
-        vbox.add_widget(Widgets.Label(''), stretch=1)
-        
-        vpaned.add_widget(sw)
-        vtop.add_widget(vpaned, stretch=1)
+        fr.set_widget(nb)
+        vbox.add_widget(fr, stretch=0)
 
+        ## spacer = Widgets.Label('')
+        ## vbox.add_widget(spacer, stretch=1)
+        
+        vtop.add_widget(sw, stretch=1)
+        
         btns = Widgets.HBox()
         btns.set_spacing(4)
 

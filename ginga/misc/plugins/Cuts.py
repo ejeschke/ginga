@@ -45,14 +45,13 @@ class Cuts(GingaPlugin.LocalPlugin):
         self.gui_up = False
 
     def build_gui(self, container):
-        # Splitter is just to provide a way to size the graph
-        # to a reasonable size
-        vpaned = Widgets.Splitter(orientation='vertical')
+        top = Widgets.VBox()
+        top.set_border_width(4)
 
         # Make the cuts plot
-        vbox1 = Widgets.VBox()
-        vbox1.set_margins(4, 4, 4, 4)
-        vbox1.set_spacing(2)
+        vbox, sw, orientation = Widgets.get_oriented_box(container)
+        vbox.set_margins(4, 4, 4, 4)
+        vbox.set_spacing(2)
 
         msgFont = self.fv.getFont("sansFont", 12)
         tw = Widgets.TextArea(wrap=True, editable=False)
@@ -60,8 +59,11 @@ class Cuts(GingaPlugin.LocalPlugin):
         self.tw = tw
 
         fr = Widgets.Frame("Instructions")
-        fr.set_widget(tw)
-        vbox1.add_widget(fr, stretch=0)
+        vbox2 = Widgets.VBox()
+        vbox2.add_widget(tw)
+        vbox2.add_widget(Widgets.Label(''), stretch=1)
+        fr.set_widget(vbox2)
+        vbox.add_widget(fr, stretch=0)
 
         self.plot = Plot.Cuts(self.logger, width=2, height=3, dpi=100)
         ax = self.plot.add_axis()
@@ -69,7 +71,7 @@ class Cuts(GingaPlugin.LocalPlugin):
 
         # for now we need to wrap this native widget
         w = Widgets.wrap(self.plot.get_widget())
-        vbox1.add_widget(w, stretch=1)
+        vbox.add_widget(w, stretch=1)
 
         hbox = Widgets.HBox()
         hbox.set_spacing(4)
@@ -108,14 +110,13 @@ class Cuts(GingaPlugin.LocalPlugin):
         combobox.set_tooltip("Choose the cut type")
         hbox.add_widget(combobox)
 
-        vbox1.add_widget(hbox, stretch=0)
- 
-        vpaned.add_widget(vbox1)
-
         vbox2 = Widgets.VBox()
-        # spacer
+        vbox2.add_widget(hbox, stretch=0)
         vbox2.add_widget(Widgets.Label(''), stretch=1)
-
+        vbox.add_widget(vbox2, stretch=0)
+ 
+        top.add_widget(sw, stretch=1)
+        
         btns = Widgets.HBox()
         btns.set_border_width(4)
         btns.set_spacing(3)
@@ -125,10 +126,9 @@ class Cuts(GingaPlugin.LocalPlugin):
         btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
 
-        vbox2.add_widget(btns, stretch=0)
-        vpaned.add_widget(vbox2)
+        top.add_widget(btns, stretch=0)
 
-        container.add_widget(vpaned, stretch=1)
+        container.add_widget(top, stretch=1)
         self.gui_up = True
 
     def instructions(self):

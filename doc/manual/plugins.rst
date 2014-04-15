@@ -166,7 +166,10 @@ RC
 ==
 
 The RC (Remote Control) plugin provides a way to control Ginga remotely
-through the use of an XML-RPC interface.
+through the use of an XML-RPC interface.  Start the plugin from the 
+`Plugins` menu (invoke "Start RC") or launch ginga with the "--modules=RC"
+command line option to start it automatically.
+
 By default, the plugin starts up with server running on port 9000 bound
 to the localhost interface--this allows connections only from the local
 host.  If you want to change this, set the host and port in the `Set

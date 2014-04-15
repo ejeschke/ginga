@@ -492,6 +492,15 @@ class Desktop(Callback.Callbacks):
     def get_nb(self, name):
         return self.notebooks[name].nb
         
+    def get_size(self, widget):
+        alloc = widget.get_allocation()
+        wd, ht = alloc.width, alloc.height
+        return (wd, ht)
+
+    def get_ws_size(self, name):
+        w = self.get_nb(name)
+        return self.get_size(w)
+        
     def get_wsnames(self, group=1):
         res = []
         for name in self.notebooks.keys():

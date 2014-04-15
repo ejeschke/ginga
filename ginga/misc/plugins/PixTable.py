@@ -47,24 +47,26 @@ class PixTable(GingaPlugin.LocalPlugin):
         self.mark_selected = None
 
     def build_gui(self, container):
-        # Make the PixTable plot
-        vbox1 = Widgets.VBox()
-        vbox1.set_border_width(4)
-        vbox1.set_spacing(2)
+        top = Widgets.VBox()
+        top.set_border_width(4)
+
+        vbox, sw, orientation = Widgets.get_oriented_box(container)
+        vbox.set_border_width(4)
+        vbox.set_spacing(2)
 
         fr = Widgets.Frame("Pixel Values")
         
-        # Make the cuts plot
+        # Make the values table as a text widget
         msgFont = self.fv.getFont('fixedFont', 10)
         tw = Widgets.TextArea(wrap=False, editable=False)
         tw.set_font(msgFont)
         self.tw = tw
 
-        sw = Widgets.ScrollArea()
-        sw.set_widget(self.tw)
-
-        fr.set_widget(sw)
-        vbox1.add_widget(fr, stretch=1)
+        vbox2 = Widgets.VBox()
+        vbox2.add_widget(tw)
+        vbox2.add_widget(Widgets.Label(''), stretch=1)
+        fr.set_widget(vbox2)
+        vbox.add_widget(fr, stretch=1)
 
         btns = Widgets.HBox()
         btns.set_border_width(4)
@@ -108,7 +110,8 @@ class PixTable(GingaPlugin.LocalPlugin):
         btns.add_widget(btn2, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
 
-        vbox1.add_widget(btns, stretch=0)
+        vbox2 = Widgets.VBox()
+        vbox2.add_widget(btns, stretch=0)
         
         btns = Widgets.HBox()
         btns.set_border_width(4)
@@ -120,9 +123,15 @@ class PixTable(GingaPlugin.LocalPlugin):
         btn3.set_tooltip("Pan follows selected mark")
         btns.add_widget(btn3)
         btns.add_widget(Widgets.Label(''), stretch=1)
+
+        vbox2.add_widget(btns, stretch=0)
+        vbox2.add_widget(Widgets.Label(''), stretch=1)
+        vbox.add_widget(vbox2, stretch=1)
+
+        ## spacer = Widgets.Label('')
+        ## vbox.add_widget(spacer, stretch=1)
         
-        vbox1.add_widget(btns, stretch=0)
-        vbox1.add_widget(Widgets.Label(''), stretch=1)
+        top.add_widget(sw, stretch=1)
 
         btns = Widgets.HBox()
         btns.set_border_width(4)
@@ -133,8 +142,8 @@ class PixTable(GingaPlugin.LocalPlugin):
         btns.add_widget(btn)
         btns.add_widget(Widgets.Label(''), stretch=1)
 
-        vbox1.add_widget(btns, stretch=0)
-        container.add_widget(vbox1, stretch=1)
+        top.add_widget(btns, stretch=0)
+        container.add_widget(top, stretch=1)
 
     def select_mark(self, tag, pan=True):
         # deselect the current selected mark, if there is one

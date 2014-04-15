@@ -34,11 +34,12 @@ class Ruler(GingaPlugin.LocalPlugin):
         self.units = 'arcmin'
 
     def build_gui(self, container):
-        sw = Widgets.ScrollArea()
+        top = Widgets.VBox()
+        top.set_border_width(4)
 
-        vbox1 = Widgets.VBox()
-        vbox1.set_border_width(4)
-        vbox1.set_spacing(2)
+        vbox, sw, orientation = Widgets.get_oriented_box(container)
+        vbox.set_border_width(4)
+        vbox.set_spacing(2)
 
         self.msgFont = self.fv.getFont("sansFont", 12)
         tw = Widgets.TextArea(wrap=True, editable=False)
@@ -46,13 +47,16 @@ class Ruler(GingaPlugin.LocalPlugin):
         self.tw = tw
 
         fr = Widgets.Frame("Instructions")
-        fr.set_widget(tw)
-        vbox1.add_widget(fr, stretch=0)
+        vbox2 = Widgets.VBox()
+        vbox2.add_widget(tw)
+        vbox2.add_widget(Widgets.Label(''), stretch=1)
+        fr.set_widget(vbox2)
+        vbox.add_widget(fr, stretch=0)
         
         fr = Widgets.Frame("Ruler")
 
         captions = (('Units:', 'label', 'Units', 'combobox'),)
-        w, b = Widgets.build_info(captions)
+        w, b = Widgets.build_info(captions, orientation=orientation)
         self.w = b
 
         combobox = b.units
@@ -63,10 +67,12 @@ class Ruler(GingaPlugin.LocalPlugin):
         combobox.add_callback('activated', lambda w, idx: self.set_units())
 
         fr.set_widget(w)
-        vbox1.add_widget(fr, stretch=0)
+        vbox.add_widget(fr, stretch=0)
 
         spacer = Widgets.Label('')
-        vbox1.add_widget(spacer, stretch=1)
+        vbox.add_widget(spacer, stretch=1)
+        
+        top.add_widget(sw, stretch=1)
         
         btns = Widgets.HBox()
         btns.set_spacing(3)
@@ -75,10 +81,9 @@ class Ruler(GingaPlugin.LocalPlugin):
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
-        vbox1.add_widget(btns, stretch=0)
+        top.add_widget(btns, stretch=0)
 
-        sw.set_widget(vbox1)
-        container.add_widget(sw, stretch=1)
+        container.add_widget(top, stretch=1)
 
     def set_units(self):
         index = self.w.units.get_index()

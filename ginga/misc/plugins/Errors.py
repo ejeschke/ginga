@@ -35,7 +35,7 @@ class Errors(GingaPlugin.GlobalPlugin):
         hbox = Widgets.HBox()
         btn = Widgets.Button("Remove All")
         btn.add_callback('activated', lambda w: self.remove_all())
-        hbox.add_widget(btn)
+        hbox.add_widget(btn, stretch=0)
         hbox.add_widget(Widgets.Label(''), stretch=1)
 
         vbox.add_widget(hbox, stretch=0)

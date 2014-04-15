@@ -22,7 +22,7 @@ class ParamSet(Callback.Callbacks):
         for name in ('changed', ):
             self.enable_callback(name)
         
-    def build_params(self, paramlst):
+    def build_params(self, paramlst, orientation='vertical'):
         # construct a set of widgets for the parameters
         captions = []
         for param in paramlst:
@@ -30,7 +30,7 @@ class ParamSet(Callback.Callbacks):
 
             captions.append((title+':', 'label', param.name, 'entry'))
 
-        w, b = Widgets.build_info(captions)
+        w, b = Widgets.build_info(captions, orientation=orientation)
 
         # fill with default values and tool tips
         for param in paramlst:

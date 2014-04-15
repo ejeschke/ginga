@@ -71,16 +71,10 @@ class Preferences(GingaPlugin.LocalPlugin):
         top = Widgets.VBox()
         top.set_border_width(4)
 
-        sw = Widgets.ScrollArea()
-
-        vbox = Widgets.VBox()
+        vbox, sw, orientation = Widgets.get_oriented_box(container)
+        self.orientation = orientation
         #vbox.set_border_width(4)
         vbox.set_spacing(2)
-
-        hbox = Widgets.HBox()
-        hbox.add_widget(vbox)
-        hbox.add_widget(Widgets.Label(''), stretch=1)
-        sw.set_widget(hbox)
 
         # COLOR DISTRIBUTION OPTIONS
         fr = Widgets.Frame("Color Distribution")
@@ -89,7 +83,7 @@ class Preferences(GingaPlugin.LocalPlugin):
                     #('Table Size:', 'label', 'Table Size', 'entry'),
                     ('Dist Defaults', 'button'))
 
-        w, b = Widgets.build_info(captions)
+        w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
         self.w.calg_choice = b.algorithm
         #self.w.table_size = b.table_size
@@ -123,7 +117,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         captions = (('Colormap:', 'label', 'Colormap', 'combobox'),
                     ('Intensity:', 'label', 'Intensity', 'combobox'),
                     ('Color Defaults', 'button'))
-        w, b = Widgets.build_info(captions)
+        w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
         self.w.cmap_choice = b.colormap
         self.w.imap_choice = b.intensity
@@ -172,7 +166,7 @@ class Preferences(GingaPlugin.LocalPlugin):
 
         captions = (('Auto Method:', 'label', 'Auto Method', 'combobox'),
                     )
-        w, b = Widgets.build_info(captions)
+        w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
 
         # Setup auto cuts method choice
@@ -200,7 +194,7 @@ class Preferences(GingaPlugin.LocalPlugin):
                     'Swap XY', 'checkbutton'),
                     ('Rotate:', 'label', 'Rotate', 'spinfloat'),
                     ('Restore', 'button'),)
-        w, b = Widgets.build_info(captions)
+        w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
 
         for name in ('flip_x', 'flip_y', 'swap_xy'):
@@ -228,7 +222,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         captions = (('WCS Coords:', 'label', 'WCS Coords', 'combobox'),
                     ('WCS Display:', 'label', 'WCS Display', 'combobox'),
                     )
-        w, b = Widgets.build_info(captions)
+        w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
 
         b.wcs_coords.set_tooltip("Set WCS coordinate system")
@@ -277,7 +271,7 @@ class Preferences(GingaPlugin.LocalPlugin):
                     ('Scale Min:', 'label', 'Scale Min', 'spinfloat'),
                     ('Scale Max:', 'label', 'Scale Max', 'spinfloat'),
                     ('Zoom Defaults', 'button'))
-        w, b = Widgets.build_info(captions)
+        w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
 
         index = 0
@@ -346,7 +340,7 @@ class Preferences(GingaPlugin.LocalPlugin):
                     ('Pan Y:', 'label', 'Pan Y', 'entry'),
                     ('Center Image', 'button'),
                     ('Mark Center', 'checkbutton'))
-        w, b = Widgets.build_info(captions)
+        w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
 
         pan_x, pan_y = self.fitsimage.get_pan()
@@ -371,7 +365,7 @@ class Preferences(GingaPlugin.LocalPlugin):
                     ('Zoom New:', 'label', 'Zoom New', 'combobox'),
                     ('Center New', 'checkbutton', 'Follow New', 'checkbutton'),
                     ('Raise New', 'checkbutton', 'Create thumbnail', 'checkbutton'),)
-        w, b = Widgets.build_info(captions)
+        w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
 
         combobox = b.cut_new
@@ -642,7 +636,8 @@ class Preferences(GingaPlugin.LocalPlugin):
         params = self.autocuts_cache.setdefault(method, {})
         self.ac_params = ParamSet.ParamSet(self.logger, params)
 
-        w = self.ac_params.build_params(paramlst)
+        w = self.ac_params.build_params(paramlst,
+                                        orientation=self.orientation)
         self.ac_params.add_callback('changed', self.autocut_params_changed_cb)
 
         self.w.acvbox.add_widget(w, stretch=1)
