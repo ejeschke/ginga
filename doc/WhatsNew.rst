@@ -2,6 +2,15 @@
 What's New in Ginga?
 ++++++++++++++++++++
 
+Ver 2.0.20140417032430
+======================
+New interactive command to orient the image by WCS to North=Up.  The
+default binding to 'o' creates left-handed orientation ('O' for
+right-handed).  Added a command to rotate the image in 90 deg
+increments.  Default binding to 'e' rotates by 90 deg ('E' for -90
+deg). 
+
+
 Ver 2.0.20140412025038
 ======================
 Major update for scale (mapping) algorithms
