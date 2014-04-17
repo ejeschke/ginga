@@ -23,19 +23,21 @@ Highly recommended, because some features will not be available without it:
 
 * scipy
 
-For opening FITS files you will need ONE of
+For opening FITS files you will need ONE of (astropy recommended):
 
 * astropy
 * pyfits
 * fitsio
 
-For WCS resolution you will need ONE of 
+For WCS resolution you will need ONE of:
 
-* astropy
 * kapteyn
 * astLib
+* starlink
+* astropy
 
-Also, depending on which GUI toolkit you prefer, you will need either:
+Also, depending on which GUI toolkit you prefer (and what you want to
+do), you will need either: 
 
 * python-gtk
 * python-cairo
@@ -62,12 +64,18 @@ will not work without the following packages:
 * matplotlib (Pick, Cuts, Histogram)
 * webkit (WBrowser (online help))
 
+Helpful, but not necessary (may optimize or speed up certain
+operations):
+
+* python-numexpr
+* python-magic
+
 ==============================
 Notes on Supported Widget Sets
 ==============================
 
 In the discussion below, we differentiate between the Ginga viewing
-widget, such as used in the examples/*/example*.py programs and the full
+widget, such as used in the examples/\*/example\*.py programs and the full
 reference viewer, which includes many plugins (scripts/ginga).
 
 .. note:: For the full reference viewer, Mac and Windows users
@@ -89,7 +97,7 @@ the full reference viewer.
 Gtk
 ===
 
-Ginga can use Gtk version 2  or 3, but at the present time only Gtk 2 is
+Ginga can use Gtk version 2 or 3, but at the present time only Gtk 2 is
 supported for the full reference viewer, due to some dependences in the
 plugins to version 2.  The viewing widget by itself is fine with either
 version.  Ginga will auto-detect which versions are installed and
@@ -129,6 +137,10 @@ Unpack, go into the top level directory and::
 
 The reference viewer can then be run using the command "ginga"
 
+Alternatively you can download and install via `pip`::
+
+    $ pip install ginga
+
 ==============================
 Platform Specific Instructions
 ==============================
@@ -140,13 +152,14 @@ Install the necessary dependences.  If you are on a relatively recent
 version of Ubuntu, something like the following will work::
 
     $ apt-get install python-numpy python-scipy python-matplotlib \
-      python-pyfits python-pywcs python-gtk python-cairo python-webkit
-      git pip
+      python-pyfits python-pywcs python-gtk python-cairo python-webkit \
+      python-magic git pip
 
 Or::
 
     $ apt-get install python-numpy python-scipy python-matplotlib \
-      python-pyfits python-pywcs python-qt4 python-webkit git pip
+      python-pyfits python-pywcs python-qt4 python-webkit python-magic \
+      git pip
 
 (if you want to use the Qt version)
 
@@ -164,13 +177,12 @@ or by obtaining the source and installing as described above.
 Mac
 ===
 
-The three recommended ways to install on the Mac are:
+The two recommended ways to install on the Mac are:
 
-* Install the `Enthought python distribution <https://www.enthought.com/products/epd/free/>`_
-* Install the `Anaconda python distribution <http://www.continuum.io/downloads>`_
 * Install from `macports <http://www.macports.org/>`_
+* Install from `homebrew <http://brew.sh/>`_
 
-The first two methods should provide all the modules necessary to run
+Either method should provide all the modules necessary to run
 Ginga.  Then install Ginga from source as described above.
 
 With macports you will need to install the necessary packages.  Assuming 

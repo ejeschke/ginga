@@ -266,10 +266,23 @@ class ImageViewEvent(ImageViewTk):
         x = event.x; y = event.y
         button = 0
         if event.num != 0:
-            if event.num == 4:
-                return self.make_callback('scroll', 'up')
-            elif event.num == 5:
-                return self.make_callback('scroll', 'down')
+            # some kind of wierd convention for scrolling, shoehorned into
+            # Tk, I guess
+            if event.num in (4, 5):
+                direction = 0.0   # up
+                if event.num == 5:
+                    # down
+                    direction = 180.0
+                # 15 deg is standard 1-click turn for a wheel mouse
+                numDegrees = 15.0
+                self.logger.debug("scroll deg=%f direction=%f" % (
+                    numDegrees, direction))
+
+                data_x, data_y = self.get_data_xy(x, y)
+                self.last_data_x, self.last_data_y = data_x, data_y
+                
+                return self.make_callback('scroll', direction, numDegrees,
+                                          data_x, data_y)
             
             button |= 0x1 << (event.num - 1)
         self._button = button

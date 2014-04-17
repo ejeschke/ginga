@@ -73,6 +73,8 @@ class AstroImage(BaseImage):
 
         loader = io_fits.PyFitsFileHandler(self.logger)
         data, naxispath = loader.load_hdu(hdu, ahdr, naxispath=naxispath)
+        if naxispath == None:
+            naxispath = []
         self.naxispath = naxispath
         self.revnaxis = list(naxispath)
         self.revnaxis.reverse()
@@ -91,6 +93,8 @@ class AstroImage(BaseImage):
         
         data, naxispath = self.io.load_file(filepath, ahdr, numhdu=numhdu,
                                             naxispath=naxispath)
+        if naxispath == None:
+            naxispath = []
         self.naxispath = naxispath
         self.revnaxis = list(naxispath)
         self.revnaxis.reverse()

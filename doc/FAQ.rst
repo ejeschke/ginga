@@ -2,19 +2,28 @@
 The Ginga FAQ
 +++++++++++++
 
---------------------------
-Problems displaying images
---------------------------
-No image shows in the display, and I get an error in the terminal about
-histogram and keyword "density". 
+---------
+Platforms
+---------
 
-.. note:: You need a slightly newer version of numpy.
+Does ginga run on Mac/Windows/Linux/XYZ?
+----------------------------------------
+Ginga is written entirely in Python, and only uses supporting Python
+packages.  As long as a platform supports python and the necessary
+packages, it can run some version of ginga.  On recent Linux, Mac and
+Windows versions, all of these packages are available.
 
-	  I recommend getting at least numpy-1.6.1.
+What GUI toolkit does Ginga use?
+--------------------------------
+It depends what exactly you want to run--Ginga is both a toolkit for
+building viewers and also includes a "reference viewer".  The example
+programs currently support Qt, Gtk, Tk and Matplotlib.  The full
+reference viewer currently supports Qt and Gtk.  The difference is
+explained here :ref:`ch-programming-ginga`.
 
--------------
-Miscellaneous
--------------
+----------------
+Control Bindings
+----------------
 
 Can I get ds9-like user interface mappings?
 -------------------------------------------
@@ -26,6 +35,14 @@ Then restart Ginga.
 How can I customize the user interface mappings?
 ------------------------------------------------
 There is more information in Section :ref:`sec-bindings`.
+
+-------------
+Miscellaneous
+-------------
+
+Is it possible to control Ginga remotely?
+-----------------------------------------
+Yes.  See Section :ref:`sec-plugins_rc`.
 
 When are you going to add the XYZ feature that ds9 has?
 -------------------------------------------------------
@@ -46,10 +63,6 @@ ginga reference viewer is more like a "take what you need from the
 pantry and whip it up" type viewer.  
 
 Please send a pull request!
-
-Is it possible to control Ginga remotely?
------------------------------------------
-Yes.  See Section :ref:`sec-plugins_rc`.
 
 -----------------------
 World Coordinate System
@@ -108,4 +121,14 @@ If you pick 'choose', Ginga will try to pick one for you.
 How easy is it for Ginga to support a new file formats besides FITS?
 --------------------------------------------------------------------
 Pretty easy.  See Section :ref:`sec-custom-io`.
+
+--------------------------
+Problems displaying images
+--------------------------
+No image shows in the display, and I get an error in the terminal about
+histogram and keyword "density". 
+
+.. note:: You need a slightly newer version of numpy.
+
+	  I recommend getting at least numpy-1.6.1.
 

@@ -96,15 +96,19 @@ class Pan(GingaPlugin.GlobalPlugin):
             pansettings.getSetting(key).add_callback('set', self.zoom_cb,
                                                      fitsimage, chinfo, paninfo)
 
-        xfrmsettings = ['flip_x', 'flip_y', 'swap_xy', 'cuts']
+        fitssettings.shareSettings(pansettings, ['rot_deg'])
+        pansettings.getSetting('rot_deg').add_callback('set', self.redraw_cb,
+                                                       fitsimage, chinfo, paninfo, 0)
+
+        xfrmsettings = ['flip_x', 'flip_y', 'swap_xy']
         fitssettings.shareSettings(pansettings, xfrmsettings)
         for key in xfrmsettings:
             pansettings.getSetting(key).add_callback('set', self.redraw_cb,
                                                      fitsimage, chinfo, paninfo, 0.5)
             
-        fitssettings.shareSettings(pansettings, ['rot_deg'])
-        pansettings.getSetting('rot_deg').add_callback('set', self.redraw_cb,
-                                                       fitsimage, chinfo, paninfo, 0)
+        fitssettings.shareSettings(pansettings, ['cuts'])
+        pansettings.getSetting('cuts').add_callback('set', self.redraw_cb,
+                                                    fitsimage, chinfo, paninfo, 1)
         self.logger.debug("channel %s added." % (chinfo.name))
 
     def delete_channel(self, viewer, chinfo):
@@ -146,7 +150,7 @@ class Pan(GingaPlugin.GlobalPlugin):
             width, height))
         fitsimage.zoom_fit()
         
-    def redraw_cb(self, setting, value, deg, chinfo, paninfo, whence):
+    def redraw_cb(self, setting, value, fitsimage, chinfo, paninfo, whence):
         paninfo.panimage.redraw(whence=whence)
         self.panset(chinfo.fitsimage, chinfo, paninfo)
         return True

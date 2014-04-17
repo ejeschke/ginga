@@ -10,7 +10,7 @@
 import math
 
 from ginga.misc import Bunch, Settings
-from ginga import AutoCuts
+from ginga import AutoCuts, trcalc
 
 class ImageViewBindings(object):
     """
@@ -146,6 +146,10 @@ class ImageViewBindings(object):
             kp_swap_xy = ['backslash', '|'],
             kp_rotate = ['r'],
             kp_rotate_reset = ['R'],
+            kp_rotate_inc90 = ['e'],
+            kp_rotate_dec90 = ['E'],
+            kp_orient_lh = ['o'],
+            kp_orient_rh = ['O'],
             kp_reset = ['escape'],
             
             # SCROLLING/WHEEL
@@ -574,6 +578,43 @@ class ImageViewBindings(object):
                                        redraw=False)
         fitsimage.rotate(deg)
 
+    def _rotate_inc(self, fitsimage, inc_deg, msg=True):
+        msg = self.settings.get('msg_rotate_inc', msg)
+        cur_rot_deg = fitsimage.get_rotation()
+        rot_deg = math.fmod(cur_rot_deg + inc_deg, 360.0)
+        fitsimage.rotate(rot_deg)
+        if msg:
+            fitsimage.onscreen_message("Rotate Inc: (%.2f) %.2f" % (
+                inc_deg, rot_deg), delay=1.0)
+
+    def _orient(self, fitsimage, righthand=False, msg=True):
+        msg = self.settings.get('msg_orient', msg)
+        image = fitsimage.get_image()
+        xflip, yflip, swapxy = fitsimage.get_transforms()
+
+        (x, y, xn, yn, xe, ye) = image.calc_compass_center()
+        degn = math.degrees(math.atan2(xn - x, yn - y))
+        self.logger.info("degn=%f xe=%f ye=%f" % (
+            degn, xe, ye))
+        # rotate east point also by degn
+        xe2, ye2 = trcalc.rotate_pt(xe, ye, degn, xoff=x, yoff=y)
+        dege = math.degrees(math.atan2(xe2 - x, ye2 - y))
+        self.logger.info("dege=%f xe2=%f ye2=%f" % (
+            dege, xe2, ye2))
+
+        # if right-hand image, flip it to make left hand
+        xflip = righthand
+        if dege > 0.0:
+            xflip = not xflip
+        if xflip:
+            degn = - degn
+            
+        fitsimage.transform(xflip, False, False)
+        fitsimage.rotate(degn)
+        if msg:
+            fitsimage.onscreen_message("Orient: rot=%.2f flipx=%s" % (
+                degn, str(xflip)), delay=1.0)
+
     def to_default_mode(self, fitsimage):
         self._ispanning = False
         fitsimage.switch_cursor('pick')
@@ -615,12 +656,12 @@ class ImageViewBindings(object):
 
     #####  KEYBOARD ACTION CALLBACKS #####
 
-    def kp_draw(self, fitsimage, action, data_x, data_y):
+    def kp_draw(self, fitsimage, keyname, data_x, data_y):
         # Used to set up drawing for one-button devices
         self.set_modifier(fitsimage, 'draw')
         return True
 
-    def kp_freepan(self, fitsimage, action, data_x, data_y, msg=True):
+    def kp_freepan(self, fitsimage, keyname, data_x, data_y, msg=True):
         msg = self.settings.get('msg_pan', msg)
         if self.canpan:
             self.set_modifier(fitsimage, 'freepan')
@@ -629,18 +670,18 @@ class ImageViewBindings(object):
                                            delay=1.0)
         return True
 
-    def kp_pan_set(self, fitsimage, action, data_x, data_y, msg=True):
+    def kp_pan_set(self, fitsimage, keyname, data_x, data_y, msg=True):
         if self.canpan:
             self._panset(fitsimage, data_x, data_y, redraw=True,
                          msg=msg)
         return True
 
-    def kp_center(self, fitsimage, action, data_x, data_y):
+    def kp_center(self, fitsimage, keyname, data_x, data_y):
         if self.canpan:
             fitsimage.center_image()
         return True
 
-    def kp_zoom_out(self, fitsimage, action, data_x, data_y, msg=True):
+    def kp_zoom_out(self, fitsimage, keyname, data_x, data_y, msg=True):
         if self.canzoom:
             msg = self.settings.get('msg_zoom', msg)
             fitsimage.zoom_out()
@@ -649,7 +690,7 @@ class ImageViewBindings(object):
                                            delay=1.0)
         return True
 
-    def kp_zoom_in(self, fitsimage, action, data_x, data_y, msg=True):
+    def kp_zoom_in(self, fitsimage, keyname, data_x, data_y, msg=True):
         if self.canzoom:
             msg = self.settings.get('msg_zoom', msg)
             fitsimage.zoom_in()
@@ -680,7 +721,7 @@ class ImageViewBindings(object):
                                            delay=1.0)
         return True
 
-    def kp_zoom_fit(self, fitsimage, action, data_x, data_y, msg=True):
+    def kp_zoom_fit(self, fitsimage, keyname, data_x, data_y, msg=True):
         if self.canzoom:
             msg = self.settings.get('msg_zoom', msg)
             fitsimage.zoom_fit()
@@ -689,7 +730,7 @@ class ImageViewBindings(object):
                                            delay=1.0)
         return True
 
-    def kp_autozoom_on(self, fitsimage, action, data_x, data_y, msg=True):
+    def kp_autozoom_on(self, fitsimage, keyname, data_x, data_y, msg=True):
         if self.canzoom:
             msg = self.settings.get('msg_zoom', msg)
             fitsimage.enable_autozoom('on')
@@ -697,7 +738,7 @@ class ImageViewBindings(object):
                 fitsimage.onscreen_message('Autozoom On', delay=1.0)
         return True
 
-    def kp_autozoom_override(self, fitsimage, action, data_x, data_y, msg=True):
+    def kp_autozoom_override(self, fitsimage, keyname, data_x, data_y, msg=True):
         if self.canzoom:
             msg = self.settings.get('msg_zoom', msg)
             fitsimage.enable_autozoom('override')
@@ -705,7 +746,7 @@ class ImageViewBindings(object):
                 fitsimage.onscreen_message('Autozoom Override', delay=1.0)
         return True
             
-    def kp_cut_low(self, fitsimage, action, data_x, data_y, msg=True):
+    def kp_cut_low(self, fitsimage, keyname, data_x, data_y, msg=True):
         if self.cancut:
             msg = self.settings.get('msg_cuts', msg)
             self.set_modifier(fitsimage, 'cutlo')
@@ -713,7 +754,7 @@ class ImageViewBindings(object):
                 fitsimage.onscreen_message("Cut low (drag mouse L-R)")
         return True
 
-    def kp_cut_high(self, fitsimage, action, data_x, data_y, msg=True):
+    def kp_cut_high(self, fitsimage, keyname, data_x, data_y, msg=True):
         if self.cancut:
             msg = self.settings.get('msg_cuts', msg)
             self.set_modifier(fitsimage, 'cuthi')
@@ -721,7 +762,7 @@ class ImageViewBindings(object):
                 fitsimage.onscreen_message("Cut high (drag mouse L-R)")
         return True
 
-    def kp_cut_all(self, fitsimage, action, data_x, data_y, msg=True):
+    def kp_cut_all(self, fitsimage, keyname, data_x, data_y, msg=True):
         if self.cancut:
             msg = self.settings.get('msg_cuts', msg)
             self.set_modifier(fitsimage, 'cutall')
@@ -729,13 +770,13 @@ class ImageViewBindings(object):
                 fitsimage.onscreen_message("Set cut levels (drag mouse)")
         return True
 
-    def kp_cut_255(self, fitsimage, action, data_x, data_y, msg=True):
+    def kp_cut_255(self, fitsimage, keyname, data_x, data_y, msg=True):
         if self.cancut:
             msg = self.settings.get('msg_cuts', msg)
             fitsimage.cut_levels(0.0, 255.0, no_reset=True)
         return True
 
-    def kp_cut_auto(self, fitsimage, action, data_x, data_y, msg=True):
+    def kp_cut_auto(self, fitsimage, keyname, data_x, data_y, msg=True):
         if self.cancut:
             msg = self.settings.get('msg_cuts', msg)
             if msg:
@@ -743,7 +784,7 @@ class ImageViewBindings(object):
             fitsimage.auto_levels()
         return True
 
-    def kp_autocuts_on(self, fitsimage, action, data_x, data_y, msg=True):
+    def kp_autocuts_on(self, fitsimage, keyname, data_x, data_y, msg=True):
         if self.cancut:
             msg = self.settings.get('msg_cuts', msg)
             fitsimage.enable_autocuts('on')
@@ -751,7 +792,7 @@ class ImageViewBindings(object):
                 fitsimage.onscreen_message('Autocuts On', delay=1.0)
         return True
 
-    def kp_autocuts_override(self, fitsimage, action, data_x, data_y, msg=True):
+    def kp_autocuts_override(self, fitsimage, keyname, data_x, data_y, msg=True):
         if self.cancut:
             msg = self.settings.get('msg_cuts', msg)
             fitsimage.enable_autocuts('override')
@@ -759,7 +800,7 @@ class ImageViewBindings(object):
                 fitsimage.onscreen_message('Autocuts Override', delay=1.0)
         return True
 
-    def kp_cmap_warp(self, fitsimage, action, data_x, data_y, msg=True):
+    def kp_cmap_warp(self, fitsimage, keyname, data_x, data_y, msg=True):
         if self.cancmap:
             msg = self.settings.get('msg_cmap', msg)
             self.set_modifier(fitsimage, 'cmapwarp')
@@ -768,7 +809,7 @@ class ImageViewBindings(object):
                                            delay=1.0)
         return True
 
-    def kp_cmap_restore(self, fitsimage, action, data_x, data_y, msg=True):
+    def kp_cmap_restore(self, fitsimage, keyname, data_x, data_y, msg=True):
         if self.cancmap:
             msg = self.settings.get('msg_cmap', msg)
             self.restore_colormap(fitsimage, msg=msg)
@@ -821,12 +862,12 @@ class ImageViewBindings(object):
         self._reset_dist(fitsimage, msg)
         return True
 
-    def kp_rotate_reset(self, fitsimage, action, data_x, data_y):
+    def kp_rotate_reset(self, fitsimage, keyname, data_x, data_y):
         if self.canrotate:
             fitsimage.rotate(0.0)
         return True
 
-    def kp_rotate(self, fitsimage, action, data_x, data_y, msg=True):
+    def kp_rotate(self, fitsimage, keyname, data_x, data_y, msg=True):
         if self.canrotate:
             msg = self.settings.get('msg_rotate', msg)
             self.set_modifier(fitsimage, 'rotate')
@@ -835,7 +876,28 @@ class ImageViewBindings(object):
                                            delay=1.0)
         return True
 
-    def kp_reset(self, fitsimage, action, data_x, data_y):
+    def kp_rotate_inc90(self, fitsimage, keyname, data_x, data_y, msg=True):
+        if self.canrotate:
+            self._rotate_inc(fitsimage, 90.0, msg=msg)
+        return True
+
+    def kp_rotate_dec90(self, fitsimage, keyname, data_x, data_y, msg=True):
+        if self.canrotate:
+            self._rotate_inc(fitsimage, -90.0, msg=msg)
+        return True
+
+    def kp_orient_lh(self, fitsimage, keyname, data_x, data_y, msg=True):
+        if self.canrotate:
+            self._orient(fitsimage, righthand=False, msg=msg)
+        return True
+
+    def kp_orient_rh(self, fitsimage, keyname, data_x, data_y,
+                            msg=True):
+        if self.canrotate:
+            self._orient(fitsimage, righthand=True, msg=msg)
+        return True
+
+    def kp_reset(self, fitsimage, keyname, data_x, data_y):
         self.reset(fitsimage)
         return True
 

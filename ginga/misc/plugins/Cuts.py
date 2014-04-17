@@ -287,9 +287,9 @@ class Cuts(GingaPlugin.LocalPlugin):
             self._plotpoints(line, color)
 
         # Make x axis labels a little more readable
-        lbls = self.plot.ax.xaxis.get_ticklabels()
-        for lbl in lbls:
-            lbl.set(rotation=45, horizontalalignment='right')
+        ## lbls = self.plot.ax.xaxis.get_ticklabels()
+        ## for lbl in lbls:
+        ##     lbl.set(rotation=45, horizontalalignment='right')
         return True
     
     def redo(self):

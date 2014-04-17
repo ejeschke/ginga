@@ -44,6 +44,7 @@ in the "examples/bindings" directory in the source download.  This file
 can be installed in the user's $HOME/.ginga folder as "bindings.cfg".
 
 bindings.cfg::
+
     #
     # bindings.cfg -- Ginga user interface bindings customization
     #
@@ -90,6 +91,8 @@ bindings.cfg::
     kp_autozoom_on = ['doublequote']
     kp_autozoom_override = ['singlequote']
     kp_draw = ['space']
+    kp_dist = ['s']
+    kp_dist_reset = ['S']
     kp_freepan = ['q']
     kp_pan_set = ['p']
     kp_center = ['c']
@@ -118,6 +121,7 @@ bindings.cfg::
     sc_zoom_coarse = []
     sc_contrast_fine = []
     sc_contrast_coarse = []
+    sc_dist = []
     
     # This controls how fast panning occurs with the sc_pan* functions.
     # Increase to speed up panning

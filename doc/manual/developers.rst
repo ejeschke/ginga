@@ -36,8 +36,8 @@ Ginga supports backends for different widget sets through various
 subclasses of this class.   
 
 Typically, a developer picks a GUI toolkit that has a supported backend
-(Gtk, Qt or Tk) and writes a GUI program using that widget set with the
-typical Python toolkit bindings and API.  Where they want a 
+(Gtk, Qt, Tk, Matplotlib) and writes a GUI program using that widget set
+with the typical Python toolkit bindings and API.  Where they want a 
 image view pane they instantiate the appropriate subclass of 
 ``ImageView``, and using the  ``get_widget()`` call extract the native
 widget and insert it into the GUI layout.  A reference should be kept to
@@ -229,15 +229,23 @@ including lines, circles, rectangles, points, polygons, text, rulers,
 compasses, etc.  Plotted objects scale, transform and rotate seamlessly
 with the image. 
 
-See the scripts prefaced with "example2" (under "examples") in the
-package source for details.  
+See the scripts prefaced with "example2" (under the "examples"
+directory) in the package source for details.  
 
 Rendering into Matplotlib Figures
 ---------------------------------
 
 Ginga can also render directly into a Matplotlib Figure, which opens up
 interesting possibilities for overplotting beyond the limited
-capabilities of the ``ImageViewCanvas`` class.  
+capabilities of the ``ImageViewCanvas`` class.  In short,
+this allows you to have all the interactive UI goodness of a Ginga widget
+in a matplotlib figure.  You can interactively flip, rotate, pan, zoom,
+set cut levels and color map warp a FITS image.  Furthermore, you can plot
+using matplotlib plotting on top of the image and the plots will follow all
+the transformations.  The interactive performance is not quite as speedy
+as with the other toolkit backends, but quite usable.
+
+Look at the examples in `examples/matplotlib`, especially `example4_mpl.py`.
 
 ========================================
 Writing plugins for the reference viewer

@@ -291,21 +291,34 @@ TBD
 Ruler
 =====
 
-TBD
+Ruler is a simple plugin designed to measure distances on an image.  It
+does this by calculating a spherical triangulation via WCS mapping of
+three points defined by a single line drawn on the image.  By default,
+the distance is shown in arcminutes of sky, but using the Units control
+it can be changed to show pixel distance instead. 
+
+When another line is drawn it replaces the first one, and when the
+plugin is closed the graphic overlay is removed.  Should you want
+"sticky rulers", use the Drawing plugin (and choose "Ruler" as the
+drawing type).
 
 .. _plugins-multidim:
 
 MultiDim
 ========
 
-TBD
+MultiDim is a plugin designed to handle data cubes and multi-HDU FITS
+files.  If you have opened such an image in Ginga, starting this plugin
+will enable you to browse to other slices of the cube or view other
+HDUs.  Note that currently there is no support for tables in Ginga, so
+at present only image data can be displayed.
 
 .. _plugins-cuts:
 
 Cuts
 ====
 
-TBD
+Cuts plots a simple 
 
 .. _plugins-histogram:
 

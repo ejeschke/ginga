@@ -63,6 +63,10 @@ kp_flip_y = [']', '}']
 kp_swap_xy = ['backslash', '|']
 kp_rotate = ['r']
 kp_rotate_reset = ['R']
+kp_rotate_inc90 = ['e']
+kp_rotate_dec90 = ['E']
+kp_orient_lh = ['o']
+kp_orient_rh = ['O']
 kp_reset = ['escape']
 
 # SCROLLING/WHEEL commands
