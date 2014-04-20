@@ -590,7 +590,6 @@ class ImageViewBindings(object):
     def _orient(self, fitsimage, righthand=False, msg=True):
         msg = self.settings.get('msg_orient', msg)
         image = fitsimage.get_image()
-        xflip, yflip, swapxy = fitsimage.get_transforms()
 
         (x, y, xn, yn, xe, ye) = image.calc_compass_center()
         degn = math.degrees(math.atan2(xn - x, yn - y))

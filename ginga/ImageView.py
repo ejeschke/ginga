@@ -1267,8 +1267,20 @@ class ImageViewBase(Callback.Callbacks):
         except:
             return
 
-        # Calculate optimum zoom level to still fit the window size
+        # zoom_fit also centers image
+        self.center_image(redraw=False)
+
+        # calculate actual width of the image, considering rotation
         width, height = self.get_data_size()
+        ctr_x, ctr_y, rot_deg = self.get_rotation_info()
+        min_x, min_y, max_x, max_y = 0, 0, 0, 0
+        for x, y in ((0, 0), (width-1, 0), (width-1, height-1), (0, height-1)):
+            x0, y0 = trcalc.rotate_pt(x, y, rot_deg, xoff=ctr_x, yoff=ctr_y)
+            min_x, min_y = min(min_x, x0), min(min_y, y0)
+            max_x, max_y = max(max_x, x0), max(max_y, y0)
+        width, height = max_x - min_x, max_y - min_y
+        
+        # Calculate optimum zoom level to still fit the window size
         if self.t_['zoom_algorithm'] == 'rate':
             scale_x = float(wwidth) / (float(width) * self.t_['scale_x_base'])
             scale_y = float(wheight) / (float(height) * self.t_['scale_y_base'])
