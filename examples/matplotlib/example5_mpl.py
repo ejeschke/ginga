@@ -24,15 +24,20 @@ While in 'capture mode' you can draw points with the right mouse button.
 Press 'c' to clear the canvas of drawn points.
 """
 import sys, os
+import platform
 # just in case you want to use qt
 os.environ['QT_API'] = 'pyqt'
 
 import matplotlib
 options = ['Qt4Agg', 'GTK', 'GTKAgg', 'MacOSX', 'GTKCairo', 'WXAgg',
            'TkAgg', 'QtAgg', 'FltkAgg', 'WX']
-# Force a specific toolkit, if you leave commented matplotlib will choose
-# an appropriate one for your system
-#matplotlib.use('Qt4Agg')
+# Force a specific toolkit on mac
+macos_ver = platform.mac_ver()[0]
+if len(macos_ver) > 0:
+    # change this to "pass" if you want to force a different backend
+    # On Mac OS X I found the default choice for matplotlib is not stable
+    # with ginga
+    matplotlib.use('Qt4Agg')
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import numpy as np

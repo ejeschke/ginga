@@ -55,6 +55,8 @@ class GingaView(QtMain.QtMain):
         self.iconpath = icon_path
         self._lastwsname = 'channels'
         self.layout = None
+        self._lsize = None
+        self._rsize = None
 
     def set_layout(self, layout):
         self.layout = layout
@@ -667,6 +669,43 @@ class GingaView(QtMain.QtMain):
             coords = map(int, coords)
             self.setPos(*coords)
 
+
+    def collapse_pane(self, side):
+        """
+        Toggle collapsing the left or right panes.
+        """
+        # TODO: this is too tied to one configuration, need to figure
+        # out how to generalize this
+        hsplit = self.w['hpnl']
+        sizes = hsplit.sizes()
+        lsize, msize, rsize = sizes
+        if self._lsize == None:
+            self._lsize, self._rsize = lsize, rsize
+        self.logger.debug("left=%d mid=%d right=%d" % (
+            lsize, msize, rsize))
+        if side == 'right':
+            if rsize < 10:
+                # restore pane
+                rsize = self._rsize
+                msize -= rsize
+            else:
+                # minimize pane
+                self._rsize = rsize
+                msize += rsize
+                rsize = 0
+        elif side == 'left':
+            if lsize < 10:
+                # restore pane
+                lsize = self._lsize
+                msize -= lsize
+            else:
+                # minimize pane
+                self._lsize = lsize
+                msize += lsize
+                lsize = 0
+        hsplit.setSizes((lsize, msize, rsize))
+        
+        
     def getFont(self, fontType, pointSize):
         fontFamily = self.settings.get(fontType)
         font = QtGui.QFont(fontFamily, pointSize)

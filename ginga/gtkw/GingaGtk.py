@@ -60,6 +60,8 @@ class GingaView(GtkMain.GtkMain):
         self.w.fscreen = None
         self._lastwsname = 'channels'
         self.layout = None
+        self._lsize = None
+        self._rsize = None
         
     def get_screen_dimensions(self):
         return (screen_wd, screen_ht)
@@ -684,6 +686,48 @@ class GingaView(GtkMain.GtkMain):
             coords = map(int, coords)
             self.setPos(*coords)
 
+    def collapse_pane(self, side):
+        """
+        Toggle collapsing the left or right panes.
+        """
+        # TODO: this is too tied to one configuration, need to figure
+        # out how to generalize this
+        hsplit = self.w['hpnl']
+        rect = hsplit.get_allocation()
+        #tot1 = tuple(rect)[2]
+        tot1 = rect.width
+        pos1 = hsplit.get_position()
+        rchild = hsplit.get_child2()
+        rect = rchild.get_allocation()
+        #tot2 = tuple(rect)[2]
+        tot2 = rect.width
+        pos2 = rchild.get_position()
+        lsize, msize, rsize = pos1, pos2, tot2-pos2 
+        if self._lsize == None:
+            self._lsize, self._rsize = lsize, rsize
+        self.logger.debug("left=%d mid=%d right=%d" % (
+            lsize, msize, rsize))
+        if side == 'right':
+            if rsize < 10:
+                # restore pane
+                pos = tot2 - self._rsize
+            else:
+                # minimize pane
+                self._rsize = rsize
+                pos = tot2
+            rchild.set_position(pos)
+
+        elif side == 'left':
+            if lsize < 10:
+                # restore pane
+                pos = self._lsize
+            else:
+                # minimize pane
+                self._lsize = lsize
+                pos = 0
+            hsplit.set_position(pos)
+        
+        
     def getFont(self, fontType, pointSize):
         fontFamily = self.settings.get(fontType)
         font = pango.FontDescription('%s %d' % (fontFamily, pointSize))

@@ -96,15 +96,11 @@ class Pan(GingaPlugin.GlobalPlugin):
             pansettings.getSetting(key).add_callback('set', self.zoom_cb,
                                                      fitsimage, chinfo, paninfo)
 
-        fitssettings.shareSettings(pansettings, ['rot_deg'])
-        pansettings.getSetting('rot_deg').add_callback('set', self.redraw_cb,
-                                                       fitsimage, chinfo, paninfo, 0)
-
-        xfrmsettings = ['flip_x', 'flip_y', 'swap_xy']
+        xfrmsettings = ['flip_x', 'flip_y', 'swap_xy', 'rot_deg']
         fitssettings.shareSettings(pansettings, xfrmsettings)
         for key in xfrmsettings:
             pansettings.getSetting(key).add_callback('set', self.redraw_cb,
-                                                     fitsimage, chinfo, paninfo, 0.5)
+                                                     fitsimage, chinfo, paninfo, 0)
             
         fitssettings.shareSettings(pansettings, ['cuts'])
         pansettings.getSetting('cuts').add_callback('set', self.redraw_cb,
