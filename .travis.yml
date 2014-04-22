@@ -33,8 +33,10 @@ install:
   - sudo apt-get update -qq
   #libatlas-dev liblapack-dev gfortran
   - sudo apt-get install -qq python${P} python${P}-numpy python${P}-scipy
-
-  - sudo apt-get install -qq python${P}-setuptools
+  # for installation and tests
+  - sudo apt-get install -qq python${P}-setuptools python${P}-nose
+  # for building sphinx doc
+  - sudo apt-get install -qq python${P}-sphinx
 
   # Note: cython3 will only appear in Ubuntu 13.04: cython${P}
   # So for now we install it from source
@@ -67,7 +69,9 @@ script:
   - which ginga
 
   # run unit tests
-  - python${P} setup.py test
+  # this doesn't seem to work
+  # - python${P} setup.py test
+  - nosetests ginga/tests
 
   # build documentation
   - python${P} setup.py build_sphinx
