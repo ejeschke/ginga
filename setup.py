@@ -1,6 +1,9 @@
 #! /usr/bin/env python
 #
-from distutils.core import setup
+try:
+    from setuptools import setup
+except ImportError:
+    from distutils.core import setup
 from ginga.version import version
 import os
 
@@ -28,7 +31,7 @@ setup(
     version = version,
     author = "Eric Jeschke",
     author_email = "eric@naoj.org",
-    description = ("An astronomical (FITS) image viewer and toolkit."),
+    description = ("An astronomical image viewer and toolkit."),
     long_description = read('README.txt'),
     license = "BSD",
     keywords = "FITS image viewer astronomy",
@@ -39,7 +42,7 @@ setup(
                 'ginga.gtkw.tests',
                 # Qt version
                 'ginga.qtw', 'ginga.qtw.plugins', 'ginga.qtw.tests',
-                # Tk version (widget only)
+                # Tk version
                 'ginga.tkw', 'ginga.aggw',
                 # Matplotlib version
                 'ginga.mplw',
@@ -54,6 +57,8 @@ setup(
                      'ginga.doc': ['manual/*.html'],
                      },
     scripts = ['scripts/ginga', 'scripts/grc'],
+    install_requires = ['numpy', ],
+    test_suite = "ginga.tests",
     classifiers = [
         "License :: OSI Approved :: BSD License",
         "Operating System :: MacOS :: MacOS X",
