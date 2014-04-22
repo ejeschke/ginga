@@ -32,8 +32,9 @@ install:
   # Get most of the required dependencies via apt-get
   - sudo apt-get update -qq
   #libatlas-dev liblapack-dev gfortran
-  - sudo apt-get install -qq python${P} python${P}-numpy
+  - sudo apt-get install -qq python${P} python${P}-numpy python${P}-scipy
 
+  - sudo apt-get install -qq python${P}-setuptools
 
   # Note: cython3 will only appear in Ubuntu 13.04: cython${P}
   # So for now we install it from source
@@ -45,7 +46,7 @@ install:
 
   # GTK is not available for Python 3, so we test QT only for now ...
   # python${PYTHON_SUFFIX}-gtk2
-  - sudo apt-get install -qq python${P}-pyside
+  - sudo apt-get install -qq python${P}-pyqt4
 
   # No apt-get install python3-pip before Ubuntu 13.04 ... python${P}-pip 
   #- if [[ $ASTROPY_VERSION == stable ]]; then sudo pip${P} -q install astropy --use-mirrors; fi
