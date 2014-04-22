@@ -8,7 +8,7 @@ language: python
 
 python:
   - 2.7
-  - 3.4
+  - 3.2
 
 env:
   - ASTROPY_VERSION=stable
@@ -16,7 +16,7 @@ env:
 
 before_install:
   # Check if we are running Python 2 or 3. This is needed for the apt-get package names
-  - if [[ $TRAVIS_PYTHON_VERSION == '3.4' ]]; then export P="3"; fi
+  - if [[ $TRAVIS_PYTHON_VERSION == '3.2' ]]; then export P="3"; fi
 
   - export PYTHONIOENCODING=UTF8 # just in case
 
