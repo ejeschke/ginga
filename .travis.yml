@@ -8,7 +8,7 @@ language: python
 
 python:
   - 2.7
-  - 3.2
+  - 3.4
 
 env:
   - ASTROPY_VERSION=stable
@@ -16,7 +16,7 @@ env:
 
 before_install:
   # Check if we are running Python 2 or 3. This is needed for the apt-get package names
-  - if [[ $TRAVIS_PYTHON_VERSION == '3.2' ]]; then export P="3"; fi
+  - if [[ $TRAVIS_PYTHON_VERSION == '3.4' ]]; then export P="3"; fi
 
   - export PYTHONIOENCODING=UTF8 # just in case
 
@@ -65,14 +65,9 @@ script:
   - python${P} -c 'import ginga'
   - which ginga
 
-  # Try to start ginga and kill it after some time ...
-  # http://stackoverflow.com/questions/601543/command-line-command-to-auto-kill-a-command-after-a-certain-amount-of-time
-  # TODO: Exceptions that don't crash ginga are simply printed on the consolue,
-  # they don't lead to a non-zero exit code and thus won't break the build
-  # ... I think we do want them to break the build ... how can we achieve this?
-  - ( ginga ) & sleep 20 ; kill $!
+  # run unit tests
+  - python${P} setup.py test
 
-  # TODO: run unit tests
+  # build documentation
+  - python${P} setup.py build_sphinx
 
-  # TODO: build documentation
-  #- python setup.py build_sphinx
