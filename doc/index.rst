@@ -21,7 +21,7 @@ FITS (Flexible Image Transport System) file format.  It is written and
 is maintained by software engineers at the Subaru Telescope, National
 Astronomical Observatory of Japan.
 
-The Ginga toolkit centers around an image display object which supports 
+The Ginga toolkit centers around an image display class which supports 
 zooming and panning, color and intensity mapping, a choice of several
 automatic cut levels algorithms and canvases for plotting scalable
 geometric forms.  In addition to this widget, a general purpose
@@ -46,8 +46,9 @@ Requirements and Supported Platforms
 Because Ginga is written in pure python, it can run on any platform that
 has the required python modules and has a supported widget set.
 The basic Ginga display class supports the Qt, Gtk, Tk widget sets
-natively as well an any matplotlib Figure, while the full reference
-viewer supports Qt and Gtk. 
+natively as well as any matplotlib Figure, while the full reference
+viewer supports Qt and Gtk.  Ginga can also be used in ipython notebooks
+and other 
 
 ==================
 Getting the source

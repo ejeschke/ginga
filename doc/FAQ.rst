@@ -6,7 +6,7 @@ The Ginga FAQ
 Platforms
 ---------
 
-Does ginga run on Mac/Windows/Linux/XYZ?
+Does Ginga run on Mac/Windows/Linux/XYZ?
 ----------------------------------------
 Ginga is written entirely in Python, and only uses supporting Python
 packages.  As long as a platform supports python and the necessary
@@ -20,6 +20,12 @@ building viewers and also includes a "reference viewer".  The example
 programs currently support Qt, Gtk, Tk and Matplotlib.  The full
 reference viewer currently supports Qt and Gtk.  The difference is
 explained here :ref:`ch-programming-ginga`.
+
+Does Ginga work with python 3?
+------------------------------
+Yes.  Just install with python 3.  Of course, you need all the
+supporting modules for python 3 (numpy, scipy, qt4, etc.)
+
 
 ----------------
 Control Bindings
@@ -36,13 +42,25 @@ How can I customize the user interface mappings?
 ------------------------------------------------
 There is more information in Section :ref:`sec-bindings`.
 
+Where can I find a quick reference of the bindings?
+---------------------------------------------------
+`Look here <https://ginga.readthedocs.org/en/latest/quickref.html>`_.
+
 -------------
 Miscellaneous
 -------------
 
+Does Ginga work with IRAF (a la ds9)?
+-------------------------------------
+Yes.  See Section :ref:`sec-plugins-IRAF`.
+
+Does Ginga work with SAMP?
+--------------------------
+Yes.  See Section :ref:`sec-plugins-SAMP`.
+
 Is it possible to control Ginga remotely?
 -----------------------------------------
-Yes.  See Section :ref:`sec-plugins_rc`.
+Yes.  See Section :ref:`sec-plugins-RC`.
 
 When are you going to add the XYZ feature that ds9 has?
 -------------------------------------------------------

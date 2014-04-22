@@ -46,18 +46,13 @@ class ImageViewBindings(object):
     * (colon ":"): turn autocuts on; new images will be auto cut levels
     * (semicolon ";"): turn autocuts to override; new images will be auto
       cut levels until the user changes cuts manually
-    * (comma ','): set the low cut level. Press and release the key, then
-        press mouse button 1 and drag left or right horizontally (X axis).
-        It will set the low cut value to a percentage between min and max,
-        depending on how far you drag. The display will adjust dynamically.
-    * (period '.'): set the high cut level. Press and release the key, then
-        press mouse button 1 and drag left or right horizontally (X axis).
-        It will set the high cut value to a percentage between min and max,
-        depending on how far you drag. The display will adjust dynamically.
+    * (period '.'): set the low and high cut levels. Press and release the
+        key, then press mouse button 1 and drag in the image pane. 
     * (slash '/'): shift the color map. Press and release the key, then
         press mouse button 1 and drag around the window.  Dragging vertically
         stretches the colormap and dragging horizontally shifts it, depending
         on how far you drag. The display will adjust dynamically.
+    * (question '?'): restore a shifted color map.
     p: sets the future pan position below the cursor
     c: centers the image by placing the pan position centrally
     r: rotate the image.  Press and release the key, then press mouse button

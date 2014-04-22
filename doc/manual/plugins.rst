@@ -160,113 +160,6 @@ the images viewed since the program was started.  Unlike Thumbs,
 Contents is sorted by channel, and then by image name.  The contents
 also shows some common metadata from the image.
 
-.. _sec-plugins_rc:
-
-RC
-==
-
-The RC (Remote Control) plugin provides a way to control Ginga remotely
-through the use of an XML-RPC interface.  Start the plugin from the 
-`Plugins` menu (invoke "Start RC") or launch ginga with the "--modules=RC"
-command line option to start it automatically.
-
-By default, the plugin starts up with server running on port 9000 bound
-to the localhost interface--this allows connections only from the local
-host.  If you want to change this, set the host and port in the `Set
-Addr` control and press Enter--you should see the address update in the
-"Addr:" display field.
-
-Please note that the host part (before the colon) does not indicate
-*which* host you want to allow access from, but to which interface to
-bind.  If you want to allow any host to connect, leave it blank (but
-include the colon and port number) to allow the server to bind on all
-interfaces. Press `Restart` to then restart the server at the new
-address. 
-
-Once the plugin is started, you can use the `grc` script (included when
-ginga is installed) to control Ginga.  Take a look at the script if you
-want to see how to write your own programmatic interface.
-
-Show example usage::
-
-    $ grc help
-
-Show help for a specific ginga method::
-
-    $ grc help ginga <method>
-
-Show help for a specific channel method::
-
-    $ grc help channel <chname> <method>
-
-Ginga (viewer shell) methods can be called like this::
-
-    $ grc ginga <method> <arg1> <arg2> ...
-
-Per-channel methods can be called like this::
-
-    $ grc channel <chname> <method> <arg1> <arg2> ...
-
-Calls can be made from a remote host by adding the options::
-
-    --host=<hostname> --port=9000
-   
-(in the plugin GUI be sure to remove the 'localhost' prefix
-from the addr, but leave the colon and port)
-
-Examples
-
-Create a new channel::
-
-    $ grc ginga add_channel FOO
- 
-Load a file::
-
-    $ grc ginga load_file /home/eric/testdata/SPCAM/SUPA01118797.fits
-
-Load a file into a specific channel::
-
-    $ grc ginga load_file /home/eric/testdata/SPCAM/SUPA01118797.fits FOO
-
-Cut levels::
-
-    $ grc channel FOO cut_levels 163 1300
-
-Auto cut levels::
-
-    $ grc channel FOO auto_levels
-
-Zoom to a specific level::
-
-    $ grc -- channel FOO zoom_to -7
-
-(note the use of -- to allow us to pass a parameter beginning with "-").
- 
-Zoom to fit::
-
-    $ grc channel FOO zoom_fit
- 
-Transform (args are boolean triplet: flipx flipy swapxy)::
-
-    $ grc channel FOO transform 1 0 1
-
-Rotate::
-
-    $ grc channel FOO rotate 37.5
-
-Change color map::
-
-    $ grc channel FOO set_color_map rainbow3
- 
-Change color distribution algorithm::
-
-    $ grc channel FOO set_color_algorithm log
- 
-Change intensity map::
-
-    $ grc channel FOO set_intensity_map neg
-
-
 .. _sec-localplugins:
 
 =============
@@ -274,10 +167,8 @@ Local plugins
 =============
 
 An *operation* is the activation of a local plugin to perform some
-function.  Operations can the started and controlled in two ways:
-graphically, or using the keyboard shortcuts.  The plugin manager
-toolbar at the bottom of the center pane is the graphical way to start
-an operation.  
+function.  The plugin manager toolbar at the bottom of the center pane
+is the graphical way to start an operation.  
 
 .. _plugins_pick:
 
@@ -290,6 +181,9 @@ TBD
 
 Ruler
 =====
+
+.. image:: figures/ruler_plugin.png
+   :align: center
 
 Ruler is a simple plugin designed to measure distances on an image.  It
 does this by calculating a spherical triangulation via WCS mapping of
@@ -307,6 +201,9 @@ drawing type).
 MultiDim
 ========
 
+.. image:: figures/multidim-plugin.png
+   :align: center
+
 MultiDim is a plugin designed to handle data cubes and multi-HDU FITS
 files.  If you have opened such an image in Ginga, starting this plugin
 will enable you to browse to other slices of the cube or view other
@@ -318,7 +215,25 @@ at present only image data can be displayed.
 Cuts
 ====
 
-Cuts plots a simple 
+.. image:: figures/cuts-plugin.png
+   :align: center
+
+Cuts plots a simple graph of pixel values vs. index for a line drawn
+through the image.
+
+This plugin can plot several cuts together.  As long as a cut is
+selected in the drop down box underneath the graph, any newly drawn line
+will replace that cut by a new one.  To *add* a new cut, simply select
+"None" from the  drop down box and draw the new cut.  Use the `Delete`
+button to delete the currently selected cut and `Delete All` to delete
+all cuts. 
+
+If a new image is added to the channel while the plugin is active it
+will update with the new calculated cuts on the new image.
+
+There are several keyboard shortcuts that are available when this plugin
+is active.  Press 'h' to place a full width horizontal cut underneath
+the cursor position and 'v' to place a full height vertical cut.
 
 .. _plugins-histogram:
 
@@ -620,34 +535,138 @@ WBrowser
 
 TBD
 
-Optional Plugins
-================
+.. _sec-plugins-SAMP:
 
-There are a number of plugins distributed with Ginga that are not loaded
-by default.  In keeping with the "small is beautiful" mantra, these
-plugins can be loaded when needed.
+SAMP Control
+------------
 
-.. _plugins-rc:
+.. image:: figures/SAMP-plugin.png
+   :align: center
 
-Remote Control
---------------
+Ginga includes a plugin for enabling SAMP (Simple Applications Messaging
+Protocol) support.  With SAMP support, Ginga can be controlled and
+interoperate with other astronomical desktop applications.
 
-You may find that you have a need to control Ginga remotely.  For
-example, you want to invoke the loading of images, or performing
-operations on images, etc.  Like many other aspects, Ginga delegates this
-task to a plugin: RC.  
-Because remote control of Ginga is handled by a plugin, you can easily
-change the types of operations that can be done, or completely change
-the protocol used.
+The SAMP module is not started by default.  To start it when Ginga
+starts, specify the command line option::
 
-The remote control module is not activated by default.  To start it, specify
-the command line option::
+    --modules=SAMP
 
-    --modules=RC
+otherwise, start it using `Start SAMP` from the `Plugins` menu.
 
-or start it from `Start RC` under the `Plugins` menu.  You can then
-control Ginga from the `grc` program located in the  `scripts` directory
-(and installed with ginga).  Some examples: 
+Currently, SAMP support is limited to `image.load.fits` messages,
+meaning that Ginga will load a FITS file if it receives one of these
+messages.
+
+Ginga's SAMP plugin uses the astropy.vo,samp module, so you will need to
+have that installed to use the plugin.  By default, Ginga's SAMP plugin
+will attempt to start a SAMP hub if one is not found running.
+
+.. _sec-plugins-IRAF:
+
+IRAF Interaction
+----------------
+
+.. image:: figures/IRAF-plugin.png
+   :align: center
+
+The IRAF plugin allows Ginga to interoperate with IRAF in a manner
+similar to IRAF and ds9.  The following IRAF commands are supported:
+`imexamine`, `rimcursor`, `display` and `tvmark`.
+
+To use the IRAF plugin, first make sure the environment variable IMTDEV
+is set appropriately, e.g.::
+
+    $ export IMTDEV=inet:45005
+
+or::
+
+    $ export IMTDEV=unix:/tmp/.imtg45
+
+If the environment variable is not set, Ginga will default to that used
+by IRAF. 
+    
+Then start Ginga and IRAF.  For Ginga, the IRAF module is not started by
+default.  To start it when Ginga starts, specify the command line option::
+
+    --modules=IRAF
+
+or use the `Start IRAF` menu item from the `Plugins` menu.
+The GUI for the IRAF plugin will appear in the tabs on the right.
+
+It can be more convenient to load images via Ginga than IRAF.  From
+Ginga you can load images via drag and drop or via the FBrowser 
+plugin and then use `imexamine` from IRAF to do analysis tasks on
+them.  You can also use the `display` command from IRAF to show
+images already loaded in IRAF in Ginga, and then use `imexamine` to
+select areas graphically for analysis.
+
+When using `imexamine` or `rimcursor`, the plugin disables
+normal UI processing on the channel image so that keystrokes,
+etc. normally caught by Ginga are passed through to IRAF.  You can
+toggle back and forth between local Ginga control (e.g. keystrokes to
+zoom and pan the image, or apply cut levels, etc.) and IRAF control
+using the radio buttons at the top of the tab.   
+
+IRAF deals with images in enumerated "frames", whereas Ginga uses
+named channels.  The bottom of the IRAF plugin GUI will show the mapping
+from Ginga channels to IRAF frames.
+
+.. _sec-plugins-RC:
+
+RC
+==
+
+The RC (Remote Control) plugin provides a way to control Ginga remotely
+through the use of an XML-RPC interface.  Start the plugin from the 
+`Plugins` menu (invoke "Start RC") or launch ginga with the "--modules=RC"
+command line option to start it automatically.
+
+By default, the plugin starts up with server running on port 9000 bound
+to the localhost interface--this allows connections only from the local
+host.  If you want to change this, set the host and port in the `Set
+Addr` control and press Enter--you should see the address update in the
+"Addr:" display field.
+
+Please note that the host part (before the colon) does not indicate
+*which* host you want to allow access from, but to which interface to
+bind.  If you want to allow any host to connect, leave it blank (but
+include the colon and port number) to allow the server to bind on all
+interfaces. Press `Restart` to then restart the server at the new
+address. 
+
+Once the plugin is started, you can use the `grc` script (included when
+ginga is installed) to control Ginga.  Take a look at the script if you
+want to see how to write your own programmatic interface.
+
+Show example usage::
+
+    $ grc help
+
+Show help for a specific ginga method::
+
+    $ grc help ginga <method>
+
+Show help for a specific channel method::
+
+    $ grc help channel <chname> <method>
+
+Ginga (viewer shell) methods can be called like this::
+
+    $ grc ginga <method> <arg1> <arg2> ...
+
+Per-channel methods can be called like this::
+
+    $ grc channel <chname> <method> <arg1> <arg2> ...
+
+Calls can be made from a remote host by adding the options::
+
+    --host=<hostname> --port=9000
+   
+(in the plugin GUI be sure to remove the 'localhost' prefix
+from the addr, but leave the colon and port)
+
+Examples
 
 Create a new channel::
 
@@ -655,7 +674,11 @@ Create a new channel::
  
 Load a file::
 
-    $ grc ginga load FOO /home/eric/testdata/SPCAM/SUPA01118797.fits
+    $ grc ginga load_file /home/eric/testdata/SPCAM/SUPA01118797.fits
+
+Load a file into a specific channel::
+
+    $ grc ginga load_file /home/eric/testdata/SPCAM/SUPA01118797.fits FOO
 
 Cut levels::
 
@@ -665,6 +688,12 @@ Auto cut levels::
 
     $ grc channel FOO auto_levels
 
+Zoom to a specific level::
+
+    $ grc -- channel FOO zoom_to -7
+
+(note the use of -- to allow us to pass a parameter beginning with "-").
+ 
 Zoom to fit::
 
     $ grc channel FOO zoom_fit
@@ -689,36 +718,6 @@ Change intensity map::
 
     $ grc channel FOO set_intensity_map neg
 
-Almost any method on the Ginga shell or a channel can be invoked from
-the remote plugin.  Methods on the shell can be called like this::
-
-    $ grc ginga <method> <arg1> <arg2> ...
-
-Channel methods can be called like this::
-
-    $ grc channel <chname> <method> <arg1> <arg2> ...
-
-Built in help is available for showing method docstrings.
-
-Show example usage::
-
-    $ grc help
-
-Show help for a specific ginga method::
-
-    $ grc help ginga <method>
-
-Show help for a specific channel method::
-
-    $ grc help channel <chname> <method>
-
-
-Calls can be made from a remote host by simply adding the options::
-
-    --host=<hostname> --port=9000
-
-to the command line.
-
 In some cases, you may need to resort to shell escapes to be able to
 pass certain characters to Ginga.  For example, a leading dash character is
 usually interpreted as a program option.  In order to pass a signed
@@ -726,70 +725,5 @@ integer you may need to do something like::
 
     $ grc -- channel FOO zoom -7
 
-.. _plugins-SAMP:
-
-SAMP Control
-------------
-
-Ginga includes a plugin for enabling SAMP (Simple Applications Messaging
-Protocol) support.  With SAMP support, Ginga can be controlled and
-interoperate with other astronomical desktop applications.
-
-The SAMP module is not loaded by default.  To load it, specify
-the command line option::
-
-    --modules=SAMP
-
-There is no GUI for this plugin.
-Currently, SAMP support is limited to `image.load.fits` messages.
-
-.. _plugins-IRAF:
-
-IRAF Interaction
-----------------
-
-.. image:: figures/IRAF-plugin.png
-   :align: center
-
-The IRAF plugin allows Ginga to interoperate with IRAF in a manner
-similar to IRAF and ds9.  The following IRAF commands are supported:
-`imexamine`, `rimcursor`, `display` and `tvmark`.
-
-To use the IRAF plugin, first make sure the environment variable IMTDEV
-is set appropriately, e.g.::
-
-    $ export IMTDEV=inet:45005
-
-or::
-
-    $ export IMTDEV=unix:/tmp/.imtg45
-
-If the environment variable is not set, Ginga will default to that used
-by IRAF. 
-    
-Then start Ginga and IRAF.  For Ginga, the IRAF module is not loaded by
-default.  To load it, specify the command line option::
-
-    --modules=IRAF
-
-In Ginga a GUI for the IRAF plugin will appear in the tabs on the right.
-
-It can be more convenient to load images via Ginga than IRAF.  From
-Ginga you can load images via drag and drop or via the FBrowser 
-plugin and then use `imexamine` from IRAF to do analysis tasks on
-them.  You can also use the `display` command from IRAF to show
-images already loaded in IRAF in Ginga, and then use `imexamine` to
-select areas graphically for analysis.
-
-When using `imexamine` or `rimcursor`, the plugin disables
-normal UI processing on the channel image so that keystrokes,
-etc. normally caught by Ginga are passed through to IRAF.  You can
-toggle back and forth between local Ginga control (e.g. keystrokes to
-zoom and pan the image, or apply cut levels, etc.) and IRAF control
-using the radio buttons at the top of the tab.   
-
-IRAF deals with images in enumerated "frames", whereas Ginga uses
-named channels.  The bottom of the IRAF plugin GUI will show the mapping
-from Ginga channels to IRAF frames.
 
 

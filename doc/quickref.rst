@@ -65,10 +65,6 @@ Cut levels and colormap commands
 +----------------------+--------------------------------------------------+
 | S                    | Reset color distribution algorithm to "linear"   |
 +----------------------+--------------------------------------------------+
-| left angle (<)       | Interactive cut low (with left mouse button)     | 
-+----------------------+--------------------------------------------------+
-| right angle (>)      | Interactive cut high (with left mouse button)    | 
-+----------------------+--------------------------------------------------+
 | period (.)           | Interactive cut *both* low and high (with left   |
 |                      |   mouse button)                                  |
 +----------------------+--------------------------------------------------+
@@ -111,8 +107,8 @@ Transform commands
 | O                    | Orient image by WCS so North=Up and East=Right   |
 +----------------------+--------------------------------------------------+
 
-Tab Navigation
-==============
+Tab Navigation (reference viewer only)
+======================================
 
 +----------------------+--------------------------------------------------+
 | I                    | Raise Info tab                                   |
@@ -126,6 +122,10 @@ Tab Navigation
 | T                    | Raise Thumbs tab                                 |
 +----------------------+--------------------------------------------------+
 | C                    | Raise Contents tab                               |
++----------------------+--------------------------------------------------+
+| left angle (<)       | Toggle collapse left pane                        |
++----------------------+--------------------------------------------------+
+| right angle (>)      | Toggle collapse right pane                       | 
 +----------------------+--------------------------------------------------+
 
 .. note:: If there are one or more plugins active, additional mouse

@@ -46,7 +46,8 @@ class AggContext(object):
     
     def get_font(self, name, size, color):
         color = self.get_color(color)
-        filename = '/usr/share/fonts/truetype/ttf-dejavu/DejaVuSans.ttf'
+        # TODO: what kind of lookup can we use for this?
+        filename = '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'
         f = agg.Font(color, filename, size=size)
         return f
     

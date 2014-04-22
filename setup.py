@@ -46,7 +46,7 @@ setup(
                 # Common stuff
                 'ginga.misc', 'ginga.misc.plugins', 'ginga.base',
                 # Misc
-                'ginga.util', 'ginga.icons', 'ginga.doc'
+                'ginga.util', 'ginga.icons', 'ginga.doc', 'ginga.tests',
                 ],
     package_data = { 'ginga.icons': ['*.ppm', '*.png'],
                      'ginga.gtkw': ['gtk_rc'],
