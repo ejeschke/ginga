@@ -149,23 +149,19 @@ Linux
 =====
 
 Install the necessary dependences.  If you are on a relatively recent
-version of Ubuntu, something like the following will work::
+version of Ubuntu (e.g. v14.04), something like the following will work::
 
     $ apt-get install python-numpy python-scipy python-matplotlib \
-      python-pyfits python-pywcs python-gtk python-cairo python-webkit \
+      python-astropy python-gtk python-cairo python-webkit \
       python-magic git pip
 
 Or::
 
     $ apt-get install python-numpy python-scipy python-matplotlib \
-      python-pyfits python-pywcs python-qt4 python-webkit python-magic \
+      python-astropy python-qt4 python-webkit python-magic \
       git pip
 
 (if you want to use the Qt version)
-
-.. note:: `astropy` is preferred over pyfits + pywcs, but was not in the
-	  default repositories as of this writing.  Use "pip install
-	  astropy" to install it if you like.
 
 Then install ginga with pip::
 
