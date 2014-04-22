@@ -44,9 +44,9 @@ install:
   - sudo python${P} setup.py install
   - cd ..
 
-  # GTK is not available for Python 3, so we test QT only for now ...
+  # GTK is not available for Python 3, so we test QT/pyside only for now ...
   # python${PYTHON_SUFFIX}-gtk2
-  - sudo apt-get install -qq python${P}-pyqt4
+  - sudo apt-get install -qq python${P}-pyside
 
   # No apt-get install python3-pip before Ubuntu 13.04 ... python${P}-pip 
   #- if [[ $ASTROPY_VERSION == stable ]]; then sudo pip${P} -q install astropy --use-mirrors; fi
