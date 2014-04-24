@@ -9,7 +9,8 @@
 #
 import math
 
-from ginga.qtw.QtHelp import QtGui, QtCore
+from ginga.qtw.QtHelp import QtGui, QtCore, QFont, QPainter, QPen, \
+     QPolygonF, QPolygon, QColor
 
 from ginga.ImageViewCanvas import *
 from ginga import Mixins
@@ -19,7 +20,7 @@ from ginga import colors
 class QtCanvasMixin(object):
 
     def __get_color(self, color):
-        clr = QtGui.QColor()
+        clr = QColor()
         if isinstance(color, tuple):
             clr.setRgbF(color[0], color[1], color[2])
         else:
@@ -43,9 +44,9 @@ class QtCanvasMixin(object):
             cr.setBrush(QtCore.Qt.NoBrush)
             
     def setup_cr(self):
-        cr = QtGui.QPainter(self.fitsimage.pixmap)
+        cr = QPainter(self.fitsimage.pixmap)
 
-        pen = QtGui.QPen()
+        pen = QPen()
         if hasattr(self, 'linewidth'):
             pen.setWidth(self.linewidth)
         else:
@@ -79,7 +80,7 @@ class QtCanvasMixin(object):
         i1, j1, i2, j2 = self.calcVertexes(x1, y1, x2, y2)
         self.fill(cr, True)
         cr.pen().setJoinStyle(QtCore.Qt.MiterJoin)
-        cr.drawPolygon(QtGui.QPolygonF([QtCore.QPointF(x2, y2),
+        cr.drawPolygon(QPolygonF([QtCore.QPointF(x2, y2),
                                         QtCore.QPointF(i1, j1),
                                         QtCore.QPointF(i2, j2)]))
         cr.pen().setJoinStyle(QtCore.Qt.BevelJoin)
@@ -113,7 +114,7 @@ class Text(TextBase, QtCanvasMixin):
             fontsize = self.scale_font()
         else:
             fontsize = self.fontsize
-        cr.setFont(QtGui.QFont(self.font, pointSize=fontsize))
+        cr.setFont(QFont(self.font, pointSize=fontsize))
         cr.drawText(cx, cy, self.text)
 
 
@@ -125,7 +126,7 @@ class Polygon(PolygonBase, QtCanvasMixin):
 
         qpoints = map(lambda p: QtCore.QPoint(p[0], p[1]),
                       cpoints + [cpoints[0]])
-        qpoly = QtGui.QPolygon(qpoints)
+        qpoly = QPolygon(qpoints)
 
         cr.drawPolygon(qpoly)
 
@@ -142,7 +143,7 @@ class Rectangle(RectangleBase, QtCanvasMixin):
         #qpoints = map(lambda p: QtCore.QPoint(p[0], p[1]), cpoints)
         qpoints = map(lambda p: QtCore.QPoint(p[0], p[1]),
                       cpoints + [cpoints[0]])
-        qpoly = QtGui.QPolygon(qpoints)
+        qpoly = QPolygon(qpoints)
 
         cr = self.setup_cr()
         cr.drawPolygon(qpoly)
@@ -152,7 +153,7 @@ class Rectangle(RectangleBase, QtCanvasMixin):
 
         if self.drawdims:
             fontsize = self.scale_font()
-            cr.setFont(QtGui.QFont(self.font, pointSize=fontsize))
+            cr.setFont(QFont(self.font, pointSize=fontsize))
 
             cx1, cy1 = cpoints[0]
             cx2, cy2 = cpoints[2]
@@ -237,7 +238,7 @@ class Compass(CompassBase, QtCanvasMixin):
             fontsize = self.scale_font()
         else:
             fontsize = self.fontsize
-        cr.setFont(QtGui.QFont('Sans Serif', pointSize=fontsize))
+        cr.setFont(QFont('Sans Serif', pointSize=fontsize))
         cx, cy = self.get_textpos(cr, 'N', cx1, cy1, cx2, cy2)
         cr.drawText(cx, cy, 'N')
         cx, cy = self.get_textpos(cr, 'E', cx1, cy1, cx3, cy3)
@@ -311,7 +312,7 @@ class Ruler(RulerBase, QtCanvasMixin):
             fontsize = self.scale_font()
         else:
             fontsize = self.fontsize
-        cr.setFont(QtGui.QFont(self.font, pointSize=fontsize))
+        cr.setFont(QFont(self.font, pointSize=fontsize))
 
         cr.pen().setCapStyle(QtCore.Qt.RoundCap)
         cr.drawLine(cx1, cy1, cx2, cy2)

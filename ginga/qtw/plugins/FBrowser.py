@@ -13,7 +13,7 @@ import stat, time
 from ginga.misc import Bunch
 from ginga import GingaPlugin
 
-from ginga.qtw.QtHelp import QtGui, QtCore
+from ginga.qtw.QtHelp import QtGui, QtCore, QImage, QPixmap, QIcon, QDrag
 from ginga.qtw import QtHelp
 from ginga import AstroImage
 
@@ -40,18 +40,18 @@ class FBrowser(GingaPlugin.LocalPlugin):
         # Make icons
         icondir = self.fv.iconpath
         foldericon = os.path.join(icondir, 'folder.png')
-        image = QtGui.QImage(foldericon)
-        pixmap = QtGui.QPixmap.fromImage(image)
-        self.folderpb = QtGui.QIcon(pixmap)
+        image = QImage(foldericon)
+        pixmap = QPixmap.fromImage(image)
+        self.folderpb = QIcon(pixmap)
         fileicon = os.path.join(icondir, 'file.png')
-        image = QtGui.QImage(fileicon)
-        pixmap = QtGui.QPixmap.fromImage(image)
-        self.filepb = QtGui.QIcon(pixmap)
+        image = QImage(fileicon)
+        pixmap = QPixmap.fromImage(image)
+        self.filepb = QIcon(pixmap)
         fitsicon = os.path.join(icondir, 'fits.png')
-        image = QtGui.QImage(fitsicon)
-        pixmap = QtGui.QPixmap.fromImage(image)
+        image = QImage(fitsicon)
+        pixmap = QPixmap.fromImage(image)
         
-        self.fitspb = QtGui.QIcon(pixmap)
+        self.fitspb = QIcon(pixmap)
 
 
     def build_gui(self, container):
@@ -342,7 +342,7 @@ class DragTable(QtGui.QTableWidget):
 
         mimeData = QtCore.QMimeData()
         mimeData.setUrls(urls)
-        drag = QtGui.QDrag(self)
+        drag = QDrag(self)
         drag.setMimeData(mimeData)
         ## pixmap = QPixmap(":/drag.png")
         ## drag.setHotSpot(QPoint(pixmap.width()/3, pixmap.height()/3))

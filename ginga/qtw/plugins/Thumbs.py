@@ -10,7 +10,7 @@
 import os
 
 from ginga.qtw import ImageViewQt as ImageViewQt
-from ginga.qtw.QtHelp import QtGui, QtCore
+from ginga.qtw.QtHelp import QtGui, QtCore, QPixmap
 from ginga.misc.plugins import ThumbsBase
 from ginga.qtw import QtHelp
 from ginga.misc import Bunch
@@ -92,7 +92,7 @@ class Thumbs(ThumbsBase.ThumbsBase):
 
     def insert_thumbnail(self, imgwin, thumbkey, thumbname, chname, name, path,
                          thumbpath, metadata):
-        pixmap = QtGui.QPixmap.fromImage(imgwin)
+        pixmap = QPixmap.fromImage(imgwin)
         imglbl = MyLabel()
         imglbl.setPixmap(pixmap)
         imglbl.thumbs_cb = lambda: self.load_file(thumbkey, chname, name, path)
@@ -205,7 +205,7 @@ class Thumbs(ThumbsBase.ThumbsBase):
                 return
 
             self.logger.debug("generating pixmap.")
-            pixmap = QtGui.QPixmap.fromImage(imgwin)
+            pixmap = QPixmap.fromImage(imgwin)
             bnch.imgwin = imgwin
             bnch.pixmap = pixmap
             bnch.imglbl.setPixmap(pixmap)

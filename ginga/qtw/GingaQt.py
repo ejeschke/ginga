@@ -15,7 +15,7 @@ import traceback
 import platform
         
 # GUI imports
-from ginga.qtw.QtHelp import QtGui, QtCore
+from ginga.qtw.QtHelp import QtGui, QtCore, QFont, QImage, QIcon, QPixmap
 from ginga.qtw import Widgets
 
 # Local application imports
@@ -81,8 +81,8 @@ class GingaView(QtMain.QtMain):
 
         for root in self.ds.toplevels:
             # add delete/destroy callbacks
-            root.connect(root, QtCore.SIGNAL('closeEvent()'),
-                         self.quit)
+            ## root.connect(root, QtCore.SIGNAL('closeEvent()'),
+            ##              self.quit)
             #root.setApp(self)
             root.setWindowTitle("Ginga")
         self.ds.add_callback('all-closed', self.quit)
@@ -333,9 +333,9 @@ class GingaView(QtMain.QtMain):
         if icon:
             iconfile = os.path.join(self.iconpath, '%s.png' % icon)
             try:
-                image = QtGui.QImage(iconfile)
-                pixmap = QtGui.QPixmap.fromImage(image)
-                picon = QtGui.QIcon(pixmap)
+                image = QImage(iconfile)
+                pixmap = QPixmap.fromImage(image)
+                picon = QIcon(pixmap)
                 qsize = QtCore.QSize(24, 24)
             except Exception, e:
                 self.logger.error("Error loading icon '%s': %s" % (
@@ -708,7 +708,7 @@ class GingaView(QtMain.QtMain):
         
     def getFont(self, fontType, pointSize):
         fontFamily = self.settings.get(fontType)
-        font = QtGui.QFont(fontFamily, pointSize)
+        font = QFont(fontFamily, pointSize)
         return font
     
     ####################################################

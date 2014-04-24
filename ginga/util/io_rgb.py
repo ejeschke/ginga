@@ -35,8 +35,7 @@ except ImportError:
 # Qt can be used as a replacement for PIL
 if not have_pilutil:
     try:
-        from ginga.qtw.QtHelp import QtCore, QtGui
-        QImage, QColor = QtGui.QImage, QtGui.QColor
+        from ginga.qtw.QtHelp import QImage, QColor, QtCore
         have_qtimage = True
     except ImportError, e:
         pass

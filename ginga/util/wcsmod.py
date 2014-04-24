@@ -136,6 +136,9 @@ def use(wcspkg, raise_err=True):
     elif wcspkg == 'barebones':
         coord_types = ['fk5']
         WCS = BareBonesWCS
+        wcs_configured = True
+        return True
+    
     return False
         
 
@@ -796,9 +799,9 @@ class BareBonesWCS(BaseWCS):
             x, y = x - 1, y - 1
         return (x, y)
 
-    def pixtocoords(self, idxs, system='icrs', coords='data'):
-        return None
-    
+    def pixtosystem(self, idxs, system=None, coords='data'):
+        return self.pixtoradec(idxs, coords=coords)
+
 
 class WcslibWCS(AstropyWCS):
     """DO NOT USE--this class name to be deprecated."""

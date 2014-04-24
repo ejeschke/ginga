@@ -36,7 +36,7 @@ import thread, threading
 import logging
 import Queue as que
 
-from ginga.qtw.QtHelp import QtGui, QtCore
+from ginga.qtw.QtHelp import QtGui, QtCore, have_pyqt4
 from ginga.misc import Task, Future
 
 class QtMain(object):
@@ -53,11 +53,13 @@ class QtMain(object):
         if not ev_quit:
             ev_quit = threading.Event()
         self.ev_quit = ev_quit
-        
-        QtGui.QApplication.setGraphicsSystem('raster')
+
+        if have_pyqt4:
+            QtGui.QApplication.setGraphicsSystem('raster')
         app = QtGui.QApplication([])
-        app.connect(app, QtCore.SIGNAL('lastWindowClosed()'),
-                    app, QtCore.SLOT('quit()'))
+        ## app.connect(app, QtCore.SIGNAL('lastWindowClosed()'),
+        ##             app, QtCore.SLOT('quit()'))
+        app.lastWindowClosed.connect(app.quit)
         self.app = app
         self.gui_thread_id = None
         

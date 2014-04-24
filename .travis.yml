@@ -71,7 +71,8 @@ script:
   # run unit tests
   # this doesn't seem to work:
   # - python${P} setup.py test
-  - nosetests${P} ginga/tests
+  - sudo python${P} setup.py build
+  - nosetests${P} build/lib*/ginga/tests
 
   # build documentation
   - python${P} setup.py build_sphinx

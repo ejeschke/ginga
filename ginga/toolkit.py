@@ -29,7 +29,7 @@ def use(name):
         family = 'qt'
         if name == 'qt':
             name = 'qt4'
-        assert name in ('qt4', 'pyside'), \
+        assert name in ('qt4', 'pyside', 'qt5'), \
                ToolKitError("ToolKit '%s' not supported!" % (name))
 
     elif name.startswith('gtk'):

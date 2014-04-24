@@ -13,7 +13,6 @@ import thread
 import threading, Queue
 # needed by thread mods:
 import inspect, types, ctypes
-import bisect
 import random
 import traceback
  
@@ -180,7 +179,7 @@ class Task(object):
         # --> self.result is set
         # If it is an exception, then raise it in this waiter
         if isinstance(self.result, Exception):
-            raise(self.result)
+            raise (self.result)
         
         # Release waiters and perform callbacks
         # done() has already been called, because of self.ev_done check
@@ -283,6 +282,9 @@ class Task(object):
         Subclass can override this method if desired.
         """
         return str(self.tag)
+
+    def __lt__(self, other):
+        return False
 
     def getExecutionTime(self):
         return self.totaltime

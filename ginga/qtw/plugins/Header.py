@@ -52,7 +52,10 @@ class Header(GingaPlugin.GlobalPlugin):
         vh = table.verticalHeader()
         # Hack to make the rows in a TableView all have a
         # reasonable height for the data
-        vh.setResizeMode(QtGui.QHeaderView.ResizeToContents)
+        if QtHelp.have_pyqt5:
+            vh.setSectionResizeMode(QtGui.QHeaderView.ResizeToContents)
+        else:
+            vh.setResizeMode(QtGui.QHeaderView.ResizeToContents)
         # Hide vertical header
         vh.setVisible(False)
 
@@ -74,7 +77,7 @@ class Header(GingaPlugin.GlobalPlugin):
 
         model = HeaderTableModel(self.columns, header)
         table.setModel(model)
-        selectionModel = QtGui.QItemSelectionModel(model, table)
+        selectionModel = QtHelp.QItemSelectionModel(model, table)
         table.setSelectionModel(selectionModel)
         
         # set column width to fit contents

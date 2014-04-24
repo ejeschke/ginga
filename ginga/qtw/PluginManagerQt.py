@@ -42,9 +42,6 @@ class PluginManager(PluginManagerBase):
                             alignment=QtCore.Qt.AlignLeft)
 
         lbl.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-        # better than making a whole new subclass just to get a label to
-        # respond to a mouse click
-        lbl.mousePressEvent = lambda event: lbl.emit(QtCore.SIGNAL("clicked"))
 
         lname = bnch.pInfo.name.lower()
         menu = QtGui.QMenu()
@@ -61,12 +58,18 @@ class PluginManager(PluginManagerBase):
         def on_context_menu(point):
             menu.exec_(lbl.mapToGlobal(point))
 
-        lbl.connect(lbl, QtCore.SIGNAL('customContextMenuRequested(const QPoint&)'), on_context_menu)
-        lbl.connect(lbl, QtCore.SIGNAL('clicked'),
-                    lambda: self.set_focus(lname))
+        lbl.customContextMenuRequested.connect(on_context_menu)
+        # better than making a whole new subclass just to get a label to
+        # respond to a mouse click
+        lbl.mousePressEvent = lambda event: self.set_focus_cb(event, lname)
 
         bnch.setvals(widget=lbl, label=lbl, menu=menu)
 
+    def set_focus_cb(self, event, lname):
+        if event.button() == 1:
+            event.accept()
+            self.set_focus(lname)
+    
     def remove_taskbar(self, bnch):
         self.logger.debug("removing widget from taskbar")
         QtHelp.removeWidget(self.hbox, bnch.widget)

@@ -12,7 +12,8 @@ import math
 import numpy
 import StringIO
 
-from ginga.qtw.QtHelp import QtGui, QtCore
+from ginga.qtw.QtHelp import QtGui, QtCore, QFont, QColor, QImage, \
+     QPixmap, QCursor, QPainter, have_pyqt5
 from ginga import ImageView, Mixins, Bindings
 
 moduleHome = os.path.split(sys.modules[__name__].__file__)[0]
@@ -84,7 +85,7 @@ class RenderWidget(QtGui.QWidget):
         height = y2 - y1
 
         # redraw the screen from backing pixmap
-        painter = QtGui.QPainter(self)
+        painter = QPainter(self)
         rect = QtCore.QRect(x1, y1, width, height)
         painter.drawPixmap(rect, self.pixmap, rect)
         
@@ -134,7 +135,7 @@ class ImageViewQt(ImageView.ImageViewBase):
         self.message = None
         self.msgtimer = QtCore.QTimer()
         self.msgtimer.timeout.connect(self.onscreen_message_off)
-        self.msgfont = QtGui.QFont(self.t_['onscreen_ff'],
+        self.msgfont = QFont(self.t_['onscreen_ff'],
                                    pointSize=24)
         self.set_bg(0.5, 0.5, 0.5, redraw=False)
         self.set_fg(1.0, 1.0, 1.0, redraw=False)
@@ -160,7 +161,7 @@ class ImageViewQt(ImageView.ImageViewBase):
         # Get qimage for copying pixel data
         qimage = self._get_qimage(data)
 
-        painter = QtGui.QPainter(drawable)
+        painter = QPainter(drawable)
         painter.setWorldMatrixEnabled(True)
 
         # fill pixmap with background color
@@ -176,7 +177,7 @@ class ImageViewQt(ImageView.ImageViewBase):
 
         # Draw a cross in the center of the window in debug mode
         if self.t_['show_pan_position']:
-            clr = QtGui.QColor()
+            clr = QColor()
             clr.setRgbF(1.0, 0.0, 0.0)
             painter.setPen(clr)
             ctr_x, ctr_y = self.get_center()
@@ -227,7 +228,7 @@ class ImageViewQt(ImageView.ImageViewBase):
         # all the time.  On Qt this causes unpleasant flashing in the display.
         if (self.pixmap == None) or (self.pixmap.width() < width) or \
            (self.pixmap.height() < height):
-            pixmap = QtGui.QPixmap(width*2, height*2)
+            pixmap = QPixmap(width*2, height*2)
             #pixmap.fill(QColor("black"))
             self.pixmap = pixmap
             self.imgwin.set_pixmap(pixmap)
@@ -327,12 +328,12 @@ class ImageViewQt(ImageView.ImageViewBase):
     #     bgra[...,2] = rgb[...,0]
     #     if channels == 3:
     #             bgra[...,3].fill(255)
-    #             fmt = QtGui.QImage.Format_RGB32
+    #             fmt = QImage.Format_RGB32
     #     else:
     #             bgra[...,3] = rgb[...,3]
-    #             fmt = QtGui.QImage.Format_ARGB32
+    #             fmt = QImage.Format_ARGB32
 
-    #     result = QtGui.QImage(bgra.data, w, h, fmt)
+    #     result = QImage(bgra.data, w, h, fmt)
     #     # Need to hang on to a reference to the array
     #     result.ndarray = bgra
     #     return result
@@ -340,15 +341,15 @@ class ImageViewQt(ImageView.ImageViewBase):
     def _get_qimage(self, bgra):
         h, w, channels = bgra.shape
 
-        fmt = QtGui.QImage.Format_ARGB32
-        result = QtGui.QImage(bgra.data, w, h, fmt)
+        fmt = QImage.Format_ARGB32
+        result = QImage(bgra.data, w, h, fmt)
         # Need to hang on to a reference to the array
         result.ndarray = bgra
         return result
 
     def _get_color(self, r, g, b):
         n = 255.0
-        clr = QtGui.QColor(int(r*n), int(g*n), int(b*n))
+        clr = QColor(int(r*n), int(g*n), int(b*n))
         return clr
         
     def set_fg(self, r, g, b, redraw=True):
@@ -653,11 +654,20 @@ class ImageViewEvent(ImageViewQt):
 
         # 15 deg is standard 1-click turn for a wheel mouse
         # delta() usually returns 120
-        delta = event.delta()
+        if have_pyqt5:
+            # TODO: use pixelDelta() for better handling on hi-res devices
+            point = event.angleDelta()
+            delta = math.sqrt(point.x() ** 2 + point.y() ** 2)
+            if point.y() < 0:
+                delta = -delta
+            orientation = QtCore.Qt.Vertical
+        else:
+            delta = event.delta()
+            orientation = event.orientation()
         numDegrees = abs(delta) / 8.0
 
         direction = None
-        if event.orientation() == QtCore.Qt.Horizontal:
+        if orientation == QtCore.Qt.Horizontal:
             if delta > 0:
                 direction = 270.0
             elif delta < 0:
@@ -819,10 +829,10 @@ class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
 
         
 def make_cursor(iconpath, x, y):
-    image = QtGui.QImage()
+    image = QImage()
     image.load(iconpath)
-    pm = QtGui.QPixmap(image)
-    return QtGui.QCursor(pm, x, y)
+    pm = QPixmap(image)
+    return QCursor(pm, x, y)
 
 
 #END

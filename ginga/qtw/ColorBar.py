@@ -9,7 +9,8 @@
 #
 import math
 
-from ginga.qtw.QtHelp import QtGui, QtCore
+from ginga.qtw.QtHelp import QtGui, QtCore, QFont, QColor, QPainter, \
+     QPen, QPixmap
 
 from ginga.misc import Callback
 from ginga import RGBMap
@@ -101,8 +102,8 @@ class ColorBar(Callback.Callbacks, QtGui.QWidget):
     def resizeEvent(self, event):
         width, height = self.get_size()
         #print "making pixmap of %dx%d" % (width, height)
-        pixmap = QtGui.QPixmap(width, height)
-        #pixmap.fill(QtGui.QColor("black"))
+        pixmap = QPixmap(width, height)
+        #pixmap.fill(QColor("black"))
         self.pixmap = pixmap
         # calculate intervals for range numbers
         nums = max(int(width // self._avg_pixels_per_range_num), 1)
@@ -134,13 +135,13 @@ class ColorBar(Callback.Callbacks, QtGui.QWidget):
 
         # redraw the screen from backing pixmap
         #print "copying pixmap to widget"
-        painter = QtGui.QPainter(self)
+        painter = QPainter(self)
         rect = QtCore.QRect(x1, y1, width, height)
         painter.drawPixmap(rect, self.pixmap, rect)
         
     def setup_cr(self):
-        cr = QtGui.QPainter(self.pixmap)
-        pen = QtGui.QPen()
+        cr = QPainter(self.pixmap)
+        pen = QPen()
         pen.setWidth(1)
         cr.setPen(pen)
         return cr
@@ -178,7 +179,7 @@ class ColorBar(Callback.Callbacks, QtGui.QWidget):
 
             (r, g, b) = self.rgbmap.get_rgbval(i)
 
-            color = QtGui.QColor(r, g, b)
+            color = QColor(r, g, b)
             cr.fillRect(QtCore.QRect(x, 0, wd, clr_ht), color)
 
             # Draw range scale if we are supposed to
@@ -203,8 +204,8 @@ class ColorBar(Callback.Callbacks, QtGui.QWidget):
 
         # draw range
         pen = cr.pen()
-        cr.setFont(QtGui.QFont(self.t_font, pointSize=self.t_fontsize))
-        color = QtGui.QColor()
+        cr.setFont(QFont(self.t_font, pointSize=self.t_fontsize))
+        color = QColor()
         color.setRgbF(0.0, 0.0, 0.0)
         pen.setColor(color)
         cr.setPen(pen)

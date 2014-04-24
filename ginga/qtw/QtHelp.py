@@ -15,16 +15,45 @@ import ginga.toolkit
 
 have_pyqt4 = False
 have_pyside = False
+have_pyqt5 = False
+configured = False
 
 toolkit = ginga.toolkit.toolkit
 
-if toolkit in ('qt4', 'choose'):
+if toolkit in ('qt5', 'choose') and (not configured):
+    try:
+        from PyQt5 import QtCore
+        from PyQt5 import QtWidgets as QtGui
+        from PyQt5.QtGui import QImage, QColor, QFont, QPixmap, QIcon, \
+             QCursor, QPainter, QPen, QPolygonF, QPolygon, QTextCursor, \
+             QDrag
+        from PyQt5.QtCore import QItemSelectionModel
+        have_pyqt5 = True
+        try:
+            from PyQt5 import QtWebKit
+        except ImportError:
+            pass
+
+        # for Matplotlib
+        os.environ['QT_API'] = 'pyqt'
+        configured = True
+    except ImportError as e:
+        pass
+    # Qt5 not working:
+    # sort checkbox in Header
+    # drag from FBrowser
+    # no matplotlib support
+
+if toolkit in ('qt4', 'choose') and (not configured):
     try:
         import sip
         for cl in ('QString', 'QVariant'):
             sip.setapi(cl, 2)
 
         from PyQt4 import QtCore, QtGui
+        from PyQt4.QtGui import QImage, QColor, QFont, QPixmap, QIcon, \
+             QCursor, QPainter, QPen, QPolygonF, QPolygon, QTextCursor, \
+             QDrag, QItemSelectionModel
         have_pyqt4 = True
         try:
             from PyQt4 import QtWebKit
@@ -33,12 +62,16 @@ if toolkit in ('qt4', 'choose'):
 
         # for Matplotlib
         os.environ['QT_API'] = 'pyqt'
+        configured = True
     except ImportError as e:
         pass
 
-if toolkit in ('pyside', 'choose') and (not have_pyqt4):
+if toolkit in ('pyside', 'choose') and (not configured):
     try:
         from PySide import QtCore, QtGui
+        from PySide.QtGui import QImage, QColor, QFont, QPixmap, QIcon, \
+             QCursor, QPainter, QPen, QPolygonF, QPolygon, QTextCursor, \
+             QDrag, QItemSelectionModel
         have_pyside = True
         try:
             from PySide import QtWebKit
@@ -47,15 +80,18 @@ if toolkit in ('pyside', 'choose') and (not have_pyqt4):
 
         # for Matplotlib
         os.environ['QT_API'] = 'pyside'
+        configured = True
     except ImportError:
         pass
     
-if have_pyqt4:
+if have_pyqt5:
+    ginga.toolkit.use('qt5')
+elif have_pyqt4:
     ginga.toolkit.use('qt4')
 elif have_pyside:
     ginga.toolkit.use('pyside')
 else:
-    raise ImportError("Failed to import qt4 or pyside. There may be an issue with the toolkit module or it is not installed")
+    raise ImportError("Failed to import qt4, qt5 or pyside. There may be an issue with the toolkit module or it is not installed")
 
 from ginga.misc import Bunch, Callback
 
@@ -353,8 +389,8 @@ class Desktop(Callback.Callbacks):
             tb = nb.tabBar()
             ## tb.setAcceptDrops(True)
             tb.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-            tb.connect(tb, QtCore.SIGNAL('customContextMenuRequested(const QPoint&)'),
-                       lambda point: self.on_context_menu(nb, group, point))
+            ## tb.connect(tb, QtCore.SIGNAL('customContextMenuRequested(const QPoint&)'),
+            ##            lambda point: self.on_context_menu(nb, group, point))
 
 
         else:

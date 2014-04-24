@@ -7,7 +7,7 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-from ginga.qtw.QtHelp import QtGui, QtCore
+from ginga.qtw.QtHelp import QtGui, QtCore, QTextCursor
 from ginga.qtw import QtHelp
 
 from ginga.misc import Callback, Bunch
@@ -90,8 +90,8 @@ class TextArea(WidgetBase):
         if not autoscroll:
             return
 
-        self.widget.moveCursor(QtGui.QTextCursor.End)
-        self.widget.moveCursor(QtGui.QTextCursor.StartOfLine)
+        self.widget.moveCursor(QTextCursor.End)
+        self.widget.moveCursor(QTextCursor.StartOfLine)
         self.widget.ensureCursorVisible()
             
     def get_text(self):
