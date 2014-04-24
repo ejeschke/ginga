@@ -13,7 +13,7 @@ import stat, time
 from ginga.misc import Bunch
 from ginga import GingaPlugin
 
-from ginga.qtw.QtHelp import QtGui, QtCore, QImage, QPixmap, QIcon, QDrag
+from ginga.qtw.QtHelp import QtGui, QtCore, QImage, QPixmap, QIcon
 from ginga.qtw import QtHelp
 from ginga import AstroImage
 
@@ -342,12 +342,15 @@ class DragTable(QtGui.QTableWidget):
 
         mimeData = QtCore.QMimeData()
         mimeData.setUrls(urls)
-        drag = QDrag(self)
+        drag = QtHelp.QDrag(self)
         drag.setMimeData(mimeData)
         ## pixmap = QPixmap(":/drag.png")
         ## drag.setHotSpot(QPoint(pixmap.width()/3, pixmap.height()/3))
         ## drag.setPixmap(pixmap)
-        result = drag.start(QtCore.Qt.MoveAction)
+        if QtHelp.have_pyqt5:
+            result = drag.exec_(QtCore.Qt.MoveAction)
+        else:
+            result = drag.start(QtCore.Qt.MoveAction)
 
     def mouseMoveEvent(self, event):
         self.startDrag(event)

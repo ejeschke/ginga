@@ -181,14 +181,16 @@ class HeaderTableModel(QtCore.QAbstractTableModel):
         def sortfn(card):
             field = self.columns[Ncol][1]
             return card[field]
-        
-        self.emit(QtCore.SIGNAL("layoutAboutToBeChanged()"))
+
+        if QtHelp.have_pyqt4:
+            self.emit(QtCore.SIGNAL("layoutAboutToBeChanged()"))
 
         self.header = sorted(self.header, key=sortfn)        
 
         if order == QtCore.Qt.DescendingOrder:
             self.header.reverse()
-        self.emit(QtCore.SIGNAL("layoutChanged()"))
+        if QtHelp.have_pyqt4:
+            self.emit(QtCore.SIGNAL("layoutChanged()"))
         
     
 #END

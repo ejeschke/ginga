@@ -13,6 +13,15 @@ packages.  As long as a platform supports python and the necessary
 packages, it can run some version of ginga.  On recent Linux, Mac and
 Windows versions, all of these packages are available.
 
+Does Ginga work with python 3?
+------------------------------
+Yes.  Just install with python 3.  Of course, you need all the
+supporting modules for python 3 (numpy, scipy, qt5, etc.)
+
+--------
+Toolkits
+--------
+
 What GUI toolkit does Ginga use?
 --------------------------------
 It depends what exactly you want to run--Ginga is both a toolkit for
@@ -21,11 +30,15 @@ programs currently support Qt, Gtk, Tk and Matplotlib.  The full
 reference viewer currently supports Qt and Gtk.  The difference is
 explained here :ref:`ch-programming-ginga`.
 
-Does Ginga work with python 3?
-------------------------------
-Yes.  Just install with python 3.  Of course, you need all the
-supporting modules for python 3 (numpy, scipy, qt4, etc.)
+Can Ginga work with PyQt5?
+--------------------------
+Yes, although some plugins for the reference viewer require matplotlib,
+and that doesn't yet support Qt5 as a backend, so those plugins won't be
+available.
 
+Can Ginga work with Gtk3?
+-------------------------
+Not yet.
 
 ----------------
 Control Bindings

@@ -578,13 +578,15 @@ class CatalogTableModel(QtCore.QAbstractTableModel):
             field = self.columns[Ncol][1]
             return star[field]
         
-        self.emit(QtCore.SIGNAL("layoutAboutToBeChanged()"))
+        if QtHelp.have_pyqt4:
+            self.emit(QtCore.SIGNAL("layoutAboutToBeChanged()"))
 
         self.starlist = sorted(self.starlist, key=sortfn)        
 
         if order == QtCore.Qt.DescendingOrder:
             self.starlist.reverse()
-        self.emit(QtCore.SIGNAL("layoutChanged()"))
+        if QtHelp.have_pyqt4:
+            self.emit(QtCore.SIGNAL("layoutChanged()"))
         
     
 # END

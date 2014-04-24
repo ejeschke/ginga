@@ -16,7 +16,7 @@ from ginga.Control import packageHome
 
 has_webkit = False
 try:
-    from ginga.qtw.QtHelp import QtWebKit as webkit
+    from ginga.qtw.QtHelp import QWebView
     has_webkit = True
 except ImportError:
     pass
@@ -33,7 +33,7 @@ class WBrowser(GingaPlugin.GlobalPlugin):
         if not has_webkit:
             self.browser = QtGui.QLabel("Please install the python-webkit package to enable this plugin")
         else:
-            self.browser = webkit.QWebView()
+            self.browser = QWebView()
         
         sw = QtGui.QScrollArea()
         sw.setWidgetResizable(True)

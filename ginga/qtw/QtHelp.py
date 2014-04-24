@@ -31,6 +31,7 @@ if toolkit in ('qt5', 'choose') and (not configured):
         have_pyqt5 = True
         try:
             from PyQt5 import QtWebKit
+            from PyQt5.QtWebKitWidgets import QWebView
         except ImportError:
             pass
 
@@ -41,7 +42,6 @@ if toolkit in ('qt5', 'choose') and (not configured):
         pass
     # Qt5 not working:
     # sort checkbox in Header
-    # drag from FBrowser
     # no matplotlib support
 
 if toolkit in ('qt4', 'choose') and (not configured):
@@ -57,6 +57,7 @@ if toolkit in ('qt4', 'choose') and (not configured):
         have_pyqt4 = True
         try:
             from PyQt4 import QtWebKit
+            from PyQt4.QtWebKit import QWebView
         except ImportError:
             pass
 
@@ -75,6 +76,7 @@ if toolkit in ('pyside', 'choose') and (not configured):
         have_pyside = True
         try:
             from PySide import QtWebKit
+            from PySide.QtWebKit import QWebView
         except ImportError:
             pass
 
@@ -389,9 +391,7 @@ class Desktop(Callback.Callbacks):
             tb = nb.tabBar()
             ## tb.setAcceptDrops(True)
             tb.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-            ## tb.connect(tb, QtCore.SIGNAL('customContextMenuRequested(const QPoint&)'),
-            ##            lambda point: self.on_context_menu(nb, group, point))
-
+            tb.customContextMenuRequested.connect(lambda point: self.on_context_menu(nb, group, point))
 
         else:
             nb = StackedWidget()
