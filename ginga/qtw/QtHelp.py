@@ -40,9 +40,6 @@ if toolkit in ('qt5', 'choose') and (not configured):
         configured = True
     except ImportError as e:
         pass
-    # Qt5 not working:
-    # sort checkbox in Header
-    # no matplotlib support
 
 if toolkit in ('qt4', 'choose') and (not configured):
     try:

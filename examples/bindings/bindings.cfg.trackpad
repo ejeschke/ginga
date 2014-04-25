@@ -63,29 +63,22 @@ kp_flip_y = [']', '}']
 kp_swap_xy = ['backslash', '|']
 kp_rotate = ['r']
 kp_rotate_reset = ['R']
-kp_rotate_inc90 = ['e']
-kp_rotate_dec90 = ['E']
 kp_orient_lh = ['o']
 kp_orient_rh = ['O']
+kp_rotate_inc90 = ['e']
+kp_rotate_dec90 = ['E']
 kp_reset = ['escape']
 
 # SCROLLING/WHEEL commands
-sc_pan = []
+sc_pan = ['scroll', 'shift+scroll']
 sc_pan_fine = []
 sc_pan_coarse = []
-sc_zoom = ['scroll']
-sc_zoom_fine = ['shift+scroll']
+sc_zoom = []
+sc_zoom_fine = []
 sc_zoom_coarse = ['ctrl+scroll']
 sc_contrast_fine = []
 sc_contrast_coarse = []
 sc_dist = []
-
-# This controls how fast panning occurs with the sc_pan* functions.
-# Increase to speed up panning
-scroll_pan_acceleration = 1.0
-# For trackpads you can adjust this down if it seems too sensitive.
-scroll_zoom_acceleration = 1.0
-
 
 # MOUSE/BUTTON commands
 # NOTE: most plugins in the reference viewer need "none", "cursor" and "draw"
@@ -113,22 +106,26 @@ ms_panset = ['shift+left']
 # "scroll zoom" (sc_zoom*) features above because the two kinds don't play
 # well together.  A good combination for trackpads is enabling pinch with
 # zoom and the sc_pan functions.
-#gs_pinch = ['pinch']
+gs_pinch = ['pinch']
 
 # This controls what operations the pinch gesture controls.  Possibilities are
 # (empty list or) some combination of 'zoom' and 'rotate'.
 pinch_actions = ['zoom']
+
 pinch_zoom_acceleration = 1.0
 pinch_rotate_acceleration = 1.0
+
+# This controls how fast panning occurs with the sc_pan* functions.  Increase to
+# speed up panning
+scroll_pan_acceleration = 1.0
+
+# For trackpads you can adjust this down if it seems too sensitive.
+scroll_zoom_acceleration = 1.0
 
 # Use opposite sense of panning direction
 pan_reverse = False
 
 # Use opposite sense of zooming scroll wheel
 zoom_scroll_reverse = False
-
-# No messages for color map warps or setting pan position
-#msg_cmap = False
-#msg_panset = False
 
 #END
