@@ -53,7 +53,7 @@ Then restart Ginga.
 
 How can I customize the user interface mappings?
 ------------------------------------------------
-There is more information in Section :ref:`sec-bindings`.
+Yes.  There is more information in Section :ref:`sec-bindings`.
 
 Where can I find a quick reference of the bindings?
 ---------------------------------------------------
@@ -156,10 +156,37 @@ Pretty easy.  See Section :ref:`sec-custom-io`.
 --------------------------
 Problems displaying images
 --------------------------
+Nothing changes in the image when I change settings under "Preferences".
+
+.. note:: The Preferences plugin sets the preferences on a *per-channel*
+	  basis.  Make sure the channel you are looking at has the same
+	  name as the prefix for the preferences.  For example: "Image"
+	  and "Image: Preferences" or "Image1" and "Image1: Preferences".
+
+          The preferences for a given channel are copied from the
+	  default "Image" channel until they are explicitly set and
+	  saved using this plugin.  So if you want preferences that
+	  follow around from channel to channel, save them as
+	  preferences for "Image" and any new channels created will get
+	  those as well, unless you have saved different ones under
+	  those channel names.
+
+Nothing changes in the image when I change the "Auto Cuts" settings under
+Preferences.  I've checked that I'm adjusting preferences for the same
+channel that I'm viewing.
+
+.. note:: What is the setting for "Cut New" under the New Images section
+	  in Preferences for this channel?
+
+          If that setting is "Off" then you have elected not to have
+	  Ginga apply Auto Levels when an image is loaded in that
+	  channel.  Press 'a' in the image window to force an auto cut
+	  levels--it will use the new settings.
+
 No image shows in the display, and I get an error in the terminal about
 histogram and keyword "density". 
 
 .. note:: You need a slightly newer version of numpy.
 
-	  I recommend getting at least numpy-1.6.1.
+          I recommend getting at least numpy-1.6.1.
 

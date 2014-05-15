@@ -45,6 +45,7 @@ class PixTable(GingaPlugin.LocalPlugin):
         self.marks = ['None']
         self.mark_index = 0
         self.mark_selected = None
+        self.tw = None
 
     def build_gui(self, container):
         top = Widgets.VBox()
@@ -257,7 +258,7 @@ class PixTable(GingaPlugin.LocalPlugin):
             self.fitsimage.deleteObjectByTag(self.layertag)
         except:
             pass
-        self.plot = None
+        self.tw = None
         
     def pause(self):
         self.canvas.ui_setActive(False)
@@ -267,7 +268,7 @@ class PixTable(GingaPlugin.LocalPlugin):
         self.redo()
         
     def redo(self):
-        if self.plot == None:
+        if self.tw == None:
             return
         # cut out and set the pixel table data
         image = self.fitsimage.get_image()
@@ -283,7 +284,7 @@ class PixTable(GingaPlugin.LocalPlugin):
     def motion_cb(self, canvas, button, data_x, data_y):
         if self.mark_selected != None:
             return False
-        if self.plot == None:
+        if self.tw == None:
             return
         self.lastx, self.lasty = data_x, data_y
         self.redo()

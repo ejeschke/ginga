@@ -46,7 +46,8 @@ class TimerFactory(object):
             self.waittime = self.waittime_reset
             if len(self.waiters) > 0:
                 timer = self.waiters[0]
-                self.waittime = timer.deadline - cur_time
+                deadline = timer.get_deadline()
+                self.waittime = deadline - cur_time
             else:
                 #print "notifying"
                 self.lock.notifyAll()
@@ -72,7 +73,8 @@ class TimerFactory(object):
             if not timer in self.waiters:
                 return
             self.waiters.remove(timer)
-            self.waiters = sorted(self.waiters, key=lambda t: t.deadline)
+            self.waiters = sorted(self.waiters,
+                                  key=lambda t: t.get_deadline())
             self.ev_timer.set()
 
         timer.make_callback('cancelled')
@@ -94,8 +96,8 @@ class TimerFactory(object):
         with self.lock:
             if not timer in self.waiters:
                 self.waiters.append(timer)
-            self.waiters = sorted(self.waiters, key=lambda t: t.deadline)
-            #print [timer.deadline for timer in self.waiters]
+            self.waiters = sorted(self.waiters,
+                                  key=lambda t: t.get_deadline())
             self.ev_timer.set()
         
     def is_set(self, timer):
@@ -114,7 +116,7 @@ class TimerFactory(object):
             rel = []
             for i in xrange(len(self.waiters)):
                 timer = self.waiters[i]
-                if timer.deadline <= cur_time:
+                if timer.get_deadline() <= cur_time:
                     rel.insert(0, (timer, i))
                 else:
                     break
@@ -170,7 +172,7 @@ class TimerFactory(object):
                 if len(self.waiters) > 0:
                     # first waiter always has the shortest deadline
                     timer = self.waiters[0]
-                    if timer.deadline <= cur_time:
+                    if timer.get_deadline() <= cur_time:
                         release = True
                         
             # there are expired timers, release them
@@ -200,6 +202,7 @@ class Timer(Callback.Callbacks):
 
         self.deadline = 0.0
         self.interval = 0.0
+        self.lock = threading.RLock()
 
         for name in ('expired', 'cancelled'):
             self.enable_callback(name)
@@ -215,9 +218,10 @@ class Timer(Callback.Callbacks):
         Set the timer for time_sec.   Any callbacks registered for the
         'expired' event will be called when the timer reaches the deadline.
         """
-        cur_time = time.time()
-        self.deadline = cur_time + time_sec
-        self.interval = time_sec
+        with self.lock:
+            cur_time = time.time()
+            self.deadline = cur_time + time_sec
+            self.interval = time_sec
         self.tfact.add_timer(self)
 
     def is_set(self):
@@ -226,14 +230,24 @@ class Timer(Callback.Callbacks):
         """
         return self.tfact.is_set(timer)        
 
+    def cond_set(self, time_sec):
+        with self.tfact.lock:
+            if not self.is_set():
+                self.set(time_sec)
+                
     def time_left(self):
         """
         Returns the amount of time left before this timer expires.
         May be negative if the timer has already expired.
         """
-        delta = self.deadline - time.time()
+        with self.lock:
+            delta = self.deadline - time.time()
         return delta
 
+    def get_deadline(self):
+        with self.lock:
+            return self.deadline
+        
 
 def main():
 

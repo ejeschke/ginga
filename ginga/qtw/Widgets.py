@@ -18,6 +18,7 @@ class WidgetBase(Callback.Callbacks):
         super(WidgetBase, self).__init__()
 
         self.widget = None
+        self.changed = False
 
     def get_widget(self):
         return self.widget
@@ -41,12 +42,16 @@ class TextEntry(WidgetBase):
         self.enable_callback('activated')
 
     def _cb_redirect(self, *args):
+        if self.changed:
+            self.changed = False
+            return
         self.make_callback('activated')
 
     def get_text(self):
         return self.widget.text()
     
     def set_text(self, text):
+        self.changed = True
         self.widget.setText(text)
 
     def set_length(self, numchars):
@@ -172,9 +177,12 @@ class ComboBox(WidgetBase):
         index = self.widget.findText(text)
         self.widget.removeItem(index)
 
+    def clear(self):
+        self.widget.clear()
+
     def show_text(self, text):
         index = self.widget.findText(text)
-        self.widget.setCurrentIndex(index)
+        self.set_index(index)
 
     def append_text(self, text):
         self.widget.addItem(text)
@@ -202,12 +210,16 @@ class SpinBox(WidgetBase):
         self.enable_callback('value-changed')
 
     def _cb_redirect(self, val):
+        if self.changed:
+            self.changed = False
+            return
         self.make_callback('value-changed', val)
 
     def get_value(self):
         return self.widget.value()
     
     def set_value(self, val):
+        self.changed = True
         self.widget.setValue(val)
 
     def set_decimals(self, num):
@@ -237,12 +249,16 @@ class Slider(WidgetBase):
         self.enable_callback('value-changed')
 
     def _cb_redirect(self, val):
+        if self.changed:
+            self.changed = False
+            return
         self.make_callback('value-changed', val)
     
     def get_value(self):
         return self.widget.value()
     
     def set_value(self, val):
+        self.changed = True
         self.widget.setValue(val)
 
     def set_tracking(self, tf):
@@ -280,10 +296,14 @@ class CheckBox(WidgetBase):
         self.enable_callback('activated')
 
     def _cb_redirect(self, *args):
+        if self.changed:
+            self.changed = False
+            return
         val = self.get_state()
         self.make_callback('activated', val)
 
     def set_state(self, tf):
+        self.changed = True
         self.widget.setChecked(tf)
 
     def get_state(self):
@@ -302,9 +322,13 @@ class ToggleButton(WidgetBase):
         self.enable_callback('activated')
 
     def _cb_redirect(self, val):
+        if self.changed:
+            self.changed = False
+            return
         self.make_callback('activated', val)
     
     def set_state(self, tf):
+        self.changed = True
         self.widget.setChecked(tf)
 
     def get_state(self):
@@ -321,9 +345,13 @@ class RadioButton(WidgetBase):
         self.enable_callback('activated')
 
     def _cb_redirect(self, val):
+        if self.changed:
+            self.changed = False
+            return
         self.make_callback('activated', val)
 
     def set_state(self, tf):
+        self.changed = True
         self.widget.setChecked(tf)
 
     def get_state(self):

@@ -231,6 +231,10 @@ class AstroImage(BaseImage):
         args = [x, y] + self.revnaxis
         return self.wcs.pixtocoords(args, system=system, coords=coords)
     
+    def spectral_coord(self, coords='data'):
+        args = [0, 0] + self.revnaxis
+        return self.wcs.spectral_coord(args, coords=coords)
+
     def pixtoradec(self, x, y, format='deg', coords='data'):
         args = [x, y] + self.revnaxis
         ra_deg, dec_deg = self.wcs.pixtoradec(args, coords=coords)

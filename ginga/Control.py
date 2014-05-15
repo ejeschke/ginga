@@ -247,7 +247,7 @@ class GingaControl(Callback.Callbacks):
             index = self.fn_keys.index(keyname)
             if (index >= 0) and (index < len(self.operations)):
                 opname = self.operations[index]
-                self.start_operation_channel(chname, opname, None)
+                self.start_local_plugin(chname, opname, None)
         return True
 
     def dragdrop(self, fitsimage, urls):

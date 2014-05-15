@@ -185,11 +185,11 @@ class AstropyWCS(BaseWCS):
         self.wcs = None
         self.coordsys = 'raw'
         self.coord_table = {
-            'icrs': coordinates.ICRSCoordinates,
-            'fk5': coordinates.FK5Coordinates,
-            'fk4': coordinates.FK4Coordinates,
-            'galactic': coordinates.GalacticCoordinates,
-            #'azel': coordinates.HorizontalCoordinates,
+            'icrs': coordinates.ICRS,
+            'fk5': coordinates.FK5,
+            'fk4': coordinates.FK4,
+            'galactic': coordinates.Galactic,
+            #'azel': coordinates.Horizontal,
             }
         self.kind = 'astropy/WCSLIB'
 
@@ -207,6 +207,21 @@ class AstropyWCS(BaseWCS):
             self.logger.error("Error making WCS object: %s" % (str(e)))
             self.wcs = None
 
+    def spectral_coord(self, idxs, coords='data'):
+
+        if coords == 'data':
+            origin = 0
+        else:
+            origin = 1
+        pixcrd = numpy.array([idxs], numpy.float_)
+        try:
+            sky = self.wcs.all_pix2world(pixcrd, origin)
+            return float(sky[0, 2])
+
+        except Exception, e:
+            self.logger.error("Error calculating spectral coordinate: %s" % (str(e)))
+            raise WCSError(e)
+        
     def pixtoradec(self, idxs, coords='data'):
 
         if coords == 'data':
@@ -249,7 +264,7 @@ class AstropyWCS(BaseWCS):
             pix = self.wcs.wcs_world2pix(skycrd, origin)
 
         except Exception, e:
-            print ("Error calculating radectopix: %s" % (str(e)))
+            self.logger.error("Error calculating radectopix: %s" % (str(e)))
             raise WCSError(e)
 
         x = float(pix[0, 0])
@@ -388,6 +403,9 @@ class AstLibWCS(BaseWCS):
         #raise WCSError("Cannot determine appropriate coordinate system from FITS header")
         return 'j2000'
 
+    def spectral_coord(self, idxs, coords='data'):
+        raise WCSError("This feature not supported by astWCS")
+
     def pixtoradec(self, idxs, coords='data'):
         if coords == 'fits':
             # Via astWCS.NUMPY_MODE, we've forced pixels referenced from 0
@@ -407,7 +425,7 @@ class AstLibWCS(BaseWCS):
             x, y = self.wcs.wcs2pix(ra_deg, dec_deg)
 
         except Exception, e:
-            print ("Error calculating radectopix: %s" % (str(e)))
+            self.logger.error("Error calculating radectopix: %s" % (str(e)))
             raise WCSError(e)
 
         if coords == 'fits':
@@ -490,6 +508,22 @@ class KapteynWCS(BaseWCS):
             self.logger.error("Error making WCS object: %s" % (str(e)))
             self.wcs = None
 
+    def spectral_coord(self, idxs, coords='data'):
+        # Kapteyn's WCS needs pixels referenced from 1
+        if coords == 'data':
+            idxs = tuple(map(lambda x: x+1, idxs))
+        else:
+            idxs = tuple(idxs)
+            
+        try:
+            res = self.wcs.toworld(idxs)
+            if len(res) > 0:
+                return res[self.wcs.specaxnum-1]
+            
+        except Exception, e:
+            self.logger.error("Error calculating spectral coordinate: %s" % (str(e)))
+            raise WCSError(e)
+    
     def pixtoradec(self, idxs, coords='data'):
         # Kapteyn's WCS needs pixels referenced from 1
         if coords == 'data':
@@ -500,7 +534,10 @@ class KapteynWCS(BaseWCS):
             
         try:
             res = self.wcs.toworld(idxs)
-            ra_deg, dec_deg = res[0], res[1]
+            if (self.wcs.lonaxnum != None) and (self.wcs.lataxnum != None):
+                ra_deg, dec_deg = res[self.wcs.lonaxnum-1], res[self.wcs.lataxnum-1]
+            else:
+                ra_deg, dec_deg = res[0], res[1]
             
         except Exception, e:
             self.logger.error("Error calculating pixtoradec: %s" % (str(e)))
@@ -518,7 +555,7 @@ class KapteynWCS(BaseWCS):
             pix = self.wcs.topixel(args)
 
         except Exception, e:
-            print ("Error calculating radectopix: %s" % (str(e)))
+            self.logger.error("Error calculating radectopix: %s" % (str(e)))
             raise WCSError(e)
 
         if coords == 'data':
@@ -601,6 +638,23 @@ class StarlinkWCS(BaseWCS):
             self.logger.error("Error making WCS object: %s" % (str(e)))
             self.wcs = None
 
+    def spectral_coord(self, idxs, coords='data'):
+        # Starlink's WCS needs pixels referenced from 1
+        if coords == 'data':
+            idxs = numpy.array(map(lambda x: x+1, idxs))
+        else:
+            idxs = numpy.array(idxs)
+            
+        try:
+            # pixel to sky coords (in the WCS specified transform)
+            arrs = [ [idxs[i]] for i in range(len(idxs)) ]
+            res = self.wcs.tran(arrs, 1)
+            return res[2][0]
+
+        except Exception, e:
+            self.logger.error("Error calculating spectral coordinate: %s" % (str(e)))
+            raise WCSError(e)
+
     def pixtoradec(self, idxs, coords='data'):
         # Starlink's WCS needs pixels referenced from 1
         if coords == 'data':
@@ -610,12 +664,12 @@ class StarlinkWCS(BaseWCS):
             
         try:
             # pixel to sky coords (in the WCS specified transform)
-            xs, ys = [idxs[0]], [idxs[1]]
-            res = self.wcs.tran([ xs, ys ], 1)
-            ra_rad, dec_rad = res[0][0], res[1][0]
+            arrs = [ [idxs[i]] for i in range(len(idxs)) ]
+            res = self.wcs.tran(arrs, 1)
 
             # whatever sky coords to icrs coords
-            res = self.icrs_trans.tran([[ra_rad], [dec_rad]], 1)
+            res = self.icrs_trans.tran(res, 1)
+            # TODO: what if axes are inverted?
             ra_rad, dec_rad = res[0][0], res[1][0]
             ra_deg, dec_deg = math.degrees(ra_rad), math.degrees(dec_rad)
             #print ra_deg, dec_deg
@@ -630,13 +684,17 @@ class StarlinkWCS(BaseWCS):
         try:
             # sky coords to pixel (in the WCS specified transform)
             ra_rad, dec_rad = math.radians(ra_deg), math.radians(dec_deg)
-            xs, ys = [ra_rad], [dec_rad]
+            # TODO: what if spatial axes are inverted?
+            args = [ra_rad, dec_rad]
+            if naxispath:
+                args += [0] * len(naxispath)
+            arrs = [ [args[i]] for i in range(len(args)) ]
             # 0 as second arg -> inverse transform
-            res = self.wcs.tran([ xs, ys ], 0)
+            res = self.wcs.tran(arrs, 0)
             x, y = res[0][0], res[1][0]
 
         except Exception, e:
-            print ("Error calculating radectopix: %s" % (str(e)))
+            self.logger.error("Error calculating radectopix: %s" % (str(e)))
             raise WCSError(e)
 
         if coords == 'data':
@@ -733,6 +791,9 @@ class BareBonesWCS(BaseWCS):
                 cd22 = float(self.get_keyword('PC002002')) * cdelt2
 
         return (cd11, cd12, cd21, cd22)
+
+    def spectral_coord(self, idxs, coords='data'):
+        raise WCSError("This feature not supported by BareBonesWCS")
 
     def pixtoradec(self, idxs, coords='data'):
         """Convert a (x, y) pixel coordinate on the image to a (ra, dec)

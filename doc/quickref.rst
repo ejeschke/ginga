@@ -107,8 +107,8 @@ Transform commands
 | O                    | Orient image by WCS so North=Up and East=Right   |
 +----------------------+--------------------------------------------------+
 
-Tab Navigation (reference viewer only)
-======================================
+Reference Viewer Only
+=====================
 
 +----------------------+--------------------------------------------------+
 | I                    | Raise Info tab                                   |
@@ -126,6 +126,12 @@ Tab Navigation (reference viewer only)
 | left angle (<)       | Toggle collapse left pane                        |
 +----------------------+--------------------------------------------------+
 | right angle (>)      | Toggle collapse right pane                       | 
++----------------------+--------------------------------------------------+
+| f                    | Toggle full screen                               | 
++----------------------+--------------------------------------------------+
+| F                    | Panoramic full screen                            | 
++----------------------+--------------------------------------------------+
+| m                    | Maximize window                                  | 
 +----------------------+--------------------------------------------------+
 
 .. note:: If there are one or more plugins active, additional mouse

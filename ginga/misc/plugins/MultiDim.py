@@ -7,6 +7,8 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+import time
+
 from ginga import AstroImage
 from ginga.misc import Widgets
 from ginga import GingaPlugin
@@ -32,6 +34,15 @@ class MultiDim(GingaPlugin.LocalPlugin):
         self.naxispath = []
         self.refs = []
         self.orientation = 'vertical'
+
+        # For animation feature
+        self.play_axis = 2
+        self.play_idx = 1
+        self.play_max = 1
+        self.play_int_sec = 0.1
+        self.play_min_sec = 0.1
+        self.timer = fv.get_timer()
+        self.timer.set_callback('expired', self.play_next)
 
     def build_gui(self, container):
         assert have_pyfits == True, \
@@ -61,13 +72,14 @@ class MultiDim(GingaPlugin.LocalPlugin):
         fr = Widgets.Frame("HDU")
 
         captions = [("Num HDUs:", 'label', "Num HDUs", 'llabel'),
-                    ("Choose HDU", 'spinbutton')]
+                    ("Choose HDU", 'combobox'),
+                    ]
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
         self.w.numhdu = b.num_hdus
         self.w.hdu = b.choose_hdu
         self.w.hdu.set_tooltip("Choose which HDU to view")
-        self.w.hdu.add_callback('value-changed', self.set_hdu_cb)
+        self.w.hdu.add_callback('activated', self.set_hdu_cb)
         
         fr.set_widget(w)
         vbox.add_widget(fr, stretch=0)
@@ -75,6 +87,32 @@ class MultiDim(GingaPlugin.LocalPlugin):
         fr = Widgets.Frame("NAXIS")
         self.naxisfr = fr
         vbox.add_widget(fr, stretch=0)
+
+        captions = [("First", 'button', "Prev", 'button', "Stop", 'button'),
+                    ("Last", 'button', "Next", 'button', "Play", 'button'),
+                    ("Interval:", 'label', "Interval", 'spinfloat'),
+                    ]
+        w, b = Widgets.build_info(captions, orientation=orientation)
+        self.w.update(b)
+        b.next.add_callback('activated', lambda w: self.next())
+        b.prev.add_callback('activated', lambda w: self.prev())
+        b.first.add_callback('activated', lambda w: self.first())
+        b.last.add_callback('activated', lambda w: self.last())
+        b.play.add_callback('activated', lambda w: self.play_start())
+        b.stop.add_callback('activated', lambda w: self.play_stop())
+        lower, upper = 0.1, 8.0
+        b.interval.set_limits(lower, upper, incr_value=0.1)
+        b.interval.set_value(lower)
+        b.interval.set_decimals(2)
+        b.interval.add_callback('value-changed', self.play_int_cb)
+        vbox.add_widget(w, stretch=0)
+
+        captions = [("Slice:", 'label', "Slice", 'llabel',
+                     "Value:", 'label', "Value", 'llabel'),
+                    ]
+        w, b = Widgets.build_info(captions, orientation=orientation)
+        self.w.update(b)
+        vbox.add_widget(w, stretch=0)
 
         spacer = Widgets.Label('')
         vbox.add_widget(spacer, stretch=1)
@@ -93,7 +131,8 @@ class MultiDim(GingaPlugin.LocalPlugin):
         container.add_widget(top, stretch=0)
 
     def set_hdu_cb(self, w, val):
-        idx = int(val)
+        #idx = int(val)
+        idx = w.get_index() + 1
         self.set_hdu(idx)
 
     def build_naxis(self, dims):
@@ -112,8 +151,14 @@ class MultiDim(GingaPlugin.LocalPlugin):
                 captions.append((title+':', 'label', title, 'llabel'))
             else:
                 captions.append((title+':', 'label', title, 'llabel',
-                                 "Choose %s" % (title), 'spinbutton'))
+                                 #"Choose %s" % (title), 'spinbutton'))
+                                 "Choose %s" % (title), 'hscale'))
 
+        # Remove old naxis widgets
+        for key in self.w:
+            if key.startswith('choose_'):
+                self.w[key] = None
+                
         w, b = Widgets.build_info(captions, orientation=self.orientation)
         self.w.update(b)
         for n in xrange(0, len(dims)):
@@ -128,12 +173,18 @@ class MultiDim(GingaPlugin.LocalPlugin):
                 upper = maxn
                 slider.set_limits(lower, upper, incr_value=1)
                 slider.set_value(lower)
+                slider.set_tracking(True)
                 #slider.set_digits(0)
                 #slider.set_wrap(True)
                 slider.add_callback('value-changed', self.set_naxis_cb, n)
 
         # Add vbox of naxis controls to gui
         self.naxisfr.set_widget(w)
+
+        self.play_axis = 2
+        if self.play_axis < len(dims):
+            self.play_max = dims[self.play_axis]
+        self.play_idx = 1
 
     def close(self):
         chname = self.fv.get_channelName(self.fitsimage)
@@ -148,12 +199,14 @@ class MultiDim(GingaPlugin.LocalPlugin):
         self.resume()
 
     def pause(self):
+        self.play_stop()
         pass
         
     def resume(self):
         self.redo()
         
     def stop(self):
+        self.play_stop()
         try:
             self.fits_f.close()
         except:
@@ -173,15 +226,18 @@ class MultiDim(GingaPlugin.LocalPlugin):
             self.fitsimage.set_image(image)
             self.build_naxis(dims)
             self.curhdu = idx-1
-            self.logger.debug("hdu #%d loaded." % (idx))
+            self.logger.debug("HDU #%d loaded." % (idx))
+
         except Exception, e:
-            errmsg = "Error loading fits hdu #%d: %s" % (
+            errmsg = "Error loading FITS HDU #%d: %s" % (
                 idx, str(e))
             self.logger.error(errmsg)
-            self.fv.error(errmsg)
+            self.fv.show_error(errmsg)
 
     def set_naxis_cb(self, w, idx, n):
         #idx = int(w.get_value()) - 1
+        self.play_idx = idx
+        self.w['choose_naxis%d' % (n+1)].set_value(idx)
         idx = idx - 1
         self.logger.debug("naxis %d index is %d" % (n+1, idx+1))
 
@@ -199,6 +255,14 @@ class MultiDim(GingaPlugin.LocalPlugin):
         
             image.load_hdu(hdu, naxispath=self.naxispath)
             image.set(path=self.path)
+            if n == 2:
+                # Try to print the spectral coordinate 
+                try:
+                    specval = image.spectral_coord()
+                    self.w.slice.set_text(str(idx+1))
+                    self.w.value.set_text(str(specval))
+                except:
+                    pass
 
             self.fitsimage.set_image(image)
             self.logger.debug("NAXIS%d slice %d loaded." % (n+1, idx+1))
@@ -208,6 +272,58 @@ class MultiDim(GingaPlugin.LocalPlugin):
             self.logger.error(errmsg)
             self.fv.error(errmsg)
 
+    def play_start(self):
+        self._isplaying = True
+        self.play_next(self.timer)
+
+    def play_next(self, timer):
+        if self._isplaying:
+            time_start = time.time()
+            deadline = time_start + self.play_int_sec
+            self.next()
+            #self.fv.update_pending(0.001)
+            delta = max(deadline - time.time(), 0.001)
+            self.timer.set(delta)
+        
+    def play_stop(self):
+        self._isplaying = False
+
+    def first(self):
+        play_idx = 1
+        self.fv.gui_do(self.set_naxis_cb, None, play_idx, self.play_axis)
+        
+    def last(self):
+        play_idx = self.play_max
+        self.fv.gui_do(self.set_naxis_cb, None, play_idx, self.play_axis)
+        
+    def prev(self):
+        play_idx = self.play_idx - 1
+        if play_idx < 1:
+            play_idx = self.play_max
+        self.fv.gui_do(self.set_naxis_cb, None, play_idx, self.play_axis)
+            
+    def next(self):
+        play_idx = self.play_idx + 1
+        if play_idx > self.play_max:
+            play_idx = 1
+        self.fv.gui_do(self.set_naxis_cb, None, play_idx, self.play_axis)
+            
+    def play_int_cb(self, w, val):
+        # force at least play_min_sec, otherwise playback is untenable
+        self.play_int_sec = max(self.play_min_sec, val)
+
+    def prep_hdu_menu(self, w, info):
+        # clear old TOC
+        w.clear()
+
+        idx = 1
+        for tup in info:
+            d = dict(index=idx, name=tup[1], htype=tup[2], dtype=tup[5])
+            toc_ent = "%(index)4d %(name)-12.12s %(htype)-12.12s %(dtype)-8.8s" % d
+            w.append_text(toc_ent)
+            idx += 1
+        if len(info) > 0:
+            w.set_index(0)
         
     def redo(self):
         image = self.fitsimage.get_image()
@@ -222,11 +338,14 @@ class MultiDim(GingaPlugin.LocalPlugin):
 
         lower = 1
         upper = len(self.fits_f)
+        info = self.fits_f.info(output=False)
+        self.prep_hdu_menu(self.w.hdu, info)
         self.num_hdu = upper
         ## self.w.num_hdus.set_text("%d" % self.num_hdu)
         self.logger.debug("there are %d hdus" % (upper))
         self.w.numhdu.set_text("%d" % (upper))
-        adj = self.w.hdu.set_limits(lower, upper, incr_value=1)
+        #adj = self.w.hdu.set_limits(lower, upper, incr_value=1)
+
         self.w.hdu.set_enabled(upper > 1)
 
         self.set_hdu(lower)

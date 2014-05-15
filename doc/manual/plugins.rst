@@ -27,6 +27,8 @@ interested in writing their own custom plugins should refer to
 Global plugins
 ==============
 
+.. _sec-plugins_pan:
+
 Pan
 ===
 

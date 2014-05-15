@@ -247,6 +247,8 @@ as with the other toolkit backends, but quite usable.
 
 Look at the examples in `examples/matplotlib`, especially `example4_mpl.py`.
 
+.. _sec-writing-plugins:
+
 ========================================
 Writing plugins for the reference viewer
 ========================================
