@@ -35,6 +35,18 @@ mod_ctrl = ['control_l', 'control_r']
 # "Control" key on a mac:
 mod_draw = ['meta_right']
 
+# Define up our custom modifiers.
+# These are typically "normal" keys.  The modifier is defined by a triplet:
+# [ keyname, modtype, msg ], where
+# keyname is a key whose press initiates the modifier,
+# modtype is a type in {'held', 'oneshot', 'locked'}
+# msg is a string to be shown in the display or None for no indicator
+dmod_cmapwarp = ('/', 'oneshot', "Color map warp")
+dmod_cutall = ['.', 'oneshot', "Cut all"]
+dmod_rotate = ['r', 'oneshot', "Rotate"]
+dmod_freepan = ['q', 'oneshot', "Free pan"]
+dmod_draw = ['space', 'oneshot', None]
+
 # KEYPRESS commands
 kp_zoom_in = ['+', '=']
 kp_zoom_out = ['-', '_']
@@ -43,25 +55,18 @@ kp_zoom_inv = ['!', '@', '#', '$', '%', '^', '&', '*', '(', ')']
 kp_zoom_fit = ['backquote']
 kp_autozoom_on = ['doublequote']
 kp_autozoom_override = ['singlequote']
-kp_draw = ['space']
 kp_dist = ['s']
 kp_dist_reset = ['S']
-kp_freepan = ['q']
 kp_pan_set = ['p']
 kp_center = ['c']
-kp_cut_low = []
-kp_cut_high = []
-kp_cut_all = ['.']
 kp_cut_255 = ['A']
 kp_cut_auto = ['a']
 kp_autocuts_on = [':']
 kp_autocuts_override = [';']
-kp_cmap_warp = ['/']
 kp_cmap_restore = ['?']
 kp_flip_x = ['[', '{']
 kp_flip_y = [']', '}']
 kp_swap_xy = ['backslash', '|']
-kp_rotate = ['r']
 kp_rotate_reset = ['R']
 kp_orient_lh = ['o']
 kp_orient_rh = ['O']
@@ -76,9 +81,11 @@ sc_pan_coarse = []
 sc_zoom = []
 sc_zoom_fine = []
 sc_zoom_coarse = ['ctrl+scroll']
-sc_contrast_fine = []
+sc_contrast_fine = ['cutall+scroll']
 sc_contrast_coarse = []
 sc_dist = []
+sc_cmap = ['cmapwarp+scroll']
+sc_imap = []
 
 # MOUSE/BUTTON commands
 # NOTE: most plugins in the reference viewer need "none", "cursor" and "draw"
@@ -95,8 +102,8 @@ ms_cmapwarp = ['cmapwarp+left', 'ctrl+right']
 ms_cmaprest = ['ctrl+middle']
 ms_pan = ['ctrl+left']
 ms_freepan = ['freepan+left', 'middle']
-ms_cutlo = ['cutlo+left']
-ms_cuthi = ['cuthi+left']
+ms_cutlo = []
+ms_cuthi = []
 ms_cutall = ['cutall+left']
 ms_panset = ['shift+left']
 

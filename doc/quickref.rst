@@ -22,7 +22,7 @@ Panning and Zooming commands
 +----------------------+--------------------------------------------------+
 | Shift + Digit        | Zoom image to zoom steps -1, -2, ..., -9, -10    |
 +----------------------+--------------------------------------------------+
-| Backquote (\`)       | Zoom image to fit window                         |
+| Backquote (\`)       | Zoom image to fit window and center it           |
 +----------------------+--------------------------------------------------+
 | Minus, Underscore    | Zoom out                                         |
 |    (-, \_)           |                                                  |

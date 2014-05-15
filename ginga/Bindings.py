@@ -116,7 +116,7 @@ class ImageViewBindings(object):
             mod_draw = ['meta_right'],
             
             # Define our custom modifiers
-            dmod_draw = ['space', 'oneshot', "Draw"],
+            dmod_draw = ['space', 'oneshot', None],
             dmod_cmapwarp = ['/', 'oneshot', "Color map"],
             #dmod_cutlo = ['<', 'oneshot', "Cut low"],
             #dmod_cuthi = ['>', 'oneshot', "Cut high"],
