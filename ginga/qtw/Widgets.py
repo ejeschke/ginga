@@ -42,16 +42,12 @@ class TextEntry(WidgetBase):
         self.enable_callback('activated')
 
     def _cb_redirect(self, *args):
-        if self.changed:
-            self.changed = False
-            return
         self.make_callback('activated')
 
     def get_text(self):
         return self.widget.text()
     
     def set_text(self, text):
-        self.changed = True
         self.widget.setText(text)
 
     def set_length(self, numchars):
@@ -296,14 +292,10 @@ class CheckBox(WidgetBase):
         self.enable_callback('activated')
 
     def _cb_redirect(self, *args):
-        if self.changed:
-            self.changed = False
-            return
         val = self.get_state()
         self.make_callback('activated', val)
 
     def set_state(self, tf):
-        self.changed = True
         self.widget.setChecked(tf)
 
     def get_state(self):
@@ -322,13 +314,9 @@ class ToggleButton(WidgetBase):
         self.enable_callback('activated')
 
     def _cb_redirect(self, val):
-        if self.changed:
-            self.changed = False
-            return
         self.make_callback('activated', val)
     
     def set_state(self, tf):
-        self.changed = True
         self.widget.setChecked(tf)
 
     def get_state(self):
@@ -345,13 +333,9 @@ class RadioButton(WidgetBase):
         self.enable_callback('activated')
 
     def _cb_redirect(self, val):
-        if self.changed:
-            self.changed = False
-            return
         self.make_callback('activated', val)
 
     def set_state(self, tf):
-        self.changed = True
         self.widget.setChecked(tf)
 
     def get_state(self):

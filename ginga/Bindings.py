@@ -1429,14 +1429,19 @@ class BindingMapper(object):
             # if there is not a modifier active now,
             # activate this one
             if self._kbdmod == None:
-                self._kbdmod = bnch.name
-                self._kbdmod_type = bnch.type
+                self.set_modifier(bnch.name, bnch.type)
                 if bnch.msg != None:
                     fitsimage.onscreen_message(bnch.msg)
                 return True
         
         try:
-            idx = (self._kbdmod, keyname)
+            # TEMP: hack to get around the issue of how keynames
+            # are generated. This assumes standard modifiers are
+            # mapped to names "shift" and "ctrl"
+            if self._kbdmod in ('shift', 'ctrl'):
+                idx = (None, keyname)
+            else:
+                idx = (self._kbdmod, keyname)
             emap = self.eventmap[idx]
 
         except KeyError:
