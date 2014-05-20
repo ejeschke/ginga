@@ -51,6 +51,7 @@ class Thumbs(ThumbsBase.ThumbsBase):
         tg = ImageViewQt.ImageViewQt(logger=self.logger)
         tg.configure(200, 200)
         tg.enable_autozoom('on')
+        tg.set_autocut_params('zscale')
         tg.enable_autocuts('on')
         tg.enable_auto_orient(True)
         tg.set_makebg(False)

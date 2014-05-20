@@ -2,6 +2,15 @@
 What's New in Ginga?
 ++++++++++++++++++++
 
+Ver 2.0.20140520035237
+======================
+Auto cut levels algorithms have been updated.  "zscale" has been
+reinforced by using the module from the "numdisplay" package, which does
+a fair sight closer to IRAF than the previous one Ginga was using.
+Also, the algorithm "median" (median filtering) makes a comeback.  It's
+now fast enough to include and produces more usable results.
+
+
 Ver 2.0.20140417032430
 ======================
 New interactive command to orient the image by WCS to North=Up.  The

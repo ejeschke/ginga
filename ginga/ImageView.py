@@ -125,7 +125,7 @@ class ImageViewBase(Callback.Callbacks):
 
         # for auto cut levels
         self.autocuts_options = ('on', 'override', 'off')
-        self.t_.addDefaults(autocuts='override', autocut_method='histogram',
+        self.t_.addDefaults(autocuts='override', autocut_method='zscale',
                             autocut_params={})
         for name in ('autocuts', 'autocut_method', 'autocut_params'):
             self.t_.getSetting(name).add_callback('set', self.auto_levels_cb)
@@ -163,7 +163,7 @@ class ImageViewBase(Callback.Callbacks):
                             defer_redraw=True, defer_lagtime=0.025)
 
         # Object that calculates auto cut levels
-        name = self.t_.get('autocut_method', 'histogram')
+        name = self.t_.get('autocut_method', 'zscale')
         klass = AutoCuts.get_autocuts(name)
         self.autocuts = klass(self.logger)
         

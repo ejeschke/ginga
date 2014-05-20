@@ -12,18 +12,17 @@ import time
 import threading
 
 from ginga.misc import Bunch
+from ginga.util import zscale
 
 have_scipy = True
-# TODO: remove median until we figure out why it is so slow
-#autocut_methods = ('minmax', 'median', 'histogram', 'stddev', 'zscale')
-autocut_methods = ('minmax', 'histogram', 'stddev', 'zscale')
+autocut_methods = ('minmax', 'median', 'histogram', 'stddev', 'zscale')
 try:
     import scipy.ndimage.filters
     import scipy.optimize as optimize
     #import scipy.misc
 except ImportError:
     have_scipy = False
-    autocut_methods = ('minmax', 'histogram', 'stddev')
+    autocut_methods = ('minmax', 'histogram', 'stddev', 'zscale')
 
 # Lock to work around a non-threadsafe bug in scipy
 _lock = threading.RLock()
@@ -321,12 +320,15 @@ class MedianFilter(AutoCutsBase):
 
     def get_params_metadata(self):
         return [
-            Bunch.Bunch(name='usecrop', type=self._bool,
-                        valid=set([True, False]),
-                        default=True,
-                        description="Use center crop of image for speed"),
+            ## Bunch.Bunch(name='usecrop', type=self._bool,
+            ##             valid=set([True, False]),
+            ##             default=True,
+            ##             description="Use center crop of image for speed"),
+            Bunch.Bunch(name='num_points', type=int,
+                        default=2000, allow_none=True,
+                        description="Number of points to sample"),
             Bunch.Bunch(name='length', type=int,
-                        default=7,
+                        default=5,
                         description="Median kernel length"),
             ]
 
@@ -337,14 +339,32 @@ class MedianFilter(AutoCutsBase):
         loval, hival = self.calc_medianfilter(data, **params)
         return loval, hival
 
-    def calc_medianfilter(self, data, usecrop=True, length=7):
-        if usecrop:
-            data = self.get_crop(data)
+    def calc_medianfilter(self, data, usecrop=True, num_points=2000,
+                          length=5):
+        # NOTE: usecrop is now ignored, we sample the image instead
+        ## if usecrop:
+        ##     data = self.get_crop(data)
 
-        xout = scipy.ndimage.filters.median_filter(data, size=length)
-        #data_f = numpy.ravel(data)
-        #xout = medfilt1(data_f, length)
-            
+        assert len(data.shape) >= 2, \
+               AutoCutsError("input data should be 2D or greater")
+        ht, wd = data.shape[:2]
+
+        if num_points == None:
+            num_points = 2000
+        if length == None:
+            length = 5
+
+        # sample the data
+        xmax = wd - 1
+        ymax = ht - 1
+        # evenly spaced sampling over rows and cols
+        xskip = int(max(1.0, numpy.sqrt(xmax * ymax / float(num_points))))
+        yskip = xskip
+
+        #cutout = data
+        cutout = data[0:ymax:yskip, 0:xmax:xskip]
+
+        xout = scipy.ndimage.filters.median_filter(cutout, size=length)
         loval = numpy.nanmin(xout)
         hival = numpy.nanmax(xout)
 
@@ -352,9 +372,68 @@ class MedianFilter(AutoCutsBase):
 
 
 class ZScale(AutoCutsBase):
+    """
+    Based on STScI's numdisplay implementation of IRAF's ZScale.
+    """
 
     def __init__(self, logger):
         super(ZScale, self).__init__(logger)
+
+        self.kind = 'zscale'
+        self.params.update(contrast=None, num_points=None)
+        
+    def get_params_metadata(self):
+        return [
+            Bunch.Bunch(name='contrast', type=float,
+                        default=0.25, allow_none=True,
+                        description="Contrast"),
+            Bunch.Bunch(name='num_points', type=int,
+                        default=1000, allow_none=True,
+                        description="Number of points to sample"),
+            ]
+
+    def calc_cut_levels(self, image, params=None):
+        data = image.get_data()
+        if params == None:
+            params = self.params
+            
+        loval, hival = self.calc_zscale(data, **params)
+        return loval, hival
+
+    def calc_zscale(self, data, contrast=0.25,
+                    num_points=1000, num_per_row=None):
+        # NOTE: num_per_row is ignored in this implementation
+
+        assert len(data.shape) >= 2, \
+               AutoCutsError("input data should be 2D or greater")
+        ht, wd = data.shape[:2]
+
+        # calculate contrast parameter, if omitted
+        if contrast == None:
+            contrast = 0.25
+
+        assert (0.0 < contrast <= 1.0), \
+               AutoCutsError("contrast (%.2f) not in range 0 < c <= 1" % (
+            contrast))
+
+        # calculate num_points parameter, if omitted
+        total_points = numpy.size(data)
+        if num_points == None:
+            num_points = max(int(total_points * 0.0002), 1000)
+        num_points = min(num_points, total_points)
+
+        assert (0 < num_points <= total_points), \
+               AutoCutsError("num_points not in range 0-%d" % (total_points))
+
+        loval, hival = zscale.zscale(data, nsamples=num_points,
+                                     contrast=contrast)
+        return loval, hival
+
+
+class ZScale2(AutoCutsBase):
+
+    def __init__(self, logger):
+        super(ZScale2, self).__init__(logger)
 
         self.kind = 'zscale'
         self.params.update(contrast=None, num_points=None, 
@@ -462,8 +541,11 @@ class ZScale(AutoCutsBase):
         num_rows = num_points // num_per_row
         xmax = wd - 1
         xskip = max(xmax // num_per_row, 1)
-        ymax = ht-1
+        ymax = ht - 1
         yskip = max(ymax // num_rows, 1)
+        # evenly spaced sampling over rows and cols
+        ## xskip = int(max(1.0, numpy.sqrt(xmax * ymax / float(num_points))))
+        ## yskip = xskip
 
         cutout = data[0:ymax:yskip, 0:xmax:xskip]
         # flatten and trim off excess
@@ -493,6 +575,11 @@ class ZScale(AutoCutsBase):
         self.logger.debug("num_pix=%d midpoint=%d median=%.4f" % (
             num_pix, midpoint, median))
 
+        ## # Remove outliers to aid fitting
+        ## threshold = numpy.std(cutout) * 2.5
+        ## cutout = cutout[numpy.where(numpy.fabs(cutout - median) > threshold)]
+        ## num_pix = len(cutout)
+        
         # zscale fitting function:
         # I(x) = slope * (x - midpoint) + intercept
         def fitting(x, slope, intercept):
@@ -500,7 +587,7 @@ class ZScale(AutoCutsBase):
             return y
 
         # compute a least squares fit 
-        X = numpy.array(range(num_pix))
+        X = numpy.arange(num_pix)
         Y = cutout
         sigma = numpy.array([ 1.0 ]* num_pix)
         guess = numpy.array([0.0, 0.0])
@@ -524,7 +611,6 @@ class ZScale(AutoCutsBase):
             return (float(data_min), float(data_max))
 
         slope, intercept = p
-
         num_chosen = 0
         self.logger.debug("intercept=%f slope=%f" % (
             intercept, slope))
@@ -555,6 +641,7 @@ autocuts_table = {
     'histogram': Histogram,
     'median': MedianFilter,
     'zscale': ZScale,
+    'zscale2': ZScale2,
     }
 
 def get_autocuts(name):
@@ -562,5 +649,6 @@ def get_autocuts(name):
         raise AutoCutsError("Method '%s' is not supported" % (name))
 
     return autocuts_table[name]
+
 
 # END
