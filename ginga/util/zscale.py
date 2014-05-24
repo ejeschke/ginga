@@ -92,6 +92,8 @@ def zsc_sample (image, maxpix, bpmask=None, zmask=None):
     stride = max (1.0, math.sqrt((nc - 1) * (nl - 1) / float(maxpix)))
     stride = int (stride)
     samples = image[::stride,::stride].flatten()
+    # remove NaN and Inf
+    samples = samples[numpy.isfinite(samples)]
     return samples[:maxpix]
     
 def zsc_fit_line (samples, npix, krej, ngrow, maxiter):

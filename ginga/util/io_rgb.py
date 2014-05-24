@@ -27,7 +27,7 @@ except ImportError:
 have_pilutil = False
 have_qtimage = False
 try:
-    from  scipy.misc import pilutil, imsave
+    from scipy.misc import imresize, imsave, toimage, fromimage
     have_pilutil = True
 except ImportError:
     pass
@@ -262,7 +262,7 @@ class RGBFileHandler(object):
             else:
                 zoom = min(zoom_x, zoom_y)
 
-            newdata = pilutil.imresize(data, zoom, interp=method)
+            newdata = imresize(data, zoom, interp=method)
 
         else:
             raise ImageError("No way to scale image smoothly")
@@ -452,19 +452,19 @@ def convert_profile_numpy(image_np, inprof_path, outprof_path):
     if (not have_pilutil) or (not have_cms):
         return image_np
 
-    in_image_pil = pilutil.toimage(image_np)
+    in_image_pil = toimage(image_np)
     out_image_pil = convert_profile_pil(in_image_pil,
                                         inprof_path, outprof_path)
-    image_out = pilutil.fromimage(out_image_pil)
+    image_out = fromimage(out_image_pil)
     return image_out
 
 def convert_profile_numpy_transform(image_np, transform):
     if (not have_pilutil) or (not have_cms):
         return image_np
 
-    in_image_pil = pilutil.toimage(image_np)
+    in_image_pil = toimage(image_np)
     convert_profile_pil_transform(in_image_pil, transform, inPlace=True)
-    image_out = pilutil.fromimage(in_image_pil)
+    image_out = fromimage(in_image_pil)
     return image_out
 
 def have_monitor_profile():

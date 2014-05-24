@@ -228,7 +228,7 @@ class Timer(Callback.Callbacks):
         """
         Returns True if this timer is set.
         """
-        return self.tfact.is_set(timer)        
+        return self.tfact.is_set(self)        
 
     def cond_set(self, time_sec):
         with self.tfact.lock:

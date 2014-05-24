@@ -30,10 +30,10 @@ class RGBImage(BaseImage):
 
         self.set_data(data_np, metadata=metadata)
 
-    def save_file_as(self, filepath):
+    def save_as_file(self, filepath):
         data = self.get_data()
         hdr = self.get_header()
-        self.io.save_file_as(filepath, data, header)
+        self.io.save_file_as(filepath, data, hdr)
 
     def get_buffer(self, format, output=None):
         """Get image as a buffer in (format).
