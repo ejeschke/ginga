@@ -373,15 +373,17 @@ class DrawingMixin(object):
         self.drawDict = drawDict
         #self.drawtypes = drawDict.keys()
         self.drawtypes = ['point', 'circle', 'rectangle', 'triangle',
-                          'line', 'ruler', 'compass']
+                          'line', 'polygon', 'ruler', 'compass']
         self.t_drawtype = 'point'
         self.t_drawparams = {}
         self._start_x = 0
         self._start_y = 0
+        self._points = []
         self.processTime = 0.0
         # time delta threshold for deciding whether to update the image
         self.deltaTime = 0.020
         self.drawObj = None
+        self.polyObj = None
 
         self.fitsobj = None
         self.drawbuttonmask = 0x4
@@ -499,6 +501,11 @@ class DrawingMixin(object):
             obj = klass(self._start_x, self._start_y, data_x, data_y,
                         **self.t_drawparams)
 
+        elif self.t_drawtype == 'polygon':
+            points = list(self._points)
+            points.append((data_x, data_y))
+            obj = klass(points, **self.t_drawparams)
+
         elif self.t_drawtype == 'ruler':
             text_x, text_y, text_h = self.get_ruler_distances(self._start_x,
                                                               self._start_y,
@@ -519,6 +526,7 @@ class DrawingMixin(object):
     def draw_start(self, canvas, action, data_x, data_y):
         if self.candraw:
             self._isdrawing = True
+            self._points = [(data_x, data_y)]
             self._start_x = data_x
             self._start_y = data_y
             self._draw_update(data_x, data_y)
@@ -530,6 +538,7 @@ class DrawingMixin(object):
             self._draw_update(data_x, data_y)
             self._isdrawing = False
             obj, self.drawObj = self.drawObj, None
+            self._points = []
 
             if obj:
                 objtag = self.add(obj, redraw=True)
@@ -539,6 +548,20 @@ class DrawingMixin(object):
                 self.processDrawing()
                 
             return True
+
+    def draw_poly_add(self, canvas, action, data_x, data_y):
+        print "poly add"
+        if self.candraw and (self.t_drawtype == 'polygon'):
+            print "append point"
+            self._points.append((data_x, data_y))
+        return True
+
+    def draw_poly_delete(self, canvas, action, data_x, data_y):
+        print "poly delete"
+        if self.candraw and (self.t_drawtype == 'polygon'):
+            if len(self._points) > 0:
+                self._points.pop()
+        return True
 
     def draw_motion(self, canvas, button, data_x, data_y):
         if self._isdrawing:

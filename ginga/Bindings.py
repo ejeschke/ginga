@@ -151,6 +151,8 @@ class ImageViewBindings(object):
             kp_rotate_dec90 = ['E'],
             kp_orient_lh = ['o'],
             kp_orient_rh = ['O'],
+            kp_poly_add = ['draw+x'],
+            kp_poly_del = ['draw+z'],
             kp_reset = ['escape'],
             
             # SCROLLING/WHEEL
@@ -912,6 +914,14 @@ class ImageViewBindings(object):
             self._orient(fitsimage, righthand=True, msg=msg)
         return True
 
+    def kp_poly_add(self, fitsimage, keyname, data_x, data_y):
+        fitsimage.draw_poly_add(fitsimage, keyname, data_x, data_y)
+        return True
+
+    def kp_poly_del(self, fitsimage, keyname, data_x, data_y):
+        fitsimage.draw_poly_delete(fitsimage, keyname, data_x, data_y)
+        return True
+
     def kp_reset(self, fitsimage, keyname, data_x, data_y):
         self.reset(fitsimage)
         return True
@@ -1477,8 +1487,8 @@ class BindingMapper(object):
                 return True
 
         # release modifier if this is a oneshot modifier
-        if self._kbdmod_type == 'oneshot':
-            self.reset_modifier(fitsimage)
+        ## if self._kbdmod_type == 'oneshot':
+        ##     self.reset_modifier(fitsimage)
 
         if emap == None:
             return False

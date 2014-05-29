@@ -7,11 +7,11 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-import os, glob
+import os
 import stat, time
 
+from ginga.misc.plugins import FBrowserBase
 from ginga.misc import Bunch
-from ginga import AstroImage, GingaPlugin
 from ginga.gtkw import gtksel
 
 import gtk
@@ -19,30 +19,18 @@ import gtk
 #icon_ext = '.svg'
 icon_ext = '.png'
 
-class FBrowser(GingaPlugin.LocalPlugin):
+class FBrowser(FBrowserBase.FBrowserBase):
 
     def __init__(self, fv, fitsimage):
         # superclass defines some variables for us, like logger
         super(FBrowser, self).__init__(fv, fitsimage)
 
-        self.keywords = ['OBJECT', 'UT']
-        self.columns = [('Name', 'name'),
-                        ('Size', 'st_size'),
-                        ('Mode', 'st_mode'),
-                        ('Last Changed', 'st_mtime')
-                        ]
         self.cell_data_funcs = (self.file_name, self.file_size,
                                 self.file_mode, self.file_last_changed)
         self.cell_sort_funcs = []
         for hdr, key in self.columns:
             self.cell_sort_funcs.append(self._mksrtfnN(key))
         
-        self.jumpinfo = []
-        homedir = os.environ['HOME']
-        self.curpath = os.path.join(homedir, '*')
-        self.do_scanfits = False
-        self.moving_cursor = False
-
         icondir = self.fv.iconpath
         foldericon = os.path.join(icondir, 'folder'+icon_ext)
         self.folderpb = gtksel.pixbuf_new_from_file_at_size(foldericon, 24, 24)
@@ -150,11 +138,6 @@ class FBrowser(GingaPlugin.LocalPlugin):
         model.set_sort_func(idx, fn)
         return True
 
-    def close(self):
-        chname = self.fv.get_channelName(self.fitsimage)
-        self.fv.stop_local_plugin(chname, str(self))
-        return True
-
     def _mksrtfnN(self, key):
         def fn(model, iter1, iter2):
             bnch1 = model.get_value(iter1, 0)
@@ -244,51 +227,9 @@ class FBrowser(GingaPlugin.LocalPlugin):
         #selection.set_uris(paths)
         selection.set("text/plain", 0, '\n'.join(paths))
     
-    def get_info(self, path):
-        dirname, filename = os.path.split(path)
-        name, ext = os.path.splitext(filename)
-        ftype = 'file'
-        if os.path.isdir(path):
-            ftype = 'dir'
-        elif os.path.islink(path):
-            ftype = 'link'
-        elif ext.lower() == '.fits':
-            ftype = 'fits'
-
-        filestat = os.stat(path)
-        bnch = Bunch.Bunch(path=path, name=filename, type=ftype,
-                           st_mode=filestat.st_mode, st_size=filestat.st_size,
-                           st_mtime=filestat.st_mtime)
-        return bnch
-        
-    def browse(self, path):
-        self.logger.debug("path: %s" % (path))
-        if os.path.isdir(path):
-            dirname = path
-            globname = None
-        else:
-            dirname, globname = os.path.split(path)
-        dirname = os.path.abspath(dirname)
-        if not globname:
-            globname = '*'
-        path = os.path.join(dirname, globname)
-
-        # Make a directory listing
-        self.logger.debug("globbing path: %s" % (path))
-        filelist = glob.glob(path)
-        filelist.sort(key=str.lower)
-        filelist.insert(0, os.path.join(dirname, '..'))
-
-        self.jumpinfo = map(self.get_info, filelist)
-        self.curpath = path
+    def makelisting(self, path):
         self.entry.set_text(path)
 
-        if self.do_scanfits:
-            self.scan_fits()
-            
-        self.makelisting()
-
-    def makelisting(self):
         listmodel = gtk.ListStore(object)
         for bnch in self.jumpinfo:
             listmodel.append([bnch])
@@ -298,29 +239,6 @@ class FBrowser(GingaPlugin.LocalPlugin):
         # Hack to get around slow TreeView scrolling with large lists
         self.treeview.set_fixed_height_mode(True)
             
-    def scan_fits(self):
-        for bnch in self.jumpinfo:
-            if not bnch.type == 'fits':
-                continue
-            if not bnch.has_key('kwds'):
-                try:
-                    in_f = AstroImage.pyfits.open(bnch.path, 'readonly')
-                    try:
-                        kwds = {}
-                        for kwd in self.keywords:
-                            kwds[kwd] = in_f[0].header.get(kwd, 'N/A')
-                        bnch.kwds = kwds
-                    finally:
-                        in_f.close()
-                except Exception, e:
-                    continue
-
-    def refresh(self):
-        self.browse(self.curpath)
-        
-    def scan_headers(self):
-        self.browse(self.curpath)
-        
     def browse_cb(self, w):
         path = w.get_text().strip()
         self.browse(path)
@@ -333,38 +251,6 @@ class FBrowser(GingaPlugin.LocalPlugin):
         image = self.fitsimage.get_image()
         self.fv.error_wrap(image.save_as_file, path)
         
-    def make_thumbs(self):
-        path = self.curpath
-        self.logger.info("Generating thumbnails for '%s'..." % (
-            path))
-        filelist = glob.glob(path)
-        filelist.sort(key=str.lower)
-
-        # find out our channel
-        chname = self.fv.get_channelName(self.fitsimage)
-        
-        # Invoke the method in this channel's Thumbs plugin
-        # TODO: don't expose gpmon!
-        rsobj = self.fv.gpmon.getPlugin('Thumbs')
-        self.fv.nongui_do(rsobj.make_thumbs, chname, filelist)
-        
-        
-    def start(self):
-        self.win = None
-        self.browse(self.curpath)
-
-    def pause(self):
-        pass
-    
-    def resume(self):
-        pass
-    
-    def stop(self):
-        pass
-        
-    def redo(self):
-        return True
-    
     def __str__(self):
         return 'fbrowser'
 
