@@ -53,6 +53,9 @@ class RGBImage(BaseImage):
     
     def get_scaled_cutout_wdht(self, x1, y1, x2, y2, new_wd, new_ht,
                                   method='bicubic'):
+        if method == 'basic':
+            return super(RGBImage, self).get_scaled_cutout_wdht(x1, y1, x2, y2,
+                                                                new_wd, new_ht)
         # calculate dimensions of NON-scaled cutout
         old_wd = x2 - x1 + 1
         old_ht = y2 - y1 + 1
@@ -68,8 +71,7 @@ class RGBImage(BaseImage):
         old_wd, old_ht = max(old_wd, 1), max(old_ht, 1)
         scale_x = float(wd) / old_wd
         scale_y = float(ht) / old_ht
-        res = Bunch.Bunch(data=newdata, org_fac=1,
-                          scale_x=scale_x, scale_y=scale_y)
+        res = Bunch.Bunch(data=newdata, scale_x=scale_x, scale_y=scale_y)
         return res
 
     def get_scaled_cutout_pil(self, x1, y1, x2, y2, scale_x, scale_y,
@@ -91,8 +93,7 @@ class RGBImage(BaseImage):
         old_wd, old_ht = max(old_wd, 1), max(old_ht, 1)
         scale_x = float(wd) / old_wd
         scale_y = float(ht) / old_ht
-        res = Bunch.Bunch(data=newdata, org_fac=1,
-                          scale_x=scale_x, scale_y=scale_y)
+        res = Bunch.Bunch(data=newdata, scale_x=scale_x, scale_y=scale_y)
         return res
 
     def get_scaled_cutout(self, x1, y1, x2, y2, scale_x, scale_y,

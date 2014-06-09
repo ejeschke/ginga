@@ -212,4 +212,102 @@ def transform(data_np, flip_x=False, flip_y=False, swap_xy=False):
     return data_np
 
 
+def calc_image_merge_clip(x1, y1, x2, y2, dst_x, dst_y, src_wd, src_ht):
+    """
+    (x1, y1) and (x2, y2) define the extent of the (non-scaled) data
+    shown.  The image, of size (src_wd, src_ht), is to be placed at
+    (dst_x, dst_y) in the image (destination may be outside of the
+    actual data array).
+
+    Returns a tuple (a1, b1, a2, b2) defining the clipped rectangle
+    needed to be cut from the source array and scaled.
+    """
+    print "calc clip in", x1, y1, x2, y2
+    print "src wd,ht=%dx%d" % (src_wd, src_ht)
+
+    # Trim off parts of srcarr that would be "hidden"
+    # to the left and above the dstarr edge.
+    if dst_y < y1:
+        b1 = abs(y1 - dst_y)
+        #srcarr = srcarr[b1:, :, :]
+        src_ht -= b1
+        dst_y += b1
+    else:
+        b1 = 0
+
+    if dst_x < x1:
+        a1 = abs(x1 - dst_x)
+        #srcarr = srcarr[:, a1:, :]
+        src_wd -= a1
+        dst_x -= a1
+    else:
+        a1 = 0
+
+    # Trim off parts of srcarr that would be "hidden"
+    # to the right and below the dstarr edge.
+    ex = dst_y + src_ht - y2
+    if ex > 0:
+        #srcarr = srcarr[:dst_ht, :, :]
+        b2 = src_ht - ex
+        src_ht -= ex
+    else:
+        b2 = src_ht
+
+    ex = dst_x + src_wd - x2
+    if ex > 0:
+        #srcarr = srcarr[:, :dst_wd, :]
+        a2 = src_wd - ex
+        src_wd -= ex
+    else:
+        a2 = src_wd
+
+    print "calc clip out", dst_x, dst_y, a1, b1, a2, b2
+    return (dst_x, dst_y, a1, b1, a2, b2)
+
+
+def overlay_image(dstarr, dst_x, dst_y, srcarr, alpha=1.0):
+
+    dst_ht, dst_wd, dst_dp = dstarr.shape
+    src_ht, src_wd, src_dp = srcarr.shape
+
+    print "1. dst_x, dst_y, dst_wd, dst_ht", dst_x, dst_y, dst_wd, dst_ht
+    print "2. src_wd, src_ht, shape", src_wd, src_ht, srcarr.shape
+    # Trim off parts of srcarr that would be "hidden"
+    # to the left and above the dstarr edge.
+    if dst_y < 0:
+        dy = abs(dst_y)
+        srcarr = srcarr[dy:, :, :]
+        src_ht -= dy
+        dst_y = 0
+
+    if dst_x < 0:
+        dx = abs(dst_x)
+        srcarr = srcarr[:, dx:, :]
+        src_wd -= dx
+        dst_x = 0
+
+    # Trim off parts of srcarr that would be "hidden"
+    # to the right and below the dstarr edge.
+    ex = dst_y + src_ht - dst_ht
+    if ex > 0:
+        srcarr = srcarr[:dst_ht, :, :]
+        src_ht -= ex
+
+    ex = dst_x + src_wd - dst_wd
+    if ex > 0:
+        srcarr = srcarr[:, :dst_wd, :]
+        src_wd -= ex
+
+    print "2. dst_x, dst_y", dst_x, dst_y
+    print "2. src_wd, src_ht, shape", src_wd, src_ht, srcarr.shape
+
+    # calculate alpha blending
+    addarr = (alpha * srcarr).astype(numpy.uint8)
+
+    # Place our srcarr into this dstarr at dst offsets
+    dstarr[dst_y:dst_y+src_ht, dst_x:dst_x+src_wd, 0:3] += addarr[0:src_ht, 0:src_wd, 0:3]
+    # TEMP
+    dstarr = dstarr.clip(0, 255)
+
+
 #END

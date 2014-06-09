@@ -183,6 +183,9 @@ class ImageViewBase(Callback.Callbacks):
         # data indexes at the reference pixel (in data coords)
         self._org_x = 0
         self._org_y = 0
+        # offset from pan position (at center) in this array
+        self._org_xoff = 0
+        self._org_yoff = 0
 
         # pan position
         self._pan_x = 0.0
@@ -676,7 +679,7 @@ class ImageViewBase(Callback.Callbacks):
         Create and return an RGB slices object representing the data
         that should be rendered at this zoom level and pan settings.
 
-        whence is an optimization flag that reduces the time to create
+        `whence` is an optimization flag that reduces the time to create
         the object by only recalculating what is necessary:
 
         0   = new image or pan/scale has changed, recalculate everything
@@ -698,17 +701,18 @@ class ImageViewBase(Callback.Callbacks):
                   self._pan_x, self._pan_y, win_wd, win_ht)
 
         time_split1 = time.time()
-        if (whence <= 0.5) or (self._rotimg == None):
-            # Apply any viewing transformations or rotations
-            self._rotimg = self.apply_transforms(self._cutout,
-                              self.t_['rot_deg'], 
-                              win_wd, win_ht)
+        ## if (whence <= 0.5) or (self._rotimg == None):
+        ##     # Apply any viewing transformations or rotations
+        ##     self._rotimg = self.apply_transforms(self._cutout,
+        ##                       self.t_['rot_deg'], 
+        ##                       win_wd, win_ht)
             
         time_split2 = time.time()
         if (whence <= 1) or (self._prergb == None):
             # Apply visual changes prior to color mapping (cut levels, etc)
             vmax = self.rgbmap.get_hash_size() - 1
-            newdata = self.apply_visuals(self._rotimg, 0, vmax)
+            #newdata = self.apply_visuals(self._rotimg, 0, vmax)
+            newdata = self.apply_visuals(self._cutout, 0, vmax)
 
             # Result becomes an index array fed to the RGB mapper
             if not numpy.issubdtype(newdata.dtype, numpy.dtype('uint')):
@@ -727,7 +731,18 @@ class ImageViewBase(Callback.Callbacks):
             image_order = self.image.get_order()
             rgbobj = self.rgbmap.get_rgbarray(idx, order=rgb_order,
                                               image_order=image_order)
+
+            self.overlay_images(self, rgbobj.rgbarr)
+            
             self._rgbobj = rgbobj
+
+        if (whence < 3) or (self._rotimg == None):
+            arr = self._rgbobj.rgbarr
+            # Apply any viewing transformations or rotations
+            self._rotimg = self.apply_transforms(arr,
+                              self.t_['rot_deg'], 
+                              win_wd, win_ht)
+            self._rgbobj.rgbarr = numpy.ascontiguousarray(self._rotimg)
 
         time_end = time.time()
         self.logger.debug("times: total=%.4f cutout=%.4f transform=%.4f index=%.4f rgbmap=%.4f" % (
@@ -815,7 +830,7 @@ class ImageViewBase(Callback.Callbacks):
         self._org_xoff, self._org_yoff = ocx, ocy
 
         # If there is no rotation, then we are done
-        if not self.t_makebg and (self.t_['rot_deg'] == 0.0):
+        if not self.t_makebg and (self.t_['rot_deg'] == 0.0) and False:
             return data
 
         # Make a square from the scaled cutout, with room to rotate
@@ -881,6 +896,23 @@ class ImageViewBase(Callback.Callbacks):
         self.logger.debug("ctr=%d,%d off=%d,%d dst=%d,%d cutout=%dx%d window=%d,%d" % (
             ctr_x, ctr_y, xoff, yoff, dst_x, dst_y, wd, ht, win_wd, win_ht))
         return data
+
+
+    def overlay_images(self, canvas, data):
+        print "in overlay_images is_compound=%s" % (canvas.is_compound())
+        #if not canvas.is_compound():
+        if not hasattr(canvas, 'objects'):
+            return
+
+        print "iterating over objects"
+        for obj in canvas.getObjects():
+            if hasattr(obj, 'draw_image'):
+                print "calling draw_image for %s" % str(obj)
+                obj.draw_image(data)
+            elif obj.is_compound() and (obj != canvas):
+                self.overlay_images(obj, data)
+            
+        print "leaving overlay_images"
 
     def get_data_xy(self, win_x, win_y, center=True):
         """Returns the closest x, y coordinates in the data array to the
@@ -1616,6 +1648,10 @@ class ImageViewBase(Callback.Callbacks):
         
     def get_bg(self):
         return self.img_bg
+    
+    def is_compound(self):
+        # this is overridden by subclasses which can overplot objects
+        return False
     
     def update_image(self):
         self.logger.warn("Subclass should override this abstract method!")

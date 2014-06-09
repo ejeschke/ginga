@@ -99,6 +99,7 @@ local_plugins = [
     Bunch(module='Cuts', ws='dialogs', shortkey='f5'),
     Bunch(module='Histogram', ws='dialogs', shortkey='f6'),
     Bunch(module='PixTable', ws='dialogs', shortkey='f7'),
+    Bunch(module='Layers', ws='dialogs', shortkey='f7'),
     Bunch(module='Preferences', ws='dialogs', shortkey='f9'),
     Bunch(module='Catalogs', ws='dialogs', shortkey='f10'),
     Bunch(module='Mosaic', ws='dialogs'),

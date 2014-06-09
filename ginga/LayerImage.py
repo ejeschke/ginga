@@ -124,13 +124,13 @@ class LayerImage(object):
     def alpha_compose(self):
         start_time = time.time()
         shape = self.get_max_shape()
-        ht, wd = shape[:2]
-        # alpha can be a scalar or an array, prepare for the appropriate kind
-        ashape = self.get_max_shape(entity='alpha')
-        if len(ashape) == 0:
-            alpha_used = 0.0
-        else:
-            alpha_used = numpy.zeros((ht, wd))
+        ## ht, wd = shape[:2]
+        ## # alpha can be a scalar or an array, prepare for the appropriate kind
+        ## ashape = self.get_max_shape(entity='alpha')
+        ## if len(ashape) == 0:
+        ##     alpha_used = 0.0
+        ## else:
+        ##     alpha_used = numpy.zeros((ht, wd))
 
         # result holds the result of the composition
         result = numpy.zeros(shape)
@@ -140,12 +140,12 @@ class LayerImage(object):
             alpha = layer.alpha
             if isinstance(alpha, BaseImage.BaseImage):
                 alpha = alpha.get_data()
-            alpha = numpy.clip((1.0 - alpha_used) * alpha, 0.0, 1.0)
+            #alpha = numpy.clip((1.0 - alpha_used) * alpha, 0.0, 1.0)
             #mina = numpy.min(alpha)
             #print "cnt=%d mina=%f" % (cnt, mina)
             data = layer.image.get_data()
             result += self.alpha_multiply(alpha, data, shape=shape)
-            alpha_used += layer.alpha
+            ## alpha_used += layer.alpha
             #numpy.clip(alpha_used, 0.0, 1.0)
             cnt += 1
         

@@ -12,6 +12,7 @@ import time
 
 from ginga.misc import Bunch
 from ginga.util import wcs
+from ginga import trcalc
 
 class CanvasObjectError(Exception):
     pass
@@ -58,7 +59,7 @@ class CanvasObjectBase(object):
         a, b = self.fitsimage.canvascoords(x, y, center=center)
         return (a, b)
 
-    def isCompound(self):
+    def is_compound(self):
         return False
     
     def contains(self, x, y):
@@ -173,7 +174,7 @@ class CompoundMixin(object):
         for obj in self.objects:
             obj.initialize(None, fitsimage, logger)
 
-    def isCompound(self):
+    def is_compound(self):
         return True
     
     def draw(self):
@@ -874,6 +875,104 @@ class RulerBase(CanvasObjectBase):
                                         font=font, fontsize=fontsize,
                                         text_x=text_x, text_y=text_y,
                                         text_h=text_h)
+
+
+class Image(CanvasObjectBase):
+    """Draws an image on a ImageViewCanvas.
+    Parameters are:
+    x, y: 0-based coordinates of one corner in the data space
+    image: the image
+    """
+
+    def __init__(self, x, y, image, alpha=None):
+        self.kind = 'image'
+        super(Image, self).__init__(x=x, y=y, image=image, alpha=alpha)
+
+    def get_coords(self):
+        x1, y1 = self.x, self.y
+        x2, y2 = x1 + self.image.width, y1 + self.image.height
+        return (x1, y1, x2, y2)
+
+    def contains(self, x, y):
+        x2, y2 = self.x + self.image.width, self.y + self.image.height
+        if ((x >= self.x) and (x <= x2) and
+            (y >= self.y) and (y <= y2)):
+            return True
+        return False
+
+    ## def rotate(self, theta, xoff=0, yoff=0):
+    ##     x, y = self.rotate_pt(self.x, self.y, theta,
+    ##                             xoff=xoff, yoff=yoff)
+    ##     self.x, self.y = x, y
+
+    def draw(self):
+        pass
+    
+    def draw_image(self, dstarr):
+        print "drawing image at %d,%d" % (self.x, self.y)
+        x1, y1, x2, y2 = self.get_coords()
+        # get width and height of our image
+        wd, ht = x2 - x1, y2 - y1
+
+        # get extent of our data coverage in the window
+        ((x0, y0), (x1, y1), (x2, y2), (x3, y3)) = self.fitsimage.get_pan_rect()
+        xmin = int(min(x0, x1, x2, x3))
+        ymin = int(min(y0, y1, y2, y3))
+        xmax = int(max(x0, x1, x2, x3))
+        ymax = int(max(y0, y1, y2, y3))
+
+        # destination location in data_coords
+        #dst_x, dst_y = self.x, self.y + ht
+        dst_x, dst_y = self.x, self.y
+        print "actual placement at %d,%d" % (dst_x, dst_y)
+        
+        # calculate the cutout that we can make and scale to merge
+        # onto the final image--by only cutting out what is necessary
+        # we speed scaling greatly at zoomed in sizes
+        dst_x, dst_y, a1, b1, a2, b2 = \
+               trcalc.calc_image_merge_clip(xmin, ymin, xmax, ymax,
+                                                      dst_x, dst_y, wd, ht)
+        #a1, b1, a2, b2 = 0, 0, self.image.width, self.image.height
+        print "a1,b1=%d,%d a2,b2=%d,%d" % (a1, b1, a2, b2)
+
+        # is image completely off the screen?
+        if (a2 - a1 <= 0) or (b2 - b1 <= 0):
+            # no overlay needed
+            print "no overlay needed"
+            return
+
+        # scale the cutout according to the current viewer scale
+        srcdata = self.image.get_data()
+        scale_x, scale_y = self.fitsimage.get_scale_xy()
+        (newdata, (nscale_x, nscale_y)) = \
+                  trcalc.get_scaled_cutout_basic(srcdata, a1, b1, a2, b2,
+                                                 scale_x, scale_y)
+        # save the height of the cutout, we'll need it later
+        inc_ht, wd, dp = newdata.shape
+        
+        # calculate our offset from the pan position
+        pan_x, pan_y = self.fitsimage.get_pan()
+        #print "pan x,y=%f,%f" % (pan_x, pan_y)
+        off_x, off_y = dst_x - pan_x, dst_y - pan_y
+        # scale offset
+        off_x *= scale_x
+        off_y *= scale_y
+        #print "off_x,y=%f,%f" % (off_x, off_y)
+
+        # dst position in the pre-transformed array should be calculated
+        # from the center of the array plus offsets
+        ht, wd, dp = dstarr.shape
+        x = int(round(wd / 2.0  + off_x))
+        y = int(round(ht / 2.0  - off_y))
+        # except that we have to subtract the height of the image we are
+        # adding since the dstarr is assumed to be oriented for display
+        y -= inc_ht 
+        print "x, y", x, y
+
+        # composite the image into the destination array at the
+        # calculated position
+        trcalc.overlay_image(dstarr, x, y, newdata, alpha=self.alpha)
+        #print "image overlaid"
 
 
 class CompoundObject(CompoundMixin, CanvasObjectBase):
