@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 #
 # ImageViewCanvas.py -- Abstract base classes for ImageViewCanvas{Gtk,Qt}.
 #
@@ -396,9 +395,12 @@ class DrawingMixin(object):
     def setSurface(self, fitsimage):
         self.fitsimage = fitsimage
 
+        # register this canvas for events of interest
         self.set_callback('draw-down', self.draw_start)
         self.set_callback('draw-move', self.draw_motion)
         self.set_callback('draw-up', self.draw_stop)
+        self.set_callback('keydown-poly_add', self.draw_poly_add)
+        self.set_callback('keydown-poly_del', self.draw_poly_delete)
 
         #self.ui_setActive(True)
 
@@ -550,14 +552,11 @@ class DrawingMixin(object):
             return True
 
     def draw_poly_add(self, canvas, action, data_x, data_y):
-        print "poly add"
         if self.candraw and (self.t_drawtype == 'polygon'):
-            print "append point"
             self._points.append((data_x, data_y))
         return True
 
     def draw_poly_delete(self, canvas, action, data_x, data_y):
-        print "poly delete"
         if self.candraw and (self.t_drawtype == 'polygon'):
             if len(self._points) > 0:
                 self._points.pop()

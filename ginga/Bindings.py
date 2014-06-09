@@ -151,8 +151,8 @@ class ImageViewBindings(object):
             kp_rotate_dec90 = ['E'],
             kp_orient_lh = ['o'],
             kp_orient_rh = ['O'],
-            kp_poly_add = ['draw+x'],
-            kp_poly_del = ['draw+z'],
+            kp_poly_add = ['x', 'draw+x'],
+            kp_poly_del = ['z', 'draw+z'],
             kp_reset = ['escape'],
             
             # SCROLLING/WHEEL
@@ -914,14 +914,6 @@ class ImageViewBindings(object):
             self._orient(fitsimage, righthand=True, msg=msg)
         return True
 
-    def kp_poly_add(self, fitsimage, keyname, data_x, data_y):
-        fitsimage.draw_poly_add(fitsimage, keyname, data_x, data_y)
-        return True
-
-    def kp_poly_del(self, fitsimage, keyname, data_x, data_y):
-        fitsimage.draw_poly_delete(fitsimage, keyname, data_x, data_y)
-        return True
-
     def kp_reset(self, fitsimage, keyname, data_x, data_y):
         self.reset(fitsimage)
         return True
@@ -1448,10 +1440,12 @@ class BindingMapper(object):
             # TEMP: hack to get around the issue of how keynames
             # are generated. This assumes standard modifiers are
             # mapped to names "shift" and "ctrl"
-            if self._kbdmod in ('shift', 'ctrl'):
+            if (self._kbdmod in ('shift', 'ctrl')) or (keyname == 'escape'):
                 idx = (None, keyname)
             else:
                 idx = (self._kbdmod, keyname)
+
+            self.logger.debug("idx=%s" % (str(idx)))
             emap = self.eventmap[idx]
 
         except KeyError:
@@ -1514,6 +1508,8 @@ class BindingMapper(object):
             return False
         
         cbname = '%s-down' % (emap.name)
+        self.logger.debug("making callback for %s (mod=%s)" % (
+            cbname, self._kbdmod))
         return fitsimage.make_callback(cbname, 'down', data_x, data_y)
 
 
