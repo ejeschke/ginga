@@ -42,8 +42,10 @@ class Debug(GingaPlugin.GlobalPlugin):
         w, b = Widgets.build_info(captions)
         self.w.update(b)
         b.local_plugin.set_tooltip("Name of a local plugin to reload")
+        b.local_plugin.set_length(14)
         b.reload.add_callback('activated', self.reload_local_cb)
         b.global_plugin.set_tooltip("Name of a global plugin to reload")
+        b.global_plugin.set_length(14)
         b.reloadg.add_callback('activated', self.reload_global_cb)
         vbox.add_widget(w, stretch=1)
         
