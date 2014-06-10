@@ -909,10 +909,7 @@ class Image(CanvasObjectBase):
         pass
     
     def draw_image(self, dstarr):
-        print "drawing image at %d,%d" % (self.x, self.y)
-        x1, y1, x2, y2 = self.get_coords()
-        # get width and height of our image
-        wd, ht = x2 - x1, y2 - y1
+        print "drawing image at %f,%f" % (self.x, self.y)
 
         # get extent of our data coverage in the window
         ((x0, y0), (x1, y1), (x2, y2), (x3, y3)) = self.fitsimage.get_pan_rect()
@@ -926,12 +923,14 @@ class Image(CanvasObjectBase):
         dst_x, dst_y = self.x, self.y
         print "actual placement at %d,%d" % (dst_x, dst_y)
         
+        a1, b1, a2, b2 = 0, 0, self.image.width, self.image.height
+
         # calculate the cutout that we can make and scale to merge
         # onto the final image--by only cutting out what is necessary
         # we speed scaling greatly at zoomed in sizes
         dst_x, dst_y, a1, b1, a2, b2 = \
                trcalc.calc_image_merge_clip(xmin, ymin, xmax, ymax,
-                                                      dst_x, dst_y, wd, ht)
+                                            dst_x, dst_y, a1, b1, a2, b2)
         #a1, b1, a2, b2 = 0, 0, self.image.width, self.image.height
         print "a1,b1=%d,%d a2,b2=%d,%d" % (a1, b1, a2, b2)
 
@@ -963,10 +962,10 @@ class Image(CanvasObjectBase):
         # from the center of the array plus offsets
         ht, wd, dp = dstarr.shape
         x = int(round(wd / 2.0  + off_x))
-        y = int(round(ht / 2.0  - off_y))
+        y = int(round(ht / 2.0  + off_y))
         # except that we have to subtract the height of the image we are
         # adding since the dstarr is assumed to be oriented for display
-        y -= inc_ht 
+        #y -= inc_ht 
         print "x, y", x, y
 
         # composite the image into the destination array at the

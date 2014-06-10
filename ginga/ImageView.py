@@ -739,10 +739,11 @@ class ImageViewBase(Callback.Callbacks):
         if (whence < 3) or (self._rotimg == None):
             arr = self._rgbobj.rgbarr
             # Apply any viewing transformations or rotations
-            self._rotimg = self.apply_transforms(arr,
-                              self.t_['rot_deg'], 
-                              win_wd, win_ht)
-            self._rgbobj.rgbarr = numpy.ascontiguousarray(self._rotimg)
+            rotimg = self.apply_transforms(arr,
+                                           self.t_['rot_deg'], 
+                                           win_wd, win_ht)
+            self._rotimg = numpy.ascontiguousarray(rotimg)
+            self._rgbobj.rgbarr = self._rotimg
 
         time_end = time.time()
         self.logger.debug("times: total=%.4f cutout=%.4f transform=%.4f index=%.4f rgbmap=%.4f" % (
@@ -887,6 +888,13 @@ class ImageViewBase(Callback.Callbacks):
             data = trcalc.rotate_clip(data, -rot_deg, out=data)
 
         split2_time = time.time()
+
+        # apply other transforms
+        if self._invertY:
+            # Flip Y for natural natural Y-axis inversion between FITS coords
+            # and screen coords
+            data = numpy.flipud(data)
+
         self.logger.debug("rotate time %.3f sec, total reshape %.3f sec" % (
             split2_time - split_time, split2_time - start_time))
 
@@ -1092,12 +1100,6 @@ class ImageViewBase(Callback.Callbacks):
         return dist
     
     def apply_visuals(self, data, vmin, vmax):
-        # apply other transforms
-        if self._invertY:
-            # Flip Y for natural natural Y-axis inversion between FITS coords
-            # and screen coords
-            data = numpy.flipud(data)
-
         # Apply cut levels
         loval, hival = self.t_['cuts']
         newdata = self.autocuts.cut_levels(data, loval, hival,
