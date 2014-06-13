@@ -396,9 +396,13 @@ class RenderMixin(object):
         self.fitsimage.leave_notify_event(self, event)
     
     def keyPressEvent(self, event):
+        # without this we do not get key release events if the focus
+        # changes to another window
+        self.grabKeyboard()
         self.fitsimage.key_press_event(self, event)
         
     def keyReleaseEvent(self, event):
+        self.releaseKeyboard()
         self.fitsimage.key_release_event(self, event)
         
     def mousePressEvent(self, event):

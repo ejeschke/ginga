@@ -251,12 +251,18 @@ class ImageViewEvent(ImageViewTk):
         return self.make_callback('leave')
     
     def key_press_event(self, event):
+        # without this we do not get key release events if the focus
+        # changes to another window
+        self.tkcanvas.grab_set_global()
+        
         keyname = event.keysym
         keyname = self.transkey(keyname)
         self.logger.debug("key press event, key=%s" % (keyname))
         return self.make_callback('key-press', keyname)
 
     def key_release_event(self, event):
+        self.tkcanvas.grab_release()
+        
         keyname = event.keysym
         keyname = self.transkey(keyname)
         self.logger.debug("key release event, key=%s" % (keyname))
