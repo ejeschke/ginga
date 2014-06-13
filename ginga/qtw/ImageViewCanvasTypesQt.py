@@ -117,6 +117,14 @@ class Text(TextBase, QtCanvasMixin):
         cr.setFont(QFont(self.font, pointSize=fontsize))
         cr.drawText(cx, cy, self.text)
 
+    def get_dimensions(self):
+        cr = self.setup_cr()
+        if not self.fontsize:
+            fontsize = self.scale_font()
+        else:
+            fontsize = self.fontsize
+        cr.setFont(QFont(self.font, pointSize=fontsize))
+        return self.text_extents(cr, self.text)
 
 class Polygon(PolygonBase, QtCanvasMixin):
 

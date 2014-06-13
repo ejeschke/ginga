@@ -9,7 +9,7 @@
 
 import math
 
-from ginga.misc import Bunch, Settings
+from ginga.misc import Bunch, Settings, Callback
 from ginga import AutoCuts, trcalc
 from ginga import cmap, imap
 
@@ -117,12 +117,12 @@ class ImageViewBindings(object):
             
             # Define our custom modifiers
             dmod_draw = ['space', 'oneshot', None],
-            dmod_cmapwarp = ['/', 'oneshot', "Color map"],
+            dmod_cmapwarp = ['/', 'oneshot', None],
             #dmod_cutlo = ['<', 'oneshot', "Cut low"],
             #dmod_cuthi = ['>', 'oneshot', "Cut high"],
-            dmod_cutall = ['.', 'oneshot', "Cut all"],
-            dmod_rotate = ['r', 'oneshot', "Rotate"],
-            dmod_freepan = ['q', 'oneshot', "Free pan"],
+            dmod_cutall = ['.', 'oneshot', None],
+            dmod_rotate = ['r', 'oneshot', None],
+            dmod_freepan = ['q', 'oneshot', None],
 
             # KEYBOARD
             kp_zoom_in = ['+', '='],
@@ -1287,7 +1287,7 @@ class ImageViewBindings(object):
 class BindingMapError(Exception):
     pass
 
-class BindingMapper(object):
+class BindingMapper(Callback.Callbacks):
     """The BindingMapper class maps physical events (key presses, button
     clicks, mouse movement, etc) into logical events.  By registering for
     logical events, plugins and other event handling code doesn't need to
@@ -1296,7 +1296,7 @@ class BindingMapper(object):
     """
 
     def __init__(self, logger, btnmap=None, modmap=None):
-        super(BindingMapper, self).__init__()
+        Callback.Callbacks.__init__(self)
 
         self.logger = logger
         
@@ -1326,6 +1326,10 @@ class BindingMapper(object):
         else:
             self.modmap = modmap
 
+        # For callbacks
+        for name in ('mode-set', ):
+            self.enable_callback(name)
+
     def set_modifier_map(self, modmap):
         self.modmap = modmap
         
@@ -1353,6 +1357,7 @@ class BindingMapper(object):
             modtype, self._kbdmod_types))
         self._kbdmod = name
         self._kbdmod_type = modtype
+        self.make_callback('mode-set', self._kbdmod, self._kbdmod_type)
         
     def reset_modifier(self, fitsimage):
         try:
@@ -1365,6 +1370,7 @@ class BindingMapper(object):
         # clear onscreen message, if any
         if (bnch != None) and (bnch.msg != None):
             fitsimage.onscreen_message(None)
+        self.make_callback('mode-set', self._kbdmod, self._kbdmod_type)
         
     def clear_button_map(self):
         self.btnmap = {}

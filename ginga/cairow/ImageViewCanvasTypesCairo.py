@@ -83,6 +83,14 @@ class Text(TextBase, CairoCanvasMixin):
         cr.move_to(cx, cy)
         cr.show_text(self.text)
 
+    def get_dimensions(self):
+        cr = self.setup_cr()
+        if not self.fontsize:
+            fontsize = self.scale_font()
+        else:
+            fontsize = self.fontsize
+        cr.set_font_size(fontsize)
+        return self.text_extents(cr, self.text)
 
 class Polygon(PolygonBase, CairoCanvasMixin):
 

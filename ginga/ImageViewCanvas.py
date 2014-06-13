@@ -25,6 +25,7 @@ class CanvasObjectBase(object):
     """
 
     def __init__(self, **kwdargs):
+        self.is_cc = False
         self.__dict__.update(kwdargs)
         self.data = None
 
@@ -56,11 +57,16 @@ class CanvasObjectBase(object):
         self.fitsimage.redraw(whence=whence)
         
     def canvascoords(self, x, y, center=True):
+        if self.is_cc:
+            return (x, y)
         a, b = self.fitsimage.canvascoords(x, y, center=center)
         return (a, b)
 
     def is_compound(self):
         return False
+    
+    def use_cc(self, tf):
+        self.is_cc = tf
     
     def contains(self, x, y):
         return False
@@ -177,6 +183,10 @@ class CompoundMixin(object):
     def is_compound(self):
         return True
     
+    def use_cc(self, tf):
+        for obj in self.objects:
+            obj.use_cc(tf)
+
     def draw(self):
         for obj in self.objects:
             obj.draw()
@@ -881,12 +891,14 @@ class Image(CanvasObjectBase):
     """Draws an image on a ImageViewCanvas.
     Parameters are:
     x, y: 0-based coordinates of one corner in the data space
-    image: the image
+    image: the image, which must be an RGBImage object
     """
 
     def __init__(self, x, y, image, alpha=None):
         self.kind = 'image'
         super(Image, self).__init__(x=x, y=y, image=image, alpha=alpha)
+
+        self._drawn = False
 
     def get_coords(self):
         x1, y1 = self.x, self.y
@@ -906,10 +918,12 @@ class Image(CanvasObjectBase):
     ##     self.x, self.y = x, y
 
     def draw(self):
-        pass
+        if not self._drawn:
+            self._drawn = True
+            self.fitsimage.redraw(whence=2)
     
     def draw_image(self, dstarr):
-        print "drawing image at %f,%f" % (self.x, self.y)
+        #print "drawing image at %f,%f" % (self.x, self.y)
 
         # get extent of our data coverage in the window
         ((x0, y0), (x1, y1), (x2, y2), (x3, y3)) = self.fitsimage.get_pan_rect()
@@ -921,7 +935,7 @@ class Image(CanvasObjectBase):
         # destination location in data_coords
         #dst_x, dst_y = self.x, self.y + ht
         dst_x, dst_y = self.x, self.y
-        print "actual placement at %d,%d" % (dst_x, dst_y)
+        #print "actual placement at %d,%d" % (dst_x, dst_y)
         
         a1, b1, a2, b2 = 0, 0, self.image.width, self.image.height
 
@@ -932,16 +946,20 @@ class Image(CanvasObjectBase):
                trcalc.calc_image_merge_clip(xmin, ymin, xmax, ymax,
                                             dst_x, dst_y, a1, b1, a2, b2)
         #a1, b1, a2, b2 = 0, 0, self.image.width, self.image.height
-        print "a1,b1=%d,%d a2,b2=%d,%d" % (a1, b1, a2, b2)
+        #print "a1,b1=%d,%d a2,b2=%d,%d" % (a1, b1, a2, b2)
 
         # is image completely off the screen?
         if (a2 - a1 <= 0) or (b2 - b1 <= 0):
             # no overlay needed
-            print "no overlay needed"
+            #print "no overlay needed"
             return
 
         # scale the cutout according to the current viewer scale
-        srcdata = self.image.get_data()
+        order = self.fitsimage.get_rgb_order()
+        if 'A' in order:
+            order = order.replace('A', '')
+        srcdata = self.image.get_array(order)
+        #print "order=%s srcdata=%s" % (order, srcdata.shape)
         scale_x, scale_y = self.fitsimage.get_scale_xy()
         (newdata, (nscale_x, nscale_y)) = \
                   trcalc.get_scaled_cutout_basic(srcdata, a1, b1, a2, b2,
@@ -966,7 +984,7 @@ class Image(CanvasObjectBase):
         # except that we have to subtract the height of the image we are
         # adding since the dstarr is assumed to be oriented for display
         #y -= inc_ht 
-        print "x, y", x, y
+        #print "x, y", x, y
 
         # composite the image into the destination array at the
         # calculated position

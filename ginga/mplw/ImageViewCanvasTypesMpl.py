@@ -66,9 +66,18 @@ class Text(TextBase, MplCanvasMixin):
             fontsize = self.scale_font()
         else:
             fontsize = self.fontsize
-        font = cr.get_font(self.font, self.fontsize, self.color)
+        font = cr.get_font(self.font, fontsize, self.color)
 
         cr.axes.text(cx, cy, self.text, fontdict=font)
+
+    def get_dimensions(self):
+        cr = self.setup_cr()
+        if not self.fontsize:
+            fontsize = self.scale_font()
+        else:
+            fontsize = self.fontsize
+        font = cr.get_font(self.font, fontsize, self.color)
+        return self.text_extents(cr, self.text, font)
 
 
 class Polygon(PolygonBase, MplCanvasMixin):

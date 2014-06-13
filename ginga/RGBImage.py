@@ -11,21 +11,64 @@ from ginga.util import io_rgb
 from ginga.misc import Bunch
 from ginga.BaseImage import BaseImage, ImageError, Header
 
+import numpy
+
 
 class RGBImage(BaseImage):
 
     def __init__(self, data_np=None, metadata=None, 
-                 logger=None, ioclass=io_rgb.RGBFileHandler):
+                 logger=None, order='RGBA',
+                 ioclass=io_rgb.RGBFileHandler):
         
         BaseImage.__init__(self, data_np=data_np, metadata=metadata,
                            logger=logger)
         
         self.io = ioclass(self.logger)
+        order = order.upper()
+        self.order = order
+        self.hasAlpha = 'A' in order
+
+    def get_slice(self, ch):
+        data = self.get_data()
+        return data[..., self.order.index(ch.upper())]
+
+    def get_order(self):
+        return self.order
+
+    def get_order_indexes(self, cs):
+        cs = cs.upper()
+        return [ self.order.index(c) for c in cs ]
+
+    def get_array(self, order):
+        order = order.upper()
+        if order == self.order:
+            return self.get_data()
+        l = [ self.get_slice(c) for c in order ]
+        return numpy.dstack(l)
+
+    def set_data(self, data_np, order=None, **kwdargs):
+        super(RGBImage, self).set_data(data_np, **kwdargs)
+        
+        if order != None:
+            self.order = order
+        else:
+            # TODO; need something better here than a guess!
+            depth = self.get_depth()
+            if depth == 1:
+                self.order = 'M'
+            elif depth == 2:
+                self.order = 'AM'
+            elif depth == 3:
+                self.order = 'RGB'
+            elif depth == 4:
+                self.order = 'ARGB'
 
     def load_file(self, filepath):
         kwds = Header()
         metadata = { 'header': kwds, 'path': filepath }
 
+        # TODO: ideally we would be informed by channel order
+        # in result by io_rgb
         data_np = self.io.load_file(filepath, kwds)
 
         self.set_data(data_np, metadata=metadata)

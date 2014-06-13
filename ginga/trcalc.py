@@ -223,8 +223,8 @@ def calc_image_merge_clip(x1, y1, x2, y2,
     Refines the tuple (a1, b1, a2, b2) defining the clipped rectangle
     needed to be cut from the source array and scaled.
     """
-    print "calc clip in dst", x1, y1, x2, y2
-    print "calc clip in src", dst_x, dst_y, a1, b1, a2, b2
+    ## print "calc clip in dst", x1, y1, x2, y2
+    ## print "calc clip in src", dst_x, dst_y, a1, b1, a2, b2
 
     src_wd, src_ht = a2 - a1, b2 - b1
 
@@ -256,7 +256,7 @@ def calc_image_merge_clip(x1, y1, x2, y2,
         src_wd -= ex
         a2 -= ex
 
-    print "calc clip out", dst_x, dst_y, a1, b1, a2, b2
+    ## print "calc clip out", dst_x, dst_y, a1, b1, a2, b2
     return (dst_x, dst_y, a1, b1, a2, b2)
 
 
@@ -269,8 +269,8 @@ def overlay_image(dstarr, dst_x, dst_y, srcarr, alpha=1.0,
     if flipy:
         srcarr = numpy.flipud(srcarr)
 
-    print "1. dst_x, dst_y, dst_wd, dst_ht", dst_x, dst_y, dst_wd, dst_ht
-    print "2. src_wd, src_ht, shape", src_wd, src_ht, srcarr.shape
+    ## print "1. dst_x, dst_y, dst_wd, dst_ht", dst_x, dst_y, dst_wd, dst_ht
+    ## print "2. src_wd, src_ht, shape", src_wd, src_ht, srcarr.shape
     # Trim off parts of srcarr that would be "hidden"
     # to the left and above the dstarr edge.
     if dst_y < 0:
@@ -297,8 +297,8 @@ def overlay_image(dstarr, dst_x, dst_y, srcarr, alpha=1.0,
         srcarr = srcarr[:, :dst_wd, :]
         src_wd -= ex
 
-    print "2. dst_x, dst_y", dst_x, dst_y
-    print "2. src_wd, src_ht, shape", src_wd, src_ht, srcarr.shape
+    ## print "2. dst_x, dst_y", dst_x, dst_y
+    ## print "2. src_wd, src_ht, shape", src_wd, src_ht, srcarr.shape
 
     # calculate alpha blending
     #   Co = CaAa + CbAb(1 - Aa)

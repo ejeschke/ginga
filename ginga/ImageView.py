@@ -145,6 +145,10 @@ class ImageViewBase(Callback.Callbacks):
         self.autozoom_options = ('on', 'override', 'off')
         self.t_.addDefaults(autozoom='on')
 
+        # image overlays
+        self.t_.addDefaults(image_overlays=False)
+        self.t_.getSetting('image_overlays').add_callback('set', self.overlays_change_cb)
+
         # for panning
         self.t_makebg = False
         self.t_.addDefaults(autocenter=True)
@@ -216,6 +220,7 @@ class ImageViewBase(Callback.Callbacks):
         self._rotimg = None
         self._prergb = None
         self._rgbobj = None
+        self._rgbobj2 = None
 
         # optimization of redrawing
         self.defer_redraw = self.t_.get('defer_redraw', True)
@@ -693,6 +698,7 @@ class ImageViewBase(Callback.Callbacks):
         
         time_start = time.time()
         win_wd, win_ht = self.get_window_size()
+        has_overlays = self.t_['image_overlays']
         
         if (whence <= 0) or (self._cutout == None):
             # Get the smallest slice of data that will fit our display needs.
@@ -701,18 +707,21 @@ class ImageViewBase(Callback.Callbacks):
                   self._pan_x, self._pan_y, win_wd, win_ht)
 
         time_split1 = time.time()
-        ## if (whence <= 0.5) or (self._rotimg == None):
-        ##     # Apply any viewing transformations or rotations
-        ##     self._rotimg = self.apply_transforms(self._cutout,
-        ##                       self.t_['rot_deg'], 
-        ##                       win_wd, win_ht)
+        if not has_overlays:
+            if (whence <= 0.5) or (self._rotimg == None):
+                # Apply any viewing transformations or rotations
+                # (only at this stage if there are no RGB overlays)
+                self._rotimg = self.apply_transforms(self._cutout,
+                                                     self.t_['rot_deg'], 
+                                                     win_wd, win_ht)
+        else:
+            self._rotimg = self._cutout
             
         time_split2 = time.time()
         if (whence <= 1) or (self._prergb == None):
             # Apply visual changes prior to color mapping (cut levels, etc)
             vmax = self.rgbmap.get_hash_size() - 1
-            #newdata = self.apply_visuals(self._rotimg, 0, vmax)
-            newdata = self.apply_visuals(self._cutout, 0, vmax)
+            newdata = self.apply_visuals(self._rotimg, 0, vmax)
 
             # Result becomes an index array fed to the RGB mapper
             if not numpy.issubdtype(newdata.dtype, numpy.dtype('uint')):
@@ -732,19 +741,25 @@ class ImageViewBase(Callback.Callbacks):
             rgbobj = self.rgbmap.get_rgbarray(idx, order=rgb_order,
                                               image_order=image_order)
 
-            self.overlay_images(self, rgbobj.rgbarr)
-            
+            if has_overlays:
+                # Apply any RGB image overlays
+                self.overlay_images(self, rgbobj.rgbarr)
+
             self._rgbobj = rgbobj
 
-        if (whence < 3) or (self._rotimg == None):
-            arr = self._rgbobj.rgbarr
-            # Apply any viewing transformations or rotations
-            rotimg = self.apply_transforms(arr,
-                                           self.t_['rot_deg'], 
-                                           win_wd, win_ht)
-            self._rotimg = numpy.ascontiguousarray(rotimg)
-            self._rgbobj.rgbarr = self._rotimg
+        if (whence <= 2.5) or (self._rgbobj2 == None):
+            rotimg = self._rgbobj.rgbarr
+            order = self._rgbobj.order
+            if has_overlays:
+                # Apply any viewing transformations or rotations
+                # if not applied earlier
+                rotimg = self.apply_transforms(rotimg,
+                                               self.t_['rot_deg'], 
+                                               win_wd, win_ht)
+                rotimg = numpy.ascontiguousarray(rotimg)
 
+            self._rgbobj2 = RGBMap.RGBPlanes(rotimg, order)
+            
         time_end = time.time()
         self.logger.debug("times: total=%.4f cutout=%.4f transform=%.4f index=%.4f rgbmap=%.4f" % (
             (time_end - time_start),
@@ -753,7 +768,7 @@ class ImageViewBase(Callback.Callbacks):
             (time_split3 - time_split2),
             (time_end - time_split3),
             ))
-        return self._rgbobj
+        return self._rgbobj2
 
     def get_scaled_cutout(self, image, scale_x, scale_y,
                           pan_x, pan_y, win_wd, win_ht):
@@ -831,7 +846,8 @@ class ImageViewBase(Callback.Callbacks):
         self._org_xoff, self._org_yoff = ocx, ocy
 
         # If there is no rotation, then we are done
-        if not self.t_makebg and (self.t_['rot_deg'] == 0.0) and False:
+        if not self.t_makebg and (self.t_['rot_deg'] == 0.0) and \
+               (self.t_['image_overlays'] == False):
             return data
 
         # Make a square from the scaled cutout, with room to rotate
@@ -907,20 +923,15 @@ class ImageViewBase(Callback.Callbacks):
 
 
     def overlay_images(self, canvas, data):
-        print "in overlay_images is_compound=%s" % (canvas.is_compound())
         #if not canvas.is_compound():
         if not hasattr(canvas, 'objects'):
             return
 
-        print "iterating over objects"
         for obj in canvas.getObjects():
             if hasattr(obj, 'draw_image'):
-                print "calling draw_image for %s" % str(obj)
                 obj.draw_image(data)
             elif obj.is_compound() and (obj != canvas):
                 self.overlay_images(obj, data)
-            
-        print "leaving overlay_images"
 
     def get_data_xy(self, win_x, win_y, center=True):
         """Returns the closest x, y coordinates in the data array to the
@@ -1530,7 +1541,11 @@ class ImageViewBase(Callback.Callbacks):
 
     def transform_cb(self, setting, value):
         self.make_callback('transform')
-        self.redraw(whence=0)
+        # whence=0 because need to calculate new extents for proper
+        # cutout for rotation (TODO: always make extents consider
+        #  room for rotation)
+        whence = 0
+        self.redraw(whence=whence)
 
     def copy_attributes(self, dst_fi, attrlist, redraw=False):
         """Copy interesting attributes of our configuration to another
@@ -1591,7 +1606,11 @@ class ImageViewBase(Callback.Callbacks):
         self.t_.set(rot_deg=deg)
 
     def rotation_change_cb(self, setting, value):
-        self.redraw(whence=0)
+        # whence=0 because need to calculate new extents for proper
+        # cutout for rotation (TODO: always make extents consider
+        #  room for rotation)
+        whence = 0
+        self.redraw(whence=whence)
         
     def get_center(self):
         return (self._ctr_x, self._ctr_y)
@@ -1640,6 +1659,12 @@ class ImageViewBase(Callback.Callbacks):
             flip_y = True
             self.transform(flip_x, flip_y, swap_xy, redraw=redraw)
 
+    def enable_overlays(self, tf):
+        self.t_.set(image_overlays=tf)
+        
+    def overlays_change_cb(self, setting, value):
+        self.redraw(whence=0)
+        
     def set_bg(self, r, g, b, redraw=True):
         """Set the background color.  Values r, g, b should be between
         0 and 1 inclusive.
