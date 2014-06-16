@@ -1689,4 +1689,5 @@ class ImageViewBase(Callback.Callbacks):
     def reschedule_redraw(self, time_sec):
         self.logger.warn("Subclass should override this abstract method!")
 
+
 #END

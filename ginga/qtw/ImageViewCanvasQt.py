@@ -33,6 +33,12 @@ class ImageViewCanvas(ImageViewQt.ImageViewZoom,
         self.setSurface(self)
         self.ui_setActive(True)
 
+        # for displaying modal keyboard state
+        self.mode_obj = None
+        bm = self.get_bindmap()
+        bm.add_callback('mode-set', self.mode_change_cb)
+
+
     def canvascoords(self, data_x, data_y, center=True):
         # data->canvas space coordinate conversion
         x, y = self.get_canvas_xy(data_x, data_y, center=center)
@@ -44,6 +50,45 @@ class ImageViewCanvas(ImageViewQt.ImageViewZoom,
         if not self.pixmap:
             return
         self.draw()
+
+    def mode_change_cb(self, bindmap, mode, modetype):
+        # delete the old indicator
+        obj = self.mode_obj
+        self.mode_obj = None
+        if obj:
+            try:
+                self.deleteObject(obj)
+            except:
+                pass
+
+        # if not one of the standard modifiers, display the new one
+        if not mode in (None, 'ctrl', 'shift'):
+            Text = self.getDrawClass('text')
+            Rect = self.getDrawClass('rectangle')
+            Compound = self.getDrawClass('compoundobject')
+
+            xsp, ysp = 4, 6
+            wd, ht = self.get_window_size()
+            x1, y1 = wd-12*len(mode), ht-12
+            o1 = Text(x1, y1, mode,
+                      fontsize=12, color='yellow')
+            o1.use_cc(True)
+            # hack necessary to be able to compute text extents _before_
+            # adding the object to the canvas
+            o1.fitsimage = self
+            wd, ht = o1.get_dimensions()
+
+            # yellow text on a black filled rectangle
+            o2 = Compound(Rect(x1-xsp, y1+ysp, x1+wd+xsp, y1-ht,
+                               color='black',
+                               fill=True, fillcolor='black'),
+                               o1)
+            # use canvas, not data coordinates
+            o2.use_cc(True)
+            self.mode_obj = o2
+            self.add(o2)
+            
+        return True
 
         
 #END
