@@ -398,8 +398,8 @@ class ImageViewBindings(object):
 
             scale_x, scale_y = fitsimage.get_scale_xy()
             off_x, off_y = fitsimage.canvas2offset(win_x, win_y)
-            delta_x = (self._start_x - off_x) / scale_x
-            delta_y = (self._start_y - off_y) / scale_y
+            delta_x = float(self._start_x - off_x) / scale_x
+            delta_y = float(self._start_y - off_y) / scale_y
             
             data_x = self._start_panx + delta_x
             data_y = self._start_pany + delta_y
