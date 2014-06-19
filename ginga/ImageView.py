@@ -1033,7 +1033,10 @@ class ImageViewBase(Callback.Callbacks):
         x, y = x1, y1
         while True:
             if getvalues:
-                val = self.get_data(x, y)
+                try:
+                    val = self.get_data(x, y)
+                except Exception:
+                    val = numpy.NaN
                 res.append(val)
             else:
                 res.append((x, y))
