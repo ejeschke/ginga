@@ -184,13 +184,21 @@ class AstropyWCS(BaseWCS):
         self.header = None
         self.wcs = None
         self.coordsys = 'raw'
-        self.coord_table = {
-            'icrs': coordinates.ICRS,
-            'fk5': coordinates.FK5,
-            'fk4': coordinates.FK4,
-            'galactic': coordinates.Galactic,
-            #'azel': coordinates.Horizontal,
-            }
+        if hasattr(coordinates, 'ICRS'):
+            self.coord_table = {
+                'icrs': coordinates.ICRS,
+                'fk5': coordinates.FK5,
+                'fk4': coordinates.FK4,
+                'galactic': coordinates.Galactic,
+                }
+        else:
+            # older astropy
+            self.coord_table = {
+                'icrs': coordinates.ICRSCoordinates,
+                'fk5': coordinates.FK5Coordinates,
+                'fk4': coordinates.FK4Coordinates,
+                'galactic': coordinates.GalacticCoordinates,
+                }
         self.kind = 'astropy/WCSLIB'
 
     def load_header(self, header, fobj=None):
