@@ -29,6 +29,9 @@ class RGBPlanes(object):
     def get_slice(self, ch):
         return self.rgbarr[..., self.order.index(ch.upper())]
 
+    def has_slice(self, ch):
+        return ch.upper() in self.order
+
     def get_order(self):
         return self.order
 

@@ -300,6 +300,10 @@ def overlay_image(dstarr, dst_x, dst_y, srcarr, alpha=1.0,
     ## print "2. dst_x, dst_y", dst_x, dst_y
     ## print "2. src_wd, src_ht, shape", src_wd, src_ht, srcarr.shape
 
+    # fill alpha channel in destination in the area we will be dropping
+    # the image
+    dstarr[dst_y:dst_y+src_ht, dst_x:dst_x+src_wd, 3] = 255
+
     # calculate alpha blending
     #   Co = CaAa + CbAb(1 - Aa)
     a_arr = (alpha * srcarr).astype(numpy.uint8)

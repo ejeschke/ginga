@@ -146,7 +146,7 @@ class ImageViewBase(Callback.Callbacks):
         self.t_.addDefaults(autozoom='on')
 
         # image overlays
-        self.t_.addDefaults(image_overlays=False)
+        self.t_.addDefaults(image_overlays=True)
         self.t_.getSetting('image_overlays').add_callback('set', self.overlays_change_cb)
 
         # for panning
@@ -221,6 +221,7 @@ class ImageViewBase(Callback.Callbacks):
         self._prergb = None
         self._rgbobj = None
         self._rgbobj2 = None
+        self._alpha_mask = None
 
         # optimization of redrawing
         self.defer_redraw = self.t_.get('defer_redraw', True)
@@ -616,7 +617,7 @@ class ImageViewBase(Callback.Callbacks):
         depth = len(order)
 
         # Prepare data array for rendering
-        data = self._rgbobj.get_array(order)
+        data = self._rgbobj2.get_array(order)
 
         # NOTE [A]
         height, width, depth = data.shape
@@ -740,8 +741,12 @@ class ImageViewBase(Callback.Callbacks):
             image_order = self.image.get_order()
             rgbobj = self.rgbmap.get_rgbarray(idx, order=rgb_order,
                                               image_order=image_order)
-
             if has_overlays:
+                if rgbobj.hasAlpha:
+                    # insert alpha mask prior to rotation
+                    alpha = rgbobj.get_slice('A')
+                    alpha[:] = self._alpha_mask[:]
+
                 # Apply any RGB image overlays
                 self.overlay_images(self, rgbobj.rgbarr)
 
@@ -867,6 +872,12 @@ class ImageViewBase(Callback.Callbacks):
 
         newdata[ncy-bdy:ncy+tdy, ncx-ldx:ncx+rdx] = \
                                  data[ocy-bdy:ocy+tdy, ocx-ldx:ocx+rdx]
+
+        # prepare alpha mask
+        alpha_mask = numpy.zeros(dims[:2], dtype=numpy.uint8)
+        alpha_mask[ncy-bdy:ncy+tdy, ncx-ldx:ncx+rdx] = 255
+        self._alpha_mask = alpha_mask
+        
         self._org_xoff, self._org_yoff = ncx, ncy
         return newdata
 

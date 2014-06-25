@@ -71,8 +71,8 @@ class ImageViewMpl(ImageView.ImageViewBase):
         self.message = None
 
         self.in_axes = False
-        # Matplotlib expects RGB data for color images
-        self._rgb_order = 'RGB'
+        # Matplotlib expects RGBA data for color images
+        self._rgb_order = 'RGBA'
         
         # cursors
         self.cursor = {}
@@ -170,7 +170,7 @@ class ImageViewMpl(ImageView.ImageViewBase):
 
         # Grab the RGB array for the current image and place it in the
         # matplotlib figure axis
-        data = self.getwin_array(order='RGB')
+        data = self.getwin_array(order=self._rgb_order)
 
         dst_x = dst_y = 0
         
@@ -205,7 +205,7 @@ class ImageViewMpl(ImageView.ImageViewBase):
 
         # Grab the RGB array for the current image and place it in the
         # matplotlib figure axis
-        arr = self.getwin_array(order='RGB')
+        arr = self.getwin_array(order=self._rgb_order)
 
         # Get the data extents
         x0, y0 = 0, 0

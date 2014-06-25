@@ -33,8 +33,10 @@ class ImageViewCairo(ImageView.ImageViewBase):
         
         if sys.byteorder == 'little':
             self._rgb_order = 'BGRA'
+            self._alpha_idx = 3
         else:
             self._rgb_order = 'ARGB'
+            self._alpha_idx = 0
 
         self.cr = None
         self.message = None
@@ -55,22 +57,27 @@ class ImageViewCairo(ImageView.ImageViewBase):
         imgwin_wd, imgwin_ht = self.get_window_size()
         cr.rectangle(0, 0, imgwin_wd, imgwin_ht)
         r, g, b = self.get_bg()
-        cr.set_source_rgb(r, g, b)
+        cr.set_source_rgba(r, g, b)
+        #cr.set_operator(cairo.OPERATOR_OVER)
         cr.fill()
 
-        #arr8 = data.astype(numpy.uint8).flatten()
+        ## arr8 = data.astype(numpy.uint8).flatten()
         arr8 = data
-        stride = cairo.ImageSurface.format_stride_for_width(cairo.FORMAT_RGB24,
+
+        ## stride = cairo.ImageSurface.format_stride_for_width(cairo.FORMAT_RGB24,
+        stride = cairo.ImageSurface.format_stride_for_width(cairo.FORMAT_ARGB32,
                                                             width)
 
         img_surface = cairo.ImageSurface.create_for_data(arr8,
-                                                         cairo.FORMAT_RGB24,
+                                                         #cairo.FORMAT_RGB24,
+                                                         cairo.FORMAT_ARGB32,
                                                          dawd, daht, stride)
 
         cr.set_source_surface(img_surface, dst_x, dst_y)
         cr.set_operator(cairo.OPERATOR_SOURCE)
 
-        cr.rectangle(dst_x, dst_y, dawd, daht)
+        cr.mask_surface(img_surface, dst_x, dst_y)
+        #cr.rectangle(dst_x, dst_y, dawd, daht)
         cr.fill()
 
         # Draw a cross in the center of the window in debug mode
@@ -129,11 +136,13 @@ class ImageViewCairo(ImageView.ImageViewBase):
 
     def configure(self, width, height):
         arr8 = numpy.zeros(height*width*4, dtype=numpy.uint8)
-        stride = cairo.ImageSurface.format_stride_for_width(cairo.FORMAT_RGB24,
+        #stride = cairo.ImageSurface.format_stride_for_width(cairo.FORMAT_RGB24,
+        stride = cairo.ImageSurface.format_stride_for_width(cairo.FORMAT_ARGB32,
                                                             width)
 
         surface = cairo.ImageSurface.create_for_data(arr8,
-                                                     cairo.FORMAT_RGB24,
+                                                     #cairo.FORMAT_RGB24,
+                                                     cairo.FORMAT_ARGB32,
                                                      width, height, stride)
         self.surface = surface
         self.set_window_size(width, height, redraw=True)
