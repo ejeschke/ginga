@@ -894,9 +894,10 @@ class Image(CanvasObjectBase):
     image: the image, which must be an RGBImage object
     """
 
-    def __init__(self, x, y, image, alpha=None):
+    def __init__(self, x, y, image, alpha=None, flipy=False):
         self.kind = 'image'
-        super(Image, self).__init__(x=x, y=y, image=image, alpha=alpha)
+        super(Image, self).__init__(x=x, y=y, image=image, alpha=alpha,
+                                    flipy=flipy)
 
         self._drawn = False
 
@@ -988,7 +989,8 @@ class Image(CanvasObjectBase):
 
         # composite the image into the destination array at the
         # calculated position
-        trcalc.overlay_image(dstarr, x, y, newdata, alpha=self.alpha)
+        trcalc.overlay_image(dstarr, x, y, newdata, alpha=self.alpha,
+                             flipy=self.flipy)
         #print "image overlaid"
 
 

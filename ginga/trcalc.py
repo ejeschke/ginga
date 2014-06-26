@@ -260,8 +260,8 @@ def calc_image_merge_clip(x1, y1, x2, y2,
     return (dst_x, dst_y, a1, b1, a2, b2)
 
 
-def overlay_image(dstarr, dst_x, dst_y, srcarr, alpha=1.0,
-                  flipy=True):
+def overlay_image(dstarr, dst_x, dst_y, srcarr, order='RGBA',
+                  alpha=1.0, fill=True, flipy=False):
 
     dst_ht, dst_wd, dst_dp = dstarr.shape
     src_ht, src_wd, src_dp = srcarr.shape
@@ -302,19 +302,33 @@ def overlay_image(dstarr, dst_x, dst_y, srcarr, alpha=1.0,
 
     # fill alpha channel in destination in the area we will be dropping
     # the image
-    dstarr[dst_y:dst_y+src_ht, dst_x:dst_x+src_wd, 3] = 255
+    if fill:
+        dstarr[dst_y:dst_y+src_ht, dst_x:dst_x+src_wd, 3] = 255
+
+    if src_dp > 3:
+        # if overlay source contains an alpha channel, extract it
+        # and use it, otherwise use scalar keyword parameter
+        alpha = srcarr[0:src_ht, 0:src_wd, 3] / 255.0
+        alpha = numpy.dstack((alpha, alpha, alpha))
 
     # calculate alpha blending
     #   Co = CaAa + CbAb(1 - Aa)
-    a_arr = (alpha * srcarr).astype(numpy.uint8)
+    a_arr = (alpha * srcarr[0:src_ht, 0:src_wd, 0:3]).astype(numpy.uint8)
     b_arr = ((1.0 - alpha) * dstarr[dst_y:dst_y+src_ht,
-                                    dst_x:dst_x+src_wd, 0:3]).astype(numpy.uint8)
+                                    dst_x:dst_x+src_wd,
+                                    0:3]).astype(numpy.uint8)
 
     # Place our srcarr into this dstarr at dst offsets
     #dstarr[dst_y:dst_y+src_ht, dst_x:dst_x+src_wd, 0:3] += addarr[0:src_ht, 0:src_wd, 0:3]
-    dstarr[dst_y:dst_y+src_ht, dst_x:dst_x+src_wd, 0:3] = a_arr[0:src_ht, 0:src_wd, 0:3] + b_arr[0:src_ht, 0:src_wd, 0:3]
+    dstarr[dst_y:dst_y+src_ht, dst_x:dst_x+src_wd, 0:3] = \
+             a_arr[0:src_ht, 0:src_wd, 0:3] + b_arr[0:src_ht, 0:src_wd, 0:3]
     # TEMP
     #dstarr = dstarr.clip(0, 255)
+
+        ## alpha = data[:, :, 3] / 255.0
+        ## alpha = numpy.dstack((alpha, alpha, alpha))
+        ## a_arr = (alpha * data[:, :, 0:3]).astype(numpy.uint8)
+        ## b_arr = ((1.0 - alpha) * outarr[dst_y:dst_y+height, dst_x:dst_x+width, 0:3]).astype(numpy.uint8)
 
 
 #END

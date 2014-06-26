@@ -146,7 +146,7 @@ class ImageViewBase(Callback.Callbacks):
         self.t_.addDefaults(autozoom='on')
 
         # image overlays
-        self.t_.addDefaults(image_overlays=True)
+        self.t_.addDefaults(image_overlays=False)
         self.t_.getSetting('image_overlays').add_callback('set', self.overlays_change_cb)
 
         # for panning
@@ -221,7 +221,6 @@ class ImageViewBase(Callback.Callbacks):
         self._prergb = None
         self._rgbobj = None
         self._rgbobj2 = None
-        self._alpha_mask = None
 
         # optimization of redrawing
         self.defer_redraw = self.t_.get('defer_redraw', True)
@@ -622,48 +621,21 @@ class ImageViewBase(Callback.Callbacks):
         # NOTE [A]
         height, width, depth = data.shape
 
-        # fill image array with the background color
         imgwin_wd, imgwin_ht = self.get_window_size()
 
         # create RGBA array for output
         outarr = numpy.zeros((imgwin_ht, imgwin_wd, depth), dtype='uint8')
         
+        # fill image array with the background color
         r, g, b = self.img_bg
         bgval = dict(A=int(255*alpha), R=int(255*r), G=int(255*g), B=int(255*b))
 
         for i in xrange(len(order)):
             outarr[:, :, i] = bgval[order[i]]
 
-        dst_x, dst_y = self._dst_x, self._dst_y
-
-        # Trim off parts of data that would be "hidden"
-        # to the left and above the window edge.
-        if dst_y < 0:
-            dy = abs(dst_y)
-            data = data[dy:, :, :]
-            height -= dy
-            dst_y = 0
-            
-        if dst_x < 0:
-            dx = abs(dst_x)
-            data = data[:, dx:, :]
-            width -= dx
-            dst_x = 0
-            
-        # Trim off parts of data that would be "hidden"
-        # to the right and below the window edge.
-        ex = dst_y + height - imgwin_ht
-        if ex > 0:
-            data = data[:imgwin_ht, :, :]
-            height -= ex
-            
-        ex = dst_x + width - imgwin_wd
-        if ex > 0:
-            data = data[:, :imgwin_wd, :]
-            width -= ex
-            
-        # Place our data into this background array at dst offsets
-        outarr[dst_y:dst_y+height, dst_x:dst_x+width] = data[0:height, 0:width]
+        # overlay our data
+        trcalc.overlay_image(outarr, self._dst_x, self._dst_y,
+                             data, flipy=False)
 
         return outarr
 
@@ -688,8 +660,8 @@ class ImageViewBase(Callback.Callbacks):
         `whence` is an optimization flag that reduces the time to create
         the object by only recalculating what is necessary:
 
-        0   = new image or pan/scale has changed, recalculate everything
-        0.5 = transform or rotation has changed
+        0   = new image, pan/scale has changed, or rotation/transform
+                 has changed--recalculate everything
         1   = cut levels or similar has changed
         2   = color mapping has changed
         3   = graphical overlays have changed
@@ -717,12 +689,20 @@ class ImageViewBase(Callback.Callbacks):
                                                      win_wd, win_ht)
         else:
             self._rotimg = self._cutout
+
+        dims = self._rotimg.shape
+        depth = dims[2] - 1
             
         time_split2 = time.time()
         if (whence <= 1) or (self._prergb == None):
             # Apply visual changes prior to color mapping (cut levels, etc)
             vmax = self.rgbmap.get_hash_size() - 1
-            newdata = self.apply_visuals(self._rotimg, 0, vmax)
+            #data = self._rotimg
+            data = self._rotimg[:, :, 0:depth]
+            newdata = self.apply_visuals(data, 0, vmax)
+
+            if depth == 1:
+                newdata = newdata.reshape(newdata.shape[:2])
 
             # Result becomes an index array fed to the RGB mapper
             if not numpy.issubdtype(newdata.dtype, numpy.dtype('uint')):
@@ -741,12 +721,13 @@ class ImageViewBase(Callback.Callbacks):
             image_order = self.image.get_order()
             rgbobj = self.rgbmap.get_rgbarray(idx, order=rgb_order,
                                               image_order=image_order)
-            if has_overlays:
-                if rgbobj.hasAlpha:
-                    # insert alpha mask prior to rotation
-                    alpha = rgbobj.get_slice('A')
-                    alpha[:] = self._alpha_mask[:]
 
+            # insert (possibly rotated) alpha mask into RGBA array
+            if rgbobj.hasAlpha:
+                alpha = rgbobj.get_slice('A')
+                alpha[:] = (self._rotimg[:, :, depth] * 255).astype(numpy.uint8)
+
+            if has_overlays:
                 # Apply any RGB image overlays
                 self.overlay_images(self, rgbobj.rgbarr)
 
@@ -850,16 +831,26 @@ class ImageViewBase(Callback.Callbacks):
         # offset from pan position (at center) in this array
         self._org_xoff, self._org_yoff = ocx, ocy
 
+        if len(data.shape) < 3:
+            depth = 1
+        else:
+            depth = data.shape[2]
+
         # If there is no rotation, then we are done
         if not self.t_makebg and (self.t_['rot_deg'] == 0.0) and \
                (self.t_['image_overlays'] == False):
+            if len(data.shape) == 2:
+                data = data.reshape(ht, wd, 1)
+            data = numpy.append(data, numpy.ones((ht, wd, 1)), axis=2)
             return data
 
         # Make a square from the scaled cutout, with room to rotate
         slop = 20
         side = int(math.sqrt(win_wd**2 + win_ht**2) + slop)
         new_wd = new_ht = side
-        dims = (new_ht, new_wd) + data.shape[2:]
+
+        # prepare a new, larger array to hold the result and alpha
+        dims = (new_ht, new_wd, depth+1)
         # TODO: fill with a different background color?
         newdata = numpy.zeros(dims)
         # Find center of new data array 
@@ -870,13 +861,14 @@ class ImageViewBase(Callback.Callbacks):
         ldx, rdx = min(ocx, ncx), min(wd - ocx, ncx)
         bdy, tdy = min(ocy, ncy), min(ht - ocy, ncy)
 
-        newdata[ncy-bdy:ncy+tdy, ncx-ldx:ncx+rdx] = \
-                                 data[ocy-bdy:ocy+tdy, ocx-ldx:ocx+rdx]
+        if depth == 1:
+            newdata[ncy-bdy:ncy+tdy, ncx-ldx:ncx+rdx, 0] = \
+                                     data[ocy-bdy:ocy+tdy, ocx-ldx:ocx+rdx]
+        else:
+            newdata[ncy-bdy:ncy+tdy, ncx-ldx:ncx+rdx, 0:depth] = \
+                                     data[ocy-bdy:ocy+tdy, ocx-ldx:ocx+rdx]
 
-        # prepare alpha mask
-        alpha_mask = numpy.zeros(dims[:2], dtype=numpy.uint8)
-        alpha_mask[ncy-bdy:ncy+tdy, ncx-ldx:ncx+rdx] = 255
-        self._alpha_mask = alpha_mask
+        newdata[ncy-bdy:ncy+tdy, ncx-ldx:ncx+rdx, depth] = 1.0
         
         self._org_xoff, self._org_yoff = ncx, ncy
         return newdata
