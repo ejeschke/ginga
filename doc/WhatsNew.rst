@@ -2,6 +2,13 @@
 What's New in Ginga?
 ++++++++++++++++++++
 
+Ver 2.0.20140626204441
+======================
+Support has been added for image overlays.  It's now possible to overlay
+RGB images on top of the canvas.  The images scale, transform and rotate
+wrt the canvas.
+
+
 Ver 2.0.20140520035237
 ======================
 Auto cut levels algorithms have been updated.  "zscale" has been
