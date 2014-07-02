@@ -957,8 +957,8 @@ class Image(CanvasObjectBase):
 
         # scale the cutout according to the current viewer scale
         order = self.fitsimage.get_rgb_order()
-        if 'A' in order:
-            order = order.replace('A', '')
+        ## if 'A' in order:
+        ##     order = order.replace('A', '')
         srcdata = self.image.get_array(order)
         #print "order=%s srcdata=%s" % (order, srcdata.shape)
         scale_x, scale_y = self.fitsimage.get_scale_xy()

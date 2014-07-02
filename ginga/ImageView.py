@@ -365,6 +365,9 @@ class ImageViewBase(Callback.Callbacks):
         dist = distClass(hashsize, **kwdargs)
         self.set_calg(dist)
 
+    def get_color_algorithms(self):
+        return ColorDist.get_dist_names()
+    
     def set_cmap(self, cm, redraw=True):
         self.rgbmap.set_cmap(cm, callback=redraw)
 
@@ -635,7 +638,7 @@ class ImageViewBase(Callback.Callbacks):
 
         # overlay our data
         trcalc.overlay_image(outarr, self._dst_x, self._dst_y,
-                             data, flipy=False)
+                             data, flipy=False, copy=False)
 
         return outarr
 

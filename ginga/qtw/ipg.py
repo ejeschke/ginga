@@ -19,6 +19,7 @@ from ginga import AstroImage
 from ginga.qtw.QtHelp import QtGui, QtCore
 from ginga.qtw.ImageViewCanvasQt import ImageViewCanvas
 from ginga.misc import log, Settings
+from ginga.util import paths
 
 from IPython.lib.kernel import connect_qtconsole
 try:
@@ -329,10 +330,7 @@ def start(kapp):
     kapp.logger = logger
 
     # Get settings (preferences)
-    try:
-        basedir = os.environ['GINGA_HOME']
-    except KeyError:
-        basedir = os.path.join(os.environ['HOME'], '.ginga')
+    basedir = paths.ginga_home
     if not os.path.exists(basedir):
         try:
             os.mkdir(basedir)

@@ -184,15 +184,29 @@ class AstropyWCS(BaseWCS):
         self.header = None
         self.wcs = None
         self.coordsys = 'raw'
-        if hasattr(coordinates, 'ICRS'):
+        self.new_coords = False            # new astropy coordinate system
+
+        if hasattr(coordinates, 'SkyCoord'):
+            # v0.4 series astropy
+            ## self.coord_table = {
+            ##     'icrs': coordinates.SkyCoord,
+            ##     'fk5': coordinates.SkyCoord,
+            ##     'fk4': coordinates.SkyCoord,
+            ##     'galactic': coordinates.SkyCoord,
+            ##     }
+            self.new_coords = True
+
+        elif hasattr(coordinates, 'ICRS'):
+            # v0.3 series astropy
             self.coord_table = {
                 'icrs': coordinates.ICRS,
                 'fk5': coordinates.FK5,
                 'fk4': coordinates.FK4,
                 'galactic': coordinates.Galactic,
                 }
+
         else:
-            # older astropy
+            # v0.2 series astropy
             self.coord_table = {
                 'icrs': coordinates.ICRSCoordinates,
                 'fk5': coordinates.FK5Coordinates,
@@ -290,28 +304,37 @@ class AstropyWCS(BaseWCS):
         # Get a coordinates object based on ra/dec wcs transform
         ra_deg, dec_deg = self.pixtoradec(idxs, coords=coords)
         self.logger.debug("ra, dec = %f, %f" % (ra_deg, dec_deg))
-        
-        # convert to astropy coord
-        try:
-            fromclass = self.coord_table[self.coordsys]
-        except KeyError:
-            raise WCSError("No such coordinate system available: '%s'" % (
-                self.coordsys))
-            
-        coord = fromclass(ra_deg, dec_deg,
-                          unit=(units.degree, units.degree))
 
-        if (system == None) or (system == self.coordsys):
-            return coord
-            
-        # Now give it back to the user in the system requested
-        try:
-            toclass = self.coord_table[system]
-        except KeyError:
-            raise WCSError("No such coordinate system available: '%s'" % (
-                system))
+        if not self.new_coords:
+            # convert to astropy coord
+            try:
+                fromclass = self.coord_table[self.coordsys]
+            except KeyError:
+                raise WCSError("No such coordinate system available: '%s'" % (
+                    self.coordsys))
 
-        coord = coord.transform_to(toclass)
+            coord = fromclass(ra_deg, dec_deg,
+                              unit=(units.degree, units.degree))
+
+            if (system == None) or (system == self.coordsys):
+                return coord
+
+            # Now give it back to the user in the system requested
+            try:
+                toclass = self.coord_table[system]
+            except KeyError:
+                raise WCSError("No such coordinate system available: '%s'" % (
+                    system))
+
+            coord = coord.transform_to(toclass)
+
+        else:
+            # new astropy coordinates system
+            coord = coordinates.SkyCoord(ra_deg * units.degree,
+                                         dec_deg * units.degree,
+                                         frame=self.coordsys)
+            coord = coord.transform_to(system)
+            
         return coord
 
     def _deg(self, coord):
@@ -324,8 +347,15 @@ class AstropyWCS(BaseWCS):
         
     def pixtosystem(self, idxs, system=None, coords='data'):
         c = self.pixtocoords(idxs, system=system, coords=coords)
-       
-        return (self._deg(c.lonangle), self._deg(c.latangle))
+        if not self.new_coords:
+            # older astropy
+            return (self._deg(c.lonangle), self._deg(c.latangle))
+        else:
+            # wish we didn't need this test
+            if system == 'galactic':
+                return (self._deg(c.l), self._deg(c.b))
+            else:
+                return (self._deg(c.ra), self._deg(c.dec))
 
 
 class AstLibWCS(BaseWCS):

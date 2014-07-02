@@ -371,8 +371,8 @@ class ImageViewEvent(ImageViewGtk):
     def get_keyTable(self):
         return self._keytbl
     
-    def set_followfocus(self, tf):
-        self.followfocus = tf
+    def set_follow_focus(self, tf):
+        self.follow_focus = tf
         
     def map_event(self, widget, event):
         super(ImageViewZoom, self).configure_event(widget, event)

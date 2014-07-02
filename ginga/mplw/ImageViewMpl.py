@@ -461,8 +461,8 @@ class ImageViewEvent(ImageViewMpl):
     def get_keyTable(self):
         return self._keytbl
     
-    def set_followfocus(self, tf):
-        self.followfocus = tf
+    def set_follow_focus(self, tf):
+        self.follow_focus = tf
         
     def focus_event(self, event, hasFocus):
         return self.make_callback('focus', hasFocus)

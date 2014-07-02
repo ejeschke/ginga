@@ -13,6 +13,7 @@ import stat, time
 from ginga.misc import Bunch
 from ginga import GingaPlugin
 from ginga import AstroImage
+from ginga.utils import paths
 
 
 class FBrowserBase(GingaPlugin.LocalPlugin):
@@ -29,7 +30,7 @@ class FBrowserBase(GingaPlugin.LocalPlugin):
                         ]
         
         self.jumpinfo = []
-        homedir = os.environ['HOME']
+        homedir = paths.home
         self.curpath = os.path.join(homedir, '*')
         self.do_scanfits = False
         self.moving_cursor = False

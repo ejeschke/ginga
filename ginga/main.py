@@ -49,6 +49,7 @@ from ginga.Control import GingaControl, GuiLogHandler
 import ginga.version as version
 import ginga.toolkit as ginga_toolkit
 from ginga import AstroImage
+from ginga.util import paths
 
 default_layout = ['seq', {},
                    ['vbox', dict(name='top', width=1440, height=900),
@@ -99,7 +100,7 @@ local_plugins = [
     Bunch(module='Cuts', ws='dialogs', shortkey='f5'),
     Bunch(module='Histogram', ws='dialogs', shortkey='f6'),
     Bunch(module='PixTable', ws='dialogs', shortkey='f7'),
-    Bunch(module='Layers', ws='dialogs', shortkey='f7'),
+    #Bunch(module='Layers', ws='dialogs', shortkey='f7'),
     Bunch(module='Preferences', ws='dialogs', shortkey='f9'),
     Bunch(module='Catalogs', ws='dialogs', shortkey='f10'),
     Bunch(module='Mosaic', ws='dialogs'),
@@ -117,10 +118,7 @@ def main(options, args):
     logger = log.get_logger(name='ginga', options=options)
 
     # Get settings (preferences)
-    try:
-        basedir = os.environ['GINGA_HOME']
-    except KeyError:
-        basedir = os.path.join(os.environ['HOME'], '.ginga')
+    basedir = paths.ginga_home
     if not os.path.exists(basedir):
         try:
             os.mkdir(basedir)

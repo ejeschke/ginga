@@ -14,6 +14,8 @@ import mimetypes
 import hashlib
 import StringIO
 
+from ginga.util import paths
+
 try:
     # do we have Python Imaging Library available?
     import PIL.Image as PILimage
@@ -54,10 +56,7 @@ try:
 except ImportError:
     have_cms = False
 
-try:
-    basedir = os.environ['GINGA_HOME']
-except KeyError:
-    basedir = os.path.join(os.environ['HOME'], '.ginga')
+basedir = paths.ginga_home
 
 # Color Management configuration
 profile = {}

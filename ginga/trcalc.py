@@ -261,7 +261,7 @@ def calc_image_merge_clip(x1, y1, x2, y2,
 
 
 def overlay_image(dstarr, dst_x, dst_y, srcarr, order='RGBA',
-                  alpha=1.0, fill=True, flipy=False):
+                  alpha=1.0, copy=False, fill=True, flipy=False):
 
     dst_ht, dst_wd, dst_dp = dstarr.shape
     src_ht, src_wd, src_dp = srcarr.shape
@@ -300,6 +300,9 @@ def overlay_image(dstarr, dst_x, dst_y, srcarr, order='RGBA',
     ## print "2. dst_x, dst_y", dst_x, dst_y
     ## print "2. src_wd, src_ht, shape", src_wd, src_ht, srcarr.shape
 
+    if copy:
+        dstarr = numpy.copy(dstarr, order='C')
+        
     # fill alpha channel in destination in the area we will be dropping
     # the image
     if fill:
@@ -310,6 +313,8 @@ def overlay_image(dstarr, dst_x, dst_y, srcarr, order='RGBA',
         # and use it, otherwise use scalar keyword parameter
         alpha = srcarr[0:src_ht, 0:src_wd, 3] / 255.0
         alpha = numpy.dstack((alpha, alpha, alpha))
+    #print "alpha is", alpha
+    #print "src_dp", src_dp
 
     # calculate alpha blending
     #   Co = CaAa + CbAb(1 - Aa)
@@ -322,13 +327,8 @@ def overlay_image(dstarr, dst_x, dst_y, srcarr, order='RGBA',
     #dstarr[dst_y:dst_y+src_ht, dst_x:dst_x+src_wd, 0:3] += addarr[0:src_ht, 0:src_wd, 0:3]
     dstarr[dst_y:dst_y+src_ht, dst_x:dst_x+src_wd, 0:3] = \
              a_arr[0:src_ht, 0:src_wd, 0:3] + b_arr[0:src_ht, 0:src_wd, 0:3]
-    # TEMP
-    #dstarr = dstarr.clip(0, 255)
 
-        ## alpha = data[:, :, 3] / 255.0
-        ## alpha = numpy.dstack((alpha, alpha, alpha))
-        ## a_arr = (alpha * data[:, :, 0:3]).astype(numpy.uint8)
-        ## b_arr = ((1.0 - alpha) * outarr[dst_y:dst_y+height, dst_x:dst_x+width, 0:3]).astype(numpy.uint8)
+    return dstarr
 
 
 #END

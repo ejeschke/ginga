@@ -48,6 +48,10 @@ OR
 
 OR
 
+* python-qt5
+
+OR
+
 * python-pyside (qt4 alternative)
 
 OR
@@ -69,6 +73,7 @@ operations):
 
 * python-numexpr
 * python-magic
+* python-PIL
 
 ==============================
 Notes on Supported Widget Sets
@@ -85,7 +90,7 @@ reference viewer, which includes many plugins (scripts/ginga).
 Qt/PySide
 =========
 
-Ginga can use either PyQt or PySide, version 4.  It will auto-detect
+Ginga can use either PyQt or PySide, version 4 or 5.  It will auto-detect
 which one is installed.  There is support for both the basic widget and
 the full reference viewer.
   
@@ -97,11 +102,7 @@ the full reference viewer.
 Gtk
 ===
 
-Ginga can use Gtk version 2 or 3, but at the present time only Gtk 2 is
-supported for the full reference viewer, due to some dependences in the
-plugins to version 2.  The viewing widget by itself is fine with either
-version.  Ginga will auto-detect which versions are installed and
-default to version 2 if available.
+At the present time only Gtk 2 is supported.
 
 Tk
 ===
@@ -173,13 +174,27 @@ or by obtaining the source and installing as described above.
 Mac
 ===
 
-The two recommended ways to install on the Mac are:
+For Mac users, if you have a working Macports or Homebrew installation
+skip to the appropriate section below.  If not, we recommend installing
+the Enthought "Canopy" python scientific distribution.  There is a 
+`free version available <https://www.enthought.com/canopy-express/>`
+which works fine.
 
-* Install from `macports <http://www.macports.org/>`_
+After installing this, open the Canopy package manager, search for
+"astropy" and install it.  Then open a Terminal and
+install Ginga via "pip install ginga".
+
+The `Anaconda distribution <http://continuum.io/downloads>` may also work.
+
+Macports and Homebrew
+---------------------
+
 * Install from `homebrew <http://brew.sh/>`_
+* Install from `macports <http://www.macports.org/>`_
 
 Either method should provide all the modules necessary to run
-Ginga.  Then install Ginga from source as described above.
+Ginga.  Then install Ginga from pip or from source as described in the
+section above on "Installation from Source".
 
 With macports you will need to install the necessary packages.  Assuming 
 that you have a working macports installed, it will be something like::
@@ -195,15 +210,15 @@ Have a cup of your favorite beverage.  It takes a while to compile all these!
 Windows
 =======
 
-Binary packages corresponding to all the ones described in the Linux
-section are available online.
+For Windows users we recommend installing the Enthought "Canopy"
+python scientific distribution.  There is a 
+`free version available <https://www.enthought.com/canopy-express/>`
+which works fine.
 
-Install the necessary dependences and then install Ginga from source as
-described above. 
+After installing this, open the Canopy package manager, search for
+"astropy" and install it.  Then open a shell (command prompt) and
+install Ginga via "pip install ginga".
 
-.. note:: We need help from someone who runs Mac or Windows and is
-	  skilled enough to make better (e.g. all-in-one) binary
-	  installation packages! 
+The `Anaconda distribution <http://continuum.io/downloads>` may also work.
 
-	  Please contact us if you can help.
 
