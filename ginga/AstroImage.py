@@ -559,9 +559,10 @@ class AstroImage(BaseImage):
                 elif system == 'ecliptic':
                     ra_lbl, dec_lbl = u"\u03BB", u"\u03B2"
                 elif system == 'helioprojective':
-                    ra_txt = "%+5.3f" % (lon_deg*3600)
+                    lon_wrap = ((lon_deg - 180.) % 360.) - (360. - 180.)
+                    ra_txt = "%+5.3f" % (lon_wrap*3600)
                     dec_txt = "%+5.3f" % (lat_deg*3600)
-                    ra_lbl, dec_lbl = u"x\u2033", u"y\u2033"
+                    ra_lbl, dec_lbl = u"x-Solar \u2033", u"y-Solar \u2033"
 
         except Exception, e:
             self.logger.warn("Bad coordinate conversion: %s" % (
