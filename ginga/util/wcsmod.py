@@ -978,6 +978,10 @@ def choose_coord_system(header):
     match = re.match(r'^HPLN\-.*$', ctype)
     if match:
         return 'helioprojective'
+    
+    match = re.match(r'^HGLT\-.*$', ctype)
+    if match:
+        return 'heliographicstonyhurst'
 
     #raise WCSError("Cannot determine appropriate coordinate system from FITS header")
     return 'icrs'
