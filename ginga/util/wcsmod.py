@@ -120,11 +120,12 @@ def use(wcspkg, raise_err=True):
                     raise
 
         try:
+            from sunpy import coordinates
             from astropy import coordinates
             from astropy import units
             have_astropy = True
             wcs_configured = True
-            coord_types = ['icrs', 'fk5', 'fk4', 'galactic']
+            coord_types = ['icrs', 'fk5', 'fk4', 'galactic', 'helioprojective']
             WCS = AstropyWCS
             return True
 
@@ -351,11 +352,9 @@ class AstropyWCS(BaseWCS):
             # older astropy
             return (self._deg(c.lonangle), self._deg(c.latangle))
         else:
-            # wish we didn't need this test
-            if system == 'galactic':
-                return (self._deg(c.l), self._deg(c.b))
-            else:
-                return (self._deg(c.ra), self._deg(c.dec))
+            from astropy.coordinates import SphericalRepresentation
+            rs = c.represent_as(SphericalRepresentation)
+            return (self._deg(rs.lon), self._deg(rs.lat))
 
 
 class AstLibWCS(BaseWCS):
@@ -966,6 +965,11 @@ def choose_coord_system(header):
         radecsys = radecsys.strip()
 
         return radecsys.lower()
+    
+    match = re.match(r'^HPLN\-.*$', ctype)
+    if match:
+        return 'helioprojective'
+
 
     #raise WCSError("Cannot determine appropriate coordinate system from FITS header")
     return 'icrs'
