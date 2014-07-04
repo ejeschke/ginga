@@ -127,14 +127,13 @@ def use(wcspkg, raise_err=True):
             WCS = AstropyWCS
             
             if hasattr(coordinates, 'SkyCoord'):
-                have_astropy_04 = True
                 try:
                     import sunpy.coordinates
                 except ImportError:
                     pass
                 coord_types = [f.name for f in coordinates.frame_transform_graph.frame_set]
             else:
-                coord_types = ['icrs', 'fk5', 'fk4', 'galactic', 'helioprojective']
+                coord_types = ['icrs', 'fk5', 'fk4', 'galactic']
             
             return True
 
@@ -344,7 +343,6 @@ class AstropyWCS(BaseWCS):
                                          dec_deg * units.degree,
                                          frame=self.coordsys)
             coord = coord.transform_to(system)
-            
         return coord
 
     def _deg(self, coord):
@@ -361,9 +359,8 @@ class AstropyWCS(BaseWCS):
             # older astropy
             return (self._deg(c.lonangle), self._deg(c.latangle))
         else:
-            from astropy.coordinates import SphericalRepresentation
-            rs = c.represent_as(SphericalRepresentation)
-            return (self._deg(rs.lon), self._deg(rs.lat))
+            r = c.frame.data
+            return map(self._deg, [getattr(r, component) for component in r.components[:2]])
 
 
 class AstLibWCS(BaseWCS):
