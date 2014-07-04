@@ -120,13 +120,22 @@ def use(wcspkg, raise_err=True):
                     raise
 
         try:
-            from sunpy import coordinates
             from astropy import coordinates
             from astropy import units
             have_astropy = True
             wcs_configured = True
-            coord_types = ['icrs', 'fk5', 'fk4', 'galactic', 'helioprojective']
             WCS = AstropyWCS
+            
+            if hasattr(coordinates, 'SkyCoord'):
+                have_astropy_04 = True
+                try:
+                    import sunpy.coordinates
+                except ImportError:
+                    pass
+                coord_types = [f.name for f in coordinates.frame_transform_graph.frame_set]
+            else:
+                coord_types = ['icrs', 'fk5', 'fk4', 'galactic', 'helioprojective']
+            
             return True
 
         except ImportError as e:
@@ -969,7 +978,6 @@ def choose_coord_system(header):
     match = re.match(r'^HPLN\-.*$', ctype)
     if match:
         return 'helioprojective'
-
 
     #raise WCSError("Cannot determine appropriate coordinate system from FITS header")
     return 'icrs'
