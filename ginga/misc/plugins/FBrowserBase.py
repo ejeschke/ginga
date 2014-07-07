@@ -13,7 +13,7 @@ import stat, time
 from ginga.misc import Bunch
 from ginga import GingaPlugin
 from ginga import AstroImage
-from ginga.utils import paths
+from ginga.util import paths
 
 
 class FBrowserBase(GingaPlugin.LocalPlugin):
