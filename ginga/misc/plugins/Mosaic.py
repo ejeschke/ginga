@@ -19,6 +19,11 @@ from ginga.util import wcs, iqcalc, dp
 from ginga import GingaPlugin
 from ginga.misc import Widgets, CanvasTypes
 
+try:
+    import astropy.io.fits as pyfits
+    have_pyfits = True
+except ImportError:
+    have_pyfits = False
 
 class Mosaic(GingaPlugin.LocalPlugin):
 
@@ -52,7 +57,8 @@ class Mosaic(GingaPlugin.LocalPlugin):
         self.settings.setDefaults(annotate_images=False, fov_deg=1.0,
                                   match_bg=False, trim_px=0,
                                   merge=False, num_threads=4,
-                                  drop_creates_new_mosaic=True)
+                                  drop_creates_new_mosaic=True,
+                                  mosaic_hdus=False, skew_limit=0.1)
         self.settings.load(onError='silent')
 
         # channel where mosaic should appear (default=ours)
@@ -96,6 +102,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
              'set_num_threads', 'entry'),
             ("Merge data", 'checkbutton', "Drop new",
              'checkbutton'),
+            ("Mosaic HDUs", 'checkbutton'),
             ]
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
@@ -137,6 +144,10 @@ class Mosaic(GingaPlugin.LocalPlugin):
         b.drop_new.set_tooltip("Dropping files on image starts a new mosaic")
         b.drop_new.set_state(drop_new)
         b.drop_new.add_callback('activated', self.drop_new_cb)
+        mosaic_hdus = self.settings.get('mosaic_hdus', False)
+        b.mosaic_hdus.set_tooltip("Mosaic data HDUs in each file")
+        b.mosaic_hdus.set_state(mosaic_hdus)
+        b.mosaic_hdus.add_callback('activated', self.mosaic_hdus_cb)
 
         fr.set_widget(w)
         vbox.add_widget(fr, stretch=0)
@@ -207,7 +218,10 @@ class Mosaic(GingaPlugin.LocalPlugin):
         self.bg_ref = iqcalc.get_median(data_np)
             
         # TODO: handle skew (differing rotation for each axis)?
-        (rot_deg, cdelt1, cdelt2) = wcs.get_rotation_and_scale(header)
+        
+        skew_limit = self.settings.get('skew_limit', 0.1)
+        (rot_deg, cdelt1, cdelt2) = wcs.get_rotation_and_scale(header,
+                                                               skew_threshold=skew_limit)
         self.logger.debug("image0 rot=%f cdelt1=%f cdelt2=%f" % (
             rot_deg, cdelt1, cdelt2))
 
@@ -232,7 +246,8 @@ class Mosaic(GingaPlugin.LocalPlugin):
         imname = img_mosaic.get('name', "NoName")
 
         header = img_mosaic.get_header()
-        (rot, cdelt1, cdelt2) = wcs.get_rotation_and_scale(header)
+        (rot, cdelt1, cdelt2) = wcs.get_rotation_and_scale(header,
+                                                           skew_threshold=skew_limit)
         self.logger.debug("mosaic rot=%f cdelt1=%f cdelt2=%f" % (
             rot, cdelt1, cdelt2))
 
@@ -347,13 +362,36 @@ class Mosaic(GingaPlugin.LocalPlugin):
         for url in paths:
             if self.ev_intr.isSet():
                 break
-            image = self.fv.load_image(url)
+            mosaic_hdus = self.settings.get('mosaic_hdus', False)
+            if mosaic_hdus:
+                self.logger.debug("mosaicing hdus")
+                # User wants us to mosaic HDUs
+                # TODO: do this in a different thread?
+                with pyfits.open(url, 'readonly') as in_f:
+                    i = 0
+                    for hdu in in_f:
+                        i += 1
+                        if hdu.data == None:
+                            continue
+                        self.logger.debug("ingesting hdu #%d" % (i))
+                        image = AstroImage.AstroImage(logger=self.logger)
+                        image.load_hdu(hdu)
+                        image.set(name='hdu%d' % (i))
+                        
+                        with self.lock:
+                            self.fv.gui_call(self.fv.error_wrap, self.ingest_one, image)
 
-            with self.lock:
-                self.fv.gui_call(self.fv.error_wrap, self.ingest_one, image)
-                count = self.ingest_count
+                with self.lock:
+                    count = self.ingest_count
 
-                self.update_progress(float(count)/self.total_files)
+            else:
+                image = self.fv.load_image(url)
+
+                with self.lock:
+                    self.fv.gui_call(self.fv.error_wrap, self.ingest_one, image)
+                    count = self.ingest_count
+
+            self.update_progress(float(count)/self.total_files)
 
         if count == self.total_files:
             self.end_progress()
@@ -402,14 +440,14 @@ class Mosaic(GingaPlugin.LocalPlugin):
             if dist > fov_deg:
                 self.prepare_mosaic(image, fov_deg)
 
-        self.fv.gui_call(self.fv.error_wrap, self.ingest_one, image)
-        self.update_progress(float(self.ingest_count)/self.total_files)
+        #self.fv.gui_call(self.fv.error_wrap, self.ingest_one, image)
+        #self.update_progress(float(self.ingest_count)/self.total_files)
 
         time_intr2 = time.time()
         self.process_elapsed += time_intr2 - time_intr1
 
         num_threads = self.settings.get('num_threads', 4)
-        groups = self.split_n(paths[1:], num_threads)
+        groups = self.split_n(paths, num_threads)
         for group in groups:
             self.fv.nongui_do(self.mosaic_some, group)
 
@@ -431,6 +469,9 @@ class Mosaic(GingaPlugin.LocalPlugin):
         
     def drop_new_cb(self, w, tf):
         self.settings.set(drop_creates_new_mosaic=tf)
+        
+    def mosaic_hdus_cb(self, w, tf):
+        self.settings.set(mosaic_hdus=tf)
         
     def set_num_threads_cb(self, w):
         num_threads = int(w.get_text())

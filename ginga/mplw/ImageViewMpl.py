@@ -107,18 +107,22 @@ class ImageViewMpl(ImageView.ImageViewBase):
                                      frameon=False)
         newax.hold(True)
         newax.autoscale(enable=False)
-        # newax.get_xaxis().set_visible(False)
-        # newax.get_yaxis().set_visible(False)
+        newax.get_xaxis().set_visible(False)
+        newax.get_yaxis().set_visible(False)
         self.ax_util = newax
 
         # Create timers
-        self._msg_timer = figure.canvas.new_timer()
-        self._msg_timer.single_shot = True
-        self._msg_timer.add_callback(self.onscreen_message_off)
+        self._msg_timer = None
+        self._defer_timer = None
         
-        self._defer_timer = figure.canvas.new_timer()
-        self._defer_timer.single_shot = True
-        self._defer_timer.add_callback(self.delayed_redraw)
+        if hasattr(figure.canvas, 'new_timer'):
+            self._msg_timer = figure.canvas.new_timer()
+            self._msg_timer.single_shot = True
+            self._msg_timer.add_callback(self.onscreen_message_off)
+        
+            self._defer_timer = figure.canvas.new_timer()
+            self._defer_timer.single_shot = True
+            self._defer_timer.add_callback(self.delayed_redraw)
 
         # marker drawn at the center of the image for debugging
         self.cross1 = lines.Line2D((0.49, 0.51), (0.50, 0.50),
@@ -270,13 +274,14 @@ class ImageViewMpl(ImageView.ImageViewBase):
         self.figure.canvas.draw()
 
         # Set the axis limits
-        wd, ht = self.get_window_size()
-        x0, y0 = self.get_data_xy(0, 0)
-        x1, tm = self.get_data_xy(wd-1, 0)
-        tm, y1 = self.get_data_xy(0, ht-1)
-        for ax in self.figure.axes:
-            ax.set_xlim(x0, x1)
-            ax.set_ylim(y0, y1)
+        # TODO: should we do this only for those who have autoaxis=True?
+        ## wd, ht = self.get_window_size()
+        ## x0, y0 = self.get_data_xy(0, 0)
+        ## x1, tm = self.get_data_xy(wd-1, 0)
+        ## tm, y1 = self.get_data_xy(0, ht-1)
+        ## for ax in self.figure.axes:
+        ##     ax.set_xlim(x0, x1)
+        ##     ax.set_ylim(y0, y1)
 
     def draw_message(self, message):
         # r, g, b = self.img_fg
@@ -350,6 +355,11 @@ class ImageViewMpl(ImageView.ImageViewBase):
         return self.onscreen_message(None, redraw=redraw)
     
     def reschedule_redraw(self, time_sec):
+
+        if self._defer_timer == None:
+            self.delayed_redraw()
+            return
+        
         try:
             self._defer_timer.stop()
         except:

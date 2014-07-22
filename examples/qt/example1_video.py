@@ -30,7 +30,7 @@ Usage:
 """
 import sys, os
 import time
-import logging
+import logging, logging.handlers
 import threading
 import Queue
 import numpy
@@ -173,10 +173,12 @@ class GingaVision(QtGui.QMainWindow):
         # Get the frame rate
         fps = cap.get(cv.CV_CAP_PROP_FPS)
         self.logger.info("Video rate is %d fps" % (fps))
-        self.set_playback_rate(fps)
+        if not ((fps == None) or (int(fps) == 0)):
+            self.set_playback_rate(fps)
 
         # Get the frame count
         num_frames = cap.get(cv.CV_CAP_PROP_FRAME_COUNT)
+        self.logger.info("There are %d frames" % (num_frames))
 
         # video frames seem to be returned with blue channel in LSByte
         self.pimage.set_order('BGR')

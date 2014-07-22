@@ -18,51 +18,6 @@ class ImageViewBindings(object):
     """
     Mouse Operation and Bindings
 
-    In a ImageViewEvent-based window with an instance of this bindings class:
-
-    * the left mouse button is used for controlling the current "operation";
-    * the middle wheel/button is used for zooming (scroll) and panning (press
-      and drag) around the image (must be zoomed in);
-
-    Key Bindings
-
-    In a ImageViewEvent-based window the following command keys are active
-    by default:
-
-    * 1,2,3,...,9,0: zoom to 1x, 2x, ... 9x, 10x. If you hold down Shift
-        key while pressing it will set to 1/2, 1/3, etc.
-    * (backquote "`"): zoom to fit window
-    * (double quote '"'): turn autozoom on; new images will be fit to the
-       window
-    * (single quote "'"): turn autozoom to override; new images will be fit
-      to the window until the user zooms the image
-    * (minus "-", underscore "_"): zoom out
-    * (equal "=", plus "+"): zoom in
-    * (left bracket "["): flip X (holding Shift (left brace "{") restores X
-      to normal orientation)
-    * (right bracket "]"): flip Y (holding Shift (right brace "}") restores Y
-      to normal orientation)
-    * (backslash \): swap XY (holding Shift (bar "|") restores XY to normal
-      orientation)
-    * a: auto cut levels
-    * (colon ":"): turn autocuts on; new images will be auto cut levels
-    * (semicolon ";"): turn autocuts to override; new images will be auto
-      cut levels until the user changes cuts manually
-    * (period '.'): set the low and high cut levels. Press and release the
-        key, then press mouse button 1 and drag in the image pane. 
-    * (slash '/'): shift the color map. Press and release the key, then
-        press mouse button 1 and drag around the window.  Dragging vertically
-        stretches the colormap and dragging horizontally shifts it, depending
-        on how far you drag. The display will adjust dynamically.
-    * (question '?'): restore a shifted color map.
-    p: sets the future pan position below the cursor
-    c: centers the image by placing the pan position centrally
-    r: rotate the image.  Press and release the key, then press mouse button
-         1 and drag left or right horizontally (X axis).  The image is rotated
-         by an amount proportional to the drag distance.
-    R: set the rotation to 0 deg (no rotation).
-    q: Start free panning.  Press mouse button 1 and drag around the window.
-         The image will be panned in the direction you drag.
     """
 
     def __init__(self, logger, settings=None):
@@ -1335,6 +1290,9 @@ class BindingMapper(Callback.Callbacks):
         
     def clear_modifier_map(self):
         self.modmap = {}
+
+    def current_modifier(self):
+        return self._kbdmod
 
     def get_modifiers(self):
         res = set([])

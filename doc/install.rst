@@ -176,15 +176,18 @@ Mac
 
 For Mac users, if you have a working Macports or Homebrew installation
 skip to the appropriate section below.  If not, we recommend installing
-the Enthought "Canopy" python scientific distribution.  There is a 
-`free version available <https://www.enthought.com/canopy-express/>`
-which works fine.
+the `Anaconda distribution <http://continuum.io/downloads>`.  
+This distribution already includes all of the necessary packages to run
+Ginga.
 
+As an alternative, you also have the choice of Enthought Canopy.  The 
+`free version <https://www.enthought.com/canopy-express/>` works fine.
 After installing this, open the Canopy package manager, search for
-"astropy" and install it.  Then open a Terminal and
-install Ginga via "pip install ginga".
+"astropy" and install it.  
 
-The `Anaconda distribution <http://continuum.io/downloads>` may also work.
+After installing one of these distributions, open a Terminal and
+install Ginga via "pip install ginga".  You can then run the reference
+viewer via the command "ginga".
 
 Macports and Homebrew
 ---------------------
@@ -210,15 +213,24 @@ Have a cup of your favorite beverage.  It takes a while to compile all these!
 Windows
 =======
 
-For Windows users we recommend installing the Enthought "Canopy"
-python scientific distribution.  There is a 
-`free version available <https://www.enthought.com/canopy-express/>`
-which works fine.
+For Windows users we recommend installing the
+`Anaconda distribution <http://continuum.io/downloads>`.  
+This distribution already includes all of the necessary packages to run
+Ginga.
 
+After installing Anaconda, you can find the reference viewer script as
+
+    Start -> All Programs -> Anaconda -> Anaconda Command Prompt
+    pythonw Scripts\ginga
+
+As an alternative, you also have the choice of Enthought Canopy.  The 
+`free version <https://www.enthought.com/canopy-express/>` works fine.
 After installing this, open the Canopy package manager, search for
-"astropy" and install it.  Then open a shell (command prompt) and
-install Ginga via "pip install ginga".
+"astropy" and install it.  
 
-The `Anaconda distribution <http://continuum.io/downloads>` may also work.
+    Start -> All Programs -> Enthought Canopy -> Canopy command prompt
+    pip install ginga
+    pythonw AppData\Local\Enthought\Canopy\User\Scripts\ginga
+
 
 

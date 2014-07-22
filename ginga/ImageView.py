@@ -638,7 +638,7 @@ class ImageViewBase(Callback.Callbacks):
 
         # overlay our data
         trcalc.overlay_image(outarr, self._dst_x, self._dst_y,
-                             data, flipy=False, copy=False)
+                             data, flipy=False, fill=False, copy=False)
 
         return outarr
 
