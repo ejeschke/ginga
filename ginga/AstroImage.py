@@ -525,7 +525,7 @@ class AstroImage(BaseImage):
         try:
             if (self.wcs == None) or (self.wcs.coordsys == 'raw'):
                 ra_txt = dec_txt = 'NO WCS'
-
+            
             else:
                 args = [data_x, data_y] + self.revnaxis
     
@@ -558,6 +558,10 @@ class AstroImage(BaseImage):
                     ra_lbl, dec_lbl = "l", "b"
                 elif system == 'ecliptic':
                     ra_lbl, dec_lbl = u"\u03BB", u"\u03B2"
+                elif system == 'helioprojective':
+                    ra_txt = "%+5.3f" % (lon_deg*3600)
+                    dec_txt = "%+5.3f" % (lat_deg*3600)
+                    ra_lbl, dec_lbl = u"x-Solar", u"y-Solar"
 
         except Exception, e:
             self.logger.warn("Bad coordinate conversion: %s" % (

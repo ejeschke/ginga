@@ -124,8 +124,17 @@ def use(wcspkg, raise_err=True):
             from astropy import units
             have_astropy = True
             wcs_configured = True
-            coord_types = ['icrs', 'fk5', 'fk4', 'galactic']
             WCS = AstropyWCS
+            
+            if hasattr(coordinates, 'SkyCoord'):
+                try:
+                    import sunpy.coordinates
+                except ImportError:
+                    pass
+                coord_types = [f.name for f in coordinates.frame_transform_graph.frame_set]
+            else:
+                coord_types = ['icrs', 'fk5', 'fk4', 'galactic']
+            
             return True
 
         except ImportError as e:
@@ -334,7 +343,6 @@ class AstropyWCS(BaseWCS):
                                          dec_deg * units.degree,
                                          frame=self.coordsys)
             coord = coord.transform_to(system)
-            
         return coord
 
     def _deg(self, coord):
@@ -351,11 +359,8 @@ class AstropyWCS(BaseWCS):
             # older astropy
             return (self._deg(c.lonangle), self._deg(c.latangle))
         else:
-            # wish we didn't need this test
-            if system == 'galactic':
-                return (self._deg(c.l), self._deg(c.b))
-            else:
-                return (self._deg(c.ra), self._deg(c.dec))
+            r = c.frame.data
+            return map(self._deg, [getattr(r, component) for component in r.components[:2]])
 
 
 class AstLibWCS(BaseWCS):
@@ -966,6 +971,14 @@ def choose_coord_system(header):
         radecsys = radecsys.strip()
 
         return radecsys.lower()
+    
+    match = re.match(r'^HPLN\-.*$', ctype)
+    if match:
+        return 'helioprojective'
+    
+    match = re.match(r'^HGLT\-.*$', ctype)
+    if match:
+        return 'heliographicstonyhurst'
 
     #raise WCSError("Cannot determine appropriate coordinate system from FITS header")
     return 'icrs'
