@@ -71,7 +71,7 @@ class Callbacks(object):
                 if res:
                     result = True
                 
-            except Exception, e:
+            except Exception as e:
                 # Catch exception because we need to iterate to the other
                 # callbacks
                 try:

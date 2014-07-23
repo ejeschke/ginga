@@ -158,12 +158,12 @@ class SettingGroup(object):
                         key = line[:i].strip()
                         val = eval(line[i+1:].strip())
                         d[key] = val
-                    except Exception, e:
+                    except Exception as e:
                         # silently skip parse errors, for now
                         continue
                         
             self.setDict(d)
-        except Exception, e:
+        except Exception as e:
             errmsg = "Error opening settings file (%s): %s" % (
                 self.preffile, str(e))
             if onError == 'silent':
@@ -199,7 +199,7 @@ class SettingGroup(object):
                 for key in keys:
                     out_f.write("%s = %s\n" % (key, repr(d[key])))
                         
-        except Exception, e:
+        except Exception as e:
             errmsg = "Error opening settings file (%s): %s" % (
                 self.preffile, str(e))
             self.logger.error(errmsg)
