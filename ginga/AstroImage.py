@@ -361,10 +361,6 @@ class AstroImage(BaseImage):
         """Drops new images into the current image (if there is room),
         relocating them according the WCS between the two images.
         """
-        # For determining our orientation
-        ra0, dec0 = self.pixtoradec(0, 0)
-        ra1, dec1 = self.pixtoradec(self.width-1, self.height-1)
-
         # Get our own (mosaic) rotation and scale
         header = self.get_header()
         ((xrot_ref, yrot_ref),
@@ -468,6 +464,11 @@ class AstroImage(BaseImage):
             x0, y0 = int(round(x0)), int(round(y0))
             self.logger.debug("Fitting image '%s' into mosaic at %d,%d" % (
                 name, x0, y0))
+
+            # This is for useful debugging info only
+            my_ctr_x, my_ctr_y = trcalc.get_center(mydata)
+            off_x, off_y = x0 - my_ctr_x, y0 - my_ctr_y
+            self.logger.debug("centering offsets: %d,%d" % (off_x, off_y))
 
             # Sanity check piece placement
             xlo, xhi = x0 - ctr_x, x0 + wd - ctr_x

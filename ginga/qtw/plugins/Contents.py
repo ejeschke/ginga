@@ -67,7 +67,7 @@ class Contents(GingaPlugin.GlobalPlugin):
         parent = item.parent()
         if parent:
             chname = str(parent.text(0))
-            print "parent is %s" % chname
+            #print "parent is %s" % chname
             self.switch_image(chname, imname)
 
     def switch_image3(self):

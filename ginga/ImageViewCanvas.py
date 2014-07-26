@@ -942,7 +942,7 @@ class Image(CanvasObjectBase):
 
         # calculate the cutout that we can make and scale to merge
         # onto the final image--by only cutting out what is necessary
-        # we speed scaling greatly at zoomed in sizes
+        # this speeds scaling greatly at zoomed in sizes
         dst_x, dst_y, a1, b1, a2, b2 = \
                trcalc.calc_image_merge_clip(xmin, ymin, xmax, ymax,
                                             dst_x, dst_y, a1, b1, a2, b2)
@@ -965,8 +965,6 @@ class Image(CanvasObjectBase):
         (newdata, (nscale_x, nscale_y)) = \
                   trcalc.get_scaled_cutout_basic(srcdata, a1, b1, a2, b2,
                                                  scale_x, scale_y)
-        # save the height of the cutout, we'll need it later
-        inc_ht, wd, dp = newdata.shape
         
         # calculate our offset from the pan position
         pan_x, pan_y = self.fitsimage.get_pan()
@@ -982,10 +980,6 @@ class Image(CanvasObjectBase):
         ht, wd, dp = dstarr.shape
         x = int(round(wd / 2.0  + off_x))
         y = int(round(ht / 2.0  + off_y))
-        # except that we have to subtract the height of the image we are
-        # adding since the dstarr is assumed to be oriented for display
-        #y -= inc_ht 
-        #print "x, y", x, y
 
         # composite the image into the destination array at the
         # calculated position

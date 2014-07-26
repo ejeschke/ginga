@@ -508,7 +508,7 @@ class GingaControl(Callback.Callbacks):
 
 
     def load_file(self, filepath, chname=None, wait=True,
-                  create_channel=True):
+                  create_channel=True, image_loader=None):
         """Load a file from filesystem and display it.
 
         Parameters
@@ -522,6 +522,8 @@ class GingaControl(Callback.Callbacks):
               (synchronous behavior)
         `create_channel`: boolean (optional)
             if not False, then will create the channel if it does not exist
+        `image_loader`: function (optional)
+            a special image loader, if provided
         Returns
         -------
         image:
@@ -536,9 +538,12 @@ class GingaControl(Callback.Callbacks):
             chinfo = self.get_channelInfo(chname)
             chname = chinfo.name
 
-        filepath = self.get_filepath(filepath)
+        if image_loader == None:
+            image_loader = self.load_image
         
-        image = self.load_image(filepath)
+        filepath = self.get_filepath(filepath)
+
+        image = image_loader(filepath)
 
         (path, filename) = os.path.split(filepath)
 
@@ -555,8 +560,9 @@ class GingaControl(Callback.Callbacks):
         # Return the image
         return image
 
-    def add_preload(self, chname, imname, path):
-        bnch = Bunch.Bunch(chname=chname, imname=imname, path=path)
+    def add_preload(self, chname, imname, path, image_loader=None):
+        bnch = Bunch.Bunch(chname=chname, imname=imname, path=path,
+                           image_loader=image_loader)
         with self.preloadLock:
             self.preloadList.append(bnch)
         self.nongui_do(self.preload_scan)
@@ -568,19 +574,24 @@ class GingaControl(Callback.Callbacks):
             while len(self.preloadList) > 0:
                 bnch = self.preloadList.pop(0)
                 self.nongui_do(self.preload_file, bnch.chname,
-                                  bnch.imname, bnch.path)
+                               bnch.imname, bnch.path,
+                               image_loader=bnch.image_loader)
 
-    def preload_file(self, chname, imname, path):
+    def preload_file(self, chname, imname, path, image_loader=None):
         # sanity check to see if the file is already in memory
         self.logger.debug("preload: checking %s in %s" % (imname, chname))
         chinfo = self.get_channelInfo(chname)
         datasrc = chinfo.datasrc
         self.logger.debug("has item: %s" % datasrc.has_key(imname))
+
         if not chinfo.datasrc.has_key(imname):
             # not there--load image in a non-gui thread, then have the
             # gui add it to the channel silently
             self.logger.info("preloading image %s" % (path))
-            image = self.load_image(path)
+            if image_loader == None:
+                image_loader = self.load_image
+            image = image_loader(path)
+
             self.gui_do(self.add_image, imname, image,
                            chname=chname, silent=True)
         self.logger.debug("end preload")
@@ -736,7 +747,8 @@ class GingaControl(Callback.Callbacks):
             return None
         return chinfo.fitsimage
         
-    def switch_name(self, chname, imname, path=None):
+    def switch_name(self, chname, imname, path=None,
+                    image_loader=None):
         chinfo = self.get_channelInfo(chname)
         if chinfo.datasrc.has_key(imname):
             # Image is still in the heap
@@ -747,7 +759,8 @@ class GingaControl(Callback.Callbacks):
             if path != None:
                 self.logger.debug("Image '%s' is no longer in memory; attempting to load from %s" % (
                     imname, path))
-                self.load_file(path, chname=chname)
+                self.load_file(path, chname=chname,
+                               image_loader=image_loader)
 
             else:
                 raise ControlError("No image by the name '%s' found" % (

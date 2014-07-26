@@ -68,7 +68,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         prefs = chinfo.prefs
         if not prefs.get('genthumb', False):
             return
-        
+
         # Is this thumbnail already in the list?
         # NOTE: does not handle two separate images with the same name
         # in the same channel
@@ -85,15 +85,17 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
             metadata[kwd] = header.get(kwd, 'N/A')
 
         thumbpath = self.get_thumbpath(path)
-        
+
         #self.thumb_generator.set_data(data)
         with self.thmblock:
             self.thumb_generator.set_image(image)
             self.copy_attrs(chinfo.fitsimage)
             imgwin = self.thumb_generator.get_image_as_widget()
 
+        # TODO: attach image loader to image metadata so we can recover it?
+        image_loader = None
         self.insert_thumbnail(imgwin, thumbkey, thumbname, chname, name, path,
-                              thumbpath, metadata)
+                              thumbpath, metadata, image_loader)
 
     def update_thumbs(self, nameList):
         
@@ -123,9 +125,11 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         self.reorder_thumbs()
         return False
         
-    def load_file(self, thumbkey, chname, name, path):
+    def load_file(self, thumbkey, chname, name, path,
+                  image_loader):
         self.logger.debug("loading image: %s" % (str(thumbkey)))
-        self.fv.switch_name(chname, name, path=path)
+        self.fv.switch_name(chname, name, path=path,
+                            image_loader=image_loader)
 
         # remember the last file we loaded
         with self.thmblock:
@@ -143,13 +147,15 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
                 nextkey = self.thumbList[index+1]
                 bnch = self.thumbDict[nextkey]
                 if bnch.path != None:
-                    self.fv.add_preload(bnch.chname, bnch.imname, bnch.path)
+                    self.fv.add_preload(bnch.chname, bnch.imname, bnch.path,
+                                        image_loader=image_loader)
 
             if index > 0:
                 prevkey = self.thumbList[index-1]
                 bnch = self.thumbDict[prevkey]
                 if bnch.path != None:
-                    self.fv.add_preload(bnch.chname, bnch.imname, bnch.path)
+                    self.fv.add_preload(bnch.chname, bnch.imname, bnch.path,
+                                        image_loader=image_loader)
 
     def load_next(self):
         with self.thmblock:
@@ -158,7 +164,8 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
                 nextkey = self.thumbList[index+1]
                 bnch = self.thumbDict[nextkey]
                 self.gui_do(self.load_file, nextkey,
-                            bnch.chname, bnch.imname, bnch.path)
+                            bnch.chname, bnch.imname, bnch.path,
+                            bnch.image_loader)
         
     def load_previous(self):
         with self.thmblock:
@@ -167,7 +174,8 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
                 prevkey = self.thumbList[index+1]
                 bnch = self.thumbDict[prevkey]
                 self.gui_do(self.load_file, prevkey,
-                            bnch.chname, bnch.imname, bnch.path)
+                            bnch.chname, bnch.imname, bnch.path,
+                            bnch.image_loader)
         
     def clear(self):
         with self.thmblock:
@@ -321,7 +329,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         self.reorder_thumbs()
 
     def _make_thumb(self, chname, image, path, thumbkey,
-                    save_thumb=False, thumbpath=None):
+                    image_loader, save_thumb=False, thumbpath=None):
         # This is called by the make_thumbs() as a gui thread
         with self.thmblock:
             self.thumb_generator.set_image(image)
@@ -347,12 +355,16 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
             thumbname = thumbname.split('.')[0]
 
         self.insert_thumbnail(imgwin, thumbkey, thumbname,
-                              chname, name, path, thumbpath, metadata)
+                              chname, name, path, thumbpath, metadata,
+                              image_loader)
         self.fv.update_pending(timeout=0.001)
         
-    def make_thumbs(self, chname, filelist):
+    def make_thumbs(self, chname, filelist, image_loader=None):
         # NOTE: this is called by the FBrowser plugin, as a non-gui thread!
         lcname = chname.lower()
+
+        if image_loader == None:
+            image_loader = self.fv.load_image
 
         cacheThumbs = self.settings.get('cacheThumbs', False)
 
@@ -381,15 +393,16 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
             if (thumbpath != None) and os.path.exists(thumbpath):
                 save_thumb = False
                 try:
-                    image = self.fv.load_image(thumbpath)
+                    image = image_loader(thumbpath)
                 except Exception, e:
                     pass
 
             try:
                 if image == None:
-                    image = self.fv.load_image(path)
+                    image = image_loader(path)
                 self.fv.gui_do(self._make_thumb, chname, image, path,
-                               thumbkey, save_thumb=save_thumb,
+                               thumbkey, image_loader,
+                               save_thumb=save_thumb,
                                thumbpath=thumbpath)
                 
             except Exception, e:

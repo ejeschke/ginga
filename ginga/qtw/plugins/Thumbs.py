@@ -93,11 +93,12 @@ class Thumbs(ThumbsBase.ThumbsBase):
         cw.addWidget(w, stretch=0)
 
     def insert_thumbnail(self, imgwin, thumbkey, thumbname, chname, name, path,
-                         thumbpath, metadata):
+                         thumbpath, metadata, image_loader):
         pixmap = QPixmap.fromImage(imgwin)
         imglbl = MyLabel()
         imglbl.setPixmap(pixmap)
-        imglbl.thumbs_cb = lambda: self.load_file(thumbkey, chname, name, path)
+        imglbl.thumbs_cb = lambda: self.load_file(thumbkey, chname, name, path,
+                                                  image_loader)
 
         text = self.query_thumb(thumbkey, name, metadata)
         imglbl.setToolTip(text)
