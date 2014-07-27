@@ -12,6 +12,7 @@ from ginga.qtw.QtHelp import QtGui, QtCore
 from ginga.qtw import QtHelp
 
 import matplotlib
+matplotlib.rcParams.update(matplotlib.rcParamsDefault)
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 
 from ginga.base.PlotBase import PlotBase, HistogramMixin, CutsMixin
