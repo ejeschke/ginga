@@ -6,7 +6,7 @@
 # Please see the file LICENSE.txt for details.
 #
 import threading
-import Callback
+from . import Callback
 
 class TimeoutError(Exception):
     pass
@@ -38,7 +38,7 @@ class Future(Callback.Callbacks):
             try:
                 res = self.method(*self.args, **self.kwdargs)
 
-            except Exception, e:
+            except Exception as e:
                 res = e
 
         self.resolve(res)

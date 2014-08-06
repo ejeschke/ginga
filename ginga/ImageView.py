@@ -633,7 +633,7 @@ class ImageViewBase(Callback.Callbacks):
         r, g, b = self.img_bg
         bgval = dict(A=int(255*alpha), R=int(255*r), G=int(255*g), B=int(255*b))
 
-        for i in xrange(len(order)):
+        for i in range(len(order)):
             outarr[:, :, i] = bgval[order[i]]
 
         # overlay our data

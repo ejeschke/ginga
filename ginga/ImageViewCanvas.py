@@ -13,6 +13,7 @@ import time
 from ginga.misc import Bunch
 from ginga.util import wcs
 from ginga import trcalc
+from ginga.util.six.moves import map, zip, filter
 
 class CanvasObjectError(Exception):
     pass
@@ -129,7 +130,7 @@ class CanvasObjectBase(object):
             self.x3, self.y3 = self.x3 + xoff, self.y3 + yoff
             
         if hasattr(self, 'points'):
-            for i in xrange(len(self.points)):
+            for i in range(len(self.points)):
                 (x, y) = self.points[i]
                 x, y = x + xoff, y + yoff
                 self.points[i] = (x, y)
@@ -281,7 +282,7 @@ class CanvasMixin(object):
         self.count += 1
         if tag:
             # user supplied a tag
-            if self.tags.has_key(tag):
+            if tag in self.tags:
                 raise CanvasObjectError("Tag already used: '%s'" % (tag))
         else:
             if tagpfx:
@@ -308,7 +309,7 @@ class CanvasMixin(object):
                 obj = self.tags[tag]
                 del self.tags[tag]
                 super(CanvasMixin, self).deleteObject(obj)
-            except Exception, e:
+            except Exception as e:
                 continue
         
         if redraw:
@@ -452,7 +453,7 @@ class DrawingMixin(object):
                 text_y = str(dy)
                 text_h = ("%.3f" % dh)
                 
-        except Exception, e:
+        except Exception as e:
             text_h = 'BAD WCS'
             text_x = 'BAD WCS'
             text_y = 'BAD WCS'

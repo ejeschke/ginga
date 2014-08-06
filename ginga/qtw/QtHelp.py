@@ -7,11 +7,13 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+from __future__ import print_function
 import time
 import os
 import math
 
 import ginga.toolkit
+from functools import reduce
 
 have_pyqt4 = False
 have_pyside = False
@@ -146,7 +148,7 @@ class MDIWorkspace(QtGui.QMdiArea):
             wl = list(self.subWindowList())
             #l = [ sw.widget() for sw in wl ]
             return wl.index(widget)
-        except (IndexError, ValueError), e:
+        except (IndexError, ValueError) as e:
             return -1
 
     def widget(self, index):
@@ -196,8 +198,8 @@ class GridWorkspace(QtGui.QWidget):
             self.layout.removeWidget(w)
 
         # add them back in, in a grid
-        for i in xrange(0, rows):
-            for j in xrange(0, cols):
+        for i in range(0, rows):
+            for j in range(0, cols):
                 index = i*cols + j
                 if index < num_widgets:
                     widget = self.widgets[index]
@@ -218,7 +220,7 @@ class GridWorkspace(QtGui.QWidget):
     def indexOf(self, widget):
         try:
             return self.widgets.index(widget)
-        except (IndexError, ValueError), e:
+        except (IndexError, ValueError) as e:
             return -1
 
     def getWidget(self, index):
@@ -471,7 +473,7 @@ class Desktop(Callback.Callbacks):
         self.tabcount += 1
         if not tabname:
             tabname = labelname
-            if self.tab.has_key(tabname):
+            if tabname in self.tab:
                 tabname = 'tab%d' % self.tabcount
             
         tab_w.addTab(widget, labelname)
@@ -975,10 +977,10 @@ def build_info(captions):
 
 def debug(widget):
     foo = dir(widget)
-    print "---- %s ----" % str(widget)
+    print("---- %s ----" % str(widget))
     for x in foo:
         if x.startswith('set'):
-            print x
+            print(x)
 
 def children(layout):   
     i = 0

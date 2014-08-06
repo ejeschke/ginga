@@ -72,7 +72,7 @@ class IQCalc(object):
             gauss_fn = self.gaussian
 
         N = len(arr1d)
-        X = numpy.array(range(N))
+        X = numpy.array(list(range(N)))
         Y = arr1d
         # Fitting works more reliably if we do the following
         # a. subtract sky background
@@ -273,7 +273,7 @@ class IQCalc(object):
                     raise IQCalcError("Method (%d) not supported for fwhm calculation!" %(
                         fwhm_method))
 
-            except Exception, e:
+            except Exception as e:
                 # Error doing FWHM, skip this object
                 self.logger.debug("Error doing FWHM on object at %.2f,%.2f: %s" % (
                     x, y, str(e)))

@@ -117,7 +117,7 @@ class Datasrc(object):
 
     def has_key(self, key):
         with self.cond:
-            return self.datums.has_key(key)
+            return key in self.datums
         
     def wait(self, timeout=None):
         with self.cond:

@@ -37,17 +37,17 @@ class ParamSet(Callback.Callbacks):
             name = param.name
 
             # if we have a cached value for the parameter, use it
-            if self.params.has_key(name):
+            if name in self.params:
                 value = self.params[name]
                 b[name].set_text(str(value))
 
             # otherwise initialize to the default value, if available
-            elif param.has_key('default'):
+            elif 'default' in param:
                 value = param.default
                 b[name].set_text(str(value))
                 self.params[name] = value
 
-            if param.has_key('description'):
+            if 'description' in param:
                 b[name].set_tooltip(param.description)
 
             b[name].add_callback('activated', self._value_changed_cb)
@@ -61,7 +61,7 @@ class ParamSet(Callback.Callbacks):
         for param in self.paramlst:
             w = self.widgets[param.name]
             value = w.get_text()
-            if param.has_key('type'):
+            if 'type' in param:
                 value = param.type(value)
             self.params[param.name] = value
 
@@ -69,7 +69,7 @@ class ParamSet(Callback.Callbacks):
         for param in self.paramlst:
             key = param.name
             w = self.widgets[key]
-            if self.params.has_key(key):
+            if key in self.params:
                 value = self.params[key]
                 w.set_text(str(value))
 

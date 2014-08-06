@@ -14,6 +14,7 @@ from ginga.ImageViewCanvas import *
 from ginga import Mixins
 from ginga.misc import Callback, Bunch
 from ginga import colors
+from ginga.util.six.moves import map, zip
 
 class CairoCanvasMixin(object):
 
@@ -95,7 +96,8 @@ class Text(TextBase, CairoCanvasMixin):
 class Polygon(PolygonBase, CairoCanvasMixin):
 
     def draw(self):
-        cpoints = map(lambda p: self.canvascoords(p[0], p[1]), self.points)
+        cpoints = map(lambda p: self.canvascoords(p[0], p[1]),
+                      self.points)
         cr = self.setup_cr()
 
         (cx0, cy0) = cpoints[-1]

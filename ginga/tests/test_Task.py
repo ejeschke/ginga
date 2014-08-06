@@ -11,6 +11,7 @@ import random
 import logging
 
 from ginga.misc import Task
+import ginga.util.six as six
 
 LOGDEBUG = True
 
@@ -45,7 +46,7 @@ def make_CompoundTask(typeClass, prefix, num):
     return it.
     """
     tasks = []
-    for i in xrange(num):
+    for i in range(num):
         st = make_SimpleTask(prefix + '_' + str(i))
         tasks.append(st)
 
@@ -105,7 +106,7 @@ class stepTask(Task.Task):
             
     def step(self):
         # Call generator for next step
-        return self.gen.next()
+        return six.advance_iterator(self.gen)
 
     def execute(self):
         res = 0

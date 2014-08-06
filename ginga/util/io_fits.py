@@ -126,7 +126,7 @@ class PyFitsFileHandler(BaseFitsFileHandler):
         # this seems to be necessary now for some fits files...
         try:
             fits_f.verify('fix')
-        except Exception, e:
+        except Exception as e:
             raise FITSError("Error loading fits file '%s': %s" % (
                 fitspath, str(e)))
 

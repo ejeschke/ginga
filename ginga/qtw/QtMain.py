@@ -31,10 +31,17 @@ Usage:
    self.myqt.gui_quit()
    
    """
+from __future__ import print_function
 import sys, traceback
-import thread, threading
+import threading
 import logging
-import Queue as que
+import ginga.util.six as six
+if six.PY2:
+    import thread
+    import Queue
+else:
+    import _thread as thread
+    import queue as Queue
 
 from ginga.qtw.QtHelp import QtGui, QtCore, have_pyqt4
 from ginga.misc import Task, Future
@@ -44,7 +51,7 @@ class QtMain(object):
     def __init__(self, queue=None, logger=None, ev_quit=None):
         # You can pass in a queue if you prefer to do so
         if not queue:
-            queue = que.Queue()
+            queue = Queue.Queue()
         self.gui_queue = queue
         # You can pass in a logger if you prefer to do so
         if not logger:
@@ -79,7 +86,7 @@ class QtMain(object):
         #print "1. PROCESSING OUT-BAND"
         try:
             self.app.processEvents()
-        except Exception, e:
+        except Exception as e:
             self.logger.error(str(e))
             # TODO: traceback!
         
@@ -96,7 +103,7 @@ class QtMain(object):
                     try:
                         res = future.thaw(suppress_exception=False)
 
-                    except Exception, e:
+                    except Exception as e:
                         future.resolve(e)
 
                         self.logger.error("gui error: %s" % str(e))
@@ -105,17 +112,17 @@ class QtMain(object):
                             tb_str = "".join(traceback.format_tb(tb))
                             self.logger.error("Traceback:\n%s" % (tb_str))
 
-                        except Exception, e:
+                        except Exception as e:
                             self.logger.error("Traceback information unavailable.")
 
                 finally:
                     pass
 
                     
-            except que.Empty:
+            except Queue.Empty:
                 done = True
                 
-            except Exception, e:
+            except Exception as e:
                 self.logger.error("Main GUI loop error: %s" % str(e))
                 #pass
                 
@@ -123,7 +130,7 @@ class QtMain(object):
         #print "3. PROCESSING OUT-BAND"
         try:
             self.app.processEvents()
-        except Exception, e:
+        except Exception as e:
             self.logger.error(str(e))
             # TODO: traceback!
 
@@ -174,7 +181,7 @@ class QtMain(object):
         try:
             task.init_and_start(self)
             return task
-        except Exception, e:
+        except Exception as e:
             self.logger.error("Error starting task: %s" % (str(e)))
             raise(e)
 
@@ -199,7 +206,7 @@ class QtMain(object):
 
     def gui_quit(self):
         "Call this to cause the GUI thread to quit the mainloop."""
-        print "QUIT CALLED"
+        print("QUIT CALLED")
         self.ev_quit.set()
         
 

@@ -12,6 +12,7 @@ import threading
 import traceback
 
 from ginga.misc import Bunch, Future, Widgets
+from ginga.util.six.moves import filter
 
 
 class PluginManagerError(Exception):
@@ -65,7 +66,7 @@ class PluginManagerBase(object):
             
             self.logger.info("Plugin '%s' loaded." % name)
         
-        except Exception, e:
+        except Exception as e:
             self.logger.error("Failed to load plugin '%s': %s" % (
                 name, str(e)))
             #raise PluginManagerError(e)
@@ -108,7 +109,7 @@ class PluginManagerBase(object):
     def activate(self, pInfo, exclusive=True):
         name = pInfo.tabname
         lname = pInfo.name.lower()
-        if not self.active.has_key(lname):
+        if lname not in self.active:
             bnch = Bunch.Bunch(pInfo=pInfo, lblname=None, widget=None,
                                exclusive=exclusive)
 
@@ -131,7 +132,7 @@ class PluginManagerBase(object):
         if lname in self.focus:
             self.clear_focus(lname)
             
-        if self.active.has_key(lname):
+        if lname in self.active:
             bnch = self.active[lname]
             self.stop_plugin(bnch.pInfo)
             if bnch.widget != None:
@@ -204,7 +205,7 @@ class PluginManagerBase(object):
             # global plugin
             plname = pInfo.name
         lname = pInfo.name.lower()
-        if self.active.has_key(lname):
+        if lname in self.active:
             if alreadyOpenOk:
                 self.set_focus(pInfo.name)
                 return
@@ -227,7 +228,7 @@ class PluginManagerBase(object):
                 else:
                     pInfo.obj.build_gui(vbox)
 
-        except Exception, e:
+        except Exception as e:
             errstr = "Plugin UI failed to initialize: %s" % (
                 str(e))
             self.logger.error(errstr)
@@ -236,7 +237,7 @@ class PluginManagerBase(object):
                 tb_str = "".join(traceback.format_tb(tb))
                 self.logger.error("Traceback:\n%s" % (tb_str))
                 
-            except Exception, e:
+            except Exception as e:
                 tb_str = "Traceback information unavailable."
                 self.logger.error(tb_str)
 
@@ -250,7 +251,7 @@ class PluginManagerBase(object):
                 else:
                     pInfo.obj.start()
 
-            except Exception, e:
+            except Exception as e:
                 had_error = True
                 errstr = "Plugin failed to start correctly: %s" % (
                     str(e))
@@ -260,7 +261,7 @@ class PluginManagerBase(object):
                     tb_str = "".join(traceback.format_tb(tb))
                     self.logger.error("Traceback:\n%s" % (tb_str))
 
-                except Exception, e:
+                except Exception as e:
                     tb_str = "Traceback information unavailable."
                     self.logger.error(tb_str)
 
@@ -289,7 +290,7 @@ class PluginManagerBase(object):
         try:
             pInfo.obj.stop()
 
-        except Exception, e:
+        except Exception as e:
             wasError = True
             self.logger.error("Plugin failed to stop correctly: %s" % (
                 str(e)))

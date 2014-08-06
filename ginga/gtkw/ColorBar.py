@@ -103,7 +103,7 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
                 cr = win.cairo_create()
                 a, b, _wd, _ht, _i, _j = cr.text_extents(text)
                 self._avg_pixels_per_range_num = self.t_spacing + _wd
-        except Exception, e:
+        except Exception as e:
             self.logger.error("Error getting text extents: %s" % (
                 str(e)))
         if self.t_showrange and redraw:
@@ -126,7 +126,7 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
         nums = max(int(width // self._avg_pixels_per_range_num), 1)
         spacing = 256 // nums
         self._interval = {}
-        for i in xrange(nums):
+        for i in range(nums):
             self._interval[i*spacing] = True
         self.logger.debug("nums=%d spacing=%d intervals=%s" % (
             nums, spacing, self._interval))
@@ -204,7 +204,7 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
         
         j = ival; off = 0
         range_pts = []
-        for i in xrange(256):
+        for i in range(256):
             
             wd = clr_wd    
             if rem_px > 0:
@@ -224,7 +224,7 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
             cr.fill()
 
             # Draw range scale if we are supposed to
-            if self.t_showrange and self._interval.has_key(i):
+            if self.t_showrange and i in self._interval:
                 cb_pct = float(i) / 256.0
                 # get inverse of distribution function and calculate value
                 # at this position

@@ -53,9 +53,7 @@ class FitsViewer(QtGui.QMainWindow):
         wopen = QtGui.QPushButton("Open File")
         wopen.clicked.connect(self.open_file)
         wquit = QtGui.QPushButton("Quit")
-        self.connect(wquit,
-                     QtCore.SIGNAL("clicked()"),
-                     self, QtCore.SLOT("close()"))
+        #wquit.clicked.connect(self, QtCore.SLOT("close()"))
 
         hbox.addStretch(1)
         for w in (wopen, wquit):
@@ -92,8 +90,8 @@ class FitsViewer(QtGui.QMainWindow):
 def main(options, args):
     
     app = QtGui.QApplication(sys.argv)
-    app.connect(app, QtCore.SIGNAL('lastWindowClosed()'),
-                app, QtCore.SLOT('quit()'))
+    ## app.connect(app, QtCore.SIGNAL('lastWindowClosed()'),
+    ##             app, QtCore.SLOT('quit()'))
 
     logger = logging.getLogger("example1")
     logger.setLevel(logging.INFO)

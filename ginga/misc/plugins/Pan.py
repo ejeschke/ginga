@@ -181,7 +181,7 @@ class Pan(GingaPlugin.GlobalPlugin):
             paninfo.pancompass = paninfo.panimage.add(CanvasTypes.Compass(
                 x, y, xn, yn, xe, ye, color='skyblue',
                 fontsize=14), redraw=True)
-        except Exception, e:
+        except Exception as e:
             self.logger.warn("Can't calculate compass: %s" % (
                 str(e)))
 

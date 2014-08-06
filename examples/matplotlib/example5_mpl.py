@@ -23,6 +23,7 @@ message will tell you which mode you are in.
 While in 'capture mode' you can draw points with the right mouse button.
 Press 'c' to clear the canvas of drawn points.
 """
+from __future__ import print_function
 import sys, os
 import platform
 # just in case you want to use qt
@@ -128,8 +129,8 @@ class MyGingaFigure(object):
         fi = canvas.fitsimage
         data_x, data_y = fi.get_last_data_xy()
         ra, dec = self.get_wcs(data_x, data_y)
-        print "key %s pressed at data %d,%d ra=%s dec=%s" % (
-            keyname, data_x, data_y, ra, dec)
+        print("key %s pressed at data %d,%d ra=%s dec=%s" % (
+            keyname, data_x, data_y, ra, dec))
         return True
 
     def key_press_ginga(self, fitsimage, keyname):
@@ -141,22 +142,22 @@ class MyGingaFigure(object):
 
     def btn_down(self, canvas, button, data_x, data_y):
         ra, dec = self.get_wcs(data_x, data_y)
-        print "button %s pressed at data %d,%d ra=%s dec=%s" % (
-            button, data_x, data_y, ra, dec)
+        print("button %s pressed at data %d,%d ra=%s dec=%s" % (
+            button, data_x, data_y, ra, dec))
         return False
 
     def btn_up(self, canvas, button, data_x, data_y):
         ra, dec = self.get_wcs(data_x, data_y)
-        print "button %s released at data %d,%d ra=%s dec=%s" % (
-            button, data_x, data_y, ra, dec)
+        print("button %s released at data %d,%d ra=%s dec=%s" % (
+            button, data_x, data_y, ra, dec))
         return False
 
     def draw_event(self, canvas, tag):
         obj = canvas.getObjectByTag(tag)
         data_x, data_y = obj.x, obj.y
         ra, dec = self.get_wcs(data_x, data_y)
-        print "A %s was drawn at data %d,%d ra=%s dec=%s" % (
-            obj.kind, data_x, data_y, ra, dec)
+        print("A %s was drawn at data %d,%d ra=%s dec=%s" % (
+            obj.kind, data_x, data_y, ra, dec))
         return True
 
 

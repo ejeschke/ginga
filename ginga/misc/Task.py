@@ -7,15 +7,25 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+from __future__ import print_function
+
 import sys, time, os
 import types
-import thread
-import threading, Queue
+import ginga.util.six as six
+if six.PY2:
+    import thread
+    import Queue
+else:
+    import _thread as thread
+    import queue as Queue
+
+import threading
 # needed by thread mods:
 import inspect, types, ctypes
 import random
 import traceback
  
+from ginga.util.six.moves import map, zip
 
 class TaskError(Exception):
     """Exception generated for task errors"""
@@ -76,7 +86,7 @@ class Task(object):
             # a task can cause it's children to have values available to them
             # without passing them explicitly.
             for var in taskParent.shares:
-                if override and override.has_key(var):
+                if override and var in override:
                     self.__dict__[var] = override[var]
                 else:
                     #print "COPYING VAR FROM PARENT: %s(%s)" % (var, str(taskParent.__dict__[var]))
@@ -179,7 +189,7 @@ class Task(object):
         # --> self.result is set
         # If it is an exception, then raise it in this waiter
         if isinstance(self.result, Exception):
-            raise (self.result)
+            raise self
         
         # Release waiters and perform callbacks
         # done() has already been called, because of self.ev_done check
@@ -326,7 +336,7 @@ class printTask(Task):
         super(printTask, self).__init__()
 
     def execute(self):
-        print self.msg
+        print(self.msg)
         
 class sleepTask(Task):
     """Simple task that sleeps for delay seconds."""
@@ -368,7 +378,7 @@ class FuncTask(Task):
                 self.logger.debug("Function returned %s" % (
                     str(res)))
                 
-        except Exception, e:
+        except Exception as e:
             if self.logger:
                 self.logger.error("Task '%s' terminated with exception: %s" % \
                                   (str(self), str(e)))
@@ -414,7 +424,7 @@ def make_tasker(func):
                     self.logger.debug("Done executing fn %s" % func)
                     return val
                 
-                except Exception, e:
+                except Exception as e:
                     # Log error message and re-raise exception.
                     self.logger.error("fn %s raised exception: %s" % (
                         func, str(e)))
@@ -478,7 +488,7 @@ class SequentialTaskset(Task):
         try:
             self.task.stop()
 
-        except TaskError, e:
+        except TaskError as e:
             self.logger.error("Error cancelling child task: %s" % (str(e)))
             
             
@@ -572,7 +582,7 @@ class oldConcurrentAndTaskset(Task):
             try:
                 task.stop()
 
-            except TaskError, e:
+            except TaskError as e:
                 # Task does not have a way to stop it.
                 # TODO: notify who?
                 pass
@@ -630,7 +640,7 @@ class newConcurrentAndTaskset(Task):
 
             self.check_state()
             
-            for i in xrange(num_tasks):
+            for i in range(num_tasks):
                 try:
                     try:
                         task = self.getTask(i)
@@ -648,7 +658,7 @@ class newConcurrentAndTaskset(Task):
                 except TaskTimeout:
                     continue
 
-                except Exception, e:
+                except Exception as e:
                     #self.logger.warn("Subtask propagated exception: %s" % str(e))
                     self.child_done(e, task)
                     continue
@@ -690,7 +700,7 @@ class newConcurrentAndTaskset(Task):
                 try:
                     task.stop()
 
-                except TaskError, e:
+                except TaskError as e:
                     # Task does not have a way to stop it.
                     # TODO: notify who?
                     pass
@@ -762,7 +772,7 @@ class QueueTaskset(Task):
             if self.task:
                 self.task.stop()
 
-        except TaskError, e:
+        except TaskError as e:
             #self.logger.error("Error cancelling child task: %s" % (str(e)))
             pass
 
@@ -774,7 +784,7 @@ class QueueTaskset(Task):
             if self.task:
                 self.task.stop()
 
-        except TaskError, e:
+        except TaskError as e:
             #self.logger.error("Error cancelling child task: %s" % (str(e)))
             pass
 
@@ -807,7 +817,7 @@ class QueueTaskset(Task):
 
                         self.logger.debug("Task %s terminated with result %s" % (
                                           (str(task), str(res))))
-                except Exception, e:
+                except Exception as e:
                     self.logger.error("Task '%s' terminated with exception: %s" % \
                                       (str(task), str(e)))
                     try:
@@ -820,7 +830,7 @@ class QueueTaskset(Task):
                         # module
                         tb = None
 
-                    except Exception, e:
+                    except Exception as e:
                         self.logger.debug("Traceback information unavailable.")
 
                     # If task raised exception then it didn't call done,
@@ -919,10 +929,10 @@ class WorkerThread(object):
             try:
                 res = task.execute()
 
-            except UserTaskException, e:
+            except UserTaskException as e:
                 res = e
                 
-            except Exception, e:
+            except Exception as e:
                 self.logger.error("Task '%s' raised exception: %s" % \
                                   (str(task), str(e)))
                 res = e
@@ -936,7 +946,7 @@ class WorkerThread(object):
                     # module
                     tb = None
 
-                except Exception, e:
+                except Exception as e:
                     self.logger.debug("Traceback information unavailable.")
 
         finally:
@@ -976,7 +986,7 @@ class WorkerThread(object):
                 except _WorkerReset:
                     self.logger.info("Worker reset!")
                 
-                except Queue.Empty, e:
+                except Queue.Empty as e:
                     # Reach here when we time out waiting for a task
                     pass
 
@@ -1077,7 +1087,7 @@ class ThreadPool(object):
 
             # Start all worker threads
             self.logger.debug("starting threads in thread pool")
-            for i in xrange(self.numthreads):
+            for i in range(self.numthreads):
                 t = self.workerClass(self.queue, logger=self.logger,
                                      ev_quit=self.ev_quit, tpool=tpool,
                                      **kwdargs)
@@ -1099,7 +1109,7 @@ class ThreadPool(object):
             # Start all worker threads
             self.logger.debug("adding %d threads to thread pool" % (
                 numthreads))
-            for i in xrange(numthreads):
+            for i in range(numthreads):
                 t = self.workerClass(self.queue, logger=self.logger,
                                      ev_quit=self.ev_quit, tpool=self.tpool,
                                      **kwdargs)

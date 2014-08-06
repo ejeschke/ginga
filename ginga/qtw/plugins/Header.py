@@ -9,6 +9,7 @@
 #
 from ginga import GingaPlugin
 from ginga.misc import Bunch
+import ginga.util.six as six
 
 from ginga.qtw.QtHelp import QtGui, QtCore
 from ginga.qtw import QtHelp
@@ -92,7 +93,7 @@ class Header(GingaPlugin.GlobalPlugin):
         info = Bunch.Bunch(chname=chname)
         sw = self._create_header_window(info)
 
-        self.nb.addTab(sw, unicode(chname))
+        self.nb.addTab(sw, six.unicode(chname))
         index = self.nb.indexOf(sw)
         info.setvals(nbindex=index)
         self.channel[chname] = info

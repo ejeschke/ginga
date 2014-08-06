@@ -7,6 +7,7 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+from __future__ import print_function
 import numpy
 
 from ginga import AstroImage
@@ -281,7 +282,7 @@ class Pipeline(GingaPlugin.LocalPlugin):
             self.fv.show_error("Please set a flat field image first")
         else:
             result = self.fv.error_wrap(dp.divide, image, self.flat)
-            print result, image
+            print(result, image)
             self.fv.gui_do(self.show_result, result)
 
     def set_flat_cb(self, w):

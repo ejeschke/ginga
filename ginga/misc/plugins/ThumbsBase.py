@@ -74,7 +74,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         # in the same channel
         thumbkey = (chname.lower(), path)
         with self.thmblock:
-            if self.thumbDict.has_key(thumbkey) or nothumb:
+            if thumbkey in self.thumbDict or nothumb:
                 return
 
         #data = image.get_data()
@@ -253,7 +253,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         path = os.path.abspath(path)
         thumbkey = (chname, path)
         with self.thmblock:
-            return self.thumbDict.has_key(thumbkey)
+            return thumbkey in self.thumbDict
 
     def redo_thumbnail(self, fitsimage, save_thumb=None):
         self.logger.debug("redoing thumbnail...")
@@ -280,7 +280,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         path = os.path.abspath(path)
         thumbkey = (chname, path)
         with self.thmblock:
-            if not self.thumbDict.has_key(thumbkey):
+            if thumbkey not in self.thumbDict:
                 # No memory of this thumbnail, so regenerate it
                 self.add_image(self.fv, chname, image)
                 return
@@ -394,7 +394,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
                 save_thumb = False
                 try:
                     image = image_loader(thumbpath)
-                except Exception, e:
+                except Exception as e:
                     pass
 
             try:
@@ -405,7 +405,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
                                save_thumb=save_thumb,
                                thumbpath=thumbpath)
                 
-            except Exception, e:
+            except Exception as e:
                 self.logger.error("Error generating thumbnail for '%s': %s" % (
                     path, str(e)))
                 continue
@@ -445,7 +445,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
                 with open(metafile, 'w') as out_f:
                     out_f.write("srcdir: %s\n" % (dirpath))
                     
-            except OSError, e:
+            except OSError as e:
                 self.logger.error("Could not make thumb directory '%s': %s" % (
                     thumbdir, str(e)))
                 return None

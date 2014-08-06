@@ -219,11 +219,11 @@ class PixTable(GingaPlugin.LocalPlugin):
 
         fmt_h = (('%%%dd' % maxdigits) + sep) * width
         fmt_h = ('%6s | ') % '' + fmt_h
-        t = tuple([i + x1 + 1 for i in xrange(width)])
+        t = tuple([i + x1 + 1 for i in range(width)])
 
         # format the buffer and insert into the tw
         l = [fmt_h % t]
-        for i in xrange(height):
+        for i in range(height):
             t = tuple([y1 + i + 1] + list(data[i]))
             l.append(fmt_r % t)
         l.append('')

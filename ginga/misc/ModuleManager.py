@@ -27,7 +27,7 @@ class ModuleManager(object):
 
     def loadModule(self, moduleName, pfx=None):
         try:
-            if self.module.has_key(moduleName):
+            if moduleName in self.module:
                 self.logger.info("Reloading module '%s'..." % moduleName)
                 module = reload(self.module[moduleName])
 
@@ -42,7 +42,7 @@ class ModuleManager(object):
                 
             self.module[moduleName] = module
 
-        except Exception, e:
+        except Exception as e:
             self.logger.error("Failed to load module '%s': %s" % (
                 moduleName, str(e)))
             raise ModuleManagerError(e)

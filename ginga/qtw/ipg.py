@@ -36,7 +36,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 from IPython.display import Image
-import StringIO
+from io import BytesIO
 
 
 STD_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcName)s) | %(message)s'
@@ -393,7 +393,7 @@ def start(kapp):
 # If QT GUI could interact nicely with --pylab=inline we wouldn't need this
 
 def showplt():
-    buf = StringIO.StringIO()
+    buf = BytesIO()
     plt.savefig(buf, bbox_inches=0)
     img = Image(data=bytes(buf.getvalue()),
                    format='png', embed=True)

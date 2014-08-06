@@ -12,6 +12,7 @@ import time
 from ginga import AstroImage
 from ginga.misc import Widgets
 from ginga import GingaPlugin
+import ginga.util.six as six
 
 have_pyfits = False
 try:
@@ -94,7 +95,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
                     ]
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
-        b.next.add_callback('activated', lambda w: self.next())
+        b.next.add_callback('activated', lambda w: six.advance_iterator(self))
         b.prev.add_callback('activated', lambda w: self.prev())
         b.first.add_callback('activated', lambda w: self.first())
         b.last.add_callback('activated', lambda w: self.last())
@@ -141,7 +142,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
                     ("NAXIS2:", 'label', 'NAXIS2', 'llabel')]
 
         self.naxispath = []
-        for n in xrange(2, len(dims)):
+        for n in range(2, len(dims)):
             self.naxispath.append(0)
             key = 'naxis%d' % (n+1)
             title = key.upper()
@@ -161,13 +162,13 @@ class MultiDim(GingaPlugin.LocalPlugin):
                 
         w, b = Widgets.build_info(captions, orientation=self.orientation)
         self.w.update(b)
-        for n in xrange(0, len(dims)):
+        for n in range(0, len(dims)):
             key = 'naxis%d' % (n+1)
             lbl = b[key]
             maxn = int(dims[n])
             lbl.set_text("%d" % maxn)
             slkey = 'choose_'+key
-            if b.has_key(slkey):
+            if slkey in b:
                 slider = b[slkey]
                 lower = 1
                 upper = maxn
@@ -228,7 +229,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
             self.curhdu = idx-1
             self.logger.debug("HDU #%d loaded." % (idx))
 
-        except Exception, e:
+        except Exception as e:
             errmsg = "Error loading FITS HDU #%d: %s" % (
                 idx, str(e))
             self.logger.error(errmsg)
@@ -266,7 +267,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
 
             self.fitsimage.set_image(image)
             self.logger.debug("NAXIS%d slice %d loaded." % (n+1, idx+1))
-        except Exception, e:
+        except Exception as e:
             errmsg = "Error loading NAXIS%d slice %d: %s" % (
                 n+1, idx+1, str(e))
             self.logger.error(errmsg)
@@ -280,7 +281,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
         if self._isplaying:
             time_start = time.time()
             deadline = time_start + self.play_int_sec
-            self.next()
+            six.advance_iterator(self)
             #self.fv.update_pending(0.001)
             delta = max(deadline - time.time(), 0.001)
             self.timer.set(delta)

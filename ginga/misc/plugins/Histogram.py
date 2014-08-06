@@ -221,7 +221,7 @@ class Histogram(GingaPlugin.LocalPlugin):
         else:
             colors = ('red', 'green', 'blue')
             ymax = 0
-            for z in xrange(depth):
+            for z in range(depth):
                 res = image.histogram(int(bbox.x1), int(bbox.y1),
                                       int(bbox.x2), int(bbox.y2),
                                       z=z, pct=1.0, numbins=numbins)
@@ -360,7 +360,7 @@ class Histogram(GingaPlugin.LocalPlugin):
             hival = float(self.w.cut_high.get_text())
 
             reslvls = self.fitsimage.cut_levels(loval, hival)
-        except Exception, e:
+        except Exception as e:
             self.fv.showStatus("Error cutting levels: %s" % (str(e)))
 
         if self.xlimbycuts:

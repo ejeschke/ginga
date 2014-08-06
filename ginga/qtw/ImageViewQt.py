@@ -10,11 +10,12 @@
 import sys, os
 import math
 import numpy
-import StringIO
+from io import BytesIO
 
 from ginga.qtw.QtHelp import QtGui, QtCore, QFont, QColor, QImage, \
      QPixmap, QCursor, QPainter, have_pyqt5
 from ginga import ImageView, Mixins, Bindings
+from ginga.util.six.moves import map, zip
 
 moduleHome = os.path.split(sys.modules[__name__].__file__)[0]
 icon_dir = os.path.abspath(os.path.join(moduleHome, '..', 'icons'))
@@ -238,7 +239,7 @@ class ImageViewQt(ImageView.ImageViewBase):
                                 quality=90):
         ibuf = output
         if ibuf == None:
-            ibuf = StringIO.StringIO()
+            ibuf = BytesIO()
         imgwin_wd, imgwin_ht = self.get_window_size()
         qpix = self.pixmap.copy(0, 0,
                                 imgwin_wd, imgwin_ht)

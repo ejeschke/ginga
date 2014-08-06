@@ -8,6 +8,7 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+from __future__ import print_function
 import sys, os
 import logging, logging.handlers
 from ginga.qtw.QtHelp import QtGui, QtCore
@@ -69,8 +70,7 @@ class FitsViewer(QtGui.QMainWindow):
             wdrawtype.addItem(name)
         index = self.drawtypes.index('ruler')
         wdrawtype.setCurrentIndex(index)
-        self.connect(wdrawtype, QtCore.SIGNAL("activated(QString)"),
-                     self.set_drawparams)
+        wdrawtype.activated.connect(self.set_drawparams)
         self.wdrawtype = wdrawtype
 
         wdrawcolor = QtGui.QComboBox()
@@ -78,17 +78,15 @@ class FitsViewer(QtGui.QMainWindow):
             wdrawcolor.addItem(name)
         index = self.drawcolors.index('blue')
         wdrawcolor.setCurrentIndex(index)
-        self.connect(wdrawcolor, QtCore.SIGNAL("activated(QString)"),
-                     self.set_drawparams)
+        wdrawcolor.activated.connect(self.set_drawparams)
         self.wdrawcolor = wdrawcolor
 
         wclear = QtGui.QPushButton("Clear Canvas")
-        self.connect(wclear, QtCore.SIGNAL("clicked()"), self.clear_canvas)
+        wclear.clicked.connect(self.clear_canvas)
         wopen = QtGui.QPushButton("Open File")
-        self.connect(wopen, QtCore.SIGNAL("clicked()"), self.open_file)
+        wopen.clicked.connect(self.open_file)
         wquit = QtGui.QPushButton("Quit")
-        self.connect(wquit, QtCore.SIGNAL("clicked()"),
-                     self, QtCore.SLOT("close()"))
+        #wquit.clicked.connect("close()")
 
         hbox.addStretch(1)
         for w in (wopen, wdrawtype, wdrawcolor, wclear, wquit):
@@ -169,10 +167,10 @@ class FitsViewer(QtGui.QMainWindow):
 
 def main(options, args):
 
-    QtGui.QApplication.setGraphicsSystem('raster')
+    #QtGui.QApplication.setGraphicsSystem('raster')
     app = QtGui.QApplication(args)
-    app.connect(app, QtCore.SIGNAL('lastWindowClosed()'),
-                app, QtCore.SLOT('quit()'))
+    ## app.connect(app, QtCore.SIGNAL('lastWindowClosed()'),
+    ##             app, QtCore.SLOT('quit()'))
 
     logger = logging.getLogger("example2")
     logger.setLevel(options.loglevel)
@@ -235,7 +233,7 @@ if __name__ == "__main__":
     elif options.profile:
         import profile
 
-        print("%s profile:" % sys.argv[0])
+        print(("%s profile:" % sys.argv[0]))
         profile.run('main(options, args)')
 
 

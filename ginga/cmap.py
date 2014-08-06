@@ -7,7 +7,10 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+from __future__ import print_function
+
 import numpy
+from ginga.util.six.moves import map, zip
 
 # Some built in colormaps
 
@@ -11452,14 +11455,14 @@ def add_matplotlib_cmaps():
         cm = plt.get_cmap(name)
         try:
             add_matplotlib_cmap(cm, name=name)
-        except Exception, e:
-            print "Error adding colormap '%s': %s" % (
-                name, str(e))
+        except Exception as e:
+            print("Error adding colormap '%s': %s" % (
+                name, str(e)))
             #pass
 
 # Add colormaps from this file
 cmaps = {}
-for name, value in globals().items():
+for name, value in list(globals().items()):
     if name.startswith('cmap_'):
         key = name[5:]
         add_cmap(key, value)

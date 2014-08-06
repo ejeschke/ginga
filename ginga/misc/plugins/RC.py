@@ -75,14 +75,20 @@ Examples:
 """
 import sys
 import numpy
-import SimpleXMLRPCServer
 import binascii
 import bz2
+
+import ginga.util.six as six
+if six.PY2:
+    import SimpleXMLRPCServer
+else:
+    import xmlrpc.server as SimpleXMLRPCServer
 
 from ginga import GingaPlugin
 from ginga import AstroImage
 from ginga.misc import Widgets
 from ginga import cmap
+from ginga.util.six.moves import map, zip
 
 help_msg = sys.modules[__name__].__doc__
 
@@ -284,7 +290,7 @@ class GingaWrapper(object):
             image.set(name=imname)
             image.update_keywords(header)
         
-        except Exception, e:
+        except Exception as e:
             # Some kind of error unpacking the data
             errmsg = "Error creating image data for '%s': %s" % (
                 fitsname, str(e))

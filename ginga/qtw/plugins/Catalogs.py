@@ -7,6 +7,7 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+from __future__ import print_function
 from ginga.qtw.QtHelp import QtGui, QtCore
 from ginga.qtw import QtHelp
 from ginga.qtw import ColorBar
@@ -237,7 +238,7 @@ class Catalogs(CatalogsBase.CatalogsBase):
         paramList = sorted(params.values(), key=lambda b: b.order)
         for bnch in paramList:
             text = bnch.name
-            if bnch.has_key('label'):
+            if 'label' in bnch:
                 text = bnch.label
             #captions.append((text, 'entry'))
             captions.append((text, 'xlabel', '@'+bnch.name, 'entry'))
@@ -281,7 +282,7 @@ class Catalogs(CatalogsBase.CatalogsBase):
                      self.catalog_server_params):
             if bnch != None:
                 for key in bnch.keys():
-                    if d.has_key(key):
+                    if key in d:
                         bnch[key].setText(str(d[key]))
     
     def get_params(self, bnch):
@@ -476,7 +477,7 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
         model = self.table.model()
         starlist = model.starlist
         res = []
-        for idx in xrange(fromidx, toidx):
+        for idx in range(fromidx, toidx):
             star = starlist[idx]
             res.append(star)
         return res
@@ -502,7 +503,7 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
             srows.add(midx.row())
         for midx in deselected.indexes():
             dsrows.add(midx.row())
-        print "selected: %s  deselected: %s" % (srows, dsrows)
+        print("selected: %s  deselected: %s" % (srows, dsrows))
         if len(srows) > 0:
             row = srows.pop()
         else:

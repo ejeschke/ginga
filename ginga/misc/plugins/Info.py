@@ -287,10 +287,10 @@ class Info(GingaPlugin.GlobalPlugin):
         obj.winfo.x.set_text("%.3f" % info.x)
         obj.winfo.y.set_text("%.3f" % info.y)
         obj.winfo.value.set_text(str(info.value))
-        if info.has_key('ra_txt'):
+        if 'ra_txt' in info:
             obj.winfo.ra.set_text(info.ra_txt)
             obj.winfo.dec.set_text(info.dec_txt)
-        if info.has_key('ra_lbl'):
+        if 'ra_lbl' in info:
             obj.winfo.lbl_ra.set_text(info.ra_lbl+':')
             obj.winfo.lbl_dec.set_text(info.dec_lbl+':')
 
@@ -306,7 +306,7 @@ class Info(GingaPlugin.GlobalPlugin):
                 hival = float(histr)
 
             return fitsimage.cut_levels(loval, hival)
-        except Exception, e:
+        except Exception as e:
             self.fv.showStatus("Error cutting levels: %s" % (str(e)))
             
         return True

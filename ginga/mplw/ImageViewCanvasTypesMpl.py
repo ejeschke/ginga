@@ -15,11 +15,13 @@ import matplotlib.text as text
 from matplotlib.path import Path
 import numpy
 
-import MplHelp
+from . import MplHelp
 from ginga.ImageViewCanvas import *
 from ginga import Mixins
 from ginga.misc import Callback, Bunch
 from ginga import colors
+from ginga.util.six.moves import map, zip
+
 
 class MplCanvasMixin(object):
 

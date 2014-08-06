@@ -8,10 +8,10 @@
 # Please see the file LICENSE.txt for details.
 
 import numpy
-import StringIO
+from io import BytesIO
 
 import aggdraw as agg
-import AggHelp
+from . import AggHelp
 
 from ginga import ImageView
 
@@ -99,7 +99,7 @@ class ImageViewAgg(ImageView.ImageViewBase):
 
         ibuf = output
         if ibuf == None:
-            ibuf = StringIO.StringIO()
+            ibuf = BytesIO()
 
         # convert AGG draw surface to a numpy array
         data = numpy.fromstring(self.surface.tostring(), dtype='uint8')

@@ -9,7 +9,6 @@
 #
 # stdlib imports
 import sys, os
-import Queue
 import traceback
 # TEMP:
 import platform
@@ -22,6 +21,7 @@ from ginga.qtw import Widgets
 from ginga import cmap, imap
 from ginga import ImageView
 from ginga.misc import Bunch
+from ginga.util.six.moves import map, zip
 
 
 moduleHome = os.path.split(sys.modules[__name__].__file__)[0]
@@ -337,7 +337,7 @@ class GingaView(QtMain.QtMain):
                 pixmap = QPixmap.fromImage(image)
                 picon = QIcon(pixmap)
                 qsize = QtCore.QSize(24, 24)
-            except Exception, e:
+            except Exception as e:
                 self.logger.error("Error loading icon '%s': %s" % (
                     iconfile, str(e)))
 
@@ -617,7 +617,7 @@ class GingaView(QtMain.QtMain):
 
         chbase = self.chncnt
         self.chncnt += num
-        for i in xrange(num):
+        for i in range(num):
             chname = "%s%d" % (chpfx, chbase+i)
             self.add_channel(chname, workspace=wsname)
         
@@ -762,7 +762,7 @@ class GingaView(QtMain.QtMain):
 
         chbase = self.chncnt
         self.chncnt += num
-        for i in xrange(num):
+        for i in range(num):
             chname = "%s%d" % (chpfx, chbase+i)
             self.add_channel(chname, workspace=wsname)
         return True
@@ -805,7 +805,7 @@ class GingaView(QtMain.QtMain):
             chnames = self.get_channelNames()
             for chname in chnames:
                 chinfo = self.get_channelInfo(chname)
-                if chinfo.has_key('container') and (chinfo.container == container):
+                if 'container' in chinfo and (chinfo.container == container):
                     fitsimage = chinfo.fitsimage
                     if fitsimage != self.getfocus_fitsimage():
                         self.logger.debug("Active channel switch to '%s'" % (

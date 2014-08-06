@@ -3400,7 +3400,7 @@ def get_names():
     return res
 
 imaps = {}
-for name, value in globals().items():
+for name, value in list(globals().items()):
     if name.startswith('imap_'):
         key = name[5:]
         add_imap(key, value)

@@ -35,6 +35,7 @@ LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
 NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
+from __future__ import print_function
 
 # stdlib imports
 import sys, os
@@ -402,7 +403,7 @@ def reference_viewer(sys_argv):
     elif options.profile:
         import profile
 
-        print("%s profile:" % sys.argv[0])
+        print(("%s profile:" % sys.argv[0]))
         profile.run('main(options, args)')
 
 

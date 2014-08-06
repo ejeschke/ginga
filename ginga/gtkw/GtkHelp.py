@@ -7,6 +7,7 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+from __future__ import print_function
 import time
 import math
 
@@ -15,6 +16,7 @@ import gtk
 import gobject
 
 from ginga.misc import Bunch, Callback
+from functools import reduce
 
 
 class MDIWorkspace(gtk.Layout):
@@ -106,7 +108,7 @@ class MDIWorkspace(gtk.Layout):
         button = self.kbdmouse_mask
         if event.button != 0:
             button |= 0x1 << (event.button - 1)
-        print ("button event at %dx%d, button=%x" % (x, y, button))
+        print(("button event at %dx%d, button=%x" % (x, y, button)))
 
     def setup_cr(self, drawable):
         cr = drawable.cairo_create()
@@ -121,7 +123,7 @@ class MDIWorkspace(gtk.Layout):
         button = self.kbdmouse_mask
         if event.button != 0:
             button |= 0x1 << (event.button - 1)
-        print ("button release at %dx%d button=%x" % (x, y, button))
+        print(("button release at %dx%d button=%x" % (x, y, button)))
         dst_x, dst_y = x, y
         if self.selected_child != None:
             self.move(self.selected_child.widget, dst_x, dst_y)
@@ -141,7 +143,7 @@ class MDIWorkspace(gtk.Layout):
             button |= 0x2
         elif state & gtk.gdk.BUTTON3_MASK:
             button |= 0x4
-        print ("motion event at %dx%d, button=%x" % (x, y, button))
+        print(("motion event at %dx%d, button=%x" % (x, y, button)))
 
         if (button & 0x1) and (self.selected_child != None):
             bnch = self.selected_child
@@ -176,8 +178,8 @@ class GridWorkspace(gtk.Table):
         self.resize(rows, cols)
 
         # add them back in, in a grid
-        for i in xrange(0, rows):
-            for j in xrange(0, cols):
+        for i in range(0, rows):
+            for j in range(0, cols):
                 index = i*cols + j
                 if index < num_widgets:
                     widget = self.widgets[index]
@@ -201,7 +203,7 @@ class GridWorkspace(gtk.Table):
     def page_num(self, widget):
         try:
             return self.widgets.index(widget)
-        except (IndexError, ValueError), e:
+        except (IndexError, ValueError) as e:
             return -1
 
     def getWidget(self, index):
@@ -373,7 +375,7 @@ class ComboBox(WidgetMask, gtk.ComboBox):
         model = self.get_model()
         tup = (text, )
         j = 0
-        for i in xrange(len(model)):
+        for i in range(len(model)):
             j = i
             if model[i][0] > text:
                 model.insert(j, tup)
@@ -387,7 +389,7 @@ class ComboBox(WidgetMask, gtk.ComboBox):
 
     def delete_alpha(self, text):
         model = self.get_model()
-        for i in xrange(len(model)):
+        for i in range(len(model)):
             if model[i][0] == text:
                 del model[i]
                 return
@@ -398,7 +400,7 @@ class ComboBox(WidgetMask, gtk.ComboBox):
 
     def show_text(self, text):
         model = self.get_model()
-        for i in xrange(len(model)):
+        for i in range(len(model)):
             if model[i][0] == text:
                 self.set_active(i)
                 return
@@ -517,7 +519,7 @@ class Desktop(Callback.Callbacks):
         self.tabcount += 1
         if not tabname:
             tabname = labelname
-            if self.tab.has_key(tabname):
+            if tabname in self.tab:
                 tabname = 'tab%d' % self.tabcount
             
         label = gtk.Label(labelname)

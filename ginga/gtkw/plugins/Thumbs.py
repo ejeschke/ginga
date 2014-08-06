@@ -164,13 +164,13 @@ class Thumbs(ThumbsBase.ThumbsBase):
         objtext = 'Object: UNKNOWN'
         try:
             objtext = 'Object: ' + metadata['OBJECT']
-        except Exception, e:
+        except Exception as e:
             self.logger.error("Couldn't determine OBJECT name: %s" % str(e))
 
         uttext = 'UT: UNKNOWN'
         try:
             uttext = 'UT: ' + metadata['UT']
-        except Exception, e:
+        except Exception as e:
             self.logger.error("Couldn't determine UT: %s" % str(e))
 
         chname, path = thumbkey

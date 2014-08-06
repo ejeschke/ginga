@@ -11,6 +11,8 @@
 # NOTE: this code is based on "custom_projection_example.py", an example
 # script developed by matplotlib developers
 #
+from __future__ import print_function
+
 import matplotlib
 from matplotlib.axes import Axes
 from matplotlib.path import Path
@@ -19,6 +21,7 @@ from matplotlib.transforms import Affine2D, BboxTransformTo, Transform, \
 from matplotlib.projections import register_projection
 
 import numpy as np
+from ginga.util.six.moves import map, zip
 
 
 class GingaAxes(Axes):
@@ -211,7 +214,7 @@ class GingaAxes(Axes):
         #pass_through = True
 
         def invalidate(self):
-            print "I don't feel validated! (%s)" % (self.pass_through)
+            print("I don't feel validated! (%s)" % (self.pass_through))
             return Transform.invalidate(self)
             
         def _transform_xy(self, n):

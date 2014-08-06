@@ -12,7 +12,7 @@ import sys, re
 import numpy
 import threading
 import math
-import StringIO
+from io import BytesIO
 
 # Matplotlib imports
 import matplotlib
@@ -23,7 +23,7 @@ from matplotlib.path import Path
 
 from ginga import ImageView
 from ginga import Mixins, Bindings, colors
-import transform
+from . import transform
 
 # Override some matplotlib keyboard UI defaults
 rc = matplotlib.rcParams
@@ -312,7 +312,7 @@ class ImageViewMpl(ImageView.ImageViewBase):
     def get_png_image_as_buffer(self, output=None):
         ibuf = output
         if ibuf == None:
-            ibuf = StringIO.StringIO()
+            ibuf = BytesIO()
         qimg = self.figure.write_to_png(ibuf)
         return ibuf
     

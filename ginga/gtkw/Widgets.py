@@ -12,6 +12,7 @@ import gtk
 import gobject
 
 from ginga.misc import Callback, Bunch
+from functools import reduce
 
 class WidgetError(Exception):
     """For errors thrown in this module."""
@@ -177,7 +178,7 @@ class ComboBox(WidgetBase):
         model = self.widget.get_model()
         tup = (text, )
         j = 0
-        for i in xrange(len(model)):
+        for i in range(len(model)):
             j = i
             if model[i][0] > text:
                 model.insert(j, tup)
@@ -197,7 +198,7 @@ class ComboBox(WidgetBase):
 
     def delete_alpha(self, text):
         model = self.widget.get_model()
-        for i in xrange(len(model)):
+        for i in range(len(model)):
             if model[i][0] == text:
                 del model[i]
                 return
@@ -208,7 +209,7 @@ class ComboBox(WidgetBase):
 
     def show_text(self, text):
         model = self.widget.get_model()
-        for i in xrange(len(model)):
+        for i in range(len(model)):
             if model[i][0] == text:
                 self.widget.set_active(i)
                 return

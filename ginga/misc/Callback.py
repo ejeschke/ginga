@@ -26,7 +26,7 @@ class Callbacks(object):
         
     def has_callback(self, name):
         #return self.cb.has_key(name) and (len(self.cb[name]) > 0)
-        return self.cb.has_key(name)
+        return name in self.cb
         
     def delete_callback(self, name):
         del self.cb[name]
@@ -71,7 +71,7 @@ class Callbacks(object):
                 if res:
                     result = True
                 
-            except Exception, e:
+            except Exception as e:
                 # Catch exception because we need to iterate to the other
                 # callbacks
                 try:

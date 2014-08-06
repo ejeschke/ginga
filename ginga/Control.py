@@ -11,9 +11,15 @@
 import sys, os
 import traceback
 import re, time
-import thread, threading
+import ginga.util.six as six
+if six.PY2:
+    import thread
+    import Queue
+else:
+    import _thread as thread
+    import queue as Queue
+import threading
 import logging
-import Queue
 import mimetypes
 
 import numpy
@@ -186,7 +192,7 @@ class GingaControl(Callback.Callbacks):
         if maxv > readout.maxv:
             readout.maxv = maxv
 
-        if info.has_key('ra_txt'):
+        if 'ra_txt' in info:
             text = "%1.1s: %-14.14s  %1.1s: %-14.14s  X: %-*.*s  Y: %-*.*s  Value: %-*.*s" % (
                 info.ra_lbl, info.ra_txt, info.dec_lbl, info.dec_txt,
                 maxx, maxx, fits_x, maxy, maxy, fits_y, maxv, maxv, value)
@@ -582,9 +588,9 @@ class GingaControl(Callback.Callbacks):
         self.logger.debug("preload: checking %s in %s" % (imname, chname))
         chinfo = self.get_channelInfo(chname)
         datasrc = chinfo.datasrc
-        self.logger.debug("has item: %s" % datasrc.has_key(imname))
+        self.logger.debug("has item: %s" % (imname in datasrc))
 
-        if not chinfo.datasrc.has_key(imname):
+        if imname not in chinfo.datasrc:
             # not there--load image in a non-gui thread, then have the
             # gui add it to the channel silently
             self.logger.info("preloading image %s" % (path))
@@ -750,7 +756,7 @@ class GingaControl(Callback.Callbacks):
     def switch_name(self, chname, imname, path=None,
                     image_loader=None):
         chinfo = self.get_channelInfo(chname)
-        if chinfo.datasrc.has_key(imname):
+        if imname in chinfo.datasrc:
             # Image is still in the heap
             image = chinfo.datasrc[imname]
             self.change_channel(chname, image=image)
@@ -866,7 +872,7 @@ class GingaControl(Callback.Callbacks):
     def has_channel(self, chname):
         name = chname.lower()
         with self.lock:
-            return self.channel.has_key(name)
+            return name in self.channel
                 
     def get_channelInfo(self, chname=None):
         with self.lock:

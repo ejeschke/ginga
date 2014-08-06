@@ -254,7 +254,7 @@ class Catalogs(CatalogsBase.CatalogsBase):
         paramList = sorted(params.values(), key=lambda b: b.order)
         for bnch in paramList:
             text = bnch.name
-            if bnch.has_key('label'):
+            if 'label' in bnch:
                 text = bnch.label
             #captions.append((text, 'entry'))
             captions.append((text, 'xlabel', '@'+bnch.name, 'entry'))
@@ -304,7 +304,7 @@ class Catalogs(CatalogsBase.CatalogsBase):
                      self.catalog_server_params):
             if bnch != None:
                 for key in bnch.keys():
-                    if d.has_key(key):
+                    if key in d:
                         bnch[key].set_text(str(d[key]))
 
     def get_params(self, bnch):
@@ -440,7 +440,7 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
         combobox = self.btn['field']
         try:
             combobox.clear()
-        except Exception, e:
+        except Exception as e:
             self.logger.error("Error clearing field selector: %s" % (
                 str(e)))
 
@@ -524,7 +524,7 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
         model = self.treeview.get_model()
         # find path containing this star in the treeview
         # TODO: is there a more efficient way to do this?
-        for path in xrange(len(self.starlist)):
+        for path in range(len(self.starlist)):
             iter = model.get_iter(path)
             cstar = model.get_value(iter, 0)
             if cstar == star:
@@ -534,7 +534,7 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
     def get_subset_from_starlist(self, fromidx, toidx):
         model = self.treeview.get_model()
         res = []
-        for idx in xrange(fromidx, toidx):
+        for idx in range(fromidx, toidx):
             iter = model.get_iter(idx)
             star = model.get_value(iter, 0)
             res.append(star)

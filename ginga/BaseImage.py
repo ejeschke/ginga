@@ -13,6 +13,7 @@ import logging
 
 from ginga.misc import Bunch, Callback
 from ginga import trcalc, AutoCuts
+from ginga.util.six.moves import map, zip
 
 class ImageError(Exception):
     pass
@@ -100,7 +101,7 @@ class BaseImage(Callback.Callbacks):
         return self.get('header', Header())
         
     def get(self, kwd, *args):
-        if self.metadata.has_key(kwd):
+        if kwd in self.metadata:
             return self.metadata[kwd]
         else:
             # return a default if there is one
@@ -360,7 +361,7 @@ class BaseImage(Callback.Callbacks):
         try:
             value = self.get_data_xy(int(data_x), int(data_y))
 
-        except Exception, e:
+        except Exception as e:
             value = None
 
         info = Bunch.Bunch(itype='base', data_x=data_x, data_y=data_y,

@@ -7,6 +7,7 @@
 # Copyright (c)  Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
+from __future__ import print_function
 
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as QtFigureCanvas
 from ginga.qtw.QtHelp import QtGui, QtCore
@@ -15,7 +16,7 @@ from ginga.qtw.QtHelp import QtGui, QtCore
 def setup_Qt(widget, fitsimage):
 
     def resizeEvent(*args):
-        print args
+        print(args)
         rect = widget.geometry()
         x1, y1, x2, y2 = rect.getCoords()
         width = x2 - x1

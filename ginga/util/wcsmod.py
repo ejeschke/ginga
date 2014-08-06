@@ -28,6 +28,7 @@ you.
 import math
 import re
 import numpy
+from ginga.util.six.moves import map, zip
 
 # Module variables that get configured at module load time
 # or when use() is called
@@ -234,7 +235,7 @@ class AstropyWCS(BaseWCS):
             self.wcs = pywcs.WCS(self.header, fobj=fobj, relax=True)
 
             self.coordsys = choose_coord_system(self.header)
-        except Exception, e:
+        except Exception as e:
             self.logger.error("Error making WCS object: %s" % (str(e)))
             self.wcs = None
 
@@ -249,7 +250,7 @@ class AstropyWCS(BaseWCS):
             sky = self.wcs.all_pix2world(pixcrd, origin)
             return float(sky[0, 2])
 
-        except Exception, e:
+        except Exception as e:
             self.logger.error("Error calculating spectral coordinate: %s" % (str(e)))
             raise WCSError(e)
         
@@ -266,7 +267,7 @@ class AstropyWCS(BaseWCS):
             # astropy only?
             sky = self.wcs.all_pix2world(pixcrd, origin)
 
-        except Exception, e:
+        except Exception as e:
             self.logger.error("Error calculating pixtoradec: %s" % (str(e)))
             raise WCSError(e)
         
@@ -294,7 +295,7 @@ class AstropyWCS(BaseWCS):
             # astropy only?
             pix = self.wcs.wcs_world2pix(skycrd, origin)
 
-        except Exception, e:
+        except Exception as e:
             self.logger.error("Error calculating radectopix: %s" % (str(e)))
             raise WCSError(e)
 
@@ -395,7 +396,7 @@ class AstLibWCS(BaseWCS):
             self.wcs = astWCS.WCS(hdr, mode='pyfits')
 
             self.coordsys = self.choose_coord_system(self.header)
-        except Exception, e:
+        except Exception as e:
             self.logger.error("Error making WCS object: %s" % (str(e)))
             self.wcs = None
 
@@ -457,7 +458,7 @@ class AstLibWCS(BaseWCS):
         try:
             ra_deg, dec_deg = self.wcs.pix2wcs(idxs[0], idxs[1])
             
-        except Exception, e:
+        except Exception as e:
             self.logger.error("Error calculating pixtoradec: %s" % (str(e)))
             raise WCSError(e)
         
@@ -467,7 +468,7 @@ class AstLibWCS(BaseWCS):
         try:
             x, y = self.wcs.wcs2pix(ra_deg, dec_deg)
 
-        except Exception, e:
+        except Exception as e:
             self.logger.error("Error calculating radectopix: %s" % (str(e)))
             raise WCSError(e)
 
@@ -547,7 +548,7 @@ class KapteynWCS(BaseWCS):
 
             self.coordsys = choose_coord_system(self.header)
 
-        except Exception, e:
+        except Exception as e:
             self.logger.error("Error making WCS object: %s" % (str(e)))
             self.wcs = None
 
@@ -563,7 +564,7 @@ class KapteynWCS(BaseWCS):
             if len(res) > 0:
                 return res[self.wcs.specaxnum-1]
             
-        except Exception, e:
+        except Exception as e:
             self.logger.error("Error calculating spectral coordinate: %s" % (str(e)))
             raise WCSError(e)
     
@@ -582,7 +583,7 @@ class KapteynWCS(BaseWCS):
             else:
                 ra_deg, dec_deg = res[0], res[1]
             
-        except Exception, e:
+        except Exception as e:
             self.logger.error("Error calculating pixtoradec: %s" % (str(e)))
             raise WCSError(e)
         
@@ -597,7 +598,7 @@ class KapteynWCS(BaseWCS):
         try:
             pix = self.wcs.topixel(args)
 
-        except Exception, e:
+        except Exception as e:
             self.logger.error("Error calculating radectopix: %s" % (str(e)))
             raise WCSError(e)
 
@@ -677,7 +678,7 @@ class StarlinkWCS(BaseWCS):
             toframe = Ast.SkyFrame("System=ICRS, Equinox=J2000")
             self.icrs_trans = refframe.convert(toframe)
 
-        except Exception, e:
+        except Exception as e:
             self.logger.error("Error making WCS object: %s" % (str(e)))
             self.wcs = None
 
@@ -694,7 +695,7 @@ class StarlinkWCS(BaseWCS):
             res = self.wcs.tran(arrs, 1)
             return res[2][0]
 
-        except Exception, e:
+        except Exception as e:
             self.logger.error("Error calculating spectral coordinate: %s" % (str(e)))
             raise WCSError(e)
 
@@ -717,7 +718,7 @@ class StarlinkWCS(BaseWCS):
             ra_deg, dec_deg = math.degrees(ra_rad), math.degrees(dec_rad)
             #print ra_deg, dec_deg
             
-        except Exception, e:
+        except Exception as e:
             self.logger.error("Error calculating pixtoradec: %s" % (str(e)))
             raise WCSError(e)
         
@@ -736,7 +737,7 @@ class StarlinkWCS(BaseWCS):
             res = self.wcs.tran(arrs, 0)
             x, y = res[0][0], res[1][0]
 
-        except Exception, e:
+        except Exception as e:
             self.logger.error("Error calculating radectopix: %s" % (str(e)))
             raise WCSError(e)
 
@@ -895,7 +896,7 @@ class BareBonesWCS(BaseWCS):
                  math.cos(crval2 * math.pi/180.0) *
                  (ra_deg - crval1))/rmatrix + crpix2
 
-        except Exception, e:
+        except Exception as e:
             raise WCSError("radectopix calculation error: %s" % str(e))
 
         # account for FITS->DATA space

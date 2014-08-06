@@ -147,7 +147,7 @@ class RGBMapper(Callback.Callbacks):
         self.iarr = numpy.round(arr).astype('uint')
 
     def reset_sarr(self, callback=True):
-        self.sarr = numpy.array(range(256))
+        self.sarr = numpy.array(list(range(256)))
         if callback:
             self.make_callback('changed')
 

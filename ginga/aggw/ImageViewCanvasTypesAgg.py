@@ -9,13 +9,14 @@
 
 import math
 import aggdraw as agg
-import AggHelp
+from . import AggHelp
 from itertools import chain
 
 from ginga.ImageViewCanvas import *
 from ginga import Mixins
 from ginga.misc import Callback, Bunch
 from ginga import colors
+from ginga.util.six.moves import map, zip
 
 
 class AggCanvasMixin(object):

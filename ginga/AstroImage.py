@@ -19,6 +19,8 @@ from ginga.util import wcs, iqcalc
 from ginga.BaseImage import BaseImage, ImageError, Header
 from ginga.misc import Bunch
 from ginga import trcalc
+import ginga.util.six as six
+from ginga.util.six.moves import map, zip
 
 
 class AstroHeader(Header):
@@ -150,7 +152,7 @@ class AstroImage(BaseImage):
             # By convention, the fits header is stored in a dictionary
             # under the metadata keyword 'header'
             hdr = self.metadata['header']
-        except KeyError, e:
+        except KeyError as e:
             if not create:
                 raise e
             #hdr = {}
@@ -514,12 +516,12 @@ class AstroImage(BaseImage):
             # change halfway across the pixel
             value = self.get_data_xy(int(data_x+0.5), int(data_y+0.5))
 
-        except Exception, e:
+        except Exception as e:
             value = None
 
         system = settings.get('wcs_coords', None)
         format = settings.get('wcs_display', 'sexagesimal')
-        ra_lbl, dec_lbl = unichr(945), unichr(948)
+        ra_lbl, dec_lbl = six.unichr(945), six.unichr(948)
                     
         # Calculate WCS coords, if available
         ts = time.time()
@@ -564,7 +566,7 @@ class AstroImage(BaseImage):
                     dec_txt = "%+5.3f" % (lat_deg*3600)
                     ra_lbl, dec_lbl = u"x-Solar", u"y-Solar"
 
-        except Exception, e:
+        except Exception as e:
             self.logger.warn("Bad coordinate conversion: %s" % (
                 str(e)))
             ra_txt  = 'BAD WCS'

@@ -370,7 +370,7 @@ class ImageViewBindings(object):
             res = fitsimage.panset_xy(data_x, data_y, redraw=redraw)
             return res
 
-        except ImageView.ImageViewCoordsError, e:
+        except ImageView.ImageViewCoordsError as e:
             # coords are not within the data area
             pass
 

@@ -11,10 +11,10 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+from __future__ import print_function
 import sys, os
 import socket, select
 import threading
-import SocketServer
 import logging
 import time
 import struct
@@ -23,22 +23,27 @@ import re
 import string
 
 from ginga.misc import Bunch
+import ginga.util.six as six
+if six.PY2:
+    import SocketServer
+else:
+    import socketserver as SocketServer
 
 # internal globals
-MEMORY            = 01              # frame buffer i/o
-LUT               = 02              # lut i/o
-FEEDBACK          = 05              # used for frame clears
-IMCURSOR          = 020             # logical image cursor
-WCS               = 021             # used to set WCS
+MEMORY            = 0o1              # frame buffer i/o
+LUT               = 0o2              # lut i/o
+FEEDBACK          = 0o5              # used for frame clears
+IMCURSOR          = 0o20             # logical image cursor
+WCS               = 0o21             # used to set WCS
 
 IIS_VERSION       = 10              # version 1.0
 
-PACKED            = 0040000
-COMMAND           = 0100000
-IIS_READ          = 0100000
-IMC_SAMPLE        = 0040000
-IMT_FBCONFIG      = 077
-XYMASK            = 077777
+PACKED            = 0o040000
+COMMAND           = 0o100000
+IIS_READ          = 0o100000
+IMC_SAMPLE        = 0o040000
+IMT_FBCONFIG      = 0o77
+XYMASK            = 0o77777
 
 MAX_FBCONFIG      = 128             # max possible frame buf sizes
 MAX_FRAMES        = 15              #  max number of frames (start from 0)
@@ -120,10 +125,10 @@ class IIS_DataListener(object):
             try:
                 (sin, sout, sexp) = select.select(inputs, [], [], self.timeout)
 
-            except KeyboardInterrupt, e:
+            except KeyboardInterrupt as e:
                 raise e
 
-            except select.error, e:
+            except select.error as e:
                 self.logger.error("select.error: %s" % str(e))
                 (code, msg) = e
                 # code==4 is interrupted system call.  This typically happens
@@ -150,7 +155,7 @@ class IIS_DataListener(object):
         try:
             (request, client_address) = self.get_request()
 
-        except socket.error, e:
+        except socket.error as e:
             # Error handling goes here.
             self.logger.error("error opening the connection: %s" % (
                 str(e)))
@@ -160,7 +165,7 @@ class IIS_DataListener(object):
 
         try:
             self.RequestHandlerClass(request, client_address, self)
-        except Exception, e:
+        except Exception as e:
             # Error handling goes here.
             self.logger.error('error handling the request: %s' % (
                 str(e)))
@@ -189,7 +194,7 @@ class IIS_DataListener(object):
             try:
                 os.remove(self.addr.path)
                 
-            except Exception, e:
+            except Exception as e:
                 self.logger.error("Failed to cleanup the pipe " + self.addr.path +
                                   (": %s" % (str(e))))
         
@@ -323,7 +328,7 @@ Where   nbytes | NB  = number of bytes expected or written
             
             # we are expecting 1 string, 2 floats, and 6 int
             try:
-                print "updating WCS: %s" % str(data[2])
+                print("updating WCS: %s" % str(data[2]))
                 (ct.region, ct.sx, ct.sy, ct.snx, 
                  ct.sny, ct.dx, ct.dy, ct.dnx, 
                  ct.dny) = string.split(data[2])
@@ -387,7 +392,7 @@ Where   nbytes | NB  = number of bytes expected or written
         the framebuffers.
         """
         self.logger.debug("handle feedback")
-        self.frame = self.decode_frameno(pkt.z & 07777) - 1
+        self.frame = self.decode_frameno(pkt.z & 0o7777) - 1
         
         # erase the frame buffer
         fb = self.server.controller.init_frame(self.frame)
@@ -407,7 +412,7 @@ Where   nbytes | NB  = number of bytes expected or written
                 return
             try:
                 x = struct.unpack(data_type, line)
-            except Exception, e:
+            except Exception as e:
                 self.logger.error("Error unpacking struct: %s" % (str(e)))
                 return
             
@@ -470,19 +475,19 @@ Where   nbytes | NB  = number of bytes expected or written
         if pkt.tid & IIS_READ:
             self.logger.debug("iis read")
             # Return the WCS for the referenced frame.
-            if (pkt.x & 017777) and (pkt.y & 017777):
+            if (pkt.x & 0o17777) and (pkt.y & 0o17777):
                 # return IIS version number
                 text = "version=" + str(IIS_VERSION)
                 text = right_pad(text, SZ_OLD_WCSBUF)
             else:
-                frame  = self.decode_frameno(pkt.z & 0177777) - 1
+                frame  = self.decode_frameno(pkt.z & 0o177777) - 1
                 try:
                     fb = self.server.controller.get_frame(frame)
                 except KeyError:
                     fb = None
                 self.logger.debug("frame=%d fb=%s" % (frame, fb))
                 
-                if (pkt.x & 017777) and (pkt.t & 017777):
+                if (pkt.x & 0o17777) and (pkt.t & 0o17777):
                     self.frame = frame
                     if (fb and fb.ct.a != None):
                         wcs = "%s\n%f %f %f %f %f %f %f %f %d\n" % (
@@ -506,7 +511,7 @@ Where   nbytes | NB  = number of bytes expected or written
                         text = fb.wcs
                     
                     # old style or new style?
-                    if pkt.x & 0777:
+                    if pkt.x & 0o777:
                         text = right_pad(text, SZ_WCSBUF)
                     else:
                         text = right_pad(text, SZ_OLD_WCSBUF)
@@ -517,7 +522,7 @@ Where   nbytes | NB  = number of bytes expected or written
             self.logger.debug("iis write")
             # Read the WCS information from the client
             # frames start from 1, we start from 0
-            self.frame = self.decode_frameno(pkt.z & 07777) - 1
+            self.frame = self.decode_frameno(pkt.z & 0o7777) - 1
             
             try:
                 fb = self.server.controller.get_frame(self.frame)
@@ -527,7 +532,7 @@ Where   nbytes | NB  = number of bytes expected or written
                 fb = self.server.controller.init_frame(self.frame)
             
             # set the width and height of the framebuffer
-            fb_config = (pkt.t & 0777) + 1
+            fb_config = (pkt.t & 0o777) + 1
             try:
                 (nframes, fb.width, fb.height) = fbconfigs [fb_config]
 
@@ -541,7 +546,7 @@ Where   nbytes | NB  = number of bytes expected or written
                 fb.height = None
             
             # do we have to deal with the new WCS format? (not used, for now)
-            new_wcs = (pkt.x & 0777)
+            new_wcs = (pkt.x & 0o777)
             
             # read the WCS info
             line = pkt.datain.read(pkt.nbytes)
@@ -562,7 +567,7 @@ Where   nbytes | NB  = number of bytes expected or written
         self.logger.debug("handle memory")
 
         # get the frame number, we start from 0
-        self.frame = self.decode_frameno(pkt.z & 07777) - 1
+        self.frame = self.decode_frameno(pkt.z & 0o7777) - 1
         try:
             fb = self.server.controller.get_frame(self.frame)
         except KeyError:
@@ -730,12 +735,12 @@ Where   nbytes | NB  = number of bytes expected or written
             
             # decode the packet fields
             subunit = bytes[2]
-            subunit077 = subunit & 077
+            subunit077 = subunit & 0o77
             tid = bytes[0]
-            x = bytes[4] & 0177777
-            y = bytes[5] & 0177777
-            z = bytes[6] & 0177777
-            t = bytes[7] & 017777
+            x = bytes[4] & 0o177777
+            y = bytes[5] & 0o177777
+            z = bytes[6] & 0o177777
+            t = bytes[7] & 0o17777
             ndatabytes = - bytes[1]
             
             # are the bytes packed?

@@ -176,7 +176,7 @@ class Contents(GingaPlugin.GlobalPlugin):
         path = image.get('path', None)
 
         model = self.treeview.get_model()
-        if not self.nameDict.has_key(chname):
+        if chname not in self.nameDict:
             it = model.append(None, [ chname ])
             fileDict = { '_iter': it }
             self.nameDict[chname] = fileDict
@@ -185,7 +185,7 @@ class Contents(GingaPlugin.GlobalPlugin):
             it = fileDict['_iter']
             
         key = name.lower()
-        if fileDict.has_key(key):
+        if key in fileDict:
             return
 
         bnch = self.get_info(chname, name, image)

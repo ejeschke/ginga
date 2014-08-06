@@ -1,3 +1,4 @@
+from __future__ import print_function
 #! /usr/bin/env python
 #
 # example2_tk.py -- Simple, configurable FITS viewer.
@@ -148,7 +149,7 @@ class FitsViewer(object):
                 return
             ra_txt, dec_txt = image.pixtoradec(fits_x, fits_y,
                                                format='str', coords='fits')
-        except Exception, e:
+        except Exception as e:
             self.logger.warn("Bad coordinate conversion: %s" % (
                 str(e)))
             ra_txt  = 'BAD WCS'
@@ -215,7 +216,7 @@ if __name__ == "__main__":
     elif options.profile:
         import profile
 
-        print "%s profile:" % sys.argv[0]
+        print("%s profile:" % sys.argv[0])
         profile.run('main(options, args)')
 
 

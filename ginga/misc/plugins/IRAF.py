@@ -30,7 +30,11 @@ import sys, os
 import logging
 import threading
 import socket
-import Queue
+import ginga.util.six as six
+if six.PY2:
+    import Queue
+else:
+    import queue as Queue
 import array
 import numpy
 import time
@@ -441,7 +445,7 @@ class IRAF(GingaPlugin.GlobalPlugin):
             image.set(name=fitsname, path=path, host=host)
             #image.update_keywords(header)
         
-        except Exception, e:
+        except Exception as e:
             # Some kind of error unpacking the data
             errmsg = "Error creating image data for '%s': %s" % (
                 chname, str(e))
@@ -640,7 +644,7 @@ class IRAF_AstroImage(AstroImage.AstroImage):
 
             # Mapping from bytescaled values back to original values
             value = iis.wcs_pix_transform(ct, value)
-        except Exception, e:
+        except Exception as e:
             self.logger.error("Exception getting value at %d,%d: %s" % (
                 x, y, str(e)))
             value = None
@@ -658,7 +662,7 @@ class IRAF_AstroImage(AstroImage.AstroImage):
             ra_txt  = 'BAD WCS'
             dec_txt = 'BAD WCS'
             
-        except Exception, e:
+        except Exception as e:
             self.logger.warn("Bad coordinate conversion: %s" % (
                 str(e)))
             ra_txt  = 'BAD WCS'

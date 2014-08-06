@@ -96,7 +96,7 @@ class Debug(GingaPlugin.GlobalPlugin):
         try:
             result = eval(cmdstr)
 
-        except Exception, e:
+        except Exception as e:
             result = str(e)
             # TODO: add traceback
 

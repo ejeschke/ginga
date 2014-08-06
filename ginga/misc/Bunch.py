@@ -66,7 +66,7 @@ class caselessDict(object):
         self.dict.clear()
 
     def setdefault(self, key, val):
-        if self.has_key(key):
+        if key in self:
             return self.__getitem__(key)
         else:
             self.__setitem__(key, val)
@@ -107,14 +107,14 @@ class caselessDict(object):
 
     def has_key(self, key):
         k = self.lower(key)
-        return self.dict.has_key(k)
+        return k in self.dict
 
     def canonicalKey(self, key):
         k = self.lower(key)
         return self.dict[k][0]
 
     def get(self, key, alt=None):
-        if self.has_key(key):
+        if key in self:
             return self.__getitem__(key)
         return alt
 
@@ -131,7 +131,7 @@ class caselessDict(object):
         return self.dict.values()
 
     def __contains__(self, item):
-        return self.dict.has_key(item.lower())
+        return item.lower() in self.dict
         
     def __repr__(self):
         items = ", ".join([("%r: %r" % (k,v)) for k,v in self.items()])
@@ -224,12 +224,12 @@ class Bunch(object):
 
         # this test allows attributes to be set in the __init__ method
         # (self.__dict__[_Bunch__initialised] same as self.__initialized)
-        if not self.__dict__.has_key('_Bunch__initialised'):
+        if '_Bunch__initialised' not in self.__dict__:
             self.__dict__[attr] = value
 
         else:
             # Any normal attributes are handled normally
-            if self.__dict__.has_key(attr):
+            if attr in self.__dict__:
                 self.__dict__[attr] = value
             # Others are entries in the table
             else:
@@ -255,7 +255,7 @@ class Bunch(object):
         return iter(self.tbl.keys())
 
     def __contains__(self, key):
-        return self.tbl.has_key(key)
+        return key in self.tbl
 
     ## def next(self):
     ##     if self.iterPosition >= len(self.keyList):
@@ -305,15 +305,15 @@ class Bunch(object):
         return self.tbl.keys()
 
     def has_key(self, key):
-        return self.tbl.has_key(key)
+        return key in self.tbl
 
     def get(self, key, alt=None):
-        if self.has_key(key):
+        if key in self:
             return self.__getitem__(key)
         return alt
 
     def setdefault(self, key, val):
-        if self.has_key(key):
+        if key in self:
             return self.__getitem__(key)
         else:
             self.__setitem__(key, val)
@@ -431,7 +431,7 @@ class threadSafeBunch(object):
 
     def __contains__(self, key):
         with self.lock:
-            return self.tbl.has_key(key)
+            return key in self.tbl
     
     def __delitem__(self, key):
         return self.delitem(key)
@@ -453,13 +453,13 @@ class threadSafeBunch(object):
         # this test allows attributes to be set in the __init__ method
         # (self.__dict__[_threadSafeBunch__initialised] same as
         #   self.__initialized)
-        if not self.__dict__.has_key('_threadSafeBunch__initialised'):
+        if '_threadSafeBunch__initialised' not in self.__dict__:
             self.__dict__[key] = value
 
         else:
             with self.lock:
                 # Any normal attributes are handled normally
-                if self.__dict__.has_key(key):
+                if key in self.__dict__:
                     self.__dict__[key] = value
                 # Others are entries in the table
                 else:
@@ -501,7 +501,7 @@ class threadSafeBunch(object):
         """Checks for membership of dictionary key.
         """
         with self.lock:
-            return self.tbl.has_key(key)
+            return key in self.tbl
 
 
     def keys(self):
@@ -538,7 +538,7 @@ class threadSafeBunch(object):
         otherwise return _alt_. 
         """
         with self.lock:
-            if self.has_key(key):
+            if key in self:
                 return self.getitem(key)
             
             else:
@@ -551,7 +551,7 @@ class threadSafeBunch(object):
         Returns the old value found or the new value.
         """
         with self.lock:
-            if self.has_key(key):
+            if key in self:
                 return self.getitem(key)
 
             else:
@@ -566,7 +566,7 @@ class threadSafeBunch(object):
         """
 
         with self.lock:
-            if self.has_key(key):
+            if key in self:
                 return self.getitem(key)
 
             # Instantiate value.

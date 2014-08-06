@@ -13,6 +13,7 @@ from ginga.misc import Bunch, Future
 from ginga import GingaPlugin
 from ginga import cmap, imap
 from ginga.util import wcs
+from ginga.util.six.moves import map, zip
 
 
 class CatalogsBase(GingaPlugin.LocalPlugin):
@@ -186,7 +187,7 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
             radius = deg*60.0 + float(mn) + sec/60.0
             #wd, ht, radius = wd_deg, ht_deg, radius_deg
             
-        except Exception, e:
+        except Exception as e:
             self.fv.showStatus('BAD WCS: %s' % str(e))
             return True
 
@@ -438,7 +439,7 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
         point = self.dc.Point(x, y, radius, color=color)
 
         ## What is this from?
-        if obj.has_key('pick'):
+        if 'pick' in obj:
             # Some objects returned from the star catalog are marked
             # with the attribute 'pick'.  If present then we show the
             # star with or without the cross, otherwise we always show the
@@ -483,7 +484,7 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
         self.table.set_minmax(i, length)
 
         # remove references to old plot objects from starlist
-        for j in xrange(len(self.starlist)):
+        for j in range(len(self.starlist)):
             obj = self.starlist[j]
             obj.canvobj = None
 
@@ -496,7 +497,7 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
         #for obj in selected:
         selected = self.table.get_selected()
         for obj in selected:
-            if (not obj.has_key('canvobj')) or (obj.canvobj == None):
+            if ('canvobj' not in obj) or (obj.canvobj == None):
                 self.plot_star(obj, image=image)
             self.highlight_object(obj.canvobj, 'selected', 'skyblue')
             
@@ -595,7 +596,7 @@ class CatalogListingBase(object):
                 self._unselect_tv(star, fromtable=fromtable)
                 # unhighlight star in plot
                 self.catalog.unhighlight_object(star.canvobj, 'selected')
-            except Exception, e:
+            except Exception as e:
                 self.logger.warn("Error unhilighting star: %s" % (str(e)))
             return False
         else:
@@ -606,12 +607,12 @@ class CatalogListingBase(object):
                     try:
                         self._unselect_tv(star2, fromtable=fromtable)
                         self.catalog.unhighlight_object(star2.canvobj, 'selected')
-                    except Exception, e:
+                    except Exception as e:
                         self.logger.warn("Error unhilighting star: %s" % (str(e)))
             self.selected.append(star)
             try:
                 # If this star is not plotted, then plot it
-                if (not star.has_key('canvobj')) or (star.canvobj == None):
+                if ('canvobj' not in star) or (star.canvobj == None):
                     self.catalog.plot_star(star)
 
                 # highlight line in table
@@ -620,7 +621,7 @@ class CatalogListingBase(object):
                 self.catalog.highlight_object(star.canvobj, 'selected', 'skyblue')
                 if self.catalog.pan_to_selected:
                     self.catalog.pan_to_star(star)
-            except Exception, e:
+            except Exception as e:
                 self.logger.warn("Error hilighting star: %s" % (str(e)))
             return True
 
@@ -634,7 +635,7 @@ class CatalogListingBase(object):
     def clear(self):
         try:
             self.catalog.clear()
-        except Exception, e:
+        except Exception as e:
             # may not have generated a catalog yet
             self.logger.warn("Error clearing star table: %s" % (str(e)))
 

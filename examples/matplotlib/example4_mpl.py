@@ -28,6 +28,7 @@ example4 produces a simple matplotlib fits view with a couple of overplots.
 This shows how you can use the functionality with straight python/matplotlib
 sessions.  Run this by supplying a single FITS file on the command line.
 """
+from __future__ import print_function
 import sys, os
 import platform
 # just in case you want to use qt
@@ -74,7 +75,7 @@ fi.get_bindings().enable_all(True)
 
 # load an image
 if len(sys.argv) < 2:
-    print "Please provide a FITS file on the command line"
+    print("Please provide a FITS file on the command line")
     sys.exit(1)
     
 image = AstroImage(logger)

@@ -28,6 +28,7 @@ Usage:
     $ example1_video.py [log options] <AVI file>
     
 """
+from __future__ import print_function
 import sys, os
 import time
 import logging, logging.handlers
@@ -45,7 +46,7 @@ from ginga import AutoCuts, RGBMap
 try:
     import cv, cv2
 except ImportError:
-    print "You need to install the OpenCV python module to run this example"
+    print("You need to install the OpenCV python module to run this example")
     sys.exit(1)
     
 STD_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcName)s) | %(message)s'
@@ -154,7 +155,7 @@ class GingaVision(QtGui.QMainWindow):
                 self.pdata[::] = img[::]
                 self.qtmain.gui_call(self.fitsimage.redraw)
 
-        except Exception, e:
+        except Exception as e:
             self.logger.error("Error unpacking packet: %s" % (
                 str(e)))
 
@@ -292,7 +293,7 @@ if __name__ == '__main__':
     elif options.profile:
         import profile
 
-        print("%s profile:" % sys.argv[0])
+        print(("%s profile:" % sys.argv[0]))
         profile.run('main(options, args)')
 
 

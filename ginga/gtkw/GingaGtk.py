@@ -9,7 +9,6 @@
 #
 # stdlib imports
 import sys, os
-import Queue
 import traceback
 
 # GUI imports
@@ -22,6 +21,7 @@ import pango
 from ginga import ImageView
 from ginga import cmap, imap
 from ginga.misc import Bunch
+from ginga.util.six.moves import map, zip
 
 moduleHome = os.path.split(sys.modules[__name__].__file__)[0]
 sys.path.insert(0, moduleHome)
@@ -613,7 +613,7 @@ class GingaView(GtkMain.GtkMain):
 
         chbase = self.chncnt
         self.chncnt += num
-        for i in xrange(num):
+        for i in range(num):
             chname = "%s%d" % (chpfx, chbase+i)
             self.add_channel(chname, workspace=wsname)
         
@@ -777,7 +777,7 @@ class GingaView(GtkMain.GtkMain):
 
         chbase = self.chncnt
         self.chncnt += num
-        for i in xrange(num):
+        for i in range(num):
             chname = "%s%d" % (chpfx, chbase+i)
             self.add_channel(chname, workspace=wsname)
         return True

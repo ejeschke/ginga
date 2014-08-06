@@ -117,7 +117,7 @@ class Contents(GingaPlugin.GlobalPlugin):
         name = image.get('name', noname)
         path = image.get('path', None)
 
-        if not self.nameDict.has_key(chname):
+        if chname not in self.nameDict:
             # channel does not exist yet in contents--add it
             chitem = QtGui.QTreeWidgetItem(self.treeview, [chname])
             chitem.setFirstColumnSpanned(True)
@@ -130,7 +130,7 @@ class Contents(GingaPlugin.GlobalPlugin):
             chitem = fileDict['_chitem']
             
         key = name.lower()
-        if fileDict.has_key(key):
+        if key in fileDict:
             return
 
         bnch = self.get_info(chname, name, image)

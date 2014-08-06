@@ -176,7 +176,7 @@ class LayerImage(object):
         result = numpy.empty((ht, wd, num))
 
         start_time = time.time()
-        for i in xrange(len(self._layer)):
+        for i in range(len(self._layer)):
             layer = self.get_layer(i)
             alpha = layer.alpha
             if isinstance(alpha, BaseImage.BaseImage):
@@ -200,7 +200,7 @@ class LayerImage(object):
             names = ("Red", "Green", "Blue")
             alphas = (0.292, 0.594, 0.114)
 
-            for i in xrange(shape[2]):
+            for i in range(shape[2]):
                 imgslice = data[:, :, i]
                 #img = BaseImage.BaseImage(data_np=imgslice, logger=self.logger)
                 # Create the same type of image as we are decomposing
@@ -230,7 +230,7 @@ class LayerImage(object):
         self.compose_layers()
 
     def set_alphas(self, vals):
-        for lidx in xrange(len(vals)):
+        for lidx in range(len(vals)):
             layer = self._layer[lidx]
             layer.alpha = vals[lidx]
 

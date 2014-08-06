@@ -8,11 +8,18 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+from __future__ import print_function
 import os.path
 import tempfile
 import re
 import urllib
-import urllib2
+import ginga.util.six as six
+if six.PY2:
+    from urllib2 import Request, urlopen, URLError, HTTPError
+else:
+    # python3
+    from urllib.request import Request, urlopen
+    from urllib.error import URLError, HTTPError
 import time
 
 from ginga.misc import Bunch
@@ -61,7 +68,7 @@ class Star(object):
         self.starInfo[key] = value
         
     def has_key(self, key):
-        return self.starInfo.has_key(key)
+        return key in self.starInfo
         
 
 class AstroPyCatalogServer(object):
@@ -160,7 +167,7 @@ class AstroPyCatalogServer(object):
         # prepare the result list
         starlist = []
         arr = results.array
-        for i in xrange(numsources):
+        for i in range(numsources):
             source = dict(zip(fields, arr[i]))
             starlist.append(self.toStar(source, ext, magfield))
 
@@ -453,7 +460,7 @@ class URLServer(object):
             self.logger.debug("fetched %d bytes" % (len(data)))
             #data = data.decode('ascii')
 
-        except Exception, e:
+        except Exception as e:
             self.logger.error("Error reading data from '%s': %s" % (
                 url, str(e)))
             raise e
@@ -550,7 +557,7 @@ class CatalogServer(URLServer):
         offset = 0
         while offset < len(lines):
             line = lines[offset].strip()
-            print line
+            print(line)
             offset += 1
             if line.startswith('-'):
                 break
@@ -602,8 +609,8 @@ class CatalogServer(URLServer):
                                     preference=0.0, priority=0,
                                     description=''))
 
-            except Exception, e:
-                print str(e)
+            except Exception as e:
+                print(str(e))
                 self.logger.error("Error parsing catalog query results: %s" % (
                     str(e)))
 

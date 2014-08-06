@@ -13,6 +13,7 @@ import numpy
 from ginga.misc import Widgets, CanvasTypes, Bunch
 from ginga.util import iqcalc, dp, wcs
 from ginga import GingaPlugin
+from ginga.util.six.moves import map, zip, filter
 
 try:
     from ginga.misc import Plot
@@ -648,7 +649,7 @@ class Pick(GingaPlugin.LocalPlugin):
             # Set the pan and zoom position & redraw
             self.plot_panzoom()
             
-        except Exception, e:
+        except Exception as e:
             self.logger.error("Error making contour plot: %s" % (
                 str(e)))
 
@@ -657,7 +658,7 @@ class Pick(GingaPlugin.LocalPlugin):
         
     def _plot_fwhm_axis(self, arr, skybg, color1, color2, color3):
         N = len(arr)
-        X = numpy.array(range(N))
+        X = numpy.array(list(range(N)))
         Y = arr
         # subtract sky background
         ## skybg = numpy.median(Y)
@@ -702,7 +703,7 @@ class Pick(GingaPlugin.LocalPlugin):
             plt.set_title("FWHM X: %.2f  Y: %.2f" % (fwhm_x, fwhm_y))
 
             self.w.fig2.canvas.draw()
-        except Exception, e:
+        except Exception as e:
             self.logger.error("Error making fwhm plot: %s" % (
                 str(e)))
 
@@ -825,7 +826,7 @@ class Pick(GingaPlugin.LocalPlugin):
             self.fv.nongui_do(self.search, serialnum, data,
                               x1, y1, wd, ht, fig)
 
-        except Exception, e:
+        except Exception as e:
             self.logger.error("Error calculating quality metrics: %s" % (
                 str(e)))
             return True
@@ -878,7 +879,7 @@ class Pick(GingaPlugin.LocalPlugin):
                     raise Exception("No object matches selection criteria")
                 qs = results[0]
 
-            except Exception, e:
+            except Exception as e:
                 msg = str(e)
                 self.update_status(msg)
 
@@ -971,7 +972,7 @@ class Pick(GingaPlugin.LocalPlugin):
                 if self.do_record:
                     self.w.report.append_text(self.last_rpt)
 
-            except Exception, e:
+            except Exception as e:
                 ra_txt = 'WCS ERROR'
                 dec_txt = 'WCS ERROR'
             self.wdetail.ra.set_text(ra_txt)
@@ -987,7 +988,7 @@ class Pick(GingaPlugin.LocalPlugin):
                  (cdelt1, cdelt2)) = wcs.get_xy_rotation_and_scale(header)
                 starsize = self.iqcalc.starsize(fwhm_x, cdelt1, fwhm_y, cdelt2)
                 self.wdetail.star_size.set_text('%.3f' % starsize)
-            except Exception, e:
+            except Exception as e:
                 self.wdetail.star_size.set_text('ERROR')
                 self.fv.show_error("Couldn't calculate star size: %s" % (
                     str(e)), raisetab=False)
@@ -999,7 +1000,7 @@ class Pick(GingaPlugin.LocalPlugin):
                 self.plot_contours()
                 self.plot_fwhm(qs)
 
-        except Exception, e:
+        except Exception as e:
             errmsg = "Error calculating quality metrics: %s" % (
                 str(e))
             self.logger.error(errmsg)
@@ -1038,7 +1039,7 @@ class Pick(GingaPlugin.LocalPlugin):
                 point = obj.objects[1]
             self.dx = (bbox.x2 - bbox.x1) // 2
             self.dy = (bbox.y2 - bbox.y1) // 2
-        except Exception, e:
+        except Exception as e:
             pass
 
         dx = self.dx
@@ -1071,7 +1072,7 @@ class Pick(GingaPlugin.LocalPlugin):
                 point = obj.objects[1]
             self.dx = (bbox.x2 - bbox.x1) // 2
             self.dy = (bbox.y2 - bbox.y1) // 2
-        except Exception, e:
+        except Exception as e:
             obj = None
             pass
 
@@ -1204,7 +1205,7 @@ class Pick(GingaPlugin.LocalPlugin):
             loval += self.delta_sky
             self.fitsimage.cut_levels(loval, hival)
             
-        except Exception, e:
+        except Exception as e:
             self.fv.showStatus("No valid sky level: '%s'" % (loval))
             
     def bright_cut(self):
@@ -1219,7 +1220,7 @@ class Pick(GingaPlugin.LocalPlugin):
             hival = skyval + hival + self.delta_bright
             self.fitsimage.cut_levels(loval, hival)
             
-        except Exception, e:
+        except Exception as e:
             self.fv.showStatus("No valid brightness level: '%s'" % (hival))
             
     def zoomset(self, setting, zoomlevel, fitsimage):

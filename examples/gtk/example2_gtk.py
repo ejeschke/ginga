@@ -8,6 +8,7 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+from __future__ import print_function
 import sys, os
 import logging, logging.handlers
 
@@ -229,7 +230,7 @@ if __name__ == "__main__":
     elif options.profile:
         import profile
 
-        print ("%s profile:" % sys.argv[0])
+        print(("%s profile:" % sys.argv[0]))
         profile.run('main(options, args)')
 
 

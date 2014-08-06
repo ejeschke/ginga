@@ -7,6 +7,7 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+from __future__ import print_function
 import time
 import threading
 
@@ -114,7 +115,7 @@ class TimerFactory(object):
             cur_time = time.time()
 
             rel = []
-            for i in xrange(len(self.waiters)):
+            for i in range(len(self.waiters)):
                 timer = self.waiters[i]
                 if timer.get_deadline() <= cur_time:
                     rel.insert(0, (timer, i))
@@ -260,10 +261,10 @@ def main():
         frac_sec = cur_time - cur_time_sec
         timestr = time.strftime("%H:%M:%S", time.localtime(cur_time_sec))
         frac = str(frac_sec).split('.')[1]
-        print "[%s] Time is '%s.%s'" % (who, timestr, frac)
+        print("[%s] Time is '%s.%s'" % (who, timestr, frac))
 
     cb(None, '0')
-    print "Setting timers"
+    print("Setting timers")
     t1 = tfact.set(0.0015, cb, 'B')
     t2 = tfact.set(0.0020, cb, 'D')
     t3 = tfact.set(0.0016, cb, 'C')
@@ -271,12 +272,12 @@ def main():
     t5 = tfact.set(0.0030, cb, 'E')
     t2.clear()
 
-    print "Waiting on timers"
+    print("Waiting on timers")
     try:
         tfact.wait_timers()
 
     except KeyboardInterrupt:
-        print "Caught ^C..."
+        print("Caught ^C...")
     tfact.quit()
     
     

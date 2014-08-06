@@ -25,6 +25,7 @@ ginga pane.
 
 You need Qt4 with python bindings (or pyside) installed to run this example.
 """
+from __future__ import print_function
 import sys
 import numpy
 
@@ -34,6 +35,7 @@ from ginga.qtw.QtHelp import QtGui, QtCore
 from ginga import AstroImage
 from ginga import cmap, imap
 from ginga.misc import log
+from ginga.util.six.moves import map, zip
 
 import matplotlib
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
@@ -241,7 +243,7 @@ class FitsViewer(QtGui.QMainWindow):
             self.fitsimage.add(Compass(
                 x, y, xn, yn, xe, ye, color='skyblue',
                 fontsize=14), redraw=True)
-        except Exception, e:
+        except Exception as e:
             self.logger.warn("Can't calculate compass: %s" % (
                 str(e)))
 
@@ -304,7 +306,7 @@ class FitsViewer(QtGui.QMainWindow):
     def make_mpl_colormap(self, fitsimage):
         # make the equivalent color map for matplotlib
         # (takes into account any cmap warps, etc.)
-        idx = numpy.array(range(256), dtype='uint')
+        idx = numpy.array(list(range(256)), dtype='uint')
         idx = idx.reshape((256, 1))
         rgbmap = fitsimage.get_rgbmap()
         carr = rgbmap.get_rgbarray(idx).get_array('RGB').astype('float')
@@ -459,7 +461,7 @@ if __name__ == "__main__":
     elif options.profile:
         import profile
 
-        print("%s profile:" % sys.argv[0])
+        print(("%s profile:" % sys.argv[0]))
         profile.run('main(options, args)')
 
 

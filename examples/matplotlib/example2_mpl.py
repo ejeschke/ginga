@@ -15,6 +15,7 @@ Usage:
 
 You need Qt4 with python bindings (or pyside) installed to run this example.
 """
+from __future__ import print_function
 import sys, os
 from ginga.qtw.QtHelp import QtGui, QtCore
 
@@ -221,7 +222,7 @@ if __name__ == "__main__":
     elif options.profile:
         import profile
 
-        print("%s profile:" % sys.argv[0])
+        print(("%s profile:" % sys.argv[0]))
         profile.run('main(options, args)')
 
 

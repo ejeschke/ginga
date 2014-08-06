@@ -16,6 +16,7 @@ from ginga.ImageViewCanvas import *
 from ginga import Mixins
 from ginga.misc import Callback, Bunch
 from ginga import colors
+from ginga.util.six.moves import map, zip
 
 class QtCanvasMixin(object):
 
@@ -129,11 +130,12 @@ class Text(TextBase, QtCanvasMixin):
 class Polygon(PolygonBase, QtCanvasMixin):
 
     def draw(self):
-        cpoints = map(lambda p: self.canvascoords(p[0], p[1]), self.points)
+        cpoints = tuple(map(lambda p: self.canvascoords(p[0], p[1]),
+                            self.points))
         cr = self.setup_cr()
 
-        qpoints = map(lambda p: QtCore.QPoint(p[0], p[1]),
-                      cpoints + [cpoints[0]])
+        qpoints = list(map(lambda p: QtCore.QPoint(p[0], p[1]),
+                            (cpoints + (cpoints[0],))))
         qpoly = QPolygon(qpoints)
 
         cr.drawPolygon(qpoly)
@@ -145,12 +147,11 @@ class Polygon(PolygonBase, QtCanvasMixin):
 class Rectangle(RectangleBase, QtCanvasMixin):
         
     def draw(self):
-        cpoints = map(lambda p: self.canvascoords(p[0], p[1]),
-                      ((self.x1, self.y1), (self.x2, self.y1),
-                       (self.x2, self.y2), (self.x1, self.y2)))
-        #qpoints = map(lambda p: QtCore.QPoint(p[0], p[1]), cpoints)
-        qpoints = map(lambda p: QtCore.QPoint(p[0], p[1]),
-                      cpoints + [cpoints[0]])
+        cpoints = tuple(map(lambda p: self.canvascoords(p[0], p[1]),
+                            ((self.x1, self.y1), (self.x2, self.y1),
+                             (self.x2, self.y2), (self.x1, self.y2))))
+        qpoints = list(map(lambda p: QtCore.QPoint(p[0], p[1]),
+                           (cpoints + (cpoints[0],))))
         qpoly = QPolygon(qpoints)
 
         cr = self.setup_cr()

@@ -11,6 +11,7 @@ from ginga.qtw.QtHelp import QtGui, QtCore, QTextCursor
 from ginga.qtw import QtHelp
 
 from ginga.misc import Callback, Bunch
+from functools import reduce
 
 class WidgetBase(Callback.Callbacks):
 

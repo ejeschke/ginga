@@ -109,7 +109,7 @@ class ColorBar(Callback.Callbacks, QtGui.QWidget):
         nums = max(int(width // self._avg_pixels_per_range_num), 1)
         spacing = 256 // nums
         self._interval = {}
-        for i in xrange(nums):
+        for i in range(nums):
             self._interval[i*spacing] = True
         self.logger.debug("nums=%d spacing=%d intervals=%s" % (
             nums, spacing, self._interval))
@@ -166,7 +166,7 @@ class ColorBar(Callback.Callbacks, QtGui.QWidget):
         
         j = ival; off = 0
         range_pts = []
-        for i in xrange(256):
+        for i in range(256):
             
             wd = clr_wd    
             if rem_px > 0:
@@ -183,7 +183,7 @@ class ColorBar(Callback.Callbacks, QtGui.QWidget):
             cr.fillRect(QtCore.QRect(x, 0, wd, clr_ht), color)
 
             # Draw range scale if we are supposed to
-            if self.t_showrange and self._interval.has_key(i):
+            if self.t_showrange and i in self._interval:
                 cb_pct = float(i) / 256.0
                 # get inverse of distribution function and calculate value
                 # at this position

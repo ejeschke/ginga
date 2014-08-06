@@ -11,6 +11,7 @@ import numpy
 
 from ginga.misc import Widgets, Plot
 from ginga import GingaPlugin
+from ginga.util.six.moves import map, zip
 
 
 class Cuts(GingaPlugin.LocalPlugin):
@@ -279,7 +280,7 @@ class Cuts(GingaPlugin.LocalPlugin):
                        color=color)
         
     def _redo(self, lines, colors):
-        for idx in xrange(len(lines)):
+        for idx in range(len(lines)):
             line, color = lines[idx], colors[idx]
             line.color = color
             #text = obj.objects[1]

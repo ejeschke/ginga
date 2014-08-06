@@ -602,7 +602,7 @@ class ZScale2(AutoCutsBase):
             try:
                 p, cov = optimize.curve_fit(fitting, X, Y, guess, sigma)
 
-            except Exception, e:
+            except Exception as e:
                 self.logger.debug("curve fitting failed: %s" % (str(e)))
                 cov = None
             

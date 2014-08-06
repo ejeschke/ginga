@@ -14,6 +14,7 @@ from ginga.misc import Bunch
 from ginga import GingaPlugin
 from ginga import AstroImage
 from ginga.util import paths
+from ginga.util.six.moves import map, zip
 
 
 class FBrowserBase(GingaPlugin.LocalPlugin):
@@ -85,7 +86,7 @@ class FBrowserBase(GingaPlugin.LocalPlugin):
             bnch = Bunch.Bunch(path=path, name=filename, type=ftype,
                                st_mode=filestat.st_mode, st_size=filestat.st_size,
                                st_mtime=filestat.st_mtime)
-        except OSError, e:
+        except OSError as e:
             # TODO: identify some kind of error with this path
             bnch = Bunch.Bunch(path=path, name=filename, type=ftype,
                                st_mode=0, st_size=0,
@@ -129,7 +130,7 @@ class FBrowserBase(GingaPlugin.LocalPlugin):
         for bnch in self.jumpinfo:
             if not bnch.type == 'fits':
                 continue
-            if not bnch.has_key('kwds'):
+            if 'kwds' not in bnch:
                 try:
                     in_f = AstroImage.pyfits.open(bnch.path, 'readonly')
                     try:
@@ -139,7 +140,7 @@ class FBrowserBase(GingaPlugin.LocalPlugin):
                         bnch.kwds = kwds
                     finally:
                         in_f.close()
-                except Exception, e:
+                except Exception as e:
                     continue
 
     def refresh(self):

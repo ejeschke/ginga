@@ -7,14 +7,16 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+from __future__ import print_function
 import sys, time
 import os
 import numpy
 import mimetypes
 import hashlib
-import StringIO
+from io import BytesIO
 
 from ginga.util import paths
+from ginga.util.six.moves import map, zip
 
 try:
     # do we have Python Imaging Library available?
@@ -39,7 +41,7 @@ if not have_pilutil:
     try:
         from ginga.qtw.QtHelp import QImage, QColor, QtCore
         have_qtimage = True
-    except ImportError, e:
+    except ImportError as e:
         pass
 
 # EXIF library for getting metadata, in the case that we don't have PIL
@@ -132,7 +134,7 @@ class RGBFileHandler(object):
                     kwd = TAGS.get(tag, tag)
                     kwds[kwd] = value
 
-            except Exception, e:
+            except Exception as e:
                 self.logger.warn("Failed to get image metadata: %s" % (str(e)))
 
             # If we have a working color profile then handle any embedded
@@ -141,7 +143,7 @@ class RGBFileHandler(object):
                 # Assume sRGB image, unless we learn to the contrary
                 in_profile = 'sRGB'
                 try:
-                    if image.info.has_key('icc_profile'):
+                    if 'icc_profile' in image.info:
                         self.logger.debug("image has embedded color profile")
                         buf_profile = image.info['icc_profile']
                         # Write out embedded profile (if needed)
@@ -153,7 +155,7 @@ class RGBFileHandler(object):
                                 icc_f.write(buf_profile)
 
                     # see if there is any EXIF tag about the colorspace
-                    elif kwds.has_key('ColorSpace'):
+                    elif 'ColorSpace' in kwds:
                         csp = kwds['ColorSpace']
                         iop = kwds.get('InteroperabilityIndex', None)
                         if (csp == 0x2) or (csp == 0xffff):
@@ -183,7 +185,7 @@ class RGBFileHandler(object):
                                                     profile['working'])
                     self.logger.info("converted from profile (%s) to profile (%s)" % (
                         in_profile, profile['working']))
-                except Exception, e:
+                except Exception as e:
                     self.logger.error("Error converting from embedded color profile: %s" % (str(e)))
                     self.logger.warn("Leaving image unprofiled.")
                         
@@ -222,7 +224,7 @@ class RGBFileHandler(object):
         image = PILimage.fromarray(data_np)
         buf = output
         if buf == None:
-            buf = StringIO.StringIO()
+            buf = BytesIO()
         image.save(buf, format)
         contents = buf.getvalue()
         if output == None:
@@ -291,7 +293,7 @@ def open_ppm(filepath):
     while header.startswith(b'#') or len(header) == 0:
         header = infile.readline().strip()
 
-    print header
+    print(header)
     width, height = map(int, header.split())
     header = infile.readline()
 

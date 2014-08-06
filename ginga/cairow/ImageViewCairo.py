@@ -12,7 +12,7 @@ import cairo
 import numpy
 import threading
 import math
-import StringIO
+from io import BytesIO
 
 from ginga import ImageView
 
@@ -158,7 +158,7 @@ class ImageViewCairo(ImageView.ImageViewBase):
     def get_png_image_as_buffer(self, output=None):
         ibuf = output
         if ibuf == None:
-            ibuf = StringIO.StringIO()
+            ibuf = BytesIO()
         qimg = self.surface.write_to_png(ibuf)
         return ibuf
     

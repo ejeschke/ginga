@@ -11,8 +11,8 @@ import os
 import pprint
 import numpy
 
-import Callback
-import Bunch
+from . import Callback
+from . import Bunch
 
 
 unset_value = ("^^UNSET^^")
@@ -98,7 +98,7 @@ class SettingGroup(object):
         other.setDict(d)
 
     def setdefault(self, key, value):
-        if self.group.has_key(key):
+        if key in self.group:
             return self.group[key].get(value)
         else:
             d = { key: value }
@@ -124,7 +124,7 @@ class SettingGroup(object):
             
     def setDict(self, d, callback=True):
         for key, value in d.items():
-            if not self.group.has_key(key):
+            if key not in self.group:
                 self.setdefault(key, value)
             else:
                 self.group[key].set(value, callback=callback)
@@ -139,7 +139,7 @@ class SettingGroup(object):
         self.group[key].set(value)
 
     def has_key(self, key):
-        return self.group.has_key(key)
+        return key in self.group
 
     def load(self, onError='raise'):
         try:
@@ -158,12 +158,12 @@ class SettingGroup(object):
                         key = line[:i].strip()
                         val = eval(line[i+1:].strip())
                         d[key] = val
-                    except Exception, e:
+                    except Exception as e:
                         # silently skip parse errors, for now
                         continue
                         
             self.setDict(d)
-        except Exception, e:
+        except Exception as e:
             errmsg = "Error opening settings file (%s): %s" % (
                 self.preffile, str(e))
             if onError == 'silent':
@@ -199,7 +199,7 @@ class SettingGroup(object):
                 for key in keys:
                     out_f.write("%s = %s\n" % (key, repr(d[key])))
                         
-        except Exception, e:
+        except Exception as e:
             errmsg = "Error opening settings file (%s): %s" % (
                 self.preffile, str(e))
             self.logger.error(errmsg)
@@ -222,7 +222,7 @@ class Preferences(object):
         return self.settings[category].getDict()
     
     def createCategory(self, category):
-        if not self.settings.has_key(category):
+        if category not in self.settings:
             suffix = '.cfg'
             path = os.path.join(self.folder, category + suffix)
             self.settings[category] = SettingGroup(logger=self.logger,
