@@ -96,8 +96,8 @@ class Text(TextBase, CairoCanvasMixin):
 class Polygon(PolygonBase, CairoCanvasMixin):
 
     def draw(self):
-        cpoints = map(lambda p: self.canvascoords(p[0], p[1]),
-                      self.points)
+        cpoints = list(map(lambda p: self.canvascoords(p[0], p[1]),
+                           self.points))
         cr = self.setup_cr()
 
         (cx0, cy0) = cpoints[-1]
@@ -122,9 +122,9 @@ class Rectangle(RectangleBase, CairoCanvasMixin):
 
     def draw(self):
         cr = self.setup_cr()
-        cpoints = map(lambda p: self.canvascoords(p[0], p[1]),
-                      ((self.x1, self.y1), (self.x2, self.y1),
-                       (self.x2, self.y2), (self.x1, self.y2)))
+        cpoints = list(map(lambda p: self.canvascoords(p[0], p[1]),
+                           ((self.x1, self.y1), (self.x2, self.y1),
+                            (self.x2, self.y2), (self.x1, self.y2))))
         (cx0, cy0) = cpoints[-1]
         cr.move_to(cx0, cy0)
         for cx, cy in cpoints:

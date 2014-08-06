@@ -10,9 +10,14 @@
 #
 import sys, os
 import logging
-import Tkinter
-from tkFileDialog import askopenfilename
 
+import ginga.util.six as six
+if six.PY2:
+    import Tkinter
+    from tkFileDialog import askopenfilename
+else:
+    import tkinter as Tkinter
+    from tkinter.filedialog import askopenfilename
 from ginga.tkw.ImageViewTk import ImageViewZoom
 from ginga import AstroImage
 

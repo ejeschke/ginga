@@ -183,9 +183,9 @@ class TestTask01(unittest.TestCase):
         self.logger.debug("resTuple = %s" % (str(resTuple)))
         self.logger.debug("Total time is %f" % t.getExecutionTime())
         # test against the values assigned in make_CompoundTask()
-        self.assert_('t3_1' in resTuple)
-        self.assert_('t3_0' in resTuple)
-        self.assert_('t3_2' in resTuple)
+        self.assertTrue('t3_1' in resTuple)
+        self.assertTrue('t3_0' in resTuple)
+        self.assertTrue('t3_2' in resTuple)
         
     def test_04(self):
         self.logger.debug("test of 2 seqential task sets in a concurrent task")
@@ -199,8 +199,8 @@ class TestTask01(unittest.TestCase):
         self.logger.debug("resTuple = %s" % (str(resTuple)))
         self.logger.debug("Total time is %f" % t.getExecutionTime())
         # test against the values assigned to final task in each make_CompoundTask()
-        self.assert_('t4b_2' in resTuple)
-        self.assert_('t4a_2' in resTuple)
+        self.assertTrue('t4b_2' in resTuple)
+        self.assertTrue('t4a_2' in resTuple)
         
     def test_05(self):
         self.logger.debug("test of 2 seqential task sets in a sequential task")
@@ -230,8 +230,8 @@ class TestTask01(unittest.TestCase):
                      t2.taskseq[0].result, t2.taskseq[1].result, t2.taskseq[2].result )
         self.logger.debug("resTuple = %s" % (str(resTuple)))
         self.logger.debug("Total time is %f" % t.getExecutionTime())
-        self.assert_( t.taskseq[0].result in ('t6a_0', 't6a_1', 't6a_2'))
-        self.assert_( t.taskseq[1].result in ('t6b_0', 't6b_1', 't6b_2'))
+        self.assertTrue( t.taskseq[0].result in ('t6a_0', 't6a_1', 't6a_2'))
+        self.assertTrue( t.taskseq[1].result in ('t6b_0', 't6b_1', 't6b_2'))
         # test against the values assigned in make_CompoundTask()
         self.assertEqual( 't6a_0', resTuple[0] )
         self.assertEqual( 't6a_1', resTuple[1] )

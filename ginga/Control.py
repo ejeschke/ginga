@@ -590,7 +590,7 @@ class GingaControl(Callback.Callbacks):
         datasrc = chinfo.datasrc
         self.logger.debug("has item: %s" % (imname in datasrc))
 
-        if imname not in chinfo.datasrc:
+        if not chinfo.datasrc.has_key(imname):
             # not there--load image in a non-gui thread, then have the
             # gui add it to the channel silently
             self.logger.info("preloading image %s" % (path))
@@ -756,7 +756,7 @@ class GingaControl(Callback.Callbacks):
     def switch_name(self, chname, imname, path=None,
                     image_loader=None):
         chinfo = self.get_channelInfo(chname)
-        if imname in chinfo.datasrc:
+        if chinfo.datasrc.has_key(imname):
             # Image is still in the heap
             image = chinfo.datasrc[imname]
             self.change_channel(chname, image=image)

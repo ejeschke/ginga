@@ -361,7 +361,7 @@ class AstropyWCS(BaseWCS):
             return (self._deg(c.lonangle), self._deg(c.latangle))
         else:
             r = c.frame.data
-            return map(self._deg, [getattr(r, component) for component in r.components[:2]])
+            return tuple(map(self._deg, [getattr(r, component) for component in r.components[:2]]))
 
 
 class AstLibWCS(BaseWCS):
@@ -604,7 +604,7 @@ class KapteynWCS(BaseWCS):
 
         if coords == 'data':
             # Kapteyn's WCS returns pixels referenced from 1
-            pix = map(lambda x: x-1, pix)
+            pix = tuple(map(lambda x: x-1, pix))
             
         x, y = pix[0], pix[1]
         return (x, y)

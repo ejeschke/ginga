@@ -118,7 +118,7 @@ class FBrowserBase(GingaPlugin.LocalPlugin):
         filelist.sort(key=str.lower)
         filelist.insert(0, os.path.join(dirname, '..'))
 
-        self.jumpinfo = map(self.get_info, filelist)
+        self.jumpinfo = list(map(self.get_info, filelist))
         self.curpath = path
 
         if self.do_scanfits:

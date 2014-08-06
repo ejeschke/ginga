@@ -85,7 +85,8 @@ class Text(TextBase, MplCanvasMixin):
 class Polygon(PolygonBase, MplCanvasMixin):
 
     def draw(self):
-        cpoints = map(lambda p: self.canvascoords(p[0], p[1]), self.points)
+        cpoints = list(map(lambda p: self.canvascoords(p[0], p[1]),
+                           self.points))
         cr = self.setup_cr()
 
         cr = self.setup_cr(closed=True, transform=None)
@@ -103,9 +104,9 @@ class Polygon(PolygonBase, MplCanvasMixin):
 class Rectangle(RectangleBase, MplCanvasMixin):
 
     def draw(self):
-        cpoints = map(lambda p: self.canvascoords(p[0], p[1]),
-                      ((self.x1, self.y1), (self.x2, self.y1),
-                       (self.x2, self.y2), (self.x1, self.y2)))
+        cpoints = list(map(lambda p: self.canvascoords(p[0], p[1]),
+                           ((self.x1, self.y1), (self.x2, self.y1),
+                            (self.x2, self.y2), (self.x1, self.y2))))
 
         cr = self.setup_cr(closed=True, transform=None)
         cr.update_patch(self)

@@ -340,7 +340,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         
     def _getlines(self, obj):
         if obj.kind == 'compound':
-            return self._append_lists(map(self._getlines, obj.objects))
+            return self._append_lists(list(map(self._getlines, obj.objects)))
         elif obj.kind == 'line':
             return [obj]
         else:
