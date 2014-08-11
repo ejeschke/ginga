@@ -624,6 +624,8 @@ def make_widget(title, wtype):
         w = Button(title)
     elif wtype == 'spacer':
         w = Label('')
+    elif wtype == 'textarea':
+        w = TextArea(editable=True)
     else:
         raise ValueError("Bad wtype=%s" % wtype)
     return w

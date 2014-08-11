@@ -588,7 +588,6 @@ class GingaControl(Callback.Callbacks):
         self.logger.debug("preload: checking %s in %s" % (imname, chname))
         chinfo = self.get_channelInfo(chname)
         datasrc = chinfo.datasrc
-        self.logger.debug("has item: %s" % (imname in datasrc))
 
         if not chinfo.datasrc.has_key(imname):
             # not there--load image in a non-gui thread, then have the

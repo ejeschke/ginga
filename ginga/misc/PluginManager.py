@@ -152,7 +152,7 @@ class PluginManagerBase(object):
         if bnch.exclusive:
             self.logger.debug("focus=%s exclusive=%s" % (
                 self.focus, self.exclusive))
-            defocus = filter(lambda x: x in self.exclusive, self.focus)
+            defocus = list(filter(lambda x: x in self.exclusive, self.focus))
             self.logger.debug("defocus: %s" % (str(defocus)))
             for xname in defocus:
                 self.clear_focus(xname)
