@@ -2,6 +2,12 @@
 What's New in Ginga?
 ++++++++++++++++++++
 
+Ver 2.0.20140811184717
+======================
+Codebase has been refactored to work with python3 via the "six" module.
+Tests can now be run with py.test as well as nosetest.
+
+
 Ver 2.0.20140626204441
 ======================
 Support has been added for image overlays.  It's now possible to overlay

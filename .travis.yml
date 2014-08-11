@@ -8,7 +8,7 @@ language: python
 
 python:
   - 2.7
-  - 3.2
+  - 3.4
 
 env:
   - ASTROPY_VERSION=stable
@@ -16,14 +16,9 @@ env:
 
 before_install:
   # Check if we are running Python 2 or 3. This is needed for the apt-get package names
-  - if [[ $TRAVIS_PYTHON_VERSION == '3.2' ]]; then export P="3"; fi
+  - if [[ $TRAVIS_PYTHON_VERSION == '3.4' ]]; then export P="3"; fi
 
   - export PYTHONIOENCODING=UTF8 # just in case
-
-  # This is needed to be able to start the ginga GUI application
-  # http://about.travis-ci.org/docs/user/gui-and-headless-browsers/
-  - export DISPLAY=:99.0
-  - sh -e /etc/init.d/xvfb start
 
   # Use system python, not virtualenv, because building the dependencies from source takes too long
   - deactivate # the virtualenv
@@ -57,7 +52,7 @@ install:
   # ... so for now use setup.py to install astropy
   - git clone git://github.com/astropy/astropy.git
   - cd astropy
-  - if [[ $ASTROPY_VERSION == stable ]]; then git checkout v0.2.1; fi
+  - if [[ $ASTROPY_VERSION == stable ]]; then git checkout v0.4.1; fi
   - sudo python${P} setup.py install
   - cd ..
 
@@ -75,5 +70,6 @@ script:
   - nosetests${P} build/lib*/ginga/tests
 
   # build documentation
-  - python${P} setup.py build_sphinx
+  # there is a problem with this presently
+  #- python${P} setup.py build_sphinx
 
