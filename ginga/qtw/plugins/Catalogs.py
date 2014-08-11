@@ -134,7 +134,7 @@ class Catalogs(CatalogsBase.CatalogsBase):
         sw.setWidgetResizable(True)
         sw.setWidget(vbox0)
         
-        nb.addTab(sw, u"Params")
+        nb.addTab(sw, "Params")
 
         vbox = QtHelp.VBox()
         self.table = CatalogListing(self.logger, vbox)
@@ -166,7 +166,7 @@ class Catalogs(CatalogsBase.CatalogsBase):
 
         vbox.addWidget(hbox, stretch=0)
         self.w.listing = vbox
-        nb.addTab(vbox, u"Listing")
+        nb.addTab(vbox, "Listing")
 
         btns = QtHelp.HBox()
         btns.setSpacing(3)

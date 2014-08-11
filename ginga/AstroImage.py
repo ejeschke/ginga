@@ -560,11 +560,11 @@ class AstroImage(BaseImage):
                 if system == 'galactic':
                     ra_lbl, dec_lbl = "l", "b"
                 elif system == 'ecliptic':
-                    ra_lbl, dec_lbl = u"\u03BB", u"\u03B2"
+                    ra_lbl, dec_lbl = six.unichr(0x03BB), six.unichr(0x03B2)
                 elif system == 'helioprojective':
                     ra_txt = "%+5.3f" % (lon_deg*3600)
                     dec_txt = "%+5.3f" % (lat_deg*3600)
-                    ra_lbl, dec_lbl = u"x-Solar", u"y-Solar"
+                    ra_lbl, dec_lbl = "x-Solar", "y-Solar"
 
         except Exception as e:
             self.logger.warn("Bad coordinate conversion: %s" % (

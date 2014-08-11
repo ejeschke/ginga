@@ -93,7 +93,6 @@ class Header(GingaPlugin.GlobalPlugin):
         info = Bunch.Bunch(chname=chname)
         sw = self._create_header_window(info)
 
-        #self.nb.addTab(sw, six.unicode(chname))
         self.nb.addTab(sw, chname)
         index = self.nb.indexOf(sw)
         info.setvals(nbindex=index)
