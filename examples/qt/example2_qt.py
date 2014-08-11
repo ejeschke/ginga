@@ -42,12 +42,7 @@ class FitsViewer(QtGui.QMainWindow):
         self.fitsimage = fi
 
         bd = fi.get_bindings()
-        bd.enable_pan(True)
-        bd.enable_zoom(True)
-        bd.enable_cuts(True)
-        bd.enable_flip(True)
-        bd.enable_rotate(True)
-        bd.enable_cmap(True)
+        bd.enable_all(True)
 
         w = fi.get_widget()
         w.resize(512, 512)
@@ -86,7 +81,7 @@ class FitsViewer(QtGui.QMainWindow):
         wopen = QtGui.QPushButton("Open File")
         wopen.clicked.connect(self.open_file)
         wquit = QtGui.QPushButton("Quit")
-        #wquit.clicked.connect("close()")
+        wquit.clicked.connect(self.quit)
 
         hbox.addStretch(1)
         for w in (wopen, wdrawtype, wdrawcolor, wclear, wquit):
@@ -165,12 +160,14 @@ class FitsViewer(QtGui.QMainWindow):
             ra_txt, dec_txt, fits_x, fits_y, value)
         self.readout.setText(text)
 
+    def quit(self, *args):
+        self.logger.info("Attempting to shut down the application...")
+        self.deleteLater()
+
 def main(options, args):
 
     #QtGui.QApplication.setGraphicsSystem('raster')
     app = QtGui.QApplication(args)
-    ## app.connect(app, QtCore.SIGNAL('lastWindowClosed()'),
-    ##             app, QtCore.SLOT('quit()'))
 
     logger = logging.getLogger("example2")
     logger.setLevel(options.loglevel)

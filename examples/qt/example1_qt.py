@@ -53,7 +53,7 @@ class FitsViewer(QtGui.QMainWindow):
         wopen = QtGui.QPushButton("Open File")
         wopen.clicked.connect(self.open_file)
         wquit = QtGui.QPushButton("Quit")
-        #wquit.clicked.connect(self, QtCore.SLOT("close()"))
+        wquit.clicked.connect(self.quit)
 
         hbox.addStretch(1)
         for w in (wopen, wquit):
@@ -86,12 +86,14 @@ class FitsViewer(QtGui.QMainWindow):
         fileName = paths[0]
         self.load_file(fileName)
 
+    def quit(self, *args):
+        self.logger.info("Attempting to shut down the application...")
+        self.deleteLater()
+
         
 def main(options, args):
     
     app = QtGui.QApplication(sys.argv)
-    ## app.connect(app, QtCore.SIGNAL('lastWindowClosed()'),
-    ##             app, QtCore.SLOT('quit()'))
 
     logger = logging.getLogger("example1")
     logger.setLevel(logging.INFO)

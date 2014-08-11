@@ -136,10 +136,8 @@ class FitsViewer(QtGui.QMainWindow):
         
 def main(options, args):
     
-    QtGui.QApplication.setGraphicsSystem('raster')
+    #QtGui.QApplication.setGraphicsSystem('raster')
     app = QtGui.QApplication(args)
-    app.connect(app, QtCore.SIGNAL('lastWindowClosed()'),
-                app, QtCore.SLOT('quit()'))
 
     logger = log.get_logger(name="example1", options=options)
     viewer = FitsViewer(logger)
