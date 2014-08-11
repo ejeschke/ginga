@@ -52,7 +52,7 @@ install:
   # ... so for now use setup.py to install astropy
   - git clone git://github.com/astropy/astropy.git
   - cd astropy
-  - if [[ $ASTROPY_VERSION == stable ]]; then git checkout v0.4.1; fi
+  - if [[ $ASTROPY_VERSION == stable ]]; then git checkout v0.3.2; fi
   - sudo python${P} setup.py install
   - cd ..
 
