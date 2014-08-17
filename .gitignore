@@ -49,3 +49,7 @@ distribute-*.tar.gz
 # Mac OSX
 .DS_Store
 
+# Eclipse project files
+.settings
+.project
+.pydevproject
