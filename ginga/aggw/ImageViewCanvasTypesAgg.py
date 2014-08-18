@@ -74,7 +74,8 @@ class Text(TextBase, AggCanvasMixin):
 class Polygon(PolygonBase, AggCanvasMixin):
 
     def draw(self):
-        cpoints = map(lambda p: self.canvascoords(p[0], p[1]), self.points)
+        cpoints = list(map(lambda p: self.canvascoords(p[0], p[1]),
+                           self.points))
         cr = self.setup_cr()
 
         pen = cr.get_pen(self.color)
@@ -94,9 +95,9 @@ class Polygon(PolygonBase, AggCanvasMixin):
 class Rectangle(RectangleBase, AggCanvasMixin):
 
     def draw(self):
-        cpoints = map(lambda p: self.canvascoords(p[0], p[1]),
-                      ((self.x1, self.y1), (self.x2, self.y1),
-                       (self.x2, self.y2), (self.x1, self.y2)))
+        cpoints = list(map(lambda p: self.canvascoords(p[0], p[1]),
+                           ((self.x1, self.y1), (self.x2, self.y1),
+                            (self.x2, self.y2), (self.x1, self.y2))))
 
         cr = self.setup_cr()
 

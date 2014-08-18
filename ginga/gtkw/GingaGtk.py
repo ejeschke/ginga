@@ -678,12 +678,12 @@ class GingaView(GtkMain.GtkMain):
 
         if dim != None:
             # user specified dimensions
-            dim = map(int, dim.split('x'))
+            dim = list(map(int, dim.split('x')))
             self.setSize(*dim)
 
         if len(coords) > 0:
             # user specified position
-            coords = map(int, coords)
+            coords = list(map(int, coords))
             self.setPos(*coords)
 
     def collapse_pane(self, side):

@@ -781,7 +781,7 @@ class ImageViewEvent(ImageViewQt):
 
     def drop_event(self, widget, event):
         dropdata = event.mimeData()
-        formats = map(str, list(dropdata.formats()))
+        formats = list(map(str, list(dropdata.formats())))
         self.logger.debug("available formats of dropped data are %s" % (
             formats))
         if dropdata.hasUrls():

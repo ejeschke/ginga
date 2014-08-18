@@ -194,7 +194,7 @@ class GingaWrapper(object):
         self.logger = logger
 
         # List of XML-RPC acceptable return types
-        self.ok_types = map(type, [str, int, float, bool, list, tuple])
+        self.ok_types = list(map(type, [str, int, float, bool, list, tuple]))
         
     def help(self, *args):
         """Get help for a remote interface method.
@@ -322,7 +322,7 @@ class GingaWrapper(object):
                 return arg
         
     def _prep_args(self, args):
-        return map(self._prep_arg, args)
+        return list(map(self._prep_arg, args))
     
     def channel(self, chname, method, *args):
         chinfo = self.fv.get_channelInfo(chname)

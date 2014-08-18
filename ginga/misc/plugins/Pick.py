@@ -1285,9 +1285,9 @@ class Pick(GingaPlugin.LocalPlugin):
         assert len(lines1) == len(lines2), \
                Exception("Number of lines don't match in reports")
 
-        img_coords = map(lambda l: map(float, l.split(',')[3:5]), lines1)
+        img_coords = list(map(lambda l: map(float, l.split(',')[3:5]), lines1))
         #print "img coords:", img_coords
-        ref_coords = map(lambda l: map(float, l.split(',')[0:2]), lines2)
+        ref_coords = list(map(lambda l: map(float, l.split(',')[0:2]), lines2))
         #print "ref coords:", ref_coords
 
         image = self.fitsimage.get_image()

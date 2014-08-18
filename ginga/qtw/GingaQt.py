@@ -625,7 +625,7 @@ class GingaView(QtMain.QtMain):
         
     def gui_load_file(self, initialdir=None):
         if self.filesel.exec_():
-            fileNames = map(str, list(self.filesel.selectedFiles()))
+            fileNames = list(map(str, list(self.filesel.selectedFiles())))
             self.load_file(fileNames[0])
         #self.start_operation_cb('FBrowser')
         
@@ -661,12 +661,12 @@ class GingaView(QtMain.QtMain):
 
         if dim != None:
             # user specified dimensions
-            dim = map(int, dim.split('x'))
+            dim = list(map(int, dim.split('x')))
             self.setSize(*dim)
 
         if len(coords) > 0:
             # user specified position
-            coords = map(int, coords)
+            coords = list(map(int, coords))
             self.setPos(*coords)
 
 

@@ -110,7 +110,7 @@ class BaseImage(Callback.Callbacks):
             raise KeyError(kwd)
         
     def get_list(self, *args):
-        return map(self.get, args)
+        return list(map(self.get, args))
     
     def __getitem__(self, kwd):
         return self.metadata[kwd]

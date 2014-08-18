@@ -172,7 +172,7 @@ class AstroImage(BaseImage):
             raise KeyError(kwd)
 
     def get_keywords_list(self, *args):
-        return map(self.get_keyword, args)
+        return list(map(self.get_keyword, args))
     
     def set_keyword(self, kwd, value, create=True):
         kwds = self.get_header(create=create)

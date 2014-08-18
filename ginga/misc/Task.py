@@ -1151,7 +1151,7 @@ class ThreadPool(object):
 
 
     def workerStatus(self):
-        return map(lambda t: t.getstatus(), self.workers)
+        return list(map(lambda t: t.getstatus(), self.workers))
 
     def reset(self):
         for t in self.workers:

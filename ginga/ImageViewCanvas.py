@@ -328,7 +328,7 @@ class CanvasMixin(object):
         return keys
 
     def getObjectsByTagpfx(self, tagpfx):
-        return map(lambda k: self.tags[k], self.getTagsByTagpfx(tagpfx))
+        return list(map(lambda k: self.tags[k], self.getTagsByTagpfx(tagpfx)))
 
     def deleteAllObjects(self, redraw=True):
         self.tags = {}
@@ -670,9 +670,9 @@ class PolygonBase(CanvasObjectBase):
         return result
             
     def rotate(self, theta, xoff=0, yoff=0):
-        newpts = map(lambda p: self.rotate_pt(p[0], p[1], theta,
+        newpts = list(map(lambda p: self.rotate_pt(p[0], p[1], theta,
                                               xoff=xoff, yoff=yoff),
-                     self.points)
+                          self.points))
         self.points = newpts
 
 

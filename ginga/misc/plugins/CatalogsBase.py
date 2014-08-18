@@ -644,7 +644,7 @@ class CatalogListingBase(object):
     
     def replot_stars(self):
         self.catalog.replot_stars()
-        canvobjs = map(lambda star: star.canvobj, self.selected)
+        canvobjs = list(map(lambda star: star.canvobj, self.selected))
         self.catalog.highlight_objects(canvobjs, 'selected', 'skyblue')
             
     def set_cmap_byname(self, name):
@@ -661,8 +661,8 @@ class CatalogListingBase(object):
 
     def set_minmax(self, i, length):
         subset = self.get_subset_from_starlist(i, i+length)
-        values = map(lambda star: float(star[self.mag_field]),
-                     subset)
+        values = list(map(lambda star: float(star[self.mag_field]),
+                          subset))
         self.mag_max = max(values)
         self.mag_min = min(values)
         self.cbar.set_range(self.mag_min, self.mag_max)

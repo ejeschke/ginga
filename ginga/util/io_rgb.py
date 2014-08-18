@@ -294,7 +294,7 @@ def open_ppm(filepath):
         header = infile.readline().strip()
 
     print(header)
-    width, height = map(int, header.split())
+    width, height = tuple(map(int, header.split()))
     header = infile.readline()
 
     # Get unit size

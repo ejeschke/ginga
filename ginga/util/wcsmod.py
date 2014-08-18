@@ -158,7 +158,7 @@ class BaseWCS(object):
         return self.header[key]
         
     def get_keywords(self, *args):
-        return map(lambda key: self.header[key], args)
+        return list(map(lambda key: self.header[key], args))
         
     def fix_bad_headers(self):
         """Fix up bad headers that cause problems for WCSLIB.
