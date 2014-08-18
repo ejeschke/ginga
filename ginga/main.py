@@ -53,71 +53,162 @@ from ginga import AstroImage
 from ginga.util import paths
 
 
+default_layout = ['seq', {},
+                   ['vbox', dict(name='top', width=1440, height=900),
+                    dict(row=['hbox', dict(name='menu')],
+                         stretch=0),
+                    dict(row=['hpanel', dict(name='hpnl'),
+                     ['ws', dict(name='left', width=300, group=2),
+                      # (tabname, layout), ...
+                      [("Info", ['vpanel', {},
+                                 ['ws', dict(name='uleft', height=300,
+                                             show_tabs=False, group=3)],
+                                 ['ws', dict(name='lleft', height=430,
+                                             show_tabs=False, group=3)],
+                                 ]
+                        )]],
+                     ['vbox', dict(name='main', width=700),
+                      dict(row=['ws', dict(name='channels', group=1)], stretch=1)],
+                     ['ws', dict(name='right', width=350, group=2),
+                      # (tabname, layout), ...
+                      [("Dialogs", ['ws', dict(name='dialogs', group=2)
+                                    ]
+                        )]
+                      ],
+                     ], stretch=1),
+                    dict(row=['hbox', dict(name='status')], stretch=0),
+                    ]]
 
-class Main(object):
-    default_layout = ['seq', {},
-                       ['vbox', dict(name='top', width=1440, height=900),
-                        dict(row=['hbox', dict(name='menu')],
-                             stretch=0),
-                        dict(row=['hpanel', dict(name='hpnl'),
-                         ['ws', dict(name='left', width=300, group=2),
-                          # (tabname, layout), ...
-                          [("Info", ['vpanel', {},
-                                     ['ws', dict(name='uleft', height=300,
-                                                 show_tabs=False, group=3)],
-                                     ['ws', dict(name='lleft', height=430,
-                                                 show_tabs=False, group=3)],
-                                     ]
-                            )]],
-                         ['vbox', dict(name='main', width=700),
-                          dict(row=['ws', dict(name='channels', group=1)], stretch=1)],
-                         ['ws', dict(name='right', width=350, group=2),
-                          # (tabname, layout), ...
-                          [("Dialogs", ['ws', dict(name='dialogs', group=2)
-                                        ]
-                            )]
-                          ],
-                         ], stretch=1),
-                        dict(row=['hbox', dict(name='status')], stretch=0),
-                        ]]
+global_plugins = [
+    Bunch(module='Pan', tab='_pan', ws='uleft', raisekey=None),
+    Bunch(module='Info', tab='_info', ws='lleft', raisekey=None),
+    Bunch(module='Header', tab='Header', ws='left', raisekey='H'),
+    Bunch(module='Zoom', tab='Zoom', ws='left', raisekey='Z'),
+    Bunch(module='Thumbs', tab='Thumbs', ws='right', raisekey='T'),
+    Bunch(module='Contents', tab='Contents', ws='right', raisekey='c'),
+    Bunch(module='WBrowser', tab='Help', ws='channels', raisekey='?', start=False),
+    Bunch(module='Errors', tab='Errors', ws='right', start=True),
+    Bunch(module='RC', tab='RC', ws='right', start=False),
+    Bunch(module='SAMP', tab='SAMP', ws='right', start=False),
+    Bunch(module='IRAF', tab='IRAF', ws='right', start=False),
+    Bunch(module='Log', tab='Log', ws='right', start=False),
+    Bunch(module='Debug', tab='Debug', ws='right', start=False),
+    ]
+
+local_plugins = [
+    Bunch(module='Pick', ws='dialogs', shortkey='f1'),
+    Bunch(module='Ruler', ws='dialogs', shortkey='f2'),
+    Bunch(module='MultiDim', ws='dialogs', shortkey='f4'),
+    Bunch(module='Cuts', ws='dialogs', shortkey='f5'),
+    Bunch(module='Histogram', ws='dialogs', shortkey='f6'),
+    Bunch(module='PixTable', ws='dialogs', shortkey='f7'),
+    Bunch(module='Preferences', ws='dialogs', shortkey='f9'),
+    Bunch(module='Catalogs', ws='dialogs', shortkey='f10'),
+    Bunch(module='Mosaic', ws='dialogs'),
+    Bunch(module='Pipeline', ws='dialogs'),
+    Bunch(module='Drawing', ws='dialogs', shortkey='f11'),
+    Bunch(module='FBrowser', ws='dialogs', shortkey='f12'),
+    ]
     
-    global_plugins = [
-        Bunch(module='Pan', tab='_pan', ws='uleft', raisekey=None),
-        Bunch(module='Info', tab='_info', ws='lleft', raisekey=None),
-        Bunch(module='Header', tab='Header', ws='left', raisekey='H'),
-        Bunch(module='Zoom', tab='Zoom', ws='left', raisekey='Z'),
-        Bunch(module='Thumbs', tab='Thumbs', ws='right', raisekey='T'),
-        Bunch(module='Contents', tab='Contents', ws='right', raisekey='c'),
-        Bunch(module='WBrowser', tab='Help', ws='channels', raisekey='?', start=False),
-        Bunch(module='Errors', tab='Errors', ws='right', start=True),
-        Bunch(module='RC', tab='RC', ws='right', start=False),
-        Bunch(module='SAMP', tab='SAMP', ws='right', start=False),
-        Bunch(module='IRAF', tab='IRAF', ws='right', start=False),
-        Bunch(module='Log', tab='Log', ws='right', start=False),
-        Bunch(module='Debug', tab='Debug', ws='right', start=False),
-        ]
-    
-    local_plugins = [
-        Bunch(module='Pick', ws='dialogs', shortkey='f1'),
-        Bunch(module='Ruler', ws='dialogs', shortkey='f2'),
-        Bunch(module='MultiDim', ws='dialogs', shortkey='f4'),
-        Bunch(module='Cuts', ws='dialogs', shortkey='f5'),
-        Bunch(module='Histogram', ws='dialogs', shortkey='f6'),
-        Bunch(module='PixTable', ws='dialogs', shortkey='f7'),
-        #Bunch(module='Layers', ws='dialogs', shortkey='f7'),
-        Bunch(module='Preferences', ws='dialogs', shortkey='f9'),
-        Bunch(module='Catalogs', ws='dialogs', shortkey='f10'),
-        Bunch(module='Mosaic', ws='dialogs'),
-        Bunch(module='Pipeline', ws='dialogs'),
-        Bunch(module='Drawing', ws='dialogs', shortkey='f11'),
-        Bunch(module='FBrowser', ws='dialogs', shortkey='f12'),
-        ]
-    
-    def __call__(self, options, args):
-    
-        # default of 1000 is a little too small
-        sys.setrecursionlimit(2000)
+
+class ReferenceViewer(object):
+    """
+    This class exists solely to be able to customize the reference
+    viewer startup.
+    """
+    def __init__(self, layout=default_layout):
+        self.local_plugins = []
+        self.global_plugins = []
+        self.layout = layout
+
+    def add_local_plugin(self, module_name, ws_name):
+        self.local_plugins.append(
+            Bunch(module=module_name, ws=ws_name))
         
+    def add_global_plugin(self, module_name, ws_name,
+                          tab_name=None, start_plugin=True):
+        if tab_name == None:
+            tab_name = module_name
+
+        self.global_plugins.append(
+            Bunch(module=module_name, ws=ws_name, tab=tab_name,
+                  start=start_plugin))
+        
+    def add_default_plugins(self):
+        """
+        Add the ginga-distributed default set of plugins to the
+        reference viewer.
+        """
+        # add default global plugins
+        for bnch in global_plugins:
+            start = bnch.get('start', True)
+            self.add_global_plugin(bnch.module, bnch.ws,
+                          tab_name=bnch.tab, start_plugin=start)
+    
+        # add default local plugins
+        for bnch in local_plugins:
+            self.add_local_plugin(bnch.module, bnch.ws)
+    
+    def add_default_options(self, optprs):
+        """
+        Adds the default reference viewer startup options to an
+        OptionParser instance `optprs`.
+        """
+        optprs.add_option("--bufsize", dest="bufsize", metavar="NUM",
+                          type="int", default=10,
+                          help="Buffer length to NUM")
+        optprs.add_option("--channels", dest="channels", default="Image",
+                          help="Specify list of channels to create")
+        optprs.add_option("--debug", dest="debug", default=False, action="store_true",
+                          help="Enter the pdb debugger on main()")
+        optprs.add_option("--display", dest="display", metavar="HOST:N",
+                          help="Use X display on HOST:N")
+        optprs.add_option("--fits", dest="fits", metavar="NAME",
+                          default=None,
+                          help="Prefer FITS I/O module NAME")
+        optprs.add_option("-g", "--geometry", dest="geometry",
+                          metavar="GEOM", 
+                          help="X geometry for initial size and placement")
+        optprs.add_option("--log", dest="logfile", metavar="FILE",
+                          help="Write logging output to FILE")
+        optprs.add_option("--loglevel", dest="loglevel", metavar="LEVEL",
+                          type='int', default=logging.INFO,
+                          help="Set logging level to LEVEL")
+        optprs.add_option("--modules", dest="modules", metavar="NAMES",
+                          help="Specify additional modules to load")
+        optprs.add_option("--nosplash", dest="nosplash", default=False,
+                          action="store_true",
+                          help="Don't display the splash screen")
+        optprs.add_option("--numthreads", dest="numthreads", type="int",
+                          default=30, metavar="NUM",
+                          help="Start NUM threads in thread pool")
+        optprs.add_option("--stderr", dest="logstderr", default=False,
+                          action="store_true",
+                          help="Copy logging also to stderr")
+        optprs.add_option("--plugins", dest="plugins", metavar="NAMES",
+                          help="Specify additional plugins to load")
+        optprs.add_option("--profile", dest="profile", action="store_true",
+                          default=False,
+                          help="Run the profiler on main()")
+        optprs.add_option("-t", "--toolkit", dest="toolkit", metavar="NAME",
+                          default=None,
+                          help="Prefer GUI toolkit (gtk|qt)")
+        optprs.add_option("--wcs", dest="wcs", metavar="NAME",
+                          default=None,
+                          help="Prefer WCS module NAME")
+
+    def main(self, options, args):
+        """
+        Main routine for running the reference viewer.
+
+        `options` is a OptionParser object that has been populated with
+        values from parsing the command line.  It should at least include
+        the options from add_default_options()
+
+        `args` is a list of arguments to the viewer after parsing out
+        options.  It should contain a list of files or URLs to load.
+        """
+    
         # Create a logger
         logger = log.get_logger(name='ginga', options=options)
     
@@ -222,7 +313,7 @@ class Main(object):
     
         # Create the Ginga main object
         ginga = Ginga(logger, threadPool, mm, prefs, ev_quit=ev_quit)
-        ginga.set_layout(self.default_layout)
+        ginga.set_layout(self.layout)
     
         # User configuration (custom star catalogs, etc.)
         try:
@@ -339,58 +430,21 @@ class Main(object):
     
         sys.exit(0)
 
-main = Main()
-
 def reference_viewer(sys_argv):
 
-    # Parse command line options with nifty optparse module
+    # default of 1000 is a little too small
+    sys.setrecursionlimit(2000)
+        
+    viewer = ReferenceViewer(layout=default_layout)
+    viewer.add_default_plugins()
+
+    # Parse command line options with optparse module
     from optparse import OptionParser
 
     usage = "usage: %prog [options] cmd [args]"
-    optprs = OptionParser(usage=usage, version=('%%prog %s' % version.version))
-
-    optprs.add_option("--bufsize", dest="bufsize", metavar="NUM",
-                      type="int", default=10,
-                      help="Buffer length to NUM")
-    optprs.add_option("--channels", dest="channels", default="Image",
-                      help="Specify list of channels to create")
-    optprs.add_option("--debug", dest="debug", default=False, action="store_true",
-                      help="Enter the pdb debugger on main()")
-    optprs.add_option("--display", dest="display", metavar="HOST:N",
-                      help="Use X display on HOST:N")
-    optprs.add_option("--fits", dest="fits", metavar="NAME",
-                      default=None,
-                      help="Prefer FITS I/O module NAME")
-    optprs.add_option("-g", "--geometry", dest="geometry",
-                      metavar="GEOM", 
-                      help="X geometry for initial size and placement")
-    optprs.add_option("--log", dest="logfile", metavar="FILE",
-                      help="Write logging output to FILE")
-    optprs.add_option("--loglevel", dest="loglevel", metavar="LEVEL",
-                      type='int', default=logging.INFO,
-                      help="Set logging level to LEVEL")
-    optprs.add_option("--modules", dest="modules", metavar="NAMES",
-                      help="Specify additional modules to load")
-    optprs.add_option("--nosplash", dest="nosplash", default=False,
-                      action="store_true",
-                      help="Don't display the splash screen")
-    optprs.add_option("--numthreads", dest="numthreads", type="int",
-                      default=30, metavar="NUM",
-                      help="Start NUM threads in thread pool")
-    optprs.add_option("--stderr", dest="logstderr", default=False,
-                      action="store_true",
-                      help="Copy logging also to stderr")
-    optprs.add_option("--plugins", dest="plugins", metavar="NAMES",
-                      help="Specify additional plugins to load")
-    optprs.add_option("--profile", dest="profile", action="store_true",
-                      default=False,
-                      help="Run the profiler on main()")
-    optprs.add_option("-t", "--toolkit", dest="toolkit", metavar="NAME",
-                      default=None,
-                      help="Prefer GUI toolkit (gtk|qt)")
-    optprs.add_option("--wcs", dest="wcs", metavar="NAME",
-                      default=None,
-                      help="Prefer WCS module NAME")
+    optprs = OptionParser(usage=usage,
+                          version=('%%prog %s' % version.version))
+    viewer.add_default_options(optprs)
 
     (options, args) = optprs.parse_args(sys_argv[1:])
 
@@ -401,17 +455,16 @@ def reference_viewer(sys_argv):
     if options.debug:
         import pdb
 
-        pdb.run('main(options, args)')
+        pdb.run('viewer.main(options, args)')
 
     # Are we profiling this?
     elif options.profile:
         import profile
 
-        print(("%s profile:" % sys.argv[0]))
-        profile.run('main(options, args)')
-
+        print(("%s profile:" % sys_argv[0]))
+        profile.run('viewer.main(options, args)')
 
     else:
-        main(options, args)
+        viewer.main(options, args)
 
 # END
