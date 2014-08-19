@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 #
-# example2_mpl.py -- Simple, configurable FITS viewer using a matplotlib
+# example1_mpl.py -- Simple, configurable FITS viewer using a matplotlib
 #                      QtAgg backend for Ginga and embedded in a Qt program.
 #
 # Eric Jeschke (eric@naoj.org)

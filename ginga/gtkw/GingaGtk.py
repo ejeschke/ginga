@@ -102,8 +102,6 @@ class GingaView(GtkMain.GtkMain):
 
         # Create main (center) FITS image pane
         self.w.vbox = self.w['main']
-        #bnch = self.ds.make_ws(name='main', group=1, wstype='nb')
-        #bnch = self.ds.make_ws(name='main', group=1, wstype='grid')
         self.ds.add_callback("page-select", self.page_switch_cb)
 
         # readout
@@ -562,6 +560,7 @@ class GingaView(GtkMain.GtkMain):
         cbox = b.workspace_type
         cbox.append_text("Tabs")
         cbox.append_text("Grid")
+        #cbox.append_text("MDI")
         cbox.set_active(0)
 
         cbox = b.in_workspace
@@ -596,7 +595,7 @@ class GingaView(GtkMain.GtkMain):
         if rsp == 0:
             w.destroy()
             return
-        d = { 0: 'nb', 1: 'grid', }
+        d = { 0: 'nb', 1: 'grid', 2: 'mdi' }
         wstype = d[idx]
 
         idx = b.in_workspace.get_active()

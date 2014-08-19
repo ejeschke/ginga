@@ -68,7 +68,8 @@ default_layout = ['seq', {},
                                  ]
                         )]],
                      ['vbox', dict(name='main', width=700),
-                      dict(row=['ws', dict(name='channels', group=1)], stretch=1)],
+                      dict(row=['ws', dict(wstype='mdi', name='channels',
+                                           group=1)], stretch=1)],
                      ['ws', dict(name='right', width=350, group=2),
                       # (tabname, layout), ...
                       [("Dialogs", ['ws', dict(name='dialogs', group=2)

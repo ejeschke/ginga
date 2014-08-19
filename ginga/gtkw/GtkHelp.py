@@ -30,6 +30,15 @@ class MDIWorkspace(gtk.Layout):
         self.selected_child = None
         self.kbdmouse_mask = 0
 
+        self.bg_rgb = (0.5, 0.5, 0.5)
+        self._last_win_x = None
+        self._last_win_y = None
+
+        self.connect("configure-event", self.configure_event)
+        if not gtksel.have_gtk3:
+            self.connect("expose_event", self.expose_event)
+        ## else:
+        ##     self.connect("draw", self.draw_event)
         self.connect("motion_notify_event", self.motion_notify_event)
         self.connect("button_press_event", self.button_press_event)
         self.connect("button_release_event", self.button_release_event)
@@ -44,8 +53,49 @@ class MDIWorkspace(gtk.Layout):
                         | gtk.gdk.KEY_PRESS_MASK
                         | gtk.gdk.KEY_RELEASE_MASK
                         | gtk.gdk.POINTER_MOTION_MASK
-                        | gtk.gdk.POINTER_MOTION_HINT_MASK
+                        #| gtk.gdk.POINTER_MOTION_HINT_MASK
                         | gtk.gdk.SCROLL_MASK)
+
+    def expose_event(self, widget, event):
+        x , y, width, height = event.area
+        win = widget.get_window()
+        cr = win.cairo_create()
+
+        # set clip area for exposed region
+        cr.rectangle(x, y, width, height)
+        cr.clip()
+
+        cr.set_source_rgb(*self.bg_rgb)
+        cr.paint()
+        print("painted")
+        return True
+        
+    def configure_event(self, widget, event):
+        rect = widget.get_allocation()
+        x, y, width, height = rect.x, rect.y, rect.width, rect.height
+
+        # This is a workaround for a strange bug in Gtk 3
+        # where we get multiple configure callbacks even though
+        # the size hasn't changed.  We avoid creating a new surface
+        # if there is an old surface with the exact same size.
+        # This prevents some flickering of the display on focus events.
+        wwd, wht = self.get_window_size()
+        if (wwd == width) and (wht == height):
+            return True
+        print("allocation is %d,%d %dx%d" % (x, y, width, height))
+        
+        win = widget.get_window()
+        cr = win.cairo_create()
+
+        # set clip area for exposed region
+        cr.rectangle(0, 0, width, height)
+        #cr.clip()
+
+        cr.set_source_rgb(*self.bg_rgb)
+        cr.paint()
+        print("painted")
+        #self.configure(width, height)
+        return True
 
     def append_page(self, widget, label):
         vbox = gtk.VBox()
@@ -75,6 +125,9 @@ class MDIWorkspace(gtk.Layout):
     def set_tab_detachable(self, w, tf):
         pass
 
+    def get_tab_label(self, w):
+        return None
+
     def page_num(self, widget):
         idx = 0
         for bnch in self.children:
@@ -94,12 +147,20 @@ class MDIWorkspace(gtk.Layout):
         #self.remove(window)
         
     def select_child_cb(self, layout, event, widget):
-        ex = event.x; ey = event.y
+        ex = event.x_root; ey = event.y_root
         x, y, width, height = widget.get_allocation()
-        dx, dy = ex - x, ey - y
+        win = widget.get_window()
+        if win == None:
+            return False
+        x, y = win.get_position()
+        print ("widgets UL corner= %d,%d" % (x, y))
+        #dx, dy = int(ex - x), int(ey - y)
+        dx, dy = ex, ey
+        print ("offset from UL corner= %d,%d" % (dx, dy))
         self.selected_child = Bunch.Bunch(widget=widget,
                                           cr = self.setup_cr(self.bin_window),
-                                          dx=x, dy=y, wd=width, ht=height)
+                                          x_origin=x, y_origin=y,
+                                          dx=dx, dy=dy, wd=width, ht=height)
         return False
        
     def button_press_event(self, widget, event):
@@ -109,6 +170,7 @@ class MDIWorkspace(gtk.Layout):
         if event.button != 0:
             button |= 0x1 << (event.button - 1)
         print(("button event at %dx%d, button=%x" % (x, y, button)))
+        return True
 
     def setup_cr(self, drawable):
         cr = drawable.cairo_create()
@@ -116,26 +178,27 @@ class MDIWorkspace(gtk.Layout):
         cr.set_dash([ 3.0, 4.0, 6.0, 4.0], 5.0)
         return cr
 
-
     def button_release_event(self, widget, event):
         # event.button, event.x, event.y
-        x = event.x; y = event.y
+        x = event.x_root; y = event.y_root
         button = self.kbdmouse_mask
         if event.button != 0:
             button |= 0x1 << (event.button - 1)
         print(("button release at %dx%d button=%x" % (x, y, button)))
-        dst_x, dst_y = x, y
         if self.selected_child != None:
-            self.move(self.selected_child.widget, dst_x, dst_y)
+            bnch = self.selected_child
+            x = int(bnch.x_origin + (x - bnch.dx))
+            y = int(bnch.x_origin + (y - bnch.dy))
+            self.move(self.selected_child.widget, x, y)
             self.selected_child = None
+        return True
 
     def motion_notify_event(self, widget, event):
         button = self.kbdmouse_mask
         if event.is_hint:
             return
         else:
-            x, y, state = event.x, event.y, event.state
-            #self.last_win_x, self.last_win_y = x, y
+            x, y, state = event.x_root, event.y_root, event.state
         
         if state & gtk.gdk.BUTTON1_MASK:
             button |= 0x1
@@ -143,14 +206,17 @@ class MDIWorkspace(gtk.Layout):
             button |= 0x2
         elif state & gtk.gdk.BUTTON3_MASK:
             button |= 0x4
-        print(("motion event at %dx%d, button=%x" % (x, y, button)))
+        print("motion event at %dx%d, button=%x" % (
+            x, y, button))
 
         if (button & 0x1) and (self.selected_child != None):
             bnch = self.selected_child
-            x += bnch.dx
-            y -= bnch.dy
-            bnch.cr.rectangle(x, y, bnch.wd, bnch.ht)
-            bnch.cr.stroke_preserve()
+            x = int(bnch.x_origin + (x - bnch.dx))
+            y = int(bnch.x_origin + (y - bnch.dy))
+            print ("offset from container UL corner= %d,%d" % (x, y))
+            self.move(self.selected_child.widget, x, y)
+
+        return True
 
 class GridWorkspace(gtk.Table):
 
@@ -459,7 +525,21 @@ class Desktop(Callback.Callbacks):
                 detachable=True, tabpos=None, scrollable=True, wstype='nb'):
         if not name:
             name = str(time.time())
-        if wstype == 'nb':
+
+        #if wstype == 'mdi':
+        # TODO: Gtk MDI workspace not ready for prime time...
+        if wstype == '___':
+            nb = MDIWorkspace()
+            widget = gtk.ScrolledWindow()
+            widget.set_border_width(2)
+            widget.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+            widget.add(nb)
+
+        elif wstype == 'grid':
+            nb = GridWorkspace()
+            widget = nb
+
+        else:
             nb = gtk.Notebook()
             if tabpos == None:
                 tabpos = gtk.POS_TOP
@@ -475,17 +555,6 @@ class Desktop(Callback.Callbacks):
             nb.set_show_border(show_border)
             #nb.set_border_width(2)
             widget = nb
-
-        elif wstype == 'grid':
-            nb = GridWorkspace()
-            widget = nb
-
-        else:
-            nb = Workspace()
-            widget = gtk.ScrolledWindow()
-            widget.set_border_width(2)
-            widget.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
-            widget.add(nb)
 
         bnch = Bunch.Bunch(nb=nb, name=name, widget=widget, group=group)
         self.notebooks[name] = bnch
@@ -582,6 +651,8 @@ class Desktop(Callback.Callbacks):
         if nb:
             widget = self.tab[tabname].widget
             lbl = nb.get_tab_label(widget)
+            if lbl == None:
+                return
             name = self.tab[tabname].name
             if onoff:
                 lbl.modify_bg(gtk.STATE_NORMAL,
@@ -705,7 +776,8 @@ class Desktop(Callback.Callbacks):
             params = Bunch.Bunch(name=None, title=None, height=-1,
                                  width=-1, group=1, show_tabs=True,
                                  show_border=False, scrollable=True,
-                                 detachable=True, tabpos=gtk.POS_TOP)
+                                 detachable=True, wstype='nb',
+                                 tabpos=gtk.POS_TOP)
             params.update(paramdict)
 
             if kind == 'widget':
@@ -718,6 +790,7 @@ class Desktop(Callback.Callbacks):
                                       show_border=params.show_border,
                                       detachable=params.detachable,
                                       tabpos=params.tabpos,
+                                      wstype=params.wstype,
                                       scrollable=params.scrollable).widget
 
             # If a title was passed as a parameter, then make a frame to

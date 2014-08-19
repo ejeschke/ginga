@@ -125,36 +125,75 @@ class StackedWidget(QtGui.QStackedWidget):
     def removeTab(self, index):
         self.removeWidget(self.widget(index))
 
+class TabWorkspace(QtGui.QTabWidget):
+
+    def __init__(self):
+        super(TabWorkspace, self).__init__()
+
+        self.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred,
+                                             QtGui.QSizePolicy.Preferred))
+
+    def window(self):
+        return self.currentWidget()
+
+    def sizeHint(self):
+        return QtCore.QSize(300, 300)
+
 class MDIWorkspace(QtGui.QMdiArea):
 
     def __init__(self):
         super(MDIWorkspace, self).__init__()
         self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
         self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
-        self.setViewMode(QtGui.QMdiArea.TabbedView)
-        
+        #self.setViewMode(QtGui.QMdiArea.TabbedView)
+
+        self.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding,
+                                             QtGui.QSizePolicy.Expanding))
+
+    def get_mode(self):
+        if self.viewMode() == QtGui.QMdiArea.TabbedView:
+            return 'tabs'
+        return 'mdi'
+    
+    def set_mode(self, mode):
+        mode = mode.lower()
+        if mode == 'tabs':
+            self.setViewMode(QtGui.QMdiArea.TabbedView)
+        elif mode == 'mdi':
+            self.setViewMode(QtGui.QMdiArea.SubWindowView)
+        else:
+            raise ValueError("Don't understand mode='%s'" % (mode))
+            
     def addTab(self, widget, label):
-        ## subw = QtGui.QMdiSubWindow()
-        ## subw.setWidget(widget)
-        ## subw.setAttribute(QtCore.Qt.WA_DeleteOnClose)
-        ## self.addSubWindow(subw)
         w = self.addSubWindow(widget)
-        #w.setContentsMargins(0, 0, 0, 0)
         w.setWindowTitle(label)
+        widget.show()
         w.show()
+        print("widget added")
+
+    def removeTab(self, index):
+        l = list(self.subWindowList())
+        sw = l[index]
+        widget = sw.widget()
+        sw.deleteLater()
+        self.removeSubWindow(widget)
 
     def indexOf(self, widget):
         try:
-            wl = list(self.subWindowList())
-            #l = [ sw.widget() for sw in wl ]
-            return wl.index(widget)
+            l = [ sw.widget() for sw in self.subWindowList() ]
+            idx = l.index(widget)
+            return idx
         except (IndexError, ValueError) as e:
             return -1
 
     def widget(self, index):
         l = list(self.subWindowList())
         sw = l[index]
-        #return sw.widget()
+        return sw.widget()
+
+    def window(self):
+        sw = self.activeSubWindow()
+        #return sw
         return sw.widget()
 
     def tabBar(self):
@@ -166,7 +205,7 @@ class MDIWorkspace(QtGui.QMdiArea):
         self.setActiveSubWindow(w)
 
     def sizeHint(self):
-        return QtCore.QSize(300, 300)
+        return QtCore.QSize(600, 600)
 
 
 class GridWorkspace(QtGui.QWidget):
@@ -174,8 +213,8 @@ class GridWorkspace(QtGui.QWidget):
     def __init__(self):
         super(GridWorkspace, self).__init__()
 
-        self.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.MinimumExpanding,
-                                             QtGui.QSizePolicy.MinimumExpanding))
+        self.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding,
+                                             QtGui.QSizePolicy.Expanding))
 
         layout = QtGui.QGridLayout()
         layout.setContentsMargins(0, 0, 0, 0)
@@ -183,6 +222,7 @@ class GridWorkspace(QtGui.QWidget):
         self.setLayout(layout)
         self.layout = layout
         self.widgets = []
+        self.current_idx = -1
 
     def _relayout(self):
         # calculate number of rows and cols, try to maintain a square
@@ -206,13 +246,15 @@ class GridWorkspace(QtGui.QWidget):
                 self.layout.addWidget(widget, i, j)
         
     def addTab(self, widget, label):
-        widget.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.MinimumExpanding,
-                                               QtGui.QSizePolicy.MinimumExpanding))
+        ## widget.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.MinimumExpanding,
+        ##                                        QtGui.QSizePolicy.MinimumExpanding))
+        widget.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding,
+                                               QtGui.QSizePolicy.Expanding))
         self.widgets.append(widget)
         self._relayout()
 
     def removeTab(self, idx):
-        widget = self.getWidget(idx)
+        widget = self.widget(idx)
         self.widgets.remove(widget)
         self.layout.removeWidget(widget)
         self._relayout()
@@ -223,18 +265,22 @@ class GridWorkspace(QtGui.QWidget):
         except (IndexError, ValueError) as e:
             return -1
 
-    def getWidget(self, index):
+    def widget(self, index):
         return self.widgets[index]
 
     def tabBar(self):
         return None
     
     def setCurrentIndex(self, index):
-        widget = self.getWidget(index)
+        widget = self.widget(index)
         # TODO: focus widget
+        self.current_idx = index
+
+    def window(self):
+        return self.widget(self.current_idx)
 
     def sizeHint(self):
-        return QtCore.QSize(20, 20)
+        return QtCore.QSize(300, 300)
 
 class ComboBox(QtGui.QComboBox):
 
@@ -373,13 +419,13 @@ class Desktop(Callback.Callbacks):
             tabpos = QtGui.QTabWidget.North
 
         if wstype == 'mdi':
-            nb = Workspace()
+            nb = MDIWorkspace()
 
         elif wstype == 'grid':
             nb = GridWorkspace()
 
         elif show_tabs:
-            nb = TabWidget()
+            nb = TabWorkspace()
             nb.setTabPosition(tabpos)
             nb.setUsesScrollButtons(scrollable)
             nb.setTabsClosable(closeable)
