@@ -435,17 +435,17 @@ class URLServer(object):
     def fetch(self, url, filepath=None):
         data = ""
 
-        req = urllib2.Request(url)
+        req = Request(url)
 
         try:
             self.logger.info("Opening url=%s" % (url))
             try:
-                response = urllib2.urlopen(req)
+                response = urlopen(req)
 
-            except urllib2.HTTPError as e:
+            except HTTPError as e:
                 self.logger.error("Server returned error code %s" % (e.code))
                 raise e
-            except urllib2.URLError as e:
+            except URLError as e:
                 self.logger.error("Server URL failure: %s" % (str(e.reason)))
                 raise e
             except Exception as e:
@@ -509,11 +509,11 @@ class URLServer(object):
         ## values = urllib.urlencode(params)
         ## if self.reqtype == 'get':
         ##     url = self.base_url + '?' + values
-        ##     req = urllib2.Request(url)
+        ##     req = Request(url)
             
         ## elif self.reqtype == 'post':
         ##     url = self.base_url
-        ##     req = urllib2.Request(self.base_url, values)
+        ##     req = Request(self.base_url, values)
 
         ## else:
         ##     raise Exception("Don't know how to handle a request of type '%s'" % (
