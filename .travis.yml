@@ -1,75 +1,115 @@
-# TODO: once ginga is in the astropy affiliated package format we should
-# switch to the package-template .travis.yml file and change the tests
-# to run like this:
-# python setup.py test
-# python setup.py build_sphinx
-
 language: python
 
 python:
-  - 2.7
-  - 3.4
-
+    # *** TODO: `python setup.py egg_info` currently doesn't work for `ginga` ... skipping for now
+    #- 2.7
+    #- 3.3
+    #- 3.4
+    # This is just for "egg_info".  All other builds are explicitly given in the matrix
 env:
-  - ASTROPY_VERSION=stable
-  - ASTROPY_VERSION=development
+    global:
+        # The following versions are the 'default' for tests, unless
+        # overidden underneath. They are defined here in order to save having
+        # to repeat them for all configurations.
+        - NUMPY_VERSION=1.8
+        - ASTROPY_VERSION=stable
+        - CONDA_INSTALL='conda install -c astropy-ci-extras --yes'
+        - PIP_INSTALL='pip install'
+    # *** TODO: `python setup.py egg_info` currently doesn't work for `ginga` ... skipping for now
+    #matrix:
+    #    - SETUP_CMD='egg_info'
+
+matrix:
+    include:
+
+        # Do a coverage test in Python 2. 
+        # *** TODO: `python setup.py test --coverage` doesn't work yet for `ginga` ... skipping for now
+        # - python: 2.7
+        #  env: SETUP_CMD='test --coverage'
+
+        # Check for sphinx doc build warnings - we do this first because it
+        # may run for a long time
+        # *** TODO: The `-w` option doesn't work with `python setup.py build_sphinx` yet for `ginga` ... removing it for now
+        - python: 2.7
+          # env: SETUP_CMD='build_sphinx -w'
+          env: SETUP_CMD='build_sphinx'
+
+        # Try Astropy development version
+        - python: 2.7
+          env: ASTROPY_VERSION=development SETUP_CMD='test'
+        - python: 3.3
+          env: ASTROPY_VERSION=development SETUP_CMD='test'
+
+        # Try all python versions with the latest numpy
+        - python: 2.7
+          env: SETUP_CMD='test'
+        - python: 3.3
+          env: SETUP_CMD='test'
+        - python: 3.4
+          env: SETUP_CMD='test'
+
+        # Try older numpy versions
+        - python: 2.7
+          env: NUMPY_VERSION=1.7 SETUP_CMD='test'
+        - python: 2.7
+          env: NUMPY_VERSION=1.6 SETUP_CMD='test'
+        - python: 2.7
+          env: NUMPY_VERSION=1.5 SETUP_CMD='test'
 
 before_install:
-  # Check if we are running Python 2 or 3. This is needed for the apt-get package names
-  - if [[ $TRAVIS_PYTHON_VERSION == '3.4' ]]; then export P="3"; fi
 
-  - export PYTHONIOENCODING=UTF8 # just in case
+    # Use utf8 encoding. Should be default, but this is insurance against
+    # future changes
+    - export PYTHONIOENCODING=UTF8
+    - wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
+    - chmod +x miniconda.sh
+    - ./miniconda.sh -b
+    - export PATH=/home/travis/miniconda/bin:$PATH
+    - conda update --yes conda
 
-  # Use system python, not virtualenv, because building the dependencies from source takes too long
-  - deactivate # the virtualenv
+    # DOCUMENTATION DEPENDENCIES
+    - if [[ $SETUP_CMD == build_sphinx* ]]; then sudo apt-get install graphviz texlive-latex-extra dvipng; fi
 
 install:
-  # Get most of the required dependencies via apt-get
-  - sudo apt-get update -qq
-  #libatlas-dev liblapack-dev gfortran
-  - sudo apt-get install -qq python${P} python${P}-numpy python${P}-scipy
-  # for installation and tests
-  - sudo apt-get install -qq python${P}-setuptools python${P}-nose
-  # for building sphinx doc
-  - sudo apt-get install -qq python${P}-sphinx
 
-  # Note: cython3 will only appear in Ubuntu 13.04: cython${P}
-  # So for now we install it from source
-  - curl -L https://pypi.python.org/packages/source/C/Cython/Cython-0.18.tar.gz > Cython-0.18.tar.gz
-  - tar zxf Cython-0.18.tar.gz
-  - cd Cython-0.18
-  - sudo python${P} setup.py install
-  - cd ..
+    # CONDA
+    - conda create --yes -n test -c astropy-ci-extras python=$TRAVIS_PYTHON_VERSION
+    - source activate test
 
-  # GTK is not available for Python 3, so we test QT/pyside only for now ...
-  # python${PYTHON_SUFFIX}-gtk2
-  - sudo apt-get install -qq python${P}-pyside
+    # CORE DEPENDENCIES
+    - if [[ $SETUP_CMD != egg_info ]]; then $CONDA_INSTALL numpy=$NUMPY_VERSION pytest pip Cython; fi
+    - if [[ $SETUP_CMD != egg_info ]]; then $PIP_INSTALL pytest-xdist; fi
 
-  # No apt-get install python3-pip before Ubuntu 13.04 ... python${P}-pip 
-  #- if [[ $ASTROPY_VERSION == stable ]]; then sudo pip${P} -q install astropy --use-mirrors; fi
-  #- if [[ $ASTROPY_VERSION == development ]]; then sudo pip${P} -q install git+http://github.com/astropy/astropy.git#egg=astropy --use-mirrors; fi
+    # ASTROPY
+    - if [[ $SETUP_CMD != egg_info ]] && [[ $ASTROPY_VERSION == development ]]; then $PIP_INSTALL git+http://github.com/astropy/astropy.git#egg=astropy; fi
+    - if [[ $SETUP_CMD != egg_info ]] && [[ $ASTROPY_VERSION == stable ]]; then $CONDA_INSTALL numpy=$NUMPY_VERSION astropy; fi
 
-  # ... so for now use setup.py to install astropy
-  - git clone git://github.com/astropy/astropy.git
-  - cd astropy
-  - if [[ $ASTROPY_VERSION == stable ]]; then git checkout v0.3.2; fi
-  - sudo python${P} setup.py install
-  - cd ..
+    # OPTIONAL DEPENDENCIES
+    # Here you can add any dependencies your package may have. You can use
+    # conda for packages available through conda, or pip for any other
+    # packages. You should leave the `numpy=$NUMPY_VERSION` in the `conda`
+    # install since this ensures Numpy does not get automatically upgraded.
+
+    # *** TODO: We should test the various GUI toolkits that ginga supports
+    # on travis-ci ... probably one build for Python 2 / 3 and each toolkit
+    # https://ginga.readthedocs.org/en/latest/install.html#dependences
+    - if [[ $SETUP_CMD != egg_info ]]; then $CONDA_INSTALL pyqt ; fi
+    # - if [[ $SETUP_CMD != egg_info ]]; then $PIP_INSTALL ...; fi
+
+    # DOCUMENTATION DEPENDENCIES
+    # build_sphinx needs sphinx and matplotlib (for plot_directive). Note that
+    # this matplotlib will *not* work with py 3.x, but our sphinx build is
+    # currently 2.7, so that's fine
+    - if [[ $SETUP_CMD == build_sphinx* ]]; then $CONDA_INSTALL numpy=$NUMPY_VERSION Sphinx matplotlib; fi
+
+    # COVERAGE DEPENDENCIES
+    - if [[ $SETUP_CMD == 'test --coverage' ]]; then $PIP_INSTALL coverage coveralls; fi
 
 script:
-  # Install ginga
-  - sudo python${P} setup.py install
+   - python setup.py $SETUP_CMD
 
-  - python${P} -c 'import ginga'
-  - which ginga
-
-  # run unit tests
-  # this doesn't seem to work:
-  # - python${P} setup.py test
-  - sudo python${P} setup.py build
-  - nosetests${P} build/lib*/ginga/tests
-
-  # build documentation
-  # there is a problem with this presently
-  #- python${P} setup.py build_sphinx
-
+after_success:
+    # If coveralls.io is set up for this package, uncomment the line
+    # below and replace "packagename" with the name of your package.
+    # The coveragerc file may be customized as needed for your package.
+    # - if [[ $SETUP_CMD == 'test --coverage' ]]; then coveralls --rcfile='packagename/tests/coveragerc'; fi
