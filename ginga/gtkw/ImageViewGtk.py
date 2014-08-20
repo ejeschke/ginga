@@ -49,14 +49,13 @@ class ImageViewGtk(ImageViewCairo.ImageViewCairo):
         self.imgwin = imgwin
         self.imgwin.show_all()
 
-        self.msgtask = None
-        
         # cursors
         self.cursor = {}
 
         # see reschedule_redraw() method
-        self._defer_task = 0
-
+        self._defer_task = None
+        self.msgtask = None
+        
 
     def get_widget(self):
         return self.imgwin
@@ -118,11 +117,17 @@ class ImageViewGtk(ImageViewCairo.ImageViewCairo):
     def reschedule_redraw(self, time_sec):
         time_ms = int(time_sec * 1000)
         try:
-            gobject.source_remove(self._defer_task)
+            if self._defer_task:
+                gobject.source_remove(self._defer_task)
         except:
             pass
-        self._defer_task = gobject.timeout_add(time_ms, self.delayed_redraw)
-                
+        self._defer_task = gobject.timeout_add(time_ms,
+                                               self.delayed_redraw_gtk)
+
+    def delayed_redraw_gtk(self):
+        self._defer_task = None
+        self.delayed_redraw()
+
     def update_image(self):
         if not self.surface:
             return
@@ -227,8 +232,12 @@ class ImageViewGtk(ImageViewCairo.ImageViewCairo):
             self.redraw(whence=3)
         if delay:
             ms = int(delay * 1000.0)
-            self.msgtask = gobject.timeout_add(ms, self.onscreen_message, None)
+            self.msgtask = gobject.timeout_add(ms,
+                                               self.clear_onscreen_message_gtk)
 
+    def clear_onscreen_message_gtk(self):
+        self.msgtask = None
+        self.onscreen_message(None)
         
 class ImageViewEvent(ImageViewGtk):
 
