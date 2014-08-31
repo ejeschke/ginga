@@ -110,7 +110,7 @@ Tk
 Ginga's Tk support is limited to the viewing widget itself.  For
 overplotting (graphics) support you also need to build and install the
 "aggdraw" module, which you can find 
-`here <http://ejeschke.github.io/aggdraw/>`_.
+`here <https://github.com/ejeschke/aggdraw>`_.
 
 Matplotlib
 ==========

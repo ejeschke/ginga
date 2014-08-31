@@ -30,7 +30,7 @@ Using the basic rendering class in new programs
 First, let's take a look at how to use the "bare" Ginga rending class
 by itself.  Ginga basically follows the Model-View-Controller (MVC)
 design pattern, that is described in more detail in
-the `chapter on internals <ch-programming-internals>`_.
+the :ref:`chapter on internals <ch-programming-internals>`.
 The "view" classes are rooted in the base class ``ImageView``.
 Ginga supports backends for different widget sets through various
 subclasses of this class.   

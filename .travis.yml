@@ -101,12 +101,16 @@ install:
     # this matplotlib will *not* work with py 3.x, but our sphinx build is
     # currently 2.7, so that's fine
     - if [[ $SETUP_CMD == build_sphinx* ]]; then $CONDA_INSTALL numpy=$NUMPY_VERSION Sphinx matplotlib; fi
+    - if [[ $SETUP_CMD == build_sphinx* ]]; then $PIP_INSTALL linkchecker; fi
 
     # COVERAGE DEPENDENCIES
     - if [[ $SETUP_CMD == 'test --coverage' ]]; then $PIP_INSTALL coverage coveralls; fi
 
 script:
    - python setup.py $SETUP_CMD
+   # TODO: once Ginga has adopted the affiliated package-template,
+   # the Python module index should be generated and `--ignore-url py-modindex.html` can be removed here.
+   - if [[ $SETUP_CMD == build_sphinx* ]]; then linkchecker doc/_build/html/index.html --ignore-url py-modindex.html; fi
 
 after_success:
     # If coveralls.io is set up for this package, uncomment the line

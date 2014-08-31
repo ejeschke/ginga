@@ -55,13 +55,12 @@ that is also part of the final color mapping process.
 
 Ver 2.0.20140114070809
 ======================
+
 - The SAMP plugin has been updated to work with the new astropy.vo.samp
-module.
-
+  module.
 - The Catalogs plugin has been updated to allow the user to define the
-radius of the conesearch or image search by drawing a circle (as well as
-the previous option--a rectangle).
-
+  radius of the conesearch or image search by drawing a circle (as well as
+  the previous option--a rectangle).
 
 Ver 2.0.20131218034517
 ======================
