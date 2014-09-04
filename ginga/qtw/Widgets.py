@@ -310,7 +310,7 @@ class ToggleButton(WidgetBase):
 
         self.widget = QtGui.QPushButton(text)
         self.widget.setCheckable(True)
-        self.widget.stateChanged.connect(self._cb_redirect)
+        self.widget.clicked.connect(self._cb_redirect)
         
         self.enable_callback('activated')
 
@@ -547,6 +547,26 @@ class GridBox(ContainerBase):
         w = child.get_widget()
         self.widget.layout().addWidget(w, row, col)
 
+
+class Toolbar(ContainerBase):
+    def __init__(self, orientation='horizontal'):
+        super(Toolbar, self).__init__()
+
+        w = QtGui.QToolBar()
+        if orientation == 'horizontal':
+            w.setOrientation(QtCore.Qt.Horizontal)
+        else:
+            w.setOrientation(QtCore.Qt.Vertical)
+        self.widget = w
+
+    def add_widget(self, child):
+        self.add_ref(child)
+        w = child.get_widget()
+        self.widget.addWidget(w)
+
+    def add_separator(self):
+        self.widget.addSeparator()
+        
 
 # MODULE FUNCTIONS
 

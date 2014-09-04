@@ -579,6 +579,27 @@ class GridBox(ContainerBase):
         self.widget.show_all()
 
 
+class Toolbar(ContainerBase):
+    def __init__(self, orientation='horizontal'):
+        super(Toolbar, self).__init__()
+
+        w = gtk.Toolbar()
+        w.set_style(gtk.TOOLBAR_ICONS)
+        if orientation == 'horizontal':
+            w.set_orientation(gtk.ORIENTATION_HORIZONTAL)
+        else:
+            w.set_orientation(gtk.ORIENTATION_VERTICAL)
+        self.widget = w
+
+    def add_widget(self, child):
+        self.add_ref(child)
+        w = child.get_widget()
+        self.widget.append_widget(w, None, None)
+
+    def add_separator(self):
+        self.widget.append_space()
+        
+
 # MODULE FUNCTIONS
 
 def name_mangle(name, pfx=''):

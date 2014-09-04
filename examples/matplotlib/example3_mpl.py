@@ -102,7 +102,7 @@ class FitsViewer(QtGui.QMainWindow):
         layout = QtGui.QVBoxLayout()
         layout.addWidget(gingaw, stretch=1)
 
-        self.cm = cmap.get_cmap('ramp')
+        self.cm = cmap.get_cmap('gray')
         self.im = imap.get_imap('ramp')
 
         # add color bar
@@ -124,7 +124,7 @@ class FitsViewer(QtGui.QMainWindow):
         wcmap = QtGui.QComboBox()
         for name in self.cmaps:
             wcmap.addItem(name)
-        index = self.cmaps.index('ramp')
+        index = self.cmaps.index('gray')
         wcmap.setCurrentIndex(index)
         wcmap.activated.connect(self.set_cmap_cb)
         self.wcmap = wcmap

@@ -3640,7 +3640,7 @@ cmap_manycol = (
                 (0.72549, 0.00000, 0.72549),
         )
 
-cmap_ramp = (
+cmap_gray = (
                 (0.00000, 0.00000, 0.00000),
                 (0.00392, 0.00392, 0.00392),
                 (0.00784, 0.00784, 0.00784),
@@ -3899,8 +3899,8 @@ cmap_ramp = (
                 (1.00000, 1.00000, 1.00000),
         )
 
-cmap_rampclip = (
-    # Like ramp, but shows clipping of top and bottom 5%
+cmap_grayclip = (
+    # Like gray, but shows clipping of top and bottom 5%
                 (0.00000, 0.00000, 1.00000),
                 (0.00000, 0.00000, 1.00000),
                 (0.00000, 0.00000, 1.00000),
@@ -11410,6 +11410,9 @@ cmap_rainbow3 = (
                 (1.00000, 0.95686, 1.00000),
                 (1.00000, 1.00000, 1.00000),
         )
+
+# to be eventually deprecated
+cmap_ramp = cmap_gray
 
 class ColorMapError(Exception):
     pass

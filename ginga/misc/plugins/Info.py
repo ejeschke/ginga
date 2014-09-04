@@ -26,10 +26,10 @@ class Info(GingaPlugin.GlobalPlugin):
         self.maxstr = 60
 
         #self.w = Bunch.Bunch()
-        fv.set_callback('add-channel', self.add_channel)
-        fv.set_callback('delete-channel', self.delete_channel)
-        fv.set_callback('field-info', self.field_info)
-        fv.set_callback('active-image', self.focus_cb)
+        fv.add_callback('add-channel', self.add_channel)
+        fv.add_callback('delete-channel', self.delete_channel)
+        fv.add_callback('field-info', self.field_info)
+        fv.add_callback('active-image', self.focus_cb)
         
     def build_gui(self, container):
         nb = Widgets.StackWidget()
@@ -75,7 +75,7 @@ class Info(GingaPlugin.GlobalPlugin):
                      'Cut Levels', 'button'), 
                     ('Cut New:', 'label', 'Cut New', 'llabel'),
                     ('Zoom New:', 'label', 'Zoom New', 'llabel'), 
-                    ('Preferences', 'button'), 
+                    ('Center New:', 'label', 'Center New', 'llabel'), 
                     )
 
         w, b2 = Widgets.build_info(captions)
@@ -87,7 +87,6 @@ class Info(GingaPlugin.GlobalPlugin):
         b.auto_levels.set_tooltip("Set cut levels by algorithm")
         b.cut_low.set_tooltip("Set low cut level (press Enter)")
         b.cut_high.set_tooltip("Set high cut level (press Enter)")
-        b.preferences.set_tooltip("Set preferences for this channel")
 
         row = Widgets.HBox()
         row.set_spacing(0)
@@ -97,46 +96,9 @@ class Info(GingaPlugin.GlobalPlugin):
         vbox.add_widget(row, stretch=1)
 
         # stretcher
-        vbox.add_widget(Widgets.Label(''), stretch=0)
-
-        # Convenience navigation buttons
-        btns = Widgets.HBox()
-        btns.set_spacing(4)
-        btns.set_border_width(4)
-
-        bw = Bunch.Bunch()
-        for tup in (
-            #("Load", 'button', 'fits_open_48', "Open an image file"),
-            ("Prev", 'button', 'prev_48', "Go to previous image"),
-            ("Next", 'button', 'next_48', "Go to next image"),
-            ("Zoom In", 'button', 'zoom_in_48', "Zoom in"),
-            ("Zoom Out", 'button', 'zoom_out_48', "Zoom out"),
-            ("Zoom Fit", 'button', 'zoom_fit_48', "Zoom to fit window size"),
-            ("Zoom 1:1", 'button', 'zoom_100_48', "Zoom to 100% (1:1)"),
-            #("Quit", 'button', 'exit_48', "Quit the program"),
-            ):
-
-            btn = self.fv.make_button(*tup)
-            name = tup[0]
-            if tup[3]:
-                btn.set_tooltip(tup[3])
-                
-            bw[Widgets.name_mangle(name, pfx='btn_')] = btn
-            btns.add_widget(btn, stretch=1)
-
-        #self.w.btn_load.connect("clicked", lambda w: self.gui_load_file())
-        bw.btn_prev.add_callback('activated', lambda w: self.fv.prev_img())
-        bw.btn_next.add_callback('activated', lambda w: self.fv.next_img())
-        bw.btn_zoom_in.add_callback('activated', lambda w: self.fv.zoom_in())
-        bw.btn_zoom_out.add_callback('activated', lambda w: self.fv.zoom_out())
-        bw.btn_zoom_fit.add_callback('activated', lambda w: self.fv.zoom_fit())
-        bw.btn_zoom_1_1.add_callback('activated', lambda w: self.fv.zoom_1_to_1())
-
-        vbox.add_widget(btns, stretch=0)
+        vbox.add_widget(Widgets.Label(''), stretch=1)
 
         sw.set_widget(vbox)
-        #sw.set_size_request(-1, 420)
-        #sw.show_all()
         return sw, b
 
     def add_channel(self, viewer, chinfo):
@@ -146,7 +108,8 @@ class Info(GingaPlugin.GlobalPlugin):
         self.nb.add_widget(sw, title=chname)
         index = self.nb.index_of(sw)
         info = Bunch.Bunch(widget=sw, winfo=winfo,
-                           nbindex=index)
+                           nbindex=index, mode_w=None,
+                           chinfo=chinfo)
         self.channel[chname] = info
 
         winfo.cut_low.add_callback('activated', self.cut_levels,
@@ -157,12 +120,10 @@ class Info(GingaPlugin.GlobalPlugin):
                                       chinfo.fitsimage, info)
         winfo.auto_levels.add_callback('activated', self.auto_levels,
                                        chinfo.fitsimage, info)
-        winfo.preferences.add_callback('activated', self.preferences,
-                                       chinfo)
 
         fitsimage = chinfo.fitsimage
         fitssettings = fitsimage.get_settings()
-        fitsimage.set_callback('image-set', self.new_image_cb, info)
+        fitsimage.add_callback('image-set', self.new_image_cb, info)
         for name in ['cuts']:
             fitssettings.getSetting(name).add_callback('set',
                                self.cutset_cb, fitsimage, info)
@@ -173,6 +134,10 @@ class Info(GingaPlugin.GlobalPlugin):
                                self.autocuts_cb, fitsimage, info)
         fitssettings.getSetting('autozoom').add_callback('set',
                                self.autozoom_cb, fitsimage, info)
+        fitssettings.getSetting('autocenter').add_callback('set',
+                               self.autocenter_cb, fitsimage, info)
+        bm = fitsimage.get_bindmap()
+        bm.add_callback('mode-set', self.mode_set_cb, fitsimage, info)
 
     def delete_channel(self, viewer, chinfo):
         self.logger.debug("TODO: delete channel %s" % (chinfo.name))
@@ -225,11 +190,10 @@ class Info(GingaPlugin.GlobalPlugin):
     def autozoom_cb(self, setting, option, fitsimage, info):
         info.winfo.zoom_new.set_text(option)
 
-    # LOGIC
+    def autocenter_cb(self, setting, option, fitsimage, info):
+        info.winfo.center_new.set_text(option)
 
-    def preferences(self, w, chinfo):
-        self.fv.start_operation('Preferences')
-        return True
+    # LOGIC
 
     def trunc(self, s):
         if len(s) > self.maxstr:
@@ -275,6 +239,7 @@ class Info(GingaPlugin.GlobalPlugin):
         t_ = fitsimage.get_settings()
         info.winfo.cut_new.set_text(t_['autocuts'])
         info.winfo.zoom_new.set_text(t_['autozoom'])
+        info.winfo.center_new.set_text(t_['autocenter'])
 
 
     def field_info(self, viewer, fitsimage, info):

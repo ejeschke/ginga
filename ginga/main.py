@@ -68,7 +68,7 @@ default_layout = ['seq', {},
                                  ]
                         )]],
                      ['vbox', dict(name='main', width=700),
-                      dict(row=['ws', dict(wstype='mdi', name='channels',
+                      dict(row=['ws', dict(wstype='tabs', name='channels',
                                            group=1)], stretch=1)],
                      ['ws', dict(name='right', width=350, group=2),
                       # (tabname, layout), ...
@@ -77,10 +77,14 @@ default_layout = ['seq', {},
                         )]
                       ],
                      ], stretch=1),
+                    dict(row=['ws', dict(name='toolbar', height=40,
+                                             show_tabs=False, group=2)],
+                         stretch=0),
                     dict(row=['hbox', dict(name='status')], stretch=0),
                     ]]
 
 global_plugins = [
+    Bunch(module='Toolbar', tab='Toolbar', ws='toolbar'),
     Bunch(module='Pan', tab='_pan', ws='uleft', raisekey=None),
     Bunch(module='Info', tab='_info', ws='lleft', raisekey=None),
     Bunch(module='Header', tab='Header', ws='left', raisekey='H'),

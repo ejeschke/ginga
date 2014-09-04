@@ -39,7 +39,9 @@ Panning and Zooming commands
 +----------------------+--------------------------------------------------+
 | c                    | Set pan position to the center of the image      |
 +----------------------+--------------------------------------------------+
-| q                    | Pan image freely (when zoomed in); Left drag     | 
+| q                    | Pan (drag) mode; Left drag, press ESC to exit    | 
++----------------------+--------------------------------------------------+
+| w                    | Pan (free) mode; Left drag                       | 
 +----------------------+--------------------------------------------------+
 | Ctrl + Left drag     | Proportional pan (press and drag left mouse      |
 |                      |     button                                       |
@@ -61,9 +63,9 @@ Cut levels and colormap commands
 +----------------------+--------------------------------------------------+
 | a                    | Auto cut levels                                  |
 +----------------------+--------------------------------------------------+
-| s                    | Cycle color distribution algorithm               |
+| d                    | Cycle color distribution algorithm               |
 +----------------------+--------------------------------------------------+
-| S                    | Reset color distribution algorithm to "linear"   |
+| D                    | Reset color distribution algorithm to "linear"   |
 +----------------------+--------------------------------------------------+
 | period (.)           | Interactive cut *both* low and high (with left   |
 |                      |   mouse button)                                  |
@@ -71,11 +73,11 @@ Cut levels and colormap commands
 | slash (/)            | Interactive warp colormap (with left mouse       |
 |                      |   button)                                        |
 +----------------------+--------------------------------------------------+
+| question (?)         | Restore the color map to its original state      |
++----------------------+--------------------------------------------------+
 | semicolon (;)        | Set autocuts for new images to *override*        |
 +----------------------+--------------------------------------------------+
 | colon (:)            | Set autocuts for new images to *on*              |
-+----------------------+--------------------------------------------------+
-| question (?)         | Restore the color map to its original state      |
 +----------------------+--------------------------------------------------+
 
 Transform commands

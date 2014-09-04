@@ -36,12 +36,15 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.autozoom_options = self.fitsimage.get_autozoom_options()
         self.autocut_options = self.fitsimage.get_autocuts_options()
         self.autocut_methods = self.fitsimage.get_autocut_methods()
+        self.autocenter_options = self.fitsimage.get_autocenter_options()
 
         self.t_ = self.fitsimage.get_settings()
         self.t_.getSetting('autocuts').add_callback('set',
                                                self.autocuts_changed_ext_cb)
         self.t_.getSetting('autozoom').add_callback('set',
                                                self.autozoom_changed_ext_cb)
+        self.t_.getSetting('autocenter').add_callback('set',
+                                                      self.autocenter_changed_ext_cb)
         for key in ['pan']:
             self.t_.getSetting(key).add_callback('set',
                                           self.pan_changed_ext_cb)
@@ -136,11 +139,11 @@ class Preferences(GingaPlugin.LocalPlugin):
             options.append(name)
             combobox.append_text(name)
             index += 1
-        cmap_name = self.t_.get('color_map', "ramp")
+        cmap_name = self.t_.get('color_map', "gray")
         try:
             index = self.cmap_names.index(cmap_name)
         except Exception:
-            index = self.cmap_names.index('ramp')
+            index = self.cmap_names.index('gray')
         combobox.set_index(index)
         combobox.add_callback('activated', self.set_cmap_cb)
 
@@ -363,8 +366,10 @@ class Preferences(GingaPlugin.LocalPlugin):
 
         captions = (('Cut New:', 'label', 'Cut New', 'combobox'),
                     ('Zoom New:', 'label', 'Zoom New', 'combobox'),
-                    ('Center New', 'checkbutton', 'Follow New', 'checkbutton'),
-                    ('Raise New', 'checkbutton', 'Create thumbnail', 'checkbutton'),)
+                    ('Center New:', 'label', 'Center New', 'combobox'),
+                    ('Follow New', 'checkbutton', 'Raise New', 'checkbutton'),
+                    ('Create thumbnail', 'checkbutton'),
+                    )
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
 
@@ -390,13 +395,25 @@ class Preferences(GingaPlugin.LocalPlugin):
         combobox.add_callback('activated', self.set_autozoom_cb)
         b.zoom_new.set_tooltip("Automatically fit new images to window")
 
-        b.center_new.set_tooltip("Automatically center new images")
+        combobox = b.center_new
+        index = 0
+        for name in self.autocenter_options:
+            combobox.append_text(name)
+            index += 1
+        option = self.t_.get('autocenter', "off")
+        # Hack to convert old values that used to be T/F
+        if isinstance(option, bool):
+            choice = { True: 'on', False: 'off' }
+            option = choice[option]
+        index = self.autocenter_options.index(option)
+        combobox.set_index(index)
+        combobox.add_callback('activated', self.set_autocenter_cb)
+        b.center_new.set_tooltip("Automatically center new images in window")
+
         b.follow_new.set_tooltip("View new images as they arrive")
         b.raise_new.set_tooltip("Raise and focus tab for new images")
         b.create_thumbnail.set_tooltip("Create thumbnail for new images")
 
-        self.w.center_new.set_state(True)
-        self.w.center_new.add_callback('activated', self.set_chprefs_cb)
         self.w.follow_new.set_state(True)
         self.w.follow_new.add_callback('activated', self.set_chprefs_cb)
         self.w.raise_new.set_state(True)
@@ -487,7 +504,7 @@ class Preferences(GingaPlugin.LocalPlugin):
             self.fitsimage.redraw(whence=2)
 
     def set_default_cmaps(self):
-        cmap_name = "ramp"
+        cmap_name = "gray"
         imap_name = "ramp"
         index = self.cmap_names.index(cmap_name)
         self.w.cmap_choice.set_index(index)
@@ -574,6 +591,17 @@ class Preferences(GingaPlugin.LocalPlugin):
         fits_x, fits_y = pan_x + 0.5, pan_y + 0.5
         self.w.pan_x.set_text(str(fits_x))
         self.w.pan_y.set_text(str(fits_y))
+
+    def set_autocenter_cb(self, w, idx):
+        option = self.autocenter_options[idx]
+        self.fitsimage.set_autocenter(option)
+        self.t_.set(autocenter=option)
+
+    def autocenter_changed_ext_cb(self, setting, option):
+        if not self.gui_up:
+            return
+        index = self.autocenter_options.index(option)
+        self.w.center_new.set_index(index)
 
     def set_scale_cb(self, w):
         scale_x = float(self.w.scale_x.get_text())
@@ -727,12 +755,11 @@ class Preferences(GingaPlugin.LocalPlugin):
         return True
 
     def set_chprefs_cb(self, *args):
-        autocenter = (self.w.center_new.get_state() != 0)
         switchnew = (self.w.follow_new.get_state() != 0)
         raisenew = (self.w.raise_new.get_state() != 0)
         genthumb = (self.w.create_thumbnail.get_state() != 0)
         self.t_.set(switchnew=switchnew, raisenew=raisenew,
-                    autocenter=autocenter, genthumb=genthumb)
+                    genthumb=genthumb)
 
     def set_wcs_params_cb(self, *args):
         idx = self.w.wcs_coords.get_index()
@@ -849,8 +876,6 @@ class Preferences(GingaPlugin.LocalPlugin):
             pass
 
         # misc settings
-        prefs.setdefault('autocenter', False)
-        self.w.center_new.set_state(prefs['autocenter'])
         prefs.setdefault('switchnew', True)
         self.w.follow_new.set_state(prefs['switchnew'])
         prefs.setdefault('raisenew', True)

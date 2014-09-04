@@ -35,7 +35,7 @@ class ImageViewCanvas(ImageViewMpl.ImageViewZoom,
         self.mode_obj = None
         bm = self.get_bindmap()
         bm.add_callback('mode-set', self.mode_change_cb)
-
+        self.add_callback('configure', self._configure_cb)
 
     def canvascoords(self, data_x, data_y, center=True):
         # data->canvas space coordinate conversion
@@ -91,4 +91,10 @@ class ImageViewCanvas(ImageViewMpl.ImageViewZoom,
             
         return True
 
+    def _configure_cb(self, view, width, height):
+        # redraw the mode indicator since the window has been resized
+        bm = view.get_bindmap()
+        mode, modetype = bm.current_modifier()
+        self.mode_change_cb(bm, mode, modetype)
+        
 #END

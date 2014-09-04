@@ -475,8 +475,9 @@ class ImageViewEvent(ImageViewQt):
         imgwin.setAcceptDrops(True)
         # enable gesture handling
         imgwin.grabGesture(QtCore.Qt.PinchGesture)
-        # Some of these are not well supported (read "just don't get recognized")
-        # by Qt and aren't the same as Mac trackpad gestures anyway
+        # Some of these are not well supported (read "just don't get
+        # recognized") by Qt and aren't the same as standard platform
+        # trackpad gestures anyway
         #imgwin.grabGesture(QtCore.Qt.PanGesture)
         #imgwin.grabGesture(QtCore.Qt.SwipeGesture)
         #imgwin.grabGesture(QtCore.Qt.TapGesture)

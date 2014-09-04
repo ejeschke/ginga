@@ -102,7 +102,7 @@ class GingaControl(Callback.Callbacks):
         # Should channel change as mouse moves between windows
         self.channel_follows_focus = self.settings['channelFollowsFocus']
 
-        self.cm = cmap.get_cmap("ramp")
+        self.cm = cmap.get_cmap("gray")
         self.im = imap.get_imap("ramp")
 
         self.fn_keys = ('f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8',

@@ -361,6 +361,7 @@ class GingaView(GtkMain.GtkMain):
                                self.change_range_cb, fi, self.colorbar)
         fi.enable_auto_orient(True)
         fi.enable_draw(False)
+        fi.set_follow_focus(settings.get('follow_focus', True))
 
         bd = fi.get_bindings()
         bd.enable_pan(True)

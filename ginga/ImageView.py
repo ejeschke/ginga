@@ -81,7 +81,7 @@ class ImageViewBase(Callback.Callbacks):
         self.name = str(self)
 
         # for color mapping
-        self.t_.addDefaults(color_map='ramp', intensity_map='ramp',
+        self.t_.addDefaults(color_map='gray', intensity_map='ramp',
                             color_algorithm='linear',
                             color_hashsize=65535)
         for name in ('color_map', 'intensity_map', 'color_algorithm',
@@ -89,11 +89,11 @@ class ImageViewBase(Callback.Callbacks):
             self.t_.getSetting(name).add_callback('set', self.cmap_changed_cb)
 
         # Initialize RGBMap
-        cmap_name = self.t_.get('color_map', 'ramp')
+        cmap_name = self.t_.get('color_map', 'gray')
         try:
             cm = cmap.get_cmap(cmap_name)
         except KeyError:
-            cm = cmap.get_cmap('ramp')
+            cm = cmap.get_cmap('gray')
         rgbmap.set_cmap(cm)
         imap_name = self.t_.get('intensity_map', 'ramp')
         try:
@@ -151,7 +151,8 @@ class ImageViewBase(Callback.Callbacks):
 
         # for panning
         self.t_makebg = False
-        self.t_.addDefaults(autocenter=True)
+        self.autocenter_options = ('on', 'override', 'off')
+        self.t_.addDefaults(autocenter='on')
         
         # for transforms
         self.t_.addDefaults(flip_x=False, flip_y=False, swap_xy=False)
@@ -393,7 +394,7 @@ class ImageViewBase(Callback.Callbacks):
         self.logger.debug("Color settings have changed.")
 
         # Update our RGBMapper with any changes
-        cmap_name = self.t_.get('color_map', "ramp")
+        cmap_name = self.t_.get('color_map', "gray")
         cm = cmap.get_cmap(cmap_name)
         self.rgbmap.set_cmap(cm, callback=False)
         
@@ -452,7 +453,7 @@ class ImageViewBase(Callback.Callbacks):
         if self.t_['autozoom'] != 'off':
             self.zoom_fit(redraw=False, no_reset=True)
 
-        if self.t_['autocenter']:
+        if not self.t_['autocenter'] in ('off', False):
             self.center_image(redraw=False)
 
         if self.t_['autocuts'] != 'off':
@@ -1390,12 +1391,14 @@ class ImageViewBase(Callback.Callbacks):
             str(self.autozoom_options)))
         self.t_.set(autozoom=option)
         
-        
     def get_autozoom_options(self):
         return self.autozoom_options
     
-    def set_pan(self, pan_x, pan_y, redraw=True):
+    def set_pan(self, pan_x, pan_y, no_reset=False, redraw=True):
         self.t_.set(pan=(pan_x, pan_y))
+
+        if (not no_reset) and (self.t_['autocenter'] == 'override'):
+            self.t_.set(autocenter='off')
 
     def pan_cb(self, setting, value):
         pan_x, pan_y = self.t_['pan']
@@ -1407,11 +1410,11 @@ class ImageViewBase(Callback.Callbacks):
     def get_pan(self):
         return (self._pan_x, self._pan_y)
     
-    def panset_xy(self, data_x, data_y, redraw=True):
+    def panset_xy(self, data_x, data_y, no_reset=False, redraw=True):
         # To center on the pixel
         pan_x, pan_y = data_x + 0.5, data_y + 0.5
         
-        self.set_pan(pan_x, pan_y, redraw=redraw)
+        self.set_pan(pan_x, pan_y, no_reset=no_reset, redraw=redraw)
 
     def panset_pct(self, pct_x, pct_y, redraw=True):
         width, height = self.get_data_size()
@@ -1421,10 +1424,21 @@ class ImageViewBase(Callback.Callbacks):
     def center_image(self, redraw=True):
         width, height = self.get_data_size()
         data_x, data_y = float(width) / 2.0, float(height) / 2.0
-        self.panset_xy(data_x, data_y)
-        if redraw:
-            self.redraw(whence=0)
+        self.panset_xy(data_x, data_y, no_reset=True)
+        # See Footnote [1]
+        ## if redraw:
+        ##     self.redraw(whence=0)
         
+    def set_autocenter(self, option):
+        option = option.lower()
+        assert(option in self.autocenter_options), \
+                      ImageViewError("Bad autocenter option '%s': must be one of %s" % (
+            str(self.autocenter_options)))
+        self.t_.set(autocenter=option)
+        
+    def get_autocenter_options(self):
+        return self.autocenter_options
+    
     def get_transforms(self):
         return (self.t_['flip_x'], self.t_['flip_y'], self.t_['swap_xy'])
 
@@ -1694,6 +1708,12 @@ class ImageViewBase(Callback.Callbacks):
 
     def reschedule_redraw(self, time_sec):
         self.logger.warn("Subclass should override this abstract method!")
+
+
+# FOOTNOTES
+# [1] This redraw is redundant due to the automatic redraw happening via
+#     a preferences callback.  It is commented out, but left here in case
+#     we can/need to implement it again.
 
 
 #END

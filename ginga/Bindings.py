@@ -72,12 +72,15 @@ class ImageViewBindings(object):
             
             # Define our custom modifiers
             dmod_draw = ['space', 'oneshot', None],
-            dmod_cmapwarp = ['/', 'oneshot', None],
-            #dmod_cutlo = ['<', 'oneshot', "Cut low"],
-            #dmod_cuthi = ['>', 'oneshot', "Cut high"],
-            dmod_cutall = ['.', 'oneshot', None],
-            dmod_rotate = ['r', 'oneshot', None],
-            dmod_freepan = ['q', 'oneshot', None],
+            dmod_cmap = ['/', 'locked', None],
+            #dmod_cutlo = ['<', 'locked', "Cut low"],
+            #dmod_cuthi = ['>', 'locked', "Cut high"],
+            dmod_cuts = ['.', 'locked', None],
+            dmod_dist = ['d', 'locked', None],
+            dmod_contrast = ['t', 'locked', None],
+            dmod_rotate = ['r', 'locked', None],
+            dmod_pan = ['q', 'locked', None],
+            dmod_freepan = ['w', 'locked', None],
 
             # KEYBOARD
             kp_zoom_in = ['+', '='],
@@ -87,8 +90,7 @@ class ImageViewBindings(object):
             kp_zoom_fit = ['backquote'],
             kp_autozoom_on = ['doublequote'],
             kp_autozoom_override = ['singlequote'],
-            kp_dist = ['s'],
-            kp_dist_reset = ['S'],
+            kp_dist_reset = ['D'],
             kp_pan_set = ['p'],
             kp_center = ['c'],
             kp_cut_255 = ['A'],
@@ -106,7 +108,7 @@ class ImageViewBindings(object):
             kp_rotate_dec90 = ['E'],
             kp_orient_lh = ['o'],
             kp_orient_rh = ['O'],
-            kp_poly_add = ['x', 'draw+x'],
+            kp_poly_add = ['v', 'draw+v'],
             kp_poly_del = ['z', 'draw+z'],
             kp_reset = ['escape'],
             
@@ -117,14 +119,16 @@ class ImageViewBindings(object):
             sc_zoom = ['scroll'],
             sc_zoom_fine = ['shift+scroll'],
             sc_zoom_coarse = ['ctrl+scroll'],
-            sc_contrast_fine = ['cutall+scroll'],
-            sc_contrast_coarse = [],
-            sc_dist = [],
-            sc_cmap = ['cmapwarp+scroll'],
+            sc_cuts_fine = ['cuts+scroll'],
+            sc_cuts_coarse = [],
+            sc_dist = ['dist+scroll'],
+            sc_cmap = ['cmap+scroll'],
             sc_imap = [],
             
             scroll_pan_acceleration = 1.0,
             scroll_zoom_acceleration = 1.0,
+            mouse_zoom_acceleration = 1.085,
+            mouse_rotate_acceleration = 0.75,
             pan_reverse = False,
             zoom_scroll_reverse = False,
             
@@ -135,14 +139,19 @@ class ImageViewBindings(object):
             ms_draw = ['draw+left', 'right'],
             
             ms_rotate = ['rotate+left'],
-            ms_cmapwarp = ['cmapwarp+left', 'ctrl+right'],
-            ms_cmaprest = ['ctrl+middle'],
-            ms_pan = ['ctrl+left'],
+            ms_rotate_reset = ['rotate+right'],
+            ms_contrast = ['contrast+left', 'ctrl+right'],
+            ms_contrast_rest = ['contrast+right', 'ctrl+middle'],
+            ms_pan = ['pan+left', 'ctrl+left'],
+            ms_zoom = ['pan+right'],
             ms_freepan = ['freepan+left', 'middle'],
+            ms_zoom_in = ['freepan+middle'],
+            ms_zoom_out = ['freepan+right'],
             ms_cutlo = ['cutlo+left'],
             ms_cuthi = ['cuthi+left'],
-            ms_cutall = ['cutall+left'],
-            ms_panset = ['shift+left'],
+            ms_cutall = ['cuts+left'],
+            ms_cut_auto = ['cuts+right'],
+            ms_panset = ['pan+middle', 'shift+left'],
             
             # GESTURES (Qt version only)
             gs_pinch = [],
@@ -487,7 +496,7 @@ class ImageViewBindings(object):
                 loval, hival), delay=1.0, redraw=False)
         fitsimage.cut_levels(loval, hival, redraw=True)
 
-    def _adjust_contrast(self, fitsimage, direction, pct, msg=True):
+    def _adjust_cuts(self, fitsimage, direction, pct, msg=True):
         direction = self.get_direction(direction)
         if direction == 'up':
             self._cut_pct(fitsimage, pct, msg=msg)
@@ -508,6 +517,18 @@ class ImageViewBindings(object):
         if msg:
             fitsimage.onscreen_message(fitsimage.get_scale_text(),
                                        delay=0.4)
+
+    def _zoom_xy(self, fitsimage, x, y, msg=True):
+        win_wd, win_ht = fitsimage.get_window_size()
+        delta = float(x - self._start_x)
+        factor = math.fabs(self.settings.get('mouse_zoom_acceleration', 1.085)
+                           - 1.0)
+        direction = 0.0
+        if delta < 0.0:
+            direction = 180.0
+        #print("factor=%f direction=%f" % (factor, direction))
+        self._start_x = x
+        self._scale_image(fitsimage, direction, factor, msg=msg)
 
     def _cycle_dist(self, fitsimage, msg, direction='down'):
         if self.cancmap:
@@ -561,7 +582,7 @@ class ImageViewBindings(object):
             msg = self.settings.get('msg_cmap', msg)
             rgbmap = fitsimage.get_rgbmap()
             # default
-            cmapname = 'ramp'
+            cmapname = 'gray'
             rgbmap.set_cmap(cmap.get_cmap(cmapname))
             if msg:
                 fitsimage.onscreen_message("Color map: %s" % (cmapname),
@@ -597,11 +618,18 @@ class ImageViewBindings(object):
                 fitsimage.onscreen_message("Intensity map: %s" % (imapname),
                                            delay=1.0)
 
+    def _get_pct_xy(self, fitsimage, x, y):
+        win_wd, win_ht = fitsimage.get_window_size()
+        x_pct = float(x - self._start_x) / win_wd
+        y_pct = float(y - self._start_y) / win_ht
+        return (x_pct, y_pct)
+
     def _rotate_xy(self, fitsimage, x, y, msg=True):
         msg = self.settings.get('msg_rotate', msg)
-        win_wd, win_ht = fitsimage.get_window_size()
-        pct = float(x) / float(win_wd)
-        deg = 360.0 * pct
+        x_pct, y_pct = self._get_pct_xy(fitsimage, x, y)
+        delta_deg = x_pct * 360.0
+        factor = self.settings.get('mouse_rotate_acceleration', 0.75)
+        deg = math.fmod(self._start_rot + delta_deg * factor, 360.0)
         if msg:
             fitsimage.onscreen_message("Rotate: %.2f" % (deg),
                                        redraw=False)
@@ -846,6 +874,8 @@ class ImageViewBindings(object):
     def kp_rotate_reset(self, fitsimage, keyname, data_x, data_y):
         if self.canrotate:
             fitsimage.rotate(0.0)
+            # also reset all transforms
+            fitsimage.transform(False, False, False)
         return True
 
     def kp_rotate_inc90(self, fitsimage, keyname, data_x, data_y, msg=True):
@@ -887,6 +917,58 @@ class ImageViewBindings(object):
     # def ms_draw(self, fitsimage, action, data_x, data_y):
     #     return False
 
+    def ms_zoom(self, fitsimage, action, data_x, data_y, msg=True):
+        """Zoom the image by dragging the cursor left or right.
+        """
+        if not self.canzoom:
+            return True
+        msg = self.settings.get('msg_zoom', msg)
+
+        x, y = fitsimage.get_last_win_xy()
+        if action == 'move':
+            self._zoom_xy(fitsimage, x, y)
+            
+        elif action == 'down':
+            if msg:
+                fitsimage.onscreen_message("Zoom (drag mouse L-R)",
+                                           delay=1.0)
+            self._start_x, self._start_y = x, y
+            
+        else:
+            fitsimage.onscreen_message(None)
+        return True
+
+    def ms_zoom_in(self, fitsimage, action, data_x, data_y, msg=True):
+        """Zoom in one level by a mouse click.
+        """
+        if not self.canzoom:
+            return True
+
+        if action == 'down':
+            pan_x, pan_y = data_x + 0.5, data_y + 0.5
+            fitsimage.set_pan(pan_x, pan_y, redraw=False)
+            fitsimage.zoom_in()
+            if msg:
+                fitsimage.onscreen_message(fitsimage.get_scale_text(),
+                                           delay=1.0)
+        return True
+
+    def ms_zoom_out(self, fitsimage, action, data_x, data_y, msg=True):
+        """Zoom out one level by a mouse click.
+        """
+        if not self.canzoom:
+            return True
+
+        if action == 'down':
+            pan_x, pan_y = data_x + 0.5, data_y + 0.5
+            fitsimage.set_pan(pan_x, pan_y, redraw=False)
+            fitsimage.zoom_out()
+            if msg:
+                fitsimage.onscreen_message(fitsimage.get_scale_text(),
+                                           delay=1.0)
+        return True
+
+
     def ms_rotate(self, fitsimage, action, data_x, data_y, msg=True):
         """Rotate the image by dragging the cursor left or right.
         """
@@ -902,20 +984,32 @@ class ImageViewBindings(object):
             if msg:
                 fitsimage.onscreen_message("Rotate (drag mouse L-R)",
                                            delay=1.0)
-            self._start_x = x
+            self._start_x, self._start_y = x, y
+            self._start_rot = fitsimage.get_rotation()
             
         else:
             fitsimage.onscreen_message(None)
         return True
 
 
-    def ms_cmapwarp(self, fitsimage, action, data_x, data_y, msg=True):
+    def ms_rotate_reset(self, fitsimage, action, data_x, data_y, msg=True):
+        if not self.canrotate:
+            return True
+        msg = self.settings.get('msg_rotate', msg)
+
+        if action == 'down':
+            fitsimage.rotate(0.0)
+            fitsimage.onscreen_message("Rotation reset", delay=0.5)
+        return True
+
+        
+    def ms_contrast(self, fitsimage, action, data_x, data_y, msg=True):
         """Shift the colormap by dragging the cursor left or right.
         Stretch the colormap by dragging the cursor up or down.
         """
         if not self.cancmap:
             return True
-        msg = self.settings.get('msg_cmap', msg)
+        msg = self.settings.get('msg_contrast', msg)
         
         x, y = fitsimage.get_last_win_xy()
         if not fitsimage._originUpper:
@@ -933,7 +1027,7 @@ class ImageViewBindings(object):
         return True
 
             
-    def ms_cmaprest(self, fitsimage, action, data_x, data_y, msg=True):
+    def ms_contrast_restore(self, fitsimage, action, data_x, data_y, msg=True):
         """An interactive way to restore the colormap settings after
         a warp operation.
         """
@@ -1042,6 +1136,10 @@ class ImageViewBindings(object):
             fitsimage.onscreen_message(None)
         return True
             
+    def ms_cut_auto(self, fitsimage, action, data_x, data_y, msg=True):
+        return self.kp_cut_auto(fitsimage, action, data_x, data_y,
+                                msg=msg)
+
     def ms_panset(self, fitsimage, action, data_x, data_y,
                   msg=True):
         """An interactive way to set the pan position.  The location
@@ -1054,22 +1152,22 @@ class ImageViewBindings(object):
 
     #####  SCROLL ACTION CALLBACKS #####
 
-    def sc_contrast_coarse(self, fitsimage, direction, amount, data_x, data_y,
+    def sc_cuts_coarse(self, fitsimage, direction, amount, data_x, data_y,
                            msg=True):
-        """Adjust contrast interactively by setting the low AND high cut
+        """Adjust cuts interactively by setting the low AND high cut
         levels.  This function adjusts it coarsely.
         """
         if self.cancut:
-            self._adjust_contrast(fitsimage, direction, 0.01, msg=msg)
+            self._adjust_cuts(fitsimage, direction, 0.01, msg=msg)
         return True
 
-    def sc_contrast_fine(self, fitsimage, direction, amount, data_x, data_y,
+    def sc_cuts_fine(self, fitsimage, direction, amount, data_x, data_y,
                          msg=True):
-        """Adjust contrast interactively by setting the low AND high cut
+        """Adjust cuts interactively by setting the low AND high cut
         levels.  This function adjusts it finely.
         """
         if self.cancut:
-            self._adjust_contrast(fitsimage, direction, 0.001, msg=msg)
+            self._adjust_cuts(fitsimage, direction, 0.001, msg=msg)
         return True
 
     def sc_zoom(self, fitsimage, direction, amount, data_x, data_y, msg=True):
@@ -1285,6 +1383,7 @@ class BindingMapper(Callback.Callbacks):
         for name in ('mode-set', ):
             self.enable_callback(name)
 
+
     def set_modifier_map(self, modmap):
         self.modmap = modmap
         
@@ -1292,7 +1391,7 @@ class BindingMapper(Callback.Callbacks):
         self.modmap = {}
 
     def current_modifier(self):
-        return self._kbdmod
+        return (self._kbdmod, self._kbdmod_type)
 
     def get_modifiers(self):
         res = set([])
@@ -1408,13 +1507,16 @@ class BindingMapper(Callback.Callbacks):
                 idx = (None, keyname)
             else:
                 idx = (self._kbdmod, keyname)
-
-            self.logger.debug("idx=%s" % (str(idx)))
             emap = self.eventmap[idx]
 
         except KeyError:
-            return False
+            try:
+                idx = (None, keyname)
+                emap = self.eventmap[idx]
+            except KeyError:
+                return False
 
+        self.logger.debug("idx=%s" % (str(idx)))
         cbname = 'keydown-%s' % (emap.name)
         last_x, last_y = fitsimage.get_last_data_xy()
 
@@ -1429,7 +1531,11 @@ class BindingMapper(Callback.Callbacks):
             emap = self.eventmap[idx]
 
         except KeyError:
-            emap = None
+            try:
+                idx = (None, keyname)
+                emap = self.eventmap[idx]
+            except KeyError:
+                emap = None
 
         # Is this a modifier key?
         if keyname in self.modmap:
@@ -1460,17 +1566,22 @@ class BindingMapper(Callback.Callbacks):
     def window_button_press(self, fitsimage, btncode, data_x, data_y):
         self.logger.debug("x,y=%d,%d btncode=%s" % (data_x, data_y,
                                                    hex(btncode)))
+        self._button |= btncode
+        button = self.btnmap[btncode]
         try:
-            self._button |= btncode
-            button = self.btnmap[btncode]
             idx = (self._kbdmod, button)
-            self.logger.debug("Event map for %s" % (str(idx)))
             emap = self.eventmap[idx]
 
         except KeyError:
-            #self.logger.warn("No button map binding for %s" % (str(btncode)))
-            return False
+            # no entry for this modifier, try unmodified entry
+            try:
+                idx = (None, button)
+                emap = self.eventmap[idx]
+            except KeyError:
+                #self.logger.warn("No button map binding for %s" % (str(btncode)))
+                return False
         
+        self.logger.debug("Event map for %s" % (str(idx)))
         cbname = '%s-down' % (emap.name)
         self.logger.debug("making callback for %s (mod=%s)" % (
             cbname, self._kbdmod))
@@ -1478,14 +1589,20 @@ class BindingMapper(Callback.Callbacks):
 
 
     def window_motion(self, fitsimage, btncode, data_x, data_y):
+
+        button = self.btnmap[btncode]
         try:
-            button = self.btnmap[btncode]
             idx = (self._kbdmod, button)
             emap = self.eventmap[idx]
-
         except KeyError:
-            return False
+            # no entry for this modifier, try unmodified entry
+            try:
+                idx = (None, button)
+                emap = self.eventmap[idx]
+            except KeyError:
+                return False
 
+        self.logger.debug("Event map for %s" % (str(idx)))
         cbname = '%s-move' % (emap.name)
         return fitsimage.make_callback(cbname, 'move', data_x, data_y)
 
@@ -1493,9 +1610,9 @@ class BindingMapper(Callback.Callbacks):
     def window_button_release(self, fitsimage, btncode, data_x, data_y):
         self.logger.debug("x,y=%d,%d button=%s" % (data_x, data_y,
                                                    hex(btncode)))
+        self._button &= ~btncode
+        button = self.btnmap[btncode]
         try:
-            self._button &= ~btncode
-            button = self.btnmap[btncode]
             idx = (self._kbdmod, button)
             # release modifier if this is a oneshot modifier
             if (self._kbdmod_type == 'oneshot') or (self._delayed_reset):
@@ -1503,9 +1620,15 @@ class BindingMapper(Callback.Callbacks):
             emap = self.eventmap[idx]
 
         except KeyError:
-            #self.logger.warn("No button map binding for %s" % (str(btncode)))
-            return False
+            # no entry for this modifier, try unmodified entry
+            try:
+                idx = (None, button)
+                emap = self.eventmap[idx]
+            except KeyError:
+                #self.logger.warn("No button map binding for %s" % (str(btncode)))
+                return False
 
+        self.logger.debug("Event map for %s" % (str(idx)))
         cbname = '%s-up' % (emap.name)
         return fitsimage.make_callback(cbname, 'up', data_x, data_y)
             
@@ -1516,7 +1639,12 @@ class BindingMapper(Callback.Callbacks):
             emap = self.eventmap[idx]
 
         except KeyError:
-            return False
+            # no entry for this modifier, try unmodified entry
+            try:
+                idx = (None, 'scroll')
+                emap = self.eventmap[idx]
+            except KeyError:
+                return False
 
         cbname = '%s-scroll' % (emap.name)
         return fitsimage.make_callback(cbname, direction, amount,

@@ -352,7 +352,7 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
         try:
             index = self.cmap_names.index(cmap_name)
         except Exception:
-            index = self.cmap_names.index('ramp')
+            index = self.cmap_names.index('gray')
         combobox.setCurrentIndex(index)
         combobox.activated.connect(self.set_cmap_cb)
         self.btn['cmap'] = combobox
