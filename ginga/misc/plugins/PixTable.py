@@ -264,6 +264,9 @@ class PixTable(GingaPlugin.LocalPlugin):
         self.canvas.ui_setActive(False)
 
     def resume(self):
+        # turn off any mode user may be in
+        self.modes_off()
+
         self.canvas.ui_setActive(True)
         self.redo()
         

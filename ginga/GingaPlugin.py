@@ -52,6 +52,11 @@ class LocalPlugin(object):
         # Holds GUI widgets
         self.w = Bunch.Bunch()
 
+    def modes_off(self):
+        # turn off any mode user may be in
+        bm = self.fitsimage.get_bindmap()
+        bm.reset_modifier(self.fitsimage)
+        
     # def build_gui(self, container):
     #     """If a plugin defines this method, it will be called with a
     #     container object in which to build its GUI. It should finish
