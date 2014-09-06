@@ -41,11 +41,14 @@ mod_draw = ['meta_right']
 # keyname is a key whose press initiates the modifier,
 # modtype is a type in {'held', 'oneshot', 'locked'}
 # msg is a string to be shown in the display or None for no indicator
-dmod_cmapwarp = ('/', 'oneshot', "Color map warp")
-dmod_cutall = ['.', 'oneshot', "Cut all"]
-dmod_rotate = ['r', 'oneshot', "Rotate"]
-dmod_freepan = ['q', 'oneshot', "Free pan"]
 dmod_draw = ['space', 'oneshot', None]
+dmod_cmap = ['y', 'locked', None]
+dmod_cuts = ['s', 'locked', None]
+dmod_dist = ['d', 'locked', None]
+dmod_contrast = ['t', 'locked', None]
+dmod_rotate = ['r', 'locked', None]
+dmod_pan = ['q', 'locked', None]
+dmod_freepan = ['w', 'locked', None]
 
 # KEYPRESS commands
 kp_zoom_in = ['+', '=']
@@ -55,23 +58,26 @@ kp_zoom_inv = ['!', '@', '#', '$', '%', '^', '&', '*', '(', ')']
 kp_zoom_fit = ['backquote']
 kp_autozoom_on = ['doublequote']
 kp_autozoom_override = ['singlequote']
-kp_dist = ['s']
-kp_dist_reset = ['S']
+kp_dist_reset = ['D']
 kp_pan_set = ['p']
 kp_center = ['c']
 kp_cut_255 = ['A']
 kp_cut_auto = ['a']
 kp_autocuts_on = [':']
 kp_autocuts_override = [';']
-kp_cmap_restore = ['?']
+kp_contrast_restore = ['T']
+kp_cmap_reset = ['Y']
+kp_imap_reset = []
 kp_flip_x = ['[', '{']
 kp_flip_y = [']', '}']
 kp_swap_xy = ['backslash', '|']
 kp_rotate_reset = ['R']
+kp_rotate_inc90 = ['<']
+kp_rotate_dec90 = ['>']
 kp_orient_lh = ['o']
 kp_orient_rh = ['O']
-kp_rotate_inc90 = ['e']
-kp_rotate_dec90 = ['E']
+kp_poly_add = ['v', 'draw+v']
+kp_poly_del = ['z', 'draw+z']
 kp_reset = ['escape']
 
 # SCROLLING/WHEEL commands
@@ -81,11 +87,18 @@ sc_pan_coarse = []
 sc_zoom = []
 sc_zoom_fine = []
 sc_zoom_coarse = ['ctrl+scroll']
-sc_contrast_fine = ['cutall+scroll']
-sc_contrast_coarse = []
-sc_dist = []
-sc_cmap = ['cmapwarp+scroll']
+sc_cuts_fine = ['cuts+scroll']
+sc_cuts_coarse = []
+sc_dist = ['dist+scroll']
+sc_cmap = ['cmap+scroll']
 sc_imap = []
+
+# This controls how fast panning occurs with the sc_pan* functions.
+# Increase to speed up panning
+scroll_pan_acceleration = 1.0
+# For trackpads you can adjust this down if it seems too sensitive.
+scroll_zoom_acceleration = 1.0
+
 
 # MOUSE/BUTTON commands
 # NOTE: most plugins in the reference viewer need "none", "cursor" and "draw"
@@ -98,14 +111,22 @@ ms_draw = ['draw+left', 'right']
 
 # mouse commands initiated by a preceeding keystroke (see above)
 ms_rotate = ['rotate+left']
-ms_cmapwarp = ['cmapwarp+left', 'ctrl+right']
-ms_cmaprest = ['ctrl+middle']
-ms_pan = ['ctrl+left']
+ms_rotate_reset = ['rotate+right']
+ms_contrast = ['contrast+left', 'ctrl+right']
+ms_contrast_restore = ['contrast+right', 'ctrl+middle']
+ms_pan = ['pan+left', 'ctrl+left']
+ms_zoom = ['pan+right']
 ms_freepan = ['freepan+left', 'middle']
-ms_cutlo = []
-ms_cuthi = []
-ms_cutall = ['cutall+left']
-ms_panset = ['shift+left']
+ms_zoom_in = ['freepan+middle']
+ms_zoom_out = ['freepan+right']
+#ms_cutlo = ['cutlo+left']
+#ms_cuthi = ['cuthi+left']
+ms_cutall = ['cuts+left']
+ms_cut_auto = ['cuts+right']
+ms_panset = ['pan+middle', 'shift+left']
+
+mouse_zoom_acceleration = 1.085
+mouse_rotate_acceleration = 0.75
 
 # GESTURES (Qt version only)
 # Uncomment to enable pinch gesture on touchpads.
@@ -118,21 +139,17 @@ gs_pinch = ['pinch']
 # This controls what operations the pinch gesture controls.  Possibilities are
 # (empty list or) some combination of 'zoom' and 'rotate'.
 pinch_actions = ['zoom']
-
 pinch_zoom_acceleration = 1.0
 pinch_rotate_acceleration = 1.0
-
-# This controls how fast panning occurs with the sc_pan* functions.  Increase to
-# speed up panning
-scroll_pan_acceleration = 1.0
-
-# For trackpads you can adjust this down if it seems too sensitive.
-scroll_zoom_acceleration = 1.0
 
 # Use opposite sense of panning direction
 pan_reverse = False
 
 # Use opposite sense of zooming scroll wheel
 zoom_scroll_reverse = False
+
+# No messages for color map warps or setting pan position
+#msg_cmap = False
+#msg_panset = False
 
 #END

@@ -72,10 +72,10 @@ class ImageViewBindings(object):
             
             # Define our custom modifiers
             dmod_draw = ['space', 'oneshot', None],
-            dmod_cmap = ['/', 'locked', None],
-            #dmod_cutlo = ['<', 'locked', "Cut low"],
-            #dmod_cuthi = ['>', 'locked', "Cut high"],
-            dmod_cuts = ['.', 'locked', None],
+            dmod_cmap = ['y', 'locked', None],
+            #dmod_cutlo = [',', 'locked', "Cut low"],
+            #dmod_cuthi = ['.', 'locked', "Cut high"],
+            dmod_cuts = ['s', 'locked', None],
             dmod_dist = ['d', 'locked', None],
             dmod_contrast = ['t', 'locked', None],
             dmod_rotate = ['r', 'locked', None],
@@ -97,15 +97,15 @@ class ImageViewBindings(object):
             kp_cut_auto = ['a'],
             kp_autocuts_on = [':'],
             kp_autocuts_override = [';'],
-            kp_cmap_restore = ['?'],
-            kp_cmap_reset = [],
+            kp_contrast_restore = ['T'],
+            kp_cmap_reset = ['Y'],
             kp_imap_reset = [],
             kp_flip_x = ['[', '{'],
             kp_flip_y = [']', '}'],
             kp_swap_xy = ['backslash', '|'],
             kp_rotate_reset = ['R'],
-            kp_rotate_inc90 = ['e'],
-            kp_rotate_dec90 = ['E'],
+            kp_rotate_inc90 = ['<'],
+            kp_rotate_dec90 = ['>'],
             kp_orient_lh = ['o'],
             kp_orient_rh = ['O'],
             kp_poly_add = ['v', 'draw+v'],
@@ -141,7 +141,7 @@ class ImageViewBindings(object):
             ms_rotate = ['rotate+left'],
             ms_rotate_reset = ['rotate+right'],
             ms_contrast = ['contrast+left', 'ctrl+right'],
-            ms_contrast_rest = ['contrast+right', 'ctrl+middle'],
+            ms_contrast_restore = ['contrast+right', 'ctrl+middle'],
             ms_pan = ['pan+left', 'ctrl+left'],
             ms_zoom = ['pan+right'],
             ms_freepan = ['freepan+left', 'middle'],
@@ -810,7 +810,7 @@ class ImageViewBindings(object):
                 fitsimage.onscreen_message('Autocuts Override', delay=1.0)
         return True
 
-    def kp_cmap_restore(self, fitsimage, keyname, data_x, data_y, msg=True):
+    def kp_contrast_restore(self, fitsimage, keyname, data_x, data_y, msg=True):
         if self.cancmap:
             msg = self.settings.get('msg_cmap', msg)
             self.restore_colormap(fitsimage, msg=msg)

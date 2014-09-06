@@ -2,6 +2,23 @@
 What's New in Ginga?
 ++++++++++++++++++++
 
+Ver 2.0.20140905210415
+======================
+Updates to the core display and bindings classes:
+- improvements to interactive rotation command--now resume rotation from
+  current value and direction is relative to horizontal motion of mouse
+- most keyboard modes are now locking and not oneshot (press to turn on,
+  press again (or hit escape) to turn off
+- additional mouse button functionality in modes (see quick reference)
+- some changes to default keyboard bindings (see quick reference)
+- changes to auto cuts parameters always result in a new autocut being
+  done (instead of having to explicity perform the autocut)--users seem
+  to expect this
+- autocenter preference changed from True/False to on/override/off
+
+Reference viewer only: new global plugin "Toolbar" provides GUI buttons
+for many operations that previously had only keyboard bindings
+
 Ver 2.0.20140811184717
 ======================
 Codebase has been refactored to work with python3 via the "six" module.

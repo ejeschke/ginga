@@ -221,10 +221,10 @@ class GingaControl(Callback.Callbacks):
             keyname, chname))
         # TODO: keyboard accelerators to raise tabs need to be integrated into
         #   the desktop object
-        if keyname == 'T':
-            self.ds.raise_tab('Thumbs')
-        elif keyname == 'Z':
+        if keyname == 'Z':
             self.ds.raise_tab('Zoom')
+        ## elif keyname == 'T':
+        ##     self.ds.raise_tab('Thumbs')
         elif keyname == 'I':
             self.ds.raise_tab('Info')
         elif keyname == 'H':
@@ -239,9 +239,9 @@ class GingaControl(Callback.Callbacks):
             self.toggle_fullscreen()
         elif keyname == 'm':
             self.maximize()
-        elif keyname == '<':
+        elif keyname == ',':
             self.collapse_pane('left')
-        elif keyname == '>':
+        elif keyname == '.':
             self.collapse_pane('right')
         ## elif keyname == 'escape':
         ##     self.reset_viewer()

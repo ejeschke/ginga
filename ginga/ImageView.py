@@ -1497,9 +1497,11 @@ class ImageViewBase(Callback.Callbacks):
         if method != str(self.autocuts):
             self.autocuts = AutoCuts.get_autocuts(method)(self.logger)
 
-        # Redo the auto levels if the user doesn't have it turned off
-        if self.t_['autocuts'] != 'off':
-            self.auto_levels()
+        # Redo the auto levels
+        #if self.t_['autocuts'] != 'off':
+        # NOTE: users seems to expect that when the auto cuts parameters
+        # are changed that the cuts should be immediately recalculated
+        self.auto_levels()
 
     def cut_levels_cb(self, setting, value):
         self.redraw(whence=1)
