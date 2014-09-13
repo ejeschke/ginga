@@ -136,8 +136,6 @@ class Info(GingaPlugin.GlobalPlugin):
                                self.autozoom_cb, fitsimage, info)
         fitssettings.getSetting('autocenter').add_callback('set',
                                self.autocenter_cb, fitsimage, info)
-        bm = fitsimage.get_bindmap()
-        bm.add_callback('mode-set', self.mode_set_cb, fitsimage, info)
 
     def delete_channel(self, viewer, chinfo):
         self.logger.debug("TODO: delete channel %s" % (chinfo.name))
@@ -191,6 +189,10 @@ class Info(GingaPlugin.GlobalPlugin):
         info.winfo.zoom_new.set_text(option)
 
     def autocenter_cb(self, setting, option, fitsimage, info):
+        # Hack to convert old values that used to be T/F
+        if isinstance(option, bool):
+            choice = { True: 'on', False: 'off' }
+            option = choice[option]
         info.winfo.center_new.set_text(option)
 
     # LOGIC
@@ -239,7 +241,12 @@ class Info(GingaPlugin.GlobalPlugin):
         t_ = fitsimage.get_settings()
         info.winfo.cut_new.set_text(t_['autocuts'])
         info.winfo.zoom_new.set_text(t_['autozoom'])
-        info.winfo.center_new.set_text(t_['autocenter'])
+        option = t_['autocenter']
+        # Hack to convert old values that used to be T/F
+        if isinstance(option, bool):
+            choice = { True: 'on', False: 'off' }
+            option = choice[option]
+        info.winfo.center_new.set_text(option)
 
 
     def field_info(self, viewer, fitsimage, info):
