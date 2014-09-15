@@ -416,6 +416,9 @@ class GingaView(QtMain.QtMain):
                                                settings=settings,
                                                bindings=bd)
         fi.enable_draw(False)
+        # at present this slows down pan/zoom a little.  plugins can
+        # turn it on for channels they care about
+        #fi.enable_overlays(False)
         fi.set_follow_focus(settings.get('follow_focus', True))
         fi.enable_auto_orient(True)
         fi.add_callback('motion', self.motion_cb)

@@ -22,13 +22,18 @@ class Toolbar(GingaPlugin.GlobalPlugin):
         self.active = None
         # holds our gui widgets
         self.w = Bunch.Bunch()
-        # TODO: this should become a plugin preference
-        self.modetype = 'locked'
         self.gui_up = False
+
+        # get local plugin preferences
+        prefs = self.fv.get_preferences()
+        self.settings = prefs.createCategory('plugin_Toolbar')
+        self.settings.load(onError='silent')
+
+        self.modetype = self.settings.get('mode_type', 'locked')
 
         fv.set_callback('add-channel', self.add_channel_cb)
         fv.set_callback('delete-channel', self.delete_channel_cb)
-        #fv.set_callback('active-image', self.focus_cb)
+        fv.set_callback('active-image', self.focus_cb)
         
     def build_gui(self, container):
         top = Widgets.VBox()
@@ -160,7 +165,7 @@ class Toolbar(GingaPlugin.GlobalPlugin):
         
     def reset_contrast_cb(self, w):
         view, bd = self._get_view()
-        bd.kp_cmap_restore(view, 'x', 0.0, 0.0)
+        bd.kp_contrast_restore(view, 'x', 0.0, 0.0)
         return True
         
     def auto_levels_cb(self, w):
@@ -283,6 +288,7 @@ class Toolbar(GingaPlugin.GlobalPlugin):
         try:
             # update transform toggles
             flipx, flipy, swapxy = fitsimage.get_transforms()
+            # toolbar follows view
             self.w.btn_flipx.set_state(flipx)
             self.w.btn_flipy.set_state(flipy)
             self.w.btn_swapxy.set_state(swapxy)
@@ -290,6 +296,8 @@ class Toolbar(GingaPlugin.GlobalPlugin):
             # update mode toggles
             bm = fitsimage.get_bindmap()
             modname, modtype = bm.current_modifier()
+            self.logger.debug("modname=%s" % (modname))
+            # toolbar follows view
             self.w.btn_pan.set_state(modname == 'pan')
             self.w.btn_freepan.set_state(modname == 'freepan')
             self.w.btn_rotate.set_state(modname == 'rotate')
