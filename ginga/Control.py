@@ -432,15 +432,18 @@ class GingaControl(Callback.Callbacks):
         typ = None
         if have_magic:
             try:
-                typ = magic.from_file(filepath, mime=True)
+                # it seems there are conflicting versions of a 'magic'
+                # module for python floating around...*sigh*
+                if hasattr(magic, 'from_file'):
+                    typ = magic.from_file(filepath, mime=True)
             except Exception as e:
-                pass
+                self.logger.warn("python-magic error: %s; falling back to 'mimetypes'" % (str(e)))
 
         if typ == None:
             try:
                 typ, enc = mimetypes.guess_type(filepath)
             except Exception as e:
-                pass
+                self.logger.warn("mimetypes error: %s; can't determine file type" % (str(e)))
 
         if typ:
             typ, subtyp = typ.split('/')
@@ -454,10 +457,13 @@ class GingaControl(Callback.Callbacks):
         # the MIME association says it is something different.
         try:
             typ, subtyp = self.guess_filetype(filepath)
-        except Exception:
+
+        except Exception as e:
+            self.logger.warn("error determining file type: %s; assuming 'image/fits'" % (str(e)))
             # Can't determine file type: assume and attempt FITS
             typ, subtyp = 'image', 'fits'
-        
+
+        self.logger.debug("assuming file type: %s/%s'" % (typ, subtyp))
         if (typ == 'image') and (subtyp != 'fits'):
             image = RGBImage.RGBImage(logger=self.logger)
         else:

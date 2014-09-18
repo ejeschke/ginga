@@ -526,16 +526,19 @@ class AstroImage(BaseImage):
         # Calculate WCS coords, if available
         ts = time.time()
         try:
-            if (self.wcs == None) or (self.wcs.coordsys == 'raw'):
+            if self.wcs == None:
+                self.logger.debug("No WCS for this image")
+                ra_txt = dec_txt = 'NO WCS'
+            
+            elif self.wcs.coordsys == 'raw':
+                self.logger.debug("No coordinate system determined")
                 ra_txt = dec_txt = 'NO WCS'
             
             else:
                 args = [data_x, data_y] + self.revnaxis
     
                 lon_deg, lat_deg = self.wcs.pixtosystem(#(data_x, data_y),
-                    args,
-                    system=system,
-                    coords='data')
+                    args, system=system, coords='data')
 
                 if format == 'sexagesimal':
                     if system in ('galactic', 'ecliptic'):
