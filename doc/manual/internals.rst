@@ -158,11 +158,11 @@ To use your WCS with Ginga create your images like this:
 
 .. code-block:: python
 
-    from ginga import AstroImage
+    from ginga.AstroImage import AstroImage
     AstroImage.set_wcsClass(MyWCS)
     ...
 
-    image = AstroImage.AstroImage()
+    image = AstroImage()
     ...
     view.set_image(image)
 
@@ -170,10 +170,10 @@ or you can override the WCS on a case-by-case basis:
 
 .. code-block:: python
 
-    from ginga import AstroImage
+    from ginga.AstroImage import AstroImage
     ...
 
-    image = AstroImage.AstroImage(wcsclass=MyWCS)
+    image = AstroImage(wcsclass=MyWCS)
     ...
     view.set_image(image)
 
@@ -208,11 +208,11 @@ To use your io handler with Ginga create your images like this:
 
 .. code-block:: python
 
-    from ginga import AstroImage
+    from ginga.AstroImage import AstroImage
     AstroImage.set_ioClass(MyIOHandler)
     ...
 
-    image = AstroImage.AstroImage()
+    image = AstroImage()
     image.load_file(path)
     ...
     view.set_image(image)
@@ -221,16 +221,31 @@ or you can override the io handler on a case-by-case basis:
 
 .. code-block:: python
 
-    from ginga import AstroImage
+    from ginga.AstroImage import AstroImage
     ...
 
-    image = AstroImage.AstroImage(ioclass=MyIOHandler)
+    image = AstroImage(ioclass=MyIOHandler)
     image.load_file(path)
     ...
     view.set_image(image)
 
 You could also subclass AstroImage or BaseImage and implement your own
 I/O handling. 
+
+.. note:: since `naxispath` is a keyword argument to the load_file()
+          method, you probably want to treat it as any kind of path that
+          you would need to take to navigate through your kind of file.
+          For example, if there are multiple image slices in the file, 
+          the naxispath would be some kind of list of indexes that would
+          help to navigate down to the particular slice in your
+          load_file method.  
+
+          If the user passes a valid naxispath (whatever that means to
+          your load_file method) you simply return that value that they
+          passed. If they passed None (default), then you return
+          whatever path you used to access the data slice that you
+          returned.  
+
 
 Porting Ginga to a New Widget Set
 ---------------------------------

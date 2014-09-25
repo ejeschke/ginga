@@ -18,6 +18,7 @@ import logging
 from ginga import AstroImage
 from ginga.qtw.QtHelp import QtGui, QtCore
 from ginga.qtw.ImageViewCanvasQt import ImageViewCanvas
+from ginga.qtw.Readout import Readout
 from ginga.misc import log, Settings
 from ginga.util import paths
 
@@ -209,8 +210,9 @@ class StartMenu(QtGui.QMainWindow):
         vbox.addWidget(w, stretch=1)
 
         # for simple WCS readout
-        readout = QtGui.QLabel("")
-        fi.set_callback('none-move', self.motion, readout)
+        self.readout = Readout(-1, 16)
+        readout = self.readout.get_widget()
+        fi.set_callback('none-move', self.motion, self.readout)
         vbox.addWidget(readout, stretch=0,
                        alignment=QtCore.Qt.AlignCenter)
         
@@ -301,7 +303,7 @@ class StartMenu(QtGui.QMainWindow):
 
         text = "RA: %s  DEC: %s  X: %.2f  Y: %.2f  Value: %s" % (
             ra_txt, dec_txt, fits_x, fits_y, value)
-        readout.setText(text)
+        readout.set_text(text)
 
     def quit(self):
         names = list(self.viewers.keys())
@@ -373,9 +375,12 @@ def start(kapp):
         logger.error("Traceback:\n%s" % (tb_str))
 
     # create Qt app
-    app = QtGui.QApplication([])
-    app.connect(app, QtCore.SIGNAL('lastWindowClosed()'),
-                app, QtCore.SLOT('quit()'))
+    # Note: workaround for pyside bug where QApplication is not deleted
+    app = QtGui.QApplication.instance()
+    if not app:
+        app = QtGui.QApplication([])
+        app.connect(app, QtCore.SIGNAL('lastWindowClosed()'),
+                    app, QtCore.SLOT('quit()'))
 
     # here is our little launcher
     w = StartMenu(logger, app, kapp, prefs)

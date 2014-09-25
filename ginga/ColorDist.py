@@ -127,7 +127,7 @@ class PowerDist(ColorDistBase):
 
     def calc_hash(self):
         base = numpy.arange(0.0, float(self.hashsize), 1.0) / self.hashsize
-        base = (self.exp ** base) / self.exp
+        base = (self.exp ** base - 1.0) / self.exp
         base = base.clip(0.0, 1.0)
         # normalize to color range
         l = base * (self.colorlen - 1)
