@@ -464,7 +464,7 @@ class GingaControl(Callback.Callbacks):
             typ, subtyp = 'image', 'fits'
 
         self.logger.debug("assuming file type: %s/%s'" % (typ, subtyp))
-        if (typ == 'image') and (subtyp != 'fits'):
+        if (typ == 'image') and (subtyp not in ('fits', 'x-fits')):
             image = RGBImage.RGBImage(logger=self.logger)
         else:
             image = AstroImage.AstroImage(logger=self.logger)
