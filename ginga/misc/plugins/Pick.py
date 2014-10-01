@@ -166,17 +166,17 @@ class Pick(GingaPlugin.LocalPlugin):
             canvas = self.w.canvas2
             nb.add_widget(Widgets.wrap(canvas), title="FWHM")
 
-        self.msgFont = self.fv.getFont("sansFont", 12)
-        tw = Widgets.TextArea(wrap=True, editable=False)
-        tw.set_font(self.msgFont)
-        self.tw = tw
+        ## self.msgFont = self.fv.getFont("sansFont", 12)
+        ## tw = Widgets.TextArea(wrap=True, editable=False)
+        ## tw.set_font(self.msgFont)
+        ## self.tw = tw
 
-        fr = Widgets.Frame("Instructions")
-        vbox2 = Widgets.VBox()
-        vbox2.add_widget(tw)
-        vbox2.add_widget(Widgets.Label(''), stretch=1)
-        fr.set_widget(vbox2)
-        vbox.add_widget(fr, stretch=0)
+        ## fr = Widgets.Frame("Instructions")
+        ## vbox2 = Widgets.VBox()
+        ## vbox2.add_widget(tw)
+        ## vbox2.add_widget(Widgets.Label(''), stretch=1)
+        ## fr.set_widget(vbox2)
+        ## vbox.add_widget(fr, stretch=0)
         
         vpaned.add_widget(Widgets.Label(''))
         vbox.add_widget(vpaned, stretch=1)
@@ -484,9 +484,9 @@ class Pick(GingaPlugin.LocalPlugin):
         self.do_record = tf
         return True
         
-    def instructions(self):
-        self.tw.set_text("""Left-click to place region.  Left-drag to position region.  Redraw region with the right mouse button.""")
-        self.tw.set_font(self.msgFont)
+    ## def instructions(self):
+    ##     self.tw.set_text("""Left-click to place region.  Left-drag to position region.  Redraw region with the right mouse button.""")
+    ##     self.tw.set_font(self.msgFont)
             
     def update_status(self, text):
         self.fv.gui_do(self.w.eval_status.set_text, text)
@@ -716,7 +716,7 @@ class Pick(GingaPlugin.LocalPlugin):
         return True
         
     def start(self):
-        self.instructions()
+        #self.instructions()
         # insert layer if it is not already
         try:
             obj = self.fitsimage.getObjectByTag(self.layertag)

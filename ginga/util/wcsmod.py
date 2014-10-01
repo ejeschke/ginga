@@ -401,47 +401,11 @@ class AstLibWCS(BaseWCS):
             self.wcs = None
 
     def choose_coord_system(self, header):
-        """Return an appropriate key code for the axes coordinate system by
-        examining the FITS header.
-        """
-        try:
-            ctype = header['CTYPE1'].strip().upper()
-        except KeyError:
-            return 'raw'
-            #raise WCSError("Cannot determine appropriate coordinate system from FITS header")
-
-        match = re.match(r'^GLON\-.*$', ctype)
-        if match:
-            return 'galactic'
-
-        # match = re.match(r'^ELON\-.*$', ctype)
-        # if match:
-        #     return 'ecliptic'
-
-        match = re.match(r'^RA\-\-\-.*$', ctype)
-        if match:
-            hdkey = 'RADECSYS'
-            try:
-                radecsys = header[hdkey]
-
-            except KeyError:
-                try:
-                    hdkey = 'RADESYS'
-                    radecsys = header[hdkey]
-                except KeyError:
-                    # missing keyword
-                    # RADESYS defaults to IRCS unless EQUINOX is given
-                    # alone, in which case it defaults to FK4 prior to 1984
-                    # and FK5 after 1984.
-                    try:
-                        equinox = header['EQUINOX']
-                        radecsys = 'FK5'
-                    except KeyError:
-                        radecsys = 'ICRS'
-
-            radecsys = radecsys.strip().upper()
-            if radecsys in ('FK4', ):
-                return 'b1950'
+        coordsys = choose_coord_system(header)
+        coordsys = coordsys.upper()
+        if coordsys in ('FK4', ):
+            return 'b1950'
+        elif coordsys in ('FK5', 'ICRS'):
             return 'j2000'
 
         #raise WCSError("Cannot determine appropriate coordinate system from FITS header")
@@ -935,8 +899,22 @@ def choose_coord_system(header):
     try:
         ctype = header['CTYPE1'].strip().upper()
     except KeyError:
-        return 'raw'
-        #raise WCSError("Cannot determine appropriate coordinate system from FITS header")
+        try:
+            # see if we have an "RA" header
+            ra = header['RA']
+            try:
+                equinox = float(header['EQUINOX'])
+                if equinox < 1984.0:
+                    radecsys = 'FK4'
+                else:
+                    radecsys = 'FK5'
+            except KeyError:
+                radecsys = 'ICRS'
+            return radecsys.lower()
+
+        except KeyError:
+            return 'raw'
+            #raise WCSError("Cannot determine appropriate coordinate system from FITS header")
     
     match = re.match(r'^GLON\-.*$', ctype)
     if match:
@@ -962,10 +940,11 @@ def choose_coord_system(header):
                 # alone, in which case it defaults to FK4 prior to 1984
                 # and FK5 after 1984.
                 try:
-                    # EQUINOX defaults to 2000 unless RADESYS is FK4,
-                    # in which case it defaults to 1950.
-                    equinox = header['EQUINOX']
-                    radecsys = 'FK5'
+                    equinox = float(header['EQUINOX'])
+                    if equinox < 1984.0:
+                        radecsys = 'FK4'
+                    else:
+                        radecsys = 'FK5'
                 except KeyError:
                     radecsys = 'ICRS'
 

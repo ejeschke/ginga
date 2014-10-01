@@ -462,6 +462,8 @@ class ImageViewEvent(ImageViewMpl):
         
     def transkey(self, keyname):
         self.logger.debug("matplotlib keyname='%s'" % (keyname))
+        if keyname == None:
+            return keyname
         try:
             return self._keytbl[keyname.lower()]
 
@@ -491,14 +493,16 @@ class ImageViewEvent(ImageViewMpl):
     def key_press_event(self, event):
         keyname = event.key
         keyname = self.transkey(keyname)
-        self.logger.debug("key press event, key=%s" % (keyname))
-        return self.make_callback('key-press', keyname)
+        if keyname != None:
+            self.logger.debug("key press event, key=%s" % (keyname))
+            return self.make_callback('key-press', keyname)
 
     def key_release_event(self, event):
         keyname = event.key
         keyname = self.transkey(keyname)
-        self.logger.debug("key release event, key=%s" % (keyname))
-        return self.make_callback('key-release', keyname)
+        if keyname != None:
+            self.logger.debug("key release event, key=%s" % (keyname))
+            return self.make_callback('key-release', keyname)
 
     def button_press_event(self, event):
         x, y = event.x, event.y

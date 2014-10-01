@@ -44,6 +44,7 @@ if len(macos_ver) > 0:
     # On Mac OS X I found the default choice for matplotlib is not stable
     # with ginga
     matplotlib.use('Qt4Agg')
+
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import numpy as np
@@ -90,6 +91,7 @@ ax = fi.add_axes()
 ax.hold(True)
 
 wd, ht = image.get_size()
+
 # plot a line
 l = ax.plot((wd*0.33, wd*0.75), (ht*0.5, ht*0.75), 'go-',
             c="g",

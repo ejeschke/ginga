@@ -13,7 +13,7 @@ from ginga.qtw import QtHelp
 from ginga.toolkit import toolkit
 
 import matplotlib
-if toolkit == 'qt4':
+if toolkit in ('qt', 'qt4'):
     from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg \
          as FigureCanvas
 elif toolkit == 'qt5':

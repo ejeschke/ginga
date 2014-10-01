@@ -81,7 +81,7 @@ class Contents(GingaPlugin.GlobalPlugin):
         # Get header keywords of interest
         header = image.get_header()
         for x, key in self.columns[1:]:
-            bnch[key] = header.get(key, 'N/A')
+            bnch[key] = str(header.get(key, 'N/A'))
         return bnch
     
     def recreate_toc(self):
@@ -135,9 +135,7 @@ class Contents(GingaPlugin.GlobalPlugin):
 
         bnch = self.get_info(chname, name, image)
         fileDict[key] = bnch
-        l = []
-        for hdr, kwd in self.columns:
-            l.append(bnch[kwd])
+        l = [ bnch[kwd] for hdr, kwd in self.columns ]
         
         item = QtGui.QTreeWidgetItem(chitem, l)
         chitem.addChild(item)

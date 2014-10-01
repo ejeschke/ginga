@@ -234,7 +234,7 @@ class GingaAxes(Axes):
             if self.fitsimage == None:
                 return xy
 
-            res = np.array(map(self._transform_xy, xy))
+            res = np.array(list(map(self._transform_xy, xy)))
             #print "transform out:", res
             return res
 
@@ -286,7 +286,7 @@ class GingaAxes(Axes):
             if self.fitsimage == None:
                 return xy
 
-            res = np.array(map(self._transform_xy, xy))
+            res = np.array(list(map(self._transform_xy, xy)))
             #print "transform out:", res
             return res
 
