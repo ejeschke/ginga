@@ -13,12 +13,12 @@ from ginga.qtw import QtHelp
 from ginga.toolkit import toolkit
 
 import matplotlib
-if toolkit in ('qt', 'qt4'):
-    from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg \
-         as FigureCanvas
-elif toolkit == 'qt5':
+if toolkit == 'qt5':
     # qt5 backend is not yet released in matplotlib stable
     from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg \
+         as FigureCanvas
+else:
+    from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg \
          as FigureCanvas
 
 from ginga.base.PlotBase import PlotBase, HistogramMixin, CutsMixin
