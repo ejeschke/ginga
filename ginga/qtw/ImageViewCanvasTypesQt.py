@@ -186,9 +186,13 @@ class Circle(CircleBase, QtCanvasMixin):
 
     def draw(self):
         cx1, cy1, cradius = self.calc_radius(self.x, self.y, self.radius)
+        # this is necessary to work around a bug in Qt--radius of 0
+        # causes a crash
+        cradius = max(cradius, 0.000001)
 
         cr = self.setup_cr()
-        cr.drawEllipse(cx1-cradius, cy1-cradius, cradius*2, cradius*2)
+        pt = QtCore.QPointF(cx1, cy1)
+        cr.drawEllipse(pt, float(cradius), float(cradius))
 
         if self.cap:
             self.draw_caps(cr, self.cap, ((cx1, cy1), ))
