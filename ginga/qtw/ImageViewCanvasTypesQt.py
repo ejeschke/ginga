@@ -20,26 +20,26 @@ from ginga.util.six.moves import map, zip
 
 class QtCanvasMixin(object):
 
-    def __get_color(self, color):
+    def __get_color(self, color, alpha):
         clr = QColor()
         if isinstance(color, tuple):
-            clr.setRgbF(color[0], color[1], color[2])
+            clr.setRgbF(color[0], color[1], color[2], alpha)
         else:
             r, g, b = colors.lookup_color(color)
-            clr.setRgbF(r, g, b)
+            clr.setRgbF(r, g, b, alpha)
         return clr
         
-    def set_color(self, cr, color):
-        clr = self.__get_color(color)
+    def set_color(self, cr, color, alpha=1.0):
+        clr = self.__get_color(color, alpha)
         pen = cr.pen()
         pen.setColor(clr)
         cr.setPen(pen)
 
-    def fill(self, cr, onoff, color=None):
+    def fill(self, cr, onoff, color=None, alpha=1.0):
         if onoff:
             if color == None:
                 color = self.color
-            color = self.__get_color(color)
+            color = self.__get_color(color, alpha)
             cr.setBrush(color)
         else:
             cr.setBrush(QtCore.Qt.NoBrush)
@@ -48,21 +48,20 @@ class QtCanvasMixin(object):
         cr = QPainter(self.fitsimage.pixmap)
 
         pen = QPen()
-        if hasattr(self, 'linewidth'):
-            pen.setWidth(self.linewidth)
-        else:
-            pen.setWidth(1)
+        pen.setWidth(getattr(self, 'linewidth', 1))
 
         if hasattr(self, 'linestyle'):
             if self.linestyle == 'dash':
                 pen.setDashPattern([ 3.0, 4.0, 6.0, 4.0])
                 pen.setDashOffset(5.0)
 
-        color = self.__get_color(self.color)
+        alpha = getattr(self, 'alpha', 1.0)
+        color = self.__get_color(self.color, alpha)
         pen.setColor(color)
         cr.setPen(pen)
 
-        if hasattr(self, 'fill') and self.fill:
+        fill = getattr(self, 'fill', False)
+        if fill:
             if hasattr(self, 'fillcolor') and self.fillcolor:
                 color = self.fillcolor
             else:
@@ -70,7 +69,7 @@ class QtCanvasMixin(object):
             if not color:
                 cr.setBrush(QtCore.Qt.NoBrush)
             else:
-                color = self.__get_color(color)
+                color = self.__get_color(color, alpha)
                 cr.setBrush(color)
         else:
             cr.setBrush(QtCore.Qt.NoBrush)

@@ -33,7 +33,7 @@ class MplCanvasMixin(object):
     def draw_arrowhead(self, cr, x1, y1, x2, y2):
         # i1, j1, i2, j2 = self.calcVertexes(x1, y1, x2, y2)
         # kwdargs = dict(fill=True, closed=True,
-        #                facecolor=cr.get_color(self.color))
+        #                facecolor=cr.get_color(self.color, 1.0))
         # xy = numpy.array(((x2, y2), (i1, j1), (i2, j2)))
         # p = patches.Polygon(xy, **kwdargs)
         # cr.axes.add_patch(p)
@@ -87,7 +87,6 @@ class Polygon(PolygonBase, MplCanvasMixin):
     def draw(self):
         cpoints = list(map(lambda p: self.canvascoords(p[0], p[1]),
                            self.points))
-        cr = self.setup_cr()
 
         cr = self.setup_cr(closed=True, transform=None)
         cr.update_patch(self)
@@ -201,7 +200,7 @@ class Compass(CompassBase, MplCanvasMixin):
 
         cr = self.setup_cr(transform=None, head_width=10, head_length=15,
                            length_includes_head=True, overhang=0.20)
-        cr.set(facecolor=cr.get_color(self.color))
+        cr.set(facecolor=cr.get_color(self.color, self.alpha))
         cr.update_line(self)
 
         # draw North line and arrowhead
@@ -293,7 +292,7 @@ class Ruler(RulerBase, MplCanvasMixin):
         
         cr = self.setup_cr(transform=None, head_width=10, head_length=15,
                            length_includes_head=True, overhang=0.20)
-        cr.set(facecolor=cr.get_color(self.color))
+        cr.set(facecolor=cr.get_color(self.color, self.alpha))
         cr.update_line(self)
         
         if not self.fontsize:
@@ -355,7 +354,7 @@ class Ruler(RulerBase, MplCanvasMixin):
         cr.axes.text(xd, yd, self.text_h, fontdict=font)
 
         if self.color2:
-            cr.set(color=cr.get_color(self.color2))
+            cr.set(color=cr.get_color(self.color2, self.alpha))
             font = cr.get_font(self.font, fontsize, self.color2)
             
         # draw X plumb line

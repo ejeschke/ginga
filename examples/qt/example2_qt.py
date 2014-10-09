@@ -79,6 +79,17 @@ class FitsViewer(QtGui.QMainWindow):
         wdrawcolor.activated.connect(self.set_drawparams)
         self.wdrawcolor = wdrawcolor
 
+        wfill = QtGui.QCheckBox("Fill")
+        wfill.stateChanged.connect(self.set_drawparams)
+        self.wfill = wfill
+
+        walpha = QtGui.QDoubleSpinBox()
+        walpha.setRange(0.0, 1.0)
+        walpha.setSingleStep(0.1)
+        walpha.setValue(1.0)
+        walpha.valueChanged.connect(self.set_drawparams)
+        self.walpha = walpha
+
         wclear = QtGui.QPushButton("Clear Canvas")
         wclear.clicked.connect(self.clear_canvas)
         wopen = QtGui.QPushButton("Open File")
@@ -87,7 +98,8 @@ class FitsViewer(QtGui.QMainWindow):
         wquit.clicked.connect(self.quit)
 
         hbox.addStretch(1)
-        for w in (wopen, wdrawtype, wdrawcolor, wclear, wquit):
+        for w in (wopen, wdrawtype, wdrawcolor, wfill,
+                  QtGui.QLabel('Alpha:'), walpha, wclear, wquit):
             hbox.addWidget(w, stretch=0)
 
         hw = QtGui.QWidget()
@@ -102,8 +114,14 @@ class FitsViewer(QtGui.QMainWindow):
         index = self.wdrawtype.currentIndex()
         kind = self.drawtypes[index]
         index = self.wdrawcolor.currentIndex()
+        fill = (self.wfill.checkState() != 0)
 
-        params = { 'color': self.drawcolors[index], }
+        params = { 'color': self.drawcolors[index],
+                   'alpha': self.walpha.value(),
+                   }
+        if kind in ('circle', 'rectangle', 'polygon'):
+            params['fill'] = fill
+
         self.fitsimage.set_drawtype(kind, **params)
 
     def clear_canvas(self):

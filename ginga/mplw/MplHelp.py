@@ -31,13 +31,19 @@ class MplContext(object):
     def update_fill(self, obj):
         if hasattr(obj, 'fill'):
             self.kwdargs['fill'] = obj.fill
-            if obj.fill:
-                self.kwdargs['facecolor'] = self.get_color(obj.fillcolor)
+            alpha = getattr(obj, 'alpha', 1.0)
+
+            if obj.fillcolor:
+                self.kwdargs['facecolor'] = self.get_color(obj.fillcolor,
+                                                           alpha)
             else:
-                self.kwdargs['facecolor'] = self.get_color(obj.color)
+                self.kwdargs['facecolor'] = self.get_color(obj.color,
+                                                           alpha)
 
     def update_line(self, obj):
-        self.kwdargs['color'] = self.get_color(obj.color)
+        alpha = getattr(obj, 'alpha', 1.0)
+        self.kwdargs['color'] = self.get_color(obj.color,
+                                               alpha)
 
         if hasattr(obj, 'linewidth'):
             self.kwdargs['linewidth'] = obj.linewidth
@@ -46,37 +52,45 @@ class MplContext(object):
             self.kwdargs['linestyle'] = obj.linestyle
 
     def update_patch(self, obj):
-        self.kwdargs['edgecolor'] = self.get_color(obj.color)
+        self.update_fill(obj)
+
+        line_color_attr = 'facecolor'
+        if 'facecolor' in self.kwdargs:
+            line_color_attr = 'edgecolor'
+
+        alpha = getattr(obj, 'alpha', 1.0)
+        self.kwdargs[line_color_attr] = self.get_color(obj.color,
+                                                       alpha)
         if hasattr(obj, 'linewidth'):
             self.kwdargs['linewidth'] = obj.linewidth
                 
         if hasattr(obj, 'linestyle'):
             self.kwdargs['linestyle'] = obj.linestyle
 
-        self.update_fill(obj)
+        #print (self.kwdargs)
                 
     def update_text(self, obj):
-        self.kwdargs['color'] = self.get_color(obj.color)
+        alpha = getattr(obj, 'alpha', 1.0)
+        self.kwdargs['color'] = self.get_color(obj.color, alpha)
         if hasattr(obj, 'font'):
             self.kwdargs['family'] = obj.font
         if hasattr(obj, 'fontsize'):
             self.kwdargs['size'] = obj.fontsize
     
-    def get_color(self, color):
+    def get_color(self, color, alpha):
         if isinstance(color, str):
             r, g, b = colors.lookup_color(color)
         elif isinstance(color, tuple):
-            # color is assumed to be a 3-tuple of RGB values as floats
+            # color is assumed to be a 4-tuple of RGBA values as floats
             # between 0 and 1
             r, g, b = color
         else:
             r, g, b = 1.0, 1.0, 1.0
 
-        #return (int(r*255), int(g*255), int(b*255))
-        return (r, g, b)
+        return (r, g, b, alpha)
     
-    def get_font(self, name, size, color):
-        color = self.get_color(color)
+    def get_font(self, name, size, color, alpha=1.0):
+        color = self.get_color(color, alpha)
         fontdict = dict(color=color, family=name, size=size,
                         transform=None)
         return fontdict

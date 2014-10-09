@@ -1051,5 +1051,21 @@ def removeWidget(layout, widget):
     else:
         #print "widget is not present"
         pass
-        
+
+def cmap2pixmap(cmap, steps=50):
+    """Convert a Ginga colormap into a QPixmap
+    """
+    inds = numpy.linspace(0, 1, steps)
+    n = len(cmap.clst) - 1
+    tups = [ cmap.clst[int(x*n)] for x in inds ]
+    rgbas = [QColor(int(r * 255), int(g * 255),
+                    int(b * 255), 255).rgba() for r, g, b in tups]
+    im = QImage(steps, 1, QImage.Format_Indexed8)
+    im.setColorTable(rgbas)
+    for i in range(steps):
+        im.setPixel(i, 0, i)
+    im = im.scaled(128, 32)
+    pm = QPixmap.fromImage(im)
+    return pm
+
 #END
