@@ -316,7 +316,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         return True
 
     def _movecut(self, obj, data_x, data_y):
-        obj.moveTo(data_x, data_y)
+        obj.move_to(data_x, data_y)
 
     def _create_cut(self, x, y, count, x1, y1, x2, y2, color='cyan'):
         text = "cuts%d" % (count)

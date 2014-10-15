@@ -32,23 +32,27 @@ class AggContext(object):
 
         return (int(r*255), int(g*255), int(b*255))
     
-    def get_pen(self, color, linewidth=1):
+    def get_pen(self, color, linewidth=1, alpha=1.0):
         # if hasattr(self, 'linestyle'):
         #     if self.linestyle == 'dash':
         #         cr.set_dash([ 3.0, 4.0, 6.0, 4.0], 5.0)
+        op = int(alpha * 255)
                 
-        p = agg.Pen(self.get_color(color), width=linewidth)
+        p = agg.Pen(self.get_color(color), width=linewidth,
+                    opacity=op)
         return p
     
-    def get_brush(self, color):
-        p = agg.Brush(self.get_color(color))
-        return p
+    def get_brush(self, color, alpha=1.0):
+        op = int(alpha * 255)
+        b = agg.Brush(self.get_color(color), opacity=op)
+        return b
     
-    def get_font(self, name, size, color):
+    def get_font(self, name, size, color, alpha=1.0):
         color = self.get_color(color)
+        op = int(alpha * 255)
         # TODO: what kind of lookup can we use for this?
         filename = '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'
-        f = agg.Font(color, filename, size=size)
+        f = agg.Font(color, filename, size=size, opacity=op)
         return f
     
     def text_extents(self, text, font):

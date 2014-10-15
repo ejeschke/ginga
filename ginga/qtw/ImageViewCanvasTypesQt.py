@@ -35,7 +35,7 @@ class QtCanvasMixin(object):
         pen.setColor(clr)
         cr.setPen(pen)
 
-    def fill(self, cr, onoff, color=None, alpha=1.0):
+    def set_fill(self, cr, onoff, color=None, alpha=1.0):
         if onoff:
             if color == None:
                 color = self.color
@@ -78,19 +78,19 @@ class QtCanvasMixin(object):
 
     def draw_arrowhead(self, cr, x1, y1, x2, y2):
         i1, j1, i2, j2 = self.calcVertexes(x1, y1, x2, y2)
-        self.fill(cr, True)
+        self.set_fill(cr, True)
         cr.pen().setJoinStyle(QtCore.Qt.MiterJoin)
         cr.drawPolygon(QPolygonF([QtCore.QPointF(x2, y2),
                                         QtCore.QPointF(i1, j1),
                                         QtCore.QPointF(i2, j2)]))
         cr.pen().setJoinStyle(QtCore.Qt.BevelJoin)
-        self.fill(cr, False)
+        self.set_fill(cr, False)
         
     def draw_cap(self, cr, cap, x, y, radius=2):
         if cap == 'ball':
-            self.fill(cr, True)
+            self.set_fill(cr, True)
             cr.drawEllipse(x-radius, y-radius, radius*2, radius*2)
-            self.fill(cr, False)
+            self.set_fill(cr, False)
         
     def draw_caps(self, cr, cap, points, radius=2):
         for x, y in points:
@@ -298,19 +298,19 @@ class Compass(CompassBase, QtCanvasMixin):
 class Triangle(TriangleBase, QtCanvasMixin):
 
     def draw(self):
-        cx1, cy1 = self.canvascoords(self.x1, self.y1)
-        cx2, cy2 = self.canvascoords(self.x2, self.y2)
+        cpoints = tuple(map(lambda p: self.canvascoords(p[0], p[1]),
+                            ((self.x1, self.y1), (self.x2, self.y2),
+                             (self.x2, self.y1))))
+        qpoints = list(map(lambda p: QtCore.QPoint(p[0], p[1]),
+                           (cpoints + (cpoints[0],))))
+        qpoly = QPolygon(qpoints)
 
         cr = self.setup_cr()
-
-        cr.pen().setCapStyle(QtCore.Qt.RoundCap)
-        cr.drawLine(cx1, cy1, cx2, cy2)
-        cr.drawLine(cx1, cy1, cx2, cy1)
-        cr.drawLine(cx2, cy1, cx2, cy2)
+        cr.drawPolygon(qpoly)
 
         if self.cap:
-            self.draw_caps(cr, self.cap,
-                           ((cx1, cy1), (cx2, cy2), (cx2, cy1)))
+            self.draw_caps(cr, self.cap, cpoints)
+
 
 class Ruler(RulerBase, QtCanvasMixin):
 

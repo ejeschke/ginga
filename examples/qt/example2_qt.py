@@ -36,8 +36,8 @@ class FitsViewer(QtGui.QMainWindow):
         fi.set_zoomrate(1.4)
         fi.show_pan_mark(True)
         fi.enable_draw(True)
-        fi.set_drawtype('ruler')
-        fi.set_drawcolor('blue')
+        fi.set_drawtype('rectangle')
+        fi.set_drawcolor('lightblue')
         fi.set_callback('drag-drop', self.drop_file)
         fi.set_callback('none-move', self.motion)
         fi.set_bg(0.2, 0.2, 0.2)
@@ -66,7 +66,7 @@ class FitsViewer(QtGui.QMainWindow):
         self.drawtypes = fi.get_drawtypes()
         for name in self.drawtypes:
             wdrawtype.addItem(name)
-        index = self.drawtypes.index('ruler')
+        index = self.drawtypes.index('rectangle')
         wdrawtype.setCurrentIndex(index)
         wdrawtype.activated.connect(self.set_drawparams)
         self.wdrawtype = wdrawtype
@@ -74,7 +74,7 @@ class FitsViewer(QtGui.QMainWindow):
         wdrawcolor = QtGui.QComboBox()
         for name in self.drawcolors:
             wdrawcolor.addItem(name)
-        index = self.drawcolors.index('blue')
+        index = self.drawcolors.index('lightblue')
         wdrawcolor.setCurrentIndex(index)
         wdrawcolor.activated.connect(self.set_drawparams)
         self.wdrawcolor = wdrawcolor
@@ -118,8 +118,9 @@ class FitsViewer(QtGui.QMainWindow):
 
         params = { 'color': self.drawcolors[index],
                    'alpha': self.walpha.value(),
+                   'cap': 'ball',
                    }
-        if kind in ('circle', 'rectangle', 'polygon'):
+        if kind in ('circle', 'rectangle', 'polygon', 'triangle'):
             params['fill'] = fill
 
         self.fitsimage.set_drawtype(kind, **params)

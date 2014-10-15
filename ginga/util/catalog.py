@@ -130,8 +130,10 @@ class AstroPyCatalogServer(object):
         radius_deg = float(params['r']) / 60.0
         #radius_deg = float(params['r'])
 
-        c = coordinates.ICRSCoordinates(ra_deg, dec_deg,
-                                        unit=(units.degree, units.degree))
+        # Note requires astropy 3.x+
+        c = coordinates.SkyCoord(ra_deg * units.degree,
+                                 dec_deg * units.degree,
+                                 frame='icrs')
         self.logger.info("Querying catalog: %s" % (self.full_name))
         time_start = time.time()
         results = conesearch.conesearch(c, radius_deg * units.degree,
@@ -194,6 +196,77 @@ class AstroPyCatalogServer(object):
         
         info = Bunch.Bunch(columns=columns, color=colorCode)
         return starlist, info
+
+
+class AstroQueryImageServer(object):
+
+    def __init__(self, logger, full_name, key, querymod, description):
+        self.logger = logger
+        self.full_name = full_name
+        self.short_name = key
+        self.description = description
+        self.kind = 'astroquery-image'
+        self.querymod = querymod
+
+        # For compatibility with other Ginga catalog servers
+        self.params = {}
+        count = 0
+        for label, key in (('RA', 'ra'), ('DEC', 'dec'),
+                          ('Width', 'width'), ('Height', 'height')):
+            self.params[key] = Bunch.Bunch(name=key, convert=str,
+                                           label=label, order=count)
+            count += 1
+
+    def getParams(self):
+        return self.params
+
+    def search(self, dstpath, **params):
+        """For compatibility with generic image catalog search.
+
+        TODO: dstpath provides the pathname for storing the image
+        """
+
+        self.logger.debug("search params=%s" % (str(params)))
+        ra, dec = params['ra'], params['dec']
+        if not (':' in ra):
+            # Assume RA and DEC are in degrees
+            ra_deg = float(ra)
+            dec_deg = float(dec)
+        else:
+            # Assume RA and DEC are in standard string notation
+            ra_deg = wcs.hmsStrToDeg(ra)
+            dec_deg = wcs.dmsStrToDeg(dec)
+
+        # Convert to degrees for search 
+        wd_deg = float(params['width']) / 60.0
+        ht_deg = float(params['height']) / 60.0
+        
+        # Note requires astropy 3.x+
+        c = coordinates.SkyCoord(ra_deg * units.degree,
+                                 dec_deg * units.degree,
+                                 frame='icrs')
+        self.logger.info("Querying catalog: %s" % (self.full_name))
+        time_start = time.time()
+        results = self.querymod.get_image_list(c,
+                                               image_width=wd_deg * units.degree,
+                                               image_height=ht_deg * units.degree)
+        time_elapsed = time.time() - time_start
+
+        if len(results) > 0:
+            self.logger.info("Found %d images" % len(results))
+        else:
+            self.logger.warn("Found no images in this area" % len(results))
+            return None
+
+        # For now, we pick the first one found
+        url = results[0]
+        #fitspath = results[0].make_dataset_filename(dir="/tmp")
+
+        # TODO: download file
+        fitspath = url
+        
+        # explicit return
+        return fitspath
 
 
 class PyVOCatalogServer(object):
@@ -320,6 +393,8 @@ class PyVOCatalogServer(object):
         info = Bunch.Bunch(columns=columns, color=colorCode)
         return starlist, info
 
+    def get_catalogs(self):
+        return conesearch.list_catalogs()
 
 class PyVOImageServer(object):
 

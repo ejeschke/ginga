@@ -73,7 +73,7 @@ class CanvasObjectBase(object):
         return False
     
     def calcVertexes(self, start_x, start_y, end_x, end_y,
-                      arrow_length=10, arrow_degrees=0.35):
+                     arrow_length=10, arrow_degrees=0.35):
 
         angle = math.atan2(end_y - start_y, end_x - start_x) + math.pi
 
@@ -119,7 +119,7 @@ class CanvasObjectBase(object):
         bp = (a * sin_t) + (b * cos_t)
         return (ap + xoff, bp + yoff)
 
-    def moveDelta(self, xoff, yoff):
+    def move_delta(self, xoff, yoff):
         if hasattr(self, 'x'):
             self.x, self.y = self.x + xoff, self.y + yoff
         if hasattr(self, 'x1'):
@@ -135,7 +135,58 @@ class CanvasObjectBase(object):
                 x, y = x + xoff, y + yoff
                 self.points[i] = (x, y)
 
-    def getReference(self):
+    def set_point_by_index(self, i, pt):
+        if hasattr(self, 'points'):
+            self.points[i] = pt
+        elif i == 0:
+            if hasattr(self, 'x'):
+                self.x, self.y = pt
+            elif hasattr(self, 'x1'):
+                self.x1, self.y1 = pt
+        elif i == 1:
+            self.x2, self.y2 = pt
+        elif i == 2:
+            self.x3, self.y3 = pt
+
+    # TODO: move these into utility module
+    #####
+    def within_radius(self, a, b, x, y, radius):
+        new_radius = math.sqrt(math.fabs(x - a)**2 + math.fabs(y - b)**2)
+        if new_radius <= radius:
+            return True
+        return False
+
+    def get_pt(self, points, x, y, radius=3):
+        for i in range(len(points)):
+            a, b = points[i]
+            if self.within_radius(x, y, a, b, radius):
+                return i
+        return None
+
+    def point_within_line(self, a, b, x1, y1, x2, y2, fuzz):
+        if x1 > x2:
+            x1, y1, x2, y2 = x2, y2, x1, y1
+
+        # check for point OOB
+        if (a + fuzz < x1) or (x2 < a - fuzz):
+            return False
+        elif (b + fuzz < min(y1, y2)) or (max(y1, y2) < b - fuzz): 
+            return False
+
+        dx, dy = x2 - x1, y2 - y1
+        # test for vertical line
+        if (dx == 0) or (dy == 0):
+            # earlier boundary check will have determined if point is
+            # not on the line
+            return True
+
+        slope, offset = dy / dx, y1 - x1*slope
+        calcy = a*slope + offset
+        contains = (b - fuzz <= calcy <= b + fuzz)
+        return contains
+    #####
+        
+    def get_reference_pt(self):
         if hasattr(self, 'x'):
             return (self.x, self.y)
         if hasattr(self, 'x1'):
@@ -144,10 +195,10 @@ class CanvasObjectBase(object):
             return self.points[0]
         raise CanvasObjectError("No point of reference in object")
 
-    def moveTo(self, xdst, ydst):
-        x, y = self.getReference()
-        return self.moveDelta(xdst - x, ydst - y)
-        
+    def move_to(self, xdst, ydst):
+        x, y = self.get_reference_pt()
+        return self.move_delta(xdst - x, ydst - y)
+
 
 class CompoundMixin(object):
     """A CompoundMixin makes an object that is an aggregation of other objects.
@@ -248,23 +299,23 @@ class CompoundMixin(object):
         for obj in self.objects:
             obj.rotate(theta, xoff=xoff, yoff=yoff)
             
-    def moveDelta(self, xoff, yoff):
+    def move_delta(self, xoff, yoff):
         for obj in self.objects:
-            obj.moveDelta(xoff, yoff)
+            obj.move_delta(xoff, yoff)
 
-    def getReference(self):
+    def get_reference_pt(self):
         for obj in self.objects:
             try:
-                x, y = obj.getReference()
+                x, y = obj.get_reference_pt()
                 return (x, y)
             except CanvasObjectError:
                 continue
         raise CanvasObjectError("No point of reference in object")
 
-    def moveTo(self, xdst, ydst):
-        x, y = self.getReference()
+    def move_to(self, xdst, ydst):
+        x, y = self.get_reference_pt()
         for obj in self.objects:
-            obj.moveDelta(xdst - x, ydst - y)
+            obj.move_delta(xdst - x, ydst - y)
 
 class CanvasMixin(object):
     """A CanvasMixin is combined with the CompoundMixin to make a
@@ -322,6 +373,13 @@ class CanvasMixin(object):
         obj = self.tags[tag]
         return obj
 
+    def lookup_object_tag(self, obj):
+        # TODO: we may need to have a reverse index eventually
+        for tag, ref in self.tags:
+            if ref == obj:
+                return tag
+        return None
+        
     def getTagsByTagpfx(self, tagpfx):
         res = []
         keys = filter(lambda k: k.startswith(tagpfx), self.tags.keys())
@@ -390,18 +448,22 @@ class DrawingMixin(object):
         self._start_x = 0
         self._start_y = 0
         self._points = []
-        self.processTime = 0.0
+
+        self._editing = False
+        self._cp_index = None
+        self._cp_radius = 10
+
+        self._processTime = 0.0
         # time delta threshold for deciding whether to update the image
-        self.deltaTime = 0.020
+        self._deltaTime = 0.020
         self.drawObj = None
-        self.polyObj = None
 
         self.fitsobj = None
         self.drawbuttonmask = 0x4
 
         # NOTE: must be mixed in with a Callback.Callbacks
         for name in ('draw-event', 'draw-down', 'draw-move', 'draw-up',
-                     'drag-drop'):
+                     'drag-drop', 'edit-event'):
             self.enable_callback(name)
 
     def setSurface(self, fitsimage):
@@ -532,25 +594,68 @@ class DrawingMixin(object):
             obj.initialize(None, self.fitsimage, self.logger)
             #obj.initialize(None, self.fitsimage, self.fitsimage.logger)
             self.drawObj = obj
-            if time.time() - self.processTime > self.deltaTime:
+            if time.time() - self._processTime > self._deltaTime:
                 self.processDrawing()
             
         return True
             
+    def _edit_update(self, data_x, data_y):
+        if self._cp_index != None:
+            self.drawObj.set_point_by_index(self._cp_index, (data_x, data_y))
+
+            if time.time() - self._processTime > self._deltaTime:
+                self.processDrawing()
+        return True
+        
     def draw_start(self, canvas, action, data_x, data_y):
-        if self.candraw:
+        if not self.candraw:
+            return False
+
+        if self._editing and (self.drawObj != None):
+            #print("editing %s" % str(self.drawObj))
+            edit_pts = self.drawObj.edit_points()
+            i = self.drawObj.get_pt(edit_pts, data_x, data_y,
+                                    self._cp_radius)
+            if i != None:
+                #print("editing a cp")
+                # editing a control point from an existing object
+                self._isdrawing = True
+                self._cp_index = i
+                self._edit_update(data_x, data_y)
+
+            elif not self.drawObj.contains(data_x, data_y):
+                #print("no operation")
+                return False
+
+            else:
+                # TODO: moving an existing object
+                #print("moving an object")
+                return False
+
+        else:
+            #print("drawing an object")
+            # drawing a new object
             self._isdrawing = True
             self._points = [(data_x, data_y)]
             self._start_x = data_x
             self._start_y = data_y
             self._draw_update(data_x, data_y)
-            self.processDrawing()
-            return True
+
+        self.processDrawing()
+        return True
 
     def draw_stop(self, canvas, button, data_x, data_y):
         if self.candraw and self._isdrawing:
-            self._draw_update(data_x, data_y)
             self._isdrawing = False
+
+            if self._editing:
+                self._edit_update(data_x, data_y)
+                self._cp_index = None
+                objtag = self.lookup_object_tag(self.drawObj)
+                self.make_callback('edit-event', objtag)
+                return True
+                
+            self._draw_update(data_x, data_y)
             obj, self.drawObj = self.drawObj, None
             self._points = []
 
@@ -560,7 +665,7 @@ class DrawingMixin(object):
                 return True
             else:
                 self.processDrawing()
-                
+
             return True
 
     def draw_poly_add(self, canvas, action, data_x, data_y):
@@ -576,11 +681,14 @@ class DrawingMixin(object):
 
     def draw_motion(self, canvas, button, data_x, data_y):
         if self._isdrawing:
-            self._draw_update(data_x, data_y)
+            if self._editing and (self.drawObj != None) and (self._cp_index != None):
+                self._edit_update(data_x, data_y)
+            else:
+                self._draw_update(data_x, data_y)
             return True
 
     def processDrawing(self):
-        self.processTime = time.time()
+        self._processTime = time.time()
         self.fitsimage.redraw(whence=3)
     
     def isDrawing(self):
@@ -636,6 +744,9 @@ class TextBase(CanvasObjectBase):
         self.x, self.y = self.rotate_pt(self.x, self.y, theta,
                                         xoff=xoff, yoff=yoff)
 
+    def edit_points(self):
+        return [(self.x, self.y)]
+
 class PolygonBase(CanvasObjectBase):
     """Draws a polygon on a ImageViewCanvas.
     Parameters are:
@@ -675,6 +786,9 @@ class PolygonBase(CanvasObjectBase):
                                               xoff=xoff, yoff=yoff),
                           self.points))
         self.points = newpts
+
+    def edit_points(self):
+        return self.points
 
 
 class RectangleBase(CanvasObjectBase):
@@ -716,6 +830,13 @@ class RectangleBase(CanvasObjectBase):
         x2, y2 = self.rotate_pt(self.x2, self.y2, theta,
                                 xoff=xoff, yoff=yoff)
         self.x1, self.y1, self.x2, self.y2 = self.swapxy(x1, y1, x2, y2)
+
+    def edit_points(self):
+        return [(self.x1, self.y1), (self.x2, self.y2)]
+
+    def move_point(self):
+        x, y = (self.x1 + self.x2) / 2.0, (self.y1 + self.y2) / 2.0
+        return (x, y)
 
     def toPolygon(self):
         points = [(self.x1, self.y1), (self.x2, self.y1),
@@ -778,6 +899,10 @@ class CircleBase(CanvasObjectBase):
         self.x, self.y = self.rotate_pt(self.x, self.y, theta,
                                         xoff=xoff, yoff=yoff)
 
+    def edit_points(self):
+        return [(self.x, self.y)]
+
+
 class PointBase(CanvasObjectBase):
     """Draws a point on a ImageViewCanvas.
     Parameters are:
@@ -805,6 +930,9 @@ class PointBase(CanvasObjectBase):
     def rotate(self, theta, xoff=0, yoff=0):
         self.x, self.y = self.rotate_pt(self.x, self.y, theta,
                                         xoff=xoff, yoff=yoff)
+    def edit_points(self):
+        return [(self.x, self.y)]
+
 
 class LineBase(CanvasObjectBase):
     """Draws a line on a ImageViewCanvas.
@@ -829,7 +957,10 @@ class LineBase(CanvasObjectBase):
         self.x2, self.y2 = self.rotate_pt(self.x2, self.y2, theta,
                                           xoff=xoff, yoff=yoff)
 
-    def getReference(self):
+    def edit_points(self):
+        return [(self.x1, self.y1), (self.x2, self.y2)]
+
+    def get_reference_pt(self):
         # calculate center point of line
         x = (self.x2 - self.x1) / 2.0 + self.x1
         y = (self.y2 - self.y1) / 2.0 + self.y1
@@ -852,6 +983,8 @@ class CompassBase(CanvasObjectBase):
                                           linewidth=linewidth, cap=cap,
                                           x1=x1, y1=y1, x2=x2, y2=y2, x3=x3, y3=y3,
                                           font=font, fontsize=fontsize)
+    def edit_points(self):
+        return [(self.x, self.y)]
 
         
 class TriangleBase(CanvasObjectBase):
@@ -871,6 +1004,9 @@ class TriangleBase(CanvasObjectBase):
                                            linestyle=linestyle,
                                            fill=fill, fillcolor=fillcolor,
                                            x1=x1, y1=y1, x2=x2, y2=y2)
+
+    def edit_points(self):
+        return [(self.x1, self.y1), (self.x2, self.y2)]
 
 
 class RulerBase(CanvasObjectBase):
@@ -894,6 +1030,9 @@ class RulerBase(CanvasObjectBase):
                                         font=font, fontsize=fontsize,
                                         text_x=text_x, text_y=text_y,
                                         text_h=text_h)
+
+    def edit_points(self):
+        return [(self.x1, self.y1), (self.x2, self.y2)]
 
 
 class Image(CanvasObjectBase):
@@ -933,8 +1072,6 @@ class Image(CanvasObjectBase):
             self.fitsimage.redraw(whence=2)
     
     def draw_image(self, dstarr):
-        #print "drawing image at %f,%f" % (self.x, self.y)
-
         # get extent of our data coverage in the window
         ((x0, y0), (x1, y1), (x2, y2), (x3, y3)) = self.fitsimage.get_pan_rect()
         xmin = int(min(x0, x1, x2, x3))
@@ -945,7 +1082,6 @@ class Image(CanvasObjectBase):
         # destination location in data_coords
         #dst_x, dst_y = self.x, self.y + ht
         dst_x, dst_y = self.x, self.y
-        #print "actual placement at %d,%d" % (dst_x, dst_y)
         
         a1, b1, a2, b2 = 0, 0, self.image.width, self.image.height
 
@@ -956,7 +1092,6 @@ class Image(CanvasObjectBase):
                trcalc.calc_image_merge_clip(xmin, ymin, xmax, ymax,
                                             dst_x, dst_y, a1, b1, a2, b2)
         #a1, b1, a2, b2 = 0, 0, self.image.width, self.image.height
-        #print "a1,b1=%d,%d a2,b2=%d,%d" % (a1, b1, a2, b2)
 
         # is image completely off the screen?
         if (a2 - a1 <= 0) or (b2 - b1 <= 0):
@@ -995,6 +1130,9 @@ class Image(CanvasObjectBase):
         trcalc.overlay_image(dstarr, x, y, newdata, alpha=self.alpha,
                              flipy=self.flipy)
         #print "image overlaid"
+
+    def edit_points(self):
+        return [(self.x, self.y)]
 
 
 class CompoundObject(CompoundMixin, CanvasObjectBase):

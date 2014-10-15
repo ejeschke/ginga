@@ -124,7 +124,7 @@ class FitsViewer(QtGui.QMainWindow):
         params = { 'color': self.drawcolors[index],
                    'alpha': self.walpha.value(),
                    }
-        if kind in ('circle', 'rectangle', 'polygon'):
+        if kind in ('circle', 'rectangle', 'polygon', 'triangle'):
             params['fill'] = fill
 
         self.fitsimage.set_drawtype(kind, **params)

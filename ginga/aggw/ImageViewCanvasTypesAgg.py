@@ -25,6 +25,24 @@ class AggCanvasMixin(object):
         cr = AggHelp.AggContext(self.fitsimage.get_surface())
         return cr
 
+    def get_pen(self, cr):
+        alpha = getattr(self, 'alpha', 1.0)
+        pen = cr.get_pen(self.color, alpha=alpha)
+        return pen
+        
+    def get_brush(self, cr):
+        fill = getattr(self, 'fill', False)
+        if fill:
+            if hasattr(self, 'fillcolor') and self.fillcolor:
+                color = self.fillcolor
+            else:
+                color = self.color
+            alpha = getattr(self, 'alpha', 1.0)
+            brush = cr.get_brush(color, alpha=alpha)
+        else:
+            brush = None
+        return brush
+        
     def draw_arrowhead(self, cr, x1, y1, x2, y2, pen):
         i1, j1, i2, j2 = self.calcVertexes(x1, y1, x2, y2)
         brush = cr.get_brush(self.color)
@@ -77,14 +95,8 @@ class Polygon(PolygonBase, AggCanvasMixin):
         cpoints = list(map(lambda p: self.canvascoords(p[0], p[1]),
                            self.points))
         cr = self.setup_cr()
-
-        pen = cr.get_pen(self.color)
-        brush = None
-        if self.fill:
-            if self.fillcolor:
-                brush = cr.get_brush(self.fillcolor)
-            else:
-                brush = cr.get_brush(self.color)
+        pen = self.get_pen(cr)
+        brush = self.get_brush(cr)
 
         cr.canvas.polygon(list(chain.from_iterable(cpoints)), 
                           pen, brush)
@@ -100,14 +112,8 @@ class Rectangle(RectangleBase, AggCanvasMixin):
                             (self.x2, self.y2), (self.x1, self.y2))))
 
         cr = self.setup_cr()
-
-        pen = cr.get_pen(self.color)
-        brush = None
-        if self.fill:
-            if self.fillcolor:
-                brush = cr.get_brush(self.fillcolor)
-            else:
-                brush = cr.get_brush(self.color)
+        pen = self.get_pen(cr)
+        brush = self.get_brush(cr)
 
         cr.canvas.polygon(list(chain.from_iterable(cpoints)),
                           pen, brush)
@@ -141,13 +147,8 @@ class Circle(CircleBase, AggCanvasMixin):
         cx1, cy1, cradius = self.calc_radius(self.x, self.y, self.radius)
 
         cr = self.setup_cr()
-        pen = cr.get_pen(self.color)
-        brush = None
-        if self.fill:
-            if self.fillcolor:
-                brush = cr.get_brush(self.fillcolor)
-            else:
-                brush = cr.get_brush(self.color)
+        pen = self.get_pen(cr)
+        brush = self.get_brush(cr)
 
         cr.canvas.ellipse((cx1-cradius, cy1-cradius, cx1+cradius, cy1+cradius),
                           pen, brush)
@@ -164,7 +165,7 @@ class Point(PointBase, AggCanvasMixin):
         cx2, cy2 = cx + cradius, cy + cradius
 
         cr = self.setup_cr()
-        pen = cr.get_pen(self.color)
+        pen = self.get_pen(cr)
         #cr.set_line_cap(cairo.LINE_CAP_ROUND)
         cr.canvas.line((cx1, cy1, cx2, cy2), pen)
         cr.canvas.line((cx1, cy2, cx2, cy1), pen)
@@ -180,7 +181,7 @@ class Line(LineBase, AggCanvasMixin):
         cx2, cy2 = self.canvascoords(self.x2, self.y2)
 
         cr = self.setup_cr()
-        pen = cr.get_pen(self.color)
+        pen = self.get_pen(cr)
         #cr.set_line_cap(cairo.LINE_CAP_ROUND)
         cr.canvas.line((cx1, cy1, cx2, cy2), pen)
 
@@ -197,7 +198,7 @@ class Compass(CompassBase, AggCanvasMixin):
 
         cr = self.setup_cr()
 
-        pen = cr.get_pen(self.color)
+        pen = self.get_pen(cr)
         # draw North line and arrowhead
         #cr.set_line_cap(cairo.LINE_CAP_ROUND)
         cr.canvas.line((cx1, cy1, cx2, cy2), pen)
@@ -261,17 +262,19 @@ class Compass(CompassBase, AggCanvasMixin):
 class Triangle(TriangleBase, AggCanvasMixin):
 
     def draw(self):
-        cx1, cy1 = self.canvascoords(self.x1, self.y1)
-        cx2, cy2 = self.canvascoords(self.x2, self.y2)
+        cpoints = list(map(lambda p: self.canvascoords(p[0], p[1]),
+                           ((self.x1, self.y1), (self.x2, self.y2),
+                            (self.x2, self.y1))))
 
         cr = self.setup_cr()
-        pen = cr.get_pen(self.color)
-        #cr.set_line_cap(cairo.LINE_CAP_ROUND)
-        cr.canvas.polygon((cx1, cy1, cx2, cy2, cx2, cy1), pen)
+        pen = self.get_pen(cr)
+        brush = self.get_brush(cr)
 
+        cr.canvas.polygon(list(chain.from_iterable(cpoints)),
+                          pen, brush)
         if self.cap:
-            self.draw_caps(cr, self.cap,
-                           ((cx1, cy1), (cx2, cy2), (cx2, cy1)))
+            self.draw_caps(cr, self.cap, cpoints)
+
 
 class Ruler(RulerBase, AggCanvasMixin):
 
@@ -280,7 +283,7 @@ class Ruler(RulerBase, AggCanvasMixin):
         cx2, cy2 = self.canvascoords(self.x2, self.y2)
 
         cr = self.setup_cr()
-        pen = cr.get_pen(self.color)
+        pen = self.get_pen(cr)
         
         if not self.fontsize:
             fontsize = self.scale_font()

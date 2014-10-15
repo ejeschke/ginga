@@ -267,20 +267,21 @@ class Compass(CompassBase, MplCanvasMixin):
 class Triangle(TriangleBase, MplCanvasMixin):
 
     def draw(self):
-        cx1, cy1 = self.canvascoords(self.x1, self.y1)
-        cx2, cy2 = self.canvascoords(self.x2, self.y2)
+        cpoints = list(map(lambda p: self.canvascoords(p[0], p[1]),
+                           ((self.x1, self.y1), (self.x2, self.y2),
+                            (self.x2, self.y1))))
 
         cr = self.setup_cr(closed=True, transform=None)
         cr.update_patch(self)
         
-        xy = numpy.array(((cx1, cy1), (cx2, cy2), (cx2, cy1)))
+        xy = numpy.array(cpoints)
             
         p = patches.Polygon(xy, **cr.kwdargs)
         cr.axes.add_patch(p)
         
         if self.cap:
-            self.draw_caps(cr, self.cap,
-                           ((cx1, cy1), (cx2, cy2), (cx2, cy1)))
+            self.draw_caps(cr, self.cap, cpoints)
+
 
 class Ruler(RulerBase, MplCanvasMixin):
 

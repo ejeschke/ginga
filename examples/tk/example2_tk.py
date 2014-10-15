@@ -91,13 +91,23 @@ class FitsViewer(object):
         wdrawcolor.bind("<Return>", self.set_drawparams)
         self.wdrawcolor = wdrawcolor
 
+        self.vfill = Tkinter.IntVar()
+        wfill = Tkinter.Checkbutton(hbox, text="Fill", variable=self.vfill)
+        self.wfill = wfill
+
+        walpha = Tkinter.Entry(hbox, width=12)
+        walpha.insert(0, '1.0')
+        walpha.bind("<Return>", self.set_drawparams)
+        self.walpha = walpha
+
         wclear = Tkinter.Button(hbox, text="Clear Canvas",
                             command=self.clear_canvas)
         wopen = Tkinter.Button(hbox, text="Open File",
                                command=self.open_file)
         wquit = Tkinter.Button(hbox, text="Quit",
                                command=lambda: self.quit(root))
-        for w in (wquit, wclear, wdrawcolor, wdrawtype, wopen):
+        for w in (wquit, wclear, walpha, Tkinter.Label(hbox, text='Alpha:'),
+                  wfill, wdrawcolor, wdrawtype, wopen):
             w.pack(side=Tkinter.RIGHT)
 
 
@@ -107,8 +117,16 @@ class FitsViewer(object):
     def set_drawparams(self, evt):
         kind = self.wdrawtype.get()
         color = self.wdrawcolor.get()
+        alpha = float(self.walpha.get())
+        fill = self.vfill.get() != 0
 
-        params = { 'color': color, }
+        params = { 'color': color,
+                   'alpha': alpha,
+                   'cap': 'ball',
+                   }
+        if kind in ('circle', 'rectangle', 'polygon', 'triangle'):
+            params['fill'] = fill
+
         self.fitsimage.set_drawtype(kind, **params)
 
     def clear_canvas(self):

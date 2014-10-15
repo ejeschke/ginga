@@ -74,7 +74,7 @@ class FitsViewer(object):
         for name in self.drawtypes:
             wdrawtype.insert_text(index, name)
             index += 1
-        index = self.drawtypes.index('ruler')
+        index = self.drawtypes.index('rectangle')
         wdrawtype.set_active(index)
         wdrawtype.connect('changed', self.set_drawparams)
         self.wdrawtype = wdrawtype
@@ -84,10 +84,22 @@ class FitsViewer(object):
         for name in self.drawcolors:
             wdrawcolor.insert_text(index, name)
             index += 1
-        index = self.drawcolors.index('blue')
+        index = self.drawcolors.index('lightblue')
         wdrawcolor.set_active(index)
         wdrawcolor.connect('changed', self.set_drawparams)
         self.wdrawcolor = wdrawcolor
+
+        wfill = GtkHelp.CheckButton("Fill")
+        wfill.sconnect('toggled', self.set_drawparams)
+        self.wfill = wfill
+
+        walpha = GtkHelp.SpinButton()
+        adj = walpha.get_adjustment()
+        adj.configure(0.0, 0.0, 1.0, 0.1, 0.1, 0)
+        walpha.set_value(1.0)
+        walpha.set_digits(1)
+        walpha.sconnect('value-changed', self.set_drawparams)
+        self.walpha = walpha
 
         wclear = gtk.Button("Clear Canvas")
         wclear.connect('clicked', self.clear_canvas)
@@ -97,7 +109,8 @@ class FitsViewer(object):
         wquit = gtk.Button("Quit")
         wquit.connect('clicked', quit)
 
-        for w in (wquit, wclear, wdrawcolor, wdrawtype, wopen):
+        for w in (wquit, wclear, walpha, gtk.Label("Alpha:"),
+                  wfill, wdrawcolor, wdrawtype, wopen):
             hbox.pack_end(w, fill=False, expand=False)
 
         vbox.pack_start(hbox, fill=False, expand=False)
@@ -111,8 +124,15 @@ class FitsViewer(object):
         index = self.wdrawtype.get_active()
         kind = self.drawtypes[index]
         index = self.wdrawcolor.get_active()
+        fill = self.wfill.get_active()
 
-        params = { 'color': self.drawcolors[index], }
+        params = { 'color': self.drawcolors[index],
+                   'alpha': self.walpha.get_value(),
+                   #'cap': 'ball',
+                   }
+        if kind in ('circle', 'rectangle', 'polygon', 'triangle'):
+            params['fill'] = fill
+
         self.fitsimage.set_drawtype(kind, **params)
 
     def clear_canvas(self, w):

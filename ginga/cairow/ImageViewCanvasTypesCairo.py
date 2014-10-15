@@ -18,7 +18,7 @@ from ginga.util.six.moves import map, zip
 
 class CairoCanvasMixin(object):
 
-    def set_color(self, cr, color):
+    def __get_color(self, color, alpha):
         if isinstance(color, str):
             r, g, b = colors.lookup_color(color)
         elif isinstance(color, tuple):
@@ -27,18 +27,19 @@ class CairoCanvasMixin(object):
             r, g, b = color
         else:
             r, g, b = 1.0, 1.0, 1.0
+        return (r, g, b, alpha)
 
-        cr.set_source_rgb(r, g, b)
+    def set_color(self, cr, color, alpha=1.0):
+        r, g, b, a = self.__get_color(color, alpha)
+        cr.set_source_rgba(r, g, b, a)
 
     def setup_cr(self):
         cr = self.fitsimage.get_offscreen_context()
 
         self.set_color(cr, self.color)
 
-        if hasattr(self, 'linewidth'):
-            cr.set_line_width(self.linewidth)
-        else:
-            cr.set_line_width(1)
+        linewidth = getattr(self, 'linewidth', 1)
+        cr.set_line_width(linewidth)
 
         if hasattr(self, 'linestyle'):
             if self.linestyle == 'dash':
@@ -46,6 +47,21 @@ class CairoCanvasMixin(object):
                 
         return cr
 
+    def draw_fill(self, cr):
+        fill = getattr(self, 'fill', False)
+        if fill:
+            color = getattr(self, 'fillcolor', None)
+            if color == None:
+                color = self.color
+            alpha = getattr(self, 'alpha', 1.0)
+
+            self.set_color(cr, color, alpha=alpha)
+            # do the fill
+            cr.fill()
+
+            # reset context to old color
+            self.set_color(cr, self.color)
+            
     def draw_arrowhead(self, cr, x1, y1, x2, y2):
         i1, j1, i2, j2 = self.calcVertexes(x1, y1, x2, y2)
         cr.move_to (x2, y2)
@@ -108,11 +124,7 @@ class Polygon(PolygonBase, CairoCanvasMixin):
         cr.close_path()
         cr.stroke_preserve()
 
-        if self.fill:
-            if self.fillcolor:
-                self.set_color(cr, self.fillcolor)
-            cr.fill()
-            self.set_color(cr, self.color)
+        self.draw_fill(cr)
 
         if self.cap:
             self.draw_caps(cr, self.cap, cpoints)
@@ -133,11 +145,7 @@ class Rectangle(RectangleBase, CairoCanvasMixin):
         cr.close_path()
         cr.stroke_preserve()
 
-        if self.fill:
-            if self.fillcolor:
-                self.set_color(cr, self.fillcolor)
-            cr.fill()
-            self.set_color(cr, self.color)
+        self.draw_fill(cr)
 
         if self.cap:
             self.draw_caps(cr, self.cap, cpoints)
@@ -172,11 +180,8 @@ class Circle(CircleBase, CairoCanvasMixin):
         cr = self.setup_cr()
         cr.arc(cx1, cy1, cradius, 0, 2*math.pi)
         cr.stroke_preserve()
-        if self.fill:
-            if self.fillcolor:
-                self.set_color(cr, self.fillcolor)
-            cr.fill()
-            self.set_color(cr, self.color)
+
+        self.draw_fill(cr)
 
         if self.cap:
             self.draw_caps(cr, self.cap, ((cx1, cy1), ))
@@ -298,27 +303,23 @@ class Compass(CompassBase, CairoCanvasMixin):
 class Triangle(TriangleBase, CairoCanvasMixin):
 
     def draw(self):
-        cx1, cy1 = self.canvascoords(self.x1, self.y1)
-        cx2, cy2 = self.canvascoords(self.x2, self.y2)
-
         cr = self.setup_cr()
+        cpoints = list(map(lambda p: self.canvascoords(p[0], p[1]),
+                           ((self.x1, self.y1), (self.x2, self.y2),
+                            (self.x2, self.y1))))
+        (cx0, cy0) = cpoints[-1]
+        cr.move_to(cx0, cy0)
+        for cx, cy in cpoints:
+            cr.line_to(cx, cy)
+            #cr.move_to(cx, cy)
+        cr.close_path()
+        cr.stroke_preserve()
 
-        cr.set_line_cap(cairo.LINE_CAP_ROUND)
-        cr.move_to(cx1, cy1)
-        cr.line_to(cx2, cy2)
-        cr.stroke()
-
-        cr.move_to(cx1, cy1)
-        cr.line_to(cx2, cy1)
-        cr.stroke()
-
-        cr.move_to(cx2, cy1)
-        cr.line_to(cx2, cy2)
-        cr.stroke()
+        self.draw_fill(cr)
 
         if self.cap:
-            self.draw_caps(cr, self.cap,
-                           ((cx1, cy1), (cx2, cy2), (cx2, cy1)))
+            self.draw_caps(cr, self.cap, cpoints)
+
 
 class Ruler(RulerBase, CairoCanvasMixin):
 
