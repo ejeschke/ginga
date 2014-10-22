@@ -17,6 +17,7 @@ import time
 from ginga.misc import Callback, Settings
 from ginga import RGBMap, AstroImage, AutoCuts, ColorDist
 from ginga import cmap, imap, trcalc, version
+from ginga.ImageViewCanvas import NormImage
 
 
 class ImageViewError(Exception):
@@ -146,7 +147,7 @@ class ImageViewBase(Callback.Callbacks):
         self.t_.addDefaults(autozoom='on')
 
         # image overlays
-        self.t_.addDefaults(image_overlays=False)
+        self.t_.addDefaults(image_overlays=True)
         self.t_.getSetting('image_overlays').add_callback('set', self.overlays_change_cb)
 
         # for panning
@@ -217,9 +218,6 @@ class ImageViewBase(Callback.Callbacks):
         self._org_scale_x = 1.0
         self._org_scale_y = 1.0
 
-        self._cutout = None
-        self._rotimg = None
-        self._prergb = None
         self._rgbobj = None
         self._rgbobj2 = None
 
@@ -443,6 +441,10 @@ class ImageViewBase(Callback.Callbacks):
         callback.
         """
         self.image = image
+
+        obj = NormImage(0, 0, image, alpha=0.2, flipy=False)
+        tag = self.add(obj)
+
         profile = self.image.get('profile', None)
         if (profile != None) and (self.t_['use_embedded_profile']):
             self.apply_profile(profile, redraw=False)
@@ -670,98 +672,44 @@ class ImageViewBase(Callback.Callbacks):
         2   = color mapping has changed
         3   = graphical overlays have changed
         """
-        if self.image is None:
-            raise NoImageError("No image has been set!")
-        
         time_start = time.time()
         win_wd, win_ht = self.get_window_size()
-        has_overlays = self.t_['image_overlays']
-        
-        if (whence <= 0) or (self._cutout == None):
-            # Get the smallest slice of data that will fit our display needs.
-            self._cutout = self.get_scaled_cutout(self.image,
-                  self._scale_x, self._scale_y,
-                  self._pan_x, self._pan_y, win_wd, win_ht)
+        order = self.get_rgb_order()
 
-        time_split1 = time.time()
-        if not has_overlays:
-            if (whence <= 0.5) or (self._rotimg == None):
-                # Apply any viewing transformations or rotations
-                # (only at this stage if there are no RGB overlays)
-                self._rotimg = self.apply_transforms(self._cutout,
-                                                     self.t_['rot_deg'], 
-                                                     win_wd, win_ht)
-        else:
-            self._rotimg = self._cutout
+        if (whence <= 0.0) or (self._rgbobj == None):
+            # calculate dimensions of window RGB backing image
+            wd, ht = self.calc_bg_dimensions(self._scale_x, self._scale_y,
+                                             self._pan_x, self._pan_y,
+                                             win_wd, win_ht)
 
-        dims = self._rotimg.shape
-        depth = dims[2] - 1
-            
-        time_split2 = time.time()
-        if (whence <= 1) or (self._prergb == None):
-            # Apply visual changes prior to color mapping (cut levels, etc)
-            vmax = self.rgbmap.get_hash_size() - 1
-            #data = self._rotimg
-            data = self._rotimg[:, :, 0:depth]
-            newdata = self.apply_visuals(data, 0, vmax)
+            # create backing image
+            depth = len(order)
+            rgba = numpy.zeros((ht, wd, depth), dtype=numpy.uint8)
+            self._rgbobj = rgba
 
-            if depth == 1:
-                newdata = newdata.reshape(newdata.shape[:2])
-
-            # Result becomes an index array fed to the RGB mapper
-            if not numpy.issubdtype(newdata.dtype, numpy.dtype('uint')):
-                newdata = newdata.astype(numpy.uint)
-            self._prergb = newdata
-                
-        time_split3 = time.time()
-        if (whence <= 2) or (self._rgbobj == None):
-            idx = self._prergb
-            self.logger.debug("shape of index is %s" % (str(idx.shape)))
-
-            # Apply color and intensity mapping.  We produce a group of
-            # ARGB slices which are then rendered by the widget-specific
-            # front end.
-            rgb_order = self.get_rgb_order()
-            image_order = self.image.get_order()
-            rgbobj = self.rgbmap.get_rgbarray(idx, order=rgb_order,
-                                              image_order=image_order)
-
-            # insert (possibly rotated) alpha mask into RGBA array
-            if rgbobj.hasAlpha:
-                alpha = rgbobj.get_slice('A')
-                alpha[:] = (self._rotimg[:, :, depth] * 255).astype(numpy.uint8)
-
-            if has_overlays:
-                # Apply any RGB image overlays
-                self.overlay_images(self, rgbobj.rgbarr)
-
-            self._rgbobj = rgbobj
+        if whence <= 2.0:
+            # Apply any RGB image overlays
+            self.overlay_images(self, self._rgbobj)
 
         if (whence <= 2.5) or (self._rgbobj2 == None):
-            rotimg = self._rgbobj.rgbarr
-            order = self._rgbobj.order
-            if has_overlays:
-                # Apply any viewing transformations or rotations
-                # if not applied earlier
-                rotimg = self.apply_transforms(rotimg,
-                                               self.t_['rot_deg'], 
-                                               win_wd, win_ht)
-                rotimg = numpy.ascontiguousarray(rotimg)
+            rotimg = self._rgbobj
+
+            # Apply any viewing transformations or rotations
+            # if not applied earlier
+            rotimg = self.apply_transforms(rotimg,
+                                           self.t_['rot_deg'])
+            rotimg = numpy.ascontiguousarray(rotimg)
 
             self._rgbobj2 = RGBMap.RGBPlanes(rotimg, order)
             
         time_end = time.time()
-        self.logger.debug("times: total=%.4f cutout=%.4f transform=%.4f index=%.4f rgbmap=%.4f" % (
-            (time_end - time_start),
-            (time_split1 - time_start),
-            (time_split2 - time_split1),
-            (time_split3 - time_split2),
-            (time_end - time_split3),
-            ))
+        self.logger.debug("times: total=%.4f" % (
+            (time_end - time_start)))
         return self._rgbobj2
 
-    def get_scaled_cutout(self, image, scale_x, scale_y,
-                          pan_x, pan_y, win_wd, win_ht):
+
+    def calc_bg_dimensions(self, scale_x, scale_y,
+                           pan_x, pan_y, win_wd, win_ht):
 
         # Sanity check on the scale
         sx = float(win_wd) / scale_x
@@ -795,16 +743,11 @@ class ImageViewBase(Callback.Callbacks):
         b2 = max(yul, yur, ylr, yll)
         
         # constrain to image dimensions and integer indexes
-        width, height = image.get_size()
-
         x1, y1, x2, y2 = int(a1), int(b1), int(round(a2)), int(round(b2))
         x1 = max(0, x1)
         y1 = max(0, y1)
-        x2 = min(x2, width-1)
-        y2 = min(y2, height-1)
-
-        # distance from start of cutout data to pan position
-        xo, yo = pan_x - x1, pan_y - y1
+        #x2 = min(x2, width-1)
+        #y2 = min(y2, height-1)
 
         self.logger.debug("approx area covered is %dx%d to %dx%d" % (
             x1, y1, x2, y2))
@@ -814,71 +757,35 @@ class ImageViewBase(Callback.Callbacks):
         self._org_x2 = x2
         self._org_y2 = y2
 
-        # Cut out data and scale it appropriately
-        res = image.get_scaled_cutout(x1, y1, x2, y2, scale_x, scale_y)
-        data = res.data
-        # actual cutout may have changed scaling slightly
-        self._org_scale_x, self._org_scale_y = res.scale_x, res.scale_y
-        #self._scale_x, self._scale_y = res.scale_x, res.scale_y
-            
-        # calculate dimensions of scaled cutout
-        wd, ht = self.get_dims(data)
-        ocx = int(xo * res.scale_x)
-        ocy = int(yo * res.scale_y)
-        self.logger.debug("ocx,ocy=%d,%d cutout=%dx%d win=%dx%d" % (
-            ocx, ocy, wd, ht, win_wd, win_ht))
-        ## assert (0 <= ocx) and (ocx < wd) and (0 <= ocy) and (ocy < ht), \
-        ##     ImageViewError("calculated center not in cutout!")
-        if not ((0 <= ocx) and (ocx < wd) and (0 <= ocy) and (ocy < ht)):
-            self.logger.warn("calculated center (%d,%d) not in cutout (%dx%d)" % (
-                ocx, ocy, wd, ht))
+        # distance from start of cutout data to pan position
+        xo, yo = pan_x - x1, pan_y - y1
+
+        ocx = int(xo * scale_x)
+        ocy = int(yo * scale_y)
+        self.logger.debug("ocx,ocy=%d,%d win=%dx%d" % (
+            ocx, ocy, win_wd, win_ht))
         # offset from pan position (at center) in this array
         self._org_xoff, self._org_yoff = ocx, ocy
-
-        if len(data.shape) < 3:
-            depth = 1
-        else:
-            depth = data.shape[2]
 
         # If there is no rotation, then we are done
         if not self.t_makebg and (self.t_['rot_deg'] == 0.0) and \
                (self.t_['image_overlays'] == False):
-            if len(data.shape) == 2:
-                data = data.reshape(ht, wd, 1)
-            data = numpy.append(data, numpy.ones((ht, wd, 1)), axis=2)
-            return data
+            wd, ht = x2 - x1, y2 - y1
+            return (wd, ht)
 
         # Make a square from the scaled cutout, with room to rotate
         slop = 20
         side = int(math.sqrt(win_wd**2 + win_ht**2) + slop)
-        new_wd = new_ht = side
+        wd = ht = side
 
-        # prepare a new, larger array to hold the result and alpha
-        dims = (new_ht, new_wd, depth+1)
-        # TODO: fill with a different background color?
-        newdata = numpy.zeros(dims)
-        # Find center of new data array 
-        ncx, ncy = new_wd // 2, new_ht // 2
-
-        # Overlay the scaled cutout image on the window image
-        # with the pan position centered on the center of the window
-        ldx, rdx = min(ocx, ncx), min(wd - ocx, ncx)
-        bdy, tdy = min(ocy, ncy), min(ht - ocy, ncy)
-
-        if depth == 1:
-            newdata[ncy-bdy:ncy+tdy, ncx-ldx:ncx+rdx, 0] = \
-                                     data[ocy-bdy:ocy+tdy, ocx-ldx:ocx+rdx]
-        else:
-            newdata[ncy-bdy:ncy+tdy, ncx-ldx:ncx+rdx, 0:depth] = \
-                                     data[ocy-bdy:ocy+tdy, ocx-ldx:ocx+rdx]
-
-        newdata[ncy-bdy:ncy+tdy, ncx-ldx:ncx+rdx, depth] = 1.0
-        
+        # Find center of new array 
+        ncx, ncy = wd // 2, ht // 2
         self._org_xoff, self._org_yoff = ncx, ncy
-        return newdata
+
+        return (wd, ht)
 
 
-    def apply_transforms(self, data, rot_deg, win_wd, win_ht):
+    def apply_transforms(self, data, rot_deg):
         start_time = time.time()
 
         wd, ht = self.get_dims(data)
@@ -924,8 +831,8 @@ class ImageViewBase(Callback.Callbacks):
         ctr_x, ctr_y = self._ctr_x, self._ctr_y
         dst_x, dst_y = ctr_x - xoff, ctr_y - (ht - yoff)
         self._dst_x, self._dst_y = dst_x, dst_y
-        self.logger.debug("ctr=%d,%d off=%d,%d dst=%d,%d cutout=%dx%d window=%d,%d" % (
-            ctr_x, ctr_y, xoff, yoff, dst_x, dst_y, wd, ht, win_wd, win_ht))
+        self.logger.debug("ctr=%d,%d off=%d,%d dst=%d,%d cutout=%dx%d" % (
+            ctr_x, ctr_y, xoff, yoff, dst_x, dst_y, wd, ht))
         return data
 
 

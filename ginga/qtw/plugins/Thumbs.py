@@ -9,7 +9,7 @@
 #
 import os
 
-from ginga.qtw import ImageViewQt as ImageViewQt
+from ginga.qtw import ImageViewCanvasQt
 from ginga.qtw.QtHelp import QtGui, QtCore, QPixmap
 from ginga.misc.plugins import ThumbsBase
 from ginga.qtw import QtHelp
@@ -48,7 +48,7 @@ class Thumbs(ThumbsBase.ThumbsBase):
         width, height = 300, 300
         cm, im = self.fv.cm, self.fv.im
 
-        tg = ImageViewQt.ImageViewQt(logger=self.logger)
+        tg = ImageViewCanvasQt.ImageViewCanvas(logger=self.logger)
         tg.configure(200, 200)
         tg.enable_autozoom('on')
         tg.set_autocut_params('zscale')

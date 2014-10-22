@@ -9,6 +9,7 @@
 #
 import math
 import time
+import numpy
 
 from ginga.misc import Bunch
 from ginga.util import wcs
@@ -1133,6 +1134,105 @@ class Image(CanvasObjectBase):
 
     def edit_points(self):
         return [(self.x, self.y)]
+
+
+class NormImage(Image):
+    """Draws an image on a ImageViewCanvas.
+    Parameters are:
+    x, y: 0-based coordinates of one corner in the data space
+    image: the image, which must be an RGBImage object
+    """
+
+    def __init__(self, x, y, image, alpha=None, flipy=False):
+        self.kind = 'normimage'
+        super(NormImage, self).__init__(x=x, y=y, image=image, alpha=alpha,
+                                        flipy=flipy)
+
+        self._drawn = False
+
+    def draw_image(self, dstarr):
+        # get extent of our data coverage in the window
+        ((x0, y0), (x1, y1), (x2, y2), (x3, y3)) = self.fitsimage.get_pan_rect()
+        xmin = int(min(x0, x1, x2, x3))
+        ymin = int(min(y0, y1, y2, y3))
+        xmax = int(max(x0, x1, x2, x3))
+        ymax = int(max(y0, y1, y2, y3))
+
+        # destination location in data_coords
+        dst_x, dst_y = self.x, self.y
+        
+        a1, b1, a2, b2 = 0, 0, self.image.width, self.image.height
+
+        # calculate the cutout that we can make and scale to merge
+        # onto the final image--by only cutting out what is necessary
+        # this speeds scaling greatly at zoomed in sizes
+        dst_x, dst_y, a1, b1, a2, b2 = \
+               trcalc.calc_image_merge_clip(xmin, ymin, xmax, ymax,
+                                            dst_x, dst_y, a1, b1, a2, b2)
+
+        # is image completely off the screen?
+        if (a2 - a1 <= 0) or (b2 - b1 <= 0):
+            # no overlay needed
+            #print "no overlay needed"
+            return
+
+        # cutout and scale the piece appropriately
+        srcdata = self.image.get_data()
+
+        scale_x, scale_y = self.fitsimage.get_scale_xy()
+        (newdata, (nscale_x, nscale_y)) = \
+                  trcalc.get_scaled_cutout_basic(srcdata, a1, b1, a2, b2,
+                                                 scale_x, scale_y)
+        
+        # apply visual changes prior to color mapping (cut levels, etc)
+        rgbmap = self.fitsimage.get_rgbmap()
+        vmax = rgbmap.get_hash_size() - 1
+        newdata = self.apply_visuals(newdata, 0, vmax)
+
+        # result becomes an index array fed to the RGB mapper
+        if not numpy.issubdtype(newdata.dtype, numpy.dtype('uint')):
+            newdata = newdata.astype(numpy.uint)
+        idx = newdata
+        
+        self.logger.debug("shape of index is %s" % (str(idx.shape)))
+
+        rgb_order = self.fitsimage.get_rgb_order()
+        image_order = self.image.get_order()
+        rgbobj = rgbmap.get_rgbarray(idx, order=rgb_order,
+                                     image_order=image_order)
+
+        ## if 'A' in rgb_order:
+        ##     rgb_order = rgb_order.replace('A', '')
+        #newdata = rgbobj.get_array(order)
+        newdata = rgbobj.rgbarr
+
+        # calculate our offset from the pan position
+        pan_x, pan_y = self.fitsimage.get_pan()
+        #print "pan x,y=%f,%f" % (pan_x, pan_y)
+        off_x, off_y = dst_x - pan_x, dst_y - pan_y
+        # scale offset
+        off_x *= scale_x
+        off_y *= scale_y
+        #print "off_x,y=%f,%f" % (off_x, off_y)
+
+        # dst position in the pre-transformed array should be calculated
+        # from the center of the array plus offsets
+        ht, wd, dp = dstarr.shape
+        x = int(round(wd / 2.0  + off_x))
+        y = int(round(ht / 2.0  + off_y))
+
+        # composite the image into the destination array at the
+        # calculated position
+        trcalc.overlay_image(dstarr, x, y, newdata, alpha=self.alpha,
+                             flipy=self.flipy)
+        #print "image overlaid"
+
+    def apply_visuals(self, data, vmin, vmax):
+        # Apply cut levels
+        loval, hival = self.fitsimage.t_['cuts']
+        newdata = self.fitsimage.autocuts.cut_levels(data, loval, hival,
+                                                     vmin=vmin, vmax=vmax)
+        return newdata
 
 
 class CompoundObject(CompoundMixin, CanvasObjectBase):
