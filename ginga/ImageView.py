@@ -22,8 +22,6 @@ from ginga.ImageViewCanvas import NormImage
 
 class ImageViewError(Exception):
     pass
-class NoImageError(ImageViewError):
-    pass
 class ImageViewCoordsError(ImageViewError):
     pass
 
@@ -151,7 +149,6 @@ class ImageViewBase(Callback.Callbacks):
         self.t_.getSetting('image_overlays').add_callback('set', self.overlays_change_cb)
 
         # for panning
-        self.t_makebg = True
         self.autocenter_options = ('on', 'override', 'off')
         self.t_.addDefaults(autocenter='on')
         
@@ -760,21 +757,6 @@ class ImageViewBase(Callback.Callbacks):
         self._org_y1 = y1
         self._org_x2 = x2
         self._org_y2 = y2
-
-        ## # distance from start of cutout data to pan position
-        ## xo, yo = pan_x - x1, pan_y - y1
-
-        ## ocx = int(xo * scale_x)
-        ## ocy = int(yo * scale_y)
-        ## self.logger.debug("ocx,ocy=%d,%d win=%dx%d" % (
-        ##     ocx, ocy, win_wd, win_ht))
-        ## # offset from pan position (at center) in this array
-        ## self._org_xoff, self._org_yoff = ocx, ocy
-
-        ## # If there is no rotation, then we are done
-        ## if not self.t_makebg and (self.t_['rot_deg'] == 0.0):
-        ##     wd, ht = x2 - x1, y2 - y1
-        ##     return (wd, ht)
 
         # Make a square from the scaled cutout, with room to rotate
         slop = 20
@@ -1499,9 +1481,6 @@ class ImageViewBase(Callback.Callbacks):
 
         if redraw:
             dst_fi.redraw(whence=0)
-
-    def set_makebg(self, tf):
-        self.t_makebg = tf
 
     def get_rotation(self):
         return self.t_['rot_deg']

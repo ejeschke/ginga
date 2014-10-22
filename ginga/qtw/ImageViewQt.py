@@ -269,8 +269,7 @@ class ImageViewQt(ImageView.ImageViewBase):
         """Used for generating thumbnails.  Does not include overlaid
         graphics.
         """
-        rgbobj = self.get_rgb_object(whence=0)
-        arr = rgbobj.get_array(self._rgb_order)
+        arr = self.getwin_array(order=self._rgb_order)
         image = self._get_qimage(arr)
         return image
 
