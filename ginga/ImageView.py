@@ -220,6 +220,7 @@ class ImageViewBase(Callback.Callbacks):
 
         self._rgbobj = None
         self._rgbobj2 = None
+        self._normimg = None
 
         # optimization of redrawing
         self.defer_redraw = self.t_.get('defer_redraw', True)
@@ -442,9 +443,12 @@ class ImageViewBase(Callback.Callbacks):
         """
         self.image = image
 
-        obj = NormImage(0, 0, image, alpha=0.2, flipy=False)
-        tag = self.add(obj)
-
+        if self._normimg == None:
+            self._normimg = NormImage(0, 0, image, alpha=1.0, flipy=False)
+            tag = self.add(self._normimg)
+        else:
+            self._normimg.image = image
+            
         profile = self.image.get('profile', None)
         if (profile != None) and (self.t_['use_embedded_profile']):
             self.apply_profile(profile, redraw=False)
