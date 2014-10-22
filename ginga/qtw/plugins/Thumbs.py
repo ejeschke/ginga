@@ -55,7 +55,6 @@ class Thumbs(ThumbsBase.ThumbsBase):
         tg.enable_autocuts('on')
         tg.enable_auto_orient(True)
         tg.set_makebg(False)
-        tg.enable_overlays(False)
         self.thumb_generator = tg
 
         sw = MyScrollArea()

@@ -151,7 +151,7 @@ class ImageViewBase(Callback.Callbacks):
         self.t_.getSetting('image_overlays').add_callback('set', self.overlays_change_cb)
 
         # for panning
-        self.t_makebg = False
+        self.t_makebg = True
         self.autocenter_options = ('on', 'override', 'off')
         self.t_.addDefaults(autocenter='on')
         
@@ -218,8 +218,8 @@ class ImageViewBase(Callback.Callbacks):
         self._org_scale_x = 1.0
         self._org_scale_y = 1.0
 
+        self._rgbarr = None
         self._rgbobj = None
-        self._rgbobj2 = None
         self._normimg = None
 
         # optimization of redrawing
@@ -443,11 +443,17 @@ class ImageViewBase(Callback.Callbacks):
         """
         self.image = image
 
+        # add a normalized image item to this canvas if we don't
+        # have one already--then just keep reusing it
         if self._normimg == None:
             self._normimg = NormImage(0, 0, image, alpha=1.0, flipy=False)
-            tag = self.add(self._normimg)
+            tag = self.add(self._normimg, tag='_image')
         else:
-            self._normimg.image = image
+            self._normimg.set_image(image)
+            try:
+                self.getObjectByTag('_image')
+            except KeyError:
+                tag = self.add(self._normimg, tag='_image')
             
         profile = self.image.get('profile', None)
         if (profile != None) and (self.t_['use_embedded_profile']):
@@ -493,11 +499,11 @@ class ImageViewBase(Callback.Callbacks):
 
     def clear(self, redraw=True):
         """
-        Clear the displayed image by setting it to a 1x1 black image.
+        Clear the displayed image.
 
         If redraw is True then the associated widget will be redrawn.
         """
-        self.set_data(numpy.zeros((1, 1)), redraw=redraw)
+        self.deleteAllObjects()
         
     def save_profile(self, **params):
         if self.image == None:
@@ -597,9 +603,6 @@ class ImageViewBase(Callback.Callbacks):
             self.logger.debug("widget '%s' redraw (whence=%d) delta=%.4f elapsed=%.4f sec" % (
                 self.name, whence, time_delta, time_elapsed))
 
-        except NoImageError:
-            self.logger.warn("There is no image set to view")
-
         except Exception as e:
             self.logger.error("Error redrawing image: %s" % (str(e)))
             try:
@@ -626,7 +629,7 @@ class ImageViewBase(Callback.Callbacks):
         depth = len(order)
 
         # Prepare data array for rendering
-        data = self._rgbobj2.get_array(order)
+        data = self._rgbobj.get_array(order)
 
         # NOTE [A]
         height, width, depth = data.shape
@@ -680,7 +683,7 @@ class ImageViewBase(Callback.Callbacks):
         win_wd, win_ht = self.get_window_size()
         order = self.get_rgb_order()
 
-        if (whence <= 0.0) or (self._rgbobj == None):
+        if (whence <= 0.0) or (self._rgbarr == None):
             # calculate dimensions of window RGB backing image
             wd, ht = self.calc_bg_dimensions(self._scale_x, self._scale_y,
                                              self._pan_x, self._pan_y,
@@ -689,14 +692,14 @@ class ImageViewBase(Callback.Callbacks):
             # create backing image
             depth = len(order)
             rgba = numpy.zeros((ht, wd, depth), dtype=numpy.uint8)
-            self._rgbobj = rgba
+            self._rgbarr = rgba
 
         if whence <= 2.0:
             # Apply any RGB image overlays
-            self.overlay_images(self, self._rgbobj)
+            self.overlay_images(self, self._rgbarr, whence=whence)
 
-        if (whence <= 2.5) or (self._rgbobj2 == None):
-            rotimg = self._rgbobj
+        if (whence <= 2.5) or (self._rgbobj == None):
+            rotimg = self._rgbarr
 
             # Apply any viewing transformations or rotations
             # if not applied earlier
@@ -704,12 +707,12 @@ class ImageViewBase(Callback.Callbacks):
                                            self.t_['rot_deg'])
             rotimg = numpy.ascontiguousarray(rotimg)
 
-            self._rgbobj2 = RGBMap.RGBPlanes(rotimg, order)
+            self._rgbobj = RGBMap.RGBPlanes(rotimg, order)
             
         time_end = time.time()
         self.logger.debug("times: total=%.4f" % (
             (time_end - time_start)))
-        return self._rgbobj2
+        return self._rgbobj
 
 
     def calc_bg_dimensions(self, scale_x, scale_y,
@@ -761,21 +764,20 @@ class ImageViewBase(Callback.Callbacks):
         self._org_x2 = x2
         self._org_y2 = y2
 
-        # distance from start of cutout data to pan position
-        xo, yo = pan_x - x1, pan_y - y1
+        ## # distance from start of cutout data to pan position
+        ## xo, yo = pan_x - x1, pan_y - y1
 
-        ocx = int(xo * scale_x)
-        ocy = int(yo * scale_y)
-        self.logger.debug("ocx,ocy=%d,%d win=%dx%d" % (
-            ocx, ocy, win_wd, win_ht))
-        # offset from pan position (at center) in this array
-        self._org_xoff, self._org_yoff = ocx, ocy
+        ## ocx = int(xo * scale_x)
+        ## ocy = int(yo * scale_y)
+        ## self.logger.debug("ocx,ocy=%d,%d win=%dx%d" % (
+        ##     ocx, ocy, win_wd, win_ht))
+        ## # offset from pan position (at center) in this array
+        ## self._org_xoff, self._org_yoff = ocx, ocy
 
-        # If there is no rotation, then we are done
-        if not self.t_makebg and (self.t_['rot_deg'] == 0.0) and \
-               (self.t_['image_overlays'] == False):
-            wd, ht = x2 - x1, y2 - y1
-            return (wd, ht)
+        ## # If there is no rotation, then we are done
+        ## if not self.t_makebg and (self.t_['rot_deg'] == 0.0):
+        ##     wd, ht = x2 - x1, y2 - y1
+        ##     return (wd, ht)
 
         # Make a square from the scaled cutout, with room to rotate
         slop = 20
@@ -840,16 +842,16 @@ class ImageViewBase(Callback.Callbacks):
         return data
 
 
-    def overlay_images(self, canvas, data):
+    def overlay_images(self, canvas, data, whence=0.0):
         #if not canvas.is_compound():
         if not hasattr(canvas, 'objects'):
             return
 
         for obj in canvas.getObjects():
             if hasattr(obj, 'draw_image'):
-                obj.draw_image(data)
+                obj.draw_image(data, whence=whence)
             elif obj.is_compound() and (obj != canvas):
-                self.overlay_images(obj, data)
+                self.overlay_images(obj, data, whence=whence)
 
     def get_data_xy(self, win_x, win_y, center=True):
         """Returns the closest x, y coordinates in the data array to the
@@ -1028,14 +1030,6 @@ class ImageViewBase(Callback.Callbacks):
         dist = round(dist)
         return dist
     
-    def apply_visuals(self, data, vmin, vmax):
-        # Apply cut levels
-        loval, hival = self.t_['cuts']
-        newdata = self.autocuts.cut_levels(data, loval, hival,
-                                           vmin=vmin, vmax=vmax)
-        return newdata
-
-        
     def scale_to(self, scale_x, scale_y, no_reset=False, redraw=True):
         """Scale the image in a channel.
 

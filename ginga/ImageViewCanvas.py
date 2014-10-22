@@ -1049,6 +1049,12 @@ class Image(CanvasObjectBase):
                                     flipy=flipy)
 
         self._drawn = False
+        # these hold intermediate step results. Depending on value of
+        # `whence` they may not need to be recomputed.
+        self._cutout = None
+        # calculated location of overlay on canvas
+        self._cvs_x = 0
+        self._cvs_y = 0
 
     def get_coords(self):
         x1, y1 = self.x, self.y
@@ -1072,64 +1078,71 @@ class Image(CanvasObjectBase):
             self._drawn = True
             self.fitsimage.redraw(whence=2)
     
-    def draw_image(self, dstarr):
-        # get extent of our data coverage in the window
-        ((x0, y0), (x1, y1), (x2, y2), (x3, y3)) = self.fitsimage.get_pan_rect()
-        xmin = int(min(x0, x1, x2, x3))
-        ymin = int(min(y0, y1, y2, y3))
-        xmax = int(max(x0, x1, x2, x3))
-        ymax = int(max(y0, y1, y2, y3))
+    def draw_image(self, dstarr, whence=0.0):
+        #print("redraw whence=%f" % (whence))
 
-        # destination location in data_coords
-        #dst_x, dst_y = self.x, self.y + ht
-        dst_x, dst_y = self.x, self.y
+        if (whence <= 0.0) or (self._cutout == None):
+            # get extent of our data coverage in the window
+            ((x0, y0), (x1, y1), (x2, y2), (x3, y3)) = self.fitsimage.get_pan_rect()
+            xmin = int(min(x0, x1, x2, x3))
+            ymin = int(min(y0, y1, y2, y3))
+            xmax = int(max(x0, x1, x2, x3))
+            ymax = int(max(y0, y1, y2, y3))
+
+            # destination location in data_coords
+            #dst_x, dst_y = self.x, self.y + ht
+            dst_x, dst_y = self.x, self.y
+
+            a1, b1, a2, b2 = 0, 0, self.image.width, self.image.height
+
+            # calculate the cutout that we can make and scale to merge
+            # onto the final image--by only cutting out what is necessary
+            # this speeds scaling greatly at zoomed in sizes
+            dst_x, dst_y, a1, b1, a2, b2 = \
+                   trcalc.calc_image_merge_clip(xmin, ymin, xmax, ymax,
+                                                dst_x, dst_y, a1, b1, a2, b2)
+
+            # is image completely off the screen?
+            if (a2 - a1 <= 0) or (b2 - b1 <= 0):
+                # no overlay needed
+                #print "no overlay needed"
+                return
+
+            # don't ask for an alpha channel from overlaid image if it
+            # doesn't have one
+            rgb_order = self.fitsimage.get_rgb_order()
+            image_order = self.image.get_order()
+            if ('A' in rgb_order) and not ('A' in image_order):
+                rgb_order = rgb_order.replace('A', '')
+
+            # scale the cutout according to the current viewer scale
+            srcdata = self.image.get_array(rgb_order)
+            #print "rgb_order=%s srcdata=%s" % (rgb_order, srcdata.shape)
+            scale_x, scale_y = self.fitsimage.get_scale_xy()
+            (newdata, (nscale_x, nscale_y)) = \
+                      trcalc.get_scaled_cutout_basic(srcdata, a1, b1, a2, b2,
+                                                     scale_x, scale_y)
+            self._cutout = newdata
         
-        a1, b1, a2, b2 = 0, 0, self.image.width, self.image.height
+            # calculate our offset from the pan position
+            pan_x, pan_y = self.fitsimage.get_pan()
+            #print "pan x,y=%f,%f" % (pan_x, pan_y)
+            off_x, off_y = dst_x - pan_x, dst_y - pan_y
+            # scale offset
+            off_x *= scale_x
+            off_y *= scale_y
+            #print "off_x,y=%f,%f" % (off_x, off_y)
 
-        # calculate the cutout that we can make and scale to merge
-        # onto the final image--by only cutting out what is necessary
-        # this speeds scaling greatly at zoomed in sizes
-        dst_x, dst_y, a1, b1, a2, b2 = \
-               trcalc.calc_image_merge_clip(xmin, ymin, xmax, ymax,
-                                            dst_x, dst_y, a1, b1, a2, b2)
-        #a1, b1, a2, b2 = 0, 0, self.image.width, self.image.height
-
-        # is image completely off the screen?
-        if (a2 - a1 <= 0) or (b2 - b1 <= 0):
-            # no overlay needed
-            #print "no overlay needed"
-            return
-
-        # scale the cutout according to the current viewer scale
-        order = self.fitsimage.get_rgb_order()
-        ## if 'A' in order:
-        ##     order = order.replace('A', '')
-        srcdata = self.image.get_array(order)
-        #print "order=%s srcdata=%s" % (order, srcdata.shape)
-        scale_x, scale_y = self.fitsimage.get_scale_xy()
-        (newdata, (nscale_x, nscale_y)) = \
-                  trcalc.get_scaled_cutout_basic(srcdata, a1, b1, a2, b2,
-                                                 scale_x, scale_y)
-        
-        # calculate our offset from the pan position
-        pan_x, pan_y = self.fitsimage.get_pan()
-        #print "pan x,y=%f,%f" % (pan_x, pan_y)
-        off_x, off_y = dst_x - pan_x, dst_y - pan_y
-        # scale offset
-        off_x *= scale_x
-        off_y *= scale_y
-        #print "off_x,y=%f,%f" % (off_x, off_y)
-
-        # dst position in the pre-transformed array should be calculated
-        # from the center of the array plus offsets
-        ht, wd, dp = dstarr.shape
-        x = int(round(wd / 2.0  + off_x))
-        y = int(round(ht / 2.0  + off_y))
+            # dst position in the pre-transformed array should be calculated
+            # from the center of the array plus offsets
+            ht, wd, dp = dstarr.shape
+            self._cvs_x = int(round(wd / 2.0  + off_x))
+            self._cvs_y = int(round(ht / 2.0  + off_y))
 
         # composite the image into the destination array at the
         # calculated position
-        trcalc.overlay_image(dstarr, x, y, newdata, alpha=self.alpha,
-                             flipy=self.flipy)
+        trcalc.overlay_image(dstarr, self._cvs_x, self._cvs_y, self._cutout,
+                             alpha=self.alpha, flipy=self.flipy)
         #print "image overlaid"
 
     def edit_points(self):
@@ -1138,101 +1151,136 @@ class Image(CanvasObjectBase):
 
 class NormImage(Image):
     """Draws an image on a ImageViewCanvas.
+
     Parameters are:
     x, y: 0-based coordinates of one corner in the data space
     image: the image, which must be an RGBImage object
     """
 
-    def __init__(self, x, y, image, alpha=None, flipy=False):
+    def __init__(self, x, y, image, alpha=None, flipy=False,
+                 rgbmap=None, autocuts=None):
         self.kind = 'normimage'
         super(NormImage, self).__init__(x=x, y=y, image=image, alpha=alpha,
                                         flipy=flipy)
+        self.rgbmap = rgbmap
+        self.autocuts = autocuts
 
         self._drawn = False
+        # these hold intermediate step results. Depending on value of
+        # `whence` they may not need to be recomputed.
+        self._cutout = None
+        self._prergb = None
+        self._rgbarr = None
+        # calculated location of overlay on canvas
+        self._cvs_x = 0
+        self._cvs_y = 0
 
-    def draw_image(self, dstarr):
-        # get extent of our data coverage in the window
-        ((x0, y0), (x1, y1), (x2, y2), (x3, y3)) = self.fitsimage.get_pan_rect()
-        xmin = int(min(x0, x1, x2, x3))
-        ymin = int(min(y0, y1, y2, y3))
-        xmax = int(max(x0, x1, x2, x3))
-        ymax = int(max(y0, y1, y2, y3))
+    def draw_image(self, dstarr, whence=0.0):
+        #print("redraw whence=%f" % (whence))
 
-        # destination location in data_coords
-        dst_x, dst_y = self.x, self.y
-        
-        a1, b1, a2, b2 = 0, 0, self.image.width, self.image.height
+        if (whence <= 0.0) or (self._cutout == None):
+            # get extent of our data coverage in the window
+            ((x0, y0), (x1, y1), (x2, y2), (x3, y3)) = self.fitsimage.get_pan_rect()
+            xmin = int(min(x0, x1, x2, x3))
+            ymin = int(min(y0, y1, y2, y3))
+            xmax = int(max(x0, x1, x2, x3))
+            ymax = int(max(y0, y1, y2, y3))
 
-        # calculate the cutout that we can make and scale to merge
-        # onto the final image--by only cutting out what is necessary
-        # this speeds scaling greatly at zoomed in sizes
-        dst_x, dst_y, a1, b1, a2, b2 = \
-               trcalc.calc_image_merge_clip(xmin, ymin, xmax, ymax,
-                                            dst_x, dst_y, a1, b1, a2, b2)
+            # destination location in data_coords
+            dst_x, dst_y = self.x, self.y
 
-        # is image completely off the screen?
-        if (a2 - a1 <= 0) or (b2 - b1 <= 0):
-            # no overlay needed
-            #print "no overlay needed"
-            return
+            a1, b1, a2, b2 = 0, 0, self.image.width, self.image.height
 
-        # cutout and scale the piece appropriately
-        srcdata = self.image.get_data()
+            # calculate the cutout that we can make and scale to merge
+            # onto the final image--by only cutting out what is necessary
+            # this speeds scaling greatly at zoomed in sizes
+            dst_x, dst_y, a1, b1, a2, b2 = \
+                   trcalc.calc_image_merge_clip(xmin, ymin, xmax, ymax,
+                                                dst_x, dst_y, a1, b1, a2, b2)
 
-        scale_x, scale_y = self.fitsimage.get_scale_xy()
-        (newdata, (nscale_x, nscale_y)) = \
-                  trcalc.get_scaled_cutout_basic(srcdata, a1, b1, a2, b2,
-                                                 scale_x, scale_y)
-        
-        # apply visual changes prior to color mapping (cut levels, etc)
-        rgbmap = self.fitsimage.get_rgbmap()
-        vmax = rgbmap.get_hash_size() - 1
-        newdata = self.apply_visuals(newdata, 0, vmax)
+            # is image completely off the screen?
+            if (a2 - a1 <= 0) or (b2 - b1 <= 0):
+                # no overlay needed
+                #print "no overlay needed"
+                return
 
-        # result becomes an index array fed to the RGB mapper
-        if not numpy.issubdtype(newdata.dtype, numpy.dtype('uint')):
-            newdata = newdata.astype(numpy.uint)
-        idx = newdata
-        
-        self.logger.debug("shape of index is %s" % (str(idx.shape)))
+            # cutout and scale the piece appropriately
+            srcdata = self.image.get_data()
 
-        rgb_order = self.fitsimage.get_rgb_order()
-        image_order = self.image.get_order()
-        rgbobj = rgbmap.get_rgbarray(idx, order=rgb_order,
-                                     image_order=image_order)
+            scale_x, scale_y = self.fitsimage.get_scale_xy()
+            (newdata, (nscale_x, nscale_y)) = \
+                      trcalc.get_scaled_cutout_basic(srcdata, a1, b1, a2, b2,
+                                                     scale_x, scale_y)
+            self._cutout = newdata
 
-        ## if 'A' in rgb_order:
-        ##     rgb_order = rgb_order.replace('A', '')
-        #newdata = rgbobj.get_array(order)
-        newdata = rgbobj.rgbarr
+            # calculate our offset from the pan position
+            pan_x, pan_y = self.fitsimage.get_pan()
+            #print "pan x,y=%f,%f" % (pan_x, pan_y)
+            off_x, off_y = dst_x - pan_x, dst_y - pan_y
+            # scale offset
+            off_x *= scale_x
+            off_y *= scale_y
+            #print "off_x,y=%f,%f" % (off_x, off_y)
 
-        # calculate our offset from the pan position
-        pan_x, pan_y = self.fitsimage.get_pan()
-        #print "pan x,y=%f,%f" % (pan_x, pan_y)
-        off_x, off_y = dst_x - pan_x, dst_y - pan_y
-        # scale offset
-        off_x *= scale_x
-        off_y *= scale_y
-        #print "off_x,y=%f,%f" % (off_x, off_y)
+            # dst position in the pre-transformed array should be calculated
+            # from the center of the array plus offsets
+            ht, wd, dp = dstarr.shape
+            self._cvs_x = int(round(wd / 2.0  + off_x))
+            self._cvs_y = int(round(ht / 2.0  + off_y))
 
-        # dst position in the pre-transformed array should be calculated
-        # from the center of the array plus offsets
-        ht, wd, dp = dstarr.shape
-        x = int(round(wd / 2.0  + off_x))
-        y = int(round(ht / 2.0  + off_y))
+        if self.rgbmap != None:
+            rgbmap = self.rgbmap
+        else:
+            rgbmap = self.fitsimage.get_rgbmap()
+
+        if (whence <= 1.0) or (self._prergb == None):
+            # apply visual changes prior to color mapping (cut levels, etc)
+            vmax = rgbmap.get_hash_size() - 1
+            newdata = self.apply_visuals(self._cutout, 0, vmax)
+
+            # result becomes an index array fed to the RGB mapper
+            if not numpy.issubdtype(newdata.dtype, numpy.dtype('uint')):
+                newdata = newdata.astype(numpy.uint)
+            idx = newdata
+
+            self.logger.debug("shape of index is %s" % (str(idx.shape)))
+            self._prergb = idx
+
+        if (whence <= 2.5) or (self._rgbarr == None):
+            rgb_order = self.fitsimage.get_rgb_order()
+            image_order = self.image.get_order()
+            rgbobj = rgbmap.get_rgbarray(self._prergb, order=rgb_order,
+                                         image_order=image_order)
+
+            # don't ask for an alpha channel from overlaid image if it
+            # doesn't have one
+            if ('A' in rgb_order) and not ('A' in image_order):
+                rgb_order = rgb_order.replace('A', '')
+            self._rgbarr = rgbobj.get_array(rgb_order)
 
         # composite the image into the destination array at the
         # calculated position
-        trcalc.overlay_image(dstarr, x, y, newdata, alpha=self.alpha,
-                             flipy=self.flipy)
+        trcalc.overlay_image(dstarr, self._cvs_x, self._cvs_y, self._rgbarr,
+                             alpha=self.alpha, flipy=self.flipy)
         #print "image overlaid"
 
     def apply_visuals(self, data, vmin, vmax):
+        if self.autocuts != None:
+            autocuts = self.autocuts
+        else:
+            autocuts = self.fitsimage.autocuts
+
         # Apply cut levels
         loval, hival = self.fitsimage.t_['cuts']
-        newdata = self.fitsimage.autocuts.cut_levels(data, loval, hival,
-                                                     vmin=vmin, vmax=vmax)
+        newdata = autocuts.cut_levels(data, loval, hival,
+                                      vmin=vmin, vmax=vmax)
         return newdata
+
+    def set_image(self, image):
+        self.image = image
+        self._cutout = None
+        self._prergb = None
+        self._rgbarr = None
 
 
 class CompoundObject(CompoundMixin, CanvasObjectBase):
