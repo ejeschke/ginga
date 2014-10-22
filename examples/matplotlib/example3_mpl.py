@@ -87,12 +87,9 @@ class FitsViewer(QtGui.QMainWindow):
 
         # enable various key and mouse controlled actions
         bd = fi.get_bindings()
-        bd.enable_pan(True)
-        bd.enable_zoom(True)
-        bd.enable_cuts(True)
-        bd.enable_flip(True)
-        bd.enable_rotate(True)
-        bd.enable_cmap(True)
+        bd.enable_all(True)
+
+        self.cp_tag = 'compass'
 
         # pack widget into layout
         gingaw = fi.get_widget()
@@ -235,14 +232,17 @@ class FitsViewer(QtGui.QMainWindow):
 
         # create compass
         try:
-            self.fitsimage.deleteAllObjects()
+            try:
+                self.fitsimage.deleteObjectByTag(self.cp_tag)
+            except KeyError:
+                pass
             (x, y, xn, yn, xe, ye) = image.calc_compass_center()
             self.logger.debug("x=%d y=%d xn=%d yn=%d xe=%d ye=%d" % (
                 x, y, xn, yn, xe, ye))
             Compass = self.fitsimage.getDrawClass('compass')
             self.fitsimage.add(Compass(
                 x, y, xn, yn, xe, ye, color='skyblue',
-                fontsize=14), redraw=True)
+                fontsize=14), tag=self.cp_tag, redraw=True)
         except Exception as e:
             self.logger.warn("Can't calculate compass: %s" % (
                 str(e)))

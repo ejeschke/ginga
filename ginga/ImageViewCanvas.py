@@ -1117,6 +1117,9 @@ class Image(CanvasObjectBase):
 
             # scale the cutout according to the current viewer scale
             srcdata = self.image.get_array(rgb_order)
+            if self.flipy:
+                srcdata = numpy.flipud(srcdata)
+                
             #print "rgb_order=%s srcdata=%s" % (rgb_order, srcdata.shape)
             scale_x, scale_y = self.fitsimage.get_scale_xy()
             (newdata, (nscale_x, nscale_y)) = \
@@ -1142,7 +1145,7 @@ class Image(CanvasObjectBase):
         # composite the image into the destination array at the
         # calculated position
         trcalc.overlay_image(dstarr, self._cvs_x, self._cvs_y, self._cutout,
-                             alpha=self.alpha, flipy=self.flipy)
+                             alpha=self.alpha, flipy=False)
         #print "image overlaid"
 
     def edit_points(self):
@@ -1165,15 +1168,10 @@ class NormImage(Image):
         self.rgbmap = rgbmap
         self.autocuts = autocuts
 
-        self._drawn = False
         # these hold intermediate step results. Depending on value of
         # `whence` they may not need to be recomputed.
-        self._cutout = None
         self._prergb = None
         self._rgbarr = None
-        # calculated location of overlay on canvas
-        self._cvs_x = 0
-        self._cvs_y = 0
 
     def draw_image(self, dstarr, whence=0.0):
         #print("redraw whence=%f" % (whence))
@@ -1206,7 +1204,9 @@ class NormImage(Image):
 
             # cutout and scale the piece appropriately
             srcdata = self.image.get_data()
-
+            if self.flipy:
+                srcdata = numpy.flipud(srcdata)
+                
             scale_x, scale_y = self.fitsimage.get_scale_xy()
             (newdata, (nscale_x, nscale_y)) = \
                       trcalc.get_scaled_cutout_basic(srcdata, a1, b1, a2, b2,
@@ -1261,7 +1261,7 @@ class NormImage(Image):
         # composite the image into the destination array at the
         # calculated position
         trcalc.overlay_image(dstarr, self._cvs_x, self._cvs_y, self._rgbarr,
-                             alpha=self.alpha, flipy=self.flipy)
+                             alpha=self.alpha, flipy=False)
         #print "image overlaid"
 
     def apply_visuals(self, data, vmin, vmax):

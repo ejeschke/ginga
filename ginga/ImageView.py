@@ -685,9 +685,9 @@ class ImageViewBase(Callback.Callbacks):
 
         if (whence <= 0.0) or (self._rgbarr == None):
             # calculate dimensions of window RGB backing image
-            wd, ht = self.calc_bg_dimensions(self._scale_x, self._scale_y,
-                                             self._pan_x, self._pan_y,
-                                             win_wd, win_ht)
+            wd, ht = self._calc_bg_dimensions(self._scale_x, self._scale_y,
+                                              self._pan_x, self._pan_y,
+                                              win_wd, win_ht)
 
             # create backing image
             depth = len(order)
@@ -715,8 +715,8 @@ class ImageViewBase(Callback.Callbacks):
         return self._rgbobj
 
 
-    def calc_bg_dimensions(self, scale_x, scale_y,
-                           pan_x, pan_y, win_wd, win_ht):
+    def _calc_bg_dimensions(self, scale_x, scale_y,
+                            pan_x, pan_y, win_wd, win_ht):
 
         # Sanity check on the scale
         sx = float(win_wd) / scale_x
@@ -729,8 +729,7 @@ class ImageViewBase(Callback.Callbacks):
             scale_x, scale_y = new_scale_x, new_scale_y
 
         # It is necessary to store these so that the get_data_xy()
-        # (below) calculations can proceed, later these values may
-        # refined slightly by the dimensions of the actual cutout
+        # (below) calculations can proceed
         self._org_x, self._org_y = pan_x, pan_y
         self._org_scale_x, self._org_scale_y = scale_x, scale_y
 
@@ -749,12 +748,10 @@ class ImageViewBase(Callback.Callbacks):
         a2 = max(xul, xur, xlr, xll)
         b2 = max(yul, yur, ylr, yll)
         
-        # constrain to image dimensions and integer indexes
+        # constrain to integer indexes
         x1, y1, x2, y2 = int(a1), int(b1), int(round(a2)), int(round(b2))
         x1 = max(0, x1)
         y1 = max(0, y1)
-        #x2 = min(x2, width-1)
-        #y2 = min(y2, height-1)
 
         self.logger.debug("approx area covered is %dx%d to %dx%d" % (
             x1, y1, x2, y2))

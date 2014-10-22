@@ -18,7 +18,7 @@ if six.PY2:
 else:
     import tkinter as Tkinter
     from tkinter.filedialog import askopenfilename
-from ginga.tkw.ImageViewTk import ImageViewZoom
+from ginga.tkw.ImageViewCanvasTk import ImageViewCanvas
 from ginga import AstroImage
 
 
@@ -39,7 +39,7 @@ class FitsViewer(object):
         canvas = Tkinter.Canvas(vbox, bg="grey", height=512, width=512)
         canvas.pack(side=Tkinter.TOP, fill=Tkinter.BOTH, expand=1)
 
-        fi = ImageViewZoom(logger)
+        fi = ImageViewCanvas(logger)
         fi.set_widget(canvas)
         fi.enable_autocuts('on')
         fi.set_autocut_params('zscale')

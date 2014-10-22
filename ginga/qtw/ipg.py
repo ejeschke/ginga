@@ -18,6 +18,7 @@ import logging
 from ginga import AstroImage
 from ginga.qtw.QtHelp import QtGui, QtCore
 from ginga.qtw.ImageViewCanvasQt import ImageViewCanvas
+from ginga.qtw.ImageViewCanvasTypesQt import DrawingCanvas
 from ginga.qtw.Readout import Readout
 from ginga.misc import log, Settings
 from ginga.util import paths
@@ -62,6 +63,16 @@ class IPyNbImageView(ImageViewCanvas):
 
         self.set_image(image)
 
+    def add_canvas(self, tag=None):
+        # add a canvas to the view
+        canvas = DrawingCanvas()
+        # enable drawing on the canvas
+        canvas.enable_draw(True)
+        canvas.ui_setActive(True)
+        canvas.setSurface(self)
+        # add the canvas to the view.
+        self.add(canvas, tag=tag)
+        return canvas
     
 class SimpleKernelApp(object):
     """A minimal object that uses an IPython kernel and has a few methods
@@ -179,9 +190,7 @@ class StartMenu(QtGui.QMainWindow):
         # create a ginga basic object for user interaction
         fi = IPyNbImageView(self.logger, settings=settings,
                             render='widget', bindings=bd)
-        fi.enable_draw(True)
-        fi.set_drawtype('point')
-        fi.set_drawcolor('blue')
+        fi.enable_draw(False)
         fi.set_callback('drag-drop', self.drop_file, name)
         fi.set_bg(0.2, 0.2, 0.2)
         fi.ui_setActive(True)
@@ -191,12 +200,7 @@ class StartMenu(QtGui.QMainWindow):
 
         # enable various interactive operations
         bd = fi.get_bindings()
-        bd.enable_pan(True)
-        bd.enable_zoom(True)
-        bd.enable_cuts(True)
-        bd.enable_flip(True)
-        bd.enable_rotate(True)
-        bd.enable_cmap(True)
+        bd.enable_all(True)
 
         # get the ginga Qt widget
         w = fi.get_widget()

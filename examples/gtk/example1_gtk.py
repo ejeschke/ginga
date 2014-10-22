@@ -11,7 +11,7 @@
 import sys, os
 import logging
 
-from ginga.gtkw.ImageViewGtk import ImageViewZoom
+from ginga.gtkw.ImageViewCanvasGtk import ImageViewCanvas
 from ginga.gtkw import FileSelection
 from ginga import AstroImage
 
@@ -34,7 +34,7 @@ class FitsViewer(object):
         self.select = FileSelection.FileSelection()
         vbox = gtk.VBox(spacing=2)
 
-        fi = ImageViewZoom(logger)
+        fi = ImageViewCanvas(logger)
         fi.enable_autocuts('on')
         fi.set_autocut_params('zscale')
         fi.enable_autozoom('on')

@@ -13,7 +13,7 @@ import logging
 
 from ginga import AstroImage
 from ginga.qtw.QtHelp import QtGui, QtCore
-from ginga.qtw.ImageViewQt import ImageViewZoom
+from ginga.qtw.ImageViewCanvasQt import ImageViewCanvas
 
 STD_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcName)s) | %(message)s'
 
@@ -24,7 +24,7 @@ class FitsViewer(QtGui.QMainWindow):
         super(FitsViewer, self).__init__()
         self.logger = logger
 
-        fi = ImageViewZoom(self.logger, render='widget')
+        fi = ImageViewCanvas(self.logger, render='widget')
         fi.enable_autocuts('on')
         fi.set_autocut_params('zscale')
         fi.enable_autozoom('on')

@@ -23,6 +23,7 @@ from ginga import AstroImage
 from matplotlib.figure import Figure
 from ginga.mplw.ImageViewCanvasMpl import ImageViewCanvas
 from ginga.mplw.FigureCanvasQt import FigureCanvas
+from ginga.mplw.ImageViewCanvasTypesMpl import DrawingCanvas
 from ginga.misc import log
 from ginga import colors
 
@@ -41,9 +42,7 @@ class FitsViewer(QtGui.QMainWindow):
         fi.enable_autocuts('on')
         fi.set_autocut_params('zscale')
         fi.enable_autozoom('on')
-        fi.enable_draw(True)
-        fi.set_drawtype('ruler')
-        fi.set_drawcolor('blue')
+        fi.enable_draw(False)
         fi.set_callback('drag-drop', self.drop_file)
         fi.set_callback('none-move', self.motion)
         fi.set_bg(0.2, 0.2, 0.2)
@@ -51,7 +50,18 @@ class FitsViewer(QtGui.QMainWindow):
         self.fitsimage = fi
         fi.set_figure(fig)
 
-        fi.get_bindings().enable_all(True)
+        bd = fi.get_bindings()
+        bd.enable_all(True)
+
+        # canvas that we will draw on
+        canvas = DrawingCanvas()
+        canvas.enable_draw(True)
+        canvas.set_drawtype('rectangle', color='lightblue')
+        canvas.setSurface(fi)
+        self.canvas = canvas
+        # add canvas to view
+        fi.add(canvas)
+        canvas.ui_setActive(True)
 
         w.resize(512, 512)
 
@@ -127,10 +137,10 @@ class FitsViewer(QtGui.QMainWindow):
         if kind in ('circle', 'rectangle', 'polygon', 'triangle'):
             params['fill'] = fill
 
-        self.fitsimage.set_drawtype(kind, **params)
+        self.canvas.set_drawtype(kind, **params)
 
     def clear_canvas(self):
-        self.fitsimage.deleteAllObjects()
+        self.canvas.deleteAllObjects()
 
     def load_file(self, filepath):
         image = AstroImage.AstroImage(logger=self.logger)
