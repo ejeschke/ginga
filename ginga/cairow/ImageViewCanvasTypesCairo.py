@@ -36,7 +36,8 @@ class CairoCanvasMixin(object):
     def setup_cr(self):
         cr = self.fitsimage.get_offscreen_context()
 
-        self.set_color(cr, self.color)
+        alpha = getattr(self, 'alpha', 1.0)
+        self.set_color(cr, self.color, alpha=alpha)
 
         linewidth = getattr(self, 'linewidth', 1)
         cr.set_line_width(linewidth)
@@ -54,13 +55,14 @@ class CairoCanvasMixin(object):
             if color == None:
                 color = self.color
             alpha = getattr(self, 'alpha', 1.0)
+            fillalpha = getattr(self, 'fillalpha', alpha)
 
-            self.set_color(cr, color, alpha=alpha)
+            self.set_color(cr, color, alpha=fillalpha)
             # do the fill
             cr.fill()
 
             # reset context to old color
-            self.set_color(cr, self.color)
+            self.set_color(cr, self.color, alpha=alpha)
             
     def draw_arrowhead(self, cr, x1, y1, x2, y2):
         i1, j1, i2, j2 = self.calcVertexes(x1, y1, x2, y2)
@@ -386,7 +388,8 @@ class Ruler(RulerBase, CairoCanvasMixin):
         cr.show_text(self.text_h)
 
         if self.color2:
-            self.set_color(cr, self.color2)
+            alpha = getattr(self, 'alpha', 1.0)
+            self.set_color(cr, self.color2, alpha=alpha)
             
         # draw X plumb line
         cr.move_to(cx1, cy1)

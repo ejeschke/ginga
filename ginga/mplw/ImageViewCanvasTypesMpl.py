@@ -68,7 +68,9 @@ class Text(TextBase, MplCanvasMixin):
             fontsize = self.scale_font()
         else:
             fontsize = self.fontsize
-        font = cr.get_font(self.font, fontsize, self.color)
+        alpha = getattr(self, 'alpha', 1.0)
+        font = cr.get_font(self.font, fontsize, self.color,
+                           alpha=alpha)
 
         cr.axes.text(cx, cy, self.text, fontdict=font)
 
@@ -120,7 +122,9 @@ class Rectangle(RectangleBase, MplCanvasMixin):
 
         if self.drawdims:
             fontsize = self.scale_font()
-            font = cr.get_font(self.font, fontsize, self.color)
+            alpha = getattr(self, 'alpha', 1.0)
+            font = cr.get_font(self.font, fontsize, self.color,
+                               alpha=alpha)
 
             cx1, cy1 = cpoints[0]
             cx2, cy2 = cpoints[2]
@@ -218,7 +222,9 @@ class Compass(CompassBase, MplCanvasMixin):
             fontsize = self.scale_font()
         else:
             fontsize = self.fontsize
-        font = cr.get_font(self.font, fontsize, self.color)
+        alpha = getattr(self, 'alpha', 1.0)
+        font = cr.get_font(self.font, fontsize, self.color,
+                           alpha=alpha)
         cx, cy = self.get_textpos(cr, 'N', cx1, cy1, cx2, cy2, font)
         cr.axes.text(cx, cy, 'N', fontdict=font)
 
@@ -300,7 +306,9 @@ class Ruler(RulerBase, MplCanvasMixin):
             fontsize = self.scale_font()
         else:
             fontsize = self.fontsize
-        font = cr.get_font(self.font, fontsize, self.color)
+        alpha = getattr(self, 'alpha', 1.0)
+        font = cr.get_font(self.font, fontsize, self.color,
+                           alpha=alpha)
 
         # draw the line connecting the start and end drag points
         # and add arrows on each end
@@ -356,7 +364,8 @@ class Ruler(RulerBase, MplCanvasMixin):
 
         if self.color2:
             cr.set(color=cr.get_color(self.color2, self.alpha))
-            font = cr.get_font(self.font, fontsize, self.color2)
+            font = cr.get_font(self.font, fontsize, self.color2,
+                               alpha=alpha)
             
         # draw X plumb line
         #cr.canvas.line((cx1, cy1, cx2, cy1), pen)

@@ -69,6 +69,7 @@ class QtCanvasMixin(object):
             if not color:
                 cr.setBrush(QtCore.Qt.NoBrush)
             else:
+                alpha = getattr(self, 'fillalpha', alpha)
                 color = self.__get_color(color, alpha)
                 cr.setBrush(color)
         else:
@@ -78,7 +79,8 @@ class QtCanvasMixin(object):
 
     def draw_arrowhead(self, cr, x1, y1, x2, y2):
         i1, j1, i2, j2 = self.calcVertexes(x1, y1, x2, y2)
-        self.set_fill(cr, True)
+        alpha = getattr(self, 'alpha', 1.0)
+        self.set_fill(cr, True, alpha=alpha)
         cr.pen().setJoinStyle(QtCore.Qt.MiterJoin)
         cr.drawPolygon(QPolygonF([QtCore.QPointF(x2, y2),
                                         QtCore.QPointF(i1, j1),
@@ -87,8 +89,9 @@ class QtCanvasMixin(object):
         self.set_fill(cr, False)
         
     def draw_cap(self, cr, cap, x, y, radius=2):
+        alpha = getattr(self, 'alpha', 1.0)
         if cap == 'ball':
-            self.set_fill(cr, True)
+            self.set_fill(cr, True, alpha=alpha)
             cr.drawEllipse(x-radius, y-radius, radius*2, radius*2)
             self.set_fill(cr, False)
         
@@ -376,7 +379,8 @@ class Ruler(RulerBase, QtCanvasMixin):
         pen.setDashOffset(5.0)
         cr.setPen(pen)
         if self.color2:
-            self.set_color(cr, self.color2)
+            alpha = getattr(self, 'alpha', 1.0)
+            self.set_color(cr, self.color2, alpha=alpha)
                 
         # draw X plumb line
         cr.drawLine(cx1, cy1, cx2, cy1)

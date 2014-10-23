@@ -32,6 +32,7 @@ class MplContext(object):
         if hasattr(obj, 'fill'):
             self.kwdargs['fill'] = obj.fill
             alpha = getattr(obj, 'alpha', 1.0)
+            alpha = getattr(obj, 'fillalpha', alpha)
 
             if obj.fillcolor:
                 self.kwdargs['facecolor'] = self.get_color(obj.fillcolor,

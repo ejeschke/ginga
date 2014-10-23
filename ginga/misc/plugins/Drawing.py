@@ -32,9 +32,9 @@ class Drawing(GingaPlugin.LocalPlugin):
         self.canvas = canvas
 
         self.w = None
-        self.drawtypes = canvas.get_drawtypes()
+        self.drawtypes = list(canvas.get_drawtypes())
         self.drawcolors = draw_colors
-
+        self.linestyles = ['solid', 'dash']
 
     def build_gui(self, container):
         top = Widgets.VBox()
@@ -58,36 +58,69 @@ class Drawing(GingaPlugin.LocalPlugin):
         
         fr = Widgets.Frame("Drawing")
 
-        captions = (('Draw type:', 'label', 'Draw type', 'combobox'),
-                    ('Draw color:', 'label', 'Draw color', 'combobox'),
-                    ('Clear canvas', 'button'))
+        captions = (("Draw type:", 'label', "Draw type", 'combobox'),
+                    ("Draw color:", 'label', "Draw color", 'combobox'),
+                    ("Line width:", 'label', "Line width", 'spinbutton'),
+                    ("Line style:", 'label', "Line style", 'combobox'),
+                    ("Alpha:", 'label', "Alpha", 'spinfloat'),
+                    ("Fill", 'checkbutton', "Fill color", 'combobox'),
+                    ("Fill Alpha:", 'label', "Fill Alpha", 'spinfloat'),
+                    ("Text:", 'label', "Text", 'entry'),
+                    ("Clear canvas", 'button')
+                    )
         w, b = Widgets.build_info(captions)
         self.w = b
 
         combobox = b.draw_type
-        options = []
-        index = 0
         for name in self.drawtypes:
-            options.append(name)
             combobox.append_text(name)
-            index += 1
         index = self.drawtypes.index(default_drawtype)
         combobox.set_index(index)
         combobox.add_callback('activated', lambda w, idx: self.set_drawparams())
 
-        self.w.draw_color = b.draw_color
         combobox = b.draw_color
-        options = []
-        index = 0
         self.drawcolors = draw_colors
         for name in self.drawcolors:
-            options.append(name)
             combobox.append_text(name)
-            index += 1
         index = self.drawcolors.index(default_drawcolor)
         combobox.set_index(index)
         combobox.add_callback('activated', lambda w, idx: self.set_drawparams())
 
+        combobox = b.fill_color
+        for name in self.drawcolors:
+            combobox.append_text(name)
+        index = self.drawcolors.index(default_drawcolor)
+        combobox.set_index(index)
+        combobox.add_callback('activated', lambda w, idx: self.set_drawparams())
+
+        b.line_width.set_limits(0, 10, 1)
+        #b.line_width.set_decimals(0)
+        b.line_width.set_value(1)
+        b.line_width.add_callback('value-changed', lambda w, val: self.set_drawparams())
+        
+        combobox = b.line_style
+        for name in self.linestyles:
+            combobox.append_text(name)
+        combobox.set_index(0)
+        combobox.add_callback('activated', lambda w, idx: self.set_drawparams())
+
+        b.fill.add_callback('activated', lambda w, tf: self.set_drawparams())
+        b.fill.set_state(False)
+
+        b.alpha.set_limits(0.0, 1.0, 0.1)
+        b.alpha.set_decimals(2)
+        b.alpha.set_value(1.0)
+        b.alpha.add_callback('value-changed', lambda w, val: self.set_drawparams())
+        
+        b.fill_alpha.set_limits(0.0, 1.0, 0.1)
+        b.fill_alpha.set_decimals(2)
+        b.fill_alpha.set_value(0.3)
+        b.fill_alpha.add_callback('value-changed', lambda w, val: self.set_drawparams())
+
+        b.text.add_callback('activated', lambda w: self.set_drawparams())
+        b.text.set_text('EDIT ME')
+        b.text.set_length(60)
+        
         b.clear_canvas.add_callback('activated', lambda w: self.clear_canvas())
 
         fr.set_widget(w)
@@ -114,9 +147,31 @@ class Drawing(GingaPlugin.LocalPlugin):
         index = self.w.draw_type.get_index()
         kind = self.drawtypes[index]
         index = self.w.draw_color.get_index()
-        drawparams = { 'color': self.drawcolors[index],
-                       }
-        self.canvas.set_drawtype(kind, **drawparams)
+        color = self.drawcolors[index]
+        fill = self.w.fill.get_state()
+        index = self.w.fill_color.get_index()
+        fillcolor = self.drawcolors[index]
+        fillalpha = self.w.fill_alpha.get_value()
+        alpha = self.w.alpha.get_value()
+        index = self.w.line_style.get_index()
+        linestyle = self.linestyles[index]
+        linewidth = self.w.line_width.get_value()
+        drawtext = self.w.text.get_text()
+
+        params = { 'color': color,
+                   'alpha': alpha,
+                   }
+        if not kind in ('text',):
+            params['linestyle'] = linestyle
+            params['linewidth'] = linewidth
+        
+        if kind in ('circle', 'rectangle', 'polygon', 'triangle'):
+            params['fill'] = fill
+            params['fillcolor'] = fillcolor
+            params['fillalpha'] = fillalpha
+
+        self.canvas.set_drawtext(drawtext)
+        self.canvas.set_drawtype(kind, **params)
 
     def clear_canvas(self):
         self.canvas.deleteAllObjects()
@@ -152,7 +207,7 @@ class Drawing(GingaPlugin.LocalPlugin):
     def stop(self):
         # remove the canvas from the image
         ## try:
-        ##     self.fitsimage.deleteObjectByTag(self.layertag)
+        ##     self.fitsimage.delete_object_by_tag(self.layertag)
         ## except:
         ##     pass
         self.canvas.ui_setActive(False)

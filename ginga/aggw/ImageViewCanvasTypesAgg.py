@@ -38,6 +38,7 @@ class AggCanvasMixin(object):
             else:
                 color = self.color
             alpha = getattr(self, 'alpha', 1.0)
+            alpha = getattr(self, 'fillalpha', alpha)
             brush = cr.get_brush(color, alpha=alpha)
         else:
             brush = None
@@ -45,7 +46,8 @@ class AggCanvasMixin(object):
         
     def draw_arrowhead(self, cr, x1, y1, x2, y2, pen):
         i1, j1, i2, j2 = self.calcVertexes(x1, y1, x2, y2)
-        brush = cr.get_brush(self.color)
+        alpha = getattr(self, 'alpha', 1.0)
+        brush = cr.get_brush(self.color, alpha=alpha)
         cr.canvas.polygon((x2, y2, i1, j1, i2, j2),
                           pen, brush)
         
@@ -56,8 +58,9 @@ class AggCanvasMixin(object):
                               pen, brush)
         
     def draw_caps(self, cr, cap, points, radius=2):
-        pen = cr.get_pen(self.color)
-        brush = cr.get_brush(self.color)
+        alpha = getattr(self, 'alpha', 1.0)
+        pen = cr.get_pen(self.color, alpha=alpha)
+        brush = cr.get_brush(self.color, alpha=alpha)
 
         for x, y in points:
             self._draw_cap(cr, pen, brush, cap, x, y, radius=radius)
@@ -76,7 +79,9 @@ class Text(TextBase, AggCanvasMixin):
             fontsize = self.scale_font()
         else:
             fontsize = self.fontsize
-        font = cr.get_font(self.font, fontsize, self.color)
+        alpha = getattr(self, 'alpha', 1.0)
+        font = cr.get_font(self.font, fontsize, self.color,
+                           alpha=alpha)
         cr.canvas.text((cx, cy), self.text, font)
 
     def get_dimensions(self):
@@ -122,7 +127,9 @@ class Rectangle(RectangleBase, AggCanvasMixin):
 
         if self.drawdims:
             fontsize = self.scale_font()
-            font = cr.get_font(self.font, fontsize, self.color)
+            alpha = getattr(self, 'alpha', 1.0)
+            font = cr.get_font(self.font, fontsize, self.color,
+                               alpha=alpha)
 
             cx1, cy1 = cpoints[0]
             cx2, cy2 = cpoints[2]
@@ -213,7 +220,9 @@ class Compass(CompassBase, AggCanvasMixin):
             fontsize = self.scale_font()
         else:
             fontsize = self.fontsize
-        font = cr.get_font(self.font, fontsize, self.color)
+        alpha = getattr(self, 'alpha', 1.0)
+        font = cr.get_font(self.font, fontsize, self.color,
+                           alpha=alpha)
         cx, cy = self.get_textpos(cr, 'N', cx1, cy1, cx2, cy2, font)
         cr.canvas.text((cx, cy), 'N', font)
 
@@ -289,7 +298,9 @@ class Ruler(RulerBase, AggCanvasMixin):
             fontsize = self.scale_font()
         else:
             fontsize = self.fontsize
-        font = cr.get_font(self.font, fontsize, self.color)
+        alpha = getattr(self, 'alpha', 1.0)
+        font = cr.get_font(self.font, fontsize, self.color,
+                           alpha=alpha)
 
         # draw the line connecting the start and end drag points
         # and add arrows on each end
@@ -342,8 +353,10 @@ class Ruler(RulerBase, AggCanvasMixin):
         cr.canvas.text((xd, yd), self.text_h, font)
 
         if self.color2:
-            pen = cr.get_pen(self.color2)
-            font = cr.get_font(self.font, fontsize, self.color2)
+            pen = cr.get_pen(self.color2, linewidth=self.linewidth,
+                             alpha=alpha)
+            font = cr.get_font(self.font, fontsize, self.color2,
+                               alpha=alpha)
             
         # draw X plumb line
         cr.canvas.line((cx1, cy1, cx2, cy1), pen)

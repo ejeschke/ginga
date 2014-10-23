@@ -443,9 +443,10 @@ class DrawingMixin(object):
         self.drawDict = drawDict
         #self.drawtypes = drawDict.keys()
         self.drawtypes = ['point', 'circle', 'rectangle', 'triangle',
-                          'line', 'polygon', 'ruler', 'compass']
+                          'line', 'polygon', 'ruler', 'compass', 'text']
         self.t_drawtype = 'point'
         self.t_drawparams = {}
+        self._drawtext = "EDIT ME"
         self._start_x = 0
         self._start_y = 0
         self._points = []
@@ -487,6 +488,9 @@ class DrawingMixin(object):
         if self.drawObj:
             self.drawObj.draw()
 
+    def set_drawtext(self, text):
+        self._drawtext = text
+        
     def get_ruler_distances(self, x1, y1, x2, y2):
         mode = self.t_drawparams.get('units', 'arcmin')
         try:
@@ -582,6 +586,10 @@ class DrawingMixin(object):
             points = list(self._points)
             points.append((data_x, data_y))
             obj = klass(points, **self.t_drawparams)
+
+        elif self.t_drawtype == 'text':
+            obj = klass(self._start_x, self._start_y, self._drawtext,
+                        **self.t_drawparams)
 
         elif self.t_drawtype == 'ruler':
             text_x, text_y, text_h = self.get_ruler_distances(self._start_x,
@@ -758,14 +766,15 @@ class PolygonBase(CanvasObjectBase):
 
     def __init__(self, points, color='red',
                  linewidth=1, linestyle='solid', cap=None,
-                 fill=False, fillcolor=None, alpha=1.0):
+                 fill=False, fillcolor=None, alpha=1.0,
+                 fillalpha=1.0):
         self.kind = 'polygon'
         
         super(PolygonBase, self).__init__(points=points, color=color,
                                           linewidth=linewidth, cap=cap,
-                                          linestyle=linestyle,
+                                          linestyle=linestyle, alpha=alpha,
                                           fill=fill, fillcolor=fillcolor,
-                                          alpha=alpha)
+                                          fillalpha=fillalpha)
         
     def contains(self, x, y):
         # NOTE: we use a version of the ray casting algorithm
@@ -806,7 +815,7 @@ class RectangleBase(CanvasObjectBase):
     def __init__(self, x1, y1, x2, y2, color='red',
                  linewidth=1, linestyle='solid', cap=None,
                  fill=False, fillcolor=None, alpha=1.0,
-                 drawdims=False, font='Sans Serif'):
+                 drawdims=False, font='Sans Serif', fillalpha=1.0):
         self.kind = 'rectangle'
         # ensure that rectangles are always bounded LL to UR
         x1, y1, x2, y2 = self.swapxy(x1, y1, x2, y2)
@@ -816,7 +825,7 @@ class RectangleBase(CanvasObjectBase):
                                             linewidth=linewidth, cap=cap,
                                             linestyle=linestyle,
                                             fill=fill, fillcolor=fillcolor,
-                                            alpha=alpha,
+                                            alpha=alpha, fillalpha=fillalpha,
                                             drawdims=drawdims, font=font)
         
     def contains(self, x, y):
@@ -845,7 +854,7 @@ class RectangleBase(CanvasObjectBase):
         p = Polygon(points, color=self.color,
                     linewidth=self.linewidth, linestyle=self.linestyle,
                     cap=self.cap, fill=self.fill, fillcolor=self.fillcolor,
-                    alpha=self.alpha)
+                    alpha=self.alpha, fillalpha=self.fillalpha)
         return p
 
 
@@ -860,13 +869,13 @@ class SquareBase(RectangleBase):
     def __init__(self, x, y, length, color='red',
                  linewidth=1, linestyle='solid', cap=None,
                  fill=False, fillcolor=None, alpha=1.0,
-                 drawdims=False, font='Sans Serif'):
+                 drawdims=False, font='Sans Serif', fillalpha=1.0):
         super(SquareBase, self).__init__(x1=x, y1=y, x2=x-length, y2=y-length,
                                          color=color,
                                          linewidth=linewidth, cap=cap,
                                          linestyle=linestyle,
                                          fill=fill, fillcolor=fillcolor,
-                                         alpha=alpha,
+                                         alpha=alpha, fillalpha=fillalpha,
                                          drawdims=drawdims, font=font)
         self.kind = 'square'
         
@@ -881,12 +890,12 @@ class CircleBase(CanvasObjectBase):
 
     def __init__(self, x, y, radius, color='yellow',
                  linewidth=1, linestyle='solid', cap=None,
-                 fill=False, fillcolor=None, alpha=1.0):
+                 fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0):
         super(CircleBase, self).__init__(color=color,
                                          linewidth=linewidth, cap=cap,
                                          linestyle=linestyle,
                                          fill=fill, fillcolor=fillcolor,
-                                         alpha=alpha,
+                                         alpha=alpha, fillalpha=fillalpha,
                                          x=x, y=y, radius=radius)
         self.kind = 'circle'
 
@@ -978,10 +987,11 @@ class CompassBase(CanvasObjectBase):
 
     def __init__(self, x1, y1, x2, y2, x3, y3, color='skyblue',
                  linewidth=1, fontsize=None, font='Sans Serif',
-                 alpha=1.0, cap='ball'):
+                 alpha=1.0, linestyle='solid', cap='ball'):
         self.kind = 'compass'
         super(CompassBase, self).__init__(color=color, alpha=alpha,
                                           linewidth=linewidth, cap=cap,
+                                          linestyle=linestyle,
                                           x1=x1, y1=y1, x2=x2, y2=y2, x3=x3, y3=y3,
                                           font=font, fontsize=fontsize)
     def edit_points(self):
@@ -998,12 +1008,13 @@ class TriangleBase(CanvasObjectBase):
 
     def __init__(self, x1, y1, x2, y2, color='pink',
                  linewidth=1, linestyle='solid', cap=None,
-                 fill=False, fillcolor=None, alpha=1.0):
+                 fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0):
         self.kind='triangle'
         super(TriangleBase, self).__init__(color=color, alpha=alpha,
                                            linewidth=linewidth, cap=cap,
                                            linestyle=linestyle,
                                            fill=fill, fillcolor=fillcolor,
+                                           fillalpha=fillalpha,
                                            x1=x1, y1=y1, x2=x2, y2=y2)
 
     def edit_points(self):
@@ -1019,14 +1030,15 @@ class RulerBase(CanvasObjectBase):
     """
 
     def __init__(self, x1, y1, x2, y2, color='red', color2='yellow',
-                 alpha=1.0,
-                 linewidth=1, cap='ball', units='arcsec',
+                 alpha=1.0, linewidth=1, linestyle='solid',
+                 cap='ball', units='arcsec',
                  font='Sans Serif', fontsize=None,
                  text_x='kon', text_y='ban', text_h='wa'):
         self.kind = 'ruler'
         super(RulerBase, self).__init__(color=color, color2=color2,
                                         alpha=alpha,
                                         linewidth=linewidth, cap=cap,
+                                        linestyle=linestyle,
                                         x1=x1, y1=y1, x2=x2, y2=y2,
                                         font=font, fontsize=fontsize,
                                         text_x=text_x, text_y=text_y,
