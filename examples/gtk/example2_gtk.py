@@ -129,13 +129,15 @@ class FitsViewer(object):
         kind = self.drawtypes[index]
         index = self.wdrawcolor.get_active()
         fill = self.wfill.get_active()
+        alpha = self.walpha.get_value()
 
         params = { 'color': self.drawcolors[index],
-                   'alpha': self.walpha.get_value(),
+                   'alpha': alpha,
                    #'cap': 'ball',
                    }
         if kind in ('circle', 'rectangle', 'polygon', 'triangle'):
             params['fill'] = fill
+            params['fillalpha'] = alpha
 
         self.canvas.set_drawtype(kind, **params)
 

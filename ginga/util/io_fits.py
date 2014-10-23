@@ -91,9 +91,9 @@ class PyFitsFileHandler(BaseFitsFileHandler):
         if hasattr(header, 'cards'):
             #newer astropy.io.fits don't have ascardlist
             for card in header.cards:
-                if len(card.key) == 0:
+                if len(card.keyword) == 0:
                     continue
-                bnch = ahdr.__setitem__(card.key, card.value)
+                bnch = ahdr.__setitem__(card.keyword, card.value)
                 bnch.comment = card.comment
         else:
             for card in header.ascardlist():

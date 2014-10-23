@@ -81,7 +81,7 @@ class FitsViewer(QtGui.QMainWindow):
         self.drawtypes = fi.get_drawtypes()
         for name in self.drawtypes:
             wdrawtype.addItem(name)
-        index = self.drawtypes.index('ruler')
+        index = self.drawtypes.index('rectangle')
         wdrawtype.setCurrentIndex(index)
         wdrawtype.activated.connect(self.set_drawparams)
         self.wdrawtype = wdrawtype
@@ -89,7 +89,7 @@ class FitsViewer(QtGui.QMainWindow):
         wdrawcolor = QtGui.QComboBox()
         for name in self.drawcolors:
             wdrawcolor.addItem(name)
-        index = self.drawcolors.index('blue')
+        index = self.drawcolors.index('lightblue')
         wdrawcolor.setCurrentIndex(index)
         wdrawcolor.activated.connect(self.set_drawparams)
         self.wdrawcolor = wdrawcolor
@@ -130,12 +130,14 @@ class FitsViewer(QtGui.QMainWindow):
         kind = self.drawtypes[index]
         index = self.wdrawcolor.currentIndex()
         fill = (self.wfill.checkState() != 0)
+        alpha = self.walpha.value()
 
         params = { 'color': self.drawcolors[index],
-                   'alpha': self.walpha.value(),
+                   'alpha': alpha,
                    }
         if kind in ('circle', 'rectangle', 'polygon', 'triangle'):
             params['fill'] = fill
+            params['fillalpha'] = alpha
 
         self.canvas.set_drawtype(kind, **params)
 

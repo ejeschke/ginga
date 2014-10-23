@@ -44,7 +44,7 @@ class MplContext(object):
     def update_line(self, obj):
         alpha = getattr(obj, 'alpha', 1.0)
         self.kwdargs['color'] = self.get_color(obj.color,
-                                               alpha)
+                                                   alpha)
 
         if hasattr(obj, 'linewidth'):
             self.kwdargs['linewidth'] = obj.linewidth

@@ -124,13 +124,15 @@ class FitsViewer(QtGui.QMainWindow):
         kind = self.drawtypes[index]
         index = self.wdrawcolor.currentIndex()
         fill = (self.wfill.checkState() != 0)
+        alpha = self.walpha.value()
 
         params = { 'color': self.drawcolors[index],
-                   'alpha': self.walpha.value(),
-                   'cap': 'ball',
+                   'alpha': alpha,
+                   #'cap': 'ball',
                    }
         if kind in ('circle', 'rectangle', 'polygon', 'triangle'):
             params['fill'] = fill
+            params['fillalpha'] = alpha
 
         self.canvas.set_drawtype(kind, **params)
 

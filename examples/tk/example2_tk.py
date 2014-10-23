@@ -127,10 +127,11 @@ class FitsViewer(object):
 
         params = { 'color': color,
                    'alpha': alpha,
-                   'cap': 'ball',
+                   #'cap': 'ball',
                    }
         if kind in ('circle', 'rectangle', 'polygon', 'triangle'):
             params['fill'] = fill
+            params['fillalpha'] = alpha
 
         self.canvas.set_drawtype(kind, **params)
 
