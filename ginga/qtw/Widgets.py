@@ -585,10 +585,11 @@ class Toolbar(ContainerBase):
     def add_action(self, text, toggle=False, iconpath=None):
         child = ToolbarAction()
         if iconpath:
-            image = QImage(iconpath)
+            qsize = QtCore.QSize(24, 24)
+            image = QImage(qsize)
+            image.load(iconpath)
             pixmap = QPixmap.fromImage(image)
             iconw = QIcon(pixmap)
-            #qsize = QtCore.QSize(24, 24)
             action = self.widget.addAction(iconw, text,
                                            child._cb_redirect)
         else:
