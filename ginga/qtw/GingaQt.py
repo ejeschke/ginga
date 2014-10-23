@@ -416,9 +416,6 @@ class GingaView(QtMain.QtMain):
                                                settings=settings,
                                                bindings=bd)
         fi.enable_draw(False)
-        # at present this slows down pan/zoom a little.  plugins can
-        # turn it on for channels they care about
-        fi.enable_overlays(True)
         fi.set_follow_focus(settings.get('follow_focus', True))
         fi.enable_auto_orient(True)
         fi.add_callback('motion', self.motion_cb)
@@ -430,12 +427,7 @@ class GingaView(QtMain.QtMain):
                                self.change_range_cb, fi, self.colorbar)
 
         bd = fi.get_bindings()
-        bd.enable_pan(True)
-        bd.enable_zoom(True)
-        bd.enable_cuts(True)
-        bd.enable_flip(True)
-        bd.enable_rotate(True)
-        bd.enable_cmap(True)
+        bd.enable_all(True)
 
         rgbmap = fi.get_rgbmap()
         rgbmap.add_callback('changed', self.rgbmap_cb, fi)

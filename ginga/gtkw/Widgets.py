@@ -7,7 +7,7 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-from ginga.gtkw import GtkHelp
+from ginga.gtkw import GtkHelp, gtksel
 import gtk
 import gobject
 
@@ -590,6 +590,21 @@ class Toolbar(ContainerBase):
         else:
             w.set_orientation(gtk.ORIENTATION_VERTICAL)
         self.widget = w
+
+    def add_action(self, text, toggle=False, iconpath=None):
+        if toggle:
+            child = ToggleButton(text)
+        else:
+            child = Button(text)
+
+        if iconpath:
+            pixbuf = gtksel.pixbuf_new_from_file_at_size(iconpath, 24, 24)
+            if pixbuf != None:
+                image = gtk.image_new_from_pixbuf(pixbuf)
+                child.get_widget().set_image(image)
+
+        self.add_widget(child)
+        return child
 
     def add_widget(self, child):
         self.add_ref(child)

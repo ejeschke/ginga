@@ -12,7 +12,6 @@ import numpy
 from io import BytesIO
 
 from ginga import ImageView, Mixins, Bindings
-from ginga.util.six.moves import map, zip
 
 moduleHome = os.path.split(sys.modules[__name__].__file__)[0]
 icon_dir = os.path.abspath(os.path.join(moduleHome, '..', 'icons'))
@@ -28,7 +27,9 @@ class ImageViewMock(ImageView.ImageViewBase):
         ImageView.ImageViewBase.__init__(self, logger=logger,
                                          rgbmap=rgbmap, settings=settings)
 
-        # Mock expects 32bit BGRA data for color images
+        # Set this to the order in which you want channels stacked
+        # in the numpy array delivered for writing to the off-screen
+        # pixmap for your widget set
         self._rgb_order = 'BGRA'
         
         self.t_.setDefaults(show_pan_position=False,
@@ -50,10 +51,15 @@ class ImageViewMock(ImageView.ImageViewBase):
         self.cursor = {}
 
     def get_widget(self):
-        """Call this method to extract the widget to pack into your GUI.
+        """
+        Call this method to extract the widget to pack into your GUI
+        when you are building the viewer into things.
         """
         return self.imgwin
 
+    def get_rgb_order(self):
+        return self._rgb_order
+        
     def _render_offscreen(self, drawable, data, dst_x, dst_y,
                           width, height):
         # NOTE [A]
@@ -191,9 +197,6 @@ class ImageViewMock(ImageView.ImageViewBase):
         
     def get_cursor(self, ctype):
         return self.cursor[ctype]
-        
-    def get_rgb_order(self):
-        return self._rgb_order
         
     def switch_cursor(self, ctype):
         self.set_cursor(self.cursor[ctype])

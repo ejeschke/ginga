@@ -7,6 +7,7 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+import os.path
 
 from ginga.misc import Widgets, Bunch
 from ginga import GingaPlugin
@@ -29,7 +30,7 @@ class Toolbar(GingaPlugin.GlobalPlugin):
         self.settings = prefs.createCategory('plugin_Toolbar')
         self.settings.load(onError='silent')
 
-        self.modetype = self.settings.get('mode_type', 'locked')
+        self.modetype = self.settings.get('mode_type', 'oneshot')
 
         fv.set_callback('add-channel', self.add_channel_cb)
         fv.set_callback('delete-channel', self.delete_channel_cb)
@@ -117,7 +118,10 @@ class Toolbar(GingaPlugin.GlobalPlugin):
             if name == '---':
                 tb.add_separator()
                 continue
-            btn = self.fv.make_button(*tup[:4])
+            #btn = self.fv.make_button(*tup[:4])
+            iconpath = os.path.join(self.fv.iconpath, "%s.png" % (tup[2]))
+            btn = tb.add_action(None, toggle=(tup[1]=='toggle'),
+                                iconpath=iconpath)
             if tup[3]:
                 btn.set_tooltip(tup[3])
             if tup[4]:
@@ -127,7 +131,7 @@ class Toolbar(GingaPlugin.GlobalPlugin):
             self.w[Widgets.name_mangle(name, pfx='btn_')] = btn
 
             # add widget to toolbar
-            tb.add_widget(btn)
+            #tb.add_widget(btn)
 
         # stretcher
         #tb.add_widget(Widgets.Label(''), stretch=1)

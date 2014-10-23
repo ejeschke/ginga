@@ -7,7 +7,8 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-from ginga.qtw.QtHelp import QtGui, QtCore, QTextCursor
+from ginga.qtw.QtHelp import QtGui, QtCore, QTextCursor, \
+     QIcon, QPixmap, QImage
 from ginga.qtw import QtHelp
 
 from ginga.misc import Callback, Bunch
@@ -548,6 +549,28 @@ class GridBox(ContainerBase):
         self.widget.layout().addWidget(w, row, col)
 
 
+class ToolbarAction(WidgetBase):
+
+    def __init__(self):
+        super(ToolbarAction, self).__init__()
+
+        self.widget = None
+        self.enable_callback('activated')
+
+    def _cb_redirect(self, *args):
+        if self.widget.isCheckable():
+            tf = self.widget.isChecked()
+            self.make_callback('activated', tf)
+        else:
+            self.make_callback('activated')
+    
+    def set_state(self, tf):
+        self.widget.setChecked(tf)
+
+    def get_state(self):
+        return self.widget.isChecked()
+
+
 class Toolbar(ContainerBase):
     def __init__(self, orientation='horizontal'):
         super(Toolbar, self).__init__()
@@ -558,6 +581,22 @@ class Toolbar(ContainerBase):
         else:
             w.setOrientation(QtCore.Qt.Vertical)
         self.widget = w
+
+    def add_action(self, text, toggle=False, iconpath=None):
+        child = ToolbarAction()
+        if iconpath:
+            image = QImage(iconpath)
+            pixmap = QPixmap.fromImage(image)
+            iconw = QIcon(pixmap)
+            #qsize = QtCore.QSize(24, 24)
+            action = self.widget.addAction(iconw, text,
+                                           child._cb_redirect)
+        else:
+            action = self.widget.addAction(text, child._cb_redirect)
+        action.setCheckable(toggle)
+        child.widget = action
+        self.add_ref(child)
+        return child
 
     def add_widget(self, child):
         self.add_ref(child)
