@@ -2,7 +2,8 @@ import unittest
 import logging
 import numpy
 
-from ginga import ImageView, AstroImage
+from ginga import AstroImage
+from ginga.mockw.ImageViewCanvasMock import ImageViewCanvas
 
 class TestError(Exception):
     pass
@@ -11,7 +12,7 @@ class TestImageView(unittest.TestCase):
 
     def setUp(self):
         self.logger = logging.getLogger("TestImageView")
-        self.viewer = ImageView.ImageViewBase(logger=self.logger)
+        self.viewer = ImageViewCanvas(logger=self.logger)
         self.data = numpy.identity(2000)
         self.image = AstroImage.AstroImage(logger=self.logger)
         self.image.set_data(self.data)
