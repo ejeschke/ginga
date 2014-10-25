@@ -66,6 +66,16 @@ class RGBImage(BaseImage):
             elif depth == 4:
                 self.order = 'ARGB'
 
+    def set_color(self, r, g, b):
+        # TODO: handle other sizes
+        ch_max = 255
+        red = self.get_slice('R')
+        red[:] = int(ch_max * r)
+        grn = self.get_slice('G')
+        grn[:] = int(ch_max * g)
+        blu = self.get_slice('B')
+        blu[:] = int(ch_max * b)
+        
     def load_file(self, filepath):
         kwds = Header()
         metadata = { 'header': kwds, 'path': filepath }
