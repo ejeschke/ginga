@@ -1055,12 +1055,13 @@ class Image(CanvasObjectBase):
     image: the image, which must be an RGBImage object
     """
 
-    def __init__(self, x, y, image, alpha=None, flipy=False):
+    def __init__(self, x, y, image, alpha=None, flipy=False, optimize=True):
         self.kind = 'image'
         super(Image, self).__init__(x=x, y=y, image=image, alpha=alpha,
                                     flipy=flipy)
 
         self._drawn = False
+        self._optimize = optimize
         # these hold intermediate step results. Depending on value of
         # `whence` they may not need to be recomputed.
         self._cutout = None
@@ -1093,7 +1094,7 @@ class Image(CanvasObjectBase):
     def draw_image(self, dstarr, whence=0.0):
         #print("redraw whence=%f" % (whence))
 
-        if (whence <= 0.0) or (self._cutout == None):
+        if (whence <= 0.0) or (self._cutout == None) or (not self._optimize):
             # get extent of our data coverage in the window
             ((x0, y0), (x1, y1), (x2, y2), (x3, y3)) = self.fitsimage.get_pan_rect()
             xmin = int(min(x0, x1, x2, x3))
@@ -1163,6 +1164,11 @@ class Image(CanvasObjectBase):
     def edit_points(self):
         return [(self.x, self.y)]
 
+    def set_image(self, image):
+        self.image = image
+        self._drawn = False
+        self._cutout = None
+
 
 class NormImage(Image):
     """Draws an image on a ImageViewCanvas.
@@ -1173,10 +1179,10 @@ class NormImage(Image):
     """
 
     def __init__(self, x, y, image, alpha=None, flipy=False,
-                 rgbmap=None, autocuts=None):
+                 optimize=True, rgbmap=None, autocuts=None):
         self.kind = 'normimage'
         super(NormImage, self).__init__(x=x, y=y, image=image, alpha=alpha,
-                                        flipy=flipy)
+                                        flipy=flipy, optimize=optimize)
         self.rgbmap = rgbmap
         self.autocuts = autocuts
 
@@ -1188,7 +1194,7 @@ class NormImage(Image):
     def draw_image(self, dstarr, whence=0.0):
         #print("redraw whence=%f" % (whence))
 
-        if (whence <= 0.0) or (self._cutout == None):
+        if (whence <= 0.0) or (self._cutout == None) or (not self._optimize):
             # get extent of our data coverage in the window
             ((x0, y0), (x1, y1), (x2, y2), (x3, y3)) = self.fitsimage.get_pan_rect()
             xmin = int(min(x0, x1, x2, x3))
@@ -1245,7 +1251,7 @@ class NormImage(Image):
         else:
             rgbmap = self.fitsimage.get_rgbmap()
 
-        if (whence <= 1.0) or (self._prergb == None):
+        if (whence <= 1.0) or (self._prergb == None) or (not self._optimize):
             # apply visual changes prior to color mapping (cut levels, etc)
             vmax = rgbmap.get_hash_size() - 1
             newdata = self.apply_visuals(self._cutout, 0, vmax)
@@ -1258,7 +1264,7 @@ class NormImage(Image):
             self.logger.debug("shape of index is %s" % (str(idx.shape)))
             self._prergb = idx
 
-        if (whence <= 2.5) or (self._rgbarr == None):
+        if (whence <= 2.5) or (self._rgbarr == None) or (not self._optimize):
             rgb_order = self.fitsimage.get_rgb_order()
             image_order = self.image.get_order()
             rgbobj = rgbmap.get_rgbarray(self._prergb, order=rgb_order,
@@ -1290,10 +1296,10 @@ class NormImage(Image):
 
     def set_image(self, image):
         self.image = image
+        self._drawn = False
         self._cutout = None
         self._prergb = None
         self._rgbarr = None
-
 
 class CompoundObject(CompoundMixin, CanvasObjectBase):
     """Compound object on a ImageViewCanvas.

@@ -27,8 +27,11 @@ class Overlays(GingaPlugin.LocalPlugin):
         self.canvas = canvas
 
         self.colornames = colors.get_colors()
-        self.sat_color = 'red'
-        self.sat_value = None
+        self.hi_color = 'red'
+        self.hi_value = None
+        self.lo_color = 'blue'
+        self.lo_value = None
+        self.opacity = 0.5
         self.arrsize = None
         self.rgbarr = numpy.zeros((1, 1, 4), dtype=numpy.uint8)
         self.rgbobj = RGBImage.RGBImage(self.rgbarr, logger=self.logger)
@@ -54,25 +57,45 @@ class Overlays(GingaPlugin.LocalPlugin):
         fr.set_widget(vbox2)
         vbox.add_widget(fr, stretch=0)
         
-        fr = Widgets.Frame("Overlays")
+        fr = Widgets.Frame("Limits")
 
-        captions = (('Sat color:', 'label', 'Sat color', 'combobox'),
-                    ('Saturation:', 'label', 'Sat value', 'entry'),
+        captions = (('Opacity:', 'label', 'Opacity', 'spinfloat'),
+                    ('Hi color:', 'label', 'Hi color', 'combobox'),
+                    ('Hi limit:', 'label', 'Hi value', 'entry'),
+                    ('Lo color:', 'label', 'Lo color', 'combobox'),
+                    ('Lo limit:', 'label', 'Lo value', 'entry'),
                     ('Redo', 'button'))
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
 
-        combobox = b.sat_color
+        b.opacity.set_decimals(2)
+        b.opacity.set_limits(0.0, 1.0, incr_value=0.1)
+        b.opacity.set_value(self.opacity)
+        b.opacity.add_callback('value-changed', lambda *args: self.redo())
+        
+        combobox = b.hi_color
         for name in self.colornames:
             combobox.append_text(name)
-        index = self.colornames.index(self.sat_color)
+        index = self.colornames.index(self.hi_color)
         combobox.set_index(index)
         combobox.add_callback('activated', lambda *args: self.redo())
 
-        b.sat_value.set_length(22)
-        if self.sat_value != None:
-            b.sat_value.set_text(str(self.sat_value))
-        b.sat_value.add_callback('activated', lambda *args: self.redo())
+        b.hi_value.set_length(22)
+        if self.hi_value != None:
+            b.hi_value.set_text(str(self.hi_value))
+        b.hi_value.add_callback('activated', lambda *args: self.redo())
+
+        combobox = b.lo_color
+        for name in self.colornames:
+            combobox.append_text(name)
+        index = self.colornames.index(self.lo_color)
+        combobox.set_index(index)
+        combobox.add_callback('activated', lambda *args: self.redo())
+
+        b.lo_value.set_length(22)
+        if self.lo_value != None:
+            b.lo_value.set_text(str(self.lo_value))
+        b.lo_value.add_callback('activated', lambda *args: self.redo())
 
         b.redo.add_callback('activated', lambda *args: self.redo())
 
@@ -114,7 +137,7 @@ class Overlays(GingaPlugin.LocalPlugin):
             self.fitsimage.add(self.canvas, tag=self.layertag)
 
         self.resume()
-        if self.sat_value != None:
+        if self.hi_value != None:
             self.redo()
 
     def pause(self):
@@ -134,15 +157,34 @@ class Overlays(GingaPlugin.LocalPlugin):
         self.fv.showStatus("")
         
     def redo(self):
-        self.sat_value = float(self.w.sat_value.get_text())
-        self.logger.debug("set max to %f" % (self.sat_value))
+        hi_value_s = self.w.hi_value.get_text().strip()
+        if len(hi_value_s) > 0:
+            self.hi_value = float(hi_value_s)
+        else:
+            self.hi_value = None
 
-        # look up the color
-        self.sat_color = self.colornames[self.w.sat_color.get_index()]
+        lo_value_s = self.w.lo_value.get_text().strip()
+        if len(lo_value_s) > 0:
+            self.lo_value = float(lo_value_s)
+        else:
+            self.lo_value = None
+        self.logger.debug("set lo=%s hi=%s" % (self.lo_value, self.hi_value))
+
+        self.opacity = self.w.opacity.get_value()
+        self.logger.debug("set alpha to %f" % (self.opacity))
+
+        # look up the colors
+        self.hi_color = self.colornames[self.w.hi_color.get_index()]
         try:
-            r, g, b = colors.lookup_color(self.sat_color)
+            rh, gh, bh = colors.lookup_color(self.hi_color)
         except KeyError:
-            self.fv.show_error("No such color found: '%s'" % (self.sat_color))
+            self.fv.show_error("No such color found: '%s'" % (self.hi_color))
+        
+        self.lo_color = self.colornames[self.w.lo_color.get_index()]
+        try:
+            rl, gl, bl = colors.lookup_color(self.lo_color)
+        except KeyError:
+            self.fv.show_error("No such color found: '%s'" % (self.lo_color))
         
         image = self.fitsimage.get_image()
         if image == None:
@@ -159,15 +201,28 @@ class Overlays(GingaPlugin.LocalPlugin):
             rgbarr = self.rgbobj.get_data()
 
         # Set array to the desired saturation color
-        self.rgbobj.set_color(r, g, b)
+        rc = self.rgbobj.get_slice('R')
+        gc = self.rgbobj.get_slice('G')
+        bc = self.rgbobj.get_slice('B')
+        ac = self.rgbobj.get_slice('A')
 
         self.logger.debug("Calculating alpha channel")
         # set alpha channel according to saturation limit
         try:
             data = image.get_data()
-            alpha = self.rgbobj.get_slice('A')
-            alpha[:] = 0
-            alpha[data >= self.sat_value] = 255
+            ac[:] = 0
+            if self.hi_value != None:
+                idx = data >= self.hi_value
+                rc[idx] = int(rh * 255)
+                gc[idx] = int(gh * 255)
+                bc[idx] = int(bh * 255)
+                ac[idx] = int(self.opacity * 255)
+            if self.lo_value != None:
+                idx = data <= self.lo_value
+                rc[idx] = int(rl * 255)
+                gc[idx] = int(gl * 255)
+                bc[idx] = int(bl * 255)
+                ac[idx] = int(self.opacity * 255)
         except Exception as e:
             self.logger.error("Error setting alpha channel: %s" % (str(e)))
             
@@ -175,8 +230,12 @@ class Overlays(GingaPlugin.LocalPlugin):
             self.logger.debug("Adding image to canvas")
             self.canvas_img = CanvasTypes.Image(0, 0, self.rgbobj)
             self.canvas.add(self.canvas_img, redraw=False)
+        else:
+            self.logger.debug("Updating canvas image")
+            self.canvas_img.set_image(self.rgbobj)
+            
         self.logger.debug("redrawing canvas")
-        self.fitsimage.redraw(whence=0)
+        self.fitsimage.redraw(whence=2)
 
         self.logger.debug("redo completed")
 

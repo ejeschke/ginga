@@ -451,6 +451,8 @@ class ImageViewBase(Callback.Callbacks):
                 self.getObjectByTag('_image')
             except KeyError:
                 tag = self.add(self._normimg, tag='_image')
+        # move image to bottom of layers
+        self.lowerObject(self._normimg)
             
         profile = self.image.get('profile', None)
         if (profile != None) and (self.t_['use_embedded_profile']):
