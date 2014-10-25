@@ -43,6 +43,8 @@ setup(
                 'ginga.tkw', 'ginga.aggw',
                 # Matplotlib version
                 'ginga.mplw',
+                # Mock version
+                'ginga.mockw',
                 # Common stuff
                 'ginga.misc', 'ginga.misc.plugins', 'ginga.base',
                 # Misc
