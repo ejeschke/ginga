@@ -61,7 +61,8 @@ class ImageViewGtk(ImageViewCairo.ImageViewCairo):
         return self.imgwin
 
     def get_image_as_pixbuf(self):
-        arr = self.getwin_array(order=self._rgb_order)
+        #arr = self.getwin_array(order=self._rgb_order)
+        arr = self.getwin_array(order='RGB')
 
         try:
             pixbuf = gtksel.pixbuf_new_from_array(arr, gtk.gdk.COLORSPACE_RGB,
