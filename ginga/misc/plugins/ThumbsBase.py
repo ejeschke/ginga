@@ -88,8 +88,8 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
 
         #self.thumb_generator.set_data(data)
         with self.thmblock:
-            self.thumb_generator.set_image(image)
             self.copy_attrs(chinfo.fitsimage)
+            self.thumb_generator.set_image(image)
             imgwin = self.thumb_generator.get_image_as_widget()
 
         # TODO: attach image loader to image metadata so we can recover it?

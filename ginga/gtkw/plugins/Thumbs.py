@@ -33,6 +33,7 @@ class Thumbs(ThumbsBase.ThumbsBase):
         tg.enable_autocuts('on')
         tg.enable_auto_orient(True)
         tg.set_bg(0.7, 0.7, 0.7)
+        tg.defer_redraw = False
         self.thumb_generator = tg
 
         sw = gtk.ScrolledWindow()
