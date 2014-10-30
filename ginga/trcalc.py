@@ -148,46 +148,51 @@ def rotate(data_np, theta_deg, rotctr_x=None, rotctr_y=None):
                           out=newdata)
     return newdata
 
-                     
+
 def get_scaled_cutout_wdht(data_np, x1, y1, x2, y2, new_wd, new_ht):
+    view, (scale_x, scale_y) = get_scaled_cutout_wdht_view(data_np.shape, x1, y1,
+                                                           x2, y2, new_wd, new_ht)
+    return data_np[view], (scale_x, scale_y)
 
-    # calculate dimensions of NON-scaled cutout
-    old_wd = x2 - x1 + 1
-    old_ht = y2 - y1 + 1
 
-    if (new_wd != old_wd) or (new_ht != old_ht):
-        # Is there a more efficient way to do this?
-        # Make indexes and scale them
-        yi, xi = numpy.mgrid[0:new_ht, 0:new_wd]
-        iscale_x = float(old_wd) / float(new_wd)
-        iscale_y = float(old_ht) / float(new_ht)
+def get_scaled_cutout_wdht_view(shp, x1, y1, x2, y2, new_wd, new_ht):
+    """
+    Like get_scaled_cutout_wdht, but returns the view/slice to extract from an image,
+    instead of the extraction itself
+    """
+    # clip to boundary
+    x1, x2 = numpy.clip([x1, x2], 0, shp[1] - 2).astype(numpy.int)
+    y1, y2 = numpy.clip([y1, y2], 0, shp[0] - 2).astype(numpy.int)
 
-        xi *= iscale_x 
-        yi *= iscale_y
-
-        # Cut out the data according to region desired
-        cutout = data_np[y1:y2+1, x1:x2+1]
-
-        # Now index cutout by scaled indexes
-        ht, wd = cutout.shape[:2]
-        xi = xi.astype('int').clip(0, wd-1)
-        yi = yi.astype('int').clip(0, ht-1)
-        newdata = cutout[yi, xi]
-
+    # check to see if we can take a simple strided view
+    old_wd = (x2 - x1 + 1)
+    old_ht = (y2 - y1 + 1)
+    ystep = int(old_ht / new_ht)
+    xstep = int(old_wd / new_wd)
+    if (new_wd * xstep == old_wd and new_ht * ystep == old_ht):
+        view = numpy.s_[y1:y2 + 1:ystep, x1:x2 + 1:xstep]
+        scale_x = 1.0 / xstep
+        scale_y = 1.0 / ystep
     else:
-        newdata = data_np[y1:y2+1, x1:x2+1]
+        xi = numpy.linspace(x1, x2 + 1, new_wd).astype(numpy.int).reshape(1, -1)
+        yi = numpy.linspace(y1, y2 + 1, new_ht).astype(numpy.int).reshape(-1, 1)
+        assert xi.max() <= shp[1] - 1, xi.max()
+        assert yi.max() <= shp[0] - 1, yi.max()
+        # broadcast to 2D arrays, cast to contiguous arrays
+        # Numpy seems buggy when using broadcast arrays as index arrays
+        view = [numpy.array(a) for a in numpy.broadcast_arrays(yi, xi)]
+        ht, wd = xi.shape
+        scale_x = 1.0 * wd / old_wd
+        scale_y = 1.0 * ht / old_ht
 
-    # Calculate actual scale used (vs. desired)
-    ht, wd = newdata.shape[:2]
-    old_wd, old_ht = max(old_wd, 1), max(old_ht, 1)
-    scale_x = float(wd) / old_wd
-    scale_y = float(ht) / old_ht
-
-    # return newdata + actual scale factors used
-    return (newdata, (scale_x, scale_y))
+    return view, (scale_x, scale_y)
 
 
-def get_scaled_cutout_basic(data_np, x1, y1, x2, y2, scale_x, scale_y):
+def get_scaled_cutout_basic_view(shp, x1, y1, x2, y2, scale_x, scale_y):
+    """
+    Like get_scaled_cutout_basic, but returns the view/slice to extract from an image,
+    instead of the extraction itself
+    """
 
     # calculate dimensions of NON-scaled cutout
     old_wd = x2 - x1 + 1
@@ -196,7 +201,14 @@ def get_scaled_cutout_basic(data_np, x1, y1, x2, y2, scale_x, scale_y):
     new_wd = int(round(scale_x * old_wd))
     new_ht = int(round(scale_y * old_ht))
 
-    return get_scaled_cutout_wdht(data_np, x1, y1, x2, y2, new_wd, new_ht)
+    return get_scaled_cutout_wdht_view(shp, x1, y1, x2, y2, new_wd, new_ht)
+
+
+def get_scaled_cutout_basic(data_np, x1, y1, x2, y2, scale_x, scale_y):
+
+    view, (scale_x, scale_y) = get_scaled_cutout_basic_view(data_np.shape,
+                                                            x1, y1, x2, y2, scale_x, scale_y)
+    return data_np[view], (scale_x, scale_y)
 
 
 def transform(data_np, flip_x=False, flip_y=False, swap_xy=False):

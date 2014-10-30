@@ -45,57 +45,68 @@ class BaseImage(Callback.Callbacks):
             self.enable_callback(name)
 
     @property
+    def shape(self):
+        return self._get_data().shape
+
+    @property
     def width(self):
         # NOTE: numpy stores data in column-major layout
-        data = self._get_data()
-        return data.shape[1]
-        
+        return self.shape[1]
+
     @property
     def height(self):
         # NOTE: numpy stores data in column-major layout
-        data = self._get_data()
-        return data.shape[0]
+        return self.shape[0]
 
     @property
     def depth(self):
         return self.get_depth()
 
+    @property
+    def ndim(self):
+        return len(self.shape)
+
     def get_size(self):
         return (self.width, self.height)
     
     def get_depth(self):
-        data = self._get_data()
-        if len(data.shape) > 2:
-            return data.shape[2]
+        shape = self.shape
+        if len(shape) > 2:
+            return shape[2]
         return 1
     
     def get_shape(self):
-        data = self._get_data()
-        return data.shape
-    
+        return self.shape
+
     def get_center(self):
         wd, ht = self.get_size()
         ctr_x, ctr_y = wd // 2, ht // 2
         return (ctr_x, ctr_y)
-    
+
     def get_data(self):
         return self._data
         
     def _get_data(self):
         return self._data
-        
+
+    def _get_fast_data(self):
+        """
+        Return an array similar to but possibly smaller than self._data,
+        for fast calculation of the intensity distribution
+        """
+        return self._data
+
     def copy_data(self):
         data = self._get_data()
         return data.copy()
         
     def get_data_xy(self, x, y):
         assert (x >= 0) and (y >= 0), \
-               ImageError("Indexes out of range: (x=%d, y=%d)" % (
-            x, y))
-        data = self._get_data()
-        val = data[y, x]
-        return val
-        
+            ImageError("Indexes out of range: (x=%d, y=%d)" % (
+                x, y))
+        view = numpy.s_[y, x]
+        return self._slice(view)
+
     def _get_dims(self, data):
         height, width = data.shape[:2]
         return (width, height)
@@ -147,14 +158,15 @@ class BaseImage(Callback.Callbacks):
         self.make_callback('modified')
 
     def get_slice(self, c):
-        data = self._get_data()
-        return data[..., self.order.index(c.upper())]
+        view = [slice(None)] * self.ndim
+        view[-1] = self.order.index(c.upper())
+        return self._slice(view)
 
     def get_array(self, order):
         order = order.upper()
         if order == self.order:
             return self._get_data()
-        l = [ self.get_slice(c) for c in order ]
+        l = [self.get_slice(c) for c in order]
         return numpy.dstack(l)
 
     def set_order(self, order):
@@ -168,7 +180,7 @@ class BaseImage(Callback.Callbacks):
         return [ self.order.index(c) for c in cs ]
         
     def _set_minmax(self):
-        data = self._get_data()
+        data = self._get_fast_data()
         try:
             self.maxval = numpy.nanmax(data)
             self.minval = numpy.nanmin(data)
@@ -212,12 +224,15 @@ class BaseImage(Callback.Callbacks):
         metadata = self.get_metadata()
         other = self.__class__(data_np=data, metadata=metadata)
         return other
-        
+
+    def _slice(self, view):
+        return self._get_data()[view]
+
     def cutout_data(self, x1, y1, x2, y2, xstep=1, ystep=1, astype=None):
         """cut out data area based on coords. 
         """
-        data = self._get_data()
-        data = data[y1:y2:ystep, x1:x2:xstep]
+        view = numpy.s_[y1:y2:ystep, x1:x2:xstep]
+        data = self._slice(view)
         if astype:
             data = data.astype(astype)
         return data
@@ -255,34 +270,39 @@ class BaseImage(Callback.Callbacks):
         radius (radius) from (image).  Returns the starting pixel (x0, y0)
         of each cut and the respective arrays (xarr, yarr).
         """
-        data = self._get_data()
         n = radius
         wd, ht = self.get_size()
-        x0, x1 = max(0, x-n), min(wd-1, x+n)
-        y0, y1 = max(0, y-n), min(ht-1, y+n)
-        xarr = data[y, x0:x1+1]
-        yarr = data[y0:y1+1, x]
+        x0, x1 = max(0, x - n), min(wd - 1, x + n)
+        y0, y1 = max(0, y - n), min(ht - 1, y + n)
+
+        xview = numpy.s_[y, x0:x1 + 1]
+        yview = numpy.s_[y0:y1 + 1, x]
+
+        xarr = self._slice(xview)
+        yarr = self._slice(yview)
+
         return (x0, y0, xarr, yarr)
 
-    
     def get_scaled_cutout_wdht(self, x1, y1, x2, y2, new_wd, new_ht):
 
-        data = self._get_data()
-        
-        (newdata, (scale_x, scale_y)) = \
-                  trcalc.get_scaled_cutout_wdht(data, x1, y1, x2, y2,
-                                                new_wd, new_ht)
+        shp = self.shape
+
+        (view, (scale_x, scale_y)) = \
+            trcalc.get_scaled_cutout_wdht_view(shp, x1, y1, x2, y2,
+                                               new_wd, new_ht)
+        newdata = self._slice(view)
 
         res = Bunch.Bunch(data=newdata, scale_x=scale_x, scale_y=scale_y)
         return res
 
     def get_scaled_cutout_basic(self, x1, y1, x2, y2, scale_x, scale_y):
 
-        data = self._get_data()
-        
-        (newdata, (scale_x, scale_y)) = \
-                  trcalc.get_scaled_cutout_basic(data, x1, y1, x2, y2,
-                                                 scale_x, scale_y)
+        shp = self.shape
+
+        (view, (scale_x, scale_y)) = \
+            trcalc.get_scaled_cutout_basic_view(shp, x1, y1, x2, y2,
+                                                scale_x, scale_y)
+        newdata = self._slice(view)
 
         res = Bunch.Bunch(data=newdata, scale_x=scale_x, scale_y=scale_y)
         return res
@@ -344,7 +364,7 @@ class BaseImage(Callback.Callbacks):
         return res
 
     def histogram(self, x1, y1, x2, y2, z=None, pct=1.0, numbins=2048):
-        data = self._get_data()
+        data = self._get_fast_data()
         if z != None:
             data = data[y1:y2, x1:x2, z]
         else:
