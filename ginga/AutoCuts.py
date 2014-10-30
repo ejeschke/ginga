@@ -37,6 +37,7 @@ class AutoCutsBase(object):
 
         self.logger = logger
         self.kind = 'base'
+        self.crop_radius = 512
         self.params = {}
 
         # funky boolean converter
@@ -54,28 +55,17 @@ class AutoCutsBase(object):
         loval, hival = self.calc_cut_levels(image, params=params)
         return loval, hival
 
-    def get_crop(self, data, cropradius=512):
+    def get_crop(self, image, crop_radius=None):
         # Even with numpy, it's kind of slow for some of the autocut
         # methods on a large image, so in those cases we can optionally
         # take a crop of size (radius*2)x(radius*2) from the center of
         # the image and calculate the cut levels on that
+        if crop_radius == None:
+            crop_radius = self.crop_radius
 
-        height, width = data.shape[:2]
-        x, y = width // 2, height // 2
-        if x > cropradius:
-            x0 = x - cropradius
-            x1 = x0 + cropradius*2
-        else:
-            x0 = 0
-            x1 = width-1
-        if y > cropradius:
-            y0 = y - cropradius
-            y1 = y0 + cropradius*2
-        else:
-            y0 = 0
-            y1 = height-1
-
-        data = data[y0:y1, x0:x1]
+        wd, ht = image.get_size()
+        (data, x1, y1, x2, y2) = image.cutout_radius(wd//2, ht//2,
+                                                     crop_radius)
         return data
     
     def cut_levels(self, data, loval, hival, vmin=0.0, vmax=255.0):
@@ -153,18 +143,20 @@ class Histogram(AutoCutsBase):
             ]
     
     def calc_cut_levels(self, image, params=None):
-        data = image.get_data()
         if params == None:
             params = self.params
         
+        usecrop = params.get('usecrop', True)
+        if usecrop:
+            data = self.get_crop(image)
+        else:
+            data = image.get_data()
         bnch = self.calc_histogram(data, **params)
         loval, hival = bnch.loval, bnch.hival
 
         return loval, hival    
 
     def calc_histogram(self, data, usecrop=True, pct=1.0, numbins=2048):
-        if usecrop:
-            data = self.get_crop(data)
 
         self.logger.debug("Computing histogram, pct=%.4f numbins=%d" % (
             pct, numbins))
@@ -285,16 +277,19 @@ class StdDev(AutoCutsBase):
             ]
 
     def calc_cut_levels(self, image, params=None):
-        data = image.get_data()
         if params == None:
             params = self.params
+
+        usecrop = params.get('usecrop', True)
+        if usecrop:
+            data = self.get_crop(image)
+        else:
+            data = image.get_data()
+
         loval, hival = self.calc_stddev(data, **params)
         return loval, hival
 
     def calc_stddev(self, data, usecrop=True, hensa_lo=35.0, hensa_hi=90.0):
-        if usecrop:
-            data = self.get_crop(data)
-
         # This is the method used in the old SOSS fits viewer
         mdata = numpy.ma.masked_array(data, numpy.isnan(data))
         mean = numpy.mean(mdata)
@@ -333,26 +328,14 @@ class MedianFilter(AutoCutsBase):
             ]
 
     def calc_cut_levels(self, image, params=None):
-        data = image.get_data()
         if params == None:
             params = self.params
-        loval, hival = self.calc_medianfilter(data, **params)
-        return loval, hival
 
-    def calc_medianfilter(self, data, usecrop=True, num_points=2000,
-                          length=5):
-        # NOTE: usecrop is now ignored, we sample the image instead
-        ## if usecrop:
-        ##     data = self.get_crop(data)
-
-        assert len(data.shape) >= 2, \
-               AutoCutsError("input data should be 2D or greater")
-        ht, wd = data.shape[:2]
-
+        wd, ht = image.get_size()
+        
+        num_points = params.get('num_points', 2000)
         if num_points == None:
             num_points = 2000
-        if length == None:
-            length = 5
 
         # sample the data
         xmax = wd - 1
@@ -361,10 +344,21 @@ class MedianFilter(AutoCutsBase):
         xskip = int(max(1.0, numpy.sqrt(xmax * ymax / float(num_points))))
         yskip = xskip
 
-        #cutout = data
-        cutout = data[0:ymax:yskip, 0:xmax:xskip]
+        cutout = image.cutout_data(0, 0, xmax, ymax,
+                                   xstep=xskip, ystep=yskip)
 
-        xout = scipy.ndimage.filters.median_filter(cutout, size=length)
+        loval, hival = self.calc_medianfilter(cutout, **params)
+        return loval, hival
+
+    def calc_medianfilter(self, data, usecrop=True, num_points=2000,
+                          length=5):
+
+        assert len(data.shape) >= 2, \
+               AutoCutsError("input data should be 2D or greater")
+        if length == None:
+            length = 5
+
+        xout = scipy.ndimage.filters.median_filter(data, size=length)
         loval = numpy.nanmin(xout)
         hival = numpy.nanmax(xout)
 
@@ -393,11 +387,32 @@ class ZScale(AutoCutsBase):
             ]
 
     def calc_cut_levels(self, image, params=None):
-        data = image.get_data()
         if params == None:
             params = self.params
             
-        loval, hival = self.calc_zscale(data, **params)
+        wd, ht = image.get_size()
+        
+        # calculate num_points parameter, if omitted
+        total_points = wd * ht
+        num_points = params.get('num_points', None)
+        if num_points == None:
+            num_points = max(int(total_points * 0.0002), 1000)
+        num_points = min(num_points, total_points)
+
+        assert (0 < num_points <= total_points), \
+               AutoCutsError("num_points not in range 0-%d" % (total_points))
+
+        # sample the data
+        xmax = wd - 1
+        ymax = ht - 1
+        # evenly spaced sampling over rows and cols
+        xskip = int(max(1.0, numpy.sqrt(xmax * ymax / float(num_points))))
+        yskip = xskip
+
+        cutout = image.cutout_data(0, 0, xmax, ymax,
+                                   xstep=xskip, ystep=yskip)
+
+        loval, hival = self.calc_zscale(cutout, **params)
         return loval, hival
 
     def calc_zscale(self, data, contrast=0.25,
@@ -416,17 +431,11 @@ class ZScale(AutoCutsBase):
                AutoCutsError("contrast (%.2f) not in range 0 < c <= 1" % (
             contrast))
 
-        # calculate num_points parameter, if omitted
-        total_points = numpy.size(data)
-        if num_points == None:
-            num_points = max(int(total_points * 0.0002), 1000)
-        num_points = min(num_points, total_points)
+        # remove NaN and Inf from samples
+        samples = data[numpy.isfinite(data)].flatten()
+        samples = samples[:num_points]
 
-        assert (0 < num_points <= total_points), \
-               AutoCutsError("num_points not in range 0-%d" % (total_points))
-
-        loval, hival = zscale.zscale(data, nsamples=num_points,
-                                     contrast=contrast)
+        loval, hival = zscale.zscale_samples(samples, contrast=contrast)
         return loval, hival
 
 
@@ -453,9 +462,11 @@ class ZScale2(AutoCutsBase):
             ]
 
     def calc_cut_levels(self, image, params=None):
-        data = image.get_data()
         if params == None:
             params = self.params
+
+        data = image.get_data()
+
         loval, hival = self.calc_zscale(data, **params)
         return loval, hival
 

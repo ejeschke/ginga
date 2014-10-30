@@ -275,9 +275,10 @@ class Cuts(GingaPlugin.LocalPlugin):
         self.deleteCutsTag(oldtag)
 
     def _plotpoints(self, line, color):
+        image = self.fitsimage.get_image()
         # Get points on the line
-        points = self.fitsimage.get_pixels_on_line(int(line.x1), int(line.y1),
-                                                   int(line.x2), int(line.y2))
+        points = image.get_pixels_on_line(int(line.x1), int(line.y1),
+                                          int(line.x2), int(line.y2))
         points = numpy.array(points)
         self.plot.cuts(points, xtitle="Line Index", ytitle="Pixel Value",
                        color=color)

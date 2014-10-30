@@ -147,19 +147,4 @@ def divide(image1, image2):
     return image
 
 
-def cutout_cross(image, x, y, radius):
-    """Cut two data subarrays that have a center at (x, y) and with
-    radius (radius) from (image).  Returns the starting pixel (x0, y0)
-    of each cut and the respective arrays (xarr, yarr).
-    """
-    data = image.get_data()
-    n = radius
-    wd, ht = image.get_size()
-    x0, x1 = max(0, x-n), min(wd-1, x+n)
-    y0, y1 = max(0, y-n), min(ht-1, y+n)
-    xarr = data[y, x0:x1+1]
-    yarr = data[y0:y1+1, x]
-    return (x0, y0, xarr, yarr)
-
-    
 # END

@@ -1178,11 +1178,11 @@ class NormImage(Image):
     image: the image, which must be an RGBImage object
     """
 
-    def __init__(self, x, y, image, alpha=None, flipy=False,
+    def __init__(self, x, y, image, alpha=None, 
                  optimize=True, rgbmap=None, autocuts=None):
         self.kind = 'normimage'
         super(NormImage, self).__init__(x=x, y=y, image=image, alpha=alpha,
-                                        flipy=flipy, optimize=optimize)
+                                        optimize=optimize)
         self.rgbmap = rgbmap
         self.autocuts = autocuts
 
@@ -1221,15 +1221,10 @@ class NormImage(Image):
                 return
 
             # cutout and scale the piece appropriately
-            srcdata = self.image.get_data()
-            if self.flipy:
-                srcdata = numpy.flipud(srcdata)
-                
             scale_x, scale_y = self.fitsimage.get_scale_xy()
-            (newdata, (nscale_x, nscale_y)) = \
-                      trcalc.get_scaled_cutout_basic(srcdata, a1, b1, a2, b2,
-                                                     scale_x, scale_y)
-            self._cutout = newdata
+            res = self.image.get_scaled_cutout(a1, b1, a2, b2,
+                                                scale_x, scale_y)
+            self._cutout = res.data
 
             # calculate our offset from the pan position
             pan_x, pan_y = self.fitsimage.get_pan()

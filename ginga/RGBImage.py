@@ -29,7 +29,7 @@ class RGBImage(BaseImage):
         self.hasAlpha = 'A' in order
 
     def get_slice(self, ch):
-        data = self.get_data()
+        data = self._get_data()
         return data[..., self.order.index(ch.upper())]
 
     def has_slice(self, ch):
@@ -45,7 +45,7 @@ class RGBImage(BaseImage):
     def get_array(self, order):
         order = order.upper()
         if order == self.order:
-            return self.get_data()
+            return self._get_data()
         l = [ self.get_slice(c) for c in order ]
         return numpy.dstack(l)
 
@@ -87,7 +87,7 @@ class RGBImage(BaseImage):
         self.set_data(data_np, metadata=metadata)
 
     def save_as_file(self, filepath):
-        data = self.get_data()
+        data = self._get_data()
         hdr = self.get_header()
         self.io.save_file_as(filepath, data, hdr)
 
@@ -95,7 +95,7 @@ class RGBImage(BaseImage):
         """Get image as a buffer in (format).
         Format should be 'jpeg', 'png', etc.
         """
-        return self.io.get_buffer(self.get_data(), self.get_header(),
+        return self.io.get_buffer(self._get_data(), self.get_header(),
                                   format, output=output)
 
     def copy(self, astype=None):
@@ -118,7 +118,7 @@ class RGBImage(BaseImage):
         self.logger.debug("old=%dx%d new=%dx%d" % (
             old_wd, old_ht, new_wd, new_ht))
 
-        data = self.get_data()
+        data = self._get_data()
         newdata = data[y1:y2+1, x1:x2+1]
 
         newdata = self.io.imresize(newdata, new_wd, new_ht, method=method)
@@ -140,7 +140,7 @@ class RGBImage(BaseImage):
         self.logger.debug("old=%dx%d new=%dx%d" % (
             old_wd, old_ht, new_wd, new_ht))
 
-        data = self.get_data()
+        data = self._get_data()
         newdata = data[y1:y2+1, x1:x2+1]
 
         newdata = self.io.imresize(newdata, new_wd, new_ht, method=method)

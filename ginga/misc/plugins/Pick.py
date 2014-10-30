@@ -11,7 +11,7 @@ import threading
 import numpy
 
 from ginga.misc import Widgets, CanvasTypes, Bunch
-from ginga.util import iqcalc, dp, wcs
+from ginga.util import iqcalc, wcs
 from ginga import GingaPlugin
 from ginga.util.six.moves import map, zip, filter
 
@@ -682,7 +682,7 @@ class Pick(GingaPlugin.LocalPlugin):
         x, y, radius = qs.x, qs.y, qs.fwhm_radius
         try:
             image = self.fitsimage.get_image()
-            x0, y0, xarr, yarr = dp.cutout_cross(image, x, y, radius)
+            x0, y0, xarr, yarr = image.cutout_cross(x, y, radius)
 
             # get median value from the cutout area
             skybg = numpy.median(self.pick_data)

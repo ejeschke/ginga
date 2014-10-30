@@ -134,19 +134,9 @@ class AstroImage(BaseImage):
     def set_io(self, io):
         self.io = io
         
-    def get_data_xy(self, x, y):
-        data = self.get_data()
-        assert (x >= 0) and (y >= 0), \
-               ImageError("Indexes out of range: (x=%d, y=%d)" % (
-            x, y))
-        return data[y, x]
-        
     def get_data_size(self):
-        data = self.get_data()
-        width, height = self._get_dims(data)
-        return (width, height)
+        return self.get_size()
 
-        
     def get_header(self, create=True):
         try:
             # By convention, the fits header is stored in a dictionary
@@ -214,18 +204,18 @@ class AstroImage(BaseImage):
         self.metadata = {}
 
     def transfer(self, other, astype=None):
-        data = self.get_data()
+        data = self._get_data()
         other.update_data(data, astype=astype)
         other.update_metadata(self.metadata)
         
     def copy(self, astype=None):
-        data = self.get_data()
+        data = self._get_data()
         other = AstroImage(data, logger=self.logger)
         self.transfer(other, astype=astype)
         return other
         
     def save_as_file(self, filepath, **kwdargs):
-        data = self.get_data()
+        data = self._get_data()
         header = self.get_header()
         self.io.save_as_file(filepath, data, header, **kwdargs)
 
@@ -372,14 +362,14 @@ class AstroImage(BaseImage):
         scale_x, scale_y = math.fabs(cdelt1_ref), math.fabs(cdelt2_ref)
         
         # drop each image in the right place in the new data array
-        mydata = self.get_data()
+        mydata = self._get_data()
 
         count = 1
         for image in imagelist:
             name = image.get('name', 'image%d' % (count))
             count += 1
 
-            data_np = image.get_data()
+            data_np = image._get_data()
 
             # Calculate sky position at the center of the piece
             ctr_x, ctr_y = trcalc.get_center(data_np)

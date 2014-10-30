@@ -443,7 +443,7 @@ class ImageViewBase(Callback.Callbacks):
         # add a normalized image item to this canvas if we don't
         # have one already--then just keep reusing it
         if self._normimg == None:
-            self._normimg = NormImage(0, 0, image, alpha=1.0, flipy=False)
+            self._normimg = NormImage(0, 0, image, alpha=1.0)
             tag = self.add(self._normimg, tag='_image')
         else:
             self._normimg.set_image(image)
@@ -963,46 +963,6 @@ class ImageViewBase(Callback.Callbacks):
         0-based, as in numpy.
         """
         return self.image.get_data_xy(data_x, data_y)
-
-    def get_pixels_on_line(self, x1, y1, x2, y2, getvalues=True):
-        """Uses Bresenham's line algorithm to enumerate the pixels along
-        a line.
-        (see http://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm)
-        """
-        dx = abs(x2 - x1)
-        dy = abs(y2 - y1) 
-        if x1 < x2:
-            sx = 1
-        else:
-            sx = -1
-        if y1 < y2:
-            sy = 1
-        else:
-            sy = -1
-        err = dx - dy
-
-        res = []
-        x, y = x1, y1
-        while True:
-            if getvalues:
-                try:
-                    val = self.get_data(x, y)
-                except Exception:
-                    val = numpy.NaN
-                res.append(val)
-            else:
-                res.append((x, y))
-            if (x == x2) and (y == y2):
-                break
-            e2 = 2 * err
-            if e2 > -dy:
-                err = err - dy
-                x += sx
-            if e2 <  dx: 
-                err = err + dx
-                y += sy
-
-        return res
 
     def get_pixel_distance(self, x1, y1, x2, y2):
         dx = abs(x2 - x1)
