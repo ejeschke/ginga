@@ -1121,25 +1121,28 @@ class Image(CanvasObjectBase):
                 #print "no overlay needed"
                 return
 
+            # cutout and scale the piece appropriately
+            scale_x, scale_y = self.fitsimage.get_scale_xy()
+            res = self.image.get_scaled_cutout(a1, b1, a2, b2,
+                                               scale_x, scale_y,
+                                               #flipy=self.flipy,
+                                               method='basic')
+
             # don't ask for an alpha channel from overlaid image if it
             # doesn't have one
-            rgb_order = self.fitsimage.get_rgb_order()
+            dst_order = self.fitsimage.get_rgb_order()
             image_order = self.image.get_order()
-            if ('A' in rgb_order) and not ('A' in image_order):
-                rgb_order = rgb_order.replace('A', '')
+            ## if ('A' in dst_order) and not ('A' in image_order):
+            ##     dst_order = dst_order.replace('A', '')
 
-            # scale the cutout according to the current viewer scale
-            srcdata = self.image.get_array(rgb_order)
-            if self.flipy:
-                srcdata = numpy.flipud(srcdata)
-                
-            #print "rgb_order=%s srcdata=%s" % (rgb_order, srcdata.shape)
-            scale_x, scale_y = self.fitsimage.get_scale_xy()
-            (newdata, (nscale_x, nscale_y)) = \
-                      trcalc.get_scaled_cutout_basic(srcdata, a1, b1, a2, b2,
-                                                     scale_x, scale_y)
-            self._cutout = newdata
-        
+            ## if dst_order != image_order:
+            ##     # reorder result to match desired rgb_order by backend
+            ##     self._cutout = trcalc.reorder_image(dst_order, res.data,
+            ##                                         image_order)
+            ## else:
+            ##     self._cutout = res.data
+            self._cutout = res.data
+
             # calculate our offset from the pan position
             pan_x, pan_y = self.fitsimage.get_pan()
             #print "pan x,y=%f,%f" % (pan_x, pan_y)
@@ -1158,8 +1161,8 @@ class Image(CanvasObjectBase):
         # composite the image into the destination array at the
         # calculated position
         trcalc.overlay_image(dstarr, self._cvs_x, self._cvs_y, self._cutout,
+                             dst_order=dst_order, src_order=image_order,
                              alpha=self.alpha, flipy=False)
-        #print "image overlaid"
 
     def edit_points(self):
         return [(self.x, self.y)]
@@ -1259,23 +1262,23 @@ class NormImage(Image):
             self.logger.debug("shape of index is %s" % (str(idx.shape)))
             self._prergb = idx
 
-        if (whence <= 2.5) or (self._rgbarr == None) or (not self._optimize):
-            rgb_order = self.fitsimage.get_rgb_order()
-            image_order = self.image.get_order()
-            rgbobj = rgbmap.get_rgbarray(self._prergb, order=rgb_order,
-                                         image_order=image_order)
+        dst_order = self.fitsimage.get_rgb_order()
+        image_order = self.image.get_order()
+        get_order = dst_order
+        if ('A' in dst_order) and not ('A' in image_order):
+            get_order = dst_order.replace('A', '')
 
-            # don't ask for an alpha channel from overlaid image if it
-            # doesn't have one
-            if ('A' in rgb_order) and not ('A' in image_order):
-                rgb_order = rgb_order.replace('A', '')
-            self._rgbarr = rgbobj.get_array(rgb_order)
+        if (whence <= 2.5) or (self._rgbarr == None) or (not self._optimize):
+            # get RGB mapped array
+            rgbobj = rgbmap.get_rgbarray(self._prergb, order=dst_order,
+                                         image_order=image_order)
+            self._rgbarr = rgbobj.get_array(get_order)
 
         # composite the image into the destination array at the
         # calculated position
         trcalc.overlay_image(dstarr, self._cvs_x, self._cvs_y, self._rgbarr,
+                             dst_order=dst_order, src_order=get_order,
                              alpha=self.alpha, flipy=False)
-        #print "image overlaid"
 
     def apply_visuals(self, data, vmin, vmax):
         if self.autocuts != None:
