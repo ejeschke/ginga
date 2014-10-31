@@ -41,9 +41,9 @@ class MockCanvasMixin(object):
             pass
             
     def setup_cr(self):
-        # prepare to draw on self.fitsimage.pixmap
+        # prepare to draw on self.viewer.pixmap
         # make a context
-        #cr = GraphicsContext(self.fitsimage.pixmap)
+        #cr = GraphicsContext(self.viewer.pixmap)
         cr = None
 
         #pen = QPen()

@@ -133,8 +133,8 @@ class ImageViewMpl(ImageView.ImageViewBase):
                                     color='red', alpha=1.0)
 
         canvas = figure.canvas
-        if hasattr(canvas, 'fitsimage'):
-            canvas.set_fitsimage(self)
+        if hasattr(canvas, 'viewer'):
+            canvas.set_viewer(self)
         else:
             canvas.mpl_connect("resize_event", self._resize_cb)
 
@@ -146,8 +146,8 @@ class ImageViewMpl(ImageView.ImageViewBase):
         return self.figure
 
     def set_widget(self, canvas):
-        if hasattr(canvas, 'fitsimage'):
-            canvas.set_fitsimage(self)
+        if hasattr(canvas, 'viewer'):
+            canvas.set_viewer(self)
 
     def get_widget(self):
         return self.figure.canvas
@@ -303,7 +303,7 @@ class ImageViewMpl(ImageView.ImageViewBase):
         ax = self.figure.add_axes(self.ax_img.get_position(),
                                   #sharex=self.ax_img, sharey=self.ax_img,
                                   frameon=False,
-                                  fitsimage=self,
+                                  viewer=self,
                                   projection='ginga')
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)

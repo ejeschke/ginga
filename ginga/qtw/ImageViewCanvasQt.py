@@ -76,7 +76,7 @@ class ImageViewCanvas(ImageViewQt.ImageViewZoom,
             o1.use_cc(True)
             # hack necessary to be able to compute text extents _before_
             # adding the object to the canvas
-            o1.fitsimage = self
+            o1.viewer = self
             wd, ht = o1.get_dimensions()
 
             # yellow text on a black filled rectangle

@@ -266,7 +266,7 @@ class ImageViewBase(Callback.Callbacks):
         ---------
         Will call any callbacks registered for the 'configure' event.
         Callbacks should have a method signature of
-            (fitsimage, width, height, ...)
+            (viewer, width, height, ...)
         """
         self._imgwin_wd = width
         self._imgwin_ht = height

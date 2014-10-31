@@ -26,7 +26,7 @@ from ginga.util.six.moves import map, zip
 class MplCanvasMixin(object):
 
     def setup_cr(self, **kwdargs):
-        cr = MplHelp.MplContext(self.fitsimage.ax_util)
+        cr = MplHelp.MplContext(self.viewer.ax_util)
         cr.kwdargs.update(kwdargs)
         return cr
 

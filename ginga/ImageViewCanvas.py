@@ -31,9 +31,9 @@ class CanvasObjectBase(object):
         self.__dict__.update(kwdargs)
         self.data = None
 
-    def initialize(self, tag, fitsimage, logger):
+    def initialize(self, tag, viewer, logger):
         self.tag = tag
-        self.fitsimage = fitsimage
+        self.viewer = viewer
         self.logger = logger
 
     def set_data(self, **kwdargs):
@@ -56,12 +56,12 @@ class CanvasObjectBase(object):
             raise CanvasObjectError("method get_data() takes at most 2 arguments")
 
     def redraw(self, whence=3):
-        self.fitsimage.redraw(whence=whence)
+        self.viewer.redraw(whence=whence)
         
     def canvascoords(self, x, y, center=True):
         if self.is_cc:
             return (x, y)
-        a, b = self.fitsimage.canvascoords(x, y, center=center)
+        a, b = self.viewer.canvascoords(x, y, center=center)
         return (a, b)
 
     def is_compound(self):
@@ -101,7 +101,7 @@ class CanvasObjectBase(object):
         return (x1, y1, x2, y2)
 
     def scale_font(self):
-        zoomlevel = self.fitsimage.get_zoom()
+        zoomlevel = self.viewer.get_zoom()
         if zoomlevel >= -4:
             return 14
         elif zoomlevel >= -6:
@@ -224,14 +224,14 @@ class CompoundMixin(object):
                 res.insert(0, obj)
         return res
         
-    def initialize(self, tag, fitsimage, logger):
+    def initialize(self, tag, viewer, logger):
         self.tag = tag
-        self.fitsimage = fitsimage
+        self.viewer = viewer
         self.logger = logger
 
         # TODO: subtags for objects?
         for obj in self.objects:
-            obj.initialize(None, fitsimage, logger)
+            obj.initialize(None, viewer, logger)
 
     def is_compound(self):
         return True
@@ -264,8 +264,8 @@ class CompoundMixin(object):
                     setattr(obj, attrname, val)
         
     def addObject(self, obj, belowThis=None):
-        #obj.initialize(None, self.fitsimage, self.logger)
-        obj.fitsimage = self.fitsimage
+        #obj.initialize(None, self.viewer, self.logger)
+        obj.viewer = self.viewer
         if not belowThis:
             self.objects.append(obj)
         else:
@@ -346,8 +346,8 @@ class CanvasMixin(object):
                 # make up our own tag
                 tag = '@%d' % (self.count)
                 
-        obj.initialize(tag, self.fitsimage, self.logger)
-        #obj.initialize(tag, self.fitsimage, self.fitsimage.logger)
+        obj.initialize(tag, self.viewer, self.logger)
+        #obj.initialize(tag, self.viewer, self.viewer.logger)
         self.tags[tag] = obj
         self.addObject(obj, belowThis=belowThis)
 
@@ -468,8 +468,8 @@ class DrawingMixin(object):
                      'drag-drop', 'edit-event'):
             self.enable_callback(name)
 
-    def setSurface(self, fitsimage):
-        self.fitsimage = fitsimage
+    def setSurface(self, viewer):
+        self.viewer = viewer
 
         # register this canvas for events of interest
         self.set_callback('draw-down', self.draw_start)
@@ -481,7 +481,7 @@ class DrawingMixin(object):
         #self.ui_setActive(True)
 
     def getSurface(self):
-        return self.fitsimage
+        return self.viewer
 
     def draw(self):
         super(DrawingMixin, self).draw()
@@ -494,7 +494,7 @@ class DrawingMixin(object):
     def get_ruler_distances(self, x1, y1, x2, y2):
         mode = self.t_drawparams.get('units', 'arcmin')
         try:
-            image = self.fitsimage.get_image()
+            image = self.viewer.get_image()
             if mode == 'arcmin':
                 # Calculate RA and DEC for the three points
                 # origination point
@@ -541,7 +541,7 @@ class DrawingMixin(object):
         elif self.t_drawtype == 'compass':
             radius = max(abs(self._start_x - data_x),
                          abs(self._start_y - data_y))
-            image = self.fitsimage.get_image()
+            image = self.viewer.get_image()
             x, y, xn, yn, xe, ye = image.calc_compass_radius(self._start_x,
                                                              self._start_y,
                                                              radius)
@@ -549,7 +549,7 @@ class DrawingMixin(object):
 
         elif self.t_drawtype == 'rectangle':
             # TODO: this method of testing for shift is no longer valid
-            #bd = self.fitsimage.get_bindings()
+            #bd = self.viewer.get_bindings()
             #if not bd.isshiftdown:
             if True:
                 obj = klass(self._start_x, self._start_y,
@@ -600,8 +600,8 @@ class DrawingMixin(object):
                         **self.t_drawparams)
 
         if obj != None:
-            obj.initialize(None, self.fitsimage, self.logger)
-            #obj.initialize(None, self.fitsimage, self.fitsimage.logger)
+            obj.initialize(None, self.viewer, self.logger)
+            #obj.initialize(None, self.viewer, self.viewer.logger)
             self.drawObj = obj
             if time.time() - self._processTime > self._deltaTime:
                 self.processDrawing()
@@ -698,7 +698,7 @@ class DrawingMixin(object):
 
     def processDrawing(self):
         self._processTime = time.time()
-        self.fitsimage.redraw(whence=3)
+        self.viewer.redraw(whence=3)
     
     def isDrawing(self):
         return self._isdrawing
@@ -1089,14 +1089,14 @@ class Image(CanvasObjectBase):
     def draw(self):
         if not self._drawn:
             self._drawn = True
-            self.fitsimage.redraw(whence=2)
+            self.viewer.redraw(whence=2)
     
     def draw_image(self, dstarr, whence=0.0):
         #print("redraw whence=%f" % (whence))
 
         if (whence <= 0.0) or (self._cutout == None) or (not self._optimize):
             # get extent of our data coverage in the window
-            ((x0, y0), (x1, y1), (x2, y2), (x3, y3)) = self.fitsimage.get_pan_rect()
+            ((x0, y0), (x1, y1), (x2, y2), (x3, y3)) = self.viewer.get_pan_rect()
             xmin = int(min(x0, x1, x2, x3))
             ymin = int(min(y0, y1, y2, y3))
             xmax = int(max(x0, x1, x2, x3))
@@ -1122,7 +1122,7 @@ class Image(CanvasObjectBase):
                 return
 
             # cutout and scale the piece appropriately
-            scale_x, scale_y = self.fitsimage.get_scale_xy()
+            scale_x, scale_y = self.viewer.get_scale_xy()
             res = self.image.get_scaled_cutout(a1, b1, a2, b2,
                                                scale_x, scale_y,
                                                #flipy=self.flipy,
@@ -1130,7 +1130,7 @@ class Image(CanvasObjectBase):
 
             # don't ask for an alpha channel from overlaid image if it
             # doesn't have one
-            dst_order = self.fitsimage.get_rgb_order()
+            dst_order = self.viewer.get_rgb_order()
             image_order = self.image.get_order()
             ## if ('A' in dst_order) and not ('A' in image_order):
             ##     dst_order = dst_order.replace('A', '')
@@ -1144,7 +1144,7 @@ class Image(CanvasObjectBase):
             self._cutout = res.data
 
             # calculate our offset from the pan position
-            pan_x, pan_y = self.fitsimage.get_pan()
+            pan_x, pan_y = self.viewer.get_pan()
             #print "pan x,y=%f,%f" % (pan_x, pan_y)
             off_x, off_y = dst_x - pan_x, dst_y - pan_y
             # scale offset
@@ -1199,7 +1199,7 @@ class NormImage(Image):
 
         if (whence <= 0.0) or (self._cutout == None) or (not self._optimize):
             # get extent of our data coverage in the window
-            ((x0, y0), (x1, y1), (x2, y2), (x3, y3)) = self.fitsimage.get_pan_rect()
+            ((x0, y0), (x1, y1), (x2, y2), (x3, y3)) = self.viewer.get_pan_rect()
             xmin = int(min(x0, x1, x2, x3))
             ymin = int(min(y0, y1, y2, y3))
             xmax = int(max(x0, x1, x2, x3))
@@ -1224,13 +1224,13 @@ class NormImage(Image):
                 return
 
             # cutout and scale the piece appropriately
-            scale_x, scale_y = self.fitsimage.get_scale_xy()
+            scale_x, scale_y = self.viewer.get_scale_xy()
             res = self.image.get_scaled_cutout(a1, b1, a2, b2,
                                                 scale_x, scale_y)
             self._cutout = res.data
 
             # calculate our offset from the pan position
-            pan_x, pan_y = self.fitsimage.get_pan()
+            pan_x, pan_y = self.viewer.get_pan()
             #print "pan x,y=%f,%f" % (pan_x, pan_y)
             off_x, off_y = dst_x - pan_x, dst_y - pan_y
             # scale offset
@@ -1247,7 +1247,7 @@ class NormImage(Image):
         if self.rgbmap != None:
             rgbmap = self.rgbmap
         else:
-            rgbmap = self.fitsimage.get_rgbmap()
+            rgbmap = self.viewer.get_rgbmap()
 
         if (whence <= 1.0) or (self._prergb == None) or (not self._optimize):
             # apply visual changes prior to color mapping (cut levels, etc)
@@ -1262,7 +1262,7 @@ class NormImage(Image):
             self.logger.debug("shape of index is %s" % (str(idx.shape)))
             self._prergb = idx
 
-        dst_order = self.fitsimage.get_rgb_order()
+        dst_order = self.viewer.get_rgb_order()
         image_order = self.image.get_order()
         get_order = dst_order
         if ('A' in dst_order) and not ('A' in image_order):
@@ -1284,10 +1284,10 @@ class NormImage(Image):
         if self.autocuts != None:
             autocuts = self.autocuts
         else:
-            autocuts = self.fitsimage.autocuts
+            autocuts = self.viewer.autocuts
 
         # Apply cut levels
-        loval, hival = self.fitsimage.t_['cuts']
+        loval, hival = self.viewer.t_['cuts']
         newdata = autocuts.cut_levels(data, loval, hival,
                                       vmin=vmin, vmax=vmax)
         return newdata

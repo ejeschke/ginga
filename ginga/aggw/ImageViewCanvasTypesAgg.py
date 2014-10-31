@@ -22,7 +22,7 @@ from ginga.util.six.moves import map, zip
 class AggCanvasMixin(object):
 
     def setup_cr(self):
-        cr = AggHelp.AggContext(self.fitsimage.get_surface())
+        cr = AggHelp.AggContext(self.viewer.get_surface())
         return cr
 
     def get_pen(self, cr):

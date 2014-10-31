@@ -45,7 +45,7 @@ class QtCanvasMixin(object):
             cr.setBrush(QtCore.Qt.NoBrush)
             
     def setup_cr(self):
-        cr = QPainter(self.fitsimage.pixmap)
+        cr = QPainter(self.viewer.pixmap)
 
         pen = QPen()
         pen.setWidth(getattr(self, 'linewidth', 1))

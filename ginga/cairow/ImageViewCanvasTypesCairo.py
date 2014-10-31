@@ -34,7 +34,7 @@ class CairoCanvasMixin(object):
         cr.set_source_rgba(r, g, b, a)
 
     def setup_cr(self):
-        cr = self.fitsimage.get_offscreen_context()
+        cr = self.viewer.get_offscreen_context()
 
         alpha = getattr(self, 'alpha', 1.0)
         self.set_color(cr, self.color, alpha=alpha)

@@ -39,14 +39,14 @@ class GingaAxes(Axes):
 
     def __init__(self, *args, **kwargs):
         # this is the Ginga object
-        self.fitsimage = kwargs.pop('fitsimage', None)
+        self.viewer = kwargs.pop('viewer', None)
         Axes.__init__(self, *args, **kwargs)
         ## self.set_aspect(0.5, adjustable='box', anchor='C')
         self.cla()
 
-    def set_fitsimage(self, fitsimage):
-        self.fitsimage = fitsimage
-        self.transData.fitsimage = fitsimage
+    def set_viewer(self, viewer):
+        self.viewer = viewer
+        self.transData.viewer = viewer
         
     def _set_lim_and_transforms(self):
         """
@@ -85,7 +85,7 @@ class GingaAxes(Axes):
         #self.transData = \
         #    self.transProjection + self.transAffine + self.transAxes
         self.transData = self.GingaTransform()
-        self.transData.fitsimage = self.fitsimage
+        self.transData.viewer = self.viewer
 
         # self._xaxis_transform = blended_transform_factory(
         #         self.transData, self.transAxes)
@@ -160,9 +160,9 @@ class GingaAxes(Axes):
             Intended to be overridden by new projection types.
 
         """
-        bd = self.fitsimage.get_bindings()
-        data_x, data_y = self.fitsimage.get_data_xy(x, y)
-        bd.ms_pan(self.fitsimage, 'down', data_x, data_y)
+        bd = self.viewer.get_bindings()
+        data_x, data_y = self.viewer.get_data_xy(x, y)
+        bd.ms_pan(self.viewer, 'down', data_x, data_y)
 
     def end_pan(self):
         """
@@ -174,9 +174,9 @@ class GingaAxes(Axes):
             Intended to be overridden by new projection types.
 
         """
-        bd = self.fitsimage.get_bindings()
-        data_x, data_y = self.fitsimage.get_last_data_xy()
-        bd.ms_pan(self.fitsimage, 'up', data_x, data_y)
+        bd = self.viewer.get_bindings()
+        data_x, data_y = self.viewer.get_last_data_xy()
+        bd.ms_pan(self.viewer, 'up', data_x, data_y)
 
     def drag_pan(self, button, key, x, y):
         """
@@ -197,9 +197,9 @@ class GingaAxes(Axes):
             Intended to be overridden by new projection types.
 
         """
-        bd = self.fitsimage.get_bindings()
-        data_x, data_y = self.fitsimage.get_data_xy(x, y)
-        bd.ms_pan(self.fitsimage, 'move', data_x, data_y)
+        bd = self.viewer.get_bindings()
+        data_x, data_y = self.viewer.get_data_xy(x, y)
+        bd.ms_pan(self.viewer, 'move', data_x, data_y)
 
     # Now, the transforms themselves.
 
@@ -210,7 +210,7 @@ class GingaAxes(Axes):
         input_dims = 2
         output_dims = 2
         is_separable = False
-        fitsimage = None
+        viewer = None
         #pass_through = True
 
         def invalidate(self):
@@ -218,8 +218,8 @@ class GingaAxes(Axes):
             return Transform.invalidate(self)
             
         def _transform_xy(self, n):
-            #win_wd, win_ht = self.fitsimage.get_window_size()
-            win_x, win_y = self.fitsimage.get_canvas_xy(n[0], n[1])
+            #win_wd, win_ht = self.viewer.get_window_size()
+            win_x, win_y = self.viewer.get_canvas_xy(n[0], n[1])
             #return float(win_x) / win_wd, float(win_y) / win_ht
             return (win_x, win_y)
             
@@ -231,7 +231,7 @@ class GingaAxes(Axes):
             The input and output are Nx2 numpy arrays.
             """
             #print "transform in:", xy
-            if self.fitsimage == None:
+            if self.viewer == None:
                 return xy
 
             res = np.array(list(map(self._transform_xy, xy)))
@@ -267,7 +267,7 @@ class GingaAxes(Axes):
 
         def inverted(self):
             tform = GingaAxes.InvertedGingaTransform()
-            tform.fitsimage = self.fitsimage
+            tform.viewer = self.viewer
             return tform
         
         inverted.__doc__ = Transform.inverted.__doc__
@@ -276,14 +276,14 @@ class GingaAxes(Axes):
         input_dims = 2
         output_dims = 2
         is_separable = False
-        fitsimage = None
+        viewer = None
 
         def _transform_xy(self, n):
-            return self.fitsimage.get_data_xy(n[0], n[1])
+            return self.viewer.get_data_xy(n[0], n[1])
             
         def transform_non_affine(self, xy):
             #print "transform in:", xy
-            if self.fitsimage == None:
+            if self.viewer == None:
                 return xy
 
             res = np.array(list(map(self._transform_xy, xy)))
@@ -300,7 +300,7 @@ class GingaAxes(Axes):
         def inverted(self):
             # The inverse of the inverse is the original transform... ;)
             tform = GingaAxes.GingaTransform()
-            tform.fitsimage = self.fitsimage
+            tform.viewer = self.viewer
             return tform
 
         inverted.__doc__ = Transform.inverted.__doc__
