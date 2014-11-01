@@ -129,6 +129,7 @@ class Text(TextBase, QtCanvasMixin):
         cr.setFont(QFont(self.font, pointSize=fontsize))
         return self.text_extents(cr, self.text)
 
+
 class Polygon(PolygonBase, QtCanvasMixin):
 
     def draw(self):
@@ -228,6 +229,22 @@ class Line(LineBase, QtCanvasMixin):
 
         if self.cap:
             self.draw_caps(cr, self.cap, ((cx1, cy1), (cx2, cy2)))
+
+
+class Path(PathBase, QtCanvasMixin):
+
+    def draw(self):
+        cpoints = tuple(map(lambda p: self.canvascoords(p[0], p[1]),
+                            self.points))
+        cr = self.setup_cr()
+        cr.pen().setCapStyle(QtCore.Qt.RoundCap)
+        for i in range(len(cpoints) - 1):
+            cx1, cy1 = cpoints[i]
+            cx2, cy2 = cpoints[i+1]
+            cr.drawLine(cx1, cy1, cx2, cy2)
+
+        if self.cap:
+            self.draw_caps(cr, self.cap, cpoints)
 
 
 class Compass(CompassBase, QtCanvasMixin):
@@ -413,7 +430,7 @@ class DrawingCanvas(DrawingMixin, CanvasMixin, CompoundMixin,
         self.kind = 'drawingcanvas'
 
 drawCatalog = dict(text=Text, rectangle=Rectangle, circle=Circle,
-                   line=Line, point=Point, polygon=Polygon,
+                   line=Line, point=Point, polygon=Polygon, path=Path,
                    triangle=Triangle, ruler=Ruler, compass=Compass,
                    compoundobject=CompoundObject, canvas=Canvas,
                    drawingcanvas=DrawingCanvas)

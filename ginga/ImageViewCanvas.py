@@ -443,7 +443,8 @@ class DrawingMixin(object):
         self.drawDict = drawDict
         #self.drawtypes = drawDict.keys()
         self.drawtypes = ['point', 'circle', 'rectangle', 'triangle',
-                          'line', 'polygon', 'ruler', 'compass', 'text']
+                          'line', 'polygon', 'path', 'ruler', 'compass',
+                          'text']
         self.t_drawtype = 'point'
         self.t_drawparams = {}
         self._drawtext = "EDIT ME"
@@ -587,6 +588,11 @@ class DrawingMixin(object):
             points.append((data_x, data_y))
             obj = klass(points, **self.t_drawparams)
 
+        elif self.t_drawtype == 'path':
+            points = list(self._points)
+            points.append((data_x, data_y))
+            obj = klass(points, **self.t_drawparams)
+
         elif self.t_drawtype == 'text':
             obj = klass(self._start_x, self._start_y, self._drawtext,
                         **self.t_drawparams)
@@ -678,12 +684,12 @@ class DrawingMixin(object):
             return True
 
     def draw_poly_add(self, canvas, action, data_x, data_y):
-        if self.candraw and (self.t_drawtype == 'polygon'):
+        if self.candraw and (self.t_drawtype in ('polygon', 'path')):
             self._points.append((data_x, data_y))
         return True
 
     def draw_poly_delete(self, canvas, action, data_x, data_y):
-        if self.candraw and (self.t_drawtype == 'polygon'):
+        if self.candraw and (self.t_drawtype in ('polygon', 'path')):
             if len(self._points) > 0:
                 self._points.pop()
         return True
@@ -975,6 +981,33 @@ class LineBase(CanvasObjectBase):
         x = (self.x2 - self.x1) / 2.0 + self.x1
         y = (self.y2 - self.y1) / 2.0 + self.y1
         return (x, y)
+
+
+class PathBase(CanvasObjectBase):
+    """Draws a path on a ImageViewCanvas.
+    Parameters are:
+    List of (x, y) points in the polygon.  
+    Optional parameters for linesize, color, etc.
+    """
+
+    def __init__(self, points, color='red',
+                 linewidth=1, linestyle='solid', cap=None,
+                 alpha=1.0):
+        self.kind = 'path'
+        
+        super(PathBase, self).__init__(points=points, color=color,
+                                       linewidth=linewidth, cap=cap,
+                                       linestyle=linestyle, alpha=alpha)
+        
+    def rotate(self, theta, xoff=0, yoff=0):
+        newpts = list(map(lambda p: self.rotate_pt(p[0], p[1], theta,
+                                              xoff=xoff, yoff=yoff),
+                          self.points))
+        self.points = newpts
+
+    def edit_points(self):
+        return self.points
+
 
 class CompassBase(CanvasObjectBase):
     """Draws a WCS compass on a ImageViewCanvas.

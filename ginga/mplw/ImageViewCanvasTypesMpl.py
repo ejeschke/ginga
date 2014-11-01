@@ -195,6 +195,26 @@ class Line(LineBase, MplCanvasMixin):
             self.draw_caps(cr, self.cap, ((cx1, cy1), (cx2, cy2)))
 
 
+class Path(PathBase, MplCanvasMixin):
+        
+    def draw(self):
+        cpoints = list(map(lambda p: self.canvascoords(p[0], p[1]),
+                           self.points))
+
+        cr = self.setup_cr(transform=None)
+        cr.update_line(self)
+        
+        # TODO: see if there is a path type in aggdraw and if so, use it
+        for i in range(len(cpoints) - 1):
+            cx1, cy1 = cpoints[i]
+            cx2, cy2 = cpoints[i+1]
+            l = lines.Line2D((cx1, cx2), (cy1, cy2), **cr.kwdargs)
+            cr.axes.add_line(l)
+
+        if self.cap:
+            self.draw_caps(cr, self.cap, cpoints)
+
+
 class Compass(CompassBase, MplCanvasMixin):
 
     def draw(self):
@@ -403,7 +423,7 @@ class DrawingCanvas(DrawingMixin, CanvasMixin, CompoundMixin,
 
 
 drawCatalog = dict(text=Text, rectangle=Rectangle, circle=Circle,
-                   line=Line, point=Point, polygon=Polygon,
+                   line=Line, point=Point, polygon=Polygon, path=Path,
                    triangle=Triangle, ruler=Ruler, compass=Compass,
                    compoundobject=CompoundObject, canvas=Canvas,
                    drawingcanvas=DrawingCanvas)

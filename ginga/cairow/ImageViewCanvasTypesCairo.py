@@ -225,6 +225,23 @@ class Line(LineBase, CairoCanvasMixin):
             self.draw_caps(cr, self.cap, ((cx1, cy1), (cx2, cy2)))
 
 
+class Path(PathBase, CairoCanvasMixin):
+
+    def draw(self):
+        cpoints = list(map(lambda p: self.canvascoords(p[0], p[1]),
+                           self.points))
+        cr = self.setup_cr()
+
+        (cx0, cy0) = cpoints[0]
+        cr.move_to(cx0, cy0)
+        for cx, cy in cpoints[1:]:
+            cr.line_to(cx, cy)
+        cr.stroke_preserve()
+
+        if self.cap:
+            self.draw_caps(cr, self.cap, cpoints)
+
+
 class Compass(CompassBase, CairoCanvasMixin):
 
     def draw(self):
@@ -429,7 +446,7 @@ class DrawingCanvas(DrawingMixin, CanvasMixin, CompoundMixin,
 
 
 drawCatalog = dict(text=Text, rectangle=Rectangle, circle=Circle,
-                   line=Line, point=Point, polygon=Polygon,
+                   line=Line, point=Point, polygon=Polygon, path=Path,
                    triangle=Triangle, ruler=Ruler, compass=Compass,
                    compoundobject=CompoundObject, canvas=Canvas,
                    drawingcanvas=DrawingCanvas)
