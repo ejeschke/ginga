@@ -171,9 +171,38 @@ class Rectangle(RectangleBase, CairoCanvasMixin):
             cr.show_text("%d" % (self.y2 - self.y1))
 
 
-class Square(SquareBase, Rectangle):
+class Square(Rectangle):
     pass
 
+
+class Ellipse(EllipseBase, CairoCanvasMixin):
+
+    def draw(self):
+        # get scale and rotation for special hack (see below)
+        scale_x, scale_y = self.viewer.get_scale_xy()
+        rot_deg = self.viewer.get_rotation()
+
+        # calculate center of ellipse and radii in canvas coordinates
+        cx, cy = self.canvascoords(self.x, self.y)
+        cxr, cyr = scale_x * self.xradius, scale_y * self.yradius
+
+        cr = self.setup_cr()
+        # Special hack for ellipses to deal with rotated canvas
+        cr.save()
+        cr.translate(cx, cy)
+        cr.rotate(math.radians(- rot_deg))
+        cr.scale(cxr, cyr)
+
+        cr.arc(0.0, 0.0, 1.0, 0.0, 2*math.pi)
+        # special trick to get uniform line thickness with ellipse
+        cr.restore()
+        cr.stroke_preserve()
+
+        self.draw_fill(cr)
+
+        if self.cap:
+            self.draw_caps(cr, self.cap, ((0.0, 0.0), ))
+        
 
 class Circle(CircleBase, CairoCanvasMixin):
     def draw(self):
@@ -447,6 +476,7 @@ class DrawingCanvas(DrawingMixin, CanvasMixin, CompoundMixin,
 
 drawCatalog = dict(text=Text, rectangle=Rectangle, circle=Circle,
                    line=Line, point=Point, polygon=Polygon, path=Path,
+                   ellipse=Ellipse, square=Square,
                    triangle=Triangle, ruler=Ruler, compass=Compass,
                    compoundobject=CompoundObject, canvas=Canvas,
                    drawingcanvas=DrawingCanvas)

@@ -441,10 +441,13 @@ class DrawingMixin(object):
         self.candraw = False
         self._isdrawing = False
         self.drawDict = drawDict
-        #self.drawtypes = drawDict.keys()
-        self.drawtypes = ['point', 'circle', 'rectangle', 'triangle',
-                          'line', 'polygon', 'path', 'ruler', 'compass',
-                          'text']
+        drawtypes = drawDict.keys()
+        self.drawtypes = []
+        for key in ['point', 'line', 'circle', 'ellipse', 'square',
+                    'rectangle', 'triangle', 'polygon', 'path',
+                    'ruler', 'compass', 'text']:
+            if key in drawtypes:
+                self.drawtypes.append(key)
         self.t_drawtype = 'point'
         self.t_drawparams = {}
         self._drawtext = "EDIT ME"
@@ -549,15 +552,10 @@ class DrawingMixin(object):
             obj = klass(x, y, xn, yn, xe, ye, **self.t_drawparams)
 
         elif self.t_drawtype == 'rectangle':
-            # TODO: this method of testing for shift is no longer valid
-            #bd = self.viewer.get_bindings()
-            #if not bd.isshiftdown:
-            if True:
-                obj = klass(self._start_x, self._start_y,
-                            data_x, data_y, **self.t_drawparams)
+            obj = klass(self._start_x, self._start_y,
+                        data_x, data_y, **self.t_drawparams)
                 
-            else:
-                # if holding the shift key, constrain to a square
+        elif self.t_drawtype == 'square':
                 len_x = self._start_x - data_x
                 len_y = self._start_y - data_y
                 length = max(abs(len_x), abs(len_y))
@@ -567,9 +565,13 @@ class DrawingMixin(object):
                             self._start_x-len_x, self._start_y-len_y,
                             **self.t_drawparams)
 
+        elif self.t_drawtype == 'ellipse':
+            xradius = abs(self._start_x - data_x)
+            yradius = abs(self._start_y - data_y)
+            obj = klass(self._start_x, self._start_y, xradius, yradius,
+                        **self.t_drawparams)
+
         elif self.t_drawtype == 'circle':
-            # radius = max(abs(self._start_x - data_x),
-            #              abs(self._start_y - data_y))
             radius = math.sqrt(abs(self._start_x - data_x)**2 + 
                                abs(self._start_y - data_y)**2 )
             obj = klass(self._start_x, self._start_y, radius,
@@ -864,28 +866,6 @@ class RectangleBase(CanvasObjectBase):
         return p
 
 
-class SquareBase(RectangleBase):
-    """Draws a square on a ImageViewCanvas.
-    Parameters are:
-    x, y: 0-based coordinates of the center in the data space
-    length: size of a side (pixels in data space)
-    Optional parameters for linesize, color, etc.
-    """
-
-    def __init__(self, x, y, length, color='red',
-                 linewidth=1, linestyle='solid', cap=None,
-                 fill=False, fillcolor=None, alpha=1.0,
-                 drawdims=False, font='Sans Serif', fillalpha=1.0):
-        super(SquareBase, self).__init__(x1=x, y1=y, x2=x-length, y2=y-length,
-                                         color=color,
-                                         linewidth=linewidth, cap=cap,
-                                         linestyle=linestyle,
-                                         fill=fill, fillcolor=fillcolor,
-                                         alpha=alpha, fillalpha=fillalpha,
-                                         drawdims=drawdims, font=font)
-        self.kind = 'square'
-        
-
 class CircleBase(CanvasObjectBase):
     """Draws a circle on a ImageViewCanvas.
     Parameters are:
@@ -908,6 +888,42 @@ class CircleBase(CanvasObjectBase):
     def contains(self, x, y):
         radius = math.sqrt(math.fabs(x - self.x)**2 + math.fabs(y - self.y)**2)
         if radius <= self.radius:
+            return True
+        return False
+
+    def rotate(self, theta, xoff=0, yoff=0):
+        self.x, self.y = self.rotate_pt(self.x, self.y, theta,
+                                        xoff=xoff, yoff=yoff)
+
+    def edit_points(self):
+        return [(self.x, self.y)]
+
+
+class EllipseBase(CanvasObjectBase):
+    """Draws an ellipse on a ImageViewCanvas.
+    Parameters are:
+    x, y: 0-based coordinates of the center in the data space
+    xradius, yradius: radii based on the number of pixels in data space
+    Optional parameters for linesize, color, etc.
+    """
+
+    def __init__(self, x, y, xradius, yradius, color='yellow',
+                 linewidth=1, linestyle='solid', cap=None,
+                 fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0):
+        super(EllipseBase, self).__init__(color=color,
+                                          linewidth=linewidth, cap=cap,
+                                          linestyle=linestyle,
+                                          fill=fill, fillcolor=fillcolor,
+                                          alpha=alpha, fillalpha=fillalpha,
+                                          x=x, y=y, xradius=xradius,
+                                          yradius=yradius)
+        self.kind = 'ellipse'
+
+    def contains(self, x, y):
+        # See http://math.stackexchange.com/questions/76457/check-if-a-point-is-within-an-ellipse
+        res = (((x - self.x)**2) / self.xradius*2 + 
+               ((y - self.y)**2) / self.yradius*2)
+        if res <= 1.0:
             return True
         return False
 

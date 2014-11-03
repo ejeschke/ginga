@@ -145,7 +145,7 @@ class Rectangle(RectangleBase, AggCanvasMixin):
             cr.canvas.text((cx, cy), text, font)
 
 
-class Square(SquareBase, Rectangle):
+class Square(Rectangle):
     pass
 
 
@@ -408,7 +408,8 @@ class DrawingCanvas(DrawingMixin, CanvasMixin, CompoundMixin,
 
 
 drawCatalog = dict(text=Text, rectangle=Rectangle, circle=Circle,
-                   line=Line, point=Point, polygon=Polygon, path=Path,
+                   line=Line, point=Point, polygon=Polygon,
+                   path=Path, square=Square,
                    triangle=Triangle, ruler=Ruler, compass=Compass,
                    compoundobject=CompoundObject, canvas=Canvas,
                    drawingcanvas=DrawingCanvas)

@@ -181,8 +181,8 @@ class Rectangle(RectangleBase, QtCanvasMixin):
             cr.drawText(cx, cy, "%d" % (self.y2 - self.y1))
 
 
-class Square(SquareBase, Rectangle):
-    pass
+class Square(Rectangle):
+        pass
 
 
 class Circle(CircleBase, QtCanvasMixin):
@@ -200,6 +200,34 @@ class Circle(CircleBase, QtCanvasMixin):
         if self.cap:
             self.draw_caps(cr, self.cap, ((cx1, cy1), ))
 
+
+class Ellipse(EllipseBase, QtCanvasMixin):
+
+    def draw(self):
+        # get scale and rotation for special hack (see below)
+        scale_x, scale_y = self.viewer.get_scale_xy()
+        rot_deg = self.viewer.get_rotation()
+
+        # calculate center of ellipse and radii in canvas coordinates
+        cx, cy = self.canvascoords(self.x, self.y)
+        cxr, cyr = scale_x * self.xradius, scale_y * self.yradius
+        # this is necessary to work around a bug in Qt--radius of 0
+        # causes a crash
+        cxr, cyr = max(cxr, 0.000001), max(cyr, 0.000001)
+
+        cr = self.setup_cr()
+        # Special hack for ellipses to deal with rotated canvas
+        cr.translate(cx, cy)
+        cr.rotate(-rot_deg)
+
+        pt = QtCore.QPointF(0.0, 0.0)
+        cr.drawEllipse(pt, float(cxr), float(cyr))
+
+        if self.cap:
+            self.draw_caps(cr, self.cap, ((0, 0), ))
+
+        cr.translate(-cx, -cy)
+        
 
 class Point(PointBase, QtCanvasMixin):
 
@@ -431,7 +459,8 @@ class DrawingCanvas(DrawingMixin, CanvasMixin, CompoundMixin,
 
 drawCatalog = dict(text=Text, rectangle=Rectangle, circle=Circle,
                    line=Line, point=Point, polygon=Polygon, path=Path,
-                   triangle=Triangle, ruler=Ruler, compass=Compass,
+                   triangle=Triangle, ellipse=Ellipse, square=Square,
+                   ruler=Ruler, compass=Compass,
                    compoundobject=CompoundObject, canvas=Canvas,
                    drawingcanvas=DrawingCanvas)
 

@@ -140,7 +140,7 @@ class Rectangle(RectangleBase, MplCanvasMixin):
             cr.axes.text(cx, cy, text, fontdict=font)
 
 
-class Square(SquareBase, Rectangle):
+class Square(Rectangle):
     pass
 
 
@@ -158,6 +158,28 @@ class Circle(CircleBase, MplCanvasMixin):
 
         if self.cap:
             self.draw_caps(cr, self.cap, ((cx1, cy1), ))
+
+
+class Ellipse(EllipseBase, MplCanvasMixin):
+
+    def draw(self):
+        # get scale and rotation for special hack (see below)
+        scale_x, scale_y = self.viewer.get_scale_xy()
+        rot_deg = self.viewer.get_rotation()
+
+        # calculate center of ellipse and radii in canvas coordinates
+        cx, cy = self.canvascoords(self.x, self.y)
+        cxr, cyr = scale_x * self.xradius, scale_y * self.yradius
+        
+        cr = self.setup_cr(angle=rot_deg, transform=None)
+        cr.update_patch(self)
+        
+        xy = (cx, cy)
+        p = patches.Ellipse(xy, cxr*2, cyr*2, **cr.kwdargs)
+        cr.axes.add_patch(p)
+
+        if self.cap:
+            self.draw_caps(cr, self.cap, ((cx, cy), ))
 
 
 class Point(PointBase, MplCanvasMixin):
@@ -423,7 +445,8 @@ class DrawingCanvas(DrawingMixin, CanvasMixin, CompoundMixin,
 
 
 drawCatalog = dict(text=Text, rectangle=Rectangle, circle=Circle,
-                   line=Line, point=Point, polygon=Polygon, path=Path,
+                   line=Line, point=Point, polygon=Polygon,
+                   path=Path, square=Square, ellipse=Ellipse,
                    triangle=Triangle, ruler=Ruler, compass=Compass,
                    compoundobject=CompoundObject, canvas=Canvas,
                    drawingcanvas=DrawingCanvas)

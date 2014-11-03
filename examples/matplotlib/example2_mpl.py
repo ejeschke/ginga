@@ -135,7 +135,8 @@ class FitsViewer(QtGui.QMainWindow):
         params = { 'color': self.drawcolors[index],
                    'alpha': alpha,
                    }
-        if kind in ('circle', 'rectangle', 'polygon', 'triangle'):
+        if kind in ('circle', 'rectangle', 'polygon', 'triangle',
+                    'ellipse', 'square'):
             params['fill'] = fill
             params['fillalpha'] = alpha
 
