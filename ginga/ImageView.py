@@ -216,6 +216,7 @@ class ImageViewBase(Callback.Callbacks):
         self._org_scale_y = 1.0
 
         self._rgbarr = None
+        self._rgbarr2 = None
         self._rgbobj = None
         self._normimg = None
 
@@ -266,7 +267,7 @@ class ImageViewBase(Callback.Callbacks):
         ---------
         Will call any callbacks registered for the 'configure' event.
         Callbacks should have a method signature of
-            (fitsimage, width, height, ...)
+            (viewer, width, height, ...)
         """
         self._imgwin_wd = width
         self._imgwin_ht = height
@@ -693,12 +694,13 @@ class ImageViewBase(Callback.Callbacks):
             rgba = numpy.zeros((ht, wd, depth), dtype=numpy.uint8)
             self._rgbarr = rgba
 
-        if whence <= 2.0:
+        if (whence <= 2.0) or (self._rgbarr2 == None):
             # Apply any RGB image overlays
-            self.overlay_images(self, self._rgbarr, whence=whence)
+            self._rgbarr2 = numpy.copy(self._rgbarr)
+            self.overlay_images(self, self._rgbarr2, whence=whence)
 
         if (whence <= 2.5) or (self._rgbobj == None):
-            rotimg = self._rgbarr
+            rotimg = self._rgbarr2
 
             # Apply any viewing transformations or rotations
             # if not applied earlier
@@ -1528,7 +1530,7 @@ class ImageViewBase(Callback.Callbacks):
         self.t_.set(image_overlays=tf)
         
     def overlays_change_cb(self, setting, value):
-        self.redraw(whence=0)
+        self.redraw(whence=2)
         
     def set_bg(self, r, g, b, redraw=True):
         """Set the background color.  Values r, g, b should be between

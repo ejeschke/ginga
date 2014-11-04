@@ -55,6 +55,7 @@ class FitsViewer(QtGui.QMainWindow):
         # add canvas to view
         fi.add(canvas)
         canvas.ui_setActive(True)
+        canvas.set_callback('cursor-down', self.clicked)
 
         w = fi.get_widget()
         w.resize(512, 512)
@@ -130,7 +131,8 @@ class FitsViewer(QtGui.QMainWindow):
                    'alpha': alpha,
                    #'cap': 'ball',
                    }
-        if kind in ('circle', 'rectangle', 'polygon', 'triangle'):
+        if kind in ('circle', 'rectangle', 'polygon', 'triangle',
+                    'righttriangle', 'ellipse', 'square', 'box'):
             params['fill'] = fill
             params['fillalpha'] = alpha
 
@@ -160,14 +162,14 @@ class FitsViewer(QtGui.QMainWindow):
         #print(fileName)
         self.load_file(fileName)
 
-    def motion(self, fitsimage, button, data_x, data_y):
+    def motion(self, viewer, button, data_x, data_y):
 
         # Get the value under the data coordinates
         try:
-            #value = fitsimage.get_data(data_x, data_y)
+            #value = viewer.get_data(data_x, data_y)
             # We report the value across the pixel, even though the coords
             # change halfway across the pixel
-            value = fitsimage.get_data(int(data_x+0.5), int(data_y+0.5))
+            value = viewer.get_data(int(data_x+0.5), int(data_y+0.5))
 
         except Exception:
             value = None
@@ -177,7 +179,7 @@ class FitsViewer(QtGui.QMainWindow):
         # Calculate WCS RA
         try:
             # NOTE: image function operates on DATA space coords
-            image = fitsimage.get_image()
+            image = viewer.get_image()
             if image == None:
                 # No image loaded
                 return
@@ -192,6 +194,14 @@ class FitsViewer(QtGui.QMainWindow):
         text = "RA: %s  DEC: %s  X: %.2f  Y: %.2f  Value: %s" % (
             ra_txt, dec_txt, fits_x, fits_y, value)
         self.readout.setText(text)
+
+    def clicked(self, viewer, button, data_x, data_y):
+        obj = viewer.objects[0]
+        print("top object is a %s" % (obj.kind))
+        print("button %s at %f,%f" % (button, data_x, data_y))
+        tf = obj.contains(data_x, data_y)
+        print("%s contains=%s" % (obj.kind, tf))
+        return True
 
     def quit(self, *args):
         self.logger.info("Attempting to shut down the application...")

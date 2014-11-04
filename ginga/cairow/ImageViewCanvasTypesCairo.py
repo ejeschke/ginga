@@ -34,7 +34,7 @@ class CairoCanvasMixin(object):
         cr.set_source_rgba(r, g, b, a)
 
     def setup_cr(self):
-        cr = self.fitsimage.get_offscreen_context()
+        cr = self.viewer.get_offscreen_context()
 
         alpha = getattr(self, 'alpha', 1.0)
         self.set_color(cr, self.color, alpha=alpha)
@@ -114,8 +114,7 @@ class Text(TextBase, CairoCanvasMixin):
 class Polygon(PolygonBase, CairoCanvasMixin):
 
     def draw(self):
-        cpoints = list(map(lambda p: self.canvascoords(p[0], p[1]),
-                           self.points))
+        cpoints = self.get_cpoints()
         cr = self.setup_cr()
 
         (cx0, cy0) = cpoints[-1]
@@ -171,8 +170,56 @@ class Rectangle(RectangleBase, CairoCanvasMixin):
             cr.show_text("%d" % (self.y2 - self.y1))
 
 
-class Square(SquareBase, Rectangle):
+class Square(Rectangle):
     pass
+
+
+class Ellipse(EllipseBase, CairoCanvasMixin):
+
+    def draw(self):
+        # get scale and rotation for special hack (see below)
+        scale_x, scale_y = self.viewer.get_scale_xy()
+        rot_deg = self.viewer.get_rotation()
+
+        # calculate center of ellipse and radii in canvas coordinates
+        cx, cy = self.canvascoords(self.x, self.y)
+        cxr, cyr = scale_x * self.xradius, scale_y * self.yradius
+
+        cr = self.setup_cr()
+        # Special hack for ellipses to deal with rotated canvas
+        cr.save()
+        cr.translate(cx, cy)
+        cr.rotate(math.radians(- rot_deg))
+        cr.scale(cxr, cyr)
+
+        cr.arc(0.0, 0.0, 1.0, 0.0, 2*math.pi)
+        # special trick to get uniform line thickness with ellipse
+        cr.restore()
+        cr.stroke_preserve()
+
+        self.draw_fill(cr)
+
+        if self.cap:
+            self.draw_caps(cr, self.cap, ((0.0, 0.0), ))
+        
+
+class Box(BoxBase, CairoCanvasMixin):
+
+    def draw(self):
+        cpoints = self.get_cpoints()
+        cr = self.setup_cr()
+        (cx0, cy0) = cpoints[-1]
+        cr.move_to(cx0, cy0)
+        for cx, cy in cpoints:
+            cr.line_to(cx, cy)
+            #cr.move_to(cx, cy)
+        cr.close_path()
+        cr.stroke_preserve()
+
+        self.draw_fill(cr)
+
+        if self.cap:
+            self.draw_caps(cr, self.cap, cpoints)
 
 
 class Circle(CircleBase, CairoCanvasMixin):
@@ -198,12 +245,20 @@ class Point(PointBase, CairoCanvasMixin):
 
         cr = self.setup_cr()
         cr.set_line_cap(cairo.LINE_CAP_ROUND)
-        cr.move_to(cx1, cy1)
-        cr.line_to(cx2, cy2)
-        cr.stroke()
-        cr.move_to(cx1, cy2)
-        cr.line_to(cx2, cy1)
-        cr.stroke()
+        if self.style == 'cross':
+            cr.move_to(cx1, cy1)
+            cr.line_to(cx2, cy2)
+            cr.stroke()
+            cr.move_to(cx1, cy2)
+            cr.line_to(cx2, cy1)
+            cr.stroke()
+        else:
+            cr.move_to(cx1, cy)
+            cr.line_to(cx2, cy)
+            cr.stroke()
+            cr.move_to(cx, cy1)
+            cr.line_to(cx, cy2)
+            cr.stroke()
 
         if self.cap:
             self.draw_caps(cr, self.cap, ((cx, cy), ))
@@ -223,6 +278,23 @@ class Line(LineBase, CairoCanvasMixin):
 
         if self.cap:
             self.draw_caps(cr, self.cap, ((cx1, cy1), (cx2, cy2)))
+
+
+class Path(PathBase, CairoCanvasMixin):
+
+    def draw(self):
+        cpoints = list(map(lambda p: self.canvascoords(p[0], p[1]),
+                           self.points))
+        cr = self.setup_cr()
+
+        (cx0, cy0) = cpoints[0]
+        cr.move_to(cx0, cy0)
+        for cx, cy in cpoints[1:]:
+            cr.line_to(cx, cy)
+        cr.stroke_preserve()
+
+        if self.cap:
+            self.draw_caps(cr, self.cap, cpoints)
 
 
 class Compass(CompassBase, CairoCanvasMixin):
@@ -302,13 +374,32 @@ class Compass(CompassBase, CairoCanvasMixin):
         return (xd, yd)
 
         
-class Triangle(TriangleBase, CairoCanvasMixin):
+class RightTriangle(RightTriangleBase, CairoCanvasMixin):
 
     def draw(self):
         cr = self.setup_cr()
         cpoints = list(map(lambda p: self.canvascoords(p[0], p[1]),
                            ((self.x1, self.y1), (self.x2, self.y2),
                             (self.x2, self.y1))))
+        (cx0, cy0) = cpoints[-1]
+        cr.move_to(cx0, cy0)
+        for cx, cy in cpoints:
+            cr.line_to(cx, cy)
+            #cr.move_to(cx, cy)
+        cr.close_path()
+        cr.stroke_preserve()
+
+        self.draw_fill(cr)
+
+        if self.cap:
+            self.draw_caps(cr, self.cap, cpoints)
+
+
+class Triangle(TriangleBase, CairoCanvasMixin):
+
+    def draw(self):
+        cr = self.setup_cr()
+        cpoints = self.get_cpoints()
         (cx0, cy0) = cpoints[-1]
         cr.move_to(cx0, cy0)
         for cx, cy in cpoints:
@@ -429,8 +520,10 @@ class DrawingCanvas(DrawingMixin, CanvasMixin, CompoundMixin,
 
 
 drawCatalog = dict(text=Text, rectangle=Rectangle, circle=Circle,
-                   line=Line, point=Point, polygon=Polygon,
-                   triangle=Triangle, ruler=Ruler, compass=Compass,
+                   line=Line, point=Point, polygon=Polygon, path=Path,
+                   ellipse=Ellipse, square=Square, box=Box,
+                   triangle=Triangle, righttriangle=RightTriangle,
+                   ruler=Ruler, compass=Compass,
                    compoundobject=CompoundObject, canvas=Canvas,
                    drawingcanvas=DrawingCanvas)
 

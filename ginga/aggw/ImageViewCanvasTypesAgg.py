@@ -22,7 +22,7 @@ from ginga.util.six.moves import map, zip
 class AggCanvasMixin(object):
 
     def setup_cr(self):
-        cr = AggHelp.AggContext(self.fitsimage.get_surface())
+        cr = AggHelp.AggContext(self.viewer.get_surface())
         return cr
 
     def get_pen(self, cr):
@@ -97,8 +97,7 @@ class Text(TextBase, AggCanvasMixin):
 class Polygon(PolygonBase, AggCanvasMixin):
 
     def draw(self):
-        cpoints = list(map(lambda p: self.canvascoords(p[0], p[1]),
-                           self.points))
+        cpoints = self.get_cpoints()
         cr = self.setup_cr()
         pen = self.get_pen(cr)
         brush = self.get_brush(cr)
@@ -145,8 +144,22 @@ class Rectangle(RectangleBase, AggCanvasMixin):
             cr.canvas.text((cx, cy), text, font)
 
 
-class Square(SquareBase, Rectangle):
+class Square(Rectangle):
     pass
+
+
+class Box(BoxBase, AggCanvasMixin):
+
+    def draw(self):
+        cpoints = self.get_cpoints()
+        cr = self.setup_cr()
+        pen = self.get_pen(cr)
+        brush = self.get_brush(cr)
+
+        cr.canvas.polygon(list(chain.from_iterable(cpoints)), 
+                          pen, brush)
+        if self.cap:
+            self.draw_caps(cr, self.cap, cpoints)
 
 
 class Circle(CircleBase, AggCanvasMixin):
@@ -174,8 +187,12 @@ class Point(PointBase, AggCanvasMixin):
         cr = self.setup_cr()
         pen = self.get_pen(cr)
         #cr.set_line_cap(cairo.LINE_CAP_ROUND)
-        cr.canvas.line((cx1, cy1, cx2, cy2), pen)
-        cr.canvas.line((cx1, cy2, cx2, cy1), pen)
+        if self.style == 'cross':
+            cr.canvas.line((cx1, cy1, cx2, cy2), pen)
+            cr.canvas.line((cx1, cy2, cx2, cy1), pen)
+        else:
+            cr.canvas.line((cx, cy1, cx, cy2), pen)
+            cr.canvas.line((cx1, cy, cx2, cy), pen)
 
         if self.cap:
             self.draw_caps(cr, self.cap, ((cx, cy), ))
@@ -194,6 +211,24 @@ class Line(LineBase, AggCanvasMixin):
 
         if self.cap:
             self.draw_caps(cr, self.cap, ((cx1, cy1), (cx2, cy2)))
+
+
+class Path(PathBase, AggCanvasMixin):
+
+    def draw(self):
+        cpoints = list(map(lambda p: self.canvascoords(p[0], p[1]),
+                           self.points))
+        cr = self.setup_cr()
+        pen = self.get_pen(cr)
+
+        # TODO: see if there is a path type in aggdraw and if so, use it
+        for i in range(len(cpoints) - 1):
+            cx1, cy1 = cpoints[i]
+            cx2, cy2 = cpoints[i+1]
+            cr.canvas.line((cx1, cy1, cx2, cy2), pen)
+
+        if self.cap:
+            self.draw_caps(cr, self.cap, cpoints)
 
 
 class Compass(CompassBase, AggCanvasMixin):
@@ -268,12 +303,27 @@ class Compass(CompassBase, AggCanvasMixin):
         return (xd, yd)
 
         
-class Triangle(TriangleBase, AggCanvasMixin):
+class RightTriangle(RightTriangleBase, AggCanvasMixin):
 
     def draw(self):
         cpoints = list(map(lambda p: self.canvascoords(p[0], p[1]),
                            ((self.x1, self.y1), (self.x2, self.y2),
                             (self.x2, self.y1))))
+
+        cr = self.setup_cr()
+        pen = self.get_pen(cr)
+        brush = self.get_brush(cr)
+
+        cr.canvas.polygon(list(chain.from_iterable(cpoints)),
+                          pen, brush)
+        if self.cap:
+            self.draw_caps(cr, self.cap, cpoints)
+
+
+class Triangle(TriangleBase, AggCanvasMixin):
+
+    def draw(self):
+        cpoints = self.get_cpoints()
 
         cr = self.setup_cr()
         pen = self.get_pen(cr)
@@ -391,7 +441,9 @@ class DrawingCanvas(DrawingMixin, CanvasMixin, CompoundMixin,
 
 drawCatalog = dict(text=Text, rectangle=Rectangle, circle=Circle,
                    line=Line, point=Point, polygon=Polygon,
-                   triangle=Triangle, ruler=Ruler, compass=Compass,
+                   path=Path, square=Square, box=Box,
+                   triangle=Triangle, righttriangle=RightTriangle,
+                   ruler=Ruler, compass=Compass,
                    compoundobject=CompoundObject, canvas=Canvas,
                    drawingcanvas=DrawingCanvas)
 

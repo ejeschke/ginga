@@ -165,7 +165,8 @@ class Drawing(GingaPlugin.LocalPlugin):
             params['linestyle'] = linestyle
             params['linewidth'] = linewidth
         
-        if kind in ('circle', 'rectangle', 'polygon', 'triangle'):
+        if kind in ('circle', 'rectangle', 'polygon', 'triangle',
+                    'square', 'ellipse'):
             params['fill'] = fill
             params['fillcolor'] = fillcolor
             params['fillalpha'] = fillalpha

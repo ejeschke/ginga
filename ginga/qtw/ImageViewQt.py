@@ -30,7 +30,7 @@ class RenderGraphicsView(QtGui.QGraphicsView):
     def __init__(self, *args, **kwdargs):
         super(RenderGraphicsView, self).__init__(*args, **kwdargs)
     
-        self.fitsimage = None
+        self.viewer = None
         self.pixmap = None
 
     def drawBackground(self, painter, rect):
@@ -53,12 +53,12 @@ class RenderGraphicsView(QtGui.QGraphicsView):
         width = x2 - x1
         height = y2 - y1
        
-        self.fitsimage.configure(width, height)
+        self.viewer.configure(width, height)
 
     def sizeHint(self):
         width, height = 300, 300
-        if self.fitsimage != None:
-            width, height = self.fitsimage.get_desired_size()
+        if self.viewer != None:
+            width, height = self.viewer.get_desired_size()
         return QtCore.QSize(width, height)
 
     def set_pixmap(self, pixmap):
@@ -70,7 +70,7 @@ class RenderWidget(QtGui.QWidget):
     def __init__(self, *args, **kwdargs):
         super(RenderWidget, self).__init__(*args, **kwdargs)
 
-        self.fitsimage = None
+        self.viewer = None
         self.pixmap = None
         self.setAttribute(QtCore.Qt.WA_OpaquePaintEvent)
         
@@ -96,13 +96,13 @@ class RenderWidget(QtGui.QWidget):
         width = x2 - x1
         height = y2 - y1
        
-        self.fitsimage.configure(width, height)
+        self.viewer.configure(width, height)
         #self.update()
 
     def sizeHint(self):
         width, height = 300, 300
-        if self.fitsimage != None:
-            width, height = self.fitsimage.get_desired_size()
+        if self.viewer != None:
+            width, height = self.viewer.get_desired_size()
         return QtCore.QSize(width, height)
 
     def set_pixmap(self, pixmap):
@@ -125,7 +125,7 @@ class ImageViewQt(ImageView.ImageViewBase):
             self.imgwin = RenderGraphicsView(self.scene)
         else:
             raise ImageViewQtError("Undefined render type: '%s'" % (render))
-        self.imgwin.fitsimage = self
+        self.imgwin.viewer = self
         self.pixmap = None
         # Qt expects 32bit BGRA data for color images
         self._rgb_order = 'BGRA'
@@ -361,41 +361,41 @@ class ImageViewQt(ImageView.ImageViewBase):
 class RenderMixin(object):
 
     def showEvent(self, event):
-        self.fitsimage.map_event(self, event)
+        self.viewer.map_event(self, event)
             
     def focusInEvent(self, event):
-        self.fitsimage.focus_event(self, event, True)
+        self.viewer.focus_event(self, event, True)
             
     def focusOutEvent(self, event):
-        self.fitsimage.focus_event(self, event, False)
+        self.viewer.focus_event(self, event, False)
             
     def enterEvent(self, event):
-        self.fitsimage.enter_notify_event(self, event)
+        self.viewer.enter_notify_event(self, event)
     
     def leaveEvent(self, event):
-        self.fitsimage.leave_notify_event(self, event)
+        self.viewer.leave_notify_event(self, event)
     
     def keyPressEvent(self, event):
         # without this we do not get key release events if the focus
         # changes to another window
         self.grabKeyboard()
-        self.fitsimage.key_press_event(self, event)
+        self.viewer.key_press_event(self, event)
         
     def keyReleaseEvent(self, event):
         self.releaseKeyboard()
-        self.fitsimage.key_release_event(self, event)
+        self.viewer.key_release_event(self, event)
         
     def mousePressEvent(self, event):
-        self.fitsimage.button_press_event(self, event)
+        self.viewer.button_press_event(self, event)
 
     def mouseReleaseEvent(self, event):
-        self.fitsimage.button_release_event(self, event)
+        self.viewer.button_release_event(self, event)
 
     def mouseMoveEvent(self, event):
-        self.fitsimage.motion_notify_event(self, event)
+        self.viewer.motion_notify_event(self, event)
 
     def wheelEvent(self, event):
-        self.fitsimage.scroll_event(self, event)
+        self.viewer.scroll_event(self, event)
 
     def event(self, event):
         # This method is a hack necessary to support trackpad gestures
@@ -403,7 +403,7 @@ class RenderMixin(object):
         # Instead we have to override the generic event handler, look
         # explicitly for gesture events.
         if event.type() == QtCore.QEvent.Gesture:
-            return self.fitsimage.gesture_event(self, event)
+            return self.viewer.gesture_event(self, event)
         return super(RenderMixin, self).event(event)
 
     def dragEnterEvent(self, event):
@@ -421,7 +421,7 @@ class RenderMixin(object):
         event.accept()
 
     def dropEvent(self, event):
-        self.fitsimage.drop_event(self, event)
+        self.viewer.drop_event(self, event)
 
     
 class RenderWidgetZoom(RenderMixin, RenderWidget):
@@ -443,7 +443,7 @@ class ImageViewEvent(ImageViewQt):
         else:
             imgwin = RenderWidgetZoom()
             
-        imgwin.fitsimage = self
+        imgwin.viewer = self
         self.imgwin = imgwin
         imgwin.setFocusPolicy(QtCore.Qt.FocusPolicy(
                               QtCore.Qt.TabFocus |

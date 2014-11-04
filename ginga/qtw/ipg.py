@@ -272,18 +272,18 @@ class StartMenu(QtGui.QMainWindow):
             fileName = str(res)
         self.load_file(fileName, name)
 
-    def drop_file(self, fitsimage, paths, name):
+    def drop_file(self, viewer, paths, name):
         fileName = paths[0]
         self.load_file(fileName, name)
 
-    def motion(self, fitsimage, button, data_x, data_y, readout):
+    def motion(self, viewer, button, data_x, data_y, readout):
 
         # Get the value under the data coordinates
         try:
-            #value = fitsimage.get_data(data_x, data_y)
+            #value = viewer.get_data(data_x, data_y)
             # We report the value across the pixel, even though the coords
             # change halfway across the pixel
-            value = fitsimage.get_data(int(data_x+0.5), int(data_y+0.5))
+            value = viewer.get_data(int(data_x+0.5), int(data_y+0.5))
 
         except Exception:
             value = None
@@ -293,7 +293,7 @@ class StartMenu(QtGui.QMainWindow):
         # Calculate WCS RA
         try:
             # NOTE: image function operates on DATA space coords
-            image = fitsimage.get_image()
+            image = viewer.get_image()
             if image == None:
                 # No image loaded
                 return

@@ -31,9 +31,9 @@ class CanvasObjectBase(object):
         self.__dict__.update(kwdargs)
         self.data = None
 
-    def initialize(self, tag, fitsimage, logger):
+    def initialize(self, tag, viewer, logger):
         self.tag = tag
-        self.fitsimage = fitsimage
+        self.viewer = viewer
         self.logger = logger
 
     def set_data(self, **kwdargs):
@@ -56,12 +56,12 @@ class CanvasObjectBase(object):
             raise CanvasObjectError("method get_data() takes at most 2 arguments")
 
     def redraw(self, whence=3):
-        self.fitsimage.redraw(whence=whence)
+        self.viewer.redraw(whence=whence)
         
     def canvascoords(self, x, y, center=True):
         if self.is_cc:
             return (x, y)
-        a, b = self.fitsimage.canvascoords(x, y, center=center)
+        a, b = self.viewer.canvascoords(x, y, center=center)
         return (a, b)
 
     def is_compound(self):
@@ -101,7 +101,7 @@ class CanvasObjectBase(object):
         return (x1, y1, x2, y2)
 
     def scale_font(self):
-        zoomlevel = self.fitsimage.get_zoom()
+        zoomlevel = self.viewer.get_zoom()
         if zoomlevel >= -4:
             return 14
         elif zoomlevel >= -6:
@@ -224,14 +224,14 @@ class CompoundMixin(object):
                 res.insert(0, obj)
         return res
         
-    def initialize(self, tag, fitsimage, logger):
+    def initialize(self, tag, viewer, logger):
         self.tag = tag
-        self.fitsimage = fitsimage
+        self.viewer = viewer
         self.logger = logger
 
         # TODO: subtags for objects?
         for obj in self.objects:
-            obj.initialize(None, fitsimage, logger)
+            obj.initialize(None, viewer, logger)
 
     def is_compound(self):
         return True
@@ -264,8 +264,8 @@ class CompoundMixin(object):
                     setattr(obj, attrname, val)
         
     def addObject(self, obj, belowThis=None):
-        #obj.initialize(None, self.fitsimage, self.logger)
-        obj.fitsimage = self.fitsimage
+        #obj.initialize(None, self.viewer, self.logger)
+        obj.viewer = self.viewer
         if not belowThis:
             self.objects.append(obj)
         else:
@@ -346,8 +346,8 @@ class CanvasMixin(object):
                 # make up our own tag
                 tag = '@%d' % (self.count)
                 
-        obj.initialize(tag, self.fitsimage, self.logger)
-        #obj.initialize(tag, self.fitsimage, self.fitsimage.logger)
+        obj.initialize(tag, self.viewer, self.logger)
+        #obj.initialize(tag, self.viewer, self.viewer.logger)
         self.tags[tag] = obj
         self.addObject(obj, belowThis=belowThis)
 
@@ -441,9 +441,14 @@ class DrawingMixin(object):
         self.candraw = False
         self._isdrawing = False
         self.drawDict = drawDict
-        #self.drawtypes = drawDict.keys()
-        self.drawtypes = ['point', 'circle', 'rectangle', 'triangle',
-                          'line', 'polygon', 'ruler', 'compass', 'text']
+        drawtypes = drawDict.keys()
+        self.drawtypes = []
+        for key in ['point', 'line', 'circle', 'ellipse', 'square',
+                    'rectangle', 'box', 'polygon', 'path',
+                    'triangle', 'righttriangle', 'equilateraltriangle',
+                    'ruler', 'compass', 'text']:
+            if key in drawtypes:
+                self.drawtypes.append(key)
         self.t_drawtype = 'point'
         self.t_drawparams = {}
         self._drawtext = "EDIT ME"
@@ -468,8 +473,8 @@ class DrawingMixin(object):
                      'drag-drop', 'edit-event'):
             self.enable_callback(name)
 
-    def setSurface(self, fitsimage):
-        self.fitsimage = fitsimage
+    def setSurface(self, viewer):
+        self.viewer = viewer
 
         # register this canvas for events of interest
         self.set_callback('draw-down', self.draw_start)
@@ -481,7 +486,7 @@ class DrawingMixin(object):
         #self.ui_setActive(True)
 
     def getSurface(self):
-        return self.fitsimage
+        return self.viewer
 
     def draw(self):
         super(DrawingMixin, self).draw()
@@ -494,7 +499,7 @@ class DrawingMixin(object):
     def get_ruler_distances(self, x1, y1, x2, y2):
         mode = self.t_drawparams.get('units', 'arcmin')
         try:
-            image = self.fitsimage.get_image()
+            image = self.viewer.get_image()
             if mode == 'arcmin':
                 # Calculate RA and DEC for the three points
                 # origination point
@@ -541,22 +546,17 @@ class DrawingMixin(object):
         elif self.t_drawtype == 'compass':
             radius = max(abs(self._start_x - data_x),
                          abs(self._start_y - data_y))
-            image = self.fitsimage.get_image()
+            image = self.viewer.get_image()
             x, y, xn, yn, xe, ye = image.calc_compass_radius(self._start_x,
                                                              self._start_y,
                                                              radius)
             obj = klass(x, y, xn, yn, xe, ye, **self.t_drawparams)
 
         elif self.t_drawtype == 'rectangle':
-            # TODO: this method of testing for shift is no longer valid
-            #bd = self.fitsimage.get_bindings()
-            #if not bd.isshiftdown:
-            if True:
-                obj = klass(self._start_x, self._start_y,
-                            data_x, data_y, **self.t_drawparams)
+            obj = klass(self._start_x, self._start_y,
+                        data_x, data_y, **self.t_drawparams)
                 
-            else:
-                # if holding the shift key, constrain to a square
+        elif self.t_drawtype == 'square':
                 len_x = self._start_x - data_x
                 len_y = self._start_y - data_y
                 length = max(abs(len_x), abs(len_y))
@@ -566,9 +566,20 @@ class DrawingMixin(object):
                             self._start_x-len_x, self._start_y-len_y,
                             **self.t_drawparams)
 
+        elif self.t_drawtype == 'equilateraltriangle':
+                len_x = self._start_x - data_x
+                len_y = self._start_y - data_y
+                length = max(abs(len_x), abs(len_y))
+                obj = klass(self._start_x, self._start_y,
+                            length, length, **self.t_drawparams)
+            
+        elif self.t_drawtype in ('box', 'ellipse', 'triangle'):
+            xradius = abs(self._start_x - data_x)
+            yradius = abs(self._start_y - data_y)
+            obj = klass(self._start_x, self._start_y, xradius, yradius,
+                        **self.t_drawparams)
+
         elif self.t_drawtype == 'circle':
-            # radius = max(abs(self._start_x - data_x),
-            #              abs(self._start_y - data_y))
             radius = math.sqrt(abs(self._start_x - data_x)**2 + 
                                abs(self._start_y - data_y)**2 )
             obj = klass(self._start_x, self._start_y, radius,
@@ -578,11 +589,16 @@ class DrawingMixin(object):
             obj = klass(self._start_x, self._start_y, data_x, data_y,
                         **self.t_drawparams)
 
-        elif self.t_drawtype == 'triangle':
+        elif self.t_drawtype == 'righttriangle':
             obj = klass(self._start_x, self._start_y, data_x, data_y,
                         **self.t_drawparams)
 
         elif self.t_drawtype == 'polygon':
+            points = list(self._points)
+            points.append((data_x, data_y))
+            obj = klass(points, **self.t_drawparams)
+
+        elif self.t_drawtype == 'path':
             points = list(self._points)
             points.append((data_x, data_y))
             obj = klass(points, **self.t_drawparams)
@@ -600,8 +616,8 @@ class DrawingMixin(object):
                         **self.t_drawparams)
 
         if obj != None:
-            obj.initialize(None, self.fitsimage, self.logger)
-            #obj.initialize(None, self.fitsimage, self.fitsimage.logger)
+            obj.initialize(None, self.viewer, self.logger)
+            #obj.initialize(None, self.viewer, self.viewer.logger)
             self.drawObj = obj
             if time.time() - self._processTime > self._deltaTime:
                 self.processDrawing()
@@ -678,12 +694,12 @@ class DrawingMixin(object):
             return True
 
     def draw_poly_add(self, canvas, action, data_x, data_y):
-        if self.candraw and (self.t_drawtype == 'polygon'):
+        if self.candraw and (self.t_drawtype in ('polygon', 'path')):
             self._points.append((data_x, data_y))
         return True
 
     def draw_poly_delete(self, canvas, action, data_x, data_y):
-        if self.candraw and (self.t_drawtype == 'polygon'):
+        if self.candraw and (self.t_drawtype in ('polygon', 'path')):
             if len(self._points) > 0:
                 self._points.pop()
         return True
@@ -698,7 +714,7 @@ class DrawingMixin(object):
 
     def processDrawing(self):
         self._processTime = time.time()
-        self.fitsimage.redraw(whence=3)
+        self.viewer.redraw(whence=3)
     
     def isDrawing(self):
         return self._isdrawing
@@ -767,25 +783,59 @@ class PolygonBase(CanvasObjectBase):
     def __init__(self, points, color='red',
                  linewidth=1, linestyle='solid', cap=None,
                  fill=False, fillcolor=None, alpha=1.0,
-                 fillalpha=1.0):
+                 fillalpha=1.0, rot_deg=0.0):
         self.kind = 'polygon'
         
         super(PolygonBase, self).__init__(points=points, color=color,
                                           linewidth=linewidth, cap=cap,
                                           linestyle=linestyle, alpha=alpha,
                                           fill=fill, fillcolor=fillcolor,
-                                          fillalpha=fillalpha)
+                                          fillalpha=fillalpha,
+                                          rot_deg=rot_deg)
+
+    def get_center_pt(self):
+        P = numpy.array(self.points + [self.points[0]])
+        x = P[:, 0]
+        y = P[:, 1]
+
+        a = x[:-1] * y[1:]
+        b = y[:-1] * x[1:]
+        A = numpy.sum(a - b) / 2.
         
+        cx = x[:-1] + x[1:]
+        cy = y[:-1] + y[1:]
+
+        Cx = numpy.sum(cx * (a - b)) / (6. * A)
+        Cy = numpy.sum(cy * (a - b)) / (6. * A)
+        return (Cx, Cy)
+    
+    def get_cpoints(self):
+        rpoints = self.points
+        if self.rot_deg != 0.0:
+            # rotate vertices according to rotation
+            x, y = self.get_center_pt()
+            rpoints = tuple(map(lambda p: self.rotate_pt(p[0], p[1],
+                                                         self.rot_deg,
+                                                         xoff=x, yoff=y),
+                                self.points))
+        cpoints = tuple(map(lambda p: self.canvascoords(p[0], p[1]),
+                            rpoints))
+        return cpoints
+
     def contains(self, x, y):
+        # rotate point back to cartesian alignment for test
+        cx, cy = self.get_center_pt()
+        xp, yp = self.rotate_pt(x, y, -self.rot_deg,
+                                xoff=cx, yoff=cy)
         # NOTE: we use a version of the ray casting algorithm
         # See: http://alienryderflex.com/polygon/
         result = False
         xj, yj = self.points[-1]
         for (xi, yi) in self.points:
-            if ((((yi < y) and (yj >= y)) or
-                 ((yj < y) and (yi >= y))) and
-                ((xi <= x) or (xj <= x))):
-                cross = (xi + float(y - yi)/(yj - yi)*(xj - xi)) < x
+            if ((((yi < yp) and (yj >= yp)) or
+                 ((yj < yp) and (yi >= yp))) and
+                ((xi <= xp) or (xj <= xp))):
+                cross = (xi + float(yp - yi)/(yj - yi)*(xj - xi)) < xp
                 result ^= cross
             xj, yj = xi, yi
 
@@ -858,27 +908,58 @@ class RectangleBase(CanvasObjectBase):
         return p
 
 
-class SquareBase(RectangleBase):
-    """Draws a square on a ImageViewCanvas.
+class BoxBase(CanvasObjectBase):
+    """Draws a box on a ImageViewCanvas.
     Parameters are:
     x, y: 0-based coordinates of the center in the data space
-    length: size of a side (pixels in data space)
+    xradius, yradius: radii based on the number of pixels in data space
     Optional parameters for linesize, color, etc.
     """
 
-    def __init__(self, x, y, length, color='red',
+    def __init__(self, x, y, xradius, yradius, color='red',
                  linewidth=1, linestyle='solid', cap=None,
-                 fill=False, fillcolor=None, alpha=1.0,
-                 drawdims=False, font='Sans Serif', fillalpha=1.0):
-        super(SquareBase, self).__init__(x1=x, y1=y, x2=x-length, y2=y-length,
-                                         color=color,
-                                         linewidth=linewidth, cap=cap,
-                                         linestyle=linestyle,
-                                         fill=fill, fillcolor=fillcolor,
-                                         alpha=alpha, fillalpha=fillalpha,
-                                         drawdims=drawdims, font=font)
-        self.kind = 'square'
-        
+                 fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0,
+                 rot_deg=0.0):
+        super(BoxBase, self).__init__(color=color,
+                                      linewidth=linewidth, cap=cap,
+                                      linestyle=linestyle,
+                                      fill=fill, fillcolor=fillcolor,
+                                      alpha=alpha, fillalpha=fillalpha,
+                                      x=x, y=y, xradius=xradius,
+                                      yradius=yradius, rot_deg=0.0)
+        self.kind = 'box'
+
+    def get_cpoints(self):
+        # rotate corners according to box rotation
+        rpoints = tuple(map(lambda p: self.rotate_pt(p[0], p[1], self.rot_deg,
+                                                     xoff=self.x, yoff=self.y),
+                            ((self.x - self.xradius, self.y - self.yradius),
+                             (self.x + self.xradius, self.y - self.yradius),
+                             (self.x + self.xradius, self.y + self.yradius),
+                             (self.x - self.xradius, self.y + self.yradius))))
+        # calculate canvas positions of corners
+        cpoints = tuple(map(lambda p: self.canvascoords(p[0], p[1]),
+                            rpoints))
+        return cpoints
+    
+    def contains(self, x, y):
+        # rotate point back to cartesian alignment for test
+        xp, yp = self.rotate_pt(x, y, -self.rot_deg,
+                                xoff=self.x, yoff=self.y)
+        x1, y1 = self.x - self.xradius, self.y - self.yradius
+        x2, y2 = self.x + self.xradius, self.y + self.yradius
+        if ((xp >= x1) and (xp <= x2) and
+            (yp >= y1) and (yp <= y2)):
+            return True
+        return False
+
+    def rotate(self, theta, xoff=0, yoff=0):
+        self.x, self.y = self.rotate_pt(self.x, self.y, theta,
+                                        xoff=xoff, yoff=yoff)
+
+    def edit_points(self):
+        return [(self.x, self.y)]
+
 
 class CircleBase(CanvasObjectBase):
     """Draws a circle on a ImageViewCanvas.
@@ -913,14 +994,53 @@ class CircleBase(CanvasObjectBase):
         return [(self.x, self.y)]
 
 
+class EllipseBase(CanvasObjectBase):
+    """Draws an ellipse on a ImageViewCanvas.
+    Parameters are:
+    x, y: 0-based coordinates of the center in the data space
+    xradius, yradius: radii based on the number of pixels in data space
+    Optional parameters for linesize, color, etc.
+    """
+
+    def __init__(self, x, y, xradius, yradius, color='yellow',
+                 linewidth=1, linestyle='solid', cap=None,
+                 fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0,
+                 rot_deg=0.0):
+        super(EllipseBase, self).__init__(color=color,
+                                          linewidth=linewidth, cap=cap,
+                                          linestyle=linestyle,
+                                          fill=fill, fillcolor=fillcolor,
+                                          alpha=alpha, fillalpha=fillalpha,
+                                          x=x, y=y, xradius=xradius,
+                                          yradius=yradius, rot_deg=0.0)
+        self.kind = 'ellipse'
+
+    def contains(self, x, y):
+        # rotate point back to cartesian alignment for test
+        xp, yp = self.rotate_pt(x, y, -self.rot_deg,
+                                xoff=self.x, yoff=self.y)
+        # See http://math.stackexchange.com/questions/76457/check-if-a-point-is-within-an-ellipse
+        res = (((xp - self.x)**2) / self.xradius**2 + 
+               ((yp - self.y)**2) / self.yradius**2)
+        if res <= 1.0:
+            return True
+        return False
+
+    def rotate(self, theta, xoff=0, yoff=0):
+        self.x, self.y = self.rotate_pt(self.x, self.y, theta,
+                                        xoff=xoff, yoff=yoff)
+
+    def edit_points(self):
+        return [(self.x, self.y)]
+
+
 class PointBase(CanvasObjectBase):
     """Draws a point on a ImageViewCanvas.
     Parameters are:
     x, y: 0-based coordinates of the center in the data space
     radius: radius based on the number of pixels in data space
-    Optional parameters for linesize, color, etc.
-
-    PLEASE NOTE: currently on the 'cross' style of point is drawn.
+    Optional parameters for linesize, color, style, etc.
+    Currently the only styles are 'cross' and 'plus'.
     """
 
     def __init__(self, x, y, radius, style='cross', color='yellow',
@@ -930,7 +1050,7 @@ class PointBase(CanvasObjectBase):
                                         linewidth=linewidth,
                                         linestyle=linestyle,
                                         x=x, y=y, radius=radius,
-                                        cap=cap)
+                                        cap=cap, style=style)
         
     def contains(self, x, y):
         if (x == self.x) and (y == self.y):
@@ -976,6 +1096,33 @@ class LineBase(CanvasObjectBase):
         y = (self.y2 - self.y1) / 2.0 + self.y1
         return (x, y)
 
+
+class PathBase(CanvasObjectBase):
+    """Draws a path on a ImageViewCanvas.
+    Parameters are:
+    List of (x, y) points in the polygon.  
+    Optional parameters for linesize, color, etc.
+    """
+
+    def __init__(self, points, color='red',
+                 linewidth=1, linestyle='solid', cap=None,
+                 alpha=1.0):
+        self.kind = 'path'
+        
+        super(PathBase, self).__init__(points=points, color=color,
+                                       linewidth=linewidth, cap=cap,
+                                       linestyle=linestyle, alpha=alpha)
+        
+    def rotate(self, theta, xoff=0, yoff=0):
+        newpts = list(map(lambda p: self.rotate_pt(p[0], p[1], theta,
+                                              xoff=xoff, yoff=yoff),
+                          self.points))
+        self.points = newpts
+
+    def edit_points(self):
+        return self.points
+
+
 class CompassBase(CanvasObjectBase):
     """Draws a WCS compass on a ImageViewCanvas.
     Parameters are:
@@ -998,7 +1145,7 @@ class CompassBase(CanvasObjectBase):
         return [(self.x, self.y)]
 
         
-class TriangleBase(CanvasObjectBase):
+class RightTriangleBase(CanvasObjectBase):
     """Draws a right triangle on a ImageViewCanvas.
     Parameters are:
     x1, y1: 0-based coordinates of one end of the diagonal in the data space
@@ -1009,16 +1156,88 @@ class TriangleBase(CanvasObjectBase):
     def __init__(self, x1, y1, x2, y2, color='pink',
                  linewidth=1, linestyle='solid', cap=None,
                  fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0):
+        self.kind='righttriangle'
+        super(RightTriangleBase, self).__init__(color=color, alpha=alpha,
+                                                linewidth=linewidth, cap=cap,
+                                                linestyle=linestyle,
+                                                fill=fill, fillcolor=fillcolor,
+                                                fillalpha=fillalpha,
+                                                x1=x1, y1=y1, x2=x2, y2=y2)
+
+    def edit_points(self):
+        return [(self.x1, self.y1), (self.x2, self.y2)]
+
+
+class TriangleBase(CanvasObjectBase):
+    """Draws a triangle on a ImageViewCanvas.
+    Parameters are:
+    x, y: 0-based coordinates of the center in the data space
+    xradius, yradius: radii based on the number of pixels in data space
+    Optional parameters for linesize, color, etc.
+    """
+
+    def __init__(self, x, y, xradius, yradius, color='pink',
+                 linewidth=1, linestyle='solid', cap=None,
+                 fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0,
+                 rot_deg=0.0):
         self.kind='triangle'
         super(TriangleBase, self).__init__(color=color, alpha=alpha,
                                            linewidth=linewidth, cap=cap,
                                            linestyle=linestyle,
                                            fill=fill, fillcolor=fillcolor,
                                            fillalpha=fillalpha,
-                                           x1=x1, y1=y1, x2=x2, y2=y2)
+                                           x=x, y=y, xradius=xradius,
+                                           yradius=yradius, rot_deg=rot_deg)
 
+    def get_points(self):
+        return ((self.x - 2*self.xradius, self.y - self.yradius),
+                (self.x + 2*self.xradius, self.y - self.yradius),
+                (self.x, self.y + self.yradius))
+    
+    def get_center_pt(self):
+        P = numpy.array(self.get_points())
+        x = P[:, 0]
+        y = P[:, 1]
+        Cx = numpy.sum(x) / 3.
+        Cy = numpy.sum(y) / 3.
+        return (Cx, Cy)
+
+    def get_cpoints(self):
+        cx, cy = self.get_center_pt()
+        # rotate corners according to triangle rotation
+        rpoints = tuple(map(lambda p: self.rotate_pt(p[0], p[1], self.rot_deg,
+                                                     xoff=cx, yoff=cy),
+                            self.get_points()))
+        # calculate canvas positions of corners
+        cpoints = tuple(map(lambda p: self.canvascoords(p[0], p[1]),
+                            rpoints))
+        return cpoints
+    
+    def contains(self, x, y):
+        # rotate point back to cartesian alignment for test
+        xp, yp = self.rotate_pt(x, y, -self.rot_deg,
+                                xoff=self.x, yoff=self.y)
+        # calculate vertices
+        ax, ay = self.x - self.xradius, self.y - self.yradius
+        bx, by = self.x + self.xradius, self.y - self.yradius
+        cx, cy = self.x, self.y + self.yradius
+
+        as_x, as_y = xp - ax, yp - ay
+        s_ab = (bx - ax)*as_y - (by - ay)*as_x > 0
+        
+        if (cx - ax)*as_y - (cy - ay)*as_x > 0 == s_ab:
+            return False
+        if (cx - bx)*(yp - by) - (cy - by)*(xp - bx) > 0 != s_ab:
+            return False
+
+        return True
+    
     def edit_points(self):
-        return [(self.x1, self.y1), (self.x2, self.y2)]
+        return [(self.x, self.y)]
+
+    def rotate(self, theta, xoff=0, yoff=0):
+        self.x, self.y = self.rotate_pt(self.x, self.y, theta,
+                                        xoff=xoff, yoff=yoff)
 
 
 class RulerBase(CanvasObjectBase):
@@ -1089,14 +1308,14 @@ class Image(CanvasObjectBase):
     def draw(self):
         if not self._drawn:
             self._drawn = True
-            self.fitsimage.redraw(whence=2)
+            self.viewer.redraw(whence=2)
     
     def draw_image(self, dstarr, whence=0.0):
         #print("redraw whence=%f" % (whence))
 
         if (whence <= 0.0) or (self._cutout == None) or (not self._optimize):
             # get extent of our data coverage in the window
-            ((x0, y0), (x1, y1), (x2, y2), (x3, y3)) = self.fitsimage.get_pan_rect()
+            ((x0, y0), (x1, y1), (x2, y2), (x3, y3)) = self.viewer.get_pan_rect()
             xmin = int(min(x0, x1, x2, x3))
             ymin = int(min(y0, y1, y2, y3))
             xmax = int(max(x0, x1, x2, x3))
@@ -1121,27 +1340,30 @@ class Image(CanvasObjectBase):
                 #print "no overlay needed"
                 return
 
+            # cutout and scale the piece appropriately
+            scale_x, scale_y = self.viewer.get_scale_xy()
+            res = self.image.get_scaled_cutout(a1, b1, a2, b2,
+                                               scale_x, scale_y,
+                                               #flipy=self.flipy,
+                                               method='basic')
+
             # don't ask for an alpha channel from overlaid image if it
             # doesn't have one
-            rgb_order = self.fitsimage.get_rgb_order()
+            dst_order = self.viewer.get_rgb_order()
             image_order = self.image.get_order()
-            if ('A' in rgb_order) and not ('A' in image_order):
-                rgb_order = rgb_order.replace('A', '')
+            ## if ('A' in dst_order) and not ('A' in image_order):
+            ##     dst_order = dst_order.replace('A', '')
 
-            # scale the cutout according to the current viewer scale
-            srcdata = self.image.get_array(rgb_order)
-            if self.flipy:
-                srcdata = numpy.flipud(srcdata)
-                
-            #print "rgb_order=%s srcdata=%s" % (rgb_order, srcdata.shape)
-            scale_x, scale_y = self.fitsimage.get_scale_xy()
-            (newdata, (nscale_x, nscale_y)) = \
-                      trcalc.get_scaled_cutout_basic(srcdata, a1, b1, a2, b2,
-                                                     scale_x, scale_y)
-            self._cutout = newdata
-        
+            ## if dst_order != image_order:
+            ##     # reorder result to match desired rgb_order by backend
+            ##     self._cutout = trcalc.reorder_image(dst_order, res.data,
+            ##                                         image_order)
+            ## else:
+            ##     self._cutout = res.data
+            self._cutout = res.data
+
             # calculate our offset from the pan position
-            pan_x, pan_y = self.fitsimage.get_pan()
+            pan_x, pan_y = self.viewer.get_pan()
             #print "pan x,y=%f,%f" % (pan_x, pan_y)
             off_x, off_y = dst_x - pan_x, dst_y - pan_y
             # scale offset
@@ -1158,8 +1380,8 @@ class Image(CanvasObjectBase):
         # composite the image into the destination array at the
         # calculated position
         trcalc.overlay_image(dstarr, self._cvs_x, self._cvs_y, self._cutout,
+                             dst_order=dst_order, src_order=image_order,
                              alpha=self.alpha, flipy=False)
-        #print "image overlaid"
 
     def edit_points(self):
         return [(self.x, self.y)]
@@ -1196,7 +1418,7 @@ class NormImage(Image):
 
         if (whence <= 0.0) or (self._cutout == None) or (not self._optimize):
             # get extent of our data coverage in the window
-            ((x0, y0), (x1, y1), (x2, y2), (x3, y3)) = self.fitsimage.get_pan_rect()
+            ((x0, y0), (x1, y1), (x2, y2), (x3, y3)) = self.viewer.get_pan_rect()
             xmin = int(min(x0, x1, x2, x3))
             ymin = int(min(y0, y1, y2, y3))
             xmax = int(max(x0, x1, x2, x3))
@@ -1221,13 +1443,13 @@ class NormImage(Image):
                 return
 
             # cutout and scale the piece appropriately
-            scale_x, scale_y = self.fitsimage.get_scale_xy()
+            scale_x, scale_y = self.viewer.get_scale_xy()
             res = self.image.get_scaled_cutout(a1, b1, a2, b2,
                                                 scale_x, scale_y)
             self._cutout = res.data
 
             # calculate our offset from the pan position
-            pan_x, pan_y = self.fitsimage.get_pan()
+            pan_x, pan_y = self.viewer.get_pan()
             #print "pan x,y=%f,%f" % (pan_x, pan_y)
             off_x, off_y = dst_x - pan_x, dst_y - pan_y
             # scale offset
@@ -1244,7 +1466,7 @@ class NormImage(Image):
         if self.rgbmap != None:
             rgbmap = self.rgbmap
         else:
-            rgbmap = self.fitsimage.get_rgbmap()
+            rgbmap = self.viewer.get_rgbmap()
 
         if (whence <= 1.0) or (self._prergb == None) or (not self._optimize):
             # apply visual changes prior to color mapping (cut levels, etc)
@@ -1259,32 +1481,32 @@ class NormImage(Image):
             self.logger.debug("shape of index is %s" % (str(idx.shape)))
             self._prergb = idx
 
-        if (whence <= 2.5) or (self._rgbarr == None) or (not self._optimize):
-            rgb_order = self.fitsimage.get_rgb_order()
-            image_order = self.image.get_order()
-            rgbobj = rgbmap.get_rgbarray(self._prergb, order=rgb_order,
-                                         image_order=image_order)
+        dst_order = self.viewer.get_rgb_order()
+        image_order = self.image.get_order()
+        get_order = dst_order
+        if ('A' in dst_order) and not ('A' in image_order):
+            get_order = dst_order.replace('A', '')
 
-            # don't ask for an alpha channel from overlaid image if it
-            # doesn't have one
-            if ('A' in rgb_order) and not ('A' in image_order):
-                rgb_order = rgb_order.replace('A', '')
-            self._rgbarr = rgbobj.get_array(rgb_order)
+        if (whence <= 2.5) or (self._rgbarr == None) or (not self._optimize):
+            # get RGB mapped array
+            rgbobj = rgbmap.get_rgbarray(self._prergb, order=dst_order,
+                                         image_order=image_order)
+            self._rgbarr = rgbobj.get_array(get_order)
 
         # composite the image into the destination array at the
         # calculated position
         trcalc.overlay_image(dstarr, self._cvs_x, self._cvs_y, self._rgbarr,
+                             dst_order=dst_order, src_order=get_order,
                              alpha=self.alpha, flipy=False)
-        #print "image overlaid"
 
     def apply_visuals(self, data, vmin, vmax):
         if self.autocuts != None:
             autocuts = self.autocuts
         else:
-            autocuts = self.fitsimage.autocuts
+            autocuts = self.viewer.autocuts
 
         # Apply cut levels
-        loval, hival = self.fitsimage.t_['cuts']
+        loval, hival = self.viewer.t_['cuts']
         newdata = autocuts.cut_levels(data, loval, hival,
                                       vmin=vmin, vmax=vmax)
         return newdata

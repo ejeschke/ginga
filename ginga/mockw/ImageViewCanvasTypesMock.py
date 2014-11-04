@@ -41,9 +41,9 @@ class MockCanvasMixin(object):
             pass
             
     def setup_cr(self):
-        # prepare to draw on self.fitsimage.pixmap
+        # prepare to draw on self.viewer.pixmap
         # make a context
-        #cr = GraphicsContext(self.fitsimage.pixmap)
+        #cr = GraphicsContext(self.viewer.pixmap)
         cr = None
 
         #pen = QPen()
@@ -215,6 +215,21 @@ class Line(LineBase, MockCanvasMixin):
 
         if self.cap:
             self.draw_caps(cr, self.cap, ((cx1, cy1), (cx2, cy2)))
+
+
+class Path(PathBase, MockCanvasMixin):
+
+    def draw(self):
+        cpoints = tuple(map(lambda p: self.canvascoords(p[0], p[1]),
+                            self.points))
+        cr = self.setup_cr()
+        for i in range(len(cpoints) - 1):
+            cx1, cy1 = cpoints[i]
+            cx2, cy2 = cpoints[i+1]
+            #cr.draw_line(cx1, cy1, cx2, cy2)
+
+        if self.cap:
+            self.draw_caps(cr, self.cap, cpoints)
 
 
 class Compass(CompassBase, MockCanvasMixin):
@@ -393,7 +408,7 @@ class DrawingCanvas(DrawingMixin, CanvasMixin, CompoundMixin,
         self.kind = 'drawingcanvas'
 
 drawCatalog = dict(text=Text, rectangle=Rectangle, circle=Circle,
-                   line=Line, point=Point, polygon=Polygon,
+                   line=Line, point=Point, polygon=Polygon, path=Path,
                    triangle=Triangle, ruler=Ruler, compass=Compass,
                    compoundobject=CompoundObject, canvas=Canvas,
                    drawingcanvas=DrawingCanvas)

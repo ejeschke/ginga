@@ -26,7 +26,7 @@ from ginga.util.six.moves import map, zip
 class MplCanvasMixin(object):
 
     def setup_cr(self, **kwdargs):
-        cr = MplHelp.MplContext(self.fitsimage.ax_util)
+        cr = MplHelp.MplContext(self.viewer.ax_util)
         cr.kwdargs.update(kwdargs)
         return cr
 
@@ -87,8 +87,7 @@ class Text(TextBase, MplCanvasMixin):
 class Polygon(PolygonBase, MplCanvasMixin):
 
     def draw(self):
-        cpoints = list(map(lambda p: self.canvascoords(p[0], p[1]),
-                           self.points))
+        cpoints = self.get_cpoints()
 
         cr = self.setup_cr(closed=True, transform=None)
         cr.update_patch(self)
@@ -140,7 +139,7 @@ class Rectangle(RectangleBase, MplCanvasMixin):
             cr.axes.text(cx, cy, text, fontdict=font)
 
 
-class Square(SquareBase, Rectangle):
+class Square(Rectangle):
     pass
 
 
@@ -160,6 +159,44 @@ class Circle(CircleBase, MplCanvasMixin):
             self.draw_caps(cr, self.cap, ((cx1, cy1), ))
 
 
+class Ellipse(EllipseBase, MplCanvasMixin):
+
+    def draw(self):
+        # get scale and rotation for special hack (see below)
+        scale_x, scale_y = self.viewer.get_scale_xy()
+        rot_deg = self.viewer.get_rotation() + self.rot_deg
+
+        # calculate center of ellipse and radii in canvas coordinates
+        cx, cy = self.canvascoords(self.x, self.y)
+        cxr, cyr = scale_x * self.xradius, scale_y * self.yradius
+        
+        cr = self.setup_cr(angle=rot_deg, transform=None)
+        cr.update_patch(self)
+        
+        xy = (cx, cy)
+        p = patches.Ellipse(xy, cxr*2, cyr*2, **cr.kwdargs)
+        cr.axes.add_patch(p)
+
+        if self.cap:
+            self.draw_caps(cr, self.cap, ((cx, cy), ))
+
+
+class Box(BoxBase, MplCanvasMixin):
+        
+    def draw(self):
+        cpoints = self.get_cpoints()
+        cr = self.setup_cr(closed=True, transform=None)
+        cr.update_patch(self)
+        
+        xy = numpy.array(cpoints)
+            
+        p = patches.Polygon(xy, **cr.kwdargs)
+        cr.axes.add_patch(p)
+
+        if self.cap:
+            self.draw_caps(cr, self.cap, cpoints)
+
+
 class Point(PointBase, MplCanvasMixin):
 
     def draw(self):
@@ -169,11 +206,17 @@ class Point(PointBase, MplCanvasMixin):
 
         cr = self.setup_cr(transform=None)
         cr.update_line(self)
-        
-        l = lines.Line2D((cx1, cx2), (cy1, cy2), **cr.kwdargs)
-        cr.axes.add_line(l)
-        l = lines.Line2D((cx1, cx2), (cy2, cy1), **cr.kwdargs)
-        cr.axes.add_line(l)
+
+        if self.style == 'cross':
+            l = lines.Line2D((cx1, cx2), (cy1, cy2), **cr.kwdargs)
+            cr.axes.add_line(l)
+            l = lines.Line2D((cx1, cx2), (cy2, cy1), **cr.kwdargs)
+            cr.axes.add_line(l)
+        else:
+            l = lines.Line2D((cx1, cx2), (cy, cy), **cr.kwdargs)
+            cr.axes.add_line(l)
+            l = lines.Line2D((cx, cx), (cy1, cy2), **cr.kwdargs)
+            cr.axes.add_line(l)
 
         if self.cap:
             self.draw_caps(cr, self.cap, ((cx, cy), ))
@@ -193,6 +236,26 @@ class Line(LineBase, MplCanvasMixin):
 
         if self.cap:
             self.draw_caps(cr, self.cap, ((cx1, cy1), (cx2, cy2)))
+
+
+class Path(PathBase, MplCanvasMixin):
+        
+    def draw(self):
+        cpoints = list(map(lambda p: self.canvascoords(p[0], p[1]),
+                           self.points))
+
+        cr = self.setup_cr(transform=None)
+        cr.update_line(self)
+        
+        # TODO: see if there is a path type in aggdraw and if so, use it
+        for i in range(len(cpoints) - 1):
+            cx1, cy1 = cpoints[i]
+            cx2, cy2 = cpoints[i+1]
+            l = lines.Line2D((cx1, cx2), (cy1, cy2), **cr.kwdargs)
+            cr.axes.add_line(l)
+
+        if self.cap:
+            self.draw_caps(cr, self.cap, cpoints)
 
 
 class Compass(CompassBase, MplCanvasMixin):
@@ -270,13 +333,29 @@ class Compass(CompassBase, MplCanvasMixin):
         return (xd, yd)
 
         
-class Triangle(TriangleBase, MplCanvasMixin):
+class RightTriangle(RightTriangleBase, MplCanvasMixin):
 
     def draw(self):
         cpoints = list(map(lambda p: self.canvascoords(p[0], p[1]),
                            ((self.x1, self.y1), (self.x2, self.y2),
                             (self.x2, self.y1))))
 
+        cr = self.setup_cr(closed=True, transform=None)
+        cr.update_patch(self)
+        
+        xy = numpy.array(cpoints)
+            
+        p = patches.Polygon(xy, **cr.kwdargs)
+        cr.axes.add_patch(p)
+        
+        if self.cap:
+            self.draw_caps(cr, self.cap, cpoints)
+
+
+class Triangle(TriangleBase, MplCanvasMixin):
+
+    def draw(self):
+        cpoints = self.get_cpoints()
         cr = self.setup_cr(closed=True, transform=None)
         cr.update_patch(self)
         
@@ -403,8 +482,10 @@ class DrawingCanvas(DrawingMixin, CanvasMixin, CompoundMixin,
 
 
 drawCatalog = dict(text=Text, rectangle=Rectangle, circle=Circle,
-                   line=Line, point=Point, polygon=Polygon,
-                   triangle=Triangle, ruler=Ruler, compass=Compass,
+                   line=Line, point=Point, polygon=Polygon, box=Box,
+                   path=Path, square=Square, ellipse=Ellipse,
+                   triangle=Triangle, righttriangle=RightTriangle,
+                   ruler=Ruler, compass=Compass,
                    compoundobject=CompoundObject, canvas=Canvas,
                    drawingcanvas=DrawingCanvas)
 

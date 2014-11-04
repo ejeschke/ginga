@@ -13,7 +13,7 @@ from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as QtFigureCanv
 from ginga.qtw.QtHelp import QtGui, QtCore
 
 
-def setup_Qt(widget, fitsimage):
+def setup_Qt(widget, viewer):
 
     def resizeEvent(*args):
         print(args)
@@ -23,8 +23,8 @@ def setup_Qt(widget, fitsimage):
         height = y2 - y1
 
         #print "RESIZE %dx%d" % (width, height)
-        if fitsimage != None:
-            fitsimage.configure(width, height)
+        if viewer != None:
+            viewer.configure(width, height)
         
     widget.setFocusPolicy(QtCore.Qt.FocusPolicy(
         QtCore.Qt.TabFocus |
@@ -45,7 +45,7 @@ class FigureCanvas(QtFigureCanvas):
     def __init__(self, fig, parent=None, width=5, height=4, dpi=100):
         QtFigureCanvas.__init__(self, fig)
         
-        self.fitsimage = None
+        self.viewer = None
         
         setup_Qt(self, None)
 
@@ -63,19 +63,19 @@ class FigureCanvas(QtFigureCanvas):
         width = x2 - x1
         height = y2 - y1
 
-        if self.fitsimage != None:
+        if self.viewer != None:
             #print "RESIZE %dx%d" % (width, height)
-            self.fitsimage.configure(width, height)
+            self.viewer.configure(width, height)
         
         return super(FigureCanvas, self).resizeEvent(event)
 
     def sizeHint(self):
         width, height = 300, 300
-        if self.fitsimage != None:
-            width, height = self.fitsimage.get_desired_size()
+        if self.viewer != None:
+            width, height = self.viewer.get_desired_size()
         return QtCore.QSize(width, height)
 
-    def set_fitsimage(self, fitsimage):
-        self.fitsimage = fitsimage
+    def set_viewer(self, viewer):
+        self.viewer = viewer
         
 #END

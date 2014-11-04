@@ -272,7 +272,8 @@ def calc_image_merge_clip(x1, y1, x2, y2,
     return (dst_x, dst_y, a1, b1, a2, b2)
 
 
-def overlay_image(dstarr, dst_x, dst_y, srcarr, order='RGBA',
+def overlay_image(dstarr, dst_x, dst_y, srcarr, dst_order='RGBA',
+                  src_order='RGBA',
                   alpha=1.0, copy=False, fill=True, flipy=False):
 
     dst_ht, dst_wd, dst_dp = dstarr.shape
@@ -314,19 +315,33 @@ def overlay_image(dstarr, dst_x, dst_y, srcarr, order='RGBA',
 
     if copy:
         dstarr = numpy.copy(dstarr, order='C')
-        
+
+    da_idx = -1
+    if 'A' in dst_order:
+        da_idx = dst_order.index('A')
+
+    # Currently we assume that alpha channel is in position 3 in dstarr
+    assert da_idx == 3, \
+           ValueError("Alpha channel not in expected position in dstarr")
+    
     # fill alpha channel in destination in the area we will be dropping
     # the image
-    if fill:
-        dstarr[dst_y:dst_y+src_ht, dst_x:dst_x+src_wd, 3] = 255
+    if fill and (da_idx >= 0):
+        dstarr[dst_y:dst_y+src_ht, dst_x:dst_x+src_wd, da_idx] = 255
 
     if src_dp > 3:
+        sa_idx = src_order.index('A')
         # if overlay source contains an alpha channel, extract it
         # and use it, otherwise use scalar keyword parameter
-        alpha = srcarr[0:src_ht, 0:src_wd, 3] / 255.0
+        alpha = srcarr[0:src_ht, 0:src_wd, sa_idx] / 255.0
         alpha = numpy.dstack((alpha, alpha, alpha))
-    #print "alpha is", alpha
-    #print "src_dp", src_dp
+
+    # reorder srcarr if necessary to match dstarr for alpha merge
+    get_order = dst_order
+    if ('A' in dst_order) and not ('A' in src_order):
+        get_order = dst_order.replace('A', '')
+    if get_order != src_order:
+        srcarr = reorder_image(get_order, srcarr, src_order)
 
     # calculate alpha blending
     #   Co = CaAa + CbAb(1 - Aa)
@@ -342,5 +357,9 @@ def overlay_image(dstarr, dst_x, dst_y, srcarr, order='RGBA',
 
     return dstarr
 
+def reorder_image(dst_order, src_arr, src_order):
+    indexes = [ src_order.index(c) for c in dst_order ]
+    return numpy.dstack([ src_arr[..., idx] for idx in indexes ])
+    
 
 #END
