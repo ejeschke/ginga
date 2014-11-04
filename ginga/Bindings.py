@@ -160,21 +160,21 @@ class ImageViewBindings(object):
             pinch_rotate_acceleration = 1.0,
             )
 
-    def window_map(self, fitsimage):
-        self.to_default_mode(fitsimage)
+    def window_map(self, viewer):
+        self.to_default_mode(viewer)
 
-    def set_bindings(self, fitsimage):
-        fitsimage.add_callback('map', self.window_map)
+    def set_bindings(self, viewer):
+        viewer.add_callback('map', self.window_map)
 
-        bindmap = fitsimage.get_bindmap()
+        bindmap = viewer.get_bindmap()
         bindmap.clear_button_map()
         bindmap.clear_event_map()
 
         # Set up bindings
-        self.setup_settings_events(fitsimage, bindmap)
+        self.setup_settings_events(viewer, bindmap)
         
-    def set_modifier(self, fitsimage, name, modtype='oneshot'):
-        bindmap = fitsimage.get_bindmap()
+    def set_modifier(self, viewer, name, modtype='oneshot'):
+        bindmap = viewer.get_bindmap()
         bindmap.set_modifier(name, modtype=modtype)
         
     def parse_combo(self, combo):
@@ -189,7 +189,7 @@ class ImageViewBindings(object):
                 modifier, trigger = combo.split('+')
         return (modifier, trigger)
 
-    def setup_settings_events(self, fitsimage, bindmap):
+    def setup_settings_events(self, viewer, bindmap):
 
         d = self.settings.getDict()
         if len(d) == 0:
@@ -242,34 +242,34 @@ class ImageViewBindings(object):
             if pfx == 'kp_':
                 # keyboard event
                 event = 'keydown-%s' % (evname)
-                fitsimage.enable_callback(event)
+                viewer.enable_callback(event)
                 if cb_method:
-                    fitsimage.add_callback(event, cb_method)
+                    viewer.add_callback(event, cb_method)
             
             elif pfx == 'ms_':
                 # mouse/button event
                 for action in ('down', 'move', 'up'):
                     event = '%s-%s' % (evname, action)
-                    fitsimage.enable_callback(event)
+                    viewer.enable_callback(event)
                     if cb_method:
-                        fitsimage.add_callback(event, cb_method)
+                        viewer.add_callback(event, cb_method)
 
             elif pfx == 'sc_':
                 # scrolling event
                 event = '%s-scroll' % evname
-                fitsimage.enable_callback(event)
+                viewer.enable_callback(event)
                 if cb_method:
-                    fitsimage.add_callback(event, cb_method)
+                    viewer.add_callback(event, cb_method)
 
             elif pfx == 'gs_':
                 if evname == 'pinch':
-                    fitsimage.set_callback('pinch', cb_method)
+                    viewer.set_callback('pinch', cb_method)
                 
-    def reset(self, fitsimage):
-        bindmap = fitsimage.get_bindmap()
-        bindmap.reset_modifier(fitsimage)
-        self.pan_stop(fitsimage)
-        fitsimage.onscreen_message(None)
+    def reset(self, viewer):
+        bindmap = viewer.get_bindmap()
+        bindmap.reset_modifier(viewer)
+        self.pan_stop(viewer)
+        viewer.onscreen_message(None)
 
     #####  ENABLERS #####
     # These methods are a quick way to enable or disable certain user
@@ -303,7 +303,7 @@ class ImageViewBindings(object):
         """
         General enable function encompassing all user interface features.
         Usage (e.g.):
-            fitsimage.enable(rotate=False, flip=True)
+            viewer.enable(rotate=False, flip=True)
         """
         for feat, value in kwdargs:
             feat = feat.lower()
@@ -322,13 +322,13 @@ class ImageViewBindings(object):
     #####  Help methods #####
     # Methods used by the callbacks to do actions.
 
-    def get_new_pan(self, fitsimage, win_x, win_y, ptype=1):
+    def get_new_pan(self, viewer, win_x, win_y, ptype=1):
 
         if ptype == 1:
             # This is a "free pan", similar to dragging the "lens"
             # over the canvas.
-            dat_wd, dat_ht = fitsimage.get_data_size()
-            win_wd, win_ht = fitsimage.get_window_size()
+            dat_wd, dat_ht = viewer.get_data_size()
+            win_wd, win_ht = viewer.get_window_size()
 
             if (win_x >= win_wd):
                 win_x = win_wd - 1
@@ -337,8 +337,8 @@ class ImageViewBindings(object):
 
             # Figure out data x,y based on percentage of X axis
             # and Y axis
-            off_x, off_y = fitsimage.canvas2offset(win_x, win_y)
-            max_x, max_y = fitsimage.canvas2offset(win_wd, win_ht)
+            off_x, off_y = viewer.canvas2offset(win_x, win_y)
+            max_x, max_y = viewer.canvas2offset(win_wd, win_ht)
             wd_x = abs(max_x) * 2.0
             ht_y = abs(max_y) * 2.0
             panx = (off_x + abs(max_x)) / float(wd_x)
@@ -360,8 +360,8 @@ class ImageViewBindings(object):
                 # return current pan values
                 return (self._start_panx, self._start_pany)
 
-            scale_x, scale_y = fitsimage.get_scale_xy()
-            off_x, off_y = fitsimage.canvas2offset(win_x, win_y)
+            scale_x, scale_y = viewer.get_scale_xy()
+            off_x, off_y = viewer.canvas2offset(win_x, win_y)
             delta_x = float(self._start_x - off_x) / scale_x
             delta_y = float(self._start_y - off_y) / scale_y
             
@@ -370,13 +370,13 @@ class ImageViewBindings(object):
             
         return (data_x, data_y)
 
-    def _panset(self, fitsimage, data_x, data_y, msg=True, redraw=True):
+    def _panset(self, viewer, data_x, data_y, msg=True, redraw=True):
         try:
             msg = self.settings.get('msg_panset', msg)
             if msg:
-                fitsimage.onscreen_message("Pan position set", delay=0.4)
+                viewer.onscreen_message("Pan position set", delay=0.4)
 
-            res = fitsimage.panset_xy(data_x, data_y, redraw=redraw)
+            res = viewer.panset_xy(data_x, data_y, redraw=redraw)
             return res
 
         except ImageView.ImageViewCoordsError as e:
@@ -400,8 +400,8 @@ class ImageViewBindings(object):
         else:
             return 'none'
         
-    def _tweak_colormap(self, fitsimage, x, y, mode):
-        win_wd, win_ht = fitsimage.get_window_size()
+    def _tweak_colormap(self, viewer, x, y, mode):
+        win_wd, win_ht = viewer.get_window_size()
 
         # translate Y cursor position as a percentage of the window
         # height into a scaling factor
@@ -415,63 +415,63 @@ class ImageViewBindings(object):
         # width into a shifting factor
         shift_pct = x / float(win_wd) - 0.5
 
-        fitsimage.scaleNshift_cmap(scale_pct, shift_pct)
+        viewer.scaleNshift_cmap(scale_pct, shift_pct)
 
-    def _cutlow_pct(self, fitsimage, pct, msg=True):
+    def _cutlow_pct(self, viewer, pct, msg=True):
         msg = self.settings.get('msg_cuts', msg)
-        image = fitsimage.get_image()
+        image = viewer.get_image()
         minval, maxval = image.get_minmax()
         spread = maxval - minval
-        loval, hival = fitsimage.get_cut_levels()
+        loval, hival = viewer.get_cut_levels()
         loval = loval + (pct * spread)
         if msg:
-            fitsimage.onscreen_message("Cut low: %.4f" % (loval),
+            viewer.onscreen_message("Cut low: %.4f" % (loval),
                                    redraw=False)
-        fitsimage.cut_levels(loval, hival, redraw=True)
+        viewer.cut_levels(loval, hival, redraw=True)
 
-    def _cutlow_xy(self, fitsimage, x, y, msg=True):
+    def _cutlow_xy(self, viewer, x, y, msg=True):
         msg = self.settings.get('msg_cuts', msg)
-        win_wd, win_ht = fitsimage.get_window_size()
+        win_wd, win_ht = viewer.get_window_size()
         pct = float(x) / float(win_wd)
-        image = fitsimage.get_image()
+        image = viewer.get_image()
         minval, maxval = image.get_minmax()
         spread = maxval - minval
-        loval, hival = fitsimage.get_cut_levels()
+        loval, hival = viewer.get_cut_levels()
         loval = minval + (pct * spread)
         if msg:
-            fitsimage.onscreen_message("Cut low: %.4f" % (loval),
+            viewer.onscreen_message("Cut low: %.4f" % (loval),
                                        redraw=False)
-        fitsimage.cut_levels(loval, hival, redraw=True)
+        viewer.cut_levels(loval, hival, redraw=True)
 
-    def _cuthigh_pct(self, fitsimage, pct, msg=True):
+    def _cuthigh_pct(self, viewer, pct, msg=True):
         msg = self.settings.get('msg_cuts', msg)
-        image = fitsimage.get_image()
+        image = viewer.get_image()
         minval, maxval = image.get_minmax()
         spread = maxval - minval
-        loval, hival = fitsimage.get_cut_levels()
+        loval, hival = viewer.get_cut_levels()
         hival = hival - (pct * spread)
         if msg:
-            fitsimage.onscreen_message("Cut high: %.4f" % (hival),
+            viewer.onscreen_message("Cut high: %.4f" % (hival),
                                        redraw=False)
-        fitsimage.cut_levels(loval, hival, redraw=True)
+        viewer.cut_levels(loval, hival, redraw=True)
 
-    def _cuthigh_xy(self, fitsimage, x, y, msg=True):
+    def _cuthigh_xy(self, viewer, x, y, msg=True):
         msg = self.settings.get('msg_cuts', msg)
-        win_wd, win_ht = fitsimage.get_window_size()
+        win_wd, win_ht = viewer.get_window_size()
         pct = 1.0 - (float(x) / float(win_wd))
-        image = fitsimage.get_image()
+        image = viewer.get_image()
         minval, maxval = image.get_minmax()
         spread = maxval - minval
-        loval, hival = fitsimage.get_cut_levels()
+        loval, hival = viewer.get_cut_levels()
         hival = maxval - (pct * spread)
         if msg:
-            fitsimage.onscreen_message("Cut high: %.4f" % (hival),
+            viewer.onscreen_message("Cut high: %.4f" % (hival),
                                        redraw=False)
-        fitsimage.cut_levels(loval, hival, redraw=True)
+        viewer.cut_levels(loval, hival, redraw=True)
 
-    def _cutboth_xy(self, fitsimage, x, y, msg=True):
+    def _cutboth_xy(self, viewer, x, y, msg=True):
         msg = self.settings.get('msg_cuts', msg)
-        win_wd, win_ht = fitsimage.get_window_size()
+        win_wd, win_ht = viewer.get_window_size()
         xpct = 1.0 - (float(x) / float(win_wd))
         #ypct = 1.0 - (float(y) / float(win_ht))
         ypct = (float(win_ht - y) / float(win_ht))
@@ -479,47 +479,47 @@ class ImageViewBindings(object):
         hival = self._hival - (xpct * spread)
         loval = self._loval + (ypct * spread)
         if msg:
-            fitsimage.onscreen_message("Cut low: %.4f  high: %.4f" % (
+            viewer.onscreen_message("Cut low: %.4f  high: %.4f" % (
                 loval, hival), redraw=False)
-        fitsimage.cut_levels(loval, hival, redraw=True)
+        viewer.cut_levels(loval, hival, redraw=True)
 
-    def _cut_pct(self, fitsimage, pct, msg=True):
+    def _cut_pct(self, viewer, pct, msg=True):
         msg = self.settings.get('msg_cuts', msg)
-        image = fitsimage.get_image()
+        image = viewer.get_image()
         minval, maxval = image.get_minmax()
         spread = maxval - minval
-        loval, hival = fitsimage.get_cut_levels()
+        loval, hival = viewer.get_cut_levels()
         loval = loval + (pct * spread)
         hival = hival - (pct * spread)
         if msg:
-            fitsimage.onscreen_message("Cut low: %.4f  high: %.4f" % (
+            viewer.onscreen_message("Cut low: %.4f  high: %.4f" % (
                 loval, hival), delay=1.0, redraw=False)
-        fitsimage.cut_levels(loval, hival, redraw=True)
+        viewer.cut_levels(loval, hival, redraw=True)
 
-    def _adjust_cuts(self, fitsimage, direction, pct, msg=True):
+    def _adjust_cuts(self, viewer, direction, pct, msg=True):
         direction = self.get_direction(direction)
         if direction == 'up':
-            self._cut_pct(fitsimage, pct, msg=msg)
+            self._cut_pct(viewer, pct, msg=msg)
         elif direction == 'down':
-            self._cut_pct(fitsimage, -pct, msg=msg)
+            self._cut_pct(viewer, -pct, msg=msg)
 
-    def _scale_image(self, fitsimage, direction, factor, msg=True):
+    def _scale_image(self, viewer, direction, factor, msg=True):
         msg = self.settings.get('msg_zoom', msg)
         rev = self.settings.get('zoom_scroll_reverse', False)
-        scale_x, scale_y = fitsimage.get_scale_xy()
+        scale_x, scale_y = viewer.get_scale_xy()
         direction = self.get_direction(direction, rev=rev)
         if direction == 'up':
                 mult = 1.0 + factor
         elif direction == 'down':
                 mult = 1.0 - factor
         scale_x, scale_y = scale_x * mult, scale_y * mult
-        fitsimage.scale_to(scale_x, scale_y)
+        viewer.scale_to(scale_x, scale_y)
         if msg:
-            fitsimage.onscreen_message(fitsimage.get_scale_text(),
+            viewer.onscreen_message(viewer.get_scale_text(),
                                        delay=0.4)
 
-    def _zoom_xy(self, fitsimage, x, y, msg=True):
-        win_wd, win_ht = fitsimage.get_window_size()
+    def _zoom_xy(self, viewer, x, y, msg=True):
+        win_wd, win_ht = viewer.get_window_size()
         delta = float(x - self._start_x)
         factor = math.fabs(self.settings.get('mouse_zoom_acceleration', 1.085)
                            - 1.0)
@@ -528,12 +528,12 @@ class ImageViewBindings(object):
             direction = 180.0
         #print("factor=%f direction=%f" % (factor, direction))
         self._start_x = x
-        self._scale_image(fitsimage, direction, factor, msg=msg)
+        self._scale_image(viewer, direction, factor, msg=msg)
 
-    def _cycle_dist(self, fitsimage, msg, direction='down'):
+    def _cycle_dist(self, viewer, msg, direction='down'):
         if self.cancmap:
             msg = self.settings.get('msg_dist', msg)
-            rgbmap = fitsimage.get_rgbmap()
+            rgbmap = viewer.get_rgbmap()
             algs = rgbmap.get_hash_algorithms()
             algname = rgbmap.get_hash_algorithm()
             idx = algs.index(algname)
@@ -545,23 +545,23 @@ class ImageViewBindings(object):
             algname = algs[idx]
             rgbmap.set_hash_algorithm(algname)
             if msg:
-                fitsimage.onscreen_message("Color dist: %s" % (algname),
+                viewer.onscreen_message("Color dist: %s" % (algname),
                                            delay=1.0)
 
-    def _reset_dist(self, fitsimage, msg):
+    def _reset_dist(self, viewer, msg):
         if self.cancmap:
             msg = self.settings.get('msg_dist', msg)
-            rgbmap = fitsimage.get_rgbmap()
+            rgbmap = viewer.get_rgbmap()
             algname = 'linear'
             rgbmap.set_hash_algorithm(algname)
             if msg:
-                fitsimage.onscreen_message("Color dist: %s" % (algname),
+                viewer.onscreen_message("Color dist: %s" % (algname),
                                            delay=1.0)
 
-    def _cycle_cmap(self, fitsimage, msg, direction='down'):
+    def _cycle_cmap(self, viewer, msg, direction='down'):
         if self.cancmap:
             msg = self.settings.get('msg_cmap', msg)
-            rgbmap = fitsimage.get_rgbmap()
+            rgbmap = viewer.get_rgbmap()
             cm = rgbmap.get_cmap()
             cmapname = cm.name
             cmapnames = cmap.get_names()
@@ -574,24 +574,24 @@ class ImageViewBindings(object):
             cmapname = cmapnames[idx]
             rgbmap.set_cmap(cmap.get_cmap(cmapname))
             if msg:
-                fitsimage.onscreen_message("Color map: %s" % (cmapname),
+                viewer.onscreen_message("Color map: %s" % (cmapname),
                                            delay=1.0)
 
-    def _reset_cmap(self, fitsimage, msg):
+    def _reset_cmap(self, viewer, msg):
         if self.cancmap:
             msg = self.settings.get('msg_cmap', msg)
-            rgbmap = fitsimage.get_rgbmap()
+            rgbmap = viewer.get_rgbmap()
             # default
             cmapname = 'gray'
             rgbmap.set_cmap(cmap.get_cmap(cmapname))
             if msg:
-                fitsimage.onscreen_message("Color map: %s" % (cmapname),
+                viewer.onscreen_message("Color map: %s" % (cmapname),
                                            delay=1.0)
 
-    def _cycle_imap(self, fitsimage, msg, direction='down'):
+    def _cycle_imap(self, viewer, msg, direction='down'):
         if self.cancmap:
             msg = self.settings.get('msg_imap', msg)
-            rgbmap = fitsimage.get_rgbmap()
+            rgbmap = viewer.get_rgbmap()
             im = rgbmap.get_imap()
             imapname = im.name
             imapnames = imap.get_names()
@@ -604,49 +604,49 @@ class ImageViewBindings(object):
             imapname = imapnames[idx]
             rgbmap.set_imap(imap.get_imap(imapname))
             if msg:
-                fitsimage.onscreen_message("Intensity map: %s" % (imapname),
+                viewer.onscreen_message("Intensity map: %s" % (imapname),
                                            delay=1.0)
 
-    def _reset_imap(self, fitsimage, msg):
+    def _reset_imap(self, viewer, msg):
         if self.cancmap:
             msg = self.settings.get('msg_imap', msg)
-            rgbmap = fitsimage.get_rgbmap()
+            rgbmap = viewer.get_rgbmap()
             # default
             imapname = 'ramp'
             rgbmap.set_imap(imap.get_imap(imapname))
             if msg:
-                fitsimage.onscreen_message("Intensity map: %s" % (imapname),
+                viewer.onscreen_message("Intensity map: %s" % (imapname),
                                            delay=1.0)
 
-    def _get_pct_xy(self, fitsimage, x, y):
-        win_wd, win_ht = fitsimage.get_window_size()
+    def _get_pct_xy(self, viewer, x, y):
+        win_wd, win_ht = viewer.get_window_size()
         x_pct = float(x - self._start_x) / win_wd
         y_pct = float(y - self._start_y) / win_ht
         return (x_pct, y_pct)
 
-    def _rotate_xy(self, fitsimage, x, y, msg=True):
+    def _rotate_xy(self, viewer, x, y, msg=True):
         msg = self.settings.get('msg_rotate', msg)
-        x_pct, y_pct = self._get_pct_xy(fitsimage, x, y)
+        x_pct, y_pct = self._get_pct_xy(viewer, x, y)
         delta_deg = x_pct * 360.0
         factor = self.settings.get('mouse_rotate_acceleration', 0.75)
         deg = math.fmod(self._start_rot + delta_deg * factor, 360.0)
         if msg:
-            fitsimage.onscreen_message("Rotate: %.2f" % (deg),
+            viewer.onscreen_message("Rotate: %.2f" % (deg),
                                        redraw=False)
-        fitsimage.rotate(deg)
+        viewer.rotate(deg)
 
-    def _rotate_inc(self, fitsimage, inc_deg, msg=True):
+    def _rotate_inc(self, viewer, inc_deg, msg=True):
         msg = self.settings.get('msg_rotate_inc', msg)
-        cur_rot_deg = fitsimage.get_rotation()
+        cur_rot_deg = viewer.get_rotation()
         rot_deg = math.fmod(cur_rot_deg + inc_deg, 360.0)
-        fitsimage.rotate(rot_deg)
+        viewer.rotate(rot_deg)
         if msg:
-            fitsimage.onscreen_message("Rotate Inc: (%.2f) %.2f" % (
+            viewer.onscreen_message("Rotate Inc: (%.2f) %.2f" % (
                 inc_deg, rot_deg), delay=1.0)
 
-    def _orient(self, fitsimage, righthand=False, msg=True):
+    def _orient(self, viewer, righthand=False, msg=True):
         msg = self.settings.get('msg_orient', msg)
-        image = fitsimage.get_image()
+        image = viewer.get_image()
 
         (x, y, xn, yn, xe, ye) = image.calc_compass_center()
         degn = math.degrees(math.atan2(xn - x, yn - y))
@@ -665,280 +665,280 @@ class ImageViewBindings(object):
         if xflip:
             degn = - degn
             
-        fitsimage.transform(xflip, False, False)
-        fitsimage.rotate(degn)
+        viewer.transform(xflip, False, False)
+        viewer.rotate(degn)
         if msg:
-            fitsimage.onscreen_message("Orient: rot=%.2f flipx=%s" % (
+            viewer.onscreen_message("Orient: rot=%.2f flipx=%s" % (
                 degn, str(xflip)), delay=1.0)
 
-    def to_default_mode(self, fitsimage):
+    def to_default_mode(self, viewer):
         self._ispanning = False
-        fitsimage.switch_cursor('pick')
+        viewer.switch_cursor('pick')
         
-    def pan_start(self, fitsimage, ptype=1):
+    def pan_start(self, viewer, ptype=1):
         # If already panning then ignore multiple keystrokes
         if self._ispanning:
             return
         self._pantype = ptype
-        fitsimage.switch_cursor('pan')
+        viewer.switch_cursor('pan')
         self._ispanning = True
         
-    def pan_set_origin(self, fitsimage, win_x, win_y, data_x, data_y):
-        self._start_x, self._start_y = fitsimage.canvas2offset(win_x, win_y)
-        self._start_panx, self._start_pany = fitsimage.get_pan()
+    def pan_set_origin(self, viewer, win_x, win_y, data_x, data_y):
+        self._start_x, self._start_y = viewer.canvas2offset(win_x, win_y)
+        self._start_panx, self._start_pany = viewer.get_pan()
         
-    def pan_stop(self, fitsimage):
+    def pan_stop(self, viewer):
         self._ispanning = False
         self._start_x = None
         self._pantype = 1
-        self.to_default_mode(fitsimage)
+        self.to_default_mode(viewer)
 
-    def restore_colormap(self, fitsimage, msg=True):
+    def restore_colormap(self, viewer, msg=True):
         msg = self.settings.get('msg_cmap', msg)
-        rgbmap = fitsimage.get_rgbmap()
+        rgbmap = viewer.get_rgbmap()
         rgbmap.reset_sarr()
         if msg:
-            fitsimage.onscreen_message("Restored color map", delay=0.5)
+            viewer.onscreen_message("Restored color map", delay=0.5)
         return True
 
 
     #####  KEYBOARD ACTION CALLBACKS #####
 
-    def kp_pan_set(self, fitsimage, keyname, data_x, data_y, msg=True):
+    def kp_pan_set(self, viewer, keyname, data_x, data_y, msg=True):
         if self.canpan:
-            self._panset(fitsimage, data_x, data_y, redraw=True,
+            self._panset(viewer, data_x, data_y, redraw=True,
                          msg=msg)
         return True
 
-    def kp_center(self, fitsimage, keyname, data_x, data_y):
+    def kp_center(self, viewer, keyname, data_x, data_y):
         if self.canpan:
-            fitsimage.center_image()
+            viewer.center_image()
         return True
 
-    def kp_zoom_out(self, fitsimage, keyname, data_x, data_y, msg=True):
+    def kp_zoom_out(self, viewer, keyname, data_x, data_y, msg=True):
         if self.canzoom:
             msg = self.settings.get('msg_zoom', msg)
-            fitsimage.zoom_out()
+            viewer.zoom_out()
             if msg:
-                fitsimage.onscreen_message(fitsimage.get_scale_text(),
+                viewer.onscreen_message(viewer.get_scale_text(),
                                            delay=1.0)
         return True
 
-    def kp_zoom_in(self, fitsimage, keyname, data_x, data_y, msg=True):
+    def kp_zoom_in(self, viewer, keyname, data_x, data_y, msg=True):
         if self.canzoom:
             msg = self.settings.get('msg_zoom', msg)
-            fitsimage.zoom_in()
+            viewer.zoom_in()
             if msg:
-                fitsimage.onscreen_message(fitsimage.get_scale_text(),
+                viewer.onscreen_message(viewer.get_scale_text(),
                                            delay=1.0)
         return True
 
-    def kp_zoom(self, fitsimage, keyname, data_x, data_y, msg=True):
+    def kp_zoom(self, viewer, keyname, data_x, data_y, msg=True):
         if self.canzoom:
             msg = self.settings.get('msg_zoom', msg)
             keylist = self.settings.get('kp_zoom')
             zoomval = (keylist.index(keyname) + 1)
-            fitsimage.zoom_to(zoomval)
+            viewer.zoom_to(zoomval)
             if msg:
-                fitsimage.onscreen_message(fitsimage.get_scale_text(),
+                viewer.onscreen_message(viewer.get_scale_text(),
                                            delay=1.0)
         return True
 
-    def kp_zoom_inv(self, fitsimage, keyname, data_x, data_y, msg=True):
+    def kp_zoom_inv(self, viewer, keyname, data_x, data_y, msg=True):
         if self.canzoom:
             msg = self.settings.get('msg_zoom', msg)
             keylist = self.settings.get('kp_zoom_inv')
             zoomval = - (keylist.index(keyname) + 1)
-            fitsimage.zoom_to(zoomval)
+            viewer.zoom_to(zoomval)
             if msg:
-                fitsimage.onscreen_message(fitsimage.get_scale_text(),
+                viewer.onscreen_message(viewer.get_scale_text(),
                                            delay=1.0)
         return True
 
-    def kp_zoom_fit(self, fitsimage, keyname, data_x, data_y, msg=True):
+    def kp_zoom_fit(self, viewer, keyname, data_x, data_y, msg=True):
         if self.canzoom:
             msg = self.settings.get('msg_zoom', msg)
-            fitsimage.zoom_fit()
+            viewer.zoom_fit()
             if msg:
-                fitsimage.onscreen_message(fitsimage.get_scale_text(),
+                viewer.onscreen_message(viewer.get_scale_text(),
                                            delay=1.0)
         return True
 
-    def kp_autozoom_on(self, fitsimage, keyname, data_x, data_y, msg=True):
+    def kp_autozoom_on(self, viewer, keyname, data_x, data_y, msg=True):
         if self.canzoom:
             msg = self.settings.get('msg_zoom', msg)
-            fitsimage.enable_autozoom('on')
+            viewer.enable_autozoom('on')
             if msg:
-                fitsimage.onscreen_message('Autozoom On', delay=1.0)
+                viewer.onscreen_message('Autozoom On', delay=1.0)
         return True
 
-    def kp_autozoom_override(self, fitsimage, keyname, data_x, data_y, msg=True):
+    def kp_autozoom_override(self, viewer, keyname, data_x, data_y, msg=True):
         if self.canzoom:
             msg = self.settings.get('msg_zoom', msg)
-            fitsimage.enable_autozoom('override')
+            viewer.enable_autozoom('override')
             if msg:
-                fitsimage.onscreen_message('Autozoom Override', delay=1.0)
+                viewer.onscreen_message('Autozoom Override', delay=1.0)
         return True
             
-    def kp_cut_255(self, fitsimage, keyname, data_x, data_y, msg=True):
+    def kp_cut_255(self, viewer, keyname, data_x, data_y, msg=True):
         if self.cancut:
             msg = self.settings.get('msg_cuts', msg)
-            fitsimage.cut_levels(0.0, 255.0, no_reset=True)
+            viewer.cut_levels(0.0, 255.0, no_reset=True)
         return True
 
-    def kp_cut_auto(self, fitsimage, keyname, data_x, data_y, msg=True):
+    def kp_cut_auto(self, viewer, keyname, data_x, data_y, msg=True):
         if self.cancut:
             msg = self.settings.get('msg_cuts', msg)
             if msg:
-                fitsimage.onscreen_message("Auto cut levels", delay=1.0)
-            fitsimage.auto_levels()
+                viewer.onscreen_message("Auto cut levels", delay=1.0)
+            viewer.auto_levels()
         return True
 
-    def kp_autocuts_on(self, fitsimage, keyname, data_x, data_y, msg=True):
+    def kp_autocuts_on(self, viewer, keyname, data_x, data_y, msg=True):
         if self.cancut:
             msg = self.settings.get('msg_cuts', msg)
-            fitsimage.enable_autocuts('on')
+            viewer.enable_autocuts('on')
             if msg:
-                fitsimage.onscreen_message('Autocuts On', delay=1.0)
+                viewer.onscreen_message('Autocuts On', delay=1.0)
         return True
 
-    def kp_autocuts_override(self, fitsimage, keyname, data_x, data_y, msg=True):
+    def kp_autocuts_override(self, viewer, keyname, data_x, data_y, msg=True):
         if self.cancut:
             msg = self.settings.get('msg_cuts', msg)
-            fitsimage.enable_autocuts('override')
+            viewer.enable_autocuts('override')
             if msg:
-                fitsimage.onscreen_message('Autocuts Override', delay=1.0)
+                viewer.onscreen_message('Autocuts Override', delay=1.0)
         return True
 
-    def kp_contrast_restore(self, fitsimage, keyname, data_x, data_y, msg=True):
+    def kp_contrast_restore(self, viewer, keyname, data_x, data_y, msg=True):
         if self.cancmap:
             msg = self.settings.get('msg_cmap', msg)
-            self.restore_colormap(fitsimage, msg=msg)
+            self.restore_colormap(viewer, msg=msg)
         return True
 
-    def kp_flip_x(self, fitsimage, keyname, data_x, data_y, msg=True):
+    def kp_flip_x(self, viewer, keyname, data_x, data_y, msg=True):
         if self.canflip:
             msg = self.settings.get('msg_transform', msg)
-            flipX, flipY, swapXY = fitsimage.get_transforms()
+            flipX, flipY, swapXY = viewer.get_transforms()
             if keyname == '[':
                 flipx = not flipX
             else:
                 flipx = False
-            fitsimage.transform(flipx, flipY, swapXY)
+            viewer.transform(flipx, flipY, swapXY)
             if msg:
-                fitsimage.onscreen_message("Flip X=%s" % flipx, delay=1.0)
+                viewer.onscreen_message("Flip X=%s" % flipx, delay=1.0)
         return True
 
-    def kp_flip_y(self, fitsimage, keyname, data_x, data_y, msg=True):
+    def kp_flip_y(self, viewer, keyname, data_x, data_y, msg=True):
         if self.canflip:
             msg = self.settings.get('msg_transform', msg)
-            flipX, flipY, swapXY = fitsimage.get_transforms()
+            flipX, flipY, swapXY = viewer.get_transforms()
             if keyname == ']':
                 flipy = not flipY
             else:
                 flipy = False
-            fitsimage.transform(flipX, flipy, swapXY)
+            viewer.transform(flipX, flipy, swapXY)
             if msg:
-                fitsimage.onscreen_message("Flip Y=%s" % flipy, delay=1.0)
+                viewer.onscreen_message("Flip Y=%s" % flipy, delay=1.0)
         return True
 
-    def kp_swap_xy(self, fitsimage, keyname, data_x, data_y, msg=True):
+    def kp_swap_xy(self, viewer, keyname, data_x, data_y, msg=True):
         if self.canflip:
             msg = self.settings.get('msg_transform', msg)
-            flipX, flipY, swapXY = fitsimage.get_transforms()
+            flipX, flipY, swapXY = viewer.get_transforms()
             if keyname == 'backslash':
                 swapxy = not swapXY
             else:
                 swapxy = False
-            fitsimage.transform(flipX, flipY, swapxy)
+            viewer.transform(flipX, flipY, swapxy)
             if msg:
-                fitsimage.onscreen_message("Swap XY=%s" % swapxy, delay=1.0)
+                viewer.onscreen_message("Swap XY=%s" % swapxy, delay=1.0)
         return True
 
-    def kp_dist(self, fitsimage, keyname, data_x, data_y, msg=True):
-        self._cycle_dist(fitsimage, msg)
+    def kp_dist(self, viewer, keyname, data_x, data_y, msg=True):
+        self._cycle_dist(viewer, msg)
         return True
 
-    def kp_dist_reset(self, fitsimage, keyname, data_x, data_y, msg=True):
-        self._reset_dist(fitsimage, msg)
+    def kp_dist_reset(self, viewer, keyname, data_x, data_y, msg=True):
+        self._reset_dist(viewer, msg)
         return True
 
-    def kp_cmap_reset(self, fitsimage, keyname, data_x, data_y, msg=True):
-        self._reset_cmap(fitsimage, msg)
+    def kp_cmap_reset(self, viewer, keyname, data_x, data_y, msg=True):
+        self._reset_cmap(viewer, msg)
         return True
 
-    def kp_imap_reset(self, fitsimage, keyname, data_x, data_y, msg=True):
-        self._reset_imap(fitsimage, msg)
+    def kp_imap_reset(self, viewer, keyname, data_x, data_y, msg=True):
+        self._reset_imap(viewer, msg)
         return True
 
-    def kp_rotate_reset(self, fitsimage, keyname, data_x, data_y):
+    def kp_rotate_reset(self, viewer, keyname, data_x, data_y):
         if self.canrotate:
-            fitsimage.rotate(0.0)
+            viewer.rotate(0.0)
             # also reset all transforms
-            fitsimage.transform(False, False, False)
+            viewer.transform(False, False, False)
         return True
 
-    def kp_rotate_inc90(self, fitsimage, keyname, data_x, data_y, msg=True):
+    def kp_rotate_inc90(self, viewer, keyname, data_x, data_y, msg=True):
         if self.canrotate:
-            self._rotate_inc(fitsimage, 90.0, msg=msg)
+            self._rotate_inc(viewer, 90.0, msg=msg)
         return True
 
-    def kp_rotate_dec90(self, fitsimage, keyname, data_x, data_y, msg=True):
+    def kp_rotate_dec90(self, viewer, keyname, data_x, data_y, msg=True):
         if self.canrotate:
-            self._rotate_inc(fitsimage, -90.0, msg=msg)
+            self._rotate_inc(viewer, -90.0, msg=msg)
         return True
 
-    def kp_orient_lh(self, fitsimage, keyname, data_x, data_y, msg=True):
+    def kp_orient_lh(self, viewer, keyname, data_x, data_y, msg=True):
         if self.canrotate:
-            self._orient(fitsimage, righthand=False, msg=msg)
+            self._orient(viewer, righthand=False, msg=msg)
         return True
 
-    def kp_orient_rh(self, fitsimage, keyname, data_x, data_y,
+    def kp_orient_rh(self, viewer, keyname, data_x, data_y,
                             msg=True):
         if self.canrotate:
-            self._orient(fitsimage, righthand=True, msg=msg)
+            self._orient(viewer, righthand=True, msg=msg)
         return True
 
-    def kp_reset(self, fitsimage, keyname, data_x, data_y):
-        self.reset(fitsimage)
+    def kp_reset(self, viewer, keyname, data_x, data_y):
+        self.reset(viewer)
         return True
 
     #####  MOUSE ACTION CALLBACKS #####
 
-    # def ms_none(self, fitsimage, action, data_x, data_y):
+    # def ms_none(self, viewer, action, data_x, data_y):
     #     return False
 
-    # def ms_cursor(self, fitsimage, action, data_x, data_y):
+    # def ms_cursor(self, viewer, action, data_x, data_y):
     #     return False
 
-    # def ms_wheel(self, fitsimage, action, data_x, data_y):
+    # def ms_wheel(self, viewer, action, data_x, data_y):
     #     return False
 
-    # def ms_draw(self, fitsimage, action, data_x, data_y):
+    # def ms_draw(self, viewer, action, data_x, data_y):
     #     return False
 
-    def ms_zoom(self, fitsimage, action, data_x, data_y, msg=True):
+    def ms_zoom(self, viewer, action, data_x, data_y, msg=True):
         """Zoom the image by dragging the cursor left or right.
         """
         if not self.canzoom:
             return True
         msg = self.settings.get('msg_zoom', msg)
 
-        x, y = fitsimage.get_last_win_xy()
+        x, y = viewer.get_last_win_xy()
         if action == 'move':
-            self._zoom_xy(fitsimage, x, y)
+            self._zoom_xy(viewer, x, y)
             
         elif action == 'down':
             if msg:
-                fitsimage.onscreen_message("Zoom (drag mouse L-R)",
+                viewer.onscreen_message("Zoom (drag mouse L-R)",
                                            delay=1.0)
             self._start_x, self._start_y = x, y
             
         else:
-            fitsimage.onscreen_message(None)
+            viewer.onscreen_message(None)
         return True
 
-    def ms_zoom_in(self, fitsimage, action, data_x, data_y, msg=True):
+    def ms_zoom_in(self, viewer, action, data_x, data_y, msg=True):
         """Zoom in one level by a mouse click.
         """
         if not self.canzoom:
@@ -946,14 +946,14 @@ class ImageViewBindings(object):
 
         if action == 'down':
             pan_x, pan_y = data_x + 0.5, data_y + 0.5
-            fitsimage.set_pan(pan_x, pan_y, redraw=False)
-            fitsimage.zoom_in()
+            viewer.set_pan(pan_x, pan_y, redraw=False)
+            viewer.zoom_in()
             if msg:
-                fitsimage.onscreen_message(fitsimage.get_scale_text(),
+                viewer.onscreen_message(viewer.get_scale_text(),
                                            delay=1.0)
         return True
 
-    def ms_zoom_out(self, fitsimage, action, data_x, data_y, msg=True):
+    def ms_zoom_out(self, viewer, action, data_x, data_y, msg=True):
         """Zoom out one level by a mouse click.
         """
         if not self.canzoom:
@@ -961,49 +961,49 @@ class ImageViewBindings(object):
 
         if action == 'down':
             pan_x, pan_y = data_x + 0.5, data_y + 0.5
-            fitsimage.set_pan(pan_x, pan_y, redraw=False)
-            fitsimage.zoom_out()
+            viewer.set_pan(pan_x, pan_y, redraw=False)
+            viewer.zoom_out()
             if msg:
-                fitsimage.onscreen_message(fitsimage.get_scale_text(),
+                viewer.onscreen_message(viewer.get_scale_text(),
                                            delay=1.0)
         return True
 
 
-    def ms_rotate(self, fitsimage, action, data_x, data_y, msg=True):
+    def ms_rotate(self, viewer, action, data_x, data_y, msg=True):
         """Rotate the image by dragging the cursor left or right.
         """
         if not self.canrotate:
             return True
         msg = self.settings.get('msg_rotate', msg)
 
-        x, y = fitsimage.get_last_win_xy()
+        x, y = viewer.get_last_win_xy()
         if action == 'move':
-            self._rotate_xy(fitsimage, x, y)
+            self._rotate_xy(viewer, x, y)
             
         elif action == 'down':
             if msg:
-                fitsimage.onscreen_message("Rotate (drag mouse L-R)",
+                viewer.onscreen_message("Rotate (drag mouse L-R)",
                                            delay=1.0)
             self._start_x, self._start_y = x, y
-            self._start_rot = fitsimage.get_rotation()
+            self._start_rot = viewer.get_rotation()
             
         else:
-            fitsimage.onscreen_message(None)
+            viewer.onscreen_message(None)
         return True
 
 
-    def ms_rotate_reset(self, fitsimage, action, data_x, data_y, msg=True):
+    def ms_rotate_reset(self, viewer, action, data_x, data_y, msg=True):
         if not self.canrotate:
             return True
         msg = self.settings.get('msg_rotate', msg)
 
         if action == 'down':
-            fitsimage.rotate(0.0)
-            fitsimage.onscreen_message("Rotation reset", delay=0.5)
+            viewer.rotate(0.0)
+            viewer.onscreen_message("Rotation reset", delay=0.5)
         return True
 
         
-    def ms_contrast(self, fitsimage, action, data_x, data_y, msg=True):
+    def ms_contrast(self, viewer, action, data_x, data_y, msg=True):
         """Shift the colormap by dragging the cursor left or right.
         Stretch the colormap by dragging the cursor up or down.
         """
@@ -1011,32 +1011,32 @@ class ImageViewBindings(object):
             return True
         msg = self.settings.get('msg_contrast', msg)
         
-        x, y = fitsimage.get_last_win_xy()
-        if not fitsimage._originUpper:
-            y = fitsimage._imgwin_ht - y
+        x, y = viewer.get_last_win_xy()
+        if not viewer._originUpper:
+            y = viewer._imgwin_ht - y
         if action == 'move':
-            self._tweak_colormap(fitsimage, x, y, 'preview')
+            self._tweak_colormap(viewer, x, y, 'preview')
             
         elif action == 'down':
             self._start_x, self._start_y = x, y
             if msg:
-                fitsimage.onscreen_message("Shift and stretch colormap (drag mouse)",
+                viewer.onscreen_message("Shift and stretch colormap (drag mouse)",
                                            delay=1.0)
         else:
-            fitsimage.onscreen_message(None)
+            viewer.onscreen_message(None)
         return True
 
             
-    def ms_contrast_restore(self, fitsimage, action, data_x, data_y, msg=True):
+    def ms_contrast_restore(self, viewer, action, data_x, data_y, msg=True):
         """An interactive way to restore the colormap settings after
         a warp operation.
         """
         if self.cancmap and (action == 'down'):
-            self.restore_colormap(fitsimage, msg=msg)
+            self.restore_colormap(viewer, msg=msg)
             return True
 
 
-    def ms_pan(self, fitsimage, action, data_x, data_y):
+    def ms_pan(self, viewer, action, data_x, data_y):
         """A 'drag' or proportional pan, where the image is panned by
         'dragging the canvas' up or down.  The amount of the pan is
         proportionate to the length of the drag.
@@ -1044,21 +1044,21 @@ class ImageViewBindings(object):
         if not self.canpan:
             return True
         
-        x, y = fitsimage.get_last_win_xy()
+        x, y = viewer.get_last_win_xy()
         if action == 'move':
-            data_x, data_y = self.get_new_pan(fitsimage, x, y,
+            data_x, data_y = self.get_new_pan(viewer, x, y,
                                               ptype=self._pantype)
-            fitsimage.panset_xy(data_x, data_y, redraw=True)
+            viewer.panset_xy(data_x, data_y, redraw=True)
             
         elif action == 'down':
-            self.pan_set_origin(fitsimage, x, y, data_x, data_y)
-            self.pan_start(fitsimage, ptype=2)
+            self.pan_set_origin(viewer, x, y, data_x, data_y)
+            self.pan_start(viewer, ptype=2)
 
         else:
-            self.pan_stop(fitsimage)
+            self.pan_stop(viewer)
         return True
             
-    def ms_freepan(self, fitsimage, action, data_x, data_y):
+    def ms_freepan(self, viewer, action, data_x, data_y):
         """A 'free' pan, where the image is panned by dragging the cursor
         towards the area you want to see in the image.  The entire image is
         pannable by dragging towards each corner of the window.
@@ -1066,111 +1066,111 @@ class ImageViewBindings(object):
         if not self.canpan:
             return True
         
-        x, y = fitsimage.get_last_win_xy()
+        x, y = viewer.get_last_win_xy()
         if action == 'move':
-            data_x, data_y = self.get_new_pan(fitsimage, x, y,
+            data_x, data_y = self.get_new_pan(viewer, x, y,
                                               ptype=self._pantype)
-            fitsimage.panset_xy(data_x, data_y, redraw=True)
+            viewer.panset_xy(data_x, data_y, redraw=True)
             
         elif action == 'down':
-            self.pan_start(fitsimage, ptype=1)
+            self.pan_start(viewer, ptype=1)
 
         else:
-            self.pan_stop(fitsimage)
+            self.pan_stop(viewer)
         return True
             
-    def ms_cutlo(self, fitsimage, action, data_x, data_y):
+    def ms_cutlo(self, viewer, action, data_x, data_y):
         """An interactive way to set the low cut level.
         """
         if not self.cancut:
             return True
         
-        x, y = fitsimage.get_last_win_xy()
+        x, y = viewer.get_last_win_xy()
         if action == 'move':
-            self._cutlow_xy(fitsimage, x, y)
+            self._cutlow_xy(viewer, x, y)
             
         elif action == 'down':
             self._start_x, self._start_y = x, y
-            self._loval, self._hival = fitsimage.get_cut_levels()
+            self._loval, self._hival = viewer.get_cut_levels()
 
         else:
-            fitsimage.onscreen_message(None)
+            viewer.onscreen_message(None)
         return True
             
-    def ms_cuthi(self, fitsimage, action, data_x, data_y):
+    def ms_cuthi(self, viewer, action, data_x, data_y):
         """An interactive way to set the high cut level.
         """
         if not self.cancut:
             return True
         
-        x, y = fitsimage.get_last_win_xy()
+        x, y = viewer.get_last_win_xy()
         if action == 'move':
-            self._cuthigh_xy(fitsimage, x, y)
+            self._cuthigh_xy(viewer, x, y)
             
         elif action == 'down':
             self._start_x, self._start_y = x, y
-            self._loval, self._hival = fitsimage.get_cut_levels()
+            self._loval, self._hival = viewer.get_cut_levels()
 
         else:
-            fitsimage.onscreen_message(None)
+            viewer.onscreen_message(None)
         return True
             
-    def ms_cutall(self, fitsimage, action, data_x, data_y):
+    def ms_cutall(self, viewer, action, data_x, data_y):
         """An interactive way to set the low AND high cut levels.
         """
         if not self.cancut:
             return True
         
-        x, y = fitsimage.get_last_win_xy()
-        if not fitsimage._originUpper:
-            y = fitsimage._imgwin_ht - y
+        x, y = viewer.get_last_win_xy()
+        if not viewer._originUpper:
+            y = viewer._imgwin_ht - y
         if action == 'move':
-            self._cutboth_xy(fitsimage, x, y)
+            self._cutboth_xy(viewer, x, y)
             
         elif action == 'down':
             self._start_x, self._start_y = x, y
-            image = fitsimage.get_image()
+            image = viewer.get_image()
             self._loval, self._hival = self.autocuts.calc_cut_levels(image)
 
         else:
-            fitsimage.onscreen_message(None)
+            viewer.onscreen_message(None)
         return True
             
-    def ms_cut_auto(self, fitsimage, action, data_x, data_y, msg=True):
-        return self.kp_cut_auto(fitsimage, action, data_x, data_y,
+    def ms_cut_auto(self, viewer, action, data_x, data_y, msg=True):
+        return self.kp_cut_auto(viewer, action, data_x, data_y,
                                 msg=msg)
 
-    def ms_panset(self, fitsimage, action, data_x, data_y,
+    def ms_panset(self, viewer, action, data_x, data_y,
                   msg=True):
         """An interactive way to set the pan position.  The location
         (data_x, data_y) will be centered in the window.
         """
         if self.canpan and (action == 'down'):
-            self._panset(fitsimage, data_x, data_y, redraw=True,
+            self._panset(viewer, data_x, data_y, redraw=True,
                          msg=msg)
         return True
 
     #####  SCROLL ACTION CALLBACKS #####
 
-    def sc_cuts_coarse(self, fitsimage, direction, amount, data_x, data_y,
+    def sc_cuts_coarse(self, viewer, direction, amount, data_x, data_y,
                            msg=True):
         """Adjust cuts interactively by setting the low AND high cut
         levels.  This function adjusts it coarsely.
         """
         if self.cancut:
-            self._adjust_cuts(fitsimage, direction, 0.01, msg=msg)
+            self._adjust_cuts(viewer, direction, 0.01, msg=msg)
         return True
 
-    def sc_cuts_fine(self, fitsimage, direction, amount, data_x, data_y,
+    def sc_cuts_fine(self, viewer, direction, amount, data_x, data_y,
                          msg=True):
         """Adjust cuts interactively by setting the low AND high cut
         levels.  This function adjusts it finely.
         """
         if self.cancut:
-            self._adjust_cuts(fitsimage, direction, 0.001, msg=msg)
+            self._adjust_cuts(viewer, direction, 0.001, msg=msg)
         return True
 
-    def sc_zoom(self, fitsimage, direction, amount, data_x, data_y, msg=True):
+    def sc_zoom(self, viewer, direction, amount, data_x, data_y, msg=True):
         """Interactively zoom the image by scrolling motion.
         This zooms by the zoom steps configured under Preferences.
         """
@@ -1179,15 +1179,15 @@ class ImageViewBindings(object):
             rev = self.settings.get('zoom_scroll_reverse', False)
             direction = self.get_direction(direction, rev=rev)
             if direction == 'up':
-                fitsimage.zoom_in()
+                viewer.zoom_in()
             elif direction == 'down':
-                fitsimage.zoom_out()
+                viewer.zoom_out()
             if msg:
-                fitsimage.onscreen_message(fitsimage.get_scale_text(),
+                viewer.onscreen_message(viewer.get_scale_text(),
                                            delay=0.4)
         return True
 
-    def sc_zoom_coarse(self, fitsimage, direction, amount, data_x, data_y,
+    def sc_zoom_coarse(self, viewer, direction, amount, data_x, data_y,
                        msg=True):
         """Interactively zoom the image by scrolling motion.
         This zooms by adjusting the scale in x and y coarsely.
@@ -1195,10 +1195,10 @@ class ImageViewBindings(object):
         if self.canzoom:
             zoom_accel = self.settings.get('scroll_zoom_acceleration', 1.0)
             amount = zoom_accel * 0.20
-            self._scale_image(fitsimage, direction, amount, msg=msg)
+            self._scale_image(viewer, direction, amount, msg=msg)
         return True
 
-    def sc_zoom_fine(self, fitsimage, direction, amount, data_x, data_y,
+    def sc_zoom_fine(self, viewer, direction, amount, data_x, data_y,
                      msg=True):
         """Interactively zoom the image by scrolling motion.
         This zooms by adjusting the scale in x and y coarsely.
@@ -1206,10 +1206,10 @@ class ImageViewBindings(object):
         if self.canzoom:
             zoom_accel = self.settings.get('scroll_zoom_acceleration', 1.0)
             amount = zoom_accel * 0.08
-            self._scale_image(fitsimage, direction, 0.08, msg=msg)
+            self._scale_image(viewer, direction, 0.08, msg=msg)
         return True
 
-    def sc_pan(self, fitsimage, direction, amount, data_x, data_y, msg=True):
+    def sc_pan(self, viewer, direction, amount, data_x, data_y, msg=True):
         """Interactively pan the image by scrolling motion.
         """
         if not self.canpan:
@@ -1225,16 +1225,16 @@ class ImageViewBindings(object):
         ang_rad = math.radians(90.0 - direction)
 
         # Calculate distance of pan amount, based on current scale
-        wd, ht = fitsimage.get_data_size()
+        wd, ht = viewer.get_data_size()
         # pageSize = min(wd, ht)
-        ((x0, y0), (x1, y1), (x2, y2), (x3, y3)) = fitsimage.get_pan_rect()
+        ((x0, y0), (x1, y1), (x2, y2), (x3, y3)) = viewer.get_pan_rect()
         page_size = min(abs(x2 - x0), abs(y2 - y0))
         distance = (num_degrees / 360.0) * page_size
         self.logger.debug("angle=%f ang_rad=%f distance=%f" % (
             direction, ang_rad, distance))
         
         # Calculate new pan position
-        pan_x, pan_y = fitsimage.get_pan()
+        pan_x, pan_y = viewer.get_pan()
         new_x = pan_x + math.cos(ang_rad) * distance
         new_y = pan_y + math.sin(ang_rad) * distance
 
@@ -1246,53 +1246,53 @@ class ImageViewBindings(object):
         new_x, new_y = new_x - 0.5, new_y - 0.5
         #print "data x,y=%f,%f   new x, y=%f,%f" % (pan_x, pan_y, new_x, new_y)
 
-        fitsimage.panset_xy(new_x, new_y, redraw=True)
+        viewer.panset_xy(new_x, new_y, redraw=True)
 
         # For checking result
-        #pan_x, pan_y = fitsimage.get_pan()
+        #pan_x, pan_y = viewer.get_pan()
         #print "new pan x,y=%f, %f" % (pan_x, pan_y)
         return True
 
-    def sc_pan_coarse(self, fitsimage, direction, amount, data_x, data_y,
+    def sc_pan_coarse(self, viewer, direction, amount, data_x, data_y,
                       msg=True):
         amount = amount / 2.0
-        return self.sc_pan(fitsimage, direction, amount, data_x, data_y,
+        return self.sc_pan(viewer, direction, amount, data_x, data_y,
                            msg=msg)
 
-    def sc_pan_fine(self, fitsimage, direction, amount, data_x, data_y,
+    def sc_pan_fine(self, viewer, direction, amount, data_x, data_y,
                       msg=True):
         amount = amount / 5.0
-        return self.sc_pan(fitsimage, direction, amount, data_x, data_y,
+        return self.sc_pan(viewer, direction, amount, data_x, data_y,
                            msg=msg)
 
-    def sc_dist(self, fitsimage, direction, amount, data_x, data_y,
+    def sc_dist(self, viewer, direction, amount, data_x, data_y,
                    msg=True):
 
         direction = self.get_direction(direction)
-        self._cycle_dist(fitsimage, msg, direction=direction)
+        self._cycle_dist(viewer, msg, direction=direction)
         return True
 
-    def sc_cmap(self, fitsimage, direction, amount, data_x, data_y,
+    def sc_cmap(self, viewer, direction, amount, data_x, data_y,
                     msg=True):
 
         direction = self.get_direction(direction)
-        self._cycle_cmap(fitsimage, msg, direction=direction)
+        self._cycle_cmap(viewer, msg, direction=direction)
         return True
 
-    def sc_imap(self, fitsimage, direction, amount, data_x, data_y,
+    def sc_imap(self, viewer, direction, amount, data_x, data_y,
                     msg=True):
 
         direction = self.get_direction(direction)
-        self._cycle_imap(fitsimage, msg, direction=direction)
+        self._cycle_imap(viewer, msg, direction=direction)
         return True
 
     ##### GESTURE ACTION CALLBACKS #####
 
-    def gs_pinch(self, fitsimage, state, rot_deg, scale, msg=True):
+    def gs_pinch(self, viewer, state, rot_deg, scale, msg=True):
         pinch_actions = self.settings.get('pinch_actions', [])
         if state == 'start':
-            self._start_scale_x, self._start_scale_y = fitsimage.get_scale_xy()
-            self._start_rot = fitsimage.get_rotation()
+            self._start_scale_x, self._start_scale_y = viewer.get_scale_xy()
+            self._start_rot = viewer.get_rotation()
         else:
             msg_str = None
             if self.canzoom and ('zoom' in pinch_actions):
@@ -1300,40 +1300,40 @@ class ImageViewBindings(object):
                 scale = scale * scale_accel
                 scale_x, scale_y = (self._start_scale_x * scale,
                                     self._start_scale_y * scale)
-                fitsimage.scale_to(scale_x, scale_y, redraw=False)
-                msg_str = fitsimage.get_scale_text()
+                viewer.scale_to(scale_x, scale_y, redraw=False)
+                msg_str = viewer.get_scale_text()
                 msg = self.settings.get('msg_zoom', True)
                 
             if self.canrotate and ('rotate' in pinch_actions):
                 deg = self._start_rot - rot_deg
                 rotate_accel = self.settings.get('pinch_rotate_acceleration', 1.0)
                 deg = rotate_accel * deg
-                fitsimage.rotate(deg)
+                viewer.rotate(deg)
                 if msg_str == None:
                     msg_str = "Rotate: %.2f" % (deg)
                     msg = self.settings.get('msg_rotate', msg)
                 
             if msg and (msg_str != None):
-                fitsimage.onscreen_message(msg_str, delay=0.4)
+                viewer.onscreen_message(msg_str, delay=0.4)
         return True        
 
-    def gs_pan(self, fitsimage, state, dx, dy):
+    def gs_pan(self, viewer, state, dx, dy):
         if not self.canpan:
             return True
         
-        x, y = fitsimage.get_last_win_xy()
+        x, y = viewer.get_last_win_xy()
         if state == 'move':
-            data_x, data_y = self.get_new_pan(fitsimage, x, y,
+            data_x, data_y = self.get_new_pan(viewer, x, y,
                                               ptype=self._pantype)
-            fitsimage.panset_xy(data_x, data_y, redraw=True)
+            viewer.panset_xy(data_x, data_y, redraw=True)
             
         elif state == 'start':
-            data_x, data_y = fitsimage.get_last_data_xy()
-            self.pan_set_origin(fitsimage, x, y, data_x, data_y)
-            self.pan_start(fitsimage, ptype=2)
+            data_x, data_y = viewer.get_last_data_xy()
+            self.pan_set_origin(viewer, x, y, data_x, data_y)
+            self.pan_start(viewer, ptype=2)
 
         else:
-            self.pan_stop(fitsimage)
+            self.pan_stop(viewer)
         return True
         
 
@@ -1416,7 +1416,7 @@ class BindingMapper(Callback.Callbacks):
         self._kbdmod_type = modtype
         self.make_callback('mode-set', self._kbdmod, self._kbdmod_type)
         
-    def reset_modifier(self, fitsimage):
+    def reset_modifier(self, viewer):
         try:
             bnch = self.modmap['mod_%s' % self._kbdmod]
         except:
@@ -1426,7 +1426,7 @@ class BindingMapper(Callback.Callbacks):
         self._delayed_reset = False
         # clear onscreen message, if any
         if (bnch != None) and (bnch.msg != None):
-            fitsimage.onscreen_message(None)
+            viewer.onscreen_message(None)
         self.make_callback('mode-set', self._kbdmod, self._kbdmod_type)
         
     def clear_button_map(self):
@@ -1450,40 +1450,40 @@ class BindingMapper(Callback.Callbacks):
     def map_event(self, modifier, alias, eventname):
         self.eventmap[(modifier, alias)] = Bunch.Bunch(name=eventname)
         
-    def register_for_events(self, fitsimage):
+    def register_for_events(self, viewer):
         # Add callbacks for interesting events
-        fitsimage.add_callback('motion', self.window_motion)
-        fitsimage.add_callback('button-press', self.window_button_press)
-        fitsimage.add_callback('button-release', self.window_button_release)
-        fitsimage.add_callback('key-press', self.window_key_press)
-        fitsimage.add_callback('key-release', self.window_key_release)
-        ## fitsimage.add_callback('drag-drop', self.window_drag_drop)
-        fitsimage.add_callback('scroll', self.window_scroll)
-        ## fitsimage.add_callback('map', self.window_map)
-        ## fitsimage.add_callback('focus', self.window_focus)
-        ## fitsimage.add_callback('enter', self.window_enter)
-        ## fitsimage.add_callback('leave', self.window_leave)
+        viewer.add_callback('motion', self.window_motion)
+        viewer.add_callback('button-press', self.window_button_press)
+        viewer.add_callback('button-release', self.window_button_release)
+        viewer.add_callback('key-press', self.window_key_press)
+        viewer.add_callback('key-release', self.window_key_release)
+        ## viewer.add_callback('drag-drop', self.window_drag_drop)
+        viewer.add_callback('scroll', self.window_scroll)
+        ## viewer.add_callback('map', self.window_map)
+        ## viewer.add_callback('focus', self.window_focus)
+        ## viewer.add_callback('enter', self.window_enter)
+        ## viewer.add_callback('leave', self.window_leave)
 
-    def window_map(self, fitsimage):
+    def window_map(self, viewer):
         pass
 
-    def window_focus(self, fitsimage, hasFocus):
+    def window_focus(self, viewer, hasFocus):
         return True
             
-    def window_enter(self, fitsimage):
+    def window_enter(self, viewer):
         return True
     
-    def window_leave(self, fitsimage):
+    def window_leave(self, viewer):
         return True
     
-    def window_key_press(self, fitsimage, keyname):
+    def window_key_press(self, viewer, keyname):
         self.logger.debug("keyname=%s" % (keyname))
         # Is this a modifier key?
         if keyname in self.modmap:
             bnch = self.modmap[keyname]
             if self._kbdmod_type == 'locked':
                 if bnch.name == self._kbdmod:
-                    self.reset_modifier(fitsimage)
+                    self.reset_modifier(viewer)
                 return True
                 
             if self._delayed_reset:
@@ -1496,7 +1496,7 @@ class BindingMapper(Callback.Callbacks):
             if self._kbdmod == None:
                 self.set_modifier(bnch.name, bnch.type)
                 if bnch.msg != None:
-                    fitsimage.onscreen_message(bnch.msg)
+                    viewer.onscreen_message(bnch.msg)
                 return True
         
         try:
@@ -1518,12 +1518,12 @@ class BindingMapper(Callback.Callbacks):
 
         self.logger.debug("idx=%s" % (str(idx)))
         cbname = 'keydown-%s' % (emap.name)
-        last_x, last_y = fitsimage.get_last_data_xy()
+        last_x, last_y = viewer.get_last_data_xy()
 
-        return fitsimage.make_callback(cbname, keyname, last_x, last_y)
+        return viewer.make_callback(cbname, keyname, last_x, last_y)
             
 
-    def window_key_release(self, fitsimage, keyname):
+    def window_key_release(self, viewer, keyname):
         self.logger.debug("keyname=%s" % (keyname))
 
         try:
@@ -1545,25 +1545,25 @@ class BindingMapper(Callback.Callbacks):
                 if bnch.type == 'held':
                     if self._button == 0:
                         # if no button is being held, then reset modifier
-                        self.reset_modifier(fitsimage)
+                        self.reset_modifier(viewer)
                     else:
                         self._delayed_reset = True
                 return True
 
         # release modifier if this is a oneshot modifier
         ## if self._kbdmod_type == 'oneshot':
-        ##     self.reset_modifier(fitsimage)
+        ##     self.reset_modifier(viewer)
 
         if emap == None:
             return False
         
         cbname = 'keyup-%s' % (emap.name)
-        last_x, last_y = fitsimage.get_last_data_xy()
+        last_x, last_y = viewer.get_last_data_xy()
 
-        return fitsimage.make_callback(cbname, keyname, last_x, last_y)
+        return viewer.make_callback(cbname, keyname, last_x, last_y)
 
         
-    def window_button_press(self, fitsimage, btncode, data_x, data_y):
+    def window_button_press(self, viewer, btncode, data_x, data_y):
         self.logger.debug("x,y=%d,%d btncode=%s" % (data_x, data_y,
                                                    hex(btncode)))
         self._button |= btncode
@@ -1585,10 +1585,10 @@ class BindingMapper(Callback.Callbacks):
         cbname = '%s-down' % (emap.name)
         self.logger.debug("making callback for %s (mod=%s)" % (
             cbname, self._kbdmod))
-        return fitsimage.make_callback(cbname, 'down', data_x, data_y)
+        return viewer.make_callback(cbname, 'down', data_x, data_y)
 
 
-    def window_motion(self, fitsimage, btncode, data_x, data_y):
+    def window_motion(self, viewer, btncode, data_x, data_y):
 
         button = self.btnmap[btncode]
         try:
@@ -1604,10 +1604,10 @@ class BindingMapper(Callback.Callbacks):
 
         self.logger.debug("Event map for %s" % (str(idx)))
         cbname = '%s-move' % (emap.name)
-        return fitsimage.make_callback(cbname, 'move', data_x, data_y)
+        return viewer.make_callback(cbname, 'move', data_x, data_y)
 
 
-    def window_button_release(self, fitsimage, btncode, data_x, data_y):
+    def window_button_release(self, viewer, btncode, data_x, data_y):
         self.logger.debug("x,y=%d,%d button=%s" % (data_x, data_y,
                                                    hex(btncode)))
         self._button &= ~btncode
@@ -1616,7 +1616,7 @@ class BindingMapper(Callback.Callbacks):
             idx = (self._kbdmod, button)
             # release modifier if this is a oneshot modifier
             if (self._kbdmod_type == 'oneshot') or (self._delayed_reset):
-                self.reset_modifier(fitsimage)
+                self.reset_modifier(viewer)
             emap = self.eventmap[idx]
 
         except KeyError:
@@ -1630,10 +1630,10 @@ class BindingMapper(Callback.Callbacks):
 
         self.logger.debug("Event map for %s" % (str(idx)))
         cbname = '%s-up' % (emap.name)
-        return fitsimage.make_callback(cbname, 'up', data_x, data_y)
+        return viewer.make_callback(cbname, 'up', data_x, data_y)
             
 
-    def window_scroll(self, fitsimage, direction, amount, data_x, data_y):
+    def window_scroll(self, viewer, direction, amount, data_x, data_y):
         try:
             idx = (self._kbdmod, 'scroll')
             emap = self.eventmap[idx]
@@ -1647,7 +1647,7 @@ class BindingMapper(Callback.Callbacks):
                 return False
 
         cbname = '%s-scroll' % (emap.name)
-        return fitsimage.make_callback(cbname, direction, amount,
+        return viewer.make_callback(cbname, direction, amount,
                                        data_x, data_y)
 
 

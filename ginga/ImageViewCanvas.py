@@ -444,7 +444,8 @@ class DrawingMixin(object):
         drawtypes = drawDict.keys()
         self.drawtypes = []
         for key in ['point', 'line', 'circle', 'ellipse', 'square',
-                    'rectangle', 'triangle', 'polygon', 'path',
+                    'rectangle', 'box', 'polygon', 'path',
+                    'triangle', 'righttriangle', 'equilateraltriangle',
                     'ruler', 'compass', 'text']:
             if key in drawtypes:
                 self.drawtypes.append(key)
@@ -565,7 +566,14 @@ class DrawingMixin(object):
                             self._start_x-len_x, self._start_y-len_y,
                             **self.t_drawparams)
 
-        elif self.t_drawtype == 'ellipse':
+        elif self.t_drawtype == 'equilateraltriangle':
+                len_x = self._start_x - data_x
+                len_y = self._start_y - data_y
+                length = max(abs(len_x), abs(len_y))
+                obj = klass(self._start_x, self._start_y,
+                            length, length, **self.t_drawparams)
+            
+        elif self.t_drawtype in ('box', 'ellipse', 'triangle'):
             xradius = abs(self._start_x - data_x)
             yradius = abs(self._start_y - data_y)
             obj = klass(self._start_x, self._start_y, xradius, yradius,
@@ -581,7 +589,7 @@ class DrawingMixin(object):
             obj = klass(self._start_x, self._start_y, data_x, data_y,
                         **self.t_drawparams)
 
-        elif self.t_drawtype == 'triangle':
+        elif self.t_drawtype == 'righttriangle':
             obj = klass(self._start_x, self._start_y, data_x, data_y,
                         **self.t_drawparams)
 
@@ -775,25 +783,59 @@ class PolygonBase(CanvasObjectBase):
     def __init__(self, points, color='red',
                  linewidth=1, linestyle='solid', cap=None,
                  fill=False, fillcolor=None, alpha=1.0,
-                 fillalpha=1.0):
+                 fillalpha=1.0, rot_deg=0.0):
         self.kind = 'polygon'
         
         super(PolygonBase, self).__init__(points=points, color=color,
                                           linewidth=linewidth, cap=cap,
                                           linestyle=linestyle, alpha=alpha,
                                           fill=fill, fillcolor=fillcolor,
-                                          fillalpha=fillalpha)
+                                          fillalpha=fillalpha,
+                                          rot_deg=rot_deg)
+
+    def get_center_pt(self):
+        P = numpy.array(self.points + [self.points[0]])
+        x = P[:, 0]
+        y = P[:, 1]
+
+        a = x[:-1] * y[1:]
+        b = y[:-1] * x[1:]
+        A = numpy.sum(a - b) / 2.
         
+        cx = x[:-1] + x[1:]
+        cy = y[:-1] + y[1:]
+
+        Cx = numpy.sum(cx * (a - b)) / (6. * A)
+        Cy = numpy.sum(cy * (a - b)) / (6. * A)
+        return (Cx, Cy)
+    
+    def get_cpoints(self):
+        rpoints = self.points
+        if self.rot_deg != 0.0:
+            # rotate vertices according to rotation
+            x, y = self.get_center_pt()
+            rpoints = tuple(map(lambda p: self.rotate_pt(p[0], p[1],
+                                                         self.rot_deg,
+                                                         xoff=x, yoff=y),
+                                self.points))
+        cpoints = tuple(map(lambda p: self.canvascoords(p[0], p[1]),
+                            rpoints))
+        return cpoints
+
     def contains(self, x, y):
+        # rotate point back to cartesian alignment for test
+        cx, cy = self.get_center_pt()
+        xp, yp = self.rotate_pt(x, y, -self.rot_deg,
+                                xoff=cx, yoff=cy)
         # NOTE: we use a version of the ray casting algorithm
         # See: http://alienryderflex.com/polygon/
         result = False
         xj, yj = self.points[-1]
         for (xi, yi) in self.points:
-            if ((((yi < y) and (yj >= y)) or
-                 ((yj < y) and (yi >= y))) and
-                ((xi <= x) or (xj <= x))):
-                cross = (xi + float(y - yi)/(yj - yi)*(xj - xi)) < x
+            if ((((yi < yp) and (yj >= yp)) or
+                 ((yj < yp) and (yi >= yp))) and
+                ((xi <= xp) or (xj <= xp))):
+                cross = (xi + float(yp - yi)/(yj - yi)*(xj - xi)) < xp
                 result ^= cross
             xj, yj = xi, yi
 
@@ -866,6 +908,59 @@ class RectangleBase(CanvasObjectBase):
         return p
 
 
+class BoxBase(CanvasObjectBase):
+    """Draws a box on a ImageViewCanvas.
+    Parameters are:
+    x, y: 0-based coordinates of the center in the data space
+    xradius, yradius: radii based on the number of pixels in data space
+    Optional parameters for linesize, color, etc.
+    """
+
+    def __init__(self, x, y, xradius, yradius, color='red',
+                 linewidth=1, linestyle='solid', cap=None,
+                 fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0,
+                 rot_deg=0.0):
+        super(BoxBase, self).__init__(color=color,
+                                      linewidth=linewidth, cap=cap,
+                                      linestyle=linestyle,
+                                      fill=fill, fillcolor=fillcolor,
+                                      alpha=alpha, fillalpha=fillalpha,
+                                      x=x, y=y, xradius=xradius,
+                                      yradius=yradius, rot_deg=0.0)
+        self.kind = 'box'
+
+    def get_cpoints(self):
+        # rotate corners according to box rotation
+        rpoints = tuple(map(lambda p: self.rotate_pt(p[0], p[1], self.rot_deg,
+                                                     xoff=self.x, yoff=self.y),
+                            ((self.x - self.xradius, self.y - self.yradius),
+                             (self.x + self.xradius, self.y - self.yradius),
+                             (self.x + self.xradius, self.y + self.yradius),
+                             (self.x - self.xradius, self.y + self.yradius))))
+        # calculate canvas positions of corners
+        cpoints = tuple(map(lambda p: self.canvascoords(p[0], p[1]),
+                            rpoints))
+        return cpoints
+    
+    def contains(self, x, y):
+        # rotate point back to cartesian alignment for test
+        xp, yp = self.rotate_pt(x, y, -self.rot_deg,
+                                xoff=self.x, yoff=self.y)
+        x1, y1 = self.x - self.xradius, self.y - self.yradius
+        x2, y2 = self.x + self.xradius, self.y + self.yradius
+        if ((xp >= x1) and (xp <= x2) and
+            (yp >= y1) and (yp <= y2)):
+            return True
+        return False
+
+    def rotate(self, theta, xoff=0, yoff=0):
+        self.x, self.y = self.rotate_pt(self.x, self.y, theta,
+                                        xoff=xoff, yoff=yoff)
+
+    def edit_points(self):
+        return [(self.x, self.y)]
+
+
 class CircleBase(CanvasObjectBase):
     """Draws a circle on a ImageViewCanvas.
     Parameters are:
@@ -909,20 +1004,24 @@ class EllipseBase(CanvasObjectBase):
 
     def __init__(self, x, y, xradius, yradius, color='yellow',
                  linewidth=1, linestyle='solid', cap=None,
-                 fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0):
+                 fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0,
+                 rot_deg=0.0):
         super(EllipseBase, self).__init__(color=color,
                                           linewidth=linewidth, cap=cap,
                                           linestyle=linestyle,
                                           fill=fill, fillcolor=fillcolor,
                                           alpha=alpha, fillalpha=fillalpha,
                                           x=x, y=y, xradius=xradius,
-                                          yradius=yradius)
+                                          yradius=yradius, rot_deg=0.0)
         self.kind = 'ellipse'
 
     def contains(self, x, y):
+        # rotate point back to cartesian alignment for test
+        xp, yp = self.rotate_pt(x, y, -self.rot_deg,
+                                xoff=self.x, yoff=self.y)
         # See http://math.stackexchange.com/questions/76457/check-if-a-point-is-within-an-ellipse
-        res = (((x - self.x)**2) / self.xradius*2 + 
-               ((y - self.y)**2) / self.yradius*2)
+        res = (((xp - self.x)**2) / self.xradius**2 + 
+               ((yp - self.y)**2) / self.yradius**2)
         if res <= 1.0:
             return True
         return False
@@ -940,9 +1039,8 @@ class PointBase(CanvasObjectBase):
     Parameters are:
     x, y: 0-based coordinates of the center in the data space
     radius: radius based on the number of pixels in data space
-    Optional parameters for linesize, color, etc.
-
-    PLEASE NOTE: currently on the 'cross' style of point is drawn.
+    Optional parameters for linesize, color, style, etc.
+    Currently the only styles are 'cross' and 'plus'.
     """
 
     def __init__(self, x, y, radius, style='cross', color='yellow',
@@ -952,7 +1050,7 @@ class PointBase(CanvasObjectBase):
                                         linewidth=linewidth,
                                         linestyle=linestyle,
                                         x=x, y=y, radius=radius,
-                                        cap=cap)
+                                        cap=cap, style=style)
         
     def contains(self, x, y):
         if (x == self.x) and (y == self.y):
@@ -1047,7 +1145,7 @@ class CompassBase(CanvasObjectBase):
         return [(self.x, self.y)]
 
         
-class TriangleBase(CanvasObjectBase):
+class RightTriangleBase(CanvasObjectBase):
     """Draws a right triangle on a ImageViewCanvas.
     Parameters are:
     x1, y1: 0-based coordinates of one end of the diagonal in the data space
@@ -1058,16 +1156,88 @@ class TriangleBase(CanvasObjectBase):
     def __init__(self, x1, y1, x2, y2, color='pink',
                  linewidth=1, linestyle='solid', cap=None,
                  fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0):
+        self.kind='righttriangle'
+        super(RightTriangleBase, self).__init__(color=color, alpha=alpha,
+                                                linewidth=linewidth, cap=cap,
+                                                linestyle=linestyle,
+                                                fill=fill, fillcolor=fillcolor,
+                                                fillalpha=fillalpha,
+                                                x1=x1, y1=y1, x2=x2, y2=y2)
+
+    def edit_points(self):
+        return [(self.x1, self.y1), (self.x2, self.y2)]
+
+
+class TriangleBase(CanvasObjectBase):
+    """Draws a triangle on a ImageViewCanvas.
+    Parameters are:
+    x, y: 0-based coordinates of the center in the data space
+    xradius, yradius: radii based on the number of pixels in data space
+    Optional parameters for linesize, color, etc.
+    """
+
+    def __init__(self, x, y, xradius, yradius, color='pink',
+                 linewidth=1, linestyle='solid', cap=None,
+                 fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0,
+                 rot_deg=0.0):
         self.kind='triangle'
         super(TriangleBase, self).__init__(color=color, alpha=alpha,
                                            linewidth=linewidth, cap=cap,
                                            linestyle=linestyle,
                                            fill=fill, fillcolor=fillcolor,
                                            fillalpha=fillalpha,
-                                           x1=x1, y1=y1, x2=x2, y2=y2)
+                                           x=x, y=y, xradius=xradius,
+                                           yradius=yradius, rot_deg=rot_deg)
 
+    def get_points(self):
+        return ((self.x - 2*self.xradius, self.y - self.yradius),
+                (self.x + 2*self.xradius, self.y - self.yradius),
+                (self.x, self.y + self.yradius))
+    
+    def get_center_pt(self):
+        P = numpy.array(self.get_points())
+        x = P[:, 0]
+        y = P[:, 1]
+        Cx = numpy.sum(x) / 3.
+        Cy = numpy.sum(y) / 3.
+        return (Cx, Cy)
+
+    def get_cpoints(self):
+        cx, cy = self.get_center_pt()
+        # rotate corners according to triangle rotation
+        rpoints = tuple(map(lambda p: self.rotate_pt(p[0], p[1], self.rot_deg,
+                                                     xoff=cx, yoff=cy),
+                            self.get_points()))
+        # calculate canvas positions of corners
+        cpoints = tuple(map(lambda p: self.canvascoords(p[0], p[1]),
+                            rpoints))
+        return cpoints
+    
+    def contains(self, x, y):
+        # rotate point back to cartesian alignment for test
+        xp, yp = self.rotate_pt(x, y, -self.rot_deg,
+                                xoff=self.x, yoff=self.y)
+        # calculate vertices
+        ax, ay = self.x - self.xradius, self.y - self.yradius
+        bx, by = self.x + self.xradius, self.y - self.yradius
+        cx, cy = self.x, self.y + self.yradius
+
+        as_x, as_y = xp - ax, yp - ay
+        s_ab = (bx - ax)*as_y - (by - ay)*as_x > 0
+        
+        if (cx - ax)*as_y - (cy - ay)*as_x > 0 == s_ab:
+            return False
+        if (cx - bx)*(yp - by) - (cy - by)*(xp - bx) > 0 != s_ab:
+            return False
+
+        return True
+    
     def edit_points(self):
-        return [(self.x1, self.y1), (self.x2, self.y2)]
+        return [(self.x, self.y)]
+
+    def rotate(self, theta, xoff=0, yoff=0):
+        self.x, self.y = self.rotate_pt(self.x, self.y, theta,
+                                        xoff=xoff, yoff=yoff)
 
 
 class RulerBase(CanvasObjectBase):

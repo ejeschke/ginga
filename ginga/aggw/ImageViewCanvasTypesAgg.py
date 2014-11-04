@@ -97,8 +97,7 @@ class Text(TextBase, AggCanvasMixin):
 class Polygon(PolygonBase, AggCanvasMixin):
 
     def draw(self):
-        cpoints = list(map(lambda p: self.canvascoords(p[0], p[1]),
-                           self.points))
+        cpoints = self.get_cpoints()
         cr = self.setup_cr()
         pen = self.get_pen(cr)
         brush = self.get_brush(cr)
@@ -149,6 +148,20 @@ class Square(Rectangle):
     pass
 
 
+class Box(BoxBase, AggCanvasMixin):
+
+    def draw(self):
+        cpoints = self.get_cpoints()
+        cr = self.setup_cr()
+        pen = self.get_pen(cr)
+        brush = self.get_brush(cr)
+
+        cr.canvas.polygon(list(chain.from_iterable(cpoints)), 
+                          pen, brush)
+        if self.cap:
+            self.draw_caps(cr, self.cap, cpoints)
+
+
 class Circle(CircleBase, AggCanvasMixin):
     def draw(self):
         cx1, cy1, cradius = self.calc_radius(self.x, self.y, self.radius)
@@ -174,8 +187,12 @@ class Point(PointBase, AggCanvasMixin):
         cr = self.setup_cr()
         pen = self.get_pen(cr)
         #cr.set_line_cap(cairo.LINE_CAP_ROUND)
-        cr.canvas.line((cx1, cy1, cx2, cy2), pen)
-        cr.canvas.line((cx1, cy2, cx2, cy1), pen)
+        if self.style == 'cross':
+            cr.canvas.line((cx1, cy1, cx2, cy2), pen)
+            cr.canvas.line((cx1, cy2, cx2, cy1), pen)
+        else:
+            cr.canvas.line((cx, cy1, cx, cy2), pen)
+            cr.canvas.line((cx1, cy, cx2, cy), pen)
 
         if self.cap:
             self.draw_caps(cr, self.cap, ((cx, cy), ))
@@ -286,12 +303,27 @@ class Compass(CompassBase, AggCanvasMixin):
         return (xd, yd)
 
         
-class Triangle(TriangleBase, AggCanvasMixin):
+class RightTriangle(RightTriangleBase, AggCanvasMixin):
 
     def draw(self):
         cpoints = list(map(lambda p: self.canvascoords(p[0], p[1]),
                            ((self.x1, self.y1), (self.x2, self.y2),
                             (self.x2, self.y1))))
+
+        cr = self.setup_cr()
+        pen = self.get_pen(cr)
+        brush = self.get_brush(cr)
+
+        cr.canvas.polygon(list(chain.from_iterable(cpoints)),
+                          pen, brush)
+        if self.cap:
+            self.draw_caps(cr, self.cap, cpoints)
+
+
+class Triangle(TriangleBase, AggCanvasMixin):
+
+    def draw(self):
+        cpoints = self.get_cpoints()
 
         cr = self.setup_cr()
         pen = self.get_pen(cr)
@@ -409,8 +441,9 @@ class DrawingCanvas(DrawingMixin, CanvasMixin, CompoundMixin,
 
 drawCatalog = dict(text=Text, rectangle=Rectangle, circle=Circle,
                    line=Line, point=Point, polygon=Polygon,
-                   path=Path, square=Square,
-                   triangle=Triangle, ruler=Ruler, compass=Compass,
+                   path=Path, square=Square, box=Box,
+                   triangle=Triangle, righttriangle=RightTriangle,
+                   ruler=Ruler, compass=Compass,
                    compoundobject=CompoundObject, canvas=Canvas,
                    drawingcanvas=DrawingCanvas)
 
