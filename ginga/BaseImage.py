@@ -162,6 +162,9 @@ class BaseImage(Callback.Callbacks):
         view[-1] = self.order.index(c.upper())
         return self._slice(view)
 
+    def has_slice(self, c):
+        return c.upper() in self.order
+
     def get_array(self, order):
         order = order.upper()
         if order == self.order:
@@ -296,16 +299,9 @@ class BaseImage(Callback.Callbacks):
         return res
 
     def get_scaled_cutout_basic(self, x1, y1, x2, y2, scale_x, scale_y):
-
-        shp = self.shape
-
-        (view, (scale_x, scale_y)) = \
-            trcalc.get_scaled_cutout_basic_view(shp, x1, y1, x2, y2,
-                                                scale_x, scale_y)
-        newdata = self._slice(view)
-
-        res = Bunch.Bunch(data=newdata, scale_x=scale_x, scale_y=scale_y)
-        return res
+        new_wd = int(round(scale_x * (x2 - x1 + 1)))
+        new_ht = int(round(scale_y * (y2 - y1 + 1)))
+        return self.get_scaled_cutout_wdht(x1, y1, x2, y2, new_wd, new_ht)
 
     def get_scaled_cutout_by_dims(self, x1, y1, x2, y2, dst_wd, dst_ht,
                                   method='basic'):
