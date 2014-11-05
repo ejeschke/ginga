@@ -173,7 +173,7 @@ class Rectangle(RectangleBase, MockCanvasMixin):
             #cr.draw_text(cx, cy, "%d" % (self.y2 - self.y1))
 
 
-class Square(SquareBase, Rectangle):
+class Square(Rectangle):
     pass
 
 
@@ -189,6 +189,42 @@ class Circle(CircleBase, MockCanvasMixin):
             self.draw_caps(cr, self.cap, ((cx1, cy1), ))
 
 
+class Ellipse(EllipseBase, MockCanvasMixin):
+
+    def draw(self):
+        # get scale and rotation for special hack (see below)
+        scale_x, scale_y = self.viewer.get_scale_xy()
+        rot_deg = self.viewer.get_rotation() + self.rot_deg
+
+        # calculate center of ellipse and radii in canvas coordinates
+        cx, cy = self.canvascoords(self.x, self.y)
+        cxr, cyr = scale_x * self.xradius, scale_y * self.yradius
+
+        cr = self.setup_cr()
+        # Special hack for ellipses to deal with rotated canvas
+        #cr.translate(cx, cy)
+        #cr.rotate(-rot_deg)
+
+        #cr.draw_ellipse(pt, float(cxr), float(cyr))
+
+        if self.cap:
+            self.draw_caps(cr, self.cap, ((0, 0), ))
+
+        #cr.translate(-cx, -cy)
+        
+
+class Box(BoxBase, MockCanvasMixin):
+        
+    def draw(self):
+        cpoints = self.get_cpoints()
+
+        cr = self.setup_cr()
+        #cr.draw_polygon(cpoints)
+
+        if self.cap:
+            self.draw_caps(cr, self.cap, cpoints)
+
+
 class Point(PointBase, MockCanvasMixin):
 
     def draw(self):
@@ -197,8 +233,14 @@ class Point(PointBase, MockCanvasMixin):
         cx2, cy2 = cx + cradius, cy + cradius
 
         cr = self.setup_cr()
-        #cr.draw_line(cx1, cy1, cx2, cy2)
-        #cr.draw_line(cx1, cy2, cx2, cy1)
+        if self.style == 'cross':
+            #cr.draw_line(cx1, cy1, cx2, cy2)
+            #cr.draw_line(cx1, cy2, cx2, cy1)
+            pass
+        else:
+            #cr.draw_line(cx1, cy, cx2, cy)
+            #cr.draw_line(cx, cy1, cx, cy2)
+            pass
 
         if self.cap:
             self.draw_caps(cr, self.cap, ((cx, cy), ))
@@ -299,13 +341,24 @@ class Compass(CompassBase, MockCanvasMixin):
         return (xd, yd)
 
         
-class Triangle(TriangleBase, MockCanvasMixin):
+class RightTriangle(RightTriangleBase, MockCanvasMixin):
 
     def draw(self):
         cpoints = tuple(map(lambda p: self.canvascoords(p[0], p[1]),
                             ((self.x1, self.y1), (self.x2, self.y2),
                              (self.x2, self.y1))))
 
+        cr = self.setup_cr()
+        #cr.draw_polygon(cpoints)
+
+        if self.cap:
+            self.draw_caps(cr, self.cap, cpoints)
+
+
+class Triangle(TriangleBase, MockCanvasMixin):
+
+    def draw(self):
+        cpoints = self.get_cpoints()
         cr = self.setup_cr()
         #cr.draw_polygon(cpoints)
 
@@ -409,7 +462,9 @@ class DrawingCanvas(DrawingMixin, CanvasMixin, CompoundMixin,
 
 drawCatalog = dict(text=Text, rectangle=Rectangle, circle=Circle,
                    line=Line, point=Point, polygon=Polygon, path=Path,
-                   triangle=Triangle, ruler=Ruler, compass=Compass,
+                   righttriangle=RightTriangle, triangle=Triangle,
+                   ellipse=Ellipse, square=Square,
+                   box=Box, ruler=Ruler, compass=Compass,
                    compoundobject=CompoundObject, canvas=Canvas,
                    drawingcanvas=DrawingCanvas)
 
