@@ -100,6 +100,8 @@ def zscale_samples(samples, contrast=0.25):
     return z1, z2
 
 def zsc_fit_line(samples, npix, krej, ngrow, maxiter):
+    if npix <= 1:
+        return npix, 0, 1
 
     #
     # First re-map indices from -1.0 to 1.0
