@@ -1312,6 +1312,8 @@ class Image(CanvasObjectBase):
     
     def draw_image(self, dstarr, whence=0.0):
         #print("redraw whence=%f" % (whence))
+        dst_order = self.viewer.get_rgb_order()
+        image_order = self.image.get_order()
 
         if (whence <= 0.0) or (self._cutout == None) or (not self._optimize):
             # get extent of our data coverage in the window
