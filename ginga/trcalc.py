@@ -157,41 +157,50 @@ def get_scaled_cutout_wdht(data_np, x1, y1, x2, y2, new_wd, new_ht):
 
 def get_scaled_cutout_wdht_view(shp, x1, y1, x2, y2, new_wd, new_ht):
     """
-    Like get_scaled_cutout_wdht, but returns the view/slice to extract from an image,
-    instead of the extraction itself
+    Like get_scaled_cutout_wdht, but returns the view/slice to extract
+    from an image instead of the extraction itself.
     """
-    # clip to boundary
-    x1, x2 = numpy.clip([x1, x2], 0, shp[1] - 2).astype(numpy.int)
-    y1, y2 = numpy.clip([y1, y2], 0, shp[0] - 2).astype(numpy.int)
+    # calculate dimensions of NON-scaled cutout
+    old_wd = x2 - x1 + 1
+    old_ht = y2 - y1 + 1
 
-    # check to see if we can take a simple strided view
-    old_wd = (x2 - x1 + 1)
-    old_ht = (y2 - y1 + 1)
-    ystep = int(old_ht / new_ht)
-    xstep = int(old_wd / new_wd)
-    if (new_wd * xstep == old_wd and new_ht * ystep == old_ht):
-        view = numpy.s_[y1:y2 + 1:ystep, x1:x2 + 1:xstep]
-        scale_x = 1.0 / xstep
-        scale_y = 1.0 / ystep
+    if (new_wd != old_wd) or (new_ht != old_ht):
+        # Make indexes and scale them
+        # Is there a more efficient way to do this?
+        yi = numpy.mgrid[0:new_ht].reshape(-1, 1)
+        xi = numpy.mgrid[0:new_wd].reshape(1, -1)
+        iscale_x = float(old_wd) / float(new_wd)
+        iscale_y = float(old_ht) / float(new_ht)
+
+        xi = (x1 + xi * iscale_x).astype('int').clip(x1, x2-1)
+        yi = (y1 + yi * iscale_y).astype('int').clip(y1, y2-1)
+        wd, ht = xi.shape[1], yi.shape[0]
+
+        # bounds check against shape (to protect future data access)
+        xi_max, yi_max = xi[0, -1], yi[-1, 0]
+        assert xi_max <= shp[1] - 1, ValueError("X index (%d) exceeds shape bounds (%d)" % (xi_max, shp[1] - 1))
+        assert yi_max <= shp[0] - 1, ValueError("Y index (%d) exceeds shape bounds (%d)" % (yi_max, shp[0] - 1))
+
+        view = numpy.s_[yi, xi]
+
     else:
-        xi = numpy.linspace(x1, x2 + 1, new_wd).astype(numpy.int).reshape(1, -1)
-        yi = numpy.linspace(y1, y2 + 1, new_ht).astype(numpy.int).reshape(-1, 1)
-        assert xi.max() <= shp[1] - 1, xi.max()
-        assert yi.max() <= shp[0] - 1, yi.max()
-        # broadcast to 2D arrays, cast to contiguous arrays
-        # Numpy seems buggy when using broadcast arrays as index arrays
-        view = [numpy.array(a) for a in numpy.broadcast_arrays(yi, xi)]
-        ht, wd = xi.shape
-        scale_x = 1.0 * wd / old_wd
-        scale_y = 1.0 * ht / old_ht
+        # simple stepped view will do, because new view is same as old
+        view = numpy.s_[y1:y2+1, x1:x2+1]
+        wd, ht = old_wd, old_ht
 
-    return view, (scale_x, scale_y)
+    # Calculate actual scale used (vs. desired)
+    old_wd, old_ht = max(old_wd, 1), max(old_ht, 1)
+    scale_x = float(wd) / old_wd
+    scale_y = float(ht) / old_ht
+
+    # return view + actual scale factors used
+    return (view, (scale_x, scale_y))
 
 
 def get_scaled_cutout_basic_view(shp, x1, y1, x2, y2, scale_x, scale_y):
     """
-    Like get_scaled_cutout_basic, but returns the view/slice to extract from an image,
-    instead of the extraction itself
+    Like get_scaled_cutout_basic, but returns the view/slice to extract
+    from an image, instead of the extraction itself
     """
 
     # calculate dimensions of NON-scaled cutout
@@ -207,7 +216,8 @@ def get_scaled_cutout_basic_view(shp, x1, y1, x2, y2, scale_x, scale_y):
 def get_scaled_cutout_basic(data_np, x1, y1, x2, y2, scale_x, scale_y):
 
     view, (scale_x, scale_y) = get_scaled_cutout_basic_view(data_np.shape,
-                                                            x1, y1, x2, y2, scale_x, scale_y)
+                                                            x1, y1, x2, y2,
+                                                            scale_x, scale_y)
     return data_np[view], (scale_x, scale_y)
 
 
