@@ -172,8 +172,8 @@ def get_scaled_cutout_wdht_view(shp, x1, y1, x2, y2, new_wd, new_ht):
         iscale_x = float(old_wd) / float(new_wd)
         iscale_y = float(old_ht) / float(new_ht)
 
-        xi = (x1 + xi * iscale_x).astype('int').clip(x1, x2-1)
-        yi = (y1 + yi * iscale_y).astype('int').clip(y1, y2-1)
+        xi = (x1 + xi * iscale_x).clip(x1, x2-1).astype('int')
+        yi = (y1 + yi * iscale_y).clip(y1, y2-1).astype('int')
         wd, ht = xi.shape[1], yi.shape[0]
 
         # bounds check against shape (to protect future data access)
