@@ -1015,6 +1015,21 @@ class EllipseBase(CanvasObjectBase):
                                           yradius=yradius, rot_deg=0.0)
         self.kind = 'ellipse'
 
+    def get_center_radii_rot(self):
+        scale_x, scale_y = self.viewer.get_scale_xy()
+        rot_deg = self.viewer.get_rotation() + self.rot_deg
+
+        # calculate center of ellipse and radii in canvas coordinates
+        cx, cy = self.canvascoords(self.x, self.y)
+        cxr, cyr = scale_x * self.xradius, scale_y * self.yradius
+
+        # swap scale if axes are swapped in transform
+        flipx, flipy, swapxy = self.viewer.get_transforms()
+        if swapxy:
+            cxr, cyr = cyr, cxr
+
+        return (cx, cy, cxr, cyr, rot_deg)
+            
     def contains(self, x, y):
         # rotate point back to cartesian alignment for test
         xp, yp = self.rotate_pt(x, y, -self.rot_deg,

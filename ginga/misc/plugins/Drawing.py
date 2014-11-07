@@ -15,6 +15,8 @@ draw_colors = colors.get_colors()
 
 default_drawtype = 'point'
 default_drawcolor = 'blue'
+fillkinds = ('circle', 'rectangle', 'polygon', 'triangle', 'righttriangle',
+             'square', 'ellipse', 'box')
 
 class Drawing(GingaPlugin.LocalPlugin):
 
@@ -165,8 +167,7 @@ class Drawing(GingaPlugin.LocalPlugin):
             params['linestyle'] = linestyle
             params['linewidth'] = linewidth
         
-        if kind in ('circle', 'rectangle', 'polygon', 'triangle',
-                    'square', 'ellipse'):
+        if kind in fillkinds:
             params['fill'] = fill
             params['fillcolor'] = fillcolor
             params['fillalpha'] = fillalpha

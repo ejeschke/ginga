@@ -162,13 +162,7 @@ class Circle(CircleBase, MplCanvasMixin):
 class Ellipse(EllipseBase, MplCanvasMixin):
 
     def draw(self):
-        # get scale and rotation for special hack (see below)
-        scale_x, scale_y = self.viewer.get_scale_xy()
-        rot_deg = self.viewer.get_rotation() + self.rot_deg
-
-        # calculate center of ellipse and radii in canvas coordinates
-        cx, cy = self.canvascoords(self.x, self.y)
-        cxr, cyr = scale_x * self.xradius, scale_y * self.yradius
+        cx, cy, cxr, cyr, rot_deg = self.get_center_radii_rot()
         
         cr = self.setup_cr(angle=rot_deg, transform=None)
         cr.update_patch(self)
