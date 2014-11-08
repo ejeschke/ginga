@@ -54,7 +54,7 @@ from ginga.util import paths
 
 
 default_layout = ['seq', {},
-                   ['vbox', dict(name='top', width=1440, height=900),
+                   ['vbox', dict(name='top', width=1520, height=900),
                     dict(row=['hbox', dict(name='menu')],
                          stretch=0),
                     dict(row=['hpanel', dict(name='hpnl'),
@@ -70,7 +70,7 @@ default_layout = ['seq', {},
                      ['vbox', dict(name='main', width=700),
                       dict(row=['ws', dict(wstype='tabs', name='channels',
                                            group=1)], stretch=1)],
-                     ['ws', dict(name='right', width=350, group=2),
+                     ['ws', dict(name='right', width=430, group=2),
                       # (tabname, layout), ...
                       [("Dialogs", ['ws', dict(name='dialogs', group=2)
                                     ]

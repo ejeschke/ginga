@@ -24,6 +24,8 @@ class ImageViewError(Exception):
     pass
 class ImageViewCoordsError(ImageViewError):
     pass
+class ImageViewNoDataError(ImageViewError):
+    pass
 
 class ImageViewBase(Callback.Callbacks):
     """An abstract base class for displaying images represented by
@@ -63,11 +65,11 @@ class ImageViewBase(Callback.Callbacks):
         self.t_ = settings
         
         # Dummy 1-pixel image
-        # self.image = None
-        self.image = AstroImage.AstroImage(numpy.zeros((1, 1)),
+        #self._image = None
+        self._image = AstroImage.AstroImage(numpy.zeros((1, 1)),
                                            #logger=self.logger
                                            )
-        self.image.set(nothumb=True)
+        self._image.set(nothumb=True)
         
         # RGB mapper
         if rgbmap:
@@ -314,7 +316,10 @@ class ImageViewBase(Callback.Callbacks):
         Returns the dimensions of the image currently being displayed as a
         tuple of (width, height).
         """
-        return self.image.get_size()
+        image = self.get_image()
+        if image == None:
+            raise ImageViewNoDataError("No data found")
+        return image.get_size()
 
     def get_settings(self):
         """
@@ -428,9 +433,9 @@ class ImageViewBase(Callback.Callbacks):
         Returns the image currently being displayed.  The object returned 
         will be a subclass of BaseImage.
         """
-        return self.image
+        return self._image
     
-    def set_image(self, image, redraw=True):
+    def set_image(self, image, redraw=True, add_to_canvas=True):
         """
         Sets an image to be displayed.
 
@@ -439,23 +444,24 @@ class ImageViewBase(Callback.Callbacks):
         If there is no error, this method will invoke the 'image-set'
         callback.
         """
-        self.image = image
+        self._image = image
 
-        # add a normalized image item to this canvas if we don't
-        # have one already--then just keep reusing it
-        if self._normimg == None:
-            self._normimg = NormImage(0, 0, image, alpha=1.0)
-            tag = self.add(self._normimg, tag='_image')
-        else:
-            self._normimg.set_image(image)
-            try:
-                self.getObjectByTag('_image')
-            except KeyError:
+        if add_to_canvas:
+            # add a normalized image item to this canvas if we don't
+            # have one already--then just keep reusing it
+            if self._normimg == None:
+                self._normimg = NormImage(0, 0, image, alpha=1.0)
                 tag = self.add(self._normimg, tag='_image')
-        # move image to bottom of layers
-        self.lowerObject(self._normimg)
+            else:
+                self._normimg.set_image(image)
+                try:
+                    self.getObjectByTag('_image')
+                except KeyError:
+                    tag = self.add(self._normimg, tag='_image')
+            # move image to bottom of layers
+            self.lowerObject(self._normimg)
             
-        profile = self.image.get('profile', None)
+        profile = image.get('profile', None)
         if (profile != None) and (self.t_['use_embedded_profile']):
             self.apply_profile(profile, redraw=False)
 
@@ -504,26 +510,29 @@ class ImageViewBase(Callback.Callbacks):
         If redraw is True then the associated widget will be redrawn.
         """
         self.deleteAllObjects()
+        self._image = None
         
     def save_profile(self, **params):
-        if self.image == None:
+        image = self.get_image()
+        if image == None:
             return
-        profile = self.image.get('profile', None)
+        profile = image.get('profile', None)
         if (profile == None):
             # If image has no profile then create one
             profile = Settings.SettingGroup()
-            self.image.set(profile=profile) 
+            image.set(profile=profile) 
 
         self.logger.debug("saving to image profile: params=%s" % (
                 str(params)))
         profile.set(**params)
             
     def apply_profile(self, profile, redraw=False):
+        image = self.get_image()
         # If there is image metadata associated that has cut levels
         # then use those values if t_use_saved_cuts == True
-        ## if (self.t_['use_saved_cuts'] and (self.image != None) and
-        ##     (self.image.get('cutlo', None) != None)):
-        ##     loval, hival = self.image.get_list('cutlo', 'cuthi')
+        ## if (self.t_['use_saved_cuts'] and (image != None) and
+        ##     (image.get('cutlo', None) != None)):
+        ##     loval, hival = image.get_list('cutlo', 'cuthi')
         ##     self.logger.debug("setting cut levels from saved cuts lo=%f hi=%f" % (
         ##         loval, hival))
         ##     self.cut_levels(loval, hival, no_reset=True, redraw=redraw)
@@ -533,8 +542,8 @@ class ImageViewBase(Callback.Callbacks):
         """
         Extract our image and call set_image() on the target with it.
         """
-        #target.set_data(self._data_org.copy())
-        target.set_image(self.image)
+        image = self.get_image()
+        target.set_image(image)
 
     def redraw(self, whence=0):
         if not self.defer_redraw:
@@ -964,7 +973,10 @@ class ImageViewBase(Callback.Callbacks):
         """Get the data value at position (data_x, data_y).  Indexes are
         0-based, as in numpy.
         """
-        return self.image.get_data_xy(data_x, data_y)
+        image = self.get_image()
+        if image != None:
+            return image.get_data_xy(data_x, data_y)
+        raise ImageViewNoDataError("No image found")
 
     def get_pixel_distance(self, x1, y1, x2, y2):
         dx = abs(x2 - x1)
@@ -1162,6 +1174,12 @@ class ImageViewBase(Callback.Callbacks):
                 self.zoom_to(1)
                 
     def zoom_fit(self, no_reset=False, redraw=True):
+        # calculate actual width of the image, considering rotation
+        try:
+            width, height = self.get_data_size()
+        except ImageViewNoDataError:
+            return
+
         try:
             wwidth, wheight = self.get_window_size()
             self.logger.debug("Window size is %dx%d" % (wwidth, wheight))
@@ -1173,15 +1191,16 @@ class ImageViewBase(Callback.Callbacks):
         # zoom_fit also centers image
         self.center_image(redraw=False)
 
-        # calculate actual width of the image, considering rotation
-        width, height = self.get_data_size()
         ctr_x, ctr_y, rot_deg = self.get_rotation_info()
         min_x, min_y, max_x, max_y = 0, 0, 0, 0
         for x, y in ((0, 0), (width-1, 0), (width-1, height-1), (0, height-1)):
             x0, y0 = trcalc.rotate_pt(x, y, rot_deg, xoff=ctr_x, yoff=ctr_y)
             min_x, min_y = min(min_x, x0), min(min_y, y0)
             max_x, max_y = max(max_x, x0), max(max_y, y0)
+
         width, height = max_x - min_x, max_y - min_y
+        if min(width, height) <= 0:
+            return
         
         # Calculate optimum zoom level to still fit the window size
         if self.t_['zoom_algorithm'] == 'rate':
@@ -1265,12 +1284,20 @@ class ImageViewBase(Callback.Callbacks):
         self.set_pan(pan_x, pan_y, no_reset=no_reset, redraw=redraw)
 
     def panset_pct(self, pct_x, pct_y, redraw=True):
-        width, height = self.get_data_size()
+        try:
+            width, height = self.get_data_size()
+        except ImageViewNoDataError:
+            return
+
         data_x, data_y = width * pct_x, height * pct_y
         self.panset_xy(data_x, data_y, redraw=redraw)
 
     def center_image(self, redraw=True):
-        width, height = self.get_data_size()
+        try:
+            width, height = self.get_data_size()
+        except ImageViewNoDataError:
+            return
+
         data_x, data_y = float(width) / 2.0, float(height) / 2.0
         self.panset_xy(data_x, data_y, no_reset=True)
         # See Footnote [1]
@@ -1329,6 +1356,8 @@ class ImageViewBase(Callback.Callbacks):
             autocuts = self.autocuts
             
         image = self.get_image()
+        if image == None:
+            return
         params = self.t_.get('autocut_params', None)
         if params != None:
             # TEMP: params is stored as a list of tuples
@@ -1494,10 +1523,13 @@ class ImageViewBase(Callback.Callbacks):
     def auto_orient(self, redraw=True):
         """Set the orientation for the image to a reasonable default.
         """
-        invertY = not isinstance(self.image, AstroImage.AstroImage)
+        image = self.get_image()
+        if image == None:
+            return
+        invertY = not isinstance(image, AstroImage.AstroImage)
 
         # Check for various things to set based on metadata
-        header = self.image.get_header()
+        header = image.get_header()
         if header:
             # Auto-orientation
             orient = header.get('Orientation', None)
