@@ -125,7 +125,7 @@ class ImageViewBindings(object):
             sc_dist = ['dist+scroll'],
             sc_cmap = ['cmap+scroll'],
             sc_imap = [],
-            sc_draw = ['draw+scroll'],
+            #sc_draw = ['draw+scroll'],
             sc_edit = ['edit+scroll'],
             
             scroll_pan_acceleration = 1.0,
