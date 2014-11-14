@@ -196,7 +196,7 @@ class FitsViewer(QtGui.QMainWindow):
         self.readout.setText(text)
 
     def clicked(self, viewer, button, data_x, data_y):
-        obj = viewer.objects[0]
+        obj = viewer.objects[-1]
         print("top object is a %s" % (obj.kind))
         print("button %s at %f,%f" % (button, data_x, data_y))
         tf = obj.contains(data_x, data_y)

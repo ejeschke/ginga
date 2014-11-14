@@ -39,21 +39,24 @@ class MplCanvasMixin(object):
         # cr.axes.add_patch(p)
         pass
         
-    def _draw_cap(self, cr, pen, brush, cap, x, y, radius=2):
+    def _draw_cap(self, cr, cap, x, y, radius=None):
+        if radius == None:
+            radius = self.cap_radius
+        xy = (x, y)
         if cap == 'ball':
-            #cr.arc(x, y, radius, 0, 2*math.pi)
-            ## cr.canvas.ellipse((x-radius, y-radius, x+radius, y+radius),
-            ##                   pen, brush)
-            pass
+            p = patches.Circle(xy, fill=True, radius=radius,
+                               edgecolor='blue', facecolor='blue')
+            cr.axes.add_patch(p)
         
-    def draw_caps(self, cr, cap, points, radius=2):
-        ## pen = cr.get_pen(self.color)
-        ## brush = cr.get_brush(self.color)
-
-        ## for x, y in points:
-        ##     self._draw_cap(cr, pen, brush, cap, x, y, radius=radius)
+    def draw_caps(self, cr, cap, points, radius=None):
+        for x, y in points:
+            self._draw_cap(cr, cap, x, y, radius=radius)
         pass
         
+    def draw_edit(self, cr):
+        cpoints = self.get_cpoints(points=self.edit_points())
+        self.draw_caps(cr, 'ball', cpoints)
+
     def text_extents(self, cr, text, font):
         return cr.text_extents(text, font)
 
@@ -97,7 +100,9 @@ class Polygon(PolygonBase, MplCanvasMixin):
         p = patches.Polygon(xy, **cr.kwdargs)
         cr.axes.add_patch(p)
 
-        if self.cap:
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
             self.draw_caps(cr, self.cap, cpoints)
 
 
@@ -116,7 +121,9 @@ class Rectangle(RectangleBase, MplCanvasMixin):
         p = patches.Polygon(xy, **cr.kwdargs)
         cr.axes.add_patch(p)
         
-        if self.cap:
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
             self.draw_caps(cr, self.cap, cpoints)
 
         if self.drawdims:
@@ -155,7 +162,9 @@ class Circle(CircleBase, MplCanvasMixin):
         p = patches.Circle(xy, **cr.kwdargs)
         cr.axes.add_patch(p)
 
-        if self.cap:
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
             self.draw_caps(cr, self.cap, ((cx1, cy1), ))
 
 
@@ -187,7 +196,9 @@ class Box(BoxBase, MplCanvasMixin):
         p = patches.Polygon(xy, **cr.kwdargs)
         cr.axes.add_patch(p)
 
-        if self.cap:
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
             self.draw_caps(cr, self.cap, cpoints)
 
 
@@ -212,7 +223,9 @@ class Point(PointBase, MplCanvasMixin):
             l = lines.Line2D((cx, cx), (cy1, cy2), **cr.kwdargs)
             cr.axes.add_line(l)
 
-        if self.cap:
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
             self.draw_caps(cr, self.cap, ((cx, cy), ))
 
 
@@ -228,7 +241,9 @@ class Line(LineBase, MplCanvasMixin):
         l = lines.Line2D((cx1, cx2), (cy1, cy2), **cr.kwdargs)
         cr.axes.add_line(l)
 
-        if self.cap:
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
             self.draw_caps(cr, self.cap, ((cx1, cy1), (cx2, cy2)))
 
 
@@ -248,16 +263,16 @@ class Path(PathBase, MplCanvasMixin):
             l = lines.Line2D((cx1, cx2), (cy1, cy2), **cr.kwdargs)
             cr.axes.add_line(l)
 
-        if self.cap:
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
             self.draw_caps(cr, self.cap, cpoints)
 
 
 class Compass(CompassBase, MplCanvasMixin):
 
     def draw(self):
-        cx1, cy1 = self.canvascoords(self.x1, self.y1)
-        cx2, cy2 = self.canvascoords(self.x2, self.y2)
-        cx3, cy3 = self.canvascoords(self.x3, self.y3)
+        (cx1, cy1), (cx2, cy2), (cx3, cy3) = self.get_cpoints()
 
         cr = self.setup_cr(transform=None, head_width=10, head_length=15,
                            length_includes_head=True, overhang=0.20)
@@ -288,7 +303,9 @@ class Compass(CompassBase, MplCanvasMixin):
         cx, cy = self.get_textpos(cr, 'E', cx1, cy1, cx3, cy3, font)
         cr.axes.text(cx, cy, 'E', fontdict=font)
 
-        if self.cap:
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
             self.draw_caps(cr, self.cap, ((cx1, cy1), ))
 
     def get_textpos(self, cr, text, cx1, cy1, cx2, cy2, font):
@@ -342,7 +359,9 @@ class RightTriangle(RightTriangleBase, MplCanvasMixin):
         p = patches.Polygon(xy, **cr.kwdargs)
         cr.axes.add_patch(p)
         
-        if self.cap:
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
             self.draw_caps(cr, self.cap, cpoints)
 
 
@@ -358,7 +377,9 @@ class Triangle(TriangleBase, MplCanvasMixin):
         p = patches.Polygon(xy, **cr.kwdargs)
         cr.axes.add_patch(p)
         
-        if self.cap:
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
             self.draw_caps(cr, self.cap, cpoints)
 
 
@@ -457,7 +478,9 @@ class Ruler(RulerBase, MplCanvasMixin):
         # draw Y plum line label
         cr.axes.text(x, yh, self.text_y, fontdict=font)
 
-        if self.cap:
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
             self.draw_caps(cr, self.cap, ((cx2, cy1), ))
 
 

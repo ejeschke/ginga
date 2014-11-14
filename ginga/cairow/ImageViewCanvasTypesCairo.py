@@ -73,15 +73,22 @@ class CairoCanvasMixin(object):
         cr.stroke_preserve()
         cr.fill()
         
-    def draw_cap(self, cr, cap, x, y, radius=2):
+    def draw_cap(self, cr, cap, x, y, radius=None):
+        if radius == None:
+            radius = self.cap_radius
+        cr.new_path()
         if cap == 'ball':
             cr.arc(x, y, radius, 0, 2*math.pi)
             cr.fill()
         
-    def draw_caps(self, cr, cap, points, radius=2):
+    def draw_caps(self, cr, cap, points, radius=None):
         for x, y in points:
             self.draw_cap(cr, cap, x, y, radius=radius)
         
+    def draw_edit(self, cr):
+        cpoints = self.get_cpoints(points=self.edit_points())
+        self.draw_caps(cr, 'ball', cpoints)
+
     def text_extents(self, cr, text):
         a, b, wd, ht, i, j = cr.text_extents(text)
         return wd, ht
@@ -127,7 +134,9 @@ class Polygon(PolygonBase, CairoCanvasMixin):
 
         self.draw_fill(cr)
 
-        if self.cap:
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
             self.draw_caps(cr, self.cap, cpoints)
 
 
@@ -148,7 +157,9 @@ class Rectangle(RectangleBase, CairoCanvasMixin):
 
         self.draw_fill(cr)
 
-        if self.cap:
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
             self.draw_caps(cr, self.cap, cpoints)
 
         if self.drawdims:
@@ -172,6 +183,22 @@ class Rectangle(RectangleBase, CairoCanvasMixin):
 
 class Square(Rectangle):
     pass
+
+
+class Circle(CircleBase, CairoCanvasMixin):
+    def draw(self):
+        cx1, cy1, cradius = self.calc_radius(self.x, self.y, self.radius)
+
+        cr = self.setup_cr()
+        cr.arc(cx1, cy1, cradius, 0, 2*math.pi)
+        cr.stroke_preserve()
+
+        self.draw_fill(cr)
+
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
+            self.draw_caps(cr, self.cap, ((cx1, cy1), ))
 
 
 class Ellipse(EllipseBase, CairoCanvasMixin):
@@ -212,22 +239,10 @@ class Box(BoxBase, CairoCanvasMixin):
 
         self.draw_fill(cr)
 
-        if self.cap:
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
             self.draw_caps(cr, self.cap, cpoints)
-
-
-class Circle(CircleBase, CairoCanvasMixin):
-    def draw(self):
-        cx1, cy1, cradius = self.calc_radius(self.x, self.y, self.radius)
-
-        cr = self.setup_cr()
-        cr.arc(cx1, cy1, cradius, 0, 2*math.pi)
-        cr.stroke_preserve()
-
-        self.draw_fill(cr)
-
-        if self.cap:
-            self.draw_caps(cr, self.cap, ((cx1, cy1), ))
 
 
 class Point(PointBase, CairoCanvasMixin):
@@ -254,7 +269,9 @@ class Point(PointBase, CairoCanvasMixin):
             cr.line_to(cx, cy2)
             cr.stroke()
 
-        if self.cap:
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
             self.draw_caps(cr, self.cap, ((cx, cy), ))
 
 
@@ -270,7 +287,9 @@ class Line(LineBase, CairoCanvasMixin):
         cr.line_to(cx2, cy2)
         cr.stroke()
 
-        if self.cap:
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
             self.draw_caps(cr, self.cap, ((cx1, cy1), (cx2, cy2)))
 
 
@@ -287,17 +306,16 @@ class Path(PathBase, CairoCanvasMixin):
             cr.line_to(cx, cy)
         cr.stroke_preserve()
 
-        if self.cap:
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
             self.draw_caps(cr, self.cap, cpoints)
 
 
 class Compass(CompassBase, CairoCanvasMixin):
 
     def draw(self):
-        cx1, cy1 = self.canvascoords(self.x1, self.y1)
-        cx2, cy2 = self.canvascoords(self.x2, self.y2)
-        cx3, cy3 = self.canvascoords(self.x3, self.y3)
-
+        (cx1, cy1), (cx2, cy2), (cx3, cy3) = self.get_cpoints()
         cr = self.setup_cr()
 
         # draw North line and arrowhead
@@ -329,7 +347,9 @@ class Compass(CompassBase, CairoCanvasMixin):
         cr.move_to(cx, cy)
         cr.show_text('E')
 
-        if self.cap:
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
             self.draw_caps(cr, self.cap, ((cx1, cy1), ))
 
     def get_textpos(self, cr, text, cx1, cy1, cx2, cy2):
@@ -385,7 +405,9 @@ class RightTriangle(RightTriangleBase, CairoCanvasMixin):
 
         self.draw_fill(cr)
 
-        if self.cap:
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
             self.draw_caps(cr, self.cap, cpoints)
 
 
@@ -404,7 +426,9 @@ class Triangle(TriangleBase, CairoCanvasMixin):
 
         self.draw_fill(cr)
 
-        if self.cap:
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
             self.draw_caps(cr, self.cap, cpoints)
 
 
@@ -495,7 +519,9 @@ class Ruler(RulerBase, CairoCanvasMixin):
         cr.move_to(x, yh)
         cr.show_text(self.text_y)
 
-        if self.cap:
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
             self.draw_caps(cr, self.cap, ((cx2, cy1), ))
 
 

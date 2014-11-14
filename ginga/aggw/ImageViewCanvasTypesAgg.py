@@ -51,13 +51,15 @@ class AggCanvasMixin(object):
         cr.canvas.polygon((x2, y2, i1, j1, i2, j2),
                           pen, brush)
         
-    def _draw_cap(self, cr, pen, brush, cap, x, y, radius=2):
+    def _draw_cap(self, cr, pen, brush, cap, x, y, radius=None):
+        if radius == None:
+            radius = self.cap_radius
         if cap == 'ball':
             #cr.arc(x, y, radius, 0, 2*math.pi)
             cr.canvas.ellipse((x-radius, y-radius, x+radius, y+radius),
                               pen, brush)
         
-    def draw_caps(self, cr, cap, points, radius=2):
+    def draw_caps(self, cr, cap, points, radius=None):
         alpha = getattr(self, 'alpha', 1.0)
         pen = cr.get_pen(self.color, alpha=alpha)
         brush = cr.get_brush(self.color, alpha=alpha)
@@ -65,6 +67,10 @@ class AggCanvasMixin(object):
         for x, y in points:
             self._draw_cap(cr, pen, brush, cap, x, y, radius=radius)
         
+    def draw_edit(self, cr):
+        cpoints = self.get_cpoints(points=self.edit_points())
+        self.draw_caps(cr, 'ball', cpoints)
+
     def text_extents(self, cr, text, font):
         return cr.text_extents(text, font)
 
@@ -104,7 +110,10 @@ class Polygon(PolygonBase, AggCanvasMixin):
 
         cr.canvas.polygon(list(chain.from_iterable(cpoints)), 
                           pen, brush)
-        if self.cap:
+
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
             self.draw_caps(cr, self.cap, cpoints)
 
 
@@ -121,7 +130,10 @@ class Rectangle(RectangleBase, AggCanvasMixin):
 
         cr.canvas.polygon(list(chain.from_iterable(cpoints)),
                           pen, brush)
-        if self.cap:
+
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
             self.draw_caps(cr, self.cap, cpoints)
 
         if self.drawdims:
@@ -148,20 +160,6 @@ class Square(Rectangle):
     pass
 
 
-class Box(BoxBase, AggCanvasMixin):
-
-    def draw(self):
-        cpoints = self.get_cpoints()
-        cr = self.setup_cr()
-        pen = self.get_pen(cr)
-        brush = self.get_brush(cr)
-
-        cr.canvas.polygon(list(chain.from_iterable(cpoints)), 
-                          pen, brush)
-        if self.cap:
-            self.draw_caps(cr, self.cap, cpoints)
-
-
 class Circle(CircleBase, AggCanvasMixin):
     def draw(self):
         cx1, cy1, cradius = self.calc_radius(self.x, self.y, self.radius)
@@ -173,8 +171,27 @@ class Circle(CircleBase, AggCanvasMixin):
         cr.canvas.ellipse((cx1-cradius, cy1-cradius, cx1+cradius, cy1+cradius),
                           pen, brush)
 
-        if self.cap:
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
             self.draw_caps(cr, self.cap, ((cx1, cy1), ))
+
+
+class Box(BoxBase, AggCanvasMixin):
+
+    def draw(self):
+        cpoints = self.get_cpoints()
+        cr = self.setup_cr()
+        pen = self.get_pen(cr)
+        brush = self.get_brush(cr)
+
+        cr.canvas.polygon(list(chain.from_iterable(cpoints)), 
+                          pen, brush)
+
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
+            self.draw_caps(cr, self.cap, cpoints)
 
 
 class Point(PointBase, AggCanvasMixin):
@@ -194,7 +211,9 @@ class Point(PointBase, AggCanvasMixin):
             cr.canvas.line((cx, cy1, cx, cy2), pen)
             cr.canvas.line((cx1, cy, cx2, cy), pen)
 
-        if self.cap:
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
             self.draw_caps(cr, self.cap, ((cx, cy), ))
 
 
@@ -209,7 +228,9 @@ class Line(LineBase, AggCanvasMixin):
         #cr.set_line_cap(cairo.LINE_CAP_ROUND)
         cr.canvas.line((cx1, cy1, cx2, cy2), pen)
 
-        if self.cap:
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
             self.draw_caps(cr, self.cap, ((cx1, cy1), (cx2, cy2)))
 
 
@@ -227,17 +248,16 @@ class Path(PathBase, AggCanvasMixin):
             cx2, cy2 = cpoints[i+1]
             cr.canvas.line((cx1, cy1, cx2, cy2), pen)
 
-        if self.cap:
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
             self.draw_caps(cr, self.cap, cpoints)
 
 
 class Compass(CompassBase, AggCanvasMixin):
 
     def draw(self):
-        cx1, cy1 = self.canvascoords(self.x1, self.y1)
-        cx2, cy2 = self.canvascoords(self.x2, self.y2)
-        cx3, cy3 = self.canvascoords(self.x3, self.y3)
-
+        (cx1, cy1), (cx2, cy2), (cx3, cy3) = self.get_cpoints()
         cr = self.setup_cr()
 
         pen = self.get_pen(cr)
@@ -264,7 +284,9 @@ class Compass(CompassBase, AggCanvasMixin):
         cx, cy = self.get_textpos(cr, 'E', cx1, cy1, cx3, cy3, font)
         cr.canvas.text((cx, cy), 'E', font)
 
-        if self.cap:
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
             self.draw_caps(cr, self.cap, ((cx1, cy1), ))
 
     def get_textpos(self, cr, text, cx1, cy1, cx2, cy2, font):
@@ -316,7 +338,10 @@ class RightTriangle(RightTriangleBase, AggCanvasMixin):
 
         cr.canvas.polygon(list(chain.from_iterable(cpoints)),
                           pen, brush)
-        if self.cap:
+
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
             self.draw_caps(cr, self.cap, cpoints)
 
 
@@ -331,7 +356,10 @@ class Triangle(TriangleBase, AggCanvasMixin):
 
         cr.canvas.polygon(list(chain.from_iterable(cpoints)),
                           pen, brush)
-        if self.cap:
+
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
             self.draw_caps(cr, self.cap, cpoints)
 
 
@@ -421,7 +449,9 @@ class Ruler(RulerBase, AggCanvasMixin):
         # draw Y plum line label
         cr.canvas.text((x, yh), self.text_y, font)
 
-        if self.cap:
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
             self.draw_caps(cr, self.cap, ((cx2, cy1), ))
 
 

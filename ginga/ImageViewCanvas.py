@@ -11,7 +11,7 @@ import math
 import time
 import numpy
 
-from ginga.misc import Bunch
+from ginga.misc import Bunch, Callback
 from ginga.util import wcs
 from ginga import trcalc
 from ginga.util.six.moves import map, zip, filter
@@ -19,7 +19,7 @@ from ginga.util.six.moves import map, zip, filter
 class CanvasObjectError(Exception):
     pass
 
-class CanvasObjectBase(object):
+class CanvasObjectBase(Callback.Callbacks):
     """This is the abstract base class for a CanvasObject.  A CanvasObject
     is an item that can be placed on a ImageViewCanvas.
 
@@ -27,7 +27,13 @@ class CanvasObjectBase(object):
     """
 
     def __init__(self, **kwdargs):
+        if not hasattr(self, 'cb'):
+            Callback.Callbacks.__init__(self)
+        # points are defined in canvas (not data) coordinates
         self.is_cc = False
+        self.editing = False
+        self.cap = 'ball'
+        self.cap_radius = 5
         self.__dict__.update(kwdargs)
         self.data = None
 
@@ -36,6 +42,13 @@ class CanvasObjectBase(object):
         self.viewer = viewer
         self.logger = logger
 
+    def is_editing(self):
+        return self.editing
+
+    def set_edit(self, tf):
+        self.editing = tf
+        # TODO: force redraw here?
+        
     def set_data(self, **kwdargs):
         if self.data == None:
             self.data = Bunch.Bunch(kwdargs)
@@ -112,13 +125,8 @@ class CanvasObjectBase(object):
             return 8
 
     def rotate_pt(self, x, y, theta, xoff=0, yoff=0):
-        a = x - xoff
-        b = y - yoff
-        cos_t = math.cos(math.radians(theta))
-        sin_t = math.sin(math.radians(theta))
-        ap = (a * cos_t) - (b * sin_t)
-        bp = (a * sin_t) + (b * cos_t)
-        return (ap + xoff, bp + yoff)
+        # TODO: deprecate class method in favor of direct module call
+        return trcalc.rotate_pt(x, y, theta, xoff=xoff, yoff=yoff)
 
     def move_delta(self, xoff, yoff):
         if hasattr(self, 'x'):
@@ -127,8 +135,6 @@ class CanvasObjectBase(object):
             self.x1, self.y1 = self.x1 + xoff, self.y1 + yoff
         if hasattr(self, 'x2'):
             self.x2, self.y2 = self.x2 + xoff, self.y2 + yoff
-        if hasattr(self, 'x3'):
-            self.x3, self.y3 = self.x3 + xoff, self.y3 + yoff
             
         if hasattr(self, 'points'):
             for i in range(len(self.points)):
@@ -146,21 +152,40 @@ class CanvasObjectBase(object):
                 self.x1, self.y1 = pt
         elif i == 1:
             self.x2, self.y2 = pt
-        elif i == 2:
-            self.x3, self.y3 = pt
+        else:
+            raise ValueError("No point corresponding to index %d" % (i))
 
     # TODO: move these into utility module
     #####
-    def within_radius(self, a, b, x, y, radius):
-        new_radius = math.sqrt(math.fabs(x - a)**2 + math.fabs(y - b)**2)
-        if new_radius <= radius:
+    def within_radius(self, a, b, x, y, canvas_radius):
+        """Point (a, b) and point (x, y) are in data coordinates.
+        Return True if point (a, b) is within the circle defined by
+        a center at point (x, y) and within canvas_radius.
+        The distance between points is scaled by the canvas scale.
+        """
+        scale_x, scale_y = self.viewer.get_scale_xy()
+        dx = math.fabs(x - a) * scale_x
+        dy = math.fabs(y - b) * scale_y
+        new_radius = math.sqrt(dx**2 + dy**2)
+        if new_radius <= canvas_radius:
             return True
         return False
 
-    def get_pt(self, points, x, y, radius=3):
+    def get_pt(self, points, x, y, canvas_radius=None):
+        if canvas_radius == None:
+            canvas_radius = self.cap_radius
+
+        if hasattr(self, 'rot_deg'):
+            # rotate point back to cartesian alignment for test
+            cx, cy = self.get_center_pt()
+            xp, yp = self.rotate_pt(x, y, -self.rot_deg,
+                                    xoff=cx, yoff=cy)
+        else:
+            xp, yp = x, y
+
         for i in range(len(points)):
             a, b = points[i]
-            if self.within_radius(x, y, a, b, radius):
+            if self.within_radius(xp, yp, a, b, canvas_radius):
                 return i
         return None
 
@@ -187,14 +212,44 @@ class CanvasObjectBase(object):
         return contains
     #####
         
+    def get_points(self):
+        return self.points
+    
+    def get_center_pt(self):
+        # default is geometric average of points
+        P = numpy.array(self.get_points())
+        x = P[:, 0]
+        y = P[:, 1]
+        Cx = numpy.sum(x) / float(len(x))
+        Cy = numpy.sum(y) / float(len(y))
+        return (Cx, Cy)
+
+    # TO BE DEPRECATED
     def get_reference_pt(self):
-        if hasattr(self, 'x'):
-            return (self.x, self.y)
-        if hasattr(self, 'x1'):
-            return (self.x1, self.y1)
-        if hasattr(self, 'points'):
-            return self.points[0]
-        raise CanvasObjectError("No point of reference in object")
+        return self.get_center_pt()
+
+    def get_cpoints(self, points=None):
+        if points == None:
+            points = self.get_points()
+        if hasattr(self, 'rot_deg') and self.rot_deg != 0.0:
+            # rotate vertices according to rotation
+            x, y = self.get_center_pt()
+            rpoints = tuple(map(lambda p: self.rotate_pt(p[0], p[1],
+                                                         self.rot_deg,
+                                                         xoff=x, yoff=y),
+                                points))
+        else:
+            rpoints = points
+        cpoints = tuple(map(lambda p: self.canvascoords(p[0], p[1]),
+                            rpoints))
+        return cpoints
+
+    def scale_by(self, scale_x, scale_y):
+        P = numpy.array(self.points)
+        ctr_x, ctr_y = self.get_center_pt()
+        P[:, 0] = (P[:, 0] - ctr_x) * scale_x + ctr_x
+        P[:, 1] = (P[:, 1] - ctr_y) * scale_y + ctr_y
+        self.points = list(P)
 
     def move_to(self, xdst, ydst):
         x, y = self.get_reference_pt()
@@ -221,7 +276,8 @@ class CompoundMixin(object):
         res = []
         for obj in self.objects:
             if obj.contains(x, y):
-                res.insert(0, obj)
+                #res.insert(0, obj)
+                res.append(obj)
         return res
         
     def initialize(self, tag, viewer, logger):
@@ -318,6 +374,13 @@ class CompoundMixin(object):
         for obj in self.objects:
             obj.move_delta(xdst - x, ydst - y)
 
+    def reorder_layers(self):
+        self.objects.sort(key=lambda obj: getattr(obj, '_zorder', 0))
+        ## for obj in self.objects:
+        ##     if obj.is_compound():
+        ##         obj.reorder_layers()
+
+
 class CanvasMixin(object):
     """A CanvasMixin is combined with the CompoundMixin to make a
     tag-addressible canvas-like interface.  This mixin should precede the
@@ -376,7 +439,7 @@ class CanvasMixin(object):
 
     def lookup_object_tag(self, obj):
         # TODO: we may need to have a reverse index eventually
-        for tag, ref in self.tags:
+        for tag, ref in self.tags.items():
             if ref == obj:
                 return tag
         return None
@@ -439,7 +502,6 @@ class DrawingMixin(object):
     def __init__(self, drawDict):
         # For interactive drawing
         self.candraw = False
-        self._isdrawing = False
         self.drawDict = drawDict
         drawtypes = drawDict.keys()
         self.drawtypes = []
@@ -455,10 +517,9 @@ class DrawingMixin(object):
         self._start_x = 0
         self._start_y = 0
         self._points = []
+        self._drawrot_deg = 0.0
 
-        self._editing = False
         self._cp_index = None
-        self._cp_radius = 10
 
         self._processTime = 0.0
         # time delta threshold for deciding whether to update the image
@@ -470,13 +531,18 @@ class DrawingMixin(object):
 
         # NOTE: must be mixed in with a Callback.Callbacks
         for name in ('draw-event', 'draw-down', 'draw-move', 'draw-up',
-                     'drag-drop', 'edit-event'):
+                     'draw-scroll', 'drag-drop', 'edit-event'):
             self.enable_callback(name)
 
     def setSurface(self, viewer):
         self.viewer = viewer
 
         # register this canvas for events of interest
+        self.set_callback('edit-down', self.edit_start)
+        self.set_callback('edit-move', self.edit_motion)
+        self.set_callback('edit-up', self.edit_stop)
+        self.set_callback('edit-scroll', self.edit_scale)
+        #self.set_callback('edit-scroll', self.edit_rotate)
         self.set_callback('draw-down', self.draw_start)
         self.set_callback('draw-move', self.draw_motion)
         self.set_callback('draw-up', self.draw_stop)
@@ -546,11 +612,8 @@ class DrawingMixin(object):
         elif self.t_drawtype == 'compass':
             radius = max(abs(self._start_x - data_x),
                          abs(self._start_y - data_y))
-            image = self.viewer.get_image()
-            x, y, xn, yn, xe, ye = image.calc_compass_radius(self._start_x,
-                                                             self._start_y,
-                                                             radius)
-            obj = klass(x, y, xn, yn, xe, ye, **self.t_drawparams)
+            obj = klass(self._start_x, self._start_y,
+                        radius, **self.t_drawparams)
 
         elif self.t_drawtype == 'rectangle':
             obj = klass(self._start_x, self._start_y,
@@ -576,6 +639,7 @@ class DrawingMixin(object):
         elif self.t_drawtype in ('box', 'ellipse', 'triangle'):
             xradius = abs(self._start_x - data_x)
             yradius = abs(self._start_y - data_y)
+            self.t_drawparams['rot_deg'] = self._drawrot_deg
             obj = klass(self._start_x, self._start_y, xradius, yradius,
                         **self.t_drawparams)
 
@@ -624,74 +688,44 @@ class DrawingMixin(object):
             
         return True
             
-    def _edit_update(self, data_x, data_y):
-        if self._cp_index != None:
-            self.drawObj.set_point_by_index(self._cp_index, (data_x, data_y))
-
-            if time.time() - self._processTime > self._deltaTime:
-                self.processDrawing()
-        return True
-        
     def draw_start(self, canvas, action, data_x, data_y):
         if not self.candraw:
             return False
 
-        if self._editing and (self.drawObj != None):
-            #print("editing %s" % str(self.drawObj))
-            edit_pts = self.drawObj.edit_points()
-            i = self.drawObj.get_pt(edit_pts, data_x, data_y,
-                                    self._cp_radius)
-            if i != None:
-                #print("editing a cp")
-                # editing a control point from an existing object
-                self._isdrawing = True
-                self._cp_index = i
-                self._edit_update(data_x, data_y)
+        # unselect an editing object if one was selected
+        if (self.drawObj != None) and self.drawObj.is_editing():
+            self.drawObj.set_edit(False)
 
-            elif not self.drawObj.contains(data_x, data_y):
-                #print("no operation")
-                return False
-
-            else:
-                # TODO: moving an existing object
-                #print("moving an object")
-                return False
-
-        else:
-            #print("drawing an object")
-            # drawing a new object
-            self._isdrawing = True
-            self._points = [(data_x, data_y)]
-            self._start_x = data_x
-            self._start_y = data_y
-            self._draw_update(data_x, data_y)
+        self.drawObj = None
+        self._drawrot_deg = 0.0
+        self._points = [(data_x, data_y)]
+        self._start_x = data_x
+        self._start_y = data_y
+        self._draw_update(data_x, data_y)
 
         self.processDrawing()
         return True
 
     def draw_stop(self, canvas, button, data_x, data_y):
-        if self.candraw and self._isdrawing:
-            self._isdrawing = False
+        if not self.candraw:
+            return False
 
-            if self._editing:
-                self._edit_update(data_x, data_y)
-                self._cp_index = None
-                objtag = self.lookup_object_tag(self.drawObj)
-                self.make_callback('edit-event', objtag)
-                return True
-                
-            self._draw_update(data_x, data_y)
-            obj, self.drawObj = self.drawObj, None
-            self._points = []
+        self._draw_update(data_x, data_y)
+        obj, self.drawObj = self.drawObj, None
+        self._points = []
 
-            if obj:
-                objtag = self.add(obj, redraw=True)
-                self.make_callback('draw-event', objtag)
-                return True
-            else:
-                self.processDrawing()
-
+        if obj:
+            objtag = self.add(obj, redraw=True)
+            self.make_callback('draw-event', objtag)
             return True
+        else:
+            self.processDrawing()
+
+    def draw_motion(self, canvas, button, data_x, data_y):
+        if not self.candraw:
+            return False
+        self._draw_update(data_x, data_y)
+        return True
 
     def draw_poly_add(self, canvas, action, data_x, data_y):
         if self.candraw and (self.t_drawtype in ('polygon', 'path')):
@@ -704,20 +738,120 @@ class DrawingMixin(object):
                 self._points.pop()
         return True
 
-    def draw_motion(self, canvas, button, data_x, data_y):
-        if self._isdrawing:
-            if self._editing and (self.drawObj != None) and (self._cp_index != None):
-                self._edit_update(data_x, data_y)
-            else:
-                self._draw_update(data_x, data_y)
-            return True
-
     def processDrawing(self):
         self._processTime = time.time()
         self.viewer.redraw(whence=3)
     
+    def _edit_update(self, data_x, data_y):
+        if self._cp_index == None:
+            return False
+
+        self.drawObj.set_point_by_index(self._cp_index, (data_x, data_y))
+
+        if time.time() - self._processTime > self._deltaTime:
+            self.processDrawing()
+        return True
+        
+    def edit_start(self, canvas, action, data_x, data_y):
+
+        # check for objects at this location
+        objs = canvas.getItemsAt(data_x, data_y)
+
+        if self.drawObj == None:
+            # <-- no current object being edited
+
+            if len(objs) == 0:
+                # no objects
+                return False
+
+            # pick top object
+            obj = objs[-1]       
+
+            if not obj.is_editing():
+                obj.set_edit(True)
+                self.drawObj = obj
+            else:
+                obj.set_edit(False)
+
+        elif self.drawObj.is_editing():
+            edit_pts = self.drawObj.edit_points()
+            i = self.drawObj.get_pt(edit_pts, data_x, data_y,
+                                    self.drawObj.cap_radius)
+            if i != None:
+                #print("editing cp #%d" % (i))
+                # editing a control point from an existing object
+                self._cp_index = i
+                self._edit_update(data_x, data_y)
+                return True
+
+            elif self.drawObj.contains(data_x, data_y):
+                # TODO: moving an existing object
+                #print("moving an object")
+                #self._start_x = data_x
+                #self._start_y = data_y
+                return False
+
+            else:
+                # <-- user clicked outside the object
+                #print("deselecting an object")
+                self.drawObj.set_edit(False)
+                if len(objs) == 0:
+                    self.drawObj = None
+                else:
+                    obj = objs[-1]       
+                    obj.set_edit(True)
+                    self.drawObj = obj
+
+        self.processDrawing()
+        return True
+
+    def edit_stop(self, canvas, button, data_x, data_y):
+        if (self.drawObj == None) or (self._cp_index == None):
+            return False
+
+        self._edit_update(data_x, data_y)
+        self._cp_index = None
+
+        #objtag = self.lookup_object_tag(self.drawObj)
+        #self.make_callback('edit-event', objtag)
+        return True
+
+    def edit_motion(self, canvas, button, data_x, data_y):
+        if (self.drawObj != None) and (self._cp_index != None):
+            self._edit_update(data_x, data_y)
+            return True
+        return False
+
+    def edit_rotate(self, canvas, direction, amount, data_x, data_y,
+                    msg=True):
+        if self.drawObj == None:
+            return False
+        bd = self.viewer.get_bindings()
+        if bd.get_direction(direction) == 'down':
+            amount = - amount
+        cur_rot = self._drawrot_deg
+        new_rot = cur_rot + amount
+        if hasattr(self.drawObj, 'rot_deg'):
+            self.drawObj.rot_deg = new_rot
+            self._drawrot_deg = new_rot
+        self.processDrawing()
+        return True
+
+    def edit_scale(self, canvas, direction, amount, data_x, data_y,
+                    msg=True):
+        if self.drawObj == None:
+            return False
+        bd = self.viewer.get_bindings()
+        if bd.get_direction(direction) == 'down':
+            amount = 0.9
+        else:
+            amount = 1.1
+        self.drawObj.scale_by(amount, amount)
+        self.processDrawing()
+        return True
+
     def isDrawing(self):
-        return self._isdrawing
+        return self.drawObj != None
     
     def enable_draw(self, tf):
         self.candraw = tf
@@ -770,7 +904,9 @@ class TextBase(CanvasObjectBase):
                                         xoff=xoff, yoff=yoff)
 
     def edit_points(self):
+        # TODO: edit point for scaling or rotating?
         return [(self.x, self.y)]
+
 
 class PolygonBase(CanvasObjectBase):
     """Draws a polygon on a ImageViewCanvas.
@@ -781,13 +917,13 @@ class PolygonBase(CanvasObjectBase):
     """
 
     def __init__(self, points, color='red',
-                 linewidth=1, linestyle='solid', cap=None,
+                 linewidth=1, linestyle='solid', showcap=False,
                  fill=False, fillcolor=None, alpha=1.0,
                  fillalpha=1.0, rot_deg=0.0):
         self.kind = 'polygon'
         
         super(PolygonBase, self).__init__(points=points, color=color,
-                                          linewidth=linewidth, cap=cap,
+                                          linewidth=linewidth, showcap=showcap,
                                           linestyle=linestyle, alpha=alpha,
                                           fill=fill, fillcolor=fillcolor,
                                           fillalpha=fillalpha,
@@ -809,19 +945,6 @@ class PolygonBase(CanvasObjectBase):
         Cy = numpy.sum(cy * (a - b)) / (6. * A)
         return (Cx, Cy)
     
-    def get_cpoints(self):
-        rpoints = self.points
-        if self.rot_deg != 0.0:
-            # rotate vertices according to rotation
-            x, y = self.get_center_pt()
-            rpoints = tuple(map(lambda p: self.rotate_pt(p[0], p[1],
-                                                         self.rot_deg,
-                                                         xoff=x, yoff=y),
-                                self.points))
-        cpoints = tuple(map(lambda p: self.canvascoords(p[0], p[1]),
-                            rpoints))
-        return cpoints
-
     def contains(self, x, y):
         # rotate point back to cartesian alignment for test
         cx, cy = self.get_center_pt()
@@ -863,7 +986,7 @@ class RectangleBase(CanvasObjectBase):
     """
 
     def __init__(self, x1, y1, x2, y2, color='red',
-                 linewidth=1, linestyle='solid', cap=None,
+                 linewidth=1, linestyle='solid', showcap=False,
                  fill=False, fillcolor=None, alpha=1.0,
                  drawdims=False, font='Sans Serif', fillalpha=1.0):
         self.kind = 'rectangle'
@@ -872,18 +995,26 @@ class RectangleBase(CanvasObjectBase):
         
         super(RectangleBase, self).__init__(color=color,
                                             x1=x1, y1=y1, x2=x2, y2=y2,
-                                            linewidth=linewidth, cap=cap,
+                                            linewidth=linewidth, showcap=showcap,
                                             linestyle=linestyle,
                                             fill=fill, fillcolor=fillcolor,
                                             alpha=alpha, fillalpha=fillalpha,
                                             drawdims=drawdims, font=font)
         
+    def get_points(self):
+        points = [(self.x1, self.y1), (self.x2, self.y1),
+                  (self.x2, self.y2), (self.x1, self.y2)]
+        return points
+    
     def contains(self, x, y):
         if ((x >= self.x1) and (x <= self.x2) and
             (y >= self.y1) and (y <= self.y2)):
             return True
         return False
 
+    def get_center_pt(self):
+        return ((self.x1 + self.x2) / 2., (self.y1 + self.y2) / 2.)
+    
     def rotate(self, theta, xoff=0, yoff=0):
         x1, y1 = self.rotate_pt(self.x1, self.y1, theta,
                                 xoff=xoff, yoff=yoff)
@@ -891,21 +1022,41 @@ class RectangleBase(CanvasObjectBase):
                                 xoff=xoff, yoff=yoff)
         self.x1, self.y1, self.x2, self.y2 = self.swapxy(x1, y1, x2, y2)
 
+    def set_point_by_index(self, i, pt):
+        if i == 0:
+            x, y = pt
+            self.move_to(x, y)
+        elif i == 1:
+            self.x1, self.y1 = pt
+        elif i == 2:
+            self.x2, self.y2 = pt
+        else:
+            raise ValueError("No point corresponding to index %d" % (i))
+
     def edit_points(self):
-        return [(self.x1, self.y1), (self.x2, self.y2)]
+        return [self.get_center_pt(),
+                (self.x1, self.y1), (self.x2, self.y2)]
 
     def move_point(self):
         x, y = (self.x1 + self.x2) / 2.0, (self.y1 + self.y2) / 2.0
         return (x, y)
 
     def toPolygon(self):
-        points = [(self.x1, self.y1), (self.x2, self.y1),
-                  (self.x2, self.y2), (self.x1, self.y2)]
+        points = self.get_points()
         p = Polygon(points, color=self.color,
                     linewidth=self.linewidth, linestyle=self.linestyle,
-                    cap=self.cap, fill=self.fill, fillcolor=self.fillcolor,
+                    showcap=self.showcap, fill=self.fill, fillcolor=self.fillcolor,
                     alpha=self.alpha, fillalpha=self.fillalpha)
         return p
+
+    def scale_by(self, scale_x, scale_y):
+        pts = [(self.x1, self.y1), (self.x2, self.y2)]
+        P = numpy.array(pts)
+        ctr_x, ctr_y = self.get_center_pt()
+        P[:, 0] = (P[:, 0] - ctr_x) * scale_x + ctr_x
+        P[:, 1] = (P[:, 1] - ctr_y) * scale_y + ctr_y
+        self.x1, self.y1 = P[0, 0], P[0, 1]
+        self.x2, self.y2 = P[1, 0], P[1, 1]
 
 
 class BoxBase(CanvasObjectBase):
@@ -917,30 +1068,27 @@ class BoxBase(CanvasObjectBase):
     """
 
     def __init__(self, x, y, xradius, yradius, color='red',
-                 linewidth=1, linestyle='solid', cap=None,
+                 linewidth=1, linestyle='solid', showcap=False,
                  fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0,
                  rot_deg=0.0):
         super(BoxBase, self).__init__(color=color,
-                                      linewidth=linewidth, cap=cap,
+                                      linewidth=linewidth, showcap=showcap,
                                       linestyle=linestyle,
                                       fill=fill, fillcolor=fillcolor,
                                       alpha=alpha, fillalpha=fillalpha,
                                       x=x, y=y, xradius=xradius,
-                                      yradius=yradius, rot_deg=0.0)
+                                      yradius=yradius, rot_deg=rot_deg)
         self.kind = 'box'
 
-    def get_cpoints(self):
-        # rotate corners according to box rotation
-        rpoints = tuple(map(lambda p: self.rotate_pt(p[0], p[1], self.rot_deg,
-                                                     xoff=self.x, yoff=self.y),
-                            ((self.x - self.xradius, self.y - self.yradius),
-                             (self.x + self.xradius, self.y - self.yradius),
-                             (self.x + self.xradius, self.y + self.yradius),
-                             (self.x - self.xradius, self.y + self.yradius))))
-        # calculate canvas positions of corners
-        cpoints = tuple(map(lambda p: self.canvascoords(p[0], p[1]),
-                            rpoints))
-        return cpoints
+    def get_center_pt(self):
+        return (self.x, self.y)
+
+    def get_points(self):
+        points = ((self.x - self.xradius, self.y - self.yradius),
+                  (self.x + self.xradius, self.y - self.yradius),
+                  (self.x + self.xradius, self.y + self.yradius),
+                  (self.x - self.xradius, self.y + self.yradius))
+        return points
     
     def contains(self, x, y):
         # rotate point back to cartesian alignment for test
@@ -957,8 +1105,30 @@ class BoxBase(CanvasObjectBase):
         self.x, self.y = self.rotate_pt(self.x, self.y, theta,
                                         xoff=xoff, yoff=yoff)
 
+    def set_point_by_index(self, i, pt):
+        if i == 0:
+            self.x, self.y = pt
+        elif i == 1:
+            x, y = pt
+            self.xradius = abs(x - self.x)
+        elif i == 2:
+            x, y = pt
+            self.yradius = abs(y - self.y)
+        elif i == 3:
+            x, y = pt
+            self.xradius, self.yradius = abs(x - self.x), abs(y - self.y)
+        else:
+            raise ValueError("No point corresponding to index %d" % (i))
+
     def edit_points(self):
-        return [(self.x, self.y)]
+        return [(self.x, self.y),    # location
+                (self.x + self.xradius, self.y),  # adj xradius
+                (self.x, self.y + self.yradius),  # adj yradius
+                (self.x + self.xradius, self.y + self.yradius)]   # adj both
+
+    def scale_by(self, scale_x, scale_y):
+        self.xradius *= scale_x
+        self.yradius *= scale_y
 
 
 class CircleBase(CanvasObjectBase):
@@ -970,28 +1140,48 @@ class CircleBase(CanvasObjectBase):
     """
 
     def __init__(self, x, y, radius, color='yellow',
-                 linewidth=1, linestyle='solid', cap=None,
+                 linewidth=1, linestyle='solid', showcap=False,
                  fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0):
         super(CircleBase, self).__init__(color=color,
-                                         linewidth=linewidth, cap=cap,
+                                         linewidth=linewidth, showcap=showcap,
                                          linestyle=linestyle,
                                          fill=fill, fillcolor=fillcolor,
                                          alpha=alpha, fillalpha=fillalpha,
                                          x=x, y=y, radius=radius)
         self.kind = 'circle'
 
+    def get_center_pt(self):
+        return (self.x, self.y)
+
+    def get_points(self):
+        return [(self.x, self.y)]
+    
     def contains(self, x, y):
         radius = math.sqrt(math.fabs(x - self.x)**2 + math.fabs(y - self.y)**2)
         if radius <= self.radius:
             return True
         return False
 
+    def set_point_by_index(self, i, pt):
+        if i == 0:
+            self.x, self.y = pt
+        elif i == 1:
+            x, y = pt
+            self.radius = math.sqrt(abs(x - self.x)**2 + 
+                                    abs(y - self.y)**2 )
+        else:
+            raise ValueError("No point corresponding to index %d" % (i))
+
     def rotate(self, theta, xoff=0, yoff=0):
         self.x, self.y = self.rotate_pt(self.x, self.y, theta,
                                         xoff=xoff, yoff=yoff)
 
     def edit_points(self):
-        return [(self.x, self.y)]
+        return [(self.x, self.y),
+                (self.x + self.radius, self.y)]
+
+    def scale_by(self, scale_x, scale_y):
+        self.radius *= max(scale_x, scale_y)
 
 
 class EllipseBase(CanvasObjectBase):
@@ -1003,18 +1193,24 @@ class EllipseBase(CanvasObjectBase):
     """
 
     def __init__(self, x, y, xradius, yradius, color='yellow',
-                 linewidth=1, linestyle='solid', cap=None,
+                 linewidth=1, linestyle='solid', showcap=False,
                  fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0,
                  rot_deg=0.0):
         super(EllipseBase, self).__init__(color=color,
-                                          linewidth=linewidth, cap=cap,
+                                          linewidth=linewidth, showcap=showcap,
                                           linestyle=linestyle,
                                           fill=fill, fillcolor=fillcolor,
                                           alpha=alpha, fillalpha=fillalpha,
                                           x=x, y=y, xradius=xradius,
-                                          yradius=yradius, rot_deg=0.0)
+                                          yradius=yradius, rot_deg=rot_deg)
         self.kind = 'ellipse'
 
+    def get_center_pt(self):
+        return (self.x, self.y)
+
+    def get_points(self):
+        return [self.get_center_pt()]
+    
     def get_center_radii_rot(self):
         scale_x, scale_y = self.viewer.get_scale_xy()
         rot_deg = self.viewer.get_rotation() + self.rot_deg
@@ -1045,8 +1241,30 @@ class EllipseBase(CanvasObjectBase):
         self.x, self.y = self.rotate_pt(self.x, self.y, theta,
                                         xoff=xoff, yoff=yoff)
 
+    def set_point_by_index(self, i, pt):
+        if i == 0:
+            self.x, self.y = pt
+        elif i == 1:
+            x, y = pt
+            self.xradius = abs(x - self.x)
+        elif i == 2:
+            x, y = pt
+            self.yradius = abs(y - self.y)
+        elif i == 3:
+            x, y = pt
+            self.xradius, self.yradius = abs(x - self.x), abs(y - self.y)
+        else:
+            raise ValueError("No point corresponding to index %d" % (i))
+
     def edit_points(self):
-        return [(self.x, self.y)]
+        return [(self.x, self.y),    # location
+                (self.x + self.xradius, self.y),  # adj xradius
+                (self.x, self.y + self.yradius),  # adj yradius
+                (self.x + self.xradius, self.y + self.yradius)]   # adj both
+
+    def scale_by(self, scale_x, scale_y):
+        self.xradius *= scale_x
+        self.yradius *= scale_y
 
 
 class PointBase(CanvasObjectBase):
@@ -1059,24 +1277,44 @@ class PointBase(CanvasObjectBase):
     """
 
     def __init__(self, x, y, radius, style='cross', color='yellow',
-                 linewidth=1, linestyle='solid', alpha=1.0, cap=None):
+                 linewidth=1, linestyle='solid', alpha=1.0, showcap=False):
         self.kind = 'point'
         super(PointBase, self).__init__(color=color, alpha=alpha,
                                         linewidth=linewidth,
                                         linestyle=linestyle,
                                         x=x, y=y, radius=radius,
-                                        cap=cap, style=style)
+                                        showcap=showcap, style=style)
         
+    def get_center_pt(self):
+        return (self.x, self.y)
+
+    def get_points(self):
+        return [self.get_center_pt()]
+    
     def contains(self, x, y):
         if (x == self.x) and (y == self.y):
             return True
         return False
 
+    def set_point_by_index(self, i, pt):
+        if i == 0:
+            self.x, self.y = pt
+        elif i == 1:
+            x, y = pt
+            self.radius = max(abs(x - self.x), abs(y - self.y))
+        else:
+            raise ValueError("No point corresponding to index %d" % (i))
+
     def rotate(self, theta, xoff=0, yoff=0):
         self.x, self.y = self.rotate_pt(self.x, self.y, theta,
                                         xoff=xoff, yoff=yoff)
     def edit_points(self):
-        return [(self.x, self.y)]
+        return [(self.x, self.y),
+                # TODO: account for point style
+                (self.x + self.radius, self.y + self.radius)]
+
+    def scale_by(self, scale_x, scale_y):
+        self.radius *= max(scale_x, scale_y)
 
 
 class LineBase(CanvasObjectBase):
@@ -1089,27 +1327,47 @@ class LineBase(CanvasObjectBase):
 
     def __init__(self, x1, y1, x2, y2, color='red',
                  linewidth=1, linestyle='solid', alpha=1.0,
-                 cap=None):
+                 showcap=False):
         self.kind = 'line'
         super(LineBase, self).__init__(color=color, alpha=alpha,
-                                       linewidth=linewidth, cap=cap,
+                                       linewidth=linewidth, showcap=showcap,
                                        linestyle=linestyle,
                                        x1=x1, y1=y1, x2=x2, y2=y2)
         
+    def get_points(self):
+        return [(self.x1, self.y1), (self.x2, self.y2)]
+
+    def get_center_pt(self):
+        return ((self.x1 + self.x2) / 2., (self.y1 + self.y2) / 2.)
+    
     def rotate(self, theta, xoff=0, yoff=0):
         self.x1, self.y1 = self.rotate_pt(self.x1, self.y1, theta,
                                           xoff=xoff, yoff=yoff)
         self.x2, self.y2 = self.rotate_pt(self.x2, self.y2, theta,
                                           xoff=xoff, yoff=yoff)
 
-    def edit_points(self):
-        return [(self.x1, self.y1), (self.x2, self.y2)]
+    def set_point_by_index(self, i, pt):
+        if i == 0:
+            x, y = pt
+            self.move_to(x, y)
+        elif i == 1:
+            self.x1, self.y1 = pt
+        elif i == 2:
+            self.x2, self.y2 = pt
+        else:
+            raise ValueError("No point corresponding to index %d" % (i))
 
-    def get_reference_pt(self):
-        # calculate center point of line
-        x = (self.x2 - self.x1) / 2.0 + self.x1
-        y = (self.y2 - self.y1) / 2.0 + self.y1
-        return (x, y)
+    def edit_points(self):
+        return [self.get_center_pt(),
+                (self.x1, self.y1), (self.x2, self.y2)]
+
+    def scale_by(self, scale_x, scale_y):
+        P = numpy.array(self.edit_points())
+        ctr_x, ctr_y = self.get_center_pt()
+        P[:, 0] = (P[:, 0] - ctr_x) * scale_x + ctr_x
+        P[:, 1] = (P[:, 1] - ctr_y) * scale_y + ctr_y
+        self.x1, self.y1 = P[0, 0], P[0, 1]
+        self.x2, self.y2 = P[1, 0], P[1, 1]
 
 
 class PathBase(CanvasObjectBase):
@@ -1120,12 +1378,12 @@ class PathBase(CanvasObjectBase):
     """
 
     def __init__(self, points, color='red',
-                 linewidth=1, linestyle='solid', cap=None,
+                 linewidth=1, linestyle='solid', showcap=False,
                  alpha=1.0):
         self.kind = 'path'
         
         super(PathBase, self).__init__(points=points, color=color,
-                                       linewidth=linewidth, cap=cap,
+                                       linewidth=linewidth, showcap=showcap,
                                        linestyle=linestyle, alpha=alpha)
         
     def rotate(self, theta, xoff=0, yoff=0):
@@ -1141,23 +1399,45 @@ class PathBase(CanvasObjectBase):
 class CompassBase(CanvasObjectBase):
     """Draws a WCS compass on a ImageViewCanvas.
     Parameters are:
-    x1, y1: 0-based coordinates of the center in the data space
-    x2, y2: 0-based coordinates of the 'North' end in the data space
-    x3, y3: 0-based coordinates of the 'East' end in the data space
+    x, y: 0-based coordinates of the center in the data space
+    radius: radius of the compass arms, in data units
     Optional parameters for linesize, color, etc.
     """
 
-    def __init__(self, x1, y1, x2, y2, x3, y3, color='skyblue',
+    def __init__(self, x, y, radius, color='skyblue',
                  linewidth=1, fontsize=None, font='Sans Serif',
-                 alpha=1.0, linestyle='solid', cap='ball'):
+                 alpha=1.0, linestyle='solid', showcap=True):
         self.kind = 'compass'
         super(CompassBase, self).__init__(color=color, alpha=alpha,
-                                          linewidth=linewidth, cap=cap,
+                                          linewidth=linewidth, showcap=showcap,
                                           linestyle=linestyle,
-                                          x1=x1, y1=y1, x2=x2, y2=y2, x3=x3, y3=y3,
+                                          x=x, y=y, radius=radius,
                                           font=font, fontsize=fontsize)
+
+    def get_center_pt(self):
+        return (self.x, self.y)
+
+    def get_points(self):
+        image = self.viewer.get_image()
+        x, y, xn, yn, xe, ye = image.calc_compass_radius(self.x,
+                                                         self.y,
+                                                         self.radius)
+        return [(x, y), (xn, yn), (xe, ye)]
+    
     def edit_points(self):
-        return [(self.x, self.y)]
+        return self.get_points()
+
+    def set_point_by_index(self, i, pt):
+        if i == 0:
+            self.x, self.y = pt
+        elif i in (1, 2):
+            x, y = pt
+            self.radius = max(abs(x - self.x), abs(y - self.y))
+        else:
+            raise ValueError("No point corresponding to index %d" % (i))
+
+    def scale_by(self, scale_x, scale_y):
+        self.radius *= max(scale_x, scale_y)
 
         
 class RightTriangleBase(CanvasObjectBase):
@@ -1169,18 +1449,45 @@ class RightTriangleBase(CanvasObjectBase):
     """
 
     def __init__(self, x1, y1, x2, y2, color='pink',
-                 linewidth=1, linestyle='solid', cap=None,
+                 linewidth=1, linestyle='solid', showcap=False,
                  fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0):
         self.kind='righttriangle'
         super(RightTriangleBase, self).__init__(color=color, alpha=alpha,
-                                                linewidth=linewidth, cap=cap,
+                                                linewidth=linewidth, showcap=showcap,
                                                 linestyle=linestyle,
                                                 fill=fill, fillcolor=fillcolor,
                                                 fillalpha=fillalpha,
                                                 x1=x1, y1=y1, x2=x2, y2=y2)
 
-    def edit_points(self):
+    def get_points(self):
         return [(self.x1, self.y1), (self.x2, self.y2)]
+    
+    def edit_points(self):
+        return [self.get_center_pt(),
+                (self.x1, self.y1), (self.x2, self.y2)]
+
+    def set_point_by_index(self, i, pt):
+        if i == 0:
+            x, y = pt
+            self.move_to(x, y)
+        elif i == 1:
+            self.x1, self.y1 = pt
+        elif i == 2:
+            self.x2, self.y2 = pt
+        else:
+            raise ValueError("No point corresponding to index %d" % (i))
+
+    def get_center_pt(self):
+        return ((self.x1 + self.x2) / 2., (self.y1 + self.y2) / 2.)
+    
+    def scale_by(self, scale_x, scale_y):
+        pts = [(self.x1, self.y1), (self.x2, self.y2)]
+        P = numpy.array(pts)
+        ctr_x, ctr_y = self.get_center_pt()
+        P[:, 0] = (P[:, 0] - ctr_x) * scale_x + ctr_x
+        P[:, 1] = (P[:, 1] - ctr_y) * scale_y + ctr_y
+        self.x1, self.y1 = P[0, 0], P[0, 1]
+        self.x2, self.y2 = P[1, 0], P[1, 1]
 
 
 class TriangleBase(CanvasObjectBase):
@@ -1192,46 +1499,31 @@ class TriangleBase(CanvasObjectBase):
     """
 
     def __init__(self, x, y, xradius, yradius, color='pink',
-                 linewidth=1, linestyle='solid', cap=None,
+                 linewidth=1, linestyle='solid', showcap=False,
                  fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0,
                  rot_deg=0.0):
         self.kind='triangle'
         super(TriangleBase, self).__init__(color=color, alpha=alpha,
-                                           linewidth=linewidth, cap=cap,
+                                           linewidth=linewidth, showcap=showcap,
                                            linestyle=linestyle,
                                            fill=fill, fillcolor=fillcolor,
                                            fillalpha=fillalpha,
                                            x=x, y=y, xradius=xradius,
                                            yradius=yradius, rot_deg=rot_deg)
 
-    def get_points(self):
-        return ((self.x - 2*self.xradius, self.y - self.yradius),
-                (self.x + 2*self.xradius, self.y - self.yradius),
-                (self.x, self.y + self.yradius))
-    
     def get_center_pt(self):
-        P = numpy.array(self.get_points())
-        x = P[:, 0]
-        y = P[:, 1]
-        Cx = numpy.sum(x) / 3.
-        Cy = numpy.sum(y) / 3.
-        return (Cx, Cy)
+        return (self.x, self.y)
 
-    def get_cpoints(self):
-        cx, cy = self.get_center_pt()
-        # rotate corners according to triangle rotation
-        rpoints = tuple(map(lambda p: self.rotate_pt(p[0], p[1], self.rot_deg,
-                                                     xoff=cx, yoff=cy),
-                            self.get_points()))
-        # calculate canvas positions of corners
-        cpoints = tuple(map(lambda p: self.canvascoords(p[0], p[1]),
-                            rpoints))
-        return cpoints
+    def get_points(self):
+        return [(self.x - 2*self.xradius, self.y - self.yradius),
+                (self.x + 2*self.xradius, self.y - self.yradius),
+                (self.x, self.y + self.yradius)]
     
     def contains(self, x, y):
+        ctr_x, ctr_y = self.get_center_pt()
         # rotate point back to cartesian alignment for test
         xp, yp = self.rotate_pt(x, y, -self.rot_deg,
-                                xoff=self.x, yoff=self.y)
+                                xoff=ctr_x, yoff=ctr_y)
         # calculate vertices
         ax, ay = self.x - self.xradius, self.y - self.yradius
         bx, by = self.x + self.xradius, self.y - self.yradius
@@ -1247,12 +1539,34 @@ class TriangleBase(CanvasObjectBase):
 
         return True
     
+    def set_point_by_index(self, i, pt):
+        if i == 0:
+            self.x, self.y = pt
+        elif i == 1:
+            x, y = pt
+            self.xradius = abs(x - self.x)
+        elif i == 2:
+            x, y = pt
+            self.yradius = abs(y - self.y)
+        elif i == 3:
+            x, y = pt
+            self.xradius, self.yradius = abs(x - self.x), abs(y - self.y)
+        else:
+            raise ValueError("No point corresponding to index %d" % (i))
+
     def edit_points(self):
-        return [(self.x, self.y)]
+        return [(self.x, self.y),    # location
+                (self.x + self.xradius, self.y),  # adj xradius
+                (self.x, self.y + self.yradius),  # adj yradius
+                (self.x + self.xradius, self.y + self.yradius)]   # adj both
 
     def rotate(self, theta, xoff=0, yoff=0):
         self.x, self.y = self.rotate_pt(self.x, self.y, theta,
                                         xoff=xoff, yoff=yoff)
+
+    def scale_by(self, scale_x, scale_y):
+        self.xradius *= scale_x
+        self.yradius *= scale_y
 
 
 class RulerBase(CanvasObjectBase):
@@ -1265,21 +1579,48 @@ class RulerBase(CanvasObjectBase):
 
     def __init__(self, x1, y1, x2, y2, color='red', color2='yellow',
                  alpha=1.0, linewidth=1, linestyle='solid',
-                 cap='ball', units='arcsec',
+                 showcap=True, units='arcsec',
                  font='Sans Serif', fontsize=None,
                  text_x='kon', text_y='ban', text_h='wa'):
         self.kind = 'ruler'
         super(RulerBase, self).__init__(color=color, color2=color2,
                                         alpha=alpha,
-                                        linewidth=linewidth, cap=cap,
+                                        linewidth=linewidth, showcap=showcap,
                                         linestyle=linestyle,
                                         x1=x1, y1=y1, x2=x2, y2=y2,
                                         font=font, fontsize=fontsize,
                                         text_x=text_x, text_y=text_y,
                                         text_h=text_h)
 
-    def edit_points(self):
+    def get_points(self):
         return [(self.x1, self.y1), (self.x2, self.y2)]
+
+    def get_center_pt(self):
+        return ((self.x1 + self.x2) / 2., (self.y1 + self.y2) / 2.)
+    
+    def edit_points(self):
+        return [self.get_center_pt(),
+                (self.x1, self.y1), (self.x2, self.y2)]
+
+    def set_point_by_index(self, i, pt):
+        if i == 0:
+            x, y = pt
+            self.move_to(x, y)
+        elif i == 1:
+            self.x1, self.y1 = pt
+        elif i == 2:
+            self.x2, self.y2 = pt
+        else:
+            raise ValueError("No point corresponding to index %d" % (i))
+
+    def scale_by(self, scale_x, scale_y):
+        pts = [(self.x1, self.y1), (self.x2, self.y2)]
+        P = numpy.array(pts)
+        ctr_x, ctr_y = self.get_center_pt()
+        P[:, 0] = (P[:, 0] - ctr_x) * scale_x + ctr_x
+        P[:, 1] = (P[:, 1] - ctr_y) * scale_y + ctr_y
+        self.x1, self.y1 = P[0, 0], P[0, 1]
+        self.x2, self.y2 = P[1, 0], P[1, 1]
 
 
 class Image(CanvasObjectBase):
@@ -1302,12 +1643,25 @@ class Image(CanvasObjectBase):
         # calculated location of overlay on canvas
         self._cvs_x = 0
         self._cvs_y = 0
+        self._zorder = 0
+
+    def get_zorder(self):
+        return self._zorder
+
+    def set_zorder(self, zorder, redraw=True):
+        self._zorder = zorder
+        self.viewer.reorder_layers()
+        if redraw:
+            self.viewer.redraw(whence=2)
 
     def get_coords(self):
         x1, y1 = self.x, self.y
         x2, y2 = x1 + self.image.width, y1 + self.image.height
         return (x1, y1, x2, y2)
 
+    def get_points(self):
+        return [(self.x, self.y)]
+    
     def contains(self, x, y):
         x2, y2 = self.x + self.image.width, self.y + self.image.height
         if ((x >= self.x) and (x <= x2) and
@@ -1401,7 +1755,7 @@ class Image(CanvasObjectBase):
                              alpha=self.alpha, flipy=False)
 
     def edit_points(self):
-        return [(self.x, self.y)]
+        return self.get_points()
 
     def set_image(self, image):
         self.image = image

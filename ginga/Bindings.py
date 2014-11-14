@@ -71,7 +71,8 @@ class ImageViewBindings(object):
             mod_draw = ['meta_right'],
             
             # Define our custom modifiers
-            dmod_draw = ['space', 'oneshot', None],
+            dmod_draw = ['space', 'locked', None],
+            dmod_edit = ['b', 'locked', None],
             dmod_cmap = ['y', 'locked', None],
             #dmod_cutlo = [',', 'locked', "Cut low"],
             #dmod_cuthi = ['.', 'locked', "Cut high"],
@@ -124,6 +125,8 @@ class ImageViewBindings(object):
             sc_dist = ['dist+scroll'],
             sc_cmap = ['cmap+scroll'],
             sc_imap = [],
+            sc_draw = ['draw+scroll'],
+            sc_edit = ['edit+scroll'],
             
             scroll_pan_acceleration = 1.0,
             scroll_zoom_acceleration = 1.0,
@@ -137,6 +140,7 @@ class ImageViewBindings(object):
             ms_cursor = ['left'],
             ms_wheel = [],
             ms_draw = ['draw+left', 'right'],
+            ms_edit = ['edit+left'],
             
             ms_rotate = ['rotate+left'],
             ms_rotate_reset = ['rotate+right'],

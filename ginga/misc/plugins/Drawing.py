@@ -14,7 +14,7 @@ from ginga.misc import Widgets, CanvasTypes
 draw_colors = colors.get_colors()
 
 default_drawtype = 'point'
-default_drawcolor = 'blue'
+default_drawcolor = 'lightblue'
 fillkinds = ('circle', 'rectangle', 'polygon', 'triangle', 'righttriangle',
              'square', 'ellipse', 'box')
 

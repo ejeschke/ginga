@@ -88,17 +88,23 @@ class QtCanvasMixin(object):
         cr.pen().setJoinStyle(QtCore.Qt.BevelJoin)
         self.set_fill(cr, False)
         
-    def draw_cap(self, cr, cap, x, y, radius=2):
+    def draw_cap(self, cr, cap, x, y, radius=None):
+        if radius == None:
+            radius = self.cap_radius
         alpha = getattr(self, 'alpha', 1.0)
         if cap == 'ball':
             self.set_fill(cr, True, alpha=alpha)
             cr.drawEllipse(x-radius, y-radius, radius*2, radius*2)
             self.set_fill(cr, False)
         
-    def draw_caps(self, cr, cap, points, radius=2):
+    def draw_caps(self, cr, cap, points, radius=None):
         for x, y in points:
             self.draw_cap(cr, cap, x, y, radius=radius)
         
+    def draw_edit(self, cr):
+        cpoints = self.get_cpoints(points=self.edit_points())
+        self.draw_caps(cr, 'ball', cpoints)
+
     def text_extents(self, cr, text):
         rect = cr.boundingRect(0, 0, 1000, 1000, 0, text)
         x1, y1, x2, y2 = rect.getCoords()
@@ -142,7 +148,9 @@ class Polygon(PolygonBase, QtCanvasMixin):
 
         cr.drawPolygon(qpoly)
 
-        if self.cap:
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
             self.draw_caps(cr, self.cap, cpoints)
 
 
@@ -159,7 +167,9 @@ class Rectangle(RectangleBase, QtCanvasMixin):
         cr = self.setup_cr()
         cr.drawPolygon(qpoly)
 
-        if self.cap:
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
             self.draw_caps(cr, self.cap, cpoints)
 
         if self.drawdims:
@@ -196,7 +206,9 @@ class Circle(CircleBase, QtCanvasMixin):
         pt = QtCore.QPointF(cx1, cy1)
         cr.drawEllipse(pt, float(cradius), float(cradius))
 
-        if self.cap:
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
             self.draw_caps(cr, self.cap, ((cx1, cy1), ))
 
 
@@ -204,6 +216,7 @@ class Ellipse(EllipseBase, QtCanvasMixin):
 
     def draw(self):
         cx, cy, cxr, cyr, rot_deg = self.get_center_radii_rot()
+        #flipx, flipy, swapxy = self.viewer.get_transforms()
         # this is necessary to work around a bug in Qt--radius of 0
         # causes a crash
         cxr, cyr = max(cxr, 0.000001), max(cyr, 0.000001)
@@ -216,7 +229,21 @@ class Ellipse(EllipseBase, QtCanvasMixin):
         pt = QtCore.QPointF(0.0, 0.0)
         cr.drawEllipse(pt, float(cxr), float(cyr))
 
-        if self.cap:
+        if self.editing:
+            def rot(pt):
+                x, y = pt[0], pt[1]
+                xr, yr = self.rotate_pt(x, y, -rot_deg,
+                                        xoff=self.x, yoff=self.y)
+                return (xr, yr)
+            def trans(pt):
+                xt, yt = pt[0] - cx, pt[1] - cy
+                return (xt, yt)
+            #self.draw_edit(cr)
+            rpoints = list(map(rot, self.edit_points()))
+            cpoints = self.get_cpoints(rpoints)
+            cpoints = list(map(trans, cpoints))
+            self.draw_caps(cr, 'ball', cpoints)
+        elif self.showcap:
             self.draw_caps(cr, self.cap, ((0, 0), ))
 
         cr.translate(-cx, -cy)
@@ -233,7 +260,9 @@ class Box(BoxBase, QtCanvasMixin):
         cr = self.setup_cr()
         cr.drawPolygon(qpoly)
 
-        if self.cap:
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
             self.draw_caps(cr, self.cap, cpoints)
 
 
@@ -254,7 +283,9 @@ class Point(PointBase, QtCanvasMixin):
             cr.drawLine(cx1, cy, cx2, cy)
             cr.drawLine(cx, cy1, cx, cy2)
 
-        if self.cap:
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
             self.draw_caps(cr, self.cap, ((cx, cy), ))
 
 
@@ -268,7 +299,9 @@ class Line(LineBase, QtCanvasMixin):
         cr.pen().setCapStyle(QtCore.Qt.RoundCap)
         cr.drawLine(cx1, cy1, cx2, cy2)
 
-        if self.cap:
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
             self.draw_caps(cr, self.cap, ((cx1, cy1), (cx2, cy2)))
 
 
@@ -284,17 +317,16 @@ class Path(PathBase, QtCanvasMixin):
             cx2, cy2 = cpoints[i+1]
             cr.drawLine(cx1, cy1, cx2, cy2)
 
-        if self.cap:
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
             self.draw_caps(cr, self.cap, cpoints)
 
 
 class Compass(CompassBase, QtCanvasMixin):
 
     def draw(self):
-        cx1, cy1 = self.canvascoords(self.x1, self.y1)
-        cx2, cy2 = self.canvascoords(self.x2, self.y2)
-        cx3, cy3 = self.canvascoords(self.x3, self.y3)
-
+        (cx1, cy1), (cx2, cy2), (cx3, cy3) = self.get_cpoints()
         cr = self.setup_cr()
 
         # draw North line and arrowhead
@@ -317,7 +349,9 @@ class Compass(CompassBase, QtCanvasMixin):
         cx, cy = self.get_textpos(cr, 'E', cx1, cy1, cx3, cy3)
         cr.drawText(cx, cy, 'E')
 
-        if self.cap:
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
             self.draw_caps(cr, self.cap, ((cx1, cy1), ))
 
     def get_textpos(self, cr, text, cx1, cy1, cx2, cy2):
@@ -369,7 +403,9 @@ class RightTriangle(RightTriangleBase, QtCanvasMixin):
         cr = self.setup_cr()
         cr.drawPolygon(qpoly)
 
-        if self.cap:
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
             self.draw_caps(cr, self.cap, cpoints)
 
 
@@ -384,7 +420,9 @@ class Triangle(TriangleBase, QtCanvasMixin):
         cr = self.setup_cr()
         cr.drawPolygon(qpoly)
 
-        if self.cap:
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
             self.draw_caps(cr, self.cap, cpoints)
 
 
@@ -471,7 +509,9 @@ class Ruler(RulerBase, QtCanvasMixin):
         # draw Y plum line label
         cr.drawText(x, yh, self.text_y)
 
-        if self.cap:
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
             self.draw_caps(cr, self.cap, ((cx2, cy1), ))
 
 

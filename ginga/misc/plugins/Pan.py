@@ -178,8 +178,9 @@ class Pan(GingaPlugin.GlobalPlugin):
             (x, y, xn, yn, xe, ye) = image.calc_compass_center()
             self.logger.debug("x=%d y=%d xn=%d yn=%d xe=%d ye=%d" % (
                 x, y, xn, yn, xe, ye))
+            radius = abs(xe - x)
             paninfo.pancompass = paninfo.panimage.add(CanvasTypes.Compass(
-                x, y, xn, yn, xe, ye, color='skyblue',
+                x, y, radius, color='skyblue',
                 fontsize=14), redraw=True)
         except Exception as e:
             self.logger.warn("Can't calculate compass: %s" % (
