@@ -254,6 +254,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
         self.img_mosaic = img_mosaic
         self.fv.gui_call(self.fv.add_image, imname, img_mosaic,
                          chname=self.mosaic_chname)
+        return img_mosaic
         
     def _prepare_mosaic1(self):
         self.canvas.deleteAllObjects()
@@ -358,7 +359,10 @@ class Mosaic(GingaPlugin.LocalPlugin):
     def annotate_cb(self, widget, tf):
         self.settings.set(annotate_images=tf)
 
-    def mosaic_some(self, paths):
+    def mosaic_some(self, paths, image_loader=None):
+        if image_loader == None:
+            image_loader = self.fv.load_image
+            
         for url in paths:
             if self.ev_intr.isSet():
                 break
@@ -385,7 +389,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
                     count = self.ingest_count
 
             else:
-                image = self.fv.load_image(url)
+                image = image_loader(url)
 
                 with self.lock:
                     self.fv.gui_call(self.fv.error_wrap, self.ingest_one, image)
@@ -401,7 +405,10 @@ class Mosaic(GingaPlugin.LocalPlugin):
             self.update_status(msg)
 
 
-    def mosaic(self, paths, new_mosaic=False):
+    def mosaic(self, paths, new_mosaic=False, image_loader=None):
+        if image_loader == None:
+            image_loader = self.fv.load_image
+            
         # NOTE: this runs in a non-gui thread
         self.fv.assert_nongui_thread()
 
@@ -416,7 +423,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
         self.init_progress()
         self.start_time = time.time()
 
-        image = self.fv.load_image(paths[0])
+        image = image_loader(paths[0])
         time_intr1 = time.time()
 
         fov_deg = self.settings.get('fov_deg', 1.0)
@@ -449,8 +456,11 @@ class Mosaic(GingaPlugin.LocalPlugin):
         num_threads = self.settings.get('num_threads', 4)
         groups = self.split_n(paths, num_threads)
         for group in groups:
-            self.fv.nongui_do(self.mosaic_some, group)
+            self.fv.nongui_do(self.mosaic_some, group,
+                              image_loader=image_loader)
 
+        return self.img_mosaic
+    
     def set_fov_cb(self, w):
         fov_deg = float(w.get_text())
         self.settings.set(fov_deg=fov_deg)

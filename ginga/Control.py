@@ -520,7 +520,8 @@ class GingaControl(Callback.Callbacks):
 
 
     def load_file(self, filepath, chname=None, wait=True,
-                  create_channel=True, image_loader=None):
+                  create_channel=True, display_image=True,
+                  image_loader=None):
         """Load a file from filesystem and display it.
 
         Parameters
@@ -529,11 +530,11 @@ class GingaControl(Callback.Callbacks):
             the path of the file to load (can be a URL)
         `chname`: string (optional)
             the name of the channel in which to display the image
+        `display_image`: boolean (optional)
+            if not False, then will load the image
         `wait`: boolean (optional)
-            if True, then wait for the file to be loaded before returning
+            if True, then wait for the file to be displayed before returning
               (synchronous behavior)
-        `create_channel`: boolean (optional)
-            if not False, then will create the channel if it does not exist
         `image_loader`: function (optional)
             a special image loader, if provided
         Returns
@@ -559,15 +560,17 @@ class GingaControl(Callback.Callbacks):
 
         (path, filename) = os.path.split(filepath)
 
-        image.set(name=filename, path=filepath, chname=chname)
+        image.set(name=filename, path=filepath, chname=chname,
+                  loader=image_loader)
 
-        # Display image.  If the wait parameter is False then don't wait
-        # for the image to load into the viewer
-        if wait:
-            self.gui_call(self.add_image, filename, image, chname=chname)
-        else:
-            self.gui_do(self.bulk_add_image, filename, image, chname)
-            #self.gui_do(self.add_image, filename, image, chname=chname)
+        if display_image:
+            # Display image.  If the wait parameter is False then don't wait
+            # for the image to load into the viewer
+            if wait:
+                self.gui_call(self.add_image, filename, image, chname=chname)
+            else:
+                self.gui_do(self.bulk_add_image, filename, image, chname)
+                #self.gui_do(self.add_image, filename, image, chname=chname)
 
         # Return the image
         return image
@@ -760,6 +763,8 @@ class GingaControl(Callback.Callbacks):
         
     def switch_name(self, chname, imname, path=None,
                     image_loader=None):
+        if not self.has_channel(chname):
+            self.add_channel(chname)
         chinfo = self.get_channelInfo(chname)
         if chinfo.datasrc.has_key(imname):
             # Image is still in the heap
@@ -770,13 +775,14 @@ class GingaControl(Callback.Callbacks):
             if path != None:
                 self.logger.debug("Image '%s' is no longer in memory; attempting to load from %s" % (
                     imname, path))
-                self.load_file(path, chname=chname,
+                #self.load_file(path, chname=chname,
+                #               image_loader=image_loader)
+                self.nongui_do(self.load_file, path, chname=chname,
                                image_loader=image_loader)
 
             else:
                 raise ControlError("No image by the name '%s' found" % (
                     imname))
-
             
     def _switch_image(self, chinfo, image):
         # update cursor to match image
@@ -809,8 +815,6 @@ class GingaControl(Callback.Callbacks):
 
                 else:
                     self.logger.debug("Apparently no need to set large fits image.")
-                    # TODO: there is a bug here, we shouldn't have to do this!
-                    #chinfo.fitsimage.set_image(image)
 
                 split_time1 = time.time()
                 self.logger.info("Large image update: %.4f sec" % (
@@ -977,7 +981,6 @@ class GingaControl(Callback.Callbacks):
             # Update the channels control
             self.channelNames.append(chname)
             self.channelNames.sort()
-            #print "CHANNELS ARE %s" % self.channelNames
             self.w.channel.insert_alpha(chname)
             
         # Prepare local plugins for this channel
@@ -997,7 +1000,6 @@ class GingaControl(Callback.Callbacks):
             # Update the channels control
             self.channelNames.remove(chname)
             self.channelNames.sort()
-            #print "CHANNELS ARE %s" % self.channelNames
             self.w.channel.delete_alpha(chname)
 
             self.ds.remove_tab(chname)

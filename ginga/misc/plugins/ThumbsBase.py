@@ -62,6 +62,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         if '.' in thumbname:
             thumbname = thumbname.split('.')[0]
         self.logger.debug("making thumb for %s" % (thumbname))
+        loader = image.get('loader', self.fv.load_image)
             
         # Is there a preference set to avoid making thumbnails?
         chinfo = self.fv.get_channelInfo(chname)
@@ -77,7 +78,6 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
             if thumbkey in self.thumbDict or nothumb:
                 return
 
-        #data = image.get_data()
         # Get metadata for mouse-over tooltip
         header = image.get_header()
         metadata = {}
@@ -86,16 +86,13 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
 
         thumbpath = self.get_thumbpath(path)
 
-        #self.thumb_generator.set_data(data)
         with self.thmblock:
             self.copy_attrs(chinfo.fitsimage)
             self.thumb_generator.set_image(image)
             imgwin = self.thumb_generator.get_image_as_widget()
 
-        # TODO: attach image loader to image metadata so we can recover it?
-        image_loader = None
         self.insert_thumbnail(imgwin, thumbkey, thumbname, chname, name, path,
-                              thumbpath, metadata, image_loader)
+                              thumbpath, metadata, loader)
 
     def update_thumbs(self, nameList):
         
@@ -286,18 +283,11 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
                 return
 
             # Generate new thumbnail
-            # TODO: Can't use set_image() because we will override the saved
-            # cuts settings...should look into fixing this...
-            ## timage = self.thumb_generator.get_image()
-            ## if timage != image:
-            ##     self.thumb_generator.set_image(image)
-            #data = image.get_data()
-            #self.thumb_generator.set_data(data)
-            self.thumb_generator.set_image(image)
             fitsimage.copy_attributes(self.thumb_generator,
                                       ['transforms', 'cutlevels',
                                        'rgbmap'],
                                       redraw=False)
+            self.thumb_generator.set_image(image)
 
             # Save a thumbnail for future browsing
             if save_thumb:

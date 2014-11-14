@@ -131,7 +131,8 @@ class Contents(GingaPlugin.GlobalPlugin):
         self.logger.debug("chname=%s name=%s path=%s" % (
             chname, imname, path))
 
-        self.fv.switch_name(chname, imname, path=path)
+        self.fv.switch_name(chname, imname, path=path,
+                            image_loader=bnch.loader)
 
     def switch_image2(self, treeview):
         path, column = treeview.get_cursor()
@@ -139,7 +140,9 @@ class Contents(GingaPlugin.GlobalPlugin):
 
     def get_info(self, chname, name, image):
         path = image.get('path', None)
-        bnch = Bunch.Bunch(NAME=name, CHNAME=chname, path=path)
+        loader = image.get('loader', self.fv.load_image)
+        bnch = Bunch.Bunch(NAME=name, CHNAME=chname, path=path,
+                           loader=loader)
 
         # Get header keywords of interest
         header = image.get_header()
@@ -173,7 +176,17 @@ class Contents(GingaPlugin.GlobalPlugin):
     def add_image(self, viewer, chname, image):
         noname = 'Noname' + str(time.time())
         name = image.get('name', noname)
-        path = image.get('path', None)
+
+        nothumb = image.get('nothumb', False)
+        if nothumb:
+            return
+
+        # Is there a preference set to avoid making thumbnails?
+        if self.fv.has_channel(chname):
+            chinfo = self.fv.get_channelInfo(chname)
+            prefs = chinfo.prefs
+            if not prefs.get('genthumb', True):
+                return
 
         model = self.treeview.get_model()
         if chname not in self.nameDict:
@@ -203,7 +216,6 @@ class Contents(GingaPlugin.GlobalPlugin):
         del self.nameDict[chname]
         self.recreate_toc()
         
-
     def __str__(self):
         return 'contents'
     
