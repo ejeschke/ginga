@@ -42,16 +42,20 @@ class MplCanvasMixin(object):
     def _draw_cap(self, cr, cap, x, y, radius=None):
         if radius == None:
             radius = self.cap_radius
-        xy = (x, y)
         if cap == 'ball':
-            p = patches.Circle(xy, fill=True, radius=radius,
-                               edgecolor='blue', facecolor='blue')
+            xy = numpy.array((x, y))
+            alpha = getattr(self, 'alpha', 1.0)
+            alpha = getattr(self, 'fillalpha', alpha)
+            color = cr.get_color(self.color, alpha)
+            p = patches.Circle((x, y), radius=radius, 
+                               edgecolor=color,
+                               fill=True, facecolor=color)
+            # TODO: figure out why this patch is not showing up!
             cr.axes.add_patch(p)
         
     def draw_caps(self, cr, cap, points, radius=None):
         for x, y in points:
             self._draw_cap(cr, cap, x, y, radius=radius)
-        pass
         
     def draw_edit(self, cr):
         cpoints = self.get_cpoints(points=self.edit_points())
@@ -160,6 +164,7 @@ class Circle(CircleBase, MplCanvasMixin):
         xy = (cx1, cy1)
             
         p = patches.Circle(xy, **cr.kwdargs)
+        print(cr.kwdargs)
         cr.axes.add_patch(p)
 
         if self.editing:
@@ -389,6 +394,8 @@ class Ruler(RulerBase, MplCanvasMixin):
         cx1, cy1 = self.canvascoords(self.x1, self.y1)
         cx2, cy2 = self.canvascoords(self.x2, self.y2)
 
+        text_x, text_y, text_h = self.get_ruler_distances()
+
         dx, dy = cx2 - cx1, cy2 - cy1
         
         cr = self.setup_cr(transform=None, head_width=10, head_length=15,
@@ -417,9 +424,9 @@ class Ruler(RulerBase, MplCanvasMixin):
 
         # calculate offsets and positions for drawing labels
         # try not to cover anything up
-        xtwd, xtht = self.text_extents(cr, self.text_x, font)
-        ytwd, ytht = self.text_extents(cr, self.text_y, font)
-        htwd, htht = self.text_extents(cr, self.text_h, font)
+        xtwd, xtht = self.text_extents(cr, text_x, font)
+        ytwd, ytht = self.text_extents(cr, text_y, font)
+        htwd, htht = self.text_extents(cr, text_h, font)
 
         diag_xoffset = 0
         diag_yoffset = 0
@@ -454,7 +461,7 @@ class Ruler(RulerBase, MplCanvasMixin):
 
         xd = xh + diag_xoffset
         yd = yh + diag_yoffset
-        cr.axes.text(xd, yd, self.text_h, fontdict=font)
+        cr.axes.text(xd, yd, text_h, fontdict=font)
 
         if self.color2:
             cr.set(color=cr.get_color(self.color2, self.alpha))
@@ -473,10 +480,10 @@ class Ruler(RulerBase, MplCanvasMixin):
 
         # draw X plum line label
         xh -= xtwd / 2
-        cr.axes.text(xh, y, self.text_x, fontdict=font)
+        cr.axes.text(xh, y, text_x, fontdict=font)
 
         # draw Y plum line label
-        cr.axes.text(x, yh, self.text_y, fontdict=font)
+        cr.axes.text(x, yh, text_y, fontdict=font)
 
         if self.editing:
             self.draw_edit(cr)

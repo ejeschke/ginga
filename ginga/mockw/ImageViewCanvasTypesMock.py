@@ -86,17 +86,23 @@ class MockCanvasMixin(object):
         #cr.draw_polygon([(x2, y2), (i1, j1), (i2, j2)])
         self.set_fill(cr, False)
         
-    def draw_cap(self, cr, cap, x, y, radius=2):
+    def draw_cap(self, cr, cap, x, y, radius=None):
+        if radius == None:
+            radius = self.cap_radius
         alpha = getattr(self, 'alpha', 1.0)
         if cap == 'ball':
             self.set_fill(cr, True, alpha=alpha)
             #cr.draw_ellipse(x-radius, y-radius, radius*2, radius*2)
             self.set_fill(cr, False)
         
-    def draw_caps(self, cr, cap, points, radius=2):
+    def draw_caps(self, cr, cap, points, radius=None):
         for x, y in points:
             self.draw_cap(cr, cap, x, y, radius=radius)
         
+    def draw_edit(self, cr):
+        cpoints = self.get_cpoints(points=self.edit_points())
+        self.draw_caps(cr, 'ball', cpoints)
+
     def text_extents(self, cr, text):
         # calculate the width and height of drawing `text` on this
         # canvas with current parameters
@@ -138,7 +144,9 @@ class Polygon(PolygonBase, MockCanvasMixin):
 
         #cr.draw_polygon(cpoints)
 
-        if self.cap:
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
             self.draw_caps(cr, self.cap, cpoints)
 
 
@@ -152,7 +160,9 @@ class Rectangle(RectangleBase, MockCanvasMixin):
 
         #cr.draw_polygon(cpoints)
 
-        if self.cap:
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
             self.draw_caps(cr, self.cap, cpoints)
 
         if self.drawdims:
@@ -185,7 +195,9 @@ class Circle(CircleBase, MockCanvasMixin):
         cr = self.setup_cr()
         #cr.draw_ellipse(cx1, cy1, float(cradius), float(cradius))
 
-        if self.cap:
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
             self.draw_caps(cr, self.cap, ((cx1, cy1), ))
 
 
@@ -216,7 +228,9 @@ class Box(BoxBase, MockCanvasMixin):
         cr = self.setup_cr()
         #cr.draw_polygon(cpoints)
 
-        if self.cap:
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
             self.draw_caps(cr, self.cap, cpoints)
 
 
@@ -237,7 +251,9 @@ class Point(PointBase, MockCanvasMixin):
             #cr.draw_line(cx, cy1, cx, cy2)
             pass
 
-        if self.cap:
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
             self.draw_caps(cr, self.cap, ((cx, cy), ))
 
 
@@ -250,7 +266,9 @@ class Line(LineBase, MockCanvasMixin):
         cr = self.setup_cr()
         #cr.draw_line(cx1, cy1, cx2, cy2)
 
-        if self.cap:
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
             self.draw_caps(cr, self.cap, ((cx1, cy1), (cx2, cy2)))
 
 
@@ -265,17 +283,16 @@ class Path(PathBase, MockCanvasMixin):
             cx2, cy2 = cpoints[i+1]
             #cr.draw_line(cx1, cy1, cx2, cy2)
 
-        if self.cap:
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
             self.draw_caps(cr, self.cap, cpoints)
 
 
 class Compass(CompassBase, MockCanvasMixin):
 
     def draw(self):
-        cx1, cy1 = self.canvascoords(self.x1, self.y1)
-        cx2, cy2 = self.canvascoords(self.x2, self.y2)
-        cx3, cy3 = self.canvascoords(self.x3, self.y3)
-
+        (cx1, cy1), (cx2, cy2), (cx3, cy3) = self.get_cpoints()
         cr = self.setup_cr()
 
         # draw North line and arrowhead
@@ -297,7 +314,9 @@ class Compass(CompassBase, MockCanvasMixin):
         cx, cy = self.get_textpos(cr, 'E', cx1, cy1, cx3, cy3)
         #cr.draw_text(cx, cy, 'E')
 
-        if self.cap:
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
             self.draw_caps(cr, self.cap, ((cx1, cy1), ))
 
     def get_textpos(self, cr, text, cx1, cy1, cx2, cy2):
@@ -346,7 +365,9 @@ class RightTriangle(RightTriangleBase, MockCanvasMixin):
         cr = self.setup_cr()
         #cr.draw_polygon(cpoints)
 
-        if self.cap:
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
             self.draw_caps(cr, self.cap, cpoints)
 
 
@@ -357,7 +378,9 @@ class Triangle(TriangleBase, MockCanvasMixin):
         cr = self.setup_cr()
         #cr.draw_polygon(cpoints)
 
-        if self.cap:
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
             self.draw_caps(cr, self.cap, cpoints)
 
 
@@ -366,6 +389,8 @@ class Ruler(RulerBase, MockCanvasMixin):
     def draw(self):
         cx1, cy1 = self.canvascoords(self.x1, self.y1)
         cx2, cy2 = self.canvascoords(self.x2, self.y2)
+
+        text_x, text_y, text_h = self.get_ruler_distances()
 
         cr = self.setup_cr()
         
@@ -381,9 +406,9 @@ class Ruler(RulerBase, MockCanvasMixin):
 
         # calculate offsets and positions for drawing labels
         # try not to cover anything up
-        xtwd, xtht = self.text_extents(cr, self.text_x)
-        ytwd, ytht = self.text_extents(cr, self.text_y)
-        htwd, htht = self.text_extents(cr, self.text_h)
+        xtwd, xtht = self.text_extents(cr, text_x)
+        ytwd, ytht = self.text_extents(cr, text_y)
+        htwd, htht = self.text_extents(cr, text_h)
 
         diag_xoffset = 0
         diag_yoffset = 0
@@ -416,7 +441,7 @@ class Ruler(RulerBase, MockCanvasMixin):
 
         xd = xh + diag_xoffset
         yd = yh + diag_yoffset
-        #cr.draw_text(xd, yd, self.text_h)
+        #cr.draw_text(xd, yd, text_h)
 
         ## pen.setDashPattern([ 3.0, 4.0, 6.0, 4.0])
         ## pen.setDashOffset(5.0)
@@ -433,12 +458,14 @@ class Ruler(RulerBase, MockCanvasMixin):
 
         # draw X plum line label
         xh -= xtwd // 2
-        #cr.draw_text(xh, y, self.text_x)
+        #cr.draw_text(xh, y, text_x)
 
         # draw Y plum line label
-        #cr.draw_text(x, yh, self.text_y)
+        #cr.draw_text(x, yh, text_y)
 
-        if self.cap:
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
             self.draw_caps(cr, self.cap, ((cx2, cy1), ))
 
 

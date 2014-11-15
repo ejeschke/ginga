@@ -1,5 +1,5 @@
 #
-# ImageViewCanvas.py -- Abstract base classes for ImageViewCanvas{Gtk,Qt}.
+# ImageViewCanvas.py -- base classes for ImageViewCanvas{Toolkit}.
 #
 # Eric Jeschke (eric@naoj.org)
 #
@@ -85,6 +85,9 @@ class CanvasObjectBase(Callback.Callbacks):
     
     def contains(self, x, y):
         return False
+    
+    def select_contains(self, x, y):
+        return self.contains(x, y)
     
     def calcVertexes(self, start_x, start_y, end_x, end_y,
                      arrow_length=10, arrow_degrees=0.35):
@@ -189,27 +192,41 @@ class CanvasObjectBase(Callback.Callbacks):
                 return i
         return None
 
-    def point_within_line(self, a, b, x1, y1, x2, y2, fuzz):
+    def point_within_line(self, a, b, x1, y1, x2, y2, canvas_radius):
+        # TODO: is there an algorithm with the cross and dot products
+        # that is more efficient?
+        epsilon = 0.000001
         if x1 > x2:
             x1, y1, x2, y2 = x2, y2, x1, y1
 
         # check for point OOB
-        if (a + fuzz < x1) or (x2 < a - fuzz):
+        if (a + canvas_radius < x1) or (x2 < a - canvas_radius):
             return False
-        elif (b + fuzz < min(y1, y2)) or (max(y1, y2) < b - fuzz): 
+        elif (b + canvas_radius < min(y1, y2)) or (max(y1, y2) < b - canvas_radius): 
             return False
 
         dx, dy = x2 - x1, y2 - y1
         # test for vertical line
-        if (dx == 0) or (dy == 0):
+        if (abs(dx) < epsilon) or (abs(dy) < epsilon):
             # earlier boundary check will have determined if point is
             # not on the line
             return True
 
-        slope, offset = dy / dx, y1 - x1*slope
-        calcy = a*slope + offset
-        contains = (b - fuzz <= calcy <= b + fuzz)
+        slope = dy / dx
+        offset = y1 - x1 * slope
+        calcy = a * slope + offset
+        contains = (b - canvas_radius <= calcy <= b + canvas_radius)
         return contains
+
+    def within_line(self, a, b, x1, y1, x2, y2, canvas_radius):
+        """Point (a, b) and points (x1, y1), (x2, y2) are in data coordinates.
+        Return True if point (a, b) is within the line defined by
+        a line from (x1, y1) to (x2, y2) and within canvas_radius.
+        The distance between points is scaled by the canvas scale.
+        """
+        scale_x, scale_y = self.viewer.get_scale_xy()
+        new_radius = canvas_radius * 1.0 / min(scale_x, scale_y)
+        return self.point_within_line(a, b, x1, y1, x2, y2, new_radius)
     #####
         
     def get_points(self):
@@ -277,6 +294,19 @@ class CompoundMixin(object):
         for obj in self.objects:
             if obj.contains(x, y):
                 #res.insert(0, obj)
+                res.append(obj)
+        return res
+        
+    def select_contains(self, x, y):
+        for obj in self.objects:
+            if obj.select_contains(x, y):
+                return True
+        return False
+
+    def select_items_at(self, x, y):
+        res = []
+        for obj in self.objects:
+            if obj.select_contains(x, y):
                 res.append(obj)
         return res
         
@@ -376,9 +406,9 @@ class CompoundMixin(object):
 
     def reorder_layers(self):
         self.objects.sort(key=lambda obj: getattr(obj, '_zorder', 0))
-        ## for obj in self.objects:
-        ##     if obj.is_compound():
-        ##         obj.reorder_layers()
+        for obj in self.objects:
+            if obj.is_compound():
+                obj.reorder_layers()
 
 
 class CanvasMixin(object):
@@ -562,42 +592,6 @@ class DrawingMixin(object):
     def set_drawtext(self, text):
         self._drawtext = text
         
-    def get_ruler_distances(self, x1, y1, x2, y2):
-        mode = self.t_drawparams.get('units', 'arcmin')
-        try:
-            image = self.viewer.get_image()
-            if mode == 'arcmin':
-                # Calculate RA and DEC for the three points
-                # origination point
-                ra_org, dec_org = image.pixtoradec(x1, y1)
-
-                # destination point
-                ra_dst, dec_dst = image.pixtoradec(x2, y2)
-
-                # "heel" point making a right triangle
-                ra_heel, dec_heel = image.pixtoradec(x2, y1)
-
-                text_h = wcs.get_starsep_RaDecDeg(ra_org, dec_org,
-                                                  ra_dst, dec_dst)
-                text_x = wcs.get_starsep_RaDecDeg(ra_org, dec_org,
-                                                  ra_heel, dec_heel)
-                text_y = wcs.get_starsep_RaDecDeg(ra_heel, dec_heel,
-                                                  ra_dst, dec_dst)
-            else:
-                dx = abs(x2 - x1)
-                dy = abs(y2 - y1)
-                dh = math.sqrt(dx**2 + dy**2)
-                text_x = str(dx)
-                text_y = str(dy)
-                text_h = ("%.3f" % dh)
-                
-        except Exception as e:
-            text_h = 'BAD WCS'
-            text_x = 'BAD WCS'
-            text_y = 'BAD WCS'
-
-        return (text_x, text_y, text_h)
-
     def _draw_update(self, data_x, data_y):
 
         klass = self.drawDict[self.t_drawtype]
@@ -672,11 +666,7 @@ class DrawingMixin(object):
                         **self.t_drawparams)
 
         elif self.t_drawtype == 'ruler':
-            text_x, text_y, text_h = self.get_ruler_distances(self._start_x,
-                                                              self._start_y,
-                                                              data_x, data_y)
             obj = klass(self._start_x, self._start_y, data_x, data_y,
-                        text_x=text_x, text_y=text_y, text_h = text_h,
                         **self.t_drawparams)
 
         if obj != None:
@@ -755,7 +745,7 @@ class DrawingMixin(object):
     def edit_start(self, canvas, action, data_x, data_y):
 
         # check for objects at this location
-        objs = canvas.getItemsAt(data_x, data_y)
+        objs = canvas.select_items_at(data_x, data_y)
 
         if self.drawObj == None:
             # <-- no current object being edited
@@ -970,8 +960,17 @@ class PolygonBase(CanvasObjectBase):
                           self.points))
         self.points = newpts
 
+    def set_point_by_index(self, i, pt):
+        if i == 0:
+            x, y = pt
+            self.move_to(x, y)
+        elif i-1 < len(self.points):
+            self.points[i-1] = pt
+        else:
+            raise ValueError("No point corresponding to index %d" % (i))
+
     def edit_points(self):
-        return self.points
+        return [self.get_center_pt()] + self.points
 
 
 class RectangleBase(CanvasObjectBase):
@@ -1014,7 +1013,11 @@ class RectangleBase(CanvasObjectBase):
 
     def get_center_pt(self):
         return ((self.x1 + self.x2) / 2., (self.y1 + self.y2) / 2.)
-    
+
+    # TO BE DEPRECATED
+    def move_point(self):
+        return self.get_center_pt()
+
     def rotate(self, theta, xoff=0, yoff=0):
         x1, y1 = self.rotate_pt(self.x1, self.y1, theta,
                                 xoff=xoff, yoff=yoff)
@@ -1036,18 +1039,6 @@ class RectangleBase(CanvasObjectBase):
     def edit_points(self):
         return [self.get_center_pt(),
                 (self.x1, self.y1), (self.x2, self.y2)]
-
-    def move_point(self):
-        x, y = (self.x1 + self.x2) / 2.0, (self.y1 + self.y2) / 2.0
-        return (x, y)
-
-    def toPolygon(self):
-        points = self.get_points()
-        p = Polygon(points, color=self.color,
-                    linewidth=self.linewidth, linestyle=self.linestyle,
-                    showcap=self.showcap, fill=self.fill, fillcolor=self.fillcolor,
-                    alpha=self.alpha, fillalpha=self.fillalpha)
-        return p
 
     def scale_by(self, scale_x, scale_y):
         pts = [(self.x1, self.y1), (self.x2, self.y2)]
@@ -1296,6 +1287,9 @@ class PointBase(CanvasObjectBase):
             return True
         return False
 
+    def select_contains(self, x, y):
+        return self.within_radius(x, y, self.x, self.y, self.cap_radius)
+        
     def set_point_by_index(self, i, pt):
         if i == 0:
             self.x, self.y = pt
@@ -1369,6 +1363,10 @@ class LineBase(CanvasObjectBase):
         self.x1, self.y1 = P[0, 0], P[0, 1]
         self.x2, self.y2 = P[1, 0], P[1, 1]
 
+    def select_contains(self, x, y):
+        return self.within_line(x, y, self.x1, self.y1, self.x2, self.y2,
+                                self.cap_radius)
+        
 
 class PathBase(CanvasObjectBase):
     """Draws a path on a ImageViewCanvas.
@@ -1392,8 +1390,33 @@ class PathBase(CanvasObjectBase):
                           self.points))
         self.points = newpts
 
+    def set_point_by_index(self, i, pt):
+        if i == 0:
+            x, y = pt
+            self.move_to(x, y)
+        elif i-1 < len(self.points):
+            self.points[i-1] = pt
+        else:
+            raise ValueError("No point corresponding to index %d" % (i))
+
     def edit_points(self):
-        return self.points
+        return [self.get_center_pt()] + self.points
+
+    def contains(self, x, y):
+        x1, y1 = self.points[0]
+        for x2, y2 in self.points[1:]:
+            if self.within_line(x, y, x1, y1, x2, y2, 1.0):
+                return True
+            x1, y1 = x2, y2
+        return False
+            
+    def select_contains(self, x, y):
+        x1, y1 = self.points[0]
+        for x2, y2 in self.points[1:]:
+            if self.within_line(x, y, x1, y1, x2, y2, self.cap_radius):
+                return True
+            x1, y1 = x2, y2
+        return False
 
 
 class CompassBase(CanvasObjectBase):
@@ -1439,6 +1462,9 @@ class CompassBase(CanvasObjectBase):
     def scale_by(self, scale_x, scale_y):
         self.radius *= max(scale_x, scale_y)
 
+    def select_contains(self, x, y):
+        return self.within_radius(x, y, self.x, self.y, self.cap_radius)
+        
         
 class RightTriangleBase(CanvasObjectBase):
     """Draws a right triangle on a ImageViewCanvas.
@@ -1462,6 +1488,19 @@ class RightTriangleBase(CanvasObjectBase):
     def get_points(self):
         return [(self.x1, self.y1), (self.x2, self.y2)]
     
+    def contains(self, x, y):
+        x1, y1, x2, y2 = self.x1, self.y1, self.x2, self.y2
+        x3, y3 = self.x2, self.y1
+        
+        # barycentric coordinate test
+        denominator = ((y2 - y3)*(x1 - x3) + (x3 - x2)*(y1 - y3))
+        a = ((y2 - y3)*(x - x3) + (x3 - x2)*(y - y3)) / denominator
+        b = ((y3 - y1)*(x - x3) + (x1 - x3)*(y - y3)) / denominator
+        c = 1.0 - a - b
+        
+        tf = (0.0 <= a <= 1.0 and 0.0 <= b <= 1.0 and 0.0 <= c <= 1.0)
+        return tf
+
     def edit_points(self):
         return [self.get_center_pt(),
                 (self.x1, self.y1), (self.x2, self.y2)]
@@ -1522,23 +1561,20 @@ class TriangleBase(CanvasObjectBase):
     def contains(self, x, y):
         ctr_x, ctr_y = self.get_center_pt()
         # rotate point back to cartesian alignment for test
-        xp, yp = self.rotate_pt(x, y, -self.rot_deg,
-                                xoff=ctr_x, yoff=ctr_y)
-        # calculate vertices
-        ax, ay = self.x - self.xradius, self.y - self.yradius
-        bx, by = self.x + self.xradius, self.y - self.yradius
-        cx, cy = self.x, self.y + self.yradius
+        x, y = self.rotate_pt(x, y, -self.rot_deg,
+                              xoff=ctr_x, yoff=ctr_y)
 
-        as_x, as_y = xp - ax, yp - ay
-        s_ab = (bx - ax)*as_y - (by - ay)*as_x > 0
+        (x1, y1), (x2, y2), (x3, y3) = self.get_points()
+
+        # barycentric coordinate test
+        denominator = ((y2 - y3)*(x1 - x3) + (x3 - x2)*(y1 - y3))
+        a = ((y2 - y3)*(x - x3) + (x3 - x2)*(y - y3)) / denominator
+        b = ((y3 - y1)*(x - x3) + (x1 - x3)*(y - y3)) / denominator
+        c = 1.0 - a - b
         
-        if (cx - ax)*as_y - (cy - ay)*as_x > 0 == s_ab:
-            return False
-        if (cx - bx)*(yp - by) - (cy - by)*(xp - bx) > 0 != s_ab:
-            return False
+        tf = (0.0 <= a <= 1.0 and 0.0 <= b <= 1.0 and 0.0 <= c <= 1.0)
+        return tf
 
-        return True
-    
     def set_point_by_index(self, i, pt):
         if i == 0:
             self.x, self.y = pt
@@ -1579,18 +1615,51 @@ class RulerBase(CanvasObjectBase):
 
     def __init__(self, x1, y1, x2, y2, color='red', color2='yellow',
                  alpha=1.0, linewidth=1, linestyle='solid',
-                 showcap=True, units='arcsec',
-                 font='Sans Serif', fontsize=None,
-                 text_x='kon', text_y='ban', text_h='wa'):
+                 showcap=True, units='arcmin',
+                 font='Sans Serif', fontsize=None):
         self.kind = 'ruler'
         super(RulerBase, self).__init__(color=color, color2=color2,
-                                        alpha=alpha,
+                                        alpha=alpha, units=units,
                                         linewidth=linewidth, showcap=showcap,
                                         linestyle=linestyle,
                                         x1=x1, y1=y1, x2=x2, y2=y2,
-                                        font=font, fontsize=fontsize,
-                                        text_x=text_x, text_y=text_y,
-                                        text_h=text_h)
+                                        font=font, fontsize=fontsize)
+
+    def get_ruler_distances(self):
+        mode = self.units.lower()
+        try:
+            image = self.viewer.get_image()
+            if mode == 'arcmin':
+                # Calculate RA and DEC for the three points
+                # origination point
+                ra_org, dec_org = image.pixtoradec(self.x1, self.y1)
+
+                # destination point
+                ra_dst, dec_dst = image.pixtoradec(self.x2, self.y2)
+
+                # "heel" point making a right triangle
+                ra_heel, dec_heel = image.pixtoradec(self.x2, self.y1)
+
+                text_h = wcs.get_starsep_RaDecDeg(ra_org, dec_org,
+                                                  ra_dst, dec_dst)
+                text_x = wcs.get_starsep_RaDecDeg(ra_org, dec_org,
+                                                  ra_heel, dec_heel)
+                text_y = wcs.get_starsep_RaDecDeg(ra_heel, dec_heel,
+                                                  ra_dst, dec_dst)
+            else:
+                dx = abs(self.x2 - self.x1)
+                dy = abs(self.y2 - self.y1)
+                dh = math.sqrt(dx**2 + dy**2)
+                text_x = str(dx)
+                text_y = str(dy)
+                text_h = ("%.3f" % dh)
+                
+        except Exception as e:
+            text_h = 'BAD WCS'
+            text_x = 'BAD WCS'
+            text_y = 'BAD WCS'
+
+        return (text_x, text_y, text_h)
 
     def get_points(self):
         return [(self.x1, self.y1), (self.x2, self.y2)]
@@ -1621,6 +1690,10 @@ class RulerBase(CanvasObjectBase):
         P[:, 1] = (P[:, 1] - ctr_y) * scale_y + ctr_y
         self.x1, self.y1 = P[0, 0], P[0, 1]
         self.x2, self.y2 = P[1, 0], P[1, 1]
+
+    def select_contains(self, x, y):
+        return self.within_line(x, y, self.x1, self.y1, self.x2, self.y2,
+                                self.cap_radius)
 
 
 class Image(CanvasObjectBase):
@@ -1653,26 +1726,6 @@ class Image(CanvasObjectBase):
         self.viewer.reorder_layers()
         if redraw:
             self.viewer.redraw(whence=2)
-
-    def get_coords(self):
-        x1, y1 = self.x, self.y
-        x2, y2 = x1 + self.image.width, y1 + self.image.height
-        return (x1, y1, x2, y2)
-
-    def get_points(self):
-        return [(self.x, self.y)]
-    
-    def contains(self, x, y):
-        x2, y2 = self.x + self.image.width, self.y + self.image.height
-        if ((x >= self.x) and (x <= x2) and
-            (y >= self.y) and (y <= y2)):
-            return True
-        return False
-
-    ## def rotate(self, theta, xoff=0, yoff=0):
-    ##     x, y = self.rotate_pt(self.x, self.y, theta,
-    ##                             xoff=xoff, yoff=yoff)
-    ##     self.x, self.y = x, y
 
     def draw(self):
         if not self._drawn:
@@ -1754,13 +1807,52 @@ class Image(CanvasObjectBase):
                              dst_order=dst_order, src_order=image_order,
                              alpha=self.alpha, flipy=False)
 
-    def edit_points(self):
-        return self.get_points()
-
     def set_image(self, image):
         self.image = image
         self._drawn = False
         self._cutout = None
+
+    # TO BE DEPRECATED?
+    def get_coords(self):
+        x1, y1 = self.x, self.y
+        x2, y2 = x1 + self.image.width, y1 + self.image.height
+        return (x1, y1, x2, y2)
+
+    def get_center_pt(self):
+        return (self.x + self.width / 2.0, self.y + self.height / 2.0)
+
+    def get_points(self):
+        return [(self.x, self.y)]
+    
+    def contains(self, x, y):
+        x2, y2 = self.x + self.image.width, self.y + self.image.height
+        if ((x >= self.x) and (x < x2) and
+            (y >= self.y) and (y < y2)):
+            return True
+        return False
+
+    ## def rotate(self, theta, xoff=0, yoff=0):
+    ##     x, y = self.rotate_pt(self.x, self.y, theta,
+    ##                             xoff=xoff, yoff=yoff)
+    ##     self.x, self.y = x, y
+
+    def set_point_by_index(self, i, pt):
+        if i == 0:
+            self.x, self.y = pt
+        else:
+            raise ValueError("No point corresponding to index %d" % (i))
+
+    def edit_points(self):
+        return [(self.x, self.y),    # location
+                #(self.x + self.width, self.y),
+                #(self.x, self.y + self.height),
+                #(self.x + self.width, self.y + self.height)
+                ]
+
+    def scale_by(self, scale_x, scale_y):
+        #self.width *= scale_x
+        #self.height *= scale_y
+        pass
 
 
 class NormImage(Image):
@@ -1888,6 +1980,7 @@ class NormImage(Image):
         self._cutout = None
         self._prergb = None
         self._rgbarr = None
+
 
 class CompoundObject(CompoundMixin, CanvasObjectBase):
     """Compound object on a ImageViewCanvas.

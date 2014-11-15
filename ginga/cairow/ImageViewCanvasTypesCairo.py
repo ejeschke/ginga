@@ -220,7 +220,7 @@ class Ellipse(EllipseBase, CairoCanvasMixin):
 
         self.draw_fill(cr)
 
-        if self.cap:
+        if self.showcap:
             self.draw_caps(cr, self.cap, ((0.0, 0.0), ))
         
 
@@ -438,6 +438,8 @@ class Ruler(RulerBase, CairoCanvasMixin):
         cx1, cy1 = self.canvascoords(self.x1, self.y1)
         cx2, cy2 = self.canvascoords(self.x2, self.y2)
 
+        text_x, text_y, text_h = self.get_ruler_distances()
+
         cr = self.setup_cr()
         
         cr.select_font_face(self.font)
@@ -458,9 +460,9 @@ class Ruler(RulerBase, CairoCanvasMixin):
 
         # calculate offsets and positions for drawing labels
         # try not to cover anything up
-        xtwd, xtht = self.text_extents(cr, self.text_x)
-        ytwd, ytht = self.text_extents(cr, self.text_y)
-        htwd, htht = self.text_extents(cr, self.text_h)
+        xtwd, xtht = self.text_extents(cr, text_x)
+        ytwd, ytht = self.text_extents(cr, text_y)
+        htwd, htht = self.text_extents(cr, text_h)
 
         diag_xoffset = 0
         diag_yoffset = 0
@@ -494,7 +496,7 @@ class Ruler(RulerBase, CairoCanvasMixin):
         xd = xh + diag_xoffset
         yd = yh + diag_yoffset
         cr.move_to(xd, yd)
-        cr.show_text(self.text_h)
+        cr.show_text(text_h)
 
         if self.color2:
             alpha = getattr(self, 'alpha', 1.0)
@@ -513,11 +515,11 @@ class Ruler(RulerBase, CairoCanvasMixin):
         # draw X plum line label
         xh -= xtwd // 2
         cr.move_to(xh, y)
-        cr.show_text(self.text_x)
+        cr.show_text(text_x)
 
         # draw Y plum line label
         cr.move_to(x, yh)
-        cr.show_text(self.text_y)
+        cr.show_text(text_y)
 
         if self.editing:
             self.draw_edit(cr)

@@ -55,7 +55,6 @@ class FitsViewer(QtGui.QMainWindow):
         # add canvas to view
         fi.add(canvas)
         canvas.ui_setActive(True)
-        canvas.set_callback('cursor-down', self.clicked)
 
         w = fi.get_widget()
         w.resize(512, 512)
@@ -129,7 +128,6 @@ class FitsViewer(QtGui.QMainWindow):
 
         params = { 'color': self.drawcolors[index],
                    'alpha': alpha,
-                   #'cap': 'ball',
                    }
         if kind in ('circle', 'rectangle', 'polygon', 'triangle',
                     'righttriangle', 'ellipse', 'square', 'box'):
@@ -194,14 +192,6 @@ class FitsViewer(QtGui.QMainWindow):
         text = "RA: %s  DEC: %s  X: %.2f  Y: %.2f  Value: %s" % (
             ra_txt, dec_txt, fits_x, fits_y, value)
         self.readout.setText(text)
-
-    def clicked(self, viewer, button, data_x, data_y):
-        obj = viewer.objects[-1]
-        print("top object is a %s" % (obj.kind))
-        print("button %s at %f,%f" % (button, data_x, data_y))
-        tf = obj.contains(data_x, data_y)
-        print("%s contains=%s" % (obj.kind, tf))
-        return True
 
     def quit(self, *args):
         self.logger.info("Attempting to shut down the application...")

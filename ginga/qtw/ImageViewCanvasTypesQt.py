@@ -229,22 +229,22 @@ class Ellipse(EllipseBase, QtCanvasMixin):
         pt = QtCore.QPointF(0.0, 0.0)
         cr.drawEllipse(pt, float(cxr), float(cyr))
 
-        if self.editing:
-            def rot(pt):
-                x, y = pt[0], pt[1]
-                xr, yr = self.rotate_pt(x, y, -rot_deg,
-                                        xoff=self.x, yoff=self.y)
-                return (xr, yr)
-            def trans(pt):
-                xt, yt = pt[0] - cx, pt[1] - cy
-                return (xt, yt)
-            #self.draw_edit(cr)
-            rpoints = list(map(rot, self.edit_points()))
-            cpoints = self.get_cpoints(rpoints)
-            cpoints = list(map(trans, cpoints))
-            self.draw_caps(cr, 'ball', cpoints)
-        elif self.showcap:
-            self.draw_caps(cr, self.cap, ((0, 0), ))
+        ## if self.editing:
+        ##     def rot(pt):
+        ##         x, y = pt[0], pt[1]
+        ##         xr, yr = self.rotate_pt(x, y, -rot_deg,
+        ##                                 xoff=self.x, yoff=self.y)
+        ##         return (xr, yr)
+        ##     def trans(pt):
+        ##         xt, yt = pt[0] - cx, pt[1] - cy
+        ##         return (xt, yt)
+        ##     #self.draw_edit(cr)
+        ##     rpoints = list(map(rot, self.edit_points()))
+        ##     cpoints = self.get_cpoints(rpoints)
+        ##     cpoints = list(map(trans, cpoints))
+        ##     self.draw_caps(cr, 'ball', cpoints)
+        ## elif self.showcap:
+        ##     self.draw_caps(cr, self.cap, ((0, 0), ))
 
         cr.translate(-cx, -cy)
         
@@ -435,6 +435,8 @@ class Ruler(RulerBase, QtCanvasMixin):
         cx1, cy1 = self.canvascoords(self.x1, self.y1)
         cx2, cy2 = self.canvascoords(self.x2, self.y2)
 
+        text_x, text_y, text_h = self.get_ruler_distances()
+
         cr = self.setup_cr()
         
         if not self.fontsize:
@@ -452,9 +454,9 @@ class Ruler(RulerBase, QtCanvasMixin):
 
         # calculate offsets and positions for drawing labels
         # try not to cover anything up
-        xtwd, xtht = self.text_extents(cr, self.text_x)
-        ytwd, ytht = self.text_extents(cr, self.text_y)
-        htwd, htht = self.text_extents(cr, self.text_h)
+        xtwd, xtht = self.text_extents(cr, text_x)
+        ytwd, ytht = self.text_extents(cr, text_y)
+        htwd, htht = self.text_extents(cr, text_h)
 
         diag_xoffset = 0
         diag_yoffset = 0
@@ -487,7 +489,7 @@ class Ruler(RulerBase, QtCanvasMixin):
 
         xd = xh + diag_xoffset
         yd = yh + diag_yoffset
-        cr.drawText(xd, yd, self.text_h)
+        cr.drawText(xd, yd, text_h)
 
         pen.setDashPattern([ 3.0, 4.0, 6.0, 4.0])
         pen.setDashOffset(5.0)
@@ -504,10 +506,10 @@ class Ruler(RulerBase, QtCanvasMixin):
 
         # draw X plum line label
         xh -= xtwd // 2
-        cr.drawText(xh, y, self.text_x)
+        cr.drawText(xh, y, text_x)
 
         # draw Y plum line label
-        cr.drawText(x, yh, self.text_y)
+        cr.drawText(x, yh, text_y)
 
         if self.editing:
             self.draw_edit(cr)

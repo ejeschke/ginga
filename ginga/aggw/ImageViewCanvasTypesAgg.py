@@ -369,6 +369,8 @@ class Ruler(RulerBase, AggCanvasMixin):
         cx1, cy1 = self.canvascoords(self.x1, self.y1)
         cx2, cy2 = self.canvascoords(self.x2, self.y2)
 
+        text_x, text_y, text_h = self.get_ruler_distances()
+
         cr = self.setup_cr()
         pen = self.get_pen(cr)
         
@@ -391,9 +393,9 @@ class Ruler(RulerBase, AggCanvasMixin):
 
         # calculate offsets and positions for drawing labels
         # try not to cover anything up
-        xtwd, xtht = self.text_extents(cr, self.text_x, font)
-        ytwd, ytht = self.text_extents(cr, self.text_y, font)
-        htwd, htht = self.text_extents(cr, self.text_h, font)
+        xtwd, xtht = self.text_extents(cr, text_x, font)
+        ytwd, ytht = self.text_extents(cr, text_y, font)
+        htwd, htht = self.text_extents(cr, text_h, font)
 
         diag_xoffset = 0
         diag_yoffset = 0
@@ -428,7 +430,7 @@ class Ruler(RulerBase, AggCanvasMixin):
 
         xd = xh + diag_xoffset
         yd = yh + diag_yoffset
-        cr.canvas.text((xd, yd), self.text_h, font)
+        cr.canvas.text((xd, yd), text_h, font)
 
         if self.color2:
             pen = cr.get_pen(self.color2, linewidth=self.linewidth,
@@ -444,10 +446,10 @@ class Ruler(RulerBase, AggCanvasMixin):
 
         # draw X plum line label
         xh -= xtwd // 2
-        cr.canvas.text((xh, y), self.text_x, font)
+        cr.canvas.text((xh, y), text_x, font)
 
         # draw Y plum line label
-        cr.canvas.text((x, yh), self.text_y, font)
+        cr.canvas.text((x, yh), text_y, font)
 
         if self.editing:
             self.draw_edit(cr)
