@@ -457,6 +457,36 @@ class Ruler(RulerBase, AggCanvasMixin):
             self.draw_caps(cr, self.cap, ((cx2, cy1), ))
 
 
+class Image(ImageBase, AggCanvasMixin):
+
+    def draw(self):
+        # currently, drawing of images is handled in base class
+        # here we just draw the caps
+        ImageBase.draw(self)
+        
+        cr = self.setup_cr()
+
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
+            self.draw_caps(cr, self.cap, self.get_points())
+
+
+class NormImage(NormImageBase, AggCanvasMixin):
+
+    def draw(self):
+        # currently, drawing of images is handled in base class
+        # here we just draw the caps
+        ImageBase.draw(self)
+        
+        cr = self.setup_cr()
+
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
+            self.draw_caps(cr, self.cap, self.get_points())
+
+
 class DrawingCanvas(DrawingMixin, CanvasMixin, CompoundMixin,
                     CanvasObjectBase, AggCanvasMixin, 
                     Mixins.UIMixin, Callback.Callbacks):
@@ -477,7 +507,8 @@ drawCatalog = dict(text=Text, rectangle=Rectangle, circle=Circle,
                    triangle=Triangle, righttriangle=RightTriangle,
                    ruler=Ruler, compass=Compass,
                    compoundobject=CompoundObject, canvas=Canvas,
-                   drawingcanvas=DrawingCanvas)
+                   drawingcanvas=DrawingCanvas,
+                   image=Image, normimage=NormImage)
 
         
 #END

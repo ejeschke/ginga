@@ -517,18 +517,59 @@ class Ruler(RulerBase, QtCanvasMixin):
             self.draw_caps(cr, self.cap, ((cx2, cy1), ))
 
 
+class Image(ImageBase, QtCanvasMixin):
+
+    def draw(self):
+        # currently, drawing of images is handled in base class
+        # here we just draw the caps
+        ImageBase.draw(self)
+        
+        cr = self.setup_cr()
+
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
+            self.draw_caps(cr, self.cap, self.get_points())
+
+
+class NormImage(NormImageBase, QtCanvasMixin):
+
+    def draw(self):
+        # currently, drawing of images is handled in base class
+        # here we just draw the caps
+        ImageBase.draw(self)
+        
+        cr = self.setup_cr()
+
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
+            self.draw_caps(cr, self.cap, self.get_points())
+
+
+## class DrawingCanvas(DrawingMixin, CanvasMixin, CompoundMixin,
+##                     CanvasObjectBase, QtCanvasMixin,
+##                     Mixins.UIMixin, Callback.Callbacks):
+##     def __init__(self):
+##         CanvasObjectBase.__init__(self)
+##         QtCanvasMixin.__init__(self)
+##         CompoundMixin.__init__(self)
+##         CanvasMixin.__init__(self)
+##         Callback.Callbacks.__init__(self)
+##         Mixins.UIMixin.__init__(self)
+##         DrawingMixin.__init__(self, drawCatalog)
+##         self.kind = 'drawingcanvas'
+
 class DrawingCanvas(DrawingMixin, CanvasMixin, CompoundMixin,
-                    CanvasObjectBase, QtCanvasMixin,
-                    Mixins.UIMixin, Callback.Callbacks):
+                    CanvasObjectBase, Mixins.UIMixin):
     def __init__(self):
         CanvasObjectBase.__init__(self)
-        QtCanvasMixin.__init__(self)
         CompoundMixin.__init__(self)
         CanvasMixin.__init__(self)
-        Callback.Callbacks.__init__(self)
         Mixins.UIMixin.__init__(self)
         DrawingMixin.__init__(self, drawCatalog)
         self.kind = 'drawingcanvas'
+        self.editable = False
 
 drawCatalog = dict(text=Text, rectangle=Rectangle, circle=Circle,
                    line=Line, point=Point, polygon=Polygon, path=Path,
@@ -537,7 +578,8 @@ drawCatalog = dict(text=Text, rectangle=Rectangle, circle=Circle,
                    ellipse=Ellipse, square=Square,
                    box=Box, ruler=Ruler, compass=Compass,
                    compoundobject=CompoundObject, canvas=Canvas,
-                   drawingcanvas=DrawingCanvas)
+                   drawingcanvas=DrawingCanvas,
+                   image=Image, normimage=NormImage)
 
 
 #END

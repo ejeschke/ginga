@@ -13,7 +13,7 @@ import numpy
 
 from ginga.misc import Bunch, Callback
 from ginga.util import wcs
-from ginga import trcalc
+from ginga import trcalc, Mixins
 from ginga.util.six.moves import map, zip, filter
 
 class CanvasObjectError(Exception):
@@ -34,6 +34,7 @@ class CanvasObjectBase(Callback.Callbacks):
         self.editing = False
         self.cap = 'ball'
         self.cap_radius = 5
+        self.editable = True
         self.__dict__.update(kwdargs)
         self.data = None
 
@@ -46,8 +47,10 @@ class CanvasObjectBase(Callback.Callbacks):
         return self.editing
 
     def set_edit(self, tf):
+        if not self.editable:
+            raise ValueError("Object is not editable")
         self.editing = tf
-        # TODO: force redraw here?
+        # TODO: force redraw here to show edit nodes?
         
     def set_data(self, **kwdargs):
         if self.data == None:
@@ -201,8 +204,10 @@ class CanvasObjectBase(Callback.Callbacks):
 
         # check for point OOB
         if (a + canvas_radius < x1) or (x2 < a - canvas_radius):
+            print("fail1 a=%f x1=%f x2=%f radius=%f" % (a, x1, x2, canvas_radius))
             return False
         elif (b + canvas_radius < min(y1, y2)) or (max(y1, y2) < b - canvas_radius): 
+            print("fail2")
             return False
 
         dx, dy = x2 - x1, y2 - y1
@@ -216,6 +221,7 @@ class CanvasObjectBase(Callback.Callbacks):
         offset = y1 - x1 * slope
         calcy = a * slope + offset
         contains = (b - canvas_radius <= calcy <= b + canvas_radius)
+        print("res=%s" % (contains))
         return contains
 
     def within_line(self, a, b, x1, y1, x2, y2, canvas_radius):
@@ -230,7 +236,7 @@ class CanvasObjectBase(Callback.Callbacks):
     #####
         
     def get_points(self):
-        return self.points
+        return []
     
     def get_center_pt(self):
         # default is geometric average of points
@@ -269,7 +275,7 @@ class CanvasObjectBase(Callback.Callbacks):
         self.points = list(P)
 
     def move_to(self, xdst, ydst):
-        x, y = self.get_reference_pt()
+        x, y = self.get_center_pt()
         return self.move_delta(xdst - x, ydst - y)
 
 
@@ -303,11 +309,24 @@ class CompoundMixin(object):
                 return True
         return False
 
-    def select_items_at(self, x, y):
+    def select_items_at(self, x, y, test=None):
         res = []
-        for obj in self.objects:
-            if obj.select_contains(x, y):
-                res.append(obj)
+        try:
+            for obj in self.objects:
+                print("obj=%s points=%s" % (str(obj), str(obj.get_points())))
+                if obj.is_compound():
+                    res.extend(obj.select_items_at(x, y, test=test))
+                    continue
+                
+                is_inside = obj.select_contains(x, y)
+                if test == None:
+                    if is_inside:
+                        res.append(obj)
+                elif test(obj, x, y, is_inside):
+                    res.append(obj)
+        except Exception as e:
+            print("error selecting: %s" % (str(e)))
+        print("selection results=%s" % str(res))
         return res
         
     def initialize(self, tag, viewer, logger):
@@ -390,6 +409,7 @@ class CompoundMixin(object):
         for obj in self.objects:
             obj.move_delta(xoff, yoff)
 
+    # TO BE DEPRECATED
     def get_reference_pt(self):
         for obj in self.objects:
             try:
@@ -400,7 +420,7 @@ class CompoundMixin(object):
         raise CanvasObjectError("No point of reference in object")
 
     def move_to(self, xdst, ydst):
-        x, y = self.get_reference_pt()
+        x, y = self.get_center_pt()
         for obj in self.objects:
             obj.move_delta(xdst - x, ydst - y)
 
@@ -410,6 +430,20 @@ class CompoundMixin(object):
             if obj.is_compound():
                 obj.reorder_layers()
 
+    def get_points(self):
+        res = []
+        for obj in self.objects:
+            res.extend(list(obj.get_points()))
+        return res
+    
+    def set_edit(self, tf):
+        for obj in self.objects:
+            try:
+                obj.set_edit(tf)
+            except ValueError:
+                # TODO: should check for specific node-can't edit error
+                continue
+        
 
 class CanvasMixin(object):
     """A CanvasMixin is combined with the CompoundMixin to make a
@@ -741,12 +775,15 @@ class DrawingMixin(object):
         if time.time() - self._processTime > self._deltaTime:
             self.processDrawing()
         return True
-        
+
+    def _is_editable(self, obj, x, y, is_inside):
+        return is_inside and obj.editable
+    
     def edit_start(self, canvas, action, data_x, data_y):
 
         # check for objects at this location
-        objs = canvas.select_items_at(data_x, data_y)
-
+        objs = canvas.select_items_at(data_x, data_y,
+                                      test=self._is_editable)
         if self.drawObj == None:
             # <-- no current object being edited
 
@@ -836,6 +873,7 @@ class DrawingMixin(object):
             amount = 0.9
         else:
             amount = 1.1
+        print("scaling object %s" % (str(self.drawObj)))
         self.drawObj.scale_by(amount, amount)
         self.processDrawing()
         return True
@@ -888,6 +926,8 @@ class TextBase(CanvasObjectBase):
         super(TextBase, self).__init__(color=color, alpha=alpha,
                                        x=x, y=y, font=font, fontsize=fontsize,
                                        text=text)
+        # for now
+        self.editable = False
 
     def rotate(self, theta, xoff=0, yoff=0):
         self.x, self.y = self.rotate_pt(self.x, self.y, theta,
@@ -935,6 +975,9 @@ class PolygonBase(CanvasObjectBase):
         Cy = numpy.sum(cy * (a - b)) / (6. * A)
         return (Cx, Cy)
     
+    def get_points(self):
+        return self.points
+
     def contains(self, x, y):
         # rotate point back to cartesian alignment for test
         cx, cy = self.get_center_pt()
@@ -1356,7 +1399,8 @@ class LineBase(CanvasObjectBase):
                 (self.x1, self.y1), (self.x2, self.y2)]
 
     def scale_by(self, scale_x, scale_y):
-        P = numpy.array(self.edit_points())
+        pts = [(self.x1, self.y1), (self.x2, self.y2)]
+        P = numpy.array(pts)
         ctr_x, ctr_y = self.get_center_pt()
         P[:, 0] = (P[:, 0] - ctr_x) * scale_x + ctr_x
         P[:, 1] = (P[:, 1] - ctr_y) * scale_y + ctr_y
@@ -1398,6 +1442,9 @@ class PathBase(CanvasObjectBase):
             self.points[i-1] = pt
         else:
             raise ValueError("No point corresponding to index %d" % (i))
+
+    def get_points(self):
+        return self.points
 
     def edit_points(self):
         return [self.get_center_pt()] + self.points
@@ -1696,17 +1743,19 @@ class RulerBase(CanvasObjectBase):
                                 self.cap_radius)
 
 
-class Image(CanvasObjectBase):
+class ImageBase(CanvasObjectBase):
     """Draws an image on a ImageViewCanvas.
     Parameters are:
     x, y: 0-based coordinates of one corner in the data space
     image: the image, which must be an RGBImage object
     """
 
-    def __init__(self, x, y, image, alpha=None, flipy=False, optimize=True):
+    def __init__(self, x, y, image, alpha=1.0, scale_x=1.0, scale_y=1.0,
+                 showcap=False, color='yellow', flipy=False, optimize=True):
         self.kind = 'image'
-        super(Image, self).__init__(x=x, y=y, image=image, alpha=alpha,
-                                    flipy=flipy)
+        super(ImageBase, self).__init__(x=x, y=y, image=image, alpha=alpha,
+                                        scale_x=scale_x, scale_y=scale_y,
+                                        showcap=showcap, color=color, flipy=flipy)
 
         self._drawn = False
         self._optimize = optimize
@@ -1717,6 +1766,8 @@ class Image(CanvasObjectBase):
         self._cvs_x = 0
         self._cvs_y = 0
         self._zorder = 0
+        # until we can resolve mapping issues
+        self.editable = False
 
     def get_zorder(self):
         return self._zorder
@@ -1764,10 +1815,13 @@ class Image(CanvasObjectBase):
                 #print "no overlay needed"
                 return
 
-            # cutout and scale the piece appropriately
+            # cutout and scale the piece appropriately by the viewer scale
             scale_x, scale_y = self.viewer.get_scale_xy()
+            # scale additionally by our scale
+            _scale_x, _scale_y = scale_x * self.scale_x, scale_y * self.scale_y
+            
             res = self.image.get_scaled_cutout(a1, b1, a2, b2,
-                                               scale_x, scale_y,
+                                               _scale_x, _scale_y,
                                                #flipy=self.flipy,
                                                method='basic')
 
@@ -1807,25 +1861,36 @@ class Image(CanvasObjectBase):
                              dst_order=dst_order, src_order=image_order,
                              alpha=self.alpha, flipy=False)
 
-    def set_image(self, image):
-        self.image = image
+    def _reset_optimize(self):
         self._drawn = False
         self._cutout = None
+        
+    def set_image(self, image):
+        self.image = image
+        self._reset_optimize()
 
+    def get_scaled_wdht(self):
+        width = int(self.image.width * self.scale_x)
+        height = int(self.image.height * self.scale_y)
+        return (width, height)
+    
     # TO BE DEPRECATED?
     def get_coords(self):
         x1, y1 = self.x, self.y
-        x2, y2 = x1 + self.image.width, y1 + self.image.height
+        wd, ht = self.get_scaled_wdht()
+        x2, y2 = x1 + wd, y1 + ht
         return (x1, y1, x2, y2)
 
     def get_center_pt(self):
-        return (self.x + self.width / 2.0, self.y + self.height / 2.0)
+        wd, ht = self.get_scaled_wdht()
+        return (self.x + wd / 2.0, self.y + ht / 2.0)
 
     def get_points(self):
         return [(self.x, self.y)]
     
     def contains(self, x, y):
-        x2, y2 = self.x + self.image.width, self.y + self.image.height
+        width, height = self.get_scaled_wdht()
+        x2, y2 = self.x + width, self.y + height
         if ((x >= self.x) and (x < x2) and
             (y >= self.y) and (y < y2)):
             return True
@@ -1838,24 +1903,47 @@ class Image(CanvasObjectBase):
 
     def set_point_by_index(self, i, pt):
         if i == 0:
-            self.x, self.y = pt
+            x, y = pt
+            self.move_to(x, y)
+        elif i == 1:
+            x, y = pt
+            self.scale_x = abs(x - self.x) / float(self.image.width)
+        elif i == 2:
+            x, y = pt
+            self.scale_y = abs(y - self.y) / float(self.image.height)
+        elif i == 3:
+            x, y = pt
+            self.scale_x = abs(x - self.x) / float(self.image.width)
+            self.scale_y = abs(y - self.y) / float(self.image.height)
         else:
             raise ValueError("No point corresponding to index %d" % (i))
 
+        self._reset_optimize()
+
     def edit_points(self):
-        return [(self.x, self.y),    # location
-                #(self.x + self.width, self.y),
-                #(self.x, self.y + self.height),
-                #(self.x + self.width, self.y + self.height)
+        width, height = self.get_scaled_wdht()
+        return [self.get_center_pt(),    # location
+                (self.x + width, self.y + height / 2.),
+                (self.x + width / 2., self.y + height),
+                (self.x + width, self.y + height)
                 ]
 
     def scale_by(self, scale_x, scale_y):
-        #self.width *= scale_x
-        #self.height *= scale_y
-        pass
+        self.scale_x *= scale_x
+        self.scale_y *= scale_y
+        self._reset_optimize()
+
+    def set_scale(self, scale_x, scale_y):
+        self.scale_x = scale_x
+        self.scale_y = scale_y
+        self._reset_optimize()
+
+    def set_origin(self, x, y):
+        self.x, self.y = x, y
+        self._reset_optomize()
 
 
-class NormImage(Image):
+class NormImageBase(ImageBase):
     """Draws an image on a ImageViewCanvas.
 
     Parameters are:
@@ -1863,11 +1951,15 @@ class NormImage(Image):
     image: the image, which must be an RGBImage object
     """
 
-    def __init__(self, x, y, image, alpha=None, 
+    def __init__(self, x, y, image, alpha=1.0,
+                 scale_x=1.0, scale_y=1.0, showcap=False,
+                 color='yellow',
                  optimize=True, rgbmap=None, autocuts=None):
         self.kind = 'normimage'
-        super(NormImage, self).__init__(x=x, y=y, image=image, alpha=alpha,
-                                        optimize=optimize)
+        super(NormImageBase, self).__init__(x=x, y=y, image=image, alpha=alpha,
+                                            scale_x=scale_x, scale_y=scale_y,
+                                            color=color,
+                                            showcap=showcap, optimize=optimize)
         self.rgbmap = rgbmap
         self.autocuts = autocuts
 
@@ -1905,10 +1997,13 @@ class NormImage(Image):
                 #print "no overlay needed"
                 return
 
-            # cutout and scale the piece appropriately
+            # cutout and scale the piece appropriately by viewer scale
             scale_x, scale_y = self.viewer.get_scale_xy()
+            # scale additionally by our scale
+            _scale_x, _scale_y = scale_x * self.scale_x, scale_y * self.scale_y
+            
             res = self.image.get_scaled_cutout(a1, b1, a2, b2,
-                                                scale_x, scale_y)
+                                               _scale_x, _scale_y)
             self._cutout = res.data
 
             # calculate our offset from the pan position
@@ -1974,12 +2069,21 @@ class NormImage(Image):
                                       vmin=vmin, vmax=vmax)
         return newdata
 
-    def set_image(self, image):
-        self.image = image
-        self._drawn = False
-        self._cutout = None
+    def _reset_optimize(self):
+        super(NormImageBase, self)._reset_optimize()
         self._prergb = None
         self._rgbarr = None
+        
+    def set_image(self, image):
+        self.image = image
+        self._reset_optimize()
+
+    def scale_by(self, scale_x, scale_y):
+        print("scaling image")
+        self.scale_x *= scale_x
+        self.scale_y *= scale_y
+        self._reset_optimize()
+        print("image scale_x=%f scale_y=%f" % (self.scale_x, self.scale_y))
 
 
 class CompoundObject(CompoundMixin, CanvasObjectBase):
@@ -1998,6 +2102,7 @@ class CompoundObject(CompoundMixin, CanvasObjectBase):
         CompoundMixin.__init__(self)
         self.kind = 'compound'
         self.objects = list(objects)
+        self.editable = False
 
 class Canvas(CanvasMixin, CompoundObject, CanvasObjectBase):
     def __init__(self, *objects):
@@ -2005,6 +2110,7 @@ class Canvas(CanvasMixin, CompoundObject, CanvasObjectBase):
         CompoundObject.__init__(self, *objects)
         CanvasMixin.__init__(self)
         self.kind = 'canvas'
+        self.editable = False
 
 
 # END

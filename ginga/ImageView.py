@@ -17,7 +17,6 @@ import time
 from ginga.misc import Callback, Settings
 from ginga import RGBMap, AstroImage, AutoCuts, ColorDist
 from ginga import cmap, imap, trcalc, version
-from ginga.ImageViewCanvas import NormImage
 
 
 class ImageViewError(Exception):
@@ -450,6 +449,7 @@ class ImageViewBase(Callback.Callbacks):
             # add a normalized image item to this canvas if we don't
             # have one already--then just keep reusing it
             if self._normimg == None:
+                NormImage = self.getDrawClass('normimage')
                 self._normimg = NormImage(0, 0, image, alpha=1.0)
                 tag = self.add(self._normimg, tag='_image')
             else:

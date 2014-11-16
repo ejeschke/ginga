@@ -324,7 +324,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         obj = self.dc.CompoundObject(
             self.dc.Line(x1, y1, x2, y2,
                          color=color,
-                         cap='ball'),
+                         showcap=True),
             self.dc.Text(x, y, text, color=color))
         obj.set_data(cuts=True)
         return obj
