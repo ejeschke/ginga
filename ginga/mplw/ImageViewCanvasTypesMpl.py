@@ -12,7 +12,7 @@ import math
 import matplotlib.patches as patches
 import matplotlib.lines as lines
 import matplotlib.text as text
-from matplotlib.path import Path
+from matplotlib.path import Path as MplPath
 import numpy
 
 from . import MplHelp
@@ -58,7 +58,7 @@ class MplCanvasMixin(object):
             self._draw_cap(cr, cap, x, y, radius=radius)
         
     def draw_edit(self, cr):
-        cpoints = self.get_cpoints(points=self.edit_points())
+        cpoints = self.get_cpoints(points=self.get_edit_points())
         self.draw_caps(cr, 'ball', cpoints)
 
     def text_extents(self, cr, text, font):
@@ -176,17 +176,27 @@ class Circle(CircleBase, MplCanvasMixin):
 class Ellipse(EllipseBase, MplCanvasMixin):
 
     def draw(self):
-        cx, cy, cxr, cyr, rot_deg = self.get_center_radii_rot()
-        
-        cr = self.setup_cr(angle=rot_deg, transform=None)
+        cr = self.setup_cr(transform=None)
         cr.update_patch(self)
-        
-        xy = (cx, cy)
-        p = patches.Ellipse(xy, cxr*2, cyr*2, **cr.kwdargs)
+
+        # draw 4 bezier curves to make the ellipse
+        verts = self.get_cpoints(points=self.get_bezier_pts())
+        codes = [ MplPath.MOVETO,
+                  MplPath.CURVE4, MplPath.CURVE4, MplPath.CURVE4,
+                  MplPath.CURVE4, MplPath.CURVE4, MplPath.CURVE4,
+                  MplPath.CURVE4, MplPath.CURVE4, MplPath.CURVE4,
+                  MplPath.CURVE4, MplPath.CURVE4, MplPath.CURVE4,
+                  ]
+        path = MplPath(verts, codes)
+
+        p = patches.PathPatch(path, **cr.kwdargs)
         cr.axes.add_patch(p)
 
-        if self.cap:
-            self.draw_caps(cr, self.cap, ((cx, cy), ))
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
+            cpoints = self.get_cpoints()
+            self.draw_caps(cr, self.cap, cpoints)
 
 
 class Box(BoxBase, MplCanvasMixin):

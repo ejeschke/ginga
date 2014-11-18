@@ -100,7 +100,7 @@ class MockCanvasMixin(object):
             self.draw_cap(cr, cap, x, y, radius=radius)
         
     def draw_edit(self, cr):
-        cpoints = self.get_cpoints(points=self.edit_points())
+        cpoints = self.get_cpoints(points=self.get_edit_points())
         self.draw_caps(cr, 'ball', cpoints)
 
     def text_extents(self, cr, text):

@@ -33,10 +33,14 @@ class CanvasObjectBase(Callback.Callbacks):
         self.is_cc = False
         self.editing = False
         self.cap = 'ball'
-        self.cap_radius = 5
+        self.cap_radius = 4
         self.editable = True
         self.__dict__.update(kwdargs)
         self.data = None
+
+        # For callbacks
+        for name in ('modified', ):
+            self.enable_callback(name)
 
     def initialize(self, tag, viewer, logger):
         self.tag = tag
@@ -134,19 +138,42 @@ class CanvasObjectBase(Callback.Callbacks):
         # TODO: deprecate class method in favor of direct module call
         return trcalc.rotate_pt(x, y, theta, xoff=xoff, yoff=yoff)
 
+    def rotate(self, theta, xoff=0, yoff=0):
+        if hasattr(self, 'x'):
+            self.x, self.y = self.rotate_pt(self.x, self.y, theta,
+                                            xoff=xoff, yoff=yoff)
+        elif hasattr(self, 'x1'):
+            self.x1, self.y1 = self.rotate_pt(self.x1, self.y1, theta,
+                                              xoff=xoff, yoff=yoff)
+            self.x2, self.y2 = self.rotate_pt(self.x2, self.y2, theta,
+                                              xoff=xoff, yoff=yoff)
+        elif hasattr(self, 'points'):
+            self.points = list(map(
+                lambda p: self.rotate_pt(p[0], p[1], theta,
+                                         xoff=xoff, yoff=yoff),
+                self.points))
+
+    def rotate_by(self, theta):
+        ref_x, ref_y = self.get_reference_pt()
+        return self.rotate(theta, ref_x, ref_y)
+    
     def move_delta(self, xoff, yoff):
         if hasattr(self, 'x'):
             self.x, self.y = self.x + xoff, self.y + yoff
-        if hasattr(self, 'x1'):
+
+        elif hasattr(self, 'x1'):
             self.x1, self.y1 = self.x1 + xoff, self.y1 + yoff
-        if hasattr(self, 'x2'):
             self.x2, self.y2 = self.x2 + xoff, self.y2 + yoff
             
-        if hasattr(self, 'points'):
+        elif hasattr(self, 'points'):
             for i in range(len(self.points)):
                 (x, y) = self.points[i]
                 x, y = x + xoff, y + yoff
                 self.points[i] = (x, y)
+
+    def move_to(self, xdst, ydst):
+        x, y = self.get_reference_pt()
+        return self.move_delta(xdst - x, ydst - y)
 
     def set_point_by_index(self, i, pt):
         if hasattr(self, 'points'):
@@ -160,6 +187,30 @@ class CanvasObjectBase(Callback.Callbacks):
             self.x2, self.y2 = pt
         else:
             raise ValueError("No point corresponding to index %d" % (i))
+
+    def scale_by(self, scale_x, scale_y):
+        if hasattr(self, 'radius'):
+            self.radius *= max(scale_x, scale_y)
+
+        elif hasattr(self, 'xradius'):
+            self.xradius *= scale_x
+            self.yradius *= scale_y
+
+        elif hasattr(self, 'x1'):
+            ctr_x, ctr_y = self.get_center_pt()
+            pts = [(self.x1, self.y1), (self.x2, self.y2)]
+            P = numpy.array(pts)
+            P[:, 0] = (P[:, 0] - ctr_x) * scale_x + ctr_x
+            P[:, 1] = (P[:, 1] - ctr_y) * scale_y + ctr_y
+            self.x1, self.y1 = P[0, 0], P[0, 1]
+            self.x2, self.y2 = P[1, 0], P[1, 1]
+            
+        elif hasattr(self, 'points'):
+            ctr_x, ctr_y = self.get_center_pt()
+            P = numpy.array(self.points)
+            P[:, 0] = (P[:, 0] - ctr_x) * scale_x + ctr_x
+            P[:, 1] = (P[:, 1] - ctr_y) * scale_y + ctr_y
+            self.points = list(P)
 
     # TODO: move these into utility module
     #####
@@ -204,10 +255,9 @@ class CanvasObjectBase(Callback.Callbacks):
 
         # check for point OOB
         if (a + canvas_radius < x1) or (x2 < a - canvas_radius):
-            print("fail1 a=%f x1=%f x2=%f radius=%f" % (a, x1, x2, canvas_radius))
+            #print("fail1 a=%f x1=%f x2=%f radius=%f" % (a, x1, x2, canvas_radius))
             return False
         elif (b + canvas_radius < min(y1, y2)) or (max(y1, y2) < b - canvas_radius): 
-            print("fail2")
             return False
 
         dx, dy = x2 - x1, y2 - y1
@@ -221,7 +271,7 @@ class CanvasObjectBase(Callback.Callbacks):
         offset = y1 - x1 * slope
         calcy = a * slope + offset
         contains = (b - canvas_radius <= calcy <= b + canvas_radius)
-        print("res=%s" % (contains))
+        #print("res=%s" % (contains))
         return contains
 
     def within_line(self, a, b, x1, y1, x2, y2, canvas_radius):
@@ -247,7 +297,6 @@ class CanvasObjectBase(Callback.Callbacks):
         Cy = numpy.sum(y) / float(len(y))
         return (Cx, Cy)
 
-    # TO BE DEPRECATED
     def get_reference_pt(self):
         return self.get_center_pt()
 
@@ -266,17 +315,6 @@ class CanvasObjectBase(Callback.Callbacks):
         cpoints = tuple(map(lambda p: self.canvascoords(p[0], p[1]),
                             rpoints))
         return cpoints
-
-    def scale_by(self, scale_x, scale_y):
-        P = numpy.array(self.points)
-        ctr_x, ctr_y = self.get_center_pt()
-        P[:, 0] = (P[:, 0] - ctr_x) * scale_x + ctr_x
-        P[:, 1] = (P[:, 1] - ctr_y) * scale_y + ctr_y
-        self.points = list(P)
-
-    def move_to(self, xdst, ydst):
-        x, y = self.get_center_pt()
-        return self.move_delta(xdst - x, ydst - y)
 
 
 class CompoundMixin(object):
@@ -313,20 +351,21 @@ class CompoundMixin(object):
         res = []
         try:
             for obj in self.objects:
-                print("obj=%s points=%s" % (str(obj), str(obj.get_points())))
                 if obj.is_compound():
+                    # compound object, list up compatible members
                     res.extend(obj.select_items_at(x, y, test=test))
                     continue
-                
+
                 is_inside = obj.select_contains(x, y)
                 if test == None:
                     if is_inside:
                         res.append(obj)
                 elif test(obj, x, y, is_inside):
+                    # custom test
                     res.append(obj)
         except Exception as e:
-            print("error selecting: %s" % (str(e)))
-        print("selection results=%s" % str(res))
+            print("error selecting objects: %s" % (str(s)))
+            res = []
         return res
         
     def initialize(self, tag, viewer, logger):
@@ -409,7 +448,6 @@ class CompoundMixin(object):
         for obj in self.objects:
             obj.move_delta(xoff, yoff)
 
-    # TO BE DEPRECATED
     def get_reference_pt(self):
         for obj in self.objects:
             try:
@@ -605,8 +643,8 @@ class DrawingMixin(object):
         self.set_callback('edit-down', self.edit_start)
         self.set_callback('edit-move', self.edit_motion)
         self.set_callback('edit-up', self.edit_stop)
-        self.set_callback('edit-scroll', self.edit_scale)
-        #self.set_callback('edit-scroll', self.edit_rotate)
+        #self.set_callback('edit-scroll', self.edit_scale)
+        self.set_callback('edit-scroll', self.edit_rotate)
         self.set_callback('draw-down', self.draw_start)
         self.set_callback('draw-move', self.draw_motion)
         self.set_callback('draw-up', self.draw_stop)
@@ -770,7 +808,10 @@ class DrawingMixin(object):
         if self._cp_index == None:
             return False
 
-        self.drawObj.set_point_by_index(self._cp_index, (data_x, data_y))
+        ## if hasattr(self.drawObj, 'rot_deg'):
+        ##     data_x, data_y = self.rotate_pt(data_x, data_y,
+        ##                                     self.drawObj.rot_deg)
+        self.drawObj.set_edit_point(self._cp_index, (data_x, data_y))
 
         if time.time() - self._processTime > self._deltaTime:
             self.processDrawing()
@@ -782,9 +823,12 @@ class DrawingMixin(object):
     def edit_start(self, canvas, action, data_x, data_y):
 
         # check for objects at this location
+        print("getting items")
         objs = canvas.select_items_at(data_x, data_y,
                                       test=self._is_editable)
+        print("items: %s" % (str(objs)))
         if self.drawObj == None:
+            print("no editing: select/deselect")
             # <-- no current object being edited
 
             if len(objs) == 0:
@@ -801,11 +845,12 @@ class DrawingMixin(object):
                 obj.set_edit(False)
 
         elif self.drawObj.is_editing():
-            edit_pts = self.drawObj.edit_points()
+            print("editing: checking for cp")
+            edit_pts = self.drawObj.get_edit_points()
             i = self.drawObj.get_pt(edit_pts, data_x, data_y,
                                     self.drawObj.cap_radius)
             if i != None:
-                #print("editing cp #%d" % (i))
+                print("editing cp #%d" % (i))
                 # editing a control point from an existing object
                 self._cp_index = i
                 self._edit_update(data_x, data_y)
@@ -813,14 +858,16 @@ class DrawingMixin(object):
 
             elif self.drawObj.contains(data_x, data_y):
                 # TODO: moving an existing object
-                #print("moving an object")
+                print("moving an object")
                 #self._start_x = data_x
                 #self._start_y = data_y
                 return False
 
             else:
                 # <-- user clicked outside the object
-                #print("deselecting an object")
+                print("deselecting an object")
+                if self.drawObj in objs:
+                    objs.remove(self.drawObj)
                 self.drawObj.set_edit(False)
                 if len(objs) == 0:
                     self.drawObj = None
@@ -828,7 +875,15 @@ class DrawingMixin(object):
                     obj = objs[-1]       
                     obj.set_edit(True)
                     self.drawObj = obj
-
+        else:
+            if self.drawObj in objs:
+                # reselect
+                self.drawObj.set_edit(True)
+            elif len(objs) > 0:
+                obj = objs[-1]       
+                obj.set_edit(True)
+                self.drawObj = obj
+            
         self.processDrawing()
         return True
 
@@ -861,6 +916,8 @@ class DrawingMixin(object):
         if hasattr(self.drawObj, 'rot_deg'):
             self.drawObj.rot_deg = new_rot
             self._drawrot_deg = new_rot
+        else:
+            self.drawObj.rotate_by(amount)
         self.processDrawing()
         return True
 
@@ -873,7 +930,6 @@ class DrawingMixin(object):
             amount = 0.9
         else:
             amount = 1.1
-        print("scaling object %s" % (str(self.drawObj)))
         self.drawObj.scale_by(amount, amount)
         self.processDrawing()
         return True
@@ -929,11 +985,7 @@ class TextBase(CanvasObjectBase):
         # for now
         self.editable = False
 
-    def rotate(self, theta, xoff=0, yoff=0):
-        self.x, self.y = self.rotate_pt(self.x, self.y, theta,
-                                        xoff=xoff, yoff=yoff)
-
-    def edit_points(self):
+    def get_edit_points(self):
         # TODO: edit point for scaling or rotating?
         return [(self.x, self.y)]
 
@@ -997,22 +1049,16 @@ class PolygonBase(CanvasObjectBase):
 
         return result
             
-    def rotate(self, theta, xoff=0, yoff=0):
-        newpts = list(map(lambda p: self.rotate_pt(p[0], p[1], theta,
-                                              xoff=xoff, yoff=yoff),
-                          self.points))
-        self.points = newpts
-
-    def set_point_by_index(self, i, pt):
+    def set_edit_point(self, i, pt):
         if i == 0:
             x, y = pt
             self.move_to(x, y)
         elif i-1 < len(self.points):
-            self.points[i-1] = pt
+            self.set_point_by_index(i-1, pt)
         else:
             raise ValueError("No point corresponding to index %d" % (i))
 
-    def edit_points(self):
+    def get_edit_points(self):
         return [self.get_center_pt()] + self.points
 
 
@@ -1057,7 +1103,7 @@ class RectangleBase(CanvasObjectBase):
     def get_center_pt(self):
         return ((self.x1 + self.x2) / 2., (self.y1 + self.y2) / 2.)
 
-    # TO BE DEPRECATED
+    # TO BE DEPRECATED?
     def move_point(self):
         return self.get_center_pt()
 
@@ -1068,29 +1114,16 @@ class RectangleBase(CanvasObjectBase):
                                 xoff=xoff, yoff=yoff)
         self.x1, self.y1, self.x2, self.y2 = self.swapxy(x1, y1, x2, y2)
 
-    def set_point_by_index(self, i, pt):
+    def set_edit_point(self, i, pt):
         if i == 0:
             x, y = pt
             self.move_to(x, y)
-        elif i == 1:
-            self.x1, self.y1 = pt
-        elif i == 2:
-            self.x2, self.y2 = pt
         else:
-            raise ValueError("No point corresponding to index %d" % (i))
+            self.set_point_by_index(i-1, pt)
 
-    def edit_points(self):
+    def get_edit_points(self):
         return [self.get_center_pt(),
                 (self.x1, self.y1), (self.x2, self.y2)]
-
-    def scale_by(self, scale_x, scale_y):
-        pts = [(self.x1, self.y1), (self.x2, self.y2)]
-        P = numpy.array(pts)
-        ctr_x, ctr_y = self.get_center_pt()
-        P[:, 0] = (P[:, 0] - ctr_x) * scale_x + ctr_x
-        P[:, 1] = (P[:, 1] - ctr_y) * scale_y + ctr_y
-        self.x1, self.y1 = P[0, 0], P[0, 1]
-        self.x2, self.y2 = P[1, 0], P[1, 1]
 
 
 class BoxBase(CanvasObjectBase):
@@ -1135,13 +1168,9 @@ class BoxBase(CanvasObjectBase):
             return True
         return False
 
-    def rotate(self, theta, xoff=0, yoff=0):
-        self.x, self.y = self.rotate_pt(self.x, self.y, theta,
-                                        xoff=xoff, yoff=yoff)
-
-    def set_point_by_index(self, i, pt):
+    def set_edit_point(self, i, pt):
         if i == 0:
-            self.x, self.y = pt
+            self.set_point_by_index(i, pt)
         elif i == 1:
             x, y = pt
             self.xradius = abs(x - self.x)
@@ -1154,15 +1183,11 @@ class BoxBase(CanvasObjectBase):
         else:
             raise ValueError("No point corresponding to index %d" % (i))
 
-    def edit_points(self):
+    def get_edit_points(self):
         return [(self.x, self.y),    # location
                 (self.x + self.xradius, self.y),  # adj xradius
                 (self.x, self.y + self.yradius),  # adj yradius
                 (self.x + self.xradius, self.y + self.yradius)]   # adj both
-
-    def scale_by(self, scale_x, scale_y):
-        self.xradius *= scale_x
-        self.yradius *= scale_y
 
 
 class CircleBase(CanvasObjectBase):
@@ -1196,9 +1221,9 @@ class CircleBase(CanvasObjectBase):
             return True
         return False
 
-    def set_point_by_index(self, i, pt):
+    def set_edit_point(self, i, pt):
         if i == 0:
-            self.x, self.y = pt
+            self.set_point_by_index(i, pt)
         elif i == 1:
             x, y = pt
             self.radius = math.sqrt(abs(x - self.x)**2 + 
@@ -1206,16 +1231,9 @@ class CircleBase(CanvasObjectBase):
         else:
             raise ValueError("No point corresponding to index %d" % (i))
 
-    def rotate(self, theta, xoff=0, yoff=0):
-        self.x, self.y = self.rotate_pt(self.x, self.y, theta,
-                                        xoff=xoff, yoff=yoff)
-
-    def edit_points(self):
+    def get_edit_points(self):
         return [(self.x, self.y),
                 (self.x + self.radius, self.y)]
-
-    def scale_by(self, scale_x, scale_y):
-        self.radius *= max(scale_x, scale_y)
 
 
 class EllipseBase(CanvasObjectBase):
@@ -1245,21 +1263,6 @@ class EllipseBase(CanvasObjectBase):
     def get_points(self):
         return [self.get_center_pt()]
     
-    def get_center_radii_rot(self):
-        scale_x, scale_y = self.viewer.get_scale_xy()
-        rot_deg = self.viewer.get_rotation() + self.rot_deg
-
-        # calculate center of ellipse and radii in canvas coordinates
-        cx, cy = self.canvascoords(self.x, self.y)
-        cxr, cyr = scale_x * self.xradius, scale_y * self.yradius
-
-        # swap scale if axes are swapped in transform
-        flipx, flipy, swapxy = self.viewer.get_transforms()
-        if swapxy:
-            cxr, cyr = cyr, cxr
-
-        return (cx, cy, cxr, cyr, rot_deg)
-            
     def contains(self, x, y):
         # rotate point back to cartesian alignment for test
         xp, yp = self.rotate_pt(x, y, -self.rot_deg,
@@ -1271,13 +1274,9 @@ class EllipseBase(CanvasObjectBase):
             return True
         return False
 
-    def rotate(self, theta, xoff=0, yoff=0):
-        self.x, self.y = self.rotate_pt(self.x, self.y, theta,
-                                        xoff=xoff, yoff=yoff)
-
-    def set_point_by_index(self, i, pt):
+    def set_edit_point(self, i, pt):
         if i == 0:
-            self.x, self.y = pt
+            self.set_point_by_index(i, pt)
         elif i == 1:
             x, y = pt
             self.xradius = abs(x - self.x)
@@ -1290,15 +1289,26 @@ class EllipseBase(CanvasObjectBase):
         else:
             raise ValueError("No point corresponding to index %d" % (i))
 
-    def edit_points(self):
+    def get_edit_points(self):
         return [(self.x, self.y),    # location
                 (self.x + self.xradius, self.y),  # adj xradius
                 (self.x, self.y + self.yradius),  # adj yradius
                 (self.x + self.xradius, self.y + self.yradius)]   # adj both
 
-    def scale_by(self, scale_x, scale_y):
-        self.xradius *= scale_x
-        self.yradius *= scale_y
+    def get_bezier_pts(self, kappa=0.5522848):
+        """Used by drawing subclasses to draw the ellipse."""
+
+        mx, my = self.x, self.y
+        xs, ys = mx - self.xradius, my - self.yradius
+        ox, oy = self.xradius * kappa, self.yradius * kappa
+        xe, ye = mx + self.xradius, my + self.yradius
+        
+        pts = [(xs, my),
+               (xs, my - oy), (mx - ox, ys), (mx, ys),
+               (mx + ox, ys), (xe, my - oy), (xe, my),
+               (xe, my + oy), (mx + ox, ye), (mx, ye),
+               (mx - ox, ye), (xs, my + oy), (xs, my)]
+        return pts
 
 
 class PointBase(CanvasObjectBase):
@@ -1333,25 +1343,19 @@ class PointBase(CanvasObjectBase):
     def select_contains(self, x, y):
         return self.within_radius(x, y, self.x, self.y, self.cap_radius)
         
-    def set_point_by_index(self, i, pt):
+    def set_edit_point(self, i, pt):
         if i == 0:
-            self.x, self.y = pt
+            self.set_point_by_index(i, pt)
         elif i == 1:
             x, y = pt
             self.radius = max(abs(x - self.x), abs(y - self.y))
         else:
             raise ValueError("No point corresponding to index %d" % (i))
 
-    def rotate(self, theta, xoff=0, yoff=0):
-        self.x, self.y = self.rotate_pt(self.x, self.y, theta,
-                                        xoff=xoff, yoff=yoff)
-    def edit_points(self):
+    def get_edit_points(self):
         return [(self.x, self.y),
                 # TODO: account for point style
                 (self.x + self.radius, self.y + self.radius)]
-
-    def scale_by(self, scale_x, scale_y):
-        self.radius *= max(scale_x, scale_y)
 
 
 class LineBase(CanvasObjectBase):
@@ -1377,35 +1381,16 @@ class LineBase(CanvasObjectBase):
     def get_center_pt(self):
         return ((self.x1 + self.x2) / 2., (self.y1 + self.y2) / 2.)
     
-    def rotate(self, theta, xoff=0, yoff=0):
-        self.x1, self.y1 = self.rotate_pt(self.x1, self.y1, theta,
-                                          xoff=xoff, yoff=yoff)
-        self.x2, self.y2 = self.rotate_pt(self.x2, self.y2, theta,
-                                          xoff=xoff, yoff=yoff)
-
-    def set_point_by_index(self, i, pt):
+    def set_edit_point(self, i, pt):
         if i == 0:
             x, y = pt
             self.move_to(x, y)
-        elif i == 1:
-            self.x1, self.y1 = pt
-        elif i == 2:
-            self.x2, self.y2 = pt
         else:
-            raise ValueError("No point corresponding to index %d" % (i))
+            self.set_point_by_index(i-1, pt)
 
-    def edit_points(self):
+    def get_edit_points(self):
         return [self.get_center_pt(),
                 (self.x1, self.y1), (self.x2, self.y2)]
-
-    def scale_by(self, scale_x, scale_y):
-        pts = [(self.x1, self.y1), (self.x2, self.y2)]
-        P = numpy.array(pts)
-        ctr_x, ctr_y = self.get_center_pt()
-        P[:, 0] = (P[:, 0] - ctr_x) * scale_x + ctr_x
-        P[:, 1] = (P[:, 1] - ctr_y) * scale_y + ctr_y
-        self.x1, self.y1 = P[0, 0], P[0, 1]
-        self.x2, self.y2 = P[1, 0], P[1, 1]
 
     def select_contains(self, x, y):
         return self.within_line(x, y, self.x1, self.y1, self.x2, self.y2,
@@ -1428,25 +1413,17 @@ class PathBase(CanvasObjectBase):
                                        linewidth=linewidth, showcap=showcap,
                                        linestyle=linestyle, alpha=alpha)
         
-    def rotate(self, theta, xoff=0, yoff=0):
-        newpts = list(map(lambda p: self.rotate_pt(p[0], p[1], theta,
-                                              xoff=xoff, yoff=yoff),
-                          self.points))
-        self.points = newpts
-
-    def set_point_by_index(self, i, pt):
+    def set_edit_point(self, i, pt):
         if i == 0:
             x, y = pt
             self.move_to(x, y)
-        elif i-1 < len(self.points):
-            self.points[i-1] = pt
         else:
-            raise ValueError("No point corresponding to index %d" % (i))
+            self.set_point_by_index(i-1, pt)
 
     def get_points(self):
         return self.points
 
-    def edit_points(self):
+    def get_edit_points(self):
         return [self.get_center_pt()] + self.points
 
     def contains(self, x, y):
@@ -1494,20 +1471,17 @@ class CompassBase(CanvasObjectBase):
                                                          self.radius)
         return [(x, y), (xn, yn), (xe, ye)]
     
-    def edit_points(self):
+    def get_edit_points(self):
         return self.get_points()
 
-    def set_point_by_index(self, i, pt):
+    def set_edit_point(self, i, pt):
         if i == 0:
-            self.x, self.y = pt
+            self.set_point_by_index(i, pt)
         elif i in (1, 2):
             x, y = pt
             self.radius = max(abs(x - self.x), abs(y - self.y))
         else:
             raise ValueError("No point corresponding to index %d" % (i))
-
-    def scale_by(self, scale_x, scale_y):
-        self.radius *= max(scale_x, scale_y)
 
     def select_contains(self, x, y):
         return self.within_radius(x, y, self.x, self.y, self.cap_radius)
@@ -1548,33 +1522,20 @@ class RightTriangleBase(CanvasObjectBase):
         tf = (0.0 <= a <= 1.0 and 0.0 <= b <= 1.0 and 0.0 <= c <= 1.0)
         return tf
 
-    def edit_points(self):
+    def get_edit_points(self):
         return [self.get_center_pt(),
                 (self.x1, self.y1), (self.x2, self.y2)]
 
-    def set_point_by_index(self, i, pt):
+    def set_edit_point(self, i, pt):
         if i == 0:
             x, y = pt
             self.move_to(x, y)
-        elif i == 1:
-            self.x1, self.y1 = pt
-        elif i == 2:
-            self.x2, self.y2 = pt
         else:
-            raise ValueError("No point corresponding to index %d" % (i))
+            self.set_point_by_index(i-1, pt)
 
     def get_center_pt(self):
         return ((self.x1 + self.x2) / 2., (self.y1 + self.y2) / 2.)
     
-    def scale_by(self, scale_x, scale_y):
-        pts = [(self.x1, self.y1), (self.x2, self.y2)]
-        P = numpy.array(pts)
-        ctr_x, ctr_y = self.get_center_pt()
-        P[:, 0] = (P[:, 0] - ctr_x) * scale_x + ctr_x
-        P[:, 1] = (P[:, 1] - ctr_y) * scale_y + ctr_y
-        self.x1, self.y1 = P[0, 0], P[0, 1]
-        self.x2, self.y2 = P[1, 0], P[1, 1]
-
 
 class TriangleBase(CanvasObjectBase):
     """Draws a triangle on a ImageViewCanvas.
@@ -1622,9 +1583,9 @@ class TriangleBase(CanvasObjectBase):
         tf = (0.0 <= a <= 1.0 and 0.0 <= b <= 1.0 and 0.0 <= c <= 1.0)
         return tf
 
-    def set_point_by_index(self, i, pt):
+    def set_edit_point(self, i, pt):
         if i == 0:
-            self.x, self.y = pt
+            self.set_point_by_index(i, pt)
         elif i == 1:
             x, y = pt
             self.xradius = abs(x - self.x)
@@ -1637,19 +1598,11 @@ class TriangleBase(CanvasObjectBase):
         else:
             raise ValueError("No point corresponding to index %d" % (i))
 
-    def edit_points(self):
+    def get_edit_points(self):
         return [(self.x, self.y),    # location
                 (self.x + self.xradius, self.y),  # adj xradius
                 (self.x, self.y + self.yradius),  # adj yradius
                 (self.x + self.xradius, self.y + self.yradius)]   # adj both
-
-    def rotate(self, theta, xoff=0, yoff=0):
-        self.x, self.y = self.rotate_pt(self.x, self.y, theta,
-                                        xoff=xoff, yoff=yoff)
-
-    def scale_by(self, scale_x, scale_y):
-        self.xradius *= scale_x
-        self.yradius *= scale_y
 
 
 class RulerBase(CanvasObjectBase):
@@ -1714,29 +1667,16 @@ class RulerBase(CanvasObjectBase):
     def get_center_pt(self):
         return ((self.x1 + self.x2) / 2., (self.y1 + self.y2) / 2.)
     
-    def edit_points(self):
+    def get_edit_points(self):
         return [self.get_center_pt(),
                 (self.x1, self.y1), (self.x2, self.y2)]
 
-    def set_point_by_index(self, i, pt):
+    def set_edit_point(self, i, pt):
         if i == 0:
             x, y = pt
             self.move_to(x, y)
-        elif i == 1:
-            self.x1, self.y1 = pt
-        elif i == 2:
-            self.x2, self.y2 = pt
         else:
-            raise ValueError("No point corresponding to index %d" % (i))
-
-    def scale_by(self, scale_x, scale_y):
-        pts = [(self.x1, self.y1), (self.x2, self.y2)]
-        P = numpy.array(pts)
-        ctr_x, ctr_y = self.get_center_pt()
-        P[:, 0] = (P[:, 0] - ctr_x) * scale_x + ctr_x
-        P[:, 1] = (P[:, 1] - ctr_y) * scale_y + ctr_y
-        self.x1, self.y1 = P[0, 0], P[0, 1]
-        self.x2, self.y2 = P[1, 0], P[1, 1]
+            self.set_point_by_index(i-1, pt)
 
     def select_contains(self, x, y):
         return self.within_line(x, y, self.x1, self.y1, self.x2, self.y2,
@@ -1896,12 +1836,10 @@ class ImageBase(CanvasObjectBase):
             return True
         return False
 
-    ## def rotate(self, theta, xoff=0, yoff=0):
-    ##     x, y = self.rotate_pt(self.x, self.y, theta,
-    ##                             xoff=xoff, yoff=yoff)
-    ##     self.x, self.y = x, y
+    def rotate(self, theta, xoff=0, yoff=0):
+        raise ValueError("Images cannot be rotated")
 
-    def set_point_by_index(self, i, pt):
+    def set_edit_point(self, i, pt):
         if i == 0:
             x, y = pt
             self.move_to(x, y)
@@ -1920,7 +1858,7 @@ class ImageBase(CanvasObjectBase):
 
         self._reset_optimize()
 
-    def edit_points(self):
+    def get_edit_points(self):
         width, height = self.get_scaled_wdht()
         return [self.get_center_pt(),    # location
                 (self.x + width, self.y + height / 2.),

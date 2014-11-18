@@ -68,7 +68,7 @@ class AggCanvasMixin(object):
             self._draw_cap(cr, pen, brush, cap, x, y, radius=radius)
         
     def draw_edit(self, cr):
-        cpoints = self.get_cpoints(points=self.edit_points())
+        cpoints = self.get_cpoints(points=self.get_edit_points())
         self.draw_caps(cr, 'ball', cpoints)
 
     def text_extents(self, cr, text, font):
@@ -176,6 +176,32 @@ class Circle(CircleBase, AggCanvasMixin):
         elif self.showcap:
             self.draw_caps(cr, self.cap, ((cx1, cy1), ))
 
+
+class Ellipse(EllipseBase, AggCanvasMixin):
+
+    def draw(self):
+        cp = self.get_cpoints(points=self.get_bezier_pts())
+        cr = self.setup_cr()
+
+        pen = self.get_pen(cr)
+        brush = self.get_brush(cr)
+
+        # draw 4 bezier curves to make the ellipse
+        # TODO: currently there is a bug in aggdraw paths
+        path = agg.Path()
+        path.moveto(cp[0][0], cp[0][1])
+        path.curveto(cp[1][0], cp[1][1], cp[2][0], cp[2][1], cp[3][0], cp[3][1])
+        path.curveto(cp[4][0], cp[4][1], cp[5][0], cp[5][1], cp[6][0], cp[6][1])
+        path.curveto(cp[7][0], cp[7][1], cp[8][0], cp[8][1], cp[9][0], cp[9][1])
+        path.curveto(cp[10][0], cp[10][1], cp[11][0], cp[11][1], cp[12][0], cp[12][1])
+        cr.canvas.path(path.coords(), path, pen, brush)
+
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
+            cpoints = self.get_cpoints()
+            self.draw_caps(cr, self.cap, cpoints)
+        
 
 class Box(BoxBase, AggCanvasMixin):
 
@@ -502,8 +528,8 @@ class DrawingCanvas(DrawingMixin, CanvasMixin, CompoundMixin,
 
 
 drawCatalog = dict(text=Text, rectangle=Rectangle, circle=Circle,
-                   line=Line, point=Point, polygon=Polygon,
-                   path=Path, square=Square, box=Box,
+                   line=Line, point=Point, polygon=Polygon, path=Path, 
+                   ellipse=Ellipse, square=Square, box=Box,
                    triangle=Triangle, righttriangle=RightTriangle,
                    ruler=Ruler, compass=Compass,
                    compoundobject=CompoundObject, canvas=Canvas,

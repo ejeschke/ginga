@@ -86,7 +86,7 @@ class CairoCanvasMixin(object):
             self.draw_cap(cr, cap, x, y, radius=radius)
         
     def draw_edit(self, cr):
-        cpoints = self.get_cpoints(points=self.edit_points())
+        cpoints = self.get_cpoints(points=self.get_edit_points())
         self.draw_caps(cr, 'ball', cpoints)
 
     def text_extents(self, cr, text):
@@ -204,24 +204,24 @@ class Circle(CircleBase, CairoCanvasMixin):
 class Ellipse(EllipseBase, CairoCanvasMixin):
 
     def draw(self):
-        cx, cy, cxr, cyr, rot_deg = self.get_center_radii_rot()
-
+        cp = self.get_cpoints(points=self.get_bezier_pts())
         cr = self.setup_cr()
-        # Special hack for ellipses to deal with rotated canvas
-        cr.save()
-        cr.translate(cx, cy)
-        cr.rotate(math.radians(- rot_deg))
-        cr.scale(cxr, cyr)
 
-        cr.arc(0.0, 0.0, 1.0, 0.0, 2*math.pi)
-        # special trick to get uniform line thickness with ellipse
-        cr.restore()
+        # draw 4 bezier curves to make the ellipse
+        cr.move_to(cp[0][0], cp[0][1])
+        cr.curve_to(cp[1][0], cp[1][1], cp[2][0], cp[2][1], cp[3][0], cp[3][1])
+        cr.curve_to(cp[4][0], cp[4][1], cp[5][0], cp[5][1], cp[6][0], cp[6][1])
+        cr.curve_to(cp[7][0], cp[7][1], cp[8][0], cp[8][1], cp[9][0], cp[9][1])
+        cr.curve_to(cp[10][0], cp[10][1], cp[11][0], cp[11][1], cp[12][0], cp[12][1])
         cr.stroke_preserve()
 
         self.draw_fill(cr)
 
-        if self.showcap:
-            self.draw_caps(cr, self.cap, ((0.0, 0.0), ))
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
+            cpoints = self.get_cpoints()
+            self.draw_caps(cr, self.cap, cpoints)
         
 
 class Box(BoxBase, CairoCanvasMixin):
