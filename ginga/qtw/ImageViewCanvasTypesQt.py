@@ -126,6 +126,11 @@ class Text(TextBase, QtCanvasMixin):
         cr.setFont(QFont(self.font, pointSize=fontsize))
         cr.drawText(cx, cy, self.text)
 
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
+            self.draw_caps(cr, self.cap, ((cx, cy), ))
+
     def get_dimensions(self):
         cr = self.setup_cr()
         if not self.fontsize:

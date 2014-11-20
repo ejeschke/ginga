@@ -90,6 +90,11 @@ class Text(TextBase, AggCanvasMixin):
                            alpha=alpha)
         cr.canvas.text((cx, cy), self.text, font)
 
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
+            self.draw_caps(cr, self.cap, ((cx, cy), ))
+
     def get_dimensions(self):
         cr = self.setup_cr()
         if not self.fontsize:

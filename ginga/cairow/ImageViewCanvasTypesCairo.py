@@ -109,6 +109,11 @@ class Text(TextBase, CairoCanvasMixin):
         cr.move_to(cx, cy)
         cr.show_text(self.text)
 
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
+            self.draw_caps(cr, self.cap, ((cx, cy), ))
+
     def get_dimensions(self):
         cr = self.setup_cr()
         if not self.fontsize:

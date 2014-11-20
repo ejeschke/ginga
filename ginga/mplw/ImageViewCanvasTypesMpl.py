@@ -43,14 +43,12 @@ class MplCanvasMixin(object):
         if radius == None:
             radius = self.cap_radius
         if cap == 'ball':
-            xy = numpy.array((x, y))
             alpha = getattr(self, 'alpha', 1.0)
             alpha = getattr(self, 'fillalpha', alpha)
             color = cr.get_color(self.color, alpha)
-            p = patches.Circle((x, y), radius=radius, 
-                               edgecolor=color,
+            p = patches.Circle((x, y), radius=radius, transform=None,
+                               edgecolor=color, 
                                fill=True, facecolor=color)
-            # TODO: figure out why this patch is not showing up!
             cr.axes.add_patch(p)
         
     def draw_caps(self, cr, cap, points, radius=None):
@@ -80,6 +78,11 @@ class Text(TextBase, MplCanvasMixin):
                            alpha=alpha)
 
         cr.axes.text(cx, cy, self.text, fontdict=font)
+
+        if self.editing:
+            self.draw_edit(cr)
+        elif self.showcap:
+            self.draw_caps(cr, self.cap, ((cx, cy), ))
 
     def get_dimensions(self):
         cr = self.setup_cr()

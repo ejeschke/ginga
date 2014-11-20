@@ -111,6 +111,7 @@ class ImageViewBindings(object):
             kp_orient_rh = ['O'],
             kp_poly_add = ['v', 'draw+v'],
             kp_poly_del = ['z', 'draw+z'],
+            kp_edit_del = ['edit+z'],
             kp_reset = ['escape'],
             
             # SCROLLING/WHEEL
@@ -126,7 +127,7 @@ class ImageViewBindings(object):
             sc_cmap = ['cmap+scroll'],
             sc_imap = [],
             #sc_draw = ['draw+scroll'],
-            sc_edit = ['edit+scroll'],
+            #sc_edit = ['edit+scroll'],
             
             scroll_pan_acceleration = 1.0,
             scroll_zoom_acceleration = 1.0,

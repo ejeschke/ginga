@@ -650,6 +650,7 @@ class DrawingMixin(object):
         self.set_callback('draw-up', self.draw_stop)
         self.set_callback('keydown-poly_add', self.draw_poly_add)
         self.set_callback('keydown-poly_del', self.draw_poly_delete)
+        self.set_callback('keydown-edit_del', self.edit_delete)
 
         #self.ui_setActive(True)
 
@@ -859,9 +860,8 @@ class DrawingMixin(object):
             elif self.drawObj.contains(data_x, data_y):
                 # TODO: moving an existing object
                 print("moving an object")
-                #self._start_x = data_x
-                #self._start_y = data_y
-                return False
+                self._cp_index = 0
+                return True
 
             else:
                 # <-- user clicked outside the object
@@ -934,6 +934,12 @@ class DrawingMixin(object):
         self.processDrawing()
         return True
 
+    def edit_delete(self, canvas, action, data_x, data_y):
+        if (self.drawObj != None) and self.drawObj.is_editing():
+            obj, self.drawObj = self.drawObj, None
+            self.deleteObject(obj)
+        return True
+
     def isDrawing(self):
         return self.drawObj != None
     
@@ -977,13 +983,27 @@ class TextBase(CanvasObjectBase):
     """
 
     def __init__(self, x, y, text, font='Sans Serif', fontsize=None,
-                 color='yellow', alpha=1.0):
+                 color='yellow', alpha=1.0, showcap=False):
         self.kind = 'text'
         super(TextBase, self).__init__(color=color, alpha=alpha,
                                        x=x, y=y, font=font, fontsize=fontsize,
-                                       text=text)
-        # for now
-        self.editable = False
+                                       text=text, showcap=showcap)
+
+
+    def get_center_pt(self):
+        return (self.x, self.y)
+
+    def select_contains(self, x, y):
+        return self.within_radius(x, y, self.x, self.y, self.cap_radius)
+    
+    def get_points(self):
+        return [self.get_center_pt()]
+    
+    def set_edit_point(self, i, pt):
+        if i == 0:
+            self.set_point_by_index(i, pt)
+        else:
+            raise ValueError("No point corresponding to index %d" % (i))
 
     def get_edit_points(self):
         # TODO: edit point for scaling or rotating?
@@ -1706,7 +1726,7 @@ class ImageBase(CanvasObjectBase):
         self._cvs_x = 0
         self._cvs_y = 0
         self._zorder = 0
-        # until we can resolve mapping issues
+        # images are not editable by default
         self.editable = False
 
     def get_zorder(self):
