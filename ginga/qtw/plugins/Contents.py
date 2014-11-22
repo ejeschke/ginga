@@ -60,7 +60,8 @@ class Contents(GingaPlugin.GlobalPlugin):
         self.logger.debug("chname=%s name=%s path=%s" % (
             chname, imname, path))
 
-        self.fv.switch_name(chname, bnch.NAME, path=path)
+        self.fv.switch_name(chname, imname, path=path,
+                            image_loader=bnch.loader)
 
     def switch_image2(self, item, column):
         imname = str(item.text(0))
@@ -76,7 +77,9 @@ class Contents(GingaPlugin.GlobalPlugin):
         
     def get_info(self, chname, name, image):
         path = image.get('path', None)
-        bnch = Bunch.Bunch(NAME=name, CHNAME=chname, path=path)
+        loader = image.get('loader', self.fv.load_image)
+        bnch = Bunch.Bunch(NAME=name, CHNAME=chname, path=path,
+                           loader=loader)
 
         # Get header keywords of interest
         header = image.get_header()
@@ -115,7 +118,10 @@ class Contents(GingaPlugin.GlobalPlugin):
     def add_image(self, viewer, chname, image):
         noname = 'Noname' + str(time.time())
         name = image.get('name', noname)
-        path = image.get('path', None)
+
+        nothumb = image.get('nothumb', False)
+        if nothumb:
+            return
 
         if chname not in self.nameDict:
             # channel does not exist yet in contents--add it
@@ -153,7 +159,6 @@ class Contents(GingaPlugin.GlobalPlugin):
         chname = chinfo.name
         del self.nameDict[chname]
         self.recreate_toc()
-        
 
     def __str__(self):
         return 'contents'

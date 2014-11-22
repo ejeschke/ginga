@@ -58,7 +58,8 @@ class Mosaic(GingaPlugin.LocalPlugin):
                                   match_bg=False, trim_px=0,
                                   merge=False, num_threads=4,
                                   drop_creates_new_mosaic=True,
-                                  mosaic_hdus=False, skew_limit=0.1)
+                                  mosaic_hdus=False, skew_limit=0.1,
+                                  make_thumbs=False)
         self.settings.load(onError='silent')
 
         # channel where mosaic should appear (default=ours)
@@ -243,7 +244,13 @@ class Mosaic(GingaPlugin.LocalPlugin):
         ## imname = 'mosaic%d' % (self.mosaic_count)
         ## img_mosaic.set(name=imname)
         ## self.mosaic_count += 1
-        imname = img_mosaic.get('name', "NoName")
+        imname = img_mosaic.get('name', image.get('name', "NoName"))
+
+        # avoid making a thumbnail of this if seed image is also that way
+        nothumb = not self.settings.get('make_thumbs', False)
+        img_mosaic.set(nothumb=image.get('nothumb', nothumb))
+
+        # TODO: fill in interesting/select object headers from seed image
 
         header = img_mosaic.get_header()
         (rot, cdelt1, cdelt2) = wcs.get_rotation_and_scale(header,

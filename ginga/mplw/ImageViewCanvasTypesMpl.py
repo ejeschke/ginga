@@ -16,7 +16,7 @@ from matplotlib.path import Path as MplPath
 import numpy
 
 from . import MplHelp
-from ginga.ImageViewCanvas import *
+from ginga.canvas.mixins import *
 from ginga import Mixins
 from ginga.misc import Callback, Bunch
 from ginga import colors

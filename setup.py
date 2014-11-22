@@ -47,6 +47,7 @@ setup(
                 'ginga.mockw',
                 # Common stuff
                 'ginga.misc', 'ginga.misc.plugins', 'ginga.base',
+                'ginga.canvas',
                 # Misc
                 'ginga.util', 'ginga.icons', 'ginga.doc', 'ginga.tests',
                 ],

@@ -9,7 +9,7 @@
 #
 import math
 
-from ginga.ImageViewCanvas import *
+from ginga.canvas.mixins import *
 from ginga import Mixins
 from ginga.misc import Callback, Bunch
 from ginga import colors

@@ -12,7 +12,7 @@ import aggdraw as agg
 from . import AggHelp
 from itertools import chain
 
-from ginga.ImageViewCanvas import *
+from ginga.canvas.mixins import *
 from ginga import Mixins
 from ginga.misc import Callback, Bunch
 from ginga import colors

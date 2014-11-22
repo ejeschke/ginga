@@ -12,7 +12,7 @@ import math
 from ginga.qtw.QtHelp import QtGui, QtCore, QFont, QPainter, QPen, \
      QPolygonF, QPolygon, QColor
 
-from ginga.ImageViewCanvas import *
+from ginga.canvas.mixins import *
 from ginga import Mixins
 from ginga.misc import Callback, Bunch
 from ginga import colors

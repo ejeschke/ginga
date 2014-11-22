@@ -181,13 +181,6 @@ class Contents(GingaPlugin.GlobalPlugin):
         if nothumb:
             return
 
-        # Is there a preference set to avoid making thumbnails?
-        if self.fv.has_channel(chname):
-            chinfo = self.fv.get_channelInfo(chname)
-            prefs = chinfo.prefs
-            if not prefs.get('genthumb', True):
-                return
-
         model = self.treeview.get_model()
         if chname not in self.nameDict:
             it = model.append(None, [ chname ])
