@@ -289,10 +289,23 @@ class Line(LineBase, QtCanvasMixin):
         cr.pen().setCapStyle(QtCore.Qt.RoundCap)
         cr.drawLine(cx1, cy1, cx2, cy2)
 
+        if self.arrow == 'end':
+            self.draw_arrowhead(cr, cx1, cy1, cx2, cy2)
+            caps = [(cx1, cy1)]
+        elif self.arrow == 'start':
+            self.draw_arrowhead(cr, cx2, cy2, cx1, cy1)
+            caps = [(cx2, cy2)]
+        elif self.arrow == 'both':
+            self.draw_arrowhead(cr, cx2, cy2, cx1, cy1)
+            self.draw_arrowhead(cr, cx1, cy1, cx2, cy2)
+            caps = []
+        else:
+            caps = [(cx1, cy1), (cx2, cy2)]
+
         if self.editing:
             self.draw_edit(cr)
         elif self.showcap:
-            self.draw_caps(cr, self.cap, ((cx1, cy1), (cx2, cy2)))
+            self.draw_caps(cr, self.cap, caps)
 
 
 class Path(PathBase, QtCanvasMixin):
@@ -481,25 +494,26 @@ class Ruler(RulerBase, QtCanvasMixin):
         yd = yh + diag_yoffset
         cr.drawText(xd, yd, text_h)
 
-        pen.setDashPattern([ 3.0, 4.0, 6.0, 4.0])
-        pen.setDashOffset(5.0)
-        cr.setPen(pen)
-        if self.color2:
-            alpha = getattr(self, 'alpha', 1.0)
-            self.set_color(cr, self.color2, alpha=alpha)
-                
-        # draw X plumb line
-        cr.drawLine(cx1, cy1, cx2, cy1)
+        if self.showplumb:
+            pen.setDashPattern([ 3.0, 4.0, 6.0, 4.0])
+            pen.setDashOffset(5.0)
+            cr.setPen(pen)
+            if self.color2:
+                alpha = getattr(self, 'alpha', 1.0)
+                self.set_color(cr, self.color2, alpha=alpha)
 
-        # draw Y plumb line
-        cr.drawLine(cx2, cy1, cx2, cy2)
+            # draw X plumb line
+            cr.drawLine(cx1, cy1, cx2, cy1)
 
-        # draw X plum line label
-        xh -= xtwd // 2
-        cr.drawText(xh, y, text_x)
+            # draw Y plumb line
+            cr.drawLine(cx2, cy1, cx2, cy2)
 
-        # draw Y plum line label
-        cr.drawText(x, yh, text_y)
+            # draw X plum line label
+            xh -= xtwd // 2
+            cr.drawText(xh, y, text_x)
+
+            # draw Y plum line label
+            cr.drawText(x, yh, text_y)
 
         if self.editing:
             self.draw_edit(cr)
@@ -514,12 +528,13 @@ class Image(ImageBase, QtCanvasMixin):
         # here we just draw the caps
         ImageBase.draw(self)
         
+        cpoints = self.get_cpoints()
         cr = self.setup_cr()
 
         if self.editing:
             self.draw_edit(cr)
         elif self.showcap:
-            self.draw_caps(cr, self.cap, self.get_points())
+            self.draw_caps(cr, self.cap, cpoints)
 
 
 class NormImage(NormImageBase, QtCanvasMixin):
@@ -529,12 +544,13 @@ class NormImage(NormImageBase, QtCanvasMixin):
         # here we just draw the caps
         ImageBase.draw(self)
         
+        cpoints = self.get_cpoints()
         cr = self.setup_cr()
 
         if self.editing:
             self.draw_edit(cr)
         elif self.showcap:
-            self.draw_caps(cr, self.cap, self.get_points())
+            self.draw_caps(cr, self.cap, cpoints)
 
 
 ## class DrawingCanvas(DrawingMixin, CanvasMixin, CompoundMixin,

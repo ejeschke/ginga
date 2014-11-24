@@ -30,55 +30,53 @@ class DrawingMixin(object):
                 self.drawtypes.append(key)
         self.t_drawtype = 'point'
         self.t_drawparams = {}
-        self._drawtext = "EDIT ME"
         self._start_x = 0
         self._start_y = 0
         self._points = []
-        self._drawrot_deg = 0.0
 
+        # For interactive editing
+        self.canedit = False
         self._cp_index = None
+        self._edit_obj = None
+        self._edit_status = False
 
         self._processTime = 0.0
         # time delta threshold for deciding whether to update the image
         self._deltaTime = 0.020
-        self.drawObj = None
-
-        self.fitsobj = None
-        self.drawbuttonmask = 0x4
+        self._draw_obj = None
 
         # NOTE: must be mixed in with a Callback.Callbacks
         for name in ('draw-event', 'draw-down', 'draw-move', 'draw-up',
-                     'draw-scroll', 'drag-drop', 'edit-event'):
+                     'draw-scroll', 'drag-drop', 'edit-event',
+                     'edit-select'):
             self.enable_callback(name)
 
     def setSurface(self, viewer):
         self.viewer = viewer
 
         # register this canvas for events of interest
-        self.set_callback('edit-down', self.edit_start)
-        self.set_callback('edit-move', self.edit_motion)
-        self.set_callback('edit-up', self.edit_stop)
-        #self.set_callback('edit-scroll', self.edit_scale)
-        self.set_callback('edit-scroll', self.edit_rotate)
         self.set_callback('draw-down', self.draw_start)
         self.set_callback('draw-move', self.draw_motion)
         self.set_callback('draw-up', self.draw_stop)
         self.set_callback('keydown-poly_add', self.draw_poly_add)
         self.set_callback('keydown-poly_del', self.draw_poly_delete)
-        self.set_callback('keydown-edit_del', self.edit_delete)
+        self.set_callback('keydown-edit_del', self._edit_delete_cb)
 
-        #self.ui_setActive(True)
+        self.set_callback('edit-down', self.edit_start)
+        self.set_callback('edit-move', self.edit_motion)
+        self.set_callback('edit-up', self.edit_stop)
+        #self.set_callback('edit-scroll', self._edit_scale_cb)
+        self.set_callback('edit-scroll', self._edit_rotate_cb)
 
     def getSurface(self):
         return self.viewer
 
     def draw(self):
         super(DrawingMixin, self).draw()
-        if self.drawObj:
-            self.drawObj.draw()
+        if self._draw_obj:
+            self._draw_obj.draw()
 
-    def set_drawtext(self, text):
-        self._drawtext = text
+    ##### DRAWING LOGIC #####
         
     def _draw_update(self, data_x, data_y):
 
@@ -121,7 +119,6 @@ class DrawingMixin(object):
         elif self.t_drawtype in ('box', 'ellipse', 'triangle'):
             xradius = abs(self._start_x - data_x)
             yradius = abs(self._start_y - data_y)
-            self.t_drawparams['rot_deg'] = self._drawrot_deg
             obj = klass(self._start_x, self._start_y, xradius, yradius,
                         **self.t_drawparams)
 
@@ -150,8 +147,7 @@ class DrawingMixin(object):
             obj = klass(points, **self.t_drawparams)
 
         elif self.t_drawtype == 'text':
-            obj = klass(self._start_x, self._start_y, self._drawtext,
-                        **self.t_drawparams)
+            obj = klass(self._start_x, self._start_y, **self.t_drawparams)
 
         elif self.t_drawtype == 'ruler':
             obj = klass(self._start_x, self._start_y, data_x, data_y,
@@ -160,7 +156,7 @@ class DrawingMixin(object):
         if obj != None:
             obj.initialize(None, self.viewer, self.logger)
             #obj.initialize(None, self.viewer, self.viewer.logger)
-            self.drawObj = obj
+            self._draw_obj = obj
             if time.time() - self._processTime > self._deltaTime:
                 self.processDrawing()
             
@@ -170,12 +166,7 @@ class DrawingMixin(object):
         if not self.candraw:
             return False
 
-        # unselect an editing object if one was selected
-        if (self.drawObj != None) and self.drawObj.is_editing():
-            self.drawObj.set_edit(False)
-
-        self.drawObj = None
-        self._drawrot_deg = 0.0
+        self._draw_obj = None
         self._points = [(data_x, data_y)]
         self._start_x, self._start_y = data_x, data_y
         self._draw_update(data_x, data_y)
@@ -188,7 +179,7 @@ class DrawingMixin(object):
             return False
 
         self._draw_update(data_x, data_y)
-        obj, self.drawObj = self.drawObj, None
+        obj, self._draw_obj = self._draw_obj, None
         self._points = []
 
         if obj:
@@ -215,150 +206,8 @@ class DrawingMixin(object):
                 self._points.pop()
         return True
 
-    def processDrawing(self):
-        self._processTime = time.time()
-        self.viewer.redraw(whence=3)
-    
-    def _edit_update(self, data_x, data_y):
-        if self._cp_index == None:
-            return False
-
-        if self._cp_index < 0:
-            self.drawObj.move_to(data_x - self._start_x,
-                                 data_y - self._start_y)
-        else:
-            self.drawObj.set_edit_point(self._cp_index, (data_x, data_y))
-
-        if time.time() - self._processTime > self._deltaTime:
-            self.processDrawing()
-        return True
-
-    def _is_editable(self, obj, x, y, is_inside):
-        return is_inside and obj.editable
-    
-    def edit_start(self, canvas, action, data_x, data_y):
-
-        # check for objects at this location
-        print("getting items")
-        objs = canvas.select_items_at(data_x, data_y,
-                                      test=self._is_editable)
-        print("items: %s" % (str(objs)))
-        if self.drawObj == None:
-            print("no editing: select/deselect")
-            # <-- no current object being edited
-
-            if len(objs) == 0:
-                # no objects
-                return False
-
-            # pick top object
-            obj = objs[-1]       
-
-            if not obj.is_editing():
-                obj.set_edit(True)
-                self.drawObj = obj
-            else:
-                obj.set_edit(False)
-
-        elif self.drawObj.is_editing():
-            print("editing: checking for cp")
-            edit_pts = self.drawObj.get_edit_points()
-            i = self.drawObj.get_pt(edit_pts, data_x, data_y,
-                                    self.drawObj.cap_radius)
-            if i != None:
-                print("editing cp #%d" % (i))
-                # editing a control point from an existing object
-                self._cp_index = i
-                self._edit_update(data_x, data_y)
-                return True
-
-            elif self.drawObj.contains(data_x, data_y):
-                # TODO: moving an existing object
-                print("moving an object")
-                self._cp_index = -1
-                ref_x, ref_y = self.drawObj.get_reference_pt()
-                self._start_x, self._start_y = data_x - ref_x, data_y - ref_y
-                return True
-
-            else:
-                # <-- user clicked outside the object
-                print("deselecting an object")
-                if self.drawObj in objs:
-                    objs.remove(self.drawObj)
-                self.drawObj.set_edit(False)
-                if len(objs) == 0:
-                    self.drawObj = None
-                else:
-                    obj = objs[-1]       
-                    obj.set_edit(True)
-                    self.drawObj = obj
-        else:
-            if self.drawObj in objs:
-                # reselect
-                self.drawObj.set_edit(True)
-            elif len(objs) > 0:
-                obj = objs[-1]       
-                obj.set_edit(True)
-                self.drawObj = obj
-            
-        self.processDrawing()
-        return True
-
-    def edit_stop(self, canvas, button, data_x, data_y):
-        if (self.drawObj == None) or (self._cp_index == None):
-            return False
-
-        self._edit_update(data_x, data_y)
-        self._cp_index = None
-
-        #objtag = self.lookup_object_tag(self.drawObj)
-        #self.make_callback('edit-event', objtag)
-        return True
-
-    def edit_motion(self, canvas, button, data_x, data_y):
-        if (self.drawObj != None) and (self._cp_index != None):
-            self._edit_update(data_x, data_y)
-            return True
-        return False
-
-    def edit_rotate(self, canvas, direction, amount, data_x, data_y,
-                    msg=True):
-        if self.drawObj == None:
-            return False
-        bd = self.viewer.get_bindings()
-        if bd.get_direction(direction) == 'down':
-            amount = - amount
-        cur_rot = self._drawrot_deg
-        new_rot = cur_rot + amount
-        if hasattr(self.drawObj, 'rot_deg'):
-            self.drawObj.rot_deg = new_rot
-            self._drawrot_deg = new_rot
-        else:
-            self.drawObj.rotate_by(amount)
-        self.processDrawing()
-        return True
-
-    def edit_scale(self, canvas, direction, amount, data_x, data_y,
-                    msg=True):
-        if self.drawObj == None:
-            return False
-        bd = self.viewer.get_bindings()
-        if bd.get_direction(direction) == 'down':
-            amount = 0.9
-        else:
-            amount = 1.1
-        self.drawObj.scale_by(amount, amount)
-        self.processDrawing()
-        return True
-
-    def edit_delete(self, canvas, action, data_x, data_y):
-        if (self.drawObj != None) and self.drawObj.is_editing():
-            obj, self.drawObj = self.drawObj, None
-            self.deleteObject(obj)
-        return True
-
-    def isDrawing(self):
-        return self.drawObj != None
+    def is_drawing(self):
+        return self._draw_obj != None
     
     def enable_draw(self, tf):
         self.candraw = tf
@@ -387,5 +236,184 @@ class DrawingMixin(object):
         
     def get_drawparams(self):
         return self.t_drawparams.copy()
+
+    def processDrawing(self):
+        self._processTime = time.time()
+        self.viewer.redraw(whence=3)
+
+    ##### EDITING LOGIC #####
+        
+    def is_editing(self):
+        return self._edit_obj != None
+    
+    def enable_edit(self, tf):
+        self.canedit = tf
+        
+    def _edit_update(self, data_x, data_y):
+        if (not self.canedit) or (self._cp_index == None):
+            return False
+
+        if self._cp_index < 0:
+            self._edit_obj.move_to(data_x - self._start_x,
+                                   data_y - self._start_y)
+        else:
+            self._edit_obj.set_edit_point(self._cp_index, (data_x, data_y))
+
+        if time.time() - self._processTime > self._deltaTime:
+            self.processDrawing()
+        return True
+
+    def _is_editable(self, obj, x, y, is_inside):
+        return is_inside and obj.editable
+    
+    def edit_start(self, canvas, action, data_x, data_y):
+        if not self.canedit:
+            return False
+
+        self._edit_tmp = self._edit_obj
+        self._edit_status = False
+            
+        # check for objects at this location
+        #print("getting items")
+        objs = canvas.select_items_at(data_x, data_y,
+                                      test=self._is_editable)
+        #print("items: %s" % (str(objs)))
+        if self._edit_obj == None:
+            #print("no editing: select/deselect")
+            # <-- no current object being edited
+
+            if len(objs) == 0:
+                # no objects
+                return False
+
+            # pick top object
+            obj = objs[-1]       
+
+            if not obj.is_editing():
+                obj.set_edit(True)
+                self._edit_obj = obj
+            else:
+                obj.set_edit(False)
+
+        elif self._edit_obj.is_editing():
+            self._edit_status = True
+            #print("editing: checking for cp")
+            edit_pts = self._edit_obj.get_edit_points()
+            i = self._edit_obj.get_pt(edit_pts, data_x, data_y,
+                                      self._edit_obj.cap_radius)
+            if i != None:
+                #print("editing cp #%d" % (i))
+                # editing a control point from an existing object
+                self._cp_index = i
+                self._edit_update(data_x, data_y)
+                return True
+
+            elif self._edit_obj.contains(data_x, data_y):
+                # TODO: moving an existing object
+                #print("moving an object")
+                self._cp_index = -1
+                ref_x, ref_y = self._edit_obj.get_reference_pt()
+                self._start_x, self._start_y = data_x - ref_x, data_y - ref_y
+                return True
+
+            else:
+                # <-- user clicked outside the object
+                #print("deselecting an object")
+                if self._edit_obj in objs:
+                    objs.remove(self._edit_obj)
+                self._edit_obj.set_edit(False)
+                if len(objs) == 0:
+                    self._edit_obj = None
+                else:
+                    obj = objs[-1]       
+                    obj.set_edit(True)
+                    self._edit_obj = obj
+        else:
+            self._edit_status = False
+            if self._edit_obj in objs:
+                # reselect
+                self._edit_obj.set_edit(True)
+            elif len(objs) > 0:
+                obj = objs[-1]       
+                obj.set_edit(True)
+                self._edit_obj = obj
+            
+        self.processDrawing()
+        return True
+
+    def edit_stop(self, canvas, button, data_x, data_y):
+        if not self.canedit:
+            return False
+
+        if (self._edit_obj != None) and (self._cp_index != None):
+            self._edit_update(data_x, data_y)
+            self._cp_index = None
+            self.make_callback('edit-event', self._edit_obj)
+
+        elif (self._edit_tmp != self._edit_obj) or (
+            (self._edit_obj != None) and 
+            (self._edit_status != self._edit_obj.is_editing())):
+            self.make_callback('edit-select', self._edit_obj)
+
+        return True
+
+    def edit_motion(self, canvas, button, data_x, data_y):
+        if not self.canedit:
+            return False
+
+        if (self._edit_obj != None) and (self._cp_index != None):
+            self._edit_update(data_x, data_y)
+            return True
+        return False
+
+    def edit_rotate(self, delta_deg):
+        if (not self.canedit) or (self._edit_obj == None):
+            return False
+        if hasattr(self._edit_obj, 'rot_deg'):
+            cur_rot = self._edit_obj.rot_deg
+            new_rot = cur_rot + delta_deg
+            self._edit_obj.rot_deg = new_rot
+        else:
+            self._edit_obj.rotate_by(delta_deg)
+        self.processDrawing()
+        self.make_callback('edit-event', self._edit_obj)
+        return True
+
+    def _edit_rotate_cb(self, canvas, direction, amount, data_x, data_y,
+                       msg=True):
+        bd = self.viewer.get_bindings()
+        if bd.get_direction(direction) == 'down':
+            amount = - amount
+        return self.edit_rotate(amount)
+
+    def edit_scale(self, delta_x, delta_y):
+        if (not self.canedit) or (self._edit_obj == None):
+            return False
+        self._edit_obj.scale_by(delta_x, delta_y)
+        self.processDrawing()
+        self.make_callback('edit-event', self._edit_obj)
+        return True
+
+    def _edit_scale_cb(self, canvas, direction, amount, data_x, data_y,
+                      msg=True):
+        bd = self.viewer.get_bindings()
+        if bd.get_direction(direction) == 'down':
+            amount = 0.9
+        else:
+            amount = 1.1
+        return self.edit_scale(amount, amount)
+
+    def edit_delete(self):
+        if not self.canedit:
+            return False
+        if (self._edit_obj != None) and self._edit_obj.is_editing():
+            obj, self._edit_obj = self._edit_obj, None
+            self.deleteObject(obj)
+            self.make_callback('edit-event', self._edit_obj)
+        return True
+
+    def _edit_delete_cb(self, canvas, action, data_x, data_y):
+        return self.edit_delete()
+
 
 #END

@@ -266,10 +266,23 @@ class Line(LineBase, MockCanvasMixin):
         cr = self.setup_cr()
         #cr.draw_line(cx1, cy1, cx2, cy2)
 
+        if self.arrow == 'end':
+            self.draw_arrowhead(cr, cx1, cy1, cx2, cy2)
+            caps = [(cx1, cy1)]
+        elif self.arrow == 'start':
+            self.draw_arrowhead(cr, cx2, cy2, cx1, cy1)
+            caps = [(cx2, cy2)]
+        elif self.arrow == 'both':
+            self.draw_arrowhead(cr, cx2, cy2, cx1, cy1)
+            self.draw_arrowhead(cr, cx1, cy1, cx2, cy2)
+            caps = []
+        else:
+            caps = [(cx1, cy1), (cx2, cy2)]
+
         if self.editing:
             self.draw_edit(cr)
         elif self.showcap:
-            self.draw_caps(cr, self.cap, ((cx1, cy1), (cx2, cy2)))
+            self.draw_caps(cr, self.cap, caps)
 
 
 class Path(PathBase, MockCanvasMixin):
@@ -443,25 +456,26 @@ class Ruler(RulerBase, MockCanvasMixin):
         yd = yh + diag_yoffset
         #cr.draw_text(xd, yd, text_h)
 
-        ## pen.setDashPattern([ 3.0, 4.0, 6.0, 4.0])
-        ## pen.setDashOffset(5.0)
-        ## cr.setPen(pen)
-        if self.color2:
-            alpha = getattr(self, 'alpha', 1.0)
-            self.set_color(cr, self.color2, alpha=alpha)
-                
-        # draw X plumb line
-        #cr.draw_line(cx1, cy1, cx2, cy1)
+        if self.showplumb:
+            ## pen.setDashPattern([ 3.0, 4.0, 6.0, 4.0])
+            ## pen.setDashOffset(5.0)
+            ## cr.setPen(pen)
+            if self.color2:
+                alpha = getattr(self, 'alpha', 1.0)
+                self.set_color(cr, self.color2, alpha=alpha)
 
-        # draw Y plumb line
-        #cr.draw_line(cx2, cy1, cx2, cy2)
+            # draw X plumb line
+            #cr.draw_line(cx1, cy1, cx2, cy1)
 
-        # draw X plum line label
-        xh -= xtwd // 2
-        #cr.draw_text(xh, y, text_x)
+            # draw Y plumb line
+            #cr.draw_line(cx2, cy1, cx2, cy2)
 
-        # draw Y plum line label
-        #cr.draw_text(x, yh, text_y)
+            # draw X plum line label
+            xh -= xtwd // 2
+            #cr.draw_text(xh, y, text_x)
+
+            # draw Y plum line label
+            #cr.draw_text(x, yh, text_y)
 
         if self.editing:
             self.draw_edit(cr)
@@ -476,12 +490,13 @@ class Image(ImageBase, MockCanvasMixin):
         # here we just draw the caps
         ImageBase.draw(self)
         
+        cpoints = self.get_cpoints()
         cr = self.setup_cr()
 
         if self.editing:
             self.draw_edit(cr)
         elif self.showcap:
-            self.draw_caps(cr, self.cap, self.get_points())
+            self.draw_caps(cr, self.cap, cpoints)
 
 
 class NormImage(NormImageBase, MockCanvasMixin):
@@ -491,12 +506,13 @@ class NormImage(NormImageBase, MockCanvasMixin):
         # here we just draw the caps
         ImageBase.draw(self)
         
+        cpoints = self.get_cpoints()
         cr = self.setup_cr()
 
         if self.editing:
             self.draw_edit(cr)
         elif self.showcap:
-            self.draw_caps(cr, self.cap, self.get_points())
+            self.draw_caps(cr, self.cap, cpoints)
 
 
 class DrawingCanvas(DrawingMixin, CanvasMixin, CompoundMixin,

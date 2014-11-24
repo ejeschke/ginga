@@ -259,10 +259,24 @@ class Line(LineBase, MplCanvasMixin):
         l = lines.Line2D((cx1, cx2), (cy1, cy2), **cr.kwdargs)
         cr.axes.add_line(l)
 
+        # TODO: arrow heads
+        if self.arrow == 'end':
+            #self.draw_arrowhead(cr, cx1, cy1, cx2, cy2)
+            caps = [(cx1, cy1)]
+        elif self.arrow == 'start':
+            #self.draw_arrowhead(cr, cx2, cy2, cx1, cy1)
+            caps = [(cx2, cy2)]
+        elif self.arrow == 'both':
+            #self.draw_arrowhead(cr, cx2, cy2, cx1, cy1)
+            #self.draw_arrowhead(cr, cx1, cy1, cx2, cy2)
+            caps = []
+        else:
+            caps = [(cx1, cy1), (cx2, cy2)]
+
         if self.editing:
             self.draw_edit(cr)
         elif self.showcap:
-            self.draw_caps(cr, self.cap, ((cx1, cy1), (cx2, cy2)))
+            self.draw_caps(cr, self.cap, caps)
 
 
 class Path(PathBase, MplCanvasMixin):
@@ -476,27 +490,28 @@ class Ruler(RulerBase, MplCanvasMixin):
         yd = yh + diag_yoffset
         cr.axes.text(xd, yd, text_h, fontdict=font)
 
-        if self.color2:
-            cr.set(color=cr.get_color(self.color2, self.alpha))
-            font = cr.get_font(self.font, fontsize, self.color2,
-                               alpha=alpha)
-            
-        # draw X plumb line
-        #cr.canvas.line((cx1, cy1, cx2, cy1), pen)
-        l = lines.Line2D((cx1, cx2), (cy1, cy1), **cr.kwdargs)
-        cr.axes.add_line(l)
+        if self.showplumb:
+            if self.color2:
+                cr.set(color=cr.get_color(self.color2, self.alpha))
+                font = cr.get_font(self.font, fontsize, self.color2,
+                                   alpha=alpha)
 
-        # draw Y plumb line
-        #cr.canvas.line((cx2, cy1, cx2, cy2), pen)
-        l = lines.Line2D((cx2, cx2), (cy1, cy2), **cr.kwdargs)
-        cr.axes.add_line(l)
+            # draw X plumb line
+            #cr.canvas.line((cx1, cy1, cx2, cy1), pen)
+            l = lines.Line2D((cx1, cx2), (cy1, cy1), **cr.kwdargs)
+            cr.axes.add_line(l)
 
-        # draw X plum line label
-        xh -= xtwd / 2
-        cr.axes.text(xh, y, text_x, fontdict=font)
+            # draw Y plumb line
+            #cr.canvas.line((cx2, cy1, cx2, cy2), pen)
+            l = lines.Line2D((cx2, cx2), (cy1, cy2), **cr.kwdargs)
+            cr.axes.add_line(l)
 
-        # draw Y plum line label
-        cr.axes.text(x, yh, text_y, fontdict=font)
+            # draw X plum line label
+            xh -= xtwd / 2
+            cr.axes.text(xh, y, text_x, fontdict=font)
+
+            # draw Y plum line label
+            cr.axes.text(x, yh, text_y, fontdict=font)
 
         if self.editing:
             self.draw_edit(cr)
@@ -511,12 +526,13 @@ class Image(ImageBase, MplCanvasMixin):
         # here we just draw the caps
         ImageBase.draw(self)
         
+        cpoints = self.get_cpoints()
         cr = self.setup_cr()
 
         if self.editing:
             self.draw_edit(cr)
         elif self.showcap:
-            self.draw_caps(cr, self.cap, self.get_points())
+            self.draw_caps(cr, self.cap, cpoints)
 
 
 class NormImage(NormImageBase, MplCanvasMixin):
@@ -526,12 +542,13 @@ class NormImage(NormImageBase, MplCanvasMixin):
         # here we just draw the caps
         ImageBase.draw(self)
         
+        cpoints = self.get_cpoints()
         cr = self.setup_cr()
 
         if self.editing:
             self.draw_edit(cr)
         elif self.showcap:
-            self.draw_caps(cr, self.cap, self.get_points())
+            self.draw_caps(cr, self.cap, cpoints)
 
 
 class DrawingCanvas(DrawingMixin, CanvasMixin, CompoundMixin,

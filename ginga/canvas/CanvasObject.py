@@ -10,7 +10,8 @@
 import math
 import numpy
 
-from ginga.misc import Bunch, Callback
+from ginga.misc import Callback, Bunch
+from ginga.misc.ParamSet import Param
 from ginga.util import wcs
 from ginga import trcalc, Mixins
 from ginga.util.six.moves import map, filter
@@ -330,13 +331,37 @@ class TextBase(CanvasObjectBase):
     Optional parameters for fontsize, color, etc.
     """
 
-    def __init__(self, x, y, text, font='Sans Serif', fontsize=None,
+    @classmethod
+    def get_params_metadata(cls):
+        return [
+            Param(name='x', type=float, default=0.0, argpos=0,
+                  description="X coordinate of lower left of text"),
+            Param(name='y', type=float, default=0.0, argpos=1,
+                  description="Y coordinate of lower left of text"),
+            Param(name='text', type=str, default='EDIT ME', 
+                  description="Text to display"),
+            Param(name='font', type=str, default='Sans Serif',
+                  description="Font family for text"),
+            Param(name='fontsize', type=int, default=None,
+                  min=8, max=72,
+                  description="Font size of text (default: vary by scale)"),
+            Param(name='color', type=str, default='yellow',
+                  description="Color of text"),
+            Param(name='alpha', type=float, default=1.0,
+                  min=0.0, max=1.0, widget='spinfloat', incr=0.1,
+                  description="Opacity of text"),
+            Param(name='showcap', type=_bool,
+                  default=False, valid=[False, True],
+                  description="Show caps for this object"),
+            ]
+    
+    def __init__(self, x, y, text='EDIT ME',
+                 font='Sans Serif', fontsize=None,
                  color='yellow', alpha=1.0, showcap=False):
         self.kind = 'text'
         super(TextBase, self).__init__(color=color, alpha=alpha,
                                        x=x, y=y, font=font, fontsize=fontsize,
                                        text=text, showcap=showcap)
-
 
     def get_center_pt(self):
         return (self.x, self.y)
@@ -366,18 +391,46 @@ class PolygonBase(CanvasObjectBase):
     Optional parameters for linesize, color, etc.
     """
 
+    @classmethod
+    def get_params_metadata(cls):
+        return [
+            ## Param(name='points', type=list, default=[], argpos=0,
+            ##       description="points making up polygon"),
+            Param(name='linewidth', type=int, default=1,
+                  min=1, max=20, widget='spinbutton', incr=1,
+                  description="Width of outline"),
+            Param(name='linestyle', type=str, default='solid',
+                  valid=['solid', 'dash'],
+                  description="Style of outline (default solid)"),
+            Param(name='color', type=str, default='red',
+                  description="Color of outline"),
+            Param(name='alpha', type=float, default=1.0,
+                  min=0.0, max=1.0, widget='spinfloat', incr=0.1,
+                  description="Opacity of outline"),
+            Param(name='fill', type=_bool,
+                  default=False, valid=[False, True],
+                  description="Fill the interior"),
+            Param(name='fillcolor', type=str, default=None,
+                  description="Color of fill"),
+            Param(name='fillalpha', type=float, default=1.0,
+                  min=0.0, max=1.0, widget='spinfloat', incr=0.1,
+                  description="Opacity of fill"),
+            Param(name='showcap', type=_bool,
+                  default=False, valid=[False, True],
+                  description="Show caps for this object"),
+            ]
+    
     def __init__(self, points, color='red',
                  linewidth=1, linestyle='solid', showcap=False,
                  fill=False, fillcolor=None, alpha=1.0,
-                 fillalpha=1.0, rot_deg=0.0):
+                 fillalpha=1.0):
         self.kind = 'polygon'
         
         super(PolygonBase, self).__init__(points=points, color=color,
                                           linewidth=linewidth, showcap=showcap,
                                           linestyle=linestyle, alpha=alpha,
                                           fill=fill, fillcolor=fillcolor,
-                                          fillalpha=fillalpha,
-                                          rot_deg=rot_deg)
+                                          fillalpha=fillalpha)
 
     def get_center_pt(self):
         P = numpy.array(self.points + [self.points[0]])
@@ -398,11 +451,7 @@ class PolygonBase(CanvasObjectBase):
     def get_points(self):
         return self.points
 
-    def contains(self, x, y):
-        # rotate point back to cartesian alignment for test
-        cx, cy = self.get_center_pt()
-        xp, yp = self.rotate_pt(x, y, -self.rot_deg,
-                                xoff=cx, yoff=cy)
+    def contains(self, xp, yp):
         # NOTE: we use a version of the ray casting algorithm
         # See: http://alienryderflex.com/polygon/
         result = False
@@ -430,6 +479,73 @@ class PolygonBase(CanvasObjectBase):
         return [self.get_center_pt()] + self.points
 
 
+class PathBase(CanvasObjectBase):
+    """Draws a path on a ImageViewCanvas.
+    Parameters are:
+    List of (x, y) points in the polygon.  
+    Optional parameters for linesize, color, etc.
+    """
+
+    @classmethod
+    def get_params_metadata(cls):
+        return [
+            ## Param(name='points', type=list, default=[], argpos=0,
+            ##       description="points making up polygon"),
+            Param(name='linewidth', type=int, default=1,
+                  min=1, max=20, widget='spinbutton', incr=1,
+                  description="Width of outline"),
+            Param(name='linestyle', type=str, default='solid',
+                  valid=['solid', 'dash'],
+                  description="Style of outline (default solid)"),
+            Param(name='color', type=str, default='red',
+                  description="Color of outline"),
+            Param(name='alpha', type=float, default=1.0,
+                  min=0.0, max=1.0, widget='spinfloat', incr=0.1,
+                  description="Opacity of outline"),
+            Param(name='showcap', type=_bool,
+                  default=False, valid=[False, True],
+                  description="Show caps for this object"),
+            ]
+    
+    def __init__(self, points, color='red',
+                 linewidth=1, linestyle='solid', showcap=False,
+                 alpha=1.0):
+        self.kind = 'path'
+        
+        super(PathBase, self).__init__(points=points, color=color,
+                                       linewidth=linewidth, showcap=showcap,
+                                       linestyle=linestyle, alpha=alpha)
+        
+    def set_edit_point(self, i, pt):
+        if i == 0:
+            x, y = pt
+            self.move_to(x, y)
+        else:
+            self.set_point_by_index(i-1, pt)
+
+    def get_points(self):
+        return self.points
+
+    def get_edit_points(self):
+        return [self.get_center_pt()] + self.points
+
+    def contains(self, x, y):
+        x1, y1 = self.points[0]
+        for x2, y2 in self.points[1:]:
+            if self.within_line(x, y, x1, y1, x2, y2, 1.0):
+                return True
+            x1, y1 = x2, y2
+        return False
+            
+    def select_contains(self, x, y):
+        x1, y1 = self.points[0]
+        for x2, y2 in self.points[1:]:
+            if self.within_line(x, y, x1, y1, x2, y2, self.cap_radius):
+                return True
+            x1, y1 = x2, y2
+        return False
+
+
 class RectangleBase(CanvasObjectBase):
     """Draws a rectangle on a ImageViewCanvas.
     Parameters are:
@@ -441,6 +557,46 @@ class RectangleBase(CanvasObjectBase):
     object such that x1, y1 always refers to the lower-left corner.
     """
 
+    @classmethod
+    def get_params_metadata(cls):
+        return [
+            Param(name='x1', type=float, default=0.0, argpos=0,
+                  description="First X coordinate of object"),
+            Param(name='y1', type=float, default=0.0, argpos=1,
+                  description="First Y coordinate of object"),
+            Param(name='x2', type=float, default=0.0, argpos=2,
+                  description="Second X coordinate of object"),
+            Param(name='y2', type=float, default=0.0, argpos=3,
+                  description="Second Y coordinate of object"),
+            Param(name='linewidth', type=int, default=1,
+                  min=1, max=20, widget='spinbutton', incr=1,
+                  description="Width of outline"),
+            Param(name='linestyle', type=str, default='solid',
+                  valid=['solid', 'dash'],
+                  description="Style of outline (default solid)"),
+            Param(name='color', type=str, default='red',
+                  description="Color of outline"),
+            Param(name='alpha', type=float, default=1.0,
+                  min=0.0, max=1.0, widget='spinfloat', incr=0.1,
+                  description="Opacity of outline"),
+            Param(name='fill', type=_bool,
+                  default=False, valid=[False, True],
+                  description="Fill the interior"),
+            Param(name='fillcolor', type=str, default=None,
+                  description="Color of fill"),
+            Param(name='fillalpha', type=float, default=1.0,
+                  min=0.0, max=1.0, widget='spinfloat', incr=0.1,
+                  description="Opacity of fill"),
+            Param(name='drawdims', type=_bool,
+                  default=False, valid=[False, True],
+                  description="Annotate with dimensions of object"),
+            Param(name='font', type=str, default='Sans Serif',
+                  description="Font family for text"),
+            Param(name='showcap', type=_bool,
+                  default=False, valid=[False, True],
+                  description="Show caps for this object"),
+            ]
+    
     def __init__(self, x1, y1, x2, y2, color='red',
                  linewidth=1, linestyle='solid', showcap=False,
                  fill=False, fillcolor=None, alpha=1.0,
@@ -502,6 +658,46 @@ class BoxBase(CanvasObjectBase):
     Optional parameters for linesize, color, etc.
     """
 
+    @classmethod
+    def get_params_metadata(cls):
+        return [
+            Param(name='x', type=float, default=0.0, argpos=0,
+                  description="X coordinate of center of object"),
+            Param(name='y', type=float, default=0.0, argpos=1,
+                  description="Y coordinate of center of object"),
+            Param(name='xradius', type=float, default=1.0,  argpos=2,
+                  min=0.0,
+                  description="X radius of object"),
+            Param(name='yradius', type=float, default=1.0,  argpos=3,
+                  min=0.0,
+                  description="Y radius of object"),
+            Param(name='linewidth', type=int, default=1,
+                  min=1, max=20, widget='spinbutton', incr=1,
+                  description="Width of outline"),
+            Param(name='linestyle', type=str, default='solid',
+                  valid=['solid', 'dash'],
+                  description="Style of outline (default solid)"),
+            Param(name='color', type=str, default='yellow',
+                  description="Color of outline"),
+            Param(name='alpha', type=float, default=1.0,
+                  min=0.0, max=1.0, widget='spinfloat', incr=0.1,
+                  description="Opacity of outline"),
+            Param(name='fill', type=_bool,
+                  default=False, valid=[False, True],
+                  description="Fill the interior"),
+            Param(name='fillcolor', type=str, default=None,
+                  description="Color of fill"),
+            Param(name='fillalpha', type=float, default=1.0,
+                  min=0.0, max=1.0, widget='spinfloat', incr=0.1,
+                  description="Opacity of fill"),
+            Param(name='showcap', type=_bool,
+                  default=False, valid=[False, True],
+                  description="Show caps for this object"),
+            Param(name='rot_deg', type=float, default=0.0,
+                  min=-359.999, max=359.999, widget='spinfloat', incr=1.0,
+                  description="Rotation about center of object"),
+            ]
+    
     def __init__(self, x, y, xradius, yradius, color='red',
                  linewidth=1, linestyle='solid', showcap=False,
                  fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0,
@@ -566,6 +762,40 @@ class CircleBase(CanvasObjectBase):
     Optional parameters for linesize, color, etc.
     """
 
+    @classmethod
+    def get_params_metadata(cls):
+        return [
+            Param(name='x', type=float, default=0.0, argpos=0,
+                  description="X coordinate of center of object"),
+            Param(name='y', type=float, default=0.0, argpos=1,
+                  description="Y coordinate of center of object"),
+            Param(name='radius', type=float, default=1.0,  argpos=2,
+                  min=0.0,
+                  description="Radius of object"),
+            Param(name='linewidth', type=int, default=1,
+                  min=1, max=20, widget='spinbutton', incr=1,
+                  description="Width of outline"),
+            Param(name='linestyle', type=str, default='solid',
+                  valid=['solid', 'dash'],
+                  description="Style of outline (default solid)"),
+            Param(name='color', type=str, default='yellow',
+                  description="Color of outline"),
+            Param(name='alpha', type=float, default=1.0,
+                  min=0.0, max=1.0, widget='spinfloat', incr=0.1,
+                  description="Opacity of outline"),
+            Param(name='fill', type=_bool,
+                  default=False, valid=[False, True],
+                  description="Fill the interior"),
+            Param(name='fillcolor', type=str, default=None,
+                  description="Color of fill"),
+            Param(name='fillalpha', type=float, default=1.0,
+                  min=0.0, max=1.0, widget='spinfloat', incr=0.1,
+                  description="Opacity of fill"),
+            Param(name='showcap', type=_bool,
+                  default=False, valid=[False, True],
+                  description="Show caps for this object"),
+            ]
+    
     def __init__(self, x, y, radius, color='yellow',
                  linewidth=1, linestyle='solid', showcap=False,
                  fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0):
@@ -612,6 +842,46 @@ class EllipseBase(CanvasObjectBase):
     Optional parameters for linesize, color, etc.
     """
 
+    @classmethod
+    def get_params_metadata(cls):
+        return [
+            Param(name='x', type=float, default=0.0, argpos=0,
+                  description="X coordinate of center of object"),
+            Param(name='y', type=float, default=0.0, argpos=1,
+                  description="Y coordinate of center of object"),
+            Param(name='xradius', type=float, default=1.0,  argpos=2,
+                  min=0.0,
+                  description="X radius of object"),
+            Param(name='yradius', type=float, default=1.0,  argpos=3,
+                  min=0.0,
+                  description="Y radius of object"),
+            Param(name='linewidth', type=int, default=1,
+                  min=1, max=20, widget='spinbutton', incr=1,
+                  description="Width of outline"),
+            Param(name='linestyle', type=str, default='solid',
+                  valid=['solid', 'dash'],
+                  description="Style of outline (default solid)"),
+            Param(name='color', type=str, default='yellow',
+                  description="Color of outline"),
+            Param(name='alpha', type=float, default=1.0,
+                  min=0.0, max=1.0, widget='spinfloat', incr=0.1,
+                  description="Opacity of outline"),
+            Param(name='fill', type=_bool,
+                  default=False, valid=[False, True],
+                  description="Fill the interior"),
+            Param(name='fillcolor', type=str, default=None,
+                  description="Color of fill"),
+            Param(name='fillalpha', type=float, default=1.0,
+                  min=0.0, max=1.0, widget='spinfloat', incr=0.1,
+                  description="Opacity of fill"),
+            Param(name='showcap', type=_bool,
+                  default=False, valid=[False, True],
+                  description="Show caps for this object"),
+            Param(name='rot_deg', type=float, default=0.0,
+                  min=-359.999, max=359.999, widget='spinfloat', incr=1.0,
+                  description="Rotation about center of object"),
+            ]
+    
     def __init__(self, x, y, xradius, yradius, color='yellow',
                  linewidth=1, linestyle='solid', showcap=False,
                  fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0,
@@ -688,6 +958,35 @@ class PointBase(CanvasObjectBase):
     Currently the only styles are 'cross' and 'plus'.
     """
 
+    @classmethod
+    def get_params_metadata(cls):
+        return [
+            Param(name='x', type=float, default=0.0, argpos=0,
+                  description="X coordinate of center of object"),
+            Param(name='y', type=float, default=0.0, argpos=1,
+                  description="Y coordinate of center of object"),
+            Param(name='radius', type=float, default=1.0,  argpos=2,
+                  min=0.0,
+                  description="Radius of object"),
+            Param(name='style', type=str, default='cross',
+                  valid=['cross', 'plus'],
+                  description="Style of point (default 'cross')"),
+            Param(name='linewidth', type=int, default=1,
+                  min=1, max=20, widget='spinbutton', incr=1,
+                  description="Width of outline"),
+            Param(name='linestyle', type=str, default='solid',
+                  valid=['solid', 'dash'],
+                  description="Style of outline (default solid)"),
+            Param(name='color', type=str, default='yellow',
+                  description="Color of outline"),
+            Param(name='alpha', type=float, default=1.0,
+                  min=0.0, max=1.0, widget='spinfloat', incr=0.1,
+                  description="Opacity of outline"),
+            Param(name='showcap', type=_bool,
+                  default=False, valid=[False, True],
+                  description="Show caps for this object"),
+            ]
+    
     def __init__(self, x, y, radius, style='cross', color='yellow',
                  linewidth=1, linestyle='solid', alpha=1.0, showcap=False):
         self.kind = 'point'
@@ -734,13 +1033,43 @@ class LineBase(CanvasObjectBase):
     Optional parameters for linesize, color, etc.
     """
 
+    @classmethod
+    def get_params_metadata(cls):
+        return [
+            Param(name='x1', type=float, default=0.0, argpos=0,
+                  description="First X coordinate of object"),
+            Param(name='y1', type=float, default=0.0, argpos=1,
+                  description="First Y coordinate of object"),
+            Param(name='x2', type=float, default=0.0, argpos=2,
+                  description="Second X coordinate of object"),
+            Param(name='y2', type=float, default=0.0, argpos=3,
+                  description="Second Y coordinate of object"),
+            Param(name='linewidth', type=int, default=1,
+                  min=1, max=20, widget='spinbutton', incr=1,
+                  description="Width of outline"),
+            Param(name='linestyle', type=str, default='solid',
+                  valid=['solid', 'dash'],
+                  description="Style of outline (default solid)"),
+            Param(name='arrow', type=str, default='none',
+                  valid=['start', 'end', 'both', 'none'],
+                  description="Arrows at ends (default: none)"),
+            Param(name='color', type=str, default='red',
+                  description="Color of outline"),
+            Param(name='alpha', type=float, default=1.0,
+                  min=0.0, max=1.0, widget='spinfloat', incr=0.1,
+                  description="Opacity of outline"),
+            Param(name='showcap', type=_bool,
+                  default=False, valid=[False, True],
+                  description="Show caps for this object"),
+            ]
+    
     def __init__(self, x1, y1, x2, y2, color='red',
                  linewidth=1, linestyle='solid', alpha=1.0,
-                 showcap=False):
+                 arrow=None, showcap=False):
         self.kind = 'line'
         super(LineBase, self).__init__(color=color, alpha=alpha,
                                        linewidth=linewidth, showcap=showcap,
-                                       linestyle=linestyle,
+                                       linestyle=linestyle, arrow=arrow,
                                        x1=x1, y1=y1, x2=x2, y2=y2)
         
     def get_points(self):
@@ -765,52 +1094,6 @@ class LineBase(CanvasObjectBase):
                                 self.cap_radius)
         
 
-class PathBase(CanvasObjectBase):
-    """Draws a path on a ImageViewCanvas.
-    Parameters are:
-    List of (x, y) points in the polygon.  
-    Optional parameters for linesize, color, etc.
-    """
-
-    def __init__(self, points, color='red',
-                 linewidth=1, linestyle='solid', showcap=False,
-                 alpha=1.0):
-        self.kind = 'path'
-        
-        super(PathBase, self).__init__(points=points, color=color,
-                                       linewidth=linewidth, showcap=showcap,
-                                       linestyle=linestyle, alpha=alpha)
-        
-    def set_edit_point(self, i, pt):
-        if i == 0:
-            x, y = pt
-            self.move_to(x, y)
-        else:
-            self.set_point_by_index(i-1, pt)
-
-    def get_points(self):
-        return self.points
-
-    def get_edit_points(self):
-        return [self.get_center_pt()] + self.points
-
-    def contains(self, x, y):
-        x1, y1 = self.points[0]
-        for x2, y2 in self.points[1:]:
-            if self.within_line(x, y, x1, y1, x2, y2, 1.0):
-                return True
-            x1, y1 = x2, y2
-        return False
-            
-    def select_contains(self, x, y):
-        x1, y1 = self.points[0]
-        for x2, y2 in self.points[1:]:
-            if self.within_line(x, y, x1, y1, x2, y2, self.cap_radius):
-                return True
-            x1, y1 = x2, y2
-        return False
-
-
 class CompassBase(CanvasObjectBase):
     """Draws a WCS compass on a ImageViewCanvas.
     Parameters are:
@@ -819,6 +1102,37 @@ class CompassBase(CanvasObjectBase):
     Optional parameters for linesize, color, etc.
     """
 
+    @classmethod
+    def get_params_metadata(cls):
+        return [
+            Param(name='x', type=float, default=0.0, argpos=0,
+                  description="X coordinate of center of object"),
+            Param(name='y', type=float, default=0.0, argpos=1,
+                  description="Y coordinate of center of object"),
+            Param(name='radius', type=float, default=1.0,  argpos=2,
+                  min=0.0,
+                  description="Radius of object"),
+            Param(name='linewidth', type=int, default=1,
+                  min=1, max=20, widget='spinbutton', incr=1,
+                  description="Width of outline"),
+            Param(name='linestyle', type=str, default='solid',
+                  valid=['solid', 'dash'],
+                  description="Style of outline (default solid)"),
+            Param(name='color', type=str, default='skyblue',
+                  description="Color of outline"),
+            Param(name='alpha', type=float, default=1.0,
+                  min=0.0, max=1.0, widget='spinfloat', incr=0.1,
+                  description="Opacity of outline"),
+            Param(name='font', type=str, default='Sans Serif',
+                  description="Font family for text"),
+            Param(name='fontsize', type=int, default=None,
+                  min=8, max=72,
+                  description="Font size of text (default: vary by scale)"),
+            Param(name='showcap', type=_bool,
+                  default=False, valid=[False, True],
+                  description="Show caps for this object"),
+            ]
+    
     def __init__(self, x, y, radius, color='skyblue',
                  linewidth=1, fontsize=None, font='Sans Serif',
                  alpha=1.0, linestyle='solid', showcap=True):
@@ -863,6 +1177,41 @@ class RightTriangleBase(CanvasObjectBase):
     Optional parameters for linesize, color, etc.
     """
 
+    @classmethod
+    def get_params_metadata(cls):
+        return [
+            Param(name='x1', type=float, default=0.0, argpos=0,
+                  description="First X coordinate of object"),
+            Param(name='y1', type=float, default=0.0, argpos=1,
+                  description="First Y coordinate of object"),
+            Param(name='x2', type=float, default=0.0, argpos=2,
+                  description="Second X coordinate of object"),
+            Param(name='y2', type=float, default=0.0, argpos=3,
+                  description="Second Y coordinate of object"),
+            Param(name='linewidth', type=int, default=1,
+                  min=1, max=20, widget='spinbutton', incr=1,
+                  description="Width of outline"),
+            Param(name='linestyle', type=str, default='solid',
+                  valid=['solid', 'dash'],
+                  description="Style of outline (default solid)"),
+            Param(name='color', type=str, default='pink',
+                  description="Color of outline"),
+            Param(name='alpha', type=float, default=1.0,
+                  min=0.0, max=1.0, widget='spinfloat', incr=0.1,
+                  description="Opacity of outline"),
+            Param(name='fill', type=_bool,
+                  default=False, valid=[False, True],
+                  description="Fill the interior"),
+            Param(name='fillcolor', type=str, default=None,
+                  description="Color of fill"),
+            Param(name='fillalpha', type=float, default=1.0,
+                  min=0.0, max=1.0, widget='spinfloat', incr=0.1,
+                  description="Opacity of fill"),
+            Param(name='showcap', type=_bool,
+                  default=False, valid=[False, True],
+                  description="Show caps for this object"),
+            ]
+    
     def __init__(self, x1, y1, x2, y2, color='pink',
                  linewidth=1, linestyle='solid', showcap=False,
                  fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0):
@@ -913,6 +1262,46 @@ class TriangleBase(CanvasObjectBase):
     Optional parameters for linesize, color, etc.
     """
 
+    @classmethod
+    def get_params_metadata(cls):
+        return [
+            Param(name='x', type=float, default=0.0, argpos=0,
+                  description="X coordinate of center of object"),
+            Param(name='y', type=float, default=0.0, argpos=1,
+                  description="Y coordinate of center of object"),
+            Param(name='xradius', type=float, default=1.0,  argpos=2,
+                  min=0.0,
+                  description="X radius of object"),
+            Param(name='yradius', type=float, default=1.0,  argpos=3,
+                  min=0.0,
+                  description="Y radius of object"),
+            Param(name='linewidth', type=int, default=1,
+                  min=1, max=20, widget='spinbutton', incr=1,
+                  description="Width of outline"),
+            Param(name='linestyle', type=str, default='solid',
+                  valid=['solid', 'dash'],
+                  description="Style of outline (default solid)"),
+            Param(name='color', type=str, default='yellow',
+                  description="Color of outline"),
+            Param(name='alpha', type=float, default=1.0,
+                  min=0.0, max=1.0, widget='spinfloat', incr=0.1,
+                  description="Opacity of outline"),
+            Param(name='fill', type=_bool,
+                  default=False, valid=[False, True],
+                  description="Fill the interior"),
+            Param(name='fillcolor', type=str, default=None,
+                  description="Color of fill"),
+            Param(name='fillalpha', type=float, default=1.0,
+                  min=0.0, max=1.0, widget='spinfloat', incr=0.1,
+                  description="Opacity of fill"),
+            Param(name='showcap', type=_bool,
+                  default=False, valid=[False, True],
+                  description="Show caps for this object"),
+            Param(name='rot_deg', type=float, default=0.0,
+                  min=-359.999, max=359.999, widget='spinfloat', incr=1.0,
+                  description="Rotation about center of object"),
+            ]
+    
     def __init__(self, x, y, xradius, yradius, color='pink',
                  linewidth=1, linestyle='solid', showcap=False,
                  fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0,
@@ -981,13 +1370,54 @@ class RulerBase(CanvasObjectBase):
     Optional parameters for linesize, color, etc.
     """
 
-    def __init__(self, x1, y1, x2, y2, color='red', color2='yellow',
+    @classmethod
+    def get_params_metadata(cls):
+        return [
+            Param(name='x1', type=float, default=0.0, argpos=0,
+                  description="First X coordinate of object"),
+            Param(name='y1', type=float, default=0.0, argpos=1,
+                  description="First Y coordinate of object"),
+            Param(name='x2', type=float, default=0.0, argpos=2,
+                  description="Second X coordinate of object"),
+            Param(name='y2', type=float, default=0.0, argpos=3,
+                  description="Second Y coordinate of object"),
+            Param(name='linewidth', type=int, default=1,
+                  min=1, max=20, widget='spinbutton', incr=1,
+                  description="Width of outline"),
+            Param(name='linestyle', type=str, default='solid',
+                  valid=['solid', 'dash'],
+                  description="Style of outline (default: solid)"),
+            Param(name='color', type=str, default='green',
+                  description="Color of outline"),
+            Param(name='showplumb', type=_bool,
+                  default=True, valid=[False, True],
+                  description="Show plumb lines for the ruler"),
+            Param(name='color2', type=str, default='yellow',
+                  description="Second color of outline"),
+            Param(name='alpha', type=float, default=1.0,
+                  min=0.0, max=1.0, widget='spinfloat', incr=0.1,
+                  description="Opacity of outline"),
+            Param(name='units', type=str, default='arcmin',
+                  valid=['arcmin', 'pixels'],
+                  description="Units for text distance (default: arcmin)"),
+            Param(name='font', type=str, default='Sans Serif',
+                  description="Font family for text"),
+            Param(name='fontsize', type=int, default=None,
+                  min=8, max=72,
+                  description="Font size of text (default: vary by scale)"),
+            Param(name='showcap', type=_bool,
+                  default=False, valid=[False, True],
+                  description="Show caps for this object"),
+            ]
+    
+    def __init__(self, x1, y1, x2, y2, color='green', color2='yellow',
                  alpha=1.0, linewidth=1, linestyle='solid',
-                 showcap=True, units='arcmin',
+                 showcap=True, showplumb=True, units='arcmin',
                  font='Sans Serif', fontsize=None):
         self.kind = 'ruler'
         super(RulerBase, self).__init__(color=color, color2=color2,
                                         alpha=alpha, units=units,
+                                        showplumb=showplumb,
                                         linewidth=linewidth, showcap=showcap,
                                         linestyle=linestyle,
                                         x1=x1, y1=y1, x2=x2, y2=y2,
@@ -1058,15 +1488,45 @@ class ImageBase(CanvasObjectBase):
     image: the image, which must be an RGBImage object
     """
 
+    @classmethod
+    def get_params_metadata(cls):
+        return [
+            Param(name='x', type=float, default=0.0, argpos=0,
+                  description="X coordinate of corner of object"),
+            Param(name='y', type=float, default=0.0, argpos=1,
+                  description="Y coordinate of corner of object"),
+            ## Param(name='image', type=?, argpos=2,
+            ##       description="Image to be displayed on canvas"),
+            Param(name='scale_x', type=float, default=1.0,
+                  description="Scaling factor for X dimension of object"),
+            Param(name='scale_y', type=float, default=1.0,
+                  description="Scaling factor for Y dimension of object"),
+            Param(name='color', type=str, default='yellow',
+                  description="Color of outline"),
+            Param(name='alpha', type=float, default=1.0,
+                  min=0.0, max=1.0, widget='spinfloat', incr=0.1,
+                  description="Opacity of outline"),
+            Param(name='showcap', type=_bool,
+                  default=False, valid=[False, True],
+                  description="Show caps for this object"),
+            ## Param(name='flipy', type=_bool,
+            ##       default=True, valid=[False, True],
+            ##       description="Flip image in Y direction"),
+            Param(name='optimize', type=_bool,
+                  default=True, valid=[False, True],
+                  description="Optimize rendering for this object"),
+            ]
+    
     def __init__(self, x, y, image, alpha=1.0, scale_x=1.0, scale_y=1.0,
-                 showcap=False, color='yellow', flipy=False, optimize=True):
+                 color='yellow', 
+                 showcap=False, flipy=False, optimize=True):
         self.kind = 'image'
         super(ImageBase, self).__init__(x=x, y=y, image=image, alpha=alpha,
                                         scale_x=scale_x, scale_y=scale_y,
-                                        showcap=showcap, color=color, flipy=flipy)
+                                        color=color, showcap=showcap,
+                                        flipy=flipy, optimize=optimize)
 
         self._drawn = False
-        self._optimize = optimize
         # these hold intermediate step results. Depending on value of
         # `whence` they may not need to be recomputed.
         self._cutout = None
@@ -1096,7 +1556,7 @@ class ImageBase(CanvasObjectBase):
         dst_order = self.viewer.get_rgb_order()
         image_order = self.image.get_order()
 
-        if (whence <= 0.0) or (self._cutout == None) or (not self._optimize):
+        if (whence <= 0.0) or (self._cutout == None) or (not self.optimize):
             # get extent of our data coverage in the window
             ((x0, y0), (x1, y1), (x2, y2), (x3, y3)) = self.viewer.get_pan_rect()
             xmin = int(min(x0, x1, x2, x3))
@@ -1182,7 +1642,6 @@ class ImageBase(CanvasObjectBase):
         height = int(self.image.height * self.scale_y)
         return (width, height)
     
-    # TO BE DEPRECATED?
     def get_coords(self):
         x1, y1 = self.x, self.y
         wd, ht = self.get_scaled_wdht()
@@ -1194,7 +1653,8 @@ class ImageBase(CanvasObjectBase):
         return (self.x + wd / 2.0, self.y + ht / 2.0)
 
     def get_points(self):
-        return [(self.x, self.y)]
+        x1, y1, x2, y2 = self.get_coords()
+        return [(x1, y1), (x2, y1), (x2, y2), (x1, y2)]
     
     def contains(self, x, y):
         width, height = self.get_scaled_wdht()
@@ -1257,9 +1717,41 @@ class NormImageBase(ImageBase):
     image: the image, which must be an RGBImage object
     """
 
-    def __init__(self, x, y, image, alpha=1.0,
-                 scale_x=1.0, scale_y=1.0, showcap=False,
-                 color='yellow',
+    @classmethod
+    def get_params_metadata(cls):
+        return [
+            Param(name='x', type=float, default=0.0, argpos=0,
+                  description="X coordinate of corner of object"),
+            Param(name='y', type=float, default=0.0, argpos=1,
+                  description="Y coordinate of corner of object"),
+            ## Param(name='image', type=?, argpos=2,
+            ##       description="Image to be displayed on canvas"),
+            Param(name='scale_x', type=float, default=1.0,
+                  description="Scaling factor for X dimension of object"),
+            Param(name='scale_y', type=float, default=1.0,
+                  description="Scaling factor for Y dimension of object"),
+            Param(name='color', type=str, default='yellow',
+                  description="Color of outline"),
+            Param(name='alpha', type=float, default=1.0,
+                  min=0.0, max=1.0, widget='spinfloat', incr=0.1,
+                  description="Opacity of outline"),
+            Param(name='showcap', type=_bool,
+                  default=False, valid=[False, True],
+                  description="Show caps for this object"),
+            ## Param(name='flipy', type=_bool,
+            ##       default=True, valid=[False, True],
+            ##       description="Flip image in Y direction"),
+            Param(name='optimize', type=_bool,
+                  default=True, valid=[False, True],
+                  description="Optimize rendering for this object"),
+            ## Param(name='rgbmap', type=?,
+            ##       description="RGB mapper for the image"),
+            ## Param(name='autocuts', type=?,
+            ##       description="Cuts manager for the image"),
+            ]
+    
+    def __init__(self, x, y, image, alpha=1.0, scale_x=1.0, scale_y=1.0, 
+                 color='yellow', showcap=False,
                  optimize=True, rgbmap=None, autocuts=None):
         self.kind = 'normimage'
         super(NormImageBase, self).__init__(x=x, y=y, image=image, alpha=alpha,
@@ -1277,7 +1769,7 @@ class NormImageBase(ImageBase):
     def draw_image(self, dstarr, whence=0.0):
         #print("redraw whence=%f" % (whence))
 
-        if (whence <= 0.0) or (self._cutout == None) or (not self._optimize):
+        if (whence <= 0.0) or (self._cutout == None) or (not self.optimize):
             # get extent of our data coverage in the window
             ((x0, y0), (x1, y1), (x2, y2), (x3, y3)) = self.viewer.get_pan_rect()
             xmin = int(min(x0, x1, x2, x3))
@@ -1332,7 +1824,7 @@ class NormImageBase(ImageBase):
         else:
             rgbmap = self.viewer.get_rgbmap()
 
-        if (whence <= 1.0) or (self._prergb == None) or (not self._optimize):
+        if (whence <= 1.0) or (self._prergb == None) or (not self.optimize):
             # apply visual changes prior to color mapping (cut levels, etc)
             vmax = rgbmap.get_hash_size() - 1
             newdata = self.apply_visuals(self._cutout, 0, vmax)
@@ -1351,7 +1843,7 @@ class NormImageBase(ImageBase):
         if ('A' in dst_order) and not ('A' in image_order):
             get_order = dst_order.replace('A', '')
 
-        if (whence <= 2.5) or (self._rgbarr == None) or (not self._optimize):
+        if (whence <= 2.5) or (self._rgbarr == None) or (not self.optimize):
             # get RGB mapped array
             rgbobj = rgbmap.get_rgbarray(self._prergb, order=dst_order,
                                          image_order=image_order)
@@ -1419,5 +1911,8 @@ class Canvas(CanvasMixin, CompoundObject, CanvasObjectBase):
         self.kind = 'canvas'
         self.editable = False
 
+
+# funky boolean converter
+_bool = lambda st: str(st).lower() == 'true'
 
 # END

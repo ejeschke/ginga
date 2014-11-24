@@ -259,10 +259,23 @@ class Line(LineBase, AggCanvasMixin):
         #cr.set_line_cap(cairo.LINE_CAP_ROUND)
         cr.canvas.line((cx1, cy1, cx2, cy2), pen)
 
+        if self.arrow == 'end':
+            self.draw_arrowhead(cr, cx1, cy1, cx2, cy2, pen)
+            caps = [(cx1, cy1)]
+        elif self.arrow == 'start':
+            self.draw_arrowhead(cr, cx2, cy2, cx1, cy1, pen)
+            caps = [(cx2, cy2)]
+        elif self.arrow == 'both':
+            self.draw_arrowhead(cr, cx2, cy2, cx1, cy1, pen)
+            self.draw_arrowhead(cr, cx1, cy1, cx2, cy2, pen)
+            caps = []
+        else:
+            caps = [(cx1, cy1), (cx2, cy2)]
+
         if self.editing:
             self.draw_edit(cr)
         elif self.showcap:
-            self.draw_caps(cr, self.cap, ((cx1, cy1), (cx2, cy2)))
+            self.draw_caps(cr, self.cap, caps)
 
 
 class Path(PathBase, AggCanvasMixin):
@@ -463,24 +476,25 @@ class Ruler(RulerBase, AggCanvasMixin):
         yd = yh + diag_yoffset
         cr.canvas.text((xd, yd), text_h, font)
 
-        if self.color2:
-            pen = cr.get_pen(self.color2, linewidth=self.linewidth,
-                             alpha=alpha)
-            font = cr.get_font(self.font, fontsize, self.color2,
-                               alpha=alpha)
-            
-        # draw X plumb line
-        cr.canvas.line((cx1, cy1, cx2, cy1), pen)
+        if self.showplumb:
+            if self.color2:
+                pen = cr.get_pen(self.color2, linewidth=self.linewidth,
+                                 alpha=alpha)
+                font = cr.get_font(self.font, fontsize, self.color2,
+                                   alpha=alpha)
 
-        # draw Y plumb line
-        cr.canvas.line((cx2, cy1, cx2, cy2), pen)
+            # draw X plumb line
+            cr.canvas.line((cx1, cy1, cx2, cy1), pen)
 
-        # draw X plum line label
-        xh -= xtwd // 2
-        cr.canvas.text((xh, y), text_x, font)
+            # draw Y plumb line
+            cr.canvas.line((cx2, cy1, cx2, cy2), pen)
 
-        # draw Y plum line label
-        cr.canvas.text((x, yh), text_y, font)
+            # draw X plum line label
+            xh -= xtwd // 2
+            cr.canvas.text((xh, y), text_x, font)
+
+            # draw Y plum line label
+            cr.canvas.text((x, yh), text_y, font)
 
         if self.editing:
             self.draw_edit(cr)
@@ -495,12 +509,13 @@ class Image(ImageBase, AggCanvasMixin):
         # here we just draw the caps
         ImageBase.draw(self)
         
+        cpoints = self.get_cpoints()
         cr = self.setup_cr()
 
         if self.editing:
             self.draw_edit(cr)
         elif self.showcap:
-            self.draw_caps(cr, self.cap, self.get_points())
+            self.draw_caps(cr, self.cap, cpoints)
 
 
 class NormImage(NormImageBase, AggCanvasMixin):
@@ -510,12 +525,13 @@ class NormImage(NormImageBase, AggCanvasMixin):
         # here we just draw the caps
         ImageBase.draw(self)
         
+        cpoints = self.get_cpoints()
         cr = self.setup_cr()
 
         if self.editing:
             self.draw_edit(cr)
         elif self.showcap:
-            self.draw_caps(cr, self.cap, self.get_points())
+            self.draw_caps(cr, self.cap, cpoints)
 
 
 class DrawingCanvas(DrawingMixin, CanvasMixin, CompoundMixin,

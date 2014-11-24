@@ -9,11 +9,11 @@
 #
 from ginga import GingaPlugin
 from ginga import colors
-from ginga.misc import Widgets, CanvasTypes
+from ginga.misc import Widgets, CanvasTypes, ParamSet, Bunch
 
 draw_colors = colors.get_colors()
 
-default_drawtype = 'point'
+default_drawtype = 'circle'
 default_drawcolor = 'lightblue'
 fillkinds = ('circle', 'rectangle', 'polygon', 'triangle', 'righttriangle',
              'square', 'ellipse', 'box')
@@ -28,21 +28,31 @@ class Drawing(GingaPlugin.LocalPlugin):
 
         canvas = CanvasTypes.DrawingCanvas()
         canvas.enable_draw(True)
+        canvas.enable_edit(True)
         canvas.set_drawtype('point', color='cyan')
         canvas.set_callback('draw-event', self.draw_cb)
+        canvas.set_callback('edit-event', self.edit_cb)
+        canvas.set_callback('edit-select', self.edit_select_cb)
         canvas.setSurface(self.fitsimage)
         self.canvas = canvas
 
-        self.w = None
         self.drawtypes = list(canvas.get_drawtypes())
         self.drawcolors = draw_colors
         self.linestyles = ['solid', 'dash']
+        # contains all parameters to be passed to the constructor
+        self.draw_args = []
+        self.draw_kwdargs = {}
+        # cache of all canvas item parameters
+        self.drawparams_cache = {}
+        # holds object being edited
+        self.edit_obj = None
 
     def build_gui(self, container):
         top = Widgets.VBox()
         top.set_border_width(4)
 
         vbox, sw, orientation = Widgets.get_oriented_box(container)
+        self.orientation = orientation
         vbox.set_border_width(4)
         vbox.set_spacing(2)
 
@@ -61,17 +71,9 @@ class Drawing(GingaPlugin.LocalPlugin):
         fr = Widgets.Frame("Drawing")
 
         captions = (("Draw type:", 'label', "Draw type", 'combobox'),
-                    ("Draw color:", 'label', "Draw color", 'combobox'),
-                    ("Line width:", 'label', "Line width", 'spinbutton'),
-                    ("Line style:", 'label', "Line style", 'combobox'),
-                    ("Alpha:", 'label', "Alpha", 'spinfloat'),
-                    ("Fill", 'checkbutton', "Fill color", 'combobox'),
-                    ("Fill Alpha:", 'label', "Fill Alpha", 'spinfloat'),
-                    ("Text:", 'label', "Text", 'entry'),
-                    ("Clear canvas", 'button')
                     )
         w, b = Widgets.build_info(captions)
-        self.w = b
+        self.w.update(b)
 
         combobox = b.draw_type
         for name in self.drawtypes:
@@ -80,53 +82,36 @@ class Drawing(GingaPlugin.LocalPlugin):
         combobox.set_index(index)
         combobox.add_callback('activated', lambda w, idx: self.set_drawparams())
 
-        combobox = b.draw_color
-        self.drawcolors = draw_colors
-        for name in self.drawcolors:
-            combobox.append_text(name)
-        index = self.drawcolors.index(default_drawcolor)
-        combobox.set_index(index)
-        combobox.add_callback('activated', lambda w, idx: self.set_drawparams())
-
-        combobox = b.fill_color
-        for name in self.drawcolors:
-            combobox.append_text(name)
-        index = self.drawcolors.index(default_drawcolor)
-        combobox.set_index(index)
-        combobox.add_callback('activated', lambda w, idx: self.set_drawparams())
-
-        b.line_width.set_limits(0, 10, 1)
-        #b.line_width.set_decimals(0)
-        b.line_width.set_value(1)
-        b.line_width.add_callback('value-changed', lambda w, val: self.set_drawparams())
-        
-        combobox = b.line_style
-        for name in self.linestyles:
-            combobox.append_text(name)
-        combobox.set_index(0)
-        combobox.add_callback('activated', lambda w, idx: self.set_drawparams())
-
-        b.fill.add_callback('activated', lambda w, tf: self.set_drawparams())
-        b.fill.set_state(False)
-
-        b.alpha.set_limits(0.0, 1.0, 0.1)
-        b.alpha.set_decimals(2)
-        b.alpha.set_value(1.0)
-        b.alpha.add_callback('value-changed', lambda w, val: self.set_drawparams())
-        
-        b.fill_alpha.set_limits(0.0, 1.0, 0.1)
-        b.fill_alpha.set_decimals(2)
-        b.fill_alpha.set_value(0.3)
-        b.fill_alpha.add_callback('value-changed', lambda w, val: self.set_drawparams())
-
-        b.text.add_callback('activated', lambda w: self.set_drawparams())
-        b.text.set_text('EDIT ME')
-        b.text.set_length(60)
-        
-        b.clear_canvas.add_callback('activated', lambda w: self.clear_canvas())
-
         fr.set_widget(w)
         vbox.add_widget(fr, stretch=0)
+
+        fr = Widgets.Frame("Attributes")
+        self.w.drawvbox = Widgets.VBox()
+        fr.set_widget(self.w.drawvbox)
+        vbox.add_widget(fr, stretch=0)
+
+        captions = (("Rotate By:", 'label', 'Rotate By', 'entry',
+                     "Scale By:", 'label', 'Scale By', 'entry'),
+                    ("Delete Obj", 'button', "Opn 3", 'button',
+                     "Opn 4", 'button', "Clear canvas", 'button'),
+                    )
+        w, b = Widgets.build_info(captions)
+        self.w.update(b)
+        b.delete_obj.add_callback('activated', lambda w: self.delete_object())
+        b.delete_obj.set_tooltip("Delete selected object in edit mode")
+        b.delete_obj.set_enabled(False)
+        b.scale_by.add_callback('activated', self.scale_object)
+        b.scale_by.set_text('0.9')
+        b.scale_by.set_tooltip("Scale selected object in edit mode")
+        b.scale_by.set_enabled(False)
+        b.rotate_by.add_callback('activated', self.rotate_object)
+        b.rotate_by.set_text('90.0')
+        b.rotate_by.set_tooltip("Rotate selected object in edit mode")
+        b.rotate_by.set_enabled(False)
+        b.clear_canvas.add_callback('activated', lambda w: self.clear_canvas())
+        b.clear_canvas.set_tooltip("Delete all drawing objects")
+
+        vbox.add_widget(w, stretch=0)
 
         spacer = Widgets.Label('')
         vbox.add_widget(spacer, stretch=1)
@@ -148,36 +133,30 @@ class Drawing(GingaPlugin.LocalPlugin):
     def set_drawparams(self):
         index = self.w.draw_type.get_index()
         kind = self.drawtypes[index]
-        index = self.w.draw_color.get_index()
-        color = self.drawcolors[index]
-        fill = self.w.fill.get_state()
-        index = self.w.fill_color.get_index()
-        fillcolor = self.drawcolors[index]
-        fillalpha = self.w.fill_alpha.get_value()
-        alpha = self.w.alpha.get_value()
-        index = self.w.line_style.get_index()
-        linestyle = self.linestyles[index]
-        linewidth = self.w.line_width.get_value()
-        drawtext = self.w.text.get_text()
 
-        params = { 'color': color,
-                   'alpha': alpha,
-                   }
-        if not kind in ('text',):
-            params['linestyle'] = linestyle
-            params['linewidth'] = linewidth
-        
-        if kind in fillkinds:
-            params['fill'] = fill
-            params['fillcolor'] = fillcolor
-            params['fillalpha'] = fillalpha
+        # remove old params
+        self.w.drawvbox.remove_all()
 
-        self.canvas.set_drawtext(drawtext)
-        self.canvas.set_drawtype(kind, **params)
+        # Create new drawing class of the right kind
+        drawClass = self.fitsimage.getDrawClass(kind)
 
-    def clear_canvas(self):
-        self.canvas.deleteAllObjects()
-        
+        # Build up a set of control widgets for the parameters
+        # of the canvas object to be drawn
+        paramlst = drawClass.get_params_metadata()
+
+        params = self.drawparams_cache.setdefault(kind, Bunch.Bunch())
+        self.draw_params = ParamSet.ParamSet(self.logger, params)
+
+        w = self.draw_params.build_params(paramlst,
+                                          orientation=self.orientation)
+        self.draw_params.add_callback('changed', self.draw_params_changed_cb)
+
+        self.w.drawvbox.add_widget(w, stretch=1)
+
+        args, kwdargs = self.draw_params.get_params()
+        #print("changing params to: %s" % str(kwdargs))
+        self.canvas.set_drawtype(kind, **kwdargs)
+
     def close(self):
         chname = self.fv.get_channelName(self.fitsimage)
         self.fv.stop_local_plugin(chname, str(self))
@@ -208,10 +187,10 @@ class Drawing(GingaPlugin.LocalPlugin):
         
     def stop(self):
         # remove the canvas from the image
-        ## try:
-        ##     self.fitsimage.delete_object_by_tag(self.layertag)
-        ## except:
-        ##     pass
+        try:
+            self.fitsimage.deleteObjectByTag(self.layertag)
+        except:
+            pass
         self.canvas.ui_setActive(False)
         self.fv.showStatus("")
 
@@ -222,6 +201,76 @@ class Drawing(GingaPlugin.LocalPlugin):
         # TODO: record information about objects drawn?
         pass
 
+    def draw_params_changed_cb(self, paramObj, params):
+        index = self.w.draw_type.get_index()
+        kind = self.drawtypes[index]
+
+        args, kwdargs = self.draw_params.get_params()
+        #print("changing params to: %s" % str(kwdargs))
+        self.canvas.set_drawtype(kind, **kwdargs)
+        
+    def edit_cb(self, fitsimage, obj):
+        # <-- obj has been edited
+        #print("edit event on canvas: obj=%s" % (obj))
+        if obj != self.edit_obj:
+            # edit object is new.  Update visual parameters
+            self.edit_select_cb(fitsimage, obj)
+        else:
+            # edit object has been modified.  Sync visual parameters
+            self.draw_params.params_to_widgets()
+
+    def edit_params_changed_cb(self, paramObj, params):
+        self.draw_params.widgets_to_params()
+        # TODO: change whence to 0 if allowing editing of images
+        whence = 2
+        self.canvas.redraw(whence=whence)
+        
+    def edit_select_cb(self, fitsimage, obj):
+        #print("editing selection status has changed for %s" % str(obj))
+        if obj != self.edit_obj:
+            # edit object is new.  Update visual parameters
+
+            # remove old params
+            self.w.drawvbox.remove_all()
+
+            self.edit_obj = obj
+            if obj != None:
+                drawClass = obj.__class__
+
+                # Build up a set of control widgets for the parameters
+                # of the canvas object to be drawn
+                paramlst = drawClass.get_params_metadata()
+
+                self.draw_params = ParamSet.ParamSet(self.logger, obj)
+
+                w = self.draw_params.build_params(paramlst,
+                                                  orientation=self.orientation)
+                self.draw_params.add_callback('changed', self.edit_params_changed_cb)
+
+                self.w.drawvbox.add_widget(w, stretch=1)
+                self.w.delete_obj.set_enabled(True)
+                self.w.scale_by.set_enabled(True)
+                self.w.rotate_by.set_enabled(True)
+            else:
+                self.w.delete_obj.set_enabled(False)
+                self.w.scale_by.set_enabled(False)
+                self.w.rotate_by.set_enabled(False)
+        
+    def clear_canvas(self):
+        self.canvas.deleteAllObjects()
+        
+    def delete_object(self):
+        self.canvas.edit_delete()
+        self.canvas.redraw(whence=2)
+        
+    def rotate_object(self, w):
+        delta = float(w.get_text())
+        self.canvas.edit_rotate(delta)
+        
+    def scale_object(self, w):
+        delta = float(w.get_text())
+        self.canvas.edit_scale(delta, delta)
+        
     def __str__(self):
         return 'drawing'
     

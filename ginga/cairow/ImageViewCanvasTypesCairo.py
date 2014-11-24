@@ -292,10 +292,23 @@ class Line(LineBase, CairoCanvasMixin):
         cr.line_to(cx2, cy2)
         cr.stroke()
 
+        if self.arrow == 'end':
+            self.draw_arrowhead(cr, cx1, cy1, cx2, cy2)
+            caps = [(cx1, cy1)]
+        elif self.arrow == 'start':
+            self.draw_arrowhead(cr, cx2, cy2, cx1, cy1)
+            caps = [(cx2, cy2)]
+        elif self.arrow == 'both':
+            self.draw_arrowhead(cr, cx2, cy2, cx1, cy1)
+            self.draw_arrowhead(cr, cx1, cy1, cx2, cy2)
+            caps = []
+        else:
+            caps = [(cx1, cy1), (cx2, cy2)]
+
         if self.editing:
             self.draw_edit(cr)
         elif self.showcap:
-            self.draw_caps(cr, self.cap, ((cx1, cy1), (cx2, cy2)))
+            self.draw_caps(cr, self.cap, caps)
 
 
 class Path(PathBase, CairoCanvasMixin):
@@ -503,28 +516,29 @@ class Ruler(RulerBase, CairoCanvasMixin):
         cr.move_to(xd, yd)
         cr.show_text(text_h)
 
-        if self.color2:
-            alpha = getattr(self, 'alpha', 1.0)
-            self.set_color(cr, self.color2, alpha=alpha)
-            
-        # draw X plumb line
-        cr.move_to(cx1, cy1)
-        cr.line_to(cx2, cy1)
-        cr.stroke()
+        if self.showplumb:
+            if self.color2:
+                alpha = getattr(self, 'alpha', 1.0)
+                self.set_color(cr, self.color2, alpha=alpha)
 
-        # draw Y plumb line
-        cr.move_to(cx2, cy1)
-        cr.line_to(cx2, cy2)
-        cr.stroke()
+            # draw X plumb line
+            cr.move_to(cx1, cy1)
+            cr.line_to(cx2, cy1)
+            cr.stroke()
 
-        # draw X plum line label
-        xh -= xtwd // 2
-        cr.move_to(xh, y)
-        cr.show_text(text_x)
+            # draw Y plumb line
+            cr.move_to(cx2, cy1)
+            cr.line_to(cx2, cy2)
+            cr.stroke()
 
-        # draw Y plum line label
-        cr.move_to(x, yh)
-        cr.show_text(text_y)
+            # draw X plum line label
+            xh -= xtwd // 2
+            cr.move_to(xh, y)
+            cr.show_text(text_x)
+
+            # draw Y plum line label
+            cr.move_to(x, yh)
+            cr.show_text(text_y)
 
         if self.editing:
             self.draw_edit(cr)
@@ -539,12 +553,13 @@ class Image(ImageBase, CairoCanvasMixin):
         # here we just draw the caps
         ImageBase.draw(self)
         
+        cpoints = self.get_cpoints()
         cr = self.setup_cr()
 
         if self.editing:
             self.draw_edit(cr)
         elif self.showcap:
-            self.draw_caps(cr, self.cap, self.get_points())
+            self.draw_caps(cr, self.cap, cpoints)
 
 
 class NormImage(NormImageBase, CairoCanvasMixin):
@@ -554,12 +569,13 @@ class NormImage(NormImageBase, CairoCanvasMixin):
         # here we just draw the caps
         ImageBase.draw(self)
         
+        cpoints = self.get_cpoints()
         cr = self.setup_cr()
 
         if self.editing:
             self.draw_edit(cr)
         elif self.showcap:
-            self.draw_caps(cr, self.cap, self.get_points())
+            self.draw_caps(cr, self.cap, cpoints)
 
 
 class DrawingCanvas(DrawingMixin, CanvasMixin, CompoundMixin,

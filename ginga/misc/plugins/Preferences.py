@@ -8,7 +8,7 @@
 # Please see the file LICENSE.txt for details.
 #
 import math
-from ginga.misc import Widgets, ParamSet
+from ginga.misc import Widgets, ParamSet, Bunch
 
 from ginga import cmap, imap
 from ginga import GingaPlugin
@@ -655,13 +655,13 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.w.acvbox.remove_all()
 
         # Create new autocuts object of the right kind
-        ac = AutoCuts.get_autocuts(method)(self.logger)
+        ac = AutoCuts.get_autocuts(method)
 
         # Build up a set of control widgets for the autocuts
         # algorithm tweakable parameters
         paramlst = ac.get_params_metadata()
 
-        params = self.autocuts_cache.setdefault(method, {})
+        params = self.autocuts_cache.setdefault(method, Bunch.Bunch())
         self.ac_params = ParamSet.ParamSet(self.logger, params)
 
         w = self.ac_params.build_params(paramlst,
