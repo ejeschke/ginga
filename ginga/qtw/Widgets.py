@@ -147,10 +147,11 @@ class Button(WidgetBase):
 
     
 class ComboBox(WidgetBase):
-    def __init__(self):
+    def __init__(self, editable=False):
         super(ComboBox, self).__init__()
 
         self.widget = QtHelp.ComboBox()
+        self.widget.setEditable(editable)
         self.widget.activated.connect(self._cb_redirect)
         
         self.enable_callback('activated')

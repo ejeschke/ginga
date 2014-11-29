@@ -156,10 +156,13 @@ class Button(WidgetBase):
 
     
 class ComboBox(WidgetBase):
-    def __init__(self):
+    def __init__(self, editable=False):
         super(ComboBox, self).__init__()
 
-        cb = GtkHelp.ComboBox()
+        if editable:
+            cb = GtkHelp.ComboBoxEntry()
+        else:
+            cb = GtkHelp.ComboBox()
         liststore = gtk.ListStore(gobject.TYPE_STRING)
         cb.set_model(liststore)
         cell = gtk.CellRendererText()

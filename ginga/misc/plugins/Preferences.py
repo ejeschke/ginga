@@ -60,8 +60,8 @@ class Preferences(GingaPlugin.LocalPlugin):
         for name in ('flip_x', 'flip_y', 'swap_xy'):
             self.t_.getSetting(name).add_callback('set', self.set_transform_ext_cb)
 
-        for name in ('autocut_method', 'autocut_params'):
-            self.t_.getSetting(name).add_callback('set', self.set_autocuts_ext_cb)
+        ## for name in ('autocut_method', 'autocut_params'):
+        ##     self.t_.getSetting(name).add_callback('set', self.set_autocuts_ext_cb)
 
         ## for key in ['color_algorithm', 'color_hashsize', 'color_map',
         ##             'intensity_map']:
@@ -631,22 +631,6 @@ class Preferences(GingaPlugin.LocalPlugin):
         index = self.autozoom_options.index(option)
         self.w.zoom_new.set_index(index)
 
-    def config_autocut_params(self, method, pct):
-        index = self.autocut_methods.index(method)
-        self.w.auto_method.set_index(index)
-        self.w.hist_pct.set_value(pct)
-        if method != 'histogram':
-            self.w.hist_pct.set_enabled(False)
-        else:
-            self.w.hist_pct.set_enabled(True)
-        
-    def set_autocuts_ext_cb(self, setting, value):
-        if not self.gui_up:
-            return
-        method = self.t_['autocut_method']
-        pct = self.t_['autocut_hist_pct']
-        self.config_autocut_params(method, pct)
-
     def config_autocut_params(self, method):
         index = self.autocut_methods.index(method)
         self.w.auto_method.set_index(index)
@@ -655,30 +639,39 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.w.acvbox.remove_all()
 
         # Create new autocuts object of the right kind
-        ac = AutoCuts.get_autocuts(method)
+        ac_class = AutoCuts.get_autocuts(method)
 
         # Build up a set of control widgets for the autocuts
         # algorithm tweakable parameters
-        paramlst = ac.get_params_metadata()
+        paramlst = ac_class.get_params_metadata()
 
+        # Get the canonical version of this object stored in our cache
+        # and make a ParamSet from it
         params = self.autocuts_cache.setdefault(method, Bunch.Bunch())
         self.ac_params = ParamSet.ParamSet(self.logger, params)
 
+        # Build widgets for the parameter/attribute list
         w = self.ac_params.build_params(paramlst,
                                         orientation=self.orientation)
         self.ac_params.add_callback('changed', self.autocut_params_changed_cb)
 
+        # Add this set of widgets to the pane
         self.w.acvbox.add_widget(w, stretch=1)
 
     def set_autocuts_ext_cb(self, setting, value):
         if not self.gui_up:
             return
+
         if setting.name == 'autocut_method':
+            # NOTE: use gui_do?
             self.config_autocut_params(value)
+
         elif setting.name == 'autocut_params':
-            params = dict(value)
-            self.ac_params.params.update(params)
-            self.ac_params.sync_params()
+            # NOTE: use gui_do?
+            # TODO: set the params from this tuple
+            #params = dict(value)
+            #self.ac_params.params.update(params)
+            self.ac_params.params_to_widgets()
 
     def set_autocut_method_cb(self, w, idx):
         #idx = self.w.auto_method.get_index()
@@ -686,12 +679,16 @@ class Preferences(GingaPlugin.LocalPlugin):
 
         self.config_autocut_params(method)
 
-        params = self.ac_params.get_params()
-        params = list(params.items())
+        args, kwdargs = self.ac_params.get_params()
+        params = list(kwdargs.items())
         self.t_.set(autocut_method=method, autocut_params=params)
 
-    def autocut_params_changed_cb(self, paramObj, params):
-        params = list(params.items())
+    def autocut_params_changed_cb(self, paramObj, ac_obj):
+        """This callback is called when the user changes the attributes of
+        an object via the paramSet.
+        """
+        args, kwdargs = paramObj.get_params()
+        params = list(kwdargs.items())
         self.t_.set(autocut_params=params)
         
     def set_autocuts_cb(self, w, index):
@@ -849,10 +846,10 @@ class Preferences(GingaPlugin.LocalPlugin):
         if autocut_method == None:
             autocut_method = 'histogram'
         else:
-            params = prefs.get('autocut_params', {})
-            p = self.autocuts_cache.setdefault(autocut_method, {})
-            p.update(params)
-
+            ## params = prefs.get('autocut_params', {})
+            ## p = self.autocuts_cache.setdefault(autocut_method, {})
+            ## p.update(params)
+            pass
         self.config_autocut_params(autocut_method)
 
         # auto zoom settings

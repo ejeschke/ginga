@@ -48,7 +48,7 @@ class QtCanvasMixin(object):
         cr = QPainter(self.viewer.pixmap)
 
         pen = QPen()
-        pen.setWidth(getattr(self, 'linewidth', 1))
+        pen.setWidthF(getattr(self, 'linewidth', 1.0))
 
         if hasattr(self, 'linestyle'):
             if self.linestyle == 'dash':

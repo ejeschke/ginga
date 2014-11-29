@@ -1358,12 +1358,8 @@ class ImageViewBase(Callback.Callbacks):
         image = self.get_image()
         if image == None:
             return
-        params = self.t_.get('autocut_params', None)
-        if params != None:
-            # TEMP: params is stored as a list of tuples
-            params = dict(params)
         
-        loval, hival = autocuts.calc_cut_levels(image, params=params)
+        loval, hival = autocuts.calc_cut_levels(image)
         
         # this will invoke cut_levels_cb()
         self.t_.set(cuts=(loval, hival))
@@ -1371,8 +1367,16 @@ class ImageViewBase(Callback.Callbacks):
     def auto_levels_cb(self, setting, value):
         # Did we change the method?
         method = self.t_['autocut_method']
+        params = self.t_.get('autocut_params', [])
+        # TEMP: params is stored as a list of tuples
+        params = dict(params)
+
         if method != str(self.autocuts):
-            self.autocuts = AutoCuts.get_autocuts(method)(self.logger)
+            ac_class = AutoCuts.get_autocuts(method)
+            self.autocuts = ac_class(self.logger, **params)
+        else:
+            # TODO: find a cleaner way to update these
+            self.autocuts.__dict__.update(params)
 
         # Redo the auto levels
         #if self.t_['autocuts'] != 'off':

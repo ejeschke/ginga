@@ -39,6 +39,13 @@ class DrawingMixin(object):
         self._cp_index = None
         self._edit_obj = None
         self._edit_status = False
+        
+        # this controls whether an object is automatically selected for
+        # editing immediately after being drawn
+        self.edit_follows_draw = True
+        # this controls whether, in edit mode, if no items are being
+        # edited on the canvas, a new item is drawn by a mouse action
+        self.draw_in_edit_mode = False
 
         self._processTime = 0.0
         # time delta threshold for deciding whether to update the image
@@ -185,6 +192,9 @@ class DrawingMixin(object):
         if obj:
             objtag = self.add(obj, redraw=True)
             self.make_callback('draw-event', objtag)
+
+            if self.edit_follows_draw:
+                self.edit_select(obj)
             return True
         else:
             self.processDrawing()
@@ -243,8 +253,11 @@ class DrawingMixin(object):
 
     ##### EDITING LOGIC #####
         
+    def get_edit_object(self):
+        return self._edit_obj
+    
     def is_editing(self):
-        return self._edit_obj != None
+        return self.get_edit_obj() != None
     
     def enable_edit(self, tf):
         self.canedit = tf
@@ -265,13 +278,21 @@ class DrawingMixin(object):
 
     def _is_editable(self, obj, x, y, is_inside):
         return is_inside and obj.editable
-    
+
+    def _prepare_to_move(self, obj, data_x, data_y):
+        #print("moving an object")
+        self.edit_select(obj)
+        self._cp_index = -1
+        ref_x, ref_y = self._edit_obj.get_reference_pt()
+        self._start_x, self._start_y = data_x - ref_x, data_y - ref_y
+        
     def edit_start(self, canvas, action, data_x, data_y):
         if not self.canedit:
             return False
 
         self._edit_tmp = self._edit_obj
         self._edit_status = False
+        self._cp_index = None
             
         # check for objects at this location
         #print("getting items")
@@ -284,16 +305,13 @@ class DrawingMixin(object):
 
             if len(objs) == 0:
                 # no objects
+                if self.draw_in_edit_mode:
+                    return self.draw_start(canvas, action, data_x, data_y)
                 return False
 
             # pick top object
             obj = objs[-1]       
-
-            if not obj.is_editing():
-                obj.set_edit(True)
-                self._edit_obj = obj
-            else:
-                obj.set_edit(False)
+            self._prepare_to_move(obj, data_x, data_y)
 
         elif self._edit_obj.is_editing():
             self._edit_status = True
@@ -310,11 +328,7 @@ class DrawingMixin(object):
 
             elif self._edit_obj.contains(data_x, data_y):
                 # TODO: moving an existing object
-                #print("moving an object")
-                self._cp_index = -1
-                ref_x, ref_y = self._edit_obj.get_reference_pt()
-                self._start_x, self._start_y = data_x - ref_x, data_y - ref_y
-                return True
+                self._prepare_to_move(self._edit_obj, data_x, data_y)
 
             else:
                 # <-- user clicked outside the object
@@ -326,8 +340,8 @@ class DrawingMixin(object):
                     self._edit_obj = None
                 else:
                     obj = objs[-1]       
-                    obj.set_edit(True)
-                    self._edit_obj = obj
+                    self._prepare_to_move(obj, data_x, data_y)
+
         else:
             self._edit_status = False
             if self._edit_obj in objs:
@@ -350,10 +364,14 @@ class DrawingMixin(object):
             self._cp_index = None
             self.make_callback('edit-event', self._edit_obj)
 
-        elif (self._edit_tmp != self._edit_obj) or (
-            (self._edit_obj != None) and 
-            (self._edit_status != self._edit_obj.is_editing())):
-            self.make_callback('edit-select', self._edit_obj)
+        else:
+            if (self._draw_obj != None) and self.draw_in_edit_mode:
+                self.draw_stop(canvas, button, data_x, data_y)
+
+            if (self._edit_tmp != self._edit_obj) or (
+                    (self._edit_obj != None) and 
+                    (self._edit_status != self._edit_obj.is_editing())):
+                self.make_callback('edit-select', self._edit_obj)
 
         return True
 
@@ -364,6 +382,11 @@ class DrawingMixin(object):
         if (self._edit_obj != None) and (self._cp_index != None):
             self._edit_update(data_x, data_y)
             return True
+
+        if (self._draw_obj != None) and self.draw_in_edit_mode:
+            self._draw_update(data_x, data_y)
+            return True
+
         return False
 
     def edit_rotate(self, delta_deg):
@@ -415,5 +438,22 @@ class DrawingMixin(object):
     def _edit_delete_cb(self, canvas, action, data_x, data_y):
         return self.edit_delete()
 
+    def edit_select(self, newobj):
+        if not self.canedit:
+            return False
+
+        if self._edit_obj != newobj:
+            # deselect old object
+            if (self._edit_obj != None) and self._edit_obj.is_editing():
+                self._edit_obj.set_edit(False)
+
+            # select new object
+            self._edit_obj = newobj
+            if (newobj != None) and (not newobj.is_editing()):
+                newobj.set_edit(True)
+
+            self.make_callback('edit-select', newobj)
+
+        return True
 
 #END

@@ -424,11 +424,8 @@ class VScale(WidgetMask, gtk.VScale):
 
         super(VScale, self).set_value(newval)
 
-    
-class ComboBox(WidgetMask, gtk.ComboBox):
-    def __init__(self, *args, **kwdargs):
-        WidgetMask.__init__(self)
-        gtk.ComboBox.__init__(self, *args, **kwdargs)
+   
+class ComboBoxMixin(object):
 
     def set_active(self, newval):
         oldval = self.get_active()
@@ -470,6 +467,18 @@ class ComboBox(WidgetMask, gtk.ComboBox):
             if model[i][0] == text:
                 self.set_active(i)
                 return
+
+class ComboBox(WidgetMask, gtk.ComboBox, ComboBoxMixin):
+    def __init__(self, *args, **kwdargs):
+        WidgetMask.__init__(self)
+        gtk.ComboBox.__init__(self, *args, **kwdargs)
+
+
+class ComboBoxEntry(WidgetMask, gtk.ComboBoxEntry, ComboBoxMixin):
+    def __init__(self, *args, **kwdargs):
+        WidgetMask.__init__(self)
+        gtk.ComboBoxEntry.__init__(self, *args, **kwdargs)
+
 
 class Notebook(gtk.Notebook):
     def set_group_id(self, id):

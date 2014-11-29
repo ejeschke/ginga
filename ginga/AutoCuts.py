@@ -12,6 +12,7 @@ import time
 import threading
 
 from ginga.misc import Bunch
+#from ginga.misc.ParamSet import Param
 from ginga.util import zscale
 
 have_scipy = True
@@ -27,32 +28,30 @@ except ImportError:
 # Lock to work around a non-threadsafe bug in scipy
 _lock = threading.RLock()
 
+class Param(Bunch.Bunch):
+    pass
+
 class AutoCutsError(Exception):
     pass
 
 class AutoCutsBase(object):
 
+    @classmethod
+    def get_params_metadata(cls):
+        return []
+    
     def __init__(self, logger):
         super(AutoCutsBase, self).__init__()
 
         self.logger = logger
         self.kind = 'base'
         self.crop_radius = 512
-        self.params = {}
 
-        # funky boolean converter
-        self._bool = lambda st: str(st).lower() == 'true'
-
-    def get_params_metadata(self):
-        return []
-    
     def get_algorithms(self):
         return autocut_methods
     
-    def get_autocut_levels(self, image, settings):
-        params = settings.get('autocut_params', self.params)
-        
-        loval, hival = self.calc_cut_levels(image, params=params)
+    def get_autocut_levels(self, image):
+        loval, hival = self.calc_cut_levels(image)
         return loval, hival
 
     def get_crop(self, image, crop_radius=None):
@@ -98,7 +97,7 @@ class Clip(AutoCutsBase):
         super(Clip, self).__init__(logger)
         self.kind = 'clip'
 
-    def calc_cut_levels(self, image, params=None):
+    def calc_cut_levels(self, image):
         loval, hival = image.get_minmax()
 
         return (float(loval), float(hival))
@@ -113,50 +112,49 @@ class Minmax(AutoCutsBase):
         super(Minmax, self).__init__(logger)
         self.kind = 'minmax'
 
-    def calc_cut_levels(self, image, params=None):
+    def calc_cut_levels(self, image):
         loval, hival = image.get_minmax()
 
         return (float(loval), float(hival))
 
+
 class Histogram(AutoCutsBase):
 
-    def __init__(self, logger):
+    @classmethod
+    def get_params_metadata(cls):
+        return [
+            Param(name='usecrop', type=_bool,
+                  valid=[True, False],
+                  default=True,
+                  description="Use center crop of image for speed"),
+            Param(name='pct', type=float,
+                  widget='spinfloat', incr=0.001,
+                  min=0.0, max=1.0, default=0.999,
+                  description="Percentage of the histogram to retain"),
+            Param(name='numbins', type=int,
+                  min=100, max=10000, default=2048,
+                  description="Number of bins for the histogram"),
+            ]
+    
+    def __init__(self, logger, usecrop=True, pct=0.999, numbins=2048):
         super(Histogram, self).__init__(logger)
 
         self.kind = 'histogram'
-        self.params.update(usecrop=True, pct=0.999, numbins=2048)
+        self.usecrop = usecrop
+        self.pct = pct
+        self.numbins = numbins
         
-    def get_params_metadata(self):
-        return [
-            Bunch.Bunch(name='usecrop', type=self._bool,
-                        valid=set([True, False]),
-                        default=True,
-                        description="Use center crop of image for speed"),
-            Bunch.Bunch(name='pct', type=float,
-                        min=0.0, max=1.0,
-                        default=0.999,
-                        description="Percentage of the histogram to retain"),
-            Bunch.Bunch(name='numbins', type=int,
-                        min=100, max=10000,
-                        default=2048,
-                        description="Number of bins for the histogram"),
-            ]
-    
-    def calc_cut_levels(self, image, params=None):
-        if params == None:
-            params = self.params
-        
-        usecrop = params.get('usecrop', True)
-        if usecrop:
+    def calc_cut_levels(self, image):
+        if self.usecrop:
             data = self.get_crop(image)
         else:
             data = image.get_data()
-        bnch = self.calc_histogram(data, **params)
+        bnch = self.calc_histogram(data, pct=self.pct, numbins=self.numbins)
         loval, hival = bnch.loval, bnch.hival
 
         return loval, hival    
 
-    def calc_histogram(self, data, usecrop=True, pct=1.0, numbins=2048):
+    def calc_histogram(self, data, pct=1.0, numbins=2048):
 
         self.logger.debug("Computing histogram, pct=%.4f numbins=%d" % (
             pct, numbins))
@@ -252,44 +250,43 @@ class Histogram(AutoCutsBase):
         return Bunch.Bunch(dist=dist, bins=bins, loval=loval, hival=hival,
                            loidx=loidx, hiidx=hiidx)
 
+
 class StdDev(AutoCutsBase):
 
-    def __init__(self, logger):
+    @classmethod
+    def get_params_metadata(cls):
+        return [
+            Param(name='usecrop', type=_bool,
+                  valid=[True, False],
+                  default=True,
+                  description="Use center crop of image for speed"),
+            ## Param(name='hensa_lo', type=float, default=35.0,
+            ##             description="Low subtraction factor"),
+            ## Param(name='hensa_hi', type=float, default=90.0,
+            ##             description="High subtraction factor"),
+            ]
+
+    def __init__(self, logger, usecrop=True):
         super(StdDev, self).__init__(logger)
 
         self.kind = 'stddev'
         # Constants used to calculate the lo and hi cut levels using the
         # "stddev" algorithm (from the old SOSS fits viewer)
-        self.params.update(usecrop=True,
-                           #hensa_lo=35.0, hensa_hi=90.0,
-                           )
+        self.usecrop = usecrop
+        self.hensa_lo = 35.0
+        self.hensa_hi = 90.0
 
-    def get_params_metadata(self):
-        return [
-            Bunch.Bunch(name='usecrop', type=self._bool,
-                        valid=set([True, False]),
-                        default=True,
-                        description="Use center crop of image for speed"),
-            ## Bunch.Bunch(name='hensa_lo', type=float, default=35.0,
-            ##             description="Low subtraction factor"),
-            ## Bunch.Bunch(name='hensa_hi', type=float, default=90.0,
-            ##             description="High subtraction factor"),
-            ]
-
-    def calc_cut_levels(self, image, params=None):
-        if params == None:
-            params = self.params
-
-        usecrop = params.get('usecrop', True)
-        if usecrop:
+    def calc_cut_levels(self, image):
+        if self.usecrop:
             data = self.get_crop(image)
         else:
             data = image.get_data()
 
-        loval, hival = self.calc_stddev(data, **params)
+        loval, hival = self.calc_stddev(data, hensa_lo=self.hensa_lo,
+                                        hensa_hi=self.hensa_hi)
         return loval, hival
 
-    def calc_stddev(self, data, usecrop=True, hensa_lo=35.0, hensa_hi=90.0):
+    def calc_stddev(self, data, hensa_lo=35.0, hensa_hi=90.0):
         # This is the method used in the old SOSS fits viewer
         mdata = numpy.ma.masked_array(data, numpy.isnan(data))
         mean = numpy.mean(mdata)
@@ -307,51 +304,44 @@ class StdDev(AutoCutsBase):
 
 class MedianFilter(AutoCutsBase):
 
-    def __init__(self, logger):
-        super(MedianFilter, self).__init__(logger)
-
-        self.kind = 'median'
-        self.params.update(length=7)
-
-    def get_params_metadata(self):
+    @classmethod
+    def get_params_metadata(cls):
         return [
-            ## Bunch.Bunch(name='usecrop', type=self._bool,
+            ## Param(name='usecrop', type=_bool,
             ##             valid=set([True, False]),
             ##             default=True,
             ##             description="Use center crop of image for speed"),
-            Bunch.Bunch(name='num_points', type=int,
-                        default=2000, allow_none=True,
-                        description="Number of points to sample"),
-            Bunch.Bunch(name='length', type=int,
-                        default=5,
-                        description="Median kernel length"),
+            Param(name='num_points', type=int,
+                  default=2000, allow_none=True,
+                  description="Number of points to sample"),
+            Param(name='length', type=int, default=5,
+                  description="Median kernel length"),
             ]
 
-    def calc_cut_levels(self, image, params=None):
-        if params == None:
-            params = self.params
+    def __init__(self, logger, num_points=2000, length=5):
+        super(MedianFilter, self).__init__(logger)
 
+        self.kind = 'median'
+        self.num_points = num_points
+        self.length = length
+
+    def calc_cut_levels(self, image):
         wd, ht = image.get_size()
         
-        num_points = params.get('num_points', 2000)
-        if num_points == None:
-            num_points = 2000
-
         # sample the data
         xmax = wd - 1
         ymax = ht - 1
         # evenly spaced sampling over rows and cols
-        xskip = int(max(1.0, numpy.sqrt(xmax * ymax / float(num_points))))
+        xskip = int(max(1.0, numpy.sqrt(xmax * ymax / float(self.num_points))))
         yskip = xskip
 
         cutout = image.cutout_data(0, 0, xmax, ymax,
                                    xstep=xskip, ystep=yskip)
 
-        loval, hival = self.calc_medianfilter(cutout, **params)
+        loval, hival = self.calc_medianfilter(cutout, length=self.length)
         return loval, hival
 
-    def calc_medianfilter(self, data, usecrop=True, num_points=2000,
-                          length=5):
+    def calc_medianfilter(self, data, length=5):
 
         assert len(data.shape) >= 2, \
                AutoCutsError("input data should be 2D or greater")
@@ -370,31 +360,30 @@ class ZScale(AutoCutsBase):
     Based on STScI's numdisplay implementation of IRAF's ZScale.
     """
 
-    def __init__(self, logger):
+    @classmethod
+    def get_params_metadata(cls):
+        return [
+            Param(name='contrast', type=float,
+                  default=0.25, allow_none=False,
+                  description="Contrast"),
+            Param(name='num_points', type=int,
+                  default=1000, allow_none=True,
+                  description="Number of points to sample"),
+            ]
+
+    def __init__(self, logger, contrast=0.25, num_points=1000):
         super(ZScale, self).__init__(logger)
 
         self.kind = 'zscale'
-        self.params.update(contrast=None, num_points=None)
+        self.contrast = contrast
+        self.num_points = num_points
         
-    def get_params_metadata(self):
-        return [
-            Bunch.Bunch(name='contrast', type=float,
-                        default=0.25, allow_none=True,
-                        description="Contrast"),
-            Bunch.Bunch(name='num_points', type=int,
-                        default=1000, allow_none=True,
-                        description="Number of points to sample"),
-            ]
-
-    def calc_cut_levels(self, image, params=None):
-        if params == None:
-            params = self.params
-            
+    def calc_cut_levels(self, image):
         wd, ht = image.get_size()
         
         # calculate num_points parameter, if omitted
         total_points = wd * ht
-        num_points = params.get('num_points', None)
+        num_points = self.num_points
         if num_points == None:
             num_points = max(int(total_points * 0.0002), 1000)
         num_points = min(num_points, total_points)
@@ -412,21 +401,18 @@ class ZScale(AutoCutsBase):
         cutout = image.cutout_data(0, 0, xmax, ymax,
                                    xstep=xskip, ystep=yskip)
 
-        loval, hival = self.calc_zscale(cutout, **params)
+        loval, hival = self.calc_zscale(cutout, contrast=self.contrast,
+                                        num_points=self.num_points)
         return loval, hival
 
-    def calc_zscale(self, data, contrast=0.25,
-                    num_points=1000, num_per_row=None):
+    def calc_zscale(self, data, contrast=0.25, num_points=1000):
         # NOTE: num_per_row is ignored in this implementation
 
         assert len(data.shape) >= 2, \
                AutoCutsError("input data should be 2D or greater")
         ht, wd = data.shape[:2]
 
-        # calculate contrast parameter, if omitted
-        if contrast == None:
-            contrast = 0.25
-
+        # sanity check on contrast parameter
         assert (0.0 < contrast <= 1.0), \
                AutoCutsError("contrast (%.2f) not in range 0 < c <= 1" % (
             contrast))
@@ -441,37 +427,39 @@ class ZScale(AutoCutsBase):
 
 class ZScale2(AutoCutsBase):
 
-    def __init__(self, logger):
+    @classmethod
+    def get_params_metadata(cls):
+        return [
+            Param(name='contrast', type=float,
+                  default=0.25, allow_none=True,
+                  description="Contrast"),
+            Param(name='num_points', type=int,
+                  default=600, allow_none=True,
+                  description="Number of points to sample"),
+            Param(name='num_per_row', type=int,
+                  default=None, allow_none=True,
+                  description="Number of points to sample"),
+            ]
+
+    def __init__(self, logger, contrast=0.25, num_points=1000,
+                 num_per_row=None):
         super(ZScale2, self).__init__(logger)
 
         self.kind = 'zscale'
-        self.params.update(contrast=None, num_points=None, 
-                           num_per_row=None)
+        self.contrast = contrast
+        self.num_points = num_points
+        self.num_per_row = num_per_row
         
-    def get_params_metadata(self):
-        return [
-            Bunch.Bunch(name='contrast', type=float,
-                        default=0.25, allow_none=True,
-                        description="Contrast"),
-            Bunch.Bunch(name='num_points', type=int,
-                        default=600, allow_none=True,
-                        description="Number of points to sample"),
-            Bunch.Bunch(name='num_per_row', type=int,
-                        default=120, allow_none=True,
-                        description="Number of points to sample"),
-            ]
-
-    def calc_cut_levels(self, image, params=None):
-        if params == None:
-            params = self.params
-
+    def calc_cut_levels(self, image):
         data = image.get_data()
 
-        loval, hival = self.calc_zscale(data, **params)
+        loval, hival = self.calc_zscale(data, contrast=self.contrast,
+                                        num_points=self.num_points,
+                                        num_per_row=self.num_per_row)
         return loval, hival
 
-    def calc_zscale(self, data, contrast=None,
-                    num_points=None, num_per_row=None):
+    def calc_zscale(self, data, contrast=0.25,
+                    num_points=1000, num_per_row=None):
         """
         From the IRAF documentation:
         
@@ -524,10 +512,6 @@ class ZScale2(AutoCutsBase):
         assert len(data.shape) >= 2, \
                AutoCutsError("input data should be 2D or greater")
         ht, wd = data.shape[:2]
-
-        # calculate contrast parameter, if omitted
-        if contrast == None:
-            contrast = 0.25
 
         assert (0.0 < contrast <= 1.0), \
                AutoCutsError("contrast (%.2f) not in range 0 < c <= 1" % (
@@ -643,6 +627,9 @@ class ZScale2(AutoCutsBase):
             hicut = data_max
 
         return (float(locut), float(hicut))
+
+# funky boolean converter
+_bool = lambda st: str(st).lower() == 'true'
 
 
 autocuts_table = {

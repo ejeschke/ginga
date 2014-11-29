@@ -10,7 +10,7 @@
 
 import re
 
-color_list = {
+color_dict = {
  'aliceblue': (0.9411764705882353, 0.9725490196078431, 1.0),
  'antiquewhite': (0.9803921568627451, 0.9215686274509803, 0.8431372549019608),
  'antiquewhite1': (1.0, 0.9372549019607843, 0.8588235294117647),
@@ -747,14 +747,28 @@ color_list = {
  'yellowgreen': (0.6039215686274509, 0.803921568627451, 0.19607843137254902),
  }
 
+color_list = []
+
+def recalc_color_list():
+    global color_list
+    color_list = color_dict.keys()
+    color_list.sort()
 
 def lookup_color(name):
-    return color_list[name]
+    return color_dict[name]
+
+def add_color(name, tup):
+    global color_dict
+    color_dict[name] = tup
+    recalc_color_list()
+
+def remove_color(name):
+    global color_dict
+    del color_dict[name]
+    recalc_color_list()
 
 def get_colors():
-    colors = list(color_list.keys())
-    colors.sort()
-    return colors
+    return color_list
     
 def scan_rgbtxt(filepath):
     with open(filepath, 'r') as in_f:
@@ -773,6 +787,9 @@ def scan_rgbtxt(filepath):
             res[name] = (r, g, b)
 
     return res
+
+# create initial color list
+recalc_color_list()
 
 if __name__ == "__main__":
     import sys, pprint
