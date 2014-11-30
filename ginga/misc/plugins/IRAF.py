@@ -98,7 +98,7 @@ class IRAF(GingaPlugin.GlobalPlugin):
 
         canvas = CanvasTypes.DrawingCanvas()
         canvas.enable_draw(False)
-        canvas.set_callback('none-move', self.cursormotion)
+        ## canvas.set_callback('none-move', self.cursormotion)
         canvas.add_callback('key-press', self.window_key_press)
         canvas.add_callback('key-release', self.window_key_release)
         self.canvas = canvas
@@ -133,7 +133,7 @@ class IRAF(GingaPlugin.GlobalPlugin):
         self.w.mode_d['ginga'] = btn1
         self.w.control.add_widget(btn1)
         btn2 = Widgets.RadioButton("IRAF", group=btn1)
-        btn2.add_callback('activated', lambda w: self.switchMode('iraf'))
+        btn2.add_callback('activated', lambda w, val: self.switchMode('iraf'))
         self.w.mode_d['iraf'] = btn2
         self.w.control.add_widget(btn2)
 
@@ -356,7 +356,7 @@ class IRAF(GingaPlugin.GlobalPlugin):
         else:
             mapping = ""
         fb.wcs = wcs + mapping
-        #print "filled wcs info"
+        self.logger.debug("filled wcs info")
         
 
     # ------ BEGIN (methods called by IIS server) ----------------
@@ -489,7 +489,6 @@ class IRAF(GingaPlugin.GlobalPlugin):
         #frame = self.current_frame
         frame = self.channel_to_frame(chinfo.name)
         fitsimage = chinfo.fitsimage
-        image = fitsimage.get_image()
         last_x, last_y = fitsimage.get_last_data_xy()
 
         # Correct for surrounding framebuffer
@@ -525,7 +524,9 @@ class IRAF(GingaPlugin.GlobalPlugin):
     # ------ END (methods called by IIS server) ----------------
 
     def ui_disable(self, fitsimage):
-        fitsimage.ui_setActive(False)
+        # NOTE: can't disable main canvas ui because it won't propagate
+        # events to layered canvases
+        #fitsimage.ui_setActive(False)
         #self.canvas.ui_setActive(True)
         self.mode = 'iraf'
 
@@ -535,7 +536,7 @@ class IRAF(GingaPlugin.GlobalPlugin):
         self.mode = 'ginga'
 
     def start_imexamine(self, fitsimage, chname):
-        self.logger.debug("STARTING")
+        self.logger.info("STARTING")
         # Turn off regular UI processing in the frame
         self.canvas.setSurface(fitsimage)
         # insert layer if it is not already
@@ -551,33 +552,33 @@ class IRAF(GingaPlugin.GlobalPlugin):
         self.imexam_active = True
         self.setMode('IRAF', chname)
         self.fv.gui_do(self.fv.ds.raise_tab, 'IRAF')
-        self.logger.debug("FINISHING")
+        self.logger.info("FINISHING")
 
     def stop_imexamine(self, fitsimage, chname):
-        self.logger.debug("STARTING")
+        self.logger.info("STARTING")
         self.imexam_active = False
         self.setMode('Ginga', chname)
-        self.logger.debug("FINISHING")
+        self.logger.info("FINISHING")
 
     def window_key_press(self, canvas, keyname):
         if not self.imexam_active:
-            return
+            return False
         self.logger.info("key pressed: %s" % (keyname))
         if len(keyname) > 1:
             if keyname in ('shift_l', 'shift_r'):
                 # ignore these keystrokes
-                return
+                return False
             elif keyname in ('control_l', 'control_r'):
                 # control key combination
                 self.ctrldown = True
-                return
+                return False
             elif keyname == 'space':
                 self.toggleMode()
-                return
+                return True
             keyname = self.keymap.get(keyname, '?')
 
         if self.mode != 'iraf':
-            return
+            return False
 
         if self.ctrldown:
             if keyname == 'd':
@@ -599,27 +600,34 @@ class IRAF(GingaPlugin.GlobalPlugin):
         chinfo = self.fv.get_channelInfo(chname)
         frame = self.channel_to_frame(chinfo.name)
 
+        # add framebuffer information if it is not there already
+        self.new_image_cb(fitsimage, image, chinfo)
+        
         self.keyqueue.put(Bunch.Bunch(x=last_x, y=last_y, key=keyname,
                                       frame=frame))
         self.keyevent.set()
+        return True
 
     def window_key_release(self, canvas, keyname):
         if not self.imexam_active:
-            return
+            return False
         self.logger.info("key released: %s" % (keyname))
         if len(keyname) > 1:
             if keyname in ('control_l', 'control_r'):
                 # control key combination
                 self.ctrldown = False
 
-    def cursormotion(self, canvas, button, data_x, data_y):
+        return False
+
+    def cursormotion(self, canvas, action, data_x, data_y):
         if self.mode != 'iraf':
-            return
-        
+            return False
+
         fitsimage = self.fv.getfocus_fitsimage()
 
-        if button == 0:
-            return self.fv.showxy(fitsimage, data_x, data_y)
+        if action == 'move':
+            self.fv.showxy(fitsimage, data_x, data_y)
+            return True
 
         return False
 
@@ -683,10 +691,11 @@ class IRAF_AstroImage(AstroImage.AstroImage):
 
     def get_corrected_xy(self, data_x, data_y):
         ct = self.get('ct', None)
-        # Subtract offsets of data in framebuffer and add offsets of
-        # rect beginning in source
-        data_x = data_x - (ct.dx-1) + (ct.sx-1)
-        data_y = data_y - (ct.dy-1) + (ct.sy-1)
+        if ct != None:
+            # Subtract offsets of data in framebuffer and add offsets of
+            # rect beginning in source
+            data_x = data_x - (ct.dx-1) + (ct.sx-1)
+            data_y = data_y - (ct.dy-1) + (ct.sy-1)
         return data_x, data_y
 
 

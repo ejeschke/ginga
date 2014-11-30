@@ -910,17 +910,17 @@ class ImageViewBindings(object):
 
     #####  MOUSE ACTION CALLBACKS #####
 
-    # def ms_none(self, viewer, action, data_x, data_y):
-    #     return False
+    ## def ms_none(self, viewer, action, data_x, data_y):
+    ##     return False
 
-    # def ms_cursor(self, viewer, action, data_x, data_y):
-    #     return False
+    ## def ms_cursor(self, viewer, action, data_x, data_y):
+    ##     return False
 
-    # def ms_wheel(self, viewer, action, data_x, data_y):
-    #     return False
+    ## def ms_wheel(self, viewer, action, data_x, data_y):
+    ##     return False
 
-    # def ms_draw(self, viewer, action, data_x, data_y):
-    #     return False
+    ## def ms_draw(self, viewer, action, data_x, data_y):
+    ##     return False
 
     def ms_zoom(self, viewer, action, data_x, data_y, msg=True):
         """Zoom the image by dragging the cursor left or right.
