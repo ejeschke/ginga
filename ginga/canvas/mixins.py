@@ -1,9 +1,9 @@
 #
 # convenience module for importing canvas mixin classes
 #
-from CanvasObject import *
-from CompoundMixin import CompoundMixin
-from CanvasMixin import CanvasMixin
-from DrawingMixin import DrawingMixin
+from ginga.canvas.CanvasObject import *
+from ginga.canvas.CompoundMixin import CompoundMixin
+from ginga.canvas.CanvasMixin import CanvasMixin
+from ginga.canvas.DrawingMixin import DrawingMixin
 
 #END

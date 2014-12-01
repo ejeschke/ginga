@@ -7,7 +7,7 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-from CompoundMixin import CompoundMixin
+from ginga.canvas.CompoundMixin import CompoundMixin
 from ginga.util.six.moves import map, filter
 
 class CanvasMixin(object):

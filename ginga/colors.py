@@ -751,7 +751,7 @@ color_list = []
 
 def recalc_color_list():
     global color_list
-    color_list = color_dict.keys()
+    color_list = list(color_dict.keys())
     color_list.sort()
 
 def lookup_color(name):

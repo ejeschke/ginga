@@ -16,8 +16,8 @@ from ginga.util import wcs
 from ginga import trcalc, Mixins, colors
 from ginga.util.six.moves import map, filter
 
-from CompoundMixin import CompoundMixin
-from CanvasMixin import CanvasMixin
+from ginga.canvas.CompoundMixin import CompoundMixin
+from ginga.canvas.CanvasMixin import CanvasMixin
 
 colors_plus_none = [ None ] + colors.get_colors()
 
