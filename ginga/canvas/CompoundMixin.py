@@ -71,9 +71,9 @@ class CompoundMixin(object):
     def is_compound(self):
         return True
     
-    def use_cc(self, tf):
+    def use_coordmap(self, mapobj):
         for obj in self.objects:
-            obj.use_cc(tf)
+            obj.use_coordmap(mapobj)
 
     def draw(self):
         for obj in self.objects:

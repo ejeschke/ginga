@@ -11,7 +11,6 @@ from ginga import ImageView, Mixins
 from ginga.qtw import ImageViewQt
 from ginga.qtw.ImageViewCanvasTypesQt import *
 
-
 class ImageViewCanvasError(ImageViewQt.ImageViewQtError):
     pass
 
@@ -72,8 +71,7 @@ class ImageViewCanvas(ImageViewQt.ImageViewZoom,
             wd, ht = self.get_window_size()
             x1, y1 = wd-12*len(mode), ht-12
             o1 = Text(x1, y1, mode,
-                      fontsize=12, color='yellow')
-            o1.use_cc(True)
+                      fontsize=12, color='yellow', coord='canvas')
             # hack necessary to be able to compute text extents _before_
             # adding the object to the canvas
             o1.viewer = self
@@ -81,11 +79,10 @@ class ImageViewCanvas(ImageViewQt.ImageViewZoom,
 
             # yellow text on a black filled rectangle
             o2 = Compound(Rect(x1-xsp, y1+ysp, x1+wd+xsp, y1-ht,
-                               color='black',
+                               color='black', coord='canvas',
                                fill=True, fillcolor='black'),
                                o1)
             # use canvas, not data coordinates
-            o2.use_cc(True)
             self.mode_obj = o2
             self.add(o2)
             

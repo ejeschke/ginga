@@ -18,6 +18,7 @@ from ginga.util.six.moves import map, filter
 
 from ginga.canvas.CompoundMixin import CompoundMixin
 from ginga.canvas.CanvasMixin import CanvasMixin
+from ginga.canvas import coordmap
 
 colors_plus_none = [ None ] + colors.get_colors()
 
@@ -34,14 +35,16 @@ class CanvasObjectBase(Callback.Callbacks):
     def __init__(self, **kwdargs):
         if not hasattr(self, 'cb'):
             Callback.Callbacks.__init__(self)
-        # points are defined in canvas (not data) coordinates
-        self.is_cc = False
         self.editing = False
         self.cap = 'ball'
         self.cap_radius = 4
         self.editable = True
+        self.coord = 'data'
+        self.ref_obj = None
         self.__dict__.update(kwdargs)
         self.data = None
+        # default mapping is to viewer coordinates
+        self._cdmap = None
 
         # For callbacks
         for name in ('modified', ):
@@ -51,6 +54,11 @@ class CanvasObjectBase(Callback.Callbacks):
         self.tag = tag
         self.viewer = viewer
         self.logger = logger
+        if self._cdmap == None:
+            if self.coord == 'offset':
+                self._cdmap = coordmap.OffsetMapper(viewer, self.ref_obj)
+            else:
+                self._cdmap = viewer.get_coordmap(self.coord)
 
     def is_editing(self):
         return self.editing
@@ -82,18 +90,16 @@ class CanvasObjectBase(Callback.Callbacks):
 
     def redraw(self, whence=3):
         self.viewer.redraw(whence=whence)
+
+    def use_coordmap(self, mapobj):
+        self._cdmap = mapobj
         
     def canvascoords(self, x, y, center=True):
-        if self.is_cc:
-            return (x, y)
-        a, b = self.viewer.canvascoords(x, y, center=center)
-        return (a, b)
+        #return self.viewer.canvascoords(x, y, center=center)
+        return self._cdmap.mapcoords(x, y)
 
     def is_compound(self):
         return False
-    
-    def use_cc(self, tf):
-        self.is_cc = tf
     
     def contains(self, x, y):
         return False
@@ -164,17 +170,15 @@ class CanvasObjectBase(Callback.Callbacks):
     
     def move_delta(self, xoff, yoff):
         if hasattr(self, 'x'):
-            self.x, self.y = self.x + xoff, self.y + yoff
+            self.x, self.y = self._cdmap.offset((self.x, self.y), xoff, yoff)
 
         elif hasattr(self, 'x1'):
-            self.x1, self.y1 = self.x1 + xoff, self.y1 + yoff
-            self.x2, self.y2 = self.x2 + xoff, self.y2 + yoff
+            self.x1, self.y1 = self._cdmap.offset((self.x1, self.y1), xoff, yoff)
+            self.x2, self.y2 = self._cdmap.offset((self.x2, self.y2), xoff, yoff)
             
         elif hasattr(self, 'points'):
             for i in range(len(self.points)):
-                (x, y) = self.points[i]
-                x, y = x + xoff, y + yoff
-                self.points[i] = (x, y)
+                self.points[i] = self._cdmap.offset(self.points[i], xoff, yoff)
 
     def move_to(self, xdst, ydst):
         x, y = self.get_reference_pt()
@@ -254,30 +258,18 @@ class CanvasObjectBase(Callback.Callbacks):
     def point_within_line(self, a, b, x1, y1, x2, y2, canvas_radius):
         # TODO: is there an algorithm with the cross and dot products
         # that is more efficient?
-        epsilon = 0.000001
-        if x1 > x2:
-            x1, y1, x2, y2 = x2, y2, x1, y1
-
-        # check for point OOB
-        if (a + canvas_radius < x1) or (x2 < a - canvas_radius):
-            #print("fail1 a=%f x1=%f x2=%f radius=%f" % (a, x1, x2, canvas_radius))
-            return False
-        elif (b + canvas_radius < min(y1, y2)) or (max(y1, y2) < b - canvas_radius): 
-            return False
-
-        dx, dy = x2 - x1, y2 - y1
-        # test for vertical line
-        if (abs(dx) < epsilon) or (abs(dy) < epsilon):
-            # earlier boundary check will have determined if point is
-            # not on the line
-            return True
-
-        slope = dy / dx
-        offset = y1 - x1 * slope
-        calcy = a * slope + offset
-        contains = (b - canvas_radius <= calcy <= b + canvas_radius)
-        #print("res=%s" % (contains))
-        return contains
+        r = canvas_radius
+        xmin, xmax = min(x1, x2) - r, max(x1, x2) + r
+        ymin, ymax = min(y1, y2) - r, max(y1, y2) + r
+        if (xmin <= a <= xmax) and (ymin <= b <= ymax):
+            div = math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
+            # TODO: check for divisor almost 0-- if so then the line is
+            # very short and it can be treated as a point comparison
+            d = abs((x2 - x1)*(y1 - b) - (x1 - a)*(y2 - y1)) / div
+            contains = (d <= canvas_radius)
+            #print("res=%s" % (contains))
+            return contains
+        return False
 
     def within_line(self, a, b, x1, y1, x2, y2, canvas_radius):
         """Point (a, b) and points (x1, y1), (x2, y2) are in data coordinates.
@@ -360,11 +352,11 @@ class TextBase(CanvasObjectBase):
     
     def __init__(self, x, y, text='EDIT ME',
                  font='Sans Serif', fontsize=None,
-                 color='yellow', alpha=1.0, showcap=False):
+                 color='yellow', alpha=1.0, showcap=False, **kwdargs):
         self.kind = 'text'
         super(TextBase, self).__init__(color=color, alpha=alpha,
                                        x=x, y=y, font=font, fontsize=fontsize,
-                                       text=text, showcap=showcap)
+                                       text=text, showcap=showcap, **kwdargs)
 
     def get_center_pt(self):
         return (self.x, self.y)
@@ -428,14 +420,14 @@ class PolygonBase(CanvasObjectBase):
     def __init__(self, points, color='red',
                  linewidth=1, linestyle='solid', showcap=False,
                  fill=False, fillcolor=None, alpha=1.0,
-                 fillalpha=1.0):
+                 fillalpha=1.0, **kwdargs):
         self.kind = 'polygon'
         
         super(PolygonBase, self).__init__(points=points, color=color,
                                           linewidth=linewidth, showcap=showcap,
                                           linestyle=linestyle, alpha=alpha,
                                           fill=fill, fillcolor=fillcolor,
-                                          fillalpha=fillalpha)
+                                          fillalpha=fillalpha, **kwdargs)
 
     def get_center_pt(self):
         P = numpy.array(self.points + [self.points[0]])
@@ -515,12 +507,13 @@ class PathBase(CanvasObjectBase):
     
     def __init__(self, points, color='red',
                  linewidth=1, linestyle='solid', showcap=False,
-                 alpha=1.0):
+                 alpha=1.0, **kwdargs):
         self.kind = 'path'
         
         super(PathBase, self).__init__(points=points, color=color,
                                        linewidth=linewidth, showcap=showcap,
-                                       linestyle=linestyle, alpha=alpha)
+                                       linestyle=linestyle, alpha=alpha,
+                                       **kwdargs)
         
     def set_edit_point(self, i, pt):
         if i == 0:
@@ -608,7 +601,8 @@ class RectangleBase(CanvasObjectBase):
     def __init__(self, x1, y1, x2, y2, color='red',
                  linewidth=1, linestyle='solid', showcap=False,
                  fill=False, fillcolor=None, alpha=1.0,
-                 drawdims=False, font='Sans Serif', fillalpha=1.0):
+                 drawdims=False, font='Sans Serif', fillalpha=1.0,
+                 **kwdargs):
         self.kind = 'rectangle'
         # ensure that rectangles are always bounded LL to UR
         x1, y1, x2, y2 = self.swapxy(x1, y1, x2, y2)
@@ -619,7 +613,8 @@ class RectangleBase(CanvasObjectBase):
                                             linestyle=linestyle,
                                             fill=fill, fillcolor=fillcolor,
                                             alpha=alpha, fillalpha=fillalpha,
-                                            drawdims=drawdims, font=font)
+                                            drawdims=drawdims, font=font,
+                                            **kwdargs)
         
     def get_points(self):
         points = [(self.x1, self.y1), (self.x2, self.y1),
@@ -711,14 +706,15 @@ class BoxBase(CanvasObjectBase):
     def __init__(self, x, y, xradius, yradius, color='red',
                  linewidth=1, linestyle='solid', showcap=False,
                  fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0,
-                 rot_deg=0.0):
+                 rot_deg=0.0, **kwdargs):
         super(BoxBase, self).__init__(color=color,
                                       linewidth=linewidth, showcap=showcap,
                                       linestyle=linestyle,
                                       fill=fill, fillcolor=fillcolor,
                                       alpha=alpha, fillalpha=fillalpha,
                                       x=x, y=y, xradius=xradius,
-                                      yradius=yradius, rot_deg=rot_deg)
+                                      yradius=yradius, rot_deg=rot_deg,
+                                      **kwdargs)
         self.kind = 'box'
 
     def get_center_pt(self):
@@ -810,13 +806,14 @@ class CircleBase(CanvasObjectBase):
     
     def __init__(self, x, y, radius, color='yellow',
                  linewidth=1, linestyle='solid', showcap=False,
-                 fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0):
+                 fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0,
+                 **kwdargs):
         super(CircleBase, self).__init__(color=color,
                                          linewidth=linewidth, showcap=showcap,
                                          linestyle=linestyle,
                                          fill=fill, fillcolor=fillcolor,
                                          alpha=alpha, fillalpha=fillalpha,
-                                         x=x, y=y, radius=radius)
+                                         x=x, y=y, radius=radius, **kwdargs)
         self.kind = 'circle'
 
     def get_center_pt(self):
@@ -899,14 +896,15 @@ class EllipseBase(CanvasObjectBase):
     def __init__(self, x, y, xradius, yradius, color='yellow',
                  linewidth=1, linestyle='solid', showcap=False,
                  fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0,
-                 rot_deg=0.0):
+                 rot_deg=0.0, **kwdargs):
         super(EllipseBase, self).__init__(color=color,
                                           linewidth=linewidth, showcap=showcap,
                                           linestyle=linestyle,
                                           fill=fill, fillcolor=fillcolor,
                                           alpha=alpha, fillalpha=fillalpha,
                                           x=x, y=y, xradius=xradius,
-                                          yradius=yradius, rot_deg=rot_deg)
+                                          yradius=yradius, rot_deg=rot_deg,
+                                          **kwdargs)
         self.kind = 'ellipse'
 
     def get_center_pt(self):
@@ -1003,13 +1001,15 @@ class PointBase(CanvasObjectBase):
             ]
     
     def __init__(self, x, y, radius, style='cross', color='yellow',
-                 linewidth=1, linestyle='solid', alpha=1.0, showcap=False):
+                 linewidth=1, linestyle='solid', alpha=1.0, showcap=False,
+                 **kwdargs):
         self.kind = 'point'
         super(PointBase, self).__init__(color=color, alpha=alpha,
                                         linewidth=linewidth,
                                         linestyle=linestyle,
                                         x=x, y=y, radius=radius,
-                                        showcap=showcap, style=style)
+                                        showcap=showcap, style=style,
+                                        **kwdargs)
         
     def get_center_pt(self):
         return (self.x, self.y)
@@ -1081,12 +1081,13 @@ class LineBase(CanvasObjectBase):
     
     def __init__(self, x1, y1, x2, y2, color='red',
                  linewidth=1, linestyle='solid', alpha=1.0,
-                 arrow=None, showcap=False):
+                 arrow=None, showcap=False, **kwdargs):
         self.kind = 'line'
         super(LineBase, self).__init__(color=color, alpha=alpha,
                                        linewidth=linewidth, showcap=showcap,
                                        linestyle=linestyle, arrow=arrow,
-                                       x1=x1, y1=y1, x2=x2, y2=y2)
+                                       x1=x1, y1=y1, x2=x2, y2=y2,
+                                       **kwdargs)
         
     def get_points(self):
         return [(self.x1, self.y1), (self.x2, self.y2)]
@@ -1152,13 +1153,14 @@ class CompassBase(CanvasObjectBase):
     
     def __init__(self, x, y, radius, color='skyblue',
                  linewidth=1, fontsize=None, font='Sans Serif',
-                 alpha=1.0, linestyle='solid', showcap=True):
+                 alpha=1.0, linestyle='solid', showcap=True, **kwdargs):
         self.kind = 'compass'
         super(CompassBase, self).__init__(color=color, alpha=alpha,
                                           linewidth=linewidth, showcap=showcap,
                                           linestyle=linestyle,
                                           x=x, y=y, radius=radius,
-                                          font=font, fontsize=fontsize)
+                                          font=font, fontsize=fontsize,
+                                          **kwdargs)
 
     def get_center_pt(self):
         return (self.x, self.y)
@@ -1233,14 +1235,16 @@ class RightTriangleBase(CanvasObjectBase):
     
     def __init__(self, x1, y1, x2, y2, color='pink',
                  linewidth=1, linestyle='solid', showcap=False,
-                 fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0):
+                 fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0,
+                 **kwdargs):
         self.kind='righttriangle'
         super(RightTriangleBase, self).__init__(color=color, alpha=alpha,
                                                 linewidth=linewidth, showcap=showcap,
                                                 linestyle=linestyle,
                                                 fill=fill, fillcolor=fillcolor,
                                                 fillalpha=fillalpha,
-                                                x1=x1, y1=y1, x2=x2, y2=y2)
+                                                x1=x1, y1=y1, x2=x2, y2=y2,
+                                                **kwdargs)
 
     def get_points(self):
         return [(self.x1, self.y1), (self.x2, self.y2)]
@@ -1326,7 +1330,7 @@ class TriangleBase(CanvasObjectBase):
     def __init__(self, x, y, xradius, yradius, color='pink',
                  linewidth=1, linestyle='solid', showcap=False,
                  fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0,
-                 rot_deg=0.0):
+                 rot_deg=0.0, **kwdargs):
         self.kind='triangle'
         super(TriangleBase, self).__init__(color=color, alpha=alpha,
                                            linewidth=linewidth, showcap=showcap,
@@ -1334,7 +1338,8 @@ class TriangleBase(CanvasObjectBase):
                                            fill=fill, fillcolor=fillcolor,
                                            fillalpha=fillalpha,
                                            x=x, y=y, xradius=xradius,
-                                           yradius=yradius, rot_deg=rot_deg)
+                                           yradius=yradius, rot_deg=rot_deg,
+                                           **kwdargs)
 
     def get_center_pt(self):
         return (self.x, self.y)
@@ -1436,7 +1441,7 @@ class RulerBase(CanvasObjectBase):
     def __init__(self, x1, y1, x2, y2, color='green', color2='yellow',
                  alpha=1.0, linewidth=1, linestyle='solid',
                  showcap=True, showplumb=True, units='arcmin',
-                 font='Sans Serif', fontsize=None):
+                 font='Sans Serif', fontsize=None, **kwdargs):
         self.kind = 'ruler'
         super(RulerBase, self).__init__(color=color, color2=color2,
                                         alpha=alpha, units=units,
@@ -1444,7 +1449,8 @@ class RulerBase(CanvasObjectBase):
                                         linewidth=linewidth, showcap=showcap,
                                         linestyle=linestyle,
                                         x1=x1, y1=y1, x2=x2, y2=y2,
-                                        font=font, fontsize=fontsize)
+                                        font=font, fontsize=fontsize,
+                                        **kwdargs)
 
     def get_ruler_distances(self):
         mode = self.units.lower()
@@ -1542,13 +1548,14 @@ class ImageBase(CanvasObjectBase):
             ]
     
     def __init__(self, x, y, image, alpha=1.0, scale_x=1.0, scale_y=1.0,
-                 color='yellow', 
-                 showcap=False, flipy=False, optimize=True):
+                 color='yellow', showcap=False, flipy=False, optimize=True,
+                 **kwdargs):
         self.kind = 'image'
         super(ImageBase, self).__init__(x=x, y=y, image=image, alpha=alpha,
                                         scale_x=scale_x, scale_y=scale_y,
                                         color=color, showcap=showcap,
-                                        flipy=flipy, optimize=optimize)
+                                        flipy=flipy, optimize=optimize,
+                                        **kwdargs)
 
         self._drawn = False
         # these hold intermediate step results. Depending on value of
@@ -1777,12 +1784,13 @@ class NormImageBase(ImageBase):
     
     def __init__(self, x, y, image, alpha=1.0, scale_x=1.0, scale_y=1.0, 
                  color='yellow', showcap=False,
-                 optimize=True, rgbmap=None, autocuts=None):
+                 optimize=True, rgbmap=None, autocuts=None, **kwdargs):
         self.kind = 'normimage'
         super(NormImageBase, self).__init__(x=x, y=y, image=image, alpha=alpha,
                                             scale_x=scale_x, scale_y=scale_y,
                                             color=color,
-                                            showcap=showcap, optimize=optimize)
+                                            showcap=showcap, optimize=optimize,
+                                            **kwdargs)
         self.rgbmap = rgbmap
         self.autocuts = autocuts
 

@@ -59,13 +59,20 @@ setup(
     scripts = ['scripts/ginga', 'scripts/grc'],
     install_requires = ['numpy', ],
     test_suite = "ginga.tests",
-    classifiers = [
-        "License :: OSI Approved :: BSD License",
-        "Operating System :: MacOS :: MacOS X",
-        "Operating System :: Microsoft :: Windows",
-        "Operating System :: POSIX",
-        "Topic :: Scientific/Engineering :: Astronomy",
-    ],
+    classifiers=[
+          'Intended Audience :: Science/Research',
+          'License :: OSI Approved :: BSD License',
+          'Operating System :: MacOS :: MacOS X',
+          'Operating System :: Microsoft :: Windows',
+          'Operating System :: POSIX',
+          'Programming Language :: C',
+          'Programming Language :: Python :: 2.7',
+          'Programming Language :: Python :: 3.3',
+          'Programming Language :: Python :: 3.4',
+          'Programming Language :: Python :: 3',
+          'Topic :: Scientific/Engineering :: Astronomy',
+          'Topic :: Scientific/Engineering :: Physics',
+          ],
     cmdclass={'build_py': build_py}
 )
 

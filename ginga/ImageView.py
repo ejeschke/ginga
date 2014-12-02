@@ -17,6 +17,7 @@ import time
 from ginga.misc import Callback, Settings
 from ginga import RGBMap, AstroImage, AutoCuts, ColorDist
 from ginga import cmap, imap, trcalc, version
+from ginga.canvas import coordmap
 
 
 class ImageViewError(Exception):
@@ -240,6 +241,13 @@ class ImageViewBase(Callback.Callbacks):
             6: (True,  True,  True),
             7: (False, True,  True),
             8: (False, False, True),
+            }
+        
+        self.coordmap = {
+            'canvas': coordmap.CanvasMapper(self),
+            'data': coordmap.DataMapper(self),
+            #'offset': coordmap.OffsetMapper(self),
+            'wcs': coordmap.WCSMapper(self),
             }
         
         # For callbacks
@@ -1562,9 +1570,17 @@ class ImageViewBase(Callback.Callbacks):
             flip_y = True
             self.transform(flip_x, flip_y, swap_xy, redraw=redraw)
 
+    def get_coordmap(self, key):
+        return self.coordmap[key]
+
+    def set_coordmap(self, key, mapper):
+        self.coordmap[key] = mapper
+
+    # TO BE DEPRECATED
     def enable_overlays(self, tf):
         self.t_.set(image_overlays=tf)
         
+    # TO BE DEPRECATED
     def overlays_change_cb(self, setting, value):
         self.redraw(whence=2)
         

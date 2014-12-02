@@ -16,7 +16,7 @@ compile anything.  But as always, YMMV.
 
 You will need:
 
-* python (v. 2.7 or higher)
+* python (v. 2.7, 3,3 or higher)
 * numpy
 
 Highly recommended, because some features will not be available without it:
@@ -154,13 +154,13 @@ version of Ubuntu (e.g. v14.04), something like the following will work::
 
     $ apt-get install python-numpy python-scipy python-matplotlib \
       python-astropy python-gtk python-cairo python-webkit \
-      python-magic git pip
+      python-magic python-numexpr git pip
 
 Or::
 
     $ apt-get install python-numpy python-scipy python-matplotlib \
       python-astropy python-qt4 python-webkit python-magic \
-      git pip
+      python-numexpr git pip
 
 (if you want to use the Qt version)
 

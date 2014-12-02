@@ -13,7 +13,6 @@ from ginga.misc import Widgets, Plot
 from ginga import GingaPlugin
 from ginga.util.six.moves import map, zip
 
-
 class Cuts(GingaPlugin.LocalPlugin):
 
     def __init__(self, fv, fitsimage):
@@ -34,8 +33,10 @@ class Cuts(GingaPlugin.LocalPlugin):
         self.dc = fv.getDrawClasses()
         canvas = self.dc.DrawingCanvas()
         canvas.enable_draw(True)
+        canvas.enable_edit(True)
         canvas.set_drawtype('line', color='cyan', linestyle='dash')
         canvas.set_callback('draw-event', self.draw_cb)
+        canvas.set_callback('edit-event', self.edit_cb)
         canvas.set_callback('cursor-down', self.buttondown_cb)
         canvas.set_callback('cursor-move', self.motion_cb)
         canvas.set_callback('cursor-up', self.buttonup_cb)
@@ -171,7 +172,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         if self.cuttype in ('free', ):
             self.canvas.set_drawtype('line', color='cyan', linestyle='dash')
         else:
-            self.canvas.set_drawtype('rectangle', color='cyan',
+            self.canvas.set_drawtype('square', color='cyan',
                                      linestyle='dash')
 
     def delete_cut_cb(self, w):
@@ -321,11 +322,11 @@ class Cuts(GingaPlugin.LocalPlugin):
 
     def _create_cut(self, x, y, count, x1, y1, x2, y2, color='cyan'):
         text = "cuts%d" % (count)
-        obj = self.dc.CompoundObject(
-            self.dc.Line(x1, y1, x2, y2,
-                         color=color,
-                         showcap=True),
-            self.dc.Text(x, y, text, color=color))
+        line_obj = self.dc.Line(x1, y1, x2, y2, color=color,
+                                showcap=True)
+        text_obj = self.dc.Text(4, 4, text, color=color, coord='offset',
+                                ref_obj=line_obj)
+        obj = self.dc.CompoundObject(line_obj, text_obj)
         obj.set_data(cuts=True)
         return obj
 
@@ -505,6 +506,10 @@ class Cuts(GingaPlugin.LocalPlugin):
 
         self.logger.debug("redoing cut plots")
         return self.redo()
+    
+    def edit_cb(self, canvas, obj):
+        self.redo()
+        return True
     
     def __str__(self):
         return 'cuts'

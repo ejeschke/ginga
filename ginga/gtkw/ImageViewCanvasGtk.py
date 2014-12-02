@@ -72,8 +72,7 @@ class ImageViewCanvas(ImageViewGtk.ImageViewZoom,
             wd, ht = self.get_window_size()
             x1, y1 = wd-12*len(mode), ht-12
             o1 = Text(x1, y1, mode,
-                      fontsize=14, color='yellow')
-            o1.use_cc(True)
+                      fontsize=14, color='yellow', coord='canvas')
             # hack necessary to be able to compute text extents _before_
             # adding the object to the canvas
             o1.viewer = self
@@ -82,10 +81,8 @@ class ImageViewCanvas(ImageViewGtk.ImageViewZoom,
             # yellow text on a black filled rectangle
             o2 = Compound(Rect(x1-xsp, y1+ysp, x1+wd+xsp, y1-ht,
                                color='black',
-                               fill=True, fillcolor='black'),
+                               fill=True, fillcolor='black', coord='canvas'),
                                o1)
-            # use canvas, not data coordinates
-            o2.use_cc(True)
             self.mode_obj = o2
             self.add(o2)
             
