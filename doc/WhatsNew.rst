@@ -2,6 +2,17 @@
 What's New in Ginga?
 ++++++++++++++++++++
 
+Ver 2.1.20141203011503
+======================
+Major updates to the drawing features of ginga:
+- new canvas types including ellipses, boxes, triangles, paths, images
+- objects are editable: press 'b' to go into edit mode to select and 
+  manipulate objects graphically (NOTE: 'b' binding is considered 
+  experimental for now--editing interface is still evolving)
+- editing: scale, rotate, move; change: fill, alpha transparency, etc.
+- editing features available in all versions of the widget
+- updated Drawing plugin of reference viewer to make use of all this
+
 Ver 2.0.20140905210415
 ======================
 Updates to the core display and bindings classes:
