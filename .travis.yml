@@ -1,10 +1,9 @@
 language: python
 
 python:
-    # *** TODO: `python setup.py egg_info` currently doesn't work for `ginga` ... skipping for now
-    #- 2.7
-    #- 3.3
-    #- 3.4
+    - 2.7
+    - 3.3
+    - 3.4
     # This is just for "egg_info".  All other builds are explicitly given in the matrix
 env:
     global:
@@ -15,9 +14,8 @@ env:
         - ASTROPY_VERSION=stable
         - CONDA_INSTALL='conda install -c astropy-ci-extras --yes'
         - PIP_INSTALL='pip install'
-    # *** TODO: `python setup.py egg_info` currently doesn't work for `ginga` ... skipping for now
-    #matrix:
-    #    - SETUP_CMD='egg_info'
+    matrix:
+        - SETUP_CMD='egg_info'
 
 matrix:
     include:
@@ -53,8 +51,6 @@ matrix:
           env: NUMPY_VERSION=1.7 SETUP_CMD='test'
         - python: 2.7
           env: NUMPY_VERSION=1.6 SETUP_CMD='test'
-        - python: 2.7
-          env: NUMPY_VERSION=1.5 SETUP_CMD='test'
 
 before_install:
 
