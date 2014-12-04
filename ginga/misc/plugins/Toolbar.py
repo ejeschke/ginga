@@ -229,10 +229,10 @@ class Toolbar(GingaPlugin.GlobalPlugin):
         return True
         
     def mode_cb(self, tf, modname):
-        if self.active == None:
+        if self.active is None:
             self.active, bd = self._get_view()
         fitsimage = self.active
-        if fitsimage == None:
+        if fitsimage is None:
             return
         bm = fitsimage.get_bindmap()
         if not tf:
@@ -247,7 +247,7 @@ class Toolbar(GingaPlugin.GlobalPlugin):
     def mode_set_cb(self, bm, mode, mtype, fitsimage):
         # called whenever the user interaction mode is changed
         # in the viewer
-        if self.active == None:
+        if self.active is None:
             self.active, bd = self._get_view()
         if fitsimage != self.active:
             return True
@@ -257,7 +257,7 @@ class Toolbar(GingaPlugin.GlobalPlugin):
     def viewer_transform_cb(self, fitsimage):
         # called whenever the transform (flip x/y, swap axes) is done
         # in the viewer
-        if self.active == None:
+        if self.active is None:
             self.active, bd = self._get_view()
         if fitsimage != self.active:
             return True
@@ -273,7 +273,7 @@ class Toolbar(GingaPlugin.GlobalPlugin):
             self.modetype = 'locked'
         else:
             self.modetype = 'oneshot'
-        if self.active == None:
+        if self.active is None:
             self.active, bd = self._get_view()
         self._update_toolbar_state(fitsimage)
         return True
@@ -286,7 +286,7 @@ class Toolbar(GingaPlugin.GlobalPlugin):
         return (view, view.get_bindings())
 
     def _update_toolbar_state(self, fitsimage):
-        if fitsimage == None:
+        if fitsimage is None:
             return
         self.logger.debug("updating toolbar state")
         try:

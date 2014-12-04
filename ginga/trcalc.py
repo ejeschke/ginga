@@ -63,9 +63,9 @@ def rotate_clip(data_np, theta_deg, rotctr_x=None, rotctr_y=None,
 
     ht, wd = data_np.shape[:2]
 
-    if rotctr_x == None:
+    if rotctr_x is None:
         rotctr_x = wd // 2
-    if rotctr_y == None:
+    if rotctr_y is None:
         rotctr_y = ht // 2
 
     yi, xi = numpy.mgrid[0:ht, 0:wd]
@@ -93,7 +93,7 @@ def rotate_clip(data_np, theta_deg, rotctr_x=None, rotctr_y=None,
     bp = bp.astype('int')
     bp.clip(0, ht-1, out=bp)
 
-    if out != None:
+    if out is not None:
         out[:, :, ...] = data_np[bp, ap]
         newdata = out
     else:
@@ -116,9 +116,9 @@ def rotate(data_np, theta_deg, rotctr_x=None, rotctr_y=None):
     ht, wd = data_np.shape[:2]
 
     ## ocx, ocy = rotctr_x, rotctr_y
-    ## if ocx == None:
+    ## if ocx is None:
     ##     ocx = wd // 2
-    ## if ocy == None:
+    ## if ocy is None:
     ##     ocy = ht // 2
     ocx, ocy = wd // 2, ht // 2
 

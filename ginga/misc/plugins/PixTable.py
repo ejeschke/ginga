@@ -90,7 +90,7 @@ class PixTable(GingaPlugin.LocalPlugin):
         cbox2 = Widgets.ComboBox()
         for tag in self.marks:
             cbox2.append_text(tag)
-        if self.mark_selected == None:
+        if self.mark_selected is None:
             cbox2.set_index(0)
         else:
             cbox2.show_text(self.mark_selected)
@@ -148,7 +148,7 @@ class PixTable(GingaPlugin.LocalPlugin):
 
     def select_mark(self, tag, pan=True):
         # deselect the current selected mark, if there is one
-        if self.mark_selected != None:
+        if self.mark_selected is not None:
             try:
                 obj = self.canvas.getObjectByTag(self.mark_selected)
                 obj.setAttrAll(color=self.mark_color)
@@ -157,7 +157,7 @@ class PixTable(GingaPlugin.LocalPlugin):
                 pass
             
         self.mark_selected = tag
-        if tag == None:
+        if tag is None:
             self.w.marks.show_text('None')
             self.canvas.redraw(whence=3)
             return
@@ -184,7 +184,7 @@ class PixTable(GingaPlugin.LocalPlugin):
         
     def clear_mark_cb(self):
         tag = self.mark_selected
-        if tag == None:
+        if tag is None:
             return
         self.canvas.deleteObjectByTag(tag)
         self.w.marks.delete_alpha(tag)
@@ -271,7 +271,7 @@ class PixTable(GingaPlugin.LocalPlugin):
         self.redo()
         
     def redo(self):
-        if self.tw == None:
+        if self.tw is None:
             return
         # cut out and set the pixel table data
         image = self.fitsimage.get_image()
@@ -285,9 +285,9 @@ class PixTable(GingaPlugin.LocalPlugin):
         self.pixtbl_radius = self.sizes[index]
         
     def motion_cb(self, canvas, button, data_x, data_y):
-        if self.mark_selected != None:
+        if self.mark_selected is not None:
             return False
-        if self.tw == None:
+        if self.tw is None:
             return
         self.lastx, self.lasty = data_x, data_y
         self.redo()

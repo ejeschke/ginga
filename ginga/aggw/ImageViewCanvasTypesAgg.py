@@ -52,7 +52,7 @@ class AggCanvasMixin(object):
                           pen, brush)
         
     def _draw_cap(self, cr, pen, brush, cap, x, y, radius=None):
-        if radius == None:
+        if radius is None:
             radius = self.cap_radius
         if cap == 'ball':
             #cr.arc(x, y, radius, 0, 2*math.pi)

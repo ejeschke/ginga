@@ -48,7 +48,7 @@ class CompoundMixin(object):
                     continue
 
                 is_inside = obj.select_contains(x, y)
-                if test == None:
+                if test is None:
                     if is_inside:
                         res.append(obj)
                 elif test(obj, x, y, is_inside):

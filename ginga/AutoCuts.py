@@ -59,7 +59,7 @@ class AutoCutsBase(object):
         # methods on a large image, so in those cases we can optionally
         # take a crop of size (radius*2)x(radius*2) from the center of
         # the image and calculate the cut levels on that
-        if crop_radius == None:
+        if crop_radius is None:
             crop_radius = self.crop_radius
 
         wd, ht = image.get_size()
@@ -345,7 +345,7 @@ class MedianFilter(AutoCutsBase):
 
         assert len(data.shape) >= 2, \
                AutoCutsError("input data should be 2D or greater")
-        if length == None:
+        if length is None:
             length = 5
 
         xout = scipy.ndimage.filters.median_filter(data, size=length)
@@ -384,7 +384,7 @@ class ZScale(AutoCutsBase):
         # calculate num_points parameter, if omitted
         total_points = wd * ht
         num_points = self.num_points
-        if num_points == None:
+        if num_points is None:
             num_points = max(int(total_points * 0.0002), 1000)
         num_points = min(num_points, total_points)
 
@@ -519,7 +519,7 @@ class ZScale2(AutoCutsBase):
 
         # calculate num_points parameter, if omitted
         total_points = numpy.size(data)
-        if num_points == None:
+        if num_points is None:
             num_points = max(int(total_points * 0.0002), 600)
         num_points = min(num_points, total_points)
 
@@ -527,7 +527,7 @@ class ZScale2(AutoCutsBase):
                AutoCutsError("num_points not in range 0-%d" % (total_points))
 
         # calculate num_per_row parameter, if omitted
-        if num_per_row == None:
+        if num_per_row is None:
             num_per_row = max(int(0.015 * num_points), 1)
         self.logger.debug("contrast=%.4f num_points=%d num_per_row=%d" % (
             contrast, num_points, num_per_row))
@@ -601,7 +601,7 @@ class ZScale2(AutoCutsBase):
                 self.logger.debug("curve fitting failed: %s" % (str(e)))
                 cov = None
             
-        if cov == None:
+        if cov is None:
             self.logger.debug("curve fitting failed")
             return (float(data_min), float(data_max))
 

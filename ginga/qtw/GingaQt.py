@@ -285,7 +285,7 @@ class GingaView(QtMain.QtMain):
     def build_fullscreen(self):
         w = self.w.fscreen
         self.w.fscreen = None
-        if w != None:
+        if w is not None:
             w.destroy()
             return
         
@@ -307,7 +307,7 @@ class GingaView(QtMain.QtMain):
 
         # Get image from current focused channel
         image = fitsimage.get_image()
-        if image == None:
+        if image is None:
             return
         fi.set_image(image)
 
@@ -660,7 +660,7 @@ class GingaView(QtMain.QtMain):
             # spec is position only
             dim = None
 
-        if dim != None:
+        if dim is not None:
             # user specified dimensions
             dim = list(map(int, dim.split('x')))
             self.setSize(*dim)
@@ -680,7 +680,7 @@ class GingaView(QtMain.QtMain):
         hsplit = self.w['hpnl']
         sizes = hsplit.sizes()
         lsize, msize, rsize = sizes
-        if self._lsize == None:
+        if self._lsize is None:
             self._lsize, self._rsize = lsize, rsize
         self.logger.debug("left=%d mid=%d right=%d" % (
             lsize, msize, rsize))
@@ -816,7 +816,7 @@ class GingaView(QtMain.QtMain):
         return True
 
     def page_switch_mdi_cb(self, w):
-        if w != None:
+        if w is not None:
             index = self.w.mnb.indexOf(w.widget())
             return self.page_switch_cb(index)
 

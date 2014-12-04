@@ -99,7 +99,7 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
         text = "%d" % (int(hival))
         try:
             win = self.get_window()
-            if win != None:
+            if win is not None:
                 cr = win.cairo_create()
                 a, b, _wd, _ht, _i, _j = cr.text_extents(text)
                 self._avg_pixels_per_range_num = self.t_spacing + _wd
@@ -142,7 +142,7 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
 
     # For Gtk3
     def draw_event(self, widget, cr):
-        if self.surface != None:
+        if self.surface is not None:
             self.logger.debug("surface is %s" % self.surface)
             cr.set_source_surface(self.surface, 0, 0)
             cr.set_operator(cairo.OPERATOR_SOURCE)
@@ -154,7 +154,7 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
         # server-side, off-screen pixmap to that area.
         x , y, width, height = event.area
         self.logger.debug("surface is %s" % self.surface)
-        if self.surface != None:
+        if self.surface is not None:
             win = widget.get_window()
             cr = win.cairo_create()
             # set clip area for exposed region
@@ -257,7 +257,7 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
             cr.show_text(text)
 
         # Draw moving value wedge
-        if self.mark_pos != None:
+        if self.mark_pos is not None:
             cr.set_source_rgb(1.0, 0.0, 0.0)
             cr.set_line_width(3)
             cr.move_to (self.mark_pos-4, self.height)

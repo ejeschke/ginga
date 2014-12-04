@@ -308,7 +308,7 @@ class AstropyWCS(BaseWCS):
         if self.coordsys == 'raw':
             raise WCSError("No usable WCS")
 
-        if system == None:
+        if system is None:
             system = 'icrs'
             
         # Get a coordinates object based on ra/dec wcs transform
@@ -326,7 +326,7 @@ class AstropyWCS(BaseWCS):
             coord = fromclass(ra_deg, dec_deg,
                               unit=(units.degree, units.degree))
 
-            if (system == None) or (system == self.coordsys):
+            if (system is None) or (system == self.coordsys):
                 return coord
 
             # Now give it back to the user in the system requested
@@ -447,7 +447,7 @@ class AstLibWCS(BaseWCS):
         if self.coordsys == 'raw':
             raise WCSError("No usable WCS")
 
-        if system == None:
+        if system is None:
             system = 'j2000'
             
         # Get a coordinates object based on ra/dec wcs transform
@@ -542,7 +542,7 @@ class KapteynWCS(BaseWCS):
             
         try:
             res = self.wcs.toworld(idxs)
-            if (self.wcs.lonaxnum != None) and (self.wcs.lataxnum != None):
+            if (self.wcs.lonaxnum is not None) and (self.wcs.lataxnum is not None):
                 ra_deg, dec_deg = res[self.wcs.lonaxnum-1], res[self.wcs.lataxnum-1]
             else:
                 ra_deg, dec_deg = res[0], res[1]
@@ -578,7 +578,7 @@ class KapteynWCS(BaseWCS):
         if self.coordsys == 'raw':
             raise WCSError("No usable WCS")
 
-        if system == None:
+        if system is None:
             system = 'icrs'
             
         # Get a coordinates object based on ra/dec wcs transform
@@ -716,7 +716,7 @@ class StarlinkWCS(BaseWCS):
         if self.coordsys == 'raw':
             raise WCSError("No usable WCS")
 
-        if system == None:
+        if system is None:
             system = 'icrs'
             
         # define a transform from reference (icrs/j2000) to user's end choice

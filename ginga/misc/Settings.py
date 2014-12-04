@@ -30,7 +30,7 @@ class Setting(Callback.Callbacks):
         self._unset = (value == unset_value)
         self.name = name
         self.logger = logger
-        if check_fn == None:
+        if check_fn is None:
             check_fn = self._check_none
         self.check_fn = check_fn
 
@@ -84,13 +84,13 @@ class SettingGroup(object):
         return self.group[key]
 
     def shareSettings(self, other, keylist=None):
-        if keylist == None:
+        if keylist is None:
             keylist = self.group.keys()
         for key in keylist:
             other.group[key] = self.group[key]
 
     def copySettings(self, other, keylist=None):
-        if keylist == None:
+        if keylist is None:
             keylist = self.group.keys()
         d = {}
         for key in keylist:

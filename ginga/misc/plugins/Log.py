@@ -103,7 +103,7 @@ class Log(GingaPlugin.GlobalPlugin):
         self.autoscroll = val
         
     def log(self, text):
-        if self.tw != None:
+        if self.tw is not None:
             self.tw.append_text(text + '\n',
                                 autoscroll=self.autoscroll)
 

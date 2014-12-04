@@ -415,7 +415,7 @@ class Desktop(Callback.Callbacks):
     def make_ws(self, name=None, group=1, show_tabs=True, show_border=False,
                 detachable=True, tabpos=None, scrollable=True, closeable=False,
                 wstype='nb'):
-        if tabpos == None:
+        if tabpos is None:
             tabpos = QtGui.QTabWidget.North
 
         if wstype == 'mdi':
@@ -465,7 +465,7 @@ class Desktop(Callback.Callbacks):
         res = []
         for name in self.notebooks.keys():
             bnch = self.notebooks[name]
-            if group == None:
+            if group is None:
                 res.append(name)
             elif group == bnch.group:
                 res.append(name)
@@ -475,7 +475,7 @@ class Desktop(Callback.Callbacks):
         res = []
         for name in self.tab.keys():
             bnch = self.tab[name]
-            if group == None:
+            if group is None:
                 res.append(name)
             elif group == bnch.group:
                 res.append(name)
@@ -550,28 +550,28 @@ class Desktop(Callback.Callbacks):
     def raise_tab(self, tabname):
         nb, index = self._find_nb(tabname)
         widget = self.tab[tabname].widget
-        if (nb != None) and (index >= 0):
+        if (nb is not None) and (index >= 0):
             nb.setCurrentIndex(index)
             # bring window to the user's attention
             win = nb.window()
-            if win != None:
+            if win is not None:
                 win.raise_()
                 win.activateWindow()
 
     def remove_tab(self, tabname):
         nb, index = self._find_nb(tabname)
         widget = self.tab[tabname].widget
-        if (nb != None) and (index >= 0):
+        if (nb is not None) and (index >= 0):
             nb.removeTab(index)
 
     def highlight_tab(self, tabname, onoff):
         nb, index = self._find_nb(tabname)
         if nb:
             tb = nb.tabBar()
-            if tb == None:
+            if tb is None:
                 return
             widget = tb.tabButton(index, QtGui.QTabBar.RightSide)
-            if widget == None:
+            if widget is None:
                 return
             name = self.tab[tabname].name
             if onoff:
@@ -647,7 +647,7 @@ class Desktop(Callback.Callbacks):
 
         root.show()
         root.resize(width, height)
-        if x != None:
+        if x is not None:
             root.moveTo(x, y)
         return True
 
@@ -667,7 +667,7 @@ class Desktop(Callback.Callbacks):
         def _foo():
             nb, index = self._find_nb(tabname)
             widget = self.tab[tabname].widget
-            if (nb != None) and (index >= 0):
+            if (nb is not None) and (index >= 0):
                 nb.removeTab(index)
                 to_nb.addTab(widget, tabname)
             
@@ -696,12 +696,12 @@ class Desktop(Callback.Callbacks):
     def switch_page_cb(self, page_num, nbw):
         pagew = nbw.currentWidget()
         bnch = self._find_tab(pagew)
-        if bnch != None:
+        if bnch is not None:
             self.make_callback('page-switch', bnch.name, bnch.data)
         return False
 
     def make_desktop(self, layout, widgetDict=None):
-        if widgetDict == None:
+        if widgetDict is None:
             widgetDict = {}
 
         def process_common_params(widget, inparams):
@@ -835,7 +835,7 @@ class Desktop(Callback.Callbacks):
                     # assume a list defining the col
                     stretch = align = 0
                     col = dct
-                if col != None:
+                if col is not None:
                     make(col, lambda w: layout.addWidget(w,
                                                          stretch=stretch))
             process_common_params(widget, params)
@@ -857,7 +857,7 @@ class Desktop(Callback.Callbacks):
                     # assume a list defining the row
                     stretch = align = 0
                     row = dct
-                if row != None:
+                if row is not None:
                     make(row, lambda w: layout.addWidget(w,
                                                          stretch=stretch))
             process_common_params(widget, params)
@@ -886,7 +886,7 @@ class Desktop(Callback.Callbacks):
                     # assume a list defining the col
                     stretch = align = 0
                     col = dct
-                if col != None:
+                if col is not None:
                     make(col, mypack)
 
             widget = QtGui.QLabel("Placeholder")
@@ -1032,7 +1032,7 @@ def children(layout):
     i = 0
     res = []
     child = layout.itemAt(i)
-    while child != None:
+    while child is not None:
         res.append(child.widget())
         i += 1
         child = layout.itemAt(i)

@@ -551,7 +551,7 @@ class URLServer(object):
 
     def retrieve(self, url, filepath=None, cb_fn=None):
         ofilepath = filepath
-        if (filepath == None) or os.path.isdir(filepath):
+        if (filepath is None) or os.path.isdir(filepath):
             with tempfile.NamedTemporaryFile(dir=filepath,
                                              delete=False) as out_f:
                 filepath = out_f.name
@@ -559,7 +559,7 @@ class URLServer(object):
         try:
             self.logger.info("Opening url=%s" % (url))
 
-            if cb_fn != None:
+            if cb_fn is not None:
                 localpath, info = urllib.urlretrieve(url, filepath,
                                                             cb_fn)
             else:
@@ -572,7 +572,7 @@ class URLServer(object):
             self.logger.error("URL fetch failure: %s" % (str(e)))
             raise e
 
-        if ofilepath != None:
+        if ofilepath is not None:
             return localpath
 
         with open(filepath, 'r') as in_f:

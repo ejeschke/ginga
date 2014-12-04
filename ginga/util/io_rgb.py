@@ -223,11 +223,11 @@ class RGBFileHandler(object):
             raise Exception("Install PIL to use this method")
         image = PILimage.fromarray(data_np)
         buf = output
-        if buf == None:
+        if buf is None:
             buf = BytesIO()
         image.save(buf, format)
         contents = buf.getvalue()
-        if output == None:
+        if output is None:
             buf.close()
         return contents
 

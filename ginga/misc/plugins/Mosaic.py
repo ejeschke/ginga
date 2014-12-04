@@ -203,7 +203,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
 
 
     def set_preprocess(self, fn):
-        if fn == None:
+        if fn is None:
             fn = lambda x: x
         self.preprocess = fn
 
@@ -367,7 +367,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
         self.settings.set(annotate_images=tf)
 
     def mosaic_some(self, paths, image_loader=None):
-        if image_loader == None:
+        if image_loader is None:
             image_loader = self.fv.load_image
             
         for url in paths:
@@ -382,7 +382,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
                     i = 0
                     for hdu in in_f:
                         i += 1
-                        if hdu.data == None:
+                        if hdu.data is None:
                             continue
                         self.logger.debug("ingesting hdu #%d" % (i))
                         image = AstroImage.AstroImage(logger=self.logger)
@@ -413,7 +413,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
 
 
     def mosaic(self, paths, new_mosaic=False, image_loader=None):
-        if image_loader == None:
+        if image_loader is None:
             image_loader = self.fv.load_image
             
         # NOTE: this runs in a non-gui thread
@@ -436,7 +436,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
         fov_deg = self.settings.get('fov_deg', 1.0)
 
         # If there is no current mosaic then prepare a new one
-        if new_mosaic or (self.img_mosaic == None):
+        if new_mosaic or (self.img_mosaic is None):
             self.prepare_mosaic(image, fov_deg)
         else:
             # get our center position

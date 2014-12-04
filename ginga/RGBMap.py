@@ -75,7 +75,7 @@ class RGBMapper(Callback.Callbacks):
 
         # For scaling algorithms
         hashsize = 65536
-        if dist == None:
+        if dist is None:
             dist = ColorDist.LinearDist(hashsize)
         self.dist = dist
 
@@ -165,7 +165,7 @@ class RGBMapper(Callback.Callbacks):
     def recalc(self, callback=True):
         self.arr = numpy.copy(self.carr)
         # Apply intensity map to rearrange colors
-        if self.iarr != None:
+        if self.iarr is not None:
             idx = self.iarr
             self.arr[0] = self.arr[0][idx]
             self.arr[1] = self.arr[1][idx]
@@ -260,7 +260,7 @@ class RGBMapper(Callback.Callbacks):
         shape = idx.shape
         depth = len(order)
         res_shape = (shape[0], shape[1], depth)
-        if out == None:
+        if out is None:
             out = numpy.empty(res_shape, dtype=numpy.uint8, order='C')
         else:
             # TODO: assertion check on shape of out
@@ -375,7 +375,7 @@ class PassThruRGBMapper(RGBMapper):
         shape = idx.shape
         depth = len(order)
         res_shape = (shape[0], shape[1], depth)
-        if out == None:
+        if out is None:
             out = numpy.empty(res_shape, dtype=numpy.uint8, order='C')
         else:
             # TODO: assertion check on shape of out

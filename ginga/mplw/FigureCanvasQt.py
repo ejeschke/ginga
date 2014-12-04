@@ -23,7 +23,7 @@ def setup_Qt(widget, viewer):
         height = y2 - y1
 
         #print "RESIZE %dx%d" % (width, height)
-        if viewer != None:
+        if viewer is not None:
             viewer.configure(width, height)
         
     widget.setFocusPolicy(QtCore.Qt.FocusPolicy(
@@ -63,7 +63,7 @@ class FigureCanvas(QtFigureCanvas):
         width = x2 - x1
         height = y2 - y1
 
-        if self.viewer != None:
+        if self.viewer is not None:
             #print "RESIZE %dx%d" % (width, height)
             self.viewer.configure(width, height)
         
@@ -71,7 +71,7 @@ class FigureCanvas(QtFigureCanvas):
 
     def sizeHint(self):
         width, height = 300, 300
-        if self.viewer != None:
+        if self.viewer is not None:
             width, height = self.viewer.get_desired_size()
         return QtCore.QSize(width, height)
 

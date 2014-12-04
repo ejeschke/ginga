@@ -54,7 +54,7 @@ class CanvasObjectBase(Callback.Callbacks):
         self.tag = tag
         self.viewer = viewer
         self.logger = logger
-        if self._cdmap == None:
+        if self._cdmap is None:
             if self.coord == 'offset':
                 self._cdmap = coordmap.OffsetMapper(viewer, self.ref_obj)
             else:
@@ -70,7 +70,7 @@ class CanvasObjectBase(Callback.Callbacks):
         # TODO: force redraw here to show edit nodes?
         
     def set_data(self, **kwdargs):
-        if self.data == None:
+        if self.data is None:
             self.data = Bunch.Bunch(kwdargs)
         else:
             self.data.update(kwdargs)
@@ -238,7 +238,7 @@ class CanvasObjectBase(Callback.Callbacks):
         return False
 
     def get_pt(self, points, x, y, canvas_radius=None):
-        if canvas_radius == None:
+        if canvas_radius is None:
             canvas_radius = self.cap_radius
 
         if hasattr(self, 'rot_deg'):
@@ -298,7 +298,7 @@ class CanvasObjectBase(Callback.Callbacks):
         return self.get_center_pt()
 
     def get_cpoints(self, points=None):
-        if points == None:
+        if points is None:
             points = self.get_points()
         if hasattr(self, 'rot_deg') and self.rot_deg != 0.0:
             # rotate vertices according to rotation
@@ -1587,7 +1587,7 @@ class ImageBase(CanvasObjectBase):
         dst_order = self.viewer.get_rgb_order()
         image_order = self.image.get_order()
 
-        if (whence <= 0.0) or (self._cutout == None) or (not self.optimize):
+        if (whence <= 0.0) or (self._cutout is None) or (not self.optimize):
             # get extent of our data coverage in the window
             ((x0, y0), (x1, y1), (x2, y2), (x3, y3)) = self.viewer.get_pan_rect()
             xmin = int(min(x0, x1, x2, x3))
@@ -1802,7 +1802,7 @@ class NormImageBase(ImageBase):
     def draw_image(self, dstarr, whence=0.0):
         #print("redraw whence=%f" % (whence))
 
-        if (whence <= 0.0) or (self._cutout == None) or (not self.optimize):
+        if (whence <= 0.0) or (self._cutout is None) or (not self.optimize):
             # get extent of our data coverage in the window
             ((x0, y0), (x1, y1), (x2, y2), (x3, y3)) = self.viewer.get_pan_rect()
             xmin = int(min(x0, x1, x2, x3))
@@ -1852,12 +1852,12 @@ class NormImageBase(ImageBase):
             self._cvs_x = int(round(wd / 2.0  + off_x))
             self._cvs_y = int(round(ht / 2.0  + off_y))
 
-        if self.rgbmap != None:
+        if self.rgbmap is not None:
             rgbmap = self.rgbmap
         else:
             rgbmap = self.viewer.get_rgbmap()
 
-        if (whence <= 1.0) or (self._prergb == None) or (not self.optimize):
+        if (whence <= 1.0) or (self._prergb is None) or (not self.optimize):
             # apply visual changes prior to color mapping (cut levels, etc)
             vmax = rgbmap.get_hash_size() - 1
             newdata = self.apply_visuals(self._cutout, 0, vmax)
@@ -1876,7 +1876,7 @@ class NormImageBase(ImageBase):
         if ('A' in dst_order) and not ('A' in image_order):
             get_order = dst_order.replace('A', '')
 
-        if (whence <= 2.5) or (self._rgbarr == None) or (not self.optimize):
+        if (whence <= 2.5) or (self._rgbarr is None) or (not self.optimize):
             # get RGB mapped array
             rgbobj = rgbmap.get_rgbarray(self._prergb, order=dst_order,
                                          image_order=image_order)
@@ -1889,7 +1889,7 @@ class NormImageBase(ImageBase):
                              alpha=self.alpha, flipy=False)
 
     def apply_visuals(self, data, vmin, vmax):
-        if self.autocuts != None:
+        if self.autocuts is not None:
             autocuts = self.autocuts
         else:
             autocuts = self.viewer.autocuts

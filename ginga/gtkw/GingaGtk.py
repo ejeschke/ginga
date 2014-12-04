@@ -154,7 +154,7 @@ class GingaView(GtkMain.GtkMain):
             iconfile = os.path.join(self.iconpath, icon+icon_ext)
             try:
                 pixbuf = gtksel.pixbuf_new_from_file_at_size(iconfile, 24, 24)
-                if pixbuf != None:
+                if pixbuf is not None:
                     image = gtk.image_new_from_pixbuf(pixbuf)
             except:
                 pass
@@ -412,7 +412,7 @@ class GingaView(GtkMain.GtkMain):
     def build_fullscreen(self):
         w = self.w.fscreen
         self.w.fscreen = None
-        if w != None:
+        if w is not None:
             w.destroy()
             return
         
@@ -428,7 +428,7 @@ class GingaView(GtkMain.GtkMain):
         root.add(iw)
 
         image = fitsimage.get_image()
-        if image == None:
+        if image is None:
             return
         fi.set_image(image)
 
@@ -671,7 +671,7 @@ class GingaView(GtkMain.GtkMain):
             # spec is position only
             dim = None
 
-        if dim != None:
+        if dim is not None:
             # user specified dimensions
             dim = list(map(int, dim.split('x')))
             self.setSize(*dim)
@@ -698,7 +698,7 @@ class GingaView(GtkMain.GtkMain):
         tot2 = rect.width
         pos2 = rchild.get_position()
         lsize, msize, rsize = pos1, pos2, tot2-pos2 
-        if self._lsize == None:
+        if self._lsize is None:
             self._lsize, self._rsize = lsize, rsize
         self.logger.debug("left=%d mid=%d right=%d" % (
             lsize, msize, rsize))
@@ -799,7 +799,7 @@ class GingaView(GtkMain.GtkMain):
         return self.start_local_plugin(chname, name, None)
         
     def page_switch_cb(self, ds, name, data):
-        if data == None:
+        if data is None:
             return
         
         fitsimage = data.fitsimage

@@ -81,7 +81,7 @@ class Overlays(GingaPlugin.LocalPlugin):
         combobox.add_callback('activated', lambda *args: self.redo())
 
         b.hi_value.set_length(22)
-        if self.hi_value != None:
+        if self.hi_value is not None:
             b.hi_value.set_text(str(self.hi_value))
         b.hi_value.add_callback('activated', lambda *args: self.redo())
 
@@ -93,7 +93,7 @@ class Overlays(GingaPlugin.LocalPlugin):
         combobox.add_callback('activated', lambda *args: self.redo())
 
         b.lo_value.set_length(22)
-        if self.lo_value != None:
+        if self.lo_value is not None:
             b.lo_value.set_text(str(self.lo_value))
         b.lo_value.add_callback('activated', lambda *args: self.redo())
 
@@ -137,7 +137,7 @@ class Overlays(GingaPlugin.LocalPlugin):
             self.fitsimage.add(self.canvas, tag=self.layertag)
 
         self.resume()
-        if self.hi_value != None:
+        if self.hi_value is not None:
             self.redo()
 
     def pause(self):
@@ -187,7 +187,7 @@ class Overlays(GingaPlugin.LocalPlugin):
             self.fv.show_error("No such color found: '%s'" % (self.lo_color))
         
         image = self.fitsimage.get_image()
-        if image == None:
+        if image is None:
             return
 
         self.logger.debug("preparing RGB image")
@@ -211,13 +211,13 @@ class Overlays(GingaPlugin.LocalPlugin):
         try:
             data = image.get_data()
             ac[:] = 0
-            if self.hi_value != None:
+            if self.hi_value is not None:
                 idx = data >= self.hi_value
                 rc[idx] = int(rh * 255)
                 gc[idx] = int(gh * 255)
                 bc[idx] = int(bh * 255)
                 ac[idx] = int(self.opacity * 255)
-            if self.lo_value != None:
+            if self.lo_value is not None:
                 idx = data <= self.lo_value
                 rc[idx] = int(rl * 255)
                 gc[idx] = int(gl * 255)
@@ -226,7 +226,7 @@ class Overlays(GingaPlugin.LocalPlugin):
         except Exception as e:
             self.logger.error("Error setting alpha channel: %s" % (str(e)))
             
-        if self.canvas_img == None:
+        if self.canvas_img is None:
             self.logger.debug("Adding image to canvas")
             self.canvas_img = CanvasTypes.Image(0, 0, self.rgbobj)
             self.canvas.add(self.canvas_img, redraw=False)

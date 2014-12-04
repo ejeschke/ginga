@@ -203,10 +203,10 @@ class IRAF(GingaPlugin.GlobalPlugin):
         self.logger.debug("channel %s added." % (chinfo.name))
 
         n = self.channel_to_frame(chinfo.name)
-        if n == None:
+        if n is None:
             found = len(self.fb)
             for n, fb in self.fb.items():
-                if fb.chname == None:
+                if fb.chname is None:
                     found = n
             fb = self.init_frame(found)
             fb.chname = chinfo.name
@@ -221,7 +221,7 @@ class IRAF(GingaPlugin.GlobalPlugin):
         self.logger.debug("delete channel %s" % (chinfo.name))
 
         n = self.channel_to_frame(chinfo.name)
-        if n != None:
+        if n is not None:
             self.fb[n].chname = None
 
         fmap = self.get_channel_frame_mapping()
@@ -285,13 +285,13 @@ class IRAF(GingaPlugin.GlobalPlugin):
         # check if this is an image we received from IRAF or
         # one that was loaded locally.
         ct = image.get('ct', None)
-        if ct != None:
+        if ct is not None:
             # This image was sent by IRAF--we don't need to
             # construct extra fb information for it
             return
         
         n = self.channel_to_frame(chinfo.name)
-        if n == None:
+        if n is None:
             return
         self.logger.debug("new image, frame is %d" % (n))
         fb = self.get_frame(n)
@@ -343,13 +343,13 @@ class IRAF(GingaPlugin.GlobalPlugin):
         fb.ct.ref = newref
 
         # TODO: we shouldn't have to know about this here...
-        if (fb and fb.ct.a != None):
+        if (fb and fb.ct.a is not None):
             wcs = "%s\n%f %f %f %f %f %f %f %f %d\n" % (
                 fb.ct.imtitle, fb.ct.a, fb.ct.b, fb.ct.c, fb.ct.d,
                 fb.ct.tx, fb.ct.ty, fb.ct.z1, fb.ct.z2, fb.ct.zt)
         else:
             wcs = "[NOSUCHWCS]\n"
-        if (fb and fb.ct.sx != None):
+        if (fb and fb.ct.sx is not None):
             mapping = "%s %f %f %d %d %d %d %d %d\n%s\n" % (
                 fb.ct.region, fb.ct.sx, fb.ct.sy, fb.ct.snx, fb.ct.sny, 
                 fb.ct.dx, fb.ct.dy, fb.ct.dnx, fb.ct.dny, fb.ct.ref)
@@ -409,7 +409,7 @@ class IRAF(GingaPlugin.GlobalPlugin):
 
         # frames are indexed from 1 in IRAF
         chname = fb.chname
-        if chname == None:
+        if chname is None:
             chname = 'Frame%d' % (frame+1)
             fb.chname = chname
             
@@ -691,7 +691,7 @@ class IRAF_AstroImage(AstroImage.AstroImage):
 
     def get_corrected_xy(self, data_x, data_y):
         ct = self.get('ct', None)
-        if ct != None:
+        if ct is not None:
             # Subtract offsets of data in framebuffer and add offsets of
             # rect beginning in source
             data_x = data_x - (ct.dx-1) + (ct.sx-1)

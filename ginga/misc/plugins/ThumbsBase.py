@@ -56,7 +56,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         name = image.get('name', noname)
         path = image.get('path', None)
         nothumb = image.get('nothumb', False)
-        if path != None:
+        if path is not None:
             path = os.path.abspath(path)
         thumbname = name
         if '.' in thumbname:
@@ -143,14 +143,14 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
             if index < len(self.thumbList)-1:
                 nextkey = self.thumbList[index+1]
                 bnch = self.thumbDict[nextkey]
-                if bnch.path != None:
+                if bnch.path is not None:
                     self.fv.add_preload(bnch.chname, bnch.imname, bnch.path,
                                         image_loader=image_loader)
 
             if index > 0:
                 prevkey = self.thumbList[index-1]
                 bnch = self.thumbDict[prevkey]
-                if bnch.path != None:
+                if bnch.path is not None:
                     self.fv.add_preload(bnch.chname, bnch.imname, bnch.path,
                                         image_loader=image_loader)
 
@@ -244,7 +244,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
 
         # Look up our version of the thumb
         path = image.get('path', None)
-        if path == None:
+        if path is None:
             # No path, so no way to find key for cached image
             return False
         path = os.path.abspath(path)
@@ -256,9 +256,9 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         self.logger.debug("redoing thumbnail...")
         # Get the thumbnail image 
         image = fitsimage.get_image()
-        if image == None:
+        if image is None:
             return
-        if save_thumb == None:
+        if save_thumb is None:
             save_thumb = self.settings.get('cacheThumbs', False)
         
         chname = self.fv.get_channelName(fitsimage)
@@ -272,7 +272,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         # Look up our version of the thumb
         name = image.get('name', None)
         path = image.get('path', None)
-        if path == None:
+        if path is None:
             return
         path = os.path.abspath(path)
         thumbkey = (chname, path)
@@ -292,7 +292,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
             # Save a thumbnail for future browsing
             if save_thumb:
                 thumbpath = self.get_thumbpath(path)
-                if thumbpath != None:
+                if thumbpath is not None:
                     self.thumb_generator.save_image_as_file(thumbpath,
                                                             format='jpeg')
 
@@ -324,7 +324,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         with self.thmblock:
             self.thumb_generator.set_image(image)
             # Save a thumbnail for future browsing
-            if save_thumb and (thumbpath != None):
+            if save_thumb and (thumbpath is not None):
                 self.thumb_generator.save_image_as_file(thumbpath,
                                                         format='jpeg')
         
@@ -353,7 +353,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         # NOTE: this is called by the FBrowser plugin, as a non-gui thread!
         lcname = chname.lower()
 
-        if image_loader == None:
+        if image_loader is None:
             image_loader = self.fv.load_image
 
         cacheThumbs = self.settings.get('cacheThumbs', False)
@@ -380,7 +380,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
             # Is there a cached thumbnail image on disk we can use?
             save_thumb = cacheThumbs
             image = None
-            if (thumbpath != None) and os.path.exists(thumbpath):
+            if (thumbpath is not None) and os.path.exists(thumbpath):
                 save_thumb = False
                 try:
                     image = image_loader(thumbpath)
@@ -388,7 +388,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
                     pass
 
             try:
-                if image == None:
+                if image is None:
                     image = image_loader(path)
                 self.fv.gui_do(self._make_thumb, chname, image, path,
                                thumbkey, image_loader,
@@ -406,7 +406,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         return hashlib.sha1(s.encode()).hexdigest()
     
     def get_thumbpath(self, path, makedir=True):
-        if path == None:
+        if path is None:
             return None
         
         path = os.path.abspath(path)

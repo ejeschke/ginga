@@ -40,7 +40,7 @@ class MplCanvasMixin(object):
         pass
         
     def _draw_cap(self, cr, cap, x, y, radius=None):
-        if radius == None:
+        if radius is None:
             radius = self.cap_radius
         if cap == 'ball':
             alpha = getattr(self, 'alpha', 1.0)

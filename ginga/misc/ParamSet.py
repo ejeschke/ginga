@@ -54,7 +54,7 @@ class ParamSet(Callback.Callbacks):
             title = param.get('title', param.name)
             wtype = param.get('widget', None)
             ptype = param.get('type', str)
-            if wtype == None:
+            if wtype is None:
                 # set default widget type if none specified
                 wtype = 'entry'
                 if param.has_key('valid'):
@@ -70,7 +70,7 @@ class ParamSet(Callback.Callbacks):
             widget = b[name]
             valid = param.get('valid', None)
 
-            if hasattr(widget, 'set_index') and valid != None:
+            if hasattr(widget, 'set_index') and valid is not None:
                 # configure combobox
                 for value in valid:
                     widget.append_text(str(value))
@@ -114,7 +114,7 @@ class ParamSet(Callback.Callbacks):
         for param in self.paramlst:
             w = self.widgets[param.name]
             value = self.get_widget_value(w, param)
-            if ('type' in param) and (value != None):
+            if ('type' in param) and (value is not None):
                 # hack
                 if value == 'None':
                     value = None
@@ -146,7 +146,7 @@ class ParamSet(Callback.Callbacks):
         for param in self.paramlst:
             w = self.widgets[param.name]
             value = self.get_widget_value(w, param)
-            if ('type' in param) and (value != None):
+            if ('type' in param) and (value is not None):
                 # hack
                 if value == 'None':
                     value = None

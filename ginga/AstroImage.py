@@ -52,16 +52,16 @@ class AstroImage(BaseImage):
                            logger=logger)
         
         # wcsclass specifies a pluggable WCS module
-        if wcsclass == None:
+        if wcsclass is None:
             wcsclass = wcsmod.WCS
         self.wcs = wcsclass(self.logger)
 
         # wcsclass specifies a pluggable IO module
-        if ioclass == None:
+        if ioclass is None:
             ioclass = io_fits.fitsLoaderClass
         self.io = ioclass(self.logger)
 
-        if metadata != None:
+        if metadata is not None:
             header = self.get_header()
             self.wcs.load_header(header)
 
@@ -75,7 +75,7 @@ class AstroImage(BaseImage):
 
         loader = io_fits.PyFitsFileHandler(self.logger)
         data, naxispath = loader.load_hdu(hdu, ahdr, naxispath=naxispath)
-        if naxispath == None:
+        if naxispath is None:
             naxispath = []
         self.naxispath = naxispath
         self.revnaxis = list(naxispath)
@@ -95,7 +95,7 @@ class AstroImage(BaseImage):
         
         data, naxispath = self.io.load_file(filepath, ahdr, numhdu=numhdu,
                                             naxispath=naxispath)
-        if naxispath == None:
+        if naxispath is None:
             naxispath = []
         self.naxispath = naxispath
         self.revnaxis = list(naxispath)
@@ -106,7 +106,7 @@ class AstroImage(BaseImage):
         # Set the name to the filename (minus extension) if no name
         # currently exists for this image
         name = self.get('name', None)
-        if name == None:
+        if name is None:
             dirpath, filename = os.path.split(filepath)
             name, ext = os.path.splitext(filename)
             self.set(name=name)
@@ -386,7 +386,7 @@ class AstroImage(BaseImage):
 
             # If caller asked us to match background of pieces then
             # get the median of this piece
-            if bg_ref != None:
+            if bg_ref is not None:
                 bg = iqcalc.get_median(data_np)
                 bg_inc = bg_ref - bg
                 #print "bg=%f inc=%f" % (bg, bg_inc)
@@ -516,7 +516,7 @@ class AstroImage(BaseImage):
         # Calculate WCS coords, if available
         ts = time.time()
         try:
-            if self.wcs == None:
+            if self.wcs is None:
                 self.logger.debug("No WCS for this image")
                 ra_txt = dec_txt = 'NO WCS'
             

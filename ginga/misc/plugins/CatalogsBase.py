@@ -209,7 +209,7 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
         
         objs = self.canvas.getItemsAt(data_x, data_y)
         for obj in objs:
-            if (obj.tag != None) and obj.tag.startswith('star'):
+            if (obj.tag is not None) and obj.tag.startswith('star'):
                 info = obj.get_data()
                 self.table.show_selection(info.star)
                 return True
@@ -500,7 +500,7 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
         #for obj in selected:
         selected = self.table.get_selected()
         for obj in selected:
-            if ('canvobj' not in obj) or (obj.canvobj == None):
+            if ('canvobj' not in obj) or (obj.canvobj is None):
                 self.plot_star(obj, image=image)
             self.highlight_object(obj.canvobj, 'selected', 'skyblue')
             
@@ -615,7 +615,7 @@ class CatalogListingBase(object):
             self.selected.append(star)
             try:
                 # If this star is not plotted, then plot it
-                if ('canvobj' not in star) or (star.canvobj == None):
+                if ('canvobj' not in star) or (star.canvobj is None):
                     self.catalog.plot_star(star)
 
                 # highlight line in table
@@ -675,7 +675,7 @@ class CatalogListingBase(object):
         self.mag_field = name
 
         # determine the range of the values
-        if self.catalog != None:
+        if self.catalog is not None:
             i, length = self.catalog.get_plot_range()
             self.set_minmax(i, length)
         

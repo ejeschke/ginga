@@ -23,7 +23,7 @@ class caselessDict(object):
         """Constructor: takes conventional dictionary as input (or nothing)
         """
         self.dict = {}
-        if inDict != None:
+        if inDict is not None:
             self.update(inDict)
 
     def lower(self, key):
@@ -181,7 +181,7 @@ class Bunch(object):
             self.tbl = caselessDict(inDict=inDict)
         else:
             self.tbl = {}
-            if inDict != None:
+            if inDict is not None:
                 self.tbl.update(inDict)
 
         self.tbl.update(kwdargs)
@@ -341,7 +341,7 @@ class threadSafeBunch(object):
             self.tbl = caselessDict(inDict=inDict)
         else:
             self.tbl = {}
-            if inDict != None:
+            if inDict is not None:
                 self.tbl.update(inDict)
 
         self.tbl.update(kwdargs)
