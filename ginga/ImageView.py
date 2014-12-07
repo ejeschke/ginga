@@ -63,13 +63,9 @@ class ImageViewBase(Callback.Callbacks):
         if settings is None:
             settings = Settings.SettingGroup(logger=self.logger)
         self.t_ = settings
-        
-        # Dummy 1-pixel image
-        #self._image = None
-        self._image = AstroImage.AstroImage(numpy.zeros((1, 1)),
-                                           #logger=self.logger
-                                           )
-        self._image.set(nothumb=True)
+
+        # this holds the reference image
+        self._image = None
         
         # RGB mapper
         if rgbmap:

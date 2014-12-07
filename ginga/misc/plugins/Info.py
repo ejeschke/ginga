@@ -205,6 +205,8 @@ class Info(GingaPlugin.GlobalPlugin):
         
     def set_info(self, info, fitsimage):
         image = fitsimage.get_image()
+        if image is None:
+            return
         header = image.get_header()
         
         # Update info panel

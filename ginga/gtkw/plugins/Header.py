@@ -182,6 +182,8 @@ class Header(GingaPlugin.GlobalPlugin):
             self.info = self.channel[self.active]
 
         image = fitsimage.get_image()
+        if image is None:
+            return
         self.set_header(self.info, image)
         
     def __str__(self):

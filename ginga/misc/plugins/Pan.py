@@ -194,6 +194,8 @@ class Pan(GingaPlugin.GlobalPlugin):
 
         # calculate pan position point radius
         image = paninfo.panimage.get_image()
+        if image is None:
+            return
         width, height = image.get_size()
         edgew = math.sqrt(width**2 + height**2)
         radius = int(0.015 * edgew)

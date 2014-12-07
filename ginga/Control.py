@@ -307,7 +307,8 @@ class GingaControl(Callback.Callbacks):
         if tf and hasattr(self, 'readout') and (self.readout is not None):
             self.readout.fitsimage = fitsimage
             image = fitsimage.get_image()
-            self.readout_config(fitsimage, image, self.readout)
+            if image is not None:
+                self.readout_config(fitsimage, image, self.readout)
 
         if not self.channel_follows_focus:
             return True

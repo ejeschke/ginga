@@ -197,6 +197,8 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
     def focus_cb(self, viewer, fitsimage):
         # Reflect transforms, colormap, etc.
         image = fitsimage.get_image()
+        if image is None:
+            return
         if not self.have_thumbnail(fitsimage, image):
             # No memory of this thumbnail, so regenerate it
             chname = viewer.get_channelName(fitsimage)
