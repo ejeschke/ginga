@@ -254,6 +254,9 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
         
 
     def setfromimage(self):
+        image = self.fitsimage.get_image()
+        if image is None:
+            return
         x1, y1 = 0, 0
         x2, y2 = self.fitsimage.get_data_size()
         Rectangle = self.canvas.getDrawClass('Rectangle')
