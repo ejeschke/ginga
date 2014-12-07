@@ -357,7 +357,7 @@ class RadioButton(WidgetBase):
     def __init__(self, text='', group=None):
         super(RadioButton, self).__init__()
 
-        if group != None:
+        if group is not None:
             group = group.get_widget()
         self.widget = GtkHelp.RadioButton(group, text)
         self.widget.connect('toggled', self._cb_redirect)
@@ -602,7 +602,7 @@ class Toolbar(ContainerBase):
 
         if iconpath:
             pixbuf = gtksel.pixbuf_new_from_file_at_size(iconpath, 24, 24)
-            if pixbuf != None:
+            if pixbuf is not None:
                 image = gtk.image_new_from_pixbuf(pixbuf)
                 child.get_widget().set_image(image)
 

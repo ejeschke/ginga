@@ -150,7 +150,7 @@ class MDIWorkspace(gtk.Layout):
         ex = event.x_root; ey = event.y_root
         x, y, width, height = widget.get_allocation()
         win = widget.get_window()
-        if win == None:
+        if win is None:
             return False
         x, y = win.get_position()
         print ("widgets UL corner= %d,%d" % (x, y))
@@ -185,7 +185,7 @@ class MDIWorkspace(gtk.Layout):
         if event.button != 0:
             button |= 0x1 << (event.button - 1)
         print(("button release at %dx%d button=%x" % (x, y, button)))
-        if self.selected_child != None:
+        if self.selected_child is not None:
             bnch = self.selected_child
             x = int(bnch.x_origin + (x - bnch.dx))
             y = int(bnch.x_origin + (y - bnch.dy))
@@ -209,7 +209,7 @@ class MDIWorkspace(gtk.Layout):
         print("motion event at %dx%d, button=%x" % (
             x, y, button))
 
-        if (button & 0x1) and (self.selected_child != None):
+        if (button & 0x1) and (self.selected_child is not None):
             bnch = self.selected_child
             x = int(bnch.x_origin + (x - bnch.dx))
             y = int(bnch.x_origin + (y - bnch.dy))
@@ -550,7 +550,7 @@ class Desktop(Callback.Callbacks):
 
         else:
             nb = gtk.Notebook()
-            if tabpos == None:
+            if tabpos is None:
                 tabpos = gtk.POS_TOP
             # Allows drag-and-drop between notebooks
             if not gtksel.have_gtk3:
@@ -585,7 +585,7 @@ class Desktop(Callback.Callbacks):
         res = []
         for name in self.notebooks.keys():
             bnch = self.notebooks[name]
-            if group == None:
+            if group is None:
                 res.append(name)
             elif group == bnch.group:
                 res.append(name)
@@ -660,7 +660,7 @@ class Desktop(Callback.Callbacks):
         if nb:
             widget = self.tab[tabname].widget
             lbl = nb.get_tab_label(widget)
-            if lbl == None:
+            if lbl is None:
                 return
             name = self.tab[tabname].name
             if onoff:
@@ -725,7 +725,7 @@ class Desktop(Callback.Callbacks):
 
         vbox.show_all()
         root.show_all()
-        if x != None:
+        if x is not None:
             win = root.get_window()
             win.move(x, y)
         return bnch
@@ -750,12 +750,12 @@ class Desktop(Callback.Callbacks):
     def switch_page_cb(self, nbw, gptr, page_num):
         pagew = nbw.get_nth_page(page_num)
         bnch = self._find_tab(pagew)
-        if bnch != None:
+        if bnch is not None:
             self.make_callback('page-switch', bnch.name, bnch.data)
         return False
 
     def make_desktop(self, layout, widgetDict=None):
-        if widgetDict == None:
+        if widgetDict is None:
             widgetDict = {}
             
         def process_common_params(widget, inparams):
@@ -773,7 +773,7 @@ class Desktop(Callback.Callbacks):
             if params.xpos >= 0:
                 #widget.show()
                 win = widget.get_window()
-                if win != None:
+                if win is not None:
                     win.move(params.xpos, params.ypos)
 
             return params
@@ -893,7 +893,7 @@ class Desktop(Callback.Callbacks):
                     # assume a list defining the col
                     fill = expand = True
                     col = dct
-                if col != None:
+                if col is not None:
                     make(col, lambda w: widget.pack_start(w,
                                                           fill=fill,
                                                           expand=expand))
@@ -917,7 +917,7 @@ class Desktop(Callback.Callbacks):
                     # assume a list defining the row
                     fill = expand = True
                     row = dct
-                if row != None:
+                if row is not None:
                     make(row, lambda w: widget.pack_start(w,
                                                           fill=fill,
                                                           expand=expand))
@@ -947,7 +947,7 @@ class Desktop(Callback.Callbacks):
                     # assume a list defining the col
                     fill = expand = True
                     col = dct
-                if col != None:
+                if col is not None:
                     make(col, mypack)
 
             widget = gtk.Label("Placeholder")

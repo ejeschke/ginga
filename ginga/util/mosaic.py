@@ -51,7 +51,7 @@ def mosaic(logger, itemlist, fov_deg=None):
                                                         cdelt1, cdelt2))
 
     px_scale = math.fabs(cdelt1)
-    if fov_deg == None:
+    if fov_deg is None:
         # TODO: calculate fov!
         fov_deg = 1.0
         

@@ -100,11 +100,11 @@ class IIS_DataListener(object):
         self.controller = controller
 
         # Controlled stop of server
-        if ev_quit == None:
+        if ev_quit is None:
             ev_quit = threading.Event()
         self.ev_quit = ev_quit
 
-        if logger == None:
+        if logger is None:
             logger = logging.getLogger(name)
         self.logger = logger
 
@@ -489,13 +489,13 @@ Where   nbytes | NB  = number of bytes expected or written
                 
                 if (pkt.x & 0o17777) and (pkt.t & 0o17777):
                     self.frame = frame
-                    if (fb and fb.ct.a != None):
+                    if (fb and fb.ct.a is not None):
                         wcs = "%s\n%f %f %f %f %f %f %f %f %d\n" % (
                             fb.ct.imtitle, fb.ct.a, fb.ct.b, fb.ct.c, fb.ct.d,
                             fb.ct.tx, fb.ct.ty, fb.ct.z1, fb.ct.z2, fb.ct.zt)
                     else:
                         wcs = "[NOSUCHWCS]\n"
-                    if (fb and fb.ct.sx != None):
+                    if (fb and fb.ct.sx is not None):
                         mapping = "%s %f %f %d %d %d %d %d %d\n%s\n" % (
                             fb.ct.region, fb.ct.sx, fb.ct.sy, fb.ct.snx, fb.ct.sny, 
                             fb.ct.dx, fb.ct.dy, fb.ct.dnx, fb.ct.dny, fb.ct.ref)
@@ -504,7 +504,7 @@ Where   nbytes | NB  = number of bytes expected or written
                     text = wcs + mapping
                     text = right_pad(text, SZ_WCSBUF)
                 else:
-                    if (frame < 0) or (fb == None) or (fb.buffer == None) or \
+                    if (frame < 0) or (fb is None) or (fb.buffer is None) or \
                         (len(fb.buffer) == 0):
                         text = "[NOSUCHFRAME]"
                     else:
@@ -602,7 +602,7 @@ Where   nbytes | NB  = number of bytes expected or written
             t_bytes = 0
             self.logger.debug("data bytes=%d needs_update=%s" % (
                 pkt.nbytes, self.needs_update))
-            if (fb.width != None) and (fb.height != None):
+            if (fb.width is not None) and (fb.height is not None):
                 if not self.needs_update:
                     #del fb.buffer
                     #fb.buffer = array.array('B', ' ' * fb.width * fb.height)

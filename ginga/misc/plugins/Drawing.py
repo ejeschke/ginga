@@ -243,7 +243,7 @@ class Drawing(GingaPlugin.LocalPlugin):
             self.w.drawvbox.remove_all()
 
             self.edit_obj = obj
-            if obj != None:
+            if obj is not None:
                 self.w.attrlbl.set_text("Editing a %s" % (obj.kind))
 
                 drawClass = obj.__class__

@@ -21,7 +21,7 @@ prefixes = dict(dp=0)
 def get_image_name(image, pfx='dp'):
     global prefixes
     name = image.get('name', None)
-    if name == None:
+    if name is None:
         if not pfx in prefixes:
             prefixes[pfx] = 0
         name = 'dp%d' % (prefixes[pfx])

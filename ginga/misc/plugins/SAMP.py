@@ -142,19 +142,19 @@ class SAMP(GingaPlugin.GlobalPlugin):
     def stop(self):
         try:
             self.logger.info("disconnecting client...")
-            if self.client != None:
+            if self.client is not None:
                 self.client.disconnect()
         except Exception as e:
             pass
         try:
             self.logger.info("stopping client...")
-            if self.client != None:
+            if self.client is not None:
                 self.client.stop()
         except Exception as e:
             pass
 
         # Try to stop the hub, if any
-        if self.hub != None:
+        if self.hub is not None:
             self.hub.stop()
         self.w.start_hub.set_state(False)            
         
@@ -229,7 +229,7 @@ class SAMP(GingaPlugin.GlobalPlugin):
             self.client = self._connect_client()
         else:
             self.logger.info("disconnecting client...")
-            if self.client != None:
+            if self.client is not None:
                 self.client.disconnect()
                 self.client = None
                 self.w.connect_client.set_state(False)

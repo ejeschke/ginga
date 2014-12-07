@@ -46,7 +46,7 @@ class PluginManagerBase(object):
             className = spec.get('klass', spec.module)
             klass = getattr(module, className)
 
-            if chinfo == None:
+            if chinfo is None:
                 # global plug in
                 obj = klass(self.fv)
                 fitsimage = None
@@ -113,7 +113,7 @@ class PluginManagerBase(object):
             bnch = Bunch.Bunch(pInfo=pInfo, lblname=None, widget=None,
                                exclusive=exclusive)
 
-            if pInfo.chinfo != None:
+            if pInfo.chinfo is not None:
                 # local plugin
                 tup = name.split(':')
                 bnch.lblname = ' ' + tup[0] + ':\n' + tup[1] + ' '
@@ -135,7 +135,7 @@ class PluginManagerBase(object):
         if lname in self.active:
             bnch = self.active[lname]
             self.stop_plugin(bnch.pInfo)
-            if bnch.widget != None:
+            if bnch.widget is not None:
                 self.remove_taskbar(bnch)
             del self.active[lname]
 
@@ -160,7 +160,7 @@ class PluginManagerBase(object):
         pInfo = bnch.pInfo
         # If this is a local plugin, raise the channel associated with the
         # plug in
-        if pInfo.chinfo != None:
+        if pInfo.chinfo is not None:
             itab = pInfo.chinfo.name
             self.logger.debug("raising tab %s" % (itab))
             self.ds.raise_tab(itab)
@@ -173,7 +173,7 @@ class PluginManagerBase(object):
             self.ds.raise_tab('Dialogs')
 
         self.focus.add(lname)
-        if pInfo.widget != None:
+        if pInfo.widget is not None:
             self.logger.debug("raising tab %s" % (pInfo.tabname))
             self.ds.raise_tab(pInfo.tabname)
 
@@ -185,7 +185,7 @@ class PluginManagerBase(object):
         try:
             self.focus.remove(lname)
 
-            if pInfo.chinfo != None:
+            if pInfo.chinfo is not None:
                 bnch.pInfo.obj.pause()
                 self.unhighlight_taskbar(bnch)
         except:
@@ -198,7 +198,7 @@ class PluginManagerBase(object):
     def start_plugin_future(self, chname, opname, future,
                             alreadyOpenOk=True):
         pInfo = self.getPluginInfo(opname)
-        if chname != None:
+        if chname is not None:
             # local plugin
             plname = chname.upper() + ': ' + pInfo.name
         else:
@@ -268,7 +268,7 @@ class PluginManagerBase(object):
                 self.plugin_build_error(vbox, errstr + '\n' + tb_str)
                 #raise PluginManagerError(e)
 
-        if vbox != None:
+        if vbox is not None:
             self.finish_gui(pInfo, vbox)
             ws = pInfo.spec.ws
             child_w = vbox.get_widget()
@@ -280,7 +280,7 @@ class PluginManagerBase(object):
         else:
             # If this is a local plugin, raise the channel associated with the
             # plug in
-            if pInfo.chinfo != None:
+            if pInfo.chinfo is not None:
                 itab = pInfo.chinfo.name
                 self.ds.raise_tab(itab)
             
@@ -302,7 +302,7 @@ class PluginManagerBase(object):
             except Exception:
                 self.logger.error("Traceback information unavailable.")
 
-        if pInfo.widget != None:
+        if pInfo.widget is not None:
             self.ds.remove_tab(pInfo.tabname)
             self.dispose_gui(pInfo)
 

@@ -133,7 +133,7 @@ class ImageViewGtk(ImageViewCairo.ImageViewCairo):
             return
             
         win = self.imgwin.get_window()
-        if win != None and self.surface != None:
+        if win is not None and self.surface is not None:
             imgwin_wd, imgwin_ht = self.get_window_size()
 
             if gtksel.have_gtk3:
@@ -161,7 +161,7 @@ class ImageViewGtk(ImageViewCairo.ImageViewCairo):
         """
         x , y, width, height = event.area
         self.logger.debug("surface is %s" % self.surface)
-        if self.surface != None:
+        if self.surface is not None:
             win = widget.get_window()
             cr = win.cairo_create()
 
@@ -180,7 +180,7 @@ class ImageViewGtk(ImageViewCairo.ImageViewCairo):
         rect = widget.get_allocation()
         x, y, width, height = rect.x, rect.y, rect.width, rect.height
 
-        if self.surface != None:
+        if self.surface is not None:
             # This is a workaround for a strange bug in Gtk 3
             # where we get multiple configure callbacks even though
             # the size hasn't changed.  We avoid creating a new surface
@@ -205,7 +205,7 @@ class ImageViewGtk(ImageViewCairo.ImageViewCairo):
 
     def set_cursor(self, cursor):
         win = self.imgwin.get_window()
-        if win != None:
+        if win is not None:
             win.set_cursor(cursor)
         
     def define_cursor(self, ctype, cursor):
@@ -525,12 +525,12 @@ class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
                                 settings=settings)
         Mixins.UIMixin.__init__(self)
 
-        if bindmap == None:
+        if bindmap is None:
             bindmap = ImageViewZoom.bindmapClass(self.logger)
         self.bindmap = bindmap
         bindmap.register_for_events(self)
 
-        if bindings == None:
+        if bindings is None:
             bindings = ImageViewZoom.bindingsClass(self.logger)
         self.set_bindings(bindings)
 

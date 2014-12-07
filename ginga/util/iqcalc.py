@@ -76,7 +76,7 @@ class IQCalc(object):
         Y = arr1d
         # Fitting works more reliably if we do the following
         # a. subtract sky background
-        if medv == None:
+        if medv is None:
             medv = numpy.median(Y)
         Y = Y - medv
         maxv = Y.max()
@@ -111,7 +111,7 @@ class IQCalc(object):
     def get_fwhm(self, x, y, radius, data, medv=None):
         """
         """
-        if medv == None:
+        if medv is None:
             medv = numpy.median(data)
             
         # Get two cuts of the data, one in X and one in Y
@@ -165,7 +165,7 @@ class IQCalc(object):
         The routine returns a list of candidate object coordinate tuples
         (x, y) in data.
         """
-        if threshold == None:
+        if threshold is None:
             # set threshold to default if none provided
             threshold = self.get_threshold(data, sigma=sigma)
             self.logger.debug("threshold defaults to %f (sigma=%f)" % (
@@ -308,7 +308,7 @@ class IQCalc(object):
                               skylevel=skylevel, background=median)
             objlist.append(obj)
 
-            if cb_fn != None:
+            if cb_fn is not None:
                 cb_fn(obj)
 
         return objlist

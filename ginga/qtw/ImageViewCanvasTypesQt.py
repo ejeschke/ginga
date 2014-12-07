@@ -37,7 +37,7 @@ class QtCanvasMixin(object):
 
     def set_fill(self, cr, onoff, color=None, alpha=1.0):
         if onoff:
-            if color == None:
+            if color is None:
                 color = self.color
             color = self.__get_color(color, alpha)
             cr.setBrush(color)
@@ -89,7 +89,7 @@ class QtCanvasMixin(object):
         self.set_fill(cr, False)
         
     def draw_cap(self, cr, cap, x, y, radius=None):
-        if radius == None:
+        if radius is None:
             radius = self.cap_radius
         alpha = getattr(self, 'alpha', 1.0)
         if cap == 'ball':

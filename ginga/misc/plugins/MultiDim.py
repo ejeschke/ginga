@@ -330,7 +330,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
         image = self.fitsimage.get_image()
         md = image.get_metadata()
         path = md.get('path', None)
-        if path == None:
+        if path is None:
             self.fv.show_error("Cannot open image: no value for metadata key 'path'")
             return
 

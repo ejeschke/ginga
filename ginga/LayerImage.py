@@ -25,9 +25,9 @@ class LayerImage(object):
         self.compose = 'alpha'
 
     def _insert_layer(self, idx, image, alpha=None, name=None):
-        if alpha == None:
+        if alpha is None:
             alpha = 1.0
-        if name == None:
+        if name is None:
             name = "layer%d" % (self.cnt)
             self.cnt += 1
         bnch = Bunch.Bunch(image=image, alpha=alpha, name=name)
@@ -91,7 +91,7 @@ class LayerImage(object):
         """(alpha) can be a scalar or an array.
         """
         # alpha can be a scalar or an array
-        if shape == None:
+        if shape is None:
             shape = data.shape
 
         if len(data.shape) == 2:

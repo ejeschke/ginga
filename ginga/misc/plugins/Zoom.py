@@ -235,7 +235,7 @@ class Zoom(GingaPlugin.GlobalPlugin):
         self.logger.debug("Setting radius to %d" % val)
         self.zoom_radius = val
         fitsimage = self.fitsimage_focus
-        if fitsimage == None:
+        if fitsimage is None:
             return True
         image = fitsimage.get_image()
         wd, ht = image.get_size()
@@ -247,7 +247,7 @@ class Zoom(GingaPlugin.GlobalPlugin):
         self.zoom_x, self.zoom_y = data_x, data_y
 
         image = fitsimage.get_image()
-        if image == None:
+        if image is None:
             # No image loaded into this channel
             return True
 

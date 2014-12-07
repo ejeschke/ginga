@@ -843,7 +843,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.w.cut_new.set_index(index)
 
         autocut_method = prefs.get('autocut_method', None)
-        if autocut_method == None:
+        if autocut_method is None:
             autocut_method = 'histogram'
         else:
             ## params = prefs.get('autocut_params', {})

@@ -401,13 +401,13 @@ class Histogram(GingaPlugin.LocalPlugin):
     def log_histogram_cb(self, w, val):
         self.plot.logy = val
         if (self.histtag is not None) and self.gui_up:
-            # self.histtag == None means no data is loaded yet
+            # self.histtag is None means no data is loaded yet
             self.redo()
 
     def plot_by_cuts_cb(self, w, val):
         self.xlimbycuts = val
         if (self.histtag is not None) and self.gui_up:
-            # self.histtag == None means no data is loaded yet
+            # self.histtag is None means no data is loaded yet
             self.redo()
 
     def __str__(self):

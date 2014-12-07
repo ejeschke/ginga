@@ -913,7 +913,7 @@ class Pick(GingaPlugin.LocalPlugin):
             text = fig.objects[2]
             text.text = "Pick"
 
-            if msg != None:
+            if msg is not None:
                 raise Exception(msg)
             
             # Mark new peaks, if desired
@@ -1267,7 +1267,7 @@ class Pick(GingaPlugin.LocalPlugin):
         self.w.canvas.draw()
         
     def add_pick_cb(self):
-        if self.last_rpt != None:
+        if self.last_rpt is not None:
             self.w.report.append_text(self.last_rpt)
 
     def correct_wcs(self):

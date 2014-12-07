@@ -259,7 +259,7 @@ class Task(object):
         called when a task terminates.
         Subclass should probably not override this method.
         """
-        if args == None:
+        if args is None:
             args = []
             
         if callable(fn):

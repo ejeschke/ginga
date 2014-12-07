@@ -44,7 +44,7 @@ class ImageViewBindings(object):
         self._start_scale_y = 0
         self._start_rot = 0
 
-        if settings == None:
+        if settings is None:
             # No settings passed.  Set up defaults.
             settings = Settings.SettingGroup(name='bindings',
                                              logger=self.logger)
@@ -360,7 +360,7 @@ class ImageViewBindings(object):
         elif ptype == 2:
             # This is a "drag pan", similar to dragging the canvas
             # under the "lens" or "viewport".
-            if self._start_x == None:
+            if self._start_x is None:
                 # user has not held the mouse button yet
                 # return current pan values
                 return (self._start_panx, self._start_pany)
@@ -1314,11 +1314,11 @@ class ImageViewBindings(object):
                 rotate_accel = self.settings.get('pinch_rotate_acceleration', 1.0)
                 deg = rotate_accel * deg
                 viewer.rotate(deg)
-                if msg_str == None:
+                if msg_str is None:
                     msg_str = "Rotate: %.2f" % (deg)
                     msg = self.settings.get('msg_rotate', msg)
                 
-            if msg and (msg_str != None):
+            if msg and (msg_str is not None):
                 viewer.onscreen_message(msg_str, delay=0.4)
         return True        
 
@@ -1367,13 +1367,13 @@ class BindingMapper(Callback.Callbacks):
         self._delayed_reset = False
 
         # Set up button mapping
-        if btnmap == None:
+        if btnmap is None:
             btnmap = { 0x1: 'cursor', 0x2: 'wheel', 0x4: 'draw' }
         self.btnmap = btnmap
         self._button = 0
 
         # Set up modifier mapping
-        if modmap == None:
+        if modmap is None:
             self.modmap = {}
             for keyname in ('shift_l', 'shift_r'):
                 self.add_modifier(keyname, 'shift')
@@ -1430,7 +1430,7 @@ class BindingMapper(Callback.Callbacks):
         self._kbdmod_type = 'held'
         self._delayed_reset = False
         # clear onscreen message, if any
-        if (bnch != None) and (bnch.msg != None):
+        if (bnch is not None) and (bnch.msg is not None):
             viewer.onscreen_message(None)
         self.make_callback('mode-set', self._kbdmod, self._kbdmod_type)
         
@@ -1498,9 +1498,9 @@ class BindingMapper(Callback.Callbacks):
 
             # if there is not a modifier active now,
             # activate this one
-            if self._kbdmod == None:
+            if self._kbdmod is None:
                 self.set_modifier(bnch.name, bnch.type)
-                if bnch.msg != None:
+                if bnch.msg is not None:
                     viewer.onscreen_message(bnch.msg)
                 return True
         
@@ -1559,7 +1559,7 @@ class BindingMapper(Callback.Callbacks):
         ## if self._kbdmod_type == 'oneshot':
         ##     self.reset_modifier(viewer)
 
-        if emap == None:
+        if emap is None:
             return False
         
         cbname = 'keyup-%s' % (emap.name)

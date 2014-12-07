@@ -53,7 +53,7 @@ class ImageViewAgg(ImageView.ImageViewBase):
         """Render the image represented by (rgbobj) at dst_x, dst_y
         in the pixel space.
         """
-        if self.surface == None:
+        if self.surface is None:
             return
         canvas = self.surface
         self.logger.debug("redraw surface")
@@ -63,7 +63,7 @@ class ImageViewAgg(ImageView.ImageViewBase):
         canvas.fromstring(rgb_buf)
 
         cr = AggHelp.AggContext(canvas)
-      
+
         # Draw a cross in the center of the window in debug mode
         if self.t_['show_pan_position']:
             ctr_x, ctr_y = self.get_center()
@@ -89,16 +89,16 @@ class ImageViewAgg(ImageView.ImageViewBase):
 
         # inform the base class about the actual window size
         self.set_window_size(width, height, redraw=True)
-        
+
     def save_rgb_image_as_buffer(self, output=None, format='png', quality=90):
         if not have_PIL:
             raise ImageViewAggError("Please install PIL to use this method")
-        
-        if self.surface == None:
+
+        if self.surface is None:
             raise ImageViewAggError("No AGG surface defined")
 
         ibuf = output
-        if ibuf == None:
+        if ibuf is None:
             ibuf = BytesIO()
 
         # convert AGG draw surface to a numpy array
@@ -113,24 +113,24 @@ class ImageViewAgg(ImageView.ImageViewBase):
 
         img.save(ibuf, format=format, quality=quality)
         return ibuf
-    
+
     def save_rgb_image_as_file(self, filepath, format='png', quality=90):
         if not have_PIL:
             raise ImageViewAggError("Please install PIL to use this method")
-        if self.surface == None:
+        if self.surface is None:
             raise ImageViewAggError("No AGG surface defined")
 
         with open(filepath, 'w') as out_f:
             self.save_rgb_image_as_buffer(output=out_f, format=format,
                                           quality=quality)
         self.logger.debug("wrote %s file '%s'" % (format, filepath))
-    
+
     def update_image(self):
         # subclass implements this method to actually update a widget
         # from the agg surface
         self.logger.warn("Subclass should override this method")
         return False
-        
+
     def set_cursor(self, cursor):
         # subclass implements this method to actually set a defined
         # cursor on a widget

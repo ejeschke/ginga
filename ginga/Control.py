@@ -140,7 +140,7 @@ class GingaControl(Callback.Callbacks):
     def showxy(self, fitsimage, data_x, data_y):
         try:
             image = fitsimage.get_image()
-            if image == None:
+            if image is None:
                 # No image loaded for this channel
                 return
 
@@ -286,7 +286,7 @@ class GingaControl(Callback.Callbacks):
     def cbar_value_cb(self, cbar, value, event):
         chinfo = self.get_channelInfo()
         readout = chinfo.readout
-        if readout != None:
+        if readout is not None:
             maxv = readout.maxv
             text = "Value: %-*.*s" % (maxv, maxv, value)
             readout.set_text(text)
@@ -304,7 +304,7 @@ class GingaControl(Callback.Callbacks):
     def focus_cb(self, fitsimage, tf, name):
         """Called when _fitsimage_ gets (tf==True) or loses (tf==False)
         the focus."""
-        if tf and hasattr(self, 'readout') and (self.readout != None):
+        if tf and hasattr(self, 'readout') and (self.readout is not None):
             self.readout.fitsimage = fitsimage
             image = fitsimage.get_image()
             self.readout_config(fitsimage, image, self.readout)
@@ -439,7 +439,7 @@ class GingaControl(Callback.Callbacks):
             except Exception as e:
                 self.logger.warn("python-magic error: %s; falling back to 'mimetypes'" % (str(e)))
 
-        if typ == None:
+        if typ is None:
             try:
                 typ, enc = mimetypes.guess_type(filepath)
             except Exception as e:
@@ -551,7 +551,7 @@ class GingaControl(Callback.Callbacks):
             chinfo = self.get_channelInfo(chname)
             chname = chinfo.name
 
-        if image_loader == None:
+        if image_loader is None:
             image_loader = self.load_image
         
         filepath = self.get_filepath(filepath)
@@ -602,7 +602,7 @@ class GingaControl(Callback.Callbacks):
             # not there--load image in a non-gui thread, then have the
             # gui add it to the channel silently
             self.logger.info("preloading image %s" % (path))
-            if image_loader == None:
+            if image_loader is None:
                 image_loader = self.load_image
             image = image_loader(path)
 
@@ -751,13 +751,13 @@ class GingaControl(Callback.Callbacks):
 
     def getfocus_fitsimage(self):
         chinfo = self.get_channelInfo()
-        if chinfo == None:
+        if chinfo is None:
             return None
         return chinfo.fitsimage
         
     def get_fitsimage(self, chname):
         chinfo = self.get_channelInfo(chname)
-        if chinfo == None:
+        if chinfo is None:
             return None
         return chinfo.fitsimage
         
@@ -772,7 +772,7 @@ class GingaControl(Callback.Callbacks):
             self.change_channel(chname, image=image)
 
         else:
-            if path != None:
+            if path is not None:
                 self.logger.debug("Image '%s' is no longer in memory; attempting to load from %s" % (
                     imname, path))
                 #self.load_file(path, chname=chname,
@@ -850,7 +850,7 @@ class GingaControl(Callback.Callbacks):
                 #self.ds.raise_tab(chinfo.workspace)
                 self.ds.raise_tab(name)
 
-            if oldchname != None:
+            if oldchname is not None:
                 try:
                     self.ds.highlight_tab(oldchname, False)
                 except:
@@ -860,7 +860,7 @@ class GingaControl(Callback.Callbacks):
 
             ## # Update title bar
             title = chinfo.name
-            ## if image != None:
+            ## if image is not None:
             ##     name = image.get('name', 'Noname')
             ##     title += ": %s" % (name)
             self.set_titlebar(title)
@@ -905,7 +905,7 @@ class GingaControl(Callback.Callbacks):
                 chinfo = self.channel[name]
             except KeyError:
                 self.logger.debug("Adding channel '%s'" % (chname))
-                if datasrc == None:
+                if datasrc is None:
                     datasrc = Datasrc.Datasrc(num_images)
 
                 chinfo = Bunch.Bunch(datasrc=datasrc,

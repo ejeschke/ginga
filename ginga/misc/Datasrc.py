@@ -71,7 +71,7 @@ class Datasrc(object):
             return val
 
     def _eject_old(self):
-        if self.length == None:
+        if self.length is None:
             # no limit
             return
         while len(self.history) > self.length:
