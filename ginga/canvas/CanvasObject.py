@@ -95,8 +95,9 @@ class CanvasObjectBase(Callback.Callbacks):
         self._cdmap = mapobj
         
     def canvascoords(self, x, y, center=True):
-        #return self.viewer.canvascoords(x, y, center=center)
-        return self._cdmap.mapcoords(x, y)
+        if self._cdmap is not None:
+            return self._cdmap.mapcoords(x, y)
+        return self.viewer.canvascoords(x, y, center=center)
 
     def is_compound(self):
         return False
