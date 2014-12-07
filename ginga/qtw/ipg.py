@@ -86,7 +86,7 @@ class SimpleKernelApp(object):
         self.shell = shell
         self.logger = None
         
-        if shell == None:
+        if shell is None:
             # Start IPython kernel with GUI event loop support
             self.ipkernel = IPKernelApp.instance()
             self.ipkernel.initialize(['python', '--gui=%s' % gui,
@@ -122,7 +122,7 @@ class SimpleKernelApp(object):
             c.kill()
 
     def start(self):
-        if self.shell == None:
+        if self.shell is None:
             self.ipkernel.start()
 
 
@@ -146,7 +146,7 @@ class StartMenu(QtGui.QMainWindow):
         hbox.setContentsMargins(QtCore.QMargins(4, 2, 4, 2))
 
         console = QtGui.QPushButton('Qt Console')
-        if self.kapp.ipkernel == None:
+        if self.kapp.ipkernel is None:
             console.setEnabled(False)
         console.clicked.connect(self.kapp.new_qt_console)
         
@@ -177,7 +177,7 @@ class StartMenu(QtGui.QMainWindow):
             self.count += 1
             name = 'v%d' % self.count
 
-        if settings == None:
+        if settings is None:
             settings = self.preferences.createCategory('ipg_viewer')
             settings.load(onError='silent')
             settings.addDefaults(autocut_method='zscale')
@@ -294,7 +294,7 @@ class StartMenu(QtGui.QMainWindow):
         try:
             # NOTE: image function operates on DATA space coords
             image = viewer.get_image()
-            if image == None:
+            if image is None:
                 # No image loaded
                 return
             ra_txt, dec_txt = image.pixtoradec(fits_x, fits_y,

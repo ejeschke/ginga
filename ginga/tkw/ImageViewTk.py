@@ -51,7 +51,7 @@ class ImageViewTk(ImageViewAgg):
         return self.tkcanvas
 
     def update_image(self):
-        if self.tkcanvas == None:
+        if self.tkcanvas is None:
             return
 
         cr = self.tkcanvas
@@ -80,7 +80,7 @@ class ImageViewTk(ImageViewAgg):
         cr.config(scrollregion=cr.bbox('all'))
 
     def reschedule_redraw(self, time_sec):
-        if self.tkcanvas != None:
+        if self.tkcanvas is not None:
             try:
                 self.tkcanvas.after_cancel(self._defer_task)
             except:
@@ -93,12 +93,12 @@ class ImageViewTk(ImageViewAgg):
         self.configure(event.width, event.height)
         
     def set_cursor(self, cursor):
-        if self.tkcanvas == None:
+        if self.tkcanvas is None:
             return
         self.tkcanvas.config(cursor=cursor)
         
     def onscreen_message(self, text, delay=None, redraw=True):
-        if self.tkcanvas == None:
+        if self.tkcanvas is None:
             return
         if self.msgtask:
             try:
@@ -367,12 +367,12 @@ class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
                                 settings=settings)
         Mixins.UIMixin.__init__(self)
 
-        if bindmap == None:
+        if bindmap is None:
             bindmap = ImageViewZoom.bindmapClass(self.logger)
         self.bindmap = bindmap
         bindmap.register_for_events(self)
 
-        if bindings == None:
+        if bindings is None:
             bindings = ImageViewZoom.bindingsClass(self.logger)
         self.set_bindings(bindings)
 

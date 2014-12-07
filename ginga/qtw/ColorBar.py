@@ -77,7 +77,7 @@ class ColorBar(Callback.Callbacks, QtGui.QWidget):
         self.loval = loval
         self.hival = hival
         # Calculate reasonable spacing for range numbers
-        if self.pixmap != None:
+        if self.pixmap is not None:
             cr = self.setup_cr()
             text = "%d" % (int(hival))
             rect = cr.boundingRect(0, 0, 1000, 1000, 0, text)

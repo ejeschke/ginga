@@ -57,7 +57,7 @@ class RenderGraphicsView(QtGui.QGraphicsView):
 
     def sizeHint(self):
         width, height = 300, 300
-        if self.viewer != None:
+        if self.viewer is not None:
             width, height = self.viewer.get_desired_size()
         return QtCore.QSize(width, height)
 
@@ -101,7 +101,7 @@ class RenderWidget(QtGui.QWidget):
 
     def sizeHint(self):
         width, height = 300, 300
-        if self.viewer != None:
+        if self.viewer is not None:
             width, height = self.viewer.get_desired_size()
         return QtCore.QSize(width, height)
 
@@ -115,7 +115,7 @@ class ImageViewQt(ImageView.ImageViewBase):
         ImageView.ImageViewBase.__init__(self, logger=logger,
                                          rgbmap=rgbmap, settings=settings)
 
-        if render == None:
+        if render is None:
             render = 'widget'
         self.wtype = render
         if self.wtype == 'widget':
@@ -208,7 +208,7 @@ class ImageViewQt(ImageView.ImageViewBase):
         in the pixel space.
         """
         self.logger.debug("redraw pixmap=%s" % (self.pixmap))
-        if self.pixmap == None:
+        if self.pixmap is None:
             return
         self.logger.debug("drawing to pixmap")
 
@@ -227,7 +227,7 @@ class ImageViewQt(ImageView.ImageViewBase):
         # If we need to build a new pixmap do it here.  We allocate one
         # twice as big as necessary to prevent having to reinstantiate it
         # all the time.  On Qt this causes unpleasant flashing in the display.
-        if (self.pixmap == None) or (self.pixmap.width() < width) or \
+        if (self.pixmap is None) or (self.pixmap.width() < width) or \
            (self.pixmap.height() < height):
             pixmap = QPixmap(width*2, height*2)
             #pixmap.fill(QColor("black"))
@@ -238,7 +238,7 @@ class ImageViewQt(ImageView.ImageViewBase):
     def get_rgb_image_as_buffer(self, output=None, format='png',
                                 quality=90):
         ibuf = output
-        if ibuf == None:
+        if ibuf is None:
             ibuf = BytesIO()
         imgwin_wd, imgwin_ht = self.get_window_size()
         qpix = self.pixmap.copy(0, 0,
@@ -793,12 +793,12 @@ class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
                                 rgbmap=rgbmap, render=render)
         Mixins.UIMixin.__init__(self)
 
-        if bindmap == None:
+        if bindmap is None:
             bindmap = ImageViewZoom.bindmapClass(self.logger)
         self.bindmap = bindmap
         bindmap.register_for_events(self)
 
-        if bindings == None:
+        if bindings is None:
             bindings = ImageViewZoom.bindingsClass(self.logger)
         self.set_bindings(bindings)
 

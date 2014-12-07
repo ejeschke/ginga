@@ -83,7 +83,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         combobox = Widgets.ComboBox()
         for tag in self.tags:
             combobox.append_text(tag)
-        if self.cutstag == None:
+        if self.cutstag is None:
             combobox.set_index(0)
         else:
             combobox.show_text(self.cutstag)
@@ -138,7 +138,7 @@ class Cuts(GingaPlugin.LocalPlugin):
             
     def select_cut(self, tag):
         # deselect the current selected cut, if there is one
-        if self.cutstag != None:
+        if self.cutstag is not None:
             try:
                 obj = self.canvas.getObjectByTag(self.cutstag)
                 #obj.setAttrAll(color=self.mark_color)
@@ -147,7 +147,7 @@ class Cuts(GingaPlugin.LocalPlugin):
                 pass
             
         self.cutstag = tag
-        if tag == None:
+        if tag is None:
             self.w.cuts.show_text('None')
             self.canvas.redraw(whence=3)
             return
@@ -177,7 +177,7 @@ class Cuts(GingaPlugin.LocalPlugin):
 
     def delete_cut_cb(self, w):
         tag = self.cutstag
-        if tag == None:
+        if tag is None:
             return
         index = self.tags.index(tag)
         self.canvas.deleteObjectByTag(tag)
@@ -188,7 +188,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         if tag == 'None':
             tag = None
         self.select_cut(tag)
-        if tag != None:
+        if tag is not None:
             self.redo()
         
     def delete_all_cb(self, w):
@@ -223,7 +223,7 @@ class Cuts(GingaPlugin.LocalPlugin):
             self.w.cuts.append_text(tag)
 
         if select:
-            if self.cutstag != None:
+            if self.cutstag is not None:
                 #self.unhighlightTag(self.cutstag)
                 pass
             self.cutstag = tag

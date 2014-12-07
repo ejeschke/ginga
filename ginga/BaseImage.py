@@ -24,11 +24,11 @@ class BaseImage(Callback.Callbacks):
 
         Callback.Callbacks.__init__(self)
         
-        if logger != None:
+        if logger is not None:
             self.logger = logger
         else:
             self.logger = logging.Logger('BaseImage')
-        if data_np == None:
+        if data_np is None:
             data_np = numpy.zeros((1, 1))
         self._data = data_np
         self.metadata = {}
@@ -361,7 +361,7 @@ class BaseImage(Callback.Callbacks):
 
     def histogram(self, x1, y1, x2, y2, z=None, pct=1.0, numbins=2048):
         data = self._get_fast_data()
-        if z != None:
+        if z is not None:
             data = data[y1:y2, x1:x2, z]
         else:
             data = data[y1:y2, x1:x2]

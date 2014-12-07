@@ -111,7 +111,7 @@ class ImageViewCairo(ImageView.ImageViewBase):
         cr.show_text(message)
 
     def get_offscreen_context(self):
-        if self.surface == None:
+        if self.surface is None:
             raise ImageViewCairoError("No offscreen surface defined")
         cr = cairo.Context(self.surface)
         return cr
@@ -124,7 +124,7 @@ class ImageViewCairo(ImageView.ImageViewBase):
         in the pixel space.
         """
         self.logger.debug("redraw surface")
-        if self.surface == None:
+        if self.surface is None:
             return
 
         # Prepare array for Cairo rendering
@@ -157,7 +157,7 @@ class ImageViewCairo(ImageView.ImageViewBase):
     
     def get_png_image_as_buffer(self, output=None):
         ibuf = output
-        if ibuf == None:
+        if ibuf is None:
             ibuf = BytesIO()
         qimg = self.surface.write_to_png(ibuf)
         return ibuf

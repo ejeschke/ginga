@@ -76,14 +76,14 @@ class Pipeline(GingaPlugin.LocalPlugin):
         b.subtract_bias.add_callback('activated', self.subtract_bias_cb)
         b.subtract_bias.set_tooltip("Subtract a bias image")
         bias_name = 'None'
-        if self.bias != None:
+        if self.bias is not None:
             bias_name = self.bias.get('name', "NoName")
         b.bias_image.set_text(bias_name)
 
         b.apply_flat_field.add_callback('activated', self.apply_flat_cb)
         b.apply_flat_field.set_tooltip("Apply a flat field correction")
         flat_name = 'None'
-        if self.flat != None:
+        if self.flat is not None:
             flat_name = self.flat.get('name', "NoName")
         b.flat_image.set_text(flat_name)
 
@@ -251,7 +251,7 @@ class Pipeline(GingaPlugin.LocalPlugin):
 
     def subtract_bias_cb(self, w):
         image = self.fitsimage.get_image()
-        if self.bias == None:
+        if self.bias is None:
             self.fv.show_error("Please set a bias image first")
         else:
             result = self.fv.error_wrap(dp.subtract, image, self.bias)
@@ -278,7 +278,7 @@ class Pipeline(GingaPlugin.LocalPlugin):
 
     def apply_flat_cb(self, w):
         image = self.fitsimage.get_image()
-        if self.flat == None:
+        if self.flat is None:
             self.fv.show_error("Please set a flat field image first")
         else:
             result = self.fv.error_wrap(dp.divide, image, self.flat)

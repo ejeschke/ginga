@@ -52,7 +52,7 @@ class CairoCanvasMixin(object):
         fill = getattr(self, 'fill', False)
         if fill:
             color = getattr(self, 'fillcolor', None)
-            if color == None:
+            if color is None:
                 color = self.color
             alpha = getattr(self, 'alpha', 1.0)
             fillalpha = getattr(self, 'fillalpha', alpha)
@@ -74,7 +74,7 @@ class CairoCanvasMixin(object):
         cr.fill()
         
     def draw_cap(self, cr, cap, x, y, radius=None):
-        if radius == None:
+        if radius is None:
             radius = self.cap_radius
         cr.new_path()
         if cap == 'ball':

@@ -130,11 +130,11 @@ class PyFitsFileHandler(BaseFitsFileHandler):
             raise FITSError("Error loading fits file '%s': %s" % (
                 fitspath, str(e)))
 
-        if numhdu == None:
+        if numhdu is None:
             found_valid_hdu = False
             for i in range(len(fits_f)):
                 hdu = fits_f[i]
-                if hdu.data == None:
+                if hdu.data is None:
                     # compressed FITS file or non-pixel data hdu?
                     continue
                 if not isinstance(hdu.data, numpy.ndarray):
@@ -216,7 +216,7 @@ class FitsioFileHandler(BaseFitsFileHandler):
         self.logger.debug("Loading file '%s' ..." % (filepath))
         fits_f = fitsio.FITS(filepath)
 
-        if numhdu == None:
+        if numhdu is None:
             found_valid_hdu = False
             for i in range(len(fits_f)):
                 hdu = fits_f[i]

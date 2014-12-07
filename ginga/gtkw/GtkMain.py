@@ -56,7 +56,7 @@ class GtkMain(object):
             queue = Queue.Queue()
         self.gui_queue = queue
         # You can pass in a logger if you prefer to do so
-        if logger == None:
+        if logger is None:
             logger = logging.getLogger('GtkHelper')
         self.logger = logger
         if not ev_quit:

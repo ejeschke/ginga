@@ -302,7 +302,7 @@ class Catalogs(CatalogsBase.CatalogsBase):
     def _update_widgets(self, d):
         for bnch in (self.image_server_params,
                      self.catalog_server_params):
-            if bnch != None:
+            if bnch is not None:
                 for key in bnch.keys():
                     if key in d:
                         bnch[key].set_text(str(d[key]))
@@ -543,7 +543,7 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
     def _select_tv(self, star, fromtable=False):
         treeselection = self.treeview.get_selection()
         star_idx = self._get_star_path(star)
-        if star_idx == None:
+        if star_idx is None:
             return
         treeselection.select_path(star_idx)
         if not fromtable:
@@ -555,7 +555,7 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
     def _unselect_tv(self, star, fromtable=False):
         treeselection = self.treeview.get_selection()
         star_idx = self._get_star_path(star)
-        if star_idx == None:
+        if star_idx is None:
             return
         treeselection.unselect_path(star_idx)
 

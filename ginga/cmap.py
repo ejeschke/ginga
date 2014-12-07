@@ -11438,7 +11438,7 @@ def get_names():
     return res
 
 def matplotlib_to_ginga_cmap(cm, name=None):
-    if name == None:
+    if name is None:
         name = cm.name
     arr = cm(numpy.arange(256))
     clst = tuple(map(lambda rec: tuple(rec)[:3], arr))

@@ -51,13 +51,13 @@ class PlotBase(Callback.Callbacks):
     def set_titles(self, xtitle=None, ytitle=None, title=None,
                    rtitle=None):
         self._sanity_check_window()
-        if xtitle != None:
+        if xtitle is not None:
             self.ax.set_xlabel(xtitle)
-        if ytitle != None:
+        if ytitle is not None:
             self.ax.set_ylabel(ytitle)
-        if title != None:
+        if title is not None:
             self.ax.set_title(title)
-        if rtitle != None:
+        if rtitle is not None:
             pass
 
     def clear(self):

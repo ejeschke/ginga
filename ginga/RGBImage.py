@@ -52,7 +52,7 @@ class RGBImage(BaseImage):
     def set_data(self, data_np, order=None, **kwdargs):
         super(RGBImage, self).set_data(data_np, **kwdargs)
         
-        if order != None:
+        if order is not None:
             self.order = order
         else:
             # TODO; need something better here than a guess!
@@ -154,7 +154,7 @@ class RGBImage(BaseImage):
 
     def get_scaled_cutout(self, x1, y1, x2, y2, scale_x, scale_y,
                           method=None):
-        if method == None:
+        if method is None:
             #if (have_pilutil or have_qtimage):
             if (io_rgb.have_pilutil):
                 method = 'bicubic'

@@ -25,7 +25,7 @@ class ColorDistBase(object):
         super(ColorDistBase, self).__init__()
 
         self.hashsize = hashsize
-        if colorlen == None:
+        if colorlen is None:
             colorlen = 256
         self.colorlen = colorlen
         self.maxhashsize = 1024*1024

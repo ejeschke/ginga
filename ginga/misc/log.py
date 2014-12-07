@@ -58,14 +58,14 @@ def get_logger(name='ginga', level=None, null=False,
     # Create a logger
     logger = logging.Logger('ginga')
 
-    if level == None:
-        if (options != None) and (options.loglevel != None):
+    if level is None:
+        if (options is not None) and (options.loglevel is not None):
             level = options.loglevel
         else:
             level = logging.WARN
 
     fmt = logging.Formatter(LOG_FORMAT)
-    if (not log_file) and (options != None) and (options.logfile != None):
+    if (not log_file) and (options is not None) and (options.logfile is not None):
         log_file = options.logfile
 
     if log_file:
@@ -76,7 +76,7 @@ def get_logger(name='ginga', level=None, null=False,
         fileHdlr.setFormatter(fmt)
         logger.addHandler(fileHdlr)
 
-    if (not log_stderr) and (options != None) and (options.logstderr):
+    if (not log_stderr) and (options is not None) and (options.logstderr):
         log_stderr = options.logstderr
 
     if log_stderr:

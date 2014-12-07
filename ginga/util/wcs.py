@@ -232,7 +232,7 @@ def get_xy_rotation_and_scale(header):
         except KeyError:
             yrot = 0.0
 
-        if xrot == None:
+        if xrot is None:
             xrot = yrot
 
         cdelt1 = float(header.get('CDELT1', 1.0))

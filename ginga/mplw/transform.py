@@ -231,7 +231,7 @@ class GingaAxes(Axes):
             The input and output are Nx2 numpy arrays.
             """
             #print "transform in:", xy
-            if self.viewer == None:
+            if self.viewer is None:
                 return xy
 
             res = np.array(list(map(self._transform_xy, xy)))
@@ -283,7 +283,7 @@ class GingaAxes(Axes):
             
         def transform_non_affine(self, xy):
             #print "transform in:", xy
-            if self.viewer == None:
+            if self.viewer is None:
                 return xy
 
             res = np.array(list(map(self._transform_xy, xy)))

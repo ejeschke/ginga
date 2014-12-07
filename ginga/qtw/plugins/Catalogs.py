@@ -248,7 +248,7 @@ class Catalogs(CatalogsBase.CatalogsBase):
 
         # remove old widgets
         old_w = container.currentWidget()
-        if old_w != None:
+        if old_w is not None:
             container.removeWidget(old_w)
 
         # add new widgets
@@ -280,7 +280,7 @@ class Catalogs(CatalogsBase.CatalogsBase):
     def _update_widgets(self, d):
         for bnch in (self.image_server_params,
                      self.catalog_server_params):
-            if bnch != None:
+            if bnch is not None:
                 for key in bnch.keys():
                     if key in d:
                         bnch[key].setText(str(d[key]))

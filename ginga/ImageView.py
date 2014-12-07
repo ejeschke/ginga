@@ -54,13 +54,13 @@ class ImageViewBase(Callback.Callbacks):
         """
         Callback.Callbacks.__init__(self)
 
-        if logger != None:
+        if logger is not None:
             self.logger = logger
         else:
             self.logger = logging.Logger('ImageViewBase')
 
         # Create settings and set defaults
-        if settings == None:
+        if settings is None:
             settings = Settings.SettingGroup(logger=self.logger)
         self.t_ = settings
         
@@ -324,7 +324,7 @@ class ImageViewBase(Callback.Callbacks):
         tuple of (width, height).
         """
         image = self.get_image()
-        if image == None:
+        if image is None:
             raise ImageViewNoDataError("No data found")
         return image.get_size()
 
@@ -456,7 +456,7 @@ class ImageViewBase(Callback.Callbacks):
         if add_to_canvas:
             # add a normalized image item to this canvas if we don't
             # have one already--then just keep reusing it
-            if self._normimg == None:
+            if self._normimg is None:
                 NormImage = self.getDrawClass('normimage')
                 self._normimg = NormImage(0, 0, image, alpha=1.0)
                 tag = self.add(self._normimg, tag='_image')
@@ -470,7 +470,7 @@ class ImageViewBase(Callback.Callbacks):
             self.lowerObject(self._normimg)
             
         profile = image.get('profile', None)
-        if (profile != None) and (self.t_['use_embedded_profile']):
+        if (profile is not None) and (self.t_['use_embedded_profile']):
             self.apply_profile(profile, redraw=False)
 
         if self.t_['auto_orient']:
@@ -522,10 +522,10 @@ class ImageViewBase(Callback.Callbacks):
         
     def save_profile(self, **params):
         image = self.get_image()
-        if image == None:
+        if image is None:
             return
         profile = image.get('profile', None)
-        if (profile == None):
+        if (profile is None):
             # If image has no profile then create one
             profile = Settings.SettingGroup()
             image.set(profile=profile) 
@@ -538,8 +538,8 @@ class ImageViewBase(Callback.Callbacks):
         image = self.get_image()
         # If there is image metadata associated that has cut levels
         # then use those values if t_use_saved_cuts == True
-        ## if (self.t_['use_saved_cuts'] and (image != None) and
-        ##     (image.get('cutlo', None) != None)):
+        ## if (self.t_['use_saved_cuts'] and (image is not None) and
+        ##     (image.get('cutlo', None) is not None)):
         ##     loval, hival = image.get_list('cutlo', 'cuthi')
         ##     self.logger.debug("setting cut levels from saved cuts lo=%f hi=%f" % (
         ##         loval, hival))
@@ -700,7 +700,7 @@ class ImageViewBase(Callback.Callbacks):
         win_wd, win_ht = self.get_window_size()
         order = self.get_rgb_order()
 
-        if (whence <= 0.0) or (self._rgbarr == None):
+        if (whence <= 0.0) or (self._rgbarr is None):
             # calculate dimensions of window RGB backing image
             wd, ht = self._calc_bg_dimensions(self._scale_x, self._scale_y,
                                               self._pan_x, self._pan_y,
@@ -711,12 +711,12 @@ class ImageViewBase(Callback.Callbacks):
             rgba = numpy.zeros((ht, wd, depth), dtype=numpy.uint8)
             self._rgbarr = rgba
 
-        if (whence <= 2.0) or (self._rgbarr2 == None):
+        if (whence <= 2.0) or (self._rgbarr2 is None):
             # Apply any RGB image overlays
             self._rgbarr2 = numpy.copy(self._rgbarr)
             self.overlay_images(self, self._rgbarr2, whence=whence)
 
-        if (whence <= 2.5) or (self._rgbobj == None):
+        if (whence <= 2.5) or (self._rgbobj is None):
             rotimg = self._rgbarr2
 
             # Apply any viewing transformations or rotations
@@ -982,7 +982,7 @@ class ImageViewBase(Callback.Callbacks):
         0-based, as in numpy.
         """
         image = self.get_image()
-        if image != None:
+        if image is not None:
             return image.get_data_xy(data_x, data_y)
         raise ImageViewNoDataError("No image found")
 
@@ -1360,11 +1360,11 @@ class ImageViewBase(Callback.Callbacks):
             If True, will redraw the image with the cut levels applied
 
         """
-        if autocuts == None:
+        if autocuts is None:
             autocuts = self.autocuts
             
         image = self.get_image()
-        if image == None:
+        if image is None:
             return
         
         loval, hival = autocuts.calc_cut_levels(image)
@@ -1536,7 +1536,7 @@ class ImageViewBase(Callback.Callbacks):
         """Set the orientation for the image to a reasonable default.
         """
         image = self.get_image()
-        if image == None:
+        if image is None:
             return
         invertY = not isinstance(image, AstroImage.AstroImage)
 

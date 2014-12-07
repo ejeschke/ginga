@@ -134,7 +134,7 @@ class ReferenceViewer(object):
         
     def add_global_plugin(self, module_name, ws_name,
                           tab_name=None, start_plugin=True):
-        if tab_name == None:
+        if tab_name is None:
             tab_name = module_name
 
         self.global_plugins.append(

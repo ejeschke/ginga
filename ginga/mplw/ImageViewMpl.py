@@ -167,7 +167,7 @@ class ImageViewMpl(ImageView.ImageViewBase):
         NOTE: this version uses a Figure.FigImage to render the image.
         """
         self.logger.debug("redraw surface")
-        if self.figure == None:
+        if self.figure is None:
             return
         ## left, bottom, width, height = self.ax_img.bbox.bounds
         ## self._imgwin_wd, self._imgwin_ht = width, height
@@ -183,7 +183,7 @@ class ImageViewMpl(ImageView.ImageViewBase):
         ## rect.set_facecolor(self.img_bg)
 
         # attempt 1: using a FigureImage (non-scaled)
-        if self.mpimage == None:
+        if self.mpimage is None:
             self.mpimage = self.figure.figimage(data, xo=dst_x, yo=dst_y,
                                                 origin='upper')
 
@@ -201,7 +201,7 @@ class ImageViewMpl(ImageView.ImageViewBase):
         NOTE: this version renders the image in an Axes with imshow().
         """
         self.logger.debug("redraw surface")
-        if self.figure == None:
+        if self.figure is None:
             return
 
         ## left, bottom, width, height = self.ax_img.bbox.bounds
@@ -224,7 +224,7 @@ class ImageViewMpl(ImageView.ImageViewBase):
         # Calculate aspect ratio
         aspect = self.calculate_aspect(arr.shape, extent)
 
-        if self.mpimage == None:
+        if self.mpimage is None:
             img = self.ax_img.imshow(arr, interpolation='none',
                                    origin="upper",
                                    vmin=0, vmax=255,
@@ -311,7 +311,7 @@ class ImageViewMpl(ImageView.ImageViewBase):
 
     def get_png_image_as_buffer(self, output=None):
         ibuf = output
-        if ibuf == None:
+        if ibuf is None:
             ibuf = BytesIO()
         qimg = self.figure.write_to_png(ibuf)
         return ibuf
@@ -356,7 +356,7 @@ class ImageViewMpl(ImageView.ImageViewBase):
     
     def reschedule_redraw(self, time_sec):
 
-        if self._defer_timer == None:
+        if self._defer_timer is None:
             self.delayed_redraw()
             return
         
@@ -462,7 +462,7 @@ class ImageViewEvent(ImageViewMpl):
         
     def transkey(self, keyname):
         self.logger.debug("matplotlib keyname='%s'" % (keyname))
-        if keyname == None:
+        if keyname is None:
             return keyname
         try:
             return self._keytbl[keyname.lower()]
@@ -493,14 +493,14 @@ class ImageViewEvent(ImageViewMpl):
     def key_press_event(self, event):
         keyname = event.key
         keyname = self.transkey(keyname)
-        if keyname != None:
+        if keyname is not None:
             self.logger.debug("key press event, key=%s" % (keyname))
             return self.make_callback('key-press', keyname)
 
     def key_release_event(self, event):
         keyname = event.key
         keyname = self.transkey(keyname)
-        if keyname != None:
+        if keyname is not None:
             self.logger.debug("key release event, key=%s" % (keyname))
             return self.make_callback('key-release', keyname)
 
@@ -587,12 +587,12 @@ class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
                                 settings=settings)
         Mixins.UIMixin.__init__(self)
 
-        if bindmap == None:
+        if bindmap is None:
             bindmap = ImageViewZoom.bindmapClass(self.logger)
         self.bindmap = bindmap
         bindmap.register_for_events(self)
 
-        if bindings == None:
+        if bindings is None:
             bindings = ImageViewZoom.bindingsClass(self.logger)
         self.set_bindings(bindings)
 

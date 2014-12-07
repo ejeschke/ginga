@@ -94,7 +94,7 @@ class ImageViewMock(ImageView.ImageViewBase):
         in the offscreen pixmap.
         """
         self.logger.debug("redraw pixmap=%s" % (self.pixmap))
-        if self.pixmap == None:
+        if self.pixmap is None:
             return
         self.logger.debug("drawing to pixmap")
 
@@ -122,7 +122,7 @@ class ImageViewMock(ImageView.ImageViewBase):
     def get_rgb_image_as_buffer(self, output=None, format='png',
                                 quality=90):
         ibuf = output
-        if ibuf == None:
+        if ibuf is None:
             ibuf = BytesIO()
         imgwin_wd, imgwin_ht = self.get_window_size()
 
@@ -477,12 +477,12 @@ class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
                                 rgbmap=rgbmap)
         Mixins.UIMixin.__init__(self)
 
-        if bindmap == None:
+        if bindmap is None:
             bindmap = ImageViewZoom.bindmapClass(self.logger)
         self.bindmap = bindmap
         bindmap.register_for_events(self)
 
-        if bindings == None:
+        if bindings is None:
             bindings = ImageViewZoom.bindingsClass(self.logger)
         self.set_bindings(bindings)
 
