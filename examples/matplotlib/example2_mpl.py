@@ -185,7 +185,7 @@ class FitsViewer(QtGui.QMainWindow):
         try:
             # NOTE: image function operates on DATA space coords
             image = fitsimage.get_image()
-            if image == None:
+            if image is None:
                 # No image loaded
                 return
             ra_txt, dec_txt = image.pixtoradec(fits_x, fits_y,

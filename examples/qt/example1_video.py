@@ -146,7 +146,7 @@ class GingaVision(QtGui.QMainWindow):
     def show_frame(self, img):
         self.logger.debug("updating image")
         try:
-            if (self.pdata == None) or (img.shape != self.pdata.shape):
+            if (self.pdata is None) or (img.shape != self.pdata.shape):
                 self.pdata = numpy.copy(img)
                 self.pimage.set_data(self.pdata)
                 self.qtmain.gui_call(self.fitsimage.set_image, self.pimage)
@@ -174,7 +174,7 @@ class GingaVision(QtGui.QMainWindow):
         # Get the frame rate
         fps = cap.get(cv.CV_CAP_PROP_FPS)
         self.logger.info("Video rate is %d fps" % (fps))
-        if not ((fps == None) or (int(fps) == 0)):
+        if not ((fps is None) or (int(fps) == 0)):
             self.set_playback_rate(fps)
 
         # Get the frame count
@@ -194,7 +194,7 @@ class GingaVision(QtGui.QMainWindow):
                 frame, time.time() - start_time))
 
             split_time = time.time()
-            if img != None:
+            if img is not None:
                 self.show_frame(img)
                         
             end_time = time.time()
