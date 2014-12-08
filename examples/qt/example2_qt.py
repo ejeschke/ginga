@@ -150,7 +150,7 @@ class FitsViewer(QtGui.QMainWindow):
         res = QtGui.QFileDialog.getOpenFileName(self, "Open FITS file",
                                                      ".", "FITS files (*.fits)")
         if isinstance(res, tuple):
-            fileName = res[0].encode('ascii')
+            fileName = res[0]
         else:
             fileName = str(res)
         self.load_file(fileName)
