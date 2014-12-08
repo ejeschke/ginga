@@ -214,7 +214,7 @@ class GingaAxes(Axes):
         #pass_through = True
 
         def invalidate(self):
-            print("I don't feel validated! (%s)" % (self.pass_through))
+            #print("I don't feel validated! (%s)" % (self.pass_through))
             return Transform.invalidate(self)
             
         def _transform_xy(self, n):

@@ -9,20 +9,23 @@
 # Please see the file LICENSE.txt for details.
 from __future__ import print_function
 
-from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as QtFigureCanvas
+from ginga.toolkit import toolkit
+if toolkit == 'qt5':
+    from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as QtFigureCanvas
+else:
+    from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as QtFigureCanvas
+    
 from ginga.qtw.QtHelp import QtGui, QtCore
 
 
 def setup_Qt(widget, viewer):
 
     def resizeEvent(*args):
-        print(args)
         rect = widget.geometry()
         x1, y1, x2, y2 = rect.getCoords()
         width = x2 - x1
         height = y2 - y1
 
-        #print "RESIZE %dx%d" % (width, height)
         if viewer is not None:
             viewer.configure(width, height)
         
@@ -64,7 +67,6 @@ class FigureCanvas(QtFigureCanvas):
         height = y2 - y1
 
         if self.viewer is not None:
-            #print "RESIZE %dx%d" % (width, height)
             self.viewer.configure(width, height)
         
         return super(FigureCanvas, self).resizeEvent(event)

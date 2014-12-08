@@ -266,7 +266,7 @@ class FitsioFileHandler(BaseFitsFileHandler):
 
 def get_path(fileSpec):
     path = fileSpec
-    if fileSpec.startswith('file://'):
+    if fileSpec.startswith(u'file://'):
         path = fileSpec[7:]
 
     # TODO: handle web references by fetching the file

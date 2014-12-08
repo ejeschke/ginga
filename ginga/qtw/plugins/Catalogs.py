@@ -494,23 +494,23 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
     def _unselect_tv(self, star, fromtable=False):
         self._update_selections()
 
-    def select_star_cb(self, selected, deselected):
-        """This method is called when the user selects a star from the table.
-        """
-        srows = set()
-        dsrows = set()
-        for midx in selected.indexes():
-            srows.add(midx.row())
-        for midx in deselected.indexes():
-            dsrows.add(midx.row())
-        print("selected: %s  deselected: %s" % (srows, dsrows))
-        if len(srows) > 0:
-            row = srows.pop()
-        else:
-            row = dsrows.pop()
-        star = self.starlist[row]
-        #self.mark_selection(star, fromtable=True)
-        return True
+    ## def select_star_cb(self, selected, deselected):
+    ##     """This method is called when the user selects a star from the table.
+    ##     """
+    ##     srows = set()
+    ##     dsrows = set()
+    ##     for midx in selected.indexes():
+    ##         srows.add(midx.row())
+    ##     for midx in deselected.indexes():
+    ##         dsrows.add(midx.row())
+    ##     print("selected: %s  deselected: %s" % (srows, dsrows))
+    ##     if len(srows) > 0:
+    ##         row = srows.pop()
+    ##     else:
+    ##         row = dsrows.pop()
+    ##     star = self.starlist[row]
+    ##     #self.mark_selection(star, fromtable=True)
+    ##     return True
     
     def select_star_cb(self, midx_to, midx_from):
         """This method is called when the user selects a star from the table.

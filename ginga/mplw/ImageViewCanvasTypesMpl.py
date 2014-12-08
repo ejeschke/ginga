@@ -167,7 +167,6 @@ class Circle(CircleBase, MplCanvasMixin):
         xy = (cx1, cy1)
             
         p = patches.Circle(xy, **cr.kwdargs)
-        print(cr.kwdargs)
         cr.axes.add_patch(p)
 
         if self.editing:

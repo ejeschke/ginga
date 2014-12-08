@@ -218,7 +218,7 @@ class Preferences(object):
     def getSettings(self, category):
         return self.settings[category]
     
-    def getDict(self, category):
+    def get_dict_category(self, category):
         return self.settings[category].getDict()
     
     def createCategory(self, category):

@@ -173,8 +173,8 @@ class ImageViewBase(Callback.Callbacks):
         # PRIVATE IMPLEMENTATION STATE
         
         # image window width and height (see set_window_dimensions())
-        self._imgwin_wd = 1
-        self._imgwin_ht = 1
+        self._imgwin_wd = 0
+        self._imgwin_ht = 0
         self._imgwin_set = False
         # desired size
         self._desired_size = (300, 300)
@@ -631,6 +631,9 @@ class ImageViewBase(Callback.Callbacks):
         """
         Do not call this method unless you are implementing a subclass.
         """
+        if not self._imgwin_set:
+            # window has not been realized yet
+            return
         rgbobj = self.get_rgb_object(whence=whence)
         self.render_image(rgbobj, self._dst_x, self._dst_y)
         # TODO: see if we can deprecate this fake callback
