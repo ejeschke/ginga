@@ -10,7 +10,6 @@
 from __future__ import print_function
 
 import sys, time, os
-import types
 import ginga.util.six as six
 if six.PY2:
     import thread
@@ -18,14 +17,15 @@ if six.PY2:
 else:
     import _thread as thread
     import queue as Queue
+    # see http://bugs.python.org/issue7946
+    _swival = 0.000001
+    sys.setswitchinterval(_swival)
 
 import threading
-# needed by thread mods:
-import inspect, types, ctypes
-import random
 import traceback
  
 from ginga.util.six.moves import map, zip
+
 
 class TaskError(Exception):
     """Exception generated for task errors"""
@@ -867,6 +867,7 @@ class QueueTaskset(Task):
 
 class PriorityQueue(Queue.PriorityQueue):
     pass
+        
 
 # ------------ WORKER THREADS ------------
 
@@ -882,7 +883,7 @@ class WorkerThread(object):
     """
 
     def __init__(self, queue, logger=None, ev_quit=None,
-                 timeout=1.0, tpool=None):
+                 timeout=0.2, tpool=None):
 
         self.queue = queue
         self.logger = logger
@@ -975,7 +976,7 @@ class WorkerThread(object):
             self.setstatus('idle')
             while not self.ev_quit.isSet():
                 try:
-
+                    
                     # Wait on our queue for a task; will timeout in
                     # self.timeout secs
                     (priority, task) = self.queue.get(block=True,
@@ -1137,13 +1138,6 @@ class ThreadPool(object):
     def workerStatus(self):
         return list(map(lambda t: t.getstatus(), self.workers))
 
-    def reset(self):
-        for t in self.workers:
-            t.reset()
-
-    def killall(self):
-        for t in self.workers:
-            t.kill()
 
     def addTask(self, task, priority=0):
         """Add a task to the queue of tasks.
@@ -1198,27 +1192,6 @@ class ThreadPool(object):
                 self.status = 'down'
             self.regcond.notify()
 
-# ------------ THREADING MODS ------------
-    
-def _async_raise(tid, exctype):
-    """raises the exception, performs cleanup if needed"""
-    if not inspect.isclass(exctype):
-        raise TypeError("Only types can be raised (not instances)")
-
-    ## res = ctypes.pythonapi.PyThreadState_SetAsyncExc(tid,
-    ##                                                  ctypes.py_object(exctype))
-    res = ctypes.pythonapi.PyThreadState_SetAsyncExc(ctypes.c_long(tid),
-                                                     #None)
-                                                     ctypes.py_object(exctype))
-    if res == 0:
-        raise ValueError("invalid thread id")
-
-    elif res != 1:
-        # """if it returns a number greater than one, you're in trouble, 
-        # and you should call it again with exc=NULL to revert the effect"""
-        ctypes.pythonapi.PyThreadState_SetAsyncExc(tid, 0)
-        raise SystemError("PyThreadState_SetAsyncExc failed")
- 
  
 # ------------ SUPPORT FUNCTIONS ------------
 
@@ -1239,4 +1212,4 @@ def get_tag(taskParent):
     return tag
     
 
-#END Task.py
+#END
