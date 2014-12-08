@@ -19,11 +19,16 @@
 
  
 """
+from __future__ import print_function
 import sys
-import xmlrpclib
 from optparse import OptionParser
 
-version = '20140127'
+import ginga.util.six as six
+if six.PY2:
+    import xmlrpclib
+else:
+    import xmlrpc.client as xmlrpclib
+
 
 def main(options, args):
 
@@ -39,13 +44,13 @@ def main(options, args):
         
     # invoke method on rest of parameters
     res = method(*args)
-    print res
+    print(res)
     
 
 if __name__ == "__main__":
    
     usage = "usage: %prog [options] cmd [arg] ..."
-    optprs = OptionParser(usage=usage, version=('%%prog %s' % version))
+    optprs = OptionParser(usage=usage, version=('%%prog'))
     
     optprs.add_option("--debug", dest="debug", default=False, action="store_true",
                       help="Enter the pdb debugger on main()")
@@ -70,7 +75,7 @@ if __name__ == "__main__":
     elif options.profile:
         import profile
 
-        print "%s profile:" % sys.argv[0]
+        print("%s profile:" % sys.argv[0])
         profile.run('main(options, args)')
 
     else:
