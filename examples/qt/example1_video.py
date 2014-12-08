@@ -20,7 +20,7 @@ Caveats:
     2. Currently, it expects an AVI file as a command line parameter.
     Only AVI formats supported by OpenCV can be used (typically JPEG encoded).
     
-Requirements:
+    Requirements:
     To run this example you will need the OpenCV bindings for Python installed.
     This module lets us access the video stream of an AVI file frame-by-frame.
 
@@ -178,7 +178,7 @@ class GingaVision(QtGui.QMainWindow):
         # Get the frame rate
         fps = cap.get(cv.CV_CAP_PROP_FPS)
         if fps is not None:
-            if not numpy.isnan(fps):
+            if not numpy.isnan(fps) and float(fps) >= 1.0:
                 self.logger.info("Video rate is %d fps" % (fps))
                 self.set_playback_rate(fps)
 
