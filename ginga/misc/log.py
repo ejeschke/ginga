@@ -47,6 +47,9 @@ class NullLogger(object):
             self.f_out.write("%s\n" % msg)
             self.f_out.flush()
 
+    def addHandler(self, hndlr):
+        pass
+
 
 def get_logger(name='ginga', level=None, null=False,
                options=None, log_file=None, log_stderr=False):

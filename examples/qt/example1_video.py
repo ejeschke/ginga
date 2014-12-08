@@ -33,12 +33,16 @@ import sys, os
 import time
 import logging, logging.handlers
 import threading
-import Queue
 import numpy
+import ginga.util.six as six
+if six.PY2:
+    import Queue
+else:
+    import queue as Queue
 
 from ginga.qtw.QtHelp import QtGui, QtCore
 from ginga.qtw import QtMain
-from ginga.qtw.ImageViewQt import ImageViewZoom
+from ginga.qtw.ImageViewCanvasQt import ImageViewCanvas
 from ginga import AstroImage
 from ginga import RGBImage
 from ginga import AutoCuts, RGBMap
@@ -70,7 +74,7 @@ class GingaVision(QtGui.QMainWindow):
         self.pimage = AstroImage.AstroImage()
         self.pdata = None
 
-        fi = ImageViewZoom(self.logger, render='widget')
+        fi = ImageViewCanvas(self.logger, render='widget')
         fi.enable_autocuts('off')
         fi.set_autocut_params('histogram')
         fi.enable_autozoom('off')
@@ -173,9 +177,10 @@ class GingaVision(QtGui.QMainWindow):
 
         # Get the frame rate
         fps = cap.get(cv.CV_CAP_PROP_FPS)
-        self.logger.info("Video rate is %d fps" % (fps))
-        if not ((fps is None) or (int(fps) == 0)):
-            self.set_playback_rate(fps)
+        if fps is not None:
+            if not numpy.isnan(fps):
+                self.logger.info("Video rate is %d fps" % (fps))
+                self.set_playback_rate(fps)
 
         # Get the frame count
         num_frames = cap.get(cv.CV_CAP_PROP_FRAME_COUNT)
