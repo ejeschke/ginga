@@ -399,13 +399,33 @@ class MenuBar(QtGui.QMenuBar):
     def __init__(self, parent=None):
         super(MenuBar, self).__init__(parent=parent)
 
-    def add_menu(self, name):
+    def add_name(self, name):
         menu = self.addMenu(name)
         return menu
 
     def make_action(self, name):
         item = QtGui.QAction(name, self)
         return item
+
+
+class ToolBar(QtGui.QToolBar):
+
+    def __init__(self, parent=None):
+        super(ToolBar, self).__init__(parent=parent)
+
+    def add_menu(self, name):
+        menu = QtGui.QMenu()
+        # TODO: need to get this to behave a little more like a regular menu
+        action = self.addAction(name, lambda *args: self._press_cb(menu))
+        return menu
+
+    def _press_cb(self, menu):
+        menu.popup(self.mapToGlobal(QtCore.QPoint(0,0)))
+        
+    def make_action(self, name):
+        item = QtGui.QAction(name, self)
+        return item
+
 
 class Desktop(Callback.Callbacks):
 

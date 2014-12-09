@@ -618,6 +618,58 @@ class Toolbar(ContainerBase):
         self.widget.append_space()
         
 
+class MenuAction(WidgetBase):
+    def __init__(self, text=None):
+        super(MenuAction, self).__init__()
+
+        self.widget = gtk.MenuItem(label=text)
+        self.widget.connect('activate', self._cb_redirect)
+        self.text = text
+        self.enable_callback('activated')
+
+    def _cb_redirect(self, *args):
+        # TODO: checkable menu items
+        self.make_callback('activated')
+
+    
+class Menu(ContainerBase):
+    def __init__(self):
+        super(Menu, self).__init__()
+
+        self.widget = None
+
+    def add_widget(self, child):
+        menuitem_w = child.get_widget()
+        self.widget.append(menuitem_w)
+        self.add_ref(child)
+        
+    def add_name(self, name):
+        child = MenuItem(text=name)
+        self.add_widget(child)
+        return child
+
+    def add_separator(self):
+        sep = gtk.SeparatorMenuItem()
+        self.widget.append(sep)
+        
+    
+class Menubar(ContainerBase):
+    def __init__(self):
+        super(Menubar, self).__init__()
+
+        self.widget = QtGui.QMenuBar()
+
+    def add_widget(self, child):
+        menu_w = child.get_widget()
+        self.widget.addMenu(menu_w)
+        self.add_ref(child)
+
+    def add_name(self, name):
+        child = Menu(name)
+        self.add_widget(child)
+        return child
+
+
 # MODULE FUNCTIONS
 
 def name_mangle(name, pfx=''):
@@ -665,6 +717,10 @@ def make_widget(title, wtype):
         w = Label('')
     elif wtype == 'textarea':
         w = TextArea(editable=True)
+    elif wtype == 'toolbar':
+        w = Toolbar()
+    elif wtype == 'menubar':
+        w = Menubar()
     else:
         raise ValueError("Bad wtype=%s" % wtype)
     return w

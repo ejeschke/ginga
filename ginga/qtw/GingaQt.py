@@ -176,7 +176,7 @@ class GingaView(QtMain.QtMain):
             holder.layout().addWidget(menubar, stretch=1)
 
         # create a File pulldown menu, and add it to the menu bar
-        filemenu = menubar.add_menu("File")
+        filemenu = menubar.add_name("File")
 
         item = menubar.make_action("Load Image")
         item.triggered.connect(self.gui_load_file)
@@ -191,7 +191,7 @@ class GingaView(QtMain.QtMain):
         filemenu.addAction(item)
 
         # create a Channel pulldown menu, and add it to the menu bar
-        chmenu = menubar.add_menu("Channel")
+        chmenu = menubar.add_name("Channel")
 
         item = menubar.make_action("Add Channel")
         item.triggered.connect(self.gui_add_channel)
@@ -206,7 +206,7 @@ class GingaView(QtMain.QtMain):
         chmenu.addAction(item)
 
         # create a Window pulldown menu, and add it to the menu bar
-        wsmenu = menubar.add_menu("Workspace")
+        wsmenu = menubar.add_name("Workspace")
 
         item = menubar.make_action("Add Workspace")
         item.triggered.connect(self.gui_add_ws)
@@ -234,14 +234,14 @@ class GingaView(QtMain.QtMain):
             wsmenu.addAction(item)
         
         # # create a Option pulldown menu, and add it to the menu bar
-        # optionmenu = menubar.add_menu("Option")
+        # optionmenu = menubar.add_name("Option")
 
         # create a Plugins pulldown menu, and add it to the menu bar
-        plugmenu = menubar.add_menu("Plugins")
+        plugmenu = menubar.add_name("Plugins")
         self.w.menu_plug = plugmenu
 
         # create a Help pulldown menu, and add it to the menu bar
-        helpmenu = menubar.add_menu("Help")
+        helpmenu = menubar.add_name("Help")
 
         item = menubar.make_action("About")
         item.triggered.connect(lambda: self.banner(raiseTab=True))

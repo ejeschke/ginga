@@ -518,38 +518,35 @@ class MenuBar(gtk.MenuBar):
     def __init__(self):
         super(MenuBar, self).__init__()
 
-    def add_menu(self, name):
+    def add_name(self, name):
         btn = gtk.MenuItem(label=name)
         menu = gtk.Menu()
         btn.set_submenu(menu)
         self.append(btn)
         return menu
 
-class MenuBar2(gtk.HBox):
+
+class ToolBar(gtk.Toolbar):
 
     def __init__(self):
-        super(MenuBar, self).__init__()
-
-        self._isactive = False
+        super(ToolBar, self).__init__()
 
     def add_menu(self, name):
         btn = gtk.Button(name)
         menu = gtk.Menu()
         btn.connect('button-press-event', self._mk_click_cb(menu))
-        btn.connect('focus-in-event', self._focus_event, True, menu)
-        btn.connect('focus-out-event', self._focus_event, False, menu)
+        ## btn.connect('focus-in-event', self._focus_event, True, menu)
+        ## btn.connect('focus-out-event', self._focus_event, False, menu)
         self.pack_start(btn, fill=False, expand=False, padding=2)
         return menu
 
     def _mk_click_cb(self, menu):
         def menu_up(button, event):
-            print(event.button, event.time)
             if event.type == gtk.gdk.BUTTON_PRESS:
                 if gtksel.have_gtk3:
                     menu.popup(None, None, None, None, event.button, event.time)
                 else:
                     menu.popup(None, None, None, event.button, event.time)
-                self._isactive = True
                 return True
             return False
         return menu_up

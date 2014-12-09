@@ -182,7 +182,7 @@ class GingaView(GtkMain.GtkMain):
         menuholder.pack_start(menubar, expand=False)
 
         # create a File pulldown menu, and add it to the menu bar
-        filemenu = menubar.add_menu("File")
+        filemenu = menubar.add_name("File")
 
         w = gtk.MenuItem("Load Image")
         filemenu.append(w)
@@ -197,7 +197,7 @@ class GingaView(GtkMain.GtkMain):
         quit_item.show()
 
         # create a Channel pulldown menu, and add it to the menu bar
-        chmenu = menubar.add_menu("Channel")
+        chmenu = menubar.add_name("Channel")
 
         w = gtk.MenuItem("Add Channel")
         chmenu.append(w)
@@ -210,19 +210,19 @@ class GingaView(GtkMain.GtkMain):
         w.connect("activate", lambda w: self.gui_delete_channel())
 
         # create a Workspace pulldown menu, and add it to the menu bar
-        winmenu = menubar.add_menu("Workspace")
+        winmenu = menubar.add_name("Workspace")
 
         w = gtk.MenuItem("Add Workspace")
         winmenu.append(w)
         w.connect("activate", lambda w: self.gui_add_ws())
 
         # create a Option pulldown menu, and add it to the menu bar
-        ## optionmenu = menubar.add_menu("Option")
+        ## optionmenu = menubar.add_name("Option")
 
-        plugmenu = menubar.add_menu("Plugins")
+        plugmenu = menubar.add_name("Plugins")
         self.w.menu_plug = plugmenu
 
-        helpmenu = menubar.add_menu("Help")
+        helpmenu = menubar.add_name("Help")
 
         w = gtk.MenuItem("About")
         helpmenu.append(w)
