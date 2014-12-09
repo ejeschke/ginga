@@ -301,8 +301,8 @@ class ImageViewBase(Callback.Callbacks):
         Returns the window size in the underlying implementation as a tuple
         of (width, height).
         """
-        if not self._imgwin_set:
-            raise ImageViewError("Dimensions of actual window are not yet determined")
+        ## if not self._imgwin_set:
+        ##     raise ImageViewError("Dimensions of actual window are not yet determined")
         return (self._imgwin_wd, self._imgwin_ht)
 
     def get_dims(self, data):
@@ -1036,19 +1036,22 @@ class ImageViewBase(Callback.Callbacks):
         if (maxscale > self.t_['scale_max']):
             self.logger.error("Scale (%.2f) exceeds max scale limit (%.2f)" % (
                 maxscale, self.t_['scale_max']))
-            # TODO: popup? exception?
+            # TODO: exception?
             return
         
         minscale = min(scale_x, scale_y)
         if (minscale < self.t_['scale_min']):
             self.logger.error("Scale (%.2f) exceeds min scale limit (%.2f)" % (
                 minscale, self.t_['scale_min']))
-            # TODO: popup? exception?
+            # TODO: exception?
             return
         
         # Sanity check on the scale vs. window size
         try:
             win_wd, win_ht = self.get_window_size()
+            if (win_ht <= 0) or (win_ht <= 0):
+                # TODO: exception?
+                return
             sx = float(win_wd) / scale_x
             sy = float(win_ht) / scale_y
             if (sx < 1.0) or (sy < 1.0):

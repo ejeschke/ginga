@@ -14,7 +14,8 @@ import traceback
 import platform
         
 # GUI imports
-from ginga.qtw.QtHelp import QtGui, QtCore, QFont, QImage, QIcon, QPixmap
+from ginga.qtw.QtHelp import QtGui, QtCore, QFont, \
+     QImage, QIcon, QPixmap, MenuBar
 from ginga.qtw import Widgets
 
 # Local application imports
@@ -164,7 +165,7 @@ class GingaView(QtMain.QtMain):
     
     def add_menus(self, holder):
 
-        menubar = QtGui.QMenuBar()
+        menubar = MenuBar()
 
         # NOTE: Special hack for Mac OS X, otherwise the menus
         # do not get added to the global OS X menu
@@ -175,78 +176,78 @@ class GingaView(QtMain.QtMain):
             holder.layout().addWidget(menubar, stretch=1)
 
         # create a File pulldown menu, and add it to the menu bar
-        filemenu = menubar.addMenu("File")
+        filemenu = menubar.add_menu("File")
 
-        item = QtGui.QAction("Load Image", menubar)
+        item = menubar.make_action("Load Image")
         item.triggered.connect(self.gui_load_file)
         filemenu.addAction(item)
 
-        sep = QtGui.QAction(menubar)
+        sep = menubar.make_action('')
         sep.setSeparator(True)
         filemenu.addAction(sep)
         
-        item = QtGui.QAction("Quit", menubar)
+        item = menubar.make_action("Quit")
         item.triggered.connect(self.windowClose)
         filemenu.addAction(item)
 
         # create a Channel pulldown menu, and add it to the menu bar
-        chmenu = menubar.addMenu("Channel")
+        chmenu = menubar.add_menu("Channel")
 
-        item = QtGui.QAction("Add Channel", menubar)
+        item = menubar.make_action("Add Channel")
         item.triggered.connect(self.gui_add_channel)
         chmenu.addAction(item)
         
-        item = QtGui.QAction("Add Channels", menubar)
+        item = menubar.make_action("Add Channels")
         item.triggered.connect(self.gui_add_channels)
         chmenu.addAction(item)
         
-        item = QtGui.QAction("Delete Channel", menubar)
+        item = menubar.make_action("Delete Channel")
         item.triggered.connect(self.gui_delete_channel)
         chmenu.addAction(item)
 
         # create a Window pulldown menu, and add it to the menu bar
-        wsmenu = menubar.addMenu("Workspace")
+        wsmenu = menubar.add_menu("Workspace")
 
-        item = QtGui.QAction("Add Workspace", menubar)
+        item = menubar.make_action("Add Workspace")
         item.triggered.connect(self.gui_add_ws)
         wsmenu.addAction(item)
         
-        item = QtGui.QAction("Take Tab", menubar)
+        item = menubar.make_action("Take Tab")
         item.triggered.connect(lambda *args: self.ds.take_tab_cb(self.w.mnb,
                                                                  args))
         wsmenu.addAction(item)
 
         if isinstance(self.w.mnb, QtGui.QMdiArea):
-            item = QtGui.QAction("Panes as Tabs", menubar)
+            item = menubar.make_action("Panes as Tabs")
             item.triggered.connect(self.tabstoggle_cb)
             item.setCheckable(True)
             is_tabs = (self.w.mnb.get_mode() == 'tabs')
             item.setChecked(is_tabs)
             wsmenu.addAction(item)
 
-            item = QtGui.QAction("Tile Panes", menubar)
+            item = menubar.make_action("Tile Panes")
             item.triggered.connect(self.tile_panes_cb)
             wsmenu.addAction(item)
 
-            item = QtGui.QAction("Cascade Panes", menubar)
+            item = menubar.make_action("Cascade Panes")
             item.triggered.connect(self.cascade_panes_cb)
             wsmenu.addAction(item)
         
         # # create a Option pulldown menu, and add it to the menu bar
-        # optionmenu = menubar.addMenu("Option")
+        # optionmenu = menubar.add_menu("Option")
 
         # create a Plugins pulldown menu, and add it to the menu bar
-        plugmenu = menubar.addMenu("Plugins")
+        plugmenu = menubar.add_menu("Plugins")
         self.w.menu_plug = plugmenu
 
         # create a Help pulldown menu, and add it to the menu bar
-        helpmenu = menubar.addMenu("Help")
+        helpmenu = menubar.add_menu("Help")
 
-        item = QtGui.QAction("About", menubar)
+        item = menubar.make_action("About")
         item.triggered.connect(lambda: self.banner(raiseTab=True))
         helpmenu.addAction(item)
 
-        item = QtGui.QAction("Documentation", menubar)
+        item = menubar.make_action("Documentation")
         item.triggered.connect(lambda: self.help())
         helpmenu.addAction(item)
 

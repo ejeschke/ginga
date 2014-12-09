@@ -394,6 +394,19 @@ class Dialog(QtGui.QDialog):
         return self.content
 
 
+class MenuBar(QtGui.QMenuBar):
+
+    def __init__(self, parent=None):
+        super(MenuBar, self).__init__(parent=parent)
+
+    def add_menu(self, name):
+        menu = self.addMenu(name)
+        return menu
+
+    def make_action(self, name):
+        item = QtGui.QAction(name, self)
+        return item
+
 class Desktop(Callback.Callbacks):
 
     def __init__(self):
@@ -589,21 +602,21 @@ class Desktop(Callback.Callbacks):
         layout.setContentsMargins(0, 0, 0, 0)
         topw.setLayout(layout)
 
-        menubar = QtGui.QMenuBar()
+        menubar = MenuBar()
         layout.addWidget(menubar, stretch=0)
 
         # create a Workspace pulldown menu, and add it to the menu bar
-        winmenu = menubar.addMenu("Workspace")
+        winmenu = menubar.add_menu("Workspace")
 
-        item = QtGui.QAction("Take Tab", menubar)
+        item = menubar.make_action("Take Tab")
         item.triggered.connect(lambda *args: self.take_tab_cb(bnch.nb, args))
         winmenu.addAction(item)
 
-        sep = QtGui.QAction(menubar)
+        sep = menubar.make_action('')
         sep.setSeparator(True)
         winmenu.addAction(sep)
         
-        closeitem = QtGui.QAction("Close", menubar)
+        closeitem = menubar.make_action("Close")
         bnch.widget.closeEvent = lambda event: self.close_page_cb(bnch, event)
         closeitem.triggered.connect(lambda: self._close_page(bnch))
         winmenu.addAction(closeitem)
@@ -622,21 +635,21 @@ class Desktop(Callback.Callbacks):
         layout.setContentsMargins(0, 0, 0, 0)
         root.setLayout(layout)
 
-        menubar = QtGui.QMenuBar()
+        menubar = MenuBar()
         layout.addWidget(menubar, stretch=0)
 
         # create a Window pulldown menu, and add it to the menu bar
-        winmenu = menubar.addMenu("Window")
+        winmenu = menubar.add_menu("Window")
 
-        ## item = QtGui.QAction("Take Tab", menubar)
+        ## item = menubar.make_action("Take Tab")
         ## item.triggered.connect(self.gui_load_file)
         ## winmenu.addAction(item)
 
-        sep = QtGui.QAction(menubar)
+        sep = menubar.add_action('')
         sep.setSeparator(True)
         winmenu.addAction(sep)
         
-        quititem = QtGui.QAction("Quit", menubar)
+        quititem = menubar.make_action("Quit")
         winmenu.addAction(quititem)
 
         bnch = self.make_ws(group=1)

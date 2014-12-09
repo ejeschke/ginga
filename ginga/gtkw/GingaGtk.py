@@ -178,20 +178,15 @@ class GingaView(GtkMain.GtkMain):
 
     def add_menus(self, menuholder):
 
-        menubar = gtk.MenuBar()
+        menubar = GtkHelp.MenuBar()
         menuholder.pack_start(menubar, expand=False)
 
         # create a File pulldown menu, and add it to the menu bar
-        filemenu = gtk.Menu()
-        file_item = gtk.MenuItem(label="File")
-        menubar.append(file_item)
-        file_item.show()
-        file_item.set_submenu(filemenu)
+        filemenu = menubar.add_menu("File")
 
         w = gtk.MenuItem("Load Image")
         filemenu.append(w)
         w.connect("activate", lambda w: self.gui_load_file())
-
 
         sep = gtk.SeparatorMenuItem()
         filemenu.append(sep)
@@ -202,11 +197,7 @@ class GingaView(GtkMain.GtkMain):
         quit_item.show()
 
         # create a Channel pulldown menu, and add it to the menu bar
-        chmenu = gtk.Menu()
-        ch_item = gtk.MenuItem(label="Channel")
-        menubar.append(ch_item)
-        ch_item.show()
-        ch_item.set_submenu(chmenu)
+        chmenu = menubar.add_menu("Channel")
 
         w = gtk.MenuItem("Add Channel")
         chmenu.append(w)
@@ -219,35 +210,19 @@ class GingaView(GtkMain.GtkMain):
         w.connect("activate", lambda w: self.gui_delete_channel())
 
         # create a Workspace pulldown menu, and add it to the menu bar
-        winmenu = gtk.Menu()
-        item = gtk.MenuItem(label="Workspace")
-        menubar.append(item)
-        item.show()
-        item.set_submenu(winmenu)
+        winmenu = menubar.add_menu("Workspace")
 
         w = gtk.MenuItem("Add Workspace")
         winmenu.append(w)
         w.connect("activate", lambda w: self.gui_add_ws())
 
         # create a Option pulldown menu, and add it to the menu bar
-        ## optionmenu = gtk.Menu()
-        ## item = gtk.MenuItem(label="Option")
-        ## menubar.append(item)
-        ## item.show()
-        ## item.set_submenu(optionmenu)
+        ## optionmenu = menubar.add_menu("Option")
 
-        plugmenu = gtk.Menu()
-        item = gtk.MenuItem(label="Plugins")
-        menubar.append(item)
-        item.show()
-        item.set_submenu(plugmenu)
+        plugmenu = menubar.add_menu("Plugins")
         self.w.menu_plug = plugmenu
 
-        helpmenu = gtk.Menu()
-        item = gtk.MenuItem(label="Help")
-        menubar.append(item)
-        item.show()
-        item.set_submenu(helpmenu)
+        helpmenu = menubar.add_menu("Help")
 
         w = gtk.MenuItem("About")
         helpmenu.append(w)

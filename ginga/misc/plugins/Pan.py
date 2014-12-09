@@ -189,6 +189,10 @@ class Pan(GingaPlugin.GlobalPlugin):
         self.panset(chinfo.fitsimage, chinfo, paninfo)
 
     def panset(self, fitsimage, chinfo, paninfo):
+        image = fitsimage.get_image()
+        if image is None:
+            return
+        
         x, y = fitsimage.get_pan()
         points = fitsimage.get_pan_rect()
 

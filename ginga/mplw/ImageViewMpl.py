@@ -537,11 +537,11 @@ class ImageViewEvent(ImageViewMpl):
         
         if event.button in (1, 2, 3):
             button |= 0x1 << (event.button - 1)
-        self.logger.warn("motion event at %dx%d, button=%x" % (x, y, button))
+        self.logger.debug("motion event at %dx%d, button=%x" % (x, y, button))
 
         data_x, data_y = self.get_data_xy(x, y)
         self.last_data_x, self.last_data_y = data_x, data_y
-        self.logger.warn("motion event at DATA %dx%d" % (data_x, data_y))
+        self.logger.debug("motion event at DATA %dx%d" % (data_x, data_y))
 
         return self.make_callback('motion', button, data_x, data_y)
 

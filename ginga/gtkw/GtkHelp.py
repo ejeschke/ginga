@@ -513,6 +513,61 @@ class Dialog(gtk.Dialog):
             self.connect("response", callback)
 
         
+class MenuBar(gtk.MenuBar):
+
+    def __init__(self):
+        super(MenuBar, self).__init__()
+
+    def add_menu(self, name):
+        btn = gtk.MenuItem(label=name)
+        menu = gtk.Menu()
+        btn.set_submenu(menu)
+        self.append(btn)
+        return menu
+
+class MenuBar2(gtk.HBox):
+
+    def __init__(self):
+        super(MenuBar, self).__init__()
+
+        self._isactive = False
+
+    def add_menu(self, name):
+        btn = gtk.Button(name)
+        menu = gtk.Menu()
+        btn.connect('button-press-event', self._mk_click_cb(menu))
+        btn.connect('focus-in-event', self._focus_event, True, menu)
+        btn.connect('focus-out-event', self._focus_event, False, menu)
+        self.pack_start(btn, fill=False, expand=False, padding=2)
+        return menu
+
+    def _mk_click_cb(self, menu):
+        def menu_up(button, event):
+            print(event.button, event.time)
+            if event.type == gtk.gdk.BUTTON_PRESS:
+                if gtksel.have_gtk3:
+                    menu.popup(None, None, None, None, event.button, event.time)
+                else:
+                    menu.popup(None, None, None, event.button, event.time)
+                self._isactive = True
+                return True
+            return False
+        return menu_up
+        
+    def _focus_event(self, widget, event, hasFocus, menu):
+        print(hasFocus)
+        if hasFocus and self._isactive:
+            if gtksel.have_gtk3:
+                menu.popup(None, None, None, None, 1, 0)
+            else:
+                menu.popup(None, None, None, 1, 0)
+            return True
+        else:
+            #menu.popdown()
+            pass
+        return False
+
+    
 class Desktop(Callback.Callbacks):
 
     def __init__(self):
@@ -694,15 +749,11 @@ class Desktop(Callback.Callbacks):
         vbox = gtk.VBox()
         root.add(vbox)
 
-        menubar = gtk.MenuBar()
+        menubar = MenuBar()
         vbox.pack_start(menubar, fill=True, expand=False)
 
         # create a Window pulldown menu, and add it to the menu bar
-        winmenu = gtk.Menu()
-        item = gtk.MenuItem(label="Window")
-        menubar.append(item)
-        item.show()
-        item.set_submenu(winmenu)
+        winmenu = menubar.add_menu("Window")
 
         ## w = gtk.MenuItem("Take Tab")
         ## winmenu.append(w)
