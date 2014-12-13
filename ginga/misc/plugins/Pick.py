@@ -9,6 +9,7 @@
 #
 import threading
 import numpy
+import time
 
 from ginga.misc import Widgets, CanvasTypes, Bunch
 from ginga.util import iqcalc, wcs
@@ -36,12 +37,18 @@ class Pick(GingaPlugin.LocalPlugin):
         self.pickcenter = None
         self.pick_qs = None
         self.picktag = None
-        self.pickcolor = 'green'
-        self.candidate_color = 'purple'
+
+        # get Pick preferences
+        prefs = self.fv.get_preferences()
+        self.settings = prefs.createCategory('plugin_Pick')
+        self.settings.load(onError='silent')
+
+        self.sync_preferences()
 
         self.pick_x1 = 0
         self.pick_y1 = 0
         self.pick_data = None
+        self.pick_log = None
         self.dx = region_default_width
         self.dy = region_default_height
         # For offloading intensive calculation from graphics thread
@@ -50,43 +57,60 @@ class Pick(GingaPlugin.LocalPlugin):
         self.lock2 = threading.RLock()
         self.ev_intr = threading.Event()
 
-        # Peak finding parameters and selection criteria
-        # this is the maximum size a side can be
-        self.max_side = 1024
-        self.radius = 10
-        self.threshold = None
-        self.min_fwhm = 2.0
-        self.max_fwhm = 50.0
-        self.min_ellipse = 0.5
-        self.edgew = 0.01
-        self.show_candidates = False
-        self.do_record = False
-        self.last_report = None
-
+        self.last_rpt = {}
         self.plot_panx = 0.5
         self.plot_pany = 0.5
         self.plot_zoomlevel = 1.0
-        self.num_contours = 8
-        self.contour_size_limit = 70
         self.contour_data = None
-        self.delta_sky = 0.0
-        self.delta_bright = 0.0
         self.iqcalc = iqcalc.IQCalc(self.logger)
 
         self.dc = self.fv.getDrawClasses()
 
         canvas = self.dc.DrawingCanvas()
         canvas.enable_draw(True)
+        canvas.enable_edit(True)
         canvas.set_callback('cursor-down', self.btndown)
         canvas.set_callback('cursor-move', self.drag)
         canvas.set_callback('cursor-up', self.update)
         canvas.set_drawtype('rectangle', color='cyan', linestyle='dash',
                             drawdims=True)
-        canvas.set_callback('draw-event', self.setpickregion)
+        canvas.set_callback('draw-event', self.draw_cb)
+        canvas.set_callback('edit-event', self.edit_cb)
         canvas.setSurface(self.fitsimage)
         self.canvas = canvas
 
         self.have_mpl = have_mpl
+
+    def sync_preferences(self):
+        # Load various preferences
+        self.pickcolor = self.settings.get('color_pick', 'green')
+        self.candidate_color = self.settings.get('color_candidate', 'purple')
+
+        # Peak finding parameters and selection criteria
+        self.max_side = self.settings.get('max_side', 1024)
+        self.radius = self.settings.get('radius', 10)
+        self.threshold = self.settings.get('threshold', None)
+        self.min_fwhm = self.settings.get('min_fwhm', 2.0)
+        self.max_fwhm = self.settings.get('max_fwhm', 50.0)
+        self.min_ellipse = self.settings.get('min_ellipse', 0.5)
+        self.edgew = self.settings.get('edge_width', 0.01)
+        self.show_candidates = self.settings.get('show_candidates', False)
+        self.use_fits_coords = self.settings.get('use_fits_coords', False)
+
+        # For controls
+        self.delta_sky = self.settings.get('delta_sky', 0.0)
+        self.delta_bright = self.settings.get('delta_bright', 0.0)
+
+        # Formatting for reports
+        self.do_record = self.settings.get('record_picks', False)
+        self.rpt_header = self.settings.get('report_header',
+                                            "# ra, dec, eq, x, y, fwhm, fwhm_x, fwhm_y, starsize, ellip, bg, sky, bright, time_local, time_ut")
+        self.rpt_format = self.settings.get('report_format',
+                                            "%(ra_deg)f, %(dec_deg)f, %(equinox)6.1f, %(x)f, %(y)f, %(fwhm)f, %(fwhm_x)f, %(fwhm_y)f, %(starsize)f, %(ellipse)f, %(background)f, %(skylevel)f, %(brightness)f, %(time_local)s, %(time_ut)s")
+
+        # For contour plot
+        self.num_contours = self.settings.get('num_contours', 8)
+        self.contour_size_limit = self.settings.get('contour_size_limit', 70)
 
     def build_gui(self, container):
         assert iqcalc.have_scipy == True, \
@@ -247,7 +271,8 @@ class Pick(GingaPlugin.LocalPlugin):
         nb.add_widget(vbox1, title="Readout")
 
         # Build settings panel
-        captions = (('Show Candidates', 'checkbutton'),
+        captions = (('Show Candidates', 'checkbutton',
+                     'Use FITS coords', 'checkbutton'),
                     ('Radius:', 'label', 'xlbl_radius', 'label',
                      'Radius', 'spinbutton'),
                     ('Threshold:', 'label', 'xlbl_threshold', 'label',
@@ -274,11 +299,12 @@ class Pick(GingaPlugin.LocalPlugin):
         b.ellipticity.set_tooltip("Minimum ellipticity for selection")
         b.edge.set_tooltip("Minimum edge distance for selection")
         b.show_candidates.set_tooltip("Show all peak candidates")
+        b.use_fits_coords.set_tooltip("Report in 1-based coordinates")
         # radius control
         #b.radius.set_digits(2)
         #b.radius.set_numeric(True)
         b.radius.set_limits(5.0, 200.0, incr_value=1.0)
-        b.radius.set_value(self.radius)
+
         def chg_radius(w, val):
             self.radius = float(val)
             self.w.xlbl_radius.set_text(str(self.radius))
@@ -360,6 +386,8 @@ class Pick(GingaPlugin.LocalPlugin):
         b.redo_pick.add_callback('activated', lambda w: self.redo())
         b.show_candidates.set_state(self.show_candidates)
         b.show_candidates.add_callback('activated', self.show_candidates_cb)
+        b.use_fits_coords.set_state(self.use_fits_coords)
+        b.use_fits_coords.add_callback('activated', self.use_fits_coords_cb)
 
         nb.add_widget(w, title="Settings")
 
@@ -421,7 +449,7 @@ class Pick(GingaPlugin.LocalPlugin):
         sw1 = Widgets.ScrollArea()
         sw1.set_widget(tw)
         vbox3.add_widget(sw1, stretch=1)
-        tw.append_text(self._mkreport_header())
+        tw.append_text(self._make_report_header())
         
         btns = Widgets.HBox()
         btns.set_spacing(4)
@@ -462,7 +490,6 @@ class Pick(GingaPlugin.LocalPlugin):
 
         ## spacer = Widgets.Label('')
         ## vbox.add_widget(spacer, stretch=1)
-        
         vtop.add_widget(sw, stretch=1)
         
         btns = Widgets.HBox()
@@ -505,6 +532,9 @@ class Pick(GingaPlugin.LocalPlugin):
             objs = self.fitsimage.getObjectsByTagpfx('peak')
             self.fitsimage.deleteObjects(objs, redraw=True)
         
+    def use_fits_coords_cb(self, w, state):
+        self.use_fits_coords = state
+
     def adjust_wcs(self, image, wcs_m, tup):
         d_ra, d_dec, d_theta = tup
         msg = "Calculated shift: dra, ddec = %f, %f\n" % (
@@ -781,10 +811,6 @@ class Pick(GingaPlugin.LocalPlugin):
                 self.fv.show_error(errmsg)
                 raise Exception(errmsg)
         
-            # Note: FITS coordinates are 1-based, whereas numpy FITS arrays
-            # are 0-based
-            fits_x, fits_y = data_x + 1, data_y + 1
-
             # Cut and show pick image in pick window
             #self.pick_x, self.pick_y = data_x, data_y
             self.logger.debug("bbox %f,%f %f,%f" % (bbox.x1, bbox.y1,
@@ -890,18 +916,60 @@ class Pick(GingaPlugin.LocalPlugin):
                 self.fv.gui_do(self.update_pick, serialnum, results, qs,
                                x1, y1, wd, ht, fig, msg)
 
-    def _mkreport_header(self):
-        rpt = "# ra, dec, eq, x, y, fwhm, fwhm_x, fwhm_y, ellip, bg, sky, bright"
-        return rpt
+    def _make_report_header(self):
+        return self.rpt_header + '\n'
     
-    def _mkreport(self, image, qs):
-        equinox = 2000.0
-        ra_deg, dec_deg = image.pixtoradec(qs.objx, qs.objy, coords='data')
-        rpt = "%f, %f, %6.1f, %f, %f, %f, %f, %f, %f, %f, %f, %f" % (
-            ra_deg, dec_deg, equinox, qs.objx, qs.objy,
-            qs.fwhm, qs.fwhm_x, qs.fwhm_y, qs.elipse,
-            qs.background, qs.skylevel, qs.brightness)
-        return rpt
+    def _make_report(self, image, qs):
+        d = Bunch.Bunch()
+        try:
+            x, y = qs.objx, qs.objy
+            equinox = float(image.get_keyword('EQUINOX', 2000.0))
+
+            try:
+                ra_deg, dec_deg = image.pixtoradec(x, y, coords='data')
+                ra_txt, dec_txt = wcs.deg2fmt(ra_deg, dec_deg, 'str')
+
+            except Exception as e:
+                self.logger.warn("Couldn't calculate sky coordinates: %s" % (str(e)))
+                ra_deg, dec_deg = 0.0, 0.0
+                ra_txt = dec_txt = 'BAD WCS'
+
+            # Calculate star size from pixel pitch
+            try:
+                header = image.get_header()
+                ((xrot, yrot),
+                 (cdelt1, cdelt2)) = wcs.get_xy_rotation_and_scale(header)
+
+                starsize = self.iqcalc.starsize(qs.fwhm_x, cdelt1,
+                                                qs.fwhm_y, cdelt2)
+            except Exception as e:
+                self.logger.warn("Couldn't calculate star size: %s" % (str(e)))
+                starsize = 0.0
+
+            if self.use_fits_coords:
+                rpt_x, rpt_y = x + 1, y + 1
+            else:
+                rpt_x, rpt_y = x, y
+
+            # make a report in the form of a dictionary
+            d.setvals(x = rpt_x, y = rpt_y,
+                      ra_deg = ra_deg, dec_deg = dec_deg,
+                      ra_txt = ra_txt, dec_txt = dec_txt,
+                      equinox = equinox,
+                      fwhm = qs.fwhm,
+                      fwhm_x = qs.fwhm_x, fwhm_y = qs.fwhm_y,
+                      ellipse = qs.elipse, background = qs.background,
+                      skylevel = qs.skylevel, brightness = qs.brightness,
+                      starsize = starsize,
+                      time_local = time.strftime("%Y-%m-%d %H:%M:%S",
+                                                 time.localtime()),
+                      time_ut = time.strftime("%Y-%m-%d %H:%M:%S",
+                                              time.gmtime()),
+                      )
+        except Exception as e:
+            self.logger.error("Error making report: %s" % (str(e)))
+            
+        return d
     
     def update_pick(self, serialnum, objlist, qs, x1, y1, wd, ht, fig, msg):
         if serialnum != self.get_serial():
@@ -936,20 +1004,29 @@ class Pick(GingaPlugin.LocalPlugin):
             # Calculate X/Y of center of star
             obj_x = qs.objx
             obj_y = qs.objy
-            self.logger.info("object center is x,y=%f,%f" % (obj_x, obj_y))
             fwhm = qs.fwhm
             fwhm_x, fwhm_y = qs.fwhm_x, qs.fwhm_y
             point.x, point.y = obj_x, obj_y
             text.color = 'cyan'
 
+            # Make report
+            self.last_rpt = self._make_report(image, qs)
+            d = self.last_rpt
+            if self.do_record:
+                self.add_pick_cb()
+
             self.wdetail.fwhm_x.set_text('%.3f' % fwhm_x)
             self.wdetail.fwhm_y.set_text('%.3f' % fwhm_y)
             self.wdetail.fwhm.set_text('%.3f' % fwhm)
-            self.wdetail.object_x.set_text('%.3f' % (obj_x+1))
-            self.wdetail.object_y.set_text('%.3f' % (obj_y+1))
+            self.wdetail.object_x.set_text('%.3f' % (d.x))
+            self.wdetail.object_y.set_text('%.3f' % (d.y))
             self.wdetail.sky_level.set_text('%.3f' % qs.skylevel)
             self.wdetail.background.set_text('%.3f' % qs.background)
             self.wdetail.brightness.set_text('%.3f' % qs.brightness)
+            self.wdetail.ra.set_text(d.ra_txt)
+            self.wdetail.dec.set_text(d.dec_txt)
+            self.wdetail.equinox.set_text(str(d.equinox))
+            self.wdetail.star_size.set_text('%.3f' % d.starsize)
 
             self.w.btn_sky_cut.set_enabled(True)
             self.w.btn_bright_cut.set_enabled(True)
@@ -966,35 +1043,6 @@ class Pick(GingaPlugin.LocalPlugin):
             # Mark object center on image
             point.color = 'cyan'
             #self.fitsimage.panset_xy(obj_x, obj_y, redraw=False)
-
-            equinox = float(image.get_keyword('EQUINOX', 2000.0))
-            # Calc RA, DEC, EQUINOX of X/Y center pixel
-            try:
-                ra_txt, dec_txt = image.pixtoradec(obj_x, obj_y, format='str')
-                self.last_rpt = self._mkreport(image, qs)
-                if self.do_record:
-                    self.w.report.append_text(self.last_rpt)
-
-            except Exception as e:
-                ra_txt = 'WCS ERROR'
-                dec_txt = 'WCS ERROR'
-            self.wdetail.ra.set_text(ra_txt)
-            self.wdetail.dec.set_text(dec_txt)
-
-            self.wdetail.equinox.set_text(str(equinox))
-
-            # Calculate star size from pixel pitch
-            try:
-                #cdelt1, cdelt2 = image.get_keywords_list('CDELT1', 'CDELT2')
-                header = image.get_header()
-                ((xrot, yrot),
-                 (cdelt1, cdelt2)) = wcs.get_xy_rotation_and_scale(header)
-                starsize = self.iqcalc.starsize(fwhm_x, cdelt1, fwhm_y, cdelt2)
-                self.wdetail.star_size.set_text('%.3f' % starsize)
-            except Exception as e:
-                self.wdetail.star_size.set_text('ERROR')
-                self.fv.show_error("Couldn't calculate star size: %s" % (
-                    str(e)), raisetab=False)
 
             self.update_status("Done")
             self.plot_panx = float(i1) / wd
@@ -1062,7 +1110,7 @@ class Pick(GingaPlugin.LocalPlugin):
                                                 linestyle='dash'))
         self.picktag = tag
 
-        #self.setpickregion(self.canvas, tag)
+        #self.draw_cb(self.canvas, tag)
         return True
         
     def update(self, canvas, button, data_x, data_y):
@@ -1101,7 +1149,7 @@ class Pick(GingaPlugin.LocalPlugin):
             bbox.x1, bbox.y1, bbox.x2, bbox.y2 = x1, y1, x2, y2
             tag = self.picktag
 
-        self.setpickregion(self.canvas, tag)
+        self.draw_cb(self.canvas, tag)
         return True
 
         
@@ -1145,9 +1193,8 @@ class Pick(GingaPlugin.LocalPlugin):
             self.canvas.redraw(whence=3)
 
         return True
-
-
-    def setpickregion(self, canvas, tag):
+    
+    def draw_cb(self, canvas, tag):
         obj = canvas.getObjectByTag(tag)
         if obj.kind != 'rectangle':
             return True
@@ -1174,7 +1221,30 @@ class Pick(GingaPlugin.LocalPlugin):
 
         #self.fv.raise_tab("detail")
         return self.redo()
-    
+
+    def edit_cb(self, canvas, obj):
+        if obj.kind != 'rectangle':
+            return True
+
+        # Get the compound object that sits on the canvas.
+        # Make sure edited rectangle was our pick rectangle.
+        c_obj = self.canvas.getObjectByTag(self.picktag)
+        if (c_obj.kind != 'compound') or (len(c_obj.objects) < 3) or \
+               (c_obj.objects[0] != obj):
+            return False
+
+        # determine center of rectangle
+        x = obj.x1 + (obj.x2 - obj.x1) // 2
+        y = obj.y1 + (obj.y2 - obj.y1) // 2
+
+        # reposition other elements to match
+        point = c_obj.objects[1]
+        point.x, point.y = x, y
+        text = c_obj.objects[2]
+        text.x, text.y = obj.x1, obj.y2+4
+
+        return self.redo()
+        
     def reset_region(self):
         self.dx = region_default_width
         self.dy = region_default_height
@@ -1265,10 +1335,18 @@ class Pick(GingaPlugin.LocalPlugin):
         self.w.ax.set_xlim(x1+xdelta, x2+xdelta)
         self.w.ax.set_ylim(y1+ydelta, y2+ydelta)
         self.w.canvas.draw()
+
+    def write_pick_log(self, rpt):
+        if self.pick_log:
+            self.pick_log.write(rpt + '\n')
+            self.pick_log.flush()
         
     def add_pick_cb(self):
         if self.last_rpt is not None:
-            self.w.report.append_text(self.last_rpt)
+            rpt = (self.rpt_format % self.last_rpt) + '\n'
+            self.w.report.append_text(rpt)
+            if self.pick_log:
+                self.fv.nongui_do(self.write_pick_log, rpt)
 
     def correct_wcs(self):
         # small local function to strip comment and blank lines

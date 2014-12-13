@@ -497,5 +497,18 @@ def get_RaDecOffsets(ra1_deg, dec1_deg, ra2_deg, dec2_deg):
     delta_dec_deg = dec1_deg - dec2_deg
     return (delta_ra_deg, delta_dec_deg)
 
-
+def lon_to_deg(lon):
+    if isinstance(lon, str) and (':' in lon):
+        # TODO: handle other coordinate systems
+        lon_deg = hmsStrToDeg(lon)
+    else:
+        lon_deg = float(lon)
+        
+def lat_to_deg(lat):
+    if isinstance(lat, str) and (':' in lat):
+        # TODO: handle other coordinate systems
+        lat_deg = dmsStrToDeg(lat)
+    else:
+        lat_deg = float(lat)
+        
 #END

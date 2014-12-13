@@ -235,7 +235,11 @@ class AstroImage(BaseImage):
             return ra_deg, dec_deg
         return wcs.deg2fmt(ra_deg, dec_deg, format)
     
-    def radectopix(self, ra_deg, dec_deg, coords='data'):
+    def radectopix(self, ra_deg, dec_deg, format='deg', coords='data'):
+        if format != 'deg':
+            # convert coordinates to degrees
+            ra_deg = wcs.lon_to_deg(ra_deg)
+            dec_deg = wcs.lat_to_deg(dec_deg)
         return self.wcs.radectopix(ra_deg, dec_deg, coords=coords,
                                    naxispath=self.revnaxis)
 

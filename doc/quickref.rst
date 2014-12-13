@@ -72,7 +72,7 @@ Cut levels and colormap commands
 | D                    | Reset color distribution algorithm to "linear"   |
 +----------------------+--------------------------------------------------+
 | s                    | Cuts mode: interactive cut *both* low and high   |
-|                      |  (with left drag), scroll wheel does fine        |
+|                      |  (with drag), scroll wheel does fine             |
 |                      |  adjustment, right click resets to auto levels   |
 +----------------------+--------------------------------------------------+
 | t                    | Contrast mode: interactive shift/stretch colormap|
