@@ -1,5 +1,5 @@
 #
-# coormap.py -- coordinate mappings to canvas.
+# coormap.py -- coordinate mappings.
 #
 # Eric Jeschke (eric@naoj.org)
 #
@@ -7,6 +7,7 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+from ginga import trcalc
 
 class CanvasMapper(object):
     """A coordinate mapper that maps to the viewer's canvas in
@@ -19,9 +20,13 @@ class CanvasMapper(object):
     def to_canvas(self, canvas_x, canvas_y):
         return (canvas_x, canvas_y)
 
-    def offset(self, pt, xoff, yoff):
+    def offset_pt(self, pt, xoff, yoff):
         x, y = pt
         return x + xoff, y + yoff
+    
+    def rotate_pt(self, x, y, theta, xoff=0, yoff=0):
+        # TODO?  Not sure if it is needed with this mapper type
+        return x, y
     
     
 class DataMapper(object):
@@ -34,10 +39,18 @@ class DataMapper(object):
     def to_canvas(self, data_x, data_y):
         return self.viewer.canvascoords(data_x, data_y)
 
-    def offset(self, pt, xoff, yoff):
+    def to_data(self, data_x, data_y):
+        return data_x, data_y
+
+    def data_to(self, data_x, data_y):
+        return data_x, data_y
+
+    def offset_pt(self, pt, xoff, yoff):
         x, y = pt
         return x + xoff, y + yoff
 
+    def rotate_pt(self, x, y, theta, xoff=0, yoff=0):
+        return trcalc.rotate_pt(x, y, theta, xoff=xoff, yoff=yoff)
     
 class OffsetMapper(object):
     """A coordinate mapper that maps to the viewer's canvas
@@ -50,13 +63,19 @@ class OffsetMapper(object):
         self.refobj = refobj
         
     def to_canvas(self, delta_x, delta_y):
-        data_x, data_y = self.refobj.get_reference_pt()
-        return self.viewer.canvascoords(data_x + delta_x,
-                                        data_y + delta_y)
+        data_x, data_y = self.to_data(delta_x, delta_y)
+        return self.viewer.canvascoords(data_x, data_y)
 
-    def offset(self, pt, xoff, yoff):
+    def to_data(self, delta_x, delta_y):
+        data_x, data_y = self.refobj.get_reference_pt()
+        return data_x + delta_x, data_y + delta_y
+
+    def offset_pt(self, pt, xoff, yoff):
         return pt
     
+    def rotate_pt(self, x, y, theta, xoff=0, yoff=0):
+        # TODO?  Not sure if it is needed with this mapper type
+        return x, y
     
 class WCSMapper(DataMapper):
     """A coordinate mapper that maps to the viewer's canvas
@@ -64,12 +83,28 @@ class WCSMapper(DataMapper):
     """
 
     def to_canvas(self, lon, lat):
-        image = self.viewer.get_image()
-
-        # convert to data coords
-        data_x, data_y = image.radectopix(lon, lat)
-
+        data_x, data_y = self.to_data(lon, lat)
         return super(WCSMapper, self).to_canvas(data_x, data_y)
+    
+    def to_data(self, lon, lat):
+        image = self.viewer.get_image()
+        data_x, data_y = image.radectopix(lon, lat)
+        return data_x, data_y
+
+    def data_to(self, data_x, data_y):
+        image = self.viewer.get_image()
+        lon, lat = image.pixtoradec(data_x, data_y)
+        return lon, lat
+
+    def rotate_pt(self, x, y, theta, xoff=0, yoff=0):
+        # TODO: optomize by reducing function calls
+        x, y = self.to_data(x, y)
+        xoff, yoff = self.to_data(xoff, yoff)
+
+        x, y = super(WCSMapper, self).rotate_pt(x, y, theta,
+                                                xoff=xoff, yoff=yoff)
+        x, y = self.data_to(x, y)
+        return x, y
     
     
 #END

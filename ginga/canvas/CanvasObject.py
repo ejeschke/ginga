@@ -43,8 +43,8 @@ class CanvasObjectBase(Callback.Callbacks):
         self.ref_obj = None
         self.__dict__.update(kwdargs)
         self.data = None
-        # default mapping is to viewer coordinates
-        self._cdmap = None
+        # default mapping is to data coordinates
+        self.crdmap = None
 
         # For callbacks
         for name in ('modified', ):
@@ -54,11 +54,11 @@ class CanvasObjectBase(Callback.Callbacks):
         self.tag = tag
         self.viewer = viewer
         self.logger = logger
-        if self._cdmap is None:
+        if self.crdmap is None:
             if self.coord == 'offset':
-                self._cdmap = coordmap.OffsetMapper(viewer, self.ref_obj)
+                self.crdmap = coordmap.OffsetMapper(viewer, self.ref_obj)
             else:
-                self._cdmap = viewer.get_coordmap(self.coord)
+                self.crdmap = viewer.get_coordmap(self.coord)
 
     def is_editing(self):
         return self.editing
@@ -92,11 +92,11 @@ class CanvasObjectBase(Callback.Callbacks):
         self.viewer.redraw(whence=whence)
 
     def use_coordmap(self, mapobj):
-        self._cdmap = mapobj
+        self.crdmap = mapobj
         
     def canvascoords(self, x, y, center=True):
-        if self._cdmap is not None:
-            return self._cdmap.to_canvas(x, y)
+        if self.crdmap is not None:
+            return self.crdmap.to_canvas(x, y)
         return self.viewer.canvascoords(x, y, center=center)
 
     def is_compound(self):
@@ -146,44 +146,55 @@ class CanvasObjectBase(Callback.Callbacks):
         else:
             return 8
 
-    def rotate_pt(self, x, y, theta, xoff=0, yoff=0):
-        # TODO: deprecate class method in favor of direct module call
-        return trcalc.rotate_pt(x, y, theta, xoff=xoff, yoff=yoff)
+    def rotate_pt(self, data_x, data_y, theta, xoff=0, yoff=0):
+        x, y = trcalc.rotate_pt(data_x, data_y, theta,
+                                xoff=xoff, yoff=yoff)
+        return x, y
 
     def rotate(self, theta, xoff=0, yoff=0):
         if hasattr(self, 'x'):
-            self.x, self.y = self.rotate_pt(self.x, self.y, theta,
-                                            xoff=xoff, yoff=yoff)
+            self.x, self.y = self.crdmap.rotate_pt(self.x, self.y, theta,
+                                                   xoff=xoff, yoff=yoff)
         elif hasattr(self, 'x1'):
-            self.x1, self.y1 = self.rotate_pt(self.x1, self.y1, theta,
-                                              xoff=xoff, yoff=yoff)
-            self.x2, self.y2 = self.rotate_pt(self.x2, self.y2, theta,
-                                              xoff=xoff, yoff=yoff)
+            self.x1, self.y1 = self.crdmap.rotate_pt(self.x1, self.y1, theta,
+                                                     xoff=xoff, yoff=yoff)
+            self.x2, self.y2 = self.crdmap.rotate_pt(self.x2, self.y2, theta,
+                                                     xoff=xoff, yoff=yoff)
         elif hasattr(self, 'points'):
             self.points = list(map(
-                lambda p: self.rotate_pt(p[0], p[1], theta,
-                                         xoff=xoff, yoff=yoff),
+                lambda p: self.crdmap.rotate_pt(p[0], p[1], theta,
+                                                xoff=xoff, yoff=yoff),
                 self.points))
 
-    def rotate_by(self, theta):
+    def rotate_by(self, theta_deg):
         ref_x, ref_y = self.get_reference_pt()
-        return self.rotate(theta, ref_x, ref_y)
+        return self.rotate(theta_deg, xoff=ref_x, yoff=ref_y)
     
     def move_delta(self, xoff, yoff):
         if hasattr(self, 'x'):
-            self.x, self.y = self._cdmap.offset((self.x, self.y), xoff, yoff)
+            self.x, self.y = self.crdmap.offset_pt((self.x, self.y), xoff, yoff)
 
         elif hasattr(self, 'x1'):
-            self.x1, self.y1 = self._cdmap.offset((self.x1, self.y1), xoff, yoff)
-            self.x2, self.y2 = self._cdmap.offset((self.x2, self.y2), xoff, yoff)
+            self.x1, self.y1 = self.crdmap.offset_pt((self.x1, self.y1), xoff, yoff)
+            self.x2, self.y2 = self.crdmap.offset_pt((self.x2, self.y2), xoff, yoff)
             
         elif hasattr(self, 'points'):
             for i in range(len(self.points)):
-                self.points[i] = self._cdmap.offset(self.points[i], xoff, yoff)
+                self.points[i] = self.crdmap.offset_pt(self.points[i], xoff, yoff)
 
     def move_to(self, xdst, ydst):
         x, y = self.get_reference_pt()
         return self.move_delta(xdst - x, ydst - y)
+
+    def get_num_points(self):
+        if hasattr(self, 'x'):
+            return 1
+        elif hasattr(self, 'x1'):
+            return 2
+        elif hasattr(self, 'points'):
+            return(len(self.points))
+        else:
+            return 0
 
     def set_point_by_index(self, i, pt):
         if hasattr(self, 'points'):
@@ -195,6 +206,19 @@ class CanvasObjectBase(Callback.Callbacks):
                 self.x1, self.y1 = pt
         elif i == 1:
             self.x2, self.y2 = pt
+        else:
+            raise ValueError("No point corresponding to index %d" % (i))
+
+    def get_point_by_index(self, i):
+        if hasattr(self, 'points'):
+            return self.points[i]
+        elif i == 0:
+            if hasattr(self, 'x'):
+                return self.x, self.y
+            elif hasattr(self, 'x1'):
+                return self.x1, self.y1
+        elif i == 1:
+            return self.x2, self.y2
         else:
             raise ValueError("No point corresponding to index %d" % (i))
 
@@ -222,6 +246,31 @@ class CanvasObjectBase(Callback.Callbacks):
             P[:, 1] = (P[:, 1] - ctr_y) * scale_y + ctr_y
             self.points = list(P)
 
+    def convert_mapper(self, tomap):
+        # convert points
+        for i in range(self.get_num_points()):
+            x, y = self.get_point_by_index(i)
+            data_x, data_y = self.crdmap.to_data(x, y)
+            new_x, new_y = tomap.data_to(data_x, data_y)
+            self.set_point_by_index(i, (new_x, new_y))
+
+        # convert radii
+        if hasattr(self, 'radius'):
+            data_x, data_y = self.get_center_pt()
+            x1, y1 = tomap.data_to(data_x, data_y)
+            x2, y2 = tomap.data_to(data_x + self.radius, data_y)
+            self.radius = math.fabs(x2 - x1)
+
+        elif hasattr(self, 'xradius'):
+            data_x, data_y = self.get_center_pt()
+            x1, y1 = tomap.data_to(data_x, data_y)
+            x2, y2 = tomap.data_to(data_x + self.xradius, data_y)
+            self.xradius = math.fabs(x2 - x1)
+            x2, y2 = tomap.data_to(data_x, data_y + self.yradius)
+            self.yradius = math.fabs(y2 - y1)
+        
+        self.crdmap = tomap
+    
     # TODO: move these into utility module
     #####
     def within_radius(self, a, b, x, y, canvas_radius):
@@ -244,9 +293,9 @@ class CanvasObjectBase(Callback.Callbacks):
 
         if hasattr(self, 'rot_deg'):
             # rotate point back to cartesian alignment for test
-            cx, cy = self.get_center_pt()
+            ctr_x, ctr_y = self.crdmap.to_data(*self.get_center_pt())
             xp, yp = self.rotate_pt(x, y, -self.rot_deg,
-                                    xoff=cx, yoff=cy)
+                                    xoff=ctr_x, yoff=ctr_y)
         else:
             xp, yp = x, y
 
@@ -304,13 +353,13 @@ class CanvasObjectBase(Callback.Callbacks):
         if hasattr(self, 'rot_deg') and self.rot_deg != 0.0:
             # rotate vertices according to rotation
             x, y = self.get_center_pt()
-            rpoints = tuple(map(lambda p: self.rotate_pt(p[0], p[1],
-                                                         self.rot_deg,
-                                                         xoff=x, yoff=y),
+            rpoints = tuple(map(lambda p: self.crdmap.rotate_pt(p[0], p[1],
+                                                                self.rot_deg,
+                                                                xoff=x, yoff=y),
                                 points))
         else:
             rpoints = points
-        cpoints = tuple(map(lambda p: self.canvascoords(p[0], p[1]),
+        cpoints = tuple(map(lambda p: self.crdmap.to_canvas(p[0], p[1]),
                             rpoints))
         return cpoints
 
@@ -329,6 +378,9 @@ class TextBase(CanvasObjectBase):
     @classmethod
     def get_params_metadata(cls):
         return [
+            Param(name='coord', type=str, default='data',
+                  valid=['data', 'wcs'],
+                  description="Set type of coordinates"),
             Param(name='x', type=float, default=0.0, argpos=0,
                   description="X coordinate of lower left of text"),
             Param(name='y', type=float, default=0.0, argpos=1,
@@ -379,7 +431,59 @@ class TextBase(CanvasObjectBase):
         return [(self.x, self.y)]
 
 
-class PolygonBase(CanvasObjectBase):
+class PolygonMixin(object):
+    """Mixin for polygon-based objects.
+    """
+
+    def get_center_pt(self):
+        P = numpy.array(self.points + [self.points[0]])
+        x = P[:, 0]
+        y = P[:, 1]
+
+        a = x[:-1] * y[1:]
+        b = y[:-1] * x[1:]
+        A = numpy.sum(a - b) / 2.
+        
+        cx = x[:-1] + x[1:]
+        cy = y[:-1] + y[1:]
+
+        Cx = numpy.sum(cx * (a - b)) / (6. * A)
+        Cy = numpy.sum(cy * (a - b)) / (6. * A)
+        return (Cx, Cy)
+    
+    def get_points(self):
+        return self.points
+
+    def contains(self, xp, yp):
+        # NOTE: we use a version of the ray casting algorithm
+        # See: http://alienryderflex.com/polygon/
+        result = False
+        xj, yj = self.crdmap.to_data(*self.points[-1])
+        for point in self.points:
+            xi, yi = self.crdmap.to_data(*point)
+            if ((((yi < yp) and (yj >= yp)) or
+                 ((yj < yp) and (yi >= yp))) and
+                ((xi <= xp) or (xj <= xp))):
+                cross = (xi + float(yp - yi)/(yj - yi)*(xj - xi)) < xp
+                result ^= cross
+            xj, yj = xi, yi
+
+        return result
+            
+    def set_edit_point(self, i, pt):
+        if i == 0:
+            x, y = pt
+            self.move_to(x, y)
+        elif i-1 < len(self.points):
+            self.set_point_by_index(i-1, pt)
+        else:
+            raise ValueError("No point corresponding to index %d" % (i))
+
+    def get_edit_points(self):
+        return [self.get_center_pt()] + self.points
+
+
+class PolygonBase(PolygonMixin, CanvasObjectBase):
     """Draws a polygon on a ImageViewCanvas.
     Parameters are:
     List of (x, y) points in the polygon.  The last one is assumed to
@@ -390,6 +494,9 @@ class PolygonBase(CanvasObjectBase):
     @classmethod
     def get_params_metadata(cls):
         return [
+            Param(name='coord', type=str, default='data',
+                  valid=['data', 'wcs'],
+                  description="Set type of coordinates"),
             ## Param(name='points', type=list, default=[], argpos=0,
             ##       description="points making up polygon"),
             Param(name='linewidth', type=int, default=1,
@@ -424,60 +531,14 @@ class PolygonBase(CanvasObjectBase):
                  fillalpha=1.0, **kwdargs):
         self.kind = 'polygon'
         
-        super(PolygonBase, self).__init__(points=points, color=color,
-                                          linewidth=linewidth, showcap=showcap,
-                                          linestyle=linestyle, alpha=alpha,
-                                          fill=fill, fillcolor=fillcolor,
-                                          fillalpha=fillalpha, **kwdargs)
+        CanvasObjectBase.__init__(self, points=points, color=color,
+                                  linewidth=linewidth, showcap=showcap,
+                                  linestyle=linestyle, alpha=alpha,
+                                  fill=fill, fillcolor=fillcolor,
+                                  fillalpha=fillalpha, **kwdargs)
+        PolygonMixin.__init__(self)
 
-    def get_center_pt(self):
-        P = numpy.array(self.points + [self.points[0]])
-        x = P[:, 0]
-        y = P[:, 1]
-
-        a = x[:-1] * y[1:]
-        b = y[:-1] * x[1:]
-        A = numpy.sum(a - b) / 2.
-        
-        cx = x[:-1] + x[1:]
-        cy = y[:-1] + y[1:]
-
-        Cx = numpy.sum(cx * (a - b)) / (6. * A)
-        Cy = numpy.sum(cy * (a - b)) / (6. * A)
-        return (Cx, Cy)
-    
-    def get_points(self):
-        return self.points
-
-    def contains(self, xp, yp):
-        # NOTE: we use a version of the ray casting algorithm
-        # See: http://alienryderflex.com/polygon/
-        result = False
-        xj, yj = self.points[-1]
-        for (xi, yi) in self.points:
-            if ((((yi < yp) and (yj >= yp)) or
-                 ((yj < yp) and (yi >= yp))) and
-                ((xi <= xp) or (xj <= xp))):
-                cross = (xi + float(yp - yi)/(yj - yi)*(xj - xi)) < xp
-                result ^= cross
-            xj, yj = xi, yi
-
-        return result
-            
-    def set_edit_point(self, i, pt):
-        if i == 0:
-            x, y = pt
-            self.move_to(x, y)
-        elif i-1 < len(self.points):
-            self.set_point_by_index(i-1, pt)
-        else:
-            raise ValueError("No point corresponding to index %d" % (i))
-
-    def get_edit_points(self):
-        return [self.get_center_pt()] + self.points
-
-
-class PathBase(CanvasObjectBase):
+class PathBase(PolygonMixin, CanvasObjectBase):
     """Draws a path on a ImageViewCanvas.
     Parameters are:
     List of (x, y) points in the polygon.  
@@ -487,6 +548,9 @@ class PathBase(CanvasObjectBase):
     @classmethod
     def get_params_metadata(cls):
         return [
+            Param(name='coord', type=str, default='data',
+                  valid=['data', 'wcs'],
+                  description="Set type of coordinates"),
             ## Param(name='points', type=list, default=[], argpos=0,
             ##       description="points making up polygon"),
             Param(name='linewidth', type=int, default=1,
@@ -511,11 +575,526 @@ class PathBase(CanvasObjectBase):
                  alpha=1.0, **kwdargs):
         self.kind = 'path'
         
-        super(PathBase, self).__init__(points=points, color=color,
-                                       linewidth=linewidth, showcap=showcap,
-                                       linestyle=linestyle, alpha=alpha,
-                                       **kwdargs)
+        CanvasObjectBase.__init__(self, points=points, color=color,
+                                  linewidth=linewidth, showcap=showcap,
+                                  linestyle=linestyle, alpha=alpha,
+                                  **kwdargs)
+        PolygonMixin.__init__(self)
         
+    def contains(self, x, y):
+        x1, y1 = self.crdmap.to_data(*self.points[0])
+        for point in self.points[1:]:
+            x2, y2 = self.crdmap.to_data(*point)
+            if self.within_line(x, y, x1, y1, x2, y2, 1.0):
+                return True
+            x1, y1 = x2, y2
+        return False
+            
+    def select_contains(self, x, y):
+        x1, y1 = self.crdmap.to_data(*self.points[0])
+        for point in self.points[1:]:
+            x2, y2 = self.crdmap.to_data(*point)
+            if self.within_line(x, y, x1, y1, x2, y2, self.cap_radius):
+                return True
+            x1, y1 = x2, y2
+        return False
+
+
+class OnePointTwoRadiusMixin(object):
+
+    def get_center_pt(self):
+        return (self.x, self.y)
+
+    def set_edit_point(self, i, pt):
+        if i == 0:
+            self.set_point_by_index(i, pt)
+        elif i == 1:
+            x, y = pt
+            self.xradius = abs(x - self.x)
+        elif i == 2:
+            x, y = pt
+            self.yradius = abs(y - self.y)
+        elif i == 3:
+            x, y = pt
+            self.xradius, self.yradius = abs(x - self.x), abs(y - self.y)
+        else:
+            raise ValueError("No point corresponding to index %d" % (i))
+
+    def get_edit_points(self):
+        return [(self.x, self.y),    # location
+                (self.x + self.xradius, self.y),  # adj xradius
+                (self.x, self.y + self.yradius),  # adj yradius
+                (self.x + self.xradius, self.y + self.yradius)]   # adj both
+
+    def rotate_by(self, theta_deg):
+        new_rot = math.fmod(self.rot_deg + theta_deg, 360.0)
+        self.rot_deg = new_rot
+        return new_rot
+
+
+class BoxBase(OnePointTwoRadiusMixin, CanvasObjectBase):
+    """Draws a box on a ImageViewCanvas.
+    Parameters are:
+    x, y: 0-based coordinates of the center in the data space
+    xradius, yradius: radii based on the number of pixels in data space
+    Optional parameters for linesize, color, etc.
+    """
+
+    @classmethod
+    def get_params_metadata(cls):
+        return [
+            Param(name='coord', type=str, default='data',
+                  valid=['data', 'wcs'],
+                  description="Set type of coordinates"),
+            Param(name='x', type=float, default=0.0, argpos=0,
+                  description="X coordinate of center of object"),
+            Param(name='y', type=float, default=0.0, argpos=1,
+                  description="Y coordinate of center of object"),
+            Param(name='xradius', type=float, default=1.0,  argpos=2,
+                  min=0.0,
+                  description="X radius of object"),
+            Param(name='yradius', type=float, default=1.0,  argpos=3,
+                  min=0.0,
+                  description="Y radius of object"),
+            Param(name='linewidth', type=int, default=1,
+                  min=1, max=20, widget='spinbutton', incr=1,
+                  description="Width of outline"),
+            Param(name='linestyle', type=str, default='solid',
+                  valid=['solid', 'dash'],
+                  description="Style of outline (default solid)"),
+            Param(name='color', 
+                  valid=colors_plus_none, type=_color, default='yellow',
+                  description="Color of outline"),
+            Param(name='alpha', type=float, default=1.0,
+                  min=0.0, max=1.0, widget='spinfloat', incr=0.05,
+                  description="Opacity of outline"),
+            Param(name='fill', type=_bool,
+                  default=False, valid=[False, True],
+                  description="Fill the interior"),
+            Param(name='fillcolor', default=None,
+                  valid=colors_plus_none, type=_color,
+                  description="Color of fill"),
+            Param(name='fillalpha', type=float, default=1.0,
+                  min=0.0, max=1.0, widget='spinfloat', incr=0.05,
+                  description="Opacity of fill"),
+            Param(name='showcap', type=_bool,
+                  default=False, valid=[False, True],
+                  description="Show caps for this object"),
+            Param(name='rot_deg', type=float, default=0.0,
+                  min=-359.999, max=359.999, widget='spinfloat', incr=1.0,
+                  description="Rotation about center of object"),
+            ]
+    
+    def __init__(self, x, y, xradius, yradius, color='red',
+                 linewidth=1, linestyle='solid', showcap=False,
+                 fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0,
+                 rot_deg=0.0, **kwdargs):
+        CanvasObjectBase.__init__(self, color=color,
+                                  linewidth=linewidth, showcap=showcap,
+                                  linestyle=linestyle,
+                                  fill=fill, fillcolor=fillcolor,
+                                  alpha=alpha, fillalpha=fillalpha,
+                                  x=x, y=y, xradius=xradius,
+                                  yradius=yradius, rot_deg=rot_deg,
+                                  **kwdargs)
+        OnePointTwoRadiusMixin.__init__(self)
+        self.kind = 'box'
+
+    def get_points(self):
+        points = ((self.x - self.xradius, self.y - self.yradius),
+                  (self.x + self.xradius, self.y - self.yradius),
+                  (self.x + self.xradius, self.y + self.yradius),
+                  (self.x - self.xradius, self.y + self.yradius))
+        return points
+    
+    def contains(self, data_x, data_y):
+        x1, y1 = self.crdmap.to_data(self.x - self.xradius,
+                                     self.y - self.yradius)
+        x2, y2 = self.crdmap.to_data(self.x + self.xradius,
+                                     self.y + self.yradius)
+
+        # rotate point back to cartesian alignment for test
+        xd, yd = self.crdmap.to_data(self.x, self.y)
+        xp, yp = self.rotate_pt(data_x, data_y, -self.rot_deg,
+                                xoff=xd, yoff=yd)
+        if (min(x1, x2) <= xp <= max(x1, x2) and
+            min(y1, y2) <= yp <= max(y1, y2)):
+            return True
+        return False
+
+
+class EllipseBase(OnePointTwoRadiusMixin, CanvasObjectBase):
+    """Draws an ellipse on a ImageViewCanvas.
+    Parameters are:
+    x, y: 0-based coordinates of the center in the data space
+    xradius, yradius: radii based on the number of pixels in data space
+    Optional parameters for linesize, color, etc.
+    """
+
+    @classmethod
+    def get_params_metadata(cls):
+        return [
+            Param(name='coord', type=str, default='data',
+                  valid=['data', 'wcs'],
+                  description="Set type of coordinates"),
+            Param(name='x', type=float, default=0.0, argpos=0,
+                  description="X coordinate of center of object"),
+            Param(name='y', type=float, default=0.0, argpos=1,
+                  description="Y coordinate of center of object"),
+            Param(name='xradius', type=float, default=1.0,  argpos=2,
+                  min=0.0,
+                  description="X radius of object"),
+            Param(name='yradius', type=float, default=1.0,  argpos=3,
+                  min=0.0,
+                  description="Y radius of object"),
+            Param(name='linewidth', type=int, default=1,
+                  min=1, max=20, widget='spinbutton', incr=1,
+                  description="Width of outline"),
+            Param(name='linestyle', type=str, default='solid',
+                  valid=['solid', 'dash'],
+                  description="Style of outline (default solid)"),
+            Param(name='color', 
+                  valid=colors_plus_none, type=_color, default='yellow',
+                  description="Color of outline"),
+            Param(name='alpha', type=float, default=1.0,
+                  min=0.0, max=1.0, widget='spinfloat', incr=0.05,
+                  description="Opacity of outline"),
+            Param(name='fill', type=_bool,
+                  default=False, valid=[False, True],
+                  description="Fill the interior"),
+            Param(name='fillcolor', default=None,
+                  valid=colors_plus_none, type=_color,
+                  description="Color of fill"),
+            Param(name='fillalpha', type=float, default=1.0,
+                  min=0.0, max=1.0, widget='spinfloat', incr=0.05,
+                  description="Opacity of fill"),
+            Param(name='showcap', type=_bool,
+                  default=False, valid=[False, True],
+                  description="Show caps for this object"),
+            Param(name='rot_deg', type=float, default=0.0,
+                  min=-359.999, max=359.999, widget='spinfloat', incr=1.0,
+                  description="Rotation about center of object"),
+            ]
+    
+    def __init__(self, x, y, xradius, yradius, color='yellow',
+                 linewidth=1, linestyle='solid', showcap=False,
+                 fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0,
+                 rot_deg=0.0, **kwdargs):
+        CanvasObjectBase.__init__(self, color=color,
+                                  linewidth=linewidth, showcap=showcap,
+                                  linestyle=linestyle,
+                                  fill=fill, fillcolor=fillcolor,
+                                  alpha=alpha, fillalpha=fillalpha,
+                                  x=x, y=y, xradius=xradius,
+                                  yradius=yradius, rot_deg=rot_deg,
+                                  **kwdargs)
+        OnePointTwoRadiusMixin.__init__(self)
+        self.kind = 'ellipse'
+
+    def get_points(self):
+        return [self.get_center_pt()]
+    
+    def contains(self, data_x, data_y):
+        # rotate point back to cartesian alignment for test
+        xd, yd = self.crdmap.to_data(self.x, self.y)
+        xp, yp = self.rotate_pt(data_x, data_y, -self.rot_deg,
+                                xoff=xd, yoff=yd)
+
+        # need to recalculate radius in case of wcs coords
+        x2, y2 = self.crdmap.to_data(self.x + self.xradius,
+                                     self.y + self.yradius)
+        xradius = max(x2, xd) - min(x2, xd)
+        yradius = max(y2, yd) - min(y2, yd)
+        
+        # See http://math.stackexchange.com/questions/76457/check-if-a-point-is-within-an-ellipse
+        res = (((xp - xd) ** 2) / xradius ** 2 + 
+               ((yp - yd) ** 2) / yradius ** 2)
+        if res <= 1.0:
+            return True
+        return False
+
+    def get_bezier_pts(self, kappa=0.5522848):
+        """Used by drawing subclasses to draw the ellipse."""
+
+        mx, my = self.x, self.y
+        xs, ys = mx - self.xradius, my - self.yradius
+        ox, oy = self.xradius * kappa, self.yradius * kappa
+        xe, ye = mx + self.xradius, my + self.yradius
+        
+        pts = [(xs, my),
+               (xs, my - oy), (mx - ox, ys), (mx, ys),
+               (mx + ox, ys), (xe, my - oy), (xe, my),
+               (xe, my + oy), (mx + ox, ye), (mx, ye),
+               (mx - ox, ye), (xs, my + oy), (xs, my)]
+        return pts
+
+
+class TriangleBase(OnePointTwoRadiusMixin, CanvasObjectBase):
+    """Draws a triangle on a ImageViewCanvas.
+    Parameters are:
+    x, y: 0-based coordinates of the center in the data space
+    xradius, yradius: radii based on the number of pixels in data space
+    Optional parameters for linesize, color, etc.
+    """
+
+    @classmethod
+    def get_params_metadata(cls):
+        return [
+            Param(name='coord', type=str, default='data',
+                  valid=['data', 'wcs'],
+                  description="Set type of coordinates"),
+            Param(name='x', type=float, default=0.0, argpos=0,
+                  description="X coordinate of center of object"),
+            Param(name='y', type=float, default=0.0, argpos=1,
+                  description="Y coordinate of center of object"),
+            Param(name='xradius', type=float, default=1.0,  argpos=2,
+                  min=0.0,
+                  description="X radius of object"),
+            Param(name='yradius', type=float, default=1.0,  argpos=3,
+                  min=0.0,
+                  description="Y radius of object"),
+            Param(name='linewidth', type=int, default=1,
+                  min=1, max=20, widget='spinbutton', incr=1,
+                  description="Width of outline"),
+            Param(name='linestyle', type=str, default='solid',
+                  valid=['solid', 'dash'],
+                  description="Style of outline (default solid)"),
+            Param(name='color', 
+                  valid=colors_plus_none, type=_color, default='yellow',
+                  description="Color of outline"),
+            Param(name='alpha', type=float, default=1.0,
+                  min=0.0, max=1.0, widget='spinfloat', incr=0.05,
+                  description="Opacity of outline"),
+            Param(name='fill', type=_bool,
+                  default=False, valid=[False, True],
+                  description="Fill the interior"),
+            Param(name='fillcolor', default=None,
+                  valid=colors_plus_none, type=_color,
+                  description="Color of fill"),
+            Param(name='fillalpha', type=float, default=1.0,
+                  min=0.0, max=1.0, widget='spinfloat', incr=0.05,
+                  description="Opacity of fill"),
+            Param(name='showcap', type=_bool,
+                  default=False, valid=[False, True],
+                  description="Show caps for this object"),
+            Param(name='rot_deg', type=float, default=0.0,
+                  min=-359.999, max=359.999, widget='spinfloat', incr=1.0,
+                  description="Rotation about center of object"),
+            ]
+    
+    def __init__(self, x, y, xradius, yradius, color='pink',
+                 linewidth=1, linestyle='solid', showcap=False,
+                 fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0,
+                 rot_deg=0.0, **kwdargs):
+        self.kind='triangle'
+        CanvasObjectBase.__init__(self, color=color, alpha=alpha,
+                                  linewidth=linewidth, showcap=showcap,
+                                  linestyle=linestyle,
+                                  fill=fill, fillcolor=fillcolor,
+                                  fillalpha=fillalpha,
+                                  x=x, y=y, xradius=xradius,
+                                  yradius=yradius, rot_deg=rot_deg,
+                                  **kwdargs)
+        OnePointTwoRadiusMixin.__init__(self)
+
+    def get_points(self):
+        return [(self.x - 2*self.xradius, self.y - self.yradius),
+                (self.x + 2*self.xradius, self.y - self.yradius),
+                (self.x, self.y + self.yradius)]
+    
+    def contains(self, data_x, data_y):
+        # is this the same as self.x, self.y ?
+        ctr_x, ctr_y = self.get_center_pt()
+        xd, yd = self.crdmap.to_data(ctr_x, ctr_y)
+        # rotate point back to cartesian alignment for test
+        x, y = self.rotate_pt(data_x, data_y, -self.rot_deg,
+                              xoff=xd, yoff=yd)
+
+        (x1, y1), (x2, y2), (x3, y3) = self.get_points()
+        x1, y1 = self.crdmap.to_data(x1, y1)
+        x2, y2 = self.crdmap.to_data(x2, y2)
+        x3, y3 = self.crdmap.to_data(x3, y3)
+
+        # barycentric coordinate test
+        denominator = ((y2 - y3)*(x1 - x3) + (x3 - x2)*(y1 - y3))
+        a = ((y2 - y3)*(x - x3) + (x3 - x2)*(y - y3)) / denominator
+        b = ((y3 - y1)*(x - x3) + (x1 - x3)*(y - y3)) / denominator
+        c = 1.0 - a - b
+        
+        tf = (0.0 <= a <= 1.0 and 0.0 <= b <= 1.0 and 0.0 <= c <= 1.0)
+        return tf
+
+
+class OnePointOneRadiusMixin(object):
+
+    def get_center_pt(self):
+        return (self.x, self.y)
+
+    def get_points(self):
+        return [(self.x, self.y)]
+    
+    def set_edit_point(self, i, pt):
+        if i == 0:
+            self.set_point_by_index(i, pt)
+        elif i == 1:
+            x, y = pt
+            self.radius = math.sqrt(abs(x - self.x)**2 + 
+                                    abs(y - self.y)**2 )
+        else:
+            raise ValueError("No point corresponding to index %d" % (i))
+
+    def get_edit_points(self):
+        return [(self.x, self.y),
+                (self.x + self.radius, self.y)]
+
+    def rotate_by(self, theta_deg):
+        pass
+
+class CircleBase(OnePointOneRadiusMixin, CanvasObjectBase):
+    """Draws a circle on a ImageViewCanvas.
+    Parameters are:
+    x, y: 0-based coordinates of the center in the data space
+    radius: radius based on the number of pixels in data space
+    Optional parameters for linesize, color, etc.
+    """
+
+    @classmethod
+    def get_params_metadata(cls):
+        return [
+            Param(name='coord', type=str, default='data',
+                  valid=['data', 'wcs'],
+                  description="Set type of coordinates"),
+            Param(name='x', type=float, default=0.0, argpos=0,
+                  description="X coordinate of center of object"),
+            Param(name='y', type=float, default=0.0, argpos=1,
+                  description="Y coordinate of center of object"),
+            Param(name='radius', type=float, default=1.0,  argpos=2,
+                  min=0.0,
+                  description="Radius of object"),
+            Param(name='linewidth', type=int, default=1,
+                  min=1, max=20, widget='spinbutton', incr=1,
+                  description="Width of outline"),
+            Param(name='linestyle', type=str, default='solid',
+                  valid=['solid', 'dash'],
+                  description="Style of outline (default solid)"),
+            Param(name='color', 
+                  valid=colors_plus_none, type=_color, default='yellow',
+                  description="Color of outline"),
+            Param(name='alpha', type=float, default=1.0,
+                  min=0.0, max=1.0, widget='spinfloat', incr=0.05,
+                  description="Opacity of outline"),
+            Param(name='fill', type=_bool,
+                  default=False, valid=[False, True],
+                  description="Fill the interior"),
+            Param(name='fillcolor', default=None,
+                  valid=colors_plus_none, type=_color,
+                  description="Color of fill"),
+            Param(name='fillalpha', type=float, default=1.0,
+                  min=0.0, max=1.0, widget='spinfloat', incr=0.05,
+                  description="Opacity of fill"),
+            Param(name='showcap', type=_bool,
+                  default=False, valid=[False, True],
+                  description="Show caps for this object"),
+            ]
+    
+    def __init__(self, x, y, radius, color='yellow',
+                 linewidth=1, linestyle='solid', showcap=False,
+                 fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0,
+                 **kwdargs):
+        CanvasObjectBase.__init__(self, color=color,
+                                  linewidth=linewidth, showcap=showcap,
+                                  linestyle=linestyle,
+                                  fill=fill, fillcolor=fillcolor,
+                                  alpha=alpha, fillalpha=fillalpha,
+                                  x=x, y=y, radius=radius, **kwdargs)
+        OnePointOneRadiusMixin.__init__(self)
+        self.kind = 'circle'
+
+    def contains(self, data_x, data_y):
+        xd, yd = self.crdmap.to_data(self.x, self.y)
+        x2, y2 = self.crdmap.to_data(self.x + self.radius, self.y)
+        dradius = math.fabs(x2 - xd)
+        radius = math.sqrt(math.fabs(data_x - xd)**2 + math.fabs(data_y - yd)**2)
+        if radius <= dradius:
+            return True
+        return False
+
+
+class PointBase(OnePointOneRadiusMixin, CanvasObjectBase):
+    """Draws a point on a ImageViewCanvas.
+    Parameters are:
+    x, y: 0-based coordinates of the center in the data space
+    radius: radius based on the number of pixels in data space
+    Optional parameters for linesize, color, style, etc.
+    Currently the only styles are 'cross' and 'plus'.
+    """
+
+    @classmethod
+    def get_params_metadata(cls):
+        return [
+            Param(name='coord', type=str, default='data',
+                  valid=['data', 'wcs'],
+                  description="Set type of coordinates"),
+            Param(name='x', type=float, default=0.0, argpos=0,
+                  description="X coordinate of center of object"),
+            Param(name='y', type=float, default=0.0, argpos=1,
+                  description="Y coordinate of center of object"),
+            Param(name='radius', type=float, default=1.0,  argpos=2,
+                  min=0.0,
+                  description="Radius of object"),
+            Param(name='style', type=str, default='cross',
+                  valid=['cross', 'plus'],
+                  description="Style of point (default 'cross')"),
+            Param(name='linewidth', type=int, default=1,
+                  min=1, max=20, widget='spinbutton', incr=1,
+                  description="Width of outline"),
+            Param(name='linestyle', type=str, default='solid',
+                  valid=['solid', 'dash'],
+                  description="Style of outline (default solid)"),
+            Param(name='color', 
+                  valid=colors_plus_none, type=_color, default='yellow',
+                  description="Color of outline"),
+            Param(name='alpha', type=float, default=1.0,
+                  min=0.0, max=1.0, widget='spinfloat', incr=0.05,
+                  description="Opacity of outline"),
+            Param(name='showcap', type=_bool,
+                  default=False, valid=[False, True],
+                  description="Show caps for this object"),
+            ]
+    
+    def __init__(self, x, y, radius, style='cross', color='yellow',
+                 linewidth=1, linestyle='solid', alpha=1.0, showcap=False,
+                 **kwdargs):
+        self.kind = 'point'
+        CanvasObjectBase.__init__(self, color=color, alpha=alpha,
+                                  linewidth=linewidth,
+                                  linestyle=linestyle,
+                                  x=x, y=y, radius=radius,
+                                  showcap=showcap, style=style,
+                                  **kwdargs)
+        OnePointOneRadiusMixin.__init__(self)
+        
+    def contains(self, data_x, data_y):
+        xd, yd = self.crdmap.to_data(self.x, self.y)
+        if (x == xd) and (y == yd):
+            return True
+        return False
+
+    def select_contains(self, data_x, data_y):
+        xd, yd = self.crdmap.to_data(self.x, self.y)
+        return self.within_radius(data_x, data_y, xd, yd, self.cap_radius)
+        
+    def get_edit_points(self):
+        return [(self.x, self.y),
+                # TODO: account for point style
+                (self.x + self.radius, self.y + self.radius)]
+
+
+class TwoPointMixin(object):
+
+    def get_center_pt(self):
+        return ((self.x1 + self.x2) / 2., (self.y1 + self.y2) / 2.)
+
     def set_edit_point(self, i, pt):
         if i == 0:
             x, y = pt
@@ -523,30 +1102,12 @@ class PathBase(CanvasObjectBase):
         else:
             self.set_point_by_index(i-1, pt)
 
-    def get_points(self):
-        return self.points
-
     def get_edit_points(self):
-        return [self.get_center_pt()] + self.points
+        return [self.get_center_pt(),
+                (self.x1, self.y1), (self.x2, self.y2)]
+        
 
-    def contains(self, x, y):
-        x1, y1 = self.points[0]
-        for x2, y2 in self.points[1:]:
-            if self.within_line(x, y, x1, y1, x2, y2, 1.0):
-                return True
-            x1, y1 = x2, y2
-        return False
-            
-    def select_contains(self, x, y):
-        x1, y1 = self.points[0]
-        for x2, y2 in self.points[1:]:
-            if self.within_line(x, y, x1, y1, x2, y2, self.cap_radius):
-                return True
-            x1, y1 = x2, y2
-        return False
-
-
-class RectangleBase(CanvasObjectBase):
+class RectangleBase(TwoPointMixin, CanvasObjectBase):
     """Draws a rectangle on a ImageViewCanvas.
     Parameters are:
     x1, y1: 0-based coordinates of one corner in the data space
@@ -560,6 +1121,9 @@ class RectangleBase(CanvasObjectBase):
     @classmethod
     def get_params_metadata(cls):
         return [
+            Param(name='coord', type=str, default='data',
+                  valid=['data', 'wcs'],
+                  description="Set type of coordinates"),
             Param(name='x1', type=float, default=0.0, argpos=0,
                   description="First X coordinate of object"),
             Param(name='y1', type=float, default=0.0, argpos=1,
@@ -606,442 +1170,39 @@ class RectangleBase(CanvasObjectBase):
                  **kwdargs):
         self.kind = 'rectangle'
         # ensure that rectangles are always bounded LL to UR
-        x1, y1, x2, y2 = self.swapxy(x1, y1, x2, y2)
+        #x1, y1, x2, y2 = self.swapxy(x1, y1, x2, y2)
         
-        super(RectangleBase, self).__init__(color=color,
-                                            x1=x1, y1=y1, x2=x2, y2=y2,
-                                            linewidth=linewidth, showcap=showcap,
-                                            linestyle=linestyle,
-                                            fill=fill, fillcolor=fillcolor,
-                                            alpha=alpha, fillalpha=fillalpha,
-                                            drawdims=drawdims, font=font,
-                                            **kwdargs)
+        CanvasObjectBase.__init__(self, color=color,
+                                  x1=x1, y1=y1, x2=x2, y2=y2,
+                                  linewidth=linewidth, showcap=showcap,
+                                  linestyle=linestyle,
+                                  fill=fill, fillcolor=fillcolor,
+                                  alpha=alpha, fillalpha=fillalpha,
+                                  drawdims=drawdims, font=font,
+                                  **kwdargs)
+        TwoPointMixin.__init__(self)
         
     def get_points(self):
         points = [(self.x1, self.y1), (self.x2, self.y1),
                   (self.x2, self.y2), (self.x1, self.y2)]
         return points
     
-    def contains(self, x, y):
-        if ((x >= self.x1) and (x <= self.x2) and
-            (y >= self.y1) and (y <= self.y2)):
+    def contains(self, data_x, data_y):
+        #x, y = self.crdmap.to_data(x, y)
+        x1, y1 = self.crdmap.to_data(self.x1, self.y1)
+        x2, y2 = self.crdmap.to_data(self.x2, self.y2)
+
+        if ((min(x1, x2) <= data_x <= max(x1, x2)) and
+            (min(y1, y2) <= data_y <= max(y1, y2))):
             return True
         return False
-
-    def get_center_pt(self):
-        return ((self.x1 + self.x2) / 2., (self.y1 + self.y2) / 2.)
 
     # TO BE DEPRECATED?
     def move_point(self):
         return self.get_center_pt()
 
-    def rotate(self, theta, xoff=0, yoff=0):
-        x1, y1 = self.rotate_pt(self.x1, self.y1, theta,
-                                xoff=xoff, yoff=yoff)
-        x2, y2 = self.rotate_pt(self.x2, self.y2, theta,
-                                xoff=xoff, yoff=yoff)
-        self.x1, self.y1, self.x2, self.y2 = self.swapxy(x1, y1, x2, y2)
 
-    def set_edit_point(self, i, pt):
-        if i == 0:
-            x, y = pt
-            self.move_to(x, y)
-        else:
-            self.set_point_by_index(i-1, pt)
-
-    def get_edit_points(self):
-        return [self.get_center_pt(),
-                (self.x1, self.y1), (self.x2, self.y2)]
-
-
-class BoxBase(CanvasObjectBase):
-    """Draws a box on a ImageViewCanvas.
-    Parameters are:
-    x, y: 0-based coordinates of the center in the data space
-    xradius, yradius: radii based on the number of pixels in data space
-    Optional parameters for linesize, color, etc.
-    """
-
-    @classmethod
-    def get_params_metadata(cls):
-        return [
-            Param(name='x', type=float, default=0.0, argpos=0,
-                  description="X coordinate of center of object"),
-            Param(name='y', type=float, default=0.0, argpos=1,
-                  description="Y coordinate of center of object"),
-            Param(name='xradius', type=float, default=1.0,  argpos=2,
-                  min=0.0,
-                  description="X radius of object"),
-            Param(name='yradius', type=float, default=1.0,  argpos=3,
-                  min=0.0,
-                  description="Y radius of object"),
-            Param(name='linewidth', type=int, default=1,
-                  min=1, max=20, widget='spinbutton', incr=1,
-                  description="Width of outline"),
-            Param(name='linestyle', type=str, default='solid',
-                  valid=['solid', 'dash'],
-                  description="Style of outline (default solid)"),
-            Param(name='color', 
-                  valid=colors_plus_none, type=_color, default='yellow',
-                  description="Color of outline"),
-            Param(name='alpha', type=float, default=1.0,
-                  min=0.0, max=1.0, widget='spinfloat', incr=0.05,
-                  description="Opacity of outline"),
-            Param(name='fill', type=_bool,
-                  default=False, valid=[False, True],
-                  description="Fill the interior"),
-            Param(name='fillcolor', default=None,
-                  valid=colors_plus_none, type=_color,
-                  description="Color of fill"),
-            Param(name='fillalpha', type=float, default=1.0,
-                  min=0.0, max=1.0, widget='spinfloat', incr=0.05,
-                  description="Opacity of fill"),
-            Param(name='showcap', type=_bool,
-                  default=False, valid=[False, True],
-                  description="Show caps for this object"),
-            Param(name='rot_deg', type=float, default=0.0,
-                  min=-359.999, max=359.999, widget='spinfloat', incr=1.0,
-                  description="Rotation about center of object"),
-            ]
-    
-    def __init__(self, x, y, xradius, yradius, color='red',
-                 linewidth=1, linestyle='solid', showcap=False,
-                 fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0,
-                 rot_deg=0.0, **kwdargs):
-        super(BoxBase, self).__init__(color=color,
-                                      linewidth=linewidth, showcap=showcap,
-                                      linestyle=linestyle,
-                                      fill=fill, fillcolor=fillcolor,
-                                      alpha=alpha, fillalpha=fillalpha,
-                                      x=x, y=y, xradius=xradius,
-                                      yradius=yradius, rot_deg=rot_deg,
-                                      **kwdargs)
-        self.kind = 'box'
-
-    def get_center_pt(self):
-        return (self.x, self.y)
-
-    def get_points(self):
-        points = ((self.x - self.xradius, self.y - self.yradius),
-                  (self.x + self.xradius, self.y - self.yradius),
-                  (self.x + self.xradius, self.y + self.yradius),
-                  (self.x - self.xradius, self.y + self.yradius))
-        return points
-    
-    def contains(self, x, y):
-        # rotate point back to cartesian alignment for test
-        xp, yp = self.rotate_pt(x, y, -self.rot_deg,
-                                xoff=self.x, yoff=self.y)
-        x1, y1 = self.x - self.xradius, self.y - self.yradius
-        x2, y2 = self.x + self.xradius, self.y + self.yradius
-        if ((xp >= x1) and (xp <= x2) and
-            (yp >= y1) and (yp <= y2)):
-            return True
-        return False
-
-    def set_edit_point(self, i, pt):
-        if i == 0:
-            self.set_point_by_index(i, pt)
-        elif i == 1:
-            x, y = pt
-            self.xradius = abs(x - self.x)
-        elif i == 2:
-            x, y = pt
-            self.yradius = abs(y - self.y)
-        elif i == 3:
-            x, y = pt
-            self.xradius, self.yradius = abs(x - self.x), abs(y - self.y)
-        else:
-            raise ValueError("No point corresponding to index %d" % (i))
-
-    def get_edit_points(self):
-        return [(self.x, self.y),    # location
-                (self.x + self.xradius, self.y),  # adj xradius
-                (self.x, self.y + self.yradius),  # adj yradius
-                (self.x + self.xradius, self.y + self.yradius)]   # adj both
-
-
-class CircleBase(CanvasObjectBase):
-    """Draws a circle on a ImageViewCanvas.
-    Parameters are:
-    x, y: 0-based coordinates of the center in the data space
-    radius: radius based on the number of pixels in data space
-    Optional parameters for linesize, color, etc.
-    """
-
-    @classmethod
-    def get_params_metadata(cls):
-        return [
-            Param(name='x', type=float, default=0.0, argpos=0,
-                  description="X coordinate of center of object"),
-            Param(name='y', type=float, default=0.0, argpos=1,
-                  description="Y coordinate of center of object"),
-            Param(name='radius', type=float, default=1.0,  argpos=2,
-                  min=0.0,
-                  description="Radius of object"),
-            Param(name='linewidth', type=int, default=1,
-                  min=1, max=20, widget='spinbutton', incr=1,
-                  description="Width of outline"),
-            Param(name='linestyle', type=str, default='solid',
-                  valid=['solid', 'dash'],
-                  description="Style of outline (default solid)"),
-            Param(name='color', 
-                  valid=colors_plus_none, type=_color, default='yellow',
-                  description="Color of outline"),
-            Param(name='alpha', type=float, default=1.0,
-                  min=0.0, max=1.0, widget='spinfloat', incr=0.05,
-                  description="Opacity of outline"),
-            Param(name='fill', type=_bool,
-                  default=False, valid=[False, True],
-                  description="Fill the interior"),
-            Param(name='fillcolor', default=None,
-                  valid=colors_plus_none, type=_color,
-                  description="Color of fill"),
-            Param(name='fillalpha', type=float, default=1.0,
-                  min=0.0, max=1.0, widget='spinfloat', incr=0.05,
-                  description="Opacity of fill"),
-            Param(name='showcap', type=_bool,
-                  default=False, valid=[False, True],
-                  description="Show caps for this object"),
-            ]
-    
-    def __init__(self, x, y, radius, color='yellow',
-                 linewidth=1, linestyle='solid', showcap=False,
-                 fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0,
-                 **kwdargs):
-        super(CircleBase, self).__init__(color=color,
-                                         linewidth=linewidth, showcap=showcap,
-                                         linestyle=linestyle,
-                                         fill=fill, fillcolor=fillcolor,
-                                         alpha=alpha, fillalpha=fillalpha,
-                                         x=x, y=y, radius=radius, **kwdargs)
-        self.kind = 'circle'
-
-    def get_center_pt(self):
-        return (self.x, self.y)
-
-    def get_points(self):
-        return [(self.x, self.y)]
-    
-    def contains(self, x, y):
-        radius = math.sqrt(math.fabs(x - self.x)**2 + math.fabs(y - self.y)**2)
-        if radius <= self.radius:
-            return True
-        return False
-
-    def set_edit_point(self, i, pt):
-        if i == 0:
-            self.set_point_by_index(i, pt)
-        elif i == 1:
-            x, y = pt
-            self.radius = math.sqrt(abs(x - self.x)**2 + 
-                                    abs(y - self.y)**2 )
-        else:
-            raise ValueError("No point corresponding to index %d" % (i))
-
-    def get_edit_points(self):
-        return [(self.x, self.y),
-                (self.x + self.radius, self.y)]
-
-
-class EllipseBase(CanvasObjectBase):
-    """Draws an ellipse on a ImageViewCanvas.
-    Parameters are:
-    x, y: 0-based coordinates of the center in the data space
-    xradius, yradius: radii based on the number of pixels in data space
-    Optional parameters for linesize, color, etc.
-    """
-
-    @classmethod
-    def get_params_metadata(cls):
-        return [
-            Param(name='x', type=float, default=0.0, argpos=0,
-                  description="X coordinate of center of object"),
-            Param(name='y', type=float, default=0.0, argpos=1,
-                  description="Y coordinate of center of object"),
-            Param(name='xradius', type=float, default=1.0,  argpos=2,
-                  min=0.0,
-                  description="X radius of object"),
-            Param(name='yradius', type=float, default=1.0,  argpos=3,
-                  min=0.0,
-                  description="Y radius of object"),
-            Param(name='linewidth', type=int, default=1,
-                  min=1, max=20, widget='spinbutton', incr=1,
-                  description="Width of outline"),
-            Param(name='linestyle', type=str, default='solid',
-                  valid=['solid', 'dash'],
-                  description="Style of outline (default solid)"),
-            Param(name='color', 
-                  valid=colors_plus_none, type=_color, default='yellow',
-                  description="Color of outline"),
-            Param(name='alpha', type=float, default=1.0,
-                  min=0.0, max=1.0, widget='spinfloat', incr=0.05,
-                  description="Opacity of outline"),
-            Param(name='fill', type=_bool,
-                  default=False, valid=[False, True],
-                  description="Fill the interior"),
-            Param(name='fillcolor', default=None,
-                  valid=colors_plus_none, type=_color,
-                  description="Color of fill"),
-            Param(name='fillalpha', type=float, default=1.0,
-                  min=0.0, max=1.0, widget='spinfloat', incr=0.05,
-                  description="Opacity of fill"),
-            Param(name='showcap', type=_bool,
-                  default=False, valid=[False, True],
-                  description="Show caps for this object"),
-            Param(name='rot_deg', type=float, default=0.0,
-                  min=-359.999, max=359.999, widget='spinfloat', incr=1.0,
-                  description="Rotation about center of object"),
-            ]
-    
-    def __init__(self, x, y, xradius, yradius, color='yellow',
-                 linewidth=1, linestyle='solid', showcap=False,
-                 fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0,
-                 rot_deg=0.0, **kwdargs):
-        super(EllipseBase, self).__init__(color=color,
-                                          linewidth=linewidth, showcap=showcap,
-                                          linestyle=linestyle,
-                                          fill=fill, fillcolor=fillcolor,
-                                          alpha=alpha, fillalpha=fillalpha,
-                                          x=x, y=y, xradius=xradius,
-                                          yradius=yradius, rot_deg=rot_deg,
-                                          **kwdargs)
-        self.kind = 'ellipse'
-
-    def get_center_pt(self):
-        return (self.x, self.y)
-
-    def get_points(self):
-        return [self.get_center_pt()]
-    
-    def contains(self, x, y):
-        # rotate point back to cartesian alignment for test
-        xp, yp = self.rotate_pt(x, y, -self.rot_deg,
-                                xoff=self.x, yoff=self.y)
-        # See http://math.stackexchange.com/questions/76457/check-if-a-point-is-within-an-ellipse
-        res = (((xp - self.x)**2) / self.xradius**2 + 
-               ((yp - self.y)**2) / self.yradius**2)
-        if res <= 1.0:
-            return True
-        return False
-
-    def set_edit_point(self, i, pt):
-        if i == 0:
-            self.set_point_by_index(i, pt)
-        elif i == 1:
-            x, y = pt
-            self.xradius = abs(x - self.x)
-        elif i == 2:
-            x, y = pt
-            self.yradius = abs(y - self.y)
-        elif i == 3:
-            x, y = pt
-            self.xradius, self.yradius = abs(x - self.x), abs(y - self.y)
-        else:
-            raise ValueError("No point corresponding to index %d" % (i))
-
-    def get_edit_points(self):
-        return [(self.x, self.y),    # location
-                (self.x + self.xradius, self.y),  # adj xradius
-                (self.x, self.y + self.yradius),  # adj yradius
-                (self.x + self.xradius, self.y + self.yradius)]   # adj both
-
-    def get_bezier_pts(self, kappa=0.5522848):
-        """Used by drawing subclasses to draw the ellipse."""
-
-        mx, my = self.x, self.y
-        xs, ys = mx - self.xradius, my - self.yradius
-        ox, oy = self.xradius * kappa, self.yradius * kappa
-        xe, ye = mx + self.xradius, my + self.yradius
-        
-        pts = [(xs, my),
-               (xs, my - oy), (mx - ox, ys), (mx, ys),
-               (mx + ox, ys), (xe, my - oy), (xe, my),
-               (xe, my + oy), (mx + ox, ye), (mx, ye),
-               (mx - ox, ye), (xs, my + oy), (xs, my)]
-        return pts
-
-
-class PointBase(CanvasObjectBase):
-    """Draws a point on a ImageViewCanvas.
-    Parameters are:
-    x, y: 0-based coordinates of the center in the data space
-    radius: radius based on the number of pixels in data space
-    Optional parameters for linesize, color, style, etc.
-    Currently the only styles are 'cross' and 'plus'.
-    """
-
-    @classmethod
-    def get_params_metadata(cls):
-        return [
-            Param(name='x', type=float, default=0.0, argpos=0,
-                  description="X coordinate of center of object"),
-            Param(name='y', type=float, default=0.0, argpos=1,
-                  description="Y coordinate of center of object"),
-            Param(name='radius', type=float, default=1.0,  argpos=2,
-                  min=0.0,
-                  description="Radius of object"),
-            Param(name='style', type=str, default='cross',
-                  valid=['cross', 'plus'],
-                  description="Style of point (default 'cross')"),
-            Param(name='linewidth', type=int, default=1,
-                  min=1, max=20, widget='spinbutton', incr=1,
-                  description="Width of outline"),
-            Param(name='linestyle', type=str, default='solid',
-                  valid=['solid', 'dash'],
-                  description="Style of outline (default solid)"),
-            Param(name='color', 
-                  valid=colors_plus_none, type=_color, default='yellow',
-                  description="Color of outline"),
-            Param(name='alpha', type=float, default=1.0,
-                  min=0.0, max=1.0, widget='spinfloat', incr=0.05,
-                  description="Opacity of outline"),
-            Param(name='showcap', type=_bool,
-                  default=False, valid=[False, True],
-                  description="Show caps for this object"),
-            ]
-    
-    def __init__(self, x, y, radius, style='cross', color='yellow',
-                 linewidth=1, linestyle='solid', alpha=1.0, showcap=False,
-                 **kwdargs):
-        self.kind = 'point'
-        super(PointBase, self).__init__(color=color, alpha=alpha,
-                                        linewidth=linewidth,
-                                        linestyle=linestyle,
-                                        x=x, y=y, radius=radius,
-                                        showcap=showcap, style=style,
-                                        **kwdargs)
-        
-    def get_center_pt(self):
-        return (self.x, self.y)
-
-    def get_points(self):
-        return [self.get_center_pt()]
-    
-    def contains(self, x, y):
-        if (x == self.x) and (y == self.y):
-            return True
-        return False
-
-    def select_contains(self, x, y):
-        return self.within_radius(x, y, self.x, self.y, self.cap_radius)
-        
-    def set_edit_point(self, i, pt):
-        if i == 0:
-            self.set_point_by_index(i, pt)
-        elif i == 1:
-            x, y = pt
-            self.radius = max(abs(x - self.x), abs(y - self.y))
-        else:
-            raise ValueError("No point corresponding to index %d" % (i))
-
-    def get_edit_points(self):
-        return [(self.x, self.y),
-                # TODO: account for point style
-                (self.x + self.radius, self.y + self.radius)]
-
-
-class LineBase(CanvasObjectBase):
+class LineBase(TwoPointMixin, CanvasObjectBase):
     """Draws a line on a ImageViewCanvas.
     Parameters are:
     x1, y1: 0-based coordinates of one end in the data space
@@ -1052,6 +1213,9 @@ class LineBase(CanvasObjectBase):
     @classmethod
     def get_params_metadata(cls):
         return [
+            Param(name='coord', type=str, default='data',
+                  valid=['data', 'wcs'],
+                  description="Set type of coordinates"),
             Param(name='x1', type=float, default=0.0, argpos=0,
                   description="First X coordinate of object"),
             Param(name='y1', type=float, default=0.0, argpos=1,
@@ -1084,112 +1248,24 @@ class LineBase(CanvasObjectBase):
                  linewidth=1, linestyle='solid', alpha=1.0,
                  arrow=None, showcap=False, **kwdargs):
         self.kind = 'line'
-        super(LineBase, self).__init__(color=color, alpha=alpha,
-                                       linewidth=linewidth, showcap=showcap,
-                                       linestyle=linestyle, arrow=arrow,
-                                       x1=x1, y1=y1, x2=x2, y2=y2,
-                                       **kwdargs)
+        CanvasObjectBase.__init__(self, color=color, alpha=alpha,
+                                  linewidth=linewidth, showcap=showcap,
+                                  linestyle=linestyle, arrow=arrow,
+                                  x1=x1, y1=y1, x2=x2, y2=y2,
+                                  **kwdargs)
+        TwoPointMixin.__init__(self)
         
     def get_points(self):
         return [(self.x1, self.y1), (self.x2, self.y2)]
 
-    def get_center_pt(self):
-        return ((self.x1 + self.x2) / 2., (self.y1 + self.y2) / 2.)
-    
-    def set_edit_point(self, i, pt):
-        if i == 0:
-            x, y = pt
-            self.move_to(x, y)
-        else:
-            self.set_point_by_index(i-1, pt)
-
-    def get_edit_points(self):
-        return [self.get_center_pt(),
-                (self.x1, self.y1), (self.x2, self.y2)]
-
-    def select_contains(self, x, y):
-        return self.within_line(x, y, self.x1, self.y1, self.x2, self.y2,
+    def select_contains(self, data_x, data_y):
+        x1, y1 = self.crdmap.to_data(self.x1, self.y1)
+        x2, y2 = self.crdmap.to_data(self.x2, self.y2)
+        return self.within_line(data_x, data_y, x1, y1, x2, y2,
                                 self.cap_radius)
         
 
-class CompassBase(CanvasObjectBase):
-    """Draws a WCS compass on a ImageViewCanvas.
-    Parameters are:
-    x, y: 0-based coordinates of the center in the data space
-    radius: radius of the compass arms, in data units
-    Optional parameters for linesize, color, etc.
-    """
-
-    @classmethod
-    def get_params_metadata(cls):
-        return [
-            Param(name='x', type=float, default=0.0, argpos=0,
-                  description="X coordinate of center of object"),
-            Param(name='y', type=float, default=0.0, argpos=1,
-                  description="Y coordinate of center of object"),
-            Param(name='radius', type=float, default=1.0,  argpos=2,
-                  min=0.0,
-                  description="Radius of object"),
-            Param(name='linewidth', type=int, default=1,
-                  min=1, max=20, widget='spinbutton', incr=1,
-                  description="Width of outline"),
-            Param(name='linestyle', type=str, default='solid',
-                  valid=['solid', 'dash'],
-                  description="Style of outline (default solid)"),
-            Param(name='color', 
-                  valid=colors_plus_none, type=_color, default='skyblue',
-                  description="Color of outline"),
-            Param(name='alpha', type=float, default=1.0,
-                  min=0.0, max=1.0, widget='spinfloat', incr=0.05,
-                  description="Opacity of outline"),
-            Param(name='font', type=str, default='Sans Serif',
-                  description="Font family for text"),
-            Param(name='fontsize', type=int, default=None,
-                  min=8, max=72,
-                  description="Font size of text (default: vary by scale)"),
-            Param(name='showcap', type=_bool,
-                  default=False, valid=[False, True],
-                  description="Show caps for this object"),
-            ]
-    
-    def __init__(self, x, y, radius, color='skyblue',
-                 linewidth=1, fontsize=None, font='Sans Serif',
-                 alpha=1.0, linestyle='solid', showcap=True, **kwdargs):
-        self.kind = 'compass'
-        super(CompassBase, self).__init__(color=color, alpha=alpha,
-                                          linewidth=linewidth, showcap=showcap,
-                                          linestyle=linestyle,
-                                          x=x, y=y, radius=radius,
-                                          font=font, fontsize=fontsize,
-                                          **kwdargs)
-
-    def get_center_pt(self):
-        return (self.x, self.y)
-
-    def get_points(self):
-        image = self.viewer.get_image()
-        x, y, xn, yn, xe, ye = image.calc_compass_radius(self.x,
-                                                         self.y,
-                                                         self.radius)
-        return [(x, y), (xn, yn), (xe, ye)]
-    
-    def get_edit_points(self):
-        return self.get_points()
-
-    def set_edit_point(self, i, pt):
-        if i == 0:
-            self.set_point_by_index(i, pt)
-        elif i in (1, 2):
-            x, y = pt
-            self.radius = max(abs(x - self.x), abs(y - self.y))
-        else:
-            raise ValueError("No point corresponding to index %d" % (i))
-
-    def select_contains(self, x, y):
-        return self.within_radius(x, y, self.x, self.y, self.cap_radius)
-        
-        
-class RightTriangleBase(CanvasObjectBase):
+class RightTriangleBase(TwoPointMixin, CanvasObjectBase):
     """Draws a right triangle on a ImageViewCanvas.
     Parameters are:
     x1, y1: 0-based coordinates of one end of the diagonal in the data space
@@ -1200,6 +1276,9 @@ class RightTriangleBase(CanvasObjectBase):
     @classmethod
     def get_params_metadata(cls):
         return [
+            Param(name='coord', type=str, default='data',
+                  valid=['data', 'wcs'],
+                  description="Set type of coordinates"),
             Param(name='x1', type=float, default=0.0, argpos=0,
                   description="First X coordinate of object"),
             Param(name='y1', type=float, default=0.0, argpos=1,
@@ -1239,20 +1318,26 @@ class RightTriangleBase(CanvasObjectBase):
                  fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0,
                  **kwdargs):
         self.kind='righttriangle'
-        super(RightTriangleBase, self).__init__(color=color, alpha=alpha,
-                                                linewidth=linewidth, showcap=showcap,
-                                                linestyle=linestyle,
-                                                fill=fill, fillcolor=fillcolor,
-                                                fillalpha=fillalpha,
-                                                x1=x1, y1=y1, x2=x2, y2=y2,
-                                                **kwdargs)
+        CanvasObjectBase.__init__(self, color=color, alpha=alpha,
+                                  linewidth=linewidth, showcap=showcap,
+                                  linestyle=linestyle,
+                                  fill=fill, fillcolor=fillcolor,
+                                  fillalpha=fillalpha,
+                                  x1=x1, y1=y1, x2=x2, y2=y2,
+                                  **kwdargs)
+        TwoPointMixin.__init__(self)
 
     def get_points(self):
         return [(self.x1, self.y1), (self.x2, self.y2)]
     
-    def contains(self, x, y):
+    def contains(self, data_x, data_y):
         x1, y1, x2, y2 = self.x1, self.y1, self.x2, self.y2
         x3, y3 = self.x2, self.y1
+
+        x, y = data_x, data_y
+        x1, y1 = self.crdmap.to_data(x1, y1)
+        x2, y2 = self.crdmap.to_data(x2, y2)
+        x3, y3 = self.crdmap.to_data(x3, y3)
         
         # barycentric coordinate test
         denominator = ((y2 - y3)*(x1 - x3) + (x3 - x2)*(y1 - y3))
@@ -1263,42 +1348,28 @@ class RightTriangleBase(CanvasObjectBase):
         tf = (0.0 <= a <= 1.0 and 0.0 <= b <= 1.0 and 0.0 <= c <= 1.0)
         return tf
 
-    def get_edit_points(self):
-        return [self.get_center_pt(),
-                (self.x1, self.y1), (self.x2, self.y2)]
 
-    def set_edit_point(self, i, pt):
-        if i == 0:
-            x, y = pt
-            self.move_to(x, y)
-        else:
-            self.set_point_by_index(i-1, pt)
-
-    def get_center_pt(self):
-        return ((self.x1 + self.x2) / 2., (self.y1 + self.y2) / 2.)
-    
-
-class TriangleBase(CanvasObjectBase):
-    """Draws a triangle on a ImageViewCanvas.
+class CompassBase(OnePointOneRadiusMixin, CanvasObjectBase):
+    """Draws a WCS compass on a ImageViewCanvas.
     Parameters are:
     x, y: 0-based coordinates of the center in the data space
-    xradius, yradius: radii based on the number of pixels in data space
+    radius: radius of the compass arms, in data units
     Optional parameters for linesize, color, etc.
     """
 
     @classmethod
     def get_params_metadata(cls):
         return [
+            Param(name='coord', type=str, default='data',
+                  valid=['data'],
+                  description="Set type of coordinates"),
             Param(name='x', type=float, default=0.0, argpos=0,
                   description="X coordinate of center of object"),
             Param(name='y', type=float, default=0.0, argpos=1,
                   description="Y coordinate of center of object"),
-            Param(name='xradius', type=float, default=1.0,  argpos=2,
+            Param(name='radius', type=float, default=1.0,  argpos=2,
                   min=0.0,
-                  description="X radius of object"),
-            Param(name='yradius', type=float, default=1.0,  argpos=3,
-                  min=0.0,
-                  description="Y radius of object"),
+                  description="Radius of object"),
             Param(name='linewidth', type=int, default=1,
                   min=1, max=20, widget='spinbutton', incr=1,
                   description="Width of outline"),
@@ -1306,90 +1377,58 @@ class TriangleBase(CanvasObjectBase):
                   valid=['solid', 'dash'],
                   description="Style of outline (default solid)"),
             Param(name='color', 
-                  valid=colors_plus_none, type=_color, default='yellow',
+                  valid=colors_plus_none, type=_color, default='skyblue',
                   description="Color of outline"),
             Param(name='alpha', type=float, default=1.0,
                   min=0.0, max=1.0, widget='spinfloat', incr=0.05,
                   description="Opacity of outline"),
-            Param(name='fill', type=_bool,
-                  default=False, valid=[False, True],
-                  description="Fill the interior"),
-            Param(name='fillcolor', default=None,
-                  valid=colors_plus_none, type=_color,
-                  description="Color of fill"),
-            Param(name='fillalpha', type=float, default=1.0,
-                  min=0.0, max=1.0, widget='spinfloat', incr=0.05,
-                  description="Opacity of fill"),
+            Param(name='font', type=str, default='Sans Serif',
+                  description="Font family for text"),
+            Param(name='fontsize', type=int, default=None,
+                  min=8, max=72,
+                  description="Font size of text (default: vary by scale)"),
             Param(name='showcap', type=_bool,
                   default=False, valid=[False, True],
                   description="Show caps for this object"),
-            Param(name='rot_deg', type=float, default=0.0,
-                  min=-359.999, max=359.999, widget='spinfloat', incr=1.0,
-                  description="Rotation about center of object"),
             ]
     
-    def __init__(self, x, y, xradius, yradius, color='pink',
-                 linewidth=1, linestyle='solid', showcap=False,
-                 fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0,
-                 rot_deg=0.0, **kwdargs):
-        self.kind='triangle'
-        super(TriangleBase, self).__init__(color=color, alpha=alpha,
-                                           linewidth=linewidth, showcap=showcap,
-                                           linestyle=linestyle,
-                                           fill=fill, fillcolor=fillcolor,
-                                           fillalpha=fillalpha,
-                                           x=x, y=y, xradius=xradius,
-                                           yradius=yradius, rot_deg=rot_deg,
-                                           **kwdargs)
-
-    def get_center_pt(self):
-        return (self.x, self.y)
+    def __init__(self, x, y, radius, color='skyblue',
+                 linewidth=1, fontsize=None, font='Sans Serif',
+                 alpha=1.0, linestyle='solid', showcap=True, **kwdargs):
+        self.kind = 'compass'
+        CanvasObjectBase.__init__(self, color=color, alpha=alpha,
+                                  linewidth=linewidth, showcap=showcap,
+                                  linestyle=linestyle,
+                                  x=x, y=y, radius=radius,
+                                  font=font, fontsize=fontsize,
+                                  **kwdargs)
+        OnePointOneRadiusMixin.__init__(self)
 
     def get_points(self):
-        return [(self.x - 2*self.xradius, self.y - self.yradius),
-                (self.x + 2*self.xradius, self.y - self.yradius),
-                (self.x, self.y + self.yradius)]
+        image = self.viewer.get_image()
+        x, y, xn, yn, xe, ye = image.calc_compass_radius(self.x,
+                                                         self.y,
+                                                         self.radius)
+        return [(x, y), (xn, yn), (xe, ye)]
     
-    def contains(self, x, y):
-        ctr_x, ctr_y = self.get_center_pt()
-        # rotate point back to cartesian alignment for test
-        x, y = self.rotate_pt(x, y, -self.rot_deg,
-                              xoff=ctr_x, yoff=ctr_y)
-
-        (x1, y1), (x2, y2), (x3, y3) = self.get_points()
-
-        # barycentric coordinate test
-        denominator = ((y2 - y3)*(x1 - x3) + (x3 - x2)*(y1 - y3))
-        a = ((y2 - y3)*(x - x3) + (x3 - x2)*(y - y3)) / denominator
-        b = ((y3 - y1)*(x - x3) + (x1 - x3)*(y - y3)) / denominator
-        c = 1.0 - a - b
-        
-        tf = (0.0 <= a <= 1.0 and 0.0 <= b <= 1.0 and 0.0 <= c <= 1.0)
-        return tf
+    def get_edit_points(self):
+        return self.get_points()
 
     def set_edit_point(self, i, pt):
         if i == 0:
             self.set_point_by_index(i, pt)
-        elif i == 1:
+        elif i in (1, 2):
             x, y = pt
-            self.xradius = abs(x - self.x)
-        elif i == 2:
-            x, y = pt
-            self.yradius = abs(y - self.y)
-        elif i == 3:
-            x, y = pt
-            self.xradius, self.yradius = abs(x - self.x), abs(y - self.y)
+            self.radius = max(abs(x - self.x), abs(y - self.y))
         else:
             raise ValueError("No point corresponding to index %d" % (i))
 
-    def get_edit_points(self):
-        return [(self.x, self.y),    # location
-                (self.x + self.xradius, self.y),  # adj xradius
-                (self.x, self.y + self.yradius),  # adj yradius
-                (self.x + self.xradius, self.y + self.yradius)]   # adj both
-
-
-class RulerBase(CanvasObjectBase):
+    def select_contains(self, data_x, data_y):
+        xd, yd = self.crdmap.to_data(self.x, self.y)
+        return self.within_radius(data_x, data_y, xd, yd, self.cap_radius)
+        
+        
+class RulerBase(TwoPointMixin, CanvasObjectBase):
     """Draws a WCS ruler (like a right triangle) on a ImageViewCanvas.
     Parameters are:
     x1, y1: 0-based coordinates of one end of the diagonal in the data space
@@ -1400,6 +1439,9 @@ class RulerBase(CanvasObjectBase):
     @classmethod
     def get_params_metadata(cls):
         return [
+            Param(name='coord', type=str, default='data',
+                  valid=['data', 'wcs'],
+                  description="Set type of coordinates"),
             Param(name='x1', type=float, default=0.0, argpos=0,
                   description="First X coordinate of object"),
             Param(name='y1', type=float, default=0.0, argpos=1,
@@ -1444,14 +1486,15 @@ class RulerBase(CanvasObjectBase):
                  showcap=True, showplumb=True, units='arcmin',
                  font='Sans Serif', fontsize=None, **kwdargs):
         self.kind = 'ruler'
-        super(RulerBase, self).__init__(color=color, color2=color2,
-                                        alpha=alpha, units=units,
-                                        showplumb=showplumb,
-                                        linewidth=linewidth, showcap=showcap,
-                                        linestyle=linestyle,
-                                        x1=x1, y1=y1, x2=x2, y2=y2,
-                                        font=font, fontsize=fontsize,
-                                        **kwdargs)
+        CanvasObjectBase.__init__(self, color=color, color2=color2,
+                                  alpha=alpha, units=units,
+                                  showplumb=showplumb,
+                                  linewidth=linewidth, showcap=showcap,
+                                  linestyle=linestyle,
+                                  x1=x1, y1=y1, x2=x2, y2=y2,
+                                  font=font, fontsize=fontsize,
+                                  **kwdargs)
+        TwoPointMixin.__init__(self)
 
     def get_ruler_distances(self):
         mode = self.units.lower()
@@ -1492,22 +1535,10 @@ class RulerBase(CanvasObjectBase):
     def get_points(self):
         return [(self.x1, self.y1), (self.x2, self.y2)]
 
-    def get_center_pt(self):
-        return ((self.x1 + self.x2) / 2., (self.y1 + self.y2) / 2.)
-    
-    def get_edit_points(self):
-        return [self.get_center_pt(),
-                (self.x1, self.y1), (self.x2, self.y2)]
-
-    def set_edit_point(self, i, pt):
-        if i == 0:
-            x, y = pt
-            self.move_to(x, y)
-        else:
-            self.set_point_by_index(i-1, pt)
-
-    def select_contains(self, x, y):
-        return self.within_line(x, y, self.x1, self.y1, self.x2, self.y2,
+    def select_contains(self, data_x, data_y):
+        x1, y1 = self.crdmap.to_data(self.x1, self.y1)
+        x2, y2 = self.crdmap.to_data(self.x2, self.y2)
+        return self.within_line(data_x, data_y, x1, y1, x2, y2,
                                 self.cap_radius)
 
 
@@ -1521,6 +1552,9 @@ class ImageBase(CanvasObjectBase):
     @classmethod
     def get_params_metadata(cls):
         return [
+            Param(name='coord', type=str, default='data',
+                  valid=['data'],
+                  description="Set type of coordinates"),
             Param(name='x', type=float, default=0.0, argpos=0,
                   description="X coordinate of corner of object"),
             Param(name='y', type=float, default=0.0, argpos=1,
@@ -1698,7 +1732,7 @@ class ImageBase(CanvasObjectBase):
         x1, y1, x2, y2 = self.get_coords()
         return [(x1, y1), (x2, y1), (x2, y2), (x1, y2)]
     
-    def contains(self, x, y):
+    def contains(self, data_x, data_y):
         width, height = self.get_scaled_wdht()
         x2, y2 = self.x + width, self.y + height
         if ((self.x <= x < x2) and (self.y <= y < y2)):
@@ -1761,6 +1795,9 @@ class NormImageBase(ImageBase):
     @classmethod
     def get_params_metadata(cls):
         return [
+            Param(name='coord', type=str, default='data',
+                  valid=['data'],
+                  description="Set type of coordinates"),
             Param(name='x', type=float, default=0.0, argpos=0,
                   description="X coordinate of corner of object"),
             Param(name='y', type=float, default=0.0, argpos=1,

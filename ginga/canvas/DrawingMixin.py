@@ -51,6 +51,7 @@ class DrawingMixin(object):
         # time delta threshold for deciding whether to update the image
         self._deltaTime = 0.020
         self._draw_obj = None
+        self._draw_cdmap = None
 
         # NOTE: must be mixed in with a Callback.Callbacks
         for name in ('draw-event', 'draw-down', 'draw-move', 'draw-up',
@@ -89,26 +90,27 @@ class DrawingMixin(object):
 
         klass = self.drawDict[self.t_drawtype]
         obj = None
+        x, y = self._draw_cdmap.data_to(data_x, data_y)
         
         if self.t_drawtype == 'point':
-            radius = max(abs(self._start_x - data_x),
-                         abs(self._start_y - data_y))
+            radius = max(abs(self._start_x - x),
+                         abs(self._start_y - y))
             obj = klass(self._start_x, self._start_y, radius,
                         **self.t_drawparams)
 
         elif self.t_drawtype == 'compass':
-            radius = max(abs(self._start_x - data_x),
-                         abs(self._start_y - data_y))
+            radius = max(abs(self._start_x - x),
+                         abs(self._start_y - y))
             obj = klass(self._start_x, self._start_y,
                         radius, **self.t_drawparams)
 
         elif self.t_drawtype == 'rectangle':
             obj = klass(self._start_x, self._start_y,
-                        data_x, data_y, **self.t_drawparams)
+                        x, y, **self.t_drawparams)
                 
         elif self.t_drawtype == 'square':
-                len_x = self._start_x - data_x
-                len_y = self._start_y - data_y
+                len_x = self._start_x - x
+                len_y = self._start_y - y
                 length = max(abs(len_x), abs(len_y))
                 len_x = cmp(len_x, 0) * length
                 len_y = cmp(len_y, 0) * length
@@ -117,47 +119,47 @@ class DrawingMixin(object):
                             **self.t_drawparams)
 
         elif self.t_drawtype == 'equilateraltriangle':
-                len_x = self._start_x - data_x
-                len_y = self._start_y - data_y
+                len_x = self._start_x - x
+                len_y = self._start_y - y
                 length = max(abs(len_x), abs(len_y))
                 obj = klass(self._start_x, self._start_y,
                             length, length, **self.t_drawparams)
             
         elif self.t_drawtype in ('box', 'ellipse', 'triangle'):
-            xradius = abs(self._start_x - data_x)
-            yradius = abs(self._start_y - data_y)
+            xradius = abs(self._start_x - x)
+            yradius = abs(self._start_y - y)
             obj = klass(self._start_x, self._start_y, xradius, yradius,
                         **self.t_drawparams)
 
         elif self.t_drawtype == 'circle':
-            radius = math.sqrt(abs(self._start_x - data_x)**2 + 
-                               abs(self._start_y - data_y)**2 )
+            radius = math.sqrt(abs(self._start_x - x)**2 + 
+                               abs(self._start_y - y)**2 )
             obj = klass(self._start_x, self._start_y, radius,
                         **self.t_drawparams)
 
         elif self.t_drawtype == 'line':
-            obj = klass(self._start_x, self._start_y, data_x, data_y,
+            obj = klass(self._start_x, self._start_y, x, y,
                         **self.t_drawparams)
 
         elif self.t_drawtype == 'righttriangle':
-            obj = klass(self._start_x, self._start_y, data_x, data_y,
+            obj = klass(self._start_x, self._start_y, x, y,
                         **self.t_drawparams)
 
         elif self.t_drawtype == 'polygon':
             points = list(self._points)
-            points.append((data_x, data_y))
+            points.append((x, y))
             obj = klass(points, **self.t_drawparams)
 
         elif self.t_drawtype == 'path':
             points = list(self._points)
-            points.append((data_x, data_y))
+            points.append((x, y))
             obj = klass(points, **self.t_drawparams)
 
         elif self.t_drawtype == 'text':
             obj = klass(self._start_x, self._start_y, **self.t_drawparams)
 
         elif self.t_drawtype == 'ruler':
-            obj = klass(self._start_x, self._start_y, data_x, data_y,
+            obj = klass(self._start_x, self._start_y, x, y,
                         **self.t_drawparams)
 
         if obj is not None:
@@ -174,9 +176,14 @@ class DrawingMixin(object):
             return False
 
         self._draw_obj = None
-        self._points = [(data_x, data_y)]
-        self._start_x, self._start_y = data_x, data_y
-        self._draw_update(data_x, data_y)
+        # get the drawing coordinate type (default 'data')
+        cdtype = self.t_drawparams.get('coord', 'data')
+        self._draw_cdmap = self.viewer.get_coordmap(cdtype)
+        # record the start point
+        x, y = self._draw_cdmap.data_to(data_x, data_y)
+        self._points = [(x, y)]
+        self._start_x, self._start_y = x, y
+        self._draw_update(x, y)
 
         self.processDrawing()
         return True
@@ -207,7 +214,8 @@ class DrawingMixin(object):
 
     def draw_poly_add(self, canvas, action, data_x, data_y):
         if self.candraw and (self.t_drawtype in ('polygon', 'path')):
-            self._points.append((data_x, data_y))
+            x, y = self._draw_cdmap.data_to(data_x, data_y)
+            self._points.append((x, y))
         return True
 
     def draw_poly_delete(self, canvas, action, data_x, data_y):
@@ -266,11 +274,20 @@ class DrawingMixin(object):
         if (not self.canedit) or (self._cp_index is None):
             return False
 
+        x, y = self._edit_obj.crdmap.data_to(data_x, data_y)
+
+        # special hack for objects that have rot_deg attribute
+        if hasattr(self._edit_obj, 'rot_deg'):
+            rot_deg = - self._edit_obj.rot_deg
+            xoff, yoff = self._edit_obj.get_center_pt()
+            x, y = self._edit_obj.crdmap.rotate_pt(x, y, rot_deg,
+                                                   xoff=xoff, yoff=yoff)
+
         if self._cp_index < 0:
-            self._edit_obj.move_to(data_x - self._start_x,
-                                   data_y - self._start_y)
+            self._edit_obj.move_to(x - self._start_x,
+                                   y - self._start_y)
         else:
-            self._edit_obj.set_edit_point(self._cp_index, (data_x, data_y))
+            self._edit_obj.set_edit_point(self._cp_index, (x, y))
 
         if time.time() - self._processTime > self._deltaTime:
             self.processDrawing()
@@ -284,7 +301,8 @@ class DrawingMixin(object):
         self.edit_select(obj)
         self._cp_index = -1
         ref_x, ref_y = self._edit_obj.get_reference_pt()
-        self._start_x, self._start_y = data_x - ref_x, data_y - ref_y
+        x, y = obj.crdmap.data_to(data_x, data_y)
+        self._start_x, self._start_y = x - ref_x, y - ref_y
         
     def edit_start(self, canvas, action, data_x, data_y):
         if not self.canedit:
@@ -295,10 +313,10 @@ class DrawingMixin(object):
         self._cp_index = None
             
         # check for objects at this location
-        #print("getting items")
+        print("getting items")
         objs = canvas.select_items_at(data_x, data_y,
                                       test=self._is_editable)
-        #print("items: %s" % (str(objs)))
+        print("items: %s" % (str(objs)))
         if self._edit_obj is None:
             #print("no editing: select/deselect")
             # <-- no current object being edited
@@ -315,12 +333,16 @@ class DrawingMixin(object):
 
         elif self._edit_obj.is_editing():
             self._edit_status = True
-            #print("editing: checking for cp")
-            edit_pts = self._edit_obj.get_edit_points()
+            print("editing: checking for cp")
+            #edit_pts = self._edit_obj.get_edit_points()
+            edit_pts = map(lambda pt: self._edit_obj.crdmap.to_data(*pt),
+                           self._edit_obj.get_edit_points())
+            #print((self._edit_obj, dir(self._edit_obj)))
+            print(edit_pts)
             i = self._edit_obj.get_pt(edit_pts, data_x, data_y,
                                       self._edit_obj.cap_radius)
             if i is not None:
-                #print("editing cp #%d" % (i))
+                print("editing cp #%d" % (i))
                 # editing a control point from an existing object
                 self._cp_index = i
                 self._edit_update(data_x, data_y)
@@ -332,7 +354,7 @@ class DrawingMixin(object):
 
             else:
                 # <-- user clicked outside the object
-                #print("deselecting an object")
+                print("deselecting an object")
                 if self._edit_obj in objs:
                     objs.remove(self._edit_obj)
                 self._edit_obj.set_edit(False)
@@ -392,12 +414,7 @@ class DrawingMixin(object):
     def edit_rotate(self, delta_deg):
         if (not self.canedit) or (self._edit_obj is None):
             return False
-        if hasattr(self._edit_obj, 'rot_deg'):
-            cur_rot = self._edit_obj.rot_deg
-            new_rot = cur_rot + delta_deg
-            self._edit_obj.rot_deg = new_rot
-        else:
-            self._edit_obj.rotate_by(delta_deg)
+        self._edit_obj.rotate_by(delta_deg)
         self.processDrawing()
         self.make_callback('edit-event', self._edit_obj)
         return True
