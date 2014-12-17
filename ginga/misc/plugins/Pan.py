@@ -164,6 +164,9 @@ class Pan(GingaPlugin.GlobalPlugin):
         self.info.panimage.clear()
 
     def set_image(self, chinfo, paninfo, image):
+        if image is None:
+            return
+
         paninfo.panimage.set_image(image)
 
         # remove old compass
@@ -175,10 +178,14 @@ class Pan(GingaPlugin.GlobalPlugin):
 
         # create compass
         try:
-            (x, y, xn, yn, xe, ye) = image.calc_compass_center()
-            self.logger.debug("x=%d y=%d xn=%d yn=%d xe=%d ye=%d" % (
-                x, y, xn, yn, xe, ye))
-            radius = abs(xe - x)
+            width, height = image.get_size()
+            x, y = width / 2.0, height / 2.0
+            # radius we want the arms to be (approx 1/4 the largest dimension)
+            radius = float(max(width, height)) / 4.0
+
+            # HACK: force a wcs error here if one is going to happen
+            image.add_offset_xy(x, y, 1.0, 1.0)
+            
             paninfo.pancompass = paninfo.panimage.add(CanvasTypes.Compass(
                 x, y, radius, color='skyblue',
                 fontsize=14), redraw=True)
