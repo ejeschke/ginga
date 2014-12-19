@@ -9,6 +9,7 @@
 #
 # stdlib imports
 import sys, os
+import time
 import traceback
 
 # GUI imports
@@ -521,7 +522,9 @@ class GingaView(GtkMain.GtkMain):
                     ('Workspace type', 'combobox'),
                     ('In workspace', 'combobox'),
                     ('Channel prefix', 'entry'),
-                    ('Number of channels', 'spinbutton'))
+                    ('Number of channels', 'spinbutton'),
+                    ('Share settings', 'entry'),
+                    )
         w, b = GtkHelp.build_info(captions)
 
         self.wscount += 1
@@ -576,16 +579,26 @@ class GingaView(GtkMain.GtkMain):
 
         chpfx = b.channel_prefix.get_text()
         num = int(b.number_of_channels.get_value())
+        share_list = b.share_settings.get_text().split()
 
         w.destroy()
         if num <= 0:
             return
 
+        # Create a settings template to copy settings from
+        settings_template = self.prefs.getSettings('channel_Image')
+        name = "channel_template_%f" % (time.time())
+        settings = self.prefs.createCategory(name)
+        settings_template.copySettings(settings)
+
         chbase = self.chncnt
         self.chncnt += num
         for i in range(num):
             chname = "%s%d" % (chpfx, chbase+i)
-            self.add_channel(chname, workspace=wsname)
+            self.add_channel(chname, workspace=wsname,
+                             settings_template=settings_template,
+                             settings_share=settings,
+                             share_keylist=share_list)
         
         return True
         

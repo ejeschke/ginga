@@ -10,8 +10,8 @@
 # stdlib imports
 import sys, os
 import traceback
-# TEMP:
 import platform
+import time
         
 # GUI imports
 from ginga.qtw.QtHelp import QtGui, QtCore, QFont, \
@@ -558,7 +558,9 @@ class GingaView(QtMain.QtMain):
                     ('Workspace type', 'combobox'),
                     ('In workspace', 'combobox'),
                     ('Channel prefix', 'entry'),
-                    ('Number of channels', 'spinbutton'))
+                    ('Number of channels', 'spinbutton'),
+                    ('Share settings', 'entry'),
+                    )
         w, b = QtHelp.build_info(captions)
 
         self.wscount += 1
@@ -617,12 +619,21 @@ class GingaView(QtMain.QtMain):
         if num <= 0:
             return
 
+        # Create a settings template to copy settings from
+        settings_template = self.prefs.getSettings('channel_Image')
+        name = "channel_template_%f" % (time.time())
+        settings = self.prefs.createCategory(name)
+        settings_template.copySettings(settings)
+        share_list = b.share_settings.text().split()
+
         chbase = self.chncnt
         self.chncnt += num
         for i in range(num):
             chname = "%s%d" % (chpfx, chbase+i)
-            self.add_channel(chname, workspace=wsname)
-        
+            self.add_channel(chname, workspace=wsname,
+                             settings_template=settings_template,
+                             settings_share=settings,
+                             share_keylist=share_list)
         return True
         
     def gui_load_file(self, initialdir=None):

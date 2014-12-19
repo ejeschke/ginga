@@ -917,7 +917,9 @@ class GingaControl(Callback.Callbacks):
 
         
     def add_channel(self, chname, datasrc=None, workspace=None,
-                    num_images=None):
+                    num_images=None, settings=None,
+                    settings_template=None,
+                    settings_share=None, share_keylist=None):
         """Create a new Ginga channel.
 
         Parameters
@@ -934,34 +936,46 @@ class GingaControl(Callback.Callbacks):
             return self.get_channelInfo(chname)
         
         name = chname
-        prefs = self.prefs.createCategory('channel_'+name)
-        try:
-            prefs.load(onError='raise')
-
-        except Exception as e:
-            self.logger.warn("no saved preferences found for channel '%s': %s" % (
-                name, str(e)))
-            # copy "Image" prefs to new channel
+        if settings is None:
+            settings = self.prefs.createCategory('channel_'+name)
             try:
-                oprefs = self.prefs.getSettings('channel_Image')
-                self.logger.debug("Copying settings from 'Image' to '%s'" % (
-                    name))
-                oprefs.copySettings(prefs)
-            except KeyError:
-                pass
-            
+                settings.load(onError='raise')
+
+            except Exception as e:
+                self.logger.warn("no saved preferences found for channel '%s': %s" % (
+                    name, str(e)))
+
+                # copy template settings to new channel
+                if settings_template is not None:
+                    osettings = settings_template
+                    osettings.copySettings(settings)
+                else:
+                    try:
+                        # use channel_Image as a template if one was not
+                        # provided
+                        osettings = self.prefs.getSettings('channel_Image')
+                        self.logger.debug("Copying settings from 'Image' to '%s'" % (
+                            name))
+                        osettings.copySettings(settings)
+                    except KeyError:
+                        pass
+
+        if (share_keylist is not None) and (settings_share is not None):
+            # caller wants us to share settings with another viewer
+            settings_share.shareSettings(settings, keylist=share_keylist)
+
+        # Make sure these preferences are at least defined
+        settings.setDefaults(switchnew=True, numImages=num_images,
+                             raisenew=True, genthumb=True)
+
         num_images = self.settings.get('numImages', 1)
         use_readout = not self.settings.get('shareReadout', True)
         
-        # Make sure these preferences are at least defined
-        prefs.setDefaults(switchnew=True, numImages=num_images,
-                          raisenew=True, genthumb=True)
-
         chinfo = self.add_channel_internal(name,
-                                           num_images=prefs['numImages'])
+                                           num_images=settings['numImages'])
 
         with self.lock:
-            bnch = self.add_viewer(chname, prefs,
+            bnch = self.add_viewer(chname, settings,
                                    use_readout=use_readout,
                                    workspace=workspace)
             # for debugging
@@ -976,7 +990,7 @@ class GingaControl(Callback.Callbacks):
                            container=bnch.container,
                            workspace=bnch.workspace,
                            fitsimage=bnch.fitsimage,
-                           prefs=prefs,
+                           prefs=settings,
                            opmon=opmon)
             
             # Update the channels control
