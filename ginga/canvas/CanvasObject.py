@@ -1642,6 +1642,8 @@ class ImageBase(CanvasObjectBase):
 
             # calculate our offset from the pan position
             pan_x, pan_y = self.viewer.get_pan()
+            pan_off = self.viewer.data_off
+            pan_x, pan_y = pan_x + pan_off, pan_y + pan_off
             #print "pan x,y=%f,%f" % (pan_x, pan_y)
             off_x, off_y = dst_x - pan_x, dst_y - pan_y
             # scale offset
@@ -1840,6 +1842,8 @@ class NormImageBase(ImageBase):
 
             # calculate our offset from the pan position
             pan_x, pan_y = self.viewer.get_pan()
+            pan_off = self.viewer.data_off
+            pan_x, pan_y = pan_x + pan_off, pan_y + pan_off
             #print "pan x,y=%f,%f" % (pan_x, pan_y)
             off_x, off_y = dst_x - pan_x, dst_y - pan_y
             # scale offset

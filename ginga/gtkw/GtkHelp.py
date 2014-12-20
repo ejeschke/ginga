@@ -531,7 +531,7 @@ class ToolBar(gtk.Toolbar):
     def __init__(self):
         super(ToolBar, self).__init__()
 
-    def add_menu(self, name):
+    def add_name(self, name):
         btn = gtk.Button(name)
         menu = gtk.Menu()
         btn.connect('button-press-event', self._mk_click_cb(menu))
@@ -750,7 +750,7 @@ class Desktop(Callback.Callbacks):
         vbox.pack_start(menubar, fill=True, expand=False)
 
         # create a Window pulldown menu, and add it to the menu bar
-        winmenu = menubar.add_menu("Window")
+        winmenu = menubar.add_name("Window")
 
         ## w = gtk.MenuItem("Take Tab")
         ## winmenu.append(w)

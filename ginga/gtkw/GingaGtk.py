@@ -530,6 +530,7 @@ class GingaView(GtkMain.GtkMain):
         self.wscount += 1
         wsname = "ws%d" % (self.wscount)
         b.workspace_name.set_text(wsname)
+        b.share_settings.set_width_chars(60)
 
         cbox = b.workspace_type
         cbox.append_text("Tabs")

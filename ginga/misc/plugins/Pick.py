@@ -227,6 +227,7 @@ class Pick(GingaPlugin.LocalPlugin):
                      'Star Size:', 'label', 'Star Size', 'llabel'),
                     ('Sample Area:', 'label', 'Sample Area', 'llabel',
                      'Default Region', 'button'),
+                    ('Pan to pick', 'button'),
                     )
 
         w, b = Widgets.build_info(captions, orientation=orientation)
@@ -236,6 +237,9 @@ class Pick(GingaPlugin.LocalPlugin):
         b.default_region.add_callback('activated',
                                       lambda w: self.reset_region())
         b.default_region.set_tooltip("Reset region size to default")
+        b.pan_to_pick.add_callback('activated',
+                                   lambda w: self.pan_to_pick_cb())
+        b.pan_to_pick.set_tooltip("Pan image to pick center")
 
         vbox1 = Widgets.VBox()
         vbox1.add_widget(w, stretch=0)
@@ -1267,6 +1271,15 @@ class Pick(GingaPlugin.LocalPlugin):
 
         self.redo()
 
+    def pan_to_pick_cb(self):
+        if not self.pick_qs:
+            self.fv.showStatus("Please pick an object to set the sky level!")
+            return
+        pan_x, pan_y = self.pick_qs.objx, self.pick_qs.objy
+
+        # TODO: convert to WCS coords based on user preference
+        self.fitsimage.set_pan(pan_x, pan_y, coord='data')
+        return True
 
     def sky_cut(self):
         if not self.pick_qs:

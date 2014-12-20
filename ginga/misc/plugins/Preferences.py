@@ -13,7 +13,7 @@ from ginga.misc import Widgets, ParamSet, Bunch
 from ginga import cmap, imap
 from ginga import GingaPlugin
 from ginga import AutoCuts, ColorDist
-from ginga.util import wcsmod
+from ginga.util import wcs, wcsmod
 
 from ginga.misc import Bunch
 
@@ -37,7 +37,8 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.autocut_options = self.fitsimage.get_autocuts_options()
         self.autocut_methods = self.fitsimage.get_autocut_methods()
         self.autocenter_options = self.fitsimage.get_autocenter_options()
-
+        self.pancoord_options = ('data', 'wcs')
+        
         self.t_ = self.fitsimage.get_settings()
         self.t_.getSetting('autocuts').add_callback('set',
                                                self.autocuts_changed_ext_cb)
@@ -339,21 +340,37 @@ class Preferences(GingaPlugin.LocalPlugin):
         # PAN OPTIONS
         fr = Widgets.Frame("Panning")
 
-        captions = (('Pan X:', 'label', 'Pan X', 'entry'),
-                    ('Pan Y:', 'label', 'Pan Y', 'entry'),
-                    ('Center Image', 'button'),
-                    ('Mark Center', 'checkbutton'))
+        captions = (('Pan X:', 'label', 'Pan X', 'entry',
+                     'WCS sexagesimal', 'checkbutton'),
+                    ('Pan Y:', 'label', 'Pan Y', 'entry',
+                     'Apply Pan', 'button'),
+                    ('Pan Coord:', 'label', 'Pan Coord', 'combobox'),
+                    ('Center Image', 'button', 'Mark Center', 'checkbutton'),
+                    )
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
 
         pan_x, pan_y = self.fitsimage.get_pan()
-        b.pan_x.set_tooltip("Set the pan position in X axis")
-        b.pan_x.set_text(str(pan_x+0.5))
-        b.pan_x.add_callback('activated', self.set_pan_cb)
-        b.pan_y.set_tooltip("Set the pan position in Y axis")
-        b.pan_y.set_text(str(pan_y+0.5))
-        b.pan_y.add_callback('activated', self.set_pan_cb)
+        b.pan_x.set_tooltip("Coordinate for the pan position in X axis")
+        b.pan_x.set_text(str(pan_x))
+        #b.pan_x.add_callback('activated', self.set_pan_cb)
+        b.pan_y.set_tooltip("Coordinate for the pan position in Y axis")
+        b.pan_y.set_text(str(pan_y))
+        #b.pan_y.add_callback('activated', self.set_pan_cb)
+        b.apply_pan.add_callback('activated', self.set_pan_cb)
+        b.apply_pan.set_tooltip("Set the pan position")
+        b.wcs_sexagesimal.set_tooltip("Display pan position in sexagesimal")
 
+        index = 0
+        for name in self.pancoord_options:
+            b.pan_coord.append_text(name)
+            index += 1
+        pan_coord = self.t_.get('pan_coord', "data")            
+        index = self.pancoord_options.index(pan_coord)
+        b.pan_coord.set_index(index)
+        b.pan_coord.set_tooltip("Pan coordinates type")
+        b.pan_coord.add_callback('activated', self.set_pan_coord_cb)
+            
         b.center_image.set_tooltip("Set the pan position to center of the image")
         b.center_image.add_callback('activated', self.center_image_cb)
         b.mark_center.set_tooltip("Mark the center (pan locator)")
@@ -584,14 +601,6 @@ class Preferences(GingaPlugin.LocalPlugin):
         else:
             self.t_.set(scale_x_base=1.0, scale_y_base=value)
         
-    def pan_changed_ext_cb(self, setting, value):
-        if not self.gui_up:
-            return
-        pan_x, pan_y = value
-        fits_x, fits_y = pan_x + 0.5, pan_y + 0.5
-        self.w.pan_x.set_text(str(fits_x))
-        self.w.pan_y.set_text(str(fits_y))
-
     def set_autocenter_cb(self, w, idx):
         option = self.autocenter_options[idx]
         self.fitsimage.set_autocenter(option)
@@ -733,10 +742,48 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.fitsimage.center_image()
         return True
 
+    def pan_changed_ext_cb(self, setting, value):
+        if not self.gui_up:
+            return
+        self._update_pan_coords()
+
     def set_pan_cb(self, *args):
-        pan_x = float(self.w.pan_x.get_text()) - 0.5
-        pan_y = float(self.w.pan_y.get_text()) - 0.5
-        self.fitsimage.set_pan(pan_x, pan_y)
+        idx = self.w.pan_coord.get_index()
+        pan_coord = self.pancoord_options[idx]
+        pan_xs = self.w.pan_x.get_text().strip()
+        pan_ys = self.w.pan_y.get_text().strip()
+        # TODO: use current value for other coord if only one coord supplied
+        if (':' in pan_xs) or (':' in pan_ys):
+            pan_x = wcs.hmsStrToDeg(pan_xs)
+            pan_y = wcs.dmsStrToDeg(pan_ys)
+            pan_coord = 'wcs'
+        else:
+            pan_x = float(pan_xs)
+            pan_y = float(pan_ys)
+            
+        self.fitsimage.set_pan(pan_x, pan_y, coord=pan_coord)
+        return True
+
+    def _update_pan_coords(self):
+        pan_coord = self.t_.get('pan_coord', 'data')
+        pan_x, pan_y = self.fitsimage.get_pan(coord=pan_coord)
+        #print("updating pan coords (%s) %f %f" % (pan_coord, pan_x, pan_y))
+        if pan_coord == 'wcs':
+            use_sex = self.w.wcs_sexagesimal.get_state()
+            if use_sex:
+                pan_x = wcs.raDegToString(pan_x)
+                pan_y = wcs.decDegToString(pan_y)
+        self.w.pan_x.set_text(str(pan_x))
+        self.w.pan_y.set_text(str(pan_y))
+
+        index = self.pancoord_options.index(pan_coord)
+        self.w.pan_coord.set_index(index)
+
+    def set_pan_coord_cb(self, w, idx):
+        pan_coord = self.pancoord_options[idx]
+        pan_x, pan_y = self.fitsimage.get_pan(coord=pan_coord)
+        self.t_.set(pan=(pan_x, pan_y), pan_coord=pan_coord)
+        #self._update_pan_coords()
         return True
 
     def restore_cb(self, *args):
@@ -825,10 +872,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.w.scale_max.set_value(scale_max)
 
         # panning settings
-        pan_x, pan_y = self.fitsimage.get_pan()
-        self.w.pan_x.set_text(str(pan_x+0.5))
-        self.w.pan_y.set_text(str(pan_y+0.5))
-
+        self._update_pan_coords()
         self.w.mark_center.set_state(prefs.get('show_pan_position', False))
 
         # transform settings

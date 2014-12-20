@@ -950,8 +950,7 @@ class ImageViewBindings(object):
             return True
 
         if action == 'down':
-            pan_x, pan_y = data_x + 0.5, data_y + 0.5
-            viewer.set_pan(pan_x, pan_y, redraw=False)
+            viewer.panset_xy(data_x, data_y, redraw=False)
             viewer.zoom_in()
             if msg:
                 viewer.onscreen_message(viewer.get_scale_text(),
@@ -965,8 +964,7 @@ class ImageViewBindings(object):
             return True
 
         if action == 'down':
-            pan_x, pan_y = data_x + 0.5, data_y + 0.5
-            viewer.set_pan(pan_x, pan_y, redraw=False)
+            viewer.panset_xy(data_x, data_y, redraw=False)
             viewer.zoom_out()
             if msg:
                 viewer.onscreen_message(viewer.get_scale_text(),
@@ -1248,7 +1246,7 @@ class ImageViewBindings(object):
         new_y = min(max(new_y, 0.0), ht)
         
         # Because pan position is reported +0.5
-        new_x, new_y = new_x - 0.5, new_y - 0.5
+        #new_x, new_y = new_x - 0.5, new_y - 0.5
         #print "data x,y=%f,%f   new x, y=%f,%f" % (pan_x, pan_y, new_x, new_y)
 
         viewer.panset_xy(new_x, new_y, redraw=True)

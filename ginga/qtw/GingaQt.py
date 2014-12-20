@@ -566,6 +566,7 @@ class GingaView(QtMain.QtMain):
         self.wscount += 1
         wsname = "ws%d" % (self.wscount)
         b.workspace_name.setText(wsname)
+        b.share_settings.setMaxLength(60)
 
         cbox = b.workspace_type
         cbox.append_text("Tabs")

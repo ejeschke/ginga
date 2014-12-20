@@ -413,7 +413,7 @@ class ToolBar(QtGui.QToolBar):
     def __init__(self, parent=None):
         super(ToolBar, self).__init__(parent=parent)
 
-    def add_menu(self, name):
+    def add_name(self, name):
         menu = QtGui.QMenu()
         # TODO: need to get this to behave a little more like a regular menu
         action = self.addAction(name, lambda *args: self._press_cb(menu))
@@ -626,7 +626,7 @@ class Desktop(Callback.Callbacks):
         layout.addWidget(menubar, stretch=0)
 
         # create a Workspace pulldown menu, and add it to the menu bar
-        winmenu = menubar.add_menu("Workspace")
+        winmenu = menubar.add_name("Workspace")
 
         item = menubar.make_action("Take Tab")
         item.triggered.connect(lambda *args: self.take_tab_cb(bnch.nb, args))
@@ -659,7 +659,7 @@ class Desktop(Callback.Callbacks):
         layout.addWidget(menubar, stretch=0)
 
         # create a Window pulldown menu, and add it to the menu bar
-        winmenu = menubar.add_menu("Window")
+        winmenu = menubar.add_name("Window")
 
         ## item = menubar.make_action("Take Tab")
         ## item.triggered.connect(self.gui_load_file)

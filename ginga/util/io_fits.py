@@ -128,7 +128,7 @@ class PyFitsFileHandler(BaseFitsFileHandler):
             fits_f.verify('fix')
         except Exception as e:
             raise FITSError("Error loading fits file '%s': %s" % (
-                fitspath, str(e)))
+                filepath, str(e)))
 
         if numhdu is None:
             found_valid_hdu = False

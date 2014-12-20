@@ -1,7 +1,7 @@
 # this file was automatically generated
 major = 2
 minor = 1
-release = 20141209230831
+release = 20141220052723
 
 version = '%d.%d.%d' % (major, minor, release)
 

@@ -111,8 +111,8 @@ class ImageViewBase(Callback.Callbacks):
             self.t_.getSetting(name).add_callback('set', self.scale_cb)
 
         # for pan
-        self.t_.addDefaults(pan=(1.0, 1.0))
-        for name in ['pan']:
+        self.t_.addDefaults(pan=(1.0, 1.0), pan_coord='data')
+        for name in ['pan', 'pan_coord']:
             self.t_.getSetting(name).add_callback('set', self.pan_cb)
 
         # for cut levels
@@ -191,6 +191,7 @@ class ImageViewBase(Callback.Callbacks):
         # pan position
         self._pan_x = 0.0
         self._pan_y = 0.0
+        self.data_off = 0.5
 
         # Origin in the data array of what is currently displayed (LL, UR)
         self._org_x1 = 0
@@ -735,6 +736,16 @@ class ImageViewBase(Callback.Callbacks):
     def _calc_bg_dimensions(self, scale_x, scale_y,
                             pan_x, pan_y, win_wd, win_ht):
 
+        coord = self.t_.get('pan_coord', 'data')
+        if coord == 'wcs':
+            # <-- pan_x, pan_y are in WCS
+            image = self.get_image()
+            if image is None:
+                # TODO:
+                pan_x, pan_y = 0.0, 0.0
+            else:
+                pan_x, pan_y = image.radectopix(pan_x, pan_y)
+                
         # Sanity check on the scale
         sx = float(win_wd) / scale_x
         sy = float(win_ht) / scale_y
@@ -747,17 +758,17 @@ class ImageViewBase(Callback.Callbacks):
 
         # It is necessary to store these so that the get_data_xy()
         # (below) calculations can proceed
-        self._org_x, self._org_y = pan_x, pan_y
+        self._org_x, self._org_y = pan_x - self.data_off, pan_y - self.data_off
         self._org_scale_x, self._org_scale_y = scale_x, scale_y
 
         # calc minimum size of pixel image we will generate
         # necessary to fit the window in the desired size
 
         # get the data points in the four corners
-        xul, yul = self.get_data_xy(0, 0)
-        xur, yur = self.get_data_xy(win_wd, 0)
-        xlr, ylr = self.get_data_xy(win_wd, win_ht)
-        xll, yll = self.get_data_xy(0, win_ht)
+        xul, yul = self.get_data_xy(0, 0, center=True)
+        xur, yur = self.get_data_xy(win_wd, 0, center=True)
+        xlr, ylr = self.get_data_xy(win_wd, win_ht, center=True)
+        xll, yll = self.get_data_xy(0, win_ht, center=True)
 
         # determine bounding box
         a1 = min(xul, xur, xlr, xll)
@@ -857,9 +868,9 @@ class ImageViewBase(Callback.Callbacks):
         x, y coordinates reported on the window (win_x, win_y).
 
         If center==True, then the coordinates are mapped such that the
-        integer pixel begins in the center of the square when the image
-        is zoomed in past 1X.  This is the specification of the FITS image
-        standard, that the pixel is centered on the integer row/column.
+        pixel is centered on the square when the image is zoomed in past
+        1X.  This is the specification of the FITS image standard,
+        that the pixel is centered on the integer row/column.
         """
         self.logger.debug("before adjustment, win_x=%d win_y=%d" % (win_x, win_y))
 
@@ -874,8 +885,8 @@ class ImageViewBase(Callback.Callbacks):
         data_x = self._org_x + off_x
         data_y = self._org_y + off_y
         if center:
-            data_x -= 0.5
-            data_y -= 0.5
+            data_x += self.data_off
+            data_y += self.data_off
 
         self.logger.debug("data_x=%d data_y=%d" % (data_x, data_y))
         return (data_x, data_y)
@@ -891,8 +902,8 @@ class ImageViewBase(Callback.Callbacks):
         standard, that the pixel is centered on the integer row/column.
         """
         if center:
-            data_x += 0.5
-            data_y += 0.5
+            data_x -= self.data_off
+            data_y -= self.data_off
         # subtract data indexes at center reference pixel
         off_x = data_x - self._org_x
         off_y = data_y - self._org_y
@@ -1271,7 +1282,10 @@ class ImageViewBase(Callback.Callbacks):
     def get_autozoom_options(self):
         return self.autozoom_options
     
-    def set_pan(self, pan_x, pan_y, no_reset=False, redraw=True):
+    def set_pan(self, pan_x, pan_y, coord='data', no_reset=False,
+                redraw=True):
+        #self.t_.set(pan=(pan_x, pan_y), pan_coord=coord)
+        self.t_.set(pan_coord=coord)
         self.t_.set(pan=(pan_x, pan_y))
 
         if (not no_reset) and (self.t_['autocenter'] == 'override'):
@@ -1284,14 +1298,25 @@ class ImageViewBase(Callback.Callbacks):
         self.logger.debug("pan set to %.2f,%.2f" % (pan_x, pan_y))
         self.redraw(whence=0)
 
-    def get_pan(self):
-        return (self._pan_x, self._pan_y)
+    def get_pan(self, coord='data'):
+        #pan_x, pan_y = self._pan_x, self._pan_y
+        pan_x, pan_y = self._org_x + self.data_off, self._org_y + self.data_off
+        if coord == 'data':
+            return (pan_x, pan_y)
+        image = self.get_image()
+        return image.pixtoradec(pan_x, pan_y)
     
     def panset_xy(self, data_x, data_y, no_reset=False, redraw=True):
+        pan_coord = self.t_['pan_coord']
         # To center on the pixel
-        pan_x, pan_y = data_x + 0.5, data_y + 0.5
-        
-        self.set_pan(pan_x, pan_y, no_reset=no_reset, redraw=redraw)
+        if pan_coord == 'wcs':
+            image = self.get_image()
+            pan_x, pan_y = image.pixtoradec(data_x, data_y)
+        else:
+            pan_x, pan_y = data_x, data_y
+            
+        self.set_pan(pan_x, pan_y, coord=pan_coord,
+                     no_reset=no_reset, redraw=redraw)
 
     def panset_pct(self, pct_x, pct_y, redraw=True):
         try:
