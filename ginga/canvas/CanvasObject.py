@@ -1531,8 +1531,14 @@ class ImageBase(CanvasObjectBase):
                   description="Scaling factor for X dimension of object"),
             Param(name='scale_y', type=float, default=1.0,
                   description="Scaling factor for Y dimension of object"),
+            Param(name='linewidth', type=int, default=0,
+                  min=0, max=20, widget='spinbutton', incr=1,
+                  description="Width of outline"),
+            Param(name='linestyle', type=str, default='solid',
+                  valid=['solid', 'dash'],
+                  description="Style of outline (default: solid)"),
             Param(name='color', 
-                  valid=colors_plus_none, type=_color, default='yellow',
+                  valid=colors_plus_none, type=_color, default='lightgreen',
                   description="Color of outline"),
             Param(name='alpha', type=float, default=1.0,
                   min=0.0, max=1.0, widget='spinfloat', incr=0.05,
@@ -1549,11 +1555,13 @@ class ImageBase(CanvasObjectBase):
             ]
     
     def __init__(self, x, y, image, alpha=1.0, scale_x=1.0, scale_y=1.0,
-                 color='yellow', showcap=False, flipy=False, optimize=True,
+                 linewidth=0, linestyle='solid', color='lightgreen',
+                 showcap=False, flipy=False, optimize=True,
                  **kwdargs):
         self.kind = 'image'
         super(ImageBase, self).__init__(x=x, y=y, image=image, alpha=alpha,
                                         scale_x=scale_x, scale_y=scale_y,
+                                        linewidth=linewidth, linestyle=linestyle,
                                         color=color, showcap=showcap,
                                         flipy=flipy, optimize=optimize,
                                         **kwdargs)
@@ -1693,8 +1701,7 @@ class ImageBase(CanvasObjectBase):
     def contains(self, x, y):
         width, height = self.get_scaled_wdht()
         x2, y2 = self.x + width, self.y + height
-        if ((x >= self.x) and (x < x2) and
-            (y >= self.y) and (y < y2)):
+        if ((self.x <= x < x2) and (self.y <= y < y2)):
             return True
         return False
 
@@ -1764,8 +1771,14 @@ class NormImageBase(ImageBase):
                   description="Scaling factor for X dimension of object"),
             Param(name='scale_y', type=float, default=1.0,
                   description="Scaling factor for Y dimension of object"),
+            Param(name='linewidth', type=int, default=0,
+                  min=0, max=20, widget='spinbutton', incr=1,
+                  description="Width of outline"),
+            Param(name='linestyle', type=str, default='solid',
+                  valid=['solid', 'dash'],
+                  description="Style of outline (default: solid)"),
             Param(name='color', 
-                  valid=colors_plus_none, type=_color, default='yellow',
+                  valid=colors_plus_none, type=_color, default='lightgreen',
                   description="Color of outline"),
             Param(name='alpha', type=float, default=1.0,
                   min=0.0, max=1.0, widget='spinfloat', incr=0.05,
@@ -1786,11 +1799,12 @@ class NormImageBase(ImageBase):
             ]
     
     def __init__(self, x, y, image, alpha=1.0, scale_x=1.0, scale_y=1.0, 
-                 color='yellow', showcap=False,
+                 linewidth=0, linestyle='solid', color='lightgreen', showcap=False,
                  optimize=True, rgbmap=None, autocuts=None, **kwdargs):
         self.kind = 'normimage'
         super(NormImageBase, self).__init__(x=x, y=y, image=image, alpha=alpha,
                                             scale_x=scale_x, scale_y=scale_y,
+                                            linewidth=linewidth, linestyle=linestyle,
                                             color=color,
                                             showcap=showcap, optimize=optimize,
                                             **kwdargs)

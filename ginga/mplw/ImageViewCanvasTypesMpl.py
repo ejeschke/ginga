@@ -528,6 +528,13 @@ class Image(ImageBase, MplCanvasMixin):
         cpoints = self.get_cpoints()
         cr = self.setup_cr()
 
+        # draw border
+        # TODO: bug here--fix!
+        # if self.linewidth > 0:
+        #     xy = numpy.array(cpoints)
+        #     p = patches.Polygon(xy, **cr.kwdargs)
+        #     cr.axes.add_patch(p)
+        
         if self.editing:
             self.draw_edit(cr)
         elif self.showcap:
@@ -544,6 +551,13 @@ class NormImage(NormImageBase, MplCanvasMixin):
         cpoints = self.get_cpoints()
         cr = self.setup_cr()
 
+        # draw border
+        # TODO: bug here--fix!
+        # if self.linewidth > 0:
+        #     xy = numpy.array(cpoints)
+        #     p = patches.Polygon(xy, **cr.kwdargs)
+        #     cr.axes.add_patch(p)
+        
         if self.editing:
             self.draw_edit(cr)
         elif self.showcap:

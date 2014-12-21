@@ -556,6 +556,16 @@ class Image(ImageBase, CairoCanvasMixin):
         cpoints = self.get_cpoints()
         cr = self.setup_cr()
 
+        # draw border
+        if self.linewidth > 0:
+            (cx0, cy0) = cpoints[-1]
+            cr.move_to(cx0, cy0)
+            for cx, cy in cpoints:
+                cr.line_to(cx, cy)
+                #cr.move_to(cx, cy)
+            cr.close_path()
+            cr.stroke_preserve()
+
         if self.editing:
             self.draw_edit(cr)
         elif self.showcap:
@@ -571,6 +581,16 @@ class NormImage(NormImageBase, CairoCanvasMixin):
         
         cpoints = self.get_cpoints()
         cr = self.setup_cr()
+
+        # draw border
+        if self.linewidth > 0:
+            (cx0, cy0) = cpoints[-1]
+            cr.move_to(cx0, cy0)
+            for cx, cy in cpoints:
+                cr.line_to(cx, cy)
+                #cr.move_to(cx, cy)
+            cr.close_path()
+            cr.stroke_preserve()
 
         if self.editing:
             self.draw_edit(cr)

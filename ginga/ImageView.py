@@ -112,7 +112,7 @@ class ImageViewBase(Callback.Callbacks):
 
         # for pan
         self.t_.addDefaults(pan=(1.0, 1.0), pan_coord='data')
-        for name in ['pan', 'pan_coord']:
+        for name in ['pan', ]:   #'pan_coord'
             self.t_.getSetting(name).add_callback('set', self.pan_cb)
 
         # for cut levels
@@ -1284,9 +1284,7 @@ class ImageViewBase(Callback.Callbacks):
     
     def set_pan(self, pan_x, pan_y, coord='data', no_reset=False,
                 redraw=True):
-        #self.t_.set(pan=(pan_x, pan_y), pan_coord=coord)
-        self.t_.set(pan_coord=coord)
-        self.t_.set(pan=(pan_x, pan_y))
+        self.t_.set(pan=(pan_x, pan_y), pan_coord=coord)
 
         if (not no_reset) and (self.t_['autocenter'] == 'override'):
             self.t_.set(autocenter='off')
@@ -1299,12 +1297,19 @@ class ImageViewBase(Callback.Callbacks):
         self.redraw(whence=0)
 
     def get_pan(self, coord='data'):
-        #pan_x, pan_y = self._pan_x, self._pan_y
-        pan_x, pan_y = self._org_x + self.data_off, self._org_y + self.data_off
-        if coord == 'data':
+        pan_x, pan_y = self._pan_x, self._pan_y
+        if coord == 'wcs':
+            if self.t_['pan_coord'] == 'data':
+                image = self.get_image()
+                return image.pixtoradec(pan_x, pan_y)
+            # <-- data already in coordinates form
+            return (pan_x, pan_y)
+
+        # <-- requesting data coords
+        if self.t_['pan_coord'] == 'data':
             return (pan_x, pan_y)
         image = self.get_image()
-        return image.pixtoradec(pan_x, pan_y)
+        return image.radectopix(pan_x, pan_y)
     
     def panset_xy(self, data_x, data_y, no_reset=False, redraw=True):
         pan_coord = self.t_['pan_coord']

@@ -531,6 +531,13 @@ class Image(ImageBase, QtCanvasMixin):
         cpoints = self.get_cpoints()
         cr = self.setup_cr()
 
+        # draw border
+        if self.linewidth > 0:
+            qpoints = list(map(lambda p: QtCore.QPoint(p[0], p[1]),
+                               cpoints))
+            qpoly = QPolygon(qpoints)
+            cr.drawPolygon(qpoly)
+
         if self.editing:
             self.draw_edit(cr)
         elif self.showcap:
@@ -546,6 +553,13 @@ class NormImage(NormImageBase, QtCanvasMixin):
         
         cpoints = self.get_cpoints()
         cr = self.setup_cr()
+
+        # draw border
+        if self.linewidth > 0:
+            qpoints = list(map(lambda p: QtCore.QPoint(p[0], p[1]),
+                               cpoints))
+            qpoly = QPolygon(qpoints)
+            cr.drawPolygon(qpoly)
 
         if self.editing:
             self.draw_edit(cr)

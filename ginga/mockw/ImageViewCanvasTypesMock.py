@@ -493,6 +493,11 @@ class Image(ImageBase, MockCanvasMixin):
         cpoints = self.get_cpoints()
         cr = self.setup_cr()
 
+        # draw border
+        if self.linewidth > 0:
+            #cr.draw_polygon(cpoints)
+            pass
+
         if self.editing:
             self.draw_edit(cr)
         elif self.showcap:
@@ -508,6 +513,11 @@ class NormImage(NormImageBase, MockCanvasMixin):
         
         cpoints = self.get_cpoints()
         cr = self.setup_cr()
+
+        # draw border
+        if self.linewidth > 0:
+            #cr.draw_polygon(cpoints)
+            pass
 
         if self.editing:
             self.draw_edit(cr)

@@ -512,6 +512,12 @@ class Image(ImageBase, AggCanvasMixin):
         cpoints = self.get_cpoints()
         cr = self.setup_cr()
 
+        # draw border
+        if self.linewidth > 0:
+            pen = self.get_pen(cr)
+            cr.canvas.polygon(list(chain.from_iterable(cpoints)), 
+                              pen)
+
         if self.editing:
             self.draw_edit(cr)
         elif self.showcap:
@@ -527,6 +533,12 @@ class NormImage(NormImageBase, AggCanvasMixin):
         
         cpoints = self.get_cpoints()
         cr = self.setup_cr()
+
+        # draw border
+        if self.linewidth > 0:
+            pen = self.get_pen(cr)
+            cr.canvas.polygon(list(chain.from_iterable(cpoints)), 
+                              pen)
 
         if self.editing:
             self.draw_edit(cr)
