@@ -247,28 +247,48 @@ class CanvasObjectBase(Callback.Callbacks):
             self.points = list(P)
 
     def convert_mapper(self, tomap):
+        """
+        Converts our object from using one coordinate map to another.
+        """
+        frommap = self.crdmap
+        if frommap == tomap:
+            return
+        
+        # convert radii
+        if hasattr(self, 'radius'):
+            xc, yc = self.get_center_pt()
+            # get data coordinates of a point radius away from center
+            # under current coordmap
+            x1, y1 = frommap.to_data(xc, yc)
+            x2, y2 = frommap.to_data(xc + self.radius, yc)
+            # now convert these data coords to native coords in tomap
+            nx1, ny1 = tomap.data_to(x1, y1)
+            nx2, ny2 = tomap.data_to(x2, y2)
+            # recalculate radius using new coords
+            self.radius = math.fabs(nx2 - nx1)
+
+        elif hasattr(self, 'xradius'):
+            # similar to above case, but there are 2 radii
+            xc, yc = self.get_center_pt()
+            x1, y1 = frommap.to_data(xc, yc)
+            x2, y2 = frommap.to_data(xc + self.xradius, yc)
+            x3, y3 = frommap.to_data(xc, yc + self.yradius)
+            nx1, ny1 = tomap.data_to(x1, y1)
+            nx2, ny2 = tomap.data_to(x2, y2)
+            nx3, ny3 = tomap.data_to(x3, y3)
+            self.xradius = math.fabs(nx2 - nx1)
+            self.yradius = math.fabs(ny3 - ny1)
+        
         # convert points
         for i in range(self.get_num_points()):
+            # convert each point by going to data coords under old map
+            # and then to native coords in the new map
             x, y = self.get_point_by_index(i)
-            data_x, data_y = self.crdmap.to_data(x, y)
+            data_x, data_y = frommap.to_data(x, y)
             new_x, new_y = tomap.data_to(data_x, data_y)
             self.set_point_by_index(i, (new_x, new_y))
 
-        # convert radii
-        if hasattr(self, 'radius'):
-            data_x, data_y = self.get_center_pt()
-            x1, y1 = tomap.data_to(data_x, data_y)
-            x2, y2 = tomap.data_to(data_x + self.radius, data_y)
-            self.radius = math.fabs(x2 - x1)
-
-        elif hasattr(self, 'xradius'):
-            data_x, data_y = self.get_center_pt()
-            x1, y1 = tomap.data_to(data_x, data_y)
-            x2, y2 = tomap.data_to(data_x + self.xradius, data_y)
-            self.xradius = math.fabs(x2 - x1)
-            x2, y2 = tomap.data_to(data_x, data_y + self.yradius)
-            self.yradius = math.fabs(y2 - y1)
-        
+        # set our map to the new map
         self.crdmap = tomap
     
     # TODO: move these into utility module
@@ -1113,9 +1133,6 @@ class RectangleBase(TwoPointMixin, CanvasObjectBase):
     x1, y1: 0-based coordinates of one corner in the data space
     x2, y2: 0-based coordinates of the opposing corner in the data space
     Optional parameters for linesize, color, etc.
-
-    PLEASE NOTE: that the coordinates will be arranged in the final
-    object such that x1, y1 always refers to the lower-left corner.
     """
 
     @classmethod
@@ -1169,8 +1186,6 @@ class RectangleBase(TwoPointMixin, CanvasObjectBase):
                  drawdims=False, font='Sans Serif', fillalpha=1.0,
                  **kwdargs):
         self.kind = 'rectangle'
-        # ensure that rectangles are always bounded LL to UR
-        #x1, y1, x2, y2 = self.swapxy(x1, y1, x2, y2)
         
         CanvasObjectBase.__init__(self, color=color,
                                   x1=x1, y1=y1, x2=x2, y2=y2,
@@ -1187,13 +1202,15 @@ class RectangleBase(TwoPointMixin, CanvasObjectBase):
                   (self.x2, self.y2), (self.x1, self.y2)]
         return points
     
-    def contains(self, data_x, data_y):
-        #x, y = self.crdmap.to_data(x, y)
+    def get_llur(self):
         x1, y1 = self.crdmap.to_data(self.x1, self.y1)
         x2, y2 = self.crdmap.to_data(self.x2, self.y2)
+        return self.swapxy(x1, y1, x2, y2)
+        
+    def contains(self, data_x, data_y):
+        x1, y1, x2, y2 = self.get_llur()
 
-        if ((min(x1, x2) <= data_x <= max(x1, x2)) and
-            (min(y1, y2) <= data_y <= max(y1, y2))):
+        if (x1 <= data_x <= x2) and (y1 <= data_y <= y2):
             return True
         return False
 

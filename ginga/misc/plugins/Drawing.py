@@ -100,8 +100,8 @@ class Drawing(GingaPlugin.LocalPlugin):
 
         captions = (("Rotate By:", 'label', 'Rotate By', 'entry',
                      "Scale By:", 'label', 'Scale By', 'entry'),
-                    ("Delete Obj", 'button', "lbl1", 'label',
-                     "lbl2", 'label', "Clear canvas", 'button'),
+                    ("Delete Obj", 'button', "sp1", 'spacer',
+                     "sp2", 'spacer', "Clear canvas", 'button'),
                     )
         w, b = Widgets.build_info(captions)
         self.w.update(b)
@@ -228,8 +228,16 @@ class Drawing(GingaPlugin.LocalPlugin):
             # edit object has been modified.  Sync visual parameters
             self.draw_params.params_to_widgets()
 
-    def edit_params_changed_cb(self, paramObj, params):
+    def edit_params_changed_cb(self, paramObj, obj):
         self.draw_params.widgets_to_params()
+        if hasattr(obj, 'coord'):
+            tomap = self.fitsimage.get_coordmap(obj.coord)
+            if obj.crdmap != tomap:
+                # user changed type of mapper; convert coordinates to
+                # new mapper and update widgets
+                obj.convert_mapper(tomap)
+                paramObj.params_to_widgets()
+            
         # TODO: change whence to 0 if allowing editing of images
         whence = 2
         self.canvas.redraw(whence=whence)

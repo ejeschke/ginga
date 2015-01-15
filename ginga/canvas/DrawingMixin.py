@@ -202,6 +202,7 @@ class DrawingMixin(object):
 
             if self.edit_follows_draw:
                 self.edit_select(obj)
+                self.make_callback('edit-select', self._edit_obj)
             return True
         else:
             self.processDrawing()
@@ -276,17 +277,17 @@ class DrawingMixin(object):
 
         x, y = self._edit_obj.crdmap.data_to(data_x, data_y)
 
-        # special hack for objects that have rot_deg attribute
-        if hasattr(self._edit_obj, 'rot_deg'):
-            rot_deg = - self._edit_obj.rot_deg
-            xoff, yoff = self._edit_obj.get_center_pt()
-            x, y = self._edit_obj.crdmap.rotate_pt(x, y, rot_deg,
-                                                   xoff=xoff, yoff=yoff)
-
         if self._cp_index < 0:
             self._edit_obj.move_to(x - self._start_x,
                                    y - self._start_y)
         else:
+            # special hack for objects that have rot_deg attribute
+            if hasattr(self._edit_obj, 'rot_deg') and (self._cp_index > 0):
+                rot_deg = - self._edit_obj.rot_deg
+                xoff, yoff = self._edit_obj.get_center_pt()
+                x, y = self._edit_obj.crdmap.rotate_pt(x, y, rot_deg,
+                                                       xoff=xoff, yoff=yoff)
+
             self._edit_obj.set_edit_point(self._cp_index, (x, y))
 
         if time.time() - self._processTime > self._deltaTime:
@@ -381,7 +382,15 @@ class DrawingMixin(object):
         if not self.canedit:
             return False
 
+        if (self._edit_tmp != self._edit_obj) or (
+            (self._edit_obj is not None) and 
+            (self._edit_status != self._edit_obj.is_editing())):
+            # <-- editing status has changed
+            print("making edit-select callback")
+            self.make_callback('edit-select', self._edit_obj)
+
         if (self._edit_obj is not None) and (self._cp_index is not None):
+            # <-- an object has been edited
             self._edit_update(data_x, data_y)
             self._cp_index = None
             self.make_callback('edit-event', self._edit_obj)
@@ -389,11 +398,6 @@ class DrawingMixin(object):
         else:
             if (self._draw_obj is not None) and self.draw_in_edit_mode:
                 self.draw_stop(canvas, button, data_x, data_y)
-
-            if (self._edit_tmp != self._edit_obj) or (
-                    (self._edit_obj is not None) and 
-                    (self._edit_status != self._edit_obj.is_editing())):
-                self.make_callback('edit-select', self._edit_obj)
 
         return True
 
@@ -469,7 +473,7 @@ class DrawingMixin(object):
             if (newobj is not None) and (not newobj.is_editing()):
                 newobj.set_edit(True)
 
-            self.make_callback('edit-select', newobj)
+            #self.make_callback('edit-select', newobj)
 
         return True
 
