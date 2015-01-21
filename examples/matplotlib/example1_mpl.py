@@ -94,7 +94,8 @@ class FitsViewer(QtGui.QMainWindow):
             fileName = res[0]
         else:
             fileName = str(res)
-        self.load_file(fileName)
+        if len(fileName) != 0:
+            self.load_file(fileName)
 
     def drop_file(self, fitsimage, paths):
         fileName = paths[0]
