@@ -8,8 +8,8 @@ Usage:
     ginga [options] [fitsfile] ...
 """
 import sys
+import logging
 from ginga import main
 
 if __name__ == "__main__":
     main.reference_viewer(sys.argv)
-
