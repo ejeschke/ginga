@@ -113,7 +113,7 @@ adjusting the "Zoom Amount" slider.
 Above zero, the zoom range corresponds to logical increments: 1=1X,
 2=2X, etc.  The zoom scale is discontinuous at the 0 and -1 settings,
 which are equivalent to 1X.  Settings below -1 correspond to zooming out,
-e.g. -2=1/2, -3=1/3, etc. 
+e.g. -2=1/2, -3=1/3, etc.
 
 Two modes of operation are possible: absolute and relative zoom.  In
 absolute mode, the zoom amount controls exactly the zoom level shown in
@@ -170,7 +170,7 @@ Local plugins
 
 An *operation* is the activation of a local plugin to perform some
 function.  The plugin manager toolbar at the bottom of the center pane
-is the graphical way to start an operation.  
+is the graphical way to start an operation.
 
 .. _plugins_pick:
 
@@ -191,7 +191,7 @@ Ruler is a simple plugin designed to measure distances on an image.  It
 does this by calculating a spherical triangulation via WCS mapping of
 three points defined by a single line drawn on the image.  By default,
 the distance is shown in arcminutes of sky, but using the Units control
-it can be changed to show pixel distance instead. 
+it can be changed to show pixel distance instead.
 
 When another line is drawn it replaces the first one, and when the
 plugin is closed the graphic overlay is removed.  Should you want
@@ -228,7 +228,7 @@ selected in the drop down box underneath the graph, any newly drawn line
 will replace that cut by a new one.  To *add* a new cut, simply select
 "None" from the  drop down box and draw the new cut.  Use the `Delete`
 button to delete the currently selected cut and `Delete All` to delete
-all cuts. 
+all cuts.
 
 If a new image is added to the channel while the plugin is active it
 will update with the new calculated cuts on the new image.
@@ -271,14 +271,14 @@ The Color Distribution preferences controls the preferences used for the
 data value to color index conversion that occurs after cut levels are
 applied and just before final color mapping is performed.  It concerns
 how the values between the low and high cut levels are distributed to
-the color and intensity mapping phase. 
+the color and intensity mapping phase.
 
 The `Algorithm` control is used to set the algorithm used for the
 mapping.  Click the control to show the list, or simply scroll the mouse
 wheel while hovering the cursor over the control.  There are eight
 algorithms available: linear, log, power, sqrt, squared, asinh, sinh,
-and histeq.  The name of each algorithm is indicative of how 
-the data is mapped to the colors in the color map.  `linear` is the 
+and histeq.  The name of each algorithm is indicative of how
+the data is mapped to the colors in the color map.  `linear` is the
 default.
 
 .. _preferences-color-mapping:
@@ -304,7 +304,7 @@ an inverted scale, logarithmic, etc.
 
 Ginga comes with a good selection of color maps, but should you want
 more you can add custom ones or, if matplotlib is installed, you
-can load all the ones that it has installed.  
+can load all the ones that it has installed.
 See :ref:`ch-customization` for details.
 
 .. _preferences-zoom:
@@ -325,14 +325,14 @@ Ginga supports two zoom algorithms, chosen using the `Zoom Alg` control:
   bit slower to zoom over wide ranges when using a scrolling motion
   because more `throw` is required to achieve a large zoom change
   (this is not the case if one uses of the shortcut zoom keys, such as
-  the digit keys). 
+  the digit keys).
 
 * The *rate* algorithm zooms the image by advancing the scaling at
   a rate defined by the value in the Zoom Rate box.  This rate defaults
   to the square root of 2.  Larger numbers cause larger changes in scale
   between zoom levels.  If you like to zoom your images rapidly, at a
   small cost in image quality, you would likely want to choose this
-  option. 
+  option.
 
 Note that regardless of which method is chosen for the zoom algorithm,
 the zoom can be controlled by holding down Ctrl (coarse) or Shift
@@ -353,7 +353,7 @@ The `Scale Min` and `Scale Max` controls can be used to place a
 limit on how much the image can be scaled.
 
 The `Zoom Defaults` button will restore the controls to the Ginga
-default values. 
+default values.
 
 .. _preferences-pan:
 
@@ -386,7 +386,7 @@ Transform Preferences
 
 The Transform preferences provide for transforming the view of the image
 by flipping the view in X or Y, swapping the X and Y axes, or rotating
-the image in arbitrary amounts. 
+the image in arbitrary amounts.
 
 The `Flip X` and `Flip Y` checkboxes cause the image view to be
 flipped in the corresponding axis.
@@ -394,7 +394,7 @@ flipped in the corresponding axis.
 The `Swap XY` checkbox causes the image view to be altered by swapping
 the X and Y axes.  This can be combined with Flip X and Flip Y to rotate
 the image in 90 degree increments.  These views will render more quickly
-than arbitrary rotations using the Rotate control. 
+than arbitrary rotations using the Rotate control.
 
 The `Rotate` control will rotate the image view the specified amount.
 The value should be specified in degrees.  Rotate can be specified in
@@ -413,11 +413,11 @@ Auto Cuts Preferences
 
 The Auto Cuts preferences control the calculation of auto cut levels for
 the view when the auto cut levels button or key is pressed, or when
-loading a new image with auto cuts enabled. 
+loading a new image with auto cuts enabled.
 
 The `Auto Method` control is used to choose which auto cuts algorithm
 used: "minmax" (minimum maximum values), "histogram" (based on an image
-histogram), "stddev" (based on the standard deviation of pixel values), or 
+histogram), "stddev" (based on the standard deviation of pixel values), or
 "zscale" (based on the ZSCALE algorithm popularized by IRAF).
 As the algorithm is changed, the boxes under it may also change to
 allow changes to parameters particular to each algorithm.
@@ -432,7 +432,7 @@ WCS Preferences
 
 The WCS preferences control the display preferences for the World
 Coordinate System calculations used to report the cursor position in the
-image. 
+image.
 
 The `WCS Coords` control is used to select the coordinate system in
 which to display the result.
@@ -463,11 +463,11 @@ currently set cut levels should be applied.  The possible settings are:
 
 .. tip:: The *override* setting is provided for the convenience of
 	 having an automatic cut levels, while preventing a manually set
-	 cuts from being overrided when a new image is ingested.  When
+	 cuts from being overridden when a new image is ingested.  When
 	 typed in the image window, the semicolon key can be used to
 	 toggle the mode back to override (from "off"), while colon will
 	 set the preference to *on*.  The global plugin Info panel shows
-	 the state of this setting. 
+	 the state of this setting.
 
 The `Zoom New` setting controls whether a newly visited image should
 be zoomed to fit the window.  There are three possible values: on,
@@ -480,12 +480,12 @@ override, and off:
 
 .. tip:: The *override* setting is provided for the convenience of
 	 having an automatic zoom, while preventing a manually set zoom
-	 level from being overrided when a new image is ingested.  When
+	 level from being overridden when a new image is ingested.  When
 	 typed in the image window,  the apostrophe (aka "single quote")
 	 key can be used to toggle the mode back to override (from
 	 "off"), while quote (aka double quote) will set the preference
 	 to "on".  The global plugin Info panel shows the state of this
-	 setting.  
+	 setting.
 
 The `Center New` box, if checked, will cause newly visited images to
 always have the pan position reset to the center of the image.  If
@@ -586,8 +586,8 @@ or::
     $ export IMTDEV=unix:/tmp/.imtg45
 
 If the environment variable is not set, Ginga will default to that used
-by IRAF. 
-    
+by IRAF.
+
 Then start Ginga and IRAF.  For Ginga, the IRAF module is not started by
 default.  To start it when Ginga starts, specify the command line option::
 
@@ -597,7 +597,7 @@ or use the `Start IRAF` menu item from the `Plugins` menu.
 The GUI for the IRAF plugin will appear in the tabs on the right.
 
 It can be more convenient to load images via Ginga than IRAF.  From
-Ginga you can load images via drag and drop or via the FBrowser 
+Ginga you can load images via drag and drop or via the FBrowser
 plugin and then use `imexamine` from IRAF to do analysis tasks on
 them.  You can also use the `display` command from IRAF to show
 images already loaded in IRAF in Ginga, and then use `imexamine` to
@@ -608,7 +608,7 @@ normal UI processing on the channel image so that keystrokes,
 etc. normally caught by Ginga are passed through to IRAF.  You can
 toggle back and forth between local Ginga control (e.g. keystrokes to
 zoom and pan the image, or apply cut levels, etc.) and IRAF control
-using the radio buttons at the top of the tab.   
+using the radio buttons at the top of the tab.
 
 IRAF deals with images in enumerated "frames", whereas Ginga uses
 named channels.  The bottom of the IRAF plugin GUI will show the mapping
@@ -620,7 +620,7 @@ RC
 ==
 
 The RC (Remote Control) plugin provides a way to control Ginga remotely
-through the use of an XML-RPC interface.  Start the plugin from the 
+through the use of an XML-RPC interface.  Start the plugin from the
 `Plugins` menu (invoke "Start RC") or launch ginga with the "--modules=RC"
 command line option to start it automatically.
 
@@ -635,7 +635,7 @@ Please note that the host part (before the colon) does not indicate
 bind.  If you want to allow any host to connect, leave it blank (but
 include the colon and port number) to allow the server to bind on all
 interfaces. Press `Restart` to then restart the server at the new
-address. 
+address.
 
 Once the plugin is started, you can use the `grc` script (included when
 ginga is installed) to control Ginga.  Take a look at the script if you
@@ -664,7 +664,7 @@ Per-channel methods can be called like this::
 Calls can be made from a remote host by adding the options::
 
     --host=<hostname> --port=9000
-   
+
 (in the plugin GUI be sure to remove the 'localhost' prefix
 from the addr, but leave the colon and port)
 
@@ -673,7 +673,7 @@ Examples
 Create a new channel::
 
     $ grc ginga add_channel FOO
- 
+
 Load a file::
 
     $ grc ginga load_file /home/eric/testdata/SPCAM/SUPA01118797.fits
@@ -695,11 +695,11 @@ Zoom to a specific level::
     $ grc -- channel FOO zoom_to -7
 
 (note the use of -- to allow us to pass a parameter beginning with "-").
- 
+
 Zoom to fit::
 
     $ grc channel FOO zoom_fit
- 
+
 Transform (args are boolean triplet: flipx flipy swapxy)::
 
     $ grc channel FOO transform 1 0 1
@@ -711,11 +711,11 @@ Rotate::
 Change color map::
 
     $ grc channel FOO set_color_map rainbow3
- 
+
 Change color distribution algorithm::
 
     $ grc channel FOO set_color_algorithm log
- 
+
 Change intensity map::
 
     $ grc channel FOO set_intensity_map neg
