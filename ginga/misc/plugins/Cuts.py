@@ -448,16 +448,21 @@ class Cuts(GingaPlugin.LocalPlugin):
 
     def draw_cb(self, canvas, tag):
         obj = canvas.getObjectByTag(tag)
-        if obj.kind not in ('line', 'rectangle'):
+        if obj.kind == 'line':
+            x1, y1 = obj.crdmap.to_data(obj.x1, obj.y1)
+            x2, y2 = obj.crdmap.to_data(obj.x2, obj.y2)
+        elif obj.kind == 'rectangle':
+            x1, y1, x2, y2 = obj.get_llur()
+        else:
             return True
         canvas.deleteObjectByTag(tag, redraw=False)
 
         # calculate center of line
-        wd = obj.x2 - obj.x1
+        wd = x2 - x1
         dw = wd // 2
-        ht = obj.y2 - obj.y1
+        ht = y2 - y1
         dh = ht // 2
-        x, y = obj.x1 + dw + 4, obj.y1 + dh + 4
+        x, y = x1 + dw + 4, y1 + dh + 4
 
         if self.cutstag:
             # Replacing a cut
@@ -473,30 +478,29 @@ class Cuts(GingaPlugin.LocalPlugin):
         tag = "cuts%d" % (count)
         if obj.kind == 'line':
             cut = self._create_cut(x, y, count,
-                                   obj.x1, obj.y1, obj.x2, obj.y2,
-                                   color='cyan')
+                                   x1, y1, x2, y2, color='cyan')
 
         elif obj.kind == 'rectangle':
             if self.cuttype == 'horizontal':
                 # add horizontal cut at midpoints of rectangle
                 cut = self._create_cut(x, y, count,
-                                       obj.x1, obj.y1+dh, obj.x2, obj.y1+dh,
+                                       x1, y1+dh, x2, y1+dh,
                                        color='cyan')
 
             elif self.cuttype == 'vertical':
                 # add vertical cut at midpoints of rectangle
                 cut = self._create_cut(x, y, count,
-                                       obj.x1+dw, obj.y1, obj.x1+dw, obj.y2,
+                                       x1+dw, y1, x1+dw, y2,
                                        color='cyan')
 
             elif self.cuttype == 'cross':
-                x, y = obj.x1 + dw//2, obj.y1 + dh - 4
+                x, y = x1 + dw//2, y1 + dh - 4
                 cut_h = self._create_cut(x, y, count,
-                                         obj.x1, obj.y1+dh, obj.x2, obj.y1+dh,
+                                         x1, y1+dh, x2, y1+dh,
                                          color='cyan')
-                x, y = obj.x1 + dw + 4, obj.y1 + dh//2
+                x, y = x1 + dw + 4, y1 + dh//2
                 cut_v = self._create_cut(x, y, count,
-                                       obj.x1+dw, obj.y1, obj.x1+dw, obj.y2,
+                                       x1+dw, y1, x1+dw, y2,
                                        color='cyan')
                 cut = self._combine_cuts(cut_h, cut_v)
 

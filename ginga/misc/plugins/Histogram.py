@@ -30,9 +30,11 @@ class Histogram(GingaPlugin.LocalPlugin):
 
         canvas = self.dc.DrawingCanvas()
         canvas.enable_draw(True)
+        canvas.enable_edit(True)
         canvas.set_drawtype('rectangle', color='cyan', linestyle='dash',
                             drawdims=True)
         canvas.set_callback('draw-event', self.draw_cb)
+        canvas.set_callback('edit-event', self.edit_cb)
         canvas.set_callback('cursor-down', self.drag)
         canvas.set_callback('cursor-move', self.drag)
         canvas.set_callback('cursor-up', self.update)
@@ -348,12 +350,33 @@ class Histogram(GingaPlugin.LocalPlugin):
             except:
                 pass
 
+        x1, y1, x2, y2 = obj.get_llur()
+
         tag = canvas.add(self.dc.CompoundObject(
-            self.dc.Rectangle(obj.x1, obj.y1, obj.x2, obj.y2,
+            self.dc.Rectangle(x1, y1, x2, y2,
                               color=self.histcolor),
-            self.dc.Text(obj.x1, obj.y2+4, "Histogram",
+            self.dc.Text(x1, y2+4, "Histogram",
                          color=self.histcolor)))
         self.histtag = tag
+
+        return self.redo()
+
+    def edit_cb(self, canvas, obj):
+        if obj.kind != 'rectangle':
+            return True
+
+        # Get the compound object that sits on the canvas.
+        # Make sure edited rectangle was our histogram rectangle.
+        c_obj = self.canvas.getObjectByTag(self.histtag)
+        if (c_obj.kind != 'compound') or (len(c_obj.objects) < 2) or \
+               (c_obj.objects[0] != obj):
+            return False
+
+        # reposition other elements to match
+        x1, y1, x2, y2 = obj.get_llur()
+        text = c_obj.objects[1]
+        text.x, text.y = x1, y2 + 4
+        self.fitsimage.redraw(whence=3)
 
         return self.redo()
 

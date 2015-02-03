@@ -8,6 +8,7 @@
 # Please see the file LICENSE.txt for details.
 #
 import os
+import math
 
 from ginga.misc import Bunch, Future
 from ginga import GingaPlugin
@@ -60,7 +61,7 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
                             )
         canvas.set_callback('cursor-down', self.btndown)
         canvas.set_callback('cursor-up', self.btnup)
-        canvas.set_callback('draw-event', self.getarea)
+        canvas.set_callback('draw-event', self.draw_cb)
         canvas.setSurface(self.fitsimage)
         self.canvas = canvas
 
@@ -123,8 +124,6 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
     def redo(self):
         obj = self.canvas.getObjectByTag(self.areatag)
         if not obj.kind in ('rectangle', 'circle'):
-            # !!?
-            self.stop()
             return True
         
         try:
@@ -134,22 +133,23 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
                 # if  the object drawn is a rectangle, calculate the radius
                 # of a circle necessary to cover the area
                 # calculate center of bbox
-                wd = obj.x2 - obj.x1
+                x1, y1, x2, y2 = obj.get_llur()
+                wd = x2 - x1
                 dw = wd // 2
-                ht = obj.y2 - obj.y1
+                ht = y2 - y1
                 dh = ht // 2
-                ctr_x, ctr_y = obj.x1 + dw, obj.y1 + dh
+                ctr_x, ctr_y = x1 + dw, y1 + dh
                 ra_ctr, dec_ctr = image.pixtoradec(ctr_x, ctr_y, format='str')
 
                 # Calculate RA and DEC for the three points
                 # origination point
-                ra_org, dec_org = image.pixtoradec(obj.x1, obj.y1)
+                ra_org, dec_org = image.pixtoradec(x1, y1)
 
                 # destination point
-                ra_dst, dec_dst = image.pixtoradec(obj.x2, obj.y2)
+                ra_dst, dec_dst = image.pixtoradec(x2, y2)
 
                 # "heel" point making a right triangle
-                ra_heel, dec_heel = image.pixtoradec(obj.x1, obj.y2)
+                ra_heel, dec_heel = image.pixtoradec(x1, y2)
 
                 ht_deg = wcs.deltaStarsRaDecDeg(ra_org, dec_org,
                                                 ra_heel, dec_heel)
@@ -160,15 +160,16 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
             else:
                 # if the object drawn is a circle, calculate the box
                 # enclosed by the circle
-                ctr_x, ctr_y = obj.x, obj.y
+                ctr_x, ctr_y = obj.crdmap.to_data(obj.x, obj.y)
                 ra_ctr, dec_ctr = image.pixtoradec(ctr_x, ctr_y)
-                ra_dst, dec_dst = image.pixtoradec(ctr_x + obj.radius, ctr_y)
+                dst_x, dst_y = obj.crdmap.to_data(obj.x + obj.radius, obj.y)
+                ra_dst, dec_dst = image.pixtoradec(dst_x, dst_y)
                 radius_deg = wcs.deltaStarsRaDecDeg(ra_ctr, dec_ctr,
                                                     ra_dst, dec_dst)
                 # redo as str format for widget
                 ra_ctr, dec_ctr = image.pixtoradec(ctr_x, ctr_y, format='str')
 
-                wd = ht = obj.radius * 2.0
+                wd = ht = math.fabs(dst_x - ctr_x) * 2.0
                 dw = wd // 2
                 dh = ht // 2
 
@@ -191,7 +192,9 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
             #wd, ht, radius = wd_deg, ht_deg, radius_deg
             
         except Exception as e:
-            self.fv.showStatus('BAD WCS: %s' % str(e))
+            errmsg = 'Error calculating bounding box: %s' % str(e)
+            self.logger.error(errmsg)
+            self.fv.show_error(errmsg)
             return True
 
         # Copy the image parameters out to the widget
@@ -263,10 +266,10 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
         tag = self.canvas.add(Rectangle(x1, y1, x2, y2,
                                         color=self.mycolor))
 
-        self.getarea(self.canvas, tag)
+        self.draw_cb(self.canvas, tag)
         
         
-    def getarea(self, canvas, tag):
+    def draw_cb(self, canvas, tag):
         obj = canvas.getObjectByTag(tag)
         if not obj.kind in ('rectangle', 'circle'):
             return True

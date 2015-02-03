@@ -1211,14 +1211,15 @@ class Pick(GingaPlugin.LocalPlugin):
                 pass
 
         # determine center of rectangle
-        x = obj.x1 + (obj.x2 - obj.x1) // 2
-        y = obj.y1 + (obj.y2 - obj.y1) // 2
+        x1, y1, x2, y2 = obj.get_llur()
+        x = x1 + (x2 - x1) // 2
+        y = y1 + (y2 - y1) // 2
 
         tag = canvas.add(self.dc.CompoundObject(
-            self.dc.Rectangle(obj.x1, obj.y1, obj.x2, obj.y2,
+            self.dc.Rectangle(x1, y1, x2, y2,
                               color=self.pickcolor),
             self.dc.Point(x, y, 10, color='red'),
-            self.dc.Text(obj.x1, obj.y2+4, "Pick: calc",
+            self.dc.Text(x1, y2+4, "Pick: calc",
                          color=self.pickcolor)),
                          redraw=False)
         self.picktag = tag
@@ -1238,14 +1239,15 @@ class Pick(GingaPlugin.LocalPlugin):
             return False
 
         # determine center of rectangle
-        x = obj.x1 + (obj.x2 - obj.x1) // 2
-        y = obj.y1 + (obj.y2 - obj.y1) // 2
+        x1, y1, x2, y2 = obj.get_llur()
+        x = x1 + (x2 - x1) // 2
+        y = y1 + (y2 - y1) // 2
 
         # reposition other elements to match
         point = c_obj.objects[1]
         point.x, point.y = x, y
         text = c_obj.objects[2]
-        text.x, text.y = obj.x1, obj.y2+4
+        text.x, text.y = x1, y2 + 4
 
         return self.redo()
         

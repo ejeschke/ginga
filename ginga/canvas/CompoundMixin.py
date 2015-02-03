@@ -7,6 +7,7 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+import sys, traceback
 
 class CompoundMixin(object):
     """A CompoundMixin makes an object that is an aggregation of other objects.
@@ -55,7 +56,15 @@ class CompoundMixin(object):
                     # custom test
                     res.append(obj)
         except Exception as e:
-            print("error selecting objects: %s" % (str(s)))
+            print("error selecting objects: %s" % (str(e)))
+            try:
+                # log traceback, if possible
+                (type, value, tb) = sys.exc_info()
+                tb_str = "".join(traceback.format_tb(tb))
+                self.logger.error("Traceback:\n%s" % (tb_str))
+            except Exception:
+                tb_str = "Traceback information unavailable."
+                self.logger.error(tb_str)
             res = []
         return res
         
