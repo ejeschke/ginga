@@ -2,6 +2,13 @@
 What's New in Ginga?
 ++++++++++++++++++++
 
+Ver 2.2.20150203025858
+======================
+Ginga drawing canvas objects now can specify points and radii in world
+coordinates degrees and sexigesimal notation.
+- default is still data coordinates
+- can play with this from Drawing plugin in reference viewer
+
 Ver 2.1.20141203011503
 ======================
 Major updates to the drawing features of ginga:

@@ -314,10 +314,10 @@ class DrawingMixin(object):
         self._cp_index = None
             
         # check for objects at this location
-        print("getting items")
+        #print("getting items")
         objs = canvas.select_items_at(data_x, data_y,
                                       test=self._is_editable)
-        print("items: %s" % (str(objs)))
+        #print("items: %s" % (str(objs)))
         if self._edit_obj is None:
             #print("no editing: select/deselect")
             # <-- no current object being edited
@@ -334,16 +334,16 @@ class DrawingMixin(object):
 
         elif self._edit_obj.is_editing():
             self._edit_status = True
-            print("editing: checking for cp")
+            #print("editing: checking for cp")
             #edit_pts = self._edit_obj.get_edit_points()
-            edit_pts = map(lambda pt: self._edit_obj.crdmap.to_data(*pt),
-                           self._edit_obj.get_edit_points())
+            edit_pts = list(map(lambda pt: self._edit_obj.crdmap.to_data(*pt),
+                                self._edit_obj.get_edit_points()))
             #print((self._edit_obj, dir(self._edit_obj)))
-            print(edit_pts)
+            #print(edit_pts)
             i = self._edit_obj.get_pt(edit_pts, data_x, data_y,
                                       self._edit_obj.cap_radius)
             if i is not None:
-                print("editing cp #%d" % (i))
+                #print("editing cp #%d" % (i))
                 # editing a control point from an existing object
                 self._cp_index = i
                 self._edit_update(data_x, data_y)
@@ -355,7 +355,7 @@ class DrawingMixin(object):
 
             else:
                 # <-- user clicked outside the object
-                print("deselecting an object")
+                #print("deselecting an object")
                 if self._edit_obj in objs:
                     objs.remove(self._edit_obj)
                 self._edit_obj.set_edit(False)
@@ -386,7 +386,7 @@ class DrawingMixin(object):
             (self._edit_obj is not None) and 
             (self._edit_status != self._edit_obj.is_editing())):
             # <-- editing status has changed
-            print("making edit-select callback")
+            #print("making edit-select callback")
             self.make_callback('edit-select', self._edit_obj)
 
         if (self._edit_obj is not None) and (self._cp_index is not None):
