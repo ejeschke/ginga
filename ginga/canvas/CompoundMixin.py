@@ -69,7 +69,7 @@ class CompoundMixin(object):
         return res
         
     def initialize(self, tag, viewer, logger):
-        self.tag = tag
+        #self.tag = tag
         self.viewer = viewer
         self.logger = logger
 
@@ -108,7 +108,7 @@ class CompoundMixin(object):
                     setattr(obj, attrname, val)
         
     def addObject(self, obj, belowThis=None):
-        #obj.initialize(None, self.viewer, self.logger)
+        obj.initialize(None, self.viewer, self.logger)
         obj.viewer = self.viewer
         if not belowThis:
             self.objects.append(obj)

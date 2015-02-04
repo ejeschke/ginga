@@ -143,17 +143,14 @@ Manually setting cut levels
 
 There are several ways to manually set the cut levels:
 
-* Pressing and releasing the period (".") key will invoke a 
-  dual (high and low) interactive cut levels.  After releasing the key,
-  click and drag the mouse horizontally in the window to interactively
-  set the high level, and vertically to set the low level--when you
-  reach the desired levels, release the mouse button.
-
-* Pressing and releasing the less than ("<") or greater than
-  (">") key will invoke an interactive cut levels, for the low and high
-  value respectively.  After releasing the key, click and drag the mouse
-  horizontally in the window to interactively set the level--when you
-  reach the desired level, release the mouse button.
+* Pressing and releasing the period ("s") key will put the viewer into
+  "cuts" mode.  Here you can invoke a dual (high and low) interactive
+  cut levels.  Click and drag the mouse horizontally in the window to
+  interactively set the high level, and vertically to set the low
+  level--when you reach the desired levels, release the mouse
+  button. Scrolling the mouse wheel in this mode will also change the
+  low and high cut levels simultaneously--toward or away from each
+  other, resulting in lower or higher contrast.
 
 * [RV] The "Cut Low" and "Cut High" boxes in the Info plugin panel
   can be used.  The current values are shown to the left; simply type a
@@ -183,8 +180,8 @@ Setting the color scale algorithm
 Ginga supports a number of color scale distribution algorithms,
 including "linear", "log", "power", "sqrt", "squared", "asinh", "sinh"
 and "histeq".  These can be sampled with the current color and intensity
-maps by pressing the "s" key repeatedly.  To reset to the default
-("linear") map, press "S" (capital S).
+maps by pressing the "d" key to go into "dist" mode, and then scrolling
+the mouse.  To reset to the default ("linear") map, press "D" (capital D).
 
 [RV] The color scale distribution algorithms can also be set from the
 Preferences plugin, under the heading "Color Distribution".

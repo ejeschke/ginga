@@ -38,8 +38,8 @@ class CanvasMixin(object):
                 # make up our own tag
                 tag = '@%d' % (self.count)
                 
-        obj.initialize(tag, self.viewer, self.logger)
         #obj.initialize(tag, self.viewer, self.viewer.logger)
+        obj.tag = tag
         self.tags[tag] = obj
         self.addObject(obj, belowThis=belowThis)
 

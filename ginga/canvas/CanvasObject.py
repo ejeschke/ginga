@@ -1096,7 +1096,7 @@ class PointBase(OnePointOneRadiusMixin, CanvasObjectBase):
         
     def contains(self, data_x, data_y):
         xd, yd = self.crdmap.to_data(self.x, self.y)
-        if (x == xd) and (y == yd):
+        if (data_x == xd) and (data_y == yd):
             return True
         return False
 
