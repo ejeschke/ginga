@@ -25,7 +25,8 @@ class Contents(GingaPlugin.GlobalPlugin):
                         ('Object', 'OBJECT'),
                         ('Date', 'DATE-OBS'),
                         ('Time UT', 'UT')]
-        
+
+        self.gui_up = False
         fv.set_callback('add-image', self.add_image)
         fv.set_callback('delete-channel', self.delete_channel)
 
@@ -50,6 +51,8 @@ class Contents(GingaPlugin.GlobalPlugin):
         #self.treeview.connect('cursor-changed', self.switch_image2)
         cw = container.get_widget()
         cw.addWidget(treeview, stretch=1)
+
+        self.gui_up = True
 
 
     def switch_image(self, chname, imname):
@@ -116,6 +119,9 @@ class Contents(GingaPlugin.GlobalPlugin):
 
 
     def add_image(self, viewer, chname, image):
+        if not self.gui_up:
+            return False
+        
         noname = 'Noname' + str(time.time())
         name = image.get('name', noname)
 
@@ -158,7 +164,12 @@ class Contents(GingaPlugin.GlobalPlugin):
         Parameter is chinfo (a bunch)."""
         chname = chinfo.name
         del self.nameDict[chname]
+        if not self.gui_up:
+            return False
         self.recreate_toc()
+
+    def stop(self):
+        self.gui_up = False
 
     def __str__(self):
         return 'contents'
