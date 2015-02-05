@@ -39,16 +39,16 @@ mod_draw = ['meta_right']
 # These are typically "normal" keys.  The modifier is defined by a triplet:
 # [ keyname, modtype, msg ], where
 # keyname is a key whose press initiates the modifier,
-# modtype is a type in {'held', 'oneshot', 'locked'}
+# modtype is None or a type in {'held', 'oneshot', 'locked'}
 # msg is a string to be shown in the display or None for no indicator
-dmod_draw = ['space', 'oneshot', None]
-dmod_cmap = ['y', 'locked', None]
-dmod_cuts = ['s', 'locked', None]
-dmod_dist = ['d', 'locked', None]
-dmod_contrast = ['t', 'locked', None]
-dmod_rotate = ['r', 'locked', None]
-dmod_pan = ['q', 'locked', None]
-dmod_freepan = ['w', 'locked', None]
+dmod_draw = ['space', None, None]
+dmod_cmap = ['y', None, None]
+dmod_cuts = ['s', None, None]
+dmod_dist = ['d', None, None]
+dmod_contrast = ['t', None, None]
+dmod_rotate = ['r', None, None]
+dmod_pan = ['q', None, None]
+dmod_freepan = ['w', None, None]
 
 # KEYPRESS commands
 kp_zoom_in = ['+', '=']
@@ -79,6 +79,7 @@ kp_orient_rh = ['O']
 kp_poly_add = ['v', 'draw+v']
 kp_poly_del = ['z', 'draw+z']
 kp_reset = ['escape']
+kp_lock = ['l']
 
 # SCROLLING/WHEEL commands
 sc_pan = []

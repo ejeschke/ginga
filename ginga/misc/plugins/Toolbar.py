@@ -239,7 +239,7 @@ class Toolbar(GingaPlugin.GlobalPlugin):
             bm.reset_modifier(fitsimage)
             return True
         
-        bm.set_modifier(modname, modtype=self.modetype)
+        bm.set_modifier(modname)
         # just in case mode change failed
         self._update_toolbar_state(fitsimage)
         return True
@@ -270,11 +270,26 @@ class Toolbar(GingaPlugin.GlobalPlugin):
         
     def set_locked_cb(self, w, tf):
         if tf:
-            self.modetype = 'locked'
+            modetype = 'locked'
         else:
-            self.modetype = 'oneshot'
+            modetype = 'oneshot'
         if self.active is None:
             self.active, bd = self._get_view()
+        fitsimage = self.active
+        if fitsimage is None:
+            return
+
+        # get current bindmap, make sure that the mode is consistent
+        # with current lock button
+        bm = fitsimage.get_bindmap()
+        modname, cur_modetype = bm.current_modifier()
+        bm.set_default_modifier_mode(modetype)
+
+        bm.set_modifier(modname, modtype=modetype)
+        if not tf:
+            # turning off lock also resets the mode
+            bm.reset_modifier(fitsimage)
+
         self._update_toolbar_state(fitsimage)
         return True
         
@@ -307,8 +322,10 @@ class Toolbar(GingaPlugin.GlobalPlugin):
             self.w.btn_rotate.set_state(modname == 'rotate')
             self.w.btn_cuts.set_state(modname == 'cuts')
             self.w.btn_contrast.set_state(modname == 'contrast')
+
+            default_modtype = bm.get_default_modifier_mode()
             if self.w.has_key('btn_modelock'):
-                self.w.btn_modelock.set_state(self.modetype == 'locked')
+                self.w.btn_modelock.set_state(default_modtype == 'locked')
 
         except Exception as e:
             self.logger.error("error updating toolbar: %s" % str(e))

@@ -67,10 +67,15 @@ class ImageViewCanvas(ImageViewQt.ImageViewZoom,
             Rect = self.getDrawClass('rectangle')
             Compound = self.getDrawClass('compoundobject')
 
+            if modetype == 'locked':
+                text = '%s [L]' % (mode)
+            else:
+                text = mode
+                
             xsp, ysp = 4, 6
             wd, ht = self.get_window_size()
-            x1, y1 = wd-12*len(mode), ht-12
-            o1 = Text(x1, y1, mode,
+            x1, y1 = wd-12*len(text), ht-12
+            o1 = Text(x1, y1, text,
                       fontsize=12, color='yellow', coord='canvas')
             # hack necessary to be able to compute text extents _before_
             # adding the object to the canvas

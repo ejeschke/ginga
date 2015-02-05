@@ -71,17 +71,17 @@ class ImageViewBindings(object):
             mod_draw = ['meta_right'],
             
             # Define our custom modifiers
-            dmod_draw = ['space', 'locked', None],
-            dmod_edit = ['b', 'locked', None],
-            dmod_cmap = ['y', 'locked', None],
-            #dmod_cutlo = [',', 'locked', "Cut low"],
-            #dmod_cuthi = ['.', 'locked', "Cut high"],
-            dmod_cuts = ['s', 'locked', None],
-            dmod_dist = ['d', 'locked', None],
-            dmod_contrast = ['t', 'locked', None],
-            dmod_rotate = ['r', 'locked', None],
-            dmod_pan = ['q', 'locked', None],
-            dmod_freepan = ['w', 'locked', None],
+            dmod_draw = ['space', None, None],
+            dmod_edit = ['b', None, None],
+            dmod_cmap = ['y', None, None],
+            #dmod_cutlo = [',', None, "Cut low"],
+            #dmod_cuthi = ['.', None, "Cut high"],
+            dmod_cuts = ['s', None, None],
+            dmod_dist = ['d', None, None],
+            dmod_contrast = ['t', None, None],
+            dmod_rotate = ['r', None, None],
+            dmod_pan = ['q', None, None],
+            dmod_freepan = ['w', None, None],
 
             # KEYBOARD
             kp_zoom_in = ['+', '='],
@@ -113,6 +113,7 @@ class ImageViewBindings(object):
             kp_poly_del = ['z', 'draw+z'],
             kp_edit_del = ['edit+z'],
             kp_reset = ['escape'],
+            kp_lock = ['l'],
             
             # SCROLLING/WHEEL
             sc_pan = [],
@@ -908,6 +909,24 @@ class ImageViewBindings(object):
         self.reset(viewer)
         return True
 
+    def kp_lock(self, viewer, keyname, data_x, data_y):
+        bm = viewer.get_bindmap()
+        # toggle default mode type to locked/oneshot
+        dfl_modetype = bm.get_default_modifier_mode()
+        # get current mode
+        modname, cur_modetype = bm.current_modifier()
+
+        if dfl_modetype == 'locked':
+            modetype = 'oneshot'
+            bm.set_default_modifier_mode(modetype)
+            # turning off lock also resets the mode
+            bm.reset_modifier(viewer)
+        else:
+            modetype = 'locked'
+            bm.set_default_modifier_mode(modetype)
+            bm.set_modifier(modname, modtype=modetype)
+        return True
+
     #####  MOUSE ACTION CALLBACKS #####
 
     ## def ms_none(self, viewer, action, data_x, data_y):
@@ -1362,6 +1381,7 @@ class BindingMapper(Callback.Callbacks):
         self._kbdmod = None
         self._kbdmod_types = ('held', 'oneshot', 'locked')
         self._kbdmod_type = 'held'
+        self._kbdmod_type_default = 'oneshot'
         self._delayed_reset = False
 
         # Set up button mapping
@@ -1403,22 +1423,39 @@ class BindingMapper(Callback.Callbacks):
         return res
 
     def add_modifier(self, keyname, modname, modtype='held', msg=None):
-        assert modtype in self._kbdmod_types, \
-               ValueError("Bad modifier type '%s': must be one of %s" % (
-            modtype, self._kbdmod_types))
+        if modtype is not None:
+            assert modtype in self._kbdmod_types, \
+                   ValueError("Bad modifier type '%s': must be one of %s" % (
+                modtype, self._kbdmod_types))
 
         bnch = Bunch.Bunch(name=modname, type=modtype, msg=msg)
         self.modmap[keyname] = bnch
         self.modmap['mod_%s' % modname] = bnch
         
-    def set_modifier(self, name, modtype='oneshot'):
+    def set_modifier(self, name, modtype=None):
+        if modtype == None:
+            modtype = self._kbdmod_type_default
         assert modtype in self._kbdmod_types, \
                ValueError("Bad modifier type '%s': must be one of %s" % (
             modtype, self._kbdmod_types))
         self._kbdmod = name
+        if name is None:
+            # like a reset_modifier()
+            modtype = 'held'
+            self._delayed_reset = False
         self._kbdmod_type = modtype
+        self.logger.info("set keyboard mode to '%s' type=%s" % (name, modtype))
         self.make_callback('mode-set', self._kbdmod, self._kbdmod_type)
         
+    def set_default_modifier_mode(self, modtype):
+        assert modtype in self._kbdmod_types, \
+               ValueError("Bad modifier type '%s': must be one of %s" % (
+            modtype, self._kbdmod_types))
+        self._kbdmod_type_default = modtype
+
+    def get_default_modifier_mode(self):
+        return self._kbdmod_type_default
+
     def reset_modifier(self, viewer):
         try:
             bnch = self.modmap['mod_%s' % self._kbdmod]
@@ -1427,6 +1464,7 @@ class BindingMapper(Callback.Callbacks):
         self._kbdmod = None
         self._kbdmod_type = 'held'
         self._delayed_reset = False
+        self.logger.info("set keyboard mode reset")
         # clear onscreen message, if any
         if (bnch is not None) and (bnch.msg is not None):
             viewer.onscreen_message(None)
@@ -1497,7 +1535,10 @@ class BindingMapper(Callback.Callbacks):
             # if there is not a modifier active now,
             # activate this one
             if self._kbdmod is None:
-                self.set_modifier(bnch.name, bnch.type)
+                mod_type = bnch.type
+                if mod_type == None:
+                    mod_type = self._kbdmod_type_default
+                self.set_modifier(bnch.name, mod_type)
                 if bnch.msg is not None:
                     viewer.onscreen_message(bnch.msg)
                 return True
