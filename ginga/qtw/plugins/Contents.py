@@ -98,6 +98,7 @@ class Contents(GingaPlugin.GlobalPlugin):
         self.treeview.clear()
 
         for key in toclist:
+            chname = key
             chitem = QtGui.QTreeWidgetItem(self.treeview, [chname])
             chitem.setFirstColumnSpanned(True)
             self.treeview.addTopLevelItem(chitem)
