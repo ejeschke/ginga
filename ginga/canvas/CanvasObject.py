@@ -249,6 +249,9 @@ class CanvasObjectBase(Callback.Callbacks):
     def convert_mapper(self, tomap):
         """
         Converts our object from using one coordinate map to another.
+
+        NOTE: This is currently NOT WORKING, because radii are not
+        converted correctly.
         """
         frommap = self.crdmap
         if frommap == tomap:
@@ -261,11 +264,13 @@ class CanvasObjectBase(Callback.Callbacks):
             # under current coordmap
             x1, y1 = frommap.to_data(xc, yc)
             x2, y2 = frommap.to_data(xc + self.radius, yc)
+            x3, y3 = frommap.to_data(xc, yc + self.radius)
             # now convert these data coords to native coords in tomap
             nx1, ny1 = tomap.data_to(x1, y1)
             nx2, ny2 = tomap.data_to(x2, y2)
+            nx3, ny3 = tomap.data_to(x3, y3)
             # recalculate radius using new coords
-            self.radius = math.fabs(nx2 - nx1)
+            self.radius = math.sqrt((nx2 - nx1)**2 + (ny3 - ny1)**2)
 
         elif hasattr(self, 'xradius'):
             # similar to above case, but there are 2 radii
@@ -291,7 +296,7 @@ class CanvasObjectBase(Callback.Callbacks):
         # set our map to the new map
         self.crdmap = tomap
     
-    # TODO: move these into utility module
+    # TODO: move these into utility module?
     #####
     def within_radius(self, a, b, x, y, canvas_radius):
         """Point (a, b) and point (x, y) are in data coordinates.
@@ -1031,14 +1036,22 @@ class CircleBase(OnePointOneRadiusMixin, CanvasObjectBase):
         self.kind = 'circle'
 
     def contains(self, data_x, data_y):
+        # rotate point back to cartesian alignment for test
         xd, yd = self.crdmap.to_data(self.x, self.y)
-        x2, y2 = self.crdmap.to_data(self.x + self.radius, self.y)
-        dradius = math.fabs(x2 - xd)
-        radius = math.sqrt(math.fabs(data_x - xd)**2 + math.fabs(data_y - yd)**2)
-        if radius <= dradius:
+        xp, yp = data_x, data_y
+
+        # need to recalculate radius in case of wcs coords
+        x2, y2 = self.crdmap.to_data(self.x + self.radius,
+                                     self.y + self.radius)
+        xradius = max(x2, xd) - min(x2, xd)
+        yradius = max(y2, yd) - min(y2, yd)
+        
+        # See http://math.stackexchange.com/questions/76457/check-if-a-point-is-within-an-ellipse
+        res = (((xp - xd) ** 2) / xradius ** 2 + 
+               ((yp - yd) ** 2) / yradius ** 2)
+        if res <= 1.0:
             return True
         return False
-
 
 class PointBase(OnePointOneRadiusMixin, CanvasObjectBase):
     """Draws a point on a ImageViewCanvas.
@@ -1983,11 +1996,11 @@ class NormImageBase(ImageBase):
         self._reset_optimize()
 
     def scale_by(self, scale_x, scale_y):
-        print("scaling image")
+        #print("scaling image")
         self.scale_x *= scale_x
         self.scale_y *= scale_y
         self._reset_optimize()
-        print("image scale_x=%f scale_y=%f" % (self.scale_x, self.scale_y))
+        #print("image scale_x=%f scale_y=%f" % (self.scale_x, self.scale_y))
 
 
 class CompoundObject(CompoundMixin, CanvasObjectBase):

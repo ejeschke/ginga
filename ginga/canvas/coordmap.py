@@ -8,6 +8,7 @@
 # Please see the file LICENSE.txt for details.
 #
 from ginga import trcalc
+from ginga.util import wcs
 
 class CanvasMapper(object):
     """A coordinate mapper that maps to the viewer's canvas in
@@ -96,8 +97,12 @@ class WCSMapper(DataMapper):
         lon, lat = image.pixtoradec(data_x, data_y)
         return lon, lat
 
+    def offset_pt(self, pt, xoff, yoff):
+        x, y = pt
+        return wcs.add_offset_radec(x, y, xoff, yoff)
+    
     def rotate_pt(self, x, y, theta, xoff=0, yoff=0):
-        # TODO: optomize by reducing function calls
+        # TODO: optomize by rotating in WCS space
         x, y = self.to_data(x, y)
         xoff, yoff = self.to_data(xoff, yoff)
 

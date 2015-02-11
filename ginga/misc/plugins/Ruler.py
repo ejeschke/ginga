@@ -89,7 +89,12 @@ class Ruler(GingaPlugin.LocalPlugin):
         index = self.w.units.get_index()
         units = self.unittypes[index]
         self.canvas.set_drawtype('ruler', color='cyan', units=units)
-        self.redo()
+
+        if self.ruletag is not None:
+            obj = self.canvas.getObjectByTag(self.ruletag)
+            if obj.kind == 'ruler':
+                obj.units = units
+                self.canvas.redraw(whence=3)
         return True
 
     def close(self):
@@ -147,6 +152,7 @@ class Ruler(GingaPlugin.LocalPlugin):
 
     def clear(self, canvas, button, data_x, data_y):
         self.canvas.deleteAllObjects()
+        self.ruletag = None
         return False
 
     def wcsruler(self, surface, tag):

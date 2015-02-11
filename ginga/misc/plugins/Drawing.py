@@ -233,6 +233,8 @@ class Drawing(GingaPlugin.LocalPlugin):
         if hasattr(obj, 'coord'):
             tomap = self.fitsimage.get_coordmap(obj.coord)
             if obj.crdmap != tomap:
+                #print("coordmap has changed to '%s'--converting mapper" % (
+                #    str(tomap)))
                 # user changed type of mapper; convert coordinates to
                 # new mapper and update widgets
                 obj.convert_mapper(tomap)

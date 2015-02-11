@@ -383,13 +383,6 @@ class ReferenceViewer(object):
         ginga.ds.raise_tab('Info')
         ginga.ds.raise_tab('Thumbs')
     
-        # Add custom channels
-        channels = options.channels.split(',')
-        for chname in channels:
-            datasrc = Datasrc.Datasrc(length=options.bufsize)
-            ginga.add_channel(chname, datasrc)
-        ginga.change_channel(channels[0])
-    
         # User configuration (custom star catalogs, etc.)
         try:
             ginga_config.post_gui_config(ginga)
@@ -404,6 +397,13 @@ class ReferenceViewer(object):
             logger.error("Error processing Ginga config file: %s" % (
                 str(e)))
             logger.error("Traceback:\n%s" % (tb_str))
+    
+        # Add custom channels
+        channels = options.channels.split(',')
+        for chname in channels:
+            datasrc = Datasrc.Datasrc(length=options.bufsize)
+            ginga.add_channel(chname, datasrc)
+        ginga.change_channel(channels[0])
     
         # Display banner the first time run, unless suppressed
         showBanner = True
