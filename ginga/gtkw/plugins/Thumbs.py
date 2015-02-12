@@ -62,8 +62,8 @@ class Thumbs(ThumbsBase.ThumbsBase):
             "Scroll the thumbs window when new images arrive")
         b.clear.set_tooltip_text("Remove all current thumbnails")
         b.clear.connect("clicked", lambda w: self.clear())
-        autoScroll = self.settings.get('autoScroll', True)
-        b.auto_scroll.set_active(autoScroll)
+        auto_scroll = self.settings.get('auto_scroll', True)
+        b.auto_scroll.set_active(auto_scroll)
 
         cw.pack_start(w, fill=True, expand=False)
 
@@ -93,6 +93,15 @@ class Thumbs(ThumbsBase.ThumbsBase):
                            thumbpath=thumbpath)
 
         with self.thmblock:
+            self.thumbDict[thumbkey] = bnch
+            self.thumbList.append(thumbkey)
+
+            sort_order = self.settings.get('sort_order', None)
+            if sort_order:
+                self.thumbList.sort()
+                self.reorder_thumbs()
+                return
+            
             if self.thumbColCount == 0:
                 hbox = gtk.HBox(homogeneous=True, spacing=self.thumbSep)
                 self.w.thumbs.pack_start(hbox)
@@ -105,9 +114,6 @@ class Thumbs(ThumbsBase.ThumbsBase):
             self.thumbColCount = (self.thumbColCount + 1) % self.thumbNumCols
 
             self.w.thumbs.show_all()
-
-            self.thumbDict[thumbkey] = bnch
-            self.thumbList.append(thumbkey)
 
         # force scroll to bottom of thumbs, if checkbox is set
         scrollp = self.w.auto_scroll.get_active()
@@ -132,6 +138,7 @@ class Thumbs(ThumbsBase.ThumbsBase):
             self.thumbColCount = 0
         
     def reorder_thumbs(self):
+        self.logger.debug("Reordering thumb grid")
         with self.thmblock:
             self.clearWidget()
 
@@ -161,23 +168,17 @@ class Thumbs(ThumbsBase.ThumbsBase):
         return self.thumbpane_resized(width, height)
         
     def query_thumb(self, thumbkey, name, metadata, x, y, ttw):
-        objtext = 'Object: UNKNOWN'
-        try:
-            objtext = 'Object: ' + metadata['OBJECT']
-        except Exception as e:
-            self.logger.error("Couldn't determine OBJECT name: %s" % str(e))
-
-        uttext = 'UT: UNKNOWN'
-        try:
-            uttext = 'UT: ' + metadata['UT']
-        except Exception as e:
-            self.logger.error("Couldn't determine UT: %s" % str(e))
-
-        chname, path = thumbkey
-
-        s = "%s\n%s\n%s\n%s" % (chname, name, objtext, uttext)
-        ttw.set_text(s)
+        result = []
+        for kwd in self.keywords:
+            try:
+                text = kwd + ': ' + str(metadata[kwd])
+            except Exception as e:
+                self.logger.warn("Couldn't determine %s name: %s" % (
+                    kwd, str(e)))
+                text = "%s: N/A" % (kwd)
+            result.append(text)
             
+        ttw.set_text('\n'.join(result))
         return True
 
     def update_thumbnail(self, thumbkey, imgwin, name, metadata):

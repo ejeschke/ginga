@@ -34,17 +34,27 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         # max length of thumb on the long side
         self.thumbWidth = 150
         self.cursor = 0
+        tt_keywords = ['OBJECT', 'FRAMEID', 'UT', 'DATE-OBS']
 
         prefs = self.fv.get_preferences()
         self.settings = prefs.createCategory('plugin_Thumbs')
+        self.settings.addDefaults(preload_images=False,
+                                  cache_thumbs=False,
+                                  cache_location='local',
+                                  auto_scroll=True,
+                                  rebuild_wait=4.0,
+                                  tt_keywords=tt_keywords,
+                                  sort_order=None)
         self.settings.load(onError='silent')
 
         self.thmbtask = fv.get_timer()
         self.thmbtask.set_callback('expired', self.redo_delay_timer)
-        self.lagtime = 4.0
+        self.lagtime = self.settings.get('rebuild_wait', 4.0)
         self.thmblock = threading.RLock()
 
-        self.keywords = ['OBJECT', 'FRAMEID', 'UT', 'DATE-OBS']
+        # TODO: these maybe should be configurable by channel
+        # different instruments have different keywords of interest
+        self.keywords = self.settings.get('tt_keywords', tt_keywords)
 
         fv.set_callback('add-image', self.add_image)
         fv.set_callback('add-channel', self.add_channel)
@@ -79,6 +89,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
                 return
 
         # Get metadata for mouse-over tooltip
+        # TODO: would be nice for this to be customizable
         header = image.get_header()
         metadata = {}
         for kwd in self.keywords:
@@ -133,7 +144,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
             index = self.thumbList.index(thumbkey)
             self.cursor = index
 
-            preload = self.settings.get('preloadImages', False)
+            preload = self.settings.get('preload_images', False)
             if not preload:
                 return
 
@@ -261,7 +272,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         if image is None:
             return
         if save_thumb is None:
-            save_thumb = self.settings.get('cacheThumbs', False)
+            save_thumb = self.settings.get('cache_thumbs', False)
         
         chname = self.fv.get_channelName(fitsimage)
 
@@ -358,7 +369,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         if image_loader is None:
             image_loader = self.fv.load_image
 
-        cacheThumbs = self.settings.get('cacheThumbs', False)
+        cache_thumbs = self.settings.get('cache_thumbs', False)
 
         for path in filelist:
             self.logger.info("generating thumb for %s..." % (
@@ -380,7 +391,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
                     pass
 
             # Is there a cached thumbnail image on disk we can use?
-            save_thumb = cacheThumbs
+            save_thumb = cache_thumbs
             image = None
             if (thumbpath is not None) and os.path.exists(thumbpath):
                 save_thumb = False
@@ -414,8 +425,8 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         path = os.path.abspath(path)
         dirpath, filename = os.path.split(path)
         # Get thumb directory
-        cacheLocation = self.settings.get('cacheLocation', 'local')
-        if cacheLocation == 'ginga':
+        cache_location = self.settings.get('cache_location', 'local')
+        if cache_location == 'ginga':
             # thumbs in .ginga cache
             prefs = self.fv.get_preferences()
             thumbDir = os.path.join(prefs.get_baseFolder(), 'thumbs')

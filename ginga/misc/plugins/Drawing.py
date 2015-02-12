@@ -42,6 +42,7 @@ class Drawing(GingaPlugin.LocalPlugin):
         self.drawtypes = list(canvas.get_drawtypes())
         self.drawcolors = draw_colors
         self.linestyles = ['solid', 'dash']
+        self.coordtypes = ['data', 'wcs']
         # contains all parameters to be passed to the constructor
         self.draw_args = []
         self.draw_kwdargs = {}
@@ -74,6 +75,7 @@ class Drawing(GingaPlugin.LocalPlugin):
         fr = Widgets.Frame("Drawing")
 
         captions = (("Draw type:", 'label', "Draw type", 'combobox'),
+                    ("Coord type:", 'label', "Coord type", 'combobox'),
                     )
         w, b = Widgets.build_info(captions)
         self.w.update(b)
@@ -82,6 +84,13 @@ class Drawing(GingaPlugin.LocalPlugin):
         for name in self.drawtypes:
             combobox.append_text(name)
         index = self.drawtypes.index(default_drawtype)
+        combobox.set_index(index)
+        combobox.add_callback('activated', lambda w, idx: self.set_drawparams_cb())
+
+        combobox = b.coord_type
+        for name in self.coordtypes:
+            combobox.append_text(name)
+        index = 0
         combobox.set_index(index)
         combobox.add_callback('activated', lambda w, idx: self.set_drawparams_cb())
 
@@ -185,6 +194,8 @@ class Drawing(GingaPlugin.LocalPlugin):
     def set_drawparams_cb(self):
         index = self.w.draw_type.get_index()
         kind = self.drawtypes[index]
+        index = self.w.coord_type.get_index()
+        coord = self.coordtypes[index]
 
         # remove old params
         self.w.drawvbox.remove_all()
@@ -208,6 +219,8 @@ class Drawing(GingaPlugin.LocalPlugin):
 
         args, kwdargs = self.draw_params.get_params()
         #print("changing params to: %s" % str(kwdargs))
+        if kind != 'compass':
+            kwdargs['coord'] = coord
         self.canvas.set_drawtype(kind, **kwdargs)
 
     def draw_params_changed_cb(self, paramObj, params):

@@ -403,9 +403,9 @@ class TextBase(CanvasObjectBase):
     @classmethod
     def get_params_metadata(cls):
         return [
-            Param(name='coord', type=str, default='data',
-                  valid=['data', 'wcs'],
-                  description="Set type of coordinates"),
+            ## Param(name='coord', type=str, default='data',
+            ##       valid=['data', 'wcs'],
+            ##       description="Set type of coordinates"),
             Param(name='x', type=float, default=0.0, argpos=0,
                   description="X coordinate of lower left of text"),
             Param(name='y', type=float, default=0.0, argpos=1,
@@ -519,9 +519,9 @@ class PolygonBase(PolygonMixin, CanvasObjectBase):
     @classmethod
     def get_params_metadata(cls):
         return [
-            Param(name='coord', type=str, default='data',
-                  valid=['data', 'wcs'],
-                  description="Set type of coordinates"),
+            ## Param(name='coord', type=str, default='data',
+            ##       valid=['data', 'wcs'],
+            ##       description="Set type of coordinates"),
             ## Param(name='points', type=list, default=[], argpos=0,
             ##       description="points making up polygon"),
             Param(name='linewidth', type=int, default=1,
@@ -668,9 +668,9 @@ class BoxBase(OnePointTwoRadiusMixin, CanvasObjectBase):
     @classmethod
     def get_params_metadata(cls):
         return [
-            Param(name='coord', type=str, default='data',
-                  valid=['data', 'wcs'],
-                  description="Set type of coordinates"),
+            ## Param(name='coord', type=str, default='data',
+            ##       valid=['data', 'wcs'],
+            ##       description="Set type of coordinates"),
             Param(name='x', type=float, default=0.0, argpos=0,
                   description="X coordinate of center of object"),
             Param(name='y', type=float, default=0.0, argpos=1,
@@ -759,9 +759,9 @@ class EllipseBase(OnePointTwoRadiusMixin, CanvasObjectBase):
     @classmethod
     def get_params_metadata(cls):
         return [
-            Param(name='coord', type=str, default='data',
-                  valid=['data', 'wcs'],
-                  description="Set type of coordinates"),
+            ## Param(name='coord', type=str, default='data',
+            ##       valid=['data', 'wcs'],
+            ##       description="Set type of coordinates"),
             Param(name='x', type=float, default=0.0, argpos=0,
                   description="X coordinate of center of object"),
             Param(name='y', type=float, default=0.0, argpos=1,
@@ -865,9 +865,9 @@ class TriangleBase(OnePointTwoRadiusMixin, CanvasObjectBase):
     @classmethod
     def get_params_metadata(cls):
         return [
-            Param(name='coord', type=str, default='data',
-                  valid=['data', 'wcs'],
-                  description="Set type of coordinates"),
+            ## Param(name='coord', type=str, default='data',
+            ##       valid=['data', 'wcs'],
+            ##       description="Set type of coordinates"),
             Param(name='x', type=float, default=0.0, argpos=0,
                   description="X coordinate of center of object"),
             Param(name='y', type=float, default=0.0, argpos=1,
@@ -986,9 +986,9 @@ class CircleBase(OnePointOneRadiusMixin, CanvasObjectBase):
     @classmethod
     def get_params_metadata(cls):
         return [
-            Param(name='coord', type=str, default='data',
-                  valid=['data', 'wcs'],
-                  description="Set type of coordinates"),
+            ## Param(name='coord', type=str, default='data',
+            ##       valid=['data', 'wcs'],
+            ##       description="Set type of coordinates"),
             Param(name='x', type=float, default=0.0, argpos=0,
                   description="X coordinate of center of object"),
             Param(name='y', type=float, default=0.0, argpos=1,
@@ -1065,9 +1065,9 @@ class PointBase(OnePointOneRadiusMixin, CanvasObjectBase):
     @classmethod
     def get_params_metadata(cls):
         return [
-            Param(name='coord', type=str, default='data',
-                  valid=['data', 'wcs'],
-                  description="Set type of coordinates"),
+            ## Param(name='coord', type=str, default='data',
+            ##       valid=['data', 'wcs'],
+            ##       description="Set type of coordinates"),
             Param(name='x', type=float, default=0.0, argpos=0,
                   description="X coordinate of center of object"),
             Param(name='y', type=float, default=0.0, argpos=1,
@@ -1151,9 +1151,9 @@ class RectangleBase(TwoPointMixin, CanvasObjectBase):
     @classmethod
     def get_params_metadata(cls):
         return [
-            Param(name='coord', type=str, default='data',
-                  valid=['data', 'wcs'],
-                  description="Set type of coordinates"),
+            ## Param(name='coord', type=str, default='data',
+            ##       valid=['data', 'wcs'],
+            ##       description="Set type of coordinates"),
             Param(name='x1', type=float, default=0.0, argpos=0,
                   description="First X coordinate of object"),
             Param(name='y1', type=float, default=0.0, argpos=1,
@@ -1243,9 +1243,9 @@ class LineBase(TwoPointMixin, CanvasObjectBase):
     @classmethod
     def get_params_metadata(cls):
         return [
-            Param(name='coord', type=str, default='data',
-                  valid=['data', 'wcs'],
-                  description="Set type of coordinates"),
+            ## Param(name='coord', type=str, default='data',
+            ##       valid=['data', 'wcs'],
+            ##       description="Set type of coordinates"),
             Param(name='x1', type=float, default=0.0, argpos=0,
                   description="First X coordinate of object"),
             Param(name='y1', type=float, default=0.0, argpos=1,
@@ -1306,9 +1306,9 @@ class RightTriangleBase(TwoPointMixin, CanvasObjectBase):
     @classmethod
     def get_params_metadata(cls):
         return [
-            Param(name='coord', type=str, default='data',
-                  valid=['data', 'wcs'],
-                  description="Set type of coordinates"),
+            ## Param(name='coord', type=str, default='data',
+            ##       valid=['data', 'wcs'],
+            ##       description="Set type of coordinates"),
             Param(name='x1', type=float, default=0.0, argpos=0,
                   description="First X coordinate of object"),
             Param(name='y1', type=float, default=0.0, argpos=1,
@@ -1390,9 +1390,9 @@ class CompassBase(OnePointOneRadiusMixin, CanvasObjectBase):
     @classmethod
     def get_params_metadata(cls):
         return [
-            Param(name='coord', type=str, default='data',
-                  valid=['data'],
-                  description="Set type of coordinates"),
+            ## Param(name='coord', type=str, default='data',
+            ##       valid=['data'],
+            ##       description="Set type of coordinates"),
             Param(name='x', type=float, default=0.0, argpos=0,
                   description="X coordinate of center of object"),
             Param(name='y', type=float, default=0.0, argpos=1,
@@ -1469,9 +1469,9 @@ class RulerBase(TwoPointMixin, CanvasObjectBase):
     @classmethod
     def get_params_metadata(cls):
         return [
-            Param(name='coord', type=str, default='data',
-                  valid=['data', 'wcs'],
-                  description="Set type of coordinates"),
+            ## Param(name='coord', type=str, default='data',
+            ##       valid=['data', 'wcs'],
+            ##       description="Set type of coordinates"),
             Param(name='x1', type=float, default=0.0, argpos=0,
                   description="First X coordinate of object"),
             Param(name='y1', type=float, default=0.0, argpos=1,
@@ -1582,9 +1582,9 @@ class ImageBase(CanvasObjectBase):
     @classmethod
     def get_params_metadata(cls):
         return [
-            Param(name='coord', type=str, default='data',
-                  valid=['data'],
-                  description="Set type of coordinates"),
+            ## Param(name='coord', type=str, default='data',
+            ##       valid=['data'],
+            ##       description="Set type of coordinates"),
             Param(name='x', type=float, default=0.0, argpos=0,
                   description="X coordinate of corner of object"),
             Param(name='y', type=float, default=0.0, argpos=1,
@@ -1825,9 +1825,9 @@ class NormImageBase(ImageBase):
     @classmethod
     def get_params_metadata(cls):
         return [
-            Param(name='coord', type=str, default='data',
-                  valid=['data'],
-                  description="Set type of coordinates"),
+            ## Param(name='coord', type=str, default='data',
+            ##       valid=['data'],
+            ##       description="Set type of coordinates"),
             Param(name='x', type=float, default=0.0, argpos=0,
                   description="X coordinate of corner of object"),
             Param(name='y', type=float, default=0.0, argpos=1,

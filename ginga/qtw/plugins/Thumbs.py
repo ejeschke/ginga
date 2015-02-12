@@ -88,8 +88,8 @@ class Thumbs(ThumbsBase.ThumbsBase):
         b.auto_scroll.setToolTip("Scroll the thumbs window when new images arrive")
         b.clear.setToolTip("Remove all current thumbnails")
         b.clear.clicked.connect(self.clear)
-        autoScroll = self.settings.get('autoScroll', True)
-        b.auto_scroll.setChecked(autoScroll)
+        auto_scroll = self.settings.get('auto_scroll', True)
+        b.auto_scroll.setChecked(auto_scroll)
         cw.addWidget(w, stretch=0)
 
     def insert_thumbnail(self, imgwin, thumbkey, thumbname, chname, name, path,
@@ -127,6 +127,12 @@ class Thumbs(ThumbsBase.ThumbsBase):
             self.thumbDict[thumbkey] = bnch
             self.thumbList.append(thumbkey)
 
+            sort_order = self.settings.get('sort_order', None)
+            if sort_order:
+                self.thumbList.sort()
+                self.reorder_thumbs()
+                return
+            
             self.w.thumbs.addWidget(widget,
                                     self.thumbRowCount, self.thumbColCount)
             self.thumbColCount = (self.thumbColCount + 1) % self.thumbNumCols
@@ -141,7 +147,7 @@ class Thumbs(ThumbsBase.ThumbsBase):
             self.fv.update_pending()
             area = self.w.thumbs_scroll
             area.verticalScrollBar().setValue(area.verticalScrollBar().maximum())
-        self.logger.debug("added thumb for %s" % (thumbname))
+        self.logger.debug("added thumb for %s" % (name))
 
     def clearWidget(self):
         """Clears the thumbnail display widget of all thumbnails, but does
@@ -157,6 +163,7 @@ class Thumbs(ThumbsBase.ThumbsBase):
         self.w.thumbs_w.update()
         
     def reorder_thumbs(self):
+        self.logger.debug("Reordering thumb grid")
         with self.thmblock:
             # Remove widgets from grid
             for thumbkey in self.thumbList:
@@ -183,22 +190,17 @@ class Thumbs(ThumbsBase.ThumbsBase):
         return False
         
     def query_thumb(self, thumbkey, name, metadata):
-        objtext = 'Object: UNKNOWN'
-        try:
-            objtext = 'Object: ' + metadata['OBJECT']
-        except Exception as e:
-            self.logger.error("Couldn't determine OBJECT name: %s" % str(e))
-
-        uttext = 'UT: UNKNOWN'
-        try:
-            uttext = 'UT: ' + metadata['UT']
-        except Exception as e:
-            self.logger.error("Couldn't determine UT: %s" % str(e))
-
-        chname, path = thumbkey
-
-        s = "%s\n%s\n%s\n%s" % (chname, name, objtext, uttext)
-        return s
+        result = []
+        for kwd in self.keywords:
+            try:
+                text = kwd + ': ' + str(metadata[kwd])
+            except Exception as e:
+                self.logger.warn("Couldn't determine %s name: %s" % (
+                    kwd, str(e)))
+                text = "%s: N/A" % (kwd)
+            result.append(text)
+            
+        return '\n'.join(result)
 
     def update_thumbnail(self, thumbkey, imgwin, name, metadata):
         with self.thmblock:
