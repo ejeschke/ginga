@@ -239,9 +239,9 @@ class GingaControl(Callback.Callbacks):
             self.toggle_fullscreen()
         elif keyname == 'm':
             self.maximize()
-        elif keyname == ',':
+        elif keyname == '<':
             self.collapse_pane('left')
-        elif keyname == '.':
+        elif keyname == '>':
             self.collapse_pane('right')
         ## elif keyname == 'escape':
         ##     self.reset_viewer()

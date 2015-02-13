@@ -30,7 +30,7 @@ class Thumbs(ThumbsBase.ThumbsBase):
         tg = ImageViewCanvasGtk.ImageViewCanvas(logger=self.logger)
         tg.configure(200, 200)
         tg.enable_autozoom('on')
-        tg.enable_autocuts('on')
+        tg.enable_autocuts('override')
         tg.enable_auto_orient(True)
         tg.set_bg(0.7, 0.7, 0.7)
         tg.defer_redraw = False
@@ -186,15 +186,19 @@ class Thumbs(ThumbsBase.ThumbsBase):
             try:
                 bnch = self.thumbDict[thumbkey]
             except KeyError:
+                self.logger.debug("No thumb found for %s; not updating thumbs" % (
+                    str(thumbkey)))
                 return
 
             imgwin.set_property("has-tooltip", True)
             imgwin.connect("query-tooltip", self._mktt(thumbkey, name, metadata))
 
             # Replace thumbnail image widget
+            self.logger.debug("replacing thumb widget.")
             child = bnch.evbox.get_child()
             bnch.evbox.remove(child)
             bnch.evbox.add(imgwin)
+            bnch.evbox.show_all()
         self.logger.debug("update finished.")
                                  
     def __str__(self):

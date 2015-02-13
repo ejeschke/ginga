@@ -52,7 +52,7 @@ class Thumbs(ThumbsBase.ThumbsBase):
         tg.configure(200, 200)
         tg.enable_autozoom('on')
         tg.set_autocut_params('zscale')
-        tg.enable_autocuts('on')
+        tg.enable_autocuts('override')
         tg.enable_auto_orient(True)
         tg.defer_redraw = False
         tg.set_bg(0.7, 0.7, 0.7)
@@ -207,6 +207,8 @@ class Thumbs(ThumbsBase.ThumbsBase):
             try:
                 bnch = self.thumbDict[thumbkey]
             except KeyError:
+                self.logger.debug("No thumb found for %s; not updating thumbs" % (
+                    str(thumbkey)))
                 return
 
             self.logger.debug("generating pixmap.")

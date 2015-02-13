@@ -278,10 +278,11 @@ class Info(GingaPlugin.GlobalPlugin):
             histr = info.winfo.cut_high.get_text().strip()
             if histr != '':
                 hival = float(histr)
+            self.logger.debug("locut=%f hicut=%f" % (loval, hival))
 
             return fitsimage.cut_levels(loval, hival)
         except Exception as e:
-            self.fv.showStatus("Error cutting levels: %s" % (str(e)))
+            self.fv.show_error("Error cutting levels: %s" % (str(e)))
             
         return True
 
