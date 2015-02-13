@@ -19,16 +19,25 @@ class Contents(GingaPlugin.GlobalPlugin):
         # superclass defines some variables for us, like logger
         super(Contents, self).__init__(fv)
 
+        columns = [ ('Name', 'NAME'), ('Object', 'OBJECT'),
+                    ('Date', 'DATE-OBS'), ('Time UT', 'UT'),
+                     ]
+
+        prefs = self.fv.get_preferences()
+        self.settings = prefs.createCategory('plugin_Contents')
+        self.settings.addDefaults(columns=columns)
+        self.settings.load(onError='silent')
+
         # For table-of-contents pane
         self.nameDict = {}
-        self.columns = [('Name', 'NAME'),
-                        ('Object', 'OBJECT'),
-                        ('Date', 'DATE-OBS'),
-                        ('Time UT', 'UT')]
+        # TODO: this ought to be customizable by channel
+        self.columns = self.settings.get('columns', columns)
+        
         self.cell_sort_funcs = []
         for hdr, key in self.columns:
             self.cell_sort_funcs.append(self._mksrtfnN(key))
         
+        self.gui_up = False
         fv.set_callback('add-image', self.add_image)
         fv.set_callback('delete-channel', self.delete_channel)
 
@@ -71,6 +80,8 @@ class Contents(GingaPlugin.GlobalPlugin):
 
         cw = container.get_widget()
         cw.pack_start(sw, fill=True, expand=True)
+
+        self.gui_up = True
 
 
     def sort_cb(self, column, idx):
@@ -141,13 +152,15 @@ class Contents(GingaPlugin.GlobalPlugin):
     def get_info(self, chname, name, image):
         path = image.get('path', None)
         loader = image.get('loader', self.fv.load_image)
-        bnch = Bunch.Bunch(NAME=name, CHNAME=chname, path=path,
+        bnch = Bunch.Bunch(CHNAME=chname, path=path,
                            loader=loader)
 
         # Get header keywords of interest
         header = image.get_header()
-        for x, key in self.columns[1:]:
+        for x, key in self.columns:
             bnch[key] = header.get(key, 'N/A')
+        # name should always be available
+        bnch.NAME = name
         return bnch
     
     def recreate_toc(self):
@@ -174,6 +187,9 @@ class Contents(GingaPlugin.GlobalPlugin):
             
 
     def add_image(self, viewer, chname, image):
+        if not self.gui_up:
+            return False
+        
         noname = 'Noname' + str(time.time())
         name = image.get('name', noname)
 
@@ -207,8 +223,13 @@ class Contents(GingaPlugin.GlobalPlugin):
         Parameter is chinfo (a bunch)."""
         chname = chinfo.name
         del self.nameDict[chname]
+        if not self.gui_up:
+            return False
         self.recreate_toc()
         
+    def stop(self):
+        self.gui_up = False
+
     def __str__(self):
         return 'contents'
     

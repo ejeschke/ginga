@@ -19,12 +19,19 @@ class Contents(GingaPlugin.GlobalPlugin):
         # superclass defines some variables for us, like logger
         super(Contents, self).__init__(fv)
 
+        columns = [ ('Name', 'NAME'), ('Object', 'OBJECT'),
+                    ('Date', 'DATE-OBS'), ('Time UT', 'UT'),
+                     ]
+
+        prefs = self.fv.get_preferences()
+        self.settings = prefs.createCategory('plugin_Contents')
+        self.settings.addDefaults(columns=columns)
+        self.settings.load(onError='silent')
+
         # For table-of-contents pane
         self.nameDict = {}
-        self.columns = [('Name', 'NAME'),
-                        ('Object', 'OBJECT'),
-                        ('Date', 'DATE-OBS'),
-                        ('Time UT', 'UT')]
+        # TODO: this ought to be customizable by channel
+        self.columns = self.settings.get('columns', columns)
 
         self.gui_up = False
         fv.set_callback('add-image', self.add_image)
@@ -81,13 +88,15 @@ class Contents(GingaPlugin.GlobalPlugin):
     def get_info(self, chname, name, image):
         path = image.get('path', None)
         loader = image.get('loader', self.fv.load_image)
-        bnch = Bunch.Bunch(NAME=name, CHNAME=chname, path=path,
+        bnch = Bunch.Bunch(CHNAME=chname, path=path,
                            loader=loader)
 
         # Get header keywords of interest
         header = image.get_header()
-        for x, key in self.columns[1:]:
+        for x, key in self.columns:
             bnch[key] = str(header.get(key, 'N/A'))
+        # name should always be available
+        bnch.NAME = name
         return bnch
     
     def recreate_toc(self):
