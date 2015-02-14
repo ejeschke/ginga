@@ -225,7 +225,7 @@ class Pan(GingaPlugin.GlobalPlugin):
 
         except KeyError:
             paninfo.panrect = paninfo.panimage.add(CanvasTypes.CompoundObject(
-                CanvasTypes.Point(x, y, radius=radius),
+                CanvasTypes.Point(x, y, radius=radius, style='plus'),
                 CanvasTypes.Polygon(points)))
 
     def motion_cb(self, fitsimage, button, data_x, data_y):

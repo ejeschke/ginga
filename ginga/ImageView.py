@@ -516,6 +516,7 @@ class ImageViewBase(Callback.Callbacks):
         """
         self.deleteAllObjects()
         self._image = None
+        self.redraw(whence=0)
         
     def save_profile(self, **params):
         image = self.get_image()

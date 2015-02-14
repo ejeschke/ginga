@@ -31,9 +31,9 @@ class MultiDim(GingaPlugin.LocalPlugin):
         # superclass defines some variables for us, like logger
         super(MultiDim, self).__init__(fv, fitsimage)
 
+        self.hdu_info = []
         self.curhdu = 0
         self.naxispath = []
-        self.refs = []
         self.orientation = 'vertical'
 
         # For animation feature
@@ -218,7 +218,21 @@ class MultiDim(GingaPlugin.LocalPlugin):
         self.logger.debug("Loading fits hdu #%d" % (idx))
         image = AstroImage.AstroImage(logger=self.logger)
         try:
+            info = self.hdu_info[idx-1]
             hdu = self.fits_f[idx-1]
+            if hdu.data is None:
+                # <- empty data part to this HDU
+                self.logger.warn("Empty data part in HDU #%d" % (idx))
+                self.curhdu = idx-1
+                self.fitsimage.clear()
+                return
+
+            elif info['htype'].lower() not in ('imagehdu', 'primaryhdu'):
+                self.logger.warn("HDU #%d is not an image" % (idx))
+                self.curhdu = idx-1
+                self.fitsimage.clear()
+                return
+                
             dims = list(hdu.data.shape)
             dims.reverse()
             image.load_hdu(hdu)
@@ -316,18 +330,25 @@ class MultiDim(GingaPlugin.LocalPlugin):
     def prep_hdu_menu(self, w, info):
         # clear old TOC
         w.clear()
+        self.hdu_info = []
 
         idx = 1
         for tup in info:
             d = dict(index=idx, name=tup[1], htype=tup[2], dtype=tup[5])
+            self.hdu_info.append(d)
+
             toc_ent = "%(index)4d %(name)-12.12s %(htype)-12.12s %(dtype)-8.8s" % d
             w.append_text(toc_ent)
             idx += 1
-        if len(info) > 0:
+
+        if len(self.hdu_info) > 0:
             w.set_index(0)
         
     def redo(self):
         image = self.fitsimage.get_image()
+        if image is None:
+            return True
+        
         md = image.get_metadata()
         path = md.get('path', None)
         if path is None:
