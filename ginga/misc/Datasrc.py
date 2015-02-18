@@ -28,6 +28,14 @@ class Datasrc(object):
     def __setitem__(self, key, value):
         self.push(key, value)
         
+    def __contains__(self, key):
+        with self.cond:
+            return key in self.datums
+
+    def has_key(self, key):
+        with self.cond:
+            return key in self.datums
+        
     def __delitem__(self, key):
         self.remove(key)
 
@@ -115,10 +123,6 @@ class Datasrc(object):
             else:
                 return self.datums.keys()
 
-    def has_key(self, key):
-        with self.cond:
-            return key in self.datums
-        
     def wait(self, timeout=None):
         with self.cond:
             self.cond.wait(timeout=timeout)

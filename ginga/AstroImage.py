@@ -8,6 +8,7 @@
 # Please see the file LICENSE.txt for details.
 #
 import sys, os
+import re
 import math
 import logging
 import time
@@ -92,7 +93,13 @@ class AstroImage(BaseImage):
         self.clear_metadata()
 
         ahdr = self.get_header()
-        
+
+        # User specified an HDU using bracket notation at end of path?
+        match = re.match(r'^(.+)\[(\d+)\]$', filepath)
+        if match:
+            filepath = match.group(1)
+            numhdu = int(match.group(2))
+            
         data, naxispath = self.io.load_file(filepath, ahdr, numhdu=numhdu,
                                             naxispath=naxispath)
         if naxispath is None:
@@ -109,6 +116,8 @@ class AstroImage(BaseImage):
         if name is None:
             dirpath, filename = os.path.split(filepath)
             name, ext = os.path.splitext(filename)
+            ## if numhdu is not None:
+            ##     name += ('[%d]' % numhdu)
             self.set(name=name)
         self.set(path=filepath)
         

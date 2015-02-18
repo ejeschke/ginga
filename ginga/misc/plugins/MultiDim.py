@@ -34,6 +34,8 @@ class MultiDim(GingaPlugin.LocalPlugin):
         self.hdu_info = []
         self.curhdu = 0
         self.naxispath = []
+        self.imgname = 'NONAME'
+        self.image = None
         self.orientation = 'vertical'
 
         # For animation feature
@@ -136,6 +138,10 @@ class MultiDim(GingaPlugin.LocalPlugin):
         idx = w.get_index() + 1
         self.set_hdu(idx)
 
+    def set_naxis_cb(self, w, idx, n):
+        #idx = int(w.get_value()) - 1
+        self.set_naxis(idx, n)
+
     def build_naxis(self, dims):
         # build a vbox of NAXIS controls
         captions = [("NAXIS1:", 'label', 'NAXIS1', 'llabel'),
@@ -213,34 +219,57 @@ class MultiDim(GingaPlugin.LocalPlugin):
         except:
             pass
         self.fv.showStatus("")
+
+    def get_name(self, idx):
+        name = self.imgname
+        # Remove trailing .fits
+        if '.' in self.imgname:
+            name = self.imgname[:name.rindex('.')]
+        ## return '%s[%d]' % (name, idx)
+        return name
         
     def set_hdu(self, idx):
         self.logger.debug("Loading fits hdu #%d" % (idx))
+
+        ## # See if this HDU is still in the channel's datasrc
+        imname = self.get_name(idx)
+        ## chname = self.fv.get_channelName(self.fitsimage)
+        ## chinfo = self.fv.get_channelInfo(chname)
+        ## if imname in chinfo.datasrc:
+        ##     self.image = chinfo.datasrc[imname]
+        ##     self.fv.switch_name(chname, imname)
+        ##     return
+
+        # Nope, we'll have to load it
+        self.logger.debug("HDU %d not in memory; refreshing from file" % (idx))
+
         image = AstroImage.AstroImage(logger=self.logger)
+        self.image = image
         try:
+            self.curhdu = idx-1
+            dims = [0, 0]
             info = self.hdu_info[idx-1]
             hdu = self.fits_f[idx-1]
+
             if hdu.data is None:
                 # <- empty data part to this HDU
                 self.logger.warn("Empty data part in HDU #%d" % (idx))
-                self.curhdu = idx-1
-                self.fitsimage.clear()
-                return
 
             elif info['htype'].lower() not in ('imagehdu', 'primaryhdu'):
                 self.logger.warn("HDU #%d is not an image" % (idx))
-                self.curhdu = idx-1
-                self.fitsimage.clear()
-                return
-                
-            dims = list(hdu.data.shape)
-            dims.reverse()
-            image.load_hdu(hdu)
-            image.set(path=self.path)
 
-            self.fitsimage.set_image(image)
+            else:
+                dims = list(hdu.data.shape)
+                dims.reverse()
+
+            image.load_hdu(hdu)
+            image.set(path=self.path, name=imname)
+
+            self.fitsimage.set_image(image,
+                                     raise_initialize_errors=False)
+            ## self.fv.add_image(imname, image, chname=chname)
+            
             self.build_naxis(dims)
-            self.curhdu = idx-1
             self.logger.debug("HDU #%d loaded." % (idx))
 
         except Exception as e:
@@ -249,7 +278,10 @@ class MultiDim(GingaPlugin.LocalPlugin):
             self.logger.error(errmsg)
             self.fv.show_error(errmsg)
 
-    def set_naxis_cb(self, w, idx, n):
+
+    def set_naxis(self, idx, n):
+        # TODO: change this to update the data in the image?
+        
         #idx = int(w.get_value()) - 1
         self.play_idx = idx
         self.w['choose_naxis%d' % (n+1)].set_value(idx)
@@ -346,7 +378,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
         
     def redo(self):
         image = self.fitsimage.get_image()
-        if image is None:
+        if (image is None) or (image == self.image):
             return True
         
         md = image.get_metadata()
@@ -356,6 +388,8 @@ class MultiDim(GingaPlugin.LocalPlugin):
             return
 
         self.path = path
+        self.imgname = image.get('name', 'NONAME')
+
         self.fits_f = pyfits.open(path, 'readonly')
 
         lower = 1

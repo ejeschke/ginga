@@ -61,6 +61,11 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         fv.set_callback('delete-channel', self.delete_channel)
         fv.add_callback('active-image', self.focus_cb)
 
+    def get_thumb_key(self, chname, path):
+        path = os.path.abspath(path)
+        thumbkey = (chname.lower(), path)
+        return thumbkey
+    
     def add_image(self, viewer, chname, image):
         noname = 'Noname' + str(time.time())
         name = image.get('name', noname)
@@ -81,15 +86,14 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
             return
 
         # Is this thumbnail already in the list?
-        # NOTE: does not handle two separate images with the same name
+        # NOTE: does not handle two separate images with the same path
         # in the same channel
-        thumbkey = (chname.lower(), path)
+        thumbkey = self.get_thumb_key(chname, path)
         with self.thmblock:
             if thumbkey in self.thumbDict or nothumb:
                 return
 
         # Get metadata for mouse-over tooltip
-        # TODO: would be nice for this to be customizable
         header = image.get_header()
         metadata = {}
         for kwd in self.keywords:
@@ -260,8 +264,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         if path is None:
             # No path, so no way to find key for cached image
             return False
-        path = os.path.abspath(path)
-        thumbkey = (chname, path)
+        thumbkey = self.get_thumb_key(chname, path)
         with self.thmblock:
             return thumbkey in self.thumbDict
 
@@ -287,8 +290,8 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         path = image.get('path', None)
         if path is None:
             return
-        path = os.path.abspath(path)
-        thumbkey = (chname, path)
+
+        thumbkey = self.get_thumb_key(chname, path)
         with self.thmblock:
             if thumbkey not in self.thumbDict:
                 # No memory of this thumbnail, so regenerate it
@@ -323,7 +326,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         with self.thmblock:
             newThumbList = []
             for thumbkey in self.thumbList:
-                chname, path = thumbkey
+                chname = thumbkey[0]
                 if chname != chname_del:
                     newThumbList.append(thumbkey)
                 else:
@@ -364,8 +367,6 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         
     def make_thumbs(self, chname, filelist, image_loader=None):
         # NOTE: this is called by the FBrowser plugin, as a non-gui thread!
-        lcname = chname.lower()
-
         if image_loader is None:
             image_loader = self.fv.load_image
 
@@ -376,8 +377,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
                 path))
 
             # Do we already have this thumb loaded?
-            path = os.path.abspath(path)
-            thumbkey = (lcname, path)
+            thumbkey = self.get_thumb_key(chname, path)
             thumbpath = self.get_thumbpath(path)
 
             with self.thmblock:

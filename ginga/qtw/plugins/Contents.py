@@ -42,6 +42,8 @@ class Contents(GingaPlugin.GlobalPlugin):
         treeview = QtGui.QTreeWidget()
         treeview.setColumnCount(len(self.columns))
         treeview.setSortingEnabled(True)
+        # Sort increasing by default
+        treeview.sortByColumn(0, QtCore.Qt.AscendingOrder)
         treeview.setAlternatingRowColors(True)
         #treeview.itemClicked.connect(self.switch_image2)
         #treeview.itemDoubleClicked.connect(self.switch_image2)
@@ -134,6 +136,7 @@ class Contents(GingaPlugin.GlobalPlugin):
         
         noname = 'Noname' + str(time.time())
         name = image.get('name', noname)
+        self.logger.info("name=%s" % (name))
 
         nothumb = image.get('nothumb', False)
         if nothumb:

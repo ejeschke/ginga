@@ -454,10 +454,18 @@ class GingaControl(Callback.Callbacks):
         raise ControlError("Can't determine file type of '%s'" % (filepath))
 
     def load_image(self, filepath):
+        # User specified an HDU using bracket notation at end of path?
+        match = re.match(r'^(.+)\[(\d+)\]$', filepath)
+        if match:
+            filepfx = match.group(1)
+            numhdu = int(match.group(2))
+        else:
+            filepfx = filepath
+            
         # Create an image.  Assume type to be an AstroImage unless
         # the MIME association says it is something different.
         try:
-            typ, subtyp = self.guess_filetype(filepath)
+            typ, subtyp = self.guess_filetype(filepfx)
 
         except Exception as e:
             self.logger.warn("error determining file type: %s; assuming 'image/fits'" % (str(e)))
@@ -467,6 +475,7 @@ class GingaControl(Callback.Callbacks):
         self.logger.debug("assuming file type: %s/%s'" % (typ, subtyp))
         if (typ == 'image') and (subtyp not in ('fits', 'x-fits')):
             image = RGBImage.RGBImage(logger=self.logger)
+            filepath = filepfx
         else:
             image = AstroImage.AstroImage(logger=self.logger)
 
@@ -491,33 +500,43 @@ class GingaControl(Callback.Callbacks):
         self.logger.debug("Successfully loaded file into image object.")
         return image
 
-    def get_filepath(self, filepath, dldir='/tmp'):
-        match = re.match(r"^file://(.+)$", filepath)
-        if match:
-            # filesystem
-            filepath = match.group(1).strip()
 
-        else:
-            # If this looks like a URL, try to fetch it, otherwise
-            # assume it is a standard filesystem path
-            match = re.match(r"^(\w+)://(.+)$", filepath)
-            if match:
-                def  _dl_indicator(count, blksize, totalsize):
-                    pct = float(count * blksize) / float(totalsize)
-                    msg = "Downloading: %%%.2f complete" % (pct*100.0)
-                    self.gui_do(chinfo.fitsimage.onscreen_message, msg)
+    def get_fileinfo(self, filespec, dldir='/tmp'):
+        """
+        Break down a file specification into its components.
 
-                # Try to download the URL.  We press our generic URL server
-                # into use as a generic file downloader.
-                try:
-                    dl = catalog.URLServer(self.logger, "downloader", "dl",
-                                           filepath, "")
-                    filepath = dl.retrieve(filepath, filepath=dldir,
-                                           cb_fn=_dl_indicator)
-                finally:
-                    self.gui_do(chinfo.fitsimage.onscreen_message, None)
+        Parameters
+        ----------
+        `filespec`: string
+            the path of the file to load (can be a URL)
 
-        return filepath
+        Returns
+        -------
+        res:
+            a Bunch object
+        """
+
+        # Get information about this file/URL
+        info = catalog.get_fileinfo(filespec, cache_dir=dldir)
+        
+        if (not info.ondisk) and (info.url is not None):
+            # Download the file if a URL was passed
+            def  _dl_indicator(count, blksize, totalsize):
+                pct = float(count * blksize) / float(totalsize)
+                msg = "Downloading: %%%.2f complete" % (pct*100.0)
+                self.gui_do(self.showStatus, msg)
+
+            # Try to download the URL.  We press our generic URL server
+            # into use as a generic file downloader.
+            try:
+                dl = catalog.URLServer(self.logger, "downloader", "dl",
+                                       info.url, "")
+                filepath = dl.retrieve(info.url, filepath=info.filepath,
+                                       cb_fn=_dl_indicator)
+            finally:
+                self.gui_do(self.showStatus, "")
+
+        return info
 
 
     def load_file(self, filepath, chname=None, wait=True,
@@ -555,11 +574,13 @@ class GingaControl(Callback.Callbacks):
         if image_loader is None:
             image_loader = self.load_image
         
-        filepath = self.get_filepath(filepath)
+        info = self.get_fileinfo(filepath)
+        filepath = info.filepath
 
         image = image_loader(filepath)
 
         (path, filename) = os.path.split(filepath)
+        (filename, fileext) = os.path.splitext(filename)
 
         image.set(name=filename, path=filepath, chname=chname,
                   loader=image_loader)
@@ -761,13 +782,13 @@ class GingaControl(Callback.Callbacks):
         if chinfo is None:
             return None
         return chinfo.fitsimage
-        
+
     def switch_name(self, chname, imname, path=None,
                     image_loader=None):
         if not self.has_channel(chname):
             self.add_channel(chname)
         chinfo = self.get_channelInfo(chname)
-        if chinfo.datasrc.has_key(imname):
+        if imname in chinfo.datasrc:
             # Image is still in the heap
             image = chinfo.datasrc[imname]
             self.change_channel(chname, image=image)
@@ -801,7 +822,8 @@ class GingaControl(Callback.Callbacks):
                 curimage = chinfo.fitsimage.get_image()
                 if curimage != image:
                     self.logger.info("Setting image...")
-                    chinfo.fitsimage.set_image(image)
+                    chinfo.fitsimage.set_image(image,
+                                               raise_initialize_errors=False)
 
                     # Update active plugins
                     opmon = chinfo.opmon

@@ -104,7 +104,13 @@ class PyFitsFileHandler(BaseFitsFileHandler):
 
     def load_hdu(self, hdu, ahdr, fobj=None, naxispath=None):
         data = hdu.data
-        if len(data.shape) < 2:
+        if data is None:
+            data = numpy.zeros((0, 0))
+        elif not isinstance(data, numpy.ndarray):
+            data = numpy.zeros((0, 0))
+        elif 0 in data.shape:
+            data = numpy.zeros((0, 0))
+        elif len(data.shape) < 2:
             # Expand 1D arrays into 1xN array
             data = data.reshape((1, data.shape[0]))
         else:
@@ -134,8 +140,8 @@ class PyFitsFileHandler(BaseFitsFileHandler):
             found_valid_hdu = False
             for i in range(len(fits_f)):
                 hdu = fits_f[i]
-                if hdu.data is None:
-                    # compressed FITS file or non-pixel data hdu?
+                if (hdu.data is None) or (0 in hdu.data.shape):
+                    # non-pixel or zero-length data hdu?
                     continue
                 if not isinstance(hdu.data, numpy.ndarray):
                     # We need to open a numpy array
@@ -146,8 +152,10 @@ class PyFitsFileHandler(BaseFitsFileHandler):
                 break
 
             if not found_valid_hdu:
-                raise FITSError("No data HDU found that Ginga can open in '%s'" % (
-                    filepath))
+                ## raise FITSError("No data HDU found that Ginga can open in '%s'" % (
+                ##     filepath))
+                # Load just the header
+                hdu = fits_f[0]
         else:
             hdu = fits_f[numhdu]
 
@@ -197,7 +205,13 @@ class FitsioFileHandler(BaseFitsFileHandler):
 
     def load_hdu(self, hdu, ahdr, fobj=None, naxispath=None):
         data = hdu.read()
-        if len(data.shape) < 2:
+        if data is None:
+            data = numpy.zeros((0, 0))
+        elif not isinstance(data, numpy.ndarray):
+            data = numpy.zeros((0, 0))
+        elif 0 in data.shape:
+            data = numpy.zeros((0, 0))
+        elif len(data.shape) < 2:
             # Expand 1D arrays into 1xN array
             data = data.reshape((1, data.shape[0]))
         else:

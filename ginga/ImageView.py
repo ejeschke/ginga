@@ -439,7 +439,8 @@ class ImageViewBase(Callback.Callbacks):
         """
         return self._image
     
-    def set_image(self, image, redraw=True, add_to_canvas=True):
+    def set_image(self, image, redraw=True, add_to_canvas=True,
+                  raise_initialize_errors=True):
         """
         Sets an image to be displayed.
 
@@ -447,6 +448,11 @@ class ImageViewBase(Callback.Callbacks):
         If redraw is True then the associated widget will be redrawn.
         If there is no error, this method will invoke the 'image-set'
         callback.
+
+        If raise_initialize_errors is passed as False, then errors
+        relating to orienting/zooming/centering/autolevels will not
+        raise an exception, although an error message and traceback
+        will appear in the log.
         """
         self._image = image
 
@@ -470,17 +476,31 @@ class ImageViewBase(Callback.Callbacks):
         if (profile is not None) and (self.t_['use_embedded_profile']):
             self.apply_profile(profile, redraw=False)
 
-        if self.t_['auto_orient']:
-            self.auto_orient(redraw=False)
+        try:
+            if self.t_['auto_orient']:
+                self.auto_orient(redraw=False)
 
-        if self.t_['autozoom'] != 'off':
-            self.zoom_fit(redraw=False, no_reset=True)
+            if self.t_['autozoom'] != 'off':
+                self.zoom_fit(redraw=False, no_reset=True)
 
-        if not self.t_['autocenter'] in ('off', False):
-            self.center_image(redraw=False)
+            if not self.t_['autocenter'] in ('off', False):
+                self.center_image(redraw=False)
 
-        if self.t_['autocuts'] != 'off':
-            self.auto_levels(redraw=False)
+            if self.t_['autocuts'] != 'off':
+                self.auto_levels(redraw=False)
+
+        except Exception as e:
+            self.logger.error("Failed to initialize image: %s" % (str(e)))
+            try:
+                # log traceback, if possible
+                (type, value, tb) = sys.exc_info()
+                tb_str = "".join(traceback.format_tb(tb))
+                self.logger.error("Traceback:\n%s" % (tb_str))
+            except Exception:
+                tb_str = "Traceback information unavailable."
+                self.logger.error(tb_str)
+            if raise_initialize_errors:
+                raise e
 
         if redraw:
             self.redraw()

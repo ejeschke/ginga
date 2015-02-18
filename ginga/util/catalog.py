@@ -742,4 +742,40 @@ class ServerBank(object):
         return obj.search(**params)
     
 
+def get_fileinfo(filespec, cache_dir='/tmp', download=False):
+    numhdu = None
+
+    # User specified an HDU using bracket notation at end of path?
+    match = re.match(r'^(.+)\[(\d+)\]$', filespec)
+    if match:
+        filespec = match.group(1)
+        numhdu = int(match.group(2))
+    else:
+        filespec = filespec
+
+    url = filespec
+    filepath = None
+    
+    match = re.match(r"^file://(.+)$", filespec)
+    if match:
+        # local file
+        filepath = match.group(1).strip()
+
+    else:
+        # Does this look like a URL?
+        match = re.match(r"^(\w+)://(.+)$", filespec)
+        if match:
+            path, filename = os.path.split(match.group(2))
+            filepath = os.path.join(cache_dir, filename)
+        else:
+            # No
+            filepath = filespec
+            url = "file://" + filepath
+
+    ondisk = os.path.exists(filepath)
+
+    res = Bunch.Bunch(filepath=filepath, url=url, numhdu=numhdu,
+                      ondisk=ondisk)
+    return res
+
 # END
