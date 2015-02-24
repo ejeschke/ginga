@@ -137,6 +137,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
     def set_hdu_cb(self, w, val):
         #idx = int(val)
         idx = w.get_index()
+        idx = max(0, idx)
         self.set_hdu(idx)
 
     def set_naxis_cb(self, w, idx, n):
@@ -276,7 +277,6 @@ class MultiDim(GingaPlugin.LocalPlugin):
             ##                          raise_initialize_errors=False)
             self.fv.add_image(imname, image, chname=chname)
 
-            print("building naxis")
             self.build_naxis(dims)
             self.logger.debug("HDU #%d loaded." % (idx))
 
