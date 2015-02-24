@@ -11,7 +11,7 @@ import sys
 import threading
 import traceback
 
-from ginga.misc import Bunch, Future, Widgets
+from ginga.misc import Bunch, Widgets
 from ginga.util.six.moves import filter
 
 

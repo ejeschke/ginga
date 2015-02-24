@@ -32,7 +32,7 @@ except ImportError:
 
 # Local application imports
 from ginga import cmap, imap, AstroImage, RGBImage, ImageView
-from ginga.misc import Bunch, Datasrc, Callback, Timer, Task
+from ginga.misc import Bunch, Datasrc, Callback, Timer, Task, Future
 from ginga.util import catalog
 
 #pluginconfpfx = 'plugins'
@@ -453,12 +453,12 @@ class GingaControl(Callback.Callbacks):
 
         raise ControlError("Can't determine file type of '%s'" % (filepath))
 
-    def load_image(self, filepath):
+    def load_image(self, filepath, idx=None):
         # User specified an HDU using bracket notation at end of path?
         match = re.match(r'^(.+)\[(\d+)\]$', filepath)
         if match:
             filepfx = match.group(1)
-            numhdu = int(match.group(2))
+            idx = max(int(match.group(2)), 0)
         else:
             filepfx = filepath
             
@@ -472,17 +472,20 @@ class GingaControl(Callback.Callbacks):
             # Can't determine file type: assume and attempt FITS
             typ, subtyp = 'image', 'fits'
 
+        kwdargs = {}
+        
         self.logger.debug("assuming file type: %s/%s'" % (typ, subtyp))
         if (typ == 'image') and (subtyp not in ('fits', 'x-fits')):
             image = RGBImage.RGBImage(logger=self.logger)
             filepath = filepfx
         else:
             image = AstroImage.AstroImage(logger=self.logger)
+            kwdargs.update(dict(numhdu=idx))
 
         try:
-            self.logger.info("Loading image from %s" % (filepath))
-            image.load_file(filepath)
-            #self.gui_do(chinfo.fitsimage.onscreen_message, "")
+            self.logger.info("Loading image from %s kwdargs=%s" % (
+                filepath, str(kwdargs)))
+            image.load_file(filepath, **kwdargs)
 
         except Exception as e:
             errmsg = "Failed to load file '%s': %s" % (
@@ -539,6 +542,17 @@ class GingaControl(Callback.Callbacks):
         return info
 
 
+    def name_image_from_path(self, path, idx=None):
+        (path, filename) = os.path.split(path)
+        (name, ext) = os.path.splitext(filename)
+        # Remove trailing .extension
+        if '.' in name:
+            name = name[:name.rindex('.')]
+        if idx is not None:
+            name = '%s[%d]' % (name, idx)
+        return name
+    
+
     def load_file(self, filepath, chname=None, wait=True,
                   create_channel=True, display_image=True,
                   image_loader=None):
@@ -577,22 +591,38 @@ class GingaControl(Callback.Callbacks):
         info = self.get_fileinfo(filepath)
         filepath = info.filepath
 
-        image = image_loader(filepath)
+        kwdargs = {}
+        idx = None
+        if info.numhdu is not None:
+            idx = max(0, info.numhdu)
+            kwdargs['idx'] = idx
+            
+        #image = image_loader(filepath, **kwdargs)
+        future = Future.Future()
+        future.freeze(image_loader, filepath, **kwdargs)
+        image = future.thaw()
 
-        (path, filename) = os.path.split(filepath)
-        (filename, fileext) = os.path.splitext(filename)
+        # Save a future for this image to reload it later if we
+        # have to remove it from memory
+        image.set(loader=image_loader, image_future=future)
 
-        image.set(name=filename, path=filepath, chname=chname,
-                  loader=image_loader)
+        if image.get('path', None) is None:
+            image.set(path=filepath)
+
+        # Assign a name to the image if the loader did not
+        name = image.get('name', None)
+        if name is None:
+            name = self.name_image_from_path(filepath, idx=idx)
+            image.set(name=name)
 
         if display_image:
             # Display image.  If the wait parameter is False then don't wait
             # for the image to load into the viewer
             if wait:
-                self.gui_call(self.add_image, filename, image, chname=chname)
+                self.gui_call(self.add_image, name, image, chname=chname)
             else:
-                self.gui_do(self.bulk_add_image, filename, image, chname)
-                #self.gui_do(self.add_image, filename, image, chname=chname)
+                self.gui_do(self.bulk_add_image, name, image, chname)
+                #self.gui_do(self.add_image, name, image, chname=chname)
 
         # Return the image
         return image
@@ -784,23 +814,44 @@ class GingaControl(Callback.Callbacks):
         return chinfo.fitsimage
 
     def switch_name(self, chname, imname, path=None,
-                    image_loader=None):
+                    image_future=None):
+
         if not self.has_channel(chname):
             self.add_channel(chname)
         chinfo = self.get_channelInfo(chname)
+
         if imname in chinfo.datasrc:
             # Image is still in the heap
             image = chinfo.datasrc[imname]
             self.change_channel(chname, image=image)
 
         else:
-            if path is not None:
+            # Do we have a way to reconstruct this image from a future?
+            if image_future is not None:
+                self.logger.info("Image '%s' is no longer in memory; attempting reloader" % (
+                    imname))
+                # TODO: recode this--it's a bit messy
+                def _switch(imname, image, chname):
+                    # this will be executed in the gui thread
+                    self.add_image(imname, image, chname=chname, silent=True)
+                    self.change_channel(chname, image=image)
+                def _load_n_switch(imname, chname, image_future):
+                    # this will be executed in a non-gui thread
+                    # reconstitute the image
+                    image = image_future.thaw()
+                    # perpetuate the image_future
+                    image.set(image_future=image_future)
+                    self.gui_do(_switch, imname, image, chname)
+                    
+                self.nongui_do(_load_n_switch, imname, chname, image_future)
+
+            elif path is not None:
+                # Do we have a path? We can try to reload it
                 self.logger.debug("Image '%s' is no longer in memory; attempting to load from %s" % (
                     imname, path))
-                #self.load_file(path, chname=chname,
-                #               image_loader=image_loader)
-                self.nongui_do(self.load_file, path, chname=chname,
-                               image_loader=image_loader)
+
+                #self.load_file(path, chname=chname)
+                self.nongui_do(self.load_file, path, chname=chname)
 
             else:
                 raise ControlError("No image by the name '%s' found" % (

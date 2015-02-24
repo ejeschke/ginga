@@ -197,7 +197,7 @@ in the AstroImage class.  You should implement this abstract class:
             self.logger = logger
     
         def load_file(self, filespec, header, **kwdargs):
-            return (data, naxispath)
+            return (data, numhdu, naxispath)
     
         def save_as_file(self, path, data, header, **kwdargs):
             pass
@@ -232,13 +232,24 @@ or you can override the io handler on a case-by-case basis:
 You could also subclass AstroImage or BaseImage and implement your own
 I/O handling. 
 
-.. note:: since `naxispath` is a keyword argument to the load_file()
-          method, you probably want to treat it as any kind of path that
-          you would need to take to navigate through your kind of file.
-          For example, if there are multiple image slices in the file, 
-          the naxispath would be some kind of list of indexes that would
-          help to navigate down to the particular slice in your
-          load_file method.  
+.. note:: Both `naxispath` and `numhdu` are valid keyword arguments to
+          the load_file() method.  
+
+          You probably want to treat `numhdu` as a kind of index into
+          your file, similarly to the meaning within a FITS file
+          (although you are free also to ignore it!).
+
+          If the user passes a valid numhdu (whatever that means to
+          your load_file method) you simply return that value that they
+          passed as the middle element of the return tuple. If they
+          passed None (default), then you return the index you used
+          to access the data area that you loaded.  
+
+          You probably want to treat `naxispath` as any kind of path
+          that you would need to take to navigate through your kind of
+          data area selected by numhdu (above).  This is usually used to
+          describe the path through a data cube of N-dimensionality to
+          reach a 2D slice.
 
           If the user passes a valid naxispath (whatever that means to
           your load_file method) you simply return that value that they

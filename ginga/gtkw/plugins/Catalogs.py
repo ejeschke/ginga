@@ -9,7 +9,7 @@
 #
 from ginga.gtkw import ColorBar
 from ginga.gtkw import GtkHelp, gtksel
-from ginga.misc import Bunch, Future
+from ginga.misc import Bunch
 from ginga.misc.plugins import CatalogsBase
 
 import gobject

@@ -8,10 +8,11 @@
 # Please see the file LICENSE.txt for details.
 #
 from ginga import GingaPlugin
-from ginga.misc import Bunch
+from ginga.misc import Bunch, Future
 
 from ginga.qtw.QtHelp import QtGui, QtCore
 import time
+import threading
 
 class Contents(GingaPlugin.GlobalPlugin):
 
@@ -32,6 +33,7 @@ class Contents(GingaPlugin.GlobalPlugin):
         self.nameDict = {}
         # TODO: this ought to be customizable by channel
         self.columns = self.settings.get('columns', columns)
+        self.toc_lock = threading.RLock()
 
         self.gui_up = False
         fv.set_callback('add-image', self.add_image)
@@ -73,7 +75,7 @@ class Contents(GingaPlugin.GlobalPlugin):
             chname, imname, path))
 
         self.fv.switch_name(chname, imname, path=path,
-                            image_loader=bnch.loader)
+                            image_future=bnch.image_future)
 
     def switch_image2(self, item, column):
         imname = str(item.text(0))
@@ -84,14 +86,20 @@ class Contents(GingaPlugin.GlobalPlugin):
             self.switch_image(chname, imname)
 
     def switch_image3(self):
-        items = list(self.treeview.selectedItems())
-        self.switch_image2(items[0], 0)
+        with self.toc_lock:
+            items = list(self.treeview.selectedItems())
+            self.switch_image2(items[0], 0)
         
     def get_info(self, chname, name, image):
         path = image.get('path', None)
-        loader = image.get('loader', self.fv.load_image)
+        future = image.get('image_future', None)
+        if future is None:
+            image_loader = image.get('loader', self.fv.load_image)
+            future = Future.Future()
+            future.freeze(image_loader, path)
+
         bnch = Bunch.Bunch(CHNAME=chname, path=path,
-                           loader=loader)
+                           image_future=future)
 
         # Get header keywords of interest
         header = image.get_header()
@@ -102,32 +110,33 @@ class Contents(GingaPlugin.GlobalPlugin):
         return bnch
     
     def recreate_toc(self):
-        self.logger.debug("Recreating table of contents...")
-        toclist = list(self.nameDict.keys())
-        toclist.sort()
+        with self.toc_lock:
+            self.logger.debug("Recreating table of contents...")
+            toclist = list(self.nameDict.keys())
+            toclist.sort()
 
-        self.treeview.clear()
+            self.treeview.clear()
 
-        for key in toclist:
-            chname = key
-            chitem = QtGui.QTreeWidgetItem(self.treeview, [chname])
-            chitem.setFirstColumnSpanned(True)
-            self.treeview.addTopLevelItem(chitem)
+            for key in toclist:
+                chname = key
+                chitem = QtGui.QTreeWidgetItem(self.treeview, [chname])
+                chitem.setFirstColumnSpanned(True)
+                self.treeview.addTopLevelItem(chitem)
 
-            fileDict = self.nameDict[key]
-            filelist = list(fileDict.keys())
-            filelist.remove('_chitem')
-            fileDict['_chitem'] = chitem
-            filelist.sort(key=str.lower)
+                fileDict = self.nameDict[key]
+                filelist = list(fileDict.keys())
+                filelist.remove('_chitem')
+                fileDict['_chitem'] = chitem
+                filelist.sort(key=str.lower)
 
-            for fname in filelist:
-                bnch = fileDict[fname]
-                l = []
-                for hdr, kwd in self.columns:
-                    l.append(bnch[kwd])
-        
-                item = QtGui.QTreeWidgetItem(chitem, l)
-                chitem.addChild(item)
+                for fname in filelist:
+                    bnch = fileDict[fname]
+                    l = []
+                    for hdr, kwd in self.columns:
+                        l.append(bnch[kwd])
+
+                    item = QtGui.QTreeWidgetItem(chitem, l)
+                    chitem.addChild(item)
 
 
     def add_image(self, viewer, chname, image):
@@ -142,30 +151,31 @@ class Contents(GingaPlugin.GlobalPlugin):
         if nothumb:
             return
 
-        if chname not in self.nameDict:
-            # channel does not exist yet in contents--add it
-            chitem = QtGui.QTreeWidgetItem(self.treeview, [chname])
-            chitem.setFirstColumnSpanned(True)
-            self.treeview.addTopLevelItem(chitem)
-            fileDict = { '_chitem': chitem }
-            self.nameDict[chname] = fileDict
+        with self.toc_lock:
+            if chname not in self.nameDict:
+                # channel does not exist yet in contents--add it
+                chitem = QtGui.QTreeWidgetItem(self.treeview, [chname])
+                chitem.setFirstColumnSpanned(True)
+                self.treeview.addTopLevelItem(chitem)
+                fileDict = { '_chitem': chitem }
+                self.nameDict[chname] = fileDict
 
-        else:
-            fileDict = self.nameDict[chname]
-            chitem = fileDict['_chitem']
-            
-        key = name.lower()
-        if key in fileDict:
-            return
+            else:
+                fileDict = self.nameDict[chname]
+                chitem = fileDict['_chitem']
 
-        bnch = self.get_info(chname, name, image)
-        fileDict[key] = bnch
-        l = [ bnch[kwd] for hdr, kwd in self.columns ]
-        
-        item = QtGui.QTreeWidgetItem(chitem, l)
-        chitem.addChild(item)
-        self.treeview.scrollToItem(item)
-        self.logger.debug("%s added to Contents" % (name))
+            key = name.lower()
+            if key in fileDict:
+                return
+
+            bnch = self.get_info(chname, name, image)
+            fileDict[key] = bnch
+            l = [ bnch[kwd] for hdr, kwd in self.columns ]
+
+            item = QtGui.QTreeWidgetItem(chitem, l)
+            chitem.addChild(item)
+            self.treeview.scrollToItem(item)
+            self.logger.debug("%s added to Contents" % (name))
 
 
     def clear(self):

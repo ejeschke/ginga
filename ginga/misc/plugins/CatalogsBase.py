@@ -10,7 +10,7 @@
 import os
 import math
 
-from ginga.misc import Bunch, Future
+from ginga.misc import Bunch
 from ginga import GingaPlugin
 from ginga import cmap, imap
 from ginga.util import wcs

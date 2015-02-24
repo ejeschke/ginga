@@ -83,7 +83,6 @@ class AstroImage(BaseImage):
         self.revnaxis.reverse()
 
         self.set_data(data)
-        self.set(path=None)
 
         # Try to make a wcs object on the header
         self.wcs.load_header(hdu.header, fobj=fobj)
@@ -98,28 +97,33 @@ class AstroImage(BaseImage):
         match = re.match(r'^(.+)\[(\d+)\]$', filepath)
         if match:
             filepath = match.group(1)
-            numhdu = int(match.group(2))
+            numhdu = max(int(match.group(2)), 0)
             
-        data, naxispath = self.io.load_file(filepath, ahdr, numhdu=numhdu,
-                                            naxispath=naxispath)
+        data, numhdu, naxispath = self.io.load_file(filepath, ahdr,
+                                                    numhdu=numhdu,
+                                                    naxispath=naxispath)
         if naxispath is None:
             naxispath = []
         self.naxispath = naxispath
         self.revnaxis = list(naxispath)
         self.revnaxis.reverse()
 
-        self.set_data(data)
-        
         # Set the name to the filename (minus extension) if no name
         # currently exists for this image
         name = self.get('name', None)
         if name is None:
             dirpath, filename = os.path.split(filepath)
             name, ext = os.path.splitext(filename)
-            ## if numhdu is not None:
-            ##     name += ('[%d]' % numhdu)
+            # Remove trailing .extension
+            if '.' in name:
+                name = name[:name.rindex('.')]
+            if numhdu is not None:
+                name += ('[%d]' % numhdu)
             self.set(name=name)
-        self.set(path=filepath)
+
+        self.set(path=filepath, idx=numhdu)
+        
+        self.set_data(data)
         
         # Try to make a wcs object on the header
         # TODO: in order to do more sophisticated WCS (e.g. distortion
@@ -405,6 +409,12 @@ class AstroImage(BaseImage):
                 #print "bg=%f inc=%f" % (bg, bg_inc)
                 data_np = data_np + bg_inc
 
+            ## # Determine max/min to update our notion
+            ## maxval = numpy.nanmax(data_np)
+            ## minval = numpy.nanmin(data_np)
+            ## self.maxval = max(self.maxval, maxval)
+            ## self.minval = max(self.minval, minval)
+            
             # Get rotation and scale of piece
             header = image.get_header()
             ((xrot, yrot),
@@ -483,14 +493,12 @@ class AstroImage(BaseImage):
             assert (yhi - ylo == ht), \
                    Exception("Height differential %d != %d" % (yhi - ylo, ht))
 
-            # fit image piece into our array, not overwriting any data
-            # already written
+            # fit image piece into our array
             try:
                 if merge:
                     mydata[ylo:yhi, xlo:xhi, ...] += rotdata[0:ht, 0:wd, ...]
                 else:
                     idx = (mydata[ylo:yhi, xlo:xhi, ...] == 0.0)
-                    #print idx.shape, rotdata.shape
                     mydata[ylo:yhi, xlo:xhi, ...][idx] = \
                                     rotdata[0:ht, 0:wd, ...][idx]
 

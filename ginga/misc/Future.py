@@ -31,6 +31,7 @@ class Future(Callback.Callbacks):
         self.kwdargs = kwdargs
 
     def thaw(self, suppress_exception=True):
+        self.evt.clear()
         if not suppress_exception:
             res = self.method(*self.args, **self.kwdargs)
 
@@ -50,6 +51,8 @@ class Future(Callback.Callbacks):
     def resolve(self, value):
         self.res = value
         self.evt.set()
+        # TODO: need to change callbacks on some custom plugins first
+        #self.make_callback('resolved', value)
         self.make_callback('resolved')
 
     def get_value(self, block=True, timeout=None, suppress_exception=False):

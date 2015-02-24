@@ -93,12 +93,12 @@ class Thumbs(ThumbsBase.ThumbsBase):
         cw.addWidget(w, stretch=0)
 
     def insert_thumbnail(self, imgwin, thumbkey, thumbname, chname, name, path,
-                         thumbpath, metadata, image_loader):
+                         thumbpath, metadata, image_future):
         pixmap = QPixmap.fromImage(imgwin)
         imglbl = MyLabel()
         imglbl.setPixmap(pixmap)
         imglbl.thumbs_cb = lambda: self.load_file(thumbkey, chname, name, path,
-                                                  image_loader)
+                                                  image_future)
 
         text = self.query_thumb(thumbkey, name, metadata)
         imglbl.setToolTip(text)
@@ -121,7 +121,7 @@ class Thumbs(ThumbsBase.ThumbsBase):
         bnch = Bunch.Bunch(widget=widget, image=imgwin, layout=vbox,
                            imglbl=imglbl, name=name, imname=name,
                            chname=chname, path=path, thumbpath=thumbpath,
-                           pixmap=pixmap)
+                           pixmap=pixmap, image_future=image_future)
 
         with self.thmblock:
             self.thumbDict[thumbkey] = bnch

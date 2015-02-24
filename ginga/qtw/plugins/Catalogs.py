@@ -11,7 +11,7 @@ from __future__ import print_function
 from ginga.qtw.QtHelp import QtGui, QtCore
 from ginga.qtw import QtHelp
 from ginga.qtw import ColorBar
-from ginga.misc import Bunch, Future
+from ginga.misc import Bunch
 from ginga.misc.plugins import CatalogsBase
 
 class Catalogs(CatalogsBase.CatalogsBase):

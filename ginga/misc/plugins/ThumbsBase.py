@@ -13,7 +13,7 @@ import hashlib
 import threading
 
 from ginga import GingaPlugin
-from ginga.misc import Bunch
+from ginga.misc import Bunch, Future
 
 
 class ThumbsBase(GingaPlugin.GlobalPlugin):
@@ -61,9 +61,9 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         fv.set_callback('delete-channel', self.delete_channel)
         fv.add_callback('active-image', self.focus_cb)
 
-    def get_thumb_key(self, chname, path):
+    def get_thumb_key(self, chname, imname, path):
         path = os.path.abspath(path)
-        thumbkey = (chname.lower(), path)
+        thumbkey = (chname.lower(), imname, path)
         return thumbkey
     
     def add_image(self, viewer, chname, image):
@@ -71,13 +71,20 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         name = image.get('name', noname)
         path = image.get('path', None)
         nothumb = image.get('nothumb', False)
-        if path is not None:
-            path = os.path.abspath(path)
+        if path is None:
+            # Currently we need a path to make a thumb key
+            return
+        path = os.path.abspath(path)
         thumbname = name
         if '.' in thumbname:
             thumbname = thumbname.split('.')[0]
         self.logger.debug("making thumb for %s" % (thumbname))
-        loader = image.get('loader', self.fv.load_image)
+
+        future = image.get('image_future', None)
+        if future is None:
+            image_loader = image.get('loader', self.fv.load_image)
+            future = Future.Future()
+            future.freeze(image_loader, path)
             
         # Is there a preference set to avoid making thumbnails?
         chinfo = self.fv.get_channelInfo(chname)
@@ -88,7 +95,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         # Is this thumbnail already in the list?
         # NOTE: does not handle two separate images with the same path
         # in the same channel
-        thumbkey = self.get_thumb_key(chname, path)
+        thumbkey = self.get_thumb_key(chname, name, path)
         with self.thmblock:
             if thumbkey in self.thumbDict or nothumb:
                 return
@@ -107,7 +114,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
             imgwin = self.thumb_generator.get_image_as_widget()
 
         self.insert_thumbnail(imgwin, thumbkey, thumbname, chname, name, path,
-                              thumbpath, metadata, loader)
+                              thumbpath, metadata, future)
 
     def update_thumbs(self, nameList):
         
@@ -138,10 +145,10 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         return False
         
     def load_file(self, thumbkey, chname, name, path,
-                  image_loader):
+                  image_future):
         self.logger.debug("loading image: %s" % (str(thumbkey)))
         self.fv.switch_name(chname, name, path=path,
-                            image_loader=image_loader)
+                            image_future=image_future)
 
         # remember the last file we loaded
         with self.thmblock:
@@ -160,14 +167,14 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
                 bnch = self.thumbDict[nextkey]
                 if bnch.path is not None:
                     self.fv.add_preload(bnch.chname, bnch.imname, bnch.path,
-                                        image_loader=image_loader)
+                                        image_future=bnch.image_future)
 
             if index > 0:
                 prevkey = self.thumbList[index-1]
                 bnch = self.thumbDict[prevkey]
                 if bnch.path is not None:
                     self.fv.add_preload(bnch.chname, bnch.imname, bnch.path,
-                                        image_loader=image_loader)
+                                        image_future=bnch.image_future)
 
     def load_next(self):
         with self.thmblock:
@@ -177,7 +184,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
                 bnch = self.thumbDict[nextkey]
                 self.gui_do(self.load_file, nextkey,
                             bnch.chname, bnch.imname, bnch.path,
-                            bnch.image_loader)
+                            bnch.image_future)
         
     def load_previous(self):
         with self.thmblock:
@@ -187,7 +194,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
                 bnch = self.thumbDict[prevkey]
                 self.gui_do(self.load_file, prevkey,
                             bnch.chname, bnch.imname, bnch.path,
-                            bnch.image_loader)
+                            bnch.image_future)
         
     def clear(self):
         with self.thmblock:
@@ -264,7 +271,10 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         if path is None:
             # No path, so no way to find key for cached image
             return False
-        thumbkey = self.get_thumb_key(chname, path)
+        noname = 'Noname' + str(time.time())
+        name = image.get('name', noname)
+
+        thumbkey = self.get_thumb_key(chname, name, path)
         with self.thmblock:
             return thumbkey in self.thumbDict
 
@@ -286,12 +296,13 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
             metadata[kwd] = header.get(kwd, 'N/A')
 
         # Look up our version of the thumb
-        name = image.get('name', None)
         path = image.get('path', None)
         if path is None:
             return
+        noname = 'Noname' + str(time.time())
+        name = image.get('name', noname)
 
-        thumbkey = self.get_thumb_key(chname, path)
+        thumbkey = self.get_thumb_key(chname, name, path)
         with self.thmblock:
             if thumbkey not in self.thumbDict:
                 # No memory of this thumbnail, so regenerate it
@@ -335,7 +346,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         self.reorder_thumbs()
 
     def _make_thumb(self, chname, image, path, thumbkey,
-                    image_loader, save_thumb=False, thumbpath=None):
+                    image_future, save_thumb=False, thumbpath=None):
         # This is called by the make_thumbs() as a gui thread
         with self.thmblock:
             self.thumb_generator.set_image(image)
@@ -362,7 +373,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
 
         self.insert_thumbnail(imgwin, thumbkey, thumbname,
                               chname, name, path, thumbpath, metadata,
-                              image_loader)
+                              image_future)
         self.fv.update_pending(timeout=0.001)
         
     def make_thumbs(self, chname, filelist, image_loader=None):
@@ -375,9 +386,10 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         for path in filelist:
             self.logger.info("generating thumb for %s..." % (
                 path))
+            imname = self.fv.name_image_from_path(path)
 
             # Do we already have this thumb loaded?
-            thumbkey = self.get_thumb_key(chname, path)
+            thumbkey = self.get_thumb_key(chname, imname, path)
             thumbpath = self.get_thumbpath(path)
 
             with self.thmblock:
@@ -403,8 +415,12 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
             try:
                 if image is None:
                     image = image_loader(path)
+
+                image_future = Future.Future()
+                image_future.freeze(image_loader, path)
+                    
                 self.fv.gui_do(self._make_thumb, chname, image, path,
-                               thumbkey, image_loader,
+                               thumbkey, image_future,
                                save_thumb=save_thumb,
                                thumbpath=thumbpath)
                 

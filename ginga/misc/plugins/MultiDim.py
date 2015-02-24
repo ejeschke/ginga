@@ -8,9 +8,10 @@
 # Please see the file LICENSE.txt for details.
 #
 import time
+import re
 
 from ginga import AstroImage
-from ginga.misc import Widgets
+from ginga.misc import Widgets, Future
 from ginga import GingaPlugin
 import ginga.util.six as six
 
@@ -135,7 +136,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
 
     def set_hdu_cb(self, w, val):
         #idx = int(val)
-        idx = w.get_index() + 1
+        idx = w.get_index()
         self.set_hdu(idx)
 
     def set_naxis_cb(self, w, idx, n):
@@ -221,24 +222,26 @@ class MultiDim(GingaPlugin.LocalPlugin):
         self.fv.showStatus("")
 
     def get_name(self, idx):
-        name = self.imgname
-        # Remove trailing .fits
-        if '.' in self.imgname:
-            name = self.imgname[:name.rindex('.')]
-        ## return '%s[%d]' % (name, idx)
-        return name
-        
+        return '%s[%d]' % (self.imgname, idx)
+
     def set_hdu(self, idx):
         self.logger.debug("Loading fits hdu #%d" % (idx))
 
-        ## # See if this HDU is still in the channel's datasrc
+        # See if this HDU is still in the channel's datasrc
         imname = self.get_name(idx)
-        ## chname = self.fv.get_channelName(self.fitsimage)
-        ## chinfo = self.fv.get_channelInfo(chname)
-        ## if imname in chinfo.datasrc:
-        ##     self.image = chinfo.datasrc[imname]
-        ##     self.fv.switch_name(chname, imname)
-        ##     return
+        chname = self.fv.get_channelName(self.fitsimage)
+        chinfo = self.fv.get_channelInfo(chname)
+        if imname in chinfo.datasrc:
+            self.curhdu = idx
+            self.image = chinfo.datasrc[imname]
+            self.fv.switch_name(chname, imname)
+
+            # Still need to build datacube profile
+            hdu = self.fits_f[idx]
+            dims = list(hdu.data.shape)
+            dims.reverse()
+            self.build_naxis(dims)
+            return
 
         # Nope, we'll have to load it
         self.logger.debug("HDU %d not in memory; refreshing from file" % (idx))
@@ -246,10 +249,10 @@ class MultiDim(GingaPlugin.LocalPlugin):
         image = AstroImage.AstroImage(logger=self.logger)
         self.image = image
         try:
-            self.curhdu = idx-1
+            self.curhdu = idx
             dims = [0, 0]
-            info = self.hdu_info[idx-1]
-            hdu = self.fits_f[idx-1]
+            info = self.hdu_info[idx]
+            hdu = self.fits_f[idx]
 
             if hdu.data is None:
                 # <- empty data part to this HDU
@@ -263,12 +266,17 @@ class MultiDim(GingaPlugin.LocalPlugin):
                 dims.reverse()
 
             image.load_hdu(hdu)
-            image.set(path=self.path, name=imname)
 
-            self.fitsimage.set_image(image,
-                                     raise_initialize_errors=False)
-            ## self.fv.add_image(imname, image, chname=chname)
-            
+            # create a future for reconstituting this HDU
+            future = Future.Future()
+            future.freeze(self.fv.load_image, self.path, idx=idx)
+            image.set(path=self.path, name=imname, image_future=future)
+
+            ## self.fitsimage.set_image(image,
+            ##                          raise_initialize_errors=False)
+            self.fv.add_image(imname, image, chname=chname)
+
+            print("building naxis")
             self.build_naxis(dims)
             self.logger.debug("HDU #%d loaded." % (idx))
 
@@ -280,28 +288,32 @@ class MultiDim(GingaPlugin.LocalPlugin):
 
 
     def set_naxis(self, idx, n):
-        # TODO: change this to update the data in the image?
-        
-        #idx = int(w.get_value()) - 1
         self.play_idx = idx
         self.w['choose_naxis%d' % (n+1)].set_value(idx)
         idx = idx - 1
         self.logger.debug("naxis %d index is %d" % (n+1, idx+1))
 
-        image = AstroImage.AstroImage(logger=self.logger)
+        image = self.fitsimage.get_image()
         try:
+            if image is None:
+                raise ValueError("Please load an image cube")
+            
             hdu = self.fits_f[self.curhdu]
             data = hdu.data
+            if data is None:
+                raise ValueError("Empty data for this HDU")
+
             self.logger.debug("HDU #%d has naxis=%s" % (
-                self.curhdu+1, str(data.shape)))
+                self.curhdu, str(data.shape)))
 
             # invert index
             m = len(data.shape) - (n+1)
             self.naxispath[m] = idx
             self.logger.debug("m=%d naxispath=%s" % (m, str(self.naxispath)))
         
-            image.load_hdu(hdu, naxispath=self.naxispath)
-            image.set(path=self.path)
+            for i in self.naxispath:
+                data = data[i]
+
             if n == 2:
                 # Try to print the spectral coordinate 
                 try:
@@ -311,8 +323,9 @@ class MultiDim(GingaPlugin.LocalPlugin):
                 except:
                     pass
 
-            self.fitsimage.set_image(image)
+            image.set_data(data)
             self.logger.debug("NAXIS%d slice %d loaded." % (n+1, idx+1))
+
         except Exception as e:
             errmsg = "Error loading NAXIS%d slice %d: %s" % (
                 n+1, idx+1, str(e))
@@ -364,7 +377,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
         w.clear()
         self.hdu_info = []
 
-        idx = 1
+        idx = 0
         for tup in info:
             d = dict(index=idx, name=tup[1], htype=tup[2], dtype=tup[5])
             self.hdu_info.append(d)
@@ -373,38 +386,44 @@ class MultiDim(GingaPlugin.LocalPlugin):
             w.append_text(toc_ent)
             idx += 1
 
-        if len(self.hdu_info) > 0:
-            w.set_index(0)
+        idx = w.get_index()
+        if idx < 0:
+            idx = 0
+        if idx >= len(self.hdu_info):
+            idx = len(self.hdu_info) - 1
+        #w.set_index(idx)
         
     def redo(self):
         image = self.fitsimage.get_image()
         if (image is None) or (image == self.image):
             return True
         
-        md = image.get_metadata()
-        path = md.get('path', None)
+        path = image.get('path', None)
         if path is None:
             self.fv.show_error("Cannot open image: no value for metadata key 'path'")
             return
 
         self.path = path
-        self.imgname = image.get('name', 'NONAME')
+
+        name = self.fv.name_image_from_path(path)
+        # remove index designation from root of name, if any
+        match = re.match(r'^(.+)\[(\d+)\]$', name)
+        if match:
+            name = match.group(1)
+        self.imgname = name
 
         self.fits_f = pyfits.open(path, 'readonly')
 
-        lower = 1
-        upper = len(self.fits_f)
+        lower = 0
+        upper = len(self.fits_f) - 1
         info = self.fits_f.info(output=False)
         self.prep_hdu_menu(self.w.hdu, info)
         self.num_hdu = upper
-        ## self.w.num_hdus.set_text("%d" % self.num_hdu)
         self.logger.debug("there are %d hdus" % (upper))
         self.w.numhdu.set_text("%d" % (upper))
-        #adj = self.w.hdu.set_limits(lower, upper, incr_value=1)
 
-        self.w.hdu.set_enabled(upper > 1)
+        self.w.hdu.set_enabled(len(self.fits_f) > 0)
 
-        self.set_hdu(lower)
 
     def __str__(self):
         return 'multidim'

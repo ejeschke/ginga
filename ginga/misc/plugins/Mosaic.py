@@ -382,6 +382,8 @@ class Mosaic(GingaPlugin.LocalPlugin):
                     i = 0
                     for hdu in in_f:
                         i += 1
+                        # TODO: I think we need a little more rigorous test
+                        # than just whether the data section is empty
                         if hdu.data is None:
                             continue
                         self.logger.debug("ingesting hdu #%d" % (i))

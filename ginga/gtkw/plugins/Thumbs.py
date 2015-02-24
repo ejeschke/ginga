@@ -72,7 +72,7 @@ class Thumbs(ThumbsBase.ThumbsBase):
         return lambda tw, x, y, kbmode, ttw: self.query_thumb(thumbkey, name, metadata, x, y, ttw)
     
     def insert_thumbnail(self, imgwin, thumbkey, thumbname, chname, name, path,
-                         thumbpath, metadata, image_loader):
+                         thumbpath, metadata, image_future):
 
         imgwin.set_property("has-tooltip", True)
         imgwin.connect("query-tooltip", self._mktt(thumbkey, name, metadata))
@@ -84,13 +84,13 @@ class Thumbs(ThumbsBase.ThumbsBase):
         evbox.add(imgwin)
         evbox.connect("button-press-event",
                       lambda w, e: self.load_file(thumbkey, chname, name, path,
-                                                  image_loader))
+                                                  image_future))
         vbox.pack_start(evbox, expand=False, fill=False)
         vbox.show_all()
 
         bnch = Bunch.Bunch(widget=vbox, evbox=evbox, imname=name,
                            thumbname=thumbname, chname=chname, path=path,
-                           thumbpath=thumbpath)
+                           thumbpath=thumbpath, image_future=image_future)
 
         with self.thmblock:
             self.thumbDict[thumbkey] = bnch

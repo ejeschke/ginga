@@ -138,8 +138,8 @@ class PyFitsFileHandler(BaseFitsFileHandler):
 
         if numhdu is None:
             found_valid_hdu = False
-            for i in range(len(fits_f)):
-                hdu = fits_f[i]
+            for numhdu in range(len(fits_f)):
+                hdu = fits_f[numhdu]
                 if (hdu.data is None) or (0 in hdu.data.shape):
                     # non-pixel or zero-length data hdu?
                     continue
@@ -155,14 +155,14 @@ class PyFitsFileHandler(BaseFitsFileHandler):
                 ## raise FITSError("No data HDU found that Ginga can open in '%s'" % (
                 ##     filepath))
                 # Load just the header
-                hdu = fits_f[0]
-        else:
-            hdu = fits_f[numhdu]
+                numhdu = 0
+
+        hdu = fits_f[numhdu]
 
         data, naxispath = self.load_hdu(hdu, ahdr, fobj=fits_f,
                                         naxispath=naxispath)
         fits_f.close()
-        return (data, naxispath)
+        return (data, numhdu, naxispath)
 
     def create_fits(self, data, header):
         fits_f = pyfits.HDUList()
@@ -232,8 +232,8 @@ class FitsioFileHandler(BaseFitsFileHandler):
 
         if numhdu is None:
             found_valid_hdu = False
-            for i in range(len(fits_f)):
-                hdu = fits_f[i]
+            for numhdu in range(len(fits_f)):
+                hdu = fits_f[numhdu]
                 info = hdu.get_info()
                 if not ('ndims' in info) or (info['ndims'] == 0):
                     # compressed FITS file or non-pixel data hdu?
@@ -244,15 +244,17 @@ class FitsioFileHandler(BaseFitsFileHandler):
                 break
 
             if not found_valid_hdu:
-                raise FITSError("No data HDU found that Ginga can open in '%s'" % (
-                    filepath))
-        else:
-            hdu = fits_f[numhdu]
+                ## raise FITSError("No data HDU found that Ginga can open in '%s'" % (
+                ##     filepath))
+                # Just load the header
+                numhdu = 0
+
+        hdu = fits_f[numhdu]
 
         data, naxispath = self.load_hdu(hdu, ahdr, fobj=fits_f,
                                         naxispath=naxispath)
         fits_f.close()
-        return (data, naxispath)
+        return (data, numhdu, naxispath)
 
     def create_fits(self, data, header):
         fits_f = pyfits.HDUList()
