@@ -44,7 +44,7 @@ class ControlError(Exception):
     pass
 
 class GingaControl(Callback.Callbacks):
-     
+
     def __init__(self, logger, threadPool, module_manager, preferences,
                  ev_quit=None):
         Callback.Callbacks.__init__(self)
@@ -75,7 +75,7 @@ class GingaControl(Callback.Callbacks):
         self.timer_factory = Timer.TimerFactory(ev_quit=self.ev_quit)
         task = Task.FuncTask2(self.timer_factory.mainloop)
         task.init_and_start(self)
-        
+
         self.lock = threading.RLock()
         self.channel = {}
         self.channelNames = []
@@ -107,7 +107,7 @@ class GingaControl(Callback.Callbacks):
 
         self.fn_keys = ('f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8',
                         'f9', 'f10', 'f11', 'f12')
-        
+
         self.global_plugins = {}
         self.local_plugins = {}
         self.operations  = []
@@ -136,7 +136,7 @@ class GingaControl(Callback.Callbacks):
     ####################################################
     # CALLBACKS
     ####################################################
-    
+
     def showxy(self, fitsimage, data_x, data_y):
         try:
             image = fitsimage.get_image()
@@ -153,7 +153,7 @@ class GingaControl(Callback.Callbacks):
             return
 
         self.make_callback('field-info', fitsimage, info)
-        
+
         self.update_pending()
         return True
 
@@ -178,7 +178,7 @@ class GingaControl(Callback.Callbacks):
         if isinstance(value, numpy.ndarray):
             avg = numpy.average(value)
             value = avg
-            
+
         # Update the readout
         fits_x = "%.3f" % info.x
         fits_y = "%.3f" % info.y
@@ -273,16 +273,16 @@ class GingaControl(Callback.Callbacks):
         loval, hival = fitsimage.get_cut_levels()
         colorbar.set_range(loval, hival, redraw=False)
         colorbar.set_rgbmap(rgbmap)
-        
+
     def change_cbar(self, viewer, fitsimage, cbar):
         self._match_cmap(fitsimage, cbar)
-        
+
     def change_range_cb(self, setting, value, fitsimage, cbar):
         if fitsimage != self.getfocus_fitsimage():
             return False
         loval, hival = value
         cbar.set_range(loval, hival)
-        
+
     def cbar_value_cb(self, cbar, value, event):
         chinfo = self.get_channelInfo()
         readout = chinfo.readout
@@ -290,12 +290,12 @@ class GingaControl(Callback.Callbacks):
             maxv = readout.maxv
             text = "Value: %-*.*s" % (maxv, maxv, value)
             readout.set_text(text)
-        
+
     def rgbmap_cb(self, rgbmap, fitsimage):
         if fitsimage != self.getfocus_fitsimage():
             return False
         self.change_cbar(self, fitsimage, self.colorbar)
-        
+
     def force_focus_cb(self, fitsimage, action, data_x, data_y):
         chname = self.get_channelName(fitsimage)
         self.change_channel(chname, raisew=True)
@@ -327,7 +327,7 @@ class GingaControl(Callback.Callbacks):
         opmon = chinfo.opmon
         opmon.deactivate_focused()
         self.normalsize()
-        
+
     # PLUGIN MANAGEMENT
 
     def start_operation(self, opname):
@@ -336,18 +336,18 @@ class GingaControl(Callback.Callbacks):
     def stop_operation_channel(self, chname, opname):
         self.logger.warn("Do not use this method name--it will be deprecated!")
         return self.stop_local_plugin(chname, opname)
-    
+
     def start_local_plugin(self, chname, opname, future):
         chinfo = self.get_channelInfo(chname)
         opmon = chinfo.opmon
         opmon.start_plugin_future(chinfo.name, opname, future)
         chinfo.fitsimage.onscreen_message(opname, delay=1.0)
-            
+
     def stop_local_plugin(self, chname, opname):
         chinfo = self.get_channelInfo(chname)
         opmon = chinfo.opmon
         opmon.deactivate(opname)
-            
+
     def start_global_plugin(self, pluginName, raise_tab=False):
         self.gpmon.start_plugin_future(None, pluginName, None)
         if raise_tab:
@@ -371,12 +371,12 @@ class GingaControl(Callback.Callbacks):
         except Exception as e:
             self.logger.error("Unable to load local plugin '%s': %s" % (
                 name, str(e)))
-        
+
     def add_global_plugin(self, spec):
         try:
             name = spec.setdefault('name', spec.get('klass', spec.module))
             self.global_plugins[name] = spec
-            
+
             self.mm.loadModule(spec.module, pfx=pluginconfpfx)
 
             self.gpmon.loadPlugin(name, spec)
@@ -385,7 +385,7 @@ class GingaControl(Callback.Callbacks):
             start = spec.get('start', True)
             if start:
                 self.start_global_plugin(name, raise_tab=False)
-                
+
         except Exception as e:
             self.logger.error("Unable to load global plugin '%s': %s" % (
                 name, str(e)))
@@ -410,10 +410,10 @@ class GingaControl(Callback.Callbacks):
             errmsg += tb_str
             self.logger.error(errmsg)
             self.gui_do(self.show_error, errmsg, raisetab=True)
-            
+
     def help(self):
         self.start_global_plugin('WBrowser')
-        
+
         localDoc = os.path.join(packageHome, 'doc', 'help.html')
         if not os.path.exists(localDoc):
             url = "https://readthedocs.org/docs/ginga/en/latest"
@@ -422,10 +422,10 @@ class GingaControl(Callback.Callbacks):
 
         # TODO: need to let GUI finish processing, it seems
         self.update_pending()
-        
+
         obj = self.gpmon.getPlugin('WBrowser')
         obj.browse(url)
-        
+
     # BASIC IMAGE OPERATIONS
 
     def guess_filetype(self, filepath):
@@ -461,7 +461,7 @@ class GingaControl(Callback.Callbacks):
             idx = max(int(match.group(2)), 0)
         else:
             filepfx = filepath
-            
+
         # Create an image.  Assume type to be an AstroImage unless
         # the MIME association says it is something different.
         try:
@@ -473,7 +473,7 @@ class GingaControl(Callback.Callbacks):
             typ, subtyp = 'image', 'fits'
 
         kwdargs = {}
-        
+
         self.logger.debug("assuming file type: %s/%s'" % (typ, subtyp))
         if (typ == 'image') and (subtyp not in ('fits', 'x-fits')):
             image = RGBImage.RGBImage(logger=self.logger)
@@ -521,7 +521,7 @@ class GingaControl(Callback.Callbacks):
 
         # Get information about this file/URL
         info = catalog.get_fileinfo(filespec, cache_dir=dldir)
-        
+
         if (not info.ondisk) and (info.url is not None):
             # Download the file if a URL was passed
             def  _dl_indicator(count, blksize, totalsize):
@@ -551,7 +551,7 @@ class GingaControl(Callback.Callbacks):
         if idx is not None:
             name = '%s[%d]' % (name, idx)
         return name
-    
+
 
     def load_file(self, filepath, chname=None, wait=True,
                   create_channel=True, display_image=True,
@@ -587,7 +587,7 @@ class GingaControl(Callback.Callbacks):
 
         if image_loader is None:
             image_loader = self.load_image
-        
+
         info = self.get_fileinfo(filepath)
         filepath = info.filepath
 
@@ -596,7 +596,7 @@ class GingaControl(Callback.Callbacks):
         if info.numhdu is not None:
             idx = max(0, info.numhdu)
             kwdargs['idx'] = idx
-            
+
         #image = image_loader(filepath, **kwdargs)
         future = Future.Future()
         future.freeze(image_loader, filepath, **kwdargs)
@@ -627,13 +627,14 @@ class GingaControl(Callback.Callbacks):
         # Return the image
         return image
 
-    def add_preload(self, chname, imname, path, image_loader=None):
+    def add_preload(self, chname, imname, path, image_loader=None,
+                    image_future=None):
         bnch = Bunch.Bunch(chname=chname, imname=imname, path=path,
-                           image_loader=image_loader)
+                           image_loader=image_loader, image_future=image_future)
         with self.preloadLock:
             self.preloadList.append(bnch)
         self.nongui_do(self.preload_scan)
-        
+
     def preload_scan(self):
         # preload any pending files
         # TODO: do we need any throttling of loading here?
@@ -661,7 +662,7 @@ class GingaControl(Callback.Callbacks):
             self.gui_do(self.add_image, imname, image,
                            chname=chname, silent=True)
         self.logger.debug("end preload")
-    
+
     def zoom_in(self):
         fitsimage = self.getfocus_fitsimage()
         fitsimage.zoom_in()
@@ -697,7 +698,7 @@ class GingaControl(Callback.Callbacks):
                 chinfo.cursor -= 1
                 image = chinfo.datasrc.index2value(chinfo.cursor)
                 self._switch_image(chinfo, image)
-            
+
         return True
 
     def next_img(self):
@@ -715,7 +716,7 @@ class GingaControl(Callback.Callbacks):
 
         return True
 
-        
+
     def add_workspace(self, wsname, wstype, inSpace='channels'):
 
         bnch = self.ds.make_ws(name=wsname, group=1, wstype=wstype)
@@ -726,7 +727,7 @@ class GingaControl(Callback.Callbacks):
             #self.ds.create_toplevel_ws(width, height, group=1)
             self.ds.add_toplevel(bnch, bnch.name)
         return True
-        
+
     # CHANNEL MANAGEMENT
 
     def add_image(self, imname, image, chname=None, silent=False):
@@ -763,7 +764,7 @@ class GingaControl(Callback.Callbacks):
             #and chinfo.switchfn(image):
             self.logger.debug("switching to new image '%s'" % (curname))
             self._switch_image(chinfo, image)
-            
+
         if chinfo.prefs['raisenew']:
             curinfo = self.get_channelInfo()
             if chinfo.name != curinfo.name:
@@ -783,7 +784,7 @@ class GingaControl(Callback.Callbacks):
         # update the gui for the latest image, which saves wasted work
         self.gui_do(self._add_image_update, chinfo, image)
 
-        
+
     def update_image(self, imname, image, chname):
         self.logger.debug("Updating image '%s' in channel %s" % (
             imname, chname))
@@ -806,7 +807,7 @@ class GingaControl(Callback.Callbacks):
         if chinfo is None:
             return None
         return chinfo.fitsimage
-        
+
     def get_fitsimage(self, chname):
         chinfo = self.get_channelInfo(chname)
         if chinfo is None:
@@ -842,7 +843,7 @@ class GingaControl(Callback.Callbacks):
                     # perpetuate the image_future
                     image.set(image_future=image_future)
                     self.gui_do(_switch, imname, image, chname)
-                    
+
                 self.nongui_do(_load_n_switch, imname, chname, image_future)
 
             elif path is not None:
@@ -856,7 +857,7 @@ class GingaControl(Callback.Callbacks):
             else:
                 raise ControlError("No image by the name '%s' found" % (
                     imname))
-            
+
     def _switch_image(self, chinfo, image):
         # update cursor to match image
         try:
@@ -914,7 +915,7 @@ class GingaControl(Callback.Callbacks):
 
             # change plugin manager info
             chinfo.opmon.update_taskbar(localmode=False)
-                
+
             # Update the channel control
             self.w.channel.show_text(chinfo.name)
 
@@ -941,12 +942,12 @@ class GingaControl(Callback.Callbacks):
 
         if image:
             self._switch_image(chinfo, image)
-        
+
         ## elif len(chinfo.datasrc) > 0:
         ##     n = chinfo.cursor
         ##     image = chinfo.datasrc.index2value(n)
         ##     self._switch_image(chinfo, image)
-            
+
         self.make_callback('active-image', chinfo.fitsimage)
 
         self.update_pending()
@@ -956,14 +957,14 @@ class GingaControl(Callback.Callbacks):
         name = chname.lower()
         with self.lock:
             return name in self.channel
-                
+
     def get_channelInfo(self, chname=None):
         with self.lock:
             if not chname:
                 return self.chinfo
             name = chname.lower()
             return self.channel[name]
-                
+
     def get_channelName(self, fitsimage):
         with self.lock:
             items = self.channel.items()
@@ -971,7 +972,7 @@ class GingaControl(Callback.Callbacks):
             if chinfo.fitsimage == fitsimage:
                 return name
         return None
-                
+
     def add_channel_internal(self, chname, datasrc=None, num_images=1):
         name = chname.lower()
         with self.lock:
@@ -984,11 +985,11 @@ class GingaControl(Callback.Callbacks):
 
                 chinfo = Bunch.Bunch(datasrc=datasrc,
                                  name=chname, cursor=0)
-            
+
                 self.channel[name] = chinfo
         return chinfo
 
-        
+
     def add_channel(self, chname, datasrc=None, workspace=None,
                     num_images=None, settings=None,
                     settings_template=None,
@@ -1007,7 +1008,7 @@ class GingaControl(Callback.Callbacks):
         """
         if self.has_channel(chname):
             return self.get_channelInfo(chname)
-        
+
         name = chname
         if settings is None:
             settings = self.prefs.createCategory('channel_'+name)
@@ -1043,7 +1044,7 @@ class GingaControl(Callback.Callbacks):
 
         num_images = self.settings.get('numImages', 1)
         use_readout = not self.settings.get('shareReadout', True)
-        
+
         chinfo = self.add_channel_internal(name,
                                            num_images=settings['numImages'])
 
@@ -1057,7 +1058,7 @@ class GingaControl(Callback.Callbacks):
             opmon = self.getPluginManager(self.logger, self,
                                           self.ds, self.mm)
             opmon.set_widget(self.w.optray)
-            
+
             chinfo.setvals(widget=bnch.view,
                            readout=bnch.readout,
                            container=bnch.container,
@@ -1065,23 +1066,23 @@ class GingaControl(Callback.Callbacks):
                            fitsimage=bnch.fitsimage,
                            prefs=settings,
                            opmon=opmon)
-            
+
             # Update the channels control
             self.channelNames.append(chname)
             self.channelNames.sort()
             self.w.channel.insert_alpha(chname)
-            
+
         # Prepare local plugins for this channel
         for opname, spec in self.local_plugins.items():
             opmon.loadPlugin(opname, spec, chinfo=chinfo)
 
         self.make_callback('add-channel', chinfo)
         return chinfo
-            
+
     def delete_channel(self, chname):
         name = chname.lower()
         # TODO: need to close plugins open on this channel
-            
+
         with self.lock:
             chinfo = self.channel[name]
 
@@ -1094,7 +1095,7 @@ class GingaControl(Callback.Callbacks):
             del self.channel[name]
 
         self.make_callback('delete-channel', chinfo)
-        
+
     def get_channelNames(self):
         with self.lock:
             return [ self.channel[key].name for key in self.channel.keys() ]
@@ -1107,7 +1108,7 @@ class GingaControl(Callback.Callbacks):
             #text = '1/%dx' % (int(1.0/scalefactor))
             text = '1/%.2fx' % (1.0/scalefactor)
         return text
-    
+
     def banner(self, raiseTab=True):
         bannerFile = os.path.join(self.iconpath, 'ginga-splash.ppm')
         chname = 'Ginga'
@@ -1139,12 +1140,12 @@ class GingaControl(Callback.Callbacks):
             self.gui_do(obj.log, text)
         except:
             pass
-            
+
     def set_loglevel(self, level):
         handlers = self.logger.handlers
         for hdlr in handlers:
             hdlr.setLevel(level)
-        
+
     def play_soundfile(self, filepath, format=None, priority=20):
         self.logger.debug("Subclass could override this to play sound file '%s'" % (
             filepath))
@@ -1155,7 +1156,7 @@ class GingaControl(Callback.Callbacks):
         Parameters
         ----------
         None
-            
+
         Returns
         -------
         `names`: list
@@ -1170,7 +1171,7 @@ class GingaControl(Callback.Callbacks):
         Parameters
         ----------
         None
-            
+
         Returns
         -------
         `names`: list
@@ -1186,7 +1187,7 @@ class GuiLogHandler(logging.Handler):
     def __init__(self, fv, level=logging.NOTSET):
         self.fv = fv
         logging.Handler.__init__(self, level=level)
-        
+
     def emit(self, record):
         text = self.format(record)
         self.fv.logit(text)
