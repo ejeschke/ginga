@@ -627,9 +627,9 @@ class GingaControl(Callback.Callbacks):
         # Return the image
         return image
 
-    def add_preload(self, chname, imname, path, image_loader=None):
+    def add_preload(self, chname, imname, path, image_future=None):
         bnch = Bunch.Bunch(chname=chname, imname=imname, path=path,
-                           image_loader=image_loader)
+                           image_future=image_future)
         with self.preloadLock:
             self.preloadList.append(bnch)
         self.nongui_do(self.preload_scan)
@@ -642,9 +642,9 @@ class GingaControl(Callback.Callbacks):
                 bnch = self.preloadList.pop(0)
                 self.nongui_do(self.preload_file, bnch.chname,
                                bnch.imname, bnch.path,
-                               image_loader=bnch.image_loader)
+                               image_future=bnch.image_future)
 
-    def preload_file(self, chname, imname, path, image_loader=None):
+    def preload_file(self, chname, imname, path, image_future=None):
         # sanity check to see if the file is already in memory
         self.logger.debug("preload: checking %s in %s" % (imname, chname))
         chinfo = self.get_channelInfo(chname)
@@ -654,9 +654,11 @@ class GingaControl(Callback.Callbacks):
             # not there--load image in a non-gui thread, then have the
             # gui add it to the channel silently
             self.logger.info("preloading image %s" % (path))
-            if image_loader is None:
-                image_loader = self.load_image
-            image = image_loader(path)
+            if image_future is None:
+                # TODO: need index info?
+                image = self.load_image(path)
+            else:
+                image = image_future.thaw()
 
             self.gui_do(self.add_image, imname, image,
                            chname=chname, silent=True)
