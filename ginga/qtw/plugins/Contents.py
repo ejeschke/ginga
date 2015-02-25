@@ -1,6 +1,6 @@
 #
 # Contents.py -- Table of Contents plugin for fits viewer
-# 
+#
 # Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c)  Eric R. Jeschke.  All rights reserved.
@@ -51,7 +51,7 @@ class Contents(GingaPlugin.GlobalPlugin):
         #treeview.itemDoubleClicked.connect(self.switch_image2)
         treeview.itemSelectionChanged.connect(self.switch_image3)
         self.treeview = treeview
-        
+
         # create the column headers
         col = 0
         l = []
@@ -88,8 +88,9 @@ class Contents(GingaPlugin.GlobalPlugin):
     def switch_image3(self):
         with self.toc_lock:
             items = list(self.treeview.selectedItems())
-            self.switch_image2(items[0], 0)
-        
+            if len(items) > 0:
+                self.switch_image2(items[0], 0)
+
     def get_info(self, chname, name, image):
         path = image.get('path', None)
         future = image.get('image_future', None)
@@ -108,7 +109,7 @@ class Contents(GingaPlugin.GlobalPlugin):
         # name should always be available
         bnch.NAME = name
         return bnch
-    
+
     def recreate_toc(self):
         with self.toc_lock:
             self.logger.debug("Recreating table of contents...")
@@ -142,7 +143,7 @@ class Contents(GingaPlugin.GlobalPlugin):
     def add_image(self, viewer, chname, image):
         if not self.gui_up:
             return False
-        
+
         noname = 'Noname' + str(time.time())
         name = image.get('name', noname)
         self.logger.info("name=%s" % (name))
@@ -196,5 +197,5 @@ class Contents(GingaPlugin.GlobalPlugin):
 
     def __str__(self):
         return 'contents'
-    
+
 #END
