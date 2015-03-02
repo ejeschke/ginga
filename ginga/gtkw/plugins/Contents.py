@@ -12,7 +12,6 @@ from ginga.misc import Bunch, Future
 
 import gtk
 import time
-import threading
 
 class Contents(GingaPlugin.GlobalPlugin):
 
@@ -33,7 +32,6 @@ class Contents(GingaPlugin.GlobalPlugin):
         self.nameDict = {}
         # TODO: this ought to be customizable by channel
         self.columns = self.settings.get('columns', columns)
-        self.toc_lock = threading.RLock()
         
         self.cell_sort_funcs = []
         for hdr, key in self.columns:
@@ -148,9 +146,8 @@ class Contents(GingaPlugin.GlobalPlugin):
                             image_future=bnch.image_future)
 
     def switch_image2(self, treeview):
-        with self.toc_lock:
-            path, column = treeview.get_cursor()
-            self.switch_image(treeview, path, column)
+        path, column = treeview.get_cursor()
+        self.switch_image(treeview, path, column)
 
     def get_info(self, chname, name, image):
         path = image.get('path', None)
@@ -172,27 +169,26 @@ class Contents(GingaPlugin.GlobalPlugin):
         return bnch
     
     def recreate_toc(self):
-        with self.toc_lock:
-            self.logger.debug("Recreating table of contents...")
-            toclist = self.nameDict.keys()
-            toclist.sort()
+        self.logger.debug("Recreating table of contents...")
+        toclist = self.nameDict.keys()
+        toclist.sort()
 
-            model = gtk.TreeStore(object)
-            for key in toclist:
-                it = model.append(None, [ key ])
-                fileDict = self.nameDict[key]
-                filelist = fileDict.keys()
-                filelist.remove('_iter')
-                fileDict['_iter'] = it
-                filelist.sort(key=str.lower)
+        model = gtk.TreeStore(object)
+        for key in toclist:
+            it = model.append(None, [ key ])
+            fileDict = self.nameDict[key]
+            filelist = fileDict.keys()
+            filelist.remove('_iter')
+            fileDict['_iter'] = it
+            filelist.sort(key=str.lower)
 
-                for fname in filelist:
-                    bnch = fileDict[fname]
-                    model.append(it, [ bnch ])
+            for fname in filelist:
+                bnch = fileDict[fname]
+                model.append(it, [ bnch ])
 
-            self.treeview.set_fixed_height_mode(False)
-            self.treeview.set_model(model)
-            self.treeview.set_fixed_height_mode(True)
+        self.treeview.set_fixed_height_mode(False)
+        self.treeview.set_model(model)
+        self.treeview.set_fixed_height_mode(True)
             
 
     def add_image(self, viewer, chname, image):
@@ -206,23 +202,22 @@ class Contents(GingaPlugin.GlobalPlugin):
         if nothumb:
             return
 
-        with self.toc_lock:
-            model = self.treeview.get_model()
-            if chname not in self.nameDict:
-                it = model.append(None, [ chname ])
-                fileDict = { '_iter': it }
-                self.nameDict[chname] = fileDict
-            else:
-                fileDict = self.nameDict[chname]
-                it = fileDict['_iter']
+        model = self.treeview.get_model()
+        if chname not in self.nameDict:
+            it = model.append(None, [ chname ])
+            fileDict = { '_iter': it }
+            self.nameDict[chname] = fileDict
+        else:
+            fileDict = self.nameDict[chname]
+            it = fileDict['_iter']
 
-            key = name.lower()
-            if key in fileDict:
-                return
+        key = name.lower()
+        if key in fileDict:
+            return
 
-            bnch = self.get_info(chname, name, image)
-            fileDict[key] = bnch
-            model.append(it, [ bnch ])
+        bnch = self.get_info(chname, name, image)
+        fileDict[key] = bnch
+        model.append(it, [ bnch ])
 
     def clear(self):
         self.nameDict = {}
