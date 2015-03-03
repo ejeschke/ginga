@@ -1121,13 +1121,16 @@ class GingaControl(Callback.Callbacks):
         bannerFile = os.path.join(self.iconpath, 'ginga-splash.ppm')
         chname = 'Ginga'
         self.add_channel(chname)
+        chinfo = self.get_channelInfo(chname)
+        viewer = chinfo.fitsimage
+        viewer.enable_autocuts('off')
+        viewer.enable_autozoom('on')
+        viewer.cut_levels(0, 255)
         #self.nongui_do(self.load_file, bannerFile, chname=chname)
         self.load_file(bannerFile, chname=chname)
         if raiseTab:
             self.change_channel(chname)
-        chinfo = self.get_channelInfo(chname)
-        chinfo.fitsimage.zoom_fit()
-        chinfo.fitsimage.cut_levels(0, 255)
+        viewer.zoom_fit()
 
     def followFocus(self, tf):
         self.channel_follows_focus = tf

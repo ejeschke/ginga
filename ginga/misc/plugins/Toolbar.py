@@ -301,7 +301,7 @@ class Toolbar(GingaPlugin.GlobalPlugin):
         return (view, view.get_bindings())
 
     def _update_toolbar_state(self, fitsimage):
-        if fitsimage is None:
+        if (fitsimage is None) or (not self.gui_up):
             return
         self.logger.debug("updating toolbar state")
         try:

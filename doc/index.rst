@@ -34,7 +34,7 @@ star catalog access, cuts, star pick/fwhm, thumbnails, etc.
 Copyright and License
 =====================
 
-Copyright (c) 2011-2014 Eric R. Jeschke. All rights reserved.
+Copyright (c) 2011-2015 Eric R. Jeschke. All rights reserved.
 
 Ginga is distributed under an open-source BSD licence. Please see the
 file LICENSE.txt in the top-level directory for details. 
@@ -47,8 +47,7 @@ Because Ginga is written in pure python, it can run on any platform that
 has the required python modules and has a supported widget set.
 The basic Ginga display class supports the Qt, Gtk, Tk widget sets
 natively as well as any matplotlib Figure, while the full reference
-viewer supports Qt and Gtk.  Ginga can also be used in ipython notebooks
-and other 
+viewer supports Qt and Gtk.  Ginga can also be used in ipython notebooks.
 
 ==================
 Getting the source

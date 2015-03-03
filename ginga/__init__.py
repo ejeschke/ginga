@@ -7,7 +7,7 @@ automatic cut levels algorithms and canvases for plotting scalable
 geometric forms.  In addition to this widget, a general purpose
 'reference' FITS viewer is provided, based on a plugin framework.
 
-Copyright (c) 2011-2014 Eric R. Jeschke. All rights reserved.
+Copyright (c) 2011-2015 Eric R. Jeschke. All rights reserved.
 
 Ginga is distributed under an open-source BSD licence. Please see the
 file LICENSE.txt in the top-level directory for details. 
