@@ -351,11 +351,12 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.w.update(b)
 
         pan_x, pan_y = self.fitsimage.get_pan()
+        coord_offset = self.fv.settings.get('pixel_coords_offset', 0.0)
         b.pan_x.set_tooltip("Coordinate for the pan position in X axis")
-        b.pan_x.set_text(str(pan_x))
+        b.pan_x.set_text(str(pan_x + coord_offset))
         #b.pan_x.add_callback('activated', self.set_pan_cb)
         b.pan_y.set_tooltip("Coordinate for the pan position in Y axis")
-        b.pan_y.set_text(str(pan_y))
+        b.pan_y.set_text(str(pan_y + coord_offset))
         #b.pan_y.add_callback('activated', self.set_pan_cb)
         b.apply_pan.add_callback('activated', self.set_pan_cb)
         b.apply_pan.set_tooltip("Set the pan position")
@@ -754,12 +755,14 @@ class Preferences(GingaPlugin.LocalPlugin):
         pan_ys = self.w.pan_y.get_text().strip()
         # TODO: use current value for other coord if only one coord supplied
         if (':' in pan_xs) or (':' in pan_ys):
+            # TODO: get maximal precision
             pan_x = wcs.hmsStrToDeg(pan_xs)
             pan_y = wcs.dmsStrToDeg(pan_ys)
             pan_coord = 'wcs'
         else:
-            pan_x = float(pan_xs)
-            pan_y = float(pan_ys)
+            coord_offset = self.fv.settings.get('pixel_coords_offset', 0.0)
+            pan_x = float(pan_xs) - coord_offset
+            pan_y = float(pan_ys) - coord_offset
             
         self.fitsimage.set_pan(pan_x, pan_y, coord=pan_coord)
         return True
@@ -773,6 +776,11 @@ class Preferences(GingaPlugin.LocalPlugin):
             if use_sex:
                 pan_x = wcs.raDegToString(pan_x)
                 pan_y = wcs.decDegToString(pan_y)
+        else:
+            coord_offset = self.fv.settings.get('pixel_coords_offset', 0.0)
+            pan_x += coord_offset
+            pan_y += coord_offset
+
         self.w.pan_x.set_text(str(pan_x))
         self.w.pan_y.set_text(str(pan_y))
 

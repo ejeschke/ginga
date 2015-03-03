@@ -95,7 +95,10 @@ class Pick(GingaPlugin.LocalPlugin):
         self.min_ellipse = self.settings.get('min_ellipse', 0.5)
         self.edgew = self.settings.get('edge_width', 0.01)
         self.show_candidates = self.settings.get('show_candidates', False)
-        self.use_fits_coords = self.settings.get('use_fits_coords', False)
+        # Report in 0- or 1-based coordinates
+        coord_offset = self.fv.settings.get('pixel_coords_offset', 0.0)
+        self.pixel_coords_offset = self.settings.get('pixel_coords_offset',
+                                                     coord_offset)
 
         # For controls
         self.delta_sky = self.settings.get('delta_sky', 0.0)
@@ -275,8 +278,7 @@ class Pick(GingaPlugin.LocalPlugin):
         nb.add_widget(vbox1, title="Readout")
 
         # Build settings panel
-        captions = (('Show Candidates', 'checkbutton',
-                     'Use FITS coords', 'checkbutton'),
+        captions = (('Show Candidates', 'checkbutton'),
                     ('Radius:', 'label', 'xlbl_radius', 'label',
                      'Radius', 'spinbutton'),
                     ('Threshold:', 'label', 'xlbl_threshold', 'label',
@@ -291,6 +293,9 @@ class Pick(GingaPlugin.LocalPlugin):
                      'Edge', 'entry'),
                     ('Max side:', 'label', 'xlbl_max_side', 'label',
                      'Max side', 'spinbutton'),
+                    ('Coordinate Base:', 'label',
+                     'xlbl_coordinate_base', 'label',
+                     'Coordinate Base', 'entry'),
                     ('Redo Pick', 'button'),
                     )
 
@@ -303,7 +308,7 @@ class Pick(GingaPlugin.LocalPlugin):
         b.ellipticity.set_tooltip("Minimum ellipticity for selection")
         b.edge.set_tooltip("Minimum edge distance for selection")
         b.show_candidates.set_tooltip("Show all peak candidates")
-        b.use_fits_coords.set_tooltip("Report in 1-based coordinates")
+        b.coordinate_base.set_tooltip("Base of pixel coordinate system")
         # radius control
         #b.radius.set_digits(2)
         #b.radius.set_numeric(True)
@@ -390,8 +395,9 @@ class Pick(GingaPlugin.LocalPlugin):
         b.redo_pick.add_callback('activated', lambda w: self.redo())
         b.show_candidates.set_state(self.show_candidates)
         b.show_candidates.add_callback('activated', self.show_candidates_cb)
-        b.use_fits_coords.set_state(self.use_fits_coords)
-        b.use_fits_coords.add_callback('activated', self.use_fits_coords_cb)
+        self.w.xlbl_coordinate_base.set_text(str(self.pixel_coords_offset))
+        b.coordinate_base.set_text(str(self.pixel_coords_offset))
+        b.coordinate_base.add_callback('activated', self.coordinate_base_cb)
 
         nb.add_widget(w, title="Settings")
 
@@ -536,8 +542,9 @@ class Pick(GingaPlugin.LocalPlugin):
             objs = self.fitsimage.getObjectsByTagpfx('peak')
             self.fitsimage.deleteObjects(objs, redraw=True)
         
-    def use_fits_coords_cb(self, w, state):
-        self.use_fits_coords = state
+    def coordinate_base_cb(self, w):
+        self.pixel_coords_offset = float(w.get_text())
+        self.w.xlbl_coordinate_base.set_text(str(self.pixel_coords_offset))
 
     def adjust_wcs(self, image, wcs_m, tup):
         d_ra, d_dec, d_theta = tup
@@ -950,10 +957,8 @@ class Pick(GingaPlugin.LocalPlugin):
                 self.logger.warn("Couldn't calculate star size: %s" % (str(e)))
                 starsize = 0.0
 
-            if self.use_fits_coords:
-                rpt_x, rpt_y = x + 1, y + 1
-            else:
-                rpt_x, rpt_y = x, y
+            rpt_x = x + self.pixel_coords_offset
+            rpt_y = y + self.pixel_coords_offset
 
             # make a report in the form of a dictionary
             d.setvals(x = rpt_x, y = rpt_y,

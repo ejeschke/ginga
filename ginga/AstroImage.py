@@ -517,10 +517,6 @@ class AstroImage(BaseImage):
         return (xlo, ylo, xhi, yhi)
 
     def info_xy(self, data_x, data_y, settings):
-        # Note: FITS coordinates are 1-based, whereas numpy FITS arrays
-        # are 0-based
-        fits_x, fits_y = data_x + 1, data_y + 1
-
         # Get the value under the data coordinates
         try:
             # We report the value across the pixel, even though the coords
@@ -590,8 +586,7 @@ class AstroImage(BaseImage):
         #print "time elapsed: %.4f" % te
 
         info = Bunch.Bunch(itype='astro', data_x=data_x, data_y=data_y,
-                           fits_x=fits_x, fits_y=fits_y,
-                           x=fits_x, y=fits_y,
+                           x=data_x, y=data_y,
                            ra_txt=ra_txt, dec_txt=dec_txt,
                            ra_lbl=ra_lbl, dec_lbl=dec_lbl,
                            value=value)

@@ -106,7 +106,7 @@ class GingaView(GtkMain.GtkMain):
         self.ds.add_callback("page-select", self.page_switch_cb)
 
         # readout
-        if self.settings.get('shareReadout', True):
+        if self.settings.get('share_readout', True):
             self.readout = self.build_readout()
             self.add_callback('field-info', self.readout_cb, self.readout, None)
             rw = self.readout.get_widget()

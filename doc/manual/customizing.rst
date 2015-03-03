@@ -24,7 +24,7 @@ general.cfg::
     # Import matplotlib colormaps in addition to our own set if matplotlib
     # is installed
     useMatplotlibColormaps = True
-    channelFollowsFocus = False
+    channel_follows_focus = False
     showBanner = False
     numImages = 10
 

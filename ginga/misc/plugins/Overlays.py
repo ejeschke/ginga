@@ -27,7 +27,9 @@ class Overlays(GingaPlugin.LocalPlugin):
         self.canvas = canvas
 
         self.colornames = colors.get_colors()
-        self.hi_color = 'red'
+        # TODO: there is some problem with basic "red", at least on Linux
+        #self.hi_color = 'red'
+        self.hi_color = 'palevioletred'
         self.hi_value = None
         self.lo_color = 'blue'
         self.lo_value = None

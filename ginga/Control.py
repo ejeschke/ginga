@@ -95,12 +95,14 @@ class GingaControl(Callback.Callbacks):
 
         self.settings.addDefaults(fixedFont='Monospace',
                                   sansFont='Sans',
-                                  channelFollowsFocus=False,
-                                  shareReadout=True,
-                                  numImages=10)
+                                  channel_follows_focus=False,
+                                  share_readout=True,
+                                  numImages=10,
+                                  # Offset to add to numpy-based coords
+                                  pixel_coords_offset=1.0)
 
         # Should channel change as mouse moves between windows
-        self.channel_follows_focus = self.settings['channelFollowsFocus']
+        self.channel_follows_focus = self.settings['channel_follows_focus']
 
         self.cm = cmap.get_cmap("gray")
         self.im = imap.get_imap("ramp")
@@ -147,6 +149,11 @@ class GingaControl(Callback.Callbacks):
             prefs = fitsimage.get_settings()
             info = image.info_xy(data_x, data_y, prefs)
 
+            # Are we reporting in data or FITS coordinates?
+            off = self.settings.get('pixel_coords_offset', 0.0)
+            info.x += off
+            info.y += off
+            
         except Exception as e:
             self.logger.warn("Can't get info under the cursor: %s" % (
                 str(e)))
@@ -180,12 +187,12 @@ class GingaControl(Callback.Callbacks):
             value = avg
             
         # Update the readout
-        fits_x = "%.3f" % info.x
-        fits_y = "%.3f" % info.y
-        maxx = max(readout.maxx, len(str(fits_x)))
+        px_x = "%.3f" % info.x
+        px_y = "%.3f" % info.y
+        maxx = max(readout.maxx, len(str(px_x)))
         if maxx > readout.maxx:
             readout.maxx = maxx
-        maxy = max(readout.maxy, len(str(fits_y)))
+        maxy = max(readout.maxy, len(str(px_y)))
         if maxy > readout.maxy:
             readout.maxy = maxy
         maxv = max(readout.maxv, len(str(value)))
@@ -195,11 +202,11 @@ class GingaControl(Callback.Callbacks):
         if 'ra_txt' in info:
             text = "%1.1s: %-14.14s  %1.1s: %-14.14s  X: %-*.*s  Y: %-*.*s  Value: %-*.*s" % (
                 info.ra_lbl, info.ra_txt, info.dec_lbl, info.dec_txt,
-                maxx, maxx, fits_x, maxy, maxy, fits_y, maxv, maxv, value)
+                maxx, maxx, px_x, maxy, maxy, px_y, maxv, maxv, value)
         else:
             text = "%1.1s: %-14.14s  %1.1s: %-14.14s  X: %-*.*s  Y: %-*.*s  Value: %-*.*s" % (
                 '', '', '', '',
-                maxx, maxx, fits_x, maxy, maxy, fits_y, maxv, maxv, value)
+                maxx, maxx, px_x, maxy, maxy, px_y, maxv, maxv, value)
         readout.set_text(text)
 
         # Draw colorbar value wedge
@@ -1044,7 +1051,7 @@ class GingaControl(Callback.Callbacks):
                              raisenew=True, genthumb=True)
 
         num_images = self.settings.get('numImages', 1)
-        use_readout = not self.settings.get('shareReadout', True)
+        use_readout = not self.settings.get('share_readout', True)
         
         chinfo = self.add_channel_internal(name,
                                            num_images=settings['numImages'])
