@@ -34,6 +34,8 @@ class MyLabel(QtGui.QLabel):
 
         if buttons & QtCore.Qt.LeftButton:
             self.thumbs_cb()
+        ## elif buttons & QtCore.Qt.RightButton:
+        ##     self.context_menu_cb()
 
     
 class Thumbs(ThumbsBase.ThumbsBase):
@@ -91,15 +93,20 @@ class Thumbs(ThumbsBase.ThumbsBase):
         auto_scroll = self.settings.get('auto_scroll', True)
         b.auto_scroll.setChecked(auto_scroll)
         cw.addWidget(w, stretch=0)
+        self.gui_up = True
 
     def insert_thumbnail(self, imgwin, thumbkey, thumbname, chname, name, path,
                          thumbpath, metadata, image_future):
         pixmap = QPixmap.fromImage(imgwin)
         imglbl = MyLabel()
         imglbl.setPixmap(pixmap)
+        # set the load callback
         imglbl.thumbs_cb = lambda: self.load_file(thumbkey, chname, name, path,
                                                   image_future)
-
+        # make a context menu
+        self._mk_context_menu(imglbl, thumbkey, chname, name, path,
+                              image_future)
+        # make a tool tip
         text = self.query_thumb(thumbkey, name, metadata)
         imglbl.setToolTip(text)
 
@@ -150,7 +157,8 @@ class Thumbs(ThumbsBase.ThumbsBase):
         self.logger.debug("added thumb for %s" % (name))
 
     def clearWidget(self):
-        """Clears the thumbnail display widget of all thumbnails, but does
+        """
+        Clears the thumbnail display widget of all thumbnails, but does
         not remove them from the thumbDict or thumbList.
         """
         with self.thmblock:
@@ -159,7 +167,6 @@ class Thumbs(ThumbsBase.ThumbsBase):
                 bnch = self.thumbDict[thumbkey]
                 self.w.thumbs.removeWidget(bnch.widget)
                 bnch.widget.setParent(None)
-                bnch.widget.deleteLater()
         self.w.thumbs_w.update()
         
     def reorder_thumbs(self):
@@ -168,7 +175,11 @@ class Thumbs(ThumbsBase.ThumbsBase):
             # Remove widgets from grid
             for thumbkey in self.thumbList:
                 bnch = self.thumbDict[thumbkey]
-                self.w.thumbs.removeWidget(bnch.widget)
+                try:
+                    self.w.thumbs.removeWidget(bnch.widget)
+                except:
+                    # widget may already be removed by a clearWidget()
+                    pass
 
             # Add thumbs back in by rows
             self.thumbColCount = 0
@@ -183,6 +194,7 @@ class Thumbs(ThumbsBase.ThumbsBase):
                 
         self.w.thumbs_w.update()
         #self.w.thumbs_scroll.show()
+        self.logger.debug("Reordering done")
         
 
     def thumbpane_resized_cb(self, width, height):
@@ -201,6 +213,24 @@ class Thumbs(ThumbsBase.ThumbsBase):
             result.append(text)
             
         return '\n'.join(result)
+
+    def _mk_context_menu(self, lbl, thumbkey, chname, name, path,
+                         image_future):
+        lbl.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        menu = QtGui.QMenu()
+        item = QtGui.QAction("Load", menu)
+        item.triggered.connect(lambda: self.load_file(thumbkey, chname, name,
+                                                      path, image_future))
+        menu.addAction(item)
+        menu.addSeparator()
+        item = QtGui.QAction("Remove", menu)
+        item.triggered.connect(lambda: self.fv.remove_image_by_name(chname, name, impath=path))
+        menu.addAction(item)
+
+        def on_context_menu(point):
+            menu.exec_(lbl.mapToGlobal(point))
+
+        lbl.customContextMenuRequested.connect(on_context_menu)
 
     def update_thumbnail(self, thumbkey, imgwin, name, metadata):
         with self.thmblock:

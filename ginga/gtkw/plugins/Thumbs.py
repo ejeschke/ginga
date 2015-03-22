@@ -66,25 +66,42 @@ class Thumbs(ThumbsBase.ThumbsBase):
         b.auto_scroll.set_active(auto_scroll)
 
         cw.pack_start(w, fill=True, expand=False)
+        self.gui_up = True
 
 
-    def _mktt(self, thumbkey, name, metadata):
+    def _mk_tooltip(self, thumbkey, name, metadata):
         return lambda tw, x, y, kbmode, ttw: self.query_thumb(thumbkey, name, metadata, x, y, ttw)
     
+    def _mk_context_menu(self, thumbkey, chname, name, path, image_future):
+        menu = gtk.Menu()
+        item = gtk.MenuItem("Load")
+        item.connect("activate", lambda w: self.load_file(thumbkey, chname,
+                                                          name, path,
+                                                          image_future))
+        menu.append(item)
+        sep = gtk.SeparatorMenuItem()
+        menu.append(sep)
+        item = gtk.MenuItem("Remove")
+        item.connect("activate", lambda w: self.fv.remove_image_by_name(chname, name, impath=path))
+        menu.append(item)
+        menu.show_all()
+        return menu
+
     def insert_thumbnail(self, imgwin, thumbkey, thumbname, chname, name, path,
                          thumbpath, metadata, image_future):
 
         imgwin.set_property("has-tooltip", True)
-        imgwin.connect("query-tooltip", self._mktt(thumbkey, name, metadata))
+        imgwin.connect("query-tooltip", self._mk_tooltip(thumbkey, name, metadata))
 
         vbox = gtk.VBox(spacing=0)
         vbox.pack_start(gtk.Label(thumbname), expand=False,
                         fill=False, padding=0)
         evbox = gtk.EventBox()
         evbox.add(imgwin)
-        evbox.connect("button-press-event",
-                      lambda w, e: self.load_file(thumbkey, chname, name, path,
-                                                  image_future))
+        evbox.connect("button-press-event", 
+                      lambda w, e: self.button_down(w, e, thumbkey, chname,
+                                                    name, path,
+                                                    image_future))
         vbox.pack_start(evbox, expand=False, fill=False)
         vbox.show_all()
 
@@ -147,7 +164,7 @@ class Thumbs(ThumbsBase.ThumbsBase):
             hbox = None
             for thumbkey in self.thumbList:
                 self.logger.debug("adding thumb for %s" % (str(thumbkey)))
-                chname, name = thumbkey
+                chname, name = thumbkey[:2]
                 bnch = self.thumbDict[thumbkey]
                 if colCount == 0:
                     hbox = gtk.HBox(homogeneous=True, spacing=self.thumbSep)
@@ -181,6 +198,18 @@ class Thumbs(ThumbsBase.ThumbsBase):
         ttw.set_text('\n'.join(result))
         return True
 
+    def button_down(self, widget, event, thumbkey, chname,
+                    name, path, image_future):
+        if event.type == gtk.gdk.BUTTON_PRESS:
+            if event.button == 1:
+                self.load_file(thumbkey, chname, name, path,
+                               image_future)
+            elif event.button == 3:
+                # make widget popup
+                menu = self._mk_context_menu(thumbkey, chname, name, path,
+                                             image_future)
+                menu.popup(None, None, None, event.button, event.time)
+        
     def update_thumbnail(self, thumbkey, imgwin, name, metadata):
         with self.thmblock:
             try:
@@ -191,7 +220,7 @@ class Thumbs(ThumbsBase.ThumbsBase):
                 return
 
             imgwin.set_property("has-tooltip", True)
-            imgwin.connect("query-tooltip", self._mktt(thumbkey, name, metadata))
+            imgwin.connect("query-tooltip", self._mk_tooltip(thumbkey, name, metadata))
 
             # Replace thumbnail image widget
             self.logger.debug("replacing thumb widget.")

@@ -622,13 +622,18 @@ class MenuAction(WidgetBase):
     def __init__(self, text=None):
         super(MenuAction, self).__init__()
 
+        #self.widget = None
         self.widget = gtk.MenuItem(label=text)
+        self.widget.show()
         self.widget.connect('activate', self._cb_redirect)
         self.text = text
         self.enable_callback('activated')
+        print("Made MenuAction for %s" % (self.text))
+        print("1 cb=%s" % (self.cb))
 
     def _cb_redirect(self, *args):
         # TODO: checkable menu items
+        print("2 cb=%s" % (self.__dict__))
         self.make_callback('activated')
 
     
@@ -636,37 +641,48 @@ class Menu(ContainerBase):
     def __init__(self):
         super(Menu, self).__init__()
 
-        self.widget = None
+        self.widget = gtk.Menu()
+        self.widget.show()
 
     def add_widget(self, child):
         menuitem_w = child.get_widget()
         self.widget.append(menuitem_w)
         self.add_ref(child)
+        #self.widget.show_all()
         
     def add_name(self, name):
-        child = MenuItem(text=name)
+        child = MenuAction(text=name)
+        ## child.widget = gtk.MenuItem(label=child.text)
+        ## child.widget.connect('activate', child._cb_redirect)
         self.add_widget(child)
         return child
 
     def add_separator(self):
         sep = gtk.SeparatorMenuItem()
         self.widget.append(sep)
+        sep.show()
         
     
 class Menubar(ContainerBase):
     def __init__(self):
         super(Menubar, self).__init__()
 
-        self.widget = QtGui.QMenuBar()
+        self.widget = gtk.MenuBar()
 
     def add_widget(self, child):
         menu_w = child.get_widget()
         self.widget.addMenu(menu_w)
         self.add_ref(child)
+        menu_w.show()
+        return child
 
     def add_name(self, name):
-        child = Menu(name)
-        self.add_widget(child)
+        item_w = gtk.MenuItem(label=name)
+        child = Menu()
+        self.add_ref(child)
+        item_w.set_submenu(child.get_widget())
+        self.widget.append(item_w)
+        item_w.show()
         return child
 
 

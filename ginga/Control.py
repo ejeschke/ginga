@@ -23,11 +23,18 @@ import logging
 import mimetypes
 
 import numpy
+magic_tester = None
 try:
     import magic
     have_magic = True
+    # it seems there are conflicting versions of a 'magic'
+    # module for python floating around...*sigh*
+    if not hasattr(magic, 'from_file'):
+        # TODO: do this at program start only
+        magic_tester = magic.open(magic.DEFAULT_MODE)
+        magic_tester.load()
 
-except ImportError:
+except (ImportError, Exception):
     have_magic = False
 
 # Local application imports
@@ -61,8 +68,8 @@ class GingaControl(Callback.Callbacks):
             self.ev_quit = ev_quit
 
         # For callbacks
-        for name in ('add-image', 'active-image', 'add-channel',
-                     'delete-channel', 'field-info'):
+        for name in ('add-image', 'active-image', 'remove-image',
+                     'add-channel', 'delete-channel', 'field-info'):
             self.enable_callback(name)
 
         self.gui_queue = Queue.Queue()
@@ -444,6 +451,12 @@ class GingaControl(Callback.Callbacks):
                 # module for python floating around...*sigh*
                 if hasattr(magic, 'from_file'):
                     typ = magic.from_file(filepath, mime=True)
+
+                elif magic_tester is not None:
+                    descrip = magic_tester.file(filepath)
+                    if descrip.startswith("FITS image data"):
+                        return ('image', 'fits')
+                    
             except Exception as e:
                 self.logger.warn("python-magic error: %s; falling back to 'mimetypes'" % (str(e)))
 
@@ -1132,6 +1145,30 @@ class GingaControl(Callback.Callbacks):
             self.change_channel(chname)
         viewer.zoom_fit()
 
+    def remove_image_by_name(self, chname, imname, impath=None):
+        chinfo = self.get_channelInfo(chname)
+        viewer = chinfo.fitsimage
+        self.logger.info("removing image %s" % (imname))
+        # If this is the current image in the viewer, clear the viewer
+        image = viewer.get_image()
+        if image is not None:
+            curname = image.get('name', 'NONAME')
+            if curname == imname:
+                viewer.clear()
+        if imname in chinfo.datasrc:
+            chinfo.datasrc.remove(imname)
+        self.make_callback('remove-image', chinfo.name, imname, impath)
+        
+    def remove_current_image(self):
+        chinfo = self.get_channelInfo()
+        viewer = chinfo.fitsimage
+        image = viewer.get_image()
+        if image is None:
+            return
+        imname = image.get('name', 'NONAME')
+        impath = image.get('path', None)
+        self.remove_image_by_name(chinfo.name, imname, impath=impath)
+        
     def followFocus(self, tf):
         self.channel_follows_focus = tf
 

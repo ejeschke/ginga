@@ -57,9 +57,12 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         self.keywords = self.settings.get('tt_keywords', tt_keywords)
 
         fv.set_callback('add-image', self.add_image)
+        fv.set_callback('remove-image', self.remove_image)
         fv.set_callback('add-channel', self.add_channel)
         fv.set_callback('delete-channel', self.delete_channel)
         fv.add_callback('active-image', self.focus_cb)
+
+        self.gui_up = False
 
     def get_thumb_key(self, chname, imname, path):
         path = os.path.abspath(path)
@@ -67,6 +70,9 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         return thumbkey
     
     def add_image(self, viewer, chname, image):
+        if not self.gui_up:
+            return False
+
         noname = 'Noname' + str(time.time())
         name = image.get('name', noname)
         path = image.get('path', None)
@@ -78,7 +84,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         thumbname = name
         if '.' in thumbname:
             thumbname = thumbname.split('.')[0]
-        self.logger.debug("making thumb for %s" % (thumbname))
+        self.logger.info("making thumb for %s" % (thumbname))
 
         future = image.get('image_future', None)
         if future is None:
@@ -115,6 +121,31 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
 
         self.insert_thumbnail(imgwin, thumbkey, thumbname, chname, name, path,
                               thumbpath, metadata, future)
+
+    def remove_image(self, viewer, chname, name, path):
+        if not self.gui_up:
+            return
+
+        if path is None:
+            # Currently we need a path to make a thumb key
+            return
+        path = os.path.abspath(path)
+        self.logger.debug("removing thumb for %s" % (name))
+
+        # Is this thumbnail already in the list?
+        thumbkey = self.get_thumb_key(chname, name, path)
+        self.remove_thumb(thumbkey)
+
+    def remove_thumb(self, thumbkey):
+        with self.thmblock:
+            if thumbkey not in self.thumbDict:
+                return
+            
+            self.clearWidget()
+            del self.thumbDict[thumbkey]
+            self.thumbList.remove(thumbkey)
+
+        self.reorder_thumbs()
 
     def update_thumbs(self, nameList):
         

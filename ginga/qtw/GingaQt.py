@@ -143,6 +143,7 @@ class GingaView(QtMain.QtMain):
         self.w.vbox.addWidget(cbar, stretch=0)
 
         menuholder = self.w['menu']
+        # NOTE: menubar is a ginga.Widgets wrapper
         self.w.menubar = self.add_menus(menuholder)
 
         self.add_dialogs()
@@ -165,73 +166,66 @@ class GingaView(QtMain.QtMain):
     
     def add_menus(self, holder):
 
-        menubar = MenuBar()
+        menubar = Widgets.Menubar()
 
+        menubar_w = menubar.get_widget()
         # NOTE: Special hack for Mac OS X, otherwise the menus
         # do not get added to the global OS X menu
         macos_ver = platform.mac_ver()[0]
         if len(macos_ver) > 0:
-            self.w['top'].layout().addWidget(menubar, stretch=0)
+            self.w['top'].layout().addWidget(menubar_w, stretch=0)
         else:
-            holder.layout().addWidget(menubar, stretch=1)
+            holder.layout().addWidget(menubar_w, stretch=1)
 
         # create a File pulldown menu, and add it to the menu bar
         filemenu = menubar.add_name("File")
 
-        item = menubar.make_action("Load Image")
-        item.triggered.connect(self.gui_load_file)
-        filemenu.addAction(item)
+        item = filemenu.add_name("Load Image")
+        item.add_callback('activated', lambda *args: self.gui_load_file())
 
-        sep = menubar.make_action('')
-        sep.setSeparator(True)
-        filemenu.addAction(sep)
+        item = filemenu.add_name("Remove Image")
+        item.add_callback("activated", lambda *args: self.remove_current_image())
+
+        filemenu.add_separator()
         
-        item = menubar.make_action("Quit")
-        item.triggered.connect(self.windowClose)
-        filemenu.addAction(item)
+        item = filemenu.add_name("Quit")
+        item.add_callback('activated', lambda *args: self.windowClose())
 
         # create a Channel pulldown menu, and add it to the menu bar
         chmenu = menubar.add_name("Channel")
 
-        item = menubar.make_action("Add Channel")
-        item.triggered.connect(self.gui_add_channel)
-        chmenu.addAction(item)
-        
-        item = menubar.make_action("Add Channels")
-        item.triggered.connect(self.gui_add_channels)
-        chmenu.addAction(item)
-        
-        item = menubar.make_action("Delete Channel")
-        item.triggered.connect(self.gui_delete_channel)
-        chmenu.addAction(item)
+        item = chmenu.add_name("Add Channel")
+        item.add_callback('activated', lambda *args: self.gui_add_channel())
+
+        item = chmenu.add_name("Add Channels")
+        item.add_callback('activated', lambda *args: self.gui_add_channels())
+
+        item = chmenu.add_name("Delete Channel")
+        item.add_callback('activated', lambda *args: self.gui_delete_channel())
 
         # create a Window pulldown menu, and add it to the menu bar
         wsmenu = menubar.add_name("Workspace")
 
-        item = menubar.make_action("Add Workspace")
-        item.triggered.connect(self.gui_add_ws)
-        wsmenu.addAction(item)
+        item = wsmenu.add_name("Add Workspace")
+        item.add_callback('activated', lambda *args: self.gui_add_ws())
         
-        item = menubar.make_action("Take Tab")
-        item.triggered.connect(lambda *args: self.ds.take_tab_cb(self.w.mnb,
+        item = wsmenu.add_name("Take Tab")
+        item.add_callback('activated',
+                          lambda *args: self.ds.take_tab_cb(self.w.mnb,
                                                                  args))
-        wsmenu.addAction(item)
 
         if isinstance(self.w.mnb, QtGui.QMdiArea):
-            item = menubar.make_action("Panes as Tabs")
-            item.triggered.connect(self.tabstoggle_cb)
-            item.setCheckable(True)
+            item = wsmenu.add_name("Panes as Tabs")
+            item.add_callback(lambda *args: self.tabstoggle_cb())
+            item.get_widget().setCheckable(True)
             is_tabs = (self.w.mnb.get_mode() == 'tabs')
-            item.setChecked(is_tabs)
-            wsmenu.addAction(item)
+            item.get_widget().setChecked(is_tabs)
 
-            item = menubar.make_action("Tile Panes")
-            item.triggered.connect(self.tile_panes_cb)
-            wsmenu.addAction(item)
+            item = wsmenu.add_name("Tile Panes")
+            item.add_callback('activated', lambda *args: self.tile_panes_cb())
 
-            item = menubar.make_action("Cascade Panes")
-            item.triggered.connect(self.cascade_panes_cb)
-            wsmenu.addAction(item)
+            item = wsmenu.add_name("Cascade Panes")
+            item.add_callback(lambda *args: self.cascade_panes_cb())
         
         # # create a Option pulldown menu, and add it to the menu bar
         # optionmenu = menubar.add_name("Option")
@@ -243,13 +237,11 @@ class GingaView(QtMain.QtMain):
         # create a Help pulldown menu, and add it to the menu bar
         helpmenu = menubar.add_name("Help")
 
-        item = menubar.make_action("About")
-        item.triggered.connect(lambda: self.banner(raiseTab=True))
-        helpmenu.addAction(item)
+        item = helpmenu.add_name("About")
+        item.add_callback('activated', lambda *args: self.banner(raiseTab=True))
 
-        item = menubar.make_action("Documentation")
-        item.triggered.connect(lambda: self.help())
-        helpmenu.addAction(item)
+        item = helpmenu.add_name("Documentation")
+        item.add_callback('activated', lambda *args: self.help())
 
         return menubar
 
@@ -260,9 +252,10 @@ class GingaView(QtMain.QtMain):
         self.filesel = filesel
 
     def add_plugin_menu(self, name):
-        item = QtGui.QAction("Start %s" % (name), self.w.menubar)
-        item.triggered.connect(lambda: self.start_global_plugin(name))
-        self.w.menu_plug.addAction(item)
+        # NOTE: self.w.menu_plug is a ginga.Widgets wrapper
+        item = self.w.menu_plug.add_name("Start %s" % (name))
+        item.add_callback('activated',
+                          lambda *args: self.start_global_plugin(name))
 
     def add_statusbar(self, holder):
         self.w.status = QtGui.QStatusBar()

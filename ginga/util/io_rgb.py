@@ -215,6 +215,27 @@ class RGBFileHandler(object):
     def imload(self, filepath, kwds):
         return self._imload(filepath, kwds)
 
+    def get_thumb(self, filepath):
+        if not have_pil:
+            raise Exception("Install PIL to use this method")
+        if not have_exif:
+            raise Exception("Install EXIF to use this method")
+
+        with open(filepath, 'rb') as in_f:
+            try:
+                d = EXIF.process_file(in_f)
+            except Exception as e:
+                return None
+        if 'JPEGThumbnail' in d:
+            buf = d['JPEGThumbnail']
+        # TODO: other possible encodings?
+        else:
+            return None
+
+        image = PILimage.open(BytesIO.BytesIO(buf))
+        data_np = numpy.array(image)
+        return data_np
+
     def get_buffer(self, data_np, header, format, output=None):
         """Get image as a buffer in (format).
         Format should be 'jpeg', 'png', etc.

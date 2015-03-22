@@ -628,11 +628,12 @@ class Menu(ContainerBase):
     def __init__(self):
         super(Menu, self).__init__()
 
+        # this ends up being a reference to the Qt menubar or toolbar
         self.widget = None
 
     def add_widget(self, child):
         child.widget = self.widget.addAction(child.text,
-                                             child._cb_redirect)
+                                             lambda: child._cb_redirect())
         self.add_ref(child)
         
     def add_name(self, name):
@@ -656,8 +657,10 @@ class Menubar(ContainerBase):
         self.add_ref(child)
 
     def add_name(self, name):
-        child = Menu(name)
-        self.add_widget(child)
+        menu_w = self.widget.addMenu(name)
+        child = Menu()
+        child.widget = menu_w
+        self.add_ref(child)
         return child
 
 

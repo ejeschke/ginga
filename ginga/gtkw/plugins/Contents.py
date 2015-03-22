@@ -12,6 +12,7 @@ from ginga.misc import Bunch, Future
 
 import gtk
 import time
+import string
 
 class Contents(GingaPlugin.GlobalPlugin):
 
@@ -39,6 +40,7 @@ class Contents(GingaPlugin.GlobalPlugin):
         
         self.gui_up = False
         fv.set_callback('add-image', self.add_image)
+        fv.set_callback('remove-image', self.remove_image)
         fv.set_callback('delete-channel', self.delete_channel)
 
     def build_gui(self, container):
@@ -180,7 +182,7 @@ class Contents(GingaPlugin.GlobalPlugin):
             filelist = fileDict.keys()
             filelist.remove('_iter')
             fileDict['_iter'] = it
-            filelist.sort(key=str.lower)
+            filelist.sort(key=string.lower)
 
             for fname in filelist:
                 bnch = fileDict[fname]
@@ -218,6 +220,24 @@ class Contents(GingaPlugin.GlobalPlugin):
         bnch = self.get_info(chname, name, image)
         fileDict[key] = bnch
         model.append(it, [ bnch ])
+
+    def remove_image(self, viewer, chname, name, path):
+        if not self.gui_up:
+            return False
+        
+        if chname not in self.nameDict:
+            return
+        else:
+            fileDict = self.nameDict[chname]
+            it = fileDict['_iter']
+
+        key = name.lower()
+        if key not in fileDict:
+            return
+
+        del fileDict[key]
+        self.recreate_toc()
+        self.logger.debug("%s removed from Contents" % (name))
 
     def clear(self):
         self.nameDict = {}

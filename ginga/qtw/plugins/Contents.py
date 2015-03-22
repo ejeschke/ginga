@@ -35,6 +35,7 @@ class Contents(GingaPlugin.GlobalPlugin):
 
         self.gui_up = False
         fv.set_callback('add-image', self.add_image)
+        fv.set_callback('remove-image', self.remove_image)
         fv.set_callback('delete-channel', self.delete_channel)
 
     def build_gui(self, container):
@@ -142,7 +143,7 @@ class Contents(GingaPlugin.GlobalPlugin):
 
         noname = 'Noname' + str(time.time())
         name = image.get('name', noname)
-        self.logger.info("name=%s" % (name))
+        self.logger.debug("name=%s" % (name))
 
         nothumb = image.get('nothumb', False)
         if nothumb:
@@ -172,6 +173,24 @@ class Contents(GingaPlugin.GlobalPlugin):
         chitem.addChild(item)
         self.treeview.scrollToItem(item)
         self.logger.debug("%s added to Contents" % (name))
+
+    def remove_image(self, viewer, chname, name, path):
+        if not self.gui_up:
+            return False
+
+        if chname not in self.nameDict:
+            return
+        else:
+            fileDict = self.nameDict[chname]
+            chitem = fileDict['_chitem']
+
+        key = name.lower()
+        if key not in fileDict:
+            return
+
+        del fileDict[key]
+        self.recreate_toc()
+        self.logger.debug("%s removed from Contents" % (name))
 
 
     def clear(self):

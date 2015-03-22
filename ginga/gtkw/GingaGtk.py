@@ -179,43 +179,38 @@ class GingaView(GtkMain.GtkMain):
 
     def add_menus(self, menuholder):
 
-        menubar = GtkHelp.MenuBar()
-        menuholder.pack_start(menubar, expand=False)
+        menubar = Widgets.Menubar()
+        menuholder.pack_start(menubar.get_widget(), expand=False)
 
         # create a File pulldown menu, and add it to the menu bar
         filemenu = menubar.add_name("File")
 
-        w = gtk.MenuItem("Load Image")
-        filemenu.append(w)
-        w.connect("activate", lambda w: self.gui_load_file())
+        item = filemenu.add_name("Load Image")
+        item.add_callback("activated", lambda *args: self.gui_load_file())
+        # FIXME: this is currently not working
+        ## item = filemenu.add_name("Remove Image")
+        ## item.add_callback("activated", lambda *args: self.remove_current_image())
 
-        sep = gtk.SeparatorMenuItem()
-        filemenu.append(sep)
-        sep.show()
-        quit_item = gtk.MenuItem(label="Exit")
-        filemenu.append(quit_item)
-        quit_item.connect_object ("activate", self.quit, "file.exit")
-        quit_item.show()
+        filemenu.add_separator()
+
+        quit_item = filemenu.add_name("Quit")
+        quit_item.add_callback("activated", lambda *args: self.quit())
 
         # create a Channel pulldown menu, and add it to the menu bar
         chmenu = menubar.add_name("Channel")
-
-        w = gtk.MenuItem("Add Channel")
-        chmenu.append(w)
-        w.connect("activate", lambda w: self.gui_add_channel())
-        w = gtk.MenuItem("Add Channels")
-        chmenu.append(w)
-        w.connect("activate", lambda w: self.gui_add_channels())
-        w = gtk.MenuItem("Delete Channel")
-        chmenu.append(w)
-        w.connect("activate", lambda w: self.gui_delete_channel())
+        
+        item = chmenu.add_name("Add Channel")
+        item.add_callback("activated", lambda *args: self.gui_add_channel())
+        item = chmenu.add_name("Add Channels")
+        item.add_callback("activated", lambda *args: self.gui_add_channels())
+        item = chmenu.add_name("Delete Channel")
+        item.add_callback("activated", lambda *args: self.gui_delete_channel())
 
         # create a Workspace pulldown menu, and add it to the menu bar
         winmenu = menubar.add_name("Workspace")
 
-        w = gtk.MenuItem("Add Workspace")
-        winmenu.append(w)
-        w.connect("activate", lambda w: self.gui_add_ws())
+        item = winmenu.add_name("Add Workspace")
+        item.add_callback("activated", lambda *args: self.gui_add_ws())
 
         # create a Option pulldown menu, and add it to the menu bar
         ## optionmenu = menubar.add_name("Option")
@@ -225,13 +220,10 @@ class GingaView(GtkMain.GtkMain):
 
         helpmenu = menubar.add_name("Help")
 
-        w = gtk.MenuItem("About")
-        helpmenu.append(w)
-        w.connect("activate", lambda w: self.banner(raiseTab=True))
-
-        w = gtk.MenuItem("Documentation")
-        helpmenu.append(w)
-        w.connect("activate", lambda w: self.help())
+        item = helpmenu.add_name("About")
+        item.add_callback("activated", lambda *args: self.banner(raiseTab=True))
+        item = helpmenu.add_name("Documentation")
+        item.add_callback("activated", lambda *args: self.help())
 
         menuholder.show_all()
 
@@ -239,10 +231,8 @@ class GingaView(GtkMain.GtkMain):
         self.filesel = FileSelection.FileSelection(action=gtk.FILE_CHOOSER_ACTION_OPEN)
         
     def add_plugin_menu(self, name):
-        w = gtk.MenuItem("Start %s" % (name))
-        self.w.menu_plug.append(w)
-        w.connect("activate", lambda w: self.start_global_plugin(name))
-        w.show()
+        item = self.w.menu_plug.add_name("Start %s" % (name))
+        item.add_callback("activated", lambda *args: self.start_global_plugin(name))
         
     def add_statusbar(self, statusholder):
         ## lbl = gtk.Label('')

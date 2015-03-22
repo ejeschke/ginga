@@ -137,9 +137,9 @@ There are two possible choices for a python FITS file reading package
 compatible with Ginga: 
 `astropy <https://github.com/astropy/astropy>`_ and
 `fitsio <https://github.com/esheldon/fitsio>`_.  
-Both are based on the CFITSIO library, although it seems that astropy's
-version has changed quite a bit from the original, while fitsio is still
-tracking the current version. 
+Both are originally based on the CFITSIO library (although astropy's
+version uses very little of it any more, while fitsio is still
+tracking the current version). 
 
 To force the use of a particular one add this to your "general.cfg"
 in $HOME/.ginga:
