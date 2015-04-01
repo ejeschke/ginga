@@ -366,9 +366,10 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         self.logger.info("deleting thumbs for channel '%s'" % (
             chname_del))
         with self.thmblock:
+            self.clearWidget()
             newThumbList = []
             for thumbkey in self.thumbList:
-                chname = thumbkey[0]
+                chname = thumbkey[0].lower()
                 if chname != chname_del:
                     newThumbList.append(thumbkey)
                 else:

@@ -277,11 +277,12 @@ class ScrollBar(WidgetBase):
             self.widget = QtGui.QScrollBar(QtCore.Qt.Horizontal)
         else:
             self.widget = QtGui.QScrollBar(QtCore.Qt.Vertical)
-        self.widget.activated.connect(self._cb_redirect)
+        self.widget.valueChanged.connect(self._cb_redirect)
         
         self.enable_callback('activated')
 
-    def _cb_redirect(self, val):
+    def _cb_redirect(self):
+        val = self.widget.value()
         self.make_callback('activated', val)
     
 
