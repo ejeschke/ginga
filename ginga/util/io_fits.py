@@ -12,7 +12,7 @@ There are two possible choices for a python FITS file reading package
 compatible with Ginga: astropy/pyfits and fitsio.  Both are based on
 the CFITSIO library, although it seems that astropy's version has
 changed quite a bit from the original, while fitsio is still tracking
-the current version. 
+the current version.
 
 To force the use of one, do:
 
@@ -36,14 +36,14 @@ def use(fitspkg, raise_err=True):
     global fits_configured, fitsLoaderClass, \
            have_pyfits, pyfits, \
            have_fitsio, fitsio
-    
+
     if fitspkg == 'astropy':
         try:
             from astropy.io import fits as pyfits
             have_pyfits = True
             fitsLoaderClass = PyFitsFileHandler
             return True
-        
+
         except ImportError:
             try:
                 # maybe they have a standalone version of pyfits?
@@ -63,7 +63,7 @@ def use(fitspkg, raise_err=True):
             have_fitsio = True
             fitsLoaderClass = FitsioFileHandler
             return True
-        
+
         except ImportError as e:
             if raise_err:
                 raise
@@ -124,7 +124,7 @@ class PyFitsFileHandler(BaseFitsFileHandler):
         self.fromHDU(hdu, ahdr)
         return (data, naxispath)
 
-    def load_file(self, filespec, ahdr, numhdu=None, naxispath=None):
+    def load_file(self, filespec, ahdr, numhdu=None, naxispath=None, phdr=None):
         filepath = get_path(filespec)
         self.logger.debug("Loading file '%s' ..." % (filepath))
         fits_f = pyfits.open(filepath, 'readonly')
@@ -161,6 +161,11 @@ class PyFitsFileHandler(BaseFitsFileHandler):
 
         data, naxispath = self.load_hdu(hdu, ahdr, fobj=fits_f,
                                         naxispath=naxispath)
+
+        # Read PRIMARY header
+        if phdr is not None:
+            self.fromHDU(fits_f[0], phdr)
+
         fits_f.close()
         return (data, numhdu, naxispath)
 
@@ -175,7 +180,7 @@ class PyFitsFileHandler(BaseFitsFileHandler):
 
         fits_f.append(hdu)
         return fits_f
-    
+
     def write_fits(self, path, data, header, **kwdargs):
         fits_f = self.create_fits(data, header)
         fits_f.writeto(path, **kwdargs)
@@ -184,7 +189,7 @@ class PyFitsFileHandler(BaseFitsFileHandler):
     def save_as_file(self, filepath, data, header, **kwdargs):
         self.write_fits(filepath, data, header, **kwdargs)
 
-        
+
 class FitsioFileHandler(BaseFitsFileHandler):
 
     def __init__(self, logger):
@@ -224,8 +229,9 @@ class FitsioFileHandler(BaseFitsFileHandler):
 
         self.fromHDU(hdu, ahdr)
         return (data, naxispath)
-        
-    def load_file(self, filespec, ahdr, numhdu=None, naxispath=None):
+
+    def load_file(self, filespec, ahdr, numhdu=None, naxispath=None,
+                  inherit_primary_header=True):
         filepath = get_path(filespec)
         self.logger.debug("Loading file '%s' ..." % (filepath))
         fits_f = fitsio.FITS(filepath)
@@ -253,6 +259,11 @@ class FitsioFileHandler(BaseFitsFileHandler):
 
         data, naxispath = self.load_hdu(hdu, ahdr, fobj=fits_f,
                                         naxispath=naxispath)
+
+        # Read PRIMARY header
+        if phdr is not None:
+            self.fromHDU(fits_f[0], phdr)
+
         fits_f.close()
         return (data, numhdu, naxispath)
 
@@ -267,10 +278,10 @@ class FitsioFileHandler(BaseFitsFileHandler):
 
         fits_f.append(hdu)
         return fits_f
-    
+
     def write_fits(self, path, data, header):
         fits_f = fitsio.FITS(path, 'rw')
-        
+
         fits_f = self.create_fits(data, header)
         fits_f.writeto(path, output_verify='fix')
         fits_f.close()
@@ -278,7 +289,7 @@ class FitsioFileHandler(BaseFitsFileHandler):
     def save_as_file(self, filepath, data, header, **kwdargs):
         self.write_fits(filepath, data, header, **kwdargs)
 
-        
+
 
 def get_path(fileSpec):
     path = fileSpec
