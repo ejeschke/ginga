@@ -1,6 +1,6 @@
 #
 # MultiDim.py -- Multidimensional plugin for fits viewer
-# 
+#
 # Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c)  Eric R. Jeschke.  All rights reserved.
@@ -72,7 +72,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
         vbox2.add_widget(Widgets.Label(''), stretch=1)
         fr.set_widget(vbox2)
         vbox.add_widget(fr, stretch=0)
-        
+
         fr = Widgets.Frame("HDU")
 
         captions = [("Num HDUs:", 'label', "Num HDUs", 'llabel'),
@@ -84,7 +84,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
         self.w.hdu = b.choose_hdu
         self.w.hdu.set_tooltip("Choose which HDU to view")
         self.w.hdu.add_callback('activated', self.set_hdu_cb)
-        
+
         fr.set_widget(w)
         vbox.add_widget(fr, stretch=0)
 
@@ -128,7 +128,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
 
         spacer = Widgets.Label('')
         vbox.add_widget(spacer, stretch=1)
-        
+
         top.add_widget(sw, stretch=0)
 
         btns = Widgets.HBox()
@@ -175,7 +175,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
         for key in self.w:
             if key.startswith('choose_'):
                 self.w[key] = None
-                
+
         w, b = Widgets.build_info(captions, orientation=self.orientation)
         self.w.update(b)
         for n in range(0, len(dims)):
@@ -217,7 +217,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
         chname = self.fv.get_channelName(self.fitsimage)
         self.fv.stop_local_plugin(chname, str(self))
         return True
-        
+
     def instructions(self):
         self.tw.set_text("""Use mouse wheel to choose HDU or axis of data cube (NAXIS controls).""")
             
@@ -228,10 +228,10 @@ class MultiDim(GingaPlugin.LocalPlugin):
     def pause(self):
         self.play_stop()
         pass
-        
+
     def resume(self):
         self.redo()
-        
+
     def stop(self):
         self.play_stop()
         try:
@@ -284,7 +284,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
                 dims = list(hdu.data.shape)
                 dims.reverse()
 
-            image.load_hdu(hdu)
+            image.load_hdu(hdu, fobj=self.fits_f)
 
             # create a future for reconstituting this HDU
             future = Future.Future()
@@ -304,7 +304,6 @@ class MultiDim(GingaPlugin.LocalPlugin):
             self.logger.error(errmsg)
             self.fv.show_error(errmsg)
 
-
     def set_naxis(self, idx, n):
         self.play_idx = idx
         self.w['choose_naxis%d' % (n+1)].set_value(idx)
@@ -315,7 +314,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
         try:
             if image is None:
                 raise ValueError("Please load an image cube")
-            
+
             hdu = self.fits_f[self.curhdu]
             data = hdu.data
             if data is None:
@@ -328,12 +327,12 @@ class MultiDim(GingaPlugin.LocalPlugin):
             m = len(data.shape) - (n+1)
             self.naxispath[m] = idx
             self.logger.debug("m=%d naxispath=%s" % (m, str(self.naxispath)))
-        
+
             for i in self.naxispath:
                 data = data[i]
 
             if n == 2:
-                # Try to print the spectral coordinate 
+                # Try to print the spectral coordinate
                 try:
                     specval = image.spectral_coord()
                     self.w.slice.set_text(str(idx+1))
@@ -362,30 +361,30 @@ class MultiDim(GingaPlugin.LocalPlugin):
             #self.fv.update_pending(0.001)
             delta = max(deadline - time.time(), 0.001)
             self.timer.set(delta)
-        
+
     def play_stop(self):
         self._isplaying = False
 
     def first(self):
         play_idx = 1
         self.fv.gui_do(self.set_naxis_cb, None, play_idx, self.play_axis)
-        
+
     def last(self):
         play_idx = self.play_max
         self.fv.gui_do(self.set_naxis_cb, None, play_idx, self.play_axis)
-        
+
     def prev(self):
         play_idx = self.play_idx - 1
         if play_idx < 1:
             play_idx = self.play_max
         self.fv.gui_do(self.set_naxis_cb, None, play_idx, self.play_axis)
-            
+
     def next(self):
         play_idx = self.play_idx + 1
         if play_idx > self.play_max:
             play_idx = 1
         self.fv.gui_do(self.set_naxis_cb, None, play_idx, self.play_axis)
-            
+
     def play_int_cb(self, w, val):
         # force at least play_min_sec, otherwise playback is untenable
         self.play_int_sec = max(self.play_min_sec, val)
@@ -410,12 +409,12 @@ class MultiDim(GingaPlugin.LocalPlugin):
         if idx >= len(self.hdu_info):
             idx = len(self.hdu_info) - 1
         #w.set_index(idx)
-        
+
     def redo(self):
         image = self.fitsimage.get_image()
         if (image is None) or (image == self.image):
             return True
-        
+
         path = image.get('path', None)
         if path is None:
             self.fv.show_error("Cannot open image: no value for metadata key 'path'")
@@ -445,5 +444,5 @@ class MultiDim(GingaPlugin.LocalPlugin):
 
     def __str__(self):
         return 'multidim'
-    
+
 #END
