@@ -1,7 +1,7 @@
 #
 # AstroImage.py -- Abstraction of an astronomical data image.
 #
-# Eric Jeschke (eric@naoj.org) 
+# Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c)  Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
@@ -30,7 +30,7 @@ class AstroHeader(Header):
 class AstroImage(BaseImage):
     """
     Abstraction of an astronomical data (image).
-    
+
     NOTE: this module is NOT thread-safe!
     """
     # class variables for WCS and IO can be set
@@ -40,18 +40,18 @@ class AstroImage(BaseImage):
     @classmethod
     def set_wcsClass(cls, klass):
         cls.wcsClass = klass
-        
+
     @classmethod
     def set_ioClass(cls, klass):
         cls.ioClass = klass
-        
+
 
     def __init__(self, data_np=None, metadata=None, logger=None,
                  wcsclass=wcsClass, ioclass=ioClass):
 
         BaseImage.__init__(self, data_np=data_np, metadata=metadata,
                            logger=logger)
-        
+
         # wcsclass specifies a pluggable WCS module
         if wcsclass is None:
             wcsclass = wcsmod.WCS
@@ -61,6 +61,14 @@ class AstroImage(BaseImage):
         if ioclass is None:
             ioclass = io_fits.fitsLoaderClass
         self.io = ioclass(self.logger)
+
+        # This can be changed to user configurable item
+        self.inherit_primary_header = True
+
+        if self.inherit_primary_header:
+            self._primary_hdr = AstroHeader()
+        else:
+            self._primary_hdr = None
 
         if metadata is not None:
             header = self.get_header()
@@ -82,6 +90,10 @@ class AstroImage(BaseImage):
         self.revnaxis = list(naxispath)
         self.revnaxis.reverse()
 
+        # Set PRIMARY header
+        if self.inherit_primary_header and fobj is not None:
+            self.io.fromHDU(fobj[0], self._primary_hdr)
+
         self.set_data(data)
 
         # Try to make a wcs object on the header
@@ -98,10 +110,12 @@ class AstroImage(BaseImage):
         if match:
             filepath = match.group(1)
             numhdu = max(int(match.group(2)), 0)
-            
+
         data, numhdu, naxispath = self.io.load_file(filepath, ahdr,
                                                     numhdu=numhdu,
-                                                    naxispath=naxispath)
+                                                    naxispath=naxispath,
+                                                    phdr=self._primary_hdr)
+
         if naxispath is None:
             naxispath = []
         self.naxispath = naxispath
@@ -122,9 +136,9 @@ class AstroImage(BaseImage):
             self.set(name=name)
 
         self.set(path=filepath, idx=numhdu)
-        
+
         self.set_data(data)
-        
+
         # Try to make a wcs object on the header
         # TODO: in order to do more sophisticated WCS (e.g. distortion
         #   correction) that requires info in additional headers we need
@@ -143,10 +157,10 @@ class AstroImage(BaseImage):
 
     def set_wcs(self, wcs):
         self.wcs = wcs
-        
+
     def set_io(self, io):
         self.io = io
-        
+
     def get_data_size(self):
         return self.get_size()
 
@@ -155,14 +169,32 @@ class AstroImage(BaseImage):
             # By convention, the fits header is stored in a dictionary
             # under the metadata keyword 'header'
             hdr = self.metadata['header']
+
+            # Inherit PRIMARY header for display but keep metadata intact
+            if self.inherit_primary_header and self._primary_hdr is not None:
+                displayhdr = AstroHeader()
+                for key in hdr.keyorder:
+                    card = hdr.get_card(key)
+                    bnch = displayhdr.__setitem__(card.key, card.value)
+                    bnch.comment = card.comment
+                for key in self._primary_hdr.keyorder:
+                    if key not in hdr:
+                        card = self._primary_hdr.get_card(key)
+                        bnch = displayhdr.__setitem__(card.key, card.value)
+                        bnch.comment = card.comment
+            else:
+                displayhdr = hdr
+
         except KeyError as e:
             if not create:
                 raise e
             #hdr = {}
             hdr = AstroHeader()
             self.metadata['header'] = hdr
-        return hdr
-        
+            displayhdr = hdr
+
+        return displayhdr
+
     def get_keyword(self, kwd, *args):
         """Get an item from the fits header, if any."""
         try:
@@ -176,14 +208,14 @@ class AstroImage(BaseImage):
 
     def get_keywords_list(self, *args):
         return list(map(self.get_keyword, args))
-    
+
     def set_keyword(self, kwd, value, create=True):
         kwds = self.get_header(create=create)
         kwd = kwd.upper()
         if not create:
             prev = kwds[kwd]
         kwds[kwd] = value
-        
+
     def update_keywords(self, keyDict):
         hdr = self.get_header()
         # Upcase all keywords
@@ -193,17 +225,17 @@ class AstroImage(BaseImage):
         # Try to make a wcs object on the header
         if hasattr(self, 'wcs'):
             self.wcs.load_header(hdr)
-        
+
     def set_keywords(self, **kwds):
         """Set an item in the fits header, if any."""
         return self.update_keywords(kwds)
-        
+
     def update_data(self, data_np, metadata=None, astype=None):
         """DO NOT USE: this method will be deprecated!
         """
         self.set_data(data_np.copy(), metadata=metadata,
                       astype=astype)
-        
+
     def update_metadata(self, keyDict):
         for key, val in keyDict.items():
             self.metadata[key] = val
@@ -220,13 +252,13 @@ class AstroImage(BaseImage):
         data = self._get_data()
         other.update_data(data, astype=astype)
         other.update_metadata(self.metadata)
-        
+
     def copy(self, astype=None):
         data = self._get_data()
         other = AstroImage(data, logger=self.logger)
         self.transfer(other, astype=astype)
         return other
-        
+
     def save_as_file(self, filepath, **kwdargs):
         data = self._get_data()
         header = self.get_header()
@@ -235,7 +267,7 @@ class AstroImage(BaseImage):
     def pixtocoords(self, x, y, system=None, coords='data'):
         args = [x, y] + self.revnaxis
         return self.wcs.pixtocoords(args, system=system, coords=coords)
-    
+
     def spectral_coord(self, coords='data'):
         args = [0, 0] + self.revnaxis
         return self.wcs.spectral_coord(args, coords=coords)
@@ -247,7 +279,7 @@ class AstroImage(BaseImage):
         if format == 'deg':
             return ra_deg, dec_deg
         return wcs.deg2fmt(ra_deg, dec_deg, format)
-    
+
     def radectopix(self, ra_deg, dec_deg, format='deg', coords='data'):
         if format != 'deg':
             # convert coordinates to degrees
@@ -350,7 +382,7 @@ class AstroImage(BaseImage):
         return self.calc_compass_radius(x, y, radius_px)
     #
     #<----- TODO: merge this into wcs.py ?
-    
+
     def get_wcs_rotation_deg(self):
         header = self.get_header()
         (rot, cdelt1, cdelt2) = wcs.get_rotation_and_scale(header)
@@ -377,7 +409,7 @@ class AstroImage(BaseImage):
         ref_rot = yrot_ref
 
         scale_x, scale_y = math.fabs(cdelt1_ref), math.fabs(cdelt2_ref)
-        
+
         # drop each image in the right place in the new data array
         mydata = self._get_data()
 
@@ -414,7 +446,7 @@ class AstroImage(BaseImage):
             ## minval = numpy.nanmin(data_np)
             ## self.maxval = max(self.maxval, maxval)
             ## self.minval = max(self.minval, minval)
-            
+
             # Get rotation and scale of piece
             header = image.get_header()
             ((xrot, yrot),
@@ -472,7 +504,7 @@ class AstroImage(BaseImage):
 
             # Find location of image piece (center) in our array
             x0, y0 = self.radectopix(ra, dec)
-            
+
             # Merge piece as closely as possible into our array
             # Unfortunately we lose a little precision rounding to the
             # nearest pixel--can't be helped with this approach
@@ -529,21 +561,21 @@ class AstroImage(BaseImage):
         system = settings.get('wcs_coords', None)
         format = settings.get('wcs_display', 'sexagesimal')
         ra_lbl, dec_lbl = six.unichr(945), six.unichr(948)
-                    
+
         # Calculate WCS coords, if available
         ts = time.time()
         try:
             if self.wcs is None:
                 self.logger.debug("No WCS for this image")
                 ra_txt = dec_txt = 'NO WCS'
-            
+
             elif self.wcs.coordsys == 'raw':
                 self.logger.debug("No coordinate system determined")
                 ra_txt = dec_txt = 'NO WCS'
-            
+
             else:
                 args = [data_x, data_y] + self.revnaxis
-    
+
                 lon_deg, lat_deg = self.wcs.pixtosystem(#(data_x, data_y),
                     args, system=system, coords='data')
 
