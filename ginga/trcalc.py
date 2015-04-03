@@ -31,6 +31,20 @@ def get_center(data_np):
     return (ctr_x, ctr_y)
     
 
+def rotate_arr(x_arr, y_arr, theta_deg, xoff=0, yoff=0):
+    """
+    Rotate an array of points (x_arr, y_arr) by theta_deg offsetted
+    from a center point by (xoff, yoff).
+    """
+    a_arr = x_arr - xoff
+    b_arr = y_arr - yoff
+    cos_t = numpy.cos(numpy.radians(theta_deg))
+    sin_t = numpy.sin(numpy.radians(theta_deg))
+    ap = (a_arr * cos_t) - (b_arr * sin_t)
+    bp = (a_arr * sin_t) + (b_arr * cos_t)
+    return (ap + xoff, bp + yoff)
+
+
 def rotate_pt(x, y, theta_deg, xoff=0, yoff=0):
     """
     Rotate a point (x, y) by theta_deg offsetted from a center point

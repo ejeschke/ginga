@@ -102,6 +102,10 @@ class CanvasObjectBase(Callback.Callbacks):
     def is_compound(self):
         return False
     
+    def contains_arr(self, x_arr, y_arr):
+        contains = numpy.array([False] * len(x_arr))
+        return contains
+    
     def contains(self, x, y):
         return False
     
@@ -298,19 +302,24 @@ class CanvasObjectBase(Callback.Callbacks):
     
     # TODO: move these into utility module?
     #####
-    def within_radius(self, a, b, x, y, canvas_radius):
+    def within_radius_arr(self, a_arr, b_arr, x, y, canvas_radius):
         """Point (a, b) and point (x, y) are in data coordinates.
         Return True if point (a, b) is within the circle defined by
         a center at point (x, y) and within canvas_radius.
         The distance between points is scaled by the canvas scale.
         """
         scale_x, scale_y = self.viewer.get_scale_xy()
-        dx = math.fabs(x - a) * scale_x
-        dy = math.fabs(y - b) * scale_y
-        new_radius = math.sqrt(dx**2 + dy**2)
-        if new_radius <= canvas_radius:
-            return True
-        return False
+        dx = numpy.fabs(x - a_arr) * scale_x
+        dy = numpy.fabs(y - b_arr) * scale_y
+        new_radius = numpy.sqrt(dx**2 + dy**2)
+        res = (new_radius <= canvas_radius)
+        return res
+
+    def within_radius(self, a, b, x, y, canvas_radius):
+        """See within_radius_np()"""
+        a_arr, b_arr = numpy.array([a]), numpy.array([b])
+        res = self.within_radius_arr(a_arr, b_arr, x, y, canvas_radius)
+        return res[0]
 
     def get_pt(self, points, x, y, canvas_radius=None):
         if canvas_radius is None:
@@ -330,23 +339,27 @@ class CanvasObjectBase(Callback.Callbacks):
                 return i
         return None
 
-    def point_within_line(self, a, b, x1, y1, x2, y2, canvas_radius):
+    def point_within_line_arr(self, a_arr, b_arr, x1, y1, x2, y2,
+                              canvas_radius):
         # TODO: is there an algorithm with the cross and dot products
         # that is more efficient?
         r = canvas_radius
         xmin, xmax = min(x1, x2) - r, max(x1, x2) + r
         ymin, ymax = min(y1, y2) - r, max(y1, y2) + r
-        if (xmin <= a <= xmax) and (ymin <= b <= ymax):
-            div = math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
-            # TODO: check for divisor almost 0-- if so then the line is
-            # very short and it can be treated as a point comparison
-            d = abs((x2 - x1)*(y1 - b) - (x1 - a)*(y2 - y1)) / div
-            contains = (d <= canvas_radius)
-            #print("res=%s" % (contains))
-            return contains
-        return False
+        div = numpy.sqrt((x2 - x1)**2 + (y2 - y1)**2)
+        
+        d = abs((x2 - x1)*(y1 - b_arr) - (x1 - a_arr)*(y2 - y1)) / div
 
-    def within_line(self, a, b, x1, y1, x2, y2, canvas_radius):
+        contains = (xmin <= a_arr <= xmax) and (ymin <= b_arr <= ymax) and \
+                   (d <= canvas_radius)
+        return contains
+
+    def point_within_line(self, a, b, x1, y1, x2, y2, canvas_radius):
+        a_arr, b_arr = numpy.array([a]), numpy.array([b])
+        res = self.within_line_arr(a_arr, b_arr, x1, y1, x2, y2, canvas_radius)
+        return res[0]
+
+    def within_line_arr(self, a_arr, b_arr, x1, y1, x2, y2, canvas_radius):
         """Point (a, b) and points (x1, y1), (x2, y2) are in data coordinates.
         Return True if point (a, b) is within the line defined by
         a line from (x1, y1) to (x2, y2) and within canvas_radius.
@@ -354,7 +367,15 @@ class CanvasObjectBase(Callback.Callbacks):
         """
         scale_x, scale_y = self.viewer.get_scale_xy()
         new_radius = canvas_radius * 1.0 / min(scale_x, scale_y)
-        return self.point_within_line(a, b, x1, y1, x2, y2, new_radius)
+        return self.point_within_line_arr(a_arr, b_arr, x1, y1, x2, y2,
+                                         new_radius)
+
+    def within_line(self, a, b, x1, y1, x2, y2, canvas_radius):
+        """See within_line_np()"""
+        a_arr, b_arr = numpy.array([a]), numpy.array([b])
+        res = self.within_line_arr(a_arr, b_arr, x1, y1, x2, y2, canvas_radius)
+        return res[0]
+
     #####
         
     def get_points(self):
@@ -479,21 +500,33 @@ class PolygonMixin(object):
     def get_points(self):
         return self.points
 
-    def contains(self, xp, yp):
+    def get_llur(self):
+        points = numpy.array(map(lambda x, y: self.crdmap.to_data(x, y),
+                                 self.get_points()))
+        x1, y1 = points.T[0].min(), points.T[1].min()
+        x2, y2 = points.T[0].max(), points.T[1].max()
+        return (x1, y1, x2, y2)
+
+    def contains_arr(self, x_arr, y_arr):
         # NOTE: we use a version of the ray casting algorithm
         # See: http://alienryderflex.com/polygon/
-        result = False
+        result = numpy.array([False] * len(x_arr))
         xj, yj = self.crdmap.to_data(*self.points[-1])
         for point in self.points:
             xi, yi = self.crdmap.to_data(*point)
-            if ((((yi < yp) and (yj >= yp)) or
-                 ((yj < yp) and (yi >= yp))) and
-                ((xi <= xp) or (xj <= xp))):
-                cross = (xi + float(yp - yi)/(yj - yi)*(xj - xi)) < xp
+            if ((((yi < y_arr) and (yj >= y_arr)) or
+                 ((yj < y_arr) and (yi >= y_arr))) and
+                ((xi <= x_arr) or (xj <= x_arr))):
+                cross = (xi + float(y_arr - yi)/(yj - yi)*(xj - xi)) < x_arr
                 result ^= cross
             xj, yj = xi, yi
 
         return result
+            
+    def contains(self, xp, yp):
+        x_arr, y_arr = numpy.array([xp]), numpy.array([yp])
+        res = self.contains_arr(x_arr, y_arr)
+        return res[0]
             
     def set_edit_point(self, i, pt):
         if i == 0:

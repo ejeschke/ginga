@@ -218,7 +218,7 @@ class Thumbs(ThumbsBase.ThumbsBase):
                          image_future):
         lbl.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         menu = QtGui.QMenu()
-        item = QtGui.QAction("Load", menu)
+        item = QtGui.QAction("Display", menu)
         item.triggered.connect(lambda: self.load_file(thumbkey, chname, name,
                                                       path, image_future))
         menu.addAction(item)

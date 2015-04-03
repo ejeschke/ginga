@@ -74,7 +74,7 @@ class Thumbs(ThumbsBase.ThumbsBase):
     
     def _mk_context_menu(self, thumbkey, chname, name, path, image_future):
         menu = gtk.Menu()
-        item = gtk.MenuItem("Load")
+        item = gtk.MenuItem("Display")
         item.connect("activate", lambda w: self.load_file(thumbkey, chname,
                                                           name, path,
                                                           image_future))
