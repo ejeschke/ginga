@@ -71,8 +71,7 @@ class Pan(GingaPlugin.GlobalPlugin):
         self.nb.add_widget(iw)
         index = self.nb.index_of(iw)
         paninfo = Bunch.Bunch(panimage=panimage, widget=iw,
-                              pancompass=None, panrect=None,
-                              nbindex=index)
+                              pancompass=None, panrect=None)
         self.channel[chname] = paninfo
 
         # Extract RGBMap object from main image and attach it to this
@@ -108,8 +107,13 @@ class Pan(GingaPlugin.GlobalPlugin):
         self.logger.debug("channel %s added." % (chinfo.name))
 
     def delete_channel(self, viewer, chinfo):
-        self.logger.debug("TODO: delete channel %s" % (chinfo.name))
-        #del self.channel[chinfo.name]
+        chname = chinfo.name
+        self.logger.debug("deleting channel %s" % (chname))
+        widget = self.channel[chname].widget
+        self.nb.remove(widget, delete=True)
+        self.active = None
+        self.info = None
+        del self.channel[chname]
 
     def start(self):
         names = self.fv.get_channelNames()
@@ -135,7 +139,8 @@ class Pan(GingaPlugin.GlobalPlugin):
         chname = chinfo.name
 
         if self.active != chname:
-            index = self.channel[chname].nbindex
+            iw = self.channel[chname].widget
+            index = self.nb.index_of(iw)
             self.nb.set_index(index)
             self.active = chname
             self.info = self.channel[self.active]

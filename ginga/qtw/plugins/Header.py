@@ -95,14 +95,22 @@ class Header(GingaPlugin.GlobalPlugin):
 
         self.nb.addTab(sw, chname)
         index = self.nb.indexOf(sw)
-        info.setvals(nbindex=index)
+        info.setvals(widget=sw)
         self.channel[chname] = info
 
         fitsimage = chinfo.fitsimage
         fitsimage.set_callback('image-set', self.new_image_cb, info)
 
     def delete_channel(self, viewer, chinfo):
-        self.logger.debug("TODO: delete channel %s" % (chinfo.name))
+        chname = chinfo.name
+        self.logger.debug("deleting channel %s" % (chname))
+        widget = self.channel[chname].widget
+        self.nb.removeWidget(widget)
+        widget.setParent(None)
+        widget.deleteLater()
+        self.active = None
+        self.info = None
+        del self.channel[chname]
 
     def start(self):
         names = self.fv.get_channelNames()
@@ -124,7 +132,8 @@ class Header(GingaPlugin.GlobalPlugin):
         chname = chinfo.name
 
         if self.active != chname:
-            index = self.channel[chname].nbindex
+            widget = self.channel[chname].widget
+            index = self.nb.indexOf(widget)
             self.nb.setCurrentIndex(index)
             self.active = chname
             self.info = self.channel[self.active]

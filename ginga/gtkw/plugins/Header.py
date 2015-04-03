@@ -146,15 +146,21 @@ class Header(GingaPlugin.GlobalPlugin):
         widget = self._create_header_window(info)
 
         self.nb.append_page(widget, gtk.Label(chname))
-        index = self.nb.page_num(widget)
-        info.setvals(nbindex=index)
+        info.setvals(widget=widget)
         self.channel[chname] = info
 
         fitsimage = chinfo.fitsimage
         fitsimage.set_callback('image-set', self.new_image_cb, info)
 
     def delete_channel(self, viewer, chinfo):
-        self.logger.debug("TODO: delete channel %s" % (chinfo.name))
+        chname = chinfo.name
+        self.logger.debug("deleting channel %s" % (chname))
+        widget = self.channel[chname].widget
+        index = self.nb.page_num(widget)
+        self.nb.remove_page(index)
+        self.active = None
+        self.info = None
+        del self.channel[chname]
 
     def start(self):
         names = self.fv.get_channelNames()
@@ -176,7 +182,8 @@ class Header(GingaPlugin.GlobalPlugin):
         chname = chinfo.name
 
         if self.active != chname:
-            index = self.channel[chname].nbindex
+            widget = self.channel[chname].widget
+            index = self.nb.page_num(widget)
             self.nb.set_current_page(index)
             self.active = chname
             self.info = self.channel[self.active]

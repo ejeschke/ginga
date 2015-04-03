@@ -108,7 +108,7 @@ class Info(GingaPlugin.GlobalPlugin):
         self.nb.add_widget(sw, title=chname)
         index = self.nb.index_of(sw)
         info = Bunch.Bunch(widget=sw, winfo=winfo,
-                           nbindex=index, mode_w=None,
+                           mode_w=None,
                            chinfo=chinfo)
         self.channel[chname] = info
 
@@ -138,7 +138,13 @@ class Info(GingaPlugin.GlobalPlugin):
                                self.autocenter_cb, fitsimage, info)
 
     def delete_channel(self, viewer, chinfo):
-        self.logger.debug("TODO: delete channel %s" % (chinfo.name))
+        chname = chinfo.name
+        self.logger.debug("deleting channel %s" % (chname))
+        widget = self.channel[chname].widget
+        self.nb.remove(widget, delete=True)
+        self.active = None
+        self.info = None
+        del self.channel[chname]
         
     # CALLBACKS
     
@@ -152,7 +158,8 @@ class Info(GingaPlugin.GlobalPlugin):
         chname = chinfo.name
 
         if self.active != chname:
-            index = self.channel[chname].nbindex
+            widget = self.channel[chname].widget
+            index = self.nb.index_of(widget)
             self.nb.set_index(index)
             self.active = chname
             self.info = self.channel[self.active]
