@@ -1,7 +1,7 @@
 #
 # BaseImage.py -- Abstraction of an generic data image.
 #
-# Eric Jeschke (eric@naoj.org)
+# Eric Jeschke (eric@naoj.org) 
 #
 # Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
@@ -23,7 +23,7 @@ class BaseImage(Callback.Callbacks):
     def __init__(self, data_np=None, metadata=None, logger=None):
 
         Callback.Callbacks.__init__(self)
-
+        
         if logger is not None:
             self.logger = logger
         else:
@@ -68,13 +68,13 @@ class BaseImage(Callback.Callbacks):
 
     def get_size(self):
         return (self.width, self.height)
-
+    
     def get_depth(self):
         shape = self.shape
         if len(shape) > 2:
             return shape[2]
         return 1
-
+    
     def get_shape(self):
         return self.shape
 
@@ -85,7 +85,7 @@ class BaseImage(Callback.Callbacks):
 
     def get_data(self):
         return self._data
-
+        
     def _get_data(self):
         return self._data
 
@@ -99,7 +99,7 @@ class BaseImage(Callback.Callbacks):
     def copy_data(self):
         data = self._get_data()
         return data.copy()
-
+        
     def get_data_xy(self, x, y):
         assert (x >= 0) and (y >= 0), \
             ImageError("Indexes out of range: (x=%d, y=%d)" % (
@@ -113,10 +113,10 @@ class BaseImage(Callback.Callbacks):
 
     def get_metadata(self):
         return self.metadata.copy()
-
+        
     def get_header(self):
         return self.get('header', Header())
-
+        
     def get(self, kwd, *args):
         if kwd in self.metadata:
             return self.metadata[kwd]
@@ -125,22 +125,22 @@ class BaseImage(Callback.Callbacks):
             if len(args) > 0:
                 return args[0]
             raise KeyError(kwd)
-
+        
     def get_list(self, *args):
         return list(map(self.get, args))
-
+    
     def __getitem__(self, kwd):
         return self.metadata[kwd]
-
+        
     def update(self, kwds):
         self.metadata.update(kwds)
-
+        
     def set(self, **kwds):
         self.update(kwds)
-
+        
     def __setitem__(self, kwd, value):
         self.metadata[kwd] = value
-
+        
     def set_data(self, data_np, metadata=None, astype=None):
         """Use this method to SHARE (not copy) the incoming array.
         """
@@ -152,7 +152,7 @@ class BaseImage(Callback.Callbacks):
 
         if metadata:
             self.update_metadata(metadata)
-
+            
         self._set_minmax()
 
         self.make_callback('modified')
@@ -174,14 +174,14 @@ class BaseImage(Callback.Callbacks):
 
     def set_order(self, order):
         self.order = order.upper()
-
+        
     def get_order(self):
         return self.order
-
+        
     def get_order_indexes(self, cs):
         cs = cs.upper()
         return [ self.order.index(c) for c in cs ]
-
+        
     def _set_minmax(self):
         data = self._get_fast_data()
         try:
@@ -199,7 +199,7 @@ class BaseImage(Callback.Callbacks):
                 self.maxval_noinf = numpy.nanmax(data[numpy.isfinite(data)])
         except:
             self.maxval_noinf = self.maxval
-
+        
         try:
             if numpy.isfinite(self.minval):
                 self.minval_noinf = self.minval
@@ -207,7 +207,7 @@ class BaseImage(Callback.Callbacks):
                 self.minval_noinf = numpy.nanmin(data[numpy.isfinite(data)])
         except:
             self.minval_noinf = self.minval
-
+        
     def get_minmax(self, noinf=False):
         if not noinf:
             return (self.minval, self.maxval)
@@ -221,7 +221,7 @@ class BaseImage(Callback.Callbacks):
     def transfer(self, other, astype=None):
         data = self._get_data()
         other.set_data(data, metadata=self.metadata, astype=astype)
-
+        
     def copy(self, astype=None):
         data = self.copy_data()
         metadata = self.get_metadata()
@@ -232,25 +232,25 @@ class BaseImage(Callback.Callbacks):
         return self._get_data()[view]
 
     def cutout_data(self, x1, y1, x2, y2, xstep=1, ystep=1, astype=None):
-        """cut out data area based on coords.
+        """cut out data area based on coords. 
         """
         view = numpy.s_[y1:y2:ystep, x1:x2:xstep]
         data = self._slice(view)
         if astype:
             data = data.astype(astype)
         return data
-
+  
     def cutout_adjust(self, x1, y1, x2, y2, xstep=1, ystep=1, astype=None):
         dx = x2 - x1
         dy = y2 - y1
-
+        
         if x1 < 0:
             x1, x2 = 0, dx
         else:
             if x2 >= self.width:
                 x2 = self.width
                 x1 = x2 - dx
-
+                
         if y1 < 0:
             y1, y2 = 0, dy
         else:
@@ -350,7 +350,7 @@ class BaseImage(Callback.Callbacks):
             return self.get_scaled_cutout_wdht(x1, y1, x2, y2, dst_wd, dst_ht)
 
         raise ImageError("Method not supported: '%s'" % (method))
-
+    
     def get_scaled_cutout(self, x1, y1, x2, y2, scale_x, scale_y,
                           method='basic'):
         if method == 'basic':
@@ -359,14 +359,14 @@ class BaseImage(Callback.Callbacks):
 
         raise ImageError("Method not supported: '%s'" % (method))
 
-
+    
     def get_pixels_on_line(self, x1, y1, x2, y2, getvalues=True):
         """Uses Bresenham's line algorithm to enumerate the pixels along
         a line.
         (see http://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm)
         """
         dx = abs(x2 - x1)
-        dy = abs(y2 - y1)
+        dy = abs(y2 - y1) 
         if x1 < x2:
             sx = 1
         else:
@@ -394,7 +394,7 @@ class BaseImage(Callback.Callbacks):
             if e2 > -dy:
                 err = err - dy
                 x += sx
-            if e2 <  dx:
+            if e2 <  dx: 
                 err = err + dx
                 y += sy
 
@@ -421,7 +421,7 @@ class BaseImage(Callback.Callbacks):
         data = trcalc.transform(data, flip_x=flip_x, flip_y=flip_y,
                                 swap_xy=swap_xy)
         self.set_data(data)
-
+            
     def rotate(self, rot_deg):
         data = self._get_data()
         wd, ht = self._get_dims(data)
@@ -438,7 +438,7 @@ class BaseImage(Callback.Callbacks):
         dims = (new_ht, new_wd) + data.shape[2:]
         # TODO: fill with a different value?
         newdata = numpy.zeros(dims)
-        # Find center of new data array
+        # Find center of new data array 
         ncx, ncy = new_wd // 2, new_ht // 2
 
         # Overlay the old image on the new (blank) image
@@ -453,7 +453,7 @@ class BaseImage(Callback.Callbacks):
 
         # Rotate the image as necessary
         rotctr_x, rotctr_y = wd // 2, ht // 2
-
+        
         if rot_deg != 0:
             yi, xi = numpy.mgrid[0:ht, 0:wd]
             xi = xi - rotctr_x
@@ -473,7 +473,7 @@ class BaseImage(Callback.Callbacks):
                    ImageError("rotated cutout is %dx%d original=%dx%d" % (
                 new_wd, new_ht, wd, ht))
             wd, ht, data = new_wd, new_ht, newdata
-
+            
         self.set_data(data)
 
     def info_xy(self, data_x, data_y, settings):
@@ -517,16 +517,16 @@ class Header(dict):
     def get_card(self, key):
         bnch = super(Header, self).__getitem__(key)
         return bnch
-
+    
     def get_keyorder(self):
         return self.keyorder
-
+    
     def keys(self):
         return self.keyorder
-
+    
     def items(self):
         return [(key, self[key]) for key in self.keys()]
-
+    
     def get(self, key, alt=None):
         try:
             return self.__getitem__(key)
@@ -536,7 +536,7 @@ class Header(dict):
     def update(self, mapKind):
         for key, value in mapKind.items():
             self.__setitem__(key, value)
-
+    
     def asdict(self):
         return dict([(key, self[key]) for key in self.keys()])
 

@@ -47,7 +47,8 @@ class AstroImage(BaseImage):
 
 
     def __init__(self, data_np=None, metadata=None, logger=None,
-                 wcsclass=wcsClass, ioclass=ioClass):
+                 wcsclass=wcsClass, ioclass=ioClass,
+                 inherit_primary_header=False):
 
         BaseImage.__init__(self, data_np=data_np, metadata=metadata,
                            logger=logger)
@@ -62,10 +63,9 @@ class AstroImage(BaseImage):
             ioclass = io_fits.fitsLoaderClass
         self.io = ioclass(self.logger)
 
-        # This can be changed to user configurable item
-        self.inherit_primary_header = True
-
+        self.inherit_primary_header = inherit_primary_header
         if self.inherit_primary_header:
+            # User wants to inherit from primary header--this will hold it
             self._primary_hdr = AstroHeader()
         else:
             self._primary_hdr = None
@@ -170,8 +170,8 @@ class AstroImage(BaseImage):
             # under the metadata keyword 'header'
             hdr = self.metadata['header']
 
-            # Inherit PRIMARY header for display but keep metadata intact
             if self.inherit_primary_header and self._primary_hdr is not None:
+                # Inherit PRIMARY header for display but keep metadata intact
                 displayhdr = AstroHeader()
                 for key in hdr.keyorder:
                     card = hdr.get_card(key)
@@ -183,6 +183,7 @@ class AstroImage(BaseImage):
                         bnch = displayhdr.__setitem__(card.key, card.value)
                         bnch.comment = card.comment
             else:
+                # Normal, separate header
                 displayhdr = hdr
 
         except KeyError as e:

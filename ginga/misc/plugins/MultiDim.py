@@ -48,6 +48,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
         self.timer = fv.get_timer()
         self.timer.set_callback('expired', self.play_next)
 
+
     def build_gui(self, container):
         assert have_pyfits == True, \
                Exception("Please install astropy/pyfits to use this plugin")
@@ -265,7 +266,11 @@ class MultiDim(GingaPlugin.LocalPlugin):
         # Nope, we'll have to load it
         self.logger.debug("HDU %d not in memory; refreshing from file" % (idx))
 
-        image = AstroImage.AstroImage(logger=self.logger)
+        # inherit from primary header?
+        inherit_prihdr = self.fv.settings.get('inherit_primary_header', False)
+        
+        image = AstroImage.AstroImage(logger=self.logger,
+                                      inherit_primary_header=inherit_prihdr)
         self.image = image
         try:
             self.curhdu = idx

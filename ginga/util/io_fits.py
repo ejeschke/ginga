@@ -89,7 +89,7 @@ class PyFitsFileHandler(BaseFitsFileHandler):
     def fromHDU(self, hdu, ahdr):
         header = hdu.header
         if hasattr(header, 'cards'):
-            #newer astropy.io.fits don't have ascardlist
+            # newer astropy.io.fits don't have ascardlist()
             for card in header.cards:
                 if len(card.keyword) == 0:
                     continue
@@ -124,7 +124,8 @@ class PyFitsFileHandler(BaseFitsFileHandler):
         self.fromHDU(hdu, ahdr)
         return (data, naxispath)
 
-    def load_file(self, filespec, ahdr, numhdu=None, naxispath=None, phdr=None):
+    def load_file(self, filespec, ahdr, numhdu=None, naxispath=None,
+                  phdr=None):
         filepath = get_path(filespec)
         self.logger.debug("Loading file '%s' ..." % (filepath))
         fits_f = pyfits.open(filepath, 'readonly')
@@ -231,7 +232,7 @@ class FitsioFileHandler(BaseFitsFileHandler):
         return (data, naxispath)
 
     def load_file(self, filespec, ahdr, numhdu=None, naxispath=None,
-                  inherit_primary_header=True):
+                  phdr=None):
         filepath = get_path(filespec)
         self.logger.debug("Loading file '%s' ..." % (filepath))
         fits_f = fitsio.FITS(filepath)

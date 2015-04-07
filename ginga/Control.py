@@ -106,7 +106,9 @@ class GingaControl(Callback.Callbacks):
                                   share_readout=True,
                                   numImages=10,
                                   # Offset to add to numpy-based coords
-                                  pixel_coords_offset=1.0)
+                                  pixel_coords_offset=1.0,
+                                  # inherit from primary header
+                                  inherit_primary_header=False)
 
         # Should channel change as mouse moves between windows
         self.channel_follows_focus = self.settings['channel_follows_focus']
@@ -499,7 +501,9 @@ class GingaControl(Callback.Callbacks):
             image = RGBImage.RGBImage(logger=self.logger)
             filepath = filepfx
         else:
-            image = AstroImage.AstroImage(logger=self.logger)
+            inherit_prihdr = self.settings.get('inherit_primary_header', False)
+            image = AstroImage.AstroImage(logger=self.logger,
+                                          inherit_primary_header=inherit_prihdr)
             kwdargs.update(dict(numhdu=idx))
 
         try:
