@@ -285,6 +285,47 @@ class BaseImage(Callback.Callbacks):
         yarr = self._slice(yview)
 
         return (x0, y0, xarr, yarr)
+    
+    def get_shape_view(self, shape_obj, avoid_oob=True):
+        """
+        Calculate a bounding box in the data enclosing `shape_obj` and
+        return a view that accesses it and a mask that is True only for
+        pixels enclosed in the region.
+
+        If `avoid_oob` is True (default) then the bounding box is clipped
+        to avoid coordinates outside of the actual data.
+        """
+        x1, y1, x2, y2 = map(int, shape_obj.get_llur())
+
+        if avoid_oob:
+            # avoid out of bounds indexes
+            wd, ht = self.get_size()
+            x1, x2 = max(0, x1), min(x2, wd-1)
+            y1, y2 = max(0, y1), min(y2, ht-1)
+
+        # calculate pixel containment mask in bbox
+        yi = numpy.mgrid[y1:y2+1].reshape(-1, 1)
+        xi = numpy.mgrid[x1:x2+1].reshape(1, -1)
+        contains = shape_obj.contains_arr(xi, yi)
+
+        view = numpy.s_[y1:y2+1, x1:x2+1]
+        return (view, contains)
+
+    def cutout_shape(self, shape_obj):
+        """
+        Cut out and return a portion of the data corresponding to `shape_obj`.
+        A masked numpy array is returned, where the pixels not enclosed in
+        the shape are masked out.
+        """
+
+        view, mask = self.get_shape_view(shape_obj)
+
+        # cutout our enclosing (possibly shortened) bbox
+        data = self._slice(view)
+
+        # mask non-containing members
+        mdata = numpy.ma.array(data, mask=numpy.logical_not(mask))
+        return mdata
 
     def get_scaled_cutout_wdht(self, x1, y1, x2, y2, new_wd, new_ht):
 

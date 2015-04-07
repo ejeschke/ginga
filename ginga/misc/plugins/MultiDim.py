@@ -88,7 +88,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
         fr.set_widget(w)
         vbox.add_widget(fr, stretch=0)
 
-        fr = Widgets.Frame("NAXIS")
+        fr = Widgets.Frame("NAXIS (data cubes)")
         self.naxisfr = fr
         vbox.add_widget(fr, stretch=0)
 
@@ -109,6 +109,14 @@ class MultiDim(GingaPlugin.LocalPlugin):
         b.interval.set_value(lower)
         b.interval.set_decimals(2)
         b.interval.add_callback('value-changed', self.play_int_cb)
+
+        b.next.set_enabled(False)
+        b.prev.set_enabled(False)
+        b.first.set_enabled(False)
+        b.last.set_enabled(False)
+        b.play.set_enabled(False)
+        b.stop.set_enabled(False)
+        b.interval.set_enabled(False)
         vbox.add_widget(w, stretch=0)
 
         captions = [("Slice:", 'label', "Slice", 'llabel',
@@ -195,13 +203,23 @@ class MultiDim(GingaPlugin.LocalPlugin):
             self.play_max = dims[self.play_axis]
         self.play_idx = 1
 
+        # Enable or disable NAXIS animation controls
+        is_dc = len(dims) > 2
+        self.w.next.set_enabled(is_dc)
+        self.w.prev.set_enabled(is_dc)
+        self.w.first.set_enabled(is_dc)
+        self.w.last.set_enabled(is_dc)
+        self.w.play.set_enabled(is_dc)
+        self.w.stop.set_enabled(is_dc)
+        self.w.interval.set_enabled(is_dc)
+
     def close(self):
         chname = self.fv.get_channelName(self.fitsimage)
         self.fv.stop_local_plugin(chname, str(self))
         return True
         
     def instructions(self):
-        self.tw.set_text("""Use mouse wheel to choose HDU or axis of data cube.""")
+        self.tw.set_text("""Use mouse wheel to choose HDU or axis of data cube (NAXIS controls).""")
             
     def start(self):
         self.instructions()

@@ -8,6 +8,9 @@
 # Please see the file LICENSE.txt for details.
 #
 import sys, traceback
+import numpy
+
+from ginga.util.six.moves import map, zip, reduce
 
 class CompoundMixin(object):
     """A CompoundMixin makes an object that is an aggregation of other objects.
@@ -18,6 +21,18 @@ class CompoundMixin(object):
     def __init__(self):
         # holds a list of objects to be drawn
         self.objects = []
+
+    def get_llur(self):
+        points = numpy.array(list(map(lambda obj: obj.get_llur(),
+                                      self.objects)))
+        t_ = points.T
+        x1, y1 = min(t_[0].min(), t_[0].min()), min(t_[1].min(), t_[3].min())
+        x2, y2 = max(t_[0].max(), t_[0].max()), min(t_[1].max(), t_[3].max())
+        return (x1, y1, x2, y2)
+
+    def contains_arr(self, x_arr, y_arr):
+        return reduce(numpy.logical_or,
+                      map(lambda obj: obj.contains_arr(x_arr, y_arr)))
 
     def contains(self, x, y):
         for obj in self.objects:

@@ -150,6 +150,11 @@ class CanvasObjectBase(Callback.Callbacks):
         else:
             return 8
 
+    def rotate_arr(self, x_arr, y_arr, theta, xoff=0, yoff=0):
+        x, y = trcalc.rotate_arr(x_arr, y_arr, theta,
+                                xoff=xoff, yoff=yoff)
+        return x, y
+
     def rotate_pt(self, data_x, data_y, theta, xoff=0, yoff=0):
         x, y = trcalc.rotate_pt(data_x, data_y, theta,
                                 xoff=xoff, yoff=yoff)
@@ -316,7 +321,7 @@ class CanvasObjectBase(Callback.Callbacks):
         return res
 
     def within_radius(self, a, b, x, y, canvas_radius):
-        """See within_radius_np()"""
+        """See within_radius_arr()"""
         a_arr, b_arr = numpy.array([a]), numpy.array([b])
         res = self.within_radius_arr(a_arr, b_arr, x, y, canvas_radius)
         return res[0]
@@ -348,10 +353,14 @@ class CanvasObjectBase(Callback.Callbacks):
         ymin, ymax = min(y1, y2) - r, max(y1, y2) + r
         div = numpy.sqrt((x2 - x1)**2 + (y2 - y1)**2)
         
-        d = abs((x2 - x1)*(y1 - b_arr) - (x1 - a_arr)*(y2 - y1)) / div
+        d = numpy.fabs((x2 - x1)*(y1 - b_arr) - (x1 - a_arr)*(y2 - y1)) / div
 
-        contains = (xmin <= a_arr <= xmax) and (ymin <= b_arr <= ymax) and \
-                   (d <= canvas_radius)
+        ## contains = (xmin <= a_arr <= xmax) and (ymin <= b_arr <= ymax) and \
+        ##            (d <= canvas_radius)
+        contains = numpy.logical_and(
+            numpy.logical_and(xmin <= a_arr, a_arr <= xmax),
+            numpy.logical_and(d <= canvas_radius,
+                              numpy.logical_and(ymin <= b_arr, b_arr <= ymax)))
         return contains
 
     def point_within_line(self, a, b, x1, y1, x2, y2, canvas_radius):
@@ -371,7 +380,7 @@ class CanvasObjectBase(Callback.Callbacks):
                                          new_radius)
 
     def within_line(self, a, b, x1, y1, x2, y2, canvas_radius):
-        """See within_line_np()"""
+        """See within_line_arr()"""
         a_arr, b_arr = numpy.array([a]), numpy.array([b])
         res = self.within_line_arr(a_arr, b_arr, x1, y1, x2, y2, canvas_radius)
         return res[0]
@@ -501,24 +510,34 @@ class PolygonMixin(object):
         return self.points
 
     def get_llur(self):
-        points = numpy.array(map(lambda x, y: self.crdmap.to_data(x, y),
-                                 self.get_points()))
-        x1, y1 = points.T[0].min(), points.T[1].min()
-        x2, y2 = points.T[0].max(), points.T[1].max()
+        points = numpy.array(list(map(lambda pt: self.crdmap.to_data(pt[0], pt[1]),
+                                 self.get_points())))
+        t_ = points.T
+        x1, y1 = t_[0].min(), t_[1].min()
+        x2, y2 = t_[0].max(), t_[1].max()
         return (x1, y1, x2, y2)
 
     def contains_arr(self, x_arr, y_arr):
         # NOTE: we use a version of the ray casting algorithm
         # See: http://alienryderflex.com/polygon/
-        result = numpy.array([False] * len(x_arr))
+        xi = x_arr.reshape(-1)
+        yi = y_arr.reshape(-1)
+        xa, ya = numpy.meshgrid(xi, yi)
+
+        result = numpy.empty(ya.shape, dtype=numpy.bool)
+        result.fill(False)
+
         xj, yj = self.crdmap.to_data(*self.points[-1])
         for point in self.points:
             xi, yi = self.crdmap.to_data(*point)
-            if ((((yi < y_arr) and (yj >= y_arr)) or
-                 ((yj < y_arr) and (yi >= y_arr))) and
-                ((xi <= x_arr) or (xj <= x_arr))):
-                cross = (xi + float(y_arr - yi)/(yj - yi)*(xj - xi)) < x_arr
-                result ^= cross
+            tf = numpy.logical_and(
+                numpy.logical_or(numpy.logical_and(yi < ya, yj >= ya),
+                                 numpy.logical_and(yj < ya, yi >= ya)),
+                numpy.logical_or(xi <= xa, xj <= xa))
+            # TODO: get a divide by zero here for some elements whose tf=False
+            # Need to figure out a way to conditionally do those w/tf=True
+            cross = (xi + (ya - yi).astype(numpy.float)/(yj - yi)*(xj - xi)) < xa
+            result[tf == True] ^= cross[tf == True]
             xj, yj = xi, yi
 
         return result
@@ -639,14 +658,24 @@ class PathBase(PolygonMixin, CanvasObjectBase):
                                   **kwdargs)
         PolygonMixin.__init__(self)
         
-    def contains(self, x, y):
+    def contains_arr(self, x_arr, y_arr, radius=1.0):
         x1, y1 = self.crdmap.to_data(*self.points[0])
+        contains = None
         for point in self.points[1:]:
             x2, y2 = self.crdmap.to_data(*point)
-            if self.within_line(x, y, x1, y1, x2, y2, 1.0):
-                return True
+            res = self.point_within_line_arr(x_arr, y_arr, x1, y1, x2, y2,
+                                             radius)
+            if contains is None:
+                contains = res
+            else:
+                contains = numpy.logical_or(contains, res)
             x1, y1 = x2, y2
-        return False
+        return contains
+            
+    def contains(self, data_x, data_y):
+        x_arr, y_arr = numpy.array([data_x]), numpy.array([data_y])
+        res = self.contains_arr(x_arr, y_arr)
+        return res[0]
             
     def select_contains(self, x, y):
         x1, y1 = self.crdmap.to_data(*self.points[0])
@@ -688,6 +717,22 @@ class OnePointTwoRadiusMixin(object):
         new_rot = math.fmod(self.rot_deg + theta_deg, 360.0)
         self.rot_deg = new_rot
         return new_rot
+
+    def get_llur(self):
+        xd, yd = self.crdmap.to_data(self.x, self.y)
+        points = ((self.x - self.xradius, self.y - self.yradius),
+                  (self.x + self.xradius, self.y - self.yradius),
+                  (self.x + self.xradius, self.y + self.yradius),
+                  (self.x - self.xradius, self.y + self.yradius))
+        mpts = numpy.array(
+            list(map(lambda pt: self.rotate_pt(pt[0], pt[1], self.rot_deg,
+                                               xoff=xd, yoff=yd),
+                     map(lambda pt: self.crdmap.to_data(pt[0], pt[1]),
+                         points))))
+        t_ = mpts.T
+        x1, y1 = t_[0].min(), t_[1].min()
+        x2, y2 = t_[0].max(), t_[1].max()
+        return (x1, y1, x2, y2)
 
 
 class BoxBase(OnePointTwoRadiusMixin, CanvasObjectBase):
@@ -765,7 +810,7 @@ class BoxBase(OnePointTwoRadiusMixin, CanvasObjectBase):
                   (self.x - self.xradius, self.y + self.yradius))
         return points
     
-    def contains(self, data_x, data_y):
+    def contains_arr(self, x_arr, y_arr):
         x1, y1 = self.crdmap.to_data(self.x - self.xradius,
                                      self.y - self.yradius)
         x2, y2 = self.crdmap.to_data(self.x + self.xradius,
@@ -773,12 +818,18 @@ class BoxBase(OnePointTwoRadiusMixin, CanvasObjectBase):
 
         # rotate point back to cartesian alignment for test
         xd, yd = self.crdmap.to_data(self.x, self.y)
-        xp, yp = self.rotate_pt(data_x, data_y, -self.rot_deg,
+        xa, ya = self.rotate_arr(x_arr, y_arr, -self.rot_deg,
                                 xoff=xd, yoff=yd)
-        if (min(x1, x2) <= xp <= max(x1, x2) and
-            min(y1, y2) <= yp <= max(y1, y2)):
-            return True
-        return False
+        
+        contains = numpy.logical_and(
+            numpy.logical_and(min(x1, x2) <= xa, xa <= max(x1, x2)),
+            numpy.logical_and(min(y1, y2) <= ya, ya <= max(y1, y2)))
+        return contains
+
+    def contains(self, data_x, data_y):
+        x_arr, y_arr = numpy.array([data_x]), numpy.array([data_y])
+        res = self.contains_arr(x_arr, y_arr)
+        return res[0]
 
 
 class EllipseBase(OnePointTwoRadiusMixin, CanvasObjectBase):
@@ -852,10 +903,10 @@ class EllipseBase(OnePointTwoRadiusMixin, CanvasObjectBase):
     def get_points(self):
         return [self.get_center_pt()]
     
-    def contains(self, data_x, data_y):
+    def contains_arr(self, x_arr, y_arr):
         # rotate point back to cartesian alignment for test
         xd, yd = self.crdmap.to_data(self.x, self.y)
-        xp, yp = self.rotate_pt(data_x, data_y, -self.rot_deg,
+        xa, ya = self.rotate_arr(x_arr, y_arr, -self.rot_deg,
                                 xoff=xd, yoff=yd)
 
         # need to recalculate radius in case of wcs coords
@@ -865,11 +916,15 @@ class EllipseBase(OnePointTwoRadiusMixin, CanvasObjectBase):
         yradius = max(y2, yd) - min(y2, yd)
         
         # See http://math.stackexchange.com/questions/76457/check-if-a-point-is-within-an-ellipse
-        res = (((xp - xd) ** 2) / xradius ** 2 + 
-               ((yp - yd) ** 2) / yradius ** 2)
-        if res <= 1.0:
-            return True
-        return False
+        res = (((xa - xd) ** 2) / xradius ** 2 + 
+               ((ya - yd) ** 2) / yradius ** 2)
+        contains = (res <= 1.0)
+        return contains
+
+    def contains(self, data_x, data_y):
+        x_arr, y_arr = numpy.array([data_x]), numpy.array([data_y])
+        res = self.contains_arr(x_arr, y_arr)
+        return res[0]
 
     def get_bezier_pts(self, kappa=0.5522848):
         """Used by drawing subclasses to draw the ellipse."""
@@ -960,13 +1015,30 @@ class TriangleBase(OnePointTwoRadiusMixin, CanvasObjectBase):
                 (self.x + 2*self.xradius, self.y - self.yradius),
                 (self.x, self.y + self.yradius)]
     
-    def contains(self, data_x, data_y):
+
+    def get_llur(self):
+        xd, yd = self.crdmap.to_data(self.x, self.y)
+        points = ((self.x - self.xradius*2, self.y - self.yradius),
+                  (self.x + self.xradius*2, self.y - self.yradius),
+                  (self.x + self.xradius*2, self.y + self.yradius),
+                  (self.x - self.xradius*2, self.y + self.yradius))
+        mpts = numpy.array(
+            list(map(lambda pt: self.rotate_pt(pt[0], pt[1], self.rot_deg,
+                                               xoff=xd, yoff=yd),
+                     map(lambda pt: self.crdmap.to_data(pt[0], pt[1]),
+                         points))))
+        t_ = mpts.T
+        x1, y1 = t_[0].min(), t_[1].min()
+        x2, y2 = t_[0].max(), t_[1].max()
+        return (x1, y1, x2, y2)
+
+    def contains_arr(self, x_arr, y_arr):
         # is this the same as self.x, self.y ?
         ctr_x, ctr_y = self.get_center_pt()
         xd, yd = self.crdmap.to_data(ctr_x, ctr_y)
         # rotate point back to cartesian alignment for test
-        x, y = self.rotate_pt(data_x, data_y, -self.rot_deg,
-                              xoff=xd, yoff=yd)
+        xa, ya = self.rotate_arr(x_arr, y_arr, -self.rot_deg,
+                                 xoff=xd, yoff=yd)
 
         (x1, y1), (x2, y2), (x3, y3) = self.get_points()
         x1, y1 = self.crdmap.to_data(x1, y1)
@@ -974,13 +1046,22 @@ class TriangleBase(OnePointTwoRadiusMixin, CanvasObjectBase):
         x3, y3 = self.crdmap.to_data(x3, y3)
 
         # barycentric coordinate test
-        denominator = ((y2 - y3)*(x1 - x3) + (x3 - x2)*(y1 - y3))
-        a = ((y2 - y3)*(x - x3) + (x3 - x2)*(y - y3)) / denominator
-        b = ((y3 - y1)*(x - x3) + (x1 - x3)*(y - y3)) / denominator
+        denominator = float((y2 - y3)*(x1 - x3) + (x3 - x2)*(y1 - y3))
+        a = ((y2 - y3)*(xa - x3) + (x3 - x2)*(ya - y3)) / denominator
+        b = ((y3 - y1)*(xa - x3) + (x1 - x3)*(ya - y3)) / denominator
         c = 1.0 - a - b
         
-        tf = (0.0 <= a <= 1.0 and 0.0 <= b <= 1.0 and 0.0 <= c <= 1.0)
-        return tf
+        #tf = (0.0 <= a <= 1.0 and 0.0 <= b <= 1.0 and 0.0 <= c <= 1.0)
+        contains = numpy.logical_and(
+            numpy.logical_and(0.0 <= a, a <= 1.0),
+            numpy.logical_and(numpy.logical_and(0.0 <= b, b <= 1.0),
+                              numpy.logical_and(0.0 <= c, c <= 1.0)))
+        return contains
+
+    def contains(self, data_x, data_y):
+        x_arr, y_arr = numpy.array([data_x]), numpy.array([data_y])
+        res = self.contains_arr(x_arr, y_arr)
+        return res[0]
 
 
 class OnePointOneRadiusMixin(object):
@@ -1007,6 +1088,7 @@ class OnePointOneRadiusMixin(object):
 
     def rotate_by(self, theta_deg):
         pass
+
 
 class CircleBase(OnePointOneRadiusMixin, CanvasObjectBase):
     """Draws a circle on a ImageViewCanvas.
@@ -1068,10 +1150,9 @@ class CircleBase(OnePointOneRadiusMixin, CanvasObjectBase):
         OnePointOneRadiusMixin.__init__(self)
         self.kind = 'circle'
 
-    def contains(self, data_x, data_y):
+    def contains_arr(self, x_arr, y_arr):
         # rotate point back to cartesian alignment for test
         xd, yd = self.crdmap.to_data(self.x, self.y)
-        xp, yp = data_x, data_y
 
         # need to recalculate radius in case of wcs coords
         x2, y2 = self.crdmap.to_data(self.x + self.radius,
@@ -1080,11 +1161,23 @@ class CircleBase(OnePointOneRadiusMixin, CanvasObjectBase):
         yradius = max(y2, yd) - min(y2, yd)
         
         # See http://math.stackexchange.com/questions/76457/check-if-a-point-is-within-an-ellipse
-        res = (((xp - xd) ** 2) / xradius ** 2 + 
-               ((yp - yd) ** 2) / yradius ** 2)
-        if res <= 1.0:
-            return True
-        return False
+        res = (((x_arr - xd) ** 2) / xradius ** 2 + 
+               ((y_arr - yd) ** 2) / yradius ** 2)
+        contains = (res <= 1.0)
+        return contains
+
+    def contains(self, data_x, data_y):
+        x_arr, y_arr = numpy.array([data_x]), numpy.array([data_y])
+        res = self.contains_arr(x_arr, y_arr)
+        return res[0]
+
+    def get_llur(self):
+        x1, y1 = self.crdmap.to_data(self.x - self.radius,
+                                     self.y - self.radius)
+        x2, y2 = self.crdmap.to_data(self.x + self.radius,
+                                     self.y + self.radius)
+        return self.swapxy(x1, y1, x2, y2)
+
 
 class PointBase(OnePointOneRadiusMixin, CanvasObjectBase):
     """Draws a point on a ImageViewCanvas.
@@ -1140,16 +1233,26 @@ class PointBase(OnePointOneRadiusMixin, CanvasObjectBase):
                                   **kwdargs)
         OnePointOneRadiusMixin.__init__(self)
         
-    def contains(self, data_x, data_y):
+    def contains_arr(self, x_arr, y_arr, radius=2.0):
         xd, yd = self.crdmap.to_data(self.x, self.y)
-        if (data_x == xd) and (data_y == yd):
-            return True
-        return False
+        contains = self.within_radius_arr(x_arr, y_arr, xd, yd,
+                                          radius)
+        return contains
+
+    def contains(self, data_x, data_y, radius=1):
+        x_arr, y_arr = numpy.array([data_x]), numpy.array([data_y])
+        res = self.contains_arr(x_arr, y_arr, radius=radius)
+        return res[0]
 
     def select_contains(self, data_x, data_y):
         xd, yd = self.crdmap.to_data(self.x, self.y)
-        return self.within_radius(data_x, data_y, xd, yd, self.cap_radius)
+        return self.within_radius(data_x, data_y, xd, yd,
+                                  self.cap_radius)
         
+    def get_llur(self):
+        x, y = self.crdmap.to_data(self.x, self.y)
+        return (x-0.5, y-0.5, x+0.5, y+0.5)
+    
     def get_edit_points(self):
         return [(self.x, self.y),
                 # TODO: account for point style
@@ -1171,6 +1274,11 @@ class TwoPointMixin(object):
     def get_edit_points(self):
         return [self.get_center_pt(),
                 (self.x1, self.y1), (self.x2, self.y2)]
+
+    def get_llur(self):
+        x1, y1 = self.crdmap.to_data(self.x1, self.y1)
+        x2, y2 = self.crdmap.to_data(self.x2, self.y2)
+        return self.swapxy(x1, y1, x2, y2)
         
 
 class RectangleBase(TwoPointMixin, CanvasObjectBase):
@@ -1248,11 +1356,14 @@ class RectangleBase(TwoPointMixin, CanvasObjectBase):
                   (self.x2, self.y2), (self.x1, self.y2)]
         return points
     
-    def get_llur(self):
-        x1, y1 = self.crdmap.to_data(self.x1, self.y1)
-        x2, y2 = self.crdmap.to_data(self.x2, self.y2)
-        return self.swapxy(x1, y1, x2, y2)
-        
+    def contains_arr(self, x_arr, y_arr):
+        x1, y1, x2, y2 = self.get_llur()
+
+        contains = numpy.logical_and(
+            numpy.logical_and(x1 <= x_arr, x_arr <= x2),
+            numpy.logical_and(y1 <= y_arr, y_arr <= y2))
+        return contains
+
     def contains(self, data_x, data_y):
         x1, y1, x2, y2 = self.get_llur()
 
@@ -1321,6 +1432,18 @@ class LineBase(TwoPointMixin, CanvasObjectBase):
     def get_points(self):
         return [(self.x1, self.y1), (self.x2, self.y2)]
 
+    def contains_arr(self, x_arr, y_arr, radius=1.0):
+        x1, y1 = self.crdmap.to_data(self.x1, self.y1)
+        x2, y2 = self.crdmap.to_data(self.x2, self.y2)
+        contains = self.point_within_line_arr(x_arr, y_arr, x1, y1, x2, y2,
+                                              radius)
+        return contains
+        
+    def contains(self, data_x, data_y, radius=1.0):
+        x_arr, y_arr = numpy.array([data_x]), numpy.array([data_y])
+        res = self.contains_arr(x_arr, y_arr, radius=radius)
+        return res[0]
+        
     def select_contains(self, data_x, data_y):
         x1, y1 = self.crdmap.to_data(self.x1, self.y1)
         x2, y2 = self.crdmap.to_data(self.x2, self.y2)
@@ -1393,19 +1516,42 @@ class RightTriangleBase(TwoPointMixin, CanvasObjectBase):
     def get_points(self):
         return [(self.x1, self.y1), (self.x2, self.y2)]
     
+    def contains_arr(self, x_arr, y_arr):
+
+        x1, y1, x2, y2 = self.x1, self.y1, self.x2, self.y2
+        x3, y3 = self.x2, self.y1
+        x1, y1 = self.crdmap.to_data(x1, y1)
+        x2, y2 = self.crdmap.to_data(x2, y2)
+        x3, y3 = self.crdmap.to_data(x3, y3)
+
+        # barycentric coordinate test
+        denominator = float((y2 - y3)*(x1 - x3) + (x3 - x2)*(y1 - y3))
+        a = ((y2 - y3)*(x_arr - x3) + (x3 - x2)*(y_arr - y3)) / denominator
+        b = ((y3 - y1)*(x_arr - x3) + (x1 - x3)*(y_arr - y3)) / denominator
+        c = 1.0 - a - b
+        
+        #tf = (0.0 <= a <= 1.0 and 0.0 <= b <= 1.0 and 0.0 <= c <= 1.0)
+        contains = numpy.logical_and(
+            numpy.logical_and(0.0 <= a, a <= 1.0),
+            numpy.logical_and(numpy.logical_and(0.0 <= b, b <= 1.0),
+                              numpy.logical_and(0.0 <= c, c <= 1.0)))
+        return contains
+
     def contains(self, data_x, data_y):
+        ## x_arr, y_arr = numpy.array([data_x]), numpy.array([data_y])
+        ## res = self.contains_arr(x_arr, y_arr)
+        ## return res[0]
         x1, y1, x2, y2 = self.x1, self.y1, self.x2, self.y2
         x3, y3 = self.x2, self.y1
 
-        x, y = data_x, data_y
         x1, y1 = self.crdmap.to_data(x1, y1)
         x2, y2 = self.crdmap.to_data(x2, y2)
         x3, y3 = self.crdmap.to_data(x3, y3)
         
         # barycentric coordinate test
         denominator = ((y2 - y3)*(x1 - x3) + (x3 - x2)*(y1 - y3))
-        a = ((y2 - y3)*(x - x3) + (x3 - x2)*(y - y3)) / denominator
-        b = ((y3 - y1)*(x - x3) + (x1 - x3)*(y - y3)) / denominator
+        a = ((y2 - y3)*(data_x - x3) + (x3 - x2)*(data_y - y3)) / denominator
+        b = ((y3 - y1)*(data_x - x3) + (x1 - x3)*(data_y - y3)) / denominator
         c = 1.0 - a - b
         
         tf = (0.0 <= a <= 1.0 and 0.0 <= b <= 1.0 and 0.0 <= c <= 1.0)

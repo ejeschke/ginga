@@ -187,9 +187,10 @@ class Drawing(GingaPlugin.LocalPlugin):
     def redo(self):
         pass
 
-    def draw_cb(self, fitsimage, tag):
-        # TODO: record information about objects drawn?
-        pass
+    def draw_cb(self, canvas, tag):
+        obj = canvas.getObjectByTag(tag)
+        self.logger.info("drew a %s" % (obj.kind))
+        return True
 
     def set_drawparams_cb(self):
         index = self.w.draw_type.get_index()
