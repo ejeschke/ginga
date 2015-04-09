@@ -57,7 +57,8 @@ class TextEntry(WidgetBase):
         self.widget.set_text(text)
 
     def set_length(self, numchars):
-        self.widget.set_width_chars(numchars)
+        #self.widget.set_width_chars(numchars)
+        pass
     
 class TextArea(WidgetBase):
     def __init__(self, wrap=False, editable=False):

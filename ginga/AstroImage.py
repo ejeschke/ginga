@@ -574,6 +574,14 @@ class AstroImage(BaseImage):
                 self.logger.debug("No coordinate system determined")
                 ra_txt = dec_txt = 'NO WCS'
 
+            elif self.wcs.coordsys == 'pixel':
+                args = [data_x, data_y] + self.revnaxis
+                x, y = self.wcs.pixtosystem(#(data_x, data_y),
+                    args, system=system, coords='data')
+                ra_txt = "%+.3f" % (x)
+                dec_txt = "%+.3f" % (y)
+                ra_lbl, dec_lbl = "X", "Y"
+                
             else:
                 args = [data_x, data_y] + self.revnaxis
 

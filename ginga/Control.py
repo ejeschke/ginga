@@ -1064,14 +1064,16 @@ class GingaControl(Callback.Callbacks):
             settings_share.shareSettings(settings, keylist=share_keylist)
 
         # Make sure these preferences are at least defined
+        if num_images is None:
+            num_images = settings.get('numImages',
+                                      self.settings.get('numImages', 1))
         settings.setDefaults(switchnew=True, numImages=num_images,
                              raisenew=True, genthumb=True)
 
-        num_images = self.settings.get('numImages', 1)
         use_readout = not self.settings.get('share_readout', True)
         
         chinfo = self.add_channel_internal(name,
-                                           num_images=settings['numImages'])
+                                           num_images=num_images)
 
         with self.lock:
             bnch = self.add_viewer(chname, settings,

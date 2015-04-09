@@ -39,13 +39,13 @@ class DrawingMixin(object):
         self._cp_index = None
         self._edit_obj = None
         self._edit_status = False
+
+        # For selection
+        self._selected = []
         
         # this controls whether an object is automatically selected for
         # editing immediately after being drawn
         self.edit_follows_draw = True
-        # this controls whether, in edit mode, if no items are being
-        # edited on the canvas, a new item is drawn by a mouse action
-        self.draw_in_edit_mode = False
 
         self._processTime = 0.0
         # time delta threshold for deciding whether to update the image
@@ -73,6 +73,7 @@ class DrawingMixin(object):
         self.set_callback('edit-down', self.edit_start)
         self.set_callback('edit-move', self.edit_motion)
         self.set_callback('edit-up', self.edit_stop)
+        ## self.set_callback('edit-up', self.select_stop)
         #self.set_callback('edit-scroll', self._edit_scale_cb)
         self.set_callback('edit-scroll', self._edit_rotate_cb)
 
@@ -201,6 +202,7 @@ class DrawingMixin(object):
             self.make_callback('draw-event', objtag)
 
             if self.edit_follows_draw:
+                self.clear_selected()
                 self.edit_select(obj)
                 self.make_callback('edit-select', self._edit_obj)
             return True
@@ -312,69 +314,71 @@ class DrawingMixin(object):
         self._edit_tmp = self._edit_obj
         self._edit_status = False
         self._cp_index = None
-            
-        # check for objects at this location
-        #print("getting items")
-        objs = canvas.select_items_at(data_x, data_y,
-                                      test=self._is_editable)
-        #print("items: %s" % (str(objs)))
-        if self._edit_obj is None:
-            #print("no editing: select/deselect")
-            # <-- no current object being edited
+
+        selects = self.get_selected()
+        if len(selects) == 0:
+            # <-- no objects already selected
+
+            # check for objects at this location
+            #print("getting items")
+            objs = canvas.select_items_at(data_x, data_y,
+                                          test=self._is_editable)
+            #print("items: %s" % (str(objs)))
 
             if len(objs) == 0:
-                # no objects
-                if self.draw_in_edit_mode:
-                    return self.draw_start(canvas, action, data_x, data_y)
+                # <-- no objects under cursor
                 return False
 
             # pick top object
             obj = objs[-1]       
             self._prepare_to_move(obj, data_x, data_y)
 
-        elif self._edit_obj.is_editing():
+        else:
             self._edit_status = True
-            #print("editing: checking for cp")
-            #edit_pts = self._edit_obj.get_edit_points()
-            edit_pts = list(map(lambda pt: self._edit_obj.crdmap.to_data(*pt),
-                                self._edit_obj.get_edit_points()))
-            #print((self._edit_obj, dir(self._edit_obj)))
-            #print(edit_pts)
-            i = self._edit_obj.get_pt(edit_pts, data_x, data_y,
-                                      self._edit_obj.cap_radius)
-            if i is not None:
-                #print("editing cp #%d" % (i))
-                # editing a control point from an existing object
-                self._cp_index = i
-                self._edit_update(data_x, data_y)
-                return True
 
-            elif self._edit_obj.contains(data_x, data_y):
-                # TODO: moving an existing object
-                self._prepare_to_move(self._edit_obj, data_x, data_y)
+            # Ugh.  Check each selected object's control points
+            # for a match
+            contains = []
+            for obj in selects:
+                #print("editing: checking for cp")
+                #edit_pts = self._edit_obj.get_edit_points()
+                edit_pts = list(map(lambda pt: obj.crdmap.to_data(*pt),
+                                    obj.get_edit_points()))
+                #print((self._edit_obj, dir(self._edit_obj)))
+                #print(edit_pts)
+                i = obj.get_pt(edit_pts, data_x, data_y, obj.cap_radius)
+                if i is not None:
+                    #print("editing cp #%d" % (i))
+                    # editing a control point from an existing object
+                    self._edit_obj = obj
+                    self._cp_index = i
+                    self._edit_update(data_x, data_y)
+                    return True
+
+                if obj.contains(data_x, data_y):
+                    contains.append(obj)
+
+            # <-- no control points match, is there an object that contains
+            # this point?
+            if len(contains) > 0:
+                # TODO?: make a compound object of contains and move it?
+                obj = contains[-1]
+                self._prepare_to_move(obj, data_x, data_y)
 
             else:
-                # <-- user clicked outside the object
-                #print("deselecting an object")
-                if self._edit_obj in objs:
-                    objs.remove(self._edit_obj)
-                self._edit_obj.set_edit(False)
-                if len(objs) == 0:
-                    self._edit_obj = None
-                else:
-                    obj = objs[-1]       
-                    self._prepare_to_move(obj, data_x, data_y)
+                # <-- user clicked outside any selected item's control pt
+                # and outside any selected item
+                self.clear_selected()
 
-        else:
-            self._edit_status = False
-            if self._edit_obj in objs:
-                # reselect
-                self._edit_obj.set_edit(True)
-            elif len(objs) > 0:
-                obj = objs[-1]       
-                obj.set_edit(True)
-                self._edit_obj = obj
-            
+                # see now if there is an unselected item at this location
+                objs = canvas.select_items_at(data_x, data_y,
+                                              test=self._is_editable)
+                #print("items: %s" % (str(objs)))
+                if len(objs) > 0:
+                    # pick top object
+                    obj = objs[-1]
+                    self._prepare_to_move(obj, data_x, data_y)
+                
         self.processDrawing()
         return True
 
@@ -395,10 +399,6 @@ class DrawingMixin(object):
             self._cp_index = None
             self.make_callback('edit-event', self._edit_obj)
 
-        else:
-            if (self._draw_obj is not None) and self.draw_in_edit_mode:
-                self.draw_stop(canvas, button, data_x, data_y)
-
         return True
 
     def edit_motion(self, canvas, button, data_x, data_y):
@@ -407,10 +407,6 @@ class DrawingMixin(object):
 
         if (self._edit_obj is not None) and (self._cp_index is not None):
             self._edit_update(data_x, data_y)
-            return True
-
-        if (self._draw_obj is not None) and self.draw_in_edit_mode:
-            self._draw_update(data_x, data_y)
             return True
 
         return False
@@ -463,18 +459,66 @@ class DrawingMixin(object):
         if not self.canedit:
             return False
 
-        if self._edit_obj != newobj:
-            # deselect old object
-            if (self._edit_obj is not None) and self._edit_obj.is_editing():
-                self._edit_obj.set_edit(False)
-
-            # select new object
-            self._edit_obj = newobj
-            if (newobj is not None) and (not newobj.is_editing()):
-                newobj.set_edit(True)
-
-            #self.make_callback('edit-select', newobj)
-
+        # add new object to selection
+        self.select_add(newobj)
+        self._edit_obj = newobj
         return True
 
+    ##### SELECTION LOGIC #####
+        
+    def _is_selectable(self, obj, x, y, is_inside):
+        return is_inside and obj.editable
+        #return is_inside
+
+    def is_selected(self, obj):
+        return obj in self._selected
+
+    def get_selected(self):
+        return self._selected
+    
+    def clear_selected(self):
+        for obj in list(self._selected):
+            self.select_clear(obj)
+
+    def select_clear(self, obj):
+        if obj in self._selected:
+            self._selected.remove(obj)
+        obj.set_edit(False)
+
+    def select_add(self, obj):
+        if obj not in self._selected:
+            self._selected.append(obj)
+        obj.set_edit(True)
+
+    def select_stop(self, canvas, button, data_x, data_y):
+        #print("getting items")
+        objs = canvas.select_items_at(data_x, data_y,
+                                      test=self._is_selectable)
+        if len(objs) == 0:
+            # no objects
+            return False
+
+        # pick top object
+        obj = objs[-1]       
+
+        if obj not in self._selected:
+            self._selected.append(obj)
+            obj.set_edit(True)
+        else:
+            self._selected.remove(obj)
+            obj.set_edit(False)
+            obj = None
+            
+        self.logger.debug("selected: %s" % (str(self._selected)))
+        self.processDrawing()
+
+        #self.make_callback('edit-select', obj, self._selected)
+        return True
+
+    def group_selection(self):
+        Compound = self.getDrawClass('compoundobject')
+        c_obj = Compound(self._selected)
+        self._selected = [ comp_obj ]
+        
+        
 #END

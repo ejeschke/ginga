@@ -21,6 +21,7 @@ class CompoundMixin(object):
     def __init__(self):
         # holds a list of objects to be drawn
         self.objects = []
+        self._contains_reduce = numpy.logical_or
 
     def get_llur(self):
         points = numpy.array(list(map(lambda obj: obj.get_llur(),
@@ -31,7 +32,7 @@ class CompoundMixin(object):
         return (x1, y1, x2, y2)
 
     def contains_arr(self, x_arr, y_arr):
-        return reduce(numpy.logical_or,
+        return reduce(self._contains_reduce,
                       map(lambda obj: obj.contains_arr(x_arr, y_arr)))
 
     def contains(self, x, y):

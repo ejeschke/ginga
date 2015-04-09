@@ -10,6 +10,7 @@
 import threading
 import numpy
 import time
+import os.path
 
 from ginga.misc import Widgets, CanvasTypes, Bunch
 from ginga.util import iqcalc, wcs
@@ -110,6 +111,12 @@ class Pick(GingaPlugin.LocalPlugin):
                                             "# ra, dec, eq, x, y, fwhm, fwhm_x, fwhm_y, starsize, ellip, bg, sky, bright, time_local, time_ut")
         self.rpt_format = self.settings.get('report_format',
                                             "%(ra_deg)f, %(dec_deg)f, %(equinox)6.1f, %(x)f, %(y)f, %(fwhm)f, %(fwhm_x)f, %(fwhm_y)f, %(starsize)f, %(ellipse)f, %(background)f, %(skylevel)f, %(brightness)f, %(time_local)s, %(time_ut)s")
+        
+        self.do_report_log = self.settings.get('report_to_log', False)
+        report_log = self.settings.get('report_log_path', None)
+        if report_log is None:
+            report_log = "pick_log.txt"
+        self.report_log = report_log
 
         # For contour plot
         self.num_contours = self.settings.get('num_contours', 8)
@@ -402,6 +409,7 @@ class Pick(GingaPlugin.LocalPlugin):
         nb.add_widget(w, title="Settings")
 
         # Build controls panel
+        vbox3 = Widgets.VBox()
         captions = (
             ('Sky cut', 'button', 'Delta sky:', 'label',
              'xlbl_delta_sky', 'label', 'Delta sky', 'entry'),
@@ -449,7 +457,9 @@ class Pick(GingaPlugin.LocalPlugin):
             return True
         b.delta_bright.add_callback('activated', chg_delta_bright)
 
-        nb.add_widget(w, title="Controls")
+        vbox3.add_widget(w, stretch=0)
+        vbox3.add_widget(Widgets.Label(''), stretch=1)
+        nb.add_widget(vbox3, title="Controls")
 
         vbox3 = Widgets.VBox()
         msgFont = self.fv.getFont("fixedFont", 10)
@@ -463,15 +473,28 @@ class Pick(GingaPlugin.LocalPlugin):
         
         btns = Widgets.HBox()
         btns.set_spacing(4)
-
         btn = Widgets.Button("Add Pick")
         btn.add_callback('activated', lambda w: self.add_pick_cb())
         btns.add_widget(btn)
-        btn = Widgets.CheckBox("Record Picks")
+        btn = Widgets.CheckBox("Record Picks automatically")
         btn.set_state(self.do_record)
         btn.add_callback('activated', self.record_cb)
         btns.add_widget(btn)
         btns.add_widget(Widgets.Label(''), stretch=1)
+        vbox3.add_widget(btns, stretch=0)
+
+        btns = Widgets.HBox()
+        btns.set_spacing(4)
+        btn = Widgets.CheckBox("Log Records")
+        btn.set_state(self.do_report_log)
+        btn.add_callback('activated', self.do_report_log_cb)
+        btns.add_widget(btn)
+        btns.add_widget(Widgets.Label("File:"))
+        ent = Widgets.TextEntry()
+        ent.set_length(512)
+        ent.set_text(self.report_log)
+        ent.add_callback('activated', self.set_report_log_cb)
+        btns.add_widget(ent, stretch=1)
         vbox3.add_widget(btns, stretch=0)
 
         nb.add_widget(vbox3, title="Report")
@@ -519,6 +542,24 @@ class Pick(GingaPlugin.LocalPlugin):
         
     def record_cb(self, w, tf):
         self.do_record = tf
+        return True
+        
+    def do_report_log_cb(self, w, tf):
+        self.do_report_log = tf
+        if tf and (self.pick_log is None):
+            self.open_report_log()
+        return True
+        
+    def set_report_log_cb(self, w):
+        self.close_report_log()
+
+        report_log = w.get_text().strip()
+        if len(report_log) == 0:
+            report_log = "pick_log.txt"
+            w.set_text(report_log)
+        self.report_log = report_log
+
+        self.open_report_log()
         return True
         
     ## def instructions(self):
@@ -751,6 +792,32 @@ class Pick(GingaPlugin.LocalPlugin):
     def clear_fwhm(self):
         self.w.ax2.cla()
         
+    def open_report_log(self):
+        # Open report log if user specified one
+        if self.do_report_log and (self.report_log is not None) and \
+               (self.pick_log is None):
+            try:
+                file_exists = os.path.exists(self.report_log)
+                self.pick_log = open(self.report_log, 'a')
+                if not file_exists:
+                    self.pick_log.write(self.rpt_header + '\n')
+                self.logger.info("Opened Pick log '%s'" % (self.report_log))
+
+            except IOError as e:
+                self.logger.error("Error opening Pick log (%s): %s" % (
+                    self.report_log, str(e)))
+            
+    def close_report_log(self):
+        if self.pick_log is not None:
+            try:
+                self.pick_log.close()
+                self.logger.info("Closed Pick log '%s'" % (self.report_log))
+            except IOError as e:
+                self.logger.error("Error closing Pick log (%s): %s" % (
+                    self.report_log, str(e)))
+            finally:
+                self.pick_log = None
+
     def close(self):
         chname = self.fv.get_channelName(self.fitsimage)
         self.fv.stop_local_plugin(chname, str(self))
@@ -758,6 +825,8 @@ class Pick(GingaPlugin.LocalPlugin):
         
     def start(self):
         #self.instructions()
+        self.open_report_log()
+
         # insert layer if it is not already
         try:
             obj = self.fitsimage.getObjectByTag(self.layertag)
@@ -782,6 +851,9 @@ class Pick(GingaPlugin.LocalPlugin):
         # Delete previous peak marks
         objs = self.fitsimage.getObjectsByTagpfx('peak')
         self.fitsimage.deleteObjects(objs, redraw=False)
+
+        # close pick log, if any
+        self.close_report_log()
 
         # deactivate the canvas 
         self.canvas.ui_setActive(False)
@@ -1307,7 +1379,7 @@ class Pick(GingaPlugin.LocalPlugin):
             return
         skyval = self.pick_qs.skylevel
         hival = self.pick_qs.brightness
-        loval, oldhi = self.fitsimage.fitsimage.get_cut_levels()
+        loval, oldhi = self.fitsimage.get_cut_levels()
         try:
             # brightness is measured ABOVE sky level
             hival = skyval + hival + self.delta_bright
@@ -1357,16 +1429,17 @@ class Pick(GingaPlugin.LocalPlugin):
         self.w.canvas.draw()
 
     def write_pick_log(self, rpt):
-        if self.pick_log:
-            self.pick_log.write(rpt + '\n')
+        if self.pick_log is not None:
+            self.pick_log.write(rpt)
             self.pick_log.flush()
         
     def add_pick_cb(self):
         if self.last_rpt is not None:
             rpt = (self.rpt_format % self.last_rpt) + '\n'
             self.w.report.append_text(rpt)
-            if self.pick_log:
-                self.fv.nongui_do(self.write_pick_log, rpt)
+            ## if self.pick_log:
+            ##     self.fv.nongui_do(self.write_pick_log, rpt)
+            self.write_pick_log(rpt)
 
     def correct_wcs(self):
         # small local function to strip comment and blank lines
@@ -1387,9 +1460,7 @@ class Pick(GingaPlugin.LocalPlugin):
                Exception("Number of lines don't match in reports")
 
         img_coords = list(map(lambda l: map(float, l.split(',')[3:5]), lines1))
-        #print "img coords:", img_coords
         ref_coords = list(map(lambda l: map(float, l.split(',')[0:2]), lines2))
-        #print "ref coords:", ref_coords
 
         image = self.fitsimage.get_image()
         self.fv.nongui_do(self._calc_match, image, img_coords, ref_coords)

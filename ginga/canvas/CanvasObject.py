@@ -1944,7 +1944,7 @@ class ImageBase(CanvasObjectBase):
     def contains(self, data_x, data_y):
         width, height = self.get_scaled_wdht()
         x2, y2 = self.x + width, self.y + height
-        if ((self.x <= x < x2) and (self.y <= y < y2)):
+        if ((self.x <= data_x < x2) and (self.y <= data_y < y2)):
             return True
         return False
 

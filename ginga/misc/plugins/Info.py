@@ -263,6 +263,8 @@ class Info(GingaPlugin.GlobalPlugin):
         chname = self.fv.get_channelName(fitsimage)
         chinfo = self.fv.get_channelInfo(chname)
         chname = chinfo.name
+        if not chname in self.channel:
+            return
         obj = self.channel[chname]
 
         obj.winfo.x.set_text("%.3f" % info.x)

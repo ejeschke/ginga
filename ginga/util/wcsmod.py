@@ -232,9 +232,11 @@ class AstropyWCS(BaseWCS):
         self.fix_bad_headers()
         
         try:
+            self.logger.debug("Trying to make astropy wcs object")
             self.wcs = pywcs.WCS(self.header, fobj=fobj, relax=True)
 
             self.coordsys = choose_coord_system(self.header)
+            self.logger.debug("Coordinate system is: %s" % (self.coordsys))
         except Exception as e:
             self.logger.error("Error making WCS object: %s" % (str(e)))
             self.wcs = None
@@ -355,6 +357,10 @@ class AstropyWCS(BaseWCS):
             return coord.degree
         
     def pixtosystem(self, idxs, system=None, coords='data'):
+        if self.coordsys == 'pixel':
+            x, y = self.pixtoradec(idxs, coords=coords)
+            return (x, y)
+
         c = self.pixtocoords(idxs, system=system, coords=coords)
         if not self.new_coords:
             # older astropy
@@ -393,9 +399,12 @@ class AstLibWCS(BaseWCS):
         # reconstruct a pyfits header
         hdr = pyfits.Header(header.items())
         try:
+            self.logger.debug("Trying to make astLib wcs object")
             self.wcs = astWCS.WCS(hdr, mode='pyfits')
 
             self.coordsys = self.choose_coord_system(self.header)
+            self.logger.debug("Coordinate system is: %s" % (self.coordsys))
+
         except Exception as e:
             self.logger.error("Error making WCS object: %s" % (str(e)))
             self.wcs = None
@@ -403,10 +412,12 @@ class AstLibWCS(BaseWCS):
     def choose_coord_system(self, header):
         coordsys = choose_coord_system(header)
         coordsys = coordsys.upper()
-        if coordsys in ('FK4', ):
+        if coordsys in ('FK4',):
             return 'b1950'
         elif coordsys in ('FK5', 'ICRS'):
             return 'j2000'
+        elif coordsys in ('PIXEL',):
+            return 'pixel'
 
         #raise WCSError("Cannot determine appropriate coordinate system from FITS header")
         return 'j2000'
@@ -458,7 +469,12 @@ class AstLibWCS(BaseWCS):
         try:
             fromsys = self.coordsys.upper()
 
+            if fromsys == 'PIXEL':
+                # these are really pixel values
+                return (ra_deg, dec_deg)
+
             tosys = system.upper()
+
             if fromsys == 'B1950':
                 equinox = 1950.0
             else:
@@ -507,10 +523,12 @@ class KapteynWCS(BaseWCS):
         self.fix_bad_headers()
         
         try:
+            self.logger.debug("Trying to make kapteyn wcs object")
             self.wcs = kapwcs.Projection(self.header,
                                          skyout=self._skyout)
 
             self.coordsys = choose_coord_system(self.header)
+            self.logger.debug("Coordinate system is: %s" % (self.coordsys))
 
         except Exception as e:
             self.logger.error("Error making WCS object: %s" % (str(e)))
@@ -585,6 +603,9 @@ class KapteynWCS(BaseWCS):
         ra_deg, dec_deg = self.pixtoradec(idxs, coords=coords)
         self.logger.debug("ra, dec = %f, %f" % (ra_deg, dec_deg))
         
+        if self.coordsys == 'pixel':
+            return (ra_deg, dec_deg)
+
         # convert to alternate coord
         spec = self.conv_d[system]
         tran = kapwcs.Transformation(self._skyout, spec)
@@ -627,6 +648,7 @@ class StarlinkWCS(BaseWCS):
         # usable WCS in Ast
 
         try:
+            self.logger.debug("Trying to make starlink wcs object")
             # read in the header and create the default WCS transform
             #adapter = Atl.PyFITSAdapter(hdu)
             #fitschan = Ast.FitsChan(adapter)
@@ -636,15 +658,20 @@ class StarlinkWCS(BaseWCS):
             #self.wcs.Report = True
 
             self.coordsys = choose_coord_system(self.header)
+            self.logger.debug("Coordinate system is: %s" % (self.coordsys))
 
+        except Exception as e:
+            self.logger.error("Error making WCS object: %s" % (str(e)))
+            self.wcs = None
+
+        try:
             # define a transform from this destination frame to icrs/j2000
             refframe = self.wcs.getframe(2)
             toframe = Ast.SkyFrame("System=ICRS, Equinox=J2000")
             self.icrs_trans = refframe.convert(toframe)
 
         except Exception as e:
-            self.logger.error("Error making WCS object: %s" % (str(e)))
-            self.wcs = None
+            self.logger.error("Error making ICRS transform: %s" % (str(e)))
 
     def spectral_coord(self, idxs, coords='data'):
         # Starlink's WCS needs pixels referenced from 1
@@ -666,7 +693,7 @@ class StarlinkWCS(BaseWCS):
     def pixtoradec(self, idxs, coords='data'):
         # Starlink's WCS needs pixels referenced from 1
         if coords == 'data':
-            idxs = numpy.array(map(lambda x: x+1, idxs))
+            idxs = numpy.array(list(map(lambda x: x+1, idxs)))
         else:
             idxs = numpy.array(idxs)
             
@@ -675,8 +702,9 @@ class StarlinkWCS(BaseWCS):
             arrs = [ [idxs[i]] for i in range(len(idxs)) ]
             res = self.wcs.tran(arrs, 1)
 
-            # whatever sky coords to icrs coords
-            res = self.icrs_trans.tran(res, 1)
+            if self.coordsys not in ('pixel', 'raw'):
+                # whatever sky coords to icrs coords
+                res = self.icrs_trans.tran(res, 1)
             # TODO: what if axes are inverted?
             ra_rad, dec_rad = res[0][0], res[1][0]
             ra_deg, dec_deg = math.degrees(ra_rad), math.degrees(dec_rad)
@@ -719,15 +747,19 @@ class StarlinkWCS(BaseWCS):
         if system is None:
             system = 'icrs'
             
+        # Get a coordinates object based on ra/dec wcs transform
+        ra_deg, dec_deg = self.pixtoradec(idxs, coords=coords)
+        self.logger.debug("ra, dec = %f, %f" % (ra_deg, dec_deg))
+        
+        if self.coordsys == 'pixel':
+            # these will actually be x, y pixel values
+            return (ra_deg, dec_deg)
+
         # define a transform from reference (icrs/j2000) to user's end choice
         refframe = self.icrs_trans.getframe(2)
         toframe = Ast.SkyFrame("System=%s, Epoch=2000.0" % (system.upper()))
         end_trans = refframe.convert(toframe)
 
-        # Get a coordinates object based on ra/dec wcs transform
-        ra_deg, dec_deg = self.pixtoradec(idxs, coords=coords)
-        self.logger.debug("ra, dec = %f, %f" % (ra_deg, dec_deg))
-        
         # convert to alternate coord
         ra_rad, dec_rad = math.radians(ra_deg), math.radians(dec_deg)
         res = end_trans.tran([[ra_rad], [dec_rad]], 1)
@@ -959,6 +991,10 @@ def choose_coord_system(header):
     match = re.match(r'^HGLT\-.*$', ctype)
     if match:
         return 'heliographicstonyhurst'
+
+    match = re.match(r'^PIXEL$', ctype)
+    if match:
+        return 'pixel'
 
     #raise WCSError("Cannot determine appropriate coordinate system from FITS header")
     return 'icrs'

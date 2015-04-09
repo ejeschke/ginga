@@ -53,7 +53,10 @@ class TextEntry(WidgetBase):
         self.widget.setText(text)
 
     def set_length(self, numchars):
-        self.widget.setMaxLength(numchars)
+        # this is only supposed to set the visible length (but Qt doesn't
+        # really have a good way to do that)
+        #self.widget.setMaxLength(numchars)
+        pass
     
     
 class GrowingTextEdit(QtGui.QTextEdit):
