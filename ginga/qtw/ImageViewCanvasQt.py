@@ -96,7 +96,7 @@ class ImageViewCanvas(ImageViewQt.ImageViewZoom,
     def _configure_cb(self, view, width, height):
         # redraw the mode indicator since the window has been resized
         bm = view.get_bindmap()
-        mode, modetype = bm.current_modifier()
+        mode, modetype = bm.current_mode()
         self.mode_change_cb(bm, mode, modetype)
         
 #END

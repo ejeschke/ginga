@@ -351,10 +351,10 @@ class Cuts(GingaPlugin.LocalPlugin):
         else:
             return []
         
-    def buttondown_cb(self, canvas, button, data_x, data_y):
-        return self.motion_cb(canvas, button, data_x, data_y)
+    def buttondown_cb(self, canvas, event, data_x, data_y):
+        return self.motion_cb(canvas, event, data_x, data_y)
     
-    def motion_cb(self, canvas, button, data_x, data_y):
+    def motion_cb(self, canvas, event, data_x, data_y):
 
         obj = self.canvas.getObjectByTag(self.cutstag)
         lines = self._getlines(obj)
@@ -365,7 +365,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         canvas.redraw(whence=3)
         return True
     
-    def buttonup_cb(self, canvas, button, data_x, data_y):
+    def buttonup_cb(self, canvas, event, data_x, data_y):
 
         obj = self.canvas.getObjectByTag(self.cutstag)
         lines = self._getlines(obj)

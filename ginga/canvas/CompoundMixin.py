@@ -31,6 +31,10 @@ class CompoundMixin(object):
         x2, y2 = max(t_[0].max(), t_[0].max()), min(t_[1].max(), t_[3].max())
         return (x1, y1, x2, y2)
 
+    def get_edit_points(self):
+        x1, y1, x2, y2 = self.get_llur()
+        return [(x1, y1), (x2, y1), (x2, y2), (x1, y2)]
+
     def contains_arr(self, x_arr, y_arr):
         return reduce(self._contains_reduce,
                       map(lambda obj: obj.contains_arr(x_arr, y_arr)))
@@ -93,6 +97,11 @@ class CompoundMixin(object):
         for obj in self.objects:
             obj.initialize(None, viewer, logger)
 
+    def inherit_from(self, obj):
+        self.crdmap = obj.crdmap
+        self.logger = obj.logger
+        self.viewer = obj.viewer
+        
     def is_compound(self):
         return True
     
@@ -164,14 +173,22 @@ class CompoundMixin(object):
         for obj in self.objects:
             obj.move_delta(xoff, yoff)
 
-    def get_reference_pt(self):
+    def rotate_by(self, theta_deg):
+        ref_x, ref_y = self.get_reference_pt()
         for obj in self.objects:
-            try:
-                x, y = obj.get_reference_pt()
-                return (x, y)
-            except CanvasObjectError:
-                continue
-        raise CanvasObjectError("No point of reference in object")
+            self.rotate(theta_deg, xoff=ref_x, yoff=ref_y)
+    
+    def scale_by(self, scale_x, scale_y):
+        for obj in self.objects:
+            obj.scale_by(scale_x, scale_y)
+
+    def get_reference_pt(self):
+        # Reference point for a compound object is the average of all
+        # it's contituents reference points
+        points = numpy.array([ obj.get_reference_pt() for obj in self.objects ])
+        t_ = points.T
+        x, y = numpy.average(t_[0]), numpy.average(t_[1])
+        return (x, y)
 
     def move_to(self, xdst, ydst):
         x, y = self.get_reference_pt()

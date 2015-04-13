@@ -228,7 +228,7 @@ class Toolbar(GingaPlugin.GlobalPlugin):
         view.transform(flip_x, flip_y, swap_xy)
         return True
         
-    def mode_cb(self, tf, modname):
+    def mode_cb(self, tf, modename):
         if self.active is None:
             self.active, bd = self._get_view()
         fitsimage = self.active
@@ -236,10 +236,10 @@ class Toolbar(GingaPlugin.GlobalPlugin):
             return
         bm = fitsimage.get_bindmap()
         if not tf:
-            bm.reset_modifier(fitsimage)
+            bm.reset_mode(fitsimage)
             return True
         
-        bm.set_modifier(modname)
+        bm.set_mode(modename)
         # just in case mode change failed
         self._update_toolbar_state(fitsimage)
         return True
@@ -282,13 +282,13 @@ class Toolbar(GingaPlugin.GlobalPlugin):
         # get current bindmap, make sure that the mode is consistent
         # with current lock button
         bm = fitsimage.get_bindmap()
-        modname, cur_modetype = bm.current_modifier()
-        bm.set_default_modifier_mode(modetype)
+        modename, cur_modetype = bm.current_mode()
+        bm.set_default_mode_type(modetype)
 
-        bm.set_modifier(modname, modtype=modetype)
+        bm.set_mode(modename, mode_type=modetype)
         if not tf:
             # turning off lock also resets the mode
-            bm.reset_modifier(fitsimage)
+            bm.reset_mode(fitsimage)
 
         self._update_toolbar_state(fitsimage)
         return True
@@ -314,18 +314,18 @@ class Toolbar(GingaPlugin.GlobalPlugin):
 
             # update mode toggles
             bm = fitsimage.get_bindmap()
-            modname, modtype = bm.current_modifier()
-            self.logger.debug("modname=%s" % (modname))
+            modename, mode_type = bm.current_mode()
+            self.logger.debug("modename=%s" % (modename))
             # toolbar follows view
-            self.w.btn_pan.set_state(modname == 'pan')
-            self.w.btn_freepan.set_state(modname == 'freepan')
-            self.w.btn_rotate.set_state(modname == 'rotate')
-            self.w.btn_cuts.set_state(modname == 'cuts')
-            self.w.btn_contrast.set_state(modname == 'contrast')
+            self.w.btn_pan.set_state(modename == 'pan')
+            self.w.btn_freepan.set_state(modename == 'freepan')
+            self.w.btn_rotate.set_state(modename == 'rotate')
+            self.w.btn_cuts.set_state(modename == 'cuts')
+            self.w.btn_contrast.set_state(modename == 'contrast')
 
-            default_modtype = bm.get_default_modifier_mode()
+            default_mode_type = bm.get_default_mode_type()
             if self.w.has_key('btn_modelock'):
-                self.w.btn_modelock.set_state(default_modtype == 'locked')
+                self.w.btn_modelock.set_state(default_mode_type == 'locked')
 
         except Exception as e:
             self.logger.error("error updating toolbar: %s" % str(e))

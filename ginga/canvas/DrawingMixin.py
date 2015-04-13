@@ -45,7 +45,7 @@ class DrawingMixin(object):
         
         # this controls whether an object is automatically selected for
         # editing immediately after being drawn
-        self.edit_follows_draw = True
+        self.edit_follows_draw = False
 
         self._processTime = 0.0
         # time delta threshold for deciding whether to update the image
@@ -172,7 +172,7 @@ class DrawingMixin(object):
             
         return True
             
-    def draw_start(self, canvas, action, data_x, data_y):
+    def draw_start(self, canvas, event, data_x, data_y):
         if not self.candraw:
             return False
 
@@ -189,7 +189,7 @@ class DrawingMixin(object):
         self.processDrawing()
         return True
 
-    def draw_stop(self, canvas, button, data_x, data_y):
+    def draw_stop(self, canvas, event, data_x, data_y):
         if not self.candraw:
             return False
 
@@ -209,19 +209,19 @@ class DrawingMixin(object):
         else:
             self.processDrawing()
 
-    def draw_motion(self, canvas, button, data_x, data_y):
+    def draw_motion(self, canvas, event, data_x, data_y):
         if not self.candraw:
             return False
         self._draw_update(data_x, data_y)
         return True
 
-    def draw_poly_add(self, canvas, action, data_x, data_y):
+    def draw_poly_add(self, canvas, event, data_x, data_y):
         if self.candraw and (self.t_drawtype in ('polygon', 'path')):
             x, y = self._draw_cdmap.data_to(data_x, data_y)
             self._points.append((x, y))
         return True
 
-    def draw_poly_delete(self, canvas, action, data_x, data_y):
+    def draw_poly_delete(self, canvas, event, data_x, data_y):
         if self.candraw and (self.t_drawtype in ('polygon', 'path')):
             if len(self._points) > 0:
                 self._points.pop()
@@ -307,14 +307,16 @@ class DrawingMixin(object):
         x, y = obj.crdmap.data_to(data_x, data_y)
         self._start_x, self._start_y = x - ref_x, y - ref_y
         
-    def edit_start(self, canvas, action, data_x, data_y):
+    def edit_start(self, canvas, event, data_x, data_y):
         if not self.canedit:
             return False
 
         self._edit_tmp = self._edit_obj
         self._edit_status = False
         self._cp_index = None
-
+        #shift_held = 'shift' in event.modifiers
+        shift_held = False
+        
         selects = self.get_selected()
         if len(selects) == 0:
             # <-- no objects already selected
@@ -363,12 +365,21 @@ class DrawingMixin(object):
             if len(contains) > 0:
                 # TODO?: make a compound object of contains and move it?
                 obj = contains[-1]
-                self._prepare_to_move(obj, data_x, data_y)
+                if self.is_selected(obj) and shift_held:
+                    # deselecting object
+                    self.select_clear(obj)
+                else:
+                    self._prepare_to_move(obj, data_x, data_y)
+                    ## Compound = self.getDrawClass('compoundobject')
+                    ## c_obj = Compound(*self.get_selected())
+                    ## c_obj.inherit_from(obj)
+                    ## self._prepare_to_move(c_obj, data_x, data_y)
 
             else:
                 # <-- user clicked outside any selected item's control pt
                 # and outside any selected item
-                self.clear_selected()
+                if not shift_held:
+                    self.clear_selected()
 
                 # see now if there is an unselected item at this location
                 objs = canvas.select_items_at(data_x, data_y,
@@ -377,12 +388,23 @@ class DrawingMixin(object):
                 if len(objs) > 0:
                     # pick top object
                     obj = objs[-1]
-                    self._prepare_to_move(obj, data_x, data_y)
+                    if self.num_selected() > 0:
+                        # if there are already some selected items, then
+                        # add this object to the selection, make a compound
+                        # object
+                        self.edit_select(obj)
+                        Compound = self.getDrawClass('compoundobject')
+                        c_obj = Compound(*self.get_selected())
+                        c_obj.inherit_from(obj)
+                        self._prepare_to_move(c_obj, data_x, data_y)
+                    else:
+                        # otherwise just start over with this new object
+                        self._prepare_to_move(obj, data_x, data_y)
                 
         self.processDrawing()
         return True
 
-    def edit_stop(self, canvas, button, data_x, data_y):
+    def edit_stop(self, canvas, event, data_x, data_y):
         if not self.canedit:
             return False
 
@@ -401,7 +423,7 @@ class DrawingMixin(object):
 
         return True
 
-    def edit_motion(self, canvas, button, data_x, data_y):
+    def edit_motion(self, canvas, event, data_x, data_y):
         if not self.canedit:
             return False
 
@@ -419,10 +441,10 @@ class DrawingMixin(object):
         self.make_callback('edit-event', self._edit_obj)
         return True
 
-    def _edit_rotate_cb(self, canvas, direction, amount, data_x, data_y,
-                       msg=True):
+    def _edit_rotate_cb(self, canvas, event, msg=True):
         bd = self.viewer.get_bindings()
-        if bd.get_direction(direction) == 'down':
+        amount = event.amount
+        if bd.get_direction(event.direction) == 'down':
             amount = - amount
         return self.edit_rotate(amount)
 
@@ -434,10 +456,9 @@ class DrawingMixin(object):
         self.make_callback('edit-event', self._edit_obj)
         return True
 
-    def _edit_scale_cb(self, canvas, direction, amount, data_x, data_y,
-                      msg=True):
+    def _edit_scale_cb(self, canvas, event, msg=True):
         bd = self.viewer.get_bindings()
-        if bd.get_direction(direction) == 'down':
+        if bd.get_direction(event.direction) == 'down':
             amount = 0.9
         else:
             amount = 1.1
@@ -452,7 +473,7 @@ class DrawingMixin(object):
             self.make_callback('edit-event', self._edit_obj)
         return True
 
-    def _edit_delete_cb(self, canvas, action, data_x, data_y):
+    def _edit_delete_cb(self, canvas, event, data_x, data_y):
         return self.edit_delete()
 
     def edit_select(self, newobj):
@@ -475,6 +496,9 @@ class DrawingMixin(object):
 
     def get_selected(self):
         return self._selected
+    
+    def num_selected(self):
+        return len(self._selected)
     
     def clear_selected(self):
         for obj in list(self._selected):

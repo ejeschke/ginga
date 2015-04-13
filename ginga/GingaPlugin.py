@@ -55,7 +55,7 @@ class LocalPlugin(object):
     def modes_off(self):
         # turn off any mode user may be in
         bm = self.fitsimage.get_bindmap()
-        bm.reset_modifier(self.fitsimage)
+        bm.reset_mode(self.fitsimage)
         
     # def build_gui(self, container):
     #     """If a plugin defines this method, it will be called with a

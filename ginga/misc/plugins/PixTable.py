@@ -284,7 +284,7 @@ class PixTable(GingaPlugin.LocalPlugin):
         index = w.get_index()
         self.pixtbl_radius = self.sizes[index]
         
-    def motion_cb(self, canvas, button, data_x, data_y):
+    def motion_cb(self, canvas, event, data_x, data_y):
         if self.mark_selected is not None:
             return False
         if self.tw is None:
@@ -293,7 +293,7 @@ class PixTable(GingaPlugin.LocalPlugin):
         self.redo()
         return False
         
-    def btndown_cb(self, canvas, button, data_x, data_y):
+    def btndown_cb(self, canvas, event, data_x, data_y):
         self.add_mark(data_x, data_y)
         return True
 

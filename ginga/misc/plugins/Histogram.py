@@ -263,7 +263,7 @@ class Histogram(GingaPlugin.LocalPlugin):
         self.fv.showStatus("Click or drag left mouse button to move region")
         return True
 
-    def update(self, canvas, button, data_x, data_y):
+    def update(self, canvas, event, data_x, data_y):
 
         obj = self.canvas.getObjectByTag(self.histtag)
         if obj.kind == 'compound':
@@ -299,7 +299,7 @@ class Histogram(GingaPlugin.LocalPlugin):
         self.draw_cb(canvas, tag)
         return True
 
-    def drag(self, canvas, button, data_x, data_y):
+    def drag(self, canvas, event, data_x, data_y):
 
         obj = self.canvas.getObjectByTag(self.histtag)
         if obj.kind == 'compound':

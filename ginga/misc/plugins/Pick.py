@@ -1161,7 +1161,7 @@ class Pick(GingaPlugin.LocalPlugin):
     def eval_intr(self):
         self.ev_intr.set()
         
-    def btndown(self, canvas, button, data_x, data_y):
+    def btndown(self, canvas, event, data_x, data_y):
         try:
             obj = self.canvas.getObjectByTag(self.picktag)
             if obj.kind == 'rectangle':
@@ -1194,7 +1194,7 @@ class Pick(GingaPlugin.LocalPlugin):
         #self.draw_cb(self.canvas, tag)
         return True
         
-    def update(self, canvas, button, data_x, data_y):
+    def update(self, canvas, event, data_x, data_y):
         try:
             obj = self.canvas.getObjectByTag(self.picktag)
             if obj.kind == 'rectangle':
@@ -1234,7 +1234,7 @@ class Pick(GingaPlugin.LocalPlugin):
         return True
 
         
-    def drag(self, canvas, button, data_x, data_y):
+    def drag(self, canvas, event, data_x, data_y):
 
         obj = self.canvas.getObjectByTag(self.picktag)
         if obj.kind == 'compound':

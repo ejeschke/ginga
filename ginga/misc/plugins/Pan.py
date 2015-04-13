@@ -233,24 +233,24 @@ class Pan(GingaPlugin.GlobalPlugin):
                 CanvasTypes.Point(x, y, radius=radius, style='plus'),
                 CanvasTypes.Polygon(points)))
 
-    def motion_cb(self, fitsimage, button, data_x, data_y):
+    def motion_cb(self, fitsimage, event, data_x, data_y):
         bigimage = self.fv.getfocus_fitsimage()
         self.fv.showxy(bigimage, data_x, data_y)
         return True
 
-    def drag_cb(self, fitsimage, action, data_x, data_y):
+    def drag_cb(self, fitsimage, event, data_x, data_y):
         # this is a panning move in the small
         # window for the big window
         bigimage = self.fv.getfocus_fitsimage()
         bigimage.panset_xy(data_x, data_y)
         return True
 
-    def btndown(self, fitsimage, action, data_x, data_y):
+    def btndown(self, fitsimage, event, data_x, data_y):
         bigimage = self.fv.getfocus_fitsimage()
         bigimage.panset_xy(data_x, data_y)
         return True
 
-    def zoom(self, fitsimage, direction, amount, data_x, data_y):
+    def zoom(self, fitsimage, event):
         """Scroll event in the small fits window.  Just zoom the large fits
         window.
         """
@@ -260,6 +260,7 @@ class Pan(GingaPlugin.GlobalPlugin):
         settings = prefs.getSettings('general')
         rev = settings.get('zoom_scroll_reverse', False)
 
+        direction = event.direction
         if (direction < 90.0) or (direction > 270.0):
             if not rev:
                 fitsimage.zoom_in()

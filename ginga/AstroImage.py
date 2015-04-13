@@ -442,11 +442,11 @@ class AstroImage(BaseImage):
                 #print "bg=%f inc=%f" % (bg, bg_inc)
                 data_np = data_np + bg_inc
 
-            ## # Determine max/min to update our notion
-            ## maxval = numpy.nanmax(data_np)
-            ## minval = numpy.nanmin(data_np)
-            ## self.maxval = max(self.maxval, maxval)
-            ## self.minval = max(self.minval, minval)
+            # Determine max/min to update our values
+            maxval = numpy.nanmax(data_np)
+            minval = numpy.nanmin(data_np)
+            self.maxval = max(self.maxval, maxval)
+            self.minval = min(self.minval, minval)
 
             # Get rotation and scale of piece
             header = image.get_header()

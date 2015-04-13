@@ -149,7 +149,16 @@ class Info(GingaPlugin.GlobalPlugin):
     # CALLBACKS
     
     def new_image_cb(self, fitsimage, image, info):
+        # add cb to image so that if it is modified we can update info
+        image.add_callback('modified', self.image_update_cb, fitsimage, info)
+        
         self.set_info(info, fitsimage)
+        return True
+        
+    def image_update_cb(self, image, fitsimage, info):
+        cur_img = fitsimage.get_image()
+        if cur_img == image:
+            self.set_info(info, fitsimage)
         return True
         
     def focus_cb(self, viewer, fitsimage):
@@ -184,10 +193,10 @@ class Info(GingaPlugin.GlobalPlugin):
         
     def cutset_cb(self, setting, value, fitsimage, info):
         loval, hival = value
-        #info.winfo.cut_low.set_text('%.2f' % (loval))
-        info.winfo.cut_low_value.set_text('%.2f' % (loval))
-        #info.winfo.cut_high.set_text('%.2f' % (hival))
-        info.winfo.cut_high_value.set_text('%.2f' % (hival))
+        #info.winfo.cut_low.set_text('%.4g' % (loval))
+        info.winfo.cut_low_value.set_text('%.4g' % (loval))
+        #info.winfo.cut_high.set_text('%.4g' % (hival))
+        info.winfo.cut_high_value.set_text('%.4g' % (hival))
 
     def autocuts_cb(self, setting, option, fitsimage, info):
         info.winfo.cut_new.set_text(option)
@@ -232,10 +241,10 @@ class Info(GingaPlugin.GlobalPlugin):
 
         # Show cut levels
         loval, hival = fitsimage.get_cut_levels()
-        #info.winfo.cut_low.set_text('%.2f' % (loval))
-        info.winfo.cut_low_value.set_text('%.2f' % (loval))
-        #info.winfo.cut_high.set_text('%.2f' % (hival))
-        info.winfo.cut_high_value.set_text('%.2f' % (hival))
+        #info.winfo.cut_low.set_text('%.4g' % (loval))
+        info.winfo.cut_low_value.set_text('%.4g' % (loval))
+        #info.winfo.cut_high.set_text('%.4g' % (hival))
+        info.winfo.cut_high_value.set_text('%.4g' % (hival))
 
         # Show dimensions
         dim_txt = "%dx%d" % (width, height)

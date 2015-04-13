@@ -619,13 +619,13 @@ class IRAF(GingaPlugin.GlobalPlugin):
 
         return False
 
-    def cursormotion(self, canvas, action, data_x, data_y):
+    def cursormotion(self, canvas, event, data_x, data_y):
         if self.mode != 'iraf':
             return False
 
         fitsimage = self.fv.getfocus_fitsimage()
 
-        if action == 'move':
+        if event.state == 'move':
             self.fv.showxy(fitsimage, data_x, data_y)
             return True
 

@@ -177,7 +177,7 @@ class CanvasObjectBase(Callback.Callbacks):
 
     def rotate_by(self, theta_deg):
         ref_x, ref_y = self.get_reference_pt()
-        return self.rotate(theta_deg, xoff=ref_x, yoff=ref_y)
+        self.rotate(theta_deg, xoff=ref_x, yoff=ref_y)
     
     def move_delta(self, xoff, yoff):
         if hasattr(self, 'x'):
@@ -2193,6 +2193,14 @@ class CompoundObject(CompoundMixin, CanvasObjectBase):
     This makes a point inside a circle.
     """
 
+    @classmethod
+    def get_params_metadata(cls):
+        return [
+            ## Param(name='coord', type=str, default='data',
+            ##       valid=['data', 'wcs'],
+            ##       description="Set type of coordinates"),
+            ]
+
     def __init__(self, *objects):
         CanvasObjectBase.__init__(self)
         CompoundMixin.__init__(self)
@@ -2202,6 +2210,14 @@ class CompoundObject(CompoundMixin, CanvasObjectBase):
 
 
 class Canvas(CanvasMixin, CompoundObject, CanvasObjectBase):
+    @classmethod
+    def get_params_metadata(cls):
+        return [
+            ## Param(name='coord', type=str, default='data',
+            ##       valid=['data', 'wcs'],
+            ##       description="Set type of coordinates"),
+            ]
+
     def __init__(self, *objects):
         CanvasObjectBase.__init__(self)
         CompoundObject.__init__(self, *objects)

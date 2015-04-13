@@ -312,7 +312,7 @@ class GingaControl(Callback.Callbacks):
             return False
         self.change_cbar(self, fitsimage, self.colorbar)
         
-    def force_focus_cb(self, fitsimage, action, data_x, data_y):
+    def force_focus_cb(self, fitsimage, event, data_x, data_y):
         chname = self.get_channelName(fitsimage)
         self.change_channel(chname, raisew=True)
         return True

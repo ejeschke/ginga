@@ -205,10 +205,10 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
         self._update_widgets(d)
         return True
     
-    def btndown(self, canvas, button, data_x, data_y):
+    def btndown(self, canvas, event, data_x, data_y):
         return True
 
-    def btnup(self, canvas, button, data_x, data_y):
+    def btnup(self, canvas, event, data_x, data_y):
         
         objs = self.canvas.getItemsAt(data_x, data_y)
         for obj in objs:
