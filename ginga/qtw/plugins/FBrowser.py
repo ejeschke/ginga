@@ -54,9 +54,12 @@ class FBrowser(FBrowserBase.FBrowserBase):
         table.verticalHeader().hide()
         table.setColumnCount(len(self.columns))
         col = 0
-        for hdr, kwd in self.columns:
+        self._name_idx = 0
+        for hdr, attrname in self.columns:
             item = QtGui.QTableWidgetItem(hdr)
             table.setHorizontalHeaderItem(col, item)
+            if attrname == 'name':
+                self._name_idx = col
             col += 1
 
         vbox.addWidget(table, stretch=1)
@@ -102,7 +105,7 @@ class FBrowser(FBrowserBase.FBrowserBase):
         curdir, curglob = os.path.split(self.curpath)
         sm = self.treeview.selectionModel()
         paths = [ os.path.join(curdir,
-                               self.treeview.model().data(row, 0))
+                               self.treeview.model().data(row, self._name_idx))
                   for row in sm.selectedRows() ]
         #self.fv.dragdrop(self.fitsimage, paths)
         self.fv.gui_do(self.fitsimage.make_callback, 'drag-drop',
@@ -118,26 +121,23 @@ class FBrowser(FBrowserBase.FBrowserBase):
 
         table.setSortingEnabled(True)
         for bnch in self.jumpinfo:
-            item1 = QtGui.QTableWidgetItem(bnch.name)
-            icon = self.file_icon(bnch)
-            item1.setIcon(icon)
-            item1.setFlags(item1.flags() & ~QtCore.Qt.ItemIsEditable)
-            item2 = QtGui.QTableWidgetItem(str(bnch.st_size))
-            item2.setFlags(item2.flags() & ~QtCore.Qt.ItemIsEditable)
-            item3 = QtGui.QTableWidgetItem(oct(bnch.st_mode))
-            item3.setFlags(item2.flags() & ~QtCore.Qt.ItemIsEditable)
-            item4 = QtGui.QTableWidgetItem(time.ctime(bnch.st_mtime))
-            item4.setFlags(item2.flags() & ~QtCore.Qt.ItemIsEditable)
-            table.setItem(row, 0, item1)
-            table.setItem(row, 1, item2)
-            table.setItem(row, 2, item3)
-            table.setItem(row, 3, item4)
+            col = 0
+            for colname, attrname in self.columns:
+                item = QtGui.QTableWidgetItem(str(bnch[attrname]))
+                # special handling for name--adds an icon
+                if attrname == 'name':
+                    icon = self.file_icon(bnch)
+                    item.setIcon(icon)
+                item.setFlags(item.flags() & ~QtCore.Qt.ItemIsEditable)
+                table.setItem(row, col, item)
+                col += 1
+
             row += 1
         #table.setSortingEnabled(True)
         table.resizeColumnsToContents()
-            
+
     def get_path_at_row(self, row):
-        item2 = self.treeview.item(row, 0)
+        item2 = self.treeview.item(row, self._name_idx)
         name = str(item2.text())
         if name != '..':
             curdir, curglob = os.path.split(self.curpath)

@@ -16,6 +16,12 @@ from ginga import AstroImage
 from ginga.util import paths
 from ginga.util.six.moves import map, zip
 
+try:
+    from astropy.io import fits as pyfits
+    have_astropy = True
+except ImportError:
+    have_astropy = False
+
 
 class FBrowserBase(GingaPlugin.LocalPlugin):
 
@@ -23,19 +29,38 @@ class FBrowserBase(GingaPlugin.LocalPlugin):
         # superclass defines some variables for us, like logger
         super(FBrowserBase, self).__init__(fv, fitsimage)
 
-        self.keywords = ['OBJECT', 'UT']
-        self.columns = [('Name', 'name'),
-                        ('Size', 'st_size'),
-                        ('Mode', 'st_mode'),
-                        ('Last Changed', 'st_mtime')
-                        ]
+        keywords = [ ('Object', 'OBJECT'),
+                     ('Date', 'DATE-OBS'),
+                     ('Time UT', 'UT'),
+                     ]
+        columns = [('Name', 'name'),
+                   ('Size', 'st_size_str'),
+                   ('Mode', 'st_mode_oct'),
+                   ('Last Changed', 'st_mtime_str')
+                   ]
         
         self.jumpinfo = []
-        homedir = paths.home
-        self.curpath = os.path.join(homedir, '*')
-        self.do_scanfits = False
-        self.moving_cursor = False
 
+        # setup plugin preferences
+        prefs = self.fv.get_preferences()
+        self.settings = prefs.createCategory('plugin_FBrowser')
+        self.settings.addDefaults(home_path=paths.home,
+                                  scan_fits_headers=False,
+                                  scan_limit=100,
+                                  keywords=keywords,
+                                  columns=columns)
+        self.settings.load(onError='silent')
+
+        homedir = self.settings.get('home_path', None)
+        if homedir is None:
+            homedir = paths.home
+        self.curpath = os.path.join(homedir, '*')
+        self.do_scanfits = self.settings.get('scan_fits_headers', False)
+        self.scan_limit = self.settings.get('scan_limit', 100)
+        self.keywords = self.settings.get('keywords', keywords)
+        self.columns = self.settings.get('columns', columns)
+        self.moving_cursor = False
+        self.na_dict = { attrname: 'N/A' for colname, attrname in self.columns }
 
     def close(self):
         chname = self.fv.get_channelName(self.fitsimage)
@@ -81,16 +106,21 @@ class FBrowserBase(GingaPlugin.LocalPlugin):
         elif ext.lower() == '.fits':
             ftype = 'fits'
 
+        bnch = Bunch.Bunch(self.na_dict)
         try:
             filestat = os.stat(path)
-            bnch = Bunch.Bunch(path=path, name=filename, type=ftype,
-                               st_mode=filestat.st_mode, st_size=filestat.st_size,
-                               st_mtime=filestat.st_mtime)
+            bnch.update(dict(path=path, name=filename, type=ftype,
+                             st_mode=filestat.st_mode,
+                             st_mode_oct=oct(filestat.st_mode),
+                             st_size=filestat.st_size,
+                             st_size_str=str(filestat.st_size),
+                             st_mtime=filestat.st_mtime,
+                             st_mtime_str=time.ctime(filestat.st_mtime)))
         except OSError as e:
             # TODO: identify some kind of error with this path
-            bnch = Bunch.Bunch(path=path, name=filename, type=ftype,
-                               st_mode=0, st_size=0,
-                               st_mtime=0)
+            bnch.update(dict(path=path, name=filename, type=ftype,
+                             st_mode=0, st_size=0,
+                             st_mtime=0))
             
         return bnch
         
@@ -122,26 +152,33 @@ class FBrowserBase(GingaPlugin.LocalPlugin):
         self.curpath = path
 
         if self.do_scanfits:
-            self.scan_fits()
+            num_files = len(self.jumpinfo)
+            if num_files <= self.scan_limit:
+                self.scan_fits()
+            else:
+                self.logger.warn("Number of files (%d) is greater than scan limit (%d)--skipping header scan" % (
+                    num_files, self.scan_limit))
             
         self.makelisting(path)
 
     def scan_fits(self):
+        # Scan each FITS file and add header items
+        self.logger.info("scanning files for header keywords...")
+        start_time = time.time()
         for bnch in self.jumpinfo:
-            if not bnch.type == 'fits':
+            if (not bnch.type == 'fits') or (not have_astropy):
                 continue
-            if 'kwds' not in bnch:
-                try:
-                    in_f = AstroImage.pyfits.open(bnch.path, 'readonly')
-                    try:
-                        kwds = {}
-                        for kwd in self.keywords:
-                            kwds[kwd] = in_f[0].header.get(kwd, 'N/A')
-                        bnch.kwds = kwds
-                    finally:
-                        in_f.close()
-                except Exception as e:
-                    continue
+            try:
+                with pyfits.open(bnch.path, 'readonly') as in_f:
+                    kwds = { attrname: in_f[0].header.get(kwd, 'N/A')
+                                  for attrname, kwd in self.keywords}
+                bnch.update(kwds)
+            except Exception as e:
+                self.logger.warn("Error reading FITS keywords from '%s': %s" % (
+                    bnch.path, str(e)))
+                continue
+        elapsed = time.time() - start_time
+        self.logger.info("done scanning--scan time: %.2f sec" % (elapsed))
 
     def refresh(self):
         self.browse(self.curpath)

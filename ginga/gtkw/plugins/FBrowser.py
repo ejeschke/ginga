@@ -25,10 +25,10 @@ class FBrowser(FBrowserBase.FBrowserBase):
         # superclass defines some variables for us, like logger
         super(FBrowser, self).__init__(fv, fitsimage)
 
-        self.cell_data_funcs = (self.file_name, self.file_size,
-                                self.file_mode, self.file_last_changed)
+        self.cell_data_funcs = []
         self.cell_sort_funcs = []
         for hdr, key in self.columns:
+            self.cell_data_funcs.append(self._mk_set_cell(key))
             self.cell_sort_funcs.append(self._mksrtfnN(key))
         
         icondir = self.fv.iconpath
@@ -54,33 +54,31 @@ class FBrowser(FBrowserBase.FBrowserBase):
         
         # create the TreeViewColumns to display the data
         self.tvcolumn = [None] * len(self.columns)
-        cellpb = gtk.CellRendererPixbuf()
-        cellpb.set_padding(2, 0)
-        header, kwd = self.columns[0]
-        tvc = gtk.TreeViewColumn(header, cellpb)
-        tvc.set_resizable(True)
-        tvc.connect('clicked', self.sort_cb, 0)
-        tvc.set_clickable(True)
-        self.tvcolumn[0] = tvc
-        self.tvcolumn[0].set_cell_data_func(cellpb, self.file_pixbuf)
-        cell = gtk.CellRendererText()
-        cell.set_padding(2, 0)
-        self.tvcolumn[0].pack_start(cell, False)
-        self.tvcolumn[0].set_cell_data_func(cell, self.file_name)
-        self.treeview.append_column(self.tvcolumn[0])
-        for n in range(1, len(self.columns)):
-            cell = gtk.CellRendererText()
-            cell.set_padding(2, 0)
-            header, kwd = self.columns[n]
-            tvc = gtk.TreeViewColumn(header, cell)
+
+        for n in range(0, len(self.columns)):
+
+            header, attrname = self.columns[n]
+            if attrname == 'name':
+                # special dispensation for attribute 'name'--add icon
+                cellpb = gtk.CellRendererPixbuf()
+                cellpb.set_padding(2, 0)
+                tvc = gtk.TreeViewColumn(header, cellpb)
+                tvc.set_cell_data_func(cellpb, self._set_file_pixbuf)
+                cell = gtk.CellRendererText()
+                cell.set_padding(2, 0)
+                tvc.pack_start(cell, False)
+            else:
+                cell = gtk.CellRendererText()
+                cell.set_padding(2, 0)
+                tvc = gtk.TreeViewColumn(header, cell)
+
             tvc.set_resizable(True)
             tvc.connect('clicked', self.sort_cb, n)
             tvc.set_clickable(True)
             self.tvcolumn[n] = tvc
-            if n == 1:
-                cell.set_property('xalign', 1.0)
-            self.tvcolumn[n].set_cell_data_func(cell, self.cell_data_funcs[n])
-            self.treeview.append_column(self.tvcolumn[n])
+            #cell.set_property('xalign', 1.0)
+            tvc.set_cell_data_func(cell, self.cell_data_funcs[n])
+            self.treeview.append_column(tvc)
 
         sw.add(self.treeview)
         self.treeview.connect('row-activated', self.open_file)
@@ -150,7 +148,14 @@ class FBrowser(FBrowserBase.FBrowserBase):
             return res
         return fn
 
-    def file_pixbuf(self, *args):
+    def _mk_set_cell(self, attrname):
+        def set_cell(*args):
+            column, cell, model, iter = args[:4]
+            bnch = model.get_value(iter, 0)
+            cell.set_property('text', bnch[attrname])
+        return set_cell
+
+    def _set_file_pixbuf(self, *args):
         column, cell, model, iter = args[:4]
         bnch = model.get_value(iter, 0)
         if bnch.type == 'dir':
@@ -160,26 +165,6 @@ class FBrowser(FBrowserBase.FBrowserBase):
         else:
             pb = self.filepb
         cell.set_property('pixbuf', pb)
-
-    def file_name(self, *args):
-        column, cell, model, iter = args[:4]
-        bnch = model.get_value(iter, 0)
-        cell.set_property('text', bnch.name)
-
-    def file_size(self, *args):
-        column, cell, model, iter = args[:4]
-        bnch = model.get_value(iter, 0)
-        cell.set_property('text', str(bnch.st_size))
-
-    def file_mode(self, *args):
-        column, cell, model, iter = args[:4]
-        bnch = model.get_value(iter, 0)
-        cell.set_property('text', oct(stat.S_IMODE(bnch.st_mode)))
-
-    def file_last_changed(self, *args):
-        column, cell, model, iter = args[:4]
-        bnch = model.get_value(iter, 0)
-        cell.set_property('text', time.ctime(bnch.st_mtime))
 
     def open_file(self, treeview, path, column):
         model = treeview.get_model()
