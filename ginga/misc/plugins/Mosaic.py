@@ -1,6 +1,6 @@
 #
 # Mosaic.py -- Mosaic plugin for Ginga FITS viewer
-# 
+#
 # Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c)  Eric R. Jeschke.  All rights reserved.
@@ -41,7 +41,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
         self.process_elapsed = 0.0
         self.ingest_count = 0
         self.total_files = 0
-        
+
         self.dc = self.fv.getDrawClasses()
 
         canvas = self.dc.DrawingCanvas()
@@ -57,7 +57,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
         self.settings.setDefaults(annotate_images=False, fov_deg=1.0,
                                   match_bg=False, trim_px=0,
                                   merge=False, num_threads=4,
-                                  drop_creates_new_mosaic=True,
+                                  drop_creates_new_mosaic=False,
                                   mosaic_hdus=False, skew_limit=0.1,
                                   make_thumbs=False)
         self.settings.load(onError='silent')
@@ -90,7 +90,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
         vbox2.add_widget(Widgets.Label(''), stretch=1)
         fr.set_widget(vbox2)
         vbox.add_widget(fr, stretch=0)
-        
+
         fr = Widgets.Frame("Mosaic")
 
         captions = [
@@ -161,7 +161,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
         label = Widgets.Label()
         self.w.eval_status = label
         hbox.add_widget(self.w.eval_status, stretch=0)
-        hbox.add_widget(Widgets.Label(''), stretch=1)                
+        hbox.add_widget(Widgets.Label(''), stretch=1)
         vbox2.add_widget(hbox, stretch=0)
 
         # Mosaic evaluation progress bar and stop button
@@ -183,12 +183,12 @@ class Mosaic(GingaPlugin.LocalPlugin):
 
         self.w.vbox = Widgets.VBox()
         vbox.add_widget(self.w.vbox, stretch=0)
-        
+
         spacer = Widgets.Label('')
         vbox.add_widget(spacer, stretch=1)
 
         top.add_widget(sw, stretch=1)
-        
+
         btns = Widgets.HBox()
         btns.set_spacing(3)
 
@@ -207,7 +207,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
             fn = lambda x: x
         self.preprocess = fn
 
-        
+
     def prepare_mosaic(self, image, fov_deg):
         """Prepare a new (blank) mosaic image based on the pointing of
         the parameter image
@@ -217,9 +217,9 @@ class Mosaic(GingaPlugin.LocalPlugin):
 
         data_np = image.get_data()
         self.bg_ref = iqcalc.get_median(data_np)
-            
+
         # TODO: handle skew (differing rotation for each axis)?
-        
+
         skew_limit = self.settings.get('skew_limit', 0.1)
         (rot_deg, cdelt1, cdelt2) = wcs.get_rotation_and_scale(header,
                                                                skew_threshold=skew_limit)
@@ -236,7 +236,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
 
         img_mosaic = dp.create_blank_image(ra_deg, dec_deg,
                                            fov_deg, px_scale,
-                                           rot_deg, 
+                                           rot_deg,
                                            cdbase=cdbase,
                                            logger=self.logger,
                                            pfx='mosaic')
@@ -262,7 +262,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
         self.fv.gui_call(self.fv.add_image, imname, img_mosaic,
                          chname=self.mosaic_chname)
         return img_mosaic
-        
+
     def _prepare_mosaic1(self):
         self.canvas.deleteAllObjects()
         self.update_status("Creating blank image...")
@@ -301,16 +301,16 @@ class Mosaic(GingaPlugin.LocalPlugin):
         if self.settings.get('annotate_images', False):
             x, y = (xlo+xhi)//2, (ylo+yhi)//2
             self.canvas.add(self.dc.Text(x, y, imname, color='red'))
-        
+
         self.ingest_count += 1
-        
+
         time_intr2 = time.time()
         self.process_elapsed += time_intr2 - time_intr1
 
         # special hack for GUI responsiveness during entire ingestion
         # process
         self.fv.update_pending(timeout=0.0)
-            
+
 
     def close(self):
         self.img_mosaic = None
@@ -318,10 +318,10 @@ class Mosaic(GingaPlugin.LocalPlugin):
         self.fv.stop_local_plugin(chname, str(self))
         self.gui_up = False
         return True
-        
+
     def instructions(self):
         self.tw.set_text("""Set the FOV and drag files onto the window.""")
-            
+
     def start(self):
         self.instructions()
         # insert layer if it is not already
@@ -347,7 +347,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
         # when it loses focus
         #self.canvas.ui_setActive(False)
         pass
-        
+
     def resume(self):
         self.canvas.ui_setActive(True)
 
@@ -355,21 +355,21 @@ class Mosaic(GingaPlugin.LocalPlugin):
         self.img_mosaic = None
         self.fitsimage.onscreen_message("Drag new files...",
                                         delay=2.0)
-        
+
     def drop_cb(self, canvas, paths):
         self.logger.info("files dropped: %s" % str(paths))
         new_mosaic = self.settings.get('drop_creates_new_mosaic', False)
         self.fv.nongui_do(self.fv.error_wrap, self.mosaic, paths,
                           new_mosaic=new_mosaic)
         return True
-        
+
     def annotate_cb(self, widget, tf):
         self.settings.set(annotate_images=tf)
 
     def mosaic_some(self, paths, image_loader=None):
         if image_loader is None:
             image_loader = self.fv.load_image
-            
+
         for url in paths:
             if self.ev_intr.isSet():
                 break
@@ -390,7 +390,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
                         image = AstroImage.AstroImage(logger=self.logger)
                         image.load_hdu(hdu)
                         image.set(name='hdu%d' % (i))
-                        
+
                         with self.lock:
                             self.fv.gui_call(self.fv.error_wrap, self.ingest_one, image)
 
@@ -413,11 +413,53 @@ class Mosaic(GingaPlugin.LocalPlugin):
                 total_elapsed, self.process_elapsed)
             self.update_status(msg)
 
+    def _calc_fov(self, paths, image_loader):
+        """Rough FOV estimate."""
+        min_ra, max_ra = None, None
+        min_dec, max_dec = None, None
+
+        for path in paths:
+            image = image_loader(path)
+            header = image.get_header()
+            data_np = image.get_data()
+
+            ctr_x, ctr_y = image.get_center()
+            ra2_deg, dec2_deg = image.pixtoradec(ctr_x, ctr_y)
+            cdelt1, cdelt2 = wcs.get_rotation_and_scale(header)[1:]
+
+            max_dpix = max(data_np.shape) // 2
+            delta_ra = cdelt1 * max_dpix
+            delta_dec = cdelt2 * max_dpix
+
+            cur_min_ra = ra2_deg - delta_ra
+            if min_ra is None or cur_min_ra < min_ra:
+                min_ra = cur_min_ra
+
+            cur_max_ra = ra2_deg + delta_ra
+            if max_ra is None or cur_max_ra > max_ra:
+                max_ra = cur_max_ra
+
+            cur_min_dec = dec2_deg - delta_dec
+            if min_dec is None or cur_min_dec < min_dec:
+                min_dec = cur_min_dec
+
+            cur_max_dec = dec2_deg + delta_dec
+            if max_dec is None or cur_max_dec > max_dec:
+                max_dec = cur_max_dec
+
+        if None in (min_ra, max_ra, min_dec, max_dec):
+            fov_deg = 1.0
+        else:
+            fov_deg = max(max_ra - min_ra, max_dec - min_dec) * 1.1
+        self.w.set_fov.set_text(str(fov_deg))
+        self.set_fov_cb(self.w.set_fov)
+
+        return fov_deg
 
     def mosaic(self, paths, new_mosaic=False, image_loader=None):
         if image_loader is None:
             image_loader = self.fv.load_image
-            
+
         # NOTE: this runs in a non-gui thread
         self.fv.assert_nongui_thread()
 
@@ -425,7 +467,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
         self.total_files = len(paths)
         if self.total_files == 0:
             return
-        
+
         self.ingest_count = 0
         self.ev_intr.clear()
         self.process_elapsed = 0.0
@@ -435,26 +477,27 @@ class Mosaic(GingaPlugin.LocalPlugin):
         image = image_loader(paths[0])
         time_intr1 = time.time()
 
-        fov_deg = self.settings.get('fov_deg', 1.0)
+        #fov_deg = self.settings.get('fov_deg', 1.0)
+        fov_deg = self._calc_fov(paths, image_loader)
 
         # If there is no current mosaic then prepare a new one
         if new_mosaic or (self.img_mosaic is None):
             self.prepare_mosaic(image, fov_deg)
-        else:
-            # get our center position
-            ctr_x, ctr_y = self.img_mosaic.get_center()
-            ra1_deg, dec1_deg = self.img_mosaic.pixtoradec(ctr_x, ctr_y)
-
-            # get new image's center position
-            ctr_x, ctr_y = image.get_center()
-            ra2_deg, dec2_deg = image.pixtoradec(ctr_x, ctr_y)
-
-            # distance between our center and new image's center
-            dist = wcs.deltaStarsRaDecDeg(ra1_deg, dec1_deg,
-                                          ra2_deg, dec2_deg)
-            # if distance is greater than current fov, start a new mosaic
-            if dist > fov_deg:
-                self.prepare_mosaic(image, fov_deg)
+        #else:
+        #    # get our center position
+        #    ctr_x, ctr_y = self.img_mosaic.get_center()
+        #    ra1_deg, dec1_deg = self.img_mosaic.pixtoradec(ctr_x, ctr_y)
+        #
+        #    # get new image's center position
+        #    ctr_x, ctr_y = image.get_center()
+        #    ra2_deg, dec2_deg = image.pixtoradec(ctr_x, ctr_y)
+        #
+        #    # distance between our center and new image's center
+        #    dist = wcs.deltaStarsRaDecDeg(ra1_deg, dec1_deg,
+        #                                  ra2_deg, dec2_deg)
+        #    # if distance is greater than current fov, start a new mosaic
+        #    if dist > fov_deg:
+        #        self.prepare_mosaic(image, fov_deg)
 
         #self.fv.gui_call(self.fv.error_wrap, self.ingest_one, image)
         #self.update_progress(float(self.ingest_count)/self.total_files)
@@ -469,34 +512,34 @@ class Mosaic(GingaPlugin.LocalPlugin):
                               image_loader=image_loader)
 
         return self.img_mosaic
-    
+
     def set_fov_cb(self, w):
         fov_deg = float(w.get_text())
         self.settings.set(fov_deg=fov_deg)
         self.w.fov.set_text(str(fov_deg))
-        
+
     def trim_pixels_cb(self, w):
         trim_px = int(w.get_text())
         self.w.trim_px.set_text(str(trim_px))
         self.settings.set(trim_px=trim_px)
-        
+
     def match_bg_cb(self, w, tf):
         self.settings.set(match_bg=tf)
-        
+
     def merge_cb(self, w, tf):
         self.settings.set(merge=tf)
-        
+
     def drop_new_cb(self, w, tf):
         self.settings.set(drop_creates_new_mosaic=tf)
-        
+
     def mosaic_hdus_cb(self, w, tf):
         self.settings.set(mosaic_hdus=tf)
-        
+
     def set_num_threads_cb(self, w):
         num_threads = int(w.get_text())
         self.w.num_threads.set_text(str(num_threads))
         self.settings.set(num_threads=num_threads)
-        
+
     def update_status(self, text):
         self.fv.gui_do(self.w.eval_status.set_text, text)
 
@@ -505,21 +548,21 @@ class Mosaic(GingaPlugin.LocalPlugin):
             self.w.btn_intr_eval.set_enabled(True)
             self.w.eval_pgs.set_value(0.0)
         self.fv.gui_do(_foo)
-            
+
     def update_progress(self, pct):
         self.fv.gui_do(self.w.eval_pgs.set_value, pct)
-        
+
     def end_progress(self):
         self.fv.gui_do(self.w.btn_intr_eval.set_enabled, False)
 
     def eval_intr(self):
         self.ev_intr.set()
-        
+
     def split_n(self, lst, sz):
         return [ lst[i:i+sz] for i in range(0, len(lst), sz) ]
 
     def __str__(self):
         return 'mosaic'
-    
+
 
 #END
