@@ -112,7 +112,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
 
         fov_deg = self.settings.get('fov_deg', 1.0)
         b.fov.set_text(str(fov_deg))
-        b.set_fov.set_length(8)
+        #b.set_fov.set_length(8)
         b.set_fov.set_text(str(fov_deg))
         b.set_fov.add_callback('activated', self.set_fov_cb)
         b.set_fov.set_tooltip("Set size of mosaic FOV (deg)")
@@ -130,12 +130,12 @@ class Mosaic(GingaPlugin.LocalPlugin):
         b.trim_pixels.set_tooltip("Set number of pixels to trim from each edge")
         b.trim_px.set_text(str(trim_px))
         b.trim_pixels.add_callback('activated', self.trim_pixels_cb)
-        b.trim_pixels.set_length(8)
+        #b.trim_pixels.set_length(8)
         b.trim_pixels.set_text(str(trim_px))
 
         num_threads = self.settings.get('num_threads', 4)
         b.num_threads.set_text(str(num_threads))
-        b.set_num_threads.set_length(8)
+        #b.set_num_threads.set_length(8)
         b.set_num_threads.set_text(str(num_threads))
         b.set_num_threads.set_tooltip("Number of threads to use for mosaicing")
         b.set_num_threads.add_callback('activated', self.set_num_threads_cb)

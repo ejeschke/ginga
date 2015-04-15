@@ -68,7 +68,7 @@ class ImageViewBindings(object):
             # Set up our standard modifiers
             mod_shift = ['shift_l', 'shift_r'],
             mod_ctrl = ['control_l', 'control_r'],
-            mod_draw = ['meta_right'],
+            mod_meta = ['meta_right'],
             
             # Define our modes
             dmod_draw = ['space', None, None],
@@ -141,7 +141,7 @@ class ImageViewBindings(object):
             ms_none = ['nobtn'],
             ms_cursor = ['left'],
             ms_wheel = [],
-            ms_draw = ['draw+left', 'right'],
+            ms_draw = ['draw+left', 'meta+left', 'right'],
             ms_edit = ['edit+left'],
             
             ms_rotate = ['rotate+left'],
@@ -178,7 +178,7 @@ class ImageViewBindings(object):
 
         # Set up bindings
         self.setup_settings_events(viewer, bindmap)
-        
+                          
     def set_mode(self, viewer, name, mode_type='oneshot'):
         bindmap = viewer.get_bindmap()
         bindmap.set_mode(name, mode_type=mode_type)
@@ -215,6 +215,7 @@ class ImageViewBindings(object):
             d = self.settings.getDict()
 
         # First scan settings for buttons and modes
+        bindmap.clear_modifier_map()
         bindmap.clear_mode_map()
 
         for name, value in d.items():
@@ -1442,7 +1443,7 @@ class BindingMapper(Callback.Callbacks):
             for keyname in ('control_l', 'control_r'):
                 self.add_modifier(keyname, 'ctrl')
             for keyname in ('meta_right',):
-                self.add_modifier(keyname, 'draw')
+                self.add_modifier(keyname, 'meta')
         else:
             self.modifier_map = mode_map
 
@@ -1468,6 +1469,9 @@ class BindingMapper(Callback.Callbacks):
         return set([bnch.name for keyname, bnch
                     in self.modifier_map.items()])
         
+    def clear_modifier_map(self):
+        self.modifier_map = {}
+
     def set_mode_map(self, mode_map):
         self.mode_map = mode_map
         
@@ -1700,7 +1704,7 @@ class BindingMapper(Callback.Callbacks):
         
         self.logger.debug("Event map for %s" % (str(idx)))
         cbname = '%s-down' % (emap.name)
-        self.logger.debug("making callback for %s (mod=%s)" % (
+        self.logger.debug("making callback for %s (mode=%s)" % (
             cbname, self._kbdmode))
 
         event = PointEvent(button=button, state='down', mode=self._kbdmode,

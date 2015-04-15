@@ -457,8 +457,8 @@ class AstroImage(BaseImage):
 
             # scale if necessary
             # TODO: combine with rotation?
-            if ((math.fabs(cdelt1) != scale_x) or
-                (math.fabs(cdelt2) != scale_y)):
+            if (not numpy.isclose(math.fabs(cdelt1), scale_x) or
+                not numpy.isclose(math.fabs(cdelt2), scale_y)):
                 nscale_x = math.fabs(cdelt1) / scale_x
                 nscale_y = math.fabs(cdelt2) / scale_y
                 self.logger.debug("scaling piece by x(%f), y(%f)" % (
@@ -481,10 +481,10 @@ class AstroImage(BaseImage):
             ##     flip_y = True
 
             # Optomization for 180 rotations
-            if math.fabs(rot_dx) == 180.0:
+            if numpy.isclose(math.fabs(rot_dx), 180.0):
                 flip_x = not flip_x
                 rot_dx = 0.0
-            if math.fabs(rot_dy) == 180.0:
+            if numpy.isclose(math.fabs(rot_dy), 180.0):
                 flip_y = not flip_y
                 rot_dy = 0.0
 
@@ -492,7 +492,7 @@ class AstroImage(BaseImage):
             rotdata = trcalc.transform(data_np, flip_x=flip_x, flip_y=flip_y)
 
             # Finish with any necessary rotation of piece
-            if rot_dy != 0.0:
+            if not numpy.isclose(rot_dy, 0.0):
                 rot_deg = rot_dy
                 self.logger.debug("rotating %s by %f deg" % (name, rot_deg))
                 rotdata = trcalc.rotate(rotdata, rot_deg,

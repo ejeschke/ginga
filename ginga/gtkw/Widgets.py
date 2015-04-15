@@ -707,7 +707,7 @@ def make_widget(title, wtype):
         w.get_widget().set_alignment(0.05, 0.95)
     elif wtype == 'entry':
         w = TextEntry()
-        w.get_widget().set_width_chars(12)
+        #w.get_widget().set_width_chars(12)
     elif wtype == 'combobox':
         w = ComboBox()
     elif wtype == 'spinbutton':

@@ -58,7 +58,6 @@ class TextEntry(WidgetBase):
         #self.widget.setMaxLength(numchars)
         pass
     
-    
 class GrowingTextEdit(QtGui.QTextEdit):
 
     def __init__(self, *args, **kwargs):
@@ -688,7 +687,7 @@ def make_widget(title, wtype):
         w.widget.setAlignment(QtCore.Qt.AlignLeft)
     elif wtype == 'entry':
         w = TextEntry()
-        w.widget.setMaxLength(12)
+        #w.widget.setMaxLength(12)
     elif wtype == 'combobox':
         w = ComboBox()
     elif wtype == 'spinbutton':

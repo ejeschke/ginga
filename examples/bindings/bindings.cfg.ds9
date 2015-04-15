@@ -33,7 +33,7 @@ mod_shift = ['shift_l', 'shift_r']
 # same setting ends up as "Ctrl" on a pc and "Command" on a mac:
 mod_ctrl = ['control_l', 'control_r']
 # "Control" key on a mac:
-mod_draw = ['meta_right']
+mod_meta = ['meta_right']
 
 # Define up our custom modifiers.
 # These are typically "normal" keys.  The modifier is defined by a triplet:
@@ -42,6 +42,7 @@ mod_draw = ['meta_right']
 # modtype is None or a type in {'held', 'oneshot', 'locked'}
 # msg is a string to be shown in the display or None for no indicator
 dmod_draw = ['space', None, None]
+dmod_edit = ['b', None, None]
 dmod_cmap = ['y', None, None]
 dmod_cuts = ['s', None, None]
 dmod_dist = ['d', None, None]
@@ -108,7 +109,8 @@ scroll_zoom_acceleration = 1.0
 ms_none = ['nobtn']
 ms_cursor = ['left']
 ms_wheel = []
-ms_draw = ['draw+left']
+ms_draw = ['draw+left', 'meta+left']
+ms_edit = ['edit+left']
 
 # mouse commands initiated by a preceeding keystroke (see above)
 ms_rotate = ['rotate+left']
@@ -120,8 +122,6 @@ ms_zoom = ['pan+right']
 ms_freepan = ['freepan+left']
 ms_zoom_in = ['freepan+middle']
 ms_zoom_out = ['freepan+right']
-#ms_cutlo = ['cutlo+left']
-#ms_cuthi = ['cuthi+left']
 ms_cutall = ['cuts+left']
 ms_cut_auto = ['cuts+right']
 ms_panset = ['pan+middle', 'shift+left', 'middle']
