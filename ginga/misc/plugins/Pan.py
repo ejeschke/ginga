@@ -131,8 +131,19 @@ class Pan(GingaPlugin.GlobalPlugin):
         loval, hival = fitsimage.get_cut_levels()
         paninfo.panimage.cut_levels(loval, hival, redraw=False)
         
+        # add cb to image so that if it is modified we can update info
+        image.add_callback('modified', self.image_update_cb, fitsimage,
+                           chinfo, paninfo)
+        
         self.set_image(chinfo, paninfo, image)
 
+    def image_update_cb(self, image, fitsimage, chinfo, paninfo):
+        # image has changed (e.g. size, value range, etc)
+        cur_img = fitsimage.get_image()
+        if cur_img == image:
+            self.set_image(chinfo, paninfo, image)
+        return True
+        
     def focus_cb(self, viewer, fitsimage):
         chname = self.fv.get_channelName(fitsimage)
         chinfo = self.fv.get_channelInfo(chname)

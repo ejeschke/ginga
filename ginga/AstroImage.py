@@ -399,7 +399,7 @@ class AstroImage(BaseImage):
         ##     self.wcs.rotate(deg)
 
     def mosaic_inline(self, imagelist, bg_ref=None, trim_px=None,
-                      merge=False):
+                      merge=False, allow_expand=True, expand_pad_deg=0.01):
         """Drops new images into the current image (if there is room),
         relocating them according the WCS between the two images.
         """
@@ -526,6 +526,47 @@ class AstroImage(BaseImage):
             assert (yhi - ylo == ht), \
                    Exception("Height differential %d != %d" % (yhi - ylo, ht))
 
+            mywd, myht = self.get_size()
+            if xlo < 0 or xhi > mywd or ylo < 0 or yhi > myht:
+                if not allow_expand:
+                    raise Exception("New piece doesn't fit on image and allow_expand=False")
+
+                #<-- Resize our data array to allow the new image
+
+                # determine amount to pad expansion by
+                expand_x = max(int(expand_pad_deg / scale_x), 0)
+                expand_y = max(int(expand_pad_deg / scale_y), 0)
+                
+                nx1_off, nx2_off = 0, 0
+                if xlo < 0:
+                    nx1_off = abs(xlo) + expand_x
+                if xhi > mywd:
+                    nx2_off = (xhi - mywd) + expand_x
+                xlo, xhi = xlo + nx1_off, xhi + nx1_off
+
+                ny1_off, ny2_off = 0, 0
+                if ylo < 0:
+                    ny1_off = abs(ylo) + expand_y
+                if yhi > myht:
+                    ny2_off = (yhi - myht) + expand_y
+                ylo, yhi = ylo + ny1_off, yhi + ny1_off
+
+                new_wd = mywd + nx1_off + nx2_off
+                new_ht = myht + ny1_off + ny2_off
+                new_data = numpy.zeros((new_ht, new_wd))
+                # place current data into new data
+                new_data[ny1_off:ny1_off+myht, nx1_off:nx1_off+mywd] = \
+                                               mydata
+                self._data = new_data
+                mydata = new_data
+
+                if (nx1_off > 0) or (ny1_off > 0):
+                    # Adjust our WCS for relocation of the reference pixel
+                    crpix1, crpix2 = self.get_keywords_list('CRPIX1', 'CRPIX2')
+                    kwds = dict(CRPIX1=crpix1 + nx1_off,
+                                CRPIX2=crpix2 + ny1_off)
+                    self.update_keywords(kwds)
+                    
             # fit image piece into our array
             try:
                 if merge:

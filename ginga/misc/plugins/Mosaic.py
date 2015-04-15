@@ -54,11 +54,13 @@ class Mosaic(GingaPlugin.LocalPlugin):
         # Load plugin preferences
         prefs = self.fv.get_preferences()
         self.settings = prefs.createCategory('plugin_Mosaic')
-        self.settings.setDefaults(annotate_images=False, fov_deg=1.0,
+        self.settings.setDefaults(annotate_images=False, fov_deg=0.2,
                                   match_bg=False, trim_px=0,
                                   merge=False, num_threads=4,
-                                  drop_creates_new_mosaic=True,
+                                  drop_creates_new_mosaic=False,
                                   mosaic_hdus=False, skew_limit=0.1,
+                                  allow_expand=True, expand_pad_deg=0.01,
+                                  max_center_deg_delta=2.0,
                                   make_thumbs=False)
         self.settings.load(onError='silent')
 
@@ -278,6 +280,8 @@ class Mosaic(GingaPlugin.LocalPlugin):
         trim_px = self.settings.get('trim_px', 0)
         match_bg = self.settings.get('match_bg', False)
         merge = self.settings.get('merge', False)
+        allow_expand = self.settings.get('allow_expand', True)
+        expand_pad_deg = self.settings.get('expand_pad_deg', 0.010)
         bg_ref = None
         if match_bg:
             bg_ref = self.bg_ref
@@ -293,7 +297,9 @@ class Mosaic(GingaPlugin.LocalPlugin):
         loc = self.img_mosaic.mosaic_inline([ image ],
                                             bg_ref=bg_ref,
                                             trim_px=trim_px,
-                                            merge=merge)
+                                            merge=merge,
+                                            allow_expand=allow_expand,
+                                            expand_pad_deg=expand_pad_deg)
 
         (xlo, ylo, xhi, yhi) = loc
 
@@ -435,12 +441,14 @@ class Mosaic(GingaPlugin.LocalPlugin):
         image = image_loader(paths[0])
         time_intr1 = time.time()
 
-        fov_deg = self.settings.get('fov_deg', 1.0)
+        fov_deg = self.settings.get('fov_deg', 0.2)
+        max_center_deg_delta = self.settings.get('max_center_deg_delta', None)
 
         # If there is no current mosaic then prepare a new one
         if new_mosaic or (self.img_mosaic is None):
             self.prepare_mosaic(image, fov_deg)
-        else:
+
+        elif max_center_deg_delta is not None:
             # get our center position
             ctr_x, ctr_y = self.img_mosaic.get_center()
             ra1_deg, dec1_deg = self.img_mosaic.pixtoradec(ctr_x, ctr_y)
@@ -452,8 +460,8 @@ class Mosaic(GingaPlugin.LocalPlugin):
             # distance between our center and new image's center
             dist = wcs.deltaStarsRaDecDeg(ra1_deg, dec1_deg,
                                           ra2_deg, dec2_deg)
-            # if distance is greater than current fov, start a new mosaic
-            if dist > fov_deg:
+            # if distance is greater than trip setting, start a new mosaic
+            if dist > max_center_deg_delta:
                 self.prepare_mosaic(image, fov_deg)
 
         #self.fv.gui_call(self.fv.error_wrap, self.ingest_one, image)
