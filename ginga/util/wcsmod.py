@@ -342,10 +342,15 @@ class AstropyWCS(BaseWCS):
 
         else:
             # new astropy coordinates system
-            coord = coordinates.SkyCoord(ra_deg * units.degree,
-                                         dec_deg * units.degree,
-                                         frame=self.coordsys)
-            coord = coord.transform_to(system)
+            ## coord = coordinates.SkyCoord(ra_deg * units.degree,
+            ##                              dec_deg * units.degree,
+            ##                              frame=self.coordsys)
+            ## coord = coord.transform_to(system)
+            frameClass = coordinates.frame_transfrom_graph.lookup_name(sys.coordsys)
+            coord = frameClass(ra_deg * units.degree, dec_deg * units.degree)
+            toClass = coordinates.frame_transfrom_graph.lookup_name(system)
+            coord = coord.transform_to(toClass)
+            
         return coord
 
     def _deg(self, coord):
