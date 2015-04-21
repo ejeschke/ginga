@@ -346,10 +346,13 @@ class AstropyWCS(BaseWCS):
             ##                              dec_deg * units.degree,
             ##                              frame=self.coordsys)
             ## coord = coord.transform_to(system)
-            frameClass = coordinates.frame_transfrom_graph.lookup_name(sys.coordsys)
+            frameClass = coordinates.frame_transform_graph.lookup_name(self.coordsys)
             coord = frameClass(ra_deg * units.degree, dec_deg * units.degree)
-            toClass = coordinates.frame_transfrom_graph.lookup_name(system)
-            coord = coord.transform_to(toClass)
+            toClass = coordinates.frame_transform_graph.lookup_name(system)
+            # Skip in input and output is the same (no realize_frame
+            # call in astropy)
+            if toClass != frameClass:
+                coord = coord.transform_to(toClass)
             
         return coord
 
@@ -371,8 +374,9 @@ class AstropyWCS(BaseWCS):
             # older astropy
             return (self._deg(c.lonangle), self._deg(c.latangle))
         else:
-            r = c.frame.data
-            return tuple(map(self._deg, [getattr(r, component) for component in r.components[:2]]))
+            r = c.data
+            return tuple(map(self._deg, [getattr(r, component)
+                                         for component in r.components[:2]]))
 
 
 class AstLibWCS(BaseWCS):
