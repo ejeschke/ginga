@@ -1,7 +1,7 @@
 #
 # io_rgb.py -- RGB image file handling.
 #
-# Eric Jeschke (eric@naoj.org) 
+# Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
@@ -188,7 +188,7 @@ class RGBFileHandler(object):
                 except Exception as e:
                     self.logger.error("Error converting from embedded color profile: %s" % (str(e)))
                     self.logger.warn("Leaving image unprofiled.")
-                        
+
             data_np = numpy.array(image)
 
         elif have_qtimage:
@@ -206,7 +206,7 @@ class RGBFileHandler(object):
         else:
             raise ImageError("No way to load image format '%s/%s'" % (
                 typ, subtyp))
-        
+
         end_time = time.time()
         self.logger.debug("loading (%s) time %.4f sec" % (
             means, end_time - start_time))
@@ -258,7 +258,7 @@ class RGBFileHandler(object):
         """
         old_ht, old_wd = data.shape[:2]
         start_time = time.time()
-        
+
         if have_qtimage:
             # QImage method is slightly faster and gives a smoother looking
             # result than PIL
@@ -314,7 +314,7 @@ def open_ppm(filepath):
     while header.startswith(b'#') or len(header) == 0:
         header = infile.readline().strip()
 
-    print(header)
+    #print(header)
     width, height = tuple(map(int, header.split()))
     header = infile.readline()
 
@@ -451,9 +451,9 @@ def rgb2qimage(rgb):
 def convert_profile_pil(image_pil, inprof_path, outprof_path, inPlace=False):
     if not have_cms:
         return image_pil
-    
+
     image_out = ImageCms.profileToProfile(image_pil, inprof_path,
-                                          outprof_path, 
+                                          outprof_path,
                                           renderingIntent=rendering_intent,
                                           outputMode='RGB', inPlace=inPlace,
                                           flags=0)
@@ -464,7 +464,7 @@ def convert_profile_pil(image_pil, inprof_path, outprof_path, inPlace=False):
 def convert_profile_pil_transform(image_pil, transform, inPlace=False):
     if not have_cms:
         return image_pil
-    
+
     image_out = ImageCms.applyTransform(image_pil, transform, inPlace)
     if inPlace:
         return image_pil
@@ -509,5 +509,5 @@ def set_rendering_intent(intent):
     """
     global rendering_intent
     rendering_intent = intent
-    
+
 #END
