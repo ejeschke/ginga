@@ -328,7 +328,6 @@ class BaseImage(Callback.Callbacks):
         return mdata
 
     def get_scaled_cutout_wdht(self, x1, y1, x2, y2, new_wd, new_ht):
-
         shp = self.shape
 
         (view, (scale_x, scale_y)) = \
@@ -400,81 +399,6 @@ class BaseImage(Callback.Callbacks):
 
         return res
 
-    def histogram(self, x1, y1, x2, y2, z=None, pct=1.0, numbins=2048):
-        data = self._get_fast_data()
-        if z is not None:
-            data = data[y1:y2, x1:x2, z]
-        else:
-            data = data[y1:y2, x1:x2]
-
-        return self.autocuts.calc_histogram(data, pct=pct, numbins=numbins)
-
-    def cut_levels(self, loval, hival, vmin=0.0, vmax=255.0):
-        data = self._get_data()
-        data = self.autocuts.cut_levels(data, loval, hival,
-                                        vmin=vmin, vmax=vmax)
-        self.set_data(data)
-
-    def transform(self, flip_x=False, flip_y=False, swap_xy=False):
-        data = self._get_data()
-
-        data = trcalc.transform(data, flip_x=flip_x, flip_y=flip_y,
-                                swap_xy=swap_xy)
-        self.set_data(data)
-            
-    def rotate(self, rot_deg):
-        data = self._get_data()
-        wd, ht = self._get_dims(data)
-        # TODO: allow off-center rotations
-        ocx, ocy = wd // 2, ht // 2
-
-        # If there is no rotation, then we are done
-        if rot_deg == 0.0:
-            return
-
-        # Make a square from the scaled cutout, with room to rotate
-        side = int(math.sqrt(wd**2 + ht**2))
-        new_wd = new_ht = side
-        dims = (new_ht, new_wd) + data.shape[2:]
-        # TODO: fill with a different value?
-        newdata = numpy.zeros(dims)
-        # Find center of new data array 
-        ncx, ncy = new_wd // 2, new_ht // 2
-
-        # Overlay the old image on the new (blank) image
-        ldx, rdx = min(ocx, ncx), min(wd - ocx, ncx)
-        bdy, tdy = min(ocy, ncy), min(ht - ocy, ncy)
-
-        newdata[ncy-bdy:ncy+tdy, ncx-ldx:ncx+rdx] = \
-                                 data[ocy-bdy:ocy+tdy, ocx-ldx:ocx+rdx]
-
-        data = newdata
-        wd, ht = self._get_dims(data)
-
-        # Rotate the image as necessary
-        rotctr_x, rotctr_y = wd // 2, ht // 2
-        
-        if rot_deg != 0:
-            yi, xi = numpy.mgrid[0:ht, 0:wd]
-            xi = xi - rotctr_x
-            yi = yi - rotctr_y
-            cos_t = numpy.cos(numpy.radians(-rot_deg))
-            sin_t = numpy.sin(numpy.radians(-rot_deg))
-            ap = (xi * cos_t) - (yi * sin_t) + rotctr_x
-            bp = (xi * sin_t) + (yi * cos_t) + rotctr_y
-            ## ap = numpy.rint(ap).astype('int').clip(0, wd-1)
-            ## bp = numpy.rint(bp).astype('int').clip(0, ht-1)
-            ap = ap.astype('int').clip(0, wd-1)
-            bp = bp.astype('int').clip(0, ht-1)
-            newdata = data[bp, ap]
-            new_wd, new_ht = self._get_dims(newdata)
-
-            assert (wd == new_wd) and (ht == new_ht), \
-                   ImageError("rotated cutout is %dx%d original=%dx%d" % (
-                new_wd, new_ht, wd, ht))
-            wd, ht, data = new_wd, new_ht, newdata
-            
-        self.set_data(data)
 
     def info_xy(self, data_x, data_y, settings):
         # Get the value under the data coordinates

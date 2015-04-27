@@ -23,27 +23,24 @@ from __future__ import print_function
 import sys
 from optparse import OptionParser
 
-import ginga.util.six as six
-if six.PY2:
-    import xmlrpclib
-else:
-    import xmlrpc.client as xmlrpclib
+from ginga.util import grc
 
 
 def main(options, args):
 
     # Get proxy to server
-    url = "http://%s:%d" % (options.host, options.port)
-    ginga = xmlrpclib.ServerProxy(url)
+    ginga = grc.RemoteClient(options.host, options.port)
 
     if len(args) == 0:
-        method = getattr(ginga, 'help')
+        method_name = 'help'
+        args, kwdargs = [], {}
     else:
-        method = getattr(ginga, args[0])
-        args = args[1:]
+        method_name = args[0]
+        args, kwdargs = grc.prep_args(args[1:])
         
     # invoke method on rest of parameters
-    res = method(*args)
+    method = getattr(ginga, method_name)
+    res = method(*args, **kwdargs)
     print(res)
     
 

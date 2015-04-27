@@ -11,6 +11,7 @@ import numpy
 
 from ginga.misc import Widgets, Plot
 from ginga import GingaPlugin
+from ginga import AutoCuts
 
 class Histogram(GingaPlugin.LocalPlugin):
 
@@ -25,6 +26,7 @@ class Histogram(GingaPlugin.LocalPlugin):
         self.xlimbycuts = True
         # Number of histogram bins
         self.numbins = 2048
+        self.autocuts = AutoCuts.Histogram(self.logger)
 
         self.dc = self.fv.getDrawClasses()
 
@@ -192,6 +194,16 @@ class Histogram(GingaPlugin.LocalPlugin):
                                            linestyle='dash'))
         self.draw_cb(canvas, tag)
 
+    def histogram(self, image, x1, y1, x2, y2, z=None, pct=1.0, numbins=2048):
+        if z is not None:
+            data = image.get_data()
+            data = data[y1:y2, x1:x2, z]
+        else:
+            tup = image.cutout_adjust(x1, y1, x2, y2)
+            data = tup[0]
+
+        return self.autocuts.calc_histogram(data, pct=pct, numbins=numbins)
+
     def redo(self):
         obj = self.canvas.getObjectByTag(self.histtag)
         if obj.kind != 'compound':
@@ -209,9 +221,9 @@ class Histogram(GingaPlugin.LocalPlugin):
 
         depth = image.get_depth()
         if depth != 3:
-            res = image.histogram(int(bbox.x1), int(bbox.y1),
-                                  int(bbox.x2), int(bbox.y2),
-                                  pct=1.0, numbins=numbins)
+            res = self.histogram(image, int(bbox.x1), int(bbox.y1),
+                                 int(bbox.x2), int(bbox.y2),
+                                 pct=1.0, numbins=numbins)
             # used with 'steps-post' drawstyle, this x and y assignment
                 # gives correct histogram-steps
             x = res.bins
@@ -227,9 +239,9 @@ class Histogram(GingaPlugin.LocalPlugin):
             colors = ('red', 'green', 'blue')
             ymax = 0
             for z in range(depth):
-                res = image.histogram(int(bbox.x1), int(bbox.y1),
-                                      int(bbox.x2), int(bbox.y2),
-                                      z=z, pct=1.0, numbins=numbins)
+                res = self.histogram(image, int(bbox.x1), int(bbox.y1),
+                                     int(bbox.x2), int(bbox.y2),
+                                     z=z, pct=1.0, numbins=numbins)
                 # used with 'steps-post' drawstyle, this x and y assignment
                 # gives correct histogram-steps
                 x = res.bins

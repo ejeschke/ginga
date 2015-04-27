@@ -90,7 +90,7 @@ class ImageViewAgg(ImageView.ImageViewBase):
         # inform the base class about the actual window size
         self.set_window_size(width, height, redraw=True)
 
-    def save_rgb_image_as_buffer(self, output=None, format='png', quality=90):
+    def get_rgb_image_as_buffer(self, output=None, format='png', quality=90):
         if not have_PIL:
             raise ImageViewAggError("Please install PIL to use this method")
 
@@ -114,6 +114,10 @@ class ImageViewAgg(ImageView.ImageViewBase):
         img.save(ibuf, format=format, quality=quality)
         return ibuf
 
+    def get_rgb_image_as_bytes(self, format='png', quality=90):
+        ibuf = self.get_rgb_image_as_buffer(format=format, quality=quality)
+        return bytes(ibuf.getvalue())
+        
     def save_rgb_image_as_file(self, filepath, format='png', quality=90):
         if not have_PIL:
             raise ImageViewAggError("Please install PIL to use this method")
@@ -121,7 +125,7 @@ class ImageViewAgg(ImageView.ImageViewBase):
             raise ImageViewAggError("No AGG surface defined")
 
         with open(filepath, 'w') as out_f:
-            self.save_rgb_image_as_buffer(output=out_f, format=format,
+            self.get_rgb_image_as_buffer(output=out_f, format=format,
                                           quality=quality)
         self.logger.debug("wrote %s file '%s'" % (format, filepath))
 
