@@ -1,6 +1,6 @@
 #
 # ImageViewAgg.py -- classes for the display of FITS files on AGG surfaces
-# 
+#
 # Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c)  Eric R. Jeschke.  All rights reserved.
@@ -14,14 +14,14 @@ import aggdraw as agg
 from . import AggHelp
 
 from ginga import ImageView
-
 from ginga.aggw.ImageViewCanvasTypesAgg import *
+
 try:
     import PIL.Image as PILimage
     have_PIL = True
 except ImportError:
     have_PIL = False
-    
+
 
 class ImageViewAggError(ImageView.ImageViewError):
     pass
@@ -35,17 +35,20 @@ class ImageViewAgg(ImageView.ImageViewBase):
 
         self.surface = None
         self.img_fg = None
-        self.set_fg(1.0, 1.0, 1.0, redraw=False)
         self._rgb_order = 'RGBA'
-        
+
         self.message = None
+
+        # initialize background and foreground colors
+        self.set_bg(0.5, 0.5, 0.5, redraw=False)
+        self.set_fg(1.0, 1.0, 1.0, redraw=False)
 
         # cursors
         self.cursor = {}
 
         self.t_.setDefaults(show_pan_position=False,
                             onscreen_ff='Sans Serif')
-        
+
     def get_surface(self):
         return self.surface
 
@@ -70,7 +73,7 @@ class ImageViewAgg(ImageView.ImageViewBase):
             pen = cr.get_pen('red')
             canvas.line((ctr_x - 10, ctr_y, ctr_x + 10, ctr_y), pen)
             canvas.line((ctr_x, ctr_y - 10, ctr_x, ctr_y + 10), pen)
-        
+
         # render self.message
         if self.message:
             font = cr.get_font(self.t_['onscreen_ff'], 24.0, self.img_fg)
@@ -101,23 +104,25 @@ class ImageViewAgg(ImageView.ImageViewBase):
         if ibuf is None:
             ibuf = BytesIO()
 
-        # convert AGG draw surface to a numpy array
-        data = numpy.fromstring(self.surface.tostring(), dtype='uint8')
         # TODO: could these have changed between the time that self.surface
         # was last updated?
         wd, ht = self.get_window_size()
-        data = data.reshape((wd, ht, 4))
 
-        # convert numpy array to PIL image for output as an image format
-        img = PILimage.fromarray(data)
+        # Get agg surface as a numpy array
+        surface = self.get_surface()
+        arr8 = numpy.fromstring(surface.tostring(), dtype=numpy.uint8)
+        arr8 = arr8.reshape((ht, wd, 4))
 
-        img.save(ibuf, format=format, quality=quality)
+        # make a PIL image
+        image = PILimage.fromarray(arr8)
+
+        image.save(ibuf, format=format, quality=quality)
         return ibuf
 
     def get_rgb_image_as_bytes(self, format='png', quality=90):
         ibuf = self.get_rgb_image_as_buffer(format=format, quality=quality)
         return bytes(ibuf.getvalue())
-        
+
     def save_rgb_image_as_file(self, filepath, format='png', quality=90):
         if not have_PIL:
             raise ImageViewAggError("Please install PIL to use this method")
@@ -139,24 +144,24 @@ class ImageViewAgg(ImageView.ImageViewBase):
         # subclass implements this method to actually set a defined
         # cursor on a widget
         self.logger.warn("Subclass should override this method")
-        
+
     def define_cursor(self, ctype, cursor):
         self.cursor[ctype] = cursor
-        
+
     def get_cursor(self, ctype):
         return self.cursor[ctype]
-        
+
     def switch_cursor(self, ctype):
         self.set_cursor(self.cursor[ctype])
-        
+
     def get_rgb_order(self):
         return self._rgb_order
-        
+
     def set_fg(self, r, g, b, redraw=True):
         self.img_fg = (r, g, b)
         if redraw:
             self.redraw(whence=3)
-        
+
     def onscreen_message(self, text, delay=None, redraw=True):
         # subclass implements this method using a timer
         self.logger.warn("Subclass should override this method")
@@ -165,6 +170,6 @@ class ImageViewAgg(ImageView.ImageViewBase):
         self.t_.set(show_pan_position=tf)
         if redraw:
             self.redraw(whence=3)
-        
+
 
 #END

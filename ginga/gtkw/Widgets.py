@@ -1,6 +1,6 @@
 #
 # Widgets.py -- wrapped Gtk widgets and convenience functions
-# 
+#
 # Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c) Eric R. Jeschke.  All rights reserved.
@@ -44,7 +44,7 @@ class TextEntry(WidgetBase):
         w.set_text(text)
         w.connect('activate', self._cb_redirect)
         self.widget = w
-        
+
         self.enable_callback('activated')
 
     def _cb_redirect(self, *args):
@@ -52,14 +52,14 @@ class TextEntry(WidgetBase):
 
     def get_text(self):
         return self.widget.get_text()
-    
+
     def set_text(self, text):
         self.widget.set_text(text)
 
     def set_length(self, numchars):
         #self.widget.set_width_chars(numchars)
         pass
-    
+
 class TextArea(WidgetBase):
     def __init__(self, wrap=False, editable=False):
         super(TextArea, self).__init__()
@@ -91,11 +91,11 @@ class TextArea(WidgetBase):
         # gtk
         buf.move_mark(mark, end)
         res = self.widget.scroll_to_mark(mark, 0.2, True)
-    
+
     def get_text(self):
         buf = self.widget.get_buffer()
         return buf.get_text()
-    
+
     def _history_housekeeping(self):
         # remove some lines to keep us within our history limit
         buf = self.widget.get_buffer()
@@ -119,7 +119,7 @@ class TextArea(WidgetBase):
     def set_limit(self, numlines):
         self.histlimit = numlines
         self._history_housekeeping()
-    
+
     def set_font(self, font):
         self.widget.modify_font(font)
 
@@ -128,7 +128,7 @@ class TextArea(WidgetBase):
             self.widget.set_wrap_mode(gtk.WRAP_WORD)
         else:
             self.widget.set_wrap_mode(gtk.WRAP_NONE)
-    
+
 class Label(WidgetBase):
     def __init__(self, text=''):
         super(Label, self).__init__()
@@ -137,11 +137,11 @@ class Label(WidgetBase):
 
     def get_text(self):
         return self.widget.get_text()
-    
+
     def set_text(self, text):
         self.widget.set_text(text)
 
-    
+
 class Button(WidgetBase):
     def __init__(self, text=''):
         super(Button, self).__init__()
@@ -149,13 +149,13 @@ class Button(WidgetBase):
         w = gtk.Button(text)
         self.widget = w
         w.connect('clicked', self._cb_redirect)
-        
+
         self.enable_callback('activated')
 
     def _cb_redirect(self, *args):
         self.make_callback('activated')
 
-    
+
 class ComboBox(WidgetBase):
     def __init__(self, editable=False):
         super(ComboBox, self).__init__()
@@ -171,7 +171,7 @@ class ComboBox(WidgetBase):
         cb.add_attribute(cell, 'text', 0)
         self.widget = cb
         self.widget.sconnect('changed', self._cb_redirect)
-        
+
         self.enable_callback('activated')
 
     def _cb_redirect(self, widget):
@@ -224,7 +224,7 @@ class ComboBox(WidgetBase):
     def get_index(self):
         return self.widget.get_active()
 
-    
+
 class SpinBox(WidgetBase):
     def __init__(self, dtype=int):
         super(SpinBox, self).__init__()
@@ -233,7 +233,7 @@ class SpinBox(WidgetBase):
         # if not gtksel.have_gtk3:
         #     self.widget.set_update_policy(gtk.UPDATE_DISCONTINUOUS)
         self.widget.sconnect('value-changed', self._cb_redirect)
-        
+
         self.enable_callback('value-changed')
 
     def _cb_redirect(self, w):
@@ -242,7 +242,7 @@ class SpinBox(WidgetBase):
 
     def get_value(self):
         return self.widget.get_value()
-    
+
     def set_value(self, val):
         self.widget.set_value(val)
 
@@ -253,7 +253,7 @@ class SpinBox(WidgetBase):
         adj = self.widget.get_adjustment()
         adj.configure(minval, minval, maxval, incr_value, incr_value, 0)
 
-    
+
 class Slider(WidgetBase):
     def __init__(self, orientation='horizontal', track=False):
         super(Slider, self).__init__()
@@ -266,21 +266,21 @@ class Slider(WidgetBase):
             w = GtkHelp.VScale()
             w.set_size_request(-1, 200)
         self.widget = w
-            
+
         w.set_draw_value(True)
         w.set_value_pos(gtk.POS_BOTTOM)
         self.set_tracking(track)
         w.sconnect('value-changed', self._cb_redirect)
-        
+
         self.enable_callback('value-changed')
 
     def _cb_redirect(self, range):
         val = range.get_value()
         self.make_callback('value-changed', val)
-    
+
     def get_value(self):
         return self.widget.get_value()
-    
+
     def set_value(self, val):
         self.widget.set_value(val)
 
@@ -293,7 +293,7 @@ class Slider(WidgetBase):
     def set_limits(self, minval, maxval, incr_value=1):
         adj = self.widget.get_adjustment()
         adj.configure(minval, minval, maxval, incr_value, incr_value, 0)
-        
+
 
 class ScrollBar(WidgetBase):
     def __init__(self, orientation='horizontal'):
@@ -304,13 +304,13 @@ class ScrollBar(WidgetBase):
         else:
             self.widget = gtk.VScrollbar()
         self.widget.connect('value-changed', self._cb_redirect)
-        
+
         self.enable_callback('activated')
 
     def _cb_redirect(self, range):
         val = range.get_value()
         self.make_callback('activated', val)
-    
+
 
 class CheckBox(WidgetBase):
     def __init__(self, text=''):
@@ -318,13 +318,13 @@ class CheckBox(WidgetBase):
 
         self.widget = GtkHelp.CheckButton(text)
         self.widget.sconnect('toggled', self._cb_redirect)
-        
+
         self.enable_callback('activated')
 
     def _cb_redirect(self, widget):
         val = widget.get_active()
         self.make_callback('activated', val)
-    
+
     def set_state(self, tf):
         self.widget.set_active(tf)
 
@@ -340,13 +340,13 @@ class ToggleButton(WidgetBase):
         w.set_mode(True)
         self.widget = w
         self.widget.sconnect('toggled', self._cb_redirect)
-        
+
         self.enable_callback('activated')
 
     def _cb_redirect(self, widget):
         val = widget.get_active()
         self.make_callback('activated', val)
-    
+
     def set_state(self, tf):
         self.widget.set_active(tf)
 
@@ -362,7 +362,7 @@ class RadioButton(WidgetBase):
             group = group.get_widget()
         self.widget = GtkHelp.RadioButton(group, text)
         self.widget.connect('toggled', self._cb_redirect)
-        
+
         self.enable_callback('activated')
 
     def _cb_redirect(self, widget):
@@ -434,7 +434,7 @@ class Box(ContainerBase):
     def set_margins(self, left, right, top, bottom):
         # TODO: can this be made more accurate?
         self.widget.set_border_width(left)
-        
+
     def set_border_width(self, pix):
         self.widget.set_border_width(pix)
 
@@ -553,7 +553,7 @@ class Splitter(ContainerBase):
         if len(self.children) == 1:
             #self.widget.pack1(child_w, resize=True, shrink=True)
             self.widget.pack1(child_w)
-            
+
         else:
             self.widget.pack2(child_w)
         self.widget.show_all()
@@ -601,7 +601,7 @@ class Toolbar(ContainerBase):
         else:
             child = Button(text)
 
-        if iconpath:
+        if iconpath is not None:
             pixbuf = gtksel.pixbuf_new_from_file_at_size(iconpath, 24, 24)
             if pixbuf is not None:
                 image = gtk.image_new_from_pixbuf(pixbuf)
@@ -617,27 +617,25 @@ class Toolbar(ContainerBase):
 
     def add_separator(self):
         self.widget.append_space()
-        
+
 
 class MenuAction(WidgetBase):
     def __init__(self, text=None):
         super(MenuAction, self).__init__()
 
-        #self.widget = None
+        self.text = text
+
         self.widget = gtk.MenuItem(label=text)
         self.widget.show()
+
         self.widget.connect('activate', self._cb_redirect)
-        self.text = text
         self.enable_callback('activated')
-        print("Made MenuAction for %s" % (self.text))
-        print("1 cb=%s" % (self.cb))
 
     def _cb_redirect(self, *args):
         # TODO: checkable menu items
-        print("2 cb=%s" % (self.__dict__))
         self.make_callback('activated')
 
-    
+
 class Menu(ContainerBase):
     def __init__(self):
         super(Menu, self).__init__()
@@ -650,11 +648,9 @@ class Menu(ContainerBase):
         self.widget.append(menuitem_w)
         self.add_ref(child)
         #self.widget.show_all()
-        
+
     def add_name(self, name):
         child = MenuAction(text=name)
-        ## child.widget = gtk.MenuItem(label=child.text)
-        ## child.widget.connect('activate', child._cb_redirect)
         self.add_widget(child)
         return child
 
@@ -662,8 +658,8 @@ class Menu(ContainerBase):
         sep = gtk.SeparatorMenuItem()
         self.widget.append(sep)
         sep.show()
-        
-    
+
+
 class Menubar(ContainerBase):
     def __init__(self):
         super(Menubar, self).__init__()
@@ -750,7 +746,7 @@ def hadjust(w, orientation):
     vbox.add_widget(w)
     vbox.add_widget(Label(''), stretch=1)
     return vbox
-        
+
 
 def build_info(captions, orientation='vertical'):
     vbox = gtk.VBox(spacing=2)

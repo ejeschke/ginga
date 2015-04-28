@@ -12,7 +12,7 @@ import sys, os
 import traceback
 import platform
 import time
-        
+
 # GUI imports
 from ginga.qtw.QtHelp import QtGui, QtCore, QFont, \
      QImage, QIcon, QPixmap, MenuBar
@@ -41,13 +41,13 @@ class GingaViewError(Exception):
     pass
 
 class GingaView(QtMain.QtMain):
-     
+
     def __init__(self, logger, ev_quit):
         # call superclass constructors--sets self.app
         QtMain.QtMain.__init__(self, logger=logger, ev_quit=ev_quit)
         if os.path.exists(rc_file):
             self.app.setStyleSheet(rc_file)
-        
+
         # defaults for height and width
         #self.default_height = min(900, self.screen_ht - 100)
         #self.default_width  = min(1600, self.screen_wd)
@@ -61,10 +61,10 @@ class GingaView(QtMain.QtMain):
 
     def set_layout(self, layout):
         self.layout = layout
-        
+
     def get_screen_dimensions(self):
         return (self.screen_wd, self.screen_ht)
-        
+
     def build_toplevel(self):
 
         self.font = self.getFont('fixedFont', 12)
@@ -87,7 +87,7 @@ class GingaView(QtMain.QtMain):
             #root.setApp(self)
             root.setWindowTitle("Ginga")
         self.ds.add_callback('all-closed', self.quit)
-        
+
         self.w.root = root
         self.w.fscreen = None
 
@@ -100,14 +100,14 @@ class GingaView(QtMain.QtMain):
             self.w.mnb.set_mode('tabs')
         else:
             self.w.mnb.currentChanged.connect(self.page_switch_cb)
-        
+
         # readout
         if self.settings.get('share_readout', True):
             self.readout = self.build_readout()
             self.add_callback('field-info', self.readout_cb, self.readout, None)
             rw = self.readout.get_widget()
             self.w.vbox.addWidget(rw, stretch=0)
-            
+
         # bottom buttons
         plw = QtGui.QWidget()
         hbox = QtGui.QHBoxLayout()
@@ -154,7 +154,7 @@ class GingaView(QtMain.QtMain):
 
     def getPluginManager(self, logger, fitsview, ds, mm):
         return PluginManagerQt.PluginManager(logger, fitsview, ds, mm)
-    
+
     def _name_mangle(self, name, pfx=''):
         newname = []
         for c in name.lower():
@@ -163,10 +163,11 @@ class GingaView(QtMain.QtMain):
             else:
                 newname.append(c)
         return pfx + ''.join(newname)
-    
+
     def add_menus(self, holder):
 
         menubar = Widgets.Menubar()
+        self.menubar = menubar
 
         menubar_w = menubar.get_widget()
         # NOTE: Special hack for Mac OS X, otherwise the menus
@@ -187,7 +188,7 @@ class GingaView(QtMain.QtMain):
         item.add_callback("activated", lambda *args: self.remove_current_image())
 
         filemenu.add_separator()
-        
+
         item = filemenu.add_name("Quit")
         item.add_callback('activated', lambda *args: self.windowClose())
 
@@ -208,7 +209,7 @@ class GingaView(QtMain.QtMain):
 
         item = wsmenu.add_name("Add Workspace")
         item.add_callback('activated', lambda *args: self.gui_add_ws())
-        
+
         item = wsmenu.add_name("Take Tab")
         item.add_callback('activated',
                           lambda *args: self.ds.take_tab_cb(self.w.mnb,
@@ -226,7 +227,7 @@ class GingaView(QtMain.QtMain):
 
             item = wsmenu.add_name("Cascade Panes")
             item.add_callback(lambda *args: self.cascade_panes_cb())
-        
+
         # # create a Option pulldown menu, and add it to the menu bar
         # optionmenu = menubar.add_name("Option")
 
@@ -263,13 +264,13 @@ class GingaView(QtMain.QtMain):
 
     def fullscreen(self):
         self.w.root.showFullScreen()
-            
+
     def normalsize(self):
         self.w.root.showNormal()
-            
+
     def maximize(self):
         self.w.root.showMaximized()
-            
+
     def toggle_fullscreen(self):
         if not self.w.root.isFullScreen():
             self.w.root.showFullScreen()
@@ -282,7 +283,7 @@ class GingaView(QtMain.QtMain):
         if w is not None:
             w.destroy()
             return
-        
+
         # Get image from current focused channel
         chinfo = self.get_channelInfo()
         fitsimage = chinfo.fitsimage
@@ -321,7 +322,7 @@ class GingaView(QtMain.QtMain):
         item.triggered.connect(lambda: self.start_operation_cb(title))
         opmenu.addAction(item)
         self.operations.append(title)
-        
+
     ####################################################
     # THESE METHODS ARE CALLED FROM OTHER MODULES & OBJECTS
     ####################################################
@@ -360,7 +361,7 @@ class GingaView(QtMain.QtMain):
 
     def set_titlebar(self, text):
         self.w.root.setWindowTitle("Ginga: %s" % text)
-        
+
     def build_readout(self):
         readout = Readout.Readout(-1, 20)
         # NOTE: Special hack for Mac OS X, otherwise the font on the readout
@@ -375,11 +376,11 @@ class GingaView(QtMain.QtMain):
     def getDrawClass(self, drawtype):
         drawtype = drawtype.lower()
         return ImageViewCanvasTypesQt.drawCatalog[drawtype]
-    
+
     def getDrawClasses(self):
         return Bunch.Bunch(ImageViewCanvasTypesQt.drawCatalog,
                            caseless=True)
-        
+
     def build_colorbar(self):
         cbar = ColorBar.ColorBar(self.logger)
         cbar.set_cmap(self.cm)
@@ -398,13 +399,13 @@ class GingaView(QtMain.QtMain):
         fr.setFrameStyle(QtGui.QFrame.Box | QtGui.QFrame.Raised)
         layout.addWidget(cbar, stretch=1)
         return fr
-    
+
     def build_viewpane(self, settings, rgbmap=None):
         # instantiate bindings loaded with users preferences
         bclass = ImageViewCanvasQt.ImageViewCanvas.bindingsClass
         bindprefs = self.prefs.createCategory('bindings')
         bd = bclass(self.logger, settings=bindprefs)
-        
+
         fi = ImageViewCanvasQt.ImageViewCanvas(logger=self.logger,
                                                rgbmap=rgbmap,
                                                settings=settings,
@@ -436,7 +437,7 @@ class GingaView(QtMain.QtMain):
         vbox.setContentsMargins(1, 1, 1, 1)
         vbox.setSpacing(0)
         vwidget.setLayout(vbox)
-        
+
         fi = self.build_viewpane(settings)
         iw = fi.get_widget()
 
@@ -492,13 +493,13 @@ class GingaView(QtMain.QtMain):
         box = dialog.get_content_area()
         layout = QtGui.QVBoxLayout()
         box.setLayout(layout)
-        
+
         layout.addWidget(lbl, stretch=0)
         layout.addWidget(ent, stretch=0)
         layout.addWidget(lbl2, stretch=0)
         layout.addWidget(cbox, stretch=0)
         dialog.show()
-        
+
     def gui_add_channels(self):
         captions = (('Prefix', 'entry'),
                     ('Number', 'spinbutton'),
@@ -509,7 +510,7 @@ class GingaView(QtMain.QtMain):
         b.number.setRange(1, 12)
         b.number.setSingleStep(1)
         b.number.setValue(1)
-        
+
         cbox = b.workspace
         names = self.ds.get_wsnames()
         try:
@@ -528,7 +529,7 @@ class GingaView(QtMain.QtMain):
         box = dialog.get_content_area()
         layout = QtGui.QVBoxLayout()
         box.setLayout(layout)
-        
+
         layout.addWidget(w, stretch=1)
         dialog.show()
 
@@ -545,7 +546,7 @@ class GingaView(QtMain.QtMain):
         box.setLayout(layout)
         layout.addWidget(lbl, stretch=0)
         dialog.show()
-        
+
     def gui_add_ws(self):
         captions = (('Workspace name', 'entry'),
                     ('Workspace type', 'combobox'),
@@ -591,7 +592,7 @@ class GingaView(QtMain.QtMain):
         box = dialog.get_content_area()
         layout = QtGui.QVBoxLayout()
         box.setLayout(layout)
-        
+
         layout.addWidget(w, stretch=1)
         dialog.show()
 
@@ -605,7 +606,7 @@ class GingaView(QtMain.QtMain):
         wstype = d[idx]
         idx = b.in_workspace.currentIndex()
         inSpace = names[idx]
-        
+
         self.add_workspace(wsname, wstype, inSpace=inSpace)
 
         chpfx = b.channel_prefix.text()
@@ -629,13 +630,13 @@ class GingaView(QtMain.QtMain):
                              settings_share=settings,
                              share_keylist=share_list)
         return True
-        
+
     def gui_load_file(self, initialdir=None):
         if self.filesel.exec_():
             fileNames = list(map(str, list(self.filesel.selectedFiles())))
             self.load_file(fileNames[0])
         #self.start_operation_cb('FBrowser')
-        
+
     def statusMsg(self, format, *args):
         if not format:
             s = ''
@@ -711,17 +712,17 @@ class GingaView(QtMain.QtMain):
                 msize += lsize
                 lsize = 0
         hsplit.setSizes((lsize, msize, rsize))
-        
-        
+
+
     def getFont(self, fontType, pointSize):
         fontFamily = self.settings.get(fontType)
         font = QFont(fontFamily, pointSize)
         return font
-    
+
     ####################################################
     # CALLBACKS
     ####################################################
-    
+
     def windowClose(self, *args):
         """Quit the application.
         """
@@ -745,7 +746,7 @@ class GingaView(QtMain.QtMain):
             self.logger.debug("Channel changed, index=%d chname=%s" % (
                 index, chname))
             self.change_channel(chname)
-        
+
     def add_channel_cb(self, w, rsp, ent, cbox, names):
         chname = str(ent.text())
         idx = cbox.currentIndex()
@@ -757,7 +758,7 @@ class GingaView(QtMain.QtMain):
             return
         self.add_channel(chname, workspace=wsname)
         return True
-        
+
     def add_channels_cb(self, w, rsp, b, names):
         chpfx = b.prefix.text()
         idx = b.workspace.currentIndex()
@@ -773,35 +774,35 @@ class GingaView(QtMain.QtMain):
             chname = "%s%d" % (chpfx, chbase+i)
             self.add_channel(chname, workspace=wsname)
         return True
-        
+
     def delete_channel_cb(self, w, rsp, chname):
         w.close()
         if rsp == 0:
             return
         self.delete_channel(chname)
         return True
-        
+
     def invoke_op_cb(self):
         menu = self.w.operation
         menu.popup(self.w.opbtn.mapToGlobal(QtCore.QPoint(0,0)))
-        
+
     def start_operation_cb(self, name):
         index = self.w.channel.currentIndex()
         chname = str(self.w.channel.itemText(index))
         return self.start_local_plugin(chname, name, None)
-        
+
     def tile_panes_cb(self):
         self.w.mnb.tileSubWindows()
 
     def cascade_panes_cb(self):
         self.w.mnb.cascadeSubWindows()
-        
+
     def tabstoggle_cb(self, useTabs):
         if useTabs:
             self.w.mnb.setViewMode(QtGui.QMdiArea.TabbedView)
         else:
             self.w.mnb.setViewMode(QtGui.QMdiArea.SubWindowView)
-        
+
     def page_switch_cb(self, index):
         self.logger.debug("index switched to %d" % (index))
         if index >= 0:
@@ -826,5 +827,5 @@ class GingaView(QtMain.QtMain):
             index = self.w.mnb.indexOf(w.widget())
             return self.page_switch_cb(index)
 
-        
+
 # END
