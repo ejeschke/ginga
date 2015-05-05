@@ -1,7 +1,7 @@
 #
 # trcalc.py -- transformation calculations for image data
-# 
-# Eric Jeschke (eric@naoj.org) 
+#
+# Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
@@ -10,6 +10,15 @@
 import math
 import numpy
 import time
+
+try:
+    # optional opencv package speeds up certain combined numpy array
+    # operations, especially rotation
+    import cv2
+    have_opencv = True
+
+except ImportError:
+    have_opencv = False
 
 try:
     # optional numexpr package speeds up certain combined numpy array
@@ -29,13 +38,14 @@ def get_center(data_np):
     ctr_x = wd // 2
     ctr_y = ht // 2
     return (ctr_x, ctr_y)
-    
+
 
 def rotate_arr(x_arr, y_arr, theta_deg, xoff=0, yoff=0):
     """
     Rotate an array of points (x_arr, y_arr) by theta_deg offsetted
     from a center point by (xoff, yoff).
     """
+    # TODO: use opencv acceleration if available
     a_arr = x_arr - xoff
     b_arr = y_arr - yoff
     cos_t = numpy.cos(numpy.radians(theta_deg))
@@ -70,7 +80,7 @@ def rotate_clip(data_np, theta_deg, rotctr_x=None, rotctr_y=None,
     be clipped according to the size of the array (the output array will be
     the same size as the input array).
     """
-    
+
     # If there is no rotation, then we are done
     if math.fmod(theta_deg, 360.0) == 0.0:
         return data_np
@@ -82,41 +92,56 @@ def rotate_clip(data_np, theta_deg, rotctr_x=None, rotctr_y=None,
     if rotctr_y is None:
         rotctr_y = ht // 2
 
-    yi, xi = numpy.mgrid[0:ht, 0:wd]
-    xi -= rotctr_x
-    yi -= rotctr_y
-    cos_t = numpy.cos(numpy.radians(theta_deg))
-    sin_t = numpy.sin(numpy.radians(theta_deg))
+    if have_opencv:
+        # opencv is fastest
+        M = cv2.getRotationMatrix2D((rotctr_y, rotctr_x), theta_deg, 1)
+        if out is not None:
+            out[:, :, ...] = cv2.warpAffine(data_np, M, (wd, ht))
+            newdata = out
+        else:
+            newdata = cv2.warpAffine(data_np, M, (wd, ht))
+            new_ht, new_wd = newdata.shape[:2]
 
-    #t1 = time.time()
-    if have_numexpr:
-        ap = ne.evaluate("(xi * cos_t) - (yi * sin_t) + rotctr_x")
-        bp = ne.evaluate("(xi * sin_t) + (yi * cos_t) + rotctr_y")
+            assert (wd == new_wd) and (ht == new_ht), \
+                   Exception("rotated cutout is %dx%d original=%dx%d" % (
+                new_wd, new_ht, wd, ht))
+
     else:
-        ap = (xi * cos_t) - (yi * sin_t) + rotctr_x
-        bp = (xi * sin_t) + (yi * cos_t) + rotctr_y
-    #print "rotation in %.5f sec" % (time.time() - t1)
+        yi, xi = numpy.mgrid[0:ht, 0:wd]
+        xi -= rotctr_x
+        yi -= rotctr_y
+        cos_t = numpy.cos(numpy.radians(theta_deg))
+        sin_t = numpy.sin(numpy.radians(theta_deg))
 
-    #ap = numpy.rint(ap).astype('int').clip(0, wd-1)
-    #bp = numpy.rint(bp).astype('int').clip(0, ht-1)
-    # Optomizations to reuse existing intermediate arrays
-    numpy.rint(ap, out=ap)
-    ap = ap.astype('int')
-    ap.clip(0, wd-1, out=ap)
-    numpy.rint(bp, out=bp)
-    bp = bp.astype('int')
-    bp.clip(0, ht-1, out=bp)
+        #t1 = time.time()
+        if have_numexpr:
+            ap = ne.evaluate("(xi * cos_t) - (yi * sin_t) + rotctr_x")
+            bp = ne.evaluate("(xi * sin_t) + (yi * cos_t) + rotctr_y")
+        else:
+            ap = (xi * cos_t) - (yi * sin_t) + rotctr_x
+            bp = (xi * sin_t) + (yi * cos_t) + rotctr_y
+        #print "rotation in %.5f sec" % (time.time() - t1)
 
-    if out is not None:
-        out[:, :, ...] = data_np[bp, ap]
-        newdata = out
-    else:
-        newdata = data_np[bp, ap]
-        new_ht, new_wd = newdata.shape[:2]
+        #ap = numpy.rint(ap).astype('int').clip(0, wd-1)
+        #bp = numpy.rint(bp).astype('int').clip(0, ht-1)
+        # Optomizations to reuse existing intermediate arrays
+        numpy.rint(ap, out=ap)
+        ap = ap.astype('int')
+        ap.clip(0, wd-1, out=ap)
+        numpy.rint(bp, out=bp)
+        bp = bp.astype('int')
+        bp.clip(0, ht-1, out=bp)
 
-        assert (wd == new_wd) and (ht == new_ht), \
-               Exception("rotated cutout is %dx%d original=%dx%d" % (
-            new_wd, new_ht, wd, ht))
+        if out is not None:
+            out[:, :, ...] = data_np[bp, ap]
+            newdata = out
+        else:
+            newdata = data_np[bp, ap]
+            new_ht, new_wd = newdata.shape[:2]
+
+            assert (wd == new_wd) and (ht == new_ht), \
+                   Exception("rotated cutout is %dx%d original=%dx%d" % (
+                new_wd, new_ht, wd, ht))
 
     return newdata
 
@@ -143,7 +168,7 @@ def rotate(data_np, theta_deg, rotctr_x=None, rotctr_y=None):
     dims = (new_ht, new_wd) + data_np.shape[2:]
     # TODO: fill with a different value?
     newdata = numpy.zeros(dims)
-    # Find center of new data array 
+    # Find center of new data array
     ncx, ncy = new_wd // 2, new_ht // 2
 
     # Overlay the old image on the new (blank) image
@@ -347,7 +372,7 @@ def overlay_image(dstarr, dst_x, dst_y, srcarr, dst_order='RGBA',
     # Currently we assume that alpha channel is in position 3 in dstarr
     assert da_idx == 3, \
            ValueError("Alpha channel not in expected position in dstarr")
-    
+
     # fill alpha channel in destination in the area we will be dropping
     # the image
     if fill and (da_idx >= 0):
@@ -384,6 +409,6 @@ def overlay_image(dstarr, dst_x, dst_y, srcarr, dst_order='RGBA',
 def reorder_image(dst_order, src_arr, src_order):
     indexes = [ src_order.index(c) for c in dst_order ]
     return numpy.dstack([ src_arr[..., idx] for idx in indexes ])
-    
+
 
 #END

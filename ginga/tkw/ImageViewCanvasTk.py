@@ -1,6 +1,6 @@
 #
 # ImageViewCanvasTk.py -- A FITS image widget with canvas drawing in Tk
-# 
+#
 # Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c) Eric R. Jeschke.  All rights reserved.
@@ -9,8 +9,9 @@
 #
 from ginga.tkw import ImageViewTk
 from ginga.aggw.ImageViewCanvasTypesAgg import *
+#from ginga.cvw.ImageViewCanvasTypesCv import *
 
-    
+
 class ImageViewCanvasError(ImageViewTk.ImageViewTkError):
     pass
 
@@ -46,7 +47,7 @@ class ImageViewCanvas(ImageViewTk.ImageViewZoom,
     def redraw_data(self, whence=0):
         super(ImageViewCanvas, self).redraw_data(whence=whence)
 
-        if not self.surface:
+        if self.surface is None:
             return
         self.draw()
 
@@ -70,7 +71,7 @@ class ImageViewCanvas(ImageViewTk.ImageViewZoom,
                 text = '%s [L]' % (mode)
             else:
                 text = mode
-                
+
             xsp, ysp = 4, 6
             wd, ht = self.get_window_size()
             x1, y1 = wd-12*len(text), ht-12
@@ -88,7 +89,7 @@ class ImageViewCanvas(ImageViewTk.ImageViewZoom,
                                o1)
             self.mode_obj = o2
             self.add(o2)
-            
+
         return True
 
     def _configure_cb(self, view, width, height):
@@ -96,5 +97,5 @@ class ImageViewCanvas(ImageViewTk.ImageViewZoom,
         bm = view.get_bindmap()
         mode, modetype = bm.current_mode()
         self.mode_change_cb(bm, mode, modetype)
-        
+
 #END

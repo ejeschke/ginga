@@ -1,6 +1,6 @@
 #
 # ImageViewTk.py -- classes for the display of FITS files in Tk surfaces
-# 
+#
 # Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c)  Eric R. Jeschke.  All rights reserved.
@@ -15,18 +15,21 @@ import PIL.ImageTk as PILimageTk
 from ginga import ImageView
 from ginga import Mixins, Bindings, colors
 
-from ginga.aggw.ImageViewAgg import ImageViewAgg
+from ginga.aggw.ImageViewAgg import ImageViewAgg as ImageView, \
+     ImageViewAggError as ImageViewError
+## from ginga.cvw.ImageViewCv import ImageViewCv as ImageView, \
+##    ImageViewCvError as ImageViewError
 
 
-class ImageViewTkError(ImageView.ImageViewError):
+class ImageViewTkError(ImageViewError):
     pass
 
-class ImageViewTk(ImageViewAgg):
+class ImageViewTk(ImageView):
 
     def __init__(self, logger=None, rgbmap=None, settings=None):
-        ImageViewAgg.__init__(self, logger=logger,
-                              rgbmap=rgbmap,
-                              settings=settings)
+        ImageView.__init__(self, logger=logger,
+                           rgbmap=rgbmap,
+                           settings=settings)
 
         self.tkcanvas = None
         self.tkphoto = None
@@ -60,13 +63,19 @@ class ImageViewTk(ImageViewAgg):
         items = cr.find_all()
         for item in items:
             cr.delete(item)
-        
+
         wd, ht = self.get_window_size()
 
-        # Get agg surface as a numpy array
+        # Get surface as a numpy array
         surface = self.get_surface()
-        arr8 = numpy.fromstring(surface.tostring(), dtype=numpy.uint8)
-        arr8 = arr8.reshape((ht, wd, 4))
+        if isinstance(surface, numpy.ndarray):
+            arr8 = surface
+            #arr8 = numpy.rollaxis(surface, 2)
+            ## arr8 = numpy.dstack((surface[:, :, 0], surface[:, :, 3],
+            ##                      surface[:, :, 2], surface[:, :, 1]))
+        else:
+            arr8 = numpy.fromstring(surface.tostring(), dtype=numpy.uint8)
+            arr8 = arr8.reshape((ht, wd, 4))
 
         # make a Tk photo image and stick it to the canvas
         image = PILimage.fromarray(arr8)
@@ -88,15 +97,15 @@ class ImageViewTk(ImageViewAgg):
             time_ms = int(time_sec * 1000)
             self._defer_task = self.tkcanvas.after(time_ms,
                                                    self.delayed_redraw)
-                
+
     def _resize_cb(self, event):
         self.configure(event.width, event.height)
-        
+
     def set_cursor(self, cursor):
         if self.tkcanvas is None:
             return
         self.tkcanvas.config(cursor=cursor)
-        
+
     def onscreen_message(self, text, delay=None, redraw=True):
         if self.tkcanvas is None:
             return
@@ -191,7 +200,7 @@ class ImageViewEvent(ImageViewTk):
             'f11': 'f11',
             'f12': 'f12',
             }
-        
+
         # Define cursors for pick and pan
         #hand = openHandCursor()
         hand = 'fleur'
@@ -200,7 +209,7 @@ class ImageViewEvent(ImageViewTk):
         self.define_cursor('pick', cross)
 
         for name in ('motion', 'button-press', 'button-release',
-                     'key-press', 'key-release', 'drag-drop', 
+                     'key-press', 'key-release', 'drag-drop',
                      'scroll', 'map', 'focus', 'enter', 'leave',
                      ):
             self.enable_callback(name)
@@ -221,9 +230,9 @@ class ImageViewEvent(ImageViewTk):
         canvas.bind("<Motion>", self.motion_notify_event)
 
         # TODO: Set up widget as a drag and drop destination
-        
+
         return self.make_callback('map')
-        
+
     def transkey(self, keyname):
         self.logger.debug("key name in tk '%s'" % (keyname))
         try:
@@ -234,27 +243,27 @@ class ImageViewEvent(ImageViewTk):
 
     def get_keyTable(self):
         return self._keytbl
-    
+
     def set_follow_focus(self, tf):
         self.follow_focus = tf
-        
+
     def focus_event(self, event, hasFocus):
         return self.make_callback('focus', hasFocus)
-            
+
     def enter_notify_event(self, event):
         if self.follow_focus:
             self.tkcanvas.focus_set()
         return self.make_callback('enter')
-    
+
     def leave_notify_event(self, event):
         self.logger.debug("leaving widget...")
         return self.make_callback('leave')
-    
+
     def key_press_event(self, event):
         # without this we do not get key release events if the focus
         # changes to another window
         self.tkcanvas.grab_set_global()
-        
+
         keyname = event.keysym
         keyname = self.transkey(keyname)
         self.logger.debug("key press event, key=%s" % (keyname))
@@ -262,7 +271,7 @@ class ImageViewEvent(ImageViewTk):
 
     def key_release_event(self, event):
         self.tkcanvas.grab_release()
-        
+
         keyname = event.keysym
         keyname = self.transkey(keyname)
         self.logger.debug("key release event, key=%s" % (keyname))
@@ -286,10 +295,10 @@ class ImageViewEvent(ImageViewTk):
 
                 data_x, data_y = self.get_data_xy(x, y)
                 self.last_data_x, self.last_data_y = data_x, data_y
-                
+
                 return self.make_callback('scroll', direction, numDegrees,
                                           data_x, data_y)
-            
+
             button |= 0x1 << (event.num - 1)
         self._button = button
         self.logger.debug("button event at %dx%d, button=%x" % (x, y, button))
@@ -304,11 +313,11 @@ class ImageViewEvent(ImageViewTk):
         if event.num != 0:
             if event.num in (4, 5):
                 return False
-            
+
             button |= 0x1 << (event.num - 1)
         self._button = 0
         self.logger.debug("button release at %dx%d button=%x" % (x, y, button))
-            
+
         data_x, data_y = self.get_data_xy(x, y)
         return self.make_callback('button-release', button, data_x, data_y)
 
@@ -356,11 +365,11 @@ class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
     @classmethod
     def set_bindingsClass(cls, klass):
         cls.bindingsClass = klass
-        
+
     @classmethod
     def set_bindmapClass(cls, klass):
         cls.bindmapClass = klass
-        
+
     def __init__(self, logger=None, rgbmap=None, settings=None,
                  bindmap=None, bindings=None):
         ImageViewEvent.__init__(self, logger=logger, rgbmap=rgbmap,
@@ -378,12 +387,12 @@ class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
 
     def get_bindmap(self):
         return self.bindmap
-    
+
     def get_bindings(self):
         return self.bindings
-    
+
     def set_bindings(self, bindings):
         self.bindings = bindings
         bindings.set_bindings(self)
-    
+
 #END

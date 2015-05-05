@@ -399,7 +399,8 @@ class AstroImage(BaseImage):
         ##     self.wcs.rotate(deg)
 
     def mosaic_inline(self, imagelist, bg_ref=None, trim_px=None,
-                      merge=False, allow_expand=True, expand_pad_deg=0.01):
+                      merge=False, allow_expand=True, expand_pad_deg=0.01,
+                      update_minmax=True):
         """Drops new images into the current image (if there is room),
         relocating them according the WCS between the two images.
         """
@@ -443,10 +444,11 @@ class AstroImage(BaseImage):
                 data_np = data_np + bg_inc
 
             # Determine max/min to update our values
-            maxval = numpy.nanmax(data_np)
-            minval = numpy.nanmin(data_np)
-            self.maxval = max(self.maxval, maxval)
-            self.minval = min(self.minval, minval)
+            if update_minmax:
+                maxval = numpy.nanmax(data_np)
+                minval = numpy.nanmin(data_np)
+                self.maxval = max(self.maxval, maxval)
+                self.minval = min(self.minval, minval)
 
             # Get rotation and scale of piece
             header = image.get_header()
@@ -489,7 +491,11 @@ class AstroImage(BaseImage):
                 rot_dy = 0.0
 
             self.logger.debug("flip_x=%s flip_y=%s" % (flip_x, flip_y))
-            rotdata = trcalc.transform(data_np, flip_x=flip_x, flip_y=flip_y)
+            if flip_x or flip_y:
+                rotdata = trcalc.transform(data_np,
+                                           flip_x=flip_x, flip_y=flip_y)
+            else:
+                rotdata = data_np
 
             # Finish with any necessary rotation of piece
             if not numpy.isclose(rot_dy, 0.0):
@@ -536,7 +542,7 @@ class AstroImage(BaseImage):
                 # determine amount to pad expansion by
                 expand_x = max(int(expand_pad_deg / scale_x), 0)
                 expand_y = max(int(expand_pad_deg / scale_y), 0)
-                
+
                 nx1_off, nx2_off = 0, 0
                 if xlo < 0:
                     nx1_off = abs(xlo) + expand_x
@@ -566,7 +572,7 @@ class AstroImage(BaseImage):
                     kwds = dict(CRPIX1=crpix1 + nx1_off,
                                 CRPIX2=crpix2 + ny1_off)
                     self.update_keywords(kwds)
-                    
+
             # fit image piece into our array
             try:
                 if merge:
@@ -622,7 +628,7 @@ class AstroImage(BaseImage):
                 ra_txt = "%+.3f" % (x)
                 dec_txt = "%+.3f" % (y)
                 ra_lbl, dec_lbl = "X", "Y"
-                
+
             else:
                 args = [data_x, data_y] + self.revnaxis
 

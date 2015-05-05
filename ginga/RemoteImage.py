@@ -24,7 +24,7 @@ class RemoteImage(AstroImage):
                             logger=logger, #wcsclass=wcsClass, ioclass=ioClass,
                             inherit_primary_header=inherit_primary_header)
         self._data = None
-        
+
     @property
     def shape(self):
         return self._shape
@@ -34,15 +34,15 @@ class RemoteImage(AstroImage):
         shape, header = self._proxy.load_file(filepath, numhdu=numhdu,
                                               naxispath=naxispath)
         self._shape = shape
-        
+
         ahdr = { key: header[key]['value'] for key in header.keys() }
         # this will set our local wcs
         self.update_keywords(ahdr)
 
     def _set_minmax(self, noinf=False):
         self.minval, self.maxval = self._proxy.get_minmax(self.id, noinf=False)
-        self.minval_noinf, self.maxval_noinf = self._proxy.get_minmax(self.id,
-                                                                      noinf=True)
+        (self.minval_noinf,
+         self.maxval_noinf) = self._proxy.get_minmax(self.id, noinf=True)
 
     def _get_data(self):
         if self._data is None:
@@ -60,7 +60,6 @@ class RemoteImage(AstroImage):
     def get_data_xy(self, x, y):
         # TODO: cache some points for faster response?
         return self._proxy.get_data_xy(self.id, x, y)
-        
+
     def get_pixels_on_line(self, x1, y1, x2, y2):
         return self._proxy.get_pixels_on_line(self.id, x1, y1, x2, y2)
-    

@@ -31,8 +31,6 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         self.thumbColCount = 0
         # distance in pixels between thumbs
         self.thumbSep = 15
-        # max length of thumb on the long side
-        self.thumbWidth = 150
         self.cursor = 0
         tt_keywords = ['OBJECT', 'FRAMEID', 'UT', 'DATE-OBS']
 
@@ -44,8 +42,11 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
                                   auto_scroll=True,
                                   rebuild_wait=4.0,
                                   tt_keywords=tt_keywords,
+                                  thumb_length=150,
                                   sort_order=None)
         self.settings.load(onError='silent')
+        # max length of thumb on the long side
+        self.thumbWidth = self.settings.get('thumb_length', 150)
 
         self.thmbtask = fv.get_timer()
         self.thmbtask.set_callback('expired', self.redo_delay_timer)
