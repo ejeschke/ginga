@@ -12,10 +12,13 @@ import numpy
 import time
 
 try:
-    # optional opencv package speeds up certain combined numpy array
-    # operations, especially rotation
-    import cv2
-    have_opencv = True
+    # optional opencv package speeds up certain operations, especially
+    # rotation
+    # TEMP: opencv broken on anaconda mac (importing causes segv)
+    # --> temporarily disable
+    #import cv2
+    #have_opencv = True
+    have_opencv = False
 
 except ImportError:
     have_opencv = False
@@ -31,6 +34,7 @@ except ImportError:
 
 # For testing
 #have_numexpr = False
+#have_opencv = False
 
 def get_center(data_np):
     ht, wd = data_np.shape[:2]
