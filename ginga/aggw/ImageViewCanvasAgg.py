@@ -1,37 +1,35 @@
 #
-# ImageViewCanvasMock.py -- A FITS image widget with canvas drawing in mock
-#                             widget set
-# 
+# ImageViewCanvasAgg.py -- A FITS image widget with canvas drawing in Agg
+#
 # Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-from ginga import ImageView, Mixins
-from ginga.mockw import ImageViewMock
-from ginga.mockw.ImageViewCanvasTypesMock import *
+from ginga.aggw import ImageViewAgg
+from ginga.aggw.ImageViewCanvasTypesAgg import *
 
 
-class ImageViewCanvasError(ImageViewMock.ImageViewMockError):
+class ImageViewCanvasError(ImageViewAgg.ImageViewAggError):
     pass
 
-class ImageViewCanvas(ImageViewMock.ImageViewZoom,
+class ImageViewCanvas(ImageViewAgg.ImageViewAgg,
                       DrawingMixin, CanvasMixin, CompoundMixin):
 
-    def __init__(self, logger=None, settings=None, 
-                 rgbmap=None, bindmap=None, bindings=None):
-        ImageViewMock.ImageViewZoom.__init__(self, logger=logger,
-                                             settings=settings,
-                                             rgbmap=rgbmap,
-                                             bindmap=bindmap,
-                                             bindings=bindings)
+    def __init__(self, logger=None, rgbmap=None, settings=None,
+                 bindmap=None, bindings=None):
+        ImageViewAgg.ImageViewAgg.__init__(self, logger=logger,
+                                           rgbmap=rgbmap,
+                                           settings=settings)
         CompoundMixin.__init__(self)
         CanvasMixin.__init__(self)
         DrawingMixin.__init__(self, drawCatalog)
 
         self.setSurface(self)
-        self.ui_setActive(True)
+
+        # override
+        self.defer_redraw = False
 
     def canvascoords(self, data_x, data_y, center=True):
         # data->canvas space coordinate conversion
@@ -41,12 +39,19 @@ class ImageViewCanvas(ImageViewMock.ImageViewZoom,
     def redraw_data(self, whence=0):
         super(ImageViewCanvas, self).redraw_data(whence=whence)
 
-        if not self.pixmap:
+        if not self.surface:
             return
         self.draw()
 
+    # subclass needs to implement these to avoid warning messages
+    def reschedule_redraw(self, time_sec):
+        pass
+
+    def update_image(self):
+        pass
+
     # METHODS THAT WERE IN IPG
-    
+
     def add_canvas(self, tag=None):
         # add a canvas to the view
         DrawingCanvas = self.getDrawClass('drawingcanvas')

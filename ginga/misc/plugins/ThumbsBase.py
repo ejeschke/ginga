@@ -1,6 +1,6 @@
 #
 # ThumbsBase.py -- Thumbnail plugin base class for Ginga
-# 
+#
 # Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c) Eric R. Jeschke.  All rights reserved.
@@ -31,8 +31,6 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         self.thumbColCount = 0
         # distance in pixels between thumbs
         self.thumbSep = 15
-        # max length of thumb on the long side
-        self.thumbWidth = 150
         self.cursor = 0
         tt_keywords = ['OBJECT', 'FRAMEID', 'UT', 'DATE-OBS']
 
@@ -44,8 +42,11 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
                                   auto_scroll=True,
                                   rebuild_wait=4.0,
                                   tt_keywords=tt_keywords,
+                                  thumb_length=150,
                                   sort_order=None)
         self.settings.load(onError='silent')
+        # max length of thumb on the long side
+        self.thumbWidth = self.settings.get('thumb_length', 150)
 
         self.thmbtask = fv.get_timer()
         self.thmbtask.set_callback('expired', self.redo_delay_timer)
@@ -68,7 +69,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         path = os.path.abspath(path)
         thumbkey = (chname.lower(), imname, path)
         return thumbkey
-    
+
     def add_image(self, viewer, chname, image):
         if not self.gui_up:
             return False
@@ -76,8 +77,9 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         noname = 'Noname' + str(time.time())
         name = image.get('name', noname)
         path = image.get('path', None)
+        # image is flagged not to make a thumbnail?
         nothumb = image.get('nothumb', False)
-        if path is None:
+        if (path is None) or nothumb:
             # Currently we need a path to make a thumb key
             return
         path = os.path.abspath(path)
@@ -91,7 +93,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
             image_loader = image.get('loader', self.fv.load_image)
             future = Future.Future()
             future.freeze(image_loader, path)
-            
+
         # Is there a preference set to avoid making thumbnails?
         chinfo = self.fv.get_channelInfo(chname)
         prefs = chinfo.prefs
@@ -140,7 +142,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         with self.thmblock:
             if thumbkey not in self.thumbDict:
                 return
-            
+
             self.clearWidget()
             del self.thumbDict[thumbkey]
             self.thumbList.remove(thumbkey)
@@ -148,7 +150,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         self.reorder_thumbs()
 
     def update_thumbs(self, nameList):
-        
+
         # Remove old thumbs that are not in the dataset
         invalid = set(self.thumbList) - set(nameList)
         if len(invalid) > 0:
@@ -174,7 +176,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
 
         self.reorder_thumbs()
         return False
-        
+
     def load_file(self, thumbkey, chname, name, path,
                   image_future):
         self.logger.debug("loading image: %s" % (str(thumbkey)))
@@ -216,7 +218,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
                 self.gui_do(self.load_file, nextkey,
                             bnch.chname, bnch.imname, bnch.path,
                             bnch.image_future)
-        
+
     def load_previous(self):
         with self.thmblock:
             index = self.cursor - 1
@@ -226,14 +228,14 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
                 self.gui_do(self.load_file, prevkey,
                             bnch.chname, bnch.imname, bnch.path,
                             bnch.image_future)
-        
+
     def clear(self):
         with self.thmblock:
             self.clearWidget()
             self.thumbList = []
             self.thumbDict = {}
         self.reorder_thumbs()
-        
+
     def add_channel(self, viewer, chinfo):
         """Called when a channel is added from the main interface.
         Parameter is chinfo (a bunch)."""
@@ -265,7 +267,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
     def transform_cb(self, fitsimage):
         self.redo_delay(fitsimage)
         return True
-        
+
     def cutset_cb(self, setting, value, fitsimage):
         self.redo_delay(fitsimage)
         return True
@@ -283,7 +285,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
 
     def redo_delay_timer(self, timer):
         self.fv.gui_do(self.redo_thumbnail, timer.data.fitsimage)
-        
+
     def copy_attrs(self, fitsimage):
         # Reflect transforms, colormap, etc.
         fitsimage.copy_attributes(self.thumb_generator,
@@ -311,13 +313,13 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
 
     def redo_thumbnail(self, fitsimage, save_thumb=None):
         self.logger.debug("redoing thumbnail...")
-        # Get the thumbnail image 
+        # Get the thumbnail image
         image = fitsimage.get_image()
         if image is None:
             return
         if save_thumb is None:
             save_thumb = self.settings.get('cache_thumbs', False)
-        
+
         chname = self.fv.get_channelName(fitsimage)
 
         # Get metadata for mouse-over tooltip
@@ -386,7 +388,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
             if save_thumb and (thumbpath is not None):
                 self.thumb_generator.save_image_as_file(thumbpath,
                                                         format='jpeg')
-        
+
             imgwin = self.thumb_generator.get_image_as_widget()
 
             # Get metadata for mouse-over tooltip
@@ -407,7 +409,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
                               chname, name, path, thumbpath, metadata,
                               image_future)
         self.fv.update_pending(timeout=0.001)
-        
+
     def make_thumbs(self, chname, filelist, image_loader=None):
         # NOTE: this is called by the FBrowser plugin, as a non-gui thread!
         if image_loader is None:
@@ -450,12 +452,12 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
 
                 image_future = Future.Future()
                 image_future.freeze(image_loader, path)
-                    
+
                 self.fv.gui_do(self._make_thumb, chname, image, path,
                                thumbkey, image_future,
                                save_thumb=save_thumb,
                                thumbpath=thumbpath)
-                
+
             except Exception as e:
                 self.logger.error("Error generating thumbnail for '%s': %s" % (
                     path, str(e)))
@@ -465,11 +467,11 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
 
     def _gethex(self, s):
         return hashlib.sha1(s.encode()).hexdigest()
-    
+
     def get_thumbpath(self, path, makedir=True):
         if path is None:
             return None
-        
+
         path = os.path.abspath(path)
         dirpath, filename = os.path.split(path)
         # Get thumb directory
@@ -488,14 +490,14 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
                 self.logger.error("Thumb directory does not exist: %s" % (
                     thumbdir))
                 return None
-            
+
             try:
                 os.mkdir(thumbdir)
                 # Write meta file
                 metafile = os.path.join(thumbdir, "meta")
                 with open(metafile, 'w') as out_f:
                     out_f.write("srcdir: %s\n" % (dirpath))
-                    
+
             except OSError as e:
                 self.logger.error("Could not make thumb directory '%s': %s" % (
                     thumbdir, str(e)))
@@ -507,5 +509,5 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         thumbpath = os.path.join(thumbdir, thumbkey + ".jpg")
         self.logger.debug("thumb path is '%s'" % (thumbpath))
         return thumbpath
-                                 
+
 #END

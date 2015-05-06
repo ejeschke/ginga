@@ -1,6 +1,6 @@
 #
 # GtkHelp.py -- customized Gtk widgets
-# 
+#
 # Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c) Eric R. Jeschke.  All rights reserved.
@@ -17,6 +17,22 @@ import gobject
 
 from ginga.misc import Bunch, Callback
 from functools import reduce
+
+
+class TabWorkspace(gtk.Notebook):
+
+    def to_next(self):
+        num_tabs = self.get_n_pages()
+        cur_idx = self.get_current_page()
+        new_idx = (cur_idx + 1) % num_tabs
+        self.set_current_page(new_idx)
+
+    def to_previous(self):
+        num_tabs = self.get_n_pages()
+        new_idx = self.get_current_page() - 1
+        if new_idx < 0:
+            new_idx = max(num_tabs - 1, 0)
+        self.set_current_page(new_idx)
 
 
 class MDIWorkspace(gtk.Layout):
@@ -67,9 +83,8 @@ class MDIWorkspace(gtk.Layout):
 
         cr.set_source_rgb(*self.bg_rgb)
         cr.paint()
-        print("painted")
         return True
-        
+
     def configure_event(self, widget, event):
         rect = widget.get_allocation()
         x, y, width, height = rect.x, rect.y, rect.width, rect.height
@@ -82,8 +97,7 @@ class MDIWorkspace(gtk.Layout):
         wwd, wht = self.get_window_size()
         if (wwd == width) and (wht == height):
             return True
-        print("allocation is %d,%d %dx%d" % (x, y, width, height))
-        
+
         win = widget.get_window()
         cr = win.cairo_create()
 
@@ -93,7 +107,6 @@ class MDIWorkspace(gtk.Layout):
 
         cr.set_source_rgb(*self.bg_rgb)
         cr.paint()
-        print("painted")
         #self.configure(width, height)
         return True
 
@@ -112,9 +125,9 @@ class MDIWorkspace(gtk.Layout):
         fr.add(vbox)
         #fr.set_resize_mode(gtk.RESIZE_IMMEDIATE)
         fr.show_all()
-        
+
         evbox.connect("button_press_event", self.select_child_cb, fr)
-        
+
         bnch = Bunch.Bunch(widget=widget, window=fr)
         self.children.append(bnch)
 
@@ -140,12 +153,12 @@ class MDIWorkspace(gtk.Layout):
         bnch = self.children[idx]
         window = bnch.window
         window.show()
-        
+
     def remove_page(self, idx):
         bnch = self.children[idx]
         window = bnch.window
         #self.remove(window)
-        
+
     def select_child_cb(self, layout, event, widget):
         ex = event.x_root; ey = event.y_root
         x, y, width, height = widget.get_allocation()
@@ -153,23 +166,20 @@ class MDIWorkspace(gtk.Layout):
         if win is None:
             return False
         x, y = win.get_position()
-        print ("widgets UL corner= %d,%d" % (x, y))
         #dx, dy = int(ex - x), int(ey - y)
         dx, dy = ex, ey
-        print ("offset from UL corner= %d,%d" % (dx, dy))
         self.selected_child = Bunch.Bunch(widget=widget,
                                           cr = self.setup_cr(self.bin_window),
                                           x_origin=x, y_origin=y,
                                           dx=dx, dy=dy, wd=width, ht=height)
         return False
-       
+
     def button_press_event(self, widget, event):
         # event.button, event.x, event.y
         x = event.x; y = event.y
         button = self.kbdmouse_mask
         if event.button != 0:
             button |= 0x1 << (event.button - 1)
-        print(("button event at %dx%d, button=%x" % (x, y, button)))
         return True
 
     def setup_cr(self, drawable):
@@ -184,7 +194,6 @@ class MDIWorkspace(gtk.Layout):
         button = self.kbdmouse_mask
         if event.button != 0:
             button |= 0x1 << (event.button - 1)
-        print(("button release at %dx%d button=%x" % (x, y, button)))
         if self.selected_child is not None:
             bnch = self.selected_child
             x = int(bnch.x_origin + (x - bnch.dx))
@@ -199,30 +208,32 @@ class MDIWorkspace(gtk.Layout):
             return
         else:
             x, y, state = event.x_root, event.y_root, event.state
-        
+
         if state & gtk.gdk.BUTTON1_MASK:
             button |= 0x1
         elif state & gtk.gdk.BUTTON2_MASK:
             button |= 0x2
         elif state & gtk.gdk.BUTTON3_MASK:
             button |= 0x4
-        print("motion event at %dx%d, button=%x" % (
-            x, y, button))
 
         if (button & 0x1) and (self.selected_child is not None):
             bnch = self.selected_child
             x = int(bnch.x_origin + (x - bnch.dx))
             y = int(bnch.x_origin + (y - bnch.dy))
-            print ("offset from container UL corner= %d,%d" % (x, y))
             self.move(self.selected_child.widget, x, y)
 
         return True
+
+    def to_next(self):
+        pass
+    def to_previous(self):
+        pass
 
 class GridWorkspace(gtk.Table):
 
     def __init__(self):
         super(GridWorkspace, self).__init__()
-        
+
         self.set_row_spacings(2)
         self.set_col_spacings(2)
         self.widgets = []
@@ -286,7 +297,11 @@ class GridWorkspace(gtk.Table):
     def set_current_page(self, idx):
         widget = self.getWidget(idx)
         self.set_focus_child(widget)
-        
+
+    def to_next(self):
+        pass
+    def to_previous(self):
+        pass
 
 class WidgetMask(object):
     def __init__(self, *args):
@@ -308,14 +323,12 @@ class WidgetMask(object):
     def change(self):
         if self.connected:
             self.changed = True
-            
+
     def cb(self, *args):
         if self.changed:
             self.changed = False
-            #print "punted callback!"
             return
 
-        #print "callback is passed through"
         newargs = list(args)
         newargs.extend(self.cb_args)
         kwdargs = self.cb_kwdargs.copy()
@@ -354,8 +367,8 @@ class ToggleButton(WidgetMask, gtk.ToggleButton):
         oldval = self.get_active()
         newval = not oldval
         super(ToggleButton, self).set_active(newval)
-        
-    
+
+
 class RadioButton(WidgetMask, gtk.RadioButton):
     def __init__(self, *args, **kwdargs):
         WidgetMask.__init__(self)
@@ -372,8 +385,8 @@ class RadioButton(WidgetMask, gtk.RadioButton):
         oldval = self.get_active()
         newval = not oldval
         super(RadioButton, self).set_active(newval)
-        
-    
+
+
 class CheckMenuItem(WidgetMask, gtk.CheckMenuItem):
     def __init__(self, *args, **kwdargs):
         WidgetMask.__init__(self)
@@ -386,7 +399,7 @@ class CheckMenuItem(WidgetMask, gtk.CheckMenuItem):
 
         super(CheckMenuItem, self).set_active(newval)
 
-    
+
 class SpinButton(WidgetMask, gtk.SpinButton):
     def __init__(self, *args, **kwdargs):
         WidgetMask.__init__(self)
@@ -399,7 +412,7 @@ class SpinButton(WidgetMask, gtk.SpinButton):
 
         super(SpinButton, self).set_value(newval)
 
-    
+
 class HScale(WidgetMask, gtk.HScale):
     def __init__(self, *args, **kwdargs):
         WidgetMask.__init__(self)
@@ -424,7 +437,7 @@ class VScale(WidgetMask, gtk.VScale):
 
         super(VScale, self).set_value(newval)
 
-   
+
 class ComboBoxMixin(object):
 
     def set_active(self, newval):
@@ -487,7 +500,7 @@ class Notebook(gtk.Notebook):
         else:
             super(Notebook, self).set_group_name(str(id))
 
-    
+
 def combo_box_new_text():
     liststore = gtk.ListStore(gobject.TYPE_STRING)
     combobox = ComboBox()
@@ -512,7 +525,7 @@ class Dialog(gtk.Dialog):
         if callback:
             self.connect("response", callback)
 
-        
+
 class MenuBar(gtk.MenuBar):
 
     def __init__(self):
@@ -550,9 +563,8 @@ class ToolBar(gtk.Toolbar):
                 return True
             return False
         return menu_up
-        
+
     def _focus_event(self, widget, event, hasFocus, menu):
-        print(hasFocus)
         if hasFocus and self._isactive:
             if gtksel.have_gtk3:
                 menu.popup(None, None, None, None, 1, 0)
@@ -564,12 +576,12 @@ class ToolBar(gtk.Toolbar):
             pass
         return False
 
-    
+
 class Desktop(Callback.Callbacks):
 
     def __init__(self):
         super(Desktop, self).__init__()
-        
+
         # for tabs
         self.tab = Bunch.caselessDict()
         self.tabcount = 0
@@ -579,9 +591,9 @@ class Desktop(Callback.Callbacks):
 
         for name in ('page-switch', 'page-select'):
             self.enable_callback(name)
-        
+
     # --- Tab Handling ---
-    
+
     def make_ws(self, name=None, group=1, show_tabs=True, show_border=False,
                 detachable=True, tabpos=None, scrollable=True, wstype='nb'):
         if not name:
@@ -601,7 +613,7 @@ class Desktop(Callback.Callbacks):
             widget = nb
 
         else:
-            nb = gtk.Notebook()
+            nb = TabWorkspace()
             if tabpos is None:
                 tabpos = gtk.POS_TOP
             # Allows drag-and-drop between notebooks
@@ -623,7 +635,7 @@ class Desktop(Callback.Callbacks):
 
     def get_nb(self, name):
         return self.notebooks[name].nb
-        
+
     def get_size(self, widget):
         alloc = widget.get_allocation()
         wd, ht = alloc.width, alloc.height
@@ -632,7 +644,7 @@ class Desktop(Callback.Callbacks):
     def get_ws_size(self, name):
         w = self.get_nb(name)
         return self.get_size(w)
-        
+
     def get_wsnames(self, group=1):
         res = []
         for name in self.notebooks.keys():
@@ -642,7 +654,7 @@ class Desktop(Callback.Callbacks):
             elif group == bnch.group:
                 res.append(name)
         return res
-    
+
     def add_tab(self, wsname, widget, group, labelname, tabname=None,
                 data=None):
         tab_w = self.get_nb(wsname)
@@ -651,7 +663,7 @@ class Desktop(Callback.Callbacks):
             tabname = labelname
             if tabname in self.tab:
                 tabname = 'tab%d' % self.tabcount
-            
+
         label = gtk.Label(labelname)
         evbox = gtk.EventBox()
         evbox.add(label)
@@ -684,7 +696,7 @@ class Desktop(Callback.Callbacks):
 
     def select_cb(self, widget, event, name, data):
         self.make_callback('page-select', name, data)
-        
+
     def raise_tab(self, tabname):
         nb, page_num = self._find_nb(tabname)
         if nb:
@@ -784,14 +796,14 @@ class Desktop(Callback.Callbacks):
             del self.notebooks[bnch.name]
             root.destroy()
         return True
-    
+
     def detach_page_cb(self, source, widget, x, y, group):
         # Detach page to new top-level workspace
         ## page = self.widgetToPage(widget)
         ## if not page:
         ##     return None
         xo, yo, width, height = widget.get_allocation()
-        
+
         bnch = self.create_toplevel_ws(width, height, group, x=x, y=y)
         return bnch.nb
 
@@ -805,11 +817,11 @@ class Desktop(Callback.Callbacks):
     def make_desktop(self, layout, widgetDict=None):
         if widgetDict is None:
             widgetDict = {}
-            
+
         def process_common_params(widget, inparams):
             params = Bunch.Bunch(name=None, height=-1, width=-1, xpos=-1, ypos=-1)
             params.update(inparams)
-            
+
             if params.name:
                 widgetDict[params.name] = widget
 
@@ -862,7 +874,7 @@ class Desktop(Callback.Callbacks):
                 pack(widget)
 
             process_common_params(widget, params)
-            
+
             if (kind == 'ws') and (len(args) > 0):
                 # <-- Notebook ws specified a sub-layout.  We expect a list
                 # of tabname, layout pairs--iterate over these and add them
@@ -899,7 +911,7 @@ class Desktop(Callback.Callbacks):
                 pack(hpaned)
 
             process_common_params(hpaned, params)
-            
+
             hpaned.show_all()
 
         # Vertical adjustable panel
@@ -923,7 +935,7 @@ class Desktop(Callback.Callbacks):
                 pack(vpaned)
 
             process_common_params(vpaned, params)
-            
+
             vpaned.show_all()
 
         # Horizontal fixed array
@@ -946,7 +958,7 @@ class Desktop(Callback.Callbacks):
                                                           fill=fill,
                                                           expand=expand))
             process_common_params(widget, params)
-            
+
             widget.show_all()
             pack(widget)
 
@@ -983,7 +995,7 @@ class Desktop(Callback.Callbacks):
                 topw.add(w)
                 self.toplevels.append(topw)
                 topw.show_all()
-                
+
             for dct in cols:
                 if isinstance(dct, dict):
                     #fill = dct.get('fill', True)
@@ -1000,7 +1012,7 @@ class Desktop(Callback.Callbacks):
 
             widget = gtk.Label("Placeholder")
             pack(widget)
-            
+
 
         def make(constituents, pack):
             kind = constituents[0]
@@ -1033,7 +1045,7 @@ def _name_mangle(name, pfx=''):
         else:
             newname.append(c)
     return pfx + ''.join(newname)
-    
+
 def _make_widget(tup, ns):
     swap = False
     title = tup[0]

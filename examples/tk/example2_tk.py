@@ -17,7 +17,6 @@ from tkFileDialog import askopenfilename
 
 from ginga import AstroImage
 from ginga.tkw.ImageViewCanvasTk import ImageViewCanvas
-from ginga.aggw.ImageViewCanvasTypesAgg import DrawingCanvas
 
 
 STD_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcName)s) | %(message)s'
@@ -34,9 +33,9 @@ class FitsViewer(object):
         #root.set_border_width(2)
         #root.connect("delete_event", lambda w, e: self.quit(w))
         self.root = root
-        
+
         #self.select = FileSelection.FileSelection()
-        
+
         vbox = Tkinter.Frame(root, relief=Tkinter.RAISED, borderwidth=1)
         vbox.pack(side=Tkinter.TOP, fill=Tkinter.BOTH, expand=1)
 
@@ -60,10 +59,11 @@ class FitsViewer(object):
         bd.enable_all(True)
 
         # canvas that we will draw on
+        DrawingCanvas = fi.getDrawClass('drawingcanvas')
         canvas = DrawingCanvas()
         canvas.enable_draw(True)
         #canvas.enable_edit(True)
-        canvas.set_drawtype('rectangle', color='lightblue')
+        canvas.set_drawtype('ellipse', color='lightblue')
         canvas.setSurface(fi)
         self.canvas = canvas
         # add canvas to view
@@ -77,7 +77,7 @@ class FitsViewer(object):
 
         self.readout = Tkinter.Label(root, text='')
         self.readout.pack(side=Tkinter.BOTTOM, fill=Tkinter.X, expand=0)
-        
+
         self.drawtypes = fi.get_drawtypes()
         ## wdrawtype = ttk.Combobox(root, values=self.drawtypes,
         ##                          command=self.set_drawparams)
@@ -189,7 +189,7 @@ class FitsViewer(object):
         root.destroy()
         return True
 
-        
+
 def main(options, args):
 
     logger = logging.getLogger("example1")
@@ -207,15 +207,15 @@ def main(options, args):
 
     top.mainloop()
 
-    
+
 if __name__ == "__main__":
-   
+
     # Parse command line options with nifty optparse module
     from optparse import OptionParser
 
     usage = "usage: %prog [options] cmd [args]"
     optprs = OptionParser(usage=usage, version=('%%prog'))
-    
+
     optprs.add_option("--debug", dest="debug", default=False, action="store_true",
                       help="Enter the pdb debugger on main()")
     optprs.add_option("--log", dest="logfile", metavar="FILE",

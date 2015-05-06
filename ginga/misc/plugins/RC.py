@@ -78,16 +78,10 @@ import numpy
 import binascii
 import bz2
 
-import ginga.util.six as six
-if six.PY2:
-    import SimpleXMLRPCServer
-else:
-    import xmlrpc.server as SimpleXMLRPCServer
-
 from ginga import GingaPlugin
 from ginga import AstroImage
 from ginga.misc import Widgets
-from ginga import cmap
+from ginga.util import grc
 from ginga.util.six.moves import map, zip
 
 help_msg = sys.modules[__name__].__doc__
@@ -150,18 +144,16 @@ class RC(GingaPlugin.GlobalPlugin):
     def start(self):
         self.robj = GingaWrapper(self.fv, self.logger)
         
-        self.server = SimpleXMLRPCServer.SimpleXMLRPCServer((self.host,
-                                                             self.port))
-        self.server.register_instance(self.robj)
-        self.fv.nongui_do(self.monitor_shutdown)
-        self.fv.nongui_do(self.server.serve_forever, poll_interval=0.1)
+        self.server = grc.RemoteServer(self.robj, host=self.host, port=self.port,
+                                       ev_quit=self.fv.ev_quit)
+        self.server.start(thread_pool=self.fv.get_threadPool())
         
     def stop(self):
-        self.server.shutdown()
+        self.server.stop()
 
     def restart_cb(self, w):
         # restart server
-        self.server.shutdown()
+        self.server.stop()
         self.start()
 
     def set_addr_cb(self, w):
@@ -171,13 +163,6 @@ class RC(GingaPlugin.GlobalPlugin):
         self.host = host
         self.port = int(port)
         self.w.addr.set_text(addr)
-
-    def monitor_shutdown(self):
-        # the thread running this method waits until the entire viewer
-        # is exiting and then shuts down the XML-RPC server which is
-        # running in a different thread
-        self.ev_quit.wait()
-        self.server.shutdown()
 
     def close(self):
         self.fv.stop_global_plugin(str(self))
@@ -302,38 +287,15 @@ class GingaWrapper(object):
                             chname=chname)
         return 0
 
-    def _cleanse(self, res):
-        """Transform results into XML-RPC friendy ones.
-        """
-        ptype = type(res)
-        
-        if ptype in self.ok_types:
-            return res
-
-        return str(res)
-        
-    def _prep_arg(self, arg):
-        try:
-            return float(arg)
-        except ValueError:
-            try:
-                return int(arg)
-            except ValueError:
-                return arg
-        
-    def _prep_args(self, args):
-        return list(map(self._prep_arg, args))
-    
-    def channel(self, chname, method, *args):
+    def channel(self, chname, method_name, *args, **kwdargs):
         chinfo = self.fv.get_channelInfo(chname)
-        _method = getattr(chinfo.fitsimage, method)
-        res = self.fv.gui_call(_method, *self._prep_args(args))
-        return self._cleanse(res)
+        _method = getattr(chinfo.fitsimage, method_name)
+        return self.fv.gui_call(_method, *args, **kwdargs)
     
-    def ginga(self, method, *args):
-        _method = getattr(self.fv, method)
-        res = self.fv.gui_call(_method, *self._prep_args(args))
-        return self._cleanse(res)
-    
+    def ginga(self, method_name, *args, **kwdargs):
+        _method = getattr(self.fv, method_name)
+        return self.fv.gui_call(_method, *args, **kwdargs)
+
+            
 #END
                                 

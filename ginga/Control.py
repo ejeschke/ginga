@@ -259,6 +259,9 @@ class GingaControl(Callback.Callbacks):
             self.collapse_pane('left')
         elif keyname == '>':
             self.collapse_pane('right')
+        elif keyname == 'n':
+            nb = self.ds.get_nb('Channels')
+            nb.to_next()
         ## elif keyname == 'escape':
         ##     self.reset_viewer()
         elif keyname in ('left', 'up'):

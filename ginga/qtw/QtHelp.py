@@ -1,6 +1,6 @@
 #
 # QtHelp.py -- customized Qt widgets and convenience functions
-# 
+#
 # Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c) Eric R. Jeschke.  All rights reserved.
@@ -84,7 +84,7 @@ if toolkit in ('pyside', 'choose') and (not configured):
         configured = True
     except ImportError:
         pass
-    
+
 if have_pyqt5:
     ginga.toolkit.use('qt5')
 elif have_pyqt4:
@@ -106,14 +106,14 @@ class TopLevel(QtGui.QWidget):
     app = None
     ## def __init__(self, *args, **kwdargs):
     ##     return super(TopLevel, self).__init__(self, *args, **kwdargs)
-        
+
     def closeEvent(self, event):
         if not (self.app is None):
             self.app.quit()
 
     def setApp(self, app):
         self.app = app
-    
+
 class TabWidget(QtGui.QTabWidget):
     pass
 
@@ -139,6 +139,19 @@ class TabWorkspace(QtGui.QTabWidget):
     def sizeHint(self):
         return QtCore.QSize(300, 300)
 
+    def to_next(self):
+        num_tabs = self.count()
+        cur_idx = self.currentIndex()
+        new_idx = (cur_idx + 1) % num_tabs
+        self.setCurrentIndex(new_idx)
+
+    def to_previous(self):
+        num_tabs = self.count()
+        new_idx = self.currentIndex() - 1
+        if new_idx < 0:
+            new_idx = max(num_tabs - 1, 0)
+        self.setCurrentIndex(new_idx)
+
 class MDIWorkspace(QtGui.QMdiArea):
 
     def __init__(self):
@@ -154,7 +167,7 @@ class MDIWorkspace(QtGui.QMdiArea):
         if self.viewMode() == QtGui.QMdiArea.TabbedView:
             return 'tabs'
         return 'mdi'
-    
+
     def set_mode(self, mode):
         mode = mode.lower()
         if mode == 'tabs':
@@ -163,13 +176,12 @@ class MDIWorkspace(QtGui.QMdiArea):
             self.setViewMode(QtGui.QMdiArea.SubWindowView)
         else:
             raise ValueError("Don't understand mode='%s'" % (mode))
-            
+
     def addTab(self, widget, label):
         w = self.addSubWindow(widget)
         w.setWindowTitle(label)
         widget.show()
         w.show()
-        print("widget added")
 
     def removeTab(self, index):
         l = list(self.subWindowList())
@@ -198,7 +210,7 @@ class MDIWorkspace(QtGui.QMdiArea):
 
     def tabBar(self):
         return None
-    
+
     def setCurrentIndex(self, index):
         l = list(self.subWindowList())
         w = l[index]
@@ -207,6 +219,10 @@ class MDIWorkspace(QtGui.QMdiArea):
     def sizeHint(self):
         return QtCore.QSize(600, 600)
 
+    def to_next(self):
+        pass
+    def to_previous(self):
+        pass
 
 class GridWorkspace(QtGui.QWidget):
 
@@ -244,7 +260,7 @@ class GridWorkspace(QtGui.QWidget):
                 if index < num_widgets:
                     widget = self.widgets[index]
                 self.layout.addWidget(widget, i, j)
-        
+
     def addTab(self, widget, label):
         ## widget.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.MinimumExpanding,
         ##                                        QtGui.QSizePolicy.MinimumExpanding))
@@ -270,7 +286,7 @@ class GridWorkspace(QtGui.QWidget):
 
     def tabBar(self):
         return None
-    
+
     def setCurrentIndex(self, index):
         widget = self.widget(index)
         # TODO: focus widget
@@ -281,6 +297,11 @@ class GridWorkspace(QtGui.QWidget):
 
     def sizeHint(self):
         return QtCore.QSize(300, 300)
+
+    def to_next(self):
+        pass
+    def to_previous(self):
+        pass
 
 class ComboBox(QtGui.QComboBox):
 
@@ -295,7 +316,7 @@ class ComboBox(QtGui.QComboBox):
                 return
             index += 1
         self.addItem(text)
-        
+
     def delete_alpha(self, text):
         index = self.findText(text)
         self.removeItem(index)
@@ -315,13 +336,13 @@ class VBox(QtGui.QWidget):
         # because of ridiculous defaults
         layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(layout)
-    
+
     def addWidget(self, w, **kwdargs):
         self.layout().addWidget(w, **kwdargs)
 
     def setSpacing(self, val):
         self.layout().setSpacing(val)
-        
+
 class HBox(QtGui.QWidget):
     def __init__(self, *args, **kwdargs):
         super(HBox, self).__init__(*args, **kwdargs)
@@ -333,10 +354,10 @@ class HBox(QtGui.QWidget):
 
     def addWidget(self, w, **kwdargs):
         self.layout().addWidget(w, **kwdargs)
-    
+
     def setSpacing(self, val):
         self.layout().setSpacing(val)
-        
+
 class Frame(QtGui.QFrame):
     def __init__(self, title=None):
         super(Frame, self).__init__()
@@ -356,10 +377,10 @@ class Frame(QtGui.QFrame):
 
     def getLabel(self):
         return self.label
-    
+
     def addWidget(self, w, **kwdargs):
         self.layout().addWidget(w, **kwdargs)
-    
+
 class Dialog(QtGui.QDialog):
     def __init__(self, title=None, flags=None, buttons=None,
                  callback=None):
@@ -371,7 +392,7 @@ class Dialog(QtGui.QDialog):
 
         self.content = QtGui.QWidget()
         vbox.addWidget(self.content, stretch=1)
-        
+
         hbox_w = QtGui.QWidget()
         hbox = QtGui.QHBoxLayout()
         hbox_w.setLayout(hbox)
@@ -380,7 +401,7 @@ class Dialog(QtGui.QDialog):
             def cb():
                 callback(self, val)
             return cb
-            
+
         for name, val in buttons:
             btn = QtGui.QPushButton(name)
             if callback:
@@ -421,7 +442,7 @@ class ToolBar(QtGui.QToolBar):
 
     def _press_cb(self, menu):
         menu.popup(self.mapToGlobal(QtCore.QPoint(0,0)))
-        
+
     def make_action(self, name):
         item = QtGui.QAction(name, self)
         return item
@@ -431,20 +452,20 @@ class Desktop(Callback.Callbacks):
 
     def __init__(self):
         super(Desktop, self).__init__()
-        
+
         # for tabs
         self.tab = Bunch.caselessDict()
         self.tabcount = 0
         self.notebooks = Bunch.caselessDict()
 
         self.toplevels = []
-        
+
         for name in ('page-switch', 'page-select', 'all-closed'):
             self.enable_callback(name)
         self.popmenu = None
-        
+
     # --- Tab Handling ---
-    
+
     def make_ws(self, name=None, group=1, show_tabs=True, show_border=False,
                 detachable=True, tabpos=None, scrollable=True, closeable=False,
                 wstype='nb'):
@@ -493,7 +514,7 @@ class Desktop(Callback.Callbacks):
     def get_ws_size(self, name):
         w = self.get_nb(name)
         return self.get_size(w)
-        
+
     def get_wsnames(self, group=1):
         res = []
         for name in self.notebooks.keys():
@@ -503,7 +524,7 @@ class Desktop(Callback.Callbacks):
             elif group == bnch.group:
                 res.append(name)
         return res
-    
+
     def get_tabnames(self, group=1):
         res = []
         for name in self.tab.keys():
@@ -513,7 +534,7 @@ class Desktop(Callback.Callbacks):
             elif group == bnch.group:
                 res.append(name)
         return res
-    
+
     def on_context_menu(self, nb, group, point):
         # create context menu
         popmenu = QtGui.QMenu(nb)
@@ -554,7 +575,7 @@ class Desktop(Callback.Callbacks):
             tabname = labelname
             if tabname in self.tab:
                 tabname = 'tab%d' % self.tabcount
-            
+
         tab_w.addTab(widget, labelname)
         self.tab[tabname] = Bunch.Bunch(widget=widget, name=labelname,
                                         tabname=tabname, data=data,
@@ -579,7 +600,7 @@ class Desktop(Callback.Callbacks):
 
     def select_cb(self, widget, event, name, data):
         self.make_callback('page-select', name, data)
-        
+
     def raise_tab(self, tabname):
         nb, index = self._find_nb(tabname)
         widget = self.tab[tabname].widget
@@ -635,7 +656,7 @@ class Desktop(Callback.Callbacks):
         sep = menubar.make_action('')
         sep.setSeparator(True)
         winmenu.addAction(sep)
-        
+
         closeitem = menubar.make_action("Close")
         bnch.widget.closeEvent = lambda event: self.close_page_cb(bnch, event)
         closeitem.triggered.connect(lambda: self._close_page(bnch))
@@ -668,7 +689,7 @@ class Desktop(Callback.Callbacks):
         sep = menubar.add_action('')
         sep.setSeparator(True)
         winmenu.addAction(sep)
-        
+
         quititem = menubar.make_action("Quit")
         winmenu.addAction(quititem)
 
@@ -690,7 +711,7 @@ class Desktop(Callback.Callbacks):
         ## if not page:
         ##     return None
         width, height = widget.size()
-        
+
         ## self.logger.info("detaching page %s" % (page.name))
         bnch = self.create_toplevel_ws(width, height, x=x, y=y)
 
@@ -703,9 +724,9 @@ class Desktop(Callback.Callbacks):
             if (nb is not None) and (index >= 0):
                 nb.removeTab(index)
                 to_nb.addTab(widget, tabname)
-            
+
         return _foo
-        
+
     def _close_page(self, bnch):
         num_children = bnch.nb.count()
         if num_children == 0:
@@ -715,7 +736,7 @@ class Desktop(Callback.Callbacks):
             #root.destroy()
             root.deleteLater()
         return True
-    
+
     def close_page_cb(self, bnch, event):
         num_children = bnch.nb.count()
         if num_children == 0:
@@ -725,7 +746,7 @@ class Desktop(Callback.Callbacks):
         else:
             event.ignore()
         return True
-    
+
     def switch_page_cb(self, page_num, nbw):
         pagew = nbw.currentWidget()
         bnch = self._find_tab(pagew)
@@ -740,7 +761,7 @@ class Desktop(Callback.Callbacks):
         def process_common_params(widget, inparams):
             params = Bunch.Bunch(name=None, height=-1, width=-1, xpos=-1, ypos=-1)
             params.update(inparams)
-            
+
             if params.name:
                 widgetDict[params.name] = widget
 
@@ -760,10 +781,10 @@ class Desktop(Callback.Callbacks):
             # User wants to place window somewhere
             if (params.xpos >= 0) and isinstance(widget, QtGui.QWidget):
                 widget.move(params.xpos, params.ypos)
-            
+
         def make_widget(kind, paramdict, args, pack):
             kind = kind.lower()
-            
+
             # Process workspace parameters
             params = Bunch.Bunch(name=None, title=None, height=-1,
                                  width=-1, group=1, show_tabs=True,
@@ -796,7 +817,7 @@ class Desktop(Callback.Callbacks):
                 pack(widget)
 
             process_common_params(widget, params)
-            
+
             if (kind in ('ws', 'mdi', 'grid')) and (len(args) > 0):
                 # <-- Notebook ws specified a sub-layout.  We expect a list
                 # of tabname, layout pairs--iterate over these and add them
@@ -808,7 +829,7 @@ class Desktop(Callback.Callbacks):
                                      tabname, tabname.lower())
 
                     make(layout, pack)
-                
+
             #return widget
 
         # Horizontal adjustable panel
@@ -831,7 +852,7 @@ class Desktop(Callback.Callbacks):
 
             process_common_params(widget, params)
             pack(widget)
-            
+
         # Vertical adjustable panel
         def vert(params, rows, pack):
             if len(rows) >= 2:
@@ -872,7 +893,7 @@ class Desktop(Callback.Callbacks):
                     make(col, lambda w: layout.addWidget(w,
                                                          stretch=stretch))
             process_common_params(widget, params)
-            
+
             pack(widget)
 
         # Vertical fixed array
@@ -907,10 +928,10 @@ class Desktop(Callback.Callbacks):
                     w.deleteLater()
                     if len(self.toplevels) == 0:
                         self.make_callback('all-closed')
-                        
+
                 w.closeEvent = closeEvent
                 w.showNormal()
-                
+
             for dct in cols:
                 if isinstance(dct, dict):
                     stretch = dct.get('stretch', 0)
@@ -932,7 +953,7 @@ class Desktop(Callback.Callbacks):
                 rest = constituents[2:]
             else:
                 rest = []
-                
+
             if kind == 'vpanel':
                 vert(params, rest, pack)
             elif kind == 'hpanel':
@@ -1061,7 +1082,7 @@ def debug(widget):
         if x.startswith('set'):
             print(x)
 
-def children(layout):   
+def children(layout):
     i = 0
     res = []
     child = layout.itemAt(i)

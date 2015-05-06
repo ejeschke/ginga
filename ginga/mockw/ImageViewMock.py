@@ -12,6 +12,7 @@ import numpy
 from io import BytesIO
 
 from ginga import ImageView, Mixins, Bindings
+from ginga.util.io_rgb import RGBFileHandler
 
 moduleHome = os.path.split(sys.modules[__name__].__file__)[0]
 icon_dir = os.path.abspath(os.path.join(moduleHome, '..', 'icons'))
@@ -50,6 +51,10 @@ class ImageViewMock(ImageView.ImageViewBase):
         # cursors
         self.cursor = {}
 
+        # override default
+        self.defer_redraw = False
+        self.rgb_fh = RGBFileHandler(self.logger)
+        
     def get_widget(self):
         """
         Call this method to extract the widget to pack into your GUI
@@ -121,19 +126,17 @@ class ImageViewMock(ImageView.ImageViewBase):
         
     def get_rgb_image_as_buffer(self, output=None, format='png',
                                 quality=90):
-        ibuf = output
-        if ibuf is None:
-            ibuf = BytesIO()
-        imgwin_wd, imgwin_ht = self.get_window_size()
-
         # copy pixmap to ibuf
-        # ...
-        
-        return ibuf
+        data_np = self.getwin_array(order=self.get_rgb_order())
+        header = {}
+        fmt_buf = self.rgb_fh.get_buffer(data_np, header, format,
+                                         output=output)
+        return fmt_buf
     
     def get_rgb_image_as_bytes(self, format='png', quality=90):
         ibuf = self.get_rgb_image_as_buffer(format=format, quality=quality)
-        return bytes(ibuf.getvalue())
+        #return bytes(ibuf.getvalue())
+        return ibuf
         
     def get_rgb_image_as_widget(self, output=None, format='png',
                                 quality=90):

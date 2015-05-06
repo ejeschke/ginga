@@ -68,10 +68,9 @@ will not work without the following packages:
 * matplotlib (Pick, Cuts, Histogram)
 * webkit (WBrowser (online help))
 
-Helpful, but not necessary (may optimize or speed up certain
-operations):
+Helpful, but not necessary (may optimize or speed up certain operations):
 
-* python-numexpr
+* python-opencv
 * python-magic
 * python-PIL
 

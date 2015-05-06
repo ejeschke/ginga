@@ -35,7 +35,7 @@ from ginga.gtkw import ImageViewCanvasGtk, ColorBar, Readout, FileSelection, \
 icon_path = os.path.abspath(os.path.join(moduleHome, '..', 'icons'))
 rc_file = os.path.join(moduleHome, "gtk_rc")
 if os.path.exists(rc_file):
-    gtk.rc_parse(rc_file) 
+    gtk.rc_parse(rc_file)
 
 root = None
 
@@ -47,7 +47,7 @@ class GingaViewError(Exception):
     pass
 
 class GingaView(GtkMain.GtkMain):
-     
+
     def __init__(self, logger, ev_quit):
         GtkMain.GtkMain.__init__(self, logger=logger, ev_quit=ev_quit)
         # defaults
@@ -63,13 +63,13 @@ class GingaView(GtkMain.GtkMain):
         self.layout = None
         self._lsize = None
         self._rsize = None
-        
+
     def get_screen_dimensions(self):
         return (screen_wd, screen_ht)
-        
+
     def set_layout(self, layout):
         self.layout = layout
-        
+
     def build_toplevel(self):
 
         self.font = self.getFont('fixedFont', 12)
@@ -95,7 +95,7 @@ class GingaView(GtkMain.GtkMain):
             root.connect("destroy", self.quit)
             root.connect("delete_event", self.delete_event)
             root.connect('window-state-event', self.window_state_change)
-        
+
         self.w.root = root
 
         menuholder = self.w['menu']
@@ -103,7 +103,7 @@ class GingaView(GtkMain.GtkMain):
 
         # Create main (center) FITS image pane
         self.w.vbox = self.w['main']
-        self.ds.add_callback("page-select", self.page_switch_cb)
+        self.ds.add_callback("page-switch", self.page_switch_cb)
 
         # readout
         if self.settings.get('share_readout', True):
@@ -111,7 +111,7 @@ class GingaView(GtkMain.GtkMain):
             self.add_callback('field-info', self.readout_cb, self.readout, None)
             rw = self.readout.get_widget()
             self.w.vbox.pack_start(rw, padding=0, fill=True, expand=False)
-            
+
         # bottom buttons
         hbox = gtk.HBox()
 
@@ -130,7 +130,7 @@ class GingaView(GtkMain.GtkMain):
 
         self.w.optray = gtk.HBox()
         hbox.pack_start(self.w.optray, fill=True, expand=True, padding=2)
-        
+
         self.w.vbox.pack_start(hbox, padding=0, fill=True, expand=False)
 
         # Add colormap bar
@@ -148,7 +148,7 @@ class GingaView(GtkMain.GtkMain):
 
     def getPluginManager(self, logger, fitsview, ds, mm):
         return PluginManagerGtk.PluginManager(logger, fitsview, ds, mm)
-    
+
     def make_button(self, name, wtyp, icon=None, tooltip=None):
         image = None
         if icon:
@@ -180,6 +180,7 @@ class GingaView(GtkMain.GtkMain):
     def add_menus(self, menuholder):
 
         menubar = Widgets.Menubar()
+        self.menubar = menubar
         menuholder.pack_start(menubar.get_widget(), expand=False)
 
         # create a File pulldown menu, and add it to the menu bar
@@ -198,7 +199,7 @@ class GingaView(GtkMain.GtkMain):
 
         # create a Channel pulldown menu, and add it to the menu bar
         chmenu = menubar.add_name("Channel")
-        
+
         item = chmenu.add_name("Add Channel")
         item.add_callback("activated", lambda *args: self.gui_add_channel())
         item = chmenu.add_name("Add Channels")
@@ -229,11 +230,11 @@ class GingaView(GtkMain.GtkMain):
 
     def add_dialogs(self):
         self.filesel = FileSelection.FileSelection(action=gtk.FILE_CHOOSER_ACTION_OPEN)
-        
+
     def add_plugin_menu(self, name):
         item = self.w.menu_plug.add_name("Start %s" % (name))
         item.add_callback("activated", lambda *args: self.start_global_plugin(name))
-        
+
     def add_statusbar(self, statusholder):
         ## lbl = gtk.Label('')
         ## lbl.set_justify(gtk.JUSTIFY_CENTER)
@@ -252,13 +253,13 @@ class GingaView(GtkMain.GtkMain):
 
     def fullscreen(self):
         self.w.root.fullscreen()
-            
+
     def normalsize(self):
         self.w.root.unfullscreen()
-            
+
     def maximize(self):
         self.w.root.maximize()
-            
+
     def toggle_fullscreen(self):
         if not self.window_is_fullscreen:
             self.w.root.fullscreen()
@@ -273,14 +274,14 @@ class GingaView(GtkMain.GtkMain):
         item.connect_object ("activate", self.start_operation_cb, title)
         self.operations.append(title)
 
-       
+
     ####################################################
     # THESE METHODS ARE CALLED FROM OTHER MODULES & OBJECTS
     ####################################################
 
     def set_titlebar(self, text):
         self.w.root.set_title("Ginga: %s" % text)
-        
+
     def build_readout(self):
         readout = Readout.Readout(-1, 20)
         readout.set_font(self.font11)
@@ -289,11 +290,11 @@ class GingaView(GtkMain.GtkMain):
     def getDrawClass(self, drawtype):
         drawtype = drawtype.lower()
         return ImageViewCanvasTypesGtk.drawCatalog[drawtype]
-    
+
     def getDrawClasses(self):
         return Bunch.Bunch(ImageViewCanvasTypesGtk.drawCatalog,
                            caseless=True)
-        
+
     def build_colorbar(self):
         cbar = ColorBar.ColorBar(self.logger)
         cbar.set_cmap(self.cm)
@@ -307,13 +308,13 @@ class GingaView(GtkMain.GtkMain):
         fr.set_shadow_type(gtk.SHADOW_ETCHED_OUT)
         fr.add(cbar)
         return fr
-    
+
     def build_viewpane(self, settings, rgbmap=None):
         # instantiate bindings loaded with users preferences
         bclass = ImageViewCanvasGtk.ImageViewCanvas.bindingsClass
         bindprefs = self.prefs.createCategory('bindings')
         bd = bclass(self.logger, settings=bindprefs)
-        
+
         fi = ImageViewCanvasGtk.ImageViewCanvas(logger=self.logger,
                                                 rgbmap=rgbmap,
                                                 settings=settings,
@@ -331,7 +332,7 @@ class GingaView(GtkMain.GtkMain):
 
         bd = fi.get_bindings()
         bd.enable_all(True)
-        
+
         rgbmap = fi.get_rgbmap()
         rgbmap.add_callback('changed', self.rgbmap_cb, fi)
         fi.set_bg(0.2, 0.2, 0.2)
@@ -342,7 +343,7 @@ class GingaView(GtkMain.GtkMain):
                    use_readout=False, workspace=None):
 
         vbox = gtk.VBox(spacing=0)
-        
+
         fi = self.build_viewpane(settings)
         iw = fi.get_widget()
 
@@ -381,7 +382,7 @@ class GingaView(GtkMain.GtkMain):
         if w is not None:
             w.destroy()
             return
-        
+
         # Get image from current focused channel
         chinfo = self.get_channelInfo()
         fitsimage = chinfo.fitsimage
@@ -454,7 +455,7 @@ class GingaView(GtkMain.GtkMain):
         box.pack_start(lbl2, True, False, 0)
         box.pack_start(cbox, True, True, 0)
         dialog.show_all()
-        
+
     def gui_add_channels(self):
         captions = (('Prefix', 'entry'),
                     ('Number', 'spinbutton'),
@@ -471,7 +472,7 @@ class GingaView(GtkMain.GtkMain):
         upper = 12
         adj.configure(lower, lower, upper, 1, 1, 0)
         adj.set_value(lower)
-        
+
         cbox = b.workspace
         names = self.ds.get_wsnames()
         try:
@@ -486,18 +487,18 @@ class GingaView(GtkMain.GtkMain):
         ## names = self.get_channelNames()
         ## for name in names:
         ##     cbox.append_text(name)
-            
+
         ## prefs = self.prefs.getSettings('channel_Image')
         ## d = prefs.getDict()
 
         ## cbox = b.copy_settings
         ## for name in d.keys():
         ##     cbox.append_text(name)
-            
+
         ## cbox = b.share_settings
         ## for name in d.keys():
         ##     cbox.append_text(name)
-            
+
         dialog = GtkHelp.Dialog("Add Channels",
                                 gtk.DIALOG_DESTROY_WITH_PARENT,
                                 [['Cancel', 0], ['Ok', 1]],
@@ -506,7 +507,7 @@ class GingaView(GtkMain.GtkMain):
         box = dialog.get_content_area()
         box.pack_start(w, True, True, 0)
         dialog.show_all()
-        
+
     def gui_add_ws(self):
         captions = (('Workspace name', 'entry'),
                     ('Workspace type', 'combobox'),
@@ -553,7 +554,7 @@ class GingaView(GtkMain.GtkMain):
         box = dialog.get_content_area()
         box.pack_start(w, expand=True, fill=True)
         dialog.show_all()
-        
+
     def new_ws_cb(self, w, rsp, b, names):
         wsname = b.workspace_name.get_text()
         idx = b.workspace_type.get_active()
@@ -565,7 +566,7 @@ class GingaView(GtkMain.GtkMain):
 
         idx = b.in_workspace.get_active()
         inSpace = names[idx]
-        
+
         self.add_workspace(wsname, wstype, inSpace=inSpace)
 
         chpfx = b.channel_prefix.get_text()
@@ -590,9 +591,9 @@ class GingaView(GtkMain.GtkMain):
                              settings_template=settings_template,
                              settings_share=settings,
                              share_keylist=share_list)
-        
+
         return True
-        
+
     def gui_delete_channel(self):
         chinfo = self.get_channelInfo()
         chname = chinfo.name
@@ -604,12 +605,12 @@ class GingaView(GtkMain.GtkMain):
         box = dialog.get_content_area()
         box.pack_start(lbl, True, False, 0)
         dialog.show_all()
-        
+
     def gui_load_file(self, initialdir=None):
         #self.start_operation('FBrowser')
         self.filesel.popup("Load FITS file", self.load_file,
                            initialdir=initialdir)
-        
+
     def statusMsg(self, format, *args):
         if not format:
             s = ''
@@ -623,7 +624,7 @@ class GingaView(GtkMain.GtkMain):
             pass
         self.w.ctx_id = self.w.status.get_context_id('status')
         self.w.status.push(self.w.ctx_id, s)
-        
+
         # remove message in about 10 seconds
         if self.statustask:
             gobject.source_remove(self.statustask)
@@ -676,7 +677,7 @@ class GingaView(GtkMain.GtkMain):
         #tot2 = tuple(rect)[2]
         tot2 = rect.width
         pos2 = rchild.get_position()
-        lsize, msize, rsize = pos1, pos2, tot2-pos2 
+        lsize, msize, rsize = pos1, pos2, tot2-pos2
         if self._lsize is None:
             self._lsize, self._rsize = lsize, rsize
         self.logger.debug("left=%d mid=%d right=%d" % (
@@ -700,17 +701,17 @@ class GingaView(GtkMain.GtkMain):
                 self._lsize = lsize
                 pos = 0
             hsplit.set_position(pos)
-        
-        
+
+
     def getFont(self, fontType, pointSize):
         fontFamily = self.settings.get(fontType)
         font = pango.FontDescription('%s %d' % (fontFamily, pointSize))
         return font
-    
+
     ####################################################
     # CALLBACKS
     ####################################################
-    
+
     def delete_event(self, widget, event, data=None):
         """Someone is trying to close the application."""
         self.quit(widget)
@@ -727,7 +728,7 @@ class GingaView(GtkMain.GtkMain):
         index = w.get_active()
         chname = self.channelNames[index]
         self.change_channel(chname)
-        
+
     def add_channel_cb(self, w, rsp, ent, cbox, names):
         chname = ent.get_text()
         idx = cbox.get_active()
@@ -739,7 +740,7 @@ class GingaView(GtkMain.GtkMain):
             return
         self.add_channel(chname, workspace=wsname)
         return True
-        
+
     def add_channels_cb(self, w, rsp, b, names):
         chpfx = b.prefix.get_text()
         idx = b.workspace.get_active()
@@ -755,14 +756,14 @@ class GingaView(GtkMain.GtkMain):
             chname = "%s%d" % (chpfx, chbase+i)
             self.add_channel(chname, workspace=wsname)
         return True
-        
+
     def delete_channel_cb(self, w, rsp, chname):
         w.destroy()
         if rsp == 0:
             return
         self.delete_channel(chname)
         return True
-        
+
     def invoke_op_cb(self, button, event):
         menu = self.w.operation
         menu.show_all()
@@ -770,17 +771,17 @@ class GingaView(GtkMain.GtkMain):
             menu.popup(None, None, None, None, event.button, event.time)
         else:
             menu.popup(None, None, None, event.button, event.time)
-        
+
     def start_operation_cb(self, name):
         index = self.w.channel.get_active()
         model = self.w.channel.get_model()
         chname = model[index][0]
         return self.start_local_plugin(chname, name, None)
-        
+
     def page_switch_cb(self, ds, name, data):
         if data is None:
             return
-        
+
         fitsimage = data.fitsimage
         if fitsimage != self.getfocus_fitsimage():
             chname = self.get_channelName(fitsimage)

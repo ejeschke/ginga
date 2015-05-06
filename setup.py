@@ -56,7 +56,7 @@ setup(
                      #'ginga.doc': get_docs(),
                      'ginga.doc': ['manual/*.html'],
                      },
-    scripts = ['scripts/ginga', 'scripts/grc'],
+    scripts = ['scripts/ginga', 'scripts/grc', 'scripts/gris'],
     install_requires = ['numpy', ],
     test_suite = "ginga.tests",
     classifiers=[

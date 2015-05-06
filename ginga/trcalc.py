@@ -1,7 +1,7 @@
 #
 # trcalc.py -- transformation calculations for image data
-# 
-# Eric Jeschke (eric@naoj.org) 
+#
+# Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
@@ -10,6 +10,18 @@
 import math
 import numpy
 import time
+
+try:
+    # optional opencv package speeds up certain operations, especially
+    # rotation
+    # TEMP: opencv broken on anaconda mac (importing causes segv)
+    # --> temporarily disable
+    #import cv2
+    #have_opencv = True
+    have_opencv = False
+
+except ImportError:
+    have_opencv = False
 
 try:
     # optional numexpr package speeds up certain combined numpy array
@@ -22,6 +34,7 @@ except ImportError:
 
 # For testing
 #have_numexpr = False
+#have_opencv = False
 
 def get_center(data_np):
     ht, wd = data_np.shape[:2]
@@ -29,13 +42,14 @@ def get_center(data_np):
     ctr_x = wd // 2
     ctr_y = ht // 2
     return (ctr_x, ctr_y)
-    
+
 
 def rotate_arr(x_arr, y_arr, theta_deg, xoff=0, yoff=0):
     """
     Rotate an array of points (x_arr, y_arr) by theta_deg offsetted
     from a center point by (xoff, yoff).
     """
+    # TODO: use opencv acceleration if available
     a_arr = x_arr - xoff
     b_arr = y_arr - yoff
     cos_t = numpy.cos(numpy.radians(theta_deg))
@@ -70,7 +84,7 @@ def rotate_clip(data_np, theta_deg, rotctr_x=None, rotctr_y=None,
     be clipped according to the size of the array (the output array will be
     the same size as the input array).
     """
-    
+
     # If there is no rotation, then we are done
     if math.fmod(theta_deg, 360.0) == 0.0:
         return data_np
@@ -82,41 +96,56 @@ def rotate_clip(data_np, theta_deg, rotctr_x=None, rotctr_y=None,
     if rotctr_y is None:
         rotctr_y = ht // 2
 
-    yi, xi = numpy.mgrid[0:ht, 0:wd]
-    xi -= rotctr_x
-    yi -= rotctr_y
-    cos_t = numpy.cos(numpy.radians(theta_deg))
-    sin_t = numpy.sin(numpy.radians(theta_deg))
+    if have_opencv:
+        # opencv is fastest
+        M = cv2.getRotationMatrix2D((rotctr_y, rotctr_x), theta_deg, 1)
+        if out is not None:
+            out[:, :, ...] = cv2.warpAffine(data_np, M, (wd, ht))
+            newdata = out
+        else:
+            newdata = cv2.warpAffine(data_np, M, (wd, ht))
+            new_ht, new_wd = newdata.shape[:2]
 
-    #t1 = time.time()
-    if have_numexpr:
-        ap = ne.evaluate("(xi * cos_t) - (yi * sin_t) + rotctr_x")
-        bp = ne.evaluate("(xi * sin_t) + (yi * cos_t) + rotctr_y")
+            assert (wd == new_wd) and (ht == new_ht), \
+                   Exception("rotated cutout is %dx%d original=%dx%d" % (
+                new_wd, new_ht, wd, ht))
+
     else:
-        ap = (xi * cos_t) - (yi * sin_t) + rotctr_x
-        bp = (xi * sin_t) + (yi * cos_t) + rotctr_y
-    #print "rotation in %.5f sec" % (time.time() - t1)
+        yi, xi = numpy.mgrid[0:ht, 0:wd]
+        xi -= rotctr_x
+        yi -= rotctr_y
+        cos_t = numpy.cos(numpy.radians(theta_deg))
+        sin_t = numpy.sin(numpy.radians(theta_deg))
 
-    #ap = numpy.rint(ap).astype('int').clip(0, wd-1)
-    #bp = numpy.rint(bp).astype('int').clip(0, ht-1)
-    # Optomizations to reuse existing intermediate arrays
-    numpy.rint(ap, out=ap)
-    ap = ap.astype('int')
-    ap.clip(0, wd-1, out=ap)
-    numpy.rint(bp, out=bp)
-    bp = bp.astype('int')
-    bp.clip(0, ht-1, out=bp)
+        #t1 = time.time()
+        if have_numexpr:
+            ap = ne.evaluate("(xi * cos_t) - (yi * sin_t) + rotctr_x")
+            bp = ne.evaluate("(xi * sin_t) + (yi * cos_t) + rotctr_y")
+        else:
+            ap = (xi * cos_t) - (yi * sin_t) + rotctr_x
+            bp = (xi * sin_t) + (yi * cos_t) + rotctr_y
+        #print "rotation in %.5f sec" % (time.time() - t1)
 
-    if out is not None:
-        out[:, :, ...] = data_np[bp, ap]
-        newdata = out
-    else:
-        newdata = data_np[bp, ap]
-        new_ht, new_wd = newdata.shape[:2]
+        #ap = numpy.rint(ap).astype('int').clip(0, wd-1)
+        #bp = numpy.rint(bp).astype('int').clip(0, ht-1)
+        # Optomizations to reuse existing intermediate arrays
+        numpy.rint(ap, out=ap)
+        ap = ap.astype('int')
+        ap.clip(0, wd-1, out=ap)
+        numpy.rint(bp, out=bp)
+        bp = bp.astype('int')
+        bp.clip(0, ht-1, out=bp)
 
-        assert (wd == new_wd) and (ht == new_ht), \
-               Exception("rotated cutout is %dx%d original=%dx%d" % (
-            new_wd, new_ht, wd, ht))
+        if out is not None:
+            out[:, :, ...] = data_np[bp, ap]
+            newdata = out
+        else:
+            newdata = data_np[bp, ap]
+            new_ht, new_wd = newdata.shape[:2]
+
+            assert (wd == new_wd) and (ht == new_ht), \
+                   Exception("rotated cutout is %dx%d original=%dx%d" % (
+                new_wd, new_ht, wd, ht))
 
     return newdata
 
@@ -143,7 +172,7 @@ def rotate(data_np, theta_deg, rotctr_x=None, rotctr_y=None):
     dims = (new_ht, new_wd) + data_np.shape[2:]
     # TODO: fill with a different value?
     newdata = numpy.zeros(dims)
-    # Find center of new data array 
+    # Find center of new data array
     ncx, ncy = new_wd // 2, new_ht // 2
 
     # Overlay the old image on the new (blank) image
@@ -161,12 +190,6 @@ def rotate(data_np, theta_deg, rotctr_x=None, rotctr_y=None):
                           rotctr_x=rotctr_x, rotctr_y=rotctr_y,
                           out=newdata)
     return newdata
-
-
-def get_scaled_cutout_wdht(data_np, x1, y1, x2, y2, new_wd, new_ht):
-    view, (scale_x, scale_y) = get_scaled_cutout_wdht_view(data_np.shape, x1, y1,
-                                                           x2, y2, new_wd, new_ht)
-    return data_np[view], (scale_x, scale_y)
 
 
 def get_scaled_cutout_wdht_view(shp, x1, y1, x2, y2, new_wd, new_ht):
@@ -211,6 +234,27 @@ def get_scaled_cutout_wdht_view(shp, x1, y1, x2, y2, new_wd, new_ht):
     return (view, (scale_x, scale_y))
 
 
+def get_scaled_cutout_wdht(data_np, x1, y1, x2, y2, new_wd, new_ht,
+                           interpolation='basic'):
+    if have_opencv and (interpolation == 'linear'):
+        # opencv is fastest
+        newdata = cv2.resize(data_np[y1:y2+1, x1:x2+1], (new_wd, new_ht),
+                                 interpolation=cv2.INTER_LINEAR)
+
+    elif have_opencv and (interpolation == 'bicubic'):
+        # opencv is fastest
+        newdata = cv2.resize(data_np[y1:y2+1, x1:x2+1], (new_wd, new_ht),
+                                 interpolation=cv2.INTER_CUBIC)
+
+    else:
+        view, (scale_x, scale_y) = get_scaled_cutout_wdht_view(data_np.shape,
+                                                               x1, y1, x2, y2,
+                                                               new_wd, new_ht)
+        new_data = data_np[view]
+
+    return new_data, (scale_x, scale_y)
+
+
 def get_scaled_cutout_basic_view(shp, x1, y1, x2, y2, scale_x, scale_y):
     """
     Like get_scaled_cutout_basic, but returns the view/slice to extract
@@ -227,12 +271,34 @@ def get_scaled_cutout_basic_view(shp, x1, y1, x2, y2, scale_x, scale_y):
     return get_scaled_cutout_wdht_view(shp, x1, y1, x2, y2, new_wd, new_ht)
 
 
-def get_scaled_cutout_basic(data_np, x1, y1, x2, y2, scale_x, scale_y):
+def get_scaled_cutout_basic(data_np, x1, y1, x2, y2, scale_x, scale_y,
+                            interpolation='basic'):
 
-    view, (scale_x, scale_y) = get_scaled_cutout_basic_view(data_np.shape,
-                                                            x1, y1, x2, y2,
-                                                            scale_x, scale_y)
-    return data_np[view], (scale_x, scale_y)
+    if have_opencv and (interpolation == 'linear'):
+        # opencv is fastest
+        newdata = cv2.resize(data_np[y1:y2+1, x1:x2+1], None,
+                             fx=scale_x, fy=scale_y,
+                             interpolation=cv2.INTER_LINEAR)
+        old_wd, old_ht = max(x2 - x1 + 1, 1), max(y2 - y1 + 1, 1)
+        ht, wd = newdata.shape[:2]
+        scale_x, scale_y = float(wd) / old_wd, float(ht) / old_ht
+
+    elif have_opencv and (interpolation == 'bicubic'):
+        # opencv is fastest
+        newdata = cv2.resize(data_np[y1:y2+1, x1:x2+1], None,
+                             fx=scale_x, fy=scale_y,
+                             interpolation=cv2.INTER_CUBIC)
+        old_wd, old_ht = max(x2 - x1 + 1, 1), max(y2 - y1 + 1, 1)
+        ht, wd = newdata.shape[:2]
+        scale_x, scale_y = float(wd) / old_wd, float(ht) / old_ht
+
+    else:
+        view, (scale_x, scale_y) = get_scaled_cutout_basic_view(data_np.shape,
+                                                                x1, y1, x2, y2,
+                                                                scale_x, scale_y)
+        newdata = data_np[view]
+
+    return newdata, (scale_x, scale_y)
 
 
 def transform(data_np, flip_x=False, flip_y=False, swap_xy=False):
@@ -347,7 +413,7 @@ def overlay_image(dstarr, dst_x, dst_y, srcarr, dst_order='RGBA',
     # Currently we assume that alpha channel is in position 3 in dstarr
     assert da_idx == 3, \
            ValueError("Alpha channel not in expected position in dstarr")
-    
+
     # fill alpha channel in destination in the area we will be dropping
     # the image
     if fill and (da_idx >= 0):
@@ -384,6 +450,6 @@ def overlay_image(dstarr, dst_x, dst_y, srcarr, dst_order='RGBA',
 def reorder_image(dst_order, src_arr, src_order):
     indexes = [ src_order.index(c) for c in dst_order ]
     return numpy.dstack([ src_arr[..., idx] for idx in indexes ])
-    
+
 
 #END

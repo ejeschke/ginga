@@ -41,7 +41,7 @@ def mosaic(logger, itemlist, fov_deg=None):
         filepath = itemlist[0]
         logger.info("Reading file '%s' ..." % (filepath))
         image0 = AstroImage.AstroImage(logger=logger)
-        image0.load_file(filelist[0])
+        image0.load_file(filepath)
         name = filepath
 
     ra_deg, dec_deg = image0.get_keywords_list('CRVAL1', 'CRVAL2')
@@ -51,10 +51,11 @@ def mosaic(logger, itemlist, fov_deg=None):
                                                         cdelt1, cdelt2))
 
     px_scale = math.fabs(cdelt1)
+    expand = False
     if fov_deg is None:
-        # TODO: calculate fov!
-        fov_deg = 1.0
-        
+        # TODO: calculate fov?
+        expand = True
+
     cdbase = [numpy.sign(cdelt1), numpy.sign(cdelt2)]
     img_mosaic = dp.create_blank_image(ra_deg, dec_deg,
                                        fov_deg, px_scale, rot_deg,
@@ -65,7 +66,8 @@ def mosaic(logger, itemlist, fov_deg=None):
     logger.debug("mosaic rot=%f cdelt1=%f cdelt2=%f" % (rot, cdelt1, cdelt2))
 
     logger.debug("Processing '%s' ..." % (name))
-    tup = img_mosaic.mosaic_inline([ image0 ])
+    tup = img_mosaic.mosaic_inline([ image0 ],
+                                   allow_expand=expand)
     logger.debug("placement %s" % (str(tup)))
 
     count = 1
@@ -87,8 +89,8 @@ def mosaic(logger, itemlist, fov_deg=None):
 
     logger.info("Done.")
     return img_mosaic
-        
-    
+
+
 def main(options, args):
 
     logger = log.get_logger(name="mosaic", options=options)
@@ -109,22 +111,22 @@ def main(options, args):
 
 
 if __name__ == "__main__":
-   
+
     # Parse command line options with nifty optparse module
     from optparse import OptionParser
 
     usage = "usage: %prog [options] cmd [args]"
     optprs = OptionParser(usage=usage, version=('%%prog'))
-    
+
     optprs.add_option("--debug", dest="debug", default=False, action="store_true",
                       help="Enter the pdb debugger on main()")
     optprs.add_option("--fov", dest="fov", metavar="DEG",
-                      type='float', 
+                      type='float',
                       help="Set output field of view")
     optprs.add_option("--log", dest="logfile", metavar="FILE",
                       help="Write logging output to FILE")
     optprs.add_option("--loglevel", dest="loglevel", metavar="LEVEL",
-                      type='int', 
+                      type='int',
                       help="Set logging level to LEVEL")
     optprs.add_option("-o", "--outfile", dest="outfile", metavar="FILE",
                       help="Write mosaic output to FILE")

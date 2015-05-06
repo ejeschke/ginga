@@ -1,0 +1,158 @@
+#! /usr/bin/env python
+#
+# gris -- Ginga Remote Image Server
+#
+# Eric Jeschke (eric@naoj.org)
+#
+# Copyright (c) Eric R. Jeschke.  All rights reserved.
+# This is open-source software licensed under a BSD license.
+# Please see the file LICENSE.txt for details.
+#
+"""
+Usage:
+   $ gris [options]
+   $ gris --help
+   
+gris is a remote image server that let's you load RemoteImage instances into a
+ginga client that make minimal use of bandwidth to the server.  This works on the
+principle that ginga extracts only the minimum amount of data from an image
+necessary to render it at the viewer's pan position and scale.
+"""
+from __future__ import print_function
+import sys
+import logging
+from optparse import OptionParser
+
+from ginga import AstroImage
+from ginga.util import grc
+from ginga.misc import Datasrc, log
+
+
+class GRIS(object):
+    """
+    This class implements the minimum subset of methods necessary to replicate the
+    data access functionality of an AstroImage object on the server side.  It keeps
+    track of images in a cache with the filesystem path as the key.
+    """
+    def __init__(self, logger=None, cache_len=10):
+        if logger is None:
+            logger = log.get_logger(null=True)
+        self.logger = logger
+        self.cache_len = cache_len
+        self.cache = Datasrc.Datasrc(length=self.cache_len)
+
+    def _get_cache(self, filepath):
+        image = self.cache[filepath]
+        return image
+        
+    def load_file(self, filepath, numhdu=None, naxispath=None):
+        image = AstroImage.AstroImage(logger=self.logger)
+        image.load_file(filepath, numhdu=numhdu, naxispath=naxispath)
+
+        # add image to cache
+        self.cache[filepath] = image
+
+        header = {}
+        header.update(image.get_header())
+        return image.shape, header
+
+    def get_minmax(self, filepath, noinf=False):
+        try:
+            image = self._get_cache(filepath)
+        except KeyError as e:
+            return (0, 0)
+        return image.get_minmax(noinf=noinf)
+
+    def get_data(self, filepath):
+        # TODO: what about numhdu and naxispath
+        raise Exception("Don't call get_data()!")
+        image = self._get_cache(filepath)
+        data = image.get_data()
+        self.logger.debug("data has shape %s" % (str(data.shape)))
+        return data
+
+    def get_view(self, filepath, view):
+        #self.logger.debug("view is %s" % str(view))
+        image = self._get_cache(filepath)
+        data = image.get_data()[view]
+        #self.logger.debug("shape is %s" % str(data.shape))
+        return data
+
+    def get_data_xy(self, filepath, x, y):
+        image = self._get_cache(filepath)
+        data = image.get_data()
+        return data[y, x]
+
+    def get_pixels_on_line(self, filepath, x1, y1, x2, y2):
+        image = self._get_cache(filepath)
+        return image.get_pixels_on_line(x1, y1, x2, y2)
+
+        
+def main(options, args):
+
+    # create a logger
+    logger = log.get_logger(log_stderr=True, level=options.loglevel)
+
+    # implements GRIS methods
+    gris = GRIS(cache_len=options.bufsize, logger=logger)
+
+    # remote server handling
+    server = grc.RemoteServer(gris, options.host, options.port, logger=logger)
+
+    try:
+        logger.info("Starting remote image server...")
+        server.start()
+
+    except KeyboardInterrupt:
+        logger.info("Remote image server stopped")
+
+
+if __name__ == "__main__":
+   
+    usage = "usage: %prog [options] cmd [arg] ..."
+    optprs = OptionParser(usage=usage, version=('%%prog'))
+    
+    optprs.add_option("--bufsize", dest="bufsize", metavar="NUM",
+                      type="int", default=10,
+                      help="Buffer length to NUM")
+    optprs.add_option("--debug", dest="debug", default=False, action="store_true",
+                      help="Enter the pdb debugger on main()")
+    optprs.add_option("--host", dest="host", metavar="HOST",
+                      default="localhost", help="Connect to server at HOST")
+    optprs.add_option("--log", dest="logfile", metavar="FILE",
+                      help="Write logging output to FILE")
+    optprs.add_option("--loglevel", dest="loglevel", metavar="LEVEL",
+                      type='int', default=logging.INFO,
+                      help="Set logging level to LEVEL")
+    optprs.add_option("--numthreads", dest="numthreads", type="int",
+                      default=30, metavar="NUM",
+                      help="Start NUM threads in thread pool")
+    optprs.add_option("--port", dest="port", type="int",
+                      default=9000, metavar="PORT",
+                      help="Connect to server at PORT")
+    optprs.add_option("--profile", dest="profile", action="store_true",
+                      default=False,
+                      help="Run the profiler on main()")
+    optprs.add_option("--stderr", dest="logstderr", default=False,
+                      action="store_true",
+                      help="Copy logging also to stderr")
+
+    (options, args) = optprs.parse_args(sys.argv[1:])
+
+    # Are we debugging this?
+    if options.debug:
+        import pdb
+
+        pdb.run('main(options, args)')
+
+    # Are we profiling this?
+    elif options.profile:
+        import profile
+
+        print("%s profile:" % sys.argv[0])
+        profile.run('main(options, args)')
+
+    else:
+        main(options, args)
+
+# END
