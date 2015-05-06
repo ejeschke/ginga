@@ -109,15 +109,23 @@ def use(wcspkg, raise_err=True):
 
     elif wcspkg == 'astropy2':
         try:
-            from astropy import coordinates
-            import astropy.wcs as pywcs
-            from astropy.io import fits as pyfits
-            import astropy.units as u
-            have_pywcs = True
+            import astropy
         except ImportError:
             if raise_err:
                 raise
 
+        from distutils.version import LooseVersion
+        if LooseVersion(astropy.__version__) <= LooseVersion('1'):
+            return False
+
+
+        import astropy.coordinates
+        import astropy.wcs as pywcs
+        from astropy.io import fits as pyfits
+        import astropy.units as u
+
+
+        have_pywcs = True
         have_astropy = True
         wcs_configured = True
         WCS = AstropyWCS2
@@ -127,7 +135,7 @@ def use(wcspkg, raise_err=True):
         except ImportError:
             pass
 
-        coord_types = [f.name for f in coordinates.frame_transform_graph.frame_set]
+        coord_types = [f.name for f in astropy.coordinates.frame_transform_graph.frame_set]
 
         return True
 
@@ -202,6 +210,9 @@ class BaseWCS(object):
 
 
 class AstropyWCS2(BaseWCS):
+    """
+    Astropy 1.0+ WCS / Coordinate System
+    """
 
     def __init__(self, logger):
         super(AstropyWCS2, self).__init__()
@@ -210,7 +221,6 @@ class AstropyWCS2(BaseWCS):
         self.header = None
         self.wcs = None
         self.coordframe = None
-        self.coordsys = ''
 
 
     def load_header(self, header, fobj=None):
@@ -225,8 +235,6 @@ class AstropyWCS2(BaseWCS):
             self.wcs = pywcs.WCS(self.header, fobj=fobj, relax=True)
             self.coordframe = wcs_to_celestial_frame(self.wcs)
 
-            self.coordsys = choose_coord_system(self.header)
-            self.logger.debug("Coordinate frame is: %s" % (self.coordframe))
         except Exception as e:
             self.logger.error("Error making WCS object: %s" % (str(e)))
             self.wcs = None
@@ -234,7 +242,7 @@ class AstropyWCS2(BaseWCS):
     def vaild_transform_frames(self):
         global coord_types
 
-        frames = [f.name for f in coordinates.frame_transform_graph.frame_set
+        frames = [f.name for f in astropy.coordinates.frame_transform_graph.frame_set
                   if self.coordframe.is_transformable_to(f)]
         coord_types = frames
 
@@ -253,22 +261,29 @@ class AstropyWCS2(BaseWCS):
         -------
         None
 
+        Notes
+        -----
+
+        This is really an ugly hack, which should be in BaseFrame. What it is
+        doing is only changing the internal representation of the data in a Frame.
+        This means that a new frame is not initilized, which is a substantial
+        speed improvement.
         """
         # If the representation is a subclass of Spherical we need to check for
         # the new _unitrep attr to give the corresponding unit spherical subclass.
         if (issubclass(self.coordframe.representation,
-                       coordinates.SphericalRepresentation) and
+                       astropy.coordinates.SphericalRepresentation) and
             hasattr(self.coordframe.representation, '_unitrep')):
             rep = self.coordframe.representation._unitrep(*data)
 
         elif issubclass(self.coordframe.representation,
-                        coordinates.UnitSphericalRepresentation):
+                        astropy.coordinates.UnitSphericalRepresentation):
             rep = self.coordframe.representation(*data)
 
         else:
             self.logger.info("Falling back to UnitSphericalRepresentation"
                              " from {}".format(self.coordframe.representation))
-            rep = coordinates.UnitSphericalRepresentation(*data)
+            rep = astropy.coordinates.UnitSphericalRepresentation(*data)
 
         if hasattr(self.coordframe._set_data, '_set_data'):
             self.coordframe._set_data(rep)
@@ -276,7 +291,8 @@ class AstropyWCS2(BaseWCS):
             self.coordframe._data = rep
             self.coordframe._rep_cache[self.coordframe._data.__class__.__name__,
                                        False] = self.coordframe._data
-#            This will eventually work
+
+#            This will eventually work, once upstream PR is complete.
 #            self.coordframe = self.coordframe.realize_frame(rep, copy=False)
 
 
@@ -369,7 +385,7 @@ class AstropyWCS2(BaseWCS):
         if system is None:
             return coord
 
-        toclass = coordinates.frame_transform_graph.lookup_name(system)
+        toclass = astropy.coordinates.frame_transform_graph.lookup_name(system)
 
         transform = self.coordframe.is_transformable_to(toclass)
         if transform and transform != 'same':
@@ -564,11 +580,6 @@ class AstropyWCS(BaseWCS):
             coord = coord.transform_to(toclass)
 
         else:
-            # new astropy coordinates system
-            ## coord = coordinates.SkyCoord(ra_deg * units.degree,
-            ##                              dec_deg * units.degree,
-            ##                              frame=self.coordsys)
-            ## coord = coord.transform_to(system)
             frameClass = coordinates.frame_transform_graph.lookup_name(self.coordsys)
             coord = frameClass(ra_deg * units.degree, dec_deg * units.degree)
             toClass = coordinates.frame_transform_graph.lookup_name(system)
