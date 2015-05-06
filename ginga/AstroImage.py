@@ -12,6 +12,7 @@ import re
 import math
 import logging
 import time
+import traceback
 
 import numpy, numpy.ma
 
@@ -536,7 +537,7 @@ class AstroImage(BaseImage):
                 # determine amount to pad expansion by
                 expand_x = max(int(expand_pad_deg / scale_x), 0)
                 expand_y = max(int(expand_pad_deg / scale_y), 0)
-                
+
                 nx1_off, nx2_off = 0, 0
                 if xlo < 0:
                     nx1_off = abs(xlo) + expand_x
@@ -566,7 +567,7 @@ class AstroImage(BaseImage):
                     kwds = dict(CRPIX1=crpix1 + nx1_off,
                                 CRPIX2=crpix2 + ny1_off)
                     self.update_keywords(kwds)
-                    
+
             # fit image piece into our array
             try:
                 if merge:
@@ -622,7 +623,7 @@ class AstroImage(BaseImage):
                 ra_txt = "%+.3f" % (x)
                 dec_txt = "%+.3f" % (y)
                 ra_lbl, dec_lbl = "X", "Y"
-                
+
             else:
                 args = [data_x, data_y] + self.revnaxis
 
@@ -663,10 +664,17 @@ class AstroImage(BaseImage):
                 str(e)))
             ra_txt  = 'BAD WCS'
             dec_txt = 'BAD WCS'
+            try:
+                # log traceback, if possible
+                (type_, value_, tb) = sys.exc_info()
+                tb_str = "".join(traceback.format_tb(tb))
+                self.logger.error("Traceback:\n%s" % (tb_str))
+            except Exception:
+                tb_str = "Traceback information unavailable."
+                self.logger.error(tb_str)
 
         te = time.time() - ts
         #print "time elapsed: %.4f" % te
-
         info = Bunch.Bunch(itype='astro', data_x=data_x, data_y=data_y,
                            x=data_x, y=data_y,
                            ra_txt=ra_txt, dec_txt=dec_txt,

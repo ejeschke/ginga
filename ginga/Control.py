@@ -625,7 +625,6 @@ class GingaControl(Callback.Callbacks):
         future = Future.Future()
         future.freeze(image_loader, filepath, **kwdargs)
         image = future.thaw()
-
         # Save a future for this image to reload it later if we
         # have to remove it from memory
         image.set(loader=image_loader, image_future=future)
