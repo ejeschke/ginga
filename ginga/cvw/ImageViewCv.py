@@ -35,7 +35,13 @@ class ImageViewCv(ImageView.ImageViewBase):
 
         self.surface = None
         self.img_fg = None
-        self._rgb_order = 'BGRA'
+        # According to OpenCV documentation:
+        # "If you are using your own image rendering and I/O functions,
+        # you can use any channel ordering. The drawing functions process
+        # each channel independently and do not depend on the channel
+        # order or even on the used color space."
+        #self._rgb_order = 'BGRA'
+        self._rgb_order = 'RGBA'
 
         self.message = None
 
@@ -77,8 +83,8 @@ class ImageViewCv(ImageView.ImageViewBase):
 
         # render self.message
         if self.message:
-            font = cr.get_font(self.t_['onscreen_ff'], 24.0, self.img_fg,
-                               linewidth=4)
+            font = cr.get_font(self.t_['onscreen_ff'], 14.0, self.img_fg,
+                               linewidth=2)
             wd, ht = cr.text_extents(self.message, font)
             imgwin_wd, imgwin_ht = self.get_window_size()
             y = ((imgwin_ht // 3) * 2) - (ht // 2)
@@ -91,7 +97,8 @@ class ImageViewCv(ImageView.ImageViewBase):
     def configure(self, width, height):
         # create cv surface the size of the window
         # (cv just uses numpy arrays!)
-        self.surface = numpy.zeros((height, width, 4), numpy.uint8)
+        depth = len(self._rgb_order)
+        self.surface = numpy.zeros((height, width, depth), numpy.uint8)
 
         # inform the base class about the actual window size
         self.set_window_size(width, height, redraw=True)

@@ -192,12 +192,6 @@ def rotate(data_np, theta_deg, rotctr_x=None, rotctr_y=None):
     return newdata
 
 
-def get_scaled_cutout_wdht(data_np, x1, y1, x2, y2, new_wd, new_ht):
-    view, (scale_x, scale_y) = get_scaled_cutout_wdht_view(data_np.shape, x1, y1,
-                                                           x2, y2, new_wd, new_ht)
-    return data_np[view], (scale_x, scale_y)
-
-
 def get_scaled_cutout_wdht_view(shp, x1, y1, x2, y2, new_wd, new_ht):
     """
     Like get_scaled_cutout_wdht, but returns the view/slice to extract
@@ -240,6 +234,27 @@ def get_scaled_cutout_wdht_view(shp, x1, y1, x2, y2, new_wd, new_ht):
     return (view, (scale_x, scale_y))
 
 
+def get_scaled_cutout_wdht(data_np, x1, y1, x2, y2, new_wd, new_ht,
+                           interpolation='basic'):
+    if have_opencv and (interpolation == 'linear'):
+        # opencv is fastest
+        newdata = cv2.resize(data_np[y1:y2+1, x1:x2+1], (new_wd, new_ht),
+                                 interpolation=cv2.INTER_LINEAR)
+
+    elif have_opencv and (interpolation == 'bicubic'):
+        # opencv is fastest
+        newdata = cv2.resize(data_np[y1:y2+1, x1:x2+1], (new_wd, new_ht),
+                                 interpolation=cv2.INTER_CUBIC)
+
+    else:
+        view, (scale_x, scale_y) = get_scaled_cutout_wdht_view(data_np.shape,
+                                                               x1, y1, x2, y2,
+                                                               new_wd, new_ht)
+        new_data = data_np[view]
+
+    return new_data, (scale_x, scale_y)
+
+
 def get_scaled_cutout_basic_view(shp, x1, y1, x2, y2, scale_x, scale_y):
     """
     Like get_scaled_cutout_basic, but returns the view/slice to extract
@@ -256,12 +271,34 @@ def get_scaled_cutout_basic_view(shp, x1, y1, x2, y2, scale_x, scale_y):
     return get_scaled_cutout_wdht_view(shp, x1, y1, x2, y2, new_wd, new_ht)
 
 
-def get_scaled_cutout_basic(data_np, x1, y1, x2, y2, scale_x, scale_y):
+def get_scaled_cutout_basic(data_np, x1, y1, x2, y2, scale_x, scale_y,
+                            interpolation='basic'):
 
-    view, (scale_x, scale_y) = get_scaled_cutout_basic_view(data_np.shape,
-                                                            x1, y1, x2, y2,
-                                                            scale_x, scale_y)
-    return data_np[view], (scale_x, scale_y)
+    if have_opencv and (interpolation == 'linear'):
+        # opencv is fastest
+        newdata = cv2.resize(data_np[y1:y2+1, x1:x2+1], None,
+                             fx=scale_x, fy=scale_y,
+                             interpolation=cv2.INTER_LINEAR)
+        old_wd, old_ht = max(x2 - x1 + 1, 1), max(y2 - y1 + 1, 1)
+        ht, wd = newdata.shape[:2]
+        scale_x, scale_y = float(wd) / old_wd, float(ht) / old_ht
+
+    elif have_opencv and (interpolation == 'bicubic'):
+        # opencv is fastest
+        newdata = cv2.resize(data_np[y1:y2+1, x1:x2+1], None,
+                             fx=scale_x, fy=scale_y,
+                             interpolation=cv2.INTER_CUBIC)
+        old_wd, old_ht = max(x2 - x1 + 1, 1), max(y2 - y1 + 1, 1)
+        ht, wd = newdata.shape[:2]
+        scale_x, scale_y = float(wd) / old_wd, float(ht) / old_ht
+
+    else:
+        view, (scale_x, scale_y) = get_scaled_cutout_basic_view(data_np.shape,
+                                                                x1, y1, x2, y2,
+                                                                scale_x, scale_y)
+        newdata = data_np[view]
+
+    return newdata, (scale_x, scale_y)
 
 
 def transform(data_np, flip_x=False, flip_y=False, swap_xy=False):

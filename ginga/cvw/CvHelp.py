@@ -32,8 +32,11 @@ class Font(object):
         self.fontsize = fontsize
         self.color = color
         self.linewidth = linewidth
+        # scale relative to a 12pt font
+        self.scale = fontsize / 12.0
         self.alpha = alpha
-        # TODO: what kind of lookup can we use for this?
+        # TODO: currently there is only support for some simple built-in
+        # fonts.  What kind of fonts/lookup can we use for this?
         self.font = cv2.FONT_HERSHEY_SIMPLEX
 
 
@@ -55,8 +58,11 @@ class CvContext(object):
         else:
             r, g, b = 1.0, 1.0, 1.0
 
-        # OpenCV expects colors as BGRA tuple
-        return (int(alpha*255), int(b*255), int(g*255), int(r*255))
+        # According to documentation, OpenCV expects colors as BGRA tuple
+        # BUT, seems we need to specify RGBA--I suppose we need to match
+        # what is defined as _rgb_order attribute in ImageViewCv class
+        #return (int(alpha*255), int(b*255), int(g*255), int(r*255))
+        return (int(r*255), int(g*255), int(b*255), int(alpha*255))
 
     def get_pen(self, color, linewidth=1, alpha=1.0):
         # if hasattr(self, 'linestyle'):
@@ -67,30 +73,29 @@ class CvContext(object):
         return Pen(color=color, linewidth=linewidth, alpha=alpha)
 
     def get_brush(self, color, alpha=1.0):
-        #op = int(alpha * 255)
         color = self.get_color(color, alpha=alpha)
         return Brush(color=color, fill=True, alpha=alpha)
 
     def get_font(self, name, size, color, linewidth=1, alpha=1.0):
         color = self.get_color(color, alpha=alpha)
-        #op = int(alpha * 255)
         return Font(fontname=name, fontsize=size, color=color,
                     linewidth=linewidth, alpha=alpha)
 
     def text_extents(self, text, font):
         ## retval, baseline = cv2.getTextSize(text, font.font, font.fontsize,
         ##                                    font.linewidth)
-        retval, baseline = cv2.getTextSize(text, font.font, 1,
+        retval, baseline = cv2.getTextSize(text, font.font, font.scale,
                                            font.linewidth)
         wd, ht = retval
         return wd, ht
 
     def text(self, pt, text, font):
         x, y = pt
-        #cv2.putText(self.canvas, text, (x, y), font.font, font.fontsize,
-        #            font.color, 1, cv2.LINE_AA)
-        cv2.putText(self.canvas, text, (x, y), font.font, 1,
-                    font.color, 1, 0)
+        ## cv2.putText(self.canvas, text, (x, y), font.font, font.scale,
+        ##             font.color, thickness=font.linewidth,
+        ##             lineType=cv2.CV_AA)
+        cv2.putText(self.canvas, text, (x, y), font.font, font.scale,
+                    font.color, thickness=font.linewidth)
 
     def line(self, pt1, pt2, pen):
         x1, y1 = int(round(pt1[0])), int(round(pt1[1]))
@@ -111,9 +116,10 @@ class CvContext(object):
 
     def ellipse(self, pt, xr, yr, theta, pen, brush):
         x, y = pt
-        if (brush is not None) and brush.fill:
-            cv2.ellipse(self.canvas, (x, y), (xr, yr), theta, 0.0, 360.0,
-                        brush.color, -1)
+        ## if (brush is not None) and brush.fill:
+        ##     cv2.ellipse(self.canvas, ((x, y), (xr, yr), theta), 0.0, 360.0,
+        ##                 brush.color, -1)
+
         cv2.ellipse(self.canvas, (x, y), (xr, yr), theta, 0.0, 360.0,
                     pen.color, pen.linewidth)
 
