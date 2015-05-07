@@ -328,6 +328,7 @@ class BaseImage(Callback.Callbacks):
         return mdata
 
     def get_scaled_cutout_wdht(self, x1, y1, x2, y2, new_wd, new_ht):
+
         shp = self.shape
 
         (view, (scale_x, scale_y)) = \

@@ -1,12 +1,14 @@
 #
 # Pan.py -- Pan plugin for fits viewer
-# 
+#
 # Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+import sys
+import traceback
 import math
 from ginga.misc import Widgets, CanvasTypes, Bunch
 from ginga import GingaPlugin
@@ -64,7 +66,7 @@ class Pan(GingaPlugin.GlobalPlugin):
     def add_channel(self, viewer, chinfo):
         panimage = self._create_pan_image()
         chname = chinfo.name
-        
+
         iw = panimage.get_widget()
         # wrap widget
         iw = Widgets.wrap(iw)
@@ -80,14 +82,14 @@ class Pan(GingaPlugin.GlobalPlugin):
         rgbmap = fitsimage.get_rgbmap()
         panimage.set_rgbmap(rgbmap, redraw=False)
         rgbmap.add_callback('changed', self.rgbmap_cb, panimage)
-        
+
         fitsimage.copy_attributes(panimage, ['cutlevels'])
         fitsimage.add_callback('image-set', self.new_image_cb, chinfo, paninfo)
         fitsimage.add_callback('redraw', self.panset, chinfo, paninfo)
 
         fitssettings = fitsimage.get_settings()
         pansettings = panimage.get_settings()
-        
+
         zoomsettings = ['zoom_algorithm', 'zoom_rate',
                         'scale_x_base', 'scale_y_base']
         fitssettings.shareSettings(pansettings, zoomsettings)
@@ -100,7 +102,7 @@ class Pan(GingaPlugin.GlobalPlugin):
         for key in xfrmsettings:
             pansettings.getSetting(key).add_callback('set', self.redraw_cb,
                                                      fitsimage, chinfo, paninfo, 0)
-            
+
         fitssettings.shareSettings(pansettings, ['cuts'])
         pansettings.getSetting('cuts').add_callback('set', self.redraw_cb,
                                                     fitsimage, chinfo, paninfo, 1)
@@ -120,21 +122,21 @@ class Pan(GingaPlugin.GlobalPlugin):
         for name in names:
             chinfo = self.fv.get_channelInfo(name)
             self.add_channel(self.fv, chinfo)
-        
+
     # CALLBACKS
 
     def rgbmap_cb(self, rgbmap, panimage):
         # color mapping has changed in some way
         panimage.redraw(whence=1)
-    
+
     def new_image_cb(self, fitsimage, image, chinfo, paninfo):
         loval, hival = fitsimage.get_cut_levels()
         paninfo.panimage.cut_levels(loval, hival, redraw=False)
-        
+
         # add cb to image so that if it is modified we can update info
         image.add_callback('modified', self.image_update_cb, fitsimage,
                            chinfo, paninfo)
-        
+
         self.set_image(chinfo, paninfo, image)
 
     def image_update_cb(self, image, fitsimage, chinfo, paninfo):
@@ -143,7 +145,7 @@ class Pan(GingaPlugin.GlobalPlugin):
         if cur_img == image:
             self.set_image(chinfo, paninfo, image)
         return True
-        
+
     def focus_cb(self, viewer, fitsimage):
         chname = self.fv.get_channelName(fitsimage)
         chinfo = self.fv.get_channelInfo(chname)
@@ -155,27 +157,27 @@ class Pan(GingaPlugin.GlobalPlugin):
             self.nb.set_index(index)
             self.active = chname
             self.info = self.channel[self.active]
-       
-        
+
+
     def reconfigure(self, fitsimage, width, height):
         self.logger.debug("new pan image dimensions are %dx%d" % (
             width, height))
         fitsimage.zoom_fit()
-        
+
     def redraw_cb(self, setting, value, fitsimage, chinfo, paninfo, whence):
         paninfo.panimage.redraw(whence=whence)
         self.panset(chinfo.fitsimage, chinfo, paninfo)
         return True
-        
+
     def zoom_cb(self, setting, value, fitsimage, chinfo, paninfo):
         # refit the pan image, because scale factors may have changed
         paninfo.panimage.zoom_fit(redraw=True)
         # redraw pan info
         self.panset(fitsimage, chinfo, paninfo)
         return True
-        
+
     # LOGIC
-    
+
     def clear(self):
         self.info.panimage.clear()
 
@@ -201,13 +203,21 @@ class Pan(GingaPlugin.GlobalPlugin):
 
             # HACK: force a wcs error here if one is going to happen
             image.add_offset_xy(x, y, 1.0, 1.0)
-            
+
             paninfo.pancompass = paninfo.panimage.add(CanvasTypes.Compass(
                 x, y, radius, color='skyblue',
                 fontsize=14), redraw=True)
         except Exception as e:
             self.logger.warn("Can't calculate compass: %s" % (
                 str(e)))
+            try:
+                # log traceback, if possible
+                (type_, value_, tb) = sys.exc_info()
+                tb_str = "".join(traceback.format_tb(tb))
+                self.logger.error("Traceback:\n%s" % (tb_str))
+            except Exception:
+                tb_str = "Traceback information unavailable."
+                self.logger.error(tb_str)
 
         self.panset(chinfo.fitsimage, chinfo, paninfo)
 
@@ -215,7 +225,7 @@ class Pan(GingaPlugin.GlobalPlugin):
         image = fitsimage.get_image()
         if image is None:
             return
-        
+
         x, y = fitsimage.get_pan()
         points = fitsimage.get_pan_rect()
 
@@ -284,7 +294,7 @@ class Pan(GingaPlugin.GlobalPlugin):
                 fitsimage.zoom_in()
         fitsimage.onscreen_message(fitsimage.get_scale_text(),
                                    delay=1.0)
-        
+
     def draw_cb(self, fitsimage, tag):
         # Get and delete the drawn object
         obj = fitsimage.getObjectByTag(tag)
@@ -317,8 +327,8 @@ class Pan(GingaPlugin.GlobalPlugin):
         fitsimage.zoom_to(zoomlevel, redraw=True)
         return True
 
-        
+
     def __str__(self):
         return 'pan'
-    
+
 #END

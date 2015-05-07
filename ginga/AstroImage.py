@@ -12,6 +12,7 @@ import re
 import math
 import logging
 import time
+import traceback
 
 import numpy, numpy.ma
 
@@ -669,10 +670,17 @@ class AstroImage(BaseImage):
                 str(e)))
             ra_txt  = 'BAD WCS'
             dec_txt = 'BAD WCS'
+            try:
+                # log traceback, if possible
+                (type_, value_, tb) = sys.exc_info()
+                tb_str = "".join(traceback.format_tb(tb))
+                self.logger.error("Traceback:\n%s" % (tb_str))
+            except Exception:
+                tb_str = "Traceback information unavailable."
+                self.logger.error(tb_str)
 
         te = time.time() - ts
         #print "time elapsed: %.4f" % te
-
         info = Bunch.Bunch(itype='astro', data_x=data_x, data_y=data_y,
                            x=data_x, y=data_y,
                            ra_txt=ra_txt, dec_txt=dec_txt,
