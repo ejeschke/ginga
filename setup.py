@@ -62,6 +62,7 @@ setup(
                      'ginga.gtkw': ['gtk_rc'],
                      #'ginga.doc': get_docs(),
                      'ginga.doc': ['manual/*.html'],
+                     'ginga.web.pgw': ['templates/*.html', 'js/*.js'],
                      },
     scripts = ['scripts/ginga', 'scripts/grc', 'scripts/gris'],
     install_requires = ['numpy', ],
