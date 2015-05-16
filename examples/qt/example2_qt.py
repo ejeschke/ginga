@@ -10,14 +10,12 @@
 #
 from __future__ import print_function
 import sys, os
-import logging, logging.handlers
+import logging
 from ginga.qtw.QtHelp import QtGui, QtCore
 
-from ginga.util import io_fits
-from ginga import AstroImage
+from ginga import AstroImage, colors
 from ginga.qtw.ImageViewCanvasQt import ImageViewCanvas
-from ginga.qtw.ImageViewCanvasTypesQt import DrawingCanvas
-from ginga import colors
+from ginga.misc import log
 
 STD_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcName)s) | %(message)s'
 
@@ -47,6 +45,7 @@ class FitsViewer(QtGui.QMainWindow):
         bd.enable_all(True)
 
         # canvas that we will draw on
+        DrawingCanvas = fi.getDrawClass('drawingcanvas')
         canvas = DrawingCanvas()
         canvas.enable_draw(True)
         canvas.set_drawtype('rectangle', color='lightblue')
@@ -67,7 +66,7 @@ class FitsViewer(QtGui.QMainWindow):
         self.readout = QtGui.QLabel("")
         vbox.addWidget(self.readout, stretch=0,
                        alignment=QtCore.Qt.AlignCenter)
-        
+
         hbox = QtGui.QHBoxLayout()
         hbox.setContentsMargins(QtCore.QMargins(4, 2, 4, 2))
 
@@ -203,20 +202,7 @@ def main(options, args):
     #QtGui.QApplication.setGraphicsSystem('raster')
     app = QtGui.QApplication(args)
 
-    logger = logging.getLogger("example2")
-    logger.setLevel(options.loglevel)
-    fmt = logging.Formatter(STD_FORMAT)
-    if options.logfile:
-        fileHdlr  = logging.handlers.RotatingFileHandler(options.logfile)
-        fileHdlr.setLevel(options.loglevel)
-        fileHdlr.setFormatter(fmt)
-        logger.addHandler(fileHdlr)
-
-    if options.logstderr:
-        stderrHdlr = logging.StreamHandler()
-        stderrHdlr.setLevel(options.loglevel)
-        stderrHdlr.setFormatter(fmt)
-        logger.addHandler(stderrHdlr)
+    logger = log.get_logger("example2", options=options)
 
     w = FitsViewer(logger)
     w.resize(524, 540)
@@ -231,13 +217,13 @@ def main(options, args):
     app.exec_()
 
 if __name__ == "__main__":
-   
+
     # Parse command line options with nifty optparse module
     from optparse import OptionParser
 
     usage = "usage: %prog [options] cmd [args]"
     optprs = OptionParser(usage=usage, version=('%%prog'))
-    
+
     optprs.add_option("--debug", dest="debug", default=False, action="store_true",
                       help="Enter the pdb debugger on main()")
     optprs.add_option("--log", dest="logfile", metavar="FILE",

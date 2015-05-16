@@ -1,7 +1,7 @@
 #
 # ImageViewQt.py -- classes for the display of FITS files in Qt widgets
-# 
-# Eric Jeschke (eric@naoj.org) 
+#
+# Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
@@ -24,12 +24,12 @@ icon_dir = os.path.abspath(os.path.join(moduleHome, '..', 'icons'))
 class ImageViewQtError(ImageView.ImageViewError):
     pass
 
-    
+
 class RenderGraphicsView(QtGui.QGraphicsView):
 
     def __init__(self, *args, **kwdargs):
         super(RenderGraphicsView, self).__init__(*args, **kwdargs)
-    
+
         self.viewer = None
         self.pixmap = None
 
@@ -52,7 +52,7 @@ class RenderGraphicsView(QtGui.QGraphicsView):
         x1, y1, x2, y2 = rect.getCoords()
         width = x2 - x1
         height = y2 - y1
-       
+
         self.viewer.configure(width, height)
 
     def sizeHint(self):
@@ -63,8 +63,8 @@ class RenderGraphicsView(QtGui.QGraphicsView):
 
     def set_pixmap(self, pixmap):
         self.pixmap = pixmap
-    
-        
+
+
 class RenderWidget(QtGui.QWidget):
 
     def __init__(self, *args, **kwdargs):
@@ -73,7 +73,7 @@ class RenderWidget(QtGui.QWidget):
         self.viewer = None
         self.pixmap = None
         self.setAttribute(QtCore.Qt.WA_OpaquePaintEvent)
-        
+
     def paintEvent(self, event):
         """When an area of the window is exposed, we just copy out of the
         server-side, off-screen pixmap to that area.
@@ -89,13 +89,13 @@ class RenderWidget(QtGui.QWidget):
         painter = QPainter(self)
         rect = QtCore.QRect(x1, y1, width, height)
         painter.drawPixmap(rect, self.pixmap, rect)
-        
+
     def resizeEvent(self, event):
         rect = self.geometry()
         x1, y1, x2, y2 = rect.getCoords()
         width = x2 - x1
         height = y2 - y1
-       
+
         self.viewer.configure(width, height)
         #self.update()
 
@@ -129,7 +129,7 @@ class ImageViewQt(ImageView.ImageViewBase):
         self.pixmap = None
         # Qt expects 32bit BGRA data for color images
         self._rgb_order = 'BGRA'
-        
+
         self.t_.setDefaults(show_pan_position=False,
                             onscreen_ff='Sans Serif')
 
@@ -184,7 +184,7 @@ class ImageViewQt(ImageView.ImageViewBase):
             ctr_x, ctr_y = self.get_center()
             painter.drawLine(ctr_x - 10, ctr_y, ctr_x + 10, ctr_y)
             painter.drawLine(ctr_x, ctr_y - 10, ctr_x, ctr_y + 10)
-        
+
         # render self.message
         if self.message:
             self._draw_message(painter, imgwin_wd, imgwin_ht,
@@ -201,7 +201,7 @@ class ImageViewQt(ImageView.ImageViewBase):
         y = ((height // 3) * 2) - (ht // 2)
         x = (width // 2) - (wd // 2)
         painter.drawText(x, y, message)
-        
+
 
     def render_image(self, rgbobj, dst_x, dst_y):
         """Render the image represented by (rgbobj) at dst_x, dst_y
@@ -234,7 +234,7 @@ class ImageViewQt(ImageView.ImageViewBase):
             self.pixmap = pixmap
             self.imgwin.set_pixmap(pixmap)
         self.set_window_size(width, height, redraw=True)
-        
+
     def get_rgb_image_as_buffer(self, output=None, format='png',
                                 quality=90):
         ibuf = output
@@ -249,22 +249,22 @@ class ImageViewQt(ImageView.ImageViewBase):
         ibuf.write(bytes(qbuf.data()))
         qbuf.close()
         return ibuf
-    
+
     def get_rgb_image_as_bytes(self, format='png', quality=90):
         ibuf = self.get_rgb_image_as_buffer(format=format, quality=quality)
         return bytes(ibuf.getvalue())
-        
+
     def get_rgb_image_as_widget(self, output=None, format='png',
                                 quality=90):
         imgwin_wd, imgwin_ht = self.get_window_size()
         qpix = self.pixmap.copy(0, 0,
                                 imgwin_wd, imgwin_ht)
         return qpix.toImage()
-    
+
     def save_rgb_image_as_file(self, filepath, format='png', quality=90):
         qimg = self.get_rgb_image_as_widget()
         res = qimg.save(filepath, format=format, quality=quality)
-    
+
     def get_image_as_widget(self):
         """Used for generating thumbnails.  Does not include overlaid
         graphics.
@@ -279,7 +279,7 @@ class ImageViewQt(ImageView.ImageViewBase):
         """
         qimg = self.get_image_as_widget()
         res = qimg.save(filepath, format=format, quality=quality)
-    
+
     def reschedule_redraw(self, time_sec):
         try:
             self._defer_task.stop()
@@ -292,7 +292,7 @@ class ImageViewQt(ImageView.ImageViewBase):
     def update_image(self):
         if (not self.pixmap) or (not self.imgwin):
             return
-            
+
         self.logger.debug("updating window from pixmap")
         if hasattr(self, 'scene'):
             imgwin_wd, imgwin_ht = self.get_window_size()
@@ -305,19 +305,19 @@ class ImageViewQt(ImageView.ImageViewBase):
     def set_cursor(self, cursor):
         if self.imgwin:
             self.imgwin.setCursor(cursor)
-        
+
     def define_cursor(self, ctype, cursor):
         self.cursor[ctype] = cursor
-        
+
     def get_cursor(self, ctype):
         return self.cursor[ctype]
-        
+
     def get_rgb_order(self):
         return self._rgb_order
-        
+
     def switch_cursor(self, ctype):
         self.set_cursor(self.cursor[ctype])
-        
+
     def _get_qimage(self, bgra):
         h, w, channels = bgra.shape
 
@@ -331,12 +331,12 @@ class ImageViewQt(ImageView.ImageViewBase):
         n = 255.0
         clr = QColor(int(r*n), int(g*n), int(b*n))
         return clr
-        
+
     def set_fg(self, r, g, b, redraw=True):
         self.img_fg = self._get_color(r, g, b)
         if redraw:
             self.redraw(whence=3)
-        
+
     def onscreen_message(self, text, delay=None, redraw=True):
         try:
             self.msgtimer.stop()
@@ -351,40 +351,40 @@ class ImageViewQt(ImageView.ImageViewBase):
 
     def onscreen_message_off(self, redraw=True):
         return self.onscreen_message(None, redraw=redraw)
-    
+
     def show_pan_mark(self, tf, redraw=True):
         self.t_.set(show_pan_position=tf)
         if redraw:
             self.redraw(whence=3)
-        
+
 
 class RenderMixin(object):
 
     def showEvent(self, event):
         self.viewer.map_event(self, event)
-            
+
     def focusInEvent(self, event):
         self.viewer.focus_event(self, event, True)
-            
+
     def focusOutEvent(self, event):
         self.viewer.focus_event(self, event, False)
-            
+
     def enterEvent(self, event):
         self.viewer.enter_notify_event(self, event)
-    
+
     def leaveEvent(self, event):
         self.viewer.leave_notify_event(self, event)
-    
+
     def keyPressEvent(self, event):
         # without this we do not get key release events if the focus
         # changes to another window
         self.grabKeyboard()
         self.viewer.key_press_event(self, event)
-        
+
     def keyReleaseEvent(self, event):
         self.releaseKeyboard()
         self.viewer.key_release_event(self, event)
-        
+
     def mousePressEvent(self, event):
         self.viewer.button_press_event(self, event)
 
@@ -423,7 +423,7 @@ class RenderMixin(object):
     def dropEvent(self, event):
         self.viewer.drop_event(self, event)
 
-    
+
 class RenderWidgetZoom(RenderMixin, RenderWidget):
     pass
 
@@ -442,7 +442,7 @@ class ImageViewEvent(ImageViewQt):
             imgwin.setScene(self.scene)
         else:
             imgwin = RenderWidgetZoom()
-            
+
         imgwin.viewer = self
         self.imgwin = imgwin
         imgwin.setFocusPolicy(QtCore.Qt.FocusPolicy(
@@ -461,7 +461,7 @@ class ImageViewEvent(ImageViewQt):
         #imgwin.grabGesture(QtCore.Qt.SwipeGesture)
         #imgwin.grabGesture(QtCore.Qt.TapGesture)
         #imgwin.grabGesture(QtCore.Qt.TapAndHoldGesture)
-        
+
         # last known window mouse position
         self.last_win_x = 0
         self.last_win_y = 0
@@ -495,7 +495,7 @@ class ImageViewEvent(ImageViewQt):
                             ]
 
         for name in ('motion', 'button-press', 'button-release',
-                     'key-press', 'key-release', 'drag-drop', 
+                     'key-press', 'key-release', 'drag-drop',
                      'scroll', 'map', 'focus', 'enter', 'leave',
                      'pinch', 'pan', 'swipe', 'tap'):
             self.enable_callback(name)
@@ -535,34 +535,34 @@ class ImageViewEvent(ImageViewQt):
 
         except KeyError:
             return keyname
-        
+
     def get_keyTable(self):
         return self._keytbl
-    
+
     def set_follow_focus(self, tf):
         self.follow_focus = tf
-        
+
     def map_event(self, widget, event):
         rect = widget.geometry()
         x1, y1, x2, y2 = rect.getCoords()
         width = x2 - x1
         height = y2 - y1
-       
+
         self.configure(width, height)
         return self.make_callback('map')
-            
+
     def focus_event(self, widget, event, hasFocus):
         return self.make_callback('focus', hasFocus)
-            
+
     def enter_notify_event(self, widget, event):
         if self.follow_focus:
             widget.setFocus()
         return self.make_callback('enter')
-    
+
     def leave_notify_event(self, widget, event):
         self.logger.debug("leaving widget...")
         return self.make_callback('leave')
-    
+
     def key_press_event(self, widget, event):
         keyname = event.key()
         keyname2 = "%s" % (event.text())
@@ -589,7 +589,7 @@ class ImageViewEvent(ImageViewQt):
         if buttons & QtCore.Qt.RightButton:
             button |= 0x4
         self.logger.debug("button down event at %dx%d, button=%x" % (x, y, button))
-                
+
         data_x, data_y = self.get_data_xy(x, y)
         return self.make_callback('button-press', button, data_x, data_y)
 
@@ -597,7 +597,7 @@ class ImageViewEvent(ImageViewQt):
         # note: for mouseRelease this needs to be button(), not buttons()!
         buttons = event.button()
         x, y = event.x(), event.y()
-        
+
         button = 0
         if buttons & QtCore.Qt.LeftButton:
             button |= 0x1
@@ -605,7 +605,7 @@ class ImageViewEvent(ImageViewQt):
             button |= 0x2
         if buttons & QtCore.Qt.RightButton:
             button |= 0x4
-            
+
         data_x, data_y = self.get_data_xy(x, y)
         return self.make_callback('button-release', button, data_x, data_y)
 
@@ -619,7 +619,7 @@ class ImageViewEvent(ImageViewQt):
         buttons = event.buttons()
         x, y = event.x(), event.y()
         self.last_win_x, self.last_win_y = x, y
-        
+
         button = 0
         if buttons & QtCore.Qt.LeftButton:
             button |= 0x1
@@ -702,7 +702,7 @@ class ImageViewEvent(ImageViewQt):
         #     return True
         # gtype = event.gesture(QtCore.Qt.TapAndHoldGesture)
         # if gtype:
-        #     self.gs_taphold(event, gesture, gstate)
+        #     self.gs_pressing(event, gesture, gstate)
         #     return True
         return True
 
@@ -752,12 +752,12 @@ class ImageViewEvent(ImageViewQt):
         return self.make_callback('pan', gstate, dx, dy)
 
     def gs_tapping(self, event, gesture, gstate):
-        #print "TAPPING", gstate
-        pass
+        self.logger.debug("tapping gesture state=%s" % (
+            gstate))
 
-    def gs_taphold(self, event, gesture, gstate):
-        #print "TAP/HOLD", gstate
-        pass
+    def gs_pressing(self, event, gesture, gstate):
+        self.logger.debug("pressing gesture state=%s" % (
+            gstate))
 
     def drop_event(self, widget, event):
         dropdata = event.mimeData()
@@ -770,7 +770,7 @@ class ImageViewEvent(ImageViewQt):
             event.acceptProposedAction()
             self.logger.debug("dropped filename(s): %s" % (str(paths)))
             self.make_callback('drag-drop', paths)
-        
+
 
 class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
 
@@ -781,11 +781,11 @@ class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
     @classmethod
     def set_bindingsClass(cls, klass):
         cls.bindingsClass = klass
-        
+
     @classmethod
     def set_bindmapClass(cls, klass):
         cls.bindmapClass = klass
-        
+
     def __init__(self, logger=None, settings=None, rgbmap=None,
                  render='widget',
                  bindmap=None, bindings=None):
@@ -804,15 +804,15 @@ class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
 
     def get_bindmap(self):
         return self.bindmap
-    
+
     def get_bindings(self):
         return self.bindings
-    
+
     def set_bindings(self, bindings):
         self.bindings = bindings
         bindings.set_bindings(self)
 
-        
+
 def make_cursor(iconpath, x, y):
     image = QImage()
     image.load(iconpath)

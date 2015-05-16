@@ -1,0 +1,37 @@
+<!doctype html>
+<html>
+<head>
+    <title>{{title}}</title>
+    <style>
+      body {
+        width: 100%;
+        height: 100%;
+        padding: 0px;
+        margin: 0px;
+      }
+      #pantograph-canvas {
+        margin-left: auto;
+        margin-right: auto;
+      }
+    </style>
+    <meta name="viewport" 
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+</head>
+<body>
+    <canvas id="{{v_id}}">Your browser does not appear to
+support HTML5 canvas.</canvas>
+    <script type="text/javascript">
+        var canvas_id = "{{v_id}}"
+        var canvas = document.getElementById("{{v_id}}")
+        var trimBy = 10;
+        var fullWidth = document.documentElement.clientWidth - trimBy;
+        var fullHeight = document.documentElement.clientHeight - trimBy;
+        canvas.width = {{width}};
+        canvas.height = {{height}};
+        canvas.style.cursor = 'crosshair';
+        var url = "{{url}}";
+        var ws_url = "ws://" + window.location.host + "{{ws_url}}";
+    </script>
+    <script type="text/javascript" src="/js/pantograph.js"></script>
+</body>
+</html>

@@ -549,7 +549,8 @@ class GingaControl(Callback.Callbacks):
         # Get information about this file/URL
         info = catalog.get_fileinfo(filespec, cache_dir=dldir)
 
-        if (not info.ondisk) and (info.url is not None):
+        if (not info.ondisk) and (info.url is not None) and \
+               (not info.url.startswith('file:')):
             # Download the file if a URL was passed
             def  _dl_indicator(count, blksize, totalsize):
                 pct = float(count * blksize) / float(totalsize)

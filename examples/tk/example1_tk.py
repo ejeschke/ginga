@@ -18,7 +18,7 @@ if six.PY2:
 else:
     import tkinter as Tkinter
     from tkinter.filedialog import askopenfilename
-from ginga.tkw.ImageViewCanvasTk import ImageViewCanvas
+from ginga.tkw.ImageViewTk import ImageViewCanvas
 from ginga import AstroImage
 
 
@@ -32,7 +32,7 @@ class FitsViewer(object):
         root = Tkinter.Tk()
         root.title("ImageViewTk Example")
         self.root = root
-        
+
         vbox = Tkinter.Frame(root, relief=Tkinter.RAISED, borderwidth=1)
         vbox.pack(side=Tkinter.TOP, fill=Tkinter.BOTH, expand=1)
 
@@ -88,7 +88,7 @@ class FitsViewer(object):
         root.destroy()
         return True
 
-        
+
 def main(options, args):
 
     logger = logging.getLogger("example1")
@@ -106,9 +106,8 @@ def main(options, args):
 
     top.mainloop()
 
-    
+
 if __name__ == '__main__':
     main(None, sys.argv[1:])
-    
-# END
 
+# END

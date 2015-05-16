@@ -118,11 +118,13 @@ class ImageViewCv(ImageView.ImageViewBase):
         image = PILimage.fromarray(self.surface)
 
         image.save(ibuf, format=format, quality=quality)
-        return ibuf
+        if output is not None:
+            return None
+        return ibuf.getvalue()
 
     def get_rgb_image_as_bytes(self, format='png', quality=90):
         ibuf = self.get_rgb_image_as_buffer(format=format, quality=quality)
-        return bytes(ibuf.getvalue())
+        return bytes(ibuf)
 
     def save_rgb_image_as_file(self, filepath, format='png', quality=90):
         if not have_PIL:

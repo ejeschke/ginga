@@ -1,6 +1,6 @@
 #
 # ImageViewCanvasTypesMock.py -- drawing classes for ImageViewCanvas widget
-# 
+#
 # Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c) Eric R. Jeschke.  All rights reserved.
@@ -22,7 +22,7 @@ class MockCanvasMixin(object):
         # color is either a string or a 3-tuple of floats in 0-1 range
         clr = None
         return clr
-        
+
     def set_color(self, cr, color, alpha=1.0):
         clr = self.__get_color(color, alpha)
         # prepare a pen in the context
@@ -39,7 +39,7 @@ class MockCanvasMixin(object):
         else:
             #cr.setBrush(QtCore.Qt.NoBrush)
             pass
-            
+
     def setup_cr(self):
         # prepare to draw on self.viewer.pixmap
         # make a context
@@ -76,7 +76,7 @@ class MockCanvasMixin(object):
         else:
             #cr.setBrush(QtCore.Qt.NoBrush)
             pass
-            
+
         return cr
 
     def draw_arrowhead(self, cr, x1, y1, x2, y2):
@@ -85,7 +85,7 @@ class MockCanvasMixin(object):
         self.set_fill(cr, True, alpha=alpha)
         #cr.draw_polygon([(x2, y2), (i1, j1), (i2, j2)])
         self.set_fill(cr, False)
-        
+
     def draw_cap(self, cr, cap, x, y, radius=None):
         if radius is None:
             radius = self.cap_radius
@@ -94,11 +94,11 @@ class MockCanvasMixin(object):
             self.set_fill(cr, True, alpha=alpha)
             #cr.draw_ellipse(x-radius, y-radius, radius*2, radius*2)
             self.set_fill(cr, False)
-        
+
     def draw_caps(self, cr, cap, points, radius=None):
         for x, y in points:
             self.draw_cap(cr, cap, x, y, radius=radius)
-        
+
     def draw_edit(self, cr):
         cpoints = self.get_cpoints(points=self.get_edit_points())
         self.draw_caps(cr, 'ball', cpoints)
@@ -123,8 +123,8 @@ class Text(TextBase, MockCanvasMixin):
             fontsize = self.scale_font()
         else:
             fontsize = self.fontsize
-        cr.setFont(QFont(self.font, pointSize=fontsize))
-        cr.drawText(cx, cy, self.text)
+        #cr.setFont(QFont(self.font, pointSize=fontsize))
+        #cr.drawText(cx, cy, self.text)
 
     def get_dimensions(self):
         cr = self.setup_cr()
@@ -132,7 +132,7 @@ class Text(TextBase, MockCanvasMixin):
             fontsize = self.scale_font()
         else:
             fontsize = self.fontsize
-        cr.setFont(QFont(self.font, pointSize=fontsize))
+        #cr.setFont(QFont(self.font, pointSize=fontsize))
         return self.text_extents(cr, self.text)
 
 class Polygon(PolygonBase, MockCanvasMixin):
@@ -151,7 +151,7 @@ class Polygon(PolygonBase, MockCanvasMixin):
 
 
 class Rectangle(RectangleBase, MockCanvasMixin):
-        
+
     def draw(self):
         cpoints = tuple(map(lambda p: self.canvascoords(p[0], p[1]),
                             ((self.x1, self.y1), (self.x2, self.y1),
@@ -218,10 +218,10 @@ class Ellipse(EllipseBase, MockCanvasMixin):
             self.draw_caps(cr, self.cap, ((0, 0), ))
 
         #cr.translate(-cx, -cy)
-        
+
 
 class Box(BoxBase, MockCanvasMixin):
-        
+
     def draw(self):
         cpoints = self.get_cpoints()
 
@@ -258,7 +258,7 @@ class Point(PointBase, MockCanvasMixin):
 
 
 class Line(LineBase, MockCanvasMixin):
-        
+
     def draw(self):
         cx1, cy1 = self.canvascoords(self.x1, self.y1)
         cx2, cy2 = self.canvascoords(self.x2, self.y2)
@@ -348,7 +348,7 @@ class Compass(CompassBase, MockCanvasMixin):
         else:
             xplumb_yoffset = 14
             diag_yoffset = -4
-        
+
         if abs(cx1 - cx2) < 5:
             diag_xoffset = -(4 + htwd)
         elif (cx1 < cx2):
@@ -367,7 +367,7 @@ class Compass(CompassBase, MockCanvasMixin):
         yd = yh + diag_yoffset
         return (xd, yd)
 
-        
+
 class RightTriangle(RightTriangleBase, MockCanvasMixin):
 
     def draw(self):
@@ -406,7 +406,7 @@ class Ruler(RulerBase, MockCanvasMixin):
         text_x, text_y, text_h = self.get_ruler_distances()
 
         cr = self.setup_cr()
-        
+
         if not self.fontsize:
             fontsize = self.scale_font()
         else:
@@ -436,7 +436,7 @@ class Ruler(RulerBase, MockCanvasMixin):
         else:
             xplumb_yoffset = 14
             diag_yoffset = -4
-        
+
         if abs(cx1 - cx2) < 5:
             diag_xoffset = -(4 + htwd)
             show_angle = 0
@@ -489,7 +489,7 @@ class Image(ImageBase, MockCanvasMixin):
         # currently, drawing of images is handled in base class
         # here we just draw the caps
         ImageBase.draw(self)
-        
+
         cpoints = self.get_cpoints()
         cr = self.setup_cr()
 
@@ -510,7 +510,7 @@ class NormImage(NormImageBase, MockCanvasMixin):
         # currently, drawing of images is handled in base class
         # here we just draw the caps
         ImageBase.draw(self)
-        
+
         cpoints = self.get_cpoints()
         cr = self.setup_cr()
 

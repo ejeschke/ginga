@@ -1,6 +1,6 @@
 #
 # catalog.py -- DSS and star catalog interfaces for the Ginga fits viewer
-# 
+#
 # Eric Jeschke (eric@naoj.org)
 # Raymond Plante -- pyvo interfaces
 #
@@ -60,16 +60,16 @@ class Star(object):
 
     def __getitem__(self, key):
         return self.starInfo[key]
-        
+
     def __contains__(self, key):
         return key in self.starInfo.keys()
-        
+
     def __setitem__(self, key, value):
         self.starInfo[key] = value
-        
+
     def has_key(self, key):
         return key in self.starInfo
-        
+
 
 class AstroPyCatalogServer(object):
 
@@ -97,7 +97,7 @@ class AstroPyCatalogServer(object):
             mag = float(data[magfield])
         except:
             mag = 0.0
-            
+
         # Make sure we have at least these Ginga standard fields defined
         d = { 'name':         data[ext['id']],
               'ra_deg':       float(data[ext['ra']]),
@@ -182,7 +182,7 @@ class AstroPyCatalogServer(object):
                    ('Priority', 'priority'),
                    ('Description', 'description'),
                    ]
-        # Append extra columns returned by search to table header 
+        # Append extra columns returned by search to table header
         # TODO: what if not all sources have same record structure?
         # is this possible with VO?
         cols = list(fields)
@@ -193,7 +193,7 @@ class AstroPyCatalogServer(object):
 
         # which column is the likely one to color source circles
         colorCode = 'Mag'
-        
+
         info = Bunch.Bunch(columns=columns, color=colorCode)
         return starlist, info
 
@@ -237,10 +237,10 @@ class AstroQueryImageServer(object):
             ra_deg = wcs.hmsStrToDeg(ra)
             dec_deg = wcs.dmsStrToDeg(dec)
 
-        # Convert to degrees for search 
+        # Convert to degrees for search
         wd_deg = float(params['width']) / 60.0
         ht_deg = float(params['height']) / 60.0
-        
+
         # Note requires astropy 3.x+
         c = coordinates.SkyCoord(ra_deg * units.degree,
                                  dec_deg * units.degree,
@@ -264,7 +264,7 @@ class AstroQueryImageServer(object):
 
         # TODO: download file
         fitspath = url
-        
+
         # explicit return
         return fitspath
 
@@ -295,7 +295,7 @@ class PyVOCatalogServer(object):
             mag = float(data[magfield])
         except:
             mag = 0.0
-            
+
         # Make sure we have at least these Ginga standard fields defined
         d = { 'name':         data[ext['id']],
               'ra_deg':       float(data[ext['ra']]),
@@ -327,7 +327,7 @@ class PyVOCatalogServer(object):
         # Convert to degrees for search radius
         radius_deg = float(params['r']) / 60.0
         #radius_deg = float(params['r'])
-        
+
         # initialize our query object with the service's base URL
         query = pyvo.scs.SCSQuery(self.url)
         query.ra = ra_deg
@@ -363,7 +363,7 @@ class PyVOCatalogServer(object):
             magfield = mags[0]
         else:
             magfield = None
-            
+
         self.logger.info("Found %d sources" % len(results))
 
         starlist = []
@@ -380,7 +380,7 @@ class PyVOCatalogServer(object):
                    ('Priority', 'priority'),
                    ('Description', 'description'),
                    ]
-        # Append extra columns returned by search to table header 
+        # Append extra columns returned by search to table header
         cols = list(source.keys())
         cols.remove(ext['ra'])
         cols.remove(ext['dec'])
@@ -389,7 +389,7 @@ class PyVOCatalogServer(object):
 
         # which column is the likely one to color source circles
         colorCode = 'Mag'
-        
+
         info = Bunch.Bunch(columns=columns, color=colorCode)
         return starlist, info
 
@@ -435,12 +435,12 @@ class PyVOImageServer(object):
             ra_deg = wcs.hmsStrToDeg(ra)
             dec_deg = wcs.dmsStrToDeg(dec)
 
-        # Convert to degrees for search 
+        # Convert to degrees for search
         wd_deg = float(params['width']) / 60.0
         ht_deg = float(params['height']) / 60.0
         ## wd_deg = float(params['width'])
         ## ht_deg = float(params['height'])
-        
+
         # initialize our query object with the service's base URL
         query = pyvo.sia.SIAQuery(self.url)
         query.ra = ra_deg
@@ -585,7 +585,7 @@ class URLServer(object):
         ## if self.reqtype == 'get':
         ##     url = self.base_url + '?' + values
         ##     req = Request(url)
-            
+
         ## elif self.reqtype == 'post':
         ##     url = self.base_url
         ##     req = Request(self.base_url, values)
@@ -595,7 +595,7 @@ class URLServer(object):
         ##         self.reqtype))
 
         url = self.base_url % params
-        
+
         self.fetch(url, filepath=filepath)
         return filepath
 
@@ -620,7 +620,7 @@ class CatalogServer(URLServer):
 
     def set_index(self, **kwdargs):
         self.index.update(kwdargs)
-        
+
     def search(self, **params):
         self.logger.debug("search params=%s" % (str(params)))
         url = self.base_url % params
@@ -640,7 +640,7 @@ class CatalogServer(URLServer):
 
         results = []
         table = [lines[offset-2]]
-        
+
         for line in lines[offset:]:
             line = line.strip()
             #print ">>>", line
@@ -672,7 +672,7 @@ class CatalogServer(URLServer):
                 if cmp(self.equinox, 2000.0) != 0:
                     ra_deg, dec_deg = wcs.eqToEq2000(ra_deg, dec_deg,
                                                      self.equinox)
-                
+
                 ra_txt = wcs.raDegToString(ra_deg, format='%02d:%02d:%06.3f')
                 dec_txt = wcs.decDegToString(dec_deg,
                                                format='%s%02d:%02d:%05.2f')
@@ -701,7 +701,7 @@ class CatalogServer(URLServer):
         info = Bunch.Bunch(columns=columns, color='Mag')
 
         return (results, info)
-        
+
 
 class ServerBank(object):
 
@@ -735,12 +735,12 @@ class ServerBank(object):
         obj = self.imbank[key]
 
         return obj.search(filepath, **params)
-    
+
     def getCatalog(self, key, filepath, **params):
         obj = self.ctbank[key]
 
         return obj.search(**params)
-    
+
 
 def get_fileinfo(filespec, cache_dir='/tmp', download=False):
     numhdu = None
@@ -755,7 +755,7 @@ def get_fileinfo(filespec, cache_dir='/tmp', download=False):
 
     url = filespec
     filepath = None
-    
+
     match = re.match(r"^file://(.+)$", filespec)
     if match:
         # local file

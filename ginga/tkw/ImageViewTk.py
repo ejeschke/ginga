@@ -12,14 +12,23 @@ import numpy
 import PIL.Image as PILimage
 import PIL.ImageTk as PILimageTk
 
-from ginga import ImageView
 from ginga import Mixins, Bindings, colors
 
-from ginga.aggw.ImageViewAgg import ImageViewAgg as ImageView, \
-     ImageViewAggError as ImageViewError
-## from ginga.cvw.ImageViewCv import ImageViewCv as ImageView, \
-##    ImageViewCvError as ImageViewError
+try:
+    from ginga.aggw.ImageViewAgg import ImageViewAgg as ImageView, \
+         ImageViewAggError as ImageViewError
+    from ginga.aggw.ImageViewCanvasTypesAgg import *
 
+except ImportError:
+    try:
+        from ginga.cvw.ImageViewCv import ImageViewCv as ImageView, \
+             ImageViewCvError as ImageViewError
+        from ginga.cvw.ImageViewCanvasTypesCv import *
+
+    except ImportError:
+        from ginga.mockw.ImageViewMock import ImageViewMock as ImageView, \
+             ImageViewMockError as ImageViewError
+        from ginga.mockw.ImageViewCanvasTypesMock import *
 
 class ImageViewTkError(ImageViewError):
     pass
@@ -70,9 +79,6 @@ class ImageViewTk(ImageView):
         surface = self.get_surface()
         if isinstance(surface, numpy.ndarray):
             arr8 = surface
-            #arr8 = numpy.rollaxis(surface, 2)
-            ## arr8 = numpy.dstack((surface[:, :, 0], surface[:, :, 3],
-            ##                      surface[:, :, 2], surface[:, :, 1]))
         else:
             arr8 = numpy.fromstring(surface.tostring(), dtype=numpy.uint8)
             arr8 = arr8.reshape((ht, wd, 4))
@@ -394,5 +400,93 @@ class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
     def set_bindings(self, bindings):
         self.bindings = bindings
         bindings.set_bindings(self)
+
+
+class ImageViewCanvasError(ImageViewTkError):
+    pass
+
+class ImageViewCanvas(ImageViewZoom,
+                      DrawingMixin, CanvasMixin, CompoundMixin):
+
+    def __init__(self, logger=None, rgbmap=None, settings=None,
+                 bindmap=None, bindings=None):
+        ImageViewZoom.__init__(self, logger=logger,
+                               rgbmap=rgbmap,
+                               settings=settings,
+                               bindmap=bindmap,
+                               bindings=bindings)
+        CompoundMixin.__init__(self)
+        CanvasMixin.__init__(self)
+        DrawingMixin.__init__(self, drawCatalog)
+
+        self.setSurface(self)
+        self.ui_setActive(True)
+
+        # for displaying modal keyboard state
+        self.mode_obj = None
+        bm = self.get_bindmap()
+        bm.add_callback('mode-set', self.mode_change_cb)
+        self.add_callback('configure', self._configure_cb)
+
+
+    def canvascoords(self, data_x, data_y, center=True):
+        # data->canvas space coordinate conversion
+        x, y = self.get_canvas_xy(data_x, data_y, center=center)
+        return (x, y)
+
+    def redraw_data(self, whence=0):
+        super(ImageViewCanvas, self).redraw_data(whence=whence)
+
+        surface = self.get_surface()
+        if surface is None:
+            return
+        self.draw()
+
+    def mode_change_cb(self, bindmap, mode, modetype):
+        # delete the old indicator
+        obj = self.mode_obj
+        self.mode_obj = None
+        if obj:
+            try:
+                self.deleteObject(obj)
+            except:
+                pass
+
+        # if not one of the standard modifiers, display the new one
+        if not mode in (None, 'ctrl', 'shift'):
+            Text = self.getDrawClass('text')
+            Rect = self.getDrawClass('rectangle')
+            Compound = self.getDrawClass('compoundobject')
+
+            if modetype == 'locked':
+                text = '%s [L]' % (mode)
+            else:
+                text = mode
+
+            xsp, ysp = 4, 6
+            wd, ht = self.get_window_size()
+            x1, y1 = wd-12*len(text), ht-12
+            o1 = Text(x1, y1-12, text,
+                      fontsize=14, color='yellow', coord='canvas')
+            # hack necessary to be able to compute text extents _before_
+            # adding the object to the canvas
+            o1.viewer = self
+            wd, ht = o1.get_dimensions()
+
+            # yellow text on a black filled rectangle
+            o2 = Compound(Rect(x1-xsp, y1+ysp, x1+wd+xsp, y1-ht,
+                               color='black',
+                               fill=True, fillcolor='black', coord='canvas'),
+                               o1)
+            self.mode_obj = o2
+            self.add(o2)
+
+        return True
+
+    def _configure_cb(self, view, width, height):
+        # redraw the mode indicator since the window has been resized
+        bm = view.get_bindmap()
+        mode, modetype = bm.current_mode()
+        self.mode_change_cb(bm, mode, modetype)
 
 #END

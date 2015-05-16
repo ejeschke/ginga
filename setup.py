@@ -20,7 +20,7 @@ def get_docs():
     docdir = os.path.join(srcdir, 'doc')
     res = []
     # ['../../doc/Makefile', 'doc/conf.py', 'doc/*.rst',
-    #                              'doc/manual/*.rst', 'doc/figures/*.png']    
+    #                              'doc/manual/*.rst', 'doc/figures/*.png']
     return res
 
 setup(
@@ -40,16 +40,23 @@ setup(
                 # Qt version
                 'ginga.qtw', 'ginga.qtw.plugins', 'ginga.qtw.tests',
                 # Tk version
-                'ginga.tkw', 'ginga.aggw',
+                'ginga.tkw',
                 # Matplotlib version
                 'ginga.mplw',
+                # aggdraw backend
+                'ginga.aggw',
+                # OpenCv backend
+                'ginga.cvw',
                 # Mock version
                 'ginga.mockw',
+                # Web stuff
+                'ginga.web', 'ginga.web.pgw',
+                'ginga.web.pgw.js', 'ginga.web.pgw.templates',
                 # Common stuff
                 'ginga.misc', 'ginga.misc.plugins', 'ginga.base',
-                'ginga.canvas',
+                'ginga.canvas', 'ginga.util',
                 # Misc
-                'ginga.util', 'ginga.icons', 'ginga.doc', 'ginga.tests',
+                'ginga.icons', 'ginga.doc', 'ginga.tests',
                 ],
     package_data = { 'ginga.icons': ['*.ppm', '*.png'],
                      'ginga.gtkw': ['gtk_rc'],
@@ -75,4 +82,3 @@ setup(
           ],
     cmdclass={'build_py': build_py}
 )
-

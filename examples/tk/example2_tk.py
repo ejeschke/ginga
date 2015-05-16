@@ -16,7 +16,7 @@ import Tkinter
 from tkFileDialog import askopenfilename
 
 from ginga import AstroImage
-from ginga.tkw.ImageViewCanvasTk import ImageViewCanvas
+from ginga.tkw.ImageViewTk import ImageViewCanvas
 
 
 STD_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcName)s) | %(message)s'
@@ -63,7 +63,7 @@ class FitsViewer(object):
         canvas = DrawingCanvas()
         canvas.enable_draw(True)
         #canvas.enable_edit(True)
-        canvas.set_drawtype('ellipse', color='lightblue')
+        canvas.set_drawtype('rectangle', color='blue')
         canvas.setSurface(fi)
         self.canvas = canvas
         # add canvas to view

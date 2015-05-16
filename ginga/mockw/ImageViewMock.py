@@ -1,7 +1,7 @@
 #
 # ImageViewMock.py -- classes for the display of FITS files in mock widgets
-# 
-# Eric Jeschke (eric@naoj.org) 
+#
+# Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
@@ -21,7 +21,7 @@ icon_dir = os.path.abspath(os.path.join(moduleHome, '..', 'icons'))
 class ImageViewMockError(ImageView.ImageViewError):
     pass
 
-    
+
 class ImageViewMock(ImageView.ImageViewBase):
 
     def __init__(self, logger=None, rgbmap=None, settings=None, render=None):
@@ -32,7 +32,7 @@ class ImageViewMock(ImageView.ImageViewBase):
         # in the numpy array delivered for writing to the off-screen
         # pixmap for your widget set
         self._rgb_order = 'BGRA'
-        
+
         self.t_.setDefaults(show_pan_position=False,
                             onscreen_ff='Sans Serif')
 
@@ -52,9 +52,9 @@ class ImageViewMock(ImageView.ImageViewBase):
         self.cursor = {}
 
         # override default
-        self.defer_redraw = False
+        #self.defer_redraw = False
         self.rgb_fh = RGBFileHandler(self.logger)
-        
+
     def get_widget(self):
         """
         Call this method to extract the widget to pack into your GUI
@@ -62,9 +62,14 @@ class ImageViewMock(ImageView.ImageViewBase):
         """
         return self.imgwin
 
+    def get_surface(self):
+        # for compatibility with agg and opencv backends
+        surface = self.getwin_array(order=self._rgb_order)
+        return surface
+
     def get_rgb_order(self):
         return self._rgb_order
-        
+
     def _render_offscreen(self, drawable, data, dst_x, dst_y,
                           width, height):
         # NOTE [A]
@@ -86,13 +91,13 @@ class ImageViewMock(ImageView.ImageViewBase):
             ctr_x, ctr_y = self.get_center()
             #painter.drawLine(ctr_x - 10, ctr_y, ctr_x + 10, ctr_y)
             #painter.drawLine(ctr_x, ctr_y - 10, ctr_x, ctr_y + 10)
-        
+
         # render self.message
         if self.message:
             y = ((imgwin_ht // 3) * 2) - (ht // 2)
             x = (imgwin_wd // 2) - (wd // 2)
             #painter.drawText(x, y, message)
-        
+
 
     def render_image(self, rgbobj, dst_x, dst_y):
         """Render the image represented by (rgbobj) at dst_x, dst_y
@@ -123,7 +128,7 @@ class ImageViewMock(ImageView.ImageViewBase):
         self.pixmap = None
 
         self.set_window_size(width, height, redraw=True)
-        
+
     def get_rgb_image_as_buffer(self, output=None, format='png',
                                 quality=90):
         # copy pixmap to ibuf
@@ -132,12 +137,11 @@ class ImageViewMock(ImageView.ImageViewBase):
         fmt_buf = self.rgb_fh.get_buffer(data_np, header, format,
                                          output=output)
         return fmt_buf
-    
+
     def get_rgb_image_as_bytes(self, format='png', quality=90):
         ibuf = self.get_rgb_image_as_buffer(format=format, quality=quality)
-        #return bytes(ibuf.getvalue())
         return ibuf
-        
+
     def get_rgb_image_as_widget(self, output=None, format='png',
                                 quality=90):
         imgwin_wd, imgwin_ht = self.get_window_size()
@@ -147,13 +151,13 @@ class ImageViewMock(ImageView.ImageViewBase):
         image_w = None
 
         return image_w
-    
+
     def save_rgb_image_as_file(self, filepath, format='png', quality=90):
         img_w = self.get_rgb_image_as_widget()
         # assumes that the image widget has some method for saving to
         # a file
         res = img_w.save(filepath, format=format, quality=quality)
-    
+
     def get_image_as_widget(self):
         """Used for generating thumbnails.  Does not include overlaid
         graphics.
@@ -172,7 +176,7 @@ class ImageViewMock(ImageView.ImageViewBase):
         # assumes that the image widget has some method for saving to
         # a file
         res = qimg.save(filepath, format=format, quality=quality)
-    
+
     def reschedule_redraw(self, time_sec):
         # stop any pending redraws, if possible
         # ...
@@ -185,7 +189,7 @@ class ImageViewMock(ImageView.ImageViewBase):
     def update_image(self):
         if (not self.pixmap) or (not self.imgwin):
             return
-            
+
         self.logger.debug("updating window from pixmap")
         # invalidate the display and force a refresh from
         # offscreen pixmap
@@ -194,16 +198,16 @@ class ImageViewMock(ImageView.ImageViewBase):
         if self.imgwin:
             # set the cursor on self.imgwin
             pass
-        
+
     def define_cursor(self, ctype, cursor):
         self.cursor[ctype] = cursor
-        
+
     def get_cursor(self, ctype):
         return self.cursor[ctype]
-        
+
     def switch_cursor(self, ctype):
         self.set_cursor(self.cursor[ctype])
-        
+
     def _get_wimage(self, arr_np):
         """Convert the numpy array (which is in our expected order)
         to a native image object in this widget set.
@@ -216,12 +220,12 @@ class ImageViewMock(ImageView.ImageViewBase):
         """
         clr = None
         return clr
-        
+
     def set_fg(self, r, g, b, redraw=True):
         self.img_fg = self._get_color(r, g, b)
         if redraw:
             self.redraw(whence=3)
-        
+
     def onscreen_message(self, text, delay=None, redraw=True):
         # stop any scheduled updates of the message
 
@@ -237,12 +241,12 @@ class ImageViewMock(ImageView.ImageViewBase):
 
     def onscreen_message_off(self, redraw=True):
         return self.onscreen_message(None, redraw=redraw)
-    
+
     def show_pan_mark(self, tf, redraw=True):
         self.t_.set(show_pan_position=tf)
         if redraw:
             self.redraw(whence=3)
-        
+
 
 class ImageViewEvent(ImageViewMock):
 
@@ -255,7 +259,7 @@ class ImageViewEvent(ImageViewMock):
         # mouse movement, wheel movement, key up/down, trackpad
         # gestures
         #...
-        
+
         # last known window mouse position
         self.last_win_x = 0
         self.last_win_y = 0
@@ -283,7 +287,7 @@ class ImageViewEvent(ImageViewMock):
             }
 
         for name in ('motion', 'button-press', 'button-release',
-                     'key-press', 'key-release', 'drag-drop', 
+                     'key-press', 'key-release', 'drag-drop',
                      'scroll', 'map', 'focus', 'enter', 'leave',
                      'pinch', 'pan', 'swipe', 'tap'):
             self.enable_callback(name)
@@ -311,13 +315,13 @@ class ImageViewEvent(ImageViewMock):
 
         except KeyError:
             return keyname
-        
+
     def get_keyTable(self):
         return self._keytbl
-    
+
     def set_follow_focus(self, tf):
         self.follow_focus = tf
-        
+
     def map_event(self, widget, event):
         """
         Called when the window is mapped to the screen.
@@ -325,14 +329,14 @@ class ImageViewEvent(ImageViewMock):
         """
         self.configure(width, height)
         return self.make_callback('map')
-            
+
     def focus_event(self, widget, event, hasFocus):
         """
         Called when the window gets focus.
         Adjust method signature as appropriate for callback.
         """
         return self.make_callback('focus', hasFocus)
-            
+
     def enter_notify_event(self, widget, event):
         """
         Called when the mouse cursor enters the window.
@@ -342,7 +346,7 @@ class ImageViewEvent(ImageViewMock):
             # set focus on widget
             pass
         return self.make_callback('enter')
-    
+
     def leave_notify_event(self, widget, event):
         """
         Called when the mouse cursor leaves the window.
@@ -350,7 +354,7 @@ class ImageViewEvent(ImageViewMock):
         """
         self.logger.debug("leaving widget...")
         return self.make_callback('leave')
-    
+
     def key_press_event(self, widget, event):
         """
         Called when a key is pressed and the window has the focus.
@@ -358,7 +362,7 @@ class ImageViewEvent(ImageViewMock):
         """
         # get keyname or keycode and translate to ginga standard
         # keyname =
-        # keycode = 
+        # keycode =
         keyname = self.transkey(keyname, keycode)
         self.logger.debug("key press event, key=%s" % (keyname))
         return self.make_callback('key-press', keyname)
@@ -370,7 +374,7 @@ class ImageViewEvent(ImageViewMock):
         """
         # get keyname or keycode and translate to ginga standard
         # keyname =
-        # keycode = 
+        # keycode =
         keyname = self.transkey(keyname, keycode)
         self.logger.debug("key release event, key=%s" % (keyname))
         return self.make_callback('key-release', keyname)
@@ -389,7 +393,7 @@ class ImageViewEvent(ImageViewMock):
         #    right button: 0x4
         # Others can be added as appropriate
         self.logger.debug("button down event at %dx%d, button=%x" % (x, y, button))
-                
+
         data_x, data_y = self.get_data_xy(x, y)
         return self.make_callback('button-press', button, data_x, data_y)
 
@@ -402,7 +406,7 @@ class ImageViewEvent(ImageViewMock):
 
         button = 0
         # prepare button mask as in button_press_event()
-        
+
         data_x, data_y = self.get_data_xy(x, y)
         return self.make_callback('button-release', button, data_x, data_y)
 
@@ -419,7 +423,7 @@ class ImageViewEvent(ImageViewMock):
         """
         # x, y = coordinates of cursor
         self.last_win_x, self.last_win_y = x, y
-        
+
         button = 0
         # prepare button mask as in button_press_event()
 
@@ -439,8 +443,8 @@ class ImageViewEvent(ImageViewMock):
 
         # calculate number of degrees of scroll and direction of scroll
         # both floats in the 0-359.999 range
-        # numDegrees = 
-        # direction = 
+        # numDegrees =
+        # direction =
         self.logger.debug("scroll deg=%f direction=%f" % (
             numDegrees, direction))
 
@@ -458,7 +462,7 @@ class ImageViewEvent(ImageViewMock):
         # make a call back with a list of URLs that were dropped
         self.logger.debug("dropped filename(s): %s" % (str(paths)))
         self.make_callback('drag-drop', paths)
-        
+
 
 class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
 
@@ -469,11 +473,11 @@ class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
     @classmethod
     def set_bindingsClass(cls, klass):
         cls.bindingsClass = klass
-        
+
     @classmethod
     def set_bindmapClass(cls, klass):
         cls.bindmapClass = klass
-        
+
     def __init__(self, logger=None, settings=None, rgbmap=None,
                  bindmap=None, bindings=None):
         ImageViewEvent.__init__(self, logger=logger, settings=settings,
@@ -491,15 +495,15 @@ class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
 
     def get_bindmap(self):
         return self.bindmap
-    
+
     def get_bindings(self):
         return self.bindings
-    
+
     def set_bindings(self, bindings):
         self.bindings = bindings
         bindings.set_bindings(self)
 
-        
+
 def make_cursor(iconpath, x, y):
     # return a cursor in the widget set's instance type
     # iconpath usually refers to a PNG file and x/y is the
