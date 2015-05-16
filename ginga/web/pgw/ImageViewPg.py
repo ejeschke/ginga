@@ -109,7 +109,7 @@ class ImageViewPg(ImageView):
         wd, ht = event.x, event.y
         # Not yet ready for prime-time--browser seems to mess with the
         # aspect ratio
-        #self.configure(wd, ht)
+        self.configure(wd, ht)
 
         self.viewer.redraw(whence=0)
 

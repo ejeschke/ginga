@@ -8,8 +8,11 @@
         height: 100%;
         padding: 0px;
         margin: 0px;
+        border: 0;
+        overflow: hidden;  /* disable scrollbars */
+        display: block; /* no floating content on sides */
       }
-      #pantograph-canvas {
+      #{{v_id}} {
         margin-left: auto;
         margin-right: auto;
       }
@@ -23,7 +26,7 @@ support HTML5 canvas.</canvas>
     <script type="text/javascript">
         var canvas_id = "{{v_id}}"
         var canvas = document.getElementById("{{v_id}}")
-        var trimBy = 10;
+        var trimBy = 0;
         var fullWidth = document.documentElement.clientWidth - trimBy;
         var fullHeight = document.documentElement.clientHeight - trimBy;
         canvas.width = {{width}};
