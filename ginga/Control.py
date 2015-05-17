@@ -572,10 +572,10 @@ class GingaControl(Callback.Callbacks):
 
     def name_image_from_path(self, path, idx=None):
         (path, filename) = os.path.split(path)
-        (name, ext) = os.path.splitext(filename)
         # Remove trailing .extension
-        if '.' in name:
-            name = name[:name.rindex('.')]
+        (name, ext) = os.path.splitext(filename)
+        #if '.' in name:
+        #    name = name[:name.rindex('.')]
         if idx is not None:
             name = '%s[%d]' % (name, idx)
         return name
@@ -845,6 +845,7 @@ class GingaControl(Callback.Callbacks):
     def switch_name(self, chname, imname, path=None,
                     image_future=None):
 
+        # create channel if it doesn't exist already
         if not self.has_channel(chname):
             self.add_channel(chname)
         chinfo = self.get_channelInfo(chname)
@@ -869,7 +870,7 @@ class GingaControl(Callback.Callbacks):
                     # reconstitute the image
                     image = image_future.thaw()
                     # perpetuate the image_future
-                    image.set(image_future=image_future)
+                    image.set(image_future=image_future, name=imname, path=path)
                     self.gui_do(_switch, imname, image, chname)
 
                 self.nongui_do(_load_n_switch, imname, chname, image_future)

@@ -714,10 +714,10 @@ class GingaView(GtkMain.GtkMain):
 
     def delete_event(self, widget, event, data=None):
         """Someone is trying to close the application."""
-        self.quit(widget)
+        self.quit()
         return True
 
-    def quit(self, widget):
+    def quit(self):
         """Quit the application.
         """
         self.stop()

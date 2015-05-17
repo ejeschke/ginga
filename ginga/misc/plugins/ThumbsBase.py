@@ -8,7 +8,6 @@
 # Please see the file LICENSE.txt for details.
 #
 import os
-import time
 import hashlib
 import threading
 
@@ -17,6 +16,12 @@ from ginga.misc import Bunch, Future
 
 
 class ThumbsBase(GingaPlugin.GlobalPlugin):
+
+    # NOTES
+    # [1] We can't seem to trust the image name set by the loader to
+    # match our idea of the name, particularly if the thumb was pregenerated.
+    # This leads to multiple thumbnails for the same image.  So we stick with
+    # our own idea of the name.
 
     def __init__(self, fv):
         # superclass defines some variables for us, like logger
@@ -74,8 +79,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         if not self.gui_up:
             return False
 
-        noname = 'Noname' + str(time.time())
-        name = image.get('name', noname)
+        # get image path
         path = image.get('path', None)
         # image is flagged not to make a thumbnail?
         nothumb = image.get('nothumb', False)
@@ -83,6 +87,13 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
             # Currently we need a path to make a thumb key
             return
         path = os.path.abspath(path)
+        idx = image.get('idx', None)
+
+        # get image name
+        name = self.fv.name_image_from_path(path, idx=idx)
+        # see Note [1]
+        #name = image.get('name', name)
+
         thumbname = name
         if '.' in thumbname:
             thumbname = thumbname.split('.')[0]
@@ -92,7 +103,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         if future is None:
             image_loader = image.get('loader', self.fv.load_image)
             future = Future.Future()
-            future.freeze(image_loader, path)
+            future.freeze(image_loader, path, idx=idx)
 
         # Is there a preference set to avoid making thumbnails?
         chinfo = self.fv.get_channelInfo(chname)
@@ -105,7 +116,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         # in the same channel
         thumbkey = self.get_thumb_key(chname, name, path)
         with self.thmblock:
-            if thumbkey in self.thumbDict or nothumb:
+            if thumbkey in self.thumbDict:
                 return
 
         # Get metadata for mouse-over tooltip
@@ -304,8 +315,13 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         if path is None:
             # No path, so no way to find key for cached image
             return False
-        noname = 'Noname' + str(time.time())
-        name = image.get('name', noname)
+        path = os.path.abspath(path)
+        idx = image.get('idx', None)
+
+        # get image name
+        name = self.fv.name_image_from_path(path, idx=idx)
+        # see Note [1]
+        #name = image.get('name', name)
 
         thumbkey = self.get_thumb_key(chname, name, path)
         with self.thmblock:
@@ -332,8 +348,13 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         path = image.get('path', None)
         if path is None:
             return
-        noname = 'Noname' + str(time.time())
-        name = image.get('name', noname)
+        path = os.path.abspath(path)
+        idx = image.get('idx', None)
+
+        # get image name
+        name = self.fv.name_image_from_path(path, idx=idx)
+        # see Note [1]
+        #name = image.get('name', name)
 
         thumbkey = self.get_thumb_key(chname, name, path)
         with self.thmblock:
@@ -505,8 +526,8 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
 
         # Get location of thumb
         modtime = os.stat(path).st_mtime
-        thumbkey = self._gethex("%s.%s" % (filename, modtime))
-        thumbpath = os.path.join(thumbdir, thumbkey + ".jpg")
+        thumb_fname = self._gethex("%s.%s" % (filename, modtime))
+        thumbpath = os.path.join(thumbdir, thumb_fname + ".jpg")
         self.logger.debug("thumb path is '%s'" % (thumbpath))
         return thumbpath
 

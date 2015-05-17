@@ -294,7 +294,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
             # create a future for reconstituting this HDU
             future = Future.Future()
             future.freeze(self.fv.load_image, self.path, idx=idx)
-            image.set(path=self.path, name=imname, image_future=future)
+            image.set(path=self.path, idx=idx, name=imname, image_future=future)
 
             ## self.fitsimage.set_image(image,
             ##                          raise_initialize_errors=False)
