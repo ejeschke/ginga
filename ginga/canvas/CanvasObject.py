@@ -68,13 +68,13 @@ class CanvasObjectBase(Callback.Callbacks):
             raise ValueError("Object is not editable")
         self.editing = tf
         # TODO: force redraw here to show edit nodes?
-        
+
     def set_data(self, **kwdargs):
         if self.data is None:
             self.data = Bunch.Bunch(kwdargs)
         else:
             self.data.update(kwdargs)
-            
+
     def get_data(self, *args):
         if len(args) == 0:
             return self.data
@@ -93,7 +93,7 @@ class CanvasObjectBase(Callback.Callbacks):
 
     def use_coordmap(self, mapobj):
         self.crdmap = mapobj
-        
+
     def canvascoords(self, x, y, center=True):
         if self.crdmap is not None:
             return self.crdmap.to_canvas(x, y)
@@ -101,17 +101,17 @@ class CanvasObjectBase(Callback.Callbacks):
 
     def is_compound(self):
         return False
-    
+
     def contains_arr(self, x_arr, y_arr):
         contains = numpy.array([False] * len(x_arr))
         return contains
-    
+
     def contains(self, x, y):
         return False
-    
+
     def select_contains(self, x, y):
         return self.contains(x, y)
-    
+
     def calcVertexes(self, start_x, start_y, end_x, end_y,
                      arrow_length=10, arrow_degrees=0.35):
 
@@ -131,7 +131,7 @@ class CanvasObjectBase(Callback.Callbacks):
         # TODO: the accuracy of this calculation of radius might be improved?
         cradius = math.sqrt(abs(cy2 - cy1)**2 + abs(cx2 - cx1)**2)
         return (cx1, cy1, cradius)
-    
+
     def swapxy(self, x1, y1, x2, y2):
         if x2 < x1:
             x1, x2 = x2, x1
@@ -178,7 +178,7 @@ class CanvasObjectBase(Callback.Callbacks):
     def rotate_by(self, theta_deg):
         ref_x, ref_y = self.get_reference_pt()
         self.rotate(theta_deg, xoff=ref_x, yoff=ref_y)
-    
+
     def move_delta(self, xoff, yoff):
         if hasattr(self, 'x'):
             self.x, self.y = self.crdmap.offset_pt((self.x, self.y), xoff, yoff)
@@ -186,7 +186,7 @@ class CanvasObjectBase(Callback.Callbacks):
         elif hasattr(self, 'x1'):
             self.x1, self.y1 = self.crdmap.offset_pt((self.x1, self.y1), xoff, yoff)
             self.x2, self.y2 = self.crdmap.offset_pt((self.x2, self.y2), xoff, yoff)
-            
+
         elif hasattr(self, 'points'):
             for i in range(len(self.points)):
                 self.points[i] = self.crdmap.offset_pt(self.points[i], xoff, yoff)
@@ -247,7 +247,7 @@ class CanvasObjectBase(Callback.Callbacks):
             P[:, 1] = (P[:, 1] - ctr_y) * scale_y + ctr_y
             self.x1, self.y1 = P[0, 0], P[0, 1]
             self.x2, self.y2 = P[1, 0], P[1, 1]
-            
+
         elif hasattr(self, 'points'):
             ctr_x, ctr_y = self.get_center_pt()
             P = numpy.array(self.points)
@@ -265,7 +265,7 @@ class CanvasObjectBase(Callback.Callbacks):
         frommap = self.crdmap
         if frommap == tomap:
             return
-        
+
         # convert radii
         if hasattr(self, 'radius'):
             xc, yc = self.get_center_pt()
@@ -292,7 +292,7 @@ class CanvasObjectBase(Callback.Callbacks):
             nx3, ny3 = tomap.data_to(x3, y3)
             self.xradius = math.fabs(nx2 - nx1)
             self.yradius = math.fabs(ny3 - ny1)
-        
+
         # convert points
         for i in range(self.get_num_points()):
             # convert each point by going to data coords under old map
@@ -304,7 +304,7 @@ class CanvasObjectBase(Callback.Callbacks):
 
         # set our map to the new map
         self.crdmap = tomap
-    
+
     # TODO: move these into utility module?
     #####
     def within_radius_arr(self, a_arr, b_arr, x, y, canvas_radius):
@@ -352,7 +352,7 @@ class CanvasObjectBase(Callback.Callbacks):
         xmin, xmax = min(x1, x2) - r, max(x1, x2) + r
         ymin, ymax = min(y1, y2) - r, max(y1, y2) + r
         div = numpy.sqrt((x2 - x1)**2 + (y2 - y1)**2)
-        
+
         d = numpy.fabs((x2 - x1)*(y1 - b_arr) - (x1 - a_arr)*(y2 - y1)) / div
 
         ## contains = (xmin <= a_arr <= xmax) and (ymin <= b_arr <= ymax) and \
@@ -386,10 +386,10 @@ class CanvasObjectBase(Callback.Callbacks):
         return res[0]
 
     #####
-        
+
     def get_points(self):
         return []
-    
+
     def get_center_pt(self):
         # default is geometric average of points
         P = numpy.array(self.get_points())
@@ -440,14 +440,14 @@ class TextBase(CanvasObjectBase):
                   description="X coordinate of lower left of text"),
             Param(name='y', type=float, default=0.0, argpos=1,
                   description="Y coordinate of lower left of text"),
-            Param(name='text', type=str, default='EDIT ME', 
+            Param(name='text', type=str, default='EDIT ME',
                   description="Text to display"),
             Param(name='font', type=str, default='Sans Serif',
                   description="Font family for text"),
             Param(name='fontsize', type=int, default=None,
                   min=8, max=72,
                   description="Font size of text (default: vary by scale)"),
-            Param(name='color', 
+            Param(name='color',
                   valid=colors_plus_none, type=_color, default='yellow',
                   description="Color of text"),
             Param(name='alpha', type=float, default=1.0,
@@ -457,7 +457,7 @@ class TextBase(CanvasObjectBase):
                   default=False, valid=[False, True],
                   description="Show caps for this object"),
             ]
-    
+
     def __init__(self, x, y, text='EDIT ME',
                  font='Sans Serif', fontsize=None,
                  color='yellow', alpha=1.0, showcap=False, **kwdargs):
@@ -471,10 +471,10 @@ class TextBase(CanvasObjectBase):
 
     def select_contains(self, x, y):
         return self.within_radius(x, y, self.x, self.y, self.cap_radius)
-    
+
     def get_points(self):
         return [self.get_center_pt()]
-    
+
     def set_edit_point(self, i, pt):
         if i == 0:
             self.set_point_by_index(i, pt)
@@ -498,14 +498,14 @@ class PolygonMixin(object):
         a = x[:-1] * y[1:]
         b = y[:-1] * x[1:]
         A = numpy.sum(a - b) / 2.
-        
+
         cx = x[:-1] + x[1:]
         cy = y[:-1] + y[1:]
 
         Cx = numpy.sum(cx * (a - b)) / (6. * A)
         Cy = numpy.sum(cy * (a - b)) / (6. * A)
         return (Cx, Cy)
-    
+
     def get_points(self):
         return self.points
 
@@ -541,12 +541,12 @@ class PolygonMixin(object):
             xj, yj = xi, yi
 
         return result
-            
+
     def contains(self, xp, yp):
         x_arr, y_arr = numpy.array([xp]), numpy.array([yp])
         res = self.contains_arr(x_arr, y_arr)
         return res[0]
-            
+
     def set_edit_point(self, i, pt):
         if i == 0:
             x, y = pt
@@ -582,7 +582,7 @@ class PolygonBase(PolygonMixin, CanvasObjectBase):
             Param(name='linestyle', type=str, default='solid',
                   valid=['solid', 'dash'],
                   description="Style of outline (default solid)"),
-            Param(name='color', 
+            Param(name='color',
                   valid=colors_plus_none, type=_color, default='yellow',
                   description="Color of outline"),
             Param(name='alpha', type=float, default=1.0,
@@ -601,13 +601,13 @@ class PolygonBase(PolygonMixin, CanvasObjectBase):
                   default=False, valid=[False, True],
                   description="Show caps for this object"),
             ]
-    
+
     def __init__(self, points, color='red',
                  linewidth=1, linestyle='solid', showcap=False,
                  fill=False, fillcolor=None, alpha=1.0,
                  fillalpha=1.0, **kwdargs):
         self.kind = 'polygon'
-        
+
         CanvasObjectBase.__init__(self, points=points, color=color,
                                   linewidth=linewidth, showcap=showcap,
                                   linestyle=linestyle, alpha=alpha,
@@ -618,7 +618,7 @@ class PolygonBase(PolygonMixin, CanvasObjectBase):
 class PathBase(PolygonMixin, CanvasObjectBase):
     """Draws a path on a ImageViewCanvas.
     Parameters are:
-    List of (x, y) points in the polygon.  
+    List of (x, y) points in the polygon.
     Optional parameters for linesize, color, etc.
     """
 
@@ -636,7 +636,7 @@ class PathBase(PolygonMixin, CanvasObjectBase):
             Param(name='linestyle', type=str, default='solid',
                   valid=['solid', 'dash'],
                   description="Style of outline (default solid)"),
-            Param(name='color', 
+            Param(name='color',
                   valid=colors_plus_none, type=_color, default='yellow',
                   description="Color of outline"),
             Param(name='alpha', type=float, default=1.0,
@@ -646,18 +646,18 @@ class PathBase(PolygonMixin, CanvasObjectBase):
                   default=False, valid=[False, True],
                   description="Show caps for this object"),
             ]
-    
+
     def __init__(self, points, color='red',
                  linewidth=1, linestyle='solid', showcap=False,
                  alpha=1.0, **kwdargs):
         self.kind = 'path'
-        
+
         CanvasObjectBase.__init__(self, points=points, color=color,
                                   linewidth=linewidth, showcap=showcap,
                                   linestyle=linestyle, alpha=alpha,
                                   **kwdargs)
         PolygonMixin.__init__(self)
-        
+
     def contains_arr(self, x_arr, y_arr, radius=1.0):
         x1, y1 = self.crdmap.to_data(*self.points[0])
         contains = None
@@ -671,12 +671,12 @@ class PathBase(PolygonMixin, CanvasObjectBase):
                 contains = numpy.logical_or(contains, res)
             x1, y1 = x2, y2
         return contains
-            
+
     def contains(self, data_x, data_y):
         x_arr, y_arr = numpy.array([data_x]), numpy.array([data_y])
         res = self.contains_arr(x_arr, y_arr)
         return res[0]
-            
+
     def select_contains(self, x, y):
         x1, y1 = self.crdmap.to_data(*self.points[0])
         for point in self.points[1:]:
@@ -765,7 +765,7 @@ class BoxBase(OnePointTwoRadiusMixin, CanvasObjectBase):
             Param(name='linestyle', type=str, default='solid',
                   valid=['solid', 'dash'],
                   description="Style of outline (default solid)"),
-            Param(name='color', 
+            Param(name='color',
                   valid=colors_plus_none, type=_color, default='yellow',
                   description="Color of outline"),
             Param(name='alpha', type=float, default=1.0,
@@ -787,7 +787,7 @@ class BoxBase(OnePointTwoRadiusMixin, CanvasObjectBase):
                   min=-359.999, max=359.999, widget='spinfloat', incr=1.0,
                   description="Rotation about center of object"),
             ]
-    
+
     def __init__(self, x, y, xradius, yradius, color='red',
                  linewidth=1, linestyle='solid', showcap=False,
                  fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0,
@@ -809,7 +809,7 @@ class BoxBase(OnePointTwoRadiusMixin, CanvasObjectBase):
                   (self.x + self.xradius, self.y + self.yradius),
                   (self.x - self.xradius, self.y + self.yradius))
         return points
-    
+
     def contains_arr(self, x_arr, y_arr):
         x1, y1 = self.crdmap.to_data(self.x - self.xradius,
                                      self.y - self.yradius)
@@ -820,7 +820,7 @@ class BoxBase(OnePointTwoRadiusMixin, CanvasObjectBase):
         xd, yd = self.crdmap.to_data(self.x, self.y)
         xa, ya = self.rotate_arr(x_arr, y_arr, -self.rot_deg,
                                 xoff=xd, yoff=yd)
-        
+
         contains = numpy.logical_and(
             numpy.logical_and(min(x1, x2) <= xa, xa <= max(x1, x2)),
             numpy.logical_and(min(y1, y2) <= ya, ya <= max(y1, y2)))
@@ -862,7 +862,7 @@ class EllipseBase(OnePointTwoRadiusMixin, CanvasObjectBase):
             Param(name='linestyle', type=str, default='solid',
                   valid=['solid', 'dash'],
                   description="Style of outline (default solid)"),
-            Param(name='color', 
+            Param(name='color',
                   valid=colors_plus_none, type=_color, default='yellow',
                   description="Color of outline"),
             Param(name='alpha', type=float, default=1.0,
@@ -884,7 +884,7 @@ class EllipseBase(OnePointTwoRadiusMixin, CanvasObjectBase):
                   min=-359.999, max=359.999, widget='spinfloat', incr=1.0,
                   description="Rotation about center of object"),
             ]
-    
+
     def __init__(self, x, y, xradius, yradius, color='yellow',
                  linewidth=1, linestyle='solid', showcap=False,
                  fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0,
@@ -902,7 +902,7 @@ class EllipseBase(OnePointTwoRadiusMixin, CanvasObjectBase):
 
     def get_points(self):
         return [self.get_center_pt()]
-    
+
     def contains_arr(self, x_arr, y_arr):
         # rotate point back to cartesian alignment for test
         xd, yd = self.crdmap.to_data(self.x, self.y)
@@ -914,9 +914,9 @@ class EllipseBase(OnePointTwoRadiusMixin, CanvasObjectBase):
                                      self.y + self.yradius)
         xradius = max(x2, xd) - min(x2, xd)
         yradius = max(y2, yd) - min(y2, yd)
-        
+
         # See http://math.stackexchange.com/questions/76457/check-if-a-point-is-within-an-ellipse
-        res = (((xa - xd) ** 2) / xradius ** 2 + 
+        res = (((xa - xd) ** 2) / xradius ** 2 +
                ((ya - yd) ** 2) / yradius ** 2)
         contains = (res <= 1.0)
         return contains
@@ -933,7 +933,7 @@ class EllipseBase(OnePointTwoRadiusMixin, CanvasObjectBase):
         xs, ys = mx - self.xradius, my - self.yradius
         ox, oy = self.xradius * kappa, self.yradius * kappa
         xe, ye = mx + self.xradius, my + self.yradius
-        
+
         pts = [(xs, my),
                (xs, my - oy), (mx - ox, ys), (mx, ys),
                (mx + ox, ys), (xe, my - oy), (xe, my),
@@ -972,7 +972,7 @@ class TriangleBase(OnePointTwoRadiusMixin, CanvasObjectBase):
             Param(name='linestyle', type=str, default='solid',
                   valid=['solid', 'dash'],
                   description="Style of outline (default solid)"),
-            Param(name='color', 
+            Param(name='color',
                   valid=colors_plus_none, type=_color, default='yellow',
                   description="Color of outline"),
             Param(name='alpha', type=float, default=1.0,
@@ -994,7 +994,7 @@ class TriangleBase(OnePointTwoRadiusMixin, CanvasObjectBase):
                   min=-359.999, max=359.999, widget='spinfloat', incr=1.0,
                   description="Rotation about center of object"),
             ]
-    
+
     def __init__(self, x, y, xradius, yradius, color='pink',
                  linewidth=1, linestyle='solid', showcap=False,
                  fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0,
@@ -1014,7 +1014,7 @@ class TriangleBase(OnePointTwoRadiusMixin, CanvasObjectBase):
         return [(self.x - 2*self.xradius, self.y - self.yradius),
                 (self.x + 2*self.xradius, self.y - self.yradius),
                 (self.x, self.y + self.yradius)]
-    
+
 
     def get_llur(self):
         xd, yd = self.crdmap.to_data(self.x, self.y)
@@ -1050,7 +1050,7 @@ class TriangleBase(OnePointTwoRadiusMixin, CanvasObjectBase):
         a = ((y2 - y3)*(xa - x3) + (x3 - x2)*(ya - y3)) / denominator
         b = ((y3 - y1)*(xa - x3) + (x1 - x3)*(ya - y3)) / denominator
         c = 1.0 - a - b
-        
+
         #tf = (0.0 <= a <= 1.0 and 0.0 <= b <= 1.0 and 0.0 <= c <= 1.0)
         contains = numpy.logical_and(
             numpy.logical_and(0.0 <= a, a <= 1.0),
@@ -1071,13 +1071,13 @@ class OnePointOneRadiusMixin(object):
 
     def get_points(self):
         return [(self.x, self.y)]
-    
+
     def set_edit_point(self, i, pt):
         if i == 0:
             self.set_point_by_index(i, pt)
         elif i == 1:
             x, y = pt
-            self.radius = math.sqrt(abs(x - self.x)**2 + 
+            self.radius = math.sqrt(abs(x - self.x)**2 +
                                     abs(y - self.y)**2 )
         else:
             raise ValueError("No point corresponding to index %d" % (i))
@@ -1117,7 +1117,7 @@ class CircleBase(OnePointOneRadiusMixin, CanvasObjectBase):
             Param(name='linestyle', type=str, default='solid',
                   valid=['solid', 'dash'],
                   description="Style of outline (default solid)"),
-            Param(name='color', 
+            Param(name='color',
                   valid=colors_plus_none, type=_color, default='yellow',
                   description="Color of outline"),
             Param(name='alpha', type=float, default=1.0,
@@ -1136,7 +1136,7 @@ class CircleBase(OnePointOneRadiusMixin, CanvasObjectBase):
                   default=False, valid=[False, True],
                   description="Show caps for this object"),
             ]
-    
+
     def __init__(self, x, y, radius, color='yellow',
                  linewidth=1, linestyle='solid', showcap=False,
                  fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0,
@@ -1159,9 +1159,9 @@ class CircleBase(OnePointOneRadiusMixin, CanvasObjectBase):
                                      self.y + self.radius)
         xradius = max(x2, xd) - min(x2, xd)
         yradius = max(y2, yd) - min(y2, yd)
-        
+
         # See http://math.stackexchange.com/questions/76457/check-if-a-point-is-within-an-ellipse
-        res = (((x_arr - xd) ** 2) / xradius ** 2 + 
+        res = (((x_arr - xd) ** 2) / xradius ** 2 +
                ((y_arr - yd) ** 2) / yradius ** 2)
         contains = (res <= 1.0)
         return contains
@@ -1210,7 +1210,7 @@ class PointBase(OnePointOneRadiusMixin, CanvasObjectBase):
             Param(name='linestyle', type=str, default='solid',
                   valid=['solid', 'dash'],
                   description="Style of outline (default solid)"),
-            Param(name='color', 
+            Param(name='color',
                   valid=colors_plus_none, type=_color, default='yellow',
                   description="Color of outline"),
             Param(name='alpha', type=float, default=1.0,
@@ -1220,7 +1220,7 @@ class PointBase(OnePointOneRadiusMixin, CanvasObjectBase):
                   default=False, valid=[False, True],
                   description="Show caps for this object"),
             ]
-    
+
     def __init__(self, x, y, radius, style='cross', color='yellow',
                  linewidth=1, linestyle='solid', alpha=1.0, showcap=False,
                  **kwdargs):
@@ -1232,7 +1232,7 @@ class PointBase(OnePointOneRadiusMixin, CanvasObjectBase):
                                   showcap=showcap, style=style,
                                   **kwdargs)
         OnePointOneRadiusMixin.__init__(self)
-        
+
     def contains_arr(self, x_arr, y_arr, radius=2.0):
         xd, yd = self.crdmap.to_data(self.x, self.y)
         contains = self.within_radius_arr(x_arr, y_arr, xd, yd,
@@ -1248,11 +1248,11 @@ class PointBase(OnePointOneRadiusMixin, CanvasObjectBase):
         xd, yd = self.crdmap.to_data(self.x, self.y)
         return self.within_radius(data_x, data_y, xd, yd,
                                   self.cap_radius)
-        
+
     def get_llur(self):
         x, y = self.crdmap.to_data(self.x, self.y)
         return (x-0.5, y-0.5, x+0.5, y+0.5)
-    
+
     def get_edit_points(self):
         return [(self.x, self.y),
                 # TODO: account for point style
@@ -1279,7 +1279,7 @@ class TwoPointMixin(object):
         x1, y1 = self.crdmap.to_data(self.x1, self.y1)
         x2, y2 = self.crdmap.to_data(self.x2, self.y2)
         return self.swapxy(x1, y1, x2, y2)
-        
+
 
 class RectangleBase(TwoPointMixin, CanvasObjectBase):
     """Draws a rectangle on a ImageViewCanvas.
@@ -1309,7 +1309,7 @@ class RectangleBase(TwoPointMixin, CanvasObjectBase):
             Param(name='linestyle', type=str, default='solid',
                   valid=['solid', 'dash'],
                   description="Style of outline (default solid)"),
-            Param(name='color', 
+            Param(name='color',
                   valid=colors_plus_none, type=_color, default='yellow',
                   description="Color of outline"),
             Param(name='alpha', type=float, default=1.0,
@@ -1333,14 +1333,14 @@ class RectangleBase(TwoPointMixin, CanvasObjectBase):
                   default=False, valid=[False, True],
                   description="Show caps for this object"),
             ]
-    
+
     def __init__(self, x1, y1, x2, y2, color='red',
                  linewidth=1, linestyle='solid', showcap=False,
                  fill=False, fillcolor=None, alpha=1.0,
                  drawdims=False, font='Sans Serif', fillalpha=1.0,
                  **kwdargs):
         self.kind = 'rectangle'
-        
+
         CanvasObjectBase.__init__(self, color=color,
                                   x1=x1, y1=y1, x2=x2, y2=y2,
                                   linewidth=linewidth, showcap=showcap,
@@ -1350,12 +1350,12 @@ class RectangleBase(TwoPointMixin, CanvasObjectBase):
                                   drawdims=drawdims, font=font,
                                   **kwdargs)
         TwoPointMixin.__init__(self)
-        
+
     def get_points(self):
         points = [(self.x1, self.y1), (self.x2, self.y1),
                   (self.x2, self.y2), (self.x1, self.y2)]
         return points
-    
+
     def contains_arr(self, x_arr, y_arr):
         x1, y1, x2, y2 = self.get_llur()
 
@@ -1407,7 +1407,7 @@ class LineBase(TwoPointMixin, CanvasObjectBase):
             Param(name='arrow', type=str, default='none',
                   valid=['start', 'end', 'both', 'none'],
                   description="Arrows at ends (default: none)"),
-            Param(name='color', 
+            Param(name='color',
                   valid=colors_plus_none, type=_color, default='yellow',
                   description="Color of outline"),
             Param(name='alpha', type=float, default=1.0,
@@ -1417,7 +1417,7 @@ class LineBase(TwoPointMixin, CanvasObjectBase):
                   default=False, valid=[False, True],
                   description="Show caps for this object"),
             ]
-    
+
     def __init__(self, x1, y1, x2, y2, color='red',
                  linewidth=1, linestyle='solid', alpha=1.0,
                  arrow=None, showcap=False, **kwdargs):
@@ -1428,7 +1428,7 @@ class LineBase(TwoPointMixin, CanvasObjectBase):
                                   x1=x1, y1=y1, x2=x2, y2=y2,
                                   **kwdargs)
         TwoPointMixin.__init__(self)
-        
+
     def get_points(self):
         return [(self.x1, self.y1), (self.x2, self.y2)]
 
@@ -1438,18 +1438,18 @@ class LineBase(TwoPointMixin, CanvasObjectBase):
         contains = self.point_within_line_arr(x_arr, y_arr, x1, y1, x2, y2,
                                               radius)
         return contains
-        
+
     def contains(self, data_x, data_y, radius=1.0):
         x_arr, y_arr = numpy.array([data_x]), numpy.array([data_y])
         res = self.contains_arr(x_arr, y_arr, radius=radius)
         return res[0]
-        
+
     def select_contains(self, data_x, data_y):
         x1, y1 = self.crdmap.to_data(self.x1, self.y1)
         x2, y2 = self.crdmap.to_data(self.x2, self.y2)
         return self.within_line(data_x, data_y, x1, y1, x2, y2,
                                 self.cap_radius)
-        
+
 
 class RightTriangleBase(TwoPointMixin, CanvasObjectBase):
     """Draws a right triangle on a ImageViewCanvas.
@@ -1479,7 +1479,7 @@ class RightTriangleBase(TwoPointMixin, CanvasObjectBase):
             Param(name='linestyle', type=str, default='solid',
                   valid=['solid', 'dash'],
                   description="Style of outline (default solid)"),
-            Param(name='color', 
+            Param(name='color',
                   valid=colors_plus_none, type=_color, default='yellow',
                   description="Color of outline"),
             Param(name='alpha', type=float, default=1.0,
@@ -1498,7 +1498,7 @@ class RightTriangleBase(TwoPointMixin, CanvasObjectBase):
                   default=False, valid=[False, True],
                   description="Show caps for this object"),
             ]
-    
+
     def __init__(self, x1, y1, x2, y2, color='pink',
                  linewidth=1, linestyle='solid', showcap=False,
                  fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0,
@@ -1515,7 +1515,7 @@ class RightTriangleBase(TwoPointMixin, CanvasObjectBase):
 
     def get_points(self):
         return [(self.x1, self.y1), (self.x2, self.y2)]
-    
+
     def contains_arr(self, x_arr, y_arr):
 
         x1, y1, x2, y2 = self.x1, self.y1, self.x2, self.y2
@@ -1529,7 +1529,7 @@ class RightTriangleBase(TwoPointMixin, CanvasObjectBase):
         a = ((y2 - y3)*(x_arr - x3) + (x3 - x2)*(y_arr - y3)) / denominator
         b = ((y3 - y1)*(x_arr - x3) + (x1 - x3)*(y_arr - y3)) / denominator
         c = 1.0 - a - b
-        
+
         #tf = (0.0 <= a <= 1.0 and 0.0 <= b <= 1.0 and 0.0 <= c <= 1.0)
         contains = numpy.logical_and(
             numpy.logical_and(0.0 <= a, a <= 1.0),
@@ -1547,13 +1547,13 @@ class RightTriangleBase(TwoPointMixin, CanvasObjectBase):
         x1, y1 = self.crdmap.to_data(x1, y1)
         x2, y2 = self.crdmap.to_data(x2, y2)
         x3, y3 = self.crdmap.to_data(x3, y3)
-        
+
         # barycentric coordinate test
         denominator = ((y2 - y3)*(x1 - x3) + (x3 - x2)*(y1 - y3))
         a = ((y2 - y3)*(data_x - x3) + (x3 - x2)*(data_y - y3)) / denominator
         b = ((y3 - y1)*(data_x - x3) + (x1 - x3)*(data_y - y3)) / denominator
         c = 1.0 - a - b
-        
+
         tf = (0.0 <= a <= 1.0 and 0.0 <= b <= 1.0 and 0.0 <= c <= 1.0)
         return tf
 
@@ -1585,7 +1585,7 @@ class CompassBase(OnePointOneRadiusMixin, CanvasObjectBase):
             Param(name='linestyle', type=str, default='solid',
                   valid=['solid', 'dash'],
                   description="Style of outline (default solid)"),
-            Param(name='color', 
+            Param(name='color',
                   valid=colors_plus_none, type=_color, default='skyblue',
                   description="Color of outline"),
             Param(name='alpha', type=float, default=1.0,
@@ -1600,7 +1600,7 @@ class CompassBase(OnePointOneRadiusMixin, CanvasObjectBase):
                   default=False, valid=[False, True],
                   description="Show caps for this object"),
             ]
-    
+
     def __init__(self, x, y, radius, color='skyblue',
                  linewidth=1, fontsize=None, font='Sans Serif',
                  alpha=1.0, linestyle='solid', showcap=True, **kwdargs):
@@ -1619,7 +1619,7 @@ class CompassBase(OnePointOneRadiusMixin, CanvasObjectBase):
                                                          self.y,
                                                          self.radius)
         return [(x, y), (xn, yn), (xe, ye)]
-    
+
     def get_edit_points(self):
         return self.get_points()
 
@@ -1635,8 +1635,8 @@ class CompassBase(OnePointOneRadiusMixin, CanvasObjectBase):
     def select_contains(self, data_x, data_y):
         xd, yd = self.crdmap.to_data(self.x, self.y)
         return self.within_radius(data_x, data_y, xd, yd, self.cap_radius)
-        
-        
+
+
 class RulerBase(TwoPointMixin, CanvasObjectBase):
     """Draws a WCS ruler (like a right triangle) on a ImageViewCanvas.
     Parameters are:
@@ -1665,7 +1665,7 @@ class RulerBase(TwoPointMixin, CanvasObjectBase):
             Param(name='linestyle', type=str, default='solid',
                   valid=['solid', 'dash'],
                   description="Style of outline (default: solid)"),
-            Param(name='color', 
+            Param(name='color',
                   valid=colors_plus_none, type=_color, default='lightgreen',
                   description="Color of outline"),
             Param(name='showplumb', type=_bool,
@@ -1689,7 +1689,7 @@ class RulerBase(TwoPointMixin, CanvasObjectBase):
                   default=False, valid=[False, True],
                   description="Show caps for this object"),
             ]
-    
+
     def __init__(self, x1, y1, x2, y2, color='green', color2='yellow',
                  alpha=1.0, linewidth=1, linestyle='solid',
                  showcap=True, showplumb=True, units='arcmin',
@@ -1733,7 +1733,7 @@ class RulerBase(TwoPointMixin, CanvasObjectBase):
                 text_x = str(dx)
                 text_y = str(dy)
                 text_h = ("%.3f" % dh)
-                
+
         except Exception as e:
             text_h = 'BAD WCS'
             text_x = 'BAD WCS'
@@ -1780,7 +1780,7 @@ class ImageBase(CanvasObjectBase):
             Param(name='linestyle', type=str, default='solid',
                   valid=['solid', 'dash'],
                   description="Style of outline (default: solid)"),
-            Param(name='color', 
+            Param(name='color',
                   valid=colors_plus_none, type=_color, default='lightgreen',
                   description="Color of outline"),
             Param(name='alpha', type=float, default=1.0,
@@ -1796,7 +1796,7 @@ class ImageBase(CanvasObjectBase):
                   default=True, valid=[False, True],
                   description="Optimize rendering for this object"),
             ]
-    
+
     def __init__(self, x, y, image, alpha=1.0, scale_x=1.0, scale_y=1.0,
                  linewidth=0, linestyle='solid', color='lightgreen',
                  showcap=False, flipy=False, optimize=True,
@@ -1833,7 +1833,7 @@ class ImageBase(CanvasObjectBase):
         if not self._drawn:
             self._drawn = True
             self.viewer.redraw(whence=2)
-    
+
     def draw_image(self, dstarr, whence=0.0):
         #print("redraw whence=%f" % (whence))
         dst_order = self.viewer.get_rgb_order()
@@ -1870,7 +1870,7 @@ class ImageBase(CanvasObjectBase):
             scale_x, scale_y = self.viewer.get_scale_xy()
             # scale additionally by our scale
             _scale_x, _scale_y = scale_x * self.scale_x, scale_y * self.scale_y
-            
+
             res = self.image.get_scaled_cutout(a1, b1, a2, b2,
                                                _scale_x, _scale_y,
                                                #flipy=self.flipy,
@@ -1917,7 +1917,7 @@ class ImageBase(CanvasObjectBase):
     def _reset_optimize(self):
         self._drawn = False
         self._cutout = None
-        
+
     def set_image(self, image):
         self.image = image
         self._reset_optimize()
@@ -1926,7 +1926,7 @@ class ImageBase(CanvasObjectBase):
         width = int(self.image.width * self.scale_x)
         height = int(self.image.height * self.scale_y)
         return (width, height)
-    
+
     def get_coords(self):
         x1, y1 = self.x, self.y
         wd, ht = self.get_scaled_wdht()
@@ -1940,7 +1940,7 @@ class ImageBase(CanvasObjectBase):
     def get_points(self):
         x1, y1, x2, y2 = self.get_coords()
         return [(x1, y1), (x2, y1), (x2, y2), (x1, y2)]
-    
+
     def contains(self, data_x, data_y):
         width, height = self.get_scaled_wdht()
         x2, y2 = self.x + width, self.y + height
@@ -2023,7 +2023,7 @@ class NormImageBase(ImageBase):
             Param(name='linestyle', type=str, default='solid',
                   valid=['solid', 'dash'],
                   description="Style of outline (default: solid)"),
-            Param(name='color', 
+            Param(name='color',
                   valid=colors_plus_none, type=_color, default='lightgreen',
                   description="Color of outline"),
             Param(name='alpha', type=float, default=1.0,
@@ -2043,8 +2043,8 @@ class NormImageBase(ImageBase):
             ## Param(name='autocuts', type=?,
             ##       description="Cuts manager for the image"),
             ]
-    
-    def __init__(self, x, y, image, alpha=1.0, scale_x=1.0, scale_y=1.0, 
+
+    def __init__(self, x, y, image, alpha=1.0, scale_x=1.0, scale_y=1.0,
                  linewidth=0, linestyle='solid', color='lightgreen', showcap=False,
                  optimize=True, rgbmap=None, autocuts=None, **kwdargs):
         self.kind = 'normimage'
@@ -2095,7 +2095,7 @@ class NormImageBase(ImageBase):
             scale_x, scale_y = self.viewer.get_scale_xy()
             # scale additionally by our scale
             _scale_x, _scale_y = scale_x * self.scale_x, scale_y * self.scale_y
-            
+
             res = self.image.get_scaled_cutout(a1, b1, a2, b2,
                                                _scale_x, _scale_y)
             self._cutout = res.data
@@ -2169,7 +2169,7 @@ class NormImageBase(ImageBase):
         super(NormImageBase, self)._reset_optimize()
         self._prergb = None
         self._rgbarr = None
-        
+
     def set_image(self, image):
         self.image = image
         self._reset_optimize()

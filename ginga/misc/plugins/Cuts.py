@@ -1,6 +1,6 @@
 #
 # Cuts.py -- Cuts plugin for Ginga fits viewer
-# 
+#
 # Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c)  Eric R. Jeschke.  All rights reserved.
@@ -96,12 +96,12 @@ class Cuts(GingaPlugin.LocalPlugin):
         btn.add_callback('activated', self.delete_cut_cb)
         btn.set_tooltip("Delete selected cut")
         hbox.add_widget(btn)
-        
+
         btn = Widgets.Button("Delete All")
         btn.add_callback('activated', self.delete_all_cb)
         btn.set_tooltip("Clear all cuts")
         hbox.add_widget(btn)
-        
+
         combobox = Widgets.ComboBox()
         for cuttype in self.cuttypes:
             combobox.append_text(cuttype)
@@ -116,9 +116,9 @@ class Cuts(GingaPlugin.LocalPlugin):
         vbox2.add_widget(hbox, stretch=0)
         vbox2.add_widget(Widgets.Label(''), stretch=1)
         vbox.add_widget(vbox2, stretch=0)
- 
+
         top.add_widget(sw, stretch=1)
-        
+
         btns = Widgets.HBox()
         btns.set_border_width(4)
         btns.set_spacing(3)
@@ -135,7 +135,7 @@ class Cuts(GingaPlugin.LocalPlugin):
 
     def instructions(self):
         self.tw.set_text("""Draw (or redraw) a line with the right mouse button.  Click or drag left button to reposition line.""")
-            
+
     def select_cut(self, tag):
         # deselect the current selected cut, if there is one
         if self.cutstag is not None:
@@ -145,7 +145,7 @@ class Cuts(GingaPlugin.LocalPlugin):
             except:
                 # old object may have been deleted
                 pass
-            
+
         self.cutstag = tag
         if tag is None:
             self.w.cuts.show_text('None')
@@ -157,7 +157,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         #obj.setAttrAll(color=self.select_color)
 
         #self.redo()
-        
+
     def cut_select_cb(self, w, index):
         tag = self.tags[index]
         if index == 0:
@@ -166,7 +166,7 @@ class Cuts(GingaPlugin.LocalPlugin):
 
     def pan2mark_cb(self, w):
         self.pan2mark = w.get_state()
-        
+
     def set_cutsdrawtype_cb(self, w, index):
         self.cuttype = self.cuttypes[index]
         if self.cuttype in ('free', ):
@@ -190,7 +190,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         self.select_cut(tag)
         if tag is not None:
             self.redo()
-        
+
     def delete_all_cb(self, w):
         self.canvas.deleteAllObjects()
         self.w.cuts.clear()
@@ -199,7 +199,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         self.w.cuts.setCurrentIndex(0)
         self.cutstag = None
         self.redo()
-        
+
     def deleteCutsTag(self, tag, redraw=False):
         try:
             self.canvas.deleteObjectByTag(tag, redraw=redraw)
@@ -216,7 +216,7 @@ class Cuts(GingaPlugin.LocalPlugin):
             else:
                 self.cutstag = self.tags[0]
                 #self.highlightTag(self.cutstag)
-        
+
     def addCutsTag(self, tag, select=False):
         if not tag in self.tags:
             self.tags.append(tag)
@@ -229,13 +229,13 @@ class Cuts(GingaPlugin.LocalPlugin):
             self.cutstag = tag
             self.w.cuts.show_text(tag)
             #self.highlightTag(self.cutstag)
-        
+
     def close(self):
         chname = self.fv.get_channelName(self.fitsimage)
         self.fv.stop_local_plugin(chname, str(self))
         self.gui_up = False
         return True
-        
+
     def start(self):
         # start line cuts operation
         self.instructions()
@@ -254,7 +254,7 @@ class Cuts(GingaPlugin.LocalPlugin):
 
     def pause(self):
         self.canvas.ui_setActive(False)
-        
+
     def resume(self):
         # turn off any mode user may be in
         self.modes_off()
@@ -283,7 +283,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         points = numpy.array(points)
         self.plot.cuts(points, xtitle="Line Index", ytitle="Pixel Value",
                        color=color)
-        
+
     def _redo(self, lines, colors):
         for idx in range(len(lines)):
             line, color = lines[idx], colors[idx]
@@ -292,12 +292,8 @@ class Cuts(GingaPlugin.LocalPlugin):
             #text.color = color
             self._plotpoints(line, color)
 
-        # Make x axis labels a little more readable
-        ## lbls = self.plot.ax.xaxis.get_ticklabels()
-        ## for lbl in lbls:
-        ##     lbl.set(rotation=45, horizontalalignment='right')
         return True
-    
+
     def redo(self):
         self.plot.clear()
         idx = 0
@@ -332,7 +328,7 @@ class Cuts(GingaPlugin.LocalPlugin):
 
     def _combine_cuts(self, *args):
         return self.dc.CompoundObject(*args)
-        
+
     def _append_lists(self, l):
         if len(l) == 0:
             return []
@@ -342,7 +338,7 @@ class Cuts(GingaPlugin.LocalPlugin):
             res = l[0]
             res.extend(self._append_lists(l[1:]))
             return res
-        
+
     def _getlines(self, obj):
         if obj.kind == 'compound':
             return self._append_lists(list(map(self._getlines, obj.objects)))
@@ -350,29 +346,29 @@ class Cuts(GingaPlugin.LocalPlugin):
             return [obj]
         else:
             return []
-        
+
     def buttondown_cb(self, canvas, event, data_x, data_y):
         return self.motion_cb(canvas, event, data_x, data_y)
-    
+
     def motion_cb(self, canvas, event, data_x, data_y):
 
         obj = self.canvas.getObjectByTag(self.cutstag)
         lines = self._getlines(obj)
         for line in lines:
             line.linestyle = 'dash'
-        self._movecut(obj, data_x, data_y)
+            self._movecut(line, data_x, data_y)
 
         canvas.redraw(whence=3)
         return True
-    
+
     def buttonup_cb(self, canvas, event, data_x, data_y):
 
         obj = self.canvas.getObjectByTag(self.cutstag)
         lines = self._getlines(obj)
         for line in lines:
             line.linestyle = 'solid'
-        self._movecut(obj, data_x, data_y)
-        
+            self._movecut(line, data_x, data_y)
+
         self.redo()
         return True
 
@@ -419,7 +415,7 @@ class Cuts(GingaPlugin.LocalPlugin):
             self.logger.debug("adding cut position")
             self.count += 1
             count = self.count
-            
+
         tag = "cuts%d" % (count)
         cuts = []
         for (x1, y1, x2, y2) in coords:
@@ -438,7 +434,7 @@ class Cuts(GingaPlugin.LocalPlugin):
             cut = cuts[0]
         else:
             cut = self._combine_cuts(*cuts)
-            
+
         cut.set_data(count=count)
         self.canvas.add(cut, tag=tag)
         self.addCutsTag(tag, select=True)
@@ -474,7 +470,7 @@ class Cuts(GingaPlugin.LocalPlugin):
             self.logger.debug("adding cut position")
             self.count += 1
             count = self.count
-            
+
         tag = "cuts%d" % (count)
         if obj.kind == 'line':
             cut = self._create_cut(x, y, count,
@@ -510,12 +506,12 @@ class Cuts(GingaPlugin.LocalPlugin):
 
         self.logger.debug("redoing cut plots")
         return self.redo()
-    
+
     def edit_cb(self, canvas, obj):
         self.redo()
         return True
-    
+
     def __str__(self):
         return 'cuts'
-    
+
 #END

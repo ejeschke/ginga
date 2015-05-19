@@ -22,6 +22,7 @@ class PlotBase(Callback.Callbacks):
         Callback.Callbacks.__init__(self)
 
         self.logger = logger
+        self.fontsize = 10
 
         # For callbacks
         for name in ('close', ):
@@ -44,7 +45,7 @@ class PlotBase(Callback.Callbacks):
     def add_axis(self, **kwdargs):
         self.ax = self.fig.add_subplot(111, **kwdargs)
         return self.ax
-        
+
     def get_axis(self):
         return self.ax
 
@@ -59,6 +60,10 @@ class PlotBase(Callback.Callbacks):
             self.ax.set_title(title)
         if rtitle is not None:
             pass
+        ax = self.ax
+        for item in ([ax.title, ax.xaxis.label, ax.yaxis.label] +
+             ax.get_xticklabels() + ax.get_yticklabels()):
+            item.set_fontsize(self.fontsize)
 
     def clear(self):
         self._sanity_check_window()
@@ -96,6 +101,16 @@ class PlotBase(Callback.Callbacks):
                         rtitle=rtitle)
         self.ax.grid(True)
         self.ax.plot(xarr, yarr, **kwdargs)
+
+        for item in self.ax.get_xticklabels() + self.ax.get_yticklabels():
+            item.set_fontsize(self.fontsize)
+
+        # Make x axis labels a little more readable
+        lbls = self.ax.xaxis.get_ticklabels()
+        for lbl in lbls:
+            lbl.set(rotation=45, horizontalalignment='right')
+
+        self.fig.tight_layout()
 
         self._draw()
 
