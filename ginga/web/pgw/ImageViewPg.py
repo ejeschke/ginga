@@ -474,7 +474,8 @@ class ImageViewCanvas(ImageViewZoom,
     def redraw_data(self, whence=0):
         super(ImageViewCanvas, self).redraw_data(whence=whence)
 
-        if self.surface is None:
+        surface = self.get_surface()
+        if surface is None:
             return
         self.draw()
 
