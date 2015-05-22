@@ -1774,6 +1774,8 @@ class ImageBase(CanvasObjectBase):
                   description="Scaling factor for X dimension of object"),
             Param(name='scale_y', type=float, default=1.0,
                   description="Scaling factor for Y dimension of object"),
+            Param(name='interpolation', type=str, default='basic',
+                  description="Interpolation method for scaling pixels"),
             Param(name='linewidth', type=int, default=0,
                   min=0, max=20, widget='spinbutton', incr=1,
                   description="Width of outline"),
@@ -1798,12 +1800,14 @@ class ImageBase(CanvasObjectBase):
             ]
 
     def __init__(self, x, y, image, alpha=1.0, scale_x=1.0, scale_y=1.0,
+                 interpolation='basic',
                  linewidth=0, linestyle='solid', color='lightgreen',
                  showcap=False, flipy=False, optimize=True,
                  **kwdargs):
         self.kind = 'image'
         super(ImageBase, self).__init__(x=x, y=y, image=image, alpha=alpha,
                                         scale_x=scale_x, scale_y=scale_y,
+                                        interpolation=interpolation,
                                         linewidth=linewidth, linestyle=linestyle,
                                         color=color, showcap=showcap,
                                         flipy=flipy, optimize=optimize,
@@ -1874,7 +1878,7 @@ class ImageBase(CanvasObjectBase):
             res = self.image.get_scaled_cutout(a1, b1, a2, b2,
                                                _scale_x, _scale_y,
                                                #flipy=self.flipy,
-                                               method='basic')
+                                               method=self.interpolation)
 
             # don't ask for an alpha channel from overlaid image if it
             # doesn't have one
@@ -2017,6 +2021,8 @@ class NormImageBase(ImageBase):
                   description="Scaling factor for X dimension of object"),
             Param(name='scale_y', type=float, default=1.0,
                   description="Scaling factor for Y dimension of object"),
+            Param(name='interpolation', type=str, default='basic',
+                  description="Interpolation method for scaling pixels"),
             Param(name='linewidth', type=int, default=0,
                   min=0, max=20, widget='spinbutton', incr=1,
                   description="Width of outline"),
@@ -2045,11 +2051,13 @@ class NormImageBase(ImageBase):
             ]
 
     def __init__(self, x, y, image, alpha=1.0, scale_x=1.0, scale_y=1.0,
+                 interpolation='basic',
                  linewidth=0, linestyle='solid', color='lightgreen', showcap=False,
                  optimize=True, rgbmap=None, autocuts=None, **kwdargs):
         self.kind = 'normimage'
         super(NormImageBase, self).__init__(x=x, y=y, image=image, alpha=alpha,
                                             scale_x=scale_x, scale_y=scale_y,
+                                            interpolation=interpolation,
                                             linewidth=linewidth, linestyle=linestyle,
                                             color=color,
                                             showcap=showcap, optimize=optimize,
@@ -2097,7 +2105,8 @@ class NormImageBase(ImageBase):
             _scale_x, _scale_y = scale_x * self.scale_x, scale_y * self.scale_y
 
             res = self.image.get_scaled_cutout(a1, b1, a2, b2,
-                                               _scale_x, _scale_y)
+                                               _scale_x, _scale_y,
+                                               method=self.interpolation)
             self._cutout = res.data
 
             # calculate our offset from the pan position

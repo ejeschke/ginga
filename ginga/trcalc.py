@@ -11,13 +11,26 @@ import math
 import numpy
 import time
 
+def use(pkgname):
+    global have_opencv, cv2, cv2_resize
+
+    if pkgname == 'opencv':
+        import cv2
+        have_opencv = True
+        cv2_resize = {
+            'nearest': cv2.INTER_NEAREST,
+            'linear' : cv2.INTER_LINEAR,
+            'area'   : cv2.INTER_AREA,
+            'bicubic': cv2.INTER_CUBIC,
+            'lanczos': cv2.INTER_LANCZOS4,
+            }
+
 try:
     # optional opencv package speeds up certain operations, especially
     # rotation
     # TEMP: opencv broken on anaconda mac (importing causes segv)
-    # --> temporarily disable
-    #import cv2
-    #have_opencv = True
+    # --> temporarily disable, can enable using use() function above
+    #use('opencv')
     have_opencv = False
 
 except ImportError:
@@ -235,16 +248,16 @@ def get_scaled_cutout_wdht_view(shp, x1, y1, x2, y2, new_wd, new_ht):
 
 
 def get_scaled_cutout_wdht(data_np, x1, y1, x2, y2, new_wd, new_ht,
-                           interpolation='basic'):
-    if have_opencv and (interpolation == 'linear'):
+                           interpolation='nearest'):
+    if have_opencv and (interpolation != 'basic'):
         # opencv is fastest
+        method = cv2_resize[interpolation]
         newdata = cv2.resize(data_np[y1:y2+1, x1:x2+1], (new_wd, new_ht),
-                                 interpolation=cv2.INTER_LINEAR)
+                             interpolation=method)
 
-    elif have_opencv and (interpolation == 'bicubic'):
-        # opencv is fastest
-        newdata = cv2.resize(data_np[y1:y2+1, x1:x2+1], (new_wd, new_ht),
-                                 interpolation=cv2.INTER_CUBIC)
+        old_wd, old_ht = max(x2 - x1 + 1, 1), max(y2 - y1 + 1, 1)
+        ht, wd = newdata.shape[:2]
+        scale_x, scale_y = float(wd) / old_wd, float(ht) / old_ht
 
     else:
         view, (scale_x, scale_y) = get_scaled_cutout_wdht_view(data_np.shape,
@@ -272,23 +285,15 @@ def get_scaled_cutout_basic_view(shp, x1, y1, x2, y2, scale_x, scale_y):
 
 
 def get_scaled_cutout_basic(data_np, x1, y1, x2, y2, scale_x, scale_y,
-                            interpolation='basic'):
+                            interpolation='nearest'):
 
-    if have_opencv and (interpolation == 'linear'):
+    if have_opencv and (interpolation != 'basic'):
         # opencv is fastest
+        method = cv2_resize[interpolation]
         newdata = cv2.resize(data_np[y1:y2+1, x1:x2+1], None,
                              fx=scale_x, fy=scale_y,
-                             interpolation=cv2.INTER_LINEAR)
-        old_wd, old_ht = max(x2 - x1 + 1, 1), max(y2 - y1 + 1, 1)
-        ht, wd = newdata.shape[:2]
-        scale_x, scale_y = float(wd) / old_wd, float(ht) / old_ht
-
-    elif have_opencv and (interpolation == 'bicubic'):
-        # opencv is fastest
-        newdata = cv2.resize(data_np[y1:y2+1, x1:x2+1], None,
-                             fx=scale_x, fy=scale_y,
-                             interpolation=cv2.INTER_CUBIC)
-        old_wd, old_ht = max(x2 - x1 + 1, 1), max(y2 - y1 + 1, 1)
+                             interpolation=method)
+        old_wd, oldsht = max(x2 - x1 + 1, 1), max(y2 - y1 + 1, 1)
         ht, wd = newdata.shape[:2]
         scale_x, scale_y = float(wd) / old_wd, float(ht) / old_ht
 
