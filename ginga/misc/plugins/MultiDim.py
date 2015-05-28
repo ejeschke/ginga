@@ -485,8 +485,8 @@ class MultiDim(GingaPlugin.LocalPlugin):
         info = self.fits_f.info(output=False)
         self.prep_hdu_menu(self.w.hdu, info)
         self.num_hdu = upper
-        self.logger.debug("there are %d hdus" % (upper))
-        self.w.numhdu.set_text("%d" % (upper))
+        self.logger.debug("there are %d hdus" % (upper+1))
+        self.w.numhdu.set_text("%d" % (upper+1))
         if idx is not None:
             # set the HDU in the drop down if known
             self.w.hdu.set_index(idx)
