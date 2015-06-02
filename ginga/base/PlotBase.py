@@ -36,6 +36,9 @@ class PlotBase(Callback.Callbacks):
         self.logx = False
         self.logy = False
 
+        self.xdata = []
+        self.ydata = []
+
     def get_widget(self):
         return self.canvas
 
@@ -97,6 +100,9 @@ class PlotBase(Callback.Callbacks):
         if self.logy:
             self.ax.set_yscale('log')
 
+        self.xdata = xarr
+        self.ydata = yarr
+
         self.set_titles(xtitle=xtitle, ytitle=ytitle, title=title,
                         rtitle=rtitle)
         self.ax.grid(True)
@@ -114,6 +120,8 @@ class PlotBase(Callback.Callbacks):
 
         self._draw()
 
+    def get_data(self):
+            return self.fig, self.xdata, self.ydata
 
 class HistogramMixin(object):
 

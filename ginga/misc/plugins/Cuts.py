@@ -12,6 +12,7 @@ import numpy
 from ginga.misc import Widgets, Plot
 from ginga import GingaPlugin, colors
 from ginga.util.six.moves import map, zip
+from ginga.qtw.QtHelp import SaveDialog
 
 # default cut colors
 cut_colors = ['magenta', 'skyblue2', 'chartreuse2', 'cyan', 'pink',
@@ -213,6 +214,10 @@ class Cuts(GingaPlugin.LocalPlugin):
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
+
+        btn = Widgets.Button("Save")
+        btn.add_callback('activated', lambda w: self.save_cb())
+        btns.add_widget(btn, stretch=0)
 
         top.add_widget(btns, stretch=0)
 
@@ -601,6 +606,21 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         self.w.btn_move.set_state(mode == 'move')
         self.w.btn_draw.set_state(mode == 'draw')
         self.w.btn_edit.set_state(mode == 'edit')
+
+    def save_cb(self):
+        fig, xarr, yarr = self.plot.get_data()
+
+        # Check if plot is empty
+        if xarr == []:
+            return
+
+        target = SaveDialog(title='Save plot', extfilter='*.png').get_path()
+        fig.savefig(target, dpi=100)
+
+        target = SaveDialog(title='Save data', extfilter='*.npz').get_path()
+        target_file = open(target, 'w')
+        np.savez_compressed(target_file, x=xarr, y=yarr)
+        target_file.close()
 
     def __str__(self):
         return 'cuts'
