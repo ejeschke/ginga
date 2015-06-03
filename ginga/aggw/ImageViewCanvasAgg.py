@@ -8,7 +8,7 @@
 # Please see the file LICENSE.txt for details.
 #
 from ginga.aggw import ImageViewAgg
-from ginga.aggw.ImageViewCanvasTypesAgg import *
+from ginga.canvas.mixins import DrawingMixin, CanvasMixin, CompoundMixin
 
 
 class ImageViewCanvasError(ImageViewAgg.ImageViewAggError):
@@ -24,24 +24,29 @@ class ImageViewCanvas(ImageViewAgg.ImageViewAgg,
                                            settings=settings)
         CompoundMixin.__init__(self)
         CanvasMixin.__init__(self)
-        DrawingMixin.__init__(self, drawCatalog)
+        DrawingMixin.__init__(self)
+
+        for name in ('modified', ):
+            self.enable_callback(name)
+
+        #self.canvas.add(self)
+        self.set_canvas(self)
 
         self.setSurface(self)
 
         # override
         self.defer_redraw = False
 
-    def canvascoords(self, data_x, data_y, center=True):
-        # data->canvas space coordinate conversion
-        x, y = self.get_canvas_xy(data_x, data_y, center=center)
-        return (x, y)
+    def update_canvas(self, whence=3):
+        self.logger.debug("updating canvas")
+        self.redraw(whence=whence)
 
     def redraw_data(self, whence=0):
         super(ImageViewCanvas, self).redraw_data(whence=whence)
 
         if not self.surface:
             return
-        self.draw()
+        self.draw(self)
 
     # subclass needs to implement these to avoid warning messages
     def reschedule_redraw(self, time_sec):

@@ -1,5 +1,5 @@
 #
-# ImageViewCanvasMock.py -- A FITS image widget with canvas drawing in mock
+# ImageViewCanvasMock.py -- A Ginga image widget with canvas drawing in mock
 #                             widget set
 #
 # Eric Jeschke (eric@naoj.org)
@@ -9,7 +9,7 @@
 # Please see the file LICENSE.txt for details.
 #
 from ginga.mockw import ImageViewMock
-from ginga.mockw.ImageViewCanvasTypesMock import *
+from ginga.canvas.mixins import DrawingMixin, CanvasMixin, CompoundMixin
 
 
 class ImageViewCanvasError(ImageViewMock.ImageViewMockError):
@@ -27,22 +27,27 @@ class ImageViewCanvas(ImageViewMock.ImageViewZoom,
                                              bindings=bindings)
         CompoundMixin.__init__(self)
         CanvasMixin.__init__(self)
-        DrawingMixin.__init__(self, drawCatalog)
+        DrawingMixin.__init__(self)
+
+        for name in ('modified', ):
+            self.enable_callback(name)
+
+        #self.canvas.add(self)
+        self.set_canvas(self)
 
         self.setSurface(self)
         self.ui_setActive(True)
 
-    def canvascoords(self, data_x, data_y, center=True):
-        # data->canvas space coordinate conversion
-        x, y = self.get_canvas_xy(data_x, data_y, center=center)
-        return (x, y)
+    def update_canvas(self, whence=3):
+        self.logger.debug("updating canvas")
+        self.redraw(whence=whence)
 
     def redraw_data(self, whence=0):
         super(ImageViewCanvas, self).redraw_data(whence=whence)
 
         if not self.pixmap:
             return
-        self.draw()
+        self.draw(self)
 
     # METHODS THAT WERE IN IPG
 

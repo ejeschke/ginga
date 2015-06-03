@@ -1,5 +1,5 @@
 #
-# ImageViewCanvas.py -- base classes for ImageViewCanvas{Toolkit}.
+# CanvasObject.py -- classes for shapes drawn on ginga canvases.
 #
 # Eric Jeschke (eric@naoj.org)
 #
@@ -16,9 +16,10 @@ from ginga.util import wcs
 from ginga import trcalc, Mixins, colors
 from ginga.util.six.moves import map, filter
 
-from ginga.canvas.CompoundMixin import CompoundMixin
-from ginga.canvas.CanvasMixin import CanvasMixin
-from ginga.canvas import coordmap
+from .CompoundMixin import CompoundMixin
+from .CanvasMixin import CanvasMixin
+from .DrawingMixin import DrawingMixin
+from . import coordmap
 
 colors_plus_none = [ None ] + colors.get_colors()
 
@@ -88,16 +89,30 @@ class CanvasObjectBase(Callback.Callbacks):
         else:
             raise CanvasObjectError("method get_data() takes at most 2 arguments")
 
-    def redraw(self, whence=3):
-        self.viewer.redraw(whence=whence)
-
     def use_coordmap(self, mapobj):
         self.crdmap = mapobj
 
-    def canvascoords(self, x, y, center=True):
-        if self.crdmap is not None:
-            return self.crdmap.to_canvas(x, y)
-        return self.viewer.canvascoords(x, y, center=center)
+    def canvascoords(self, viewer, x, y, center=True):
+        # if object has a valid coordinate map, use it
+        crdmap = self.crdmap
+        if crdmap is None:
+            # otherwise get viewer's default one
+            crdmap = viewer.get_coordmap('data')
+
+        # convert coordinates to data coordinates
+        data_x, data_y = crdmap.to_data(x, y)
+
+        # finally, convert to viewer's canvas coordinates
+        return viewer.canvascoords(data_x, data_y, center=center)
+
+    ## def canvascoords(self, viewer, x, y, center=True):
+    ##     crdmap = viewer.get_coordmap(self.coord)
+
+    ##     # convert coordinates to data coordinates
+    ##     data_x, data_y = crdmap.to_data(x, y)
+
+    ##     # finally, convert to viewer's canvas coordinates
+    ##     return viewer.canvascoords(data_x, data_y, center=center)
 
     def is_compound(self):
         return False
@@ -109,28 +124,50 @@ class CanvasObjectBase(Callback.Callbacks):
     def contains(self, x, y):
         return False
 
-    def select_contains(self, x, y):
+    def select_contains(self, viewer, x, y):
         return self.contains(x, y)
 
-    def calcVertexes(self, start_x, start_y, end_x, end_y,
-                     arrow_length=10, arrow_degrees=0.35):
+    def draw_arrowhead(self, cr, x1, y1, x2, y2):
+        i1, j1, i2, j2 = self.calcVertexes(x1, y1, x2, y2)
 
-        angle = math.atan2(end_y - start_y, end_x - start_x) + math.pi
+        alpha = getattr(self, 'alpha', 1.0)
+        cr.set_fill(self.color, alpha=alpha)
+        cr.draw_polygon(((x2, y2), (i1, j1), (i2, j2)))
+        cr.set_fill(None)
 
-        x1 = end_x + arrow_length * math.cos(angle - arrow_degrees);
-        y1 = end_y + arrow_length * math.sin(angle - arrow_degrees);
-        x2 = end_x + arrow_length * math.cos(angle + arrow_degrees);
-        y2 = end_y + arrow_length * math.sin(angle + arrow_degrees);
+    def draw_caps(self, cr, cap, points, radius=None):
+        for cx, cy in points:
+            if radius is None:
+                radius = self.cap_radius
+            alpha = getattr(self, 'alpha', 1.0)
+            if cap == 'ball':
+                cr.set_fill(self.color, alpha=alpha)
+                cr.draw_circle(cx, cy, radius)
+                #cr.set_fill(self, None)
 
-        return (x1, y1, x2, y2)
+    def draw_edit(self, cr, viewer):
+        cpoints = self.get_cpoints(viewer, points=self.get_edit_points())
+        self.draw_caps(cr, 'ball', cpoints)
 
-    def calc_radius(self, x1, y1, radius):
+    def calc_radius(self, viewer, x1, y1, radius):
         # scale radius
-        cx1, cy1 = self.canvascoords(x1, y1)
-        cx2, cy2 = self.canvascoords(x1, y1 + radius)
+        cx1, cy1 = self.canvascoords(viewer, x1, y1)
+        cx2, cy2 = self.canvascoords(viewer, x1, y1 + radius)
         # TODO: the accuracy of this calculation of radius might be improved?
         cradius = math.sqrt(abs(cy2 - cy1)**2 + abs(cx2 - cx1)**2)
         return (cx1, cy1, cradius)
+
+    def calcVertexes(self, start_cx, start_cy, end_cx, end_cy,
+                     arrow_length=10, arrow_degrees=0.35):
+
+        angle = math.atan2(end_cy - start_cy, end_cx - start_cx) + math.pi
+
+        cx1 = end_cx + arrow_length * math.cos(angle - arrow_degrees);
+        cy1 = end_cy + arrow_length * math.sin(angle - arrow_degrees);
+        cx2 = end_cx + arrow_length * math.cos(angle + arrow_degrees);
+        cy2 = end_cy + arrow_length * math.sin(angle + arrow_degrees);
+
+        return (cx1, cy1, cx2, cy2)
 
     def swapxy(self, x1, y1, x2, y2):
         if x2 < x1:
@@ -139,8 +176,8 @@ class CanvasObjectBase(Callback.Callbacks):
             y1, y2 = y2, y1
         return (x1, y1, x2, y2)
 
-    def scale_font(self):
-        zoomlevel = self.viewer.get_zoom()
+    def scale_font(self, viewer):
+        zoomlevel = viewer.get_zoom()
         if zoomlevel >= -4:
             return 14
         elif zoomlevel >= -6:
@@ -307,26 +344,43 @@ class CanvasObjectBase(Callback.Callbacks):
 
     # TODO: move these into utility module?
     #####
-    def within_radius_arr(self, a_arr, b_arr, x, y, canvas_radius):
+    def point_within_radius_arr(self, a_arr, b_arr, x, y, canvas_radius,
+                                scale_x=1.0, scale_y=1.0):
         """Point (a, b) and point (x, y) are in data coordinates.
         Return True if point (a, b) is within the circle defined by
         a center at point (x, y) and within canvas_radius.
-        The distance between points is scaled by the canvas scale.
         """
-        scale_x, scale_y = self.viewer.get_scale_xy()
         dx = numpy.fabs(x - a_arr) * scale_x
         dy = numpy.fabs(y - b_arr) * scale_y
         new_radius = numpy.sqrt(dx**2 + dy**2)
         res = (new_radius <= canvas_radius)
         return res
 
-    def within_radius(self, a, b, x, y, canvas_radius):
-        """See within_radius_arr()"""
+    def point_within_radius(self, a, b, x, y, canvas_radius,
+                            scale_x=1.0, scale_y=1.0):
+        """See point_within_radius_arr()"""
         a_arr, b_arr = numpy.array([a]), numpy.array([b])
-        res = self.within_radius_arr(a_arr, b_arr, x, y, canvas_radius)
+        res = self.within_radius_arr(viewer, a_arr, b_arr, x, y, canvas_radius,
+                                     scale_x=scale_x, scale_y=scale_y)
         return res[0]
 
-    def get_pt(self, points, x, y, canvas_radius=None):
+    def within_radius_arr(self, viewer, a_arr, b_arr, x, y, canvas_radius):
+        """Point (a, b) and point (x, y) are in data coordinates.
+        Return True if point (a, b) is within the circle defined by
+        a center at point (x, y) and within canvas_radius.
+        The distance between points is scaled by the canvas scale.
+        """
+        scale_x, scale_y = viewer.get_scale_xy()
+        return self.point_within_radius_arr(a_arr, b_arr, x, y, canvas_radius,
+                                            scale_x=scale_x, scale_y=scale_y)
+
+    def within_radius(self, viewer, a, b, x, y, canvas_radius):
+        """See within_radius_arr()"""
+        a_arr, b_arr = numpy.array([a]), numpy.array([b])
+        res = self.within_radius_arr(viewer, a_arr, b_arr, x, y, canvas_radius)
+        return res[0]
+
+    def get_pt(self, viewer, points, x, y, canvas_radius=None):
         if canvas_radius is None:
             canvas_radius = self.cap_radius
 
@@ -338,9 +392,10 @@ class CanvasObjectBase(Callback.Callbacks):
         else:
             xp, yp = x, y
 
+        # TODO: do this using within_radius_arr()
         for i in range(len(points)):
             a, b = points[i]
-            if self.within_radius(xp, yp, a, b, canvas_radius):
+            if self.within_radius(viewer, xp, yp, a, b, canvas_radius):
                 return i
         return None
 
@@ -365,24 +420,27 @@ class CanvasObjectBase(Callback.Callbacks):
 
     def point_within_line(self, a, b, x1, y1, x2, y2, canvas_radius):
         a_arr, b_arr = numpy.array([a]), numpy.array([b])
-        res = self.within_line_arr(a_arr, b_arr, x1, y1, x2, y2, canvas_radius)
+        res = self.point_within_line_arr(a_arr, b_arr, x1, y1, x2, y2,
+                                         canvas_radius)
         return res[0]
 
-    def within_line_arr(self, a_arr, b_arr, x1, y1, x2, y2, canvas_radius):
+    def within_line_arr(self, viewer, a_arr, b_arr, x1, y1, x2, y2,
+                        canvas_radius):
         """Point (a, b) and points (x1, y1), (x2, y2) are in data coordinates.
         Return True if point (a, b) is within the line defined by
         a line from (x1, y1) to (x2, y2) and within canvas_radius.
         The distance between points is scaled by the canvas scale.
         """
-        scale_x, scale_y = self.viewer.get_scale_xy()
+        scale_x, scale_y = viewer.get_scale_xy()
         new_radius = canvas_radius * 1.0 / min(scale_x, scale_y)
         return self.point_within_line_arr(a_arr, b_arr, x1, y1, x2, y2,
                                          new_radius)
 
-    def within_line(self, a, b, x1, y1, x2, y2, canvas_radius):
+    def within_line(self, viewer, a, b, x1, y1, x2, y2, canvas_radius):
         """See within_line_arr()"""
         a_arr, b_arr = numpy.array([a]), numpy.array([b])
-        res = self.within_line_arr(a_arr, b_arr, x1, y1, x2, y2, canvas_radius)
+        res = self.within_line_arr(viewer, a_arr, b_arr, x1, y1, x2, y2,
+                                   canvas_radius)
         return res[0]
 
     #####
@@ -402,7 +460,7 @@ class CanvasObjectBase(Callback.Callbacks):
     def get_reference_pt(self):
         return self.get_center_pt()
 
-    def get_cpoints(self, points=None):
+    def get_cpoints(self, viewer, points=None):
         if points is None:
             points = self.get_points()
         if hasattr(self, 'rot_deg') and self.rot_deg != 0.0:
@@ -414,7 +472,7 @@ class CanvasObjectBase(Callback.Callbacks):
                                 points))
         else:
             rpoints = points
-        cpoints = tuple(map(lambda p: self.crdmap.to_canvas(p[0], p[1]),
+        cpoints = tuple(map(lambda p: self.canvascoords(viewer, p[0], p[1]),
                             rpoints))
         return cpoints
 
@@ -422,7 +480,7 @@ class CanvasObjectBase(Callback.Callbacks):
 #
 #   ==== BASE CLASSES FOR GRAPHICS OBJECTS ====
 #
-class TextBase(CanvasObjectBase):
+class Text(CanvasObjectBase):
     """Draws text on a ImageViewCanvas.
     Parameters are:
     x, y: 0-based coordinates in the data space
@@ -462,15 +520,16 @@ class TextBase(CanvasObjectBase):
                  font='Sans Serif', fontsize=None,
                  color='yellow', alpha=1.0, showcap=False, **kwdargs):
         self.kind = 'text'
-        super(TextBase, self).__init__(color=color, alpha=alpha,
+        super(Text, self).__init__(color=color, alpha=alpha,
                                        x=x, y=y, font=font, fontsize=fontsize,
                                        text=text, showcap=showcap, **kwdargs)
 
     def get_center_pt(self):
         return (self.x, self.y)
 
-    def select_contains(self, x, y):
-        return self.within_radius(x, y, self.x, self.y, self.cap_radius)
+    def select_contains(self, viewer, x, y):
+        return self.within_radius(viewer, x, y, self.x, self.y,
+                                  self.cap_radius)
 
     def get_points(self):
         return [self.get_center_pt()]
@@ -484,6 +543,18 @@ class TextBase(CanvasObjectBase):
     def get_edit_points(self):
         # TODO: edit point for scaling or rotating?
         return [(self.x, self.y)]
+
+    def draw(self, viewer):
+        cr = viewer.renderer.setup_cr(self)
+        cr.set_font_from_shape(self)
+
+        cx, cy = self.canvascoords(viewer, self.x, self.y)
+        cr.draw_text(cx, cy, self.text)
+
+        if self.editing:
+            self.draw_edit(cr, viewer)
+        elif self.showcap:
+            self.draw_caps(cr, self.cap, ((cx, cy), ))
 
 
 class PolygonMixin(object):
@@ -560,7 +631,7 @@ class PolygonMixin(object):
         return [self.get_center_pt()] + self.points
 
 
-class PolygonBase(PolygonMixin, CanvasObjectBase):
+class Polygon(PolygonMixin, CanvasObjectBase):
     """Draws a polygon on a ImageViewCanvas.
     Parameters are:
     List of (x, y) points in the polygon.  The last one is assumed to
@@ -615,7 +686,19 @@ class PolygonBase(PolygonMixin, CanvasObjectBase):
                                   fillalpha=fillalpha, **kwdargs)
         PolygonMixin.__init__(self)
 
-class PathBase(PolygonMixin, CanvasObjectBase):
+    def draw(self, viewer):
+        cr = viewer.renderer.setup_cr(self)
+
+        cpoints = self.get_cpoints(viewer)
+        cr.draw_polygon(cpoints)
+
+        if self.editing:
+            self.draw_edit(cr, viewer)
+        elif self.showcap:
+            self.draw_caps(cr, self.cap, cpoints)
+
+
+class Path(PolygonMixin, CanvasObjectBase):
     """Draws a path on a ImageViewCanvas.
     Parameters are:
     List of (x, y) points in the polygon.
@@ -677,14 +760,26 @@ class PathBase(PolygonMixin, CanvasObjectBase):
         res = self.contains_arr(x_arr, y_arr)
         return res[0]
 
-    def select_contains(self, x, y):
+    def select_contains(self, viewer, x, y):
         x1, y1 = self.crdmap.to_data(*self.points[0])
         for point in self.points[1:]:
             x2, y2 = self.crdmap.to_data(*point)
-            if self.within_line(x, y, x1, y1, x2, y2, self.cap_radius):
+            if self.within_line(viewer, x, y, x1, y1, x2, y2,
+                                self.cap_radius):
                 return True
             x1, y1 = x2, y2
         return False
+
+    def draw(self, viewer):
+        cpoints = self.get_cpoints(viewer, points=self.points)
+
+        cr = viewer.renderer.setup_cr(self)
+        cr.draw_path(cpoints)
+
+        if self.editing:
+            self.draw_edit(cr, viewer)
+        elif self.showcap:
+            self.draw_caps(cr, self.cap, cpoints)
 
 
 class OnePointTwoRadiusMixin(object):
@@ -735,7 +830,7 @@ class OnePointTwoRadiusMixin(object):
         return (x1, y1, x2, y2)
 
 
-class BoxBase(OnePointTwoRadiusMixin, CanvasObjectBase):
+class Box(OnePointTwoRadiusMixin, CanvasObjectBase):
     """Draws a box on a ImageViewCanvas.
     Parameters are:
     x, y: 0-based coordinates of the center in the data space
@@ -831,8 +926,19 @@ class BoxBase(OnePointTwoRadiusMixin, CanvasObjectBase):
         res = self.contains_arr(x_arr, y_arr)
         return res[0]
 
+    def draw(self, viewer):
+        cpoints = self.get_cpoints(viewer)
 
-class EllipseBase(OnePointTwoRadiusMixin, CanvasObjectBase):
+        cr = viewer.renderer.setup_cr(self)
+        cr.draw_polygon(cpoints)
+
+        if self.editing:
+            self.draw_edit(cr, viewer)
+        elif self.showcap:
+            self.draw_caps(cr, self.cap, cpoints)
+
+
+class Ellipse(OnePointTwoRadiusMixin, CanvasObjectBase):
     """Draws an ellipse on a ImageViewCanvas.
     Parameters are:
     x, y: 0-based coordinates of the center in the data space
@@ -941,8 +1047,27 @@ class EllipseBase(OnePointTwoRadiusMixin, CanvasObjectBase):
                (mx - ox, ye), (xs, my + oy), (xs, my)]
         return pts
 
+    def draw(self, viewer):
+        cr = viewer.renderer.setup_cr(self)
 
-class TriangleBase(OnePointTwoRadiusMixin, CanvasObjectBase):
+        if hasattr(cr, 'draw_ellipse_bezier'):
+            cp = self.get_cpoints(viewer, points=self.get_bezier_pts())
+            cr.draw_ellipse_bezier(cp)
+        else:
+            cpoints = self.get_cpoints(viewer, points=self.get_edit_points())
+            cx, cy = cpoints[0]
+            cxradius = abs(cpoints[1][0] - cx)
+            cyradius = abs(cpoints[2][1] - cy)
+            cr.draw_ellipse(cx, cy, cxradius, cyradius, self.rot_deg)
+
+        if self.editing:
+            self.draw_edit(cr, viewer)
+        elif self.showcap:
+            cpoints = self.get_cpoints(viewer)
+            self.draw_caps(cr, self.cap, cpoints)
+
+
+class Triangle(OnePointTwoRadiusMixin, CanvasObjectBase):
     """Draws a triangle on a ImageViewCanvas.
     Parameters are:
     x, y: 0-based coordinates of the center in the data space
@@ -1063,6 +1188,17 @@ class TriangleBase(OnePointTwoRadiusMixin, CanvasObjectBase):
         res = self.contains_arr(x_arr, y_arr)
         return res[0]
 
+    def draw(self, viewer):
+        cpoints = self.get_cpoints(viewer)
+
+        cr = viewer.renderer.setup_cr(self)
+        cr.draw_polygon(cpoints)
+
+        if self.editing:
+            self.draw_edit(cr, viewer)
+        elif self.showcap:
+            self.draw_caps(cr, self.cap, cpoints)
+
 
 class OnePointOneRadiusMixin(object):
 
@@ -1090,7 +1226,7 @@ class OnePointOneRadiusMixin(object):
         pass
 
 
-class CircleBase(OnePointOneRadiusMixin, CanvasObjectBase):
+class Circle(OnePointOneRadiusMixin, CanvasObjectBase):
     """Draws a circle on a ImageViewCanvas.
     Parameters are:
     x, y: 0-based coordinates of the center in the data space
@@ -1178,8 +1314,19 @@ class CircleBase(OnePointOneRadiusMixin, CanvasObjectBase):
                                      self.y + self.radius)
         return self.swapxy(x1, y1, x2, y2)
 
+    def draw(self, viewer):
+        cx, cy, cradius = self.calc_radius(viewer, self.x, self.y,
+                                           self.radius)
+        cr = viewer.renderer.setup_cr(self)
+        cr.draw_circle(cx, cy, cradius)
 
-class PointBase(OnePointOneRadiusMixin, CanvasObjectBase):
+        if self.editing:
+            self.draw_edit(cr, viewer)
+        elif self.showcap:
+            self.draw_caps(cr, self.cap, ((cx, cy), ))
+
+
+class Point(OnePointOneRadiusMixin, CanvasObjectBase):
     """Draws a point on a ImageViewCanvas.
     Parameters are:
     x, y: 0-based coordinates of the center in the data space
@@ -1235,8 +1382,8 @@ class PointBase(OnePointOneRadiusMixin, CanvasObjectBase):
 
     def contains_arr(self, x_arr, y_arr, radius=2.0):
         xd, yd = self.crdmap.to_data(self.x, self.y)
-        contains = self.within_radius_arr(x_arr, y_arr, xd, yd,
-                                          radius)
+        contains = self.point_within_radius_arr(x_arr, y_arr, xd, yd,
+                                                radius)
         return contains
 
     def contains(self, data_x, data_y, radius=1):
@@ -1244,9 +1391,9 @@ class PointBase(OnePointOneRadiusMixin, CanvasObjectBase):
         res = self.contains_arr(x_arr, y_arr, radius=radius)
         return res[0]
 
-    def select_contains(self, data_x, data_y):
+    def select_contains(self, viewer, data_x, data_y):
         xd, yd = self.crdmap.to_data(self.x, self.y)
-        return self.within_radius(data_x, data_y, xd, yd,
+        return self.within_radius(viewer, data_x, data_y, xd, yd,
                                   self.cap_radius)
 
     def get_llur(self):
@@ -1257,6 +1404,26 @@ class PointBase(OnePointOneRadiusMixin, CanvasObjectBase):
         return [(self.x, self.y),
                 # TODO: account for point style
                 (self.x + self.radius, self.y + self.radius)]
+
+    def draw(self, viewer):
+        cx, cy, cradius = self.calc_radius(viewer, self.x, self.y,
+                                           self.radius)
+        cx1, cy1 = cx - cradius, cy - cradius
+        cx2, cy2 = cx + cradius, cy + cradius
+
+        cr = viewer.renderer.setup_cr(self)
+
+        if self.style == 'cross':
+            cr.draw_line(cx1, cy1, cx2, cy2)
+            cr.draw_line(cx1, cy2, cx2, cy1)
+        else:
+            cr.draw_line(cx1, cy, cx2, cy)
+            cr.draw_line(cx, cy1, cx, cy2)
+
+        if self.editing:
+            self.draw_edit(cr, viewer)
+        elif self.showcap:
+            self.draw_caps(cr, self.cap, ((cx, cy), ))
 
 
 class TwoPointMixin(object):
@@ -1281,7 +1448,7 @@ class TwoPointMixin(object):
         return self.swapxy(x1, y1, x2, y2)
 
 
-class RectangleBase(TwoPointMixin, CanvasObjectBase):
+class Rectangle(TwoPointMixin, CanvasObjectBase):
     """Draws a rectangle on a ImageViewCanvas.
     Parameters are:
     x1, y1: 0-based coordinates of one corner in the data space
@@ -1375,8 +1542,42 @@ class RectangleBase(TwoPointMixin, CanvasObjectBase):
     def move_point(self):
         return self.get_center_pt()
 
+    def draw(self, viewer):
+        cr = viewer.renderer.setup_cr(self)
 
-class LineBase(TwoPointMixin, CanvasObjectBase):
+        cpoints = self.get_cpoints(viewer,
+                                   points=((self.x1, self.y1),
+                                           (self.x2, self.y1),
+                                           (self.x2, self.y2),
+                                           (self.x1, self.y2)))
+        cr.draw_polygon(cpoints)
+
+        if self.drawdims:
+            fontsize = self.scale_font(viewer)
+            cr.set_font(self.font, fontsize)
+
+            cx1, cy1 = cpoints[0]
+            cx2, cy2 = cpoints[2]
+
+            # draw label on X dimension
+            cx = cx1 + (cx2 - cx1) // 2
+            cy = cy2 + -4
+            cr.draw_text(cx, cy, "%d" % abs(self.x2 - self.x1))
+
+            # draw label on Y dimension
+            cy = cy1 + (cy2 - cy1) // 2
+            cx = cx2 + 4
+            cr.draw_text(cx, cy, "%d" % abs(self.y2 - self.y1))
+
+        if self.editing:
+            self.draw_edit(cr, viewer)
+        elif self.showcap:
+            self.draw_caps(cr, self.cap, cpoints)
+
+class Square(Rectangle):
+    pass
+
+class Line(TwoPointMixin, CanvasObjectBase):
     """Draws a line on a ImageViewCanvas.
     Parameters are:
     x1, y1: 0-based coordinates of one end in the data space
@@ -1444,14 +1645,39 @@ class LineBase(TwoPointMixin, CanvasObjectBase):
         res = self.contains_arr(x_arr, y_arr, radius=radius)
         return res[0]
 
-    def select_contains(self, data_x, data_y):
+    def select_contains(self, viewer, data_x, data_y):
         x1, y1 = self.crdmap.to_data(self.x1, self.y1)
         x2, y2 = self.crdmap.to_data(self.x2, self.y2)
-        return self.within_line(data_x, data_y, x1, y1, x2, y2,
+        return self.within_line(viewer, data_x, data_y, x1, y1, x2, y2,
                                 self.cap_radius)
 
+    def draw(self, viewer):
+        cx1, cy1 = self.canvascoords(viewer, self.x1, self.y1)
+        cx2, cy2 = self.canvascoords(viewer, self.x2, self.y2)
 
-class RightTriangleBase(TwoPointMixin, CanvasObjectBase):
+        cr = viewer.renderer.setup_cr(self)
+        cr.draw_line(cx1, cy1, cx2, cy2)
+
+        if self.arrow == 'end':
+            self.draw_arrowhead(cr, cx1, cy1, cx2, cy2)
+            caps = [(cx1, cy1)]
+        elif self.arrow == 'start':
+            self.draw_arrowhead(cr, cx2, cy2, cx1, cy1)
+            caps = [(cx2, cy2)]
+        elif self.arrow == 'both':
+            self.draw_arrowhead(cr, cx2, cy2, cx1, cy1)
+            self.draw_arrowhead(cr, cx1, cy1, cx2, cy2)
+            caps = []
+        else:
+            caps = [(cx1, cy1), (cx2, cy2)]
+
+        if self.editing:
+            self.draw_edit(cr, viewer)
+        elif self.showcap:
+            self.draw_caps(cr, self.cap, caps)
+
+
+class RightTriangle(TwoPointMixin, CanvasObjectBase):
     """Draws a right triangle on a ImageViewCanvas.
     Parameters are:
     x1, y1: 0-based coordinates of one end of the diagonal in the data space
@@ -1557,8 +1783,21 @@ class RightTriangleBase(TwoPointMixin, CanvasObjectBase):
         tf = (0.0 <= a <= 1.0 and 0.0 <= b <= 1.0 and 0.0 <= c <= 1.0)
         return tf
 
+    def draw(self, viewer):
+        cpoints = self.get_cpoints(viewer,
+                                   points=((self.x1, self.y1),
+                                           (self.x2, self.y2),
+                                           (self.x2, self.y1)))
+        cr = viewer.renderer.setup_cr(self)
+        cr.draw_polygon(cpoints)
 
-class CompassBase(OnePointOneRadiusMixin, CanvasObjectBase):
+        if self.editing:
+            self.draw_edit(cr, viewer)
+        elif self.showcap:
+            self.draw_caps(cr, self.cap, cpoints)
+
+
+class Compass(OnePointOneRadiusMixin, CanvasObjectBase):
     """Draws a WCS compass on a ImageViewCanvas.
     Parameters are:
     x, y: 0-based coordinates of the center in the data space
@@ -1632,12 +1871,71 @@ class CompassBase(OnePointOneRadiusMixin, CanvasObjectBase):
         else:
             raise ValueError("No point corresponding to index %d" % (i))
 
-    def select_contains(self, data_x, data_y):
+    def select_contains(self, viewer, data_x, data_y):
         xd, yd = self.crdmap.to_data(self.x, self.y)
-        return self.within_radius(data_x, data_y, xd, yd, self.cap_radius)
+        return self.within_radius(viewer, data_x, data_y, xd, yd,
+                                  self.cap_radius)
+
+    def draw(self, viewer):
+        (cx1, cy1), (cx2, cy2), (cx3, cy3) = self.get_cpoints(viewer)
+        cr = viewer.renderer.setup_cr(self)
+        cr.set_font_from_shape(self)
+
+        # draw North line and arrowhead
+        cr.draw_line(cx1, cy1, cx2, cy2)
+        self.draw_arrowhead(cr, cx1, cy1, cx2, cy2)
+
+        # draw East line and arrowhead
+        cr.draw_line(cx1, cy1, cx3, cy3)
+        self.draw_arrowhead(cr, cx1, cy1, cx3, cy3)
+
+        # draw "N" & "E"
+        cx, cy = self.get_textpos(cr, 'N', cx1, cy1, cx2, cy2)
+        cr.draw_text(cx, cy, 'N')
+        cx, cy = self.get_textpos(cr, 'E', cx1, cy1, cx3, cy3)
+        cr.draw_text(cx, cy, 'E')
+
+        if self.editing:
+            self.draw_edit(cr, viewer)
+        elif self.showcap:
+            self.draw_caps(cr, self.cap, ((cx1, cy1), ))
+
+    def get_textpos(self, cr, text, cx1, cy1, cx2, cy2):
+        htwd, htht = cr.text_extents(text)
+        diag_xoffset = 0
+        diag_yoffset = 0
+        xplumb_yoffset = 0
+        yplumb_xoffset = 0
+
+        diag_yoffset = 14
+        if abs(cy1 - cy2) < 5:
+            pass
+        elif cy1 < cy2:
+            xplumb_yoffset = -4
+        else:
+            xplumb_yoffset = 14
+            diag_yoffset = -4
+
+        if abs(cx1 - cx2) < 5:
+            diag_xoffset = -(4 + htwd)
+        elif (cx1 < cx2):
+            diag_xoffset = -(4 + htwd)
+            yplumb_xoffset = 4
+        else:
+            diag_xoffset = 4
+            yplumb_xoffset = -(4 + 0)
+
+        xh = min(cx1, cx2); y = cy1 + xplumb_yoffset
+        xh += (max(cx1, cx2) - xh) // 2
+        yh = min(cy1, cy2); x = cx2 + yplumb_xoffset
+        yh += (max(cy1, cy2) - yh) // 2
+
+        xd = xh + diag_xoffset
+        yd = yh + diag_yoffset
+        return (xd, yd)
 
 
-class RulerBase(TwoPointMixin, CanvasObjectBase):
+class Ruler(TwoPointMixin, CanvasObjectBase):
     """Draws a WCS ruler (like a right triangle) on a ImageViewCanvas.
     Parameters are:
     x1, y1: 0-based coordinates of one end of the diagonal in the data space
@@ -1705,10 +2003,19 @@ class RulerBase(TwoPointMixin, CanvasObjectBase):
                                   **kwdargs)
         TwoPointMixin.__init__(self)
 
-    def get_ruler_distances(self):
+    def get_points(self):
+        return [(self.x1, self.y1), (self.x2, self.y2)]
+
+    def select_contains(self, viewer, data_x, data_y):
+        x1, y1 = self.crdmap.to_data(self.x1, self.y1)
+        x2, y2 = self.crdmap.to_data(self.x2, self.y2)
+        return self.within_line(viewer, data_x, data_y, x1, y1, x2, y2,
+                                self.cap_radius)
+
+    def get_ruler_distances(self, viewer):
         mode = self.units.lower()
         try:
-            image = self.viewer.get_image()
+            image = viewer.get_image()
             if mode == 'arcmin':
                 # Calculate RA and DEC for the three points
                 # origination point
@@ -1741,17 +2048,83 @@ class RulerBase(TwoPointMixin, CanvasObjectBase):
 
         return (text_x, text_y, text_h)
 
-    def get_points(self):
-        return [(self.x1, self.y1), (self.x2, self.y2)]
+    def draw(self, viewer):
+        cx1, cy1 = self.canvascoords(viewer, self.x1, self.y1)
+        cx2, cy2 = self.canvascoords(viewer, self.x2, self.y2)
 
-    def select_contains(self, data_x, data_y):
-        x1, y1 = self.crdmap.to_data(self.x1, self.y1)
-        x2, y2 = self.crdmap.to_data(self.x2, self.y2)
-        return self.within_line(data_x, data_y, x1, y1, x2, y2,
-                                self.cap_radius)
+        text_x, text_y, text_h = self.get_ruler_distances(viewer)
+
+        cr = viewer.renderer.setup_cr(self)
+        cr.set_font_from_shape(self)
+
+        cr.draw_line(cx1, cy1, cx2, cy2)
+        self.draw_arrowhead(cr, cx1, cy1, cx2, cy2)
+        self.draw_arrowhead(cr, cx2, cy2, cx1, cy1)
+
+        # calculate offsets and positions for drawing labels
+        # try not to cover anything up
+        xtwd, xtht = cr.text_extents(text_x)
+        ytwd, ytht = cr.text_extents(text_y)
+        htwd, htht = cr.text_extents(text_h)
+
+        diag_xoffset = 0
+        diag_yoffset = 0
+        xplumb_yoffset = 0
+        yplumb_xoffset = 0
+
+        diag_yoffset = 14
+        if abs(cy1 - cy2) < 5:
+            show_angle = 0
+        elif cy1 < cy2:
+            xplumb_yoffset = -4
+        else:
+            xplumb_yoffset = 14
+            diag_yoffset = -4
+
+        if abs(cx1 - cx2) < 5:
+            diag_xoffset = -(4 + htwd)
+            show_angle = 0
+        elif (cx1 < cx2):
+            diag_xoffset = -(4 + htwd)
+            yplumb_xoffset = 4
+        else:
+            diag_xoffset = 4
+            yplumb_xoffset = -(4 + ytwd)
+
+        xh = min(cx1, cx2); y = cy1 + xplumb_yoffset
+        xh += (max(cx1, cx2) - xh) // 2
+        yh = min(cy1, cy2); x = cx2 + yplumb_xoffset
+        yh += (max(cy1, cy2) - yh) // 2
+
+        xd = xh + diag_xoffset
+        yd = yh + diag_yoffset
+        cr.draw_text(xd, yd, text_h)
+
+        if self.showplumb:
+            if self.color2:
+                alpha = getattr(self, 'alpha', 1.0)
+                cr.set_line(self.color2, alpha=alpha, style='dash')
+
+            # draw X plumb line
+            cr.draw_line(cx1, cy1, cx2, cy1)
+
+            # draw Y plumb line
+            cr.draw_line(cx2, cy1, cx2, cy2)
+
+            # draw X plum line label
+            xh -= xtwd // 2
+            cr.draw_text(xh, y, text_x)
+
+            # draw Y plum line label
+            cr.draw_text(x, yh, text_y)
+
+        if self.editing:
+            self.draw_edit(cr, viewer)
+        elif self.showcap:
+            self.draw_caps(cr, self.cap, ((cx2, cy1), ))
 
 
-class ImageBase(CanvasObjectBase):
+class Image(CanvasObjectBase):
     """Draws an image on a ImageViewCanvas.
     Parameters are:
     x, y: 0-based coordinates of one corner in the data space
@@ -1805,7 +2178,7 @@ class ImageBase(CanvasObjectBase):
                  showcap=False, flipy=False, optimize=True,
                  **kwdargs):
         self.kind = 'image'
-        super(ImageBase, self).__init__(x=x, y=y, image=image, alpha=alpha,
+        super(Image, self).__init__(x=x, y=y, image=image, alpha=alpha,
                                         scale_x=scale_x, scale_y=scale_y,
                                         interpolation=interpolation,
                                         linewidth=linewidth, linestyle=linestyle,
@@ -1833,19 +2206,32 @@ class ImageBase(CanvasObjectBase):
         if redraw:
             self.viewer.redraw(whence=2)
 
-    def draw(self):
+    def draw(self, viewer):
         if not self._drawn:
             self._drawn = True
-            self.viewer.redraw(whence=2)
+            viewer.redraw(whence=2)
 
-    def draw_image(self, dstarr, whence=0.0):
+        cpoints = self.get_cpoints(viewer)
+        cr = viewer.renderer.setup_cr(self)
+
+        # draw optional border
+        if self.linewidth > 0:
+            cr.draw_polygon(cpoints)
+
+        if self.editing:
+            self.draw_edit(cr, viewer)
+        elif self.showcap:
+            self.draw_caps(cr, self.cap, cpoints)
+
+
+    def draw_image(self, viewer, dstarr, whence=0.0):
         #print("redraw whence=%f" % (whence))
-        dst_order = self.viewer.get_rgb_order()
+        dst_order = viewer.get_rgb_order()
         image_order = self.image.get_order()
 
         if (whence <= 0.0) or (self._cutout is None) or (not self.optimize):
             # get extent of our data coverage in the window
-            ((x0, y0), (x1, y1), (x2, y2), (x3, y3)) = self.viewer.get_pan_rect()
+            ((x0, y0), (x1, y1), (x2, y2), (x3, y3)) = viewer.get_pan_rect()
             xmin = int(min(x0, x1, x2, x3))
             ymin = int(min(y0, y1, y2, y3))
             xmax = int(max(x0, x1, x2, x3))
@@ -1871,7 +2257,7 @@ class ImageBase(CanvasObjectBase):
                 return
 
             # cutout and scale the piece appropriately by the viewer scale
-            scale_x, scale_y = self.viewer.get_scale_xy()
+            scale_x, scale_y = viewer.get_scale_xy()
             # scale additionally by our scale
             _scale_x, _scale_y = scale_x * self.scale_x, scale_y * self.scale_y
 
@@ -1882,7 +2268,7 @@ class ImageBase(CanvasObjectBase):
 
             # don't ask for an alpha channel from overlaid image if it
             # doesn't have one
-            dst_order = self.viewer.get_rgb_order()
+            dst_order = viewer.get_rgb_order()
             image_order = self.image.get_order()
             ## if ('A' in dst_order) and not ('A' in image_order):
             ##     dst_order = dst_order.replace('A', '')
@@ -1896,8 +2282,8 @@ class ImageBase(CanvasObjectBase):
             self._cutout = res.data
 
             # calculate our offset from the pan position
-            pan_x, pan_y = self.viewer.get_pan()
-            pan_off = self.viewer.data_off
+            pan_x, pan_y = viewer.get_pan()
+            pan_off = viewer.data_off
             pan_x, pan_y = pan_x + pan_off, pan_y + pan_off
             #print "pan x,y=%f,%f" % (pan_x, pan_y)
             off_x, off_y = dst_x - pan_x, dst_y - pan_y
@@ -1997,7 +2383,7 @@ class ImageBase(CanvasObjectBase):
         self._reset_optomize()
 
 
-class NormImageBase(ImageBase):
+class NormImage(Image):
     """Draws an image on a ImageViewCanvas.
 
     Parameters are:
@@ -2055,7 +2441,7 @@ class NormImageBase(ImageBase):
                  linewidth=0, linestyle='solid', color='lightgreen', showcap=False,
                  optimize=True, rgbmap=None, autocuts=None, **kwdargs):
         self.kind = 'normimage'
-        super(NormImageBase, self).__init__(x=x, y=y, image=image, alpha=alpha,
+        super(NormImage, self).__init__(x=x, y=y, image=image, alpha=alpha,
                                             scale_x=scale_x, scale_y=scale_y,
                                             interpolation=interpolation,
                                             linewidth=linewidth, linestyle=linestyle,
@@ -2070,12 +2456,12 @@ class NormImageBase(ImageBase):
         self._prergb = None
         self._rgbarr = None
 
-    def draw_image(self, dstarr, whence=0.0):
+    def draw_image(self, viewer, dstarr, whence=0.0):
         #print("redraw whence=%f" % (whence))
 
         if (whence <= 0.0) or (self._cutout is None) or (not self.optimize):
             # get extent of our data coverage in the window
-            ((x0, y0), (x1, y1), (x2, y2), (x3, y3)) = self.viewer.get_pan_rect()
+            ((x0, y0), (x1, y1), (x2, y2), (x3, y3)) = viewer.get_pan_rect()
             xmin = int(min(x0, x1, x2, x3))
             ymin = int(min(y0, y1, y2, y3))
             xmax = int(max(x0, x1, x2, x3))
@@ -2100,7 +2486,7 @@ class NormImageBase(ImageBase):
                 return
 
             # cutout and scale the piece appropriately by viewer scale
-            scale_x, scale_y = self.viewer.get_scale_xy()
+            scale_x, scale_y = viewer.get_scale_xy()
             # scale additionally by our scale
             _scale_x, _scale_y = scale_x * self.scale_x, scale_y * self.scale_y
 
@@ -2110,8 +2496,8 @@ class NormImageBase(ImageBase):
             self._cutout = res.data
 
             # calculate our offset from the pan position
-            pan_x, pan_y = self.viewer.get_pan()
-            pan_off = self.viewer.data_off
+            pan_x, pan_y = viewer.get_pan()
+            pan_off = viewer.data_off
             pan_x, pan_y = pan_x + pan_off, pan_y + pan_off
             #print "pan x,y=%f,%f" % (pan_x, pan_y)
             off_x, off_y = dst_x - pan_x, dst_y - pan_y
@@ -2129,12 +2515,12 @@ class NormImageBase(ImageBase):
         if self.rgbmap is not None:
             rgbmap = self.rgbmap
         else:
-            rgbmap = self.viewer.get_rgbmap()
+            rgbmap = viewer.get_rgbmap()
 
         if (whence <= 1.0) or (self._prergb is None) or (not self.optimize):
             # apply visual changes prior to color mapping (cut levels, etc)
             vmax = rgbmap.get_hash_size() - 1
-            newdata = self.apply_visuals(self._cutout, 0, vmax)
+            newdata = self.apply_visuals(viewer, self._cutout, 0, vmax)
 
             # result becomes an index array fed to the RGB mapper
             if not numpy.issubdtype(newdata.dtype, numpy.dtype('uint')):
@@ -2144,7 +2530,7 @@ class NormImageBase(ImageBase):
             self.logger.debug("shape of index is %s" % (str(idx.shape)))
             self._prergb = idx
 
-        dst_order = self.viewer.get_rgb_order()
+        dst_order = viewer.get_rgb_order()
         image_order = self.image.get_order()
         get_order = dst_order
         if ('A' in dst_order) and not ('A' in image_order):
@@ -2162,20 +2548,20 @@ class NormImageBase(ImageBase):
                              dst_order=dst_order, src_order=get_order,
                              alpha=self.alpha, flipy=False)
 
-    def apply_visuals(self, data, vmin, vmax):
+    def apply_visuals(self, viewer, data, vmin, vmax):
         if self.autocuts is not None:
             autocuts = self.autocuts
         else:
-            autocuts = self.viewer.autocuts
+            autocuts = viewer.autocuts
 
         # Apply cut levels
-        loval, hival = self.viewer.t_['cuts']
+        loval, hival = viewer.t_['cuts']
         newdata = autocuts.cut_levels(data, loval, hival,
                                       vmin=vmin, vmax=vmax)
         return newdata
 
     def _reset_optimize(self):
-        super(NormImageBase, self)._reset_optimize()
+        super(NormImage, self)._reset_optimize()
         self._prergb = None
         self._rgbarr = None
 
@@ -2233,6 +2619,27 @@ class Canvas(CanvasMixin, CompoundObject, CanvasObjectBase):
         CanvasMixin.__init__(self)
         self.kind = 'canvas'
         self.editable = False
+
+
+class DrawingCanvas(DrawingMixin, CanvasMixin, CompoundMixin,
+                    CanvasObjectBase, Mixins.UIMixin):
+    def __init__(self):
+        CanvasObjectBase.__init__(self)
+        CompoundMixin.__init__(self)
+        CanvasMixin.__init__(self)
+        Mixins.UIMixin.__init__(self)
+        DrawingMixin.__init__(self)
+        self.kind = 'drawingcanvas'
+        self.editable = False
+
+drawCatalog = dict(text=Text, rectangle=Rectangle, circle=Circle,
+                   line=Line, point=Point, polygon=Polygon, path=Path,
+                   righttriangle=RightTriangle, triangle=Triangle,
+                   ellipse=Ellipse, square=Square,
+                   box=Box, ruler=Ruler, compass=Compass,
+                   compoundobject=CompoundObject, canvas=Canvas,
+                   drawingcanvas=DrawingCanvas,
+                   image=Image, normimage=NormImage)
 
 
 # funky boolean converter

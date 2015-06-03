@@ -23,6 +23,7 @@ from ginga import ImageView
 from ginga import cmap, imap
 from ginga.misc import Bunch
 from ginga.util.six.moves import map, zip
+from ginga.canvas.CanvasObject import drawCatalog
 
 moduleHome = os.path.split(sys.modules[__name__].__file__)[0]
 sys.path.insert(0, moduleHome)
@@ -30,7 +31,7 @@ childDir = os.path.join(moduleHome, 'plugins')
 sys.path.insert(0, childDir)
 
 from ginga.gtkw import ImageViewCanvasGtk, ColorBar, Readout, FileSelection, \
-     PluginManagerGtk, GtkHelp, GtkMain, ImageViewCanvasTypesGtk
+     PluginManagerGtk, GtkHelp, GtkMain
 
 icon_path = os.path.abspath(os.path.join(moduleHome, '..', 'icons'))
 rc_file = os.path.join(moduleHome, "gtk_rc")
@@ -289,11 +290,10 @@ class GingaView(GtkMain.GtkMain):
 
     def getDrawClass(self, drawtype):
         drawtype = drawtype.lower()
-        return ImageViewCanvasTypesGtk.drawCatalog[drawtype]
+        return drawCatalog[drawtype]
 
     def getDrawClasses(self):
-        return Bunch.Bunch(ImageViewCanvasTypesGtk.drawCatalog,
-                           caseless=True)
+        return Bunch.Bunch(drawCatalog, caseless=True)
 
     def build_colorbar(self):
         cbar = ColorBar.ColorBar(self.logger)

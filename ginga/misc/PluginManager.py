@@ -14,7 +14,6 @@ import traceback
 from ginga.misc import Bunch, Widgets
 from ginga.util.six.moves import filter
 
-
 class PluginManagerError(Exception):
     pass
 
@@ -22,7 +21,7 @@ class PluginManagerBase(object):
 
     def __init__(self, logger, fitsview, ds, mm):
         super(PluginManagerBase, self).__init__()
-        
+
         self.logger = logger
         self.fv = fitsview
         self.ds = ds
@@ -34,12 +33,12 @@ class PluginManagerBase(object):
         self.focus  = set([])
         self.exclusive = set([])
         self.focuscolor = "lightgreen"
-        
+
         self.hbox = None
 
     def set_widget(self, hbox):
         self.hbox = hbox
-        
+
     def loadPlugin(self, name, spec, chinfo=None):
         try:
             module = self.mm.getModule(spec.module)
@@ -63,9 +62,9 @@ class PluginManagerBase(object):
                                               spec=spec,
                                               fitsimage=fitsimage,
                                               chinfo=chinfo)
-            
+
             self.logger.info("Plugin '%s' loaded." % name)
-        
+
         except Exception as e:
             self.logger.error("Failed to load plugin '%s': %s" % (
                 name, str(e)))
@@ -74,7 +73,7 @@ class PluginManagerBase(object):
     def reloadPlugin(self, plname, chinfo=None):
         pInfo = self.getPluginInfo(plname)
         return self.loadPlugin(pInfo.name, pInfo.spec, chinfo=chinfo)
-        
+
     def getPluginInfo(self, plname):
         plname = plname.lower()
         pInfo = self.plugin[plname]
@@ -83,7 +82,7 @@ class PluginManagerBase(object):
     def getPlugin(self, name):
         pInfo = self.getPluginInfo(name)
         return pInfo.obj
-    
+
     def getNames(self):
         return self.plugin.keys()
 
@@ -91,17 +90,17 @@ class PluginManagerBase(object):
         names = self.get_focus()
         for name in names:
             self.deactivate(name)
-        
+
     def get_active(self):
         return self.active.keys()
-    
+
     def is_active(self, key):
         lname = key.lower()
         return lname in self.get_active()
-    
+
     def get_focus(self):
         return list(self.focus)
-    
+
     def get_info(self, name):
         lname = name.lower()
         return self.active[lname]
@@ -121,17 +120,17 @@ class PluginManagerBase(object):
             else:
                 # global plugin
                 bnch.exclusive = False
-            
+
             self.active[lname] = bnch
             if bnch.exclusive:
                 self.exclusive.add(lname)
-    
+
     def deactivate(self, name):
         self.logger.debug("deactivating %s" % (name))
         lname = name.lower()
         if lname in self.focus:
             self.clear_focus(lname)
-            
+
         if lname in self.active:
             bnch = self.active[lname]
             self.stop_plugin(bnch.pInfo)
@@ -164,7 +163,7 @@ class PluginManagerBase(object):
             itab = pInfo.chinfo.name
             self.logger.debug("raising tab %s" % (itab))
             self.ds.raise_tab(itab)
-            
+
             self.logger.debug("resuming plugin %s" % (name))
             pInfo.obj.resume()
             self.highlight_taskbar(bnch)
@@ -236,14 +235,14 @@ class PluginManagerBase(object):
                 (type, value, tb) = sys.exc_info()
                 tb_str = "".join(traceback.format_tb(tb))
                 self.logger.error("Traceback:\n%s" % (tb_str))
-                
+
             except Exception as e:
                 tb_str = "Traceback information unavailable."
                 self.logger.error(tb_str)
 
             self.plugin_build_error(vbox, errstr + '\n' + tb_str)
             #raise PluginManagerError(e)
-            
+
         if not had_error:
             try:
                 if future:
@@ -283,7 +282,7 @@ class PluginManagerBase(object):
             if pInfo.chinfo is not None:
                 itab = pInfo.chinfo.name
                 self.ds.raise_tab(itab)
-            
+
     def stop_plugin(self, pInfo):
         self.logger.debug("stopping plugin %s" % (str(pInfo)))
         wasError = False
@@ -298,7 +297,7 @@ class PluginManagerBase(object):
                 (type, value, tb) = sys.exc_info()
                 tb_str = "".join(traceback.format_tb(tb))
                 self.logger.error("Traceback:\n%s" % (tb_str))
-                
+
             except Exception:
                 self.logger.error("Traceback information unavailable.")
 
@@ -319,7 +318,7 @@ class PluginManagerBase(object):
 
         if wasError:
             raise PluginManagerError(e)
-        
+
     def plugin_build_error(self, box, text):
         textw = Widgets.TextArea(editable=False, wrap=True)
         textw.append_text(text)

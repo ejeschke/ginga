@@ -1,7 +1,7 @@
 #
 # ImageViewMpl.py -- classes for the display of FITS files in a
 #                             Matplotlib FigureCanvas
-# 
+#
 # Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c)  Eric R. Jeschke.  All rights reserved.
@@ -19,11 +19,12 @@ import matplotlib
 from matplotlib.image import FigureImage
 from matplotlib.figure import Figure
 import matplotlib.lines as lines
-from matplotlib.path import Path
+#from matplotlib.path import Path
 
 from ginga import ImageView
 from ginga import Mixins, Bindings, colors
 from . import transform
+from ginga.mplw.ImageViewCanvasTypesMpl import CanvasRenderer
 
 # Override some matplotlib keyboard UI defaults
 rc = matplotlib.rcParams
@@ -67,13 +68,15 @@ class ImageViewMpl(ImageView.ImageViewBase):
 
         self.img_fg = None
         self.set_fg(1.0, 1.0, 1.0, redraw=False)
-        
+
         self.message = None
 
         self.in_axes = False
         # Matplotlib expects RGBA data for color images
         self._rgb_order = 'RGBA'
-        
+
+        self.renderer = CanvasRenderer(self)
+
         # cursors
         self.cursor = {}
 
@@ -83,7 +86,7 @@ class ImageViewMpl(ImageView.ImageViewBase):
 
         self.t_.setDefaults(show_pan_position=False,
                             onscreen_ff='Sans Serif')
-        
+
     def set_figure(self, figure):
         """Call this with the matplotlib Figure() object."""
         self.figure = figure
@@ -114,12 +117,12 @@ class ImageViewMpl(ImageView.ImageViewBase):
         # Create timers
         self._msg_timer = None
         self._defer_timer = None
-        
+
         if hasattr(figure.canvas, 'new_timer'):
             self._msg_timer = figure.canvas.new_timer()
             self._msg_timer.single_shot = True
             self._msg_timer.add_callback(self.onscreen_message_off)
-        
+
             self._defer_timer = figure.canvas.new_timer()
             self._defer_timer.single_shot = True
             self._defer_timer.add_callback(self.delayed_redraw)
@@ -154,7 +157,7 @@ class ImageViewMpl(ImageView.ImageViewBase):
 
     def get_rgb_order(self):
         return self._rgb_order
-        
+
     def calculate_aspect(self, shape, extent):
         dx = abs(extent[1] - extent[0]) / float(shape[1])
         dy = abs(extent[3] - extent[2]) / float(shape[0])
@@ -177,7 +180,7 @@ class ImageViewMpl(ImageView.ImageViewBase):
         data = self.getwin_array(order=self._rgb_order)
 
         dst_x = dst_y = 0
-        
+
         # fill background color
         ## rect = self.figure.patch
         ## rect.set_facecolor(self.img_bg)
@@ -213,11 +216,11 @@ class ImageViewMpl(ImageView.ImageViewBase):
 
         # Get the data extents
         x0, y0 = 0, 0
-        y1, x1 = arr.shape[:2] 
+        y1, x1 = arr.shape[:2]
         flipx, flipy, swapxy = self.get_transforms()
         if swapxy:
             x0, x1, y0, y1 = y0, y1, x0, x1
-            
+
         extent = (x0, x1, y1, y0)
         self.logger.debug("extent=%s" % (str(extent)))
 
@@ -260,12 +263,12 @@ class ImageViewMpl(ImageView.ImageViewBase):
 
         # clear utility axis
         self.ax_util.cla()
-        
+
         # Draw a cross in the center of the window in debug mode
         if self.t_['show_pan_position']:
             self.ax_util.add_line(self.cross1)
             self.ax_util.add_line(self.cross2)
-        
+
         # render message if there is one currently
         if self.message:
             self.draw_message(self.message)
@@ -315,27 +318,27 @@ class ImageViewMpl(ImageView.ImageViewBase):
             ibuf = BytesIO()
         qimg = self.figure.write_to_png(ibuf)
         return ibuf
-    
+
     def update_image(self):
         pass
-        
+
     def set_cursor(self, cursor):
         pass
-        
+
     def define_cursor(self, ctype, cursor):
         self.cursor[ctype] = cursor
-        
+
     def get_cursor(self, ctype):
         return self.cursor[ctype]
-        
+
     def switch_cursor(self, ctype):
         self.set_cursor(self.cursor[ctype])
-        
+
     def set_fg(self, r, g, b, redraw=True):
         self.img_fg = (r, g, b)
         if redraw:
             self.redraw(whence=3)
-        
+
     def onscreen_message(self, text, delay=None, redraw=True):
         try:
             self._msg_timer.stop()
@@ -353,13 +356,13 @@ class ImageViewMpl(ImageView.ImageViewBase):
 
     def onscreen_message_off(self, redraw=True):
         return self.onscreen_message(None, redraw=redraw)
-    
+
     def reschedule_redraw(self, time_sec):
 
         if self._defer_timer is None:
             self.delayed_redraw()
             return
-        
+
         try:
             self._defer_timer.stop()
         except:
@@ -379,7 +382,7 @@ class ImageViewMpl(ImageView.ImageViewBase):
         self.t_.set(show_pan_position=tf)
         if redraw:
             self.redraw(whence=3)
-        
+
 class ImageViewEvent(ImageViewMpl):
 
     def __init__(self, logger=None, rgbmap=None, settings=None):
@@ -425,7 +428,7 @@ class ImageViewEvent(ImageViewMpl):
             'f11': 'f11',
             'f12': 'f12',
             }
-        
+
         # Define cursors for pick and pan
         #hand = openHandCursor()
         hand = 0
@@ -435,7 +438,7 @@ class ImageViewEvent(ImageViewMpl):
         self.define_cursor('pick', cross)
 
         for name in ('motion', 'button-press', 'button-release',
-                     'key-press', 'key-release', 'drag-drop', 
+                     'key-press', 'key-release', 'drag-drop',
                      'scroll', 'map', 'focus', 'enter', 'leave',
                      ):
             self.enable_callback(name)
@@ -459,7 +462,7 @@ class ImageViewEvent(ImageViewMpl):
         connect("scroll_event", self.scroll_event)
 
         # TODO: drag-drop event
-        
+
     def transkey(self, keyname):
         self.logger.debug("matplotlib keyname='%s'" % (keyname))
         if keyname is None:
@@ -472,24 +475,24 @@ class ImageViewEvent(ImageViewMpl):
 
     def get_keyTable(self):
         return self._keytbl
-    
+
     def set_follow_focus(self, tf):
         self.follow_focus = tf
-        
+
     def focus_event(self, event, hasFocus):
         return self.make_callback('focus', hasFocus)
-            
+
     def enter_notify_event(self, event):
         if self.follow_focus:
             self.focus_event(event, True)
         return self.make_callback('enter')
-    
+
     def leave_notify_event(self, event):
         self.logger.debug("leaving widget...")
         if self.follow_focus:
             self.focus_event(event, False)
         return self.make_callback('leave')
-    
+
     def key_press_event(self, event):
         keyname = event.key
         keyname = self.transkey(keyname)
@@ -520,7 +523,7 @@ class ImageViewEvent(ImageViewMpl):
         if event.button in (1, 2, 3):
             button |= 0x1 << (event.button - 1)
         self.logger.debug("button release at %dx%d button=%x" % (x, y, button))
-            
+
         data_x, data_y = self.get_data_xy(x, y)
         return self.make_callback('button-release', button, data_x, data_y)
 
@@ -534,7 +537,7 @@ class ImageViewEvent(ImageViewMpl):
         button = 0
         x, y = event.x, event.y
         self.last_win_x, self.last_win_y = x, y
-        
+
         if event.button in (1, 2, 3):
             button |= 0x1 << (event.button - 1)
         self.logger.debug("motion event at %dx%d, button=%x" % (x, y, button))
@@ -557,7 +560,7 @@ class ImageViewEvent(ImageViewMpl):
             direction = 180.0
 
         amount = abs(event.step) * 15.0
-            
+
         self.logger.debug("scroll deg=%f direction=%f" % (
             amount, direction))
 
@@ -576,11 +579,11 @@ class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
     @classmethod
     def set_bindingsClass(cls, klass):
         cls.bindingsClass = klass
-        
+
     @classmethod
     def set_bindmapClass(cls, klass):
         cls.bindmapClass = klass
-        
+
     def __init__(self, logger=None, rgbmap=None, settings=None,
                  bindmap=None, bindings=None):
         ImageViewEvent.__init__(self, logger=logger, rgbmap=rgbmap,
@@ -598,10 +601,10 @@ class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
 
     def get_bindmap(self):
         return self.bindmap
-    
+
     def get_bindings(self):
         return self.bindings
-    
+
     def set_bindings(self, bindings):
         self.bindings = bindings
         bindings.set_bindings(self)

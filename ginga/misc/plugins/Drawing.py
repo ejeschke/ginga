@@ -1,6 +1,6 @@
 #
 # Drawing.py -- Drawing plugin for Ginga fits viewer
-# 
+#
 # Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c) Eric R. Jeschke.  All rights reserved.
@@ -71,7 +71,7 @@ class Drawing(GingaPlugin.LocalPlugin):
         vbox2.add_widget(Widgets.Label(''), stretch=1)
         fr.set_widget(vbox2)
         vbox.add_widget(fr, stretch=0)
-        
+
         fr = Widgets.Frame("Drawing")
 
         captions = (("Draw type:", 'label', "Draw type", 'combobox'),
@@ -104,7 +104,7 @@ class Drawing(GingaPlugin.LocalPlugin):
         self.w.drawvbox = Widgets.VBox()
         vbox2.add_widget(self.w.drawvbox, stretch=1)
         fr.set_widget(vbox2)
-        
+
         vbox.add_widget(fr, stretch=0)
 
         captions = (("Rotate By:", 'label', 'Rotate By', 'entry',
@@ -132,9 +132,9 @@ class Drawing(GingaPlugin.LocalPlugin):
 
         spacer = Widgets.Label('')
         vbox.add_widget(spacer, stretch=1)
-        
+
         top.add_widget(sw, stretch=1)
-        
+
         btns = Widgets.HBox()
         btns.set_spacing(4)
 
@@ -150,10 +150,10 @@ class Drawing(GingaPlugin.LocalPlugin):
     def close(self):
         chname = self.fv.get_channelName(self.fitsimage)
         self.fv.stop_local_plugin(chname, str(self))
-        
+
     def instructions(self):
         self.tw.set_text("""Draw a figure with the right mouse button.""")
-            
+
     def start(self):
         self.instructions()
         self.set_drawparams_cb()
@@ -165,16 +165,16 @@ class Drawing(GingaPlugin.LocalPlugin):
         except KeyError:
             # Add canvas layer
             self.fitsimage.add(self.canvas, tag=self.layertag)
-            
+
         self.resume()
 
     def pause(self):
         self.canvas.ui_setActive(False)
-        
+
     def resume(self):
         self.canvas.ui_setActive(True)
         self.fv.showStatus("Draw a figure with the right mouse button")
-        
+
     def stop(self):
         # remove the canvas from the image
         try:
@@ -231,7 +231,7 @@ class Drawing(GingaPlugin.LocalPlugin):
         args, kwdargs = self.draw_params.get_params()
         #print("changing params to: %s" % str(kwdargs))
         self.canvas.set_drawtype(kind, **kwdargs)
-        
+
     def edit_cb(self, fitsimage, obj):
         # <-- obj has been edited
         #print("edit event on canvas: obj=%s" % (obj))
@@ -253,11 +253,11 @@ class Drawing(GingaPlugin.LocalPlugin):
                 # new mapper and update widgets
                 obj.convert_mapper(tomap)
                 paramObj.params_to_widgets()
-            
+
         # TODO: change whence to 0 if allowing editing of images
         whence = 2
         self.canvas.redraw(whence=whence)
-        
+
     def edit_select_cb(self, fitsimage, obj):
         #print("editing selection status has changed for %s" % str(obj))
         if obj != self.edit_obj:
@@ -301,23 +301,23 @@ class Drawing(GingaPlugin.LocalPlugin):
             self.edit_select_cb(self.fitsimage, obj)
         else:
             self.edit_select_cb(self.fitsimage, None)
-        
+
     def clear_canvas(self):
         self.canvas.deleteAllObjects()
-        
+
     def delete_object(self):
         self.canvas.edit_delete()
         self.canvas.redraw(whence=2)
-        
+
     def rotate_object(self, w):
         delta = float(w.get_text())
-        self.canvas.edit_rotate(delta)
-        
+        self.canvas.edit_rotate(delta, self.fitsimage)
+
     def scale_object(self, w):
         delta = float(w.get_text())
-        self.canvas.edit_scale(delta, delta)
-        
+        self.canvas.edit_scale(delta, delta, self.fitsimage)
+
     def __str__(self):
         return 'drawing'
-    
+
 #END

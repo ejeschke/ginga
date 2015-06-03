@@ -1395,7 +1395,7 @@ class UIEvent(object):
 
 class KeyEvent(UIEvent):
     def __init__(self, key=None, state=None, mode=None, modifiers=None,
-                 data_x=None, data_y=None):
+                 data_x=None, data_y=None, viewer=None):
         super(KeyEvent, self).__init__()
         self.key = key
         self.state = state
@@ -1403,10 +1403,11 @@ class KeyEvent(UIEvent):
         self.modifiers = modifiers
         self.data_x = data_x
         self.data_y = data_y
+        self.viewer = viewer
 
 class PointEvent(UIEvent):
     def __init__(self, button=None, state=None, mode=None, modifiers=None,
-                 data_x=None, data_y=None):
+                 data_x=None, data_y=None, viewer=None):
         super(PointEvent, self).__init__()
         self.button = button
         self.state = state
@@ -1414,10 +1415,12 @@ class PointEvent(UIEvent):
         self.modifiers = modifiers
         self.data_x = data_x
         self.data_y = data_y
+        self.viewer = viewer
 
 class ScrollEvent(UIEvent):
     def __init__(self, button=None, state=None, mode=None, modifiers=None,
-                 direction=None, amount=None, data_x=None, data_y=None):
+                 direction=None, amount=None, data_x=None, data_y=None,
+                 viewer=None):
         super(ScrollEvent, self).__init__()
         self.button = button
         self.state = state
@@ -1427,6 +1430,7 @@ class ScrollEvent(UIEvent):
         self.amount = amount
         self.data_x = data_x
         self.data_y = data_y
+        self.viewer = viewer
 
 class BindingMapError(Exception):
     pass
@@ -1655,7 +1659,7 @@ class BindingMapper(Callback.Callbacks):
         last_x, last_y = viewer.get_last_data_xy()
 
         event = KeyEvent(key=keyname, state='down', mode=self._kbdmode,
-                         modifiers=self._modifiers,
+                         modifiers=self._modifiers, viewer=viewer,
                          data_x=last_x, data_y=last_y)
         return viewer.make_callback(cbname, event, last_x, last_y)
 
@@ -1704,7 +1708,7 @@ class BindingMapper(Callback.Callbacks):
         last_x, last_y = viewer.get_last_data_xy()
 
         event = KeyEvent(key=keyname, state='up', mode=self._kbdmode,
-                         modifiers=self._modifiers,
+                         modifiers=self._modifiers, viewer=viewer,
                          data_x=last_x, data_y=last_y)
         return viewer.make_callback(cbname, event, last_x, last_y)
 
@@ -1733,7 +1737,7 @@ class BindingMapper(Callback.Callbacks):
             cbname, self._kbdmode))
 
         event = PointEvent(button=button, state='down', mode=self._kbdmode,
-                           modifiers=self._modifiers,
+                           modifiers=self._modifiers, viewer=viewer,
                            data_x=data_x, data_y=data_y)
         return viewer.make_callback(cbname, event, data_x, data_y)
 
@@ -1756,7 +1760,7 @@ class BindingMapper(Callback.Callbacks):
         cbname = '%s-move' % (emap.name)
 
         event = PointEvent(button=button, state='move', mode=self._kbdmode,
-                           modifiers=self._modifiers,
+                           modifiers=self._modifiers, viewer=viewer,
                            data_x=data_x, data_y=data_y)
         return viewer.make_callback(cbname, event, data_x, data_y)
 
@@ -1786,7 +1790,7 @@ class BindingMapper(Callback.Callbacks):
         cbname = '%s-up' % (emap.name)
 
         event = PointEvent(button=button, state='up', mode=self._kbdmode,
-                           modifiers=self._modifiers,
+                           modifiers=self._modifiers, viewer=viewer,
                            data_x=data_x, data_y=data_y)
         return viewer.make_callback(cbname, event, data_x, data_y)
 
@@ -1807,7 +1811,7 @@ class BindingMapper(Callback.Callbacks):
         cbname = '%s-scroll' % (emap.name)
 
         event = ScrollEvent(button='scroll', state='scroll', mode=self._kbdmode,
-                            modifiers=self._modifiers,
+                            modifiers=self._modifiers, viewer=viewer,
                             direction=direction, amount=amount,
                             data_x=data_x, data_y=data_y)
         return viewer.make_callback(cbname, event)

@@ -52,23 +52,23 @@ class CompoundMixin(object):
                 #res.insert(0, obj)
                 res.append(obj)
         return res
-        
-    def select_contains(self, x, y):
+
+    def select_contains(self, viewer, x, y):
         for obj in self.objects:
-            if obj.select_contains(x, y):
+            if obj.select_contains(viewer, x, y):
                 return True
         return False
 
-    def select_items_at(self, x, y, test=None):
+    def select_items_at(self, viewer, x, y, test=None):
         res = []
         try:
             for obj in self.objects:
                 if obj.is_compound():
                     # compound object, list up compatible members
-                    res.extend(obj.select_items_at(x, y, test=test))
+                    res.extend(obj.select_items_at(viewer, x, y, test=test))
                     continue
 
-                is_inside = obj.select_contains(x, y)
+                is_inside = obj.select_contains(viewer, x, y)
                 if test is None:
                     if is_inside:
                         res.append(obj)
@@ -76,7 +76,7 @@ class CompoundMixin(object):
                     # custom test
                     res.append(obj)
         except Exception as e:
-            print("error selecting objects: %s" % (str(e)))
+            #print("error selecting objects: %s" % (str(e)))
             try:
                 # log traceback, if possible
                 (type, value, tb) = sys.exc_info()
@@ -87,7 +87,7 @@ class CompoundMixin(object):
                 self.logger.error(tb_str)
             res = []
         return res
-        
+
     def initialize(self, tag, viewer, logger):
         #self.tag = tag
         self.viewer = viewer
@@ -101,28 +101,28 @@ class CompoundMixin(object):
         self.crdmap = obj.crdmap
         self.logger = obj.logger
         self.viewer = obj.viewer
-        
+
     def is_compound(self):
         return True
-    
+
     def use_coordmap(self, mapobj):
         for obj in self.objects:
             obj.use_coordmap(mapobj)
 
-    def draw(self):
+    def draw(self, viewer):
         for obj in self.objects:
-            obj.draw()
+            obj.draw(viewer)
 
     def getObjects(self):
         return self.objects
-    
+
     def deleteObject(self, obj):
         self.objects.remove(obj)
-        
+
     def deleteObjects(self, objects):
         for obj in objects:
             self.deleteObject(obj)
-        
+
     def deleteAllObjects(self):
         self.objects = []
 
@@ -131,7 +131,7 @@ class CompoundMixin(object):
             for attrname, val in kwdargs.items():
                 if hasattr(obj, attrname):
                     setattr(obj, attrname, val)
-        
+
     def addObject(self, obj, belowThis=None):
         obj.initialize(None, self.viewer, self.logger)
         obj.viewer = self.viewer
@@ -140,7 +140,7 @@ class CompoundMixin(object):
         else:
             index = self.objects.index(belowThis)
             self.objects.insert(index, obj)
-        
+
     def raiseObject(self, obj, aboveThis=None):
         if not aboveThis:
             # no reference object--move to top
@@ -168,7 +168,7 @@ class CompoundMixin(object):
     def rotate(self, theta, xoff=0, yoff=0):
         for obj in self.objects:
             obj.rotate(theta, xoff=xoff, yoff=yoff)
-            
+
     def move_delta(self, xoff, yoff):
         for obj in self.objects:
             obj.move_delta(xoff, yoff)
@@ -177,7 +177,7 @@ class CompoundMixin(object):
         ref_x, ref_y = self.get_reference_pt()
         for obj in self.objects:
             self.rotate(theta_deg, xoff=ref_x, yoff=ref_y)
-    
+
     def scale_by(self, scale_x, scale_y):
         for obj in self.objects:
             obj.scale_by(scale_x, scale_y)
@@ -206,7 +206,7 @@ class CompoundMixin(object):
         for obj in self.objects:
             res.extend(list(obj.get_points()))
         return res
-    
+
     def set_edit(self, tf):
         for obj in self.objects:
             try:
@@ -214,6 +214,6 @@ class CompoundMixin(object):
             except ValueError:
                 # TODO: should check for specific node-can't edit error
                 continue
-        
+
 
 #END

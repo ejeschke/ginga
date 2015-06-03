@@ -14,7 +14,7 @@ import cv2
 from . import CvHelp
 
 from ginga import ImageView
-from ginga.cvw.ImageViewCanvasTypesCv import *
+from ginga.cvw.ImageViewCanvasTypesCv import CanvasRenderer
 
 try:
     import PIL.Image as PILimage
@@ -42,6 +42,8 @@ class ImageViewCv(ImageView.ImageViewBase):
         # order or even on the used color space."
         #self._rgb_order = 'BGRA'
         self._rgb_order = 'RGBA'
+
+        self.renderer = CanvasRenderer(self)
 
         self.message = None
 

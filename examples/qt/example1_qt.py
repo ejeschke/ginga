@@ -31,6 +31,7 @@ class FitsViewer(QtGui.QMainWindow):
         fi.set_callback('drag-drop', self.drop_file)
         fi.set_bg(0.2, 0.2, 0.2)
         fi.ui_setActive(True)
+        fi.enable_draw(False)
         self.fitsimage = fi
 
         bd = fi.get_bindings()
@@ -91,9 +92,9 @@ class FitsViewer(QtGui.QMainWindow):
         self.logger.info("Attempting to shut down the application...")
         self.deleteLater()
 
-        
+
 def main(options, args):
-    
+
     app = QtGui.QApplication(sys.argv)
 
     logger = logging.getLogger("example1")
@@ -117,5 +118,5 @@ def main(options, args):
 
 if __name__ == '__main__':
     main(None, sys.argv[1:])
-    
+
 # END

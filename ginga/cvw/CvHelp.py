@@ -116,10 +116,9 @@ class CvContext(object):
 
     def ellipse(self, pt, xr, yr, theta, pen, brush):
         x, y = pt
-        ## if (brush is not None) and brush.fill:
-        ##     cv2.ellipse(self.canvas, ((x, y), (xr, yr), theta), 0.0, 360.0,
-        ##                 brush.color, -1)
-
+        if (brush is not None) and brush.fill:
+            cv2.ellipse(self.canvas, (x, y), (xr, yr), theta, 0.0, 360.0,
+                        brush.color, -1)
         cv2.ellipse(self.canvas, (x, y), (xr, yr), theta, 0.0, 360.0,
                     pen.color, pen.linewidth)
 

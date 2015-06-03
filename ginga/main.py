@@ -46,12 +46,10 @@ import traceback
 # Local application imports
 from ginga.misc.Bunch import Bunch
 from ginga.misc import Task, ModuleManager, Datasrc, Settings, log
-from ginga.Control import GingaControl, GuiLogHandler
 import ginga.version as version
 import ginga.toolkit as ginga_toolkit
 from ginga import AstroImage
 from ginga.util import paths
-
 
 default_layout = ['seq', {},
                    ['vbox', dict(name='top', width=1520, height=900),
@@ -116,7 +114,7 @@ local_plugins = [
     Bunch(module='Drawing', ws='dialogs', shortkey='f11'),
     Bunch(module='FBrowser', ws='dialogs', shortkey='f12'),
     ]
-    
+
 
 class ReferenceViewer(object):
     """
@@ -131,7 +129,7 @@ class ReferenceViewer(object):
     def add_local_plugin(self, module_name, ws_name):
         self.local_plugins.append(
             Bunch(module=module_name, ws=ws_name))
-        
+
     def add_global_plugin(self, module_name, ws_name,
                           tab_name=None, start_plugin=True):
         if tab_name is None:
@@ -140,7 +138,7 @@ class ReferenceViewer(object):
         self.global_plugins.append(
             Bunch(module=module_name, ws=ws_name, tab=tab_name,
                   start=start_plugin))
-        
+
     def add_default_plugins(self):
         """
         Add the ginga-distributed default set of plugins to the
@@ -151,11 +149,11 @@ class ReferenceViewer(object):
             start = bnch.get('start', True)
             self.add_global_plugin(bnch.module, bnch.ws,
                           tab_name=bnch.tab, start_plugin=start)
-    
+
         # add default local plugins
         for bnch in local_plugins:
             self.add_local_plugin(bnch.module, bnch.ws)
-    
+
     def add_default_options(self, optprs):
         """
         Adds the default reference viewer startup options to an
@@ -174,7 +172,7 @@ class ReferenceViewer(object):
                           default=None,
                           help="Prefer FITS I/O module NAME")
         optprs.add_option("-g", "--geometry", dest="geometry",
-                          metavar="GEOM", 
+                          metavar="GEOM",
                           help="X geometry for initial size and placement")
         optprs.add_option("--log", dest="logfile", metavar="FILE",
                           help="Write logging output to FILE")
@@ -215,10 +213,10 @@ class ReferenceViewer(object):
         `args` is a list of arguments to the viewer after parsing out
         options.  It should contain a list of files or URLs to load.
         """
-    
+
         # Create a logger
         logger = log.get_logger(name='ginga', options=options)
-    
+
         # Get settings (preferences)
         basedir = paths.ginga_home
         if not os.path.exists(basedir):
@@ -228,7 +226,7 @@ class ReferenceViewer(object):
                 logger.warn("Couldn't create ginga settings area (%s): %s" % (
                     basedir, str(e)))
                 logger.warn("Preferences will not be able to be saved")
-    
+
         # Set up preferences
         prefs = Settings.Preferences(basefolder=basedir, logger=logger)
         settings = prefs.createCategory('general')
@@ -236,7 +234,7 @@ class ReferenceViewer(object):
         settings.setDefaults(useMatplotlibColormaps=False,
                              widgetSet='choose',
                              WCSpkg='choose', FITSpkg='choose')
-    
+
         # So we can find our plugins
         sys.path.insert(0, basedir)
         moduleHome = os.path.split(sys.modules['ginga.version'].__file__)[0]
@@ -244,16 +242,16 @@ class ReferenceViewer(object):
         sys.path.insert(0, childDir)
         pluginDir = os.path.join(basedir, 'plugins')
         sys.path.insert(0, pluginDir)
-    
+
         # Choose a toolkit
         if options.toolkit:
             toolkit = options.toolkit
         else:
             toolkit = settings.get('widgetSet', 'choose')
-    
+
         ginga_toolkit.use(toolkit)
         tkname = ginga_toolkit.get_family()
-        
+
         if tkname == 'gtk':
             from ginga.gtkw.GingaGtk import GingaView
         elif tkname == 'qt':
@@ -267,16 +265,20 @@ class ReferenceViewer(object):
                 except ImportError:
                     print("You need python-gtk or python-qt4 to run Ginga!")
                     sys.exit(1)
-    
+
+        # these imports have to be here, otherwise they force the choice
+        # of toolkit too early
+        from ginga.Control import GingaControl, GuiLogHandler
+
         # Define class dynamically based on toolkit choice
         class Ginga(GingaControl, GingaView):
-    
+
             def __init__(self, logger, threadPool, module_manager, prefs,
                          ev_quit=None):
                 GingaView.__init__(self, logger, ev_quit)
                 GingaControl.__init__(self, logger, threadPool, module_manager,
                                       prefs, ev_quit=ev_quit)
-    
+
         if settings.get('useMatplotlibColormaps', False):
             # Add matplotlib color maps if matplotlib is installed
             try:
@@ -284,79 +286,79 @@ class ReferenceViewer(object):
                 cmap.add_matplotlib_cmaps()
             except Exception as e:
                 logger.warn("failed to load matplotlib colormaps: %s" % (str(e)))
-    
+
         # User wants to customize the WCS package?
         if options.wcs:
             wcspkg = options.wcs
         else:
             wcspkg = settings.get('WCSpkg', 'choose')
-    
+
         try:
             from ginga.util import wcsmod
             assert wcsmod.use(wcspkg) == True
         except Exception as e:
             logger.warn("failed to set WCS package preference: %s" % (str(e)))
-    
+
         # User wants to customize the FITS package?
         if options.fits:
             fitspkg = options.fits
         else:
             fitspkg = settings.get('FITSpkg', 'choose')
-    
+
         try:
             from ginga.util import io_fits
             assert io_fits.use(fitspkg) == True
         except Exception as e:
             logger.warn("failed to set FITS package preference: %s" % (str(e)))
-    
+
         # Create the dynamic module manager
         mm = ModuleManager.ModuleManager(logger)
-    
+
         # Create and start thread pool
         ev_quit = threading.Event()
         threadPool = Task.ThreadPool(options.numthreads, logger,
                                      ev_quit=ev_quit)
         threadPool.startall()
-    
+
         # Create the Ginga main object
         ginga = Ginga(logger, threadPool, mm, prefs, ev_quit=ev_quit)
         ginga.set_layout(self.layout)
-    
+
         # User configuration (custom star catalogs, etc.)
         try:
             import ginga_config
-    
+
             ginga_config.pre_gui_config(ginga)
         except Exception as e:
             try:
                 (type, value, tb) = sys.exc_info()
                 tb_str = "\n".join(traceback.format_tb(tb))
-    
+
             except Exception:
                 tb_str = "Traceback information unavailable."
-    
+
             logger.error("Error importing Ginga config file: %s" % (
                 str(e)))
             logger.error("Traceback:\n%s" % (tb_str))
-    
+
         # Build desired layout
         ginga.build_toplevel()
-    
+
         # Did user specify a particular geometry?
         if options.geometry:
             ginga.setGeometry(options.geometry)
-    
+
         # Add desired global plugins
         for spec in self.global_plugins:
             ginga.add_global_plugin(spec)
-    
+
         # Add GUI log handler (for "Log" global plugin)
         guiHdlr = GuiLogHandler(ginga)
         guiHdlr.setLevel(options.loglevel)
         fmt = logging.Formatter(log.LOG_FORMAT)
         guiHdlr.setFormatter(fmt)
         logger.addHandler(guiHdlr)
-    
+
         # Load any custom modules
         if options.modules:
             modules = options.modules.split(',')
@@ -364,11 +366,11 @@ class ReferenceViewer(object):
                 spec = Bunch(name=pluginName, module=pluginName,
                              tab=pluginName, ws='right')
                 ginga.add_global_plugin(spec)
-    
+
         # Load modules for "local" (per-channel) plug ins
         for spec in self.local_plugins:
             ginga.add_local_plugin(spec)
-    
+
         # Load any custom plugins
         if options.plugins:
             plugins = options.plugins.split(',')
@@ -376,13 +378,16 @@ class ReferenceViewer(object):
                 spec = Bunch(module=pluginName, ws='dialogs',
                              hidden=False)
                 ginga.add_local_plugin(spec)
-    
+
         ginga.update_pending()
-    
+
         # TEMP?
-        ginga.ds.raise_tab('Info')
-        ginga.ds.raise_tab('Thumbs')
-    
+        tab_names = list(map(str.lower, ginga.ds.get_tabnames(group=None)))
+        if 'info' in tab_names:
+            ginga.ds.raise_tab('Info')
+        if 'thumbs' in tab_names:
+            ginga.ds.raise_tab('Thumbs')
+
         # User configuration (custom star catalogs, etc.)
         try:
             ginga_config.post_gui_config(ginga)
@@ -390,58 +395,58 @@ class ReferenceViewer(object):
             try:
                 (type, value, tb) = sys.exc_info()
                 tb_str = "\n".join(traceback.format_tb(tb))
-    
+
             except Exception:
                 tb_str = "Traceback information unavailable."
-    
+
             logger.error("Error processing Ginga config file: %s" % (
                 str(e)))
             logger.error("Traceback:\n%s" % (tb_str))
-    
+
         # Add custom channels
         channels = options.channels.split(',')
         for chname in channels:
             datasrc = Datasrc.Datasrc(length=options.bufsize)
             ginga.add_channel(chname, datasrc)
         ginga.change_channel(channels[0])
-    
+
         # Display banner the first time run, unless suppressed
         showBanner = True
         try:
             showBanner = settings.get('showBanner')
-            
+
         except KeyError:
             # disable for subsequent runs
             settings.set(showBanner=False)
             settings.save()
-            
+
         if (not options.nosplash) and (len(args) == 0) and showBanner:
             ginga.banner()
-    
+
         # Assume remaining arguments are fits files and load them.
         for imgfile in args:
             ginga.nongui_do(ginga.load_file, imgfile)
-    
+
         try:
             try:
                 # Main loop to handle GUI events
                 logger.info("Entering mainloop...")
                 ginga.mainloop(timeout=0.001)
-    
+
             except KeyboardInterrupt:
                 logger.error("Received keyboard interrupt!")
-    
+
         finally:
             logger.info("Shutting down...")
             ev_quit.set()
-    
+
         sys.exit(0)
 
 def reference_viewer(sys_argv):
 
     # default of 1000 is a little too small
     sys.setrecursionlimit(2000)
-        
+
     viewer = ReferenceViewer(layout=default_layout)
     viewer.add_default_plugins()
 

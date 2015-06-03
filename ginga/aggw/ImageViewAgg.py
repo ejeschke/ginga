@@ -14,7 +14,7 @@ import aggdraw as agg
 from . import AggHelp
 
 from ginga import ImageView
-from ginga.aggw.ImageViewCanvasTypesAgg import *
+from ginga.aggw.ImageViewCanvasTypesAgg import CanvasRenderer
 
 try:
     import PIL.Image as PILimage
@@ -36,6 +36,8 @@ class ImageViewAgg(ImageView.ImageViewBase):
         self.surface = None
         self.img_fg = None
         self._rgb_order = 'RGBA'
+
+        self.renderer = CanvasRenderer(self)
 
         self.message = None
 

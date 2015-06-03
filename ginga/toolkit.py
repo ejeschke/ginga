@@ -1,6 +1,6 @@
 #
 # toolkit.py -- module for customizing Ginga GUI toolkit version
-# 
+#
 # Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c) Eric R. Jeschke.  All rights reserved.
@@ -46,7 +46,7 @@ def use(name):
 
     else:
         ToolKitError("ToolKit '%s' not supported!" % (name))
-        
+
     toolkit = name
 
 def get_toolkit():

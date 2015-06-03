@@ -13,6 +13,7 @@ from io import BytesIO
 
 from ginga import ImageView, Mixins, Bindings
 from ginga.util.io_rgb import RGBFileHandler
+from ginga.mockw.ImageViewCanvasTypesMock import CanvasRenderer
 
 moduleHome = os.path.split(sys.modules[__name__].__file__)[0]
 icon_dir = os.path.abspath(os.path.join(moduleHome, '..', 'icons'))
@@ -32,6 +33,8 @@ class ImageViewMock(ImageView.ImageViewBase):
         # in the numpy array delivered for writing to the off-screen
         # pixmap for your widget set
         self._rgb_order = 'BGRA'
+
+        self.renderer = CanvasRenderer(self)
 
         self.t_.setDefaults(show_pan_position=False,
                             onscreen_ff='Sans Serif')

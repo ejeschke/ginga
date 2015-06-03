@@ -19,21 +19,23 @@ class Callbacks(object):
 
     def clear_callback(self, name):
         self.cb[name] = []
-        
+
     def enable_callback(self, name):
         if not self.has_callback(name):
             self.clear_callback(name)
-        
+
     def has_callback(self, name):
         #return self.cb.has_key(name) and (len(self.cb[name]) > 0)
         return name in self.cb
-        
+
     def delete_callback(self, name):
         del self.cb[name]
-        
+
     def add_callback(self, name, fn, *args, **kwdargs):
         try:
-            self.cb[name].append((fn, args, kwdargs))
+            tup = (fn, args, kwdargs)
+            if not tup in self.cb[name]:
+                self.cb[name].append(tup)
         except KeyError:
             raise CallbackError("No callback category of '%s'" % (
                 name))
@@ -43,7 +45,7 @@ class Callbacks(object):
         if not self.has_callback(name):
             self.enable_callback(name)
         return self.add_callback(name, fn, *args, **kwdargs)
-    
+
     def make_callback(self, name, *args, **kwdargs):
         if not self.has_callback(name):
             return None
@@ -70,7 +72,7 @@ class Callbacks(object):
                 res = method(*cb_args, **cb_kwdargs)
                 if res:
                     result = True
-                
+
             except Exception as e:
                 # Catch exception because we need to iterate to the other
                 # callbacks
@@ -87,5 +89,5 @@ class Callbacks(object):
                     self.logger.error("Traceback:\n%s" % (tb_str))
 
         return result
-    
+
 #END

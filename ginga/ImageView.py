@@ -17,7 +17,7 @@ import time
 from ginga.misc import Callback, Settings
 from ginga import RGBMap, AstroImage, AutoCuts, ColorDist
 from ginga import cmap, imap, trcalc, version
-from ginga.canvas import coordmap
+from ginga.canvas import coordmap, CanvasObject
 
 
 class ImageViewError(Exception):
@@ -217,7 +217,6 @@ class ImageViewBase(Callback.Callbacks):
         self._rgbarr = None
         self._rgbarr2 = None
         self._rgbobj = None
-        self._normimg = None
 
         # optimization of redrawing
         self.defer_redraw = self.t_.get('defer_redraw', True)
@@ -239,6 +238,13 @@ class ImageViewBase(Callback.Callbacks):
             7: (False, True,  True),
             8: (False, False, True),
             }
+
+        # our canvas
+        self.canvas = CanvasObject.DrawingCanvas()
+        self.canvas.initialize(None, self, self.logger)
+        self.canvas.add_callback('modified', self.canvas_changed_cb)
+        # holds image on canvas
+        self._normimg = None
 
         self.coordmap = {
             'canvas': coordmap.CanvasMapper(self),
@@ -336,6 +342,15 @@ class ImageViewBase(Callback.Callbacks):
         Returns the logger object used by this instance.
         """
         return self.logger
+
+    def get_canvas(self):
+        return self.canvas
+
+    def set_canvas(self, canvas):
+        self.canvas = canvas
+        canvas.initialize(None, self, self.logger)
+        canvas.add_callback('modified', self.canvas_changed_cb)
+
 
     def set_color_map(self, cmap_name):
         """Sets the color map.
@@ -460,17 +475,17 @@ class ImageViewBase(Callback.Callbacks):
             # add a normalized image item to this canvas if we don't
             # have one already--then just keep reusing it
             if self._normimg is None:
-                NormImage = self.getDrawClass('normimage')
+                NormImage = self.canvas.getDrawClass('normimage')
                 self._normimg = NormImage(0, 0, image, alpha=1.0)
-                tag = self.add(self._normimg, tag='_image')
+                tag = self.canvas.add(self._normimg, tag='_image')
             else:
                 self._normimg.set_image(image)
                 try:
-                    self.getObjectByTag('_image')
+                    self.canvas.getObjectByTag('_image')
                 except KeyError:
-                    tag = self.add(self._normimg, tag='_image')
+                    tag = self.canvas.add(self._normimg, tag='_image')
             # move image to bottom of layers
-            self.lowerObject(self._normimg)
+            self.canvas.lowerObject(self._normimg)
 
         profile = image.get('profile', None)
         if (profile is not None) and (self.t_['use_embedded_profile']):
@@ -630,6 +645,10 @@ class ImageViewBase(Callback.Callbacks):
                 # A redraw is already scheduled.  Just record whence.
                 self._defer_whence = whence
 
+    def canvas_changed_cb(self, canvas, whence):
+        self.logger.debug("root canvas changed, whence=%d" % (whence))
+        self.redraw(whence=whence)
+
     def delayed_redraw(self):
         # This is the optomized redraw method
         with self._defer_lock:
@@ -685,6 +704,9 @@ class ImageViewBase(Callback.Callbacks):
         if not self._imgwin_set:
             # window has not been realized yet
             return
+
+        self.canvas.draw(self)
+
         rgbobj = self.get_rgb_object(whence=whence)
         self.render_image(rgbobj, self._dst_x, self._dst_y)
         # TODO: see if we can deprecate this fake callback
@@ -764,7 +786,7 @@ class ImageViewBase(Callback.Callbacks):
         if (whence <= 2.0) or (self._rgbarr2 is None):
             # Apply any RGB image overlays
             self._rgbarr2 = numpy.copy(self._rgbarr)
-            self.overlay_images(self, self._rgbarr2, whence=whence)
+            self.overlay_images(self.canvas, self._rgbarr2, whence=whence)
 
         if (whence <= 2.5) or (self._rgbobj is None):
             rotimg = self._rgbarr2
@@ -909,7 +931,7 @@ class ImageViewBase(Callback.Callbacks):
 
         for obj in canvas.getObjects():
             if hasattr(obj, 'draw_image'):
-                obj.draw_image(data, whence=whence)
+                obj.draw_image(self, data, whence=whence)
             elif obj.is_compound() and (obj != canvas):
                 self.overlay_images(obj, data, whence=whence)
 
@@ -1016,6 +1038,11 @@ class ImageViewBase(Callback.Callbacks):
             off_x = - off_x
 
         return (off_x, off_y)
+
+    def canvascoords(self, data_x, data_y, center=True):
+        # data->canvas space coordinate conversion
+        x, y = self.get_canvas_xy(data_x, data_y, center=center)
+        return (x, y)
 
     def get_data_pct(self, xpct, ypct):
         width, height = self.get_data_size()

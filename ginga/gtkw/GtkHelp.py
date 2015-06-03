@@ -655,6 +655,16 @@ class Desktop(Callback.Callbacks):
                 res.append(name)
         return res
 
+    def get_tabnames(self, group=1):
+        res = []
+        for name in self.tab.keys():
+            bnch = self.tab[name]
+            if group is None:
+                res.append(name)
+            elif group == bnch.group:
+                res.append(name)
+        return res
+
     def add_tab(self, wsname, widget, group, labelname, tabname=None,
                 data=None):
         tab_w = self.get_nb(wsname)

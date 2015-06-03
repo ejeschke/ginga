@@ -14,6 +14,7 @@ import time
 
 from ginga import Mixins, Bindings
 from ginga.misc import log, Bunch
+from ginga.canvas.mixins import DrawingMixin, CanvasMixin, CompoundMixin
 import PgHelp
 
 
@@ -21,23 +22,17 @@ try:
     # Try to use Agg drawing first if we have it
     from ginga.aggw.ImageViewAgg import ImageViewAgg as ImageView, \
          ImageViewAggError as ImageViewError
-    from ginga.aggw.ImageViewCanvasTypesAgg import DrawingMixin, \
-         CanvasMixin, CompoundMixin, drawCatalog
 
 except ImportError:
     # Otherwise try OpenCv
     try:
         from ginga.cvw.ImageViewCv import ImageViewCv as ImageView, \
              ImageViewCvError as ImageViewError
-        from ginga.cvw.ImageViewCanvasTypesCv import DrawingMixin, \
-             CanvasMixin, CompoundMixin, drawCatalog
 
     except ImportError:
         # No drawing will be possible with mock widget
         from ginga.mockw.ImageViewMock import ImageViewMock as ImageView, \
              ImageViewMockError as ImageViewError
-        from ginga.mockw.ImageViewCanvasTypesMock import DrawingMixin, \
-             CanvasMixin, CompoundMixin, drawCatalog
 
 
 class ImageViewPgError(ImageViewError):
@@ -454,7 +449,13 @@ class ImageViewCanvas(ImageViewZoom,
                                bindings=bindings)
         CompoundMixin.__init__(self)
         CanvasMixin.__init__(self)
-        DrawingMixin.__init__(self, drawCatalog)
+        DrawingMixin.__init__(self)
+
+        for name in ('modified', ):
+            self.enable_callback(name)
+
+        #self.canvas.add(self)
+        self.set_canvas(self)
 
         self.setSurface(self)
         self.ui_setActive(True)
@@ -466,10 +467,9 @@ class ImageViewCanvas(ImageViewZoom,
         self.add_callback('configure', self._configure_cb)
 
 
-    def canvascoords(self, data_x, data_y, center=True):
-        # data->canvas space coordinate conversion
-        x, y = self.get_canvas_xy(data_x, data_y, center=center)
-        return (x, y)
+    def update_canvas(self, whence=3):
+        self.logger.debug("updating canvas")
+        self.redraw(whence=whence)
 
     def redraw_data(self, whence=0):
         super(ImageViewCanvas, self).redraw_data(whence=whence)
@@ -477,7 +477,7 @@ class ImageViewCanvas(ImageViewZoom,
         surface = self.get_surface()
         if surface is None:
             return
-        self.draw()
+        self.draw(self)
 
     def mode_change_cb(self, bindmap, mode, modetype):
         # delete the old indicator
@@ -505,10 +505,7 @@ class ImageViewCanvas(ImageViewZoom,
             x1, y1 = wd-12*len(text), ht-12
             o1 = Text(x1, y1-12, text,
                       fontsize=14, color='yellow', coord='canvas')
-            # hack necessary to be able to compute text extents _before_
-            # adding the object to the canvas
-            o1.viewer = self
-            wd, ht = o1.get_dimensions()
+            wd, ht = self.renderer.get_dimensions(o1)
 
             # yellow text on a black filled rectangle
             o2 = Compound(Rect(x1-xsp, y1+ysp, x1+wd+xsp, y1-ht,

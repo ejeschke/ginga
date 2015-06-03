@@ -1,6 +1,6 @@
 #
 # Pick.py -- Pick plugin for Ginga fits viewer
-# 
+#
 # Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c) Eric R. Jeschke.  All rights reserved.
@@ -111,7 +111,7 @@ class Pick(GingaPlugin.LocalPlugin):
                                             "# ra, dec, eq, x, y, fwhm, fwhm_x, fwhm_y, starsize, ellip, bg, sky, bright, time_local, time_ut")
         self.rpt_format = self.settings.get('report_format',
                                             "%(ra_deg)f, %(dec_deg)f, %(equinox)6.1f, %(x)f, %(y)f, %(fwhm)f, %(fwhm_x)f, %(fwhm_y)f, %(starsize)f, %(ellipse)f, %(background)f, %(skylevel)f, %(brightness)f, %(time_local)s, %(time_ut)s")
-        
+
         self.do_report_log = self.settings.get('report_to_log', False)
         report_log = self.settings.get('report_log_path', None)
         if report_log is None:
@@ -125,7 +125,7 @@ class Pick(GingaPlugin.LocalPlugin):
     def build_gui(self, container):
         assert iqcalc.have_scipy == True, \
                Exception("Please install python-scipy to use this plugin")
-        
+
         self.pickcenter = None
 
         vtop = Widgets.VBox()
@@ -141,7 +141,7 @@ class Pick(GingaPlugin.LocalPlugin):
         #nb.set_scrollable(True)
         self.w.nb1 = nb
         vpaned.add_widget(nb)
-        
+
         cm, im = self.fv.cm, self.fv.im
 
         di = CanvasTypes.ImageViewCanvas(logger=self.logger)
@@ -211,10 +211,10 @@ class Pick(GingaPlugin.LocalPlugin):
         ## vbox2.add_widget(Widgets.Label(''), stretch=1)
         ## fr.set_widget(vbox2)
         ## vbox.add_widget(fr, stretch=0)
-        
+
         vpaned.add_widget(Widgets.Label(''))
         vbox.add_widget(vpaned, stretch=1)
-        
+
         fr = Widgets.Frame("Pick")
 
         nb = Widgets.TabWidget(tabpos='bottom')
@@ -230,7 +230,7 @@ class Pick(GingaPlugin.LocalPlugin):
                     ('Equinox:', 'label', 'Equinox', 'llabel',
                      'Background:', 'label', 'Background', 'llabel'),
                     ('Sky Level:', 'label', 'Sky Level', 'llabel',
-                     'Brightness:', 'label', 'Brightness', 'llabel'), 
+                     'Brightness:', 'label', 'Brightness', 'llabel'),
                     ('FWHM X:', 'label', 'FWHM X', 'llabel',
                      'FWHM Y:', 'label', 'FWHM Y', 'llabel'),
                     ('FWHM:', 'label', 'FWHM', 'llabel',
@@ -256,7 +256,7 @@ class Pick(GingaPlugin.LocalPlugin):
 
         # spacer
         vbox1.add_widget(Widgets.Label(''), stretch=0)
-        
+
         # Pick field evaluation status
         hbox = Widgets.HBox()
         hbox.set_spacing(4)
@@ -265,7 +265,7 @@ class Pick(GingaPlugin.LocalPlugin):
         #label.set_alignment(0.05, 0.5)
         self.w.eval_status = label
         hbox.add_widget(self.w.eval_status, stretch=0)
-        hbox.add_widget(Widgets.Label(''), stretch=1)                
+        hbox.add_widget(Widgets.Label(''), stretch=1)
         vbox1.add_widget(hbox, stretch=0)
 
         # Pick field evaluation progress bar and stop button
@@ -281,7 +281,7 @@ class Pick(GingaPlugin.LocalPlugin):
         self.w.eval_pgs = Widgets.ProgressBar()
         hbox.add_widget(self.w.eval_pgs, stretch=1)
         vbox1.add_widget(hbox, stretch=0)
-        
+
         nb.add_widget(vbox1, title="Readout")
 
         # Build settings panel
@@ -439,7 +439,7 @@ class Pick(GingaPlugin.LocalPlugin):
             self.w.xlbl_delta_sky.set_text(str(self.delta_sky))
             return True
         b.delta_sky.add_callback('activated', chg_delta_sky)
-        
+
         b.bright_cut.set_enabled(False)
         self.w.btn_bright_cut = b.bright_cut
         self.w.btn_bright_cut.add_callback('activated',
@@ -470,7 +470,7 @@ class Pick(GingaPlugin.LocalPlugin):
         sw1.set_widget(tw)
         vbox3.add_widget(sw1, stretch=1)
         tw.append_text(self._make_report_header())
-        
+
         btns = Widgets.HBox()
         btns.set_spacing(4)
         btn = Widgets.Button("Add Pick")
@@ -507,7 +507,7 @@ class Pick(GingaPlugin.LocalPlugin):
         ## sw1.set_widget(tw)
         ## vbox4.add_widget(sw1, stretch=1)
         ## tw.append_text("# paste a reference report here")
-        
+
         ## btns = Widgets.HBox()
         ## btns.set_spacing(4)
 
@@ -524,7 +524,7 @@ class Pick(GingaPlugin.LocalPlugin):
         ## spacer = Widgets.Label('')
         ## vbox.add_widget(spacer, stretch=1)
         vtop.add_widget(sw, stretch=1)
-        
+
         btns = Widgets.HBox()
         btns.set_spacing(4)
 
@@ -539,17 +539,17 @@ class Pick(GingaPlugin.LocalPlugin):
     def copyText(self, w):
         text = w.get_text()
         # TODO: put it in the clipboard
-        
+
     def record_cb(self, w, tf):
         self.do_record = tf
         return True
-        
+
     def do_report_log_cb(self, w, tf):
         self.do_report_log = tf
         if tf and (self.pick_log is None):
             self.open_report_log()
         return True
-        
+
     def set_report_log_cb(self, w):
         self.close_report_log()
 
@@ -561,28 +561,28 @@ class Pick(GingaPlugin.LocalPlugin):
 
         self.open_report_log()
         return True
-        
+
     ## def instructions(self):
     ##     self.tw.set_text("""Left-click to place region.  Left-drag to position region.  Redraw region with the right mouse button.""")
     ##     self.tw.set_font(self.msgFont)
-            
+
     def update_status(self, text):
         self.fv.gui_do(self.w.eval_status.set_text, text)
 
     def init_progress(self):
         self.w.btn_intr_eval.set_enabled(True)
         self.w.eval_pgs.set_value(0.0)
-            
+
     def update_progress(self, pct):
         self.w.eval_pgs.set_value(pct)
-        
+
     def show_candidates_cb(self, w, state):
         self.show_candidates = state
         if not self.show_candidates:
             # Delete previous peak marks
             objs = self.fitsimage.getObjectsByTagpfx('peak')
             self.fitsimage.deleteObjects(objs, redraw=True)
-        
+
     def coordinate_base_cb(self, w):
         self.pixel_coords_offset = float(w.get_text())
         self.w.xlbl_coordinate_base.set_text(str(self.pixel_coords_offset))
@@ -593,7 +593,7 @@ class Pick(GingaPlugin.LocalPlugin):
             d_ra/3600.0, d_dec/3600.0)
         msg += "Calculated rotation: %f deg\n" % (d_theta)
         msg += "\nAdjust WCS?"
-        
+
         dialog = GtkHelp.Dialog("Adjust WCS",
                                 gtk.DIALOG_DESTROY_WITH_PARENT,
                                 [['Cancel', 0], ['Ok', 1]],
@@ -603,7 +603,7 @@ class Pick(GingaPlugin.LocalPlugin):
         w = gtk.Label(msg)
         box.pack_start(w, expand=True, fill=True)
         dialog.show_all()
-        
+
     def adjust_wcs_cb(self, w, rsp, image, wcs_m):
         w.destroy()
         if rsp == 0:
@@ -612,7 +612,7 @@ class Pick(GingaPlugin.LocalPlugin):
         #image.wcs = wcs_m.wcs
         image.update_keywords(wcs_m.hdr)
         return True
-        
+
     def plot_scroll(self, event):
         # Matplotlib only gives us the number of steps of the scroll,
         # positive for up and negative for down.
@@ -625,13 +625,13 @@ class Pick(GingaPlugin.LocalPlugin):
             self.plot_zoomlevel -= 1.0
 
         self.plot_panzoom()
-        
+
         # x1, x2 = self.w.ax.get_xlim()
         # y1, y2 = self.w.ax.get_ylim()
         # self.w.ax.set_xlim(x1*delta, x2*delta)
         # self.w.ax.set_ylim(y1*delta, y2*delta)
         # self.w.canvas.draw()
-        
+
     def plot_button_press(self, event):
         if event.button == 1:
             self.plot_x, self.plot_y = event.x, event.y
@@ -648,11 +648,11 @@ class Pick(GingaPlugin.LocalPlugin):
         with self.lock:
             self.serialnum += 1
             return self.serialnum
-        
+
     def get_serial(self):
         with self.lock:
             return self.serialnum
-        
+
     def plot_panzoom(self):
         ht, wd = self.contour_data.shape
         x = int(self.plot_panx * wd)
@@ -717,7 +717,7 @@ class Pick(GingaPlugin.LocalPlugin):
         # Set pan position in contour plot
         self.plot_panx = float(x) / wd
         self.plot_pany = float(y) / ht
-        
+
         self.w.ax.cla()
         try:
             # Create a contour plot
@@ -730,14 +730,14 @@ class Pick(GingaPlugin.LocalPlugin):
 
             # Set the pan and zoom position & redraw
             self.plot_panzoom()
-            
+
         except Exception as e:
             self.logger.error("Error making contour plot: %s" % (
                 str(e)))
 
     def clear_contours(self):
         self.w.ax.cla()
-        
+
     def _plot_fwhm_axis(self, arr, skybg, color1, color2, color3):
         N = len(arr)
         X = numpy.array(list(range(N)))
@@ -770,7 +770,7 @@ class Pick(GingaPlugin.LocalPlugin):
             skybg = numpy.median(self.pick_data)
             self.logger.debug("cutting x=%d y=%d r=%d med=%f" % (
                 x, y, radius, skybg))
-            
+
             self.logger.debug("xarr=%s" % (str(xarr)))
             fwhm_x, mu, sdev, maxv = self._plot_fwhm_axis(xarr, skybg,
                                                           'blue', 'blue', 'skyblue')
@@ -791,7 +791,7 @@ class Pick(GingaPlugin.LocalPlugin):
 
     def clear_fwhm(self):
         self.w.ax2.cla()
-        
+
     def open_report_log(self):
         # Open report log if user specified one
         if self.do_report_log and (self.report_log is not None) and \
@@ -806,7 +806,7 @@ class Pick(GingaPlugin.LocalPlugin):
             except IOError as e:
                 self.logger.error("Error opening Pick log (%s): %s" % (
                     self.report_log, str(e)))
-            
+
     def close_report_log(self):
         if self.pick_log is not None:
             try:
@@ -822,7 +822,7 @@ class Pick(GingaPlugin.LocalPlugin):
         chname = self.fv.get_channelName(self.fitsimage)
         self.fv.stop_local_plugin(chname, str(self))
         return True
-        
+
     def start(self):
         #self.instructions()
         self.open_report_log()
@@ -834,19 +834,19 @@ class Pick(GingaPlugin.LocalPlugin):
         except KeyError:
             # Add canvas layer
             self.fitsimage.add(self.canvas, tag=self.layertag)
-            
+
         self.resume()
 
     def pause(self):
         self.canvas.ui_setActive(False)
-        
+
     def resume(self):
         # turn off any mode user may be in
         self.modes_off()
 
         self.canvas.ui_setActive(True)
         self.fv.showStatus("Draw a rectangle with the right mouse button")
-        
+
     def stop(self):
         # Delete previous peak marks
         objs = self.fitsimage.getObjectsByTagpfx('peak')
@@ -855,18 +855,18 @@ class Pick(GingaPlugin.LocalPlugin):
         # close pick log, if any
         self.close_report_log()
 
-        # deactivate the canvas 
+        # deactivate the canvas
         self.canvas.ui_setActive(False)
         try:
             self.fitsimage.deleteObjectByTag(self.layertag)
         except:
             pass
         self.fv.showStatus("")
-        
+
     def redo(self):
         serialnum = self.bump_serial()
         self.ev_intr.set()
-        
+
         fig = self.canvas.getObjectByTag(self.picktag)
         if fig.kind != 'compound':
             return True
@@ -881,7 +881,7 @@ class Pick(GingaPlugin.LocalPlugin):
                                        ['transforms', 'cutlevels',
                                         'rgbmap'],
                                        redraw=False)
-        
+
         try:
             image = self.fitsimage.get_image()
 
@@ -893,7 +893,7 @@ class Pick(GingaPlugin.LocalPlugin):
                     width, height)
                 self.fv.show_error(errmsg)
                 raise Exception(errmsg)
-        
+
             # Cut and show pick image in pick window
             #self.pick_x, self.pick_y = data_x, data_y
             self.logger.debug("bbox %f,%f %f,%f" % (bbox.x1, bbox.y1,
@@ -913,7 +913,7 @@ class Pick(GingaPlugin.LocalPlugin):
                                                        linewidth=1,
                                                        color='red'))
                 self.pickcenter = self.pickimage.getObjectByTag(tag)
-            
+
             self.pick_x1, self.pick_y1 = x1, y1
             self.pick_data = data
             self.wdetail.sample_area.set_text('%dx%d' % (x2-x1, y2-y1))
@@ -950,7 +950,7 @@ class Pick(GingaPlugin.LocalPlugin):
             self.pgs_cnt = 0
             self.ev_intr.clear()
             self.fv.gui_call(self.init_progress)
-            
+
             msg, results, qs = None, None, None
             try:
                 self.update_status("Finding bright peaks...")
@@ -966,7 +966,7 @@ class Pick(GingaPlugin.LocalPlugin):
                     self.pgs_cnt += 1
                     pct = float(self.pgs_cnt) / num_peaks
                     self.fv.gui_do(self.update_progress, pct)
-                    
+
                 # Evaluate those peaks
                 self.update_status("Evaluating %d bright peaks..." % (
                     num_peaks))
@@ -1001,7 +1001,7 @@ class Pick(GingaPlugin.LocalPlugin):
 
     def _make_report_header(self):
         return self.rpt_header + '\n'
-    
+
     def _make_report(self, image, qs):
         d = Bunch.Bunch()
         try:
@@ -1049,13 +1049,13 @@ class Pick(GingaPlugin.LocalPlugin):
                       )
         except Exception as e:
             self.logger.error("Error making report: %s" % (str(e)))
-            
+
         return d
-    
+
     def update_pick(self, serialnum, objlist, qs, x1, y1, wd, ht, fig, msg):
         if serialnum != self.get_serial():
             return
-        
+
         try:
             image = self.fitsimage.get_image()
             point = fig.objects[1]
@@ -1064,7 +1064,7 @@ class Pick(GingaPlugin.LocalPlugin):
 
             if msg is not None:
                 raise Exception(msg)
-            
+
             # Mark new peaks, if desired
             if self.show_candidates:
                 for obj in objlist:
@@ -1160,7 +1160,7 @@ class Pick(GingaPlugin.LocalPlugin):
 
     def eval_intr(self):
         self.ev_intr.set()
-        
+
     def btndown(self, canvas, event, data_x, data_y):
         try:
             obj = self.canvas.getObjectByTag(self.picktag)
@@ -1176,7 +1176,7 @@ class Pick(GingaPlugin.LocalPlugin):
 
         dx = self.dx
         dy = self.dy
-        
+
         # Mark center of object and region on main image
         try:
             self.canvas.deleteObjectByTag(self.picktag, redraw=False)
@@ -1193,7 +1193,7 @@ class Pick(GingaPlugin.LocalPlugin):
 
         #self.draw_cb(self.canvas, tag)
         return True
-        
+
     def update(self, canvas, event, data_x, data_y):
         try:
             obj = self.canvas.getObjectByTag(self.picktag)
@@ -1210,10 +1210,10 @@ class Pick(GingaPlugin.LocalPlugin):
 
         dx = self.dx
         dy = self.dy
-        
+
         x1, y1 = data_x - dx, data_y - dy
         x2, y2 = data_x + dx, data_y + dy
-        
+
         if (not obj) or (obj.kind == 'compound'):
             # Replace compound image with rectangle
             try:
@@ -1233,7 +1233,7 @@ class Pick(GingaPlugin.LocalPlugin):
         self.draw_cb(self.canvas, tag)
         return True
 
-        
+
     def drag(self, canvas, event, data_x, data_y):
 
         obj = self.canvas.getObjectByTag(self.picktag)
@@ -1274,7 +1274,7 @@ class Pick(GingaPlugin.LocalPlugin):
             self.canvas.redraw(whence=3)
 
         return True
-    
+
     def draw_cb(self, canvas, tag):
         obj = canvas.getObjectByTag(tag)
         if obj.kind != 'rectangle':
@@ -1327,7 +1327,7 @@ class Pick(GingaPlugin.LocalPlugin):
         text.x, text.y = x1, y2 + 4
 
         return self.redo()
-        
+
     def reset_region(self):
         self.dx = region_default_width
         self.dy = region_default_height
@@ -1336,7 +1336,7 @@ class Pick(GingaPlugin.LocalPlugin):
         if obj.kind != 'compound':
             return True
         bbox = obj.objects[0]
-    
+
         # calculate center of bbox
         wd = bbox.x2 - bbox.x1
         dw = wd // 2
@@ -1369,10 +1369,10 @@ class Pick(GingaPlugin.LocalPlugin):
         try:
             loval += self.delta_sky
             self.fitsimage.cut_levels(loval, hival)
-            
+
         except Exception as e:
             self.fv.showStatus("No valid sky level: '%s'" % (loval))
-            
+
     def bright_cut(self):
         if not self.pick_qs:
             self.fv.showStatus("Please pick an object to set the brightness!")
@@ -1384,10 +1384,10 @@ class Pick(GingaPlugin.LocalPlugin):
             # brightness is measured ABOVE sky level
             hival = skyval + hival + self.delta_bright
             self.fitsimage.cut_levels(loval, hival)
-            
+
         except Exception as e:
             self.fv.showStatus("No valid brightness level: '%s'" % (hival))
-            
+
     def zoomset(self, setting, zoomlevel, fitsimage):
         scalefactor = fitsimage.get_scale()
         self.logger.debug("scalefactor = %.2f" % (scalefactor))
@@ -1405,7 +1405,7 @@ class Pick(GingaPlugin.LocalPlugin):
             # Don't update global information if our fitsimage isn't focused
             if fitsimage != self.fitsimage:
                 return True
-        
+
             # Add offsets from cutout
             data_x = data_x + self.pick_x1
             data_y = data_y + self.pick_y1
@@ -1423,7 +1423,7 @@ class Pick(GingaPlugin.LocalPlugin):
     def pan_plot(self, xdelta, ydelta):
         x1, x2 = self.w.ax.get_xlim()
         y1, y2 = self.w.ax.get_ylim()
-        
+
         self.w.ax.set_xlim(x1+xdelta, x2+xdelta)
         self.w.ax.set_ylim(y1+ydelta, y2+ydelta)
         self.w.canvas.draw()
@@ -1432,7 +1432,7 @@ class Pick(GingaPlugin.LocalPlugin):
         if self.pick_log is not None:
             self.pick_log.write(rpt)
             self.pick_log.flush()
-        
+
     def add_pick_cb(self):
         if self.last_rpt is not None:
             rpt = (self.rpt_format % self.last_rpt) + '\n'
@@ -1478,5 +1478,5 @@ class Pick(GingaPlugin.LocalPlugin):
 
     def __str__(self):
         return 'pick'
-    
+
 #END

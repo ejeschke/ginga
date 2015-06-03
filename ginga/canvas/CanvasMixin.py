@@ -22,6 +22,23 @@ class CanvasMixin(object):
         self.tags = {}
         self.count = 0
 
+    def update_canvas(self, whence=3):
+        # TODO: deprecate
+        self.make_callback('modified', whence)
+
+    def redraw(self, whence=3):
+        self.make_callback('modified', whence)
+
+    def subcanvas_updated_cb(self, canvas, whence):
+        """
+        This is a notification that a subcanvas (a canvas contained in
+        our canvas) has been modified.  We in turn signal that our canvas
+        has been modified.
+        """
+        # avoid self-referential loops
+        if canvas != self:
+            self.update_canvas(whence=whence)
+
     def add(self, obj, tag=None, tagpfx=None, belowThis=None, redraw=True):
         self.count += 1
         if tag:
@@ -37,16 +54,19 @@ class CanvasMixin(object):
             else:
                 # make up our own tag
                 tag = '@%d' % (self.count)
-                
-        #obj.initialize(tag, self.viewer, self.viewer.logger)
+
         obj.tag = tag
         self.tags[tag] = obj
         self.addObject(obj, belowThis=belowThis)
 
+        # propagate change notification on this canvas
+        if obj.has_callback('modified'):
+            obj.add_callback('modified', self.subcanvas_updated_cb)
+
         if redraw:
-            self.redraw(whence=3)
+            self.update_canvas(whence=3)
         return tag
-        
+
     def deleteObjectsByTag(self, tags, redraw=True):
         for tag in tags:
             try:
@@ -55,9 +75,9 @@ class CanvasMixin(object):
                 super(CanvasMixin, self).deleteObject(obj)
             except Exception as e:
                 continue
-        
+
         if redraw:
-            self.redraw(whence=3)
+            self.update_canvas(whence=3)
 
     def deleteObjectByTag(self, tag, redraw=True):
         self.deleteObjectsByTag([tag], redraw=redraw)
@@ -72,7 +92,7 @@ class CanvasMixin(object):
             if ref == obj:
                 return tag
         return None
-        
+
     def getTagsByTagpfx(self, tagpfx):
         res = []
         keys = filter(lambda k: k.startswith(tagpfx), self.tags.keys())
@@ -84,21 +104,21 @@ class CanvasMixin(object):
     def deleteAllObjects(self, redraw=True):
         self.tags = {}
         CompoundMixin.deleteAllObjects(self)
-        
+
         if redraw:
-            self.redraw(whence=3)
+            self.update_canvas(whence=3)
 
     def deleteObjects(self, objects, redraw=True):
         for tag, obj in self.tags.items():
             if obj in objects:
                 self.deleteObjectByTag(tag, redraw=False)
-        
+
         if redraw:
-            self.redraw(whence=3)
+            self.update_canvas(whence=3)
 
     def deleteObject(self, obj, redraw=True):
         self.deleteObjects([obj], redraw=redraw)
-        
+
     def raiseObjectByTag(self, tag, aboveThis=None, redraw=True):
         obj1 = self.getObjectByTag(tag)
         if not aboveThis:
@@ -108,7 +128,7 @@ class CanvasMixin(object):
             self.raiseObject(obj1, obj2)
 
         if redraw:
-            self.redraw(whence=3)
+            self.update_canvas(whence=3)
 
     def lowerObjectByTag(self, tag, belowThis=None, redraw=True):
         obj1 = self.getObjectByTag(tag)
@@ -119,7 +139,7 @@ class CanvasMixin(object):
             self.lowerObject(obj1, obj2)
 
         if redraw:
-            self.redraw(whence=3)
-            
+            self.update_canvas(whence=3)
+
 
 #END

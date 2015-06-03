@@ -1,6 +1,6 @@
 #
 # ImageViewCanvasGtk.py -- A FITS image widget with canvas drawing in Gtk
-# 
+#
 # Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c) Eric R. Jeschke.  All rights reserved.
@@ -10,9 +10,9 @@
 from ginga import ImageView
 from ginga import Mixins
 from ginga.gtkw import ImageViewGtk
-from ginga.gtkw.ImageViewCanvasTypesGtk import *
+from ginga.canvas.mixins import DrawingMixin, CanvasMixin, CompoundMixin
 
-    
+
 class ImageViewCanvasError(ImageViewGtk.ImageViewGtkError):
     pass
 
@@ -28,7 +28,13 @@ class ImageViewCanvas(ImageViewGtk.ImageViewZoom,
                                             bindings=bindings)
         CompoundMixin.__init__(self)
         CanvasMixin.__init__(self)
-        DrawingMixin.__init__(self, drawCatalog)
+        DrawingMixin.__init__(self)
+
+        for name in ('modified', ):
+            self.enable_callback(name)
+
+        #self.canvas.add(self)
+        self.set_canvas(self)
 
         self.setSurface(self)
         self.ui_setActive(True)
@@ -40,17 +46,16 @@ class ImageViewCanvas(ImageViewGtk.ImageViewZoom,
         self.add_callback('configure', self._configure_cb)
 
 
-    def canvascoords(self, data_x, data_y, center=True):
-        # data->canvas space coordinate conversion
-        x, y = self.get_canvas_xy(data_x, data_y, center=center)
-        return (x, y)
+    def update_canvas(self, whence=3):
+        self.logger.debug("updating canvas")
+        self.redraw(whence=whence)
 
     def redraw_data(self, whence=0):
         super(ImageViewCanvas, self).redraw_data(whence=whence)
 
         if not self.surface:
             return
-        self.draw()
+        self.draw(self)
 
     def mode_change_cb(self, bindmap, mode, modetype):
         # delete the old indicator
@@ -72,16 +77,13 @@ class ImageViewCanvas(ImageViewGtk.ImageViewZoom,
                 text = '%s [L]' % (mode)
             else:
                 text = mode
-                
+
             xsp, ysp = 4, 6
             wd, ht = self.get_window_size()
             x1, y1 = wd-12*len(text), ht-12
             o1 = Text(x1, y1, text,
                       fontsize=14, color='yellow', coord='canvas')
-            # hack necessary to be able to compute text extents _before_
-            # adding the object to the canvas
-            o1.viewer = self
-            wd, ht = o1.get_dimensions()
+            wd, ht = self.renderer.get_dimensions(o1)
 
             # yellow text on a black filled rectangle
             o2 = Compound(Rect(x1-xsp, y1+ysp, x1+wd+xsp, y1-ht,
@@ -90,7 +92,7 @@ class ImageViewCanvas(ImageViewGtk.ImageViewZoom,
                                o1)
             self.mode_obj = o2
             self.add(o2)
-            
+
         return True
 
     def _configure_cb(self, view, width, height):
@@ -98,5 +100,5 @@ class ImageViewCanvas(ImageViewGtk.ImageViewZoom,
         bm = view.get_bindmap()
         mode, modetype = bm.current_mode()
         self.mode_change_cb(bm, mode, modetype)
-        
+
 #END

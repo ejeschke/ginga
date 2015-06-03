@@ -16,6 +16,7 @@ from ginga.qtw.QtHelp import QtGui, QtCore, QFont, QColor, QImage, \
      QPixmap, QCursor, QPainter, have_pyqt5
 from ginga import ImageView, Mixins, Bindings
 from ginga.util.six.moves import map, zip
+from ginga.qtw.ImageViewCanvasTypesQt import CanvasRenderer
 
 moduleHome = os.path.split(sys.modules[__name__].__file__)[0]
 icon_dir = os.path.abspath(os.path.join(moduleHome, '..', 'icons'))
@@ -129,6 +130,8 @@ class ImageViewQt(ImageView.ImageViewBase):
         self.pixmap = None
         # Qt expects 32bit BGRA data for color images
         self._rgb_order = 'BGRA'
+
+        self.renderer = CanvasRenderer(self)
 
         self.t_.setDefaults(show_pan_position=False,
                             onscreen_ff='Sans Serif')

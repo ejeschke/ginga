@@ -1,6 +1,6 @@
 #
 # MplHelp.py -- help classes for Matplotlib drawing
-# 
+#
 # Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c)  Eric R. Jeschke.  All rights reserved.
@@ -10,6 +10,31 @@
 from ginga import colors
 
 import matplotlib.textpath as textpath
+
+
+class Pen(object):
+    def __init__(self, color='black', linewidth=1, linestyle='solid'):
+        self.color = color
+        self.linewidth = linewidth
+        self.linestyle = 'solid'
+        if linestyle == 'dash':
+            self.linestyle = 'dashdot'
+
+class Brush(object):
+    def __init__(self, color='black', fill=False):
+        self.color = color
+        self.fill = fill
+
+class Font(object):
+    def __init__(self, fontname='sans', fontsize=12.0, color='black'):
+        self.fontname = fontname
+        self.fontsize = fontsize
+        self.color = color
+
+    def get_fontdict(self):
+        fontdict = dict(color=self.color, family=self.fontname,
+                        size=self.fontsize, transform=None)
+        return fontdict
 
 
 class MplContext(object):
@@ -28,56 +53,33 @@ class MplContext(object):
     def set(self, **kwdargs):
         self.kwdargs.update(kwdargs)
 
-    def update_fill(self, obj):
-        if hasattr(obj, 'fill'):
-            self.kwdargs['fill'] = obj.fill
-            alpha = getattr(obj, 'alpha', 1.0)
-            alpha = getattr(obj, 'fillalpha', alpha)
+    def update_fill(self, brush):
+        if brush is None:
+            self.kwdargs['fill'] = False
+            return
 
-            if obj.fillcolor:
-                self.kwdargs['facecolor'] = self.get_color(obj.fillcolor,
-                                                           alpha)
-            else:
-                self.kwdargs['facecolor'] = self.get_color(obj.color,
-                                                           alpha)
+        self.kwdargs['fill'] = True
+        self.kwdargs['facecolor'] = brush.color
 
-    def update_line(self, obj):
-        alpha = getattr(obj, 'alpha', 1.0)
-        self.kwdargs['color'] = self.get_color(obj.color,
-                                                   alpha)
+    def update_line(self, pen):
+        self.kwdargs['color'] = pen.color
+        self.kwdargs['linewidth'] = pen.linewidth
+        self.kwdargs['linestyle'] = pen.linestyle
 
-        if hasattr(obj, 'linewidth'):
-            self.kwdargs['linewidth'] = obj.linewidth
-                
-        if hasattr(obj, 'linestyle'):
-            self.kwdargs['linestyle'] = obj.linestyle
+    def update_patch(self, pen, brush):
+        self.update_fill(brush)
 
-    def update_patch(self, obj):
-        self.update_fill(obj)
+        if self.kwdargs['fill']:
+            line_color_attr = 'facecolor'
+            if 'facecolor' in self.kwdargs:
+                line_color_attr = 'edgecolor'
+        else:
+            line_color_attr = 'color'
 
-        line_color_attr = 'facecolor'
-        if 'facecolor' in self.kwdargs:
-            line_color_attr = 'edgecolor'
+        self.kwdargs[line_color_attr] = pen.color
+        self.kwdargs['linewidth'] = pen.linewidth
+        self.kwdargs['linestyle'] = pen.linestyle
 
-        alpha = getattr(obj, 'alpha', 1.0)
-        self.kwdargs[line_color_attr] = self.get_color(obj.color,
-                                                       alpha)
-        if hasattr(obj, 'linewidth'):
-            self.kwdargs['linewidth'] = obj.linewidth
-                
-        if hasattr(obj, 'linestyle'):
-            self.kwdargs['linestyle'] = obj.linestyle
-
-        #print (self.kwdargs)
-                
-    def update_text(self, obj):
-        alpha = getattr(obj, 'alpha', 1.0)
-        self.kwdargs['color'] = self.get_color(obj.color, alpha)
-        if hasattr(obj, 'font'):
-            self.kwdargs['family'] = obj.font
-        if hasattr(obj, 'fontsize'):
-            self.kwdargs['size'] = obj.fontsize
-    
     def get_color(self, color, alpha):
         if isinstance(color, str):
             r, g, b = colors.lookup_color(color)
@@ -89,22 +91,26 @@ class MplContext(object):
             r, g, b = 1.0, 1.0, 1.0
 
         return (r, g, b, alpha)
-    
+
+    def get_pen(self, color, alpha=1.0, linewidth=1, linestyle='solid'):
+        color = self.get_color(color, alpha=alpha)
+        return Pen(color=color, linewidth=linewidth, linestyle=linestyle)
+
+    def get_brush(self, color, alpha=1.0):
+        color = self.get_color(color, alpha=alpha)
+        return Brush(color=color, fill=True)
+
     def get_font(self, name, size, color, alpha=1.0):
-        color = self.get_color(color, alpha)
-        fontdict = dict(color=color, family=name, size=size,
-                        transform=None)
-        return fontdict
-    
+        color = self.get_color(color, alpha=alpha)
+        return Font(fontname=name, fontsize=size, color=color)
+
     def text_extents(self, text, font):
-        size = font.get('size', 16)
-        name = font.get('name', 'Sans')
         # This is not completely accurate because it depends a lot
         # on the renderer used, but that is complicated under Mpl
-        t = textpath.TextPath((0, 0), text, size=size, prop=name)
+        t = textpath.TextPath((0, 0), text, size=font.fontsize,
+                              prop=font.fontname)
         bb = t.get_extents()
         wd, ht = bb.width, bb.height
         return (wd, ht)
 
 #END
-
