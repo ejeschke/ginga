@@ -1,7 +1,7 @@
 #
 # transform.py -- a custom projection for supporting matplotlib plotting
-#                          on ginga 
-# 
+#                          on ginga
+#
 # Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c)  Eric R. Jeschke.  All rights reserved.
@@ -10,6 +10,7 @@
 #
 # NOTE: this code is based on "custom_projection_example.py", an example
 # script developed by matplotlib developers
+# See http://matplotlib.org/examples/api/custom_projection_example.html
 #
 from __future__ import print_function
 
@@ -47,7 +48,7 @@ class GingaAxes(Axes):
     def set_viewer(self, viewer):
         self.viewer = viewer
         self.transData.viewer = viewer
-        
+
     def _set_lim_and_transforms(self):
         """
         This is called once when the plot is created to set up all the
@@ -216,26 +217,20 @@ class GingaAxes(Axes):
         def invalidate(self):
             #print("I don't feel validated! (%s)" % (self.pass_through))
             return Transform.invalidate(self)
-            
-        def _transform_xy(self, n):
-            #win_wd, win_ht = self.viewer.get_window_size()
-            win_x, win_y = self.viewer.get_canvas_xy(n[0], n[1])
-            #return float(win_x) / win_wd, float(win_y) / win_ht
-            return (win_x, win_y)
-            
+
         def transform_non_affine(self, xy):
             """
-            Override the transform_non_affine method to implement the custom 
+            Override the transform_non_affine method to implement the custom
             transform.
 
             The input and output are Nx2 numpy arrays.
             """
-            #print "transform in:", xy
+            #print(("transform in:", xy))
             if self.viewer is None:
                 return xy
 
-            res = np.array(list(map(self._transform_xy, xy)))
-            #print "transform out:", res
+            res = np.dstack(self.viewer.get_canvas_xy(xy.T[0], xy.T[1]))[0]
+            #print(("transform out:", res))
             return res
 
         # This is where things get interesting.  With this projection,
@@ -255,7 +250,7 @@ class GingaAxes(Axes):
             # Note: For compatibility with matplotlib v1.1 and older, you'll
             # need to explicitly implement a ``transform`` method as well.
             # Otherwise a ``NotImplementedError`` will be raised. This isn't
-            # necessary for v1.2 and newer, however.  
+            # necessary for v1.2 and newer, however.
             transform = transform_non_affine
 
             # Similarly, we need to explicitly override ``transform_path`` if
@@ -269,7 +264,7 @@ class GingaAxes(Axes):
             tform = GingaAxes.InvertedGingaTransform()
             tform.viewer = self.viewer
             return tform
-        
+
         inverted.__doc__ = Transform.inverted.__doc__
 
     class InvertedGingaTransform(Transform):
@@ -278,21 +273,18 @@ class GingaAxes(Axes):
         is_separable = False
         viewer = None
 
-        def _transform_xy(self, n):
-            return self.viewer.get_data_xy(n[0], n[1])
-            
         def transform_non_affine(self, xy):
             #print "transform in:", xy
             if self.viewer is None:
                 return xy
 
-            res = np.array(list(map(self._transform_xy, xy)))
+            res = np.dstack(self.viewer.get_data_xy(xy.T[0], xy.T[1]))[0]
             #print "transform out:", res
             return res
 
         transform_non_affine.__doc__ = Transform.transform_non_affine.__doc__
 
-        # As before, we need to implement the "transform" method for 
+        # As before, we need to implement the "transform" method for
         # compatibility with matplotlib v1.1 and older.
         if matplotlib.__version__ < '1.2':
             transform = transform_non_affine

@@ -943,9 +943,9 @@ class ImageViewBase(Callback.Callbacks):
         pixel is centered on the square when the image is zoomed in past
         1X.  This is the specification of the FITS image standard,
         that the pixel is centered on the integer row/column.
-        """
-        self.logger.debug("before adjustment, win_x=%d win_y=%d" % (win_x, win_y))
 
+        This function can take numpy arrays for data_x and data_y.
+        """
         # First, translate window coordinates onto pixel image
         off_x, off_y = self.canvas2offset(win_x, win_y)
 
@@ -960,7 +960,6 @@ class ImageViewBase(Callback.Callbacks):
             data_x += self.data_off
             data_y += self.data_off
 
-        self.logger.debug("data_x=%d data_y=%d" % (data_x, data_y))
         return (data_x, data_y)
 
     def get_canvas_xy(self, data_x, data_y, center=True):
@@ -972,6 +971,8 @@ class ImageViewBase(Callback.Callbacks):
         integer pixel begins in the center of the square when the image
         is zoomed in past 1X.  This is the specification of the FITS image
         standard, that the pixel is centered on the integer row/column.
+
+        This function can take numpy arrays for data_x and data_y.
         """
         if center:
             data_x -= self.data_off
@@ -985,12 +986,12 @@ class ImageViewBase(Callback.Callbacks):
         off_y *= self._org_scale_y
 
         win_x, win_y = self.offset2canvas(off_x, off_y)
-        self.logger.debug("win_x=%d win_y=%d" % (win_x, win_y))
-
         return (win_x, win_y)
 
     def offset2canvas(self, off_x, off_y, asint=True):
-
+        """
+        This method can take numpy arrays for off_x and off_y.
+        """
         if self.t_['flip_x']:
             off_x = - off_x
         if self.t_['flip_y']:
@@ -1012,12 +1013,15 @@ class ImageViewBase(Callback.Callbacks):
 
         # round to pixel units
         if asint:
-            win_x = int(round(win_x))
-            win_y = int(round(win_y))
+            win_x = numpy.rint(win_x).astype(numpy.int)
+            win_y = numpy.rint(win_y).astype(numpy.int)
 
         return (win_x, win_y)
 
     def canvas2offset(self, win_x, win_y):
+        """
+        This method can take numpy arrays for win_x and win_y.
+        """
         # make relative to center pixel to convert from canvas
         # graphics space to standard X/Y coordinate space
         off_x = win_x - self._ctr_x

@@ -103,7 +103,7 @@ class CanvasObjectBase(Callback.Callbacks):
         data_x, data_y = crdmap.to_data(x, y)
 
         # finally, convert to viewer's canvas coordinates
-        return viewer.canvascoords(data_x, data_y, center=center)
+        return viewer.get_canvas_xy(data_x, data_y, center=center)
 
     ## def canvascoords(self, viewer, x, y, center=True):
     ##     crdmap = viewer.get_coordmap(self.coord)
@@ -112,7 +112,7 @@ class CanvasObjectBase(Callback.Callbacks):
     ##     data_x, data_y = crdmap.to_data(x, y)
 
     ##     # finally, convert to viewer's canvas coordinates
-    ##     return viewer.canvascoords(data_x, data_y, center=center)
+    ##     return viewer.get_canvas_xy(data_x, data_y, center=center)
 
     def is_compound(self):
         return False
@@ -186,16 +186,6 @@ class CanvasObjectBase(Callback.Callbacks):
             return 10
         else:
             return 8
-
-    def rotate_arr(self, x_arr, y_arr, theta, xoff=0, yoff=0):
-        x, y = trcalc.rotate_arr(x_arr, y_arr, theta,
-                                xoff=xoff, yoff=yoff)
-        return x, y
-
-    def rotate_pt(self, data_x, data_y, theta, xoff=0, yoff=0):
-        x, y = trcalc.rotate_pt(data_x, data_y, theta,
-                                xoff=xoff, yoff=yoff)
-        return x, y
 
     def rotate(self, theta, xoff=0, yoff=0):
         if hasattr(self, 'x'):
@@ -344,8 +334,8 @@ class CanvasObjectBase(Callback.Callbacks):
 
     # TODO: move these into utility module?
     #####
-    def point_within_radius_arr(self, a_arr, b_arr, x, y, canvas_radius,
-                                scale_x=1.0, scale_y=1.0):
+    def point_within_radius(self, a_arr, b_arr, x, y, canvas_radius,
+                            scale_x=1.0, scale_y=1.0):
         """Point (a, b) and point (x, y) are in data coordinates.
         Return True if point (a, b) is within the circle defined by
         a center at point (x, y) and within canvas_radius.
@@ -356,29 +346,15 @@ class CanvasObjectBase(Callback.Callbacks):
         res = (new_radius <= canvas_radius)
         return res
 
-    def point_within_radius(self, a, b, x, y, canvas_radius,
-                            scale_x=1.0, scale_y=1.0):
-        """See point_within_radius_arr()"""
-        a_arr, b_arr = numpy.array([a]), numpy.array([b])
-        res = self.within_radius_arr(viewer, a_arr, b_arr, x, y, canvas_radius,
-                                     scale_x=scale_x, scale_y=scale_y)
-        return res[0]
-
-    def within_radius_arr(self, viewer, a_arr, b_arr, x, y, canvas_radius):
+    def within_radius(self, viewer, a_arr, b_arr, x, y, canvas_radius):
         """Point (a, b) and point (x, y) are in data coordinates.
         Return True if point (a, b) is within the circle defined by
         a center at point (x, y) and within canvas_radius.
         The distance between points is scaled by the canvas scale.
         """
         scale_x, scale_y = viewer.get_scale_xy()
-        return self.point_within_radius_arr(a_arr, b_arr, x, y, canvas_radius,
-                                            scale_x=scale_x, scale_y=scale_y)
-
-    def within_radius(self, viewer, a, b, x, y, canvas_radius):
-        """See within_radius_arr()"""
-        a_arr, b_arr = numpy.array([a]), numpy.array([b])
-        res = self.within_radius_arr(viewer, a_arr, b_arr, x, y, canvas_radius)
-        return res[0]
+        return self.point_within_radius(a_arr, b_arr, x, y, canvas_radius,
+                                        scale_x=scale_x, scale_y=scale_y)
 
     def get_pt(self, viewer, points, x, y, canvas_radius=None):
         if canvas_radius is None:
@@ -387,20 +363,20 @@ class CanvasObjectBase(Callback.Callbacks):
         if hasattr(self, 'rot_deg'):
             # rotate point back to cartesian alignment for test
             ctr_x, ctr_y = self.crdmap.to_data(*self.get_center_pt())
-            xp, yp = self.rotate_pt(x, y, -self.rot_deg,
-                                    xoff=ctr_x, yoff=ctr_y)
+            xp, yp = trcalc.rotate_pt(x, y, -self.rot_deg,
+                                      xoff=ctr_x, yoff=ctr_y)
         else:
             xp, yp = x, y
 
-        # TODO: do this using within_radius_arr()
+        # TODO: do this using numpy array()
         for i in range(len(points)):
             a, b = points[i]
             if self.within_radius(viewer, xp, yp, a, b, canvas_radius):
                 return i
         return None
 
-    def point_within_line_arr(self, a_arr, b_arr, x1, y1, x2, y2,
-                              canvas_radius):
+    def point_within_line(self, a_arr, b_arr, x1, y1, x2, y2,
+                          canvas_radius):
         # TODO: is there an algorithm with the cross and dot products
         # that is more efficient?
         r = canvas_radius
@@ -418,14 +394,8 @@ class CanvasObjectBase(Callback.Callbacks):
                               numpy.logical_and(ymin <= b_arr, b_arr <= ymax)))
         return contains
 
-    def point_within_line(self, a, b, x1, y1, x2, y2, canvas_radius):
-        a_arr, b_arr = numpy.array([a]), numpy.array([b])
-        res = self.point_within_line_arr(a_arr, b_arr, x1, y1, x2, y2,
-                                         canvas_radius)
-        return res[0]
-
-    def within_line_arr(self, viewer, a_arr, b_arr, x1, y1, x2, y2,
-                        canvas_radius):
+    def within_line(self, viewer, a_arr, b_arr, x1, y1, x2, y2,
+                    canvas_radius):
         """Point (a, b) and points (x1, y1), (x2, y2) are in data coordinates.
         Return True if point (a, b) is within the line defined by
         a line from (x1, y1) to (x2, y2) and within canvas_radius.
@@ -433,15 +403,8 @@ class CanvasObjectBase(Callback.Callbacks):
         """
         scale_x, scale_y = viewer.get_scale_xy()
         new_radius = canvas_radius * 1.0 / min(scale_x, scale_y)
-        return self.point_within_line_arr(a_arr, b_arr, x1, y1, x2, y2,
+        return self.point_within_line(a_arr, b_arr, x1, y1, x2, y2,
                                          new_radius)
-
-    def within_line(self, viewer, a, b, x1, y1, x2, y2, canvas_radius):
-        """See within_line_arr()"""
-        a_arr, b_arr = numpy.array([a]), numpy.array([b])
-        res = self.within_line_arr(viewer, a_arr, b_arr, x1, y1, x2, y2,
-                                   canvas_radius)
-        return res[0]
 
     #####
 
@@ -746,8 +709,8 @@ class Path(PolygonMixin, CanvasObjectBase):
         contains = None
         for point in self.points[1:]:
             x2, y2 = self.crdmap.to_data(*point)
-            res = self.point_within_line_arr(x_arr, y_arr, x1, y1, x2, y2,
-                                             radius)
+            res = self.point_within_line(x_arr, y_arr, x1, y1, x2, y2,
+                                         radius)
             if contains is None:
                 contains = res
             else:
@@ -820,8 +783,8 @@ class OnePointTwoRadiusMixin(object):
                   (self.x + self.xradius, self.y + self.yradius),
                   (self.x - self.xradius, self.y + self.yradius))
         mpts = numpy.array(
-            list(map(lambda pt: self.rotate_pt(pt[0], pt[1], self.rot_deg,
-                                               xoff=xd, yoff=yd),
+            list(map(lambda pt: trcalc.rotate_pt(pt[0], pt[1], self.rot_deg,
+                                                 xoff=xd, yoff=yd),
                      map(lambda pt: self.crdmap.to_data(pt[0], pt[1]),
                          points))))
         t_ = mpts.T
@@ -913,8 +876,8 @@ class Box(OnePointTwoRadiusMixin, CanvasObjectBase):
 
         # rotate point back to cartesian alignment for test
         xd, yd = self.crdmap.to_data(self.x, self.y)
-        xa, ya = self.rotate_arr(x_arr, y_arr, -self.rot_deg,
-                                xoff=xd, yoff=yd)
+        xa, ya = trcalc.rotate_pt(x_arr, y_arr, -self.rot_deg,
+                                  xoff=xd, yoff=yd)
 
         contains = numpy.logical_and(
             numpy.logical_and(min(x1, x2) <= xa, xa <= max(x1, x2)),
@@ -1012,8 +975,8 @@ class Ellipse(OnePointTwoRadiusMixin, CanvasObjectBase):
     def contains_arr(self, x_arr, y_arr):
         # rotate point back to cartesian alignment for test
         xd, yd = self.crdmap.to_data(self.x, self.y)
-        xa, ya = self.rotate_arr(x_arr, y_arr, -self.rot_deg,
-                                xoff=xd, yoff=yd)
+        xa, ya = trcalc.rotate_pt(x_arr, y_arr, -self.rot_deg,
+                                  xoff=xd, yoff=yd)
 
         # need to recalculate radius in case of wcs coords
         x2, y2 = self.crdmap.to_data(self.x + self.xradius,
@@ -1148,8 +1111,8 @@ class Triangle(OnePointTwoRadiusMixin, CanvasObjectBase):
                   (self.x + self.xradius*2, self.y + self.yradius),
                   (self.x - self.xradius*2, self.y + self.yradius))
         mpts = numpy.array(
-            list(map(lambda pt: self.rotate_pt(pt[0], pt[1], self.rot_deg,
-                                               xoff=xd, yoff=yd),
+            list(map(lambda pt: trcalc.rotate_pt(pt[0], pt[1], self.rot_deg,
+                                                 xoff=xd, yoff=yd),
                      map(lambda pt: self.crdmap.to_data(pt[0], pt[1]),
                          points))))
         t_ = mpts.T
@@ -1162,8 +1125,8 @@ class Triangle(OnePointTwoRadiusMixin, CanvasObjectBase):
         ctr_x, ctr_y = self.get_center_pt()
         xd, yd = self.crdmap.to_data(ctr_x, ctr_y)
         # rotate point back to cartesian alignment for test
-        xa, ya = self.rotate_arr(x_arr, y_arr, -self.rot_deg,
-                                 xoff=xd, yoff=yd)
+        xa, ya = trcalc.rotate_pt(x_arr, y_arr, -self.rot_deg,
+                                  xoff=xd, yoff=yd)
 
         (x1, y1), (x2, y2), (x3, y3) = self.get_points()
         x1, y1 = self.crdmap.to_data(x1, y1)
@@ -1382,8 +1345,8 @@ class Point(OnePointOneRadiusMixin, CanvasObjectBase):
 
     def contains_arr(self, x_arr, y_arr, radius=2.0):
         xd, yd = self.crdmap.to_data(self.x, self.y)
-        contains = self.point_within_radius_arr(x_arr, y_arr, xd, yd,
-                                                radius)
+        contains = self.point_within_radius(x_arr, y_arr, xd, yd,
+                                            radius)
         return contains
 
     def contains(self, data_x, data_y, radius=1):
@@ -1636,8 +1599,8 @@ class Line(TwoPointMixin, CanvasObjectBase):
     def contains_arr(self, x_arr, y_arr, radius=1.0):
         x1, y1 = self.crdmap.to_data(self.x1, self.y1)
         x2, y2 = self.crdmap.to_data(self.x2, self.y2)
-        contains = self.point_within_line_arr(x_arr, y_arr, x1, y1, x2, y2,
-                                              radius)
+        contains = self.point_within_line(x_arr, y_arr, x1, y1, x2, y2,
+                                          radius)
         return contains
 
     def contains(self, data_x, data_y, radius=1.0):
