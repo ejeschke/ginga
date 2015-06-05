@@ -529,31 +529,34 @@ class ImageViewBase(Callback.Callbacks):
         if self._normimg is not None:
             self._normimg.set_image(image)
 
-        try:
-            if self.t_['auto_orient']:
-                self.auto_orient(redraw=False)
+        # Per issue #111, zoom and pan and cuts probably should
+        # not change if the image is _modified_, or it should be
+        # optional--these settings are only for _new_ images
+        ## try:
+        ##     if self.t_['auto_orient']:
+        ##         self.auto_orient(redraw=False)
 
-            if self.t_['autozoom'] != 'off':
-                self.zoom_fit(redraw=False, no_reset=True)
+        ##     if self.t_['autozoom'] != 'off':
+        ##         self.zoom_fit(redraw=False, no_reset=True)
 
-            if not self.t_['autocenter'] in ('off', False):
-                self.center_image(redraw=False)
+        ##     if not self.t_['autocenter'] in ('off', False):
+        ##         self.center_image(redraw=False)
 
-            if self.t_['autocuts'] != 'off':
-                self.auto_levels(redraw=False)
+        ##     if self.t_['autocuts'] != 'off':
+        ##         self.auto_levels(redraw=False)
 
-        except Exception as e:
-            self.logger.error("Failed to initialize image: %s" % (str(e)))
-            try:
-                # log traceback, if possible
-                (type, value, tb) = sys.exc_info()
-                tb_str = "".join(traceback.format_tb(tb))
-                self.logger.error("Traceback:\n%s" % (tb_str))
-            except Exception:
-                tb_str = "Traceback information unavailable."
-                self.logger.error(tb_str)
-            if raise_initialize_errors:
-                raise e
+        ## except Exception as e:
+        ##     self.logger.error("Failed to initialize image: %s" % (str(e)))
+        ##     try:
+        ##         # log traceback, if possible
+        ##         (type, value, tb) = sys.exc_info()
+        ##         tb_str = "".join(traceback.format_tb(tb))
+        ##         self.logger.error("Traceback:\n%s" % (tb_str))
+        ##     except Exception:
+        ##         tb_str = "Traceback information unavailable."
+        ##         self.logger.error(tb_str)
+        ##     if raise_initialize_errors:
+        ##         raise e
 
         self.redraw(whence=0)
 
