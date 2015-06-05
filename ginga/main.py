@@ -382,7 +382,8 @@ class ReferenceViewer(object):
         ginga.update_pending()
 
         # TEMP?
-        tab_names = list(map(str.lower, ginga.ds.get_tabnames(group=None)))
+        tab_names = list(map(lambda name: name.lower(),
+                             ginga.ds.get_tabnames(group=None)))
         if 'info' in tab_names:
             ginga.ds.raise_tab('Info')
         if 'thumbs' in tab_names:
