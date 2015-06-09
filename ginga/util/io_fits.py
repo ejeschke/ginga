@@ -24,6 +24,8 @@ any images.  Otherwise Ginga will try to pick one for you.
 """
 import numpy
 
+from ginga.util import iohelper
+
 fits_configured = False
 fitsLoaderClass = None
 have_pyfits = False
@@ -126,7 +128,13 @@ class PyFitsFileHandler(BaseFitsFileHandler):
 
     def load_file(self, filespec, ahdr, numhdu=None, naxispath=None,
                   phdr=None):
-        filepath = get_path(filespec)
+
+        info = iohelper.get_fileinfo(filespec)
+        if not info.ondisk:
+            raise FITSError("File does not appear to be on disk: %s" % (
+                info.url))
+        filepath = info.filepath
+
         self.logger.debug("Loading file '%s' ..." % (filepath))
         fits_f = pyfits.open(filepath, 'readonly')
 
@@ -233,7 +241,13 @@ class FitsioFileHandler(BaseFitsFileHandler):
 
     def load_file(self, filespec, ahdr, numhdu=None, naxispath=None,
                   phdr=None):
-        filepath = get_path(filespec)
+
+        info = iohelper.get_fileinfo(filespec)
+        if not info.ondisk:
+            raise FITSError("File does not appear to be on disk: %s" % (
+                info.url))
+        filepath = info.filepath
+
         self.logger.debug("Loading file '%s' ..." % (filepath))
         fits_f = fitsio.FITS(filepath)
 
@@ -290,15 +304,6 @@ class FitsioFileHandler(BaseFitsFileHandler):
     def save_as_file(self, filepath, data, header, **kwdargs):
         self.write_fits(filepath, data, header, **kwdargs)
 
-
-
-def get_path(fileSpec):
-    path = fileSpec
-    if fileSpec.startswith('file://'):
-        path = fileSpec[7:]
-
-    # TODO: handle web references by fetching the file
-    return path
 
 if not fits_configured:
     # default

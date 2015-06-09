@@ -111,7 +111,7 @@ class ImageViewBindings(object):
             kp_orient_rh = ['O'],
             kp_poly_add = ['v', 'draw+v'],
             kp_poly_del = ['z', 'draw+z'],
-            kp_edit_del = ['edit+z'],
+            kp_edit_del = ['edit+x'],
             kp_reset = ['escape'],
             kp_lock = ['l'],
 

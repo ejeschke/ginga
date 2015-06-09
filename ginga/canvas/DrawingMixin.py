@@ -225,6 +225,8 @@ class DrawingMixin(object):
     def draw_poly_add(self, canvas, event, data_x, data_y, viewer):
         if not self.candraw or (viewer != event.viewer):
             return False
+        if self._draw_obj is None:
+            return self.edit_poly_add(canvas, event, data_x, data_y, viewer)
         if self.t_drawtype in ('polygon', 'path'):
             x, y = self._draw_crdmap.data_to(data_x, data_y)
             self._points.append((x, y))
@@ -233,6 +235,8 @@ class DrawingMixin(object):
     def draw_poly_delete(self, canvas, event, data_x, data_y, viewer):
         if not self.candraw or (viewer != event.viewer):
             return False
+        if self._draw_obj is None:
+            return self.edit_poly_del(canvas, event, data_x, data_y, viewer)
         if self.t_drawtype in ('polygon', 'path'):
             if len(self._points) > 0:
                 self._points.pop()
@@ -446,6 +450,66 @@ class DrawingMixin(object):
             return True
 
         return False
+
+    def edit_poly_add(self, canvas, event, data_x, data_y, viewer):
+        if not self.canedit or (viewer != event.viewer):
+            return False
+        obj = self._edit_obj
+        if (obj is not None) and obj.is_editing() and \
+               (obj.kind in ('polygon', 'path')):
+            self.logger.debug("checking points")
+            # determine which line we are adding a point to
+            points = list(obj.get_points())
+            if obj.kind == 'polygon':
+                points = points + [points[0]]
+            x0, y0 = obj.crdmap.to_data(*points[0])
+            insert = None
+            for i in range(1, len(points[1:])):
+                x1, y1 = obj.crdmap.to_data(*points[i])
+                self.logger.debug("checking line %d" % (i))
+                if obj.within_line(viewer, data_x, data_y, x0, y0, x1, y1,
+                                   8):
+                    insert = i
+                    break
+                x0, y0 = x1, y1
+            if insert is not None:
+                self.logger.debug("inserting point")
+                # Point near a line
+                x, y = obj.crdmap.data_to(data_x, data_y)
+                points.insert(insert, (x, y))
+                obj.points = points
+                self.processDrawing(viewer)
+            else:
+                self.logger.debug("cursor not near a line")
+
+        return True
+
+    def edit_poly_del(self, canvas, event, data_x, data_y, viewer):
+        if not self.canedit or (viewer != event.viewer):
+            return False
+        obj = self._edit_obj
+        if (obj is not None) and obj.is_editing() and \
+               (obj.kind in ('polygon', 'path')):
+            self.logger.debug("checking points")
+            # determine which point we are deleting
+            points = list(obj.get_points())
+            delete = None
+            for i in range(len(points)):
+                x1, y1 = obj.crdmap.to_data(*points[i])
+                self.logger.debug("checking line %d" % (i))
+                if obj.within_radius(viewer, data_x, data_y, x1, y1,
+                                     8):
+                    delete = i
+                    break
+            if delete is not None:
+                self.logger.debug("deleting point")
+                points.pop(delete)
+                obj.points = points
+                self.processDrawing(viewer)
+            else:
+                self.logger.debug("cursor not near a point")
+
+        return True
 
     def edit_rotate(self, delta_deg, viewer):
         if self._edit_obj is None:

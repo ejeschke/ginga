@@ -40,7 +40,7 @@ except (ImportError, Exception):
 # Local application imports
 from ginga import cmap, imap, AstroImage, RGBImage, ImageView
 from ginga.misc import Bunch, Datasrc, Callback, Timer, Task, Future
-from ginga.util import catalog
+from ginga.util import catalog, iohelper
 
 #pluginconfpfx = 'plugins'
 pluginconfpfx = None
@@ -547,7 +547,7 @@ class GingaControl(Callback.Callbacks):
         """
 
         # Get information about this file/URL
-        info = catalog.get_fileinfo(filespec, cache_dir=dldir)
+        info = iohelper.get_fileinfo(filespec, cache_dir=dldir)
 
         if (not info.ondisk) and (info.url is not None) and \
                (not info.url.startswith('file:')):
@@ -571,14 +571,7 @@ class GingaControl(Callback.Callbacks):
 
 
     def name_image_from_path(self, path, idx=None):
-        (path, filename) = os.path.split(path)
-        # Remove trailing .extension
-        (name, ext) = os.path.splitext(filename)
-        #if '.' in name:
-        #    name = name[:name.rindex('.')]
-        if idx is not None:
-            name = '%s[%d]' % (name, idx)
-        return name
+        return iohelper.name_image_from_path(path, idx=idx)
 
 
     def load_file(self, filepath, chname=None, wait=True,

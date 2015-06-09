@@ -48,7 +48,7 @@ import tornado.ioloop
 from ginga.web.pgw.ImageViewPg import ImageViewCanvas, RenderWidgetZoom
 from ginga import AstroImage, colors
 from ginga.misc import log, Task
-from ginga.util import catalog
+from ginga.util import catalog, iohelper
 
 from ginga.web.pgw import templates, js
 
@@ -90,7 +90,7 @@ class FitsViewer(RenderWidgetZoom):
     def get_fileinfo(self, filespec, dldir='/tmp'):
 
         # Get information about this file/URL
-        info = catalog.get_fileinfo(filespec, cache_dir=dldir)
+        info = iohelper.get_fileinfo(filespec, cache_dir=dldir)
 
         if (not info.ondisk) and (info.url is not None) and \
                (not info.url.startswith('file:')):
