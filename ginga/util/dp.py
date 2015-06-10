@@ -1,5 +1,5 @@
 #
-# dp.py -- Data pipeline and reduction routines 
+# dp.py -- Data pipeline and reduction routines
 #
 # Eric Jeschke (eric@naoj.org)
 #
@@ -24,11 +24,11 @@ def get_image_name(image, pfx='dp'):
     if name is None:
         if not pfx in prefixes:
             prefixes[pfx] = 0
-        name = 'dp%d' % (prefixes[pfx])
+        name = '{0}{1:d}'.format(pfx, prefixes[pfx])
         prefixes[pfx] += 1
         image.set(name=name)
     return name
-    
+
 
 def make_image(data_np, oldimage, header, pfx='dp'):
     # Prepare a new image with the numpy array as data
@@ -43,7 +43,7 @@ def make_image(data_np, oldimage, header, pfx='dp'):
     get_image_name(image, pfx=pfx)
     return image
 
-    
+
 def create_blank_image(ra_deg, dec_deg, fov_deg, px_scale, rot_deg,
                        cdbase=[1, 1], logger=None, pfx='dp'):
 
@@ -87,7 +87,7 @@ def create_blank_image(ra_deg, dec_deg, fov_deg, px_scale, rot_deg,
     image.update_keywords(header)
     # give the image a name
     get_image_name(image, pfx=pfx)
-    
+
     return image
 
 
@@ -127,7 +127,7 @@ def add(image1, image2):
     result = data1_np + data2_np
     image = make_image(result, image1, {}, pfx='add')
     return image
-    
+
 
 def subtract(image1, image2):
     data1_np = image1.get_data()
@@ -136,7 +136,7 @@ def subtract(image1, image2):
     result = data1_np - data2_np
     image = make_image(result, image1, {}, pfx='sub')
     return image
-    
+
 
 def divide(image1, image2):
     data1_np = image1.get_data()
