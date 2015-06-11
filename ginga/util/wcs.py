@@ -77,7 +77,7 @@ def degToDms(dec, isLatitude=True):
     # this calculation with return values produces conversion problem.
     # e.g. dec +311600.00 -> 31.2666666667 degree
     # deg=31 min=15 sec=60 instead deg=31 min=16 sec=0.0
-    # bug fixed    
+    # bug fixed
     mnt, sec = divmod(dec*3600, 60)
     deg, mnt = divmod(mnt, 60)
 
@@ -93,7 +93,7 @@ def hmsStrToDeg(ra):
     hour, min, sec = ra.split(':')
     ra_deg = hmsToDeg(int(hour), int(min), float(sec))
     return ra_deg
-    
+
 def dmsStrToDeg(dec):
     """Convert a string representation of DEC into a float in degrees."""
     sign_deg, min, sec = dec.split(':')
@@ -102,17 +102,17 @@ def dmsStrToDeg(dec):
         sign = '+'
         deg = sign_deg
     else:
-        deg = sign_deg[1:] 
+        deg = sign_deg[1:]
     dec_deg = decTimeToDeg(sign, int(deg), int(min), float(sec))
     return dec_deg
 
 def raDegToString(ra_deg, format='%02d:%02d:%06.3f'):
     if ra_deg > 360.0:
         ra_deg = math.fmod(ra_deg, 360.0)
-        
+
     ra_hour, ra_min, ra_sec = degToHms(ra_deg)
     return format % (ra_hour, ra_min, ra_sec)
-    
+
 def decDegToString(dec_deg, format='%s%02d:%02d:%05.2f'):
     sign, dec_degree, dec_min, dec_sec = degToDms(dec_deg)
     if sign > 0:
@@ -120,22 +120,22 @@ def decDegToString(dec_deg, format='%s%02d:%02d:%05.2f'):
     else:
         sign_sym = '-'
     return format % (sign_sym, int(dec_degree), int(dec_min), dec_sec)
-    
+
 # this function is provided by MOKA2 Development Team (1996.xx.xx)
 #   and used in SOSS system
 def trans_coeff (eq, x, y, z):
-       
+
     tt = (eq - 2000.0) / 100.0
-    
+
     zeta = 2306.2181*tt+0.30188*tt*tt+0.017998*tt*tt*tt
     zetto = 2306.2181*tt+1.09468*tt*tt+0.018203*tt*tt*tt
     theta = 2004.3109*tt-0.42665*tt*tt-0.041833*tt*tt*tt
-    
+
     zeta = math.radians(zeta) / 3600.0
     zetto = math.radians(zetto) / 3600.0
     theta = math.radians(theta) / 3600.0
-    
-    
+
+
     p11 = math.cos(zeta)*math.cos(theta)*math.cos(zetto)-math.sin(zeta)*math.sin(zetto)
     p12 = -math.sin(zeta)*math.cos(theta)*math.cos(zetto)-math.cos(zeta)*math.sin(zetto)
     p13 = -math.sin(theta)*math.cos(zetto)
@@ -145,43 +145,43 @@ def trans_coeff (eq, x, y, z):
     p31 = math.cos(zeta)*math.sin(theta)
     p32 = -math.sin(zeta)*math.sin(theta)
     p33 = math.cos(theta)
-    
+
     return (p11,p12,p13, p21, p22, p23, p31,p32, p33)
 
 def eqToEq2000(ra_deg, dec_deg, eq):
-           
+
     ra_rad = math.radians(ra_deg)
     dec_rad = math.radians(dec_deg)
-    
-    x = math.cos(dec_rad) * math.cos(ra_rad) 
+
+    x = math.cos(dec_rad) * math.cos(ra_rad)
     y = math.cos(dec_rad) * math.sin(ra_rad)
-    z = math.sin(dec_rad) 
-    
+    z = math.sin(dec_rad)
+
     p11, p12, p13, p21, p22, p23, p31, p32, p33 = trans_coeff (eq, x, y, z)
-    
+
     x0 = p11*x + p21*y + p31*z
     y0 = p12*x + p22*y + p32*z
     z0 = p13*x + p23*y + p33*z
-    
+
     new_dec = math.asin(z0)
     if x0 == 0.0:
         new_ra = math.pi / 2.0
     else:
         new_ra = math.atan( y0/x0 )
-        
-    if ((y0*math.cos(new_dec) > 0.0 and x0*math.cos(new_dec) <= 0.0)  or  
+
+    if ((y0*math.cos(new_dec) > 0.0 and x0*math.cos(new_dec) <= 0.0)  or
         (y0*math.cos(new_dec) <= 0.0 and x0*math.cos(new_dec) < 0.0) ):
             new_ra += math.pi
-            
+
     elif new_ra < 0.0:
         new_ra += 2.0*math.pi
-        
+
     #new_ra = new_ra * 12.0 * 3600.0 / math.pi
     new_ra_deg = new_ra * 12.0 / math.pi * 15.0
-   
+
     #new_dec = new_dec * 180.0 * 3600.0 / math.pi
     new_dec_deg = new_dec * 180.0 / math.pi
- 
+
     return (new_ra_deg, new_dec_deg)
 
 def get_xy_rotation_and_scale(header):
@@ -211,7 +211,7 @@ def get_xy_rotation_and_scale(header):
             cdelt1 = cd1_1
             cdelt2 = cd2_2
         else:
-            xrot = math.atan2(sgn * cd1_2, sgn * cd1_1) 
+            xrot = math.atan2(sgn * cd1_2, sgn * cd1_1)
             yrot = math.atan2(-cd2_1, cd2_2)
 
             cdelt1 = sgn * math.sqrt(cd1_1**2 + cd1_2**2)
@@ -265,12 +265,12 @@ def get_xy_rotation_and_scale(header):
             cd2_2 = header['CD2_2']
             xrot, yrot, cdelt1, cdelt2 = calc_from_cd(cd1_1, cd1_2,
                                                       cd2_1, cd2_2)
-        
+
         except KeyError:
             # 3rd, check for presence of CROTA keyword
             #  (or default is north=up)
             xrot, yrot, cdelt1, cdelt2 = calc_from_crota()
-            
+
     xrot, yrot = math.degrees(xrot), math.degrees(yrot)
 
     return ((xrot, yrot), (cdelt1, cdelt2))
@@ -286,7 +286,7 @@ def get_rotation_and_scale(header, skew_threshold=0.001):
         raise ValueError("Skew detected: xrot=%.4f yrot=%.4f" % (
             xrot, yrot))
     rot = yrot
-    
+
     lonpole = float(header.get('LONPOLE', 180.0))
     if lonpole != 180.0:
         rot += 180.0 - lonpole
@@ -337,7 +337,7 @@ def simple_wcs(px_x, px_y, ra_deg, dec_deg, px_scale_deg_px, rot_deg,
                        ('CUNIT2', 'deg'),
                        ('CTYPE1', 'RA---TAN'),
                        ('CTYPE2', 'DEC--TAN'),
-                       ('RADECSYS', 'FK5'),
+                       ('RADESYS', 'FK5'),
                        # Either PC + CDELT or CD should appear
                        # PC + CDELT seems to be the preferred approach
                        # according to the Calabretta papers
@@ -378,7 +378,7 @@ def dispos(dra0, decd0, dra, decd):
     """
     Source/credit: Skycat
 
-    dispos computes distance and position angle solving a spherical 
+    dispos computes distance and position angle solving a spherical
     triangle (no approximations)
     INPUT        :coords in decimal degrees
     OUTPUT       :dist in arcmin, returns phi in degrees (East of North)
@@ -391,7 +391,7 @@ def dispos(dra0, decd0, dra, decd):
     """
     radian = 180.0/math.pi
 
-    # coord transformed in radians 
+    # coord transformed in radians
     alf = dra / radian
     alf0 = dra0 / radian
     del_ = decd / radian
@@ -412,7 +412,7 @@ def dispos(dra0, decd0, dra, decd):
         #    cospa=1.0
         if math.fabs(cospa) > 1.0:
             # 2005-06-02: fix from awicenec@eso.org
-            cospa = cospa/math.fabs(cospa) 
+            cospa = cospa/math.fabs(cospa)
         sinpa = cd*math.sin(alf-alf0)/sind
         phi = math.acos(cospa)*radian
         if sinpa < 0.0:
@@ -503,12 +503,12 @@ def lon_to_deg(lon):
         lon_deg = hmsStrToDeg(lon)
     else:
         lon_deg = float(lon)
-        
+
 def lat_to_deg(lat):
     if isinstance(lat, str) and (':' in lat):
         # TODO: handle other coordinate systems
         lat_deg = dmsStrToDeg(lat)
     else:
         lat_deg = float(lat)
-        
+
 #END
