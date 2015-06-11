@@ -1,6 +1,6 @@
 #
 # Preferences.py -- Preferences plugin for fits viewer
-# 
+#
 # Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c) Eric R. Jeschke.  All rights reserved.
@@ -28,7 +28,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.cmap_names = cmap.get_names()
         self.imap_names = imap.get_names()
         self.zoomalg_names = ('step', 'rate')
-        
+
         self.autocuts_cache = {}
         self.gui_up = False
 
@@ -38,7 +38,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.autocut_methods = self.fitsimage.get_autocut_methods()
         self.autocenter_options = self.fitsimage.get_autocenter_options()
         self.pancoord_options = ('data', 'wcs')
-        
+
         self.t_ = self.fitsimage.get_settings()
         self.t_.getSetting('autocuts').add_callback('set',
                                                self.autocuts_changed_ext_cb)
@@ -67,7 +67,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         ## for key in ['color_algorithm', 'color_hashsize', 'color_map',
         ##             'intensity_map']:
         ##     self.t_.getSetting(key).add_callback('set', self.cmap_changed_ext_cb)
-            
+
         self.t_.setdefault('wcs_coords', 'icrs')
         self.t_.setdefault('wcs_display', 'sexagesimal')
 
@@ -282,12 +282,12 @@ class Preferences(GingaPlugin.LocalPlugin):
         for name in self.zoomalg_names:
             b.zoom_alg.append_text(name.capitalize())
             index += 1
-        zoomalg = self.t_.get('zoom_algorithm', "step")            
+        zoomalg = self.t_.get('zoom_algorithm', "step")
         index = self.zoomalg_names.index(zoomalg)
         b.zoom_alg.set_index(index)
         b.zoom_alg.set_tooltip("Choose Zoom algorithm")
         b.zoom_alg.add_callback('activated', self.set_zoomalg_cb)
-            
+
         index = 0
         for name in ('X', 'Y'):
             b.stretch_xy.append_text(name)
@@ -295,7 +295,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         b.stretch_xy.set_index(0)
         b.stretch_xy.set_tooltip("Stretch pixels in X or Y")
         b.stretch_xy.add_callback('activated', self.set_stretch_cb)
-            
+
         b.stretch_factor.set_limits(1.0, 10.0, incr_value=0.10)
         b.stretch_factor.set_value(1.0)
         b.stretch_factor.set_decimals(8)
@@ -312,7 +312,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         b.zoom_rate.add_callback('value-changed', self.set_zoomrate_cb)
 
         b.zoom_defaults.add_callback('activated', self.set_zoom_defaults_cb)
-        
+
         scale_x, scale_y = self.fitsimage.get_scale_xy()
         b.scale_x.set_tooltip("Set the scale in X axis")
         b.scale_x.set_text(str(scale_x))
@@ -366,12 +366,12 @@ class Preferences(GingaPlugin.LocalPlugin):
         for name in self.pancoord_options:
             b.pan_coord.append_text(name)
             index += 1
-        pan_coord = self.t_.get('pan_coord', "data")            
+        pan_coord = self.t_.get('pan_coord', "data")
         index = self.pancoord_options.index(pan_coord)
         b.pan_coord.set_index(index)
         b.pan_coord.set_tooltip("Pan coordinates type")
         b.pan_coord.add_callback('activated', self.set_pan_coord_cb)
-            
+
         b.center_image.set_tooltip("Set the pan position to center of the image")
         b.center_image.add_callback('activated', self.center_image_cb)
         b.mark_center.set_tooltip("Mark the center (pan locator)")
@@ -458,9 +458,9 @@ class Preferences(GingaPlugin.LocalPlugin):
         top.add_widget(btns, stretch=0)
 
         container.add_widget(top, stretch=1)
-        
+
         self.gui_up = True
-        
+
     def set_cmap_cb(self, w, index):
         """This callback is invoked when the user selects a new color
         map from the preferences pane."""
@@ -477,7 +477,7 @@ class Preferences(GingaPlugin.LocalPlugin):
 
         rgbmap = self.fitsimage.get_rgbmap()
         rgbmap.set_cmap(cm)
-        
+
     def set_imap_cb(self, w, index):
         """This callback is invoked when the user selects a new intensity
         map from the preferences pane."""
@@ -532,7 +532,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.t_.set(color_map=cmap_name)
         self.set_imap_byname(imap_name)
         self.t_.set(intensity_map=imap_name)
-        
+
     def set_default_distmaps(self):
         name = 'linear'
         index = self.calg_names.index(name)
@@ -544,18 +544,18 @@ class Preferences(GingaPlugin.LocalPlugin):
         ## self.w.table_size.set_text(str(hashsize))
         rgbmap = self.fitsimage.get_rgbmap()
         rgbmap.set_hash_size(hashsize)
-        
+
     def set_zoomrate_cb(self, w, rate):
         self.t_.set(zoom_rate=rate)
-        
+
     def set_zoomrate_ext_cb(self, setting, value):
         if not self.gui_up:
             return
         self.w.zoom_rate.set_value(value)
-        
+
     def set_zoomalg_cb(self, w, idx):
         self.t_.set(zoom_algorithm=self.zoomalg_names[idx])
-        
+
     def set_zoomalg_ext_cb(self, setting, value):
         if not self.gui_up:
             return
@@ -587,13 +587,13 @@ class Preferences(GingaPlugin.LocalPlugin):
         # Update stretch controls to reflect actual scale
         self.w.stretch_xy.set_index(idx)
         self.w.stretch_factor.set_value(ratio)
-        
+
     def set_zoom_defaults_cb(self, w):
         rate = math.sqrt(2.0)
         self.w.stretch_factor.set_value(1.0)
         self.t_.set(zoom_algorithm='step', zoom_rate=rate,
                     scale_x_base=1.0, scale_y_base=1.0)
-        
+
     def set_stretch_cb(self, *args):
         axis = self.w.stretch_xy.get_index()
         value = self.w.stretch_factor.get_value()
@@ -601,7 +601,7 @@ class Preferences(GingaPlugin.LocalPlugin):
             self.t_.set(scale_x_base=value, scale_y_base=1.0)
         else:
             self.t_.set(scale_x_base=1.0, scale_y_base=value)
-        
+
     def set_autocenter_cb(self, w, idx):
         option = self.autocenter_options[idx]
         self.fitsimage.set_autocenter(option)
@@ -644,7 +644,7 @@ class Preferences(GingaPlugin.LocalPlugin):
     def config_autocut_params(self, method):
         index = self.autocut_methods.index(method)
         self.w.auto_method.set_index(index)
-        
+
         # remove old params
         self.w.acvbox.remove_all()
 
@@ -700,7 +700,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         args, kwdargs = paramObj.get_params()
         params = list(kwdargs.items())
         self.t_.set(autocut_params=params)
-        
+
     def set_autocuts_cb(self, w, index):
         option = self.autocut_options[index]
         self.fitsimage.enable_autocuts(option)
@@ -727,7 +727,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.w.flip_x.set_state(flip_x)
         self.w.flip_y.set_state(flip_y)
         self.w.swap_xy.set_state(swap_xy)
-        
+
     def rotate_cb(self, w, deg):
         #deg = self.w.rotate.get_value()
         self.t_.set(rot_deg=deg)
@@ -763,7 +763,7 @@ class Preferences(GingaPlugin.LocalPlugin):
             coord_offset = self.fv.settings.get('pixel_coords_offset', 0.0)
             pan_x = float(pan_xs) - coord_offset
             pan_y = float(pan_ys) - coord_offset
-            
+
         self.fitsimage.set_pan(pan_x, pan_y, coord=pan_coord)
         return True
 
@@ -774,8 +774,8 @@ class Preferences(GingaPlugin.LocalPlugin):
         if pan_coord == 'wcs':
             use_sex = self.w.wcs_sexagesimal.get_state()
             if use_sex:
-                pan_x = wcs.raDegToString(pan_x)
-                pan_y = wcs.decDegToString(pan_y)
+                pan_x = wcs.raDegToString(pan_x, format='%02d:%02d:%010.7f')
+                pan_y = wcs.decDegToString(pan_y, format='%s%02d:%02d:%09.7f')
         else:
             coord_offset = self.fv.settings.get('pixel_coords_offset', 0.0)
             pan_x += coord_offset
@@ -859,7 +859,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         auto_zoom = prefs.get('autozoom', 'off')
 
         # zoom settings
-        zoomalg = prefs.get('zoom_algorithm', "step")            
+        zoomalg = prefs.get('zoom_algorithm', "step")
         index = self.zoomalg_names.index(zoomalg)
         self.w.zoom_alg.set_index(index)
 
@@ -869,7 +869,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.w.stretch_factor.set_enabled(zoomalg!='step')
 
         self.scalebase_changed_ext_cb(prefs, None)
-        
+
         scale_x, scale_y = self.fitsimage.get_scale_xy()
         self.w.scale_x.set_text(str(scale_x))
         self.w.scale_y.set_text(str(scale_y))
@@ -938,23 +938,23 @@ class Preferences(GingaPlugin.LocalPlugin):
     def close(self):
         self.fv.stop_local_plugin(self.chname, str(self))
         return True
-        
+
     def start(self):
         self.preferences_to_controls()
 
     def pause(self):
         pass
-        
+
     def resume(self):
         pass
-        
+
     def stop(self):
         self.gui_up = False
-        
+
     def redo(self):
         pass
 
     def __str__(self):
         return 'preferences'
-    
+
 #END
