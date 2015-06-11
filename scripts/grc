@@ -13,11 +13,11 @@
 
  In Ginga, start the RC plugin to enable Ginga remote control
   (Plugins->Start RC).
- 
+
  Show example usage (plugin must be started):
  $ grc help
 
- 
+
 """
 from __future__ import print_function
 import sys
@@ -37,18 +37,20 @@ def main(options, args):
     else:
         method_name = args[0]
         args, kwdargs = grc.prep_args(args[1:])
-        
+        #print (("args=", args, "kwdargs=", kwdargs))
+
     # invoke method on rest of parameters
     method = getattr(ginga, method_name)
     res = method(*args, **kwdargs)
-    print(res)
-    
+    if res not in (grc.undefined, None):
+        print(res)
+
 
 if __name__ == "__main__":
-   
+
     usage = "usage: %prog [options] cmd [arg] ..."
     optprs = OptionParser(usage=usage, version=('%%prog'))
-    
+
     optprs.add_option("--debug", dest="debug", default=False, action="store_true",
                       help="Enter the pdb debugger on main()")
     optprs.add_option("--host", dest="host", metavar="HOST",

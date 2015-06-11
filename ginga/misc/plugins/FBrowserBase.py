@@ -1,6 +1,6 @@
 #
 # FBrowserBase.py -- Base class for file browser plugin for fits viewer
-# 
+#
 # Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c)  Eric R. Jeschke.  All rights reserved.
@@ -38,7 +38,7 @@ class FBrowserBase(GingaPlugin.LocalPlugin):
                    ('Mode', 'st_mode_oct'),
                    ('Last Changed', 'st_mtime_str')
                    ]
-        
+
         self.jumpinfo = []
 
         # setup plugin preferences
@@ -82,7 +82,7 @@ class FBrowserBase(GingaPlugin.LocalPlugin):
         if path == '..':
             curdir, curglob = os.path.split(self.curpath)
             path = os.path.join(curdir, path, curglob)
-            
+
         if os.path.isdir(path):
             path = os.path.join(path, '*')
             self.browse(path)
@@ -121,9 +121,9 @@ class FBrowserBase(GingaPlugin.LocalPlugin):
             bnch.update(dict(path=path, name=filename, type=ftype,
                              st_mode=0, st_size=0,
                              st_mtime=0))
-            
+
         return bnch
-        
+
     def browse(self, path):
         self.logger.debug("path: %s" % (path))
         if os.path.isdir(path):
@@ -137,7 +137,7 @@ class FBrowserBase(GingaPlugin.LocalPlugin):
         if not os.path.isdir(dirname):
             self.fv.show_error("Not a valid path: %s" % (dirname))
             return
-        
+
         if not globname:
             globname = '*'
         path = os.path.join(dirname, globname)
@@ -145,7 +145,7 @@ class FBrowserBase(GingaPlugin.LocalPlugin):
         # Make a directory listing
         self.logger.debug("globbing path: %s" % (path))
         filelist = list(glob.glob(path))
-        filelist.sort(key=str.lower)
+        filelist.sort(key=lambda s: s.lower())
         filelist.insert(0, os.path.join(dirname, '..'))
 
         self.jumpinfo = list(map(self.get_info, filelist))
@@ -158,7 +158,7 @@ class FBrowserBase(GingaPlugin.LocalPlugin):
             else:
                 self.logger.warn("Number of files (%d) is greater than scan limit (%d)--skipping header scan" % (
                     num_files, self.scan_limit))
-            
+
         self.makelisting(path)
 
     def scan_fits(self):
@@ -182,20 +182,20 @@ class FBrowserBase(GingaPlugin.LocalPlugin):
 
     def refresh(self):
         self.browse(self.curpath)
-        
+
     def scan_headers(self):
         self.browse(self.curpath)
-        
+
     def make_thumbs(self):
         path = self.curpath
         self.logger.info("Generating thumbnails for '%s'..." % (
             path))
         filelist = glob.glob(path)
-        filelist.sort(key=str.lower)
+        filelist.sort(key=lambda s: s.lower())
 
         # find out our channel
         chname = self.fv.get_channelName(self.fitsimage)
-        
+
         # Invoke the method in this channel's Thumbs plugin
         # TODO: don't expose gpmon!
         rsobj = self.fv.gpmon.getPlugin('Thumbs')
@@ -207,15 +207,15 @@ class FBrowserBase(GingaPlugin.LocalPlugin):
 
     def pause(self):
         pass
-    
+
     def resume(self):
         pass
-    
+
     def stop(self):
         pass
-        
+
     def redo(self):
         return True
-    
+
 
 #END

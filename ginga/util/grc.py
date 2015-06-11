@@ -21,8 +21,12 @@ else:
 from ginga.util.six.moves import map
 from ginga.misc import Task, log
 
+# undefined passed value--for a data type that cannot be converted
+undefined = '#UNDEFINED'
+
+
 class RemoteClient(object):
-    
+
     def __init__(self, host, port):
         self.host = host
         self.port = port
@@ -34,7 +38,7 @@ class RemoteClient(object):
         url = "http://%s:%d" % (self.host, self.port)
         self._proxy = xmlrpclib.ServerProxy(url, allow_none=True)
         return self._proxy
-    
+
     def __getattr__(self, method_name):
         def call(*args, **kwdargs):
             if self._proxy is None:
@@ -43,7 +47,7 @@ class RemoteClient(object):
             # marshall args and kwdargs
             p_args = marshall(args)
             p_kwdargs = marshall(kwdargs)
-            
+
             res = self._proxy.dispatch_call(method_name, p_args, p_kwdargs)
 
             return unmarshall(res)
@@ -72,7 +76,8 @@ class RemoteServer(object):
 
     def start(self, thread_pool=None):
         self.server = SimpleXMLRPCServer.SimpleXMLRPCServer((self.host,
-                                                             self.port))
+                                                             self.port),
+                                                            allow_none=True)
         self.server.register_function(self.dispatch_call)
         if thread_pool is not None:
             t1 = Task.FuncTask2(self.monitor_shutdown)
@@ -81,7 +86,7 @@ class RemoteServer(object):
             thread_pool.addTask(t2)
         else:
             self.server.serve_forever(poll_interval=0.1)
-        
+
     def stop(self):
         self.server.shutdown()
 
@@ -105,10 +110,10 @@ class RemoteServer(object):
             self.logger.debug("unmarshalling params")
             args = unmarshall(p_args)
             kwdargs = unmarshall(p_kwdargs)
-            
+
             self.logger.debug("calling method '%s'" % (method_name))
             res = method(*args, **kwdargs)
-            
+
             self.logger.debug("marshalling return val")
             return marshall(method(*args, **kwdargs))
 
@@ -117,38 +122,50 @@ class RemoteServer(object):
 
 
 # List of XML-RPC acceptable return types
-ok_types = list(map(type, [str, int, float, bool, list, tuple]))
+ok_types = [str, int, float, bool, list, tuple, dict]
 
 ## def marshall(res):
 ##     """Transform results into XML-RPC friendy ones.
 ##     """
 ##     ptype = type(res)
-      
+
 ##     if ptype in ok_types:
 ##         return (0, res)
 
-##     pkl = pickle.dumps(res)
-##     return ('pickle', pkl)
+##     raise ValueError("Don't know how to marshall this type of argument (%s)" % (
+##         ptype))
+##     ## pkl = pickle.dumps(res)
+##     ## return ('pickle', pkl)
 
 
 ## def unmarshall(rtnval):
 ##     (kind, res) = rtnval
-    
+
 ##     if kind == 0:
 ##         # this is a type passable by the transport
 ##         return res
 
-##     if kind == 'pickle':
-##         return pickle.loads(res)
-        
+##     raise ValueError("Don't know how to marshall this kind of argument (%s)" % (
+##         kind))
+##     ## if kind == 'pickle':
+##     ##     return pickle.loads(res)
+
+
+## def marshall(res):
+##     pkl = pickle.dumps(res)
+##     return ('pickle', pkl)
+
+## def unmarshall(rtnval):
+##     (kind, res) = rtnval
+##     return pickle.loads(res)
 
 def marshall(res):
-    pkl = pickle.dumps(res)
-    return ('pickle', pkl)
+    if not type(res) in ok_types:
+        res = undefined
+    return res
 
 def unmarshall(rtnval):
-    (kind, res) = rtnval
-    return pickle.loads(res)
+    return rtnval
 
 def prep_arg(arg):
     try:
@@ -168,5 +185,3 @@ def prep_args(args):
         else:
             a.append(prep_arg(arg))
     return a, k
-    
-

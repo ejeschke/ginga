@@ -88,7 +88,7 @@ class Contents(GingaPlugin.GlobalPlugin):
         items = list(self.treeview.selectedItems())
         if len(items) > 0:
             self.switch_image2(items[0], 0)
-        
+
     def get_info(self, chname, name, image):
         path = image.get('path', None)
         future = image.get('image_future', None)
@@ -125,7 +125,7 @@ class Contents(GingaPlugin.GlobalPlugin):
             filelist = list(fileDict.keys())
             filelist.remove('_chitem')
             fileDict['_chitem'] = chitem
-            filelist.sort(key=str.lower)
+            filelist.sort(key=lambda s: s.lower())
 
             for fname in filelist:
                 bnch = fileDict[fname]
