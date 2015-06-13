@@ -380,6 +380,9 @@ def overlay_image(dstarr, dst_x, dst_y, srcarr, dst_order='RGBA',
         src_wd -= dx
         dst_x = 0
 
+    if src_wd <= 0 or src_ht <=0:
+        return dstarr
+
     # Trim off parts of srcarr that would be "hidden"
     # to the right and below the dstarr edge.
     ex = dst_y + src_ht - dst_ht
