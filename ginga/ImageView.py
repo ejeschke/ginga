@@ -503,6 +503,10 @@ class ImageViewBase(Callback.Callbacks):
 
             if self.t_['autocuts'] != 'off':
                 self.auto_levels(redraw=False)
+            else:
+                cut_lo, cut_hi = self.get_cut_levels()
+                if cut_lo == cut_hi == 0:
+                    self.auto_levels(redraw=False)
 
         except Exception as e:
             self.logger.error("Failed to initialize image: %s" % (str(e)))
