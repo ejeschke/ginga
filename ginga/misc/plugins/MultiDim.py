@@ -9,10 +9,20 @@
 #
 import time
 import re
+from distutils import spawn
 
 from ginga import AstroImage
 from ginga.misc import Widgets, Future
 from ginga import GingaPlugin
+from ginga.qtw.QtHelp import SaveDialog
+from ginga.util.videosink import VideoSink
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+have_mencoder = False
+if spawn.find_executable("mencoder"):
+    have_mencoder = True
 
 have_pyfits = False
 try:
@@ -37,6 +47,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
         self.imgname = 'NONAME'
         self.image = None
         self.orientation = 'vertical'
+        self.curr_slice = []
 
         # For animation feature
         self.play_axis = 2
@@ -136,6 +147,18 @@ class MultiDim(GingaPlugin.LocalPlugin):
         self.w.update(b)
         vbox.add_widget(w, stretch=0)
 
+        fr = Widgets.Frame("Movie")
+        captions = [("Start:", 'label', "Start", 'entry',
+                     "End:", 'label', "End", 'entry', 'Save Movie', 'button')]
+        w, b = Widgets.build_info(captions, orientation=orientation)
+        self.w.update(b)
+        b.start.set_tooltip("Starting slice")
+        b.end.set_tooltip("Ending slice")
+        b.save_movie.add_callback('activated', lambda w: self.save_movie_cb())
+        b.save_movie.set_enabled(False)
+        fr.set_widget(w)
+        vbox.add_widget(fr, stretch=0)
+
         spacer = Widgets.Label('')
         vbox.add_widget(spacer, stretch=1)
 
@@ -148,6 +171,10 @@ class MultiDim(GingaPlugin.LocalPlugin):
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn)
         btns.add_widget(Widgets.Label(''), stretch=1)
+
+        btn = Widgets.Button("Save slice")
+        btn.add_callback('activated', lambda w: self.save_slice_cb())
+        btns.add_widget(btn)
         top.add_widget(btns, stretch=0)
 
         container.add_widget(top, stretch=0)
@@ -224,6 +251,8 @@ class MultiDim(GingaPlugin.LocalPlugin):
         self.w.play.set_enabled(is_dc)
         self.w.stop.set_enabled(is_dc)
         self.w.interval.set_enabled(is_dc)
+
+        self.w.save_movie.set_enabled(is_dc)
 
     def close(self):
         chname = self.fv.get_channelName(self.fitsimage)
@@ -487,6 +516,45 @@ class MultiDim(GingaPlugin.LocalPlugin):
 
         self.w.hdu.set_enabled(len(self.fits_f) > 0)
 
+    def save_slice_cb(self):
+        target = SaveDialog(title='Save slice', extfilter='PNG image (*.png)').get_path()
+        hival = self.fitsimage.get_cut_levels()[1]
+        plt.imsave(target, self.curr_slice, vmax=hival, cmap=plt.get_cmap('gray'), origin='lower')
+        self.fv.showStatus("Successfully saved slice to %s" % target+'.png')
+
+    def save_movie_cb(self):
+        try:
+            assert have_mencoder is True, \
+                Exception("Please install mencoder to save as movie")
+
+            start = int(self.w.start.get_text())
+            end = int(self.w.end.get_text())
+
+            if start < 0 or end > self.play_max:
+                self.fv.showStatus("Wrong slice index")
+            elif start > end:
+                self.fv.showStatus("Wrong slice order")
+            else:
+                if end == self.play_max+1:
+                    end = self.play_max
+
+                hdu = self.fits_f[self.curhdu]
+                data = hdu.data
+
+                target = SaveDialog('Save Movie', 'AVI movie (*.avi)').get_path()
+
+                data_rescaled = 255.0 / (data.max() - data.min()) * (data - data.min())
+                data_rescaled = data_rescaled.astype(np.uint8)
+                H, W = data.shape[1:]
+
+                video = VideoSink((H, W), target)
+                for i in xrange(start, end):
+                    video.run(data_rescaled[i])
+                video.close()
+
+                self.fv.showStatus("Successfully saved video to %s" % target+'.avi')
+        except Exception as e:
+            self.fv.showStatus("Error saving movie: %s" % (str(e)))
 
     def __str__(self):
         return 'multidim'
