@@ -1,6 +1,6 @@
 #
 # Ruler.py -- Ruler plugin for Ginga FITS viewer
-# 
+#
 # Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c)  Eric R. Jeschke.  All rights reserved.
@@ -52,7 +52,7 @@ class Ruler(GingaPlugin.LocalPlugin):
         vbox2.add_widget(Widgets.Label(''), stretch=1)
         fr.set_widget(vbox2)
         vbox.add_widget(fr, stretch=0)
-        
+
         fr = Widgets.Frame("Ruler")
 
         captions = (('Units:', 'label', 'Units', 'combobox'),)
@@ -71,9 +71,9 @@ class Ruler(GingaPlugin.LocalPlugin):
 
         spacer = Widgets.Label('')
         vbox.add_widget(spacer, stretch=1)
-        
+
         top.add_widget(sw, stretch=1)
-        
+
         btns = Widgets.HBox()
         btns.set_spacing(3)
 
@@ -101,10 +101,10 @@ class Ruler(GingaPlugin.LocalPlugin):
         chname = self.fv.get_channelName(self.fitsimage)
         self.fv.stop_local_plugin(chname, str(self))
         return True
-        
+
     def instructions(self):
         self.tw.set_text("""Draw (or redraw) a line with the right mouse button.  Display the Zoom tab to precisely see detail.""")
-            
+
     def start(self):
         self.instructions()
         # start ruler drawing operation
@@ -120,11 +120,11 @@ class Ruler(GingaPlugin.LocalPlugin):
 
     def pause(self):
         self.canvas.ui_setActive(False)
-        
+
     def resume(self):
         self.canvas.ui_setActive(True)
         self.fv.showStatus("Draw a ruler with the right mouse button")
-        
+
     def stop(self):
         ## # remove the ruler from the canvas
         ## try:
@@ -138,16 +138,12 @@ class Ruler(GingaPlugin.LocalPlugin):
             pass
         #self.canvas.ui_setActive(False)
         self.fv.showStatus("")
-        
+
     def redo(self):
         obj = self.canvas.getObjectByTag(self.ruletag)
         if obj.kind != 'ruler':
             return True
-        text_x, text_y, text_h = self.canvas.get_ruler_distances(obj.x1, obj.y1,
-                                                                 obj.x2, obj.y2)
-        obj.text_x = text_x
-        obj.text_y = text_y
-        obj.text_h = text_h
+        # redraw updates ruler measurements
         self.canvas.redraw(whence=3)
 
     def clear(self, canvas, button, data_x, data_y):
@@ -171,8 +167,8 @@ class Ruler(GingaPlugin.LocalPlugin):
         obj.color = self.rulecolor
         obj.cap = 'ball'
         self.canvas.redraw(whence=3)
-        
+
     def __str__(self):
         return 'ruler'
-    
+
 #END

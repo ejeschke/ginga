@@ -208,6 +208,9 @@ class BaseWCS(object):
             #self.header.update('CUNIT2', 'deg')
             self.header['CUNIT2'] = 'deg'
 
+    def has_valid_wcs(self):
+        return self.wcs != None
+
 
 class AstropyWCS2(BaseWCS):
     """
@@ -1028,6 +1031,7 @@ class BareBonesWCS(BaseWCS):
         self.header = {}
         self.coordsys = 'raw'
         self.kind = 'barebones'
+        self.wcs = True
 
     def load_header(self, header, fobj=None):
         self.header = {}

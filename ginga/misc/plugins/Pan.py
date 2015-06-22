@@ -195,29 +195,30 @@ class Pan(GingaPlugin.GlobalPlugin):
             pass
 
         # create compass
-        try:
-            width, height = image.get_size()
-            x, y = width / 2.0, height / 2.0
-            # radius we want the arms to be (approx 1/4 the largest dimension)
-            radius = float(max(width, height)) / 4.0
-
-            # HACK: force a wcs error here if one is going to happen
-            image.add_offset_xy(x, y, 1.0, 1.0)
-
-            paninfo.pancompass = paninfo.panimage.add(CanvasTypes.Compass(
-                x, y, radius, color='skyblue',
-                fontsize=14), redraw=True)
-        except Exception as e:
-            self.logger.warn("Can't calculate compass: %s" % (
-                str(e)))
+        if image.has_valid_wcs():
             try:
-                # log traceback, if possible
-                (type_, value_, tb) = sys.exc_info()
-                tb_str = "".join(traceback.format_tb(tb))
-                self.logger.error("Traceback:\n%s" % (tb_str))
-            except Exception:
-                tb_str = "Traceback information unavailable."
-                self.logger.error(tb_str)
+                width, height = image.get_size()
+                x, y = width / 2.0, height / 2.0
+                # radius we want the arms to be (approx 1/4 the largest dimension)
+                radius = float(max(width, height)) / 4.0
+
+                # HACK: force a wcs error here if one is going to happen
+                image.add_offset_xy(x, y, 1.0, 1.0)
+
+                paninfo.pancompass = paninfo.panimage.add(CanvasTypes.Compass(
+                    x, y, radius, color='skyblue',
+                    fontsize=14), redraw=True)
+            except Exception as e:
+                self.logger.warn("Can't calculate compass: %s" % (
+                    str(e)))
+                try:
+                    # log traceback, if possible
+                    (type_, value_, tb) = sys.exc_info()
+                    tb_str = "".join(traceback.format_tb(tb))
+                    self.logger.error("Traceback:\n%s" % (tb_str))
+                except Exception:
+                    tb_str = "Traceback information unavailable."
+                    self.logger.error(tb_str)
 
         self.panset(chinfo.fitsimage, chinfo, paninfo)
 

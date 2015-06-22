@@ -182,6 +182,9 @@ class BaseImage(Callback.Callbacks):
         cs = cs.upper()
         return [ self.order.index(c) for c in cs ]
 
+    def has_valid_wcs(self):
+        return hasattr(self, 'wcs') and self.wcs.has_valid_wcs()
+
     def _set_minmax(self):
         data = self._get_fast_data()
         try:
