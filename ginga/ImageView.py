@@ -121,10 +121,10 @@ class ImageViewBase(Callback.Callbacks):
             self.t_.getSetting(name).add_callback('set', self.cut_levels_cb)
 
         # for auto cut levels
-        self.autocuts_options = ('on', 'override', 'off')
+        self.autocuts_options = ('on', 'override', 'once', 'off')
         self.t_.addDefaults(autocuts='override', autocut_method='zscale',
                             autocut_params={})
-        for name in ('autocuts', 'autocut_method', 'autocut_params'):
+        for name in ('autocut_method', 'autocut_params'):
             self.t_.getSetting(name).add_callback('set', self.auto_levels_cb)
 
         # for zooming
@@ -139,7 +139,7 @@ class ImageViewBase(Callback.Callbacks):
         self.t_.addDefaults(scale_max=10000.0, scale_min=0.00001)
 
         # autozoom options
-        self.autozoom_options = ('on', 'override', 'off')
+        self.autozoom_options = ('on', 'override', 'once', 'off')
         self.t_.addDefaults(autozoom='on')
 
         # image overlays
@@ -147,7 +147,7 @@ class ImageViewBase(Callback.Callbacks):
         self.t_.getSetting('image_overlays').add_callback('set', self.overlays_change_cb)
 
         # for panning
-        self.autocenter_options = ('on', 'override', 'off')
+        self.autocenter_options = ('on', 'override', 'once', 'off')
         self.t_.addDefaults(autocenter='on')
 
         # for transforms
@@ -492,15 +492,20 @@ class ImageViewBase(Callback.Callbacks):
             self.apply_profile(profile, redraw=False)
 
         try:
+            self.logger.debug("auto orient (%s)" % (self.t_['auto_orient']))
             if self.t_['auto_orient']:
                 self.auto_orient(redraw=False)
 
+            self.logger.debug("auto zoom (%s)" % (self.t_['autozoom']))
             if self.t_['autozoom'] != 'off':
-                self.zoom_fit(redraw=False, no_reset=True)
+                self.zoom_fit(no_reset=True, redraw=False)
 
+            # NOTE: False a possible value from historical use
+            self.logger.debug("auto center (%s)" % (self.t_['autocenter']))
             if not self.t_['autocenter'] in ('off', False):
-                self.center_image(redraw=False)
+                self.center_image(no_reset=True, redraw=False)
 
+            self.logger.debug("auto cuts (%s)" % (self.t_['autocuts']))
             if self.t_['autocuts'] != 'off':
                 self.auto_levels(redraw=False)
 
@@ -1160,9 +1165,9 @@ class ImageViewBase(Callback.Callbacks):
 
         self.t_.set(scale=(scale_x, scale_y))
 
-        # If user specified override for auto zoom, then turn off
+        # If user specified "override" or "once" for auto zoom, then turn off
         # auto zoom now that they have set the zoom manually
-        if (not no_reset) and (self.t_['autozoom'] == 'override'):
+        if (not no_reset) and (self.t_['autozoom'] in ('override', 'once')):
             self.t_.set(autozoom='off')
 
     def scale_cb(self, setting, value):
@@ -1294,7 +1299,7 @@ class ImageViewBase(Callback.Callbacks):
             return
 
         # zoom_fit also centers image
-        self.center_image(redraw=False)
+        self.center_image(no_reset=no_reset, redraw=False)
 
         ctr_x, ctr_y, rot_deg = self.get_rotation_info()
         min_x, min_y, max_x, max_y = 0, 0, 0, 0
@@ -1325,6 +1330,9 @@ class ImageViewBase(Callback.Callbacks):
 
         self._scale_to(scale_x, scale_y,
                       no_reset=no_reset, redraw=redraw)
+
+        if self.t_['autozoom'] == 'once':
+            self.t_.set(autozoom='off')
 
     def get_zoom(self):
         return self.t_['zoomlevel']
@@ -1370,7 +1378,9 @@ class ImageViewBase(Callback.Callbacks):
                 redraw=True):
         self.t_.set(pan=(pan_x, pan_y), pan_coord=coord)
 
-        if (not no_reset) and (self.t_['autocenter'] == 'override'):
+        # If user specified "override" or "once" for auto center, then turn off
+        # auto center now that they have set the pan manually
+        if (not no_reset) and (self.t_['autocenter'] in ('override', 'once')):
             self.t_.set(autocenter='off')
 
     def pan_cb(self, setting, value):
@@ -1416,17 +1426,20 @@ class ImageViewBase(Callback.Callbacks):
         data_x, data_y = width * pct_x, height * pct_y
         self.panset_xy(data_x, data_y, redraw=redraw)
 
-    def center_image(self, redraw=True):
+    def center_image(self, no_reset=True, redraw=True):
         try:
             width, height = self.get_data_size()
         except ImageViewNoDataError:
             return
 
         data_x, data_y = float(width) / 2.0, float(height) / 2.0
-        self.panset_xy(data_x, data_y, no_reset=True)
+        self.panset_xy(data_x, data_y, no_reset=no_reset)
         # See Footnote [1]
         ## if redraw:
         ##     self.redraw(whence=0)
+
+        if self.t_['autocenter'] == 'once':
+            self.t_.set(autocenter='off')
 
     def set_autocenter(self, option):
         option = option.lower()
@@ -1456,13 +1469,15 @@ class ImageViewBase(Callback.Callbacks):
         """
         self.t_.set(cuts=(loval, hival))
 
-        # If user specified override for auto levels, then turn off
-        # auto levels now that they have set the levels manually
-        if (not no_reset) and (self.t_['autocuts'] == 'override'):
+        # If user specified "override" or "once" for auto levels,
+        # then turn off auto levels now that they have set the levels
+        # manually
+        if (not no_reset) and (self.t_['autocuts'] in ('once', 'override')):
             self.t_.set(autocuts='off')
 
         # Save cut levels with this image embedded profile
         self.save_profile(cutlo=loval, cuthi=hival)
+
 
     def auto_levels(self, autocuts=None, redraw=True):
         """
@@ -1487,6 +1502,12 @@ class ImageViewBase(Callback.Callbacks):
 
         # this will invoke cut_levels_cb()
         self.t_.set(cuts=(loval, hival))
+
+        # If user specified "once" for auto levels, then turn off
+        # auto levels now that we have cut levels established
+        if self.t_['autocuts'] == 'once':
+            self.t_.set(autocuts='off')
+
 
     def auto_levels_cb(self, setting, value):
         # Did we change the method?

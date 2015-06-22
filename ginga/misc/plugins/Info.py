@@ -1,6 +1,6 @@
 #
 # Info.py -- FITS Info plugin for the Ginga fits viewer
-# 
+#
 # Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c) Eric R. Jeschke.  All rights reserved.
@@ -30,7 +30,7 @@ class Info(GingaPlugin.GlobalPlugin):
         fv.add_callback('delete-channel', self.delete_channel)
         fv.add_callback('field-info', self.field_info)
         fv.add_callback('active-image', self.focus_cb)
-        
+
     def build_gui(self, container):
         nb = Widgets.StackWidget()
         self.nb = nb
@@ -65,17 +65,17 @@ class Info(GingaPlugin.GlobalPlugin):
         sw2 = Widgets.ScrollArea()
         sw2.set_widget(col)
         vbox.add_widget(sw2, stretch=2)
-        
-        captions = (('Zoom:', 'label', 'Zoom', 'llabel'), 
+
+        captions = (('Zoom:', 'label', 'Zoom', 'llabel'),
                     ('Cut Low:', 'label', 'Cut Low Value', 'llabel',
                      'Cut Low', 'entry'),
                     ('Cut High:', 'label', 'Cut High Value', 'llabel',
                      'Cut High', 'entry'),
                     ('Auto Levels', 'button', 'spacer1', 'spacer',
-                     'Cut Levels', 'button'), 
+                     'Cut Levels', 'button'),
                     ('Cut New:', 'label', 'Cut New', 'llabel'),
-                    ('Zoom New:', 'label', 'Zoom New', 'llabel'), 
-                    ('Center New:', 'label', 'Center New', 'llabel'), 
+                    ('Zoom New:', 'label', 'Zoom New', 'llabel'),
+                    ('Center New:', 'label', 'Center New', 'llabel'),
                     )
 
         w, b2 = Widgets.build_info(captions)
@@ -145,22 +145,22 @@ class Info(GingaPlugin.GlobalPlugin):
         self.active = None
         self.info = None
         del self.channel[chname]
-        
+
     # CALLBACKS
-    
+
     def new_image_cb(self, fitsimage, image, info):
         # add cb to image so that if it is modified we can update info
         image.add_callback('modified', self.image_update_cb, fitsimage, info)
-        
+
         self.set_info(info, fitsimage)
         return True
-        
+
     def image_update_cb(self, image, fitsimage, info):
         cur_img = fitsimage.get_image()
         if cur_img == image:
             self.set_info(info, fitsimage)
         return True
-        
+
     def focus_cb(self, viewer, fitsimage):
         chname = self.fv.get_channelName(fitsimage)
         chinfo = self.fv.get_channelInfo(chname)
@@ -174,14 +174,13 @@ class Info(GingaPlugin.GlobalPlugin):
             self.info = self.channel[self.active]
 
         self.set_info(self.info, fitsimage)
-        return True
-        
+
     def zoomset_cb(self, setting, value, fitsimage, info):
         """This callback is called when the main window is zoomed.
         """
         #scale_x, scale_y = fitsimage.get_scale_xy()
         scale_x, scale_y = value
-        
+
         # Set text showing zoom factor (1X, 2X, etc.)
         if scale_x == scale_y:
             text = self.fv.scale2text(scale_x)
@@ -190,7 +189,7 @@ class Info(GingaPlugin.GlobalPlugin):
             texty = self.fv.scale2text(scale_y)
             text = "X: %s  Y: %s" % (textx, texty)
         info.winfo.zoom.set_text(text)
-        
+
     def cutset_cb(self, setting, value, fitsimage, info):
         loval, hival = value
         #info.winfo.cut_low.set_text('%.4g' % (loval))
@@ -218,13 +217,13 @@ class Info(GingaPlugin.GlobalPlugin):
             return s[:self.maxstr-3] + '...'
         else:
             return s
-        
+
     def set_info(self, info, fitsimage):
         image = fitsimage.get_image()
         if image is None:
             return
         header = image.get_header()
-        
+
         # Update info panel
         name = self.trunc(image.get('name', 'Noname'))
         info.winfo.name.set_text(name)
@@ -301,7 +300,7 @@ class Info(GingaPlugin.GlobalPlugin):
             return fitsimage.cut_levels(loval, hival)
         except Exception as e:
             self.fv.show_error("Error cutting levels: %s" % (str(e)))
-            
+
         return True
 
     def auto_levels(self, w, fitsimage, info):
@@ -309,5 +308,5 @@ class Info(GingaPlugin.GlobalPlugin):
 
     def __str__(self):
         return 'info'
-    
+
 #END
