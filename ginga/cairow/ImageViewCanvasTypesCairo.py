@@ -118,6 +118,7 @@ class RenderContext(object):
     def draw_text(self, cx, cy, text):
         self.cr.move_to(cx, cy)
         self.cr.show_text(text)
+        self.cr.new_path()
 
     def draw_polygon(self, cpoints):
         (cx0, cy0) = cpoints[-1]
@@ -129,12 +130,14 @@ class RenderContext(object):
         self.cr.stroke_preserve()
 
         self._draw_fill()
+        self.cr.new_path()
 
     def draw_circle(self, cx, cy, cradius):
         self.cr.arc(cx, cy, cradius, 0, 2*math.pi)
         self.cr.stroke_preserve()
 
         self._draw_fill()
+        self.cr.new_path()
 
     def draw_ellipse_bezier(self, cp):
         # draw 4 bezier curves to make the ellipse
@@ -146,19 +149,22 @@ class RenderContext(object):
         self.cr.stroke_preserve()
 
         self._draw_fill()
+        self.cr.new_path()
 
     def draw_line(self, cx1, cy1, cx2, cy2):
         self.cr.set_line_cap(cairo.LINE_CAP_ROUND)
         self.cr.move_to(cx1, cy1)
         self.cr.line_to(cx2, cy2)
         self.cr.stroke()
+        self.cr.new_path()
 
     def draw_path(self, cpoints):
         (cx0, cy0) = cpoints[0]
         self.cr.move_to(cx0, cy0)
         for cx, cy in cpoints[1:]:
             self.cr.line_to(cx, cy)
-        self.cr.stroke_preserve()
+        self.cr.stroke()
+        self.cr.new_path()
 
 
 class CanvasRenderer(object):
