@@ -1,6 +1,6 @@
 #
 # Contents.py -- Table of Contents plugin for fits viewer
-# 
+#
 # Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c) Eric R. Jeschke.  All rights reserved.
@@ -30,14 +30,14 @@ class Contents(GingaPlugin.GlobalPlugin):
         self.settings.load(onError='silent')
 
         # For table-of-contents pane
-        self.nameDict = {}
+        self.nameDict = Bunch.caselessDict()
         # TODO: this ought to be customizable by channel
         self.columns = self.settings.get('columns', columns)
-        
+
         self.cell_sort_funcs = []
         for hdr, key in self.columns:
             self.cell_sort_funcs.append(self._mksrtfnN(key))
-        
+
         self.gui_up = False
         fv.set_callback('add-image', self.add_image)
         fv.set_callback('remove-image', self.remove_image)
@@ -50,7 +50,7 @@ class Contents(GingaPlugin.GlobalPlugin):
 
         # create the TreeView
         self.treeview = gtk.TreeView()
-        
+
         # create the TreeViewColumns to display the data
         self.tvcolumn = [None] * len(self.columns)
         for n in range(0, len(self.columns)):
@@ -169,7 +169,7 @@ class Contents(GingaPlugin.GlobalPlugin):
         # name should always be available
         bnch.NAME = name
         return bnch
-    
+
     def recreate_toc(self):
         self.logger.debug("Recreating table of contents...")
         toclist = self.nameDict.keys()
@@ -191,12 +191,12 @@ class Contents(GingaPlugin.GlobalPlugin):
         self.treeview.set_fixed_height_mode(False)
         self.treeview.set_model(model)
         self.treeview.set_fixed_height_mode(True)
-            
+
 
     def add_image(self, viewer, chname, image):
         if not self.gui_up:
             return False
-        
+
         noname = 'Noname' + str(time.time())
         name = image.get('name', noname)
 
@@ -224,7 +224,7 @@ class Contents(GingaPlugin.GlobalPlugin):
     def remove_image(self, viewer, chname, name, path):
         if not self.gui_up:
             return False
-        
+
         if chname not in self.nameDict:
             return
         else:
@@ -240,7 +240,7 @@ class Contents(GingaPlugin.GlobalPlugin):
         self.logger.debug("%s removed from Contents" % (name))
 
     def clear(self):
-        self.nameDict = {}
+        self.nameDict = Bunch.caselessDict()
         self.recreate_toc()
 
     def delete_channel(self, viewer, chinfo):
@@ -251,11 +251,15 @@ class Contents(GingaPlugin.GlobalPlugin):
         if not self.gui_up:
             return False
         self.recreate_toc()
-        
+
     def stop(self):
         self.gui_up = False
 
+    def get_contents_by_channel(self, chname):
+        fileDict = self.nameDict[chname]
+        return fileDict
+
     def __str__(self):
         return 'contents'
-    
+
 #END

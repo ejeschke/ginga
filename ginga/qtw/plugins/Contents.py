@@ -29,7 +29,7 @@ class Contents(GingaPlugin.GlobalPlugin):
         self.settings.load(onError='silent')
 
         # For table-of-contents pane
-        self.nameDict = {}
+        self.nameDict = Bunch.caselessDict()
         # TODO: this ought to be customizable by channel
         self.columns = self.settings.get('columns', columns)
 
@@ -194,7 +194,7 @@ class Contents(GingaPlugin.GlobalPlugin):
 
 
     def clear(self):
-        self.nameDict = {}
+        self.nameDict = Bunch.caselessDict()
         self.recreate_toc()
 
     def delete_channel(self, viewer, chinfo):
@@ -208,6 +208,10 @@ class Contents(GingaPlugin.GlobalPlugin):
 
     def stop(self):
         self.gui_up = False
+
+    def get_contents_by_channel(self, chname):
+        fileDict = self.nameDict[chname]
+        return fileDict
 
     def __str__(self):
         return 'contents'
