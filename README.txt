@@ -12,13 +12,13 @@ zooming and panning, color and intensity mapping, a choice of several
 automatic cut levels algorithms and canvases for plotting scalable
 geometric forms.  In addition to this widget, a general purpose
 "reference" FITS viewer is provided, based on a plugin framework.
-A fairly complete set of "standard" plugins are provided for features
+A fairly complete set of standard plugins are provided for features
 that we expect from a modern FITS viewer: panning and zooming windows,
 star catalog access, cuts, star pick/fwhm, thumbnails, etc. 
 
 COPYRIGHT AND LICENSE
 ---------------------
-Copyright (c) 2011-2014  Eric R. Jeschke.  All rights reserved.
+Copyright (c) 2011-2015  Eric R. Jeschke.  All rights reserved.
 Ginga is distributed under an open-source BSD licence.  Please see the
 file LICENSE.txt in the top-level directory for details.
 

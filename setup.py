@@ -65,7 +65,7 @@ setup(
                      'ginga.web.pgw': ['templates/*.html', 'js/*.js'],
                      },
     scripts = ['scripts/ginga', 'scripts/grc', 'scripts/gris'],
-    install_requires = ['numpy', ],
+    install_requires = ['numpy>=1.7'],
     test_suite = "ginga.tests",
     classifiers=[
           'Intended Audience :: Science/Research',
