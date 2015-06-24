@@ -708,32 +708,40 @@ class GingaControl(Callback.Callbacks):
         fitsimage = self.getfocus_fitsimage()
         fitsimage.auto_levels()
 
-    def prev_img(self):
+    def prev_img(self, loop=True):
         chinfo = self.get_channelInfo()
         with self.lock:
             self.logger.debug("Previous image")
             if chinfo.cursor <= 0:
-                self.showStatus("No previous image!")
-                self.logger.error("No previous image!")
+                n = len(chinfo.datasrc) - 1
+                if (not loop) or (n < 0):
+                    self.showStatus("No previous image!")
+                    self.logger.error("No previous image!")
+                    return True
+                chinfo.cursor = n
             else:
                 chinfo.cursor -= 1
-                image = chinfo.datasrc.index2value(chinfo.cursor)
-                self._switch_image(chinfo, image)
+            image = chinfo.datasrc.index2value(chinfo.cursor)
+            self._switch_image(chinfo, image)
 
         return True
 
-    def next_img(self):
+    def next_img(self, loop=True):
         chinfo = self.get_channelInfo()
         with self.lock:
             self.logger.debug("Next image")
             n = len(chinfo.datasrc) - 1
             if chinfo.cursor >= n:
-                self.showStatus("No next image!")
-                self.logger.error("No next image!")
+                if (not loop) or (n < 0):
+                    self.showStatus("No next image!")
+                    self.logger.error("No next image!")
+                    return True
+                chinfo.cursor = 0
             else:
                 chinfo.cursor += 1
-                image = chinfo.datasrc.index2value(chinfo.cursor)
-                self._switch_image(chinfo, image)
+
+            image = chinfo.datasrc.index2value(chinfo.cursor)
+            self._switch_image(chinfo, image)
 
         return True
 
