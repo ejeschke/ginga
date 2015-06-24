@@ -105,6 +105,7 @@ local_plugins = [
     Bunch(module='Cuts', ws='dialogs', shortkey='f5'),
     Bunch(module='Histogram', ws='dialogs', shortkey='f6'),
     Bunch(module='Overlays', ws='dialogs'),
+    Bunch(module='Blink', ws='dialogs'),
     Bunch(module='PixTable', ws='dialogs', shortkey='f7'),
     Bunch(module='Preferences', ws='dialogs', shortkey='f9'),
     Bunch(module='Catalogs', ws='dialogs', shortkey='f10'),
@@ -311,6 +312,12 @@ class ReferenceViewer(object):
         except Exception as e:
             logger.warn("failed to set FITS package preference: %s" % (str(e)))
 
+        # Check whether user wants to use OpenCv
+        use_opencv = settings.get('use_opencv', False)
+        if use_opencv:
+            from ginga import trcalc
+            trcalc.use('opencv')
+            
         # Create the dynamic module manager
         mm = ModuleManager.ModuleManager(logger)
 

@@ -26,7 +26,7 @@ class Zoom(GingaPlugin.GlobalPlugin):
         self.zoom_y = 0
         self.t_abszoom = True
         self.zoomtask = fv.get_timer()
-        self.zoomtask.set_callback('expired', self.showzoom_timer)
+        self.zoomtask.set_callback('expired', self.showzoom_timer_cb)
         self.fitsimage_focus = None
         self.update_time = time.time()
 
@@ -279,7 +279,7 @@ class Zoom(GingaPlugin.GlobalPlugin):
         self.showxy(fitsimage, data_x, data_y)
         return False
 
-    def showzoom_timer(self, timer):
+    def showzoom_timer_cb(self, timer):
         data = timer.data
         self.showzoom(data.image, data.data_x, data.data_y)
         

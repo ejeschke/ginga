@@ -367,6 +367,9 @@ class BaseImage(Callback.Callbacks):
         """Uses Bresenham's line algorithm to enumerate the pixels along
         a line.
         (see http://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm)
+
+        If `getvalues`==False then it will return tuples of (x, y) coordinates
+        instead of pixel values.
         """
         dx = abs(x2 - x1)
         dy = abs(y2 - y1)

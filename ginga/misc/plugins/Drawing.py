@@ -152,7 +152,9 @@ class Drawing(GingaPlugin.LocalPlugin):
         self.fv.stop_local_plugin(chname, str(self))
 
     def instructions(self):
-        self.tw.set_text("""Draw a figure with the right mouse button.""")
+        self.tw.set_text(
+            """Draw a figure with the right mouse button.
+For polygons/paths press 'v' to create a vertex, 'z' to remove last vertex.""")
 
     def start(self):
         self.instructions()

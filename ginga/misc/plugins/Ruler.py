@@ -1,5 +1,5 @@
 #
-# Ruler.py -- Ruler plugin for Ginga FITS viewer
+# Ruler.py -- Ruler plugin for Ginga reference viewer
 #
 # Eric Jeschke (eric@naoj.org)
 #
