@@ -17,7 +17,7 @@ compile anything.  But as always, YMMV.
 You will need:
 
 * python (v. 2.7, 3,3 or higher)
-* numpy
+* numpy  (v. 1.7 or higher)
 
 Highly recommended, because some features will not be available without it:
 
@@ -67,12 +67,13 @@ will not work without the following packages:
 
 * matplotlib (Pick, Cuts, Histogram)
 * webkit (WBrowser (online help))
+* scipy (Pick)
 
 Helpful, but not necessary (may optimize or speed up certain operations):
 
-* python-opencv
-* python-magic
-* python-PIL
+* python-opencv  (speeds up rotation and some transformations)
+* python-filemagic (aids in identifying files when opening them)
+* python-PIL or pillow (useful for various RGB file manipulations)
 
 ==============================
 Notes on Supported Widget Sets
@@ -119,6 +120,12 @@ to the viewing widget itself.  Any of the backends that Matplotlib
 supports is usable.  Performance is not as good as to one of the
 "native" backends listed above, but oh, the overplot options!
 
+HTML5 web browser
+=================
+
+Ginga can render via a web server into an HTML5 canvas.  Support is limited
+to the viewing widget itself.  See the notes in example/pg/example1_pg.py 
+Tested browsers include Chromium (Chrome), Firefox, Safari
 
 ========================
 Installation from Source

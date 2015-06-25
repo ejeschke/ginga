@@ -26,15 +26,15 @@ What GUI toolkit does Ginga use?
 --------------------------------
 It depends what exactly you want to run--Ginga is both a toolkit for
 building viewers and also includes a "reference viewer".  The example
-programs currently support Qt, Gtk, Tk and Matplotlib.  The full
-reference viewer currently supports Qt and Gtk.  The difference is
-explained here :ref:`ch-programming-ginga`.
+programs currently support Qt, Gtk, Tk, Matplotlib and web browser via
+HTML5 canvas.  
+
+The full reference viewer currently supports Qt and Gtk.  The difference
+is explained here :ref:`ch-programming-ginga`.
 
 Can Ginga work with PyQt5?
 --------------------------
-Yes, although some plugins for the reference viewer require matplotlib,
-and that doesn't yet support Qt5 as a backend, so those plugins won't be
-available.
+Yes.
 
 Can Ginga work with Gtk3?
 -------------------------
@@ -188,5 +188,5 @@ histogram and keyword "density".
 
 .. note:: You need a slightly newer version of numpy.
 
-          I recommend getting at least numpy-1.6.1.
+          I recommend getting at least numpy>1.7.
 
