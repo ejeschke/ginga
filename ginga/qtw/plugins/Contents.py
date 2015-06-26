@@ -25,7 +25,7 @@ class Contents(GingaPlugin.GlobalPlugin):
 
         prefs = self.fv.get_preferences()
         self.settings = prefs.createCategory('plugin_Contents')
-        self.settings.addDefaults(columns=columns)
+        self.settings.addDefaults(columns=columns, always_expand=True)
         self.settings.load(onError='silent')
 
         # For table-of-contents pane
@@ -136,8 +136,9 @@ class Contents(GingaPlugin.GlobalPlugin):
                 item = QtGui.QTreeWidgetItem(chitem, l)
                 chitem.addChild(item)
 
-        # Always expanded
-        self.treeview.expandAll()
+        # User wants auto expand?
+        if self.settings.get('always_expand', False):
+            self.treeview.expandAll()
 
     def add_image(self, viewer, chname, image):
         if not self.gui_up:

@@ -12,7 +12,6 @@ from ginga.misc import Bunch, Future
 
 import gtk
 import time
-import string
 
 class Contents(GingaPlugin.GlobalPlugin):
 
@@ -26,7 +25,7 @@ class Contents(GingaPlugin.GlobalPlugin):
 
         prefs = self.fv.get_preferences()
         self.settings = prefs.createCategory('plugin_Contents')
-        self.settings.addDefaults(columns=columns)
+        self.settings.addDefaults(columns=columns, always_expand=True)
         self.settings.load(onError='silent')
 
         # For table-of-contents pane
@@ -182,7 +181,7 @@ class Contents(GingaPlugin.GlobalPlugin):
             filelist = fileDict.keys()
             filelist.remove('_iter')
             fileDict['_iter'] = it
-            filelist.sort(key=string.lower)
+            filelist.sort(key=lambda s: s.lower())
 
             for fname in filelist:
                 bnch = fileDict[fname]
@@ -192,6 +191,9 @@ class Contents(GingaPlugin.GlobalPlugin):
         self.treeview.set_model(model)
         self.treeview.set_fixed_height_mode(True)
 
+        # User wants auto expand?
+        if self.settings.get('always_expand', False):
+            self.treeview.expand_all()
 
     def add_image(self, viewer, chname, image):
         if not self.gui_up:
@@ -199,6 +201,7 @@ class Contents(GingaPlugin.GlobalPlugin):
 
         noname = 'Noname' + str(time.time())
         name = image.get('name', noname)
+        self.logger.debug("name=%s" % (name))
 
         nothumb = image.get('nothumb', False)
         if nothumb:
@@ -220,6 +223,13 @@ class Contents(GingaPlugin.GlobalPlugin):
         bnch = self.get_info(chname, name, image)
         fileDict[key] = bnch
         model.append(it, [ bnch ])
+
+        # User wants auto expand?
+        if self.settings.get('always_expand', False):
+            self.treeview.expand_all()
+
+        #self.treeview.scroll_to_cell(it)
+        self.logger.debug("%s added to Contents" % (name))
 
     def remove_image(self, viewer, chname, name, path):
         if not self.gui_up:
