@@ -28,7 +28,8 @@ class DrawingMixin(object):
         drawtypes = self.drawDict.keys()
         self.drawtypes = []
         for key in ['point', 'line', 'circle', 'ellipse', 'square',
-                    'rectangle', 'box', 'polygon', 'path',
+                    'rectangle', 'box', 'polygon', 'freepolygon',
+                    'path', 'freepath',
                     'triangle', 'righttriangle', 'equilateraltriangle',
                     'ruler', 'compass', 'text']:
             if key in drawtypes:
@@ -153,15 +154,25 @@ class DrawingMixin(object):
             obj = klass(self._start_x, self._start_y, x, y,
                         **self.t_drawparams)
 
-        elif self.t_drawtype == 'polygon':
+        elif self.t_drawtype in ('polygon', 'path'):
             points = list(self._points)
             points.append((x, y))
             obj = klass(points, **self.t_drawparams)
 
-        elif self.t_drawtype == 'path':
+        elif self.t_drawtype in ('freepolygon', 'freepath'):
+            self._points.append((x, y))
             points = list(self._points)
-            points.append((x, y))
             obj = klass(points, **self.t_drawparams)
+
+        ## elif self.t_drawtype == 'path':
+        ##     points = list(self._points)
+        ##     points.append((x, y))
+        ##     obj = klass(points, **self.t_drawparams)
+
+        ## elif self.t_drawtype == 'freepath':
+        ##     self._points.append((x, y))
+        ##     points = list(self._points)
+        ##     obj = klass(points, **self.t_drawparams)
 
         elif self.t_drawtype == 'text':
             obj = klass(self._start_x, self._start_y, **self.t_drawparams)
@@ -175,7 +186,7 @@ class DrawingMixin(object):
             #obj.initialize(None, viewer, viewer.logger)
             self._draw_obj = obj
             if time.time() - self._processTime > self._deltaTime:
-                self.processDrawing(viewer)
+                self.process_drawing(viewer)
 
         return True
 
@@ -193,7 +204,7 @@ class DrawingMixin(object):
         self._start_x, self._start_y = x, y
         self._draw_update(x, y, viewer)
 
-        self.processDrawing(viewer)
+        self.process_drawing(viewer)
         return True
 
     def draw_stop(self, canvas, event, data_x, data_y, viewer):
@@ -214,7 +225,7 @@ class DrawingMixin(object):
                 self.make_callback('edit-select', self._edit_obj)
             return True
         else:
-            self.processDrawing(viewer)
+            self.process_drawing(viewer)
 
     def draw_motion(self, canvas, event, data_x, data_y, viewer):
         if not self.candraw or (viewer != event.viewer):
@@ -273,7 +284,7 @@ class DrawingMixin(object):
     def get_drawparams(self):
         return self.t_drawparams.copy()
 
-    def processDrawing(self, viewer):
+    def process_drawing(self, viewer):
         self._processTime = time.time()
         #viewer.redraw(whence=3)
         #self.redraw(whence=3)
@@ -310,7 +321,7 @@ class DrawingMixin(object):
             self._edit_obj.set_edit_point(self._cp_index, (x, y))
 
         if time.time() - self._processTime > self._deltaTime:
-            self.processDrawing(viewer)
+            self.process_drawing(viewer)
         return True
 
     def _is_editable(self, obj, x, y, is_inside):
@@ -419,7 +430,7 @@ class DrawingMixin(object):
                         # otherwise just start over with this new object
                         self._prepare_to_move(obj, data_x, data_y)
 
-        self.processDrawing(viewer)
+        self.process_drawing(viewer)
         return True
 
     def edit_stop(self, canvas, event, data_x, data_y, viewer):
@@ -478,7 +489,7 @@ class DrawingMixin(object):
                 x, y = obj.crdmap.data_to(data_x, data_y)
                 points.insert(insert, (x, y))
                 obj.points = points
-                self.processDrawing(viewer)
+                self.process_drawing(viewer)
             else:
                 self.logger.debug("cursor not near a line")
 
@@ -505,7 +516,7 @@ class DrawingMixin(object):
                 self.logger.debug("deleting point")
                 points.pop(delete)
                 obj.points = points
-                self.processDrawing(viewer)
+                self.process_drawing(viewer)
             else:
                 self.logger.debug("cursor not near a point")
 
@@ -515,7 +526,7 @@ class DrawingMixin(object):
         if self._edit_obj is None:
             return False
         self._edit_obj.rotate_by(delta_deg)
-        self.processDrawing(viewer)
+        self.process_drawing(viewer)
         self.make_callback('edit-event', self._edit_obj)
         return True
 
@@ -532,7 +543,7 @@ class DrawingMixin(object):
         if self._edit_obj is None:
             return False
         self._edit_obj.scale_by(delta_x, delta_y)
-        self.processDrawing(viewer)
+        self.process_drawing(viewer)
         self.make_callback('edit-event', self._edit_obj)
         return True
 
@@ -616,7 +627,7 @@ class DrawingMixin(object):
             obj = None
 
         self.logger.debug("selected: %s" % (str(self._selected)))
-        self.processDrawing(viewer)
+        self.process_drawing(viewer)
 
         #self.make_callback('edit-select', obj, self._selected)
         return True

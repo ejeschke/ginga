@@ -745,6 +745,14 @@ class Path(PolygonMixin, CanvasObjectBase):
             self.draw_caps(cr, self.cap, cpoints)
 
 
+class FreePolygon(Polygon):
+    pass
+
+
+class FreePath(Path):
+    pass
+
+
 class OnePointTwoRadiusMixin(object):
 
     def get_center_pt(self):
@@ -973,6 +981,10 @@ class Ellipse(OnePointTwoRadiusMixin, CanvasObjectBase):
         return [self.get_center_pt()]
 
     def contains_arr(self, x_arr, y_arr):
+        # coerce args to floats
+        x_arr = x_arr.astype(numpy.float)
+        y_arr = y_arr.astype(numpy.float)
+
         # rotate point back to cartesian alignment for test
         xd, yd = self.crdmap.to_data(self.x, self.y)
         xa, ya = trcalc.rotate_pt(x_arr, y_arr, -self.rot_deg,
@@ -1133,6 +1145,10 @@ class Triangle(OnePointTwoRadiusMixin, CanvasObjectBase):
         x2, y2 = self.crdmap.to_data(x2, y2)
         x3, y3 = self.crdmap.to_data(x3, y3)
 
+        # coerce args to floats
+        x_arr = x_arr.astype(numpy.float)
+        y_arr = y_arr.astype(numpy.float)
+
         # barycentric coordinate test
         denominator = float((y2 - y3)*(x1 - x3) + (x3 - x2)*(y1 - y3))
         a = ((y2 - y3)*(xa - x3) + (x3 - x2)*(ya - y3)) / denominator
@@ -1250,14 +1266,17 @@ class Circle(OnePointOneRadiusMixin, CanvasObjectBase):
         self.kind = 'circle'
 
     def contains_arr(self, x_arr, y_arr):
-        # rotate point back to cartesian alignment for test
         xd, yd = self.crdmap.to_data(self.x, self.y)
 
         # need to recalculate radius in case of wcs coords
-        x2, y2 = self.crdmap.to_data(self.x + self.radius,
-                                     self.y + self.radius)
+        x2, y2 = self.crdmap.to_data(self.x + self.radius, self.y)
+        x3, y3 = self.crdmap.to_data(self.x, self.y + self.radius)
         xradius = max(x2, xd) - min(x2, xd)
-        yradius = max(y2, yd) - min(y2, yd)
+        yradius = max(y3, yd) - min(y3, yd)
+
+        # need to make sure to coerce these to floats or it won't work
+        x_arr = x_arr.astype(numpy.float)
+        y_arr = y_arr.astype(numpy.float)
 
         # See http://math.stackexchange.com/questions/76457/check-if-a-point-is-within-an-ellipse
         res = (((x_arr - xd) ** 2) / xradius ** 2 +
@@ -1713,6 +1732,10 @@ class RightTriangle(TwoPointMixin, CanvasObjectBase):
         x2, y2 = self.crdmap.to_data(x2, y2)
         x3, y3 = self.crdmap.to_data(x3, y3)
 
+        # coerce args to floats
+        x_arr = x_arr.astype(numpy.float)
+        y_arr = y_arr.astype(numpy.float)
+
         # barycentric coordinate test
         denominator = float((y2 - y3)*(x1 - x3) + (x3 - x2)*(y1 - y3))
         a = ((y2 - y3)*(x_arr - x3) + (x3 - x2)*(y_arr - y3)) / denominator
@@ -1727,24 +1750,24 @@ class RightTriangle(TwoPointMixin, CanvasObjectBase):
         return contains
 
     def contains(self, data_x, data_y):
-        ## x_arr, y_arr = numpy.array([data_x]), numpy.array([data_y])
-        ## res = self.contains_arr(x_arr, y_arr)
-        ## return res[0]
-        x1, y1, x2, y2 = self.x1, self.y1, self.x2, self.y2
-        x3, y3 = self.x2, self.y1
+        x_arr, y_arr = numpy.array([data_x]), numpy.array([data_y])
+        res = self.contains_arr(x_arr, y_arr)
+        return res[0]
+        ## x1, y1, x2, y2 = self.x1, self.y1, self.x2, self.y2
+        ## x3, y3 = self.x2, self.y1
 
-        x1, y1 = self.crdmap.to_data(x1, y1)
-        x2, y2 = self.crdmap.to_data(x2, y2)
-        x3, y3 = self.crdmap.to_data(x3, y3)
+        ## x1, y1 = self.crdmap.to_data(x1, y1)
+        ## x2, y2 = self.crdmap.to_data(x2, y2)
+        ## x3, y3 = self.crdmap.to_data(x3, y3)
 
-        # barycentric coordinate test
-        denominator = ((y2 - y3)*(x1 - x3) + (x3 - x2)*(y1 - y3))
-        a = ((y2 - y3)*(data_x - x3) + (x3 - x2)*(data_y - y3)) / denominator
-        b = ((y3 - y1)*(data_x - x3) + (x1 - x3)*(data_y - y3)) / denominator
-        c = 1.0 - a - b
+        ## barycentric coordinate test
+        ## denominator = ((y2 - y3)*(x1 - x3) + (x3 - x2)*(y1 - y3))
+        ## a = ((y2 - y3)*(data_x - x3) + (x3 - x2)*(data_y - y3)) / denominator
+        ## b = ((y3 - y1)*(data_x - x3) + (x1 - x3)*(data_y - y3)) / denominator
+        ## c = 1.0 - a - b
 
-        tf = (0.0 <= a <= 1.0 and 0.0 <= b <= 1.0 and 0.0 <= c <= 1.0)
-        return tf
+        ## tf = (0.0 <= a <= 1.0 and 0.0 <= b <= 1.0 and 0.0 <= c <= 1.0)
+        ## return tf
 
     def draw(self, viewer):
         cpoints = self.get_cpoints(viewer,
@@ -2596,7 +2619,8 @@ class DrawingCanvas(DrawingMixin, CanvasMixin, CompoundMixin,
         self.editable = False
 
 drawCatalog = dict(text=Text, rectangle=Rectangle, circle=Circle,
-                   line=Line, point=Point, polygon=Polygon, path=Path,
+                   line=Line, point=Point, polygon=Polygon,
+                   freepolygon=FreePolygon, path=Path, freepath=FreePath,
                    righttriangle=RightTriangle, triangle=Triangle,
                    ellipse=Ellipse, square=Square,
                    box=Box, ruler=Ruler, compass=Compass,

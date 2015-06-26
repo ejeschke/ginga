@@ -11,6 +11,7 @@ import sys, traceback
 import numpy
 
 from ginga.util.six.moves import map, zip, reduce
+from ginga.canvas import coordmap
 
 class CompoundMixin(object):
     """A CompoundMixin makes an object that is an aggregation of other objects.
@@ -21,6 +22,8 @@ class CompoundMixin(object):
     def __init__(self):
         # holds a list of objects to be drawn
         self.objects = []
+        self.crdmap = None
+        self.coord = 'data'
         self._contains_reduce = numpy.logical_or
 
     def get_llur(self):
@@ -89,11 +92,20 @@ class CompoundMixin(object):
         return res
 
     def initialize(self, tag, viewer, logger):
-        #self.tag = tag
+        # TODO: this needs to be merged with the code in CanvasObject
         self.viewer = viewer
         self.logger = logger
+        if self.crdmap is None:
+            if self.coord == 'offset':
+                self.crdmap = coordmap.OffsetMapper(viewer, self.ref_obj)
+            else:
+                try:
+                    self.crdmap = viewer.get_coordmap(self.coord)
+                except Exception as e:
+                    # last best effort--a generic data mapper
+                    self.crdmap = coordmap.DataMapper(viewer)
 
-        # TODO: subtags for objects?
+        # initialize children
         for obj in self.objects:
             obj.initialize(None, viewer, logger)
 
@@ -134,7 +146,8 @@ class CompoundMixin(object):
 
     def addObject(self, obj, belowThis=None):
         obj.initialize(None, self.viewer, self.logger)
-        obj.viewer = self.viewer
+        # isn't this taken care of above?
+        #obj.viewer = self.viewer
         if not belowThis:
             self.objects.append(obj)
         else:
