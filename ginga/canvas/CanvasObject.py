@@ -733,6 +733,15 @@ class Path(PolygonMixin, CanvasObjectBase):
             x1, y1 = x2, y2
         return False
 
+    def get_center_pt(self):
+        # default is geometric average of points
+        P = numpy.array(self.get_points())
+        x = P[:, 0]
+        y = P[:, 1]
+        Cx = numpy.sum(x) / float(len(x))
+        Cy = numpy.sum(y) / float(len(y))
+        return (Cx, Cy)
+
     def draw(self, viewer):
         cpoints = self.get_cpoints(viewer, points=self.points)
 

@@ -14,6 +14,55 @@ from ginga import GingaPlugin
 from ginga.util.six.moves import map, zip
 
 class Cuts(GingaPlugin.LocalPlugin):
+    """
+    A plugin for generating a plot of the values along a line or path.
+
+    There are three kinds of cuts available: line, path and freepath.
+    The 'line' cut is a straight line between two points.  The 'path' cut
+    is drawn like an open polygon, with straight segments in-between.
+    The 'freepath' cut is like a path cut, but drawn using a free-form
+    stroke following the cursor movement.
+
+    Multiple cuts can be plotted.
+
+    Drawing Cuts
+    ------------
+    The Cut Type menu chooses what kind of cut you are going to draw.
+
+    Choose "None" from the Cut dropdown menu if you want to draw a
+    new cut. Otherwise, if a particular named cut is selected then that
+    will be replaced by any newly drawn cut.
+
+    While drawing a path cut, press 'v' to add a vertex, or 'z' to remove
+    the last vertex added.
+
+    Keyboard Shortcuts
+    ------------------
+    While hovering the cursor, press 'h' for a full horizontal cut and
+    'j' for a full vertical cut.
+
+    Deleting Cuts
+    -------------
+    To delete a cut select its name from the Cut dropdown and click the
+    Delete button.  To delete all cuts press "Delete All".
+
+    Editing Cuts
+    ------------
+    Using the edit canvas function it is possible to add new vertexes to
+    an existing path, and to move vertexes around.   Press 'b' to enter
+    edit mode and then press 'l' to lock it (you can also click the lock
+    icon).  Now you can select the line or path by clicking on it, which
+    should enable the control points at the ends or vertexes--you can drag
+    these around.  To add a new vertex to a path, hover the cursor carefully
+    on the line where you want the new vertex and press 'v'.  To get rid of
+    a vertex, hover the cursor over it and press 'z'.  You will notice one
+    extra control point for the path, which seems to be out to the
+    side--this is a movement control point for moving the entire path
+    around the image when in edit mode.
+
+    To get out of edit mode, press Escape or 'l' again (or click the lock
+    icon again).
+    """
 
     def __init__(self, fv, fitsimage):
         # superclass defines some variables for us, like logger
@@ -74,12 +123,15 @@ class Cuts(GingaPlugin.LocalPlugin):
         w = Widgets.wrap(self.plot.get_widget())
         vbox.add_widget(w, stretch=1)
 
-        hbox = Widgets.HBox()
-        hbox.set_spacing(4)
-        hbox.set_border_width(4)
+        captions = (('Cut:', 'label', 'Cut', 'combobox',
+                     'Cut Type:', 'label', 'Cut Type', 'combobox'),
+                    ('Delete Cut', 'button', 'Delete All', 'button'),
+                    )
+        w, b = Widgets.build_info(captions, orientation=orientation)
+        self.w.update(b)
 
         # control for selecting a cut
-        combobox = Widgets.ComboBox()
+        combobox = b.cut
         for tag in self.tags:
             combobox.append_text(tag)
         if self.cutstag is None:
@@ -88,32 +140,28 @@ class Cuts(GingaPlugin.LocalPlugin):
             combobox.show_text(self.cutstag)
         combobox.add_callback('activated', self.cut_select_cb)
         self.w.cuts = combobox
-        combobox.set_tooltip("Select a cut")
-        hbox.add_widget(combobox)
+        combobox.set_tooltip("Select a cut to redraw or delete")
 
         # control for selecting cut type
-        combobox = Widgets.ComboBox()
+        combobox = b.cut_type
         for cuttype in self.cuttypes:
             combobox.append_text(cuttype)
         self.w.cuts_type = combobox
         index = self.cuttypes.index(self.cuttype)
         combobox.set_index(index)
         combobox.add_callback('activated', self.set_cutsdrawtype_cb)
-        combobox.set_tooltip("Choose the cut type")
-        hbox.add_widget(combobox)
+        combobox.set_tooltip("Choose the cut type to draw")
 
-        btn = Widgets.Button("Delete")
+        btn = b.delete_cut
         btn.add_callback('activated', self.delete_cut_cb)
         btn.set_tooltip("Delete selected cut")
-        hbox.add_widget(btn)
 
-        btn = Widgets.Button("Delete All")
+        btn = b.delete_all
         btn.add_callback('activated', self.delete_all_cb)
         btn.set_tooltip("Clear all cuts")
-        hbox.add_widget(btn)
 
         vbox2 = Widgets.VBox()
-        vbox2.add_widget(hbox, stretch=0)
+        vbox2.add_widget(w, stretch=0)
         vbox2.add_widget(Widgets.Label(''), stretch=1)
         vbox.add_widget(vbox2, stretch=0)
 
@@ -136,9 +184,9 @@ class Cuts(GingaPlugin.LocalPlugin):
     def instructions(self):
         self.tw.set_text("""Draw (or redraw) a line with the right mouse button.  Click or drag left button to reposition line.
 
-Press 'h' for a full horizontal cut and 'j' for a full vertical cut.
+When drawing a path cut, press 'v' to add a vertex.
 
-When drawing a path cut, press 'v' to add a vertex.""")
+Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full vertical cut.""")
 
     def select_cut(self, tag):
         # deselect the current selected cut, if there is one

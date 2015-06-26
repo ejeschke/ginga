@@ -164,16 +164,6 @@ class DrawingMixin(object):
             points = list(self._points)
             obj = klass(points, **self.t_drawparams)
 
-        ## elif self.t_drawtype == 'path':
-        ##     points = list(self._points)
-        ##     points.append((x, y))
-        ##     obj = klass(points, **self.t_drawparams)
-
-        ## elif self.t_drawtype == 'freepath':
-        ##     self._points.append((x, y))
-        ##     points = list(self._points)
-        ##     obj = klass(points, **self.t_drawparams)
-
         elif self.t_drawtype == 'text':
             obj = klass(self._start_x, self._start_y, **self.t_drawparams)
 
