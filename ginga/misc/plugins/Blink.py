@@ -43,15 +43,15 @@ class Blink(GingaPlugin.LocalPlugin):
         fr = Widgets.Frame("Blink")
 
         captions = (("Interval:", 'label', 'Interval', 'entry',
-                     's1', 'spacer'),
-                    ('Start blink', 'button', 'Stop blink', 'button',
-                     's2', 'spacer'),
+                     "Start Blink", 'button', "Stop Blink", 'button'),
                     )
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w = b
 
         b.interval.set_text(str(self.interval))
         b.interval.add_callback('activated', lambda w: self._set_interval_cb())
+        b.interval.set_tooltip("Interval in seconds between changing images")
+
         b.start_blink.add_callback('activated',
                                    lambda w: self._start_blink_cb())
         b.stop_blink.add_callback('activated',
@@ -82,7 +82,9 @@ class Blink(GingaPlugin.LocalPlugin):
         return True
 
     def instructions(self):
-        self.tw.set_text("""Blink the images in this channel.""")
+        self.tw.set_text("""Blink the images in this channel.
+
+Only images loaded in memory will be cycled.""")
 
     def start(self):
         self.instructions()
@@ -107,23 +109,23 @@ class Blink(GingaPlugin.LocalPlugin):
 
     def start_blinking(self):
         self.blink_timer.set(self.interval)
-        
+
     def stop_blinking(self):
         self.blink_timer.clear()
-        
+
     def _start_blink_cb(self):
         self._set_interval_cb()
         self.start_blinking()
-        
+
     def _stop_blink_cb(self):
         self.stop_blinking()
-        
+
     def _set_interval_cb(self):
         interval = float(self.w.interval.get_text())
         self.interval = max(min(interval, 30.0), 0.25)
         self.stop_blinking()
         self.start_blinking()
-        
+
     def __str__(self):
         return 'blink'
 

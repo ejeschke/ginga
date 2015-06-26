@@ -26,9 +26,8 @@ class Cuts(GingaPlugin.LocalPlugin):
         self.count = 0
         self.colors = ['green', 'red', 'blue', 'cyan', 'pink', 'magenta',
                        'orange', 'violet', 'turquoise', 'yellow']
-        #self.cuttypes = ['free', 'horizontal', 'vertical', 'cross']
-        self.cuttypes = ['free', 'cross']
-        self.cuttype = 'free'
+        self.cuttypes = ['line', 'path', 'freepath']
+        self.cuttype = 'line'
 
         self.dc = fv.getDrawClasses()
         canvas = self.dc.DrawingCanvas()
@@ -92,16 +91,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         combobox.set_tooltip("Select a cut")
         hbox.add_widget(combobox)
 
-        btn = Widgets.Button("Delete")
-        btn.add_callback('activated', self.delete_cut_cb)
-        btn.set_tooltip("Delete selected cut")
-        hbox.add_widget(btn)
-
-        btn = Widgets.Button("Delete All")
-        btn.add_callback('activated', self.delete_all_cb)
-        btn.set_tooltip("Clear all cuts")
-        hbox.add_widget(btn)
-
+        # control for selecting cut type
         combobox = Widgets.ComboBox()
         for cuttype in self.cuttypes:
             combobox.append_text(cuttype)
@@ -111,6 +101,16 @@ class Cuts(GingaPlugin.LocalPlugin):
         combobox.add_callback('activated', self.set_cutsdrawtype_cb)
         combobox.set_tooltip("Choose the cut type")
         hbox.add_widget(combobox)
+
+        btn = Widgets.Button("Delete")
+        btn.add_callback('activated', self.delete_cut_cb)
+        btn.set_tooltip("Delete selected cut")
+        hbox.add_widget(btn)
+
+        btn = Widgets.Button("Delete All")
+        btn.add_callback('activated', self.delete_all_cb)
+        btn.set_tooltip("Clear all cuts")
+        hbox.add_widget(btn)
 
         vbox2 = Widgets.VBox()
         vbox2.add_widget(hbox, stretch=0)
@@ -134,14 +134,17 @@ class Cuts(GingaPlugin.LocalPlugin):
         self.gui_up = True
 
     def instructions(self):
-        self.tw.set_text("""Draw (or redraw) a line with the right mouse button.  Click or drag left button to reposition line.""")
+        self.tw.set_text("""Draw (or redraw) a line with the right mouse button.  Click or drag left button to reposition line.
+
+Press 'h' for a full horizontal cut and 'j' for a full vertical cut.
+
+When drawing a path cut, press 'v' to add a vertex.""")
 
     def select_cut(self, tag):
         # deselect the current selected cut, if there is one
         if self.cutstag is not None:
             try:
                 obj = self.canvas.getObjectByTag(self.cutstag)
-                #obj.setAttrAll(color=self.mark_color)
             except:
                 # old object may have been deleted
                 pass
@@ -154,7 +157,6 @@ class Cuts(GingaPlugin.LocalPlugin):
 
         self.w.cuts.show_text(tag)
         obj = self.canvas.getObjectByTag(tag)
-        #obj.setAttrAll(color=self.select_color)
 
         #self.redo()
 
@@ -164,16 +166,14 @@ class Cuts(GingaPlugin.LocalPlugin):
             tag = None
         self.select_cut(tag)
 
-    def pan2mark_cb(self, w):
-        self.pan2mark = w.get_state()
-
     def set_cutsdrawtype_cb(self, w, index):
         self.cuttype = self.cuttypes[index]
-        if self.cuttype in ('free', ):
+        if self.cuttype == 'line':
             self.canvas.set_drawtype('line', color='cyan', linestyle='dash')
-        else:
-            self.canvas.set_drawtype('square', color='cyan',
-                                     linestyle='dash')
+        elif self.cuttype == 'path':
+            self.canvas.set_drawtype('path', color='cyan', linestyle='dash')
+        elif self.cuttype == 'freepath':
+            self.canvas.set_drawtype('freepath', color='cyan', linestyle='dash')
 
     def delete_cut_cb(self, w):
         tag = self.cutstag
@@ -181,7 +181,7 @@ class Cuts(GingaPlugin.LocalPlugin):
             return
         index = self.tags.index(tag)
         self.canvas.deleteObjectByTag(tag)
-        self.w.cuts.removeItem(index)
+        self.w.cuts.delete_alpha(tag)
         self.tags.remove(tag)
         idx = len(self.tags) - 1
         tag = self.tags[idx]
@@ -196,15 +196,12 @@ class Cuts(GingaPlugin.LocalPlugin):
         self.w.cuts.clear()
         self.tags = ['None']
         self.w.cuts.append_text('None')
-        self.w.cuts.setCurrentIndex(0)
+        self.w.cuts.set_index(0)
         self.cutstag = None
         self.redo()
 
     def deleteCutsTag(self, tag, redraw=False):
-        try:
-            self.canvas.deleteObjectByTag(tag, redraw=redraw)
-        except:
-            pass
+        self.canvas.deleteObjectByTag(tag, redraw=redraw)
         try:
             self.tags.remove(tag)
         except:
@@ -217,7 +214,7 @@ class Cuts(GingaPlugin.LocalPlugin):
                 self.cutstag = self.tags[0]
                 #self.highlightTag(self.cutstag)
 
-    def addCutsTag(self, tag, select=False):
+    def add_cuts_tag(self, tag, select=False):
         if not tag in self.tags:
             self.tags.append(tag)
             self.w.cuts.append_text(tag)
@@ -265,21 +262,29 @@ class Cuts(GingaPlugin.LocalPlugin):
 
     def stop(self):
         # remove the canvas from the image
-        try:
-            self.fitsimage.deleteObjectByTag(self.layertag)
-        except:
-            pass
+        self.fitsimage.deleteObjectByTag(self.layertag)
         self.fv.showStatus("")
 
-    def replaceCutsTag(self, oldtag, newtag, select=False):
-        self.addCutsTag(newtag, select=select)
-        self.deleteCutsTag(oldtag)
+    ## def replace_cuts_tag(self, oldtag, newtag, select=False):
+    ##     self.add_cuts_tag(newtag, select=select)
+    ##     self.deleteCutsTag(oldtag)
 
-    def _plotpoints(self, line, color):
+    def _plotpoints(self, obj, color):
         image = self.fitsimage.get_image()
         # Get points on the line
-        points = image.get_pixels_on_line(int(line.x1), int(line.y1),
-                                          int(line.x2), int(line.y2))
+        if obj.kind == 'line':
+            points = image.get_pixels_on_line(int(obj.x1), int(obj.y1),
+                                              int(obj.x2), int(obj.y2))
+        elif obj.kind in ('path', 'freepath'):
+            points = []
+            x1, y1 = obj.points[0]
+            for x2, y2 in obj.points[1:]:
+                pts = image.get_pixels_on_line(int(x1), int(y1),
+                                               int(x2), int(y2))
+                # don't repeat last point when adding next segment
+                points.extend(pts[:-1])
+                x1, y1 = x2, y2
+
         points = numpy.array(points)
         self.plot.cuts(points, xtitle="Line Index", ytitle="Pixel Value",
                        color=color)
@@ -313,9 +318,6 @@ class Cuts(GingaPlugin.LocalPlugin):
         self.fv.showStatus("Click or drag left mouse button to reposition cuts")
         return True
 
-    def _movecut(self, obj, data_x, data_y):
-        obj.move_to(data_x, data_y)
-
     def _create_cut(self, x, y, count, x1, y1, x2, y2, color='cyan'):
         text = "cuts%d" % (count)
         line_obj = self.dc.Line(x1, y1, x2, y2, color=color,
@@ -323,6 +325,17 @@ class Cuts(GingaPlugin.LocalPlugin):
         text_obj = self.dc.Text(4, 4, text, color=color, coord='offset',
                                 ref_obj=line_obj)
         obj = self.dc.CompoundObject(line_obj, text_obj)
+        obj.set_data(cuts=True)
+        return obj
+
+    def _create_cut_obj(self, count, cuts_obj, color='cyan'):
+        text = "cuts%d" % (count)
+        cuts_obj.showcap = True
+        cuts_obj.linestyle = 'solid'
+        #cuts_obj.color = color
+        text_obj = self.dc.Text(4, 4, text, color=color, coord='offset',
+                                ref_obj=cuts_obj)
+        obj = self.dc.CompoundObject(cuts_obj, text_obj)
         obj.set_data(cuts=True)
         return obj
 
@@ -342,7 +355,7 @@ class Cuts(GingaPlugin.LocalPlugin):
     def _getlines(self, obj):
         if obj.kind == 'compound':
             return self._append_lists(list(map(self._getlines, obj.objects)))
-        elif obj.kind == 'line':
+        elif obj.kind in ('line', 'path', 'freepath'):
             return [obj]
         else:
             return []
@@ -351,23 +364,18 @@ class Cuts(GingaPlugin.LocalPlugin):
         return self.motion_cb(canvas, event, data_x, data_y)
 
     def motion_cb(self, canvas, event, data_x, data_y):
-
         obj = self.canvas.getObjectByTag(self.cutstag)
-        lines = self._getlines(obj)
-        for line in lines:
-            line.linestyle = 'dash'
-            self._movecut(line, data_x, data_y)
-
+        # Assume first element of this compound object is the reference obj
+        obj = obj.objects[0]
+        obj.move_to(data_x, data_y)
         canvas.redraw(whence=3)
         return True
 
     def buttonup_cb(self, canvas, event, data_x, data_y):
-
         obj = self.canvas.getObjectByTag(self.cutstag)
-        lines = self._getlines(obj)
-        for line in lines:
-            line.linestyle = 'solid'
-            self._movecut(line, data_x, data_y)
+        # Assume first element of this compound object is the reference obj
+        obj = obj.objects[0]
+        obj.move_to(data_x, data_y)
 
         self.redo()
         return True
@@ -379,16 +387,30 @@ class Cuts(GingaPlugin.LocalPlugin):
         elif keyname == 'h':
             self.cut_at('horizontal')
             return True
-        elif keyname == 'v':
+        elif keyname == 'j':
             self.cut_at('vertical')
             return True
-        elif keyname == 'u':
-            self.cut_at('cross')
-            return True
+
+    def _get_cut_index(self):
+        if self.cutstag is not None:
+            # Replacing a cut
+            self.logger.debug("replacing cut position")
+            try:
+                cutobj = self.canvas.getObjectByTag(self.cutstag)
+                self.canvas.deleteObjectByTag(self.cutstag, redraw=False)
+                count = cutobj.get_data('count')
+            except KeyError:
+                self.count += 1
+                count = self.count
+        else:
+            self.logger.debug("adding cut position")
+            self.count += 1
+            count = self.count
+        return count
 
     def cut_at(self, cuttype):
         """Perform a cut at the last mouse position in the image.
-        $cuttype$ determines the type of cut made.
+        `cuttype` determines the type of cut made.
         """
         data_x, data_y = self.fitsimage.get_last_data_xy()
         image = self.fitsimage.get_image()
@@ -399,23 +421,8 @@ class Cuts(GingaPlugin.LocalPlugin):
             coords.append((0, data_y, wd-1, data_y))
         elif cuttype == 'vertical':
             coords.append((data_x, 0, data_x, ht-1))
-        elif cuttype == 'cross':
-            # calculate largest cross cut that centers plots on the point
-            n = min(data_x, wd-data_x, data_y, ht-data_y)
-            coords.append((data_x-n, data_y, data_x+n, data_y))
-            coords.append((data_x, data_y-n, data_x, data_y+n))
 
-        if self.cutstag:
-            # Replacing a cut
-            self.logger.debug("replacing cut position")
-            cutobj = self.canvas.getObjectByTag(self.cutstag)
-            self.canvas.deleteObjectByTag(self.cutstag, redraw=False)
-            count = cutobj.get_data('count')
-        else:
-            self.logger.debug("adding cut position")
-            self.count += 1
-            count = self.count
-
+        count = self._get_cut_index()
         tag = "cuts%d" % (count)
         cuts = []
         for (x1, y1, x2, y2) in coords:
@@ -436,73 +443,30 @@ class Cuts(GingaPlugin.LocalPlugin):
             cut = self._combine_cuts(*cuts)
 
         cut.set_data(count=count)
+
+        self.canvas.deleteObjectByTag(tag, redraw=False)
         self.canvas.add(cut, tag=tag)
-        self.addCutsTag(tag, select=True)
+        self.add_cuts_tag(tag, select=True)
 
         self.logger.debug("redoing cut plots")
         return self.redo()
 
     def draw_cb(self, canvas, tag):
         obj = canvas.getObjectByTag(tag)
-        if obj.kind == 'line':
-            x1, y1 = obj.crdmap.to_data(obj.x1, obj.y1)
-            x2, y2 = obj.crdmap.to_data(obj.x2, obj.y2)
-        elif obj.kind == 'rectangle':
-            x1, y1, x2, y2 = obj.get_llur()
-        else:
-            return True
         canvas.deleteObjectByTag(tag, redraw=False)
 
-        # calculate center of line
-        wd = x2 - x1
-        dw = wd // 2
-        ht = y2 - y1
-        dh = ht // 2
-        x, y = x1 + dw + 4, y1 + dh + 4
+        if not obj.kind in ('line', 'path', 'freepath'):
+            return True
 
-        if self.cutstag:
-            # Replacing a cut
-            self.logger.debug("replacing cut position")
-            cutobj = canvas.getObjectByTag(self.cutstag)
-            canvas.deleteObjectByTag(self.cutstag, redraw=False)
-            count = cutobj.get_data('count')
-        else:
-            self.logger.debug("adding cut position")
-            self.count += 1
-            count = self.count
-
+        count = self._get_cut_index()
         tag = "cuts%d" % (count)
-        if obj.kind == 'line':
-            cut = self._create_cut(x, y, count,
-                                   x1, y1, x2, y2, color='cyan')
 
-        elif obj.kind == 'rectangle':
-            if self.cuttype == 'horizontal':
-                # add horizontal cut at midpoints of rectangle
-                cut = self._create_cut(x, y, count,
-                                       x1, y1+dh, x2, y1+dh,
-                                       color='cyan')
-
-            elif self.cuttype == 'vertical':
-                # add vertical cut at midpoints of rectangle
-                cut = self._create_cut(x, y, count,
-                                       x1+dw, y1, x1+dw, y2,
-                                       color='cyan')
-
-            elif self.cuttype == 'cross':
-                x, y = x1 + dw//2, y1 + dh - 4
-                cut_h = self._create_cut(x, y, count,
-                                         x1, y1+dh, x2, y1+dh,
-                                         color='cyan')
-                x, y = x1 + dw + 4, y1 + dh//2
-                cut_v = self._create_cut(x, y, count,
-                                       x1+dw, y1, x1+dw, y2,
-                                       color='cyan')
-                cut = self._combine_cuts(cut_h, cut_v)
-
+        cut = self._create_cut_obj(count, obj, color='cyan')
         cut.set_data(count=count)
-        canvas.add(cut, tag=tag)
-        self.addCutsTag(tag, select=True)
+
+        canvas.deleteObjectByTag(tag, redraw=False)
+        self.canvas.add(cut, tag=tag)
+        self.add_cuts_tag(tag, select=True)
 
         self.logger.debug("redoing cut plots")
         return self.redo()

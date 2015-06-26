@@ -1,6 +1,6 @@
 #
 # CatalogsBase.py -- Catalogs plugin for Ginga fits viewer
-# 
+#
 # Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c) Eric R. Jeschke.  All rights reserved.
@@ -38,7 +38,7 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
         self.starlist = []
         # catalog listing
         self.table = None
-        
+
         self.layertag = 'catalog-canvas'
         self.areatag = None
         self.curstar = None
@@ -89,7 +89,7 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
         except KeyError:
             # Add canvas layer
             self.fitsimage.add(self.canvas, tag=self.layertag)
-            
+
         # Raise the params tab
         self._raise_tab(self.w.params)
 
@@ -98,14 +98,14 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
 
     def pause(self):
         self.canvas.ui_setActive(False)
-        
+
     def resume(self):
         # turn off any mode user may be in
         self.modes_off()
 
         self.canvas.ui_setActive(True)
         #self.fv.showStatus("Draw a rectangle with the right mouse button")
-        
+
     def stop(self):
         # stop catalog operation
         self.clearAll()
@@ -120,12 +120,12 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
         except:
             pass
         self.fv.showStatus("")
-        
+
     def redo(self):
         obj = self.canvas.getObjectByTag(self.areatag)
         if not obj.kind in ('rectangle', 'circle'):
             return True
-        
+
         try:
             image = self.fitsimage.get_image()
 
@@ -181,7 +181,7 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
                 ra_dst, dec_dst = image.pixtoradec(ctr_x + dw, ctr_y)
                 wd_deg = wcs.deltaStarsRaDecDeg(ra_org, dec_org,
                                                 ra_dst, dec_dst)
-                
+
             # width and height are specified in arcmin
             sgn, deg, mn, sec = wcs.degToDms(wd_deg)
             wd = deg*60.0 + float(mn) + sec/60.0
@@ -190,7 +190,7 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
             sgn, deg, mn, sec = wcs.degToDms(radius_deg)
             radius = deg*60.0 + float(mn) + sec/60.0
             #wd, ht, radius = wd_deg, ht_deg, radius_deg
-            
+
         except Exception as e:
             errmsg = 'Error calculating bounding box: %s' % str(e)
             self.logger.error(errmsg)
@@ -204,12 +204,12 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
               }
         self._update_widgets(d)
         return True
-    
+
     def btndown(self, canvas, event, data_x, data_y):
         return True
 
     def btnup(self, canvas, event, data_x, data_y):
-        
+
         objs = self.canvas.getItemsAt(data_x, data_y)
         for obj in objs:
             if (obj.tag is not None) and obj.tag.startswith('star'):
@@ -217,7 +217,7 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
                 self.table.show_selection(info.star)
                 return True
         return True
-    
+
     def highlight_object(self, obj, tag, color, redraw=True):
         x = obj.objects[0].x
         y = obj.objects[0].y
@@ -226,13 +226,13 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
 
         hilite = self.dc.Circle(x, y, radius, linewidth=4, color=color)
         obj.add(hilite, tag=tag, redraw=redraw)
-        
+
     def highlight_objects(self, objs, tag, color, redraw=True):
         for obj in objs:
             self.highlight_object(obj, tag, color, redraw=False)
         if redraw:
             self.canvas.redraw()
-        
+
     def unhighlight_object(self, obj, tag):
         # delete the highlight ring of the former cursor object
         try:
@@ -240,7 +240,7 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
             obj.deleteObjectByTag(tag)
         except:
             pass
-        
+
     def highlight_cursor(self, obj):
         if self.curstar:
             bnch = self.curstar
@@ -254,7 +254,7 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
         self.highlight_object(obj, 'cursor', self.color_cursor)
         self.curstar = Bunch.Bunch(obj=obj)
         self.canvas.redraw()
-        
+
 
     def setfromimage(self):
         image = self.fitsimage.get_image()
@@ -267,8 +267,8 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
                                         color=self.mycolor))
 
         self.draw_cb(self.canvas, tag)
-        
-        
+
+
     def draw_cb(self, canvas, tag):
         obj = canvas.getObjectByTag(tag)
         if not obj.kind in ('rectangle', 'circle'):
@@ -340,7 +340,7 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
             # pop up the error in the GUI under "Errors" tab
             self.fv.gui_do(self.fv.show_error, errmsg)
             return
-            
+
         self.fv.load_file(fitspath, chname=chname)
 
         # Update the GUI
@@ -362,10 +362,10 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
             # If none, then use the visible image area
             try:
                 obj = self.canvas.getObjectByTag(self.areatag)
-            
+
             except KeyError:
                 pass
-            
+
         self.reset()
         self.fitsimage.onscreen_message("Querying catalog db...",
                                         delay=1.0)
@@ -376,7 +376,7 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
         try:
             starlist, info = srvbank.getCatalog(key, None, **params)
             return starlist, info
-            
+
         except Exception as e:
             errmsg ="Failed to load catalog: %s" % (str(e))
             raise Exception(errmsg)
@@ -391,13 +391,13 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
 
             # Update the GUI
             self.fv.gui_do(self.update_catalog, starlist, info)
-        
+
         except Exception as e:
             errmsg = "Query exception: %s" % (str(e))
             self.logger.error(errmsg)
             # pop up the error in the GUI under "Errors" tab
             self.fv.gui_do(self.fv.show_error, errmsg)
-            
+
     def update_catalog(self, starlist, info):
         self.starlist = starlist
         self.table.show_table(self, info, starlist)
@@ -424,15 +424,15 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
     def clear(self):
         objects = self.canvas.getObjectsByTagpfx('star')
         self.canvas.deleteObjects(objects)
-       
+
     def clearAll(self):
         self.canvas.deleteAllObjects()
-       
+
     def reset(self):
         self.clear()
         #self.clearAll()
         self.table.clear()
-       
+
     def plot_star(self, obj, image=None):
 
         if not image:
@@ -470,7 +470,7 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
         image = self.fitsimage.get_image()
         x, y = image.radectopix(star['ra_deg'], star['dec_deg'])
         self.fitsimage.panset_xy(x, y)
-                    
+
     def get_plot_range(self):
         length = len(self.starlist)
         if length <= self.plot_limit:
@@ -509,15 +509,15 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
             if ('canvobj' not in obj) or (obj.canvobj is None):
                 self.plot_star(obj, image=image)
             self.highlight_object(obj.canvobj, 'selected', 'skyblue')
-            
+
         canvas.redraw(whence=3)
 
-        
+
 class CatalogListingBase(object):
-    
+
     def __init__(self, logger, container):
         super(CatalogListingBase, self).__init__()
-        
+
         self.logger = logger
         self.tag = None
         self.mycolor = 'skyblue'
@@ -578,11 +578,11 @@ class CatalogListingBase(object):
         # sanity check: clip to 0-1 range
         point = max(0.0, point)
         point = min(1.0, point)
-        
+
         # map to a 8-bit color range
         point = int(point * 255.0)
 
-        # Apply colormap.  
+        # Apply colormap.
         rgbmap = self.cbar.get_rgbmap()
         (r, g, b) = rgbmap.get_rgbval(point)
         r = float(r) / 255.0
@@ -642,26 +642,23 @@ class CatalogListingBase(object):
         self.mark_selection(star)
 
     def clear(self):
-        try:
+        if self.catalog is not None:
             self.catalog.clear()
-        except Exception as e:
-            # may not have generated a catalog yet
-            self.logger.warn("Error clearing star table: %s" % (str(e)))
 
     def get_selected(self):
         return self.selected
-    
+
     def replot_stars(self):
         self.catalog.replot_stars()
         canvobjs = list(map(lambda star: star.canvobj, self.selected))
         self.catalog.highlight_objects(canvobjs, 'selected', 'skyblue')
-            
+
     def set_cmap_byname(self, name):
         # Get colormap
         cm = cmap.get_cmap(name)
         self.cbar.set_cmap(cm)
         self.replot_stars()
-        
+
     def set_imap_byname(self, name):
         # Get intensity map
         im = imap.get_imap(name)
@@ -684,9 +681,9 @@ class CatalogListingBase(object):
         if self.catalog is not None:
             i, length = self.catalog.get_plot_range()
             self.set_minmax(i, length)
-        
+
     def set_field(self, name):
         self._set_field(name)
         self.replot_stars()
-        
+
 # END
