@@ -321,7 +321,7 @@ When drawing a path cut, press 'v' to add a vertex.""")
     def _create_cut(self, x, y, count, x1, y1, x2, y2, color='cyan'):
         text = "cuts%d" % (count)
         line_obj = self.dc.Line(x1, y1, x2, y2, color=color,
-                                showcap=True)
+                                showcap=False)
         text_obj = self.dc.Text(4, 4, text, color=color, coord='offset',
                                 ref_obj=line_obj)
         obj = self.dc.CompoundObject(line_obj, text_obj)
@@ -330,7 +330,7 @@ When drawing a path cut, press 'v' to add a vertex.""")
 
     def _create_cut_obj(self, count, cuts_obj, color='cyan'):
         text = "cuts%d" % (count)
-        cuts_obj.showcap = True
+        cuts_obj.showcap = False
         cuts_obj.linestyle = 'solid'
         #cuts_obj.color = color
         text_obj = self.dc.Text(4, 4, text, color=color, coord='offset',
