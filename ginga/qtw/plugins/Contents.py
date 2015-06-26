@@ -25,7 +25,7 @@ class Contents(GingaPlugin.GlobalPlugin):
 
         prefs = self.fv.get_preferences()
         self.settings = prefs.createCategory('plugin_Contents')
-        self.settings.addDefaults(columns=columns)
+        self.settings.addDefaults(columns=columns, always_expand=True)
         self.settings.load(onError='silent')
 
         # For table-of-contents pane
@@ -66,7 +66,7 @@ class Contents(GingaPlugin.GlobalPlugin):
 
 
     def switch_image(self, chname, imname):
-        fileDict = self.nameDict[chname]
+        fileDict = self.get_contents_by_channel(chname)
         key = imname.lower()
         bnch = fileDict[key]
         path = bnch.path
@@ -121,7 +121,7 @@ class Contents(GingaPlugin.GlobalPlugin):
             chitem.setFirstColumnSpanned(True)
             self.treeview.addTopLevelItem(chitem)
 
-            fileDict = self.nameDict[key]
+            fileDict = self.get_contents_by_channel(key)
             filelist = list(fileDict.keys())
             filelist.remove('_chitem')
             fileDict['_chitem'] = chitem
@@ -136,6 +136,9 @@ class Contents(GingaPlugin.GlobalPlugin):
                 item = QtGui.QTreeWidgetItem(chitem, l)
                 chitem.addChild(item)
 
+        # User wants auto expand?
+        if self.settings.get('always_expand', False):
+            self.treeview.expandAll()
 
     def add_image(self, viewer, chname, image):
         if not self.gui_up:
@@ -158,7 +161,7 @@ class Contents(GingaPlugin.GlobalPlugin):
             self.nameDict[chname] = fileDict
 
         else:
-            fileDict = self.nameDict[chname]
+            fileDict = self.get_contents_by_channel(chname)
             chitem = fileDict['_chitem']
 
         key = name.lower()
@@ -181,7 +184,7 @@ class Contents(GingaPlugin.GlobalPlugin):
         if chname not in self.nameDict:
             return
         else:
-            fileDict = self.nameDict[chname]
+            fileDict = self.get_contents_by_channel(chname)
             chitem = fileDict['_chitem']
 
         key = name.lower()
