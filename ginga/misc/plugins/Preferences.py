@@ -71,6 +71,10 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.t_.setdefault('wcs_coords', 'icrs')
         self.t_.setdefault('wcs_display', 'sexagesimal')
 
+        # buffer len (number of images in memory)
+        self.t_.addDefaults(numImages=4)
+        self.t_.getSetting('numImages').add_callback('set', self.set_buflen_ext_cb)
+
     def build_gui(self, container):
         top = Widgets.VBox()
         top.set_border_width(4)
@@ -387,6 +391,7 @@ class Preferences(GingaPlugin.LocalPlugin):
                     ('Center New:', 'label', 'Center New', 'combobox'),
                     ('Follow New', 'checkbutton', 'Raise New', 'checkbutton'),
                     ('Create thumbnail', 'checkbutton'),
+                    ('Num Images:', 'label', 'Num Images', 'entry'),
                     )
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
@@ -431,6 +436,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         b.follow_new.set_tooltip("View new images as they arrive")
         b.raise_new.set_tooltip("Raise and focus tab for new images")
         b.create_thumbnail.set_tooltip("Create thumbnail for new images")
+        b.num_images.set_tooltip("Maximum number of in memory images in channel (0==unlimited)")
 
         self.w.follow_new.set_state(True)
         self.w.follow_new.add_callback('activated', self.set_chprefs_cb)
@@ -438,6 +444,8 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.w.raise_new.add_callback('activated', self.set_chprefs_cb)
         self.w.create_thumbnail.set_state(True)
         self.w.create_thumbnail.add_callback('activated', self.set_chprefs_cb)
+        self.w.num_images.set_text('0')
+        self.w.num_images.add_callback('activated', self.set_buffer_cb)
 
         fr.set_widget(w)
         vbox.add_widget(fr, stretch=0)
@@ -728,6 +736,18 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.w.flip_y.set_state(flip_y)
         self.w.swap_xy.set_state(swap_xy)
 
+    def set_buflen_ext_cb(self, setting, value):
+        num_images = self.t_['numImages']
+
+        # update the datasrc length
+        chname = self.fv.get_channelName(self.fitsimage)
+        chinfo = self.fv.get_channelInfo(chname)
+        chinfo.datasrc.set_bufsize(num_images)
+
+        if not self.gui_up:
+            return
+        self.w.num_images.set_text(str(num_images))
+
     def rotate_cb(self, w, deg):
         #deg = self.w.rotate.get_value()
         self.t_.set(rot_deg=deg)
@@ -812,6 +832,10 @@ class Preferences(GingaPlugin.LocalPlugin):
         genthumb = (self.w.create_thumbnail.get_state() != 0)
         self.t_.set(switchnew=switchnew, raisenew=raisenew,
                     genthumb=genthumb)
+
+    def set_buffer_cb(self, *args):
+        num_images = int(self.w.num_images.get_text())
+        self.t_.set(numImages=num_images)
 
     def set_wcs_params_cb(self, *args):
         idx = self.w.wcs_coords.get_index()
@@ -931,6 +955,8 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.w.raise_new.set_state(prefs['raisenew'])
         prefs.setdefault('genthumb', True)
         self.w.create_thumbnail.set_state(prefs['genthumb'])
+        num_images = prefs.get('numImages', 0)
+        self.w.num_images.set_text(str(num_images))
 
     def save_preferences(self):
         self.t_.save()

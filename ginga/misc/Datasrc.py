@@ -12,7 +12,7 @@ class TimeoutError(Exception):
 
 class Datasrc(object):
 
-    def __init__(self, length=None):
+    def __init__(self, length=0):
         self.length = length
         self.cursor = -1
         self.datums = {}
@@ -27,7 +27,7 @@ class Datasrc(object):
 
     def __setitem__(self, key, value):
         self.push(key, value)
-        
+
     def __contains__(self, key):
         with self.cond:
             return key in self.datums
@@ -35,7 +35,7 @@ class Datasrc(object):
     def has_key(self, key):
         with self.cond:
             return key in self.datums
-        
+
     def __delitem__(self, key):
         self.remove(key)
 
@@ -52,14 +52,14 @@ class Datasrc(object):
 
             self.datums[key] = value
             self._eject_old()
-            
+
             self.newdata.set()
             self.cond.notify()
-        
+
 
     def pop_one(self):
         return self.remove(self.history[0])
-    
+
     def pop(self, *args):
         if len(args) == 0:
             return self.remove(self.history[0])
@@ -79,7 +79,7 @@ class Datasrc(object):
             return val
 
     def _eject_old(self):
-        if self.length is None:
+        if (self.length is None) or (self.length <= 0):
             # no limit
             return
         while len(self.history) > self.length:
@@ -104,16 +104,16 @@ class Datasrc(object):
 
     def youngest(self):
         return self.datums[self.history[-1]]
-    
+
     def oldest(self):
         return self.datums[self.history[0]]
-    
+
     def pop_oldest(self):
         return self.pop(self.history[0])
-    
+
     def pop_youngest(self):
         return self.pop(self.history[-1])
-    
+
     def keys(self, sort='alpha'):
         with self.cond:
             if sort == 'alpha':
@@ -137,12 +137,12 @@ class Datasrc(object):
     def get_bufsize(self):
         with self.cond:
             return self.length
-       
-        
+
+
     def set_bufsize(self, length):
         with self.cond:
             self.length = length
             self._eject_old()
 
-        
+
 #END
