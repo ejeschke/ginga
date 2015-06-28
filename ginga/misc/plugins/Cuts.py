@@ -9,7 +9,7 @@
 #
 import numpy
 
-from ginga.gw import Widgets, Plots
+from ginga.gw import Widgets, Plots, Bunch
 from ginga import GingaPlugin, colors
 from ginga.util.six.moves import map, zip
 from ginga.canvas.coordmap import OffsetMapper
@@ -100,6 +100,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         self.cuttypes = ['line', 'path', 'freepath', 'beziercurve']
         self.cuttype = 'line'
         self.save_enabled = False
+        self.axes_chkboxes = []
 
         # For collecting data orthogonal to the cut
         self.widthtypes = ['none', 'x', 'y', 'perpendicular']
@@ -152,13 +153,28 @@ class Cuts(GingaPlugin.LocalPlugin):
         fr.set_widget(tw)
         vbox.add_widget(fr, stretch=0)
 
-        self.plot = Plots.Cuts(self.logger, width=2, height=3, dpi=100)
-        ax = self.plot.add_axis()
-        ax.grid(True)
+        nb = Widgets.TabWidget(tabpos='bottom')
+        vbox.add_widget(nb, stretch=1)
 
-        # for now we need to wrap this native widget
-        w = Widgets.wrap(self.plot.get_widget())
-        vbox.add_widget(w, stretch=1)
+        self.plot = Plots.Cuts(self.logger, width=2, height=3, dpi=100)
+        self.w.canvas = self.plot.canvas
+        self.w.fig = self.plot.fig
+        self.w.ax = self.w.fig.add_subplot(111, axisbg='white')
+        #self.w.ax.set_aspect('equal', adjustable='box')
+        canvas = self.w.canvas
+
+        nb.add_widget(Widgets.wrap(canvas), title="Cuts")
+
+        self.plot2 = Plots.Plot(self.logger, width=2, height=3, dpi=100)
+        self.w.canvas2 = self.plot2.canvas
+        self.w.fig2 = self.plot2.fig
+        self.w.ax2 = self.w.fig2.add_subplot(111, axisbg='black')
+        self.w.ax2.set_ylabel('Time')
+        self.w.ax2.set_xlabel('Slit length')
+        self.w.ax2.grid(True)
+        canvas = self.w.canvas2
+
+        nb.add_widget(Widgets.wrap(canvas), title="Slit")
 
         captions = (('Cut:', 'label', 'Cut', 'combobox',
                      'New Cut Type:', 'label', 'Cut Type', 'combobox'),
@@ -254,6 +270,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         vbox2.add_widget(Widgets.Label(''), stretch=1)
 
         vbox.add_widget(vbox2, stretch=0)
+        self.build_axes(vbox)
         top.add_widget(sw, stretch=1)
 
         btns = Widgets.HBox()
@@ -276,6 +293,29 @@ class Cuts(GingaPlugin.LocalPlugin):
 
         self.select_cut(self.cutstag)
         self.gui_up = True
+
+    def build_axes(self, vbox):
+        fr = Widgets.Frame("Axes")
+        hbox = Widgets.HBox()
+        hbox.set_border_width(4)
+        hbox.set_spacing(1)
+
+        image = self.fitsimage.get_image()
+        if image is not None:
+            # Add Checkbox widgets
+            for i in xrange(0, len(image.get_mddata().shape)+1):
+                name = 'NAXIS%d' % i
+                chkbox = Widgets.CheckBox(name)
+                self.axes_chkboxes.append(Bunch.Bunch(widget=chkbox, pos=i, state=False))
+                hbox.add_widget(chkbox)
+
+            # Add callbacks
+            for chkbox in self.axes_chkboxes:
+                cbox = chkbox.get('widget')
+                cbox.add_callback('activated', lambda w, tf: self.axis_toggle_cb(w, tf, chkbox))
+
+        fr.set_widget(hbox)
+        vbox.add_widget(fr, stretch=0)
 
     def instructions(self):
         self.tw.set_text("""When drawing a path or Bezier cut, press 'v' to add a vertex.
@@ -364,7 +404,7 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
     def start(self):
         # start line cuts operation
         self.instructions()
-        self.plot.set_titles(rtitle="Cuts")
+        #self.plot.set_titles(rtitle="Cuts")
 
         # insert canvas, if not already
         p_canvas = self.fitsimage.get_canvas()
@@ -465,12 +505,22 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
 
         elif obj.kind == 'beziercurve':
             points = obj.get_pixels_on_curve(image)
+        coords = numpy.array(coords)
+
+        slit = image.get_mddata()[:, coords[:, 1], coords[:, 0]]
 
         points = numpy.array(points)
 
         rgb = colors.lookup_color(color)
-        self.plot.cuts(points, xtitle="Line Index", ytitle="Pixel Value",
-                       color=rgb)
+        self.w.ax.plot.cuts(points, xtitle="Line Index", ytitle="Pixel Value",
+                            color=rgb)
+        self.w.fig.canvas.draw()
+
+        import matplotlib.pyplot as plt
+        self.w.ax2.imshow(slit, cmap=plt.get_cmap('gray'), interpolation='nearest',
+                          origin='lower', aspect='auto')
+
+        #self.plot2.fig.canvas.draw()
 
         if self.settings.get('show_cuts_legend', False):
             self.add_legend()
@@ -495,7 +545,8 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         return True
 
     def replot_all(self):
-        self.plot.clear()
+        self.w.ax.cla()
+        self.w.ax2.cla()
         idx = 0
         for cutstag in self.tags:
             if cutstag == self._new_cut:
@@ -520,9 +571,10 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
                 self.save_btn.set_enabled(True)
 
         # force mpl redraw
-        self.plot.fig.canvas.draw()
+        self.w.fig.canvas.draw()
+        self.w.fig2.canvas.draw()
 
-        self.canvas.redraw(whence=3)
+        #self.canvas.redraw(whence=3)
         self.fv.showStatus("Click or drag left mouse button to reposition cuts")
         return True
 
@@ -810,6 +862,9 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         target = Widgets.SaveDialog(title='Save data', selectedfilter='*.npz').get_path()
         with open(target, 'w') as target_file:
             numpy.savez_compressed(target_file, x=xarr, y=yarr)
+
+    def axis_toggle_cb(self, w, tf, chkbox):
+        chkbox.setvals(state=tf)
 
     def __str__(self):
         return 'cuts'
