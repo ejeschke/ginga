@@ -239,6 +239,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
             self.fits_f.close()
         except:
             pass
+        self.image = None
         self.fv.showStatus("")
 
     def get_name(self, idx):
@@ -427,11 +428,13 @@ class MultiDim(GingaPlugin.LocalPlugin):
 
         self.path = path
 
-        name = self.fv.name_image_from_path(path)
+        name = image.get('name', self.fv.name_image_from_path(path))
+        idx = None
         # remove index designation from root of name, if any
         match = re.match(r'^(.+)\[(\d+)\]$', name)
         if match:
             name = match.group(1)
+            idx = int(match.group(2))
         self.imgname = name
 
         self.fits_f = pyfits.open(path, 'readonly')
@@ -443,6 +446,9 @@ class MultiDim(GingaPlugin.LocalPlugin):
         self.num_hdu = upper
         self.logger.debug("there are %d hdus" % (upper))
         self.w.numhdu.set_text("%d" % (upper))
+        if idx is not None:
+            # set the HDU in the drop down if known
+            self.w.hdu.set_index(idx)
 
         self.w.hdu.set_enabled(len(self.fits_f) > 0)
 
