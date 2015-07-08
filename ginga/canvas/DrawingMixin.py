@@ -29,7 +29,7 @@ class DrawingMixin(object):
         self.drawtypes = []
         for key in ['point', 'line', 'circle', 'ellipse', 'square',
                     'rectangle', 'box', 'polygon', 'freepolygon',
-                    'path', 'freepath',
+                    'path', 'freepath', 'beziercurve',
                     'triangle', 'righttriangle', 'equilateraltriangle',
                     'ruler', 'compass', 'text']:
             if key in drawtypes:
@@ -154,7 +154,7 @@ class DrawingMixin(object):
             obj = klass(self._start_x, self._start_y, x, y,
                         **self.t_drawparams)
 
-        elif self.t_drawtype in ('polygon', 'path'):
+        elif self.t_drawtype in ('polygon', 'path', 'beziercurve'):
             points = list(self._points)
             points.append((x, y))
             obj = klass(points, **self.t_drawparams)
@@ -231,6 +231,9 @@ class DrawingMixin(object):
         if self.t_drawtype in ('polygon', 'path'):
             x, y = self._draw_crdmap.data_to(data_x, data_y)
             self._points.append((x, y))
+        elif self.t_drawtype == 'beziercurve' and len(self._points) < 3:
+            x, y = self._draw_crdmap.data_to(data_x, data_y)
+            self._points.append((x, y))
         return True
 
     def draw_poly_delete(self, canvas, event, data_x, data_y, viewer):
@@ -238,7 +241,7 @@ class DrawingMixin(object):
             return False
         if self._draw_obj is None:
             return self.edit_poly_del(canvas, event, data_x, data_y, viewer)
-        if self.t_drawtype in ('polygon', 'path'):
+        if self.t_drawtype in ('polygon', 'path', 'beziercurve'):
             if len(self._points) > 0:
                 self._points.pop()
         return True

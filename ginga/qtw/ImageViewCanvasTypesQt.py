@@ -129,6 +129,12 @@ class RenderContext(object):
         pt = QtCore.QPointF(cx, cy)
         self.cr.drawEllipse(pt, float(cradius), float(cradius))
 
+    def draw_bezier_curve(self, cp):
+        path = QtGui.QPainterPath()
+        path.moveTo(cp[0][0], cp[0][1])
+        path.cubicTo(cp[1][0], cp[1][1], cp[2][0], cp[2][1], cp[3][0], cp[3][1])
+        self.cr.drawPath(path)
+
     def draw_ellipse_bezier(self, cp):
         # draw 4 bezier curves to make the ellipse
         path = QtGui.QPainterPath()

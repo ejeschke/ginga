@@ -111,6 +111,18 @@ class RenderContext(object):
         p = patches.Circle(xy, **self.cr.kwdargs)
         self.cr.axes.add_patch(p)
 
+    def draw_bezier_curve(self, verts):
+        self.cr.init(transform=None)
+        self.cr.update_patch(self.pen, None)
+
+        codes = [ MplPath.MOVETO,
+                  MplPath.CURVE4, MplPath.CURVE4, MplPath.CURVE4,
+                  ]
+        path = MplPath(verts, codes)
+
+        p = patches.PathPatch(path, **self.cr.kwdargs)
+        self.cr.axes.add_patch(p)
+
     def draw_ellipse_bezier(self, verts):
         self.cr.init(transform=None)
         self.cr.update_patch(self.pen, self.brush)

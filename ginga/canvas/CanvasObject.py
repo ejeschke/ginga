@@ -762,6 +762,44 @@ class FreePath(Path):
     pass
 
 
+class BezierCurve(Path):
+    """Draws a Bezier Curve on a ImageViewCanvas.
+    Parameters are:
+    List of (x, y) points in the curve.
+    Optional parameters for linesize, color, etc.
+
+    TODO: need to implement contains(), which means figuring out whether a
+    point lies on a bezier curve.
+        See http://polymathprogrammer.com/2012/04/03/does-point-lie-on-bezier-curve/
+    """
+
+    def __init__(self, points, color='red',
+                 linewidth=1, linestyle='solid', showcap=False,
+                 alpha=1.0, **kwdargs):
+        self.kind = 'beziercurve'
+
+        CanvasObjectBase.__init__(self, points=points, color=color,
+                                  linewidth=linewidth, showcap=showcap,
+                                  linestyle=linestyle, alpha=alpha,
+                                  **kwdargs)
+        PolygonMixin.__init__(self)
+
+    def draw(self, viewer):
+        cpoints = self.get_cpoints(viewer, points=self.points)
+
+        cr = viewer.renderer.setup_cr(self)
+        if len(cpoints) < 4:
+            # until we have 4 points, we cannot draw a quadradic bezier curve
+            cr.draw_path(cpoints)
+        else:
+            cr.draw_bezier_curve(cpoints)
+
+        if self.editing:
+            self.draw_edit(cr, viewer)
+        elif self.showcap:
+            self.draw_caps(cr, self.cap, cpoints)
+
+
 class OnePointTwoRadiusMixin(object):
 
     def get_center_pt(self):
@@ -2631,7 +2669,7 @@ drawCatalog = dict(text=Text, rectangle=Rectangle, circle=Circle,
                    line=Line, point=Point, polygon=Polygon,
                    freepolygon=FreePolygon, path=Path, freepath=FreePath,
                    righttriangle=RightTriangle, triangle=Triangle,
-                   ellipse=Ellipse, square=Square,
+                   ellipse=Ellipse, square=Square, beziercurve=BezierCurve,
                    box=Box, ruler=Ruler, compass=Compass,
                    compoundobject=CompoundObject, canvas=Canvas,
                    drawingcanvas=DrawingCanvas,

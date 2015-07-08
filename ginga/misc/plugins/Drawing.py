@@ -36,8 +36,8 @@ class Drawing(GingaPlugin.LocalPlugin):
         canvas.setSurface(self.fitsimage)
         self.canvas = canvas
 
-        bm = fitsimage.get_bindmap()
-        bm.add_callback('mode-set', self.mode_change_cb)
+        ## bm = fitsimage.get_bindmap()
+        ## bm.add_callback('mode-set', self.mode_change_cb)
 
         self.drawtypes = list(canvas.get_drawtypes())
         self.drawcolors = draw_colors
@@ -295,14 +295,14 @@ For polygons/paths press 'v' to create a vertex, 'z' to remove last vertex.""")
                 self.w.scale_by.set_enabled(False)
                 self.w.rotate_by.set_enabled(False)
 
-    def mode_change_cb(self, bindmap, modename, modetype):
-        if modename == 'draw':
-            self.set_drawparams_cb()
-        elif modename == 'edit':
-            obj = self.canvas.get_edit_object()
-            self.edit_select_cb(self.fitsimage, obj)
-        else:
-            self.edit_select_cb(self.fitsimage, None)
+    ## def mode_change_cb(self, bindmap, modename, modetype):
+    ##     if modename == 'draw':
+    ##         self.set_drawparams_cb()
+    ##     elif modename == 'edit':
+    ##         obj = self.canvas.get_edit_object()
+    ##         self.edit_select_cb(self.fitsimage, obj)
+    ##     else:
+    ##         self.edit_select_cb(self.fitsimage, None)
 
     def clear_canvas(self):
         self.canvas.deleteAllObjects()
