@@ -13,6 +13,11 @@ from ginga.misc import Widgets, Plot
 from ginga import GingaPlugin
 from ginga.util.six.moves import map, zip
 
+# default cut colors
+cut_colors = ['green', 'red', 'blue', 'cyan', 'pink', 'magenta',
+              'orange', 'violet', 'turquoise', 'yellow']
+
+
 class Cuts(GingaPlugin.LocalPlugin):
     """
     A plugin for generating a plot of the values along a line or path.
@@ -74,16 +79,16 @@ class Cuts(GingaPlugin.LocalPlugin):
         self.cutstag = self._new_cut
         self.tags = [self._new_cut]
         self.count = 0
-        self.colors = ['green', 'red', 'blue', 'cyan', 'pink', 'magenta',
-                       'orange', 'violet', 'turquoise', 'yellow']
         self.cuttypes = ['line', 'path', 'freepath']
         self.cuttype = 'line'
 
         # get Cuts preferences
         prefs = self.fv.get_preferences()
         self.settings = prefs.createCategory('plugin_Cuts')
-        self.settings.addDefaults(select_new_cut=True)
+        self.settings.addDefaults(select_new_cut=True, label_cuts=True,
+                                  colors=cut_colors)
         self.settings.load(onError='silent')
+        self.colors = self.settings.get('colors', cut_colors)
 
         self.dc = fv.getDrawClasses()
         canvas = self.dc.DrawingCanvas()
@@ -301,8 +306,6 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         for idx in range(len(lines)):
             line, color = lines[idx], colors[idx]
             line.color = color
-            #text = obj.objects[1]
-            #text.color = color
             self._plotpoints(line, color)
 
         return True
@@ -321,6 +324,11 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
             count = obj.get_data('count', self.count)
             idx = (count + n) % len(self.colors)
             colors = self.colors[idx:idx+n]
+            # text should take same color as first line in line set
+            text = obj.objects[1]
+            if text.kind == 'text':
+                text.color = colors[0]
+            #text.color = color
             self._redo(lines, colors)
 
         self.canvas.redraw(whence=3)
@@ -329,6 +337,8 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
 
     def _create_cut(self, x, y, count, x1, y1, x2, y2, color='cyan'):
         text = "cuts%d" % (count)
+        if not self.settings.get('label_cuts', True):
+            text = ''
         line_obj = self.dc.Line(x1, y1, x2, y2, color=color,
                                 showcap=False)
         text_obj = self.dc.Text(4, 4, text, color=color, coord='offset',
@@ -339,9 +349,12 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
 
     def _create_cut_obj(self, count, cuts_obj, color='cyan'):
         text = "cuts%d" % (count)
+        if not self.settings.get('label_cuts', True):
+            text = ''
         cuts_obj.showcap = False
         cuts_obj.linestyle = 'solid'
         #cuts_obj.color = color
+        color = cuts_obj.color
         text_obj = self.dc.Text(4, 4, text, color=color, coord='offset',
                                 ref_obj=cuts_obj)
         obj = self.dc.CompoundObject(cuts_obj, text_obj)
