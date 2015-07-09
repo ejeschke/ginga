@@ -505,8 +505,6 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         self.canvas.add(cut, tag=tag)
         select_flag = self.settings.get('select_new_cut', True)
         self.add_cuts_tag(tag, select=select_flag)
-        self.w.delete_cut.set_enabled(True)
-        self.w.delete_all.set_enabled(True)
 
         self.logger.debug("redoing cut plots")
         return self.redo()
@@ -528,6 +526,8 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         self.canvas.add(cut, tag=tag)
         select_flag = self.settings.get('select_new_cut', True)
         self.add_cuts_tag(tag, select=select_flag)
+        self.w.delete_cut.set_enabled(True)
+        self.w.delete_all.set_enabled(True)
 
         self.logger.debug("redoing cut plots")
         return self.redo()
