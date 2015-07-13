@@ -615,12 +615,14 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
             return
 
         target = SaveDialog(title='Save plot', extfilter='*.png').get_path()
-        fig.savefig(target, dpi=100)
+        if target:
+            fig.savefig(target, dpi=100)
 
         target = SaveDialog(title='Save data', extfilter='*.npz').get_path()
-        target_file = open(target, 'w')
-        np.savez_compressed(target_file, x=xarr, y=yarr)
-        target_file.close()
+        if target:
+            target_file = open(target, 'w')
+            np.savez_compressed(target_file, x=xarr, y=yarr)
+            target_file.close()
 
     def __str__(self):
         return 'cuts'

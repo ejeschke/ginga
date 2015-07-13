@@ -174,6 +174,8 @@ class MultiDim(GingaPlugin.LocalPlugin):
 
         btn = Widgets.Button("Save slice")
         btn.add_callback('activated', lambda w: self.save_slice_cb())
+        btn.set_enabled(False)
+        self.w.save_slice = btn
         btns.add_widget(btn)
         top.add_widget(btns, stretch=0)
 
@@ -252,6 +254,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
         self.w.stop.set_enabled(is_dc)
         self.w.interval.set_enabled(is_dc)
 
+        self.w.save_slice.set_enabled(is_dc)
         self.w.save_movie.set_enabled(is_dc)
 
     def close(self):
@@ -518,43 +521,48 @@ class MultiDim(GingaPlugin.LocalPlugin):
 
     def save_slice_cb(self):
         target = SaveDialog(title='Save slice', extfilter='PNG image (*.png)').get_path()
-        hival = self.fitsimage.get_cut_levels()[1]
-        plt.imsave(target, self.curr_slice, vmax=hival, cmap=plt.get_cmap('gray'), origin='lower')
-        self.fv.showStatus("Successfully saved slice to %s" % target+'.png')
+        if target:
+            hival = self.fitsimage.get_cut_levels()[1]
+            plt.imsave(target, self.curr_slice, vmax=hival, cmap=plt.get_cmap('gray'), origin='lower')
+            self.fv.showStatus("Successfully saved slice")
 
     def save_movie_cb(self):
-        try:
-            assert have_mencoder is True, \
-                Exception("Please install mencoder to save as movie")
+        assert have_mencoder is True, \
+            Exception("Please install 'mencoder' to save as movie")
 
-            start = int(self.w.start.get_text())
-            end = int(self.w.end.get_text())
+        start = int(self.w.start.get_text())
+        end = int(self.w.end.get_text())
+        if not start or not end:
+            return
+        elif start < 0 or end > self.play_max:
+            self.fv.showStatus("Wrong slice index")
+            return
+        elif start > end:
+            self.fv.showStatus("Wrong slice order")
+            return
 
-            if start < 0 or end > self.play_max:
-                self.fv.showStatus("Wrong slice index")
-            elif start > end:
-                self.fv.showStatus("Wrong slice order")
-            else:
-                if end == self.play_max+1:
-                    end = self.play_max
+        if start == 1:
+            start = 0
 
-                hdu = self.fits_f[self.curhdu]
-                data = hdu.data
+        target = SaveDialog('Save Movie', 'AVI movie (*.avi)').get_path()
+        if target:
+            self.save_movie(start, end, target)
 
-                target = SaveDialog('Save Movie', 'AVI movie (*.avi)').get_path()
+    def save_movie(self, start, end, target):
+        hdu = self.fits_f[self.curhdu]
+        data = np.array(hdu.data)
 
-                data_rescaled = 255.0 / (data.max() - data.min()) * (data - data.min())
-                data_rescaled = data_rescaled.astype(np.uint8)
-                H, W = data.shape[1:]
+        loval, hival = self.fitsimage.get_cut_levels()
+        data_rescaled = (data - loval) * 255 / (hival - loval)
+        data_rescaled = data_rescaled.astype(np.uint8, copy=False)
+        H, W = data.shape[1:]
 
-                video = VideoSink((H, W), target)
-                for i in xrange(start, end):
-                    video.run(data_rescaled[i])
-                video.close()
+        video = VideoSink((H, W), target)
+        for i in xrange(start, end):
+            video.run(np.flipud(data_rescaled[i]))
+        video.close()
 
-                self.fv.showStatus("Successfully saved video to %s" % target+'.avi')
-        except Exception as e:
-            self.fv.showStatus("Error saving movie: %s" % (str(e)))
+        self.fv.showStatus("Successfully saved movie")
 
     def __str__(self):
         return 'multidim'
