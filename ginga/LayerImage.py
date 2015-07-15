@@ -1,7 +1,7 @@
 #
 # LayerImage.py -- Abstraction of an generic layered image.
 #
-# Eric Jeschke (eric@naoj.org) 
+# Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
@@ -39,7 +39,7 @@ class LayerImage(object):
 
         if compose:
             self.compose_layers()
-        
+
     def set_layer(self, idx, image, alpha=None, name=None,
                     compose=True):
         self.delete_layer(idx, compose=False)
@@ -47,13 +47,13 @@ class LayerImage(object):
 
         if compose:
             self.compose_layers()
-        
+
     def delete_layer(self, idx, compose=True):
         self._layer.pop(idx)
 
         if compose:
             self.compose_layers()
-        
+
     def get_layer(self, idx):
         return self._layer[idx]
 
@@ -68,19 +68,19 @@ class LayerImage(object):
                 shape = layer[entity].get_shape()
             elif entity == 'alpha':
                 item = layer.alpha
-                # If alpha is an image, get the array 
+                # If alpha is an image, get the array
                 if isinstance(item, BaseImage.BaseImage):
                     item = layer.alpha.get_data()
                 shape = numpy.shape(item)
             else:
                 raise BaseImage.ImageError("entity '%s' not in (image, alpha)" % (
                     entity))
-            
+
             if len(shape) > maxdim:
                 maxdim = len(shape)
                 maxshape = shape
         return maxshape
-    
+
     ## def alpha_combine(self, src, alpha, dst):
     ##     return (src * alpha) + (dst * (1.0 - alpha))
 
@@ -108,7 +108,7 @@ class LayerImage(object):
             data[:, :, 1] = res[:, :]
             data[:, :, 2] = res[:, :]
             return data
-        
+
         else:
             # note: in timing tests, dstack was not as efficient here...
             #res = numpy.dstack((data[:, :, 0] * alpha,
@@ -119,8 +119,8 @@ class LayerImage(object):
             res[:, :, 1] = data[:, :, 1] * alpha
             res[:, :, 2] = data[:, :, 2] * alpha
             return res
-            
-    
+
+
     def alpha_compose(self):
         start_time = time.time()
         shape = self.get_max_shape()
@@ -148,7 +148,7 @@ class LayerImage(object):
             ## alpha_used += layer.alpha
             #numpy.clip(alpha_used, 0.0, 1.0)
             cnt += 1
-        
+
         self.set_data(result)
         end_time = time.time()
         self.logger.debug("alpha compose=%.4f sec" % (end_time - start_time))
@@ -170,7 +170,8 @@ class LayerImage(object):
     #         end_time - start_time)
 
     def rgb_compose(self):
-        num = self.num_layers()
+        #num = self.num_layers()
+        num = 3
         layer = self.get_layer(0)
         wd, ht = layer.image.get_size()
         result = numpy.empty((ht, wd, num))
@@ -241,6 +242,6 @@ class LayerImage(object):
             self.rgb_compose()
         else:
             self.alpha_compose()
-            
+
 
 #END

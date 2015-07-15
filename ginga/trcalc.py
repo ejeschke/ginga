@@ -280,7 +280,7 @@ def get_scaled_cutout_basic(data_np, x1, y1, x2, y2, scale_x, scale_y,
         newdata = cv2.resize(data_np[y1:y2+1, x1:x2+1], None,
                              fx=scale_x, fy=scale_y,
                              interpolation=method)
-        old_wd, oldsht = max(x2 - x1 + 1, 1), max(y2 - y1 + 1, 1)
+        old_wd, old_ht = max(x2 - x1 + 1, 1), max(y2 - y1 + 1, 1)
         ht, wd = newdata.shape[:2]
         scale_x, scale_y = float(wd) / old_wd, float(ht) / old_ht
 

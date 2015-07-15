@@ -108,7 +108,7 @@ class RGBImage(BaseImage):
         return 'A' in order
 
     def get_scaled_cutout_wdht(self, x1, y1, x2, y2, new_wd, new_ht,
-                                  method='cubic'):
+                                  method='bicubic'):
         newdata, (scale_x, scale_y) = trcalc.get_scaled_cutout_wdht(
             self._get_data(), x1, y1, x2, y2, new_wd, new_ht,
             interpolation=method)
@@ -117,7 +117,7 @@ class RGBImage(BaseImage):
         return res
 
     def get_scaled_cutout(self, x1, y1, x2, y2, scale_x, scale_y,
-                          method='cubic'):
+                          method='bicubic'):
         newdata, (scale_x, scale_y) = trcalc.get_scaled_cutout_basic(
             self._get_data(), x1, y1, x2, y2, scale_x, scale_y,
             interpolation=method)

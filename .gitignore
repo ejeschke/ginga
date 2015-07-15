@@ -53,3 +53,6 @@ distribute-*.tar.gz
 .settings
 .project
 .pydevproject
+
+# Ignore IPython notebook (Jupyter) checkpoints.
++.ipynb_checkpoints
