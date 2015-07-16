@@ -490,6 +490,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
         if idx is not None:
             # set the HDU in the drop down if known
             self.w.hdu.set_index(idx)
+            self.set_hdu(idx)
 
         self.w.hdu.set_enabled(len(self.fits_f) > 0)
 
