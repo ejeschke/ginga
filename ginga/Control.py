@@ -888,6 +888,19 @@ class GingaControl(Callback.Callbacks):
                 raise ControlError("No image by the name '%s' found" % (
                     imname))
 
+    def _redo_plugins(self, image, chinfo):
+        # New data in channel--update active plugins
+        opmon = chinfo.opmon
+        for key in opmon.get_active():
+            obj = opmon.getPlugin(key)
+            try:
+                obj.redo()
+
+            except Exception as e:
+                self.logger.error("Failed to continue operation: %s" % (
+                    str(e)))
+                # TODO: log traceback?
+
     def _switch_image(self, chinfo, image):
         # update cursor to match image
         try:
@@ -906,17 +919,10 @@ class GingaControl(Callback.Callbacks):
                     self.logger.info("Setting image...")
                     chinfo.fitsimage.set_image(image,
                                                raise_initialize_errors=False)
+                    # if image is modified internally, update plugins
+                    image.add_callback('modified', self._redo_plugins, chinfo)
 
-                    # Update active plugins
-                    opmon = chinfo.opmon
-                    for key in opmon.get_active():
-                        ## bnch = opmon.get_info(key)
-                        obj = opmon.getPlugin(key)
-                        try:
-                            obj.redo()
-                        except Exception as e:
-                            self.logger.error("Failed to continue operation: %s" % (
-                                str(e)))
+                    self._redo_plugins(image, chinfo)
 
                 else:
                     self.logger.debug("Apparently no need to set large fits image.")
