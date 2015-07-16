@@ -62,7 +62,7 @@ default_layout = ['seq', {},
                                  ['ws', dict(name='uleft', height=300,
                                              show_tabs=False, group=3)],
                                  ['ws', dict(name='lleft', height=430,
-                                             show_tabs=False, group=3)],
+                                             show_tabs=True, group=3)],
                                  ]
                         )]],
                      ['vbox', dict(name='main', width=700),
@@ -84,7 +84,7 @@ default_layout = ['seq', {},
 global_plugins = [
     Bunch(module='Toolbar', tab='Toolbar', ws='toolbar'),
     Bunch(module='Pan', tab='_pan', ws='uleft', raisekey=None),
-    Bunch(module='Info', tab='_info', ws='lleft', raisekey=None),
+    Bunch(module='Info', tab='Synopsis', ws='lleft', raisekey=None),
     Bunch(module='Header', tab='Header', ws='left', raisekey='H'),
     Bunch(module='Zoom', tab='Zoom', ws='left', raisekey='Z'),
     Bunch(module='Thumbs', tab='Thumbs', ws='right', raisekey='T'),
@@ -101,7 +101,7 @@ global_plugins = [
 local_plugins = [
     Bunch(module='Pick', ws='dialogs', shortkey='f1'),
     Bunch(module='Ruler', ws='dialogs', shortkey='f2'),
-    Bunch(module='MultiDim', ws='dialogs', shortkey='f4'),
+    Bunch(module='MultiDim', ws='lleft', shortkey='f4'),
     Bunch(module='Cuts', ws='dialogs', shortkey='f5'),
     Bunch(module='Histogram', ws='dialogs', shortkey='f6'),
     Bunch(module='Overlays', ws='dialogs'),
@@ -317,7 +317,7 @@ class ReferenceViewer(object):
         if use_opencv:
             from ginga import trcalc
             trcalc.use('opencv')
-            
+
         # Create the dynamic module manager
         mm = ModuleManager.ModuleManager(logger)
 
