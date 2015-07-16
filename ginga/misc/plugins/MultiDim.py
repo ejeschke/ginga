@@ -48,6 +48,16 @@ class MultiDim(GingaPlugin.LocalPlugin):
         self.timer = fv.get_timer()
         self.timer.set_callback('expired', self.play_next)
 
+        # Load plugin preferences
+        prefs = self.fv.get_preferences()
+        self.settings = prefs.createCategory('plugin_MultiDim')
+        self.settings.setDefaults(auto_start_naxis=False)
+        self.settings.load(onError='silent')
+
+        # register for new image notification in this channel
+        fitsimage.set_callback('image-set', self.new_image_cb)
+
+        self.gui_up = False
 
     def build_gui(self, container):
         assert have_pyfits == True, \
@@ -143,6 +153,8 @@ class MultiDim(GingaPlugin.LocalPlugin):
 
         container.add_widget(top, stretch=0)
 
+        self.gui_up = True
+
     def set_hdu_cb(self, w, val):
         #idx = int(val)
         idx = w.get_index()
@@ -219,9 +231,37 @@ class MultiDim(GingaPlugin.LocalPlugin):
         self.fv.stop_local_plugin(chname, str(self))
         return True
 
+    def new_image_cb(self, fitsimage, image):
+        """We are called when a new image is set in the channel.
+        If our GUI is not up, and auto_start_naxis preference is True,
+        and NAXIS >= 3 then start us up.
+        """
+        if fitsimage != self.fitsimage:
+            # Focus is not our channel-->not an event for us
+            return False
+
+        image = fitsimage.get_image()
+        if image is None:
+            return False
+
+        # Start ourselves if file is multidimensional
+        if image.get_keyword('NAXIS') <= 2:
+            return False
+
+        # check preference for auto_start_naxis
+        if not self.settings.get('auto_start_naxis', False):
+            return False
+
+        # Start ourselves if GUI is not up yet
+        if not self.gui_up:
+            chname = self.fv.get_channelName(self.fitsimage)
+            self.fv.start_local_plugin(chname, str(self), None)
+
+        return True
+
     def instructions(self):
         self.tw.set_text("""Use mouse wheel to choose HDU or axis of data cube (NAXIS controls).""")
-            
+
     def start(self):
         self.instructions()
         self.resume()
@@ -234,6 +274,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
         self.redo()
 
     def stop(self):
+        self.gui_up = False
         self.play_stop()
         try:
             self.fits_f.close()
@@ -269,7 +310,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
 
         # inherit from primary header?
         inherit_prihdr = self.fv.settings.get('inherit_primary_header', False)
-        
+
         image = AstroImage.AstroImage(logger=self.logger,
                                       inherit_primary_header=inherit_prihdr)
         self.image = image
