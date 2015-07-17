@@ -34,10 +34,9 @@ class Drawing(GingaPlugin.LocalPlugin):
         canvas.set_callback('edit-event', self.edit_cb)
         canvas.set_callback('edit-select', self.edit_select_cb)
         canvas.setSurface(self.fitsimage)
+        # So we can draw and edit with the cursor
+        canvas.register_for_cursor_drawing(self.fitsimage)
         self.canvas = canvas
-
-        ## bm = fitsimage.get_bindmap()
-        ## bm.add_callback('mode-set', self.mode_change_cb)
 
         self.drawtypes = list(canvas.get_drawtypes())
         self.drawcolors = draw_colors
@@ -76,6 +75,7 @@ class Drawing(GingaPlugin.LocalPlugin):
 
         captions = (("Draw type:", 'label', "Draw type", 'combobox'),
                     ("Coord type:", 'label', "Coord type", 'combobox'),
+                    ("Edit mode", 'checkbutton'),
                     )
         w, b = Widgets.build_info(captions)
         self.w.update(b)
@@ -93,6 +93,10 @@ class Drawing(GingaPlugin.LocalPlugin):
         index = 0
         combobox.set_index(index)
         combobox.add_callback('activated', lambda w, idx: self.set_drawparams_cb())
+
+        b.edit_mode.set_state(self.canvas.get_draw_mode() == 'edit')
+        b.edit_mode.add_callback('activated', self.set_mode_cb)
+        b.edit_mode.set_tooltip("on to edit canvas, off to draw")
 
         fr.set_widget(w)
         vbox.add_widget(fr, stretch=0)
@@ -153,7 +157,8 @@ class Drawing(GingaPlugin.LocalPlugin):
 
     def instructions(self):
         self.tw.set_text(
-            """Draw a figure with the right mouse button.
+            """Draw a figure with the cursor.
+
 For polygons/paths press 'v' to create a vertex, 'z' to remove last vertex.""")
 
     def start(self):
@@ -183,6 +188,8 @@ For polygons/paths press 'v' to create a vertex, 'z' to remove last vertex.""")
             self.fitsimage.deleteObjectByTag(self.layertag)
         except:
             pass
+        # don't leave us stuck in edit mode
+        self.canvas.set_draw_mode('draw')
         self.canvas.ui_setActive(False)
         self.fv.showStatus("")
 
@@ -195,6 +202,9 @@ For polygons/paths press 'v' to create a vertex, 'z' to remove last vertex.""")
         return True
 
     def set_drawparams_cb(self):
+        if self.canvas.get_draw_mode() != 'draw':
+            # if we are in edit mode then don't initialize draw gui
+            return
         index = self.w.draw_type.get_index()
         kind = self.drawtypes[index]
         index = self.w.coord_type.get_index()
@@ -220,8 +230,13 @@ For polygons/paths press 'v' to create a vertex, 'z' to remove last vertex.""")
 
         self.w.drawvbox.add_widget(w, stretch=1)
 
+        # disable edit-only controls
+        self.w.delete_obj.set_enabled(False)
+        self.w.scale_by.set_enabled(False)
+        self.w.rotate_by.set_enabled(False)
+
         args, kwdargs = self.draw_params.get_params()
-        #print("changing params to: %s" % str(kwdargs))
+        #self.logger.debug("changing params to: %s" % str(kwdargs))
         if kind != 'compass':
             kwdargs['coord'] = coord
         self.canvas.set_drawtype(kind, **kwdargs)
@@ -231,12 +246,12 @@ For polygons/paths press 'v' to create a vertex, 'z' to remove last vertex.""")
         kind = self.drawtypes[index]
 
         args, kwdargs = self.draw_params.get_params()
-        #print("changing params to: %s" % str(kwdargs))
+        #self.logger.debug("changing params to: %s" % str(kwdargs))
         self.canvas.set_drawtype(kind, **kwdargs)
 
     def edit_cb(self, fitsimage, obj):
         # <-- obj has been edited
-        #print("edit event on canvas: obj=%s" % (obj))
+        #self.logger.debug("edit event on canvas: obj=%s" % (obj))
         if obj != self.edit_obj:
             # edit object is new.  Update visual parameters
             self.edit_select_cb(fitsimage, obj)
@@ -249,7 +264,7 @@ For polygons/paths press 'v' to create a vertex, 'z' to remove last vertex.""")
         if hasattr(obj, 'coord'):
             tomap = self.fitsimage.get_coordmap(obj.coord)
             if obj.crdmap != tomap:
-                #print("coordmap has changed to '%s'--converting mapper" % (
+                #self.logger.debug("coordmap has changed to '%s'--converting mapper" % (
                 #    str(tomap)))
                 # user changed type of mapper; convert coordinates to
                 # new mapper and update widgets
@@ -260,49 +275,49 @@ For polygons/paths press 'v' to create a vertex, 'z' to remove last vertex.""")
         whence = 2
         self.canvas.redraw(whence=whence)
 
+    def edit_initialize(self, fitsimage, obj):
+        # remove old params
+        self.w.drawvbox.remove_all()
+
+        self.edit_obj = obj
+        if (obj is not None) and obj.is_editing():
+            self.w.attrlbl.set_text("Editing a %s" % (obj.kind))
+
+            drawClass = obj.__class__
+
+            # Build up a set of control widgets for the parameters
+            # of the canvas object to be drawn
+            paramlst = drawClass.get_params_metadata()
+
+            self.draw_params = ParamSet.ParamSet(self.logger, obj)
+
+            w = self.draw_params.build_params(paramlst,
+                                              orientation=self.orientation)
+            self.draw_params.add_callback('changed', self.edit_params_changed_cb)
+
+            self.w.drawvbox.add_widget(w, stretch=1)
+            self.w.delete_obj.set_enabled(True)
+            self.w.scale_by.set_enabled(True)
+            self.w.rotate_by.set_enabled(True)
+        else:
+            self.w.attrlbl.set_text("")
+
+            self.w.delete_obj.set_enabled(False)
+            self.w.scale_by.set_enabled(False)
+            self.w.rotate_by.set_enabled(False)
+
     def edit_select_cb(self, fitsimage, obj):
-        #print("editing selection status has changed for %s" % str(obj))
-        if obj != self.edit_obj:
-            # edit object is new.  Update visual parameters
+        #self.logger.debug("editing selection status has changed for %s" % str(obj))
+        self.edit_initialize(fitsimage, obj)
 
-            # remove old params
-            self.w.drawvbox.remove_all()
-
-            self.edit_obj = obj
-            if obj is not None:
-                self.w.attrlbl.set_text("Editing a %s" % (obj.kind))
-
-                drawClass = obj.__class__
-
-                # Build up a set of control widgets for the parameters
-                # of the canvas object to be drawn
-                paramlst = drawClass.get_params_metadata()
-
-                self.draw_params = ParamSet.ParamSet(self.logger, obj)
-
-                w = self.draw_params.build_params(paramlst,
-                                                  orientation=self.orientation)
-                self.draw_params.add_callback('changed', self.edit_params_changed_cb)
-
-                self.w.drawvbox.add_widget(w, stretch=1)
-                self.w.delete_obj.set_enabled(True)
-                self.w.scale_by.set_enabled(True)
-                self.w.rotate_by.set_enabled(True)
-            else:
-                self.w.attrlbl.set_text("")
-
-                self.w.delete_obj.set_enabled(False)
-                self.w.scale_by.set_enabled(False)
-                self.w.rotate_by.set_enabled(False)
-
-    ## def mode_change_cb(self, bindmap, modename, modetype):
-    ##     if modename == 'draw':
-    ##         self.set_drawparams_cb()
-    ##     elif modename == 'edit':
-    ##         obj = self.canvas.get_edit_object()
-    ##         self.edit_select_cb(self.fitsimage, obj)
-    ##     else:
-    ##         self.edit_select_cb(self.fitsimage, None)
+    def set_mode_cb(self, w, val):
+        if val:
+            self.canvas.set_draw_mode('edit')
+            self.edit_initialize(self.fitsimage, None)
+        else:
+            self.canvas.set_draw_mode('draw')
+            self.set_drawparams_cb()
+        return True
 
     def clear_canvas(self):
         self.canvas.deleteAllObjects()

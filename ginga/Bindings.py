@@ -72,7 +72,6 @@ class ImageViewBindings(object):
 
             # Define our modes
             dmod_draw = ['space', None, None],
-            dmod_edit = ['b', None, None],
             dmod_cmap = ['y', None, None],
             #dmod_cutlo = [',', None, "Cut low"],
             #dmod_cuthi = ['.', None, "Cut high"],
@@ -111,7 +110,7 @@ class ImageViewBindings(object):
             kp_orient_rh = ['O'],
             kp_poly_add = ['v', 'draw+v'],
             kp_poly_del = ['z', 'draw+z'],
-            kp_edit_del = ['edit+x'],
+            kp_edit_del = ['draw+x'],
             kp_reset = ['escape'],
             kp_lock = ['l'],
 
@@ -128,7 +127,6 @@ class ImageViewBindings(object):
             sc_cmap = ['cmap+scroll'],
             sc_imap = [],
             #sc_draw = ['draw+scroll'],
-            #sc_edit = ['edit+scroll'],
 
             scroll_pan_acceleration = 1.0,
             scroll_zoom_acceleration = 1.0,
@@ -142,7 +140,6 @@ class ImageViewBindings(object):
             ms_cursor = ['left'],
             ms_wheel = [],
             ms_draw = ['draw+left', 'meta+left', 'right'],
-            ms_edit = ['edit+left'],
 
             ms_rotate = ['rotate+left'],
             ms_rotate_reset = ['rotate+right'],

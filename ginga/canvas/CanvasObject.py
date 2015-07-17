@@ -649,6 +649,9 @@ class Polygon(PolygonMixin, CanvasObjectBase):
                                   fillalpha=fillalpha, **kwdargs)
         PolygonMixin.__init__(self)
 
+        assert len(points) > 2, \
+               ValueError("Polygons need at least 3 points")
+
     def draw(self, viewer):
         cr = viewer.renderer.setup_cr(self)
 

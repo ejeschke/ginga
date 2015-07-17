@@ -45,6 +45,7 @@ class DrawingMixin(object):
         self._cp_index = None
         self._edit_obj = None
         self._edit_status = False
+        self._mode = 'draw'
 
         # For selection
         self._selected = []
@@ -61,10 +62,10 @@ class DrawingMixin(object):
 
         # NOTE: must be mixed in with a Callback.Callbacks
         for name in ('draw-event', 'draw-down', 'draw-move', 'draw-up',
+                     'cursor-down', 'cursor-up', 'cursor-move',
                      'draw-scroll', 'keydown-poly_add', 'keydown-poly_del',
-                     'keydown-edit_del', 'edit-event', 'edit-down',
-                     'edit-move', 'edit-up',
-                     'edit-select', 'edit-scroll', 'drag-drop'):
+                     'keydown-edit_del', 'edit-event',
+                     'edit-select', 'drag-drop'):
             self.enable_callback(name)
 
     def setSurface(self, viewer):
@@ -76,17 +77,17 @@ class DrawingMixin(object):
         self.add_callback('draw-up', self.draw_stop, viewer)
         self.add_callback('keydown-poly_add', self.draw_poly_add, viewer)
         self.add_callback('keydown-poly_del', self.draw_poly_delete, viewer)
-        self.add_callback('keydown-edit_del', self._edit_delete_cb, viewer)
-
-        self.add_callback('edit-down', self.edit_start, viewer)
-        self.add_callback('edit-move', self.edit_motion, viewer)
-        self.add_callback('edit-up', self.edit_stop, viewer)
-        ## self.add_callback('edit-up', self.select_stop, viewer)
-        #self.add_callback('edit-scroll', self._edit_scale_cb, viewer)
-        self.add_callback('edit-scroll', self._edit_rotate_cb, viewer)
+        self.add_callback('keydown-edit_del', self.edit_delete_cb, viewer)
+        self.add_callback('draw-scroll', self._edit_rotate_cb, viewer)
+        #self.add_callback('draw-scroll', self._edit_scale_cb, viewer)
 
     def getSurface(self):
         return self.viewer
+
+    def register_for_cursor_drawing(self, viewer):
+        self.add_callback('cursor-down', self.draw_start, viewer)
+        self.add_callback('cursor-move', self.draw_motion, viewer)
+        self.add_callback('cursor-up', self.draw_stop, viewer)
 
     def draw(self, viewer):
         super(DrawingMixin, self).draw(viewer)
@@ -94,6 +95,19 @@ class DrawingMixin(object):
             self._draw_obj.draw(viewer)
 
     ##### DRAWING LOGIC #####
+
+    def set_draw_mode(self, mode):
+        if not mode in ('draw', 'edit', None):
+            raise ValueError("mode must be one of 'draw', 'edit' or None")
+
+        self._mode = mode
+        if mode != 'edit':
+            self.clear_selected()
+
+        self.update_canvas()
+
+    def get_draw_mode(self):
+        return self._mode
 
     def _draw_update(self, data_x, data_y, viewer):
 
@@ -154,7 +168,19 @@ class DrawingMixin(object):
             obj = klass(self._start_x, self._start_y, x, y,
                         **self.t_drawparams)
 
-        elif self.t_drawtype in ('polygon', 'path', 'beziercurve'):
+        elif self.t_drawtype in ('polygon',):
+            points = list(self._points)
+            points.append((x, y))
+            if len(points) < 3:
+                # we need at least 3 points for a polygon, so
+                # revert to a line if we haven't got enough
+                klass = self.drawDict['line']
+                obj = klass(self._start_x, self._start_y, x, y,
+                            **self.t_drawparams)
+            else:
+                obj = klass(points, **self.t_drawparams)
+
+        elif self.t_drawtype in ('path', 'beziercurve'):
             points = list(self._points)
             points.append((x, y))
             obj = klass(points, **self.t_drawparams)
@@ -181,7 +207,13 @@ class DrawingMixin(object):
         return True
 
     def draw_start(self, canvas, event, data_x, data_y, viewer):
-        if not self.candraw or (viewer != event.viewer):
+        if viewer != event.viewer:
+            return False
+
+        if self._mode == 'edit':
+            return self.edit_start(canvas, event, data_x, data_y, viewer)
+
+        if not self.candraw or (self._mode != 'draw'):
             return False
 
         self._draw_obj = None
@@ -192,13 +224,19 @@ class DrawingMixin(object):
         x, y = self._draw_crdmap.data_to(data_x, data_y)
         self._points = [(x, y)]
         self._start_x, self._start_y = x, y
-        self._draw_update(x, y, viewer)
 
+        self._draw_update(data_x, data_y, viewer)
         self.process_drawing(viewer)
         return True
 
     def draw_stop(self, canvas, event, data_x, data_y, viewer):
-        if not self.candraw or (viewer != event.viewer):
+        if viewer != event.viewer:
+            return False
+
+        if self._mode == 'edit':
+            return self.edit_stop(canvas, event, data_x, data_y, viewer)
+
+        if not self.candraw or (self._mode != 'draw'):
             return False
 
         self._draw_update(data_x, data_y, viewer)
@@ -218,14 +256,28 @@ class DrawingMixin(object):
             self.process_drawing(viewer)
 
     def draw_motion(self, canvas, event, data_x, data_y, viewer):
-        if not self.candraw or (viewer != event.viewer):
+        if viewer != event.viewer:
             return False
+
+        if self._mode == 'edit':
+            return self.edit_motion(canvas, event, data_x, data_y, viewer)
+
+        if not self.candraw or (self._mode != 'draw'):
+            return False
+
         self._draw_update(data_x, data_y, viewer)
         return True
 
     def draw_poly_add(self, canvas, event, data_x, data_y, viewer):
-        if not self.candraw or (viewer != event.viewer):
+        if viewer != event.viewer:
             return False
+
+        if self._mode == 'edit':
+            return self.edit_poly_add(canvas, event, data_x, data_y, viewer)
+
+        if not self.candraw or (self._mode != 'draw'):
+            return False
+
         if self._draw_obj is None:
             return self.edit_poly_add(canvas, event, data_x, data_y, viewer)
         if self.t_drawtype in ('polygon', 'path'):
@@ -237,10 +289,17 @@ class DrawingMixin(object):
         return True
 
     def draw_poly_delete(self, canvas, event, data_x, data_y, viewer):
-        if not self.candraw or (viewer != event.viewer):
+        if viewer != event.viewer:
             return False
+
+        if self._mode == 'edit':
+            return self.edit_poly_delete(canvas, event, data_x, data_y, viewer)
+
+        if not self.candraw or (self._mode != 'draw'):
+            return False
+
         if self._draw_obj is None:
-            return self.edit_poly_del(canvas, event, data_x, data_y, viewer)
+            return self.edit_poly_delete(canvas, event, data_x, data_y, viewer)
         if self.t_drawtype in ('polygon', 'path', 'beziercurve'):
             if len(self._points) > 0:
                 self._points.pop()
@@ -488,7 +547,7 @@ class DrawingMixin(object):
 
         return True
 
-    def edit_poly_del(self, canvas, event, data_x, data_y, viewer):
+    def edit_poly_delete(self, canvas, event, data_x, data_y, viewer):
         if not self.canedit or (viewer != event.viewer):
             return False
         obj = self._edit_obj
@@ -500,7 +559,7 @@ class DrawingMixin(object):
             delete = None
             for i in range(len(points)):
                 x1, y1 = obj.crdmap.to_data(*points[i])
-                self.logger.debug("checking line %d" % (i))
+                self.logger.debug("checking vertex %d" % (i))
                 if obj.within_radius(viewer, data_x, data_y, x1, y1,
                                      8):
                     delete = i
@@ -557,7 +616,7 @@ class DrawingMixin(object):
             self.make_callback('edit-event', self._edit_obj)
         return True
 
-    def _edit_delete_cb(self, canvas, event, data_x, data_y, viewer):
+    def edit_delete_cb(self, canvas, event, data_x, data_y, viewer):
         if not self.canedit or (viewer != event.viewer):
             return False
         return self.edit_delete()
