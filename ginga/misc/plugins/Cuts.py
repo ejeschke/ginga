@@ -141,6 +141,12 @@ class Cuts(GingaPlugin.LocalPlugin):
                     )
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
+        if len(self.tags) > 1:
+            b.delete_cut.set_enabled(True)
+            b.delete_all.set_enabled(True)
+        else:
+            b.delete_cut.set_enabled(False)
+            b.delete_all.set_enabled(False)
 
         # control for selecting a cut
         combobox = b.cut
@@ -225,6 +231,11 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         idx = len(self.tags) - 1
         tag = self.tags[idx]
         self.select_cut(tag)
+        if tag == self._new_cut:
+            self.w.delete_cut.set_enabled(False)
+            self.w.delete_all.set_enabled(False)
+            self.plot.ax.cla()
+            self.plot.fig.canvas.draw()
         self.redo()
 
     def delete_all_cb(self, w):
@@ -234,6 +245,10 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         self.cutstag = self._new_cut
         self.w.cuts.append_text(self._new_cut)
         self.w.cuts.set_index(0)
+        self.plot.ax.cla()
+        self.plot.fig.canvas.draw()
+        self.w.delete_cut.set_enabled(False)
+        self.w.delete_all.set_enabled(False)
         self.redo()
 
     def add_cuts_tag(self, tag, select=False):
@@ -511,6 +526,8 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         self.canvas.add(cut, tag=tag)
         select_flag = self.settings.get('select_new_cut', True)
         self.add_cuts_tag(tag, select=select_flag)
+        self.w.delete_cut.set_enabled(True)
+        self.w.delete_all.set_enabled(True)
 
         self.logger.debug("redoing cut plots")
         return self.redo()
