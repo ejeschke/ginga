@@ -97,22 +97,23 @@ class RenderContext(object):
                                self.pen, self.brush)
 
     def draw_bezier_curve(self, cp):
-        # TODO: currently there is a bug in aggdraw paths
+        # there is a bug in path handling of some versions of aggdraw--
+        # aggdraw here is ok:
         path = agg.Path()
         path.moveto(cp[0][0], cp[0][1])
         path.curveto(cp[1][0], cp[1][1], cp[2][0], cp[2][1], cp[3][0], cp[3][1])
-        self.cr.canvas.path(path.coords(), path, self.pen, self.brush)
+        self.cr.canvas.path(path, self.pen, self.brush)
 
     def draw_ellipse_bezier(self, cp):
-        # draw 4 bezier curves to make the ellipse
-        # TODO: currently there is a bug in aggdraw paths
+        # draw 4 bezier curves to make the ellipse because there seems
+        # to be a bug in aggdraw ellipse drawing function
         path = agg.Path()
         path.moveto(cp[0][0], cp[0][1])
         path.curveto(cp[1][0], cp[1][1], cp[2][0], cp[2][1], cp[3][0], cp[3][1])
         path.curveto(cp[4][0], cp[4][1], cp[5][0], cp[5][1], cp[6][0], cp[6][1])
         path.curveto(cp[7][0], cp[7][1], cp[8][0], cp[8][1], cp[9][0], cp[9][1])
         path.curveto(cp[10][0], cp[10][1], cp[11][0], cp[11][1], cp[12][0], cp[12][1])
-        self.cr.canvas.path(path.coords(), path, self.pen, self.brush)
+        self.cr.canvas.path(path, self.pen, self.brush)
 
     def draw_line(self, cx1, cy1, cx2, cy2):
         self.cr.canvas.line((cx1, cy1, cx2, cy2), self.pen)

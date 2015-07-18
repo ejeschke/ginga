@@ -23,7 +23,6 @@ from ginga import AstroImage
 from matplotlib.figure import Figure
 from ginga.mplw.ImageViewCanvasMpl import ImageViewCanvas
 from ginga.mplw.FigureCanvasQt import FigureCanvas
-from ginga.mplw.ImageViewCanvasTypesMpl import DrawingCanvas
 from ginga.misc import log
 from ginga import colors
 
@@ -37,7 +36,7 @@ class FitsViewer(QtGui.QMainWindow):
 
         fig = Figure()
         w = FigureCanvas(fig)
-        
+
         fi = ImageViewCanvas(logger)
         fi.enable_autocuts('on')
         fi.set_autocut_params('zscale')
@@ -54,6 +53,7 @@ class FitsViewer(QtGui.QMainWindow):
         bd.enable_all(True)
 
         # canvas that we will draw on
+        DrawingCanvas = fi.getDrawClass('drawingcanvas')
         canvas = DrawingCanvas()
         canvas.enable_draw(True)
         #canvas.enable_edit(True)
@@ -74,7 +74,7 @@ class FitsViewer(QtGui.QMainWindow):
         self.readout = QtGui.QLabel("")
         vbox.addWidget(self.readout, stretch=0,
                        alignment=QtCore.Qt.AlignCenter)
-        
+
         hbox = QtGui.QHBoxLayout()
         hbox.setContentsMargins(QtCore.QMargins(4, 2, 4, 2))
 
@@ -222,13 +222,13 @@ def main(options, args):
     app.exec_()
 
 if __name__ == "__main__":
-   
+
     # Parse command line options with nifty optparse module
     from optparse import OptionParser
 
     usage = "usage: %prog [options] cmd [args]"
     optprs = OptionParser(usage=usage, version=('%%prog'))
-    
+
     optprs.add_option("--debug", dest="debug", default=False, action="store_true",
                       help="Enter the pdb debugger on main()")
     optprs.add_option("--log", dest="logfile", metavar="FILE",
