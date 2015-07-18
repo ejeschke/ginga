@@ -118,12 +118,13 @@ class RenderContext(object):
     def draw_line(self, cx1, cy1, cx2, cy2):
         self.cr.canvas.line((cx1, cy1, cx2, cy2), self.pen)
 
-    def draw_path(self, cpoints):
-        # TODO: see if the path type in aggdraw can be used for this
-        for i in range(len(cpoints) - 1):
-            cx1, cy1 = cpoints[i]
-            cx2, cy2 = cpoints[i+1]
-            self.cr.canvas.line((cx1, cy1, cx2, cy2), self.pen)
+    def draw_path(self, cp):
+        # TODO: is there a more efficient way in aggdraw to do this?
+        path = agg.Path()
+        path.moveto(cp[0][0], cp[0][1])
+        for pt in cp[1:]:
+            path.lineto(pt[0], pt[1])
+        self.cr.canvas.path(path, self.pen, self.brush)
 
 
 class CanvasRenderer(object):

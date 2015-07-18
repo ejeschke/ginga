@@ -147,15 +147,13 @@ class RenderContext(object):
         self.cr.axes.add_line(l)
 
     def draw_path(self, cpoints):
-        self.cr.init(transform=None)
-        self.cr.update_line(self.pen)
+        self.cr.init(closed=False, transform=None)
+        self.cr.update_patch(self.pen, None)
 
-        # TODO: use the path type in matplotlib
-        for i in range(len(cpoints) - 1):
-            cx1, cy1 = cpoints[i]
-            cx2, cy2 = cpoints[i+1]
-            l = lines.Line2D((cx1, cx2), (cy1, cy2), **self.cr.kwdargs)
-            self.cr.axes.add_line(l)
+        xy = numpy.array(cpoints)
+
+        p = patches.Polygon(xy, **self.cr.kwdargs)
+        self.cr.axes.add_patch(p)
 
 
 class CanvasRenderer(object):
