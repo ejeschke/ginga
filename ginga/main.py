@@ -106,6 +106,7 @@ local_plugins = [
     Bunch(module='Histogram', ws='dialogs', shortkey='f6'),
     Bunch(module='Overlays', ws='dialogs'),
     Bunch(module='Blink', ws='dialogs'),
+    Bunch(module='LineProfile', ws='dialogs'),
     Bunch(module='PixTable', ws='dialogs', shortkey='f7'),
     Bunch(module='Preferences', ws='dialogs', shortkey='f9'),
     Bunch(module='Catalogs', ws='dialogs', shortkey='f10'),
