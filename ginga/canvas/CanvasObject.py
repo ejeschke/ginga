@@ -752,6 +752,7 @@ class Path(PolygonMixin, CanvasObjectBase):
             x2, y2 = self.crdmap.to_data(*point)
             if self.within_line(viewer, data_x, data_y, x1, y1, x2, y2,
                                 self.cap_radius):
+
                 return True
             x1, y1 = x2, y2
         return False
@@ -842,14 +843,14 @@ class BezierCurve(Path):
             # convert to integer data coordinates and remove duplicates
             d[int(round(x)), int(round(y))] = None
 
-        return d.keys()
+        return list(d.keys())
 
     def get_points_on_curve(self, image):
         points = list(map(lambda pt: self.crdmap.to_data(pt[0], pt[1]),
                                       self.points))
         # use maximum dimension of image to estimate a reasonable number
         # of intermediate points
-        steps = apply(max, image.get_size())
+        steps = max(*image.get_size())
         return self.calc_bezier_curve_range(steps, points)
 
     def select_contains(self, viewer, data_x, data_y):
@@ -878,7 +879,7 @@ class BezierCurve(Path):
             else:
                 # No Bezier support in this backend, so calculate intermediate
                 # points and draw a path
-                steps = apply(max, viewer.get_window_size())
+                steps = max(*viewer.get_window_size())
                 ipoints = self.calc_bezier_curve_range(steps, cpoints)
                 cr.draw_path(ipoints)
 
