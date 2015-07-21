@@ -787,6 +787,63 @@ class BezierCurve(Path):
                                   **kwdargs)
         PolygonMixin.__init__(self)
 
+    def calc_bezier_curve_range(self, steps, points):
+        """Hacky method to get an ordered set of points that are on the
+        Bezier curve.  This is used by some backends (which don't support
+        drawing cubic Bezier curves) to render the curve using paths
+        connecting points.
+        """
+        n = len(points) - 1
+        fact_n = math.factorial(n)
+
+        # press OrderedDict into use as an OrderedSet of points
+        from collections import OrderedDict
+        d = OrderedDict()
+
+        m = float(steps - 1)
+
+        for i in range(steps):
+            #t = i / float(steps - 1)
+            t = i / m
+
+            # optomize a call to calculate the bezier point
+            #x, y = bezier(t, points)
+            x = y = 0
+            for j, pos in enumerate(points):
+                #bern = bernstein(t, j, n)
+                bin = fact_n / float(math.factorial(j) * math.factorial(n - j))
+                bern = bin * (t ** j) * ((1 - t) ** (n - j))
+                x += pos[0] * bern
+                y += pos[1] * bern
+
+            # convert to integer data coordinates and remove duplicates
+            d[int(round(x)), int(round(y))] = None
+
+        return d.keys()
+
+    def get_points_on_curve(self, image):
+        points = list(map(lambda pt: self.crdmap.to_data(pt[0], pt[1]),
+                                      self.points))
+        # use maximum dimension of image to estimate a reasonable number
+        # of intermediate points
+        steps = apply(max, image.get_size())
+        return self.calc_bezier_curve_range(steps, points)
+
+    # TODO: this needs properly overridden contains_arr(), contains() and
+    #       select_contains() !!
+    ## def select_contains(self, viewer, data_x, data_y):
+    ##     image = viewer.get_image()
+    ##     points = self.get_points_on_curve(image)
+    ##     pt = ( int(round(data_x)), int(round(data_y)) )
+    ##     return (pt in points)
+
+    def get_pixels_on_curve(self, image):
+        curve_pts = numpy.array(self.get_points_on_curve(image))
+        xa, ya = curve_pts.T
+        data = image.get_data()
+        res = data[ya, xa].flat
+        return res
+
     def draw(self, viewer):
         cpoints = self.get_cpoints(viewer, points=self.points)
 
@@ -795,7 +852,14 @@ class BezierCurve(Path):
             # until we have 4 points, we cannot draw a quadradic bezier curve
             cr.draw_path(cpoints)
         else:
-            cr.draw_bezier_curve(cpoints)
+            if hasattr(cr, 'draw_bezier_curve'):
+                cr.draw_bezier_curve(cpoints)
+            else:
+                # No Bezier support in this backend, so calculate intermediate
+                # points and draw a path
+                steps = apply(max, viewer.get_window_size())
+                ipoints = self.calc_bezier_curve_range(steps, cpoints)
+                cr.draw_path(ipoints)
 
         if self.editing:
             self.draw_edit(cr, viewer)

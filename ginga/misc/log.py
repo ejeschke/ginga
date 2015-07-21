@@ -26,7 +26,7 @@ class NullLogger(object):
     """
     def __init__(self, f_out=None):
         self.f_out = f_out
-        
+
     def debug(self, msg):
         if self.f_out:
             self.f_out.write("%s\n" % msg)
@@ -36,7 +36,7 @@ class NullLogger(object):
         if self.f_out:
             self.f_out.write("%s\n" % msg)
             self.f_out.flush()
-            
+
     def warn(self, msg):
         if self.f_out:
             self.f_out.write("%s\n" % msg)
@@ -57,7 +57,7 @@ def get_logger(name='ginga', level=None, null=False,
     if null:
         # User wants a Null Logger
         return NullLogger()
-    
+
     # Create a logger
     logger = logging.Logger('ginga')
 
@@ -71,8 +71,8 @@ def get_logger(name='ginga', level=None, null=False,
     if (not log_file) and (options is not None) and (options.logfile is not None):
         log_file = options.logfile
 
-    if log_file:
-        fileHdlr  = logging.handlers.RotatingFileHandler(options.logfile,
+    if log_file is not None:
+        fileHdlr  = logging.handlers.RotatingFileHandler(log_file,
                                                          maxBytes=log_maxsize,
                                                          backupCount=log_backups)
         fileHdlr.setLevel(level)

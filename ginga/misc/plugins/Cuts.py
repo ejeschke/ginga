@@ -26,7 +26,8 @@ class Cuts(GingaPlugin.LocalPlugin):
     The 'line' cut is a straight line between two points.  The 'path' cut
     is drawn like an open polygon, with straight segments in-between.
     The 'freepath' cut is like a path cut, but drawn using a free-form
-    stroke following the cursor movement.
+    stroke following the cursor movement.  The 'beziercurve' path is a
+    cubic Bezier curve.
 
     Multiple cuts can be plotted.
 
@@ -38,8 +39,8 @@ class Cuts(GingaPlugin.LocalPlugin):
     new cut. Otherwise, if a particular named cut is selected then that
     will be replaced by any newly drawn cut.
 
-    While drawing a path cut, press 'v' to add a vertex, or 'z' to remove
-    the last vertex added.
+    While drawing a path or beziercurve cut, press 'v' to add a vertex,
+    or 'z' to remove the last vertex added.
 
     Keyboard Shortcuts
     ------------------
@@ -73,13 +74,12 @@ class Cuts(GingaPlugin.LocalPlugin):
         # superclass defines some variables for us, like logger
         super(Cuts, self).__init__(fv, fitsimage)
 
-        self.cutscolor = 'green'
         self.layertag = 'cuts-canvas'
         self._new_cut = 'New Cut'
         self.cutstag = self._new_cut
         self.tags = [self._new_cut]
         self.count = 0
-        self.cuttypes = ['line', 'path', 'freepath']
+        self.cuttypes = ['line', 'path', 'freepath', 'beziercurve']
         self.cuttype = 'line'
 
         # get Cuts preferences
@@ -193,7 +193,7 @@ class Cuts(GingaPlugin.LocalPlugin):
     def instructions(self):
         self.tw.set_text("""Draw (or redraw) a line with the right mouse button.  Click or drag left button to reposition line.
 
-When drawing a path cut, press 'v' to add a vertex.
+When drawing a path or Bezier cut, press 'v' to add a vertex.
 
 Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full vertical cut.""")
 
@@ -214,12 +214,8 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
 
     def set_cutsdrawtype_cb(self, w, index):
         self.cuttype = self.cuttypes[index]
-        if self.cuttype == 'line':
-            self.canvas.set_drawtype('line', color='cyan', linestyle='dash')
-        elif self.cuttype == 'path':
-            self.canvas.set_drawtype('path', color='cyan', linestyle='dash')
-        elif self.cuttype == 'freepath':
-            self.canvas.set_drawtype('freepath', color='cyan', linestyle='dash')
+        self.canvas.set_drawtype(self.cuttype, color='cyan',
+                                 linestyle='dash')
 
     def delete_cut_cb(self, w):
         tag = self.cutstag
@@ -309,8 +305,10 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
                 # don't repeat last point when adding next segment
                 points.extend(pts[:-1])
                 x1, y1 = x2, y2
-
+        elif obj.kind == 'beziercurve':
+            points = obj.get_pixels_on_curve(image)
         points = numpy.array(points)
+
         self.plot.cuts(points, xtitle="Line Index", ytitle="Pixel Value",
                        color=color)
 
@@ -352,7 +350,7 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
 
     def _create_cut(self, x, y, count, x1, y1, x2, y2, color='cyan'):
         text = "cuts%d" % (count)
-        if not self.settings.get('label_cuts', True):
+        if not self.settings.get('label_cuts', False):
             text = ''
         line_obj = self.dc.Line(x1, y1, x2, y2, color=color,
                                 showcap=False)
@@ -364,7 +362,7 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
 
     def _create_cut_obj(self, count, cuts_obj, color='cyan'):
         text = "cuts%d" % (count)
-        if not self.settings.get('label_cuts', True):
+        if not self.settings.get('label_cuts', False):
             text = ''
         cuts_obj.showcap = False
         cuts_obj.linestyle = 'solid'
@@ -392,7 +390,7 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
     def _getlines(self, obj):
         if obj.kind == 'compound':
             return self._append_lists(list(map(self._getlines, obj.objects)))
-        elif obj.kind in ('line', 'path', 'freepath'):
+        elif obj.kind in ('line', 'path', 'freepath', 'beziercurve'):
             return [obj]
         else:
             return []
@@ -513,7 +511,7 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         obj = canvas.getObjectByTag(tag)
         canvas.deleteObjectByTag(tag, redraw=False)
 
-        if not obj.kind in ('line', 'path', 'freepath'):
+        if not obj.kind in self.cuttypes:
             return True
 
         count = self._get_cut_index()

@@ -93,9 +93,6 @@ class RenderContext(object):
     def draw_circle(self, cx, cy, cradius):
         self.cr.circle((cx, cy), cradius, self.pen, self.brush)
 
-    def draw_bezier_curve(self, cp):
-        self.cr.bezier_curve(cp, self.pen)
-
     def draw_ellipse(self, cx, cy, cxradius, cyradius, theta):
         self.cr.ellipse((cx, cy), cxradius, cyradius, theta,
                         self.pen, self.brush)

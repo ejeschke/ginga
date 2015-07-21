@@ -135,42 +135,35 @@ class CvContext(object):
         pts = pts.reshape((-1, 1, 2))
         cv2.polylines(self.canvas, [pts], False, pen.color, pen.linewidth)
 
-    def bezier_curve(self, points, pen, steps=1000):
-        # TODO: this is inefficient--see if OpenCv has a better way
-        self.path(bezier_curve_range(steps, points), pen)
-
 
 # Help functions for drawing Bezier curves
 # Basis at:
 #   https://gist.github.com/Alquimista/1274149
+#
 
-def binomial(i, n):
-    """Binomial coefficient"""
-    return math.factorial(n) / float(
-        math.factorial(i) * math.factorial(n - i))
+## def binomial(i, n):
+##     """Binomial coefficient"""
+##     return math.factorial(n) / float(
+##         math.factorial(i) * math.factorial(n - i))
 
-def bernstein(t, i, n):
-    """Bernstein polynom"""
-    return binomial(i, n) * (t ** i) * ((1 - t) ** (n - i))
+## def bernstein(t, i, n):
+##     """Bernstein polynomial"""
+##     return binomial(i, n) * (t ** i) * ((1 - t) ** (n - i))
 
-def bezier(t, points):
-    """Calculate coordinate of a point in the bezier curve"""
-    n = len(points) - 1
-    x = y = 0
-    for i, pos in enumerate(points):
-        bern = bernstein(t, i, n)
-        x += pos[0] * bern
-        y += pos[1] * bern
-    return x, y
+## def bezier(t, points):
+##     """Calculate coordinate of a point in the bezier curve"""
+##     n = len(points) - 1
+##     x = y = 0
+##     for j, pos in enumerate(points):
+##         bern = bernstein(t, j, n)
+##         x += pos[0] * bern
+##         y += pos[1] * bern
+##     return x, y
 
-def bezier_curve_range(n, points):
-    """Range of points in a curve bezier"""
-    return [ bezier(i / float(n - 1), points) for i in range(n) ]
-
-## def bezier_curve_range(n, points):
+## def bezier_curve_range(steps, points):
 ##     """Range of points in a curve bezier"""
-##     for i in xrange(n):
-##         t = i / float(n - 1)
+##     for i in xrange(steps):
+##         t = i / float(steps - 1)
 ##         yield bezier(t, points)
 
 #END
