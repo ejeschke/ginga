@@ -1,6 +1,6 @@
 #
 # colors.py -- color definitions
-# 
+#
 # Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c) Eric R. Jeschke.  All rights reserved.
@@ -754,8 +754,15 @@ def recalc_color_list():
     color_list = list(color_dict.keys())
     color_list.sort()
 
-def lookup_color(name):
-    return color_dict[name]
+def lookup_color(name, format='tuple'):
+    color = color_dict[name]
+    if format == 'tuple':
+        return color
+    elif format == 'hash':
+        return "#%02x%02x%02x" % (
+            int(color[0]*255), int(color[1]*255), int(color[2]*255))
+    else:
+        raise ValueError("format needs to be 'tuple' or 'hash'")
 
 def add_color(name, tup):
     global color_dict
@@ -769,13 +776,13 @@ def remove_color(name):
 
 def get_colors():
     return color_list
-    
+
 def scan_rgbtxt(filepath):
     with open(filepath, 'r') as in_f:
         buf = in_f.read()
 
     res = {}
-    
+
     for line in buf.split('\n'):
         match = re.match(r"^\s*(\d+)\s+(\d+)\s+(\d+)\s+([\w_]+)\s*$", line)
         if match:
@@ -795,5 +802,5 @@ if __name__ == "__main__":
     import sys, pprint
     res = scan_rgbtxt(sys.argv[1])
     pprint.pprint(res)
-    
+
 #END

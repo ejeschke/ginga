@@ -857,11 +857,12 @@ class BezierCurve(Path):
         points = self.get_points_on_curve(image)
         return self.select_contains_points(viewer, points, data_x, data_y)
 
+    # TODO: this probably belongs somewhere else
     def get_pixels_on_curve(self, image):
-        curve_pts = numpy.array(self.get_points_on_curve(image))
-        xa, ya = curve_pts.T
         data = image.get_data()
-        res = data[ya, xa].flat
+        wd, ht = image.get_size()
+        res = [ data[y, x] if 0 <= x < wd and 0 <= y < ht else numpy.NaN
+                for x, y in self.get_points_on_curve(image) ]
         return res
 
     def draw(self, viewer):

@@ -10,12 +10,12 @@
 import numpy
 
 from ginga.misc import Widgets, Plot
-from ginga import GingaPlugin
+from ginga import GingaPlugin, colors
 from ginga.util.six.moves import map, zip
 
 # default cut colors
-cut_colors = ['green', 'red', 'blue', 'cyan', 'pink', 'magenta',
-              'orange', 'violet', 'turquoise', 'yellow']
+cut_colors = ['magenta', 'skyblue2', 'chartreuse2', 'cyan', 'pink',
+              'burlywood2', 'yellow3', 'turquoise', 'coral1', 'mediumpurple2']
 
 
 class Cuts(GingaPlugin.LocalPlugin):
@@ -176,9 +176,9 @@ class Cuts(GingaPlugin.LocalPlugin):
 
         vbox2 = Widgets.VBox()
         vbox2.add_widget(w, stretch=0)
+        vbox2.add_widget(btn, stretch=0)
         vbox2.add_widget(Widgets.Label(''), stretch=1)
         vbox.add_widget(vbox2, stretch=0)
-        vbox.add_widget(btn, stretch=0)
 
         top.add_widget(sw, stretch=1)
 
@@ -316,8 +316,9 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
             points = obj.get_pixels_on_curve(image)
         points = numpy.array(points)
 
+        rgb = colors.lookup_color(color)
         self.plot.cuts(points, xtitle="Line Index", ytitle="Pixel Value",
-                       color=color)
+                       color=rgb)
 
     def _redo(self, lines, colors):
         for idx in range(len(lines)):
