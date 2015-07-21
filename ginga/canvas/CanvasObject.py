@@ -9,6 +9,8 @@
 #
 import math
 import numpy
+# for BezierCurve
+from collections import OrderedDict
 
 from ginga.misc import Callback, Bunch
 from ginga.misc.ParamSet import Param
@@ -135,19 +137,29 @@ class CanvasObjectBase(Callback.Callbacks):
         cr.draw_polygon(((x2, y2), (i1, j1), (i2, j2)))
         cr.set_fill(None)
 
-    def draw_caps(self, cr, cap, points, radius=None):
+    def draw_caps(self, cr, cap, points, radius=None, isedit=False):
+        i = 0
         for cx, cy in points:
             if radius is None:
                 radius = self.cap_radius
             alpha = getattr(self, 'alpha', 1.0)
             if cap == 'ball':
-                cr.set_fill(self.color, alpha=alpha)
+                # Draw move control point in a different color than the others
+                # (move cp is always cp #0)
+                if (i == 0) and isedit:
+                    # TODO: configurable
+                    color = 'orangered'
+                else:
+                    color = self.color
+
+                cr.set_fill(color, alpha=alpha)
                 cr.draw_circle(cx, cy, radius)
                 #cr.set_fill(self, None)
+            i += 1
 
     def draw_edit(self, cr, viewer):
         cpoints = self.get_cpoints(viewer, points=self.get_edit_points())
-        self.draw_caps(cr, 'ball', cpoints)
+        self.draw_caps(cr, 'ball', cpoints, isedit=True)
 
     def calc_radius(self, viewer, x1, y1, radius):
         # scale radius
@@ -707,10 +719,12 @@ class Path(PolygonMixin, CanvasObjectBase):
                                   **kwdargs)
         PolygonMixin.__init__(self)
 
-    def contains_arr(self, x_arr, y_arr, radius=1.0):
-        x1, y1 = self.crdmap.to_data(*self.points[0])
+    def contains_arr_points(self, x_arr, y_arr, points, radius=1.0):
+        # This code is split out of contains_arr() so that it can
+        # be called from BezierCurve with a different set of points
+        x1, y1 = self.crdmap.to_data(*points[0])
         contains = None
-        for point in self.points[1:]:
+        for point in points[1:]:
             x2, y2 = self.crdmap.to_data(*point)
             res = self.point_within_line(x_arr, y_arr, x1, y1, x2, y2,
                                          radius)
@@ -721,20 +735,30 @@ class Path(PolygonMixin, CanvasObjectBase):
             x1, y1 = x2, y2
         return contains
 
+    def contains_arr(self, x_arr, y_arr, radius=1.0):
+        return self.contains_arr_points(x_arr, y_arr, self.points,
+                                        radius=radius)
+
     def contains(self, data_x, data_y):
         x_arr, y_arr = numpy.array([data_x]), numpy.array([data_y])
         res = self.contains_arr(x_arr, y_arr)
         return res[0]
 
-    def select_contains(self, viewer, x, y):
-        x1, y1 = self.crdmap.to_data(*self.points[0])
-        for point in self.points[1:]:
+    def select_contains_points(self, viewer, points, data_x, data_y):
+        # This code is split out of contains_arr() so that it can
+        # be called from BezierCurve with a different set of points
+        x1, y1 = self.crdmap.to_data(*points[0])
+        for point in points[1:]:
             x2, y2 = self.crdmap.to_data(*point)
-            if self.within_line(viewer, x, y, x1, y1, x2, y2,
+            if self.within_line(viewer, data_x, data_y, x1, y1, x2, y2,
                                 self.cap_radius):
                 return True
             x1, y1 = x2, y2
         return False
+
+    def select_contains(self, viewer, data_x, data_y):
+        return self.select_contains_points(viewer, self.points,
+                                           data_x, data_y)
 
     def get_center_pt(self):
         # default is geometric average of points
@@ -790,18 +814,17 @@ class BezierCurve(Path):
     def calc_bezier_curve_range(self, steps, points):
         """Hacky method to get an ordered set of points that are on the
         Bezier curve.  This is used by some backends (which don't support
-        drawing cubic Bezier curves) to render the curve using paths
-        connecting points.
+        drawing cubic Bezier curves) to render the curve using paths.
         """
         n = len(points) - 1
         fact_n = math.factorial(n)
 
         # press OrderedDict into use as an OrderedSet of points
-        from collections import OrderedDict
         d = OrderedDict()
 
         m = float(steps - 1)
 
+        # TODO: optomize this code as much as possible
         for i in range(steps):
             #t = i / float(steps - 1)
             t = i / m
@@ -829,13 +852,10 @@ class BezierCurve(Path):
         steps = apply(max, image.get_size())
         return self.calc_bezier_curve_range(steps, points)
 
-    # TODO: this needs properly overridden contains_arr(), contains() and
-    #       select_contains() !!
-    ## def select_contains(self, viewer, data_x, data_y):
-    ##     image = viewer.get_image()
-    ##     points = self.get_points_on_curve(image)
-    ##     pt = ( int(round(data_x)), int(round(data_y)) )
-    ##     return (pt in points)
+    def select_contains(self, viewer, data_x, data_y):
+        image = viewer.get_image()
+        points = self.get_points_on_curve(image)
+        return self.select_contains_points(viewer, points, data_x, data_y)
 
     def get_pixels_on_curve(self, image):
         curve_pts = numpy.array(self.get_points_on_curve(image))
