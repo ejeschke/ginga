@@ -169,10 +169,16 @@ class Cuts(GingaPlugin.LocalPlugin):
         btn.add_callback('activated', self.delete_all_cb)
         btn.set_tooltip("Clear all cuts")
 
+        btn = Widgets.CheckBox("Edit Mode")
+        btn.set_state(self.canvas.get_draw_mode() == 'edit')
+        btn.add_callback('activated', self.set_mode_cb)
+        btn.set_tooltip("on to edit canvas, off to draw")
+
         vbox2 = Widgets.VBox()
         vbox2.add_widget(w, stretch=0)
         vbox2.add_widget(Widgets.Label(''), stretch=1)
         vbox.add_widget(vbox2, stretch=0)
+        vbox.add_widget(btn, stretch=0)
 
         top.add_widget(sw, stretch=1)
 
@@ -288,6 +294,7 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
     def stop(self):
         # remove the canvas from the image
         self.fitsimage.deleteObjectByTag(self.layertag)
+        self.canvas.set_draw_mode('draw')
         self.fv.showStatus("")
 
     def _plotpoints(self, obj, color):
@@ -530,6 +537,13 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
 
     def edit_cb(self, canvas, obj):
         self.redo()
+        return True
+
+    def set_mode_cb(self, w, val):
+        if val:
+            self.canvas.set_draw_mode('edit')
+        else:
+            self.canvas.set_draw_mode('draw')
         return True
 
     def __str__(self):
