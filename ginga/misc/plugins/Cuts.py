@@ -33,7 +33,7 @@ class Cuts(GingaPlugin.LocalPlugin):
 
     Drawing Cuts
     ------------
-    The Cut Type menu chooses what kind of cut you are going to draw.
+    The New Cut Type menu chooses what kind of cut you are going to draw.
 
     Choose "New Cut" from the Cut dropdown menu if you want to draw a
     new cut. Otherwise, if a particular named cut is selected then that
@@ -97,10 +97,15 @@ class Cuts(GingaPlugin.LocalPlugin):
         canvas.set_drawtype('line', color='cyan', linestyle='dash')
         canvas.set_callback('draw-event', self.draw_cb)
         canvas.set_callback('edit-event', self.edit_cb)
-        canvas.set_callback('cursor-down', self.buttondown_cb)
-        canvas.set_callback('cursor-move', self.motion_cb)
-        canvas.set_callback('cursor-up', self.buttonup_cb)
-        canvas.set_callback('key-press', self.keydown)
+        ## canvas.set_callback('cursor-down', self.buttondown_cb)
+        ## canvas.set_callback('cursor-move', self.motion_cb)
+        ## canvas.set_callback('cursor-up', self.buttonup_cb)
+        canvas.add_draw_mode('move', down=self.buttondown_cb,
+                             move=self.motion_cb, up=self.buttonup_cb,
+                             key=self.keydown)
+        canvas.set_draw_mode('draw')
+        canvas.register_for_cursor_drawing(self.fitsimage)
+        #canvas.set_callback('key-press', self.keydown)
         canvas.setSurface(self.fitsimage)
         self.canvas = canvas
 
@@ -136,7 +141,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         vbox.add_widget(w, stretch=1)
 
         captions = (('Cut:', 'label', 'Cut', 'combobox',
-                     'Cut Type:', 'label', 'Cut Type', 'combobox'),
+                     'New Cut Type:', 'label', 'Cut Type', 'combobox'),
                     ('Delete Cut', 'button', 'Delete All', 'button'),
                     )
         w, b = Widgets.build_info(captions, orientation=orientation)
@@ -169,17 +174,39 @@ class Cuts(GingaPlugin.LocalPlugin):
         btn.add_callback('activated', self.delete_all_cb)
         btn.set_tooltip("Clear all cuts")
 
+        vbox2 = Widgets.VBox()
+        vbox2.add_widget(w, stretch=0)
+
         btn = Widgets.CheckBox("Edit Mode")
         btn.set_state(self.canvas.get_draw_mode() == 'edit')
         btn.add_callback('activated', self.set_mode_cb)
         btn.set_tooltip("on to edit canvas, off to draw")
 
-        vbox2 = Widgets.VBox()
-        vbox2.add_widget(w, stretch=0)
-        vbox2.add_widget(btn, stretch=0)
-        vbox2.add_widget(Widgets.Label(''), stretch=1)
-        vbox.add_widget(vbox2, stretch=0)
+        mode = self.canvas.get_draw_mode()
+        hbox = Widgets.HBox()
+        btn1 = Widgets.RadioButton("Move")
+        btn1.set_state(mode == 'move')
+        btn1.add_callback('activated', lambda w, val: self.set_mode_cb('move'))
+        self.w.btn_move = btn1
+        hbox.add_widget(btn1)
 
+        btn2 = Widgets.RadioButton("Draw", group=btn1)
+        btn1.set_state(mode == 'draw')
+        btn2.add_callback('activated', lambda w, val: self.set_mode_cb('draw'))
+        self.w.btn_draw = btn2
+        hbox.add_widget(btn2)
+
+        btn3 = Widgets.RadioButton("Edit", group=btn1)
+        btn1.set_state(mode == 'edit')
+        btn3.add_callback('activated', lambda w, val: self.set_mode_cb('edit'))
+        self.w.btn_edit = btn3
+        hbox.add_widget(btn3)
+
+        vbox2.add_widget(hbox, stretch=0)
+
+        vbox2.add_widget(Widgets.Label(''), stretch=1)
+
+        vbox.add_widget(vbox2, stretch=0)
         top.add_widget(sw, stretch=1)
 
         btns = Widgets.HBox()
@@ -194,12 +221,12 @@ class Cuts(GingaPlugin.LocalPlugin):
         top.add_widget(btns, stretch=0)
 
         container.add_widget(top, stretch=1)
+
+        self.select_cut(self._new_cut)
         self.gui_up = True
 
     def instructions(self):
-        self.tw.set_text("""Draw (or redraw) a line with the right mouse button.  Click or drag left button to reposition line.
-
-When drawing a path or Bezier cut, press 'v' to add a vertex.
+        self.tw.set_text("""When drawing a path or Bezier cut, press 'v' to add a vertex.
 
 Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full vertical cut.""")
 
@@ -210,9 +237,19 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         if (tag == self._new_cut) or len(self.tags) < 2:
             self.w.delete_cut.set_enabled(False)
             self.w.delete_all.set_enabled(False)
+
+            self.w.btn_move.set_enabled(False)
+            self.w.btn_draw.set_state(True)
+            self.w.btn_edit.set_enabled(False)
         else:
             self.w.delete_cut.set_enabled(True)
             self.w.delete_all.set_enabled(True)
+
+            self.w.btn_move.set_enabled(True)
+            self.w.btn_edit.set_enabled(True)
+
+            if self.w.btn_edit.get_state():
+                self.edit_select_cuts()
 
     def cut_select_cb(self, w, index):
         tag = self.tags[index]
@@ -294,7 +331,7 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
     def stop(self):
         # remove the canvas from the image
         self.fitsimage.deleteObjectByTag(self.layertag)
-        self.canvas.set_draw_mode('draw')
+        self.canvas.set_draw_mode('move')
         self.fv.showStatus("")
 
     def _plotpoints(self, obj, color):
@@ -398,15 +435,15 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
     def _getlines(self, obj):
         if obj.kind == 'compound':
             return self._append_lists(list(map(self._getlines, obj.objects)))
-        elif obj.kind in ('line', 'path', 'freepath', 'beziercurve'):
+        elif obj.kind in self.cuttypes:
             return [obj]
         else:
             return []
 
-    def buttondown_cb(self, canvas, event, data_x, data_y):
-        return self.motion_cb(canvas, event, data_x, data_y)
+    def buttondown_cb(self, canvas, event, data_x, data_y, viewer):
+        return self.motion_cb(canvas, event, data_x, data_y, viewer)
 
-    def motion_cb(self, canvas, event, data_x, data_y):
+    def motion_cb(self, canvas, event, data_x, data_y, viewer):
         if self.cutstag == self._new_cut:
             return True
         obj = self.canvas.getObjectByTag(self.cutstag)
@@ -416,7 +453,7 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         canvas.redraw(whence=3)
         return True
 
-    def buttonup_cb(self, canvas, event, data_x, data_y):
+    def buttonup_cb(self, canvas, event, data_x, data_y, viewer):
         if self.cutstag == self._new_cut:
             return True
         obj = self.canvas.getObjectByTag(self.cutstag)
@@ -427,16 +464,17 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         self.redo()
         return True
 
-    def keydown(self, canvas, keyname):
-        if keyname == 'n':
+    def keydown(self, canvas, event, data_x, data_y, viewer):
+        if event.key == 'n':
             self.select_cut(self._new_cut)
             return True
-        elif keyname == 'h':
+        elif event.key == 'h':
             self.cut_at('horizontal')
             return True
-        elif keyname == 'j':
+        elif event.key == 'j':
             self.cut_at('vertical')
             return True
+        return False
 
     def _get_new_count(self):
         counts = set([])
@@ -540,11 +578,21 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         self.redo()
         return True
 
-    def set_mode_cb(self, w, val):
-        if val:
-            self.canvas.set_draw_mode('edit')
+    def edit_select_cuts(self):
+        if self.cutstag != self._new_cut:
+            obj = self.canvas.getObjectByTag(self.cutstag)
+            # drill down to reference shape
+            if hasattr(obj, 'objects'):
+                obj = obj.objects[0]
+            self.canvas.edit_select(obj)
         else:
-            self.canvas.set_draw_mode('draw')
+            self.canvas.clear_selected()
+        self.canvas.update_canvas()
+
+    def set_mode_cb(self, mode):
+        self.canvas.set_draw_mode(mode)
+        if mode == 'edit':
+            self.edit_select_cuts()
         return True
 
     def __str__(self):
