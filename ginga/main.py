@@ -114,6 +114,7 @@ local_plugins = [
     #Bunch(module='Pipeline', ws='dialogs'),
     Bunch(module='Drawing', ws='dialogs', shortkey='f11'),
     Bunch(module='FBrowser', ws='dialogs', shortkey='f12'),
+    Bunch(module='Compose', ws='dialogs'),
     ]
 
 
