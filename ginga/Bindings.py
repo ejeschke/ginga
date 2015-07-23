@@ -73,8 +73,6 @@ class ImageViewBindings(object):
             # Define our modes
             dmod_draw = ['space', None, None],
             dmod_cmap = ['y', None, None],
-            #dmod_cutlo = [',', None, "Cut low"],
-            #dmod_cuthi = ['.', None, "Cut high"],
             dmod_cuts = ['s', None, None],
             dmod_dist = ['d', None, None],
             dmod_contrast = ['t', None, None],
@@ -97,6 +95,7 @@ class ImageViewBindings(object):
             kp_cut_auto = ['a'],
             kp_autocuts_on = [':'],
             kp_autocuts_override = [';'],
+            kp_autocenter_override = ['/'],
             kp_contrast_restore = ['T'],
             kp_cmap_reset = ['Y'],
             kp_imap_reset = [],
@@ -833,6 +832,14 @@ class ImageViewBindings(object):
             viewer.enable_autocuts('override')
             if msg:
                 viewer.onscreen_message('Autocuts Override', delay=1.0)
+        return True
+
+    def kp_autocenter_override(self, viewer, event, data_x, data_y, msg=True):
+        if self.canpan:
+            msg = self.settings.get('msg_cuts', msg)
+            viewer.set_autocenter('override')
+            if msg:
+                viewer.onscreen_message('Autocenter Override', delay=1.0)
         return True
 
     def kp_contrast_restore(self, viewer, event, data_x, data_y, msg=True):
