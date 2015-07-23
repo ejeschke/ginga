@@ -37,10 +37,11 @@ class Histogram(GingaPlugin.LocalPlugin):
                             drawdims=True)
         canvas.set_callback('draw-event', self.draw_cb)
         canvas.set_callback('edit-event', self.edit_cb)
-        canvas.set_callback('cursor-down', self.drag)
-        canvas.set_callback('cursor-move', self.drag)
-        canvas.set_callback('cursor-up', self.update)
+        canvas.add_draw_mode('move', down=self.drag,
+                             move=self.drag, up=self.update)
+        canvas.register_for_cursor_drawing(self.fitsimage)
         canvas.setSurface(self.fitsimage)
+        canvas.set_draw_mode('draw')
         self.canvas = canvas
 
         fitssettings = fitsimage.get_settings()
@@ -73,7 +74,7 @@ class Histogram(GingaPlugin.LocalPlugin):
         self.plot = Plot.Plot(self.logger, width=2, height=3, dpi=100)
         ax = self.plot.add_axis()
         ax.grid(True)
-        
+
         # for now we need to wrap this native widget
         w = Widgets.wrap(self.plot.get_widget())
         vbox.add_widget(w, stretch=1)
@@ -111,9 +112,34 @@ class Histogram(GingaPlugin.LocalPlugin):
 
         vbox.add_widget(w, stretch=0)
 
+        mode = self.canvas.get_draw_mode()
+        hbox = Widgets.HBox()
+        btn1 = Widgets.RadioButton("Move")
+        btn1.set_state(mode == 'move')
+        btn1.add_callback('activated', lambda w, val: self.set_mode_cb('move'))
+        btn1.set_tooltip("Choose this to position box")
+        self.w.btn_move = btn1
+        hbox.add_widget(btn1)
+
+        btn2 = Widgets.RadioButton("Draw", group=btn1)
+        btn2.set_state(mode == 'draw')
+        btn2.add_callback('activated', lambda w, val: self.set_mode_cb('draw'))
+        btn2.set_tooltip("Choose this to draw a replacement box")
+        self.w.btn_draw = btn2
+        hbox.add_widget(btn2)
+
+        btn3 = Widgets.RadioButton("Edit", group=btn1)
+        btn3.set_state(mode == 'edit')
+        btn3.add_callback('activated', lambda w, val: self.set_mode_cb('edit'))
+        btn3.set_tooltip("Choose this to edit a box")
+        self.w.btn_edit = btn3
+        hbox.add_widget(btn3)
+
+        vbox.add_widget(hbox, stretch=0)
+
         ## spacer = Widgets.Label('')
         ## vbox.add_widget(spacer, stretch=1)
-        
+
         top.add_widget(sw, stretch=1)
 
         btns = Widgets.HBox()
@@ -267,7 +293,7 @@ class Histogram(GingaPlugin.LocalPlugin):
         ## lbls = self.plot.ax.xaxis.get_ticklabels()
         ## for lbl in lbls:
         ##     lbl.set(rotation=45, horizontalalignment='right')
-        
+
         self.w.cut_low.set_text(str(loval))
         self.w.cut_high.set_text(str(hival))
         self.plot.fig.canvas.draw()
@@ -275,7 +301,7 @@ class Histogram(GingaPlugin.LocalPlugin):
         self.fv.showStatus("Click or drag left mouse button to move region")
         return True
 
-    def update(self, canvas, event, data_x, data_y):
+    def update(self, canvas, event, data_x, data_y, viewer):
 
         obj = self.canvas.getObjectByTag(self.histtag)
         if obj.kind == 'compound':
@@ -311,7 +337,7 @@ class Histogram(GingaPlugin.LocalPlugin):
         self.draw_cb(canvas, tag)
         return True
 
-    def drag(self, canvas, event, data_x, data_y):
+    def drag(self, canvas, event, data_x, data_y, viewer):
 
         obj = self.canvas.getObjectByTag(self.histtag)
         if obj.kind == 'compound':
@@ -432,7 +458,7 @@ class Histogram(GingaPlugin.LocalPlugin):
     def set_numbins_cb(self):
         self.numbins = int(self.w.numbins.get_text())
         self.redo()
-        
+
     def log_histogram_cb(self, w, val):
         self.plot.logy = val
         if (self.histtag is not None) and self.gui_up:
@@ -444,6 +470,24 @@ class Histogram(GingaPlugin.LocalPlugin):
         if (self.histtag is not None) and self.gui_up:
             # self.histtag is None means no data is loaded yet
             self.redo()
+
+    def edit_select_box(self):
+        if self.histtag is not None:
+            obj = self.canvas.getObjectByTag(self.histtag)
+            if obj.kind != 'compound':
+                return True
+            # drill down to reference shape
+            bbox = obj.objects[0]
+            self.canvas.edit_select(bbox)
+        else:
+            self.canvas.clear_selected()
+        self.canvas.update_canvas()
+
+    def set_mode_cb(self, mode):
+        self.canvas.set_draw_mode(mode)
+        if mode == 'edit':
+            self.edit_select_box()
+        return True
 
     def __str__(self):
         return 'histogram'

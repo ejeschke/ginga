@@ -97,9 +97,6 @@ class Cuts(GingaPlugin.LocalPlugin):
         canvas.set_drawtype('line', color='cyan', linestyle='dash')
         canvas.set_callback('draw-event', self.draw_cb)
         canvas.set_callback('edit-event', self.edit_cb)
-        ## canvas.set_callback('cursor-down', self.buttondown_cb)
-        ## canvas.set_callback('cursor-move', self.motion_cb)
-        ## canvas.set_callback('cursor-up', self.buttonup_cb)
         canvas.add_draw_mode('move', down=self.buttondown_cb,
                              move=self.motion_cb, up=self.buttonup_cb,
                              key=self.keydown)
@@ -177,28 +174,26 @@ class Cuts(GingaPlugin.LocalPlugin):
         vbox2 = Widgets.VBox()
         vbox2.add_widget(w, stretch=0)
 
-        btn = Widgets.CheckBox("Edit Mode")
-        btn.set_state(self.canvas.get_draw_mode() == 'edit')
-        btn.add_callback('activated', self.set_mode_cb)
-        btn.set_tooltip("on to edit canvas, off to draw")
-
         mode = self.canvas.get_draw_mode()
         hbox = Widgets.HBox()
         btn1 = Widgets.RadioButton("Move")
         btn1.set_state(mode == 'move')
         btn1.add_callback('activated', lambda w, val: self.set_mode_cb('move'))
+        btn1.set_tooltip("Choose this to position cuts")
         self.w.btn_move = btn1
         hbox.add_widget(btn1)
 
         btn2 = Widgets.RadioButton("Draw", group=btn1)
-        btn1.set_state(mode == 'draw')
+        btn2.set_state(mode == 'draw')
         btn2.add_callback('activated', lambda w, val: self.set_mode_cb('draw'))
+        btn2.set_tooltip("Choose this to draw a new or replacement cut")
         self.w.btn_draw = btn2
         hbox.add_widget(btn2)
 
         btn3 = Widgets.RadioButton("Edit", group=btn1)
-        btn1.set_state(mode == 'edit')
+        btn3.set_state(mode == 'edit')
         btn3.add_callback('activated', lambda w, val: self.set_mode_cb('edit'))
+        btn3.set_tooltip("Choose this to edit a cut")
         self.w.btn_edit = btn3
         hbox.add_widget(btn3)
 

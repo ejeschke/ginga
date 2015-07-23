@@ -23,9 +23,13 @@ class Ruler(GingaPlugin.LocalPlugin):
         self.dc = fv.getDrawClasses()
         canvas = self.dc.DrawingCanvas()
         canvas.enable_draw(True)
+        canvas.enable_edit(True)
         canvas.set_drawtype('ruler', color='cyan')
         canvas.set_callback('draw-event', self.wcsruler)
         canvas.set_callback('draw-down', self.clear)
+        canvas.set_callback('edit-event', self.edit_cb)
+        canvas.set_draw_mode('draw')
+        canvas.register_for_cursor_drawing(self.fitsimage)
         canvas.setSurface(self.fitsimage)
         self.canvas = canvas
 
@@ -55,7 +59,9 @@ class Ruler(GingaPlugin.LocalPlugin):
 
         fr = Widgets.Frame("Ruler")
 
-        captions = (('Units:', 'label', 'Units', 'combobox'),)
+        captions = (('Units:', 'label', 'Units', 'combobox'),
+                    ("Edit mode", 'checkbutton'),
+                    )
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w = b
 
@@ -65,6 +71,10 @@ class Ruler(GingaPlugin.LocalPlugin):
         index = self.unittypes.index(self.units)
         combobox.set_index(index)
         combobox.add_callback('activated', lambda w, idx: self.set_units())
+
+        b.edit_mode.set_state(self.canvas.get_draw_mode() == 'edit')
+        b.edit_mode.add_callback('activated', self.set_mode_cb)
+        b.edit_mode.set_tooltip("on to edit canvas, off to draw")
 
         fr.set_widget(w)
         vbox.add_widget(fr, stretch=0)
@@ -167,6 +177,26 @@ class Ruler(GingaPlugin.LocalPlugin):
         obj.color = self.rulecolor
         obj.cap = 'ball'
         self.canvas.redraw(whence=3)
+
+    def edit_cb(self, canvas, obj):
+        self.redo()
+        return True
+
+    def edit_select_ruler(self):
+        if self.ruletag is not None:
+            obj = self.canvas.getObjectByTag(self.ruletag)
+            self.canvas.edit_select(obj)
+        else:
+            self.canvas.clear_selected()
+        self.canvas.update_canvas()
+
+    def set_mode_cb(self, w, val):
+        if val:
+            self.canvas.set_draw_mode('edit')
+            self.edit_select_ruler()
+        else:
+            self.canvas.set_draw_mode('draw')
+        return True
 
     def __str__(self):
         return 'ruler'

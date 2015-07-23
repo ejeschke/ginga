@@ -70,14 +70,15 @@ class Pick(GingaPlugin.LocalPlugin):
         canvas = self.dc.DrawingCanvas()
         canvas.enable_draw(True)
         canvas.enable_edit(True)
-        canvas.set_callback('cursor-down', self.btndown)
-        canvas.set_callback('cursor-move', self.drag)
-        canvas.set_callback('cursor-up', self.update)
         canvas.set_drawtype('rectangle', color='cyan', linestyle='dash',
                             drawdims=True)
         canvas.set_callback('draw-event', self.draw_cb)
         canvas.set_callback('edit-event', self.edit_cb)
+        canvas.add_draw_mode('move', down=self.btndown,
+                             move=self.drag, up=self.update)
+        canvas.register_for_cursor_drawing(self.fitsimage)
         canvas.setSurface(self.fitsimage)
+        canvas.set_draw_mode('move')
         self.canvas = canvas
 
         self.have_mpl = have_mpl
@@ -520,6 +521,31 @@ class Pick(GingaPlugin.LocalPlugin):
 
         fr.set_widget(nb)
         vbox.add_widget(fr, stretch=0)
+
+        mode = self.canvas.get_draw_mode()
+        hbox = Widgets.HBox()
+        btn1 = Widgets.RadioButton("Move")
+        btn1.set_state(mode == 'move')
+        btn1.add_callback('activated', lambda w, val: self.set_mode_cb('move'))
+        btn1.set_tooltip("Choose this to position pick")
+        self.w.btn_move = btn1
+        hbox.add_widget(btn1)
+
+        btn2 = Widgets.RadioButton("Draw", group=btn1)
+        btn2.set_state(mode == 'draw')
+        btn2.add_callback('activated', lambda w, val: self.set_mode_cb('draw'))
+        btn2.set_tooltip("Choose this to draw a replacement pick")
+        self.w.btn_draw = btn2
+        hbox.add_widget(btn2)
+
+        btn3 = Widgets.RadioButton("Edit", group=btn1)
+        btn3.set_state(mode == 'edit')
+        btn3.add_callback('activated', lambda w, val: self.set_mode_cb('edit'))
+        btn3.set_tooltip("Choose this to edit a pick")
+        self.w.btn_edit = btn3
+        hbox.add_widget(btn3)
+
+        vbox.add_widget(hbox, stretch=0)
 
         ## spacer = Widgets.Label('')
         ## vbox.add_widget(spacer, stretch=1)
@@ -1161,7 +1187,7 @@ class Pick(GingaPlugin.LocalPlugin):
     def eval_intr(self):
         self.ev_intr.set()
 
-    def btndown(self, canvas, event, data_x, data_y):
+    def btndown(self, canvas, event, data_x, data_y, viewer):
         try:
             obj = self.canvas.getObjectByTag(self.picktag)
             if obj.kind == 'rectangle':
@@ -1194,7 +1220,7 @@ class Pick(GingaPlugin.LocalPlugin):
         #self.draw_cb(self.canvas, tag)
         return True
 
-    def update(self, canvas, event, data_x, data_y):
+    def update(self, canvas, event, data_x, data_y, viewer):
         try:
             obj = self.canvas.getObjectByTag(self.picktag)
             if obj.kind == 'rectangle':
@@ -1234,7 +1260,7 @@ class Pick(GingaPlugin.LocalPlugin):
         return True
 
 
-    def drag(self, canvas, event, data_x, data_y):
+    def drag(self, canvas, event, data_x, data_y, viewer):
 
         obj = self.canvas.getObjectByTag(self.picktag)
         if obj.kind == 'compound':
@@ -1475,6 +1501,24 @@ class Pick(GingaPlugin.LocalPlugin):
             errmsg = "Error calculating WCS match: %s" % (str(e))
             self.fv.gui_do(self.fv.show_error, errmsg)
             return
+
+    def edit_select_pick(self):
+        if self.picktag is not None:
+            obj = self.canvas.getObjectByTag(self.picktag)
+            if obj.kind != 'compound':
+                return True
+            # drill down to reference shape
+            bbox = obj.objects[0]
+            self.canvas.edit_select(bbox)
+        else:
+            self.canvas.clear_selected()
+        self.canvas.update_canvas()
+
+    def set_mode_cb(self, mode):
+        self.canvas.set_draw_mode(mode)
+        if mode == 'edit':
+            self.edit_select_pick()
+        return True
 
     def __str__(self):
         return 'pick'
