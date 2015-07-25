@@ -158,7 +158,7 @@ class Info(GingaPlugin.GlobalPlugin):
     def image_update_cb(self, image, fitsimage, info):
         cur_img = fitsimage.get_image()
         if cur_img == image:
-            self.set_info(info, fitsimage)
+            self.fv.gui_do(self.set_info, info, fitsimage)
         return True
 
     def focus_cb(self, viewer, fitsimage):

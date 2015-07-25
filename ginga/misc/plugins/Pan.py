@@ -143,7 +143,7 @@ class Pan(GingaPlugin.GlobalPlugin):
         # image has changed (e.g. size, value range, etc)
         cur_img = fitsimage.get_image()
         if cur_img == image:
-            self.set_image(chinfo, paninfo, image)
+            self.fv.gui_do(self.set_image, chinfo, paninfo, image)
         return True
 
     def focus_cb(self, viewer, fitsimage):
