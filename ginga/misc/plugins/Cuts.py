@@ -83,6 +83,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         self.count = 0
         self.cuttypes = ['line', 'path', 'freepath', 'beziercurve']
         self.cuttype = 'line'
+        self.save_enabled = False
 
         # get Cuts preferences
         prefs = self.fv.get_preferences()
@@ -215,9 +216,10 @@ class Cuts(GingaPlugin.LocalPlugin):
         btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
 
-        btn = Widgets.Button("Save")
-        btn.add_callback('activated', lambda w: self.save_cb())
-        btns.add_widget(btn, stretch=0)
+        self.save_btn = Widgets.Button("Save")
+        self.save_btn.add_callback('activated', lambda w: self.save_cb())
+        self.save_btn.set_enabled(self.save_enabled)
+        btns.add_widget(self.save_btn, stretch=0)
 
         top.add_widget(btns, stretch=0)
 
@@ -273,6 +275,8 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         tag = self.tags[idx]
         self.select_cut(tag)
         # plot cleared in redo() if no more cuts
+        if tag == self._new_cut:
+            self.save_btn.set_enabled(False)
         self.redo()
 
     def delete_all_cb(self, w):
@@ -283,6 +287,7 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         self.w.cuts.append_text(self._new_cut)
         self.select_cut(self._new_cut)
         # plot cleared in redo() if no more cuts
+        self.save_btn.set_enabled(False)
         self.redo()
 
     def add_cuts_tag(self, tag):
@@ -574,6 +579,8 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         self.canvas.add(cut, tag=tag)
         self.add_cuts_tag(tag)
 
+        self.save_btn.set_enabled(True)
+
         self.logger.debug("redoing cut plots")
         return self.redo()
 
@@ -610,10 +617,6 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
     def save_cb(self):
         fig, xarr, yarr = self.plot.get_data()
 
-        # Check if plot is empty
-        if xarr == []:
-            return
-
         target = SaveDialog(title='Save plot', extfilter='*.png').get_path()
         if target:
             fig.savefig(target, dpi=100)
@@ -621,7 +624,7 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         target = SaveDialog(title='Save data', extfilter='*.npz').get_path()
         if target:
             target_file = open(target, 'w')
-            np.savez_compressed(target_file, x=xarr, y=yarr)
+            numpy.savez_compressed(target_file, x=xarr, y=yarr)
             target_file.close()
 
     def __str__(self):

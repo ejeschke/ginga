@@ -72,6 +72,8 @@ class PlotBase(Callback.Callbacks):
         self._sanity_check_window()
         self.logger.debug('clearing canvas...')
         self.ax.cla()
+        self.xdata = []
+        self.ydata = []
 
     def show(self):
         self._sanity_check_window()

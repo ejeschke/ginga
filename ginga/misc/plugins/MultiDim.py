@@ -148,15 +148,20 @@ class MultiDim(GingaPlugin.LocalPlugin):
         vbox.add_widget(w, stretch=0)
 
         fr = Widgets.Frame("Movie")
-        captions = [("Start:", 'label', "Start", 'entry',
-                     "End:", 'label', "End", 'entry', 'Save Movie', 'button')]
-        w, b = Widgets.build_info(captions, orientation=orientation)
-        self.w.update(b)
-        b.start.set_tooltip("Starting slice")
-        b.end.set_tooltip("Ending slice")
-        b.save_movie.add_callback('activated', lambda w: self.save_movie_cb())
-        b.save_movie.set_enabled(False)
-        fr.set_widget(w)
+        if have_mencoder:
+            captions = [("Start:", 'label', "Start", 'entry',
+                         "End:", 'label', "End", 'entry', 'Save Movie', 'button')]
+            w, b = Widgets.build_info(captions, orientation=orientation)
+            self.w.update(b)
+            b.start.set_tooltip("Starting slice")
+            b.end.set_tooltip("Ending slice")
+            b.save_movie.add_callback('activated', lambda w: self.save_movie_cb())
+            b.save_movie.set_enabled(False)
+            fr.set_widget(w)
+        else:
+            infolbl = Widgets.Label()
+            infolbl.set_text("Please install 'mencoder' to save as movie")
+            fr.set_widget(infolbl)
         vbox.add_widget(fr, stretch=0)
 
         spacer = Widgets.Label('')
@@ -255,7 +260,8 @@ class MultiDim(GingaPlugin.LocalPlugin):
         self.w.interval.set_enabled(is_dc)
 
         self.w.save_slice.set_enabled(is_dc)
-        self.w.save_movie.set_enabled(is_dc)
+        if have_mencoder:
+            self.w.save_movie.set_enabled(is_dc)
 
     def close(self):
         chname = self.fv.get_channelName(self.fitsimage)
@@ -527,9 +533,6 @@ class MultiDim(GingaPlugin.LocalPlugin):
             self.fv.showStatus("Successfully saved slice")
 
     def save_movie_cb(self):
-        assert have_mencoder is True, \
-            Exception("Please install 'mencoder' to save as movie")
-
         start = int(self.w.start.get_text())
         end = int(self.w.end.get_text())
         if not start or not end:
@@ -550,11 +553,10 @@ class MultiDim(GingaPlugin.LocalPlugin):
 
     def save_movie(self, start, end, target):
         hdu = self.fits_f[self.curhdu]
-        data = np.array(hdu.data)
-
         loval, hival = self.fitsimage.get_cut_levels()
-        data_rescaled = (data - loval) * 255 / (hival - loval)
-        data_rescaled = data_rescaled.astype(np.uint8, copy=False)
+        data = np.array(hdu.data, copy=True).clip(loval, hival)
+
+        data_rescaled = ((data - loval) * 255 / (hival - loval)).astype(np.uint8, copy=False)
         H, W = data.shape[1:]
 
         video = VideoSink((H, W), target)
