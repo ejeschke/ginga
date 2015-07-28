@@ -171,6 +171,7 @@ class Pick(GingaPlugin.LocalPlugin):
         nb.add_widget(iw, title="Image")
 
         if have_mpl:
+            # Contour plot
             self.plot1 = Plot.Plot(logger=self.logger,
                                    width=2, height=3, dpi=72)
             self.w.canvas = self.plot1.canvas
@@ -178,6 +179,7 @@ class Pick(GingaPlugin.LocalPlugin):
             self.w.ax = self.w.fig.add_subplot(111, axisbg='black')
             self.w.ax.set_aspect('equal', adjustable='box')
             self.w.ax.set_title('Contours')
+            #self.w.fig.tight_layout()
             #self.w.ax.grid(True)
 
             canvas = self.w.canvas
@@ -188,6 +190,7 @@ class Pick(GingaPlugin.LocalPlugin):
             connect("scroll_event", self.plot_scroll)
             nb.add_widget(Widgets.wrap(canvas), title="Contour")
 
+            # FWHM gaussians plot
             self.plot2 = Plot.Plot(logger=self.logger,
                                    width=2, height=3, dpi=72)
             self.w.canvas2 = self.plot2.canvas
@@ -198,8 +201,24 @@ class Pick(GingaPlugin.LocalPlugin):
             self.w.ax2.set_xlabel('pixels')
             self.w.ax2.set_title('FWHM')
             self.w.ax.grid(True)
+            #self.w.fig2.tight_layout()
             canvas = self.w.canvas2
             nb.add_widget(Widgets.wrap(canvas), title="FWHM")
+
+            # Radial profile plot
+            self.plot3 = Plot.Plot(logger=self.logger,
+                                   width=2, height=3, dpi=72)
+            self.w.canvas3 = self.plot3.canvas
+            self.w.fig3 = self.plot3.fig
+            self.w.ax3 = self.w.fig3.add_subplot(111, axisbg='white')
+            #self.w.ax3.set_aspect('equal', adjustable='box')
+            self.w.ax3.set_ylabel('ADU')
+            self.w.ax3.set_xlabel('Radius')
+            self.w.ax3.set_title('Radial Profile')
+            self.w.ax.grid(True)
+            #self.w.fig3.tight_layout()
+            canvas = self.w.canvas3
+            nb.add_widget(Widgets.wrap(canvas), title="Radial")
 
         ## self.msgFont = self.fv.getFont("sansFont", 12)
         ## tw = Widgets.TextArea(wrap=True, editable=False)
@@ -778,8 +797,12 @@ class Pick(GingaPlugin.LocalPlugin):
         self.w.ax2.plot(X, Y, color=color1, marker='.')
 
         fwhm, mu, sdev, maxv = self.iqcalc.calc_fwhm(arr)
-        Z = numpy.array([self.iqcalc.gaussian(x, (mu, sdev, maxv)) for x in X])
-        self.w.ax2.plot(X, Z, color=color1, linestyle=':')
+        # Make a little smoother gaussian curve by plotting intermediate
+        # points
+        XN = numpy.linspace(0.0, float(N), N*10)
+        Z = numpy.array([self.iqcalc.gaussian(x, (mu, sdev, maxv))
+                         for x in XN])
+        self.w.ax2.plot(XN, Z, color=color1, linestyle=':')
         self.w.ax2.axvspan(mu-fwhm/2.0, mu+fwhm/2.0,
                            facecolor=color3, alpha=0.25)
         return (fwhm, mu, sdev, maxv)
@@ -815,8 +838,54 @@ class Pick(GingaPlugin.LocalPlugin):
             self.logger.error("Error making fwhm plot: %s" % (
                 str(e)))
 
+    def plot_radial(self, qs, image):
+        # Make a radial plot
+        ax = self.w.ax3
+        ax.cla()
+        x, y, radius = qs.x, qs.y, qs.fwhm_radius
+        img_data, x1, y1, x2, y2 = image.cutout_radius(x, y, radius)
+        try:
+            ht, wd = img_data.shape
+            off_x, off_y = x1, y1
+            maxval = numpy.nanmax(img_data)
+
+            # create arrays of radius and value
+            r = []
+            v = []
+            for i in range(0, wd):
+                for j in range(0, ht):
+                    r.append( numpy.sqrt( (off_x + i - x)**2 + (off_y + j - y)**2 ) )
+                    v.append(img_data[j, i])
+            r, v = numpy.array(r), numpy.array(v)
+
+            # TODO: Plot gaussian fit of data
+            ## idx = numpy.argmax(self._Z)
+            ## Z = self._Z[idx:]
+            ## max_radius = numpy.nanmax(r)
+            ## print(('max radius', max_radius))
+            ## X = numpy.linspace(0.0, float(max_radius), len(Z))
+            ## ax.plot(X, Z, color='green', linestyle='-')
+
+            # Plot scatter plot of data
+            # TODO: with error bars (?)
+            ax.scatter(r, v, marker='.', color='black')
+            ax.set_xlim(-0.1, radius)
+            ax.set_ylim(-0.01*maxval, 1.01*maxval)
+
+            ax.set_title("X="+str(x)+" Y="+str(y))
+            ax.set_xlabel('Radius [pixels]')
+            ax.set_ylabel('Pixel Value (ADU)')
+
+            self.w.fig3.canvas.draw()
+        except Exception as e:
+            self.logger.error("Error making radial plot: %s" % (
+                str(e)))
+
     def clear_fwhm(self):
         self.w.ax2.cla()
+
+    def clear_radial(self):
+        self.w.ax3.cla()
 
     def open_report_log(self):
         # Open report log if user specified one
@@ -954,6 +1023,7 @@ class Pick(GingaPlugin.LocalPlugin):
             if self.have_mpl:
                 self.clear_contours()
                 self.clear_fwhm()
+                self.clear_radial()
 
             # Delete previous peak marks
             objs = self.fitsimage.getObjectsByTagpfx('peak')
@@ -1157,6 +1227,7 @@ class Pick(GingaPlugin.LocalPlugin):
             if self.have_mpl:
                 self.plot_contours()
                 self.plot_fwhm(qs)
+                self.plot_radial(qs, image)
 
         except Exception as e:
             errmsg = "Error calculating quality metrics: %s" % (
