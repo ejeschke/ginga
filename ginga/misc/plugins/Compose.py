@@ -91,13 +91,22 @@ class Compose(GingaPlugin.LocalPlugin):
 
         fr = Widgets.Frame("Compositing")
 
-        captions = (("New Image", 'button', "Insert Layer", 'button'),
+        captions = (("Compose Type:", 'label', "Compose Type", 'combobox'),
+                    ("New Image", 'button', "Insert Layer", 'button'),
                     )
         w, b = Widgets.build_info(captions)
         self.w.update(b)
 
         fr.set_widget(w)
         vbox.add_widget(fr, stretch=0)
+
+        combobox = b.compose_type
+        index = 0
+        for name in ('Alpha', 'RGB'):
+            combobox.append_text(name)
+            index += 1
+        combobox.set_index(1)
+        #combobox.add_callback('activated', self.set_combine_cb)
 
         b.new_image.add_callback('activated', lambda w: self.new_cb())
         b.new_image.set_tooltip("Start a new composite image")
@@ -172,16 +181,25 @@ class Compose(GingaPlugin.LocalPlugin):
 
         name = "composite%d" % (self.count)
         self.limage = ComposeImage(logger=self.logger, order='RGB')
-        self.limage.compose = 'rgb'
+
+        # Alpha or RGB composition?
+        index = self.w.compose_type.get_index()
+        if index == 0:
+            self.limage.compose = 'alpha'
+        else:
+            self.limage.compose = 'rgb'
         self._gui_config_layers()
         self.limage.set(name=name, nothumb=True)
 
     def _get_layer_attributes(self):
         # Get layer name
         idx = self.limage.num_layers()
-        idx = min(idx, 2)
-        names = ['Red', 'Green', 'Blue']
-        name = names[idx]
+        if self.limage.compose == 'rgb':
+            idx = min(idx, 2)
+            names = ['Red', 'Green', 'Blue']
+            name = names[idx]
+        else:
+            name = 'layer%d' % (idx)
 
         # Get alpha
         alpha = 1.0
@@ -194,7 +212,7 @@ class Compose(GingaPlugin.LocalPlugin):
             self.new_cb()
 
         nlayers = self.limage.num_layers()
-        if nlayers >= 3:
+        if (self.limage.compose == 'rgb') and (nlayers >= 3):
             self.fv.show_error("There are already 3 layers")
             return
         elif nlayers == 0:

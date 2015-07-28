@@ -869,7 +869,13 @@ class GingaControl(Callback.Callbacks):
                 def _load_n_switch(imname, chname, image_future):
                     # this will be executed in a non-gui thread
                     # reconstitute the image
-                    image = image_future.thaw()
+                    image = self.error_wrap(image_future.thaw)
+                    if isinstance(image, Exception):
+                        errmsg = "Error reconstituting image: %s" % (
+                                                                     str(image))
+                        self.logger.error(errmsg)
+                        raise image
+
                     # perpetuate the image_future
                     image.set(image_future=image_future, name=imname, path=path)
                     self.gui_do(_switch, imname, image, chname)

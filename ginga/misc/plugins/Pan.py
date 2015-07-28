@@ -137,7 +137,10 @@ class Pan(GingaPlugin.GlobalPlugin):
         image.add_callback('modified', self.image_update_cb, fitsimage,
                            chinfo, paninfo)
 
-        self.set_image(chinfo, paninfo, image)
+        # This seems to trigger a crash with mosaic images if we call
+        # set_image() immediately, so just queue up on the GUI thread
+        ## self.set_image(chinfo, paninfo, image)
+        self.fv.gui_do(self.set_image, chinfo, paninfo, image)
 
     def image_update_cb(self, image, fitsimage, chinfo, paninfo):
         # image has changed (e.g. size, value range, etc)
