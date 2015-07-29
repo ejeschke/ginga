@@ -833,6 +833,9 @@ class GingaControl(Callback.Callbacks):
             self._add_image_update(chinfo, image)
 
 
+    def advertise_image(self, chname, image):
+        self.make_callback('add-image', chname, image)
+
     def _add_image_update(self, chinfo, image):
         self.make_callback('add-image', chinfo.name, image)
 

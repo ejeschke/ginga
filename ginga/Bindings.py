@@ -134,6 +134,7 @@ class ImageViewBindings(object):
             mouse_zoom_acceleration = 1.085,
             mouse_rotate_acceleration = 0.75,
             pan_reverse = False,
+            pan_multiplier = 1.0,
             zoom_scroll_reverse = False,
 
             # MOUSE/BUTTON
@@ -390,9 +391,10 @@ class ImageViewBindings(object):
                 return (self._start_panx, self._start_pany)
 
             scale_x, scale_y = viewer.get_scale_xy()
+            multiplier = self.settings.get('pan_multiplier', 1.0)
             off_x, off_y = viewer.canvas2offset(win_x, win_y)
-            delta_x = float(self._start_x - off_x) / scale_x
-            delta_y = float(self._start_y - off_y) / scale_y
+            delta_x = float(self._start_x - off_x) / scale_x * multiplier
+            delta_y = float(self._start_y - off_y) / scale_y * multiplier
 
             data_x = self._start_panx + delta_x
             data_y = self._start_pany + delta_y

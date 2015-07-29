@@ -146,6 +146,8 @@ pinch_rotate_acceleration = 1.0
 
 # ds9 uses opposite sense of panning direction
 pan_reverse = True
+# 1.0 is a proportional drag pan. Increase to "accelerate" panning speed.
+pan_multiplier = 1.0
 
 # ds9 uses opposite sense of zooming scroll wheel
 zoom_scroll_reverse = True

@@ -51,7 +51,7 @@ def create_blank_image(ra_deg, dec_deg, fov_deg, px_scale, rot_deg,
     ra_txt = wcs.raDegToString(ra_deg, format='%02d:%02d:%06.3f')
     dec_txt = wcs.decDegToString(dec_deg, format='%s%02d:%02d:%05.2f')
 
-    # Create a dummy sh image
+    # Create an empty image
     imagesize = int(round(fov_deg / px_scale))
     # round to an even size
     if imagesize % 2 != 0:
@@ -89,6 +89,39 @@ def create_blank_image(ra_deg, dec_deg, fov_deg, px_scale, rot_deg,
     get_image_name(image, pfx=pfx)
 
     return image
+
+def recycle_image(image, ra_deg, dec_deg, fov_deg, px_scale, rot_deg,
+                  cdbase=[1, 1], logger=None, pfx='dp'):
+
+    # ra and dec in traditional format
+    ra_txt = wcs.raDegToString(ra_deg, format='%02d:%02d:%06.3f')
+    dec_txt = wcs.decDegToString(dec_deg, format='%s%02d:%02d:%05.2f')
+
+    header = image.get_header()
+    pointing = OrderedDict((('RA', ra_txt),
+                            ('DEC', dec_txt),
+                            ))
+    header.update(pointing)
+
+    # Update WCS keywords and internal wcs objects
+    wd, ht = image.get_size()
+    crpix1 = wd // 2
+    crpix2 = ht // 2
+    wcshdr = wcs.simple_wcs(crpix1, crpix2, ra_deg, dec_deg, px_scale,
+                            rot_deg, cdbase=cdbase)
+    header.update(wcshdr)
+
+    # zero out data array
+    data = image.get_data()
+    data.fill(0)
+
+    # Create new image container sharing same data
+    new_image = AstroImage.AstroImage(data, logger=logger)
+    new_image.update_keywords(header)
+    # give the image a name
+    get_image_name(new_image, pfx=pfx)
+
+    return new_image
 
 
 def make_flat(imglist, bias=None):

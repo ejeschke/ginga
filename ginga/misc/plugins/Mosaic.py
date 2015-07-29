@@ -62,7 +62,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
                                   mosaic_hdus=False, skew_limit=0.1,
                                   allow_expand=True, expand_pad_deg=0.01,
                                   max_center_deg_delta=2.0,
-                                  make_thumbs=False)
+                                  make_thumbs=True, reuse_image=False)
         self.settings.load(onError='silent')
 
         # channel where mosaic should appear (default=ours)
@@ -235,26 +235,49 @@ class Mosaic(GingaPlugin.LocalPlugin):
         cdbase = [numpy.sign(cdelt1), numpy.sign(cdelt2)]
         #cdbase = [1, 1]
 
-        self.logger.debug("creating blank image to hold mosaic")
-        self.fv.gui_do(self._prepare_mosaic1)
+        reuse_image = self.settings.get('reuse_image', False)
+        if (not reuse_image) or (self.img_mosaic is None):
+            self.logger.debug("creating blank image to hold mosaic")
+            self.fv.gui_do(self._prepare_mosaic1, "Creating blank image...")
 
-        img_mosaic = dp.create_blank_image(ra_deg, dec_deg,
-                                           fov_deg, px_scale,
-                                           rot_deg,
-                                           cdbase=cdbase,
-                                           logger=self.logger,
-                                           pfx='mosaic')
+            img_mosaic = dp.create_blank_image(ra_deg, dec_deg,
+                                               fov_deg, px_scale,
+                                               rot_deg,
+                                               cdbase=cdbase,
+                                               logger=self.logger,
+                                               pfx='mosaic')
+
+        else:
+            # <-- reuse image (faster)
+            self.logger.debug("Reusing previous mosaic image")
+            self.fv.gui_do(self._prepare_mosaic1, "Reusing previous mosaic image...")
+
+            img_mosaic = dp.recycle_image(self.img_mosaic,
+                                          ra_deg, dec_deg,
+                                          fov_deg, px_scale,
+                                          rot_deg,
+                                          cdbase=cdbase,
+                                          logger=self.logger,
+                                          pfx='mosaic')
 
         ## imname = 'mosaic%d' % (self.mosaic_count)
         ## img_mosaic.set(name=imname)
         ## self.mosaic_count += 1
         imname = img_mosaic.get('name', image.get('name', "NoName"))
 
+        # image needs a path for Thumbs plugin
+        img_mosaic.set(path="/dev/null/%s" % (imname))
+
         # avoid making a thumbnail of this if seed image is also that way
         nothumb = not self.settings.get('make_thumbs', False)
-        img_mosaic.set(nothumb=image.get('nothumb', nothumb))
+        if nothumb:
+            img_mosaic.set(nothumb=True)
 
         # TODO: fill in interesting/select object headers from seed image
+
+        self.img_mosaic = img_mosaic
+        self.fv.gui_call(self.fv.add_image, imname, img_mosaic,
+                         chname=self.mosaic_chname)
 
         header = img_mosaic.get_header()
         (rot, cdelt1, cdelt2) = wcs.get_rotation_and_scale(header,
@@ -262,14 +285,11 @@ class Mosaic(GingaPlugin.LocalPlugin):
         self.logger.debug("mosaic rot=%f cdelt1=%f cdelt2=%f" % (
             rot, cdelt1, cdelt2))
 
-        self.img_mosaic = img_mosaic
-        self.fv.gui_call(self.fv.add_image, imname, img_mosaic,
-                         chname=self.mosaic_chname)
         return img_mosaic
 
-    def _prepare_mosaic1(self):
+    def _prepare_mosaic1(self, msg):
         self.canvas.deleteAllObjects()
-        self.update_status("Creating blank image...")
+        self.update_status(msg)
 
     def ingest_one(self, image):
         self.fv.assert_gui_thread()
@@ -351,6 +371,8 @@ class Mosaic(GingaPlugin.LocalPlugin):
             p_canvas.deleteObjectByTag(self.layertag)
         except:
             pass
+        # dereference potentially large mosaic image
+        self.img_mosaic = None
         self.fv.showStatus("")
 
     def pause(self):
@@ -514,19 +536,23 @@ class Mosaic(GingaPlugin.LocalPlugin):
         self.settings.set(num_threads=num_threads)
 
     def update_status(self, text):
-        self.fv.gui_do(self.w.eval_status.set_text, text)
+        if self.gui_up:
+            self.fv.gui_do(self.w.eval_status.set_text, text)
 
     def init_progress(self):
         def _foo():
             self.w.btn_intr_eval.set_enabled(True)
             self.w.eval_pgs.set_value(0.0)
-        self.fv.gui_do(_foo)
+        if self.gui_up:
+            self.fv.gui_do(_foo)
 
     def update_progress(self, pct):
-        self.fv.gui_do(self.w.eval_pgs.set_value, pct)
+        if self.gui_up:
+            self.fv.gui_do(self.w.eval_pgs.set_value, pct)
 
     def end_progress(self):
-        self.fv.gui_do(self.w.btn_intr_eval.set_enabled, False)
+        if self.gui_up:
+            self.fv.gui_do(self.w.btn_intr_eval.set_enabled, False)
 
     def eval_intr(self):
         self.ev_intr.set()
