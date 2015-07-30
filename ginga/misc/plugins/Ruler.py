@@ -60,7 +60,6 @@ class Ruler(GingaPlugin.LocalPlugin):
         fr = Widgets.Frame("Ruler")
 
         captions = (('Units:', 'label', 'Units', 'combobox'),
-                    ("Edit mode", 'checkbutton'),
                     )
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w = b
@@ -72,12 +71,26 @@ class Ruler(GingaPlugin.LocalPlugin):
         combobox.set_index(index)
         combobox.add_callback('activated', lambda w, idx: self.set_units())
 
-        b.edit_mode.set_state(self.canvas.get_draw_mode() == 'edit')
-        b.edit_mode.add_callback('activated', self.set_mode_cb)
-        b.edit_mode.set_tooltip("on to edit canvas, off to draw")
-
         fr.set_widget(w)
         vbox.add_widget(fr, stretch=0)
+
+        mode = self.canvas.get_draw_mode()
+        hbox = Widgets.HBox()
+        btn1 = Widgets.RadioButton("Draw")
+        btn1.set_state(mode == 'draw')
+        btn1.add_callback('activated', lambda w, val: self.set_mode_cb('draw', val))
+        btn1.set_tooltip("Choose this to draw a ruler")
+        self.w.btn_draw = btn1
+        hbox.add_widget(btn1)
+
+        btn2 = Widgets.RadioButton("Edit", group=btn1)
+        btn2.set_state(mode == 'edit')
+        btn2.add_callback('activated', lambda w, val: self.set_mode_cb('edit', val))
+        btn2.set_tooltip("Choose this to edit a ruler")
+        self.w.btn_edit = btn2
+        hbox.add_widget(btn2)
+
+        vbox.add_widget(hbox, stretch=0)
 
         spacer = Widgets.Label('')
         vbox.add_widget(spacer, stretch=1)
@@ -113,7 +126,9 @@ class Ruler(GingaPlugin.LocalPlugin):
         return True
 
     def instructions(self):
-        self.tw.set_text("""Draw (or redraw) a line with the right mouse button.  Display the Zoom tab to precisely see detail.""")
+        self.tw.set_text("""Draw (or redraw) a line with the cursor.
+
+Display the Zoom tab at the same time to precisely see detail while drawing.""")
 
     def start(self):
         self.instructions()
@@ -190,12 +205,11 @@ class Ruler(GingaPlugin.LocalPlugin):
             self.canvas.clear_selected()
         self.canvas.update_canvas()
 
-    def set_mode_cb(self, w, val):
-        if val:
-            self.canvas.set_draw_mode('edit')
-            self.edit_select_ruler()
-        else:
-            self.canvas.set_draw_mode('draw')
+    def set_mode_cb(self, mode, tf):
+        if tf:
+            self.canvas.set_draw_mode(mode)
+            if mode == 'edit':
+                self.edit_select_ruler()
         return True
 
     def __str__(self):

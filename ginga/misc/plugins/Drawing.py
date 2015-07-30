@@ -75,7 +75,6 @@ class Drawing(GingaPlugin.LocalPlugin):
 
         captions = (("Draw type:", 'label', "Draw type", 'combobox'),
                     ("Coord type:", 'label', "Coord type", 'combobox'),
-                    ("Edit mode", 'checkbutton'),
                     )
         w, b = Widgets.build_info(captions)
         self.w.update(b)
@@ -94,12 +93,26 @@ class Drawing(GingaPlugin.LocalPlugin):
         combobox.set_index(index)
         combobox.add_callback('activated', lambda w, idx: self.set_drawparams_cb())
 
-        b.edit_mode.set_state(self.canvas.get_draw_mode() == 'edit')
-        b.edit_mode.add_callback('activated', self.set_mode_cb)
-        b.edit_mode.set_tooltip("on to edit canvas, off to draw")
-
         fr.set_widget(w)
         vbox.add_widget(fr, stretch=0)
+
+        mode = self.canvas.get_draw_mode()
+        hbox = Widgets.HBox()
+        btn1 = Widgets.RadioButton("Draw")
+        btn1.set_state(mode == 'draw')
+        btn1.add_callback('activated', lambda w, val: self.set_mode_cb('draw', val))
+        btn1.set_tooltip("Choose this to draw a ruler")
+        self.w.btn_draw = btn1
+        hbox.add_widget(btn1)
+
+        btn2 = Widgets.RadioButton("Edit", group=btn1)
+        btn2.set_state(mode == 'edit')
+        btn2.add_callback('activated', lambda w, val: self.set_mode_cb('edit', val))
+        btn2.set_tooltip("Choose this to edit a ruler")
+        self.w.btn_edit = btn2
+        hbox.add_widget(btn2)
+
+        vbox.add_widget(hbox, stretch=0)
 
         fr = Widgets.Frame("Attributes")
         vbox2 = Widgets.VBox()
@@ -310,13 +323,13 @@ For polygons/paths press 'v' to create a vertex, 'z' to remove last vertex.""")
         #self.logger.debug("editing selection status has changed for %s" % str(obj))
         self.edit_initialize(fitsimage, obj)
 
-    def set_mode_cb(self, w, val):
-        if val:
-            self.canvas.set_draw_mode('edit')
-            self.edit_initialize(self.fitsimage, None)
-        else:
-            self.canvas.set_draw_mode('draw')
-            self.set_drawparams_cb()
+    def set_mode_cb(self, mode, tf):
+        if tf:
+            self.canvas.set_draw_mode(mode)
+            if mode == 'edit':
+                self.edit_initialize(self.fitsimage, None)
+            elif mode == 'draw':
+                self.set_drawparams_cb()
         return True
 
     def clear_canvas(self):

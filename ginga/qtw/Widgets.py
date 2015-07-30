@@ -1,6 +1,6 @@
 #
 # Widgets.py -- wrapped Qt widgets and convenience functions
-# 
+#
 # Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c) Eric R. Jeschke.  All rights reserved.
@@ -40,7 +40,7 @@ class TextEntry(WidgetBase):
         self.widget = QtGui.QLineEdit()
         self.widget.setText(text)
         self.widget.returnPressed.connect(self._cb_redirect)
-        
+
         self.enable_callback('activated')
 
     def _cb_redirect(self, *args):
@@ -48,7 +48,7 @@ class TextEntry(WidgetBase):
 
     def get_text(self):
         return self.widget.text()
-    
+
     def set_text(self, text):
         self.widget.setText(text)
 
@@ -57,11 +57,11 @@ class TextEntry(WidgetBase):
         # really have a good way to do that)
         #self.widget.setMaxLength(numchars)
         pass
-    
+
 class GrowingTextEdit(QtGui.QTextEdit):
 
     def __init__(self, *args, **kwargs):
-        super(GrowingTextEdit, self).__init__(*args, **kwargs)  
+        super(GrowingTextEdit, self).__init__(*args, **kwargs)
         self.document().documentLayout().documentSizeChanged.connect(
             self.sizeChange)
         self.heightMin = 0
@@ -98,10 +98,10 @@ class TextArea(WidgetBase):
         self.widget.moveCursor(QTextCursor.End)
         self.widget.moveCursor(QTextCursor.StartOfLine)
         self.widget.ensureCursorVisible()
-            
+
     def get_text(self):
         return self.widget.document().toPlainText()
-    
+
     def clear(self):
         self.widget.clear()
 
@@ -112,16 +112,16 @@ class TextArea(WidgetBase):
     def set_limit(self, numlines):
         #self.widget.setMaximumBlockCount(numlines)
         pass
-    
+
     def set_font(self, font):
         self.widget.setCurrentFont(font)
-        
+
     def set_wrap(self, tf):
         if tf:
             self.widget.setLineWrapMode(QtGui.QTextEdit.WidgetWidth)
         else:
             self.widget.setLineWrapMode(QtGui.QTextEdit.NoWrap)
-    
+
 class Label(WidgetBase):
     def __init__(self, text=''):
         super(Label, self).__init__()
@@ -130,24 +130,24 @@ class Label(WidgetBase):
 
     def get_text(self):
         return self.widget.text()
-    
+
     def set_text(self, text):
         self.widget.setText(text)
 
-    
+
 class Button(WidgetBase):
     def __init__(self, text=''):
         super(Button, self).__init__()
 
         self.widget = QtGui.QPushButton(text)
         self.widget.clicked.connect(self._cb_redirect)
-        
+
         self.enable_callback('activated')
 
     def _cb_redirect(self, *args):
         self.make_callback('activated')
 
-    
+
 class ComboBox(WidgetBase):
     def __init__(self, editable=False):
         super(ComboBox, self).__init__()
@@ -155,7 +155,7 @@ class ComboBox(WidgetBase):
         self.widget = QtHelp.ComboBox()
         self.widget.setEditable(editable)
         self.widget.activated.connect(self._cb_redirect)
-        
+
         self.enable_callback('activated')
 
     def _cb_redirect(self):
@@ -173,7 +173,7 @@ class ComboBox(WidgetBase):
                 return
             index += 1
         self.widget.addItem(text)
-        
+
     def delete_alpha(self, text):
         index = self.widget.findText(text)
         self.widget.removeItem(index)
@@ -194,7 +194,7 @@ class ComboBox(WidgetBase):
     def get_index(self):
         return self.widget.currentIndex()
 
-    
+
 class SpinBox(WidgetBase):
     def __init__(self, dtype=int):
         super(SpinBox, self).__init__()
@@ -207,7 +207,7 @@ class SpinBox(WidgetBase):
         # should values wrap around
         w.setWrapping(False)
         self.widget = w
-        
+
         self.enable_callback('value-changed')
 
     def _cb_redirect(self, val):
@@ -218,7 +218,7 @@ class SpinBox(WidgetBase):
 
     def get_value(self):
         return self.widget.value()
-    
+
     def set_value(self, val):
         self.changed = True
         self.widget.setValue(val)
@@ -230,8 +230,8 @@ class SpinBox(WidgetBase):
         adj = self.widget
         adj.setRange(minval, maxval)
         adj.setSingleStep(incr_value)
-        
-    
+
+
 class Slider(WidgetBase):
     def __init__(self, orientation='horizontal', track=False):
         super(Slider, self).__init__()
@@ -246,7 +246,7 @@ class Slider(WidgetBase):
         w.setTickPosition(QtGui.QSlider.TicksBelow)
         self.widget = w
         w.valueChanged.connect(self._cb_redirect)
-        
+
         self.enable_callback('value-changed')
 
     def _cb_redirect(self, val):
@@ -254,10 +254,10 @@ class Slider(WidgetBase):
             self.changed = False
             return
         self.make_callback('value-changed', val)
-    
+
     def get_value(self):
         return self.widget.value()
-    
+
     def set_value(self, val):
         self.changed = True
         self.widget.setValue(val)
@@ -269,7 +269,7 @@ class Slider(WidgetBase):
         adj = self.widget
         adj.setRange(minval, maxval)
         adj.setSingleStep(incr_value)
-        
+
 
 class ScrollBar(WidgetBase):
     def __init__(self, orientation='horizontal'):
@@ -280,13 +280,13 @@ class ScrollBar(WidgetBase):
         else:
             self.widget = QtGui.QScrollBar(QtCore.Qt.Vertical)
         self.widget.valueChanged.connect(self._cb_redirect)
-        
+
         self.enable_callback('activated')
 
     def _cb_redirect(self):
         val = self.widget.value()
         self.make_callback('activated', val)
-    
+
 
 class CheckBox(WidgetBase):
     def __init__(self, text=''):
@@ -294,7 +294,7 @@ class CheckBox(WidgetBase):
 
         self.widget = QtGui.QCheckBox(text)
         self.widget.stateChanged.connect(self._cb_redirect)
-        
+
         self.enable_callback('activated')
 
     def _cb_redirect(self, *args):
@@ -316,12 +316,12 @@ class ToggleButton(WidgetBase):
         self.widget = QtGui.QPushButton(text)
         self.widget.setCheckable(True)
         self.widget.clicked.connect(self._cb_redirect)
-        
+
         self.enable_callback('activated')
 
     def _cb_redirect(self, val):
         self.make_callback('activated', val)
-    
+
     def set_state(self, tf):
         self.widget.setChecked(tf)
 
@@ -335,14 +335,20 @@ class RadioButton(WidgetBase):
 
         self.widget = QtGui.QRadioButton(text)
         self.widget.toggled.connect(self._cb_redirect)
-        
+
         self.enable_callback('activated')
 
     def _cb_redirect(self, val):
+        if self.changed:
+            self.changed = False
+            return
         self.make_callback('activated', val)
 
     def set_state(self, tf):
-        self.widget.setChecked(tf)
+        if self.widget.isChecked() != tf:
+            # toggled only fires when the value is toggled
+            self.changed = True
+            self.widget.setChecked(tf)
 
     def get_state(self):
         return self.widget.isChecked()
@@ -376,7 +382,7 @@ class ContainerBase(WidgetBase):
         childw.setParent(None)
         if delete:
             childw.deleteLater()
-        
+
     def remove(self, w, delete=False):
         if not w in self.children:
             raise KeyError("Widget is not a child of this container")
@@ -387,7 +393,7 @@ class ContainerBase(WidgetBase):
     def remove_all(self):
         for w in list(self.children):
             self.remove(w)
-            
+
     def get_children(self):
         return self.children
 
@@ -400,7 +406,7 @@ class Box(ContainerBase):
             self.widget = QtHelp.HBox()
         else:
             self.widget = QtHelp.VBox()
-        
+
     def add_widget(self, child, stretch=0.0):
         self.add_ref(child)
         child_w = child.get_widget()
@@ -411,10 +417,10 @@ class Box(ContainerBase):
 
     def set_margins(self, left, right, top, bottom):
         self.widget.layout().setContentsMargins(left, right, top, bottom)
-        
+
     def set_border_width(self, pix):
         self.widget.layout().setContentsMargins(pix, pix, pix, pix)
-        
+
 
 class HBox(Box):
     def __init__(self):
@@ -446,7 +452,7 @@ class Frame(ContainerBase):
         self.remove_all()
         self.add_ref(child)
         self.widget.layout().addWidget(child.get_widget(), stretch=stretch)
-    
+
 class TabWidget(ContainerBase):
     def __init__(self, tabpos='top'):
         super(TabWidget, self).__init__()
@@ -465,7 +471,7 @@ class TabWidget(ContainerBase):
 
     def _cb_redirect(self, index):
         self.make_callback('activated', index)
-        
+
     def add_widget(self, child, title=''):
         self.add_ref(child)
         child_w = child.get_widget()
@@ -499,7 +505,7 @@ class StackWidget(ContainerBase):
 
     def index_of(self, child):
         return self.widget.indexOf(child.get_widget())
-        
+
 
 class ScrollArea(ContainerBase):
     def __init__(self):
@@ -566,7 +572,7 @@ class ToolbarAction(WidgetBase):
             self.make_callback('activated', tf)
         else:
             self.make_callback('activated')
-    
+
     def set_state(self, tf):
         self.widget.setChecked(tf)
 
@@ -609,7 +615,7 @@ class Toolbar(ContainerBase):
 
     def add_separator(self):
         self.widget.addSeparator()
-        
+
 
 class MenuAction(WidgetBase):
     def __init__(self, text=None):
@@ -626,7 +632,7 @@ class MenuAction(WidgetBase):
         else:
             self.make_callback('activated')
 
-    
+
 class Menu(ContainerBase):
     def __init__(self):
         super(Menu, self).__init__()
@@ -638,7 +644,7 @@ class Menu(ContainerBase):
         child.widget = self.widget.addAction(child.text,
                                              lambda: child._cb_redirect())
         self.add_ref(child)
-        
+
     def add_name(self, name):
         child = MenuAction(text=name)
         self.add_widget(child)
@@ -646,8 +652,8 @@ class Menu(ContainerBase):
 
     def add_separator(self):
         self.widget.addSeparator()
-        
-    
+
+
 class Menubar(ContainerBase):
     def __init__(self):
         super(Menubar, self).__init__()
@@ -730,7 +736,7 @@ def hadjust(w, orientation):
     vbox.add_widget(w)
     vbox.add_widget(Label(''), stretch=1)
     return vbox
-        
+
 
 def build_info(captions, orientation='vertical'):
     numrows = len(captions)
@@ -802,5 +808,5 @@ def get_oriented_box(container, scrolled=True, fill=False):
         sw = box2
 
     return box1, sw, orientation
-    
+
 #END

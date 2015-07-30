@@ -21,11 +21,19 @@ class Histogram(GingaPlugin.LocalPlugin):
 
         self.layertag = 'histogram-canvas'
         self.histtag = None
-        self.histcolor = 'aquamarine'
         # If True, limits X axis to lo/hi cut levels
         self.xlimbycuts = True
-        # Number of histogram bins
-        self.numbins = 2048
+
+        # get Histogram preferences
+        prefs = self.fv.get_preferences()
+        self.settings = prefs.createCategory('plugin_Histogram')
+        self.settings.addDefaults(draw_then_move=True, num_bins=2048,
+                                  hist_color='aquamarine')
+        self.settings.load(onError='silent')
+
+        # Set up histogram control parameters
+        self.histcolor = self.settings.get('hist_color', 'aquamarine')
+        self.numbins = self.settings.get('num_bins', 2048)
         self.autocuts = AutoCuts.Histogram(self.logger)
 
         self.dc = self.fv.getDrawClasses()
@@ -116,24 +124,28 @@ class Histogram(GingaPlugin.LocalPlugin):
         hbox = Widgets.HBox()
         btn1 = Widgets.RadioButton("Move")
         btn1.set_state(mode == 'move')
-        btn1.add_callback('activated', lambda w, val: self.set_mode_cb('move'))
+        btn1.add_callback('activated', lambda w, val: self.set_mode_cb('move', val))
         btn1.set_tooltip("Choose this to position box")
         self.w.btn_move = btn1
         hbox.add_widget(btn1)
 
         btn2 = Widgets.RadioButton("Draw", group=btn1)
         btn2.set_state(mode == 'draw')
-        btn2.add_callback('activated', lambda w, val: self.set_mode_cb('draw'))
+        btn2.add_callback('activated', lambda w, val: self.set_mode_cb('draw', val))
         btn2.set_tooltip("Choose this to draw a replacement box")
         self.w.btn_draw = btn2
         hbox.add_widget(btn2)
 
         btn3 = Widgets.RadioButton("Edit", group=btn1)
         btn3.set_state(mode == 'edit')
-        btn3.add_callback('activated', lambda w, val: self.set_mode_cb('edit'))
+        btn3.add_callback('activated', lambda w, val: self.set_mode_cb('edit', val))
         btn3.set_tooltip("Choose this to edit a box")
         self.w.btn_edit = btn3
         hbox.add_widget(btn3)
+
+        if self.histtag is None:
+            self.w.btn_move.set_enabled(False)
+            self.w.btn_edit.set_enabled(False)
 
         vbox.add_widget(hbox, stretch=0)
 
@@ -397,6 +409,13 @@ class Histogram(GingaPlugin.LocalPlugin):
                          color=self.histcolor)))
         self.histtag = tag
 
+        self.w.btn_move.set_enabled(True)
+        self.w.btn_edit.set_enabled(True)
+
+        move_flag = self.settings.get('draw_then_move', True)
+        if move_flag:
+            self.set_mode('move')
+
         return self.redo()
 
     def edit_cb(self, canvas, obj):
@@ -483,11 +502,20 @@ class Histogram(GingaPlugin.LocalPlugin):
             self.canvas.clear_selected()
         self.canvas.update_canvas()
 
-    def set_mode_cb(self, mode):
-        self.canvas.set_draw_mode(mode)
-        if mode == 'edit':
-            self.edit_select_box()
+    def set_mode_cb(self, mode, tf):
+        """Called when one of the Move/Draw/Edit radio buttons is selected.
+        """
+        if tf:
+            self.canvas.set_draw_mode(mode)
+            if mode == 'edit':
+                self.edit_select_box()
         return True
+
+    def set_mode(self, mode):
+        self.canvas.set_draw_mode(mode)
+        self.w.btn_move.set_state(mode == 'move')
+        self.w.btn_draw.set_state(mode == 'draw')
+        self.w.btn_edit.set_state(mode == 'edit')
 
     def __str__(self):
         return 'histogram'

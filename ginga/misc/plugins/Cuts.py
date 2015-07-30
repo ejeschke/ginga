@@ -22,12 +22,14 @@ class Cuts(GingaPlugin.LocalPlugin):
     """
     A plugin for generating a plot of the values along a line or path.
 
-    There are three kinds of cuts available: line, path and freepath.
-    The 'line' cut is a straight line between two points.  The 'path' cut
-    is drawn like an open polygon, with straight segments in-between.
-    The 'freepath' cut is like a path cut, but drawn using a free-form
-    stroke following the cursor movement.  The 'beziercurve' path is a
-    cubic Bezier curve.
+    There are four kinds of cuts available: line, path, freepath and
+    beziercurve.
+    - The 'line' cut is a straight line between two points.
+    - The 'path' cut is drawn like an open polygon, with straight segments
+      in-between.
+    - The 'freepath' cut is like a path cut, but drawn using a free-form
+      stroke following the cursor movement.
+    - The 'beziercurve' path is a cubic Bezier curve.
 
     Multiple cuts can be plotted.
 
@@ -55,19 +57,18 @@ class Cuts(GingaPlugin.LocalPlugin):
     Editing Cuts
     ------------
     Using the edit canvas function it is possible to add new vertexes to
-    an existing path, and to move vertexes around.   Press 'b' to enter
-    edit mode and then press 'l' to lock it (you can also click the lock
-    icon).  Now you can select the line or path by clicking on it, which
-    should enable the control points at the ends or vertexes--you can drag
-    these around.  To add a new vertex to a path, hover the cursor carefully
-    on the line where you want the new vertex and press 'v'.  To get rid of
-    a vertex, hover the cursor over it and press 'z'.  You will notice one
-    extra control point for the path, which seems to be out to the
-    side--this is a movement control point for moving the entire path
-    around the image when in edit mode.
+    an existing path, and to move vertexes around.   Click the "Edit"
+    radio button to put the canvas in edit mode.  If a cut is not
+    automatically selected you can now select the line, path or curve by
+    clicking on it, which should enable the control points at the ends or
+    vertices--you can drag these around.  To add a new vertex to a path,
+    hover the cursor carefully on the line where you want the new vertex
+    and press 'v'.  To get rid of a vertex, hover the cursor over it and
+    press 'z'.
 
-    To get out of edit mode, press Escape or 'l' again (or click the lock
-    icon again).
+    You will notice one extra control point for most objects, which has
+    a center of a different color--this is a movement control point for
+    moving the entire object around the image when in edit mode.
     """
 
     def __init__(self, fv, fitsimage):
@@ -85,8 +86,8 @@ class Cuts(GingaPlugin.LocalPlugin):
         # get Cuts preferences
         prefs = self.fv.get_preferences()
         self.settings = prefs.createCategory('plugin_Cuts')
-        self.settings.addDefaults(select_new_cut=True, label_cuts=True,
-                                  colors=cut_colors)
+        self.settings.addDefaults(select_new_cut=True, draw_then_move=True,
+                                  label_cuts=True, colors=cut_colors)
         self.settings.load(onError='silent')
         self.colors = self.settings.get('colors', cut_colors)
 
@@ -178,21 +179,21 @@ class Cuts(GingaPlugin.LocalPlugin):
         hbox = Widgets.HBox()
         btn1 = Widgets.RadioButton("Move")
         btn1.set_state(mode == 'move')
-        btn1.add_callback('activated', lambda w, val: self.set_mode_cb('move'))
+        btn1.add_callback('activated', lambda w, val: self.set_mode_cb('move', val))
         btn1.set_tooltip("Choose this to position cuts")
         self.w.btn_move = btn1
         hbox.add_widget(btn1)
 
         btn2 = Widgets.RadioButton("Draw", group=btn1)
         btn2.set_state(mode == 'draw')
-        btn2.add_callback('activated', lambda w, val: self.set_mode_cb('draw'))
+        btn2.add_callback('activated', lambda w, val: self.set_mode_cb('draw', val))
         btn2.set_tooltip("Choose this to draw a new or replacement cut")
         self.w.btn_draw = btn2
         hbox.add_widget(btn2)
 
         btn3 = Widgets.RadioButton("Edit", group=btn1)
         btn3.set_state(mode == 'edit')
-        btn3.add_callback('activated', lambda w, val: self.set_mode_cb('edit'))
+        btn3.add_callback('activated', lambda w, val: self.set_mode_cb('edit', val))
         btn3.set_tooltip("Choose this to edit a cut")
         self.w.btn_edit = btn3
         hbox.add_widget(btn3)
@@ -217,7 +218,7 @@ class Cuts(GingaPlugin.LocalPlugin):
 
         container.add_widget(top, stretch=1)
 
-        self.select_cut(self._new_cut)
+        self.select_cut(self.cutstag)
         self.gui_up = True
 
     def instructions(self):
@@ -234,8 +235,8 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
             self.w.delete_all.set_enabled(False)
 
             self.w.btn_move.set_enabled(False)
-            self.w.btn_draw.set_state(True)
             self.w.btn_edit.set_enabled(False)
+            self.set_mode('draw')
         else:
             self.w.delete_cut.set_enabled(True)
             self.w.delete_all.set_enabled(True)
@@ -279,7 +280,7 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         # plot cleared in redo() if no more cuts
         self.redo()
 
-    def add_cuts_tag(self, tag, select=False):
+    def add_cuts_tag(self, tag):
         if not tag in self.tags:
             self.tags.append(tag)
             self.w.cuts.append_text(tag)
@@ -287,11 +288,16 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         self.w.delete_cut.set_enabled(True)
         self.w.delete_all.set_enabled(True)
 
-        if select:
+        select_flag = self.settings.get('select_new_cut', True)
+        if select_flag:
             self.select_cut(tag)
+            move_flag = self.settings.get('draw_then_move', True)
+            if move_flag:
+                self.set_mode('move')
 
     def close(self):
         chname = self.fv.get_channelName(self.fitsimage)
+        #self.set_mode('move')
         self.fv.stop_local_plugin(chname, str(self))
         self.gui_up = False
         return True
@@ -326,7 +332,6 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
     def stop(self):
         # remove the canvas from the image
         self.fitsimage.deleteObjectByTag(self.layertag)
-        self.canvas.set_draw_mode('move')
         self.fv.showStatus("")
 
     def _plotpoints(self, obj, color):
@@ -542,8 +547,7 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
 
         self.canvas.deleteObjectByTag(tag, redraw=False)
         self.canvas.add(cut, tag=tag)
-        select_flag = self.settings.get('select_new_cut', True)
-        self.add_cuts_tag(tag, select=select_flag)
+        self.add_cuts_tag(tag)
 
         self.logger.debug("redoing cut plots")
         return self.redo()
@@ -563,8 +567,7 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
 
         canvas.deleteObjectByTag(tag, redraw=False)
         self.canvas.add(cut, tag=tag)
-        select_flag = self.settings.get('select_new_cut', True)
-        self.add_cuts_tag(tag, select=select_flag)
+        self.add_cuts_tag(tag)
 
         self.logger.debug("redoing cut plots")
         return self.redo()
@@ -584,11 +587,20 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
             self.canvas.clear_selected()
         self.canvas.update_canvas()
 
-    def set_mode_cb(self, mode):
-        self.canvas.set_draw_mode(mode)
-        if mode == 'edit':
-            self.edit_select_cuts()
+    def set_mode_cb(self, mode, tf):
+        """Called when one of the Move/Draw/Edit radio buttons is selected.
+        """
+        if tf:
+            self.canvas.set_draw_mode(mode)
+            if mode == 'edit':
+                self.edit_select_cuts()
         return True
+
+    def set_mode(self, mode):
+        self.canvas.set_draw_mode(mode)
+        self.w.btn_move.set_state(mode == 'move')
+        self.w.btn_draw.set_state(mode == 'draw')
+        self.w.btn_edit.set_state(mode == 'edit')
 
     def __str__(self):
         return 'cuts'
