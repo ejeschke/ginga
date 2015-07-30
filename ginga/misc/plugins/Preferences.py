@@ -88,7 +88,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         fr = Widgets.Frame("Color Distribution")
 
         captions = (('Algorithm:', 'label', 'Algorithm', 'combobox'),
-                    #('Table Size:', 'label', 'Table Size', 'entry'),
+                    #('Table Size:', 'label', 'Table Size', 'entryset'),
                     ('Dist Defaults', 'button'))
 
         w, b = Widgets.build_info(captions, orientation=orientation)
@@ -274,8 +274,8 @@ class Preferences(GingaPlugin.LocalPlugin):
                     ('Zoom Rate:', 'label', 'Zoom Rate', 'spinfloat'),
                     ('Stretch XY:', 'label', 'Stretch XY', 'combobox'),
                     ('Stretch Factor:', 'label', 'Stretch Factor', 'spinfloat'),
-                    ('Scale X:', 'label', 'Scale X', 'entry'),
-                    ('Scale Y:', 'label', 'Scale Y', 'entry'),
+                    ('Scale X:', 'label', 'Scale X', 'entryset'),
+                    ('Scale Y:', 'label', 'Scale Y', 'entryset'),
                     ('Scale Min:', 'label', 'Scale Min', 'spinfloat'),
                     ('Scale Max:', 'label', 'Scale Max', 'spinfloat'),
                     ('Zoom Defaults', 'button'))
@@ -391,7 +391,7 @@ class Preferences(GingaPlugin.LocalPlugin):
                     ('Center New:', 'label', 'Center New', 'combobox'),
                     ('Follow New', 'checkbutton', 'Raise New', 'checkbutton'),
                     ('Create thumbnail', 'checkbutton'),
-                    ('Num Images:', 'label', 'Num Images', 'entry'),
+                    ('Num Images:', 'label', 'Num Images', 'entryset'),
                     )
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)

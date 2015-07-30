@@ -244,6 +244,9 @@ class MultiDim(GingaPlugin.LocalPlugin):
         if image is None:
             return False
 
+        # TODO: maybe we should only auto-open for AstroImages?
+        if not hasattr(image, 'get_keyword'):
+            return False
         # Start ourselves if file is multidimensional
         if image.get_keyword('NAXIS') <= 2:
             return False

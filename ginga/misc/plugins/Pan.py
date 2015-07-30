@@ -154,6 +154,8 @@ class Pan(GingaPlugin.GlobalPlugin):
         chinfo = self.fv.get_channelInfo(chname)
         chname = chinfo.name
 
+        # If the active widget has changed, then raise our Info widget
+        # that corresponds to it
         if self.active != chname:
             iw = self.channel[chname].widget
             index = self.nb.index_of(iw)

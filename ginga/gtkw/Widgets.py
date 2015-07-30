@@ -60,6 +60,38 @@ class TextEntry(WidgetBase):
         #self.widget.set_width_chars(numchars)
         pass
 
+class TextEntrySet(WidgetBase):
+    def __init__(self, text=''):
+        super(TextEntrySet, self).__init__()
+
+        hbox = gtk.HBox()
+        hbox.set_spacing(4)
+        w = gtk.Entry()
+        w.set_text(text)
+        hbox.pack_start(w, fill=True)
+        w.connect('activate', self._cb_redirect)
+        self.entry = w
+        w = gtk.Button('Set')
+        w.connect('clicked', self._cb_redirect)
+        hbox.pack_start(w, fill=False)
+        self.btn = w
+        self.widget = hbox
+
+        self.enable_callback('activated')
+
+    def _cb_redirect(self, *args):
+        self.make_callback('activated')
+
+    def get_text(self):
+        return self.entry.get_text()
+
+    def set_text(self, text):
+        self.entry.set_text(text)
+
+    def set_length(self, numchars):
+        #self.widget.set_width_chars(numchars)
+        pass
+
 class TextArea(WidgetBase):
     def __init__(self, wrap=False, editable=False):
         super(TextArea, self).__init__()
@@ -704,6 +736,8 @@ def make_widget(title, wtype):
     elif wtype == 'entry':
         w = TextEntry()
         #w.get_widget().set_width_chars(12)
+    elif wtype == 'entryset':
+        w = TextEntrySet()
     elif wtype == 'combobox':
         w = ComboBox()
     elif wtype == 'spinbutton':

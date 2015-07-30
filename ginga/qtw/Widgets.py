@@ -58,6 +58,37 @@ class TextEntry(WidgetBase):
         #self.widget.setMaxLength(numchars)
         pass
 
+class TextEntrySet(WidgetBase):
+    def __init__(self, text=''):
+        super(TextEntrySet, self).__init__()
+
+        self.widget = QtHelp.HBox()
+        self.entry = QtGui.QLineEdit()
+        self.entry.setText(text)
+        layout = self.widget.layout()
+        layout.addWidget(self.entry, stretch=1)
+        self.btn = QtGui.QPushButton('Set')
+        self.entry.returnPressed.connect(self._cb_redirect)
+        self.btn.clicked.connect(self._cb_redirect)
+        layout.addWidget(self.btn, stretch=0)
+
+        self.enable_callback('activated')
+
+    def _cb_redirect(self, *args):
+        self.make_callback('activated')
+
+    def get_text(self):
+        return self.entry.text()
+
+    def set_text(self, text):
+        self.entry.setText(text)
+
+    def set_length(self, numchars):
+        # this is only supposed to set the visible length (but Qt doesn't
+        # really have a good way to do that)
+        #self.widget.setMaxLength(numchars)
+        pass
+
 class GrowingTextEdit(QtGui.QTextEdit):
 
     def __init__(self, *args, **kwargs):
@@ -693,6 +724,9 @@ def make_widget(title, wtype):
         w.widget.setAlignment(QtCore.Qt.AlignLeft)
     elif wtype == 'entry':
         w = TextEntry()
+        #w.widget.setMaxLength(12)
+    elif wtype == 'entryset':
+        w = TextEntrySet()
         #w.widget.setMaxLength(12)
     elif wtype == 'combobox':
         w = ComboBox()
