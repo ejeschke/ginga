@@ -829,7 +829,7 @@ class Pick(GingaPlugin.LocalPlugin):
                                                           'green', 'green', 'seagreen')
             plt = self.w.ax2
             plt.legend(('data x', 'gauss x', 'data y', 'gauss y'),
-                       'upper right', shadow=False, fancybox=False,
+                       loc='upper right', shadow=False, fancybox=False,
                        prop={'size': 8}, labelspacing=0.2)
             plt.set_title("FWHM X: %.2f  Y: %.2f" % (fwhm_x, fwhm_y))
 
