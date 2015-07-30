@@ -75,8 +75,10 @@ class AstroImage(BaseImage):
             header = self.get_header()
             self.wcs.load_header(header)
 
+        # For navigating multidimensional data
         self.naxispath = []
         self.revnaxis = []
+        self._md_data = None
 
     def load_hdu(self, hdu, fobj=None, naxispath=None):
         self.clear_metadata()
@@ -84,18 +86,21 @@ class AstroImage(BaseImage):
         ahdr = self.get_header()
 
         loader = io_fits.PyFitsFileHandler(self.logger)
-        data, naxispath = loader.load_hdu(hdu, ahdr, naxispath=naxispath)
+        _data, naxispath = loader.load_hdu(hdu, ahdr, naxispath=naxispath)
+        self._md_data = _data
+
         if naxispath is None:
             naxispath = []
-        self.naxispath = naxispath
-        self.revnaxis = list(naxispath)
-        self.revnaxis.reverse()
+
+        # Drill down to 2D data slice
+        if len(naxispath) == 0:
+            naxispath = ([0] * (len(_data.shape)-2))
+
+        self.set_naxispath(naxispath)
 
         # Set PRIMARY header
         if self.inherit_primary_header and fobj is not None:
             self.io.fromHDU(fobj[0], self._primary_hdr)
-
-        self.set_data(data)
 
         # Try to make a wcs object on the header
         self.wcs.load_header(hdu.header, fobj=fobj)
@@ -112,16 +117,18 @@ class AstroImage(BaseImage):
             filepath = match.group(1)
             numhdu = max(int(match.group(2)), 0)
 
-        data, numhdu, naxispath = self.io.load_file(filepath, ahdr,
-                                                    numhdu=numhdu,
-                                                    naxispath=naxispath,
-                                                    phdr=self._primary_hdr)
+        _data, numhdu, naxispath = self.io.load_file(filepath, ahdr,
+                                                     numhdu=numhdu,
+                                                     naxispath=naxispath,
+                                                     phdr=self._primary_hdr)
+        self._md_data = _data
 
         if naxispath is None:
             naxispath = []
-        self.naxispath = naxispath
-        self.revnaxis = list(naxispath)
-        self.revnaxis.reverse()
+
+        # Drill down to 2D data slice
+        if len(naxispath) == 0:
+            naxispath = ([0] * (len(_data.shape)-2))
 
         # Set the name to the filename (minus extension) if no name
         # currently exists for this image
@@ -138,7 +145,7 @@ class AstroImage(BaseImage):
 
         self.set(path=filepath, idx=numhdu)
 
-        self.set_data(data)
+        self.set_naxispath(naxispath)
 
         # Try to make a wcs object on the header
         # TODO: in order to do more sophisticated WCS (e.g. distortion
@@ -155,6 +162,28 @@ class AstroImage(BaseImage):
             data.byteswap(True)
         data = data.reshape(dims)
         self.set_data(data, metadata=metadata)
+
+    def get_mddata(self):
+        return self._md_data
+
+    def set_naxispath(self, naxispath):
+        """Choose a slice out of multidimensional data.
+        """
+        revnaxis = list(naxispath)
+        revnaxis.reverse()
+
+        # construct slice view and extract it
+        view = revnaxis + [slice(None), slice(None)]
+        data = self.get_mddata()[view]
+
+        assert len(data.shape) == 2, \
+               ImageError("naxispath does not lead to a 2D slice: %s" % (
+            str(naxispath)))
+
+        self.naxispath = naxispath
+        self.revnaxis = revnaxis
+
+        self.set_data(data)
 
     def set_wcs(self, wcs):
         self.wcs = wcs

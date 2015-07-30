@@ -13,7 +13,6 @@ import re
 from ginga import AstroImage
 from ginga.misc import Widgets, Future
 from ginga import GingaPlugin
-import ginga.util.six as six
 
 have_pyfits = False
 try:
@@ -109,10 +108,10 @@ class MultiDim(GingaPlugin.LocalPlugin):
                     ]
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
-        b.next.add_callback('activated', lambda w: six.advance_iterator(self))
-        b.prev.add_callback('activated', lambda w: self.prev())
-        b.first.add_callback('activated', lambda w: self.first())
-        b.last.add_callback('activated', lambda w: self.last())
+        b.next.add_callback('activated', lambda w: self.next_slice())
+        b.prev.add_callback('activated', lambda w: self.prev_slice())
+        b.first.add_callback('activated', lambda w: self.first_slice())
+        b.last.add_callback('activated', lambda w: self.last_slice())
         b.play.add_callback('activated', lambda w: self.play_start())
         b.stop.add_callback('activated', lambda w: self.play_stop())
         lower, upper = 0.1, 8.0
@@ -244,15 +243,16 @@ class MultiDim(GingaPlugin.LocalPlugin):
         if image is None:
             return False
 
-        # TODO: maybe we should only auto-open for AstroImages?
-        if not hasattr(image, 'get_keyword'):
+        auto_start = self.settings.get('auto_start_naxis', False)
+
+        if not hasattr(image, 'naxispath'):
             return False
         # Start ourselves if file is multidimensional
-        if image.get_keyword('NAXIS') <= 2:
+        if len(image.naxispath) <= 0:
             return False
 
         # check preference for auto_start_naxis
-        if not self.settings.get('auto_start_naxis', False):
+        if not auto_start:
             return False
 
         # Start ourselves if GUI is not up yet
@@ -365,21 +365,14 @@ class MultiDim(GingaPlugin.LocalPlugin):
             if image is None:
                 raise ValueError("Please load an image cube")
 
-            hdu = self.fits_f[self.curhdu]
-            data = hdu.data
-            if data is None:
-                raise ValueError("Empty data for this HDU")
-
-            self.logger.debug("HDU #%d has naxis=%s" % (
-                self.curhdu, str(data.shape)))
-
             # invert index
-            m = len(data.shape) - (n+1)
+            naxislen = 2 + len(image.naxispath)
+            m = naxislen - (n+1)
             self.naxispath[m] = idx
             self.logger.debug("m=%d naxispath=%s" % (m, str(self.naxispath)))
 
-            for i in self.naxispath:
-                data = data[i]
+            image.set_naxispath(self.naxispath)
+            self.logger.debug("NAXIS%d slice %d loaded." % (n+1, idx+1))
 
             if n == 2:
                 # Try to print the spectral coordinate
@@ -389,9 +382,6 @@ class MultiDim(GingaPlugin.LocalPlugin):
                     self.w.value.set_text(str(specval))
                 except:
                     pass
-
-            image.set_data(data)
-            self.logger.debug("NAXIS%d slice %d loaded." % (n+1, idx+1))
 
         except Exception as e:
             errmsg = "Error loading NAXIS%d slice %d: %s" % (
@@ -407,7 +397,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
         if self._isplaying:
             time_start = time.time()
             deadline = time_start + self.play_int_sec
-            six.advance_iterator(self)
+            self.next_slice()
             #self.fv.update_pending(0.001)
             delta = max(deadline - time.time(), 0.001)
             self.timer.set(delta)
@@ -415,21 +405,21 @@ class MultiDim(GingaPlugin.LocalPlugin):
     def play_stop(self):
         self._isplaying = False
 
-    def first(self):
+    def first_slice(self):
         play_idx = 1
         self.fv.gui_do(self.set_naxis_cb, None, play_idx, self.play_axis)
 
-    def last(self):
+    def last_slice(self):
         play_idx = self.play_max
         self.fv.gui_do(self.set_naxis_cb, None, play_idx, self.play_axis)
 
-    def prev(self):
+    def prev_slice(self):
         play_idx = self.play_idx - 1
         if play_idx < 1:
             play_idx = self.play_max
         self.fv.gui_do(self.set_naxis_cb, None, play_idx, self.play_axis)
 
-    def next(self):
+    def next_slice(self):
         play_idx = self.play_idx + 1
         if play_idx > self.play_max:
             play_idx = 1

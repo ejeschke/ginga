@@ -116,12 +116,12 @@ class PyFitsFileHandler(BaseFitsFileHandler):
             # Expand 1D arrays into 1xN array
             data = data.reshape((1, data.shape[0]))
         else:
-            # Drill down to 2D data slice
-            if not naxispath:
-                naxispath = ([0] * (len(data.shape)-2))
-
-            for idx in naxispath:
-                data = data[idx]
+            if naxispath is None:
+                naxispath = []
+            else:
+                # Drill down naxispath
+                for idx in naxispath:
+                    data = data[idx]
 
         self.fromHDU(hdu, ahdr)
         return (data, naxispath)
@@ -229,12 +229,12 @@ class FitsioFileHandler(BaseFitsFileHandler):
             # Expand 1D arrays into 1xN array
             data = data.reshape((1, data.shape[0]))
         else:
-            # Drill down to 2D data slice
-            if not naxispath:
-                naxispath = ([0] * (len(data.shape)-2))
-
-            for idx in naxispath:
-                data = data[idx]
+            if naxispath is None:
+                naxispath = []
+            else:
+                # Drill down naxispath
+                for idx in naxispath:
+                    data = data[idx]
 
         self.fromHDU(hdu, ahdr)
         return (data, naxispath)

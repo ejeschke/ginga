@@ -107,10 +107,6 @@ class BaseImage(Callback.Callbacks):
         view = numpy.s_[y, x]
         return self._slice(view)
 
-    def _get_dims(self, data):
-        height, width = data.shape[:2]
-        return (width, height)
-
     def get_metadata(self):
         return self.metadata.copy()
 
@@ -156,6 +152,9 @@ class BaseImage(Callback.Callbacks):
         self._set_minmax()
 
         self.make_callback('modified')
+
+    def _slice(self, view):
+        return self._get_data()[view]
 
     def get_slice(self, c):
         view = [slice(None)] * self.ndim
@@ -230,9 +229,6 @@ class BaseImage(Callback.Callbacks):
         metadata = self.get_metadata()
         other = self.__class__(data_np=data, metadata=metadata)
         return other
-
-    def _slice(self, view):
-        return self._get_data()[view]
 
     def cutout_data(self, x1, y1, x2, y2, xstep=1, ystep=1, astype=None):
         """cut out data area based on coords.
