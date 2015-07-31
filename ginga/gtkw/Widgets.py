@@ -714,6 +714,34 @@ class Menubar(ContainerBase):
         item_w.show()
         return child
 
+# SAVE DIALOG
+class SaveDialog:
+    def __init__(self, title='Save File', selectedfilter=None):
+        action = gtk.FILE_CHOOSER_ACTION_SAVE
+        buttons = (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, gtk.STOCK_SAVE, gtk.RESPONSE_OK)
+
+        self.widget = gtk.FileChooserDialog(title=title, action=action, buttons=buttons)
+
+        filtr = gtk.FileFilter()
+        filtr.add_pattern(selectedfilter)
+        if 'png' in selectedfilter:
+            filtr.set_name('Image (*.png)')
+        elif 'avi' in selectedfilter:
+            filtr.set_name('Movie (*.avi)')
+        elif 'npz' in selectedfilter:
+            filtr.set_name('Numpy Compressed Archive (*.npz)')
+        self.widget.add_filter(filtr)
+
+    def get_path(self):
+        response = self.widget.run()
+
+        if response == gtk.RESPONSE_OK:
+            path = self.widget.get_filename()
+            self.widget.destroy()
+            return path
+        elif response == gtk.RESPONSE_CANCEL:
+            self.widget.destroy()
+            return None
 
 # MODULE FUNCTIONS
 

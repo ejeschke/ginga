@@ -12,7 +12,6 @@ import numpy
 from ginga.misc import Widgets, Plot
 from ginga import GingaPlugin, colors
 from ginga.util.six.moves import map, zip
-from ginga.qtw.QtHelp import SaveDialog
 
 # default cut colors
 cut_colors = ['magenta', 'skyblue2', 'chartreuse2', 'cyan', 'pink',
@@ -274,9 +273,9 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         idx = len(self.tags) - 1
         tag = self.tags[idx]
         self.select_cut(tag)
-        # plot cleared in redo() if no more cuts
         if tag == self._new_cut:
             self.save_btn.set_enabled(False)
+        # plot cleared in redo() if no more cuts
         self.redo()
 
     def delete_all_cb(self, w):
@@ -286,8 +285,8 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         self.cutstag = self._new_cut
         self.w.cuts.append_text(self._new_cut)
         self.select_cut(self._new_cut)
-        # plot cleared in redo() if no more cuts
         self.save_btn.set_enabled(False)
+        # plot cleared in redo() if no more cuts
         self.redo()
 
     def add_cuts_tag(self, tag):
@@ -395,6 +394,10 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
                 text.color = colors[0]
             #text.color = color
             self._redo(lines, colors)
+            if n:
+                self.w.delete_cut.set_enabled(True)
+                self.w.delete_all.set_enabled(True)
+                self.save_btn.set_enabled(True)
 
         # force mpl redraw
         self.plot.fig.canvas.draw()
@@ -579,8 +582,6 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         self.canvas.add(cut, tag=tag)
         self.add_cuts_tag(tag)
 
-        self.save_btn.set_enabled(True)
-
         self.logger.debug("redoing cut plots")
         return self.redo()
 
@@ -617,15 +618,13 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
     def save_cb(self):
         fig, xarr, yarr = self.plot.get_data()
 
-        target = SaveDialog(title='Save plot', extfilter='*.png').get_path()
-        if target:
-            fig.savefig(target, dpi=100)
+        target = Widgets.SaveDialog(title='Save plot', selectedfilter='*.png').get_path()
+        with open(target, 'w') as target_file:
+            fig.savefig(target_file, dpi=100)
 
-        target = SaveDialog(title='Save data', extfilter='*.npz').get_path()
-        if target:
-            target_file = open(target, 'w')
+        target = Widgets.SaveDialog(title='Save data', selectedfilter='*.npz').get_path()
+        with open(target, 'w') as target_file:
             numpy.savez_compressed(target_file, x=xarr, y=yarr)
-            target_file.close()
 
     def __str__(self):
         return 'cuts'

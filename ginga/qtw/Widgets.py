@@ -703,6 +703,15 @@ class Menubar(ContainerBase):
         self.add_ref(child)
         return child
 
+# SAVE DIALOG
+class SaveDialog(QtGui.QFileDialog):
+    def __init__(self, title=None, selectedfilter=None):
+        super(SaveDialog, self).__init__()
+
+        self.widget = self.getSaveFileName(self, title, '', selectedfilter)
+
+    def get_path(self):
+        return self.widget
 
 # MODULE FUNCTIONS
 

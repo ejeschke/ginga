@@ -414,16 +414,6 @@ class Dialog(QtGui.QDialog):
     def get_content_area(self):
         return self.content
 
-class SaveDialog(QtGui.QFileDialog):
-
-    def __init__(self, title=None, extfilter=None):
-        super(SaveDialog, self).__init__()
-
-        self.title = title
-        self.extfilter = extfilter
-
-    def get_path(self):
-        return self.getSaveFileName(self, self.title, '', self.extfilter)
 
 class MenuBar(QtGui.QMenuBar):
 

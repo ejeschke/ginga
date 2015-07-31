@@ -14,7 +14,6 @@ from distutils import spawn
 from ginga import AstroImage
 from ginga.misc import Widgets, Future
 from ginga import GingaPlugin
-from ginga.qtw.QtHelp import SaveDialog
 from ginga.util.videosink import VideoSink
 
 import numpy as np
@@ -47,7 +46,6 @@ class MultiDim(GingaPlugin.LocalPlugin):
         self.imgname = 'NONAME'
         self.image = None
         self.orientation = 'vertical'
-        self.curr_slice = []
 
         # For animation feature
         self.play_axis = 2
@@ -526,10 +524,13 @@ class MultiDim(GingaPlugin.LocalPlugin):
         self.w.hdu.set_enabled(len(self.fits_f) > 0)
 
     def save_slice_cb(self):
-        target = SaveDialog(title='Save slice', extfilter='PNG image (*.png)').get_path()
-        if target:
+        target = Widgets.SaveDialog(title='Save slice', selectedfilter='*.png').get_path()
+        with open(target, 'w') as target_file:
             hival = self.fitsimage.get_cut_levels()[1]
-            plt.imsave(target, self.curr_slice, vmax=hival, cmap=plt.get_cmap('gray'), origin='lower')
+            image = self.fitsimage.get_image()
+            curr_slice_data = image.get_data()
+
+            plt.imsave(target_file, curr_slice_data, vmax=hival, cmap=plt.get_cmap('gray'), origin='lower')
             self.fv.showStatus("Successfully saved slice")
 
     def save_movie_cb(self):
@@ -547,19 +548,19 @@ class MultiDim(GingaPlugin.LocalPlugin):
         if start == 1:
             start = 0
 
-        target = SaveDialog('Save Movie', 'AVI movie (*.avi)').get_path()
+        target = Widgets.SaveDialog(title='Save Movie', selectedfilter='*.avi').get_path()
         if target:
             self.save_movie(start, end, target)
 
-    def save_movie(self, start, end, target):
-        hdu = self.fits_f[self.curhdu]
+    def save_movie(self, start, end, target_file):
+        image = self.fitsimage.get_image()
         loval, hival = self.fitsimage.get_cut_levels()
-        data = np.array(hdu.data, copy=True).clip(loval, hival)
+        data = np.array(image.get_mddata()).clip(loval, hival)
 
         data_rescaled = ((data - loval) * 255 / (hival - loval)).astype(np.uint8, copy=False)
-        H, W = data.shape[1:]
 
-        video = VideoSink((H, W), target)
+        W, H = image.get_data_size()
+        video = VideoSink((H, W), target_file)
         for i in xrange(start, end):
             video.run(np.flipud(data_rescaled[i]))
         video.close()
