@@ -10,6 +10,7 @@
 import time
 import re
 from distutils import spawn
+from contextlib import contextmanager
 
 from ginga import AstroImage
 from ginga.misc import Widgets, Future
@@ -557,15 +558,24 @@ class MultiDim(GingaPlugin.LocalPlugin):
         loval, hival = self.fitsimage.get_cut_levels()
         data = np.array(image.get_mddata()).clip(loval, hival)
 
+        # http://stackoverflow.com/questions/7042190/plotting-directly-to-movie-with-numpy-and-mencoder
         data_rescaled = ((data - loval) * 255 / (hival - loval)).astype(np.uint8, copy=False)
 
         W, H = image.get_data_size()
-        video = VideoSink((H, W), target_file)
-        for i in xrange(start, end):
-            video.run(np.flipud(data_rescaled[i]))
-        video.close()
+        with self.video_writer(VideoSink((H, W), target_file)) as video:
+            for i in xrange(start, end):
+                video.write(np.flipud(data_rescaled[i]))
 
         self.fv.showStatus("Successfully saved movie")
+
+    @contextmanager
+    def video_writer(self, v):
+        v.open()
+        try:
+            yield v
+        finally:
+            v.close()
+        return
 
     def __str__(self):
         return 'multidim'
