@@ -1,6 +1,6 @@
 #
 # ColorBar.py -- color bar widget
-# 
+#
 # Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c) Eric R. Jeschke.  All rights reserved.
@@ -28,7 +28,7 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
     def __init__(self, logger, rgbmap=None, link=False):
         gtk.DrawingArea.__init__(self)
         Callback.Callbacks.__init__(self)
-        
+
         self.surface = None
         self.logger = logger
         self.link_rgbmap = link
@@ -43,12 +43,12 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
         self.t_font = 'Sans Serif'
         self.t_fontsize = 10
         self.t_spacing = 40
-        self.loval = 0
-        self.hival = 0
+        self.loval = 0.0
+        self.hival = 0.0
         self._interval = {}
         self._avg_pixels_per_range_num = 70
         self.mark_pos = None
-        
+
         # For callbacks
         for name in ('motion', 'scroll'):
             self.enable_callback(name)
@@ -71,11 +71,11 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
                         | gtk.gdk.POINTER_MOTION_MASK
                         | gtk.gdk.POINTER_MOTION_HINT_MASK
                         | gtk.gdk.SCROLL_MASK)
-        
+
 
     def get_rgbmap(self):
         return self.rgbmap
-        
+
     def set_rgbmap(self, rgbmap):
         self.rgbmap = rgbmap
         # TODO: figure out if we can get rid of this link option
@@ -91,12 +91,12 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
     def set_imap(self, im, reset=False):
         self.rgbmap.set_imap(im)
         self.redraw()
-        
+
     def set_range(self, loval, hival, redraw=True):
-        self.loval = loval
-        self.hival = hival
+        self.loval = float(loval)
+        self.hival = float(hival)
         # Calculate reasonable spacing for range numbers
-        text = "%d" % (int(hival))
+        text = "%.4g" % (hival)
         try:
             win = self.get_window()
             if win is not None:
@@ -108,7 +108,7 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
                 str(e)))
         if self.t_showrange and redraw:
             self.redraw()
-        
+
     def configure_event(self, widget, event):
         self.surface = None
         rect = widget.get_allocation()
@@ -201,12 +201,12 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
         #    rect.width, rect.height, clr_wd, rem_px, ival)
 
         dist = self.rgbmap.get_dist()
-        
+
         j = ival; off = 0
         range_pts = []
         for i in range(256):
-            
-            wd = clr_wd    
+
+            wd = clr_wd
             if rem_px > 0:
                 j -= 1
                 if j == 0:
@@ -229,14 +229,14 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
                 # get inverse of distribution function and calculate value
                 # at this position
                 rng_pct = dist.get_dist_pct(cb_pct)
-                val = int(self.loval + (rng_pct * (self.hival - self.loval)))
-                text = "%d" % (val)
+                val = float(self.loval + (rng_pct * (self.hival - self.loval)))
+                text = "%.4g" % (val)
                 a, b, _wd, _ht, _i, _j = cr.text_extents(text)
 
                 rx = x
                 ry = 4 + _ht
                 range_pts.append((rx, ry, text))
-                
+
             off += wd
 
         # draw range
@@ -296,7 +296,7 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
         self.mark_pos = int(pct * self.width)
         #print "mark position is %d (%.2f)" % (self.mark_pos, pct)
         self.redraw()
-        
+
     def shift_colormap(self, pct):
         self.rgbmap.set_sarr(self._sarr, callback=False)
         self.rgbmap.shift(pct)
@@ -304,7 +304,7 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
 
     def rgbmap_cb(self, rgbmap):
         self.redraw()
-    
+
     def button_press_event(self, widget, event):
         # event.button, event.x, event.y
         x = event.x; y = event.y
@@ -315,7 +315,7 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
             sarr = self.rgbmap.get_sarr()
             self._sarr = sarr.copy()
             return True
-                
+
         ## return self.make_callback('button-press', event)
 
     def button_release_event(self, widget, event):
@@ -337,7 +337,7 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
         elif button == 3:
             self.rgbmap.reset_cmap()
             return True
-            
+
         ## return self.make_callback('button-release', event)
 
     def motion_notify_event(self, widget, event):
