@@ -57,7 +57,8 @@ class TextEntry(WidgetBase):
         self.widget.set_text(text)
 
     def set_length(self, numchars):
-        #self.widget.set_width_chars(numchars)
+        # this only sets the visible length of the widget
+        self.widget.set_width_chars(numchars)
         pass
 
 class TextEntrySet(WidgetBase):

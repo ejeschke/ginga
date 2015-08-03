@@ -76,7 +76,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
         top.set_border_width(4)
 
         vbox, sw, orientation = Widgets.get_oriented_box(container,
-                                                         scrolled=False)
+                                                         scrolled=True)
         self.orientation = orientation
         vbox.set_border_width(4)
         vbox.set_spacing(2)
@@ -141,19 +141,26 @@ class MultiDim(GingaPlugin.LocalPlugin):
 
         captions = [("Slice:", 'label', "Slice", 'llabel',
                      "Value:", 'label', "Value", 'llabel'),
+                    ("Save Slice", 'button'),
                     ]
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
+
+        b.save_slice.add_callback('activated', lambda w: self.save_slice_cb())
+        b.save_slice.set_enabled(False)
+        b.save_slice.set_tooltip("Save current slice as RGB image")
         vbox.add_widget(w, stretch=0)
 
         fr = Widgets.Frame("Movie")
         if have_mencoder:
-            captions = [("Start:", 'label', "Start", 'entry',
-                         "End:", 'label', "End", 'entry', 'Save Movie', 'button')]
+            captions = [("Start:", 'label', "Start Slice", 'entry',
+                         "End:", 'label', "End Slice", 'entry', 'Save Movie', 'button')]
             w, b = Widgets.build_info(captions, orientation=orientation)
             self.w.update(b)
-            b.start.set_tooltip("Starting slice")
-            b.end.set_tooltip("Ending slice")
+            b.start_slice.set_tooltip("Starting slice")
+            b.end_slice.set_tooltip("Ending slice")
+            b.start_slice.set_length(6)
+            b.end_slice.set_length(6)
             b.save_movie.add_callback('activated', lambda w: self.save_movie_cb())
             b.save_movie.set_enabled(False)
             fr.set_widget(w)
@@ -163,10 +170,10 @@ class MultiDim(GingaPlugin.LocalPlugin):
             fr.set_widget(infolbl)
         vbox.add_widget(fr, stretch=0)
 
-        spacer = Widgets.Label('')
-        vbox.add_widget(spacer, stretch=1)
+        #spacer = Widgets.Label('')
+        #vbox.add_widget(spacer, stretch=1)
 
-        top.add_widget(sw, stretch=0)
+        top.add_widget(sw, stretch=1)
 
         btns = Widgets.HBox()
         btns.set_spacing(4)
@@ -176,14 +183,9 @@ class MultiDim(GingaPlugin.LocalPlugin):
         btns.add_widget(btn)
         btns.add_widget(Widgets.Label(''), stretch=1)
 
-        btn = Widgets.Button("Save slice")
-        btn.add_callback('activated', lambda w: self.save_slice_cb())
-        btn.set_enabled(False)
-        self.w.save_slice = btn
-        btns.add_widget(btn)
         top.add_widget(btns, stretch=0)
 
-        container.add_widget(top, stretch=0)
+        container.add_widget(top, stretch=1)
 
         self.gui_up = True
 
@@ -535,8 +537,8 @@ class MultiDim(GingaPlugin.LocalPlugin):
             self.fv.showStatus("Successfully saved slice")
 
     def save_movie_cb(self):
-        start = int(self.w.start.get_text())
-        end = int(self.w.end.get_text())
+        start = int(self.w.start_slice.get_text())
+        end = int(self.w.end_slice.get_text())
         if not start or not end:
             return
         elif start < 0 or end > self.play_max:
