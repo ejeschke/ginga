@@ -161,7 +161,8 @@ class ImageViewBase(Callback.Callbacks):
 
         # misc
         self.t_.addDefaults(use_embedded_profile=True, auto_orient=False,
-                            defer_redraw=True, defer_lagtime=0.025)
+                            defer_redraw=True, defer_lagtime=0.025,
+                            interpolation='basic')
 
         # Object that calculates auto cut levels
         name = self.t_.get('autocut_method', 'zscale')
@@ -476,7 +477,9 @@ class ImageViewBase(Callback.Callbacks):
             # have one already--then just keep reusing it
             if self._normimg is None:
                 NormImage = self.canvas.getDrawClass('normimage')
-                self._normimg = NormImage(0, 0, image, alpha=1.0)
+                interp = self.t_.get('interpolation', 'basic')
+                self._normimg = NormImage(0, 0, image, alpha=1.0,
+                                          interpolation=interp)
                 tag = self.canvas.add(self._normimg, tag='_image')
             else:
                 self._normimg.set_image(image)

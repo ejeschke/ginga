@@ -10,6 +10,9 @@
 from ginga.canvas.CompoundMixin import CompoundMixin
 from ginga.util.six.moves import map, filter
 
+class CanvasError(Exception):
+    pass
+
 class CanvasMixin(object):
     """A CanvasMixin is combined with the CompoundMixin to make a
     tag-addressible canvas-like interface.  This mixin should precede the
@@ -44,12 +47,12 @@ class CanvasMixin(object):
         if tag:
             # user supplied a tag
             if tag in self.tags:
-                raise CanvasObjectError("Tag already used: '%s'" % (tag))
+                raise CanvasError("Tag already used: '%s'" % (tag))
         else:
             if tagpfx:
                 # user supplied a tag prefix
                 if tagpfx.startswith('@'):
-                    raise CanvasObjectError("Tag prefix may not begin with '@'")
+                    raise CanvasError("Tag prefix may not begin with '@'")
                 tag = '%s%d' % (tagpfx, self.count)
             else:
                 # make up our own tag
