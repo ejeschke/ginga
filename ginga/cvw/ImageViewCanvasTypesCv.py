@@ -84,7 +84,7 @@ class RenderContext(object):
 
     ##### DRAWING OPERATIONS #####
 
-    def draw_text(self, cx, cy, text):
+    def draw_text(self, cx, cy, text, rot_deg=0.0):
         self.cr.text((cx, cy), text, self.font)
 
     def draw_polygon(self, cpoints):

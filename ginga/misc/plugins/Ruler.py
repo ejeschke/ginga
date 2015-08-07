@@ -34,7 +34,7 @@ class Ruler(GingaPlugin.LocalPlugin):
         self.canvas = canvas
 
         self.w = None
-        self.unittypes = ('arcmin', 'pixels')
+        self.unittypes = ('arcmin', 'degrees', 'pixels')
         self.units = 'arcmin'
 
     def build_gui(self, container):
@@ -151,17 +151,12 @@ Display the Zoom tab at the same time to precisely see detail while drawing.""")
         self.fv.showStatus("Draw a ruler with the right mouse button")
 
     def stop(self):
-        ## # remove the ruler from the canvas
-        ## try:
-        ##     self.canvas.deleteObjectByTag(self.ruletag, redraw=False)
-        ## except:
-        ##     pass
         # remove the canvas from the image
         try:
             self.fitsimage.deleteObjectByTag(self.layertag)
         except:
             pass
-        #self.canvas.ui_setActive(False)
+        self.canvas.ui_setActive(False)
         self.fv.showStatus("")
 
     def redo(self):

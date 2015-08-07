@@ -7,6 +7,8 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 
+import math
+
 import aggdraw as agg
 from . import AggHelp
 from itertools import chain
@@ -82,11 +84,31 @@ class RenderContext(object):
     def text_extents(self, text):
         return self.cr.text_extents(text, self.font)
 
+    def get_affine_transform(self, cx, cy, rot_deg):
+        x, y = 0, 0          # old center
+        nx, ny = cx, cy      # new center
+        sx = sy = 1.0        # new scale
+        cosine = math.cos(math.radians(rot_deg))
+        sine = math.sin(math.radians(rot_deg))
+        a = cosine / sx
+        b = sine / sx
+        c = x - nx*a - ny*b
+        d = -sine / sy
+        e = cosine / sy
+        f = y - nx*d - ny*e
+        return (a, b, c, d, e, f)
 
     ##### DRAWING OPERATIONS #####
 
-    def draw_text(self, cx, cy, text):
+    def draw_text(self, cx, cy, text, rot_deg=0.0):
         self.cr.canvas.text((cx, cy), text, self.font)
+        ## affine = self.get_affine_transform(cx, cy, rot_deg)
+        ## self.cr.canvas.settransform(affine)
+
+        ## self.cr.canvas.text((0, 0), text, self.font)
+
+        ## # reset default transform
+        ## self.cr.canvas.settransform()
 
     def draw_polygon(self, cpoints):
         self.cr.canvas.polygon(list(chain.from_iterable(cpoints)),

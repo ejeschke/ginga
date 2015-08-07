@@ -61,7 +61,7 @@ class RenderContext(object):
 
     ##### DRAWING OPERATIONS #####
 
-    def draw_text(self, cx, cy, text):
+    def draw_text(self, cx, cy, text, rot_deg=0.0):
         #self.cr.draw_text(cx, cy, text)
         pass
 

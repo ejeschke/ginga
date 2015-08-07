@@ -486,6 +486,9 @@ class Text(CanvasObjectBase):
             Param(name='alpha', type=float, default=1.0,
                   min=0.0, max=1.0, widget='spinfloat', incr=0.05,
                   description="Opacity of text"),
+            Param(name='rot_deg', type=float, default=0.0,
+                  min=-359.999, max=359.999, widget='spinfloat', incr=1.0,
+                  description="Rotation of text"),
             Param(name='showcap', type=_bool,
                   default=False, valid=[False, True],
                   description="Show caps for this object"),
@@ -493,11 +496,13 @@ class Text(CanvasObjectBase):
 
     def __init__(self, x, y, text='EDIT ME',
                  font='Sans Serif', fontsize=None,
-                 color='yellow', alpha=1.0, showcap=False, **kwdargs):
+                 color='yellow', alpha=1.0, rot_deg=0.0,
+                 showcap=False, **kwdargs):
         self.kind = 'text'
         super(Text, self).__init__(color=color, alpha=alpha,
-                                       x=x, y=y, font=font, fontsize=fontsize,
-                                       text=text, showcap=showcap, **kwdargs)
+                                   x=x, y=y, font=font, fontsize=fontsize,
+                                   text=text, rot_deg=rot_deg,
+                                   showcap=showcap, **kwdargs)
 
     def get_center_pt(self):
         return (self.x, self.y)
@@ -524,7 +529,7 @@ class Text(CanvasObjectBase):
         cr.set_font_from_shape(self)
 
         cx, cy = self.canvascoords(viewer, self.x, self.y)
-        cr.draw_text(cx, cy, self.text)
+        cr.draw_text(cx, cy, self.text, rot_deg=self.rot_deg)
 
         if self.editing:
             self.draw_edit(cr, viewer)
@@ -537,7 +542,7 @@ class PolygonMixin(object):
     """
 
     def get_center_pt(self):
-        P = numpy.array(self.points + [self.points[0]])
+        P = numpy.array(self.points)
         x = P[:, 0]
         y = P[:, 1]
 
@@ -2098,7 +2103,7 @@ class Ruler(TwoPointMixin, CanvasObjectBase):
                   min=0.0, max=1.0, widget='spinfloat', incr=0.05,
                   description="Opacity of outline"),
             Param(name='units', type=str, default='arcmin',
-                  valid=['arcmin', 'pixels'],
+                  valid=['arcmin', 'degrees', 'pixels'],
                   description="Units for text distance (default: arcmin)"),
             Param(name='font', type=str, default='Sans Serif',
                   description="Font family for text"),
@@ -2138,7 +2143,7 @@ class Ruler(TwoPointMixin, CanvasObjectBase):
         mode = self.units.lower()
         try:
             image = viewer.get_image()
-            if mode == 'arcmin':
+            if mode in ('arcmin', 'degrees'):
                 # Calculate RA and DEC for the three points
                 # origination point
                 ra_org, dec_org = image.pixtoradec(self.x1, self.y1)
@@ -2149,12 +2154,23 @@ class Ruler(TwoPointMixin, CanvasObjectBase):
                 # "heel" point making a right triangle
                 ra_heel, dec_heel = image.pixtoradec(self.x2, self.y1)
 
-                text_h = wcs.get_starsep_RaDecDeg(ra_org, dec_org,
-                                                  ra_dst, dec_dst)
-                text_x = wcs.get_starsep_RaDecDeg(ra_org, dec_org,
-                                                  ra_heel, dec_heel)
-                text_y = wcs.get_starsep_RaDecDeg(ra_heel, dec_heel,
-                                                  ra_dst, dec_dst)
+                if mode == 'arcmin':
+                    text_h = wcs.get_starsep_RaDecDeg(ra_org, dec_org,
+                                                      ra_dst, dec_dst)
+                    text_x = wcs.get_starsep_RaDecDeg(ra_org, dec_org,
+                                                      ra_heel, dec_heel)
+                    text_y = wcs.get_starsep_RaDecDeg(ra_heel, dec_heel,
+                                                      ra_dst, dec_dst)
+                else:
+                    sep_h = wcs.deltaStarsRaDecDeg(ra_org, dec_org,
+                                                   ra_dst, dec_dst)
+                    text_h = str(sep_h)
+                    sep_x = wcs.deltaStarsRaDecDeg(ra_org, dec_org,
+                                                   ra_heel, dec_heel)
+                    text_x = str(sep_x)
+                    sep_y = wcs.deltaStarsRaDecDeg(ra_heel, dec_heel,
+                                                    ra_dst, dec_dst)
+                    text_y = str(sep_y)
             else:
                 dx = abs(self.x2 - self.x1)
                 dy = abs(self.y2 - self.y1)

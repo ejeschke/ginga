@@ -112,8 +112,14 @@ class RenderContext(object):
 
     ##### DRAWING OPERATIONS #####
 
-    def draw_text(self, cx, cy, text):
-        self.cr.drawText(cx, cy, text)
+    def draw_text(self, cx, cy, text, rot_deg=0.0):
+        self.cr.save()
+        self.cr.translate(cx, cy)
+        self.cr.rotate(-rot_deg)
+
+        self.cr.drawText(0, 0, text)
+
+        self.cr.restore()
 
     def draw_polygon(self, cpoints):
         qpoints = list(map(lambda p: QtCore.QPoint(p[0], p[1]),

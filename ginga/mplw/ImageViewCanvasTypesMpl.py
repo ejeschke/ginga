@@ -89,7 +89,7 @@ class RenderContext(object):
 
     ##### DRAWING OPERATIONS #####
 
-    def draw_text(self, cx, cy, text):
+    def draw_text(self, cx, cy, text, rot_deg=0.0):
         fontdict = self.font.get_fontdict()
         self.cr.axes.text(cx, cy, text, fontdict=fontdict)
 

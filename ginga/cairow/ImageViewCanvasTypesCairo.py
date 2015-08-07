@@ -115,9 +115,13 @@ class RenderContext(object):
 
     ##### DRAWING OPERATIONS #####
 
-    def draw_text(self, cx, cy, text):
-        self.cr.move_to(cx, cy)
+    def draw_text(self, cx, cy, text, rot_deg=0.0):
+        self.cr.save()
+        self.cr.translate(cx, cy)
+        self.cr.move_to(0, 0)
+        self.cr.rotate(-math.radians(rot_deg))
         self.cr.show_text(text)
+        self.cr.restore()
         self.cr.new_path()
 
     def draw_polygon(self, cpoints):
