@@ -708,9 +708,12 @@ class SaveDialog(QtGui.QFileDialog):
     def __init__(self, title=None, selectedfilter=None):
         super(SaveDialog, self).__init__()
 
+        self.selectedfilter = selectedfilter
         self.widget = self.getSaveFileName(self, title, '', selectedfilter)
 
     def get_path(self):
+        if not self.widget.endswith(self.selectedfilter[1:]):
+            self.widget += self.selectedfilter[1:]
         return self.widget
 
 # MODULE FUNCTIONS
