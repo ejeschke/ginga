@@ -727,10 +727,13 @@ class SaveDialog:
         filtr.add_pattern(selectedfilter)
         if 'png' in selectedfilter:
             filtr.set_name('Image (*.png)')
+            self.selectedfilter = '.png'
         elif 'avi' in selectedfilter:
             filtr.set_name('Movie (*.avi)')
+            self.selectedfilter = '.avi'
         elif 'npz' in selectedfilter:
             filtr.set_name('Numpy Compressed Archive (*.npz)')
+            self.selectedfilter = '.npz'
         self.widget.add_filter(filtr)
 
     def get_path(self):
@@ -738,6 +741,8 @@ class SaveDialog:
 
         if response == gtk.RESPONSE_OK:
             path = self.widget.get_filename()
+            if not path.endswith(self.selectedfilter):
+                path += self.selectedfilter
             self.widget.destroy()
             return path
         elif response == gtk.RESPONSE_CANCEL:

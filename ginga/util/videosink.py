@@ -9,7 +9,7 @@ class VideoSink(object):
         self.size = size
         self.cmdstring = ('mencoder', '/dev/stdin', '-demuxer', 'rawvideo',
                      '-rawvideo', 'w=%i:h=%i' % size[::-1] + ":fps=%i:format=%s" % (rate, byteorder),
-                     '-o', filename+'.avi', '-ovc', 'lavc')
+                     '-o', filename, '-ovc', 'lavc')
 
     def open(self):
         self.p = subprocess.Popen(self.cmdstring, stdin=subprocess.PIPE, shell=False)
