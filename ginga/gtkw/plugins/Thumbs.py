@@ -1,6 +1,6 @@
 #
 # Thumbs.py -- Thumbnail plugin for Ginga fits viewer
-# 
+#
 # Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c) Eric R. Jeschke.  All rights reserved.
@@ -22,6 +22,10 @@ class Thumbs(ThumbsBase.ThumbsBase):
     def __init__(self, fv):
         # superclass defines some variables for us, like logger
         super(Thumbs, self).__init__(fv)
+
+        self.TARGET_TYPE_TEXT = 0
+        self.TARGET_TYPE_THUMB = 1
+        self.action = None
 
     def build_gui(self, container):
         width, height = 300, 300
@@ -71,7 +75,7 @@ class Thumbs(ThumbsBase.ThumbsBase):
 
     def _mk_tooltip(self, thumbkey, name, metadata):
         return lambda tw, x, y, kbmode, ttw: self.query_thumb(thumbkey, name, metadata, x, y, ttw)
-    
+
     def _mk_context_menu(self, thumbkey, chname, name, path, image_future):
         menu = gtk.Menu()
         item = gtk.MenuItem("Display")
@@ -98,10 +102,33 @@ class Thumbs(ThumbsBase.ThumbsBase):
                         fill=False, padding=0)
         evbox = gtk.EventBox()
         evbox.add(imgwin)
-        evbox.connect("button-press-event", 
+        evbox.connect("button-press-event",
                       lambda w, e: self.button_down(w, e, thumbkey, chname,
                                                     name, path,
                                                     image_future))
+        evbox.connect("button-release-event",
+                      lambda w, e: self.button_up(w, e, thumbkey, chname,
+                                                  name, path,
+                                                  image_future))
+        # set up for drag & drop
+        targets = [ ( "text/plain", 0, self.TARGET_TYPE_TEXT ),
+                    #( "text/uri-list", 0, self.TARGET_TYPE_TEXT ),
+                    ( "text/thumb", gtk.TARGET_SAME_APP,
+                      self.TARGET_TYPE_THUMB ),
+                    ]
+        evbox.drag_source_set(gtk.gdk.BUTTON1_MASK, targets,
+                              gtk.gdk.ACTION_COPY | gtk.gdk.ACTION_MOVE)
+
+        evbox.connect("drag-begin",
+                      lambda *args: self.drag_begin(args, imgwin, thumbkey))
+        evbox.connect("drag-data-get",
+                      lambda *args: self.drag_data_get(args, chname, name,
+                                                       path))
+        evbox.connect("drag-data-delete",
+                      lambda *args: self.drag_data_move(args))
+        evbox.connect("drag-end",
+                      lambda *args: self.drag_end(args))
+
         vbox.pack_start(evbox, expand=False, fill=False)
         vbox.show_all()
 
@@ -118,7 +145,7 @@ class Thumbs(ThumbsBase.ThumbsBase):
                 self.thumbList.sort()
                 self.reorder_thumbs()
                 return
-            
+
             if self.thumbColCount == 0:
                 hbox = gtk.HBox(homogeneous=True, spacing=self.thumbSep)
                 self.w.thumbs.pack_start(hbox)
@@ -153,7 +180,7 @@ class Thumbs(ThumbsBase.ThumbsBase):
                 self.w.thumbs.remove(hbox)
             self.thumbRowList = []
             self.thumbColCount = 0
-        
+
     def reorder_thumbs(self):
         self.logger.debug("Reordering thumb grid")
         with self.thmblock:
@@ -178,12 +205,12 @@ class Thumbs(ThumbsBase.ThumbsBase):
 
             self.thumbColCount = colCount
             self.w.thumbs.show_all()
-        
+
     def thumbpane_resized_cb(self, widget, allocation):
         rect = widget.get_allocation()
         x, y, width, height = rect.x, rect.y, rect.width, rect.height
         return self.thumbpane_resized(width, height)
-        
+
     def query_thumb(self, thumbkey, name, metadata, x, y, ttw):
         result = []
         for kwd in self.keywords:
@@ -194,7 +221,7 @@ class Thumbs(ThumbsBase.ThumbsBase):
                     kwd, str(e)))
                 text = "%s: N/A" % (kwd)
             result.append(text)
-            
+
         ttw.set_text('\n'.join(result))
         return True
 
@@ -202,14 +229,47 @@ class Thumbs(ThumbsBase.ThumbsBase):
                     name, path, image_future):
         if event.type == gtk.gdk.BUTTON_PRESS:
             if event.button == 1:
-                self.load_file(thumbkey, chname, name, path,
-                               image_future)
+                self.action = 'click'
             elif event.button == 3:
                 # make widget popup
                 menu = self._mk_context_menu(thumbkey, chname, name, path,
                                              image_future)
                 menu.popup(None, None, None, event.button, event.time)
-        
+
+    def button_up(self, widget, event, thumbkey, chname,
+                  name, path, image_future):
+        if event.type == gtk.gdk.BUTTON_RELEASE:
+            if (event.button == 1) and (self.action == 'click'):
+                self.action = None
+                self.load_file(thumbkey, chname, name, path,
+                               image_future)
+
+    def drag_begin(self, args, imgwin, thumbkey):
+        widget, context = args
+        self.action = 'drag'
+        # set drag icon
+        pixbuf = imgwin.get_pixbuf()
+        context.set_icon_pixbuf(pixbuf, 10, 10)
+
+    def drag_data_get(self, args, chname, name, path):
+        widget, context, selection, target_type, dragtime = args
+        if "text/thumb" in context.targets:
+            path = "%s||%s||%s" % (chname, name, path)
+            selection.set(selection.target, 8, path)
+        elif "text/uri-list" in context.targets:
+            path = "file://%s" % (path)
+            selection.set(selection.target, 8, path)
+        elif "text/plain" in context.targets:
+            selection.set(selection.target, 8, path)
+
+    def drag_data_delete(self, args):
+        widget, context = args
+        #print(('drag data delete', widget, context))
+
+    def drag_end(self, args):
+        widget, context = args
+        self.action = None
+
     def update_thumbnail(self, thumbkey, imgwin, name, metadata):
         with self.thmblock:
             try:
@@ -229,8 +289,8 @@ class Thumbs(ThumbsBase.ThumbsBase):
             bnch.evbox.add(imgwin)
             bnch.evbox.show_all()
         self.logger.debug("update finished.")
-                                 
+
     def __str__(self):
         return 'thumbs'
-    
+
 #END

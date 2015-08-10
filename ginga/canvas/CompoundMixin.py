@@ -40,7 +40,8 @@ class CompoundMixin(object):
 
     def contains_arr(self, x_arr, y_arr):
         return reduce(self._contains_reduce,
-                      map(lambda obj: obj.contains_arr(x_arr, y_arr)))
+                      map(lambda obj: obj.contains_arr(x_arr, y_arr),
+                          self.objects))
 
     def contains(self, x, y):
         for obj in self.objects:

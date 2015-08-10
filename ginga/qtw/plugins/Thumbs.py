@@ -1,6 +1,6 @@
 #
 # Thumbs.py -- Thumbnail plugin for Ginga fits viewer
-# 
+#
 # Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c)  Eric R. Jeschke.  All rights reserved.
@@ -10,7 +10,7 @@
 import os
 
 from ginga.qtw import ImageViewCanvasQt
-from ginga.qtw.QtHelp import QtGui, QtCore, QPixmap
+from ginga.qtw.QtHelp import QtGui, QtCore, QPixmap, QApplication
 from ginga.misc.plugins import ThumbsBase
 from ginga.qtw import QtHelp
 from ginga.misc import Bunch
@@ -30,14 +30,48 @@ class MyLabel(QtGui.QLabel):
 
     def mousePressEvent(self, event):
         buttons = event.buttons()
-        x, y = event.x(), event.y()
+        self.event_type = None
 
         if buttons & QtCore.Qt.LeftButton:
+            self.drag_start_position = event.pos()
+            self.event_type = 'click'
+
+        ## elif buttons & QtCore.Qt.RightButton:
+        ##     self.context_menu_cb()
+
+    def mouseMoveEvent(self, event):
+
+        if event.buttons() != QtCore.Qt.LeftButton:
+            return
+
+        # only consider this a drag if user has moved a certain amount
+        # away from the press position
+        if ((event.pos() - self.drag_start_position).manhattanLength() <
+            QApplication.startDragDistance()):
+            return
+
+        # prepare formatted possibilities on drop
+        mimeData = QtCore.QMimeData()
+        chname, name, path = self._dragdata
+        data = "%s||%s||%s" % (chname, name, path)
+        mimeData.setData("text/thumb", data)
+        mimeData.setData("text/plain", path)
+
+        drag = QtGui.QDrag(self)
+        drag.setMimeData(mimeData)
+        drag.setPixmap(self.pixmap())
+        drag.setHotSpot(event.pos() - self.rect().topLeft())
+
+        self.event_type = 'drag'
+        #dropAction = drag.start(QtCore.Qt.CopyAction | QtCore.Qt.MoveAction)
+        dropAction = drag.start(QtCore.Qt.CopyAction)
+
+    def mouseReleaseEvent(self, event):
+        if self.event_type == 'click':
             self.thumbs_cb()
         ## elif buttons & QtCore.Qt.RightButton:
         ##     self.context_menu_cb()
 
-    
 class Thumbs(ThumbsBase.ThumbsBase):
 
     def __init__(self, fv):
@@ -100,6 +134,7 @@ class Thumbs(ThumbsBase.ThumbsBase):
         pixmap = QPixmap.fromImage(imgwin)
         imglbl = MyLabel()
         imglbl.setPixmap(pixmap)
+        imglbl._dragdata = (chname, name, path)
         # set the load callback
         imglbl.thumbs_cb = lambda: self.load_file(thumbkey, chname, name, path,
                                                   image_future)
@@ -139,7 +174,7 @@ class Thumbs(ThumbsBase.ThumbsBase):
                 self.thumbList.sort()
                 self.reorder_thumbs()
                 return
-            
+
             self.w.thumbs.addWidget(widget,
                                     self.thumbRowCount, self.thumbColCount)
             self.thumbColCount = (self.thumbColCount + 1) % self.thumbNumCols
@@ -147,7 +182,7 @@ class Thumbs(ThumbsBase.ThumbsBase):
                 self.thumbRowCount += 1
 
         #self.w.thumbs.show()
-        
+
         # force scroll to bottom of thumbs, if checkbox is set
         scrollp = self.w.auto_scroll.isChecked()
         if scrollp:
@@ -168,7 +203,7 @@ class Thumbs(ThumbsBase.ThumbsBase):
                 self.w.thumbs.removeWidget(bnch.widget)
                 bnch.widget.setParent(None)
         self.w.thumbs_w.update()
-        
+
     def reorder_thumbs(self):
         self.logger.debug("Reordering thumb grid")
         with self.thmblock:
@@ -191,16 +226,16 @@ class Thumbs(ThumbsBase.ThumbsBase):
                 self.thumbColCount = (self.thumbColCount + 1) % self.thumbNumCols
                 if self.thumbColCount == 0:
                     self.thumbRowCount += 1
-                
+
         self.w.thumbs_w.update()
         #self.w.thumbs_scroll.show()
         self.logger.debug("Reordering done")
-        
+
 
     def thumbpane_resized_cb(self, width, height):
         self.thumbpane_resized(width, height)
         return False
-        
+
     def query_thumb(self, thumbkey, name, metadata):
         result = []
         for kwd in self.keywords:
@@ -211,7 +246,7 @@ class Thumbs(ThumbsBase.ThumbsBase):
                     kwd, str(e)))
                 text = "%s: N/A" % (kwd)
             result.append(text)
-            
+
         return '\n'.join(result)
 
     def _mk_context_menu(self, lbl, thumbkey, chname, name, path,
@@ -249,8 +284,8 @@ class Thumbs(ThumbsBase.ThumbsBase):
             bnch.imglbl.repaint()
             self.w.thumbs_w.update()
         self.logger.debug("update finished.")
-        
+
     def __str__(self):
         return 'thumbs'
-    
+
 #END

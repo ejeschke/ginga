@@ -275,15 +275,28 @@ class GingaControl(Callback.Callbacks):
                 self.start_local_plugin(chname, opname, None)
         return True
 
+    def _is_thumb(self, url):
+        return '||' in url
+
+    def move_image_by_thumb(self, url, to_chname):
+        from_chname, imname, path = url.split('||')
+        self.move_image_by_name(from_chname, imname, to_chname,
+                                impath=path)
+
     def dragdrop(self, fitsimage, urls):
         """Called when a drop operation is performed on our main window.
         We are called back with a URL and we attempt to load it if it
         names a file.
         """
         for url in urls:
+            to_chname = self.get_channelName(fitsimage)
+
+            if self._is_thumb(url):
+                self.move_image_by_thumb(url, to_chname)
+                continue
+
             #self.load_file(url)
-            chname = self.get_channelName(fitsimage)
-            self.nongui_do(self.load_file, url, chname=chname,
+            self.nongui_do(self.load_file, url, chname=to_chname,
                            wait=False)
         return True
 
@@ -1181,6 +1194,21 @@ class GingaControl(Callback.Callbacks):
         if imname in chinfo.datasrc:
             chinfo.datasrc.remove(imname)
         self.make_callback('remove-image', chinfo.name, imname, impath)
+
+    def move_image_by_name(self, from_chname, imname, to_chname, impath=None):
+
+        chinfo = self.get_channelInfo(from_chname)
+        try:
+            image = chinfo.datasrc[imname]
+        except KeyError:
+            # TODO: lost index, image_future
+            image = self.load_image(impath)
+
+        if from_chname.upper() != to_chname.upper():
+            self.remove_image_by_name(from_chname, imname, impath)
+
+        self.add_image(imname, image, chname=to_chname)
+
 
     def remove_current_image(self):
         chinfo = self.get_channelInfo()

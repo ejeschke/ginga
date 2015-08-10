@@ -9,6 +9,7 @@
 #
 import os
 import math
+import numpy
 
 from ginga.misc import Bunch
 from ginga import GingaPlugin
@@ -412,11 +413,26 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
 
         # Filter starts by a containing object, if provided
         if filter_obj:
-            stars = []
-            for star in starlist:
-                x, y = image.radectopix(star['ra_deg'], star['dec_deg'])
-                if filter_obj.contains(x, y):
-                    stars.append(star)
+            num_cat = len(starlist)
+            self.logger.debug("number of incoming stars=%d" % (num_cat))
+            ## stars = []
+            ## for star in starlist:
+            ##     x, y = image.radectopix(star['ra_deg'], star['dec_deg'])
+            ##     if filter_obj.contains(x, y):
+            ##         stars.append(star)
+
+            # TODO: vectorize wcs lookup
+            coords = [ image.radectopix(star['ra_deg'], star['dec_deg'])
+                       for star in starlist ]
+            arr = numpy.array(coords)
+            self.logger.debug("arr.shape = %s" % str(arr.shape))
+
+            # vectorized test for inclusion in shape
+            res = filter_obj.contains_arr(arr.T[0], arr.T[1])
+            self.logger.debug("res.shape = %s" % str(res.shape))
+
+            stars = [ starlist[i] for i in range(num_cat) if res[i] ]
+            self.logger.debug("number of filtered stars=%d" % (len(stars)))
             starlist = stars
 
         return starlist

@@ -731,7 +731,7 @@ class ImageViewEvent(ImageViewQt):
             return self.make_callback('swipe', gstate, hdir, vdir)
 
     def gs_pinching(self, event, gesture, gstate):
-        #print "PINCHING"
+        #print("PINCHING")
         rot = gesture.rotationAngle()
         scale = gesture.scaleFactor()
         self.logger.debug("pinch gesture rot=%f scale=%f state=%s" % (
@@ -740,7 +740,7 @@ class ImageViewEvent(ImageViewQt):
         return self.make_callback('pinch', gstate, rot, scale)
 
     def gs_panning(self, event, gesture, gstate):
-        #print "PANNING"
+        #print("PANNING")
         # x, y = event.x(), event.y()
         # self.last_win_x, self.last_win_y = x, y
 
@@ -767,13 +767,24 @@ class ImageViewEvent(ImageViewQt):
         formats = list(map(str, list(dropdata.formats())))
         self.logger.debug("available formats of dropped data are %s" % (
             formats))
-        if dropdata.hasUrls():
+        if "text/thumb" in formats:
+            thumbstr = str(dropdata.data("text/thumb"))
+            data = [ thumbstr ]
+            self.logger.debug("dropped thumb(s): %s" % (str(data)))
+        elif dropdata.hasUrls():
             urls = list(dropdata.urls())
-            paths = [ str(url.toString()) for url in urls ]
-            event.acceptProposedAction()
-            self.logger.debug("dropped filename(s): %s" % (str(paths)))
-            self.make_callback('drag-drop', paths)
+            data = [ str(url.toString()) for url in urls ]
+            self.logger.debug("dropped filename(s): %s" % (str(data)))
+        elif "text/plain" in formats:
+            data = [ dropdata.text() ]
+            self.logger.debug("dropped filename(s): %s" % (str(data)))
+        else:
+            # No format that we understand--just pass it along
+            data = dropdata.data(formats[0])
+            self.logger.debug("dropped data of len %d" % (len(data)))
 
+        event.acceptProposedAction()
+        self.make_callback('drag-drop', data)
 
 class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
 

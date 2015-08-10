@@ -1,6 +1,6 @@
 #
 # ImageViewGtk.py -- classes for the display of FITS files in Gtk widgets
-# 
+#
 # Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c)  Eric R. Jeschke.  All rights reserved.
@@ -55,7 +55,7 @@ class ImageViewGtk(ImageViewCairo.ImageViewCairo):
         # see reschedule_redraw() method
         self._defer_task = None
         self.msgtask = None
-        
+
 
     def get_widget(self):
         return self.imgwin
@@ -75,7 +75,7 @@ class ImageViewGtk(ImageViewCairo.ImageViewCairo):
             pixbuf = gtksel.pixbuf_new_from_data(rgb_buf,
                                                  gtk.gdk.COLORSPACE_RGB,
                                                  False, 8, dawd, daht, dawd*3)
-            
+
         return pixbuf
 
     def get_image_as_widget(self):
@@ -97,14 +97,14 @@ class ImageViewGtk(ImageViewCairo.ImageViewCairo):
         if format == 'jpeg':
             options['quality'] = str(quality)
         pixbuf.save(filepath, format, options)
-    
+
     def get_rgb_image_as_pixbuf(self):
         dawd = self.surface.get_width()
         daht = self.surface.get_height()
         rgb_buf = bytes(self.surface.get_data())
         pixbuf = gtksel.pixbuf_new_from_data(rgb_buf, gtk.gdk.COLORSPACE_RGB,
                                              False, 8, dawd, daht, dawd*3)
-            
+
         return pixbuf
 
     def save_rgb_image_as_file(self, filepath, format='png', quality=90):
@@ -113,7 +113,7 @@ class ImageViewGtk(ImageViewCairo.ImageViewCairo):
         if format == 'jpeg':
             options['quality'] = str(quality)
         pixbuf.save(filepath, format, options)
-    
+
     def reschedule_redraw(self, time_sec):
         time_ms = int(time_sec * 1000)
         try:
@@ -131,7 +131,7 @@ class ImageViewGtk(ImageViewCairo.ImageViewCairo):
     def update_image(self):
         if not self.surface:
             return
-            
+
         win = self.imgwin.get_window()
         if win is not None and self.surface is not None:
             imgwin_wd, imgwin_ht = self.get_window_size()
@@ -154,7 +154,7 @@ class ImageViewGtk(ImageViewCairo.ImageViewCairo):
         cr.set_operator(cairo.OPERATOR_SOURCE)
         cr.paint()
         return False
-        
+
     def expose_event(self, widget, event):
         """When an area of the window is exposed, we just copy out of the
         server-side, off-screen surface to that area.
@@ -175,7 +175,7 @@ class ImageViewGtk(ImageViewCairo.ImageViewCairo):
             cr.paint()
 
         return False
-        
+
     def configure_event(self, widget, event):
         rect = widget.get_allocation()
         x, y, width, height = rect.x, rect.y, rect.width, rect.height
@@ -189,7 +189,7 @@ class ImageViewGtk(ImageViewCairo.ImageViewCairo):
             wwd, wht = self.get_window_size()
             if (wwd == width) and (wht == height):
                 return True
-        
+
         #self.surface = None
         self.logger.debug("allocation is %d,%d %dx%d" % (
             x, y, width, height))
@@ -207,16 +207,16 @@ class ImageViewGtk(ImageViewCairo.ImageViewCairo):
         win = self.imgwin.get_window()
         if win is not None:
             win.set_cursor(cursor)
-        
+
     def define_cursor(self, ctype, cursor):
         self.cursor[ctype] = cursor
-        
+
     def get_cursor(self, ctype):
         return self.cursor[ctype]
-        
+
     def switch_cursor(self, ctype):
         self.set_cursor(self.cursor[ctype])
-        
+
     def _get_rgbbuf(self, data):
         buf = data.tostring(order='C')
         return buf
@@ -238,7 +238,7 @@ class ImageViewGtk(ImageViewCairo.ImageViewCairo):
     def clear_onscreen_message_gtk(self):
         self.msgtask = None
         self.onscreen_message(None)
-        
+
 class ImageViewEvent(ImageViewGtk):
 
     def __init__(self, logger=None, rgbmap=None, settings=None):
@@ -274,19 +274,26 @@ class ImageViewEvent(ImageViewGtk):
 
         # Set up widget as a drag and drop destination
         imgwin.connect("drag-data-received", self.drop_event)
+        imgwin.connect("drag-motion", self.drag_motion_cb)
+        imgwin.connect("drag-drop", self.drag_drop_cb)
         if gtksel.have_gtk3:
             self.TARGET_TYPE_TEXT = 0
-            imgwin.drag_dest_set(gtk.DestDefaults.ALL,
-                                 [], gtk.gdk.DragAction.COPY)
+            imgwin.drag_dest_set(gtk.DestDefaults.ALL, [],
+                                 gtk.gdk.DragAction.COPY)
             imgwin.drag_dest_add_text_targets()
         else:
             self.TARGET_TYPE_TEXT = 0
+            self.TARGET_TYPE_THUMB = 1
             toImage = [ ( "text/plain", 0, self.TARGET_TYPE_TEXT ),
                         #( "text/uri-list", 0, self.TARGET_TYPE_TEXT ),
+                        ( "text/thumb", gtk.TARGET_SAME_APP,
+                          self.TARGET_TYPE_THUMB ),
                         ]
-            imgwin.drag_dest_set(gtk.DEST_DEFAULT_ALL,
-                                 toImage, gtk.gdk.ACTION_COPY)
-        
+            imgwin.drag_dest_set(gtk.DEST_DEFAULT_ALL, toImage,
+                                 gtk.gdk.ACTION_COPY)
+            ## imgwin.drag_dest_set(0, toImage,  gtk.gdk.ACTION_COPY)
+            ## imgwin.drag_dest_set(0, [],  0)
+
         # last known window mouse position
         self.last_win_x = 0
         self.last_win_y = 0
@@ -356,7 +363,7 @@ class ImageViewEvent(ImageViewGtk):
             'f11': 'f11',
             'f12': 'f12',
             }
-        
+
         # Define cursors
         for curname, filename in (('pan', 'openHandCursor.png'),
                                ('pick', 'thinCrossCursor.png')):
@@ -365,7 +372,7 @@ class ImageViewEvent(ImageViewGtk):
             self.define_cursor(curname, cur)
 
         for name in ('motion', 'button-press', 'button-release',
-                     'key-press', 'key-release', 'drag-drop', 
+                     'key-press', 'key-release', 'drag-drop',
                      'scroll', 'map', 'focus', 'enter', 'leave',
                      ):
             self.enable_callback(name)
@@ -379,26 +386,26 @@ class ImageViewEvent(ImageViewGtk):
 
     def get_keyTable(self):
         return self._keytbl
-    
+
     def set_follow_focus(self, tf):
         self.follow_focus = tf
-        
+
     def map_event(self, widget, event):
         super(ImageViewZoom, self).configure_event(widget, event)
         return self.make_callback('map')
-            
+
     def focus_event(self, widget, event, hasFocus):
         return self.make_callback('focus', hasFocus)
-            
+
     def enter_notify_event(self, widget, event):
         if self.follow_focus:
             widget.grab_focus()
         return self.make_callback('enter')
-    
+
     def leave_notify_event(self, widget, event):
         self.logger.debug("leaving widget...")
         return self.make_callback('leave')
-    
+
     def key_press_event(self, widget, event):
         # without this we do not get key release events if the focus
         # changes to another window
@@ -435,7 +442,7 @@ class ImageViewEvent(ImageViewGtk):
         if event.button != 0:
             button |= 0x1 << (event.button - 1)
         self.logger.debug("button release at %dx%d button=%x" % (x, y, button))
-            
+
         data_x, data_y = self.get_data_xy(x, y)
         return self.make_callback('button-release', button, data_x, data_y)
 
@@ -456,7 +463,7 @@ class ImageViewEvent(ImageViewGtk):
         else:
             x, y, state = event.x, event.y, event.state
         self.last_win_x, self.last_win_y = x, y
-        
+
         if state & gtk.gdk.BUTTON1_MASK:
             button |= 0x1
         elif state & gtk.gdk.BUTTON2_MASK:
@@ -489,15 +496,46 @@ class ImageViewEvent(ImageViewGtk):
         amount = 15.0
         self.logger.debug("scroll deg=%f direction=%f" % (
             amount, direction))
-        
+
         data_x, data_y = self.get_data_xy(x, y)
         self.last_data_x, self.last_data_y = data_x, data_y
 
         return self.make_callback('scroll', direction, amount,
                                   data_x, data_y)
 
+    def drag_drop_cb(self, widget, context, x, y, time):
+        self.logger.debug('drag_drop_cb')
+        # initiates a drop
+        success = delete = False
+        for mimetype in context.targets:
+            if mimetype in ("text/thumb", "text/plain", "text/uri-list"):
+                context.drop_reply(True, time)
+                success = True
+                return True
+
+        self.logger.debug("dropped format type did not match known types")
+        context.drop_reply(False, time)
+
+        # api: context.finish(success, delete_data, time)
+        #context.finish(success, delete, time)
+        return True
+
+    def drag_motion_cb(self, widget, context, x, y, time):
+        self.logger.debug('drag_motion_cb')
+        status = gtk.gdk.ACTION_COPY
+        # checks whether a drop is possible
+        for mimetype in context.targets:
+            if mimetype in ("text/thumb", "text/plain", "text/uri-list"):
+                context.drag_status(status, time)
+                return True
+
+        context.drag_status(0, time)
+        self.logger.debug('drag_motion_cb done')
+        return True
+
     def drop_event(self, widget, context, x, y, selection, targetType,
                    time):
+        self.logger.debug('drop_event')
         if targetType != self.TARGET_TYPE_TEXT:
             return False
         paths = selection.get_text().strip().split('\n')
@@ -514,11 +552,11 @@ class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
     @classmethod
     def set_bindingsClass(cls, klass):
         cls.bindingsClass = klass
-        
+
     @classmethod
     def set_bindmapClass(cls, klass):
         cls.bindmapClass = klass
-        
+
     def __init__(self, logger=None, rgbmap=None, settings=None,
                  bindmap=None, bindings=None):
         ImageViewEvent.__init__(self, logger=logger, rgbmap=rgbmap,
@@ -536,13 +574,13 @@ class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
 
     def get_bindmap(self):
         return self.bindmap
-    
+
     def get_bindings(self):
         return self.bindings
-    
+
     def set_bindings(self, bindings):
         self.bindings = bindings
         bindings.set_bindings(self)
-    
-        
+
+
 #END

@@ -8,7 +8,7 @@
 # Please see the file LICENSE.txt for details.
 #
 from ginga import GingaPlugin
-from ginga.misc import Widgets, CanvasTypes
+from ginga.misc import Widgets
 
 class Ruler(GingaPlugin.LocalPlugin):
 
