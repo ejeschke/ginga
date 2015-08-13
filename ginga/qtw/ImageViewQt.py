@@ -15,6 +15,7 @@ from io import BytesIO
 from ginga.qtw.QtHelp import QtGui, QtCore, QFont, QColor, QImage, \
      QPixmap, QCursor, QPainter, have_pyqt5
 from ginga import ImageView, Mixins, Bindings
+import ginga.util.six as six
 from ginga.util.six.moves import map, zip
 from ginga.qtw.ImageViewCanvasTypesQt import CanvasRenderer
 
@@ -768,7 +769,10 @@ class ImageViewEvent(ImageViewQt):
         self.logger.debug("available formats of dropped data are %s" % (
             formats))
         if "text/thumb" in formats:
-            thumbstr = str(dropdata.data("text/thumb"))
+            if six.PY2:
+                thumbstr = str(dropdata.data("text/thumb"))
+            else:
+                thumbstr = str(dropdata.data("text/thumb"), encoding='ascii')
             data = [ thumbstr ]
             self.logger.debug("dropped thumb(s): %s" % (str(data)))
         elif dropdata.hasUrls():
@@ -780,10 +784,13 @@ class ImageViewEvent(ImageViewQt):
             self.logger.debug("dropped filename(s): %s" % (str(data)))
         else:
             # No format that we understand--just pass it along
-            data = dropdata.data(formats[0])
-            self.logger.debug("dropped data of len %d" % (len(data)))
+            ## data = dropdata.data(formats[0])
+            ## self.logger.debug("dropped data of len %d" % (len(data)))
+            event.setAccepted(False)
+            return
 
-        event.acceptProposedAction()
+        event.setAccepted(True)
+        #event.acceptProposedAction()
         self.make_callback('drag-drop', data)
 
 class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
