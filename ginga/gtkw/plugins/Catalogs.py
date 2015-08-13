@@ -1,6 +1,6 @@
 #
 # Catalogs.py -- Catalogs plugin for Ginga fits viewer
-# 
+#
 # Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c) Eric R. Jeschke.  All rights reserved.
@@ -39,7 +39,7 @@ class Catalogs(CatalogsBase.CatalogsBase):
         fr.set_label_align(0.1, 0.5)
         fr.add(tw)
         vbox1.pack_start(fr, padding=4, fill=True, expand=False)
-        
+
         nb = gtk.Notebook()
         #nb.set_group_id(group)
         #nb.connect("create-window", self.detach_page, group)
@@ -72,7 +72,7 @@ class Catalogs(CatalogsBase.CatalogsBase):
 
         self.w.img_params = gtk.VBox()
         vbox.pack_start(self.w.img_params, padding=4, fill=True, expand=False)
-        
+
         combobox = self.w.server
         index = 0
         self.image_server_options = self.fv.imgsrv.getServerNames(kind='image')
@@ -106,7 +106,7 @@ class Catalogs(CatalogsBase.CatalogsBase):
 
         self.w2.cat_params = gtk.VBox()
         vbox.pack_start(self.w2.cat_params, padding=4, fill=True, expand=False)
-        
+
         combobox = self.w2.server
         index = 0
         self.catalog_server_options = self.fv.imgsrv.getServerNames(kind='catalog')
@@ -145,7 +145,7 @@ class Catalogs(CatalogsBase.CatalogsBase):
         sw.set_border_width(2)
         sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
         sw.add_with_viewport(vbox0)
-        
+
         lbl = gtk.Label("Params")
         self.w.params = sw
         nb.append_page(sw, lbl)
@@ -203,7 +203,7 @@ class Catalogs(CatalogsBase.CatalogsBase):
         vbox1.show_all()
         cw = container.get_widget()
         cw.pack_start(vbox1, padding=0, fill=True, expand=True)
-        
+
 
     def limit_area_cb(self, w):
         self.limit_stars_to_area = w.get_active()
@@ -240,14 +240,14 @@ class Catalogs(CatalogsBase.CatalogsBase):
         buf = self.tw.get_buffer()
         buf.set_text(msg)
         self.tw.modify_font(self.msgFont)
-        
+
     def _raise_tab(self, w):
         num = self.w.nb.page_num(w)
         self.w.nb.set_current_page(num)
-        
+
     def _get_cbidx(self, w):
         return w.get_active()
-        
+
     def _setup_params(self, obj, container):
         params = obj.getParams()
         captions = []
@@ -295,7 +295,7 @@ class Catalogs(CatalogsBase.CatalogsBase):
 
         if redo:
             self.redo()
-            
+
     def instructions(self):
         self.set_message("""Draw a rectangle or circle to enclose search area.""")
 
@@ -312,20 +312,20 @@ class Catalogs(CatalogsBase.CatalogsBase):
         for key in bnch.keys():
             params[key] = bnch[key].get_text()
         return params
-        
+
     def set_drawtype_cb(self, w, drawtype):
         tf = w.get_active()
         if tf:
             self.drawtype = drawtype
             self.canvas.set_drawtype(self.drawtype, color='cyan',
                                      linestyle='dash')
-        
+
     def __str__(self):
         return 'catalogs'
-    
+
 
 class CatalogListing(CatalogsBase.CatalogListingBase):
-    
+
     def _build_gui(self, container):
         self.mframe = container
 
@@ -391,7 +391,7 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
             btn = gtk.Button(name)
             btns.add(btn)
             self.btn[name.lower()] = btn
-            
+
         combobox = GtkHelp.combo_box_new_text()
         options = []
         index = 0
@@ -410,7 +410,7 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
 
         vbox.pack_start(btns, padding=4, fill=True, expand=False)
         vbox.show_all()
-        
+
         # create the table
         info = Bunch.Bunch(columns=self.columns, color='Mag')
         self.build_table(info)
@@ -421,7 +421,7 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
     def build_table(self, info):
         columns = info.columns
         self.columns = columns
-        
+
         # remove old treeviews, if any
         children = self.sw.get_children()
         for child in children:
@@ -430,7 +430,7 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
         # create the TreeView
         treeview = gtk.TreeView()
         self.treeview = treeview
-        
+
         self.cell_sort_funcs = []
         for kwd, key in columns:
             self.cell_sort_funcs.append(self._mksrtfnN(key))
@@ -465,7 +465,7 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
                 fidx = n
 
         combobox.set_active(fidx)
-        
+
         self.sw.add(treeview)
         self.treeview.connect('cursor-changed', self.select_star_cb)
         self.sw.show_all()
@@ -511,7 +511,7 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
 
         # rebuild the table
         self.build_table(info)
-        
+
         # Update the starlist info
         listmodel = gtk.ListStore(object)
         for star in starlist:
@@ -534,10 +534,11 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
     def get_subset_from_starlist(self, fromidx, toidx):
         model = self.treeview.get_model()
         res = []
-        for idx in range(fromidx, toidx):
-            iter = model.get_iter(idx)
-            star = model.get_value(iter, 0)
-            res.append(star)
+        if model is not None:
+            for idx in range(fromidx, toidx):
+                iter = model.get_iter(idx)
+                star = model.get_value(iter, 0)
+                res.append(star)
         return res
 
     def _select_tv(self, star, fromtable=False):
@@ -569,7 +570,7 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
         self.logger.debug("selected star: %s" % (str(star)))
         self.mark_selection(star, fromtable=True)
         return True
-    
+
     def set_cmap_cb(self, w):
         index = w.get_active()
         name = self.cmap_names[index]

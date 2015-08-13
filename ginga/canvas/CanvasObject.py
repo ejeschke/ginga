@@ -571,9 +571,7 @@ class PolygonMixin(object):
     def contains_arr(self, x_arr, y_arr):
         # NOTE: we use a version of the ray casting algorithm
         # See: http://alienryderflex.com/polygon/
-        xi = x_arr.reshape(-1)
-        yi = y_arr.reshape(-1)
-        xa, ya = numpy.meshgrid(xi, yi)
+        xa, ya = x_arr, y_arr
 
         result = numpy.empty(ya.shape, dtype=numpy.bool)
         result.fill(False)
