@@ -275,8 +275,8 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         self.select_cut(tag)
         if tag == self._new_cut:
             self.save_btn.set_enabled(False)
-        # plot cleared in redo() if no more cuts
-        self.redo()
+        # plot cleared in replot_all() if no more cuts
+        self.replot_all()
 
     def delete_all_cb(self, w):
         self.canvas.deleteAllObjects()
@@ -286,8 +286,8 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         self.w.cuts.append_text(self._new_cut)
         self.select_cut(self._new_cut)
         self.save_btn.set_enabled(False)
-        # plot cleared in redo() if no more cuts
-        self.redo()
+        # plot cleared in replot_all() if no more cuts
+        self.replot_all()
 
     def add_cuts_tag(self, tag):
         if not tag in self.tags:
@@ -336,12 +336,18 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
 
         self.canvas.ui_setActive(True)
         self.fv.showStatus("Draw a line with the right mouse button")
-        self.redo()
+        self.replot_all()
 
     def stop(self):
         # remove the canvas from the image
         self.fitsimage.deleteObjectByTag(self.layertag)
         self.fv.showStatus("")
+
+    def redo(self):
+        """This is called when a new image arrives or the data in the
+        existing image changes.
+        """
+        self.replot_all()
 
     def _plotpoints(self, obj, color):
         image = self.fitsimage.get_image()
@@ -366,7 +372,7 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         self.plot.cuts(points, xtitle="Line Index", ytitle="Pixel Value",
                        color=rgb)
 
-    def _redo(self, lines, colors):
+    def _replot(self, lines, colors):
         for idx in range(len(lines)):
             line, color = lines[idx], colors[idx]
             line.color = color
@@ -374,7 +380,7 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
 
         return True
 
-    def redo(self):
+    def replot_all(self):
         self.plot.clear()
         idx = 0
         for cutstag in self.tags:
@@ -393,7 +399,7 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
             if text.kind == 'text':
                 text.color = colors[0]
             #text.color = color
-            self._redo(lines, colors)
+            self._replot(lines, colors)
             if n:
                 self.w.delete_cut.set_enabled(True)
                 self.w.delete_all.set_enabled(True)
@@ -474,7 +480,7 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         obj = obj.objects[0]
         obj.move_to(data_x, data_y)
 
-        self.redo()
+        self.replot_all()
         return True
 
     def keydown(self, canvas, event, data_x, data_y, viewer):
@@ -563,7 +569,7 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         self.add_cuts_tag(tag)
 
         self.logger.debug("redoing cut plots")
-        return self.redo()
+        return self.replot_all()
 
     def draw_cb(self, canvas, tag):
         obj = canvas.getObjectByTag(tag)
@@ -583,10 +589,10 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         self.add_cuts_tag(tag)
 
         self.logger.debug("redoing cut plots")
-        return self.redo()
+        return self.replot_all()
 
     def edit_cb(self, canvas, obj):
-        self.redo()
+        self.replot_all()
         return True
 
     def edit_select_cuts(self):
