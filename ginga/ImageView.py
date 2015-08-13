@@ -17,7 +17,8 @@ import time
 from ginga.misc import Callback, Settings
 from ginga import RGBMap, AstroImage, AutoCuts, ColorDist
 from ginga import cmap, imap, trcalc, version
-from ginga.canvas import coordmap, CanvasObject
+from ginga.canvas import coordmap
+from ginga.canvas.types.layer import DrawingCanvas
 
 
 class ImageViewError(Exception):
@@ -241,7 +242,7 @@ class ImageViewBase(Callback.Callbacks):
             }
 
         # our canvas
-        self.canvas = CanvasObject.DrawingCanvas()
+        self.canvas = DrawingCanvas()
         self.canvas.initialize(None, self, self.logger)
         self.canvas.add_callback('modified', self.canvas_changed_cb)
         # holds image on canvas

@@ -14,7 +14,7 @@ import cv2
 from . import CvHelp
 
 from ginga import ImageView
-from ginga.cvw.ImageViewCanvasTypesCv import CanvasRenderer
+from ginga.cvw.CanvasRenderCv import CanvasRenderer
 
 try:
     import PIL.Image as PILimage

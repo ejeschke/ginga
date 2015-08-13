@@ -13,7 +13,7 @@ from io import BytesIO
 
 from ginga import ImageView, Mixins, Bindings
 from ginga.util.io_rgb import RGBFileHandler
-from ginga.mockw.ImageViewCanvasTypesMock import CanvasRenderer
+from ginga.mockw.CanvasRenderMock import CanvasRenderer
 
 moduleHome = os.path.split(sys.modules[__name__].__file__)[0]
 icon_dir = os.path.abspath(os.path.join(moduleHome, '..', 'icons'))

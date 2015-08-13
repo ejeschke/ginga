@@ -14,7 +14,7 @@ import aggdraw as agg
 from . import AggHelp
 
 from ginga import ImageView
-from ginga.aggw.ImageViewCanvasTypesAgg import CanvasRenderer
+from ginga.aggw.CanvasRenderAgg import CanvasRenderer
 
 try:
     import PIL.Image as PILimage

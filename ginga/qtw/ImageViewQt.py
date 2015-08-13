@@ -1,5 +1,5 @@
 #
-# ImageViewQt.py -- classes for the display of FITS files in Qt widgets
+# ImageViewQt.py -- classes for the display of Ginga canvases in Qt widgets
 #
 # Eric Jeschke (eric@naoj.org)
 #
@@ -17,7 +17,7 @@ from ginga.qtw.QtHelp import QtGui, QtCore, QFont, QColor, QImage, \
 from ginga import ImageView, Mixins, Bindings
 import ginga.util.six as six
 from ginga.util.six.moves import map, zip
-from ginga.qtw.ImageViewCanvasTypesQt import CanvasRenderer
+from ginga.qtw.CanvasRenderQt import CanvasRenderer
 
 moduleHome = os.path.split(sys.modules[__name__].__file__)[0]
 icon_dir = os.path.abspath(os.path.join(moduleHome, '..', 'icons'))

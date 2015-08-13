@@ -24,7 +24,7 @@ import matplotlib.lines as lines
 from ginga import ImageView
 from ginga import Mixins, Bindings, colors
 from . import transform
-from ginga.mplw.ImageViewCanvasTypesMpl import CanvasRenderer
+from ginga.mplw.CanvasRenderMpl import CanvasRenderer
 
 # Override some matplotlib keyboard UI defaults
 rc = matplotlib.rcParams

@@ -1,5 +1,6 @@
 #
-# ImageViewCairo.py -- classes for the display of FITS files in Cairo surfaces
+# ImageViewCairo.py -- classes for the display of Ginga canvases
+#                         in Cairo surfaces
 #
 # Eric Jeschke (eric@naoj.org)
 #
@@ -15,7 +16,7 @@ import math
 from io import BytesIO
 
 from ginga import ImageView
-from ginga.cairow.ImageViewCanvasTypesCairo import CanvasRenderer
+from ginga.cairow.CanvasRenderCairo import CanvasRenderer
 
 class ImageViewCairoError(ImageView.ImageViewError):
     pass

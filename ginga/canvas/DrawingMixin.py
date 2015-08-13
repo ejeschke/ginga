@@ -27,25 +27,22 @@ class DrawingMixin(object):
         # For interactive drawing
         self.candraw = False
         self.drawDict = drawCatalog
-        drawtypes = self.drawDict.keys()
-        self.drawtypes = []
-        for key in ['point', 'line', 'circle', 'ellipse', 'square',
-                    'rectangle', 'box', 'polygon', 'freepolygon',
-                    'path', 'freepath', 'beziercurve',
-                    'triangle', 'righttriangle', 'equilateraltriangle',
-                    'ruler', 'compass', 'text']:
-            if key in drawtypes:
-                self.drawtypes.append(key)
+        # canvas objects which we know how to draw have an "idraw"
+        # class method
+        self.drawtypes = [ key for key in self.drawDict.keys()
+                           if hasattr(self.drawDict[key], 'idraw') ]
+        self.drawtypes.sort()
         self.t_drawtype = 'point'
         self.t_drawparams = {}
-        self._start_x = 0
-        self._start_y = 0
-        self._points = []
+        # holds the drawing context
+        self._draw_cxt = None
 
         # For interactive editing
         self.canedit = False
         # Set to False to disable drag moves except from move control pt
         self.easymove = True
+        self._start_x = 0
+        self._start_y = 0
         self._cp_index = None
         self._edit_obj = None
         self._edit_status = False
@@ -75,7 +72,6 @@ class DrawingMixin(object):
         # time delta threshold for deciding whether to update the image
         self._deltaTime = 0.020
         self._draw_obj = None
-        self._draw_crdmap = None
 
         # NOTE: must be mixed in with a Callback.Callbacks
         for name in ('draw-event', 'draw-down', 'draw-move', 'draw-up',
@@ -172,100 +168,30 @@ class DrawingMixin(object):
 
     ##### DRAWING LOGIC #####
 
-    def _draw_update(self, data_x, data_y, viewer):
+    def _draw_update(self, data_x, data_y, cxt):
 
         klass = self.drawDict[self.t_drawtype]
         obj = None
-        x, y = self._draw_crdmap.data_to(data_x, data_y)
 
-        if self.t_drawtype == 'point':
-            radius = max(abs(self._start_x - x),
-                         abs(self._start_y - y))
-            obj = klass(self._start_x, self._start_y, radius,
-                        **self.t_drawparams)
+        # update the context with current position
+        x, y = cxt.crdmap.data_to(data_x, data_y)
+        cxt.setvals(x=x, y=y, data_x=data_x, data_y=data_y)
 
-        elif self.t_drawtype == 'compass':
-            radius = max(abs(self._start_x - x),
-                         abs(self._start_y - y))
-            obj = klass(self._start_x, self._start_y,
-                        radius, **self.t_drawparams)
+        obj = klass.idraw(self, cxt)
 
-        elif self.t_drawtype == 'rectangle':
-            obj = klass(self._start_x, self._start_y,
-                        x, y, **self.t_drawparams)
-
-        elif self.t_drawtype == 'square':
-                len_x = self._start_x - x
-                len_y = self._start_y - y
-                length = max(abs(len_x), abs(len_y))
-                len_x = cmp(len_x, 0) * length
-                len_y = cmp(len_y, 0) * length
-                obj = klass(self._start_x, self._start_y,
-                            self._start_x-len_x, self._start_y-len_y,
-                            **self.t_drawparams)
-
-        elif self.t_drawtype == 'equilateraltriangle':
-                len_x = self._start_x - x
-                len_y = self._start_y - y
-                length = max(abs(len_x), abs(len_y))
-                obj = klass(self._start_x, self._start_y,
-                            length, length, **self.t_drawparams)
-
-        elif self.t_drawtype in ('box', 'ellipse', 'triangle'):
-            xradius = abs(self._start_x - x)
-            yradius = abs(self._start_y - y)
-            obj = klass(self._start_x, self._start_y, xradius, yradius,
-                        **self.t_drawparams)
-
-        elif self.t_drawtype == 'circle':
-            radius = math.sqrt(abs(self._start_x - x)**2 +
-                               abs(self._start_y - y)**2 )
-            obj = klass(self._start_x, self._start_y, radius,
-                        **self.t_drawparams)
-
-        elif self.t_drawtype == 'line':
-            obj = klass(self._start_x, self._start_y, x, y,
-                        **self.t_drawparams)
-
-        elif self.t_drawtype == 'righttriangle':
-            obj = klass(self._start_x, self._start_y, x, y,
-                        **self.t_drawparams)
-
-        elif self.t_drawtype in ('polygon',):
-            points = list(self._points)
-            points.append((x, y))
-            if len(points) < 3:
-                # we need at least 3 points for a polygon, so
-                # revert to a line if we haven't got enough
-                klass = self.drawDict['line']
-                obj = klass(self._start_x, self._start_y, x, y,
-                            **self.t_drawparams)
-            else:
-                obj = klass(points, **self.t_drawparams)
-
-        elif self.t_drawtype in ('path', 'beziercurve'):
-            points = list(self._points)
-            points.append((x, y))
-            obj = klass(points, **self.t_drawparams)
-
-        elif self.t_drawtype in ('freepolygon', 'freepath'):
-            self._points.append((x, y))
-            points = list(self._points)
-            obj = klass(points, **self.t_drawparams)
-
-        elif self.t_drawtype == 'text':
-            obj = klass(self._start_x, self._start_y, **self.t_drawparams)
-
-        elif self.t_drawtype == 'ruler':
-            obj = klass(self._start_x, self._start_y, x, y,
-                        **self.t_drawparams)
+        # elif self.t_drawtype == 'equilateraltriangle':
+        #         len_x = self._start_x - x
+        #         len_y = self._start_y - y
+        #         length = max(abs(len_x), abs(len_y))
+        #         obj = klass(self._start_x, self._start_y,
+        #                     length, length, **self.t_drawparams)
 
         if obj is not None:
-            obj.initialize(None, viewer, self.logger)
-            #obj.initialize(None, viewer, viewer.logger)
+            obj.initialize(None, cxt.viewer, self.logger)
+            #obj.initialize(None, cxt.viewer, viewer.logger)
             self._draw_obj = obj
             if time.time() - self._processTime > self._deltaTime:
-                self.process_drawing(viewer)
+                self.process_drawing(cxt.viewer)
 
         return True
 
@@ -276,13 +202,16 @@ class DrawingMixin(object):
         self._draw_obj = None
         # get the drawing coordinate type (default 'data')
         crdtype = self.t_drawparams.get('coord', 'data')
-        self._draw_crdmap = viewer.get_coordmap(crdtype)
-        # record the start point
-        x, y = self._draw_crdmap.data_to(data_x, data_y)
-        self._points = [(x, y)]
-        self._start_x, self._start_y = x, y
+        crdmap = viewer.get_coordmap(crdtype)
+        x, y = crdmap.data_to(data_x, data_y)
+        # create the drawing context
+        self._draw_cxt = Bunch(start_x=x, start_y=y, points=[(x, y)],
+                               x=x, y=y, data_x=data_x, data_y=data_y,
+                               drawparams=self.t_drawparams,
+                               crdmap=crdmap, viewer=viewer,
+                               logger=self.logger)
 
-        self._draw_update(data_x, data_y, viewer)
+        self._draw_update(data_x, data_y, self._draw_cxt)
         self.process_drawing(viewer)
         return True
 
@@ -290,9 +219,8 @@ class DrawingMixin(object):
         if not self.candraw:
             return False
 
-        self._draw_update(data_x, data_y, viewer)
+        self._draw_update(data_x, data_y, self._draw_cxt)
         obj, self._draw_obj = self._draw_obj, None
-        self._points = []
 
         if obj:
             objtag = self.add(obj, redraw=True)
@@ -311,28 +239,30 @@ class DrawingMixin(object):
         if not self.candraw:
             return False
 
-        self._draw_update(data_x, data_y, viewer)
+        self._draw_update(data_x, data_y, self._draw_cxt)
         return True
 
     def draw_poly_add(self, canvas, event, data_x, data_y, viewer):
         if not self.candraw:
             return False
 
+        cxt = self._draw_cxt
         if self.t_drawtype in ('polygon', 'path'):
-            x, y = self._draw_crdmap.data_to(data_x, data_y)
-            self._points.append((x, y))
-        elif self.t_drawtype == 'beziercurve' and len(self._points) < 3:
-            x, y = self._draw_crdmap.data_to(data_x, data_y)
-            self._points.append((x, y))
+            x, y = cxt.crdmap.data_to(data_x, data_y)
+            cxt.points.append((x, y))
+        elif self.t_drawtype == 'beziercurve' and len(cxt.points) < 3:
+            x, y = cxt.crdmap.data_to(data_x, data_y)
+            cxt.points.append((x, y))
         return True
 
     def draw_poly_delete(self, canvas, event, data_x, data_y, viewer):
         if not self.candraw:
             return False
 
+        cxt = self._draw_cxt
         if self.t_drawtype in ('polygon', 'path', 'beziercurve'):
-            if len(self._points) > 0:
-                self._points.pop()
+            if len(cxt.points) > 0:
+                cxt.points.pop()
         return True
 
     def is_drawing(self):
@@ -371,6 +301,14 @@ class DrawingMixin(object):
         #viewer.redraw(whence=3)
         #self.redraw(whence=3)
         self.update_canvas()
+
+    def register_canvas_type(self, name, klass):
+        drawtype = name.lower()
+        self.drawDict[drawtype] = klass
+        if not drawtype in self.drawtypes:
+            self.drawtypes.append(drawtype)
+            self.drawtypes.sort()
+
 
     ##### EDITING LOGIC #####
 
