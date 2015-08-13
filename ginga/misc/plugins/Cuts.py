@@ -158,14 +158,11 @@ class Cuts(GingaPlugin.LocalPlugin):
         vbox.add_widget(nb, stretch=1)
 
         self.plot = Plots.Cuts(self.logger, width=2, height=3, dpi=100)
-        self.w.canvas = self.plot.canvas
-        self.w.fig = self.plot.fig
-        self.w.ax = self.w.fig.add_subplot(111, axisbg='white', aspect='auto')
+        ax = self.plot.add_axis()
+        ax.grid(True)
 
         self.plot2 = Plots.Plot(self.logger, width=2, height=3, dpi=100)
-        self.w.canvas2 = self.plot2.canvas
-        self.w.fig2 = self.plot2.fig
-        self.w.ax2 = self.w.fig2.add_subplot(111, axisbg='black', aspect='auto')
+        self.plot2.add_axis(axisbg='black')
 
         captions = (('Cut:', 'label', 'Cut', 'combobox',
                      'New Cut Type:', 'label', 'Cut Type', 'combobox'),
@@ -258,10 +255,10 @@ class Cuts(GingaPlugin.LocalPlugin):
         hbox.add_widget(Widgets.Label(''), stretch=1)
         # Add Cuts controls to its tab
         vbox_cuts = Widgets.VBox()
-        vbox_cuts.add_widget(Widgets.wrap(self.w.canvas))
+        wp = Widgets.wrap(self.plot.get_widget())
+        vbox_cuts.add_widget(wp, stretch=1)
         vbox_cuts.add_widget(w, stretch=0)
         vbox_cuts.add_widget(hbox, stretch=0)
-        vbox_cuts.add_widget(Widgets.Label(''), stretch=1)
         nb.add_widget(vbox_cuts, title="Cuts")
 
         # Add frame to hold the slit controls
@@ -273,7 +270,8 @@ class Cuts(GingaPlugin.LocalPlugin):
 
         # Add Slit controls to its tab
         vbox_slit = Widgets.VBox()
-        vbox_slit.add_widget(Widgets.wrap(self.w.canvas2))
+        wp = Widgets.wrap(self.plot2.get_widget())
+        vbox_slit.add_widget(wp, stretch=1)
         vbox_slit.add_widget(fr)
         nb.add_widget(vbox_slit, title="Slit")
 
@@ -415,7 +413,7 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
     def start(self):
         # start line cuts operation
         self.instructions()
-        #self.plot.set_titles(rtitle="Cuts")
+        self.plot.set_titles(rtitle="Cuts")
 
         # insert canvas, if not already
         p_canvas = self.fitsimage.get_canvas()
@@ -450,6 +448,7 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         """This is called when a new image arrives or the data in the
         existing image changes.
         """
+        self.build_axes()
         self.replot_all()
 
     def _get_perpendicular_points(self, obj, x, y, r):
@@ -520,11 +519,8 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         points = numpy.array(points)
 
         rgb = colors.lookup_color(color)
-        self.w.ax.plot(points, color=rgb)
-        self.w.ax.set_xlabel('Line Index')
-        self.w.ax.set_ylabel('Pixel Value')
-
-        self._plot_slit(obj)
+        self.plot.cuts(points, xtitle="Line Index", ytitle="Pixel Value",
+                       color=rgb)
 
         if self.settings.get('show_cuts_legend', False):
             self.add_legend()
@@ -571,10 +567,11 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         coords = numpy.array(coords)
         slit_data = self.get_slit_data(coords, enabled_axes)
 
-        self.w.ax2.imshow(slit_data,  interpolation='nearest',
-                          origin='lower', aspect='auto').set_cmap('gray')
-        self.w.ax2.set_xlabel('Slit length')
-        self.w.ax2.set_ylabel('Time')
+        self.plot2.ax.imshow(slit_data,  interpolation='nearest',
+                             origin='lower', aspect='auto').set_cmap('gray')
+        self.plot2.ax.set_xlabel('Slit length')
+        self.plot2.ax.set_ylabel('Time')
+        self.plot2.fig.tight_layout(pad=0.3)
 
     def get_slit_data(self, coords, enabled_axes):
         image = self.fitsimage.get_image()
@@ -601,12 +598,13 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
             line, color = lines[idx], colors[idx]
             line.color = color
             self._plotpoints(line, color)
+            self._plot_slit(line)
 
         return True
 
     def replot_all(self):
-        self.w.ax.cla()
-        self.w.ax2.cla()
+        self.plot.clear()
+        self.plot2.clear()
         idx = 0
         for cutstag in self.tags:
             if cutstag == self._new_cut:
@@ -631,10 +629,10 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
                 self.save_btn.set_enabled(True)
 
         # force mpl redraw
-        self.w.fig.canvas.draw()
-        self.w.fig2.canvas.draw()
+        self.plot.fig.canvas.draw()
+        self.plot2.fig.canvas.draw()
 
-        #self.canvas.redraw(whence=3)
+        self.canvas.redraw(whence=3)
         self.fv.showStatus("Click or drag left mouse button to reposition cuts")
         return True
 
