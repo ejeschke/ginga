@@ -124,7 +124,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         tw.set_font(msgFont)
         self.tw = tw
 
-        fr = Widgets.Frame("Instructions")
+        fr = Widgets.Expander("Instructions")
         vbox2 = Widgets.VBox()
         vbox2.add_widget(tw)
         vbox2.add_widget(Widgets.Label(''), stretch=1)

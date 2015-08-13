@@ -64,7 +64,7 @@ class MyLabel(QtGui.QLabel):
 
         self.event_type = 'drag'
         #dropAction = drag.start(QtCore.Qt.CopyAction | QtCore.Qt.MoveAction)
-        #dropAction = drag.start(QtCore.Qt.CopyAction)
+        dropAction = drag.start(QtCore.Qt.CopyAction)
 
     def mouseReleaseEvent(self, event):
         if self.event_type == 'click':

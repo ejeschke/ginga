@@ -504,6 +504,20 @@ class Frame(ContainerBase):
         self.widget.show_all()
 
 
+class Expander(ContainerBase):
+    def __init__(self, title=None):
+        super(Expander, self).__init__()
+
+        w = gtk.Expander(label=title)
+        self.widget = w
+
+    def set_widget(self, child):
+        self.remove_all()
+        self.add_ref(child)
+        self.widget.add(child.get_widget())
+        self.widget.show_all()
+
+
 class TabWidget(ContainerBase):
     def __init__(self, tabpos='top'):
         super(TabWidget, self).__init__()

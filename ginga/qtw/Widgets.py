@@ -484,6 +484,48 @@ class Frame(ContainerBase):
         self.add_ref(child)
         self.widget.layout().addWidget(child.get_widget(), stretch=stretch)
 
+
+# Qt custom expander widget
+# See http://stackoverflow.com/questions/10364589/equivalent-of-gtks-expander-in-pyqt4
+#
+class Expander(ContainerBase):
+    def __init__(self, title=''):
+        super(Expander, self).__init__()
+
+        style = QtGui.QCommonStyle()
+        self.rightArrow = style.standardIcon(QtGui.QStyle.SP_ArrowRight)
+        self.downArrow = style.standardIcon(QtGui.QStyle.SP_ArrowDown)
+
+        self.widget = QtGui.QWidget()
+        vbox = QtGui.QVBoxLayout()
+        vbox.setContentsMargins(0, 0, 0, 0)
+
+        self.toggle = QtGui.QPushButton(self.downArrow, title)
+        #self.toggle.setCheckable(True)
+        self.toggle.clicked.connect(self._toggle_widget)
+
+        vbox.addWidget(self.toggle, stretch=0)
+        self.widget.setLayout(vbox)
+
+    def set_widget(self, child, stretch=1):
+        self.remove_all()
+        self.add_ref(child)
+        child_w = child.get_widget()
+        self.widget.layout().addWidget(child_w, stretch=stretch)
+        child_w.setVisible(False)
+
+    def _toggle_widget(self):
+        child = self.get_children()[0]
+        child_w = child.get_widget()
+        #if self.toggle.isChecked():
+        if child_w.isVisible():
+            self.toggle.setIcon(self.rightArrow)
+            child_w.setVisible(False)
+        else:
+            self.toggle.setIcon(self.downArrow)
+            child_w.setVisible(True)
+
+
 class TabWidget(ContainerBase):
     def __init__(self, tabpos='top'):
         super(TabWidget, self).__init__()

@@ -1204,10 +1204,11 @@ class GingaControl(Callback.Callbacks):
             # TODO: lost index, image_future
             image = self.load_image(impath)
 
-        if from_chname.upper() != to_chname.upper():
-            self.remove_image_by_name(from_chname, imname, impath)
-
         self.add_image(imname, image, chname=to_chname)
+
+        if from_chname.upper() != to_chname.upper():
+            self.gui_do(self.remove_image_by_name, from_chname, imname,
+                        impath=impath)
 
 
     def remove_current_image(self):
