@@ -9,7 +9,7 @@
 #
 import numpy
 
-from ginga.gw import Widgets, Plots, Bunch
+from ginga.gw import Widgets, Plots
 from ginga import GingaPlugin, colors
 from ginga.util.six.moves import map, zip
 from ginga.canvas.coordmap import OffsetMapper
@@ -100,8 +100,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         self.cuttypes = ['line', 'path', 'freepath', 'beziercurve']
         self.cuttype = 'line'
         self.save_enabled = False
-        self.axis3_enabled = False
-        self.mdfile = False
+        self.axes_states = []
 
         # For collecting data orthogonal to the cut
         self.widthtypes = ['none', 'x', 'y', 'perpendicular']
@@ -154,24 +153,19 @@ class Cuts(GingaPlugin.LocalPlugin):
         fr.set_widget(tw)
         vbox.add_widget(fr, stretch=0)
 
-        nb = Widgets.TabWidget(tabpos='bottom')
+        # Add Tab Widget
+        nb = Widgets.TabWidget(tabpos='top')
         vbox.add_widget(nb, stretch=1)
 
         self.plot = Plots.Cuts(self.logger, width=2, height=3, dpi=100)
         self.w.canvas = self.plot.canvas
         self.w.fig = self.plot.fig
-        self.w.ax = self.w.fig.add_subplot(111, axisbg='white')
-        canvas = self.w.canvas
-
-        nb.add_widget(Widgets.wrap(canvas), title="Cuts")
+        self.w.ax = self.w.fig.add_subplot(111, axisbg='white', aspect='auto')
 
         self.plot2 = Plots.Plot(self.logger, width=2, height=3, dpi=100)
         self.w.canvas2 = self.plot2.canvas
         self.w.fig2 = self.plot2.fig
-        self.w.ax2 = self.w.fig2.add_subplot(111, axisbg='black')
-        canvas = self.w.canvas2
-
-        nb.add_widget(Widgets.wrap(canvas), title="Slit")
+        self.w.ax2 = self.w.fig2.add_subplot(111, axisbg='black', aspect='auto')
 
         captions = (('Cut:', 'label', 'Cut', 'combobox',
                      'New Cut Type:', 'label', 'Cut Type', 'combobox'),
@@ -262,19 +256,28 @@ class Cuts(GingaPlugin.LocalPlugin):
         hbox.add_widget(btn3)
 
         hbox.add_widget(Widgets.Label(''), stretch=1)
-        vbox2.add_widget(hbox, stretch=0)
+        # Add Cuts controls to its tab
+        vbox_cuts = Widgets.VBox()
+        vbox_cuts.add_widget(Widgets.wrap(self.w.canvas))
+        vbox_cuts.add_widget(w, stretch=0)
+        vbox_cuts.add_widget(hbox, stretch=0)
+        vbox_cuts.add_widget(Widgets.Label(''), stretch=1)
+        nb.add_widget(vbox_cuts, title="Cuts")
 
-        vbox2.add_widget(Widgets.Label(''), stretch=1)
+        # Add frame to hold the slit controls
+        fr = Widgets.Frame("Axes controls")
+        self.hbox_axes = Widgets.HBox()
+        self.hbox_axes.set_border_width(4)
+        self.hbox_axes.set_spacing(1)
+        fr.set_widget(self.hbox_axes)
 
-        vbox.add_widget(vbox2, stretch=0)
+        # Add Slit controls to its tab
+        vbox_slit = Widgets.VBox()
+        vbox_slit.add_widget(Widgets.wrap(self.w.canvas2))
+        vbox_slit.add_widget(fr)
+        nb.add_widget(vbox_slit, title="Slit")
 
-        # Create axes checkboxes only if file is multidimensional
-        image = self.fitsimage.get_image()
-        if not hasattr(image, 'naxispath'):
-            pass
-        elif len(image.naxispath) > 0:
-            self.mdfile = True
-            self.build_axes(vbox)
+        self.build_axes()
 
         top.add_widget(sw, stretch=1)
 
@@ -299,21 +302,31 @@ class Cuts(GingaPlugin.LocalPlugin):
         self.select_cut(self.cutstag)
         self.gui_up = True
 
-    def build_axes(self, vbox):
-        fr = Widgets.Frame("Axes")
-        hbox = Widgets.HBox()
-        hbox.set_border_width(4)
-        hbox.set_spacing(1)
-
+    def build_axes(self):
+        self.hbox_axes.remove_all()
         image = self.fitsimage.get_image()
         if image is not None:
-            # Add Checkbox widgets
-            chkbox = Widgets.CheckBox('NAXIS3')
-            hbox.add_widget(chkbox)
-            chkbox.add_callback('activated', self.axis_toggle_cb)
+            self.axes_states = []
+            # For easier mapping of indices with the axes
+            self.axes_states.append(None)
 
-        fr.set_widget(hbox)
-        vbox.add_widget(fr, stretch=0)
+            # Add Checkbox widgets
+            for i in xrange(1, len(image.get_mddata().shape)+1):
+                name = 'NAXIS%d' % i
+                chkbox = Widgets.CheckBox(name)
+                self.axes_states.append(False)
+                self.hbox_axes.add_widget(chkbox)
+
+                # Disable axes 1,2
+                if i < 3:
+                    chkbox.set_enabled(False)
+                    continue
+
+                # Add callback
+                self.axes_callback_handler(chkbox, i)
+
+    def axes_callback_handler(self, chkbox, pos):
+        chkbox.add_callback('activated', lambda w, tf: self.axis_toggle_cb(w, tf, pos))
 
     def instructions(self):
         self.tw.set_text("""When drawing a path or Bezier cut, press 'v' to add a vertex.
@@ -511,10 +524,7 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         self.w.ax.set_xlabel('Line Index')
         self.w.ax.set_ylabel('Pixel Value')
 
-        if self.axis3_enabled and self.mdfile:
-            self._plot_slit(obj)
-
-        #self.plot2.fig.canvas.draw()
+        self._plot_slit(obj)
 
         if self.settings.get('show_cuts_legend', False):
             self.add_legend()
@@ -532,6 +542,15 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
 
     def _plot_slit(self, obj):
         image = self.fitsimage.get_image()
+
+        # Check whether multidimensional
+        if len(image.naxispath) <= 0:
+            return
+
+        enabled_axes = [pos for pos, val in enumerate(self.axes_states) if val is True]
+        if not enabled_axes:
+            return
+
         # Get points on the line
         if obj.kind == 'line':
             coords = image.get_pixels_on_line(int(obj.x1), int(obj.y1),
@@ -550,19 +569,32 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
             return
 
         coords = numpy.array(coords)
-        slit_data = self.get_slit_data(coords)
+        slit_data = self.get_slit_data(coords, enabled_axes)
 
         self.w.ax2.imshow(slit_data,  interpolation='nearest',
                           origin='lower', aspect='auto').set_cmap('gray')
         self.w.ax2.set_xlabel('Slit length')
         self.w.ax2.set_ylabel('Time')
 
-    def get_slit_data(self, coords):
+    def get_slit_data(self, coords, enabled_axes):
         image = self.fitsimage.get_image()
-        if len(image.get_mddata().shape) == 3:
-            return image.get_mddata()[:, coords[:, 1], coords[:, 0]]
-        else:
-            pass
+        data = image.get_mddata()
+        naxes = data.ndim
+
+        # Find correct indices of axes
+        enabled_axes = [abs(x - naxes) for x in enabled_axes]
+        spatial_axes = [naxes-1, naxes-2]
+
+        # Build N-dim slice
+        axes_slice = [0] * naxes
+
+        # Slice data according to axis
+        for i, sa in enumerate(spatial_axes):
+            axes_slice[sa] = coords[:, i]
+        for ea in enabled_axes:
+            axes_slice[ea] = slice(None, None, None)
+
+        return data[axes_slice]
 
     def _replot(self, lines, colors):
         for idx in range(len(lines)):
@@ -891,8 +923,9 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         with open(target, 'w') as target_file:
             numpy.savez_compressed(target_file, x=xarr, y=yarr)
 
-    def axis_toggle_cb(self, w, tf):
-        self.axis3_enabled = tf
+    def axis_toggle_cb(self, w, tf, pos):
+        self.axes_states[pos] = tf
+        self.logger.info('Axes states : %s ' % self.axes_states)
 
     def __str__(self):
         return 'cuts'
