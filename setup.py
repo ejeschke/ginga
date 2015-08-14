@@ -54,7 +54,7 @@ setup(
                 'ginga.web.pgw.js', 'ginga.web.pgw.templates',
                 # Common stuff
                 'ginga.misc', 'ginga.misc.plugins', 'ginga.base',
-                'ginga.canvas', 'ginga.util',
+                'ginga.canvas', 'ginga.canvas.types', 'ginga.util',
                 # Misc
                 'ginga.icons', 'ginga.doc', 'ginga.tests',
                 ],
