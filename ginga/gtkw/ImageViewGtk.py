@@ -10,6 +10,7 @@
 import sys, os
 
 from ginga.gtkw import gtksel
+from ginga.gtkw.GtkHelp import get_scroll_info
 import gtk
 import gobject
 import cairo
@@ -480,27 +481,15 @@ class ImageViewEvent(ImageViewGtk):
     def scroll_event(self, widget, event):
         # event.button, event.x, event.y
         x = event.x; y = event.y
-        direction = None
-        if event.direction == gtk.gdk.SCROLL_UP:
-            direction = 0.0
-        elif event.direction == gtk.gdk.SCROLL_DOWN:
-            direction = 180.0
-        elif event.direction == gtk.gdk.SCROLL_LEFT:
-            direction = 270.0
-        elif event.direction == gtk.gdk.SCROLL_RIGHT:
-            direction = 90.0
-        self.logger.debug("scroll at %dx%d event=%s" % (x, y, str(event)))
 
-        # TODO: does Gtk encode the amount of scroll?
-        # 15 deg is standard 1-click turn for a wheel mouse
-        amount = 15.0
+        degrees, direction = get_scroll_info(event)
         self.logger.debug("scroll deg=%f direction=%f" % (
-            amount, direction))
+            degrees, direction))
 
         data_x, data_y = self.get_data_xy(x, y)
         self.last_data_x, self.last_data_y = data_x, data_y
 
-        return self.make_callback('scroll', direction, amount,
+        return self.make_callback('scroll', direction, degrees,
                                   data_x, data_y)
 
     def drag_drop_cb(self, widget, context, x, y, time):

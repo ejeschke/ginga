@@ -439,7 +439,7 @@ class ImageViewBindings(object):
         # width into a shifting factor
         shift_pct = x / float(win_wd) - 0.5
 
-        viewer.scaleNshift_cmap(scale_pct, shift_pct)
+        viewer.scale_and_shift_cmap(scale_pct, shift_pct)
 
     def _cutlow_pct(self, viewer, pct, msg=True):
         msg = self.settings.get('msg_cuts', msg)

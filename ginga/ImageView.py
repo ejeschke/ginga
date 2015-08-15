@@ -404,8 +404,8 @@ class ImageViewBase(Callback.Callbacks):
     def shift_cmap(self, pct, redraw=True):
         self.rgbmap.shift(pct, callback=redraw)
 
-    def scaleNshift_cmap(self, scale_pct, shift_pct, redraw=True):
-        self.rgbmap.scaleNshift(scale_pct, shift_pct, callback=redraw)
+    def scale_and_shift_cmap(self, scale_pct, shift_pct, redraw=True):
+        self.rgbmap.scale_and_shift(scale_pct, shift_pct, callback=redraw)
 
     def rgbmap_cb(self, rgbmap):
         self.logger.debug("RGB map has changed.")

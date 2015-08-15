@@ -11,6 +11,7 @@ import math
 import numpy
 
 from ginga.gtkw import gtksel
+from ginga.gtkw.GtkHelp import get_scroll_info
 import gtk, gobject, cairo
 
 from ginga.misc import Callback
@@ -197,8 +198,8 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
         else:
             ival = 0
         clr_ht = rect.height
-        #print "clr is %dx%d width=%d rem=%d ival=%d" % (
-        #    rect.width, rect.height, clr_wd, rem_px, ival)
+        #print("clr is %dx%d width=%d rem=%d ival=%d" % (
+        #    rect.width, rect.height, clr_wd, rem_px, ival))
 
         dist = self.rgbmap.get_dist()
 
@@ -294,12 +295,16 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
 
         pct = float(value - self.loval) / float(range)
         self.mark_pos = int(pct * self.width)
-        #print "mark position is %d (%.2f)" % (self.mark_pos, pct)
+        #print("mark position is %d (%.2f)" % (self.mark_pos, pct))
         self.redraw()
 
     def shift_colormap(self, pct):
         self.rgbmap.set_sarr(self._sarr, callback=False)
         self.rgbmap.shift(pct)
+        self.redraw()
+
+    def stretch_colormap(self, pct):
+        self.rgbmap.stretch(pct)
         self.redraw()
 
     def rgbmap_cb(self, rgbmap):
@@ -309,7 +314,7 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
         # event.button, event.x, event.y
         x = event.x; y = event.y
         button = event.button
-        ## print "button event at %dx%d, button=%d" % (x, y, button)
+        ## print("button event at %dx%d, button=%d" % (x, y, button))
         if button == 1:
             self._start_x = x
             sarr = self.rgbmap.get_sarr()
@@ -323,14 +328,14 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
         x = event.x; y = event.y
         button = event.button
         win = self.get_window()
-        #print "button release at %dx%d button=%d" % (x, y, button)
+        #print("button release at %dx%d button=%d" % (x, y, button))
         if button == 1:
             dx = x - self._start_x
             #wd, ht = win.get_size()
             geom = win.get_geometry()
             wd, ht = geom[2], geom[3]
             pct = float(dx) / float(wd)
-            #print "dx=%f wd=%d pct=%f" % (dx, wd, pct)
+            #print("dx=%f wd=%d pct=%f" % (dx, wd, pct))
             self.shift_colormap(pct)
             return True
 
@@ -359,18 +364,26 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
             geom = win.get_geometry()
             wd, ht = geom[2], geom[3]
             pct = float(dx) / float(wd)
-            #print "dx=%f wd=%d pct=%f" % (dx, wd, pct)
+            #print("dx=%f wd=%d pct=%f" % (dx, wd, pct))
             self.shift_colormap(pct)
             return True
 
         pct = float(x) / float(self.width)
-        value = int(self.loval + pct * (self.hival - self.loval))
+        value = float(self.loval + pct * (self.hival - self.loval))
         return self.make_callback('motion', value, event)
 
     def scroll_event(self, widget, event):
         # event.button, event.x, event.y
-        x = event.x; y = event.y
-        #print "scroll at %dx%d event=%s" % (x, y, str(event))
+        num_degrees, direction = get_scroll_info(event)
+
+        if (direction < 90.0) or (direction > 270.0):
+            # up
+            scale_factor = 1.1
+        else:
+            # not up!
+            scale_factor = 0.9
+
+        self.stretch_colormap(scale_factor)
 
         return self.make_callback('scroll', event)
 

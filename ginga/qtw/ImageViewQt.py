@@ -13,7 +13,7 @@ import numpy
 from io import BytesIO
 
 from ginga.qtw.QtHelp import QtGui, QtCore, QFont, QColor, QImage, \
-     QPixmap, QCursor, QPainter, have_pyqt5
+     QPixmap, QCursor, QPainter, have_pyqt5, get_scroll_info
 from ginga import ImageView, Mixins, Bindings
 import ginga.util.six as six
 from ginga.util.six.moves import map, zip
@@ -641,31 +641,7 @@ class ImageViewEvent(ImageViewQt):
         x, y = event.x(), event.y()
         self.last_win_x, self.last_win_y = x, y
 
-        # 15 deg is standard 1-click turn for a wheel mouse
-        # delta() usually returns 120
-        if have_pyqt5:
-            # TODO: use pixelDelta() for better handling on hi-res devices
-            point = event.angleDelta()
-            delta = math.sqrt(point.x() ** 2 + point.y() ** 2)
-            if point.y() < 0:
-                delta = -delta
-            orientation = QtCore.Qt.Vertical
-        else:
-            delta = event.delta()
-            orientation = event.orientation()
-        numDegrees = abs(delta) / 8.0
-
-        direction = None
-        if orientation == QtCore.Qt.Horizontal:
-            if delta > 0:
-                direction = 270.0
-            elif delta < 0:
-                direction = 90.0
-        else:
-            if delta > 0:
-                direction = 0.0
-            elif delta < 0:
-                direction = 180.0
+        numDegrees, direction = get_scroll_info(event)
         self.logger.debug("scroll deg=%f direction=%f" % (
             numDegrees, direction))
 

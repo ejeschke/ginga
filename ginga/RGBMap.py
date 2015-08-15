@@ -1,6 +1,6 @@
 #
 # RGBMap.py -- color mapping
-# 
+#
 # Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c) Eric R. Jeschke.  All rights reserved.
@@ -49,7 +49,7 @@ class RGBPlanes(object):
     def get_size(self):
         """Returns (height, width) tuple of slice size."""
         return self.get_slice('R').shape
-    
+
 class RGBMapper(Callback.Callbacks):
 
     ############################################################
@@ -57,14 +57,14 @@ class RGBMapper(Callback.Callbacks):
     #
     # [A] Some numpy routines have been optomized by using the out=
     # parameter, which avoids having to allocate a new array for the
-    # result 
+    # result
     #
 
     def __init__(self, logger, dist=None):
         Callback.Callbacks.__init__(self)
 
         self.logger = logger
-        
+
         # For color and intensity maps
         self.cmap = None
         self.imap = None
@@ -72,6 +72,7 @@ class RGBMapper(Callback.Callbacks):
         self.iarr = None
         self.carr = None
         self.sarr = None
+        self.scale_pct = 1.0
 
         # For scaling algorithms
         hashsize = 65536
@@ -99,7 +100,7 @@ class RGBMapper(Callback.Callbacks):
         Return the color map used by this RGBMapper.
         """
         return self.cmap
-    
+
     def calc_cmap(self):
         clst = self.cmap.clst
         arr = numpy.array(clst).transpose() * 255.0
@@ -141,13 +142,14 @@ class RGBMapper(Callback.Callbacks):
         Return the intensity map used by this RGBMapper.
         """
         return self.imap
-    
+
     def calc_imap(self):
         arr = numpy.array(self.imap.ilst) * 255.0
         self.iarr = numpy.round(arr).astype('uint')
 
     def reset_sarr(self, callback=True):
-        self.sarr = numpy.array(list(range(256)))
+        self.sarr = numpy.arange(256)
+        self.scale_pct = 1.0
         if callback:
             self.make_callback('changed')
 
@@ -155,13 +157,14 @@ class RGBMapper(Callback.Callbacks):
         assert len(sarr) == 256, \
                RGBMapError("shift map length %d != 256" % (len(sarr)))
         self.sarr = sarr.astype('uint')
+        self.scale_pct = 1.0
 
         if callback:
             self.make_callback('changed')
 
     def get_sarr(self):
         return self.sarr
-    
+
     def recalc(self, callback=True):
         self.arr = numpy.copy(self.carr)
         # Apply intensity map to rearrange colors
@@ -172,7 +175,7 @@ class RGBMapper(Callback.Callbacks):
             self.arr[2] = self.arr[2][idx]
 
         self.reset_sarr(callback=callback)
-        
+
     def get_hash_size(self):
         return self.dist.get_hash_size()
 
@@ -180,29 +183,29 @@ class RGBMapper(Callback.Callbacks):
         self.dist.set_hash_size(size)
         if callback:
             self.make_callback('changed')
-    
+
     def get_hash_algorithms(self):
         return ColorDist.get_dist_names()
-    
+
     def get_hash_algorithm(self):
         return str(self.dist)
-    
+
     def get_dist(self):
         """
         Return the color distribution used by this RGBMapper.
         """
         return self.dist
-    
+
     def set_dist(self, dist, callback=True):
         self.dist = dist
         if callback:
             self.make_callback('changed')
-    
+
     def set_hash_algorithm(self, name, callback=True, **kwdargs):
         hashsize = self.dist.get_hash_size()
         dist = ColorDist.get_dist(name)(hashsize, **kwdargs)
         self.set_dist(dist, callback=callback)
-    
+
     def get_order_indexes(self, order, cs):
         order = order.upper()
         if order == '':
@@ -221,7 +224,7 @@ class RGBMapper(Callback.Callbacks):
         out[..., ri] = arr[..., 0]
         out[..., gi] = arr[..., 1]
         out[..., bi] = arr[..., 2]
-    
+
     def _get_rgbarray(self, idx, rgbobj, image_order):
         # NOTE: data is assumed to be in the range 0-255 at this point
         # but clip as a precaution
@@ -238,7 +241,7 @@ class RGBMapper(Callback.Callbacks):
 
         ri, gi, bi = self.get_order_indexes(rgbobj.get_order(), 'RGB')
         out = rgbobj.rgbarr
-        
+
         if len(idx.shape) == 2:
             out[..., ri] = self.arr[0][idx]
             out[..., gi] = self.arr[1][idx]
@@ -267,7 +270,7 @@ class RGBMapper(Callback.Callbacks):
             assert res_shape == out.shape, \
                    RGBMapError("Output array shape %s doesn't match result shape %s" % (
                 str(out.shape), str(res_shape)))
-            
+
         res = RGBPlanes(out, order)
 
         # set alpha channel
@@ -280,10 +283,10 @@ class RGBMapper(Callback.Callbacks):
         self._get_rgbarray(idx, res, image_order)
 
         return res
-    
+
     def get_hasharray(self, idx):
         return self.dist.hash_array(idx)
-        
+
     def _shift(self, sarr, pct, rotate=False):
         n = len(sarr)
         num = int(n * pct)
@@ -302,12 +305,12 @@ class RGBMapper(Callback.Callbacks):
         # Is there a more efficient way to do this?
         xi = numpy.mgrid[0:new_wd]
         iscale_x = float(old_wd) / float(new_wd)
-            
-        xi *= iscale_x 
+
+        xi *= iscale_x
         xi = xi.astype('int').clip(0, old_wd-1)
         newdata = sarr[xi]
         return newdata
-    
+
     def shift(self, pct, rotate=False, callback=True):
         work = self._shift(self.sarr, pct, rotate=rotate)
         assert len(work) == 256, \
@@ -315,15 +318,16 @@ class RGBMapper(Callback.Callbacks):
         self.sarr = work
         if callback:
             self.make_callback('changed')
-        
-    def scaleNshift(self, scale_pct, shift_pct, callback=True):
+
+    def scale_and_shift(self, scale_pct, shift_pct, callback=True):
         """Stretch and/or shrink the color map via altering the shift map.
         """
-        self.reset_sarr(callback=False)
-        
+        self.sarr = numpy.arange(256)
+
         #print "amount=%.2f location=%.2f" % (scale_pct, shift_pct)
         # limit shrinkage to 5% of original size
         scale = max(scale_pct, 0.050)
+        self.scale_pct = scale
 
         work = self._stretch(self.sarr, scale)
         n = len(work)
@@ -353,6 +357,12 @@ class RGBMapper(Callback.Callbacks):
             self.make_callback('changed')
 
 
+    def stretch(self, scale_factor, callback=True):
+        """Stretch the color map via altering the shift map.
+        """
+        self.scale_pct *= scale_factor
+        self.scale_and_shift(self.scale_pct, 0.0, callback=callback)
+
     def copy_attributes(self, dst_rgbmap):
         dst_rgbmap.set_cmap(self.cmap)
         dst_rgbmap.set_imap(self.imap)
@@ -367,9 +377,9 @@ class PassThruRGBMapper(RGBMapper):
     def __init__(self, logger, dist=None):
         super(PassThruRGBMapper, self).__init__(logger)
 
-        # ignore passed in distribution 
+        # ignore passed in distribution
         self.dist = ColorDist.LinearDist(256)
-            
+
     def get_rgbarray(self, idx, out=None, order='RGB', image_order='RGB'):
         # prepare output array
         shape = idx.shape
@@ -398,6 +408,6 @@ class PassThruRGBMapper(RGBMapper):
         out[..., bi] = idx[..., bj]
 
         return res
-    
-        
+
+
 #END

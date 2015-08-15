@@ -10,7 +10,7 @@
 import math
 
 from ginga.qtw.QtHelp import QtGui, QtCore, QFont, QColor, QPainter, \
-     QPen, QPixmap
+     QPen, QPixmap, get_scroll_info
 
 from ginga.misc import Callback
 from ginga import RGBMap
@@ -237,6 +237,10 @@ class ColorBar(Callback.Callbacks, QtGui.QWidget):
         self.rgbmap.shift(pct)
         self.redraw()
 
+    def stretch_colormap(self, pct):
+        self.rgbmap.stretch(pct)
+        self.redraw()
+
     def rgbmap_cb(self, rgbmap):
         self.redraw()
 
@@ -282,12 +286,16 @@ class ColorBar(Callback.Callbacks, QtGui.QWidget):
         self.make_callback('motion', value, event)
 
     def wheelEvent(self, event):
-        delta = event.delta()
-        direction = None
-        if delta > 0:
-            direction = 'up'
-        elif delta < 0:
-            direction = 'down'
+        num_degrees, direction = get_scroll_info(event)
+
+        if (direction < 90.0) or (direction > 270.0):
+            # up
+            scale_factor = 1.1
+        else:
+            # not up!
+            scale_factor = 0.9
+
+        self.stretch_colormap(scale_factor)
 
         self.make_callback('scroll', event)
 

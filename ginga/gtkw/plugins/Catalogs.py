@@ -341,6 +341,8 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
         self.cbar = ColorBar.ColorBar(self.logger)
         self.cbar.set_cmap(self.cmap)
         self.cbar.set_imap(self.imap)
+        rgbmap = self.cbar.get_rgbmap()
+        rgbmap.add_callback('changed', lambda *args: self.replot_stars())
 
         vbox.pack_start(self.cbar, padding=4, fill=True, expand=False)
 

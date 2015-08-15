@@ -301,29 +301,52 @@ class GingaControl(Callback.Callbacks):
         return True
 
     def _match_cmap(self, fitsimage, colorbar):
+        """
+        Help method to change the ColorBar to match the cut levels or
+        colormap used in a ginga ImageView.
+        """
         rgbmap = fitsimage.get_rgbmap()
         loval, hival = fitsimage.get_cut_levels()
         colorbar.set_range(loval, hival, redraw=False)
+        # If we are sharing a ColorBar for all channels, then store
+        # to change the ColorBar's rgbmap to match our
         colorbar.set_rgbmap(rgbmap)
 
     def change_cbar(self, viewer, fitsimage, cbar):
         self._match_cmap(fitsimage, cbar)
 
     def change_range_cb(self, setting, value, fitsimage, cbar):
+        """
+        This method is called when the cut level values (lo/hi) have
+        changed in a channel.  We adjust them in the ColorBar to match.
+        """
         if fitsimage != self.getfocus_fitsimage():
+            # values have changed in a channel that doesn't have the focus
             return False
         loval, hival = value
         cbar.set_range(loval, hival)
 
     def cbar_value_cb(self, cbar, value, event):
+        """
+        This method is called when the user moves the mouse over the
+        ColorBar.  It displays the value of the mouse position in the
+        ColorBar in the Readout (if any).
+        """
         chinfo = self.get_channelInfo()
         readout = chinfo.readout
+        if readout is None:
+            # must be using a shared readout
+            readout = self.readout
         if readout is not None:
             maxv = readout.maxv
             text = "Value: %-*.*s" % (maxv, maxv, value)
             readout.set_text(text)
 
     def rgbmap_cb(self, rgbmap, fitsimage):
+        """
+        This method is called when the RGBMap is changed.  We update
+        the ColorBar to match.
+        """
         if fitsimage != self.getfocus_fitsimage():
             return False
         self.change_cbar(self, fitsimage, self.colorbar)
@@ -335,7 +358,8 @@ class GingaControl(Callback.Callbacks):
 
     def focus_cb(self, fitsimage, tf, name):
         """Called when _fitsimage_ gets (tf==True) or loses (tf==False)
-        the focus."""
+        the focus.
+        """
         if tf and hasattr(self, 'readout') and (self.readout is not None):
             self.readout.fitsimage = fitsimage
             image = fitsimage.get_image()

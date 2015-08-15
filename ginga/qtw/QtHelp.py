@@ -1122,4 +1122,37 @@ def cmap2pixmap(cmap, steps=50):
     pm = QPixmap.fromImage(im)
     return pm
 
+def get_scroll_info(event):
+    """
+    Returns the (degrees, direction) of a scroll motion Qt event.
+    """
+
+    # 15 deg is standard 1-click turn for a wheel mouse
+    # delta() usually returns 120
+    if have_pyqt5:
+        # TODO: use pixelDelta() for better handling on hi-res devices
+        point = event.angleDelta()
+        delta = math.sqrt(point.x() ** 2 + point.y() ** 2)
+        if point.y() < 0:
+            delta = -delta
+        orientation = QtCore.Qt.Vertical
+    else:
+        delta = event.delta()
+        orientation = event.orientation()
+    numDegrees = abs(delta) / 8.0
+
+    direction = None
+    if orientation == QtCore.Qt.Horizontal:
+        if delta > 0:
+            direction = 270.0
+        elif delta < 0:
+            direction = 90.0
+    else:
+        if delta > 0:
+            direction = 0.0
+        elif delta < 0:
+            direction = 180.0
+
+    return (numDegrees, direction)
+
 #END

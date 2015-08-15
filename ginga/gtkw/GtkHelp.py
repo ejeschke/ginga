@@ -1158,5 +1158,24 @@ def build_info(captions):
 
     return vbox, wb
 
+def get_scroll_info(event):
+    """
+    Returns the (degrees, direction) of a scroll motion Gtk event.
+    """
+    direction = None
+    if event.direction == gtk.gdk.SCROLL_UP:
+        direction = 0.0
+    elif event.direction == gtk.gdk.SCROLL_DOWN:
+        direction = 180.0
+    elif event.direction == gtk.gdk.SCROLL_LEFT:
+        direction = 270.0
+    elif event.direction == gtk.gdk.SCROLL_RIGHT:
+        direction = 90.0
+
+    # TODO: does Gtk encode the amount of scroll?
+    # 15 deg is standard 1-click turn for a wheel mouse
+    degrees = 15.0
+
+    return (degrees, direction)
 
 #END
