@@ -342,6 +342,8 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
             self.w.btn_move.set_enabled(False)
             self.w.btn_edit.set_enabled(False)
             self.set_mode('draw')
+
+            self.plot2.clear()
         else:
             self.w.delete_cut.set_enabled(True)
             self.w.delete_all.set_enabled(True)
@@ -351,6 +353,13 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
 
             if self.w.btn_edit.get_state():
                 self.edit_select_cuts()
+
+            # Redraw slit plot
+            obj = self.canvas.getObjectByTag(tag)
+            line = self._getlines(obj)
+            self._plot_slit(line[0])
+
+        self.plot2.fig.canvas.draw()
 
     def cut_select_cb(self, w, index):
         tag = self.tags[index]
@@ -561,7 +570,16 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
                 points.extend(coords[:-1])
                 x1, y1 = x2, y2
         elif obj.kind == 'beziercurve':
-            #points = obj.get_pixels_on_curve(image)
+            coords = obj.get_pixels_on_curve(image, getvalues=False)
+            # Exlude NaNs
+            coords = [c for c in coords if not numpy.any(numpy.isnan(c))]
+
+        shape = image.shape
+        # Exclude points outside boundaries
+        coords = [(coord[0], coord[1]) for coord in coords if 0 <= coord[0] < shape[1]
+                  and 0 <= coord[1] < shape[0]]
+        if not coords:
+            self.plot2.clear()
             return
 
         coords = numpy.array(coords)
