@@ -69,6 +69,10 @@ will not work without the following packages:
 * webkit (WBrowser (online help))
 * scipy (Pick)
 
+For saving slices as a movie:
+
+* mencoder
+
 Helpful, but not necessary (may optimize or speed up certain operations):
 
 * python-opencv  (speeds up rotation and some transformations)

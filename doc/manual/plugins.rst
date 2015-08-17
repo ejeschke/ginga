@@ -209,8 +209,12 @@ MultiDim
 MultiDim is a plugin designed to handle data cubes and multi-HDU FITS
 files.  If you have opened such an image in Ginga, starting this plugin
 will enable you to browse to other slices of the cube or view other
-HDUs.  Note that currently there is no support for tables in Ginga, so
-at present only image data can be displayed.
+HDUs.  You can save a slice as an image using the `Save Slice` button
+or create a movie using the `Save Movie` button by entering the "Start"
+and "End" slice indices.  This feature requires 'mencoder' to be installed.
+Check the `Intensity Scaling` checkbox to scale slices with respect to
+the first slice. Note that currently there is no support for tables in Ginga,
+so at present only image data can be displayed.
 
 .. _plugins-cuts:
 
@@ -226,16 +230,33 @@ through the image.
 This plugin can plot several cuts together.  As long as a cut is
 selected in the drop down box underneath the graph, any newly drawn line
 will replace that cut by a new one.  To *add* a new cut, simply select
-"None" from the  drop down box and draw the new cut.  Use the `Delete`
+"New Cut" from the  drop down box and draw the new cut.  To change this
+behaviour, copy the file `plugin_Cuts.cfg` from `ginga/examples/configs`
+to `~/.ginga`. Open it and set `select_new_cut` to `True`. This will
+make the plugin create a new cut for any newly drawn line. Use the `Delete`
 button to delete the currently selected cut and `Delete All` to delete
-all cuts.
+all cuts. To move or edit a cut, select the cut from the drop down box and
+select `Move` or `Edit`. Use the `Save` button to save the current cuts
+and slit plot as images and the plot data as Numpy compressed archives.
 
 If a new image is added to the channel while the plugin is active it
 will update with the new calculated cuts on the new image.
 
+This plugin can also plot the slit image. To do so, go to the "Slit" tab,
+select one or multiple axes from the "Axes" list and draw a line. The slit
+images for other cuts can be viewed using the cut selection drop down box.
+
 There are several keyboard shortcuts that are available when this plugin
 is active.  Press 'h' to place a full width horizontal cut underneath
 the cursor position and 'v' to place a full height vertical cut.
+
+.. _plugins-lineprofile:
+
+Line Profile
+============
+
+The Line Profile plugin plots a simple profile at the current cursor
+position, depending on which axis is selected.
 
 .. _plugins-histogram:
 
