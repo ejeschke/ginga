@@ -23,7 +23,6 @@ from ginga import ImageView
 from ginga import cmap, imap
 from ginga.misc import Bunch
 from ginga.util.six.moves import map, zip
-from ginga.canvas.CanvasObject import drawCatalog
 
 moduleHome = os.path.split(sys.modules[__name__].__file__)[0]
 sys.path.insert(0, moduleHome)
@@ -287,13 +286,6 @@ class GingaView(GtkMain.GtkMain):
         readout = Readout.Readout(-1, 20)
         readout.set_font(self.font11)
         return readout
-
-    def getDrawClass(self, drawtype):
-        drawtype = drawtype.lower()
-        return drawCatalog[drawtype]
-
-    def getDrawClasses(self):
-        return Bunch.Bunch(drawCatalog, caseless=True)
 
     def build_colorbar(self):
         cbar = ColorBar.ColorBar(self.logger)

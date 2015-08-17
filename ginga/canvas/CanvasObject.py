@@ -448,6 +448,9 @@ class CanvasObjectBase(Callback.Callbacks):
 # this is the data structure to which drawing classes are registered
 drawCatalog = Bunch.Bunch(caseless=True)
 
+def get_canvas_types():
+    return drawCatalog
+
 def register_canvas_type(name, klass):
     global drawCatalog
     drawCatalog[name] = klass

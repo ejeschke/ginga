@@ -41,6 +41,7 @@ except (ImportError, Exception):
 from ginga import cmap, imap, AstroImage, RGBImage, ImageView
 from ginga.misc import Bunch, Datasrc, Callback, Timer, Task, Future
 from ginga.util import catalog, iohelper
+from ginga.canvas.CanvasObject import drawCatalog
 
 #pluginconfpfx = 'plugins'
 pluginconfpfx = None
@@ -383,6 +384,13 @@ class GingaControl(Callback.Callbacks):
         opmon = chinfo.opmon
         opmon.deactivate_focused()
         self.normalsize()
+
+    def get_draw_class(self, drawtype):
+        drawtype = drawtype.lower()
+        return drawCatalog[drawtype]
+
+    def get_draw_classes(self):
+        return drawCatalog
 
     # PLUGIN MANAGEMENT
 
@@ -1303,6 +1311,17 @@ class GingaControl(Callback.Callbacks):
 
         """
         return imap.get_names()
+
+    ########################################################
+    ### TO BE DEPRECATED
+
+    def getDrawClass(self, drawtype):
+        #self.logger.warn("This method to be deprecated--use 'get_draw_class' instead")
+        return self.get_draw_class(drawtype)
+
+    def getDrawClasses(self):
+        #self.logger.warn("This method to be deprecated--use 'get_draw_classes' instead")
+        return self.get_draw_classes()
 
 
 class GuiLogHandler(logging.Handler):
