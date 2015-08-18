@@ -285,6 +285,16 @@ class BaseImage(Callback.Callbacks):
 
         return (x0, y0, xarr, yarr)
 
+    def get_shape_mask(self, shape_obj):
+        """
+        Return full mask where True marks pixels within the given shape.
+        """
+        wd, ht = self.get_size()
+        yi = numpy.mgrid[:ht].reshape(-1, 1)
+        xi = numpy.mgrid[:wd].reshape(1, -1)
+        contains = shape_obj.contains_arr(xi, yi)
+        return contains
+
     def get_shape_view(self, shape_obj, avoid_oob=True):
         """
         Calculate a bounding box in the data enclosing `shape_obj` and
