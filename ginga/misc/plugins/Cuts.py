@@ -599,6 +599,7 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
 
         self.plot2.ax.imshow(self.slit_data,  interpolation='nearest',
                              origin='lower', aspect='auto').set_cmap('gray')
+        self.set_labels()
         self.plot2.fig.tight_layout(pad=0.3)
 
     def get_slit_data(self, coords, enabled_axes):
@@ -979,6 +980,7 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
             self.slit_data = self.slit_data.T
             self.plot2.ax.imshow(self.slit_data,  interpolation='nearest',
                                  origin='lower', aspect='auto').set_cmap('gray')
+            self.set_labels()
             self.plot2.fig.tight_layout(pad=0.3)
 
         self.plot2.fig.canvas.draw()
@@ -989,6 +991,17 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
 
         if old_val != tf and self.cutstag != self._new_cut and True in self.axes_states:
             self.redraw_slit(mode='transpose')
+
+    def set_labels(self):
+        image = self.fitsimage.get_image()
+        shape = image.get_mddata().shape
+
+        if shape[0] == len(self.slit_data[0]) or shape[1] == len(self.slit_data[0]):
+            self.plot2.ax.set_xlabel('')
+            self.plot2.ax.set_ylabel('Position along slit')
+        else:
+            self.plot2.ax.set_ylabel('')
+            self.plot2.ax.set_xlabel('Position along slit')
 
     def __str__(self):
         return 'cuts'
