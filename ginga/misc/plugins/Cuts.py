@@ -371,6 +371,17 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         rgb = colors.lookup_color(color)
         self.plot.cuts(points, xtitle="Line Index", ytitle="Pixel Value",
                        color=rgb)
+        self.add_legend()
+
+    def add_legend(self):
+        cuts = [tag for tag in self.tags if tag is not self._new_cut]
+
+        # Shrink plot width by 20%
+        box = self.plot.ax.get_position()
+        self.plot.ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
+
+        self.plot.ax.legend(cuts, loc='center left', bbox_to_anchor=(1, 0.5), shadow=True, fancybox=True,
+                            prop={'size': 8}, labelspacing=0.2)
 
     def _replot(self, lines, colors):
         for idx in range(len(lines)):
@@ -626,7 +637,7 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
 
         target = Widgets.SaveDialog(title='Save plot', selectedfilter='*.png').get_path()
         with open(target, 'w') as target_file:
-            fig.savefig(target_file, dpi=100)
+            fig.savefig(target_file, dpi=100, format='png', bbox_inches='tight')
 
         target = Widgets.SaveDialog(title='Save data', selectedfilter='*.npz').get_path()
         with open(target, 'w') as target_file:
