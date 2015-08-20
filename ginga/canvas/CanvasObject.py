@@ -31,7 +31,6 @@ class CanvasObjectBase(Callback.Callbacks):
     def __init__(self, **kwdargs):
         if not hasattr(self, 'cb'):
             Callback.Callbacks.__init__(self)
-        self.editing = False
         self.cap = 'ball'
         self.cap_radius = 4
         self.editable = True
@@ -55,15 +54,6 @@ class CanvasObjectBase(Callback.Callbacks):
                 self.crdmap = coordmap.OffsetMapper(viewer, self.ref_obj)
             else:
                 self.crdmap = viewer.get_coordmap(self.coord)
-
-    def is_editing(self):
-        return self.editing
-
-    def set_edit(self, tf):
-        if not self.editable:
-            raise ValueError("Object is not editable")
-        self.editing = tf
-        # TODO: force redraw here to show edit nodes?
 
     def set_data(self, **kwdargs):
         if self.data is None:

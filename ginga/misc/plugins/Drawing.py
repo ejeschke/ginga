@@ -293,7 +293,7 @@ For polygons/paths press 'v' to create a vertex, 'z' to remove last vertex.""")
         self.w.drawvbox.remove_all()
 
         self.edit_obj = obj
-        if (obj is not None) and obj.is_editing():
+        if (obj is not None) and self.canvas.is_selected(obj):
             self.w.attrlbl.set_text("Editing a %s" % (obj.kind))
 
             drawClass = obj.__class__

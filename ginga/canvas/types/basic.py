@@ -277,11 +277,8 @@ class Text(CanvasObjectBase):
         cx, cy = self.canvascoords(viewer, self.x, self.y)
         cr.draw_text(cx, cy, self.text, rot_deg=self.rot_deg)
 
-        if self.editing:
-            self.draw_edit(cr, viewer)
-        elif self.showcap:
-            self.draw_caps(cr, self.cap, ((cx, cy), ))
-
+        if self.showcap:
+            self.draw_caps(cr, self.cap, cpoints)
 
 class Polygon(PolygonMixin, CanvasObjectBase):
     """Draws a polygon on a DrawingCanvas.
@@ -360,9 +357,7 @@ class Polygon(PolygonMixin, CanvasObjectBase):
         cpoints = self.get_cpoints(viewer)
         cr.draw_polygon(cpoints)
 
-        if self.editing:
-            self.draw_edit(cr, viewer)
-        elif self.showcap:
+        if self.showcap:
             self.draw_caps(cr, self.cap, cpoints)
 
 
@@ -474,9 +469,7 @@ class Path(PolygonMixin, CanvasObjectBase):
         cr = viewer.renderer.setup_cr(self)
         cr.draw_path(cpoints)
 
-        if self.editing:
-            self.draw_edit(cr, viewer)
-        elif self.showcap:
+        if self.showcap:
             self.draw_caps(cr, self.cap, cpoints)
 
 
@@ -597,9 +590,7 @@ class BezierCurve(Path):
                 ipoints = self.calc_bezier_curve_range(steps, cpoints)
                 cr.draw_path(ipoints)
 
-        if self.editing:
-            self.draw_edit(cr, viewer)
-        elif self.showcap:
+        if self.showcap:
             self.draw_caps(cr, self.cap, cpoints)
 
 
@@ -710,9 +701,7 @@ class Box(OnePointTwoRadiusMixin, CanvasObjectBase):
         cr = viewer.renderer.setup_cr(self)
         cr.draw_polygon(cpoints)
 
-        if self.editing:
-            self.draw_edit(cr, viewer)
-        elif self.showcap:
+        if self.showcap:
             self.draw_caps(cr, self.cap, cpoints)
 
 
@@ -847,9 +836,7 @@ class Ellipse(OnePointTwoRadiusMixin, CanvasObjectBase):
             cyradius = abs(cpoints[2][1] - cy)
             cr.draw_ellipse(cx, cy, cxradius, cyradius, self.rot_deg)
 
-        if self.editing:
-            self.draw_edit(cr, viewer)
-        elif self.showcap:
+        if self.showcap:
             cpoints = self.get_cpoints(viewer)
             self.draw_caps(cr, self.cap, cpoints)
 
@@ -990,9 +977,7 @@ class Triangle(OnePointTwoRadiusMixin, CanvasObjectBase):
         cr = viewer.renderer.setup_cr(self)
         cr.draw_polygon(cpoints)
 
-        if self.editing:
-            self.draw_edit(cr, viewer)
-        elif self.showcap:
+        if self.showcap:
             self.draw_caps(cr, self.cap, cpoints)
 
 
@@ -1099,9 +1084,7 @@ class Circle(OnePointOneRadiusMixin, CanvasObjectBase):
         cr = viewer.renderer.setup_cr(self)
         cr.draw_circle(cx, cy, cradius)
 
-        if self.editing:
-            self.draw_edit(cr, viewer)
-        elif self.showcap:
+        if self.showcap:
             self.draw_caps(cr, self.cap, ((cx, cy), ))
 
 
@@ -1205,9 +1188,7 @@ class Point(OnePointOneRadiusMixin, CanvasObjectBase):
             cr.draw_line(cx1, cy, cx2, cy)
             cr.draw_line(cx, cy1, cx, cy2)
 
-        if self.editing:
-            self.draw_edit(cr, viewer)
-        elif self.showcap:
+        if self.showcap:
             self.draw_caps(cr, self.cap, ((cx, cy), ))
 
 
@@ -1336,9 +1317,7 @@ class Rectangle(TwoPointMixin, CanvasObjectBase):
             cx = cx2 + 4
             cr.draw_text(cx, cy, "%d" % abs(self.y2 - self.y1))
 
-        if self.editing:
-            self.draw_edit(cr, viewer)
-        elif self.showcap:
+        if self.showcap:
             self.draw_caps(cr, self.cap, cpoints)
 
 class Square(Rectangle):
@@ -1452,9 +1431,7 @@ class Line(TwoPointMixin, CanvasObjectBase):
         else:
             caps = [(cx1, cy1), (cx2, cy2)]
 
-        if self.editing:
-            self.draw_edit(cr, viewer)
-        elif self.showcap:
+        if self.showcap:
             self.draw_caps(cr, self.cap, caps)
 
 
@@ -1580,9 +1557,7 @@ class RightTriangle(TwoPointMixin, CanvasObjectBase):
         cr = viewer.renderer.setup_cr(self)
         cr.draw_polygon(cpoints)
 
-        if self.editing:
-            self.draw_edit(cr, viewer)
-        elif self.showcap:
+        if self.showcap:
             self.draw_caps(cr, self.cap, cpoints)
 
 

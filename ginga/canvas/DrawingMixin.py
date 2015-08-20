@@ -107,11 +107,6 @@ class DrawingMixin(object):
         self.add_callback('cursor-move', self._draw_op, 'move', viewer)
         self.add_callback('cursor-up', self._draw_op, 'up', viewer)
 
-    def draw(self, viewer):
-        super(DrawingMixin, self).draw(viewer)
-        if self._draw_obj:
-            self._draw_obj.draw(viewer)
-
     ##### MODE LOGIC #####
 
     def add_draw_mode(self, name, **kwargs):
@@ -460,7 +455,7 @@ class DrawingMixin(object):
 
         if (self._edit_tmp != self._edit_obj) or (
             (self._edit_obj is not None) and
-            (self._edit_status != self._edit_obj.is_editing())):
+            (self._edit_status != self.is_selected(self._edit_obj))):
             # <-- editing status has changed
             #print("making edit-select callback")
             self.make_callback('edit-select', self._edit_obj)
@@ -487,7 +482,7 @@ class DrawingMixin(object):
         if not self.canedit:
             return False
         obj = self._edit_obj
-        if (obj is not None) and obj.is_editing() and \
+        if (obj is not None) and self.is_selected(obj) and \
                (obj.kind in ('polygon', 'path')):
             self.logger.debug("checking points")
             # determine which line we are adding a point to
@@ -520,7 +515,7 @@ class DrawingMixin(object):
         if not self.canedit:
             return False
         obj = self._edit_obj
-        if (obj is not None) and obj.is_editing() and \
+        if (obj is not None) and self.is_selected(obj) and \
                (obj.kind in ('polygon', 'path')):
             self.logger.debug("checking points")
             # determine which point we are deleting
@@ -579,7 +574,7 @@ class DrawingMixin(object):
         return self.edit_scale(amount, amount)
 
     def edit_delete(self):
-        if (self._edit_obj is not None) and self._edit_obj.is_editing():
+        if (self._edit_obj is not None) and self.is_selected(self._edit_obj):
             obj, self._edit_obj = self._edit_obj, None
             self.deleteObject(obj)
             self.make_callback('edit-event', self._edit_obj)
@@ -622,14 +617,11 @@ class DrawingMixin(object):
             self.select_clear(obj)
 
     def select_clear(self, obj):
-        if obj in self._selected:
-            self._selected.remove(obj)
-        obj.set_edit(False)
+        self._selected = []
 
     def select_add(self, obj):
         if obj not in self._selected:
             self._selected.append(obj)
-        obj.set_edit(True)
 
     def select_stop(self, canvas, button, data_x, data_y, viewer):
         #print("getting items")
@@ -644,10 +636,8 @@ class DrawingMixin(object):
 
         if obj not in self._selected:
             self._selected.append(obj)
-            obj.set_edit(True)
         else:
             self._selected.remove(obj)
-            obj.set_edit(False)
             obj = None
 
         self.logger.debug("selected: %s" % (str(self._selected)))
@@ -660,6 +650,24 @@ class DrawingMixin(object):
         Compound = self.getDrawClass('compoundobject')
         c_obj = Compound(self._selected)
         self._selected = [ comp_obj ]
+
+
+    # The canvas drawing
+
+    def draw(self, viewer):
+        # Draw everything else as usual
+        super(DrawingMixin, self).draw(viewer)
+
+        # Draw our current drawing object, if any
+        if self._draw_obj:
+            self._draw_obj.draw(viewer)
+
+        # Draw control points on edited objects
+        selected = self.get_selected()
+        if len(selected) > 0:
+            for obj in selected:
+                cr = viewer.renderer.setup_cr(obj)
+                obj.draw_edit(cr, viewer)
 
 
 #END

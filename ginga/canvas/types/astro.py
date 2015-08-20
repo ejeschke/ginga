@@ -217,9 +217,7 @@ class Ruler(TwoPointMixin, CanvasObjectBase):
             # draw Y plum line label
             cr.draw_text(x, yh, text_y)
 
-        if self.editing:
-            self.draw_edit(cr, viewer)
-        elif self.showcap:
+        if self.showcap:
             self.draw_caps(cr, self.cap, ((cx2, cy1), ))
 
 
@@ -326,9 +324,7 @@ class Compass(OnePointOneRadiusMixin, CanvasObjectBase):
         cx, cy = self.get_textpos(cr, 'E', cx1, cy1, cx3, cy3)
         cr.draw_text(cx, cy, 'E')
 
-        if self.editing:
-            self.draw_edit(cr, viewer)
-        elif self.showcap:
+        if self.showcap:
             self.draw_caps(cr, self.cap, ((cx1, cy1), ))
 
     def get_textpos(self, cr, text, cx1, cy1, cx2, cy2):

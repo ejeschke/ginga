@@ -40,12 +40,13 @@ class CompoundObject(CompoundMixin, CanvasObjectBase):
     def __init__(self, *objects):
         CanvasObjectBase.__init__(self)
         CompoundMixin.__init__(self)
-        self.kind = 'compound'
         self.objects = list(objects)
+
+        self.kind = 'compound'
         self.editable = False
 
 
-class Canvas(CanvasMixin, CompoundObject, CanvasObjectBase):
+class Canvas(CanvasMixin, CompoundObject):
     @classmethod
     def get_params_metadata(cls):
         return [
@@ -55,23 +56,22 @@ class Canvas(CanvasMixin, CompoundObject, CanvasObjectBase):
             ]
 
     def __init__(self, *objects):
-        CanvasObjectBase.__init__(self)
         CompoundObject.__init__(self, *objects)
         CanvasMixin.__init__(self)
+
         self.kind = 'canvas'
         self.editable = False
 
 
-class DrawingCanvas(DrawingMixin, CanvasMixin, CompoundMixin,
-                    CanvasObjectBase, Mixins.UIMixin):
+class DrawingCanvas(DrawingMixin, Canvas, Mixins.UIMixin):
     def __init__(self):
-        CanvasObjectBase.__init__(self)
-        CompoundMixin.__init__(self)
-        CanvasMixin.__init__(self)
+        Canvas.__init__(self)
         Mixins.UIMixin.__init__(self)
         DrawingMixin.__init__(self)
+
         self.kind = 'drawingcanvas'
         self.editable = False
+
 
 
 catalog = dict(compoundobject=CompoundObject, canvas=Canvas,

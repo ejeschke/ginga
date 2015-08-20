@@ -109,9 +109,7 @@ class Image(CanvasObjectBase):
         if self.linewidth > 0:
             cr.draw_polygon(cpoints)
 
-        if self.editing:
-            self.draw_edit(cr, viewer)
-        elif self.showcap:
+        if self.showcap:
             self.draw_caps(cr, self.cap, cpoints)
 
 
