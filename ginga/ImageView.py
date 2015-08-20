@@ -1200,6 +1200,9 @@ class ImageViewBase(Callback.Callbacks):
         self.redraw(whence=0)
 
     def get_scale(self):
+        return self.get_scale_max()
+
+    def get_scale_max(self):
         #scalefactor = max(self._org_scale_x, self._org_scale_y)
         scalefactor = max(self._scale_x, self._scale_y)
         return scalefactor

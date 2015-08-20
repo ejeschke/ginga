@@ -324,8 +324,10 @@ class DrawingMixin(object):
 
         if self._cp_index < 0:
             if self.easymove:
-                self._edit_obj.move_to(x - self._start_x,
-                                       y - self._start_y)
+                ## self._edit_obj.move_to(x - self._start_x,
+                ##                        y - self._start_y)
+                self._edit_obj.set_edit_point(0, (x - self._start_x,
+                                                  y - self._start_y))
         else:
             # special hack for objects that have rot_deg attribute
             if hasattr(self._edit_obj, 'rot_deg') and (self._cp_index > 0):
@@ -336,6 +338,8 @@ class DrawingMixin(object):
 
             self._edit_obj.set_edit_point(self._cp_index, (x, y))
 
+        #self._edit_obj.sync_state()
+
         if time.time() - self._processTime > self._deltaTime:
             self.process_drawing(viewer)
         return True
@@ -344,12 +348,13 @@ class DrawingMixin(object):
         return is_inside and obj.editable
 
     def _prepare_to_move(self, obj, data_x, data_y):
-        #print("moving an object")
+        #print(("moving an object", obj.editable))
         self.edit_select(obj)
         self._cp_index = -1
         ref_x, ref_y = self._edit_obj.get_reference_pt()
         x, y = obj.crdmap.data_to(data_x, data_y)
         self._start_x, self._start_y = x - ref_x, y - ref_y
+        #print(("end moving an object", obj.editable))
 
     def edit_start(self, canvas, event, data_x, data_y, viewer):
         if not self.canedit:
@@ -363,6 +368,7 @@ class DrawingMixin(object):
 
         selects = self.get_selected()
         if len(selects) == 0:
+            #print("no objects already selected")
             # <-- no objects already selected
 
             # check for objects at this location
@@ -390,10 +396,10 @@ class DrawingMixin(object):
                 #edit_pts = self._edit_obj.get_edit_points()
                 edit_pts = list(map(lambda pt: obj.crdmap.to_data(*pt),
                                     obj.get_edit_points()))
-                #print((self._edit_obj, dir(self._edit_obj)))
-                #print(edit_pts)
+                #print((self._edit_obj, edit_pts))
                 i = obj.get_pt(viewer, edit_pts, data_x, data_y,
                                obj.cap_radius)
+                #print(('got point', i))
                 if i is not None:
                     #print("editing cp #%d" % (i))
                     # editing a control point from an existing object
@@ -412,7 +418,7 @@ class DrawingMixin(object):
                 obj = contains[-1]
                 if self.is_selected(obj) and shift_held:
                     # deselecting object
-                    self.select_clear(obj)
+                    self.select_remove(obj)
                 else:
                     self._prepare_to_move(obj, data_x, data_y)
                     ## Compound = self.getDrawClass('compoundobject')
@@ -429,11 +435,13 @@ class DrawingMixin(object):
                 # see now if there is an unselected item at this location
                 objs = canvas.select_items_at(viewer, data_x, data_y,
                                               test=self._is_editable)
-                #print("items: %s" % (str(objs)))
+                #print("new items: %s" % (str(objs)))
                 if len(objs) > 0:
                     # pick top object
                     obj = objs[-1]
+                    #print(("top object", obj))
                     if self.num_selected() > 0:
+                        #print("there are previously selected items")
                         # if there are already some selected items, then
                         # add this object to the selection, make a compound
                         # object
@@ -444,6 +452,7 @@ class DrawingMixin(object):
                         self._prepare_to_move(c_obj, data_x, data_y)
                     else:
                         # otherwise just start over with this new object
+                        #print(("starting over"))
                         self._prepare_to_move(obj, data_x, data_y)
 
         self.process_drawing(viewer)
@@ -575,6 +584,7 @@ class DrawingMixin(object):
 
     def edit_delete(self):
         if (self._edit_obj is not None) and self.is_selected(self._edit_obj):
+            self.select_remove(self._edit_obj)
             obj, self._edit_obj = self._edit_obj, None
             self.deleteObject(obj)
             self.make_callback('edit-event', self._edit_obj)
@@ -613,11 +623,13 @@ class DrawingMixin(object):
         return len(self._selected)
 
     def clear_selected(self):
-        for obj in list(self._selected):
-            self.select_clear(obj)
-
-    def select_clear(self, obj):
         self._selected = []
+
+    def select_remove(self, obj):
+        try:
+            self._selected.remove(obj)
+        except:
+            pass
 
     def select_add(self, obj):
         if obj not in self._selected:
@@ -663,6 +675,9 @@ class DrawingMixin(object):
             self._draw_obj.draw(viewer)
 
         # Draw control points on edited objects
+        # TODO: there is a problem if the object has been removed from
+        # the canvas but not removed from the selection--we still end
+        # up drawing the control points for it
         selected = self.get_selected()
         if len(selected) > 0:
             for obj in selected:

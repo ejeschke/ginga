@@ -705,6 +705,150 @@ class Box(OnePointTwoRadiusMixin, CanvasObjectBase):
             self.draw_caps(cr, self.cap, cpoints)
 
 
+class SquareBox(OnePointOneRadiusMixin, CanvasObjectBase):
+    """Draws a square box on a DrawingCanvas.
+    Parameters are:
+    x, y: 0-based coordinates of the center in the data space
+    radius: radius based on the number of pixels in data space
+    Optional parameters for linesize, color, etc.
+    """
+
+    @classmethod
+    def get_params_metadata(cls):
+        return [
+            ## Param(name='coord', type=str, default='data',
+            ##       valid=['data', 'wcs'],
+            ##       description="Set type of coordinates"),
+            Param(name='x', type=float, default=0.0, argpos=0,
+                  description="X coordinate of center of object"),
+            Param(name='y', type=float, default=0.0, argpos=1,
+                  description="Y coordinate of center of object"),
+            Param(name='radius', type=float, default=1.0,  argpos=2,
+                  min=0.0,
+                  description="radius of object"),
+            Param(name='linewidth', type=int, default=1,
+                  min=1, max=20, widget='spinbutton', incr=1,
+                  description="Width of outline"),
+            Param(name='linestyle', type=str, default='solid',
+                  valid=['solid', 'dash'],
+                  description="Style of outline (default solid)"),
+            Param(name='color',
+                  valid=colors_plus_none, type=_color, default='yellow',
+                  description="Color of outline"),
+            Param(name='alpha', type=float, default=1.0,
+                  min=0.0, max=1.0, widget='spinfloat', incr=0.05,
+                  description="Opacity of outline"),
+            Param(name='fill', type=_bool,
+                  default=False, valid=[False, True],
+                  description="Fill the interior"),
+            Param(name='fillcolor', default=None,
+                  valid=colors_plus_none, type=_color,
+                  description="Color of fill"),
+            Param(name='fillalpha', type=float, default=1.0,
+                  min=0.0, max=1.0, widget='spinfloat', incr=0.05,
+                  description="Opacity of fill"),
+            Param(name='showcap', type=_bool,
+                  default=False, valid=[False, True],
+                  description="Show caps for this object"),
+            Param(name='rot_deg', type=float, default=0.0,
+                  min=-359.999, max=359.999, widget='spinfloat', incr=1.0,
+                  description="Rotation about center of object"),
+            ]
+
+    @classmethod
+    def idraw(cls, canvas, cxt):
+        len_x = cxt.start_x - cxt.x
+        len_y = cxt.start_y - cxt.y
+        radius = max(abs(len_x), abs(len_y))
+        return cls(cxt.start_x, cxt.start_y, radius, **cxt.drawparams)
+
+    def __init__(self, x, y, radius, color='red',
+                 linewidth=1, linestyle='solid', showcap=False,
+                 fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0,
+                 rot_deg=0.0, **kwdargs):
+        CanvasObjectBase.__init__(self, color=color,
+                                  linewidth=linewidth, showcap=showcap,
+                                  linestyle=linestyle,
+                                  fill=fill, fillcolor=fillcolor,
+                                  alpha=alpha, fillalpha=fillalpha,
+                                  x=x, y=y, radius=radius,
+                                  rot_deg=rot_deg,
+                                  **kwdargs)
+        OnePointOneRadiusMixin.__init__(self)
+        self.kind = 'squarebox'
+
+    def get_points(self):
+        points = ((self.x - self.radius, self.y - self.radius),
+                  (self.x + self.radius, self.y - self.radius),
+                  (self.x + self.radius, self.y + self.radius),
+                  (self.x - self.radius, self.y + self.radius))
+        return points
+
+    def rotate_by(self, theta_deg):
+        new_rot = math.fmod(self.rot_deg + theta_deg, 360.0)
+        self.rot_deg = new_rot
+        return new_rot
+
+    def get_llur(self):
+        xd, yd = self.crdmap.to_data(self.x, self.y)
+        points = ((self.x - self.radius, self.y - self.radius),
+                  (self.x + self.radius, self.y - self.radius),
+                  (self.x + self.radius, self.y + self.radius),
+                  (self.x - self.radius, self.y + self.radius))
+        mpts = numpy.array(
+            list(map(lambda pt: trcalc.rotate_pt(pt[0], pt[1], self.rot_deg,
+                                                 xoff=xd, yoff=yd),
+                     map(lambda pt: self.crdmap.to_data(pt[0], pt[1]),
+                         points))))
+        t_ = mpts.T
+        x1, y1 = t_[0].min(), t_[1].min()
+        x2, y2 = t_[0].max(), t_[1].max()
+        return (x1, y1, x2, y2)
+
+    def contains_arr(self, x_arr, y_arr):
+        x1, y1 = self.crdmap.to_data(self.x - self.radius,
+                                     self.y - self.radius)
+        x2, y2 = self.crdmap.to_data(self.x + self.radius,
+                                     self.y + self.radius)
+
+        # rotate point back to cartesian alignment for test
+        xd, yd = self.crdmap.to_data(self.x, self.y)
+        xa, ya = trcalc.rotate_pt(x_arr, y_arr, -self.rot_deg,
+                                  xoff=xd, yoff=yd)
+
+        contains = numpy.logical_and(
+            numpy.logical_and(min(x1, x2) <= xa, xa <= max(x1, x2)),
+            numpy.logical_and(min(y1, y2) <= ya, ya <= max(y1, y2)))
+        return contains
+
+    def contains(self, data_x, data_y):
+        x_arr, y_arr = numpy.array([data_x]), numpy.array([data_y])
+        res = self.contains_arr(x_arr, y_arr)
+        return res[0]
+
+    def set_edit_point(self, i, pt):
+        if i == 0:
+            self.set_point_by_index(i, pt)
+        elif i == 1:
+            x, y = pt
+            self.radius = max(abs(x - self.x), abs(y - self.y))
+        else:
+            raise ValueError("No point corresponding to index %d" % (i))
+
+    def get_edit_points(self):
+        return [(self.x, self.y),
+                (self.x + self.radius, self.y + self.radius)]
+
+    def draw(self, viewer):
+        cpoints = self.get_cpoints(viewer)
+
+        cr = viewer.renderer.setup_cr(self)
+        cr.draw_polygon(cpoints)
+
+        if self.showcap:
+            self.draw_caps(cr, self.cap, cpoints)
+
+
 class Ellipse(OnePointTwoRadiusMixin, CanvasObjectBase):
     """Draws an ellipse on a DrawingCanvas.
     Parameters are:
@@ -1310,12 +1454,12 @@ class Rectangle(TwoPointMixin, CanvasObjectBase):
             # draw label on X dimension
             cx = cx1 + (cx2 - cx1) // 2
             cy = cy2 + -4
-            cr.draw_text(cx, cy, "%d" % abs(self.x2 - self.x1))
+            cr.draw_text(cx, cy, "%f" % abs(self.x2 - self.x1))
 
             # draw label on Y dimension
             cy = cy1 + (cy2 - cy1) // 2
             cx = cx2 + 4
-            cr.draw_text(cx, cy, "%d" % abs(self.y2 - self.y1))
+            cr.draw_text(cx, cy, "%f" % abs(self.y2 - self.y1))
 
         if self.showcap:
             self.draw_caps(cr, self.cap, cpoints)
@@ -1567,6 +1711,6 @@ register_canvas_types(
          freepolygon=FreePolygon, path=Path, freepath=FreePath,
          righttriangle=RightTriangle, triangle=Triangle,
          ellipse=Ellipse, square=Square, beziercurve=BezierCurve,
-         box=Box))
+         box=Box, squarebox=SquareBox))
 
 #END

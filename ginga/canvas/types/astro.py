@@ -9,15 +9,17 @@
 # Please see the file LICENSE.txt for details.
 #
 import math
+import numpy
 
 from ginga.canvas.CanvasObject import (CanvasObjectBase, _bool, _color,
-                                       register_canvas_types,
+                                       register_canvas_types, get_canvas_type,
                                        colors_plus_none)
 from ginga.misc.ParamSet import Param
+from ginga.misc.Bunch import Bunch
 from ginga.util import wcs
 
 from .basic import TwoPointMixin, OnePointOneRadiusMixin
-
+from .layer import CompoundObject
 
 class Ruler(TwoPointMixin, CanvasObjectBase):
     """Draws a WCS ruler (like a right triangle) on a DrawingCanvas.
@@ -362,6 +364,162 @@ class Compass(OnePointOneRadiusMixin, CanvasObjectBase):
         return (xd, yd)
 
 
-register_canvas_types(dict(ruler=Ruler, compass=Compass))
+class AnnulusMixin(object):
+
+    def contains(self, x, y):
+        """Containment test."""
+        obj1, obj2 = self.objects
+        return obj2.contains(x, y) and numpy.logical_not(obj1.contains(x, y))
+
+    def contains_arr(self, x_arr, y_arr):
+        """Containment test on arrays."""
+        obj1, obj2 = self.objects
+        arg1 = obj2.contains_arr(x_arr, y_arr)
+        arg2 = numpy.logical_not(obj1.contains_arr(x_arr, y_arr))
+        return numpy.logical_and(arg1, arg2)
+
+    def get_llur(self):
+        """Bounded by outer object."""
+        obj2 = self.objects[1]
+        return obj2.get_llur()
+
+    def select_contains(self, viewer, data_x, data_y):
+        obj2 = self.objects[1]
+        return obj2.select_contains(viewer, data_x, data_y)
+
+
+class Annulus(CompoundObject, OnePointOneRadiusMixin, AnnulusMixin):
+    """Special compound object to handle annulus shape that
+    consists of two objects with the same centroid.
+
+    Examples
+    --------
+    >>> tag = canvas.add(Annulus(100, 200, 10, width=5, atype='circle'))
+    >>> obj = canvas.getObjectByTag(tag)
+    >>> arr_masked = image.cutout_shape(obj)
+
+    """
+    @classmethod
+    def get_params_metadata(cls):
+        return [
+            ## Param(name='coord', type=str, default='data',
+            ##       valid=['data', 'wcs'],
+            ##       description="Set type of coordinates"),
+            Param(name='x', type=float, default=0.0, argpos=0,
+                  description="X coordinate of center of object"),
+            Param(name='y', type=float, default=0.0, argpos=1,
+                  description="Y coordinate of center of object"),
+            Param(name='radius', type=float, default=1.0,  argpos=2,
+                  min=0.0,
+                  description="Inner radius of annulus"),
+            Param(name='width', type=float, default=5,
+                  min=0.0,
+                  description="Width of annulus"),
+            Param(name='atype', type=str, default='circle',
+                  valid=['circle', 'squarebox'],
+                  description="Type of annulus"),
+            Param(name='linewidth', type=int, default=1,
+                  min=1, max=20, widget='spinbutton', incr=1,
+                  description="Width of outline"),
+            Param(name='linestyle', type=str, default='solid',
+                  valid=['solid', 'dash'],
+                  description="Style of outline (default solid)"),
+            Param(name='color',
+                  valid=colors_plus_none, type=_color, default='yellow',
+                  description="Color of outline"),
+            Param(name='alpha', type=float, default=1.0,
+                  min=0.0, max=1.0, widget='spinfloat', incr=0.05,
+                  description="Opacity of outline"),
+            ]
+
+    @classmethod
+    def idraw(cls, canvas, cxt):
+        radius = math.sqrt(abs(cxt.start_x - cxt.x)**2 +
+                            abs(cxt.start_y - cxt.y)**2 )
+        return cls(cxt.start_x, cxt.start_y, radius,
+                   **cxt.drawparams)
+
+    def __init__(self, x, y, radius, width=None,
+                 atype='circle', color='yellow',
+                 linewidth=1, linestyle='solid', alpha=1.0,
+                 **kwdargs):
+
+        if width is None:
+            width = 0.15 * radius
+        oradius = radius + width
+
+        if oradius < radius:
+            raise ValueError('Outer boundary < inner boundary')
+
+        CanvasObjectBase.__init__(self, x=x, y=y, radius=radius,
+                                  width=width, color=color,
+                                  linewidth=linewidth, linestyle=linestyle,
+                                  alpha=alpha, **kwdargs)
+
+        klass = get_canvas_type(atype)
+        obj1 = klass(x, y, radius, color=color,
+                     linewidth=linewidth,
+                     linestyle=linestyle, alpha=alpha)
+        obj1.editable = False
+
+        obj2 = klass(x, y, oradius, color=color,
+                     linewidth=linewidth,
+                     linestyle=linestyle, alpha=alpha)
+        obj2.editable = False
+
+        CompoundObject.__init__(self, obj1, obj2)
+        OnePointOneRadiusMixin.__init__(self)
+
+        self.editable = True
+        self.opaque = True
+        self.kind = 'annulus'
+
+    def get_edit_points(self):
+        return [(self.x, self.y),
+                (self.x + self.radius, self.y),
+                (self.x + self.radius + self.width, self.y)]
+
+    def set_edit_point(self, i, pt):
+        if i == 0:
+            # move control point
+            self.set_point_by_index(i, pt)
+        else:
+            x, y = pt
+            radius = math.sqrt(abs(x - self.x)**2 +
+                               abs(y - self.y)**2 )
+            if i == 1:
+                # inner obj radius control pt
+                self.radius = radius
+            elif i == 2:
+                # outer obj radius control pt--calculate new width
+                width = radius - self.radius
+                assert width > 0, ValueError("Must have a positive width")
+                self.width = width
+            else:
+                raise ValueError("No point corresponding to index %d" % (i))
+
+        self.sync_state()
+
+    def sync_state(self):
+        """Called to synchronize state (e.g. when parameters have changed).
+        """
+        oradius = self.radius + self.width
+        if oradius < self.radius:
+            raise ValueError('Outer boundary < inner boundary')
+
+        d = dict(x=self.x, y=self.y, radius=self.radius, color=self.color,
+                 linewidth=self.linewidth, linestyle=self.linestyle,
+                 alpha=self.alpha)
+
+        # update inner object
+        self.objects[0].__dict__.update(d)
+
+        # update outer object
+        d['radius'] = oradius
+        self.objects[1].__dict__.update(d)
+
+
+register_canvas_types(dict(ruler=Ruler, compass=Compass,
+                           annulus=Annulus))
 
 #END

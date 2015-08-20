@@ -24,6 +24,7 @@ class CompoundMixin(object):
         self.objects = []
         self.crdmap = None
         self.coord = 'data'
+        self.opaque = False
         self._contains_reduce = numpy.logical_or
 
     def get_llur(self):
@@ -67,7 +68,7 @@ class CompoundMixin(object):
         res = []
         try:
             for obj in self.objects:
-                if obj.is_compound():
+                if obj.is_compound() and not obj.opaque:
                     # compound object, list up compatible members
                     res.extend(obj.select_items_at(viewer, x, y, test=test))
                     continue
@@ -220,14 +221,5 @@ class CompoundMixin(object):
         for obj in self.objects:
             res.extend(list(obj.get_points()))
         return res
-
-    def set_edit(self, tf):
-        for obj in self.objects:
-            try:
-                obj.set_edit(tf)
-            except ValueError:
-                # TODO: should check for specific node-can't edit error
-                continue
-
 
 #END

@@ -284,6 +284,7 @@ For polygons/paths press 'v' to create a vertex, 'z' to remove last vertex.""")
                 obj.convert_mapper(tomap)
                 paramObj.params_to_widgets()
 
+        obj.sync_state()
         # TODO: change whence to 0 if allowing editing of images
         whence = 2
         self.canvas.redraw(whence=whence)
@@ -320,7 +321,7 @@ For polygons/paths press 'v' to create a vertex, 'z' to remove last vertex.""")
             self.w.rotate_by.set_enabled(False)
 
     def edit_select_cb(self, fitsimage, obj):
-        #self.logger.debug("editing selection status has changed for %s" % str(obj))
+        self.logger.debug("editing selection status has changed for %s" % str(obj))
         self.edit_initialize(fitsimage, obj)
 
     def set_mode_cb(self, mode, tf):
@@ -333,6 +334,7 @@ For polygons/paths press 'v' to create a vertex, 'z' to remove last vertex.""")
         return True
 
     def clear_canvas(self):
+        self.canvas.clear_selected()
         self.canvas.deleteAllObjects()
 
     def delete_object(self):

@@ -9,6 +9,7 @@
 #
 from ginga import trcalc
 from ginga.util import wcs
+from ginga.util.six.moves import map
 
 class CanvasMapper(object):
     """A coordinate mapper that maps to the viewer's canvas in
@@ -66,15 +67,30 @@ class OffsetMapper(object):
         self.viewer = viewer
         self.refobj = refobj
 
+    def calc_offsets(self, points):
+        ref_x, ref_y = self.refobj.get_reference_pt()
+        #return map(lambda x, y: x - ref_x, y - ref_y, points)
+        def _cvt(pt):
+            x, y = pt
+            return x - ref_x, y - ref_y
+        return map(_cvt, points)
+
     def to_canvas(self, delta_x, delta_y):
         data_x, data_y = self.to_data(delta_x, delta_y)
         return self.viewer.canvascoords(data_x, data_y)
 
     def to_data(self, delta_x, delta_y):
-        data_x, data_y = self.refobj.get_reference_pt()
+        ref_x, ref_y = self.refobj.get_reference_pt()
+        data_x, data_y = self.refobj.crdmap.to_data(ref_x, ref_y)
         return data_x + delta_x, data_y + delta_y
 
+    ## def data_to(self, data_x, data_y):
+    ##     ref_x, ref_y = self.refobj.get_reference_pt()
+    ##     return data_x - ref_data_x, data_y - ref_data_y
+
     def offset_pt(self, pt, xoff, yoff):
+        # A no-op because this object's points are always considered
+        # relative to the reference object
         return pt
 
     def rotate_pt(self, x, y, theta, xoff=0, yoff=0):

@@ -55,6 +55,12 @@ class CanvasObjectBase(Callback.Callbacks):
             else:
                 self.crdmap = viewer.get_coordmap(self.coord)
 
+    def sync_state(self):
+        """This method called when changes are made to the parameters.
+        subclasses should override if they need any special state handling.
+        """
+        pass
+
     def set_data(self, **kwdargs):
         if self.data is None:
             self.data = Bunch.Bunch(kwdargs)
@@ -440,6 +446,9 @@ drawCatalog = Bunch.Bunch(caseless=True)
 
 def get_canvas_types():
     return drawCatalog
+
+def get_canvas_type(name):
+    return drawCatalog[name]
 
 def register_canvas_type(name, klass):
     global drawCatalog
