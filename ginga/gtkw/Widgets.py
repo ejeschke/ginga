@@ -846,7 +846,12 @@ class SaveDialog:
         buttons = (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, gtk.STOCK_SAVE, gtk.RESPONSE_OK)
 
         self.widget = gtk.FileChooserDialog(title=title, action=action, buttons=buttons)
+        self.selectedfilter = selectedfilter
 
+        if selectedfilter is not None:
+            self._add_filter(selectedfilter)
+
+    def _add_filter(self, selectedfilter):
         filtr = gtk.FileFilter()
         filtr.add_pattern(selectedfilter)
         if 'png' in selectedfilter:
@@ -865,7 +870,7 @@ class SaveDialog:
 
         if response == gtk.RESPONSE_OK:
             path = self.widget.get_filename()
-            if not path.endswith(self.selectedfilter):
+            if self.selectedfilter is not None and not path.endswith(self.selectedfilter):
                 path += self.selectedfilter
             self.widget.destroy()
             return path

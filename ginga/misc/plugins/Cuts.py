@@ -168,12 +168,10 @@ class Cuts(GingaPlugin.LocalPlugin):
         captions = (('Cut:', 'label', 'Cut', 'combobox',
                      'New Cut Type:', 'label', 'Cut Type', 'combobox'),
                     ('Delete Cut', 'button', 'Delete All', 'button'),
+                    ('Save', 'button'),
                     )
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
-
-        fr = Widgets.Frame('Cuts controls')
-        fr.set_widget(w)
 
         # control for selecting a cut
         combobox = b.cut
@@ -193,6 +191,11 @@ class Cuts(GingaPlugin.LocalPlugin):
         combobox.set_index(index)
         combobox.add_callback('activated', self.set_cutsdrawtype_cb)
         combobox.set_tooltip("Choose the cut type to draw")
+
+        self.save_cuts = b.save
+        self.save_cuts.set_tooltip("Save cuts plot and data")
+        self.save_cuts.add_callback('activated', lambda w: self.save_cb(mode='cuts'))
+        self.save_cuts.set_enabled(self.save_enabled)
 
         btn = b.delete_cut
         btn.add_callback('activated', self.delete_cut_cb)
@@ -257,14 +260,32 @@ class Cuts(GingaPlugin.LocalPlugin):
         hbox.add_widget(btn3)
 
         hbox.add_widget(Widgets.Label(''), stretch=1)
-        vbox.add_widget(fr, stretch=0)
-        vbox.add_widget(hbox, stretch=0)
+        vbox2.add_widget(hbox, stretch=0)
+
+        vbox2.add_widget(Widgets.Label(''), stretch=1)
+
+        vbox.add_widget(vbox2, stretch=0)
 
         # Add Cuts plot to its tab
         vbox_cuts = Widgets.VBox()
         wp = Widgets.wrap(self.plot.get_widget())
         vbox_cuts.add_widget(wp, stretch=1)
         nb.add_widget(vbox_cuts, title="Cuts")
+
+        captions = (("Transpose Plot", 'checkbutton', "Save", 'button'),
+                    )
+        w, b = Widgets.build_info(captions, orientation=orientation)
+        self.w.update(b)
+
+        self.t_btn = b.transpose_plot
+        self.t_btn.set_tooltip("Flip the plot")
+        self.t_btn.set_state(self.transpose_enabled)
+        self.t_btn.add_callback('activated', self.transpose_plot)
+
+        self.save_slit = b.save
+        self.save_slit.set_tooltip("Save slit plot and data")
+        self.save_slit.add_callback('activated', lambda w: self.save_cb(mode='slit'))
+        self.save_slit.set_enabled(self.save_enabled)
 
         # Add frame to hold the slit controls
         fr = Widgets.Frame("Axes controls")
@@ -273,20 +294,15 @@ class Cuts(GingaPlugin.LocalPlugin):
         self.hbox_axes.set_spacing(1)
         fr.set_widget(self.hbox_axes)
 
-        self.t_btn = Widgets.CheckBox('Transpose Plot')
-        self.t_btn.set_state(self.transpose_enabled)
-        self.t_btn.add_callback('activated', self.transpose_plot)
-        self.t_btn.set_tooltip("Flip the plot")
+        self.build_axes()
 
         # Add Slit plot and controls to its tab
         vbox_slit = Widgets.VBox()
         wp = Widgets.wrap(self.plot2.get_widget())
         vbox_slit.add_widget(wp, stretch=1)
-        vbox_slit.add_widget(self.t_btn)
+        vbox_slit.add_widget(w)
         vbox_slit.add_widget(fr)
         nb.add_widget(vbox_slit, title="Slit")
-
-        self.build_axes()
 
         top.add_widget(sw, stretch=1)
 
@@ -298,11 +314,6 @@ class Cuts(GingaPlugin.LocalPlugin):
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
-
-        self.save_btn = Widgets.Button("Save")
-        self.save_btn.add_callback('activated', lambda w: self.save_cb())
-        self.save_btn.set_enabled(self.save_enabled)
-        btns.add_widget(self.save_btn, stretch=0)
 
         top.add_widget(btns, stretch=0)
 
@@ -354,6 +365,8 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
             self.w.btn_edit.set_enabled(False)
             self.set_mode('draw')
 
+            self.save_slit.set_enabled(False)
+
             self.redraw_slit('clear')
         else:
             self.w.delete_cut.set_enabled(True)
@@ -364,6 +377,8 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
 
             if self.w.btn_edit.get_state():
                 self.edit_select_cuts()
+
+            self.save_slit.set_enabled(True)
 
             self.redraw_slit('redraw')
 
@@ -388,7 +403,8 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         tag = self.tags[idx]
         self.select_cut(tag)
         if tag == self._new_cut:
-            self.save_btn.set_enabled(False)
+            self.save_cuts.set_enabled(False)
+            self.save_slit.set_enabled(False)
         # plot cleared in replot_all() if no more cuts
         self.replot_all()
 
@@ -399,7 +415,8 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         self.cutstag = self._new_cut
         self.w.cuts.append_text(self._new_cut)
         self.select_cut(self._new_cut)
-        self.save_btn.set_enabled(False)
+        self.save_cuts.set_enabled(False)
+        self.save_slit.set_enabled(False)
         # plot cleared in replot_all() if no more cuts
         self.replot_all()
 
@@ -655,7 +672,8 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
             if n:
                 self.w.delete_cut.set_enabled(True)
                 self.w.delete_all.set_enabled(True)
-                self.save_btn.set_enabled(True)
+                self.save_cuts.set_enabled(True)
+                self.save_slit.set_enabled(True)
 
         # force mpl redraw
         self.plot.fig.canvas.draw()
@@ -939,16 +957,28 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         self.replot_all()
         return True
 
-    def save_cb(self):
-        fig, xarr, yarr = self.plot.get_data()
+    def save_cb(self, mode):
+        if mode == 'cuts':
+            target = Widgets.SaveDialog(title='Save cuts data').get_path()
 
-        target = Widgets.SaveDialog(title='Save plot', selectedfilter='*.png').get_path()
-        with open(target, 'w') as target_file:
-            fig.savefig(target_file, dpi=100, format='png', bbox_inches='tight')
+            # Save as fits file
+            image = self.fitsimage.get_image()
+            self.fv.error_wrap(image.save_as_file, target)
 
-        target = Widgets.SaveDialog(title='Save data', selectedfilter='*.npz').get_path()
-        with open(target, 'w') as target_file:
-            numpy.savez_compressed(target_file, x=xarr, y=yarr)
+            if target:
+                fig, xarr, yarr = self.plot.get_data()
+                fig.savefig(target, dpi=100)
+                numpy.savez_compressed(target, x=xarr, y=yarr)
+        elif mode == 'slit':
+            enabled_axes = [pos for pos, val in enumerate(self.axes_states) if val is True]
+            if not enabled_axes:
+                return
+
+            target = Widgets.SaveDialog(title='Save slit data').get_path()
+            if target:
+                fig2, xarr2, yarr2 = self.plot2.get_data()
+                fig2.savefig(target, dpi=100)
+                numpy.savez_compressed(target, x=xarr2, y=yarr2)
 
     def axis_toggle_cb(self, w, tf, pos):
         # Deactivate other checkboxes
