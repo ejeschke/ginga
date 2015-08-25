@@ -388,7 +388,7 @@ class AnnulusMixin(object):
         return obj2.select_contains(viewer, data_x, data_y)
 
 
-class Annulus(CompoundObject, OnePointOneRadiusMixin, AnnulusMixin):
+class Annulus(AnnulusMixin, OnePointOneRadiusMixin, CompoundObject):
     """Special compound object to handle annulus shape that
     consists of two objects with the same centroid.
 
