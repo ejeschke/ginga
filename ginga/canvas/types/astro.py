@@ -518,6 +518,11 @@ class Annulus(AnnulusMixin, OnePointOneRadiusMixin, CompoundObject):
         d['radius'] = oradius
         self.objects[1].__dict__.update(d)
 
+    def move_to(self, xdst, ydst):
+        super(Annulus, self).move_to(xdst, ydst)
+        self.x = xdst
+        self.y = ydst
+
 
 register_canvas_types(dict(ruler=Ruler, compass=Compass,
                            annulus=Annulus))
