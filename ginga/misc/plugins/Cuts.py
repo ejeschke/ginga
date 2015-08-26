@@ -88,7 +88,8 @@ class Cuts(GingaPlugin.LocalPlugin):
         prefs = self.fv.get_preferences()
         self.settings = prefs.createCategory('plugin_Cuts')
         self.settings.addDefaults(select_new_cut=True, draw_then_move=True,
-                                  label_cuts=True, colors=cut_colors)
+                                  label_cuts=True, colors=cut_colors,
+                                  show_cuts_legend=False)
         self.settings.load(onError='silent')
         self.colors = self.settings.get('colors', cut_colors)
 
@@ -350,7 +351,9 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         self.replot_all()
 
     def _plotpoints(self, obj, color):
+
         image = self.fitsimage.get_image()
+
         # Get points on the line
         if obj.kind == 'line':
             points = image.get_pixels_on_line(int(obj.x1), int(obj.y1),
@@ -364,14 +367,18 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
                 # don't repeat last point when adding next segment
                 points.extend(pts[:-1])
                 x1, y1 = x2, y2
+
         elif obj.kind == 'beziercurve':
             points = obj.get_pixels_on_curve(image)
+
         points = numpy.array(points)
 
         rgb = colors.lookup_color(color)
         self.plot.cuts(points, xtitle="Line Index", ytitle="Pixel Value",
                        color=rgb)
-        self.add_legend()
+
+        if self.settings.get('show_cuts_legend', False):
+            self.add_legend()
 
     def add_legend(self):
         cuts = [tag for tag in self.tags if tag is not self._new_cut]
@@ -380,7 +387,8 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         box = self.plot.ax.get_position()
         self.plot.ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
 
-        self.plot.ax.legend(cuts, loc='center left', bbox_to_anchor=(1, 0.5), shadow=True, fancybox=True,
+        self.plot.ax.legend(cuts, loc='center left', bbox_to_anchor=(1, 0.5),
+                            shadow=True, fancybox=True,
                             prop={'size': 8}, labelspacing=0.2)
 
     def _replot(self, lines, colors):
