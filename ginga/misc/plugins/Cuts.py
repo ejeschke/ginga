@@ -12,6 +12,7 @@ import numpy
 from ginga.misc import Widgets, Plot
 from ginga import GingaPlugin, colors
 from ginga.util.six.moves import map, zip
+from ginga.canvas.coordmap import OffsetMapper
 
 # default cut colors
 cut_colors = ['magenta', 'skyblue2', 'chartreuse2', 'cyan', 'pink',
@@ -69,6 +70,22 @@ class Cuts(GingaPlugin.LocalPlugin):
     You will notice one extra control point for most objects, which has
     a center of a different color--this is a movement control point for
     moving the entire object around the image when in edit mode.
+
+    Changing Width of Cuts
+    ----------------------
+    The width of 'line' cuts can be changed using the "Width Type" menu:
+    - "none" indicates a cut of zero radius; i.e. only showing the pixel
+      values along the line
+    - "x" will plot the sum of values along the X axis orthoginal to the
+      cut.
+    - "y" will plot the sum of values along the Y axis orthoginal to the
+      cut.
+    - "perpendicular" will plot the sum of values along an axis perpendicular
+      to the cut.
+
+    The "Width radius" controls the width of the orthoginal summation by
+    an amount on either side of the cut--1 would be 3 pixels, 2 would be 5
+    pixels, etc.
     """
 
     def __init__(self, fv, fitsimage):
@@ -83,6 +100,12 @@ class Cuts(GingaPlugin.LocalPlugin):
         self.cuttypes = ['line', 'path', 'freepath', 'beziercurve']
         self.cuttype = 'line'
         self.save_enabled = False
+
+        # For collecting data orthogonal to the cut
+        self.widthtypes = ['none', 'x', 'y', 'perpendicular']
+        self.widthtype = 'none'
+        self.width_radius = 5
+        self.tine_spacing_px = 100
 
         # get Cuts preferences
         prefs = self.fv.get_preferences()
@@ -176,6 +199,32 @@ class Cuts(GingaPlugin.LocalPlugin):
 
         vbox2 = Widgets.VBox()
         vbox2.add_widget(w, stretch=0)
+
+        fr = Widgets.Expander("Cut Width")
+
+        captions = (('Width Type:', 'label', 'Width Type', 'combobox',
+                     'Width radius:', 'label', 'Width radius', 'spinbutton'),
+                    )
+        w, b = Widgets.build_info(captions, orientation=orientation)
+        self.w.update(b)
+
+        # control for selecting width cut type
+        combobox = b.width_type
+        for atype in self.widthtypes:
+            combobox.append_text(atype)
+        index = self.widthtypes.index(self.widthtype)
+        combobox.set_index(index)
+        combobox.add_callback('activated', self.set_width_type_cb)
+        combobox.set_tooltip("Direction of summation orthogonal to cut")
+
+        sb = b.width_radius
+        sb.add_callback('value-changed', self.width_radius_changed_cb)
+        sb.set_tooltip("Radius of cut width")
+        sb.set_limits(1, 100)
+        sb.set_value(self.width_radius)
+
+        fr.set_widget(w)
+        vbox2.add_widget(fr, stretch=0)
 
         mode = self.canvas.get_draw_mode()
         hbox = Widgets.HBox()
@@ -350,14 +399,58 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         """
         self.replot_all()
 
+    def _get_perpendicular_points(self, obj, x, y, r):
+        dx = float(obj.x1 - obj.x2)
+        dy = float(obj.y1 - obj.y2)
+        dist = numpy.sqrt(dx*dx + dy*dy)
+        dx /= dist
+        dy /= dist
+        x3 = x + r * dy
+        y3 = y - r * dx
+        x4 = x - r * dy
+        y4 = y + r * dx
+        return (x3, y3, x4, y4)
+
+    def _get_width_points(self, obj, x, y, rx, ry):
+        x3, y3 = x - rx, y - ry
+        x4, y4 = x + rx, y + ry
+        return (x3, y3, x4, y4)
+
+    def get_orthogonal_points(self, obj, x, y, r):
+        if self.widthtype == 'x':
+            return self._get_width_points(obj, x, y, r, 0)
+        elif self.widthtype == 'y':
+            return self._get_width_points(obj, x, y, 0, r)
+        else:
+            return self._get_perpendicular_points(obj, x, y, r)
+
+    def get_orthogonal_array(self, image, obj, x, y, r):
+        x1, y1, x2, y2 = self.get_orthogonal_points(obj, x, y, r)
+        values = image.get_pixels_on_line(int(x1), int(y1),
+                                          int(x2), int(y2))
+        return numpy.array(values)
+
     def _plotpoints(self, obj, color):
 
         image = self.fitsimage.get_image()
 
         # Get points on the line
         if obj.kind == 'line':
-            points = image.get_pixels_on_line(int(obj.x1), int(obj.y1),
-                                              int(obj.x2), int(obj.y2))
+            if self.widthtype == 'none':
+                points = image.get_pixels_on_line(int(obj.x1), int(obj.y1),
+                                                  int(obj.x2), int(obj.y2))
+            else:
+                coords = image.get_pixels_on_line(int(obj.x1), int(obj.y1),
+                                                  int(obj.x2), int(obj.y2),
+                                                  getvalues=False)
+
+                points = []
+                for x, y in coords:
+                    arr = self.get_orthogonal_array(image, obj, x, y,
+                                                       self.width_radius)
+                    val = numpy.nansum(arr)
+                    points.append(val)
+
         elif obj.kind in ('path', 'freepath'):
             points = []
             x1, y1 = obj.points[0]
@@ -443,6 +536,36 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         obj.set_data(cuts=True)
         return obj
 
+    def _update_tines(self, obj):
+        if obj.objects[0].kind != 'line':
+            # right now we only know how to adjust lines
+            return
+
+        # Remove previous tines, if any
+        if len(obj.objects) > 2:
+            obj.objects = obj.objects[:2]
+
+        if self.widthtype == 'none':
+            return
+
+        image = self.fitsimage.get_image()
+        line = obj.objects[0]
+        coords = image.get_pixels_on_line(int(line.x1), int(line.y1),
+                                          int(line.x2), int(line.y2),
+                                          getvalues=False)
+        crdmap = OffsetMapper(self.fitsimage, line)
+        num_ticks = max(len(coords) // self.tine_spacing_px, 3)
+        interval = len(coords) // num_ticks
+        for i in range(0, len(coords), interval):
+            x, y = coords[i]
+            x1, y1, x2, y2 = self.get_orthogonal_points(line, x, y,
+                                                        self.width_radius)
+            (x1, y1), (x2, y2) = crdmap.calc_offsets([(x1, y1), (x2, y2)])
+            aline = self.dc.Line(x1, y1, x2, y2)
+            aline.crdmap = crdmap
+            aline.editable = False
+            obj.objects.append(aline)
+
     def _create_cut_obj(self, count, cuts_obj, color='cyan'):
         text = "cuts%d" % (count)
         if not self.settings.get('label_cuts', False):
@@ -451,10 +574,16 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         cuts_obj.linestyle = 'solid'
         #cuts_obj.color = color
         color = cuts_obj.color
+        args = [cuts_obj]
         text_obj = self.dc.Text(4, 4, text, color=color, coord='offset',
                                 ref_obj=cuts_obj)
-        obj = self.dc.CompoundObject(cuts_obj, text_obj)
+        args.append(text_obj)
+
+        obj = self.dc.CompoundObject(*args)
         obj.set_data(cuts=True)
+
+        if (self.widthtype != 'none') and (self.width_radius > 0):
+            self._update_tines(obj)
         return obj
 
     def _combine_cuts(self, *args):
@@ -472,7 +601,8 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
 
     def _getlines(self, obj):
         if obj.kind == 'compound':
-            return self._append_lists(list(map(self._getlines, obj.objects)))
+            #return self._append_lists(list(map(self._getlines, obj.objects)))
+            return [ obj.objects[0] ]
         elif obj.kind in self.cuttypes:
             return [obj]
         else:
@@ -574,6 +704,7 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
 
             cut = self._create_cut(x, y, count, x1, y1, x2, y2,
                                    color='cyan')
+            self._update_tines(cut)
             cuts.append(cut)
 
         if len(cuts) == 1:
@@ -602,6 +733,7 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
 
         cut = self._create_cut_obj(count, obj, color='cyan')
         cut.set_data(count=count)
+        self._update_tines(cut)
 
         canvas.deleteObjectByTag(tag, redraw=False)
         self.canvas.add(cut, tag=tag)
@@ -611,6 +743,7 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         return self.replot_all()
 
     def edit_cb(self, canvas, obj):
+        self.redraw_cuts()
         self.replot_all()
         return True
 
@@ -639,6 +772,31 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         self.w.btn_move.set_state(mode == 'move')
         self.w.btn_draw.set_state(mode == 'draw')
         self.w.btn_edit.set_state(mode == 'edit')
+
+    def redraw_cuts(self):
+        """Redraws cuts with tines (for cuts with a 'width')."""
+        self.logger.debug("redrawing cuts")
+        for cutstag in self.tags:
+            if cutstag == self._new_cut:
+                continue
+            obj = self.canvas.getObjectByTag(cutstag)
+            if obj.kind != 'compound':
+                continue
+            self._update_tines(obj)
+        self.canvas.redraw(whence=3)
+
+    def width_radius_changed_cb(self, widget, val):
+        """Callback executed when the Width radius is changed."""
+        self.width_radius = val
+        self.redraw_cuts()
+        self.replot_all()
+        return True
+
+    def set_width_type_cb(self, widget, idx):
+        self.widthtype = self.widthtypes[idx]
+        self.redraw_cuts()
+        self.replot_all()
+        return True
 
     def save_cb(self):
         fig, xarr, yarr = self.plot.get_data()
