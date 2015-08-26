@@ -144,6 +144,7 @@ class ImageViewBase(Callback.Callbacks):
         self.t_.addDefaults(autozoom='on')
 
         # image overlays
+        # TO BE DEPRECATED
         self.t_.addDefaults(image_overlays=True)
         self.t_.getSetting('image_overlays').add_callback('set', self.overlays_change_cb)
 
@@ -161,9 +162,14 @@ class ImageViewBase(Callback.Callbacks):
         self.t_.getSetting('rot_deg').add_callback('set', self.rotation_change_cb)
 
         # misc
-        self.t_.addDefaults(use_embedded_profile=True, auto_orient=False,
+        self.t_.addDefaults(auto_orient=False,
                             defer_redraw=True, defer_lagtime=0.025,
                             interpolation='basic')
+
+        # embedded profiles
+        self.t_.addDefaults(profile_use_scale=False, profile_use_pan=False,
+                            profile_use_cuts=False, profile_use_transform=False,
+                            profile_use_rotation=False)
 
         # Object that calculates auto cut levels
         name = self.t_.get('autocut_method', 'zscale')
@@ -493,26 +499,54 @@ class ImageViewBase(Callback.Callbacks):
                 self.canvas.lowerObject(self._normimg)
 
             profile = image.get('profile', None)
-            if (profile is not None) and (self.t_['use_embedded_profile']):
-                self.apply_profile(profile)
-
             try:
-                self.logger.debug("auto orient (%s)" % (self.t_['auto_orient']))
-                if self.t_['auto_orient']:
-                    self.auto_orient()
+                # initialize transform
+                if (profile is not None) and (self.t_['profile_use_transform']) and \
+                       profile.has_key('flip_x'):
+                    flip_x, flip_y = profile['flip_x'], profile['flip_y']
+                    swap_xy = profile['swap_xy']
+                    self.transform(flip_x, flip_y, swap_xy)
+                else:
+                    self.logger.debug("auto orient (%s)" % (self.t_['auto_orient']))
+                    if self.t_['auto_orient']:
+                        self.auto_orient()
 
-                self.logger.debug("auto zoom (%s)" % (self.t_['autozoom']))
-                if self.t_['autozoom'] != 'off':
-                    self.zoom_fit(no_reset=True)
+                # initialize scale
+                if (profile is not None) and (self.t_['profile_use_scale']) and \
+                       profile.has_key('scale_x'):
+                    scale_x, scale_y = profile['scale_x'], profile['scale_y']
+                    self.scale_to(scale_x, scale_y, no_reset=True)
+                else:
+                    self.logger.debug("auto zoom (%s)" % (self.t_['autozoom']))
+                    if self.t_['autozoom'] != 'off':
+                        self.zoom_fit(no_reset=True)
 
-                # NOTE: False a possible value from historical use
-                self.logger.debug("auto center (%s)" % (self.t_['autocenter']))
-                if not self.t_['autocenter'] in ('off', False):
-                    self.center_image(no_reset=True)
+                # initialize pan position
+                if (profile is not None) and (self.t_['profile_use_pan']) and \
+                       profile.has_key('pan_x'):
+                    pan_x, pan_y = profile['pan_x'], profile['pan_y']
+                    self.set_pan(pan_x, pan_y, no_reset=True)
+                else:
+                    # NOTE: False a possible value from historical use
+                    self.logger.debug("auto center (%s)" % (self.t_['autocenter']))
+                    if not self.t_['autocenter'] in ('off', False):
+                        self.center_image(no_reset=True)
 
-                self.logger.debug("auto cuts (%s)" % (self.t_['autocuts']))
-                if self.t_['autocuts'] != 'off':
-                    self.auto_levels()
+                # initialize rotation
+                if (profile is not None) and (self.t_['profile_use_rotation']) and \
+                       profile.has_key('rot_deg'):
+                    rot_deg = profile['rot_deg']
+                    self.rotate(rot_deg)
+
+                # initialize cuts
+                if (profile is not None) and (self.t_['profile_use_cuts']) and \
+                       profile.has_key('cutlo'):
+                    loval, hival = profile['cutlo'], profile['cuthi']
+                    self.cut_levels(loval, hival, no_reset=True)
+                else:
+                    self.logger.debug("auto cuts (%s)" % (self.t_['autocuts']))
+                    if self.t_['autocuts'] != 'off':
+                        self.auto_levels()
 
             except Exception as e:
                 self.logger.error("Failed to initialize image: %s" % (str(e)))
@@ -598,8 +632,9 @@ class ImageViewBase(Callback.Callbacks):
 
     def save_profile(self, **params):
         image = self.get_image()
-        if image is None:
+        if (image is None):
             return
+
         profile = image.get('profile', None)
         if (profile is None):
             # If image has no profile then create one
@@ -610,17 +645,24 @@ class ImageViewBase(Callback.Callbacks):
                 str(params)))
         profile.set(**params)
 
-    def apply_profile(self, profile):
-        image = self.get_image()
-        # If there is image metadata associated that has cut levels
-        # then use those values if t_use_saved_cuts == True
-        ## if (self.t_['use_saved_cuts'] and (image is not None) and
-        ##     (image.get('cutlo', None) is not None)):
-        ##     loval, hival = image.get_list('cutlo', 'cuthi')
-        ##     self.logger.debug("setting cut levels from saved cuts lo=%f hi=%f" % (
-        ##         loval, hival))
-        ##     self.cut_levels(loval, hival, no_reset=True)
-        pass
+    ## def apply_profile(self, image, profile, redraw=False):
+
+    ##     self.logger.info("applying existing profile found in image")
+
+    ##     if profile.has_key('scale_x'):
+    ##         scale_x, scale_y = profile['scale_x'], profile['scale_y']
+    ##         self.scale_to(scale_x, scale_y, no_reset=True, redraw=False)
+
+    ##     if profile.has_key('pan_x'):
+    ##         pan_x, pan_y = profile['pan_x'], profile['pan_y']
+    ##         self.set_pan(pan_x, pan_y, no_reset=True, redraw=False)
+
+    ##     if profile.has_key('cutlo'):
+    ##         loval, hival = profile['cutlo'], profile['cuthi']
+    ##         self.cut_levels(loval, hival, no_reset=True, redraw=False)
+
+    ##     if redraw:
+    ##         self.redraw(whence=0)
 
     def copy_to_dst(self, target):
         """
@@ -1185,6 +1227,10 @@ class ImageViewBase(Callback.Callbacks):
         if (not no_reset) and (self.t_['autozoom'] in ('override', 'once')):
             self.t_.set(autozoom='off')
 
+        if self.t_['profile_use_scale']:
+            # Save scale with this image embedded profile
+            self.save_profile(scale_x=scale_x, scale_y=scale_y)
+
     def scale_cb(self, setting, value):
         scale_x, scale_y = self.t_['scale']
         self._scale_x = scale_x
@@ -1401,6 +1447,11 @@ class ImageViewBase(Callback.Callbacks):
         if (not no_reset) and (self.t_['autocenter'] in ('override', 'once')):
             self.t_.set(autocenter='off')
 
+        if self.t_['profile_use_pan']:
+            # Save pan position with this image embedded profile
+            self.save_profile(pan_x=pan_x, pan_y=pan_y)
+
+
     def pan_cb(self, setting, value):
         pan_x, pan_y = self.t_['pan']
         self._pan_x = pan_x
@@ -1492,8 +1543,9 @@ class ImageViewBase(Callback.Callbacks):
         if (not no_reset) and (self.t_['autocuts'] in ('once', 'override')):
             self.t_.set(autocuts='off')
 
-        # Save cut levels with this image embedded profile
-        self.save_profile(cutlo=loval, cuthi=hival)
+        if self.t_['profile_use_cuts']:
+            # Save cut levels with this image embedded profile
+            self.save_profile(cutlo=loval, cuthi=hival)
 
 
     def auto_levels(self, autocuts=None):
@@ -1606,6 +1658,10 @@ class ImageViewBase(Callback.Callbacks):
         with self.suppress_redraw:
             self.t_.set(flip_x=flip_x, flip_y=flip_y, swap_xy=swap_xy)
 
+        if self.t_['profile_use_transform']:
+            # Save transform with this image embedded profile
+            self.save_profile(flip_x=flip_x, flip_y=flip_y, swap_xy=swap_xy)
+
     def transform_cb(self, setting, value):
         self.make_callback('transform')
         # whence=0 because need to calculate new extents for proper
@@ -1667,6 +1723,10 @@ class ImageViewBase(Callback.Callbacks):
         transform
         """
         self.t_.set(rot_deg=deg)
+
+        if self.t_['profile_use_rotation']:
+            # Save rotation with this image embedded profile
+            self.save_profile(rot_deg=deg)
 
     def rotation_change_cb(self, setting, value):
         # whence=0 because need to calculate new extents for proper
@@ -1773,22 +1833,32 @@ class ImageViewBase(Callback.Callbacks):
         self.logger.warn("Subclass should override this abstract method!")
 
 
+## class SuppressRedraw(object):
+##     def __init__(self, viewer):
+##         self.viewer = viewer
+
+##     def __enter__(self):
+##         self.viewer._hold_redraw_cnt += 1
+##         return self
+
+##     def __exit__(self, exc_type, exc_val, exc_tb):
+##         self.viewer._hold_redraw_cnt -= 1
+
+##         if (self.viewer._hold_redraw_cnt <= 0):
+##             # TODO: whence should be largest possible
+##             # maybe self.viewer._defer_whence ??
+##             whence = 0
+##             self.viewer.redraw(whence=whence)
+##         return False
+
 class SuppressRedraw(object):
     def __init__(self, viewer):
         self.viewer = viewer
 
     def __enter__(self):
-        self.viewer._hold_redraw_cnt += 1
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.viewer._hold_redraw_cnt -= 1
-
-        if (self.viewer._hold_redraw_cnt <= 0):
-            # TODO: whence should be largest possible
-            # maybe self.viewer._defer_whence ??
-            whence = 0
-            self.viewer.redraw(whence=whence)
         return False
 
 # FOOTNOTES

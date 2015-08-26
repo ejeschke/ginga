@@ -436,7 +436,6 @@ class Preferences(GingaPlugin.LocalPlugin):
         b.follow_new.set_tooltip("View new images as they arrive")
         b.raise_new.set_tooltip("Raise and focus tab for new images")
         b.create_thumbnail.set_tooltip("Create thumbnail for new images")
-        b.num_images.set_tooltip("Maximum number of in memory images in channel (0==unlimited)")
 
         self.w.follow_new.set_state(True)
         self.w.follow_new.add_callback('activated', self.set_chprefs_cb)
@@ -444,8 +443,50 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.w.raise_new.add_callback('activated', self.set_chprefs_cb)
         self.w.create_thumbnail.set_state(True)
         self.w.create_thumbnail.add_callback('activated', self.set_chprefs_cb)
+
+        fr.set_widget(w)
+        vbox.add_widget(fr, stretch=0)
+
+        fr = Widgets.Expander("General")
+
+        captions = (('Num Images:', 'label', 'Num Images', 'entryset'),
+                    )
+        w, b = Widgets.build_info(captions, orientation=orientation)
+        self.w.update(b)
+
+        b.num_images.set_tooltip("Maximum number of in memory images in channel (0==unlimited)")
         self.w.num_images.set_text('0')
         self.w.num_images.add_callback('activated', self.set_buffer_cb)
+
+        fr.set_widget(w)
+        vbox.add_widget(fr, stretch=0)
+
+        fr = Widgets.Expander("Remember")
+
+        captions = (('Save Scale', 'checkbutton',
+                     'Save Pan', 'checkbutton'),
+                    ('Save Transform', 'checkbutton',
+                    'Save Rotation', 'checkbutton'),
+                    ('Save Cuts', 'checkbutton'),
+                    )
+        w, b = Widgets.build_info(captions, orientation=orientation)
+        self.w.update(b)
+
+        self.w.save_scale.set_state(self.t_.get('profile_use_scale', False))
+        self.w.save_scale.add_callback('activated', self.set_profile_cb)
+        self.w.save_scale.set_tooltip("Remember scale with image")
+        self.w.save_pan.set_state(self.t_.get('profile_use_pan', False))
+        self.w.save_pan.add_callback('activated', self.set_profile_cb)
+        self.w.save_pan.set_tooltip("Remember pan position with image")
+        self.w.save_transform.set_state(self.t_.get('profile_use_transform', False))
+        self.w.save_transform.add_callback('activated', self.set_profile_cb)
+        self.w.save_transform.set_tooltip("Remember transform with image")
+        self.w.save_rotation.set_state(self.t_.get('profile_use_rotation', False))
+        self.w.save_rotation.add_callback('activated', self.set_profile_cb)
+        self.w.save_rotation.set_tooltip("Remember rotation with image")
+        self.w.save_cuts.set_state(self.t_.get('profile_use_cuts', False))
+        self.w.save_cuts.add_callback('activated', self.set_profile_cb)
+        self.w.save_cuts.set_tooltip("Remember cut levels with image")
 
         fr.set_widget(w)
         vbox.add_widget(fr, stretch=0)
@@ -832,6 +873,17 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.t_.set(switchnew=switchnew, raisenew=raisenew,
                     genthumb=genthumb)
 
+    def set_profile_cb(self, *args):
+        save_scale = (self.w.save_scale.get_state() != 0)
+        save_pan = (self.w.save_pan.get_state() != 0)
+        save_cuts = (self.w.save_cuts.get_state() != 0)
+        save_transform = (self.w.save_transform.get_state() != 0)
+        save_rotation = (self.w.save_rotation.get_state() != 0)
+        self.t_.set(profile_use_scale=save_scale, profile_use_pan=save_pan,
+                    profile_use_cuts=save_cuts,
+                    profile_use_transform=save_transform,
+                    profile_use_rotation=save_rotation)
+
     def set_buffer_cb(self, *args):
         num_images = int(self.w.num_images.get_text())
         self.t_.set(numImages=num_images)
@@ -954,8 +1006,21 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.w.raise_new.set_state(prefs['raisenew'])
         prefs.setdefault('genthumb', True)
         self.w.create_thumbnail.set_state(prefs['genthumb'])
+
         num_images = prefs.get('numImages', 0)
         self.w.num_images.set_text(str(num_images))
+
+        # profile settings
+        prefs.setdefault('profile_use_scale', False)
+        self.w.save_scale.set_state(prefs['profile_use_scale'])
+        prefs.setdefault('profile_use_pan', False)
+        self.w.save_pan.set_state(prefs['profile_use_pan'])
+        prefs.setdefault('profile_use_cuts', False)
+        self.w.save_cuts.set_state(prefs['profile_use_cuts'])
+        prefs.setdefault('profile_use_transform', False)
+        self.w.save_transform.set_state(prefs['profile_use_transform'])
+        prefs.setdefault('profile_use_rotation', False)
+        self.w.save_rotation.set_state(prefs['profile_use_rotation'])
 
     def save_preferences(self):
         self.t_.save()
