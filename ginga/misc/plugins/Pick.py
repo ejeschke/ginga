@@ -156,7 +156,8 @@ class Pick(GingaPlugin.LocalPlugin):
 
         di = CanvasTypes.ImageViewCanvas(logger=self.logger)
         width, height = 200, 200
-        di.set_desired_size(width, height)
+        #di.set_desired_size(width, height)
+        di.configure(width, height)
         di.enable_autozoom('off')
         di.enable_autocuts('off')
         di.zoom_to(3)
@@ -230,8 +231,8 @@ class Pick(GingaPlugin.LocalPlugin):
             nb.add_widget(Widgets.wrap(canvas), title="Radial")
 
         vpaned.add_widget(Widgets.Label(''))
-        vbox.add_widget(vpaned, stretch=1)
-        ## vbox.add_widget(nb, stretch=1)
+        vbox.add_widget(vpaned, stretch=0)
+        #vbox.add_widget(nb, stretch=1)
 
         fr = Widgets.Frame("Pick")
 
@@ -563,10 +564,10 @@ class Pick(GingaPlugin.LocalPlugin):
 
         vbox.add_widget(hbox, stretch=0)
 
-        spacer = Widgets.Label('')
-        vbox.add_widget(spacer, stretch=1)
-
         vtop.add_widget(sw, stretch=1)
+
+        ## spacer = Widgets.Label('')
+        ## vtop.add_widget(spacer, stretch=0)
 
         btns = Widgets.HBox()
         btns.set_spacing(4)
