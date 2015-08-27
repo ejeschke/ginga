@@ -7,12 +7,18 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+import os.path
+from functools import reduce
+
 from ginga.qtw.QtHelp import QtGui, QtCore, QTextCursor, \
      QIcon, QPixmap, QImage
 from ginga.qtw import QtHelp
 
 from ginga.misc import Callback, Bunch
-from functools import reduce
+import ginga.icons
+
+# path to our icons
+icondir = os.path.split(ginga.icons.__file__)[0]
 
 class WidgetBase(Callback.Callbacks):
 
@@ -489,18 +495,28 @@ class Frame(ContainerBase):
 # See http://stackoverflow.com/questions/10364589/equivalent-of-gtks-expander-in-pyqt4
 #
 class Expander(ContainerBase):
+    r_arrow = None
+    d_arrow = None
+
     def __init__(self, title=''):
         super(Expander, self).__init__()
 
-        style = QtGui.QCommonStyle()
-        self.rightArrow = style.standardIcon(QtGui.QStyle.SP_ArrowRight)
-        self.downArrow = style.standardIcon(QtGui.QStyle.SP_ArrowDown)
+        # Qt doesn't seem to like it (segfault) if we actually construct
+        # these icons in the class variable declarations
+        if Expander.r_arrow is None:
+            Expander.r_arrow = QtHelp.get_icon(os.path.join(icondir,
+                                                            'triangle-right-48.png'),
+                                               size=(12, 12))
+        if Expander.d_arrow is None:
+            Expander.d_arrow = QtHelp.get_icon(os.path.join(icondir,
+                                                            'triangle-down-48.png'),
+                                               size=(12, 12))
 
         self.widget = QtGui.QWidget()
         vbox = QtGui.QVBoxLayout()
         vbox.setContentsMargins(0, 0, 0, 0)
 
-        self.toggle = QtGui.QPushButton(self.downArrow, title)
+        self.toggle = QtGui.QPushButton(Expander.r_arrow, title)
         #self.toggle.setCheckable(True)
         self.toggle.clicked.connect(self._toggle_widget)
 
@@ -519,10 +535,10 @@ class Expander(ContainerBase):
         child_w = child.get_widget()
         #if self.toggle.isChecked():
         if child_w.isVisible():
-            self.toggle.setIcon(self.rightArrow)
+            self.toggle.setIcon(Expander.r_arrow)
             child_w.setVisible(False)
         else:
-            self.toggle.setIcon(self.downArrow)
+            self.toggle.setIcon(Expander.d_arrow)
             child_w.setVisible(True)
 
 

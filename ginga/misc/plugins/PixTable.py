@@ -1,6 +1,6 @@
 #
 # PixTable.py -- Pixel Table plugin for fits viewer
-# 
+#
 # Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c) Eric R. Jeschke.  All rights reserved.
@@ -55,8 +55,17 @@ class PixTable(GingaPlugin.LocalPlugin):
         vbox.set_border_width(4)
         vbox.set_spacing(2)
 
+        self.msgFont = self.fv.getFont("sansFont", 12)
+        tw = Widgets.TextArea(wrap=True, editable=False)
+        tw.set_font(self.msgFont)
+        self.tw = tw
+
+        fr = Widgets.Expander("Instructions")
+        fr.set_widget(tw)
+        vbox.add_widget(fr, stretch=0)
+
         fr = Widgets.Frame("Pixel Values")
-        
+
         # Make the values table as a text widget
         msgFont = self.fv.getFont('fixedFont', 10)
         tw = Widgets.TextArea(wrap=False, editable=False)
@@ -104,7 +113,7 @@ class PixTable(GingaPlugin.LocalPlugin):
         btn1.add_callback('activated', lambda w: self.clear_mark_cb())
         btn1.set_tooltip("Delete selected mark")
         btns.add_widget(btn1, stretch=0)
-        
+
         btn2 = Widgets.Button("Delete All")
         btn2.add_callback('activated', lambda w: self.clear_all())
         btn2.set_tooltip("Clear all marks")
@@ -113,7 +122,7 @@ class PixTable(GingaPlugin.LocalPlugin):
 
         vbox2 = Widgets.VBox()
         vbox2.add_widget(btns, stretch=0)
-        
+
         btns = Widgets.HBox()
         btns.set_border_width(4)
         btns.set_spacing(4)
@@ -131,7 +140,7 @@ class PixTable(GingaPlugin.LocalPlugin):
 
         ## spacer = Widgets.Label('')
         ## vbox.add_widget(spacer, stretch=1)
-        
+
         top.add_widget(sw, stretch=1)
 
         btns = Widgets.HBox()
@@ -155,7 +164,7 @@ class PixTable(GingaPlugin.LocalPlugin):
             except:
                 # old object may have been deleted
                 pass
-            
+
         self.mark_selected = tag
         if tag is None:
             self.w.marks.show_text('None')
@@ -172,7 +181,7 @@ class PixTable(GingaPlugin.LocalPlugin):
         self.canvas.redraw(whence=3)
 
         self.redo()
-        
+
     def mark_select_cb(self, w, index):
         tag = self.marks[index]
         if index == 0:
@@ -181,7 +190,7 @@ class PixTable(GingaPlugin.LocalPlugin):
 
     def pan2mark_cb(self, w, val):
         self.pan2mark = val
-        
+
     def clear_mark_cb(self):
         tag = self.mark_selected
         if tag is None:
@@ -191,7 +200,7 @@ class PixTable(GingaPlugin.LocalPlugin):
         self.marks.remove(tag)
         self.w.marks.set_index(0)
         self.mark_selected = None
-        
+
     def clear_all(self):
         self.canvas.deleteAllObjects()
         for name in self.marks:
@@ -200,16 +209,16 @@ class PixTable(GingaPlugin.LocalPlugin):
         self.w.marks.append_text('None')
         self.w.marks.set_index(0)
         self.mark_selected = None
-        
+
     def plot(self, data, x1, y1, x2, y2, data_x, data_y, radius,
              maxv=9):
-        
+
         width, height = self.fitsimage.get_dims(data)
 
         maxval = numpy.nanmax(data)
         minval = numpy.nanmin(data)
         avgval = numpy.average(data)
-        
+
         maxdigits = 9
         sep = '  '
         # make format string for a row
@@ -235,13 +244,18 @@ class PixTable(GingaPlugin.LocalPlugin):
 
         # update the text widget
         self.tw.set_text('\n'.join(l))
-    
+
     def close(self):
         chname = self.fv.get_channelName(self.fitsimage)
         self.fv.stop_local_plugin(chname, str(self))
         return True
-        
+
+    def instructions(self):
+        self.tw.set_text("""Move cursor around to see surrounding pixel values.
+""")
+
     def start(self):
+        self.instructions()
         # insert layer if it is not already
         try:
             obj = self.fitsimage.getObjectByTag(self.layertag)
@@ -259,7 +273,7 @@ class PixTable(GingaPlugin.LocalPlugin):
         except:
             pass
         self.tw = None
-        
+
     def pause(self):
         self.canvas.ui_setActive(False)
 
@@ -269,7 +283,7 @@ class PixTable(GingaPlugin.LocalPlugin):
 
         self.canvas.ui_setActive(True)
         self.redo()
-        
+
     def redo(self):
         if self.tw is None:
             return
@@ -283,7 +297,7 @@ class PixTable(GingaPlugin.LocalPlugin):
     def set_cutout_size(self, w, val):
         index = w.get_index()
         self.pixtbl_radius = self.sizes[index]
-        
+
     def motion_cb(self, canvas, event, data_x, data_y):
         if self.mark_selected is not None:
             return False
@@ -292,7 +306,7 @@ class PixTable(GingaPlugin.LocalPlugin):
         self.lastx, self.lasty = data_x, data_y
         self.redo()
         return False
-        
+
     def btndown_cb(self, canvas, event, data_x, data_y):
         self.add_mark(data_x, data_y)
         return True
@@ -318,10 +332,9 @@ class PixTable(GingaPlugin.LocalPlugin):
         self.marks.append(tag)
         self.w.marks.append_text(tag)
         self.select_mark(tag, pan=False)
-        
-        
+
+
     def __str__(self):
         return 'pixtable'
-    
+
 #END
-        

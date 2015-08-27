@@ -149,10 +149,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         self.tw = tw
 
         fr = Widgets.Expander("Instructions")
-        vbox2 = Widgets.VBox()
-        vbox2.add_widget(tw)
-        vbox2.add_widget(Widgets.Label(''), stretch=1)
-        fr.set_widget(vbox2)
+        fr.set_widget(tw)
         vbox.add_widget(fr, stretch=0)
 
         self.plot = Plot.Cuts(self.logger, width=2, height=3, dpi=100)

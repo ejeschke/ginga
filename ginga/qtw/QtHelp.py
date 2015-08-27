@@ -1155,4 +1155,14 @@ def get_scroll_info(event):
 
     return (numDegrees, direction)
 
+def get_icon(iconpath, size=None):
+    image = QImage(iconpath)
+    if size is not None:
+        qsize = QtCore.QSize(*size)
+        image = image.scaled(qsize)
+    pixmap = QPixmap.fromImage(image)
+    iconw = QIcon(pixmap)
+    return iconw
+
+
 #END

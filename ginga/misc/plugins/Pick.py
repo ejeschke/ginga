@@ -136,6 +136,15 @@ class Pick(GingaPlugin.LocalPlugin):
         vbox.set_border_width(4)
         vbox.set_spacing(2)
 
+        self.msgFont = self.fv.getFont("sansFont", 12)
+        tw = Widgets.TextArea(wrap=True, editable=False)
+        tw.set_font(self.msgFont)
+        self.tw = tw
+
+        fr = Widgets.Expander("Instructions")
+        fr.set_widget(tw)
+        vbox.add_widget(fr, stretch=0)
+
         vpaned = Widgets.Splitter(orientation=orientation)
 
         nb = Widgets.TabWidget(tabpos='bottom')
@@ -219,18 +228,6 @@ class Pick(GingaPlugin.LocalPlugin):
             #self.w.fig3.tight_layout()
             canvas = self.w.canvas3
             nb.add_widget(Widgets.wrap(canvas), title="Radial")
-
-        ## self.msgFont = self.fv.getFont("sansFont", 12)
-        ## tw = Widgets.TextArea(wrap=True, editable=False)
-        ## tw.set_font(self.msgFont)
-        ## self.tw = tw
-
-        ## fr = Widgets.Frame("Instructions")
-        ## vbox2 = Widgets.VBox()
-        ## vbox2.add_widget(tw)
-        ## vbox2.add_widget(Widgets.Label(''), stretch=1)
-        ## fr.set_widget(vbox2)
-        ## vbox.add_widget(fr, stretch=0)
 
         vpaned.add_widget(Widgets.Label(''))
         vbox.add_widget(vpaned, stretch=1)
@@ -511,7 +508,6 @@ class Pick(GingaPlugin.LocalPlugin):
         btns.add_widget(btn)
         btns.add_widget(Widgets.Label("File:"))
         ent = Widgets.TextEntry()
-        ent.set_length(512)
         ent.set_text(self.report_log)
         ent.add_callback('activated', self.set_report_log_cb)
         btns.add_widget(ent, stretch=1)
@@ -607,9 +603,9 @@ class Pick(GingaPlugin.LocalPlugin):
         self.open_report_log()
         return True
 
-    ## def instructions(self):
-    ##     self.tw.set_text("""Left-click to place region.  Left-drag to position region.  Redraw region with the right mouse button.""")
-    ##     self.tw.set_font(self.msgFont)
+    def instructions(self):
+        self.tw.set_text("""Left-click to place region.  Left-drag to position region.  Redraw region with the right mouse button.""")
+        self.tw.set_font(self.msgFont)
 
     def update_status(self, text):
         self.fv.gui_do(self.w.eval_status.set_text, text)
@@ -919,7 +915,7 @@ class Pick(GingaPlugin.LocalPlugin):
         return True
 
     def start(self):
-        #self.instructions()
+        self.instructions()
         self.open_report_log()
 
         # insert layer if it is not already

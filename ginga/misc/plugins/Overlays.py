@@ -1,6 +1,6 @@
 #
 # Overlays.py -- Overlays plugin for Ginga FITS viewer
-# 
+#
 # Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c)  Eric R. Jeschke.  All rights reserved.
@@ -52,13 +52,10 @@ class Overlays(GingaPlugin.LocalPlugin):
         tw.set_font(self.msgFont)
         self.tw = tw
 
-        fr = Widgets.Frame("Instructions")
-        vbox2 = Widgets.VBox()
-        vbox2.add_widget(tw)
-        vbox2.add_widget(Widgets.Label(''), stretch=1)
-        fr.set_widget(vbox2)
+        fr = Widgets.Expander("Instructions")
+        fr.set_widget(tw)
         vbox.add_widget(fr, stretch=0)
-        
+
         fr = Widgets.Frame("Limits")
 
         captions = (('Opacity:', 'label', 'Opacity', 'spinfloat'),
@@ -74,7 +71,7 @@ class Overlays(GingaPlugin.LocalPlugin):
         b.opacity.set_limits(0.0, 1.0, incr_value=0.1)
         b.opacity.set_value(self.opacity)
         b.opacity.add_callback('value-changed', lambda *args: self.redo())
-        
+
         combobox = b.hi_color
         for name in self.colornames:
             combobox.append_text(name)
@@ -106,9 +103,9 @@ class Overlays(GingaPlugin.LocalPlugin):
 
         spacer = Widgets.Label('')
         vbox.add_widget(spacer, stretch=1)
-        
+
         top.add_widget(sw, stretch=1)
-        
+
         btns = Widgets.HBox()
         btns.set_spacing(3)
 
@@ -124,10 +121,10 @@ class Overlays(GingaPlugin.LocalPlugin):
         chname = self.fv.get_channelName(self.fitsimage)
         self.fv.stop_local_plugin(chname, str(self))
         return True
-        
+
     def instructions(self):
         self.tw.set_text("""Enter a limit for saturation.""")
-            
+
     def start(self):
         self.instructions()
         # start ruler drawing operation
@@ -144,11 +141,11 @@ class Overlays(GingaPlugin.LocalPlugin):
 
     def pause(self):
         self.canvas.ui_setActive(False)
-        
+
     def resume(self):
         #self.canvas.ui_setActive(True)
         self.fv.showStatus("Enter a value for saturation limit")
-        
+
     def stop(self):
         # remove the canvas from the image
         try:
@@ -157,7 +154,7 @@ class Overlays(GingaPlugin.LocalPlugin):
             pass
         #self.canvas.ui_setActive(False)
         self.fv.showStatus("")
-        
+
     def redo(self):
         hi_value_s = self.w.hi_value.get_text().strip()
         if len(hi_value_s) > 0:
@@ -181,13 +178,13 @@ class Overlays(GingaPlugin.LocalPlugin):
             rh, gh, bh = colors.lookup_color(self.hi_color)
         except KeyError:
             self.fv.show_error("No such color found: '%s'" % (self.hi_color))
-        
+
         self.lo_color = self.colornames[self.w.lo_color.get_index()]
         try:
             rl, gl, bl = colors.lookup_color(self.lo_color)
         except KeyError:
             self.fv.show_error("No such color found: '%s'" % (self.lo_color))
-        
+
         image = self.fitsimage.get_image()
         if image is None:
             return
@@ -227,7 +224,7 @@ class Overlays(GingaPlugin.LocalPlugin):
                 ac[idx] = int(self.opacity * 255)
         except Exception as e:
             self.logger.error("Error setting alpha channel: %s" % (str(e)))
-            
+
         if self.canvas_img is None:
             self.logger.debug("Adding image to canvas")
             self.canvas_img = CanvasTypes.Image(0, 0, self.rgbobj)
@@ -235,7 +232,7 @@ class Overlays(GingaPlugin.LocalPlugin):
         else:
             self.logger.debug("Updating canvas image")
             self.canvas_img.set_image(self.rgbobj)
-            
+
         self.logger.debug("redrawing canvas")
         self.fitsimage.redraw(whence=2)
 
@@ -247,5 +244,5 @@ class Overlays(GingaPlugin.LocalPlugin):
 
     def __str__(self):
         return 'overlays'
-    
+
 #END

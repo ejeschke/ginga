@@ -64,11 +64,8 @@ class Drawing(GingaPlugin.LocalPlugin):
         tw.set_font(msgFont)
         self.tw = tw
 
-        fr = Widgets.Frame("Instructions")
-        vbox2 = Widgets.VBox()
-        vbox2.add_widget(tw)
-        vbox2.add_widget(Widgets.Label(''), stretch=1)
-        fr.set_widget(vbox2)
+        fr = Widgets.Expander("Instructions")
+        fr.set_widget(tw)
         vbox.add_widget(fr, stretch=0)
 
         fr = Widgets.Frame("Drawing")
