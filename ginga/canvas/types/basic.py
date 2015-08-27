@@ -158,7 +158,7 @@ class PolygonMixin(object):
         # See: http://alienryderflex.com/polygon/
         xa, ya = x_arr, y_arr
 
-        result = numpy.empty(ya.shape, dtype=numpy.bool)
+        result = numpy.empty((ya.size, xa.size), dtype=numpy.bool)
         result.fill(False)
 
         xj, yj = self.crdmap.to_data(*self.points[-1])
