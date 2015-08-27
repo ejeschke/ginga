@@ -8,6 +8,7 @@
 # Please see the file LICENSE.txt for details.
 #
 import math
+import warnings
 import numpy
 # for BezierCurve
 from collections import OrderedDict
@@ -170,7 +171,10 @@ class PolygonMixin(object):
                 numpy.logical_or(xi <= xa, xj <= xa))
             # TODO: get a divide by zero here for some elements whose tf=False
             # Need to figure out a way to conditionally do those w/tf=True
-            cross = (xi + (ya - yi).astype(numpy.float)/(yj - yi)*(xj - xi)) < xa
+            with warnings.catch_warnings():
+                warnings.simplefilter('ignore', RuntimeWarning)
+                cross = ((xi + (ya - yi).astype(numpy.float) /
+                          (yj - yi) * (xj - xi)) < xa)
             result[tf == True] ^= cross[tf == True]
             xj, yj = xi, yi
 
