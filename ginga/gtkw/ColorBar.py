@@ -93,7 +93,7 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
         self.rgbmap.set_imap(im)
         self.redraw()
 
-    def set_range(self, loval, hival, redraw=True):
+    def set_range(self, loval, hival):
         self.loval = float(loval)
         self.hival = float(hival)
         # Calculate reasonable spacing for range numbers
@@ -107,7 +107,7 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
         except Exception as e:
             self.logger.error("Error getting text extents: %s" % (
                 str(e)))
-        if self.t_showrange and redraw:
+        if self.t_showrange:
             self.redraw()
 
     def configure_event(self, widget, event):

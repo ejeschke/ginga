@@ -309,8 +309,7 @@ class GingaView(QtMain.QtMain):
         fitsimage.copy_attributes(fi,
                                   [#'transforms',
                                    #'cutlevels',
-                                   'rgbmap'],
-                                  redraw=False)
+                                   'rgbmap'])
 
         root.showFullScreen()
         self.w.fscreen = root

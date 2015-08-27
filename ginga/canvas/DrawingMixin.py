@@ -218,7 +218,7 @@ class DrawingMixin(object):
         obj, self._draw_obj = self._draw_obj, None
 
         if obj:
-            objtag = self.add(obj, redraw=True)
+            objtag = self.add(obj)
             self.make_callback('draw-event', objtag)
 
             if self.edit_follows_draw:

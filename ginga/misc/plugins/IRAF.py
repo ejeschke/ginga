@@ -11,7 +11,7 @@ Set the environment variable IMTDEV appropriately, e.g.
     $ export IMTDEV=unix:/tmp/.imtg45
 
 Ginga will try to use the default value if none is assigned.
-    
+
 Start IRAF plugin (Plugins->Start IRAF).
 
 From Ginga you can load images and then use 'imexamine' from IRAF to load
@@ -65,18 +65,18 @@ class IRAF(GingaPlugin.GlobalPlugin):
         self.canvas = None
 
         self.addr = iis.get_interface()
-        
+
         self.ev_quit = self.fv.ev_quit
         self.dataTask = None
 
         # Holds frame buffers
         self.fb = {}
         self.current_frame = 0
-        
+
         # cursor position
         self.cursor_x = 1.0
         self.cursor_y = 1.0
-        
+
         self.mode = 'ginga'
         self.imexam_active = False
         self.imexam_chname = None
@@ -120,7 +120,7 @@ class IRAF(GingaPlugin.GlobalPlugin):
         b.addr.set_text(addr)
         b.restart.set_tooltip("Restart the server")
         b.restart.add_callback('activated', self.restart_cb)
-        
+
         b.set_addr.set_length(100)
         b.addr.set_text(addr)
         b.set_addr.set_tooltip("Set address to run remote control server")
@@ -183,11 +183,11 @@ class IRAF(GingaPlugin.GlobalPlugin):
         self.w.channel.set_text(chname)
 
         self.switchMode(modeStr)
-        
+
     def setMode(self, modeStr, chname):
         self.imexam_chname = chname
         self.fv.gui_do(self._setMode, modeStr, chname)
-        
+
     def toggleMode(self):
         isIRAF = self.w.mode_d['iraf'].get_state()
         chname = self.imexam_chname
@@ -210,7 +210,7 @@ class IRAF(GingaPlugin.GlobalPlugin):
                     found = n
             fb = self.init_frame(found)
             fb.chname = chinfo.name
-            
+
         fmap = self.get_channel_frame_mapping()
         self.fv.gui_do(self.update_chinfo, fmap)
 
@@ -243,7 +243,7 @@ class IRAF(GingaPlugin.GlobalPlugin):
                 os.remove(self.addr.path)
         except:
             pass
-        
+
         # start the data listener task, if appropriate
         ev_quit = threading.Event()
         self.dataTask = iis.IIS_DataListener(
@@ -278,7 +278,7 @@ class IRAF(GingaPlugin.GlobalPlugin):
     def get_channel_frame_mapping(self):
         l = [ (fb.chname, n+1) for n, fb in self.fb.items() ]
         return l
-    
+
     def new_image_cb(self, fitsimage, image, chinfo):
         if not self.gui_up:
             return
@@ -289,7 +289,7 @@ class IRAF(GingaPlugin.GlobalPlugin):
             # This image was sent by IRAF--we don't need to
             # construct extra fb information for it
             return
-        
+
         n = self.channel_to_frame(chinfo.name)
         if n is None:
             return
@@ -311,7 +311,7 @@ class IRAF(GingaPlugin.GlobalPlugin):
         #print "filling wcs info"
         fb.ct = iis.coord_tran()
         image.set(ct=ct)
-        
+
         # iis version 1 data
         fb.ct.valid = 1
         fb.ct.a = 1
@@ -325,7 +325,7 @@ class IRAF(GingaPlugin.GlobalPlugin):
         fb.ct.zt = iis.W_UNITARY
         fb.ct.format = ''
         fb.ct.imtitle = ''
-        
+
         # iis version 1+ data
         fb.ct.region = 'image'
         #x1, y1, x2, y2 = fitsimage.get_datarect()
@@ -337,7 +337,7 @@ class IRAF(GingaPlugin.GlobalPlugin):
         fb.ct.snx, fb.ct.sny = wd, ht
         fb.ct.dx, fb.ct.dy = 1, 1
         fb.ct.dnx, fb.ct.dny = wd, ht
-        
+
         # ref
         newref = "!".join([newhost, newpath])
         fb.ct.ref = newref
@@ -351,13 +351,13 @@ class IRAF(GingaPlugin.GlobalPlugin):
             wcs = "[NOSUCHWCS]\n"
         if (fb and fb.ct.sx is not None):
             mapping = "%s %f %f %d %d %d %d %d %d\n%s\n" % (
-                fb.ct.region, fb.ct.sx, fb.ct.sy, fb.ct.snx, fb.ct.sny, 
+                fb.ct.region, fb.ct.sx, fb.ct.sy, fb.ct.snx, fb.ct.sny,
                 fb.ct.dx, fb.ct.dy, fb.ct.dnx, fb.ct.dny, fb.ct.ref)
         else:
             mapping = ""
         fb.wcs = wcs + mapping
         self.logger.debug("filled wcs info")
-        
+
 
     # ------ BEGIN (methods called by IIS server) ----------------
     def init_frame(self, n):
@@ -382,7 +382,7 @@ class IRAF(GingaPlugin.GlobalPlugin):
         fb.ct = iis.coord_tran()
         #fb.chname = None
         return fb
-    
+
     def get_frame(self, n):
         """
         NOTE: this is called from the IISRequestHandler
@@ -400,10 +400,10 @@ class IRAF(GingaPlugin.GlobalPlugin):
         """
         NOTE: this is called from the IISRequestHandler
         """
-        
+
         fb = self.get_frame(frame)
         self.current_frame = frame
-        
+
         if reverse:
             fb.buffer.reverse()
 
@@ -412,7 +412,7 @@ class IRAF(GingaPlugin.GlobalPlugin):
         if chname is None:
             chname = 'Frame%d' % (frame+1)
             fb.chname = chname
-            
+
         self.logger.debug("display to %s" %(chname))
 
         try:
@@ -444,7 +444,7 @@ class IRAF(GingaPlugin.GlobalPlugin):
 
             image.set(name=fitsname, path=path, host=host)
             #image.update_keywords(header)
-        
+
         except Exception as e:
             # Some kind of error unpacking the data
             errmsg = "Error creating image data for '%s': %s" % (
@@ -476,12 +476,12 @@ class IRAF(GingaPlugin.GlobalPlugin):
                               swap_xy=False, rot_deg=0.0), callback=True)
 
         # Set cut levels
-        fitsimage.cut_levels(0.0, 255.0, no_reset=True, redraw=False)
+        fitsimage.cut_levels(0.0, 255.0, no_reset=True)
 
         # Enqueue image to display datasrc
         self.fv.add_image(fitsname, image, chname=chname)
         self.fv.ds.raise_tab('IRAF')
-        
+
     def get_cursor(self):
         self.logger.info("get_cursor() called")
         chinfo = self.fv.get_channelInfo()
@@ -509,7 +509,7 @@ class IRAF(GingaPlugin.GlobalPlugin):
         image = fitsimage.get_image()
 
         self.start_imexamine(fitsimage, chinfo.name)
-        
+
         self.keyevent.wait()
         evt = self.keyqueue.get()
 
@@ -520,7 +520,7 @@ class IRAF(GingaPlugin.GlobalPlugin):
 
     def set_cursor(self, x, y):
         self.logger.info("TODO: set_cursor() called")
-    
+
     # ------ END (methods called by IIS server) ----------------
 
     def ui_disable(self, fitsimage):
@@ -545,10 +545,9 @@ class IRAF(GingaPlugin.GlobalPlugin):
 
         except KeyError:
             # Add canvas layer
-            fitsimage.add(self.canvas, tag=self.layertag,
-                          redraw=False)
+            fitsimage.add(self.canvas, tag=self.layertag)
         self.canvas.ui_setActive(True)
-        
+
         self.imexam_active = True
         self.setMode('IRAF', chname)
         self.fv.gui_do(self.fv.ds.raise_tab, 'IRAF')
@@ -602,7 +601,7 @@ class IRAF(GingaPlugin.GlobalPlugin):
 
         # add framebuffer information if it is not there already
         self.new_image_cb(fitsimage, image, chinfo)
-        
+
         self.keyqueue.put(Bunch.Bunch(x=last_x, y=last_y, key=keyname,
                                       frame=frame))
         self.keyevent.set()
@@ -638,7 +637,7 @@ class IRAF(GingaPlugin.GlobalPlugin):
     def __str__(self):
         return 'iraf'
 
-    
+
 class IRAF_AstroImage(AstroImage.AstroImage):
 
     def info_xy(self, data_x, data_y, settings):
@@ -669,7 +668,7 @@ class IRAF_AstroImage(AstroImage.AstroImage):
             #ra_txt, dec_txt = self.wcs.deg2fmt(ra_deg, dec_deg, 'str')
             ra_txt  = 'BAD WCS'
             dec_txt = 'BAD WCS'
-            
+
         except Exception as e:
             self.logger.warn("Bad coordinate conversion: %s" % (
                 str(e)))

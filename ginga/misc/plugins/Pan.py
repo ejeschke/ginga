@@ -80,7 +80,7 @@ class Pan(GingaPlugin.GlobalPlugin):
         # pan image
         fitsimage = chinfo.fitsimage
         rgbmap = fitsimage.get_rgbmap()
-        panimage.set_rgbmap(rgbmap, redraw=False)
+        panimage.set_rgbmap(rgbmap)
         rgbmap.add_callback('changed', self.rgbmap_cb, panimage)
 
         fitsimage.copy_attributes(panimage, ['cutlevels'])
@@ -131,7 +131,7 @@ class Pan(GingaPlugin.GlobalPlugin):
 
     def new_image_cb(self, fitsimage, image, chinfo, paninfo):
         loval, hival = fitsimage.get_cut_levels()
-        paninfo.panimage.cut_levels(loval, hival, redraw=False)
+        paninfo.panimage.cut_levels(loval, hival)
 
         # add cb to image so that if it is modified we can update info
         image.add_callback('modified', self.image_update_cb, fitsimage,
@@ -176,7 +176,7 @@ class Pan(GingaPlugin.GlobalPlugin):
 
     def zoom_cb(self, setting, value, fitsimage, chinfo, paninfo):
         # refit the pan image, because scale factors may have changed
-        paninfo.panimage.zoom_fit(redraw=True)
+        paninfo.panimage.zoom_fit()
         # redraw pan info
         self.panset(fitsimage, chinfo, paninfo)
         return True
@@ -194,8 +194,7 @@ class Pan(GingaPlugin.GlobalPlugin):
 
         # remove old compass
         try:
-            paninfo.panimage.deleteObjectByTag(paninfo.pancompass,
-                                               redraw=False)
+            paninfo.panimage.deleteObjectByTag(paninfo.pancompass)
         except Exception:
             pass
 
@@ -212,7 +211,7 @@ class Pan(GingaPlugin.GlobalPlugin):
 
                 paninfo.pancompass = paninfo.panimage.add(CanvasTypes.Compass(
                     x, y, radius, color='skyblue',
-                    fontsize=14), redraw=True)
+                    fontsize=14))
             except Exception as e:
                 self.logger.warn("Can't calculate compass: %s" % (
                     str(e)))
@@ -304,7 +303,7 @@ class Pan(GingaPlugin.GlobalPlugin):
     def draw_cb(self, fitsimage, tag):
         # Get and delete the drawn object
         obj = fitsimage.getObjectByTag(tag)
-        fitsimage.deleteObjectByTag(tag, redraw=True)
+        fitsimage.deleteObjectByTag(tag)
 
         # determine center of drawn rectangle and set pan position
         if obj.kind != 'rectangle':
@@ -313,7 +312,7 @@ class Pan(GingaPlugin.GlobalPlugin):
         yc = (obj.y1 + obj.y2) / 2.0
         fitsimage = self.fv.getfocus_fitsimage()
         # note: fitsimage <-- referring to large non-pan image
-        fitsimage.panset_xy(xc, yc, redraw=False)
+        fitsimage.panset_xy(xc, yc)
 
         # Determine appropriate zoom level to fit this rect
         wd = obj.x2 - obj.x1
@@ -330,7 +329,7 @@ class Pan(GingaPlugin.GlobalPlugin):
             zoomlevel = max(1, int(math.floor(scale)))
         self.logger.debug("zoomlevel=%d" % (zoomlevel))
 
-        fitsimage.zoom_to(zoomlevel, redraw=True)
+        fitsimage.zoom_to(zoomlevel)
         return True
 
 

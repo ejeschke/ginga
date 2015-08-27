@@ -110,7 +110,7 @@ class ImageViewTk(ImageView):
             return
         self.tkcanvas.config(cursor=cursor)
 
-    def onscreen_message(self, text, delay=None, redraw=True):
+    def onscreen_message(self, text, delay=None):
         if self.tkcanvas is None:
             return
         if self.msgtask:
@@ -119,8 +119,7 @@ class ImageViewTk(ImageView):
             except:
                 pass
         self.message = text
-        if redraw:
-            self.redraw(whence=3)
+        self.redraw(whence=3)
         if delay:
             ms = int(delay * 1000.0)
             self.msgtask = self.tkcanvas.after(ms,

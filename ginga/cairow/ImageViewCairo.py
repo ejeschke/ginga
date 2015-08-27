@@ -30,8 +30,6 @@ class ImageViewCairo(ImageView.ImageViewBase):
 
         self.surface = None
         self.dst_surface = None
-        self.img_fg = None
-        self.set_fg(1.0, 1.0, 1.0, redraw=False)
 
         if sys.byteorder == 'little':
             self._rgb_order = 'BGRA'
@@ -47,6 +45,7 @@ class ImageViewCairo(ImageView.ImageViewBase):
 
         self.t_.setDefaults(show_pan_position=False,
                             onscreen_ff='Sans Serif')
+
 
     def _render_offscreen(self, surface, data, dst_x, dst_y,
                           width, height):
@@ -149,7 +148,7 @@ class ImageViewCairo(ImageView.ImageViewBase):
                                                      cairo.FORMAT_ARGB32,
                                                      width, height, stride)
         self.surface = surface
-        self.set_window_size(width, height, redraw=True)
+        self.set_window_size(width, height)
 
     def save_image_as_surface(self, surface):
         try:
@@ -198,18 +197,12 @@ class ImageViewCairo(ImageView.ImageViewBase):
     def get_rgb_order(self):
         return self._rgb_order
 
-    def set_fg(self, r, g, b, redraw=True):
-        self.img_fg = (r, g, b)
-        if redraw:
-            self.redraw(whence=3)
-
-    def onscreen_message(self, text, delay=None, redraw=True):
+    def onscreen_message(self, text, delay=None):
         pass
 
-    def show_pan_mark(self, tf, redraw=True):
+    def show_pan_mark(self, tf):
         self.t_.set(show_pan_position=tf)
-        if redraw:
-            self.redraw(whence=3)
+        self.redraw(whence=3)
 
     def pix2canvas(self, x, y):
         x, y = self.cr.device_to_user(x, y)

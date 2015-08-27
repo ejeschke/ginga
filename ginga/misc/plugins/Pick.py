@@ -159,12 +159,12 @@ class Pick(GingaPlugin.LocalPlugin):
         di.set_desired_size(width, height)
         di.enable_autozoom('off')
         di.enable_autocuts('off')
-        di.zoom_to(3, redraw=False)
+        di.zoom_to(3)
         settings = di.get_settings()
         settings.getSetting('zoomlevel').add_callback('set',
                                self.zoomset, di)
-        di.set_cmap(cm, redraw=False)
-        di.set_imap(im, redraw=False)
+        di.set_cmap(cm)
+        di.set_imap(im)
         di.set_callback('none-move', self.detailxy)
         di.set_bg(0.4, 0.4, 0.4)
         # for debugging
@@ -231,6 +231,7 @@ class Pick(GingaPlugin.LocalPlugin):
 
         vpaned.add_widget(Widgets.Label(''))
         vbox.add_widget(vpaned, stretch=1)
+        ## vbox.add_widget(nb, stretch=1)
 
         fr = Widgets.Frame("Pick")
 
@@ -562,8 +563,9 @@ class Pick(GingaPlugin.LocalPlugin):
 
         vbox.add_widget(hbox, stretch=0)
 
-        ## spacer = Widgets.Label('')
-        ## vbox.add_widget(spacer, stretch=1)
+        spacer = Widgets.Label('')
+        vbox.add_widget(spacer, stretch=1)
+
         vtop.add_widget(sw, stretch=1)
 
         btns = Widgets.HBox()
@@ -622,7 +624,7 @@ class Pick(GingaPlugin.LocalPlugin):
         if not self.show_candidates:
             # Delete previous peak marks
             objs = self.fitsimage.getObjectsByTagpfx('peak')
-            self.fitsimage.deleteObjects(objs, redraw=True)
+            self.fitsimage.deleteObjects(objs)
 
     def coordinate_base_cb(self, w):
         self.pixel_coords_offset = float(w.get_text())
@@ -941,7 +943,7 @@ class Pick(GingaPlugin.LocalPlugin):
     def stop(self):
         # Delete previous peak marks
         objs = self.fitsimage.getObjectsByTagpfx('peak')
-        self.fitsimage.deleteObjects(objs, redraw=False)
+        self.fitsimage.deleteObjects(objs)
 
         # close pick log, if any
         self.close_report_log()
@@ -965,13 +967,12 @@ class Pick(GingaPlugin.LocalPlugin):
         point = fig.objects[1]
         text = fig.objects[2]
         data_x, data_y = point.x, point.y
-        #self.fitsimage.panset_xy(data_x, data_y, redraw=False)
+        #self.fitsimage.panset_xy(data_x, data_y)
 
         # set the pick image to have the same cut levels and transforms
         self.fitsimage.copy_attributes(self.pickimage,
                                        ['transforms', 'cutlevels',
-                                        'rgbmap'],
-                                       redraw=False)
+                                        'rgbmap'])
 
         try:
             image = self.fitsimage.get_image()
@@ -1023,7 +1024,7 @@ class Pick(GingaPlugin.LocalPlugin):
 
             # Delete previous peak marks
             objs = self.fitsimage.getObjectsByTagpfx('peak')
-            self.fitsimage.deleteObjects(objs, redraw=True)
+            self.fitsimage.deleteObjects(objs)
 
             # Offload this task to another thread so that GUI remains
             # responsive
@@ -1165,7 +1166,7 @@ class Pick(GingaPlugin.LocalPlugin):
                                                            5,
                                                            linewidth=1,
                                                            color=self.candidate_color),
-                                             tagpfx='peak', redraw=False)
+                                             tagpfx='peak')
 
             # Add back in offsets into image to get correct values with respect
             # to the entire image
@@ -1211,11 +1212,11 @@ class Pick(GingaPlugin.LocalPlugin):
             self.pickcenter.y = j1
             self.pickcenter.color = 'cyan'
             self.pick_qs = qs
-            self.pickimage.panset_xy(i1, j1, redraw=True)
+            self.pickimage.panset_xy(i1, j1)
 
             # Mark object center on image
             point.color = 'cyan'
-            #self.fitsimage.panset_xy(obj_x, obj_y, redraw=False)
+            #self.fitsimage.panset_xy(obj_x, obj_y)
 
             self.update_status("Done")
             self.plot_panx = float(i1) / wd
@@ -1272,7 +1273,7 @@ class Pick(GingaPlugin.LocalPlugin):
 
         # Mark center of object and region on main image
         try:
-            self.canvas.deleteObjectByTag(self.picktag, redraw=False)
+            self.canvas.deleteObjectByTag(self.picktag)
         except:
             pass
 
@@ -1310,14 +1311,13 @@ class Pick(GingaPlugin.LocalPlugin):
         if (not obj) or (obj.kind == 'compound'):
             # Replace compound image with rectangle
             try:
-                self.canvas.deleteObjectByTag(self.picktag, redraw=False)
+                self.canvas.deleteObjectByTag(self.picktag)
             except:
                 pass
 
             tag = self.canvas.add(self.dc.Rectangle(x1, y1, x2, y2,
                                                     color='cyan',
-                                                    linestyle='dash'),
-                                  redraw=False)
+                                                    linestyle='dash'))
         else:
             # Update current rectangle with new coords
             bbox.x1, bbox.y1, bbox.x2, bbox.y2 = x1, y1, x2, y2
@@ -1354,7 +1354,7 @@ class Pick(GingaPlugin.LocalPlugin):
         if (not obj) or (obj.kind == 'compound'):
             # Replace compound image with rectangle
             try:
-                self.canvas.deleteObjectByTag(self.picktag, redraw=False)
+                self.canvas.deleteObjectByTag(self.picktag)
             except:
                 pass
 
@@ -1372,11 +1372,11 @@ class Pick(GingaPlugin.LocalPlugin):
         obj = canvas.getObjectByTag(tag)
         if obj.kind != 'rectangle':
             return True
-        canvas.deleteObjectByTag(tag, redraw=False)
+        canvas.deleteObjectByTag(tag)
 
         if self.picktag:
             try:
-                canvas.deleteObjectByTag(self.picktag, redraw=False)
+                canvas.deleteObjectByTag(self.picktag)
             except:
                 pass
 
@@ -1390,8 +1390,7 @@ class Pick(GingaPlugin.LocalPlugin):
                               color=self.pickcolor),
             self.dc.Point(x, y, 10, color='red'),
             self.dc.Text(x1, y2+4, "Pick: calc",
-                         color=self.pickcolor)),
-                         redraw=False)
+                         color=self.pickcolor)))
         self.picktag = tag
 
         #self.fv.raise_tab("detail")
@@ -1505,11 +1504,11 @@ class Pick(GingaPlugin.LocalPlugin):
 
             return self.fv.showxy(self.fitsimage, data_x, data_y)
 
-    def cutdetail(self, srcimage, dstimage, x1, y1, x2, y2, redraw=True):
+    def cutdetail(self, srcimage, dstimage, x1, y1, x2, y2):
         image = srcimage.get_image()
         data, x1, y1, x2, y2 = image.cutout_adjust(x1, y1, x2, y2)
 
-        dstimage.set_data(data, redraw=redraw)
+        dstimage.set_data(data)
 
         return (x1, y1, x2, y2, data)
 

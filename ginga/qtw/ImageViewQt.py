@@ -142,9 +142,6 @@ class ImageViewQt(ImageView.ImageViewBase):
         self.msgtimer.timeout.connect(self.onscreen_message_off)
         self.msgfont = QFont(self.t_['onscreen_ff'],
                                    pointSize=24)
-        self.set_bg(0.5, 0.5, 0.5, redraw=False)
-        self.set_fg(1.0, 1.0, 1.0, redraw=False)
-
         # cursors
         self.cursor = {}
 
@@ -171,7 +168,7 @@ class ImageViewQt(ImageView.ImageViewBase):
 
         # fill pixmap with background color
         imgwin_wd, imgwin_ht = self.get_window_size()
-        bgclr = self._get_color(*self.get_bg())
+        bgclr = self._get_color(*self.img_bg)
         painter.fillRect(QtCore.QRect(0, 0, imgwin_wd, imgwin_ht),
                          bgclr)
 
@@ -195,8 +192,9 @@ class ImageViewQt(ImageView.ImageViewBase):
                                self.message)
 
     def _draw_message(self, painter, width, height, message):
-        painter.setPen(self.img_fg)
-        painter.setBrush(self.img_fg)
+        fgclr = self._get_color(*self.img_fg)
+        painter.setPen(fgclr)
+        painter.setBrush(fgclr)
         painter.setFont(self.msgfont)
         rect = painter.boundingRect(0, 0, 1000, 1000, 0, message)
         x1, y1, x2, y2 = rect.getCoords()
@@ -237,7 +235,7 @@ class ImageViewQt(ImageView.ImageViewBase):
             #pixmap.fill(QColor("black"))
             self.pixmap = pixmap
             self.imgwin.set_pixmap(pixmap)
-        self.set_window_size(width, height, redraw=True)
+        self.set_window_size(width, height)
 
     def get_rgb_image_as_buffer(self, output=None, format='png',
                                 quality=90):
@@ -336,30 +334,23 @@ class ImageViewQt(ImageView.ImageViewBase):
         clr = QColor(int(r*n), int(g*n), int(b*n))
         return clr
 
-    def set_fg(self, r, g, b, redraw=True):
-        self.img_fg = self._get_color(r, g, b)
-        if redraw:
-            self.redraw(whence=3)
-
-    def onscreen_message(self, text, delay=None, redraw=True):
+    def onscreen_message(self, text, delay=None):
         try:
             self.msgtimer.stop()
         except:
             pass
         self.message = text
-        if redraw:
-            self.redraw(whence=3)
+        self.redraw(whence=3)
         if delay:
             ms = int(delay * 1000.0)
             self.msgtimer.start(ms)
 
-    def onscreen_message_off(self, redraw=True):
-        return self.onscreen_message(None, redraw=redraw)
+    def onscreen_message_off(self):
+        return self.onscreen_message(None)
 
-    def show_pan_mark(self, tf, redraw=True):
+    def show_pan_mark(self, tf):
         self.t_.set(show_pan_position=tf)
-        if redraw:
-            self.redraw(whence=3)
+        self.redraw(whence=3)
 
 
 class RenderMixin(object):

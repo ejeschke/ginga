@@ -34,7 +34,6 @@ class ImageViewCv(ImageView.ImageViewBase):
                                          settings=settings)
 
         self.surface = None
-        self.img_fg = None
         # According to OpenCV documentation:
         # "If you are using your own image rendering and I/O functions,
         # you can use any channel ordering. The drawing functions process
@@ -46,10 +45,6 @@ class ImageViewCv(ImageView.ImageViewBase):
         self.renderer = CanvasRenderer(self)
 
         self.message = None
-
-        # initialize background and foreground colors
-        self.set_bg(0.5, 0.5, 0.5, redraw=False)
-        self.set_fg(1.0, 1.0, 1.0, redraw=False)
 
         # cursors
         self.cursor = {}
@@ -103,7 +98,7 @@ class ImageViewCv(ImageView.ImageViewBase):
         self.surface = numpy.zeros((height, width, depth), numpy.uint8)
 
         # inform the base class about the actual window size
-        self.set_window_size(width, height, redraw=True)
+        self.set_window_size(width, height)
 
     def get_rgb_image_as_buffer(self, output=None, format='png', quality=90):
         if not have_PIL:
@@ -162,19 +157,13 @@ class ImageViewCv(ImageView.ImageViewBase):
     def get_rgb_order(self):
         return self._rgb_order
 
-    def set_fg(self, r, g, b, redraw=True):
-        self.img_fg = (r, g, b)
-        if redraw:
-            self.redraw(whence=3)
-
-    def onscreen_message(self, text, delay=None, redraw=True):
+    def onscreen_message(self, text, delay=None):
         # subclass implements this method using a timer
         self.logger.warn("Subclass should override this method")
 
-    def show_pan_mark(self, tf, redraw=True):
+    def show_pan_mark(self, tf):
         self.t_.set(show_pan_position=tf)
-        if redraw:
-            self.redraw(whence=3)
+        self.redraw(whence=3)
 
 
 #END

@@ -219,20 +219,20 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
                 return True
         return True
 
-    def highlight_object(self, obj, tag, color, redraw=True):
+    def highlight_object(self, obj, tag, color):
         x = obj.objects[0].x
         y = obj.objects[0].y
         delta = 10
         radius = obj.objects[0].radius + delta
 
         hilite = self.dc.Circle(x, y, radius, linewidth=4, color=color)
-        obj.add(hilite, tag=tag, redraw=redraw)
+        obj.add(hilite, tag=tag)
 
-    def highlight_objects(self, objs, tag, color, redraw=True):
-        for obj in objs:
-            self.highlight_object(obj, tag, color, redraw=False)
-        if redraw:
-            self.canvas.redraw()
+    def highlight_objects(self, objs, tag, color):
+        with self.fitsimage.suppress_redraw:
+            for obj in objs:
+                self.highlight_object(obj, tag, color)
+            self.canvas.update_canvas()
 
     def unhighlight_object(self, obj, tag):
         # delete the highlight ring of the former cursor object
@@ -254,7 +254,7 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
 
         self.highlight_object(obj, 'cursor', self.color_cursor)
         self.curstar = Bunch.Bunch(obj=obj)
-        self.canvas.redraw()
+        self.canvas.update_canvas()
 
 
     def setfromimage(self):
@@ -283,7 +283,7 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
 
         obj.color = self.mycolor
         obj.linestyle = 'solid'
-        canvas.redraw(whence=3)
+        canvas.update_canvas()
 
         self.areatag = tag
         # Raise the params tab
@@ -515,18 +515,20 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
 
         # plot stars in range
         subset = self.table.get_subset_from_starlist(i, i+length)
-        for obj in subset:
-            self.plot_star(obj, image=image)
 
-        # plot stars in selected list even if they are not in the range
-        #for obj in selected:
-        selected = self.table.get_selected()
-        for obj in selected:
-            if ('canvobj' not in obj) or (obj.canvobj is None):
+        with self.fitsimage.suppress_redraw:
+            for obj in subset:
                 self.plot_star(obj, image=image)
-            self.highlight_object(obj.canvobj, 'selected', 'skyblue')
 
-        canvas.redraw(whence=3)
+            # plot stars in selected list even if they are not in the range
+            #for obj in selected:
+            selected = self.table.get_selected()
+            for obj in selected:
+                if ('canvobj' not in obj) or (obj.canvobj is None):
+                    self.plot_star(obj, image=image)
+                self.highlight_object(obj.canvobj, 'selected', 'skyblue')
+
+            canvas.update_canvas()
 
 
 class CatalogListingBase(object):
@@ -569,6 +571,8 @@ class CatalogListingBase(object):
 
         self.cmap = cmap.get_cmap(self.magcmap)
         self.imap = imap.get_imap('ramp')
+
+        self.operation_table = []
 
         self._build_gui(container)
 
@@ -704,5 +708,8 @@ class CatalogListingBase(object):
     def set_field(self, name):
         self._set_field(name)
         self.replot_stars()
+
+    def add_operation(self, name, fn):
+        self.operation_table.append((name, fn))
 
 # END

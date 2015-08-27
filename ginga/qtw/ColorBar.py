@@ -73,7 +73,7 @@ class ColorBar(Callback.Callbacks, QtGui.QWidget):
         self.rgbmap.set_imap(im)
         self.redraw()
 
-    def set_range(self, loval, hival, redraw=True):
+    def set_range(self, loval, hival):
         self.loval = float(loval)
         self.hival = float(hival)
         # Calculate reasonable spacing for range numbers
@@ -88,7 +88,7 @@ class ColorBar(Callback.Callbacks, QtGui.QWidget):
             # dereference this painter or we get an error redrawing
             cr = None
 
-            if self.t_showrange and redraw:
+            if self.t_showrange:
                 self.redraw()
 
     def get_size(self):

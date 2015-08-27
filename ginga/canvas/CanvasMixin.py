@@ -26,7 +26,7 @@ class CanvasMixin(object):
         self.count = 0
 
     def update_canvas(self, whence=3):
-        # TODO: deprecate
+        # TODO: deprecate?
         self.make_callback('modified', whence)
 
     def redraw(self, whence=3):

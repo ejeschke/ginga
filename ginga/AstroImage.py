@@ -156,7 +156,7 @@ class AstroImage(BaseImage):
 
 
     def load_buffer(self, data, dims, dtype, byteswap=False,
-                    metadata=None, redraw=True):
+                    metadata=None):
         data = numpy.fromstring(data, dtype=dtype)
         if byteswap:
             data.byteswap(True)

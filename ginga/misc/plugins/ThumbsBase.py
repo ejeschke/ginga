@@ -301,8 +301,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         # Reflect transforms, colormap, etc.
         fitsimage.copy_attributes(self.thumb_generator,
                                   ['transforms', 'cutlevels',
-                                   'rgbmap'],
-                                  redraw=False)
+                                   'rgbmap'])
 
     def have_thumbnail(self, fitsimage, image):
         """Returns True if we already have a thumbnail version of this image
@@ -366,8 +365,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
             # Generate new thumbnail
             fitsimage.copy_attributes(self.thumb_generator,
                                       ['transforms', 'cutlevels',
-                                       'rgbmap'],
-                                      redraw=False)
+                                       'rgbmap'])
             self.thumb_generator.set_image(image)
 
             # Save a thumbnail for future browsing

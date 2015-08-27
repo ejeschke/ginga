@@ -395,8 +395,7 @@ class GingaView(GtkMain.GtkMain):
         fitsimage.copy_attributes(fi,
                                   [#'transforms',
                                    #'cutlevels',
-                                   'rgbmap'],
-                                  redraw=False)
+                                   'rgbmap'])
 
         root.fullscreen()
         self.w.fscreen = root

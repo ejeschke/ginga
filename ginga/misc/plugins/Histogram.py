@@ -202,7 +202,7 @@ class Histogram(GingaPlugin.LocalPlugin):
     def stop(self):
         # remove the rect from the canvas
         ## try:
-        ##     self.canvas.deleteObjectByTag(self.histtag, redraw=False)
+        ##     self.canvas.deleteObjectByTag(self.histtag)
         ## except:
         ##     pass
         ##self.histtag = None
@@ -217,7 +217,7 @@ class Histogram(GingaPlugin.LocalPlugin):
     def full_image_cb(self):
         canvas = self.canvas
         try:
-            canvas.deleteObjectByTag(self.histtag, redraw=False)
+            canvas.deleteObjectByTag(self.histtag)
         except:
             pass
 
@@ -335,7 +335,7 @@ class Histogram(GingaPlugin.LocalPlugin):
         x1, y1, x2, y2 = bbox.x1+dx, bbox.y1+dy, bbox.x2+dx, bbox.y2+dy
 
         try:
-            canvas.deleteObjectByTag(self.histtag, redraw=False)
+            canvas.deleteObjectByTag(self.histtag)
         except:
             pass
 
@@ -372,7 +372,7 @@ class Histogram(GingaPlugin.LocalPlugin):
 
         if obj.kind == 'compound':
             try:
-                canvas.deleteObjectByTag(self.histtag, redraw=False)
+                canvas.deleteObjectByTag(self.histtag)
             except:
                 pass
 
@@ -389,11 +389,11 @@ class Histogram(GingaPlugin.LocalPlugin):
         obj = canvas.getObjectByTag(tag)
         if obj.kind != 'rectangle':
             return True
-        canvas.deleteObjectByTag(tag, redraw=False)
+        canvas.deleteObjectByTag(tag)
 
         if self.histtag:
             try:
-                canvas.deleteObjectByTag(self.histtag, redraw=False)
+                canvas.deleteObjectByTag(self.histtag)
             except:
                 pass
 

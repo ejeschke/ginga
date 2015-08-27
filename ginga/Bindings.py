@@ -394,13 +394,13 @@ class ImageViewBindings(object):
 
         return (data_x, data_y)
 
-    def _panset(self, viewer, data_x, data_y, msg=True, redraw=True):
+    def _panset(self, viewer, data_x, data_y, msg=True):
         try:
             msg = self.settings.get('msg_panset', msg)
             if msg:
                 viewer.onscreen_message("Pan position set", delay=0.4)
 
-            res = viewer.panset_xy(data_x, data_y, redraw=redraw)
+            res = viewer.panset_xy(data_x, data_y)
             return res
 
         except ImageView.ImageViewCoordsError as e:
@@ -449,9 +449,8 @@ class ImageViewBindings(object):
         loval, hival = viewer.get_cut_levels()
         loval = loval + (pct * spread)
         if msg:
-            viewer.onscreen_message("Cut low: %.4f" % (loval),
-                                   redraw=False)
-        viewer.cut_levels(loval, hival, redraw=True)
+            viewer.onscreen_message("Cut low: %.4f" % (loval))
+        viewer.cut_levels(loval, hival)
 
     def _cutlow_xy(self, viewer, x, y, msg=True):
         msg = self.settings.get('msg_cuts', msg)
@@ -463,9 +462,8 @@ class ImageViewBindings(object):
         loval, hival = viewer.get_cut_levels()
         loval = minval + (pct * spread)
         if msg:
-            viewer.onscreen_message("Cut low: %.4f" % (loval),
-                                       redraw=False)
-        viewer.cut_levels(loval, hival, redraw=True)
+            viewer.onscreen_message("Cut low: %.4f" % (loval))
+        viewer.cut_levels(loval, hival)
 
     def _cuthigh_pct(self, viewer, pct, msg=True):
         msg = self.settings.get('msg_cuts', msg)
@@ -475,9 +473,8 @@ class ImageViewBindings(object):
         loval, hival = viewer.get_cut_levels()
         hival = hival - (pct * spread)
         if msg:
-            viewer.onscreen_message("Cut high: %.4f" % (hival),
-                                       redraw=False)
-        viewer.cut_levels(loval, hival, redraw=True)
+            viewer.onscreen_message("Cut high: %.4f" % (hival))
+        viewer.cut_levels(loval, hival)
 
     def _cuthigh_xy(self, viewer, x, y, msg=True):
         msg = self.settings.get('msg_cuts', msg)
@@ -489,9 +486,8 @@ class ImageViewBindings(object):
         loval, hival = viewer.get_cut_levels()
         hival = maxval - (pct * spread)
         if msg:
-            viewer.onscreen_message("Cut high: %.4f" % (hival),
-                                       redraw=False)
-        viewer.cut_levels(loval, hival, redraw=True)
+            viewer.onscreen_message("Cut high: %.4f" % (hival))
+        viewer.cut_levels(loval, hival)
 
     def _cutboth_xy(self, viewer, x, y, msg=True):
         msg = self.settings.get('msg_cuts', msg)
@@ -504,8 +500,8 @@ class ImageViewBindings(object):
         loval = self._loval + (ypct * spread)
         if msg:
             viewer.onscreen_message("Cut low: %.4f  high: %.4f" % (
-                loval, hival), redraw=False)
-        viewer.cut_levels(loval, hival, redraw=True)
+                loval, hival))
+        viewer.cut_levels(loval, hival)
 
     def _cut_pct(self, viewer, pct, msg=True):
         msg = self.settings.get('msg_cuts', msg)
@@ -517,8 +513,8 @@ class ImageViewBindings(object):
         hival = hival - (pct * spread)
         if msg:
             viewer.onscreen_message("Cut low: %.4f  high: %.4f" % (
-                loval, hival), delay=1.0, redraw=False)
-        viewer.cut_levels(loval, hival, redraw=True)
+                loval, hival), delay=1.0)
+        viewer.cut_levels(loval, hival)
 
     def _adjust_cuts(self, viewer, direction, pct, msg=True):
         direction = self.get_direction(direction)
@@ -655,8 +651,7 @@ class ImageViewBindings(object):
         factor = self.settings.get('mouse_rotate_acceleration', 0.75)
         deg = math.fmod(self._start_rot + delta_deg * factor, 360.0)
         if msg:
-            viewer.onscreen_message("Rotate: %.2f" % (deg),
-                                       redraw=False)
+            viewer.onscreen_message("Rotate: %.2f" % (deg))
         viewer.rotate(deg)
 
     def _rotate_inc(self, viewer, inc_deg, msg=True):
@@ -730,8 +725,7 @@ class ImageViewBindings(object):
 
     def kp_pan_set(self, viewer, event, data_x, data_y, msg=True):
         if self.canpan:
-            self._panset(viewer, data_x, data_y, redraw=True,
-                         msg=msg)
+            self._panset(viewer, data_x, data_y, msg=msg)
         return True
 
     def kp_center(self, viewer, event, data_x, data_y):
@@ -995,7 +989,7 @@ class ImageViewBindings(object):
             return True
 
         if event.state == 'down':
-            viewer.panset_xy(data_x, data_y, redraw=False)
+            viewer.panset_xy(data_x, data_y)
             viewer.zoom_in()
             if msg:
                 viewer.onscreen_message(viewer.get_scale_text(),
@@ -1009,7 +1003,7 @@ class ImageViewBindings(object):
             return True
 
         if event.state == 'down':
-            viewer.panset_xy(data_x, data_y, redraw=False)
+            viewer.panset_xy(data_x, data_y)
             viewer.zoom_out()
             if msg:
                 viewer.onscreen_message(viewer.get_scale_text(),
@@ -1096,7 +1090,7 @@ class ImageViewBindings(object):
         if event.state == 'move':
             data_x, data_y = self.get_new_pan(viewer, x, y,
                                               ptype=self._pantype)
-            viewer.panset_xy(data_x, data_y, redraw=True)
+            viewer.panset_xy(data_x, data_y)
 
         elif event.state == 'down':
             self.pan_set_origin(viewer, x, y, data_x, data_y)
@@ -1118,7 +1112,7 @@ class ImageViewBindings(object):
         if event.state == 'move':
             data_x, data_y = self.get_new_pan(viewer, x, y,
                                               ptype=self._pantype)
-            viewer.panset_xy(data_x, data_y, redraw=True)
+            viewer.panset_xy(data_x, data_y)
 
         elif event.state == 'down':
             self.pan_start(viewer, ptype=1)
@@ -1194,8 +1188,7 @@ class ImageViewBindings(object):
         (data_x, data_y) will be centered in the window.
         """
         if self.canpan and (event.state == 'down'):
-            self._panset(viewer, data_x, data_y, redraw=True,
-                         msg=msg)
+            self._panset(viewer, data_x, data_y, msg=msg)
         return True
 
     #####  SCROLL ACTION CALLBACKS #####
@@ -1291,7 +1284,7 @@ class ImageViewBindings(object):
         #new_x, new_y = new_x - 0.5, new_y - 0.5
         #print "data x,y=%f,%f   new x, y=%f,%f" % (pan_x, pan_y, new_x, new_y)
 
-        viewer.panset_xy(new_x, new_y, redraw=True)
+        viewer.panset_xy(new_x, new_y)
 
         # For checking result
         #pan_x, pan_y = viewer.get_pan()
@@ -1338,7 +1331,7 @@ class ImageViewBindings(object):
                 scale = scale * scale_accel
                 scale_x, scale_y = (self._start_scale_x * scale,
                                     self._start_scale_y * scale)
-                viewer.scale_to(scale_x, scale_y, redraw=False)
+                viewer.scale_to(scale_x, scale_y)
                 msg_str = viewer.get_scale_text()
                 msg = self.settings.get('msg_zoom', True)
 
@@ -1366,7 +1359,7 @@ class ImageViewBindings(object):
 
             data_x = self._start_panx + delta_x
             data_y = self._start_pany + delta_y
-            viewer.panset_xy(data_x, data_y, redraw=True)
+            viewer.panset_xy(data_x, data_y)
 
         elif state == 'start':
             self._start_panx, self._start_pany = viewer.get_pan()

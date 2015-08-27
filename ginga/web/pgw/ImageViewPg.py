@@ -87,12 +87,11 @@ class ImageViewPg(ImageView):
             return
         #self.pgcanvas.config(cursor=cursor)
 
-    def onscreen_message(self, text, delay=None, redraw=True):
+    def onscreen_message(self, text, delay=None):
         if self.pgcanvas is None:
             return
         self.message = text
-        if redraw:
-            self.redraw(whence=3)
+        self.redraw(whence=3)
         if delay:
             self.pgcanvas.reset_timer('msg', delay)
 

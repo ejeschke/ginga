@@ -665,7 +665,7 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
             self.logger.debug("replacing cut position")
             try:
                 cutobj = self.canvas.getObjectByTag(self.cutstag)
-                self.canvas.deleteObjectByTag(self.cutstag, redraw=False)
+                self.canvas.deleteObjectByTag(self.cutstag)
                 count = cutobj.get_data('count')
             except KeyError:
                 count = self._get_new_count()
@@ -711,7 +711,7 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
 
         cut.set_data(count=count)
 
-        self.canvas.deleteObjectByTag(tag, redraw=False)
+        self.canvas.deleteObjectByTag(tag)
         self.canvas.add(cut, tag=tag)
         self.add_cuts_tag(tag)
 
@@ -720,7 +720,7 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
 
     def draw_cb(self, canvas, tag):
         obj = canvas.getObjectByTag(tag)
-        canvas.deleteObjectByTag(tag, redraw=False)
+        canvas.deleteObjectByTag(tag)
 
         if not obj.kind in self.cuttypes:
             return True
@@ -732,7 +732,7 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         cut.set_data(count=count)
         self._update_tines(cut)
 
-        canvas.deleteObjectByTag(tag, redraw=False)
+        canvas.deleteObjectByTag(tag)
         self.canvas.add(cut, tag=tag)
         self.add_cuts_tag(tag)
 

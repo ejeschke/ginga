@@ -26,8 +26,8 @@ from ginga.misc import Bunch
 from ginga.util import wcs
 
 
-star_attrs = ('name', 'ra', 'dec', 'ra_deg', 'dec_deg', 'mag', 'preference',
-              'priority', 'flag', 'b_r', 'dst', 'description')
+## star_attrs = ('name', 'ra', 'dec', 'ra_deg', 'dec_deg', 'mag', 'preference',
+##               'priority', 'flag', 'b_r', 'dst', 'description')
 
 
 # Do we have astropy.vo installed?
@@ -54,8 +54,8 @@ class Star(object):
     def __init__(self, **kwdargs):
         starInfo = {}
         starInfo.update(kwdargs)
-        for attrname in star_attrs:
-            starInfo[attrname] = kwdargs.get(attrname)
+        ## for attrname in star_attrs:
+        ##     starInfo[attrname] = kwdargs.get(attrname)
         self.starInfo = starInfo
 
     def __getitem__(self, key):

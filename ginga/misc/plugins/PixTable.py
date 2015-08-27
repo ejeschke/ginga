@@ -177,7 +177,7 @@ class PixTable(GingaPlugin.LocalPlugin):
         self.lastx = obj.objects[0].x
         self.lasty = obj.objects[0].y
         if self.pan2mark and pan:
-            self.fitsimage.panset_xy(self.lastx, self.lasty, redraw=True)
+            self.fitsimage.panset_xy(self.lastx, self.lasty)
         self.canvas.redraw(whence=3)
 
         self.redo()

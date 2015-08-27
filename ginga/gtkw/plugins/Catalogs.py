@@ -383,6 +383,21 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
         self.btn['imap'] = combobox
         btns.add(combobox)
 
+        combobox = GtkHelp.combo_box_new_text()
+        options = []
+        index = 0
+        for name, fn in self.operation_table:
+            options.append(name)
+            combobox.insert_text(index, name)
+            index += 1
+        combobox.set_active(0)
+        self.btn['oprn'] = combobox
+        btns.add(combobox)
+
+        doit = gtk.Button("Do it")
+        doit.connect('clicked', self.do_operation_cb)
+        btns.add(doit)
+
         vbox.pack_start(btns, padding=4, fill=True, expand=False)
 
         btns = gtk.HBox()
@@ -587,6 +602,12 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
         index = w.get_active()
         fieldname = self.columns[index][1]
         self.set_field(fieldname)
+
+    def do_operation_cb(self, w):
+        index = self.btn['oprn'].get_active()
+        if index >= 0:
+            fn = self.operation_table[index][1]
+            self.fv.wrap_error(fn, self.selected)
 
 
 # END

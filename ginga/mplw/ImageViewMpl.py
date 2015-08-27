@@ -66,8 +66,8 @@ class ImageViewMpl(ImageView.ImageViewBase):
         # the origin at the bottom (see base class)
         self._originUpper = False
 
-        self.img_fg = None
-        self.set_fg(1.0, 1.0, 1.0, redraw=False)
+        self.img_fg = (1.0, 1.0, 1.0)
+        self.img_bg = (0.5, 0.5, 0.5)
 
         self.message = None
 
@@ -295,7 +295,7 @@ class ImageViewMpl(ImageView.ImageViewBase):
                           transform=self.ax_util.transAxes)
 
     def configure(self, width, height):
-        self.set_window_size(width, height, redraw=True)
+        self.set_window_size(width, height)
 
     def _resize_cb(self, event):
         wd, ht = event.width, event.height
@@ -334,28 +334,26 @@ class ImageViewMpl(ImageView.ImageViewBase):
     def switch_cursor(self, ctype):
         self.set_cursor(self.cursor[ctype])
 
-    def set_fg(self, r, g, b, redraw=True):
+    def set_fg(self, r, g, b):
         self.img_fg = (r, g, b)
-        if redraw:
-            self.redraw(whence=3)
+        self.redraw(whence=3)
 
-    def onscreen_message(self, text, delay=None, redraw=True):
+    def onscreen_message(self, text, delay=None):
         try:
             self._msg_timer.stop()
         except:
             pass
 
         self.message = text
-        if redraw:
-            self.redraw(whence=3)
+        self.redraw(whence=3)
 
         if delay:
             time_ms = int(delay * 1000.0)
             self._msg_timer.interval = time_ms
             self._msg_timer.start()
 
-    def onscreen_message_off(self, redraw=True):
-        return self.onscreen_message(None, redraw=redraw)
+    def onscreen_message_off(self):
+        return self.onscreen_message(None)
 
     def reschedule_redraw(self, time_sec):
 
@@ -378,10 +376,9 @@ class ImageViewMpl(ImageView.ImageViewBase):
                              "using unoptomized redraw" % (str(e)))
             self.delayed_redraw()
 
-    def show_pan_mark(self, tf, redraw=True):
+    def show_pan_mark(self, tf):
         self.t_.set(show_pan_position=tf)
-        if redraw:
-            self.redraw(whence=3)
+        self.redraw(whence=3)
 
 class ImageViewEvent(ImageViewMpl):
 

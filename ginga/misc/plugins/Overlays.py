@@ -228,13 +228,13 @@ class Overlays(GingaPlugin.LocalPlugin):
         if self.canvas_img is None:
             self.logger.debug("Adding image to canvas")
             self.canvas_img = CanvasTypes.Image(0, 0, self.rgbobj)
-            self.canvas.add(self.canvas_img, redraw=False)
+            self.canvas.add(self.canvas_img)
         else:
             self.logger.debug("Updating canvas image")
             self.canvas_img.set_image(self.rgbobj)
 
-        self.logger.debug("redrawing canvas")
-        self.fitsimage.redraw(whence=2)
+        #self.logger.debug("redrawing canvas")
+        #self.fitsimage.redraw(whence=2)
 
         self.logger.debug("redo completed")
 

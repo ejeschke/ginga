@@ -61,7 +61,7 @@ class FitsViewer(QtGui.QMainWindow):
         sep = QtGui.QAction(menubar)
         sep.setSeparator(True)
         filemenu.addAction(sep)
-        
+
         item = QtGui.QAction("Quit", menubar)
         item.triggered.connect(self.close)
         filemenu.addAction(item)
@@ -116,7 +116,7 @@ class FitsViewer(QtGui.QMainWindow):
         settings.getSetting('cuts').add_callback('set',
                                                  self.change_range_cb, fi,
                                                  self.colorbar)
-            
+
         # color map selection widget
         wcmap = QtGui.QComboBox()
         for name in self.cmaps:
@@ -164,7 +164,7 @@ class FitsViewer(QtGui.QMainWindow):
         # layout.addWidget(scrw, stretch=1)
         # scrw.setWidget(self.canvas)
         layout.addWidget(self.canvas, stretch=1)
-        
+
         # Add matplotlib buttons
         hbox = QtGui.QHBoxLayout()
         hbox.setContentsMargins(QtCore.QMargins(4, 2, 4, 2))
@@ -200,7 +200,7 @@ class FitsViewer(QtGui.QMainWindow):
         self.readout = QtGui.QLabel("")
         vbox.addWidget(self.readout, stretch=0,
                        alignment=QtCore.Qt.AlignCenter)
-        
+
         vw = QtGui.QWidget()
         vw.setLayout(vbox)
         self.setCentralWidget(vw)
@@ -213,13 +213,13 @@ class FitsViewer(QtGui.QMainWindow):
         imap_name = self.imaps[index]
         self.im = imap.get_imap(imap_name)
 
-        self.fitsimage.set_cmap(self.cm, redraw=False)
+        self.fitsimage.set_cmap(self.cm)
         self.fitsimage.set_imap(self.im)
-        
+
     def change_range_cb(self, setting, value, fitsimage, cbar):
         loval, hival = value
         cbar.set_range(loval, hival)
-        
+
     def clear_canvas(self):
         self.fitsimage.deleteAllObjects()
 
@@ -242,7 +242,7 @@ class FitsViewer(QtGui.QMainWindow):
             Compass = self.fitsimage.getDrawClass('compass')
             self.fitsimage.add(Compass(
                 x, y, xn, yn, xe, ye, color='skyblue',
-                fontsize=14), tag=self.cp_tag, redraw=True)
+                fontsize=14), tag=self.cp_tag)
         except Exception as e:
             self.logger.warn("Can't calculate compass: %s" % (
                 str(e)))
@@ -265,7 +265,7 @@ class FitsViewer(QtGui.QMainWindow):
 
     def closeEvent(self, ce):
         self.close()
-    
+
     def motion(self, fitsimage, button, data_x, data_y):
 
         # Get the value under the data coordinates
@@ -332,7 +332,7 @@ class FitsViewer(QtGui.QMainWindow):
         # matplotlib figure axis
         arr = fi.getwin_array(order='RGB')
 
-        # force aspect ratio of figure to match 
+        # force aspect ratio of figure to match
         wd, ht = fi.get_window_size()
 
         # Get the data extents
@@ -346,7 +346,7 @@ class FitsViewer(QtGui.QMainWindow):
         else:
             xlabel = 'ra'
             ylabel = 'dec'
-            
+
         #extent = (x0, x1, y1, y0)
         image = fi.get_image()
         extent = self.get_wcs_extent(image, x0, x1, y1, y0)
@@ -372,7 +372,7 @@ class FitsViewer(QtGui.QMainWindow):
 
         # force an update of the figure
         self.fig.canvas.draw()
-        
+
     def get_image(self):
         fi = self.fitsimage
         # clear previous image
@@ -380,7 +380,7 @@ class FitsViewer(QtGui.QMainWindow):
 
         ax = self.fig.add_subplot(111)
         ax.autoscale(True, tight=True)
-        
+
         x0, y0, x1, y1 = tuple(map(int, fi.get_datarect()))
         #extent = (x0, x1, y0, y1)
 
@@ -388,7 +388,7 @@ class FitsViewer(QtGui.QMainWindow):
         arr = image.cutout_data(x0, y0, x1, y1)
 
         extent = self.get_wcs_extent(image, x0, y0, x1, y1)
-        
+
         # get cut levels
         loval, hival = fi.get_cut_levels()
 
@@ -406,8 +406,8 @@ class FitsViewer(QtGui.QMainWindow):
 
         # force an update of the figure
         self.fig.canvas.draw()
-        
-    
+
+
 def main(options, args):
 
     QtGui.QApplication.setGraphicsSystem('raster')
@@ -429,13 +429,13 @@ def main(options, args):
     app.exec_()
 
 if __name__ == "__main__":
-   
+
     # Parse command line options with nifty optparse module
     from optparse import OptionParser
 
     usage = "usage: %prog [options] cmd [args]"
     optprs = OptionParser(usage=usage, version=('%%prog'))
-    
+
     optprs.add_option("--debug", dest="debug", default=False, action="store_true",
                       help="Enter the pdb debugger on main()")
     optprs.add_option("--log", dest="logfile", metavar="FILE",

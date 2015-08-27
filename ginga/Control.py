@@ -308,7 +308,7 @@ class GingaControl(Callback.Callbacks):
         """
         rgbmap = fitsimage.get_rgbmap()
         loval, hival = fitsimage.get_cut_levels()
-        colorbar.set_range(loval, hival, redraw=False)
+        colorbar.set_range(loval, hival)
         # If we are sharing a ColorBar for all channels, then store
         # to change the ColorBar's rgbmap to match our
         colorbar.set_rgbmap(rgbmap)

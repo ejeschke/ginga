@@ -174,7 +174,7 @@ Display the Zoom tab at the same time to precisely see detail while drawing.""")
             return True
         # remove the old ruler
         try:
-            self.canvas.deleteObjectByTag(self.ruletag, redraw=False)
+            self.canvas.deleteObjectByTag(self.ruletag)
         except:
             pass
 

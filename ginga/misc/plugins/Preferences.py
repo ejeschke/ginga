@@ -476,7 +476,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.set_cmap_byname(name)
         self.t_.set(color_map=name)
 
-    def set_cmap_byname(self, name, redraw=True):
+    def set_cmap_byname(self, name):
         # Get colormap
         try:
             cm = cmap.get_cmap(name)
@@ -493,7 +493,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.set_imap_byname(name)
         self.t_.set(intensity_map=name)
 
-    def set_imap_byname(self, name, redraw=True):
+    def set_imap_byname(self, name):
         # Get intensity map
         try:
             im = imap.get_imap(name)
@@ -516,7 +516,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         rgbmap.set_hash_size(value)
         self.t_.set(color_hashsize=value)
 
-    def set_calg_byname(self, name, redraw=True):
+    def set_calg_byname(self, name):
         # Get color mapping algorithm
         rgbmap = self.fitsimage.get_rgbmap()
         try:
@@ -526,8 +526,7 @@ class Preferences(GingaPlugin.LocalPlugin):
 
         # Doesn't this force a redraw?  Following redraw should be unecessary.
         self.t_.set(color_algorithm=name)
-        if redraw:
-            self.fitsimage.redraw(whence=2)
+        self.fitsimage.redraw(whence=2)
 
     def set_default_cmaps(self):
         cmap_name = "gray"

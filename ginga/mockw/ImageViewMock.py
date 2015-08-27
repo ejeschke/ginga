@@ -47,10 +47,6 @@ class ImageViewMock(ImageView.ImageViewBase):
         # create it here
         self.imgwin = None
 
-        # initialize background and foreground colors
-        self.set_bg(0.5, 0.5, 0.5, redraw=False)
-        self.set_fg(1.0, 1.0, 1.0, redraw=False)
-
         # cursors
         self.cursor = {}
 
@@ -130,7 +126,7 @@ class ImageViewMock(ImageView.ImageViewBase):
         # TODO: allocate pixmap of width x height
         self.pixmap = None
 
-        self.set_window_size(width, height, redraw=True)
+        self.set_window_size(width, height)
 
     def get_rgb_image_as_buffer(self, output=None, format='png',
                                 quality=90):
@@ -221,34 +217,27 @@ class ImageViewMock(ImageView.ImageViewBase):
         """Convert red, green and blue values specified in floats with
         range 0-1 to whatever the native widget color object is.
         """
-        clr = None
+        clr = (r, g, b)
         return clr
 
-    def set_fg(self, r, g, b, redraw=True):
-        self.img_fg = self._get_color(r, g, b)
-        if redraw:
-            self.redraw(whence=3)
-
-    def onscreen_message(self, text, delay=None, redraw=True):
+    def onscreen_message(self, text, delay=None):
         # stop any scheduled updates of the message
 
         # set new message text
         self.message = text
-        if redraw:
-            self.redraw(whence=3)
+        self.redraw(whence=3)
 
         if delay:
             # schedule a call to onscreen_message_off after
             # `delay` sec
             pass
 
-    def onscreen_message_off(self, redraw=True):
-        return self.onscreen_message(None, redraw=redraw)
+    def onscreen_message_off(self):
+        return self.onscreen_message(None)
 
-    def show_pan_mark(self, tf, redraw=True):
+    def show_pan_mark(self, tf):
         self.t_.set(show_pan_position=tf)
-        if redraw:
-            self.redraw(whence=3)
+        self.redraw(whence=3)
 
 
 class ImageViewEvent(ImageViewMock):

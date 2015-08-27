@@ -723,7 +723,7 @@ Figure :ref:`fig6`.
         def stop(self):
             ## # remove the ruler from the canvas
             ## try:
-            ##     self.canvas.deleteObjectByTag(self.ruletag, redraw=False)
+            ##     self.canvas.deleteObjectByTag(self.ruletag)
             ## except:
             ##     pass
             # remove the canvas from the image
@@ -755,7 +755,7 @@ Figure :ref:`fig6`.
                 return True
             # remove the old ruler
             try:
-                self.canvas.deleteObjectByTag(self.ruletag, redraw=False)
+                self.canvas.deleteObjectByTag(self.ruletag)
             except:
                 pass
 

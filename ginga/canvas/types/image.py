@@ -91,11 +91,10 @@ class Image(CanvasObjectBase):
     def get_zorder(self):
         return self._zorder
 
-    def set_zorder(self, zorder, redraw=True):
+    def set_zorder(self, zorder):
         self._zorder = zorder
         self.viewer.reorder_layers()
-        if redraw:
-            self.viewer.redraw(whence=2)
+        self.viewer.redraw(whence=2)
 
     def draw(self, viewer):
         if not self._drawn:
