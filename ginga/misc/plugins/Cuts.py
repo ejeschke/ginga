@@ -197,7 +197,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         vbox2 = Widgets.VBox()
         vbox2.add_widget(w, stretch=0)
 
-        fr = Widgets.Expander("Cut Width")
+        exp = Widgets.Expander("Cut Width")
 
         captions = (('Width Type:', 'label', 'Width Type', 'combobox',
                      'Width radius:', 'label', 'Width radius', 'spinbutton'),
@@ -220,8 +220,10 @@ class Cuts(GingaPlugin.LocalPlugin):
         sb.set_limits(1, 100)
         sb.set_value(self.width_radius)
 
+        fr = Widgets.Frame()
         fr.set_widget(w)
-        vbox2.add_widget(fr, stretch=0)
+        exp.set_widget(fr)
+        vbox2.add_widget(exp, stretch=0)
 
         mode = self.canvas.get_draw_mode()
         hbox = Widgets.HBox()
@@ -246,6 +248,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         self.w.btn_edit = btn3
         hbox.add_widget(btn3)
 
+        hbox.add_widget(Widgets.Label(''), stretch=1)
         vbox2.add_widget(hbox, stretch=0)
 
         vbox2.add_widget(Widgets.Label(''), stretch=1)

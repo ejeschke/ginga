@@ -480,6 +480,7 @@ class Frame(ContainerBase):
         if title:
             lbl = QtGui.QLabel(title)
             lbl.setAlignment(QtCore.Qt.AlignHCenter)
+            #lbl.setAlignment(QtCore.Qt.AlignLeft)
             vbox.addWidget(lbl, stretch=0)
             self.label = lbl
         else:
@@ -498,6 +499,12 @@ class Expander(ContainerBase):
     r_arrow = None
     d_arrow = None
 
+    # Note: add 'text-align: left;' if you want left adjusted labels
+    widget_style = """
+    QPushButton { margin: 1px,1px,1px,1px; padding: 0px; border-width: 0px;
+                   border-style: solid; }
+    """
+    
     def __init__(self, title=''):
         super(Expander, self).__init__()
 
@@ -513,8 +520,10 @@ class Expander(ContainerBase):
                                                size=(12, 12))
 
         self.widget = QtGui.QWidget()
+        self.widget.setStyleSheet(Expander.widget_style)
         vbox = QtGui.QVBoxLayout()
         vbox.setContentsMargins(0, 0, 0, 0)
+        vbox.setSpacing(0)
 
         self.toggle = QtGui.QPushButton(Expander.r_arrow, title)
         #self.toggle.setCheckable(True)

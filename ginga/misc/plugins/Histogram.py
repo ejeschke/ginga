@@ -144,6 +144,7 @@ class Histogram(GingaPlugin.LocalPlugin):
             self.w.btn_move.set_enabled(False)
             self.w.btn_edit.set_enabled(False)
 
+        hbox.add_widget(Widgets.Label(''), stretch=1)
         vbox.add_widget(hbox, stretch=0)
 
         ## spacer = Widgets.Label('')

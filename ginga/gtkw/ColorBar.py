@@ -226,7 +226,8 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
 
             # Draw range scale if we are supposed to
             if self.t_showrange and i in self._interval:
-                cb_pct = float(i) / 256.0
+                #cb_pct = float(i) / 256.0
+                cb_pct = float(x) / rect.width
                 # get inverse of distribution function and calculate value
                 # at this position
                 rng_pct = dist.get_dist_pct(cb_pct)
@@ -368,8 +369,10 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
             self.shift_colormap(pct)
             return True
 
+        dist = self.rgbmap.get_dist()
         pct = float(x) / float(self.width)
-        value = float(self.loval + pct * (self.hival - self.loval))
+        rng_pct = dist.get_dist_pct(pct)
+        value = float(self.loval + (rng_pct * (self.hival - self.loval)))
         return self.make_callback('motion', value, event)
 
     def scroll_event(self, widget, event):

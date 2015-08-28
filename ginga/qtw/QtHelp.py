@@ -101,6 +101,7 @@ QTabWidget::pane { margin: 0px,0px,0px,0px; padding: 0px; }
 QMdiSubWindow { margin: 0px; padding: 2px; }
 """
 
+
 class TopLevel(QtGui.QWidget):
 
     app = None

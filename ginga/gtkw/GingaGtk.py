@@ -518,13 +518,13 @@ class GingaView(GtkMain.GtkMain):
         cbox.append_text("Tabs")
         cbox.append_text("Grid")
         #cbox.append_text("MDI")
-        cbox.set_active(0)
+        cbox.set_active(1)
 
         cbox = b.in_workspace
         names = self.ds.get_wsnames()
         names.insert(0, 'top level')
         try:
-            idx = names.index('top level')
+            idx = names.index('channels')
         except:
             idx = 0
         for name in names:
@@ -536,7 +536,7 @@ class GingaView(GtkMain.GtkMain):
         lower = 0
         upper = 12
         adj.configure(lower, lower, upper, 1, 1, 0)
-        adj.set_value(1)
+        adj.set_value(4)
 
         dialog = GtkHelp.Dialog("Add Workspace",
                                 gtk.DIALOG_DESTROY_WITH_PARENT,

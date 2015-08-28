@@ -562,6 +562,7 @@ class Pick(GingaPlugin.LocalPlugin):
         self.w.btn_edit = btn3
         hbox.add_widget(btn3)
 
+        hbox.add_widget(Widgets.Label(''), stretch=1)
         vbox.add_widget(hbox, stretch=0)
 
         vtop.add_widget(sw, stretch=1)

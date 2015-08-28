@@ -447,7 +447,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         fr.set_widget(w)
         vbox.add_widget(fr, stretch=0)
 
-        fr = Widgets.Expander("General")
+        exp = Widgets.Expander("General")
 
         captions = (('Num Images:', 'label', 'Num Images', 'entryset'),
                     )
@@ -458,10 +458,12 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.w.num_images.set_text('0')
         self.w.num_images.add_callback('activated', self.set_buffer_cb)
 
+        fr = Widgets.Frame()
         fr.set_widget(w)
-        vbox.add_widget(fr, stretch=0)
+        exp.set_widget(fr)
+        vbox.add_widget(exp, stretch=0)
 
-        fr = Widgets.Expander("Remember")
+        exp = Widgets.Expander("Remember")
 
         captions = (('Save Scale', 'checkbutton',
                      'Save Pan', 'checkbutton'),
@@ -488,8 +490,10 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.w.save_cuts.add_callback('activated', self.set_profile_cb)
         self.w.save_cuts.set_tooltip("Remember cut levels with image")
 
+        fr = Widgets.Frame()
         fr.set_widget(w)
-        vbox.add_widget(fr, stretch=0)
+        exp.set_widget(fr)
+        vbox.add_widget(exp, stretch=0)
 
         top.add_widget(sw, stretch=1)
 

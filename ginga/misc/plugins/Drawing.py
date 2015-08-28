@@ -109,6 +109,7 @@ class Drawing(GingaPlugin.LocalPlugin):
         self.w.btn_edit = btn2
         hbox.add_widget(btn2)
 
+        hbox.add_widget(Widgets.Label(''), stretch=1)
         vbox.add_widget(hbox, stretch=0)
 
         fr = Widgets.Frame("Attributes")

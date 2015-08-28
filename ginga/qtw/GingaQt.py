@@ -556,13 +556,13 @@ class GingaView(QtMain.QtMain):
         cbox.append_text("Tabs")
         cbox.append_text("Grid")
         cbox.append_text("MDI")
-        cbox.setCurrentIndex(0)
+        cbox.setCurrentIndex(1)
 
         cbox = b.in_workspace
         names = self.ds.get_wsnames()
         names.insert(0, 'top level')
         try:
-            idx = names.index('top level')
+            idx = names.index('channels')
         except:
             idx = 0
         for name in names:
@@ -573,7 +573,7 @@ class GingaView(QtMain.QtMain):
         spnbtn = b.number_of_channels
         spnbtn.setRange(0, 12)
         spnbtn.setSingleStep(1)
-        spnbtn.setValue(1)
+        spnbtn.setValue(4)
 
         dialog = QtHelp.Dialog("Add Workspace",
                                0,

@@ -184,7 +184,8 @@ class ColorBar(Callback.Callbacks, QtGui.QWidget):
 
             # Draw range scale if we are supposed to
             if self.t_showrange and i in self._interval:
-                cb_pct = float(i) / 256.0
+                #cb_pct = float(i) / 256.0
+                cb_pct = float(x) / width
                 # get inverse of distribution function and calculate value
                 # at this position
                 rng_pct = dist.get_dist_pct(cb_pct)
@@ -194,6 +195,7 @@ class ColorBar(Callback.Callbacks, QtGui.QWidget):
                 x1, y1, x2, y2 = rect.getCoords()
                 _wd = x2 - x1
                 _ht = y2 - y1
+                # override?
                 _ht = 14
 
                 rx = x
@@ -280,9 +282,11 @@ class ColorBar(Callback.Callbacks, QtGui.QWidget):
             self.shift_colormap(pct)
             return
 
+        dist = self.rgbmap.get_dist()
         width, height = self.get_size()
         pct = float(x) / float(width)
-        value = float(self.loval + pct * (self.hival - self.loval))
+        rng_pct = dist.get_dist_pct(pct)
+        value = float(self.loval + (rng_pct * (self.hival - self.loval)))
         self.make_callback('motion', value, event)
 
     def wheelEvent(self, event):
