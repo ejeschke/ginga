@@ -391,7 +391,6 @@ class Preferences(GingaPlugin.LocalPlugin):
                     ('Center New:', 'label', 'Center New', 'combobox'),
                     ('Follow New', 'checkbutton', 'Raise New', 'checkbutton'),
                     ('Create thumbnail', 'checkbutton'),
-                    ('Num Images:', 'label', 'Num Images', 'entryset'),
                     )
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
