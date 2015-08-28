@@ -454,7 +454,8 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.w.update(b)
 
         b.num_images.set_tooltip("Maximum number of in memory images in channel (0==unlimited)")
-        self.w.num_images.set_text('0')
+        num_images = self.t_.get('numImages', 0)
+        self.w.num_images.set_text(str(num_images))
         self.w.num_images.add_callback('activated', self.set_buffer_cb)
 
         fr = Widgets.Frame()
@@ -786,6 +787,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         chname = self.fv.get_channelName(self.fitsimage)
         chinfo = self.fv.get_channelInfo(chname)
         chinfo.datasrc.set_bufsize(num_images)
+        print(("num images was set to", num_images))
 
         if not self.gui_up:
             return
@@ -889,6 +891,7 @@ class Preferences(GingaPlugin.LocalPlugin):
 
     def set_buffer_cb(self, *args):
         num_images = int(self.w.num_images.get_text())
+        print(("setting num images", num_images))
         self.t_.set(numImages=num_images)
 
     def set_wcs_params_cb(self, *args):
