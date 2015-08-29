@@ -28,13 +28,14 @@ if toolkit in ('qt5', 'choose') and (not configured):
         from PyQt5 import QtWidgets as QtGui
         from PyQt5.QtGui import QImage, QColor, QFont, QPixmap, QIcon, \
              QCursor, QPainter, QPen, QPolygonF, QPolygon, QTextCursor, \
-             QDrag, QPainterPath, QApplication
+             QDrag, QPainterPath
         from PyQt5.QtCore import QItemSelectionModel
+        from PyQt5.QtWidgets import QApplication
         have_pyqt5 = True
         try:
             from PyQt5 import QtWebKit
             from PyQt5.QtWebKitWidgets import QWebView
-        except ImportError:
+        except ImportError as e:
             pass
 
         # for Matplotlib
