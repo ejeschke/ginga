@@ -11,6 +11,8 @@ import math
 import numpy
 import time
 
+interpolation_methods = ['basic']
+
 def use(pkgname):
     global have_opencv, cv2, cv2_resize
 
@@ -24,6 +26,9 @@ def use(pkgname):
             'bicubic': cv2.INTER_CUBIC,
             'lanczos': cv2.INTER_LANCZOS4,
             }
+        if not 'nearest' in interpolation_methods:
+            interpolation_methods.extend(cv2_resize.keys())
+            interpolation_methods.sort()
 
 try:
     # optional opencv package speeds up certain operations, especially
@@ -283,6 +288,10 @@ def get_scaled_cutout_basic(data_np, x1, y1, x2, y2, scale_x, scale_y,
         old_wd, old_ht = max(x2 - x1 + 1, 1), max(y2 - y1 + 1, 1)
         ht, wd = newdata.shape[:2]
         scale_x, scale_y = float(wd) / old_wd, float(ht) / old_ht
+
+    elif interpolation != 'basic':
+        raise ValueError("Interpolation method not supported: '%s'" % (
+            interpolation))
 
     else:
         view, (scale_x, scale_y) = get_scaled_cutout_basic_view(data_np.shape,

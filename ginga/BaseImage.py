@@ -358,16 +358,25 @@ class BaseImage(Callback.Callbacks):
         if method == 'basic':
             return self.get_scaled_cutout_wdht(x1, y1, x2, y2, dst_wd, dst_ht)
 
-        raise ImageError("Method not supported: '%s'" % (method))
+        data = self._get_data()
+        newdata, (scale_x, scale_y) = trcalc.get_scaled_cutout_wdht(
+            data, x1, y1, x2, y2, dst_wd, dst_ht, interpolation=method)
+
+        res = Bunch.Bunch(data=newdata, scale_x=scale_x, scale_y=scale_y)
+        return res
 
     def get_scaled_cutout(self, x1, y1, x2, y2, scale_x, scale_y,
                           method='basic'):
         if method == 'basic':
             return self.get_scaled_cutout_basic(x1, y1, x2, y2,
-                                                 scale_x, scale_y)
+                                                scale_x, scale_y)
 
-        raise ImageError("Method not supported: '%s'" % (method))
+        data = self._get_data()
+        newdata, (scale_x, scale_y) = trcalc.get_scaled_cutout_basic(
+            data, x1, y1, x2, y2, scale_x, scale_y, interpolation=method)
 
+        res = Bunch.Bunch(data=newdata, scale_x=scale_x, scale_y=scale_y)
+        return res
 
     def get_pixels_on_line(self, x1, y1, x2, y2, getvalues=True):
         """Uses Bresenham's line algorithm to enumerate the pixels along

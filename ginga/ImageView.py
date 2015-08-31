@@ -131,10 +131,12 @@ class ImageViewBase(Callback.Callbacks):
         # for zooming
         self.t_.addDefaults(zoomlevel=1.0, zoom_algorithm='step',
                             scale_x_base=1.0, scale_y_base=1.0,
+                            interpolation='basic',
                             zoom_rate=math.sqrt(2.0))
         for name in ('zoom_rate', 'zoom_algorithm',
                      'scale_x_base', 'scale_y_base'):
             self.t_.getSetting(name).add_callback('set', self.zoomalg_change_cb)
+        self.t_.getSetting('interpolation').add_callback('set', self.interpolation_change_cb)
 
         # max/min scaling
         self.t_.addDefaults(scale_max=10000.0, scale_min=0.00001)
@@ -163,8 +165,7 @@ class ImageViewBase(Callback.Callbacks):
 
         # misc
         self.t_.addDefaults(auto_orient=False,
-                            defer_redraw=True, defer_lagtime=0.025,
-                            interpolation='basic')
+                            defer_redraw=True, defer_lagtime=0.025)
 
         # embedded profiles
         self.t_.addDefaults(profile_use_scale=False, profile_use_pan=False,
@@ -1417,6 +1418,12 @@ class ImageViewBase(Callback.Callbacks):
 
     def zoomalg_change_cb(self, setting, value):
         self.zoom_to(self.t_['zoomlevel'])
+
+    def interpolation_change_cb(self, setting, value):
+        if self._normimg is not None:
+            self._normimg.interpolation = value
+            self._normimg._reset_optimize()
+            self.redraw(whence=0)
 
     def set_name(self, name):
         self.name = name

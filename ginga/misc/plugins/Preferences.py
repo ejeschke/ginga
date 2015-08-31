@@ -10,7 +10,7 @@
 import math
 from ginga.misc import Widgets, ParamSet, Bunch
 
-from ginga import cmap, imap
+from ginga import cmap, imap, trcalc
 from ginga import GingaPlugin
 from ginga import AutoCuts, ColorDist
 from ginga.util import wcs, wcsmod
@@ -278,6 +278,7 @@ class Preferences(GingaPlugin.LocalPlugin):
                     ('Scale Y:', 'label', 'Scale Y', 'entryset'),
                     ('Scale Min:', 'label', 'Scale Min', 'spinfloat'),
                     ('Scale Max:', 'label', 'Scale Max', 'spinfloat'),
+                    ('Interpolation:', 'label', 'Interpolation', 'combobox'),
                     ('Zoom Defaults', 'button'))
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
@@ -337,6 +338,16 @@ class Preferences(GingaPlugin.LocalPlugin):
         b.scale_max.set_decimals(8)
         b.scale_max.add_callback('value-changed', self.set_scale_limit_cb)
         b.scale_min.set_tooltip("Set the maximum allowed scale in any axis")
+
+        index = 0
+        for name in trcalc.interpolation_methods:
+            b.interpolation.append_text(name)
+            index += 1
+        interp = self.t_.get('interpolation', "basic")
+        index = trcalc.interpolation_methods.index(interp)
+        b.interpolation.set_index(index)
+        b.interpolation.set_tooltip("Choose interpolation method")
+        b.interpolation.add_callback('activated', self.set_interp_cb)
 
         fr.set_widget(w)
         vbox.add_widget(fr, stretch=0)
@@ -619,6 +630,9 @@ class Preferences(GingaPlugin.LocalPlugin):
             self.w.zoom_alg.set_index(1)
             self.w.zoom_rate.set_enabled(True)
             self.w.stretch_factor.set_enabled(True)
+
+    def set_interp_cb(self, w, idx):
+        self.t_.set(interpolation=trcalc.interpolation_methods[idx])
 
     def scalebase_changed_ext_cb(self, setting, value):
         if not self.gui_up:

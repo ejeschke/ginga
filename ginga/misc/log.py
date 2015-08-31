@@ -54,7 +54,7 @@ class NullLogger(object):
 def get_logger(name='ginga', level=None, null=False,
                options=None, log_file=None, log_stderr=False):
 
-    if null:
+    if null or options.nulllogger:
         # User wants a Null Logger
         return NullLogger()
 

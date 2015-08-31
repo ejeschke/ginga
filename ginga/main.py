@@ -181,6 +181,9 @@ class ReferenceViewer(object):
         optprs.add_option("--loglevel", dest="loglevel", metavar="LEVEL",
                           type='int', default=logging.INFO,
                           help="Set logging level to LEVEL")
+        optprs.add_option("--lognull", dest="nulllogger", default=False,
+                          action="store_true",
+                          help="Use a null logger")
         optprs.add_option("--modules", dest="modules", metavar="NAMES",
                           help="Specify additional modules to load")
         optprs.add_option("--nosplash", dest="nosplash", default=False,
@@ -235,7 +238,11 @@ class ReferenceViewer(object):
         settings.load(onError='silent')
         settings.setDefaults(useMatplotlibColormaps=False,
                              widgetSet='choose',
-                             WCSpkg='choose', FITSpkg='choose')
+                             WCSpkg='choose', FITSpkg='choose',
+                             recursion_limit=2000)
+
+        # default of 1000 is a little too small
+        sys.setrecursionlimit(settings.get('recursion_limit'))
 
         # So we can find our plugins
         sys.path.insert(0, basedir)
@@ -332,22 +339,26 @@ class ReferenceViewer(object):
         ginga = Ginga(logger, threadPool, mm, prefs, ev_quit=ev_quit)
         ginga.set_layout(self.layout)
 
+        gc = os.path.join(basedir, "ginga_config.py")
+        have_ginga_config = os.path.exists(gc)
+
         # User configuration (custom star catalogs, etc.)
-        try:
-            import ginga_config
-
-            ginga_config.pre_gui_config(ginga)
-        except Exception as e:
+        if have_ginga_config:
             try:
-                (type, value, tb) = sys.exc_info()
-                tb_str = "\n".join(traceback.format_tb(tb))
+                import ginga_config
 
-            except Exception:
-                tb_str = "Traceback information unavailable."
+                ginga_config.pre_gui_config(ginga)
+            except Exception as e:
+                try:
+                    (type, value, tb) = sys.exc_info()
+                    tb_str = "\n".join(traceback.format_tb(tb))
 
-            logger.error("Error importing Ginga config file: %s" % (
-                str(e)))
-            logger.error("Traceback:\n%s" % (tb_str))
+                except Exception:
+                    tb_str = "Traceback information unavailable."
+
+                logger.error("Error importing Ginga config file: %s" % (
+                    str(e)))
+                logger.error("Traceback:\n%s" % (tb_str))
 
         # Build desired layout
         ginga.build_toplevel()
@@ -398,19 +409,20 @@ class ReferenceViewer(object):
             ginga.ds.raise_tab('Thumbs')
 
         # User configuration (custom star catalogs, etc.)
-        try:
-            ginga_config.post_gui_config(ginga)
-        except Exception as e:
+        if have_ginga_config:
             try:
-                (type, value, tb) = sys.exc_info()
-                tb_str = "\n".join(traceback.format_tb(tb))
+                ginga_config.post_gui_config(ginga)
+            except Exception as e:
+                try:
+                    (type, value, tb) = sys.exc_info()
+                    tb_str = "\n".join(traceback.format_tb(tb))
 
-            except Exception:
-                tb_str = "Traceback information unavailable."
+                except Exception:
+                    tb_str = "Traceback information unavailable."
 
-            logger.error("Error processing Ginga config file: %s" % (
-                str(e)))
-            logger.error("Traceback:\n%s" % (tb_str))
+                logger.error("Error processing Ginga config file: %s" % (
+                    str(e)))
+                logger.error("Traceback:\n%s" % (tb_str))
 
         # Add custom channels
         channels = options.channels.split(',')
@@ -452,9 +464,6 @@ class ReferenceViewer(object):
         sys.exit(0)
 
 def reference_viewer(sys_argv):
-
-    # default of 1000 is a little too small
-    sys.setrecursionlimit(2000)
 
     viewer = ReferenceViewer(layout=default_layout)
     viewer.add_default_plugins()
