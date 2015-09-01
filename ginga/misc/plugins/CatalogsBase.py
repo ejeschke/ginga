@@ -23,9 +23,6 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
     def __init__(self, fv, fitsimage):
         super(CatalogsBase, self).__init__(fv, fitsimage)
 
-        self.mycolor = 'skyblue'
-        self.color_cursor = 'red'
-
         self.limit_stars_to_area = False
         self.pan_to_selected = False
         self.use_dss_channel = False
@@ -40,9 +37,9 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
         # catalog listing
         self.table = None
 
+        self.color_outline = 'aquamarine'
         self.layertag = 'catalog-canvas'
         self.areatag = None
-        self.curstar = None
 
         prefs = self.fv.get_preferences()
         self.settings = prefs.createCategory('plugin_Catalogs')
@@ -66,6 +63,8 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
         canvas.setSurface(self.fitsimage)
         self.canvas = canvas
 
+        self.color_selected = 'skyblue'
+        self.hilite = None
 
     def ok(self):
         return self.close()
@@ -219,42 +218,38 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
                 return True
         return True
 
-    def highlight_object(self, obj, tag, color):
+    def highlight_object(self, obj, tag, color, redraw=True):
         x = obj.objects[0].x
         y = obj.objects[0].y
         delta = 10
         radius = obj.objects[0].radius + delta
 
         hilite = self.dc.Circle(x, y, radius, linewidth=4, color=color)
-        obj.add(hilite, tag=tag)
-
-    def highlight_objects(self, objs, tag, color):
-        with self.fitsimage.suppress_redraw:
-            for obj in objs:
-                self.highlight_object(obj, tag, color)
+        self.hilite.addObject(hilite)
+        if redraw:
             self.canvas.update_canvas()
 
-    def unhighlight_object(self, obj, tag):
-        # delete the highlight ring of the former cursor object
-        try:
-            #hilite = obj.objects[2]
-            obj.deleteObjectByTag(tag)
-        except:
-            pass
+    def update_selected(self, redraw=True):
+        if self.hilite is None:
+            self.hilite = self.dc.CompoundObject()
+        if not self.canvas.has_object(self.hilite):
+            self.canvas.add(self.hilite, tag='selected', redraw=False)
 
-    def highlight_cursor(self, obj):
-        if self.curstar:
-            bnch = self.curstar
-            if bnch.obj == obj:
-                # <-- we are already highlighting this object
-                return True
+        self.hilite.deleteAllObjects()
 
-            # delete the highlight ring of the former cursor object
-            self.unhighlight_object(bnch.obj, 'cursor')
+        image = self.fitsimage.get_image()
+        selected = self.table.get_selected()
+        for obj in selected:
+            # plot stars in selected list even if they are not in the range
+            if ('canvobj' not in obj) or (obj.canvobj is None):
+                self.plot_star(obj, image=image)
 
-        self.highlight_object(obj, 'cursor', self.color_cursor)
-        self.curstar = Bunch.Bunch(obj=obj)
-        self.canvas.update_canvas()
+            # add highlight ring to selected stars
+            self.highlight_object(obj.canvobj, 'selected',
+                                  self.color_selected)
+
+        if redraw:
+            self.canvas.update_canvas()
 
 
     def setfromimage(self):
@@ -265,7 +260,7 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
         x2, y2 = self.fitsimage.get_data_size()
         Rectangle = self.canvas.getDrawClass('Rectangle')
         tag = self.canvas.add(Rectangle(x1, y1, x2, y2,
-                                        color=self.mycolor))
+                                        color=self.color_outline))
 
         self.draw_cb(self.canvas, tag)
 
@@ -281,7 +276,7 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
             except:
                 pass
 
-        obj.color = self.mycolor
+        obj.color = self.color_outline
         obj.linestyle = 'solid'
         canvas.update_canvas()
 
@@ -415,12 +410,6 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
         if filter_obj:
             num_cat = len(starlist)
             self.logger.debug("number of incoming stars=%d" % (num_cat))
-            ## stars = []
-            ## for star in starlist:
-            ##     x, y = image.radectopix(star['ra_deg'], star['dec_deg'])
-            ##     if filter_obj.contains(x, y):
-            ##         stars.append(star)
-
             # TODO: vectorize wcs lookup
             coords = [ image.radectopix(star['ra_deg'], star['dec_deg'])
                        for star in starlist ]
@@ -440,6 +429,7 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
     def clear(self):
         objects = self.canvas.getObjectsByTagpfx('star')
         self.canvas.deleteObjects(objects)
+        self.canvas.deleteObjectsByTag(['selected'])
 
     def clearAll(self):
         self.canvas.deleteAllObjects()
@@ -454,11 +444,9 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
         if not image:
             image = self.fitsimage.get_image()
         x, y = image.radectopix(obj['ra_deg'], obj['dec_deg'])
-        #print "STAR at %d,%d" % (x, y)
         # TODO: auto-pick a decent radius
         radius = 10
         color = self.table.get_color(obj)
-        #print "color is %s" % str(color)
 
         circle = self.dc.Circle(x, y, radius, color=color)
         point = self.dc.Point(x, y, radius, color=color)
@@ -520,13 +508,7 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
             for obj in subset:
                 self.plot_star(obj, image=image)
 
-            # plot stars in selected list even if they are not in the range
-            #for obj in selected:
-            selected = self.table.get_selected()
-            for obj in selected:
-                if ('canvobj' not in obj) or (obj.canvobj is None):
-                    self.plot_star(obj, image=image)
-                self.highlight_object(obj.canvobj, 'selected', 'skyblue')
+            self.update_selected(redraw=False)
 
             canvas.update_canvas()
 
@@ -538,7 +520,6 @@ class CatalogListingBase(object):
 
         self.logger = logger
         self.tag = None
-        self.mycolor = 'skyblue'
         self.cmap_names = cmap.get_names()
         self.imap_names = imap.get_names()
         self.magcmap = 'stairs8'
@@ -547,6 +528,7 @@ class CatalogListingBase(object):
         self.mag_field = 'mag'
         self.mag_max = 25.0
         self.mag_min = 0.0
+        self.color_default = 'skyblue'
 
         # keys: are name, ra, dec, mag, flag, b_r, preference, priority, dst
         # TODO: automate this generation
@@ -561,7 +543,6 @@ class CatalogListingBase(object):
 
         self.catalog = None
         self.cursor = 0
-        self.color_cursor = 'red'
         self.color_selected = 'skyblue'
         self.selection_mode = 'single'
         self.selected = []
@@ -573,6 +554,7 @@ class CatalogListingBase(object):
         self.imap = imap.get_imap('ramp')
 
         self.operation_table = []
+        self._select_flag = False
 
         self._build_gui(container)
 
@@ -581,7 +563,7 @@ class CatalogListingBase(object):
         try:
             mag = obj[self.mag_field]
         except:
-            return self.mycolor
+            return self.color_default
 
         # calculate range of values
         rng = float(self.mag_max - self.mag_min)
@@ -623,10 +605,10 @@ class CatalogListingBase(object):
             try:
                 # remove selection from table
                 self._unselect_tv(star, fromtable=fromtable)
-                # unhighlight star in plot
-                self.catalog.unhighlight_object(star.canvobj, 'selected')
             except Exception as e:
                 self.logger.warn("Error unhilighting star: %s" % (str(e)))
+
+            self.catalog.update_selected()
             return False
         else:
             if self.selection_mode == 'single':
@@ -635,23 +617,18 @@ class CatalogListingBase(object):
                     self.selected.remove(star2)
                     try:
                         self._unselect_tv(star2, fromtable=fromtable)
-                        self.catalog.unhighlight_object(star2.canvobj, 'selected')
                     except Exception as e:
                         self.logger.warn("Error unhilighting star: %s" % (str(e)))
             self.selected.append(star)
             try:
-                # If this star is not plotted, then plot it
-                if ('canvobj' not in star) or (star.canvobj is None):
-                    self.catalog.plot_star(star)
-
                 # highlight line in table
                 self._select_tv(star, fromtable=fromtable)
-                # highlight the plot object
-                self.catalog.highlight_object(star.canvobj, 'selected', 'skyblue')
                 if self.catalog.pan_to_selected:
                     self.catalog.pan_to_star(star)
             except Exception as e:
                 self.logger.warn("Error hilighting star: %s" % (str(e)))
+
+            self.catalog.update_selected()
             return True
 
 
@@ -659,7 +636,15 @@ class CatalogListingBase(object):
         """This method is called when the user clicks on a plotted star in the
         fitsviewer.
         """
-        self.mark_selection(star)
+        try:
+            # NOTE: this works around a quirk of Qt widget set where
+            # selecting programatically in the table triggers the widget
+            # selection callback (see select_star_cb() in Catalogs.py for Qt)
+            self._select_flag = True
+            self.mark_selection(star)
+
+        finally:
+            self._select_flag = False
 
     def clear(self):
         if self.catalog is not None:
@@ -672,8 +657,6 @@ class CatalogListingBase(object):
         if self.catalog is None:
             return
         self.catalog.replot_stars()
-        canvobjs = list(map(lambda star: star.canvobj, self.selected))
-        self.catalog.highlight_objects(canvobjs, 'selected', 'skyblue')
 
     def set_cmap_byname(self, name):
         # Get colormap

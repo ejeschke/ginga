@@ -1,6 +1,6 @@
 #
 # Catalogs.py -- Catalogs plugin for fits viewer
-# 
+#
 # Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c)  Eric R. Jeschke.  All rights reserved.
@@ -31,7 +31,7 @@ class Catalogs(CatalogsBase.CatalogsBase):
         fr = QtHelp.Frame("Instructions")
         fr.addWidget(tw, stretch=1, alignment=QtCore.Qt.AlignTop)
         vbox1.addWidget(fr, stretch=0, alignment=QtCore.Qt.AlignTop)
-        
+
         nb = QtHelp.TabWidget()
         nb.setTabPosition(QtGui.QTabWidget.South)
         nb.setUsesScrollButtons(True)
@@ -65,7 +65,7 @@ class Catalogs(CatalogsBase.CatalogsBase):
         self.w.img_params = QtHelp.StackedWidget()
         vbox.addWidget(self.w.img_params, stretch=1,
                        alignment=QtCore.Qt.AlignTop)
-        
+
         combobox = self.w.server
         index = 0
         self.image_server_options = self.fv.imgsrv.getServerNames(kind='image')
@@ -97,7 +97,7 @@ class Catalogs(CatalogsBase.CatalogsBase):
         self.w2.cat_params = QtHelp.StackedWidget()
         vbox.addWidget(self.w2.cat_params, stretch=1,
                        alignment=QtCore.Qt.AlignTop)
-        
+
         combobox = self.w2.server
         index = 0
         self.catalog_server_options = self.fv.imgsrv.getServerNames(kind='catalog')
@@ -112,7 +112,7 @@ class Catalogs(CatalogsBase.CatalogsBase):
 
         btns = QtHelp.HBox()
         btns.setSpacing(5)
-        
+
         btn = QtGui.QRadioButton("Rectangle")
         if self.drawtype == 'rectangle':
             btn.setChecked(True)
@@ -133,7 +133,7 @@ class Catalogs(CatalogsBase.CatalogsBase):
         sw = QtGui.QScrollArea()
         sw.setWidgetResizable(True)
         sw.setWidget(vbox0)
-        
+
         nb.addTab(sw, "Params")
 
         vbox = QtHelp.VBox()
@@ -189,7 +189,7 @@ class Catalogs(CatalogsBase.CatalogsBase):
 
         cw = container.get_widget()
         cw.addWidget(vbox1, stretch=1)
-        
+
 
     def limit_area_cb(self, tf):
         self.limit_stars_to_area = (tf != 0)
@@ -225,13 +225,13 @@ class Catalogs(CatalogsBase.CatalogsBase):
 
     def set_message(self, msg):
         self.tw.setText(msg)
-        
+
     def _raise_tab(self, w):
         self.w.nb.setCurrentWidget(w)
-        
+
     def _get_cbidx(self, w):
         return w.currentIndex()
-        
+
     def _setup_params(self, obj, container):
         params = obj.getParams()
         captions = []
@@ -284,7 +284,7 @@ class Catalogs(CatalogsBase.CatalogsBase):
                 for key in bnch.keys():
                     if key in d:
                         bnch[key].setText(str(d[key]))
-    
+
     def get_params(self, bnch):
         params = {}
         for key in bnch.keys():
@@ -293,22 +293,22 @@ class Catalogs(CatalogsBase.CatalogsBase):
 
     def instructions(self):
         self.set_message("""TBD.""")
-        
+
     def set_drawtype_cb(self, tf, drawtype):
         if tf:
             self.drawtype = drawtype
             self.canvas.set_drawtype(self.drawtype, color='cyan',
                                      linestyle='dash')
-        
+
     def __str__(self):
         return 'catalogs'
-    
+
 
 class CatalogListing(CatalogsBase.CatalogListingBase):
-    
+
     def _build_gui(self, container):
         self.mframe = container
-            
+
         vbox = QtHelp.VBox()
 
         # create the table
@@ -375,6 +375,21 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
         self.btn['imap'] = combobox
         btns.addWidget(combobox, stretch=0, alignment=QtCore.Qt.AlignRight)
 
+        combobox = QtHelp.ComboBox()
+        options = []
+        index = 0
+        for name, fn in self.operation_table:
+            options.append(name)
+            combobox.addItem(name)
+            index += 1
+        combobox.setCurrentIndex(0)
+        combobox.activated.connect(self.do_operation_cb)
+        self.btn['oprn'] = combobox
+        btns.addWidget(combobox, stretch=0, alignment=QtCore.Qt.AlignRight)
+
+        btn = QtGui.QPushButton("Do it")
+        btns.addWidget(btn, stretch=0, alignment=QtCore.Qt.AlignRight)
+
         vbox.addWidget(btns, stretch=0, alignment=QtCore.Qt.AlignTop)
 
         btns = QtHelp.HBox()
@@ -403,11 +418,11 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
         btns.addWidget(combobox, stretch=0, alignment=QtCore.Qt.AlignLeft)
 
         vbox.addWidget(btns, stretch=0, alignment=QtCore.Qt.AlignTop)
-        
+
         # create the table
         info = Bunch.Bunch(columns=self.columns, color='Mag')
         self.build_table(info)
-        
+
         self.mframe.addWidget(vbox, stretch=1)
 
     def build_table(self, info):
@@ -418,7 +433,7 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
         fidx = 0
         combobox = self.btn['field']
         combobox.clear()
-        
+
         col = 0
         for hdr, kwd in columns:
             #item = QtGui.QTableWidgetItem(hdr)
@@ -443,7 +458,7 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
 
         # rebuild table according to metadata
         self.build_table(info)
-        
+
         table = self.table
         model = CatalogTableModel(info.columns, self.starlist)
         table.setModel(model)
@@ -451,7 +466,7 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
         table.setSelectionModel(selectionModel)
         selectionModel.currentRowChanged.connect(self.select_star_cb)
         model.layoutChanged.connect(self.sort_cb)
-        
+
         # set column width to fit contents
         table.resizeColumnsToContents()
         table.resizeRowsToContents()
@@ -511,15 +526,16 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
     ##     star = self.starlist[row]
     ##     #self.mark_selection(star, fromtable=True)
     ##     return True
-    
+
     def select_star_cb(self, midx_to, midx_from):
         """This method is called when the user selects a star from the table.
         """
         row = midx_to.row()
         star = self.starlist[row]
-        self.mark_selection(star, fromtable=True)
+        if not self._select_flag:
+            self.mark_selection(star, fromtable=True)
         return True
-    
+
     def set_cmap_cb(self, index):
         name = self.cmap_names[index]
         self.set_cmap_byname(name)
@@ -532,9 +548,14 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
         fieldname = self.columns[index][1]
         self.set_field(fieldname)
 
+    def do_operation_cb(self, w, index):
+        if index >= 0:
+            fn = self.operation_table[index][1]
+            fn(self.selected)
+
     def sort_cb(self):
         self.replot_stars()
-        
+
 
 class CatalogTableModel(QtCore.QAbstractTableModel):
 
@@ -544,16 +565,16 @@ class CatalogTableModel(QtCore.QAbstractTableModel):
         self.columns = columns
         self.starlist = starlist
 
-    def rowCount(self, parent): 
-        return len(self.starlist) 
- 
-    def columnCount(self, parent): 
-        return len(self.columns) 
- 
-    def data(self, index, role): 
-        if not index.isValid(): 
-            return None 
-        elif role != QtCore.Qt.DisplayRole: 
+    def rowCount(self, parent):
+        return len(self.starlist)
+
+    def columnCount(self, parent):
+        return len(self.columns)
+
+    def data(self, index, role):
+        if not index.isValid():
+            return None
+        elif role != QtCore.Qt.DisplayRole:
             return None
 
         star = self.starlist[index.row()]
@@ -564,7 +585,7 @@ class CatalogTableModel(QtCore.QAbstractTableModel):
         if (orientation == QtCore.Qt.Horizontal) and \
                (role == QtCore.Qt.DisplayRole):
             return self.columns[col][0]
-        
+
         # Hack to make the rows in a TableView all have a
         # reasonable height for the data
         elif (role == QtCore.Qt.SizeHintRole) and \
@@ -578,16 +599,16 @@ class CatalogTableModel(QtCore.QAbstractTableModel):
         def sortfn(star):
             field = self.columns[Ncol][1]
             return star[field]
-        
+
         if QtHelp.have_pyqt4:
             self.emit(QtCore.SIGNAL("layoutAboutToBeChanged()"))
 
-        self.starlist = sorted(self.starlist, key=sortfn)        
+        self.starlist = sorted(self.starlist, key=sortfn)
 
         if order == QtCore.Qt.DescendingOrder:
             self.starlist.reverse()
         if QtHelp.have_pyqt4:
             self.emit(QtCore.SIGNAL("layoutChanged()"))
-        
-    
+
+
 # END

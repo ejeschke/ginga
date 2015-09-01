@@ -130,6 +130,9 @@ class CompoundMixin(object):
     def getObjects(self):
         return self.objects
 
+    def has_object(self, obj):
+        return obj in self.objects
+
     def deleteObject(self, obj):
         self.objects.remove(obj)
 

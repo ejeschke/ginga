@@ -360,7 +360,7 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
         try:
             index = self.cmap_names.index(cmap_name)
         except Exception:
-            index = self.cmap_names.index('ramp')
+            index = self.cmap_names.index('gray')
         combobox.set_active(index)
         combobox.sconnect('changed', self.set_cmap_cb)
         self.btn['cmap'] = combobox
@@ -477,6 +477,8 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
             tvcolumn[n].set_cell_data_func(cell, fn_data)
             treeview.append_column(tvcolumn[n])
 
+            # TODO: these are not making it into the combobox correctly
+            header = header.strip()
             combobox.insert_text(n, header)
             if header == info.color:
                 fidx = n
@@ -607,7 +609,7 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
         index = self.btn['oprn'].get_active()
         if index >= 0:
             fn = self.operation_table[index][1]
-            self.fv.wrap_error(fn, self.selected)
+            fn(self.selected)
 
 
 # END
