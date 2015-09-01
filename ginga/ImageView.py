@@ -606,7 +606,7 @@ class ImageViewBase(Callback.Callbacks):
                     tb_str = "Traceback information unavailable."
                     self.logger.error(tb_str)
 
-            ## self.redraw(whence=0)
+            self.redraw(whence=0)
 
     def set_data(self, data, metadata=None):
         """
