@@ -801,7 +801,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         chname = self.fv.get_channelName(self.fitsimage)
         chinfo = self.fv.get_channelInfo(chname)
         chinfo.datasrc.set_bufsize(num_images)
-        print(("num images was set to", num_images))
+        self.logger.debug("num images was set to {0}".format(num_images))
 
         if not self.gui_up:
             return
@@ -849,7 +849,7 @@ class Preferences(GingaPlugin.LocalPlugin):
     def _update_pan_coords(self):
         pan_coord = self.t_.get('pan_coord', 'data')
         pan_x, pan_y = self.fitsimage.get_pan(coord=pan_coord)
-        #print("updating pan coords (%s) %f %f" % (pan_coord, pan_x, pan_y))
+        #self.logger.debug("updating pan coords (%s) %f %f" % (pan_coord, pan_x, pan_y))
         if pan_coord == 'wcs':
             use_sex = self.w.wcs_sexagesimal.get_state()
             if use_sex:
@@ -905,7 +905,7 @@ class Preferences(GingaPlugin.LocalPlugin):
 
     def set_buffer_cb(self, *args):
         num_images = int(self.w.num_images.get_text())
-        print(("setting num images", num_images))
+        self.logger.debug("setting num images {0}".format(num_images))
         self.t_.set(numImages=num_images)
 
     def set_wcs_params_cb(self, *args):
