@@ -159,6 +159,12 @@ class PolygonMixin(object):
         # See: http://alienryderflex.com/polygon/
         xa, ya = x_arr, y_arr
 
+        # promote input arrays dimension cardinality, if necessary
+        if len(xa.shape) == 1:
+            xa = xa.reshape(1, -1)
+        if len(ya.shape) == 1:
+            ya = ya.reshape(-1, 1)
+
         result = numpy.empty((ya.size, xa.size), dtype=numpy.bool)
         result.fill(False)
 
@@ -169,12 +175,14 @@ class PolygonMixin(object):
                 numpy.logical_or(numpy.logical_and(yi < ya, yj >= ya),
                                  numpy.logical_and(yj < ya, yi >= ya)),
                 numpy.logical_or(xi <= xa, xj <= xa))
-            # TODO: get a divide by zero here for some elements whose tf=False
+            # NOTE: get a divide by zero here for some elements whose tf=False
             # Need to figure out a way to conditionally do those w/tf=True
+            # Till then we use the warnings module to suppress the warning.
             with warnings.catch_warnings():
                 warnings.simplefilter('ignore', RuntimeWarning)
                 cross = ((xi + (ya - yi).astype(numpy.float) /
                           (yj - yi) * (xj - xi)) < xa)
+
             result[tf == True] ^= cross[tf == True]
             xj, yj = xi, yi
 
