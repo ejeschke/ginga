@@ -50,7 +50,7 @@ class Pan(GingaPlugin.GlobalPlugin):
         sfi.set_callback('cursor-down', self.btndown)
         sfi.set_callback('cursor-move', self.drag_cb)
         sfi.set_callback('none-move', self.motion_cb)
-        sfi.set_callback('scroll', self.zoom)
+        sfi.set_callback('zoom-scroll', self.zoom_cb)
         sfi.set_callback('configure', self.reconfigure)
         # for debugging
         sfi.set_name('panimage')
@@ -94,7 +94,7 @@ class Pan(GingaPlugin.GlobalPlugin):
                         'scale_x_base', 'scale_y_base']
         fitssettings.shareSettings(pansettings, zoomsettings)
         for key in zoomsettings:
-            pansettings.getSetting(key).add_callback('set', self.zoom_cb,
+            pansettings.getSetting(key).add_callback('set', self.zoom_ext_cb,
                                                      fitsimage, chinfo, paninfo)
 
         xfrmsettings = ['flip_x', 'flip_y', 'swap_xy', 'rot_deg']
@@ -174,7 +174,7 @@ class Pan(GingaPlugin.GlobalPlugin):
         self.panset(chinfo.fitsimage, chinfo, paninfo)
         return True
 
-    def zoom_cb(self, setting, value, fitsimage, chinfo, paninfo):
+    def zoom_ext_cb(self, setting, value, fitsimage, chinfo, paninfo):
         # refit the pan image, because scale factors may have changed
         paninfo.panimage.zoom_fit()
         # redraw pan info
@@ -276,29 +276,17 @@ class Pan(GingaPlugin.GlobalPlugin):
         bigimage.panset_xy(data_x, data_y)
         return True
 
-    def zoom(self, fitsimage, event):
-        """Scroll event in the small fits window.  Just zoom the large fits
+    def zoom_cb(self, fitsimage, event):
+        """Zoom event in the small fits window.  Just zoom the large fits
         window.
         """
         fitsimage = self.fv.getfocus_fitsimage()
+        bd = fitsimage.get_bindings()
 
-        prefs = self.fv.get_preferences()
-        settings = prefs.getSettings('general')
-        rev = settings.get('zoom_scroll_reverse', False)
+        if hasattr(bd, 'sc_zoom'):
+            return bd.sc_zoom(fitsimage, event)
 
-        direction = event.direction
-        if (direction < 90.0) or (direction > 270.0):
-            if not rev:
-                fitsimage.zoom_in()
-            else:
-                fitsimage.zoom_out()
-        elif (90.0 < direction < 270.0):
-            if not rev:
-                fitsimage.zoom_out()
-            else:
-                fitsimage.zoom_in()
-        fitsimage.onscreen_message(fitsimage.get_scale_text(),
-                                   delay=1.0)
+        return False
 
     def draw_cb(self, fitsimage, tag):
         # Get and delete the drawn object
