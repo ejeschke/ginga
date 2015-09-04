@@ -137,14 +137,14 @@ class Overlays(GingaPlugin.LocalPlugin):
             p_canvas.add(self.canvas, tag=self.layertag)
 
         self.resume()
-        if self.hi_value is not None:
+        if not (self.hi_value is None):
             self.redo()
 
     def pause(self):
         self.canvas.ui_setActive(False)
 
     def resume(self):
-        #self.canvas.ui_setActive(True)
+        self.canvas.ui_setActive(True)
         self.fv.showStatus("Enter a value for saturation limit")
 
     def stop(self):
@@ -235,12 +235,13 @@ class Overlays(GingaPlugin.LocalPlugin):
             self.logger.debug("Updating canvas image")
             self.canvas_img.set_image(self.rgbobj)
 
-        #self.logger.debug("redrawing canvas")
-        #self.fitsimage.redraw(whence=2)
+        self.logger.debug("redrawing canvas")
+        self.canvas.update_canvas()
 
         self.logger.debug("redo completed")
 
     def clear(self, canvas, button, data_x, data_y):
+        self.canvas_img = None
         self.canvas.deleteAllObjects()
         return False
 
