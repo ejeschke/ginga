@@ -13,6 +13,7 @@ from ginga.canvas.CanvasObject import (CanvasObjectBase, _bool, _color,
                                        register_canvas_types,
                                        colors_plus_none)
 from ginga.misc.ParamSet import Param
+from ginga.misc import Bunch
 from ginga import trcalc
 
 class Image(CanvasObjectBase):
@@ -77,13 +78,9 @@ class Image(CanvasObjectBase):
                                         flipy=flipy, optimize=optimize,
                                         **kwdargs)
 
-        self._drawn = False
-        # these hold intermediate step results. Depending on value of
-        # `whence` they may not need to be recomputed.
-        self._cutout = None
-        # calculated location of overlay on canvas
-        self._cvs_x = 0
-        self._cvs_y = 0
+        # The cache holds intermediate step results by viewer.
+        # Depending on value of `whence` they may not need to be recomputed.
+        self._cache = {}
         self._zorder = 0
         # images are not editable by default
         self.editable = False
@@ -93,12 +90,27 @@ class Image(CanvasObjectBase):
 
     def set_zorder(self, zorder):
         self._zorder = zorder
-        self.viewer.reorder_layers()
-        self.viewer.redraw(whence=2)
+        for viewer in self._cache:
+            viewer.reorder_layers()
+            viewer.redraw(whence=2)
+
+    def get_cache(self, viewer):
+        if viewer in self._cache:
+            cache = self._cache[viewer]
+        else:
+            cache = self._reset_cache(Bunch.Bunch())
+            self._cache[viewer] = cache
+        return cache
 
     def draw(self, viewer):
-        if not self._drawn:
-            self._drawn = True
+        """General draw method for RGB image types.
+        Note that actual insertion of the image into the output is
+        handled in `draw_image()`
+        """
+        cache = self.get_cache(viewer)
+
+        if not cache.drawn:
+            cache.drawn = True
             viewer.redraw(whence=2)
 
         cpoints = self.get_cpoints(viewer)
@@ -113,11 +125,16 @@ class Image(CanvasObjectBase):
 
 
     def draw_image(self, viewer, dstarr, whence=0.0):
+        if self.image is None:
+            return
+
+        cache = self.get_cache(viewer)
+
         #print("redraw whence=%f" % (whence))
         dst_order = viewer.get_rgb_order()
         image_order = self.image.get_order()
 
-        if (whence <= 0.0) or (self._cutout is None) or (not self.optimize):
+        if (whence <= 0.0) or (cache.cutout is None) or (not self.optimize):
             # get extent of our data coverage in the window
             ((x0, y0), (x1, y1), (x2, y2), (x3, y3)) = viewer.get_pan_rect()
             xmin = int(min(x0, x1, x2, x3))
@@ -163,11 +180,11 @@ class Image(CanvasObjectBase):
 
             ## if dst_order != image_order:
             ##     # reorder result to match desired rgb_order by backend
-            ##     self._cutout = trcalc.reorder_image(dst_order, res.data,
-            ##                                         image_order)
+            ##     cache.cutout = trcalc.reorder_image(dst_order, res.data,
+            ##                                          image_order)
             ## else:
-            ##     self._cutout = res.data
-            self._cutout = res.data
+            ##     cache.cutout = res.data
+            cache.cutout = res.data
 
             # calculate our offset from the pan position
             pan_x, pan_y = viewer.get_pan()
@@ -183,22 +200,26 @@ class Image(CanvasObjectBase):
             # dst position in the pre-transformed array should be calculated
             # from the center of the array plus offsets
             ht, wd, dp = dstarr.shape
-            self._cvs_x = int(round(wd / 2.0  + off_x))
-            self._cvs_y = int(round(ht / 2.0  + off_y))
+            cache.cvs_x = int(round(wd / 2.0  + off_x))
+            cache.cvs_y = int(round(ht / 2.0  + off_y))
 
         # composite the image into the destination array at the
         # calculated position
-        trcalc.overlay_image(dstarr, self._cvs_x, self._cvs_y, self._cutout,
+        trcalc.overlay_image(dstarr, cache.cvs_x, cache.cvs_y, cache.cutout,
                              dst_order=dst_order, src_order=image_order,
                              alpha=self.alpha, flipy=False)
 
-    def _reset_optimize(self):
-        self._drawn = False
-        self._cutout = None
+    def _reset_cache(self, cache):
+        cache.setvals(cutout=None, drawn=False, cvs_x=0, cvs_y=0)
+        return cache
+
+    def reset_optimize(self):
+        for cache in self._cache.values():
+            self._reset_cache(cache)
 
     def set_image(self, image):
         self.image = image
-        self._reset_optimize()
+        self.reset_optimize()
 
     def get_scaled_wdht(self):
         width = int(self.image.width * self.scale_x)
@@ -246,7 +267,7 @@ class Image(CanvasObjectBase):
         else:
             raise ValueError("No point corresponding to index %d" % (i))
 
-        self._reset_optimize()
+        self.reset_optimize()
 
     def get_edit_points(self):
         width, height = self.get_scaled_wdht()
@@ -259,16 +280,16 @@ class Image(CanvasObjectBase):
     def scale_by(self, scale_x, scale_y):
         self.scale_x *= scale_x
         self.scale_y *= scale_y
-        self._reset_optimize()
+        self.reset_optimize()
 
     def set_scale(self, scale_x, scale_y):
         self.scale_x = scale_x
         self.scale_y = scale_y
-        self._reset_optimize()
+        self.reset_optimize()
 
     def set_origin(self, x, y):
         self.x, self.y = x, y
-        self._reset_optomize()
+        self.reset_optimize()
 
 
 class NormImage(Image):
@@ -339,15 +360,15 @@ class NormImage(Image):
         self.rgbmap = rgbmap
         self.autocuts = autocuts
 
-        # these hold intermediate step results. Depending on value of
-        # `whence` they may not need to be recomputed.
-        self._prergb = None
-        self._rgbarr = None
 
     def draw_image(self, viewer, dstarr, whence=0.0):
-        #print("redraw whence=%f" % (whence))
+        if self.image is None:
+            return
 
-        if (whence <= 0.0) or (self._cutout is None) or (not self.optimize):
+        #print("redraw whence=%f" % (whence))
+        cache = self.get_cache(viewer)
+
+        if (whence <= 0.0) or (cache.cutout is None) or (not self.optimize):
             # get extent of our data coverage in the window
             ((x0, y0), (x1, y1), (x2, y2), (x3, y3)) = viewer.get_pan_rect()
             xmin = int(min(x0, x1, x2, x3))
@@ -381,7 +402,7 @@ class NormImage(Image):
             res = self.image.get_scaled_cutout(a1, b1, a2, b2,
                                                _scale_x, _scale_y,
                                                method=self.interpolation)
-            self._cutout = res.data
+            cache.cutout = res.data
 
             # calculate our offset from the pan position
             pan_x, pan_y = viewer.get_pan()
@@ -397,18 +418,18 @@ class NormImage(Image):
             # dst position in the pre-transformed array should be calculated
             # from the center of the array plus offsets
             ht, wd, dp = dstarr.shape
-            self._cvs_x = int(round(wd / 2.0  + off_x))
-            self._cvs_y = int(round(ht / 2.0  + off_y))
+            cache.cvs_x = int(round(wd / 2.0  + off_x))
+            cache.cvs_y = int(round(ht / 2.0  + off_y))
 
         if self.rgbmap is not None:
             rgbmap = self.rgbmap
         else:
             rgbmap = viewer.get_rgbmap()
 
-        if (whence <= 1.0) or (self._prergb is None) or (not self.optimize):
+        if (whence <= 1.0) or (cache.prergb is None) or (not self.optimize):
             # apply visual changes prior to color mapping (cut levels, etc)
             vmax = rgbmap.get_hash_size() - 1
-            newdata = self.apply_visuals(viewer, self._cutout, 0, vmax)
+            newdata = self.apply_visuals(viewer, cache.cutout, 0, vmax)
 
             # result becomes an index array fed to the RGB mapper
             if not numpy.issubdtype(newdata.dtype, numpy.dtype('uint')):
@@ -416,7 +437,7 @@ class NormImage(Image):
             idx = newdata
 
             self.logger.debug("shape of index is %s" % (str(idx.shape)))
-            self._prergb = idx
+            cache.prergb = idx
 
         dst_order = viewer.get_rgb_order()
         image_order = self.image.get_order()
@@ -424,15 +445,15 @@ class NormImage(Image):
         if ('A' in dst_order) and not ('A' in image_order):
             get_order = dst_order.replace('A', '')
 
-        if (whence <= 2.5) or (self._rgbarr is None) or (not self.optimize):
+        if (whence <= 2.5) or (cache.rgbarr is None) or (not self.optimize):
             # get RGB mapped array
-            rgbobj = rgbmap.get_rgbarray(self._prergb, order=dst_order,
+            rgbobj = rgbmap.get_rgbarray(cache.prergb, order=dst_order,
                                          image_order=image_order)
-            self._rgbarr = rgbobj.get_array(get_order)
+            cache.rgbarr = rgbobj.get_array(get_order)
 
         # composite the image into the destination array at the
         # calculated position
-        trcalc.overlay_image(dstarr, self._cvs_x, self._cvs_y, self._rgbarr,
+        trcalc.overlay_image(dstarr, cache.cvs_x, cache.cvs_y, cache.rgbarr,
                              dst_order=dst_order, src_order=get_order,
                              alpha=self.alpha, flipy=False)
 
@@ -448,20 +469,20 @@ class NormImage(Image):
                                       vmin=vmin, vmax=vmax)
         return newdata
 
-    def _reset_optimize(self):
-        super(NormImage, self)._reset_optimize()
-        self._prergb = None
-        self._rgbarr = None
+    def _reset_cache(self, cache):
+        cache.setvals(cutout=None, prergb=None, rgbarr=None,
+                      drawn=False, cvs_x=0, cvs_y=0)
+        return cache
 
     def set_image(self, image):
         self.image = image
-        self._reset_optimize()
+        self.reset_optimize()
 
     def scale_by(self, scale_x, scale_y):
         #print("scaling image")
         self.scale_x *= scale_x
         self.scale_y *= scale_y
-        self._reset_optimize()
+        self.reset_optimize()
         #print("image scale_x=%f scale_y=%f" % (self.scale_x, self.scale_y))
 
 

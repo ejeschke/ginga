@@ -28,14 +28,7 @@ class ImageViewCanvas(ImageViewMpl.ImageViewZoom,
         CanvasMixin.__init__(self)
         DrawingMixin.__init__(self)
 
-        for name in ('modified', ):
-            self.enable_callback(name)
-
-        #self.canvas.add(self)
         self.set_canvas(self)
-
-        self.setSurface(self)
-        self.ui_setActive(True)
 
         # for displaying modal keyboard state
         self.mode_obj = None
@@ -43,16 +36,8 @@ class ImageViewCanvas(ImageViewMpl.ImageViewZoom,
         bm.add_callback('mode-set', self.mode_change_cb)
         self.add_callback('configure', self._configure_cb)
 
-    def update_canvas(self, whence=3):
-        self.logger.debug("updating canvas")
-        self.redraw(whence=whence)
-
     def redraw_data(self, whence=0):
         super(ImageViewCanvas, self).redraw_data(whence=whence)
-
-        if not self.figure:
-            return
-        self.draw(self)
 
         # refresh the matplotlib canvas
         self.figure.canvas.draw()

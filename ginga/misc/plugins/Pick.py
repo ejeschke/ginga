@@ -625,8 +625,8 @@ class Pick(GingaPlugin.LocalPlugin):
         self.show_candidates = state
         if not self.show_candidates:
             # Delete previous peak marks
-            objs = self.fitsimage.getObjectsByTagpfx('peak')
-            self.fitsimage.deleteObjects(objs)
+            objs = self.canvas.getObjectsByTagpfx('peak')
+            self.canvas.deleteObjects(objs)
 
     def coordinate_base_cb(self, w):
         self.pixel_coords_offset = float(w.get_text())
@@ -923,12 +923,13 @@ class Pick(GingaPlugin.LocalPlugin):
         self.open_report_log()
 
         # insert layer if it is not already
+        p_canvas = self.fitsimage.get_canvas()
         try:
-            obj = self.fitsimage.getObjectByTag(self.layertag)
+            obj = p_canvas.getObjectByTag(self.layertag)
 
         except KeyError:
             # Add canvas layer
-            self.fitsimage.add(self.canvas, tag=self.layertag)
+            p_canvas.add(self.canvas, tag=self.layertag)
 
         self.resume()
 
@@ -944,16 +945,17 @@ class Pick(GingaPlugin.LocalPlugin):
 
     def stop(self):
         # Delete previous peak marks
-        objs = self.fitsimage.getObjectsByTagpfx('peak')
-        self.fitsimage.deleteObjects(objs)
+        objs = self.canvas.getObjectsByTagpfx('peak')
+        self.canvas.deleteObjects(objs)
 
         # close pick log, if any
         self.close_report_log()
 
         # deactivate the canvas
         self.canvas.ui_setActive(False)
+        p_canvas = self.fitsimage.get_canvas()
         try:
-            self.fitsimage.deleteObjectByTag(self.layertag)
+            p_canvas.deleteObjectByTag(self.layertag)
         except:
             pass
         self.fv.showStatus("")
@@ -1025,8 +1027,8 @@ class Pick(GingaPlugin.LocalPlugin):
                 self.clear_radial()
 
             # Delete previous peak marks
-            objs = self.fitsimage.getObjectsByTagpfx('peak')
-            self.fitsimage.deleteObjects(objs)
+            objs = self.canvas.getObjectsByTagpfx('peak')
+            self.canvas.deleteObjects(objs)
 
             # Offload this task to another thread so that GUI remains
             # responsive
@@ -1163,12 +1165,12 @@ class Pick(GingaPlugin.LocalPlugin):
             # Mark new peaks, if desired
             if self.show_candidates:
                 for obj in objlist:
-                    tag = self.fitsimage.add(self.dc.Point(x1+obj.objx,
-                                                           y1+obj.objy,
-                                                           5,
-                                                           linewidth=1,
-                                                           color=self.candidate_color),
-                                             tagpfx='peak')
+                    tag = self.canvas.add(self.dc.Point(x1+obj.objx,
+                                                        y1+obj.objy,
+                                                        5,
+                                                        linewidth=1,
+                                                        color=self.candidate_color),
+                                          tagpfx='peak')
 
             # Add back in offsets into image to get correct values with respect
             # to the entire image

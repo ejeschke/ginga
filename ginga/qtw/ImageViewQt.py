@@ -781,6 +781,8 @@ class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
                                 rgbmap=rgbmap, render=render)
         Mixins.UIMixin.__init__(self)
 
+        self.ui_setActive(True)
+
         if bindmap is None:
             bindmap = ImageViewZoom.bindmapClass(self.logger)
         self.bindmap = bindmap
@@ -799,6 +801,24 @@ class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
     def set_bindings(self, bindings):
         self.bindings = bindings
         bindings.set_bindings(self)
+
+
+class CanvasView(ImageViewZoom):
+
+    def __init__(self, logger=None, settings=None, rgbmap=None,
+                 render='widget',
+                 bindmap=None, bindings=None):
+        ImageViewZoom.__init__(self, logger=logger, settings=settings,
+                               rgbmap=rgbmap, render=render,
+                               bindmap=bindmap, bindings=bindings)
+
+        # Needed for UIMixin to propagate events correctly
+        self.objects = [self.canvas]
+
+    def set_canvas(self, canvas):
+        super(CanvasView, self).set_canvas(canvas)
+
+        self.objects[0] = canvas
 
 
 def make_cursor(iconpath, x, y):

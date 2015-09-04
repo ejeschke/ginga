@@ -85,27 +85,30 @@ class DrawingMixin(object):
         self.viewer = viewer
 
         # register this canvas for events of interest
-        # for legacy drawing via draw mode in Bindmap
-        self.add_callback('draw-down', self.draw_start, viewer)
-        self.add_callback('draw-move', self.draw_motion, viewer)
-        self.add_callback('draw-up', self.draw_stop, viewer)
+        canvas = self
 
-        self.add_callback('key-press', self._draw_key, 'key', viewer)
-        self.add_callback('keydown-poly_add', self._draw_op, 'poly_add',
+        # for legacy drawing via draw mode in Bindmap
+        canvas.add_callback('draw-down', self.draw_start, viewer)
+        canvas.add_callback('draw-move', self.draw_motion, viewer)
+        canvas.add_callback('draw-up', self.draw_stop, viewer)
+
+        canvas.add_callback('key-press', self._draw_key, 'key', viewer)
+        canvas.add_callback('keydown-poly_add', self._draw_op, 'poly_add',
                           viewer)
-        self.add_callback('keydown-poly_del', self._draw_op, 'poly_delete',
+        canvas.add_callback('keydown-poly_del', self._draw_op, 'poly_delete',
                           viewer)
-        self.add_callback('keydown-edit_del', self.edit_delete_cb, viewer)
-        #self.add_callback('draw-scroll', self._edit_rotate_cb, viewer)
-        #self.add_callback('draw-scroll', self._edit_scale_cb, viewer)
+        canvas.add_callback('keydown-edit_del', self.edit_delete_cb, viewer)
+        #canvas.add_callback('draw-scroll', self._edit_rotate_cb, viewer)
+        #canvas.add_callback('draw-scroll', self._edit_scale_cb, viewer)
 
     def getSurface(self):
         return self.viewer
 
     def register_for_cursor_drawing(self, viewer):
-        self.add_callback('cursor-down', self._draw_op, 'down', viewer)
-        self.add_callback('cursor-move', self._draw_op, 'move', viewer)
-        self.add_callback('cursor-up', self._draw_op, 'up', viewer)
+        canvas = self
+        canvas.add_callback('cursor-down', self._draw_op, 'down', viewer)
+        canvas.add_callback('cursor-move', self._draw_op, 'move', viewer)
+        canvas.add_callback('cursor-up', self._draw_op, 'up', viewer)
 
     ##### MODE LOGIC #####
 
@@ -165,6 +168,9 @@ class DrawingMixin(object):
 
     def _draw_update(self, data_x, data_y, cxt):
 
+        ## self.logger.debug("drawing a '%s' x,y=%f,%f" % (
+        ##     self.t_drawtype, data_x, data_y))
+
         klass = self.drawDict[self.t_drawtype]
         obj = None
 
@@ -186,7 +192,7 @@ class DrawingMixin(object):
             #obj.initialize(None, cxt.viewer, viewer.logger)
             self._draw_obj = obj
             if time.time() - self._processTime > self._deltaTime:
-                self.process_drawing(cxt.viewer)
+                self.process_drawing()
 
         return True
 
@@ -207,7 +213,7 @@ class DrawingMixin(object):
                                logger=self.logger)
 
         self._draw_update(data_x, data_y, self._draw_cxt)
-        self.process_drawing(viewer)
+        self.process_drawing()
         return True
 
     def draw_stop(self, canvas, event, data_x, data_y, viewer):
@@ -228,7 +234,7 @@ class DrawingMixin(object):
                 self.make_callback('edit-select', self._edit_obj)
             return True
         else:
-            self.process_drawing(viewer)
+            self.process_drawing()
 
     def draw_motion(self, canvas, event, data_x, data_y, viewer):
         if not self.candraw:
@@ -291,7 +297,7 @@ class DrawingMixin(object):
     def get_drawparams(self):
         return self.t_drawparams.copy()
 
-    def process_drawing(self, viewer):
+    def process_drawing(self):
         self._processTime = time.time()
         #viewer.redraw(whence=3)
         #self.redraw(whence=3)
@@ -341,7 +347,7 @@ class DrawingMixin(object):
         #self._edit_obj.sync_state()
 
         if time.time() - self._processTime > self._deltaTime:
-            self.process_drawing(viewer)
+            self.process_drawing()
         return True
 
     def _is_editable(self, obj, x, y, is_inside):
@@ -455,7 +461,7 @@ class DrawingMixin(object):
                         #print(("starting over"))
                         self._prepare_to_move(obj, data_x, data_y)
 
-        self.process_drawing(viewer)
+        self.process_drawing()
         return True
 
     def edit_stop(self, canvas, event, data_x, data_y, viewer):
@@ -514,7 +520,7 @@ class DrawingMixin(object):
                 x, y = obj.crdmap.data_to(data_x, data_y)
                 points.insert(insert, (x, y))
                 obj.points = points
-                self.process_drawing(viewer)
+                self.process_drawing()
             else:
                 self.logger.debug("cursor not near a line")
 
@@ -541,7 +547,7 @@ class DrawingMixin(object):
                 self.logger.debug("deleting point")
                 points.pop(delete)
                 obj.points = points
-                self.process_drawing(viewer)
+                self.process_drawing()
             else:
                 self.logger.debug("cursor not near a point")
 
@@ -551,7 +557,7 @@ class DrawingMixin(object):
         if self._edit_obj is None:
             return False
         self._edit_obj.rotate_by(delta_deg)
-        self.process_drawing(viewer)
+        self.process_drawing()
         self.make_callback('edit-event', self._edit_obj)
         return True
 
@@ -568,7 +574,7 @@ class DrawingMixin(object):
         if self._edit_obj is None:
             return False
         self._edit_obj.scale_by(delta_x, delta_y)
-        self.process_drawing(viewer)
+        self.process_drawing()
         self.make_callback('edit-event', self._edit_obj)
         return True
 
@@ -653,7 +659,7 @@ class DrawingMixin(object):
             obj = None
 
         self.logger.debug("selected: %s" % (str(self._selected)))
-        self.process_drawing(viewer)
+        self.process_drawing()
 
         #self.make_callback('edit-select', obj, self._selected)
         return True
@@ -670,6 +676,7 @@ class DrawingMixin(object):
         # Draw everything else as usual
         super(DrawingMixin, self).draw(viewer)
 
+        #self.logger.debug("%s drawing draw obj to %s" % (self.name, viewer.name))
         # Draw our current drawing object, if any
         if self._draw_obj:
             self._draw_obj.draw(viewer)

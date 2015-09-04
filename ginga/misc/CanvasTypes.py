@@ -14,10 +14,10 @@ tkname = toolkit.get_family()
 
 if tkname == 'gtk':
     from ginga.gtkw.ImageViewCanvasGtk import *
-    from ginga.gtkw.ImageViewCanvasTypesGtk import *
 
 elif tkname == 'qt':
     from ginga.qtw.ImageViewCanvasQt import *
-    from ginga.qtw.ImageViewCanvasTypesQt import *
+
+from ginga.canvas.types.all import *
 
 # END

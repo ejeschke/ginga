@@ -177,12 +177,13 @@ For polygons/paths press 'v' to create a vertex, 'z' to remove last vertex.""")
         self.set_drawparams_cb()
 
         # insert layer if it is not already
+        p_canvas = self.fitsimage.get_canvas()
         try:
-            obj = self.fitsimage.getObjectByTag(self.layertag)
+            obj = p_canvas.getObjectByTag(self.layertag)
 
         except KeyError:
             # Add canvas layer
-            self.fitsimage.add(self.canvas, tag=self.layertag)
+            p_canvas.add(self.canvas, tag=self.layertag)
 
         self.resume()
 
@@ -195,8 +196,9 @@ For polygons/paths press 'v' to create a vertex, 'z' to remove last vertex.""")
 
     def stop(self):
         # remove the canvas from the image
+        p_canvas = self.fitsimage.get_canvas()
         try:
-            self.fitsimage.deleteObjectByTag(self.layertag)
+            p_canvas.deleteObjectByTag(self.layertag)
         except:
             pass
         # don't leave us stuck in edit mode
@@ -225,7 +227,7 @@ For polygons/paths press 'v' to create a vertex, 'z' to remove last vertex.""")
         self.w.drawvbox.remove_all()
 
         # Create new drawing class of the right kind
-        drawClass = self.fitsimage.getDrawClass(kind)
+        drawClass = self.canvas.getDrawClass(kind)
 
         self.w.attrlbl.set_text("New Object: %s" % (kind))
         # Build up a set of control widgets for the parameters

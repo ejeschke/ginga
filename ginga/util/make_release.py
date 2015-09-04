@@ -3,7 +3,7 @@ import os
 import time
 
 major = 2
-minor = 4
+minor = 5
 
 rlfile = 'version.py'
 backup = 'version.py.bak'

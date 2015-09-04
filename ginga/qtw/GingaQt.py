@@ -397,16 +397,20 @@ class GingaView(QtMain.QtMain):
         bd = bclass(self.logger, settings=bindprefs)
 
         fi = ImageViewCanvasQt.ImageViewCanvas(logger=self.logger,
-                                               rgbmap=rgbmap,
-                                               settings=settings,
-                                               bindings=bd)
-        fi.enable_draw(False)
+                                       rgbmap=rgbmap,
+                                       settings=settings,
+                                       bindings=bd)
+        canvas = fi.get_canvas()
+        canvas.enable_draw(False)
         fi.set_follow_focus(settings.get('follow_focus', True))
         fi.enable_auto_orient(True)
+
         fi.add_callback('motion', self.motion_cb)
         fi.add_callback('cursor-down', self.force_focus_cb)
         fi.add_callback('key-press', self.keypress)
         fi.add_callback('drag-drop', self.dragdrop)
+        fi.ui_setActive(True)
+
         for name in ['cuts']:
             settings.getSetting(name).add_callback('set',
                                self.change_range_cb, fi, self.colorbar)

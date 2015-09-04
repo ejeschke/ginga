@@ -40,10 +40,12 @@ class CanvasObjectBase(Callback.Callbacks):
         self.data = None
         # default mapping is to data coordinates
         self.crdmap = None
+        # For debugging
+        self.name = None
 
-        # For callbacks
-        for name in ('modified', ):
-            self.enable_callback(name)
+        ## # For callbacks
+        ## for name in ('modified', ):
+        ##     self.enable_callback(name)
 
     def initialize(self, tag, viewer, logger):
         self.tag = tag

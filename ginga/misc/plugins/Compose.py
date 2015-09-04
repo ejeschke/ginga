@@ -320,12 +320,13 @@ Then manipulate channel mix using the sliders.""")
     def start(self):
         self.instructions()
         # start ruler drawing operation
+        p_canvas = self.fitsimage.get_canvas()
         try:
-            obj = self.fitsimage.getObjectByTag(self.layertag)
+            obj = p_canvas.getObjectByTag(self.layertag)
 
         except KeyError:
             # Add ruler layer
-            self.fitsimage.add(self.canvas, tag=self.layertag)
+            p_canvas.add(self.canvas, tag=self.layertag)
 
         self.resume()
 
@@ -337,8 +338,9 @@ Then manipulate channel mix using the sliders.""")
 
     def stop(self):
         # remove the canvas from the image
+        p_canvas = self.fitsimage.get_canvas()
         try:
-            self.fitsimage.deleteObjectByTag(self.layertag)
+            p_canvas.deleteObjectByTag(self.layertag)
         except:
             pass
         self.canvas.ui_setActive(False)

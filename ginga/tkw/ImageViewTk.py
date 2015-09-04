@@ -399,6 +399,23 @@ class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
         bindings.set_bindings(self)
 
 
+class CanvasView(ImageViewZoom):
+
+    def __init__(self, logger=None, settings=None, rgbmap=None,
+                 bindmap=None, bindings=None):
+        ImageViewZoom.__init__(self, logger=logger, settings=settings,
+                               rgbmap=rgbmap,
+                               bindmap=bindmap, bindings=bindings)
+
+        # Needed for UIMixin to propagate events correctly
+        self.objects = [self.canvas]
+
+    def set_canvas(self, canvas):
+        super(CanvasView, self).set_canvas(canvas)
+
+        self.objects[0] = canvas
+
+
 class ImageViewCanvasError(ImageViewTkError):
     pass
 
@@ -416,33 +433,13 @@ class ImageViewCanvas(ImageViewZoom,
         CanvasMixin.__init__(self)
         DrawingMixin.__init__(self)
 
-        for name in ('modified', ):
-            self.enable_callback(name)
-
-        #self.canvas.add(self)
         self.set_canvas(self)
-
-        self.setSurface(self)
-        self.ui_setActive(True)
 
         # for displaying modal keyboard state
         self.mode_obj = None
         bm = self.get_bindmap()
         bm.add_callback('mode-set', self.mode_change_cb)
         self.add_callback('configure', self._configure_cb)
-
-
-    def update_canvas(self, whence=3):
-        self.logger.debug("updating canvas")
-        self.redraw(whence=whence)
-
-    def redraw_data(self, whence=0):
-        super(ImageViewCanvas, self).redraw_data(whence=whence)
-
-        surface = self.get_surface()
-        if surface is None:
-            return
-        self.draw(self)
 
     def mode_change_cb(self, bindmap, mode, modetype):
         # delete the old indicator

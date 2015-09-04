@@ -29,8 +29,9 @@ class Ruler(GingaPlugin.LocalPlugin):
         canvas.set_callback('draw-down', self.clear)
         canvas.set_callback('edit-event', self.edit_cb)
         canvas.set_draw_mode('draw')
-        canvas.register_for_cursor_drawing(self.fitsimage)
         canvas.setSurface(self.fitsimage)
+        canvas.register_for_cursor_drawing(self.fitsimage)
+        canvas.name = 'Ruler-canvas'
         self.canvas = canvas
 
         self.w = None
@@ -131,12 +132,15 @@ Display the Zoom tab at the same time to precisely see detail while drawing.""")
     def start(self):
         self.instructions()
         # start ruler drawing operation
-        try:
-            obj = self.fitsimage.getObjectByTag(self.layertag)
+        p_canvas = self.fitsimage.get_canvas()
+        ## try:
+        ##     obj = p_canvas.getObjectByTag(self.layertag)
 
-        except KeyError:
-            # Add ruler layer
-            self.fitsimage.add(self.canvas, tag=self.layertag)
+        ## except KeyError:
+        ##     # Add ruler layer
+        ##     p_canvas.add(self.canvas, tag=self.layertag)
+        if not p_canvas.has_object(self.canvas):
+            p_canvas.add(self.canvas, tag=self.layertag)
 
         self.canvas.deleteAllObjects()
         self.resume()
@@ -150,8 +154,9 @@ Display the Zoom tab at the same time to precisely see detail while drawing.""")
 
     def stop(self):
         # remove the canvas from the image
+        p_canvas = self.fitsimage.get_canvas()
         try:
-            self.fitsimage.deleteObjectByTag(self.layertag)
+            p_canvas.deleteObjectByTag(self.layertag)
         except:
             pass
         self.canvas.ui_setActive(False)

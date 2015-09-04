@@ -29,25 +29,7 @@ class ImageViewCanvas(ImageViewMock.ImageViewZoom,
         CanvasMixin.__init__(self)
         DrawingMixin.__init__(self)
 
-        for name in ('modified', ):
-            self.enable_callback(name)
-
-        #self.canvas.add(self)
         self.set_canvas(self)
-
-        self.setSurface(self)
-        self.ui_setActive(True)
-
-    def update_canvas(self, whence=3):
-        self.logger.debug("updating canvas")
-        self.redraw(whence=whence)
-
-    def redraw_data(self, whence=0):
-        super(ImageViewCanvas, self).redraw_data(whence=whence)
-
-        if not self.pixmap:
-            return
-        self.draw(self)
 
     # METHODS THAT WERE IN IPG
 

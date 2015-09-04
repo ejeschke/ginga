@@ -180,12 +180,13 @@ class Histogram(GingaPlugin.LocalPlugin):
         self.plot.show()
 
         # insert canvas, if not already
+        p_canvas = self.fitsimage.get_canvas()
         try:
-            obj = self.fitsimage.getObjectByTag(self.layertag)
+            obj = p_canvas.getObjectByTag(self.layertag)
 
         except KeyError:
             # Add ruler layer
-            self.fitsimage.add(self.canvas, tag=self.layertag)
+            p_canvas.add(self.canvas, tag=self.layertag)
 
         #self.canvas.deleteAllObjects()
         self.resume()
@@ -208,8 +209,9 @@ class Histogram(GingaPlugin.LocalPlugin):
         ##     pass
         ##self.histtag = None
         # remove the canvas from the image
+        p_canvas = self.fitsimage.get_canvas()
         try:
-            self.fitsimage.deleteObjectByTag(self.layertag)
+            p_canvas.deleteObjectByTag(self.layertag)
         except:
             pass
         self.gui_up = False

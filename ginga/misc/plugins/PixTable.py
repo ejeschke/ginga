@@ -257,19 +257,21 @@ class PixTable(GingaPlugin.LocalPlugin):
     def start(self):
         self.instructions()
         # insert layer if it is not already
+        p_canvas = self.fitsimage.get_canvas()
         try:
-            obj = self.fitsimage.getObjectByTag(self.layertag)
+            obj = p_canvas.getObjectByTag(self.layertag)
 
         except KeyError:
             # Add canvas layer
-            self.fitsimage.add(self.canvas, tag=self.layertag)
+            p_canvas.add(self.canvas, tag=self.layertag)
         self.resume()
 
     def stop(self):
         # remove the canvas from the image
         self.canvas.ui_setActive(False)
+        p_canvas = self.fitsimage.get_canvas()
         try:
-            self.fitsimage.deleteObjectByTag(self.layertag)
+            p_canvas.deleteObjectByTag(self.layertag)
         except:
             pass
         self.tw = None

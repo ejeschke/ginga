@@ -83,12 +83,13 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
     def start(self, future=None):
         self.instructions()
         # start catalog operation
+        p_canvas = self.fitsimage.get_canvas()
         try:
-            obj = self.fitsimage.getObjectByTag(self.layertag)
+            obj = p_canvas.getObjectByTag(self.layertag)
 
         except KeyError:
             # Add canvas layer
-            self.fitsimage.add(self.canvas, tag=self.layertag)
+            p_canvas.add(self.canvas, tag=self.layertag)
 
         # Raise the params tab
         self._raise_tab(self.w.params)
@@ -111,8 +112,9 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
         self.clearAll()
         # remove the canvas from the image
         self.canvas.ui_setActive(False)
+        p_canvas = self.fitsimage.get_canvas()
         try:
-            self.fitsimage.deleteObjectByTag(self.layertag)
+            p_canvas.deleteObjectByTag(self.layertag)
         except:
             pass
         try:

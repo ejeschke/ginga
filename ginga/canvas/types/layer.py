@@ -12,6 +12,7 @@ from ginga.canvas.CanvasObject import (CanvasObjectBase,
                                        register_canvas_types)
 from ginga.misc.ParamSet import Param
 from ginga import Mixins
+from ginga.misc.log import get_logger
 
 from ..CompoundMixin import CompoundMixin
 from ..CanvasMixin import CanvasMixin
@@ -25,7 +26,7 @@ class CompoundObject(CompoundMixin, CanvasObjectBase):
     in the order listed.
     Example:
       CompoundObject(Point(x, y, radius, ...),
-      Circle(x, y, radius, ...))
+                     Circle(x, y, radius, ...))
     This makes a point inside a circle.
     """
 
@@ -41,6 +42,7 @@ class CompoundObject(CompoundMixin, CanvasObjectBase):
         CanvasObjectBase.__init__(self)
         CompoundMixin.__init__(self)
         self.objects = list(objects)
+        self.logger = get_logger('foo', log_stderr=True, level=10)
 
         self.kind = 'compound'
         self.editable = False
@@ -63,11 +65,11 @@ class Canvas(CanvasMixin, CompoundObject):
         self.editable = False
 
 
-class DrawingCanvas(DrawingMixin, Canvas, Mixins.UIMixin):
+class DrawingCanvas(Mixins.UIMixin, DrawingMixin, Canvas):
     def __init__(self):
         Canvas.__init__(self)
-        Mixins.UIMixin.__init__(self)
         DrawingMixin.__init__(self)
+        Mixins.UIMixin.__init__(self)
 
         self.kind = 'drawingcanvas'
         self.editable = False

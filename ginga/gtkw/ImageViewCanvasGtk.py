@@ -30,32 +30,14 @@ class ImageViewCanvas(ImageViewGtk.ImageViewZoom,
         CanvasMixin.__init__(self)
         DrawingMixin.__init__(self)
 
-        for name in ('modified', ):
-            self.enable_callback(name)
-
-        #self.canvas.add(self)
+        # we are both a viewer and a canvas
         self.set_canvas(self)
-
-        self.setSurface(self)
-        self.ui_setActive(True)
 
         # for displaying modal keyboard state
         self.mode_obj = None
         bm = self.get_bindmap()
         bm.add_callback('mode-set', self.mode_change_cb)
         self.add_callback('configure', self._configure_cb)
-
-
-    def update_canvas(self, whence=3):
-        self.logger.debug("updating canvas")
-        self.redraw(whence=whence)
-
-    def redraw_data(self, whence=0):
-        super(ImageViewCanvas, self).redraw_data(whence=whence)
-
-        if not self.surface:
-            return
-        self.draw(self)
 
     def mode_change_cb(self, bindmap, mode, modetype):
         # delete the old indicator

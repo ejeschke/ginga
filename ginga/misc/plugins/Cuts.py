@@ -367,12 +367,13 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         self.plot.set_titles(rtitle="Cuts")
 
         # insert canvas, if not already
+        p_canvas = self.fitsimage.get_canvas()
         try:
-            obj = self.fitsimage.getObjectByTag(self.layertag)
+            obj = p_canvas.getObjectByTag(self.layertag)
 
         except KeyError:
             # Add ruler layer
-            self.fitsimage.add(self.canvas, tag=self.layertag)
+            p_canvas.add(self.canvas, tag=self.layertag)
 
         #self.canvas.deleteAllObjects()
         self.resume()
@@ -390,7 +391,8 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
 
     def stop(self):
         # remove the canvas from the image
-        self.fitsimage.deleteObjectByTag(self.layertag)
+        p_canvas = self.fitsimage.get_canvas()
+        p_canvas.deleteObjectByTag(self.layertag)
         self.fv.showStatus("")
 
     def redo(self):

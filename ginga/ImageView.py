@@ -65,9 +65,6 @@ class ImageViewBase(Callback.Callbacks):
             settings = Settings.SettingGroup(logger=self.logger)
         self.t_ = settings
 
-        # this holds the reference image
-        self._image = None
-
         # RGB mapper
         if rgbmap:
             self.rgbmap = rgbmap
@@ -254,8 +251,15 @@ class ImageViewBase(Callback.Callbacks):
         self.canvas = DrawingCanvas()
         self.canvas.initialize(None, self, self.logger)
         self.canvas.add_callback('modified', self.canvas_changed_cb)
-        # holds image on canvas
-        self._normimg = None
+        self.canvas.setSurface(self)
+        self.canvas.ui_setActive(True)
+
+        # canvas that holds the main image (assumed to be the same canvas
+        #   or a subcanvas of self.canvas)
+        self.image_canvas = self.canvas
+        # handle to image object on the image canvas
+        self._imgobj = None
+        self._canvas_img_tag = '__image'
 
         self.coordmap = {
             'canvas': coordmap.CanvasMapper(self),
@@ -356,11 +360,21 @@ class ImageViewBase(Callback.Callbacks):
     def get_canvas(self):
         return self.canvas
 
-    def set_canvas(self, canvas):
+    def set_canvas(self, canvas, image_canvas=None):
         self.canvas = canvas
         canvas.initialize(None, self, self.logger)
         canvas.add_callback('modified', self.canvas_changed_cb)
+        canvas.setSurface(self)
+        canvas.ui_setActive(True)
 
+        self._imgobj = None
+
+        # secondary image canvas set?
+        if (image_canvas is None) or (image_canvas == canvas):
+            self.image_canvas = canvas
+        else:
+            image_canvas.setSurface(self)
+            image_canvas.ui_setActive(True)
 
     def set_color_map(self, cmap_name):
         """Sets the color map.
@@ -461,7 +475,29 @@ class ImageViewBase(Callback.Callbacks):
         Returns the image currently being displayed.  The object returned
         will be a subclass of BaseImage.
         """
-        return self._image
+        if not (self._imgobj is None):
+            # quick optomization
+            return self._imgobj.image
+
+        canvas_img = self.get_canvas_image()
+        return canvas_img.image
+
+    def get_canvas_image(self):
+        if not (self._imgobj is None):
+            return self._imgobj
+
+        try:
+            # See if there is an image on the canvas
+            self._imgobj = self.image_canvas.getObjectByTag(self._canvas_img_tag)
+
+        except KeyError:
+            # add a normalized image item to this canvas if we don't
+            # have one already--then just keep reusing it
+            NormImage = self.image_canvas.getDrawClass('normimage')
+            interp = self.t_.get('interpolation', 'basic')
+            self._imgobj = NormImage(0, 0, None, alpha=1.0,
+                                      interpolation=interp)
+        return self._imgobj
 
     def set_image(self, image, add_to_canvas=True,
                   raise_initialize_errors=True):
@@ -477,27 +513,20 @@ class ImageViewBase(Callback.Callbacks):
         raise an exception, although an error message and traceback
         will appear in the log.
         """
-        self._image = image
-
         with self.suppress_redraw:
 
+            canvas_img = self.get_canvas_image()
+            canvas_img.set_image(image)
+
             if add_to_canvas:
-                # add a normalized image item to this canvas if we don't
-                # have one already--then just keep reusing it
-                if self._normimg is None:
-                    NormImage = self.canvas.getDrawClass('normimage')
-                    interp = self.t_.get('interpolation', 'basic')
-                    self._normimg = NormImage(0, 0, image, alpha=1.0,
-                                              interpolation=interp)
-                    tag = self.canvas.add(self._normimg, tag='_image')
-                else:
-                    self._normimg.set_image(image)
-                    try:
-                        self.canvas.getObjectByTag('_image')
-                    except KeyError:
-                        tag = self.canvas.add(self._normimg, tag='_image')
+                try:
+                    self.image_canvas.getObjectByTag(self._canvas_img_tag)
+                except KeyError:
+                    tag = self.image_canvas.add(canvas_img,
+                                                tag=self._canvas_img_tag)
+
                 # move image to bottom of layers
-                self.canvas.lowerObject(self._normimg)
+                self.image_canvas.lowerObject(canvas_img)
 
             profile = image.get('profile', None)
             try:
@@ -562,7 +591,7 @@ class ImageViewBase(Callback.Callbacks):
                 if raise_initialize_errors:
                     raise e
 
-            self.redraw()
+            self.image_canvas.update_canvas(whence=0)
 
         # update our display if the image changes underneath us
         image.add_callback('modified', self._image_updated)
@@ -573,8 +602,9 @@ class ImageViewBase(Callback.Callbacks):
 
         with self.suppress_redraw:
 
-            if self._normimg is not None:
-                self._normimg.set_image(image)
+            canvas_img = self.get_canvas_image()
+            #canvas_img.set_image(image)
+            canvas_img.reset_optimize()
 
             # Per issue #111, zoom and pan and cuts probably should
             # not change if the image is _modified_, or it should be
@@ -606,7 +636,7 @@ class ImageViewBase(Callback.Callbacks):
                     tb_str = "Traceback information unavailable."
                     self.logger.error(tb_str)
 
-            self.redraw(whence=0)
+            self.image_canvas.update_canvas(whence=0)
 
     def set_data(self, data, metadata=None):
         """
@@ -627,9 +657,9 @@ class ImageViewBase(Callback.Callbacks):
         """
         Clear the displayed image.
         """
-        self.deleteAllObjects()
-        self._image = None
-        self.redraw(whence=0)
+        self.image_canvas.deleteAllObjects()
+        self._imgobj = None
+        self.image_canvas.update_canvas(whence=0)
 
     def save_profile(self, **params):
         image = self.get_image()
@@ -771,10 +801,11 @@ class ImageViewBase(Callback.Callbacks):
             # window has not been realized yet
             return
 
-        self.canvas.draw(self)
-
         rgbobj = self.get_rgb_object(whence=whence)
         self.render_image(rgbobj, self._dst_x, self._dst_y)
+
+        self.canvas.draw(self)
+
         # TODO: see if we can deprecate this fake callback
         if whence <= 0:
             self.make_callback('redraw')
@@ -1420,10 +1451,10 @@ class ImageViewBase(Callback.Callbacks):
         self.zoom_to(self.t_['zoomlevel'])
 
     def interpolation_change_cb(self, setting, value):
-        if self._normimg is not None:
-            self._normimg.interpolation = value
-            self._normimg._reset_optimize()
-            self.redraw(whence=0)
+        canvas_img = self.get_canvas_image()
+        canvas_img.interpolation = value
+        canvas_img.reset_optimize()
+        self.redraw(whence=0)
 
     def set_name(self, name):
         self.name = name
@@ -1486,6 +1517,8 @@ class ImageViewBase(Callback.Callbacks):
         # To center on the pixel
         if pan_coord == 'wcs':
             image = self.get_image()
+            if image is None:
+                return
             pan_x, pan_y = image.pixtoradec(data_x, data_y)
         else:
             pan_x, pan_y = data_x, data_y

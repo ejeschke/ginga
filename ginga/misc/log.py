@@ -54,7 +54,8 @@ class NullLogger(object):
 def get_logger(name='ginga', level=None, null=False,
                options=None, log_file=None, log_stderr=False):
 
-    if null or (hasattr(options, 'nulllogger') and options.nulllogger):
+    if null or ((options is not None) and hasattr(options, 'nulllogger') and
+                options.nulllogger):
         # User wants a Null Logger
         return NullLogger()
 
