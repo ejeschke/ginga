@@ -8,7 +8,7 @@ it should become active in the right panel.
 """
 
 from ginga import GingaPlugin
-from ginga.misc import Widgets
+from ginga.gw import Widgets
 
 # import any other modules you want here--it's a python world!
 
@@ -36,7 +36,7 @@ class MyGlobalPlugin(GingaPlugin.GlobalPlugin):
         fv.set_callback('add-channel', self.add_channel)
         fv.set_callback('delete-channel', self.delete_channel)
         fv.set_callback('active-image', self.focus_cb)
-        
+
     def build_gui(self, container):
         """
         This method is called when the plugin is invoked.  It builds the
@@ -69,10 +69,7 @@ class MyGlobalPlugin(GingaPlugin.GlobalPlugin):
         # Frame for instructions and add the text widget with another
         # blank widget to stretch as needed to fill emp
         fr = Widgets.Frame("Status")
-        vbox2 = Widgets.VBox()
-        vbox2.add_widget(tw)
-        vbox2.add_widget(Widgets.Label(''), stretch=1)
-        fr.set_widget(vbox2)
+        fr.set_widget(tw)
         vbox.add_widget(fr, stretch=0)
 
         # Add a spacer to stretch the rest of the way to the end of the
@@ -110,9 +107,9 @@ class MyGlobalPlugin(GingaPlugin.GlobalPlugin):
 
     def set_info(self, text):
         self.tw.set_text(text)
-    
+
     # CALLBACKS
-    
+
     def add_channel(self, viewer, chinfo):
         """
         Callback from the reference viewer shell when a channel is added.
@@ -130,7 +127,7 @@ class MyGlobalPlugin(GingaPlugin.GlobalPlugin):
         self.set_info("Channel '%s' has been deleted" % (
                 chinfo.name))
         return True
-        
+
     def focus_cb(self, viewer, fitsimage):
         """
         Callback from the reference viewer shell when the focus changes
@@ -138,7 +135,7 @@ class MyGlobalPlugin(GingaPlugin.GlobalPlugin):
         """
         chinfo = self.get_channel_info(fitsimage)
         chname = chinfo.name
-        
+
         if self.active != chname:
             # focus has shifted to a different channel than our idea
             # of the active one
@@ -146,7 +143,7 @@ class MyGlobalPlugin(GingaPlugin.GlobalPlugin):
             self.set_info("Focus is now in channel '%s'" % (
                 self.active))
         return True
-        
+
     def new_image_cb(self, fitsimage, image):
         """
         Callback from the reference viewer shell when a new image has
@@ -162,7 +159,7 @@ class MyGlobalPlugin(GingaPlugin.GlobalPlugin):
             self.set_info("A new image '%s' has been added to channel %s" % (
                 imname, chname))
         return True
-        
+
     def start(self):
         """
         This method is called just after ``build_gui()`` when the plugin
@@ -174,14 +171,14 @@ class MyGlobalPlugin(GingaPlugin.GlobalPlugin):
 
     def stop(self):
         """
-        This method is called when the plugin is stopped. 
+        This method is called when the plugin is stopped.
         It should perform any special clean up necessary to terminate
         the operation.  This method could be called more than once if
         the plugin is opened and closed, and may be omitted if there is no
         special cleanup required when stopping.
         """
         pass
-        
+
     def close(self):
         self.fv.stop_global_plugin(str(self))
         return True
@@ -192,4 +189,3 @@ class MyGlobalPlugin(GingaPlugin.GlobalPlugin):
         name of the plugin.
         """
         return 'myglobalplugin'
-

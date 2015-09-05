@@ -12,13 +12,14 @@ import numpy
 import time
 import os.path
 
-from ginga.misc import Widgets, CanvasTypes, Bunch
+from ginga.gw import Widgets, Viewers
+from ginga.misc import Bunch
 from ginga.util import iqcalc, wcs
 from ginga import GingaPlugin
 from ginga.util.six.moves import map, zip, filter
 
 try:
-    from ginga.misc import Plot
+    from ginga.gw import Plots
     have_mpl = True
 except ImportError:
     have_mpl = False
@@ -154,7 +155,7 @@ class Pick(GingaPlugin.LocalPlugin):
 
         cm, im = self.fv.cm, self.fv.im
 
-        di = CanvasTypes.ImageViewCanvas(logger=self.logger)
+        di = Viewers.ImageViewCanvas(logger=self.logger)
         width, height = 200, 200
         #di.set_desired_size(width, height)
         di.configure(width, height)
@@ -182,8 +183,8 @@ class Pick(GingaPlugin.LocalPlugin):
 
         if have_mpl:
             # Contour plot
-            self.plot1 = Plot.Plot(logger=self.logger,
-                                   width=2, height=3, dpi=72)
+            self.plot1 = Plots.Plot(logger=self.logger,
+                                    width=2, height=3, dpi=72)
             self.w.canvas = self.plot1.canvas
             self.w.fig = self.plot1.fig
             self.w.ax = self.w.fig.add_subplot(111, axisbg='black')
@@ -201,8 +202,8 @@ class Pick(GingaPlugin.LocalPlugin):
             nb.add_widget(Widgets.wrap(canvas), title="Contour")
 
             # FWHM gaussians plot
-            self.plot2 = Plot.Plot(logger=self.logger,
-                                   width=2, height=3, dpi=72)
+            self.plot2 = Plots.Plot(logger=self.logger,
+                                    width=2, height=3, dpi=72)
             self.w.canvas2 = self.plot2.canvas
             self.w.fig2 = self.plot2.fig
             self.w.ax2 = self.w.fig2.add_subplot(111, axisbg='white')
@@ -216,8 +217,8 @@ class Pick(GingaPlugin.LocalPlugin):
             nb.add_widget(Widgets.wrap(canvas), title="FWHM")
 
             # Radial profile plot
-            self.plot3 = Plot.Plot(logger=self.logger,
-                                   width=2, height=3, dpi=72)
+            self.plot3 = Plots.Plot(logger=self.logger,
+                                    width=2, height=3, dpi=72)
             self.w.canvas3 = self.plot3.canvas
             self.w.fig3 = self.plot3.fig
             self.w.ax3 = self.w.fig3.add_subplot(111, axisbg='white')

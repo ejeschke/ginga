@@ -19,17 +19,17 @@ Usage:
 
    # main thread calls this:
    self.myqt.mainloop()
-   
+
    # (asynchronous call)
    self.myqt.gui_do(method, arg1, arg2, ... argN, kwd1=val1, ..., kwdN=valN)
 
-   # OR 
+   # OR
    # (synchronous call)
    res = self.myqt.gui_call(method, arg1, arg2, ... argN, kwd1=val1, ..., kwdN=valN)
 
    # To cause the GUI thread to terminate the mainloop
    self.myqt.gui_quit()
-   
+
    """
 from __future__ import print_function
 import sys, traceback
@@ -44,11 +44,15 @@ else:
     import queue as Queue
 
 from ginga.qtw.QtHelp import QtGui, QtCore, have_pyqt4
-from ginga.misc import Task, Future
+from ginga.misc import Task, Future, Callback
 
-class QtMain(object):
+class QtMain(Callback.Callbacks):
 
     def __init__(self, queue=None, logger=None, ev_quit=None):
+        super(QtMain, self).__init__()
+
+        self.enable_callback('shutdown')
+
         # You can pass in a queue if you prefer to do so
         if not queue:
             queue = Queue.Queue()
@@ -66,10 +70,10 @@ class QtMain(object):
         app = QtGui.QApplication([])
         ## app.connect(app, QtCore.SIGNAL('lastWindowClosed()'),
         ##             app, QtCore.SLOT('quit()'))
-        app.lastWindowClosed.connect(app.quit)
+        app.lastWindowClosed.connect(lambda *args: self._quit())
         self.app = app
         self.gui_thread_id = None
-        
+
         # Get screen size
         desktop = self.app.desktop()
         #rect = desktop.screenGeometry()
@@ -78,9 +82,12 @@ class QtMain(object):
         self.screen_wd = size.width()
         self.screen_ht = size.height()
 
+    def get_widget(self):
+        return self.app
+
     def get_screen_size(self):
         return (self.screen_wd, self.screen_ht)
-    
+
     def update_pending(self, timeout=0.0):
 
         #print "1. PROCESSING OUT-BAND"
@@ -89,13 +96,13 @@ class QtMain(object):
         except Exception as e:
             self.logger.error(str(e))
             # TODO: traceback!
-        
+
         done = False
         while not done:
             #print "2. PROCESSING IN-BAND len=%d" % self.gui_queue.qsize()
             # Process "in-band" Qt events
             try:
-                future = self.gui_queue.get(block=True, 
+                future = self.gui_queue.get(block=True,
                                             timeout=timeout)
 
                 # Execute the GUI method
@@ -118,14 +125,14 @@ class QtMain(object):
                 finally:
                     pass
 
-                    
+
             except Queue.Empty:
                 done = True
-                
+
             except Exception as e:
                 self.logger.error("Main GUI loop error: %s" % str(e))
                 #pass
-                
+
         # Process "out-of-band" events
         #print "3. PROCESSING OUT-BAND"
         try:
@@ -145,21 +152,21 @@ class QtMain(object):
         future.freeze(method, *args, **kwdargs)
         self.gui_queue.put(future)
 
-        my_id = thread.get_ident() 
+        my_id = thread.get_ident()
         if my_id != self.gui_thread_id:
             return future
-   
+
     def gui_call(self, method, *args, **kwdargs):
         """General method for synchronously calling into the GUI.
         This waits until the method has completed before returning.
         """
-        my_id = thread.get_ident() 
+        my_id = thread.get_ident()
         if my_id == self.gui_thread_id:
             return method(*args, **kwdargs)
         else:
             future = self.gui_do(method, *args, **kwdargs)
             return future.wait()
-   
+
     def gui_do_future(self, future):
         self.gui_queue.put(future)
         return future
@@ -167,16 +174,16 @@ class QtMain(object):
     def nongui_do(self, method, *args, **kwdargs):
         task = Task.FuncTask(method, args, kwdargs, logger=self.logger)
         return self.nongui_do_task(task)
-   
+
     def nongui_do_cb(self, tup, method, *args, **kwdargs):
         task = Task.FuncTask(method, args, kwdargs, logger=self.logger)
         task.register_callback(tup[0], args=tup[1:])
         return self.nongui_do_task(task)
-   
+
     def nongui_do_future(self, future):
         task = Task.FuncTask(future.thaw, (), {}, logger=self.logger)
         return self.nongui_do_task(task)
-   
+
     def nongui_do_task(self, task):
         try:
             task.init_and_start(self)
@@ -186,17 +193,17 @@ class QtMain(object):
             raise(e)
 
     def assert_gui_thread(self):
-        my_id = thread.get_ident() 
+        my_id = thread.get_ident()
         assert my_id == self.gui_thread_id, \
                Exception("Non-GUI thread (%d) is executing GUI code!" % (
             my_id))
-        
+
     def assert_nongui_thread(self):
-        my_id = thread.get_ident() 
+        my_id = thread.get_ident()
         assert my_id != self.gui_thread_id, \
                Exception("GUI thread (%d) is executing non-GUI code!" % (
             my_id))
-        
+
     def mainloop(self, timeout=0.001):
         # Mark our thread id
         self.gui_thread_id = thread.get_ident()
@@ -206,8 +213,13 @@ class QtMain(object):
 
     def gui_quit(self):
         "Call this to cause the GUI thread to quit the mainloop."""
-        print("QUIT CALLED")
         self.ev_quit.set()
-        
+
+        self.make_callback('shutdown')
+
+        self.app.quit()
+
+    def _quit(self):
+        self.gui_quit()
 
 # END

@@ -18,7 +18,7 @@ import logging
 from ginga import AstroImage
 from ginga.qtw.QtHelp import QtGui, QtCore
 from ginga.qtw.ImageViewCanvasQt import ImageViewCanvas
-from ginga.qtw.ImageViewCanvasTypesQt import DrawingCanvas
+from ginga.canvas.types.all import DrawingCanvas
 from ginga.qtw.Readout import Readout
 from ginga.misc import log, Settings
 from ginga.util import paths
@@ -27,7 +27,7 @@ from IPython.lib.kernel import connect_qtconsole
 try:
     # older IPython releases
     from IPython.zmq.ipkernel import IPKernelApp
-    
+
 except ImportError:
     # newer releases
     from IPython.kernel.zmq.kernelapp import IPKernelApp
@@ -73,7 +73,7 @@ class IPyNbImageView(ImageViewCanvas):
         # add the canvas to the view.
         self.add(canvas, tag=tag)
         return canvas
-    
+
 class SimpleKernelApp(object):
     """A minimal object that uses an IPython kernel and has a few methods
     to manipulate a namespace and open Qt consoles tied to the kernel.
@@ -85,7 +85,7 @@ class SimpleKernelApp(object):
     def __init__(self, gui, shell):
         self.shell = shell
         self.logger = None
-        
+
         if shell is None:
             # Start IPython kernel with GUI event loop support
             self.ipkernel = IPKernelApp.instance()
@@ -101,13 +101,13 @@ class SimpleKernelApp(object):
 
         # To create and track active qt consoles
         self.consoles = []
-       
+
 
     def new_qt_console(self, evt=None):
         """start a new qtconsole connected to our kernel"""
         try:
             if hasattr(self.ipkernel, 'profile'):
-                return connect_qtconsole(self.ipkernel.connection_file, 
+                return connect_qtconsole(self.ipkernel.connection_file,
                                          profile=self.ipkernel.profile)
             else:
                 return connect_qtconsole(self.ipkernel.connection_file)
@@ -137,7 +137,7 @@ class StartMenu(QtGui.QMainWindow):
         self.app = app
         self.kapp = kapp
         self.app.aboutToQuit.connect(self.quit)
-                
+
         vbox = QtGui.QVBoxLayout()
         vbox.setContentsMargins(QtCore.QMargins(2, 2, 2, 2))
         vbox.setSpacing(1)
@@ -149,10 +149,10 @@ class StartMenu(QtGui.QMainWindow):
         if self.kapp.ipkernel is None:
             console.setEnabled(False)
         console.clicked.connect(self.kapp.new_qt_console)
-        
+
         newfits = QtGui.QPushButton('New Viewer')
         newfits.clicked.connect(self.new_viewer)
-        
+
         wquit = QtGui.QPushButton("Quit")
         wquit.clicked.connect(self.quit)
 
@@ -181,12 +181,12 @@ class StartMenu(QtGui.QMainWindow):
             settings = self.preferences.createCategory('ipg_viewer')
             settings.load(onError='silent')
             settings.addDefaults(autocut_method='zscale')
-            
+
         # instantiate bindings loaded with users preferences
         bclass = IPyNbImageView.bindingsClass
         bindprefs = self.preferences.createCategory('bindings')
         bd = bclass(self.logger, settings=bindprefs)
-        
+
         # create a ginga basic object for user interaction
         fi = IPyNbImageView(self.logger, settings=settings,
                             render='widget', bindings=bd)
@@ -219,7 +219,7 @@ class StartMenu(QtGui.QMainWindow):
         fi.set_callback('none-move', self.motion, self.readout)
         vbox.addWidget(readout, stretch=0,
                        alignment=QtCore.Qt.AlignCenter)
-        
+
         hbox = QtGui.QHBoxLayout()
         hbox.setContentsMargins(QtCore.QMargins(4, 2, 4, 2))
 
@@ -255,7 +255,7 @@ class StartMenu(QtGui.QMainWindow):
         del self.kapp.namespace[name]
         w.setParent(None)
         w.deleteLater()
-        
+
     def load_file(self, filepath, name):
         image = AstroImage.AstroImage(logger=self.logger)
         image.load_file(filepath)
@@ -317,10 +317,10 @@ class StartMenu(QtGui.QMainWindow):
         self.setParent(None)
         self.deleteLater()
 
-        
+
 def start(kapp):
     global app_ref
-    
+
     if use_null_logger:
         logger = log.NullLogger()
     else:
@@ -418,9 +418,9 @@ def main(options, args):
     """Call this function if running as standalone app."""
     kapp = SimpleKernelApp('qt', None)
     return start(kapp)
-                
+
 
 if __name__ == '__main__':
     main(None, sys.argv[1:])
-    
+
 # END

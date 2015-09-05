@@ -1,6 +1,6 @@
 #
 # SAMP.py -- SAMP plugin for Ginga fits viewer
-# 
+#
 # Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c)  Eric R. Jeschke.  All rights reserved.
@@ -19,14 +19,14 @@ import os
 try:
     import astropy.vo.samp as samp
     have_samp = True
-    
+
 except ImportError as e:
     have_samp = False
 
 from ginga import GingaPlugin
 from ginga.util import catalog
 from ginga.version import version
-from ginga.misc import Widgets
+from ginga.gw import Widgets
 
 class SAMPError(Exception):
     pass
@@ -73,7 +73,7 @@ class SAMP(GingaPlugin.GlobalPlugin):
         fr = Widgets.Frame("Instructions")
         fr.set_widget(tw)
         vbox.add_widget(fr, stretch=0)
-        
+
         fr = Widgets.Frame("SAMP")
 
         captions = [('Start hub', 'checkbutton'),
@@ -88,7 +88,7 @@ class SAMP(GingaPlugin.GlobalPlugin):
         b.connect_client.set_state(self.settings.get('default_connect',
                                                      True))
         b.connect_client.add_callback('activated', self.connect_client_cb)
-        
+
         fr.set_widget(w)
         vbox.add_widget(fr, stretch=0)
 
@@ -106,13 +106,13 @@ class SAMP(GingaPlugin.GlobalPlugin):
         vbox.add_widget(btns, stretch=0)
 
         container.add_widget(vbox, stretch=1)
-        
+
     def instructions(self):
         self.tw.set_text("""SAMP hub/client control.""")
 
     def start(self):
         self.instructions()
-        
+
         self.robj = GingaWrapper(self.fv, self.logger)
 
         # Create a HUB
@@ -123,7 +123,7 @@ class SAMP(GingaPlugin.GlobalPlugin):
 
         except Exception as e:
             self.logger.warn("Cannot start hub: %s" % (str(e)))
-            
+
         # Used to fetch data
         self.fetcher = catalog.ImageServer(self.logger, "SAMP Image Fetcher",
                                            "SAMP", "none", "SAMP handler")
@@ -135,10 +135,10 @@ class SAMP(GingaPlugin.GlobalPlugin):
 
         except Exception as e:
             self.fv.show_error("Cannot connect client: %s" % (str(e)))
-        
-        # TODO: this should eventually shut down the samp 
+
+        # TODO: this should eventually shut down the samp
         self.fv.nongui_do(self.monitor_shutdown)
-        
+
     def stop(self):
         try:
             self.logger.info("disconnecting client...")
@@ -156,8 +156,8 @@ class SAMP(GingaPlugin.GlobalPlugin):
         # Try to stop the hub, if any
         if self.hub is not None:
             self.hub.stop()
-        self.w.start_hub.set_state(False)            
-        
+        self.w.start_hub.set_state(False)
+
     def start_hub_cb(self, w, tf):
         try:
             if tf:
@@ -170,7 +170,7 @@ class SAMP(GingaPlugin.GlobalPlugin):
 
         except Exception as e:
             self.fv.show_error("Cannot start/stop hub: %s" % (str(e)))
-            
+
     def _connect_client(self):
         client = samp.SAMPIntegratedClient(metadata = {
             "samp.name": "ginga",
@@ -188,8 +188,8 @@ class SAMP(GingaPlugin.GlobalPlugin):
         #   image-id (string) optional: Identifier which may be used
         #           to refer to the loaded image in subsequent messages
         #   name (string) optional: name which may be used to label the
-        #           loaded image in the application GUI 
-        # Return Values: none 
+        #           loaded image in the application GUI
+        # Return Values: none
         client.bind_receive_call("image.load.fits", self.samp_call_load_fits)
         client.bind_receive_notification("image.load.fits",
                                        self.samp_notify_load_fits)
@@ -203,8 +203,8 @@ class SAMP(GingaPlugin.GlobalPlugin):
         #   of view) to a given point on the celestial sphere.
         # Arguments:
         #   ra (SAMP float): right ascension in degrees
-        #   dec (SAMP float): declination in degrees 
-        # Return Values: none 
+        #   dec (SAMP float): declination in degrees
+        # Return Values: none
         client.bind_receive_call("coord.pointAt.sky", self.samp_placeholder)
         client.bind_receive_notification("coord.pointAt.sky",
                                          self.samp_placeholder)
@@ -216,8 +216,8 @@ class SAMP(GingaPlugin.GlobalPlugin):
         #   table-id (string) optional: identifier which may be used to
         #     refer to the loaded table in subsequent messages
         #   name (string) optional: name which may be used to label the
-        #     loaded table in the application GUI 
-        # Return Values: none 
+        #     loaded table in the application GUI
+        # Return Values: none
         client.bind_receive_call("table.load.votable", self.samp_placeholder)
         client.bind_receive_notification("table.load.votable",
                                          self.samp_placeholder)
@@ -233,7 +233,7 @@ class SAMP(GingaPlugin.GlobalPlugin):
                 self.client.disconnect()
                 self.client = None
                 self.w.connect_client.set_state(False)
-            
+
     def monitor_shutdown(self):
         # the thread running this method waits until the entire viewer
         # is exiting and then shuts down the SAMP XML-RPC server which is
@@ -256,10 +256,10 @@ class SAMP(GingaPlugin.GlobalPlugin):
         # TODO: unmangle the 'name' parameter to a filename (if provided)
         self.count += 1
         name = "samp_%d.fits" % (self.count)
-        
+
         filedir = self.settings.get('cache_location', '/tmp')
         fitspath = os.path.join(filedir, name)
-        
+
         chname = self.settings.get('SAMP_channel', 'SAMP')
         dowait = True
 
@@ -270,7 +270,7 @@ class SAMP(GingaPlugin.GlobalPlugin):
 
             # load into the viewer
             self.robj.display_fitsfile(chname, fitspath, dowait)
-        
+
         except Exception as e:
             errmsg = "Error loading FITS file '%s': %s" % (
                 fitspath, str(e))
@@ -308,7 +308,7 @@ class SAMP(GingaPlugin.GlobalPlugin):
     def __str__(self):
         return 'samp'
 
-    
+
 class GingaWrapper(object):
 
     def __init__(self, fv, logger):

@@ -7,7 +7,7 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-from ginga.gtkw import GtkHelp, gtksel
+from ginga.gtkw import GtkHelp, gtksel, GtkMain
 import gtk
 import gobject
 
@@ -17,6 +17,8 @@ from functools import reduce
 class WidgetError(Exception):
     """For errors thrown in this module."""
     pass
+
+# BASE
 
 class WidgetBase(Callback.Callbacks):
 
@@ -729,7 +731,115 @@ class Menubar(ContainerBase):
         item_w.show()
         return child
 
-# SAVE DIALOG
+
+class TopLevel(ContainerBase):
+    def __init__(self, title=None):
+        super(TopLevel, self).__init__()
+
+        widget = GtkHelp.TopLevel()
+        self.widget = widget
+        widget.set_border_width(0)
+        widget.connect("destroy", self._quit)
+        widget.connect("delete_event", self._closeEvent)
+
+        if not title is None:
+            widget.set_title(title)
+
+        self.enable_callback('closed')
+
+    def set_widget(self, child):
+        self.add_ref(child)
+        child_w = child.get_widget()
+        self.widget.add(child_w)
+
+    def show(self):
+        self.widget.show_all()
+
+    def hide(self):
+        self.widget.hide()
+
+    def _quit(self, *args):
+        self.close()
+
+    def _closeEvent(self, widget, event):
+        self.close()
+
+    def close(self):
+        try:
+            self.widget.destroy()
+        except Exception as e:
+            pass
+        #self.widget = None
+
+        self.make_callback('closed')
+
+    def raise_(self):
+        window = self.widget.get_window()
+        ## if window:
+        ##     if hasattr(window, 'present'):
+        ##         # gtk3 ?
+        ##         window.present()
+        ##     else:
+        ##         # gtk2
+        ##         window.show()
+        window.raise_()
+
+    def lower(self):
+        window = self.widget.get_window()
+        window.lower()
+
+    def resize(self, width, height):
+        self.widget.set_size_request(width, height)
+
+    def focus(self):
+        window = self.widget.get_window()
+        window.focus()
+
+    def move(self, x, y):
+        window = self.widget.get_window()
+        window.move(x, y)
+
+    def maximize(self):
+        window = self.widget.get_window()
+        window.maximize()
+
+    def unmaximize(self):
+        window = self.widget.get_window()
+        window.unmaximize()
+
+    def fullscreen(self):
+        window = self.widget.get_window()
+        window.fullscreen()
+
+    def unfullscreen(self):
+        window = self.widget.get_window()
+        window.unfullscreen()
+
+    def iconify(self):
+        window = self.widget.get_window()
+        window.iconify()
+
+    def uniconify(self):
+        window = self.widget.get_window()
+        window.deiconify()
+
+    def set_title(self, title):
+        self.widget.set_title(title)
+
+
+class Application(GtkMain.GtkMain):
+
+    def __init__(self, *args, **kwdargs):
+        super(Application, self).__init__(*args, **kwdargs)
+
+        self.window_list = []
+
+    def window(self, title=None):
+        w = TopLevel(title=title)
+        self.window_list.append(w)
+        return w
+
+
 class SaveDialog:
     def __init__(self, title='Save File', selectedfilter=None):
         action = gtk.FILE_CHOOSER_ACTION_SAVE

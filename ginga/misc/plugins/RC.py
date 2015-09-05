@@ -1,6 +1,6 @@
 #
 # RC.py -- Remote Control plugin for Ginga fits viewer
-# 
+#
 # Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c)  Eric R. Jeschke.  All rights reserved.
@@ -30,7 +30,7 @@ Channel methods can be called like this:
 
 Calls can be made from a remote host by adding the options
    --host=<hostname> --port=9000
-   
+
 (in the plugin GUI be sure to remove the 'localhost' prefix
 from the addr, but leave the colon and port)
 
@@ -38,7 +38,7 @@ Examples:
 
  Create a new channel:
  $ grc ginga add_channel FOO
- 
+
  Load a file into current channel:
  $ grc ginga load_file /home/eric/testdata/SPCAM/SUPA01118797.fits
 
@@ -53,10 +53,10 @@ Examples:
 
  Zoom to a specific level:
  $ grc -- channel FOO zoom_to -7
- 
+
  Zoom to fit:
  $ grc channel FOO zoom_fit
- 
+
  Transform (args are boolean triplet: (flipx flipy swapxy)):
  $ grc channel FOO transform 1 0 1
 
@@ -65,13 +65,13 @@ Examples:
 
  Change color map:
  $ grc channel FOO set_color_map rainbow3
- 
+
  Change color distribution algorithm:
  $ grc channel FOO set_color_algorithm log
- 
+
  Change intensity map:
  $ grc channel FOO set_intensity_map neg
- 
+
 """
 import sys
 import numpy
@@ -80,7 +80,7 @@ import bz2
 
 from ginga import GingaPlugin
 from ginga import AstroImage
-from ginga.misc import Widgets
+from ginga.gw import Widgets
 from ginga.util import grc
 from ginga.util.six.moves import map, zip
 
@@ -116,7 +116,7 @@ class RC(GingaPlugin.GlobalPlugin):
         b.addr.set_text(addr)
         b.restart.set_tooltip("Restart the server")
         b.restart.add_callback('activated', self.restart_cb)
-        
+
         b.set_addr.set_length(100)
         b.set_addr.set_text(addr)
         b.set_addr.set_tooltip("Set address to run remote control server")
@@ -140,14 +140,14 @@ class RC(GingaPlugin.GlobalPlugin):
 
         container.add_widget(vbox, stretch=1)
 
-    
+
     def start(self):
         self.robj = GingaWrapper(self.fv, self.logger)
-        
+
         self.server = grc.RemoteServer(self.robj, host=self.host, port=self.port,
                                        ev_quit=self.fv.ev_quit)
         self.server.start(thread_pool=self.fv.get_threadPool())
-        
+
     def stop(self):
         self.server.stop()
 
@@ -171,7 +171,7 @@ class RC(GingaPlugin.GlobalPlugin):
     def __str__(self):
         return 'rc'
 
-    
+
 class GingaWrapper(object):
 
     def __init__(self, fv, logger):
@@ -180,7 +180,7 @@ class GingaWrapper(object):
 
         # List of XML-RPC acceptable return types
         self.ok_types = list(map(type, [str, int, float, bool, list, tuple]))
-        
+
     def help(self, *args):
         """Get help for a remote interface method.
 
@@ -201,7 +201,7 @@ class GingaWrapper(object):
             return help_msg
 
         which = args[0].lower()
-        
+
         if which == 'ginga':
             method = args[1]
             _method = getattr(self.fv, method)
@@ -274,7 +274,7 @@ class GingaWrapper(object):
                               metadata=metadata)
             image.set(name=imname)
             image.update_keywords(header)
-        
+
         except Exception as e:
             # Some kind of error unpacking the data
             errmsg = "Error creating image data for '%s': %s" % (
@@ -291,11 +291,10 @@ class GingaWrapper(object):
         chinfo = self.fv.get_channelInfo(chname)
         _method = getattr(chinfo.fitsimage, method_name)
         return self.fv.gui_call(_method, *args, **kwdargs)
-    
+
     def ginga(self, method_name, *args, **kwdargs):
         _method = getattr(self.fv, method_name)
         return self.fv.gui_call(_method, *args, **kwdargs)
 
-            
+
 #END
-                                

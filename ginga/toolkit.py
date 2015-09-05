@@ -55,5 +55,8 @@ def get_toolkit():
 def get_family():
     return family
 
+def get_rv_toolkits():
+    """Returns a list of reference viewer supported toolkits."""
+    return ['qt4', 'qt5', 'pyside', 'gtk']
 
 #END

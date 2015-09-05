@@ -1,13 +1,13 @@
 #
 # Debug.py -- Debugging plugin for Ginga
-# 
+#
 # Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-from ginga.misc import Widgets
+from ginga.gw import Widgets
 from ginga import GingaPlugin
 
 
@@ -21,14 +21,14 @@ class Debug(GingaPlugin.GlobalPlugin):
     def build_gui(self, container):
 
         vbox = Widgets.VBox()
-        
+
         self.msgFont = self.fv.getFont("fixedFont", 12)
         tw = Widgets.TextArea(wrap=False, editable=False)
         tw.set_font(self.msgFont)
         self.tw = tw
         self.history = []
         self.histmax = 10
-         
+
         sw = Widgets.ScrollArea()
         sw.set_widget(self.tw)
 
@@ -48,7 +48,7 @@ class Debug(GingaPlugin.GlobalPlugin):
         b.global_plugin.set_length(14)
         b.reloadg.add_callback('activated', self.reload_global_cb)
         vbox.add_widget(w, stretch=1)
-        
+
         self.entry = Widgets.TextEntry()
         vbox.add_widget(self.entry, stretch=0)
         self.entry.add_callback('activated', self.command_cb)
@@ -72,11 +72,11 @@ class Debug(GingaPlugin.GlobalPlugin):
             chinfo = self.fv.get_channelInfo(chname)
             chinfo.opmon.reloadPlugin(plname, chinfo=chinfo)
         return True
-            
+
     def reload_local_cb(self, w):
         plname = self.w.local_plugin.get_text().strip()
         self.reloadLocalPlugin(plname)
-        
+
     def reloadGlobalPlugin(self, plname):
         gpmon = self.fv.gpmon
         pInfo = gpmon.getPluginInfo(plname)
@@ -90,7 +90,7 @@ class Debug(GingaPlugin.GlobalPlugin):
     def reload_global_cb(self, w):
         plname = self.w.global_plugin.get_text().strip()
         self.reloadLocalPlugin(plname)
-        
+
     def command(self, cmdstr):
         # Evaluate command
         try:
@@ -107,18 +107,18 @@ class Debug(GingaPlugin.GlobalPlugin):
         self.history = self.history[-self.histmax:]
         # Update text widget
         self.tw.set_text('\n'.join(self.history))
-        
+
     def command_cb(self, w):
         # TODO: implement a readline editing widget
         cmdstr = str(w.get_text()).strip()
         self.command(cmdstr)
         w.set_text("")
-        
+
     def close(self):
         self.fv.stop_global_plugin(str(self))
         return True
 
     def __str__(self):
         return 'debug'
-    
+
 #END

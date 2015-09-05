@@ -49,6 +49,8 @@ setup(
                 'ginga.cvw',
                 # Mock version
                 'ginga.mockw',
+                # Ginga (wrapped) widgets
+                'ginga.gw',
                 # Web stuff
                 'ginga.web', 'ginga.web.pgw',
                 'ginga.web.pgw.js', 'ginga.web.pgw.templates',

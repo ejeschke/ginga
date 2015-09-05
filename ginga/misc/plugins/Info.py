@@ -9,7 +9,8 @@
 #
 import numpy
 
-from ginga.misc import Widgets, Bunch
+from ginga.gw import Widgets
+from ginga.misc import Bunch
 from ginga import GingaPlugin
 
 

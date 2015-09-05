@@ -1,6 +1,6 @@
 #
 # Errors.py -- Error reporting plugin for fits viewer
-# 
+#
 # Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c)  Eric R. Jeschke.  All rights reserved.
@@ -10,7 +10,7 @@
 import time
 
 from ginga import GingaPlugin
-from ginga.misc import Widgets
+from ginga.gw import Widgets
 
 class Errors(GingaPlugin.GlobalPlugin):
 
@@ -50,7 +50,7 @@ class Errors(GingaPlugin.GlobalPlugin):
         lbl = Widgets.Label(ts)
         hbox.add_widget(lbl, stretch=1)
         vbox.add_widget(hbox, stretch=0)
-        
+
         tw = Widgets.TextArea(editable=False, wrap=False)
         tw.set_font(self.msgFont)
 
@@ -63,18 +63,18 @@ class Errors(GingaPlugin.GlobalPlugin):
         hbox.add_widget(btn)
         hbox.add_widget(Widgets.Label(''), stretch=1)
         vbox.add_widget(hbox, stretch=0)
-        
+
         self.msgList.add_widget(vbox, stretch=0)
-        # TODO: force scroll to bottom 
+        # TODO: force scroll to bottom
 
     def remove_error(self, child):
         self.msgList.remove(child)
-        
+
     def remove_all(self):
         for child in list(self.msgList.get_children()):
             self.remove_error(child)
-            
+
     def __str__(self):
         return 'errors'
-    
+
 #END

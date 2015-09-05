@@ -11,7 +11,8 @@ import sys
 import threading
 import traceback
 
-from ginga.misc import Bunch, Widgets
+from ginga.gw import Widgets
+from ginga.misc import Bunch
 from ginga.util.six.moves import filter
 
 class PluginManagerError(Exception):

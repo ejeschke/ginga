@@ -9,7 +9,8 @@
 #
 import time
 
-from ginga.misc import Widgets, CanvasTypes, Bunch
+from ginga.gw import Widgets, Viewers
+from ginga.misc import Bunch
 from ginga import GingaPlugin
 
 
@@ -52,8 +53,8 @@ class Zoom(GingaPlugin.GlobalPlugin):
 
         # Uncomment to debug; passing parent logger generates too
         # much noise in the main logger
-        #zi = CanvasTypes.ImageViewCanvas(logger=self.logger)
-        zi = CanvasTypes.ImageViewCanvas(logger=None)
+        #zi = Viewers.ImageViewCanvas(logger=self.logger)
+        zi = Viewers.ImageViewCanvas(logger=None)
         zi.set_desired_size(width, height)
         zi.enable_autozoom('off')
         zi.enable_autocuts('off')

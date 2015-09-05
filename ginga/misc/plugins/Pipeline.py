@@ -1,6 +1,6 @@
 #
 # Pipeline.py -- Simple data reduction pipeline plugin for Ginga FITS viewer
-# 
+#
 # Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c)  Eric R. Jeschke.  All rights reserved.
@@ -13,7 +13,7 @@ import numpy
 from ginga import AstroImage
 from ginga.util import dp
 from ginga import GingaPlugin
-from ginga.misc import Widgets
+from ginga.gw import Widgets
 
 
 class Pipeline(GingaPlugin.LocalPlugin):
@@ -53,12 +53,9 @@ class Pipeline(GingaPlugin.LocalPlugin):
         self.tw = tw
 
         fr = Widgets.Frame("Instructions")
-        vbox2 = Widgets.VBox()
-        vbox2.add_widget(tw)
-        vbox2.add_widget(Widgets.Label(''), stretch=1)
-        fr.set_widget(vbox2)
+        fr.set_widget(tw)
         vbox1.add_widget(fr, stretch=0)
-        
+
         # Main pipeline control area
         captions = [
             ("Subtract Bias", 'button', "Bias Image:", 'label',
@@ -95,7 +92,7 @@ class Pipeline(GingaPlugin.LocalPlugin):
         label = Widgets.Label()
         self.w.eval_status = label
         hbox.add_widget(self.w.eval_status, stretch=0)
-        hbox.add_widget(Widgets.Label(''), stretch=1)                
+        hbox.add_widget(Widgets.Label(''), stretch=1)
         vbox2.add_widget(hbox, stretch=0)
 
         # progress bar and stop button
@@ -114,7 +111,7 @@ class Pipeline(GingaPlugin.LocalPlugin):
         vbox2.add_widget(Widgets.Label(''), stretch=1)
         vbox1.add_widget(vbox2, stretch=0)
 
-        # Image list 
+        # Image list
         captions = [
             ("Append", 'button', "Prepend", 'button', "Clear", 'button'),
             ]
@@ -133,7 +130,7 @@ class Pipeline(GingaPlugin.LocalPlugin):
         vbox1.add_widget(fr, stretch=0)
 
         self.update_stack_gui()
-        
+
         b.append.add_callback('activated', self.append_image_cb)
         b.append.set_tooltip("Append an individual image to the stack")
         b.prepend.add_callback('activated', self.prepend_image_cb)
@@ -175,9 +172,9 @@ class Pipeline(GingaPlugin.LocalPlugin):
 
         spacer = Widgets.Label('')
         vbox1.add_widget(spacer, stretch=1)
-        
+
         top.add_widget(sw, stretch=1)
-        
+
         btns = Widgets.HBox()
         btns.set_spacing(3)
 
@@ -196,10 +193,10 @@ class Pipeline(GingaPlugin.LocalPlugin):
         self.fv.stop_local_plugin(chname, str(self))
         self.gui_up = False
         return True
-        
+
     def instructions(self):
         self.tw.set_text("""TBD.""")
-            
+
     def start(self):
         self.instructions()
 
@@ -212,19 +209,19 @@ class Pipeline(GingaPlugin.LocalPlugin):
     def update_stack_gui(self):
         stack = [ image.get('name', "NoName") for image in self.imglist ]
         self.w.stack.set_text(str(stack))
-    
+
     def append_image_cb(self, w):
         image = self.fitsimage.get_image()
         self.imglist.append(image)
         self.update_stack_gui()
         self.update_status("Appended image #%d to stack." % (len(self.imglist)))
-        
+
     def prepend_image_cb(self, w):
         image = self.fitsimage.get_image()
         self.imglist.insert(0, image)
         self.update_stack_gui()
         self.update_status("Prepended image #%d to stack." % (len(self.imglist)))
-        
+
     def clear_stack_cb(self, w):
         self.imglist = []
         self.update_stack_gui()
@@ -236,7 +233,7 @@ class Pipeline(GingaPlugin.LocalPlugin):
         self.imglist.insert(0, image)
         self.update_stack_gui()
         self.fv.add_image(name, image, chname=chname)
-        
+
     # BIAS
 
     def _make_bias(self):
@@ -294,6 +291,6 @@ class Pipeline(GingaPlugin.LocalPlugin):
 
     def __str__(self):
         return 'pipeline'
-    
+
 
 #END

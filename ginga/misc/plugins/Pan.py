@@ -10,7 +10,8 @@
 import sys
 import traceback
 import math
-from ginga.misc import Widgets, CanvasTypes, Bunch
+from ginga.gw import Widgets, Viewers
+from ginga.misc import Bunch
 from ginga import GingaPlugin
 
 class Pan(GingaPlugin.GlobalPlugin):
@@ -27,6 +28,8 @@ class Pan(GingaPlugin.GlobalPlugin):
         fv.add_callback('delete-channel', self.delete_channel)
         fv.set_callback('active-image', self.focus_cb)
 
+        self.dc = fv.getDrawClasses()
+
     def build_gui(self, container):
         nb = Widgets.StackWidget()
         self.nb = nb
@@ -35,7 +38,7 @@ class Pan(GingaPlugin.GlobalPlugin):
     def _create_pan_image(self):
         width, height = 300, 300
 
-        sfi = CanvasTypes.ImageViewCanvas(logger=self.logger)
+        sfi = Viewers.ImageViewCanvas(logger=self.logger)
         sfi.enable_autozoom('on')
         sfi.enable_autocuts('off')
         sfi.enable_draw(True)
@@ -209,7 +212,7 @@ class Pan(GingaPlugin.GlobalPlugin):
                 # HACK: force a wcs error here if one is going to happen
                 image.add_offset_xy(x, y, 1.0, 1.0)
 
-                paninfo.pancompass = paninfo.panimage.add(CanvasTypes.Compass(
+                paninfo.pancompass = paninfo.panimage.add(self.dc.Compass(
                     x, y, radius, color='skyblue',
                     fontsize=14))
             except Exception as e:
@@ -255,9 +258,9 @@ class Pan(GingaPlugin.GlobalPlugin):
             paninfo.panimage.redraw(whence=3)
 
         except KeyError:
-            paninfo.panrect = paninfo.panimage.add(CanvasTypes.CompoundObject(
-                CanvasTypes.Point(x, y, radius=radius, style='plus'),
-                CanvasTypes.Polygon(points)))
+            paninfo.panrect = paninfo.panimage.add(self.dc.CompoundObject(
+                self.dc.Point(x, y, radius=radius, style='plus'),
+                self.dc.Polygon(points)))
 
     def motion_cb(self, fitsimage, event, data_x, data_y):
         bigimage = self.fv.getfocus_fitsimage()

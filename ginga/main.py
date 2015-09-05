@@ -260,6 +260,8 @@ class ReferenceViewer(object):
 
         ginga_toolkit.use(toolkit)
         tkname = ginga_toolkit.get_family()
+        logger.info("Chosen toolkit (%s) family is '%s'" % (
+            ginga_toolkit.toolkit, tkname))
 
         if tkname == 'gtk':
             from ginga.gtkw.GingaGtk import GingaView

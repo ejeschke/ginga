@@ -1,6 +1,6 @@
 #
 # Log.py -- Logging plugin for fits viewer
-# 
+#
 # Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c) Eric R. Jeschke.  All rights reserved.
@@ -10,7 +10,7 @@
 import logging
 
 from ginga import GingaPlugin
-from ginga.misc import Widgets
+from ginga.gw import Widgets
 
 class Log(GingaPlugin.GlobalPlugin):
 
@@ -29,13 +29,13 @@ class Log(GingaPlugin.GlobalPlugin):
 
     def build_gui(self, container):
         vbox = Widgets.VBox()
-        
+
         self.msgFont = self.fv.getFont("fixedFont", 12)
         tw = Widgets.TextArea(wrap=False, editable=False)
         tw.set_font(self.msgFont)
         tw.set_limit(self.histlimit)
         self.tw = tw
-         
+
         sw = Widgets.ScrollArea()
         sw.set_widget(self.tw)
 
@@ -53,13 +53,13 @@ class Log(GingaPlugin.GlobalPlugin):
         combobox.set_index(1)
         combobox.add_callback('activated', self.set_loglevel_cb)
         combobox.set_tooltip("Set the logging level")
-        
+
         spinbox = b.history
         spinbox.set_limits(100, self.histmax, incr_value=10)
         spinbox.set_value(self.histlimit)
         spinbox.add_callback('value-changed', self.set_history_cb)
         spinbox.set_tooltip("Set the logging history line limit")
-        
+
         btn = b.auto_scroll
         btn.set_state(self.autoscroll)
         btn.set_tooltip("Scroll the log window automatically")
@@ -89,10 +89,10 @@ class Log(GingaPlugin.GlobalPlugin):
         self.logger.debug("Logging history limit set to %d" % (
             histlimit))
         self.tw.set_limit(histlimit)
-        
+
     def set_history_cb(self, w, val):
         self.set_history(val)
-        
+
     def set_loglevel_cb(self, w, index):
         name, level = self.levels[index]
         self.fv.set_loglevel(level)
@@ -101,7 +101,7 @@ class Log(GingaPlugin.GlobalPlugin):
 
     def set_autoscroll_cb(self, w, val):
         self.autoscroll = val
-        
+
     def log(self, text):
         if self.tw is not None:
             self.tw.append_text(text + '\n',
@@ -110,7 +110,7 @@ class Log(GingaPlugin.GlobalPlugin):
     def clear(self):
         self.tw.clear()
         return True
-        
+
     def close(self):
         self.fv.stop_global_plugin(str(self))
         self.tw = None
@@ -118,5 +118,5 @@ class Log(GingaPlugin.GlobalPlugin):
 
     def __str__(self):
         return 'log'
-    
+
 #END

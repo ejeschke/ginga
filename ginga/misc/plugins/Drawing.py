@@ -9,7 +9,8 @@
 #
 from ginga import GingaPlugin
 from ginga import colors
-from ginga.misc import Widgets, CanvasTypes, ParamSet, Bunch
+from ginga.gw import Widgets
+from ginga.misc import ParamSet, Bunch
 
 draw_colors = colors.get_colors()
 
@@ -26,7 +27,8 @@ class Drawing(GingaPlugin.LocalPlugin):
 
         self.layertag = 'drawing-canvas'
 
-        canvas = CanvasTypes.DrawingCanvas()
+        self.dc = fv.getDrawClasses()
+        canvas = self.dc.DrawingCanvas()
         canvas.enable_draw(True)
         canvas.enable_edit(True)
         canvas.set_drawtype('point', color='cyan')

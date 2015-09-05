@@ -12,13 +12,19 @@ from functools import reduce
 
 from ginga.qtw.QtHelp import QtGui, QtCore, QTextCursor, \
      QIcon, QPixmap, QImage
-from ginga.qtw import QtHelp
+from ginga.qtw import QtHelp, QtMain
 
 from ginga.misc import Callback, Bunch
 import ginga.icons
 
 # path to our icons
 icondir = os.path.split(ginga.icons.__file__)[0]
+
+class WidgetError(Exception):
+    """For errors thrown in this module."""
+    pass
+
+# BASE
 
 class WidgetBase(Callback.Callbacks):
 
@@ -36,6 +42,7 @@ class WidgetBase(Callback.Callbacks):
 
     def set_enabled(self, tf):
         self.widget.setEnabled(tf)
+
 
 # BASIC WIDGETS
 
@@ -770,7 +777,100 @@ class Menubar(ContainerBase):
         self.add_ref(child)
         return child
 
-# SAVE DIALOG
+
+class TopLevel(ContainerBase):
+    def __init__(self, title=None):
+        super(TopLevel, self).__init__()
+
+        widget = QtHelp.TopLevel()
+        self.widget = widget
+        box = QtGui.QVBoxLayout()
+        box.setContentsMargins(0, 0, 0, 0)
+        box.setSpacing(0)
+        widget.setLayout(box)
+        widget.closeEvent = lambda event: self._quit(event)
+
+        if not title is None:
+            widget.setWindowTitle(title)
+
+        self.enable_callback('closed')
+
+    def set_widget(self, child):
+        self.add_ref(child)
+        child_w = child.get_widget()
+        self.widget.layout().addWidget(child_w)
+
+    def show(self):
+        self.widget.show()
+
+    def hide(self):
+        self.widget.hide()
+
+    def _quit(self, event):
+        event.accept()
+        self.close()
+
+    def _closeEvent(*args):
+        self.close()
+
+    def close(self):
+        self.widget.deleteLater()
+        #self.widget = None
+
+        self.make_callback('closed')
+
+    def raise_(self):
+        self.widget.raise_()
+        self.widget.activateWindow()
+
+    def lower(self):
+        self.widget.lower()
+
+    def resize(self, width, height):
+        self.widget.resize(width, height)
+
+    def focus(self):
+        self.widget.raise_()
+        self.widget.activateWindow()
+
+    def move(self, x, y):
+        self.widget.moveTo(x, y)
+
+    def maximize(self):
+        self.widget.showMaximized()
+
+    def unmaximize(self):
+        self.widget.showNormal()
+
+    def fullscreen(self):
+        self.widget.showFullScreen()
+
+    def unfullscreen(self):
+        self.widget.showNormal()
+
+    def iconify(self):
+        self.hide()
+
+    def uniconify(self):
+        self.widget.showNormal()
+
+    def set_title(self, title):
+        self.widget.setWindowTitle(title)
+
+
+class Application(QtMain.QtMain):
+
+    def __init__(self, *args, **kwdargs):
+        super(Application, self).__init__(*args, **kwdargs)
+
+        self.window_list = []
+
+    def window(self, title=None):
+        w = TopLevel(title=title)
+        self.window_list.append(w)
+        return w
+
+
 class SaveDialog(QtGui.QFileDialog):
     def __init__(self, title=None, selectedfilter=None):
         super(SaveDialog, self).__init__()

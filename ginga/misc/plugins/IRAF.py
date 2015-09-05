@@ -41,7 +41,8 @@ import time
 
 from ginga import GingaPlugin, AstroImage
 from ginga import cmap, imap
-from ginga.misc import Widgets, CanvasTypes, Bunch
+from ginga.gw import Widgets, Viewers
+from ginga.misc import Bunch
 
 # XImage protocol support
 import IIS_DataListener as iis
@@ -63,6 +64,7 @@ class IRAF(GingaPlugin.GlobalPlugin):
         self.layertag = 'iraf-canvas'
         # this will be set in initialize()
         self.canvas = None
+        self.dc = fv.getDrawClasses()
 
         self.addr = iis.get_interface()
 
@@ -96,7 +98,7 @@ class IRAF(GingaPlugin.GlobalPlugin):
 
     def build_gui(self, container):
 
-        canvas = CanvasTypes.DrawingCanvas()
+        canvas = self.dc.DrawingCanvas()
         canvas.enable_draw(False)
         ## canvas.set_callback('none-move', self.cursormotion)
         canvas.add_callback('key-press', self.window_key_press)

@@ -10,7 +10,7 @@
 import numpy
 
 from ginga import GingaPlugin, RGBImage, colors
-from ginga.misc import Widgets, CanvasTypes
+from ginga.gw import Widgets
 
 class Overlays(GingaPlugin.LocalPlugin):
 
@@ -229,7 +229,7 @@ class Overlays(GingaPlugin.LocalPlugin):
 
         if self.canvas_img is None:
             self.logger.debug("Adding image to canvas")
-            self.canvas_img = CanvasTypes.Image(0, 0, self.rgbobj)
+            self.canvas_img = self.dc.Image(0, 0, self.rgbobj)
             self.canvas.add(self.canvas_img)
         else:
             self.logger.debug("Updating canvas image")

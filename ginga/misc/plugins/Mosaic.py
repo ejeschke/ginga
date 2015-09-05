@@ -17,7 +17,7 @@ from ginga import AstroImage
 from ginga.util import mosaic
 from ginga.util import wcs, iqcalc, dp
 from ginga import GingaPlugin
-from ginga.misc import Widgets, CanvasTypes
+from ginga.gw import Widgets
 
 try:
     import astropy.io.fits as pyfits

@@ -9,7 +9,7 @@
 #
 import numpy
 
-from ginga.misc import Widgets, Plot
+from ginga.gw import Widgets, Plots
 from ginga import GingaPlugin, colors
 from ginga.util.six.moves import map, zip
 from ginga.canvas.coordmap import OffsetMapper
@@ -152,7 +152,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         fr.set_widget(tw)
         vbox.add_widget(fr, stretch=0)
 
-        self.plot = Plot.Cuts(self.logger, width=2, height=3, dpi=100)
+        self.plot = Plots.Cuts(self.logger, width=2, height=3, dpi=100)
         ax = self.plot.add_axis()
         ax.grid(True)
 

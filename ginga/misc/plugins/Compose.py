@@ -9,7 +9,8 @@
 #
 import os
 
-from ginga.misc import Widgets, CanvasTypes, Bunch
+from ginga.gw import Widgets
+from ginga.misc import Bunch
 from ginga import RGBImage, LayerImage
 from ginga import GingaPlugin
 

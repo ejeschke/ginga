@@ -9,7 +9,7 @@ it will then be available from the "Operations" button.
 """
 
 from ginga import GingaPlugin
-from ginga.misc import Widgets
+from ginga.gw import Widgets
 
 # import any other modules you want here--it's a python world!
 
@@ -60,11 +60,8 @@ class MyLocalPlugin(GingaPlugin.LocalPlugin):
 
         # Frame for instructions and add the text widget with another
         # blank widget to stretch as needed to fill emp
-        fr = Widgets.Frame("Instructions")
-        vbox2 = Widgets.VBox()
-        vbox2.add_widget(tw)
-        vbox2.add_widget(Widgets.Label(''), stretch=1)
-        fr.set_widget(vbox2)
+        fr = Widgets.Expander("Instructions")
+        fr.set_widget(tw)
         vbox.add_widget(fr, stretch=0)
 
         # Add a spacer to stretch the rest of the way to the end of the
@@ -104,7 +101,7 @@ class MyLocalPlugin(GingaPlugin.LocalPlugin):
         chname = self.fv.get_channelName(self.fitsimage)
         self.fv.stop_local_plugin(chname, str(self))
         return True
-        
+
     def start(self):
         """
         This method is called just after ``build_gui()`` when the plugin
@@ -129,18 +126,18 @@ class MyLocalPlugin(GingaPlugin.LocalPlugin):
 
     def resume(self):
         """
-        This method is called when the plugin gets focus. 
+        This method is called when the plugin gets focus.
         It should take any actions necessary to start handling user
         interaction events for the operations that it does.
         This method may be called many times as the plugin is focused or
         defocused.  The method may be omitted if there is no user event
-        handling to enable. 
+        handling to enable.
         """
         pass
-        
+
     def stop(self):
         """
-        This method is called when the plugin is stopped. 
+        This method is called when the plugin is stopped.
         It should perform any special clean up necessary to terminate
         the operation.  The GUI will be destroyed by the plugin manager
         so there is no need for the stop method to do that.
@@ -149,7 +146,7 @@ class MyLocalPlugin(GingaPlugin.LocalPlugin):
         special cleanup required when stopping.
         """
         pass
-        
+
     def redo(self):
         """
         This method is called when the plugin is active and a new
@@ -159,11 +156,10 @@ class MyLocalPlugin(GingaPlugin.LocalPlugin):
         active.  This method may be omitted.
         """
         pass
-    
+
     def __str__(self):
         """
         This method should be provided and should return the lower case
         name of the plugin.
         """
         return 'mylocalplugin'
-

@@ -9,7 +9,7 @@
 #
 import numpy
 
-from ginga.misc import Widgets, CanvasTypes
+from ginga.gw import Widgets
 from ginga import GingaPlugin
 
 
@@ -22,7 +22,8 @@ class PixTable(GingaPlugin.LocalPlugin):
         self.layertag = 'pixtable-canvas'
         self.pan2mark = False
 
-        canvas = CanvasTypes.DrawingCanvas()
+        self.dc = self.fv.getDrawClasses()
+        canvas = self.dc.DrawingCanvas()
         ## canvas.enable_draw(True)
         ## canvas.set_drawtype('point', color='pink')
         ## canvas.set_callback('draw-event', self.draw_cb)
@@ -324,12 +325,12 @@ class PixTable(GingaPlugin.LocalPlugin):
         self.logger.debug("Setting mark at %d,%d" % (data_x, data_y))
         self.mark_index += 1
         tag = 'mark%d' % (self.mark_index)
-        tag = self.canvas.add(CanvasTypes.CompoundObject(
-            CanvasTypes.Point(data_x, data_y, self.mark_radius,
-                              style=style, color=color,
-                              linestyle='solid'),
-            CanvasTypes.Text(data_x + 10, data_y, "%d" % (self.mark_index),
-                             color=color)),
+        tag = self.canvas.add(self.dc.CompoundObject(
+            self.dc.Point(data_x, data_y, self.mark_radius,
+                          style=style, color=color,
+                          linestyle='solid'),
+            self.dc.Text(data_x + 10, data_y, "%d" % (self.mark_index),
+                         color=color)),
                               tag=tag)
         self.marks.append(tag)
         self.w.marks.append_text(tag)

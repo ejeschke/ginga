@@ -8,7 +8,8 @@
 # Please see the file LICENSE.txt for details.
 #
 import math
-from ginga.misc import Widgets, ParamSet, Bunch
+from ginga.gw import Widgets
+from ginga.misc import ParamSet, Bunch
 
 from ginga import cmap, imap, trcalc
 from ginga import GingaPlugin

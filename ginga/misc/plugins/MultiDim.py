@@ -13,7 +13,8 @@ from distutils import spawn
 from contextlib import contextmanager
 
 from ginga import AstroImage
-from ginga.misc import Widgets, Future
+from ginga.gw import Widgets
+from ginga.misc import Future
 from ginga import GingaPlugin
 from ginga.util.videosink import VideoSink
 

@@ -1,13 +1,14 @@
 #
 # ParamSet.py -- Groups of widgets holding parameters
-# 
+#
 # Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-from ginga.misc import Widgets, Callback, Bunch
+from ginga.misc import Callback, Bunch
+from ginga.gw import Widgets
 
 class Param(Bunch.Bunch):
     pass
@@ -15,7 +16,7 @@ class Param(Bunch.Bunch):
 class ParamSet(Callback.Callbacks):
     def __init__(self, logger, obj):
         super(ParamSet, self).__init__()
-        
+
         self.logger = logger
         self.paramlst = []
         self.obj = obj
@@ -23,7 +24,7 @@ class ParamSet(Callback.Callbacks):
 
         for name in ('changed', ):
             self.enable_callback(name)
-        
+
     def get_widget_value(self, widget, param):
         if hasattr(widget, 'get_text'):
             return widget.get_text()
@@ -83,7 +84,7 @@ class ParamSet(Callback.Callbacks):
             wtype = param.get('widget', None)
             if wtype == 'spinfloat':
                 widget.set_decimals(param.get('decimals', 4))
-                
+
             # if we have a cached value for the parameter, use it
             try:
                 value = getattr(self.obj, name)
@@ -103,7 +104,7 @@ class ParamSet(Callback.Callbacks):
                 widget.add_callback('activated', self._value_changed_cb)
             elif widget.has_callback('value-changed'):
                 widget.add_callback('value-changed', self._value_changed_cb)
-            
+
         self.paramlst = paramlst
         self.widgets = b
 
@@ -131,7 +132,7 @@ class ParamSet(Callback.Callbacks):
 
     def get_params(self):
         return self._get_params()
-    
+
     def params_to_widgets(self):
         for param in self.paramlst:
             name = param.name
@@ -141,7 +142,7 @@ class ParamSet(Callback.Callbacks):
 
     def sync_params(self):
         return self.params_to_widgets()
-    
+
     def widgets_to_params(self):
         for param in self.paramlst:
             w = self.widgets[param.name]
@@ -157,6 +158,6 @@ class ParamSet(Callback.Callbacks):
     def _value_changed_cb(self, w, *args):
         self._get_params()
         self.make_callback('changed', self.obj)
-        
+
 
 #END
