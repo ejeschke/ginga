@@ -1,10 +1,5 @@
 #! /usr/bin/env python
 #
-# example2.py -- Simple, configurable FITS viewer.
-#
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c)  Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -37,40 +32,74 @@ class FitsViewer(object):
         vbox.set_border_width(2)
         vbox.set_spacing(1)
 
-        fi = Viewers.CanvasView(logger)
-        fi.enable_autocuts('on')
-        fi.set_autocut_params('zscale')
-        fi.enable_autozoom('on')
-        fi.set_zoom_algorithm('rate')
-        fi.set_zoomrate(1.4)
-        fi.show_pan_mark(True)
-        fi.set_callback('drag-drop', self.drop_file)
-        fi.set_callback('none-move', self.motion)
-        fi.set_bg(0.2, 0.2, 0.2)
-        fi.ui_setActive(True)
-        self.fitsimage = fi
+        hbox = Widgets.HBox()
+        hbox.set_border_width(2)
+        hbox.set_spacing(4)
 
-        bd = fi.get_bindings()
+        v1 = Viewers.CanvasView(logger)
+        v1.enable_autocuts('on')
+        v1.set_autocut_params('zscale')
+        v1.enable_autozoom('on')
+        v1.set_zoom_algorithm('rate')
+        v1.set_zoomrate(1.4)
+        v1.show_pan_mark(True)
+        v1.set_callback('drag-drop', self.drop_file)
+        v1.set_callback('none-move', self.motion)
+        v1.set_bg(0.2, 0.2, 0.2)
+        v1.ui_setActive(True)
+        self.viewer1 = v1
+        self._mi1 = ModeIndicator(v1)
+
+        bd = v1.get_bindings()
         bd.enable_all(True)
 
-        # add little mode indicator that shows modal states in
-        # lower left hand corner
-        self._mi = ModeIndicator(fi)
-
-        # canvas that we will draw on
+        # shared canvas between the two viewers
         canvas = self.dc.DrawingCanvas()
         canvas.enable_draw(True)
+        canvas.enable_edit(True)
         canvas.set_drawtype('rectangle', color='lightblue')
-        canvas.setSurface(fi)
         self.canvas = canvas
-        # add canvas to view
-        fi.get_canvas().add(canvas)
-        canvas.ui_setActive(True)
+        # Tell viewer1 to use this canvas
+        #v1.set_canvas(canvas)
+        v1_canvas = v1.get_canvas()
+        v1_canvas.add(canvas)
+        v1.set_canvas(v1_canvas, image_canvas=canvas)
+        #canvas.ui_setActive(True)
         self.drawtypes = canvas.get_drawtypes()
         self.drawtypes.sort()
 
-        fi.set_desired_size(512, 512)
-        vbox.add_widget(fi, stretch=1)
+        hbox.add_widget(v1, stretch=0)
+
+        # Add a second viewer viewing the same canvas
+        v2 = Viewers.CanvasView(logger)
+        v2.enable_autocuts('on')
+        v2.set_autocut_params('zscale')
+        v2.enable_autozoom('on')
+        v2.set_zoom_algorithm('rate')
+        v2.set_zoomrate(1.4)
+        v2.show_pan_mark(True)
+        v2.set_callback('drag-drop', self.drop_file)
+        v2.set_callback('none-move', self.motion)
+        v2.set_bg(0.2, 0.2, 0.2)
+        v2.ui_setActive(True)
+        self.viewer2 = v2
+        self._mi2 = ModeIndicator(v2)
+
+        canvas.setSurface(self.viewer1)
+        canvas.setSurface(self.viewer2)
+
+        # Tell viewer2 to use this same canvas
+        #v2.set_canvas(canvas)
+        v2_canvas = v2.get_canvas()
+        v2_canvas.add(canvas)
+        v2.set_canvas(v2_canvas, image_canvas=canvas)
+
+        bd = v2.get_bindings()
+        bd.enable_all(True)
+
+        hbox.add_widget(v2, stretch=0)
+
+        vbox.add_widget(hbox, stretch=1)
 
         self.readout = Widgets.Label("")
         vbox.add_widget(self.readout, stretch=0)
@@ -127,9 +156,11 @@ class FitsViewer(object):
         index = self.wdrawcolor.get_index()
         fill = self.wfill.get_state()
         alpha = self.walpha.get_value()
+        coord = 'data'
 
         params = { 'color': self.drawcolors[index],
                    'alpha': alpha,
+                   'coord': coord,
                    }
         if kind in ('circle', 'rectangle', 'polygon', 'triangle',
                     'righttriangle', 'ellipse', 'square', 'box'):
@@ -141,11 +172,11 @@ class FitsViewer(object):
     def clear_canvas(self):
         self.canvas.deleteAllObjects()
 
-    def load_file(self, filepath):
+    def load_file(self, viewer, filepath):
         image = AstroImage.AstroImage(logger=self.logger)
         image.load_file(filepath)
 
-        self.fitsimage.set_image(image)
+        viewer.set_image(image)
         self.top.set_title(filepath)
 
     def open_file(self):
@@ -156,12 +187,12 @@ class FitsViewer(object):
         else:
             fileName = str(res)
         if len(fileName) != 0:
-            self.load_file(fileName)
+            self.load_file(self.viewer1, fileName)
 
-    def drop_file(self, fitsimage, paths):
+    def drop_file(self, viewer, paths):
         fileName = paths[0]
         #print(fileName)
-        self.load_file(fileName)
+        self.load_file(viewer, fileName)
 
     def motion(self, viewer, button, data_x, data_y):
 
@@ -223,7 +254,7 @@ def main(options, args):
     viewer.top.resize(700, 540)
 
     if len(args) > 0:
-        viewer.load_file(args[0])
+        viewer.load_file(viewer.viewer1, args[0])
 
     viewer.top.show()
     viewer.top.raise_()

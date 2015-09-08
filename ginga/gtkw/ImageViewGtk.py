@@ -583,8 +583,9 @@ class CanvasView(ImageViewZoom):
         # Needed for UIMixin to propagate events correctly
         self.objects = [self.canvas]
 
-    def set_canvas(self, canvas):
-        super(CanvasView, self).set_canvas(canvas)
+    def set_canvas(self, canvas, image_canvas=None):
+        super(CanvasView, self).set_canvas(canvas,
+                                           image_canvas=image_canvas)
 
         self.objects[0] = canvas
 

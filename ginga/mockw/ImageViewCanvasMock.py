@@ -29,7 +29,8 @@ class ImageViewCanvas(ImageViewMock.ImageViewZoom,
         CanvasMixin.__init__(self)
         DrawingMixin.__init__(self)
 
-        self.set_canvas(self)
+        # we are both a viewer and a canvas
+        self.set_canvas(self, image_canvas=self)
 
     # METHODS THAT WERE IN IPG
 

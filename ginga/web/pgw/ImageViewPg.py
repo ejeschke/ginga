@@ -15,6 +15,7 @@ import time
 from ginga import Mixins, Bindings
 from ginga.misc import log, Bunch
 from ginga.canvas.mixins import DrawingMixin, CanvasMixin, CompoundMixin
+from ginga.util.toolbox import ModeIndicator
 import PgHelp
 
 
@@ -447,8 +448,9 @@ class CanvasView(ImageViewZoom):
         # Needed for UIMixin to propagate events correctly
         self.objects = [self.canvas]
 
-    def set_canvas(self, canvas):
-        super(CanvasView, self).set_canvas(canvas)
+    def set_canvas(self, canvas, image_canvas=None):
+        super(CanvasView, self).set_canvas(canvas,
+                                           image_canvas=image_canvas)
 
         self.objects[0] = canvas
 
@@ -467,57 +469,10 @@ class ImageViewCanvas(ImageViewZoom,
         CanvasMixin.__init__(self)
         DrawingMixin.__init__(self)
 
-        self.set_canvas(self)
+        # we are both a viewer and a canvas
+        self.set_canvas(self, image_canvas=self)
 
-        # for displaying modal keyboard state
-        self.mode_obj = None
-        bm = self.get_bindmap()
-        bm.add_callback('mode-set', self.mode_change_cb)
-        self.add_callback('configure', self._configure_cb)
-
-    def mode_change_cb(self, bindmap, mode, modetype):
-        # delete the old indicator
-        obj = self.mode_obj
-        self.mode_obj = None
-        if obj:
-            try:
-                self.deleteObject(obj)
-            except:
-                pass
-
-        # if not one of the standard modifiers, display the new one
-        if not mode in (None, 'ctrl', 'shift'):
-            Text = self.getDrawClass('text')
-            Rect = self.getDrawClass('rectangle')
-            Compound = self.getDrawClass('compoundobject')
-
-            if modetype == 'locked':
-                text = '%s [L]' % (mode)
-            else:
-                text = mode
-
-            xsp, ysp = 4, 6
-            wd, ht = self.get_window_size()
-            x1, y1 = wd-12*len(text), ht-12
-            o1 = Text(x1, y1-12, text,
-                      fontsize=14, color='yellow', coord='canvas')
-            wd, ht = self.renderer.get_dimensions(o1)
-
-            # yellow text on a black filled rectangle
-            o2 = Compound(Rect(x1-xsp, y1+ysp, x1+wd+xsp, y1-ht,
-                               color='black',
-                               fill=True, fillcolor='black', coord='canvas'),
-                               o1)
-            self.mode_obj = o2
-            self.add(o2)
-
-        return True
-
-    def _configure_cb(self, view, width, height):
-        # redraw the mode indicator since the window has been resized
-        bm = view.get_bindmap()
-        mode, modetype = bm.current_mode()
-        self.mode_change_cb(bm, mode, modetype)
+        self._mi = ModeIndicator(self)
 
 
 class RenderWidgetZoom(PgHelp.PantographHandler):

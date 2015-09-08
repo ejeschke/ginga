@@ -15,6 +15,9 @@ from ginga.qtw.QtHelp import QtGui, QtCore
 
 from ginga import AstroImage, colors
 from ginga.qtw.ImageViewCanvasQt import ImageViewCanvas
+from ginga.qtw.ImageViewQt import CanvasView
+from ginga.canvas.CanvasObject import get_canvas_types
+from ginga.util.toolbox import ModeIndicator
 from ginga.misc import log
 
 STD_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcName)s) | %(message)s'
@@ -26,15 +29,17 @@ class FitsViewer(QtGui.QMainWindow):
         super(FitsViewer, self).__init__()
         self.logger = logger
         self.drawcolors = colors.get_colors()
+        self.dc = get_canvas_types()
 
-        fi = ImageViewCanvas(logger, render='widget')
+        #fi = ImageViewCanvas(logger, render='widget')
+        fi = CanvasView(logger, render='widget')
         fi.enable_autocuts('on')
         fi.set_autocut_params('zscale')
         fi.enable_autozoom('on')
         fi.set_zoom_algorithm('rate')
         fi.set_zoomrate(1.4)
         fi.show_pan_mark(True)
-        fi.enable_draw(False)
+        #fi.enable_draw(False)
         fi.set_callback('drag-drop', self.drop_file)
         fi.set_callback('none-move', self.motion)
         fi.set_bg(0.2, 0.2, 0.2)
@@ -44,16 +49,22 @@ class FitsViewer(QtGui.QMainWindow):
         bd = fi.get_bindings()
         bd.enable_all(True)
 
+        # add little mode indicator that shows modal states in
+        # lower left hand corner
+        self._mi = ModeIndicator(fi)
+
         # canvas that we will draw on
-        DrawingCanvas = fi.getDrawClass('drawingcanvas')
-        canvas = DrawingCanvas()
+        canvas = self.dc.DrawingCanvas()
         canvas.enable_draw(True)
         canvas.set_drawtype('rectangle', color='lightblue')
         canvas.setSurface(fi)
         self.canvas = canvas
         # add canvas to view
-        fi.add(canvas)
+        #fi.add(canvas)
+        fi.get_canvas().add(canvas)
         canvas.ui_setActive(True)
+        self.drawtypes = canvas.get_drawtypes()
+        self.drawtypes.sort()
 
         w = fi.get_widget()
         w.resize(512, 512)
@@ -71,7 +82,6 @@ class FitsViewer(QtGui.QMainWindow):
         hbox.setContentsMargins(QtCore.QMargins(4, 2, 4, 2))
 
         wdrawtype = QtGui.QComboBox()
-        self.drawtypes = fi.get_drawtypes()
         for name in self.drawtypes:
             wdrawtype.addItem(name)
         index = self.drawtypes.index('rectangle')

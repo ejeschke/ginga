@@ -447,9 +447,15 @@ class CanvasObjectBase(Callback.Callbacks):
 drawCatalog = Bunch.Bunch(caseless=True)
 
 def get_canvas_types():
+    # force registration of all canvas types
+    import ginga.canvas.types.all
+
     return drawCatalog
 
 def get_canvas_type(name):
+    # force registration of all canvas types
+    import ginga.canvas.types.all
+
     return drawCatalog[name]
 
 def register_canvas_type(name, klass):

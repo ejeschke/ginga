@@ -370,11 +370,14 @@ class ImageViewBase(Callback.Callbacks):
         self._imgobj = None
 
         # secondary image canvas set?
-        if (image_canvas is None) or (image_canvas == canvas):
-            self.image_canvas = canvas
-        else:
+        if not (image_canvas is None):
+            self.image_canvas = image_canvas
+
             image_canvas.setSurface(self)
             image_canvas.ui_setActive(True)
+        else:
+            if self.image_canvas is None:
+                self.image_canvas = canvas
 
     def set_color_map(self, cmap_name):
         """Sets the color map.
@@ -524,6 +527,7 @@ class ImageViewBase(Callback.Callbacks):
                 except KeyError:
                     tag = self.image_canvas.add(canvas_img,
                                                 tag=self._canvas_img_tag)
+                    #print("adding image to canvas %s" % self.image_canvas)
 
                 # move image to bottom of layers
                 self.image_canvas.lowerObject(canvas_img)

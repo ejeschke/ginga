@@ -99,8 +99,11 @@ class RenderContext(object):
     ##### DRAWING OPERATIONS #####
 
     def draw_text(self, cx, cy, text, rot_deg=0.0):
-        self.cr.canvas.text((cx, cy), text, self.font)
-        ## affine = self.get_affine_transform(cx, cy, rot_deg)
+
+        wd, ht = self.cr.text_extents(text, self.font)
+
+        self.cr.canvas.text((cx, cy-ht), text, self.font)
+        ## affine = self.get_affine_transform(cx, cy-ht, rot_deg)
         ## self.cr.canvas.settransform(affine)
 
         ## self.cr.canvas.text((0, 0), text, self.font)
