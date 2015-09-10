@@ -479,6 +479,7 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
 
             # TODO: these are not making it into the combobox correctly
             header = header.strip()
+            #print("header is --->%s<---" % header)
             combobox.insert_text(n, header)
             if header == info.color:
                 fidx = n
@@ -587,7 +588,8 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
         iter = model.get_iter(path)
         star = model.get_value(iter, 0)
         self.logger.debug("selected star: %s" % (str(star)))
-        self.mark_selection(star, fromtable=True)
+        if not self._select_flag:
+            self.mark_selection(star, fromtable=True)
         return True
 
     def set_cmap_cb(self, w):
