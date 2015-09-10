@@ -480,7 +480,15 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         """This is called when a new image arrives or the data in the
         existing image changes.
         """
+        curr_axis = self.axes_states
         self.build_axes()
+
+        # Restore axis state
+        children = self.hbox_axes.get_children()
+        for p, val in enumerate(curr_axis):
+            if val is True:
+                children[p-1].set_state(True)
+
         self.replot_all()
 
     def _get_perpendicular_points(self, obj, x, y, r):
@@ -674,6 +682,9 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
                 self.w.delete_all.set_enabled(True)
                 self.save_cuts.set_enabled(True)
                 self.save_slit.set_enabled(True)
+
+        # Redraw slit image for selected cut
+        self.select_cut(self.cutstag)
 
         # force mpl redraw
         self.plot.fig.canvas.draw()
