@@ -255,7 +255,7 @@ class ImageViewEvent(ImageViewPg):
         keycode = event.key_code
         keyname = self.transkey(keycode)
         self.logger.info("key press event, key=%s" % (keyname))
-        return self.make_callback('key-press', keyname)
+        return self.make_ui_callback('key-press', keyname)
 
     def key_down_event(self, event):
         keycode = event.key_code
@@ -263,7 +263,7 @@ class ImageViewEvent(ImageViewPg):
         self.logger.info("key press event, key=%s" % (keyname))
         # special hack for modifiers
         if keyname in self._browser_problem_keys:
-            return self.make_callback('key-press', keyname)
+            return self.make_ui_callback('key-press', keyname)
         return False
 
     def key_up_event(self, event):
@@ -272,7 +272,7 @@ class ImageViewEvent(ImageViewPg):
         self.logger.info("key release event, key=%s" % (keyname))
         # special hack for modifiers
         if keyname in self._browser_problem_keys:
-            return self.make_callback('key-release', keyname)
+            return self.make_ui_callback('key-release', keyname)
         return False
 
     def button_press_event(self, event):
@@ -283,7 +283,7 @@ class ImageViewEvent(ImageViewPg):
         self.logger.debug("button event at %dx%d, button=%x" % (x, y, button))
 
         data_x, data_y = self.get_data_xy(x, y)
-        return self.make_callback('button-press', button, data_x, data_y)
+        return self.make_ui_callback('button-press', button, data_x, data_y)
 
     def button_release_event(self, event):
         # event.button, event.x, event.y
@@ -294,7 +294,7 @@ class ImageViewEvent(ImageViewPg):
         self.logger.debug("button release at %dx%d button=%x" % (x, y, button))
 
         data_x, data_y = self.get_data_xy(x, y)
-        return self.make_callback('button-release', button, data_x, data_y)
+        return self.make_ui_callback('button-release', button, data_x, data_y)
 
     def get_last_win_xy(self):
         return (self.last_win_x, self.last_win_y)
@@ -313,7 +313,7 @@ class ImageViewEvent(ImageViewPg):
         data_x, data_y = self.get_data_xy(x, y)
         self.last_data_x, self.last_data_y = data_x, data_y
 
-        return self.make_callback('motion', button, data_x, data_y)
+        return self.make_ui_callback('motion', button, data_x, data_y)
 
     def scroll_event(self, event):
         x, y = event.x, event.y
@@ -335,7 +335,7 @@ class ImageViewEvent(ImageViewPg):
         data_x, data_y = self.get_data_xy(x, y)
         self.last_data_x, self.last_data_y = data_x, data_y
 
-        return self.make_callback('scroll', direction, numDegrees,
+        return self.make_ui_callback('scroll', direction, numDegrees,
                                   data_x, data_y)
 
     def drop_event(self, event):
@@ -343,7 +343,7 @@ class ImageViewEvent(ImageViewPg):
         self.logger.info("data=%s" % (str(data)))
         paths = data.split('\n')
         self.logger.info("dropped text(s): %s" % (str(paths)))
-        return self.make_callback('drag-drop', paths)
+        return self.make_ui_callback('drag-drop', paths)
 
 
     def pinch_event(self, event):
@@ -357,7 +357,7 @@ class ImageViewEvent(ImageViewPg):
         self.logger.debug("pinch gesture rot=%f scale=%f state=%s" % (
             rot, scale, state))
 
-        return self.make_callback('pinch', state, rot, scale)
+        return self.make_ui_callback('pinch', state, rot, scale)
 
     def rotate_event(self, event):
         state = 'move'
@@ -369,7 +369,7 @@ class ImageViewEvent(ImageViewPg):
         self.logger.debug("rotate gesture rot=%f state=%s" % (
             rot, state))
 
-        return self.make_callback('rotate', state, rot)
+        return self.make_ui_callback('rotate', state, rot)
 
     def pan_event(self, event):
         state = 'move'
@@ -382,7 +382,7 @@ class ImageViewEvent(ImageViewPg):
         self.logger.debug("pan gesture dx=%f dy=%f state=%s" % (
             dx, dy, state))
 
-        return self.make_callback('pan', state, dx, dy)
+        return self.make_ui_callback('pan', state, dx, dy)
 
     def swipe_event(self, event):
         if event.isfinal:
@@ -390,7 +390,7 @@ class ImageViewEvent(ImageViewPg):
             self.logger.info("swipe gesture event=%s" % (str(event)))
             ## self.logger.debug("swipe gesture hdir=%s vdir=%s" % (
             ##     hdir, vdir))
-            ## return self.make_callback('swipe', state, hdir, vdir)
+            ## return self.make_ui_callback('swipe', state, hdir, vdir)
 
     def tap_event(self, event):
         if event.isfinal:
@@ -416,6 +416,8 @@ class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
         ImageViewEvent.__init__(self, logger=logger, rgbmap=rgbmap,
                                 settings=settings)
         Mixins.UIMixin.__init__(self)
+
+        self.ui_setActive(True)
 
         if bindmap is None:
             bindmap = ImageViewZoom.bindmapClass(self.logger)
@@ -446,13 +448,13 @@ class CanvasView(ImageViewZoom):
                                bindmap=bindmap, bindings=bindings)
 
         # Needed for UIMixin to propagate events correctly
-        self.objects = [self.canvas]
+        self.objects = [self.private_canvas]
 
-    def set_canvas(self, canvas, image_canvas=None):
+    def set_canvas(self, canvas, private_canvas=None):
         super(CanvasView, self).set_canvas(canvas,
-                                           image_canvas=image_canvas)
+                                           private_canvas=private_canvas)
 
-        self.objects[0] = canvas
+        self.objects[0] = self.private_canvas
 
 
 class ImageViewCanvas(ImageViewZoom,
@@ -470,7 +472,7 @@ class ImageViewCanvas(ImageViewZoom,
         DrawingMixin.__init__(self)
 
         # we are both a viewer and a canvas
-        self.set_canvas(self, image_canvas=self)
+        self.set_canvas(self, private_canvas=self)
 
         self._mi = ModeIndicator(self)
 

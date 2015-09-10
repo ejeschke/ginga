@@ -26,27 +26,11 @@ class ImageViewCanvas(ImageViewAgg.ImageViewAgg,
         CanvasMixin.__init__(self)
         DrawingMixin.__init__(self)
 
-        for name in ('modified', ):
-            self.enable_callback(name)
-
-        #self.canvas.add(self)
-        self.set_canvas(self)
-
-        self.setSurface(self)
+        # we are both a viewer and a canvas
+        self.set_canvas(self, private_canvas=self)
 
         # override
         self.defer_redraw = False
-
-    def update_canvas(self, whence=3):
-        self.logger.debug("updating canvas")
-        self.redraw(whence=whence)
-
-    def redraw_data(self, whence=0):
-        super(ImageViewCanvas, self).redraw_data(whence=whence)
-
-        if not self.surface:
-            return
-        self.draw(self)
 
     # subclass needs to implement these to avoid warning messages
     def reschedule_redraw(self, time_sec):

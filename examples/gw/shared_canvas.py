@@ -60,15 +60,11 @@ class FitsViewer(object):
         canvas.set_drawtype('rectangle', color='lightblue')
         self.canvas = canvas
         # Tell viewer1 to use this canvas
-        #v1.set_canvas(canvas)
-        v1_canvas = v1.get_canvas()
-        v1_canvas.add(canvas)
-        v1.set_canvas(v1_canvas, image_canvas=canvas)
-        #canvas.ui_setActive(True)
+        v1.set_canvas(canvas)
         self.drawtypes = canvas.get_drawtypes()
         self.drawtypes.sort()
 
-        hbox.add_widget(v1, stretch=0)
+        hbox.add_widget(v1, stretch=1)
 
         # Add a second viewer viewing the same canvas
         v2 = Viewers.CanvasView(logger)
@@ -85,19 +81,13 @@ class FitsViewer(object):
         self.viewer2 = v2
         self._mi2 = ModeIndicator(v2)
 
-        canvas.setSurface(self.viewer1)
-        canvas.setSurface(self.viewer2)
-
         # Tell viewer2 to use this same canvas
-        #v2.set_canvas(canvas)
-        v2_canvas = v2.get_canvas()
-        v2_canvas.add(canvas)
-        v2.set_canvas(v2_canvas, image_canvas=canvas)
+        v2.set_canvas(canvas)
 
         bd = v2.get_bindings()
         bd.enable_all(True)
 
-        hbox.add_widget(v2, stretch=0)
+        hbox.add_widget(v2, stretch=1)
 
         vbox.add_widget(hbox, stretch=1)
 

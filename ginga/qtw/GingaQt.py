@@ -20,8 +20,8 @@ from ginga.qtw import Widgets
 
 # Local application imports
 from ginga import cmap, imap
-from ginga import ImageView
 from ginga.misc import Bunch
+from ginga.canvas.types.layer import DrawingCanvas
 from ginga.util.six.moves import map, zip
 
 moduleHome = os.path.split(sys.modules[__name__].__file__)[0]
@@ -29,8 +29,8 @@ sys.path.insert(0, moduleHome)
 childDir = os.path.join(moduleHome, 'plugins')
 sys.path.insert(0, childDir)
 
-from ginga.qtw import ImageViewCanvasQt, ColorBar, Readout, PluginManagerQt, \
-     QtHelp, QtMain
+from ginga.qtw import ColorBar, Readout, PluginManagerQt, \
+     QtHelp, QtMain, ImageViewCanvasQt
 
 icon_path = os.path.abspath(os.path.join(moduleHome, '..', 'icons'))
 rc_file = os.path.join(moduleHome, "qt_rc")
@@ -397,11 +397,13 @@ class GingaView(QtMain.QtMain):
         bd = bclass(self.logger, settings=bindprefs)
 
         fi = ImageViewCanvasQt.ImageViewCanvas(logger=self.logger,
-                                       rgbmap=rgbmap,
-                                       settings=settings,
-                                       bindings=bd)
-        canvas = fi.get_canvas()
+                                               rgbmap=rgbmap,
+                                               settings=settings,
+                                               bindings=bd)
+        canvas = DrawingCanvas()
         canvas.enable_draw(False)
+        fi.set_canvas(canvas)
+
         fi.set_follow_focus(settings.get('follow_focus', True))
         fi.enable_auto_orient(True)
 

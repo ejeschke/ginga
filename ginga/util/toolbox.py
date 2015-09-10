@@ -33,7 +33,8 @@ class ModeIndicator(object):
         # delete the old indicator
         obj = self.mode_obj
         self.mode_obj = None
-        canvas = self.viewer.get_canvas()
+        #canvas = self.viewer.get_canvas()
+        canvas = self.viewer.private_canvas
         if obj:
             try:
                 canvas.deleteObject(obj)

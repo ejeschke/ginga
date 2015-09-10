@@ -102,6 +102,11 @@ class Image(CanvasObjectBase):
             self._cache[viewer] = cache
         return cache
 
+    def invalidate_cache(self, viewer):
+        cache = self.get_cache(viewer)
+        self._reset_cache(cache)
+        return cache
+
     def draw(self, viewer):
         """General draw method for RGB image types.
         Note that actual insertion of the image into the output is

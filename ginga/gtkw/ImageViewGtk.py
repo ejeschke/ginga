@@ -415,7 +415,7 @@ class ImageViewEvent(ImageViewGtk):
         keyname = gtk.gdk.keyval_name(event.keyval)
         keyname = self.transkey(keyname)
         self.logger.debug("key press event, key=%s" % (keyname))
-        return self.make_callback('key-press', keyname)
+        return self.make_ui_callback('key-press', keyname)
 
     def key_release_event(self, widget, event):
         gtk.gdk.keyboard_ungrab()
@@ -423,7 +423,7 @@ class ImageViewEvent(ImageViewGtk):
         keyname = gtk.gdk.keyval_name(event.keyval)
         keyname = self.transkey(keyname)
         self.logger.debug("key release event, key=%s" % (keyname))
-        return self.make_callback('key-release', keyname)
+        return self.make_ui_callback('key-release', keyname)
 
     def button_press_event(self, widget, event):
         # event.button, event.x, event.y
@@ -434,7 +434,7 @@ class ImageViewEvent(ImageViewGtk):
         self.logger.debug("button event at %dx%d, button=%x" % (x, y, button))
 
         data_x, data_y = self.get_data_xy(x, y)
-        return self.make_callback('button-press', button, data_x, data_y)
+        return self.make_ui_callback('button-press', button, data_x, data_y)
 
     def button_release_event(self, widget, event):
         # event.button, event.x, event.y
@@ -445,7 +445,7 @@ class ImageViewEvent(ImageViewGtk):
         self.logger.debug("button release at %dx%d button=%x" % (x, y, button))
 
         data_x, data_y = self.get_data_xy(x, y)
-        return self.make_callback('button-release', button, data_x, data_y)
+        return self.make_ui_callback('button-release', button, data_x, data_y)
 
     def get_last_win_xy(self):
         return (self.last_win_x, self.last_win_y)
@@ -476,7 +476,7 @@ class ImageViewEvent(ImageViewGtk):
         data_x, data_y = self.get_data_xy(x, y)
         self.last_data_x, self.last_data_y = data_x, data_y
 
-        return self.make_callback('motion', button, data_x, data_y)
+        return self.make_ui_callback('motion', button, data_x, data_y)
 
     def scroll_event(self, widget, event):
         # event.button, event.x, event.y
@@ -489,7 +489,7 @@ class ImageViewEvent(ImageViewGtk):
         data_x, data_y = self.get_data_xy(x, y)
         self.last_data_x, self.last_data_y = data_x, data_y
 
-        return self.make_callback('scroll', direction, degrees,
+        return self.make_ui_callback('scroll', direction, degrees,
                                   data_x, data_y)
 
     def drag_drop_cb(self, widget, context, x, y, time):
@@ -529,7 +529,7 @@ class ImageViewEvent(ImageViewGtk):
             return False
         paths = selection.get_text().strip().split('\n')
         self.logger.debug("dropped filename(s): %s" % (str(paths)))
-        return self.make_callback('drag-drop', paths)
+        return self.make_ui_callback('drag-drop', paths)
 
 
 class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
@@ -551,6 +551,8 @@ class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
         ImageViewEvent.__init__(self, logger=logger, rgbmap=rgbmap,
                                 settings=settings)
         Mixins.UIMixin.__init__(self)
+
+        self.ui_setActive(True)
 
         if bindmap is None:
             bindmap = ImageViewZoom.bindmapClass(self.logger)
@@ -581,13 +583,13 @@ class CanvasView(ImageViewZoom):
                                bindmap=bindmap, bindings=bindings)
 
         # Needed for UIMixin to propagate events correctly
-        self.objects = [self.canvas]
+        self.objects = [self.private_canvas]
 
-    def set_canvas(self, canvas, image_canvas=None):
+    def set_canvas(self, canvas, private_canvas=None):
         super(CanvasView, self).set_canvas(canvas,
-                                           image_canvas=image_canvas)
+                                           private_canvas=private_canvas)
 
-        self.objects[0] = canvas
+        self.objects[0] = self.private_canvas
 
 
 #END

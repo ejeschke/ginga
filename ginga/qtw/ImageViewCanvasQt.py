@@ -30,7 +30,7 @@ class ImageViewCanvas(ImageViewQt.ImageViewZoom,
         DrawingMixin.__init__(self)
 
         # we are both a viewer and a canvas
-        self.set_canvas(self, image_canvas=self)
+        self.set_canvas(self, private_canvas=self)
 
         self._mi = ModeIndicator(self)
 

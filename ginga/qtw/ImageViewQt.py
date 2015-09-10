@@ -563,14 +563,14 @@ class ImageViewEvent(ImageViewQt):
         keyname2 = "%s" % (event.text())
         keyname = self.transkey(keyname, keyname2)
         self.logger.debug("key press event, key=%s" % (keyname))
-        return self.make_callback('key-press', keyname)
+        return self.make_ui_callback('key-press', keyname)
 
     def key_release_event(self, widget, event):
         keyname = event.key()
         keyname2 = "%s" % (event.text())
         keyname = self.transkey(keyname, keyname2)
         self.logger.debug("key release event, key=%s" % (keyname))
-        return self.make_callback('key-release', keyname)
+        return self.make_ui_callback('key-release', keyname)
 
     def button_press_event(self, widget, event):
         buttons = event.buttons()
@@ -586,7 +586,7 @@ class ImageViewEvent(ImageViewQt):
         self.logger.debug("button down event at %dx%d, button=%x" % (x, y, button))
 
         data_x, data_y = self.get_data_xy(x, y)
-        return self.make_callback('button-press', button, data_x, data_y)
+        return self.make_ui_callback('button-press', button, data_x, data_y)
 
     def button_release_event(self, widget, event):
         # note: for mouseRelease this needs to be button(), not buttons()!
@@ -602,7 +602,7 @@ class ImageViewEvent(ImageViewQt):
             button |= 0x4
 
         data_x, data_y = self.get_data_xy(x, y)
-        return self.make_callback('button-release', button, data_x, data_y)
+        return self.make_ui_callback('button-release', button, data_x, data_y)
 
     def get_last_win_xy(self):
         return (self.last_win_x, self.last_win_y)
@@ -626,7 +626,7 @@ class ImageViewEvent(ImageViewQt):
         data_x, data_y = self.get_data_xy(x, y)
         self.last_data_x, self.last_data_y = data_x, data_y
 
-        return self.make_callback('motion', button, data_x, data_y)
+        return self.make_ui_callback('motion', button, data_x, data_y)
 
     def scroll_event(self, widget, event):
         x, y = event.x(), event.y()
@@ -639,7 +639,7 @@ class ImageViewEvent(ImageViewQt):
         data_x, data_y = self.get_data_xy(x, y)
         self.last_data_x, self.last_data_y = data_x, data_y
 
-        return self.make_callback('scroll', direction, numDegrees,
+        return self.make_ui_callback('scroll', direction, numDegrees,
                                   data_x, data_y)
 
     def gesture_event(self, widget, event):
@@ -696,7 +696,7 @@ class ImageViewEvent(ImageViewQt):
             self.logger.debug("swipe gesture hdir=%s vdir=%s" % (
                 hdir, vdir))
 
-            return self.make_callback('swipe', gstate, hdir, vdir)
+            return self.make_ui_callback('swipe', gstate, hdir, vdir)
 
     def gs_pinching(self, event, gesture, gstate):
         #print("PINCHING")
@@ -705,7 +705,7 @@ class ImageViewEvent(ImageViewQt):
         self.logger.debug("pinch gesture rot=%f scale=%f state=%s" % (
             rot, scale, gstate))
 
-        return self.make_callback('pinch', gstate, rot, scale)
+        return self.make_ui_callback('pinch', gstate, rot, scale)
 
     def gs_panning(self, event, gesture, gstate):
         #print("PANNING")
@@ -720,7 +720,7 @@ class ImageViewEvent(ImageViewQt):
         self.logger.debug("pan gesture dx=%f dy=%f state=%s" % (
             dx, dy, gstate))
 
-        return self.make_callback('pan', gstate, dx, dy)
+        return self.make_ui_callback('pan', gstate, dx, dy)
 
     def gs_tapping(self, event, gesture, gstate):
         self.logger.debug("tapping gesture state=%s" % (
@@ -758,7 +758,7 @@ class ImageViewEvent(ImageViewQt):
 
         event.setAccepted(True)
         #event.acceptProposedAction()
-        self.make_callback('drag-drop', data)
+        self.make_ui_callback('drag-drop', data)
 
 class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
 
@@ -813,13 +813,13 @@ class CanvasView(ImageViewZoom):
                                bindmap=bindmap, bindings=bindings)
 
         # Needed for UIMixin to propagate events correctly
-        self.objects = [self.canvas]
+        self.objects = [self.private_canvas]
 
-    def set_canvas(self, canvas, image_canvas=None):
+    def set_canvas(self, canvas, private_canvas=None):
         super(CanvasView, self).set_canvas(canvas,
-                                           image_canvas=image_canvas)
+                                           private_canvas=private_canvas)
 
-        self.objects[0] = canvas
+        self.objects[0] = self.private_canvas
 
 
 def make_cursor(iconpath, x, y):

@@ -1005,11 +1005,11 @@ class Pick(GingaPlugin.LocalPlugin):
             wd, ht = self.pickimage.get_data_size()
             xc = wd // 2
             yc = ht // 2
-            if not self.pickcenter:
-                tag = self.pickimage.add(self.dc.Point(xc, yc, 5,
-                                                       linewidth=1,
-                                                       color='red'))
-                self.pickcenter = self.pickimage.getObjectByTag(tag)
+            if self.pickcenter is None:
+                p_canvas = self.pickimage.get_canvas()
+                tag = p_canvas.add(self.dc.Point(xc, yc, 5,
+                                                 linewidth=1, color='red'))
+                self.pickcenter = p_canvas.getObjectByTag(tag)
 
             self.pick_x1, self.pick_y1 = x1, y1
             self.pick_data = data

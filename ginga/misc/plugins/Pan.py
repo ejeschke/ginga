@@ -30,46 +30,64 @@ class Pan(GingaPlugin.GlobalPlugin):
 
         self.dc = fv.getDrawClasses()
 
+        prefs = self.fv.get_preferences()
+        self.settings = prefs.createCategory('plugin_Pan')
+        self.settings.addDefaults(use_shared_canvas=False,
+                                  pan_position_color='yellow',
+                                  pan_rectangle_color='red',
+                                  compass_color='skyblue')
+        self.settings.load(onError='silent')
+        # share canvas with channel viewer?
+        self.use_shared_canvas = self.settings.get('use_shared_canvas', False)
+
     def build_gui(self, container):
         nb = Widgets.StackWidget()
         self.nb = nb
         container.add_widget(self.nb, stretch=1)
 
-    def _create_pan_image(self):
+    def _create_pan_image(self, fitsimage):
         width, height = 300, 300
 
-        sfi = Viewers.ImageViewCanvas(logger=self.logger)
-        sfi.enable_autozoom('on')
-        sfi.enable_autocuts('off')
-        sfi.enable_draw(True)
-        sfi.set_drawtype('rectangle', linestyle='dash')
-        sfi.set_drawcolor('green')
-        sfi.set_callback('draw-event', self.draw_cb)
-        hand = sfi.get_cursor('pan')
-        sfi.define_cursor('pick', hand)
-        ## sfi.enable_cuts(False)
-        sfi.set_bg(0.4, 0.4, 0.4)
-        sfi.set_desired_size(width, height)
-        sfi.set_callback('cursor-down', self.btndown)
-        sfi.set_callback('cursor-move', self.drag_cb)
-        sfi.set_callback('none-move', self.motion_cb)
-        sfi.set_callback('zoom-scroll', self.zoom_cb)
-        sfi.set_callback('configure', self.reconfigure)
+        #pi = Viewers.ImageViewCanvas(logger=self.logger)
+        pi = Viewers.CanvasView(logger=self.logger)
+        pi.enable_autozoom('on')
+        pi.enable_autocuts('off')
+        hand = pi.get_cursor('pan')
+        pi.define_cursor('pick', hand)
+        pi.set_bg(0.4, 0.4, 0.4)
+        pi.set_desired_size(width, height)
+        pi.set_callback('cursor-down', self.btndown)
+        pi.set_callback('cursor-move', self.drag_cb)
+        pi.set_callback('none-move', self.motion_cb)
+        pi.set_callback('zoom-scroll', self.zoom_cb)
+        pi.set_callback('configure', self.reconfigure)
         # for debugging
-        sfi.set_name('panimage')
+        pi.set_name('panimage')
+        #pi.ui_setActive(True)
 
-        bd = sfi.get_bindings()
+        my_canvas = pi.get_canvas()
+        my_canvas.enable_draw(True)
+        my_canvas.set_drawtype('rectangle', linestyle='dash', color='green')
+        my_canvas.set_callback('draw-event', self.draw_cb)
+        my_canvas.ui_setActive(True)
+
+        if self.use_shared_canvas:
+            canvas = fitsimage.get_canvas()
+            pi.set_canvas(canvas)
+
+        bd = pi.get_bindings()
         bd.enable_pan(False)
         bd.enable_zoom(False)
 
-        #iw = sfi.get_widget()
-        sfi.set_desired_size(width, height)
-        return sfi
+        pi.set_desired_size(width, height)
+        return pi
 
     def add_channel(self, viewer, chinfo):
-        panimage = self._create_pan_image()
+        fitsimage = chinfo.fitsimage
+        panimage = self._create_pan_image(fitsimage)
         chname = chinfo.name
 
+        # ?? Can't we use panimage directly as a wrapped widget ??
         iw = panimage.get_widget()
         # wrap widget
         iw = Widgets.wrap(iw)
@@ -81,17 +99,26 @@ class Pan(GingaPlugin.GlobalPlugin):
 
         # Extract RGBMap object from main image and attach it to this
         # pan image
-        fitsimage = chinfo.fitsimage
         rgbmap = fitsimage.get_rgbmap()
         panimage.set_rgbmap(rgbmap)
         rgbmap.add_callback('changed', self.rgbmap_cb, panimage)
 
         fitsimage.copy_attributes(panimage, ['cutlevels'])
         fitsimage.add_callback('image-set', self.new_image_cb, chinfo, paninfo)
-        fitsimage.add_callback('redraw', self.panset, chinfo, paninfo)
 
         fitssettings = fitsimage.get_settings()
         pansettings = panimage.get_settings()
+
+        xfrmsettings = ['flip_x', 'flip_y', 'swap_xy', 'rot_deg']
+        fitssettings.shareSettings(pansettings, xfrmsettings)
+        for key in xfrmsettings:
+            pansettings.getSetting(key).add_callback('set', self.settings_cb,
+                                                     fitsimage, chinfo, paninfo, 0)
+
+
+        fitssettings.shareSettings(pansettings, ['cuts'])
+        pansettings.getSetting('cuts').add_callback('set', self.settings_cb,
+                                                    fitsimage, chinfo, paninfo, 1)
 
         zoomsettings = ['zoom_algorithm', 'zoom_rate',
                         'scale_x_base', 'scale_y_base']
@@ -100,16 +127,9 @@ class Pan(GingaPlugin.GlobalPlugin):
             pansettings.getSetting(key).add_callback('set', self.zoom_ext_cb,
                                                      fitsimage, chinfo, paninfo)
 
-        xfrmsettings = ['flip_x', 'flip_y', 'swap_xy', 'rot_deg']
-        fitssettings.shareSettings(pansettings, xfrmsettings)
-        for key in xfrmsettings:
-            pansettings.getSetting(key).add_callback('set', self.redraw_cb,
-                                                     fitsimage, chinfo, paninfo, 0)
+        fitsimage.add_callback('redraw', self.redraw_cb, chinfo, paninfo)
 
-        fitssettings.shareSettings(pansettings, ['cuts'])
-        pansettings.getSetting('cuts').add_callback('set', self.redraw_cb,
-                                                    fitsimage, chinfo, paninfo, 1)
-        self.logger.debug("channel %s added." % (chinfo.name))
+        self.logger.debug("channel '%s' added." % (chinfo.name))
 
     def delete_channel(self, viewer, chinfo):
         chname = chinfo.name
@@ -133,24 +153,31 @@ class Pan(GingaPlugin.GlobalPlugin):
         panimage.redraw(whence=1)
 
     def new_image_cb(self, fitsimage, image, chinfo, paninfo):
+
+        # HACK: when is the non-shared _imgobj being created?
+        # we have to null it here so that it get's recreated correctly--fix!
+        #print(('new_image_cb', paninfo.panimage._imgobj))
+        paninfo.panimage._imgobj = None
+
         loval, hival = fitsimage.get_cut_levels()
         paninfo.panimage.cut_levels(loval, hival)
 
         # add cb to image so that if it is modified we can update info
-        image.add_callback('modified', self.image_update_cb, fitsimage,
-                           chinfo, paninfo)
+        ## image.add_callback('modified', self.image_update_cb, fitsimage,
+        ##                    chinfo, paninfo)
 
         # This seems to trigger a crash with mosaic images if we call
         # set_image() immediately, so just queue up on the GUI thread
-        ## self.set_image(chinfo, paninfo, image)
+        #self.set_image(chinfo, paninfo, image)
         self.fv.gui_do(self.set_image, chinfo, paninfo, image)
+        return False
 
     def image_update_cb(self, image, fitsimage, chinfo, paninfo):
         # image has changed (e.g. size, value range, etc)
         cur_img = fitsimage.get_image()
         if cur_img == image:
             self.fv.gui_do(self.set_image, chinfo, paninfo, image)
-        return True
+        return False
 
     def focus_cb(self, viewer, fitsimage):
         chname = self.fv.get_channelName(fitsimage)
@@ -167,13 +194,20 @@ class Pan(GingaPlugin.GlobalPlugin):
             self.info = self.channel[self.active]
 
 
-    def reconfigure(self, fitsimage, width, height):
+    def reconfigure(self, panimage, width, height):
         self.logger.debug("new pan image dimensions are %dx%d" % (
             width, height))
-        fitsimage.zoom_fit()
+        panimage.zoom_fit()
+        panimage.redraw(whence=0)
+        return True
 
-    def redraw_cb(self, setting, value, fitsimage, chinfo, paninfo, whence):
-        paninfo.panimage.redraw(whence=whence)
+    def redraw_cb(self, fitsimage, chinfo, paninfo):
+        #paninfo.panimage.redraw(whence=whence)
+        self.panset(chinfo.fitsimage, chinfo, paninfo)
+        return True
+
+    def settings_cb(self, setting, value, fitsimage, chinfo, paninfo, whence):
+        #paninfo.panimage.redraw(whence=whence)
         self.panset(chinfo.fitsimage, chinfo, paninfo)
         return True
 
@@ -182,7 +216,7 @@ class Pan(GingaPlugin.GlobalPlugin):
         paninfo.panimage.zoom_fit()
         # redraw pan info
         self.panset(fitsimage, chinfo, paninfo)
-        return True
+        return False
 
     # LOGIC
 
@@ -193,11 +227,15 @@ class Pan(GingaPlugin.GlobalPlugin):
         if image is None:
             return
 
-        paninfo.panimage.set_image(image)
+        if not self.use_shared_canvas:
+            paninfo.panimage.set_image(image)
+        else:
+            paninfo.panimage.zoom_fit()
 
+        p_canvas = paninfo.panimage.private_canvas
         # remove old compass
         try:
-            paninfo.panimage.deleteObjectByTag(paninfo.pancompass)
+            p_canvas.deleteObjectByTag(paninfo.pancompass)
         except Exception:
             pass
 
@@ -212,8 +250,8 @@ class Pan(GingaPlugin.GlobalPlugin):
                 # HACK: force a wcs error here if one is going to happen
                 image.add_offset_xy(x, y, 1.0, 1.0)
 
-                paninfo.pancompass = paninfo.panimage.add(self.dc.Compass(
-                    x, y, radius, color='skyblue',
+                paninfo.pancompass = p_canvas.add(self.dc.Compass(
+                    x, y, radius, color=self.settings.get('compass_color', 'skyblue'),
                     fontsize=14))
             except Exception as e:
                 self.logger.warn("Can't calculate compass: %s" % (
@@ -238,29 +276,40 @@ class Pan(GingaPlugin.GlobalPlugin):
         points = fitsimage.get_pan_rect()
 
         # calculate pan position point radius
-        image = paninfo.panimage.get_image()
-        if image is None:
-            return
+        p_image = paninfo.panimage.get_image()
+        try:
+            obj = paninfo.panimage.canvas.getObjectByTag('__image')
+        except KeyError:
+            obj = None
+        #print(('panset', image, p_image, obj, obj.image, paninfo.panimage._imgobj))
+
         width, height = image.get_size()
         edgew = math.sqrt(width**2 + height**2)
         radius = int(0.015 * edgew)
 
         # Mark pan rectangle and pan position
+        #p_canvas = paninfo.panimage.get_canvas()
+        p_canvas = paninfo.panimage.private_canvas
         try:
-            obj = paninfo.panimage.getObjectByTag(paninfo.panrect)
+            obj = p_canvas.getObjectByTag(paninfo.panrect)
             if obj.kind != 'compound':
-                return True
+                return False
             point, bbox = obj.objects
             self.logger.debug("starting panset")
             point.x, point.y = x, y
             point.radius = radius
             bbox.points = points
-            paninfo.panimage.redraw(whence=3)
+            p_canvas.update_canvas(whence=0)
 
         except KeyError:
-            paninfo.panrect = paninfo.panimage.add(self.dc.CompoundObject(
-                self.dc.Point(x, y, radius=radius, style='plus'),
-                self.dc.Polygon(points)))
+            paninfo.panrect = p_canvas.add(self.dc.CompoundObject(
+                self.dc.Point(x, y, radius=radius, style='plus',
+                              color=self.settings.get('pan_position_color', 'yellow')),
+                self.dc.Polygon(points,
+                                color=self.settings.get('pan_rectangle_color', 'red'))))
+
+        p_canvas.update_canvas(whence=0)
+        return True
 
     def motion_cb(self, fitsimage, event, data_x, data_y):
         bigimage = self.fv.getfocus_fitsimage()
@@ -291,14 +340,14 @@ class Pan(GingaPlugin.GlobalPlugin):
 
         return False
 
-    def draw_cb(self, fitsimage, tag):
+    def draw_cb(self, canvas, tag):
         # Get and delete the drawn object
-        obj = fitsimage.getObjectByTag(tag)
-        fitsimage.deleteObjectByTag(tag)
+        obj = canvas.getObjectByTag(tag)
+        canvas.deleteObjectByTag(tag)
 
         # determine center of drawn rectangle and set pan position
         if obj.kind != 'rectangle':
-            return True
+            return False
         xc = (obj.x1 + obj.x2) / 2.0
         yc = (obj.y1 + obj.y2) / 2.0
         fitsimage = self.fv.getfocus_fitsimage()

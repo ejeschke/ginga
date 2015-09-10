@@ -29,7 +29,6 @@ class CanvasMixin(object):
             self.enable_callback(name)
 
     def update_canvas(self, whence=3):
-        # TODO: deprecate?
         self.make_callback('modified', whence)
 
     def redraw(self, whence=3):
@@ -44,7 +43,7 @@ class CanvasMixin(object):
         # avoid self-referential loops
         if canvas != self:
             #print("%s subcanvas %s was updated" % (self.name, canvas.name))
-            self.make_callback_nochildren('modified', whence)
+            self.make_callback('modified', whence)
 
     def add(self, obj, tag=None, tagpfx=None, belowThis=None, redraw=True):
         self.count += 1

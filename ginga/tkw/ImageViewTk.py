@@ -271,7 +271,7 @@ class ImageViewEvent(ImageViewTk):
         keyname = event.keysym
         keyname = self.transkey(keyname)
         self.logger.debug("key press event, key=%s" % (keyname))
-        return self.make_callback('key-press', keyname)
+        return self.make_ui_callback('key-press', keyname)
 
     def key_release_event(self, event):
         self.tkcanvas.grab_release()
@@ -279,7 +279,7 @@ class ImageViewEvent(ImageViewTk):
         keyname = event.keysym
         keyname = self.transkey(keyname)
         self.logger.debug("key release event, key=%s" % (keyname))
-        return self.make_callback('key-release', keyname)
+        return self.make_ui_callback('key-release', keyname)
 
     def button_press_event(self, event):
         x = event.x; y = event.y
@@ -300,7 +300,7 @@ class ImageViewEvent(ImageViewTk):
                 data_x, data_y = self.get_data_xy(x, y)
                 self.last_data_x, self.last_data_y = data_x, data_y
 
-                return self.make_callback('scroll', direction, numDegrees,
+                return self.make_ui_callback('scroll', direction, numDegrees,
                                           data_x, data_y)
 
             button |= 0x1 << (event.num - 1)
@@ -308,7 +308,7 @@ class ImageViewEvent(ImageViewTk):
         self.logger.debug("button event at %dx%d, button=%x" % (x, y, button))
 
         data_x, data_y = self.get_data_xy(x, y)
-        return self.make_callback('button-press', button, data_x, data_y)
+        return self.make_ui_callback('button-press', button, data_x, data_y)
 
     def button_release_event(self, event):
         # event.button, event.x, event.y
@@ -323,7 +323,7 @@ class ImageViewEvent(ImageViewTk):
         self.logger.debug("button release at %dx%d button=%x" % (x, y, button))
 
         data_x, data_y = self.get_data_xy(x, y)
-        return self.make_callback('button-release', button, data_x, data_y)
+        return self.make_ui_callback('button-release', button, data_x, data_y)
 
     def get_last_win_xy(self):
         return (self.last_win_x, self.last_win_y)
@@ -349,7 +349,7 @@ class ImageViewEvent(ImageViewTk):
         data_x, data_y = self.get_data_xy(x, y)
         self.last_data_x, self.last_data_y = data_x, data_y
 
-        return self.make_callback('motion', button, data_x, data_y)
+        return self.make_ui_callback('motion', button, data_x, data_y)
 
     ## def drop_event(self, widget, context, x, y, selection, targetType,
     ##                time):
@@ -357,7 +357,7 @@ class ImageViewEvent(ImageViewTk):
     ##         return False
     ##     paths = selection.data.split('\n')
     ##     self.logger.debug("dropped filename(s): %s" % (str(paths)))
-    ##     return self.make_callback('drag-drop', paths)
+    ##     return self.make_ui_callback('drag-drop', paths)
 
 
 class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
@@ -379,6 +379,8 @@ class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
         ImageViewEvent.__init__(self, logger=logger, rgbmap=rgbmap,
                                 settings=settings)
         Mixins.UIMixin.__init__(self)
+
+        self.ui_setActive(True)
 
         if bindmap is None:
             bindmap = ImageViewZoom.bindmapClass(self.logger)
@@ -409,13 +411,13 @@ class CanvasView(ImageViewZoom):
                                bindmap=bindmap, bindings=bindings)
 
         # Needed for UIMixin to propagate events correctly
-        self.objects = [self.canvas]
+        self.objects = [self.private_canvas]
 
-    def set_canvas(self, canvas, image_canvas=None):
+    def set_canvas(self, canvas, private_canvas=None):
         super(CanvasView, self).set_canvas(canvas,
-                                           image_canvas=image_canvas)
+                                           private_canvas=private_canvas)
 
-        self.objects[0] = canvas
+        self.objects[0] = self.private_canvas
 
 
 class ImageViewCanvasError(ImageViewTkError):
@@ -436,7 +438,7 @@ class ImageViewCanvas(ImageViewZoom,
         DrawingMixin.__init__(self)
 
         # we are both a viewer and a canvas
-        self.set_canvas(self, image_canvas=self)
+        self.set_canvas(self, private_canvas=self)
 
         self._mi = ModeIndicator(self)
 

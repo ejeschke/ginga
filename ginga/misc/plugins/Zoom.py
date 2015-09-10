@@ -34,7 +34,11 @@ class Zoom(GingaPlugin.GlobalPlugin):
         # read preferences for this plugin
         prefs = self.fv.get_preferences()
         self.settings = prefs.createCategory('plugin_Zoom')
+        self.settings.addDefaults(zoom_radius=self.default_radius,
+                                  zoom_amount=self.default_zoom,
+                                  refresh_interval=0.02)
         self.settings.load(onError='silent')
+
         self.zoom_radius = self.settings.get('zoom_radius', self.default_radius)
         self.zoom_amount = self.settings.get('zoom_amount', self.default_zoom)
         self.refresh_interval = self.settings.get('refresh_interval', 0.02)
@@ -53,8 +57,8 @@ class Zoom(GingaPlugin.GlobalPlugin):
 
         # Uncomment to debug; passing parent logger generates too
         # much noise in the main logger
-        #zi = Viewers.ImageViewCanvas(logger=self.logger)
-        zi = Viewers.ImageViewCanvas(logger=None)
+        #zi = Viewers.CanvasView(logger=self.logger)
+        zi = Viewers.CanvasView(logger=None)
         zi.set_desired_size(width, height)
         zi.enable_autozoom('off')
         zi.enable_autocuts('off')

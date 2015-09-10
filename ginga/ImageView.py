@@ -254,9 +254,8 @@ class ImageViewBase(Callback.Callbacks):
         self.canvas.setSurface(self)
         self.canvas.ui_setActive(True)
 
-        # canvas that holds the main image (assumed to be the same canvas
-        #   or a subcanvas of self.canvas)
-        self.image_canvas = self.canvas
+        # private canvas for drawing
+        self.private_canvas = self.canvas
         # handle to image object on the image canvas
         self._imgobj = None
         self._canvas_img_tag = '__image'
@@ -360,7 +359,7 @@ class ImageViewBase(Callback.Callbacks):
     def get_canvas(self):
         return self.canvas
 
-    def set_canvas(self, canvas, image_canvas=None):
+    def set_canvas(self, canvas, private_canvas=None):
         self.canvas = canvas
         canvas.initialize(None, self, self.logger)
         canvas.add_callback('modified', self.canvas_changed_cb)
@@ -369,15 +368,24 @@ class ImageViewBase(Callback.Callbacks):
 
         self._imgobj = None
 
-        # secondary image canvas set?
-        if not (image_canvas is None):
-            self.image_canvas = image_canvas
+        # private canvas set?
+        if not (private_canvas is None):
+            self.private_canvas = private_canvas
 
-            image_canvas.setSurface(self)
-            image_canvas.ui_setActive(True)
-        else:
-            if self.image_canvas is None:
-                self.image_canvas = canvas
+            if private_canvas != canvas:
+                private_canvas.setSurface(self)
+                private_canvas.ui_setActive(True)
+                private_canvas.add_callback('modified', self.canvas_changed_cb)
+
+        # sanity check that we have a private canvas, and if not,
+        # set it to the "advertised" canvas
+        if self.private_canvas is None:
+            self.private_canvas = canvas
+
+        # make sure private canvas has our non-private one added
+        if (self.private_canvas != self.canvas) and (
+            not self.private_canvas.has_object(canvas)):
+            self.private_canvas.add(canvas)
 
     def set_color_map(self, cmap_name):
         """Sets the color map.
@@ -491,12 +499,12 @@ class ImageViewBase(Callback.Callbacks):
 
         try:
             # See if there is an image on the canvas
-            self._imgobj = self.image_canvas.getObjectByTag(self._canvas_img_tag)
+            self._imgobj = self.canvas.getObjectByTag(self._canvas_img_tag)
 
         except KeyError:
             # add a normalized image item to this canvas if we don't
             # have one already--then just keep reusing it
-            NormImage = self.image_canvas.getDrawClass('normimage')
+            NormImage = self.canvas.getDrawClass('normimage')
             interp = self.t_.get('interpolation', 'basic')
             self._imgobj = NormImage(0, 0, None, alpha=1.0,
                                       interpolation=interp)
@@ -523,14 +531,14 @@ class ImageViewBase(Callback.Callbacks):
 
             if add_to_canvas:
                 try:
-                    self.image_canvas.getObjectByTag(self._canvas_img_tag)
+                    self.canvas.getObjectByTag(self._canvas_img_tag)
                 except KeyError:
-                    tag = self.image_canvas.add(canvas_img,
+                    tag = self.canvas.add(canvas_img,
                                                 tag=self._canvas_img_tag)
-                    #print("adding image to canvas %s" % self.image_canvas)
+                    #print("adding image to canvas %s" % self.canvas)
 
                 # move image to bottom of layers
-                self.image_canvas.lowerObject(canvas_img)
+                self.canvas.lowerObject(canvas_img)
 
             profile = image.get('profile', None)
             try:
@@ -595,7 +603,7 @@ class ImageViewBase(Callback.Callbacks):
                 if raise_initialize_errors:
                     raise e
 
-            self.image_canvas.update_canvas(whence=0)
+            self.canvas.update_canvas(whence=0)
 
         # update our display if the image changes underneath us
         image.add_callback('modified', self._image_updated)
@@ -640,7 +648,7 @@ class ImageViewBase(Callback.Callbacks):
                     tb_str = "Traceback information unavailable."
                     self.logger.error(tb_str)
 
-            self.image_canvas.update_canvas(whence=0)
+            self.canvas.update_canvas(whence=0)
 
     def set_data(self, data, metadata=None):
         """
@@ -661,9 +669,9 @@ class ImageViewBase(Callback.Callbacks):
         """
         Clear the displayed image.
         """
-        self.image_canvas.deleteAllObjects()
+        self.canvas.deleteAllObjects()
         self._imgobj = None
-        self.image_canvas.update_canvas(whence=0)
+        self.canvas.update_canvas(whence=0)
 
     def save_profile(self, **params):
         image = self.get_image()
@@ -808,7 +816,7 @@ class ImageViewBase(Callback.Callbacks):
         rgbobj = self.get_rgb_object(whence=whence)
         self.render_image(rgbobj, self._dst_x, self._dst_y)
 
-        self.canvas.draw(self)
+        self.private_canvas.draw(self)
 
         # TODO: see if we can deprecate this fake callback
         if whence <= 0:
@@ -1045,7 +1053,7 @@ class ImageViewBase(Callback.Callbacks):
         1X.  This is the specification of the FITS image standard,
         that the pixel is centered on the integer row/column.
 
-        This function can take numpy arrays for data_x and data_y.
+        This function can take numpy arrays for win_x and win_y.
         """
         # First, translate window coordinates onto pixel image
         off_x, off_y = self.canvas2offset(win_x, win_y)

@@ -22,6 +22,7 @@ import pango
 from ginga import ImageView
 from ginga import cmap, imap
 from ginga.misc import Bunch
+from ginga.canvas.types.layer import DrawingCanvas
 from ginga.util.six.moves import map, zip
 
 moduleHome = os.path.split(sys.modules[__name__].__file__)[0]
@@ -311,8 +312,10 @@ class GingaView(GtkMain.GtkMain):
                                                 rgbmap=rgbmap,
                                                 settings=settings,
                                                 bindings=bd)
-        canvas = fi.get_canvas()
+        canvas = DrawingCanvas()
         canvas.enable_draw(False)
+        fi.set_canvas(canvas)
+
         fi.set_follow_focus(settings.get('follow_focus', True))
         fi.enable_auto_orient(True)
 

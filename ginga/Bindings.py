@@ -1658,7 +1658,7 @@ class BindingMapper(Callback.Callbacks):
         event = KeyEvent(key=keyname, state='down', mode=self._kbdmode,
                          modifiers=self._modifiers, viewer=viewer,
                          data_x=last_x, data_y=last_y)
-        return viewer.make_callback(cbname, event, last_x, last_y)
+        return viewer.make_ui_callback(cbname, event, last_x, last_y)
 
 
     def window_key_release(self, viewer, keyname):
@@ -1707,7 +1707,7 @@ class BindingMapper(Callback.Callbacks):
         event = KeyEvent(key=keyname, state='up', mode=self._kbdmode,
                          modifiers=self._modifiers, viewer=viewer,
                          data_x=last_x, data_y=last_y)
-        return viewer.make_callback(cbname, event, last_x, last_y)
+        return viewer.make_ui_callback(cbname, event, last_x, last_y)
 
 
     def window_button_press(self, viewer, btncode, data_x, data_y):
@@ -1736,7 +1736,7 @@ class BindingMapper(Callback.Callbacks):
         event = PointEvent(button=button, state='down', mode=self._kbdmode,
                            modifiers=self._modifiers, viewer=viewer,
                            data_x=data_x, data_y=data_y)
-        return viewer.make_callback(cbname, event, data_x, data_y)
+        return viewer.make_ui_callback(cbname, event, data_x, data_y)
 
 
     def window_motion(self, viewer, btncode, data_x, data_y):
@@ -1759,7 +1759,7 @@ class BindingMapper(Callback.Callbacks):
         event = PointEvent(button=button, state='move', mode=self._kbdmode,
                            modifiers=self._modifiers, viewer=viewer,
                            data_x=data_x, data_y=data_y)
-        return viewer.make_callback(cbname, event, data_x, data_y)
+        return viewer.make_ui_callback(cbname, event, data_x, data_y)
 
 
     def window_button_release(self, viewer, btncode, data_x, data_y):
@@ -1789,7 +1789,7 @@ class BindingMapper(Callback.Callbacks):
         event = PointEvent(button=button, state='up', mode=self._kbdmode,
                            modifiers=self._modifiers, viewer=viewer,
                            data_x=data_x, data_y=data_y)
-        return viewer.make_callback(cbname, event, data_x, data_y)
+        return viewer.make_ui_callback(cbname, event, data_x, data_y)
 
 
     def window_scroll(self, viewer, direction, amount, data_x, data_y):
@@ -1811,7 +1811,7 @@ class BindingMapper(Callback.Callbacks):
                             modifiers=self._modifiers, viewer=viewer,
                             direction=direction, amount=amount,
                             data_x=data_x, data_y=data_y)
-        return viewer.make_callback(cbname, event)
+        return viewer.make_ui_callback(cbname, event)
 
 
 #END

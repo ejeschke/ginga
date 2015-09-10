@@ -495,14 +495,14 @@ class ImageViewEvent(ImageViewMpl):
         keyname = self.transkey(keyname)
         if keyname is not None:
             self.logger.debug("key press event, key=%s" % (keyname))
-            return self.make_callback('key-press', keyname)
+            return self.make_ui_callback('key-press', keyname)
 
     def key_release_event(self, event):
         keyname = event.key
         keyname = self.transkey(keyname)
         if keyname is not None:
             self.logger.debug("key release event, key=%s" % (keyname))
-            return self.make_callback('key-release', keyname)
+            return self.make_ui_callback('key-release', keyname)
 
     def button_press_event(self, event):
         x, y = event.x, event.y
@@ -512,7 +512,7 @@ class ImageViewEvent(ImageViewMpl):
         self.logger.debug("button event at %dx%d, button=%x" % (x, y, button))
 
         data_x, data_y = self.get_data_xy(x, y)
-        return self.make_callback('button-press', button, data_x, data_y)
+        return self.make_ui_callback('button-press', button, data_x, data_y)
 
     def button_release_event(self, event):
         x, y = event.x, event.y
@@ -522,7 +522,7 @@ class ImageViewEvent(ImageViewMpl):
         self.logger.debug("button release at %dx%d button=%x" % (x, y, button))
 
         data_x, data_y = self.get_data_xy(x, y)
-        return self.make_callback('button-release', button, data_x, data_y)
+        return self.make_ui_callback('button-release', button, data_x, data_y)
 
     def get_last_win_xy(self):
         return (self.last_win_x, self.last_win_y)
@@ -543,7 +543,7 @@ class ImageViewEvent(ImageViewMpl):
         self.last_data_x, self.last_data_y = data_x, data_y
         self.logger.debug("motion event at DATA %dx%d" % (data_x, data_y))
 
-        return self.make_callback('motion', button, data_x, data_y)
+        return self.make_ui_callback('motion', button, data_x, data_y)
 
     def scroll_event(self, event):
         x, y = event.x, event.y
@@ -564,7 +564,7 @@ class ImageViewEvent(ImageViewMpl):
         data_x, data_y = self.get_data_xy(x, y)
         self.last_data_x, self.last_data_y = data_x, data_y
 
-        return self.make_callback('scroll', direction, amount,
+        return self.make_ui_callback('scroll', direction, amount,
                                   data_x, data_y)
 
 class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
@@ -586,6 +586,8 @@ class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
         ImageViewEvent.__init__(self, logger=logger, rgbmap=rgbmap,
                                 settings=settings)
         Mixins.UIMixin.__init__(self)
+
+        self.ui_setActive(True)
 
         if bindmap is None:
             bindmap = ImageViewZoom.bindmapClass(self.logger)
@@ -616,13 +618,13 @@ class CanvasView(ImageViewZoom):
                                bindmap=bindmap, bindings=bindings)
 
         # Needed for UIMixin to propagate events correctly
-        self.objects = [self.canvas]
+        self.objects = [self.private_canvas]
 
-    def set_canvas(self, canvas, image_canvas=None):
+    def set_canvas(self, canvas, private_canvas=None):
         super(CanvasView, self).set_canvas(canvas,
-                                           image_canvas=image_canvas)
+                                           private_canvas=private_canvas)
 
-        self.objects[0] = canvas
+        self.objects[0] = self.private_canvas
 
 
 #END

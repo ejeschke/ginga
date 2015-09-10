@@ -676,7 +676,6 @@ class DrawingMixin(object):
         # Draw everything else as usual
         super(DrawingMixin, self).draw(viewer)
 
-        #self.logger.debug("%s drawing draw obj to %s" % (self.name, viewer.name))
         # Draw our current drawing object, if any
         if self._draw_obj:
             self._draw_obj.draw(viewer)
