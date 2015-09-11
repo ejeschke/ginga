@@ -41,7 +41,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'Ginga'
-copyright = u'2013-2014, Eric Jeschke'
+copyright = u'2013-2015, Eric Jeschke'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -252,7 +252,7 @@ texinfo_documents = [
 epub_title = u'Ginga'
 epub_author = u'Eric Jeschke'
 epub_publisher = u'Eric Jeschke'
-epub_copyright = u'2013-2014, Eric Jeschke'
+epub_copyright = u'2013-2015, Eric Jeschke'
 
 # The language of the text. It defaults to the language option
 # or en if the language is not set.

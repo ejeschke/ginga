@@ -110,7 +110,8 @@ Tk
 Ginga's Tk support is limited to the viewing widget itself.  For
 overplotting (graphics) support you also need to build and install the
 "aggdraw" module, which you can find 
-`here <https://github.com/ejeschke/aggdraw>`_.
+`here <https://github.com/ejeschke/aggdraw>`_, or install the Python
+"OpenCv" module.
 
 Matplotlib
 ==========
@@ -182,12 +183,12 @@ Mac
 
 For Mac users, if you have a working Macports or Homebrew installation
 skip to the appropriate section below.  If not, we recommend installing
-the `Anaconda distribution <http://continuum.io/downloads>`.  
+the `Anaconda distribution <http://continuum.io/downloads>`_.  
 This distribution already includes all of the necessary packages to run
 Ginga.
 
 As an alternative, you also have the choice of Enthought Canopy.  The 
-`free version <https://www.enthought.com/canopy-express/>` works fine.
+`free version <https://www.enthought.com/canopy-express/>`_ works fine.
 After installing this, open the Canopy package manager, search for
 "astropy" and install it.  
 
