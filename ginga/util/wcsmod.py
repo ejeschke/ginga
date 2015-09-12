@@ -1252,7 +1252,7 @@ if not wcs_configured:
     WCS = BareBonesWCS
 
     # try to use them in this order
-    order = ('kapteyn', 'starlink', 'astlib', 'astropy2', 'astropy')
+    order = ('kapteyn', 'starlink', 'astlib', 'astropy', 'astropy2')
     for name in order:
         if use(name, raise_err=False):
             break

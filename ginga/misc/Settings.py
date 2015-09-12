@@ -40,12 +40,12 @@ class Setting(Callback.Callbacks):
 
     def _check_none(self, value):
         return value
-    
+
     def set(self, value, callback=True):
         self.value = self.check_fn(value)
         if callback:
             self.make_callback('set', value)
-        
+
     def get(self, *args):
         if self._unset:
             if len(args) == 0:
@@ -57,13 +57,13 @@ class Setting(Callback.Callbacks):
                     str(args)))
                 return args[0]
         return self.value
-    
+
     def __repr__(self):
         return repr(self.value)
 
     def __str__(self):
         return str(self.value)
-    
+
 
 class SettingGroup(object):
 
@@ -79,7 +79,7 @@ class SettingGroup(object):
             self.group[key] = Setting(value=value, name=key,
                                       logger=self.logger)
             # TODO: add group change callback?
-        
+
     def getSetting(self, key):
         return self.group[key]
 
@@ -111,7 +111,7 @@ class SettingGroup(object):
 
     def setDefaults(self, **kwdargs):
         return self.addDefaults(**kwdargs)
-    
+
     def get(self, *args):
         key = args[0]
         if len(args) == 1:
@@ -121,20 +121,20 @@ class SettingGroup(object):
 
     def getDict(self):
         return dict([[name, self.group[name].value] for name in self.group.keys()])
-            
+
     def setDict(self, d, callback=True):
         for key, value in d.items():
             if key not in self.group:
                 self.setdefault(key, value)
             else:
                 self.group[key].set(value, callback=callback)
-        
+
     def set(self, callback=True, **kwdargs):
         self.setDict(kwdargs, callback=callback)
-        
+
     def __getitem__(self, key):
         return self.group[key].value
-        
+
     def __setitem__(self, key, value):
         self.group[key].set(value)
 
@@ -161,7 +161,7 @@ class SettingGroup(object):
                     except Exception as e:
                         # silently skip parse errors, for now
                         continue
-                        
+
             self.setDict(d)
         except Exception as e:
             errmsg = "Error opening settings file (%s): %s" % (
@@ -172,7 +172,7 @@ class SettingGroup(object):
                 self.logger.warn(errmsg)
             else:
                 raise SettingError(errmsg)
-            
+
     def _check(self, d):
         if isinstance(d, dict):
             for key, value in d.items():
@@ -186,7 +186,7 @@ class SettingGroup(object):
         except Exception:
             pass
         return d
-        
+
     def save(self):
         d = self.getDict()
         # sanitize data -- hard to parse NaN or Inf
@@ -198,16 +198,16 @@ class SettingGroup(object):
             with open(self.preffile, 'w') as out_f:
                 for key in keys:
                     out_f.write("%s = %s\n" % (key, repr(d[key])))
-                        
+
         except Exception as e:
             errmsg = "Error opening settings file (%s): %s" % (
                 self.preffile, str(e))
             self.logger.error(errmsg)
-        
+
 
 class Preferences(object):
 
-    def __init__(self, basefolder="/tmp", logger=None):
+    def __init__(self, basefolder=None, logger=None):
         self.folder = basefolder
         self.logger = logger
         self.settings = Bunch.Bunch(caseless=True)
@@ -217,10 +217,10 @@ class Preferences(object):
 
     def getSettings(self, category):
         return self.settings[category]
-    
+
     def get_dict_category(self, category):
         return self.settings[category].getDict()
-    
+
     def createCategory(self, category):
         if category not in self.settings:
             suffix = '.cfg'
@@ -236,6 +236,6 @@ class Preferences(object):
     def getDict(self):
         return dict([[name, self.settings[name].getDict()] for name in
                      self.settings.keys()])
-            
-        
+
+
 #END

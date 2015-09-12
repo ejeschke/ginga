@@ -1,6 +1,6 @@
 #
 # IIS_DataListener.py -- IIS (XImtool protocol) server
-# 
+#
 # Eric Jeschke (eric@naoj.org)
 #
 # This file contains code by "fpierfed" (email addr unknown) downloaded from:
@@ -78,7 +78,7 @@ class IIS_DataListener(object):
     A class that listens to a socket/fifo for incoming data.
     It uses the XImtool protocol (libiio.a).
     """
-    def __init__(self, addr, name='DataListener', 
+    def __init__(self, addr, name='DataListener',
                  controller=None, ev_quit=None, logger=None):
         self.timeout = 0.5
         self.addr = addr
@@ -91,10 +91,10 @@ class IIS_DataListener(object):
         else:
             self.socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             s_address = addr.path
-            
+
         # attach a RequestHandler to the server
         self.RequestHandlerClass = IIS_RequestHandler
-        
+
         # attach the interface controller class we will call this
         # class' display_data() method.
         self.controller = controller
@@ -114,7 +114,7 @@ class IIS_DataListener(object):
         # bind the socket and start listening
         self.socket.bind(s_address)
         self.socket.listen(self.nconnections)
-    
+
     # so we don't have to block indefinitely on the socket.accept() method.
     # See SocketServer.py
     def get_request(self):
@@ -136,7 +136,7 @@ class IIS_DataListener(object):
                 if code == 4:
                     raise socketTimeout('select() timed out, system call interrupted')
                 raise e
-            
+
             for i in sin:
                 if i == self.socket:
                     conn = self.socket.accept()
@@ -172,7 +172,7 @@ class IIS_DataListener(object):
             for exctn in sys.exc_info():
                 print (exctn)
             return
-    
+
 
     def mainloop(self):
         """main control loop."""
@@ -185,19 +185,19 @@ class IIS_DataListener(object):
                     continue
         finally:
             self.socket.close()
-    
+
     def stop(self):
         self.ev_quit.set()
         self.logger.info("stop() invoked on IIS DataListener.")
-        
+
         if (self.addr.prot == 'unix'):
             try:
                 os.remove(self.addr.path)
-                
+
             except Exception as e:
                 self.logger.error("Failed to cleanup the pipe " + self.addr.path +
                                   (": %s" % (str(e))))
-        
+
 
 
 class IIS_RequestHandler(SocketServer.StreamRequestHandler):
@@ -235,7 +235,7 @@ Where   nbytes | NB  = number of bytes expected or written
         wcs          = WCS number (usually zero)
         Data         = the number of bytes of data to be read or written
                        following the header packet.
-    """     
+    """
     needs_update = False
     # these NEED to be set automatically
     # from the client interaction
@@ -248,8 +248,8 @@ Where   nbytes | NB  = number of bytes expected or written
     #sequence = -1
     #key = None
     #got_key = None
-    
-    
+
+
     def decode_frameno(self, z):
         try:
             z = int(z)
@@ -257,17 +257,17 @@ Where   nbytes | NB  = number of bytes expected or written
             z = 1
         if (not z):
             z = 1
-        n = 0                
+        n = 0
         while (not (z & 1)):
             n += 1
             z >>= 1
-        
+
         frame = max (1, n + 1)
         return frame
-    
+
     def wcs_update(self, wcs_text, fb=None):
         """
-        parses the wcs_text and populates the fields 
+        parses the wcs_text and populates the fields
         of a coord_tran instance.
         we start from the coord_tran of the input
         frame buffer, if any
@@ -278,14 +278,14 @@ Where   nbytes | NB  = number of bytes expected or written
             ct = coord_tran ()
         if (not ct.valid):
             ct.zt = W_UNITARY
-            
+
             # read wcs_text
             data = string.split(wcs_text, '\n')
             ct.imtitle = data[0]
             # we are expecting 8 floats and 1 int
             try:
-                (ct.a, ct.b, ct.c, ct.d, 
-                 ct.tx, ct.ty, ct.z1, ct.z2, 
+                (ct.a, ct.b, ct.c, ct.d,
+                 ct.tx, ct.ty, ct.z1, ct.z2,
                  ct.zt) = string.split(data[1])
                 ct.a = float(ct.a)
                 ct.b = float(ct.b)
@@ -306,7 +306,7 @@ Where   nbytes | NB  = number of bytes expected or written
                 ct.ty = 0
                 ct.zt = W_UNITARY
             ct.valid += 1
-            
+
             # determine the best format for WCS output
             if (ct.valid and ct.zt == W_LINEAR):
                 z1 = ct.z1
@@ -321,16 +321,16 @@ Where   nbytes | NB  = number of bytes expected or written
                     ct.format = W_DEFFORMAT
             else:
                 ct.format = " %7.2f %7.2f %7.0f%c"
-            
+
             # add_mapping, if we can
             if (len(data) < 4):
                 return(ct)
-            
+
             # we are expecting 1 string, 2 floats, and 6 int
             try:
                 print("updating WCS: %s" % str(data[2]))
-                (ct.region, ct.sx, ct.sy, ct.snx, 
-                 ct.sny, ct.dx, ct.dy, ct.dnx, 
+                (ct.region, ct.sx, ct.sy, ct.snx,
+                 ct.sny, ct.dx, ct.dy, ct.dnx,
                  ct.dny) = string.split(data[2])
                 ct.sx = float(ct.sx)
                 ct.sy = float(ct.sy)
@@ -359,7 +359,7 @@ Where   nbytes | NB  = number of bytes expected or written
                 ct.dny = fb.height
                 ct.ref = 'none'
         return (ct)
-    
+
     def return_cursor(self, dataout, sx, sy, frame, wcs, key, strval=''):
         """
         writes the cursor position to dataout.
@@ -381,24 +381,24 @@ Where   nbytes | NB  = number of bytes expected or written
                 keystr = key
             else:
                 keystr = "\\%03o" % (ord(key))
-        
+
         # send the necessary infor to the client
         curval = "%10.3f %10.3f %d %s %s\n" % (sx, sy, wcscode, keystr, strval)
         dataout.write(right_pad(curval, SZ_IMCURVAL))
         #print "END RETURN CURSOR"
-    
+
     def handle_feedback(self, pkt):
         """This part of the protocol is used by IRAF to erase a frame in
         the framebuffers.
         """
         self.logger.debug("handle feedback")
         self.frame = self.decode_frameno(pkt.z & 0o7777) - 1
-        
+
         # erase the frame buffer
         fb = self.server.controller.init_frame(self.frame)
         self.server.controller.set_frame(self.frame)
-    
-    
+
+
     def handle_lut(self, pkt):
         """This part of the protocol is used by IRAF to set the frame number.
         """
@@ -415,7 +415,7 @@ Where   nbytes | NB  = number of bytes expected or written
             except Exception as e:
                 self.logger.error("Error unpacking struct: %s" % (str(e)))
                 return
-            
+
             if len(x) < 14:
                 # pad it with zeroes
                 y = []
@@ -426,16 +426,16 @@ Where   nbytes | NB  = number of bytes expected or written
                         y.append(0)
                 x = y
                 del(y)
-            
+
             if len(x) == 14:
                 z = int(x[0])
                 # frames start from 1, we start from 0
                 self.frame = self.decode_frameno(z) - 1
-                
+
                 if (self.frame > MAX_FRAMES):
                     self.logger.error("attempt to select non existing frame.")
                     return
-                
+
                 # init the framebuffer
                 #self.server.controller.init_frame(self.frame)
                 try:
@@ -443,26 +443,26 @@ Where   nbytes | NB  = number of bytes expected or written
                 except KeyError:
                     fb = self.server.controller.init_frame(self.frame)
                 return
-            
+
             self.logger.error("unable to select a frame.")
             return
-        
+
         self.logger.error("what shall I do?")
-        
-    
+
+
     def handle_wcs(self, pkt):
         """
         This part of the protocol is used by IRAF to bidirectionally
         communicate metadata about frames in the framebuffers.
-        
+
         IIS WCS format:
         name - title\n
         a b c d tx ty z1 z2 zt\n
         region_name sx sy snx sny dx dy dnx dny\n
         object_ref
 
-        where the new parameters are defined as 
-        
+        where the new parameters are defined as
+
             region_name       - user-defined name for the region (e.g. 'image',
                                 'subras1', 'ccd3', etc).
             sx, sy, snx, sny  - source rect in the object
@@ -486,7 +486,7 @@ Where   nbytes | NB  = number of bytes expected or written
                 except KeyError:
                     fb = None
                 self.logger.debug("frame=%d fb=%s" % (frame, fb))
-                
+
                 if (pkt.x & 0o17777) and (pkt.t & 0o17777):
                     self.frame = frame
                     if (fb and fb.ct.a is not None):
@@ -497,7 +497,7 @@ Where   nbytes | NB  = number of bytes expected or written
                         wcs = "[NOSUCHWCS]\n"
                     if (fb and fb.ct.sx is not None):
                         mapping = "%s %f %f %d %d %d %d %d %d\n%s\n" % (
-                            fb.ct.region, fb.ct.sx, fb.ct.sy, fb.ct.snx, fb.ct.sny, 
+                            fb.ct.region, fb.ct.sx, fb.ct.sy, fb.ct.snx, fb.ct.sny,
                             fb.ct.dx, fb.ct.dy, fb.ct.dnx, fb.ct.dny, fb.ct.ref)
                     else:
                         mapping = ""
@@ -509,7 +509,7 @@ Where   nbytes | NB  = number of bytes expected or written
                         text = "[NOSUCHFRAME]"
                     else:
                         text = fb.wcs
-                    
+
                     # old style or new style?
                     if pkt.x & 0o777:
                         text = right_pad(text, SZ_WCSBUF)
@@ -523,14 +523,14 @@ Where   nbytes | NB  = number of bytes expected or written
             # Read the WCS information from the client
             # frames start from 1, we start from 0
             self.frame = self.decode_frameno(pkt.z & 0o7777) - 1
-            
+
             try:
                 fb = self.server.controller.get_frame(self.frame)
 
             except KeyError:
                 # the selected frame does not exist, create it
                 fb = self.server.controller.init_frame(self.frame)
-            
+
             # set the width and height of the framebuffer
             fb_config = (pkt.t & 0o777) + 1
             try:
@@ -544,22 +544,22 @@ Where   nbytes | NB  = number of bytes expected or written
                 fbconfigs[fb_config] = [1, None, None]
                 fb.width = None
                 fb.height = None
-            
+
             # do we have to deal with the new WCS format? (not used, for now)
             new_wcs = (pkt.x & 0o777)
-            
+
             # read the WCS info
             line = pkt.datain.read(pkt.nbytes)
-            
+
             # paste it in the frame buffer
             fb.wcs = line
-                        
+
             fb.ct.format = W_DEFFORMAT
             fb.ct.imtitle = ''
             fb.ct.valid = 0
             fb.ct = self.wcs_update(line, fb)
         # end of handle_wcs()
-    
+
     def handle_memory(self, pkt):
         """This part of the protocol is used by IRAF to read/write image data
         in the framebuffers.
@@ -581,7 +581,7 @@ Where   nbytes | NB  = number of bytes expected or written
 
         if (pkt.tid & IIS_READ):
             self.logger.debug("start memory read")
-            
+
             # read the data and send back to server
             start = self.x + self.y * fb.width
             end = start + pkt.nbytes
@@ -624,7 +624,7 @@ Where   nbytes | NB  = number of bytes expected or written
                     data = array.array('B', pkt.datain.read(pkt.nbytes))
                     data.reverse()
                     fb.buffer += data
-            
+
             self.needs_update = True
             self.logger.debug("end memory write")
 
@@ -643,14 +643,14 @@ Where   nbytes | NB  = number of bytes expected or written
             #     if fbconfigs.has_key(fb.config):
             #         fbconfigs[fb.config][1] = width
 
-    
+
     def handle_imcursor(self, pkt):
         """This part of the protocol is used by IRAF to read the cursor
         position and keystrokes from the display client.
         """
         self.logger.debug("handle imcursor")
         done = 0
-        
+
         if pkt.tid & IIS_READ:
             if pkt.tid & IMC_SAMPLE:
                 self.logger.debug("SAMPLE")
@@ -658,7 +658,7 @@ Where   nbytes | NB  = number of bytes expected or written
                 wcsflag = int(pkt.z)
                 #wcsflag = 0
                 res = self.server.controller.get_keystroke()
-                
+
                 self.return_cursor(pkt.dataout, res.x, res.y,
                                    res.frame, wcsflag, '0', '')
             else:
@@ -686,7 +686,7 @@ Where   nbytes | NB  = number of bytes expected or written
             wx = float(pkt.x)
             wy = float(pkt.y)
             wcs = int(pkt.z)
-            
+
             if wcs:
                 # decode the WCS info for the current frame
                 try:
@@ -701,28 +701,28 @@ Where   nbytes | NB  = number of bytes expected or written
                         sx = int((wx - fb.ct.tx) / fb.ct.a)
                     if abs(fb.ct.d) > 0.001:
                         sy = int((wy - xt.ty) / fb.ct.d)
-                        
+
             self.server.controller.set_cursor(sx, sy)
-    
-    
+
+
     def handle(self):
         """
         This is where the action starts.
-        """        
+        """
         self.logger = self.server.logger
-        
+
         # create a packet structure
         packet = iis()
         packet.datain = self.rfile
         packet.dataout = self.wfile
-                
+
         # decode the header
         size = struct.calcsize('8h')
         line = packet.datain.read(size)
         n = len(line)
         if n < size:
             return
-        
+
         while n > 0:
             try:
                 bytes = struct.unpack('8h', line)
@@ -730,9 +730,9 @@ Where   nbytes | NB  = number of bytes expected or written
                 self.logger.error('error unpacking the data.')
                 for exctn in sys.exc_info():
                     print (exctn)
-            
+
             # TODO: verify checksum
-            
+
             # decode the packet fields
             subunit = bytes[2]
             subunit077 = subunit & 0o77
@@ -742,11 +742,11 @@ Where   nbytes | NB  = number of bytes expected or written
             z = bytes[6] & 0o177777
             t = bytes[7] & 0o17777
             ndatabytes = - bytes[1]
-            
+
             # are the bytes packed?
             if (not(tid & PACKED)):
                 ndatabytes *= 2
-            
+
             # populate the packet structure
             packet.subunit = subunit
             packet.subunit077 = subunit077
@@ -756,21 +756,21 @@ Where   nbytes | NB  = number of bytes expected or written
             packet.z = z
             packet.t = t
             packet.nbytes = ndatabytes
-            
+
             # decide what to do, depending on the
             # value of subunit
             self.logger.debug("PACKET IS %o" % packet.subunit)
-            
+
             if packet.subunit077 == FEEDBACK:
                 self.handle_feedback(packet)
-                
+
             elif packet.subunit077 == LUT:
                 self.handle_lut(packet)
                 # read the next packet
                 line = packet.datain.read(size)
                 n = len(line)
                 continue
-            
+
             elif packet.subunit077 == MEMORY:
                 self.handle_memory(packet)
                 if self.needs_update:
@@ -780,22 +780,22 @@ Where   nbytes | NB  = number of bytes expected or written
                 line = packet.datain.read(size)
                 n = len(line)
                 continue
-            
+
             elif packet.subunit077 == WCS:
                 self.handle_wcs(packet)
                 line = packet.datain.read(size)
                 n = len(line)
                 continue
-            
+
             elif packet.subunit077 == IMCURSOR:
                 self.handle_imcursor(packet)
                 line = packet.datain.read(size)
                 n = len(line)
                 continue
-            
+
             else:
                 self.logger.debug('?NO OP (0%o)' % (packet.subunit077))
-            
+
             if not (packet.tid & IIS_READ):
                 # OK, discard the rest of the data
                 nbytes = packet.nbytes
@@ -809,7 +809,7 @@ Where   nbytes | NB  = number of bytes expected or written
                     if m <= 0:
                         break
                     nbytes -= n
-            
+
             # read the next packet
             line = packet.datain.read(size)
             n = len(line)
@@ -819,8 +819,8 @@ Where   nbytes | NB  = number of bytes expected or written
         if self.needs_update:
             self.display_image()
             self.needs_update = False
-        
-    
+
+
     def display_image(self, reset=1):
         """Utility routine used to display an updated frame from a framebuffer.
         """
@@ -829,12 +829,12 @@ Where   nbytes | NB  = number of bytes expected or written
         except KeyError:
             # the selected frame does not exist, create it
             fb = self.server.controller.init_frame(self.frame)
-        
+
         if not fb.height:
-            width = fb.width       
+            width = fb.width
             height = int(len(fb.buffer) / width)
             fb.height = height
-        
+
             # display the image
             if (len(fb.buffer) > 0) and (height > 0):
                 self.server.controller.display(self.frame, width, height,
@@ -842,8 +842,8 @@ Where   nbytes | NB  = number of bytes expected or written
         else:
             self.server.controller.display(self.frame, fb.width, fb.height,
                                             False)
-    
-    
+
+
     def decode_iis(self, data):
         f = file('/tmp/pippo', 'wb')
         f.write(data)
@@ -853,55 +853,55 @@ Where   nbytes | NB  = number of bytes expected or written
 
 # Frame buffer configurations
 fbconfigs = {
-    1: [2, 512, 512], 
-    2: [2, 800, 800], 
-    3: [2, 1024, 1024], 
-    4: [1, 1600, 1600], 
-    5: [1, 2048, 2048], 
-    6: [1, 4096, 4096], 
-    7: [1, 8192, 8192], 
-    8: [1, 1024, 4096], 
-    9: [2, 1144, 880], 
-    10: [2, 1144, 764], 
-    11: [2, 128, 128], 
-    12: [2, 256, 256], 
-    13: [2, 128, 1056], 
-    14: [2, 256, 1056], 
-    15: [2, 1056, 128], 
-    16: [2, 1056, 256], 
-    17: [2, 1008, 648], 
-    18: [2, 1024, 680], 
-    19: [1, 4096, 1024], 
-    20: [2, 388, 576], 
-    21: [1, 3040, 976], 
-    22: [1, 128, 1520], 
-    23: [1, 256, 1520], 
-    24: [1, 512, 1520], 
-    25: [1, 960, 1520], 
-    26: [1, 1232, 800], 
-    27: [1, 3104, 512], 
-    28: [1, 976, 3040], 
-    29: [1, 800, 256], 
-    30: [1, 256, 800], 
-    31: [1, 1240, 400], 
-    32: [2, 832, 800], 
-    33: [2, 544, 512], 
-    34: [1, 1056, 1024], 
-    35: [1, 2080, 2048], 
-    36: [2, 832, 820], 
-    37: [2, 520, 512], 
-    38: [1, 3104, 1024], 
-    39: [1, 1232, 800], 
-    40: [4, 1200, 600], 
-    41: [1, 8800, 8800], 
-    42: [1, 4400, 4400], 
-    43: [1, 2200, 2200], 
-    44: [1, 1100, 1100], 
-    45: [1, 2080, 4644], 
-    46: [1, 6400, 4644], 
-    47: [1, 3200, 2322], 
-    48: [1, 1600, 1161], 
-    49: [1, 800, 581], 
+    1: [2, 512, 512],
+    2: [2, 800, 800],
+    3: [2, 1024, 1024],
+    4: [1, 1600, 1600],
+    5: [1, 2048, 2048],
+    6: [1, 4096, 4096],
+    7: [1, 8192, 8192],
+    8: [1, 1024, 4096],
+    9: [2, 1144, 880],
+    10: [2, 1144, 764],
+    11: [2, 128, 128],
+    12: [2, 256, 256],
+    13: [2, 128, 1056],
+    14: [2, 256, 1056],
+    15: [2, 1056, 128],
+    16: [2, 1056, 256],
+    17: [2, 1008, 648],
+    18: [2, 1024, 680],
+    19: [1, 4096, 1024],
+    20: [2, 388, 576],
+    21: [1, 3040, 976],
+    22: [1, 128, 1520],
+    23: [1, 256, 1520],
+    24: [1, 512, 1520],
+    25: [1, 960, 1520],
+    26: [1, 1232, 800],
+    27: [1, 3104, 512],
+    28: [1, 976, 3040],
+    29: [1, 800, 256],
+    30: [1, 256, 800],
+    31: [1, 1240, 400],
+    32: [2, 832, 800],
+    33: [2, 544, 512],
+    34: [1, 1056, 1024],
+    35: [1, 2080, 2048],
+    36: [2, 832, 820],
+    37: [2, 520, 512],
+    38: [1, 3104, 1024],
+    39: [1, 1232, 800],
+    40: [4, 1200, 600],
+    41: [1, 8800, 8800],
+    42: [1, 4400, 4400],
+    43: [1, 2200, 2200],
+    44: [1, 1100, 1100],
+    45: [1, 2080, 4644],
+    46: [1, 6400, 4644],
+    47: [1, 3200, 2322],
+    48: [1, 1600, 1161],
+    49: [1, 800, 581],
     50: [1, 2048, 2500]}
 
 
@@ -971,25 +971,25 @@ class framebuffer(object):
 
 # utility routines
 def wcs_pix_transform (ct, i, format=0):
-    """Computes the WCS corrected pixel value given a coordinate 
+    """Computes the WCS corrected pixel value given a coordinate
     transformation and the raw pixel value.
-    
+
     Input:
     ct      coordinate transformation. instance of coord_tran.
     i       raw pixel intensity.
     format  format string (optional).
-    
+
     Returns:
     WCS corrected pixel value
     """
     z1 = float (ct.z1)
     z2 = float (ct.z2)
     i = float (i)
-    
+
     yscale = 128.0 / (z2 - z1)
     if (format == 'T' or format == 't'):
         format = 1
-    
+
     if (i == 0):
         t = 0.
     else:
@@ -1005,14 +1005,14 @@ def wcs_pix_transform (ct, i, format=0):
 
 def wcs_coord_transform (ct, x, y):
     """Computes tha WCS corrected pixel coordinates (RA and Dec
-    in degrees) given a coordinate transformation and the screen 
+    in degrees) given a coordinate transformation and the screen
     coordinates (x and y, in pixels).
-    
+
     Input:
     ct      coordinate transformation. instance of coord_tran.
     x       x coordinate in pixels.
     y       y coordinate in pixels.
-    
+
     Returns:
     (RA, Dec) in degrees (as floats).
     """
@@ -1023,7 +1023,7 @@ def wcs_coord_transform (ct, x, y):
         # pixel is at (0,0) but actually it is at (0.5,0.5).
         #x -= 0.5
         #y -= 0.5
-        
+
         if (abs(ct.a) > .001):
             ra = ct.a * x + ct.c * y + ct.tx
         if (abs(ct.d) > .001):
@@ -1051,7 +1051,7 @@ def deg2sex (deg, sep=':'):
         deg = float (deg)
     except:
         return ('')
-    
+
     degrees = int (deg)
     if(degrees >= 0):
         temp = (deg - degrees) * 60
@@ -1061,7 +1061,7 @@ def deg2sex (deg, sep=':'):
         temp = - (deg - degrees) * 60
         minutes = int (temp)
         seconds = int ((temp - minutes) * 60)
-    
+
     sex = "%02d%c%02d%c%05.2f" % (degrees, sep, minutes, sep, seconds)
     return (sex)
 
@@ -1117,6 +1117,6 @@ def get_interface(addr=None):
         port = int(port)
         prot = 'inet'
         return Bunch.Bunch(prot=prot, port=port, host='', name=imtdev)
-        
-        
+
+
 #END

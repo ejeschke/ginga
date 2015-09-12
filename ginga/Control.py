@@ -11,6 +11,7 @@
 import sys, os
 import traceback
 import re, time
+import tempfile
 import ginga.util.six as six
 if six.PY2:
     import thread
@@ -67,6 +68,7 @@ class GingaControl(Callback.Callbacks):
             self.ev_quit = threading.Event()
         else:
             self.ev_quit = ev_quit
+        self.tmpdir = tempfile.mkdtemp()
 
         # For callbacks
         for name in ('add-image', 'active-image', 'remove-image',
@@ -576,7 +578,7 @@ class GingaControl(Callback.Callbacks):
         return image
 
 
-    def get_fileinfo(self, filespec, dldir='/tmp'):
+    def get_fileinfo(self, filespec, dldir=None):
         """
         Break down a file specification into its components.
 
@@ -590,6 +592,8 @@ class GingaControl(Callback.Callbacks):
         res:
             a Bunch object
         """
+        if dldir is None:
+            dldir = self.tmpdir
 
         # Get information about this file/URL
         info = iohelper.get_fileinfo(filespec, cache_dir=dldir)

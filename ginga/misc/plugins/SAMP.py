@@ -51,7 +51,7 @@ class SAMP(GingaPlugin.GlobalPlugin):
         prefs = self.fv.get_preferences()
         self.settings = prefs.createCategory('plugin_SAMP')
         self.settings.addDefaults(SAMP_channel='Image',
-                                  cache_location='/tmp',
+                                  cache_location=self.fv.tmpdir,
                                   default_connect=True,
                                   start_hub=True)
         self.settings.load(onError='silent')
@@ -257,7 +257,7 @@ class SAMP(GingaPlugin.GlobalPlugin):
         self.count += 1
         name = "samp_%d.fits" % (self.count)
 
-        filedir = self.settings.get('cache_location', '/tmp')
+        filedir = self.settings.get('cache_location', self.fv.tmpdir)
         fitspath = os.path.join(filedir, name)
 
         chname = self.settings.get('SAMP_channel', 'SAMP')

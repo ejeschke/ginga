@@ -314,7 +314,7 @@ class CatalogsBase(GingaPlugin.LocalPlugin):
         #filename = 'sky-' + str(time.time()).replace('.', '-') + '.fits'
         filename = 'sky-' + str(self.dsscnt) + '.fits'
         self.dsscnt = (self.dsscnt + 1) % 5
-        filepath = os.path.join("/tmp", filename)
+        filepath = os.path.join(self.fv.tmpdir, filename)
         try:
             os.remove(filepath)
         except Exception as e:
