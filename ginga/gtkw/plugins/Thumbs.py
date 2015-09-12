@@ -32,7 +32,7 @@ class Thumbs(ThumbsBase.ThumbsBase):
         cm, im = self.fv.cm, self.fv.im
 
         tg = ImageViewCanvasGtk.ImageViewCanvas(logger=self.logger)
-        tg.configure(200, 200)
+        tg.configure_window(200, 200)
         tg.enable_autozoom('on')
         tg.enable_autocuts('override')
         tg.enable_auto_orient(True)

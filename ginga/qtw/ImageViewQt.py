@@ -55,7 +55,7 @@ class RenderGraphicsView(QtGui.QGraphicsView):
         width = x2 - x1
         height = y2 - y1
 
-        self.viewer.configure(width, height)
+        self.viewer.configure_window(width, height)
 
     def sizeHint(self):
         width, height = 300, 300
@@ -98,7 +98,7 @@ class RenderWidget(QtGui.QWidget):
         width = x2 - x1
         height = y2 - y1
 
-        self.viewer.configure(width, height)
+        self.viewer.configure_window(width, height)
         #self.update()
 
     def sizeHint(self):
@@ -221,7 +221,7 @@ class ImageViewQt(ImageView.ImageViewBase):
         return self._render_offscreen(self.pixmap, arr, dst_x, dst_y,
                                       width, height)
 
-    def configure(self, width, height):
+    def configure_window(self, width, height):
         self.logger.debug("window size reconfigured to %dx%d" % (
             width, height))
         if hasattr(self, 'scene'):
@@ -235,7 +235,8 @@ class ImageViewQt(ImageView.ImageViewBase):
             #pixmap.fill(QColor("black"))
             self.pixmap = pixmap
             self.imgwin.set_pixmap(pixmap)
-        self.set_window_size(width, height)
+
+        self.configure(width, height)
 
     def get_rgb_image_as_buffer(self, output=None, format='png',
                                 quality=90):
@@ -543,7 +544,7 @@ class ImageViewEvent(ImageViewQt):
         width = x2 - x1
         height = y2 - y1
 
-        self.configure(width, height)
+        self.configure_window(width, height)
         return self.make_callback('map')
 
     def focus_event(self, widget, event, hasFocus):

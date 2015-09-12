@@ -299,13 +299,13 @@ class ImageViewBase(Callback.Callbacks):
         self._imgwin_ht = height
         self._ctr_x = width // 2
         self._ctr_y = height // 2
-        self._imgwin_set = True
         self.logger.info("widget resized to %dx%d" % (width, height))
 
         self.make_callback('configure', width, height)
         self.redraw(whence=0)
 
     def configure(self, width, height):
+        self._imgwin_set = True
         self.set_window_size(width, height)
 
     def set_desired_size(self, width, height):

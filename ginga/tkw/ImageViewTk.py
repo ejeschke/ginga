@@ -56,7 +56,8 @@ class ImageViewTk(ImageView):
         canvas.bind("<Configure>", self._resize_cb)
         width = canvas.winfo_width()
         height = canvas.winfo_height()
-        self.configure(width, height)
+
+        self.configure_window(width, height)
 
     def get_widget(self):
         return self.tkcanvas
@@ -103,8 +104,11 @@ class ImageViewTk(ImageView):
             self._defer_task = self.tkcanvas.after(time_ms,
                                                    self.delayed_redraw)
 
+    def configure_window(self, width, height):
+        self.configure_surface(width, height)
+
     def _resize_cb(self, event):
-        self.configure(event.width, event.height)
+        self.configure_window(event.width, event.height)
 
     def set_cursor(self, cursor):
         if self.tkcanvas is None:

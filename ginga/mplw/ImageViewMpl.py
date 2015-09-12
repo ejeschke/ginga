@@ -143,7 +143,7 @@ class ImageViewMpl(ImageView.ImageViewBase):
 
         # Because we don't know if resize callback works with all backends
         left, bottom, wd, ht = self.ax_img.bbox.bounds
-        self.configure(wd, ht)
+        self.configure_window(wd, ht)
 
     def get_figure(self):
         return self.figure
@@ -294,13 +294,13 @@ class ImageViewMpl(ImageView.ImageViewBase):
                           verticalalignment='center',
                           transform=self.ax_util.transAxes)
 
-    def configure(self, width, height):
-        self.set_window_size(width, height)
+    def configure_window(self, width, height):
+        self.configure(width, height)
 
     def _resize_cb(self, event):
         wd, ht = event.width, event.height
         self.logger.debug("canvas resized %dx%d" % (wd, ht))
-        self.configure(wd, ht)
+        self.configure_window(wd, ht)
 
     def add_axes(self):
         ax = self.figure.add_axes(self.ax_img.get_position(),

@@ -114,19 +114,22 @@ class ImageViewMock(ImageView.ImageViewBase):
         return self._render_offscreen(self.pixmap, arr, dst_x, dst_y,
                                       width, height)
 
-    def configure(self, width, height):
+    def configure_window(self, width, height):
         """
         This method is called by the event handler when the
         size of the window changes (or it can be called manually).
         We allocate an off-screen pixmap of the appropriate size
         and inform the superclass of our window size.
         """
+        self.configure_surface(width, height)
+
+    def configure_surface(self, width, height):
         self.logger.debug("window size reconfigured to %dx%d" % (
             width, height))
         # TODO: allocate pixmap of width x height
         self.pixmap = None
 
-        self.set_window_size(width, height)
+        self.configure(width, height)
 
     def get_rgb_image_as_buffer(self, output=None, format='png',
                                 quality=90):
@@ -319,7 +322,7 @@ class ImageViewEvent(ImageViewMock):
         Called when the window is mapped to the screen.
         Adjust method signature as appropriate for callback.
         """
-        self.configure(width, height)
+        self.configure_window(width, height)
         return self.make_callback('map')
 
     def focus_event(self, widget, event, hasFocus):

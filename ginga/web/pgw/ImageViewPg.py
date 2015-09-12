@@ -100,11 +100,14 @@ class ImageViewPg(ImageView):
         self.logger.debug("clearing message...")
         self.onscreen_message(None)
 
+    def configure_window(self, width, height):
+        self.configure_surface(width, height)
+
     def resize_event(self, event):
         wd, ht = event.x, event.y
         # Not yet ready for prime-time--browser seems to mess with the
         # aspect ratio
-        self.configure(wd, ht)
+        self.configure_window(wd, ht)
 
         self.viewer.redraw(whence=0)
 
@@ -504,7 +507,7 @@ class RenderWidgetZoom(PgHelp.PantographHandler):
         self.add_timer('msg', self.viewer.clear_onscreen_message)
 
         if self._configured:
-            self.viewer.configure(self.width, self.height)
+            self.viewer.configure_window(self.width, self.height)
 
     def setup(self):
         ## self.logger = self.settings['logger']
@@ -513,7 +516,7 @@ class RenderWidgetZoom(PgHelp.PantographHandler):
 
         self.logger.info("canvas size is %dx%d" % (self.width, self.height))
         ## if self.viewer is not None:
-        ##     self.viewer.configure(self.width, self.height)
+        ##     self.viewer.configure_window(self.width, self.height)
         ## self.add_timer('redraw', self.viewer.delayed_redraw)
         ## self.add_timer('msg', self.viewer.clear_onscreen_message)
         self._configured = True

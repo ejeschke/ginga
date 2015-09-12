@@ -137,7 +137,7 @@ class ImageViewCairo(ImageView.ImageViewBase):
         return self._render_offscreen(self.surface, arr, dst_x, dst_y,
                                       width, height)
 
-    def configure(self, width, height):
+    def configure_surface(self, width, height):
         arr8 = numpy.zeros(height*width*4, dtype=numpy.uint8)
         #stride = cairo.ImageSurface.format_stride_for_width(cairo.FORMAT_RGB24,
         stride = cairo.ImageSurface.format_stride_for_width(cairo.FORMAT_ARGB32,
@@ -148,7 +148,7 @@ class ImageViewCairo(ImageView.ImageViewBase):
                                                      cairo.FORMAT_ARGB32,
                                                      width, height, stride)
         self.surface = surface
-        self.set_window_size(width, height)
+        self.configure(width, height)
 
     def save_image_as_surface(self, surface):
         try:

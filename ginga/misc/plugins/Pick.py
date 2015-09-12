@@ -158,7 +158,7 @@ class Pick(GingaPlugin.LocalPlugin):
         di = Viewers.ImageViewCanvas(logger=self.logger)
         width, height = 200, 200
         #di.set_desired_size(width, height)
-        di.configure(width, height)
+        di.configure_window(width, height)
         di.enable_autozoom('off')
         di.enable_autocuts('off')
         di.zoom_to(3)

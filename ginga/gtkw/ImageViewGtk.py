@@ -177,6 +177,9 @@ class ImageViewGtk(ImageViewCairo.ImageViewCairo):
 
         return False
 
+    def configure_window(self, width, height):
+        self.configure_surface(width, height)
+
     def configure_event(self, widget, event):
         rect = widget.get_allocation()
         x, y, width, height = rect.x, rect.y, rect.width, rect.height
@@ -195,7 +198,7 @@ class ImageViewGtk(ImageViewCairo.ImageViewCairo):
         self.logger.debug("allocation is %d,%d %dx%d" % (
             x, y, width, height))
         #width, height = width*2, height*2
-        self.configure(width, height)
+        self.configure_window(width, height)
         return True
 
     def size_request(self, widget, requisition):

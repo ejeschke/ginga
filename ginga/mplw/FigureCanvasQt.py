@@ -1,7 +1,7 @@
 #
 # GingaCanvasQt.py -- classes for the display of FITS files in
 #                             Matplotlib FigureCanvas
-# 
+#
 # Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c)  Eric R. Jeschke.  All rights reserved.
@@ -14,7 +14,7 @@ if toolkit == 'qt5':
     from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as QtFigureCanvas
 else:
     from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as QtFigureCanvas
-    
+
 from ginga.qtw.QtHelp import QtGui, QtCore
 
 
@@ -27,8 +27,8 @@ def setup_Qt(widget, viewer):
         height = y2 - y1
 
         if viewer is not None:
-            viewer.configure(width, height)
-        
+            viewer.configure_window(width, height)
+
     widget.setFocusPolicy(QtCore.Qt.FocusPolicy(
         QtCore.Qt.TabFocus |
         QtCore.Qt.ClickFocus |
@@ -47,19 +47,19 @@ class FigureCanvas(QtFigureCanvas):
     """
     def __init__(self, fig, parent=None, width=5, height=4, dpi=100):
         QtFigureCanvas.__init__(self, fig)
-        
+
         self.viewer = None
-        
+
         setup_Qt(self, None)
 
         self.setParent(parent)
-        
+
         FigureCanvas.setSizePolicy(self,
                                    QtGui.QSizePolicy.Expanding,
                                    QtGui.QSizePolicy.Expanding)
         FigureCanvas.updateGeometry(self)
 
-        
+
     def resizeEvent(self, event):
         rect = self.geometry()
         x1, y1, x2, y2 = rect.getCoords()
@@ -67,8 +67,8 @@ class FigureCanvas(QtFigureCanvas):
         height = y2 - y1
 
         if self.viewer is not None:
-            self.viewer.configure(width, height)
-        
+            self.viewer.configure_window(width, height)
+
         return super(FigureCanvas, self).resizeEvent(event)
 
     def sizeHint(self):
@@ -79,5 +79,5 @@ class FigureCanvas(QtFigureCanvas):
 
     def set_viewer(self, viewer):
         self.viewer = viewer
-        
+
 #END

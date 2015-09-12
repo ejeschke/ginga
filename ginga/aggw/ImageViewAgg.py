@@ -83,12 +83,12 @@ class ImageViewAgg(ImageView.ImageViewBase):
         # for debugging
         #self.save_rgb_image_as_file('/tmp/temp.png', format='png')
 
-    def configure(self, width, height):
+    def configure_surface(self, width, height):
         # create agg surface the size of the window
         self.surface = agg.Draw("RGBA", (width, height), 'black')
 
         # inform the base class about the actual window size
-        self.set_window_size(width, height)
+        self.configure(width, height)
 
     def get_rgb_image_as_buffer(self, output=None, format='png', quality=90):
         if not have_PIL:

@@ -24,7 +24,7 @@ Use --host='' if you want to listen on all network interfaces.
 (client side)
 From the browser, type in a URL based on the port that you chose above, e.g.:
 
-    http://servername:6500/viewer?width=600&height=600&path=some/file.fits
+    http://servername:6500/viewer?id=v1&width=600&height=600&path=some/file.fits
 
 The `path` should be to a file *on the server side, relative to the directory
 specified using -d.
@@ -32,6 +32,9 @@ specified using -d.
 If `width` and `height` are omitted they default to the browser's page size.
 NOTE that because all rendering is done on the server side, you will achieve
 better performance if you choose a smaller rendering size.
+
+`id` is an identifier that will identify the same viewer each time you
+request it.
 
 You will need a reasonably modern web browser with HTML5 canvas support.
 Tested with Chromium 41.0.2272.76, Firefox 37.0.2, Safari 7.1.6
@@ -255,6 +258,13 @@ def main(options, args):
     logger = log.get_logger("example2", options=options)
     ev_quit = threading.Event()
 
+    if options.opencv:
+        from ginga import trcalc
+        try:
+            trcalc.use('opencv')
+        except Exception as e:
+            logger.warn("Error using opencv: %s" % str(e))
+
     thread_pool = Task.ThreadPool(options.numthreads, logger,
                                   ev_quit=ev_quit)
     thread_pool.startall()
@@ -312,6 +322,9 @@ if __name__ == "__main__":
     optprs.add_option("--stderr", dest="logstderr", default=False,
                       action="store_true",
                       help="Copy logging also to stderr")
+    optprs.add_option("--opencv", dest="opencv", default=False,
+                      action="store_true",
+                      help="Use OpenCv acceleration")
     optprs.add_option("-p", "--port", dest="port",
                       type='int', default=8080, metavar="PORT",
                       help="Default PORT to use for the web socket")

@@ -85,7 +85,7 @@ class Thumbs(ThumbsBase.ThumbsBase):
         cm, im = self.fv.cm, self.fv.im
 
         tg = ImageViewCanvasQt.ImageViewCanvas(logger=self.logger)
-        tg.configure(200, 200)
+        tg.configure_window(200, 200)
         tg.enable_autozoom('on')
         tg.set_autocut_params('zscale')
         tg.enable_autocuts('override')

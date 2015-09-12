@@ -667,10 +667,11 @@ class GingaControl(Callback.Callbacks):
             idx = max(0, info.numhdu)
             kwdargs['idx'] = idx
 
-        #image = image_loader(filepath, **kwdargs)
+        image = image_loader(filepath, **kwdargs)
+
         future = Future.Future()
         future.freeze(image_loader, filepath, **kwdargs)
-        image = future.thaw()
+
         # Save a future for this image to reload it later if we
         # have to remove it from memory
         image.set(loader=image_loader, image_future=future)
@@ -1202,7 +1203,7 @@ class GingaControl(Callback.Callbacks):
             text = '1/%.2fx' % (1.0/scalefactor)
         return text
 
-    def banner(self, raiseTab=True):
+    def banner(self, raiseTab=False):
         bannerFile = os.path.join(self.iconpath, 'ginga-splash.ppm')
         chname = 'Ginga'
         self.add_channel(chname)
@@ -1211,11 +1212,12 @@ class GingaControl(Callback.Callbacks):
         viewer.enable_autocuts('off')
         viewer.enable_autozoom('on')
         viewer.cut_levels(0, 255)
+
         #self.nongui_do(self.load_file, bannerFile, chname=chname)
-        self.load_file(bannerFile, chname=chname)
+        self.load_file(bannerFile, chname=chname, wait=False)
         if raiseTab:
             self.change_channel(chname)
-        viewer.zoom_fit()
+            viewer.zoom_fit()
 
     def remove_image_by_name(self, chname, imname, impath=None):
         chinfo = self.get_channelInfo(chname)
