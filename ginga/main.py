@@ -192,6 +192,9 @@ class ReferenceViewer(object):
         optprs.add_option("--numthreads", dest="numthreads", type="int",
                           default=30, metavar="NUM",
                           help="Start NUM threads in thread pool")
+        optprs.add_option("--opencv", dest="opencv", default=False,
+                          action="store_true",
+                          help="Use OpenCv acceleration")
         optprs.add_option("--stderr", dest="logstderr", default=False,
                           action="store_true",
                           help="Copy logging also to stderr")
@@ -324,9 +327,12 @@ class ReferenceViewer(object):
 
         # Check whether user wants to use OpenCv
         use_opencv = settings.get('use_opencv', False)
-        if use_opencv:
+        if use_opencv or options.opencv:
             from ginga import trcalc
-            trcalc.use('opencv')
+            try:
+                trcalc.use('opencv')
+            except Exception as e:
+                logger.warn("failed to set OpenCv preference: %s" % (str(e)))
 
         # Create the dynamic module manager
         mm = ModuleManager.ModuleManager(logger)

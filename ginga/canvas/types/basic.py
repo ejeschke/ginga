@@ -160,10 +160,13 @@ class PolygonMixin(object):
         xa, ya = x_arr, y_arr
 
         # promote input arrays dimension cardinality, if necessary
+        promoted = False
         if len(xa.shape) == 1:
             xa = xa.reshape(1, -1)
+            promoted = True
         if len(ya.shape) == 1:
             ya = ya.reshape(-1, 1)
+            promoted = True
 
         result = numpy.empty((ya.size, xa.size), dtype=numpy.bool)
         result.fill(False)
@@ -186,6 +189,10 @@ class PolygonMixin(object):
             result[tf == True] ^= cross[tf == True]
             xj, yj = xi, yi
 
+        if promoted:
+            # de-promote result
+            result = result[numpy.eye(len(y_arr), len(x_arr), dtype=numpy.bool)]
+            
         return result
 
     def contains(self, xp, yp):
