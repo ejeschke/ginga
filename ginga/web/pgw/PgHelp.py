@@ -164,6 +164,8 @@ class PantographHandler(tornado.websocket.WebSocketHandler):
                    buffer=None, **extra):
         if buffer is not None:
             imgString = binascii.b2a_base64(buffer)
+            if isinstance(imgString, bytes):
+                imgString = imgString.decode("utf-8")
             img_src = 'data:image/png;base64,' + imgString
 
         else:

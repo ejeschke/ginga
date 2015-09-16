@@ -11,12 +11,13 @@
 from __future__ import print_function
 import threading
 import time
+import io
 
 from ginga import Mixins, Bindings
 from ginga.misc import log, Bunch
 from ginga.canvas.mixins import DrawingMixin, CanvasMixin, CompoundMixin
 from ginga.util.toolbox import ModeIndicator
-import PgHelp
+from ginga.web.pgw import PgHelp
 
 
 try:

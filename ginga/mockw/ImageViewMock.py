@@ -133,7 +133,7 @@ class ImageViewMock(ImageView.ImageViewBase):
 
     def get_rgb_image_as_buffer(self, output=None, format='png',
                                 quality=90):
-        # copy pixmap to ibuf
+        # copy pixmap to buffer
         data_np = self.getwin_array(order=self.get_rgb_order())
         header = {}
         fmt_buf = self.rgb_fh.get_buffer(data_np, header, format,
@@ -141,8 +141,8 @@ class ImageViewMock(ImageView.ImageViewBase):
         return fmt_buf
 
     def get_rgb_image_as_bytes(self, format='png', quality=90):
-        ibuf = self.get_rgb_image_as_buffer(format=format, quality=quality)
-        return ibuf
+        buf = self.get_rgb_image_as_buffer(format=format, quality=quality)
+        return buf
 
     def get_rgb_image_as_widget(self, output=None, format='png',
                                 quality=90):

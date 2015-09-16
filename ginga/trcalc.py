@@ -30,17 +30,19 @@ def use(pkgname):
             interpolation_methods.extend(cv2_resize.keys())
             interpolation_methods.sort()
 
+have_opencv = False
 try:
     # optional opencv package speeds up certain operations, especially
     # rotation
     # TEMP: opencv broken on anaconda mac (importing causes segv)
     # --> temporarily disable, can enable using use() function above
     #use('opencv')
-    have_opencv = False
+    pass
 
 except ImportError:
-    have_opencv = False
+    pass
 
+have_numexpr = False
 try:
     # optional numexpr package speeds up certain combined numpy array
     # operations, especially rotation
@@ -48,7 +50,7 @@ try:
     have_numexpr = True
 
 except ImportError:
-    have_numexpr = False
+    pass
 
 # For testing
 #have_numexpr = False

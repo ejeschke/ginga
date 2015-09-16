@@ -8,9 +8,6 @@
 # Please see the file LICENSE.txt for details.
 
 import os.path
-import math
-import numpy
-import cv2
 from PIL import ImageFont, ImageDraw
 
 from ginga import colors
