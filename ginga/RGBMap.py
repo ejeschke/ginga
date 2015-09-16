@@ -10,7 +10,6 @@
 import math
 import numpy
 
-from ginga.util import io_rgb
 from ginga.misc import Callback
 from ginga import ColorDist
 
@@ -215,16 +214,6 @@ class RGBMapper(Callback.Callbacks):
         cs = cs.upper()
         return [ order.index(c) for c in cs ]
 
-    def convert_profile_monitor(self, rgbobj):
-        inp = rgbobj.get_array('RGB')
-        arr = io_rgb.convert_profile_monitor(inp)
-        out = rgbobj.rgbarr
-
-        ri, gi, bi = rgbobj.get_order_indexes('RGB')
-        out[..., ri] = arr[..., 0]
-        out[..., gi] = arr[..., 1]
-        out[..., bi] = arr[..., 2]
-
     def _get_rgbarray(self, idx, rgbobj, image_order):
         # NOTE: data is assumed to be in the range 0-255 at this point
         # but clip as a precaution
@@ -251,12 +240,6 @@ class RGBMapper(Callback.Callbacks):
             out[..., ri] = self.arr[0][idx[..., rj]]
             out[..., gi] = self.arr[1][idx[..., gj]]
             out[..., bi] = self.arr[2][idx[..., bj]]
-
-            # convert to monitor profile, if one is available
-            # TODO: this conversion doesn't really belong here!
-            if io_rgb.have_monitor_profile():
-                self.logger.debug("Converting to monitor profile.")
-                self.convert_profile_monitor(rgbobj)
 
     def get_rgbarray(self, idx, out=None, order='RGB', image_order='RGB'):
         # prepare output array

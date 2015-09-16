@@ -31,7 +31,7 @@ setup(
     description = ("An astronomical image viewer and toolkit."),
     long_description = read('README.txt'),
     license = "BSD",
-    keywords = "FITS image viewer astronomy",
+    keywords = "scientific image viewer numpy toolkit astronomy FITS",
     url = "http://ejeschke.github.com/ginga",
     packages = ['ginga',
                 # Gtk version
@@ -47,11 +47,13 @@ setup(
                 'ginga.aggw',
                 # OpenCv backend
                 'ginga.cvw',
+                # PIL backend
+                'ginga.pilw',
                 # Mock version
                 'ginga.mockw',
                 # Ginga (wrapped) widgets
                 'ginga.gw',
-                # Web stuff
+                # Web backends
                 'ginga.web', 'ginga.web.pgw',
                 'ginga.web.pgw.js', 'ginga.web.pgw.templates',
                 # Common stuff
@@ -65,6 +67,7 @@ setup(
                      #'ginga.doc': get_docs(),
                      'ginga.doc': ['manual/*.html'],
                      'ginga.web.pgw': ['templates/*.html', 'js/*.js'],
+                     #'ginga.fonts': ['*/*.ttf', '*/*.txt'],
                      },
     scripts = ['scripts/ginga', 'scripts/grc', 'scripts/gris'],
     install_requires = ['numpy>=1.7'],

@@ -20,20 +20,26 @@ import PgHelp
 
 
 try:
-    # Try to use Agg drawing first if we have it
+    # See if we have aggdraw module--best choice
     from ginga.aggw.ImageViewAgg import ImageViewAgg as ImageView, \
          ImageViewAggError as ImageViewError
 
 except ImportError:
-    # Otherwise try OpenCv
     try:
+        # No, hmm..ok, see if we have opencv module...
         from ginga.cvw.ImageViewCv import ImageViewCv as ImageView, \
              ImageViewCvError as ImageViewError
 
     except ImportError:
-        # No drawing will be possible with mock widget
-        from ginga.mockw.ImageViewMock import ImageViewMock as ImageView, \
-             ImageViewMockError as ImageViewError
+        try:
+            # No dice. How about the PIL module?
+            from ginga.pilw.ImageViewPil import ImageViewPil as ImageView, \
+                 ImageViewPilError as ImageViewError
+
+        except ImportError:
+            # Fall back to mock--there will be no graphic overlays
+            from ginga.mockw.ImageViewMock import ImageViewMock as ImageView, \
+                 ImageViewMockError as ImageViewError
 
 
 class ImageViewPgError(ImageViewError):

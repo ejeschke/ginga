@@ -16,7 +16,6 @@ import ginga.fonts
 
 # Set up known fonts
 fontdir, xx = os.path.split(ginga.fonts.__file__)
-#known_font = os.path.join(fontdir, 'Inconsolata', 'Inconsolata-Regular.ttf')
 known_font = os.path.join(fontdir, 'Roboto', 'Roboto-Regular.ttf')
 
 class AggContext(object):

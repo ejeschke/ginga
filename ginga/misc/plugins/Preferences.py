@@ -14,7 +14,7 @@ from ginga.misc import ParamSet, Bunch
 from ginga import cmap, imap, trcalc
 from ginga import GingaPlugin
 from ginga import AutoCuts, ColorDist
-from ginga.util import wcs, wcsmod
+from ginga.util import wcs, wcsmod, io_rgb
 
 from ginga.misc import Bunch
 
@@ -75,6 +75,10 @@ class Preferences(GingaPlugin.LocalPlugin):
         # buffer len (number of images in memory)
         self.t_.addDefaults(numImages=4)
         self.t_.getSetting('numImages').add_callback('set', self.set_buflen_ext_cb)
+
+        self.icc_profiles = list(io_rgb.get_profiles())
+        self.icc_profiles.insert(0, None)
+        self.icc_intents = io_rgb.get_intents()
 
     def build_gui(self, container):
         top = Widgets.VBox()
@@ -461,6 +465,10 @@ class Preferences(GingaPlugin.LocalPlugin):
         exp = Widgets.Expander("General")
 
         captions = (('Num Images:', 'label', 'Num Images', 'entryset'),
+                    ('Output ICC profile:', 'label', 'Output ICC profile', 'combobox'),
+                    ('Rendering intent:', 'label', 'Rendering intent', 'combobox'),
+                    ('Proof ICC profile:', 'label', 'Proof ICC profile', 'combobox'),
+                    ('Proof intent:', 'label', 'Proof intent', 'combobox'),
                     )
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
@@ -469,6 +477,50 @@ class Preferences(GingaPlugin.LocalPlugin):
         num_images = self.t_.get('numImages', 0)
         self.w.num_images.set_text(str(num_images))
         self.w.num_images.add_callback('activated', self.set_buffer_cb)
+
+        option = self.t_.get('output_icc', None)
+        if option is None:
+            (profile_name, intent_name, proof_name,
+             proof_intent) = (None, 'perceptual', None, 'perceptual')
+        else:
+            (profile_name, intent_name, proof_name,
+             proof_intent) = option
+
+        combobox = b.output_icc_profile
+        index = 0
+        for name in self.icc_profiles:
+            combobox.append_text(str(name))
+            index += 1
+        index = self.icc_profiles.index(profile_name)
+        combobox.set_index(index)
+        combobox.add_callback('activated', self.set_icc_profile_cb)
+
+        combobox = b.rendering_intent
+        index = 0
+        for name in self.icc_intents:
+            combobox.append_text(name)
+            index += 1
+        index = self.icc_intents.index(intent_name)
+        combobox.set_index(index)
+        combobox.add_callback('activated', self.set_icc_profile_cb)
+
+        combobox = b.proof_icc_profile
+        index = 0
+        for name in self.icc_profiles:
+            combobox.append_text(str(name))
+            index += 1
+        index = self.icc_profiles.index(proof_name)
+        combobox.set_index(index)
+        combobox.add_callback('activated', self.set_icc_profile_cb)
+
+        combobox = b.proof_intent
+        index = 0
+        for name in self.icc_intents:
+            combobox.append_text(name)
+            index += 1
+        index = self.icc_intents.index(proof_intent)
+        combobox.set_index(index)
+        combobox.add_callback('activated', self.set_icc_profile_cb)
 
         fr = Widgets.Frame()
         fr.set_widget(w)
@@ -501,6 +553,71 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.w.save_cuts.set_state(self.t_.get('profile_use_cuts', False))
         self.w.save_cuts.add_callback('activated', self.set_profile_cb)
         self.w.save_cuts.set_tooltip("Remember cut levels with image")
+
+        fr = Widgets.Frame()
+        fr.set_widget(w)
+        exp.set_widget(fr)
+        vbox.add_widget(exp, stretch=0)
+
+        exp = Widgets.Expander("ICC Profiles")
+
+        captions = (('Output ICC profile:', 'label', 'Output ICC profile', 'combobox'),
+                    ('Rendering intent:', 'label', 'Rendering intent', 'combobox'),
+                    ('Proof ICC profile:', 'label', 'Proof ICC profile', 'combobox'),
+                    ('Proof intent:', 'label', 'Proof intent', 'combobox'),
+                    ('__x', 'spacer', 'Black point compensation', 'checkbutton'),
+                    )
+        w, b = Widgets.build_info(captions, orientation=orientation)
+        self.w.update(b)
+
+        value = self.t_.get('icc_output_profile', None)
+        combobox = b.output_icc_profile
+        index = 0
+        for name in self.icc_profiles:
+            combobox.append_text(str(name))
+            index += 1
+        index = self.icc_profiles.index(value)
+        combobox.set_index(index)
+        combobox.add_callback('activated', self.set_icc_profile_cb)
+        combobox.set_tooltip("ICC profile for the viewer display")
+
+        value = self.t_.get('icc_output_intent', 'perceptual')
+        combobox = b.rendering_intent
+        index = 0
+        for name in self.icc_intents:
+            combobox.append_text(name)
+            index += 1
+        index = self.icc_intents.index(value)
+        combobox.set_index(index)
+        combobox.add_callback('activated', self.set_icc_profile_cb)
+        combobox.set_tooltip("Rendering intent for the viewer display")
+
+        value = self.t_.get('icc_proof_profile', None)
+        combobox = b.proof_icc_profile
+        index = 0
+        for name in self.icc_profiles:
+            combobox.append_text(str(name))
+            index += 1
+        index = self.icc_profiles.index(value)
+        combobox.set_index(index)
+        combobox.add_callback('activated', self.set_icc_profile_cb)
+        combobox.set_tooltip("ICC profile for soft proofing")
+
+        value = self.t_.get('icc_proof_intent', None)
+        combobox = b.proof_intent
+        index = 0
+        for name in self.icc_intents:
+            combobox.append_text(name)
+            index += 1
+        index = self.icc_intents.index(value)
+        combobox.set_index(index)
+        combobox.add_callback('activated', self.set_icc_profile_cb)
+        combobox.set_tooltip("Rendering intent for soft proofing")
+
+        value = self.t_.get('icc_black_point_compensation', False)
+        b.black_point_compensation.set_state(value)
+        b.black_point_compensation.add_callback('activated', self.set_icc_profile_cb)
+        b.black_point_compensation.set_tooltip("Use black point compensation")
 
         fr = Widgets.Frame()
         fr.set_widget(w)
@@ -807,6 +924,26 @@ class Preferences(GingaPlugin.LocalPlugin):
         if not self.gui_up:
             return
         self.w.num_images.set_text(str(num_images))
+
+    def set_icc_profile_cb(self, setting, idx):
+        idx = self.w.output_icc_profile.get_index()
+        output_profile_name = self.icc_profiles[idx]
+        idx = self.w.rendering_intent.get_index()
+        intent_name = self.icc_intents[idx]
+
+        idx = self.w.proof_icc_profile.get_index()
+        proof_profile_name = self.icc_profiles[idx]
+        idx = self.w.proof_intent.get_index()
+        proof_intent = self.icc_intents[idx]
+
+        bpc = self.w.black_point_compensation.get_state()
+
+        self.t_.set(icc_output_profile=output_profile_name,
+                    icc_output_intent=intent_name,
+                    icc_proof_profile=proof_profile_name,
+                    icc_proof_intent=proof_intent,
+                    icc_black_point_compensation=bpc)
+        return True
 
     def rotate_cb(self, w, deg):
         #deg = self.w.rotate.get_value()

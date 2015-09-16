@@ -19,6 +19,7 @@ from ginga import RGBMap, AstroImage, AutoCuts, ColorDist
 from ginga import cmap, imap, trcalc, version
 from ginga.canvas import coordmap
 from ginga.canvas.types.layer import DrawingCanvas
+from ginga.util import io_rgb
 
 
 class ImageViewError(Exception):
@@ -164,10 +165,19 @@ class ImageViewBase(Callback.Callbacks):
         self.t_.addDefaults(auto_orient=False,
                             defer_redraw=True, defer_lagtime=0.025)
 
-        # embedded profiles
+        # embedded image "profiles"
         self.t_.addDefaults(profile_use_scale=False, profile_use_pan=False,
                             profile_use_cuts=False, profile_use_transform=False,
                             profile_use_rotation=False)
+
+        # ICC profile support
+        d = dict(icc_output_profile=None, icc_output_intent='perceptual',
+                 icc_proof_profile=None,  icc_proof_intent='perceptual',
+                 icc_black_point_compensation=False)
+        self.t_.addDefaults(**d)
+        for key in d:
+            # Note: transform_cb will redraw enough to pick up ICC profile change
+            self.t_.getSetting(key).add_callback('set', self.transform_cb)
 
         # Object that calculates auto cut levels
         name = self.t_.get('autocut_method', 'zscale')
@@ -908,6 +918,12 @@ class ImageViewBase(Callback.Callbacks):
 
             self._rgbobj = RGBMap.RGBPlanes(rotimg, order)
 
+            # convert to output ICC profile, if one is specified
+            output_profile = self.t_.get('icc_output_profile', None)
+            if not (output_profile is None):
+                self.convert_via_profile(self._rgbobj, 'working',
+                                         output_profile)
+
         time_end = time.time()
         self.logger.debug("times: total=%.4f" % (
             (time_end - time_start)))
@@ -1043,6 +1059,30 @@ class ImageViewBase(Callback.Callbacks):
                 obj.draw_image(self, data, whence=whence)
             elif obj.is_compound() and (obj != canvas):
                 self.overlay_images(obj, data, whence=whence)
+
+    def convert_via_profile(self, rgbobj, inprof_name, outprof_name):
+
+        # get rest of necessary conversion parameters
+        to_intent = self.t_.get('icc_output_intent', 'perceptual')
+        proofprof_name = self.t_.get('icc_proof_profile', None)
+        proof_intent = self.t_.get('icc_proof_intent', 'perceptual')
+        use_black_pt = self.t_.get('icc_black_point_compensation', False)
+
+        self.logger.info("Attempting conversion from '%s' to '%s' profile" % (
+            inprof_name, outprof_name))
+
+        inp = rgbobj.get_array('RGB')
+        arr = io_rgb.convert_profile_fromto(inp, inprof_name, outprof_name,
+                                            to_intent=to_intent,
+                                            proof_name=proofprof_name,
+                                            proof_intent=proof_intent,
+                                            use_black_pt=use_black_pt)
+        out = rgbobj.rgbarr
+
+        ri, gi, bi = rgbobj.get_order_indexes('RGB')
+        out[..., ri] = arr[..., 0]
+        out[..., gi] = arr[..., 1]
+        out[..., bi] = arr[..., 2]
 
     def get_data_xy(self, win_x, win_y, center=True):
         """Returns the closest x, y coordinates in the data array to the
