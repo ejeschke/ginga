@@ -10,12 +10,26 @@ class LineProfile(GingaPlugin.LocalPlugin):
 
         self.layertag = 'lineprofile-canvas'
         self.raster_file = False
+        self.pan2mark = False
 
         self.dc = self.fv.getDrawClasses()
         canvas = self.dc.DrawingCanvas()
         canvas.add_callback('motion', self.motion_cb)
+        canvas.set_callback('cursor-down', self.btndown_cb)
         canvas.setSurface(self.fitsimage)
         self.canvas = canvas
+
+        # For "marks" feature
+        self.mark_radius = 10
+        self.mark_style = 'cross'
+        self.mark_color = 'purple'
+        self.select_color = 'cyan'
+        self.marks = ['None']
+        self.mark_index = 0
+        self.mark_selected = None
+        self.tw = None
+        self.mark_data_x = [None]
+        self.mark_data_y = [None]
 
         self.gui_up = False
 
@@ -44,7 +58,7 @@ class LineProfile(GingaPlugin.LocalPlugin):
         ax.grid(False)
 
         w = Widgets.wrap(self.plot.get_widget())
-        vbox.add_widget(w, stretch=1)
+        vbox.add_widget(w, stretch=0)
 
         fr = Widgets.Frame("Axes controls")
         self.hbox_axes = Widgets.HBox()
@@ -54,6 +68,52 @@ class LineProfile(GingaPlugin.LocalPlugin):
 
         vbox.add_widget(fr, stretch=0)
         self.build_axes()
+
+        btns = Widgets.HBox()
+        btns.set_border_width(4)
+        btns.set_spacing(4)
+
+        # control for selecting a mark
+        cbox2 = Widgets.ComboBox()
+        for tag in self.marks:
+            cbox2.append_text(tag)
+        if self.mark_selected is None:
+            cbox2.set_index(0)
+        else:
+            cbox2.show_text(self.mark_selected)
+        cbox2.add_callback('activated', self.mark_select_cb)
+        self.w.marks = cbox2
+        cbox2.set_tooltip("Select a mark")
+        btns.add_widget(cbox2, stretch=0)
+
+        btn1 = Widgets.CheckBox("Pan to mark")
+        btn1.set_state(self.pan2mark)
+        btn1.add_callback('activated', self.pan2mark_cb)
+        btn1.set_tooltip("Pan follows selected mark")
+        btns.add_widget(btn1)
+        btns.add_widget(Widgets.Label(''), stretch=1)
+
+        btn2 = Widgets.Button("Delete")
+        self.del_btn = btn2
+        btn2.add_callback('activated', lambda w: self.clear_mark_cb())
+        btn2.set_tooltip("Delete selected mark")
+        btn2.set_enabled(False)
+        btns.add_widget(btn2, stretch=0)
+
+        btn3 = Widgets.Button("Delete All")
+        self.del_all_btn = btn3
+        btn3.add_callback('activated', lambda w: self.clear_all())
+        btn3.set_tooltip("Clear all marks")
+        btn3.set_enabled(False)
+        btns.add_widget(btn3, stretch=0)
+
+        vbox2 = Widgets.VBox()
+        vbox2.add_widget(btns, stretch=0)
+        vbox2.add_widget(Widgets.Label(''), stretch=1)
+
+        fr = Widgets.Frame("Mark controls")
+        fr.set_widget(vbox2)
+        vbox.add_widget(fr, stretch=1)
 
         # scroll bars will allow lots of content to be accessed
         top.add_widget(sw, stretch=1)
@@ -107,8 +167,15 @@ class LineProfile(GingaPlugin.LocalPlugin):
         self.axes_states[pos] = tf
         self.logger.info('Axes states : %s ' % self.axes_states)
 
+        # Clear plot if no axis is enabled
+        if True not in self.axes_states:
+            self.redraw_plot('clear')
+        else:
+            self.redraw_plot('redraw')
+
     def instructions(self):
-        self.tw.set_text("""Pick a point using the cursor""")
+        self.tw.set_text("""Select an axis and pick a point using the cursor. Left-click to mark position.
+Use MultiDim to change step values of axes.""")
 
     def close(self):
         chname = self.fv.get_channelName(self.fitsimage)
@@ -163,19 +230,19 @@ class LineProfile(GingaPlugin.LocalPlugin):
         if self.image is None:
             return
 
-        self.xcoord = int(data_x)
-        self.ycoord = int(data_y)
+        self.xcoord = data_x
+        self.ycoord = data_y
 
         # Exclude points outside boundaries
         wd, ht = self.image.get_size()
         if 0 <= self.xcoord < wd and 0 <= self.ycoord < ht:
-            self._plot()
-        else:
-            self.plot.clear()
-            self.plot.fig.canvas.draw()
+            if self.mark_selected is None:
+                self._plot(mark=None)
+            else:
+                self.redraw_plot('redraw')
         return False
 
-    def _plot(self):
+    def _plot(self, mark=None):
         # Transpose array for easier slicing
         mddata = self.image.get_mddata().T
         naxes = mddata.ndim
@@ -184,22 +251,26 @@ class LineProfile(GingaPlugin.LocalPlugin):
 
         if self.enabled_axes:
             axis_data = self.get_axis(self.enabled_axes[0])
-            axes_slice = self._slice(naxes)
+            axes_slice = self._slice(naxes, mk=mark)
 
             self.plot.clear()
             self.plot.plot(axis_data, mddata[axes_slice])
 
-    def _slice(self, naxes):
-        header = self.image.get_header()
-
+    def _slice(self, naxes, mk=None):
         # Build N-dim slice
         axes_slice = [0] * naxes
 
-        t_step = self.image.revnaxis[-1] + 1
+        # For axes 1 and 2
+        if mk is not None:
+            axes_slice[0] = self.mark_data_x[mk]
+            axes_slice[1] = self.mark_data_y[mk]
+        else:
+            axes_slice[0] = self.xcoord
+            axes_slice[1] = self.ycoord
 
-        axes_slice[0] = self.xcoord
-        axes_slice[1] = self.ycoord
-        axes_slice[2] = t_step
+        # For axes 3 onwards
+        for i in xrange(2, naxes):
+            axes_slice[i] = self.image.revnaxis[i-2] + 1
 
         # Slice enabled axis
         for ea in self.enabled_axes:
@@ -218,6 +289,126 @@ class LineProfile(GingaPlugin.LocalPlugin):
             errmsg = "Error loading axis %d: %s" % (i, str(e))
             self.logger.error(errmsg)
             self.fv.error(errmsg)
+
+    def redraw_plot(self, mode):
+        if mode == 'clear':
+            self.plot.clear()
+            self.plot.fig.canvas.draw()
+        elif mode == 'redraw':
+            idx = int(self.mark_selected.strip('mark'))
+            self._plot(mark=idx)
+
+    ### MARK FEATURE LOGIC ###
+
+    def btndown_cb(self, canvas, event, data_x, data_y):
+        if self.image is None or self.mark_selected:
+            return
+
+        self.mark_data_x.append(data_x)
+        self.mark_data_y.append(data_y)
+        self.add_mark(data_x, data_y)
+
+        self.del_btn.set_enabled(True)
+        self.del_all_btn.set_enabled(True)
+        return True
+
+    def add_mark(self, data_x, data_y, radius=None, color=None, style=None):
+        if not radius:
+            radius = self.mark_radius
+        if not color:
+            color = self.mark_color
+        if not style:
+            style = self.mark_style
+
+        self.logger.debug("Setting mark at %d,%d" % (data_x, data_y))
+        self.mark_index += 1
+        tag = 'mark%d' % (self.mark_index)
+        tag = self.canvas.add(self.dc.CompoundObject(
+            self.dc.Point(data_x, data_y, self.mark_radius,
+                          style=style, color=color,
+                          linestyle='solid'),
+            self.dc.Text(data_x + 10, data_y, "%d" % (self.mark_index),
+                         color=color)),
+                              tag=tag)
+        self.marks.append(tag)
+        self.w.marks.append_text(tag)
+        self.select_mark(tag, pan=False)
+
+    def select_mark(self, tag, pan=True):
+        # deselect the current selected mark, if there is one
+        if self.mark_selected is not None:
+            try:
+                obj = self.canvas.getObjectByTag(self.mark_selected)
+                obj.setAttrAll(color=self.mark_color)
+            except:
+                # old object may have been deleted
+                pass
+
+        self.mark_selected = tag
+        if tag is None:
+            self.w.marks.show_text('None')
+            self.canvas.redraw(whence=3)
+            return
+
+        self.w.marks.show_text(tag)
+        obj = self.canvas.getObjectByTag(tag)
+        obj.setAttrAll(color=self.select_color)
+        if self.pan2mark and pan:
+            self.fitsimage.panset_xy(obj.objects[0].x, obj.objects[0].y)
+        self.canvas.redraw(whence=3)
+
+        idx = int(tag.strip('mark'))
+        self._plot(mark=idx)
+
+    def mark_select_cb(self, w, index):
+        tag = self.marks[index]
+        if index == 0:
+            tag = None
+            self.redraw_plot(mode='clear')
+            self.del_btn.set_enabled(False)
+        else:
+            self.del_btn.set_enabled(True)
+
+        self.select_mark(tag)
+
+    def pan2mark_cb(self, w, val):
+        self.pan2mark = val
+
+    def clear_mark_cb(self):
+        tag = self.mark_selected
+        idx = int(tag.strip('mark'))
+        if tag is None:
+            return
+        self.canvas.deleteObjectByTag(tag)
+        self.w.marks.delete_alpha(tag)
+        self.marks.remove(tag)
+        self.w.marks.set_index(0)
+        self.mark_selected = None
+
+        self.redraw_plot(mode='clear')
+
+        self.mark_data_x[idx] = None
+        self.mark_data_y[idx] = None
+        self.del_btn.set_enabled(False)
+        if len(self.marks) == 1:
+            self.del_all_btn.set_enabled(False)
+
+    def clear_all(self):
+        self.canvas.deleteAllObjects()
+        for name in self.marks:
+            self.w.marks.delete_alpha(name)
+        self.marks = ['None']
+        self.w.marks.append_text('None')
+        self.w.marks.set_index(0)
+        self.mark_index = 0
+        self.mark_selected = None
+        self.mark_data_x = [None]
+        self.mark_data_y = [None]
+
+        self.redraw_plot(mode='clear')
+
+        self.del_btn.set_enabled(False)
+        self.del_all_btn.set_enabled(False)
 
     def __str__(self):
         return 'lineprofile'
