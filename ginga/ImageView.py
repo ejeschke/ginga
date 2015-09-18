@@ -261,7 +261,7 @@ class ImageViewBase(Callback.Callbacks):
         self.canvas = DrawingCanvas()
         self.canvas.initialize(None, self, self.logger)
         self.canvas.add_callback('modified', self.canvas_changed_cb)
-        self.canvas.setSurface(self)
+        self.canvas.set_surface(self)
         self.canvas.ui_setActive(True)
 
         # private canvas for drawing
@@ -373,7 +373,7 @@ class ImageViewBase(Callback.Callbacks):
         self.canvas = canvas
         canvas.initialize(None, self, self.logger)
         canvas.add_callback('modified', self.canvas_changed_cb)
-        canvas.setSurface(self)
+        canvas.set_surface(self)
         canvas.ui_setActive(True)
 
         self._imgobj = None
@@ -383,7 +383,7 @@ class ImageViewBase(Callback.Callbacks):
             self.private_canvas = private_canvas
 
             if private_canvas != canvas:
-                private_canvas.setSurface(self)
+                private_canvas.set_surface(self)
                 private_canvas.ui_setActive(True)
                 private_canvas.add_callback('modified', self.canvas_changed_cb)
 

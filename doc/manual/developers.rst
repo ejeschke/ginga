@@ -9,237 +9,21 @@ Developing with Ginga
 Developers interested in using Ginga in their project will probably
 follow one of two logical development paths: 
 
-- using only the Ginga rendering class in a program of their own design, or
+- using Ginga toolkit classes in a program of their own design, or
 - starting with the full-featured reference viewer that comes with Ginga
   and customizing it for some special purpose, typically by modifying
   one of the plugins or writing a new plugin.
 
 The first approach is probably best for when the developer has a custom
 application in mind, needs a minimal but powerful viewer or wants to
-develop an entirely new full-featured viewer.  The second approach is
-probably best for end users or developers that are mostly satisfied with
-the reference viewer as a general purpose tool and want to add some specific
-enhancements or functionality.  Because the reference viewer is based on
-a flexible plugin architecture this is fairly easy to do.  We examine
-both approaches in this chapter.
+develop an entirely new full-featured viewer.  Developers interested in
+this direction should head over to the Ginga Toolkit Manual.
 
-===============================================
-Using the basic rendering class in new programs
-===============================================
-
-First, let's take a look at how to use the "bare" Ginga rending class
-by itself.  Ginga basically follows the Model-View-Controller (MVC)
-design pattern, that is described in more detail in
-the :ref:`chapter on internals <ch-programming-internals>`.
-The "view" classes are rooted in the base class ``ImageView``.
-Ginga supports backends for different widget sets through various
-subclasses of this class.   
-
-Typically, a developer picks a GUI toolkit that has a supported backend
-(Gtk, Qt, Tk, Matplotlib) and writes a GUI program using that widget set
-with the typical Python toolkit bindings and API.  Where they want a 
-image view pane they instantiate the appropriate subclass of 
-``ImageView``, and using the  ``get_widget()`` call extract the native
-widget and insert it into the GUI layout.  A reference should be kept to
-the view object.
-
-Ginga does not create any additional GUI components beyond the image
-pane itself, however it does provide a standard set of keyboard and
-mouse bindings on the widget that can be enabled, disabled or changed.
-The user interface bindings are configurable via a pluggable
-``Bindings`` class which constitutes the "controller" part of the MVC
-design.  There are a plethora of callbacks that can be registered,
-allowing the user to create their own custom user interface for
-manipulating the view.   
-
-.. _fig1:
-.. figure:: figures/barebonesviewer_qt.png
-   :scale: 100%
-   :figclass: h
-
-   A simple, "bare bones" FITS viewer written in Qt.  
-
-Listing 1 shows a code listing for a simple graphical FITS
-viewer built using the subclass ``ImageViewZoom`` from the module
-``ginga.qtw`` (screenshot in Figure :ref:`fig1`) written in around 100
-or so lines of Python.  It creates a window containing an image view and
-two buttons.  This example, included with the Ginga source (look in the
-``examples`` directory), will open FITS files dragged and dropped on the 
-image window or via a dialog popped up when clicking the "Open File"
-button.   
-
-.. code-block:: python
-
-    import sys, os
-    import logging
-
-    from ginga import AstroImage
-    from ginga.qtw.QtHelp import QtGui, QtCore
-    from ginga.qtw.ImageViewQt import ImageViewZoom
-
-    STD_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcName)s) | %(message)s'
-
-
-    class FitsViewer(QtGui.QMainWindow):
-
-	def __init__(self, logger):
-	    super(FitsViewer, self).__init__()
-	    self.logger = logger
-
-	    fi = ImageViewZoom(self.logger, render='widget')
-	    fi.enable_autocuts('on')
-	    fi.set_autocut_params('zscale')
-	    fi.enable_autozoom('on')
-	    fi.set_callback('drag-drop', self.drop_file)
-	    fi.set_bg(0.2, 0.2, 0.2)
-	    fi.ui_setActive(True)
-	    self.fitsimage = fi
-
-	    bd = fi.get_bindings()
-	    bd.enable_pan(True)
-	    bd.enable_zoom(True)
-	    bd.enable_cuts(True)
-	    bd.enable_flip(True)
-
-	    w = fi.get_widget()
-	    w.resize(512, 512)
-
-	    vbox = QtGui.QVBoxLayout()
-	    vbox.setContentsMargins(QtCore.QMargins(2, 2, 2, 2))
-	    vbox.setSpacing(1)
-	    vbox.addWidget(w, stretch=1)
-
-	    hbox = QtGui.QHBoxLayout()
-	    hbox.setContentsMargins(QtCore.QMargins(4, 2, 4, 2))
-
-	    wopen = QtGui.QPushButton("Open File")
-	    wopen.clicked.connect(self.open_file)
-	    wquit = QtGui.QPushButton("Quit")
-	    self.connect(wquit,
-			 QtCore.SIGNAL("clicked()"),
-			 self, QtCore.SLOT("close()"))
-
-	    hbox.addStretch(1)
-	    for w in (wopen, wquit):
-		hbox.addWidget(w, stretch=0)
-
-	    hw = QtGui.QWidget()
-	    hw.setLayout(hbox)
-	    vbox.addWidget(hw, stretch=0)
-
-	    vw = QtGui.QWidget()
-	    self.setCentralWidget(vw)
-	    vw.setLayout(vbox)
-
-	def load_file(self, filepath):
-	    image = AstroImage.AstroImage(logger=self.logger)
-	    image.load_file(filepath)
-	    self.fitsimage.set_image(image)
-	    self.setWindowTitle(filepath)
-
-	def open_file(self):
-	    res = QtGui.QFileDialog.getOpenFileName(self, "Open FITS file",
-						    ".", "FITS files (*.fits)")
-	    if isinstance(res, tuple):
-		fileName = res[0].encode('ascii')
-	    else:
-		fileName = str(res)
-	    self.load_file(fileName)
-
-	def drop_file(self, fitsimage, paths):
-	    fileName = paths[0]
-	    self.load_file(fileName)
-
-
-    def main(options, args):
-
-	app = QtGui.QApplication(sys.argv)
-	app.connect(app, QtCore.SIGNAL('lastWindowClosed()'),
-		    app, QtCore.SLOT('quit()'))
-
-	logger = logging.getLogger("example1")
-	logger.setLevel(logging.INFO)
-	fmt = logging.Formatter(STD_FORMAT)
-	stderrHdlr = logging.StreamHandler()
-	stderrHdlr.setFormatter(fmt)
-	logger.addHandler(stderrHdlr)
-
-	w = FitsViewer(logger)
-	w.resize(524, 540)
-	w.show()
-	app.setActiveWindow(w)
-	w.raise_()
-	w.activateWindow()
-
-	if len(args) > 0:
-	    w.load_file(args[0])
-
-	app.exec_()
-
-    if __name__ == '__main__':
-	main(None, sys.argv[1:])
-    
-Looking at the constructor for this particular viewer, you can see where
-we create a ``ImageViewZoom`` object.  On this object we enable automatic
-cut levels (using the 'zscale' algorithm), configure it to auto zoom the
-image to fit the window and set a callback function for files dropped on
-the window.  We extract the user-interface bindings with
-``get_bindings()``, and on this object enable standard user interactive
-controls for panning, zooming, cut levels, simple transformations (flip
-x/y and swap axes), rotation and color map warping.
-We then extract the platform-specific widget (Qt-based, in this case) using
-``get_widget()`` and pack it into a Qt container along with a couple of
-buttons to complete the viewer. 
-
-Scanning down the code a bit, we can see that whether by dragging and
-dropping or via the click to open, we ultimately call the load_file()
-method to get the data into the viewer.  As shown, load_file creates 
-an AstroImage object (the "model" part of our MVC design).  It then
-passes this object to the viewer via the set_image() method.  
-AstroImage objects have methods for ingesting data via a file path, an
-``Astropy``/``pyfits`` HDU or a bare ``Numpy`` data array. 
-
-Many of these sorts of examples are contained in the ``examples``
-directory in the source distribution.  Look for files with names
-matching example*_*.py
-
-.. _sec-plotting:
-
-Graphics plotting with Ginga
-----------------------------
-
-.. _fig2:
-.. figure:: figures/example2_screenshot.png
-   :scale: 100%
-   :figclass: h
-
-   An example of a ``ImageViewCanvas`` widget with graphical overlay. 
-
-For each supported widget set there is a subclass of ImageViewZoom called
-``ImageViewCanvas`` (an example is shown in Figure :ref:`fig2`).
-This class adds scalable object plotting on top of the image view plane.
-A variety of simple graphical shapes are available,
-including lines, circles, rectangles, points, polygons, text, rulers,
-compasses, etc.  Plotted objects scale, transform and rotate seamlessly
-with the image. 
-
-See the scripts prefaced with "example2" (under the "examples"
-directory) in the package source for details.  
-
-Rendering into Matplotlib Figures
----------------------------------
-
-Ginga can also render directly into a Matplotlib Figure, which opens up
-interesting possibilities for overplotting beyond the limited
-capabilities of the ``ImageViewCanvas`` class.  In short,
-this allows you to have all the interactive UI goodness of a Ginga widget
-in a matplotlib figure.  You can interactively flip, rotate, pan, zoom,
-set cut levels and color map warp a FITS image.  Furthermore, you can plot
-using matplotlib plotting on top of the image and the plots will follow all
-the transformations.  The interactive performance is not quite as speedy
-as with the other toolkit backends, but quite usable.
-
-Look at the examples in `examples/matplotlib`, especially `example4_mpl.py`.
+The second approach is probably best for end users or developers that
+are mostly satisfied with the reference viewer as a general purpose tool
+and want to add some specific enhancements or functionality.  Because
+the reference viewer is based on a flexible plugin architecture this is
+fairly straightforward to do.
 
 .. _sec-writing-plugins:
 
@@ -247,11 +31,9 @@ Look at the examples in `examples/matplotlib`, especially `example4_mpl.py`.
 Writing plugins for the reference viewer
 ========================================
 
-We now turn our attention to the other approach to developing with
-Ginga: modifying the reference viewer.
 The philosophy behind the design of the reference viewer distributed
 with the Ginga is that it is simply a flexible layout shell for
-instantiating instances of the viewing widget described in the earlier
+instantiating instances of the Ginga view widgets described in the earlier
 section.  All of the other important pieces of a modern FITS viewer--a
 panning widget, information panels, zoom widget, analysis panes--are
 implemented as plugins: encapsulated modules that interface with the
@@ -607,167 +389,210 @@ Figure :ref:`fig6`.
 
 .. code-block:: python
 
+    #
+    # Ruler.py -- Ruler plugin for Ginga reference viewer
+    #
     from ginga import GingaPlugin
-    from ginga.misc import Widgets, CanvasTypes
-
+    from ginga.gw import Widgets
+    
     class Ruler(GingaPlugin.LocalPlugin):
-
+    
         def __init__(self, fv, fitsimage):
             # superclass defines some variables for us, like logger
             super(Ruler, self).__init__(fv, fitsimage)
-
+    
             self.rulecolor = 'green'
             self.layertag = 'ruler-canvas'
             self.ruletag = None
-
+    
             self.dc = fv.getDrawClasses()
             canvas = self.dc.DrawingCanvas()
             canvas.enable_draw(True)
+            canvas.enable_edit(True)
             canvas.set_drawtype('ruler', color='cyan')
             canvas.set_callback('draw-event', self.wcsruler)
             canvas.set_callback('draw-down', self.clear)
-            canvas.setSurface(self.fitsimage)
+            canvas.set_callback('edit-event', self.edit_cb)
+            canvas.set_draw_mode('draw')
+            canvas.set_surface(self.fitsimage)
+            canvas.register_for_cursor_drawing(self.fitsimage)
+            canvas.name = 'Ruler-canvas'
             self.canvas = canvas
-
+    
             self.w = None
-            self.unittypes = ('arcmin', 'pixels')
+            self.unittypes = ('arcmin', 'degrees', 'pixels')
             self.units = 'arcmin'
-
+    
         def build_gui(self, container):
             top = Widgets.VBox()
             top.set_border_width(4)
-
+    
             vbox, sw, orientation = Widgets.get_oriented_box(container)
             vbox.set_border_width(4)
             vbox.set_spacing(2)
-
+    
             self.msgFont = self.fv.getFont("sansFont", 12)
             tw = Widgets.TextArea(wrap=True, editable=False)
             tw.set_font(self.msgFont)
             self.tw = tw
-
-            fr = Widgets.Frame("Instructions")
-            vbox2 = Widgets.VBox()
-            vbox2.add_widget(tw)
-            vbox2.add_widget(Widgets.Label(''), stretch=1)
-            fr.set_widget(vbox2)
+    
+            fr = Widgets.Expander("Instructions")
+            fr.set_widget(tw)
             vbox.add_widget(fr, stretch=0)
-
+    
             fr = Widgets.Frame("Ruler")
-
-            captions = (('Units:', 'label', 'Units', 'combobox'),)
+    
+            captions = (('Units:', 'label', 'Units', 'combobox'),
+                        )
             w, b = Widgets.build_info(captions, orientation=orientation)
             self.w = b
-
+    
             combobox = b.units
             for name in self.unittypes:
                 combobox.append_text(name)
             index = self.unittypes.index(self.units)
             combobox.set_index(index)
             combobox.add_callback('activated', lambda w, idx: self.set_units())
-
+    
             fr.set_widget(w)
             vbox.add_widget(fr, stretch=0)
-
+    
+            mode = self.canvas.get_draw_mode()
+            hbox = Widgets.HBox()
+            btn1 = Widgets.RadioButton("Draw")
+            btn1.set_state(mode == 'draw')
+            btn1.add_callback('activated', lambda w, val: self.set_mode_cb('draw', val))
+            btn1.set_tooltip("Choose this to draw a ruler")
+            self.w.btn_draw = btn1
+            hbox.add_widget(btn1)
+    
+            btn2 = Widgets.RadioButton("Edit", group=btn1)
+            btn2.set_state(mode == 'edit')
+            btn2.add_callback('activated', lambda w, val: self.set_mode_cb('edit', val))
+            btn2.set_tooltip("Choose this to edit a ruler")
+            self.w.btn_edit = btn2
+            hbox.add_widget(btn2)
+    
+            hbox.add_widget(Widgets.Label(''), stretch=1)
+            vbox.add_widget(hbox, stretch=0)
+    
             spacer = Widgets.Label('')
             vbox.add_widget(spacer, stretch=1)
-
+    
             top.add_widget(sw, stretch=1)
-
+    
             btns = Widgets.HBox()
             btns.set_spacing(3)
-
+    
             btn = Widgets.Button("Close")
             btn.add_callback('activated', lambda w: self.close())
             btns.add_widget(btn, stretch=0)
             btns.add_widget(Widgets.Label(''), stretch=1)
             top.add_widget(btns, stretch=0)
-
+    
             container.add_widget(top, stretch=1)
-
+    
         def set_units(self):
             index = self.w.units.get_index()
             units = self.unittypes[index]
             self.canvas.set_drawtype('ruler', color='cyan', units=units)
-            self.redo()
+    
+            if self.ruletag is not None:
+                obj = self.canvas.getObjectByTag(self.ruletag)
+                if obj.kind == 'ruler':
+                    obj.units = units
+                    self.canvas.redraw(whence=3)
             return True
-
+    
         def close(self):
             chname = self.fv.get_channelName(self.fitsimage)
             self.fv.stop_local_plugin(chname, str(self))
             return True
-
+    
         def instructions(self):
-            self.tw.set_text("""Draw (or redraw) a line with the right mouse button.  Display the Zoom tab to precisely see detail.""")
+            self.tw.set_text("""Draw (or redraw) a line with the cursor.
+    
+    Display the Zoom tab at the same time to precisely see detail while drawing.""")
 
         def start(self):
             self.instructions()
             # start ruler drawing operation
-            try:
-                obj = self.fitsimage.getObjectByTag(self.layertag)
-
-            except KeyError:
-                # Add ruler layer
-                self.fitsimage.add(self.canvas, tag=self.layertag)
-
-            self.canvas.deleteAllObjects()
+            p_canvas = self.fitsimage.get_canvas()
+            if not p_canvas.has_object(self.canvas):
+                p_canvas.add(self.canvas, tag=self.layertag)
+    
+            self.canvas.delete_all_objects()
             self.resume()
-
+    
         def pause(self):
             self.canvas.ui_setActive(False)
-
+    
         def resume(self):
             self.canvas.ui_setActive(True)
             self.fv.showStatus("Draw a ruler with the right mouse button")
-
+    
         def stop(self):
-            ## # remove the ruler from the canvas
-            ## try:
-            ##     self.canvas.deleteObjectByTag(self.ruletag)
-            ## except:
-            ##     pass
             # remove the canvas from the image
+            p_canvas = self.fitsimage.get_canvas()
             try:
-                self.fitsimage.deleteObjectByTag(self.layertag)
+                p_canvas.delete_object_by_tag(self.layertag)
             except:
                 pass
-            #self.canvas.ui_setActive(False)
+            self.canvas.ui_setActive(False)
             self.fv.showStatus("")
-
+    
         def redo(self):
-            obj = self.canvas.getObjectByTag(self.ruletag)
+            obj = self.canvas.get_object_by_tag(self.ruletag)
             if obj.kind != 'ruler':
                 return True
-            text_x, text_y, text_h = self.canvas.get_ruler_distances(obj.x1, obj.y1,
-                                                                     obj.x2, obj.y2)
-            obj.text_x = text_x
-            obj.text_y = text_y
-            obj.text_h = text_h
+            # redraw updates ruler measurements
             self.canvas.redraw(whence=3)
-
+    
         def clear(self, canvas, button, data_x, data_y):
-            self.canvas.deleteAllObjects()
+            self.canvas.delete_all_objects()
+            self.ruletag = None
             return False
-
+    
         def wcsruler(self, surface, tag):
-            obj = self.canvas.getObjectByTag(tag)
+            obj = self.canvas.get_object_by_tag(tag)
             if obj.kind != 'ruler':
                 return True
             # remove the old ruler
             try:
-                self.canvas.deleteObjectByTag(self.ruletag)
+                self.canvas.delete_object_by_tag(self.ruletag)
             except:
                 pass
-
+    
             # change some characteristics of the drawn image and
             # save as the new ruler
             self.ruletag = tag
             obj.color = self.rulecolor
             obj.cap = 'ball'
             self.canvas.redraw(whence=3)
-
+    
+        def edit_cb(self, canvas, obj):
+            self.redo()
+            return True
+    
+        def edit_select_ruler(self):
+            if self.ruletag is not None:
+                obj = self.canvas.get_object_by_tag(self.ruletag)
+                self.canvas.edit_select(obj)
+            else:
+                self.canvas.clear_selected()
+            self.canvas.update_canvas()
+    
+        def set_mode_cb(self, mode, tf):
+            if tf:
+                self.canvas.set_draw_mode(mode)
+                if mode == 'edit':
+                    self.edit_select_ruler()
+            return True
+    
         def __str__(self):
             return 'ruler'
+    
+    #END
     
 This plugin shows a standard design pattern typical to local plugins.
 Often one is wanting to draw or plot something on top of the image

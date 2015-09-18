@@ -121,7 +121,7 @@ class CanvasObjectBase(Callback.Callbacks):
         return self.contains(x, y)
 
     def draw_arrowhead(self, cr, x1, y1, x2, y2):
-        i1, j1, i2, j2 = self.calcVertexes(x1, y1, x2, y2)
+        i1, j1, i2, j2 = self.calc_vertexes(x1, y1, x2, y2)
 
         alpha = getattr(self, 'alpha', 1.0)
         cr.set_fill(self.color, alpha=alpha)
@@ -160,7 +160,7 @@ class CanvasObjectBase(Callback.Callbacks):
         cradius = math.sqrt(abs(cy2 - cy1)**2 + abs(cx2 - cx1)**2)
         return (cx1, cy1, cradius)
 
-    def calcVertexes(self, start_cx, start_cy, end_cx, end_cy,
+    def calc_vertexes(self, start_cx, start_cy, end_cx, end_cy,
                      arrow_length=10, arrow_degrees=0.35):
 
         angle = math.atan2(end_cy - start_cy, end_cx - start_cx) + math.pi
@@ -442,6 +442,18 @@ class CanvasObjectBase(Callback.Callbacks):
                             rpoints))
         return cpoints
 
+    def get_bbox(self):
+        """
+        Get lower-left and upper-right coordinates of the bounding box
+        of this compound object.
+
+        Returns
+        -------
+        x1, y1, x2, y2: a 4-tuple of the lower-left and upper-right coords
+        """
+        x1, y1, x2, y2 = self.get_llur()
+        return ((x1, y1), (x1, y2), (x2, y2), (x2, y1))
+
 
 # this is the data structure to which drawing classes are registered
 drawCatalog = Bunch.Bunch(caseless=True)
@@ -471,5 +483,6 @@ _bool = lambda st: str(st).lower() == 'true'
 
 # color converter
 _color = lambda name: name
+
 
 # END

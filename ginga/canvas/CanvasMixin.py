@@ -63,7 +63,7 @@ class CanvasMixin(object):
 
         obj.tag = tag
         self.tags[tag] = obj
-        self.addObject(obj, belowThis=belowThis)
+        self.add_object(obj, belowThis=belowThis)
 
         # propagate change notification on this canvas
         if obj.has_callback('modified'):
@@ -73,22 +73,22 @@ class CanvasMixin(object):
             self.update_canvas(whence=3)
         return tag
 
-    def deleteObjectsByTag(self, tags, redraw=True):
+    def delete_objects_by_tag(self, tags, redraw=True):
         for tag in tags:
             try:
                 obj = self.tags[tag]
                 del self.tags[tag]
-                super(CanvasMixin, self).deleteObject(obj)
+                super(CanvasMixin, self).delete_object(obj)
             except Exception as e:
                 continue
 
         if redraw:
             self.update_canvas(whence=3)
 
-    def deleteObjectByTag(self, tag, redraw=True):
-        self.deleteObjectsByTag([tag], redraw=redraw)
+    def delete_object_by_tag(self, tag, redraw=True):
+        self.delete_objects_by_tag([tag], redraw=redraw)
 
-    def getObjectByTag(self, tag):
+    def get_object_by_tag(self, tag):
         obj = self.tags[tag]
         return obj
 
@@ -99,53 +99,68 @@ class CanvasMixin(object):
                 return tag
         return None
 
-    def getTagsByTagpfx(self, tagpfx):
+    def get_tags_by_tag_pfx(self, tagpfx):
         res = []
         keys = filter(lambda k: k.startswith(tagpfx), self.tags.keys())
         return keys
 
-    def getObjectsByTagpfx(self, tagpfx):
+    def get_objects_by_tag_pfx(self, tagpfx):
         return list(map(lambda k: self.tags[k], self.getTagsByTagpfx(tagpfx)))
 
-    def deleteAllObjects(self, redraw=True):
+    def delete_all_objects(self, redraw=True):
         self.tags = {}
-        CompoundMixin.deleteAllObjects(self)
+        CompoundMixin.delete_all_objects(self)
 
         if redraw:
             self.update_canvas(whence=3)
 
-    def deleteObjects(self, objects, redraw=True):
+    def delete_objects(self, objects, redraw=True):
         for tag, obj in self.tags.items():
             if obj in objects:
-                self.deleteObjectByTag(tag, redraw=False)
+                self.delete_object_by_tag(tag, redraw=False)
 
         if redraw:
             self.update_canvas(whence=3)
 
-    def deleteObject(self, obj, redraw=True):
-        self.deleteObjects([obj], redraw=redraw)
+    def delete_object(self, obj, redraw=True):
+        self.delete_objects([obj], redraw=redraw)
 
-    def raiseObjectByTag(self, tag, aboveThis=None, redraw=True):
-        obj1 = self.getObjectByTag(tag)
+    def raise_object_by_tag(self, tag, aboveThis=None, redraw=True):
+        obj1 = self.get_object_by_tag(tag)
         if not aboveThis:
-            self.raiseObject(obj1)
+            self.raise_object(obj1)
         else:
-            obj2 = self.getObjectByTag(aboveThis)
-            self.raiseObject(obj1, obj2)
+            obj2 = self.get_object_by_tag(aboveThis)
+            self.raise_object(obj1, obj2)
 
         if redraw:
             self.update_canvas(whence=3)
 
-    def lowerObjectByTag(self, tag, belowThis=None, redraw=True):
-        obj1 = self.getObjectByTag(tag)
+    def lower_object_by_tag(self, tag, belowThis=None, redraw=True):
+        obj1 = self.get_object_by_tag(tag)
         if not belowThis:
-            self.lowerObject(obj1)
+            self.lower_object(obj1)
         else:
-            obj2 = self.getObjectByTag(belowThis)
-            self.lowerObject(obj1, obj2)
+            obj2 = self.get_object_by_tag(belowThis)
+            self.lower_object(obj1, obj2)
 
         if redraw:
             self.update_canvas(whence=3)
+
+
+    ### NON-PEP8 EQUIVALENTS -- TO BE DEPRECATED ###
+
+    deleteObjectsByTag = delete_objects_by_tag
+    deleteObjectByTag = delete_object_by_tag
+    getObjectByTag = get_object_by_tag
+    getTagsByTagpfx = get_tags_by_tag_pfx
+    getObjectsByTagpfx = get_objects_by_tag_pfx
+    getObjectsByTagpfx = get_objects_by_tag_pfx
+    deleteAllObjects = delete_all_objects
+    deleteObjects = delete_objects
+    deleteObject = delete_object
+    raiseObjectByTag = raise_object_by_tag
+    lowerObjectByTag = lower_object_by_tag
 
 
 #END

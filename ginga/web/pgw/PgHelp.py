@@ -47,8 +47,13 @@ GestureEvent = namedtuple("GestureEvent", ["type", "x", "y", "dx", "dy",
 
 
 class PantographHandler(tornado.websocket.WebSocketHandler):
-    def initialize(self, name):
+
+    def initialize(self, name, ioloop=None):
         self.name = name
+        if ioloop is None:
+            ioloop = IOLoop.current()
+        self.my_ioloop = ioloop
+
         interval = self.settings.get("timer_interval", DEFAULT_INTERVAL)
         if self.name in self.settings:
             interval = self.settings[self.name].get("timer_interval", interval)
@@ -87,7 +92,7 @@ class PantographHandler(tornado.websocket.WebSocketHandler):
         # expiring at the same time
         interval = random.randint(1, self.interval)
         delta = datetime.timedelta(milliseconds = interval)
-        self.timeout = IOLoop.current().add_timeout(delta, self.timer_tick)
+        self.timeout = self.my_ioloop.add_timeout(delta, self.timer_tick)
 
         self.setup()
         self.do_operation("refresh")
@@ -96,7 +101,7 @@ class PantographHandler(tornado.websocket.WebSocketHandler):
         self.set_nodelay(True)
 
     def on_close(self):
-        IOLoop.current().remove_timeout(self.timeout)
+        self.my_ioloop.remove_timeout(self.timeout)
 
     def on_message(self, raw_message):
         message = json.loads(raw_message)
@@ -187,7 +192,7 @@ class PantographHandler(tornado.websocket.WebSocketHandler):
         self.update()
         self.do_operation("refresh")
         delta = datetime.timedelta(milliseconds = self.interval)
-        self.timeout = IOLoop.current().add_timeout(delta, self.timer_tick)
+        self.timeout = self.my_ioloop.add_timeout(delta, self.timer_tick)
 
     def setup(self):
         pass

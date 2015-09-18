@@ -14,7 +14,9 @@ from ginga.util.six.moves import map, zip, reduce
 from ginga.canvas import coordmap
 
 class CompoundMixin(object):
-    """A CompoundMixin makes an object that is an aggregation of other objects.
+    """A CompoundMixin is a mixin class that makes an object that is an
+    aggregation of other objects.
+
     It is used to make generic compound drawing types as well as (for example)
     layers of canvases on top of an image.
     """
@@ -28,6 +30,14 @@ class CompoundMixin(object):
         self._contains_reduce = numpy.logical_or
 
     def get_llur(self):
+        """
+        Get lower-left and upper-right coordinates of the bounding box
+        of this compound object.
+
+        Returns
+        -------
+        x1, y1, x2, y2: a 4-tuple of the lower-left and upper-right coords
+        """
         points = numpy.array(list(map(lambda obj: obj.get_llur(),
                                       self.objects)))
         t_ = points.T
@@ -50,7 +60,7 @@ class CompoundMixin(object):
                 return True
         return False
 
-    def getItemsAt(self, x, y):
+    def get_items_at(self, x, y):
         res = []
         for obj in self.objects:
             if obj.contains(x, y):
@@ -127,29 +137,29 @@ class CompoundMixin(object):
         for obj in self.objects:
             obj.draw(viewer)
 
-    def getObjects(self):
+    def get_objects(self):
         return self.objects
 
     def has_object(self, obj):
         return obj in self.objects
 
-    def deleteObject(self, obj):
+    def delete_object(self, obj):
         self.objects.remove(obj)
 
-    def deleteObjects(self, objects):
+    def delete_objects(self, objects):
         for obj in objects:
-            self.deleteObject(obj)
+            self.delete_object(obj)
 
-    def deleteAllObjects(self):
+    def delete_all_objects(self):
         self.objects = []
 
-    def setAttrAll(self, **kwdargs):
+    def set_attr_all(self, **kwdargs):
         for obj in self.objects:
             for attrname, val in kwdargs.items():
                 if hasattr(obj, attrname):
                     setattr(obj, attrname, val)
 
-    def addObject(self, obj, belowThis=None):
+    def add_object(self, obj, belowThis=None):
         obj.initialize(None, self.viewer, self.logger)
         # isn't this taken care of above?
         #obj.viewer = self.viewer
@@ -159,7 +169,7 @@ class CompoundMixin(object):
             index = self.objects.index(belowThis)
             self.objects.insert(index, obj)
 
-    def raiseObject(self, obj, aboveThis=None):
+    def raise_object(self, obj, aboveThis=None):
         if not aboveThis:
             # no reference object--move to top
             self.objects.remove(obj)
@@ -171,7 +181,7 @@ class CompoundMixin(object):
             index = self.objects.index(aboveThis)
             self.objects.insert(index+1, obj)
 
-    def lowerObject(self, obj, belowThis=None):
+    def lower_object(self, obj, belowThis=None):
         if not belowThis:
             # no reference object--move to bottom
             self.objects.remove(obj)
@@ -224,5 +234,18 @@ class CompoundMixin(object):
         for obj in self.objects:
             res.extend(list(obj.get_points()))
         return res
+
+
+    ### NON-PEP8 EQUIVALENTS -- TO BE DEPRECATED ###
+
+    getItemsAt = get_items_at
+    getObjects = get_objects
+    deleteObject = delete_object
+    deleteObjects = delete_objects
+    deleteAllObjects = delete_all_objects
+    setAttrAll = set_attr_all
+    addObject = add_object
+    raiseObject = raise_object
+    lowerObject = lower_object
 
 #END

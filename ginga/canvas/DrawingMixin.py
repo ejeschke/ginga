@@ -16,7 +16,7 @@ from .CanvasMixin import CanvasMixin
 
 class DrawingMixin(object):
     """The DrawingMixin is a mixin class that adds drawing capability for
-    some of the basic CanvasObject-derived types.  The setSurface method is
+    some of the basic CanvasObject-derived types.  The set_surface method is
     used to associate a ImageViewCanvas object for layering on.
     """
 
@@ -26,11 +26,11 @@ class DrawingMixin(object):
         from .CanvasObject import drawCatalog
         # For interactive drawing
         self.candraw = False
-        self.drawDict = drawCatalog
+        self.draw_dict = drawCatalog
         # canvas objects which we know how to draw have an "idraw"
         # class method
-        self.drawtypes = [ key for key in self.drawDict.keys()
-                           if hasattr(self.drawDict[key], 'idraw') ]
+        self.drawtypes = [ key for key in self.draw_dict.keys()
+                           if hasattr(self.draw_dict[key], 'idraw') ]
         self.drawtypes.sort()
         self.t_drawtype = 'point'
         self.t_drawparams = {}
@@ -68,9 +68,9 @@ class DrawingMixin(object):
         # editing immediately after being drawn
         self.edit_follows_draw = False
 
-        self._processTime = 0.0
+        self._process_time = 0.0
         # time delta threshold for deciding whether to update the image
-        self._deltaTime = 0.020
+        self._delta_time = 0.020
         self._draw_obj = None
 
         # NOTE: must be mixed in with a Callback.Callbacks
@@ -81,7 +81,7 @@ class DrawingMixin(object):
                      'edit-select', 'drag-drop'):
             self.enable_callback(name)
 
-    def setSurface(self, viewer):
+    def set_surface(self, viewer):
         self.viewer = viewer
 
         # register this canvas for events of interest
@@ -101,7 +101,7 @@ class DrawingMixin(object):
         #canvas.add_callback('draw-scroll', self._edit_rotate_cb, viewer)
         #canvas.add_callback('draw-scroll', self._edit_scale_cb, viewer)
 
-    def getSurface(self):
+    def get_surface(self):
         return self.viewer
 
     def register_for_cursor_drawing(self, viewer):
@@ -171,7 +171,7 @@ class DrawingMixin(object):
         ## self.logger.debug("drawing a '%s' x,y=%f,%f" % (
         ##     self.t_drawtype, data_x, data_y))
 
-        klass = self.drawDict[self.t_drawtype]
+        klass = self.draw_dict[self.t_drawtype]
         obj = None
 
         # update the context with current position
@@ -191,7 +191,7 @@ class DrawingMixin(object):
             obj.initialize(None, cxt.viewer, self.logger)
             #obj.initialize(None, cxt.viewer, viewer.logger)
             self._draw_obj = obj
-            if time.time() - self._processTime > self._deltaTime:
+            if time.time() - self._process_time > self._delta_time:
                 self.process_drawing()
 
         return True
@@ -289,23 +289,23 @@ class DrawingMixin(object):
     def get_drawtype(self):
         return self.t_drawtype
 
-    def getDrawClass(self, drawtype):
+    def get_draw_class(self, drawtype):
         drawtype = drawtype.lower()
-        klass = self.drawDict[drawtype]
+        klass = self.draw_dict[drawtype]
         return klass
 
     def get_drawparams(self):
         return self.t_drawparams.copy()
 
     def process_drawing(self):
-        self._processTime = time.time()
+        self._process_time = time.time()
         #viewer.redraw(whence=3)
         #self.redraw(whence=3)
         self.update_canvas()
 
     def register_canvas_type(self, name, klass):
         drawtype = name.lower()
-        self.drawDict[drawtype] = klass
+        self.draw_dict[drawtype] = klass
         if not drawtype in self.drawtypes:
             self.drawtypes.append(drawtype)
             self.drawtypes.sort()
@@ -346,7 +346,7 @@ class DrawingMixin(object):
 
         #self._edit_obj.sync_state()
 
-        if time.time() - self._processTime > self._deltaTime:
+        if time.time() - self._process_time > self._delta_time:
             self.process_drawing()
         return True
 
@@ -427,7 +427,7 @@ class DrawingMixin(object):
                     self.select_remove(obj)
                 else:
                     self._prepare_to_move(obj, data_x, data_y)
-                    ## Compound = self.getDrawClass('compoundobject')
+                    ## Compound = self.get_draw_class('compoundobject')
                     ## c_obj = Compound(*self.get_selected())
                     ## c_obj.inherit_from(obj)
                     ## self._prepare_to_move(c_obj, data_x, data_y)
@@ -452,7 +452,7 @@ class DrawingMixin(object):
                         # add this object to the selection, make a compound
                         # object
                         self.edit_select(obj)
-                        Compound = self.getDrawClass('compoundobject')
+                        Compound = self.get_draw_class('compoundobject')
                         c_obj = Compound(*self.get_selected())
                         c_obj.inherit_from(obj)
                         self._prepare_to_move(c_obj, data_x, data_y)
@@ -665,7 +665,7 @@ class DrawingMixin(object):
         return True
 
     def group_selection(self):
-        Compound = self.getDrawClass('compoundobject')
+        Compound = self.get_draw_class('compoundobject')
         c_obj = Compound(self._selected)
         self._selected = [ comp_obj ]
 
@@ -689,6 +689,13 @@ class DrawingMixin(object):
             for obj in selected:
                 cr = viewer.renderer.setup_cr(obj)
                 obj.draw_edit(cr, viewer)
+
+
+    ### NON-PEP8 EQUIVALENTS -- TO BE DEPRECATED ###
+
+    setSurface = set_surface
+    getSurface = get_surface
+    getDrawClass = get_draw_class
 
 
 #END

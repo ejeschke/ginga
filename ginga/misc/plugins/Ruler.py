@@ -29,7 +29,7 @@ class Ruler(GingaPlugin.LocalPlugin):
         canvas.set_callback('draw-down', self.clear)
         canvas.set_callback('edit-event', self.edit_cb)
         canvas.set_draw_mode('draw')
-        canvas.setSurface(self.fitsimage)
+        canvas.set_surface(self.fitsimage)
         canvas.register_for_cursor_drawing(self.fitsimage)
         canvas.name = 'Ruler-canvas'
         self.canvas = canvas
@@ -113,7 +113,7 @@ class Ruler(GingaPlugin.LocalPlugin):
         self.canvas.set_drawtype('ruler', color='cyan', units=units)
 
         if self.ruletag is not None:
-            obj = self.canvas.getObjectByTag(self.ruletag)
+            obj = self.canvas.get_object_by_tag(self.ruletag)
             if obj.kind == 'ruler':
                 obj.units = units
                 self.canvas.redraw(whence=3)
@@ -133,16 +133,10 @@ Display the Zoom tab at the same time to precisely see detail while drawing.""")
         self.instructions()
         # start ruler drawing operation
         p_canvas = self.fitsimage.get_canvas()
-        ## try:
-        ##     obj = p_canvas.getObjectByTag(self.layertag)
-
-        ## except KeyError:
-        ##     # Add ruler layer
-        ##     p_canvas.add(self.canvas, tag=self.layertag)
         if not p_canvas.has_object(self.canvas):
             p_canvas.add(self.canvas, tag=self.layertag)
 
-        self.canvas.deleteAllObjects()
+        self.canvas.delete_all_objects()
         self.resume()
 
     def pause(self):
@@ -156,31 +150,31 @@ Display the Zoom tab at the same time to precisely see detail while drawing.""")
         # remove the canvas from the image
         p_canvas = self.fitsimage.get_canvas()
         try:
-            p_canvas.deleteObjectByTag(self.layertag)
+            p_canvas.delete_object_by_tag(self.layertag)
         except:
             pass
         self.canvas.ui_setActive(False)
         self.fv.showStatus("")
 
     def redo(self):
-        obj = self.canvas.getObjectByTag(self.ruletag)
+        obj = self.canvas.get_object_by_tag(self.ruletag)
         if obj.kind != 'ruler':
             return True
         # redraw updates ruler measurements
         self.canvas.redraw(whence=3)
 
     def clear(self, canvas, button, data_x, data_y):
-        self.canvas.deleteAllObjects()
+        self.canvas.delete_all_objects()
         self.ruletag = None
         return False
 
     def wcsruler(self, surface, tag):
-        obj = self.canvas.getObjectByTag(tag)
+        obj = self.canvas.get_object_by_tag(tag)
         if obj.kind != 'ruler':
             return True
         # remove the old ruler
         try:
-            self.canvas.deleteObjectByTag(self.ruletag)
+            self.canvas.delete_object_by_tag(self.ruletag)
         except:
             pass
 
@@ -197,7 +191,7 @@ Display the Zoom tab at the same time to precisely see detail while drawing.""")
 
     def edit_select_ruler(self):
         if self.ruletag is not None:
-            obj = self.canvas.getObjectByTag(self.ruletag)
+            obj = self.canvas.get_object_by_tag(self.ruletag)
             self.canvas.edit_select(obj)
         else:
             self.canvas.clear_selected()
