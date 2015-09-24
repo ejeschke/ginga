@@ -118,12 +118,11 @@ def use(wcspkg, raise_err=True):
         if LooseVersion(astropy.__version__) <= LooseVersion('1'):
             return False
 
-
         import astropy.coordinates
         import astropy.wcs as pywcs
         from astropy.io import fits as pyfits
         import astropy.units as u
-
+        from astropy.version import version
 
         have_pywcs = True
         have_astropy = True
@@ -144,6 +143,8 @@ def use(wcspkg, raise_err=True):
         try:
             import astropy.wcs as pywcs
             from astropy.io import fits as pyfits
+            from astropy.version import version
+            print("astropy version is %s" % version)
             have_pywcs = True
         except ImportError:
             try:
@@ -228,10 +229,9 @@ class AstropyWCS2(BaseWCS):
 
     def load_header(self, header, fobj=None):
         from astropy.wcs.utils import wcs_to_celestial_frame
-        self.header = {}
-        self.header.update(header.items())
-
-        self.fix_bad_headers()
+        # reconstruct a pyfits header, because otherwise we take an
+        # incredible performance hit in astropy.wcs
+        self.header = pyfits.Header(header.items())
 
         try:
             self.logger.debug("Trying to make astropy wcs object")
@@ -439,13 +439,7 @@ class AstropyWCS(BaseWCS):
         self.new_coords = False            # new astropy coordinate system
 
         if hasattr(coordinates, 'SkyCoord'):
-            # v0.4 series astropy
-            ## self.coord_table = {
-            ##     'icrs': coordinates.SkyCoord,
-            ##     'fk5': coordinates.SkyCoord,
-            ##     'fk4': coordinates.SkyCoord,
-            ##     'galactic': coordinates.SkyCoord,
-            ##     }
+            # v0.4 series astropy and later
             self.new_coords = True
 
         elif hasattr(coordinates, 'ICRS'):
@@ -468,14 +462,14 @@ class AstropyWCS(BaseWCS):
         self.kind = 'astropy/WCSLIB'
 
     def load_header(self, header, fobj=None):
-        self.header = {}
-        self.header.update(header.items())
-
-        self.fix_bad_headers()
+        # reconstruct a pyfits header, because otherwise we take an
+        # incredible performance hit in astropy.wcs
+        self.header = pyfits.Header(header.items())
 
         try:
-            self.logger.debug("Trying to make astropy wcs object")
+            self.logger.debug("Trying to make astropy-- wcs object")
             self.wcs = pywcs.WCS(self.header, fobj=fobj, relax=True)
+            self.logger.debug("made astropy wcs object")
 
             self.coordsys = choose_coord_system(self.header)
             self.logger.debug("Coordinate system is: %s" % (self.coordsys))
