@@ -46,6 +46,8 @@ class Contents(GingaPlugin.GlobalPlugin):
         # Sort increasing by default
         treeview.sortByColumn(0, QtCore.Qt.AscendingOrder)
         treeview.setAlternatingRowColors(True)
+        # NOTE: this one line speeds things up *tremendously*
+        treeview.setUniformRowHeights(True)
         #treeview.itemClicked.connect(self.switch_image2)
         #treeview.itemDoubleClicked.connect(self.switch_image2)
         treeview.itemSelectionChanged.connect(self.switch_image3)

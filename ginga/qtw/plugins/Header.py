@@ -1,6 +1,6 @@
 #
 # Header.py -- FITS Header plugin for fits viewer
-# 
+#
 # Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c) Eric R. Jeschke.  All rights reserved.
@@ -32,7 +32,7 @@ class Header(GingaPlugin.GlobalPlugin):
         fv.set_callback('add-channel', self.add_channel)
         fv.set_callback('delete-channel', self.delete_channel)
         fv.set_callback('active-image', self.focus_cb)
-        
+
 
     def build_gui(self, container):
         nb = QtHelp.StackedWidget()
@@ -54,9 +54,14 @@ class Header(GingaPlugin.GlobalPlugin):
         # Hack to make the rows in a TableView all have a
         # reasonable height for the data
         if QtHelp.have_pyqt5:
-            vh.setSectionResizeMode(QtGui.QHeaderView.ResizeToContents)
+            # NOTE: this makes a terrible hit on performance--DO NOT USE!
+            #vh.setSectionResizeMode(QtGui.QHeaderView.ResizeToContents)
+            vh.setSectionResizeMode(QtGui.QHeaderView.Fixed)
         else:
-            vh.setResizeMode(QtGui.QHeaderView.ResizeToContents)
+            # NOTE: this makes a terrible hit on performance--DO NOT USE!
+            #vh.setResizeMode(QtGui.QHeaderView.ResizeToContents)
+            vh.setResizeMode(QtGui.QHeaderView.Fixed)
+        vh.setDefaultSectionSize(18)
         # Hide vertical header
         vh.setVisible(False)
 
@@ -68,11 +73,12 @@ class Header(GingaPlugin.GlobalPlugin):
         hbox = QtHelp.HBox()
         hbox.addWidget(cb, stretch=0)
         vbox.addWidget(hbox, stretch=0)
-        
+
         info.setvals(widget=widget, table=table, sortw=cb)
         return widget
 
     def set_header(self, info, image):
+        self.logger.debug("setting header")
         header = image.get_header()
         table = info.table
 
@@ -80,13 +86,15 @@ class Header(GingaPlugin.GlobalPlugin):
         table.setModel(model)
         selectionModel = QtHelp.QItemSelectionModel(model, table)
         table.setSelectionModel(selectionModel)
-        
+
         # set column width to fit contents
-        table.resizeColumnsToContents()
-        table.resizeRowsToContents()
+        # NOTE: this makes a terrible hit on performance--DO NOT USE!
+        ## table.resizeColumnsToContents()
+        ## table.resizeRowsToContents()
 
         sorted = info.sortw.isChecked()
         table.setSortingEnabled(sorted)
+        self.logger.debug("setting header done")
 
     def add_channel(self, viewer, chinfo):
         chname = chinfo.name
@@ -117,15 +125,15 @@ class Header(GingaPlugin.GlobalPlugin):
         for name in names:
             chinfo = self.fv.get_channelInfo(name)
             self.add_channel(self.fv, chinfo)
-        
+
     def new_image_cb(self, fitsimage, image, info):
         self.set_header(info, image)
-        
+
     def set_sortable_cb(self, info):
         chinfo = self.fv.get_channelInfo(info.chname)
         image = chinfo.fitsimage.get_image()
         self.set_header(info, image)
-        
+
     def focus_cb(self, viewer, fitsimage):
         chname = self.fv.get_channelName(fitsimage)
         chinfo = self.fv.get_channelInfo(chname)
@@ -142,7 +150,7 @@ class Header(GingaPlugin.GlobalPlugin):
         if image is None:
             return
         self.set_header(self.info, image)
-        
+
     def __str__(self):
         return 'header'
 
@@ -159,16 +167,16 @@ class HeaderTableModel(QtCore.QAbstractTableModel):
         for key in header.keys():
             self.header.append(header.get_card(key))
 
-    def rowCount(self, parent): 
-        return len(self.header) 
- 
-    def columnCount(self, parent): 
-        return len(self.columns) 
- 
-    def data(self, index, role): 
-        if not index.isValid(): 
-            return None 
-        elif role != QtCore.Qt.DisplayRole: 
+    def rowCount(self, parent):
+        return len(self.header)
+
+    def columnCount(self, parent):
+        return len(self.columns)
+
+    def data(self, index, role):
+        if not index.isValid():
+            return None
+        elif role != QtCore.Qt.DisplayRole:
             return None
 
         card = self.header[index.row()]
@@ -179,7 +187,7 @@ class HeaderTableModel(QtCore.QAbstractTableModel):
         if (orientation == QtCore.Qt.Horizontal) and \
                (role == QtCore.Qt.DisplayRole):
             return self.columns[col][0]
-        
+
         # Hack to make the rows in a TableView all have a
         # reasonable height for the data
         elif (role == QtCore.Qt.SizeHintRole) and \
@@ -197,12 +205,12 @@ class HeaderTableModel(QtCore.QAbstractTableModel):
         if QtHelp.have_pyqt4:
             self.emit(QtCore.SIGNAL("layoutAboutToBeChanged()"))
 
-        self.header = sorted(self.header, key=sortfn)        
+        self.header = sorted(self.header, key=sortfn)
 
         if order == QtCore.Qt.DescendingOrder:
             self.header.reverse()
         if QtHelp.have_pyqt4:
             self.emit(QtCore.SIGNAL("layoutChanged()"))
-        
-    
+
+
 #END

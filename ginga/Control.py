@@ -22,6 +22,7 @@ else:
 import threading
 import logging
 import mimetypes
+import atexit, shutil
 
 import numpy
 magic_tester = None
@@ -68,7 +69,10 @@ class GingaControl(Callback.Callbacks):
             self.ev_quit = threading.Event()
         else:
             self.ev_quit = ev_quit
+
         self.tmpdir = tempfile.mkdtemp()
+        # remove temporary directory on exit
+        atexit.register(_rmtmpdir, self.tmpdir)
 
         # For callbacks
         for name in ('add-image', 'active-image', 'remove-image',
@@ -975,9 +979,12 @@ class GingaControl(Callback.Callbacks):
                     self.logger.info("Setting image...")
                     chinfo.fitsimage.set_image(image,
                                                raise_initialize_errors=False)
-                    # if image is modified internally, update plugins
+
+                    # add cb so that if image is modified internally
+                    #  our plugins get updated
                     image.add_callback('modified', self._redo_plugins, chinfo)
 
+                    self.logger.info("executing redo() in plugins...")
                     self._redo_plugins(image, chinfo)
 
                 else:
@@ -1329,6 +1336,9 @@ class GingaControl(Callback.Callbacks):
         #self.logger.warn("This method to be deprecated--use 'get_draw_classes' instead")
         return self.get_draw_classes()
 
+
+def _rmtmpdir(tmpdir):
+    shutil.rmtree(tmpdir)
 
 class GuiLogHandler(logging.Handler):
     """Logs to a pane in the GUI."""

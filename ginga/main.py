@@ -168,6 +168,9 @@ class ReferenceViewer(object):
                           help="Specify list of channels to create")
         optprs.add_option("--debug", dest="debug", default=False, action="store_true",
                           help="Enter the pdb debugger on main()")
+        optprs.add_option("--disable-plugins", dest="disable_plugins",
+                          metavar="NAMES",
+                          help="Specify plugins that should be disabled")
         optprs.add_option("--display", dest="display", metavar="HOST:N",
                           help="Use X display on HOST:N")
         optprs.add_option("--fits", dest="fits", metavar="NAME",
@@ -375,9 +378,15 @@ class ReferenceViewer(object):
         if options.geometry:
             ginga.setGeometry(options.geometry)
 
+        # make the list of disabled plugins
+        disabled_plugins = []
+        if not (options.disable_plugins is None):
+            disabled_plugins = options.disable_plugins.lower().split(',')
+
         # Add desired global plugins
         for spec in self.global_plugins:
-            ginga.add_global_plugin(spec)
+            if not spec.module.lower() in disabled_plugins:
+                ginga.add_global_plugin(spec)
 
         # Add GUI log handler (for "Log" global plugin)
         guiHdlr = GuiLogHandler(ginga)
@@ -396,7 +405,8 @@ class ReferenceViewer(object):
 
         # Load modules for "local" (per-channel) plug ins
         for spec in self.local_plugins:
-            ginga.add_local_plugin(spec)
+            if not spec.module.lower() in disabled_plugins:
+                ginga.add_local_plugin(spec)
 
         # Load any custom plugins
         if options.plugins:
