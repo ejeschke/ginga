@@ -18,11 +18,14 @@
       }
     </style>
     <meta name="viewport" 
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0,
+minimum-scale=1.0, user-scalable=no, width=device-width,
+height=device-height, target-densitydpi=device-dpi" /> 
 </head>
 <body>
-    <canvas id="{{v_id}}">Your browser does not appear to
+    <canvas id="{{v_id}}" tabindex="0">Your browser does not appear to
 support HTML5 canvas.</canvas>
+    <script type="text/javascript" src="/js/pantograph.js"></script>
     <script type="text/javascript">
         var canvas_id = "{{v_id}}"
         var canvas = document.getElementById("{{v_id}}")
@@ -34,7 +37,9 @@ support HTML5 canvas.</canvas>
         canvas.style.cursor = 'crosshair';
         var url = "{{url}}";
         var ws_url = "ws://" + window.location.host + "{{ws_url}}";
+
+        var cv_socket = new WebSocket(ws_url);
+        var pgraph = make_pantograph(canvas, canvas_id, cv_socket);
     </script>
-    <script type="text/javascript" src="/js/pantograph.js"></script>
 </body>
 </html>

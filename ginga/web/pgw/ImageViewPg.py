@@ -55,6 +55,10 @@ class ImageViewPg(ImageView):
 
         self.pgcanvas = None
 
+        # format for rendering image on HTML5 canvas
+        # NOTE: 'jpeg' has much better performance than 'png'
+        self.t_.setDefaults(html5_canvas_format='jpeg')
+
         #self.defer_redraw = False
 
 
@@ -75,9 +79,12 @@ class ImageViewPg(ImageView):
             return
 
         try:
-            self.logger.debug("getting png image...")
-            buf = self.get_rgb_image_as_buffer(format='png')
-            self.logger.debug("got png image")
+            self.logger.debug("getting image as buffer...")
+            format = self.t_.get('html5_canvas_format', 'jpeg')
+            buf = self.get_rgb_image_as_buffer(format=format)
+            #buf = self.get_image_as_buffer()
+            self.logger.info("got '%s' RGB image buffer, len=%d" % (
+                format, len(buf)))
 
             self.pgcanvas.do_update(buf)
             self.logger.debug("informed update")
@@ -488,12 +495,20 @@ class ImageViewCanvas(ImageViewZoom,
 
 
 class RenderWidgetZoom(PgHelp.PantographHandler):
+    """
+    This class implements the server-side backend of the surface for a
+    web-based Ginga viewer.  It uses a web socket to connect to an HTML5
+    canvas with javascript callbacks in a web browser on the client.
+
+    The viewer is created separately on the backend and connects to this
+    surface via the set_viewer() method.
+    """
 
     def __init__(self, *args, **kwdargs):
         super(RenderWidgetZoom, self).__init__(*args, **kwdargs)
 
-        self.logger = self.settings['logger']
         self.viewer = None
+        self.logger = self.settings['logger']
 
         self._configured = False
         self._canvas_lock = threading.RLock()
@@ -504,7 +519,7 @@ class RenderWidgetZoom(PgHelp.PantographHandler):
         self._rotating = False
 
     def set_viewer(self, viewer):
-        self.logger.info("set_viewer called")
+        self.logger.debug("set_viewer called")
         self.viewer = viewer
         #self.logger = viewer.get_logger()
 
@@ -516,18 +531,49 @@ class RenderWidgetZoom(PgHelp.PantographHandler):
         if self._configured:
             self.viewer.configure_window(self.width, self.height)
 
+    def get_viewer(self):
+        return self.viewer
+
+    def initialize(self, name, factory):
+        self.factory = factory
+        super(RenderWidgetZoom, self).initialize(name)
+
     def setup(self):
+        """
+        This method is called when the web socket is first connected
+        by the browser.  The canvas is created and the size is now known
+        (self.width, self.height), but the ImageViewPg-based viewer may
+        not yet be created or connected.
+        """
         ## self.logger = self.settings['logger']
         ## self.viewer = self.settings['viewer']
         ## self.viewer.set_widget(self)
 
         self.logger.info("canvas size is %dx%d" % (self.width, self.height))
-        ## if self.viewer is not None:
-        ##     self.viewer.configure_window(self.width, self.height)
-        ## self.add_timer('redraw', self.viewer.delayed_redraw)
-        ## self.add_timer('msg', self.viewer.clear_onscreen_message)
+        if not (self.viewer is None):
+            self.viewer.configure_window(self.width, self.height)
+
         self._configured = True
+
         self.get()
+
+    def get(self):
+        """
+        Subclass normally overrides this method to get a viewer according
+        to some scheme, such as an ?id= parameter in the URL.  It should then
+        call set_viewer() with that viewer.
+        """
+        self.logger.warning("subclass should override this method!")
+
+        v_id = self.get_argument('id', '0')
+        viewer = self.factory.get_viewer(v_id)
+        self.set_viewer(viewer)
+
+        ## if self.viewer is None:
+        ##     # make a viewer for this surface
+        ##     self.logger.debug("making a viewer since none is configured")
+        ##     viewer = CanvasView(logger=self.logger)
+        ##     self.set_viewer(viewer)
 
     def do_update(self, buf):
         self.clear_rect(0, 0, self.width, self.height)
@@ -618,7 +664,7 @@ class RenderWidgetZoom(PgHelp.PantographHandler):
             self.viewer.drop_event(event)
 
     def on_resize(self, event):
-        self.logger.debug("resize (%s)" % str(event))
+        self.logger.info("resize (%s)" % str(event))
         if self.viewer is not None:
             self.viewer.resize_event(event)
 

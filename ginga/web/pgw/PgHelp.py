@@ -5,41 +5,19 @@ from tornado.ioloop import IOLoop
 
 import random
 import json
-import os
+import os, time
 import datetime
 import binascii
 from collections import namedtuple
 
-## from . import templates
-
-## LOADER = tornado.template.Loader(os.path.dirname(templates.__file__))
-
-## class MainPageHandler(tornado.web.RequestHandler):
-##     def initialize(self, name, url):
-##         self.name = name
-##         self.url = url
-##     def get(self):
-##         t = LOADER.load("index.html")
-
-##         width = self.settings.get("canvasWidth", "fullWidth")
-##         height = self.settings.get("canvasHeight", "fullHeight")
-
-##         if self.name in self.settings:
-##             width = self.settings[self.name].get("canvasWidth", width)
-##             height = self.settings[self.name].get("canvasHeight", height)
-
-##         ws_url = os.path.join(self.url, "socket")
-
-##         self.write(t.generate(
-##             title = self.name, url = self.url, ws_url = ws_url,
-##             width = width, height = height))
 
 DEFAULT_INTERVAL = 10
 
-InputEvent = namedtuple("InputEvent", ["type", "x", "y", "button", "delta",
-                                       "alt_key", "ctrl_key", "meta_key",
-                                       "shift_key", "key_code"])
-GestureEvent = namedtuple("GestureEvent", ["type", "x", "y", "dx", "dy",
+ConfigEvent = namedtuple("ConfigEvent", ["type", "id", "width", "height"])
+InputEvent = namedtuple("InputEvent", ["type", "id", "x", "y", "button",
+                                       "delta", "alt_key", "ctrl_key",
+                                       "meta_key", "shift_key", "key_code"])
+GestureEvent = namedtuple("GestureEvent", ["type", "id", "x", "y", "dx", "dy",
                                            "distance",
                                            "theta", "direction", "vx", "vy",
                                            "scale", "rotation", "isfirst",
@@ -54,12 +32,15 @@ class PantographHandler(tornado.websocket.WebSocketHandler):
             ioloop = IOLoop.current()
         self.my_ioloop = ioloop
 
+        # self.settings defined in subclass
+        print(self.settings)
         interval = self.settings.get("timer_interval", DEFAULT_INTERVAL)
         if self.name in self.settings:
             interval = self.settings[self.name].get("timer_interval", interval)
         self.interval = interval
 
         self.event_callbacks = {
+            "setbounds": (self.on_canvas_init, ConfigEvent),
             "mousedown": (self.on_mouse_down, InputEvent),
             "mouseup": (self.on_mouse_up, InputEvent),
             "mousemove": (self.on_mouse_move, InputEvent),
@@ -75,6 +56,7 @@ class PantographHandler(tornado.websocket.WebSocketHandler):
             "keypress": (self.on_key_press, InputEvent),
             "resize": (self.on_resize, InputEvent),
             "focus": (self.on_focus, InputEvent),
+            "focusout": (self.on_blur, InputEvent),
             "blur": (self.on_blur, InputEvent),
             "drop": (self.on_drop, InputEvent),
             #"paste": (self.on_paste, InputEvent),
@@ -84,18 +66,6 @@ class PantographHandler(tornado.websocket.WebSocketHandler):
             "pan": (self.on_pan, GestureEvent),
             "swipe": (self.on_swipe, GestureEvent),
             }
-
-    def on_canvas_init(self, message):
-        self.width = message["width"]
-        self.height = message["height"]
-        # randomize the first timeout so we don't get every timer
-        # expiring at the same time
-        interval = random.randint(1, self.interval)
-        delta = datetime.timedelta(milliseconds = interval)
-        self.timeout = self.my_ioloop.add_timeout(delta, self.timer_tick)
-
-        self.setup()
-        self.do_operation("refresh")
 
     def on_open(self, *args, **kwdargs):
         self.set_nodelay(True)
@@ -107,17 +77,15 @@ class PantographHandler(tornado.websocket.WebSocketHandler):
         message = json.loads(raw_message)
         event_type = message.get("type")
 
-        if event_type == "setbounds":
-            self.on_canvas_init(message)
-        else:
-            try:
-                method, EventClass = self.event_callbacks[event_type]
-            except KeyError:
-                print("I don't know how to process '%s' events!" % (
-                    event_type))
-                return
+        try:
+            method, EventClass = self.event_callbacks[event_type]
 
-            method(EventClass(**message))
+        except KeyError:
+            print("I don't know how to process '%s' events!" % (
+                event_type))
+            return
+
+        method(EventClass(**message))
 
     def do_operation(self, operation, **kwargs):
         message = dict(kwargs, operation=operation)
@@ -126,7 +94,7 @@ class PantographHandler(tornado.websocket.WebSocketHandler):
 
     def draw(self, shape_type, **kwargs):
         shape = dict(kwargs, type=shape_type)
-        self.do_operation("draw", shape=shape)
+        self.do_operation("draw_canvas", shape=shape)
 
     def draw_rect(self, x, y, width, height, color = "#000", **extra):
         self.draw("rect", x=x, y=y, width=width, height=height,
@@ -167,11 +135,12 @@ class PantographHandler(tornado.websocket.WebSocketHandler):
 
     def draw_image(self, img_name, x, y, width=None, height=None,
                    buffer=None, **extra):
-        if buffer is not None:
-            imgString = binascii.b2a_base64(buffer)
-            if isinstance(imgString, bytes):
-                imgString = imgString.decode("utf-8")
-            img_src = 'data:image/png;base64,' + imgString
+        if not (buffer is None):
+            img_string = binascii.b2a_base64(buffer)
+            if isinstance(img_string, bytes):
+                img_string = img_string.decode("utf-8")
+                #print("decoded bytes to utf-8")
+            img_src = 'data:image/png;base64,' + img_string
 
         else:
             app_path = os.path.join("./images", img_name)
@@ -190,7 +159,7 @@ class PantographHandler(tornado.websocket.WebSocketHandler):
 
     def timer_tick(self):
         self.update()
-        self.do_operation("refresh")
+        self.do_operation("refresh_canvas")
         delta = datetime.timedelta(milliseconds = self.interval)
         self.timeout = self.my_ioloop.add_timeout(delta, self.timer_tick)
 
@@ -199,6 +168,18 @@ class PantographHandler(tornado.websocket.WebSocketHandler):
 
     def update(self):
         pass
+
+    def on_canvas_init(self, event):
+        self.width = event.width
+        self.height = event.height
+        # randomize the first timeout so we don't get every timer
+        # expiring at the same time
+        interval = random.randint(1, self.interval)
+        delta = datetime.timedelta(milliseconds = interval)
+        self.timeout = self.my_ioloop.add_timeout(delta, self.timer_tick)
+
+        self.setup()
+        self.do_operation("refresh_canvas")
 
     def on_mouse_down(self, event):
         pass
@@ -259,3 +240,103 @@ class PantographHandler(tornado.websocket.WebSocketHandler):
 
     def on_tap(self, event):
         pass
+
+
+WidgetEvent = namedtuple("WidgetEvent", ["type", "id", "value"])
+TimerEvent = namedtuple("TimerEvent", ["type", "id", "value"])
+
+class ApplicationHandler(tornado.websocket.WebSocketHandler):
+
+    def initialize(self, name, app):
+        #print(("initialize", name, app))
+        self.name = name
+        self.app = app
+        self.app.ws_handler = self
+
+        self.event_callbacks = {
+            "activate": WidgetEvent,
+            "setbounds": ConfigEvent,
+            "mousedown": InputEvent,
+            "mouseup": InputEvent,
+            "mousemove": InputEvent,
+            "mouseout": InputEvent,
+            "mouseover": InputEvent,
+            "mousewheel": InputEvent,
+            "DOMMouseScroll": InputEvent,
+            "wheel": InputEvent,
+            "click": InputEvent,
+            "dblclick": InputEvent,
+            "keydown": InputEvent,
+            "keyup": InputEvent,
+            "keypress": InputEvent,
+            "resize": InputEvent,
+            "focus": InputEvent,
+            "focusout": InputEvent,
+            "blur": InputEvent,
+            "drop": InputEvent,
+            #"paste": InputEvent,
+            "pinch": GestureEvent,
+            "rotate": GestureEvent,
+            "tap": GestureEvent,
+            "pan": GestureEvent,
+            "swipe": GestureEvent,
+            }
+
+        #self.interval = 10
+        interval = self.settings.get("timer_interval", DEFAULT_INTERVAL)
+        if self.name in self.settings:
+            interval = self.settings[self.name].get("timer_interval", interval)
+        self.interval = interval
+
+        # randomize the first timeout so we don't get every timer
+        # expiring at the same time
+        interval = random.randint(1, self.interval)
+        delta = datetime.timedelta(milliseconds=interval)
+        self.timeout = IOLoop.current().add_timeout(delta, self.timer_tick)
+
+    def add_event_type(self, msg_type, event_class):
+        self.event_callbacks[msg_type] = event_class
+
+    def on_open(self, *args, **kwdargs):
+        self.set_nodelay(True)
+
+    def on_close(self):
+        IOLoop.current().remove_timeout(self.timeout)
+
+    def on_message(self, raw_message):
+        message = json.loads(raw_message)
+        event_type = message.get("type")
+
+        try:
+            event_class = self.event_callbacks[event_type]
+
+        except KeyError:
+            print("I don't know how to process '%s' events!" % (
+                event_type))
+            return
+
+        event = event_class(**message)
+        self.app.widget_event(event)
+
+    def do_operation(self, operation, **kwargs):
+        message = dict(kwargs, operation=operation)
+        raw_message = json.dumps(message)
+        self.write_message(raw_message)
+
+    def timer_tick(self):
+        event = TimerEvent(type="timer", id=0, value=time.time())
+        # TODO: should exceptions thrown from this be caught and ignored
+        self.app.widget_event(event)
+
+        delta = datetime.timedelta(milliseconds = self.interval)
+        self.timeout = IOLoop.current().add_timeout(delta, self.timer_tick)
+
+    def on_canvas_init(self, event):
+        self.width = event.width
+        self.height = event.height
+
+        self.setup()
+        self.do_operation("refresh_canvas")
+
+    def update(self):
+        self.do_operation("refresh_canvas")

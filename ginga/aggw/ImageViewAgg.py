@@ -90,16 +90,9 @@ class ImageViewAgg(ImageView.ImageViewBase):
         # inform the base class about the actual window size
         self.configure(width, height)
 
-    def get_rgb_image_as_buffer(self, output=None, format='png', quality=90):
-        if not have_PIL:
-            raise ImageViewAggError("Please install PIL to use this method")
-
+    def get_image_as_array(self):
         if self.surface is None:
             raise ImageViewAggError("No AGG surface defined")
-
-        ibuf = output
-        if ibuf is None:
-            ibuf = BytesIO()
 
         # TODO: could these have changed between the time that self.surface
         # was last updated?
@@ -109,14 +102,44 @@ class ImageViewAgg(ImageView.ImageViewBase):
         surface = self.get_surface()
         arr8 = numpy.fromstring(surface.tostring(), dtype=numpy.uint8)
         arr8 = arr8.reshape((ht, wd, 4))
+        return arr8
+
+    def get_image_as_buffer(self, output=None):
+        if self.surface is None:
+            raise ImageViewAggError("No AGG surface defined")
+
+        obuf = output
+        if obuf is None:
+            obuf = BytesIO()
+
+        surface = self.get_surface()
+        obuf.write(surface.tostring())
+
+        if not (output is None):
+            return None
+        return obuf.getvalue()
+
+    def get_rgb_image_as_buffer(self, output=None, format='png', quality=90):
+        if not have_PIL:
+            raise ImageViewAggError("Please install PIL to use this method")
+
+        if self.surface is None:
+            raise ImageViewAggError("No AGG surface defined")
+
+        obuf = output
+        if obuf is None:
+            obuf = BytesIO()
+
+        # Get current surface as an array
+        arr8 = self.get_image_as_array()
 
         # make a PIL image
         image = PILimage.fromarray(arr8)
 
-        image.save(ibuf, format=format, quality=quality)
-        if output is not None:
+        image.save(obuf, format=format, quality=quality)
+        if not (output is None):
             return None
-        return ibuf.getvalue()
+        return obuf.getvalue()
 
     def get_rgb_image_as_bytes(self, format='png', quality=90):
         buf = self.get_rgb_image_as_buffer(format=format, quality=quality)

@@ -90,21 +90,47 @@ class ImageViewPil(ImageView.ImageViewBase):
         if self.surface is None:
             raise ImageViewPilError("No PIL surface defined")
 
-        ibuf = output
-        if ibuf is None:
-            ibuf = BytesIO()
+        obuf = output
+        if obuf is None:
+            obuf = BytesIO()
 
         # TODO: could these have changed between the time that self.surface
         # was last updated?
         wd, ht = self.get_window_size()
 
-        # Get agg surface as a numpy array
+        # Get PIL surface
         p_image = self.get_surface()
 
-        p_image.save(ibuf, format=format, quality=quality)
+        p_image.save(obuf, format=format, quality=quality)
         if output is not None:
             return None
-        return ibuf.getvalue()
+        return obuf.getvalue()
+
+    def get_image_as_array(self):
+        if self.surface is None:
+            raise ImageViewPilError("No PIL surface defined")
+
+        # TODO: could these have changed between the time that self.surface
+        # was last updated?
+        wd, ht = self.get_window_size()
+
+        # Get PIL surface
+        p_image = self.get_surface()
+        arr8 = numpy.array(p_image, dtype=numpy.uint8)
+        #arr8 = arr8.reshape((ht, wd, 4))
+        return arr8
+
+    def get_image_as_buffer(self, output=None):
+        obuf = output
+        if obuf is None:
+            obuf = BytesIO()
+
+        arr8 = self.get_image_as_array()
+        obuf.write(arr8.tostring(order='C'))
+
+        if not (output is None):
+            return None
+        return obuf.getvalue()
 
     def get_rgb_image_as_bytes(self, format='png', quality=90):
         buf = self.get_rgb_image_as_buffer(format=format, quality=quality)

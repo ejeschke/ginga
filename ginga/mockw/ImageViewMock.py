@@ -140,6 +140,12 @@ class ImageViewMock(ImageView.ImageViewBase):
                                          output=output)
         return fmt_buf
 
+    def get_image_as_buffer(self, output=None):
+        return self.get_rgb_image_as_buffer(self, output=output)
+
+    def get_image_as_array(self):
+        return self.getwin_array(order=self.get_rgb_order())
+
     def get_rgb_image_as_bytes(self, format='png', quality=90):
         buf = self.get_rgb_image_as_buffer(format=format, quality=quality)
         return buf

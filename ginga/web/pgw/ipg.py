@@ -69,7 +69,7 @@ class ViewerWidget(RenderWidgetZoom):
         self.viewer_factory = factory
         self.thread_pool = factory.get_threadpool()
 
-        super(ViewerWidget, self).initialize(name)
+        super(ViewerWidget, self).initialize(name, factory)
         self.logger.info("Interval is %f" % (self.interval))
         self.interval = 10
 
@@ -333,22 +333,6 @@ class WebServer(object):
         url = "%s?id=%s" % (self.url_base, v_id)
         display(HTML('<a href="%s">link to viewer</a>' % url))
         return v
-
-
-def showplt():
-    from io import BytesIO
-    import matplotlib
-    # Hack to force matplotlib to not use any Xwindows backend.
-    matplotlib.use('Agg')
-    import matplotlib.pyplot as plt
-    from IPython.display import Image
-
-    buf = BytesIO()
-    plt.savefig(buf, bbox_inches=0)
-    img = Image(data=bytes(buf.getvalue()),
-                   format='png', embed=True)
-    buf.close()
-    return img
 
 
 def make_server(logger=None, basedir='.', numthreads=5,

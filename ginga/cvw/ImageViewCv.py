@@ -100,6 +100,25 @@ class ImageViewCv(ImageView.ImageViewBase):
         # inform the base class about the actual window size
         self.configure(width, height)
 
+    def get_image_as_array(self):
+        if self.surface is None:
+            raise ImageViewCvError("No OpenCv surface defined")
+
+        arr8 = self.get_surface()
+        return numpy.copy(arr8)
+
+    def get_image_as_buffer(self, output=None):
+        obuf = output
+        if obuf is None:
+            obuf = BytesIO()
+
+        arr8 = self.get_image_as_array()
+        obuf.write(arr8.tostring(order='C'))
+
+        if not (output is None):
+            return None
+        return obuf.getvalue()
+
     def get_rgb_image_as_buffer(self, output=None, format='png', quality=90):
         if not have_PIL:
             raise ImageViewCvError("Please install PIL to use this method")
