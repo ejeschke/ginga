@@ -63,6 +63,7 @@ class FitsViewer(QtGui.QMainWindow):
         #fi.add(canvas)
         fi.get_canvas().add(canvas)
         canvas.ui_setActive(True)
+        canvas.register_for_cursor_drawing(fi)
         self.drawtypes = canvas.get_drawtypes()
         self.drawtypes.sort()
 
