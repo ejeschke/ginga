@@ -143,8 +143,6 @@ def use(wcspkg, raise_err=True):
         try:
             import astropy.wcs as pywcs
             from astropy.io import fits as pyfits
-            from astropy.version import version
-            print("astropy version is %s" % version)
             have_pywcs = True
         except ImportError:
             try:
