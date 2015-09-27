@@ -3,19 +3,26 @@ from ginga.misc import Widgets, Plot
 
 import numpy as np
 
+
 class LineProfile(GingaPlugin.LocalPlugin):
 
     def __init__(self, fv, fitsimage):
         super(LineProfile, self).__init__(fv, fitsimage)
 
+        self.image = None
         self.layertag = 'lineprofile-canvas'
         self.raster_file = False
         self.pan2mark = False
+        self.wd = None
+        self.ht = None
 
         self.dc = self.fv.getDrawClasses()
         canvas = self.dc.DrawingCanvas()
+        canvas.enable_draw(True)
+        canvas.add_draw_mode('move', move=self.drag, up=self.update, down=self.btndown_cb)
+        canvas.register_for_cursor_drawing(self.fitsimage)
+        canvas.set_draw_mode('move')
         canvas.add_callback('motion', self.motion_cb)
-        canvas.set_callback('cursor-down', self.btndown_cb)
         canvas.setSurface(self.fitsimage)
         self.canvas = canvas
 
@@ -169,9 +176,9 @@ class LineProfile(GingaPlugin.LocalPlugin):
 
         # Clear plot if no axis is enabled
         if True not in self.axes_states:
-            self.redraw_plot('clear')
+            self.clear_plot()
         else:
-            self.redraw_plot('redraw')
+            self.redraw_mark()
 
     def instructions(self):
         self.tw.set_text("""Select an axis and pick a point using the cursor. Left-click to mark position.
@@ -213,6 +220,9 @@ Use MultiDim to change step values of axes.""")
     def redo(self):
         # Get image being shown
         self.image = self.fitsimage.get_image()
+        if self.image is None:
+            return
+        self.wd, self.ht = self.image.get_size()
 
         try:
             curr_axis = self.axes_states
@@ -223,26 +233,26 @@ Use MultiDim to change step values of axes.""")
             for p, val in enumerate(curr_axis):
                 if val is True:
                     children[p-1].set_state(True)
+
+            if len(self.marks) > 1:
+                self.del_all_btn.set_enabled(True)
         except AttributeError:
             self.build_axes()
 
     def motion_cb(self, canvas, button, data_x, data_y):
-        if self.image is None:
-            return
-
-        self.xcoord = data_x
-        self.ycoord = data_y
-
-        # Exclude points outside boundaries
-        wd, ht = self.image.get_size()
-        if 0 <= self.xcoord < wd and 0 <= self.ycoord < ht:
-            if self.mark_selected is None:
-                self._plot(mark=None)
+        if self.mark_selected is None:
+            if not 0 <= data_x < self.wd or not 0 <= data_y < self.ht:
+                self.clear_plot()
             else:
-                self.redraw_plot('redraw')
+                self._plot(data_x, data_y, mark=None)
         return False
 
-    def _plot(self, mark=None):
+    def _plot(self, data_x, data_y, mark=None):
+        # Exclude points outside boundaries
+        if not 0 <= data_x < self.wd or not 0 <= data_y < self.ht:
+            self.clear_plot()
+            return
+
         # Transpose array for easier slicing
         mddata = self.image.get_mddata().T
         naxes = mddata.ndim
@@ -251,12 +261,12 @@ Use MultiDim to change step values of axes.""")
 
         if self.enabled_axes:
             axis_data = self.get_axis(self.enabled_axes[0])
-            axes_slice = self._slice(naxes, mk=mark)
+            axes_slice = self._slice(naxes, data_x, data_y, mk=mark)
 
-            self.plot.clear()
+            self.clear_plot()
             self.plot.plot(axis_data, mddata[axes_slice])
 
-    def _slice(self, naxes, mk=None):
+    def _slice(self, naxes, data_x, data_y, mk):
         # Build N-dim slice
         axes_slice = [0] * naxes
 
@@ -265,10 +275,10 @@ Use MultiDim to change step values of axes.""")
             axes_slice[0] = self.mark_data_x[mk]
             axes_slice[1] = self.mark_data_y[mk]
         else:
-            axes_slice[0] = self.xcoord
-            axes_slice[1] = self.ycoord
+            axes_slice[0] = data_x
+            axes_slice[1] = data_y
 
-        # For axes 3 onwards
+        # For axis > 3
         for i in xrange(2, naxes):
             axes_slice[i] = self.image.revnaxis[i-2] + 1
 
@@ -290,17 +300,13 @@ Use MultiDim to change step values of axes.""")
             self.logger.error(errmsg)
             self.fv.error(errmsg)
 
-    def redraw_plot(self, mode):
-        if mode == 'clear':
-            self.plot.clear()
-            self.plot.fig.canvas.draw()
-        elif mode == 'redraw':
-            idx = int(self.mark_selected.strip('mark'))
-            self._plot(mark=idx)
+    def clear_plot(self):
+        self.plot.clear()
+        self.plot.fig.canvas.draw()
 
     ### MARK FEATURE LOGIC ###
 
-    def btndown_cb(self, canvas, event, data_x, data_y):
+    def btndown_cb(self, canvas, event, data_x, data_y, viewer):
         if self.image is None or self.mark_selected:
             return
 
@@ -310,6 +316,32 @@ Use MultiDim to change step values of axes.""")
 
         self.del_btn.set_enabled(True)
         self.del_all_btn.set_enabled(True)
+        return True
+
+    def drag(self, canvas, event, data_x, data_y, viewer):
+        tag = self.mark_selected
+        if tag is None:
+            return
+        obj = self.canvas.getObjectByTag(tag)
+        obj.move_to(data_x, data_y)
+
+        canvas.redraw(whence=3)
+        return True
+
+    def update(self, canvas, event, data_x, data_y, viewer):
+        tag = self.mark_selected
+        if tag is None:
+            return
+        idx = int(tag.strip('mark'))
+        obj = self.canvas.getObjectByTag(tag)
+        obj.move_to(data_x, data_y)
+
+        canvas.redraw(whence=3)
+
+        self.mark_data_x[idx] = data_x
+        self.mark_data_y[idx] = data_y
+
+        self.redraw_mark()
         return True
 
     def add_mark(self, data_x, data_y, radius=None, color=None, style=None):
@@ -357,14 +389,19 @@ Use MultiDim to change step values of axes.""")
             self.fitsimage.panset_xy(obj.objects[0].x, obj.objects[0].y)
         self.canvas.redraw(whence=3)
 
-        idx = int(tag.strip('mark'))
-        self._plot(mark=idx)
+        self.redraw_mark()
+
+    def redraw_mark(self):
+        if self.mark_selected is None:
+            return
+        idx = int(self.mark_selected.strip('mark'))
+        self._plot(self.mark_data_x[idx], self.mark_data_y[idx], mark=idx)
 
     def mark_select_cb(self, w, index):
         tag = self.marks[index]
         if index == 0:
             tag = None
-            self.redraw_plot(mode='clear')
+            self.clear_plot()
             self.del_btn.set_enabled(False)
         else:
             self.del_btn.set_enabled(True)
@@ -376,16 +413,16 @@ Use MultiDim to change step values of axes.""")
 
     def clear_mark_cb(self):
         tag = self.mark_selected
-        idx = int(tag.strip('mark'))
         if tag is None:
             return
+        idx = int(tag.strip('mark'))
         self.canvas.deleteObjectByTag(tag)
         self.w.marks.delete_alpha(tag)
         self.marks.remove(tag)
         self.w.marks.set_index(0)
         self.mark_selected = None
 
-        self.redraw_plot(mode='clear')
+        self.clear_plot()
 
         self.mark_data_x[idx] = None
         self.mark_data_y[idx] = None
@@ -405,7 +442,7 @@ Use MultiDim to change step values of axes.""")
         self.mark_data_x = [None]
         self.mark_data_y = [None]
 
-        self.redraw_plot(mode='clear')
+        self.clear_plot()
 
         self.del_btn.set_enabled(False)
         self.del_all_btn.set_enabled(False)
