@@ -17,7 +17,6 @@ from ginga import AstroImage, colors
 from ginga.qtw.ImageViewCanvasQt import ImageViewCanvas
 from ginga.qtw.ImageViewQt import CanvasView
 from ginga.canvas.CanvasObject import get_canvas_types
-from ginga.util.toolbox import ModeIndicator
 from ginga.misc import log
 
 STD_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcName)s) | %(message)s'
@@ -57,17 +56,18 @@ class FitsViewer(QtGui.QMainWindow):
         self.canvas = canvas
         # add canvas to view
         #fi.add(canvas)
-        fi.get_canvas().add(canvas)
+        private_canvas = fi.get_canvas()
+        private_canvas.add(canvas)
         canvas.ui_setActive(True)
         self.drawtypes = canvas.get_drawtypes()
         self.drawtypes.sort()
 
         # add a color bar
-        fi.private_canvas.add(self.dc.ColorBar(side='bottom', offset=10))
+        private_canvas.add(self.dc.ColorBar(side='bottom', offset=10))
 
         # add little mode indicator that shows modal states in
         # lower left hand corner
-        fi.private_canvas.add(self.dc.ModeIndicator(corner='ur'))
+        private_canvas.add(self.dc.ModeIndicator(corner='ur'))
         # little hack necessary to get correct operation of the mode indicator
         # in all circumstances
         bm = fi.get_bindmap()

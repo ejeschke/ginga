@@ -163,6 +163,8 @@ class ColorBar(CanvasObjectBase):
 
         # draw range
         if self.showrange:
+            cr.set_font(self.font, self.fontsize, color=self.color,
+                    alpha=self.alpha)
             for (cx, cy, cyy, text) in range_pts:
                 # tick
                 cr.draw_line(cx, cyy, cx, cyy+self.tick_ht)

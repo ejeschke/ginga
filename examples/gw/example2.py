@@ -53,19 +53,28 @@ class FitsViewer(object):
         bd = fi.get_bindings()
         bd.enable_all(True)
 
+        # add a color bar
+        fi.private_canvas.add(self.dc.ColorBar(side='bottom', offset=10))
+
         # add little mode indicator that shows modal states in
         # lower left hand corner
-        self._mi = ModeIndicator(fi)
+        fi.private_canvas.add(self.dc.ModeIndicator(corner='ur', fontsize=14))
+        # little hack necessary to get correct operation of the mode indicator
+        # in all circumstances
+        bm = fi.get_bindmap()
+        bm.add_callback('mode-set', lambda *args: fi.redraw(whence=3))
 
         # canvas that we will draw on
         canvas = self.dc.DrawingCanvas()
         canvas.enable_draw(True)
+        canvas.enable_edit(True)
         canvas.set_drawtype('rectangle', color='lightblue')
         canvas.setSurface(fi)
         self.canvas = canvas
         # add canvas to view
         fi.get_canvas().add(canvas)
         canvas.ui_setActive(True)
+        canvas.register_for_cursor_drawing(fi)
         self.drawtypes = canvas.get_drawtypes()
         self.drawtypes.sort()
 
@@ -117,6 +126,27 @@ class FitsViewer(object):
                   Widgets.Label('Alpha:'), walpha, wclear, wquit):
             hbox.add_widget(w, stretch=0)
 
+        vbox.add_widget(hbox, stretch=0)
+
+        mode = self.canvas.get_draw_mode()
+        hbox = Widgets.HBox()
+        btn1 = Widgets.RadioButton("Draw")
+        btn1.set_state(mode == 'draw')
+        btn1.add_callback('activated', lambda w, val: self.set_mode_cb('draw', val))
+        btn1.set_tooltip("Choose this to draw on the canvas")
+        hbox.add_widget(btn1)
+
+        btn2 = Widgets.RadioButton("Edit", group=btn1)
+        btn2.set_state(mode == 'edit')
+        btn2.add_callback('activated', lambda w, val: self.set_mode_cb('edit', val))
+        btn2.set_tooltip("Choose this to edit things on the canvas")
+        hbox.add_widget(btn2)
+
+        btn3 = Widgets.CheckBox("I'm using a trackpad")
+        btn3.add_callback('activated', lambda w, tf: self.use_trackpad_cb(tf))
+        hbox.add_widget(btn3)
+
+        hbox.add_widget(Widgets.Label(''), stretch=1)
         vbox.add_widget(hbox, stretch=0)
 
         self.top.set_widget(vbox)
@@ -195,6 +225,19 @@ class FitsViewer(object):
         text = "RA: %s  DEC: %s  X: %.2f  Y: %.2f  Value: %s" % (
             ra_txt, dec_txt, fits_x, fits_y, value)
         self.readout.set_text(text)
+
+    def set_mode_cb(self, mode, tf):
+        self.logger.info("canvas mode changed (%s) %s" % (mode, tf))
+        if not (tf is False):
+            self.canvas.set_draw_mode(mode)
+        return True
+
+    def use_trackpad_cb(self, state):
+        settings = self.fitsimage.get_bindings().get_settings()
+        val = 1.0
+        if state:
+            val = 0.1
+        settings.set(scroll_zoom_acceleration=val)
 
     def closed(self, w):
         self.logger.info("Top window closed.")

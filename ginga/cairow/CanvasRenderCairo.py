@@ -106,6 +106,7 @@ class RenderContext(object):
     def set_font(self, fontname, fontsize, color='black', alpha=1.0):
         self.cr.select_font_face(fontname)
         self.cr.set_font_size(fontsize)
+        self._set_color(color, alpha=alpha)
 
     def text_extents(self, text):
         a, b, wd, ht, i, j = self.cr.text_extents(text)
