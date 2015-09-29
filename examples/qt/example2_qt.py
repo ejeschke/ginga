@@ -49,10 +49,6 @@ class FitsViewer(QtGui.QMainWindow):
         bd = fi.get_bindings()
         bd.enable_all(True)
 
-        # add little mode indicator that shows modal states in
-        # lower left hand corner
-        self._mi = ModeIndicator(fi)
-
         # canvas that we will draw on
         canvas = self.dc.DrawingCanvas()
         canvas.enable_draw(True)
@@ -65,6 +61,17 @@ class FitsViewer(QtGui.QMainWindow):
         canvas.ui_setActive(True)
         self.drawtypes = canvas.get_drawtypes()
         self.drawtypes.sort()
+
+        # add a color bar
+        fi.private_canvas.add(self.dc.ColorBar(side='bottom', offset=10))
+
+        # add little mode indicator that shows modal states in
+        # lower left hand corner
+        fi.private_canvas.add(self.dc.ModeIndicator(corner='ur'))
+        # little hack necessary to get correct operation of the mode indicator
+        # in all circumstances
+        bm = fi.get_bindmap()
+        bm.add_callback('mode-set', lambda *args: fi.redraw(whence=3))
 
         w = fi.get_widget()
         w.resize(512, 512)

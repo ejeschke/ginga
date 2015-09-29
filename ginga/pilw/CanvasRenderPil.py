@@ -75,9 +75,9 @@ class RenderContext(object):
         else:
             self.brush = self.cr.get_brush(color, alpha=alpha)
 
-    def set_font(self, fontname, fontsize):
-        self.font = self.cr.get_font(fontname, fontsize, 'black',
-                                     alpha=1.0)
+    def set_font(self, fontname, fontsize, color='black', alpha=1.0):
+        self.font = self.cr.get_font(fontname, fontsize, color,
+                                     alpha=alpha)
 
     def text_extents(self, text):
         return self.cr.text_extents(text, self.font)

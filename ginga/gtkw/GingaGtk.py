@@ -1,5 +1,5 @@
 #
-# GingaGtk.py -- Gtk display handler for the Ginga FITS tool.
+# GingaGtk.py -- Gtk display handler for the Ginga reference viewer.
 #
 # Eric Jeschke (eric@naoj.org)
 #

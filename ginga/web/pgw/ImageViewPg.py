@@ -1,6 +1,6 @@
 #
 # ImageViewPg.py -- classes for the display of FITS files in web browsers
-#                        using the pantograph module
+#                        using javascript/HTML5 canvas/websockets
 #
 # Eric Jeschke (eric@naoj.org)
 #
@@ -27,15 +27,15 @@ try:
 
 except ImportError:
     try:
-        # No, hmm..ok, see if we have opencv module...
-        from ginga.cvw.ImageViewCv import ImageViewCv as ImageView, \
-             ImageViewCvError as ImageViewError
+        # No, hmm..ok, see if we have PIL module...
+        from ginga.pilw.ImageViewPil import ImageViewPil as ImageView, \
+             ImageViewPilError as ImageViewError
 
     except ImportError:
         try:
-            # No dice. How about the PIL module?
-            from ginga.pilw.ImageViewPil import ImageViewPil as ImageView, \
-                 ImageViewPilError as ImageViewError
+            # No dice. How about the OpenCv module?
+            from ginga.cvw.ImageViewCv import ImageViewCv as ImageView, \
+                 ImageViewCvError as ImageViewError
 
         except ImportError:
             # Fall back to mock--there will be no graphic overlays
@@ -56,7 +56,8 @@ class ImageViewPg(ImageView):
         self.pgcanvas = None
 
         # format for rendering image on HTML5 canvas
-        # NOTE: 'jpeg' has much better performance than 'png'
+        # NOTE: 'jpeg' has much better performance than 'png', but can show
+        # some artifacts, especially noticeable with small text
         self.t_.setDefaults(html5_canvas_format='jpeg')
 
         #self.defer_redraw = False
@@ -81,13 +82,12 @@ class ImageViewPg(ImageView):
         try:
             self.logger.debug("getting image as buffer...")
             format = self.t_.get('html5_canvas_format', 'jpeg')
-            buf = self.get_rgb_image_as_buffer(format=format)
-            #buf = self.get_image_as_buffer()
-            self.logger.info("got '%s' RGB image buffer, len=%d" % (
+            buf = self.get_rgb_image_as_buffer(format=format, quality=90)
+            self.logger.debug("got '%s' RGB image buffer, len=%d" % (
                 format, len(buf)))
 
             self.pgcanvas.do_update(buf)
-            self.logger.debug("informed update")
+
         except Exception as e:
             self.logger.error("Couldn't update canvas: %s" % (str(e)))
 
@@ -117,13 +117,16 @@ class ImageViewPg(ImageView):
     def configure_window(self, width, height):
         self.configure_surface(width, height)
 
+    def map_event(self, event):
+        self.configure_window(event.width, event.height)
+        self.redraw(whence=0)
+
     def resize_event(self, event):
         wd, ht = event.x, event.y
         # Not yet ready for prime-time--browser seems to mess with the
         # aspect ratio
         self.configure_window(wd, ht)
-
-        self.viewer.redraw(whence=0)
+        self.redraw(whence=0)
 
 
 class ImageViewEvent(ImageViewPg):

@@ -128,7 +128,9 @@ class ImageViewBindings(object):
             #sc_draw = ['draw+scroll'],
 
             scroll_pan_acceleration = 1.0,
+            # 1.0 is appropriate for a mouse, 0.1 for most trackpads
             scroll_zoom_acceleration = 1.0,
+            #scroll_zoom_acceleration = 0.1,
             mouse_zoom_acceleration = 1.085,
             mouse_rotate_acceleration = 0.75,
             pan_reverse = False,
@@ -167,6 +169,9 @@ class ImageViewBindings(object):
             pinch_zoom_acceleration = 1.0,
             pinch_rotate_acceleration = 1.0,
             )
+
+    def get_settings(self):
+        return self.settings
 
     def window_map(self, viewer):
         self.to_default_mode(viewer)
@@ -1209,7 +1214,7 @@ class ImageViewBindings(object):
             self._adjust_cuts(viewer, event.direction, 0.001, msg=msg)
         return True
 
-    def sc_zoom(self, viewer, event, msg=True):
+    def sc_zoom_old(self, viewer, event, msg=True):
         """Interactively zoom the image by scrolling motion.
         This zooms by the zoom steps configured under Preferences.
         """
@@ -1226,6 +1231,9 @@ class ImageViewBindings(object):
                                            delay=0.4)
         return True
 
+    def sc_zoom(self, viewer, event, msg=True):
+        return self.sc_zoom_coarse(viewer, event, msg=msg)
+
     def sc_zoom_coarse(self, viewer, event, msg=True):
         """Interactively zoom the image by scrolling motion.
         This zooms by adjusting the scale in x and y coarsely.
@@ -1233,7 +1241,7 @@ class ImageViewBindings(object):
         if self.canzoom:
             zoom_accel = self.settings.get('scroll_zoom_acceleration', 1.0)
             amount = zoom_accel * 0.20
-            self._scale_image(viewer, event.direction, event.amount, msg=msg)
+            self._scale_image(viewer, event.direction, amount, msg=msg)
         return True
 
     def sc_zoom_fine(self, viewer, event, msg=True):

@@ -1,34 +1,86 @@
 
-make_pantograph = function (canvas, id, socket) {
+ginga_make_application = function (ws_url) {
+        
+    var ginga_app = {};
     
-    var pantograph = {};
+    ginga_app.socket = new WebSocket(ws_url);
+    ginga_app.canvases = {}
+    ginga_app.debug = false
+    
+    ginga_app.send_pkt = function (message) {
+        var ws = ginga_app.socket;
+        ws.send(JSON.stringify(message));
+        };
+    
+    ginga_app.widget_handler = function (id, value) {
+        if (ginga_app.debug) console.log("callback for widget changed");
+        var ws = ginga_app.socket;
+        var message = {
+            type: "activate",
+            id: id,
+            value: value,
+        }
+        ginga_app.send_pkt(message);
+    }
+    
+    ginga_app.socket.onopen = function(e) {
+        // initialize all our canvases
+        for (var key in ginga_app.canvases) {
+            ginga_app.canvases[key].initialize_canvas(e)
+        }
+    }
+  
+    ginga_app.socket.onmessage = function(e) {
+        message = JSON.parse(e.data);
+        if (message.operation == "update_value") {
+            // update widget value
+            document.getElementById(message.id).value = message.value;
+        }
+        else if (message.operation == "update_label") {
+            // update widget value
+            if (ginga_app.debug) console.log("updating element");
+            document.getElementById(message.id).innerHTML = message.value;
+        }
+        else if (message.operation == "refresh_canvas") {
+            if (ginga_app.debug) console.log("refreshing canvas");
+            ginga_app.canvases[message.id].redrawCanvas();
+        }
+        else if (message.operation == "draw_canvas") {
+            if (ginga_app.debug) console.log("drawing canvas");
+            ginga_app.canvases[message.id].drawShape(message["shape"]);
+        };
+    }
+
+    return ginga_app;
+}
+
+ginga_initialize_canvas = function (canvas, id, app) {
+    
+    var pg_canvas = {};
+
+    pg_canvas.canvas_id = id
+    pg_canvas.app = app
+    app.canvases[id] = pg_canvas
 
     // request animation frame from browser
-    pantograph.animFrame = window.requestAnimationFrame ||
+    pg_canvas.animFrame = window.requestAnimationFrame ||
         window.webkitRequestAnimationFrame ||
         window.mozRequestAnimationFrame ||
         window.oRequestAnimationFrame ||
         window.msRequestAnimationFrame;
     
-    // pantograph.socket = new WebSocket(ws_url);
-    pantograph.socket = socket
+    pg_canvas.send_pkt = app.send_pkt
     
-    pantograph.send_pkt = function (message) {
-        var ws = pantograph.socket;
-        ws.send(JSON.stringify(message));
-        };
+    pg_canvas.context = canvas.getContext("2d");
+    pg_canvas.hiddenCanvas = document.createElement("canvas");
+    pg_canvas.hiddenCanvas.width = canvas.width;
+    pg_canvas.hiddenCanvas.height = canvas.height;
+    pg_canvas.hiddenContext = pg_canvas.hiddenCanvas.getContext("2d");
     
-    pantograph.canvas_id = id
-    pantograph.context = canvas.getContext("2d");
-    pantograph.hiddenCanvas = document.createElement("canvas");
-    pantograph.hiddenCanvas.width = canvas.width;
-    pantograph.hiddenCanvas.height = canvas.height;
-    pantograph.hiddenContext = pantograph.hiddenCanvas.getContext("2d");
-    
-    pantograph.input_handler = function (e) {
+    pg_canvas.input_handler = function (e) {
         var message = {
             type: e.type || "",
-            id: pantograph.canvas_id,
+            id: pg_canvas.canvas_id,
             x: e.offsetX || e.clientX || 0,
             y: e.offsetY || e.clientY || 0,
             button: e.button || 0,
@@ -39,13 +91,13 @@ make_pantograph = function (canvas, id, socket) {
             shift_key: e.shiftKey || false,
             key_code: e.keyCode || e.which || 0
         }
-        pantograph.send_pkt(message);
+        pg_canvas.send_pkt(message);
     }
     
-    pantograph.input_handler_suppress = function (e) {
+    pg_canvas.input_handler_suppress = function (e) {
         var message = {
             type: e.type || "",
-            id: pantograph.canvas_id,
+            id: pg_canvas.canvas_id,
             x: e.offsetX || 0,
             y: e.offsetY || 0,
             button: e.button || 0,
@@ -57,13 +109,13 @@ make_pantograph = function (canvas, id, socket) {
             key_code: e.keyCode || 0
         }
         e.preventDefault();
-        pantograph.send_pkt(message);
+        pg_canvas.send_pkt(message);
     }
     
-    pantograph.input_handler_gesture = function (e) {
+    pg_canvas.input_handler_gesture = function (e) {
         var message = {
             type: e.type || "",
-            id: pantograph.canvas_id,
+            id: pg_canvas.canvas_id,
             x: e.srcEvent.offsetX || 0,
             y: e.srcEvent.offsetY || 0,
             dx: e.deltaX || 0,
@@ -79,16 +131,21 @@ make_pantograph = function (canvas, id, socket) {
             isfinal: e.isFinal || false
         }
         e.preventDefault();
-        pantograph.send_pkt(message);
+        pg_canvas.send_pkt(message);
     }
     
-    pantograph.input_handler_drop = function (e) {
+    pg_canvas.input_handler_focus = function (e) {
+	canvas.focus()
+	pg_canvas.input_handler(e)
+    }
+
+    pg_canvas.input_handler_drop = function (e) {
         e.preventDefault();
         var data = e.dataTransfer.getData("text/plain");
         //var data = e.dataTransfer.files;
         var message = {
             type: e.type || "",
-            id: pantograph.canvas_id,
+            id: pg_canvas.canvas_id,
             x: e.offsetX || 0,
             y: e.offsetY || 0,
             button: e.button || 0,
@@ -99,36 +156,36 @@ make_pantograph = function (canvas, id, socket) {
             shift_key: e.shiftKey || false,
             key_code: e.keyCode || 0
         }
-        pantograph.send_pkt(message);
+        pg_canvas.send_pkt(message);
     }
     
-    pantograph.input_handler_suppress_only = function (e) {
+    pg_canvas.input_handler_suppress_only = function (e) {
         e.preventDefault();
     }
     
-    pantograph.resize_window = function resize_canvas(e) {
+    pg_canvas.resize_window = function resize_canvas(e) {
         console.log("canvas is resized");
         e.preventDefault();
-        canvas = document.getElementById(pantograph.canvas_id);
+        canvas = document.getElementById(pg_canvas.canvas_id);
 
         // ack--this is bad--assumes the canvas size is the window size
-        width = window.innerWidth;
-        height = window.innerHeight;
+        // width = window.innerWidth;
+        // height = window.innerHeight;
     
-        canvas.width = width;
-        canvas.height = height;
+        // canvas.width = width;
+        // canvas.height = height;
 
         // canvas is auto-resized
-        //width = canvas.width;
-        //height = canvas.height;
+        width = canvas.width;
+        height = canvas.height;
     
         // now resize hidden backing canvas
-        pantograph.hiddenCanvas.width = width;
-        pantograph.hiddenCanvas.height = height;
+        pg_canvas.hiddenCanvas.width = width;
+        pg_canvas.hiddenCanvas.height = height;
     
         var message = {
             type: e.type || "",
-            id: pantograph.canvas_id,
+            id: pg_canvas.canvas_id,
             x: width || 0,
             y: height || 0,
             button: e.button || 0,
@@ -139,15 +196,15 @@ make_pantograph = function (canvas, id, socket) {
             shift_key: e.shiftKey || false,
             key_code: e.keyCode || 0
         }
-        pantograph.send_pkt(message);
+        pg_canvas.send_pkt(message);
         console.log("resized canvas");
     }
 
-    pantograph.redrawCanvas = function() {
-        var ctx = pantograph.context;
-        var hidCtx = pantograph.hiddenContext;
-        var hidCvs = pantograph.hiddenCanvas;
-        var animFrame = pantograph.animFrame;
+    pg_canvas.redrawCanvas = function() {
+        var ctx = pg_canvas.context;
+        var hidCtx = pg_canvas.hiddenContext;
+        var hidCvs = pg_canvas.hiddenCanvas;
+        var animFrame = pg_canvas.animFrame;
     
         animFrame(function () {
             //ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -156,10 +213,10 @@ make_pantograph = function (canvas, id, socket) {
         });
     }
     
-    pantograph.drawShape = function(shape) {
-        var ctx = pantograph.hiddenContext;
-        var operation = pantograph.shapeToFunc[shape["type"]];
-        var animFrame = pantograph.animFrame;
+    pg_canvas.drawShape = function(shape) {
+        var ctx = pg_canvas.hiddenContext;
+        var operation = pg_canvas.shapeToFunc[shape["type"]];
+        var animFrame = pg_canvas.animFrame;
     
         if (operation === undefined) {
             console.log("Could not find operation for shape " + shape["type"]);
@@ -176,7 +233,7 @@ make_pantograph = function (canvas, id, socket) {
         });
     }
     
-    pantograph.drawRect = function (ctx, rect) {
+    pg_canvas.drawRect = function (ctx, rect) {
         if (rect.lineColor) {
             ctx.strokeStyle = rect.lineColor;
             ctx.strokeRect(rect.x, rect.y, rect.width, rect.height);
@@ -187,11 +244,11 @@ make_pantograph = function (canvas, id, socket) {
         }
     }
     
-    pantograph.clearRect = function (ctx, rect) {
+    pg_canvas.clearRect = function (ctx, rect) {
             ctx.clearRect(rect.x, rect.y, rect.width, rect.height);
     }
     
-    pantograph.drawCircle = function(ctx, circle) {
+    pg_canvas.drawCircle = function(ctx, circle) {
         ctx.beginPath();
         ctx.arc(circle.x, circle.y, circle.radius, 0, 2 * Math.PI, true);
         if (circle.lineColor) {
@@ -204,7 +261,7 @@ make_pantograph = function (canvas, id, socket) {
         }
     }
     
-    pantograph.drawOval = function(ctx, oval) {
+    pg_canvas.drawOval = function(ctx, oval) {
         var x = oval.x + oval.width / 2;
         var y = oval.y + oval.height / 2;
         
@@ -229,7 +286,7 @@ make_pantograph = function (canvas, id, socket) {
         }
     }
     
-    pantograph.drawLine = function(ctx, line) {
+    pg_canvas.drawLine = function(ctx, line) {
         ctx.beginPath();
         ctx.moveTo(line.startX, line.startY);
         ctx.lineTo(line.endX, line.endY);
@@ -237,7 +294,7 @@ make_pantograph = function (canvas, id, socket) {
         ctx.stroke();
     }
     
-    pantograph.drawPolygon = function(ctx, polygon) {
+    pg_canvas.drawPolygon = function(ctx, polygon) {
         var startX = polygon.points[0][0];
         var startY = polygon.points[0][1];
         
@@ -261,7 +318,7 @@ make_pantograph = function (canvas, id, socket) {
         }
     }
     
-    pantograph.drawImage = function(ctx, imgInfo) {
+    pg_canvas.drawImage = function(ctx, imgInfo) {
         var img = new Image();
         img.src = imgInfo.src;
         
@@ -270,79 +327,75 @@ make_pantograph = function (canvas, id, socket) {
     
         // Use an event listener, because otherwise if the draw happens
         // before the image is loaded you get nothing or an error in some
-        // browsers ("Mozilla", *cough*)
+        // browsers (e.g. Mozilla)
         img.addEventListener("load", function () {
             //ctx.drawImage(img, imgInfo.x, imgInfo.y, width, height);
             ctx.drawImage(img, imgInfo.x, imgInfo.y);
-            console.log("drew image");
+            //console.log("drew image");
             })
     }
     
-    pantograph.drawCompound = function(ctx, compound) {
+    pg_canvas.drawCompound = function(ctx, compound) {
         compound.shapes.forEach(function (shp) {
-            pantograph.shapeToFunc[shp["type"]](ctx, shp);
+            pg_canvas.shapeToFunc[shp["type"]](ctx, shp);
         });
     }
     
-    pantograph.shapeToFunc = {
-        clear: pantograph.clearRect,
-        rect: pantograph.drawRect,
-        oval: pantograph.drawOval,
-        circle: pantograph.drawCircle,
-        image: pantograph.drawImage,
-        line: pantograph.drawLine,
-        polygon: pantograph.drawPolygon,
-        compound: pantograph.drawCompound
+    pg_canvas.shapeToFunc = {
+        clear: pg_canvas.clearRect,
+        rect: pg_canvas.drawRect,
+        oval: pg_canvas.drawOval,
+        circle: pg_canvas.drawCircle,
+        image: pg_canvas.drawImage,
+        line: pg_canvas.drawLine,
+        polygon: pg_canvas.drawPolygon,
+        compound: pg_canvas.drawCompound
     }
     
     var setup_canvas = function(e) {
         
+        console.log("initializing canvas for events");
+
         // set up some event handlers for the canvas
-        canvas.onmousedown = pantograph.input_handler;
-        canvas.onmouseup   = pantograph.input_handler;
-        canvas.onmousemove = pantograph.input_handler;
-        canvas.onmouseout  = pantograph.input_handler;
-        canvas.onmouseover = pantograph.input_handler;
-        canvas.onwheel = pantograph.input_handler_suppress;
-        canvas.onclick     = pantograph.input_handler;
-        canvas.ondblclick  = pantograph.input_handler;
-        canvas.ondrop      = pantograph.input_handler_drop;
-        //canvas.onpaste   = pantograph.input_handler_drop;
-        canvas.ondragover  = pantograph.input_handler_suppress_only;
+        canvas.onmousedown = pg_canvas.input_handler;
+        canvas.onmouseup   = pg_canvas.input_handler;
+        canvas.onmousemove = pg_canvas.input_handler;
+        canvas.onmouseout  = pg_canvas.input_handler;
+        canvas.onmouseover = pg_canvas.input_handler_focus;
+        canvas.onwheel = pg_canvas.input_handler_suppress;
+        canvas.onmousewheel = pg_canvas.input_handler_suppress;
+        canvas.onclick     = pg_canvas.input_handler;
+        canvas.ondblclick  = pg_canvas.input_handler;
+        canvas.ondrop      = pg_canvas.input_handler_drop;
+        //canvas.onpaste   = pg_canvas.input_handler_drop;
+        canvas.ondragover  = pg_canvas.input_handler_suppress_only;
         // disable right click context mentu
-        canvas.oncontextmenu  = pantograph.input_handler_suppress_only;
+        canvas.oncontextmenu  = pg_canvas.input_handler_suppress_only;
         
-        canvas.addEventListener("keydown", pantograph.input_handler, true);
-        canvas.addEventListener("keyup", pantograph.input_handler, true);
-        canvas.addEventListener("keypress", pantograph.input_handler, true);
+        canvas.addEventListener("keydown", pg_canvas.input_handler, true);
+        canvas.addEventListener("keyup", pg_canvas.input_handler, true);
+        canvas.addEventListener("keypress", pg_canvas.input_handler, true);
 
-        // document.body.addEventListener("resize", pantograph.resize_window,
+        // document.body.addEventListener("resize", pg_canvas.resize_window,
         //                                false);
-        document.body.onresize = pantograph.resize_window;
+        document.body.onresize = pg_canvas.resize_window;
 
-        canvas.addEventListener("focus", pantograph.input_handler, true);
-        //canvas.addEventListener("blur", pantograph.input_handler, true);
-        canvas.addEventListener("focusout", pantograph.input_handler, true);
-        // document.body.onfocus = pantograph.input_handler;
-        // document.body.onblur = pantograph.input_handler;
+        canvas.addEventListener("focus", pg_canvas.input_handler, true);
+        //canvas.addEventListener("blur", pg_canvas.input_handler, true);
+        canvas.addEventListener("focusout", pg_canvas.input_handler, true);
+        // document.body.onfocus = pg_canvas.input_handler;
+        // document.body.onblur = pg_canvas.input_handler;
+
+	canvas.style.cursor = 'crosshair';
 
         var message = { type: "setbounds",
-                        id: pantograph.canvas_id,
+                        id: pg_canvas.canvas_id,
                         width: canvas.width,
                         height: canvas.height
                       };
-        pantograph.send_pkt(message);
+        pg_canvas.send_pkt(message);
     }
+    pg_canvas.initialize_canvas = setup_canvas
     
-    pantograph.socket.onopen = setup_canvas
-
-    pantograph.socket.onmessage = function(e) {
-        message = JSON.parse(e.data);
-        if (message.operation == "refresh_canvas")
-            pantograph.redrawCanvas();
-        else if (message.operation == "draw_canvas")
-            pantograph.drawShape(message["shape"]);
-    }
-    
-    return pantograph;
+    return pg_canvas;
 }

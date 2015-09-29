@@ -300,8 +300,10 @@ class WebServer(object):
              {"path":  js_path}),
             (r"/viewer", FileHandler,
               dict(name='Ginga', url='/viewer', factory=self.factory)),
-             ("/viewer/socket", ViewerWidget,
-              dict(name='Ginga', factory=self.factory)),
+            (r"/app/socket", PgHelp.ApplicationHandler,
+              dict(name='Ginga', app=self)),
+            ("/viewer/socket", ViewerWidget,
+             dict(name='Ginga', factory=self.factory)),
             ],
                factory=self.factory, logger=self.logger)
 

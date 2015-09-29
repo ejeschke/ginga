@@ -48,7 +48,7 @@ class RenderContext(object):
     def set_fill(self, color, alpha=1.0):
         pass
 
-    def set_font(self, fontname, fontsize):
+    def set_font(self, fontname, fontsize, color='black', alpha=1.0):
         pass
 
     def text_extents(self, text):

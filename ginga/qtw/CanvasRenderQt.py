@@ -98,7 +98,8 @@ class RenderContext(object):
             color = self.__get_color(color, alpha)
             self.cr.setBrush(color)
 
-    def set_font(self, fontname, fontsize):
+    def set_font(self, fontname, fontsize, color='black', alpha=1.0):
+        # TODO: setting color a matter of setting the pen?
         self.cr.setFont(QFont(fontname, pointSize=fontsize))
 
     def text_extents(self, text):

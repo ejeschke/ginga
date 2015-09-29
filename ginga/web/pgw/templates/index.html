@@ -18,14 +18,18 @@
       }
     </style>
     <meta name="viewport" 
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0,
-minimum-scale=1.0, user-scalable=no, width=device-width,
-height=device-height, target-densitydpi=device-dpi" /> 
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 </head>
 <body>
-    <canvas id="{{v_id}}" tabindex="0">Your browser does not appear to
+    <script type="text/javascript" src="/js/application.js"></script>
+    <script type="text/javascript">
+        var wid = "%(wid)s";
+        var url = "%(url)s";
+        var ws_url = "ws://" + window.location.host + "/app/socket?wid=%(wid)s";
+        var ginga_app = ginga_make_application(ws_url);
+    </script>
+    <canvas id="{{v_id}}">Your browser does not appear to
 support HTML5 canvas.</canvas>
-    <script type="text/javascript" src="/js/pantograph.js"></script>
     <script type="text/javascript">
         var canvas_id = "{{v_id}}"
         var canvas = document.getElementById("{{v_id}}")
@@ -35,11 +39,7 @@ support HTML5 canvas.</canvas>
         canvas.width = {{width}};
         canvas.height = {{height}};
         canvas.style.cursor = 'crosshair';
-        var url = "{{url}}";
-        var ws_url = "ws://" + window.location.host + "{{ws_url}}";
-
-        var cv_socket = new WebSocket(ws_url);
-        var pgraph = make_pantograph(canvas, canvas_id, cv_socket);
+        ginga_initialize_canvas(canvas, canvas_id, ginga_app);
     </script>
 </body>
 </html>

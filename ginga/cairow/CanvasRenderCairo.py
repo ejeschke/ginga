@@ -103,7 +103,7 @@ class RenderContext(object):
             self.fill_color = color
             self.fill_alpha = alpha
 
-    def set_font(self, fontname, fontsize):
+    def set_font(self, fontname, fontsize, color='black', alpha=1.0):
         self.cr.select_font_face(fontname)
         self.cr.set_font_size(fontsize)
 

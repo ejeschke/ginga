@@ -1,5 +1,5 @@
 #
-# GingaQt.py -- Qt display handler for the Ginga FITS tool.
+# GingaQt.py -- Qt display handler for the Ginga reference viewer.
 #
 # Eric Jeschke (eric@naoj.org)
 #

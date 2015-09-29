@@ -1,5 +1,5 @@
 #
-# astronomy.py -- classes for special astronomy shapes drawn on
+# astro.py -- classes for special astronomy shapes drawn on
 #                   ginga canvases.
 #
 # Eric Jeschke (eric@naoj.org)

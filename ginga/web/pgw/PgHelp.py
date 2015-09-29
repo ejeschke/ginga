@@ -33,7 +33,6 @@ class PantographHandler(tornado.websocket.WebSocketHandler):
         self.my_ioloop = ioloop
 
         # self.settings defined in subclass
-        print(self.settings)
         interval = self.settings.get("timer_interval", DEFAULT_INTERVAL)
         if self.name in self.settings:
             interval = self.settings[self.name].get("timer_interval", interval)
@@ -139,7 +138,6 @@ class PantographHandler(tornado.websocket.WebSocketHandler):
             img_string = binascii.b2a_base64(buffer)
             if isinstance(img_string, bytes):
                 img_string = img_string.decode("utf-8")
-                #print("decoded bytes to utf-8")
             img_src = 'data:image/png;base64,' + img_string
 
         else:
@@ -248,10 +246,9 @@ TimerEvent = namedtuple("TimerEvent", ["type", "id", "value"])
 class ApplicationHandler(tornado.websocket.WebSocketHandler):
 
     def initialize(self, name, app):
-        #print(("initialize", name, app))
         self.name = name
         self.app = app
-        self.app.ws_handler = self
+        self.app.add_ws_handler(self)
 
         self.event_callbacks = {
             "activate": WidgetEvent,
@@ -330,13 +327,3 @@ class ApplicationHandler(tornado.websocket.WebSocketHandler):
 
         delta = datetime.timedelta(milliseconds = self.interval)
         self.timeout = IOLoop.current().add_timeout(delta, self.timer_tick)
-
-    def on_canvas_init(self, event):
-        self.width = event.width
-        self.height = event.height
-
-        self.setup()
-        self.do_operation("refresh_canvas")
-
-    def update(self):
-        self.do_operation("refresh_canvas")
