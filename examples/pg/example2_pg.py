@@ -15,19 +15,17 @@ import logging
 from ginga import AstroImage, colors
 from ginga.canvas.CanvasObject import get_canvas_types
 from ginga.misc import log
-from ginga.web.pgw import Widgets, Viewers
+from ginga.web.pgw import Widgets, Viewers, PgMain
 
 
 class FitsViewer(object):
 
-    def __init__(self, logger, app):
+    def __init__(self, logger, window):
         self.logger = logger
-        self.app = app
         self.drawcolors = colors.get_colors()
         self.dc = get_canvas_types()
 
-        self.app.add_callback('shutdown', self.quit)
-        self.top = self.app.window("Ginga example2")
+        self.top = window
         self.top.add_callback('closed', self.closed)
 
         vbox = Widgets.VBox()
@@ -260,25 +258,36 @@ def main(options, args):
         except Exception as e:
             logger.warn("Error using opencv: %s" % str(e))
 
-    app = Widgets.Application(host=options.host, port=options.port)
+    base_url = "http://%s:%d/app" % (options.host, options.port)
 
-    viewer = FitsViewer(logger, app)
+    # establish our widget application
+    app = Widgets.Application(logger=logger, base_url=base_url)
 
-    viewer.top.resize(700, 540)
+    # web server/connection machinery
+    server = PgMain.PgMain(logger=logger, app=app,
+                           host=options.host, port=options.port)
+
+    #  create top level window
+    window = app.make_window("Ginga example2")
+
+    # our own viewer object, customized with methods (see above)
+    viewer = FitsViewer(logger, window)
+    server.add_callback('shutdown', viewer.quit)
+
+    #window.resize(700, 540)
 
     if len(args) > 0:
         viewer.load_file(args[0])
 
-    viewer.top.show()
-    viewer.top.raise_()
+    #window.show()
+    #window.raise_()
 
     try:
-        viewer.app.mainloop()
+        server.mainloop()
 
     except KeyboardInterrupt:
         logger.info("Terminating viewer...")
-        if viewer.top is not None:
-            viewer.top.close()
+        window.close()
 
 if __name__ == "__main__":
 

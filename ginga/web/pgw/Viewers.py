@@ -41,7 +41,6 @@ class GingaViewer(Widgets.Canvas):
             "mouseout": viewer.leave_notify_event,
             "mouseover": viewer.enter_notify_event,
             "mousewheel": viewer.scroll_event,
-            "DOMMouseScroll": viewer.scroll_event,
             "wheel": viewer.scroll_event,
             "click": self.ignore_event,
             "dblclick": self.ignore_event,
@@ -92,11 +91,13 @@ class GingaViewer(Widgets.Canvas):
 
     def _cb_redirect(self, event):
         method = self._dispatch_event_table[event.type]
-        print("calling method %s" % str(method))
         try:
             method(event)
+
         except Exception as e:
-            print(str(e))
+            self.logger.error("error redirecting '%s' event: " % (
+                event.type, str(e)))
+            # TODO: dump traceback to debug log
 
 
 #END

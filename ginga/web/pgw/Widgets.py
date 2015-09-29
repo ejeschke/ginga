@@ -13,10 +13,6 @@ import time
 import binascii
 from functools import reduce
 
-## from ginga.qtw.QtHelp import QtGui, QtCore, QTextCursor, \
-##      QIcon, QPixmap, QImage
-from ginga.web.pgw import PgHelp, PgMain
-
 from ginga.misc import Callback, Bunch
 import ginga.icons
 
@@ -32,7 +28,7 @@ widget_id = 0
 # widget dict
 widget_dict = {}
 # reference to the created application
-app = None
+_app = None
 
 # BASE
 class WidgetBase(Callback.Callbacks):
@@ -51,10 +47,11 @@ class WidgetBase(Callback.Callbacks):
         widget_dict[widget_id] = self
 
     def get_url(self):
+        app = self.get_app()
         return app.base_url
 
     def get_app(self):
-        return app
+        return _app
 
     def get_widget(self):
         return self.widget
@@ -195,6 +192,7 @@ class Label(WidgetBase):
 
     def set_text(self, text):
         self.text = text
+        app = self.get_app()
         app.do_operation('update_label', id=self.id, value=text)
 
     def render(self):
@@ -507,8 +505,8 @@ support HTML5 canvas.</canvas>
 
     def _draw(self, shape_type, **kwargs):
         shape = dict(kwargs, type=shape_type)
+        app = self.get_app()
         app.do_operation("draw_canvas", id=self.id, shape=shape)
-        #app.do_operation("refresh_canvas", id=self.id)
 
     def clear_rect(self, x, y, width, height):
         self._draw("clear", x=x, y=y, width=width, height=height)
@@ -935,18 +933,19 @@ class TopLevel(ContainerBase):
 </html>''' % d
 
 
-class Application(PgMain.PgMain):
+class Application(object):
 
-    def __init__(self, *args, **kwdargs):
-        global app, widget_dict
-        super(Application, self).__init__(*args, **kwdargs)
+    def __init__(self, logger=None, base_url=None):
+        global _app, widget_dict
 
+        self.logger = logger
+        self.base_url = base_url
         self.window_dict = {}
         self.wincnt = 0
-        # this is set via PgMain
+        # list of web socket handlers connected to this application
         self.ws_handlers = []
 
-        app = self
+        _app = self
         widget_dict[0] = self
 
         self._timer_lock = threading.RLock()
@@ -964,7 +963,7 @@ class Application(PgMain.PgMain):
     def get_window(self, wid):
         return self.window_dict[wid]
 
-    def window(self, title=None):
+    def make_window(self, title=None):
         w = TopLevel(title=title)
         self.add_window(w)
         return w
@@ -993,8 +992,6 @@ class Application(PgMain.PgMain):
             with self._timer_lock:
                 for handler in bad_handlers:
                     self.ws_handlers.remove(handler)
-
-
 
     def on_timer_event(self, event):
         #self.logger.debug("timer update")

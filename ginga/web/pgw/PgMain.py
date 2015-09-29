@@ -25,13 +25,12 @@ import tornado.template
 import tornado.ioloop
 
 from ginga.web.pgw import templates, js, PgHelp
-from ginga.web.pgw.ImageViewPg import RenderWidgetZoom
 from ginga.misc import Task, Future, Callback
 
 class PgMain(Callback.Callbacks):
 
     def __init__(self, queue=None, logger=None, ev_quit=None,
-                 host='localhost', port=9909):
+                 host='localhost', port=9909, app=None):
         super(PgMain, self).__init__()
 
         self.enable_callback('shutdown')
@@ -41,7 +40,7 @@ class PgMain(Callback.Callbacks):
             queue = Queue.Queue()
         self.gui_queue = queue
         # You can pass in a logger if you prefer to do so
-        if not logger:
+        if logger is None:
             logger = logging.getLogger('PgMain')
         self.logger = logger
         if not ev_quit:
@@ -49,8 +48,7 @@ class PgMain(Callback.Callbacks):
         self.ev_quit = ev_quit
         self.host = host
         self.port = port
-
-        self.app = None
+        self.app = app
         self.gui_thread_id = None
 
         # Get screen size
@@ -201,17 +199,17 @@ class PgMain(Callback.Callbacks):
         js_path = os.path.dirname(js.__file__)
 
         # create and run the app
-        self.app = tornado.web.Application([
+        self.server = tornado.web.Application([
             (r"/js/(.*\.js)", tornado.web.StaticFileHandler,
              {"path":  js_path}),
             (r"/app", FileHandler,
-              dict(name='Application', url='/app', app=self)),
+              dict(name='Application', url='/app', app=self.app)),
             (r"/app/socket", PgHelp.ApplicationHandler,
-              dict(name='Ginga', app=self)),
+              dict(name='Ginga', app=self.app)),
             ],
                app=self.app, logger=self.logger)
 
-        self.app.listen(self.port, self.host)
+        self.server.listen(self.port, self.host)
         self.base_url = "http://%s:%d/app" % (self.host, self.port)
         self.logger.info("ginga web now running at " + self.base_url)
 
@@ -254,7 +252,6 @@ class FileHandler(tornado.web.RequestHandler):
         self.logger.info("filehandler initialize")
         self.name = name
         self.url = url
-        #self.app.ws_handler = self
 
     def get(self):
         self.logger.info("filehandler get")
@@ -274,17 +271,6 @@ class FileHandler(tornado.web.RequestHandler):
 
         # Get window with this id
         window = self.app.get_window(wid)
-
-        # Return the data for this page
-        ## t = LOADER.load("index.html")
-
-        ## ws_url = self.url + "/socket?id=%s" % (wid)
-        ## if path is not None:
-        ##     ws_url += ("&path=%s" % (path))
-
-        ## self.write(t.generate(
-        ##     title=self.name, url=self.url, ws_url=ws_url,
-        ##     width=width, height=height, wid=wid))
 
         output = window.render()
         self.write(output)

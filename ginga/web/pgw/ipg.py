@@ -48,12 +48,12 @@ import tornado.web
 import tornado.template
 import tornado.ioloop
 
-from ginga.web.pgw.ImageViewPg import ImageViewCanvas, RenderWidgetZoom
+from ginga.web.pgw.ImageViewPg import ImageViewCanvas
 from ginga import AstroImage, colors
 from ginga.misc import log, Task
 from ginga.util import catalog, iohelper
 
-from ginga.web.pgw import templates, js
+from ginga.web.pgw import templates, js, PgHelp, Widgets, Viewers
 
 
 STD_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcName)s) | %(message)s'
@@ -163,7 +163,7 @@ class FileHandler(tornado.web.RequestHandler):
     def get(self):
         self.logger.info("filehandler get")
         # Collect arguments
-        v_id = self.get_argument('id', None)
+        v_id = self.get_argument('vid', None)
         if v_id is None:
             v_id = FileHandler.get_vid()
         width = self.get_argument('width', None)
@@ -287,7 +287,7 @@ class WebServer(object):
             ev_quit = threading.Event()
         self.ev_quit = ev_quit
 
-        self.app = None
+        self.server = None
 
     def start(self, use_thread=True, no_ioloop=False):
         self.thread_pool.startall()
@@ -295,21 +295,24 @@ class WebServer(object):
         js_path = os.path.dirname(js.__file__)
 
         # create and run the app
-        self.app = tornado.web.Application([
+        self.base_url = "http://%s:%d/viewer" % (self.host, self.port)
+        self.app = Widgets.Application(logger=self.logger,
+                                       base_url=self.base_url)
+
+        self.server = tornado.web.Application([
             (r"/js/(.*\.js)", tornado.web.StaticFileHandler,
              {"path":  js_path}),
             (r"/viewer", FileHandler,
               dict(name='Ginga', url='/viewer', factory=self.factory)),
             (r"/app/socket", PgHelp.ApplicationHandler,
-              dict(name='Ginga', app=self)),
+              dict(name='Ginga', app=self.app)),
             ("/viewer/socket", ViewerWidget,
              dict(name='Ginga', factory=self.factory)),
             ],
                factory=self.factory, logger=self.logger)
 
-        self.app.listen(self.port, self.host)
-        self.url_base = "http://%s:%d/viewer" % (self.host, self.port)
-        self.logger.info("ginga web now running at " + self.url_base)
+        self.server.listen(self.port, self.host)
+        self.logger.info("ginga web now running at " + self.base_url)
 
         if no_ioloop:
             self.t_ioloop = None
@@ -332,7 +335,7 @@ class WebServer(object):
     def get_viewer(self, v_id):
         from IPython.display import display, HTML
         v = self.factory.get_viewer(v_id)
-        url = "%s?id=%s" % (self.url_base, v_id)
+        url = "%s?id=%s" % (self.base_url, v_id)
         display(HTML('<a href="%s">link to viewer</a>' % url))
         return v
 
