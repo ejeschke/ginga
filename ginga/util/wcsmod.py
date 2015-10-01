@@ -51,7 +51,7 @@ def use(wcspkg, raise_err=True):
            have_kapteyn, kapwcs, \
            have_astlib, astWCS, astCoords, \
            have_starlink, Ast, Atl, \
-           have_astropy, pywcs, pyfits, coordinates, units
+           have_astropy, pywcs, pyfits, astropy, coordinates, units
 
     if wcspkg == 'kapteyn':
         try:

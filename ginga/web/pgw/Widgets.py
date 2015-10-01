@@ -1021,6 +1021,12 @@ class Application(object):
     def get_window(self, wid):
         return self.window_dict[wid]
 
+    def has_window(self, wid):
+        return wid in self.window_dict
+
+    def get_wids(self):
+        return list(self.window_dict.keys())
+
     def make_window(self, title=None):
         w = TopLevel(title=title)
         self.add_window(w)
