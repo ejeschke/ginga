@@ -202,10 +202,10 @@ class PgMain(Callback.Callbacks):
         self.server = tornado.web.Application([
             (r"/js/(.*\.js)", tornado.web.StaticFileHandler,
              {"path":  js_path}),
-            (r"/app", FileHandler,
+            (r"/app", PgHelp.WindowHandler,
               dict(name='Application', url='/app', app=self.app)),
             (r"/app/socket", PgHelp.ApplicationHandler,
-              dict(name='Ginga', app=self.app)),
+              dict(name='ApplicationSocketInterface', app=self.app)),
             ],
                app=self.app, logger=self.logger)
 
@@ -243,36 +243,5 @@ class PgMain(Callback.Callbacks):
     def _quit(self):
         self.gui_quit()
 
-
-class FileHandler(tornado.web.RequestHandler):
-
-    def initialize(self, name, url, app):
-        self.app = app
-        self.logger = app.logger
-        self.logger.info("filehandler initialize")
-        self.name = name
-        self.url = url
-
-    def get(self):
-        self.logger.info("filehandler get")
-        # Collect arguments
-        wid = self.get_argument('id', None)
-        width = self.get_argument('width', None)
-        if width is None:
-            width = 'fullWidth'
-        else:
-            width = int(width)
-        height = self.get_argument('height', None)
-        if height is None:
-            height = 'fullHeight'
-        else:
-            height = int(height)
-        ## path = self.get_argument('path', None)
-
-        # Get window with this id
-        window = self.app.get_window(wid)
-
-        output = window.render()
-        self.write(output)
 
 # END

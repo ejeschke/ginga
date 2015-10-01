@@ -48,8 +48,9 @@ import tornado.web
 import tornado.template
 import tornado.ioloop
 
-from ginga.web.pgw.ImageViewPg import ImageViewCanvas
+#from ginga.web.pgw.ImageViewPg import ImageViewCanvas
 from ginga import AstroImage, colors
+from ginga.canvas.CanvasObject import get_canvas_types
 from ginga.misc import log, Task
 from ginga.util import catalog, iohelper
 
@@ -61,7 +62,166 @@ STD_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcNa
 LOADER = tornado.template.Loader(os.path.dirname(templates.__file__))
 
 
-class ViewerWidget(RenderWidgetZoom):
+class EnhancedCanvasView(Viewers.CanvasView):
+
+    def show(self):
+        from IPython.display import Image
+        return Image(data=bytes(self.get_rgb_image_as_bytes(format='png')),
+                     format='png', embed=True)
+
+    def load(self, filepath):
+        image = AstroImage.AstroImage(logger=self.logger)
+        image.load_file(filepath)
+
+        self.set_image(image)
+
+    def add_canvas(self, tag=None):
+        # add a canvas to the view
+        my_canvas = self.get_canvas()
+        DrawingCanvas = my_canvas.get_draw_class('drawingcanvas')
+        canvas = DrawingCanvas()
+        # enable drawing on the canvas
+        canvas.enable_draw(True)
+        #canvas.enable_edit(True)
+        canvas.ui_setActive(True)
+        canvas.set_surface(self)
+        # add the canvas to the view.
+        my_canvas.add(canvas, tag=tag)
+
+        return canvas
+
+
+class ImageViewer(object):
+
+    def __init__(self, logger, window):
+        self.logger = logger
+        self.drawcolors = colors.get_colors()
+        self.dc = get_canvas_types()
+
+        self.top = window
+        self.top.add_callback('closed', self.closed)
+
+        vbox = Widgets.VBox()
+        vbox.set_border_width(2)
+        vbox.set_spacing(1)
+
+        fi = EnhancedCanvasView(logger)
+        fi.enable_autocuts('on')
+        fi.set_autocut_params('zscale')
+        fi.enable_autozoom('on')
+        fi.set_zoom_algorithm('rate')
+        fi.set_zoomrate(1.4)
+        fi.show_pan_mark(True)
+        fi.set_callback('drag-drop', self.drop_file)
+        fi.set_callback('none-move', self.motion)
+        fi.set_bg(0.2, 0.2, 0.2)
+        fi.ui_setActive(True)
+        self.fitsimage = fi
+
+        bd = fi.get_bindings()
+        bd.enable_all(True)
+
+        # canvas that we will draw on
+        canvas = self.dc.DrawingCanvas()
+        canvas.enable_draw(True)
+        canvas.enable_edit(True)
+        canvas.set_drawtype('rectangle', color='lightblue')
+        canvas.setSurface(fi)
+        self.canvas = canvas
+        # add canvas to view
+        private_canvas = fi.get_canvas()
+        private_canvas.add(canvas)
+        canvas.ui_setActive(True)
+        canvas.register_for_cursor_drawing(fi)
+        ## self.drawtypes = canvas.get_drawtypes()
+        ## self.drawtypes.sort()
+
+        # add a color bar
+        private_canvas.add(self.dc.ColorBar(side='bottom', offset=10))
+
+        # add little mode indicator that shows modal states in
+        # the corner
+        private_canvas.add(self.dc.ModeIndicator(corner='ur', fontsize=14))
+        # little hack necessary to get correct operation of the mode indicator
+        # in all circumstances
+        bm = fi.get_bindmap()
+        bm.add_callback('mode-set', lambda *args: fi.redraw(whence=3))
+
+        fi.set_desired_size(512, 512)
+        w = Viewers.GingaViewer(viewer=fi)
+        vbox.add_widget(w, stretch=1)
+
+        self.readout = Widgets.Label("")
+        vbox.add_widget(self.readout, stretch=0)
+
+        hbox = Widgets.HBox()
+        btn3 = Widgets.CheckBox("I'm using a trackpad")
+        btn3.add_callback('activated', lambda w, tf: self.use_trackpad_cb(tf))
+        hbox.add_widget(btn3)
+
+        hbox.add_widget(Widgets.Label(''), stretch=1)
+        vbox.add_widget(hbox, stretch=0)
+
+        self.top.set_widget(vbox)
+
+    def load_file(self, filepath):
+        image = AstroImage.AstroImage(logger=self.logger)
+        image.load_file(filepath)
+
+        self.fitsimage.set_image(image)
+        self.top.set_title(filepath)
+
+    def drop_file(self, fitsimage, paths):
+        fileName = paths[0]
+        self.load_file(fileName)
+
+    def motion(self, viewer, button, data_x, data_y):
+
+        # Get the value under the data coordinates
+        try:
+            #value = viewer.get_data(data_x, data_y)
+            # We report the value across the pixel, even though the coords
+            # change halfway across the pixel
+            value = viewer.get_data(int(data_x+0.5), int(data_y+0.5))
+
+        except Exception:
+            value = None
+
+        fits_x, fits_y = data_x + 1, data_y + 1
+
+        # Calculate WCS RA
+        try:
+            # NOTE: image function operates on DATA space coords
+            image = viewer.get_image()
+            if image is None:
+                # No image loaded
+                return
+            ra_txt, dec_txt = image.pixtoradec(fits_x, fits_y,
+                                               format='str', coords='fits')
+        except Exception as e:
+            self.logger.warn("Bad coordinate conversion: %s" % (
+                str(e)))
+            ra_txt  = 'BAD WCS'
+            dec_txt = 'BAD WCS'
+
+        text = "RA: %s  DEC: %s  X: %.2f  Y: %.2f  Value: %s" % (
+            ra_txt, dec_txt, fits_x, fits_y, value)
+        self.readout.set_text(text)
+
+    def use_trackpad_cb(self, state):
+        settings = self.fitsimage.get_bindings().get_settings()
+        val = 1.0
+        if state:
+            val = 0.1
+        settings.set(scroll_zoom_acceleration=val)
+
+    def closed(self, w):
+        self.logger.info("Top window closed.")
+        self.top = None
+        sys.exit()
+
+
+class ViewerWidget(Viewers.GingaViewer):
 
     def initialize(self, name, factory):
         self.logger = factory.logger
@@ -143,7 +303,7 @@ class ViewerWidget(RenderWidgetZoom):
         self.load_file(path)
 
 
-class FileHandler(tornado.web.RequestHandler):
+class FileHandler_old(tornado.web.RequestHandler):
 
     v_count = 0
 
@@ -153,12 +313,11 @@ class FileHandler(tornado.web.RequestHandler):
         cls.v_count += 1
         return v_id
 
-    def initialize(self, name, url, factory):
+    def initialize(self, name, factory):
+        self.name = name
         self.viewer_factory = factory
         self.logger = factory.logger
         self.logger.info("filehandler initialize")
-        self.name = name
-        self.url = url
 
     def get(self):
         self.logger.info("filehandler get")
@@ -168,12 +327,14 @@ class FileHandler(tornado.web.RequestHandler):
             v_id = FileHandler.get_vid()
         width = self.get_argument('width', None)
         if width is None:
-            width = 'fullWidth'
+            #width = 'fullWidth'
+            width = 600
         else:
             width = int(width)
         height = self.get_argument('height', None)
         if height is None:
-            height = 'fullHeight'
+            #height = 'fullHeight'
+            height = 600
         else:
             height = int(height)
         path = self.get_argument('path', None)
@@ -181,47 +342,33 @@ class FileHandler(tornado.web.RequestHandler):
         # Get a viewer with this id
         viewer = self.viewer_factory.get_viewer(v_id)
 
-        # Return the data for this page
-        t = LOADER.load("index.html")
+        ## if not (path is None):
+        ##     viewer.load_file(path)
 
-        ws_url = os.path.join(self.url, "socket?id=%s" % (v_id))
-        if path is not None:
-            ws_url += ("&path=%s" % (path))
+        self.write(viewer.top.render())
 
-        self.write(t.generate(
-            title=self.name, url=self.url, ws_url=ws_url,
-            width=width, height=height, v_id=v_id))
+class FileHandler(tornado.web.RequestHandler):
 
+    def initialize(self, name, factory):
+        self.name = name
+        self.viewer_factory = factory
+        self.logger = factory.logger
+        self.logger.info("filehandler initialize")
 
-class ImageViewer(ImageViewCanvas):
+    def get(self):
+        self.logger.info("filehandler get")
+        # Collect arguments
+        wid = self.get_argument('id', None)
 
-    def show(self):
-        from IPython.display import Image
-        return Image(data=bytes(self.get_rgb_image_as_bytes(format='png')),
-                     format='png', embed=True)
+        # Get window with this id
+        window = self.app.get_window(wid)
 
-    def load(self, filepath):
-        image = AstroImage.AstroImage(logger=self.logger)
-        image.load_file(filepath)
-
-        self.set_image(image)
-
-    def add_canvas(self, tag=None):
-        # add a canvas to the view
-        DrawingCanvas = self.get_canvas().get_draw_class('drawingcanvas')
-        canvas = DrawingCanvas()
-        # enable drawing on the canvas
-        canvas.enable_draw(True)
-        canvas.ui_setActive(True)
-        canvas.set_surface(self)
-        # add the canvas to the view.
-        self.add(canvas, tag=tag)
-        return canvas
-
+        output = window.render()
+        self.write(output)
 
 class ViewerFactory(object):
 
-    def __init__(self, logger, basedir, thread_pool):
+    def __init__(self, logger, basedir, app, thread_pool):
         """
         Constructor parameters:
           `logger` : a logging-module compatible logger object
@@ -230,6 +377,7 @@ class ViewerFactory(object):
         """
         self.logger = logger
         self.basedir = basedir
+        self.app = app
         self.thread_pool = thread_pool
         # dict of viewers
         self.viewers = {}
@@ -250,24 +398,11 @@ class ViewerFactory(object):
         except KeyError:
             pass
 
-        viewer = ImageViewer(self.logger)
-        # configuring surface allows drawing before viewer canvas is
-        # realized in browser
-        viewer.configure_surface(600, 600)
+        #  create top level window
+        window = self.app.make_window("Viewer %s" % v_id)
 
-        # customize this viewer
-        viewer.enable_autocuts('on')
-        viewer.set_autocut_params('zscale')
-        viewer.enable_autozoom('on')
-        viewer.set_zoom_algorithm('rate')
-        viewer.set_zoomrate(1.4)
-        viewer.show_pan_mark(True)
-        viewer.enable_draw(False)
-        viewer.set_bg(0.2, 0.2, 0.2)
-        viewer.ui_setActive(True)
-
-        bd = viewer.get_bindings()
-        bd.enable_all(True)
+        # our own viewer object, customized with methods (see above)
+        viewer = ImageViewer(self.logger, window)
 
         self.viewers[v_id] = viewer
         return viewer
@@ -275,12 +410,13 @@ class ViewerFactory(object):
 
 class WebServer(object):
 
-    def __init__(self, logger, thread_pool, factory,
+    def __init__(self, app, thread_pool, factory,
                  host='localhost', port=9909, ev_quit=None):
 
         self.host = host
         self.port = port
-        self.logger = logger
+        self.app = app
+        self.logger = app.logger
         self.thread_pool = thread_pool
         self.factory = factory
         if ev_quit is None:
@@ -294,25 +430,21 @@ class WebServer(object):
 
         js_path = os.path.dirname(js.__file__)
 
-        # create and run the app
-        self.base_url = "http://%s:%d/viewer" % (self.host, self.port)
-        self.app = Widgets.Application(logger=self.logger,
-                                       base_url=self.base_url)
-
         self.server = tornado.web.Application([
             (r"/js/(.*\.js)", tornado.web.StaticFileHandler,
              {"path":  js_path}),
             (r"/viewer", FileHandler,
-              dict(name='Ginga', url='/viewer', factory=self.factory)),
+              dict(name='Ginga', factory=self.factory)),
+            (r"/app", PgHelp.WindowHandler,
+              dict(name='Application', url='/app', app=self.app)),
             (r"/app/socket", PgHelp.ApplicationHandler,
               dict(name='Ginga', app=self.app)),
-            ("/viewer/socket", ViewerWidget,
-             dict(name='Ginga', factory=self.factory)),
+            ## ("/viewer/socket", ViewerWidget,
+            ##  dict(name='Ginga', factory=self.factory)),
             ],
                factory=self.factory, logger=self.logger)
 
         self.server.listen(self.port, self.host)
-        self.logger.info("ginga web now running at " + self.base_url)
 
         if no_ioloop:
             self.t_ioloop = None
@@ -335,9 +467,9 @@ class WebServer(object):
     def get_viewer(self, v_id):
         from IPython.display import display, HTML
         v = self.factory.get_viewer(v_id)
-        url = "%s?id=%s" % (self.base_url, v_id)
+        url = v.top.url
         display(HTML('<a href="%s">link to viewer</a>' % url))
-        return v
+        return v.fitsimage
 
 
 def make_server(logger=None, basedir='.', numthreads=5,
@@ -356,8 +488,13 @@ def make_server(logger=None, basedir='.', numthreads=5,
 
     thread_pool = Task.ThreadPool(numthreads, logger,
                                   ev_quit=ev_quit)
-    factory = ViewerFactory(logger, basedir, thread_pool)
-    server = WebServer(logger, thread_pool, factory,
+
+    base_url = "http://%s:%d/app" % (host, port)
+    app = Widgets.Application(logger=logger, base_url=base_url)
+
+    factory = ViewerFactory(logger, basedir, app, thread_pool)
+
+    server = WebServer(app, thread_pool, factory,
                        host=host, port=port)
 
     return server

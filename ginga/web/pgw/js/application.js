@@ -32,22 +32,30 @@ ginga_make_application = function (ws_url) {
   
     ginga_app.socket.onmessage = function(e) {
         message = JSON.parse(e.data);
-        if (message.operation == "update_value") {
-            // update widget value
-            document.getElementById(message.id).value = message.value;
-        }
-        else if (message.operation == "update_label") {
-            // update widget value
-            if (ginga_app.debug) console.log("updating element");
-            document.getElementById(message.id).innerHTML = message.value;
-        }
-        else if (message.operation == "refresh_canvas") {
+        if (message.operation == "refresh_canvas") {
             if (ginga_app.debug) console.log("refreshing canvas");
             ginga_app.canvases[message.id].redrawCanvas();
         }
         else if (message.operation == "draw_canvas") {
             if (ginga_app.debug) console.log("drawing canvas");
             ginga_app.canvases[message.id].drawShape(message["shape"]);
+        }
+        else if (message.operation == "update_label") {
+            // update widget value
+            if (ginga_app.debug) console.log("updating element");
+            document.getElementById(message.id).innerHTML = message.value;
+        }
+        else if (message.operation == "update_value") {
+            // update widget value
+            document.getElementById(message.id).value = message.value;
+        }
+        else if (message.operation == "update_index") {
+            // update widget value
+            document.getElementById(message.id).selectedIndex = message.value;
+        }
+        else if (message.operation == "disable") {
+            // update widget value
+            document.getElementById(message.id).disabled = message.value;
         };
     }
 

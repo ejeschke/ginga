@@ -48,17 +48,6 @@ class FitsViewer(object):
         bd = fi.get_bindings()
         bd.enable_all(True)
 
-        # add a color bar
-        fi.private_canvas.add(self.dc.ColorBar(side='bottom', offset=10))
-
-        # add little mode indicator that shows modal states in
-        # lower left hand corner
-        fi.private_canvas.add(self.dc.ModeIndicator(corner='ur', fontsize=14))
-        # little hack necessary to get correct operation of the mode indicator
-        # in all circumstances
-        bm = fi.get_bindmap()
-        bm.add_callback('mode-set', lambda *args: fi.redraw(whence=3))
-
         # canvas that we will draw on
         canvas = self.dc.DrawingCanvas()
         canvas.enable_draw(True)
@@ -67,11 +56,23 @@ class FitsViewer(object):
         canvas.setSurface(fi)
         self.canvas = canvas
         # add canvas to view
-        fi.get_canvas().add(canvas)
+        private_canvas = fi.get_canvas()
+        private_canvas.add(canvas)
         canvas.ui_setActive(True)
         canvas.register_for_cursor_drawing(fi)
         self.drawtypes = canvas.get_drawtypes()
         self.drawtypes.sort()
+
+        # add a color bar
+        private_canvas.add(self.dc.ColorBar(side='bottom', offset=10))
+
+        # add little mode indicator that shows modal states in
+        # the corner
+        private_canvas.add(self.dc.ModeIndicator(corner='ur', fontsize=14))
+        # little hack necessary to get correct operation of the mode indicator
+        # in all circumstances
+        bm = fi.get_bindmap()
+        bm.add_callback('mode-set', lambda *args: fi.redraw(whence=3))
 
         fi.set_desired_size(512, 512)
         w = Viewers.GingaViewer(viewer=fi)

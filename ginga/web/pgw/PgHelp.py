@@ -116,3 +116,23 @@ class ApplicationHandler(tornado.websocket.WebSocketHandler):
 
         delta = datetime.timedelta(milliseconds = self.interval)
         self.timeout = IOLoop.current().add_timeout(delta, self.timer_tick)
+
+class WindowHandler(tornado.web.RequestHandler):
+
+    def initialize(self, name, url, app):
+        self.app = app
+        self.logger = app.logger
+        self.logger.info("windowhandler initialize")
+        self.name = name
+        self.url = url
+
+    def get(self):
+        self.logger.info("windowhandler get")
+        # Collect arguments
+        wid = self.get_argument('id', None)
+
+        # Get window with this id
+        window = self.app.get_window(wid)
+
+        output = window.render()
+        self.write(output)

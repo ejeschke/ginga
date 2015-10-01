@@ -66,7 +66,7 @@ class FitsViewer(QtGui.QMainWindow):
         private_canvas.add(self.dc.ColorBar(side='bottom', offset=10))
 
         # add little mode indicator that shows modal states in
-        # lower left hand corner
+        # the corner
         private_canvas.add(self.dc.ModeIndicator(corner='ur'))
         # little hack necessary to get correct operation of the mode indicator
         # in all circumstances

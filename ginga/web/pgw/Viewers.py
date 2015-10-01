@@ -60,12 +60,11 @@ class GingaViewer(Widgets.Canvas):
             "swipe": viewer.swipe_event,
             }
 
-        self.viewer.set_widget(self)
+        self.add_timer('refresh', self.refresh_cb)
+        self.add_timer('redraw', self.viewer.delayed_redraw)
+        self.add_timer('msg', self.viewer.clear_onscreen_message)
 
-        app = self.get_app()
-        app.add_timer('redraw', self.viewer.delayed_redraw)
-        app.add_timer('msg', self.viewer.clear_onscreen_message)
-        app.add_timer('refresh', self.refresh_cb)
+        self.viewer.set_widget(self)
 
     def get_viewer(self):
         return self.viewer
