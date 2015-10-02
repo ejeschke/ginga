@@ -312,7 +312,7 @@ if not fits_configured:
     # try to use them in this order
     # astropy is faster
     for name in ('astropy', 'fitsio'):
-        if use(name, raise_err=True):
+        if use(name, raise_err=False):
             break
 
 def get_fitsloader(kind=None, logger=None):

@@ -671,7 +671,12 @@ class GingaControl(Callback.Callbacks):
             idx = max(0, info.numhdu)
             kwdargs['idx'] = idx
 
-        image = image_loader(filepath, **kwdargs)
+        try:
+            image = image_loader(filepath, **kwdargs)
+
+        except Exception as e:
+            errmsg = "Failed to load '%s': %s" % (filepath, str(e))
+            self.gui_do(self.show_error, errmsg)
 
         future = Future.Future()
         future.freeze(image_loader, filepath, **kwdargs)

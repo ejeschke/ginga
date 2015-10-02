@@ -269,7 +269,7 @@ def main(options, args):
                            host=options.host, port=options.port)
 
     #  create top level window
-    window = app.make_window("Ginga example2")
+    window = app.make_window("Ginga web example2")
 
     # our own viewer object, customized with methods (see above)
     viewer = FitsViewer(logger, window)

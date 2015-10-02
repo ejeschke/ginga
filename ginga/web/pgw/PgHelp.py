@@ -126,13 +126,37 @@ class WindowHandler(tornado.web.RequestHandler):
         self.name = name
         self.url = url
 
+    def make_index(self, wids):
+        template = '''
+<!doctype html>
+<html>
+<head>
+    <title>%(title)s</title>
+</head>
+<body>
+%(content)s
+</body>
+</html>'''
+        content = ["<ul>"]
+        for wid in wids:
+            content.append('''<li><a href="%s?id=%s">Window %s</a></li>''' % (
+                self.url, wid, wid))
+        content.append("</ul>")
+
+        return template % dict(title="Window index", content=''.join(content))
+
     def get(self):
         self.logger.info("windowhandler get")
         # Collect arguments
         wid = self.get_argument('id', None)
 
         # Get window with this id
-        window = self.app.get_window(wid)
+        wids = self.app.get_wids()
+        if wid in wids:
+            window = self.app.get_window(wid)
+            output = window.render()
 
-        output = window.render()
+        else:
+            output = self.make_index(wids)
+
         self.write(output)
