@@ -367,23 +367,24 @@ class ImageViewEvent(ImageViewPg):
 
 
     def pinch_event(self, event):
+        self.logger.info("pinch: event=%s" % (str(event)))
         state = 'move'
-        if event.isfirst:
+        if event.type == 'pinchstart' or event.isfirst:
             state = 'start'
-        elif event.isfinal:
+        elif event.type == 'pinchend' or event.isfinal:
             state = 'end'
         rot = event.theta
         scale = event.scale
-        self.logger.debug("pinch gesture rot=%f scale=%f state=%s" % (
+        self.logger.info("pinch gesture rot=%f scale=%f state=%s" % (
             rot, scale, state))
 
         return self.make_ui_callback('pinch', state, rot, scale)
 
     def rotate_event(self, event):
         state = 'move'
-        if event.isfirst:
+        if event.type == 'rotatestart' or event.isfirst:
             state = 'start'
-        elif event.isfinal:
+        elif event.type == 'rotateend' or event.isfinal:
             state = 'end'
         rot = event.theta
         self.logger.debug("rotate gesture rot=%f state=%s" % (
@@ -393,13 +394,13 @@ class ImageViewEvent(ImageViewPg):
 
     def pan_event(self, event):
         state = 'move'
-        if event.isfirst:
+        if event.type == 'panstart' or event.isfirst:
             state = 'start'
-        elif event.isfinal:
+        elif event.type == 'panend' or event.isfinal:
             state = 'end'
         # TODO: need to know which ones to flip
         dx, dy = -event.dx, event.dy
-        self.logger.debug("pan gesture dx=%f dy=%f state=%s" % (
+        self.logger.info("pan gesture dx=%f dy=%f state=%s" % (
             dx, dy, state))
 
         return self.make_ui_callback('pan', state, dx, dy)

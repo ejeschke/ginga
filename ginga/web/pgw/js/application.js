@@ -65,6 +65,7 @@ ginga_make_application = function (ws_url) {
 ginga_initialize_canvas = function (canvas, id, app) {
     
     var pg_canvas = {};
+    var is_touch_device = 'ontouchstart' in document.documentElement;
 
     pg_canvas.canvas_id = id
     pg_canvas.app = app
@@ -383,6 +384,24 @@ ginga_initialize_canvas = function (canvas, id, app) {
         canvas.addEventListener("keydown", pg_canvas.input_handler, true);
         canvas.addEventListener("keyup", pg_canvas.input_handler, true);
         canvas.addEventListener("keypress", pg_canvas.input_handler, true);
+
+        // enable touch events if this is a touch device
+        if (is_touch_device) {
+            pg_canvas.hammer = new Hammer(canvas, {})
+            pg_canvas.hammer.get('pinch').set({ enable: true });
+            pg_canvas.hammer.get('rotate').set({ enable: true });
+            pg_canvas.hammer.get('pan').set({ direction: Hammer.DIRECTION_ALL });
+            pg_canvas.hammer.on('pan', pg_canvas.input_handler_gesture)
+            pg_canvas.hammer.on('panstart', pg_canvas.input_handler_gesture)
+            pg_canvas.hammer.on('panend', pg_canvas.input_handler_gesture)
+            pg_canvas.hammer.on('tap', pg_canvas.input_handler_gesture)
+            pg_canvas.hammer.on('pinch', pg_canvas.input_handler_gesture)
+            pg_canvas.hammer.on('pinchstart', pg_canvas.input_handler_gesture)
+            pg_canvas.hammer.on('pinchend', pg_canvas.input_handler_gesture)
+            pg_canvas.hammer.on('rotate', pg_canvas.input_handler_gesture)
+            pg_canvas.hammer.on('rotatestart', pg_canvas.input_handler_gesture)
+            pg_canvas.hammer.on('rotateend', pg_canvas.input_handler_gesture)
+        }
 
         // document.body.addEventListener("resize", pg_canvas.resize_window,
         //                                false);

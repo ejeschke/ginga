@@ -167,7 +167,7 @@ class ImageViewBindings(object):
             gs_swipe = [],
             gs_tap = [],
             pinch_actions = ['zoom'],
-            pinch_zoom_acceleration = 1.0,
+            pinch_zoom_acceleration = 1.4,
             pinch_rotate_acceleration = 1.0,
             )
 
@@ -1332,6 +1332,7 @@ class ImageViewBindings(object):
     def gs_pinch(self, viewer, state, rot_deg, scale, msg=True):
         pinch_actions = self.settings.get('pinch_actions', [])
         if state == 'start':
+            print("start pinch")
             self._start_scale_x, self._start_scale_y = viewer.get_scale_xy()
             self._start_rot = viewer.get_rotation()
         else:

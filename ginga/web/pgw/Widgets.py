@@ -974,9 +974,10 @@ class TopLevel(ContainerBase):
       }
     </style>
     <meta name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+      content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, target-densitydpi=device-dpi" />
 </head>
 <body>
+    <script type="text/javascript" src="/js/hammer.js"></script>
     <script type="text/javascript" src="/js/application.js"></script>
     <script type="text/javascript">
         var wid = "%(wid)s";

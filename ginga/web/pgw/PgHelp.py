@@ -19,6 +19,8 @@ import datetime
 import binascii
 from collections import namedtuple
 
+from ginga.misc import Bunch
+
 default_interval = 10
 
 ConfigEvent = namedtuple("ConfigEvent", ["type", "id", "width", "height"])
@@ -61,10 +63,17 @@ class ApplicationHandler(tornado.websocket.WebSocketHandler):
             "blur": InputEvent,
             "drop": InputEvent,
             #"paste": InputEvent,
+            # These are all Hammer.js events
             "pinch": GestureEvent,
+            "pinchstart": GestureEvent,
+            "pinchend": GestureEvent,
             "rotate": GestureEvent,
-            "tap": GestureEvent,
+            "rotatestart": GestureEvent,
+            "rotateend": GestureEvent,
             "pan": GestureEvent,
+            "panstart": GestureEvent,
+            "panend": GestureEvent,
+            "tap": GestureEvent,
             "swipe": GestureEvent,
             }
 

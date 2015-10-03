@@ -53,10 +53,17 @@ class GingaViewer(Widgets.Canvas):
             "blur": lambda event: viewer.focus_event(event, False),
             "drop": viewer.drop_event,
             "paste": self.ignore_event,
+            # Hammer.js events
             "pinch": viewer.pinch_event,
+            "pinchstart": viewer.pinch_event,
+            "pinchend": viewer.pinch_event,
             "rotate": viewer.rotate_event,
+            "rotatestart": viewer.rotate_event,
+            "rotateend": viewer.rotate_event,
             "tap": viewer.tap_event,
             "pan": viewer.pan_event,
+            "panstart": viewer.pan_event,
+            "panend": viewer.pan_event,
             "swipe": viewer.swipe_event,
             }
 

@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 #
-# ipg.py -- Simple FITS viewer in an HTML5 canvas web browser.
+# ipg.py -- Module for simple FITS viewer in an HTML5 canvas web browser.
 #
 # Eric Jeschke (eric@naoj.org)
 #
@@ -14,27 +14,9 @@ rendering is done on the server side and the browser only acts as a display
 front end.  Using this you could create an analysis type environment on a
 server and view it via a browser.
 
-Usage:
-(server side)
-    ./example1_pg.py -p 6500 --host='' -d /path/to/root/of/fits/files \
-        --loglevel=20
+See example usage with an ipython notebook at:
 
-Use --host='' if you want to listen on all network interfaces.
-
-(client side)
-From the browser, type in a URL based on the port that you chose above, e.g.:
-
-    http://servername:6500/viewer?id=v1&width=600&height=600&path=some/file.fits
-
-The `path` should be to a file *on the server side, relative to the directory
-specified using -d.
-
-If `width` and `height` are omitted they default to the browser's page size.
-NOTE that because all rendering is done on the server side, you will achieve
-better performance if you choose a smaller rendering size.
-
-`id` is an identifier that will identify the same viewer each time you
-request it.
+    http://nbviewer.ipython.org/gist/ejeschke/6067409
 
 You will need a reasonably modern web browser with HTML5 canvas support.
 Tested with Chromium 41.0.2272.76, Firefox 37.0.2, Safari 7.1.6
@@ -45,21 +27,14 @@ import logging
 import threading
 
 import tornado.web
-import tornado.template
 import tornado.ioloop
 
-#from ginga.web.pgw.ImageViewPg import ImageViewCanvas
 from ginga import AstroImage, colors
 from ginga.canvas.CanvasObject import get_canvas_types
 from ginga.misc import log, Task
 from ginga.util import catalog, iohelper
 
 from ginga.web.pgw import templates, js, PgHelp, Widgets, Viewers
-
-
-STD_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcName)s) | %(message)s'
-
-LOADER = tornado.template.Loader(os.path.dirname(templates.__file__))
 
 
 class EnhancedCanvasView(Viewers.CanvasView):
@@ -220,132 +195,6 @@ class ImageViewer(object):
         self.top = None
         sys.exit()
 
-
-class ViewerWidget(Viewers.GingaViewer):
-
-    def initialize(self, name, factory):
-        self.logger = factory.logger
-        self.logger.info("fitsviewer intialize")
-        self.viewer_factory = factory
-        self.thread_pool = factory.get_threadpool()
-
-        super(ViewerWidget, self).initialize(name, factory)
-        self.logger.info("Interval is %f" % (self.interval))
-        self.interval = 10
-
-    def get(self):
-        self.logger.info("fitsviewer get")
-        # Collect arguments
-        v_id = self.get_argument('id', '0')
-        path = self.get_argument('path', None)
-
-        # Get a viewer with this id
-        viewer = self.viewer_factory.get_viewer(v_id)
-        self.set_viewer(viewer)
-
-        # Anything we need to customize about this viewer
-        viewer.set_callback('drag-drop', self.drop_file)
-        ## viewer.set_callback('none-move', self.motion)
-
-        if (path is not None) and (len(path) > 0):
-            #self.load_file(path)
-            task = Task.FuncTask2(self.load_file, path)
-            self.thread_pool.addTask(task)
-
-    def get_fileinfo(self, filespec, dldir='/tmp'):
-
-        # Get information about this file/URL
-        info = iohelper.get_fileinfo(filespec, cache_dir=dldir)
-
-        if (not info.ondisk) and (info.url is not None) and \
-               (not info.url.startswith('file:')):
-            # Download the file if a URL was passed
-            def  _dl_indicator(count, blksize, totalsize):
-                pct = float(count * blksize) / float(totalsize)
-                msg = "Downloading: %%%.2f complete" % (pct*100.0)
-                self.viewer.onscreen_message(msg, delay=1.0)
-
-            # Try to download the URL.  We press our generic URL server
-            # into use as a generic file downloader.
-            try:
-                dl = catalog.URLServer(self.logger, "downloader", "dl",
-                                       info.url, "")
-                filepath = dl.retrieve(info.url, filepath=info.filepath,
-                                       cb_fn=_dl_indicator)
-            finally:
-                self.viewer.clear_onscreen_message()
-
-        return info
-
-    def load_file(self, path):
-        image = AstroImage.AstroImage(logger=self.logger)
-
-        try:
-            info = self.get_fileinfo(path)
-            if info.url.startswith('file:'):
-                basedir = self.viewer_factory.get_basedir()
-                fullpath = os.path.join(basedir, info.filepath)
-            else:
-                fullpath = info.filepath
-
-            image.load_file(fullpath)
-
-            self.viewer.set_image(image)
-        except Exception as e:
-            self.logger.error("Error loading uri (%s): %s" % (
-                path, str(e)))
-            # TODO: include traceback, error message to browser
-
-        ## self.setWindowTitle(filepath)
-
-    def drop_file(self, viewer, paths):
-        path = paths[0]
-        self.load_file(path)
-
-
-class FileHandler_old(tornado.web.RequestHandler):
-
-    v_count = 0
-
-    @classmethod
-    def get_vid(cls):
-        v_id = "vcanvas-%d" % (cls.v_count)
-        cls.v_count += 1
-        return v_id
-
-    def initialize(self, name, factory):
-        self.name = name
-        self.viewer_factory = factory
-        self.logger = factory.logger
-        self.logger.info("filehandler initialize")
-
-    def get(self):
-        self.logger.info("filehandler get")
-        # Collect arguments
-        v_id = self.get_argument('vid', None)
-        if v_id is None:
-            v_id = FileHandler.get_vid()
-        width = self.get_argument('width', None)
-        if width is None:
-            #width = 'fullWidth'
-            width = 600
-        else:
-            width = int(width)
-        height = self.get_argument('height', None)
-        if height is None:
-            #height = 'fullHeight'
-            height = 600
-        else:
-            height = int(height)
-        path = self.get_argument('path', None)
-
-        # Get a viewer with this id
-        viewer = self.viewer_factory.get_viewer(v_id)
-
-        ## if not (path is None):
-        ##     viewer.load_file(path)
-
-        self.write(viewer.top.render())
 
 class FileHandler(tornado.web.RequestHandler):
 
