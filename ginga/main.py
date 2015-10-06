@@ -128,18 +128,18 @@ class ReferenceViewer(object):
         self.global_plugins = []
         self.layout = layout
 
-    def add_local_plugin(self, module_name, ws_name):
+    def add_local_plugin(self, module_name, ws_name, pfx=None):
         self.local_plugins.append(
-            Bunch(module=module_name, ws=ws_name))
+            Bunch(module=module_name, ws=ws_name, pfx=pfx))
 
     def add_global_plugin(self, module_name, ws_name,
-                          tab_name=None, start_plugin=True):
+                          tab_name=None, start_plugin=True, pfx=None):
         if tab_name is None:
             tab_name = module_name
 
         self.global_plugins.append(
             Bunch(module=module_name, ws=ws_name, tab=tab_name,
-                  start=start_plugin))
+                  start=start_plugin, pfx=pfx))
 
     def add_default_plugins(self):
         """
@@ -149,12 +149,14 @@ class ReferenceViewer(object):
         # add default global plugins
         for bnch in global_plugins:
             start = bnch.get('start', True)
+            pfx = bnch.get('pfx', None)
             self.add_global_plugin(bnch.module, bnch.ws,
-                          tab_name=bnch.tab, start_plugin=start)
+                          tab_name=bnch.tab, start_plugin=start, pfx=pfx)
 
         # add default local plugins
         for bnch in local_plugins:
-            self.add_local_plugin(bnch.module, bnch.ws)
+            pfx = bnch.get('pfx', None)
+            self.add_local_plugin(bnch.module, bnch.ws, pfx=pfx)
 
     def add_default_options(self, optprs):
         """
@@ -398,9 +400,16 @@ class ReferenceViewer(object):
         # Load any custom modules
         if options.modules:
             modules = options.modules.split(',')
-            for pluginName in modules:
+            for longPluginName in modules:
+                if '.' in longPluginName:
+                    tmpstr = longPluginName.split('.')
+                    pluginName = tmpstr[-1]
+                    pfx = '.'.join(tmpstr[:-1])
+                else:
+                    pluginName = longPluginName
+                    pfx = None
                 spec = Bunch(name=pluginName, module=pluginName,
-                             tab=pluginName, ws='right')
+                             tab=pluginName, ws='right', pfx=pfx)
                 ginga.add_global_plugin(spec)
 
         # Load modules for "local" (per-channel) plug ins
@@ -411,9 +420,16 @@ class ReferenceViewer(object):
         # Load any custom plugins
         if options.plugins:
             plugins = options.plugins.split(',')
-            for pluginName in plugins:
+            for longPluginName in plugins:
+                if '.' in longPluginName:
+                    tmpstr = longPluginName.split('.')
+                    pluginName = tmpstr[-1]
+                    pfx = '.'.join(tmpstr[:-1])
+                else:
+                    pluginName = longPluginName
+                    pfx = None
                 spec = Bunch(module=pluginName, ws='dialogs',
-                             hidden=False)
+                             hidden=False, pfx=pfx)
                 ginga.add_local_plugin(spec)
 
         ginga.update_pending()
