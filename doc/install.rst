@@ -69,7 +69,7 @@ will not work without the following packages:
 * webkit (WBrowser (online help))
 * scipy (Pick)
 
-For saving slices as a movie:
+To save a movie:
 
 * mencoder
 
