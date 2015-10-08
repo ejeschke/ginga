@@ -432,7 +432,8 @@ class GingaControl(Callback.Callbacks):
             name = spec.setdefault('name', spec.get('klass', spec.module))
             self.local_plugins[name] = spec
 
-            self.mm.loadModule(spec.module, pfx=pluginconfpfx)
+            pfx = spec.get('pfx', pluginconfpfx)
+            self.mm.loadModule(spec.module, pfx=pfx)
 
             hidden = spec.get('hidden', False)
             if not hidden:
@@ -447,7 +448,8 @@ class GingaControl(Callback.Callbacks):
             name = spec.setdefault('name', spec.get('klass', spec.module))
             self.global_plugins[name] = spec
 
-            self.mm.loadModule(spec.module, pfx=pluginconfpfx)
+            pfx = spec.get('pfx', pluginconfpfx)
+            self.mm.loadModule(spec.module, pfx=pfx)
 
             self.gpmon.loadPlugin(name, spec)
             self.add_plugin_menu(name)

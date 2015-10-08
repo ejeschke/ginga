@@ -246,7 +246,7 @@ class GingaView(QtMain.QtMain):
         return menubar
 
     def add_dialogs(self):
-        filesel = QtGui.QFileDialog(self.w.root)
+        filesel = QtGui.QFileDialog(self.w.root, directory=os.curdir)
         filesel.setFileMode(QtGui.QFileDialog.ExistingFile)
         filesel.setViewMode(QtGui.QFileDialog.Detail)
         self.filesel = filesel
