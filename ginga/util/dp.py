@@ -185,4 +185,29 @@ def divide(image1, image2):
     return image
 
 
+# https://gist.github.com/stscieisenhamer/25bf6287c2c724cb9cc7
+def masktorgb(mask):
+    opacity = 0.1
+    color = 'blue'
+
+    wd, ht = mask.get_size()
+    r, g, b = colors.lookup_color(color)
+    rgbarr = np.zeros((ht, wd, 4), dtype=np.uint8)
+    rgbobj = RGBImage(data_np=rgbarr)
+
+    rc = rgbobj.get_slice('R')
+    gc = rgbobj.get_slice('G')
+    bc = rgbobj.get_slice('B')
+    ac = rgbobj.get_slice('A')
+
+    data = mask.get_data()
+    ac[:] = 0
+    idx = data > 0
+    rc[idx] = int(r * 255)
+    gc[idx] = int(g * 255)
+    bc[idx] = int(b * 255)
+    ac[idx] = int(opacity * 255)
+
+    return rgbobj
+
 # END
