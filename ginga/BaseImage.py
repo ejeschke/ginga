@@ -464,6 +464,20 @@ class Header(dict):
         bnch = super(Header, self).__getitem__(key)
         return bnch
 
+    def set_card(self, key, value, comment=None):
+        try:
+            bnch = super(Header, self).__getitem__(key)
+            bnch.value = value
+            if not (comment is None):
+                bnch.comment = comment
+        except KeyError:
+            if comment is None:
+                comment = ''
+            bnch = Bunch.Bunch(key=key, value=value, comment=comment)
+            self.keyorder.append(key)
+            super(Header, self).__setitem__(key, bnch)
+        return bnch
+
     def get_keyorder(self):
         return self.keyorder
 
@@ -479,8 +493,8 @@ class Header(dict):
         except KeyError:
             return alt
 
-    def update(self, mapKind):
-        for key, value in mapKind.items():
+    def update(self, map_kind):
+        for key, value in map_kind.items():
             self.__setitem__(key, value)
 
     def asdict(self):

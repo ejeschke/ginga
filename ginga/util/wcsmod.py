@@ -462,6 +462,7 @@ class AstropyWCS(BaseWCS):
     def load_header(self, header, fobj=None):
         # reconstruct a pyfits header, because otherwise we take an
         # incredible performance hit in astropy.wcs
+        self.logger.debug("Reconstructing PyFITS header")
         self.header = pyfits.Header(header.items())
 
         try:
@@ -471,6 +472,7 @@ class AstropyWCS(BaseWCS):
 
             self.coordsys = choose_coord_system(self.header)
             self.logger.debug("Coordinate system is: %s" % (self.coordsys))
+
         except Exception as e:
             self.logger.error("Error making WCS object: %s" % (str(e)))
             self.wcs = None

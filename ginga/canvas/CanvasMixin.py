@@ -127,7 +127,7 @@ class CanvasMixin(object):
 
     def raise_object_by_tag(self, tag, aboveThis=None, redraw=True):
         obj1 = self.get_object_by_tag(tag)
-        if not aboveThis:
+        if aboveThis is None:
             self.raise_object(obj1)
         else:
             obj2 = self.get_object_by_tag(aboveThis)
@@ -138,7 +138,7 @@ class CanvasMixin(object):
 
     def lower_object_by_tag(self, tag, belowThis=None, redraw=True):
         obj1 = self.get_object_by_tag(tag)
-        if not belowThis:
+        if belowThis is None:
             self.lower_object(obj1)
         else:
             obj2 = self.get_object_by_tag(belowThis)

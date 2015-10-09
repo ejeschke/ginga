@@ -163,14 +163,14 @@ class CompoundMixin(object):
         obj.initialize(None, self.viewer, self.logger)
         # isn't this taken care of above?
         #obj.viewer = self.viewer
-        if not belowThis:
+        if belowThis is None:
             self.objects.append(obj)
         else:
             index = self.objects.index(belowThis)
             self.objects.insert(index, obj)
 
     def raise_object(self, obj, aboveThis=None):
-        if not aboveThis:
+        if aboveThis is None:
             # no reference object--move to top
             self.objects.remove(obj)
             self.objects.append(obj)
@@ -182,7 +182,7 @@ class CompoundMixin(object):
             self.objects.insert(index+1, obj)
 
     def lower_object(self, obj, belowThis=None):
-        if not belowThis:
+        if belowThis is None:
             # no reference object--move to bottom
             self.objects.remove(obj)
             self.objects.insert(0, obj)

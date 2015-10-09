@@ -95,14 +95,12 @@ class PyFitsFileHandler(BaseFitsFileHandler):
             for card in header.cards:
                 if len(card.keyword) == 0:
                     continue
-                bnch = ahdr.__setitem__(card.keyword, card.value)
-                bnch.comment = card.comment
+                ahdr.set_card(card.keyword, card.value, comment=card.comment)
         else:
             for card in header.ascardlist():
                 if len(card.key) == 0:
                     continue
-                bnch = ahdr.__setitem__(card.key, card.value)
-                bnch.comment = card.comment
+                ahdr.set_card(card.keyword, card.value, comment=card.comment)
 
     def load_hdu(self, hdu, ahdr, fobj=None, naxispath=None):
         data = hdu.data

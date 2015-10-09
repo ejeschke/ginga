@@ -175,7 +175,7 @@ class ReferenceViewer(object):
                           help="Specify plugins that should be disabled")
         optprs.add_option("--display", dest="display", metavar="HOST:N",
                           help="Use X display on HOST:N")
-        optprs.add_option("--fits", dest="fits", metavar="NAME",
+        optprs.add_option("--fitspkg", dest="fitspkg", metavar="NAME",
                           default=None,
                           help="Prefer FITS I/O module NAME")
         optprs.add_option("-g", "--geometry", dest="geometry",
@@ -211,7 +211,7 @@ class ReferenceViewer(object):
         optprs.add_option("-t", "--toolkit", dest="toolkit", metavar="NAME",
                           default=None,
                           help="Prefer GUI toolkit (gtk|qt)")
-        optprs.add_option("--wcs", dest="wcs", metavar="NAME",
+        optprs.add_option("--wcspkg", dest="wcspkg", metavar="NAME",
                           default=None,
                           help="Prefer WCS module NAME")
 
@@ -307,8 +307,8 @@ class ReferenceViewer(object):
                 logger.warn("failed to load matplotlib colormaps: %s" % (str(e)))
 
         # User wants to customize the WCS package?
-        if options.wcs:
-            wcspkg = options.wcs
+        if options.wcspkg:
+            wcspkg = options.wcspkg
         else:
             wcspkg = settings.get('WCSpkg', 'choose')
 
@@ -319,8 +319,8 @@ class ReferenceViewer(object):
             logger.warn("failed to set WCS package preference: %s" % (str(e)))
 
         # User wants to customize the FITS package?
-        if options.fits:
-            fitspkg = options.fits
+        if options.fitspkg:
+            fitspkg = options.fitspkg
         else:
             fitspkg = settings.get('FITSpkg', 'choose')
 

@@ -87,6 +87,7 @@ class AstroImage(BaseImage):
 
         loader = io_fits.PyFitsFileHandler(self.logger)
         _data, naxispath = loader.load_hdu(hdu, ahdr, naxispath=naxispath)
+        # this is a handle to the full data array
         self._md_data = _data
 
         if naxispath is None:
@@ -121,6 +122,7 @@ class AstroImage(BaseImage):
                                                      numhdu=numhdu,
                                                      naxispath=naxispath,
                                                      phdr=self._primary_hdr)
+        # this is a handle to the full data array
         self._md_data = _data
 
         if naxispath is None:
