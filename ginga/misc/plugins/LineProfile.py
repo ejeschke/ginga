@@ -15,14 +15,12 @@ class LineProfile(GingaPlugin.LocalPlugin):
         self.pan2mark = False
         self.wd = None
         self.ht = None
+        self.selected_axis = None
 
         self.dc = self.fv.getDrawClasses()
         canvas = self.dc.DrawingCanvas()
-        canvas.enable_draw(True)
-        canvas.add_draw_mode('move', move=self.drag, up=self.update, down=self.btndown_cb)
-        canvas.register_for_cursor_drawing(self.fitsimage)
-        canvas.set_draw_mode('move')
-        canvas.add_callback('motion', self.motion_cb)
+        canvas.set_callback('cursor-down', self.btndown_cb)
+        canvas.set_callback('cursor-up', self.update)
         canvas.setSurface(self.fitsimage)
         self.canvas = canvas
 
@@ -37,6 +35,9 @@ class LineProfile(GingaPlugin.LocalPlugin):
         self.tw = None
         self.mark_data_x = [None]
         self.mark_data_y = [None]
+
+        # register for new image notification in this channel
+        fitsimage.set_callback('image-set', self.new_image_cb)
 
         self.gui_up = False
 
@@ -140,19 +141,26 @@ class LineProfile(GingaPlugin.LocalPlugin):
         container.add_widget(top, stretch=1)
         self.gui_up = True
 
+    def new_image_cb(self, fitsimage, image):
+        if fitsimage != self.fitsimage:
+            # Focus is not our channel-->not an event for us
+            return False
+        elif image is None:
+            return False
+        else:
+            self.build_axes()
+
     def build_axes(self):
         self.hbox_axes.remove_all()
+        self.selected_axis = None
+        self.clear_plot()
+
         image = self.fitsimage.get_image()
         if image is not None:
-            self.axes_states = []
-            # For easier mapping of indices with the axes
-            self.axes_states.append(None)
-
             # Add Checkbox widgets
-            for i in xrange(1, len(image.get_mddata().shape)+1):
-                name = 'NAXIS%d' % i
-                chkbox = Widgets.CheckBox(name)
-                self.axes_states.append(False)
+            # `image.naxispath` returns only mdim axes
+            for i in xrange(1, len(image.naxispath)+3):
+                chkbox = Widgets.CheckBox('NAXIS%d' % i)
                 self.hbox_axes.add_widget(chkbox)
 
                 # Add callback
@@ -162,22 +170,19 @@ class LineProfile(GingaPlugin.LocalPlugin):
         chkbox.add_callback('activated', lambda w, tf: self.axis_toggle_cb(w, tf, pos))
 
     def axis_toggle_cb(self, w, tf, pos):
-        # Deactivate other checkboxes
         children = self.hbox_axes.get_children()
-        for p, val in enumerate(self.axes_states):
-            if val is None:
-                continue
-            elif val is True:
-                self.axes_states[p] = False
-                children[p-1].set_state(False)
 
-        self.axes_states[pos] = tf
-        self.logger.info('Axes states : %s ' % self.axes_states)
+        # Deactivate previously selected axis
+        if self.selected_axis is not None:
+            children[self.selected_axis-1].set_state(False)
 
-        # Clear plot if no axis is enabled
-        if True not in self.axes_states:
+        # Check if the old axis has been clicked
+        if pos == self.selected_axis:
+            self.selected_axis = None
             self.clear_plot()
         else:
+            self.selected_axis = pos
+            children[pos-1].set_state(tf)
             self.redraw_mark()
 
     def instructions(self):
@@ -224,69 +229,37 @@ Use MultiDim to change step values of axes.""")
             return
         self.wd, self.ht = self.image.get_size()
 
-        try:
-            curr_axis = self.axes_states
-            self.build_axes()
+        self.redraw_mark()
 
-            # Restore axis state
-            children = self.hbox_axes.get_children()
-            for p, val in enumerate(curr_axis):
-                if val is True:
-                    children[p-1].set_state(True)
-
-            if len(self.marks) > 1:
-                self.del_all_btn.set_enabled(True)
-        except AttributeError:
-            self.build_axes()
-
-    def motion_cb(self, canvas, button, data_x, data_y):
-        if self.mark_selected is None:
-            if not 0 <= data_x < self.wd or not 0 <= data_y < self.ht:
-                self.clear_plot()
-            else:
-                self._plot(data_x, data_y, mark=None)
-        return False
-
-    def _plot(self, data_x, data_y, mark=None):
-        # Exclude points outside boundaries
-        if not 0 <= data_x < self.wd or not 0 <= data_y < self.ht:
-            self.clear_plot()
-            return
-
+    def _plot(self, mark=None):
         # Transpose array for easier slicing
         mddata = self.image.get_mddata().T
         naxes = mddata.ndim
 
-        self.enabled_axes = [pos for pos, val in enumerate(self.axes_states) if val is True]
-
-        if self.enabled_axes:
-            axis_data = self.get_axis(self.enabled_axes[0])
-            axes_slice = self._slice(naxes, data_x, data_y, mk=mark)
+        if self.selected_axis:
+            axis_data = self.get_axis(self.selected_axis)
+            slice_obj = self._slice(naxes, mk=mark)
 
             self.clear_plot()
-            self.plot.plot(axis_data, mddata[axes_slice])
+            self.plot.plot(axis_data, mddata[slice_obj])
 
-    def _slice(self, naxes, data_x, data_y, mk):
+    def _slice(self, naxes, mk):
         # Build N-dim slice
-        axes_slice = [0] * naxes
+        slice_obj = [0] * naxes
 
         # For axes 1 and 2
         if mk is not None:
-            axes_slice[0] = self.mark_data_x[mk]
-            axes_slice[1] = self.mark_data_y[mk]
-        else:
-            axes_slice[0] = data_x
-            axes_slice[1] = data_y
+            slice_obj[0] = self.mark_data_x[mk]
+            slice_obj[1] = self.mark_data_y[mk]
 
         # For axis > 3
         for i in xrange(2, naxes):
-            axes_slice[i] = self.image.revnaxis[i-2] + 1
+            slice_obj[i] = self.image.revnaxis[i-2] + 1
 
-        # Slice enabled axis
-        for ea in self.enabled_axes:
-            axes_slice[ea-1] = slice(None, None, None)
+        # Slice selected axis
+        slice_obj[self.selected_axis-1] = slice(None, None, None)
 
-        return axes_slice
+        return slice_obj
 
     def get_axis(self, i):
         try:
@@ -306,37 +279,38 @@ Use MultiDim to change step values of axes.""")
 
     ### MARK FEATURE LOGIC ###
 
-    def btndown_cb(self, canvas, event, data_x, data_y, viewer):
-        if self.image is None or self.mark_selected:
+    def btndown_cb(self, canvas, event, data_x, data_y):
+        # Exclude points outside boundaries
+        if not 0 <= data_x < self.wd or not 0 <= data_y < self.ht:
+            self.clear_plot()
             return
 
-        self.mark_data_x.append(data_x)
-        self.mark_data_y.append(data_y)
-        self.add_mark(data_x, data_y)
+        if not self.mark_selected:
+            self.mark_data_x.append(data_x)
+            self.mark_data_y.append(data_y)
+            self.add_mark(data_x, data_y)
 
-        self.del_btn.set_enabled(True)
-        self.del_all_btn.set_enabled(True)
+            self.del_btn.set_enabled(True)
+            self.del_all_btn.set_enabled(True)
         return True
 
-    def drag(self, canvas, event, data_x, data_y, viewer):
-        tag = self.mark_selected
-        if tag is None:
-            return
-        obj = self.canvas.getObjectByTag(tag)
-        obj.move_to(data_x, data_y)
-
-        canvas.redraw(whence=3)
-        return True
-
-    def update(self, canvas, event, data_x, data_y, viewer):
+    def update(self, canvas, event, data_x, data_y):
         tag = self.mark_selected
         if tag is None:
             return
         idx = int(tag.strip('mark'))
         obj = self.canvas.getObjectByTag(tag)
-        obj.move_to(data_x, data_y)
+        obj.move_to(data_x+5, data_y)
 
         canvas.redraw(whence=3)
+
+        # Exclude points outside boundaries
+        if not 0 <= data_x < self.wd or not 0 <= data_y < self.ht:
+            self.clear_plot()
+            # Clear mark data
+            self.mark_data_x[idx] = None
+            self.mark_data_y[idx] = None
+            return
 
         self.mark_data_x[idx] = data_x
         self.mark_data_y[idx] = data_y
@@ -395,7 +369,7 @@ Use MultiDim to change step values of axes.""")
         if self.mark_selected is None:
             return
         idx = int(self.mark_selected.strip('mark'))
-        self._plot(self.mark_data_x[idx], self.mark_data_y[idx], mark=idx)
+        self._plot(mark=idx)
 
     def mark_select_cb(self, w, index):
         tag = self.marks[index]
