@@ -340,6 +340,8 @@ class GingaControl(Callback.Callbacks):
         ColorBar in the Readout (if any).
         """
         chinfo = self.get_channelInfo()
+        if chinfo is None:
+            return
         readout = chinfo.readout
         if readout is None:
             # must be using a shared readout
