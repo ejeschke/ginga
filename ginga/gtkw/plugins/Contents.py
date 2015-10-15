@@ -81,6 +81,7 @@ class Contents(GingaPlugin.GlobalPlugin):
 
         cw = container.get_widget()
         cw.pack_start(sw, fill=True, expand=True)
+        cw.show_all()
 
         self.gui_up = True
 

@@ -10,4 +10,7 @@ if tkname == 'gtk':
 elif tkname == 'qt':
     from ginga.qtw.Widgets import *
 
+elif tkname == 'pg':
+    from ginga.web.pgw.Widgets import *
+
 #END

@@ -14,6 +14,7 @@ import math
 from ginga.gtkw import gtksel
 import gtk
 import gobject
+import pango
 
 from ginga.misc import Bunch, Callback
 from functools import reduce
@@ -674,12 +675,18 @@ class Desktop(Callback.Callbacks):
             if tabname in self.tab:
                 tabname = 'tab%d' % self.tabcount
 
+        cont = None
+        if hasattr(widget, 'get_widget'):
+            # widget is a wrapped one
+            cont = widget
+            widget = widget.get_widget()
+
         label = gtk.Label(labelname)
         evbox = gtk.EventBox()
         evbox.add(label)
         evbox.show_all()
         tab_w.append_page(widget, evbox)
-        bnch = Bunch.Bunch(widget=widget, name=labelname,
+        bnch = Bunch.Bunch(widget=widget, wrapped=cont, name=labelname,
                            tabname=tabname, data=data)
         self.tab[tabname] = bnch
         evbox.connect("button-press-event", self.select_cb, labelname, data)
@@ -1177,5 +1184,9 @@ def get_scroll_info(event):
     degrees = 15.0
 
     return (degrees, direction)
+
+def get_font(font_family, point_size):
+    font = pango.FontDescription('%s %d' % (font_family, point_size))
+    return font
 
 #END

@@ -1,4 +1,4 @@
-from ginga.web.pgw.ImageViewPg import CanvasView
+from ginga.web.pgw.ImageViewPg import CanvasView, ImageViewCanvas
 from ginga.web.pgw import Widgets
 from ginga.misc import Bunch
 
@@ -20,10 +20,6 @@ class GingaViewer(Widgets.Canvas):
         self.logger = viewer.logger
 
         self._configured = False
-
-        self._pinching = False
-        self._panning = False
-        self._rotating = False
 
         self.set_viewer(viewer)
 

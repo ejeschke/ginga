@@ -589,10 +589,16 @@ class Desktop(Callback.Callbacks):
             if tabname in self.tab:
                 tabname = 'tab%d' % self.tabcount
 
+        cont = None
+        if hasattr(widget, 'get_widget'):
+            # widget is a wrapped one
+            cont = widget
+            widget = widget.get_widget()
+
         tab_w.addTab(widget, labelname)
         self.tab[tabname] = Bunch.Bunch(widget=widget, name=labelname,
                                         tabname=tabname, data=data,
-                                        group=group)
+                                        wrapped=cont, group=group)
         return tabname
 
     def _find_nb(self, tabname):
@@ -1177,5 +1183,8 @@ def get_icon(iconpath, size=None):
     iconw = QIcon(pixmap)
     return iconw
 
+def get_font(font_family, point_size):
+    font = QFont(font_family, point_size)
+    return font
 
 #END

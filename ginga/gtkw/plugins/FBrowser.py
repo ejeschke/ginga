@@ -1,7 +1,7 @@
 #
 # FBrowser.py -- File Browser plugin for fits viewer
-# 
-# Eric Jeschke (eric@naoj.org) 
+#
+# Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
@@ -30,7 +30,7 @@ class FBrowser(FBrowserBase.FBrowserBase):
         for hdr, key in self.columns:
             self.cell_data_funcs.append(self._mk_set_cell(key))
             self.cell_sort_funcs.append(self._mksrtfnN(key))
-        
+
         icondir = self.fv.iconpath
         foldericon = os.path.join(icondir, 'folder'+icon_ext)
         self.folderpb = gtksel.pixbuf_new_from_file_at_size(foldericon, 24, 24)
@@ -51,7 +51,7 @@ class FBrowser(FBrowserBase.FBrowserBase):
         # create the TreeView
         #self.treeview = gtk.TreeView()
         self.treeview = MultiDragDropTreeView()
-        
+
         # create the TreeViewColumns to display the data
         self.tvcolumn = [None] * len(self.columns)
 
@@ -124,6 +124,7 @@ class FBrowser(FBrowserBase.FBrowserBase):
         btn.connect('clicked', lambda w: self.make_thumbs())
         btns.add(btn)
         rvbox.pack_start(btns, padding=4, fill=True, expand=False)
+        rvbox.show_all()
 
         cw = container.get_widget()
         cw.pack_start(rvbox, padding=0, fill=True, expand=True)
@@ -176,7 +177,7 @@ class FBrowser(FBrowserBase.FBrowserBase):
         if path == '..':
             curdir, curglob = os.path.split(self.curpath)
             path = os.path.join(curdir, path, curglob)
-            
+
         if os.path.isdir(path):
             path = os.path.join(path, '*')
             self.browse(path)
@@ -205,13 +206,13 @@ class FBrowser(FBrowserBase.FBrowserBase):
         #self.fv.dragdrop(self.fitsimage, paths)
         self.fv.gui_do(self.fitsimage.make_callback, 'drag-drop',
                        paths)
-        
+
     def drag_data_get_cb(self, treeview, context, selection,
                          info, timestamp):
         paths = self.get_selected_paths()
         #selection.set_uris(paths)
         selection.set("text/plain", 0, '\n'.join(paths))
-    
+
     def makelisting(self, path):
         self.entry.set_text(path)
 
@@ -223,11 +224,11 @@ class FBrowser(FBrowserBase.FBrowserBase):
         self.treeview.set_model(listmodel)
         # Hack to get around slow TreeView scrolling with large lists
         self.treeview.set_fixed_height_mode(True)
-            
+
     def browse_cb(self, w):
         path = w.get_text().strip()
         self.browse(path)
-        
+
     def save_as_cb(self):
         path = self.entry2.get_text()
         if not path.startswith('/'):
@@ -235,7 +236,7 @@ class FBrowser(FBrowserBase.FBrowserBase):
 
         image = self.fitsimage.get_image()
         self.fv.error_wrap(image.save_as_file, path)
-        
+
     def __str__(self):
         return 'fbrowser'
 
@@ -245,7 +246,7 @@ class MultiDragDropTreeView(gtk.TreeView):
     properly
     See: https://gist.github.com/kevinmehall/278480#file-multiple-selection-dnd-class-py
     '''
- 
+
     def __init__(self):
         super(MultiDragDropTreeView, self).__init__()
 
@@ -257,7 +258,7 @@ class MultiDragDropTreeView(gtk.TreeView):
         # Here we intercept mouse clicks on selected items so that we can
         # drag multiple items without the click selecting only one
         target = self.get_path_at_pos(int(event.x), int(event.y))
-        if (target 
+        if (target
            and event.type == gtk.gdk.BUTTON_PRESS
            and not (event.state & (gtk.gdk.CONTROL_MASK|gtk.gdk.SHIFT_MASK))
            and self.get_selection().path_is_selected(target[0])):
@@ -269,8 +270,8 @@ class MultiDragDropTreeView(gtk.TreeView):
         # re-enable selection
         self.get_selection().set_select_function(lambda *ignore: True)
 
-        target = self.get_path_at_pos(int(event.x), int(event.y))	
-        if (self.defer_select and target 
+        target = self.get_path_at_pos(int(event.x), int(event.y))
+        if (self.defer_select and target
            and self.defer_select == target[0]
            and not (event.x==0 and event.y==0)): # certain drag and drop
             self.set_cursor(target[0], target[1], False)

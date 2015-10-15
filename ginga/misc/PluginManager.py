@@ -133,17 +133,26 @@ class PluginManagerBase(object):
             self.clear_focus(lname)
 
         if lname in self.active:
+            self.logger.debug("removing from task bar: %s" % (lname))
             bnch = self.active[lname]
-            self.stop_plugin(bnch.pInfo)
+
             if bnch.widget is not None:
                 self.remove_taskbar(bnch)
             del self.active[lname]
 
-        # Set focus to another plugin if one is running
-        active = self.active.keys()
-        if len(active) > 0:
-            name = active[0]
-            self.set_focus(name)
+            try:
+                self.stop_plugin(bnch.pInfo)
+
+            except Exception as e:
+                self.logger.error("Error deactivating plugin: %s" % (str(e)))
+                # TODO: log traceback
+
+            # Set focus to another plugin if one is running
+            active = self.active.keys()
+            if len(active) > 0:
+                name = active[0]
+                self.logger.debug("focusing: %s" % (name))
+                self.set_focus(name)
 
     def set_focus(self, name):
         self.logger.debug("Focusing plugin '%s'" % (name))
@@ -219,10 +228,12 @@ class PluginManagerBase(object):
         try:
             if hasattr(pInfo.obj, 'build_gui'):
                 vbox = Widgets.VBox()
+
                 # attach size of workspace to container so plugin
                 # can plan for how to configure itself
                 wd, ht = self.ds.get_ws_size(pInfo.spec.ws)
                 vbox.size = (wd, ht)
+
                 if future:
                     pInfo.obj.build_gui(vbox, future=future)
                 else:
@@ -270,9 +281,9 @@ class PluginManagerBase(object):
 
         if vbox is not None:
             self.finish_gui(pInfo, vbox)
+            # add container to workspace
             ws = pInfo.spec.ws
-            child_w = vbox.get_widget()
-            self.ds.add_tab(ws, child_w, 2, pInfo.tabname, pInfo.tabname)
+            self.ds.add_tab(ws, vbox, 2, pInfo.tabname, pInfo.tabname)
             pInfo.widget = vbox
 
             self.activate(pInfo)

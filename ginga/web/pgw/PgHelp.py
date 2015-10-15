@@ -169,3 +169,9 @@ class WindowHandler(tornado.web.RequestHandler):
             output = self.make_index(wids)
 
         self.write(output)
+
+def get_font(font_family, point_size):
+    font = '%s %d' % (font_family, point_size)
+    return font
+
+#END

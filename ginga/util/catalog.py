@@ -632,7 +632,7 @@ class CatalogServer(URLServer):
         offset = 0
         while offset < len(lines):
             line = lines[offset].strip()
-            print(line)
+            #print(line)
             offset += 1
             if line.startswith('-'):
                 break
@@ -643,7 +643,7 @@ class CatalogServer(URLServer):
 
         for line in lines[offset:]:
             line = line.strip()
-            #print ">>>", line
+            #print(line)
             if (len(line) == 0) or line.startswith('#'):
                 continue
             elts = line.split()
@@ -685,7 +685,6 @@ class CatalogServer(URLServer):
                                     description=''))
 
             except Exception as e:
-                print(str(e))
                 self.logger.error("Error parsing catalog query results: %s" % (
                     str(e)))
 

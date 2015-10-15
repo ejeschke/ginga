@@ -1,6 +1,6 @@
 #
 # WBrowser.py -- Web Browser plugin for fits viewer
-# 
+#
 # Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c)  Eric R. Jeschke.  All rights reserved.
@@ -34,18 +34,18 @@ class WBrowser(GingaPlugin.GlobalPlugin):
             self.browser = QtGui.QLabel("Please install the python-webkit package to enable this plugin")
         else:
             self.browser = QWebView()
-        
+
         sw = QtGui.QScrollArea()
         sw.setWidgetResizable(True)
         #sw.set_border_width(2)
         sw.setWidget(self.browser)
 
         cw = container.get_widget()
-        cw.addWidget(sw, stretch=1)
+        cw.layout().addWidget(sw, stretch=1)
         sw.show()
 
         self.entry = QtGui.QLineEdit()
-        cw.addWidget(self.entry, stretch=0)
+        cw.layout().addWidget(self.entry, stretch=0)
         self.entry.returnPressed.connect(self.browse_cb)
 
         btns = QtHelp.HBox()
@@ -55,7 +55,7 @@ class WBrowser(GingaPlugin.GlobalPlugin):
         btn = QtGui.QPushButton("Close")
         btn.clicked.connect(self.close)
         layout.addWidget(btn, stretch=0, alignment=QtCore.Qt.AlignLeft)
-        cw.addWidget(btns, stretch=0, alignment=QtCore.Qt.AlignLeft)
+        cw.layout().addWidget(btns, stretch=0, alignment=QtCore.Qt.AlignLeft)
 
         if has_webkit:
             helpfile = os.path.abspath(os.path.join(packageHome,
@@ -71,16 +71,16 @@ class WBrowser(GingaPlugin.GlobalPlugin):
             self.browser.show()
         except Exception as e:
             self.fv.show_error("Couldn't load web page: %s" % (str(e)))
-        
+
     def browse_cb(self):
         url = str(self.entry.text()).strip()
         self.browse(url)
-        
+
     def close(self):
         self.fv.stop_global_plugin(str(self))
         return True
 
     def __str__(self):
         return 'wbrowser'
-    
+
 #END

@@ -1270,8 +1270,12 @@ class ImageViewBindings(object):
                                            delay=0.4)
         return True
 
-    def sc_zoom_new(self, viewer, event, msg=True):
-        return self.sc_zoom_coarse(viewer, event, msg=msg)
+    ## def sc_zoom(self, viewer, event, msg=True):
+    ##     if self.canzoom:
+    ##         zoom_accel = self.settings.get('scroll_zoom_acceleration', 1.0)
+    ##         amount = zoom_accel * 0.50
+    ##         self._scale_image(viewer, event.direction, amount, msg=msg)
+    ##     return True
 
     def sc_zoom_coarse(self, viewer, event, msg=True):
         """Interactively zoom the image by scrolling motion.

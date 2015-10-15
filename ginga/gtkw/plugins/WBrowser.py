@@ -1,6 +1,6 @@
 #
 # WBrowser.py -- Web Browser plugin for fits viewer
-# 
+#
 # Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c) Eric R. Jeschke.  All rights reserved.
@@ -34,7 +34,7 @@ class WBrowser(GingaPlugin.GlobalPlugin):
             self.browser = gtk.Label("Please install the python-webkit package to enable this plugin")
         else:
             self.browser = webkit.WebView()
-        
+
         sw = gtk.ScrolledWindow()
         sw.set_border_width(2)
         sw.set_policy(gtk.POLICY_AUTOMATIC,
@@ -47,7 +47,7 @@ class WBrowser(GingaPlugin.GlobalPlugin):
         self.entry = gtk.Entry()
         cw.pack_start(self.entry, fill=True, expand=False)
         self.entry.connect('activate', self.browse_cb)
-         
+
         if has_webkit:
             helpfile = os.path.abspath(os.path.join(packageHome,
                                                     "doc", "help.html"))
@@ -63,7 +63,7 @@ class WBrowser(GingaPlugin.GlobalPlugin):
         btn.connect('clicked', lambda w: self.close())
         btns.add(btn)
         cw.pack_start(btns, padding=4, fill=True, expand=False)
-
+        cw.show_all()
 
     def browse(self, url):
         self.logger.debug("Browsing '%s'" % (url))
@@ -72,16 +72,16 @@ class WBrowser(GingaPlugin.GlobalPlugin):
             self.entry.set_text(url)
         except Exception as e:
             self.fv.show_error("Couldn't load web page: %s" % (str(e)))
-        
+
     def browse_cb(self, w):
         url = w.get_text().strip()
         self.browse(url)
-        
+
     def close(self):
         self.fv.stop_global_plugin(str(self))
         return True
 
     def __str__(self):
         return 'wbrowser'
-    
+
 #END

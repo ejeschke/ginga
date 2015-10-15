@@ -1,5 +1,5 @@
 #
-# PgMain.py -- web application threading help routines.
+# GwMain.py -- application threading help routines.
 #
 # Eric Jeschke (eric@naoj.org)
 #
@@ -20,18 +20,12 @@ else:
     import _thread as thread
     import queue as Queue
 
-import tornado.web
-import tornado.template
-import tornado.ioloop
-
-from ginga.web.pgw import templates, js, PgHelp
 from ginga.misc import Task, Future, Callback
 
-class PgMain(Callback.Callbacks):
+class GwMain(Callback.Callbacks):
 
-    def __init__(self, queue=None, logger=None, ev_quit=None,
-                 host='localhost', port=9909, app=None):
-        super(PgMain, self).__init__()
+    def __init__(self, queue=None, logger=None, ev_quit=None, app=None):
+        super(GwMain, self).__init__()
 
         self.enable_callback('shutdown')
 
@@ -41,41 +35,22 @@ class PgMain(Callback.Callbacks):
         self.gui_queue = queue
         # You can pass in a logger if you prefer to do so
         if logger is None:
-            logger = logging.getLogger('PgMain')
+            logger = logging.getLogger('GwMain')
         self.logger = logger
         if not ev_quit:
             ev_quit = threading.Event()
         self.ev_quit = ev_quit
-        self.host = host
-        self.port = port
         self.app = app
-        self.base_url = "http://%s:%d/app" % (self.host, self.port)
-        if self.app is not None:
-            self.app.base_url = self.base_url
         self.gui_thread_id = None
-
-        # Get screen size
-        ## desktop = self.app.desktop()
-        ## #rect = desktop.screenGeometry()
-        ## rect = desktop.availableGeometry()
-        ## size = rect.size()
-        ## self.screen_wd = size.width()
-        ## self.screen_ht = size.height()
-        self.screen_wd = 600
-        self.screen_ht = 800
 
     def get_widget(self):
         return self.app
-
-    def get_screen_size(self):
-        return (self.screen_wd, self.screen_ht)
 
     def update_pending(self, timeout=0.0):
 
         #print "1. PROCESSING OUT-BAND"
         try:
             self.app.process_events()
-            pass
         except Exception as e:
             self.logger.error(str(e))
             # TODO: traceback!
@@ -194,43 +169,6 @@ class PgMain(Callback.Callbacks):
 
         while not self.ev_quit.isSet():
             self.update_pending(timeout=timeout)
-        #self.start(use_thread=False)
-
-    def start(self, no_ioloop=False):
-
-        js_path = os.path.dirname(js.__file__)
-
-        # create and run the app
-        self.server = tornado.web.Application([
-            #(r"/js/(.*\.js)", tornado.web.StaticFileHandler,
-            (r"/js/(.*)", tornado.web.StaticFileHandler,
-             {"path":  js_path}),
-            (r"/js/jquery/(.*)", tornado.web.StaticFileHandler,
-             {"path":  os.path.join(js_path, 'jquery')}),
-            (r"/app", PgHelp.WindowHandler,
-              dict(name='Application', url='/app', app=self.app)),
-            (r"/app/socket", PgHelp.ApplicationHandler,
-              dict(name='ApplicationSocketInterface', app=self.app)),
-            ],
-               app=self.app, logger=self.logger)
-
-        self.server.listen(self.port, self.host)
-
-        self.logger.info("ginga web now running at " + self.base_url)
-
-        if no_ioloop:
-            self.t_ioloop = None
-        else:
-            self.t_ioloop = tornado.ioloop.IOLoop.instance()
-            self.t_ioloop.start()
-
-    def stop(self):
-        # how to stop tornado server?
-        if not self.t_ioloop is None:
-            self.t_ioloop.stop()
-
-        self.ev_quit.set()
-
 
     def gui_quit(self):
         "Call this to cause the GUI thread to quit the mainloop."""
@@ -238,10 +176,9 @@ class PgMain(Callback.Callbacks):
 
         self.make_callback('shutdown')
 
-        #self.app.quit()
+        self.app.process_end()
 
     def _quit(self):
         self.gui_quit()
-
 
 # END

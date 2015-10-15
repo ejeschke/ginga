@@ -11,7 +11,7 @@ import os.path
 from functools import reduce
 
 from ginga.qtw.QtHelp import QtGui, QtCore, QTextCursor, \
-     QIcon, QPixmap, QImage
+     QIcon, QPixmap, QImage, have_pyqt4
 from ginga.qtw import QtHelp, QtMain
 
 from ginga.misc import Callback, Bunch
@@ -43,6 +43,25 @@ class WidgetBase(Callback.Callbacks):
     def set_enabled(self, tf):
         self.widget.setEnabled(tf)
 
+    def get_size(self):
+        wd, ht = self.widget.width(), self.widget.height()
+        return (wd, ht)
+
+    def delete(self):
+        self.widget.deleteLater()
+
+    def resize(self, width, height):
+        self.widget.resize(width, height)
+
+    def show(self):
+        self.widget.show()
+
+    def hide(self):
+        self.widget.hide()
+
+    def get_font(self, font_family, point_size):
+        font = QtHelp.get_font(font_family, point_size)
+        return font
 
 # BASIC WIDGETS
 
@@ -64,6 +83,9 @@ class TextEntry(WidgetBase):
 
     def set_text(self, text):
         self.widget.setText(text)
+
+    def set_font(self, font):
+        self.widget.setFont(font)
 
     def set_length(self, numchars):
         # this is only supposed to set the visible length (but Qt doesn't
@@ -95,6 +117,9 @@ class TextEntrySet(WidgetBase):
 
     def set_text(self, text):
         self.entry.setText(text)
+
+    def set_font(self, font):
+        self.widget.setFont(font)
 
     def set_length(self, numchars):
         # this is only supposed to set the visible length (but Qt doesn't
@@ -167,16 +192,52 @@ class TextArea(WidgetBase):
             self.widget.setLineWrapMode(QtGui.QTextEdit.NoWrap)
 
 class Label(WidgetBase):
-    def __init__(self, text=''):
+    def __init__(self, text='', halign='left', style='normal', menu=None):
         super(Label, self).__init__()
 
-        self.widget = QtGui.QLabel(text)
+        lbl = QtGui.QLabel(text)
+        if halign == 'left':
+            lbl.setAlignment(QtCore.Qt.AlignLeft)
+        elif halign == 'center':
+            lbl.setAlignment(QtCore.Qt.AlignHCenter)
+        elif halign == 'center':
+            lbl.setAlignment(QtCore.Qt.AlignRight)
+
+        self.widget = lbl
+        lbl.mousePressEvent = self._cb_redirect
+
+        if style == 'clickable':
+            lbl.setSizePolicy(QtGui.QSizePolicy.Minimum,
+                              QtGui.QSizePolicy.Minimum)
+            lbl.setFrameStyle(QtGui.QFrame.Box | QtGui.QFrame.Raised)
+
+        if menu is not None:
+            lbl.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+            menu_w = menu.get_widget()
+
+            def on_context_menu(point):
+                menu_w.exec_(lbl.mapToGlobal(point))
+
+            lbl.customContextMenuRequested.connect(on_context_menu)
+
+        self.enable_callback('activated')
+
+    def _cb_redirect(self, event):
+        buttons = event.buttons()
+        if buttons & QtCore.Qt.LeftButton:
+            self.make_callback('activated')
 
     def get_text(self):
         return self.widget.text()
 
     def set_text(self, text):
         self.widget.setText(text)
+
+    def set_font(self, font):
+        self.widget.setFont(font)
+
+    def set_color(self, fg=None, bg=None):
+        self.widget.setStyleSheet("QLabel { background-color: %s; color: %s; }" % (bg, fg));
 
 
 class Button(WidgetBase):
@@ -222,6 +283,9 @@ class ComboBox(WidgetBase):
         index = self.widget.findText(text)
         self.widget.removeItem(index)
 
+    def get_alpha(self, idx):
+        return self.widget.itemText(idx)
+
     def clear(self):
         self.widget.clear()
 
@@ -237,7 +301,6 @@ class ComboBox(WidgetBase):
 
     def get_index(self):
         return self.widget.currentIndex()
-
 
 class SpinBox(WidgetBase):
     def __init__(self, dtype=int):
@@ -410,6 +473,18 @@ class ProgressBar(WidgetBase):
     def set_value(self, pct):
         self.widget.setValue(int(pct * 100.0))
 
+class StatusBar(WidgetBase):
+    def __init__(self):
+        super(StatusBar, self).__init__()
+
+        sbar = QtGui.QStatusBar()
+        self.widget = sbar
+
+    def set_message(self, msg_str):
+        # remove message in about 10 seconds
+        self.widget.showMessage(msg_str, 10000)
+
+
 # CONTAINERS
 
 class ContainerBase(WidgetBase):
@@ -422,7 +497,9 @@ class ContainerBase(WidgetBase):
         self.children.append(ref)
 
     def _remove(self, childw, delete=False):
-        self.widget.layout().removeWidget(childw)
+        layout = self.widget.layout()
+        if layout is not None:
+            layout.removeWidget(childw)
         childw.setParent(None)
         if delete:
             childw.deleteLater()
@@ -445,25 +522,34 @@ class Box(ContainerBase):
     def __init__(self, orientation='horizontal'):
         super(Box, self).__init__()
 
+        self.widget = QtGui.QWidget()
         self.orientation = orientation
         if orientation == 'horizontal':
-            self.widget = QtHelp.HBox()
+            self.layout = QtGui.QHBoxLayout()
         else:
-            self.widget = QtHelp.VBox()
+            self.layout = QtGui.QVBoxLayout()
+
+        # because of ridiculous defaults
+        self.layout.setContentsMargins(0, 0, 0, 0)
+        self.widget.setLayout(self.layout)
 
     def add_widget(self, child, stretch=0.0):
         self.add_ref(child)
         child_w = child.get_widget()
-        self.widget.layout().addWidget(child_w, stretch=stretch)
+        if self.orientation == 'horizontal':
+            self.layout.addWidget(child_w, stretch=stretch,
+                                           alignment=QtCore.Qt.AlignLeft)
+        else:
+            self.layout.addWidget(child_w, stretch=stretch)
 
     def set_spacing(self, val):
-        self.widget.layout().setSpacing(val)
+        self.layout.setSpacing(val)
 
     def set_margins(self, left, right, top, bottom):
-        self.widget.layout().setContentsMargins(left, right, top, bottom)
+        self.layout.setContentsMargins(left, right, top, bottom)
 
     def set_border_width(self, pix):
-        self.widget.layout().setContentsMargins(pix, pix, pix, pix)
+        self.layout.setContentsMargins(pix, pix, pix, pix)
 
 
 class HBox(Box):
@@ -563,6 +649,14 @@ class TabWidget(ContainerBase):
         super(TabWidget, self).__init__()
 
         nb = QtGui.QTabWidget()
+        nb.currentChanged.connect(self._cb_redirect)
+        self.widget = nb
+        self.set_tab_position(tabpos)
+
+        self.enable_callback('page-switch')
+
+    def set_tab_position(self, tabpos):
+        nb = self.widget
         if tabpos == 'top':
             nb.setTabPosition(QtGui.QTabWidget.North)
         elif tabpos == 'bottom':
@@ -571,11 +665,9 @@ class TabWidget(ContainerBase):
             nb.setTabPosition(QtGui.QTabWidget.West)
         elif tabpos == 'right':
             nb.setTabPosition(QtGui.QTabWidget.East)
-        nb.currentChanged.connect(self._cb_redirect)
-        self.widget = nb
 
     def _cb_redirect(self, index):
-        self.make_callback('activated', index)
+        self.make_callback('page-switch', index)
 
     def add_widget(self, child, title=''):
         self.add_ref(child)
@@ -591,11 +683,18 @@ class TabWidget(ContainerBase):
     def index_of(self, child):
         return self.widget.indexOf(child.get_widget())
 
+    def get_widget_by_index(self, idx):
+        """Returns child corresponding to `idx`"""
+        return self.widget.widget(idx)
+
+
 class StackWidget(ContainerBase):
     def __init__(self):
         super(StackWidget, self).__init__()
 
         self.widget = QtHelp.StackedWidget()
+
+        self.enable_callback('page-switch')
 
     def add_widget(self, child, title=''):
         self.add_ref(child)
@@ -742,8 +841,8 @@ class Menu(ContainerBase):
     def __init__(self):
         super(Menu, self).__init__()
 
-        # this ends up being a reference to the Qt menubar or toolbar
-        self.widget = None
+        # this get's overwritten if created from Menubar
+        self.widget = QtGui.QMenu()
 
     def add_widget(self, child):
         child.widget = self.widget.addAction(child.text,
@@ -758,6 +857,9 @@ class Menu(ContainerBase):
     def add_separator(self):
         self.widget.addSeparator()
 
+    def popup(self, widget):
+        w = widget.get_widget()
+        self.widget.popup(w.mapToGlobal(QtCore.QPoint(0, 0)))
 
 class Menubar(ContainerBase):
     def __init__(self):
@@ -800,12 +902,6 @@ class TopLevel(ContainerBase):
         child_w = child.get_widget()
         self.widget.layout().addWidget(child_w)
 
-    def show(self):
-        self.widget.show()
-
-    def hide(self):
-        self.widget.hide()
-
     def _quit(self, event):
         event.accept()
         self.close()
@@ -825,9 +921,6 @@ class TopLevel(ContainerBase):
 
     def lower(self):
         self.widget.lower()
-
-    def resize(self, width, height):
-        self.widget.resize(width, height)
 
     def focus(self):
         self.widget.raise_()
@@ -858,16 +951,61 @@ class TopLevel(ContainerBase):
         self.widget.setWindowTitle(title)
 
 
-class Application(QtMain.QtMain):
+class Application(object):
 
-    def __init__(self, *args, **kwdargs):
-        super(Application, self).__init__(*args, **kwdargs)
+    def __init__(self, logger=None):
 
+        self.logger = logger
         self.window_list = []
 
-    def window(self, title=None):
+        self.window_dict = {}
+        self.wincnt = 0
+
+        if have_pyqt4:
+            QtGui.QApplication.setGraphicsSystem('raster')
+        app = QtGui.QApplication([])
+        #app.lastWindowClosed.connect(lambda *args: self._quit())
+        self._qtapp = app
+
+        # Get screen size
+        desktop = self._qtapp.desktop()
+        #rect = desktop.screenGeometry()
+        rect = desktop.availableGeometry()
+        size = rect.size()
+        self.screen_wd = size.width()
+        self.screen_ht = size.height()
+
+    def get_screen_size(self):
+        return (self.screen_wd, self.screen_ht)
+
+    def process_events(self):
+        self._qtapp.processEvents()
+
+    def process_end(self):
+        self._qtapp.quit()
+
+    def add_window(self, window, wid=None):
+        if wid is None:
+            wid = 'win%d' % (self.wincnt)
+            self.wincnt += 1
+        window.wid = wid
+        window.url = ''
+        window.app = self
+
+        self.window_dict[wid] = window
+
+    def get_window(self, wid):
+        return self.window_dict[wid]
+
+    def has_window(self, wid):
+        return wid in self.window_dict
+
+    def get_wids(self):
+        return list(self.window_dict.keys())
+
+    def make_window(self, title=None):
         w = TopLevel(title=title)
-        self.window_list.append(w)
+        self.add_window(w)
         return w
 
 
@@ -997,6 +1135,8 @@ def get_orientation(container):
     if not hasattr(container, 'size'):
         return 'vertical'
     (wd, ht) = container.size
+    ## wd, ht = container.get_size()
+    print('container size is %dx%d' % (wd, ht))
     if wd < ht:
         return 'vertical'
     else:

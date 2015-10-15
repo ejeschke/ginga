@@ -114,7 +114,7 @@ class Thumbs(ThumbsBase.ThumbsBase):
 
         # TODO: should this even have it's own scrolled window?
         cw = container.get_widget()
-        cw.addWidget(sw, stretch=1)
+        cw.layout().addWidget(sw, stretch=1)
         sw.show()
 
         captions = (('Auto scroll', 'checkbutton', 'Clear', 'button'),)
@@ -126,7 +126,7 @@ class Thumbs(ThumbsBase.ThumbsBase):
         b.clear.clicked.connect(self.clear)
         auto_scroll = self.settings.get('auto_scroll', True)
         b.auto_scroll.setChecked(auto_scroll)
-        cw.addWidget(w, stretch=0)
+        cw.layout().addWidget(w, stretch=0)
         self.gui_up = True
 
     def insert_thumbnail(self, imgwin, thumbkey, thumbname, chname, name, path,

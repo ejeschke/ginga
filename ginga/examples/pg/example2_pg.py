@@ -262,18 +262,15 @@ def main(options, args):
     base_url = "http://%s:%d/app" % (options.host, options.port)
 
     # establish our widget application
-    app = Widgets.Application(logger=logger, base_url=base_url)
-
-    # web server/connection machinery
-    server = PgMain.PgMain(logger=logger, app=app,
-                           host=options.host, port=options.port)
+    app = Widgets.Application(logger=logger,
+                              host=options.host, port=options.port)
 
     #  create top level window
     window = app.make_window("Ginga web example2")
 
     # our own viewer object, customized with methods (see above)
     viewer = FitsViewer(logger, window)
-    server.add_callback('shutdown', viewer.quit)
+    #server.add_callback('shutdown', viewer.quit)
 
     #window.resize(700, 540)
 
@@ -284,7 +281,7 @@ def main(options, args):
     #window.raise_()
 
     try:
-        server.mainloop()
+        app.start()
 
     except KeyboardInterrupt:
         logger.info("Terminating viewer...")

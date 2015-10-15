@@ -273,6 +273,7 @@ class ReferenceViewer(object):
         logger.info("Chosen toolkit (%s) family is '%s'" % (
             ginga_toolkit.toolkit, tkname))
 
+        ##from ginga.gw.GingaGw import GingaView
         if tkname == 'gtk':
             from ginga.gtkw.GingaGtk import GingaView
         elif tkname == 'qt':
@@ -294,10 +295,10 @@ class ReferenceViewer(object):
         # Define class dynamically based on toolkit choice
         class Ginga(GingaControl, GingaView):
 
-            def __init__(self, logger, threadPool, module_manager, prefs,
+            def __init__(self, logger, thread_pool, module_manager, prefs,
                          ev_quit=None):
                 GingaView.__init__(self, logger, ev_quit)
-                GingaControl.__init__(self, logger, threadPool, module_manager,
+                GingaControl.__init__(self, logger, thread_pool, module_manager,
                                       prefs, ev_quit=ev_quit)
 
         if settings.get('useMatplotlibColormaps', False):
@@ -346,12 +347,12 @@ class ReferenceViewer(object):
 
         # Create and start thread pool
         ev_quit = threading.Event()
-        threadPool = Task.ThreadPool(options.numthreads, logger,
+        thread_pool = Task.ThreadPool(options.numthreads, logger,
                                      ev_quit=ev_quit)
-        threadPool.startall()
+        thread_pool.startall()
 
         # Create the Ginga main object
-        ginga = Ginga(logger, threadPool, mm, prefs, ev_quit=ev_quit)
+        ginga = Ginga(logger, thread_pool, mm, prefs, ev_quit=ev_quit)
         ginga.set_layout(self.layout)
 
         gc = os.path.join(basedir, "ginga_config.py")
@@ -486,6 +487,11 @@ class ReferenceViewer(object):
 
         try:
             try:
+                # if there is a network component, start it
+                if hasattr(ginga, 'start'):
+                    task = Task.FuncTask2(ginga.start)
+                    thread_pool.addTask(task)
+
                 # Main loop to handle GUI events
                 logger.info("Entering mainloop...")
                 ginga.mainloop(timeout=0.001)

@@ -16,7 +16,6 @@ import traceback
 from ginga.gtkw import gtksel, Widgets
 import gtk
 import gobject
-import pango
 
 # Local application imports
 from ginga import ImageView
@@ -30,8 +29,9 @@ sys.path.insert(0, moduleHome)
 childDir = os.path.join(moduleHome, 'plugins')
 sys.path.insert(0, childDir)
 
-from ginga.gtkw import ImageViewCanvasGtk, ColorBar, Readout, FileSelection, \
-     PluginManagerGtk, GtkHelp, GtkMain
+from ginga.gtkw import ImageViewCanvasGtk, ColorBar, FileSelection, \
+     GtkHelp, GtkMain
+from ginga.gw import PluginManager, Readout
 
 icon_path = os.path.abspath(os.path.join(moduleHome, '..', 'icons'))
 rc_file = os.path.join(moduleHome, "gtk_rc")
@@ -111,6 +111,8 @@ class GingaView(GtkMain.GtkMain):
             self.readout = self.build_readout()
             self.add_callback('field-info', self.readout_cb, self.readout, None)
             rw = self.readout.get_widget()
+            # one level deeper to the native widget in gw.Readout
+            rw = rw.get_widget()
             self.w.vbox.pack_start(rw, padding=0, fill=True, expand=False)
 
         # bottom buttons
@@ -148,7 +150,7 @@ class GingaView(GtkMain.GtkMain):
 
 
     def getPluginManager(self, logger, fitsview, ds, mm):
-        return PluginManagerGtk.PluginManager(logger, fitsview, ds, mm)
+        return PluginManager.PluginManager(logger, fitsview, ds, mm)
 
     def make_button(self, name, wtyp, icon=None, tooltip=None):
         image = None
@@ -358,6 +360,8 @@ class GingaView(GtkMain.GtkMain):
             fi.add_callback('image-set', self.readout_config, readout)
             self.add_callback('field-info', self.readout_cb, readout, name)
             rw = readout.get_widget()
+            # one level deeper to the native widget in gw.Readout
+            rw = rw.get_widget()
             vbox.pack_start(rw, padding=0, fill=True, expand=False)
         else:
             readout = None
@@ -702,9 +706,8 @@ class GingaView(GtkMain.GtkMain):
 
 
     def getFont(self, fontType, pointSize):
-        fontFamily = self.settings.get(fontType)
-        font = pango.FontDescription('%s %d' % (fontFamily, pointSize))
-        return font
+        font_family = self.settings.get(fontType)
+        return GtkHelp.get_font(font_family, pointSize)
 
     ####################################################
     # CALLBACKS

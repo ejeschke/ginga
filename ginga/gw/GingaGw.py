@@ -1,5 +1,5 @@
 #
-# GingaQt.py -- Qt display handler for the Ginga reference viewer.
+# GingaGw.py -- Gw display handler for the Ginga reference viewer.
 #
 # Eric Jeschke (eric@naoj.org)
 #
@@ -14,9 +14,8 @@ import platform
 import time
 
 # GUI imports
-from ginga.qtw.QtHelp import QtGui, QtCore, QFont, \
-     QImage, QIcon, QPixmap, MenuBar
-from ginga.qtw import Widgets
+from ginga.gw import GwHelp, GwMain, PluginManager, Readout
+from ginga.gw import Widgets, Viewers, Desktop
 
 # Local application imports
 from ginga import cmap, imap
@@ -29,23 +28,24 @@ sys.path.insert(0, moduleHome)
 childDir = os.path.join(moduleHome, 'plugins')
 sys.path.insert(0, childDir)
 
-from ginga.qtw import ColorBar, QtHelp, QtMain, ImageViewCanvasQt
-from ginga.gw import PluginManager, Readout
+## from ginga.gw import ColorBar, Readout, PluginManagerQt, \
+##      QtHelp, QtMain, ImageViewCanvasQt
 
 icon_path = os.path.abspath(os.path.join(moduleHome, '..', 'icons'))
-rc_file = os.path.join(moduleHome, "qt_rc")
 
 
 class GingaViewError(Exception):
     pass
 
-class GingaView(QtMain.QtMain):
+class GingaView(GwMain.GwMain, Widgets.Application):
 
     def __init__(self, logger, ev_quit):
-        # call superclass constructors--sets self.app
-        QtMain.QtMain.__init__(self, logger=logger, ev_quit=ev_quit)
-        if os.path.exists(rc_file):
-            self.app.setStyleSheet(rc_file)
+        Widgets.Application.__init__(self, logger=logger)
+        GwMain.GwMain.__init__(self, logger=logger, ev_quit=ev_quit,
+                               app=self)
+
+        ## if os.path.exists(rc_file):
+        ##     self.app.setStyleSheet(rc_file)
 
         # defaults for height and width
         #self.default_height = min(900, self.screen_ht - 100)
@@ -57,6 +57,9 @@ class GingaView(QtMain.QtMain):
         self.layout = None
         self._lsize = None
         self._rsize = None
+
+        self.colorbar = None
+        self.readout = None
 
     def set_layout(self, layout):
         self.layout = layout
@@ -72,79 +75,72 @@ class GingaView(QtMain.QtMain):
         self.font18 = self.getFont('fixedFont', 18)
 
         self.w.tooltips = None
-        QtGui.QToolTip.setFont(self.font11)
+        #QtGui.QToolTip.setFont(self.font11)
 
-        self.ds = QtHelp.Desktop()
+        self.ds = Desktop.Desktop(self)
         self.ds.make_desktop(self.layout, widgetDict=self.w)
         # TEMP: FIX ME!
         self.gpmon.ds = self.ds
 
-        for root in self.ds.toplevels:
+        for win in self.ds.toplevels:
             # add delete/destroy callbacks
-            ## root.connect(root, QtCore.SIGNAL('closeEvent()'),
-            ##              self.quit)
-            #root.setApp(self)
-            root.setWindowTitle("Ginga")
+            win.add_callback('closed', self.quit)
+            win.set_title("Ginga")
+            root = win
         self.ds.add_callback('all-closed', self.quit)
 
         self.w.root = root
         self.w.fscreen = None
 
         # Create main (center) FITS image pane
-        self.w.vbox = self.w['main'].layout()
-        self.w.vbox.setSpacing(0)
+        self.w.vbox = self.w['main']
+        self.w.vbox.set_spacing(0)
         self.w.mnb = self.w['channels']
-        if isinstance(self.w.mnb, QtGui.QMdiArea):
-            self.w.mnb.subWindowActivated.connect(self.page_switch_mdi_cb)
-            self.w.mnb.set_mode('tabs')
-        else:
-            self.w.mnb.currentChanged.connect(self.page_switch_cb)
+        ## if isinstance(self.w.mnb, QtGui.QMdiArea):
+        ##     self.w.mnb.subWindowActivated.connect(self.page_switch_mdi_cb)
+        ##     self.w.mnb.set_mode('tabs')
+        ## else:
+        ##     self.w.mnb.currentChanged.connect(self.page_switch_cb)
+        self.w.mnb.add_callback('page-switch', self.page_switch_cb)
 
         # readout
         if self.settings.get('share_readout', True):
             self.readout = self.build_readout()
             self.add_callback('field-info', self.readout_cb, self.readout, None)
             rw = self.readout.get_widget()
-            # one level deeper to the native widget in gw.Readout
-            rw = rw.get_widget()
-            self.w.vbox.addWidget(rw, stretch=0)
+            self.w.vbox.add_widget(rw, stretch=0)
 
         # bottom buttons
-        plw = QtGui.QWidget()
-        hbox = QtGui.QHBoxLayout()
-        hbox.setContentsMargins(0, 0, 0, 0)
-        hbox.setSpacing(2)
-        plw.setLayout(hbox)
+        hbox = Widgets.HBox()
+        hbox.set_border_width(0)
+        hbox.set_spacing(2)
 
-        cbox1 = QtHelp.ComboBox()
+        cbox1 = Widgets.ComboBox()
         self.w.channel = cbox1
-        cbox1.setToolTip("Select a channel")
-        cbox1.activated.connect(self.channel_select_cb)
-        hbox.addWidget(cbox1, stretch=0)
+        cbox1.set_tooltip("Select a channel")
+        cbox1.add_callback('activated', self.channel_select_cb)
+        hbox.add_widget(cbox1, stretch=0)
 
-        opmenu = QtGui.QMenu()
+        opmenu = Widgets.Menu()
         self.w.operation = opmenu
-        btn = QtGui.QPushButton("Operation")
-        btn.clicked.connect(self.invoke_op_cb)
-        btn.setToolTip("Invoke operation")
+        btn = Widgets.Button("Operation")
+        btn.add_callback('activated', self.invoke_op_cb)
+        btn.set_tooltip("Invoke operation")
         self.w.opbtn = btn
-        hbox.addWidget(btn, stretch=0)
+        hbox.add_widget(btn, stretch=0)
 
-        w = QtGui.QWidget()
-        self.w.optray = QtGui.QHBoxLayout()
-        self.w.optray.setContentsMargins(0, 0, 0, 0)
-        self.w.optray.setSpacing(2)
-        w.setLayout(self.w.optray)
-        hbox.addWidget(w, stretch=1, alignment=QtCore.Qt.AlignLeft)
+        self.w.optray = Widgets.HBox()
+        self.w.optray.set_border_width(0)
+        self.w.optray.set_spacing(2)
+        hbox.add_widget(self.w.optray, stretch=1)
 
-        self.w.vbox.addWidget(plw, stretch=0)
+        self.w.vbox.add_widget(hbox, stretch=0)
 
         # Add colormap bar
-        cbar = self.build_colorbar()
-        self.w.vbox.addWidget(cbar, stretch=0)
+        ## cbar = self.build_colorbar()
+        ## self.w.vbox.add_widget(cbar, stretch=0)
 
         menuholder = self.w['menu']
-        # NOTE: menubar is a ginga.Widgets wrapper
         self.w.menubar = self.add_menus(menuholder)
 
         self.add_dialogs()
@@ -170,14 +166,13 @@ class GingaView(QtMain.QtMain):
         menubar = Widgets.Menubar()
         self.menubar = menubar
 
-        menubar_w = menubar.get_widget()
         # NOTE: Special hack for Mac OS X, otherwise the menus
         # do not get added to the global OS X menu
         macos_ver = platform.mac_ver()[0]
         if len(macos_ver) > 0:
-            self.w['top'].layout().addWidget(menubar_w, stretch=0)
+            self.w['top'].add_widget(menubar_w, stretch=0)
         else:
-            holder.layout().addWidget(menubar_w, stretch=1)
+            holder.add_widget(menubar, stretch=1)
 
         # create a File pulldown menu, and add it to the menu bar
         filemenu = menubar.add_name("File")
@@ -216,18 +211,18 @@ class GingaView(QtMain.QtMain):
                           lambda *args: self.ds.take_tab_cb(self.w.mnb,
                                                                  args))
 
-        if isinstance(self.w.mnb, QtGui.QMdiArea):
-            item = wsmenu.add_name("Panes as Tabs")
-            item.add_callback('activated', lambda w, tf: self.tabstoggle_cb(tf))
-            item.get_widget().setCheckable(True)
-            is_tabs = (self.w.mnb.get_mode() == 'tabs')
-            item.get_widget().setChecked(is_tabs)
+        ## if isinstance(self.w.mnb, QtGui.QMdiArea):
+        ##     item = wsmenu.add_name("Panes as Tabs")
+        ##     item.add_callback(lambda *args: self.tabstoggle_cb())
+        ##     item.get_widget().setCheckable(True)
+        ##     is_tabs = (self.w.mnb.get_mode() == 'tabs')
+        ##     item.get_widget().setChecked(is_tabs)
 
-            item = wsmenu.add_name("Tile Panes")
-            item.add_callback('activated', lambda *args: self.tile_panes_cb())
+        ##     item = wsmenu.add_name("Tile Panes")
+        ##     item.add_callback('activated', lambda *args: self.tile_panes_cb())
 
-            item = wsmenu.add_name("Cascade Panes")
-            item.add_callback('activated', lambda *args: self.cascade_panes_cb())
+        ##     item = wsmenu.add_name("Cascade Panes")
+        ##     item.add_callback(lambda *args: self.cascade_panes_cb())
 
         # # create a Option pulldown menu, and add it to the menu bar
         # optionmenu = menubar.add_name("Option")
@@ -248,10 +243,11 @@ class GingaView(QtMain.QtMain):
         return menubar
 
     def add_dialogs(self):
-        filesel = QtGui.QFileDialog(self.w.root, directory=os.curdir)
-        filesel.setFileMode(QtGui.QFileDialog.ExistingFile)
-        filesel.setViewMode(QtGui.QFileDialog.Detail)
-        self.filesel = filesel
+        ## filesel = QtGui.QFileDialog(self.w.root)
+        ## filesel.setFileMode(QtGui.QFileDialog.ExistingFile)
+        ## filesel.setViewMode(QtGui.QFileDialog.Detail)
+        ## self.filesel = filesel
+        pass
 
     def add_plugin_menu(self, name):
         # NOTE: self.w.menu_plug is a ginga.Widgets wrapper
@@ -260,29 +256,30 @@ class GingaView(QtMain.QtMain):
                           lambda *args: self.start_global_plugin(name))
 
     def add_statusbar(self, holder):
-        self.w.status = QtGui.QStatusBar()
-        holder.layout().addWidget(self.w.status, stretch=1)
+        self.w.status = Widgets.StatusBar()
+        holder.add_widget(self.w.status, stretch=1)
 
     def fullscreen(self):
-        self.w.root.showFullScreen()
+        self.w.root.fullscreen()
 
     def normalsize(self):
-        self.w.root.showNormal()
+        self.w.root.unfullscreen()
 
     def maximize(self):
-        self.w.root.showMaximized()
+        self.w.root.maximize()
 
     def toggle_fullscreen(self):
-        if not self.w.root.isFullScreen():
-            self.w.root.showFullScreen()
-        else:
-            self.w.root.showNormal()
+        ## if not self.w.root.isFullScreen():
+        ##     self.w.root.showFullScreen()
+        ## else:
+        ##     self.w.root.showNormal()
+        self.w.root.unfullscreen()
 
     def build_fullscreen(self):
         w = self.w.fscreen
         self.w.fscreen = None
         if w is not None:
-            w.destroy()
+            w.delete()
             return
 
         # Get image from current focused channel
@@ -291,15 +288,15 @@ class GingaView(QtMain.QtMain):
         settings = fitsimage.get_settings()
         rgbmap = fitsimage.get_rgbmap()
 
-        root = QtHelp.TopLevel()
-        vbox = QtGui.QVBoxLayout()
-        vbox.setContentsMargins(0, 0, 0, 0)
-        vbox.setSpacing(0)
-        root.setLayout(vbox)
+        root = Widgets.TopLevel()
+        vbox = Widgets.VBox()
+        vbox.set_border_width(0)
+        vbox.set_spacing(0)
+        root.add_widget(vbox, stretch=1)
 
         fi = self.build_viewpane(settings, rgbmap=rgbmap)
         iw = fi.get_widget()
-        vbox.addWidget(iw, stretch=1)
+        vbox.add_widget(iw, stretch=1)
 
         # Get image from current focused channel
         image = fitsimage.get_image()
@@ -313,14 +310,14 @@ class GingaView(QtMain.QtMain):
                                    #'cutlevels',
                                    'rgbmap'])
 
-        root.showFullScreen()
+        root.fullscreen()
         self.w.fscreen = root
 
     def add_operation(self, title):
         opmenu = self.w.operation
-        item = QtGui.QAction(title, opmenu)
-        item.triggered.connect(lambda: self.start_operation_cb(title))
-        opmenu.addAction(item)
+        item = opmenu.add_name(title)
+        item.add_callback('activated',
+                          lambda *args: self.start_operation_cb(title))
         self.operations.append(title)
 
     ####################################################
@@ -360,7 +357,7 @@ class GingaView(QtMain.QtMain):
         return w
 
     def set_titlebar(self, text):
-        self.w.root.setWindowTitle("Ginga: %s" % text)
+        self.w.root.set_title("Ginga: %s" % text)
 
     def build_readout(self):
         readout = Readout.Readout(-1, 20)
@@ -383,25 +380,26 @@ class GingaView(QtMain.QtMain):
         self.add_callback('active-image', self.change_cbar, cbar)
         cbar.add_callback('motion', self.cbar_value_cb)
 
-        fr = QtGui.QFrame()
-        fr.setContentsMargins(0, 0, 0, 0)
-        layout = QtGui.QHBoxLayout()
-        fr.setLayout(layout)
-        layout.setContentsMargins(0, 0, 0, 0)
-        fr.setFrameStyle(QtGui.QFrame.Box | QtGui.QFrame.Raised)
-        layout.addWidget(cbar, stretch=1)
+        fr = Widgets.Frame()
+        fr.set_border_width(2)
+        ## layout = QtGui.QHBoxLayout()
+        ## fr.setLayout(layout)
+        ## layout.setContentsMargins(0, 0, 0, 0)
+        ## fr.setFrameStyle(QtGui.QFrame.Box | QtGui.QFrame.Raised)
+        fr.set_widget(cbar)
         return fr
 
     def build_viewpane(self, settings, rgbmap=None):
         # instantiate bindings loaded with users preferences
-        bclass = ImageViewCanvasQt.ImageViewCanvas.bindingsClass
+        bclass = Viewers.ImageViewCanvas.bindingsClass
         bindprefs = self.prefs.createCategory('bindings')
         bd = bclass(self.logger, settings=bindprefs)
 
-        fi = ImageViewCanvasQt.ImageViewCanvas(logger=self.logger,
-                                               rgbmap=rgbmap,
-                                               settings=settings,
-                                               bindings=bd)
+        fi = Viewers.ImageViewCanvas(logger=self.logger,
+                                     rgbmap=rgbmap,
+                                     settings=settings,
+                                     bindings=bd)
+
         canvas = DrawingCanvas()
         canvas.enable_draw(False)
         fi.set_canvas(canvas)
@@ -430,17 +428,18 @@ class GingaView(QtMain.QtMain):
     def add_viewer(self, name, settings,
                    use_readout=False, workspace=None):
 
-        vwidget = QtGui.QWidget()
-        vbox = QtGui.QVBoxLayout()
-        vbox.setContentsMargins(1, 1, 1, 1)
-        vbox.setSpacing(0)
-        vwidget.setLayout(vbox)
+        vbox = Widgets.VBox()
+        vbox.set_border_width(1)
+        vbox.set_spacing(0)
 
         fi = self.build_viewpane(settings)
-        iw = fi.get_widget()
+        if hasattr(Viewers, 'GingaViewer'):
+            iw = Viewers.GingaViewer(viewer=fi)
+        else:
+            iw = Widgets.wrap(fi.get_widget())
 
         fi.add_callback('focus', self.focus_cb, name)
-        vbox.addWidget(iw, stretch=1)
+        vbox.add_widget(iw, stretch=1)
         fi.set_name(name)
 
         if use_readout:
@@ -450,21 +449,19 @@ class GingaView(QtMain.QtMain):
             fi.add_callback('image-set', self.readout_config, readout)
             self.add_callback('field-info', self.readout_cb, readout, name)
             rw = readout.get_widget()
-            # one level deeper to the native widget in gw.Readout
-            rw = rw.get_widget()
-            rw.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed,
-                                               QtGui.QSizePolicy.Fixed))
-            vbox.addWidget(rw, stretch=0, alignment=QtCore.Qt.AlignLeft)
+            ## rw.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed,
+            ##                                    QtGui.QSizePolicy.Fixed))
+            vbox.add_widget(rw, stretch=0)
         else:
             readout = None
 
         # Add a page to the specified notebook
         if not workspace:
             workspace = 'channels'
-        self.ds.add_tab(workspace, vwidget, 1, name)
+        self.ds.add_tab(workspace, vbox, 1, name)
 
         self.update_pending()
-        bnch = Bunch.Bunch(fitsimage=fi, view=iw, container=vwidget,
+        bnch = Bunch.Bunch(fitsimage=fi, view=iw, container=vbox,
                            readout=readout, workspace=workspace)
         return bnch
 
@@ -473,43 +470,48 @@ class GingaView(QtMain.QtMain):
         if not chname:
             self.chncnt += 1
             chname = "Image%d" % self.chncnt
-        lbl = QtGui.QLabel('New channel name:')
-        ent = QtGui.QLineEdit()
-        ent.setText(chname)
-        lbl2 = QtGui.QLabel('Workspace:')
-        cbox = QtHelp.ComboBox()
+
+        captions = (('New channel name:', 'label', 'channel_name', 'entry'),
+                    ('In workspace:', 'label', 'workspace', 'combobox'),
+                    )
+
+        w, b = Widgets.build_info(captions, orientation='vertical')
+
+        # populate values
+        b.channel_name.set_text(chname)
         names = self.ds.get_wsnames()
         try:
             idx = names.index(self._lastwsname)
         except:
             idx = 0
         for name in names:
-            cbox.append_text(name)
-        cbox.setCurrentIndex(idx)
-        dialog = QtHelp.Dialog("Add Channel",
-                               0,
-                               [['Cancel', 0], ['Ok', 1]],
-                               lambda w, rsp: self.add_channel_cb(w, rsp, ent, cbox, names))
-        box = dialog.get_content_area()
-        layout = QtGui.QVBoxLayout()
-        box.setLayout(layout)
+            b.workspace.append_text(name)
+        b.workspace.set_index(idx)
 
-        layout.addWidget(lbl, stretch=0)
-        layout.addWidget(ent, stretch=0)
-        layout.addWidget(lbl2, stretch=0)
-        layout.addWidget(cbox, stretch=0)
+        # build dialog
+        dialog = Dialog("Add Channel",
+                        0,
+                        [['Cancel', 0], ['Ok', 1]],
+                        lambda w, rsp: self.add_channel_cb(w, rsp, b, names))
+
+        box = dialog.get_content_area()
+        box.add_widget(w, stretch=0)
+
+        # save a handle so widgets aren't garbage collected
+        self._dialog = dialog
         dialog.show()
 
     def gui_add_channels(self):
-        captions = (('Prefix', 'entry'),
-                    ('Number', 'spinbutton'),
-                    ('Workspace', 'combobox'),
+
+        captions = (('Prefix:', 'label', 'Prefix', 'entry'),
+                    ('Number:', 'label', 'Number', 'spinbutton'),
+                    ('In workspace:', 'label', 'workspace', 'combobox'),
                     )
-        w, b = QtHelp.build_info(captions)
-        b.prefix.setText("Image")
-        b.number.setRange(1, 12)
-        b.number.setSingleStep(1)
-        b.number.setValue(1)
+
+        w, b = Widgets.build_info(captions)
+        b.prefix.set_text("Image")
+        b.number.set_limits(1, 12, incr_value=1)
+        b.number.set_value(1)
 
         cbox = b.workspace
         names = self.ds.get_wsnames()
@@ -518,57 +520,59 @@ class GingaView(QtMain.QtMain):
         except:
             idx = 0
         for name in names:
-            cbox.append_text(name)
-        cbox.setCurrentIndex(idx)
+            b.workspace.append_text(name)
+        b.workspace.set_index(idx)
 
-        dialog = QtHelp.Dialog("Add Channels",
-                               0,
-                               [['Cancel', 0], ['Ok', 1]],
-                               lambda w, rsp: self.add_channels_cb(w, rsp,
-                                                                   b, names))
+        dialog = Dialog("Add Channels",
+                        0,
+                        [['Cancel', 0], ['Ok', 1]],
+                        lambda w, rsp: self.add_channels_cb(w, rsp, b, names))
+
         box = dialog.get_content_area()
-        layout = QtGui.QVBoxLayout()
-        box.setLayout(layout)
+        box.add_widget(w, stretch=0)
 
-        layout.addWidget(w, stretch=1)
+        # save a handle so widgets aren't garbage collected
+        self._dialog = dialog
         dialog.show()
 
     def gui_delete_channel(self):
         chinfo = self.get_channelInfo()
         chname = chinfo.name
-        lbl = QtGui.QLabel("Really delete channel '%s' ?" % (chname))
-        dialog = QtHelp.Dialog("Delete Channel",
-                               0,
-                               [['Cancel', 0], ['Ok', 1]],
-                               lambda w, rsp: self.delete_channel_cb(w, rsp, chname))
+        lbl = Widgets.Label("Really delete channel '%s' ?" % (chname))
+        dialog = Dialog("Delete Channel",
+                        0,
+                        [['Cancel', 0], ['Ok', 1]],
+                        lambda w, rsp: self.delete_channel_cb(w, rsp, chname))
         box = dialog.get_content_area()
-        layout = QtGui.QVBoxLayout()
-        box.setLayout(layout)
-        layout.addWidget(lbl, stretch=0)
+        box.add_widget(lbl, stretch=0)
+
+        # save a handle so widgets aren't garbage collected
+        self._dialog = dialog
         dialog.show()
 
     def gui_add_ws(self):
-        captions = (('Workspace name', 'entry'),
-                    ('Workspace type', 'combobox'),
-                    ('In workspace', 'combobox'),
-                    ('Channel prefix', 'entry'),
-                    ('Number of channels', 'spinbutton'),
-                    ('Share settings', 'entry'),
+
+        captions = (('Workspace name:', 'label', 'Workspace name', 'entry'),
+                    ('Workspace type:', 'label', 'Workspace type', 'combobox'),
+                    ('In workspace:', 'label', 'workspace', 'combobox'),
+                    ('Channel prefix:', 'label', 'Channel prefix', 'entry'),
+                    ('Number of channels:', 'label', 'num_channels', 'spinbutton'),
+                    ('Share settings:', 'label', 'Share settings', 'entry'),
                     )
-        w, b = QtHelp.build_info(captions)
+        w, b = Widgets.build_info(captions)
 
         self.wscount += 1
         wsname = "ws%d" % (self.wscount)
-        b.workspace_name.setText(wsname)
-        b.share_settings.setMaxLength(60)
+        b.workspace_name.set_text(wsname)
+        #b.share_settings.set_length(60)
 
         cbox = b.workspace_type
         cbox.append_text("Tabs")
-        cbox.append_text("Grid")
-        cbox.append_text("MDI")
-        cbox.setCurrentIndex(1)
+        ## cbox.append_text("Grid")
+        ## cbox.append_text("MDI")
+        cbox.set_index(0)
 
-        cbox = b.in_workspace
+        cbox = b.workspace
         names = self.ds.get_wsnames()
         names.insert(0, 'top level')
         try:
@@ -577,59 +581,23 @@ class GingaView(QtMain.QtMain):
             idx = 0
         for name in names:
             cbox.append_text(name)
-        cbox.setCurrentIndex(idx)
+        cbox.set_index(idx)
 
-        b.channel_prefix.setText("Image")
-        spnbtn = b.number_of_channels
-        spnbtn.setRange(0, 12)
-        spnbtn.setSingleStep(1)
-        spnbtn.setValue(4)
+        b.channel_prefix.set_text("Image")
+        spnbtn = b.num_channels
+        spnbtn.set_limits(0, 12, incr_value=1)
+        spnbtn.set_value(4)
 
-        dialog = QtHelp.Dialog("Add Workspace",
-                               0,
-                               [['Cancel', 0], ['Ok', 1]],
-                               lambda w, rsp: self.new_ws_cb(w, rsp, b, names))
+        dialog = Dialog("Add Workspace",
+                        0,
+                        [['Cancel', 0], ['Ok', 1]],
+                        lambda w, rsp: self.new_ws_cb(w, rsp, b, names))
+
         box = dialog.get_content_area()
-        layout = QtGui.QVBoxLayout()
-        box.setLayout(layout)
-
-        layout.addWidget(w, stretch=1)
+        box.add_widget(w, stretch=1)
+        # save a handle so widgets aren't garbage collected
+        self._dialog = dialog
         dialog.show()
-
-    def new_ws_cb(self, w, rsp, b, names):
-        w.close()
-        wsname = str(b.workspace_name.text())
-        idx = b.workspace_type.currentIndex()
-        if rsp == 0:
-            return
-        d = { 0: 'nb', 1: 'grid', 2: 'mdi' }
-        wstype = d[idx]
-        idx = b.in_workspace.currentIndex()
-        inSpace = names[idx]
-
-        self.add_workspace(wsname, wstype, inSpace=inSpace)
-
-        chpfx = b.channel_prefix.text()
-        num = int(b.number_of_channels.value())
-        if num <= 0:
-            return
-
-        # Create a settings template to copy settings from
-        settings_template = self.prefs.getSettings('channel_Image')
-        name = "channel_template_%f" % (time.time())
-        settings = self.prefs.createCategory(name)
-        settings_template.copySettings(settings)
-        share_list = b.share_settings.text().split()
-
-        chbase = self.chncnt
-        self.chncnt += num
-        for i in range(num):
-            chname = "%s%d" % (chpfx, chbase+i)
-            self.add_channel(chname, workspace=wsname,
-                             settings_template=settings_template,
-                             settings_share=settings,
-                             share_keylist=share_list)
-        return True
 
     def gui_load_file(self, initialdir=None):
         if self.filesel.exec_():
@@ -643,9 +611,7 @@ class GingaView(QtMain.QtMain):
         else:
             s = format % args
 
-        # remove message in about 10 seconds
-        self.w.status.showMessage(s, 10000)
-
+        self.w.status.set_message(s)
 
     def setPos(self, x, y):
         self.w.root.move(x, y)
@@ -711,12 +677,12 @@ class GingaView(QtMain.QtMain):
                 self._lsize = lsize
                 msize += lsize
                 lsize = 0
-        hsplit.setSizes((lsize, msize, rsize))
-
+        #hsplit.setSizes((lsize, msize, rsize))
 
     def getFont(self, fontType, pointSize):
         font_family = self.settings.get(fontType)
-        return QtHelp.get_font(font_family, pointSize)
+        return GwHelp.get_font(font_family, pointSize)
+
 
     ####################################################
     # CALLBACKS
@@ -737,7 +703,7 @@ class GingaView(QtMain.QtMain):
         self.w.root = None
         while len(self.ds.toplevels) > 0:
             w = self.ds.toplevels.pop()
-            w.deleteLater()
+            w.delete()
 
     def channel_select_cb(self, index):
         if index >= 0:
@@ -746,11 +712,14 @@ class GingaView(QtMain.QtMain):
                 index, chname))
             self.change_channel(chname)
 
-    def add_channel_cb(self, w, rsp, ent, cbox, names):
-        chname = str(ent.text())
-        idx = cbox.currentIndex()
+    def add_channel_cb(self, w, rsp, b, names):
+        chname = str(b.channel_name.get_text())
+        idx = b.workspace.get_index()
+        if idx < 0:
+            idx = 0
         wsname = names[idx]
-        w.close()
+        w.delete()
+        self._dialog = None
         # save name for next add
         self._lastwsname = wsname
         if rsp == 0:
@@ -759,11 +728,12 @@ class GingaView(QtMain.QtMain):
         return True
 
     def add_channels_cb(self, w, rsp, b, names):
-        chpfx = b.prefix.text()
-        idx = b.workspace.currentIndex()
+        chpfx = b.prefix.get_text()
+        idx = b.workspace.get_index()
         wsname = names[idx]
-        num = int(b.number.value())
-        w.close()
+        num = int(b.number.get_value())
+        w.delete()
+        self._dialog = None
         if (rsp == 0) or (num <= 0):
             return
 
@@ -775,37 +745,81 @@ class GingaView(QtMain.QtMain):
         return True
 
     def delete_channel_cb(self, w, rsp, chname):
-        w.close()
+        w.delete()
+        self._dialog = None
         if rsp == 0:
             return
         self.delete_channel(chname)
         return True
 
-    def invoke_op_cb(self):
+    def new_ws_cb(self, w, rsp, b, names):
+        try:
+            wsname = str(b.workspace_name.get_text())
+            idx = b.workspace_type.get_index()
+            if rsp == 0:
+                return
+            d = { 0: 'nb', 1: 'grid', 2: 'mdi' }
+            wstype = d[idx]
+            idx = b.workspace.get_index()
+            in_space = names[idx]
+
+            self.add_workspace(wsname, wstype, inSpace=in_space)
+
+            chpfx = b.channel_prefix.get_text()
+            num = int(b.num_channels.get_value())
+            share_list = b.share_settings.get_text().split()
+
+            w.delete()
+            self._dialog = None
+
+            if num <= 0:
+                return
+        except Exception as e:
+            print("Exception building workspace: %s" % (str(e)))
+
+        # Create a settings template to copy settings from
+        settings_template = self.prefs.getSettings('channel_Image')
+        name = "channel_template_%f" % (time.time())
+        settings = self.prefs.createCategory(name)
+        settings_template.copySettings(settings)
+
+        chbase = self.chncnt
+        self.chncnt += num
+        for i in range(num):
+            chname = "%s%d" % (chpfx, chbase+i)
+            self.add_channel(chname, workspace=wsname,
+                             settings_template=settings_template,
+                             settings_share=settings,
+                             share_keylist=share_list)
+        return True
+
+    def invoke_op_cb(self, btn_w):
+        self.logger.debug("invoking operation menu")
         menu = self.w.operation
-        menu.popup(self.w.opbtn.mapToGlobal(QtCore.QPoint(0,0)))
+        menu.popup(btn_w)
 
     def start_operation_cb(self, name):
-        index = self.w.channel.currentIndex()
-        chname = str(self.w.channel.itemText(index))
+        self.logger.debug("invoking operation menu")
+        idx = self.w.channel.get_index()
+        chname = str(self.w.channel.get_alpha(idx))
         return self.start_local_plugin(chname, name, None)
 
-    def tile_panes_cb(self):
-        self.w.mnb.tileSubWindows()
+    ## def tile_panes_cb(self):
+    ##     self.w.mnb.tileSubWindows()
 
-    def cascade_panes_cb(self):
-        self.w.mnb.cascadeSubWindows()
+    ## def cascade_panes_cb(self):
+    ##     self.w.mnb.cascadeSubWindows()
 
-    def tabstoggle_cb(self, useTabs):
-        if useTabs:
-            self.w.mnb.setViewMode(QtGui.QMdiArea.TabbedView)
-        else:
-            self.w.mnb.setViewMode(QtGui.QMdiArea.SubWindowView)
+    ## def tabstoggle_cb(self, useTabs):
+    ##     if useTabs:
+    ##         self.w.mnb.setViewMode(QtGui.QMdiArea.TabbedView)
+    ##     else:
+    ##         self.w.mnb.setViewMode(QtGui.QMdiArea.SubWindowView)
 
-    def page_switch_cb(self, index):
+    def page_switch_cb(self, tab_w, index):
         self.logger.debug("index switched to %d" % (index))
         if index >= 0:
-            container = self.w.mnb.widget(index)
+            container = tab_w.get_widget_by_index(index)
             self.logger.debug("container is %s" % (container))
 
             # Find the channel that contains this widget
@@ -821,10 +835,46 @@ class GingaView(QtMain.QtMain):
 
         return True
 
-    def page_switch_mdi_cb(self, w):
-        if w is not None:
-            index = self.w.mnb.indexOf(w.widget())
-            return self.page_switch_cb(index)
+    ## def page_switch_mdi_cb(self, w):
+    ##     if w is not None:
+    ##         index = self.w.mnb.indexOf(w.widget())
+    ##         return self.page_switch_cb(index)
+
+
+class Dialog(Widgets.TopLevel):
+    def __init__(self, title=None, flags=None, buttons=None,
+                 callback=None):
+        super(Dialog, self).__init__(title=title)
+        #self.setModal(True)
+
+        vbox = Widgets.VBox()
+        vbox.set_border_width(4)
+
+        self.content = Widgets.VBox()
+        vbox.add_widget(self.content, stretch=1)
+
+        hbox = Widgets.HBox()
+
+        def mklocal(val):
+            def cb(widget):
+                callback(self, val)
+            return cb
+
+        for name, val in buttons:
+            btn = Widgets.Button(name)
+            if callback:
+                btn.add_callback('activated', mklocal(val))
+            hbox.add_widget(btn, stretch=0)
+        # add stretch
+        hbox.add_widget(Widgets.Label(''), stretch=1)
+
+        vbox.add_widget(hbox, stretch=0)
+
+        self.set_widget(vbox)
+
+    def get_content_area(self):
+        return self.content
+
 
 
 # END

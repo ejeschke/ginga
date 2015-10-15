@@ -44,6 +44,11 @@ def use(name):
         assert name in ('tk', ), \
                ToolKitError("ToolKit '%s' not supported!" % (name))
 
+    elif name.startswith('pg'):
+        family = 'pg'
+        assert name in ('pg', ), \
+               ToolKitError("ToolKit '%s' not supported!" % (name))
+
     else:
         ToolKitError("ToolKit '%s' not supported!" % (name))
 
@@ -57,6 +62,6 @@ def get_family():
 
 def get_rv_toolkits():
     """Returns a list of reference viewer supported toolkits."""
-    return ['qt4', 'qt5', 'pyside', 'gtk']
+    return ['qt4', 'qt5', 'pyside', 'gtk', 'pg']
 
 #END

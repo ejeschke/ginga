@@ -9,3 +9,6 @@ if tkname == 'gtk':
 elif tkname == 'qt':
     from ginga.qtw.ImageViewQt import *
     from ginga.qtw.ImageViewCanvasQt import *
+
+elif tkname == 'pg':
+    from ginga.web.pgw.Viewers import *

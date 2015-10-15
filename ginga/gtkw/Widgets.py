@@ -36,6 +36,27 @@ class WidgetBase(Callback.Callbacks):
     def set_enabled(self, tf):
         self.widget.set_sensitive(tf)
 
+    def get_size(self):
+        rect = self.widget.get_allocation()
+        x, y, wd, ht = rect.x, rect.y, rect.width, rect.height
+        return (wd, ht)
+
+    def delete(self):
+        self.widget.destroy()
+
+    def show(self):
+        self.widget.show()
+
+    def hide(self):
+        self.widget.hide()
+
+    def resize(self, width, height):
+        self.widget.set_size_request(width, height)
+
+    def get_font(self, font_family, point_size):
+        font = GtkHelp.get_font(font_family, point_size)
+        return font
+
 # BASIC WIDGETS
 
 class TextEntry(WidgetBase):
@@ -57,6 +78,9 @@ class TextEntry(WidgetBase):
 
     def set_text(self, text):
         self.widget.set_text(text)
+
+    def set_font(self, font):
+        self.widget.modify_font(font)
 
     def set_length(self, numchars):
         # this only sets the visible length of the widget
@@ -90,6 +114,9 @@ class TextEntrySet(WidgetBase):
 
     def set_text(self, text):
         self.entry.set_text(text)
+
+    def set_font(self, font):
+        self.widget.modify_font(font)
 
     def set_length(self, numchars):
         #self.widget.set_width_chars(numchars)
@@ -165,17 +192,70 @@ class TextArea(WidgetBase):
             self.widget.set_wrap_mode(gtk.WRAP_NONE)
 
 class Label(WidgetBase):
-    def __init__(self, text=''):
+    def __init__(self, text='', halign='left', style='normal', menu=None):
         super(Label, self).__init__()
 
-        self.widget = gtk.Label(text)
+        label = gtk.Label(text)
+        evbox = gtk.EventBox()
+        evbox.set_border_width(0)
+        evbox.props.visible_window = False
+        evbox.add(label)
+        evbox.connect("button_press_event", self._cb_redirect)
+
+        if halign == 'left':
+            label.set_justify(gtk.JUSTIFY_LEFT)
+        elif halign == 'center':
+            label.set_justify(gtk.JUSTIFY_CENTER)
+        elif halign == 'right':
+            label.set_justify(gtk.JUSTIFY_RIGHT)
+
+        evbox.connect("button_press_event", self._cb_redirect)
+        self.enable_callback('activated')
+
+        self.label = label
+        self.menu = menu
+        self.evbox = evbox
+        self.widget = evbox
+        if style == 'clickable':
+            fr = gtk.Frame()
+            fr.set_shadow_type(gtk.SHADOW_OUT)
+            evbox.props.visible_window = True
+            fr.add(evbox)
+            self.frame = fr
+            self.widget = fr
+
+    def _cb_redirect(self, widget, event):
+        # event.button, event.x, event.y
+        if event.button == 1:
+            self.make_callback('activated')
+            return True
+
+        elif event.button == 3:
+            menu_w = self.menu.get_widget()
+            if gtksel.have_gtk3:
+                return menu_w.popup(None, None, None, None,
+                                    event.button, event.time)
+            else:
+                return menu_w.popup(None, None, None,
+                                    event.button, event.time)
+            return True
+
+        return False
 
     def get_text(self):
-        return self.widget.get_text()
+        return self.label.get_text()
 
     def set_text(self, text):
-        self.widget.set_text(text)
+        self.label.set_text(text)
 
+    def set_font(self, font):
+        self.label.modify_font(font)
+
+    def set_color(self, fg=None, bg=None):
+        if bg is not None:
+            self.evbox.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse(bg))
+        if fg is not None:
+            self.label.modify_fg(gtk.STATE_NORMAL, gtk.gdk.color_parse(fg))
 
 class Button(WidgetBase):
     def __init__(self, text=''):
@@ -241,6 +321,11 @@ class ComboBox(WidgetBase):
             if model[i][0] == text:
                 del model[i]
                 return
+
+    def get_alpha(self, idx):
+        model = self.widget.get_model()
+        text = model[idx][0]
+        return text
 
     def clear(self):
         model = self.widget.get_model()
@@ -425,6 +510,32 @@ class ProgressBar(WidgetBase):
         self.widget.set_fraction(pct)
         self.widget.set_text("%.2f %%" % (pct * 100.0))
 
+class StatusBar(WidgetBase):
+    def __init__(self):
+        super(StatusBar, self).__init__()
+
+        sbar = gtk.Statusbar()
+        if not gtksel.have_gtk3:
+            sbar.set_has_resize_grip(True)
+        self.ctx_id = None
+        self.widget = sbar
+        self.statustask = None
+
+    def set_message(self, msg_str):
+        try:
+            self.widget.remove_all(self.ctx_id)
+        except:
+            pass
+        self.ctx_id = self.widget.get_context_id('status')
+        self.widget.push(self.ctx_id, msg_str)
+
+        # remove message in about 10 seconds
+        if self.statustask:
+            gobject.source_remove(self.statustask)
+        self.statustask = gobject.timeout_add(10000,
+                                  self.widget.remove_all, self.ctx_id)
+
+
 # CONTAINERS
 
 class ContainerBase(WidgetBase):
@@ -527,6 +638,14 @@ class TabWidget(ContainerBase):
         nb = gtk.Notebook()
         nb.set_show_border(False)
         nb.set_scrollable(True)
+        nb.connect("switch-page", self._cb_redirect)
+        self.widget = nb
+        self.set_tab_position(tabpos)
+
+        self.enable_callback('page-switch')
+
+    def set_tab_position(self, tabpos):
+        nb = self.widget
         if tabpos == 'top':
             nb.set_tab_pos(gtk.POS_TOP)
         elif tabpos == 'bottom':
@@ -535,13 +654,9 @@ class TabWidget(ContainerBase):
             nb.set_tab_pos(gtk.POS_LEFT)
         elif tabpos == 'right':
             nb.set_tab_pos(gtk.POS_RIGHT)
-        nb.connect("switch-page", self._cb_redirect)
-        self.widget = nb
-
-        self.enable_callback('activated')
 
     def _cb_redirect(self, nbw, gptr, index):
-        self.make_callback('activated', index)
+        self.make_callback('page-switch', index)
 
     def add_widget(self, child, title=''):
         self.add_ref(child)
@@ -559,6 +674,9 @@ class TabWidget(ContainerBase):
     def index_of(self, child):
         return self.widget.page_num(child.get_widget())
 
+    def get_widget_by_index(self, idx):
+        """Returns child corresponding to `idx`"""
+        return self.widget.get_nth_page(idx)
 
 class StackWidget(TabWidget):
     def __init__(self):
@@ -590,11 +708,15 @@ class Splitter(ContainerBase):
         super(Splitter, self).__init__()
 
         self.orientation = orientation
-        if orientation == 'horizontal':
+        self.widget = self._get_pane()
+        self.panes = []
+
+    def _get_pane(self):
+        if self.orientation == 'horizontal':
             w = gtk.HPaned()
         else:
             w = gtk.VPaned()
-        self.widget = w
+        return w
 
     def add_widget(self, child):
         self.add_ref(child)
@@ -604,7 +726,16 @@ class Splitter(ContainerBase):
             self.widget.pack1(child_w)
 
         else:
-            self.widget.pack2(child_w)
+            last = self.widget
+            if len(self.panes) > 0:
+                last = self.panes[-1]
+
+            w = self._get_pane()
+            self.panes.append(w)
+
+            w.pack1(child_w)
+            last.pack2(w)
+
         self.widget.show_all()
 
 
@@ -707,6 +838,14 @@ class Menu(ContainerBase):
         sep = gtk.SeparatorMenuItem()
         self.widget.append(sep)
         sep.show()
+
+    def popup(self, widget):
+        menu = self.widget
+        menu.show_all()
+        if gtksel.have_gtk3:
+            menu.popup(None, None, None, None, 0, 0L)
+        else:
+            menu.popup(None, None, None, 0, 0L)
 
 
 class Menubar(ContainerBase):
@@ -827,16 +966,59 @@ class TopLevel(ContainerBase):
         self.widget.set_title(title)
 
 
-class Application(GtkMain.GtkMain):
+class Application(object):
 
-    def __init__(self, *args, **kwdargs):
-        super(Application, self).__init__(*args, **kwdargs)
+    def __init__(self, logger=None):
 
+        self.logger = logger
         self.window_list = []
 
-    def window(self, title=None):
+        self.window_dict = {}
+        self.wincnt = 0
+
+        try:
+            screen = gtk.gdk.screen_get_default()
+            self.screen_ht = screen.get_height()
+            self.screen_wd = screen.get_width()
+        except:
+            self.screen_wd = 1600
+            self.screen_ht = 1200
+        self.logger.debug("screen dimensions %dx%d" % (
+            self.screen_wd, self.screen_ht))
+
+    def get_screen_size(self):
+        return (self.screen_wd, self.screen_ht)
+
+    def process_events(self):
+        while gtk.events_pending():
+            #gtk.main_iteration(False)
+            gtk.main_iteration()
+
+    def process_end(self):
+        pass
+
+    def add_window(self, window, wid=None):
+        if wid is None:
+            wid = 'win%d' % (self.wincnt)
+            self.wincnt += 1
+        window.wid = wid
+        window.url = ''
+        window.app = self
+
+        self.window_dict[wid] = window
+
+    def get_window(self, wid):
+        return self.window_dict[wid]
+
+    def has_window(self, wid):
+        return wid in self.window_dict
+
+    def get_wids(self):
+        return list(self.window_dict.keys())
+
+    def make_window(self, title=None):
         w = TopLevel(title=title)
-        self.window_list.append(w)
+        self.add_window(w)
         return w
 
 
@@ -892,10 +1074,10 @@ def name_mangle(name, pfx=''):
 def make_widget(title, wtype):
     if wtype == 'label':
         w = Label(title)
-        w.get_widget().set_alignment(0.95, 0.5)
+        w.label.set_alignment(0.95, 0.5)
     elif wtype == 'llabel':
         w = Label(title)
-        w.get_widget().set_alignment(0.05, 0.95)
+        w.label.set_alignment(0.05, 0.95)
     elif wtype == 'entry':
         w = TextEntry()
         #w.get_widget().set_width_chars(12)
@@ -996,6 +1178,8 @@ def get_orientation(container):
     if not hasattr(container, 'size'):
         return 'vertical'
     (wd, ht) = container.size
+    ## wd, ht = container.get_size()
+    print('container size is %dx%d' % (wd, ht))
     if wd < ht:
         return 'vertical'
     else:
@@ -1020,5 +1204,35 @@ def get_oriented_box(container, scrolled=True, fill=False):
         sw = box2
 
     return box1, sw, orientation
+
+def add_context_menu(widget, menu):
+    qt_w = widget.get_widget()
+    menu_w = menu.get_widget()
+
+    def bp_event(self, widget, event, name):
+        # event.button, event.x, event.y
+        bnch = self.active[name]
+        if event.button == 1:
+            return self.set_focus(name)
+
+        elif event.button == 3:
+            if gtksel.have_gtk3:
+                return bnch.menu.popup(None, None, None, None,
+                                       event.button, event.time)
+            else:
+                return bnch.menu.popup(None, None, None,
+                                       event.button, event.time)
+
+        return False
+
+def clickable_label(widget, fn_cb):
+    # Special hacks for making a label into a button-type item
+    widget.setSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Minimum)
+    widget.setFrameStyle(QtGui.QFrame.Box | QtGui.QFrame.Raised)
+
+    # better than making a whole new subclass just to get a label to
+    # respond to a mouse click
+    widget.mousePressEvent = lambda event: fn_cb()
+
 
 #END

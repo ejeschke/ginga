@@ -27,7 +27,7 @@ class Header(HeaderBase):
         nb = QtHelp.StackedWidget()
         self.nb = nb
         cw = container.get_widget()
-        cw.addWidget(nb, stretch=0)
+        cw.layout().addWidget(nb, stretch=0)
 
     def _create_header_window(self, info):
         widget = QtGui.QWidget()

@@ -62,7 +62,7 @@ class Contents(GingaPlugin.GlobalPlugin):
 
         #self.treeview.connect('cursor-changed', self.switch_image2)
         cw = container.get_widget()
-        cw.addWidget(treeview, stretch=1)
+        cw.layout().addWidget(treeview, stretch=1)
 
         self.gui_up = True
 

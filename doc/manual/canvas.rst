@@ -16,17 +16,17 @@ On the canvas can be placed a number of different kinds of
 *canvas objects*, including many geometric shapes.  The set of canvas
 objects includes: 
 
-* ``Text`` -- a piece of text having a single point coordinate.
-* ``Polygon`` -- a closed polygon defined by N points.
-* ``Path`` -- an open polygon defined by N points.
-* ``Box`` -- a rectangular shape defined by a single center point,
+* ``Text``:  a piece of text having a single point coordinate.
+* ``Polygon``:  a closed polygon defined by N points.
+* ``Path``:  an open polygon defined by N points.
+* ``Box``:  a rectangular shape defined by a single center point,
   two radii and a rotation angle.
-* ``Ellipse`` -- an elliptical shape defined by a single center point,
+* ``Ellipse``:  an elliptical shape defined by a single center point,
   two radii and a rotation angle.
-* ``Triangle`` -- an equilateral triangluar shape defined by a single
+* ``Triangle``:  an equilateral triangluar shape defined by a single
   center point, two radii and a rotation angle.
-* ``Circle`` -- a circular shape defined by a center point and a radius.
-* ``Point`` -- a marker for a point defined by a single point and a
+* ``Circle``:  a circular shape defined by a center point and a radius.
+* ``Point``:  a marker for a point defined by a single point and a
   radius for the "arms".
 * ``Rectangle`` -- a rectangular shape defined by two points.
 * ``Line`` -- a line defined by two points.
@@ -39,16 +39,28 @@ objects includes:
 * ``NormImage`` -- a subclass of ``Image``, with rendering done with the
   aid of a colormap, a color distribution algorithm (linear, log, etc),
   and defined low and high cut levels.
-* ``CompoundObject`` -- a compound object combining a series of other
+* ``CompoundObject``:  a compound object combining a series of other
   canvas objects.
-* ``Canvas`` -- a transparent subcanvas on which items can be placed.
-* ``DrawingCanvas`` -- Like a ``Canvas``, but also can support manual
+* ``Canvas``:  a transparent subcanvas on which items can be placed.
+* ``DrawingCanvas``:  Like a ``Canvas``, but also can support manual
   drawing operations initiated in a viewer to create shapes on itself. 
+* ``ColorBar``: a bar with a color range and ticks and value markers to
+  help indicate the mapping of color to the value range of the data.
+* ``ModeIndicator``: a small rectangular overlay with text indicating
+  that the user has entered a special keyboard/mouse mode.
 
 All canvas objects are subclasses of ``CanvasObjectBase`` and may also
 contain mixin classes that define common attributes or behavior.  For
 example, ``Line``, ``Ruler`` and ``RightTriangle`` are all subclasses of
 the mixin class ``TwoPointMixin``.
+
+.. note:: In most general canvas systems you can layer objects in any
+          order.  In Ginga there is an optimization of canvas redrawing
+          that merges image bitmaps before updating other kinds of
+          canvas objects.  This means that while images can be stacked in
+          any order, effectively you cannot have other objects
+          appear *underneath* image objects.  For most uses of the
+          viewer this is not a big limitation.
 
 Viewers
 =======

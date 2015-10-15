@@ -1,6 +1,6 @@
 #
 # FBrowser.py -- File Browser plugin for fits viewer
-# 
+#
 # Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c)  Eric R. Jeschke.  All rights reserved.
@@ -34,7 +34,7 @@ class FBrowser(FBrowserBase.FBrowserBase):
         fitsicon = os.path.join(icondir, 'fits.png')
         image = QImage(fitsicon)
         pixmap = QPixmap.fromImage(image)
-        
+
         self.fitspb = QIcon(pixmap)
 
 
@@ -65,7 +65,7 @@ class FBrowser(FBrowserBase.FBrowserBase):
         vbox.addWidget(table, stretch=1)
         table.itemDoubleClicked.connect(self.itemclicked_cb)
         self.treeview = table
-        
+
         self.entry = QtGui.QLineEdit()
         vbox.addWidget(self.entry, stretch=0, alignment=QtCore.Qt.AlignTop)
         self.entry.returnPressed.connect(self.browse_cb)
@@ -99,7 +99,7 @@ class FBrowser(FBrowserBase.FBrowserBase):
         vbox.addWidget(btns, stretch=0, alignment=QtCore.Qt.AlignLeft)
 
         cw = container.get_widget()
-        cw.addWidget(widget, stretch=1)
+        cw.layout().addWidget(widget, stretch=1)
 
     def load_cb(self):
         curdir, curglob = os.path.split(self.curpath)
@@ -110,7 +110,7 @@ class FBrowser(FBrowserBase.FBrowserBase):
         #self.fv.dragdrop(self.fitsimage, paths)
         self.fv.gui_do(self.fitsimage.make_callback, 'drag-drop',
                        paths)
-        
+
     def makelisting(self, path):
         self.entry.setText(path)
 
@@ -149,11 +149,11 @@ class FBrowser(FBrowserBase.FBrowserBase):
     def itemclicked_cb(self, item):
         path = self.get_path_at_row(item.row())
         self.open_file(path)
-        
+
     def browse_cb(self):
         path = str(self.entry.text()).strip()
         self.browse(path)
-        
+
     def save_as_cb(self):
         path = str(self.entry2.text()).strip()
         if not path.startswith('/'):
@@ -161,7 +161,7 @@ class FBrowser(FBrowserBase.FBrowserBase):
 
         image = self.fitsimage.get_image()
         self.fv.error_wrap(image.save_as_file, path)
-        
+
     def __str__(self):
         return 'fbrowser'
 
@@ -169,7 +169,7 @@ class FBrowser(FBrowserBase.FBrowserBase):
 class DragTable(QtGui.QTableWidget):
     # This class exists only to let us drag and drop files from the
     # file pane into the Ginga widget.
-    
+
     def __init__(self, parent=None, plugin=None):
         super(DragTable, self).__init__(parent)
         self.setDragEnabled(True)
@@ -209,5 +209,5 @@ class DragTable(QtGui.QTableWidget):
 
     def mouseMoveEvent(self, event):
         self.startDrag(event)
-        
+
 #END
