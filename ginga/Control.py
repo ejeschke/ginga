@@ -86,9 +86,9 @@ class GingaControl(Callback.Callbacks):
         self.shares = ['threadPool', 'logger']
 
         # Initialize the timer factory
-        self.timer_factory = Timer.TimerFactory(ev_quit=self.ev_quit)
-        task = Task.FuncTask2(self.timer_factory.mainloop)
-        task.init_and_start(self)
+        self.timer_factory = Timer.TimerFactory(ev_quit=self.ev_quit,
+                                                logger=self.logger)
+        self.timer_factory.wind()
 
         self.lock = threading.RLock()
         self.channel = {}
@@ -383,7 +383,10 @@ class GingaControl(Callback.Callbacks):
         return True
 
     def stop(self):
+        self.logger.info("shutting down Ginga...")
+        self.timer_factory.quit()
         self.ev_quit.set()
+        self.logger.debug("should be exiting now")
 
     def reset_viewer(self):
         chinfo = self.get_channelInfo()

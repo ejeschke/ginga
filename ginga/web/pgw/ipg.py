@@ -108,6 +108,7 @@ class ImageViewer(object):
         private_canvas.add(canvas)
         canvas.ui_setActive(True)
         canvas.register_for_cursor_drawing(fi)
+        fi.set_canvas(canvas)
         ## self.drawtypes = canvas.get_drawtypes()
         ## self.drawtypes.sort()
 

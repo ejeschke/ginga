@@ -86,6 +86,7 @@ class ImageViewAgg(ImageView.ImageViewBase):
     def configure_surface(self, width, height):
         # create agg surface the size of the window
         self.surface = agg.Draw("RGBA", (width, height), 'black')
+        self.surface.antialias(True)
 
         # inform the base class about the actual window size
         self.configure(width, height)

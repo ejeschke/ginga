@@ -153,6 +153,19 @@ class CompoundMixin(object):
     def delete_all_objects(self):
         self.objects = []
 
+    def roll_objects(self, n):
+        num = len(self.objects)
+        if num == 0:
+            return
+        n = n % num
+        self.objects = self.objects[-n:] + self.objects[:-n]
+
+    def swap_objects(self):
+        num = len(self.objects)
+        if num >= 2:
+            l = self.objects
+            self.objects = l[:num-2] + [l[num-1], l[num-2]]
+
     def set_attr_all(self, **kwdargs):
         for obj in self.objects:
             for attrname, val in kwdargs.items():

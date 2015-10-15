@@ -1096,7 +1096,7 @@ class ImageViewBase(Callback.Callbacks):
         This function can take numpy arrays for win_x and win_y.
         """
         # First, translate window coordinates onto pixel image
-        off_x, off_y = self.canvas2offset(win_x, win_y)
+        off_x, off_y = self.window_to_offset(win_x, win_y)
 
         # Reverse scaling
         off_x = off_x * (1.0 / self._org_scale_x)
@@ -1134,10 +1134,10 @@ class ImageViewBase(Callback.Callbacks):
         off_x *= self._org_scale_x
         off_y *= self._org_scale_y
 
-        win_x, win_y = self.offset2canvas(off_x, off_y)
+        win_x, win_y = self.offset_to_window(off_x, off_y)
         return (win_x, win_y)
 
-    def offset2canvas(self, off_x, off_y, asint=True):
+    def offset_to_window(self, off_x, off_y, asint=True):
         """
         This method can take numpy arrays for off_x and off_y.
         """
@@ -1167,7 +1167,7 @@ class ImageViewBase(Callback.Callbacks):
 
         return (win_x, win_y)
 
-    def canvas2offset(self, win_x, win_y):
+    def window_to_offset(self, win_x, win_y):
         """
         This method can take numpy arrays for win_x and win_y.
         """

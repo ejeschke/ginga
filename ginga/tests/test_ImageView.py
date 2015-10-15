@@ -40,13 +40,13 @@ class TestImageView(unittest.TestCase):
                TestError("Pan position is not at center (%f,%f != %f,%f)" % (
             pan_x, pan_y, ctr_x, ctr_y))
 
-        ## off_x, off_y = viewer.canvas2offset(200, 200)
-        ## print "200,200 absolute canvas2offset ->", off_x, off_y
+        ## off_x, off_y = viewer.window_to_offset(200, 200)
+        ## print "200,200 absolute window_to_offset ->", off_x, off_y
         ## data_x, data_y = viewer.get_data_xy(200, 200)
         ## print "200,200 data xy ->", data_x, data_y
 
-        ## win_x, win_y = viewer.offset2canvas(200, 200)
-        ## print "200,200 relative offset2canvas ->", win_x, win_y
+        ## win_x, win_y = viewer.offset_to_window(200, 200)
+        ## print "200,200 relative offset_to_window ->", win_x, win_y
         ## win_x, win_y = viewer.get_canvas_xy(200, 200)
         ## print "200,200 canvas xy ->", win_x, win_y
 

@@ -92,6 +92,7 @@ class ImageViewBindings(object):
             kp_pan_set = ['p'],
             kp_center = ['c'],
             kp_cut_255 = ['A'],
+            kp_cut_minmax = ['S'],
             kp_cut_auto = ['a'],
             kp_autocuts_on = [':'],
             kp_autocuts_override = [';'],
@@ -367,8 +368,8 @@ class ImageViewBindings(object):
 
             # Figure out data x,y based on percentage of X axis
             # and Y axis
-            off_x, off_y = viewer.canvas2offset(win_x, win_y)
-            max_x, max_y = viewer.canvas2offset(win_wd, win_ht)
+            off_x, off_y = viewer.window_to_offset(win_x, win_y)
+            max_x, max_y = viewer.window_to_offset(win_wd, win_ht)
             wd_x = abs(max_x) * 2.0
             ht_y = abs(max_y) * 2.0
             panx = (off_x + abs(max_x)) / float(wd_x)
@@ -392,7 +393,7 @@ class ImageViewBindings(object):
 
             scale_x, scale_y = viewer.get_scale_xy()
             multiplier = self.settings.get('pan_multiplier', 1.0)
-            off_x, off_y = viewer.canvas2offset(win_x, win_y)
+            off_x, off_y = viewer.window_to_offset(win_x, win_y)
             delta_x = float(self._start_x - off_x) / scale_x * multiplier
             delta_y = float(self._start_y - off_y) / scale_y * multiplier
 
@@ -710,7 +711,7 @@ class ImageViewBindings(object):
         self._ispanning = True
 
     def pan_set_origin(self, viewer, win_x, win_y, data_x, data_y):
-        self._start_x, self._start_y = viewer.canvas2offset(win_x, win_y)
+        self._start_x, self._start_y = viewer.window_to_offset(win_x, win_y)
         self._start_panx, self._start_pany = viewer.get_pan()
 
     def pan_stop(self, viewer):
@@ -809,6 +810,14 @@ class ImageViewBindings(object):
         if self.cancut:
             msg = self.settings.get('msg_cuts', msg)
             viewer.cut_levels(0.0, 255.0, no_reset=True)
+        return True
+
+    def kp_cut_minmax(self, viewer, event, data_x, data_y, msg=True):
+        if self.cancut:
+            msg = self.settings.get('msg_cuts', msg)
+            image = viewer.get_image()
+            mn, mx = image.get_minmax(noinf=True)
+            viewer.cut_levels(mn, mx, no_reset=True)
         return True
 
     def kp_cut_auto(self, viewer, event, data_x, data_y, msg=True):
@@ -1179,6 +1188,7 @@ class ImageViewBindings(object):
         elif event.state == 'down':
             self._start_x, self._start_y = x, y
             image = viewer.get_image()
+            #self._loval, self._hival = viewer.get_cut_levels()
             self._loval, self._hival = self.autocuts.calc_cut_levels(image)
 
         else:
@@ -1216,7 +1226,7 @@ class ImageViewBindings(object):
             self._adjust_cuts(viewer, event.direction, 0.001, msg=msg)
         return True
 
-    def sc_zoom_old(self, viewer, event, msg=True):
+    def sc_zoom(self, viewer, event, msg=True):
         """Interactively zoom the image by scrolling motion.
         This zooms by the zoom steps configured under Preferences.
         """
@@ -1233,7 +1243,7 @@ class ImageViewBindings(object):
                                            delay=0.4)
         return True
 
-    def sc_zoom(self, viewer, event, msg=True):
+    def sc_zoom_new(self, viewer, event, msg=True):
         return self.sc_zoom_coarse(viewer, event, msg=msg)
 
     def sc_zoom_coarse(self, viewer, event, msg=True):
@@ -1332,7 +1342,6 @@ class ImageViewBindings(object):
     def gs_pinch(self, viewer, state, rot_deg, scale, msg=True):
         pinch_actions = self.settings.get('pinch_actions', [])
         if state == 'start':
-            print("start pinch")
             self._start_scale_x, self._start_scale_y = viewer.get_scale_xy()
             self._start_rot = viewer.get_rotation()
         else:

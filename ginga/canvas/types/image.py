@@ -178,8 +178,6 @@ class Image(CanvasObjectBase):
 
             # don't ask for an alpha channel from overlaid image if it
             # doesn't have one
-            dst_order = viewer.get_rgb_order()
-            image_order = self.image.get_order()
             ## if ('A' in dst_order) and not ('A' in image_order):
             ##     dst_order = dst_order.replace('A', '')
 
