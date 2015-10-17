@@ -41,28 +41,28 @@ class Timer (object):
         self.timer_heap = heap
         self.logger = heap.logger
 
-    def run (self):
+    def run(self):
         try:
             self.action(*self.args, **self.kwargs)
         except Exception as ex:
             self.logger.error("Ignoring uncaught exception within timer action: %s", str(ex))
 
-    def __hash__ (self):
+    def __hash__(self):
         return id(self)
 
-    def __lt__ (self, other):
+    def __lt__(self, other):
         if other is None:
             return -1
         return self.expire < other.expire
 
-    def __eq__ (self, other):
+    def __eq__(self, other):
         return id(self) == id(other)
 
-    def is_scheduled (self):
+    def is_scheduled(self):
         with self.timer_heap:
             return self.expire is not None
 
-    def start (self, time_sec):
+    def start(self, time_sec):
         self.stop()
 
         self.start_time = time.time()
@@ -74,11 +74,16 @@ class Timer (object):
 
         self.timer_heap.add(self)
 
-    def elapsed_time (self):
+    def cond_start(self, time_sec):
+        with self.timer_heap:
+            if not self.is_scheduled():
+                self.start(time_sec)
+
+    def elapsed_time(self):
         """Return the elapsed time since the timer was started."""
         return time.time() - self.start_time
 
-    def remaining_time (self):
+    def remaining_time(self):
         """Return the remaining time to the timer expiration.
         If the timer has already expired then None is returned.
         """
@@ -86,14 +91,14 @@ class Timer (object):
             return 0.0
         return self.expire - time.time()
 
-    def stop (self):
+    def stop(self):
         had_run = self.timer_heap.remove(self)
         self.expire = None
         return had_run
 
 
-class TimerHeap (object):
-    def __init__ (self, desc='A Timer Heap', logger=None):
+class TimerHeap(object):
+    def __init__(self, desc='A Timer Heap', logger=None):
         self.desc = desc
         if logger is None:
             # use module logger if user doesn't supply one
@@ -107,19 +112,19 @@ class TimerHeap (object):
         self.expiring = False
         self.expire_gen = 0
 
-    def __enter__ (self):
+    def __enter__(self):
         """Use with statement to hold lock"""
         return self.lock.acquire()
 
-    def __exit__ (self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type, exc_val, exc_tb):
         """Use with statement to hold lock"""
         return self.lock.release()
 
-    def timer (self, jitter, action, *args, **kwargs):
+    def timer(self, jitter, action, *args, **kwargs):
         """Convenience method to create a Timer from the heap"""
         return Timer(self, jitter, action, *args, **kwargs)
 
-    def add (self, timer):
+    def add(self, timer):
         """Add a timer to the heap"""
         with self.lock:
             if self.heap:
@@ -150,7 +155,7 @@ class TimerHeap (object):
                 self.rtimer = threading.Timer(ival, self.expire)
                 self.rtimer.start()
 
-    def expire (self):
+    def expire(self):
         try:
             # Set expiring variable and forget old timer.
             with self.lock:
@@ -193,7 +198,7 @@ class TimerHeap (object):
                     self.rtimer.start()
                 self.expiring = False
 
-    def _remove (self, timer):
+    def _remove(self, timer):
         """Remove timer from heap lock and presence are assumed"""
         assert timer.timer_heap == self
         del self.timers[timer]
@@ -201,7 +206,7 @@ class TimerHeap (object):
         self.heap.remove(timer)
         heapq.heapify(self.heap)
 
-    def remove (self, timer):
+    def remove(self, timer):
         """Remove a timer from the heap, return True if already run"""
         with self.lock:
             # This is somewhat expensive as we have to heapify.
@@ -211,7 +216,7 @@ class TimerHeap (object):
             else:
                 return True
 
-    def remove_all_timers (self):
+    def remove_all_timers(self):
         """Remove all waiting timers and terminate any blocking threads."""
         with self.lock:
             if self.rtimer is not None:
@@ -222,7 +227,7 @@ class TimerHeap (object):
             self.rtimer = None
             self.expiring = False
 
-    def quit (self):
+    def quit(self):
         """Execute this method before your program exit to make sure it
         doesn't block on waiting for a timer thread to terminate."""
         self.remove_all_timers()

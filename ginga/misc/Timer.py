@@ -104,9 +104,7 @@ class Timer(Callback.Callbacks):
         self.make_callback('expired')
 
     def cond_set(self, time_sec):
-        with self.tfact.lock:
-            if not self.is_set():
-                self.set(time_sec)
+        self.timer.cond_start(time_sec)
 
     def time_left(self):
         return self.timer.remaining_time()
