@@ -69,7 +69,7 @@ setup(
                      'ginga.doc': ['manual/*.html'],
                      'ginga.web.pgw': ['templates/*.html', 'js/*.js'],
                      'ginga.fonts': ['*/*.ttf', '*/*.txt'],
-                     'ginga': ['examples/*/*'],
+                     'ginga': ['data/*', 'examples/*/*'],
                      },
     scripts = ['scripts/ginga', 'scripts/grc', 'scripts/gris'],
     install_requires = ['numpy>=1.7'],
