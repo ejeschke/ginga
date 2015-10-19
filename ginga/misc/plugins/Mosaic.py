@@ -266,7 +266,10 @@ class Mosaic(GingaPlugin.LocalPlugin):
         imname = img_mosaic.get('name', image.get('name', "NoName"))
 
         # image needs a path for Thumbs plugin
-        img_mosaic.set(path="/dev/null/%s" % (imname))
+        thumbdir = os.path.join(os.curdir, imname)
+        if not os.path.exists(thumbdir):
+            os.makedirs(thumbdir)
+        img_mosaic.set(path=thumbdir)
 
         # avoid making a thumbnail of this if seed image is also that way
         nothumb = not self.settings.get('make_thumbs', False)

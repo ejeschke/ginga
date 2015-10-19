@@ -511,7 +511,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
                 return None
 
             try:
-                os.mkdir(thumbdir)
+                os.makedirs(thumbdir)
                 # Write meta file
                 metafile = os.path.join(thumbdir, "meta")
                 with open(metafile, 'w') as out_f:
