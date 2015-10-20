@@ -537,13 +537,10 @@ class GingaControl(Callback.Callbacks):
         raise ControlError("Can't determine file type of '%s'" % (filepath))
 
     def load_image(self, filepath, idx=None):
-        # User specified an HDU using bracket notation at end of path?
-        match = re.match(r'^(.+)\[(\d+)\]$', filepath)
-        if match:
-            filepfx = match.group(1)
-            idx = max(int(match.group(2)), 0)
-        else:
-            filepfx = filepath
+
+        info = iohelper.get_fileinfo(filepath, cache_dir=self.tmpdir)
+        filepfx = info.filepath
+        idx = info.numhdu
 
         # Create an image.  Assume type to be an AstroImage unless
         # the MIME association says it is something different.
@@ -675,8 +672,7 @@ class GingaControl(Callback.Callbacks):
         kwdargs = {}
         idx = None
         if info.numhdu is not None:
-            idx = max(0, info.numhdu)
-            kwdargs['idx'] = idx
+            kwdargs['idx'] = info.numhdu
 
         try:
             image = image_loader(filepath, **kwdargs)

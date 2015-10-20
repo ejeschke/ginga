@@ -16,7 +16,7 @@ import traceback
 
 import numpy, numpy.ma
 
-from ginga.util import wcsmod, io_fits
+from ginga.util import wcsmod, io_fits, iohelper
 from ginga.util import wcs, iqcalc
 from ginga.BaseImage import BaseImage, ImageError, Header
 from ginga.misc import Bunch
@@ -112,14 +112,10 @@ class AstroImage(BaseImage):
 
         ahdr = self.get_header()
 
-        # User specified an HDU using bracket notation at end of path?
-        match = re.match(r'^(.+)\[(\d+)\]$', filepath)
-        if match:
-            filepath = match.group(1)
-            numhdu = max(int(match.group(2)), 0)
+        info = iohelper.get_fileinfo(filepath)
 
-        _data, numhdu, naxispath = self.io.load_file(filepath, ahdr,
-                                                     numhdu=numhdu,
+        _data, numhdu, naxispath = self.io.load_file(info.filepath, ahdr,
+                                                     numhdu=info.numhdu,
                                                      naxispath=naxispath,
                                                      phdr=self._primary_hdr)
         # this is a handle to the full data array
@@ -132,17 +128,11 @@ class AstroImage(BaseImage):
         if len(naxispath) == 0:
             naxispath = ([0] * (len(_data.shape)-2))
 
-        # Set the name to the filename (minus extension) if no name
-        # currently exists for this image
+        # Set the image name if no name currently exists for this image
+        # TODO: should this *change* the existing name, if any
         name = self.get('name', None)
         if name is None:
-            dirpath, filename = os.path.split(filepath)
-            name, ext = os.path.splitext(filename)
-            # Remove trailing .extension
-            if '.' in name:
-                name = name[:name.rindex('.')]
-            if numhdu is not None:
-                name += ('[%d]' % numhdu)
+            name = info.name
             self.set(name=name)
 
         self.set(path=filepath, idx=numhdu)

@@ -18,13 +18,27 @@ def get_fileinfo(filespec, cache_dir='/tmp', download=False):
     """
     Parse a file specification and return information about it.
     """
-    numhdu = None
+    idx = None
+    name_ext = ''
 
     # User specified an HDU using bracket notation at end of path?
-    match = re.match(r'^(.+)\[(\d+)\]$', filespec)
+    match = re.match(r'^(.+)\[([\w_\-\,\s]+)\]$', filespec)
     if match:
         filespec = match.group(1)
-        numhdu = int(match.group(2))
+        idx = match.group(2)
+        if ',' in idx:
+            hduname, extver = idx.split(',')
+            hduname = hduname.strip()
+            extver = int(extver)
+            idx = (hduname, extver)
+            name_ext = "[%s,%d]" % idx
+        else:
+            if re.match(r'^\d+$', idx):
+                idx = int(idx)
+                name_ext = "[%d]" % idx
+            else:
+                idx = idx.strip()
+                name_ext = "[%s]" % idx
     else:
         filespec = filespec
 
@@ -57,8 +71,12 @@ def get_fileinfo(filespec, cache_dir='/tmp', download=False):
 
     ondisk = os.path.exists(filepath)
 
-    res = Bunch.Bunch(filepath=filepath, url=url, numhdu=numhdu,
-                      ondisk=ondisk)
+    dirname, fname = os.path.split(filepath)
+    fname_pfx, fname_sfx = os.path.splitext(fname)
+    name = fname_pfx + name_ext
+
+    res = Bunch.Bunch(filepath=filepath, url=url, numhdu=idx,
+                      name=name, ondisk=ondisk)
     return res
 
 
@@ -69,5 +87,16 @@ def name_image_from_path(path, idx=None):
     #if '.' in name:
     #    name = name[:name.rindex('.')]
     if idx is not None:
-        name = '%s[%d]' % (name, idx)
+        if isinstance(idx, tuple):
+            assert len(idx) == 2, ValueError("idx tuple len (%d) != 2" % (
+                len(idx)))
+            hduname, extver = idx
+            hduname = hduname.strip()
+            extver = int(extver)
+            name += "[%s,%d]" % idx
+        else:
+            if isinstance(idx, str):
+                name += "[%s]" % idx.strip()
+            else:
+                name += "[%d]" % idx
     return name
