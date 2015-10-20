@@ -536,7 +536,7 @@ class GingaControl(Callback.Callbacks):
 
         raise ControlError("Can't determine file type of '%s'" % (filepath))
 
-    def load_image(self, filepath, idx=None):
+    def load_image(self, filepath):
 
         info = iohelper.get_fileinfo(filepath, cache_dir=self.tmpdir)
         filepfx = info.filepath
