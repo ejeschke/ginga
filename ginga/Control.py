@@ -540,7 +540,8 @@ class GingaControl(Callback.Callbacks):
 
         info = iohelper.get_fileinfo(filepath, cache_dir=self.tmpdir)
         filepfx = info.filepath
-        idx = info.numhdu
+        if idx is None:
+            idx = info.numhdu
 
         # Create an image.  Assume type to be an AstroImage unless
         # the MIME association says it is something different.

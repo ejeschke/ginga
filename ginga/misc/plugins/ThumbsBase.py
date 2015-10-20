@@ -95,8 +95,6 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         #name = image.get('name', name)
 
         thumbname = name
-        if '.' in thumbname:
-            thumbname = thumbname.split('.')[0]
         self.logger.info("making thumb for %s" % (thumbname))
 
         future = image.get('image_future', None)

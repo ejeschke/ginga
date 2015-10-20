@@ -113,11 +113,13 @@ class AstroImage(BaseImage):
         ahdr = self.get_header()
 
         info = iohelper.get_fileinfo(filepath)
+        if numhdu is None:
+            numhdu = info.numhdu
 
-        _data, numhdu, naxispath = self.io.load_file(info.filepath, ahdr,
-                                                     numhdu=info.numhdu,
-                                                     naxispath=naxispath,
-                                                     phdr=self._primary_hdr)
+        _data, numhdu_, naxispath = self.io.load_file(info.filepath, ahdr,
+                                                      numhdu=numhdu,
+                                                      naxispath=naxispath,
+                                                      phdr=self._primary_hdr)
         # this is a handle to the full data array
         self._md_data = _data
 

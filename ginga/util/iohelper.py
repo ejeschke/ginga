@@ -22,7 +22,7 @@ def get_fileinfo(filespec, cache_dir='/tmp', download=False):
     name_ext = ''
 
     # User specified an HDU using bracket notation at end of path?
-    match = re.match(r'^(.+)\[([\w_\-\,\s]+)\]$', filespec)
+    match = re.match(r'^(.+)\[(.+)\]$', filespec)
     if match:
         filespec = match.group(1)
         idx = match.group(2)

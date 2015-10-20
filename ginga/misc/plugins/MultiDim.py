@@ -14,9 +14,10 @@ from contextlib import contextmanager
 
 from ginga import AstroImage
 from ginga.gw import Widgets
-from ginga.misc import Future
+from ginga.misc import Future, Bunch
 from ginga import GingaPlugin
 from ginga.util.videosink import VideoSink
+from ginga.util import iohelper
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -43,9 +44,10 @@ class MultiDim(GingaPlugin.LocalPlugin):
         super(MultiDim, self).__init__(fv, fitsimage)
 
         self.hdu_info = []
+        self.hdu_db = {}
         self.curhdu = 0
         self.naxispath = []
-        self.imgname = 'NONAME'
+        self.name_pfx = 'NONAME'
         self.image = None
         self.orientation = 'vertical'
 
@@ -93,17 +95,24 @@ class MultiDim(GingaPlugin.LocalPlugin):
 
         fr = Widgets.Frame("HDU")
 
+        vb1 = Widgets.VBox()
         captions = [("Num HDUs:", 'label', "Num HDUs", 'llabel'),
-                    ("Choose HDU", 'combobox'),
                     ]
         w, b = Widgets.build_info(captions, orientation=orientation)
-        self.w.update(b)
         self.w.numhdu = b.num_hdus
+        self.w.update(b)
+        vb1.add_widget(w)
+
+        captions = [("Choose HDU", 'combobox'),
+                    ]
+        w, b = Widgets.build_info(captions, orientation=orientation)
+        vb1.add_widget(w)
+
         self.w.hdu = b.choose_hdu
         self.w.hdu.set_tooltip("Choose which HDU to view")
         self.w.hdu.add_callback('activated', self.set_hdu_cb)
 
-        fr.set_widget(w)
+        fr.set_widget(vb1)
         vbox.add_widget(fr, stretch=0)
 
         fr = Widgets.Frame("NAXIS (data cubes)")
@@ -191,7 +200,12 @@ class MultiDim(GingaPlugin.LocalPlugin):
         #idx = int(val)
         idx = w.get_index()
         idx = max(0, idx)
-        self.set_hdu(idx)
+        try:
+            self.set_hdu(idx)
+
+        except Exception as e:
+            self.logger.error("Error loading HDU #%d: %s" % (
+                idx+1, str(e)))
 
     def set_naxis_cb(self, w, idx, n):
         #idx = int(w.get_value()) - 1
@@ -323,14 +337,19 @@ class MultiDim(GingaPlugin.LocalPlugin):
         self.image = None
         self.fv.showStatus("")
 
-    def get_name(self, idx):
-        return '%s[%d]' % (self.imgname, idx)
+    def get_name(self, sfx):
+        return '%s[%s]' % (self.name_pfx, sfx)
 
     def set_hdu(self, idx):
         self.logger.debug("Loading fits hdu #%d" % (idx))
 
+        # determine canonical index of this HDU
+        info = self.hdu_info[idx]
+        aidx = (info.name, info.extver)
+        sfx = '%s,%d' % aidx
+
         # See if this HDU is still in the channel's datasrc
-        imname = self.get_name(idx)
+        imname = self.get_name(sfx)
         chname = self.fv.get_channelName(self.fitsimage)
         chinfo = self.fv.get_channelInfo(chname)
         if imname in chinfo.datasrc:
@@ -357,7 +376,6 @@ class MultiDim(GingaPlugin.LocalPlugin):
         try:
             self.curhdu = idx
             dims = [0, 0]
-            info = self.hdu_info[idx]
             hdu = self.fits_f[idx]
 
             if hdu.data is None:
@@ -375,8 +393,8 @@ class MultiDim(GingaPlugin.LocalPlugin):
 
             # create a future for reconstituting this HDU
             future = Future.Future()
-            future.freeze(self.fv.load_image, self.path, idx=idx)
-            image.set(path=self.path, idx=idx, name=imname, image_future=future)
+            future.freeze(self.fv.load_image, self.path, idx=aidx)
+            image.set(path=self.path, idx=aidx, name=imname, image_future=future)
 
             ## self.fitsimage.set_image(image,
             ##                          raise_initialize_errors=False)
@@ -389,7 +407,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
             errmsg = "Error loading FITS HDU #%d: %s" % (
                 idx, str(e))
             self.logger.error(errmsg)
-            self.fv.show_error(errmsg)
+            self.fv.show_error(errmsg, raisetab=False)
 
     def set_naxis(self, idx, n):
         self.play_idx = idx
@@ -470,13 +488,29 @@ class MultiDim(GingaPlugin.LocalPlugin):
         # clear old TOC
         w.clear()
         self.hdu_info = []
+        self.hdu_db = {}
 
         idx = 0
+        extver_db = {}
         for tup in info:
-            d = dict(index=idx, name=tup[1], htype=tup[2], dtype=tup[5])
-            self.hdu_info.append(d)
+            name = tup[1]
+            # figure out the EXTVER for this HDU
+            extver = extver_db.setdefault(name, 0)
+            extver += 1
+            extver_db[name] = extver
 
-            toc_ent = "%(index)4d %(name)-12.12s %(htype)-12.12s %(dtype)-8.8s" % d
+            # prepare a record of pertinent info about the HDU for
+            # lookups by numerical index or (NAME, EXTVER)
+            d = Bunch.Bunch(index=idx, name=name, extver=extver,
+                            htype=tup[2], dtype=tup[5])
+            self.hdu_info.append(d)
+            # different ways of accessing this HDU:
+            # by numerical index
+            self.hdu_db[idx] = d
+            # by (hduname, extver)
+            self.hdu_db[(name, extver)] = d
+
+            toc_ent = "%(index)4d %(name)-12.12s (%(extver)3d) %(htype)-12.12s %(dtype)-8.8s" % d
             w.append_text(toc_ent)
             idx += 1
 
@@ -488,6 +522,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
         #w.set_index(idx)
 
     def redo(self):
+        """Called when an image is set in the channel."""
         image = self.fitsimage.get_image()
         if (image is None) or (image == self.image):
             return True
@@ -500,13 +535,12 @@ class MultiDim(GingaPlugin.LocalPlugin):
         self.path = path
 
         name = image.get('name', self.fv.name_image_from_path(path))
-        idx = None
+        idx = image.get('idx', None)
         # remove index designation from root of name, if any
-        match = re.match(r'^(.+)\[(\d+)\]$', name)
+        match = re.match(r'^(.+)\[(.+)\]$', name)
         if match:
             name = match.group(1)
-            idx = int(match.group(2))
-        self.imgname = name
+        self.name_pfx = name
 
         self.fits_f = pyfits.open(path, 'readonly')
 
@@ -517,10 +551,14 @@ class MultiDim(GingaPlugin.LocalPlugin):
         self.num_hdu = upper
         self.logger.debug("there are %d hdus" % (upper+1))
         self.w.numhdu.set_text("%d" % (upper+1))
+
         if idx is not None:
             # set the HDU in the drop down if known
-            self.w.hdu.set_index(idx)
-            self.set_hdu(idx)
+            info = self.hdu_db.get(idx, None)
+            if info is not None:
+                index = info.index
+                self.w.hdu.set_index(index)
+                self.set_hdu(index)
 
         self.w.hdu.set_enabled(len(self.fits_f) > 0)
 
