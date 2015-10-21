@@ -321,9 +321,14 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
         # Hack to make the rows in a TableView all have a
         # reasonable height for the data
         if QtHelp.have_pyqt5:
-            vh.setSectionResizeMode(QtGui.QHeaderView.ResizeToContents)
+            # NOTE: this makes a terrible hit on performance--DO NOT USE!
+            #vh.setSectionResizeMode(QtGui.QHeaderView.ResizeToContents)
+            vh.setSectionResizeMode(QtGui.QHeaderView.Fixed)
         else:
-            vh.setResizeMode(QtGui.QHeaderView.ResizeToContents)
+            # NOTE: this makes a terrible hit on performance--DO NOT USE!
+            #vh.setResizeMode(QtGui.QHeaderView.ResizeToContents)
+            vh.setResizeMode(QtGui.QHeaderView.Fixed)
+        vh.setDefaultSectionSize(18)
         # Hide vertical header
         vh.setVisible(False)
 
@@ -468,8 +473,9 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
         model.layoutChanged.connect(self.sort_cb)
 
         # set column width to fit contents
-        table.resizeColumnsToContents()
-        table.resizeRowsToContents()
+        # NOTE: this makes a terrible hit on performance--DO NOT USE!
+        ## table.resizeColumnsToContents()
+        ## table.resizeRowsToContents()
 
         table.setSortingEnabled(True)
 
