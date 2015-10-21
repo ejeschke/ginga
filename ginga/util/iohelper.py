@@ -18,29 +18,48 @@ def get_fileinfo(filespec, cache_dir='/tmp', download=False):
     """
     Parse a file specification and return information about it.
     """
-    idx = None
-    name_ext = ''
+    # Loads first science extension by default.
+    # This prevents [None] to be loaded instead.
+    idx = ('SCI', 1)
+    name_ext = '[SCI,1]'
 
     # User specified an HDU using bracket notation at end of path?
-    match = re.match(r'^(.+)\[(.+)\]$', filespec)
+
+    # This matches
+    #   image.fits[("NAME", 1)]
+    #   image.fits[('NAME', 1)]
+    #   image.fits['NAME', 1]
+    #   image.fits["NAME", 1]
+    #   image.fits[NAME, 1]
+    #   image.fits[(NAME, 1)]
+    match = re.match(r'^(.+)\[\(?[\'\"]?([A-Za-z]+)[\'\"]?\,([0-9])\)?\]$',
+                     filespec)
     if match:
         filespec = match.group(1)
-        idx = match.group(2)
-        if ',' in idx:
-            hduname, extver = idx.split(',')
-            hduname = hduname.strip()
-            extver = int(extver)
-            idx = (hduname, extver)
-            name_ext = "[%s,%d]" % idx
-        else:
+        hduname = match.group(2)
+        extver = int(match.group(3))
+        idx = (hduname, extver)
+        name_ext = "[%s,%d]" % idx
+
+    else:
+        # This matches
+        #   image.fits[1]
+        #   image.fits["NAME"]
+        #   image.fits['NAME']
+        #   image.fits[NAME]
+        match = re.match(r'^(.+)\[\(?[\'\"]?([A-Za-z0-9]+)[\'\"]?\)?\]$',
+                         filespec)
+        if match:
+            filespec = match.group(1)
+            idx = match.group(2)
             if re.match(r'^\d+$', idx):
                 idx = int(idx)
                 name_ext = "[%d]" % idx
             else:
                 idx = idx.strip()
                 name_ext = "[%s]" % idx
-    else:
-        filespec = filespec
+        else:
+            filespec = filespec
 
     url = filespec
     filepath = None
@@ -93,7 +112,7 @@ def name_image_from_path(path, idx=None):
             hduname, extver = idx
             hduname = hduname.strip()
             extver = int(extver)
-            name += "[%s,%d]" % idx
+            name += "[%s,%d]" % (hduname, extver)
         else:
             if isinstance(idx, str):
                 name += "[%s]" % idx.strip()
