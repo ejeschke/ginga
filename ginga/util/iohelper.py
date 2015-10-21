@@ -24,42 +24,25 @@ def get_fileinfo(filespec, cache_dir='/tmp', download=False):
     name_ext = '[SCI,1]'
 
     # User specified an HDU using bracket notation at end of path?
-
-    # This matches
-    #   image.fits[("NAME", 1)]
-    #   image.fits[('NAME', 1)]
-    #   image.fits['NAME', 1]
-    #   image.fits["NAME", 1]
-    #   image.fits[NAME, 1]
-    #   image.fits[(NAME, 1)]
-    match = re.match(r'^(.+)\[\(?[\'\"]?([A-Za-z]+)[\'\"]?\,([0-9])\)?\]$',
-                     filespec)
+    match = re.match(r'^(.+)\[(.+)\]$', filespec)
     if match:
         filespec = match.group(1)
-        hduname = match.group(2)
-        extver = int(match.group(3))
-        idx = (hduname, extver)
-        name_ext = "[%s,%d]" % idx
-
-    else:
-        # This matches
-        #   image.fits[1]
-        #   image.fits["NAME"]
-        #   image.fits['NAME']
-        #   image.fits[NAME]
-        match = re.match(r'^(.+)\[\(?[\'\"]?([A-Za-z0-9]+)[\'\"]?\)?\]$',
-                         filespec)
-        if match:
-            filespec = match.group(1)
-            idx = match.group(2)
+        idx = match.group(2)
+        if ',' in idx:
+            hduname, extver = idx.split(',')
+            hduname = hduname.strip()
+            extver = int(extver)
+            idx = (hduname, extver)
+            name_ext = "[%s,%d]" % idx
+        else:
             if re.match(r'^\d+$', idx):
                 idx = int(idx)
                 name_ext = "[%d]" % idx
             else:
                 idx = idx.strip()
                 name_ext = "[%s]" % idx
-        else:
-            filespec = filespec
+    else:
+        filespec = filespec
 
     url = filespec
     filepath = None
