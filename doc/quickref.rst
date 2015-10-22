@@ -50,9 +50,13 @@ Panning and Zooming commands
 | Ctrl + Left drag     | Proportional pan (press and drag left mouse      |
 |                      |     button                                       |
 +----------------------+--------------------------------------------------+
+| slash (/)            | Set autocenter for new images to *override*      |
++----------------------+--------------------------------------------------+
+| question (?)         | Toggle autocenter for images to *on* or *off*    |
++----------------------+--------------------------------------------------+
 | apostrophe (')       | Set autozoom for new images to *override*        |
 +----------------------+--------------------------------------------------+
-| doublequote (")      | Set autozoom for new images to *on*              |
+| doublequote (")      | Toggle autozoom for new images to *on* or *off*  |
 +----------------------+--------------------------------------------------+
 | Ctrl + Scroll wheel  | Adjust zoom by intermediate coarse steps         |
 |   turned             |                                                  | 
@@ -87,7 +91,7 @@ Cut levels and colormap commands
 +----------------------+--------------------------------------------------+
 | semicolon (;)        | Set autocuts for new images to *override*        |
 +----------------------+--------------------------------------------------+
-| colon (:)            | Set autocuts for new images to *on*              |
+| colon (:)            | Toggle autocuts for new images to *on* or *off*  |
 +----------------------+--------------------------------------------------+
 
 Transform commands
@@ -112,9 +116,9 @@ Transform commands
 | R                    | Restore rotation to 0 degrees and additionally   |
 |                      |   undo any flip/swap transformations             |
 +----------------------+--------------------------------------------------+
-| less than (<)        | Increment current rotation by 90 degrees         |
+| period (.)           | Increment current rotation by 90 degrees         |
 +----------------------+--------------------------------------------------+
-| greater than (>)     | Increment current rotation by -90 degrees        |
+| comma (,)            | Decrement current rotation by 90 degrees         |
 +----------------------+--------------------------------------------------+
 | o                    | Orient image by transforms and rotation so that  |
 |                      | WCS indicates North=Up and East=Left             |
@@ -137,9 +141,9 @@ Reference Viewer Only
 +----------------------+--------------------------------------------------+
 | C                    | Raise Contents tab                               |
 +----------------------+--------------------------------------------------+
-| comma (,)            | Toggle collapse left pane                        |
+| less than (<)        | Toggle collapse left pane                        |
 +----------------------+--------------------------------------------------+
-| period (.)           | Toggle collapse right pane                       | 
+| greater than (>)     | Toggle collapse right pane                       | 
 +----------------------+--------------------------------------------------+
 | f                    | Toggle full screen                               | 
 +----------------------+--------------------------------------------------+

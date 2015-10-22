@@ -45,7 +45,7 @@ def make_image(data_np, oldimage, header, pfx='dp'):
 
 
 def create_blank_image(ra_deg, dec_deg, fov_deg, px_scale, rot_deg,
-                       cdbase=[1, 1], logger=None, pfx='dp'):
+                       cdbase=[1, 1], dtype=None, logger=None, pfx='dp'):
 
     # ra and dec in traditional format
     ra_txt = wcs.raDegToString(ra_deg, format='%02d:%02d:%06.3f')
@@ -61,7 +61,9 @@ def create_blank_image(ra_deg, dec_deg, fov_deg, px_scale, rot_deg,
     ##     imagesize += 1
     width = height = imagesize
 
-    data = numpy.zeros((height, width), dtype=numpy.float32)
+    if dtype is None:
+        dtype = numpy.float32
+    data = numpy.zeros((height, width), dtype=dtype)
 
     crpix = float(imagesize // 2)
     header = OrderedDict((('SIMPLE', True),
@@ -110,16 +112,19 @@ def recycle_image(image, ra_deg, dec_deg, fov_deg, px_scale, rot_deg,
     wcshdr = wcs.simple_wcs(crpix1, crpix2, ra_deg, dec_deg, px_scale,
                             rot_deg, cdbase=cdbase)
     header.update(wcshdr)
+    # this should update the wcs
+    image.update_keywords(header)
 
     # zero out data array
     data = image.get_data()
     data.fill(0)
 
-    # Create new image container sharing same data
-    new_image = AstroImage.AstroImage(data, logger=logger)
-    new_image.update_keywords(header)
-    # give the image a name
-    get_image_name(new_image, pfx=pfx)
+    ## # Create new image container sharing same data
+    ## new_image = AstroImage.AstroImage(data, logger=logger)
+    ## new_image.update_keywords(header)
+    ## # give the image a name
+    ## get_image_name(new_image, pfx=pfx)
+    new_image = image
 
     return new_image
 

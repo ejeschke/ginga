@@ -86,7 +86,7 @@ class ImageViewBindings(object):
             kp_zoom = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'],
             kp_zoom_inv = ['!', '@', '#', '$', '%', '^', '&', '*', '(', ')'],
             kp_zoom_fit = ['backquote'],
-            kp_autozoom_on = ['doublequote'],
+            kp_autozoom_toggle = ['doublequote'],
             kp_autozoom_override = ['singlequote'],
             kp_dist_reset = ['D'],
             kp_pan_set = ['p'],
@@ -94,8 +94,9 @@ class ImageViewBindings(object):
             kp_cut_255 = ['A'],
             kp_cut_minmax = ['S'],
             kp_cut_auto = ['a'],
-            kp_autocuts_on = [':'],
+            kp_autocuts_toggle = [':'],
             kp_autocuts_override = [';'],
+            kp_autocenter_toggle = ['?'],
             kp_autocenter_override = ['/'],
             kp_contrast_restore = ['T'],
             kp_cmap_reset = ['Y'],
@@ -790,12 +791,17 @@ class ImageViewBindings(object):
                                            delay=1.0)
         return True
 
-    def kp_autozoom_on(self, viewer, event, data_x, data_y, msg=True):
+    def kp_autozoom_toggle(self, viewer, event, data_x, data_y, msg=True):
         if self.canzoom:
             msg = self.settings.get('msg_zoom', msg)
-            viewer.enable_autozoom('on')
+            val = viewer.get_settings().get('autozoom')
+            if val == 'off':
+                val = 'on'
+            else:
+                val = 'off'
+            viewer.enable_autozoom(val)
             if msg:
-                viewer.onscreen_message('Autozoom On', delay=1.0)
+                viewer.onscreen_message('Autozoom %s' % val, delay=1.0)
         return True
 
     def kp_autozoom_override(self, viewer, event, data_x, data_y, msg=True):
@@ -828,12 +834,17 @@ class ImageViewBindings(object):
             viewer.auto_levels()
         return True
 
-    def kp_autocuts_on(self, viewer, event, data_x, data_y, msg=True):
+    def kp_autocuts_toggle(self, viewer, event, data_x, data_y, msg=True):
         if self.cancut:
             msg = self.settings.get('msg_cuts', msg)
-            viewer.enable_autocuts('on')
+            val = viewer.get_settings().get('autocuts')
+            if val == 'off':
+                val = 'on'
+            else:
+                val = 'off'
+            viewer.enable_autocuts(val)
             if msg:
-                viewer.onscreen_message('Autocuts On', delay=1.0)
+                viewer.onscreen_message('Autocuts %s' % val, delay=1.0)
         return True
 
     def kp_autocuts_override(self, viewer, event, data_x, data_y, msg=True):
@@ -844,9 +855,22 @@ class ImageViewBindings(object):
                 viewer.onscreen_message('Autocuts Override', delay=1.0)
         return True
 
+    def kp_autocenter_toggle(self, viewer, event, data_x, data_y, msg=True):
+        if self.canpan:
+            msg = self.settings.get('msg_pan', msg)
+            val = viewer.get_settings().get('autocenter')
+            if val == 'off':
+                val = 'on'
+            else:
+                val = 'off'
+            viewer.set_autocenter(val)
+            if msg:
+                viewer.onscreen_message('Autocenter %s' % val, delay=1.0)
+        return True
+
     def kp_autocenter_override(self, viewer, event, data_x, data_y, msg=True):
         if self.canpan:
-            msg = self.settings.get('msg_cuts', msg)
+            msg = self.settings.get('msg_pan', msg)
             viewer.set_autocenter('override')
             if msg:
                 viewer.onscreen_message('Autocenter Override', delay=1.0)

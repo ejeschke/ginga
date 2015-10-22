@@ -424,7 +424,7 @@ class AstroImage(BaseImage):
 
     def mosaic_inline(self, imagelist, bg_ref=None, trim_px=None,
                       merge=False, allow_expand=True, expand_pad_deg=0.01,
-                      update_minmax=True):
+                      update_minmax=True, suppress_callback=False):
         """Drops new images into the current image (if there is room),
         relocating them according the WCS between the two images.
         """
@@ -616,7 +616,8 @@ class AstroImage(BaseImage):
         #self._set_minmax()
 
         # Notify watchers that our data has changed
-        self.make_callback('modified')
+        if not suppress_callback:
+            self.make_callback('modified')
 
         return (xlo, ylo, xhi, yhi)
 

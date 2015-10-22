@@ -966,7 +966,7 @@ class GingaControl(Callback.Callbacks):
         for key in opmon.get_active():
             obj = opmon.getPlugin(key)
             try:
-                obj.redo()
+                self.gui_do(obj.redo)
 
             except Exception as e:
                 self.logger.error("Failed to continue operation: %s" % (

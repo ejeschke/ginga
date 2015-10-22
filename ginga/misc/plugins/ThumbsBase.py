@@ -17,12 +17,6 @@ from ginga.misc import Bunch, Future
 
 class ThumbsBase(GingaPlugin.GlobalPlugin):
 
-    # NOTES
-    # [1] We can't seem to trust the image name set by the loader to
-    # match our idea of the name, particularly if the thumb was pregenerated.
-    # This leads to multiple thumbnails for the same image.  So we stick with
-    # our own idea of the name.
-
     def __init__(self, fv):
         # superclass defines some variables for us, like logger
         super(ThumbsBase, self).__init__(fv)
@@ -71,7 +65,8 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         self.gui_up = False
 
     def get_thumb_key(self, chname, imname, path):
-        path = os.path.abspath(path)
+        if not (path is None):
+            path = os.path.abspath(path)
         thumbkey = (chname.lower(), imname, path)
         return thumbkey
 
@@ -79,20 +74,22 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         if not self.gui_up:
             return False
 
-        # get image path
-        path = image.get('path', None)
         # image is flagged not to make a thumbnail?
         nothumb = image.get('nothumb', False)
-        if (path is None) or nothumb:
-            # Currently we need a path to make a thumb key
+        if nothumb:
             return
-        path = os.path.abspath(path)
-        idx = image.get('idx', None)
 
-        # get image name
-        name = self.fv.name_image_from_path(path, idx=idx)
-        # see Note [1]
-        #name = image.get('name', name)
+        idx = image.get('idx', None)
+        # get image path
+        path = image.get('path', None)
+        if not (path is None):
+            path = os.path.abspath(path)
+            # get image name
+            name = self.fv.name_image_from_path(path, idx=idx)
+        else:
+            name = 'NoName'
+
+        name = image.get('name', name)
 
         thumbname = name
         self.logger.info("making thumb for %s" % (thumbname))
@@ -342,16 +339,16 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
             metadata[kwd] = header.get(kwd, 'N/A')
 
         # Look up our version of the thumb
-        path = image.get('path', None)
-        if path is None:
-            return
-        path = os.path.abspath(path)
         idx = image.get('idx', None)
+        path = image.get('path', None)
+        if not (path is None):
+            path = os.path.abspath(path)
+            name = self.fv.name_image_from_path(path, idx=idx)
+        else:
+            name = 'NoName'
 
         # get image name
-        name = self.fv.name_image_from_path(path, idx=idx)
-        # see Note [1]
-        #name = image.get('name', name)
+        name = image.get('name', name)
 
         thumbkey = self.get_thumb_key(chname, name, path)
         with self.thmblock:

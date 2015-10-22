@@ -479,6 +479,21 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
 
         table.setSortingEnabled(True)
 
+        # sort by priority, if possible
+        i = self.get_column_index('priority', info)
+        if i >= 0:
+            table.sortByColumn(i, QtCore.Qt.AscendingOrder)
+
+    def get_column_index(self, name, info):
+        i = 0
+        for column in info.columns:
+            print(column)
+            colname = column[0]
+            if colname.lower() == name.lower():
+                return i
+            i += 1
+        return -1
+
     def _update_selections(self):
 
         self.table.clearSelection()
@@ -554,7 +569,8 @@ class CatalogListing(CatalogsBase.CatalogListingBase):
         fieldname = self.columns[index][1]
         self.set_field(fieldname)
 
-    def do_operation_cb(self, w, index):
+    def do_operation_cb(self, w):
+        index = w.currentIndex()
         if index >= 0:
             fn = self.operation_table[index][1]
             fn(self.selected)

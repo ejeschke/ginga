@@ -62,7 +62,7 @@ class Star(object):
         return self.starInfo[key]
 
     def __contains__(self, key):
-        return key in self.starInfo.keys()
+        return key in self.starInfo
 
     def __setitem__(self, key, value):
         self.starInfo[key] = value
