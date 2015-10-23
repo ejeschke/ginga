@@ -18,8 +18,10 @@ def get_fileinfo(filespec, cache_dir='/tmp', download=False):
     """
     Parse a file specification and return information about it.
     """
-    idx = None
-    name_ext = ''
+    # Loads first science extension by default.
+    # This prevents [None] to be loaded instead.
+    idx = ('SCI', 1)
+    name_ext = '[SCI,1]'
 
     # User specified an HDU using bracket notation at end of path?
     match = re.match(r'^(.+)\[(.+)\]$', filespec)
@@ -93,7 +95,7 @@ def name_image_from_path(path, idx=None):
             hduname, extver = idx
             hduname = hduname.strip()
             extver = int(extver)
-            name += "[%s,%d]" % idx
+            name += "[%s,%d]" % (hduname, extver)
         else:
             if isinstance(idx, str):
                 name += "[%s]" % idx.strip()
