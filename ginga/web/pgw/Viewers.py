@@ -101,7 +101,7 @@ class GingaViewer(Widgets.Canvas):
             method(event)
 
         except Exception as e:
-            self.logger.error("error redirecting '%s' event: " % (
+            self.logger.error("error redirecting '%s' event: %s" % (
                 event.type, str(e)))
             # TODO: dump traceback to debug log
 
