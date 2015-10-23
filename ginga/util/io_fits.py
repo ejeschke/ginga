@@ -144,9 +144,20 @@ class PyFitsFileHandler(BaseFitsFileHandler):
                 filepath, str(e)))
 
         if numhdu is None:
+
+            info = fits_f.info(output=False)
+            extver_db = {}
+
             found_valid_hdu = False
-            for numhdu in range(len(fits_f)):
-                hdu = fits_f[numhdu]
+            for i in range(len(fits_f)):
+                hdu = fits_f[i]
+                tup = info[i]
+                name = tup[1]
+                # figure out the EXTVER for this HDU
+                extver = extver_db.setdefault(name, 0)
+                extver += 1
+                extver_db[name] = extver
+
                 if (hdu.data is None) or (0 in hdu.data.shape):
                     # non-pixel or zero-length data hdu?
                     continue
@@ -156,6 +167,7 @@ class PyFitsFileHandler(BaseFitsFileHandler):
                 #print "data type is %s" % hdu.data.dtype.kind
                 # Looks good, let's try it
                 found_valid_hdu = True
+                numhdu = (name, extver)
                 break
 
             if not found_valid_hdu:

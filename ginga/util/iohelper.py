@@ -20,8 +20,8 @@ def get_fileinfo(filespec, cache_dir='/tmp', download=False):
     """
     # Loads first science extension by default.
     # This prevents [None] to be loaded instead.
-    idx = ('SCI', 1)
-    name_ext = '[SCI,1]'
+    idx = None
+    name_ext = ''
 
     # User specified an HDU using bracket notation at end of path?
     match = re.match(r'^(.+)\[(.+)\]$', filespec)
@@ -82,6 +82,23 @@ def get_fileinfo(filespec, cache_dir='/tmp', download=False):
     return res
 
 
+def get_hdu_suffix(idx):
+    if idx is None:
+        return ''
+
+    if isinstance(idx, tuple):
+        assert len(idx) == 2, ValueError("idx tuple len (%d) != 2" % (
+            len(idx)))
+        hduname, extver = idx
+        hduname = hduname.strip()
+        extver = int(extver)
+        return "[%s,%d]" % (hduname, extver)
+
+    if isinstance(idx, str):
+        return "[%s]" % idx.strip()
+
+    return "[%d]" % idx
+
 def name_image_from_path(path, idx=None):
     (path, filename) = os.path.split(path)
     # Remove trailing .extension
@@ -89,16 +106,5 @@ def name_image_from_path(path, idx=None):
     #if '.' in name:
     #    name = name[:name.rindex('.')]
     if idx is not None:
-        if isinstance(idx, tuple):
-            assert len(idx) == 2, ValueError("idx tuple len (%d) != 2" % (
-                len(idx)))
-            hduname, extver = idx
-            hduname = hduname.strip()
-            extver = int(extver)
-            name += "[%s,%d]" % (hduname, extver)
-        else:
-            if isinstance(idx, str):
-                name += "[%s]" % idx.strip()
-            else:
-                name += "[%d]" % idx
+        name += get_hdu_suffix(idx)
     return name

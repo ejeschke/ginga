@@ -136,7 +136,9 @@ class AstroImage(BaseImage):
         if name is None:
             name = info.name
             if ('[' not in name):
-                name += '[{0}]'.format(numhdu)
+                if numhdu is None:
+                    numhdu = numhdu_
+                name += iohelper.get_hdu_suffix(numhdu)
             self.set(name=name)
 
         self.set(path=filepath, idx=numhdu)
