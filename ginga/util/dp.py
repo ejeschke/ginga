@@ -11,7 +11,8 @@ import numpy
 
 from collections import OrderedDict
 
-from ginga import AstroImage
+from ginga import AstroImage, colors
+from ginga.RGBImage import RGBImage
 from ginga.util import wcs
 
 # counter used to name anonymous images
@@ -184,5 +185,56 @@ def divide(image1, image2):
     image = make_image(result, image1, {}, pfx='div')
     return image
 
+
+# https://gist.github.com/stscieisenhamer/25bf6287c2c724cb9cc7
+def masktorgb(mask, color='lightgreen', alpha=1.0):
+    """Convert boolean mask to RGB image object for canvas overlay.
+
+    Parameters
+    ----------
+    mask : ndarray
+        Boolean mask to overlay. 2D image only.
+
+    color : str
+        Color name accepted by Ginga.
+
+    alpha : float
+        Opacity. Unmasked data are always transparent.
+
+    Returns
+    -------
+    rgbobj : RGBImage
+        RGB image for canvas Image object.
+
+    Raises
+    ------
+    ValueError
+        Invalid mask dimension.
+
+    """
+    mask = numpy.asarray(mask)
+
+    if mask.ndim != 2:
+        raise ValueError('ndim={0} is not supported'.format(mask.ndim))
+
+    ht, wd = mask.shape
+    r, g, b = colors.lookup_color(color)
+    rgbobj = RGBImage(data_np = numpy.zeros((ht, wd, 4), dtype=numpy.uint8))
+
+    rc = rgbobj.get_slice('R')
+    gc = rgbobj.get_slice('G')
+    bc = rgbobj.get_slice('B')
+    ac = rgbobj.get_slice('A')
+    ac[:] = 0  # Transparent background
+
+    rc[mask] = int(r * 255)
+    gc[mask] = int(g * 255)
+    bc[mask] = int(b * 255)
+    ac[mask] = int(alpha * 255)
+
+    # For debugging
+    #rgbobj.save_as_file('ztmp_rgbobj.png')
+
+    return rgbobj
 
 # END
