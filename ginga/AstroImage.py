@@ -48,11 +48,11 @@ class AstroImage(BaseImage):
 
 
     def __init__(self, data_np=None, metadata=None, logger=None,
-                 wcsclass=wcsClass, ioclass=ioClass,
+                 name=None, wcsclass=wcsClass, ioclass=ioClass,
                  inherit_primary_header=False):
 
         BaseImage.__init__(self, data_np=data_np, metadata=metadata,
-                           logger=logger)
+                           logger=logger, name=name)
 
         # wcsclass specifies a pluggable WCS module
         if wcsclass is None:
@@ -131,15 +131,18 @@ class AstroImage(BaseImage):
             naxispath = ([0] * (len(_data.shape)-2))
 
         # Set the image name if no name currently exists for this image
-        # TODO: should this *change* the existing name, if any
-        name = self.get('name', None)
-        if name is None:
-            name = info.name
-            if ('[' not in name):
-                if numhdu is None:
-                    numhdu = numhdu_
-                name += iohelper.get_hdu_suffix(numhdu)
-            self.set(name=name)
+        # TODO: should this *change* the existing name, if any?
+        if not (self.name is None):
+            self.set(name=self.name)
+        else:
+            name = self.get('name', None)
+            if name is None:
+                name = info.name
+                if ('[' not in name):
+                    if numhdu is None:
+                        numhdu = numhdu_
+                    name += iohelper.get_hdu_suffix(numhdu)
+                self.set(name=name)
 
         self.set(path=filepath, idx=numhdu)
 

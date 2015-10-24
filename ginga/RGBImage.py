@@ -17,11 +17,11 @@ import numpy
 class RGBImage(BaseImage):
 
     def __init__(self, data_np=None, metadata=None,
-                 logger=None, order='RGBA',
+                 logger=None, name=None, order='RGBA',
                  ioclass=io_rgb.RGBFileHandler):
 
         BaseImage.__init__(self, data_np=data_np, metadata=metadata,
-                           logger=logger)
+                           logger=logger, name=name)
 
         self.io = ioclass(self.logger)
         order = order.upper()
@@ -85,6 +85,9 @@ class RGBImage(BaseImage):
         data_np = self.io.load_file(filepath, kwds)
 
         self.set_data(data_np, metadata=metadata)
+
+        if not (self.name is None):
+            self.set(name=self.name)
 
     def save_as_file(self, filepath):
         data = self._get_data()

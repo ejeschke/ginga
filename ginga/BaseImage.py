@@ -20,7 +20,7 @@ class ImageError(Exception):
 
 class BaseImage(Callback.Callbacks):
 
-    def __init__(self, data_np=None, metadata=None, logger=None):
+    def __init__(self, data_np=None, metadata=None, logger=None, name=None):
 
         Callback.Callbacks.__init__(self)
 
@@ -35,6 +35,7 @@ class BaseImage(Callback.Callbacks):
         if metadata:
             self.update_metadata(metadata)
         self.order = ''
+        self.name = name
 
         self._set_minmax()
 
