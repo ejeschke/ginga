@@ -121,6 +121,7 @@ class GingaView(GtkMain.GtkMain):
         cbox.set_tooltip_text("Select a channel")
         cbox.connect("changed", self.channel_select_cb)
         hbox.pack_start(cbox, fill=False, expand=False, padding=4)
+        cbox.hide()
 
         opmenu = gtk.Menu()
         self.w.operation = opmenu

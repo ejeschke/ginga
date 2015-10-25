@@ -119,6 +119,7 @@ class GingaView(QtMain.QtMain):
         cbox1.setToolTip("Select a channel")
         cbox1.activated.connect(self.channel_select_cb)
         hbox.addWidget(cbox1, stretch=0)
+        cbox1.hide()
 
         opmenu = QtGui.QMenu()
         self.w.operation = opmenu
