@@ -25,9 +25,11 @@ class Contents(GingaPlugin.GlobalPlugin):
 
         prefs = self.fv.get_preferences()
         self.settings = prefs.createCategory('plugin_Contents')
-        self.settings.addDefaults(columns=columns, always_expand=True,
-                                  highlight_tracks_keyboard_focus=False,
-                                  color_alternate_rows=True)
+        self.settings.addDefaults(columns=columns,
+                                  always_expand=True,
+                                  highlight_tracks_keyboard_focus=True,
+                                  color_alternate_rows=True,
+                                  row_font_color='green')
         self.settings.load(onError='silent')
 
         # For table-of-contents pane
@@ -36,19 +38,17 @@ class Contents(GingaPlugin.GlobalPlugin):
         self.columns = self.settings.get('columns', columns)
         self.treeview = None
         # paths of highlighted entries, by channel
-        self._hl_path = {}
         self.highlight_tracks_keyboard_focus = self.settings.get(
-            'highlight_tracks_keyboard_focus', False)
+            'highlight_tracks_keyboard_focus', True)
+        self._hl_path = set([])
 
-        self.gui_up = False
         fv.add_callback('add-image', self.add_image_cb)
         fv.add_callback('remove-image', self.remove_image_cb)
         fv.add_callback('add-channel', self.add_channel_cb)
         fv.add_callback('delete-channel', self.delete_channel_cb)
-        if self.highlight_tracks_keyboard_focus:
-            fv.add_callback('active-image', self.focus_cb)
-            self._hl_path['none'] = None
+        fv.add_callback('active-image', self.focus_cb)
 
+        self.gui_up = False
 
     def build_gui(self, container):
         # create the Treeview
@@ -64,7 +64,6 @@ class Contents(GingaPlugin.GlobalPlugin):
         container.add_widget(treeview, stretch=1)
 
         self.gui_up = True
-
 
     def switch_image(self, widget, res_dict):
         chname = list(res_dict.keys())[0]
@@ -102,9 +101,14 @@ class Contents(GingaPlugin.GlobalPlugin):
         self.treeview.set_tree(self.name_dict)
 
         # re-highlight as necessary
-        hl_items = list(self._hl_path.items())
-        for chname, hl_path in hl_items:
-            self._highlight_path(chname, hl_path, True)
+        if self.highlight_tracks_keyboard_focus:
+            new_highlight = self._hl_path
+        else:
+            new_highlight = set([])
+            for chname in self.name_dict:
+                channel = self.fv.get_channelInfo(chname)
+                new_highlight |= channel.extdata.contents_old_highlight
+        self.update_highlights(set([]), new_highlight)
 
     def add_image_cb(self, viewer, chname, image, image_info):
         if not self.gui_up:
@@ -117,7 +121,7 @@ class Contents(GingaPlugin.GlobalPlugin):
         if nothumb:
             return
 
-        key = name.lower()
+        key = name
 
         if chname in self.name_dict:
             fileDict = self.name_dict[chname]
@@ -145,29 +149,38 @@ class Contents(GingaPlugin.GlobalPlugin):
 
         fileDict = self.name_dict[chname]
 
-        key = name.lower()
+        key = name
         if key not in fileDict:
             return
 
         del fileDict[key]
+
+        # Unhighlight
+        channel = self.fv.get_channelInfo(chname)
+        key = (chname, name)
+        self._hl_path.discard(key)
+        channel.extdata.contents_old_highlight.discard(key)
+
         self.recreate_toc()
         self.logger.debug("%s removed from Contents" % (name))
 
     def clear(self):
         self.name_dict = Bunch.caselessDict()
+        self._hl_path = set([])
         self.recreate_toc()
 
     def add_channel_cb(self, viewer, chinfo):
         """Called when a channel is added from the main interface.
         Parameter is chinfo (a bunch)."""
         chname = chinfo.name
+        chinfo.fitsimage.add_callback('image-set', self.set_image_cb, chname)
 
-        if not self.highlight_tracks_keyboard_focus:
-            chinfo.fitsimage.add_callback('image-set',
-                                          self.set_image_cb, chname)
+        # add old highlight set to channel external data
+        chinfo.extdata.setdefault('contents_old_highlight', set([]))
 
         if not self.gui_up:
             return False
+
         # Add the channel to the treeview
         fileDict = {}
         self.name_dict.setdefault(chname, fileDict)
@@ -180,60 +193,100 @@ class Contents(GingaPlugin.GlobalPlugin):
         Parameter is chinfo (a bunch)."""
         chname = chinfo.name
         del self.name_dict[chname]
-        if chname in self._hl_path:
-            del self._hl_path[chname]
+
+        # Unhighlight
+        un_hilite_set = set([])
+        for path in self._hl_path:
+            if path[0] == chname:
+                un_hilite_set.add(path)
+        self._hl_path -= un_hilite_set
+
         if not self.gui_up:
             return False
         self.recreate_toc()
 
-    def _highlight_path(self, chname, path, tf):
+    def _get_hl_key(self, chname, image):
+        return (chname, image.get('name', 'none'))
+
+    def _highlight_path(self, hl_path, tf):
+        """Highlight or unhighlight a single entry.
+
+        Examples
+        --------
+        >>> hl_path = self._get_hl_key(chname, image)
+        >>> self._highlight_path(hl_path, True)
+
+        """
+        fc = self.settings.get('row_font_color', 'green')
+
         try:
-            self.treeview.highlight_path(path, tf)
-
+            self.treeview.highlight_path(hl_path, tf, font_color=fc)
         except Exception as e:
-            self.logger.warn("Error changing highlight on treeview path (%s): %s" % (
-                str(path), str(e)))
-            path = None
+            self.logger.error('Error changing highlight on treeview path '
+                              '({0}): {1}'.format(hl_path, str(e)))
 
-        self._hl_path[chname] = path
+    def update_highlights(self, old_highlight_set, new_highlight_set):
+        """Unhighlight the entries represented by ``old_highlight_set``
+        and highlight the ones represented by ``new_highlight_set``.
+
+        Both are sets of keys.
+
+        """
+        un_hilite_set = old_highlight_set - new_highlight_set
+        re_hilite_set = new_highlight_set - old_highlight_set
+
+        # unhighlight entries that should NOT be highlighted any more
+        for key in un_hilite_set:
+            self._highlight_path(key, False)
+
+        # highlight new entries that should be
+        for key in re_hilite_set:
+            self._highlight_path(key, True)
 
     def set_image_cb(self, fitsimage, image, chname):
-        if chname in self._hl_path:
-            # if there is already a path highlighted for this channel
-            # then unhighlight it
-            path = self._hl_path[chname]
-            if path is not None:
-                self._highlight_path(chname, path, False)
+        """This method is called when an image is set in a channel."""
 
-        if image is None:
-            return
-        # create path of this image in treeview
-        hl_path = [chname, image.get('name', 'none')]
+        # get old highlighted entries for this channel -- will be
+        # an empty set or one key
+        channel = self.fv.get_channelInfo(chname)
+        old_highlight = channel.extdata.contents_old_highlight
 
-        # note and highlight the new path
-        self._highlight_path(chname, hl_path, True)
+        # calculate new highlight keys -- again, an empty set or one key
+        if image is not None:
+            key = self._get_hl_key(chname, image)
+            new_highlight = set([key])
+        else:
+            # no image has the focus
+            new_highlight = set([])
+
+        # Only highlights active image in the current channel
+        if self.highlight_tracks_keyboard_focus:
+            self.update_highlights(self._hl_path, new_highlight)
+            self._hl_path = new_highlight
+
+        # Highlight all active images in all channels
+        else:
+            self.update_highlights(old_highlight, new_highlight)
+            channel.extdata.contents_old_highlight = new_highlight
+
         return True
 
     def focus_cb(self, viewer, fitsimage):
         chname = self.fv.get_channelName(fitsimage)
         chinfo = self.fv.get_channelInfo(chname)
         chname = chinfo.name
-
-        # if there is already a path highlighted for this channel
-        # then unhighlight it
-        path = self._hl_path['none']
-        if path is not None:
-            self._highlight_path('none', path, False)
-
         image = fitsimage.get_image()
-        if image is None:
-            return
 
-        # create path of this image in treeview
-        hl_path = [chname, image.get('name', 'none')]
+        if image is not None:
+            key = self._get_hl_key(chname, image)
+            new_highlight = set([key])
+        else:
+            # no image has the focus
+            new_highlight = set([])
 
-        # note and highlight the new path
-        self._highlight_path('none', hl_path, True)
+        if self.highlight_tracks_keyboard_focus:
+            self.update_highlights(self._hl_path, new_highlight)
+            self._hl_path = new_highlight
 
     def stop(self):
         self.gui_up = False
