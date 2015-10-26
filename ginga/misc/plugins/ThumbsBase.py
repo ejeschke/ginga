@@ -42,7 +42,9 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
                                   rebuild_wait=4.0,
                                   tt_keywords=tt_keywords,
                                   thumb_length=150,
-                                  sort_order=None)
+                                  sort_order=None,
+                                  label_name=True,
+                                  mouseover_name_key='NAME')
         self.settings.load(onError='silent')
         # max length of thumb on the long side
         self.thumbWidth = self.settings.get('thumb_length', 150)
@@ -126,6 +128,12 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
             self.copy_attrs(chinfo.fitsimage)
             self.thumb_generator.set_image(image)
             imgwin = self.thumb_generator.get_image_as_widget()
+
+        if not self.settings.get('label_name', True):
+            thumbnamekey = self.settings.get('mouseover_name_key', 'NAME')
+            self.keywords.insert(0, thumbnamekey)
+            metadata[thumbnamekey] = thumbname
+            thumbname = ''
 
         self.insert_thumbnail(imgwin, thumbkey, thumbname, chname, name, path,
                               thumbpath, metadata, future)
