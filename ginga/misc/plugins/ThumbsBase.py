@@ -41,10 +41,11 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
                                   auto_scroll=True,
                                   rebuild_wait=4.0,
                                   tt_keywords=tt_keywords,
+                                  mouseover_name_key='NAME',
                                   thumb_length=150,
                                   sort_order=None,
-                                  label_name=True,
-                                  mouseover_name_key='NAME')
+                                  label_length=None,
+                                  label_cutoff='back')
         self.settings.load(onError='silent')
         # max length of thumb on the long side
         self.thumbWidth = self.settings.get('thumb_length', 150)
@@ -57,6 +58,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         # TODO: these maybe should be configurable by channel
         # different instruments have different keywords of interest
         self.keywords = self.settings.get('tt_keywords', tt_keywords)
+        self.keywords.insert(0, self.settings.get('mouseover_name_key', 'NAME'))
 
         fv.set_callback('add-image', self.add_image)
         fv.set_callback('remove-image', self.remove_image)
@@ -121,6 +123,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         metadata = {}
         for kwd in self.keywords:
             metadata[kwd] = header.get(kwd, 'N/A')
+        metadata[self.settings.get('mouseover_name_key','NAME')] = name
 
         thumbpath = self.get_thumbpath(path)
 
@@ -129,11 +132,29 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
             self.thumb_generator.set_image(image)
             imgwin = self.thumb_generator.get_image_as_widget()
 
-        if not self.settings.get('label_name', True):
-            thumbnamekey = self.settings.get('mouseover_name_key', 'NAME')
-            self.keywords.insert(0, thumbnamekey)
-            metadata[thumbnamekey] = thumbname
-            thumbname = ''
+        label_length = self.settings.get('label_length', None)
+
+        # Shorten thumbnail label
+        # TODO: A more elegant way to do this?
+        if label_length is not None and len(thumbname) > label_length:
+            label_cutoff = self.settings.get('label_cutoff', 'back')
+            if '[' in thumbname:
+                s = thumbname.split('[')
+                len2 = len(s[1]) + 1
+                len1 = label_length - len2 - 4 + 1
+                if len1 > 0:
+                    if label_cutoff == 'back':
+                        thumbname = '{0}...[{1}'.format(s[0][:len1], s[1])
+                    else:  # front
+                        thumbname = '...{0}[{1}'.format(s[0][-len1:], s[1])
+                else:
+                    thumbname = '...[{0}'.format(s[1])
+            else:
+                len1 = label_length - 3 + 1
+                if label_cutoff == 'back':
+                    thumbname = '{0}...'.format(thumbname[:len1])
+                else:  # front
+                    thumbname = '...{0}'.format(thumbname[-len1:])
 
         self.insert_thumbnail(imgwin, thumbkey, thumbname, chname, name, path,
                               thumbpath, metadata, future)
