@@ -24,6 +24,7 @@ class Header(GingaPlugin.GlobalPlugin):
         self.channel = {}
         self.active = None
         self.info = None
+        self._image = None
 
         self.columns = [('Keyword', 'key'),
                         ('Value', 'value'),
@@ -78,6 +79,9 @@ class Header(GingaPlugin.GlobalPlugin):
         return widget
 
     def set_header(self, info, image):
+        if self._image == image:
+            # we've already handled this header
+            return
         self.logger.debug("setting header")
         header = image.get_header()
         table = info.table
@@ -95,6 +99,7 @@ class Header(GingaPlugin.GlobalPlugin):
         sorted = info.sortw.isChecked()
         table.setSortingEnabled(sorted)
         self.logger.debug("setting header done")
+        self._image = image
 
     def add_channel(self, viewer, chinfo):
         chname = chinfo.name

@@ -100,8 +100,10 @@ class Cuts(GingaPlugin.LocalPlugin):
         self.cuttypes = ['line', 'path', 'freepath', 'beziercurve']
         self.cuttype = 'line'
         self.save_enabled = False
+        # for 3D Slit functionality
         self.transpose_enabled = False
         self.selected_axis = None
+        self.hbox_axes = None
 
         # For collecting data orthogonal to the cut
         self.widthtypes = ['none', 'x', 'y', 'perpendicular']
@@ -114,7 +116,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         self.settings = prefs.createCategory('plugin_Cuts')
         self.settings.addDefaults(select_new_cut=True, draw_then_move=True,
                                   label_cuts=True, colors=cut_colors,
-                                  show_cuts_legend=False)
+                                  show_cuts_legend=False, enable_slit=False)
         self.settings.load(onError='silent')
         self.colors = self.settings.get('colors', cut_colors)
 
@@ -134,8 +136,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         canvas.setSurface(self.fitsimage)
         self.canvas = canvas
 
-        # register for new image notification in this channel
-        fitsimage.set_callback('image-set', self.new_image_cb)
+        self.use_slit = self.settings.get('enable_slit', False)
 
         self.gui_up = False
 
@@ -275,37 +276,36 @@ class Cuts(GingaPlugin.LocalPlugin):
         vbox_cuts.add_widget(wp, stretch=1)
         nb.add_widget(vbox_cuts, title="Cuts")
 
-        captions = (("Transpose Plot", 'checkbutton', "Save", 'button'),
-                    )
-        w, b = Widgets.build_info(captions, orientation=orientation)
-        self.w.update(b)
+        if self.use_slit:
+            captions = (("Transpose Plot", 'checkbutton', "Save", 'button'),
+                        )
+            w, b = Widgets.build_info(captions, orientation=orientation)
+            self.w.update(b)
 
-        self.t_btn = b.transpose_plot
-        self.t_btn.set_tooltip("Flip the plot")
-        self.t_btn.set_state(self.transpose_enabled)
-        self.t_btn.add_callback('activated', self.transpose_plot)
+            self.t_btn = b.transpose_plot
+            self.t_btn.set_tooltip("Flip the plot")
+            self.t_btn.set_state(self.transpose_enabled)
+            self.t_btn.add_callback('activated', self.transpose_plot)
 
-        self.save_slit = b.save
-        self.save_slit.set_tooltip("Save slit plot and data")
-        self.save_slit.add_callback('activated', lambda w: self.save_cb(mode='slit'))
-        self.save_slit.set_enabled(self.save_enabled)
+            self.save_slit = b.save
+            self.save_slit.set_tooltip("Save slit plot and data")
+            self.save_slit.add_callback('activated', lambda w: self.save_cb(mode='slit'))
+            self.save_slit.set_enabled(self.save_enabled)
 
-        # Add frame to hold the slit controls
-        fr = Widgets.Frame("Axes controls")
-        self.hbox_axes = Widgets.HBox()
-        self.hbox_axes.set_border_width(4)
-        self.hbox_axes.set_spacing(1)
-        fr.set_widget(self.hbox_axes)
+            # Add frame to hold the slit controls
+            fr = Widgets.Frame("Axes controls")
+            self.hbox_axes = Widgets.HBox()
+            self.hbox_axes.set_border_width(4)
+            self.hbox_axes.set_spacing(1)
+            fr.set_widget(self.hbox_axes)
 
-        self.build_axes()
-
-        # Add Slit plot and controls to its tab
-        vbox_slit = Widgets.VBox()
-        wp = Widgets.wrap(self.plot2.get_widget())
-        vbox_slit.add_widget(wp, stretch=1)
-        vbox_slit.add_widget(w)
-        vbox_slit.add_widget(fr)
-        nb.add_widget(vbox_slit, title="Slit")
+            # Add Slit plot and controls to its tab
+            vbox_slit = Widgets.VBox()
+            wp = Widgets.wrap(self.plot2.get_widget())
+            vbox_slit.add_widget(wp, stretch=1)
+            vbox_slit.add_widget(w)
+            vbox_slit.add_widget(fr)
+            nb.add_widget(vbox_slit, title="Slit")
 
         top.add_widget(sw, stretch=1)
 
@@ -325,9 +325,14 @@ class Cuts(GingaPlugin.LocalPlugin):
         self.select_cut(self.cutstag)
         self.gui_up = True
 
+        if self.use_slit:
+            self.build_axes()
+
     def build_axes(self):
-        self.hbox_axes.remove_all()
         self.selected_axis = None
+        if (not self.gui_up) or (self.hbox_axes is None):
+            return
+        self.hbox_axes.remove_all()
         image = self.fitsimage.get_image()
         if image is not None:
             # Add Checkbox widgets
@@ -347,7 +352,8 @@ class Cuts(GingaPlugin.LocalPlugin):
             self.redraw_slit('clear')
 
     def axes_callback_handler(self, chkbox, pos):
-        chkbox.add_callback('activated', lambda w, tf: self.axis_toggle_cb(w, tf, pos))
+        chkbox.add_callback('activated',
+                            lambda w, tf: self.axis_toggle_cb(w, tf, pos))
 
     def instructions(self):
         self.tw.set_text("""When drawing a path or Bezier cut, press 'v' to add a vertex.
@@ -369,9 +375,9 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
             self.w.btn_edit.set_enabled(False)
             self.set_mode('draw')
 
-            self.save_slit.set_enabled(False)
-
-            self.redraw_slit('clear')
+            if self.use_slit:
+                self.save_slit.set_enabled(False)
+                self.redraw_slit('clear')
         else:
             self.w.delete_cut.set_enabled(True)
             self.w.delete_all.set_enabled(True)
@@ -383,10 +389,11 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
                 self.edit_select_cuts()
 
             self.save_cuts.set_enabled(True)
-            if self.selected_axis:
-                self.save_slit.set_enabled(True)
 
-            self._plot_slit()
+            if self.use_slit:
+                if self.selected_axis:
+                    self.save_slit.set_enabled(True)
+                self._plot_slit()
 
     def cut_select_cb(self, w, index):
         tag = self.tags[index]
@@ -410,7 +417,8 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         self.select_cut(tag)
         if tag == self._new_cut:
             self.save_cuts.set_enabled(False)
-            self.save_slit.set_enabled(False)
+            if self.use_slit:
+                self.save_slit.set_enabled(False)
         # plot cleared in replot_all() if no more cuts
         self.replot_all()
 
@@ -422,7 +430,8 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         self.w.cuts.append_text(self._new_cut)
         self.select_cut(self._new_cut)
         self.save_cuts.set_enabled(False)
-        self.save_slit.set_enabled(False)
+        if self.use_slit:
+            self.save_slit.set_enabled(False)
         # plot cleared in replot_all() if no more cuts
         self.replot_all()
 
@@ -483,16 +492,10 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         """This is called when a new image arrives or the data in the
         existing image changes.
         """
-        self.replot_all()
-
-    def new_image_cb(self, fitsimage, image):
-        if fitsimage != self.fitsimage:
-            # Focus is not our channel-->not an event for us
-            return False
-        elif image is None:
-            return False
-        else:
+        if self.use_slit:
             self.build_axes()
+
+        self.replot_all()
 
     def _get_perpendicular_points(self, obj, x, y, r):
         dx = float(obj.x1 - obj.x2)
@@ -636,7 +639,7 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
 
     def _plot_slit(self):
         if not self.selected_axis:
-                return
+            return
 
         obj = self.canvas.getObjectByTag(self.cutstag)
         line = self._getlines(obj)
@@ -681,8 +684,9 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
             self._replot(lines, colors)
 
         # Redraw slit image for selected cut
-        if self.cutstag != self._new_cut:
-            self._plot_slit()
+        if self.use_slit:
+            if self.cutstag != self._new_cut:
+                self._plot_slit()
 
         # force mpl redraw
         self.plot.fig.canvas.draw()

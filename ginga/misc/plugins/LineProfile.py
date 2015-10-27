@@ -16,6 +16,7 @@ class LineProfile(GingaPlugin.LocalPlugin):
         self.wd = None
         self.ht = None
         self.selected_axis = None
+        self.hbox_axes = None
 
         self.dc = self.fv.getDrawClasses()
         canvas = self.dc.DrawingCanvas()
@@ -35,9 +36,6 @@ class LineProfile(GingaPlugin.LocalPlugin):
         self.tw = None
         self.mark_data_x = [None]
         self.mark_data_y = [None]
-
-        # register for new image notification in this channel
-        fitsimage.set_callback('image-set', self.new_image_cb)
 
         self.gui_up = False
 
@@ -75,7 +73,6 @@ class LineProfile(GingaPlugin.LocalPlugin):
         fr.set_widget(self.hbox_axes)
 
         vbox.add_widget(fr, stretch=0)
-        self.build_axes()
 
         btns = Widgets.HBox()
         btns.set_border_width(4)
@@ -141,16 +138,11 @@ class LineProfile(GingaPlugin.LocalPlugin):
         container.add_widget(top, stretch=1)
         self.gui_up = True
 
-    def new_image_cb(self, fitsimage, image):
-        if fitsimage != self.fitsimage:
-            # Focus is not our channel-->not an event for us
-            return False
-        elif image is None:
-            return False
-        else:
-            self.build_axes()
+        self.build_axes()
 
     def build_axes(self):
+        if (not self.gui_up) or (self.hbox_axes is None):
+            return
         self.hbox_axes.remove_all()
         self.selected_axis = None
         self.clear_plot()
@@ -167,7 +159,8 @@ class LineProfile(GingaPlugin.LocalPlugin):
                 self.axes_callback_handler(chkbox, i)
 
     def axes_callback_handler(self, chkbox, pos):
-        chkbox.add_callback('activated', lambda w, tf: self.axis_toggle_cb(w, tf, pos))
+        chkbox.add_callback('activated',
+                            lambda w, tf: self.axis_toggle_cb(w, tf, pos))
 
     def axis_toggle_cb(self, w, tf, pos):
         children = self.hbox_axes.get_children()
@@ -227,6 +220,9 @@ Use MultiDim to change step values of axes.""")
         self.image = self.fitsimage.get_image()
         if self.image is None:
             return
+
+        self.build_axes()
+
         self.wd, self.ht = self.image.get_size()
 
         self.redraw_mark()
