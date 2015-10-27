@@ -155,8 +155,12 @@ class LineProfile(GingaPlugin.LocalPlugin):
                 chkbox = Widgets.CheckBox('NAXIS%d' % i)
                 self.hbox_axes.add_widget(chkbox)
 
-                # Add callback
-                self.axes_callback_handler(chkbox, i)
+                # Disable axes for 2D images
+                if len(image.naxispath) <= 0:
+                    chkbox.set_enabled(False)
+                else:
+                    # Add callback
+                    self.axes_callback_handler(chkbox, i)
 
     def axes_callback_handler(self, chkbox, pos):
         chkbox.add_callback('activated',
@@ -276,6 +280,11 @@ Use MultiDim to change step values of axes.""")
     ### MARK FEATURE LOGIC ###
 
     def btndown_cb(self, canvas, event, data_x, data_y):
+        # Disable plotting for 2D images
+        image = self.fitsimage.get_image()
+        if len(image.naxispath) <= 0:
+            return
+
         # Exclude points outside boundaries
         if not 0 <= data_x < self.wd or not 0 <= data_y < self.ht:
             self.clear_plot()
