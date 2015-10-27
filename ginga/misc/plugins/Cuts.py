@@ -100,6 +100,8 @@ class Cuts(GingaPlugin.LocalPlugin):
         self.cuttypes = ['line', 'path', 'freepath', 'beziercurve']
         self.cuttype = 'line'
         self.save_enabled = False
+        self.transpose_enabled = False
+        self.selected_axis = None
 
         # For collecting data orthogonal to the cut
         self.widthtypes = ['none', 'x', 'y', 'perpendicular']
@@ -132,6 +134,9 @@ class Cuts(GingaPlugin.LocalPlugin):
         canvas.setSurface(self.fitsimage)
         self.canvas = canvas
 
+        # register for new image notification in this channel
+        fitsimage.set_callback('image-set', self.new_image_cb)
+
         self.gui_up = False
 
     def build_gui(self, container):
@@ -152,17 +157,21 @@ class Cuts(GingaPlugin.LocalPlugin):
         fr.set_widget(tw)
         vbox.add_widget(fr, stretch=0)
 
+        # Add Tab Widget
+        nb = Widgets.TabWidget(tabpos='top')
+        vbox.add_widget(nb, stretch=1)
+
         self.plot = Plots.Cuts(self.logger, width=2, height=3, dpi=100)
         ax = self.plot.add_axis()
         ax.grid(True)
 
-        # for now we need to wrap this native widget
-        w = Widgets.wrap(self.plot.get_widget())
-        vbox.add_widget(w, stretch=1)
+        self.plot2 = Plots.Plot(self.logger, width=2, height=3, dpi=100)
+        self.plot2.add_axis(axisbg='black')
 
         captions = (('Cut:', 'label', 'Cut', 'combobox',
                      'New Cut Type:', 'label', 'Cut Type', 'combobox'),
                     ('Delete Cut', 'button', 'Delete All', 'button'),
+                    ('Save', 'button'),
                     )
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
@@ -185,6 +194,11 @@ class Cuts(GingaPlugin.LocalPlugin):
         combobox.set_index(index)
         combobox.add_callback('activated', self.set_cutsdrawtype_cb)
         combobox.set_tooltip("Choose the cut type to draw")
+
+        self.save_cuts = b.save
+        self.save_cuts.set_tooltip("Save cuts plot and data")
+        self.save_cuts.add_callback('activated', lambda w: self.save_cb(mode='cuts'))
+        self.save_cuts.set_enabled(self.save_enabled)
 
         btn = b.delete_cut
         btn.add_callback('activated', self.delete_cut_cb)
@@ -254,6 +268,45 @@ class Cuts(GingaPlugin.LocalPlugin):
         vbox2.add_widget(Widgets.Label(''), stretch=1)
 
         vbox.add_widget(vbox2, stretch=0)
+
+        # Add Cuts plot to its tab
+        vbox_cuts = Widgets.VBox()
+        wp = Widgets.wrap(self.plot.get_widget())
+        vbox_cuts.add_widget(wp, stretch=1)
+        nb.add_widget(vbox_cuts, title="Cuts")
+
+        captions = (("Transpose Plot", 'checkbutton', "Save", 'button'),
+                    )
+        w, b = Widgets.build_info(captions, orientation=orientation)
+        self.w.update(b)
+
+        self.t_btn = b.transpose_plot
+        self.t_btn.set_tooltip("Flip the plot")
+        self.t_btn.set_state(self.transpose_enabled)
+        self.t_btn.add_callback('activated', self.transpose_plot)
+
+        self.save_slit = b.save
+        self.save_slit.set_tooltip("Save slit plot and data")
+        self.save_slit.add_callback('activated', lambda w: self.save_cb(mode='slit'))
+        self.save_slit.set_enabled(self.save_enabled)
+
+        # Add frame to hold the slit controls
+        fr = Widgets.Frame("Axes controls")
+        self.hbox_axes = Widgets.HBox()
+        self.hbox_axes.set_border_width(4)
+        self.hbox_axes.set_spacing(1)
+        fr.set_widget(self.hbox_axes)
+
+        self.build_axes()
+
+        # Add Slit plot and controls to its tab
+        vbox_slit = Widgets.VBox()
+        wp = Widgets.wrap(self.plot2.get_widget())
+        vbox_slit.add_widget(wp, stretch=1)
+        vbox_slit.add_widget(w)
+        vbox_slit.add_widget(fr)
+        nb.add_widget(vbox_slit, title="Slit")
+
         top.add_widget(sw, stretch=1)
 
         btns = Widgets.HBox()
@@ -265,17 +318,36 @@ class Cuts(GingaPlugin.LocalPlugin):
         btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
 
-        self.save_btn = Widgets.Button("Save")
-        self.save_btn.add_callback('activated', lambda w: self.save_cb())
-        self.save_btn.set_enabled(self.save_enabled)
-        btns.add_widget(self.save_btn, stretch=0)
-
         top.add_widget(btns, stretch=0)
 
         container.add_widget(top, stretch=1)
 
         self.select_cut(self.cutstag)
         self.gui_up = True
+
+    def build_axes(self):
+        self.hbox_axes.remove_all()
+        self.selected_axis = None
+        image = self.fitsimage.get_image()
+        if image is not None:
+            # Add Checkbox widgets
+            # `image.naxispath` returns only mdim axes
+            for i in xrange(1, len(image.naxispath)+3):
+                chkbox = Widgets.CheckBox('NAXIS%d' % i)
+                self.hbox_axes.add_widget(chkbox)
+
+                # Disable axes 1,2
+                if i < 3:
+                    chkbox.set_enabled(False)
+                    continue
+
+                # Add callback
+                self.axes_callback_handler(chkbox, i)
+
+            self.redraw_slit('clear')
+
+    def axes_callback_handler(self, chkbox, pos):
+        chkbox.add_callback('activated', lambda w, tf: self.axis_toggle_cb(w, tf, pos))
 
     def instructions(self):
         self.tw.set_text("""When drawing a path or Bezier cut, press 'v' to add a vertex.
@@ -288,11 +360,18 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
 
         if (tag == self._new_cut) or len(self.tags) < 2:
             self.w.delete_cut.set_enabled(False)
-            self.w.delete_all.set_enabled(False)
+            if len(self.tags) > 1:
+                self.w.delete_all.set_enabled(True)
+            else:
+                self.w.delete_all.set_enabled(False)
 
             self.w.btn_move.set_enabled(False)
             self.w.btn_edit.set_enabled(False)
             self.set_mode('draw')
+
+            self.save_slit.set_enabled(False)
+
+            self.redraw_slit('clear')
         else:
             self.w.delete_cut.set_enabled(True)
             self.w.delete_all.set_enabled(True)
@@ -302,6 +381,12 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
 
             if self.w.btn_edit.get_state():
                 self.edit_select_cuts()
+
+            self.save_cuts.set_enabled(True)
+            if self.selected_axis:
+                self.save_slit.set_enabled(True)
+
+            self._plot_slit()
 
     def cut_select_cb(self, w, index):
         tag = self.tags[index]
@@ -324,7 +409,8 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         tag = self.tags[idx]
         self.select_cut(tag)
         if tag == self._new_cut:
-            self.save_btn.set_enabled(False)
+            self.save_cuts.set_enabled(False)
+            self.save_slit.set_enabled(False)
         # plot cleared in replot_all() if no more cuts
         self.replot_all()
 
@@ -335,7 +421,8 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         self.cutstag = self._new_cut
         self.w.cuts.append_text(self._new_cut)
         self.select_cut(self._new_cut)
-        self.save_btn.set_enabled(False)
+        self.save_cuts.set_enabled(False)
+        self.save_slit.set_enabled(False)
         # plot cleared in replot_all() if no more cuts
         self.replot_all()
 
@@ -343,9 +430,6 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         if not tag in self.tags:
             self.tags.append(tag)
             self.w.cuts.append_text(tag)
-
-        self.w.delete_cut.set_enabled(True)
-        self.w.delete_all.set_enabled(True)
 
         select_flag = self.settings.get('select_new_cut', True)
         if select_flag:
@@ -400,6 +484,15 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         existing image changes.
         """
         self.replot_all()
+
+    def new_image_cb(self, fitsimage, image):
+        if fitsimage != self.fitsimage:
+            # Focus is not our channel-->not an event for us
+            return False
+        elif image is None:
+            return False
+        else:
+            self.build_axes()
 
     def _get_perpendicular_points(self, obj, x, y, r):
         dx = float(obj.x1 - obj.x2)
@@ -486,6 +579,78 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
                             shadow=True, fancybox=True,
                             prop={'size': 8}, labelspacing=0.2)
 
+    def get_coords(self, obj):
+        image = self.fitsimage.get_image()
+
+        # Check whether multidimensional
+        if len(image.naxispath) <= 0:
+            return
+
+        # Get points on the line
+        if obj.kind == 'line':
+            coords = image.get_pixels_on_line(int(obj.x1), int(obj.y1),
+                                              int(obj.x2), int(obj.y2), getvalues=False)
+        elif obj.kind in ('path', 'freepath'):
+            coords = []
+            x1, y1 = obj.points[0]
+            for x2, y2 in obj.points[1:]:
+                pts = image.get_pixels_on_line(int(x1), int(y1),
+                                               int(x2), int(y2), getvalues=False)
+                # don't repeat last point when adding next segment
+                coords.extend(pts[:-1])
+                x1, y1 = x2, y2
+        elif obj.kind == 'beziercurve':
+            coords = obj.get_pixels_on_curve(image, getvalues=False)
+            # Exclude NaNs
+            coords = [c for c in coords if not numpy.any(numpy.isnan(c))]
+
+        shape = image.shape
+        # Exclude points outside boundaries
+        coords = [(coord[0], coord[1]) for coord in coords if 0 <= coord[0] < shape[1]
+                  and 0 <= coord[1] < shape[0]]
+        if not coords:
+            self.redraw_slit('clear')
+            return
+
+        return numpy.array(coords)
+
+    def get_slit_data(self, coords):
+        image = self.fitsimage.get_image()
+        data = image.get_mddata()
+        naxes = data.ndim
+
+        # Small correction
+        selected_axis = abs(self.selected_axis - naxes)
+
+        spatial_axes = [naxes-1, naxes-2]
+
+        # Build N-dim slice
+        axes_slice = [0] * naxes
+
+        # Slice data according to axis
+        for i, sa in enumerate(spatial_axes):
+            axes_slice[sa] = coords[:, i]
+        axes_slice[selected_axis] = slice(None, None, None)
+
+        self.slit_data = data[axes_slice]
+
+    def _plot_slit(self):
+        if not self.selected_axis:
+                return
+
+        obj = self.canvas.getObjectByTag(self.cutstag)
+        line = self._getlines(obj)
+
+        self.get_slit_data(self.get_coords(line[0]))
+        if self.transpose_enabled:
+            self.redraw_slit('transpose')
+        else:
+            self.plot2.ax.imshow(self.slit_data,  interpolation='nearest',
+                                 origin='lower', aspect='auto').set_cmap('gray')
+            self.set_labels()
+            self.plot2.fig.tight_layout(pad=0.3)
+            self.plot2.fig.canvas.draw()
+
     def _replot(self, lines, colors):
         for idx in range(len(lines)):
             line, color = lines[idx], colors[idx]
@@ -514,10 +679,10 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
                 text.color = colors[0]
             #text.color = color
             self._replot(lines, colors)
-            if n:
-                self.w.delete_cut.set_enabled(True)
-                self.w.delete_all.set_enabled(True)
-                self.save_btn.set_enabled(True)
+
+        # Redraw slit image for selected cut
+        if self.cutstag != self._new_cut:
+            self._plot_slit()
 
         # force mpl redraw
         self.plot.fig.canvas.draw()
@@ -800,16 +965,73 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         self.replot_all()
         return True
 
-    def save_cb(self):
-        fig, xarr, yarr = self.plot.get_data()
+    def save_cb(self, mode):
+        if mode == 'cuts':
+            target = Widgets.SaveDialog(title='Save cuts data').get_path()
 
-        target = Widgets.SaveDialog(title='Save plot', selectedfilter='*.png').get_path()
-        with open(target, 'w') as target_file:
-            fig.savefig(target_file, dpi=100, format='png', bbox_inches='tight')
+            # Save as fits file
+            image = self.fitsimage.get_image()
+            self.fv.error_wrap(image.save_as_file, target)
 
-        target = Widgets.SaveDialog(title='Save data', selectedfilter='*.npz').get_path()
-        with open(target, 'w') as target_file:
-            numpy.savez_compressed(target_file, x=xarr, y=yarr)
+            if target:
+                fig, xarr, yarr = self.plot.get_data()
+                fig.savefig(target, dpi=100)
+                numpy.savez_compressed(target, x=xarr, y=yarr)
+        elif mode == 'slit':
+            target = Widgets.SaveDialog(title='Save slit data').get_path()
+            if target:
+                fig2, xarr2, yarr2 = self.plot2.get_data()
+                fig2.savefig(target, dpi=100)
+                numpy.savez_compressed(target, x=xarr2, y=yarr2)
+
+    def axis_toggle_cb(self, w, tf, pos):
+        children = self.hbox_axes.get_children()
+
+        # Deactivate previously selected axis
+        if self.selected_axis is not None:
+            children[self.selected_axis-1].set_state(False)
+
+        # Check if the old axis is clicked
+        if pos == self.selected_axis:
+            self.selected_axis = None
+            self.save_slit.set_enabled(False)
+            self.redraw_slit('clear')
+        else:
+            self.selected_axis = pos
+            children[pos-1].set_state(tf)
+            if self.cutstag != self._new_cut:
+                self.save_slit.set_enabled(True)
+            self._plot_slit()
+
+    def redraw_slit(self, mode):
+        if mode == 'clear':
+            self.plot2.clear()
+        elif mode == 'transpose':
+            self.slit_data = self.slit_data.T
+            self.plot2.ax.imshow(self.slit_data,  interpolation='nearest',
+                                 origin='lower', aspect='auto').set_cmap('gray')
+            self.set_labels()
+            self.plot2.fig.tight_layout(pad=0.3)
+
+        self.plot2.fig.canvas.draw()
+
+    def transpose_plot(self, w, tf):
+        old_val = self.transpose_enabled
+        self.transpose_enabled = tf
+
+        if old_val != tf and self.cutstag != self._new_cut and self.selected_axis:
+            self.redraw_slit('transpose')
+
+    def set_labels(self):
+        image = self.fitsimage.get_image()
+        shape = image.get_mddata().shape
+
+        if shape[0] == len(self.slit_data[0]) or shape[1] == len(self.slit_data[0]):
+            self.plot2.ax.set_xlabel('')
+            self.plot2.ax.set_ylabel('Position along slit')
+        else:
+            self.plot2.ax.set_ylabel('')
+            self.plot2.ax.set_xlabel('Position along slit')
 
     def __str__(self):
         return 'cuts'
