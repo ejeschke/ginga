@@ -13,6 +13,7 @@ import threading
 
 from ginga import GingaPlugin
 from ginga.misc import Bunch, Future
+from ginga.util import iohelper
 
 
 class ThumbsBase(GingaPlugin.GlobalPlugin):
@@ -44,8 +45,8 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
                                   mouseover_name_key='NAME',
                                   thumb_length=150,
                                   sort_order=None,
-                                  label_length=None,
-                                  label_cutoff='back')
+                                  label_length=25,
+                                  label_cutoff='right')
         self.settings.load(onError='silent')
         # max length of thumb on the long side
         self.thumbWidth = self.settings.get('thumb_length', 150)
@@ -133,28 +134,12 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
             imgwin = self.thumb_generator.get_image_as_widget()
 
         label_length = self.settings.get('label_length', None)
+        label_cutoff = self.settings.get('label_cutoff', 'right')
 
-        # Shorten thumbnail label
-        # TODO: A more elegant way to do this?
-        if label_length is not None and len(thumbname) > label_length:
-            label_cutoff = self.settings.get('label_cutoff', 'back')
-            if '[' in thumbname:
-                s = thumbname.split('[')
-                len2 = len(s[1]) + 1
-                len1 = label_length - len2 - 4 + 1
-                if len1 > 0:
-                    if label_cutoff == 'back':
-                        thumbname = '{0}...[{1}'.format(s[0][:len1], s[1])
-                    else:  # front
-                        thumbname = '...{0}[{1}'.format(s[0][-len1:], s[1])
-                else:
-                    thumbname = '...[{0}'.format(s[1])
-            else:
-                len1 = label_length - 3 + 1
-                if label_cutoff == 'back':
-                    thumbname = '{0}...'.format(thumbname[:len1])
-                else:  # front
-                    thumbname = '...{0}'.format(thumbname[-len1:])
+        # Shorten thumbnail label, if requested
+        if label_length is not None:
+            thumbname = iohelper.shorten_name(thumbname, label_length,
+                                              side=label_cutoff)
 
         self.insert_thumbnail(imgwin, thumbkey, thumbname, chname, name, path,
                               thumbpath, metadata, future)
@@ -334,17 +319,16 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         chname = self.fv.get_channelName(fitsimage)
 
         # Look up our version of the thumb
-        path = image.get('path', None)
-        if path is None:
-            # No path, so no way to find key for cached image
-            return False
-        path = os.path.abspath(path)
         idx = image.get('idx', None)
+        path = image.get('path', None)
+        if not (path is None):
+            path = os.path.abspath(path)
+            name = self.fv.name_image_from_path(path, idx=idx)
+        else:
+            name = 'NoName'
 
         # get image name
-        name = self.fv.name_image_from_path(path, idx=idx)
-        # see Note [1]
-        #name = image.get('name', name)
+        name = image.get('name', name)
 
         thumbkey = self.get_thumb_key(chname, name, path)
         with self.thmblock:
@@ -378,6 +362,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
 
         # get image name
         name = image.get('name', name)
+        metadata[self.settings.get('mouseover_name_key','NAME')] = name
 
         thumbkey = self.get_thumb_key(chname, name, path)
         with self.thmblock:

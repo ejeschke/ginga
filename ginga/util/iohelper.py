@@ -108,3 +108,33 @@ def name_image_from_path(path, idx=None):
     if idx is not None:
         name += get_hdu_suffix(idx)
     return name
+
+def shorten_name(name, char_limit, side='right'):
+    """Shorten `name` if it is longer than `char_limit`.
+    If `side` == "right" then the right side of the name is shortened;
+    if "left" then the left side is shortened.
+    In either case, the suffix of the name is preserved.
+    """
+    # TODO: A more elegant way to do this?
+    if char_limit is not None and len(name) > char_limit:
+        info = get_fileinfo(name)
+        if info.numhdu is not None:
+            i = name.rindex('[')
+            s = (name[:i], name[i:])
+            len_sfx = len(s[1])
+            len_pfx = char_limit - len_sfx - 4 + 1
+            if len_pfx > 0:
+                if side == 'right':
+                    name = '{0}...{1}'.format(s[0][:len_pfx], s[1])
+                elif side == 'left':
+                    name = '...{0}{1}'.format(s[0][-len_pfx:], s[1])
+            else:
+                name = '...{0}'.format(s[1])
+        else:
+            len1 = char_limit - 3 + 1
+            if side == 'right':
+                name = '{0}...'.format(name[:len1])
+            elif side == 'left':
+                name = '...{0}'.format(name[-len1:])
+
+    return name
