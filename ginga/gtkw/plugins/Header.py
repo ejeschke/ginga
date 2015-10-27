@@ -122,7 +122,7 @@ class Header(HeaderBase):
 
         for key in keyorder:
             card = header.get_card(key)
-            bnch = Bunch.Bunch(kwd=key, value=str(card.value),
+            bnch = Bunch.Bunch(key=key, value=str(card.value),
                                comment=card.comment)
             listmodel.append([bnch])
 
