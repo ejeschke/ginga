@@ -144,7 +144,7 @@ mouse_rotate_acceleration = 0.75
 
 # This controls what operations the pinch gesture controls.  Possibilities are
 # (empty list or) some combination of 'zoom' and 'rotate'.
-pinch_actions = ['zoom']
+pinch_actions = []
 pinch_zoom_acceleration = 1.0
 pinch_rotate_acceleration = 1.0
 

@@ -278,7 +278,8 @@ class ImageViewBase(Callback.Callbacks):
             }
 
         # For callbacks
-        for name in ('transform', 'image-set', 'configure', 'redraw', ):
+        for name in ('transform', 'image-set', 'image-unset', 'configure',
+                     'redraw', ):
             self.enable_callback(name)
 
 
@@ -498,10 +499,10 @@ class ImageViewBase(Callback.Callbacks):
         """
         if not (self._imgobj is None):
             # quick optomization
-            return self._imgobj.image
+            return self._imgobj.get_image()
 
         canvas_img = self.get_canvas_image()
-        return canvas_img.image
+        return canvas_img.get_image()
 
     def get_canvas_image(self):
         if not (self._imgobj is None):
@@ -509,7 +510,7 @@ class ImageViewBase(Callback.Callbacks):
 
         try:
             # See if there is an image on the canvas
-            self._imgobj = self.canvas.getObjectByTag(self._canvas_img_tag)
+            self._imgobj = self.canvas.get_object_by_tag(self._canvas_img_tag)
 
         except KeyError:
             # add a normalized image item to this canvas if we don't
@@ -537,11 +538,12 @@ class ImageViewBase(Callback.Callbacks):
         with self.suppress_redraw:
 
             canvas_img = self.get_canvas_image()
+            old_image = canvas_img.get_image()
             canvas_img.set_image(image)
 
             if add_to_canvas:
                 try:
-                    self.canvas.getObjectByTag(self._canvas_img_tag)
+                    self.canvas.get_object_by_tag(self._canvas_img_tag)
                 except KeyError:
                     tag = self.canvas.add(canvas_img,
                                                 tag=self._canvas_img_tag)
@@ -618,6 +620,8 @@ class ImageViewBase(Callback.Callbacks):
         # update our display if the image changes underneath us
         image.add_callback('modified', self._image_updated)
 
+        # out with the old, in with the new...
+        self.make_callback('image-unset', old_image)
         self.make_callback('image-set', image)
 
     def _image_updated(self, image):
@@ -679,9 +683,12 @@ class ImageViewBase(Callback.Callbacks):
         """
         Clear the displayed image.
         """
-        self.canvas.deleteAllObjects()
         self._imgobj = None
-        self.canvas.update_canvas(whence=0)
+        try:
+            # See if there is an image on the canvas
+            self.canvas.delete_object_by_tag(self._canvas_img_tag)
+        except KeyError:
+            pass
 
     def save_profile(self, **params):
         image = self.get_image()
@@ -1054,7 +1061,7 @@ class ImageViewBase(Callback.Callbacks):
         if not hasattr(canvas, 'objects'):
             return
 
-        for obj in canvas.getObjects():
+        for obj in canvas.get_objects():
             if hasattr(obj, 'draw_image'):
                 obj.draw_image(self, data, whence=whence)
             elif obj.is_compound() and (obj != canvas):

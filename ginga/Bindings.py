@@ -168,7 +168,7 @@ class ImageViewBindings(object):
             gs_pan = [],
             gs_swipe = [],
             gs_tap = [],
-            pinch_actions = ['zoom'],
+            pinch_actions = [],
             pinch_zoom_acceleration = 1.4,
             pinch_rotate_acceleration = 1.0,
             )

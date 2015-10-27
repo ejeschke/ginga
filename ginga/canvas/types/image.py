@@ -220,6 +220,9 @@ class Image(CanvasObjectBase):
         for cache in self._cache.values():
             self._reset_cache(cache)
 
+    def get_image(self):
+        return self.image
+
     def set_image(self, image):
         self.image = image
         self.reset_optimize()
