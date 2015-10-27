@@ -897,6 +897,7 @@ class GingaControl(Callback.Callbacks):
             self.logger.info("Large image update: %.4f sec" % (
                 split_time1 - start_time))
 
+            self.make_callback('active-image', channel.fitsimage)
 
     def change_channel(self, chname, image=None, raisew=True):
         self.logger.debug("change channel: %s" % (chname))

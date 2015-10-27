@@ -49,7 +49,9 @@ class Thumbs(GingaPlugin.GlobalPlugin):
                                   thumb_length=150,
                                   sort_order=None,
                                   label_length=25,
-                                  label_cutoff='right')
+                                  label_cutoff='right',
+                                  label_font_color='black',
+                                  label_bg_color='yellow')
         self.settings.load(onError='silent')
         # max length of thumb on the long side
         self.thumbWidth = self.settings.get('thumb_length', 150)
@@ -331,11 +333,13 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             # No memory of this thumbnail, so regenerate it
             chname = viewer.get_channelName(fitsimage)
             self._add_image(viewer, chname, image)
+            self.highlight_thumbnail(viewer, fitsimage)
             return
 
         # Else schedule an update of the thumbnail for changes to
         # cut levels, etc.
         self.redo_delay(fitsimage)
+        self.highlight_thumbnail(viewer, fitsimage)
 
     def transform_cb(self, fitsimage):
         self.redo_delay(fitsimage)
@@ -364,6 +368,28 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         fitsimage.copy_attributes(self.thumb_generator,
                                   ['transforms', 'cutlevels',
                                    'rgbmap'])
+
+    def highlight_thumbnail(self, viewer, fitsimage):
+        """Highlight currently active thumbnail. Called by ``focus_cb()``."""
+        image = fitsimage.get_image()
+        name = image.get('name')
+        path = image.get('path')
+        chname = viewer.get_channelName(fitsimage)
+        thumbkey = self.get_thumb_key(chname, name, path)
+
+        hlight_bg = self.settings.get('label_bg_color', 'yellow')
+        hlight_fg = self.settings.get('label_font_color', 'black')
+
+        with self.thmblock:
+            for tkey in self.thumbDict:
+                if tkey == thumbkey:
+                    bgcolor = hlight_bg
+                    fgcolor = hlight_fg
+                else:
+                    bgcolor = fgcolor = None
+
+                namelbl = self.thumbDict[tkey].get('namelbl')
+                namelbl.set_color(bg=bgcolor, fg=fgcolor)
 
     def have_thumbnail(self, fitsimage, image):
         """Returns True if we already have a thumbnail version of this image
@@ -621,7 +647,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         vbox.cfg_expand(0, 0)
 
         bnch = Bunch.Bunch(widget=vbox, image=thumbw,
-                           name=name, imname=name,
+                           name=name, imname=name, namelbl=namelbl,
                            chname=chname, path=path, thumbpath=thumbpath,
                            image_future=image_future)
 
