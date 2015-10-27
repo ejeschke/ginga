@@ -7,33 +7,21 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-from ginga import GingaPlugin
 from ginga.misc import Bunch
+from ginga.misc.plugins.HeaderBase import HeaderBase
 import ginga.util.six as six
 
 from ginga.qtw.QtHelp import QtGui, QtCore
 from ginga.qtw import QtHelp
 
 
-class Header(GingaPlugin.GlobalPlugin):
+class Header(HeaderBase):
 
     def __init__(self, fv):
         # superclass defines some variables for us, like logger
         super(Header, self).__init__(fv)
 
-        self.channel = {}
-        self.active = None
-        self.info = None
         self._image = None
-
-        self.columns = [('Keyword', 'key'),
-                        ('Value', 'value'),
-                        ('Comment', 'comment'),
-                        ]
-        fv.set_callback('add-channel', self.add_channel)
-        fv.set_callback('delete-channel', self.delete_channel)
-        fv.set_callback('active-image', self.focus_cb)
-
 
     def build_gui(self, container):
         nb = QtHelp.StackedWidget()
@@ -75,6 +63,10 @@ class Header(GingaPlugin.GlobalPlugin):
         hbox.addWidget(cb, stretch=0)
         vbox.addWidget(hbox, stretch=0)
 
+        # toggle sort
+        if self.settings.get('sortable', False):
+            cb.setCheckState(QtCore.Qt.Checked)
+
         info.setvals(widget=widget, table=table, sortw=cb)
         return widget
 
@@ -96,9 +88,9 @@ class Header(GingaPlugin.GlobalPlugin):
         ## table.resizeColumnsToContents()
         ## table.resizeRowsToContents()
 
-        sorted = info.sortw.isChecked()
-        table.setSortingEnabled(sorted)
-        self.logger.debug("setting header done")
+        is_sorted = info.sortw.isChecked()
+        table.setSortingEnabled(is_sorted)
+        self.logger.debug("setting header done ({0})".format(is_sorted))
         self._image = image
 
     def add_channel(self, viewer, chinfo):
@@ -125,20 +117,6 @@ class Header(GingaPlugin.GlobalPlugin):
         self.info = None
         del self.channel[chname]
 
-    def start(self):
-        names = self.fv.get_channelNames()
-        for name in names:
-            chinfo = self.fv.get_channelInfo(name)
-            self.add_channel(self.fv, chinfo)
-
-    def new_image_cb(self, fitsimage, image, info):
-        self.set_header(info, image)
-
-    def set_sortable_cb(self, info):
-        chinfo = self.fv.get_channelInfo(info.chname)
-        image = chinfo.fitsimage.get_image()
-        self.set_header(info, image)
-
     def focus_cb(self, viewer, fitsimage):
         chname = self.fv.get_channelName(fitsimage)
         chinfo = self.fv.get_channelInfo(chname)
@@ -155,6 +133,10 @@ class Header(GingaPlugin.GlobalPlugin):
         if image is None:
             return
         self.set_header(self.info, image)
+
+    def set_sortable_cb(self, info):
+        self._image = None
+        super(Header, self).set_sortable_cb(info)
 
     def __str__(self):
         return 'header'

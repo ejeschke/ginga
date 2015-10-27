@@ -1,41 +1,28 @@
 #
 # Header.py -- FITS Header plugin for fits viewer
-# 
+#
 # Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c)  Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-from ginga import GingaPlugin
 from ginga.misc import Bunch
+from ginga.misc.plugins.HeaderBase import HeaderBase
 
 from ginga.gtkw import gtksel, GtkHelp
 import gtk
 
 
-class Header(GingaPlugin.GlobalPlugin):
+class Header(HeaderBase):
 
     def __init__(self, fv):
         # superclass defines some variables for us, like logger
         super(Header, self).__init__(fv)
 
-        self.channel = {}
-        self.active = None
-        self.info = None
-
-        self.columns = [('Keyword', 'kwd'),
-                        ('Value', 'value'),
-                        ('Comment', 'comment'),
-                        ]
         self.cell_sort_funcs = []
         for kwd, key in self.columns:
             self.cell_sort_funcs.append(self._mksrtfnN(key))
-
-        fv.set_callback('add-channel', self.add_channel)
-        fv.set_callback('delete-channel', self.delete_channel)
-        fv.set_callback('active-image', self.focus_cb)
-        
 
     def build_gui(self, container):
         nb = GtkHelp.Notebook()
@@ -52,14 +39,14 @@ class Header(GingaPlugin.GlobalPlugin):
     def _create_header_window(self, info):
         width, height = 300, -1
         vbox = gtk.VBox()
-        
+
         sw = gtk.ScrolledWindow()
         sw.set_border_width(2)
         sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
 
         # create the TreeView
         treeview = gtk.TreeView()
-        
+
         # create the TreeViewColumns to display the data
         tvcolumn = [None] * len(self.columns)
         for n in range(0, len(self.columns)):
@@ -77,7 +64,7 @@ class Header(GingaPlugin.GlobalPlugin):
 
         sw.add(treeview)
         vbox.pack_start(sw, fill=True, expand=True)
-        
+
         # create sort toggle
         cb = GtkHelp.CheckButton("Sortable")
         cb.sconnect('toggled', lambda w: self.set_sortable_cb(info))
@@ -85,7 +72,11 @@ class Header(GingaPlugin.GlobalPlugin):
         hbox.pack_start(cb, fill=True, expand=False)
         vbox.pack_start(hbox, fill=True, expand=False)
         vbox.show_all()
-        
+
+        # toggle sort
+        if self.settings.get('sortable', False):
+            cb.set_active()
+
         info.setvals(widget=vbox, treeview=treeview, sortw=cb)
         return vbox
 
@@ -119,7 +110,7 @@ class Header(GingaPlugin.GlobalPlugin):
 
     def set_header(self, info, image):
         treeview = info.treeview
-        
+
         header = image.get_header()
         # Update the header info
         listmodel = gtk.ListStore(object)
@@ -128,7 +119,7 @@ class Header(GingaPlugin.GlobalPlugin):
         sorted = info.sortw.get_active()
         if sorted:
             keyorder.sort()
-            
+
         for key in keyorder:
             card = header.get_card(key)
             bnch = Bunch.Bunch(kwd=key, value=str(card.value),
@@ -162,20 +153,6 @@ class Header(GingaPlugin.GlobalPlugin):
         self.info = None
         del self.channel[chname]
 
-    def start(self):
-        names = self.fv.get_channelNames()
-        for name in names:
-            chinfo = self.fv.get_channelInfo(name)
-            self.add_channel(self.fv, chinfo)
-        
-    def new_image_cb(self, fitsimage, image, info):
-        self.set_header(info, image)
-        
-    def set_sortable_cb(self, info):
-        chinfo = self.fv.get_channelInfo(info.chname)
-        image = chinfo.fitsimage.get_image()
-        self.set_header(info, image)
-        
     def focus_cb(self, viewer, fitsimage):
         chname = self.fv.get_channelName(fitsimage)
         chinfo = self.fv.get_channelInfo(chname)
@@ -192,8 +169,8 @@ class Header(GingaPlugin.GlobalPlugin):
         if image is None:
             return
         self.set_header(self.info, image)
-        
+
     def __str__(self):
         return 'header'
-    
+
 #END
