@@ -167,7 +167,10 @@ class PyFitsFileHandler(BaseFitsFileHandler):
                 #print "data type is %s" % hdu.data.dtype.kind
                 # Looks good, let's try it
                 found_valid_hdu = True
-                numhdu = (name, extver)
+                if len(name) == 0:
+                    numhdu = i
+                else:
+                    numhdu = (name, extver)
                 break
 
             if not found_valid_hdu:
@@ -263,15 +266,22 @@ class FitsioFileHandler(BaseFitsFileHandler):
 
         if numhdu is None:
             found_valid_hdu = False
-            for numhdu in range(len(fits_f)):
-                hdu = fits_f[numhdu]
+            for i in range(len(fits_f)):
+                hdu = fits_f[i]
                 info = hdu.get_info()
+                name = info['extname']
+                extver = info['extver']
+
                 if not ('ndims' in info) or (info['ndims'] == 0):
                     # compressed FITS file or non-pixel data hdu?
                     continue
                 #print "data type is %s" % hdu.data.dtype.kind
                 # Looks good, let's try it
                 found_valid_hdu = True
+                if len(name) == 0:
+                    numhdu = i
+                else:
+                    numhdu = (name, extver)
                 break
 
             if not found_valid_hdu:

@@ -364,6 +364,123 @@ class Compass(OnePointOneRadiusMixin, CanvasObjectBase):
         return (xd, yd)
 
 
+class Crosshair(CanvasObjectBase):
+    """Draws a crosshair on a DrawingCanvas.
+    Parameters are:
+    x, y: 0-based coordinates of the center in the data space
+    Optional parameters for linesize, color, etc.
+    """
+
+    @classmethod
+    def get_params_metadata(cls):
+        return [
+            ## Param(name='coord', type=str, default='data',
+            ##       valid=['data'],
+            ##       description="Set type of coordinates"),
+            Param(name='x', type=float, default=0.0, argpos=0,
+                  description="X coordinate of center of object"),
+            Param(name='y', type=float, default=0.0, argpos=1,
+                  description="Y coordinate of center of object"),
+            Param(name='linewidth', type=int, default=1,
+                  min=1, max=20, widget='spinbutton', incr=1,
+                  description="Width of outline"),
+            Param(name='linestyle', type=str, default='solid',
+                  valid=['solid', 'dash'],
+                  description="Style of outline (default solid)"),
+            Param(name='color',
+                  valid=colors_plus_none, type=_color, default='green',
+                  description="Color of outline"),
+            Param(name='alpha', type=float, default=1.0,
+                  min=0.0, max=1.0, widget='spinfloat', incr=0.05,
+                  description="Opacity of outline"),
+            Param(name='text', type=str, default=None,
+                  description="Text annotation"),
+            Param(name='textcolor',
+                  valid=colors_plus_none, type=_color, default='yellow',
+                  description="Color of text annotation"),
+            Param(name='font', type=str, default='Sans Serif',
+                  description="Font family for text"),
+            Param(name='fontsize', type=int, default=None,
+                  min=8, max=72,
+                  description="Font size of text (default: vary by scale)"),
+            Param(name='format', type=str, default='xy',
+                  valid=['xy', 'value', 'coords'],
+                  description="Format for text annotation (default: xy)"),
+            ]
+
+    @classmethod
+    def idraw(cls, canvas, cxt):
+        return cls(cxt.x, cxt.y, **cxt.drawparams)
+
+    def __init__(self, x, y, color='green',
+                 linewidth=1, alpha=1.0, linestyle='solid',
+                 text=None, textcolor='yellow',
+                 fontsize=None, font='Sans Serif', format='xy',
+                 **kwdargs):
+        self.kind = 'crosshair'
+        CanvasObjectBase.__init__(self, color=color, alpha=alpha,
+                                  linewidth=linewidth, linestyle=linestyle,
+                                  text=text, textcolor=textcolor,
+                                  fontsize=fontsize, font=font,
+                                  x=x, y=y, format=format, **kwdargs)
+
+    def get_points(self):
+        return [ (self.x, self.y) ]
+
+    def get_edit_points(self):
+        return self.get_points()
+
+    def set_edit_point(self, i, pt):
+        if i == 0:
+            self.set_point_by_index(i, pt)
+        else:
+            raise ValueError("No point corresponding to index %d" % (i))
+
+    def select_contains(self, viewer, data_x, data_y):
+        xd, yd = self.crdmap.to_data(self.x, self.y)
+        return self.within_radius(viewer, data_x, data_y, xd, yd,
+                                  self.cap_radius)
+
+    def draw(self, viewer):
+        wd, ht = viewer.get_window_size()
+        cpoints = self.get_cpoints(viewer)
+        (cx, cy) = cpoints[0]
+
+        hx1, hx2 = 0, wd
+        hy1 = hy2 = cy
+        vy1, vy2 = 0, ht
+        vx1 = vx2 = cx
+
+        if self.text is None:
+            if self.format == 'xy':
+                text = "X:%f, Y:%f" % (self.x, self.y)
+
+            else:
+                image = viewer.get_image()
+                # NOTE: x, y are assumed to be in data coordinates
+                info = image.info_xy(self.x, self.y, viewer.get_settings())
+                if self.format == 'coords':
+                    text = "%s:%s, %s:%s" % (info.ra_lbl, info.ra_txt,
+                                             info.dec_lbl, info.dec_txt)
+                else:
+                    text = "V: %f" % (info.value)
+        else:
+            text = self.text
+
+        cr = viewer.renderer.setup_cr(self)
+        cr.set_font_from_shape(self)
+
+        # draw horizontal line
+        cr.draw_line(hx1, hy1, hx2, hy2)
+
+        # draw vertical line
+        cr.draw_line(vx1, vy1, vx2, vy2)
+
+        txtwd, txtht = cr.text_extents(text)
+        cr.set_line(self.textcolor, alpha=self.alpha)
+        cr.draw_text(cx+10, cy+4+txtht, text)
+
+
 class AnnulusMixin(object):
 
     def contains(self, x, y):
@@ -525,6 +642,6 @@ class Annulus(AnnulusMixin, OnePointOneRadiusMixin, CompoundObject):
 
 
 register_canvas_types(dict(ruler=Ruler, compass=Compass,
-                           annulus=Annulus))
+                           crosshair=Crosshair, annulus=Annulus))
 
 #END

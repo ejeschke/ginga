@@ -110,6 +110,7 @@ class Ruler(GingaPlugin.LocalPlugin):
     def set_units(self):
         index = self.w.units.get_index()
         units = self.unittypes[index]
+        self.units = units
         self.canvas.set_drawtype('ruler', color='cyan', units=units)
 
         if self.ruletag is not None:

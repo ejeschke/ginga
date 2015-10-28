@@ -33,6 +33,8 @@ objects includes:
 * ``RightTriangle`` -- a right triangle defined by two points.
 * ``Compass`` -- a compass defined by a point and a radius.
 * ``Ruler`` -- a ruler defined by two points.
+* ``Crosshair`` -- a crosshair defined by one point.
+* ``Annulus`` -- an annulus defined by one point and two radii.
 * ``Image`` -- a raster image anchored by a point.
 * ``NormImage`` -- a subclass of ``Image``, with rendering done with the
   aid of a colormap, a color distribution algorithm (linear, log, etc),

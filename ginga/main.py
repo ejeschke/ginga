@@ -104,6 +104,7 @@ local_plugins = [
     Bunch(module='MultiDim', ws='lleft', shortkey='f4'),
     Bunch(module='Cuts', ws='dialogs', shortkey='f5'),
     Bunch(module='Histogram', ws='dialogs', shortkey='f6'),
+    Bunch(module='Crosshair', ws='dialogs'),
     Bunch(module='Overlays', ws='dialogs'),
     Bunch(module='Blink', ws='dialogs'),
     Bunch(module='LineProfile', ws='dialogs'),
