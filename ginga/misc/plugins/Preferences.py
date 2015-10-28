@@ -465,10 +465,6 @@ class Preferences(GingaPlugin.LocalPlugin):
         exp = Widgets.Expander("General")
 
         captions = (('Num Images:', 'label', 'Num Images', 'entryset'),
-                    ('Output ICC profile:', 'label', 'Output ICC profile', 'combobox'),
-                    ('Rendering intent:', 'label', 'Rendering intent', 'combobox'),
-                    ('Proof ICC profile:', 'label', 'Proof ICC profile', 'combobox'),
-                    ('Proof intent:', 'label', 'Proof intent', 'combobox'),
                     )
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
@@ -477,50 +473,6 @@ class Preferences(GingaPlugin.LocalPlugin):
         num_images = self.t_.get('numImages', 0)
         self.w.num_images.set_text(str(num_images))
         self.w.num_images.add_callback('activated', self.set_buffer_cb)
-
-        option = self.t_.get('output_icc', None)
-        if option is None:
-            (profile_name, intent_name, proof_name,
-             proof_intent) = (None, 'perceptual', None, 'perceptual')
-        else:
-            (profile_name, intent_name, proof_name,
-             proof_intent) = option
-
-        combobox = b.output_icc_profile
-        index = 0
-        for name in self.icc_profiles:
-            combobox.append_text(str(name))
-            index += 1
-        index = self.icc_profiles.index(profile_name)
-        combobox.set_index(index)
-        combobox.add_callback('activated', self.set_icc_profile_cb)
-
-        combobox = b.rendering_intent
-        index = 0
-        for name in self.icc_intents:
-            combobox.append_text(name)
-            index += 1
-        index = self.icc_intents.index(intent_name)
-        combobox.set_index(index)
-        combobox.add_callback('activated', self.set_icc_profile_cb)
-
-        combobox = b.proof_icc_profile
-        index = 0
-        for name in self.icc_profiles:
-            combobox.append_text(str(name))
-            index += 1
-        index = self.icc_profiles.index(proof_name)
-        combobox.set_index(index)
-        combobox.add_callback('activated', self.set_icc_profile_cb)
-
-        combobox = b.proof_intent
-        index = 0
-        for name in self.icc_intents:
-            combobox.append_text(name)
-            index += 1
-        index = self.icc_intents.index(proof_intent)
-        combobox.set_index(index)
-        combobox.add_callback('activated', self.set_icc_profile_cb)
 
         fr = Widgets.Frame()
         fr.set_widget(w)
