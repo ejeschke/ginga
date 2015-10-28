@@ -976,6 +976,9 @@ class Preferences(GingaPlugin.LocalPlugin):
             pan_x = wcs.hmsStrToDeg(pan_xs)
             pan_y = wcs.dmsStrToDeg(pan_ys)
             pan_coord = 'wcs'
+        elif pan_coord == 'wcs':
+            pan_x = float(pan_xs)
+            pan_y = float(pan_ys)
         else:
             coord_offset = self.fv.settings.get('pixel_coords_offset', 0.0)
             pan_x = float(pan_xs) - coord_offset
