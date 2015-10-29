@@ -470,7 +470,7 @@ class AstropyWCS(BaseWCS):
             self.wcs = pywcs.WCS(self.header, fobj=fobj, relax=True)
             self.logger.debug("made astropy wcs object")
 
-            self.coordsys = choose_coord_system(self.header)
+            self.coordsys = get_coord_system_name(self.header)
             self.logger.debug("Coordinate system is: %s" % (self.coordsys))
 
         except Exception as e:
@@ -640,15 +640,15 @@ class AstLibWCS(BaseWCS):
             self.logger.debug("Trying to make astLib wcs object")
             self.wcs = astWCS.WCS(hdr, mode='pyfits')
 
-            self.coordsys = self.choose_coord_system(self.header)
+            self.coordsys = self.get_coord_system_name(self.header)
             self.logger.debug("Coordinate system is: %s" % (self.coordsys))
 
         except Exception as e:
             self.logger.error("Error making WCS object: %s" % (str(e)))
             self.wcs = None
 
-    def choose_coord_system(self, header):
-        coordsys = choose_coord_system(header)
+    def get_coord_system_name(self, header):
+        coordsys = get_coord_system_name(header)
         coordsys = coordsys.upper()
         if coordsys in ('FK4',):
             return 'b1950'
@@ -763,7 +763,7 @@ class KapteynWCS(BaseWCS):
             self.wcs = kapwcs.Projection(self.header,
                                          skyout=self._skyout)
 
-            self.coordsys = choose_coord_system(self.header)
+            self.coordsys = get_coord_system(self.header)
             self.logger.debug("Coordinate system is: %s" % (self.coordsys))
 
         except Exception as e:
@@ -891,7 +891,7 @@ class StarlinkWCS(BaseWCS):
             # self.wcs is a FrameSet, with a Mapping
             #self.wcs.Report = True
 
-            self.coordsys = choose_coord_system(self.header)
+            self.coordsys = get_coord_system(self.header)
             self.logger.debug("Coordinate system is: %s" % (self.coordsys))
 
         except Exception as e:
@@ -1025,7 +1025,7 @@ class BareBonesWCS(BaseWCS):
         self.header.update(header.items())
 
         self.fix_bad_headers()
-        self.coordsys = choose_coord_system(self.header)
+        self.coordsys = get_coord_system(self.header)
 
     # WCS calculations
     def get_reference_pixel(self):
@@ -1158,7 +1158,7 @@ def choose_coord_units(header):
     return 'degree'
 
 
-def choose_coord_system(header):
+def get_coord_system_name(header):
     """Return an appropriate key code for the axes coordinate system by
     examining the FITS header.
     """
