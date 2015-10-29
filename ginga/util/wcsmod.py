@@ -250,7 +250,14 @@ class AstropyWCS2(BaseWCS):
         try:
             self.logger.debug("Trying to make astropy wcs object")
             self.wcs = pywcs.WCS(self.header, fobj=fobj, relax=True)
-            self.coordframe = wcs_to_celestial_frame(self.wcs)
+            try:
+                self.coordframe = wcs_to_celestial_frame(self.wcs)
+            except ValueError:
+                sysname = get_coord_system_name(self.header)
+                if sysname in ('raw', 'pixel'):
+                    self.coordframe = sysname
+                else:
+                    raise
 
         except Exception as e:
             self.logger.error("Error making WCS object: %s" % (str(e)))
