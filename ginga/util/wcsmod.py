@@ -228,7 +228,7 @@ class AstropyWCS2(BaseWCS):
         self.logger = logger
         self.header = None
         self.wcs = None
-        self.coordframe = None
+        self.coordframe = 'raw'
 
 
     def load_header(self, header, fobj=None):
@@ -246,7 +246,7 @@ class AstropyWCS2(BaseWCS):
             self.logger.error("Error making WCS object: %s" % (str(e)))
             self.wcs = None
 
-    def vaild_transform_frames(self):
+    def valid_transform_frames(self):
         global coord_types
 
         frames = [f.name for f in astropy.coordinates.frame_transform_graph.frame_set
@@ -288,7 +288,7 @@ class AstropyWCS2(BaseWCS):
                              " from {}".format(self.coordframe.representation))
             rep = astropy.coordinates.UnitSphericalRepresentation(*data)
 
-        if hasattr(self.coordframe._set_data, '_set_data'):
+        if hasattr(self.coordframe, '_set_data'):
             self.coordframe._set_data(rep)
         else:
             self.coordframe._data = rep
@@ -380,7 +380,7 @@ class AstropyWCS2(BaseWCS):
 
     def pixtocoords(self, idxs, system=None, coords='data'):
 
-        if self.coordsys == 'raw':
+        if self.coordframe == 'raw':
             raise WCSError("No usable WCS")
 
         coord = self.pixtonative(idxs, coords=coords)
@@ -401,7 +401,7 @@ class AstropyWCS2(BaseWCS):
 
 
     def pixtosystem(self, idxs, system=None, coords='data'):
-        if self.coordsys == 'pixel':
+        if self.coordframe == 'pixel':
             x, y = self.pixtoradec(idxs, coords=coords)
             return (x, y)
 
