@@ -230,6 +230,16 @@ class AstropyWCS2(BaseWCS):
         self.wcs = None
         self.coordframe = 'raw'
 
+    @property
+    def coordsys(self):
+        """
+        We include this here to make this compatible with the other WCSs.  But
+        "coordsys" is a bad name in astropy coordinates, and using the name
+        `coordframe` internally makes it clearer what's going on (see
+        http://astropy.readthedocs.org/en/latest/coordinates/definitions.html)
+        """
+        return self.coordframe
+
 
     def load_header(self, header, fobj=None):
         from astropy.wcs.utils import wcs_to_celestial_frame
@@ -292,11 +302,10 @@ class AstropyWCS2(BaseWCS):
             self.coordframe._set_data(rep)
         else:
             self.coordframe._data = rep
-            self.coordframe._rep_cache[self.coordframe._data.__class__.__name__,
-                                       False] = self.coordframe._data
-
-#            This will eventually work, once upstream PR is complete.
-#            self.coordframe = self.coordframe.realize_frame(rep, copy=False)
+            # # This will eventually work, once upstream PR is complete.
+            # self.coordframe._rep_cache[self.coordframe._data.__class__.__name__,
+            #                            False] = self.coordframe._data
+            # self.coordframe = self.coordframe.realize_frame(rep, copy=False)
 
 
     def spectral_coord(self, idxs, coords='data'):
