@@ -185,6 +185,13 @@ class PyFitsFileHandler(BaseFitsFileHandler):
                 # Load just the header
                 numhdu = 0
 
+        elif isinstance(numhdu, (int, str)):
+            hdu = fits_f[numhdu]
+            name = hdu.name
+            extver = hdu.ver
+            if len(name) > 0:
+                numhdu = (name, extver)
+
         hdu = fits_f[numhdu]
 
         data, naxispath = self.load_hdu(hdu, ahdr, fobj=fits_f,
@@ -296,6 +303,14 @@ class FitsioFileHandler(BaseFitsFileHandler):
                 ##     filepath))
                 # Just load the header
                 numhdu = 0
+
+        elif isinstance(numhdu, (int, str)):
+            hdu = fits_f[numhdu]
+            info = hdu.get_info()
+            name = info['extname']
+            extver = info['extver']
+            if len(name) > 0:
+                numhdu = (name, extver)
 
         hdu = fits_f[numhdu]
 

@@ -139,8 +139,7 @@ class AstroImage(BaseImage):
             if name is None:
                 name = info.name
                 if ('[' not in name):
-                    if numhdu is None:
-                        numhdu = numhdu_
+                    numhdu = numhdu_
                     name += iohelper.get_hdu_suffix(numhdu)
                 self.set(name=name)
 

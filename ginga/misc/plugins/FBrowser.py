@@ -1,5 +1,5 @@
 #
-# FBrowserBase.py -- Base class for file browser plugin for fits viewer
+# FBrowser.py -- Class for file browser plugin for fits viewer
 #
 # Eric Jeschke (eric@naoj.org)
 #
@@ -13,7 +13,7 @@ import stat, time
 from ginga.misc import Bunch
 from ginga import GingaPlugin
 from ginga import AstroImage
-from ginga.util import paths
+from ginga.util import paths, iohelper
 from ginga.util.six.moves import map, zip
 from ginga.gw import Widgets
 
@@ -55,7 +55,7 @@ class FBrowser(GingaPlugin.LocalPlugin):
         self.settings.load(onError='silent')
 
         homedir = self.settings.get('home_path', None)
-        if homedir is None:
+        if homedir is None or not os.path.isdir(homedir):
             homedir = paths.home
         self.curpath = os.path.join(homedir, '*')
         self.do_scanfits = self.settings.get('scan_fits_headers', False)
@@ -130,11 +130,27 @@ class FBrowser(GingaPlugin.LocalPlugin):
         container.add_widget(vbox, stretch=1)
 
     def load_cb(self):
+        # Load from text box
+        path = str(self.entry.get_text()).strip()
+        retcode = self.open_files(path)
+        if retcode:
+            return
+
+        # Load from tree view
         #curdir, curglob = os.path.split(self.curpath)
         select_dict = self.treeview.get_selected()
         paths = [ info.path for key, info in select_dict.items() ]
-        self.fv.gui_do(self.fitsimage.make_callback, 'drag-drop',
-                       paths)
+        self.logger.debug('Loading {0}'.format(paths))
+
+        # Open directory
+        if len(paths) == 1 and os.path.isdir(paths[0]):
+            path = os.path.join(paths[0], '*')
+            self.entry.set_text(path)
+            self.browse_cb(self.entry)
+            return
+
+        # Load files
+        self.fv.gui_do(self.fitsimage.make_callback, 'drag-drop', paths)
 
     def makelisting(self, path):
         self.entry.set_text(path)
@@ -168,7 +184,13 @@ class FBrowser(GingaPlugin.LocalPlugin):
 
     def browse_cb(self, widget):
         path = str(widget.get_text()).strip()
-        self.browse(path)
+
+        # Load file(s) -- image*.fits, image*.fits[ext]
+        retcode = self.open_files(path)
+
+        # Open directory
+        if not retcode:
+            self.browse(path)
 
     def save_as_cb(self):
         path = str(self.entry2.get_text()).strip()
@@ -176,6 +198,10 @@ class FBrowser(GingaPlugin.LocalPlugin):
             path = os.path.join(self.curpath, path)
 
         image = self.fitsimage.get_image()
+        if image is None:
+            self.logger.error('No image to save')
+            return
+
         self.fv.error_wrap(image.save_as_file, path)
 
     def close(self):
@@ -191,6 +217,27 @@ class FBrowser(GingaPlugin.LocalPlugin):
         else:
             pb = self.filepb
         return pb
+
+
+    def open_files(self, path):
+        """Load file(s) -- image*.fits, image*.fits[ext].
+        Returns success code (True or False).
+        """
+        # Strips trailing wildcard
+        if path.endswith('*'):
+            path = path[:-1]
+
+        if os.path.isdir(path):
+            return False
+
+        self.logger.debug('Opening files matched by {0}'.format(path))
+        info = iohelper.get_fileinfo(path)
+        ext = iohelper.get_hdu_suffix(info.numhdu)
+        files = glob.glob(info.filepath)  # Expand wildcard
+        paths = ['{0}{1}'.format(f, ext) for f in files]
+        self.fv.gui_do(self.fitsimage.make_callback, 'drag-drop', paths)
+
+        return True
 
     def open_file(self, path):
         self.logger.debug("path: %s" % (path))
