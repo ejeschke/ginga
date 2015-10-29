@@ -569,6 +569,8 @@ class ImageViewBase(Callback.Callbacks):
                 if (profile is not None) and (self.t_['profile_use_scale']) and \
                        profile.has_key('scale_x'):
                     scale_x, scale_y = profile['scale_x'], profile['scale_y']
+                    self.logger.debug("restoring scale to (%f,%f)" % (
+                        scale_x, scale_y))
                     self.scale_to(scale_x, scale_y, no_reset=True)
                 else:
                     self.logger.debug("auto zoom (%s)" % (self.t_['autozoom']))
@@ -579,6 +581,8 @@ class ImageViewBase(Callback.Callbacks):
                 if (profile is not None) and (self.t_['profile_use_pan']) and \
                        profile.has_key('pan_x'):
                     pan_x, pan_y = profile['pan_x'], profile['pan_y']
+                    self.logger.debug("restoring pan position to (%f,%f)" % (
+                        pan_x, pan_y))
                     self.set_pan(pan_x, pan_y, no_reset=True)
                 else:
                     # NOTE: False a possible value from historical use
@@ -1561,7 +1565,11 @@ class ImageViewBase(Callback.Callbacks):
         if coord == 'wcs':
             if self.t_['pan_coord'] == 'data':
                 image = self.get_image()
-                return image.pixtoradec(pan_x, pan_y)
+                if image is not None:
+                    try:
+                        return image.pixtoradec(pan_x, pan_y)
+                    except Exception as e:
+                        pass
             # <-- data already in coordinates form
             return (pan_x, pan_y)
 
@@ -1569,7 +1577,12 @@ class ImageViewBase(Callback.Callbacks):
         if self.t_['pan_coord'] == 'data':
             return (pan_x, pan_y)
         image = self.get_image()
-        return image.radectopix(pan_x, pan_y)
+        if image is not None:
+            try:
+                return image.radectopix(pan_x, pan_y)
+            except Exception as e:
+                pass
+        return (pan_x, pan_y)
 
     def panset_xy(self, data_x, data_y, no_reset=False):
         pan_coord = self.t_['pan_coord']

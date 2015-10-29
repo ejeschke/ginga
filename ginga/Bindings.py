@@ -412,9 +412,12 @@ class ImageViewBindings(object):
             res = viewer.panset_xy(data_x, data_y)
             return res
 
-        except ImageView.ImageViewCoordsError as e:
-            # coords are not within the data area
-            pass
+        except Exception as e:
+            viewer.onscreen_message("Pan position set error; see log",
+                                    delay=2.0)
+            # most likely image does not have a valid wcs
+            self.logger.error("Error setting pan position: %s" % (
+                str(e)))
 
     def get_direction(self, direction, rev=False):
         """

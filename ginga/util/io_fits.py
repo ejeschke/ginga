@@ -158,12 +158,18 @@ class PyFitsFileHandler(BaseFitsFileHandler):
                 extver += 1
                 extver_db[name] = extver
 
-                if (hdu.data is None) or (0 in hdu.data.shape):
-                    # non-pixel or zero-length data hdu?
+                # rule out HDUs we can't deal with
+                if not (isinstance(hdu, pyfits.ImageHDU) or
+                        isinstance(hdu, pyfits.PrimaryHDU)):
+                    # Don't open tables, etc.
                     continue
                 if not isinstance(hdu.data, numpy.ndarray):
                     # We need to open a numpy array
                     continue
+                if 0 in hdu.data.shape:
+                    # non-pixel or zero-length data hdu?
+                    continue
+
                 #print "data type is %s" % hdu.data.dtype.kind
                 # Looks good, let's try it
                 found_valid_hdu = True
@@ -269,13 +275,14 @@ class FitsioFileHandler(BaseFitsFileHandler):
             for i in range(len(fits_f)):
                 hdu = fits_f[i]
                 info = hdu.get_info()
+                #print(info)
                 name = info['extname']
                 extver = info['extver']
 
                 if not ('ndims' in info) or (info['ndims'] == 0):
                     # compressed FITS file or non-pixel data hdu?
                     continue
-                #print "data type is %s" % hdu.data.dtype.kind
+                #print(dir(hdu))
                 # Looks good, let's try it
                 found_valid_hdu = True
                 if len(name) == 0:
