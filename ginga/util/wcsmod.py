@@ -290,11 +290,12 @@ class AstropyWCS2(BaseWCS):
 
         """
         # If the representation is a subclass of Spherical we need to check for
-        # the new _unitrep attr to give the corresponding unit spherical subclass.
+        # the new _unit_representation attr to give the corresponding unit
+        # spherical subclass.
         if (issubclass(self.coordframe.representation,
                        astropy.coordinates.SphericalRepresentation) and
-            hasattr(self.coordframe.representation, '_unitrep')):
-            rep = self.coordframe.representation._unitrep(*data)
+            hasattr(self.coordframe.representation, '_unit_representation')):
+            rep = self.coordframe.representation._unit_representation(*data)
 
         elif issubclass(self.coordframe.representation,
                         astropy.coordinates.UnitSphericalRepresentation):
