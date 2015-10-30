@@ -164,6 +164,8 @@ class MDIWorkspace(QtGui.QMdiArea):
 
         self.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding,
                                              QtGui.QSizePolicy.Expanding))
+        self.setTabsClosable(True)
+        self.setTabsMovable(True)
 
     def get_mode(self):
         if self.viewMode() == QtGui.QMdiArea.TabbedView:
@@ -180,7 +182,11 @@ class MDIWorkspace(QtGui.QMdiArea):
             raise ValueError("Don't understand mode='%s'" % (mode))
 
     def addTab(self, widget, label):
-        w = self.addSubWindow(widget)
+        subwin = QtGui.QMdiSubWindow(self)
+        subwin.setWidget(widget)
+        w = self.addSubWindow(subwin)
+        w._closeEvent = w.closeEvent
+        w.closeEvent = lambda event: self._window_closed(event, w, widget)
         w.setWindowTitle(label)
         widget.show()
         w.show()
@@ -209,6 +215,11 @@ class MDIWorkspace(QtGui.QMdiArea):
         sw = self.activeSubWindow()
         #return sw
         return sw.widget()
+
+    def _window_closed(self, event, subwin, widget):
+        event.accept()
+        self.removeSubWindow(subwin)
+        return False
 
     def tabBar(self):
         return None

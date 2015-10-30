@@ -1237,6 +1237,10 @@ def choose_coord_system(header):
     if match:
         return 'pixel'
 
+    match = re.match(r'^LINEAR$', ctype)
+    if match:
+        return 'pixel'
+
     #raise WCSError("Cannot determine appropriate coordinate system from FITS header")
     return 'icrs'
 

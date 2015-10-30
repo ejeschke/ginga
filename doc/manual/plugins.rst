@@ -27,7 +27,7 @@ interested in writing their own custom plugins should refer to
 Global plugins
 ==============
 
-.. _sec-plugins_pan:
+.. _sec-plugins-pan:
 
 Pan
 ===
@@ -51,7 +51,7 @@ channel.
 The Pan plugin usually appears as a sub-pane under the "Info" tab, next
 to the Info plugin.
 
-.. _sec-plugins_info:
+.. _sec-plugins-info:
 
 Info
 ====
@@ -76,7 +76,7 @@ the user interface.  Below the Info plugin appear several buttons that
 can be used to zoom the image or to navigate between images in the
 history of the current channel.
 
-.. _sec-plugins_header:
+.. _sec-plugins-header:
 
 Header
 ======
@@ -87,13 +87,13 @@ Header
 The Header plugin shows the FITS keyword metadata from the image.
 Initially only the primary HDU metadata is shown.  However, in
 conjunction with the MultiDim plugin the metadata for other HDUs will be
-shown.  See :ref:`plugins-multidim` for details.
+shown.  See :ref:`sec-plugins-multidim` for details.
 
 If the "Sortable" checkbox has been checked in the lower left of the UI,
 then clicking on a column header will sort the table by values in that
 column, which may be useful for quickly locating a particular keyword.
 
-.. _sec-plugins_zoom:
+.. _sec-plugins-zoom:
 
 Zoom
 ====
@@ -138,7 +138,7 @@ specified in milliseconds.
 	 image seems too jerky or out of sync with the mouse movement in
 	 the channel image window.
 
-.. _sec-plugins_thumbs:
+.. _sec-plugins-thumbs:
 
 Thumbs
 ======
@@ -153,7 +153,7 @@ newest images at the bottom and the oldest at the top.  Hovering the
 cursor over a thumbnail will show a tooltip that contains a couple of
 useful pieces of metadata from the image.
 
-.. _sec-plugins_contents:
+.. _sec-plugins-contents:
 
 Contents
 ========
@@ -173,14 +173,14 @@ An *operation* is the activation of a local plugin to perform some
 function.  The plugin manager toolbar at the bottom of the center pane
 is the graphical way to start an operation.
 
-.. _plugins_pick:
+.. _sec-plugins-pick:
 
 Pick
 ====
 
 TBD
 
-.. _plugins-ruler:
+.. _sec-plugins-ruler:
 
 Ruler
 =====
@@ -199,7 +199,7 @@ plugin is closed the graphic overlay is removed.  Should you want
 "sticky rulers", use the Drawing plugin (and choose "Ruler" as the
 drawing type).
 
-.. _plugins-multidim:
+.. _sec-plugins-multidim:
 
 MultiDim
 ========
@@ -216,7 +216,7 @@ and "End" slice indices.  This feature requires 'mencoder' to be installed.
 Note that currently there is no support for tables in Ginga,
 so at present only image data can be displayed.
 
-.. _plugins-cuts:
+.. _sec-plugins-cuts:
 
 Cuts
 ====
@@ -256,7 +256,7 @@ Much like Cuts, you can view the other slit images using the cut
 selection drop down box. 
 
 
-.. _plugins-lineprofile:
+.. _sec-plugins-lineprofile:
 
 Line Profile
 ============
@@ -270,21 +270,21 @@ position through the selected axis.  This can be used to create
 normal spectral line profiles.  Be warned, there are no restrictions to
 what axes can be chosen.  As such, the output can be meaningless. 
 
-.. _plugins-histogram:
+.. _sec-plugins-histogram:
 
 Histogram
 =========
 
 TBD
 
-.. _plugins-pixtable:
+.. _sec-plugins-pixtable:
 
 PixTable
 ========
 
 TBD
 
-.. _plugins-preferences:
+.. _sec-plugins-preferences:
 
 Preferences
 ===========
@@ -293,7 +293,7 @@ The Preferences plugin sets the preferences on a per-channel basis.
 The preferences for a given channel are inherited from the "Image"
 channel until they are explicitly set and saved using this plugin.
 
-.. _preferences-color-distribution:
+.. _preferences_color_distribution:
 
 Color Distribution Preferences
 ------------------------------
@@ -314,7 +314,7 @@ and histeq.  The name of each algorithm is indicative of how
 the data is mapped to the colors in the color map.  `linear` is the
 default.
 
-.. _preferences-color-mapping:
+.. _preferences_color_mapping:
 
 Color Mapping Preferences
 -------------------------
@@ -340,7 +340,7 @@ more you can add custom ones or, if matplotlib is installed, you
 can load all the ones that it has installed.
 See :ref:`ch-customization` for details.
 
-.. _preferences-zoom:
+.. _preferences_zoom:
 
 Zoom Preferences
 ----------------
@@ -388,7 +388,7 @@ limit on how much the image can be scaled.
 The `Zoom Defaults` button will restore the controls to the Ginga
 default values.
 
-.. _preferences-pan:
+.. _preferences_pan:
 
 Pan Preferences
 ---------------
@@ -409,7 +409,7 @@ The `Mark Center` check box, when checked, will cause Ginga to draw a
 small reticle in the center of the image.  This is useful for knowing
 the pan position and for debugging.
 
-.. _preferences-transform:
+.. _preferences_transform:
 
 Transform Preferences
 ---------------------
@@ -436,7 +436,7 @@ conjunction with flipping and swapping.
 The `Restore` button will restore the view to the default view, which
 is unflipped, unswapped and unrotated.
 
-.. _preferences-autocuts:
+.. _preferences_autocuts:
 
 Auto Cuts Preferences
 ---------------------
@@ -455,7 +455,7 @@ histogram), "stddev" (based on the standard deviation of pixel values), or
 As the algorithm is changed, the boxes under it may also change to
 allow changes to parameters particular to each algorithm.
 
-.. _preferences-wcs:
+.. _preferences_wcs:
 
 WCS Preferences
 ---------------
@@ -473,7 +473,7 @@ which to display the result.
 The `WCS Display` control is used to select a sexagesimal (H:M:S)
 readout or a decimal degrees readout.
 
-.. _preferences-newimages:
+.. _preferences_newimages:
 
 New Image Preferences
 ---------------------

@@ -216,7 +216,7 @@ class GingaView(QtMain.QtMain):
 
         if isinstance(self.w.mnb, QtGui.QMdiArea):
             item = wsmenu.add_name("Panes as Tabs")
-            item.add_callback(lambda *args: self.tabstoggle_cb())
+            item.add_callback('activated', lambda w, tf: self.tabstoggle_cb(tf))
             item.get_widget().setCheckable(True)
             is_tabs = (self.w.mnb.get_mode() == 'tabs')
             item.get_widget().setChecked(is_tabs)
@@ -225,7 +225,7 @@ class GingaView(QtMain.QtMain):
             item.add_callback('activated', lambda *args: self.tile_panes_cb())
 
             item = wsmenu.add_name("Cascade Panes")
-            item.add_callback(lambda *args: self.cascade_panes_cb())
+            item.add_callback('activated', lambda *args: self.cascade_panes_cb())
 
         # # create a Option pulldown menu, and add it to the menu bar
         # optionmenu = menubar.add_name("Option")
