@@ -24,8 +24,8 @@ implemented by a GUI toolkit container widget such as a notebook widget,
 where each item in the workspace is identified by a tab.  Workspaces can
 be nested, so a tab might contain yet another nested set of tabs, and so
 on [#f1]_. 
-Tabs can be freely dragged between workspaces, or out onto the desktop,
-forming a new, detached workspace.
+Tabs can be freely dragged between workspaces, (or out onto the desktop if you are using
+the Gtk widget set), forming a new, detached workspace.
 
 In its default configuration, Ginga starts up with a
 single row (horizontal) panel of three workspaces, as shown in
@@ -36,9 +36,9 @@ This panel is sandwiched vertically between a menu bar and a status bar.
    :width: 100%
    :align: center
 
-The layout of the workspaces is controlled by a table in the Ginga
-startup script.  By changing this table the layout can be substantially
-altered. 
+The layout of the workspaces is controlled by a 
+table in the Ginga startup script (see :ref:`ch-customization`).
+By changing this table the layout can be substantially altered. 
 
 .. _concepts-channels:
 
@@ -78,7 +78,11 @@ opening a new image.
 
 Many preferences in Ginga are set on a per-channel basis.  A new channel
 will generally "inherit" the settings for the generic "Image"
-channel until new preferences are defined and saved.
+channel until new preferences are defined and saved. If you create a 
+new channel and have already saved preferences for a channel with that
+name, it will adopt those preferences. Thus you can set up channels 
+configured for certain telescopes or types of data and easily reuse
+them in later sessions.
 
 .. _concepts_plugins:
 
