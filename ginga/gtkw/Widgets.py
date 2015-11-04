@@ -57,6 +57,9 @@ class WidgetBase(Callback.Callbacks):
         font = GtkHelp.get_font(font_family, point_size)
         return font
 
+    def no_expand(self):
+        pass
+
 # BASIC WIDGETS
 
 class TextEntry(WidgetBase):
@@ -230,7 +233,7 @@ class Label(WidgetBase):
             self.make_callback('activated')
             return True
 
-        elif event.button == 3:
+        elif event.button == 3 and self.menu is not None:
             menu_w = self.menu.get_widget()
             if gtksel.have_gtk3:
                 return menu_w.popup(None, None, None, None,
@@ -238,8 +241,6 @@ class Label(WidgetBase):
             else:
                 return menu_w.popup(None, None, None,
                                     event.button, event.time)
-            return True
-
         return False
 
     def get_text(self):
@@ -495,6 +496,48 @@ class RadioButton(WidgetBase):
     def get_state(self):
         return self.widget.get_active()
 
+
+class Image(WidgetBase):
+    def __init__(self, native_image=None, style='normal', menu=None):
+        super(Image, self).__init__()
+
+        if native_image is None:
+            native_image = gtk.Image()
+        self.image = native_image
+        self.image.set_property("has-tooltip", True)
+        evbox = gtk.EventBox()
+        evbox.add(self.image)
+        evbox.connect("button-press-event", self._cb_redirect1)
+        evbox.connect("button-release-event", self._cb_redirect2)
+        self._action = None
+        self.menu = menu
+        self.widget = evbox
+
+        self.enable_callback('activated')
+
+    def _cb_redirect1(self, widget, event):
+        if event.type == gtk.gdk.BUTTON_PRESS:
+            if event.button == 1:
+                self._action = 'click'
+
+            elif event.button == 3 and self.menu is not None:
+                menu_w = self.menu.get_widget()
+                if gtksel.have_gtk3:
+                    return menu_w.popup(None, None, None, None,
+                                        event.button, event.time)
+                else:
+                    return menu_w.popup(None, None, None,
+                                        event.button, event.time)
+
+    def _cb_redirect2(self, widget, event):
+        if event.type == gtk.gdk.BUTTON_RELEASE:
+            if (event.button == 1) and (self._action == 'click'):
+                self._action = None
+                self.make_callback('activated')
+
+    def _set_image(self, native_image):
+        self.image.set_from_pixbuf(native_image.get_pixbuf())
+
 class ProgressBar(WidgetBase):
     def __init__(self):
         super(ProgressBar, self).__init__()
@@ -564,6 +607,13 @@ class ContainerBase(WidgetBase):
     def get_children(self):
         return self.children
 
+    def set_margins(self, left, right, top, bottom):
+        # TODO: can this be made more accurate?
+        self.widget.set_border_width(left)
+
+    def set_border_width(self, pix):
+        self.widget.set_border_width(pix)
+
 
 class Box(ContainerBase):
     def __init__(self, orientation='horizontal'):
@@ -576,13 +626,6 @@ class Box(ContainerBase):
 
     def set_spacing(self, val):
         self.widget.set_spacing(val)
-
-    def set_margins(self, left, right, top, bottom):
-        # TODO: can this be made more accurate?
-        self.widget.set_border_width(left)
-
-    def set_border_width(self, pix):
-        self.widget.set_border_width(pix)
 
     def add_widget(self, child, stretch=0.0):
         self.add_ref(child)
@@ -696,11 +739,30 @@ class ScrollArea(ContainerBase):
         sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
         self.widget = sw
 
+        self.enable_callback('configure')
+        sw.connect("size_allocate", self._resize_cb)
+
+    def _resize_cb(self, widget, allocation):
+        rect = widget.get_allocation()
+        x, y, width, height = rect.x, rect.y, rect.width, rect.height
+        self.make_callback('configure', width, height)
+        return True
+
     def set_widget(self, child):
         self.remove_all()
         self.add_ref(child)
         self.widget.add_with_viewport(child.get_widget())
         self.widget.show_all()
+
+    def scroll_to_end(self, vertical=True, horizontal=False):
+        if vertical:
+            adj_w = self.widget.get_vadjustment()
+            maxv = adj_w.get_upper()
+            adj_w.set_value(maxv)
+        if horizontal:
+            adj_w = self.widget.get_hadjustment()
+            maxv = adj_w.get_upper()
+            adj_w.set_value(maxv)
 
 
 class Splitter(ContainerBase):

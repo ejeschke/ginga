@@ -63,6 +63,11 @@ class WidgetBase(Callback.Callbacks):
         font = QtHelp.get_font(font_family, point_size)
         return font
 
+    def no_expand(self):
+        self.widget.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed,
+                                                    QtGui.QSizePolicy.Fixed))
+
+
 # BASIC WIDGETS
 
 class TextEntry(WidgetBase):
@@ -461,6 +466,43 @@ class RadioButton(WidgetBase):
         return self.widget.isChecked()
 
 
+class Image(WidgetBase):
+    def __init__(self, native_image=None, style='normal', menu=None):
+        super(Image, self).__init__()
+
+        lbl = QtGui.QLabel()
+        self.widget = lbl
+        if native_image is not None:
+            self._set_image(native_image)
+
+        lbl.mousePressEvent = self._cb_redirect
+
+        if style == 'clickable':
+            lbl.setSizePolicy(QtGui.QSizePolicy.Minimum,
+                              QtGui.QSizePolicy.Minimum)
+            #lbl.setFrameStyle(QtGui.QFrame.Box | QtGui.QFrame.Raised)
+
+        if menu is not None:
+            lbl.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+            menu_w = menu.get_widget()
+
+            def on_context_menu(point):
+                menu_w.exec_(lbl.mapToGlobal(point))
+
+            lbl.customContextMenuRequested.connect(on_context_menu)
+
+        self.enable_callback('activated')
+
+    def _cb_redirect(self, event):
+        buttons = event.buttons()
+        if buttons & QtCore.Qt.LeftButton:
+            self.make_callback('activated')
+
+    def _set_image(self, native_image):
+        pixmap = QPixmap.fromImage(native_image)
+        self.widget.setPixmap(pixmap)
+
+
 class ProgressBar(WidgetBase):
     def __init__(self):
         super(ProgressBar, self).__init__()
@@ -518,6 +560,12 @@ class ContainerBase(WidgetBase):
     def get_children(self):
         return self.children
 
+    def set_margins(self, left, right, top, bottom):
+        self.layout.setContentsMargins(left, right, top, bottom)
+
+    def set_border_width(self, pix):
+        self.layout.setContentsMargins(pix, pix, pix, pix)
+
 class Box(ContainerBase):
     def __init__(self, orientation='horizontal'):
         super(Box, self).__init__()
@@ -545,13 +593,6 @@ class Box(ContainerBase):
     def set_spacing(self, val):
         self.layout.setSpacing(val)
 
-    def set_margins(self, left, right, top, bottom):
-        self.layout.setContentsMargins(left, right, top, bottom)
-
-    def set_border_width(self, pix):
-        self.layout.setContentsMargins(pix, pix, pix, pix)
-
-
 class HBox(Box):
     def __init__(self):
         super(HBox, self).__init__(orientation='horizontal')
@@ -567,6 +608,7 @@ class Frame(ContainerBase):
         self.widget = QtGui.QFrame()
         self.widget.setFrameStyle(QtGui.QFrame.Box | QtGui.QFrame.Raised)
         vbox = QtGui.QVBoxLayout()
+        self.layout = vbox
         # because of ridiculous defaults
         vbox.setContentsMargins(2, 2, 2, 2)
         self.widget.setLayout(vbox)
@@ -616,6 +658,7 @@ class Expander(ContainerBase):
         vbox = QtGui.QVBoxLayout()
         vbox.setContentsMargins(0, 0, 0, 0)
         vbox.setSpacing(0)
+        self.layout = vbox
 
         self.toggle = QtGui.QPushButton(Expander.r_arrow, title)
         self.toggle.setStyleSheet(Expander.widget_style)
@@ -717,10 +760,28 @@ class ScrollArea(ContainerBase):
 
         self.widget = QtGui.QScrollArea()
         self.widget.setWidgetResizable(True)
+        self.widget.resizeEvent = self._resize_cb
+
+        self.enable_callback('configure')
+
+    def _resize_cb(self, event):
+        rect = self.widget.geometry()
+        x1, y1, x2, y2 = rect.getCoords()
+        width = x2 - x1
+        height = y2 - y1
+        self.make_callback('configure', width, height)
 
     def set_widget(self, child):
         self.add_ref(child)
         self.widget.setWidget(child.get_widget())
+
+    def scroll_to_end(self, vertical=True, horizontal=False):
+        area = self.widget
+        if vertical:
+            area.verticalScrollBar().setValue(area.verticalScrollBar().maximum())
+        if horizontal:
+            area.horizontalScrollBar().setValue(area.horizontalScrollBar().maximum())
+
 
 class Splitter(ContainerBase):
     def __init__(self, orientation='horizontal'):
@@ -748,19 +809,20 @@ class GridBox(ContainerBase):
 
         w = QtGui.QWidget()
         layout = QtGui.QGridLayout()
+        self.layout = layout
         w.setLayout(layout)
         self.widget = w
 
     def set_row_spacing(self, val):
-        self.widget.layout().setVerticalSpacing(val)
+        self.layout.setVerticalSpacing(val)
 
     def set_column_spacing(self, val):
-        self.widget.layout().setHorizontalSpacing(val)
+        self.layout.setHorizontalSpacing(val)
 
     def add_widget(self, child, row, col, stretch=0):
         self.add_ref(child)
         w = child.get_widget()
-        self.widget.layout().addWidget(w, row, col)
+        self.layout.addWidget(w, row, col)
 
 
 class ToolbarAction(WidgetBase):

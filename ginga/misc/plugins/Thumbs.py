@@ -1,5 +1,5 @@
 #
-# ThumbsBase.py -- Thumbnail plugin base class for Ginga
+# Thumbs.py -- Thumbs plugin for Ginga image viewer
 #
 # Eric Jeschke (eric@naoj.org)
 #
@@ -14,13 +14,15 @@ import threading
 from ginga import GingaPlugin
 from ginga.misc import Bunch, Future
 from ginga.util import iohelper
+from ginga.misc import Bunch
+from ginga.gw import GwHelp, Widgets, Viewers
 
 
-class ThumbsBase(GingaPlugin.GlobalPlugin):
+class Thumbs(GingaPlugin.GlobalPlugin):
 
     def __init__(self, fv):
         # superclass defines some variables for us, like logger
-        super(ThumbsBase, self).__init__(fv)
+        super(Thumbs, self).__init__(fv)
 
         # For thumbnail pane
         self.thumbDict = {}
@@ -28,6 +30,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         self.thumbRowList = []
         self.thumbNumRows = 20
         self.thumbNumCols = 1
+        self.thumbRowCount = 0
         self.thumbColCount = 0
         # distance in pixels between thumbs
         self.thumbSep = 15
@@ -68,6 +71,47 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         fv.add_callback('active-image', self.focus_cb)
 
         self.gui_up = False
+
+    def build_gui(self, container):
+        width, height = 300, 300
+        cm, im = self.fv.cm, self.fv.im
+
+        tg = Viewers.ImageViewCanvas(logger=self.logger)
+        tg.configure_window(200, 200)
+        tg.enable_autozoom('on')
+        tg.set_autocut_params('zscale')
+        tg.enable_autocuts('override')
+        tg.enable_auto_orient(True)
+        tg.defer_redraw = False
+        tg.set_bg(0.7, 0.7, 0.7)
+        self.thumb_generator = tg
+
+        sw = Widgets.ScrollArea()
+        sw.add_callback('configure', self.thumbpane_resized_cb)
+
+        # Create thumbnails pane
+        vbox = Widgets.GridBox()
+        vbox.set_margins(4, 4, 4, 4)
+        vbox.set_column_spacing(14)
+        self.w.thumbs = vbox
+
+        sw.set_widget(vbox)
+        self.w.thumbs_scroll = sw
+
+        container.add_widget(sw, stretch=1)
+
+        captions = (('Auto scroll', 'checkbutton', 'Clear', 'button'),)
+        w, b = Widgets.build_info(captions)
+        self.w.update(b)
+
+        b.auto_scroll.set_tooltip("Scroll the thumbs window when new images arrive")
+        b.clear.set_tooltip("Remove all current thumbnails")
+        b.clear.add_callback('activated', lambda w: self.clear())
+        auto_scroll = self.settings.get('auto_scroll', True)
+        b.auto_scroll.set_state(auto_scroll)
+        container.add_widget(w, stretch=0)
+
+        self.gui_up = True
 
     def get_thumb_key(self, chname, imname, path):
         if not (path is None):
@@ -163,7 +207,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
             if thumbkey not in self.thumbDict:
                 return
 
-            self.clearWidget()
+            self.clear_widget()
             del self.thumbDict[thumbkey]
             self.thumbList.remove(thumbkey)
 
@@ -182,8 +226,8 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
             self.reorder_thumbs()
 
 
-    def thumbpane_resized(self, width, height):
-        self.logger.debug("reordering thumbs width=%d" % (width))
+    def thumbpane_resized_cb(self, widget, width, height):
+        self.logger.info("reordering thumbs width=%d" % (width))
 
         with self.thmblock:
             cols = max(1, width // (self.thumbWidth + self.thumbSep))
@@ -191,7 +235,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
                 # If we have not actually changed the possible number of columns
                 # then don't do anything
                 return False
-            self.logger.debug("column count is now %d" % (cols))
+            self.logger.info("column count is now %d" % (cols))
             self.thumbNumCols = cols
 
         self.reorder_thumbs()
@@ -251,7 +295,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
 
     def clear(self):
         with self.thmblock:
-            self.clearWidget()
+            self.clear_widget()
             self.thumbList = []
             self.thumbDict = {}
         self.reorder_thumbs()
@@ -396,7 +440,7 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         self.logger.info("deleting thumbs for channel '%s'" % (
             chname_del))
         with self.thmblock:
-            self.clearWidget()
+            self.clear_widget()
             newThumbList = []
             for thumbkey in self.thumbList:
                 chname = thumbkey[0].lower()
@@ -537,5 +581,129 @@ class ThumbsBase(GingaPlugin.GlobalPlugin):
         thumbpath = os.path.join(thumbdir, thumb_fname + ".jpg")
         self.logger.debug("thumb path is '%s'" % (thumbpath))
         return thumbpath
+
+    def insert_thumbnail(self, imgwin, thumbkey, thumbname, chname, name, path,
+                         thumbpath, metadata, image_future):
+
+        # make a context menu
+        menu = self._mk_context_menu(thumbkey, chname, name, path, image_future)
+
+        thumbw = Widgets.Image(native_image=imgwin, menu=menu,
+                               style='clickable')
+        # set the load callback
+        thumbw.add_callback('activated',
+                            lambda w: self.load_file(thumbkey, chname, name,
+                                                     path, image_future))
+
+        # make a tool tip
+        text = self.query_thumb(thumbkey, name, metadata)
+        thumbw.set_tooltip(text)
+
+        vbox = Widgets.VBox()
+        vbox.set_margins(0, 0, 0, 0)
+        vbox.set_spacing(0)
+        namelbl = Widgets.Label(text=thumbname, halign='left')
+        vbox.add_widget(namelbl, stretch=0)
+        vbox.add_widget(thumbw, stretch=0)
+        # special hack for Qt widgets
+        vbox.no_expand()
+
+        bnch = Bunch.Bunch(widget=vbox, image=thumbw,
+                           name=name, imname=name,
+                           chname=chname, path=path, thumbpath=thumbpath,
+                           image_future=image_future)
+
+        with self.thmblock:
+            self.thumbDict[thumbkey] = bnch
+            self.thumbList.append(thumbkey)
+
+            sort_order = self.settings.get('sort_order', None)
+            if sort_order:
+                self.thumbList.sort()
+                self.reorder_thumbs()
+                return
+
+            self.w.thumbs.add_widget(vbox,
+                                     self.thumbRowCount, self.thumbColCount)
+            self.thumbColCount = (self.thumbColCount + 1) % self.thumbNumCols
+            if self.thumbColCount == 0:
+                self.thumbRowCount += 1
+
+        # force scroll to bottom of thumbs, if checkbox is set
+        scrollp = self.w.auto_scroll.get_state()
+        if scrollp:
+            self.fv.update_pending()
+            self.w.thumbs_scroll.scroll_to_end()
+        self.logger.debug("added thumb for %s" % (name))
+
+    def clear_widget(self):
+        """
+        Clears the thumbnail display widget of all thumbnails, but does
+        not remove them from the thumbDict or thumbList.
+        """
+        with self.thmblock:
+            self.w.thumbs.remove_all()
+
+    def reorder_thumbs(self):
+        self.logger.debug("Reordering thumb grid")
+        with self.thmblock:
+            self.clear_widget()
+
+            # Add thumbs back in by rows
+            self.thumbColCount = 0
+            self.thumbRowCount = 0
+            for thumbkey in self.thumbList:
+                bnch = self.thumbDict[thumbkey]
+                self.w.thumbs.add_widget(bnch.widget,
+                                         self.thumbRowCount, self.thumbColCount)
+                self.thumbColCount = (self.thumbColCount + 1) % self.thumbNumCols
+                if self.thumbColCount == 0:
+                    self.thumbRowCount += 1
+
+        self.logger.debug("Reordering done")
+
+
+    def query_thumb(self, thumbkey, name, metadata):
+        result = []
+        for kwd in self.keywords:
+            try:
+                text = kwd + ': ' + str(metadata[kwd])
+            except Exception as e:
+                self.logger.warn("Couldn't determine %s name: %s" % (
+                    kwd, str(e)))
+                text = "%s: N/A" % (kwd)
+            result.append(text)
+
+        return '\n'.join(result)
+
+    def _mk_context_menu(self, thumbkey, chname, name, path, image_future):
+        menu = Widgets.Menu()
+        item = menu.add_name("Display")
+        item.add_callback('activated',
+                          lambda w: self.load_file(thumbkey, chname, name,
+                                                      path, image_future))
+        menu.add_separator()
+        item = menu.add_name("Remove")
+        item.add_callback('activated',
+                          lambda w: self.fv.remove_image_by_name(
+                              chname, name, impath=path))
+
+        return menu
+
+    def update_thumbnail(self, thumbkey, imgwin, name, metadata):
+        with self.thmblock:
+            try:
+                bnch = self.thumbDict[thumbkey]
+            except KeyError:
+                self.logger.debug("No thumb found for %s; not updating thumbs" % (
+                    str(thumbkey)))
+                return
+
+            self.logger.info("updating thumbnail '%s'" % (name))
+            bnch.image._set_image(imgwin)
+            self.logger.debug("update finished.")
+
+    def __str__(self):
+        return 'thumbs'
 
 #END
