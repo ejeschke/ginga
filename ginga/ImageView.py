@@ -122,7 +122,7 @@ class ImageViewBase(Callback.Callbacks):
         # for auto cut levels
         self.autocuts_options = ('on', 'override', 'once', 'off')
         self.t_.addDefaults(autocuts='override', autocut_method='zscale',
-                            autocut_params={})
+                            autocut_params=[])
         for name in ('autocut_method', 'autocut_params'):
             self.t_.getSetting(name).add_callback('set', self.auto_levels_cb)
 
@@ -1694,7 +1694,6 @@ class ImageViewBase(Callback.Callbacks):
         # Did we change the method?
         method = self.t_['autocut_method']
         params = self.t_.get('autocut_params', [])
-        # TEMP: params is stored as a list of tuples
         params = dict(params)
 
         if method != str(self.autocuts):
