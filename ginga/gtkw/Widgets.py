@@ -1179,7 +1179,7 @@ def get_orientation(container):
         return 'vertical'
     (wd, ht) = container.size
     ## wd, ht = container.get_size()
-    print('container size is %dx%d' % (wd, ht))
+    #print('container size is %dx%d' % (wd, ht))
     if wd < ht:
         return 'vertical'
     else:
