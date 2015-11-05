@@ -526,6 +526,81 @@ class StatusBar(WidgetBase):
         # remove message in about 10 seconds
         self.widget.showMessage(msg_str, 10000)
 
+class TreeView(WidgetBase):
+    def __init__(self, auto_expand=False):
+        super(TreeView, self).__init__()
+
+        tv = QtGui.QTreeWidget()
+        self.widget = tv
+        tv.itemSelectionChanged.connect(self._cb_redirect)
+        self.auto_expand = auto_expand
+        self.columns = []
+
+        self.enable_callback('selected')
+
+    def set_headers(self, columns):
+        self.columns = columns
+        treeview = self.widget
+        treeview.setColumnCount(len(columns))
+        treeview.setSortingEnabled(True)
+        # Sort increasing by default
+        treeview.sortByColumn(0, QtCore.Qt.AscendingOrder)
+        treeview.setAlternatingRowColors(True)
+        # speeds things up a bit
+        treeview.setUniformRowHeights(True)
+
+        # create the column headers
+        treeview.setHeaderLabels(columns)
+
+    def set_tree(self, tree_dict):
+        toclist = list(tree_dict.keys())
+        toclist.sort()
+
+        self.clear()
+
+        for key in toclist:
+            topitem = QtGui.QTreeWidgetItem(self.widget, [key])
+            topitem.setFirstColumnSpanned(True)
+            self.widget.addTopLevelItem(topitem)
+
+            item_dict = tree_dict[key]
+            item_list = list(item_dict.keys())
+            item_list.sort(key=lambda s: s.lower())
+
+            for item_name in item_list:
+                bnch = item_dict[item_name]
+                l = [ bnch[hdr] for hdr in self.columns ]
+                item = QtGui.QTreeWidgetItem(topitem, l)
+                topitem.addChild(item)
+
+        # User wants auto expand?
+        if self.auto_expand:
+            self.widget.expandAll()
+
+    def _cb_redirect(self):
+        items = list(self.widget.selectedItems())
+        if len(items) > 0:
+            item = items[0]
+            item_name = str(item.text(0))
+            parent = item.parent()
+            if parent:
+                top_name = str(parent.text(0))
+                self.make_callback('selected', (top_name, item_name))
+
+    def clear(self):
+        self.widget.clear()
+
+    def add_top_level(self, key):
+        item = QtGui.QTreeWidgetItem(self.widget, [key])
+        item.setFirstColumnSpanned(True)
+        self.widget.addTopLevelItem(item)
+        return item
+
+    def add_row(self, item, l):
+        subitem = QtGui.QTreeWidgetItem(item, l)
+        item.addChild(subitem)
+        self.widget.scrollToItem(subitem)
+
 
 # CONTAINERS
 

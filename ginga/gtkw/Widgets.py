@@ -579,6 +579,156 @@ class StatusBar(WidgetBase):
                                   self.widget.remove_all, self.ctx_id)
 
 
+class TreeView(WidgetBase):
+    def __init__(self, auto_expand=False):
+        super(TreeView, self).__init__()
+
+        self.auto_expand = auto_expand
+
+        # this widget has a built in scrollarea to match Qt functionality
+        sw = gtk.ScrolledWindow()
+        sw.set_border_width(2)
+        sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+        self.widget = sw
+
+        tv = gtk.TreeView()
+        self.tv = tv
+        sw.add(self.tv)
+        tv.connect('cursor-changed', self._cb_redirect)
+        self.columns = []
+
+        self.enable_callback('selected')
+
+    def set_headers(self, columns):
+        self.columns = columns
+
+        # make sort functions
+        self.cell_sort_funcs = []
+        for idx, hdr in enumerate(self.columns):
+            self.cell_sort_funcs.append(self._mksrtfnN(idx))
+
+        # Set up headers
+        tvcolumn = [None] * len(self.columns)
+        for n in range(0, len(self.columns)):
+            cell = gtk.CellRendererText()
+            cell.set_padding(2, 0)
+            header = self.columns[n]
+            tvc = gtk.TreeViewColumn(header, cell)
+            tvc.set_resizable(True)
+            tvc.connect('clicked', self.sort_cb, n)
+            tvc.set_clickable(True)
+            tvcolumn[n] = tvc
+            if n == 0:
+                fn_data = self._mkcolfn0(0)
+                ## cell.set_property('xalign', 1.0)
+            else:
+                fn_data = self._mkcolfnN(n)
+            tvcolumn[n].set_cell_data_func(cell, fn_data)
+            self.tv.append_column(tvcolumn[n])
+
+        treemodel = gtk.TreeStore(object)
+        self.tv.set_fixed_height_mode(False)
+        self.tv.set_model(treemodel)
+        # This speeds up rendering of TreeViews
+        self.tv.set_fixed_height_mode(True)
+
+    def set_tree(self, tree_dict):
+        toclist = list(tree_dict.keys())
+        toclist.sort()
+
+        model = gtk.TreeStore(object)
+        for key in toclist:
+            item = model.append(None, [ key ])
+
+            item_dict = tree_dict[key]
+            item_list = list(item_dict.keys())
+            item_list.sort(key=lambda s: s.lower())
+
+            for item_name in item_list:
+                bnch = item_dict[item_name]
+                l = [ bnch[hdr] for hdr in self.columns ]
+                model.append(item, [ l ])
+
+        self.tv.set_fixed_height_mode(False)
+        self.tv.set_model(model)
+        self.tv.set_fixed_height_mode(True)
+
+        # User wants auto expand?
+        if self.auto_expand:
+            self.tv.expand_all()
+
+    def _cb_redirect(self, treeview):
+        path, column = treeview.get_cursor()
+        model = treeview.get_model()
+        child = model.get_iter(path)
+        parent = model.iter_parent(child)
+        if parent is None:
+            return
+        res = model.get_value(child, 0)
+        item_name = res[0]
+        top_name = model.get_value(parent, 0)
+        self.make_callback('selected', (top_name, item_name))
+
+    def clear(self):
+        model = gtk.TreeStore(object)
+        self.tv.set_model(model)
+
+    def add_top_level(self, key):
+        model = self.tv.get_model()
+        item = model.append(None, [ key ])
+        return item
+
+    def add_row(self, item, l):
+        model = self.tv.get_model()
+        subitem = model.append(item, [ l ])
+        #self.tv.scroll_to_cell(subitem)
+
+    def sort_cb(self, column, idx):
+        treeview = column.get_tree_view()
+        model = treeview.get_model()
+        model.set_sort_column_id(idx, gtk.SORT_ASCENDING)
+        fn = self.cell_sort_funcs[idx]
+        model.set_sort_func(idx, fn)
+        return True
+
+    def _mksrtfnN(self, idx):
+        def fn(*args):
+            model, iter1, iter2 = args[:3]
+            bnch1 = model.get_value(iter1, 0)
+            bnch2 = model.get_value(iter2, 0)
+            if isinstance(bnch1, str):
+                if isinstance(bnch2, str):
+                    return cmp(bnch1.lower(), bnch2.lower())
+                return 0
+            val1, val2 = bnch1[idx], bnch2[idx]
+            if isinstance(val1, str):
+                val1 = val1.lower()
+                val2 = val2.lower()
+            res = cmp(val1, val2)
+            return res
+        return fn
+
+    def _mkcolfn0(self, idx):
+        def fn(*args):
+            column, cell, model, iter = args[:4]
+            bnch = model.get_value(iter, 0)
+            if isinstance(bnch, str):
+                cell.set_property('text', bnch)
+            else:
+                cell.set_property('text', bnch[idx])
+        return fn
+
+    def _mkcolfnN(self, idx):
+        def fn(*args):
+            column, cell, model, iter = args[:4]
+            bnch = model.get_value(iter, 0)
+            if isinstance(bnch, str):
+                cell.set_property('text', '')
+            else:
+                cell.set_property('text', bnch[idx])
+        return fn
+
+
 # CONTAINERS
 
 class ContainerBase(WidgetBase):
