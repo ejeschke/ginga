@@ -43,7 +43,8 @@ class Contents(GingaPlugin.GlobalPlugin):
     def build_gui(self, container):
         # create the Treeview
         always_expand = self.settings.get('always_expand', False)
-        treeview = Widgets.TreeView(auto_expand=always_expand)
+        treeview = Widgets.TreeView(auto_expand=always_expand,
+                                    sortable=True)
         self.treeview = treeview
         headers = [ tup[0] for tup in self.columns ]
         treeview.set_headers(headers)
@@ -83,6 +84,7 @@ class Contents(GingaPlugin.GlobalPlugin):
             bnch[hdr] = str(header.get(key, 'N/A'))
         # name should always be available
         bnch.Name = name
+        bnch.__terminal__ = True
         return bnch
 
     def recreate_toc(self):

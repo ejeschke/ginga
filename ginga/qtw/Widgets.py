@@ -527,14 +527,17 @@ class StatusBar(WidgetBase):
         self.widget.showMessage(msg_str, 10000)
 
 class TreeView(WidgetBase):
-    def __init__(self, auto_expand=False):
+    def __init__(self, auto_expand=False, sortable=False):
         super(TreeView, self).__init__()
+
+        self.auto_expand = auto_expand
+        self.sortable = sortable
 
         tv = QtGui.QTreeWidget()
         self.widget = tv
         tv.itemSelectionChanged.connect(self._cb_redirect)
-        self.auto_expand = auto_expand
         self.columns = []
+        self.tree_index = {}
 
         self.enable_callback('selected')
 
@@ -542,9 +545,10 @@ class TreeView(WidgetBase):
         self.columns = columns
         treeview = self.widget
         treeview.setColumnCount(len(columns))
-        treeview.setSortingEnabled(True)
-        # Sort increasing by default
-        treeview.sortByColumn(0, QtCore.Qt.AscendingOrder)
+        treeview.setSortingEnabled(self.sortable)
+        if self.sortable:
+            # Sort increasing by default
+            treeview.sortByColumn(0, QtCore.Qt.AscendingOrder)
         treeview.setAlternatingRowColors(True)
         # speeds things up a bit
         treeview.setUniformRowHeights(True)
@@ -553,29 +557,42 @@ class TreeView(WidgetBase):
         treeview.setHeaderLabels(columns)
 
     def set_tree(self, tree_dict):
-        toclist = list(tree_dict.keys())
-        toclist.sort()
+
+        if self.sortable:
+            self.widget.setSortingEnabled(False)
 
         self.clear()
 
-        for key in toclist:
-            topitem = QtGui.QTreeWidgetItem(self.widget, [key])
-            topitem.setFirstColumnSpanned(True)
-            self.widget.addTopLevelItem(topitem)
+        for key in tree_dict:
+            self._set_subtree(0, self.widget, key, tree_dict[key])
 
-            item_dict = tree_dict[key]
-            item_list = list(item_dict.keys())
-            item_list.sort(key=lambda s: s.lower())
-
-            for item_name in item_list:
-                bnch = item_dict[item_name]
-                l = [ bnch[hdr] for hdr in self.columns ]
-                item = QtGui.QTreeWidgetItem(topitem, l)
-                topitem.addChild(item)
+        if self.sortable:
+            self.widget.setSortingEnabled(True)
 
         # User wants auto expand?
         if self.auto_expand:
             self.widget.expandAll()
+
+    def _set_subtree(self, level, parent_item, key, node):
+
+        if '__terminal__' in node:
+            # terminal node
+            l = [ node[hdr] for hdr in self.columns ]
+            item = QtGui.QTreeWidgetItem(parent_item, l)
+            if level == 0:
+                parent_item.addTopLevelItem(item)
+            else:
+                parent_item.addChild(item)
+
+        else:
+            item = QtGui.QTreeWidgetItem(parent_item, [key])
+            if level == 0:
+                parent_item.addTopLevelItem(item)
+            else:
+                parent_item.addChild(item)
+
+            for key in node:
+                self._set_subtree(level+1, item, key, node[key])
 
     def _cb_redirect(self):
         items = list(self.widget.selectedItems())
@@ -589,14 +606,17 @@ class TreeView(WidgetBase):
 
     def clear(self):
         self.widget.clear()
+        self.tree_index = {}
 
     def add_top_level(self, key):
+        """DO NOT USE!  TO BE DEPRECATED"""
         item = QtGui.QTreeWidgetItem(self.widget, [key])
         item.setFirstColumnSpanned(True)
         self.widget.addTopLevelItem(item)
         return item
 
     def add_row(self, item, l):
+        """DO NOT USE!  TO BE DEPRECATED"""
         subitem = QtGui.QTreeWidgetItem(item, l)
         item.addChild(subitem)
         self.widget.scrollToItem(subitem)

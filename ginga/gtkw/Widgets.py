@@ -580,12 +580,13 @@ class StatusBar(WidgetBase):
 
 
 class TreeView(WidgetBase):
-    def __init__(self, auto_expand=False):
+    def __init__(self, auto_expand=False, sortable=False):
         super(TreeView, self).__init__()
 
         self.auto_expand = auto_expand
+        self.sortable = sortable
 
-        # this widget has a built in scrollarea to match Qt functionality
+        # this widget has a built in ScrollArea to match Qt functionality
         sw = gtk.ScrolledWindow()
         sw.set_border_width(2)
         sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
@@ -615,8 +616,9 @@ class TreeView(WidgetBase):
             header = self.columns[n]
             tvc = gtk.TreeViewColumn(header, cell)
             tvc.set_resizable(True)
-            tvc.connect('clicked', self.sort_cb, n)
-            tvc.set_clickable(True)
+            if self.sortable:
+                tvc.connect('clicked', self.sort_cb, n)
+                tvc.set_clickable(True)
             tvcolumn[n] = tvc
             if n == 0:
                 fn_data = self._mkcolfn0(0)
@@ -633,21 +635,11 @@ class TreeView(WidgetBase):
         self.tv.set_fixed_height_mode(True)
 
     def set_tree(self, tree_dict):
-        toclist = list(tree_dict.keys())
-        toclist.sort()
 
         model = gtk.TreeStore(object)
-        for key in toclist:
-            item = model.append(None, [ key ])
 
-            item_dict = tree_dict[key]
-            item_list = list(item_dict.keys())
-            item_list.sort(key=lambda s: s.lower())
-
-            for item_name in item_list:
-                bnch = item_dict[item_name]
-                l = [ bnch[hdr] for hdr in self.columns ]
-                model.append(item, [ l ])
+        for key in tree_dict:
+            self._set_subtree(0, model, None, key, tree_dict[key])
 
         self.tv.set_fixed_height_mode(False)
         self.tv.set_model(model)
@@ -656,6 +648,19 @@ class TreeView(WidgetBase):
         # User wants auto expand?
         if self.auto_expand:
             self.tv.expand_all()
+
+    def _set_subtree(self, level, model, parent_item, key, node):
+
+        if '__terminal__' in node:
+            # terminal node
+            l = [ node[hdr] for hdr in self.columns ]
+            model.append(parent_item, [ l ])
+
+        else:
+            item = model.append(None, [ key ])
+
+            for key in node:
+                self._set_subtree(level+1, model, item, key, node[key])
 
     def _cb_redirect(self, treeview):
         path, column = treeview.get_cursor()
@@ -674,11 +679,13 @@ class TreeView(WidgetBase):
         self.tv.set_model(model)
 
     def add_top_level(self, key):
+        """DO NOT USE!  TO BE DEPRECATED"""
         model = self.tv.get_model()
         item = model.append(None, [ key ])
         return item
 
     def add_row(self, item, l):
+        """DO NOT USE!  TO BE DEPRECATED"""
         model = self.tv.get_model()
         subitem = model.append(item, [ l ])
         #self.tv.scroll_to_cell(subitem)
