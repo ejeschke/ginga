@@ -152,12 +152,16 @@ class GingaView(GtkMain.GtkMain):
     def getPluginManager(self, logger, fitsview, ds, mm):
         return PluginManager.PluginManager(logger, fitsview, ds, mm)
 
+    def get_icon(self, icondir, filename):
+        iconpath = os.path.join(icondir, filename)
+        pixbuf = gtksel.pixbuf_new_from_file_at_size(iconpath, 24, 24)
+        return pixbuf
+
     def make_button(self, name, wtyp, icon=None, tooltip=None):
         image = None
         if icon:
-            iconfile = os.path.join(self.iconpath, icon+icon_ext)
             try:
-                pixbuf = gtksel.pixbuf_new_from_file_at_size(iconfile, 24, 24)
+                pixbuf = self.get_icon(self.iconpath, icon+icon_ext)
                 if pixbuf is not None:
                     image = gtk.image_new_from_pixbuf(pixbuf)
             except:

@@ -657,8 +657,11 @@ class ContainerBase(WidgetBase):
     def render(self):
         return self.render_children()
 
-    def render_children(self, ifx=' '):
-        return ifx.join(map(lambda child: child.render(), self.children))
+    def render_children(self, ifx=' ', spacing=0, spacing_side='right'):
+        def _render_child(child):
+            return '''<span style="margin-%s: %dpx;">%s</span>''' % (
+                spacing_side, spacing, child.render())
+        return ifx.join(map(_render_child, self.children))
 
 class Box(ContainerBase):
     def __init__(self, orientation='horizontal'):
@@ -687,11 +690,13 @@ class Box(ContainerBase):
         style_d = dict(left=self.margins[0], right=self.margins[1],
                        top=self.margins[2], bottom=self.margins[3])
         if self.orientation == 'horizontal':
-            d['style'] = "display: table-cell; vertical-align: middle; padding: %(left)dpx %(right)dpx %(top)dpx %(bottom)dpx;" % style_d
-            d['content'] = self.render_children()
+            d['style'] = "display: flex; flex-direction: row; flex-wrap: nowrap; justify-content: flex-start; margin: %(left)dpx %(right)dpx %(top)dpx%(bottom)dpx;" % style_d
+            d['content'] = self.render_children(spacing=self.spacing,
+                                                spacing_side='right')
         else:
-            d['style'] = "display: table-cell; horizontal-align: middle; padding: %(left)dpx %(right)dpx %(top)dpx %(bottom)dpx;" % style_d
-            d['content'] = self.render_children('<br>')
+            d['style'] = "display: flex; flex-direction: column; flex-wrap: nowrap; justify-content: flex-start; margin: %(left)dpx %(right)dpx %(top)dpx %(bottom)dpx;" % style_d
+            d['content'] = self.render_children(spacing=self.spacing,
+                                                spacing_side='bottom')
 
         return '''<div id=%(id)s style="%(style)s">%(content)s</div>''' % d
 

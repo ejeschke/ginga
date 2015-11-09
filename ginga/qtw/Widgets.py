@@ -63,9 +63,8 @@ class WidgetBase(Callback.Callbacks):
         font = QtHelp.get_font(font_family, point_size)
         return font
 
-    def no_expand(self):
-        self.widget.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed,
-                                                    QtGui.QSizePolicy.Fixed))
+    def no_expand(self, horizontal=0, vertical=0):
+        self.widget.setSizePolicy(QtGui.QSizePolicy(horizontal, vertical))
 
 
 # BASIC WIDGETS
@@ -527,22 +526,38 @@ class StatusBar(WidgetBase):
         self.widget.showMessage(msg_str, 10000)
 
 class TreeView(WidgetBase):
-    def __init__(self, auto_expand=False, sortable=False):
+    def __init__(self, auto_expand=False, sortable=False,
+                 selection='single'):
         super(TreeView, self).__init__()
 
         self.auto_expand = auto_expand
         self.sortable = sortable
+        self.selection = selection
+        self.levels = 1
+        self.leaf_key = None
+        self.leaf_idx = 0
 
         tv = QtGui.QTreeWidget()
         self.widget = tv
-        tv.itemSelectionChanged.connect(self._cb_redirect)
+        tv.setSelectionBehavior(QtGui.QAbstractItemView.SelectRows)
+        if selection == 'multiple':
+            tv.setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection)
+        tv.itemDoubleClicked.connect(self._cb_redirect)
+        tv.itemSelectionChanged.connect(self._selection_cb)
         self.columns = []
-        self.tree_index = {}
+        self.datakeys = []
+        # shadow index
+        self.shadow = {}
 
-        self.enable_callback('selected')
+        for cbname in ('selected', 'activated'):
+            self.enable_callback(cbname)
 
-    def set_headers(self, columns):
+    def setup_table(self, columns, levels, leaf_key):
+        self.clear()
+
         self.columns = columns
+        self.levels = levels
+        self.leaf_key = leaf_key
         treeview = self.widget
         treeview.setColumnCount(len(columns))
         treeview.setSortingEnabled(self.sortable)
@@ -554,17 +569,30 @@ class TreeView(WidgetBase):
         treeview.setUniformRowHeights(True)
 
         # create the column headers
-        treeview.setHeaderLabels(columns)
+        if not isinstance(columns[0], str):
+            # columns specifies a mapping
+            headers = [ col[0] for col in columns ]
+            datakeys = [ col[1] for col in columns ]
+        else:
+            headers = datakeys = columns
+
+        self.datakeys = datakeys
+        self.leaf_idx = datakeys.index(self.leaf_key)
+
+        treeview.setHeaderLabels(headers)
 
     def set_tree(self, tree_dict):
+        self.clear()
+        self.add_tree(tree_dict)
+
+    def add_tree(self, tree_dict):
 
         if self.sortable:
             self.widget.setSortingEnabled(False)
 
-        self.clear()
-
         for key in tree_dict:
-            self._set_subtree(0, self.widget, key, tree_dict[key])
+            self._add_subtree(1, self.shadow,
+                              self.widget, key, tree_dict[key])
 
         if self.sortable:
             self.widget.setSortingEnabled(True)
@@ -573,53 +601,121 @@ class TreeView(WidgetBase):
         if self.auto_expand:
             self.widget.expandAll()
 
-    def _set_subtree(self, level, parent_item, key, node):
+    def _add_subtree(self, level, shadow, parent_item, key, node):
 
-        if '__terminal__' in node:
-            # terminal node
-            l = [ node[hdr] for hdr in self.columns ]
-            item = QtGui.QTreeWidgetItem(parent_item, l)
-            if level == 0:
-                parent_item.addTopLevelItem(item)
-            else:
-                parent_item.addChild(item)
+        if level >= self.levels:
+            # leaf node
+            values = [ '' if _key == 'icon' else str(node[_key])
+                       for _key in self.datakeys ]
+            try:
+                bnch = shadow[key]
+                item = bnch.item
+                # TODO: update leaf item
+
+            except KeyError:
+                # new item
+                item = QtGui.QTreeWidgetItem(parent_item, values)
+                if level == 1:
+                    parent_item.addTopLevelItem(item)
+                else:
+                    parent_item.addChild(item)
+
+                shadow[key] = Bunch.Bunch(node=node, item=item, terminal=True)
+
+                # hack for adding an image to a table
+                # TODO: add types for columns
+                if 'icon' in node:
+                    i = self.datakeys.index('icon')
+                    item.setIcon(i, node['icon'])
+
+                # mark cell as non-editable
+                item.setFlags(item.flags() & ~QtCore.Qt.ItemIsEditable)
 
         else:
-            item = QtGui.QTreeWidgetItem(parent_item, [key])
-            if level == 0:
-                parent_item.addTopLevelItem(item)
-            else:
-                parent_item.addChild(item)
+            try:
+                # node already exists
+                bnch = shadow[key]
+                item = bnch.item
+                d = bnch.node
 
+            except KeyError:
+                # new node
+                item = QtGui.QTreeWidgetItem(parent_item, [str(key)])
+                if level == 1:
+                    parent_item.addTopLevelItem(item)
+                else:
+                    parent_item.addChild(item)
+                d = {}
+                shadow[key] = Bunch.Bunch(node=d, item=item, terminal=False)
+
+            # recurse for non-leaf interior node
             for key in node:
-                self._set_subtree(level+1, item, key, node[key])
+                self._add_subtree(level+1, d, item, key, node[key])
 
-    def _cb_redirect(self):
+    def _selection_cb(self):
+        res_dict = self.get_selected()
+        self.make_callback('selected', res_dict)
+
+    def _cb_redirect(self, item):
+        res_dict = {}
+        self._get_item(res_dict, item)
+        self.make_callback('activated', res_dict)
+
+    def _get_path(self, item):
+        if item is None:
+            return []
+
+        if item.childCount() == 0:
+            path_rest = self._get_path(item.parent())
+            myname = item.text(self.leaf_idx)
+            path_rest.append(myname)
+            return path_rest
+
+        myname = item.text(0)
+        path_rest = self._get_path(item.parent())
+        path_rest.append(myname)
+        return path_rest
+
+    def _get_item(self, res_dict, item):
+        # from the QTreeViewItem `item`, return the item via a path
+        # in the dictionary `res_dict`
+        path = self._get_path(item)
+        d, s = res_dict, self.shadow
+        for name in path[:-1]:
+            d = d.setdefault(name, {})
+            s = s[name].node
+
+        dst_key = path[-1]
+        d[dst_key] = s[dst_key].node
+
+    def get_selected(self):
         items = list(self.widget.selectedItems())
-        if len(items) > 0:
-            item = items[0]
-            item_name = str(item.text(0))
-            parent = item.parent()
-            if parent:
-                top_name = str(parent.text(0))
-                self.make_callback('selected', (top_name, item_name))
+        res_dict = {}
+        for item in items:
+            if item.childCount() > 0:
+                # only leaf nodes can be selected
+                continue
+            self._get_item(res_dict, item)
+        return res_dict
 
     def clear(self):
         self.widget.clear()
-        self.tree_index = {}
+        self.shadow = {}
 
-    def add_top_level(self, key):
-        """DO NOT USE!  TO BE DEPRECATED"""
-        item = QtGui.QTreeWidgetItem(self.widget, [key])
-        item.setFirstColumnSpanned(True)
-        self.widget.addTopLevelItem(item)
-        return item
+    def clear_selection(self):
+        self.widget.clearSelection()
 
-    def add_row(self, item, l):
-        """DO NOT USE!  TO BE DEPRECATED"""
-        subitem = QtGui.QTreeWidgetItem(item, l)
-        item.addChild(subitem)
-        self.widget.scrollToItem(subitem)
+    def select_path(self, path):
+        s = self.shadow
+        for name in path[:-1]:
+            s = s[name].node
+        item = s[path[-1]].item
+        self.widget.selectRow(item)
+
+    def scroll_to_path(self, path):
+        #midx = self.widget.indexAt(QtCore.QPoint(idx, 0))
+        #self.widget.scrollTo(midx)
+        pass
 
 
 # CONTAINERS
@@ -788,6 +884,7 @@ class TabWidget(ContainerBase):
 
         nb = QtGui.QTabWidget()
         nb.currentChanged.connect(self._cb_redirect)
+        nb.setUsesScrollButtons(True)
         self.widget = nb
         self.set_tab_position(tabpos)
 
