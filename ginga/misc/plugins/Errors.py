@@ -47,15 +47,16 @@ class Errors(GingaPlugin.GlobalPlugin):
         hbox = Widgets.HBox()
         # Add the time the error occurred
         ts = time.strftime("%m/%d %H:%M:%S", time.localtime())
-        lbl = Widgets.Label(ts)
-        hbox.add_widget(lbl, stretch=1)
+        lbl = Widgets.Label(ts, halign='left')
+        hbox.add_widget(lbl, stretch=0)
+        hbox.add_widget(Widgets.Label(''), stretch=1)
         vbox.add_widget(hbox, stretch=0)
 
         tw = Widgets.TextArea(editable=False, wrap=False)
         tw.set_font(self.msgFont)
 
         tw.set_text(errmsg)
-        vbox.add_widget(tw, stretch=0)
+        vbox.add_widget(tw, stretch=1)
 
         hbox = Widgets.HBox()
         btn = Widgets.Button("Remove")
@@ -63,6 +64,8 @@ class Errors(GingaPlugin.GlobalPlugin):
         hbox.add_widget(btn)
         hbox.add_widget(Widgets.Label(''), stretch=1)
         vbox.add_widget(hbox, stretch=0)
+        # special hack for Qt
+        vbox.no_expand(horizontal=1)
 
         self.msgList.add_widget(vbox, stretch=0)
         # TODO: force scroll to bottom

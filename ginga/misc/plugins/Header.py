@@ -50,9 +50,7 @@ class Header(GingaPlugin.GlobalPlugin):
 
         table = Widgets.TreeView(auto_expand=True)
         self.table = table
-
-        headers = [ tup[0] for tup in self.columns ]
-        table.set_headers(headers)
+        table.setup_table(self.columns, 1, 'key')
 
         vbox.add_widget(table, stretch=1)
 
@@ -87,10 +85,11 @@ class Header(GingaPlugin.GlobalPlugin):
             keys.sort()
         for key in keys:
             card = header.get_card(key)
-            tree_dict[key] = Bunch.Bunch(Keyword=card.key,
-                                         Value=str(card.value),
-                                         Comment=card.comment,
-                                         __terminal__=True)
+            ## tree_dict[key] = Bunch.Bunch(key=card.key,
+            ##                              value=str(card.value),
+            ##                              comment=card.comment,
+            ##                              __terminal__=True)
+            tree_dict[key] = card
 
         table.set_tree(tree_dict)
 

@@ -41,6 +41,12 @@ style "statusbar-style"
 GtkStatusbar::shadow_type = none
 }
 
+style "treeview-style"
+{
+GtkTreeView::odd_row_color = "#00CBFF"
+GtkTreeView::even_row_color = "#90EE90"
+}
+
 style "text"
 {
   fg[NORMAL] = { 1.0, 1.0, 1.0 }

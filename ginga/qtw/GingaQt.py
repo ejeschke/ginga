@@ -327,14 +327,19 @@ class GingaView(QtMain.QtMain):
     # THESE METHODS ARE CALLED FROM OTHER MODULES & OBJECTS
     ####################################################
 
+    def get_icon(self, icondir, filename):
+        iconpath = os.path.join(icondir, filename)
+        image = QImage(iconpath)
+        pixmap = QPixmap.fromImage(image)
+        icon = QIcon(pixmap)
+        return icon
+
     def make_button(self, name, wtyp, icon=None, tooltip=None):
         picon = None
         if icon:
             iconfile = os.path.join(self.iconpath, '%s.png' % icon)
             try:
-                image = QImage(iconfile)
-                pixmap = QPixmap.fromImage(image)
-                picon = QIcon(pixmap)
+                picon = self.get_icon(self.iconpath, '%s.png' % icon)
                 qsize = QtCore.QSize(24, 24)
             except Exception as e:
                 self.logger.error("Error loading icon '%s': %s" % (

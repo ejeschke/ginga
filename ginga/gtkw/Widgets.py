@@ -57,7 +57,8 @@ class WidgetBase(Callback.Callbacks):
         font = GtkHelp.get_font(font_family, point_size)
         return font
 
-    def no_expand(self):
+    def no_expand(self, horizontal=0, vertical=0):
+        # this is for compatibility with Qt widgets
         pass
 
 # BASIC WIDGETS
@@ -580,11 +581,15 @@ class StatusBar(WidgetBase):
 
 
 class TreeView(WidgetBase):
-    def __init__(self, auto_expand=False, sortable=False):
+    def __init__(self, auto_expand=False, sortable=False, selection='single'):
         super(TreeView, self).__init__()
 
         self.auto_expand = auto_expand
         self.sortable = sortable
+        self.selection = selection
+        self.levels = 1
+        self.leaf_key = None
+        self.leaf_idx = 0
 
         # this widget has a built in ScrollArea to match Qt functionality
         sw = gtk.ScrolledWindow()
@@ -595,38 +600,65 @@ class TreeView(WidgetBase):
         tv = gtk.TreeView()
         self.tv = tv
         sw.add(self.tv)
-        tv.connect('cursor-changed', self._cb_redirect)
+        tv.connect('cursor-changed', self._selection_cb)
+        tv.connect('row-activated', self._cb_redirect)
+        # needed to get alternating row colors
+        tv.set_rules_hint(True)
+        if selection == 'multiple':
+            # enable multiple selection
+            treeselection = tv.get_selection()
+            treeselection.set_mode(gtk.SELECTION_MULTIPLE)
         self.columns = []
+        self.datakeys = []
+        # shadow index
+        self.shadow = {}
 
-        self.enable_callback('selected')
+        for cbname in ('selected', 'activated'):
+            self.enable_callback(cbname)
 
-    def set_headers(self, columns):
+    def setup_table(self, columns, levels, leaf_key):
+        self.clear()
+
         self.columns = columns
+        self.levels = levels
+        self.leaf_key = leaf_key
 
+        # create the column headers
+        if not isinstance(columns[0], str):
+            # columns specifies a mapping
+            headers = [ col[0] for col in columns ]
+            datakeys = [ col[1] for col in columns ]
+        else:
+            headers = datakeys = columns
+
+        self.datakeys = datakeys
+        self.leaf_idx = datakeys.index(self.leaf_key)
         # make sort functions
         self.cell_sort_funcs = []
-        for idx, hdr in enumerate(self.columns):
-            self.cell_sort_funcs.append(self._mksrtfnN(idx))
+        for kwd in self.datakeys:
+            self.cell_sort_funcs.append(self._mksrtfnN(kwd))
 
         # Set up headers
-        tvcolumn = [None] * len(self.columns)
         for n in range(0, len(self.columns)):
-            cell = gtk.CellRendererText()
+            kwd = self.datakeys[n]
+            if kwd == 'icon':
+                cell = gtk.CellRendererPixbuf()
+            else:
+                cell = gtk.CellRendererText()
             cell.set_padding(2, 0)
-            header = self.columns[n]
+            header = headers[n]
             tvc = gtk.TreeViewColumn(header, cell)
             tvc.set_resizable(True)
             if self.sortable:
                 tvc.connect('clicked', self.sort_cb, n)
                 tvc.set_clickable(True)
-            tvcolumn[n] = tvc
             if n == 0:
-                fn_data = self._mkcolfn0(0)
+                fn_data = self._mkcolfn0(kwd)
                 ## cell.set_property('xalign', 1.0)
             else:
-                fn_data = self._mkcolfnN(n)
-            tvcolumn[n].set_cell_data_func(cell, fn_data)
-            self.tv.append_column(tvcolumn[n])
+                fn_data = self._mkcolfnN(kwd)
+            tvc.set_cell_data_func(cell, fn_data)
+            self.tv.append_column(tvc)
 
         treemodel = gtk.TreeStore(object)
         self.tv.set_fixed_height_mode(False)
@@ -635,60 +667,135 @@ class TreeView(WidgetBase):
         self.tv.set_fixed_height_mode(True)
 
     def set_tree(self, tree_dict):
+        self.clear()
 
         model = gtk.TreeStore(object)
+        self._add_tree(model, tree_dict)
+
+    def add_tree(self, tree_dict):
+        model = self.tv.get_model()
+        self._add_tree(model, tree_dict)
+
+    def _add_tree(self, model, tree_dict):
+
+        # Hack to get around slow TreeView scrolling with large lists
+        self.tv.set_fixed_height_mode(False)
 
         for key in tree_dict:
-            self._set_subtree(0, model, None, key, tree_dict[key])
+            self._add_subtree(1, self.shadow,
+                              model, None, key, tree_dict[key])
 
-        self.tv.set_fixed_height_mode(False)
         self.tv.set_model(model)
+
         self.tv.set_fixed_height_mode(True)
 
         # User wants auto expand?
         if self.auto_expand:
             self.tv.expand_all()
 
-    def _set_subtree(self, level, model, parent_item, key, node):
+    def _add_subtree(self, level, shadow, model, parent_item, key, node):
 
-        if '__terminal__' in node:
-            # terminal node
-            l = [ node[hdr] for hdr in self.columns ]
-            model.append(parent_item, [ l ])
+        if level >= self.levels:
+            # leaf node
+            try:
+                bnch = shadow[key]
+                item_iter = bnch.item
+                # TODO: update leaf item
+
+            except KeyError:
+                # new item
+                item_iter = model.append(parent_item, [node])
+                shadow[key] = Bunch.Bunch(node=node, item=item_iter,
+                                          terminal=True)
 
         else:
-            item = model.append(None, [ key ])
+            try:
+                # node already exists
+                bnch = shadow[key]
+                item = bnch.item
+                d = bnch.node
 
+            except KeyError:
+                # new node
+                item = model.append(None, [str(key)])
+                d = {}
+                shadow[key] = Bunch.Bunch(node=d, item=item, terminal=False)
+
+            # recurse for non-leaf interior node
             for key in node:
-                self._set_subtree(level+1, model, item, key, node[key])
+                self._add_subtree(level+1, d, model, item, key, node[key])
 
-    def _cb_redirect(self, treeview):
+    def _selection_cb(self, treeview):
         path, column = treeview.get_cursor()
         model = treeview.get_model()
-        child = model.get_iter(path)
-        parent = model.iter_parent(child)
-        if parent is None:
-            return
-        res = model.get_value(child, 0)
-        item_name = res[0]
-        top_name = model.get_value(parent, 0)
-        self.make_callback('selected', (top_name, item_name))
+        item = model.get_iter(path)
+        res_dict = {}
+        self._get_item(res_dict, item)
+        self.make_callback('selected', res_dict)
+
+    def _cb_redirect(self, treeview, path, column):
+        model = treeview.get_model()
+        item = model.get_iter(path)
+        res_dict = {}
+        self._get_item(res_dict, item)
+        self.make_callback('activated', res_dict)
+
+    def _get_path(self, item):
+        if item is None:
+            return []
+
+        model = self.tv.get_model()
+        if not model.iter_has_child(item):
+            # child node, so append my name to parent's path
+            path_rest = self._get_path(model.iter_parent(item))
+            myname = model.get_value(item, 0)[self.leaf_key]
+            path_rest.append(myname)
+            return path_rest
+
+        # non-leaf node case
+        myname = model.get_value(item, 0)
+        path_rest = self._get_path(model.iter_parent(item))
+        path_rest.append(myname)
+        return path_rest
+
+    def _get_item(self, res_dict, item):
+        # from the model iter `item`, return the item via a path
+        # in the dictionary `res_dict`
+        path = self._get_path(item)
+        d, s = res_dict, self.shadow
+        for name in path[:-1]:
+            d = d.setdefault(name, {})
+            s = s[name].node
+
+        dst_key = path[-1]
+        d[dst_key] = s[dst_key].node
+
+    def get_selected(self):
+        treeselection = self.tv.get_selection()
+        model, pathlist = treeselection.get_selected_rows()
+        res_dict = {}
+        for path in pathlist:
+            item = model.get_iter(path)
+            self._get_item(res_dict, item)
+        return res_dict
 
     def clear(self):
         model = gtk.TreeStore(object)
         self.tv.set_model(model)
+        self.shadow = {}
 
-    def add_top_level(self, key):
-        """DO NOT USE!  TO BE DEPRECATED"""
-        model = self.tv.get_model()
-        item = model.append(None, [ key ])
-        return item
+    def clear_selection(self):
+        treeselection = self.tv.get_selection()
+        treeselection.unselect_all()
 
-    def add_row(self, item, l):
-        """DO NOT USE!  TO BE DEPRECATED"""
-        model = self.tv.get_model()
-        subitem = model.append(item, [ l ])
-        #self.tv.scroll_to_cell(subitem)
+    def select_path(self, path):
+        ## treeselection = self.tv.get_selection()
+        ## treeselection.select_path(idx)
+        pass
+
+    def scroll_to_path(self, path):
+        ## self.tv.scroll_to_cell(idx)
+        pass
 
     def sort_cb(self, column, idx):
         treeview = column.get_tree_view()
@@ -721,6 +828,10 @@ class TreeView(WidgetBase):
             bnch = model.get_value(iter, 0)
             if isinstance(bnch, str):
                 cell.set_property('text', bnch)
+            elif isinstance(bnch, gtk.gdk.Pixbuf):
+                cell.set_property('pixbuf', bnch)
+            elif isinstance(bnch[idx], gtk.gdk.Pixbuf):
+                cell.set_property('pixbuf', bnch[idx])
             else:
                 cell.set_property('text', bnch[idx])
         return fn
@@ -731,6 +842,10 @@ class TreeView(WidgetBase):
             bnch = model.get_value(iter, 0)
             if isinstance(bnch, str):
                 cell.set_property('text', '')
+            elif isinstance(bnch, gtk.gdk.Pixbuf):
+                cell.set_property('text', '')
+            elif isinstance(bnch[idx], gtk.gdk.Pixbuf):
+                cell.set_property('pixbuf', bnch[idx])
             else:
                 cell.set_property('text', bnch[idx])
         return fn
