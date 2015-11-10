@@ -564,7 +564,7 @@ class TreeView(WidgetBase):
         treeview.setSortingEnabled(self.sortable)
         if self.sortable:
             # Sort increasing by default
-            treeview.sortByColumn(0, QtCore.Qt.AscendingOrder)
+            treeview.sortByColumn(1, QtCore.Qt.AscendingOrder)
         # speeds things up a bit
         treeview.setUniformRowHeights(True)
 
