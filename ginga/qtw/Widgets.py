@@ -527,7 +527,7 @@ class StatusBar(WidgetBase):
 
 class TreeView(WidgetBase):
     def __init__(self, auto_expand=False, sortable=False,
-                 selection='single'):
+                 selection='single', use_alt_row_color=False):
         super(TreeView, self).__init__()
 
         self.auto_expand = auto_expand
@@ -542,6 +542,7 @@ class TreeView(WidgetBase):
         tv.setSelectionBehavior(QtGui.QAbstractItemView.SelectRows)
         if selection == 'multiple':
             tv.setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection)
+        tv.setAlternatingRowColors(use_alt_row_color)
         tv.itemDoubleClicked.connect(self._cb_redirect)
         tv.itemSelectionChanged.connect(self._selection_cb)
         self.columns = []
@@ -564,7 +565,6 @@ class TreeView(WidgetBase):
         if self.sortable:
             # Sort increasing by default
             treeview.sortByColumn(0, QtCore.Qt.AscendingOrder)
-        treeview.setAlternatingRowColors(True)
         # speeds things up a bit
         treeview.setUniformRowHeights(True)
 
@@ -705,18 +705,27 @@ class TreeView(WidgetBase):
     def clear_selection(self):
         self.widget.clearSelection()
 
-    def select_path(self, path):
+    def _path_to_item(self, path):
         s = self.shadow
         for name in path[:-1]:
             s = s[name].node
         item = s[path[-1]].item
-        self.widget.selectRow(item)
+        return item
+
+    def select_path(self, path):
+        item = self._path_to_item(path)
+        self.widget.setItemSelected(item, True)
 
     def scroll_to_path(self, path):
-        #midx = self.widget.indexAt(QtCore.QPoint(idx, 0))
-        #self.widget.scrollTo(midx)
-        pass
+        # TODO: this doesn't give an error, but does not seem to be
+        # working as the API indicates
+        item = self._path_to_item(path)
+        row = self.widget.indexOfTopLevelItem(item)
+        midx = self.widget.indexAt(QtCore.QPoint(row, 0))
+        self.widget.scrollTo(midx, QtGui.QAbstractItemView.PositionAtCenter)
 
+    def sort_on_column(self, i):
+        self.widget.sortByColumn(i, QtCore.Qt.AscendingOrder)
 
 # CONTAINERS
 

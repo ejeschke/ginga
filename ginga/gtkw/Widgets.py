@@ -581,7 +581,8 @@ class StatusBar(WidgetBase):
 
 
 class TreeView(WidgetBase):
-    def __init__(self, auto_expand=False, sortable=False, selection='single'):
+    def __init__(self, auto_expand=False, sortable=False, selection='single',
+                 use_alt_row_color=False):
         super(TreeView, self).__init__()
 
         self.auto_expand = auto_expand
@@ -603,7 +604,8 @@ class TreeView(WidgetBase):
         tv.connect('cursor-changed', self._selection_cb)
         tv.connect('row-activated', self._cb_redirect)
         # needed to get alternating row colors
-        tv.set_rules_hint(True)
+        if use_alt_row_color:
+            tv.set_rules_hint(True)
         if selection == 'multiple':
             # enable multiple selection
             treeselection = tv.get_selection()
@@ -789,13 +791,26 @@ class TreeView(WidgetBase):
         treeselection.unselect_all()
 
     def select_path(self, path):
-        ## treeselection = self.tv.get_selection()
-        ## treeselection.select_path(idx)
-        pass
+        treeselection = self.tv.get_selection()
+        item = self._path_to_item(path)
+        treeselection.select_iter(item)
+
+    def _path_to_item(self, path):
+        s = self.shadow
+        for name in path[:-1]:
+            s = s[name].node
+        item = s[path[-1]].item
+        return item
 
     def scroll_to_path(self, path):
-        ## self.tv.scroll_to_cell(idx)
-        pass
+        item = self._path_to_item(path)
+        model = self.tv.get_model()
+        treepath = model.get_path(item)
+        self.tv.scroll_to_cell(treepath, use_align=True, row_align=0.5)
+
+    def sort_on_column(self, i):
+        model = self.tv.get_model()
+        model.set_sort_column_id(i, gtk.SORT_ASCENDING)
 
     def sort_cb(self, column, idx):
         treeview = column.get_tree_view()

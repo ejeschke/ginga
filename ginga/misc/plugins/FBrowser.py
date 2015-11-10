@@ -76,7 +76,8 @@ class FBrowser(GingaPlugin.LocalPlugin):
         vbox.set_margins(2, 2, 2, 2)
 
         # create the table
-        table = Widgets.TreeView(sortable=True, selection='multiple')
+        table = Widgets.TreeView(sortable=True, selection='multiple',
+                                 use_alt_row_color=True)
         table.add_callback('activated', self.item_dblclicked_cb)
 
         # set header
