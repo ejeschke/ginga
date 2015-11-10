@@ -25,7 +25,8 @@ class Contents(GingaPlugin.GlobalPlugin):
 
         prefs = self.fv.get_preferences()
         self.settings = prefs.createCategory('plugin_Contents')
-        self.settings.addDefaults(columns=columns, always_expand=True)
+        self.settings.addDefaults(columns=columns, always_expand=True,
+                                  highlight_tracks_keyboard_focus=False)
         self.settings.load(onError='silent')
 
         # For table-of-contents pane
@@ -35,12 +36,18 @@ class Contents(GingaPlugin.GlobalPlugin):
         self.treeview = None
         # paths of highlighted entries, by channel
         self._hl_path = {}
+        self.highlight_tracks_keyboard_focus = self.settings.get(
+            'highlight_tracks_keyboard_focus', False)
 
         self.gui_up = False
         fv.add_callback('add-image', self.add_image)
         fv.add_callback('remove-image', self.remove_image)
         fv.add_callback('add-channel', self.add_channel)
         fv.add_callback('delete-channel', self.delete_channel)
+        if self.highlight_tracks_keyboard_focus:
+            fv.add_callback('active-image', self.focus_cb)
+            self._hl_path['none'] = None
+
 
     def build_gui(self, container):
         # create the Treeview
@@ -85,7 +92,6 @@ class Contents(GingaPlugin.GlobalPlugin):
             bnch[key] = str(header.get(key, 'N/A'))
         # name should always be available
         bnch.NAME = name
-        bnch.__terminal__ = True
         return bnch
 
     def recreate_toc(self):
@@ -154,8 +160,9 @@ class Contents(GingaPlugin.GlobalPlugin):
         Parameter is chinfo (a bunch)."""
         chname = chinfo.name
 
-        chinfo.fitsimage.add_callback('image-set',
-                                      self.active_image_cb, chname)
+        if not self.highlight_tracks_keyboard_focus:
+            chinfo.fitsimage.add_callback('image-set',
+                                          self.set_image_cb, chname)
 
         if not self.gui_up:
             return False
@@ -188,9 +195,10 @@ class Contents(GingaPlugin.GlobalPlugin):
 
         self._hl_path[chname] = path
 
-    def active_image_cb(self, fitsimage, image, chname):
+    def set_image_cb(self, fitsimage, image, chname):
         if chname in self._hl_path:
-            # if there is already a path highlighted, unhighlight it
+            # if there is already a path highlighted for this channel
+            # then unhighlight it
             path = self._hl_path[chname]
             if path is not None:
                 self._highlight_path(chname, path, False)
@@ -203,6 +211,27 @@ class Contents(GingaPlugin.GlobalPlugin):
         # note and highlight the new path
         self._highlight_path(chname, hl_path, True)
         return True
+
+    def focus_cb(self, viewer, fitsimage):
+        chname = self.fv.get_channelName(fitsimage)
+        chinfo = self.fv.get_channelInfo(chname)
+        chname = chinfo.name
+
+        # if there is already a path highlighted for this channel
+        # then unhighlight it
+        path = self._hl_path['none']
+        if path is not None:
+            self._highlight_path('none', path, False)
+
+        image = fitsimage.get_image()
+        if image is None:
+            return
+
+        # create path of this image in treeview
+        hl_path = [chname, image.get('name', 'none')]
+
+        # note and highlight the new path
+        self._highlight_path('none', hl_path, True)
 
     def stop(self):
         self.gui_up = False
