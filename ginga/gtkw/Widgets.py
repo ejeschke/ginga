@@ -582,15 +582,20 @@ class StatusBar(WidgetBase):
 
 class TreeView(WidgetBase):
     def __init__(self, auto_expand=False, sortable=False, selection='single',
-                 use_alt_row_color=False):
+                 use_alt_row_color=False, dragable=False):
         super(TreeView, self).__init__()
 
         self.auto_expand = auto_expand
         self.sortable = sortable
         self.selection = selection
+        self.dragable = dragable
         self.levels = 1
         self.leaf_key = None
         self.leaf_idx = 0
+        self.columns = []
+        self.datakeys = []
+        # shadow index
+        self.shadow = {}
 
         # this widget has a built in ScrollArea to match Qt functionality
         sw = gtk.ScrolledWindow()
@@ -598,7 +603,16 @@ class TreeView(WidgetBase):
         sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
         self.widget = sw
 
-        tv = gtk.TreeView()
+        if self.dragable:
+            tv = GtkHelp.MultiDragDropTreeView()
+            # enable drag from this widget
+            toImage = [ ( "text/plain", 0, 0 ) ]
+            tv.enable_model_drag_source(gtk.gdk.BUTTON1_MASK,
+                                        toImage, gtk.gdk.ACTION_COPY)
+            tv.connect("drag-data-get", self._start_drag)
+        else:
+            tv = gtk.TreeView()
+
         self.tv = tv
         sw.add(self.tv)
         tv.connect('cursor-changed', self._selection_cb)
@@ -606,16 +620,12 @@ class TreeView(WidgetBase):
         # needed to get alternating row colors
         if use_alt_row_color:
             tv.set_rules_hint(True)
-        if selection == 'multiple':
+        if self.selection == 'multiple':
             # enable multiple selection
             treeselection = tv.get_selection()
             treeselection.set_mode(gtk.SELECTION_MULTIPLE)
-        self.columns = []
-        self.datakeys = []
-        # shadow index
-        self.shadow = {}
 
-        for cbname in ('selected', 'activated'):
+        for cbname in ('selected', 'activated', 'drag-start'):
             self.enable_callback(cbname)
 
     def setup_table(self, columns, levels, leaf_key):
@@ -869,6 +879,12 @@ class TreeView(WidgetBase):
                 cell.set_property('text', bnch[idx])
         return fn
 
+    def _start_drag(self, treeview, context, selection,
+                         info, timestamp):
+        res_dict = self.get_selected()
+        drag_pkg = DragPackage(self.tv, selection)
+        self.make_callback('drag-start', drag_pkg, res_dict)
+        drag_pkg.start_drag()
 
 # CONTAINERS
 
@@ -1412,6 +1428,18 @@ class SaveDialog:
         elif response == gtk.RESPONSE_CANCEL:
             self.widget.destroy()
             return None
+
+class DragPackage(object):
+    def __init__(self, src_widget, selection):
+        self.src_widget = src_widget
+        self._selection = selection
+
+    def set_urls(self, urls):
+        self._selection.set_uris(urls)
+        self._selection.set("text/plain", 0, '\n'.join(urls))
+
+    def start_drag(self):
+        pass
 
 # MODULE FUNCTIONS
 

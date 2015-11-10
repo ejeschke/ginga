@@ -577,6 +577,43 @@ class ToolBar(gtk.Toolbar):
             pass
         return False
 
+class MultiDragDropTreeView(gtk.TreeView):
+    '''TreeView that captures mouse events to make drag and drop work
+    properly
+    See: https://gist.github.com/kevinmehall/278480#file-multiple-selection-dnd-class-py
+    '''
+
+    def __init__(self):
+        super(MultiDragDropTreeView, self).__init__()
+
+        self.connect('button_press_event', self.on_button_press)
+        self.connect('button_release_event', self.on_button_release)
+        self.defer_select = False
+
+    def on_button_press(self, widget, event):
+        # Here we intercept mouse clicks on selected items so that we can
+        # drag multiple items without the click selecting only one
+        target = self.get_path_at_pos(int(event.x), int(event.y))
+        if (target
+           and event.type == gtk.gdk.BUTTON_PRESS
+           and not (event.state & (gtk.gdk.CONTROL_MASK|gtk.gdk.SHIFT_MASK))
+           and self.get_selection().path_is_selected(target[0])):
+            # disable selection
+            self.get_selection().set_select_function(lambda *ignore: False)
+            self.defer_select = target[0]
+
+    def on_button_release(self, widget, event):
+        # re-enable selection
+        self.get_selection().set_select_function(lambda *ignore: True)
+
+        target = self.get_path_at_pos(int(event.x), int(event.y))
+        if (self.defer_select and target
+           and self.defer_select == target[0]
+           and not (event.x==0 and event.y==0)): # certain drag and drop
+            self.set_cursor(target[0], target[1], False)
+
+        self.defer_select=False
+
 
 class Desktop(Callback.Callbacks):
 

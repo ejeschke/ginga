@@ -77,8 +77,9 @@ class FBrowser(GingaPlugin.LocalPlugin):
 
         # create the table
         table = Widgets.TreeView(sortable=True, selection='multiple',
-                                 use_alt_row_color=True)
+                                 use_alt_row_color=True, dragable=True)
         table.add_callback('activated', self.item_dblclicked_cb)
+        table.add_callback('drag-start', self.item_drag_cb)
 
         # set header
         col = 0
@@ -156,6 +157,11 @@ class FBrowser(GingaPlugin.LocalPlugin):
     def item_dblclicked_cb(self, widget, res_dict):
         path = self.get_path_from_item(res_dict)
         self.open_file(path)
+
+    def item_drag_cb(self, widget, drag_pkg, res_dict):
+        urls = [ "file://" + info.path for key, info in res_dict.items() ]
+        self.logger.info("urls: %s" % (urls))
+        drag_pkg.set_urls(urls)
 
     def browse_cb(self, widget):
         path = str(widget.get_text()).strip()

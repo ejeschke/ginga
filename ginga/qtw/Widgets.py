@@ -527,15 +527,21 @@ class StatusBar(WidgetBase):
 
 class TreeView(WidgetBase):
     def __init__(self, auto_expand=False, sortable=False,
-                 selection='single', use_alt_row_color=False):
+                 selection='single', use_alt_row_color=False,
+                 dragable=False):
         super(TreeView, self).__init__()
 
         self.auto_expand = auto_expand
         self.sortable = sortable
+        self.dragable = dragable
         self.selection = selection
         self.levels = 1
         self.leaf_key = None
         self.leaf_idx = 0
+        self.columns = []
+        self.datakeys = []
+        # shadow index
+        self.shadow = {}
 
         tv = QtGui.QTreeWidget()
         self.widget = tv
@@ -545,12 +551,11 @@ class TreeView(WidgetBase):
         tv.setAlternatingRowColors(use_alt_row_color)
         tv.itemDoubleClicked.connect(self._cb_redirect)
         tv.itemSelectionChanged.connect(self._selection_cb)
-        self.columns = []
-        self.datakeys = []
-        # shadow index
-        self.shadow = {}
+        if self.dragable:
+            tv.setDragEnabled(True)
+            tv.startDrag = self._start_drag
 
-        for cbname in ('selected', 'activated'):
+        for cbname in ('selected', 'activated', 'drag-start'):
             self.enable_callback(cbname)
 
     def setup_table(self, columns, levels, leaf_key):
@@ -742,6 +747,11 @@ class TreeView(WidgetBase):
     def sort_on_column(self, i):
         self.widget.sortByColumn(i, QtCore.Qt.AscendingOrder)
 
+    def _start_drag(self, event):
+        res_dict = self.get_selected()
+        drag_pkg = DragPackage(self.widget)
+        self.make_callback('drag-start', drag_pkg, res_dict)
+        drag_pkg.start_drag()
 
 # CONTAINERS
 
@@ -1299,6 +1309,23 @@ class SaveDialog(QtGui.QFileDialog):
         if self.widget and self.selectedfilter is not None and not self.widget.endswith(self.selectedfilter[1:]):
             self.widget += self.selectedfilter[1:]
         return self.widget
+
+class DragPackage(object):
+    def __init__(self, src_widget):
+        self.src_widget = src_widget
+        self._drag = QtHelp.QDrag(self.src_widget)
+
+    def set_urls(self, urls):
+        mimeData = QtCore.QMimeData()
+        _urls = [ QtCore.QUrl(url) for url in urls ]
+        mimeData.setUrls(_urls)
+        self._drag.setMimeData(mimeData)
+
+    def start_drag(self):
+        if QtHelp.have_pyqt5:
+            result = self._drag.exec_(QtCore.Qt.MoveAction)
+        else:
+            result = self._drag.start(QtCore.Qt.MoveAction)
 
 # MODULE FUNCTIONS
 
