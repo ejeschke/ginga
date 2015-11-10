@@ -33,11 +33,14 @@ class Contents(GingaPlugin.GlobalPlugin):
         # TODO: this ought to be customizable by channel
         self.columns = self.settings.get('columns', columns)
         self.treeview = None
+        # paths of highlighted entries, by channel
+        self._hl_path = {}
 
         self.gui_up = False
-        fv.set_callback('add-image', self.add_image)
-        fv.set_callback('remove-image', self.remove_image)
-        fv.set_callback('delete-channel', self.delete_channel)
+        fv.add_callback('add-image', self.add_image)
+        fv.add_callback('remove-image', self.remove_image)
+        fv.add_callback('add-channel', self.add_channel)
+        fv.add_callback('delete-channel', self.delete_channel)
 
     def build_gui(self, container):
         # create the Treeview
@@ -88,6 +91,11 @@ class Contents(GingaPlugin.GlobalPlugin):
     def recreate_toc(self):
         self.logger.debug("Recreating table of contents...")
         self.treeview.set_tree(self.name_dict)
+
+        # re-highlight as necessary
+        hl_items = list(self._hl_path.items())
+        for chname, hl_path in hl_items:
+            self._highlight_path(chname, hl_path, True)
 
     def add_image(self, viewer, chname, image):
         if not self.gui_up:
@@ -141,14 +149,60 @@ class Contents(GingaPlugin.GlobalPlugin):
         self.name_dict = Bunch.caselessDict()
         self.recreate_toc()
 
+    def add_channel(self, viewer, chinfo):
+        """Called when a channel is added from the main interface.
+        Parameter is chinfo (a bunch)."""
+        chname = chinfo.name
+
+        chinfo.fitsimage.add_callback('image-set',
+                                      self.active_image_cb, chname)
+
+        if not self.gui_up:
+            return False
+        # Add the channel to the treeview
+        fileDict = {}
+        self.name_dict.setdefault(chname, fileDict)
+
+        tree_dict = { chname: { } }
+        self.treeview.add_tree(tree_dict)
+
     def delete_channel(self, viewer, chinfo):
         """Called when a channel is deleted from the main interface.
         Parameter is chinfo (a bunch)."""
         chname = chinfo.name
         del self.name_dict[chname]
+        if chname in self._hl_path:
+            del self._hl_path[chname]
         if not self.gui_up:
             return False
         self.recreate_toc()
+
+    def _highlight_path(self, chname, path, tf):
+        try:
+            self.treeview.highlight_path(path, tf)
+
+        except Exception as e:
+            self.logger.warn("Error changing highlight on treeview path (%s): %s" % (
+                str(path), str(e)))
+            path = None
+
+        self._hl_path[chname] = path
+
+    def active_image_cb(self, fitsimage, image, chname):
+        if chname in self._hl_path:
+            # if there is already a path highlighted, unhighlight it
+            path = self._hl_path[chname]
+            if path is not None:
+                self._highlight_path(chname, path, False)
+
+        if image is None:
+            return
+        # create path of this image in treeview
+        hl_path = [chname, image.get('name', 'none')]
+
+        # note and highlight the new path
+        self._highlight_path(chname, hl_path, True)
+        return True
 
     def stop(self):
         self.gui_up = False

@@ -716,6 +716,21 @@ class TreeView(WidgetBase):
         item = self._path_to_item(path)
         self.widget.setItemSelected(item, True)
 
+    def highlight_path(self, path, onoff, font_color='green'):
+        item = self._path_to_item(path)
+
+        # A little painfully inefficient, can we do better than this?
+        font = QtGui.QFont()
+        if not onoff:
+            color = QtGui.QColor('black')
+        else:
+            font.setBold(True)
+            color = QtGui.QColor(font_color)
+
+        for i in range(item.columnCount()):
+            item.setFont(i, font)
+            item.setTextColor(i, color)
+
     def scroll_to_path(self, path):
         # TODO: this doesn't give an error, but does not seem to be
         # working as the API indicates
@@ -726,6 +741,7 @@ class TreeView(WidgetBase):
 
     def sort_on_column(self, i):
         self.widget.sortByColumn(i, QtCore.Qt.AscendingOrder)
+
 
 # CONTAINERS
 

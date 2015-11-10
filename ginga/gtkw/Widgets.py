@@ -795,6 +795,10 @@ class TreeView(WidgetBase):
         item = self._path_to_item(path)
         treeselection.select_iter(item)
 
+    def highlight_path(self, path, onoff, font_color='green'):
+        item = self._path_to_item(path)
+        # TODO
+
     def _path_to_item(self, path):
         s = self.shadow
         for name in path[:-1]:
