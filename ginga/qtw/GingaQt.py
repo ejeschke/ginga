@@ -57,6 +57,7 @@ class GingaView(QtMain.QtMain):
         self.layout = None
         self._lsize = None
         self._rsize = None
+        self._cur_dialogs = []
 
     def set_layout(self, layout):
         self.layout = layout
@@ -504,6 +505,7 @@ class GingaView(QtMain.QtMain):
         layout.addWidget(lbl2, stretch=0)
         layout.addWidget(cbox, stretch=0)
         dialog.show()
+        self._cur_dialogs.append(dialog)
 
     def gui_add_channels(self):
         captions = (('Prefix', 'entry'),
@@ -537,6 +539,7 @@ class GingaView(QtMain.QtMain):
 
         layout.addWidget(w, stretch=1)
         dialog.show()
+        self._cur_dialogs.append(dialog)
 
     def gui_delete_channel(self):
         chinfo = self.get_channelInfo()
@@ -551,6 +554,7 @@ class GingaView(QtMain.QtMain):
         box.setLayout(layout)
         layout.addWidget(lbl, stretch=0)
         dialog.show()
+        self._cur_dialogs.append(dialog)
 
     def gui_add_ws(self):
         captions = (('Workspace name', 'entry'),
@@ -562,8 +566,8 @@ class GingaView(QtMain.QtMain):
                     )
         w, b = QtHelp.build_info(captions)
 
-        self.wscount += 1
         wsname = "ws%d" % (self.wscount)
+        self.wscount += 1
         b.workspace_name.setText(wsname)
         b.share_settings.setMaxLength(60)
 
@@ -600,9 +604,11 @@ class GingaView(QtMain.QtMain):
 
         layout.addWidget(w, stretch=1)
         dialog.show()
+        self._cur_dialogs.append(dialog)
 
     def new_ws_cb(self, w, rsp, b, names):
         w.close()
+        self._cur_dialogs.remove(w)
         wsname = str(b.workspace_name.text())
         idx = b.workspace_type.currentIndex()
         if rsp == 0:
@@ -756,6 +762,7 @@ class GingaView(QtMain.QtMain):
         idx = cbox.currentIndex()
         wsname = names[idx]
         w.close()
+        self._cur_dialogs.remove(w)
         # save name for next add
         self._lastwsname = wsname
         if rsp == 0:
@@ -769,6 +776,7 @@ class GingaView(QtMain.QtMain):
         wsname = names[idx]
         num = int(b.number.value())
         w.close()
+        self._cur_dialogs.remove(w)
         if (rsp == 0) or (num <= 0):
             return
 
@@ -784,6 +792,7 @@ class GingaView(QtMain.QtMain):
         if rsp == 0:
             return
         self.delete_channel(chname)
+        self._cur_dialogs.remove(w)
         return True
 
     def invoke_op_cb(self):

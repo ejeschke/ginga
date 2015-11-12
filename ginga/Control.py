@@ -271,10 +271,14 @@ class GingaControl(Callback.Callbacks):
             nb.to_next()
         ## elif keyname == 'escape':
         ##     self.reset_viewer()
-        elif keyname in ('left', 'up'):
+        elif keyname in ('up',):
             self.prev_img()
-        elif keyname in ('right', 'down'):
+        elif keyname in ('down',):
             self.next_img()
+        elif keyname in ('left',):
+            self.prev_channel()
+        elif keyname in ('right',):
+            self.next_channel()
         elif keyname in self.fn_keys:
             index = self.fn_keys.index(keyname)
             if (index >= 0) and (index < len(self.operations)):
@@ -808,6 +812,20 @@ class GingaControl(Callback.Callbacks):
 
         return True
 
+
+    def get_current_workspace(self):
+        # TODO: track current workspace
+        return self.ds.get_nb('channels')
+
+    def prev_channel(self):
+        print("prev channel")
+        ws = self.get_current_workspace()
+        ws.to_previous()
+
+    def next_channel(self):
+        print("next channel")
+        ws = self.get_current_workspace()
+        ws.to_next()
 
     def add_workspace(self, wsname, wstype, inSpace='channels'):
 

@@ -57,6 +57,7 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         self.layout = None
         self._lsize = None
         self._rsize = None
+        self._cur_dialogs = []
 
         self.colorbar = None
         self.readout = None
@@ -497,9 +498,9 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         box = dialog.get_content_area()
         box.add_widget(w, stretch=0)
 
-        # save a handle so widgets aren't garbage collected
-        self._dialog = dialog
         dialog.show()
+        # save a handle so widgets aren't garbage collected
+        self._cur_dialogs.append(dialog)
 
     def gui_add_channels(self):
 
@@ -531,9 +532,9 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         box = dialog.get_content_area()
         box.add_widget(w, stretch=0)
 
-        # save a handle so widgets aren't garbage collected
-        self._dialog = dialog
         dialog.show()
+        # save a handle so widgets aren't garbage collected
+        self._cur_dialogs.append(dialog)
 
     def gui_delete_channel(self):
         chinfo = self.get_channelInfo()
@@ -546,9 +547,9 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         box = dialog.get_content_area()
         box.add_widget(lbl, stretch=0)
 
-        # save a handle so widgets aren't garbage collected
-        self._dialog = dialog
         dialog.show()
+        # save a handle so widgets aren't garbage collected
+        self._cur_dialogs.append(dialog)
 
     def gui_add_ws(self):
 
@@ -595,9 +596,9 @@ class GingaView(GwMain.GwMain, Widgets.Application):
 
         box = dialog.get_content_area()
         box.add_widget(w, stretch=1)
-        # save a handle so widgets aren't garbage collected
-        self._dialog = dialog
         dialog.show()
+        # save a handle so widgets aren't garbage collected
+        self._cur_dialogs.append(dialog)
 
     def gui_load_file(self, initialdir=None):
         if self.filesel.exec_():
@@ -718,8 +719,8 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         if idx < 0:
             idx = 0
         wsname = names[idx]
+        self._cur_dialogs.remove(w)
         w.delete()
-        self._dialog = None
         # save name for next add
         self._lastwsname = wsname
         if rsp == 0:
@@ -732,8 +733,8 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         idx = b.workspace.get_index()
         wsname = names[idx]
         num = int(b.number.get_value())
+        self._cur_dialogs.remove(w)
         w.delete()
-        self._dialog = None
         if (rsp == 0) or (num <= 0):
             return
 
@@ -745,8 +746,8 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         return True
 
     def delete_channel_cb(self, w, rsp, chname):
+        self._cur_dialogs.remove(w)
         w.delete()
-        self._dialog = None
         if rsp == 0:
             return
         self.delete_channel(chname)
@@ -769,8 +770,8 @@ class GingaView(GwMain.GwMain, Widgets.Application):
             num = int(b.num_channels.get_value())
             share_list = b.share_settings.get_text().split()
 
+            self._cur_dialogs.remove(w)
             w.delete()
-            self._dialog = None
 
             if num <= 0:
                 return

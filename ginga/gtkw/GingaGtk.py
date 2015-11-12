@@ -64,6 +64,7 @@ class GingaView(GtkMain.GtkMain):
         self.layout = None
         self._lsize = None
         self._rsize = None
+        self._cur_dialogs = []
 
     def get_screen_dimensions(self):
         return (screen_wd, screen_ht)
@@ -461,6 +462,7 @@ class GingaView(GtkMain.GtkMain):
         box.pack_start(lbl2, True, False, 0)
         box.pack_start(cbox, True, True, 0)
         dialog.show_all()
+        self._cur_dialogs.append(dialog)
 
     def gui_add_channels(self):
         captions = (('Prefix', 'entry'),
@@ -513,6 +515,7 @@ class GingaView(GtkMain.GtkMain):
         box = dialog.get_content_area()
         box.pack_start(w, True, True, 0)
         dialog.show_all()
+        self._cur_dialogs.append(dialog)
 
     def gui_add_ws(self):
         captions = (('Workspace name', 'entry'),
@@ -560,10 +563,12 @@ class GingaView(GtkMain.GtkMain):
         box = dialog.get_content_area()
         box.pack_start(w, expand=True, fill=True)
         dialog.show_all()
+        self._cur_dialogs.append(dialog)
 
     def new_ws_cb(self, w, rsp, b, names):
         wsname = b.workspace_name.get_text()
         idx = b.workspace_type.get_active()
+        self._cur_dialogs.remove(w)
         if rsp == 0:
             w.destroy()
             return
@@ -611,6 +616,7 @@ class GingaView(GtkMain.GtkMain):
         box = dialog.get_content_area()
         box.pack_start(lbl, True, False, 0)
         dialog.show_all()
+        self._cur_dialogs.append(dialog)
 
     def gui_load_file(self, initialdir=None):
         #self.start_operation('FBrowser')
@@ -740,6 +746,7 @@ class GingaView(GtkMain.GtkMain):
         wsname = names[idx]
         # save name for next add
         self._lastwsname = wsname
+        self._cur_dialogs.remove(w)
         w.destroy()
         if rsp == 0:
             return
@@ -751,6 +758,7 @@ class GingaView(GtkMain.GtkMain):
         idx = b.workspace.get_active()
         wsname = names[idx]
         num = int(b.number.get_value())
+        self._cur_dialogs.remove(w)
         w.destroy()
         if (rsp == 0) or (num <= 0):
             return
@@ -763,6 +771,7 @@ class GingaView(GtkMain.GtkMain):
         return True
 
     def delete_channel_cb(self, w, rsp, chname):
+        self._cur_dialogs.remove(w)
         w.destroy()
         if rsp == 0:
             return

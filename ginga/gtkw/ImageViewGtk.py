@@ -366,6 +366,10 @@ class ImageViewEvent(ImageViewGtk):
             'f10': 'f10',
             'f11': 'f11',
             'f12': 'f12',
+            'right': 'right',
+            'left': 'left',
+            'up': 'up',
+            'down': 'down',
             }
 
         # Define cursors
