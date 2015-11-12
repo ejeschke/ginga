@@ -1081,7 +1081,7 @@ class GingaControl(Callback.Callbacks):
             items = self.channel.items()
         for name, chinfo in items:
             if chinfo.fitsimage == fitsimage:
-                return name
+                return chinfo.name
         return None
 
     def add_channel_internal(self, chname, datasrc=None, num_images=1):
