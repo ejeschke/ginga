@@ -91,11 +91,11 @@ class WCSMatch(GingaPlugin.GlobalPlugin):
         btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
         top.add_widget(btns, stretch=0)
-        self._reset_channels_gui()
 
         container.add_widget(top, stretch=1)
 
         self.gui_up = True
+        self._reset_channels_gui()
 
     def add_channel(self, viewer, chinfo):
         chname = chinfo.name
@@ -128,10 +128,12 @@ class WCSMatch(GingaPlugin.GlobalPlugin):
         self.fv.gui_do(self._reset_channels_gui)
 
     def _reset_channels_gui(self):
-        self.w.ref_channel.clear()
         self.chnames = list(self.fv.get_channelNames())
         self.chnames.sort()
         self.chnames.insert(0, "None")
+        if not self.gui_up:
+            return
+        self.w.ref_channel.clear()
         for chname in self.chnames:
             self.w.ref_channel.append_text(chname)
 
@@ -151,6 +153,7 @@ class WCSMatch(GingaPlugin.GlobalPlugin):
         chname = self.chnames[idx]
         if chname == 'None':
             self.ref_image = None
+            self.ref_channel = None
 
         chinfo = self.fv.get_channelInfo(chname)
         self.ref_channel = chinfo
@@ -180,6 +183,7 @@ class WCSMatch(GingaPlugin.GlobalPlugin):
 
     def stop(self):
         self.ref_channel = None
+        self.ref_image = None
         self.fv.showStatus("")
 
     def get_other_channels(self, myname):
