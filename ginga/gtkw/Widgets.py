@@ -8,6 +8,7 @@
 # Please see the file LICENSE.txt for details.
 #
 from ginga.gtkw import GtkHelp, gtksel, GtkMain
+import ginga.util.six as six
 import gtk
 import gobject
 
@@ -1211,10 +1212,12 @@ class Menu(ContainerBase):
     def popup(self, widget):
         menu = self.widget
         menu.show_all()
+        if not six.PY2:
+            long = int
         if gtksel.have_gtk3:
-            menu.popup(None, None, None, None, 0, 0L)
+            menu.popup(None, None, None, None, 0, long(0))
         else:
-            menu.popup(None, None, None, 0, 0L)
+            menu.popup(None, None, None, 0, long(0))
 
 
 class Menubar(ContainerBase):
