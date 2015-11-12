@@ -13,6 +13,7 @@ import math
 import re
 from collections import OrderedDict
 import numpy
+from ginga.misc import Bunch
 
 class WCSError(Exception):
     pass
@@ -292,6 +293,66 @@ def get_rotation_and_scale(header, skew_threshold=0.001):
 
     return (rot, cdelt1, cdelt2)
 
+
+def get_relative_orientation(image, ref_image):
+    """
+    Computes the relative orientation and scale of an image to a reference
+    image.
+
+    Parameters
+    ----------
+      image : AstroImage based object
+      ref_image : AstroImage based object
+
+    Returns
+    -------
+      result : a Bunch object containing the relative scale in x and y
+               and the relative rotation in degrees.
+    """
+    # Get reference image rotation and scale
+    header = ref_image.get_header()
+    ((xrot_ref, yrot_ref),
+     (cdelt1_ref, cdelt2_ref)) = get_xy_rotation_and_scale(header)
+    ref_rot = yrot_ref
+
+    scale_x, scale_y = math.fabs(cdelt1_ref), math.fabs(cdelt2_ref)
+
+    # Get rotation and scale of image
+    header = image.get_header()
+    ((xrot, yrot),
+     (cdelt1, cdelt2)) = get_xy_rotation_and_scale(header)
+
+    # Determine relative scale of this image to the reference
+    rscale_x = math.fabs(cdelt1) / scale_x
+    rscale_y = math.fabs(cdelt2) / scale_y
+
+    # Figure out rotation relative to our orientation
+    rrot_dx, rrot_dy = xrot - xrot_ref, yrot - yrot_ref
+
+    # flip_x = False
+    # flip_y = False
+
+    # ## # Flip X due to negative CDELT1
+    # ## if numpy.sign(cdelt1) < 0:
+    # ##     flip_x = True
+
+    # ## # Flip Y due to negative CDELT2
+    # ## if numpy.sign(cdelt2) < 0:
+    # ##     flip_y = True
+
+    # # Optomization for 180 rotations
+    # if numpy.isclose(math.fabs(rrot_dx), 180.0):
+    #     flip_x = not flip_x
+    #     rrot_dx = 0.0
+    # if numpy.isclose(math.fabs(rrot_dy), 180.0):
+    #     flip_y = not flip_y
+    #     rrot_dy = 0.0
+
+    rrot_deg = max(rrot_dx, rrot_dy)
+
+    res = Bunch.Bunch(rscale_x=rscale_x, rscale_y=rscale_y,
+                      rrot_deg=rrot_deg)
+    return res
 
 def simple_wcs(px_x, px_y, ra_deg, dec_deg, px_scale_deg_px, rot_deg,
                cdbase=[1, 1]):
