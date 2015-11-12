@@ -32,7 +32,8 @@ class Header(GingaPlugin.GlobalPlugin):
 
         prefs = self.fv.get_preferences()
         self.settings = prefs.createCategory('plugin_Header')
-        self.settings.addDefaults(sortable=False)
+        self.settings.addDefaults(sortable=False,
+                                  color_alternate_rows=True)
         self.settings.load(onError='silent')
 
         fv.set_callback('add-channel', self.add_channel)
@@ -48,7 +49,9 @@ class Header(GingaPlugin.GlobalPlugin):
         vbox = Widgets.VBox()
         vbox.set_margins(2, 2, 2, 2)
 
-        table = Widgets.TreeView(auto_expand=True)
+        color_alternate = self.settings.get('color_alternate_rows', True)
+        table = Widgets.TreeView(auto_expand=True,
+                                 use_alt_row_color=color_alternate)
         self.table = table
         table.setup_table(self.columns, 1, 'key')
 

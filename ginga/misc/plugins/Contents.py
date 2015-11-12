@@ -26,7 +26,8 @@ class Contents(GingaPlugin.GlobalPlugin):
         prefs = self.fv.get_preferences()
         self.settings = prefs.createCategory('plugin_Contents')
         self.settings.addDefaults(columns=columns, always_expand=True,
-                                  highlight_tracks_keyboard_focus=False)
+                                  highlight_tracks_keyboard_focus=False,
+                                  color_alternate_rows=True)
         self.settings.load(onError='silent')
 
         # For table-of-contents pane
@@ -52,8 +53,10 @@ class Contents(GingaPlugin.GlobalPlugin):
     def build_gui(self, container):
         # create the Treeview
         always_expand = self.settings.get('always_expand', False)
+        color_alternate = self.settings.get('color_alternate_rows', True)
         treeview = Widgets.TreeView(auto_expand=always_expand,
-                                    sortable=True)
+                                    sortable=True,
+                                    use_alt_row_color=color_alternate)
         self.treeview = treeview
         treeview.setup_table(self.columns, 2, 'NAME')
 

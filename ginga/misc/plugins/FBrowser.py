@@ -50,7 +50,8 @@ class FBrowser(GingaPlugin.LocalPlugin):
                                   scan_fits_headers=False,
                                   scan_limit=100,
                                   keywords=keywords,
-                                  columns=columns)
+                                  columns=columns,
+                                  color_alternate_rows=True)
         self.settings.load(onError='silent')
 
         homedir = self.settings.get('home_path', None)
@@ -76,8 +77,10 @@ class FBrowser(GingaPlugin.LocalPlugin):
         vbox.set_margins(2, 2, 2, 2)
 
         # create the table
+        color_alternate = self.settings.get('color_alternate_rows', True)
         table = Widgets.TreeView(sortable=True, selection='multiple',
-                                 use_alt_row_color=True, dragable=True)
+                                 use_alt_row_color=color_alternate,
+                                 dragable=True)
         table.add_callback('activated', self.item_dblclicked_cb)
         table.add_callback('drag-start', self.item_drag_cb)
 
