@@ -50,6 +50,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
                                   sort_order=None,
                                   label_length=25,
                                   label_cutoff='right',
+                                  highlight_tracks_keyboard_focus=False,
                                   label_font_color='black',
                                   label_bg_color='yellow')
         self.settings.load(onError='silent')
@@ -65,6 +66,9 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         # different instruments have different keywords of interest
         self.keywords = self.settings.get('tt_keywords', tt_keywords)
         self.keywords.insert(0, self.settings.get('mouseover_name_key', 'NAME'))
+
+        self.highlight_tracks_keyboard_focus = self.settings.get(
+            'highlight_tracks_keyboard_focus', False)
 
         fv.set_callback('add-image', self.add_image_cb)
         fv.set_callback('remove-image', self.remove_image_cb)
@@ -376,12 +380,18 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         path = image.get('path')
         chname = viewer.get_channelName(fitsimage)
         thumbkey = self.get_thumb_key(chname, name, path)
+        chname = chname.lower()  # for matching with thumbkey
 
         hlight_bg = self.settings.get('label_bg_color', 'yellow')
         hlight_fg = self.settings.get('label_font_color', 'black')
 
         with self.thmblock:
             for tkey in self.thumbDict:
+                # Do not mess with other channels unless asked to
+                if (not self.highlight_tracks_keyboard_focus and
+                        chname != tkey[0]):
+                    continue
+
                 if tkey == thumbkey:
                     bgcolor = hlight_bg
                     fgcolor = hlight_fg
