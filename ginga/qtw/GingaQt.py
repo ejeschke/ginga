@@ -648,6 +648,7 @@ class GingaView(QtMain.QtMain):
                 self.load_file(filename)
 
             # Fancy load (first file only)
+            # TODO: If load all the matches, might get QPainter errors
             else:
                 info = iohelper.get_fileinfo(filename)
                 ext = iohelper.get_hdu_suffix(info.numhdu)
