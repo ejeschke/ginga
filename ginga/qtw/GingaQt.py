@@ -476,8 +476,8 @@ class GingaView(QtMain.QtMain):
 
     def gui_add_channel(self, chname=None):
         if not chname:
-            self.chncnt += 1
             chname = "Image%d" % self.chncnt
+            self.chncnt += 1
         lbl = QtGui.QLabel('New channel name:')
         ent = QtGui.QLineEdit()
         ent.setText(chname)

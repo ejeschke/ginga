@@ -435,8 +435,8 @@ class GingaView(GtkMain.GtkMain):
 
     def gui_add_channel(self, chname=None):
         if not chname:
-            self.chncnt += 1
             chname = "Image%d" % self.chncnt
+            self.chncnt += 1
         lbl = gtk.Label('New channel name:')
         ent = gtk.Entry()
         ent.set_text(chname)
