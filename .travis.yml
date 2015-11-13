@@ -104,6 +104,8 @@ install:
     # currently 2.7, so that's fine
     - if [[ $SETUP_CMD == build_sphinx* ]]; then $CONDA_INSTALL numpy=$NUMPY_VERSION Sphinx matplotlib; fi
     - if [[ $SETUP_CMD == build_sphinx* ]]; then $PIP_INSTALL linkchecker; fi
+    # This is needed for API autodoc
+    - if [[ $SETUP_CMD == build_sphinx* ]]; then $PIP_INSTALL numpydoc; fi
 
     # COVERAGE DEPENDENCIES
     - if [[ $SETUP_CMD == 'test --coverage' ]]; then $PIP_INSTALL coverage coveralls; fi

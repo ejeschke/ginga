@@ -7,7 +7,7 @@ the most part these apply both to Ginga ImageView classes that can be
 embedded in a python application as well as to the reference viewer
 distributed with Ginga.  In cases where we are referring to something
 that is only available in the reference viewer these will be prefixed by
-the notation "[RV]". 
+the notation "[RV]".
 
 ===========
 Terminology
@@ -23,9 +23,9 @@ with the mouse:
 * *Scroll* means to scroll with the middle mouse wheel;
 * *Scroll-click* means to click with the middle mouse wheel/button;
 * *Scroll-drag* means to click, hold and drag with the middle
-  mouse wheel/button; 
+  mouse wheel/button;
 * *Right-click* means to click on an item with the right mouse
-  button; 
+  button;
 * *Right-drag* means to click, hold and drag with the right
   mouse button.
 
@@ -64,7 +64,7 @@ There are several ways to load a file into Ginga:
 
 * [RV] Use the "Load Image" entry from the `File` menu on the main menu
   bar at the top of the window.  This opens a standard file dialog popup
-  window where you can navigate to the file you wish to load. 
+  window where you can navigate to the file you wish to load.
 
 .. _zooming-and-panning:
 
@@ -74,7 +74,7 @@ Zooming and panning
 
 The display object used throughout most of the Ginga panels has built-in
 support for zooming and panning.  The :ref:`ginga-quick-reference` has the
-complete listing of default keyboard and mouse bindings.  
+complete listing of default keyboard and mouse bindings.
 Briefly, the scroll wheel of the mouse can be used to zoom in and out,
 along with the "+" and "-" keys.  The backquote key will fit the
 image to the window.  Digit keys (1, 2, etc) will zoom in to the
@@ -91,18 +91,18 @@ and dragging) or press and release "q" and then Left-drag.
 *Proportional panning* or "drag panning" pans the image in direct
 proportion to the distance the mouse is moved; a common idiom is
 dragging the image canvas in the direction you want to move it under the
-window.  To utilize a proportional pan, Ctrl-drag the canvas.  
+window.  To utilize a proportional pan, Ctrl-drag the canvas.
 
 [RV] The Pan plugin (usually embedded under the Info tab) shows the
 outline of the current pan position as a rectangle on a small version of
 the whole image.  Dragging this outline will also pan the image in the main
 window.  You can also click anywhere in the Pan window to set the pan
 position, or right drag an outline to roughly specify the region to zoom
-and pan to together. 
+and pan to together.
 
-Panning in Ginga is based on an (X, Y) coordinate known as the 
-*pan position*.  The pan position determines what Ginga will 
-try to keep in the middle of the window as the image is zoomed.  
+Panning in Ginga is based on an (X, Y) coordinate known as the
+*pan position*.  The pan position determines what Ginga will
+try to keep in the middle of the window as the image is zoomed.
 When zoomed out, one can Shift-click on a particular point in the image
 (or press the "p" key while hovering over a spot),
 setting the pan position.  Zooming afterward will keep the pan
@@ -111,7 +111,7 @@ center of the image, press 'c'.
 
 Ginga has an auto zoom feature to automatically fit newly loaded images
 to the window, similar to what happens when the backquote key is
-pressed.  See section :ref:`preferences-zoom` for details.
+pressed.  See section :ref:`preferences_zoom` for details.
 
 ================================
 How Ginga maps an image to color
@@ -123,9 +123,9 @@ steps:
 1) setting the *cut levels*, which scales all values in the image to a
    specified range,
 2) a *color distribution algorithm*, which distributes values within
-   that range to indexes into a color map table, and 
+   that range to indexes into a color map table, and
 3) an *intensity map* and *color map*, which are applied to these
-   indexes to map the final values to RGB pixels. 
+   indexes to map the final values to RGB pixels.
 
 .. _setting_cut_levels:
 
@@ -170,9 +170,9 @@ Ginga can algorithmically estimate and set the cut levels--a so called
 
 [RV] The auto cut levels feature is controlled by several factors in the
 preferences, including the choice of algorithm and some parameters to
-the algorithm.  See section :ref:`preferences-autocuts` for details.
+the algorithm.  See section :ref:`preferences_autocuts` for details.
 Ginga can also automatically set the cut levels for new images displayed
-in the view.  See section :ref:`preferences-newimages` for details.
+in the view.  See section :ref:`preferences_newimages` for details.
 
 Setting the color scale algorithm
 =================================
@@ -189,7 +189,7 @@ Preferences plugin, under the heading "Color Distribution".
 Changing the color and intensity maps
 =====================================
 
-The color and intensity maps 
+The color and intensity maps
 
 ===========================
 Transforming the image view
@@ -204,7 +204,7 @@ thereof.  These operations can be done by keyboard shortcuts:
 * Press "]" to flip in Y, "}" to restore.
 * Press "\" to swap X and Y axes, "|" to restore.
 
-The image can also be rotated in arbitrary amounts.  
+The image can also be rotated in arbitrary amounts.
 
 An interactive rotate operation can be initiated by pressing "r" in the
 image and then dragging the mouse horizontally left or right to set the
@@ -214,7 +214,7 @@ angle.  Press "R" (Shift+R) to restore the angle to 0 (unrotated).
 	  the simple transforms (flip, swap) than by the rotation
 	  feature.  Rotation may slow down some viewing operations.
 
-[RV] The image can also be transformed in the channel Preferences (see 
-:ref:`preferences-transform`) which has checkboxes for flip X, flip Y,
+[RV] The image can also be transformed in the channel Preferences (see
+:ref:`preferences_transform`) which has checkboxes for flip X, flip Y,
 swap XY and a box for rotation by degrees.
 
