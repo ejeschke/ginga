@@ -818,12 +818,10 @@ class GingaControl(Callback.Callbacks):
         return self.ds.get_nb('channels')
 
     def prev_channel(self):
-        print("prev channel")
         ws = self.get_current_workspace()
         ws.to_previous()
 
     def next_channel(self):
-        print("next channel")
         ws = self.get_current_workspace()
         ws.to_next()
 
