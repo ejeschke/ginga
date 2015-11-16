@@ -129,7 +129,11 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             return
 
         idx = image.get('idx', None)
+        # get image path
         path = image_info.path
+
+        if not (path is None):
+            path = os.path.abspath(path)
         name = image_info.name
 
         thumbname = name

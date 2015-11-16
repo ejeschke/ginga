@@ -95,7 +95,6 @@ class GingaControl(Callback.Callbacks):
         self.channel = {}
         self.channelNames = []
         self.cur_channel = None
-        self.chncnt = 0
         self.wscount = 0
         self.statustask = None
         self.preloadLock = threading.RLock()
@@ -1038,14 +1037,9 @@ class GingaControl(Callback.Callbacks):
         use_readout = not self.settings.get('share_readout', True)
 
         with self.lock:
-            name = chname.lower()
-            try:
-                channel = self.channel[name]
-            except KeyError:
-                self.logger.debug("Adding channel '%s'" % (chname))
-                channel = Channel(chname, self, datasrc=None,
-                                  settings=settings)
-                self.channel[name] = channel
+            self.logger.debug("Adding channel '%s'" % (chname))
+            channel = Channel(chname, self, datasrc=None,
+                              settings=settings)
 
             bnch = self.add_viewer(chname, settings,
                                    use_readout=use_readout,
@@ -1065,7 +1059,7 @@ class GingaControl(Callback.Callbacks):
             channel.opmon = opmon
 
             name = chname.lower()
-            self.channel[name] = chinfo
+            self.channel[name] = channel
 
             # Update the channels control
             self.channelNames.append(chname)
