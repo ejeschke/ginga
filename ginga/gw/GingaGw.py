@@ -288,8 +288,8 @@ class GingaView(GwMain.GwMain, Widgets.Application):
             return
 
         # Get image from current focused channel
-        chinfo = self.get_channelInfo()
-        fitsimage = chinfo.fitsimage
+        channel = self.get_channelInfo()
+        fitsimage = channel.fitsimage
         settings = fitsimage.get_settings()
         rgbmap = fitsimage.get_rgbmap()
 

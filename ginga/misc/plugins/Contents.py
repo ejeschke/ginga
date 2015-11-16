@@ -41,10 +41,10 @@ class Contents(GingaPlugin.GlobalPlugin):
             'highlight_tracks_keyboard_focus', False)
 
         self.gui_up = False
-        fv.add_callback('add-image', self.add_image)
-        fv.add_callback('remove-image', self.remove_image)
-        fv.add_callback('add-channel', self.add_channel)
-        fv.add_callback('delete-channel', self.delete_channel)
+        fv.add_callback('add-image', self.add_image_cb)
+        fv.add_callback('remove-image', self.remove_image_cb)
+        fv.add_callback('add-channel', self.add_channel_cb)
+        fv.add_callback('delete-channel', self.delete_channel_cb)
         if self.highlight_tracks_keyboard_focus:
             fv.add_callback('active-image', self.focus_cb)
             self._hl_path['none'] = None
@@ -106,12 +106,11 @@ class Contents(GingaPlugin.GlobalPlugin):
         for chname, hl_path in hl_items:
             self._highlight_path(chname, hl_path, True)
 
-    def add_image(self, viewer, chname, image):
+    def add_image_cb(self, viewer, chname, image, image_info):
         if not self.gui_up:
             return False
 
-        noname = 'Noname' + str(time.time())
-        name = image.get('name', noname)
+        name = image_info.name
         self.logger.debug("name=%s" % (name))
 
         nothumb = image.get('nothumb', False)
@@ -137,7 +136,7 @@ class Contents(GingaPlugin.GlobalPlugin):
         self.treeview.add_tree(tree_dict)
         self.logger.debug("%s added to Contents" % (name))
 
-    def remove_image(self, viewer, chname, name, path):
+    def remove_image_cb(self, viewer, chname, name, path):
         if not self.gui_up:
             return False
 
@@ -158,7 +157,7 @@ class Contents(GingaPlugin.GlobalPlugin):
         self.name_dict = Bunch.caselessDict()
         self.recreate_toc()
 
-    def add_channel(self, viewer, chinfo):
+    def add_channel_cb(self, viewer, chinfo):
         """Called when a channel is added from the main interface.
         Parameter is chinfo (a bunch)."""
         chname = chinfo.name
@@ -176,7 +175,7 @@ class Contents(GingaPlugin.GlobalPlugin):
         tree_dict = { chname: { } }
         self.treeview.add_tree(tree_dict)
 
-    def delete_channel(self, viewer, chinfo):
+    def delete_channel_cb(self, viewer, chinfo):
         """Called when a channel is deleted from the main interface.
         Parameter is chinfo (a bunch)."""
         chname = chinfo.name

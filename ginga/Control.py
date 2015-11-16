@@ -76,7 +76,8 @@ class GingaControl(Callback.Callbacks):
 
         # For callbacks
         for name in ('add-image', 'active-image', 'remove-image',
-                     'add-channel', 'delete-channel', 'field-info'):
+                     'add-channel', 'delete-channel', 'field-info',
+                     'add-image-info'):
             self.enable_callback(name)
 
         self.gui_queue = Queue.Queue()
@@ -93,7 +94,8 @@ class GingaControl(Callback.Callbacks):
         self.lock = threading.RLock()
         self.channel = {}
         self.channelNames = []
-        self.chinfo = None
+        self.cur_channel = None
+        self.chncnt = 0
         self.wscount = 0
         self.statustask = None
         self.preloadLock = threading.RLock()
@@ -161,8 +163,8 @@ class GingaControl(Callback.Callbacks):
                 # No image loaded for this channel
                 return
 
-            prefs = fitsimage.get_settings()
-            info = image.info_xy(data_x, data_y, prefs)
+            settings = fitsimage.get_settings()
+            info = image.info_xy(data_x, data_y, settings)
 
             # Are we reporting in data or FITS coordinates?
             off = self.settings.get('pixel_coords_offset', 0.0)
@@ -180,8 +182,9 @@ class GingaControl(Callback.Callbacks):
         return True
 
     def readout_config(self, fitsimage, image, readout):
-        # A new image has come into fitsimage. Get and store the sizes of
-        # the fields necessary to display all X, Y coords as well as values.
+        # A new image has come into the viewer. Get and store the
+        # sizes of the fields necessary to display all X, Y coords
+        # as well as values.
         width, height = fitsimage.get_data_size()
         # Set size of coordinate areas (4 is "." + precision 3)
         readout.maxx = len(str(width)) + 4
@@ -195,7 +198,8 @@ class GingaControl(Callback.Callbacks):
         if readout.fitsimage != fitsimage:
             return
 
-        # If this is a multiband image, then average the values for the readout
+        # If this is a multiband image, then average the values
+        # for the readout
         value = info.value
         if isinstance(value, numpy.ndarray):
             avg = numpy.average(value)
@@ -342,10 +346,10 @@ class GingaControl(Callback.Callbacks):
         ColorBar.  It displays the value of the mouse position in the
         ColorBar in the Readout (if any).
         """
-        chinfo = self.get_channelInfo()
-        if chinfo is None:
+        channel = self.get_channelInfo()
+        if channel is None:
             return
-        readout = chinfo.readout
+        readout = channel.readout
         if readout is None:
             # must be using a shared readout
             readout = self.readout
@@ -394,8 +398,8 @@ class GingaControl(Callback.Callbacks):
         self.logger.debug("should be exiting now")
 
     def reset_viewer(self):
-        chinfo = self.get_channelInfo()
-        opmon = chinfo.opmon
+        channel = self.get_channelInfo()
+        opmon = channel.opmon
         opmon.deactivate_focused()
         self.normalsize()
 
@@ -416,14 +420,14 @@ class GingaControl(Callback.Callbacks):
         return self.stop_local_plugin(chname, opname)
 
     def start_local_plugin(self, chname, opname, future):
-        chinfo = self.get_channelInfo(chname)
-        opmon = chinfo.opmon
-        opmon.start_plugin_future(chinfo.name, opname, future)
-        chinfo.fitsimage.onscreen_message(opname, delay=1.0)
+        channel = self.get_channelInfo(chname)
+        opmon = channel.opmon
+        opmon.start_plugin_future(channel.name, opname, future)
+        channel.fitsimage.onscreen_message(opname, delay=1.0)
 
     def stop_local_plugin(self, chname, opname):
-        chinfo = self.get_channelInfo(chname)
-        opmon = chinfo.opmon
+        channel = self.get_channelInfo(chname)
+        opmon = channel.opmon
         opmon.deactivate(opname)
 
     def start_global_plugin(self, pluginName, raise_tab=False):
@@ -583,7 +587,7 @@ class GingaControl(Callback.Callbacks):
             except Exception as e:
                 tb_str = "Traceback information unavailable."
             self.gui_do(self.show_error, errmsg + '\n' + tb_str)
-            #chinfo.fitsimage.onscreen_message("Failed to load file", delay=1.0)
+            #channel.fitsimage.onscreen_message("Failed to load file", delay=1.0)
             raise ControlError(errmsg)
 
         self.logger.debug("Successfully loaded file into image object.")
@@ -659,13 +663,13 @@ class GingaControl(Callback.Callbacks):
             the image object that was loaded
         """
         if not chname:
-            chinfo = self.get_channelInfo()
-            chname = chinfo.name
+            channel = self.get_channelInfo()
+            chname = channel.name
         else:
             if not self.has_channel(chname) and create_channel:
                 self.gui_call(self.add_channel, chname)
-            chinfo = self.get_channelInfo(chname)
-            chname = chinfo.name
+            channel = self.get_channelInfo(chname)
+            chname = channel.name
 
         if image_loader is None:
             image_loader = self.load_image
@@ -733,10 +737,10 @@ class GingaControl(Callback.Callbacks):
     def preload_file(self, chname, imname, path, image_future=None):
         # sanity check to see if the file is already in memory
         self.logger.debug("preload: checking %s in %s" % (imname, chname))
-        chinfo = self.get_channelInfo(chname)
-        datasrc = chinfo.datasrc
+        channel = self.get_channelInfo(chname)
+        datasrc = channel.datasrc
 
-        if not chinfo.datasrc.has_key(imname):
+        if not channel.datasrc.has_key(imname):
             # not there--load image in a non-gui thread, then have the
             # gui add it to the channel silently
             self.logger.info("preloading image %s" % (path))
@@ -775,42 +779,14 @@ class GingaControl(Callback.Callbacks):
         fitsimage.auto_levels()
 
     def prev_img(self, loop=True):
-        chinfo = self.get_channelInfo()
-        with self.lock:
-            self.logger.debug("Previous image")
-            if chinfo.cursor <= 0:
-                n = len(chinfo.datasrc) - 1
-                if (not loop) or (n < 0):
-                    self.showStatus("No previous image!")
-                    self.logger.error("No previous image!")
-                    return True
-                chinfo.cursor = n
-            else:
-                chinfo.cursor -= 1
-            image = chinfo.datasrc.index2value(chinfo.cursor)
-            self._switch_image(chinfo, image)
-
+        channel = self.get_channelInfo()
+        channel.prev_image()
         return True
 
     def next_img(self, loop=True):
-        chinfo = self.get_channelInfo()
-        with self.lock:
-            self.logger.debug("Next image")
-            n = len(chinfo.datasrc) - 1
-            if chinfo.cursor >= n:
-                if (not loop) or (n < 0):
-                    self.showStatus("No next image!")
-                    self.logger.error("No next image!")
-                    return True
-                chinfo.cursor = 0
-            else:
-                chinfo.cursor += 1
-
-            image = chinfo.datasrc.index2value(chinfo.cursor)
-            self._switch_image(chinfo, image)
-
+        channel = self.get_channelInfo()
+        channel.next_image()
         return True
-
 
     def get_current_workspace(self):
         # TODO: track current workspace
@@ -842,146 +818,56 @@ class GingaControl(Callback.Callbacks):
     # CHANNEL MANAGEMENT
 
     def add_image(self, imname, image, chname=None, silent=False):
-        if not chname:
-            # no channel name provided, so add to current channel
-            chname = self.chinfo.name
-        self.logger.debug("Adding image '%s' in channel %s" % (
-            imname, chname))
+        if chname is None:
+            channel = self.get_channelInfo()
+            if channel is None:
+                raise ValueError("Need to provide a channel name to add the image")
+            chname = channel.name
 
         # add image to named channel
-        if not self.has_channel(chname):
-            chinfo = self.add_channel(chname)
-        else:
-            chinfo = self.get_channelInfo(chname)
-        chinfo.datasrc[imname] = image
-
-        #self.make_callback('add-image', chinfo.name, image)
-
-        if not silent:
-            self._add_image_update(chinfo, image)
-
+        channel = self.get_channel_on_demand(chname)
+        channel.add_image(image, silent=silent)
 
     def advertise_image(self, chname, image):
-        self.make_callback('add-image', chname, image)
+        channel = self.get_channelInfo(chname)
+        info = channel.get_image_info(image.name)
 
-    def _add_image_update(self, chinfo, image):
-        self.make_callback('add-image', chinfo.name, image)
-
-        current = chinfo.datasrc.youngest()
-        curname = current.get('name')
-        self.logger.debug("image=%s youngest=%s" % (image.get('name'), curname))
-        if current != image:
-            return
-
-        # switch to current image?
-        if chinfo.prefs['switchnew']:
-            #and chinfo.switchfn(image):
-            self.logger.debug("switching to new image '%s'" % (curname))
-            self._switch_image(chinfo, image)
-
-        if chinfo.prefs['raisenew']:
-            curinfo = self.get_channelInfo()
-            if chinfo.name != curinfo.name:
-                self.change_channel(chinfo.name)
+        self.make_callback('add-image', chname, image, info)
 
     def bulk_add_image(self, imname, image, chname):
-        if not self.has_channel(chname):
-            chinfo = self.add_channel(chname)
-        else:
-            chinfo = self.get_channelInfo(chname)
-        chinfo.datasrc[imname] = image
+        channel = self.get_channel_on_demand(chname)
+        channel.add_image(image, bulk_add=True)
 
-        #self.update_pending(timeout=0)
-
-        # By delaying the update here, more images may be bulk added
-        # before the _add_image_update executes--it will then only
-        # update the gui for the latest image, which saves wasted work
-        self.gui_do(self._add_image_update, chinfo, image)
-
-
-    def update_image(self, imname, image, chname):
-        self.logger.debug("Updating image '%s' in channel %s" % (
-            imname, chname))
-
-        # add image to named channel
-        if not self.has_channel(chname):
-            self.add_channel(chname)
-        chinfo = self.get_channelInfo(chname)
-        chinfo.datasrc[imname] = image
-
-        self._switch_image(chinfo, image)
-
-    def get_image(self, chname, fitsname):
-        chinfo = self.get_channelInfo(chname)
-        image = chinfo.datasrc[fitsname]
-        return image
+    def get_image(self, chname, imname):
+        channel = self.get_channelInfo(chname)
+        if channel is None:
+            return None
+        return channel.get_loaded_image(imname)
 
     def getfocus_fitsimage(self):
-        chinfo = self.get_channelInfo()
-        if chinfo is None:
+        channel = self.get_channelInfo()
+        if channel is None:
             return None
-        return chinfo.fitsimage
+        return channel.fitsimage
 
     def get_fitsimage(self, chname):
-        chinfo = self.get_channelInfo(chname)
-        if chinfo is None:
+        channel = self.get_channelInfo(chname)
+        if channel is None:
             return None
-        return chinfo.fitsimage
+        return channel.fitsimage
 
     def switch_name(self, chname, imname, path=None,
                     image_future=None):
 
         # create channel if it doesn't exist already
-        if not self.has_channel(chname):
-            self.add_channel(chname)
-        chinfo = self.get_channelInfo(chname)
+        channel = self.get_channel_on_demand(chname)
+        channel.switch_name(imname)
 
-        if imname in chinfo.datasrc:
-            # Image is still in the heap
-            image = chinfo.datasrc[imname]
-            self.change_channel(chname, image=image)
+        self.change_channel(channel.name)
 
-        else:
-            # Do we have a way to reconstruct this image from a future?
-            if image_future is not None:
-                self.logger.info("Image '%s' is no longer in memory; attempting reloader" % (
-                    imname))
-                # TODO: recode this--it's a bit messy
-                def _switch(imname, image, chname):
-                    # this will be executed in the gui thread
-                    self.add_image(imname, image, chname=chname, silent=True)
-                    self.change_channel(chname, image=image)
-                def _load_n_switch(imname, chname, image_future):
-                    # this will be executed in a non-gui thread
-                    # reconstitute the image
-                    image = self.error_wrap(image_future.thaw)
-                    if isinstance(image, Exception):
-                        errmsg = "Error reconstituting image: %s" % (
-                                                                     str(image))
-                        self.logger.error(errmsg)
-                        raise image
-
-                    # perpetuate the image_future
-                    image.set(image_future=image_future, name=imname, path=path)
-                    self.gui_do(_switch, imname, image, chname)
-
-                self.nongui_do(_load_n_switch, imname, chname, image_future)
-
-            elif path is not None:
-                # Do we have a path? We can try to reload it
-                self.logger.debug("Image '%s' is no longer in memory; attempting to load from %s" % (
-                    imname, path))
-
-                #self.load_file(path, chname=chname)
-                self.nongui_do(self.load_file, path, chname=chname)
-
-            else:
-                raise ControlError("No image by the name '%s' found" % (
-                    imname))
-
-    def _redo_plugins(self, image, chinfo):
+    def _redo_plugins(self, image, channel):
         # New data in channel--update active plugins
-        opmon = chinfo.opmon
+        opmon = channel.opmon
         for key in opmon.get_active():
             obj = opmon.getPlugin(key)
             try:
@@ -992,67 +878,47 @@ class GingaControl(Callback.Callbacks):
                     str(e)))
                 # TODO: log traceback?
 
-    def _switch_image(self, chinfo, image):
-        # update cursor to match image
-        try:
-            name = image.get('name')
-            chinfo.cursor = chinfo.datasrc.index(name)
-        except Exception as e:
-            self.logger.warn("Couldn't find index: %s" % (str(e)))
-            chinfo.cursor = 0
+    def channel_image_updated(self, channel, image):
 
         with self.lock:
             self.logger.info("Update image start")
             start_time = time.time()
-            try:
-                curimage = chinfo.fitsimage.get_image()
-                if curimage != image:
-                    self.logger.info("Setting image...")
-                    chinfo.fitsimage.set_image(image,
-                                               raise_initialize_errors=False)
 
-                    # add cb so that if image is modified internally
-                    #  our plugins get updated
-                    image.add_callback('modified', self._redo_plugins, chinfo)
+            # add cb so that if image is modified internally
+            #  our plugins get updated
+            image.add_callback('modified', self._redo_plugins, channel)
 
-                    self.logger.info("executing redo() in plugins...")
-                    self._redo_plugins(image, chinfo)
+            self.logger.info("executing redo() in plugins...")
+            self._redo_plugins(image, channel)
 
-                else:
-                    self.logger.debug("Apparently no need to set large fits image.")
-
-                split_time1 = time.time()
-                self.logger.info("Large image update: %.4f sec" % (
-                    split_time1 - start_time))
-
-            finally:
-                pass
-
-        return True
+            split_time1 = time.time()
+            self.logger.info("Large image update: %.4f sec" % (
+                split_time1 - start_time))
 
 
     def change_channel(self, chname, image=None, raisew=True):
+        self.logger.info("CHANGE CHANNEL: %s" % (chname))
         name = chname.lower()
-        if not self.chinfo:
+        if not self.cur_channel:
             oldchname = None
         else:
-            oldchname = self.chinfo.name.lower()
+            oldchname = self.cur_channel.name.lower()
 
-        chinfo = self.get_channelInfo(name)
+        channel = self.get_channelInfo(name)
         if name != oldchname:
             with self.lock:
-                self.chinfo = chinfo
+                self.cur_channel = channel
 
             # change plugin manager info
-            chinfo.opmon.update_taskbar(localmode=False)
+            channel.opmon.update_taskbar(localmode=False)
 
             # Update the channel control
-            self.w.channel.show_text(chinfo.name)
+            self.w.channel.show_text(channel.name)
 
         if name != oldchname:
             # raise tab
             if raisew:
-                #self.ds.raise_tab(chinfo.workspace)
+                #self.ds.raise_tab(channel.workspace)
                 self.ds.raise_tab(name)
 
             if oldchname is not None:
@@ -1064,21 +930,16 @@ class GingaControl(Callback.Callbacks):
             self.ds.highlight_tab(name, True)
 
             ## # Update title bar
-            title = chinfo.name
+            title = channel.name
             ## if image is not None:
             ##     name = image.get('name', 'Noname')
             ##     title += ": %s" % (name)
             self.set_titlebar(title)
 
         if image:
-            self._switch_image(chinfo, image)
+            channel.switch_image(image)
 
-        ## elif len(chinfo.datasrc) > 0:
-        ##     n = chinfo.cursor
-        ##     image = chinfo.datasrc.index2value(n)
-        ##     self._switch_image(chinfo, image)
-
-        self.make_callback('active-image', chinfo.fitsimage)
+        self.make_callback('active-image', channel.fitsimage)
 
         self.update_pending()
         return True
@@ -1091,16 +952,22 @@ class GingaControl(Callback.Callbacks):
     def get_channelInfo(self, chname=None):
         with self.lock:
             if not chname:
-                return self.chinfo
+                return self.cur_channel
             name = chname.lower()
             return self.channel[name]
+
+    def get_channel_on_demand(self, chname):
+        if self.has_channel(chname):
+            return self.get_channelInfo(chname)
+
+        return self.add_channel(chname)
 
     def get_channelName(self, fitsimage):
         with self.lock:
             items = self.channel.items()
-        for name, chinfo in items:
-            if chinfo.fitsimage == fitsimage:
-                return chinfo.name
+        for name, channel in items:
+            if channel.fitsimage == fitsimage:
+                return channel.name
         return None
 
     def make_channel_name(self, pfx):
@@ -1112,7 +979,7 @@ class GingaControl(Callback.Callbacks):
             i += 1
         return pfx + str(time.time())
 
-    def add_channel(self, chname, datasrc=None, workspace=None,
+    def add_channel(self, chname, workspace=None,
                     num_images=None, settings=None,
                     settings_template=None,
                     settings_share=None, share_keylist=None):
@@ -1125,7 +992,7 @@ class GingaControl(Callback.Callbacks):
 
         Returns
         -------
-        chinfo: bunch
+        channel: bunch
             the channel info bunch
         """
         if self.has_channel(chname):
@@ -1165,17 +1032,20 @@ class GingaControl(Callback.Callbacks):
             num_images = settings.get('numImages',
                                       self.settings.get('numImages', 1))
         settings.setDefaults(switchnew=True, numImages=num_images,
-                             raisenew=True, genthumb=True)
+                             raisenew=True, genthumb=True,
+                             sort_order='loadtime')
 
         use_readout = not self.settings.get('share_readout', True)
 
         with self.lock:
-            self.logger.debug("Adding channel '%s'" % (chname))
-            if datasrc is None:
-                datasrc = Datasrc.Datasrc(num_images)
-
-            chinfo = Bunch.Bunch(datasrc=datasrc,
-                                 name=chname, cursor=0)
+            name = chname.lower()
+            try:
+                channel = self.channel[name]
+            except KeyError:
+                self.logger.debug("Adding channel '%s'" % (chname))
+                channel = Channel(chname, self, datasrc=None,
+                                  settings=settings)
+                self.channel[name] = channel
 
             bnch = self.add_viewer(chname, settings,
                                    use_readout=use_readout,
@@ -1187,13 +1057,12 @@ class GingaControl(Callback.Callbacks):
                                           self.ds, self.mm)
             opmon.set_widget(self.w.optray)
 
-            chinfo.setvals(widget=bnch.view,
-                           readout=bnch.readout,
-                           container=bnch.container,
-                           workspace=bnch.workspace,
-                           fitsimage=bnch.fitsimage,
-                           prefs=settings,
-                           opmon=opmon)
+            channel.widget = bnch.view
+            channel.readout = bnch.readout
+            channel.container = bnch.container
+            channel.workspace = bnch.workspace
+            channel.fitsimage = bnch.fitsimage
+            channel.opmon = opmon
 
             name = chname.lower()
             self.channel[name] = chinfo
@@ -1205,17 +1074,17 @@ class GingaControl(Callback.Callbacks):
 
         # Prepare local plugins for this channel
         for opname, spec in self.local_plugins.items():
-            opmon.loadPlugin(opname, spec, chinfo=chinfo)
+            opmon.loadPlugin(opname, spec, chinfo=channel)
 
-        self.make_callback('add-channel', chinfo)
-        return chinfo
+        self.make_callback('add-channel', channel)
+        return channel
 
     def delete_channel(self, chname):
         name = chname.lower()
         # TODO: need to close plugins open on this channel
 
         with self.lock:
-            chinfo = self.channel[name]
+            channel = self.channel[name]
 
             # Update the channels control
             self.channelNames.remove(chname)
@@ -1225,7 +1094,7 @@ class GingaControl(Callback.Callbacks):
             self.ds.remove_tab(chname)
             del self.channel[name]
 
-        self.make_callback('delete-channel', chinfo)
+        self.make_callback('delete-channel', channel)
 
     def get_channelNames(self):
         with self.lock:
@@ -1244,8 +1113,8 @@ class GingaControl(Callback.Callbacks):
         bannerFile = os.path.join(self.iconpath, 'ginga-splash.ppm')
         chname = 'Ginga'
         self.add_channel(chname)
-        chinfo = self.get_channelInfo(chname)
-        viewer = chinfo.fitsimage
+        channel = self.get_channelInfo(chname)
+        viewer = channel.fitsimage
         viewer.enable_autocuts('off')
         viewer.enable_autozoom('on')
         viewer.cut_levels(0, 255)
@@ -1257,8 +1126,8 @@ class GingaControl(Callback.Callbacks):
             viewer.zoom_fit()
 
     def remove_image_by_name(self, chname, imname, impath=None):
-        chinfo = self.get_channelInfo(chname)
-        viewer = chinfo.fitsimage
+        channel = self.get_channelInfo(chname)
+        viewer = channel.fitsimage
         self.logger.info("removing image %s" % (imname))
         # If this is the current image in the viewer, clear the viewer
         image = viewer.get_image()
@@ -1266,35 +1135,25 @@ class GingaControl(Callback.Callbacks):
             curname = image.get('name', 'NONAME')
             if curname == imname:
                 viewer.clear()
-        if imname in chinfo.datasrc:
-            chinfo.datasrc.remove(imname)
-        self.make_callback('remove-image', chinfo.name, imname, impath)
+
+        bnch = channel.remove_image(imname)
+        self.make_callback('remove-image', channel.name, imname, impath)
 
     def move_image_by_name(self, from_chname, imname, to_chname, impath=None):
 
-        chinfo = self.get_channelInfo(from_chname)
-        try:
-            image = chinfo.datasrc[imname]
-        except KeyError:
-            # TODO: lost index, image_future
-            image = self.load_image(impath)
-
-        self.add_image(imname, image, chname=to_chname)
-
-        if from_chname.upper() != to_chname.upper():
-            self.gui_do(self.remove_image_by_name, from_chname, imname,
-                        impath=impath)
-
+        channel_from = self.get_channelInfo(from_chname)
+        channel_to = self.get_channelInfo(to_chname)
+        channel_from.move_image_to(imname, channel_to)
 
     def remove_current_image(self):
-        chinfo = self.get_channelInfo()
-        viewer = chinfo.fitsimage
+        channel = self.get_channelInfo()
+        viewer = channel.fitsimage
         image = viewer.get_image()
         if image is None:
             return
         imname = image.get('name', 'NONAME')
         impath = image.get('path', None)
-        self.remove_image_by_name(chinfo.name, imname, impath=impath)
+        self.remove_image_by_name(channel.name, imname, impath=impath)
 
     def followFocus(self, tf):
         self.channel_follows_focus = tf
@@ -1380,5 +1239,293 @@ class GuiLogHandler(logging.Handler):
     def emit(self, record):
         text = self.format(record)
         self.fv.logit(text)
+
+
+class Channel(Callback.Callbacks):
+
+    def __init__(self, name, fv, settings, datasrc=None):
+        super(Channel, self).__init__()
+
+        self.logger = fv.logger
+        self.fv = fv
+        self.settings = settings
+        self.logger = fv.logger
+        self.lock = threading.RLock()
+
+        # CHANNEL ATTRIBUTES
+        self.name = name
+        self.readout = None
+        self.widget = None
+        self.container = None
+        self.workspace = None
+        self.opmon = None
+        # this is the viewer we are connected to
+        self.fitsimage = None
+        if datasrc is None:
+            num_images = self.settings.get('numImages', 1)
+            datasrc = Datasrc.Datasrc(num_images)
+        self.datasrc = datasrc
+        self.cursor = -1
+        self.history = []
+        self.image_index = {}
+
+        # default is to not sort history, so order is by time added
+        self.hist_sort = None
+        sort_order = self.settings.get('sort_order', 'loadtime')
+        if sort_order == 'alpha':
+            # sort history alphabetically
+            self.hist_sort = lambda info1, info2: cmp(info1.name, info2.name)
+
+    def connect_viewer(self, viewer):
+        self.viewer = viewer
+
+        # redraw top image
+        self.refresh_top_image()
+
+    def move_image_to(self, imname, channel):
+        if self == channel:
+            return
+
+        self.copy_image_to(imname, channel)
+        self.remove_image(imname)
+
+    def copy_image_to(self, imname, channel):
+        if self == channel:
+            return
+
+        try:
+            # copy image to other channel's datasrc if still
+            # in memory
+            image = self.datasrc[imname]
+            channel.datasrc[imname] = image
+
+        except KeyError:
+            pass
+
+        # transfer image info
+        info = self.image_index[imname]
+        channel._add_info(info)
+
+    def remove_image(self, imname):
+        if self.datasrc.has_key(imname):
+            self.datasrc.remove(imname)
+
+        info = self.remove_history(imname)
+        return info
+
+    def get_image_names(self):
+        return [ info.name for info in self.history ]
+
+    def get_loaded_image(self, imname):
+        """Will raise a KeyError if image is not in memory."""
+        image = channel.datasrc[imname]
+        return image
+
+    def add_image(self, image, silent=False, bulk_add=False):
+
+        imname = image.get('name', None)
+        assert imname is not None, \
+               ValueError("image has no name")
+
+        self.logger.debug("Adding image '%s' in channel %s" % (
+            imname, self.name))
+
+        self.datasrc[imname] = image
+
+        idx = image.get('idx', None)
+        path = image.get('path', None)
+        image_future = image.get('image_future', None)
+        info = self.add_history(imname, path, image_future=image_future,
+                                idx=idx)
+
+        #self.make_callback('add-image', self.name, image, info)
+        if not silent:
+            if not bulk_add:
+                self._add_image_update(image, info)
+                return
+
+            # By using gui_do() here, more images may be bulk added
+            # before the _add_image_update executes--it will then
+            # only update the gui for the latest image, which saves
+            # work
+            self.fv.gui_do(self._add_image_update, image, info)
+
+
+    def add_image_info(self, info):
+        image_future = info.get('image_future', None)
+        info = self.add_history(info.name, info.path,
+                                image_future=image_future)
+        self.fv.make_callback('add-image-info', info)
+
+    def get_image_info(self, imname):
+        return self.image_index[imname]
+
+    def _add_image_update(self, image, info):
+        self.fv.make_callback('add-image', self.name, image, info)
+
+        current = self.datasrc.youngest()
+        curname = current.get('name')
+        self.logger.debug("image=%s youngest=%s" % (image.get('name'), curname))
+        if current != image:
+            return
+
+        # switch to current image?
+        if self.settings['switchnew']:
+            #and channel.switchfn(image):
+            self.logger.debug("switching to new image '%s'" % (curname))
+            self.switch_image(image)
+
+        if self.settings['raisenew']:
+            channel = self.fv.get_channelInfo()
+            if channel != self:
+                self.fv.change_channel(self.name)
+
+
+    def refresh_cursor_image(self):
+        info = self.history[self.cursor]
+        if self.datasrc.has_key(info.name):
+            # image still in memory
+            image = self.datasrc[info.name]
+            self.switch_image(image)
+
+        else:
+            self.switch_name(info.name)
+
+    def prev_image(self, loop=True):
+        with self.lock:
+            self.logger.debug("Previous image")
+            if self.cursor <= 0:
+                n = len(self.history) - 1
+                if (not loop) or (n < 0):
+                    self.logger.error("No previous image!")
+                    return True
+                self.cursor = n
+            else:
+                self.cursor -= 1
+
+            self.refresh_cursor_image()
+
+        return True
+
+    def next_image(self, loop=True):
+        with self.lock:
+            self.logger.debug("Next image")
+            n = len(self.history) - 1
+            if self.cursor >= n:
+                if (not loop) or (n < 0):
+                    self.logger.error("No next image!")
+                    return True
+                self.cursor = 0
+            else:
+                self.cursor += 1
+
+            self.refresh_cursor_image()
+
+        return True
+
+    def _add_info(self, info):
+        if not info in self.image_index:
+            self.history.append(info)
+            self.image_index[info.name] = info
+
+            if self.hist_sort is not None:
+                self.history.sort(cmp=self.hist_sort)
+
+    def add_history(self, imname, path, idx=None, image_future=None):
+        if not (imname in self.image_index):
+            info = Bunch.Bunch(name=imname, path=path,
+                               idx=idx,
+                               image_future=image_future,
+                               time_added=time.time())
+            self._add_info(info)
+        else:
+            # already in history
+            info = self.image_index[imname]
+        return info
+
+    def remove_history(self, imname):
+        if imname in self.image_index:
+            info = self.image_index[imname]
+            del self.image_index[imname]
+            self.history.remove(info)
+            return info
+        return None
+
+    def switch_image(self, image):
+
+        with self.lock:
+            curimage = self.fitsimage.get_image()
+            if curimage != image:
+                self.logger.info("Setting image...")
+                self.fitsimage.set_image(image,
+                                         raise_initialize_errors=False)
+
+                # update cursor to match image
+                imname = image.get('name')
+                if imname in self.image_index:
+                    info = self.image_index[imname]
+                    if info in self.history:
+                        self.cursor = self.history.index(info)
+
+                self.fv.channel_image_updated(self, image)
+
+            else:
+                self.logger.debug("Apparently no need to set large fits image.")
+
+
+    def switch_name(self, imname):
+
+        if self.datasrc.has_key(imname):
+            # Image is still in the heap
+            image = self.datasrc[imname]
+            self.switch_image(image)
+            return
+
+        if not (imname in self.image_index):
+            raise ControlError("No image by the name '%s' found" % (
+                imname))
+
+        # Do we have a way to reconstruct this image from a future?
+        info = self.image_index[imname]
+        if info.image_future is not None:
+            self.logger.info("Image '%s' is no longer in memory; attempting reloader" % (
+                    imname))
+            # TODO: recode this--it's a bit messy
+            def _switch(image):
+                # this will be executed in the gui thread
+                self.add_image(image, silent=True)
+                self.switch_image(image)
+
+            def _load_n_switch(imname, path, image_future):
+                # this will be executed in a non-gui thread
+                # reconstitute the image
+                image = self.fv.error_wrap(image_future.thaw)
+                if isinstance(image, Exception):
+                    errmsg = "Error reconstituting image: %s" % (
+                                                                 str(image))
+                    self.logger.error(errmsg)
+                    raise image
+
+                # perpetuate the image_future
+                image.set(image_future=image_future, name=imname,
+                          path=path)
+                self.fv.gui_do(self.switch, image)
+
+            self.fv.nongui_do(_load_n_switch, imname, info.path,
+                              info.image_future)
+
+        elif info.path is not None:
+            # Do we have a path? We can try to reload it
+            self.logger.debug("Image '%s' is no longer in memory; attempting to load from %s" % (
+                imname, info.path))
+
+            #self.fv.load_file(path, chname=chname)
+            self.fv.nongui_do(self.load_file, info.path,
+                           chname=self.name)
+
+        else:
+            raise ControlError("No way to recreate image '%s'" % (
+                imname))
+
 
 # END
