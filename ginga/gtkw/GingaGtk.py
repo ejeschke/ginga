@@ -392,8 +392,8 @@ class GingaView(GtkMain.GtkMain):
             return
 
         # Get image from current focused channel
-        chinfo = self.get_channelInfo()
-        fitsimage = chinfo.fitsimage
+        channel = self.get_channelInfo()
+        fitsimage = channel.fitsimage
         settings = fitsimage.get_settings()
         rgbmap = fitsimage.get_rgbmap()
 
@@ -614,8 +614,8 @@ class GingaView(GtkMain.GtkMain):
         return True
 
     def gui_delete_channel(self):
-        chinfo = self.get_channelInfo()
-        chname = chinfo.name
+        channel = self.get_channelInfo()
+        chname = channel.name
         lbl = gtk.Label("Really delete channel '%s' ?" % (chname))
         dialog = GtkHelp.Dialog("Delete Channel",
                                 gtk.DIALOG_DESTROY_WITH_PARENT,

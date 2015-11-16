@@ -284,8 +284,8 @@ class GingaView(GwMain.GwMain, Widgets.Application):
             return
 
         # Get image from current focused channel
-        chinfo = self.get_channelInfo()
-        fitsimage = chinfo.fitsimage
+        channel = self.get_channelInfo()
+        fitsimage = channel.fitsimage
         settings = fitsimage.get_settings()
         rgbmap = fitsimage.get_rgbmap()
 
@@ -536,8 +536,8 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         self._cur_dialogs.append(dialog)
 
     def gui_delete_channel(self):
-        chinfo = self.get_channelInfo()
-        chname = chinfo.name
+        channel = self.get_channelInfo()
+        chname = channel.name
         lbl = Widgets.Label("Really delete channel '%s' ?" % (chname))
         dialog = Dialog("Delete Channel",
                         0,
@@ -838,9 +838,9 @@ class GingaView(GwMain.GwMain, Widgets.Application):
             # Find the channel that contains this widget
             chnames = self.get_channelNames()
             for chname in chnames:
-                chinfo = self.get_channelInfo(chname)
-                if 'container' in chinfo and (chinfo.container == container):
-                    fitsimage = chinfo.fitsimage
+                channel = self.get_channelInfo(chname)
+                if channel.container == container:
+                    fitsimage = channel.fitsimage
                     if fitsimage != self.getfocus_fitsimage():
                         self.logger.debug("Active channel switch to '%s'" % (
                             chname))

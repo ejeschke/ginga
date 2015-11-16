@@ -64,10 +64,10 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         self.keywords = self.settings.get('tt_keywords', tt_keywords)
         self.keywords.insert(0, self.settings.get('mouseover_name_key', 'NAME'))
 
-        fv.set_callback('add-image', self.add_image)
-        fv.set_callback('remove-image', self.remove_image)
-        fv.set_callback('add-channel', self.add_channel)
-        fv.set_callback('delete-channel', self.delete_channel)
+        fv.set_callback('add-image', self.add_image_cb)
+        fv.set_callback('remove-image', self.remove_image_cb)
+        fv.set_callback('add-channel', self.add_channel_cb)
+        fv.set_callback('delete-channel', self.delete_channel_cb)
         fv.add_callback('active-image', self.focus_cb)
 
         self.gui_up = False
@@ -119,7 +119,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         thumbkey = (chname.lower(), imname, path)
         return thumbkey
 
-    def add_image(self, viewer, chname, image):
+    def add_image_cb(self, viewer, chname, image, image_info):
         if not self.gui_up:
             return False
 
@@ -130,20 +130,16 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
         idx = image.get('idx', None)
         # get image path
-        path = image.get('path', None)
+        path = image_info.path
+
         if not (path is None):
             path = os.path.abspath(path)
-            # get image name
-            name = self.fv.name_image_from_path(path, idx=idx)
-        else:
-            name = 'NoName'
-
-        name = image.get('name', name)
+        name = image_info.name
 
         thumbname = name
         self.logger.info("making thumb for %s" % (thumbname))
 
-        future = image.get('image_future', None)
+        future = image_info.image_future
         if future is None:
             image_loader = image.get('loader', self.fv.load_image)
             future = Future.Future()
@@ -188,7 +184,16 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         self.insert_thumbnail(imgwin, thumbkey, thumbname, chname, name, path,
                               thumbpath, metadata, future)
 
-    def remove_image(self, viewer, chname, name, path):
+    def _add_image(self, viewer, chname, image):
+        chinfo = self.fv.get_channelInfo(chname)
+        try:
+            info = chinfo.get_image_info(image.name)
+        except KeyError:
+            return
+
+        self.add_image_cb(viewer, chname, image, info)
+
+    def remove_image_cb(self, viewer, chname, name, path):
         if not self.gui_up:
             return
 
@@ -300,7 +305,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             self.thumbDict = {}
         self.reorder_thumbs()
 
-    def add_channel(self, viewer, chinfo):
+    def add_channel_cb(self, viewer, chinfo):
         """Called when a channel is added from the main interface.
         Parameter is chinfo (a bunch)."""
         fitsimage = chinfo.fitsimage
@@ -321,7 +326,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         if not self.have_thumbnail(fitsimage, image):
             # No memory of this thumbnail, so regenerate it
             chname = viewer.get_channelName(fitsimage)
-            self.add_image(viewer, chname, image)
+            self._add_image(viewer, chname, image)
             return
 
         # Else schedule an update of the thumbnail for changes to
@@ -412,7 +417,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         with self.thmblock:
             if thumbkey not in self.thumbDict:
                 # No memory of this thumbnail, so regenerate it
-                self.add_image(self.fv, chname, image)
+                self._add_image(self.fv, chname, image)
                 return
 
             # Generate new thumbnail
@@ -432,7 +437,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
         self.update_thumbnail(thumbkey, imgwin, name, metadata)
 
-    def delete_channel(self, viewer, chinfo):
+    def delete_channel_cb(self, viewer, chinfo):
         """Called when a channel is deleted from the main interface.
         Parameter is chinfo (a bunch)."""
         chname_del = chinfo.name.lower()

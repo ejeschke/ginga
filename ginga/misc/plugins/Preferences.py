@@ -39,6 +39,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.autocut_methods = self.fitsimage.get_autocut_methods()
         self.autocenter_options = self.fitsimage.get_autocenter_options()
         self.pancoord_options = ('data', 'wcs')
+        self.sort_options = ('loadtime', 'alpha')
 
         self.t_ = self.fitsimage.get_settings()
         self.t_.getSetting('autocuts').add_callback('set',
@@ -465,6 +466,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         exp = Widgets.Expander("General")
 
         captions = (('Num Images:', 'label', 'Num Images', 'entryset'),
+                    ('Sort Order:', 'label', 'Sort Order', 'combobox'),
                     )
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
@@ -473,6 +475,17 @@ class Preferences(GingaPlugin.LocalPlugin):
         num_images = self.t_.get('numImages', 0)
         self.w.num_images.set_text(str(num_images))
         self.w.num_images.add_callback('activated', self.set_buffer_cb)
+
+        combobox = b.sort_order
+        index = 0
+        for name in self.sort_options:
+            combobox.append_text(name)
+            index += 1
+        option = self.t_.get('sort_order', 'loadtime')
+        index = self.sort_options.index(option)
+        combobox.set_index(index)
+        combobox.add_callback('activated', self.set_sort_cb)
+        b.sort_order.set_tooltip("Sort order for images in channel")
 
         fr = Widgets.Frame()
         fr.set_widget(w)
@@ -876,6 +889,12 @@ class Preferences(GingaPlugin.LocalPlugin):
         if not self.gui_up:
             return
         self.w.num_images.set_text(str(num_images))
+
+    def set_sort_cb(self, w, index):
+        """This callback is invoked when the user selects a new sort order
+        from the preferences pane."""
+        name = self.sort_options[index]
+        self.t_.set(sort_order=name)
 
     def set_icc_profile_cb(self, setting, idx):
         idx = self.w.output_icc_profile.get_index()
