@@ -1109,19 +1109,6 @@ class GingaControl(Callback.Callbacks):
         return pfx + str(time.time())
 
     def add_channel_internal(self, chname, datasrc=None, num_images=1):
-        name = chname.lower()
-        with self.lock:
-            try:
-                chinfo = self.channel[name]
-            except KeyError:
-                self.logger.debug("Adding channel '%s'" % (chname))
-                if datasrc is None:
-                    datasrc = Datasrc.Datasrc(num_images)
-
-                chinfo = Bunch.Bunch(datasrc=datasrc,
-                                 name=chname, cursor=0)
-
-                self.channel[name] = chinfo
         return chinfo
 
 
@@ -1182,10 +1169,14 @@ class GingaControl(Callback.Callbacks):
 
         use_readout = not self.settings.get('share_readout', True)
 
-        chinfo = self.add_channel_internal(name,
-                                           num_images=num_images)
-
         with self.lock:
+            self.logger.debug("Adding channel '%s'" % (chname))
+            if datasrc is None:
+                datasrc = Datasrc.Datasrc(num_images)
+
+            chinfo = Bunch.Bunch(datasrc=datasrc,
+                                 name=chname, cursor=0)
+
             bnch = self.add_viewer(chname, settings,
                                    use_readout=use_readout,
                                    workspace=workspace)
@@ -1203,6 +1194,9 @@ class GingaControl(Callback.Callbacks):
                            fitsimage=bnch.fitsimage,
                            prefs=settings,
                            opmon=opmon)
+
+            name = chname.lower()
+            self.channel[name] = chinfo
 
             # Update the channels control
             self.channelNames.append(chname)
