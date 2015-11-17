@@ -896,7 +896,7 @@ class GingaControl(Callback.Callbacks):
 
 
     def change_channel(self, chname, image=None, raisew=True):
-        self.logger.info("CHANGE CHANNEL: %s" % (chname))
+        self.logger.debug("change channel: %s" % (chname))
         name = chname.lower()
         if not self.cur_channel:
             oldchname = None
