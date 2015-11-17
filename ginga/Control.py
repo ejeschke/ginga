@@ -892,7 +892,7 @@ class GingaControl(Callback.Callbacks):
 
 
     def change_channel(self, chname, image=None, raisew=True):
-        self.logger.info("CHANGE CHANNEL: %s" % (chname))
+        self.logger.debug("change channel: %s" % (chname))
         name = chname.lower()
         if not self.cur_channel:
             oldchname = None
@@ -1264,7 +1264,7 @@ class Channel(Callback.Callbacks):
         sort_order = self.settings.get('sort_order', 'loadtime')
         if sort_order == 'alpha':
             # sort history alphabetically
-            self.hist_sort = lambda info1, info2: cmp(info1.name, info2.name)
+            self.hist_sort = lambda info: info.name
 
     def connect_viewer(self, viewer):
         self.viewer = viewer
@@ -1419,7 +1419,7 @@ class Channel(Callback.Callbacks):
             self.image_index[info.name] = info
 
             if self.hist_sort is not None:
-                self.history.sort(cmp=self.hist_sort)
+                self.history.sort(key=self.hist_sort)
 
     def add_history(self, imname, path, idx=None, image_future=None):
         if not (imname in self.image_index):
