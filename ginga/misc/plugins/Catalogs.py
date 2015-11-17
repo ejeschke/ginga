@@ -1193,7 +1193,7 @@ class CatalogListing(object):
     def select_star_cb(self, widget, res_dict):
         """This method is called when the user selects a star from the table.
         """
-        key = res_dict.keys()[0]
+        key = list(res_dict.keys())[0]
         idx = int(key)
         star = self.starlist[idx]
         if not self._select_flag:

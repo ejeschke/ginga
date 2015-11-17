@@ -67,9 +67,9 @@ class Contents(GingaPlugin.GlobalPlugin):
 
 
     def switch_image(self, widget, res_dict):
-        chname = res_dict.keys()[0]
+        chname = list(res_dict.keys())[0]
         img_dict = res_dict[chname]
-        imname = img_dict.keys()[0]
+        imname = list(img_dict.keys())[0]
         bnch = img_dict[imname]
         path = bnch.path
         self.logger.debug("chname=%s name=%s path=%s" % (
