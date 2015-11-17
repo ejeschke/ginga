@@ -106,7 +106,8 @@ class AstroImage(BaseImage):
         # Try to make a wcs object on the header
         self.wcs.load_header(hdu.header, fobj=fobj)
 
-    def load_file(self, filepath, numhdu=None, naxispath=None):
+    def load_file(self, filepath, numhdu=None, naxispath=None,
+                  allow_numhdu_override=True):
         self.logger.debug("Loading file '%s' ..." % (filepath))
         self.clear_metadata()
 
@@ -139,7 +140,7 @@ class AstroImage(BaseImage):
             if name is None:
                 name = info.name
                 if ('[' not in name):
-                    if numhdu is None:
+                    if (numhdu is None) or allow_numhdu_override:
                         numhdu = numhdu_
                     name += iohelper.get_hdu_suffix(numhdu)
                 self.set(name=name)

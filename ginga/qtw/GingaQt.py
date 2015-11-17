@@ -8,6 +8,7 @@
 # Please see the file LICENSE.txt for details.
 #
 # stdlib imports
+import glob
 import sys, os
 import traceback
 import platform
@@ -22,6 +23,7 @@ from ginga.qtw import Widgets
 from ginga import cmap, imap
 from ginga.misc import Bunch
 from ginga.canvas.types.layer import DrawingCanvas
+from ginga.util import iohelper
 from ginga.util.six.moves import map, zip
 
 moduleHome = os.path.split(sys.modules[__name__].__file__)[0]
@@ -250,7 +252,7 @@ class GingaView(QtMain.QtMain):
 
     def add_dialogs(self):
         filesel = QtGui.QFileDialog(self.w.root, directory=os.curdir)
-        filesel.setFileMode(QtGui.QFileDialog.ExistingFile)
+        #filesel.setFileMode(QtGui.QFileDialog.ExistingFile)
         filesel.setViewMode(QtGui.QFileDialog.Detail)
         self.filesel = filesel
 
@@ -644,8 +646,24 @@ class GingaView(QtMain.QtMain):
 
     def gui_load_file(self, initialdir=None):
         if self.filesel.exec_():
-            fileNames = list(map(str, list(self.filesel.selectedFiles())))
-            self.load_file(fileNames[0])
+            filename = list(map(str, list(self.filesel.selectedFiles())))[0]
+
+            # Normal load
+            if os.path.isfile(filename):
+                self.logger.debug('Loading {0}'.format(filename))
+                self.load_file(filename)
+
+            # Fancy load (first file only)
+            # TODO: If load all the matches, might get QPainter errors
+            else:
+                info = iohelper.get_fileinfo(filename)
+                ext = iohelper.get_hdu_suffix(info.numhdu)
+                paths = ['{0}{1}'.format(fname, ext)
+                         for fname in glob.iglob(info.filepath)]
+                self.logger.debug(
+                    'Found {0} and only loading {1}'.format(paths, paths[0]))
+                self.load_file(paths[0])
+
         #self.start_operation_cb('FBrowser')
 
     def statusMsg(self, format, *args):
@@ -687,7 +705,6 @@ class GingaView(QtMain.QtMain):
             # user specified position
             coords = list(map(int, coords))
             self.setPos(*coords)
-
 
     def collapse_pane(self, side):
         """
