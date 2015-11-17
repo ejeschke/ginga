@@ -14,7 +14,7 @@ Canvases and Canvas Objects
 Ginga's canvas is based on the ``DrawingCanvas`` class.
 On the canvas can be placed a number of different kinds of
 *canvas objects*, including many geometric shapes.  The set of canvas
-objects includes: 
+objects includes:
 
 * ``Text``:  a piece of text having a single point coordinate.
 * ``Polygon``:  a closed polygon defined by N points.
@@ -43,7 +43,7 @@ objects includes:
   canvas objects.
 * ``Canvas``:  a transparent subcanvas on which items can be placed.
 * ``DrawingCanvas``:  Like a ``Canvas``, but also can support manual
-  drawing operations initiated in a viewer to create shapes on itself. 
+  drawing operations initiated in a viewer to create shapes on itself.
 * ``ColorBar``: a bar with a color range and ticks and value markers to
   help indicate the mapping of color to the value range of the data.
 * ``ModeIndicator``: a small rectangular overlay with text indicating
@@ -71,9 +71,9 @@ canvas defined by:
 
 * dimensions of their viewport (typically tied to the height and
   width of the native widget's window into which the viewer is rendering),
-* scale in X and Y dimensions, 
+* scale in X and Y dimensions,
 * a *pan position* linking the center of the viewport to a canvas
- coordinate,
+  coordinate,
 * a transform consisting of possible flips in X, Y axes and/or swapping
   of X/Y axes, and
 * a rotation.
@@ -90,4 +90,3 @@ overlaid graphics.
 The various subclasses of ``ImageView`` are designed to render into a
 different widget set or "native" canvas using a ``CanvasRenderer``
 customized for that target.
-

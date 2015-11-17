@@ -18,6 +18,8 @@ object from a FITS header.
 
 To force the use of one, do:
 
+.. code-block:: python
+
     from ginga.util import wcsmod
     wcsmod.use('kapteyn')
 
@@ -41,12 +43,17 @@ have_astlib = False
 have_pywcs = False
 have_astropy = False
 have_starlink = False
+
 WCS = None
+"""Alias to the chosen WCS system."""
+
 
 class WCSError(Exception):
     pass
 
+
 def use(wcspkg, raise_err=True):
+    """Choose WCS package."""
     global coord_types, wcs_configured, WCS, \
            have_kapteyn, kapwcs, \
            have_astlib, astWCS, astCoords, \
@@ -138,7 +145,6 @@ def use(wcspkg, raise_err=True):
 
         return True
 
-
     elif wcspkg == 'astropy':
         try:
             import astropy.wcs as pywcs
@@ -185,7 +191,7 @@ def use(wcspkg, raise_err=True):
 
 
 class BaseWCS(object):
-
+    """Base class for WCS."""
     def get_keyword(self, key):
         return self.header[key]
 
@@ -252,23 +258,19 @@ class AstropyWCS2(BaseWCS):
         Wrap frame.realize_frame, modify self.coordframe to reflect the
         new coords.
 
+        .. note::
+            This is really an ugly hack, which should be in BaseFrame.
+            What it is doing is only changing the internal representation of
+            the data in a Frame.
+
+            This means that a new frame is not initialized, which is a
+            substantial speed improvement.
+
         Parameters
         ----------
+        data : tuple of Quantity
+            The coordinate data (assumed unit spherical).
 
-        data : tuple of `astropy.units.Quantity`
-            The coordinate data (assumed unit spherical)
-
-        Returns
-        -------
-        None
-
-        Notes
-        -----
-
-        This is really an ugly hack, which should be in BaseFrame. What it is
-        doing is only changing the internal representation of the data in a Frame.
-        This means that a new frame is not initilized, which is a substantial
-        speed improvement.
         """
         # If the representation is a subclass of Spherical we need to check for
         # the new _unitrep attr to give the corresponding unit spherical subclass.
@@ -419,12 +421,10 @@ class AstropyWCS2(BaseWCS):
 class AstropyWCS(BaseWCS):
     """A WCS interface for astropy.wcs
     You need to install python module 'astropy'
-
-        http://pypi.python.org/pypi/astropy
-
+    (http://pypi.python.org/pypi/astropy)
     if you want to use this version.
-    """
 
+    """
     def __init__(self, logger):
         super(AstropyWCS, self).__init__()
 
@@ -613,12 +613,10 @@ class AstropyWCS(BaseWCS):
 class AstLibWCS(BaseWCS):
     """A WCS interface for astLib.astWCS.WCS
     You need to install python module 'astLib'
-
-        http://sourceforge.net/projects/astlib
-
+    (http://sourceforge.net/projects/astlib)
     if you want to use this version.
-    """
 
+    """
     def __init__(self, logger):
         super(AstLibWCS, self).__init__()
 
@@ -733,12 +731,10 @@ class AstLibWCS(BaseWCS):
 class KapteynWCS(BaseWCS):
     """A WCS interface for kapteyn.wcs.Projection
     You need to install python module 'kapteyn'
-
-        http://www.astro.rug.nl/software/kapteyn/
-
+    (http://www.astro.rug.nl/software/kapteyn/)
     if you want to use this version.
-    """
 
+    """
     def __init__(self, logger):
         super(KapteynWCS, self).__init__()
 
@@ -857,12 +853,10 @@ class KapteynWCS(BaseWCS):
 class StarlinkWCS(BaseWCS):
     """A WCS interface for Starlink
     You need to install python module 'starlink-pyast'
-
-        http://www.astro.rug.nl/software/kapteyn/
-
+    (http://www.astro.rug.nl/software/kapteyn/)
     if you want to use this version.
-    """
 
+    """
     def __init__(self, logger):
         super(StarlinkWCS, self).__init__()
 
@@ -1012,13 +1006,12 @@ class StarlinkWCS(BaseWCS):
 class BareBonesWCS(BaseWCS):
     """A very basic WCS.  Assumes J2000, units in degrees, projection TAN.
 
-    ***** NOTE *****:
-    We strongly recommend that you install one of the 3rd party python
-    WCS modules referred to at the top of this module, all of which are
-    much more capable than BareBonesWCS.
-    ****************
-    """
+    .. note::
+        We strongly recommend that you install one of the 3rd party python
+        WCS modules referred to at the top of this module, all of which are
+        much more capable than BareBonesWCS.
 
+    """
     def __init__(self, logger):
         super(BareBonesWCS, self).__init__()
         self.logger = logger
@@ -1258,6 +1251,5 @@ if not wcs_configured:
 
         except Exception as e:
             continue
-
 
 #END

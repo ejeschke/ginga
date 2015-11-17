@@ -15,20 +15,20 @@ About Ginga
 ===========
 
 Ginga is a toolkit designed for building viewers for scientific image
-data in Python, visualizing 2D pixel data in numpy arrays.  
+data in Python, visualizing 2D pixel data in numpy arrays.
 It can view astronomical data such as contained in files based on the
 FITS (Flexible Image Transport System) file format.  It is written and
 is maintained by software engineers at the Subaru Telescope, National
 Astronomical Observatory of Japan.
 
-The Ginga toolkit centers around an image display class which supports 
+The Ginga toolkit centers around an image display class which supports
 zooming and panning, color and intensity mapping, a choice of several
 automatic cut levels algorithms and canvases for plotting scalable
 geometric forms.  In addition to this widget, a general purpose
 "reference" FITS viewer is provided, based on a plugin framework.
 A fairly complete set of "standard" plugins are provided for features
 that we expect from a modern FITS viewer: panning and zooming windows,
-star catalog access, cuts, star pick/fwhm, thumbnails, etc. 
+star catalog access, cuts, star pick/fwhm, thumbnails, etc.
 
 =====================
 Copyright and License
@@ -37,7 +37,7 @@ Copyright and License
 Copyright (c) 2011-2015 Eric R. Jeschke. All rights reserved.
 
 Ginga is distributed under an open-source BSD licence. Please see the
-file LICENSE.txt in the top-level directory for details. 
+file LICENSE.txt in the top-level directory for details.
 
 ====================================
 Requirements and Supported Platforms
@@ -67,7 +67,7 @@ Building and Installation
 Download and install from `pip`::
     $ pip install ginga
 
-Or, if you have downloaded the source, go into the top level directory and:: 
+Or, if you have downloaded the source, go into the top level directory and::
 
     $ python setup.py install
 
@@ -89,11 +89,12 @@ Documentation
    quickref
    FAQ
    manual/index
+   api/index
 
-Some training videos are available in the 
+Some training videos are available in the
 `downloads <https://github.com/ejeschke/ginga/downloads>`_ section at
 github.
-Be sure to also check out the 
+Be sure to also check out the
 `wiki <https://github.com/ejeschke/ginga/wiki>`_.
 
 ===========
@@ -111,7 +112,7 @@ invoke Ginga with the logging options to capture any logged errors::
 
 If the difficulty is with non-display or non-working WCS for a
 particular image file please be ready to supply the file for our aid in
-debugging. 
+debugging.
 
 ==============
 Developer Info
@@ -120,7 +121,7 @@ Developer Info
 In the source code `examples/*` directories, see example{1,2}_gtk.py (Gtk),
 example{1,2}_qt.py (Qt), example{1,2}_tk.py (Tk) or
 example{1,2,3,4,5}_mpl.py (matplotlib).
-There is more information for developers in the :ref:`manual`.  
+There is more information for developers in the :ref:`manual`.
 
 See also the Module Index at the bottom of this document.
 
@@ -130,9 +131,9 @@ Etymology
 
 "Ginga" is the romanized spelling of the Japanese word "銀河" (hiragana:
 ぎんが), meaning "galaxy" (in general) and, more familiarly, the Milky
-Way. This viewer was written by software engineers at 
+Way. This viewer was written by software engineers at
 `Subaru Telescope <http://subarutelescope.org/>`_,
-National Astronomical Observatory of Japan--thus the connection. 
+National Astronomical Observatory of Japan--thus the connection.
 
 =============
 Pronunciation
@@ -150,5 +151,3 @@ Indices and tables
 
 * :ref:`genindex`
 * :ref:`modindex`
-* :ref:`search`
-

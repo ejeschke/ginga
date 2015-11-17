@@ -9,11 +9,13 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+"""This module handles calculations based on world coordinate system."""
 import math
 import re
 from collections import OrderedDict
 import numpy
 from ginga.misc import Bunch
+
 
 class WCSError(Exception):
     pass
@@ -35,18 +37,24 @@ def hmsToDeg(h, m, s):
     """Convert RA hours, minutes, seconds into an angle in degrees."""
     return h * degPerHMSHour + m * degPerHMSMin + s * degPerHMSSec
 
+
 def dmsToDeg(sign, deg, min, sec):
-    """Convert dec sign, degrees, minutes, seconds into a signed angle in degrees."""
+    """Convert dec sign, degrees, minutes, seconds into a signed angle in
+    degrees."""
     return sign * (deg + min * degPerDmsMin + sec * degPerDmsSec)
 
+
 def decTimeToDeg(sign_sym, deg, min, sec):
-    """Convert dec sign, degrees, minutes, seconds into a signed angle in degrees.
-       sign_sym may represent negative as either '-' or numeric -1."""
+    """Convert dec sign, degrees, minutes, seconds into a signed angle in
+    degrees.
+
+    ``sign_sym`` may represent negative as either '-' or numeric -1."""
     if sign_sym == -1 or sign_sym == '-':
         sign = -1
     else:
         sign = 1
     return dmsToDeg(sign, deg, min, sec)
+
 
 def degToHms(ra):
     """Converts the ra (in degrees) to HMS three tuple.
@@ -58,6 +66,7 @@ def degToHms(ra):
     ramin = (ra % degPerHMSHour) * HMSMinPerDeg
     rasec = (ra % degPerHMSMin)  * HMSSecPerDeg
     return  (int(rah), int(ramin), rasec)
+
 
 def degToDms(dec, isLatitude=True):
     """Convert the dec, in degrees, to an (sign,D,M,S) tuple.
@@ -84,16 +93,19 @@ def degToDms(dec, isLatitude=True):
 
     return (int(sign), int(deg), int(mnt), sec)
 
+
 def arcsecToDeg(arcsec):
     """Convert numeric arcseconds (aka DMS seconds) to degrees of arc.
     """
     return arcsec * degPerDmsSec
+
 
 def hmsStrToDeg(ra):
     """Convert a string representation of RA into a float in degrees."""
     hour, min, sec = ra.split(':')
     ra_deg = hmsToDeg(int(hour), int(min), float(sec))
     return ra_deg
+
 
 def dmsStrToDeg(dec):
     """Convert a string representation of DEC into a float in degrees."""
@@ -107,12 +119,14 @@ def dmsStrToDeg(dec):
     dec_deg = decTimeToDeg(sign, int(deg), int(min), float(sec))
     return dec_deg
 
+
 def raDegToString(ra_deg, format='%02d:%02d:%06.3f'):
     if ra_deg > 360.0:
         ra_deg = math.fmod(ra_deg, 360.0)
 
     ra_hour, ra_min, ra_sec = degToHms(ra_deg)
     return format % (ra_hour, ra_min, ra_sec)
+
 
 def decDegToString(dec_deg, format='%s%02d:%02d:%05.2f'):
     sign, dec_degree, dec_min, dec_sec = degToDms(dec_deg)
@@ -122,10 +136,10 @@ def decDegToString(dec_deg, format='%s%02d:%02d:%05.2f'):
         sign_sym = '-'
     return format % (sign_sym, int(dec_degree), int(dec_min), dec_sec)
 
-# this function is provided by MOKA2 Development Team (1996.xx.xx)
-#   and used in SOSS system
-def trans_coeff (eq, x, y, z):
 
+def trans_coeff (eq, x, y, z):
+    """This function is provided by MOKA2 Development Team (1996.xx.xx)
+    and used in SOSS system."""
     tt = (eq - 2000.0) / 100.0
 
     zeta = 2306.2181*tt+0.30188*tt*tt+0.017998*tt*tt*tt
@@ -149,8 +163,9 @@ def trans_coeff (eq, x, y, z):
 
     return (p11,p12,p13, p21, p22, p23, p31,p32, p33)
 
-def eqToEq2000(ra_deg, dec_deg, eq):
 
+def eqToEq2000(ra_deg, dec_deg, eq):
+    """Convert Eq to Eq 2000."""
     ra_rad = math.radians(ra_deg)
     dec_rad = math.radians(dec_deg)
 
@@ -185,10 +200,11 @@ def eqToEq2000(ra_deg, dec_deg, eq):
 
     return (new_ra_deg, new_dec_deg)
 
+
 def get_xy_rotation_and_scale(header):
     """
     CREDIT: See IDL code at
-    # http://www.astro.washington.edu/docs/idl/cgi-bin/getpro/library32.html?GETROT
+    http://www.astro.washington.edu/docs/idl/cgi-bin/getpro/library32.html?GETROT
     """
 
     def calc_from_cd(cd1_1, cd1_2, cd2_1, cd2_2):
@@ -278,7 +294,7 @@ def get_xy_rotation_and_scale(header):
 
 
 def get_rotation_and_scale(header, skew_threshold=0.001):
-
+    """Calculate rotation and CDELT."""
     ((xrot, yrot),
      (cdelt1, cdelt2)) = get_xy_rotation_and_scale(header)
 
@@ -295,19 +311,23 @@ def get_rotation_and_scale(header, skew_threshold=0.001):
 
 
 def get_relative_orientation(image, ref_image):
-    """
-    Computes the relative orientation and scale of an image to a reference
+    """Computes the relative orientation and scale of an image to a reference
     image.
 
     Parameters
     ----------
-      image : AstroImage based object
-      ref_image : AstroImage based object
+    image
+        AstroImage based object
+
+    ref_image
+        AstroImage based object
 
     Returns
     -------
-      result : a Bunch object containing the relative scale in x and y
-               and the relative rotation in degrees.
+    result
+        Bunch object containing the relative scale in x and y
+        and the relative rotation in degrees.
+
     """
     # Get reference image rotation and scale
     header = ref_image.get_header()
@@ -354,22 +374,42 @@ def get_relative_orientation(image, ref_image):
                       rrot_deg=rrot_deg)
     return res
 
+
 def simple_wcs(px_x, px_y, ra_deg, dec_deg, px_scale_deg_px, rot_deg,
                cdbase=[1, 1]):
     """Calculate a set of WCS keywords for a 2D simple instrument FITS
     file with a 'standard' RA/DEC pixel projection.
 
-    Parameters:
-        px_x            : (ZERO-based) reference pixel of field in X
-                                (usually center of field)
-        px_y            : (ZERO-based) reference pixel of field in Y
-                                (usually center of field)
-        ra_deg          : RA (in deg) for the reference point
-        dec_deg         : DEC (in deg) for the reference point
-        px_scale_deg_px : pixel scale (deg/pixel)
-        rot_deg         : rotation angle of the field (in deg)
+    Parameters
+    ----------
+    px_x
+        (ZERO-based) reference pixel of field in X
+        (usually center of field)
 
-    Returns an ordered dictionary object containing WCS headers.
+    px_y
+        (ZERO-based) reference pixel of field in Y
+        (usually center of field)
+
+    ra_deg
+        RA (in deg) for the reference point
+
+    dec_deg
+        DEC (in deg) for the reference point
+
+    px_scale_deg_px
+        Pixel scale (deg/pixel)
+
+    rot_deg
+        Rotation angle of the field (in deg)
+
+    cdbase
+        CD base
+
+    Returns
+    -------
+    res : dict
+        Ordered dictionary object containing WCS headers.
+
     """
     # center of the projection
     crpix = (px_x+1, px_y+1)  # pixel position (WCS is 1 based)
@@ -414,7 +454,9 @@ def simple_wcs(px_x, px_y, ra_deg, dec_deg, px_scale_deg_px, rot_deg,
                        ))
     return res
 
+
 def deg2fmt(ra_deg, dec_deg, format):
+    """Format coordinates."""
 
     rhr, rmn, rsec = degToHms(ra_deg)
     dsgn, ddeg, dmn, dsec = degToDms(dec_deg)
@@ -435,19 +477,34 @@ def deg2fmt(ra_deg, dec_deg, format):
 
 
 def dispos(dra0, decd0, dra, decd):
-    """
+    """Compute distance and position angle solving a spherical
+    triangle (no approximations).
+
     Source/credit: Skycat
+    Author: A.P. Martinez
 
-    dispos computes distance and position angle solving a spherical
-    triangle (no approximations)
-    INPUT        :coords in decimal degrees
-    OUTPUT       :dist in arcmin, returns phi in degrees (East of North)
-    AUTHOR       :a.p.martinez
-    Parameters:
-      dra0: center RA  decd0: center DEC  dra: point RA  decd: point DEC
+    Parameters
+    ----------
+    dra0 : float
+        Center RA in decimal degrees.
 
-    Returns:
-      distance in arcmin
+    decd0 : float
+        Center DEC in decimal degrees.
+
+    dra : float
+        Point RA in decimal degrees.
+
+    decd : float
+        Point DEC in decimal degrees.
+
+    Returns
+    -------
+    phi : float
+        Phi in degrees (East of North).
+
+    dist : float
+        Distance in arcmin.
+
     """
     radian = 180.0/math.pi
 
@@ -487,8 +544,10 @@ def dispos(dra0, decd0, dra, decd):
 
 
 def deltaStarsRaDecDeg1(ra1_deg, dec1_deg, ra2_deg, dec2_deg):
+    """Spherical triangulation."""
     phi, dist = dispos(ra1_deg, dec1_deg, ra2_deg, dec2_deg)
     return arcsecToDeg(dist*60.0)
+
 
 def deltaStarsRaDecDeg2(ra1_deg, dec1_deg, ra2_deg, dec2_deg):
     ra1_rad = math.radians(ra1_deg)
@@ -504,8 +563,11 @@ def deltaStarsRaDecDeg2(ra1_deg, dec1_deg, ra2_deg, dec2_deg):
 
 # Use spherical triangulation
 deltaStarsRaDecDeg = deltaStarsRaDecDeg1
+"""Use spherical triangulation."""
+
 
 def get_starsep_RaDecDeg(ra1_deg, dec1_deg, ra2_deg, dec2_deg):
+    """Calculate separation."""
     sep = deltaStarsRaDecDeg(ra1_deg, dec1_deg, ra2_deg, dec2_deg)
     sgn, deg, mn, sec = degToDms(sep)
     if deg != 0:
@@ -513,6 +575,7 @@ def get_starsep_RaDecDeg(ra1_deg, dec1_deg, ra2_deg, dec2_deg):
     else:
         txt = '%02d:%06.3f' % (mn, sec)
     return txt
+
 
 def add_offset_radec(ra_deg, dec_deg, delta_deg_ra, delta_deg_dec):
     """
@@ -544,7 +607,9 @@ def add_offset_radec(ra_deg, dec_deg, delta_deg_ra, delta_deg_dec):
 
     return (ra2_deg, dec2_deg)
 
+
 def get_RaDecOffsets(ra1_deg, dec1_deg, ra2_deg, dec2_deg):
+    """Calculate offset."""
     delta_ra_deg = ra1_deg - ra2_deg
     adj = math.cos(math.radians(dec2_deg))
     if delta_ra_deg > 180.0:
@@ -557,14 +622,18 @@ def get_RaDecOffsets(ra1_deg, dec1_deg, ra2_deg, dec2_deg):
     delta_dec_deg = dec1_deg - dec2_deg
     return (delta_ra_deg, delta_dec_deg)
 
+
 def lon_to_deg(lon):
+    """Convert longitude to degrees."""
     if isinstance(lon, str) and (':' in lon):
         # TODO: handle other coordinate systems
         lon_deg = hmsStrToDeg(lon)
     else:
         lon_deg = float(lon)
 
+
 def lat_to_deg(lat):
+    """Convert latitude to degrees."""
     if isinstance(lat, str) and (':' in lat):
         # TODO: handle other coordinate systems
         lat_deg = dmsStrToDeg(lat)

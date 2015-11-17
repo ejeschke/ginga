@@ -7,7 +7,7 @@ Developing with Ginga
 * :ref:`modindex`
 
 Developers interested in using Ginga in their project will probably
-follow one of two logical development paths: 
+follow one of two logical development paths:
 
 - using Ginga toolkit classes in a program of their own design, or
 - starting with the full-featured reference viewer that comes with Ginga
@@ -48,12 +48,12 @@ A channel has a name and maintains its own history of images that have
 cycled through it.  The user can create new channels as needed.  For
 example, they might use different channels for different kinds of
 images: camera vs. spectrograph, or channels organized by CCD, or by
-target, or raw data vs. quick look, etc.  In the default layout, shown
-in :ref:`fig2` the channel tabs are in the large middle pane, while the
+target, or raw data vs. quick look, etc.  In the default layout,
+the channel tabs are in the large middle pane, while the
 plugins occupy the left and right panes.  Other layouts are possible, by
 simply changing a table used in the startup script.
 
-Ginga distinguishes between two types of plugin: *global* and *local*.  
+Ginga distinguishes between two types of plugin: *global* and *local*.
 Global plugins are used where the functionality is generally enabled
 during the entire session with the viewer and where the plugin is active
 no matter which channel is currenly under interaction with the user.
@@ -80,9 +80,9 @@ open, and does not capture the mouse actions unless the channel it is
 operating on is selected.  Thus one can have two different Pick
 operations going on concurrently on two different channels, for example,
 or a Pick operation in a camera channel, and a Cuts (line cuts)
-operation on a spectrograph channel. 
+operation on a spectrograph channel.
 Figure :ref:`fig5` shows an example of the Pick local plugin occupying a
-notebook tab. 
+notebook tab.
 
 .. _fig5:
 .. figure:: figures/local_plugin1.png
@@ -98,7 +98,7 @@ Anatomy of a Local Ginga Plugin
 
 Let's take a look at a local plugin to understand the API for
 interfacing to the Ginga shell.  In Listing 2, we show a stub for a
-local plugin.  
+local plugin.
 
 .. code-block:: python
 
@@ -267,18 +267,18 @@ Manager bar.
 
         def resume(self):
             """
-            This method is called when the plugin gets focus. 
+            This method is called when the plugin gets focus.
             It should take any actions necessary to start handling user
             interaction events for the operations that it does.
             This method may be called many times as the plugin is focused or
             defocused.  The method may be omitted if there is no user event
-            handling to enable. 
+            handling to enable.
             """
             pass
 
         def stop(self):
             """
-            This method is called when the plugin is stopped. 
+            This method is called when the plugin is stopped.
             It should perform any special clean up necessary to terminate
             the operation.  The GUI will be destroyed by the plugin manager
             so there is no need for the stop method to do that.
@@ -309,7 +309,7 @@ The instance variables "fv" and "fitsimage" will be assigned by the
 superclass initializer to self.fv and self.fitsimage--these are the
 reference viewer "shell" and the ginga display object respectively.
 To interact with the viewer you will be calling methods on one or both
-of these objects. 
+of these objects.
 
 The best way to get a feel for these APIs is to look at the source of
 one of the many plugins distributed with Ginga.  Most of them are not
@@ -324,7 +324,7 @@ ginga configuration area.  In a terminal:
 
     $ mkdir $HOME/.ginga/plugins
 
-Put your plugin in there (a good one to start with is to modify the 
+Put your plugin in there (a good one to start with is to modify the
 MyLocalPlugin example that comes with Ginga):
 
     $ cp MyPlugin.py $HOME/.ginga/plugins/.
@@ -341,7 +341,7 @@ menu to select your plugin and it should be launched in the right panel.
 If you don't see the name of your plugin in the Operation menu, then
 there was probably an error trying to load it.  Examine the log and
 search for the name of your plugin--you should find some error message
-associated with it. 
+associated with it.
 
 If you select your plugin from the menu, but it doesn't launch a GUI,
 there may be a problem or error in the plugin file.  Again, examine the
@@ -366,7 +366,7 @@ the GUI or possibly under the Errors tab.
           plugin into the "Local plugin" box in "Debug" and press
           "Reload"--this will reload the python module representing your
           plugin and you should be able to immediately restart it using
-          the Plugin Manager bar as described above. 
+          the Plugin Manager bar as described above.
 
           If you have edited third party modules that are included in
           the plugin, this will not be enough to pick up those changes.
@@ -377,8 +377,7 @@ A more complex example: The ``Ruler`` Plugin
 Finally, in Listing 3 we show a completed plugin for ``Ruler``.  The
 purpose of this plugin to draw triangulation (distance measurement)
 rulers on the image.  For reference, you may want to refer to the ruler
-shown on the canvas in Figure :ref:`fig2` and the plugin GUI shown in
-Figure :ref:`fig6`.   
+shown in :ref:`fig6`.
 
 .. _fig6:
 .. figure:: figures/ruler_plugin.png
@@ -394,17 +393,17 @@ Figure :ref:`fig6`.
     #
     from ginga import GingaPlugin
     from ginga.gw import Widgets
-    
+
     class Ruler(GingaPlugin.LocalPlugin):
-    
+
         def __init__(self, fv, fitsimage):
             # superclass defines some variables for us, like logger
             super(Ruler, self).__init__(fv, fitsimage)
-    
+
             self.rulecolor = 'green'
             self.layertag = 'ruler-canvas'
             self.ruletag = None
-    
+
             self.dc = fv.getDrawClasses()
             canvas = self.dc.DrawingCanvas()
             canvas.enable_draw(True)
@@ -418,45 +417,45 @@ Figure :ref:`fig6`.
             canvas.register_for_cursor_drawing(self.fitsimage)
             canvas.name = 'Ruler-canvas'
             self.canvas = canvas
-    
+
             self.w = None
             self.unittypes = ('arcmin', 'degrees', 'pixels')
             self.units = 'arcmin'
-    
+
         def build_gui(self, container):
             top = Widgets.VBox()
             top.set_border_width(4)
-    
+
             vbox, sw, orientation = Widgets.get_oriented_box(container)
             vbox.set_border_width(4)
             vbox.set_spacing(2)
-    
+
             self.msgFont = self.fv.getFont("sansFont", 12)
             tw = Widgets.TextArea(wrap=True, editable=False)
             tw.set_font(self.msgFont)
             self.tw = tw
-    
+
             fr = Widgets.Expander("Instructions")
             fr.set_widget(tw)
             vbox.add_widget(fr, stretch=0)
-    
+
             fr = Widgets.Frame("Ruler")
-    
+
             captions = (('Units:', 'label', 'Units', 'combobox'),
                         )
             w, b = Widgets.build_info(captions, orientation=orientation)
             self.w = b
-    
+
             combobox = b.units
             for name in self.unittypes:
                 combobox.append_text(name)
             index = self.unittypes.index(self.units)
             combobox.set_index(index)
             combobox.add_callback('activated', lambda w, idx: self.set_units())
-    
+
             fr.set_widget(w)
             vbox.add_widget(fr, stretch=0)
-    
+
             mode = self.canvas.get_draw_mode()
             hbox = Widgets.HBox()
             btn1 = Widgets.RadioButton("Draw")
@@ -465,53 +464,53 @@ Figure :ref:`fig6`.
             btn1.set_tooltip("Choose this to draw a ruler")
             self.w.btn_draw = btn1
             hbox.add_widget(btn1)
-    
+
             btn2 = Widgets.RadioButton("Edit", group=btn1)
             btn2.set_state(mode == 'edit')
             btn2.add_callback('activated', lambda w, val: self.set_mode_cb('edit', val))
             btn2.set_tooltip("Choose this to edit a ruler")
             self.w.btn_edit = btn2
             hbox.add_widget(btn2)
-    
+
             hbox.add_widget(Widgets.Label(''), stretch=1)
             vbox.add_widget(hbox, stretch=0)
-    
+
             spacer = Widgets.Label('')
             vbox.add_widget(spacer, stretch=1)
-    
+
             top.add_widget(sw, stretch=1)
-    
+
             btns = Widgets.HBox()
             btns.set_spacing(3)
-    
+
             btn = Widgets.Button("Close")
             btn.add_callback('activated', lambda w: self.close())
             btns.add_widget(btn, stretch=0)
             btns.add_widget(Widgets.Label(''), stretch=1)
             top.add_widget(btns, stretch=0)
-    
+
             container.add_widget(top, stretch=1)
-    
+
         def set_units(self):
             index = self.w.units.get_index()
             units = self.unittypes[index]
             self.canvas.set_drawtype('ruler', color='cyan', units=units)
-    
+
             if self.ruletag is not None:
                 obj = self.canvas.getObjectByTag(self.ruletag)
                 if obj.kind == 'ruler':
                     obj.units = units
                     self.canvas.redraw(whence=3)
             return True
-    
+
         def close(self):
             chname = self.fv.get_channelName(self.fitsimage)
             self.fv.stop_local_plugin(chname, str(self))
             return True
-    
+
         def instructions(self):
             self.tw.set_text("""Draw (or redraw) a line with the cursor.
-    
+
     Display the Zoom tab at the same time to precisely see detail while drawing.""")
 
         def start(self):
@@ -520,17 +519,17 @@ Figure :ref:`fig6`.
             p_canvas = self.fitsimage.get_canvas()
             if not p_canvas.has_object(self.canvas):
                 p_canvas.add(self.canvas, tag=self.layertag)
-    
+
             self.canvas.delete_all_objects()
             self.resume()
-    
+
         def pause(self):
             self.canvas.ui_setActive(False)
-    
+
         def resume(self):
             self.canvas.ui_setActive(True)
             self.fv.showStatus("Draw a ruler with the right mouse button")
-    
+
         def stop(self):
             # remove the canvas from the image
             p_canvas = self.fitsimage.get_canvas()
@@ -540,19 +539,19 @@ Figure :ref:`fig6`.
                 pass
             self.canvas.ui_setActive(False)
             self.fv.showStatus("")
-    
+
         def redo(self):
             obj = self.canvas.get_object_by_tag(self.ruletag)
             if obj.kind != 'ruler':
                 return True
             # redraw updates ruler measurements
             self.canvas.redraw(whence=3)
-    
+
         def clear(self, canvas, button, data_x, data_y):
             self.canvas.delete_all_objects()
             self.ruletag = None
             return False
-    
+
         def wcsruler(self, surface, tag):
             obj = self.canvas.get_object_by_tag(tag)
             if obj.kind != 'ruler':
@@ -562,18 +561,18 @@ Figure :ref:`fig6`.
                 self.canvas.delete_object_by_tag(self.ruletag)
             except:
                 pass
-    
+
             # change some characteristics of the drawn image and
             # save as the new ruler
             self.ruletag = tag
             obj.color = self.rulecolor
             obj.cap = 'ball'
             self.canvas.redraw(whence=3)
-    
+
         def edit_cb(self, canvas, obj):
             self.redo()
             return True
-    
+
         def edit_select_ruler(self):
             if self.ruletag is not None:
                 obj = self.canvas.get_object_by_tag(self.ruletag)
@@ -581,23 +580,23 @@ Figure :ref:`fig6`.
             else:
                 self.canvas.clear_selected()
             self.canvas.update_canvas()
-    
+
         def set_mode_cb(self, mode, tf):
             if tf:
                 self.canvas.set_draw_mode(mode)
                 if mode == 'edit':
                     self.edit_select_ruler()
             return True
-    
+
         def __str__(self):
             return 'ruler'
-    
+
     #END
-    
+
 This plugin shows a standard design pattern typical to local plugins.
 Often one is wanting to draw or plot something on top of the image
 below.  The ``ImageViewCanvas`` widget used by Ginga allows this to be
-done very cleanly and conveniently by adding a ``DrawingCanvas`` 
+done very cleanly and conveniently by adding a ``DrawingCanvas``
 object to the image and drawing on that.  Canvases can be layered on top
 of each other in a manner analogous to "layers" in an image editing
 program.  Since each local plugin maintains it's own canvas, it is very
@@ -615,16 +614,16 @@ notice a ``setSurface()`` call that associates this canvas with a
 ``ImageView``-based widget--this is the key for the canvas to utilize WCS
 information for correct plotting.
 All the other methods shown are support methods for doing the ruler
-drawing operation and interacting with the plugin GUI. 
+drawing operation and interacting with the plugin GUI.
 
 .. _sec-writing-global-plugins:
 
 Writing a Global Plugin
 -----------------------
-The last example was focused on writing a local plugin.  Global plugins 
+The last example was focused on writing a local plugin.  Global plugins
 employ a nearly identical API to that shown in Listing 2, except that
 the constructor does not take a ``fitsimage`` parameter.
-``pause()`` and ``resume()`` can safely be omitted.  Like local plugins, 
+``pause()`` and ``resume()`` can safely be omitted.  Like local plugins,
 ``build_gui()`` can be omitted if there is no GUI associated with the plugin.
 
 A template: MyGlobalPlugin
@@ -637,7 +636,7 @@ invoked from a terminal:
 
     $ ginga --modules=MyGlobalPlugin --loglevel=20 --log=/tmp/ginga.log
 
-The plugin will be started at program startup and can be seen in the 
+The plugin will be started at program startup and can be seen in the
 "MyGlobalPlugin" tab in the right panel.  Watch the status message as
 you create new channels, delete channels or load images into channels.
 
@@ -810,7 +809,7 @@ you create new channels, delete channels or load images into channels.
 
         def stop(self):
             """
-            This method is called when the plugin is stopped. 
+            This method is called when the plugin is stopped.
             It should perform any special clean up necessary to terminate
             the operation.  This method could be called more than once if
             the plugin is opened and closed, and may be omitted if there is no
