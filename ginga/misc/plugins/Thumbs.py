@@ -143,7 +143,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
         # Is there a preference set to avoid making thumbnails?
         chinfo = self.fv.get_channelInfo(chname)
-        prefs = chinfo.prefs
+        prefs = chinfo.settings
         if not prefs.get('genthumb', False):
             return
 
