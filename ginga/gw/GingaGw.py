@@ -469,8 +469,7 @@ class GingaView(GwMain.GwMain, Widgets.Application):
 
     def gui_add_channel(self, chname=None):
         if not chname:
-            self.chncnt += 1
-            chname = "Image%d" % self.chncnt
+            chname = self.make_channel_name("Image")
 
         captions = (('New channel name:', 'label', 'channel_name', 'entry'),
                     ('In workspace:', 'label', 'workspace', 'combobox'),
@@ -725,6 +724,11 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         self._lastwsname = wsname
         if rsp == 0:
             return
+
+        if self.has_channel(chname):
+            self.show_error("Channel name already in use: '%s'" % (chname))
+            return True
+
         self.add_channel(chname, workspace=wsname)
         return True
 
@@ -738,10 +742,8 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         if (rsp == 0) or (num <= 0):
             return
 
-        chbase = self.chncnt
-        self.chncnt += num
         for i in range(num):
-            chname = "%s%d" % (chpfx, chbase+i)
+            chname = self.make_channel_name(chpfx)
             self.add_channel(chname, workspace=wsname)
         return True
 
@@ -755,10 +757,23 @@ class GingaView(GwMain.GwMain, Widgets.Application):
 
     def new_ws_cb(self, w, rsp, b, names):
         try:
+            self._cur_dialogs.remove(w)
             wsname = str(b.workspace_name.get_text())
             idx = b.workspace_type.get_index()
             if rsp == 0:
+                w.delete()
                 return
+
+            try:
+                nb = self.ds.get_nb(wsname)
+                self.show_error("Workspace name '%s' cannot be used, sorry." % (
+                    wsname))
+                w.delete()
+                return
+
+            except KeyError:
+                pass
+
             d = { 0: 'nb', 1: 'grid', 2: 'mdi' }
             wstype = d[idx]
             idx = b.workspace.get_index()
@@ -770,7 +785,6 @@ class GingaView(GwMain.GwMain, Widgets.Application):
             num = int(b.num_channels.get_value())
             share_list = b.share_settings.get_text().split()
 
-            self._cur_dialogs.remove(w)
             w.delete()
 
             if num <= 0:
@@ -784,10 +798,8 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         settings = self.prefs.createCategory(name)
         settings_template.copySettings(settings)
 
-        chbase = self.chncnt
-        self.chncnt += num
         for i in range(num):
-            chname = "%s%d" % (chpfx, chbase+i)
+            chname = self.make_channel_name(chpfx)
             self.add_channel(chname, workspace=wsname,
                              settings_template=settings_template,
                              settings_share=settings,

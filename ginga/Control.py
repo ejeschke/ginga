@@ -94,7 +94,6 @@ class GingaControl(Callback.Callbacks):
         self.channel = {}
         self.channelNames = []
         self.chinfo = None
-        self.chncnt = 0
         self.wscount = 0
         self.statustask = None
         self.preloadLock = threading.RLock()
@@ -1099,6 +1098,15 @@ class GingaControl(Callback.Callbacks):
             if chinfo.fitsimage == fitsimage:
                 return chinfo.name
         return None
+
+    def make_channel_name(self, pfx):
+        i = 0
+        while i < 10000:
+            chname = pfx + str(i)
+            if not self.has_channel(chname):
+                return chname
+            i += 1
+        return pfx + str(time.time())
 
     def add_channel_internal(self, chname, datasrc=None, num_images=1):
         name = chname.lower()

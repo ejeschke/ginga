@@ -476,11 +476,9 @@ class GingaView(QtMain.QtMain):
                            readout=readout, workspace=workspace)
         return bnch
 
-
     def gui_add_channel(self, chname=None):
         if not chname:
-            chname = "Image%d" % self.chncnt
-            self.chncnt += 1
+            chname = self.make_channel_name("Image")
         lbl = QtGui.QLabel('New channel name:')
         ent = QtGui.QLineEdit()
         ent.setText(chname)
@@ -615,6 +613,16 @@ class GingaView(QtMain.QtMain):
         idx = b.workspace_type.currentIndex()
         if rsp == 0:
             return
+
+        try:
+            nb = self.ds.get_nb(wsname)
+            self.show_error("Workspace name '%s' cannot be used, sorry." % (
+                wsname))
+            return
+
+        except KeyError:
+            pass
+
         d = { 0: 'nb', 1: 'grid', 2: 'mdi' }
         wstype = d[idx]
         idx = b.in_workspace.currentIndex()
@@ -634,10 +642,8 @@ class GingaView(QtMain.QtMain):
         settings_template.copySettings(settings)
         share_list = b.share_settings.text().split()
 
-        chbase = self.chncnt
-        self.chncnt += num
         for i in range(num):
-            chname = "%s%d" % (chpfx, chbase+i)
+            chname = self.make_channel_name(chpfx)
             self.add_channel(chname, workspace=wsname,
                              settings_template=settings_template,
                              settings_share=settings,
@@ -784,6 +790,10 @@ class GingaView(QtMain.QtMain):
         self._lastwsname = wsname
         if rsp == 0:
             return
+        if self.has_channel(chname):
+            self.show_error("Channel name already in use: '%s'" % (chname))
+            return True
+
         self.add_channel(chname, workspace=wsname)
         return True
 
@@ -797,10 +807,8 @@ class GingaView(QtMain.QtMain):
         if (rsp == 0) or (num <= 0):
             return
 
-        chbase = self.chncnt
-        self.chncnt += num
         for i in range(num):
-            chname = "%s%d" % (chpfx, chbase+i)
+            chname = self.make_channel_name(chpfx)
             self.add_channel(chname, workspace=wsname)
         return True
 

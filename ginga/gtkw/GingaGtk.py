@@ -436,8 +436,7 @@ class GingaView(GtkMain.GtkMain):
 
     def gui_add_channel(self, chname=None):
         if not chname:
-            chname = "Image%d" % self.chncnt
-            self.chncnt += 1
+            chname = self.make_channel_name("Image")
         lbl = gtk.Label('New channel name:')
         ent = gtk.Entry()
         ent.set_text(chname)
@@ -572,6 +571,17 @@ class GingaView(GtkMain.GtkMain):
         if rsp == 0:
             w.destroy()
             return
+
+        try:
+            nb = self.ds.get_nb(wsname)
+            self.show_error("Workspace name '%s' cannot be used, sorry." % (
+                wsname))
+            w.destroy()
+            return
+
+        except KeyError:
+            pass
+
         d = { 0: 'nb', 1: 'grid', 2: 'mdi' }
         wstype = d[idx]
 
@@ -594,10 +604,8 @@ class GingaView(GtkMain.GtkMain):
         settings = self.prefs.createCategory(name)
         settings_template.copySettings(settings)
 
-        chbase = self.chncnt
-        self.chncnt += num
         for i in range(num):
-            chname = "%s%d" % (chpfx, chbase+i)
+            chname = self.make_channel_name(chpfx)
             self.add_channel(chname, workspace=wsname,
                              settings_template=settings_template,
                              settings_share=settings,
@@ -750,6 +758,10 @@ class GingaView(GtkMain.GtkMain):
         w.destroy()
         if rsp == 0:
             return
+        if self.has_channel(chname):
+            self.show_error("Channel name already in use: '%s'" % (chname))
+            return True
+
         self.add_channel(chname, workspace=wsname)
         return True
 
@@ -763,10 +775,8 @@ class GingaView(GtkMain.GtkMain):
         if (rsp == 0) or (num <= 0):
             return
 
-        chbase = self.chncnt
-        self.chncnt += num
         for i in range(num):
-            chname = "%s%d" % (chpfx, chbase+i)
+            chname = self.make_channel_name(chpfx)
             self.add_channel(chname, workspace=wsname)
         return True
 
