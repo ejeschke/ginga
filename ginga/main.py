@@ -66,7 +66,7 @@ default_layout = ['seq', {},
                                  ]
                         )]],
                      ['vbox', dict(name='main', width=700),
-                      dict(row=['ws', dict(wstype='tabs', name='channels',
+                      dict(row=['ws', dict(wstype='nb', name='channels',
                                            group=1)], stretch=1)],
                      ['ws', dict(name='right', width=430, group=2),
                       # (tabname, layout), ...
@@ -274,20 +274,20 @@ class ReferenceViewer(object):
         logger.info("Chosen toolkit (%s) family is '%s'" % (
             ginga_toolkit.toolkit, tkname))
 
-        ##from ginga.gw.GingaGw import GingaView
-        if tkname == 'gtk':
-            from ginga.gtkw.GingaGtk import GingaView
-        elif tkname == 'qt':
-            from ginga.qtw.GingaQt import GingaView
-        else:
-            try:
-                from ginga.qtw.GingaQt import GingaView
-            except ImportError:
-                try:
-                    from ginga.gtkw.GingaGtk import GingaView
-                except ImportError:
-                    print("You need python-gtk or python-qt4 to run Ginga!")
-                    sys.exit(1)
+        from ginga.gw.GingaGw import GingaView
+        ## if tkname == 'gtk':
+        ##     from ginga.gtkw.GingaGtk import GingaView
+        ## elif tkname == 'qt':
+        ##     from ginga.qtw.GingaQt import GingaView
+        ## else:
+        ##     try:
+        ##         from ginga.qtw.GingaQt import GingaView
+        ##     except ImportError:
+        ##         try:
+        ##             from ginga.gtkw.GingaGtk import GingaView
+        ##         except ImportError:
+        ##             print("You need python-gtk or python-qt4 to run Ginga!")
+        ##             sys.exit(1)
 
         # these imports have to be here, otherwise they force the choice
         # of toolkit too early

@@ -191,7 +191,8 @@ class ImageViewBase(Callback.Callbacks):
         self._imgwin_ht = 0
         self._imgwin_set = False
         # desired size
-        self._desired_size = (300, 300)
+        #self._desired_size = (300, 300)
+        self._desired_size = (1, 1)
         # center (and reference) pixel in the screen image (in pixel coords)
         self._ctr_x = 1
         self._ctr_y = 1

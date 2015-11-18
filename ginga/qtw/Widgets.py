@@ -768,13 +768,13 @@ class ContainerBase(WidgetBase):
         layout = self.widget.layout()
         if layout is not None:
             layout.removeWidget(childw)
-        childw.setParent(None)
         if delete:
+            childw.setParent(None)
             childw.deleteLater()
 
     def remove(self, w, delete=False):
         if not w in self.children:
-            raise KeyError("Widget is not a child of this container")
+            raise ValueError("Widget is not a child of this container")
         self.children.remove(w)
 
         self._remove(w.get_widget(), delete=delete)
@@ -786,11 +786,27 @@ class ContainerBase(WidgetBase):
     def get_children(self):
         return self.children
 
+    def num_children(self):
+        return len(self.children)
+
+    def _get_native_children(self):
+        return [child.get_widget() for child in self.children]
+
+    def _get_native_index(self, nchild):
+        l = self._get_native_children()
+        return l.index(nchild)
+
+    def _native_to_child(self, nchild):
+        idx = self._get_native_index(nchild)
+        return self.children[idx]
+
     def set_margins(self, left, right, top, bottom):
-        self.layout.setContentsMargins(left, right, top, bottom)
+        layout = self.widget.layout()
+        layout.setContentsMargins(left, right, top, bottom)
 
     def set_border_width(self, pix):
-        self.layout.setContentsMargins(pix, pix, pix, pix)
+        layout = self.widget.layout()
+        layout.setContentsMargins(pix, pix, pix, pix)
 
 class Box(ContainerBase):
     def __init__(self, orientation='horizontal'):
@@ -917,24 +933,24 @@ class TabWidget(ContainerBase):
     def __init__(self, tabpos='top'):
         super(TabWidget, self).__init__()
 
-        nb = QtGui.QTabWidget()
-        nb.currentChanged.connect(self._cb_redirect)
-        nb.setUsesScrollButtons(True)
-        self.widget = nb
+        w = QtGui.QTabWidget()
+        w.currentChanged.connect(self._cb_redirect)
+        w.setUsesScrollButtons(True)
+        self.widget = w
         self.set_tab_position(tabpos)
 
         self.enable_callback('page-switch')
 
     def set_tab_position(self, tabpos):
-        nb = self.widget
+        w = self.widget
         if tabpos == 'top':
-            nb.setTabPosition(QtGui.QTabWidget.North)
+            w.setTabPosition(QtGui.QTabWidget.North)
         elif tabpos == 'bottom':
-            nb.setTabPosition(QtGui.QTabWidget.South)
+            w.setTabPosition(QtGui.QTabWidget.South)
         elif tabpos == 'left':
-            nb.setTabPosition(QtGui.QTabWidget.West)
+            w.setTabPosition(QtGui.QTabWidget.West)
         elif tabpos == 'right':
-            nb.setTabPosition(QtGui.QTabWidget.East)
+            w.setTabPosition(QtGui.QTabWidget.East)
 
     def _cb_redirect(self, index):
         self.make_callback('page-switch', index)
@@ -944,8 +960,16 @@ class TabWidget(ContainerBase):
         child_w = child.get_widget()
         self.widget.addTab(child_w, title)
 
+    def _remove(self, nchild, delete=False):
+        idx = self.widget.indexOf(nchild)
+        self.widget.removeTab(idx)
+
+        nchild.setParent(None)
+        if delete:
+            nchild.deleteLater()
+
     def get_index(self):
-        return self.widget.getCurrentIndex()
+        return self.widget.currentIndex()
 
     def set_index(self, idx):
         self.widget.setCurrentIndex(idx)
@@ -953,32 +977,156 @@ class TabWidget(ContainerBase):
     def index_of(self, child):
         return self.widget.indexOf(child.get_widget())
 
-    def get_widget_by_index(self, idx):
+    def index_to_widget(self, idx):
         """Returns child corresponding to `idx`"""
-        return self.widget.widget(idx)
+        nchild = self.widget.widget(idx)
+        return self._native_to_child(nchild)
 
 
 class StackWidget(ContainerBase):
     def __init__(self):
         super(StackWidget, self).__init__()
 
-        self.widget = QtHelp.StackedWidget()
+        self.widget = QtGui.QStackedWidget()
 
         self.enable_callback('page-switch')
 
     def add_widget(self, child, title=''):
         self.add_ref(child)
         child_w = child.get_widget()
-        self.widget.addTab(child_w, title)
+        self.widget.addWidget(child_w)
 
     def get_index(self):
-        return self.widget.getCurrentIndex()
+        return self.widget.currentIndex()
 
     def set_index(self, idx):
         self.widget.setCurrentIndex(idx)
 
     def index_of(self, child):
         return self.widget.indexOf(child.get_widget())
+
+    def index_to_widget(self, idx):
+        nchild = self.widget.widget(idx)
+        return self._native_to_child(nchild)
+
+
+class MDIWidget(ContainerBase):
+    def __init__(self, tabpos='top'):
+        super(MDIWidget, self).__init__()
+
+        w = QtGui.QMdiArea()
+        w.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
+        w.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
+        w.subWindowActivated.connect(self._cb_redirect)
+
+        ## w.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding,
+        ##                                   QtGui.QSizePolicy.Expanding))
+        w.setTabsClosable(True)
+        w.setTabsMovable(True)
+        self.widget = w
+
+        self.set_tab_position(tabpos)
+
+        self.enable_callback('page-switch')
+
+    def set_tab_position(self, tabpos):
+        w = self.widget
+        if tabpos == 'top':
+            w.setTabPosition(QtGui.QTabWidget.North)
+        elif tabpos == 'bottom':
+            w.setTabPosition(QtGui.QTabWidget.South)
+        elif tabpos == 'left':
+            w.setTabPosition(QtGui.QTabWidget.West)
+        elif tabpos == 'right':
+            w.setTabPosition(QtGui.QTabWidget.East)
+
+    def get_mode(self):
+        if self.widget.viewMode() == QtGui.QMdiArea.TabbedView:
+            return 'tabs'
+        return 'mdi'
+
+    def set_mode(self, mode):
+        mode = mode.lower()
+        if mode == 'tabs':
+            self.widget.setViewMode(QtGui.QMdiArea.TabbedView)
+        elif mode == 'mdi':
+            self.widget.setViewMode(QtGui.QMdiArea.SubWindowView)
+        else:
+            raise ValueError("Don't understand mode='%s'" % (mode))
+
+    def _cb_redirect(self, subwin):
+        if subwin is not None:
+            l = list(self.widget.subWindowList())
+            idx = l.index(subwin)
+            self.make_callback('page-switch', idx)
+
+    def _window_closed(self, event, subwin, widget):
+        event.accept()
+        child_w = subwin.widget()
+        self.widget.removeSubWindow(subwin)
+        return False
+
+    def add_widget(self, child, title=''):
+        self.add_ref(child)
+        child_w = child.get_widget()
+        subwin = QtGui.QMdiSubWindow(self.widget)
+        subwin.setWidget(child_w)
+        w = self.widget.addSubWindow(subwin)
+        w._closeEvent = w.closeEvent
+        w.closeEvent = lambda event: self._window_closed(event, w, child)
+        w.setWindowTitle(title)
+        child_w.show()
+        w.show()
+
+    def _remove(self, nchild, delete=False):
+        l = [ sw.widget() for sw in self.subWindowList() ]
+        try:
+            idx = l.index(nchild)
+            subwin = l[idx]
+        except (IndexError, ValueError) as e:
+            subwin = None
+
+        if subwin is not None:
+            self.widget.removeSubWindow(subwin)
+            subwin.deleteLater()
+
+        nchild.setParent(None)
+        if delete:
+            nchild.deleteLater()
+
+    def get_index(self):
+        return self.widget.getCurrentIndex()
+
+    def set_index(self, idx):
+        l = list(self.widget.subWindowList())
+        subwin = l[idx]
+        self.widget.setActiveSubWindow(subwin)
+
+    def index_of(self, child):
+        nchild = child.get_widget()
+        try:
+            l = [ sw.widget() for sw in self.widget.subWindowList() ]
+            idx = l.index(nchild)
+            return idx
+        except (IndexError, ValueError) as e:
+            return -1
+
+    def index_to_widget(self, idx):
+        subwin = list(self.widget.subWindowList())[idx]
+        nchild = subwin.widget()
+        return self._native_to_child(nchild)
+
+    def tile_panes(self):
+        self.widget.tileSubWindows()
+
+    def cascade_panes(self):
+        self.widget.cascadeSubWindows()
+
+    def use_tabs(self, tf):
+        if tf:
+            self.widget.setViewMode(QtGui.QMdiArea.TabbedView)
+        else:
+            self.widget.setViewMode(QtGui.QMdiArea.SubWindowView)
 
 
 class ScrollArea(ContainerBase):
@@ -1036,21 +1184,26 @@ class GridBox(ContainerBase):
 
         w = QtGui.QWidget()
         layout = QtGui.QGridLayout()
-        self.layout = layout
         w.setLayout(layout)
         self.widget = w
 
+    def resize_grid(self, rows, columns):
+        pass
+
     def set_row_spacing(self, val):
-        self.layout.setVerticalSpacing(val)
+        self.widget.layout().setVerticalSpacing(val)
 
     def set_column_spacing(self, val):
-        self.layout.setHorizontalSpacing(val)
+        self.widget.layout().setHorizontalSpacing(val)
+
+    def set_spacing(self, val):
+        self.set_row_spacing(val)
+        self.set_column_spacing(val)
 
     def add_widget(self, child, row, col, stretch=0):
         self.add_ref(child)
         w = child.get_widget()
-        self.layout.addWidget(w, row, col)
-
+        self.widget.layout().addWidget(w, row, col)
 
 class ToolbarAction(WidgetBase):
     def __init__(self):
@@ -1230,6 +1383,9 @@ class TopLevel(ContainerBase):
     def unfullscreen(self):
         self.widget.showNormal()
 
+    def is_fullscreen(self):
+        return self.widget.isFullScreen()
+
     def iconify(self):
         self.hide()
 
@@ -1298,6 +1454,44 @@ class Application(object):
         return w
 
 
+class Dialog(WidgetBase):
+    def __init__(self, title=None, flags=None, buttons=None,
+                 parent=None):
+        super(Dialog, self).__init__()
+
+        self.widget = QtGui.QDialog(parent.get_widget())
+        self.widget.setModal(True)
+
+        vbox = QtGui.QVBoxLayout()
+        self.widget.setLayout(vbox)
+
+        self.content = VBox()
+        vbox.addWidget(self.content.get_widget(), stretch=1)
+
+        hbox_w = QtGui.QWidget()
+        hbox = QtGui.QHBoxLayout()
+        hbox_w.setLayout(hbox)
+
+        for name, val in buttons:
+            btn = QtGui.QPushButton(name)
+            def cb(val):
+                return lambda: self._cb_redirect(val)
+            btn.clicked.connect(cb(val))
+            hbox.addWidget(btn, stretch=0)
+
+        vbox.addWidget(hbox_w, stretch=0)
+        ## self.widget.closeEvent = lambda event: self.delete()
+
+        self.enable_callback('activated')
+
+    def _cb_redirect(self, val):
+        print("response given: %s" % (str(val)))
+        self.make_callback('activated', val)
+
+    def get_content_area(self):
+        return self.content
+
+
 class SaveDialog(QtGui.QFileDialog):
     def __init__(self, title=None, selectedfilter=None):
         super(SaveDialog, self).__init__()
@@ -1309,6 +1503,7 @@ class SaveDialog(QtGui.QFileDialog):
         if self.widget and self.selectedfilter is not None and not self.widget.endswith(self.selectedfilter[1:]):
             self.widget += self.selectedfilter[1:]
         return self.widget
+
 
 class DragPackage(object):
     def __init__(self, src_widget):

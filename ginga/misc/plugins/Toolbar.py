@@ -123,7 +123,6 @@ class Toolbar(GingaPlugin.GlobalPlugin):
             if name == '---':
                 tb.add_separator()
                 continue
-            #btn = self.fv.make_button(*tup[:4])
             iconpath = os.path.join(self.fv.iconpath, "%s.png" % (tup[2]))
             btn = tb.add_action(None, toggle=(tup[1]=='toggle'),
                                 iconpath=iconpath)

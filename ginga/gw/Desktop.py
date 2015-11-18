@@ -8,9 +8,10 @@
 # Please see the file LICENSE.txt for details.
 #
 import time
+import math
 
 from ginga.misc import Bunch, Callback
-from ginga.gw import Widgets
+from ginga.gw import Widgets, GwHelp
 
 class Desktop(Callback.Callbacks):
 
@@ -37,19 +38,20 @@ class Desktop(Callback.Callbacks):
             tabpos = 'top'
 
         if wstype == 'mdi':
-            nb = Widgets.MDIWorkspace()
+            nb = MDIWorkspace()
 
         elif wstype == 'grid':
-            nb = Widgets.GridWorkspace()
+            nb = GridWorkspace()
 
         elif show_tabs:
-            nb = Widgets.TabWidget()
+            nb = TabWorkspace()
             nb.set_tab_position(tabpos)
 
         else:
-            nb = Widgets.StackWidget()
+            nb = StackWorkspace()
 
-        nb.add_callback('page-switch', self.switch_page_cb)
+        if nb.has_callback('page-switch'):
+            nb.add_callback('page-switch', self.switch_page_cb)
 
         if not name:
             name = str(time.time())
@@ -90,14 +92,14 @@ class Desktop(Callback.Callbacks):
 
     def add_tab(self, wsname, widget, group, labelname, tabname=None,
                 data=None):
-        tab_w = self.get_nb(wsname)
+        ws_w = self.get_nb(wsname)
         self.tabcount += 1
         if not tabname:
             tabname = labelname
             if tabname in self.tab:
                 tabname = 'tab%d' % self.tabcount
 
-        tab_w.add_widget(widget, title=labelname)
+        ws_w.add_tab(widget, title=labelname)
         self.tab[tabname] = Bunch.Bunch(widget=widget, name=labelname,
                                         tabname=tabname, data=data,
                                         group=group)
@@ -132,7 +134,7 @@ class Desktop(Callback.Callbacks):
         nb, index = self._find_nb(tabname)
         widget = self.tab[tabname].widget
         if (nb is not None) and (index >= 0):
-            nb.remove(widget)
+            nb.remove_tab(widget)
 
     def highlight_tab(self, tabname, onoff):
         nb, index = self._find_nb(tabname)
@@ -218,8 +220,8 @@ class Desktop(Callback.Callbacks):
             nb, index = self._find_nb(tabname)
             widget = self.tab[tabname].widget
             if (nb is not None) and (index >= 0):
-                nb.remove(widget)
-                to_nb.add_widget(widget, title=tabname)
+                nb.remove_tab(widget)
+                to_nb.add_tab(widget, title=tabname)
 
         return _foo
 
@@ -245,7 +247,7 @@ class Desktop(Callback.Callbacks):
     def switch_page_cb(self, nbw, page_num):
         self.logger.debug("page switch: %d" % page_num)
         idx = nbw.get_index()
-        pagew = nbw.get_widget_by_index(idx)
+        pagew = nbw.index_to_widget(idx)
         bnch = self._find_tab(pagew)
         if bnch is not None:
             self.make_callback('page-switch', bnch.name, bnch.data)
@@ -410,6 +412,8 @@ class Desktop(Callback.Callbacks):
         def seq(params, cols, pack):
             def mypack(w):
                 w_top = self.app.make_window()
+                # Qt hack
+                w_top.no_expand(1|2|4, 1|2|4)
                 w_top.set_widget(w)
                 self.toplevels.append(w_top)
                 ## def closeEvent(*args):
@@ -458,3 +462,132 @@ class Desktop(Callback.Callbacks):
                 make_widget(kind, params, rest, pack)
 
         make(layout, lambda w: None)
+
+
+    ##### WORKSPACES #####
+
+class WorkspaceMixin(object):
+
+    def to_next(self):
+        num_tabs = self.num_children()
+        cur_idx = self.get_index()
+        new_idx = (cur_idx + 1) % num_tabs
+        self.set_index(new_idx)
+
+    def to_previous(self):
+        num_tabs = self.num_children()
+        new_idx = self.get_index() - 1
+        if new_idx < 0:
+            new_idx = max(num_tabs - 1, 0)
+        self.set_index(new_idx)
+
+
+class TabWorkspace(Widgets.TabWidget, WorkspaceMixin):
+
+    def __init__(self):
+        super(TabWorkspace, self).__init__()
+
+        self.no_expand(1|2|4, 1|2|4)
+
+    def add_tab(self, widget, title=''):
+        self.add_widget(widget, title=title)
+
+    def remove_tab(self, widget):
+        self.remove(widget)
+
+
+class StackWorkspace(Widgets.StackWidget, WorkspaceMixin):
+
+    def __init__(self):
+        super(StackWorkspace, self).__init__()
+
+        self.no_expand(1|2|4, 1|2|4)
+
+    def add_tab(self, widget, title=''):
+        self.add_widget(widget)
+
+    def remove_tab(self, widget):
+        self.remove(widget)
+
+
+class MDIWorkspace(Widgets.MDIWidget, WorkspaceMixin):
+
+    def __init__(self):
+        super(MDIWorkspace, self).__init__()
+
+        self.no_expand(1|2|4, 1|2|4)
+
+    def add_tab(self, widget, title=''):
+        self.add_widget(widget, title=title)
+
+    def remove_tab(self, widget):
+        self.remove(widget)
+
+
+class GridWorkspace(Widgets.GridBox, WorkspaceMixin):
+
+    def __init__(self):
+        super(GridWorkspace, self).__init__()
+
+        self.no_expand(1|2|4, 1|2|4)
+
+        self.set_margins(0, 0, 0, 0)
+        self.set_spacing(2)
+
+    def _relayout(self, widgets):
+        # remove all the old widgets
+        self.remove_all()
+
+        # calculate number of rows and cols, try to maintain a square
+        # TODO: take into account the window geometry
+        num_widgets = len(widgets)
+        rows = int(round(math.sqrt(num_widgets)))
+        cols = rows
+        if rows**2 < num_widgets:
+            cols += 1
+
+        self.resize_grid(rows, cols)
+
+        # add them back in, in a grid
+        for i in range(0, rows):
+            for j in range(0, cols):
+                index = i*cols + j
+                if index < num_widgets:
+                    child = widgets[index]
+                    self.add_widget(child, i, j, stretch=1)
+
+    def add_tab(self, widget, title=''):
+        widget.no_expand(1|2|4, 1|2|4)
+
+        widgets = list(self.get_children())
+        widgets.append(widget)
+
+        self._relayout(widgets)
+
+
+    def remove_tab(self, widget):
+        self.remove(widget)
+
+        widgets = list(self.get_children())
+        self._relayout(widgets)
+
+    def get_index(self):
+        return self.cur_index
+
+    def set_index(self, idx):
+        if 0 <= idx < self.num_children():
+            self.cur_index = idx
+            # TODO: focus widget
+
+    def index_of(self, child):
+        children = self.get_children()
+        try:
+            return children.index(child)
+        except (IndexError, ValueError) as e:
+            return -1
+
+    def index_to_widget(self, idx):
+        children = self.get_children()
+        return children[idx]
+
+#END

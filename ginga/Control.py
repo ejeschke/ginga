@@ -1108,10 +1108,6 @@ class GingaControl(Callback.Callbacks):
             i += 1
         return pfx + str(time.time())
 
-    def add_channel_internal(self, chname, datasrc=None, num_images=1):
-        return chinfo
-
-
     def add_channel(self, chname, datasrc=None, workspace=None,
                     num_images=None, settings=None,
                     settings_template=None,

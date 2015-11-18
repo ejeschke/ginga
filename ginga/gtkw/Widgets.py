@@ -915,6 +915,20 @@ class ContainerBase(WidgetBase):
     def get_children(self):
         return self.children
 
+    def num_children(self):
+        return len(self.children)
+
+    def _get_native_children(self):
+        return [child.get_widget() for child in self.children]
+
+    def _get_native_index(self, nchild):
+        l = self._get_native_children()
+        return l.index(nchild)
+
+    def _native_to_child(self, nchild):
+        idx = self._get_native_index(nchild)
+        return self.children[idx]
+
     def set_margins(self, left, right, top, bottom):
         # TODO: can this be made more accurate?
         self.widget.set_border_width(left)
@@ -1025,9 +1039,10 @@ class TabWidget(ContainerBase):
     def index_of(self, child):
         return self.widget.page_num(child.get_widget())
 
-    def get_widget_by_index(self, idx):
+    def index_to_widget(self, idx):
         """Returns child corresponding to `idx`"""
-        return self.widget.get_nth_page(idx)
+        nchild = self.widget.get_nth_page(idx)
+        return self._native_to_child(nchild)
 
 class StackWidget(TabWidget):
     def __init__(self):
@@ -1037,6 +1052,24 @@ class StackWidget(TabWidget):
         #nb.set_scrollable(False)
         nb.set_show_tabs(False)
         nb.set_show_border(False)
+
+class MDIWidget(TabWidget):
+
+    def get_mode(self):
+        return 'tabs'
+
+    def set_mode(self, mode):
+        pass
+
+    def tile_panes(self):
+        pass
+
+    def cascade_panes(self):
+        pass
+
+    def use_tabs(self, tf):
+        pass
+
 
 class ScrollArea(ContainerBase):
     def __init__(self):
@@ -1115,6 +1148,13 @@ class GridBox(ContainerBase):
 
         w = gtk.Table(rows=rows, columns=columns)
         self.widget = w
+        self.num_rows = rows
+        self.num_cols = columns
+
+    def resize_grid(self, rows, columns):
+        self.num_rows = rows
+        self.num_cols = columns
+        self.widget.resize(rows, columns)
 
     def set_row_spacing(self, val):
         self.widget.set_row_spacings(val)
@@ -1122,14 +1162,32 @@ class GridBox(ContainerBase):
     def set_column_spacing(self, val):
         self.widget.set_col_spacings(val)
 
+    def set_spacing(self, val):
+        self.set_row_spacing(val)
+        self.set_column_spacing(val)
+
     def add_widget(self, child, row, col, stretch=0):
+        resize = False
+        if row > self.num_rows:
+            resize = True
+            self.num_rows = row
+        if col > self.num_cols:
+            resize = True
+            self.num_cols = col
+        if resize:
+            self.resize_grid(self.num_rows, self.num_cols)
+
         self.add_ref(child)
         w = child.get_widget()
         if stretch > 0:
             xoptions = gtk.EXPAND|gtk.FILL
+            yoptions = gtk.EXPAND|gtk.FILL
         else:
             xoptions = gtk.FILL
-        self.widget.attach(w, col, col+1, row, row+1, xoptions=xoptions)
+            yoptions = gtk.FILL
+        self.widget.attach(w, col, col+1, row, row+1,
+                           xoptions=xoptions, yoptions=yoptions,
+                           xpadding=0, ypadding=0)
         self.widget.show_all()
 
 
@@ -1247,11 +1305,14 @@ class TopLevel(ContainerBase):
     def __init__(self, title=None):
         super(TopLevel, self).__init__()
 
+        self._fullscreen = False
+
         widget = GtkHelp.TopLevel()
         self.widget = widget
         widget.set_border_width(0)
         widget.connect("destroy", self._quit)
-        widget.connect("delete_event", self._closeEvent)
+        widget.connect("delete_event", self._close_event)
+        widget.connect("window_state_event", self._window_event)
 
         if not title is None:
             widget.set_title(title)
@@ -1272,8 +1333,15 @@ class TopLevel(ContainerBase):
     def _quit(self, *args):
         self.close()
 
-    def _closeEvent(self, widget, event):
+    def _close_event(self, widget, event):
         self.close()
+
+    def _window_event(self, widget, event):
+        if ((event.changed_mask & gtk.gdk.WINDOW_STATE_FULLSCREEN) or
+            (event.changed_mask & gtk.gdk.WINDOW_STATE_MAXIMIZED)):
+            self._fullscreen = True
+        else:
+            self._fullscreen = False
 
     def close(self):
         try:
@@ -1325,6 +1393,9 @@ class TopLevel(ContainerBase):
     def unfullscreen(self):
         window = self.widget.get_window()
         window.unfullscreen()
+
+    def is_fullscreen(self):
+        return self._fullscreen
 
     def iconify(self):
         window = self.widget.get_window()
@@ -1394,12 +1465,41 @@ class Application(object):
         return w
 
 
-class SaveDialog:
+class Dialog(WidgetBase):
+    def __init__(self, title=None, flags=None, buttons=None,
+                 parent=None):
+        super(Dialog, self).__init__()
+
+        button_list = []
+        for name, val in buttons:
+            button_list.extend([name, val])
+
+        self.parent = parent.get_widget()
+        self.widget = gtk.Dialog(title=title, flags=flags,
+                                 buttons=tuple(button_list))
+        self.content = VBox()
+        content = self.widget.get_content_area()
+        content.pack_start(self.content.get_widget(), fill=True, expand=True)
+        ## self.widget.connect("delete_event",
+        ##                     lambda *args: self._cb_redirect(self.widget, 0))
+        self.widget.connect("response", self._cb_redirect)
+
+        self.enable_callback('activated')
+
+    def _cb_redirect(self, w, val):
+        self.make_callback('activated', val)
+
+    def get_content_area(self):
+        return self.content
+
+class SaveDialog(object):
     def __init__(self, title='Save File', selectedfilter=None):
         action = gtk.FILE_CHOOSER_ACTION_SAVE
-        buttons = (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, gtk.STOCK_SAVE, gtk.RESPONSE_OK)
+        buttons = (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
+                   gtk.STOCK_SAVE, gtk.RESPONSE_OK)
 
-        self.widget = gtk.FileChooserDialog(title=title, action=action, buttons=buttons)
+        self.widget = gtk.FileChooserDialog(title=title, action=action,
+                                            buttons=buttons)
         self.selectedfilter = selectedfilter
 
         if selectedfilter is not None:
@@ -1611,12 +1711,12 @@ def add_context_menu(widget, menu):
 
 def clickable_label(widget, fn_cb):
     # Special hacks for making a label into a button-type item
-    widget.setSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Minimum)
-    widget.setFrameStyle(QtGui.QFrame.Box | QtGui.QFrame.Raised)
+    ## widget.setSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Minimum)
+    ## widget.setFrameStyle(QtGui.QFrame.Box | QtGui.QFrame.Raised)
 
-    # better than making a whole new subclass just to get a label to
-    # respond to a mouse click
-    widget.mousePressEvent = lambda event: fn_cb()
-
+    ## # better than making a whole new subclass just to get a label to
+    ## # respond to a mouse click
+    ## widget.mousePressEvent = lambda event: fn_cb()
+    pass
 
 #END
