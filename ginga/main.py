@@ -42,6 +42,8 @@ import sys, os
 import logging, logging.handlers
 import threading
 import traceback
+import glob
+import json
 
 # Local application imports
 from ginga.misc.Bunch import Bunch
@@ -145,6 +147,65 @@ class ReferenceViewer(object):
             Bunch(module=module_name, ws=ws_name, tab=tab_name,
                   start=start_plugin, pfx=pfx))
 
+    def discover_plugins(self, logger, pl_dir):
+        """Look through the directory specified by `pl_dir` for JSON
+        formatted plugin configuration files.  For each one found,
+        read it and add the plugin configuration.
+        """
+        logger.info("Discovering plugins from '%s'" % (pl_dir))
+
+        for pl_conffile in glob.glob(os.path.join(pl_dir, '*.json')):
+            with open(pl_conffile, 'r') as in_f:
+                try:
+                    pl_conf = json.loads(in_f.read())
+                    pl_type = pl_conf['type'].lower()
+
+                    if pl_type == 'local':
+                        pfx = pl_conf.get('pfx', None)
+                        self.add_local_plugin(pl_conf['module'],
+                                              pl_conf['workspace'], pfx=pfx)
+                    if pl_type == 'global':
+                        pfx = pl_conf.get('pfx', None)
+                        tab_name = pl_conf.get('tab_name', None)
+                        start = pl_conf.get('start', False)
+                        self.add_global_plugin(pl_conf['module'],
+                                               pl_conf['workspace'],
+                                               tab_name=tab_name,
+                                               start_plugin=start, pfx=pfx)
+
+                except Exception as e:
+                    logger.error("Error loading plugin configuration '%s': %s" % (
+                        pl_conffile, str(e)))
+                    continue
+
+    def write_plugin_conf(self, logger, pl_dir):
+        """Scan the current set of plugins and for each one write to the
+        configuration directory specified by `pl_dir` a JSON formatted
+        plugin configuration file.
+        """
+        for bnch in self.global_plugins:
+            pl_name = '%s.json' % (bnch.module)
+            pl_conf = dict(type='global',
+                           module=bnch.module, workspace=bnch.ws,
+                           tab_name=bnch.tab, start=bnch.start,
+                           pfx=bnch.pfx)
+            with open(os.path.join(pl_dir, pl_name), 'w') as out_f:
+                out_f.write(json.dumps(pl_conf, indent=4, sort_keys=True))
+
+        for bnch in self.local_plugins:
+            pl_name = '%s.json' % (bnch.module)
+            pl_conf = dict(type='local',
+                           module=bnch.module, workspace=bnch.ws,
+                           pfx=bnch.pfx)
+            with open(os.path.join(pl_dir, pl_name), 'w') as out_f:
+                out_f.write(json.dumps(pl_conf, indent=4, sort_keys=True))
+
+    def write_layout_conf(self, logger, lo_file):
+        # write layout
+        with open(lo_file, 'w') as out_f:
+            out_f.write(json.dumps(self.layout, indent=4, sort_keys=True))
+
+
     def add_default_plugins(self):
         """
         Add the ginga-distributed default set of plugins to the
@@ -218,6 +279,9 @@ class ReferenceViewer(object):
         optprs.add_option("--wcspkg", dest="wcspkg", metavar="NAME",
                           default=None,
                           help="Prefer WCS module NAME")
+        optprs.add_option("--write-plugin-conf", dest="write_plugin_conf",
+                          action="store_true", default=False,
+                          help="Write the plugin configuration")
 
     def main(self, options, args):
         """
@@ -263,6 +327,32 @@ class ReferenceViewer(object):
         sys.path.insert(0, childDir)
         pluginDir = os.path.join(basedir, 'plugins')
         sys.path.insert(0, pluginDir)
+
+        conf_dir = os.path.join(basedir, 'plugin_conf')
+        if options.write_plugin_conf:
+            if not os.path.isdir(conf_dir):
+                os.mkdir(conf_dir)
+            self.add_default_plugins()
+            self.write_plugin_conf(logger, conf_dir)
+
+            # write layout, because plugins configuration may depend on it
+            lo_file = os.path.join(basedir, 'layout.json')
+            self.write_layout_conf(logger, lo_file)
+
+        # Look for user configuration of plugins
+        elif os.path.isdir(conf_dir):
+            self.discover_plugins(logger, conf_dir)
+
+        else:
+            self.add_default_plugins()
+
+        # Did user override layout?
+        layout_conf = os.path.join(basedir, 'layout.json')
+        if os.path.exists(layout_conf):
+            logger.info("Overriding default layout with '%s'" % (
+                layout_conf))
+            with open(layout_conf, 'r') as in_f:
+                self.layout = json.loads(in_f.read())
 
         # Choose a toolkit
         if options.toolkit:
@@ -507,7 +597,6 @@ class ReferenceViewer(object):
 def reference_viewer(sys_argv):
 
     viewer = ReferenceViewer(layout=default_layout)
-    viewer.add_default_plugins()
 
     # Parse command line options with optparse module
     from optparse import OptionParser
