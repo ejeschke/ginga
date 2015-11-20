@@ -833,6 +833,10 @@ class GingaControl(Callback.Callbacks):
             #width, height = 700, 800
             #self.ds.create_toplevel_ws(width, height, group=1)
             self.ds.add_toplevel(bnch, bnch.name)
+
+        if bnch.nb.has_callback('page-closed'):
+            bnch.nb.add_callback('page-closed', self.page_closed_cb, wsname)
+
         return True
 
     # CHANNEL MANAGEMENT

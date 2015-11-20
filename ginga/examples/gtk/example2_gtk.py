@@ -13,7 +13,7 @@ import sys, os
 import logging, logging.handlers
 
 from ginga import AstroImage
-from ginga.gtkw import FileSelection, GtkHelp
+from ginga.gtkw import GtkHelp
 from ginga.gtkw.ImageViewCanvasGtk import ImageViewCanvas
 from ginga.canvas.types.all import DrawingCanvas
 from ginga import colors
@@ -28,13 +28,13 @@ class FitsViewer(object):
 
         self.logger = logger
         self.drawcolors = colors.get_colors()
-        self.select = FileSelection.FileSelection()
 
         root = gtk.Window(gtk.WINDOW_TOPLEVEL)
         root.set_title("ImageViewCanvas Example")
         root.set_border_width(2)
         root.connect("delete_event", lambda w, e: quit(w))
         self.root = root
+        self.select = GtkHelp.FileSelection(root)
 
         vbox = gtk.VBox(spacing=2)
 

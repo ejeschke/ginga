@@ -114,7 +114,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         self.gui_up = True
 
     def get_thumb_key(self, chname, imname, path):
-        if not (path is None):
+        if path is not None:
             path = os.path.abspath(path)
         thumbkey = (chname.lower(), imname, path)
         return thumbkey
@@ -131,8 +131,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         idx = image.get('idx', None)
         # get image path
         path = image.get('path', None)
-        if not (path is None):
-            path = os.path.abspath(path)
+        if path is not None:
             # get image name
             name = self.fv.name_image_from_path(path, idx=idx)
         else:
@@ -195,12 +194,16 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         if path is None:
             # Currently we need a path to make a thumb key
             return
-        path = os.path.abspath(path)
-        self.logger.debug("removing thumb for %s" % (name))
+        self.logger.info("removing thumb for %s" % (name))
 
-        # Is this thumbnail already in the list?
-        thumbkey = self.get_thumb_key(chname, name, path)
-        self.remove_thumb(thumbkey)
+        try:
+            # Is this thumbnail already in the list?
+            thumbkey = self.get_thumb_key(chname, name, path)
+            self.remove_thumb(thumbkey)
+        except Exception as e:
+            self.logger.error("Error removing thumb for %s: %s" % (
+                name, str(e)))
+
 
     def remove_thumb(self, thumbkey):
         with self.thmblock:
@@ -606,7 +609,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         vbox.add_widget(namelbl, stretch=0)
         vbox.add_widget(thumbw, stretch=0)
         # special hack for Qt widgets
-        vbox.no_expand()
+        vbox.cfg_expand(0, 0)
 
         bnch = Bunch.Bunch(widget=vbox, image=thumbw,
                            name=name, imname=name,

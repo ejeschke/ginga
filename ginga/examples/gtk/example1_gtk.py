@@ -12,7 +12,7 @@ import sys, os
 import logging
 
 from ginga.gtkw.ImageViewCanvasGtk import ImageViewCanvas
-from ginga.gtkw import FileSelection
+from ginga.gtkw import GtkHelp
 from ginga import AstroImage
 
 import gtk
@@ -30,8 +30,8 @@ class FitsViewer(object):
         root.set_border_width(2)
         root.connect("delete_event", lambda w, e: self.quit(w))
         self.root = root
-        
-        self.select = FileSelection.FileSelection()
+
+        self.select = GtkHelp.FileSelection(rootr)
         vbox = gtk.VBox(spacing=2)
 
         fi = ImageViewCanvas(logger)
@@ -83,12 +83,12 @@ class FitsViewer(object):
     def drop_file(self, fitsimage, paths):
         fileName = paths[0]
         self.load_file(fileName)
-        
+
     def quit(self, w):
         gtk.main_quit()
         return True
 
-        
+
 def main(options, args):
 
     logger = logging.getLogger("example1")
@@ -106,9 +106,8 @@ def main(options, args):
         fv.load_file(args[0])
 
     gtk.main()
-    
+
 if __name__ == '__main__':
     main(None, sys.argv[1:])
-    
-# END
 
+# END

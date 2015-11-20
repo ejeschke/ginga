@@ -17,6 +17,7 @@ import time
 # GUI imports
 from ginga.gw import GwHelp, GwMain, PluginManager, Readout
 from ginga.gw import Widgets, Viewers, Desktop, ColorBar
+from ginga import toolkit
 
 # Local application imports
 from ginga import cmap, imap
@@ -27,11 +28,13 @@ from ginga.util.six.moves import map, zip
 
 moduleHome = os.path.split(sys.modules[__name__].__file__)[0]
 sys.path.insert(0, moduleHome)
-childDir = os.path.join(moduleHome, 'plugins')
+# pick up plugins specific to our chosen toolkit
+pfx, sfx = os.path.split(moduleHome)
+tkname = toolkit.get_family()
+if tkname is not None:
+    # TODO: this relies on a naming convention for widget directories!
+    childDir = os.path.join(pfx, tkname + 'w', 'plugins')
 sys.path.insert(0, childDir)
-
-## from ginga.gw import ColorBar, Readout, PluginManagerQt, \
-##      QtHelp, QtMain, ImageViewCanvasQt
 
 icon_path = os.path.abspath(os.path.join(moduleHome, '..', 'icons'))
 
@@ -48,10 +51,6 @@ class GingaView(GwMain.GwMain, Widgets.Application):
 
         ## if os.path.exists(rc_file):
         ##     self.app.setStyleSheet(rc_file)
-
-        # defaults for height and width
-        #self.default_height = min(900, self.screen_ht - 100)
-        #self.default_width  = min(1600, self.screen_wd)
 
         self.w = Bunch.Bunch()
         self.iconpath = icon_path
@@ -78,7 +77,6 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         self.font18 = self.getFont('fixedFont', 18)
 
         self.w.tooltips = None
-        #QtGui.QToolTip.setFont(self.font11)
 
         self.ds = Desktop.Desktop(self)
         self.ds.make_desktop(self.layout, widgetDict=self.w)
@@ -95,16 +93,20 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         self.w.root = root
         self.w.fscreen = None
 
-        # Create main (center) FITS image pane
+        # Configure main (center) FITS image pane
         self.w.vbox = self.w['main']
         self.w.vbox.set_spacing(0)
-        self.w.mnb = self.w['channels']
-        ## if isinstance(self.w.mnb, QtGui.QMdiArea):
-        ##     self.w.mnb.subWindowActivated.connect(self.page_switch_mdi_cb)
-        ##     self.w.mnb.set_mode('tabs')
-        ## else:
-        ##     self.w.mnb.currentChanged.connect(self.page_switch_cb)
-        self.w.mnb.add_callback('page-switch', self.page_switch_cb)
+        # TODO: fix this--relies on a workspace named "channels" existing
+        ## self.w.mnb = self.ds.get_nb('channels')
+        ## self.w.mnb.add_callback('page-switch', self.page_switch_cb)
+
+        # get informed about window closures in existing workspaces
+        for wsname in self.ds.get_wsnames():
+            nb = self.ds.get_nb(wsname)
+            if nb.has_callback('page-switch'):
+                nb.add_callback('page-switch', self.page_switch_cb)
+            if nb.has_callback('page-close'):
+                nb.add_callback('page-close', self.page_closed_cb, wsname)
 
         # readout
         if self.settings.get('share_readout', True):
@@ -209,24 +211,30 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         item = wsmenu.add_name("Add Workspace")
         item.add_callback('activated', lambda *args: self.gui_add_ws())
 
-        item = wsmenu.add_name("Take Tab")
-        item.add_callback('activated',
-                          lambda *args: self.ds.take_tab_cb(self.w.mnb,
-                                                                 args))
+        # TODO: Make this an individual workspace menu in Desktop
+        if self.ds.has_ws('channels'):
+            mnb = self.ds.get_nb('channels')
 
-        if isinstance(self.w.mnb, Widgets.MDIWidget):
-            item = wsmenu.add_name("Panes as Tabs")
-            ## item.add_callback(lambda w, tf: self.tabstoggle_cb(tf))
-            ## item.get_widget().setCheckable(True)
-            ## is_tabs = (self.w.mnb.get_mode() == 'tabs')
-            ## item.get_widget().setChecked(is_tabs)
+            ## item = wsmenu.add_name("Take Tab")
+            ## item.add_callback('activated',
+            ##                   lambda *args: self.ds.take_tab_cb(mnb, args))
 
-            item = wsmenu.add_name("Tile Panes")
-            item.add_callback('activated', lambda *args: self.tile_panes_cb())
+            if isinstance(mnb, Widgets.MDIWidget) and mnb.true_mdi:
+                mnb.set_mode('tabs')
 
-            item = wsmenu.add_name("Cascade Panes")
-            item.add_callback('activated',
-                              lambda *args: self.cascade_panes_cb())
+                item = wsmenu.add_name("Panes as Tabs", checkable=True)
+                item.add_callback('activated',
+                                  lambda w, tf: self.tabstoggle_cb(mnb, tf))
+                is_tabs = (mnb.get_mode() == 'tabs')
+                item.set_state(is_tabs)
+
+                item = wsmenu.add_name("Tile Panes")
+                item.add_callback('activated',
+                                  lambda *args: self.tile_panes_cb(mnb))
+
+                item = wsmenu.add_name("Cascade Panes")
+                item.add_callback('activated',
+                                  lambda *args: self.cascade_panes_cb(mnb))
 
         # # create a Option pulldown menu, and add it to the menu bar
         # optionmenu = menubar.add_name("Option")
@@ -353,7 +361,7 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         fr.set_widget(cbar_w)
         return fr
 
-    def build_viewpane(self, settings, rgbmap=None):
+    def build_viewpane(self, settings, rgbmap=None, size=(1, 1)):
         # instantiate bindings loaded with users preferences
         bclass = Viewers.ImageViewCanvas.bindingsClass
         bindprefs = self.prefs.createCategory('bindings')
@@ -363,6 +371,7 @@ class GingaView(GwMain.GwMain, Widgets.Application):
                                      rgbmap=rgbmap,
                                      settings=settings,
                                      bindings=bd)
+        fi.set_desired_size(size[0], size[1])
 
         canvas = DrawingCanvas()
         canvas.enable_draw(False)
@@ -396,7 +405,15 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         vbox.set_border_width(1)
         vbox.set_spacing(0)
 
-        fi = self.build_viewpane(settings)
+        if not workspace:
+            workspace = 'channels'
+        w = self.ds.get_nb(workspace)
+
+        size = (1, 1)
+        if isinstance(w, Widgets.MDIWidget) and w.true_mdi:
+            size = (300, 300)
+
+        fi = self.build_viewpane(settings, size=size)
         if hasattr(Viewers, 'GingaViewer'):
             iw = Viewers.GingaViewer(viewer=fi)
         else:
@@ -417,9 +434,7 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         else:
             readout = None
 
-        # Add a page to the specified notebook
-        if not workspace:
-            workspace = 'channels'
+        # Add the viewer to the specified workspace
         self.ds.add_tab(workspace, vbox, 1, name)
 
         self.update_pending()
@@ -497,8 +512,8 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         # save a handle so widgets aren't garbage collected
         self._cur_dialogs.append(dialog)
 
-    def gui_delete_channel(self):
-        chinfo = self.get_channelInfo()
+    def gui_delete_channel(self, chname=None):
+        chinfo = self.get_channelInfo(chname=chname)
         chname = chinfo.name
         lbl = Widgets.Label("Really delete channel '%s' ?" % (chname))
         dialog = Widgets.Dialog(title="Delete Channel",
@@ -614,7 +629,7 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         # TODO: this is too tied to one configuration, need to figure
         # out how to generalize this
         hsplit = self.w['hpnl']
-        sizes = hsplit.sizes()
+        sizes = hsplit.get_sizes()
         lsize, msize, rsize = sizes
         if self._lsize is None:
             self._lsize, self._rsize = lsize, rsize
@@ -640,7 +655,7 @@ class GingaView(GwMain.GwMain, Widgets.Application):
                 self._lsize = lsize
                 msize += lsize
                 lsize = 0
-        #hsplit.setSizes((lsize, msize, rsize))
+        hsplit.set_sizes([lsize, msize, rsize])
 
     def getFont(self, fontType, pointSize):
         font_family = self.settings.get(fontType)
@@ -808,33 +823,44 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         chname = str(self.w.channel.get_alpha(idx))
         return self.start_local_plugin(chname, name, None)
 
-    def tile_panes_cb(self):
-        self.w.mnb.tile_panes()
+    def tile_panes_cb(self, ws):
+        ws.tile_panes()
 
-    def cascade_panes_cb(self):
-        self.w.mnb.cascade_panes()
+    def cascade_panes_cb(self, ws):
+        ws.cascade_panes()
 
-    def tabstoggle_cb(self, tf):
-        self.w.mnb.use_tabs(tf)
+    def tabstoggle_cb(self, ws, tf):
+        ws.use_tabs(tf)
 
-    def page_switch_cb(self, tab_w, index):
-        self.logger.debug("index switched to %d" % (index))
-        if index >= 0:
-            container = tab_w.index_to_widget(index)
-            self.logger.debug("container is %s" % (container))
+    def _get_channel_by_container(self, child):
+        for chname in self.get_channelNames():
+            chinfo = self.get_channelInfo(chname)
+            if chinfo.container == child:
+                return chinfo
+        return None
 
-            # Find the channel that contains this widget
-            chnames = self.get_channelNames()
-            for chname in chnames:
-                chinfo = self.get_channelInfo(chname)
-                if chinfo.container == container:
-                    fitsimage = chinfo.fitsimage
-                    if fitsimage != self.getfocus_fitsimage():
-                        self.logger.debug("Active channel switch to '%s'" % (
-                            chname))
-                        self.change_channel(chname, raisew=False)
+    def page_switch_cb(self, tab_w, child):
+        self.logger.debug("page switched to %s" % (str(child)))
+
+        # Find the channel that contains this widget
+        chinfo = self._get_channel_by_container(child)
+        self.logger.debug("chinfo: %s" % (str(chinfo)))
+        if chinfo is not None:
+            fitsimage = chinfo.fitsimage
+            if fitsimage != self.getfocus_fitsimage():
+                chname = chinfo.name
+                self.logger.debug("Active channel switch to '%s'" % (
+                    chname))
+                self.change_channel(chname, raisew=False)
 
         return True
+
+    def page_closed_cb(self, widget, child, wsname):
+        self.logger.debug("page closed in %s: '%s'" % (wsname, str(child)))
+
+        chinfo = self._get_channel_by_container(child)
+        if chinfo is not None:
+            self.gui_delete_channel(chinfo.name)
 
 
 # END

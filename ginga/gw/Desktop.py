@@ -22,16 +22,16 @@ class Desktop(Callback.Callbacks):
         # for tabs
         self.tab = Bunch.caselessDict()
         self.tabcount = 0
-        self.notebooks = Bunch.caselessDict()
+        self.workspace = Bunch.caselessDict()
 
         self.toplevels = []
 
-        for name in ('page-switch', 'page-select', 'all-closed'):
+        for name in ('page-switch', 'all-closed'):
             self.enable_callback(name)
 
-    # --- Tab Handling ---
+    # --- Workspace Handling ---
 
-    def make_ws(self, name=None, group=1, show_tabs=True, show_border=False,
+    def make_ws(self, name, group=1, show_tabs=True, show_border=False,
                 detachable=True, tabpos=None, scrollable=True, closeable=False,
                 wstype='nb'):
         if tabpos is None:
@@ -53,15 +53,32 @@ class Desktop(Callback.Callbacks):
         if nb.has_callback('page-switch'):
             nb.add_callback('page-switch', self.switch_page_cb)
 
-        if not name:
-            name = str(time.time())
+        ## vbox = Widgets.VBox()
+        ## toolbar = Widgets.Toolbar(orientation='horizontal')
+        ## vbox.add_widget(toolbar, stretch=0)
+        ## vbox.add_widget(nb, stretch=1)
+
+        ## # create a Workspace pulldown menu, and add it to the menu bar
+        ## winbtn = toolbar.add_action(text="Workspace")
+
+        ## winmenu = Widgets.Menu()
+        ## item = winmenu.add_name("Take Tab")
+        ## item.add_callback('activated',
+        ##                   lambda *args: self.take_tab_cb(nb, args))
+
         bnch = Bunch.Bunch(nb=nb, name=name, nbtype=wstype,
                            widget=nb, group=group)
-        self.notebooks[name] = bnch
+        self.workspace[name] = bnch
         return bnch
 
+    def has_ws(self, name):
+        return name in self.workspace
+
+    def get_ws(self, name):
+        return self.workspace[name]
+
     def get_nb(self, name):
-        return self.notebooks[name].nb
+        return self.workspace[name].nb
 
     def get_size(self, widget):
         return widget.get_size()
@@ -72,8 +89,8 @@ class Desktop(Callback.Callbacks):
 
     def get_wsnames(self, group=1):
         res = []
-        for name in self.notebooks.keys():
-            bnch = self.notebooks[name]
+        for name in self.workspace.keys():
+            bnch = self.workspace[name]
             if group is None:
                 res.append(name)
             elif group == bnch.group:
@@ -107,7 +124,7 @@ class Desktop(Callback.Callbacks):
 
     def _find_nb(self, tabname):
         widget = self.tab[tabname].widget
-        for bnch in self.notebooks.values():
+        for bnch in self.workspace.values():
             nb = bnch.nb
             page_num = nb.index_of(widget)
             if page_num < 0:
@@ -120,9 +137,6 @@ class Desktop(Callback.Callbacks):
             if widget == bnch.widget:
                 return bnch
         return None
-
-    ## def select_cb(self, widget, event, name, data):
-    ##     self.make_callback('page-select', name, data)
 
     def raise_tab(self, tabname):
         nb, index = self._find_nb(tabname)
@@ -150,11 +164,11 @@ class Desktop(Callback.Callbacks):
         vbox.set_border_width(0)
         topw.add_widget(vbox, stretch=1)
 
-        menubar = Widgets.Menubar()
-        vbox.add_widget(menubar, stretch=0)
+        toolbar = Widgets.Toolbar()
+        vbox.add_widget(toolbar, stretch=0)
 
         # create a Workspace pulldown menu, and add it to the menu bar
-        winmenu = menubar.add_name("Workspace")
+        winmenu = toolbar.add_name("Workspace")
 
         item = winmenu.add_name("Take Tab")
         item.add_callback('activated',
@@ -191,9 +205,10 @@ class Desktop(Callback.Callbacks):
 
         quititem = menubar.add_name("Quit")
 
-        bnch = self.make_ws(group=1)
+        wsname = str(time.time())
+        bnch = self.make_ws(wsname, group=1)
         bnch.root = root
-        vbox.add_widget(bnch.nb, stretch=1)
+        vbox.add_widget(bnch.widget, stretch=1)
         #root.closeEvent = lambda event: self.close_page_cb(bnch, event)
         quititem.add_callback('activated', lambda *args: self._close_page(bnch))
 
@@ -228,7 +243,7 @@ class Desktop(Callback.Callbacks):
     def _close_page(self, bnch):
         num_children = bnch.nb.count()
         if num_children == 0:
-            del self.notebooks[bnch.name]
+            del self.workspace[bnch.name]
             root = bnch.root
             bnch.root = None
             root.delete()
@@ -237,18 +252,16 @@ class Desktop(Callback.Callbacks):
     ## def close_page_cb(self, bnch, event):
     ##     num_children = bnch.nb.count()
     ##     if num_children == 0:
-    ##         del self.notebooks[bnch.name]
+    ##         del self.workspace[bnch.name]
     ##         #bnch.root.destroy()
     ##         event.accept()
     ##     else:
     ##         event.ignore()
     ##     return True
 
-    def switch_page_cb(self, nbw, page_num):
-        self.logger.debug("page switch: %d" % page_num)
-        idx = nbw.get_index()
-        pagew = nbw.index_to_widget(idx)
-        bnch = self._find_tab(pagew)
+    def switch_page_cb(self, nbw, child):
+        self.logger.debug("page switch: %s" % str(child))
+        bnch = self._find_tab(child)
         if bnch is not None:
             self.make_callback('page-switch', bnch.name, bnch.data)
         return False
@@ -268,15 +281,21 @@ class Desktop(Callback.Callbacks):
             # User is specifying the size of the widget
             if ((params.width >= 0) or (params.height >= 0)) and \
                    isinstance(widget, Widgets.WidgetBase):
+                w_exp, h_exp = 0, 0
                 if params.width < 0:
                     width = widget.get_size()[0]
+                    w_exp = 8
                 else:
                     width = params.width
+                    w_exp = 1|4
                 if params.height < 0:
                     height = widget.get_size()[1]
+                    h_exp = 8
                 else:
                     height = params.height
+                    h_exp = 1|4
                 widget.resize(width, height)
+                widget.cfg_expand(w_exp, h_exp)
 
             # User wants to place window somewhere
             if (params.xpos >= 0) and isinstance(widget, Widgets.WidgetBase):
@@ -298,13 +317,14 @@ class Desktop(Callback.Callbacks):
 
             elif kind == 'ws':
                 group = int(params.group)
-                widget = self.make_ws(name=params.name, group=group,
+                bnch = self.make_ws(params.name, group=group,
                                       show_tabs=params.show_tabs,
                                       show_border=params.show_border,
                                       detachable=params.detachable,
                                       tabpos=params.tabpos,
                                       wstype=params.wstype,
-                                      scrollable=params.scrollable).nb
+                                      scrollable=params.scrollable)
+                widget = bnch.widget
                 #debug(widget)
 
             # If a title was passed as a parameter, then make a frame to
@@ -319,7 +339,7 @@ class Desktop(Callback.Callbacks):
             process_common_params(widget, params)
 
             if (kind in ('ws', 'mdi', 'grid')) and (len(args) > 0):
-                # <-- Notebook ws specified a sub-layout.  We expect a list
+                # <-- Workspace specified a sub-layout.  We expect a list
                 # of tabname, layout pairs--iterate over these and add them
                 # to the workspace as tabs.
                 for tabname, layout in args[0]:
@@ -385,7 +405,6 @@ class Desktop(Callback.Callbacks):
                     make(col, lambda w: widget.add_widget(w,
                                                           stretch=stretch))
             process_common_params(widget, params)
-
             pack(widget)
 
         # Vertical fixed array
@@ -405,15 +424,13 @@ class Desktop(Callback.Callbacks):
                     make(row, lambda w: widget.add_widget(w,
                                                           stretch=stretch))
             process_common_params(widget, params)
-
             pack(widget)
 
         # Sequence of separate items
         def seq(params, cols, pack):
             def mypack(w):
                 w_top = self.app.make_window()
-                # Qt hack
-                w_top.no_expand(1|2|4, 1|2|4)
+                w_top.cfg_expand(8, 8)
                 w_top.set_widget(w)
                 self.toplevels.append(w_top)
                 ## def closeEvent(*args):
@@ -487,8 +504,6 @@ class TabWorkspace(Widgets.TabWidget, WorkspaceMixin):
     def __init__(self):
         super(TabWorkspace, self).__init__()
 
-        self.no_expand(1|2|4, 1|2|4)
-
     def add_tab(self, widget, title=''):
         self.add_widget(widget, title=title)
 
@@ -501,8 +516,6 @@ class StackWorkspace(Widgets.StackWidget, WorkspaceMixin):
     def __init__(self):
         super(StackWorkspace, self).__init__()
 
-        self.no_expand(1|2|4, 1|2|4)
-
     def add_tab(self, widget, title=''):
         self.add_widget(widget)
 
@@ -513,9 +526,7 @@ class StackWorkspace(Widgets.StackWidget, WorkspaceMixin):
 class MDIWorkspace(Widgets.MDIWidget, WorkspaceMixin):
 
     def __init__(self):
-        super(MDIWorkspace, self).__init__()
-
-        self.no_expand(1|2|4, 1|2|4)
+        super(MDIWorkspace, self).__init__(mode='mdi')
 
     def add_tab(self, widget, title=''):
         self.add_widget(widget, title=title)
@@ -528,8 +539,6 @@ class GridWorkspace(Widgets.GridBox, WorkspaceMixin):
 
     def __init__(self):
         super(GridWorkspace, self).__init__()
-
-        self.no_expand(1|2|4, 1|2|4)
 
         self.set_margins(0, 0, 0, 0)
         self.set_spacing(2)
@@ -557,8 +566,6 @@ class GridWorkspace(Widgets.GridBox, WorkspaceMixin):
                     self.add_widget(child, i, j, stretch=1)
 
     def add_tab(self, widget, title=''):
-        widget.no_expand(1|2|4, 1|2|4)
-
         widgets = list(self.get_children())
         widgets.append(widget)
 

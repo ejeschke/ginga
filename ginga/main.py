@@ -56,7 +56,8 @@ default_layout = ['seq', {},
                     dict(row=['hbox', dict(name='menu')],
                          stretch=0),
                     dict(row=['hpanel', dict(name='hpnl'),
-                     ['ws', dict(name='left', width=300, group=2),
+                     ['ws', dict(name='left', width=300, height=-1,
+                                 group=2),
                       # (tabname, layout), ...
                       [("Info", ['vpanel', {},
                                  ['ws', dict(name='uleft', height=300,
@@ -66,9 +67,9 @@ default_layout = ['seq', {},
                                  ]
                         )]],
                      ['vbox', dict(name='main', width=700),
-                      dict(row=['ws', dict(wstype='nb', name='channels',
+                      dict(row=['ws', dict(wstype='ws', name='channels',
                                            group=1)], stretch=1)],
-                     ['ws', dict(name='right', width=430, group=2),
+                     ['ws', dict(name='right', width=400, height=-1, group=2),
                       # (tabname, layout), ...
                       [("Dialogs", ['ws', dict(name='dialogs', group=2)
                                     ]

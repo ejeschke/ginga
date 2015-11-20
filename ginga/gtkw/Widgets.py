@@ -58,7 +58,7 @@ class WidgetBase(Callback.Callbacks):
         font = GtkHelp.get_font(font_family, point_size)
         return font
 
-    def no_expand(self, horizontal=0, vertical=0):
+    def cfg_expand(self, horizontal=0, vertical=0):
         # this is for compatibility with Qt widgets
         pass
 
@@ -898,19 +898,21 @@ class ContainerBase(WidgetBase):
         # TODO: should this be a weakref?
         self.children.append(ref)
 
-    def _remove(self, childw):
+    def _remove(self, childw, delete=False):
         self.widget.remove(childw)
+        if delete:
+            childw.destroy()
 
-    def remove(self, w):
+    def remove(self, w, delete=False):
         if not w in self.children:
             raise KeyError("Widget is not a child of this container")
         self.children.remove(w)
 
-        self._remove(w.get_widget())
+        self._remove(w.get_widget(), delete=delete)
 
-    def remove_all(self):
+    def remove_all(self, delete=False):
         for w in list(self.children):
-            self.remove(w)
+            self.remove(w, delete=delete)
 
     def get_children(self):
         return self.children
@@ -1007,7 +1009,9 @@ class TabWidget(ContainerBase):
         self.widget = nb
         self.set_tab_position(tabpos)
 
-        self.enable_callback('page-switch')
+        for name in ('page-switch', 'page-close'):
+            self.enable_callback(name)
+
 
     def set_tab_position(self, tabpos):
         nb = self.widget
@@ -1021,7 +1025,8 @@ class TabWidget(ContainerBase):
             nb.set_tab_pos(gtk.POS_RIGHT)
 
     def _cb_redirect(self, nbw, gptr, index):
-        self.make_callback('page-switch', index)
+        child = self.index_to_widget(index)
+        self.make_callback('page-switch', child)
 
     def add_widget(self, child, title=''):
         self.add_ref(child)
@@ -1055,8 +1060,14 @@ class StackWidget(TabWidget):
 
 class MDIWidget(TabWidget):
 
+    def __init__(self, tabpos='top', mode='tabs'):
+        super(MDIWidget, self).__init__(tabpos=tabpos)
+
+        self.mode = 'tabs'
+        self.true_mdi = False
+
     def get_mode(self):
-        return 'tabs'
+        return self.mode
 
     def set_mode(self, mode):
         pass
@@ -1112,7 +1123,7 @@ class Splitter(ContainerBase):
 
         self.orientation = orientation
         self.widget = self._get_pane()
-        self.panes = []
+        self.panes = [self.widget]
 
     def _get_pane(self):
         if self.orientation == 'horizontal':
@@ -1125,7 +1136,6 @@ class Splitter(ContainerBase):
         self.add_ref(child)
         child_w = child.get_widget()
         if len(self.children) == 1:
-            #self.widget.pack1(child_w, resize=True, shrink=True)
             self.widget.pack1(child_w)
 
         else:
@@ -1140,6 +1150,31 @@ class Splitter(ContainerBase):
             last.pack2(w)
 
         self.widget.show_all()
+
+    def _get_sizes(self, pane):
+        rect = pane.get_allocation()
+        if self.orientation == 'horizontal':
+            total = rect.width
+        else:
+            total = rect.height
+        pos = pane.get_position()
+        return (pos, total)
+
+    def get_sizes(self):
+        res = []
+        if len(self.panes) > 0:
+            for pane in self.panes[:-1]:
+                pos, total = self._get_sizes(pane)
+                res.append(pos)
+            pane = self.panes[-1]
+            pos, total = self._get_sizes(pane)
+            res.append(total)
+        return res
+
+    def set_sizes(self, sizes):
+        for i, pos in enumerate(sizes):
+            pane = self.panes[i]
+            pane.set_position(pos)
 
 
 class GridBox(ContainerBase):
@@ -1228,20 +1263,36 @@ class Toolbar(ContainerBase):
 
 
 class MenuAction(WidgetBase):
-    def __init__(self, text=None):
+    def __init__(self, text=None, checkable=False):
         super(MenuAction, self).__init__()
 
         self.text = text
+        self.checkable = checkable
 
-        self.widget = gtk.MenuItem(label=text)
+        if checkable:
+            self.widget = gtk.CheckMenuItem(label=text)
+            self.widget.connect('toggled', self._cb_redirect)
+        else:
+            self.widget = gtk.MenuItem(label=text)
+            self.widget.connect('activate', self._cb_redirect)
         self.widget.show()
 
-        self.widget.connect('activate', self._cb_redirect)
         self.enable_callback('activated')
 
+    def set_state(self, tf):
+        if not self.checkable:
+            raise ValueError("Not a checkable menu item")
+        self.widget.set_active(tf)
+
+    def get_state(self):
+        return self.widget.get_active()
+
     def _cb_redirect(self, *args):
-        # TODO: checkable menu items
-        self.make_callback('activated')
+        if self.checkable:
+            tf = self.widget.get_active()
+            self.make_callback('activated', tf)
+        else:
+            self.make_callback('activated')
 
 
 class Menu(ContainerBase):
@@ -1257,8 +1308,8 @@ class Menu(ContainerBase):
         self.add_ref(child)
         #self.widget.show_all()
 
-    def add_name(self, name):
-        child = MenuAction(text=name)
+    def add_name(self, name, checkable=False):
+        child = MenuAction(text=name, checkable=checkable)
         self.add_widget(child)
         return child
 

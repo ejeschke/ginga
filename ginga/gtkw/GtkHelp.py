@@ -499,6 +499,15 @@ class FileSelection(object):
         self.filew.hide()
 
 
+def combo_box_new_text():
+    liststore = gtk.ListStore(gobject.TYPE_STRING)
+    combobox = ComboBox()
+    combobox.set_model(liststore)
+    cell = gtk.CellRendererText()
+    combobox.pack_start(cell, True)
+    combobox.add_attribute(cell, 'text', 0)
+    return combobox
+
 def get_scroll_info(event):
     """
     Returns the (degrees, direction) of a scroll motion Gtk event.

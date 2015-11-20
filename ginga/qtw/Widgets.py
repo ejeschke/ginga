@@ -63,7 +63,7 @@ class WidgetBase(Callback.Callbacks):
         font = QtHelp.get_font(font_family, point_size)
         return font
 
-    def no_expand(self, horizontal=0, vertical=0):
+    def cfg_expand(self, horizontal=0, vertical=0):
         self.widget.setSizePolicy(QtGui.QSizePolicy(horizontal, vertical))
 
 
@@ -768,8 +768,9 @@ class ContainerBase(WidgetBase):
         layout = self.widget.layout()
         if layout is not None:
             layout.removeWidget(childw)
+
+        childw.setParent(None)
         if delete:
-            childw.setParent(None)
             childw.deleteLater()
 
     def remove(self, w, delete=False):
@@ -779,9 +780,9 @@ class ContainerBase(WidgetBase):
 
         self._remove(w.get_widget(), delete=delete)
 
-    def remove_all(self):
+    def remove_all(self, delete=False):
         for w in list(self.children):
-            self.remove(w)
+            self.remove(w, delete=delete)
 
     def get_children(self):
         return self.children
@@ -935,11 +936,14 @@ class TabWidget(ContainerBase):
 
         w = QtGui.QTabWidget()
         w.currentChanged.connect(self._cb_redirect)
+        w.tabCloseRequested.connect(self._tab_close)
         w.setUsesScrollButtons(True)
+        #w.setTabsClosable(True)
         self.widget = w
         self.set_tab_position(tabpos)
 
-        self.enable_callback('page-switch')
+        for name in ('page-switch', 'page-close'):
+            self.enable_callback(name)
 
     def set_tab_position(self, tabpos):
         w = self.widget
@@ -953,7 +957,12 @@ class TabWidget(ContainerBase):
             w.setTabPosition(QtGui.QTabWidget.East)
 
     def _cb_redirect(self, index):
-        self.make_callback('page-switch', index)
+        child = self.index_to_widget(index)
+        self.make_callback('page-switch', child)
+
+    def _tab_close(self, index):
+        child = self.index_to_widget(index)
+        self.make_callback('page-close', child)
 
     def add_widget(self, child, title=''):
         self.add_ref(child)
@@ -989,6 +998,8 @@ class StackWidget(ContainerBase):
 
         self.widget = QtGui.QStackedWidget()
 
+        # TODO: currently only provided for compatibility with other
+        # like widgets
         self.enable_callback('page-switch')
 
     def add_widget(self, child, title=''):
@@ -1011,7 +1022,7 @@ class StackWidget(ContainerBase):
 
 
 class MDIWidget(ContainerBase):
-    def __init__(self, tabpos='top'):
+    def __init__(self, tabpos='top', mode='mdi'):
         super(MDIWidget, self).__init__()
 
         w = QtGui.QMdiArea()
@@ -1022,12 +1033,15 @@ class MDIWidget(ContainerBase):
         ## w.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding,
         ##                                   QtGui.QSizePolicy.Expanding))
         w.setTabsClosable(True)
-        w.setTabsMovable(True)
+        w.setTabsMovable(False)
         self.widget = w
+        self.true_mdi = True
+
+        for name in ('page-switch', 'page-close'):
+            self.enable_callback(name)
 
         self.set_tab_position(tabpos)
-
-        self.enable_callback('page-switch')
+        self.set_mode(mode)
 
     def set_tab_position(self, tabpos):
         w = self.widget
@@ -1056,15 +1070,20 @@ class MDIWidget(ContainerBase):
 
     def _cb_redirect(self, subwin):
         if subwin is not None:
-            l = list(self.widget.subWindowList())
-            idx = l.index(subwin)
-            self.make_callback('page-switch', idx)
+            nchild = subwin.widget()
+            child = self._native_to_child(nchild)
+            self.make_callback('page-switch', child)
 
     def _window_closed(self, event, subwin, widget):
-        event.accept()
-        child_w = subwin.widget()
-        self.widget.removeSubWindow(subwin)
-        return False
+        nchild = subwin.widget()
+        child = self._native_to_child(nchild)
+
+        # let the application deal with this if desired in page-close
+        # callback
+        event.ignore()
+        #self.widget.removeSubWindow(subwin)
+
+        self.make_callback('page-close', child)
 
     def add_widget(self, child, title=''):
         self.add_ref(child)
@@ -1079,10 +1098,11 @@ class MDIWidget(ContainerBase):
         w.show()
 
     def _remove(self, nchild, delete=False):
-        l = [ sw.widget() for sw in self.subWindowList() ]
+        subwins = list(self.widget.subWindowList())
+        l = [ sw.widget() for sw in subwins ]
         try:
             idx = l.index(nchild)
-            subwin = l[idx]
+            subwin = subwins[idx]
         except (IndexError, ValueError) as e:
             subwin = None
 
@@ -1095,7 +1115,12 @@ class MDIWidget(ContainerBase):
             nchild.deleteLater()
 
     def get_index(self):
-        return self.widget.getCurrentIndex()
+        subwin = self.widget.activeSubWindow()
+        l = list(self.widget.subWindowList())
+        try:
+            return l.index(subwin)
+        except (IndexError, ValueError) as e:
+            return -1
 
     def set_index(self, idx):
         l = list(self.widget.subWindowList())
@@ -1177,6 +1202,12 @@ class Splitter(ContainerBase):
         child_w = child.get_widget()
         self.widget.addWidget(child_w)
 
+    def get_sizes(self):
+        return list(self.widget.sizes())
+
+    def set_sizes(self, sizes):
+        return self.widget.setSizes(sizes)
+
 
 class GridBox(ContainerBase):
     def __init__(self, rows=1, columns=1):
@@ -1204,6 +1235,7 @@ class GridBox(ContainerBase):
         self.add_ref(child)
         w = child.get_widget()
         self.widget.layout().addWidget(w, row, col)
+
 
 class ToolbarAction(WidgetBase):
     def __init__(self):
@@ -1264,12 +1296,21 @@ class Toolbar(ContainerBase):
 
 
 class MenuAction(WidgetBase):
-    def __init__(self, text=None):
+    def __init__(self, text=None, checkable=False):
         super(MenuAction, self).__init__()
 
         self.widget = None
         self.text = text
+        self.checkable = checkable
         self.enable_callback('activated')
+
+    def set_state(self, tf):
+        if not self.checkable:
+            raise ValueError("Not a checkable menu item")
+        self.widget.setChecked(tf)
+
+    def get_state(self):
+        return self.widget.isChecked()
 
     def _cb_redirect(self, *args):
         if self.widget.isCheckable():
@@ -1287,12 +1328,14 @@ class Menu(ContainerBase):
         self.widget = QtGui.QMenu()
 
     def add_widget(self, child):
-        child.widget = self.widget.addAction(child.text,
-                                             lambda: child._cb_redirect())
+        w = self.widget.addAction(child.text, lambda: child._cb_redirect())
+        if child.checkable:
+            w.setCheckable(True)
+        child.widget = w
         self.add_ref(child)
 
-    def add_name(self, name):
-        child = MenuAction(text=name)
+    def add_name(self, name, checkable=False):
+        child = MenuAction(text=name, checkable=checkable)
         self.add_widget(child)
         return child
 
@@ -1485,7 +1528,6 @@ class Dialog(WidgetBase):
         self.enable_callback('activated')
 
     def _cb_redirect(self, val):
-        print("response given: %s" % (str(val)))
         self.make_callback('activated', val)
 
     def get_content_area(self):
