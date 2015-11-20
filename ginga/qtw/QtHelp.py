@@ -39,7 +39,7 @@ if toolkit in ('qt5', 'choose') and (not configured):
             pass
 
         # for Matplotlib
-        os.environ['QT_API'] = 'pyqt'
+        os.environ['QT_API'] = 'pyqt5'
         configured = True
     except ImportError as e:
         pass
