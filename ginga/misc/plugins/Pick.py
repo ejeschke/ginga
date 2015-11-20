@@ -859,19 +859,18 @@ class Pick(GingaPlugin.LocalPlugin):
                     v.append(img_data[j, i])
             r, v = numpy.array(r), numpy.array(v)
 
-            # TODO: Plot gaussian fit of data
-            ## idx = numpy.argmax(self._Z)
-            ## Z = self._Z[idx:]
-            ## max_radius = numpy.nanmax(r)
-            ## print(('max radius', max_radius))
-            ## X = numpy.linspace(0.0, float(max_radius), len(Z))
-            ## ax.plot(X, Z, color='green', linestyle='-')
+            # compute and plot radial fitting
+            # note: you might wanna change `deg` here.
+            coefficients = numpy.polyfit(x=r, y=v, deg=10)
+            polynomial = numpy.poly1d(coefficients)
 
-            # Plot scatter plot of data
-            # TODO: with error bars (?)
-            ax.scatter(r, v, marker='.', color='black')
+            x_curve = numpy.linspace(numpy.min(r), numpy.max(r), len(r))
+            y_curve = polynomial(x_curve)
+
+            yerror = 0   # for now, no error bars
+            ax.errorbar(r, v, yerr=yerror, marker='o', ls='none', color='blue')
+            ax.plot(x_curve, y_curve, '-', color='green', lw=2)
             ax.set_xlim(-0.1, radius)
-            ax.set_ylim(-0.01*maxval, 1.01*maxval)
 
             ax.set_title("X="+str(x)+" Y="+str(y))
             ax.set_xlabel('Radius [pixels]')
