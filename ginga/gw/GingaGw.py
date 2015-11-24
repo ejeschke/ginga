@@ -510,8 +510,8 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         self._cur_dialogs.append(dialog)
 
     def gui_delete_channel(self, chname=None):
-        chinfo = self.get_channelInfo(chname=chname)
-        chname = chinfo.name
+        channel = self.get_channelInfo(chname=chname)
+        chname = channel.name
         lbl = Widgets.Label("Really delete channel '%s' ?" % (chname))
         dialog = Widgets.Dialog(title="Delete Channel",
                                 flags=0,
