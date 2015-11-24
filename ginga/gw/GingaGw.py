@@ -170,7 +170,7 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         # do not get added to the global OS X menu
         macos_ver = platform.mac_ver()[0]
         if len(macos_ver) > 0:
-            self.w['top'].add_widget(menubar_w, stretch=0)
+            self.w['top'].add_widget(menubar, stretch=0)
         else:
             holder.add_widget(menubar, stretch=1)
 
