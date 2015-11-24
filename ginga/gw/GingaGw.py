@@ -49,9 +49,6 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         GwMain.GwMain.__init__(self, logger=logger, ev_quit=ev_quit,
                                app=self)
 
-        ## if os.path.exists(rc_file):
-        ##     self.app.setStyleSheet(rc_file)
-
         self.w = Bunch.Bunch()
         self.iconpath = icon_path
         self._lastwsname = 'channels'
@@ -85,7 +82,7 @@ class GingaView(GwMain.GwMain, Widgets.Application):
 
         for win in self.ds.toplevels:
             # add delete/destroy callbacks
-            win.add_callback('closed', self.quit)
+            win.add_callback('close', self.quit)
             win.set_title("Ginga")
             root = win
         self.ds.add_callback('all-closed', self.quit)
@@ -94,11 +91,9 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         self.w.fscreen = None
 
         # Configure main (center) FITS image pane
+        # TODO: fix this--relies on a workspace named "main" existing
         self.w.vbox = self.w['main']
         self.w.vbox.set_spacing(0)
-        # TODO: fix this--relies on a workspace named "channels" existing
-        ## self.w.mnb = self.ds.get_nb('channels')
-        ## self.w.mnb.add_callback('page-switch', self.page_switch_cb)
 
         # get informed about window closures in existing workspaces
         for wsname in self.ds.get_wsnames():
@@ -351,7 +346,7 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         cbar.set_cmap(self.cm)
         cbar.set_imap(self.im)
         cbar_w = Widgets.wrap(cbar)
-        cbar_w.resize(700, 15)
+        #cbar_w.resize(-1, 15)
         self.colorbar = cbar
         self.add_callback('active-image', self.change_cbar, cbar)
         cbar.add_callback('motion', self.cbar_value_cb)
@@ -572,7 +567,7 @@ class GingaView(GwMain.GwMain, Widgets.Application):
                                 buttons=[['Cancel', 0], ['Ok', 1]],
                                 parent=self.w.root)
         dialog.add_callback('activated',
-                            lambda w, rsp: self.new_ws_cb(w, rsp, b, names))
+                            lambda w, rsp: self.add_ws_cb(w, rsp, b, names))
         box = dialog.get_content_area()
         box.add_widget(w, stretch=1)
         dialog.show()
@@ -592,14 +587,14 @@ class GingaView(GwMain.GwMain, Widgets.Application):
 
         self.w.status.set_message(s)
 
-    def setPos(self, x, y):
+    def set_pos(self, x, y):
         self.w.root.move(x, y)
 
-    def setSize(self, wd, ht):
+    def set_size(self, wd, ht):
         self.w.root.resize(wd, ht)
 
-    def setGeometry(self, geometry):
-        # Painful translation of X window geometry specification
+    def set_geometry(self, geometry):
+        # translation of X window geometry specification WxH+X+Y
         coords = geometry.replace('+', ' +')
         coords = coords.replace('-', ' -')
         coords = coords.split()
@@ -614,12 +609,12 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         if dim is not None:
             # user specified dimensions
             dim = list(map(int, dim.split('x')))
-            self.setSize(*dim)
+            self.set_size(*dim)
 
         if len(coords) > 0:
             # user specified position
             coords = list(map(int, coords))
-            self.setPos(*coords)
+            self.set_pos(*coords)
 
 
     def collapse_pane(self, side):
@@ -737,7 +732,7 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         self.delete_channel(chname)
         return True
 
-    def new_ws_cb(self, w, rsp, b, names):
+    def add_ws_cb(self, w, rsp, b, names):
         try:
             self._cur_dialogs.remove(w)
             wsname = str(b.workspace_name.get_text())
@@ -767,7 +762,8 @@ class GingaView(GwMain.GwMain, Widgets.Application):
 
             w.delete()
 
-            self.add_workspace(wsname, wstype, inSpace=in_space)
+            self.error_wrap(self.add_workspace, wsname, wstype,
+                            inSpace=in_space)
 
             if num <= 0:
                 return

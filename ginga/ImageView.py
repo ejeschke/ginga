@@ -191,6 +191,8 @@ class ImageViewBase(Callback.Callbacks):
         self._imgwin_ht = 0
         self._imgwin_set = False
         # desired size
+        # on gtk, this seems to set a boundary on the lower size, so we
+        # default to very small, set it larger with set_desired_size()
         #self._desired_size = (300, 300)
         self._desired_size = (1, 1)
         # center (and reference) pixel in the screen image (in pixel coords)

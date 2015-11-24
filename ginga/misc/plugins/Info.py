@@ -62,11 +62,11 @@ class Info(GingaPlugin.GlobalPlugin):
         row.add_widget(w, stretch=0)
         row.add_widget(Widgets.Label(''), stretch=1)
         col.add_widget(row, stretch=1)
-        col.add_widget(Widgets.Label(''), stretch=1)
+        #col.add_widget(Widgets.Label(''), stretch=1)
         sw2 = Widgets.ScrollArea()
         sw2.set_widget(col)
-        sw2.cfg_expand(1|8, 1|8)
-        vbox.add_widget(sw2, stretch=2)
+        sw2.cfg_expand(1|2|4, 8)
+        vbox.add_widget(sw2, stretch=1)
 
         captions = (('Zoom:', 'label', 'Zoom', 'llabel'),
                     ('Cut Low:', 'label', 'Cut Low Value', 'llabel',

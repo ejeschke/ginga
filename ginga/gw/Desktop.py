@@ -32,7 +32,7 @@ class Desktop(Callback.Callbacks):
     # --- Workspace Handling ---
 
     def make_ws(self, name, group=1, show_tabs=True, show_border=False,
-                detachable=True, tabpos=None, scrollable=True, closeable=False,
+                detachable=False, tabpos=None, scrollable=True, closeable=False,
                 wstype='nb'):
         if tabpos is None:
             tabpos = 'top'
@@ -44,8 +44,10 @@ class Desktop(Callback.Callbacks):
             nb = GridWorkspace()
 
         elif show_tabs:
-            nb = TabWorkspace()
+            nb = TabWorkspace(group=group, detachable=detachable)
             nb.set_tab_position(tabpos)
+            #nb.add_callback('page-move', self.page_move_cb)
+            nb.add_callback('page-detach', self.page_detach_cb, name)
 
         else:
             nb = StackWorkspace()
@@ -155,80 +157,72 @@ class Desktop(Callback.Callbacks):
         if nb and hasattr(nb, 'highlight_tab'):
             nb.highlight_tab(index)
 
-    def add_toplevel(self, bnch, wsname, width=700, height=700):
-        topw = self.app.make_window(title=wsname)
-        topw.resize(width, height)
-        self.toplevels.append(topw)
-
-        vbox = Widgets.VBox()
-        vbox.set_border_width(0)
-        topw.add_widget(vbox, stretch=1)
-
+    def _add_toolbar(self, vbox):
         toolbar = Widgets.Toolbar()
         vbox.add_widget(toolbar, stretch=0)
 
         # create a Workspace pulldown menu, and add it to the menu bar
-        winmenu = toolbar.add_name("Workspace")
+        winactn = toolbar.add_action("Workspace")
+
+        winmenu = Widgets.Menu()
+        def winmenu_popup(w, winmenu, toolbar):
+            try:
+                winmenu.popup(toolbar)
+            except Exception as e:
+                print(str(e))
+        winactn.add_callback('activated', winmenu_popup, winmenu, toolbar)
 
         item = winmenu.add_name("Take Tab")
         item.add_callback('activated',
                           lambda *args: self.take_tab_cb(bnch.nb, args))
 
-        winmenu.add_separator()
+        ## winmenu.add_separator()
 
-        closeitem = winmenu.add_name("Close")
-        #bnch.widget.closeEvent = lambda event: self.close_page_cb(bnch, event)
-        closeitem.add_callback('activated',
-                               lambda *args: self._close_page(bnch))
+        ## closeitem = winmenu.add_name("Close")
+        ## #bnch.widget.closeEvent = lambda event: self.close_page_cb(bnch, event)
+        ## closeitem.add_callback('activated',
+        ##                        lambda *args: self._close_page(bnch))
+
+    def add_toplevel(self, bnch, wsname, width=700, height=700):
+        topw = self.app.make_window(title=wsname)
+        topw.resize(width, height)
+        self.toplevels.append(topw)
+        # TODO: don't ignore close, but handle workspace deletion
+        topw.add_callback('close', lambda w: None)
+
+        vbox = Widgets.VBox()
+        vbox.set_border_width(0)
+        topw.set_widget(vbox)
+        self._add_toolbar(vbox)
 
         vbox.add_widget(bnch.widget, stretch=1)
         topw.show()
         return topw
 
-    def create_toplevel_ws(self, width, height, group=2, x=None, y=None):
+    def create_toplevel_ws(self, wsname, width, height,
+                           group=2, x=None, y=None):
         # create main frame
         root = self.app.make_window()
-        ## root.set_title(title)
+
         # TODO: this needs to be more sophisticated
+        ## root.set_title(wsname)
+        bnch = self.make_ws(wsname, wstype='nb')
 
         vbox = Widgets.VBox()
         vbox.set_border_width(0)
-        root.add_widget(vbox)
 
-        menubar = Widgets.Menubar()
-        vbox.addWidget(menubar, stretch=0)
+        self._add_toolbar(vbox)
 
-        # create a Window pulldown menu, and add it to the menu bar
-        winmenu = menubar.add_name("Window")
-
-        winmenu.add_separator()
-
-        quititem = menubar.add_name("Quit")
-
-        wsname = str(time.time())
-        bnch = self.make_ws(wsname, group=1)
-        bnch.root = root
-        vbox.add_widget(bnch.widget, stretch=1)
-        #root.closeEvent = lambda event: self.close_page_cb(bnch, event)
-        quititem.add_callback('activated', lambda *args: self._close_page(bnch))
+        vbox.add_widget(bnch.widget)
+        root.set_widget(vbox)
 
         root.resize(width, height)
         root.show()
+        self.toplevels.append(root)
+
         if x is not None:
             root.move(x, y)
-        return True
-
-    ## def detach_page_cb(self, source, widget, x, y, group):
-    ##     # Detach page to new top-level workspace
-    ##     ## page = self.widgetToPage(widget)
-    ##     ## if not page:
-    ##     ##     return None
-    ##     width, height = widget.size()
-
-    ##     ## self.logger.info("detaching page %s" % (page.name))
-    ##     bnch = self.create_toplevel_ws(width, height, x=x, y=y)
-
-    ##     return bnch.nb
+        return bnch
 
     def _mk_take_tab_cb(self, tabname, to_nb):
         def _foo():
@@ -258,6 +252,17 @@ class Desktop(Callback.Callbacks):
     ##     else:
     ##         event.ignore()
     ##     return True
+
+    def page_detach_cb(self, nbw, child, wsname):
+        try:
+            width, height = child.get_size()
+
+            wsname = str(time.time())
+            bnch = self.create_toplevel_ws(wsname, width, height+100)
+
+            bnch.nb.add_widget(child, title='FOO')
+        except Exception as e:
+            print(str(e))
 
     def switch_page_cb(self, nbw, child):
         self.logger.debug("page switch: %s" % str(child))
@@ -296,6 +301,7 @@ class Desktop(Callback.Callbacks):
                     h_exp = 1|4
                 widget.resize(width, height)
                 widget.cfg_expand(w_exp, h_exp)
+                #print((widget, width, height))
 
             # User wants to place window somewhere
             if (params.xpos >= 0) and isinstance(widget, Widgets.WidgetBase):
@@ -308,7 +314,7 @@ class Desktop(Callback.Callbacks):
             params = Bunch.Bunch(name=None, title=None, height=-1,
                                  width=-1, group=1, show_tabs=True,
                                  show_border=False, scrollable=True,
-                                 detachable=True, wstype='nb',
+                                 detachable=False, wstype='nb',
                                  tabpos='top')
             params.update(paramdict)
 
@@ -336,7 +342,7 @@ class Desktop(Callback.Callbacks):
             else:
                 pack(widget)
 
-            process_common_params(widget, params)
+            #process_common_params(widget, params)
 
             if (kind in ('ws', 'mdi', 'grid')) and (len(args) > 0):
                 # <-- Workspace specified a sub-layout.  We expect a list
@@ -350,42 +356,64 @@ class Desktop(Callback.Callbacks):
 
                     make(layout, pack)
 
+            process_common_params(widget, params)
+
             #return widget
 
         # Horizontal adjustable panel
         def horz(params, cols, pack):
             if len(cols) >= 2:
-                hpaned = Widgets.Splitter(orientation='horizontal')
+                widget = Widgets.Splitter(orientation='horizontal')
+                process_common_params(widget, params)
 
+                sizes = []
                 for col in cols:
-                    make(col, lambda w: hpaned.add_widget(w))
-                widget = hpaned
+                    make(col, lambda w: widget.add_widget(w))
+
+                    # collect widths to set width of panes
+                    params = col[1]
+                    if 'width' in params:
+                        sizes.append(params['width'])
+
+                if len(sizes) == len(cols):
+                    widget.set_sizes(sizes)
 
             elif len(cols) == 1:
                 widget = Widgets.HBox()
                 widget.set_border_width(0)
+                process_common_params(widget, params)
+
                 make(cols[0], lambda w: widget.add_widget(w, stretch=1))
                 #widget.show()
 
-            process_common_params(widget, params)
             pack(widget)
 
         # Vertical adjustable panel
         def vert(params, rows, pack):
             if len(rows) >= 2:
-                vpaned = Widgets.Splitter(orientation='vertical')
+                widget = Widgets.Splitter(orientation='vertical')
+                process_common_params(widget, params)
 
+                sizes = []
                 for row in rows:
-                    make(row, lambda w: vpaned.add_widget(w))
-                widget = vpaned
+                    make(row, lambda w: widget.add_widget(w))
+
+                    # collect heights to set height of panes
+                    params = row[1]
+                    if 'height' in params:
+                        sizes.append(params['height'])
+
+                if len(sizes) == len(rows):
+                    widget.set_sizes(sizes)
 
             elif len(rows) == 1:
                 widget = Widgets.VBox()
                 widget.set_border_width(0)
+                process_common_params(widget, params)
+
                 make(rows[0], lambda w: widget.add_widget(w, stretch=1))
                 #widget.show()
 
-            process_common_params(widget, params)
             pack(widget)
 
         # Horizontal fixed array
@@ -430,7 +458,7 @@ class Desktop(Callback.Callbacks):
         def seq(params, cols, pack):
             def mypack(w):
                 w_top = self.app.make_window()
-                w_top.cfg_expand(8, 8)
+                #w_top.cfg_expand(8, 8)
                 w_top.set_widget(w)
                 self.toplevels.append(w_top)
                 ## def closeEvent(*args):
@@ -501,8 +529,8 @@ class WorkspaceMixin(object):
 
 class TabWorkspace(Widgets.TabWidget, WorkspaceMixin):
 
-    def __init__(self):
-        super(TabWorkspace, self).__init__()
+    def __init__(self, detachable=False, group=0):
+        super(TabWorkspace, self).__init__(detachable=detachable, group=group)
 
     def add_tab(self, widget, title=''):
         self.add_widget(widget, title=title)

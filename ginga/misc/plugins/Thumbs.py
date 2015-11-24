@@ -632,12 +632,15 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             if self.thumbColCount == 0:
                 self.thumbRowCount += 1
 
+        self._auto_scroll()
+        self.logger.debug("added thumb for %s" % (name))
+
+    def _auto_scroll(self):
         # force scroll to bottom of thumbs, if checkbox is set
         scrollp = self.w.auto_scroll.get_state()
         if scrollp:
             self.fv.update_pending()
             self.w.thumbs_scroll.scroll_to_end()
-        self.logger.debug("added thumb for %s" % (name))
 
     def clear_widget(self):
         """
@@ -663,6 +666,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
                 if self.thumbColCount == 0:
                     self.thumbRowCount += 1
 
+        self._auto_scroll()
         self.logger.debug("Reordering done")
 
 

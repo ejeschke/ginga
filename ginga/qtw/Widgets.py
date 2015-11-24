@@ -931,18 +931,26 @@ class Expander(ContainerBase):
 
 
 class TabWidget(ContainerBase):
-    def __init__(self, tabpos='top'):
+    def __init__(self, tabpos='top', reorderable=False, detachable=False,
+                 group=0):
         super(TabWidget, self).__init__()
+
+        self.reorderable = reorderable
+        self.detachable = detachable
 
         w = QtGui.QTabWidget()
         w.currentChanged.connect(self._cb_redirect)
         w.tabCloseRequested.connect(self._tab_close)
         w.setUsesScrollButtons(True)
         #w.setTabsClosable(True)
+        if self.reorderable:
+            w.setMovable(True)
+        ## w.tabInserted = self._tab_insert_cb
+        ## w.tabRemoved = self._tab_remove_cb
         self.widget = w
         self.set_tab_position(tabpos)
 
-        for name in ('page-switch', 'page-close'):
+        for name in ('page-switch', 'page-close', 'page-move', 'page-detach'):
             self.enable_callback(name)
 
     def set_tab_position(self, tabpos):
@@ -957,12 +965,23 @@ class TabWidget(ContainerBase):
             w.setTabPosition(QtGui.QTabWidget.East)
 
     def _cb_redirect(self, index):
+        # get new index, because passed index can be out of date
+        index = self.get_index()
         child = self.index_to_widget(index)
-        self.make_callback('page-switch', child)
+        if child is not None:
+            self.make_callback('page-switch', child)
 
     def _tab_close(self, index):
         child = self.index_to_widget(index)
         self.make_callback('page-close', child)
+
+    ## def _tab_insert_cb(self, index):
+    ##     print("tab inserted %d" % index)
+    ##     child = self.index_to_widget(index)
+
+    ## def _tab_remove_cb(self, index):
+    ##     print("tab removed %d" % index)
+    ##     child = self.index_to_widget(index)
 
     def add_widget(self, child, title=''):
         self.add_ref(child)
@@ -989,6 +1008,8 @@ class TabWidget(ContainerBase):
     def index_to_widget(self, idx):
         """Returns child corresponding to `idx`"""
         nchild = self.widget.widget(idx)
+        if nchild is None:
+            return nchild
         return self._native_to_child(nchild)
 
 
@@ -1344,7 +1365,8 @@ class Menu(ContainerBase):
 
     def popup(self, widget):
         w = widget.get_widget()
-        self.widget.popup(w.mapToGlobal(QtCore.QPoint(0, 0)))
+        #self.widget.popup(w.mapToGlobal(QtCore.QPoint(0, 0)))
+        self.widget.exec_(w.mapToGlobal(QtCore.QPoint(0, 0)))
 
 class Menubar(ContainerBase):
     def __init__(self):
@@ -1380,7 +1402,7 @@ class TopLevel(ContainerBase):
         if not title is None:
             widget.setWindowTitle(title)
 
-        self.enable_callback('closed')
+        self.enable_callback('close')
 
     def set_widget(self, child):
         self.add_ref(child)
@@ -1388,17 +1410,18 @@ class TopLevel(ContainerBase):
         self.widget.layout().addWidget(child_w)
 
     def _quit(self, event):
-        event.accept()
+        #event.accept()
+        # let application decide how to handle this
+        event.ignore()
         self.close()
 
     def _closeEvent(*args):
         self.close()
 
     def close(self):
-        self.widget.deleteLater()
+        #self.widget.deleteLater()
         #self.widget = None
-
-        self.make_callback('closed')
+        self.make_callback('close')
 
     def raise_(self):
         self.widget.raise_()

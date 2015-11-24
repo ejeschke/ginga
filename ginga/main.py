@@ -183,7 +183,7 @@ class ReferenceViewer(object):
                           default=None,
                           help="Prefer FITS I/O module NAME")
         optprs.add_option("-g", "--geometry", dest="geometry",
-                          metavar="GEOM",
+                          default='1500x900', metavar="GEOM",
                           help="X geometry for initial size and placement")
         optprs.add_option("--log", dest="logfile", metavar="FILE",
                           help="Write logging output to FILE")
@@ -270,28 +270,25 @@ class ReferenceViewer(object):
         else:
             toolkit = settings.get('widgetSet', 'choose')
 
-        ginga_toolkit.use(toolkit)
+        if toolkit == 'choose':
+            try:
+                from ginga.qtw import QtHelp
+            except ImportError:
+                try:
+                    from ginga.gtkw import GtkHelp
+                except ImportError:
+                    print("You need python-gtk or python-qt to run Ginga!")
+                    sys.exit(1)
+        else:
+            ginga_toolkit.use(toolkit)
+
         tkname = ginga_toolkit.get_family()
         logger.info("Chosen toolkit (%s) family is '%s'" % (
             ginga_toolkit.toolkit, tkname))
 
-        from ginga.gw.GingaGw import GingaView
-        ## if tkname == 'gtk':
-        ##     from ginga.gtkw.GingaGtk import GingaView
-        ## elif tkname == 'qt':
-        ##     from ginga.qtw.GingaQt import GingaView
-        ## else:
-        ##     try:
-        ##         from ginga.qtw.GingaQt import GingaView
-        ##     except ImportError:
-        ##         try:
-        ##             from ginga.gtkw.GingaGtk import GingaView
-        ##         except ImportError:
-        ##             print("You need python-gtk or python-qt4 to run Ginga!")
-        ##             sys.exit(1)
-
         # these imports have to be here, otherwise they force the choice
         # of toolkit too early
+        from ginga.gw.GingaGw import GingaView
         from ginga.Control import GingaControl, GuiLogHandler
 
         # Define class dynamically based on toolkit choice
@@ -383,7 +380,7 @@ class ReferenceViewer(object):
 
         # Did user specify a particular geometry?
         if options.geometry:
-            ginga.setGeometry(options.geometry)
+            ginga.set_geometry(options.geometry)
 
         # make the list of disabled plugins
         disabled_plugins = []

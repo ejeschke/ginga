@@ -19,6 +19,10 @@ class WidgetError(Exception):
     """For errors thrown in this module."""
     pass
 
+
+# (see TabWidget)
+_widget_move_event = None
+
 # BASE
 
 class WidgetBase(Callback.Callbacks):
@@ -761,7 +765,11 @@ class TreeView(WidgetBase):
         if not model.iter_has_child(item):
             # child node, so append my name to parent's path
             path_rest = self._get_path(model.iter_parent(item))
-            myname = model.get_value(item, 0)[self.leaf_key]
+            d = model.get_value(item, 0)
+            if isinstance(d, str):
+                myname = d
+            else:
+                myname = d[self.leaf_key]
             path_rest.append(myname)
             return path_rest
 
@@ -999,19 +1007,29 @@ class Expander(ContainerBase):
 
 
 class TabWidget(ContainerBase):
-    def __init__(self, tabpos='top'):
+    def __init__(self, tabpos='top', reorderable=False, detachable=True,
+                 group=0):
         super(TabWidget, self).__init__()
+
+        self.reorderable = reorderable
+        self.detachable = detachable
 
         nb = gtk.Notebook()
         nb.set_show_border(False)
         nb.set_scrollable(True)
+        if not gtksel.have_gtk3:
+            # Allows drag-and-drop between notebooks
+            nb.set_group_id(group)
+        if self.detachable:
+            nb.connect("create-window", self._tab_detach_cb)
+        nb.connect("page-added", self._tab_insert_cb)
+        nb.connect("page-removed", self._tab_remove_cb)
         nb.connect("switch-page", self._cb_redirect)
         self.widget = nb
         self.set_tab_position(tabpos)
 
-        for name in ('page-switch', 'page-close'):
+        for name in ('page-switch', 'page-close', 'page-move', 'page-detach'):
             self.enable_callback(name)
-
 
     def set_tab_position(self, tabpos):
         nb = self.widget
@@ -1024,6 +1042,35 @@ class TabWidget(ContainerBase):
         elif tabpos == 'right':
             nb.set_tab_pos(gtk.POS_RIGHT)
 
+    def _tab_detach_cb(self, source, nchild_w, x, y):
+        child = self._native_to_child(nchild_w)
+        # remove child
+        # (native widget already has been removed by gtk)
+        self.children.remove(child)
+
+        #nchild_w.unparent()
+        self.make_callback('page-detach', child)
+
+    def _tab_insert_cb(self, nbw, nchild_w, page_num):
+        global _widget_move_event
+        if _widget_move_event is not None:
+            event, _widget_move_event = _widget_move_event, None
+            already_here = nchild_w in self._get_native_children()
+            if not already_here and event.child.get_widget() == nchild_w:
+                child = event.child
+                # remove child from src tab
+                # (native widget already has been removed by gtk)
+                event.src_widget.children.remove(child)
+                # add child to us
+                # (native widget already has been added by gtk)
+                self.add_ref(child)
+                self.make_callback('page-move', event.src_widget, child)
+
+    def _tab_remove_cb(self, nbw, nchild_w, page_num):
+        global _widget_move_event
+        child = self._native_to_child(nchild_w)
+        _widget_move_event = WidgetMoveEvent(self, child)
+
     def _cb_redirect(self, nbw, gptr, index):
         child = self.index_to_widget(index)
         self.make_callback('page-switch', child)
@@ -1032,7 +1079,15 @@ class TabWidget(ContainerBase):
         self.add_ref(child)
         child_w = child.get_widget()
         label = gtk.Label(title)
-        self.widget.append_page(child_w, label)
+        evbox = gtk.EventBox()
+        evbox.add(label)
+        evbox.show_all()
+        #evbox.connect("button-press-event", self.select_cb, labelname, data)
+        self.widget.append_page(child_w, evbox)
+        if self.reorderable:
+            self.widget.set_tab_reorderable(child_w, True)
+        if self.detachable:
+            self.widget.set_tab_detachable(child_w, True)
         self.widget.show_all()
 
     def get_index(self):
@@ -1321,12 +1376,14 @@ class Menu(ContainerBase):
     def popup(self, widget):
         menu = self.widget
         menu.show_all()
-        if not six.PY2:
-            long = int
-        if gtksel.have_gtk3:
-            menu.popup(None, None, None, None, 0, long(0))
+        if six.PY2:
+            now = long(0)
         else:
-            menu.popup(None, None, None, 0, long(0))
+            now = int(0)
+        if gtksel.have_gtk3:
+            menu.popup(None, None, None, None, 0, now)
+        else:
+            menu.popup(None, None, None, 0, now)
 
 
 class Menubar(ContainerBase):
@@ -1368,7 +1425,7 @@ class TopLevel(ContainerBase):
         if not title is None:
             widget.set_title(title)
 
-        self.enable_callback('closed')
+        self.enable_callback('close')
 
     def set_widget(self, child):
         self.add_ref(child)
@@ -1386,6 +1443,8 @@ class TopLevel(ContainerBase):
 
     def _close_event(self, widget, event):
         self.close()
+        # don't automatically destroy window
+        return True
 
     def _window_event(self, widget, event):
         if ((event.changed_mask & gtk.gdk.WINDOW_STATE_FULLSCREEN) or
@@ -1395,13 +1454,13 @@ class TopLevel(ContainerBase):
             self._fullscreen = False
 
     def close(self):
-        try:
-            self.widget.destroy()
-        except Exception as e:
-            pass
+        ## try:
+        ##     self.widget.destroy()
+        ## except Exception as e:
+        ##     pass
         #self.widget = None
 
-        self.make_callback('closed')
+        self.make_callback('close')
 
     def raise_(self):
         window = self.widget.get_window()
@@ -1594,6 +1653,18 @@ class DragPackage(object):
 
     def start_drag(self):
         pass
+
+class WidgetMoveEvent(object):
+    def __init__(self, src_widget, child):
+        self.src_widget = src_widget
+        self.child = child
+        self._result = False
+
+    def accept(self):
+        self._result = True
+
+    def reject(self):
+        self._result = False
 
 # MODULE FUNCTIONS
 
