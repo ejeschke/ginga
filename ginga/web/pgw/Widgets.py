@@ -782,12 +782,20 @@ class Expander(Frame):
     pass
 
 class TabWidget(ContainerBase):
+
+    tab_script_template = '''
+    <script>
+    ginga_initialize_tab_widget(document.getElementById("%(id)s"), "%(id)s", ginga_app)
+    </script>
+    '''
+
     def __init__(self, tabpos='top'):
         super(TabWidget, self).__init__()
 
         self.widget = None
-        self.index = None
+        self.index = 0
         self.set_tab_position(tabpos)
+        self.titles = []
 
         self.enable_callback('page-switch')
 
@@ -804,17 +812,20 @@ class TabWidget(ContainerBase):
             pass
 
     def _cb_redirect(self, event):
-        index = event.value
-        self.make_callback('page-switch', index)
+        self.index = event.value
+        self.make_callback('page-switch', self.index)
 
     def add_widget(self, child, title=''):
         self.add_ref(child)
+        self.titles.append(title)
 
     def get_index(self):
         return self.index
 
     def set_index(self, idx):
         self.index = idx
+        app = self.get_app()
+        app.do_operation('set_tab', id=self.id, value=self.index)
 
     def index_of(self, child):
         try:
@@ -829,11 +840,12 @@ class TabWidget(ContainerBase):
 
     def render(self):
         d = dict(id=self.id)
-        res = ['''<div id=%(id)s>\n''' % d]
+        res = ['''\n<div id="%(id)s">\n''' % d]
         res.append('''  <ul>\n''')
         d['cnt'] = 1
         for child in self.get_children():
-            res.append('''<li><a href="#%(id)s-%(cnt)d">Tab %(cnt)d</a></li>\n''' % d)
+            d['title'] = self.titles[d['cnt']-1]
+            res.append('''<li><a href="#%(id)s-%(cnt)d">%(title)s</a></li>\n''' % d)
             d['cnt'] += 1
         res.append('''  </ul>\n''')
 
@@ -844,7 +856,7 @@ class TabWidget(ContainerBase):
             d['cnt'] += 1
 
         res.append('''</div>\n''')
-        res.append('''<script>$( "#%(id)s" ).tabs();</script>''' % d)
+        res.append(TabWidget.tab_script_template % d)
 
         return ''.join(res)
 
