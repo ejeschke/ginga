@@ -166,11 +166,13 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         menubar = Widgets.Menubar()
         self.menubar = menubar
 
-        # NOTE: Special hack for Mac OS X, otherwise the menus
-        # do not get added to the global OS X menu
+        # NOTE: Special hack for Mac OS X. From the Qt documentation:
+        # "If you want all windows in a Mac application to share one
+        #  menu bar, you must create a menu bar that does not have a
+        #  parent."
         macos_ver = platform.mac_ver()[0]
         if len(macos_ver) > 0:
-            self.w['top'].add_widget(menubar, stretch=0)
+            pass
         else:
             holder.add_widget(menubar, stretch=1)
 
