@@ -629,6 +629,55 @@ support HTML5 canvas.</canvas>
                  tab_idx=tab_idx)
         return Canvas.canvas_template % d
 
+class Dialog(WidgetBase):
+
+    dialog_template = '''
+    <div id="%(id)s">
+    <script>
+    ginga_initialize_dialog(document.getElementById("%(id)s"), "%(id)s", "%(title)s", %(buttons)s, ginga_app)
+    </script>
+    </div>
+    '''
+
+    def __init__(self, title=None, flags=None, buttons=None,
+                 callback=None):
+
+        super(Dialog, self).__init__()
+        self.title = title
+        self.buttons = buttons
+        self.value = None
+        if callback:
+            self.enable_callback('activated')
+            self.add_callback('activated', callback)
+
+    def buttons_to_js_obj(self):
+        d = dict(id=self.id)
+        s = '{'
+        for item in self.buttons:
+            d['label'], d['val'] = item
+            s += '''
+            "%(label)s": function() {
+            ginga_app.widget_handler("%(id)s", "%(val)s");
+            },
+            ''' % d
+        s += '}'
+        return s
+
+    def _cb_redirect(self, event):
+        self.value = event.value
+        self.make_callback('activated', self.value)
+
+    def show(self):
+        app = self.get_app()
+        app.do_operation('dialog_action', id=self.id, action="open")
+
+    def close(self):
+        app = self.get_app()
+        app.do_operation('dialog_action', id=self.id, action="close")
+
+    def render(self):
+        d = dict(id=self.id, title=self.title, buttons=self.buttons_to_js_obj())
+        return self.dialog_template % d
 
 # CONTAINERS
 
@@ -1109,6 +1158,9 @@ class TopLevel(ContainerBase):
 </head>
 <body>
     <script type="text/javascript" src="/js/hammer.js"></script>
+    <link rel="stylesheet" href="//code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css">
+    <script src="//code.jquery.com/jquery-1.10.2.js"></script>
+    <script src="//code.jquery.com/ui/1.11.4/jquery-ui.js"></script>
     <script type="text/javascript" src="/js/application.js"></script>
     <script type="text/javascript">
         var wid = "%(wid)s";

@@ -6,6 +6,7 @@ ginga_make_application = function (ws_url) {
     ginga_app.socket = new WebSocket(ws_url);
     ginga_app.canvases = {}
     ginga_app.debug = false
+    ginga_app.dialogs = {}
     
     ginga_app.send_pkt = function (message) {
         var ws = ginga_app.socket;
@@ -56,6 +57,9 @@ ginga_make_application = function (ws_url) {
         else if (message.operation == "disable") {
             // update widget value
             document.getElementById(message.id).disabled = message.value;
+	}
+        else if (message.operation == "dialog_action") {
+            ginga_app.dialogs[message.id].fn(message.action)
         };
     }
 
@@ -425,4 +429,22 @@ ginga_initialize_canvas = function (canvas, id, app) {
     pg_canvas.initialize_canvas = setup_canvas
     
     return pg_canvas;
+}
+
+ginga_initialize_dialog = function (doc_elem, id, title, buttons, app) {
+
+    var pg_dialog = {};
+    pg_dialog.dialog_id = id;
+    pg_dialog.app = app;
+    app.dialogs[id] = pg_dialog;
+
+    pg_dialog.options = {autoOpen: false, modal: true, title: title, buttons: buttons};
+
+    pg_dialog.dialogObj = $("#"+id).dialog(pg_dialog.options);
+
+    pg_dialog.fn = function(action) {
+	pg_dialog.dialogObj.dialog(action);
+    }
+
+    return pg_dialog;
 }
