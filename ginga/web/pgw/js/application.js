@@ -5,6 +5,7 @@ ginga_make_application = function (ws_url) {
     
     ginga_app.socket = new WebSocket(ws_url);
     ginga_app.canvases = {}
+    // set this to true to get javascript console debugging
     ginga_app.debug = false
     ginga_app.dialogs = {}
     ginga_app.tab_widgets = {}
