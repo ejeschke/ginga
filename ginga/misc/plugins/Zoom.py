@@ -78,7 +78,7 @@ class Zoom(GingaPlugin.GlobalPlugin):
         bd.enable_pan(False)
         bd.enable_cmap(False)
 
-        iw = Widgets.wrap(zi.get_widget())
+        iw = Viewers.GingaViewerWidget(zi)
         vpaned = Widgets.Splitter(orientation=orientation)
         vpaned.add_widget(iw)
         vpaned.add_widget(Widgets.Label(''))

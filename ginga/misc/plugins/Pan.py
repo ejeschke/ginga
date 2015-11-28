@@ -87,10 +87,7 @@ class Pan(GingaPlugin.GlobalPlugin):
         panimage = self._create_pan_image(fitsimage)
         chname = chinfo.name
 
-        # ?? Can't we use panimage directly as a wrapped widget ??
-        iw = panimage.get_widget()
-        # wrap widget
-        iw = Widgets.wrap(iw)
+        iw = Viewers.GingaViewerWidget(panimage)
         self.nb.add_widget(iw)
         index = self.nb.index_of(iw)
         paninfo = Bunch.Bunch(panimage=panimage, widget=iw,

@@ -1,5 +1,5 @@
 #
-# Plot.py -- Plotting function for Ginga scientific viewer.
+# Plot.py -- Plotting widget canvas wrapper.
 #
 # Copyright (c)  Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
@@ -8,76 +8,22 @@
 from io import BytesIO
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 
-from ginga.base.PlotBase import PlotBase, HistogramMixin, CutsMixin
 from ginga.web.pgw import Widgets
 
-class Plot(PlotBase):
-
-    def __init__(self, logger, width=5, height=5, dpi=100):
-        PlotBase.__init__(self, logger, FigureCanvas,
-                          width=width, height=height, dpi=dpi)
-
-        self.viewer = None
-
-    def set_widget(self, viewer):
-        self.viewer = viewer
-
-    def get_rgb_buffer(self):
-        buf = BytesIO()
-        self.fig.canvas.print_figure(buf, format='png')
-        return buf.getvalue()
-
-    def _draw(self):
-        super(Plot, self)._draw()
-
-        if self.viewer is not None:
-            self.logger.debug("getting RGB buffer")
-            buf = self.get_rgb_buffer()
-
-            self.logger.debug("sending buffer")
-            self.viewer.do_update(buf)
-
-            self.logger.debug("sent buffer")
-
-    def configure_window(self, wd, ht):
-        self.logger.debug("canvas resized to %dx%d" % (wd, ht))
-
-    def map_event(self, event):
-        wd, ht = event.width, event.height
-        self.configure_window(wd, ht)
-
-        self._draw()
-
-    def resize_event(self, event):
-        wd, ht = event.x, event.y
-        # Not yet ready for prime-time--browser seems to mess with the
-        # aspect ratio
-        self.configure_window(wd, ht)
-
-        self._draw()
-
-
-class Histogram(Plot, HistogramMixin):
-    pass
-
-class Cuts(Plot, CutsMixin):
-    pass
-
-class PlotViewer(Widgets.Canvas):
+class PlotWidget(Widgets.Canvas):
     """
     This class implements the server-side backend of the surface for a
-    web-based Ginga viewer.  It uses a web socket to connect to an HTML5
+    web-based plot viewer.  It uses a web socket to connect to an HTML5
     canvas with javascript callbacks in a web browser on the client.
 
     The viewer is created separately on the backend and connects to this
     surface via the set_viewer() method.
     """
 
-    def __init__(self, plot=None, width=500, height=500):
-        super(PlotViewer, self).__init__(width=width, height=height)
+    def __init__(self, plot, width=500, height=500):
+        super(PlotWidget, self).__init__(width=width, height=height)
 
-        if plot is None:
-            plot = Plot(logger)
+        self.widget = FigureCanvas(plot.fig)
         self.logger = plot.logger
 
         self._configured = False
@@ -87,11 +33,10 @@ class PlotViewer(Widgets.Canvas):
     def set_plot(self, plot):
         self.logger.debug("set_plot called")
         self.plot = plot
-        #self.logger = plot.get_logger()
 
         self._dispatch_event_table = {
             "activate": self.ignore_event,
-            "setbounds": plot.map_event,
+            "setbounds": self.map_event,
             "mousedown": self.ignore_event,
             "mouseup": self.ignore_event,
             "mousemove": self.ignore_event,
@@ -104,7 +49,7 @@ class PlotViewer(Widgets.Canvas):
             "keydown": self.ignore_event,
             "keyup": self.ignore_event,
             "keypress": self.ignore_event,
-            "resize": plot.resize_event,
+            "resize": self.resize_event,
             "focus": self.ignore_event,
             "focusout": self.ignore_event,
             "blur": self.ignore_event,
@@ -124,7 +69,7 @@ class PlotViewer(Widgets.Canvas):
             "swipe": self.ignore_event,
             }
 
-        self.plot.set_widget(self)
+        self.plot.add_callback('draw-canvas', self.draw_cb)
 
     def get_plot(self):
         return self.plot
@@ -137,15 +82,40 @@ class PlotViewer(Widgets.Canvas):
         app.do_operation('refresh_canvas', id=self.id)
         self.logger.debug("did refresh")
 
-    def do_update(self, buf):
-        #self.logger.debug("clear_rect")
-        #self.clear_rect(0, 0, self.width, self.height)
+    def get_rgb_buffer(self, plot):
+        buf = BytesIO()
+        plot.fig.canvas.print_figure(buf, format='png')
+        wd, ht = self.width, self.height
+        return (wd, ht, buf.getvalue())
 
-        self.logger.debug("drawing %dx%d image" % (self.width, self.height))
-        self.draw_image(buf, 0, 0, self.width, self.height)
-        self.logger.debug("drew image")
+    def draw_cb(self, plot):
+        self.logger.debug("getting RGB buffer")
+        wd, ht, buf = self.get_rgb_buffer(plot)
+
+        #self.logger.debug("clear_rect")
+        #self.clear_rect(0, 0, wd, ht)
+
+        self.logger.debug("drawing %dx%d image" % (wd, ht))
+        self.draw_image(buf, 0, 0, wd, ht)
 
         self.refresh()
+
+    def configure_window(self, wd, ht):
+        self.logger.debug("canvas resized to %dx%d" % (wd, ht))
+        fig = self.plot.fig
+        fig.set_size_inches(float(wd) / fig.dpi, float(ht) / fig.dpi)
+
+    def map_event(self, event):
+        wd, ht = event.width, event.height
+        self.configure_window(wd, ht)
+
+        self.plot.draw()
+
+    def resize_event(self, event):
+        wd, ht = event.x, event.y
+        self.configure_window(wd, ht)
+
+        self.plot.draw()
 
     def _cb_redirect(self, event):
         method = self._dispatch_event_table[event.type]

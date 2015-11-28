@@ -32,6 +32,8 @@ tab_idx = 0
 _app = None
 
 
+default_font = 'Ariel 8'
+
 # BASE
 class WidgetBase(Callback.Callbacks):
 
@@ -44,8 +46,8 @@ class WidgetBase(Callback.Callbacks):
         self.changed = False
         # generic attributes of widgets
         self.enabled = True
-        self.width = 640
-        self.height = 480
+        self.width = 400
+        self.height = 800
         self.bgcolor = 'gray'
         self.fgcolor = 'black'
         self.tooltip = ''
@@ -91,8 +93,14 @@ class WidgetBase(Callback.Callbacks):
         font = '%s %s' % (font_family, point_size)
         return font
 
+    def cfg_expand(self, horizontal=0, vertical=0):
+        # this is for compatibility with Qt widgets
+        pass
+
     def render(self):
-        return '''<!-- "%s" NOT YET RENDERED! -->''' % str(self.__class__)
+        text = "'%s' NOT YET IMPLEMENTED" % (str(self.__class__))
+        d = dict(id=self.id, text=text)
+        return '''<span id=%(id)s>%(text)s</span>''' % d
 
 # BASIC WIDGETS
 
@@ -102,7 +110,7 @@ class TextEntry(WidgetBase):
 
         self.widget = None
         self.text = text
-        self.font = 'Sans 12'
+        self.font = default_font
         self.length = 20    # seems to be default HTML5 size
 
         self.enable_callback('activated')
@@ -137,7 +145,7 @@ class TextEntrySet(WidgetBase):
 
         self.widget = None
         self.text = text
-        self.font = 'Sans 12'
+        self.font = default_font
         ## self.entry = None
         ## self.btn = None
         self.length = 20    # seems to be default HTML5 size
@@ -175,7 +183,7 @@ class TextArea(WidgetBase):
         self.editable = editable
         self.wrap = wrap
         self.text = ''
-        self.font = 'Sans 12'
+        self.font = default_font
 
     def _cb_redirect(self, event):
         self.text = event.value
@@ -184,7 +192,7 @@ class TextArea(WidgetBase):
     def append_text(self, text, autoscroll=True):
         if text.endswith('\n'):
             text = text[:-1]
-        self.text.append(text)
+        self.text = self.text + text
         if not autoscroll:
             return
 
@@ -214,14 +222,14 @@ class TextArea(WidgetBase):
             d['disabled'] = 'disabled'
         if not self.editable:
             d['editable'] = 'readOnly'
-        return '''<textarea id=%(id)s name="%(id)s" %(disabled)s %(editable)s onchange="ginga_app.widget_handler('%(id)s', document.getElementById('%(id)s').value)">%(text)s</textarea>''' % d
+        return '''<textarea id=%(id)s name="%(id)s" style="width: 100%%;" %(disabled)s %(editable)s onchange="ginga_app.widget_handler('%(id)s', document.getElementById('%(id)s').value)">%(text)s</textarea>''' % d
 
 class Label(WidgetBase):
     def __init__(self, text='', halign='left', style='normal', menu=None):
         super(Label, self).__init__()
 
         self.text = text
-        self.font = 'Sans 12'
+        self.font = default_font
         self.halign = halign
         self.style = style
         self.menu = menu
@@ -348,11 +356,11 @@ class SpinBox(WidgetBase):
 
         self.dtype = dtype
         self.widget = None
-        self.value = None
+        self.value = dtype(0)
         self.decimals = 0
-        self.minval = None
-        self.maxval = None
-        self.incr = None
+        self.minval = dtype(0)
+        self.maxval = dtype(0)
+        self.incr = dtype(0)
 
         self.enable_callback('value-changed')
 
@@ -393,8 +401,10 @@ class Slider(WidgetBase):
         self.orientation = orientation
         self.track = track
         self.widget = None
-        self.value = None
         self.dtype = dtype
+        self.value = dtype(0)
+        self.minval = dtype(0)
+        self.maxval = dtype(0)
 
         self.enable_callback('value-changed')
 
@@ -437,7 +447,7 @@ class ScrollBar(WidgetBase):
         #     self.widget = QtGui.QScrollBar(QtCore.Qt.Vertical)
         # self.widget.valueChanged.connect(self._cb_redirect)
         self.widget = None
-        self.value = None
+        self.value = 0.0
 
         self.enable_callback('activated')
 
@@ -548,6 +558,26 @@ class RadioButton(WidgetBase):
             d['checked'] = 'checked'
         return '''<input id=%(id)s name="%(group)s" type="radio" %(disabled)s onchange="ginga_app.widget_handler('%(id)s', document.getElementById('%(id)s').value)" %(checked)s value="true">%(text)s''' % d
 
+
+class Image(WidgetBase):
+    def __init__(self, native_image=None, style='normal', menu=None):
+        super(Image, self).__init__()
+
+        if native_image is None:
+            native_image = "(no image available)"
+        self.image = native_image
+        self.menu = menu
+        self.widget = None
+
+        self.enable_callback('activated')
+
+    def _set_image(self, native_image):
+        self.image = native_image
+
+    def render(self):
+        d = dict(id=self.id, image=self.image)
+        return '''<span id=%(id)s>%(image)s</span>''' % d
+
 class ProgressBar(WidgetBase):
     def __init__(self):
         super(ProgressBar, self).__init__()
@@ -568,7 +598,26 @@ class StatusBar(Label):
 
     def set_message(self, msg_str):
         # TODO: remove message in about 10 seconds
-        self.widget.set_text(msg_str)
+        self.set_text(msg_str)
+
+
+class TreeView(WidgetBase):
+    def __init__(self, auto_expand=False, sortable=False, selection='single',
+                 use_alt_row_color=False, dragable=False):
+        super(TreeView, self).__init__()
+
+        self.auto_expand = auto_expand
+        self.sortable = sortable
+        self.selection = selection
+        self.dragable = dragable
+        self.levels = 1
+        self.leaf_key = None
+        self.leaf_idx = 0
+        self.columns = []
+        self.datakeys = []
+        # shadow index
+        self.shadow = {}
+
 
 class Canvas(WidgetBase):
 
@@ -629,56 +678,6 @@ support HTML5 canvas.</canvas>
                  tab_idx=tab_idx)
         return Canvas.canvas_template % d
 
-class Dialog(WidgetBase):
-
-    dialog_template = '''
-    <div id="%(id)s">
-    <script>
-    ginga_initialize_dialog(document.getElementById("%(id)s"), "%(id)s", "%(title)s", %(buttons)s, ginga_app)
-    </script>
-    </div>
-    '''
-
-    def __init__(self, title=None, flags=None, buttons=None,
-                 callback=None):
-
-        super(Dialog, self).__init__()
-        self.title = title
-        self.buttons = buttons
-        self.value = None
-        if callback:
-            self.enable_callback('activated')
-            self.add_callback('activated', callback)
-
-    def buttons_to_js_obj(self):
-        d = dict(id=self.id)
-        s = '{'
-        for item in self.buttons:
-            d['label'], d['val'] = item
-            s += '''
-            "%(label)s": function() {
-            ginga_app.widget_handler("%(id)s", "%(val)s");
-            },
-            ''' % d
-        s += '}'
-        return s
-
-    def _cb_redirect(self, event):
-        self.value = event.value
-        self.make_callback('activated', self.value)
-
-    def show(self):
-        app = self.get_app()
-        app.do_operation('dialog_action', id=self.id, action="open")
-
-    def close(self):
-        app = self.get_app()
-        app.do_operation('dialog_action', id=self.id, action="close")
-
-    def render(self):
-        d = dict(id=self.id, title=self.title, buttons=self.buttons_to_js_obj())
-        return self.dialog_template % d
-
 # CONTAINERS
 
 class ContainerBase(WidgetBase):
@@ -686,6 +685,7 @@ class ContainerBase(WidgetBase):
         super(ContainerBase, self).__init__()
         # TODO: probably need to maintain children as list of widget ids
         self.children = []
+        self.margins = (0, 0, 0, 0)   # L, R, T, B
 
     def add_ref(self, ref):
         # TODO: should this be a weakref?
@@ -706,6 +706,12 @@ class ContainerBase(WidgetBase):
     def render(self):
         return self.render_children()
 
+    def set_margins(self, left, right, top, bottom):
+        self.margins = (left, right, top, bottom)
+
+    def set_border_width(self, pix):
+        self.margins = (pix, pix, pix, pix)
+
     def render_children(self, ifx=' ', spacing=0, spacing_side='right'):
         def _render_child(child):
             return '''<span style="margin-%s: %dpx;">%s</span>''' % (
@@ -719,7 +725,6 @@ class Box(ContainerBase):
         self.orientation = orientation
         self.widget = None
         self.spacing = 0
-        self.margins = (0, 0, 0, 0)   # L, R, T, B
 
     def add_widget(self, child, stretch=0.0):
         self.add_ref(child)
@@ -727,19 +732,13 @@ class Box(ContainerBase):
     def set_spacing(self, val):
         self.spacing = val
 
-    def set_margins(self, left, right, top, bottom):
-        self.margins = (left, right, top, bottom)
-
-    def set_border_width(self, pix):
-        self.margins = (pix, pix, pix, pix)
-
     def render(self):
         # TODO: handle spacing attribute
         d = dict(id=self.id)
         style_d = dict(left=self.margins[0], right=self.margins[1],
                        top=self.margins[2], bottom=self.margins[3])
         if self.orientation == 'horizontal':
-            d['style'] = "display: flex; flex-direction: row; flex-wrap: nowrap; justify-content: flex-start; margin: %(left)dpx %(right)dpx %(top)dpx%(bottom)dpx;" % style_d
+            d['style'] = "display: flex; flex-direction: row; flex-wrap: nowrap; justify-content: flex-start; margin: %(left)dpx %(right)dpx %(top)dpx %(bottom)dpx;" % style_d
             d['content'] = self.render_children(spacing=self.spacing,
                                                 spacing_side='right')
         else:
@@ -789,17 +788,24 @@ class TabWidget(ContainerBase):
     </script>
     '''
 
-    def __init__(self, tabpos='top'):
+    def __init__(self, tabpos='top', reorderable=False, detachable=True,
+                 group=0):
         super(TabWidget, self).__init__()
+
+        self.reorderable = reorderable
+        self.detachable = detachable
+        self.group = group
 
         self.widget = None
         self.index = 0
         self.set_tab_position(tabpos)
         self.titles = []
 
-        self.enable_callback('page-switch')
+        for name in ('page-switch', 'page-close', 'page-move', 'page-detach'):
+            self.enable_callback(name)
 
     def set_tab_position(self, tabpos):
+        self.tabpos = tabpos
         # TODO: set tab position
         nb = self.widget
         if tabpos == 'top':
@@ -831,16 +837,18 @@ class TabWidget(ContainerBase):
         try:
             return self.children.index(child)
         except ValueError:
-            print(self.children)
             return -1
 
-    def get_widget_by_index(self, idx):
+    def index_to_widget(self, idx):
         """Returns child corresponding to `idx`"""
         return self.children[idx]
 
     def render(self):
         d = dict(id=self.id)
-        res = ['''\n<div id="%(id)s">\n''' % d]
+        style_d = dict(left=self.margins[0], right=self.margins[1],
+                       top=self.margins[2], bottom=self.margins[3])
+        d['style'] = "padding: 0; margin: %(left)dpx %(right)dpx %(top)dpx %(bottom)dpx;" % style_d
+        res = ['''\n<div id="%(id)s" style="%(style)s">\n''' % d]
         res.append('''  <ul>\n''')
         d['cnt'] = 1
         for child in self.get_children():
@@ -852,7 +860,7 @@ class TabWidget(ContainerBase):
         d['cnt'] = 1
         for child in self.get_children():
             d['content'] = child.render()
-            res.append('''<div id="%(id)s-%(cnt)d"> %(content)s </div>\n''' % d)
+            res.append('''<div id="%(id)s-%(cnt)d" style="%(style)s"> %(content)s </div>\n''' % d)
             d['cnt'] += 1
 
         res.append('''</div>\n''')
@@ -860,40 +868,31 @@ class TabWidget(ContainerBase):
 
         return ''.join(res)
 
-class StackWidget(ContainerBase):
-    def __init__(self):
-        super(StackWidget, self).__init__()
+class StackWidget(TabWidget):
+    pass
 
-        self.widget = None
+class MDIWidget(TabWidget):
 
-        self.enable_callback('page-switch')
+    def __init__(self, tabpos='top', mode='tabs'):
+        super(MDIWidget, self).__init__(tabpos=tabpos)
 
-    def add_widget(self, child, title=''):
-        self.add_ref(child)
+        self.mode = 'tabs'
+        self.true_mdi = False
 
-    def get_index(self):
-        return self.index
+    def get_mode(self):
+        return self.mode
 
-    def set_index(self, idx):
-        self.index = idx
+    def set_mode(self, mode):
+        pass
 
-    def index_of(self, child):
-        try:
-            return self.children.index(child)
-        except ValueError:
-            print(self.children)
-            return -1
+    def tile_panes(self):
+        pass
 
-    def get_widget_by_index(self, idx):
-        """Returns child corresponding to `idx`"""
-        return self.children[idx]
+    def cascade_panes(self):
+        pass
 
-    def render(self):
-        d = dict(id=self.id)
-        d['style'] = "display: table-cell; vertical-align: middle;"
-        d['content'] = self.render_children()
-
-        return '''<div id=%(id)s style="%(style)s">%(content)s</div>''' % d
+    def use_tabs(self, tf):
+        pass
 
 class ScrollArea(ContainerBase):
     def __init__(self):
@@ -901,61 +900,72 @@ class ScrollArea(ContainerBase):
 
         self.widget = None
 
+        self.enable_callback('configure')
+
     def set_widget(self, child):
         self.add_ref(child)
 
-class Splitter(ContainerBase):
-    def __init__(self, orientation='horizontal'):
-        super(Splitter, self).__init__()
-
-        self.orientation = orientation
-        self.widget = None
-        ## w.setStretchFactor(0, 0.5)
-        ## w.setStretchFactor(1, 0.5)
-
-    def add_widget(self, child):
-        self.add_ref(child)
+    def scroll_to_end(self, vertical=True, horizontal=False):
+        pass
 
     def render(self):
+        # TODO: handle spacing attribute
         d = dict(id=self.id)
-        if self.orientation == 'horizontal':
-            d['style'] = "display: table-cell; vertical-align: middle;"
-            d['content'] = self.render_children()
-        else:
-            d['style'] = "display: table-cell; horizontal-align: middle;"
-            d['content'] = self.render_children('<br>')
+        child = self.get_children()[0]
+        d['content'] = child.render()
+        return '''<div id=%(id)s>%(content)s</div>''' % d
 
-        return '''<div id=%(id)s style="%(style)s">%(content)s</div>''' % d
+class Splitter(Box):
+
+    def get_sizes(self):
+        wd, ht = self.get_size()
+        if self.orientation == 'horizontal':
+            length = wd
+        else:
+            length = ht
+        return length // self.num_children()
+
+    def set_sizes(self, sizes):
+        pass
+
 
 class GridBox(ContainerBase):
     def __init__(self, rows=1, columns=1):
         super(GridBox, self).__init__()
 
         self.widget = None
-        self.rows = rows
-        self.cols = columns
+        self.num_rows = rows
+        self.num_cols = columns
         self.row_spacing = 0
         self.col_spacing = 0
         self.tbl = {}
 
+    def resize_grid(self, rows, columns):
+        self.num_rows = rows
+        self.num_cols = columns
+
     def set_row_spacing(self, val):
         self.row_spacing = val
+
+    def set_spacing(self, val):
+        self.set_row_spacing(val)
+        self.set_column_spacing(val)
 
     def set_column_spacing(self, val):
         self.col_spacing = val
 
     def add_widget(self, child, row, col, stretch=0):
         self.add_ref(child)
-        self.rows = max(self.rows, row+1)
-        self.cols = max(self.cols, col+1)
+        self.num_rows = max(self.num_rows, row+1)
+        self.num_cols = max(self.num_cols, col+1)
         self.tbl[(row, col)] = child
 
     def render(self):
         d = dict(id=self.id)
         res = ['''<table id=%(id)s>''' % d]
-        for i in range(self.rows):
+        for i in range(self.num_rows):
             res.append("  <tr>")
-            for j in range(self.cols):
+            for j in range(self.num_cols):
                 res.append("  <td>")
                 key = (i, j)
                 if key in self.tbl:
@@ -1089,7 +1099,7 @@ class TopLevel(ContainerBase):
         self.app = None
         #widget.closeEvent = lambda event: self._quit(event)
 
-        self.enable_callback('closed')
+        self.enable_callback('close')
 
     def set_widget(self, child):
         self.add_ref(child)
@@ -1101,7 +1111,7 @@ class TopLevel(ContainerBase):
         pass
 
     def close(self):
-        self.make_callback('closed')
+        self.make_callback('close')
 
     def raise_(self):
         pass
@@ -1356,6 +1366,57 @@ class Application(object):
             self.t_ioloop.stop()
 
         self.ev_quit.set()
+
+
+class Dialog(WidgetBase):
+
+    dialog_template = '''
+    <div id="%(id)s">
+    <script>
+    ginga_initialize_dialog(document.getElementById("%(id)s"), "%(id)s", "%(title)s", %(buttons)s, ginga_app)
+    </script>
+    </div>
+    '''
+
+    def __init__(self, title=None, flags=None, buttons=None,
+                 callback=None):
+
+        super(Dialog, self).__init__()
+        self.title = title
+        self.buttons = buttons
+        self.value = None
+        if callback:
+            self.enable_callback('activated')
+            self.add_callback('activated', callback)
+
+    def buttons_to_js_obj(self):
+        d = dict(id=self.id)
+        s = '{'
+        for item in self.buttons:
+            d['label'], d['val'] = item
+            s += '''
+            "%(label)s": function() {
+            ginga_app.widget_handler("%(id)s", "%(val)s");
+            },
+            ''' % d
+        s += '}'
+        return s
+
+    def _cb_redirect(self, event):
+        self.value = event.value
+        self.make_callback('activated', self.value)
+
+    def show(self):
+        app = self.get_app()
+        app.do_operation('dialog_action', id=self.id, action="open")
+
+    def close(self):
+        app = self.get_app()
+        app.do_operation('dialog_action', id=self.id, action="close")
+
+    def render(self):
+        d = dict(id=self.id, title=self.title, buttons=self.buttons_to_js_obj())
+        return self.dialog_template % d
 
 ## class SaveDialog(QtGui.QFileDialog):
 ##     def __init__(self, title=None, selectedfilter=None):

@@ -170,6 +170,15 @@ class WindowHandler(tornado.web.RequestHandler):
 
         self.write(output)
 
+def get_icon(iconpath, size=None):
+    if size is not None:
+        wd, ht = size
+    else:
+        wd, ht = 24, 24
+    # TODO: return a jpeg or png icon
+    iconw = "(no image available)"
+    return iconw
+
 def get_font(font_family, point_size):
     font = '%s %d' % (font_family, point_size)
     return font

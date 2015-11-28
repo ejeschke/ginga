@@ -45,7 +45,7 @@ import traceback
 
 # Local application imports
 from ginga.misc.Bunch import Bunch
-from ginga.misc import Task, ModuleManager, Datasrc, Settings, log
+from ginga.misc import Task, ModuleManager, Settings, log
 import ginga.version as version
 import ginga.toolkit as ginga_toolkit
 from ginga import AstroImage
@@ -444,6 +444,12 @@ class ReferenceViewer(object):
         if 'thumbs' in tab_names:
             ginga.ds.raise_tab('Thumbs')
 
+        # Add custom channels
+        channels = options.channels.split(',')
+        for chname in channels:
+            ginga.add_channel(chname)
+        ginga.change_channel(channels[0])
+
         # User configuration (custom star catalogs, etc.)
         if have_ginga_config:
             try:
@@ -459,13 +465,6 @@ class ReferenceViewer(object):
                 logger.error("Error processing Ginga config file: %s" % (
                     str(e)))
                 logger.error("Traceback:\n%s" % (tb_str))
-
-        # Add custom channels
-        channels = options.channels.split(',')
-        for chname in channels:
-            datasrc = Datasrc.Datasrc(length=options.bufsize)
-            ginga.add_channel(chname, datasrc)
-        ginga.change_channel(channels[0])
 
         # Display banner the first time run, unless suppressed
         showBanner = True

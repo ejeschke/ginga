@@ -96,6 +96,20 @@ class ImageViewPg(ImageView):
         else:
             self.delayed_redraw()
 
+    def get_image_as_widget(self):
+        """Used for generating thumbnails.  Does not include overlaid
+        graphics.
+        """
+        # TODO: generate something that can be rendered as an HTML image
+        image = "(no image available)"
+        return image
+
+    def save_image_as_file(self, filepath, format='png', quality=90):
+        """Used for generating thumbnails.  Does not include overlaid
+        graphics.
+        """
+        pass
+
     def set_cursor(self, cursor):
         if self.pgcanvas is None:
             return
