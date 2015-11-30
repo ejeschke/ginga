@@ -37,11 +37,15 @@ ginga_make_application = function (ws_url) {
         message = JSON.parse(e.data);
         if (message.operation == "refresh_canvas") {
             if (ginga_app.debug) console.log("refreshing canvas");
-            ginga_app.canvases[message.id].redrawCanvas();
+            if (message.id in ginga_app.canvases) {
+                ginga_app.canvases[message.id].redrawCanvas();
+                };
         }
         else if (message.operation == "draw_canvas") {
             if (ginga_app.debug) console.log("drawing canvas");
-            ginga_app.canvases[message.id].drawShape(message["shape"]);
+            if (message.id in ginga_app.canvases) {
+                ginga_app.canvases[message.id].drawShape(message["shape"]);
+                };
         }
         else if (message.operation == "update_label") {
             // update widget value
@@ -55,6 +59,19 @@ ginga_make_application = function (ws_url) {
         else if (message.operation == "update_index") {
             // update widget value
             document.getElementById(message.id).selectedIndex = message.value;
+        }
+        else if (message.operation == "update_html") {
+            // update widget content
+            document.getElementById(message.id).innerHTML = message.value;
+        }
+        else if (message.operation == "update_imgsrc") {
+            // update image content
+            document.getElementById(message.id).src = message.value;
+        }
+        else if (message.operation == "update_style") {
+            // update widget style
+            document.getElementById(message.id).setAttribute('style',
+                                                             message.value);
         }
         else if (message.operation == "disable") {
             // update widget value

@@ -40,14 +40,15 @@ class Pan(GingaPlugin.GlobalPlugin):
         # share canvas with channel viewer?
         self.use_shared_canvas = self.settings.get('use_shared_canvas', False)
 
+        self._wd = 300
+        self._ht = 300
+
     def build_gui(self, container):
         nb = Widgets.StackWidget()
         self.nb = nb
         container.add_widget(self.nb, stretch=1)
 
     def _create_pan_image(self, fitsimage):
-        width, height = 300, 300
-
         #pi = Viewers.ImageViewCanvas(logger=self.logger)
         pi = Viewers.CanvasView(logger=self.logger)
         pi.enable_autozoom('on')
@@ -55,7 +56,7 @@ class Pan(GingaPlugin.GlobalPlugin):
         hand = pi.get_cursor('pan')
         pi.define_cursor('pick', hand)
         pi.set_bg(0.4, 0.4, 0.4)
-        pi.set_desired_size(width, height)
+        pi.set_desired_size(self._wd, self._ht)
         pi.set_callback('cursor-down', self.btndown)
         pi.set_callback('cursor-move', self.drag_cb)
         pi.set_callback('none-move', self.motion_cb)
@@ -79,7 +80,6 @@ class Pan(GingaPlugin.GlobalPlugin):
         bd.enable_pan(False)
         bd.enable_zoom(False)
 
-        pi.set_desired_size(width, height)
         return pi
 
     def add_channel(self, viewer, chinfo):
@@ -88,6 +88,7 @@ class Pan(GingaPlugin.GlobalPlugin):
         chname = chinfo.name
 
         iw = Viewers.GingaViewerWidget(panimage)
+        iw.resize(self._wd, self._ht)
         self.nb.add_widget(iw)
         index = self.nb.index_of(iw)
         paninfo = Bunch.Bunch(panimage=panimage, widget=iw,

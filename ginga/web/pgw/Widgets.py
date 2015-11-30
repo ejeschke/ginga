@@ -10,10 +10,10 @@
 import os.path
 import threading
 import time
-import binascii
 from functools import reduce
 
 from ginga.misc import Callback, Bunch
+from ginga.web.pgw import PgHelp
 import ginga.icons
 
 # path to our icons
@@ -405,6 +405,7 @@ class Slider(WidgetBase):
         self.value = dtype(0)
         self.minval = dtype(0)
         self.maxval = dtype(0)
+        self.incr = dtype(0)
 
         self.enable_callback('value-changed')
 
@@ -563,20 +564,33 @@ class Image(WidgetBase):
     def __init__(self, native_image=None, style='normal', menu=None):
         super(Image, self).__init__()
 
-        if native_image is None:
-            native_image = "(no image available)"
-        self.image = native_image
+        self.image = None
+        self.img_src = ''
         self.menu = menu
         self.widget = None
 
         self.enable_callback('activated')
 
+        if native_image is not None:
+            self._set_image(native_image)
+
+    def _cb_redirect(self, event):
+        self.value = event.value
+        self.make_callback('activated', event.value)
+
     def _set_image(self, native_image):
         self.image = native_image
+        self.img_src = PgHelp.get_image_src_from_buffer(self.image)
+
+        app = self.get_app()
+        app.do_operation('update_imgsrc', id=self.id, value=self.img_src)
 
     def render(self):
-        d = dict(id=self.id, image=self.image)
-        return '''<span id=%(id)s>%(image)s</span>''' % d
+        # TODO: callback for click
+        d = dict(id=self.id, src=self.img_src, tooltip=self.tooltip,
+                 height=self.height, width=self.width)
+        return '''<img id=%(id)s src="%(src)s" alt="%(tooltip)s"
+                        width="%(width)d" height="%(height)d">''' % d
 
 class ProgressBar(WidgetBase):
     def __init__(self):
@@ -652,10 +666,7 @@ support HTML5 canvas.</canvas>
 
     def draw_image(self, img_buf, x, y, width=None, height=None):
 
-        img_string = binascii.b2a_base64(img_buf)
-        if isinstance(img_string, bytes):
-            img_string = img_string.decode("utf-8")
-        img_src = 'data:image/png;base64,' + img_string
+        img_src = PgHelp.get_image_src_from_buffer(img_buf)
 
         self._draw("image", x=x, y=y, src=img_src, width=width, height=height)
 
@@ -800,6 +811,7 @@ class TabWidget(ContainerBase):
         self.index = 0
         self.set_tab_position(tabpos)
         self.titles = []
+        self._tabs_visible = True
 
         for name in ('page-switch', 'page-close', 'page-move', 'page-detach'):
             self.enable_callback(name)
@@ -849,13 +861,16 @@ class TabWidget(ContainerBase):
                        top=self.margins[2], bottom=self.margins[3])
         d['style'] = "padding: 0; margin: %(left)dpx %(right)dpx %(top)dpx %(bottom)dpx;" % style_d
         res = ['''\n<div id="%(id)s" style="%(style)s">\n''' % d]
-        res.append('''  <ul>\n''')
-        d['cnt'] = 1
-        for child in self.get_children():
-            d['title'] = self.titles[d['cnt']-1]
-            res.append('''<li><a href="#%(id)s-%(cnt)d">%(title)s</a></li>\n''' % d)
-            d['cnt'] += 1
-        res.append('''  </ul>\n''')
+
+        if self._tabs_visible:
+            # draw tabs
+            res.append('''  <ul>\n''')
+            d['cnt'] = 1
+            for child in self.get_children():
+                d['title'] = self.titles[d['cnt']-1]
+                res.append('''<li><a href="#%(id)s-%(cnt)d">%(title)s</a></li>\n''' % d)
+                d['cnt'] += 1
+            res.append('''  </ul>\n''')
 
         d['cnt'] = 1
         for child in self.get_children():
@@ -869,7 +884,11 @@ class TabWidget(ContainerBase):
         return ''.join(res)
 
 class StackWidget(TabWidget):
-    pass
+    def __init__(self):
+        super(StackWidget, self).__init__(tabpos='top', reorderable=False,
+                                          detachable=False, group=-1)
+        self._tabs_visible = False
+
 
 class MDIWidget(TabWidget):
 
@@ -960,9 +979,12 @@ class GridBox(ContainerBase):
         self.num_cols = max(self.num_cols, col+1)
         self.tbl[(row, col)] = child
 
-    def render(self):
-        d = dict(id=self.id)
-        res = ['''<table id=%(id)s>''' % d]
+        app = self.get_app()
+        app.do_operation('update_html', id=self.id,
+                         value=self.render_body())
+
+    def render_body(self):
+        res = []
         for i in range(self.num_rows):
             res.append("  <tr>")
             for j in range(self.num_cols):
@@ -976,17 +998,25 @@ class GridBox(ContainerBase):
             res.append("  </tr>")
         return '\n'.join(res)
 
+    def render(self):
+        d = dict(id=self.id)
+        res = ['''<table id=%(id)s>''' % d]
+        res.append(self.render_body())
+        res.append("</table>")
+        return '\n'.join(res)
+
 class ToolbarAction(WidgetBase):
     def __init__(self):
         super(ToolbarAction, self).__init__()
 
         self.widget = None
         self.value = False
+        self.checkable = False
         self.enable_callback('activated')
 
     def _cb_redirect(self, *args):
-        if self.widget.isCheckable():
-            tf = self.widget.isChecked()
+        if self.checkable:
+            tf = self.get_state()
             self.make_callback('activated', tf)
         else:
             self.make_callback('activated')
@@ -997,32 +1027,30 @@ class ToolbarAction(WidgetBase):
     def get_state(self):
         return self.value
 
+    def render(self):
+        return self.widget.render()
+
 
 class Toolbar(ContainerBase):
     def __init__(self, orientation='horizontal'):
         super(Toolbar, self).__init__()
 
         self.orientation = orientation
-        self.widget = None
+        self.widget = Box(orientation=orientation)
 
     def add_action(self, text, toggle=False, iconpath=None):
         child = ToolbarAction()
         self.text = text
         if iconpath:
-            ## image = QImage(iconpath)
-            ## qsize = QtCore.QSize(24, 24)
-            ## image = image.scaled(qsize)
-            ## pixmap = QPixmap.fromImage(image)
-            ## iconw = QIcon(pixmap)
-            ## action = self.widget.addAction(iconw, text,
-            ##                                child._cb_redirect)
-            pass
+            native_image = PgHelp.get_icon(iconpath, size=(24, 24),
+                                           format='png')
+            widget = Image(native_image=native_image)
+            widget.resize(24, 24)
         else:
-            pass
-        ##     action = self.widget.addAction(text, child._cb_redirect)
-        ## action.setCheckable(toggle)
-        child.widget = None
-        self.add_ref(child)
+            widget = Button(text)
+        child.checkable = toggle
+        child.widget = widget
+        self.widget.add_widget(child, stretch=0)
         return child
 
     def add_widget(self, child):
@@ -1031,6 +1059,9 @@ class Toolbar(ContainerBase):
     def add_separator(self):
         #self.widget.addSeparator()
         pass
+
+    def render(self):
+        return self.widget.render()
 
 class MenuAction(WidgetBase):
     def __init__(self, text=None):
@@ -1171,7 +1202,7 @@ class TopLevel(ContainerBase):
         padding: 0px;
         margin: 0px;
         border: 0;
-        overflow: hidden; /* disable scrollbars */
+        /* overflow: hidden; disable scrollbars */
         display: block; /* no floating content on sides */
       }
     </style>
@@ -1314,7 +1345,7 @@ class Application(object):
 
     def reset_timer(self, timer, time_sec):
         with self._timer_lock:
-            self.logger.debug("setting timer...")
+            #self.logger.debug("setting timer...")
             timer.timer = time.time() + time_sec
 
     def widget_event(self, event):

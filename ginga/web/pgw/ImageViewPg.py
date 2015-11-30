@@ -100,9 +100,8 @@ class ImageViewPg(ImageView):
         """Used for generating thumbnails.  Does not include overlaid
         graphics.
         """
-        # TODO: generate something that can be rendered as an HTML image
-        image = "(no image available)"
-        return image
+        image_buf = self.get_rgb_image_as_bytes()
+        return image_buf
 
     def save_image_as_file(self, filepath, format='png', quality=90):
         """Used for generating thumbnails.  Does not include overlaid
