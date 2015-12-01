@@ -9,10 +9,11 @@
 #
 import numpy
 
-from ginga.gw import Widgets, Plots
+from ginga.gw import Widgets, Plot
 from ginga import GingaPlugin, colors
 from ginga.util.six.moves import map, zip
 from ginga.canvas.coordmap import OffsetMapper
+from ginga.util import plots
 
 # default cut colors
 cut_colors = ['magenta', 'skyblue2', 'chartreuse2', 'cyan', 'pink',
@@ -162,12 +163,18 @@ class Cuts(GingaPlugin.LocalPlugin):
         nb = Widgets.TabWidget(tabpos='top')
         vbox.add_widget(nb, stretch=1)
 
-        self.plot = Plots.Cuts(self.logger, width=2, height=3, dpi=100)
-        ax = self.plot.add_axis()
+        self.cuts_plot = plots.CutsPlot(logger=self.logger,
+                                        width=400, height=300)
+        self.plot = Plot.PlotWidget(self.cuts_plot)
+        self.plot.resize(400, 300)
+        ax = self.cuts_plot.add_axis()
         ax.grid(True)
 
-        self.plot2 = Plots.Plot(self.logger, width=2, height=3, dpi=100)
-        self.plot2.add_axis(axisbg='black')
+        self.slit_plot = plots.Plot(logger=self.logger,
+                                    width=400, height=300)
+        self.slit_plot.add_axis(axisbg='black')
+        self.plot2 = Plot.PlotWidget(self.slit_plot)
+        self.plot2.resize(400, 300)
 
         captions = (('Cut:', 'label', 'Cut', 'combobox',
                      'New Cut Type:', 'label', 'Cut Type', 'combobox'),
@@ -272,8 +279,7 @@ class Cuts(GingaPlugin.LocalPlugin):
 
         # Add Cuts plot to its tab
         vbox_cuts = Widgets.VBox()
-        wp = Widgets.wrap(self.plot.get_widget())
-        vbox_cuts.add_widget(wp, stretch=1)
+        vbox_cuts.add_widget(self.plot, stretch=1)
         nb.add_widget(vbox_cuts, title="Cuts")
 
         if self.use_slit:
@@ -301,8 +307,7 @@ class Cuts(GingaPlugin.LocalPlugin):
 
             # Add Slit plot and controls to its tab
             vbox_slit = Widgets.VBox()
-            wp = Widgets.wrap(self.plot2.get_widget())
-            vbox_slit.add_widget(wp, stretch=1)
+            vbox_slit.add_widget(self.plot2, stretch=1)
             vbox_slit.add_widget(w)
             vbox_slit.add_widget(fr)
             nb.add_widget(vbox_slit, title="Slit")
@@ -457,7 +462,7 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
     def start(self):
         # start line cuts operation
         self.instructions()
-        self.plot.set_titles(rtitle="Cuts")
+        self.cuts_plot.set_titles(rtitle="Cuts")
 
         # insert canvas, if not already
         p_canvas = self.fitsimage.get_canvas()
@@ -565,8 +570,8 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         points = numpy.array(points)
 
         rgb = colors.lookup_color(color)
-        self.plot.cuts(points, xtitle="Line Index", ytitle="Pixel Value",
-                       color=rgb)
+        self.cuts_plot.cuts(points, xtitle="Line Index", ytitle="Pixel Value",
+                            color=rgb)
 
         if self.settings.get('show_cuts_legend', False):
             self.add_legend()
@@ -575,12 +580,14 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         cuts = [tag for tag in self.tags if tag is not self._new_cut]
 
         # Shrink plot width by 20%
-        box = self.plot.ax.get_position()
-        self.plot.ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
+        box = self.cuts_plot.ax.get_position()
+        self.cuts_plot.ax.set_position([box.x0, box.y0,
+                                        box.width * 0.8, box.height])
 
-        self.plot.ax.legend(cuts, loc='center left', bbox_to_anchor=(1, 0.5),
-                            shadow=True, fancybox=True,
-                            prop={'size': 8}, labelspacing=0.2)
+        self.cuts_plot.ax.legend(cuts, loc='center left',
+                                 bbox_to_anchor=(1, 0.5),
+                                 shadow=True, fancybox=True,
+                                 prop={'size': 8}, labelspacing=0.2)
 
     def get_coords(self, obj):
         image = self.fitsimage.get_image()
@@ -648,11 +655,11 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         if self.transpose_enabled:
             self.redraw_slit('transpose')
         else:
-            self.plot2.ax.imshow(self.slit_data,  interpolation='nearest',
+            self.slit_plot.ax.imshow(self.slit_data,  interpolation='nearest',
                                  origin='lower', aspect='auto').set_cmap('gray')
             self.set_labels()
-            self.plot2.fig.tight_layout(pad=0.3)
-            self.plot2.fig.canvas.draw()
+            self.slit_plot.fig.tight_layout(pad=0.3)
+            self.slit_plot.draw()
 
     def _replot(self, lines, colors):
         for idx in range(len(lines)):
@@ -663,7 +670,7 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         return True
 
     def replot_all(self):
-        self.plot.clear()
+        self.cuts_plot.clear()
         idx = 0
         for cutstag in self.tags:
             if cutstag == self._new_cut:
@@ -689,7 +696,7 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
                 self._plot_slit()
 
         # force mpl redraw
-        self.plot.fig.canvas.draw()
+        self.cuts_plot.draw()
 
         self.canvas.redraw(whence=3)
         self.fv.showStatus("Click or drag left mouse button to reposition cuts")
@@ -978,13 +985,13 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
             self.fv.error_wrap(image.save_as_file, target)
 
             if target:
-                fig, xarr, yarr = self.plot.get_data()
+                fig, xarr, yarr = self.cuts_plot.get_data()
                 fig.savefig(target, dpi=100)
                 numpy.savez_compressed(target, x=xarr, y=yarr)
         elif mode == 'slit':
             target = Widgets.SaveDialog(title='Save slit data').get_path()
             if target:
-                fig2, xarr2, yarr2 = self.plot2.get_data()
+                fig2, xarr2, yarr2 = self.slit_plot.get_data()
                 fig2.savefig(target, dpi=100)
                 numpy.savez_compressed(target, x=xarr2, y=yarr2)
 
@@ -1009,15 +1016,15 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
 
     def redraw_slit(self, mode):
         if mode == 'clear':
-            self.plot2.clear()
+            self.slit_plot.clear()
         elif mode == 'transpose':
             self.slit_data = self.slit_data.T
-            self.plot2.ax.imshow(self.slit_data,  interpolation='nearest',
+            self.slit_plot.ax.imshow(self.slit_data,  interpolation='nearest',
                                  origin='lower', aspect='auto').set_cmap('gray')
             self.set_labels()
-            self.plot2.fig.tight_layout(pad=0.3)
+            self.slit_plot.fig.tight_layout(pad=0.3)
 
-        self.plot2.fig.canvas.draw()
+        self.slit_plot.draw()
 
     def transpose_plot(self, w, tf):
         old_val = self.transpose_enabled
@@ -1031,11 +1038,11 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         shape = image.get_mddata().shape
 
         if shape[0] == len(self.slit_data[0]) or shape[1] == len(self.slit_data[0]):
-            self.plot2.ax.set_xlabel('')
-            self.plot2.ax.set_ylabel('Position along slit')
+            self.slit_plot.ax.set_xlabel('')
+            self.slit_plot.ax.set_ylabel('Position along slit')
         else:
-            self.plot2.ax.set_ylabel('')
-            self.plot2.ax.set_xlabel('Position along slit')
+            self.slit_plot.ax.set_ylabel('')
+            self.slit_plot.ax.set_xlabel('Position along slit')
 
     def __str__(self):
         return 'cuts'

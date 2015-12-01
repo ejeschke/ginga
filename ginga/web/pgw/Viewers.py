@@ -2,7 +2,7 @@ from ginga.web.pgw.ImageViewPg import CanvasView, ImageViewCanvas
 from ginga.web.pgw import Widgets
 from ginga.misc import Bunch
 
-class GingaViewer(Widgets.Canvas):
+class GingaViewerWidget(Widgets.Canvas):
     """
     This class implements the server-side backend of the surface for a
     web-based Ginga viewer.  It uses a web socket to connect to an HTML5
@@ -13,7 +13,7 @@ class GingaViewer(Widgets.Canvas):
     """
 
     def __init__(self, viewer=None, width=600, height=600):
-        super(GingaViewer, self).__init__(width=600, height=600)
+        super(GingaViewerWidget, self).__init__(width=600, height=600)
 
         if viewer is None:
             viewer = CanvasView(logger)

@@ -593,6 +593,9 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
         thumbw = Widgets.Image(native_image=imgwin, menu=menu,
                                style='clickable')
+        wd, ht = self.thumb_generator.get_window_size()
+        thumbw.resize(wd, ht)
+
         # set the load callback
         thumbw.add_callback('activated',
                             lambda w: self.load_file(thumbkey, chname, name,

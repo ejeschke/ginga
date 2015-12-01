@@ -1,5 +1,5 @@
 #
-# ImageViewPg.py -- classes for the display of FITS files in web browsers
+# ImageViewPg.py -- classes for the display of science data in web browsers
 #                        using javascript/HTML5 canvas/websockets
 #
 # Eric Jeschke (eric@naoj.org)
@@ -11,7 +11,6 @@
 from __future__ import print_function
 import threading
 import time
-import io
 
 from ginga import Mixins, Bindings
 from ginga.misc import log, Bunch
@@ -96,6 +95,19 @@ class ImageViewPg(ImageView):
             self.pgcanvas.reset_timer('redraw', time_sec)
         else:
             self.delayed_redraw()
+
+    def get_image_as_widget(self):
+        """Used for generating thumbnails.  Does not include overlaid
+        graphics.
+        """
+        image_buf = self.get_rgb_image_as_bytes()
+        return image_buf
+
+    def save_image_as_file(self, filepath, format='png', quality=90):
+        """Used for generating thumbnails.  Does not include overlaid
+        graphics.
+        """
+        pass
 
     def set_cursor(self, cursor):
         if self.pgcanvas is None:
@@ -244,7 +256,7 @@ class ImageViewEvent(ImageViewPg):
         return self.make_callback('map')
 
     def transkey(self, keycode):
-        self.logger.info("key code in js '%d'" % (keycode))
+        self.logger.debug("key code in js '%d'" % (keycode))
         try:
             return self._keytbl[keycode]
 
@@ -274,13 +286,13 @@ class ImageViewEvent(ImageViewPg):
     def key_press_event(self, event):
         keycode = event.key_code
         keyname = self.transkey(keycode)
-        self.logger.info("key press event, key=%s" % (keyname))
+        self.logger.debug("key press event, key=%s" % (keyname))
         return self.make_ui_callback('key-press', keyname)
 
     def key_down_event(self, event):
         keycode = event.key_code
         keyname = self.transkey(keycode)
-        self.logger.info("key press event, key=%s" % (keyname))
+        self.logger.debug("key press event, key=%s" % (keyname))
         # special hack for modifiers
         if keyname in self._browser_problem_keys:
             return self.make_ui_callback('key-press', keyname)
@@ -289,7 +301,7 @@ class ImageViewEvent(ImageViewPg):
     def key_up_event(self, event):
         keycode = event.key_code
         keyname = self.transkey(keycode)
-        self.logger.info("key release event, key=%s" % (keyname))
+        self.logger.debug("key release event, key=%s" % (keyname))
         # special hack for modifiers
         if keyname in self._browser_problem_keys:
             return self.make_ui_callback('key-release', keyname)
@@ -360,14 +372,14 @@ class ImageViewEvent(ImageViewPg):
 
     def drop_event(self, event):
         data = event.delta
-        self.logger.info("data=%s" % (str(data)))
+        self.logger.debug("data=%s" % (str(data)))
         paths = data.split('\n')
-        self.logger.info("dropped text(s): %s" % (str(paths)))
+        self.logger.debug("dropped text(s): %s" % (str(paths)))
         return self.make_ui_callback('drag-drop', paths)
 
 
     def pinch_event(self, event):
-        self.logger.info("pinch: event=%s" % (str(event)))
+        self.logger.debug("pinch: event=%s" % (str(event)))
         state = 'move'
         if event.type == 'pinchstart' or event.isfirst:
             state = 'start'
@@ -375,7 +387,7 @@ class ImageViewEvent(ImageViewPg):
             state = 'end'
         rot = event.theta
         scale = event.scale
-        self.logger.info("pinch gesture rot=%f scale=%f state=%s" % (
+        self.logger.debug("pinch gesture rot=%f scale=%f state=%s" % (
             rot, scale, state))
 
         return self.make_ui_callback('pinch', state, rot, scale)
@@ -400,7 +412,7 @@ class ImageViewEvent(ImageViewPg):
             state = 'end'
         # TODO: need to know which ones to flip
         dx, dy = -event.dx, event.dy
-        self.logger.info("pan gesture dx=%f dy=%f state=%s" % (
+        self.logger.debug("pan gesture dx=%f dy=%f state=%s" % (
             dx, dy, state))
 
         return self.make_ui_callback('pan', state, dx, dy)
@@ -408,7 +420,7 @@ class ImageViewEvent(ImageViewPg):
     def swipe_event(self, event):
         if event.isfinal:
             state = 'end'
-            self.logger.info("swipe gesture event=%s" % (str(event)))
+            self.logger.debug("swipe gesture event=%s" % (str(event)))
             ## self.logger.debug("swipe gesture hdir=%s vdir=%s" % (
             ##     hdir, vdir))
             ## return self.make_ui_callback('swipe', state, hdir, vdir)
@@ -416,7 +428,7 @@ class ImageViewEvent(ImageViewPg):
     def tap_event(self, event):
         if event.isfinal:
             state = 'end'
-            self.logger.info("tap gesture event=%s" % (str(event)))
+            self.logger.debug("tap gesture event=%s" % (str(event)))
 
 class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
 
