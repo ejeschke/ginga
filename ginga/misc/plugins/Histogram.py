@@ -9,7 +9,7 @@
 #
 import numpy
 
-from ginga.gw import Widgets, Plots
+from ginga.gw import Widgets, Plot
 from ginga import GingaPlugin
 from ginga import AutoCuts
 from ginga.util import plots
@@ -81,7 +81,7 @@ class Histogram(GingaPlugin.LocalPlugin):
                                width=400, height=300)
         ax = self.plot.add_axis()
         ax.grid(True)
-        w = Plots.PlotWidget(self.plot)
+        w = Plot.PlotWidget(self.plot)
         w.resize(400, 300)
         vbox.add_widget(w, stretch=1)
 

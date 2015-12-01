@@ -1,2 +1,2 @@
 # TO BE DEPRECATED
-from ginga.gw.Plots import *
+from ginga.gw.Plot import *

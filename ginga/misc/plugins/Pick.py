@@ -129,7 +129,6 @@ class Pick(GingaPlugin.LocalPlugin):
         vtop = Widgets.VBox()
         vtop.set_border_width(4)
 
-        self.logger.info("container size: %s" % str(container.get_size()))
         vbox, sw, orientation = Widgets.get_oriented_box(container)
         vbox.set_border_width(4)
         vbox.set_spacing(2)

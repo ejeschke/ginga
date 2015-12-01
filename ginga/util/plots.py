@@ -22,8 +22,8 @@ class Plot(Callback.Callbacks):
 
         if figure is None:
             dpi = 100
-            figure = mpl.figure.Figure(figsize=(width//dpi, height//dpi),
-                                       dpi=dpi)
+            wd_in, ht_in = float(width)/dpi, float(height)/dpi
+            figure = mpl.figure.Figure(figsize=(wd_in, ht_in), dpi=dpi)
         self.fig = figure
         self.logger = logger
         self.fontsize = 10
@@ -200,8 +200,6 @@ class ContourPlot(Plot):
             self.plot_panzoom()
 
         except Exception as e:
-            print("Error making contour plot: %s" % (
-                str(e)))
             self.logger.error("Error making contour plot: %s" % (
                 str(e)))
 
