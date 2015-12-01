@@ -18,8 +18,10 @@ import os, time
 import datetime
 import binascii
 from collections import namedtuple
+from io import BytesIO
 
 from ginga.misc import Bunch
+from ginga.util import io_rgb
 
 default_interval = 10
 
@@ -169,6 +171,26 @@ class WindowHandler(tornado.web.RequestHandler):
             output = self.make_index(wids)
 
         self.write(output)
+
+def get_image_src_from_buffer(img_buf, imgtype='png'):
+    img_string = binascii.b2a_base64(img_buf)
+    if isinstance(img_string, bytes):
+        img_string = img_string.decode("utf-8")
+    return ('data:image/%s;base64,' % imgtype) + img_string
+
+def get_icon(iconpath, size=None, format='png'):
+    image = io_rgb.PILimage.open(iconpath)
+    if size is not None:
+        wd, ht = size
+    else:
+        wd, ht = 24, 24
+    image = image.resize((wd, ht))
+
+    img_buf = BytesIO()
+    image.save(img_buf, format=format)
+
+    icon = get_image_src_from_buffer(img_buf.getvalue(), imgtype=format)
+    return icon
 
 def get_font(font_family, point_size):
     font = '%s %d' % (font_family, point_size)

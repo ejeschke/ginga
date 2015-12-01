@@ -7,30 +7,27 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-# GUI imports
-import gtk
-
 import matplotlib
 matplotlib.use('GTKCairo')
 from  matplotlib.backends.backend_gtkcairo import FigureCanvasGTKCairo \
      as FigureCanvas
-import pango
 
-from ginga.base.PlotBase import PlotBase, HistogramMixin, CutsMixin
+from ginga.gtkw import Widgets
 
-class Plot(PlotBase):
+class PlotWidget(Widgets.WidgetBase):
 
-    def __init__(self, logger, width=300, height=300, dpi=100):
-        PlotBase.__init__(self, logger, FigureCanvas,
-                          width=width, height=height, dpi=dpi)
+    def __init__(self, plot, width=500, height=500):
+        super(PlotWidget, self).__init__()
 
-        self.canvas.set_size_request(width*dpi, height*dpi)
-        self.canvas.show_all()
+        self.widget = FigureCanvas(plot.fig)
+        self.plot = plot
 
-class Histogram(Plot, HistogramMixin):
-    pass
+        self.widget.set_size_request(width, height)
+        self.widget.show_all()
 
-class Cuts(Plot, CutsMixin):
-    pass
+    def configure_window(self, wd, ht):
+        self.logger.debug("canvas resized to %dx%d" % (wd, ht))
+        fig = self.plot.fig
+        fig.set_size_inches(float(wd) / fig.dpi, float(ht) / fig.dpi)
 
 #END

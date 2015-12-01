@@ -43,6 +43,9 @@ class Zoom(GingaPlugin.GlobalPlugin):
         self.zoom_amount = self.settings.get('zoom_amount', self.default_zoom)
         self.refresh_interval = self.settings.get('refresh_interval', 0.02)
 
+        self._wd = 300
+        self._ht = 300
+
         fv.add_callback('add-channel', self.add_channel)
         fv.add_callback('active-image', self.focus_cb)
 
@@ -53,13 +56,11 @@ class Zoom(GingaPlugin.GlobalPlugin):
         vbox.set_border_width(4)
         vbox.set_spacing(2)
 
-        width, height = 300, 300
-
         # Uncomment to debug; passing parent logger generates too
         # much noise in the main logger
         #zi = Viewers.CanvasView(logger=self.logger)
         zi = Viewers.CanvasView(logger=None)
-        zi.set_desired_size(width, height)
+        zi.set_desired_size(self._wd, self._ht)
         zi.enable_autozoom('off')
         zi.enable_autocuts('off')
         #zi.set_scale_limits(0.001, 1000.0)
@@ -78,7 +79,8 @@ class Zoom(GingaPlugin.GlobalPlugin):
         bd.enable_pan(False)
         bd.enable_cmap(False)
 
-        iw = Widgets.wrap(zi.get_widget())
+        iw = Viewers.GingaViewerWidget(zi)
+        iw.resize(self._wd, self._ht)
         vpaned = Widgets.Splitter(orientation=orientation)
         vpaned.add_widget(iw)
         vpaned.add_widget(Widgets.Label(''))
