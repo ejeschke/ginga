@@ -12,6 +12,7 @@ import numpy
 from ginga.gw import Widgets, Plots
 from ginga import GingaPlugin
 from ginga import AutoCuts
+from ginga.util import plots
 
 class Histogram(GingaPlugin.LocalPlugin):
 
@@ -76,12 +77,12 @@ class Histogram(GingaPlugin.LocalPlugin):
         fr.set_widget(tw)
         vbox.add_widget(fr, stretch=0)
 
-        self.plot = Plots.Plot(self.logger, width=2, height=3, dpi=100)
+        self.plot = plots.Plot(logger=self.logger,
+                               width=400, height=300)
         ax = self.plot.add_axis()
         ax.grid(True)
-
-        # for now we need to wrap this native widget
-        w = Widgets.wrap(self.plot.get_widget())
+        w = Plots.PlotWidget(self.plot)
+        w.resize(400, 300)
         vbox.add_widget(w, stretch=1)
 
         captions = (('Cut Low:', 'label', 'Cut Low', 'entry'),
@@ -177,7 +178,6 @@ class Histogram(GingaPlugin.LocalPlugin):
     def start(self):
         self.instructions()
         self.plot.set_titles(rtitle="Histogram")
-        self.plot.show()
 
         # insert canvas, if not already
         p_canvas = self.fitsimage.get_canvas()

@@ -567,9 +567,7 @@ class TreeView(WidgetBase):
         treeview = self.widget
         treeview.setColumnCount(len(columns))
         treeview.setSortingEnabled(self.sortable)
-        if self.sortable:
-            # Sort increasing by default
-            treeview.sortByColumn(1, QtCore.Qt.AscendingOrder)
+
         # speeds things up a bit
         treeview.setUniformRowHeights(True)
 
@@ -583,6 +581,10 @@ class TreeView(WidgetBase):
 
         self.datakeys = datakeys
         self.leaf_idx = datakeys.index(self.leaf_key)
+
+        if self.sortable:
+            # Sort increasing by default
+            treeview.sortByColumn(self.leaf_idx, QtCore.Qt.AscendingOrder)
 
         treeview.setHeaderLabels(headers)
 
@@ -752,6 +754,7 @@ class TreeView(WidgetBase):
         drag_pkg = DragPackage(self.widget)
         self.make_callback('drag-start', drag_pkg, res_dict)
         drag_pkg.start_drag()
+
 
 # CONTAINERS
 

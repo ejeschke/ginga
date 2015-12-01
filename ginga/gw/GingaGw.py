@@ -58,6 +58,7 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         self._cur_dialogs = []
 
         self.colorbar = None
+        self.filesel = None
         self.readout = None
 
     def set_layout(self, layout):
@@ -137,13 +138,15 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         self.w.vbox.add_widget(hbox, stretch=0)
 
         # Add colormap bar
-        cbar = self.build_colorbar()
-        self.w.vbox.add_widget(cbar, stretch=0)
+        if hasattr(ColorBar, 'ColorBar'):
+            cbar = self.build_colorbar()
+            self.w.vbox.add_widget(cbar, stretch=0)
 
         menuholder = self.w['menu']
         self.w.menubar = self.add_menus(menuholder)
 
         self.add_dialogs()
+
         statusholder = self.w['status']
         self.add_statusbar(statusholder)
 
@@ -252,8 +255,8 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         return menubar
 
     def add_dialogs(self):
-        filesel = GwHelp.FileSelection(self.w.root.get_widget())
-        self.filesel = filesel
+        if hasattr(GwHelp, 'FileSelection'):
+            self.filesel = GwHelp.FileSelection(self.w.root.get_widget())
 
     def add_plugin_menu(self, name):
         # NOTE: self.w.menu_plug is a ginga.Widgets wrapper
@@ -411,10 +414,7 @@ class GingaView(GwMain.GwMain, Widgets.Application):
             size = (300, 300)
 
         fi = self.build_viewpane(settings, size=size)
-        if hasattr(Viewers, 'GingaViewer'):
-            iw = Viewers.GingaViewer(viewer=fi)
-        else:
-            iw = Widgets.wrap(fi.get_widget())
+        iw = Viewers.GingaViewerWidget(viewer=fi)
 
         fi.add_callback('focus', self.focus_cb, name)
         vbox.add_widget(iw, stretch=1)

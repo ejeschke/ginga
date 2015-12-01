@@ -333,6 +333,8 @@ class GingaControl(Callback.Callbacks):
         This method is called when the cut level values (lo/hi) have
         changed in a channel.  We adjust them in the ColorBar to match.
         """
+        if cbar is None:
+            return
         if fitsimage != self.getfocus_fitsimage():
             # values have changed in a channel that doesn't have the focus
             return False
@@ -364,7 +366,8 @@ class GingaControl(Callback.Callbacks):
         """
         if fitsimage != self.getfocus_fitsimage():
             return False
-        self.change_cbar(self, fitsimage, self.colorbar)
+        if self.colorbar is not None:
+            self.change_cbar(self, fitsimage, self.colorbar)
 
     def force_focus_cb(self, fitsimage, event, data_x, data_y):
         chname = self.get_channelName(fitsimage)
