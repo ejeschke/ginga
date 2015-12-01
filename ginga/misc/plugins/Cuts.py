@@ -9,7 +9,7 @@
 #
 import numpy
 
-from ginga.gw import Widgets, Plots
+from ginga.gw import Widgets, Plot
 from ginga import GingaPlugin, colors
 from ginga.util.six.moves import map, zip
 from ginga.canvas.coordmap import OffsetMapper
@@ -165,7 +165,7 @@ class Cuts(GingaPlugin.LocalPlugin):
 
         self.cuts_plot = plots.CutsPlot(logger=self.logger,
                                         width=400, height=300)
-        self.plot = Plots.PlotWidget(self.cuts_plot)
+        self.plot = Plot.PlotWidget(self.cuts_plot)
         self.plot.resize(400, 300)
         ax = self.cuts_plot.add_axis()
         ax.grid(True)
@@ -173,7 +173,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         self.slit_plot = plots.Plot(logger=self.logger,
                                     width=400, height=300)
         self.slit_plot.add_axis(axisbg='black')
-        self.plot2 = Plots.PlotWidget(self.slit_plot)
+        self.plot2 = Plot.PlotWidget(self.slit_plot)
         self.plot2.resize(400, 300)
 
         captions = (('Cut:', 'label', 'Cut', 'combobox',

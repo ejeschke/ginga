@@ -1,5 +1,6 @@
 from ginga import GingaPlugin
 from ginga.misc import Widgets, Plot
+from ginga.util import plots
 
 import numpy as np
 
@@ -59,11 +60,13 @@ class LineProfile(GingaPlugin.LocalPlugin):
         fr.set_widget(vbox2)
         vbox.add_widget(fr, stretch=0)
 
-        self.plot = Plot.Plot(self.logger, width=2, height=4, dpi=100)
+        self.plot = plots.Plot(logger=self.logger,
+                               width=400, height=300)
         ax = self.plot.add_axis()
         ax.grid(False)
 
-        w = Widgets.wrap(self.plot.get_widget())
+        w = Plot.PlotWidget(self.plot)
+        w.resize(400, 300)
         vbox.add_widget(w, stretch=0)
 
         fr = Widgets.Frame("Axes controls")
