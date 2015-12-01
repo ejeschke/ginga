@@ -5,7 +5,10 @@ ginga_make_application = function (ws_url) {
     
     ginga_app.socket = new WebSocket(ws_url);
     ginga_app.canvases = {}
+    // set this to true to get javascript console debugging
     ginga_app.debug = false
+    ginga_app.dialogs = {}
+    ginga_app.tab_widgets = {}
     
     ginga_app.send_pkt = function (message) {
         var ws = ginga_app.socket;
@@ -22,7 +25,7 @@ ginga_make_application = function (ws_url) {
         }
         ginga_app.send_pkt(message);
     }
-    
+
     ginga_app.socket.onopen = function(e) {
         // initialize all our canvases
         for (var key in ginga_app.canvases) {
@@ -34,11 +37,15 @@ ginga_make_application = function (ws_url) {
         message = JSON.parse(e.data);
         if (message.operation == "refresh_canvas") {
             if (ginga_app.debug) console.log("refreshing canvas");
-            ginga_app.canvases[message.id].redrawCanvas();
+            if (message.id in ginga_app.canvases) {
+                ginga_app.canvases[message.id].redrawCanvas();
+                };
         }
         else if (message.operation == "draw_canvas") {
             if (ginga_app.debug) console.log("drawing canvas");
-            ginga_app.canvases[message.id].drawShape(message["shape"]);
+            if (message.id in ginga_app.canvases) {
+                ginga_app.canvases[message.id].drawShape(message["shape"]);
+                };
         }
         else if (message.operation == "update_label") {
             // update widget value
@@ -53,9 +60,28 @@ ginga_make_application = function (ws_url) {
             // update widget value
             document.getElementById(message.id).selectedIndex = message.value;
         }
+        else if (message.operation == "update_html") {
+            // update widget content
+            document.getElementById(message.id).innerHTML = message.value;
+        }
+        else if (message.operation == "update_imgsrc") {
+            // update image content
+            document.getElementById(message.id).src = message.value;
+        }
+        else if (message.operation == "update_style") {
+            // update widget style
+            document.getElementById(message.id).setAttribute('style',
+                                                             message.value);
+        }
         else if (message.operation == "disable") {
             // update widget value
             document.getElementById(message.id).disabled = message.value;
+	}
+        else if (message.operation == "dialog_action") {
+            ginga_app.dialogs[message.id].fn(message.action);
+	}
+        else if (message.operation == "set_tab") {
+	    ginga_app.tab_widgets[message.id].fn(message.value);
         };
     }
 
@@ -425,4 +451,42 @@ ginga_initialize_canvas = function (canvas, id, app) {
     pg_canvas.initialize_canvas = setup_canvas
     
     return pg_canvas;
+}
+
+ginga_initialize_dialog = function (doc_elem, id, title, buttons, app) {
+
+    var pg_dialog = {};
+    pg_dialog.dialog_id = id;
+    pg_dialog.app = app;
+    app.dialogs[id] = pg_dialog;
+
+    pg_dialog.options = {autoOpen: false, modal: true, title: title, buttons: buttons};
+
+    pg_dialog.dialogObj = $("#"+id).dialog(pg_dialog.options);
+
+    pg_dialog.fn = function(action) {
+	pg_dialog.dialogObj.dialog(action);
+    }
+
+    return pg_dialog;
+}
+
+ginga_initialize_tab_widget = function (doc_elem, id, app) {
+
+    var pg_tab_widget = {};
+    pg_tab_widget.tab_widget_id = id;
+    pg_tab_widget.app = app;
+    app.tab_widgets[id] = pg_tab_widget;
+
+    pg_tab_widget.options = {
+	activate: function(event, ui) {ginga_app.widget_handler(id, ui.newTab.index());},
+    };
+
+    pg_tab_widget.tabObj = $("#"+id).tabs(pg_tab_widget.options);
+
+    pg_tab_widget.fn = function(idx) {
+	pg_tab_widget.tabObj.tabs("option", "active", idx);
+    }
+
+    return pg_tab_widget;
 }

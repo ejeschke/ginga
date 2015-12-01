@@ -14,12 +14,12 @@ import os.path
 
 from ginga.gw import Widgets, Viewers
 from ginga.misc import Bunch
-from ginga.util import iqcalc, wcs
+from ginga.util import iqcalc, plots, wcs
 from ginga import GingaPlugin
 from ginga.util.six.moves import map, zip, filter
 
 try:
-    from ginga.gw import Plots
+    from ginga.gw import Plot
     have_mpl = True
 except ImportError:
     have_mpl = False
@@ -60,10 +60,6 @@ class Pick(GingaPlugin.LocalPlugin):
         self.ev_intr = threading.Event()
 
         self.last_rpt = {}
-        self.plot_panx = 0.5
-        self.plot_pany = 0.5
-        self.plot_zoomlevel = 1.0
-        self.contour_data = None
         self.iqcalc = iqcalc.IQCalc(self.logger)
 
         self.dc = self.fv.getDrawClasses()
@@ -133,6 +129,7 @@ class Pick(GingaPlugin.LocalPlugin):
         vtop = Widgets.VBox()
         vtop.set_border_width(4)
 
+        self.logger.info("container size: %s" % str(container.get_size()))
         vbox, sw, orientation = Widgets.get_oriented_box(container)
         vbox.set_border_width(4)
         vbox.set_spacing(2)
@@ -149,16 +146,16 @@ class Pick(GingaPlugin.LocalPlugin):
         vpaned = Widgets.Splitter(orientation=orientation)
 
         nb = Widgets.TabWidget(tabpos='bottom')
-        #nb.set_scrollable(True)
         self.w.nb1 = nb
         vpaned.add_widget(nb)
 
         cm, im = self.fv.cm, self.fv.im
 
-        di = Viewers.ImageViewCanvas(logger=self.logger)
-        width, height = 200, 200
-        #di.set_desired_size(width, height)
-        di.configure_window(width, height)
+        #di = Viewers.ImageViewCanvas(logger=self.logger)
+        di = Viewers.CanvasView(logger=self.logger)
+        width, height = 300, 300
+        di.set_desired_size(width, height)
+        #di.configure_window(width, height)
         di.enable_autozoom('off')
         di.enable_autocuts('off')
         di.zoom_to(3)
@@ -178,61 +175,34 @@ class Pick(GingaPlugin.LocalPlugin):
         bd.enable_zoom(True)
         bd.enable_cuts(True)
 
-        iw = Widgets.wrap(di.get_widget())
+        iw = Viewers.GingaViewerWidget(viewer=di)
         nb.add_widget(iw, title="Image")
+        di.configure(width, height)
 
         if have_mpl:
             # Contour plot
-            self.plot1 = Plots.Plot(logger=self.logger,
-                                    width=2, height=3, dpi=72)
-            self.w.canvas = self.plot1.canvas
-            self.w.fig = self.plot1.fig
-            self.w.ax = self.w.fig.add_subplot(111, axisbg='black')
-            self.w.ax.set_aspect('equal', adjustable='box')
-            self.w.ax.set_title('Contours')
-            #self.w.fig.tight_layout()
-            #self.w.ax.grid(True)
-
-            canvas = self.w.canvas
-            connect = canvas.mpl_connect
-            # These are not ready for prime time...
-            # connect("motion_notify_event", self.plot_motion_notify)
-            # connect("button_press_event", self.plot_button_press)
-            connect("scroll_event", self.plot_scroll)
-            nb.add_widget(Widgets.wrap(canvas), title="Contour")
+            self.contour_plot = plots.ContourPlot(logger=self.logger)
+            self.contour_plot.add_axis(axisbg='black')
+            pw = Plot.PlotWidget(self.contour_plot)
+            pw.resize(400, 300)
+            nb.add_widget(pw, title="Contour")
 
             # FWHM gaussians plot
-            self.plot2 = Plots.Plot(logger=self.logger,
-                                    width=2, height=3, dpi=72)
-            self.w.canvas2 = self.plot2.canvas
-            self.w.fig2 = self.plot2.fig
-            self.w.ax2 = self.w.fig2.add_subplot(111, axisbg='white')
-            #self.w.ax2.set_aspect('equal', adjustable='box')
-            self.w.ax2.set_ylabel('brightness')
-            self.w.ax2.set_xlabel('pixels')
-            self.w.ax2.set_title('FWHM')
-            self.w.ax.grid(True)
-            #self.w.fig2.tight_layout()
-            canvas = self.w.canvas2
-            nb.add_widget(Widgets.wrap(canvas), title="FWHM")
+            self.fwhm_plot = plots.FWHMPlot(logger=self.logger)
+            self.fwhm_plot.add_axis(axisbg='white')
+            pw = Plot.PlotWidget(self.fwhm_plot)
+            pw.resize(400, 300)
+            nb.add_widget(pw, title="FWHM")
 
             # Radial profile plot
-            self.plot3 = Plots.Plot(logger=self.logger,
-                                    width=2, height=3, dpi=72)
-            self.w.canvas3 = self.plot3.canvas
-            self.w.fig3 = self.plot3.fig
-            self.w.ax3 = self.w.fig3.add_subplot(111, axisbg='white')
-            #self.w.ax3.set_aspect('equal', adjustable='box')
-            self.w.ax3.set_ylabel('ADU')
-            self.w.ax3.set_xlabel('Radius')
-            self.w.ax3.set_title('Radial Profile')
-            self.w.ax.grid(True)
-            #self.w.fig3.tight_layout()
-            canvas = self.w.canvas3
-            nb.add_widget(Widgets.wrap(canvas), title="Radial")
+            self.radial_plot = plots.RadialPlot(logger=self.logger)
+            self.radial_plot.add_axis(axisbg='white')
+            pw = Plot.PlotWidget(self.radial_plot)
+            pw.resize(400, 300)
+            nb.add_widget(pw, title="Radial")
 
         vpaned.add_widget(Widgets.Label(''))
-        vbox.add_widget(vpaned, stretch=0)
+        vbox.add_widget(vpaned, stretch=1)
         #vbox.add_widget(nb, stretch=1)
 
         fr = Widgets.Frame("Pick")
@@ -299,7 +269,9 @@ class Pick(GingaPlugin.LocalPlugin):
         hbox.add_widget(btn, stretch=0)
 
         self.w.eval_pgs = Widgets.ProgressBar()
+        #self.w.eval_pgs.cfg_expand(8, 0)
         hbox.add_widget(self.w.eval_pgs, stretch=1)
+        #hbox.cfg_expand(8, 0)
         vbox1.add_widget(hbox, stretch=0)
 
         nb.add_widget(vbox1, title="Readout")
@@ -518,25 +490,6 @@ class Pick(GingaPlugin.LocalPlugin):
 
         nb.add_widget(vbox3, title="Report")
 
-        ## vbox4 = Widgets.VBox()
-        ## tw = Widgets.TextArea(wrap=False, editable=True)
-        ## tw.set_font(msgFont)
-        ## self.w.correct = tw
-        ## sw1 = Widgets.ScrollArea()
-        ## sw1.set_widget(tw)
-        ## vbox4.add_widget(sw1, stretch=1)
-        ## tw.append_text("# paste a reference report here")
-
-        ## btns = Widgets.HBox()
-        ## btns.set_spacing(4)
-
-        ## btn = Widgets.Button("Correct WCS")
-        ## btn.add_callback('activated', lambda w: self.correct_wcs())
-        ## btns.add_widget(btn)
-        ## vbox4.add_widget(btns, stretch=0)
-
-        ## nb.add_widget(vbox4, title="Correct")
-
         fr.set_widget(nb)
         vbox.add_widget(fr, stretch=0)
 
@@ -627,68 +580,11 @@ class Pick(GingaPlugin.LocalPlugin):
         if not self.show_candidates:
             # Delete previous peak marks
             objs = self.canvas.getObjectsByTagpfx('peak')
-            self.canvas.deleteObjects(objs)
+            self.canvas.delete_objects(objs)
 
     def coordinate_base_cb(self, w):
         self.pixel_coords_offset = float(w.get_text())
         self.w.xlbl_coordinate_base.set_text(str(self.pixel_coords_offset))
-
-    def adjust_wcs(self, image, wcs_m, tup):
-        d_ra, d_dec, d_theta = tup
-        msg = "Calculated shift: dra, ddec = %f, %f\n" % (
-            d_ra/3600.0, d_dec/3600.0)
-        msg += "Calculated rotation: %f deg\n" % (d_theta)
-        msg += "\nAdjust WCS?"
-
-        dialog = GtkHelp.Dialog("Adjust WCS",
-                                gtk.DIALOG_DESTROY_WITH_PARENT,
-                                [['Cancel', 0], ['Ok', 1]],
-                                lambda w, rsp: self.adjust_wcs_cb(w, rsp,
-                                                                  image, wcs_m))
-        box = dialog.get_content_area()
-        w = gtk.Label(msg)
-        box.pack_start(w, expand=True, fill=True)
-        dialog.show_all()
-
-    def adjust_wcs_cb(self, w, rsp, image, wcs_m):
-        w.destroy()
-        if rsp == 0:
-            return
-
-        #image.wcs = wcs_m.wcs
-        image.update_keywords(wcs_m.hdr)
-        return True
-
-    def plot_scroll(self, event):
-        # Matplotlib only gives us the number of steps of the scroll,
-        # positive for up and negative for down.
-        direction = None
-        if event.step > 0:
-            #delta = 0.9
-            self.plot_zoomlevel += 1.0
-        elif event.step < 0:
-            #delta = 1.1
-            self.plot_zoomlevel -= 1.0
-
-        self.plot_panzoom()
-
-        # x1, x2 = self.w.ax.get_xlim()
-        # y1, y2 = self.w.ax.get_ylim()
-        # self.w.ax.set_xlim(x1*delta, x2*delta)
-        # self.w.ax.set_ylim(y1*delta, y2*delta)
-        # self.w.canvas.draw()
-
-    def plot_button_press(self, event):
-        if event.button == 1:
-            self.plot_x, self.plot_y = event.x, event.y
-        return True
-
-    def plot_motion_notify(self, event):
-        if event.button == 1:
-            xdelta = event.x - self.plot_x
-            #ydelta = event.y - self.plot_y
-            ydelta = self.plot_y - event.y
-            self.pan_plot(xdelta, ydelta)
 
     def bump_serial(self):
         with self.lock:
@@ -699,49 +595,7 @@ class Pick(GingaPlugin.LocalPlugin):
         with self.lock:
             return self.serialnum
 
-    def plot_panzoom(self):
-        ht, wd = self.contour_data.shape
-        x = int(self.plot_panx * wd)
-        y = int(self.plot_pany * ht)
-
-        if self.plot_zoomlevel >= 1.0:
-            scalefactor = 1.0 / self.plot_zoomlevel
-        elif self.plot_zoomlevel < -1.0:
-            scalefactor = - self.plot_zoomlevel
-        else:
-            # wierd condition?--reset to 1:1
-            scalefactor = 1.0
-            self.plot_zoomlevel = 1.0
-
-        # Show contour zoom level
-        text = self.fv.scale2text(1.0/scalefactor)
-        self.wdetail.contour_zoom.set_text(text)
-
-        xdelta = int(scalefactor * (wd/2.0))
-        ydelta = int(scalefactor * (ht/2.0))
-        xlo, xhi = x-xdelta, x+xdelta
-        # distribute remaining x space from plot
-        if xlo < 0:
-            xsh = abs(xlo)
-            xlo, xhi = 0, min(wd-1, xhi+xsh)
-        elif xhi >= wd:
-            xsh = xhi - wd
-            xlo, xhi = max(0, xlo-xsh), wd-1
-        self.w.ax.set_xlim(xlo, xhi)
-
-        ylo, yhi = y-ydelta, y+ydelta
-        # distribute remaining y space from plot
-        if ylo < 0:
-            ysh = abs(ylo)
-            ylo, yhi = 0, min(ht-1, yhi+ysh)
-        elif yhi >= ht:
-            ysh = yhi - ht
-            ylo, yhi = max(0, ylo-ysh), ht-1
-        self.w.ax.set_ylim(ylo, yhi)
-
-        self.w.fig.canvas.draw()
-
-    def plot_contours(self):
+    def plot_contours(self, image):
         # Make a contour plot
 
         ht, wd = self.pick_data.shape
@@ -750,7 +604,6 @@ class Pick(GingaPlugin.LocalPlugin):
         # the picked object coordinates for plotting contours
         maxsize = max(ht, wd)
         if maxsize > self.contour_size_limit:
-            image = self.fitsimage.get_image()
             radius = int(self.contour_size_limit // 2)
             x, y = self.pick_qs.x, self.pick_qs.y
             data, x1, y1, x2, y2 = image.cutout_radius(x, y, radius)
@@ -759,133 +612,48 @@ class Pick(GingaPlugin.LocalPlugin):
         else:
             data = self.pick_data
             x, y = self.pickcenter.x, self.pickcenter.y
-        self.contour_data = data
-        # Set pan position in contour plot
-        self.plot_panx = float(x) / wd
-        self.plot_pany = float(y) / ht
 
-        self.w.ax.cla()
         try:
-            # Create a contour plot
-            xarr = numpy.arange(wd)
-            yarr = numpy.arange(ht)
-            self.w.ax.contourf(xarr, yarr, data, self.num_contours)
-            # Mark the center of the object
-            self.w.ax.plot([x], [y], marker='x', ms=20.0,
-                           color='black')
+            # TODO: fix
+            self.contour_plot.num_contours = self.num_contours
 
-            # Set the pan and zoom position & redraw
-            self.plot_panzoom()
+            self.contour_plot.plot_contours(x, y, data)
 
         except Exception as e:
             self.logger.error("Error making contour plot: %s" % (
                 str(e)))
 
     def clear_contours(self):
-        self.w.ax.cla()
+        self.contour_plot.clear()
 
-    def _plot_fwhm_axis(self, arr, skybg, color1, color2, color3):
-        N = len(arr)
-        X = numpy.array(list(range(N)))
-        Y = arr
-        # subtract sky background
-        ## skybg = numpy.median(Y)
-        Y = Y - skybg
-        maxv = Y.max()
-        # clamp to 0..max
-        Y = Y.clip(0, maxv)
-        self.logger.debug("Y=%s" % (str(Y)))
-        self.w.ax2.plot(X, Y, color=color1, marker='.')
-
-        fwhm, mu, sdev, maxv = self.iqcalc.calc_fwhm(arr)
-        # Make a little smoother gaussian curve by plotting intermediate
-        # points
-        XN = numpy.linspace(0.0, float(N), N*10)
-        Z = numpy.array([self.iqcalc.gaussian(x, (mu, sdev, maxv))
-                         for x in XN])
-        self.w.ax2.plot(XN, Z, color=color1, linestyle=':')
-        self.w.ax2.axvspan(mu-fwhm/2.0, mu+fwhm/2.0,
-                           facecolor=color3, alpha=0.25)
-        return (fwhm, mu, sdev, maxv)
-
-    def plot_fwhm(self, qs):
+    def plot_fwhm(self, qs, image):
         # Make a FWHM plot
-        self.w.ax2.cla()
         x, y, radius = qs.x, qs.y, qs.fwhm_radius
+
         try:
-            image = self.fitsimage.get_image()
-            x0, y0, xarr, yarr = image.cutout_cross(x, y, radius)
+            self.fwhm_plot.plot_fwhm(x, y, radius, self.pick_data, image,
+                                     iqcalc=self.iqcalc)
 
-            # get median value from the cutout area
-            skybg = numpy.median(self.pick_data)
-            self.logger.debug("cutting x=%d y=%d r=%d med=%f" % (
-                x, y, radius, skybg))
-
-            self.logger.debug("xarr=%s" % (str(xarr)))
-            fwhm_x, mu, sdev, maxv = self._plot_fwhm_axis(xarr, skybg,
-                                                          'blue', 'blue', 'skyblue')
-
-            self.logger.debug("yarr=%s" % (str(yarr)))
-            fwhm_y, mu, sdev, maxv = self._plot_fwhm_axis(yarr, skybg,
-                                                          'green', 'green', 'seagreen')
-            plt = self.w.ax2
-            plt.legend(('data x', 'gauss x', 'data y', 'gauss y'),
-                       loc='upper right', shadow=False, fancybox=False,
-                       prop={'size': 8}, labelspacing=0.2)
-            plt.set_title("FWHM X: %.2f  Y: %.2f" % (fwhm_x, fwhm_y))
-
-            self.w.fig2.canvas.draw()
         except Exception as e:
             self.logger.error("Error making fwhm plot: %s" % (
                 str(e)))
 
+    def clear_fwhm(self):
+        self.fwhm_plot.clear()
+
     def plot_radial(self, qs, image):
         # Make a radial plot
-        ax = self.w.ax3
-        ax.cla()
         x, y, radius = qs.x, qs.y, qs.fwhm_radius
-        img_data, x1, y1, x2, y2 = image.cutout_radius(x, y, radius)
+
         try:
-            ht, wd = img_data.shape
-            off_x, off_y = x1, y1
-            maxval = numpy.nanmax(img_data)
+            self.radial_plot.plot_radial(x, y, radius, image)
 
-            # create arrays of radius and value
-            r = []
-            v = []
-            for i in range(0, wd):
-                for j in range(0, ht):
-                    r.append( numpy.sqrt( (off_x + i - x)**2 + (off_y + j - y)**2 ) )
-                    v.append(img_data[j, i])
-            r, v = numpy.array(r), numpy.array(v)
-
-            # compute and plot radial fitting
-            # note: you might wanna change `deg` here.
-            coefficients = numpy.polyfit(x=r, y=v, deg=10)
-            polynomial = numpy.poly1d(coefficients)
-
-            x_curve = numpy.linspace(numpy.min(r), numpy.max(r), len(r))
-            y_curve = polynomial(x_curve)
-
-            yerror = 0   # for now, no error bars
-            ax.errorbar(r, v, yerr=yerror, marker='o', ls='none', color='blue')
-            ax.plot(x_curve, y_curve, '-', color='green', lw=2)
-            ax.set_xlim(-0.1, radius)
-
-            ax.set_title("X="+str(x)+" Y="+str(y))
-            ax.set_xlabel('Radius [pixels]')
-            ax.set_ylabel('Pixel Value (ADU)')
-
-            self.w.fig3.canvas.draw()
         except Exception as e:
             self.logger.error("Error making radial plot: %s" % (
                 str(e)))
 
-    def clear_fwhm(self):
-        self.w.ax2.cla()
-
     def clear_radial(self):
-        self.w.ax3.cla()
+        self.radial_plot.clear()
 
     def open_report_log(self):
         # Open report log if user specified one
@@ -925,7 +693,7 @@ class Pick(GingaPlugin.LocalPlugin):
         # insert layer if it is not already
         p_canvas = self.fitsimage.get_canvas()
         try:
-            obj = p_canvas.getObjectByTag(self.layertag)
+            obj = p_canvas.get_object_by_tag(self.layertag)
 
         except KeyError:
             # Add canvas layer
@@ -946,7 +714,7 @@ class Pick(GingaPlugin.LocalPlugin):
     def stop(self):
         # Delete previous peak marks
         objs = self.canvas.getObjectsByTagpfx('peak')
-        self.canvas.deleteObjects(objs)
+        self.canvas.delete_objects(objs)
 
         # close pick log, if any
         self.close_report_log()
@@ -955,16 +723,19 @@ class Pick(GingaPlugin.LocalPlugin):
         self.canvas.ui_setActive(False)
         p_canvas = self.fitsimage.get_canvas()
         try:
-            p_canvas.deleteObjectByTag(self.layertag)
+            p_canvas.delete_object_by_tag(self.layertag)
         except:
             pass
         self.fv.showStatus("")
 
     def redo(self):
+        if self.picktag is None:
+            return
+
         serialnum = self.bump_serial()
         self.ev_intr.set()
 
-        fig = self.canvas.getObjectByTag(self.picktag)
+        fig = self.canvas.get_object_by_tag(self.picktag)
         if fig.kind != 'compound':
             return True
         bbox  = fig.objects[0]
@@ -1008,7 +779,7 @@ class Pick(GingaPlugin.LocalPlugin):
                 p_canvas = self.pickimage.get_canvas()
                 tag = p_canvas.add(self.dc.Point(xc, yc, 5,
                                                  linewidth=1, color='red'))
-                self.pickcenter = p_canvas.getObjectByTag(tag)
+                self.pickcenter = p_canvas.get_object_by_tag(tag)
 
             self.pick_x1, self.pick_y1 = x1, y1
             self.pick_data = data
@@ -1028,7 +799,7 @@ class Pick(GingaPlugin.LocalPlugin):
 
             # Delete previous peak marks
             objs = self.canvas.getObjectsByTagpfx('peak')
-            self.canvas.deleteObjects(objs)
+            self.canvas.delete_objects(objs)
 
             # Offload this task to another thread so that GUI remains
             # responsive
@@ -1226,8 +997,8 @@ class Pick(GingaPlugin.LocalPlugin):
             self.plot_panx = float(i1) / wd
             self.plot_pany = float(j1) / ht
             if self.have_mpl:
-                self.plot_contours()
-                self.plot_fwhm(qs)
+                self.plot_contours(image)
+                self.plot_fwhm(qs, image)
                 self.plot_radial(qs, image)
 
         except Exception as e:
@@ -1246,7 +1017,7 @@ class Pick(GingaPlugin.LocalPlugin):
             text.color = 'red'
 
             self.plot_panx = self.plot_pany = 0.5
-            #self.plot_contours()
+            #self.plot_contours(image)
             # TODO: could calc background based on numpy calc
 
         self.w.btn_intr_eval.set_enabled(False)
@@ -1261,7 +1032,7 @@ class Pick(GingaPlugin.LocalPlugin):
 
     def btndown(self, canvas, event, data_x, data_y, viewer):
         try:
-            obj = self.canvas.getObjectByTag(self.picktag)
+            obj = self.canvas.get_object_by_tag(self.picktag)
             if obj.kind == 'rectangle':
                 bbox = obj
             else:
@@ -1277,7 +1048,7 @@ class Pick(GingaPlugin.LocalPlugin):
 
         # Mark center of object and region on main image
         try:
-            self.canvas.deleteObjectByTag(self.picktag)
+            self.canvas.delete_object_by_tag(self.picktag)
         except:
             pass
 
@@ -1294,7 +1065,7 @@ class Pick(GingaPlugin.LocalPlugin):
 
     def update(self, canvas, event, data_x, data_y, viewer):
         try:
-            obj = self.canvas.getObjectByTag(self.picktag)
+            obj = self.canvas.get_object_by_tag(self.picktag)
             if obj.kind == 'rectangle':
                 bbox = obj
             else:
@@ -1315,7 +1086,7 @@ class Pick(GingaPlugin.LocalPlugin):
         if (not obj) or (obj.kind == 'compound'):
             # Replace compound image with rectangle
             try:
-                self.canvas.deleteObjectByTag(self.picktag)
+                self.canvas.delete_object_by_tag(self.picktag)
             except:
                 pass
 
@@ -1333,7 +1104,7 @@ class Pick(GingaPlugin.LocalPlugin):
 
     def drag(self, canvas, event, data_x, data_y, viewer):
 
-        obj = self.canvas.getObjectByTag(self.picktag)
+        obj = self.canvas.get_object_by_tag(self.picktag)
         if obj.kind == 'compound':
             bbox = obj.objects[0]
         elif obj.kind == 'rectangle':
@@ -1358,7 +1129,7 @@ class Pick(GingaPlugin.LocalPlugin):
         if (not obj) or (obj.kind == 'compound'):
             # Replace compound image with rectangle
             try:
-                self.canvas.deleteObjectByTag(self.picktag)
+                self.canvas.delete_object_by_tag(self.picktag)
             except:
                 pass
 
@@ -1373,14 +1144,14 @@ class Pick(GingaPlugin.LocalPlugin):
         return True
 
     def draw_cb(self, canvas, tag):
-        obj = canvas.getObjectByTag(tag)
+        obj = canvas.get_object_by_tag(tag)
         if obj.kind != 'rectangle':
             return True
-        canvas.deleteObjectByTag(tag)
+        canvas.delete_object_by_tag(tag)
 
         if self.picktag:
             try:
-                canvas.deleteObjectByTag(self.picktag)
+                canvas.delete_object_by_tag(self.picktag)
             except:
                 pass
 
@@ -1406,7 +1177,7 @@ class Pick(GingaPlugin.LocalPlugin):
 
         # Get the compound object that sits on the canvas.
         # Make sure edited rectangle was our pick rectangle.
-        c_obj = self.canvas.getObjectByTag(self.picktag)
+        c_obj = self.canvas.get_object_by_tag(self.picktag)
         if (c_obj.kind != 'compound') or (len(c_obj.objects) < 3) or \
                (c_obj.objects[0] != obj):
             return False
@@ -1428,7 +1199,7 @@ class Pick(GingaPlugin.LocalPlugin):
         self.dx = region_default_width
         self.dy = region_default_height
 
-        obj = self.canvas.getObjectByTag(self.picktag)
+        obj = self.canvas.get_object_by_tag(self.picktag)
         if obj.kind != 'compound':
             return True
         bbox = obj.objects[0]
@@ -1537,44 +1308,9 @@ class Pick(GingaPlugin.LocalPlugin):
             ##     self.fv.nongui_do(self.write_pick_log, rpt)
             self.write_pick_log(rpt)
 
-    def correct_wcs(self):
-        # small local function to strip comment and blank lines
-        def _flt(line):
-            line = line.strip()
-            if line.startswith('#'):
-                return False
-            if len(line) == 0:
-                return False
-            return True
-
-        # extract image and reference coords from text widgets
-        txt1 = self.w.report.get_text()
-        lines1 = filter(_flt, txt1.split('\n'))
-        txt2 = self.w.correct.get_text()
-        lines2 = filter(_flt, txt2.split('\n'))
-        assert len(lines1) == len(lines2), \
-               Exception("Number of lines don't match in reports")
-
-        img_coords = list(map(lambda l: map(float, l.split(',')[3:5]), lines1))
-        ref_coords = list(map(lambda l: map(float, l.split(',')[0:2]), lines2))
-
-        image = self.fitsimage.get_image()
-        self.fv.nongui_do(self._calc_match, image, img_coords, ref_coords)
-
-    def _calc_match(self, image, img_coords, ref_coords):
-        # NOTE: this function is run in a non-gui thread!
-        try:
-            wcs_m, tup = image.match_wcs(img_coords, ref_coords)
-            self.fv.gui_do(self.adjust_wcs, image, wcs_m, tup)
-
-        except Exception as e:
-            errmsg = "Error calculating WCS match: %s" % (str(e))
-            self.fv.gui_do(self.fv.show_error, errmsg)
-            return
-
     def edit_select_pick(self):
         if self.picktag is not None:
-            obj = self.canvas.getObjectByTag(self.picktag)
+            obj = self.canvas.get_object_by_tag(self.picktag)
             if obj.kind != 'compound':
                 return True
             # drill down to reference shape

@@ -8,4 +8,7 @@ if tkname == 'gtk':
 elif tkname == 'qt':
     from ginga.qtw.Plot import *
 
+elif tkname == 'pg':
+    from ginga.web.pgw.Plot import *
+
 #END
