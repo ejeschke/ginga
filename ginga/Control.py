@@ -1266,12 +1266,9 @@ class Channel(Callback.Callbacks):
         self.history = []
         self.image_index = {}
 
-        # default is to not sort history, so order is by time added
-        self.hist_sort = None
-        sort_order = self.settings.get('sort_order', 'loadtime')
-        if sort_order == 'alpha':
-            # sort history alphabetically
-            self.hist_sort = lambda info: info.name
+        self._configure_sort()
+        self.settings.getSetting('sort_order').add_callback('set',
+                                               self._sort_changed_ext_cb)
 
     def connect_viewer(self, viewer):
         self.viewer = viewer
@@ -1524,5 +1521,17 @@ class Channel(Callback.Callbacks):
             raise ControlError("No way to recreate image '%s'" % (
                 imname))
 
+    def _configure_sort(self):
+        self.hist_sort = lambda info: info.time_added
+        # set sorting function
+        sort_order = self.settings.get('sort_order', 'loadtime')
+        if sort_order == 'alpha':
+            # sort history alphabetically
+            self.hist_sort = lambda info: info.name
+
+    def _sort_changed_ext_cb(self, setting, value):
+        self._configure_sort()
+
+        self.history.sort(key=self.hist_sort)
 
 # END
