@@ -302,8 +302,6 @@ class AstropyWCS2(BaseWCS):
             rep = self.coordframe.representation(*data)
 
         else:
-            self.logger.info("Falling back to UnitSphericalRepresentation"
-                             " from {}".format(self.coordframe.representation))
             rep = astropy.coordinates.UnitSphericalRepresentation(*data)
 
         if hasattr(self.coordframe, '_set_data'):
