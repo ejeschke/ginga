@@ -8,10 +8,12 @@
 # Please see the file LICENSE.txt for details.
 #
 from __future__ import print_function
+import glob
 import os
 import math
 
 import ginga.toolkit
+from ginga.util import iohelper
 
 have_pyqt4 = False
 have_pyside = False
@@ -91,7 +93,8 @@ elif have_pyqt4:
 elif have_pyside:
     ginga.toolkit.use('pyside')
 else:
-    raise ImportError("Failed to import qt4, qt5 or pyside. There may be an issue with the toolkit module or it is not installed")
+    raise ImportError("Failed to import qt4, qt5 or pyside. There may be an "
+                      "issue with the toolkit module or it is not installed")
 
 
 tabwidget_style = """
@@ -112,6 +115,7 @@ class TopLevel(QtGui.QWidget):
 
     def setApp(self, app):
         self.app = app
+
 
 class ComboBox(QtGui.QComboBox):
 
@@ -138,6 +142,7 @@ class ComboBox(QtGui.QComboBox):
     def append_text(self, text):
         self.addItem(text)
 
+
 class VBox(QtGui.QWidget):
     def __init__(self, *args, **kwdargs):
         super(VBox, self).__init__(*args, **kwdargs)
@@ -152,6 +157,7 @@ class VBox(QtGui.QWidget):
 
     def setSpacing(self, val):
         self.layout().setSpacing(val)
+
 
 class HBox(QtGui.QWidget):
     def __init__(self, *args, **kwdargs):
@@ -170,19 +176,52 @@ class HBox(QtGui.QWidget):
 
 
 class FileSelection(object):
+    """Handle Load Image file dialog from File menu."""
+    def __init__(self, parent_w):
+        self.parent = parent_w
+        self.cb = None
 
-    def __init__(self, parent_w, action=None):
-        # Create a new file selection widget
-        self.filew = QtGui.QFileDialog(parent_w, directory=os.curdir)
-        #self.filew.setFileMode(QtGui.QFileDialog.ExistingFile)
-        self.filew.setViewMode(QtGui.QFileDialog.Detail)
+    def popup(self, title, callfn, initialdir=None, filename=None):
+        """Let user select and load file(s). This allows wildcards and
+        extensions, like in FBrowser.
 
-    def popup(self, title, callfn, initialdir=None,
-              filename=None):
+        Parameters
+        ----------
+        title : str
+            Title for the file dialog.
+
+        callfn : func
+            Function used to open the file(s).
+
+        initialdir : str or `None`
+            Directory for file dialog.
+
+        filename : str
+            Filter for file dialog.
+
+        """
         self.cb = callfn
-        if self.filew.exec_():
-            filename = list(map(str, list(self.filew.selectedFiles())))[0]
-            self.cb(filename)
+        filenames = QtGui.QFileDialog.getOpenFileNames(
+            self.parent, title, initialdir, filename)
+
+        for filename in filenames:
+
+            # Special handling for wildcard or extension.
+            # This is similar to open_files() in FBrowser plugin.
+            if '*' in filename or '[' in filename:
+                info = iohelper.get_fileinfo(filename)
+                ext = iohelper.get_hdu_suffix(info.numhdu)
+                files = glob.glob(info.filepath)  # Expand wildcard
+                paths = ['{0}{1}'.format(f, ext) for f in files]
+
+                # NOTE: Using drag-drop callback here might give QPainter
+                # warnings.
+                for path in paths:
+                    self.cb(path)
+
+            # Normal load
+            else:
+                self.cb(filename)
 
 
 def cmap2pixmap(cmap, steps=50):
@@ -200,6 +239,7 @@ def cmap2pixmap(cmap, steps=50):
     im = im.scaled(128, 32)
     pm = QPixmap.fromImage(im)
     return pm
+
 
 def get_scroll_info(event):
     """
@@ -234,6 +274,7 @@ def get_scroll_info(event):
 
     return (numDegrees, direction)
 
+
 def get_icon(iconpath, size=None):
     image = QImage(iconpath)
     if size is not None:
@@ -242,6 +283,7 @@ def get_icon(iconpath, size=None):
     pixmap = QPixmap.fromImage(image)
     iconw = QIcon(pixmap)
     return iconw
+
 
 def get_font(font_family, point_size):
     font = QFont(font_family, point_size)
