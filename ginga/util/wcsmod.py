@@ -310,10 +310,11 @@ class AstropyWCS2(BaseWCS):
             self.coordframe._set_data(rep)
         else:
             self.coordframe._data = rep
-            # # This will eventually work, once upstream PR is complete.
-            # self.coordframe._rep_cache[self.coordframe._data.__class__.__name__,
-            #                            False] = self.coordframe._data
-            # self.coordframe = self.coordframe.realize_frame(rep, copy=False)
+
+            # need to reset the representation cache b/c we're changing reps
+            # directly setting it instead of clearing the dict because it might
+            # not exist at all if we're starting from an un-realized frame
+            self.coordframe._rep_cache = {(rep.__class__.__name__, False): rep}
 
 
     def spectral_coord(self, idxs, coords='data'):
