@@ -3,15 +3,93 @@ ginga_make_application = function (ws_url) {
         
     var ginga_app = {};
     
-    ginga_app.socket = new WebSocket(ws_url);
+    ginga_app.ws_url = ws_url
+    //ginga_app.socket = new WebSocket(ws_url);
     ginga_app.canvases = {}
     // set this to true to get javascript console debugging
     ginga_app.debug = false
     ginga_app.dialogs = {}
     ginga_app.tab_widgets = {}
     
+    ginga_app.onmessage_handler = function(e) {
+        try {
+            message = JSON.parse(e.data);
+            if (ginga_app.debug) console.log(message.operation);
+
+            if (message.operation == "refresh_canvas") {
+                if (message.id in ginga_app.canvases) {
+                    ginga_app.canvases[message.id].redrawCanvas();
+                };
+            }
+            else if (message.operation == "draw_canvas") {
+                if (message.id in ginga_app.canvases) {
+                    ginga_app.canvases[message.id].drawShape(message["shape"]);
+                };
+            }
+            else if (message.operation == "dialog_action") {
+                ginga_app.dialogs[message.id].fn(message.action);
+	    }
+            else if (message.operation == "set_tab") {
+	        ginga_app.tab_widgets[message.id].fn(message.value);
+            }
+            else {
+                elt = document.getElementById(message.id)
+                if (elt == null) {
+                    console.log("NULL document element--");
+                    console.log(message.id);
+                    return;
+                }
+                else if (message.operation == "update_label") {
+                    // update widget value
+                    elt.innerHTML = message.value;
+                }
+                else if (message.operation == "update_value") {
+                    // update widget value
+                    elt.value = message.value;
+                }
+                else if (message.operation == "update_index") {
+                    // update widget value
+                    elt.selectedIndex = message.value;
+                }
+                else if (message.operation == "update_html") {
+                    // update widget content
+                    elt.innerHTML = message.value;
+                }
+                else if (message.operation == "update_imgsrc") {
+                    // update image content
+                    elt.src = message.value;
+                }
+                else if (message.operation == "update_style") {
+                    // update widget style
+                    elt.setAttribute('style', message.value);
+                }
+                else if (message.operation == "disable") {
+                    // update widget value
+                    elt.disabled = message.value;
+	        };
+            };
+        }
+        catch (err) {
+            console.log("Error performing operation:");
+            console.log(err.message);
+            console.log(message.operation);
+            console.log(message.id);
+            };
+    };
+
+    ginga_app.init_socket = function() {
+        ginga_app.socket = new WebSocket(ginga_app.ws_url);
+        ginga_app.socket.onmessage = ginga_app.onmessage_handler;
+    }
+  
     ginga_app.send_pkt = function (message) {
         var ws = ginga_app.socket;
+        if (ws.readyState == WebSocket.CLOSED) {
+            // try to reinitialize if the socket is closed
+            console.log("web socket appears to be closed--trying to reopen...");
+            ginga_app.init_socket();
+            ws = ginga_app.socket;
+            };
         ws.send(JSON.stringify(message));
         };
     
@@ -26,63 +104,13 @@ ginga_make_application = function (ws_url) {
         ginga_app.send_pkt(message);
     }
 
+    ginga_app.init_socket();
+  
     ginga_app.socket.onopen = function(e) {
         // initialize all our canvases
         for (var key in ginga_app.canvases) {
             ginga_app.canvases[key].initialize_canvas(e)
         }
-    }
-  
-    ginga_app.socket.onmessage = function(e) {
-        message = JSON.parse(e.data);
-        if (message.operation == "refresh_canvas") {
-            if (ginga_app.debug) console.log("refreshing canvas");
-            if (message.id in ginga_app.canvases) {
-                ginga_app.canvases[message.id].redrawCanvas();
-                };
-        }
-        else if (message.operation == "draw_canvas") {
-            if (ginga_app.debug) console.log("drawing canvas");
-            if (message.id in ginga_app.canvases) {
-                ginga_app.canvases[message.id].drawShape(message["shape"]);
-                };
-        }
-        else if (message.operation == "update_label") {
-            // update widget value
-            if (ginga_app.debug) console.log("updating element");
-            document.getElementById(message.id).innerHTML = message.value;
-        }
-        else if (message.operation == "update_value") {
-            // update widget value
-            document.getElementById(message.id).value = message.value;
-        }
-        else if (message.operation == "update_index") {
-            // update widget value
-            document.getElementById(message.id).selectedIndex = message.value;
-        }
-        else if (message.operation == "update_html") {
-            // update widget content
-            document.getElementById(message.id).innerHTML = message.value;
-        }
-        else if (message.operation == "update_imgsrc") {
-            // update image content
-            document.getElementById(message.id).src = message.value;
-        }
-        else if (message.operation == "update_style") {
-            // update widget style
-            document.getElementById(message.id).setAttribute('style',
-                                                             message.value);
-        }
-        else if (message.operation == "disable") {
-            // update widget value
-            document.getElementById(message.id).disabled = message.value;
-	}
-        else if (message.operation == "dialog_action") {
-            ginga_app.dialogs[message.id].fn(message.action);
-	}
-        else if (message.operation == "set_tab") {
-	    ginga_app.tab_widgets[message.id].fn(message.value);
-        };
     }
 
     return ginga_app;

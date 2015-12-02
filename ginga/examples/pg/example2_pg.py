@@ -26,7 +26,7 @@ class FitsViewer(object):
         self.dc = get_canvas_types()
 
         self.top = window
-        self.top.add_callback('closed', self.closed)
+        self.top.add_callback('close', self.closed)
 
         vbox = Widgets.VBox()
         vbox.set_border_width(2)
@@ -75,7 +75,7 @@ class FitsViewer(object):
         bm.add_callback('mode-set', lambda *args: fi.redraw(whence=3))
 
         fi.set_desired_size(512, 512)
-        w = Viewers.GingaViewer(viewer=fi)
+        w = Viewers.GingaViewerWidget(viewer=fi)
         vbox.add_widget(w, stretch=1)
 
         self.readout = Widgets.Label("")
@@ -237,6 +237,7 @@ class FitsViewer(object):
 
     def closed(self, w):
         self.logger.info("Top window closed.")
+        w.delete()
         self.top = None
         sys.exit()
 

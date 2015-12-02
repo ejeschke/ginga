@@ -9,6 +9,7 @@
 #
 import numpy
 import matplotlib as mpl
+from matplotlib.figure import Figure
 # fix issue of negative numbers rendering incorrectly with default font
 mpl.rcParams['axes.unicode_minus'] = False
 
@@ -23,7 +24,7 @@ class Plot(Callback.Callbacks):
         if figure is None:
             dpi = 100
             wd_in, ht_in = float(width)/dpi, float(height)/dpi
-            figure = mpl.figure.Figure(figsize=(wd_in, ht_in), dpi=dpi)
+            figure = Figure(figsize=(wd_in, ht_in), dpi=dpi)
         self.fig = figure
         self.logger = logger
         self.fontsize = 10

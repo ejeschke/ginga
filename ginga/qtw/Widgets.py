@@ -1401,6 +1401,7 @@ class TopLevel(ContainerBase):
         box.setSpacing(0)
         widget.setLayout(box)
         widget.closeEvent = lambda event: self._quit(event)
+        widget.destroyed = self._destroyed_cb
 
         if not title is None:
             widget.setWindowTitle(title)
@@ -1426,6 +1427,9 @@ class TopLevel(ContainerBase):
         #self.widget = None
         self.make_callback('close')
 
+    def _destroyed_cb(self, *args):
+        event.accept()
+
     def raise_(self):
         self.widget.raise_()
         self.widget.activateWindow()
@@ -1438,7 +1442,7 @@ class TopLevel(ContainerBase):
         self.widget.activateWindow()
 
     def move(self, x, y):
-        self.widget.moveTo(x, y)
+        self.widget.move(x, y)
 
     def maximize(self):
         self.widget.showMaximized()

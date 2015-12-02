@@ -73,6 +73,7 @@ def get_logger(name='ginga', level=None, null=False,
         log_file = options.logfile
 
     if log_file is not None:
+        # TODO: get maxsize and backup from options, if present
         fileHdlr  = logging.handlers.RotatingFileHandler(log_file,
                                                          maxBytes=log_maxsize,
                                                          backupCount=log_backups)
@@ -90,5 +91,23 @@ def get_logger(name='ginga', level=None, null=False,
         logger.addHandler(stderrHdlr)
 
     return logger
+
+
+def addlogopts(optprs):
+    optprs.add_option("--log", dest="logfile", metavar="FILE",
+                      help="Write logging output to FILE")
+    optprs.add_option("--loglevel", dest="loglevel", metavar="LEVEL",
+                      default='info',
+                      help="Set logging level to LEVEL")
+    optprs.add_option("--logsize", dest="logsize", metavar="NUMBYTES",
+                      type="int", default=log_maxsize,
+                      help="Set maximum logging level to NUMBYTES")
+    optprs.add_option("--logbackups", dest="logbackups", metavar="NUM",
+                      type="int", default=log_backups,
+                      help="Set maximum number of backups to NUM")
+    optprs.add_option("--stderr", dest="logstderr", default=False,
+                      action="store_true",
+                      help="Copy logging also to stderr")
+
 
 #END

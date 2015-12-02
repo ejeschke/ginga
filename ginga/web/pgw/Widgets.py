@@ -1102,19 +1102,19 @@ class Menu(ContainerBase):
         w = widget.get_widget()
         #self.widget.popup(w.mapToGlobal(QtCore.QPoint(0, 0)))
 
-class Menubar(ContainerBase):
+class Menubar(HBox):
+
     def __init__(self):
         super(Menubar, self).__init__()
 
-        self.widget = None
-
-    def add_widget(self, child):
-        self.add_ref(child)
+        self.set_border_width(2)
+        self.set_spacing(8)
 
     def add_name(self, name):
-        #menu_w = self.widget.addMenu(name)
         child = Menu()
-        self.add_ref(child)
+        menu_w = Label(text=name, halign='left', style='clickable',
+                       menu=child)
+        self.add_widget(menu_w)
         return child
 
 
@@ -1353,11 +1353,16 @@ class Application(object):
             self.on_timer_event(event)
             return
 
-        #print("we have an event from '%s' event=%s" % (event.id, str(event)))
         # get the widget associated with this id
-        widget = widget_dict[int(event.id)]
-        # make the callback for this widget (activation or value-changed)
-        widget._cb_redirect(event)
+        w_id = int(event.id)
+        try:
+            widget = widget_dict[w_id]
+            # make the callback for this widget (activation or value-changed)
+            widget._cb_redirect(event)
+
+        except KeyError:
+            self.logger.error("Event '%s' from unknown widget (id=%d)" % (
+                str(event), w_id))
 
     def start(self, no_ioloop=False):
 

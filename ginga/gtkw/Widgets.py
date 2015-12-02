@@ -1536,8 +1536,8 @@ class Application(object):
         except:
             self.screen_wd = 1600
             self.screen_ht = 1200
-        self.logger.debug("screen dimensions %dx%d" % (
-            self.screen_wd, self.screen_ht))
+        ## self.logger.debug("screen dimensions %dx%d" % (
+        ##     self.screen_wd, self.screen_ht))
 
     def get_screen_size(self):
         return (self.screen_wd, self.screen_ht)
