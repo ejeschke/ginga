@@ -1503,7 +1503,7 @@ class Channel(Callback.Callbacks):
                 # perpetuate the image_future
                 image.set(image_future=image_future, name=imname,
                           path=path)
-                self.fv.gui_do(self.switch, image)
+                self.fv.gui_do(self.switch_image, image)
 
             self.fv.nongui_do(_load_n_switch, imname, info.path,
                               info.image_future)
