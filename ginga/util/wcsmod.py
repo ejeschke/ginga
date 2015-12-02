@@ -270,9 +270,9 @@ class AstropyWCS2(BaseWCS):
                   if self.coordframe.is_transformable_to(f)]
         coord_types = frames
 
-    def realize_frame(self, data):
+    def realize_frame_inplace(self, data):
         """
-        Wrap frame.realize_frame, modify self.coordframe to reflect the
+        Wrap frame.realize_frame_inplace, modify self.coordframe to reflect the
         new coords.
 
         .. note::
@@ -354,7 +354,7 @@ class AstropyWCS2(BaseWCS):
             raise WCSError(e)
 
         # Update our frame with the new data
-        self.realize_frame(sky)
+        self.realize_frame_inplace(sky)
 
         return self.coordframe
 
@@ -367,7 +367,7 @@ class AstropyWCS2(BaseWCS):
             args += [0] * len(naxispath)
         skycrd = u.Quantity(args, unit=u.deg)
 
-        self.realize_frame(skycrd)
+        self.realize_frame_inplace(skycrd)
 
         return self.nativetopix(coords=coords, naxispath=naxispath)
 
