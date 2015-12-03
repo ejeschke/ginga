@@ -204,6 +204,11 @@ class FileSelection(object):
         filenames = QtGui.QFileDialog.getOpenFileNames(
             self.parent, title, initialdir, filename)
 
+        # Special handling for PyQt5, see
+        # https://www.reddit.com/r/learnpython/comments/2xhagb/pyqt5_trouble_with_openinggetting_the_name_of_the/
+        if ginga.toolkit.get_toolkit() == 'qt5':
+            filenames = filenames[0]
+
         for filename in filenames:
 
             # Special handling for wildcard or extension.
