@@ -1,13 +1,12 @@
 .. _api:
 
-###
-API
-###
-
-*UNDER CONSTRUCTION*
+#############
+Reference/API
+#############
 
 .. toctree::
    :maxdepth: 3
 
+   imageview
    main
    wcsutil

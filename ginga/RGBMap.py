@@ -39,6 +39,19 @@ class RGBPlanes(object):
         return [ self.order.index(c) for c in cs ]
 
     def get_array(self, order):
+        """Get Numpy array that represents the RGB layers.
+
+        Parameters
+        ----------
+        order : str
+            The desired order of RGB color layers.
+
+        Returns
+        -------
+        arr : ndarray
+            Numpy array that represents the RGB layers.
+
+        """
         order = order.upper()
         if order == self.order:
             return self.rgbarr
