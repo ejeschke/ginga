@@ -1098,9 +1098,10 @@ class Menu(ContainerBase):
         #self.widget.addSeparator()
         pass
 
-    def popup(self, widget):
-        w = widget.get_widget()
-        #self.widget.popup(w.mapToGlobal(QtCore.QPoint(0, 0)))
+    def popup(self, widget=None):
+        # TODO
+        if widget is not None:
+            w = widget.get_widget()
 
 class Menubar(HBox):
 

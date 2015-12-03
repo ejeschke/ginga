@@ -40,6 +40,9 @@ class Plot(Callback.Callbacks):
         for name in ('draw-canvas', ):
             self.enable_callback(name)
 
+    def get_figure(self):
+        return self.fig
+
     def get_widget(self):
         return self.fig.canvas
 

@@ -23,7 +23,7 @@ class PlotWidget(Widgets.Canvas):
     def __init__(self, plot, width=500, height=500):
         super(PlotWidget, self).__init__(width=width, height=height)
 
-        self.widget = FigureCanvas(plot.fig)
+        self.widget = FigureCanvas(plot.get_figure())
         self.logger = plot.logger
 
         self._configured = False
@@ -84,7 +84,8 @@ class PlotWidget(Widgets.Canvas):
 
     def get_rgb_buffer(self, plot):
         buf = BytesIO()
-        plot.fig.canvas.print_figure(buf, format='png')
+        fig = plot.get_figure()
+        fig.canvas.print_figure(buf, format='png')
         wd, ht = self.width, self.height
         return (wd, ht, buf.getvalue())
 
@@ -102,7 +103,7 @@ class PlotWidget(Widgets.Canvas):
 
     def configure_window(self, wd, ht):
         self.logger.debug("canvas resized to %dx%d" % (wd, ht))
-        fig = self.plot.fig
+        fig = self.plot.get_figure()
         fig.set_size_inches(float(wd) / fig.dpi, float(ht) / fig.dpi)
 
     def map_event(self, event):

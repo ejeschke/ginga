@@ -1315,6 +1315,13 @@ class Toolbar(ContainerBase):
         w = child.get_widget()
         self.widget.addWidget(w)
 
+    def add_menu(self, text, menu=None):
+        if menu is None:
+            menu = Menu()
+        child = self.add_action(text)
+        child.add_callback('activated', lambda w: menu.popup())
+        return menu
+
     def add_separator(self):
         self.widget.addSeparator()
 
@@ -1366,10 +1373,13 @@ class Menu(ContainerBase):
     def add_separator(self):
         self.widget.addSeparator()
 
-    def popup(self, widget):
-        w = widget.get_widget()
-        #self.widget.popup(w.mapToGlobal(QtCore.QPoint(0, 0)))
-        self.widget.exec_(w.mapToGlobal(QtCore.QPoint(0, 0)))
+    def popup(self, widget=None):
+        if widget is not None:
+            w = widget.get_widget()
+            #self.widget.popup(w.mapToGlobal(QtCore.QPoint(0, 0)))
+            self.widget.exec_(w.mapToGlobal(QtCore.QPoint(0, 0)))
+        else:
+            self.widget.exec_(QtGui.QCursor.pos())
 
 class Menubar(ContainerBase):
     def __init__(self):

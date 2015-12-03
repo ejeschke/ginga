@@ -1373,7 +1373,7 @@ class Menu(ContainerBase):
         self.widget.append(sep)
         sep.show()
 
-    def popup(self, widget):
+    def popup(self, widget=None):
         menu = self.widget
         menu.show_all()
         if six.PY2:
