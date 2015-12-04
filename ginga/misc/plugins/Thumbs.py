@@ -50,9 +50,9 @@ class Thumbs(GingaPlugin.GlobalPlugin):
                                   sort_order=None,
                                   label_length=25,
                                   label_cutoff='right',
-                                  highlight_tracks_keyboard_focus=False,
+                                  highlight_tracks_keyboard_focus=True,
                                   label_font_color='black',
-                                  label_bg_color='yellow')
+                                  label_bg_color='lightgreen')
         self.settings.load(onError='silent')
         # max length of thumb on the long side
         self.thumbWidth = self.settings.get('thumb_length', 150)
@@ -68,7 +68,8 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         self.keywords.insert(0, self.settings.get('mouseover_name_key', 'NAME'))
 
         self.highlight_tracks_keyboard_focus = self.settings.get(
-            'highlight_tracks_keyboard_focus', False)
+            'highlight_tracks_keyboard_focus', True)
+        self._tkf_highlight = set([])
 
         fv.set_callback('add-image', self.add_image_cb)
         fv.set_callback('remove-image', self.remove_image_cb)
@@ -118,6 +119,10 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         container.add_widget(w, stretch=0)
 
         self.gui_up = True
+
+    def _get_thumb_key(self, chname, image):
+        path = image.get('path', None)
+        return self.get_thumb_key(chname, image.get('name'), path)
 
     def get_thumb_key(self, chname, imname, path):
         if path is not None:
@@ -324,26 +329,39 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             fitssettings.getSetting(name).add_callback('set',
                                self.cutset_cb, fitsimage)
         fitsimage.add_callback('transform', self.transform_cb)
+        fitsimage.add_callback('image-set', self.image_set_cb)
 
         rgbmap = fitsimage.get_rgbmap()
         rgbmap.add_callback('changed', self.rgbmap_cb, fitsimage)
 
+        # add old highlight set to channel external data
+        chinfo.extdata.setdefault('thumbs_old_highlight', set([]))
+
     def focus_cb(self, viewer, fitsimage):
         # Reflect transforms, colormap, etc.
         image = fitsimage.get_image()
-        if image is None:
-            return
-        if not self.have_thumbnail(fitsimage, image):
-            # No memory of this thumbnail, so regenerate it
+        if image is not None:
             chname = viewer.get_channelName(fitsimage)
-            self._add_image(viewer, chname, image)
-            self.highlight_thumbnail(viewer, fitsimage)
-            return
+            thumbkey = self._get_thumb_key(chname, image)
+            new_highlight = set([thumbkey])
 
-        # Else schedule an update of the thumbnail for changes to
-        # cut levels, etc.
-        self.redo_delay(fitsimage)
-        self.highlight_thumbnail(viewer, fitsimage)
+            # TODO: already calculated thumbkey, use simpler test
+            if not self.have_thumbnail(fitsimage, image):
+                # No memory of this thumbnail, so regenerate it
+                self._add_image(viewer, chname, image)
+                return
+
+            # Else schedule an update of the thumbnail for changes to
+            # cut levels, etc.
+            self.redo_delay(fitsimage)
+
+        else:
+            # no image has the focus
+            new_highlight = set([])
+
+        if self.highlight_tracks_keyboard_focus:
+            self.update_highlights(self._tkf_highlight, new_highlight)
+            self._tkf_highlight = new_highlight
 
     def transform_cb(self, fitsimage):
         self.redo_delay(fitsimage)
@@ -373,33 +391,54 @@ class Thumbs(GingaPlugin.GlobalPlugin):
                                   ['transforms', 'cutlevels',
                                    'rgbmap'])
 
-    def highlight_thumbnail(self, viewer, fitsimage):
-        """Highlight currently active thumbnail. Called by ``focus_cb()``."""
-        image = fitsimage.get_image()
-        name = image.get('name')
-        path = image.get('path')
-        chname = viewer.get_channelName(fitsimage)
-        thumbkey = self.get_thumb_key(chname, name, path)
-        chname = chname.lower()  # for matching with thumbkey
+    def update_highlights(self, old_highlight_set, new_highlight_set):
+        """Unhighlight the thumbnails represented by `old_highlight_set`
+        and highlight the ones represented by new_highlight_set.
 
-        hlight_bg = self.settings.get('label_bg_color', 'yellow')
-        hlight_fg = self.settings.get('label_font_color', 'black')
+        Both are sets of thumbkeys.
+        """
 
-        with self.thmblock:
-            for tkey in self.thumbDict:
-                # Do not mess with other channels unless asked to
-                if (not self.highlight_tracks_keyboard_focus and
-                        chname != tkey[0]):
-                    continue
+        un_hilite_set = old_highlight_set - new_highlight_set
+        re_hilite_set = new_highlight_set - old_highlight_set
 
-                if tkey == thumbkey:
-                    bgcolor = hlight_bg
-                    fgcolor = hlight_fg
-                else:
-                    bgcolor = fgcolor = None
+        # unhilight thumb labels that should NOT be any more
+        for thumbkey in un_hilite_set:
+            namelbl = self.thumbDict[thumbkey].get('namelbl')
+            namelbl.set_color(bg=None, fg=None)
 
-                namelbl = self.thumbDict[tkey].get('namelbl')
-                namelbl.set_color(bg=bgcolor, fg=fgcolor)
+        # hilight new labels that should be
+        bg = self.settings.get('label_bg_color', 'lightgreen')
+        fg = self.settings.get('label_font_color', 'black')
+
+        for thumbkey in re_hilite_set:
+            namelbl = self.thumbDict[thumbkey].get('namelbl')
+            namelbl.set_color(bg=bg, fg=fg)
+
+
+    def image_set_cb(self, fitsimage, image):
+        """This method is called when an image is set in a channel."""
+        chname = self.fv.get_channelName(fitsimage)
+        channel = self.fv.get_channelInfo(chname)
+        # get old highlighted thumbs for this channel--will be
+        # a set of zero or one thumbkey
+        old_highlight = channel.extdata.thumbs_old_highlight
+
+        # calculate new highlight thumbkeys--again, a set of zero
+        # or one thumbkey
+        if image is not None:
+            thumbkey = self._get_thumb_key(chname, image)
+            new_highlight = set([thumbkey])
+        else:
+            # no image has the focus
+            new_highlight = set([])
+
+        if self.highlight_tracks_keyboard_focus:
+            self.update_highlights(self._tkf_highlight, new_highlight)
+            self._tkf_highlight = new_highlight
+
+        else:
+            self.update_highlights(old_highlight, new_highlight)
+            channel.extdata.thumbs_old_highlight = new_highlight
 
     def have_thumbnail(self, fitsimage, image):
         """Returns True if we already have a thumbnail version of this image

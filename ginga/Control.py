@@ -897,8 +897,6 @@ class GingaControl(Callback.Callbacks):
             self.logger.info("Large image update: %.4f sec" % (
                 split_time1 - start_time))
 
-            self.make_callback('active-image', channel.fitsimage)
-
     def change_channel(self, chname, image=None, raisew=True):
         self.logger.debug("change channel: %s" % (chname))
         name = chname.lower()
@@ -1266,6 +1264,8 @@ class Channel(Callback.Callbacks):
         self.cursor = -1
         self.history = []
         self.image_index = {}
+        # external entities can attach stuff via this attribute
+        self.extdata = Bunch.Bunch()
 
         self._configure_sort()
         self.settings.getSetting('sort_order').add_callback('set',
@@ -1275,7 +1275,7 @@ class Channel(Callback.Callbacks):
         self.viewer = viewer
 
         # redraw top image
-        self.refresh_top_image()
+        self.refresh_cursor_image()
 
     def move_image_to(self, imname, channel):
         if self == channel:
@@ -1375,6 +1375,8 @@ class Channel(Callback.Callbacks):
             if channel != self:
                 self.fv.change_channel(self.name)
 
+    def get_current_image(self):
+        return self.fitsimage.get_image()
 
     def refresh_cursor_image(self):
         info = self.history[self.cursor]
