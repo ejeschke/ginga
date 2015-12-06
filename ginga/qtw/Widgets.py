@@ -33,6 +33,8 @@ class WidgetBase(Callback.Callbacks):
 
         self.widget = None
         self.changed = False
+        # external data can be attached here
+        self.extdata = Bunch.Bunch()
 
     def get_widget(self):
         return self.widget
@@ -49,6 +51,11 @@ class WidgetBase(Callback.Callbacks):
 
     def delete(self):
         self.widget.deleteLater()
+
+    def focus(self):
+        self.widget.activateWindow()
+        self.widget.setFocus()
+        #self.widget.raise_()
 
     def resize(self, width, height):
         self.widget.resize(width, height)
@@ -798,10 +805,15 @@ class ContainerBase(WidgetBase):
 
     def _get_native_index(self, nchild):
         l = self._get_native_children()
-        return l.index(nchild)
+        try:
+            return l.index(nchild)
+        except (IndexError, ValueError) as e:
+            return -1
 
     def _native_to_child(self, nchild):
         idx = self._get_native_index(nchild)
+        if idx < 0:
+            return None
         return self.children[idx]
 
     def set_margins(self, left, right, top, bottom):
@@ -978,18 +990,12 @@ class TabWidget(ContainerBase):
         child = self.index_to_widget(index)
         self.make_callback('page-close', child)
 
-    ## def _tab_insert_cb(self, index):
-    ##     print("tab inserted %d" % index)
-    ##     child = self.index_to_widget(index)
-
-    ## def _tab_remove_cb(self, index):
-    ##     print("tab removed %d" % index)
-    ##     child = self.index_to_widget(index)
-
     def add_widget(self, child, title=''):
         self.add_ref(child)
         child_w = child.get_widget()
         self.widget.addTab(child_w, title)
+        # attach title to child
+        child.extdata.tab_title = title
 
     def _remove(self, nchild, delete=False):
         idx = self.widget.indexOf(nchild)
@@ -1004,6 +1010,8 @@ class TabWidget(ContainerBase):
 
     def set_index(self, idx):
         self.widget.setCurrentIndex(idx)
+        child = self.index_to_widget(idx)
+        #child.focus()
 
     def index_of(self, child):
         return self.widget.indexOf(child.get_widget())
@@ -1014,7 +1022,6 @@ class TabWidget(ContainerBase):
         if nchild is None:
             return nchild
         return self._native_to_child(nchild)
-
 
 class StackWidget(ContainerBase):
     def __init__(self):
@@ -1030,12 +1037,16 @@ class StackWidget(ContainerBase):
         self.add_ref(child)
         child_w = child.get_widget()
         self.widget.addWidget(child_w)
+        # attach title to child
+        child.extdata.tab_title = title
 
     def get_index(self):
         return self.widget.currentIndex()
 
     def set_index(self, idx):
         self.widget.setCurrentIndex(idx)
+        #child = self.index_to_widget(idx)
+        #child.focus()
 
     def index_of(self, child):
         return self.widget.indexOf(child.get_widget())
@@ -1043,7 +1054,6 @@ class StackWidget(ContainerBase):
     def index_to_widget(self, idx):
         nchild = self.widget.widget(idx)
         return self._native_to_child(nchild)
-
 
 class MDIWidget(ContainerBase):
     def __init__(self, tabpos='top', mode='mdi'):
@@ -1060,6 +1070,7 @@ class MDIWidget(ContainerBase):
         w.setTabsMovable(False)
         self.widget = w
         self.true_mdi = True
+        self.cur_index = -1
 
         for name in ('page-switch', 'page-close'):
             self.enable_callback(name)
@@ -1096,7 +1107,22 @@ class MDIWidget(ContainerBase):
         if subwin is not None:
             nchild = subwin.widget()
             child = self._native_to_child(nchild)
+            self.cur_index = self.children.index(child)
             self.make_callback('page-switch', child)
+
+    def _window_resized(self, event, subwin, widget):
+        qsize = event.size()
+        wd, ht = qsize.width(), qsize.height()
+        # save size
+        widget.extdata.mdi_size = (wd, ht)
+        subwin._resizeEvent(event)
+
+    def _window_moved(self, event, subwin, widget):
+        qpos = event.pos()
+        x, y = qpos.x(), qpos.y()
+        # save position
+        widget.extdata.mdi_pos = (x, y)
+        subwin._moveEvent(event)
 
     def _window_closed(self, event, subwin, widget):
         nchild = subwin.widget()
@@ -1114,9 +1140,29 @@ class MDIWidget(ContainerBase):
         child_w = child.get_widget()
         subwin = QtGui.QMdiSubWindow(self.widget)
         subwin.setWidget(child_w)
+        # attach title to child
+        child.extdata.tab_title = title
+
         w = self.widget.addSubWindow(subwin)
         w._closeEvent = w.closeEvent
         w.closeEvent = lambda event: self._window_closed(event, w, child)
+
+        # does child have a previously saved size
+        size = child.extdata.get('mdi_size', None)
+        if size is not None:
+            wd, ht = size
+            w.resize(wd, ht)
+
+        # does child have a previously saved position
+        pos = child.extdata.get('mdi_pos', None)
+        if pos is not None:
+            x, y = pos
+            w.move(x, y)
+
+        w._resizeEvent = w.resizeEvent
+        w.resizeEvent = lambda event: self._window_resized(event, w, child)
+        w._moveEvent = w.moveEvent
+        w.moveEvent = lambda event: self._window_moved(event, w, child)
         w.setWindowTitle(title)
         child_w.show()
         w.show()
@@ -1140,30 +1186,31 @@ class MDIWidget(ContainerBase):
 
     def get_index(self):
         subwin = self.widget.activeSubWindow()
-        l = list(self.widget.subWindowList())
-        try:
-            return l.index(subwin)
-        except (IndexError, ValueError) as e:
-            return -1
+        if subwin is not None:
+            return self._get_native_index(subwin.widget())
+        return self.cur_index
+
+    def _get_subwin(self, widget):
+        for subwin in list(self.widget.subWindowList()):
+            if subwin.widget() == widget:
+                return subwin
+        return None
 
     def set_index(self, idx):
-        l = list(self.widget.subWindowList())
-        subwin = l[idx]
-        self.widget.setActiveSubWindow(subwin)
+        if 0 <= idx < len(self.children):
+            child = self.children[idx]
+            subwin = self._get_subwin(child.widget)
+            if subwin is not None:
+                self.widget.setActiveSubWindow(subwin)
 
     def index_of(self, child):
         nchild = child.get_widget()
-        try:
-            l = [ sw.widget() for sw in self.widget.subWindowList() ]
-            idx = l.index(nchild)
-            return idx
-        except (IndexError, ValueError) as e:
-            return -1
+        return self._get_native_index(nchild)
 
     def index_to_widget(self, idx):
-        subwin = list(self.widget.subWindowList())[idx]
-        nchild = subwin.widget()
-        return self._native_to_child(nchild)
+        if 0 <= idx < len(self.children):
+            return self.children[idx]
+        return None
 
     def tile_panes(self):
         self.widget.tileSubWindows()

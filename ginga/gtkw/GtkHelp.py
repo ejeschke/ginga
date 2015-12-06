@@ -253,26 +253,21 @@ class MultiDragDropTreeView(gtk.TreeView):
         self.defer_select=False
 
 
-class MDIWorkspace(gtk.Layout):
+class MDIWidget(gtk.Layout):
     """
-    This is a work in progress!
+    Multiple Document Interface type widget for Gtk.
+
+    NOTE: *** This is a work in progress! ***
     """
     def __init__(self):
-        super(MDIWorkspace, self).__init__()
+        super(MDIWidget, self).__init__()
 
         self.children = []
+        self.cur_index = -1
         self.selected_child = None
         self.kbdmouse_mask = 0
+        self.cascade_offset = 50
 
-        self.bg_rgb = (0.5, 0.5, 0.5)
-        self._last_win_x = None
-        self._last_win_y = None
-
-        self.connect("configure-event", self.configure_event)
-        if not gtksel.have_gtk3:
-            self.connect("expose_event", self.expose_event)
-        ## else:
-        ##     self.connect("draw", self.draw_event)
         self.connect("motion_notify_event", self.motion_notify_event)
         self.connect("button_press_event", self.button_press_event)
         self.connect("button_release_event", self.button_release_event)
@@ -290,66 +285,38 @@ class MDIWorkspace(gtk.Layout):
                         #| gtk.gdk.POINTER_MOTION_HINT_MASK
                         | gtk.gdk.SCROLL_MASK)
 
-    def expose_event(self, widget, event):
-        x , y, width, height = event.area
-        win = widget.get_window()
-        cr = win.cairo_create()
-
-        # set clip area for exposed region
-        cr.rectangle(x, y, width, height)
-        cr.clip()
-
-        cr.set_source_rgb(*self.bg_rgb)
-        cr.paint()
-        return True
-
-    def configure_event(self, widget, event):
-        rect = widget.get_allocation()
-        x, y, width, height = rect.x, rect.y, rect.width, rect.height
-
-        # This is a workaround for a strange bug in Gtk 3
-        # where we get multiple configure callbacks even though
-        # the size hasn't changed.  We avoid creating a new surface
-        # if there is an old surface with the exact same size.
-        # This prevents some flickering of the display on focus events.
-        wwd, wht = self.get_window_size()
-        if (wwd == width) and (wht == height):
-            return True
-
-        win = widget.get_window()
-        cr = win.cairo_create()
-
-        # set clip area for exposed region
-        cr.rectangle(0, 0, width, height)
-        #cr.clip()
-
-        cr.set_source_rgb(*self.bg_rgb)
-        cr.paint()
-        #self.configure(width, height)
-        return True
-
     def append_page(self, widget, label):
         vbox = gtk.VBox()
+        vbox.set_border_width(4)
         evbox = gtk.EventBox()
         evbox.add(label)
-        evbox.modify_fg(gtk.STATE_NORMAL, gtk.gdk.color_parse("yellow"))
+        #evbox.modify_fg(gtk.STATE_NORMAL, gtk.gdk.color_parse("yellow"))
         evbox.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse("skyblue"))
-        vbox.pack_start(evbox, fill=False, expand=False)
-        vbox.pack_start(widget, fill=True, expand=True)
+        vbox.pack_start(evbox, fill=False, expand=False, padding=0)
+        vbox.pack_start(widget, fill=True, expand=True, padding=4)
 
-        fr = gtk.Frame()
-        fr.set_border_width(10)
-        fr.set_shadow_type(gtk.SHADOW_ETCHED_OUT)
-        fr.add(vbox)
-        #fr.set_resize_mode(gtk.RESIZE_IMMEDIATE)
-        fr.show_all()
+        frame = gtk.EventBox()
+        frame.set_size_request(300, 300)
+        frame.props.visible_window = True
+        frame.set_border_width(0)
+        frame.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse("palegreen1"))
 
-        evbox.connect("button_press_event", self.select_child_cb, fr)
+        frame.add(vbox)
+        frame.show_all()
 
-        bnch = Bunch.Bunch(widget=widget, window=fr)
-        self.children.append(bnch)
+        pos = self.get_widget_position(frame)
+        if pos is None:
+            x, y = 0, 0
+        else:
+            x, y = pos
+        wd, ht = self.get_widget_size(frame)
+        subwin = Bunch.Bunch(widget=widget, label=evbox, frame=frame,
+                             x=x, y=y, width=wd, height=ht)
+        self.children.append(subwin)
 
-        self.put(fr, 10, 10)
+        evbox.connect("button_press_event", self.select_child_cb, subwin)
+        frame.connect("button_press_event", self.start_resize_cb, subwin)
+        self.put(frame, self.cascade_offset, self.cascade_offset)
 
     def set_tab_reorderable(self, w, tf):
         pass
@@ -360,37 +327,86 @@ class MDIWorkspace(gtk.Layout):
         return None
 
     def page_num(self, widget):
-        idx = 0
-        for bnch in self.children:
-            if bnch.widget == widget:
-                return idx
-            idx += 1
-        return -1
+        index, subwin = self._widget_to_index(widget)
+        return index
+
+    def get_nth_page(self, idx):
+        if 0 <= idx < len(self.children):
+            subwin = self.children[idx]
+            return subwin.widget
+        return None
 
     def set_current_page(self, idx):
-        bnch = self.children[idx]
-        window = bnch.window
-        window.show()
+        subwin = self.children[idx]
+        frame = subwin.frame
+        #frame.show()
+        self.raise_widget(subwin)
+        self.cur_index = idx
+
+    def get_current_page(self):
+        return self.cur_index
+
+    def _widget_to_index(self, widget):
+        index = 0
+        for subwin in self.children:
+            if subwin.widget == widget:
+                return index, subwin
+            index += 1
+        return -1, None
 
     def remove_page(self, idx):
-        bnch = self.children[idx]
-        window = bnch.window
-        #self.remove(window)
+        subwin = self.children[idx]
+        self.remove(subwin.widget)
 
-    def select_child_cb(self, layout, event, widget):
-        ex = event.x_root; ey = event.y_root
+    def remove(self, widget):
+        idx, subwin = self._widget_to_index(widget)
+        if subwin is not None:
+            self.children.remove(subwin)
+            self.cur_index = -1
+            frame = subwin.frame
+            super(MDIWidget, self).remove(frame)
+            widget.unparent()
+
+    def get_widget_position(self, widget):
         x, y, width, height = widget.get_allocation()
-        win = widget.get_window()
-        if win is None:
-            return False
-        x, y = win.get_position()
-        #dx, dy = int(ex - x), int(ey - y)
-        dx, dy = ex, ey
-        self.selected_child = Bunch.Bunch(widget=widget,
+        return x, y
+
+    def get_widget_size(self, widget):
+        x, y, width, height = widget.get_allocation()
+        return width, height
+
+    def raise_widget(self, subwin):
+        frame = subwin.frame
+        # Hack to bring widget to the top--no documentation on any other
+        # way to accomplish this
+        super(MDIWidget, self).remove(frame)
+        frame.unparent()
+        self.put(frame, subwin.x, subwin.y)
+
+    def select_child_cb(self, layout, event, subwin):
+        ex, ey = event.x_root, event.y_root
+
+        x, y = self.get_widget_position(subwin.frame)
+        subwin.x, subwin.y = x, y
+
+        # make this the selected widget
+        idx = self.page_num(subwin.widget)
+        if idx >= 0:
+            self.set_current_page(idx)
+
+        self.selected_child = Bunch.Bunch(subwin=subwin, action='move',
                                           cr = self.setup_cr(self.bin_window),
-                                          x_origin=x, y_origin=y,
-                                          dx=dx, dy=dy, wd=width, ht=height)
-        return False
+                                          x_origin=x, y_origin=y, dx=ex, dy=ey)
+        return True
+
+    def start_resize_cb(self, widget, event, subwin):
+        ex, ey = event.x_root, event.y_root
+        x, y = self.get_widget_position(subwin.frame)
+        subwin.x, subwin.y = x, y
+        self.selected_child = Bunch.Bunch(subwin=subwin, action='resize',
+                                          cr = self.setup_cr(self.bin_window),
+                                          x_origin=x, y_origin=y, dx=ex, dy=ey)
+        return True
 
     def button_press_event(self, widget, event):
         # event.button, event.x, event.y
@@ -414,9 +430,17 @@ class MDIWorkspace(gtk.Layout):
             button |= 0x1 << (event.button - 1)
         if self.selected_child is not None:
             bnch = self.selected_child
-            x = int(bnch.x_origin + (x - bnch.dx))
-            y = int(bnch.x_origin + (y - bnch.dy))
-            self.move(self.selected_child.widget, x, y)
+            subwin = bnch.subwin
+            if bnch.action == 'move':
+                x = int(subwin.x + (x - bnch.dx))
+                y = int(subwin.y + (y - bnch.dy))
+                self.move(subwin.frame, x, y)
+                subwin.x, subwin.y = self.get_widget_position(subwin.frame)
+            elif bnch.action == 'resize':
+                wd = int(subwin.width + (x - bnch.dx))
+                ht = int(subwin.height + (y - bnch.dy))
+                subwin.frame.set_size_request(wd, ht)
+                subwin.width, subwin.height = self.get_widget_size(subwin.frame)
             self.selected_child = None
         return True
 
@@ -436,21 +460,27 @@ class MDIWorkspace(gtk.Layout):
 
         if (button & 0x1) and (self.selected_child is not None):
             bnch = self.selected_child
-            x = int(bnch.x_origin + (x - bnch.dx))
-            y = int(bnch.x_origin + (y - bnch.dy))
-            self.move(self.selected_child.widget, x, y)
-
+            subwin = bnch.subwin
+            if bnch.action == 'move':
+                x = int(subwin.x + (x - bnch.dx))
+                y = int(subwin.y + (y - bnch.dy))
+                self.move(subwin.frame, x, y)
+            elif bnch.action == 'resize':
+                wd = int(subwin.width + (x - bnch.dx))
+                ht = int(subwin.height + (y - bnch.dy))
+                subwin.frame.set_size_request(wd, ht)
         return True
 
-    def to_next(self):
-        pass
-    def to_previous(self):
+    def tile_pages(self):
         pass
 
-    def tile_panes(self):
-        pass
-    def cascade_panes(self):
-        pass
+    def cascade_pages(self):
+        x, y = 0, 0
+        for subwin in self.children:
+            self.move(subwin.frame, x, y)
+            x += self.cascade_offset
+            y += self.cascade_offset
+
     def use_tabs(self, tf):
         pass
 

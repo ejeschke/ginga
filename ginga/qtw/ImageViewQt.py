@@ -465,7 +465,7 @@ class ImageViewEvent(ImageViewQt):
         self.last_data_x = 0
         self.last_data_y = 0
         # Does widget accept focus when mouse enters window
-        self.follow_focus = True
+        self.enter_focus = False
 
         # Define cursors
         for curname, filename in (('pan', 'openHandCursor.png'),
@@ -535,8 +535,8 @@ class ImageViewEvent(ImageViewQt):
     def get_keyTable(self):
         return self._keytbl
 
-    def set_follow_focus(self, tf):
-        self.follow_focus = tf
+    def set_enter_focus(self, tf):
+        self.enter_focus = tf
 
     def map_event(self, widget, event):
         rect = widget.geometry()
@@ -551,7 +551,7 @@ class ImageViewEvent(ImageViewQt):
         return self.make_callback('focus', hasFocus)
 
     def enter_notify_event(self, widget, event):
-        if self.follow_focus:
+        if self.enter_focus:
             widget.setFocus()
         return self.make_callback('enter')
 

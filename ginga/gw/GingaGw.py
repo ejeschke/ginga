@@ -377,7 +377,7 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         canvas.enable_draw(False)
         fi.set_canvas(canvas)
 
-        fi.set_follow_focus(settings.get('follow_focus', True))
+        fi.set_enter_focus(settings.get('enter_focus', False))
         fi.enable_auto_orient(True)
 
         fi.add_callback('motion', self.motion_cb)
@@ -546,6 +546,7 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         cbox.append_text("Grid")
         cbox.append_text("Tabs")
         cbox.append_text("MDI")
+        cbox.append_text("Stack")
         cbox.set_index(0)
 
         cbox = b.workspace
@@ -753,7 +754,7 @@ class GingaView(GwMain.GwMain, Widgets.Application):
             except KeyError:
                 pass
 
-            d = { 0: 'grid', 1: 'nb', 2: 'mdi' }
+            d = { 0: 'grid', 1: 'tabs', 2: 'mdi', 3: 'stack' }
             wstype = d[idx]
             idx = b.workspace.get_index()
             in_space = names[idx]

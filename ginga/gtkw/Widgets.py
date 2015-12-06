@@ -31,6 +31,8 @@ class WidgetBase(Callback.Callbacks):
         super(WidgetBase, self).__init__()
 
         self.widget = None
+        # external data can be attached here
+        self.extdata = Bunch.Bunch()
 
     def get_widget(self):
         return self.widget
@@ -54,6 +56,9 @@ class WidgetBase(Callback.Callbacks):
 
     def hide(self):
         self.widget.hide()
+
+    def focus(self):
+        self.widget.grab_focus()
 
     def resize(self, width, height):
         self.widget.set_size_request(width, height)
@@ -1089,6 +1094,8 @@ class TabWidget(ContainerBase):
         if self.detachable:
             self.widget.set_tab_detachable(child_w, True)
         self.widget.show_all()
+        # attach title to child
+        child.extdata.tab_title = title
 
     def get_index(self):
         return self.widget.get_current_page()
@@ -1136,6 +1143,63 @@ class MDIWidget(TabWidget):
     def use_tabs(self, tf):
         pass
 
+
+class MDIWidget2(ContainerBase):
+
+    def __init__(self, tabpos='top', mode='tabs'):
+        super(MDIWidget2, self).__init__()
+
+        self.mode = 'tabs'
+        self.true_mdi = False
+
+        sw = gtk.ScrolledWindow()
+        sw.set_border_width(2)
+        sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+        self.widget = sw
+        self.mdi_w = GtkHelp.MDIWidget()
+        sw.add(self.mdi_w)
+
+    def get_mode(self):
+        return self.mode
+
+    def set_mode(self, mode):
+        pass
+
+    def add_widget(self, child, title=''):
+        self.add_ref(child)
+        child_w = child.get_widget()
+        label = gtk.Label(title)
+        self.mdi_w.append_page(child_w, label)
+        #self.mdi_w.show_all()
+        # attach title to child
+        child.extdata.tab_title = title
+
+    def _cb_redirect(self, nbw, gptr, index):
+        child = self.index_to_widget(index)
+        self.make_callback('page-switch', child)
+
+    def get_index(self):
+        return self.mdi_w.get_current_page()
+
+    def set_index(self, idx):
+        self.mdi_w.set_current_page(idx)
+
+    def index_of(self, child):
+        return self.mdi_w.page_num(child.get_widget())
+
+    def index_to_widget(self, idx):
+        """Returns child corresponding to `idx`"""
+        nchild = self.mdi_w.get_nth_page(idx)
+        return self._native_to_child(nchild)
+
+    def tile_panes(self):
+        self.mdi_w.tile_pages()
+
+    def cascade_panes(self):
+        self.mdi_w.cascade_pages()
+
+    def use_tabs(self, tf):
+        pass
 
 class ScrollArea(ContainerBase):
     def __init__(self):
@@ -1810,35 +1874,5 @@ def get_oriented_box(container, scrolled=True, fill=False):
         sw = box2
 
     return box1, sw, orientation
-
-def add_context_menu(widget, menu):
-    qt_w = widget.get_widget()
-    menu_w = menu.get_widget()
-
-    def bp_event(self, widget, event, name):
-        # event.button, event.x, event.y
-        bnch = self.active[name]
-        if event.button == 1:
-            return self.set_focus(name)
-
-        elif event.button == 3:
-            if gtksel.have_gtk3:
-                return bnch.menu.popup(None, None, None, None,
-                                       event.button, event.time)
-            else:
-                return bnch.menu.popup(None, None, None,
-                                       event.button, event.time)
-
-        return False
-
-def clickable_label(widget, fn_cb):
-    # Special hacks for making a label into a button-type item
-    ## widget.setSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Minimum)
-    ## widget.setFrameStyle(QtGui.QFrame.Box | QtGui.QFrame.Raised)
-
-    ## # better than making a whole new subclass just to get a label to
-    ## # respond to a mouse click
-    ## widget.mousePressEvent = lambda event: fn_cb()
-    pass
 
 #END

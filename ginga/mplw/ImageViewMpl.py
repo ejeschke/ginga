@@ -393,7 +393,7 @@ class ImageViewEvent(ImageViewMpl):
         self.last_data_x = 0
         self.last_data_y = 0
         # Does widget accept focus when mouse enters window
-        self.follow_focus = True
+        self.enter_focus = False
 
         # @$%&^(_)*&^ gnome!!
         self._keytbl = {
@@ -473,20 +473,20 @@ class ImageViewEvent(ImageViewMpl):
     def get_keyTable(self):
         return self._keytbl
 
-    def set_follow_focus(self, tf):
-        self.follow_focus = tf
+    def set_enter_focus(self, tf):
+        self.enter_focus = tf
 
     def focus_event(self, event, hasFocus):
         return self.make_callback('focus', hasFocus)
 
     def enter_notify_event(self, event):
-        if self.follow_focus:
+        if self.enter_focus:
             self.focus_event(event, True)
         return self.make_callback('enter')
 
     def leave_notify_event(self, event):
         self.logger.debug("leaving widget...")
-        if self.follow_focus:
+        if self.enter_focus:
             self.focus_event(event, False)
         return self.make_callback('leave')
 

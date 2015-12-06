@@ -44,6 +44,8 @@ class WidgetBase(Callback.Callbacks):
 
         self.widget = None
         self.changed = False
+        # external data can be attached here
+        self.extdata = Bunch.Bunch()
         # generic attributes of widgets
         self.enabled = True
         self.width = 400
@@ -82,6 +84,9 @@ class WidgetBase(Callback.Callbacks):
 
     def resize(self, width, height):
         self.width, self.height = width, height
+
+    def focus(self):
+        pass
 
     def show(self):
         pass
@@ -836,6 +841,8 @@ class TabWidget(ContainerBase):
     def add_widget(self, child, title=''):
         self.add_ref(child)
         self.titles.append(title)
+        # attach title to child
+        child.extdata.tab_title = title
 
     def get_index(self):
         return self.index

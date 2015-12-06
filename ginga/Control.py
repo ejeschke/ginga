@@ -269,8 +269,11 @@ class GingaControl(Callback.Callbacks):
         elif keyname == '>':
             self.collapse_pane('right')
         elif keyname == 'n':
-            nb = self.ds.get_nb('Channels')
-            nb.to_next()
+            self.next_channel()
+        elif keyname == 'j':
+            self.cycle_workspace_type()
+        elif keyname == 'k':
+            self.add_channel_auto()
         ## elif keyname == 'escape':
         ##     self.reset_viewer()
         elif keyname in ('up',):
@@ -792,28 +795,49 @@ class GingaControl(Callback.Callbacks):
 
     def get_current_workspace(self):
         # TODO: track current workspace
-        return self.ds.get_nb('channels')
+        return self.ds.get_ws('channels')
 
     def prev_channel(self):
         ws = self.get_current_workspace()
         ws.to_previous()
+        idx = ws.nb.get_index()
+        child = ws.nb.index_to_widget(idx)
+        chname = child.extdata.tab_title
+        self.change_channel(chname, raisew=True)
 
     def next_channel(self):
         ws = self.get_current_workspace()
         ws.to_next()
+        idx = ws.nb.get_index()
+        child = ws.nb.index_to_widget(idx)
+        chname = child.extdata.tab_title
+        self.change_channel(chname, raisew=True)
+
+    def add_channel_auto(self):
+        ws = self.get_current_workspace()
+        chname = self.make_channel_name('Image')
+        self.add_channel(chname, workspace=ws.name)
+
+    def configure_workspace(self, wstype):
+        ws = self.get_current_workspace()
+        ws.configure_wstype(wstype)
+
+    def cycle_workspace_type(self):
+        ws = self.get_current_workspace()
+        ws.cycle_wstype()
 
     def add_workspace(self, wsname, wstype, inSpace='channels'):
 
-        bnch = self.ds.make_ws(name=wsname, group=1, wstype=wstype)
+        ws = self.ds.make_ws(name=wsname, group=1, wstype=wstype)
         if inSpace != 'top level':
-            self.ds.add_tab(inSpace, bnch.widget, 1, bnch.name)
+            self.ds.add_tab(inSpace, ws.widget, 1, ws.name)
         else:
             #width, height = 700, 800
             #self.ds.create_toplevel_ws(width, height, group=1)
-            self.ds.add_toplevel(bnch, bnch.name)
+            self.ds.add_toplevel(ws, ws.name)
 
-        if bnch.nb.has_callback('page-closed'):
-            bnch.nb.add_callback('page-closed', self.page_closed_cb, wsname)
+        if ws.widget.has_callback('page-closed'):
+            ws.widget.add_callback('page-closed', self.page_closed_cb, wsname)
 
         return True
 

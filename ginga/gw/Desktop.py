@@ -11,7 +11,7 @@ import time
 import math
 
 from ginga.misc import Bunch, Callback
-from ginga.gw import Widgets, GwHelp
+from ginga.gw import Widgets, GwHelp, Viewers
 
 class Desktop(Callback.Callbacks):
 
@@ -33,27 +33,23 @@ class Desktop(Callback.Callbacks):
 
     def make_ws(self, name, group=1, show_tabs=True, show_border=False,
                 detachable=False, tabpos=None, scrollable=True, closeable=False,
-                wstype='nb'):
+                wstype='tabs'):
+
+        if (wstype in ('nb', 'ws', 'tabs')) and (not show_tabs):
+            wstype = 'stack'
+
+        ws = Workspace(name=name, wstype=wstype,
+                       group=group, detachable=detachable)
+        ws.add_callback('page-switch', self.switch_page_cb)
+        ws.add_callback('page-detach', self.page_detach_cb)
+
+        nb = ws.nb
+
         if tabpos is None:
             tabpos = 'top'
 
-        if wstype == 'mdi':
-            nb = MDIWorkspace()
-
-        elif wstype == 'grid':
-            nb = GridWorkspace()
-
-        elif show_tabs:
-            nb = TabWorkspace(group=group, detachable=detachable)
+        if (wstype == 'tabs') and show_tabs:
             nb.set_tab_position(tabpos)
-            #nb.add_callback('page-move', self.page_move_cb)
-            nb.add_callback('page-detach', self.page_detach_cb, name)
-
-        else:
-            nb = StackWorkspace()
-
-        if nb.has_callback('page-switch'):
-            nb.add_callback('page-switch', self.switch_page_cb)
 
         ## vbox = Widgets.VBox()
         ## toolbar = Widgets.Toolbar(orientation='horizontal')
@@ -68,10 +64,8 @@ class Desktop(Callback.Callbacks):
         ## item.add_callback('activated',
         ##                   lambda *args: self.take_tab_cb(nb, args))
 
-        bnch = Bunch.Bunch(nb=nb, name=name, nbtype=wstype,
-                           widget=nb, group=group)
-        self.workspace[name] = bnch
-        return bnch
+        self.workspace[name] = ws
+        return ws
 
     def has_ws(self, name):
         return name in self.workspace
@@ -92,10 +86,10 @@ class Desktop(Callback.Callbacks):
     def get_wsnames(self, group=1):
         res = []
         for name in self.workspace.keys():
-            bnch = self.workspace[name]
+            ws = self.workspace[name]
             if group is None:
                 res.append(name)
-            elif group == bnch.group:
+            elif group == ws.group:
                 res.append(name)
         return res
 
@@ -111,14 +105,14 @@ class Desktop(Callback.Callbacks):
 
     def add_tab(self, wsname, widget, group, labelname, tabname=None,
                 data=None):
-        ws_w = self.get_nb(wsname)
+        ws = self.get_ws(wsname)
         self.tabcount += 1
         if not tabname:
             tabname = labelname
             if tabname in self.tab:
                 tabname = 'tab%d' % self.tabcount
 
-        ws_w.add_tab(widget, title=labelname)
+        ws.add_tab(widget, title=labelname)
         self.tab[tabname] = Bunch.Bunch(widget=widget, name=labelname,
                                         tabname=tabname, data=data,
                                         group=group)
@@ -126,8 +120,8 @@ class Desktop(Callback.Callbacks):
 
     def _find_nb(self, tabname):
         widget = self.tab[tabname].widget
-        for bnch in self.workspace.values():
-            nb = bnch.nb
+        for ws in self.workspace.values():
+            nb = ws.nb
             page_num = nb.index_of(widget)
             if page_num < 0:
                 continue
@@ -150,38 +144,30 @@ class Desktop(Callback.Callbacks):
         nb, index = self._find_nb(tabname)
         widget = self.tab[tabname].widget
         if (nb is not None) and (index >= 0):
-            nb.remove_tab(widget)
+            nb.remove(widget)
 
     def highlight_tab(self, tabname, onoff):
         nb, index = self._find_nb(tabname)
-        if nb and hasattr(nb, 'highlight_tab'):
+        if (nb is not None) and hasattr(nb, 'highlight_tab'):
             nb.highlight_tab(index)
 
-    def _add_toolbar(self, vbox):
+    def _add_toolbar(self, vbox, ws):
         toolbar = Widgets.Toolbar()
         vbox.add_widget(toolbar, stretch=0)
 
         # create a Workspace pulldown menu, and add it to the menu bar
-        winactn = toolbar.add_action("Workspace")
-
-        winmenu = Widgets.Menu()
-        def winmenu_popup(w, winmenu, toolbar):
-            try:
-                winmenu.popup(toolbar)
-            except Exception as e:
-                print(str(e))
-        winactn.add_callback('activated', winmenu_popup, winmenu, toolbar)
+        winmenu = toolbar.add_name("Workspace")
 
         item = winmenu.add_name("Take Tab")
         item.add_callback('activated',
-                          lambda *args: self.take_tab_cb(bnch.nb, args))
+                          lambda *args: self.take_tab_cb(ws.widget, args))
 
         ## winmenu.add_separator()
 
         ## closeitem = winmenu.add_name("Close")
         ## #bnch.widget.closeEvent = lambda event: self.close_page_cb(bnch, event)
         ## closeitem.add_callback('activated',
-        ##                        lambda *args: self._close_page(bnch))
+        ##                        lambda *args: self._close_page(ws))
 
     def add_toplevel(self, bnch, wsname, width=700, height=700):
         topw = self.app.make_window(title=wsname)
@@ -206,12 +192,12 @@ class Desktop(Callback.Callbacks):
 
         # TODO: this needs to be more sophisticated
         ## root.set_title(wsname)
-        bnch = self.make_ws(wsname, wstype='nb')
+        ws = self.make_ws(wsname, wstype='tabs')
 
         vbox = Widgets.VBox()
         vbox.set_border_width(0)
 
-        self._add_toolbar(vbox)
+        self._add_toolbar(vbox, ws)
 
         vbox.add_widget(bnch.widget)
         root.set_widget(vbox)
@@ -234,37 +220,43 @@ class Desktop(Callback.Callbacks):
 
         return _foo
 
-    def _close_page(self, bnch):
-        num_children = bnch.nb.count()
+    def _close_page(self, ws):
+        num_children = ws.widget.num_children()
         if num_children == 0:
-            del self.workspace[bnch.name]
-            root = bnch.root
+            del self.workspace[ws.name]
+            root = ws.root
             bnch.root = None
             root.delete()
         return True
 
-    ## def close_page_cb(self, bnch, event):
-    ##     num_children = bnch.nb.count()
+    ## def close_page_cb(self, ws, event):
+    ##     num_children = bnch.ws.num_children()
     ##     if num_children == 0:
-    ##         del self.workspace[bnch.name]
-    ##         #bnch.root.destroy()
+    ##         del self.workspace[ws.name]
+    ##         #ws.root.destroy()
     ##         event.accept()
     ##     else:
     ##         event.ignore()
     ##     return True
 
-    def page_detach_cb(self, nbw, child, wsname):
+    def page_detach_cb(self, ws, child):
         try:
             width, height = child.get_size()
 
             wsname = str(time.time())
-            bnch = self.create_toplevel_ws(wsname, width, height+100)
+            ws = self.create_toplevel_ws(wsname, width, height+100)
 
-            bnch.nb.add_widget(child, title='FOO')
+            # get title of child
+            try:
+                title = child.extdata['tab_title']
+            except KeyError:
+                title = 'No Title'
+
+            ws.add_tab(child, title=title)
         except Exception as e:
             print(str(e))
 
-    def switch_page_cb(self, nbw, child):
+    def switch_page_cb(self, ws, child):
         self.logger.debug("page switch: %s" % str(child))
         bnch = self._find_tab(child)
         if bnch is not None:
@@ -314,7 +306,7 @@ class Desktop(Callback.Callbacks):
             params = Bunch.Bunch(name=None, title=None, height=-1,
                                  width=-1, group=1, show_tabs=True,
                                  show_border=False, scrollable=True,
-                                 detachable=False, wstype='nb',
+                                 detachable=False, wstype='tabs',
                                  tabpos='top')
             params.update(paramdict)
 
@@ -323,14 +315,14 @@ class Desktop(Callback.Callbacks):
 
             elif kind == 'ws':
                 group = int(params.group)
-                bnch = self.make_ws(params.name, group=group,
+                ws = self.make_ws(params.name, group=group,
                                       show_tabs=params.show_tabs,
                                       show_border=params.show_border,
                                       detachable=params.detachable,
                                       tabpos=params.tabpos,
                                       wstype=params.wstype,
                                       scrollable=params.scrollable)
-                widget = bnch.widget
+                widget = ws.widget
                 #debug(widget)
 
             # If a title was passed as a parameter, then make a frame to
@@ -344,7 +336,7 @@ class Desktop(Callback.Callbacks):
 
             #process_common_params(widget, params)
 
-            if (kind in ('ws', 'mdi', 'grid')) and (len(args) > 0):
+            if (kind in ('ws', 'mdi', 'grid', 'stack')) and (len(args) > 0):
                 # <-- Workspace specified a sub-layout.  We expect a list
                 # of tabname, layout pairs--iterate over these and add them
                 # to the workspace as tabs.
@@ -511,65 +503,139 @@ class Desktop(Callback.Callbacks):
 
     ##### WORKSPACES #####
 
-class WorkspaceMixin(object):
+class Workspace(Widgets.WidgetBase):
+
+    def __init__(self, name, wstype='tab', group=0, detachable=False):
+        super(Workspace, self).__init__()
+
+        self.name = name
+        self.wstype = wstype
+        self.wstypes = ['tabs', 'mdi', 'stack', 'grid']
+        self.vbox = Widgets.VBox()
+        # for now
+        self.widget = self.vbox
+        self.nb = None
+        self.group = group
+        self.detachable = detachable
+
+        self._set_wstype(wstype)
+        self.vbox.add_widget(self.nb, stretch=1)
+
+        for name in ('page-switch', 'page-detach'):
+            self.enable_callback(name)
+
+    def _set_wstype(self, wstype):
+        if wstype in ('tabs', 'nb', 'ws'):
+            wstype = 'tabs'
+            self.nb = Widgets.TabWidget(detachable=self.detachable,
+                                            group=self.group)
+        elif wstype == 'mdi':
+            self.nb = Widgets.MDIWidget(mode='mdi')
+
+        elif wstype == 'stack':
+            self.nb = Widgets.StackWidget()
+
+        elif wstype == 'grid':
+            self.nb = SymmetricGridWidget()
+
+        if self.nb.has_callback('page-switch'):
+            self.nb.add_callback('page-switch', self._switch_page_cb)
+        if self.nb.has_callback('page-detach'):
+            self.nb.add_callback('page-detach', self._detach_page_cb)
+
+        self.wstype = wstype
+
+    def _switch_page_cb(self, nb, child):
+        self.focus_index()
+        self.make_callback('page-switch', child)
+
+    def _detach_page_cb(self, nb, child):
+        self.make_callback('page-detach', child)
+
+    def configure_wstype(self, wstype):
+        old_widget = self.nb
+        self.vbox.remove(old_widget)
+
+        # remember which tab was on top
+        idx = old_widget.get_index()
+
+        self._set_wstype(wstype)
+        self.vbox.add_widget(self.nb, stretch=1)
+
+        for child in list(old_widget.get_children()):
+            # TODO: sort by previous index so they get added to the
+            # new widget in the same order
+            title = child.extdata.get('tab_title', '')
+            old_widget.remove(child)
+            self.nb.add_widget(child, title=title)
+            child.show()
+
+        # restore focus to widget that was on top
+        if idx >= 0:
+            self.nb.set_index(idx)
+        self.focus_index()
+
+    def cycle_wstype(self):
+        idx = self.wstypes.index(self.wstype)
+        idx = (idx + 1) % len(self.wstypes)
+        wstype = self.wstypes[idx]
+        self.configure_wstype(wstype)
+
+    def focus_index(self):
+        def _f(widget):
+            # TODO: this probably just ought to check whether a widget
+            # *can take* focus
+            if isinstance(widget, Viewers.GingaViewerWidget):
+                widget.focus()
+                return True
+            # widget can't take focus.  If it is a container widget,
+            # check its children
+            if isinstance(widget, Widgets.ContainerBase):
+                for child in widget.get_children():
+                    if _f(child):
+                        return True
+                return False
+            return False
+
+        cur_idx = self.nb.get_index()
+        child = self.nb.index_to_widget(cur_idx)
+        _f(child)
 
     def to_next(self):
-        num_tabs = self.num_children()
-        cur_idx = self.get_index()
+        num_tabs = self.nb.num_children()
+        cur_idx = self.nb.get_index()
         new_idx = (cur_idx + 1) % num_tabs
-        self.set_index(new_idx)
+        self.nb.set_index(new_idx)
+        self.focus_index()
 
     def to_previous(self):
-        num_tabs = self.num_children()
-        new_idx = self.get_index() - 1
+        num_tabs = self.nb.num_children()
+        new_idx = self.nb.get_index() - 1
         if new_idx < 0:
             new_idx = max(num_tabs - 1, 0)
-        self.set_index(new_idx)
+        self.nb.set_index(new_idx)
+        self.focus_index()
+
+    def add_tab(self, child, title=''):
+        self.nb.add_widget(child, title=title)
+
+    def remove_tab(self, child):
+        self.nb.remove(child)
 
 
-class TabWorkspace(Widgets.TabWidget, WorkspaceMixin):
-
-    def __init__(self, detachable=False, group=0):
-        super(TabWorkspace, self).__init__(detachable=detachable, group=group)
-
-    def add_tab(self, widget, title=''):
-        self.add_widget(widget, title=title)
-
-    def remove_tab(self, widget):
-        self.remove(widget)
-
-
-class StackWorkspace(Widgets.StackWidget, WorkspaceMixin):
+class SymmetricGridWidget(Widgets.GridBox):
+    """Custom widget for grid-type workspace that has the API of a
+    tab-like widget.
+    """
 
     def __init__(self):
-        super(StackWorkspace, self).__init__()
-
-    def add_tab(self, widget, title=''):
-        self.add_widget(widget)
-
-    def remove_tab(self, widget):
-        self.remove(widget)
-
-
-class MDIWorkspace(Widgets.MDIWidget, WorkspaceMixin):
-
-    def __init__(self):
-        super(MDIWorkspace, self).__init__(mode='mdi')
-
-    def add_tab(self, widget, title=''):
-        self.add_widget(widget, title=title)
-
-    def remove_tab(self, widget):
-        self.remove(widget)
-
-
-class GridWorkspace(Widgets.GridBox, WorkspaceMixin):
-
-    def __init__(self):
-        super(GridWorkspace, self).__init__()
+        super(SymmetricGridWidget, self).__init__()
 
         self.set_margins(0, 0, 0, 0)
         self.set_spacing(2)
+        self.cur_index = 0
+
+        self.enable_callback('page-switch')
 
     def _relayout(self, widgets):
         # remove all the old widgets
@@ -591,28 +657,36 @@ class GridWorkspace(Widgets.GridBox, WorkspaceMixin):
                 index = i*cols + j
                 if index < num_widgets:
                     child = widgets[index]
-                    self.add_widget(child, i, j, stretch=1)
+                    super(SymmetricGridWidget, self).add_widget(child,
+                                                                i, j, stretch=1)
 
-    def add_tab(self, widget, title=''):
+    def add_widget(self, child, title=''):
         widgets = list(self.get_children())
-        widgets.append(widget)
+        widgets.append(child)
+        # attach title to child
+        child.extdata.tab_title = title
 
         self._relayout(widgets)
 
-
-    def remove_tab(self, widget):
-        self.remove(widget)
+    def remove(self, child, delete=False):
+        super(SymmetricGridWidget, self).remove(child)
 
         widgets = list(self.get_children())
+
         self._relayout(widgets)
 
     def get_index(self):
         return self.cur_index
 
     def set_index(self, idx):
+        old_index = self.cur_index
         if 0 <= idx < self.num_children():
             self.cur_index = idx
-            # TODO: focus widget
+            child = self.children[idx]
+            #child.focus()
+
+            if old_index != idx:
+                self.make_callback('page-switch', child)
 
     def index_of(self, child):
         children = self.get_children()
