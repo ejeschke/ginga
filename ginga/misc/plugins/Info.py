@@ -41,6 +41,8 @@ class Info(GingaPlugin.GlobalPlugin):
         sw = Widgets.ScrollArea()
 
         vbox = Widgets.VBox()
+        sw.set_widget(vbox)
+
         captions = (('Name:', 'label', 'Name', 'llabel'),
                     ('Object:', 'label', 'Object', 'llabel'),
                     ('X:', 'label', 'X', 'llabel'),
@@ -61,12 +63,14 @@ class Info(GingaPlugin.GlobalPlugin):
         row.set_border_width(0)
         row.add_widget(w, stretch=0)
         row.add_widget(Widgets.Label(''), stretch=1)
-        col.add_widget(row, stretch=1)
+        col.add_widget(row, stretch=0)
         #col.add_widget(Widgets.Label(''), stretch=1)
         sw2 = Widgets.ScrollArea()
         sw2.set_widget(col)
-        sw2.cfg_expand(1|2|4, 8)
-        vbox.add_widget(sw2, stretch=1)
+        vbox.add_widget(sw2, stretch=2)
+
+        # stretcher
+        vbox.add_widget(Widgets.Label(''), stretch=1)
 
         captions = (('Zoom:', 'label', 'Zoom', 'llabel'),
                     ('Cut Low:', 'label', 'Cut Low Value', 'llabel',
@@ -88,19 +92,20 @@ class Info(GingaPlugin.GlobalPlugin):
         b.cut_levels.set_tooltip("Set cut levels manually")
         b.auto_levels.set_tooltip("Set cut levels by algorithm")
         b.cut_low.set_tooltip("Set low cut level (press Enter)")
+        b.cut_low_value.set_text('')
         b.cut_high.set_tooltip("Set high cut level (press Enter)")
+        b.cut_high_value.set_text('')
+        b.cut_new.set_text('')
+        b.zoom_new.set_text('')
+        b.center_new.set_text('')
 
         row = Widgets.HBox()
         row.set_spacing(0)
         row.set_border_width(0)
         row.add_widget(w, stretch=0)
-        row.add_widget(Widgets.Label(''), stretch=1)
-        vbox.add_widget(row, stretch=1)
+        ## row.add_widget(Widgets.Label(''), stretch=1)
+        vbox.add_widget(row, stretch=0)
 
-        # stretcher
-        vbox.add_widget(Widgets.Label(''), stretch=1)
-
-        sw.set_widget(vbox)
         return sw, b
 
     def add_channel(self, viewer, chinfo):

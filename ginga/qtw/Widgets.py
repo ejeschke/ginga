@@ -1231,11 +1231,14 @@ class ScrollArea(ContainerBase):
 
         self.widget = QtGui.QScrollArea()
         self.widget.setWidgetResizable(True)
+        self.widget._resizeEvent = self.widget.resizeEvent
         self.widget.resizeEvent = self._resize_cb
 
         self.enable_callback('configure')
 
     def _resize_cb(self, event):
+        self.widget._resizeEvent(event)
+
         rect = self.widget.geometry()
         x1, y1, x2, y2 = rect.getCoords()
         width = x2 - x1

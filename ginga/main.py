@@ -183,7 +183,7 @@ class ReferenceViewer(object):
                           default=None,
                           help="Prefer FITS I/O module NAME")
         optprs.add_option("-g", "--geometry", dest="geometry",
-                          default='1500x900', metavar="GEOM",
+                          default='1440x900+50+50', metavar="GEOM",
                           help="X geometry for initial size and placement")
         optprs.add_option("--log", dest="logfile", metavar="FILE",
                           help="Write logging output to FILE")

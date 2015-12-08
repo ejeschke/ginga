@@ -40,8 +40,8 @@ class Pan(GingaPlugin.GlobalPlugin):
         # share canvas with channel viewer?
         self.use_shared_canvas = self.settings.get('use_shared_canvas', False)
 
-        self._wd = 300
-        self._ht = 300
+        self._wd = 200
+        self._ht = 200
 
     def build_gui(self, container):
         nb = Widgets.StackWidget()

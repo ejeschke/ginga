@@ -43,8 +43,8 @@ class Zoom(GingaPlugin.GlobalPlugin):
         self.zoom_amount = self.settings.get('zoom_amount', self.default_zoom)
         self.refresh_interval = self.settings.get('refresh_interval', 0.02)
 
-        self._wd = 300
-        self._ht = 300
+        self._wd = 200
+        self._ht = 200
 
         fv.add_callback('add-channel', self.add_channel)
         fv.add_callback('active-image', self.focus_cb)
@@ -83,8 +83,6 @@ class Zoom(GingaPlugin.GlobalPlugin):
         iw.resize(self._wd, self._ht)
         vpaned = Widgets.Splitter(orientation=orientation)
         vpaned.add_widget(iw)
-        vpaned.add_widget(Widgets.Label(''))
-        vbox.add_widget(vpaned, stretch=1)
 
         vbox2 = Widgets.VBox()
         captions = (("Zoom Radius:", 'label', 'Zoom Radius', 'hscale'),
@@ -130,8 +128,12 @@ class Zoom(GingaPlugin.GlobalPlugin):
         spacer = Widgets.Label('')
         vbox2.add_widget(spacer, stretch=1)
 
-        vbox.add_widget(vbox2, stretch=0)
-        vbox.add_widget(Widgets.Label(''), stretch=1)
+        vpaned.add_widget(vbox2)
+        #vpaned.add_widget(Widgets.Label(''))
+
+        vbox.add_widget(vpaned, stretch=1)
+
+        #vbox.add_widget(Widgets.Label(''), stretch=1)
 
         container.add_widget(sw, stretch=1)
 

@@ -272,7 +272,7 @@ class GingaControl(Callback.Callbacks):
             self.next_channel()
         elif keyname == 'j':
             self.cycle_workspace_type()
-        elif keyname == 'k':
+        elif keyname == 'L':
             self.add_channel_auto()
         ## elif keyname == 'escape':
         ##     self.reset_viewer()
