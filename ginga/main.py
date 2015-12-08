@@ -477,7 +477,7 @@ class ReferenceViewer(object):
             settings.save()
 
         if (not options.nosplash) and (len(args) == 0) and showBanner:
-            ginga.banner()
+            ginga.banner(raiseTab=True)
 
         # Assume remaining arguments are fits files and load them.
         for imgfile in args:
