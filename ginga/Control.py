@@ -45,6 +45,9 @@ from ginga.misc import Bunch, Datasrc, Callback, Timer, Task, Future
 from ginga.util import catalog, iohelper
 from ginga.canvas.CanvasObject import drawCatalog
 
+# Version
+from ginga import __version__
+
 #pluginconfpfx = 'plugins'
 pluginconfpfx = None
 
@@ -1140,7 +1143,12 @@ class GingaControl(Callback.Callbacks):
         viewer.cut_levels(0, 255)
 
         #self.nongui_do(self.load_file, bannerFile, chname=chname)
-        self.load_file(bannerFile, chname=chname, wait=False)
+        image = self.load_file(bannerFile, chname=chname, wait=False)
+
+        # Insert Ginga version info
+        header = image.get_header()
+        header['VERSION'] = __version__
+
         if raiseTab:
             self.change_channel(chname)
             viewer.zoom_fit()
