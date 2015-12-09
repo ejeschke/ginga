@@ -243,6 +243,9 @@ class Histogram(GingaPlugin.LocalPlugin):
         return self.autocuts.calc_histogram(data, pct=pct, numbins=numbins)
 
     def redo(self):
+        if self.histtag is None:
+            return
+
         obj = self.canvas.getObjectByTag(self.histtag)
         if obj.kind != 'compound':
             return True
@@ -441,10 +444,26 @@ class Histogram(GingaPlugin.LocalPlugin):
         try:
             loval = float(self.w.cut_low.get_text())
             hival = float(self.w.cut_high.get_text())
+        except Exception as e:
+            errmsg = 'Error cutting levels: {0}'.format(str(e))
+            self.fv.showStatus(errmsg)
+            self.logger.error(errmsg)
+            return
 
+        # This is needed to avoid UserWarning from matplotlib
+        if loval == hival:
+            errmsg = 'Error cutting levels: loval==hival ({0})'.format(loval)
+            self.fv.showStatus(errmsg)
+            self.logger.error(errmsg)
+            return
+
+        try:
             reslvls = self.fitsimage.cut_levels(loval, hival)
         except Exception as e:
-            self.fv.showStatus("Error cutting levels: %s" % (str(e)))
+            errmsg = 'Error cutting levels: {0}'.format(str(e))
+            self.fv.showStatus(errmsg)
+            self.logger.error(errmsg)
+            return
 
         if self.xlimbycuts:
             self.redo()
