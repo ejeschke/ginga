@@ -228,7 +228,17 @@ class AstropyWCS2(BaseWCS):
         self.logger = logger
         self.header = None
         self.wcs = None
-        self.coordframe = None
+        self.coordframe = 'raw'
+
+    @property
+    def coordsys(self):
+        """
+        We include this here to make this compatible with the other WCSs.  But
+        "coordsys" is a bad name in astropy coordinates, and using the name
+        `coordframe` internally makes it clearer what's going on (see
+        http://astropy.readthedocs.org/en/latest/coordinates/definitions.html)
+        """
+        return self.coordframe
 
 
     def load_header(self, header, fobj=None):
@@ -240,22 +250,29 @@ class AstropyWCS2(BaseWCS):
         try:
             self.logger.debug("Trying to make astropy wcs object")
             self.wcs = pywcs.WCS(self.header, fobj=fobj, relax=True)
-            self.coordframe = wcs_to_celestial_frame(self.wcs)
+            try:
+                self.coordframe = wcs_to_celestial_frame(self.wcs)
+            except ValueError:
+                sysname = get_coord_system_name(self.header)
+                if sysname in ('raw', 'pixel'):
+                    self.coordframe = sysname
+                else:
+                    raise
 
         except Exception as e:
             self.logger.error("Error making WCS object: %s" % (str(e)))
             self.wcs = None
 
-    def vaild_transform_frames(self):
+    def valid_transform_frames(self):
         global coord_types
 
         frames = [f.name for f in astropy.coordinates.frame_transform_graph.frame_set
                   if self.coordframe.is_transformable_to(f)]
         coord_types = frames
 
-    def realize_frame(self, data):
+    def realize_frame_inplace(self, data):
         """
-        Wrap frame.realize_frame, modify self.coordframe to reflect the
+        Wrap frame.realize_frame_inplace, modify self.coordframe to reflect the
         new coords.
 
         .. note::
@@ -273,30 +290,29 @@ class AstropyWCS2(BaseWCS):
 
         """
         # If the representation is a subclass of Spherical we need to check for
-        # the new _unitrep attr to give the corresponding unit spherical subclass.
+        # the new _unit_representation attr to give the corresponding unit
+        # spherical subclass.
         if (issubclass(self.coordframe.representation,
                        astropy.coordinates.SphericalRepresentation) and
-            hasattr(self.coordframe.representation, '_unitrep')):
-            rep = self.coordframe.representation._unitrep(*data)
+            hasattr(self.coordframe.representation, '_unit_representation')):
+            rep = self.coordframe.representation._unit_representation(*data)
 
         elif issubclass(self.coordframe.representation,
                         astropy.coordinates.UnitSphericalRepresentation):
             rep = self.coordframe.representation(*data)
 
         else:
-            self.logger.info("Falling back to UnitSphericalRepresentation"
-                             " from {}".format(self.coordframe.representation))
             rep = astropy.coordinates.UnitSphericalRepresentation(*data)
 
-        if hasattr(self.coordframe._set_data, '_set_data'):
+        if hasattr(self.coordframe, '_set_data'):
             self.coordframe._set_data(rep)
         else:
             self.coordframe._data = rep
-            self.coordframe._rep_cache[self.coordframe._data.__class__.__name__,
-                                       False] = self.coordframe._data
 
-#            This will eventually work, once upstream PR is complete.
-#            self.coordframe = self.coordframe.realize_frame(rep, copy=False)
+            # need to reset the representation cache b/c we're changing reps
+            # directly setting it instead of clearing the dict because it might
+            # not exist at all if we're starting from an un-realized frame
+            self.coordframe._rep_cache = {(rep.__class__.__name__, False): rep}
 
 
     def spectral_coord(self, idxs, coords='data'):
@@ -338,7 +354,7 @@ class AstropyWCS2(BaseWCS):
             raise WCSError(e)
 
         # Update our frame with the new data
-        self.realize_frame(sky)
+        self.realize_frame_inplace(sky)
 
         return self.coordframe
 
@@ -351,7 +367,7 @@ class AstropyWCS2(BaseWCS):
             args += [0] * len(naxispath)
         skycrd = u.Quantity(args, unit=u.deg)
 
-        self.realize_frame(skycrd)
+        self.realize_frame_inplace(skycrd)
 
         return self.nativetopix(coords=coords, naxispath=naxispath)
 
@@ -380,7 +396,7 @@ class AstropyWCS2(BaseWCS):
 
     def pixtocoords(self, idxs, system=None, coords='data'):
 
-        if self.coordsys == 'raw':
+        if self.coordframe == 'raw':
             raise WCSError("No usable WCS")
 
         coord = self.pixtonative(idxs, coords=coords)
@@ -401,7 +417,7 @@ class AstropyWCS2(BaseWCS):
 
 
     def pixtosystem(self, idxs, system=None, coords='data'):
-        if self.coordsys == 'pixel':
+        if self.coordframe == 'pixel':
             x, y = self.pixtoradec(idxs, coords=coords)
             return (x, y)
 
@@ -470,7 +486,7 @@ class AstropyWCS(BaseWCS):
             self.wcs = pywcs.WCS(self.header, fobj=fobj, relax=True)
             self.logger.debug("made astropy wcs object")
 
-            self.coordsys = choose_coord_system(self.header)
+            self.coordsys = get_coord_system_name(self.header)
             self.logger.debug("Coordinate system is: %s" % (self.coordsys))
 
         except Exception as e:
@@ -640,15 +656,15 @@ class AstLibWCS(BaseWCS):
             self.logger.debug("Trying to make astLib wcs object")
             self.wcs = astWCS.WCS(hdr, mode='pyfits')
 
-            self.coordsys = self.choose_coord_system(self.header)
+            self.coordsys = self.get_coord_system_name(self.header)
             self.logger.debug("Coordinate system is: %s" % (self.coordsys))
 
         except Exception as e:
             self.logger.error("Error making WCS object: %s" % (str(e)))
             self.wcs = None
 
-    def choose_coord_system(self, header):
-        coordsys = choose_coord_system(header)
+    def get_coord_system_name(self, header):
+        coordsys = get_coord_system_name(header)
         coordsys = coordsys.upper()
         if coordsys in ('FK4',):
             return 'b1950'
@@ -763,7 +779,7 @@ class KapteynWCS(BaseWCS):
             self.wcs = kapwcs.Projection(self.header,
                                          skyout=self._skyout)
 
-            self.coordsys = choose_coord_system(self.header)
+            self.coordsys = get_coord_system(self.header)
             self.logger.debug("Coordinate system is: %s" % (self.coordsys))
 
         except Exception as e:
@@ -891,7 +907,7 @@ class StarlinkWCS(BaseWCS):
             # self.wcs is a FrameSet, with a Mapping
             #self.wcs.Report = True
 
-            self.coordsys = choose_coord_system(self.header)
+            self.coordsys = get_coord_system(self.header)
             self.logger.debug("Coordinate system is: %s" % (self.coordsys))
 
         except Exception as e:
@@ -1025,7 +1041,7 @@ class BareBonesWCS(BaseWCS):
         self.header.update(header.items())
 
         self.fix_bad_headers()
-        self.coordsys = choose_coord_system(self.header)
+        self.coordsys = get_coord_system(self.header)
 
     # WCS calculations
     def get_reference_pixel(self):
@@ -1158,7 +1174,7 @@ def choose_coord_units(header):
     return 'degree'
 
 
-def choose_coord_system(header):
+def get_coord_system_name(header):
     """Return an appropriate key code for the axes coordinate system by
     examining the FITS header.
     """
