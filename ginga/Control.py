@@ -1116,6 +1116,7 @@ class GingaControl(Callback.Callbacks):
 
             self.ds.remove_tab(chname)
             del self.channel[name]
+            self.prefs.remove_settings('channel_'+chname)
 
         self.make_callback('delete-channel', channel)
 

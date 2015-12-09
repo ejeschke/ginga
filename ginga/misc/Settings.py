@@ -218,6 +218,9 @@ class Preferences(object):
     def getSettings(self, category):
         return self.settings[category]
 
+    def remove_settings(self, category):
+        del self.settings[category]
+
     def get_dict_category(self, category):
         return self.settings[category].getDict()
 
