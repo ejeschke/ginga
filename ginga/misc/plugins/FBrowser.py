@@ -149,6 +149,9 @@ class FBrowser(GingaPlugin.LocalPlugin):
             self.browse_cb(self.entry)
             return
 
+        # Exclude directories
+        paths = [path for path in paths if os.path.isfile(path)]
+
         # Load files
         self.fv.gui_do(self.fitsimage.make_callback, 'drag-drop', paths)
 
