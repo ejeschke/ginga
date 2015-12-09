@@ -779,7 +779,7 @@ class KapteynWCS(BaseWCS):
             self.wcs = kapwcs.Projection(self.header,
                                          skyout=self._skyout)
 
-            self.coordsys = get_coord_system(self.header)
+            self.coordsys = get_coord_system_name(self.header)
             self.logger.debug("Coordinate system is: %s" % (self.coordsys))
 
         except Exception as e:
@@ -907,7 +907,7 @@ class StarlinkWCS(BaseWCS):
             # self.wcs is a FrameSet, with a Mapping
             #self.wcs.Report = True
 
-            self.coordsys = get_coord_system(self.header)
+            self.coordsys = get_coord_system_name(self.header)
             self.logger.debug("Coordinate system is: %s" % (self.coordsys))
 
         except Exception as e:
@@ -1041,7 +1041,7 @@ class BareBonesWCS(BaseWCS):
         self.header.update(header.items())
 
         self.fix_bad_headers()
-        self.coordsys = get_coord_system(self.header)
+        self.coordsys = get_coord_system_name(self.header)
 
     # WCS calculations
     def get_reference_pixel(self):
@@ -1196,7 +1196,6 @@ def get_coord_system_name(header):
 
         except KeyError:
             return 'raw'
-            #raise WCSError("Cannot determine appropriate coordinate system from FITS header")
 
     match = re.match(r'^GLON\-.*$', ctype)
     if match:
