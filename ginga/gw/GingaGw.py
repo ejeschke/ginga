@@ -685,7 +685,7 @@ class GingaView(GwMain.GwMain, Widgets.Application):
             w = self.ds.toplevels.pop()
             w.delete()
 
-    def channel_select_cb(self, index):
+    def channel_select_cb(self, widget, index):
         if index >= 0:
             chname = self.channelNames[index]
             self.logger.debug("Channel changed, index=%d chname=%s" % (

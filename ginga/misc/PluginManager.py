@@ -317,17 +317,6 @@ class PluginManagerBase(object):
             self.ds.remove_tab(pInfo.tabname)
             self.dispose_gui(pInfo)
 
-        ## # If there are no more dialogs present, raise Thumbs
-        ## nb = self.ds.get_nb('Dialogs')
-        ## num_dialogs = nb.get_n_pages()   # gtk
-        ## num_dialogs = len(nb.children()) # qt
-        ## if num_dialogs == 0:
-        ##     try:
-        ##         self.ds.raise_tab('Thumbs')
-        ##     except:
-        ##         # No Thumbs tab--OK
-        ##         pass
-
         if wasError:
             raise PluginManagerError(e)
 

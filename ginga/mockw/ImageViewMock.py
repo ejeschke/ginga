@@ -268,7 +268,7 @@ class ImageViewEvent(ImageViewMock):
         self.last_data_x = 0
         self.last_data_y = 0
         # Does widget accept focus when mouse enters window
-        self.enter_focus = False
+        self.enter_focus = self.t_.get('enter_focus', True)
 
         # Define cursors
         for curname, filename in (('pan', 'openHandCursor.png'),
