@@ -14,6 +14,7 @@ from ginga import GingaPlugin
 from ginga import AutoCuts
 from ginga.util import plots
 
+
 class Histogram(GingaPlugin.LocalPlugin):
 
     def __init__(self, fv, fitsimage):
@@ -55,8 +56,8 @@ class Histogram(GingaPlugin.LocalPlugin):
 
         fitssettings = fitsimage.get_settings()
         for name in ['cuts']:
-            fitssettings.getSetting(name).add_callback('set',
-                               self.cutset_ext_cb, fitsimage)
+            fitssettings.getSetting(name).add_callback(
+                'set', self.cutset_ext_cb, fitsimage)
         self.gui_up = False
 
     def build_gui(self, container):
@@ -86,9 +87,11 @@ class Histogram(GingaPlugin.LocalPlugin):
         vbox.add_widget(w, stretch=1)
 
         captions = (('Cut Low:', 'label', 'Cut Low', 'entry'),
-                    ('Cut High:', 'label', 'Cut High', 'entry', 'Cut Levels', 'button'),
+                    ('Cut High:', 'label', 'Cut High', 'entry',
+                     'Cut Levels', 'button'),
                     ('Auto Levels', 'button'),
-                    ('Log Histogram', 'checkbutton', 'Plot By Cuts', 'checkbutton'),
+                    ('Log Histogram', 'checkbutton',
+                     'Plot By Cuts', 'checkbutton'),
                     ('NumBins:', 'label', 'NumBins', 'entry'),
                     ('Full Image', 'button'),
                     )
@@ -99,10 +102,13 @@ class Histogram(GingaPlugin.LocalPlugin):
         b.auto_levels.set_tooltip("Set cut levels by algorithm")
         b.cut_low.set_tooltip("Set low cut level (press Enter)")
         b.cut_high.set_tooltip("Set high cut level (press Enter)")
-        b.log_histogram.set_tooltip("Use the log of the pixel values for the histogram (empty bins map to 10^-1)")
-        b.plot_by_cuts.set_tooltip("Only show the part of the histogram between the cuts")
+        b.log_histogram.set_tooltip("Use the log of the pixel values for the "
+                                    "histogram (empty bins map to 10^-1)")
+        b.plot_by_cuts.set_tooltip("Only show the part of the histogram "
+                                   "between the cuts")
         b.numbins.set_tooltip("Number of bins for the histogram")
-        b.full_image.set_tooltip("Use the full image for calculating the histogram")
+        b.full_image.set_tooltip("Use the full image for calculating the "
+                                 "histogram")
         b.numbins.set_text(str(self.numbins))
         b.cut_low.add_callback('activated', lambda w: self.cut_levels())
         b.cut_high.add_callback('activated', lambda w: self.cut_levels())
@@ -122,21 +128,24 @@ class Histogram(GingaPlugin.LocalPlugin):
         hbox = Widgets.HBox()
         btn1 = Widgets.RadioButton("Move")
         btn1.set_state(mode == 'move')
-        btn1.add_callback('activated', lambda w, val: self.set_mode_cb('move', val))
+        btn1.add_callback('activated',
+                          lambda w, val: self.set_mode_cb('move', val))
         btn1.set_tooltip("Choose this to position box")
         self.w.btn_move = btn1
         hbox.add_widget(btn1)
 
         btn2 = Widgets.RadioButton("Draw", group=btn1)
         btn2.set_state(mode == 'draw')
-        btn2.add_callback('activated', lambda w, val: self.set_mode_cb('draw', val))
+        btn2.add_callback('activated',
+                          lambda w, val: self.set_mode_cb('draw', val))
         btn2.set_tooltip("Choose this to draw a replacement box")
         self.w.btn_draw = btn2
         hbox.add_widget(btn2)
 
         btn3 = Widgets.RadioButton("Edit", group=btn1)
         btn3.set_state(mode == 'edit')
-        btn3.add_callback('activated', lambda w, val: self.set_mode_cb('edit', val))
+        btn3.add_callback('activated',
+                          lambda w, val: self.set_mode_cb('edit', val))
         btn3.set_tooltip("Choose this to edit a box")
         self.w.btn_edit = btn3
         hbox.add_widget(btn3)
@@ -208,6 +217,7 @@ class Histogram(GingaPlugin.LocalPlugin):
         ## except:
         ##     pass
         ##self.histtag = None
+
         # remove the canvas from the image
         p_canvas = self.fitsimage.get_canvas()
         try:
@@ -293,14 +303,15 @@ class Histogram(GingaPlugin.LocalPlugin):
                     y = numpy.choose(y > 0, (.1, y))
                 self.plot.plot(x, y, xtitle="Pixel value", ytitle="Number",
                                title="Pixel Value Distribution",
-                               color=colors[z], alpha=0.33, drawstyle='steps-post')
+                               color=colors[z], alpha=0.33,
+                               drawstyle='steps-post')
 
         # show cut levels
         loval, hival = self.fitsimage.get_cut_levels()
         self.loline = self.plot.ax.axvline(loval, 0.0, 0.99,
                                            linestyle='-', color='red')
         self.hiline = self.plot.ax.axvline(hival, 0.0, 0.99,
-                                            linestyle='-', color='green')
+                                           linestyle='-', color='green')
         if self.xlimbycuts:
             self.plot.ax.set_xlim(loval, hival)
 
@@ -345,9 +356,8 @@ class Histogram(GingaPlugin.LocalPlugin):
         except:
             pass
 
-        tag = canvas.add(self.dc.Rectangle(x1, y1, x2, y2,
-                                           color='cyan',
-                                           linestyle='dash'))
+        tag = canvas.add(self.dc.Rectangle(
+            x1, y1, x2, y2, color='cyan', linestyle='dash'))
 
         self.draw_cb(canvas, tag)
         return True
@@ -382,9 +392,8 @@ class Histogram(GingaPlugin.LocalPlugin):
             except:
                 pass
 
-            self.histtag = canvas.add(self.dc.Rectangle(x1, y1, x2, y2,
-                                                        color='cyan',
-                                                        linestyle='dash'))
+            self.histtag = canvas.add(self.dc.Rectangle(
+                x1, y1, x2, y2, color='cyan', linestyle='dash'))
         else:
             bbox.x1, bbox.y1, bbox.x2, bbox.y2 = x1, y1, x2, y2
             canvas.redraw(whence=3)
@@ -428,8 +437,8 @@ class Histogram(GingaPlugin.LocalPlugin):
         # Get the compound object that sits on the canvas.
         # Make sure edited rectangle was our histogram rectangle.
         c_obj = self.canvas.getObjectByTag(self.histtag)
-        if (c_obj.kind != 'compound') or (len(c_obj.objects) < 2) or \
-               (c_obj.objects[0] != obj):
+        if ((c_obj.kind != 'compound') or (len(c_obj.objects) < 2) or
+                (c_obj.objects[0] != obj)):
             return False
 
         # reposition other elements to match
@@ -441,32 +450,22 @@ class Histogram(GingaPlugin.LocalPlugin):
         return self.redo()
 
     def cut_levels(self):
+        reslvls = None
+
         try:
             loval = float(self.w.cut_low.get_text())
             hival = float(self.w.cut_high.get_text())
-        except Exception as e:
-            errmsg = 'Error cutting levels: {0}'.format(str(e))
-            self.fv.showStatus(errmsg)
-            self.logger.error(errmsg)
-            return
 
-        # This is needed to avoid UserWarning from matplotlib
-        if loval == hival:
-            errmsg = 'Error cutting levels: loval==hival ({0})'.format(loval)
-            self.fv.showStatus(errmsg)
-            self.logger.error(errmsg)
-            return
-
-        try:
             reslvls = self.fitsimage.cut_levels(loval, hival)
+
         except Exception as e:
             errmsg = 'Error cutting levels: {0}'.format(str(e))
             self.fv.showStatus(errmsg)
             self.logger.error(errmsg)
-            return
 
-        if self.xlimbycuts:
-            self.redo()
+        else:
+            if self.xlimbycuts:
+                self.redo()
 
         return reslvls
 
@@ -476,6 +475,7 @@ class Histogram(GingaPlugin.LocalPlugin):
     def cutset_ext_cb(self, setting, value, fitsimage):
         if not self.gui_up:
             return
+
         t_ = fitsimage.get_settings()
         loval, hival = t_['cuts']
 
@@ -487,7 +487,7 @@ class Histogram(GingaPlugin.LocalPlugin):
         self.loline = self.plot.ax.axvline(loval, 0.0, 0.99,
                                            linestyle='-', color='black')
         self.hiline = self.plot.ax.axvline(hival, 0.0, 0.99,
-                                            linestyle='-', color='black')
+                                           linestyle='-', color='black')
         self.w.cut_low.set_text(str(loval))
         self.w.cut_high.set_text(str(hival))
         #self.plot.fig.canvas.draw()
@@ -522,8 +522,7 @@ class Histogram(GingaPlugin.LocalPlugin):
         self.canvas.update_canvas()
 
     def set_mode_cb(self, mode, tf):
-        """Called when one of the Move/Draw/Edit radio buttons is selected.
-        """
+        """Called when one of the Move/Draw/Edit radio buttons is selected."""
         if tf:
             self.canvas.set_draw_mode(mode)
             if mode == 'edit':
