@@ -51,6 +51,9 @@ import ginga.toolkit as ginga_toolkit
 from ginga import AstroImage
 from ginga.util import paths
 
+# Catch warnings
+logging.captureWarnings(True)
+
 default_layout = ['seq', {},
                    ['vbox', dict(name='top', width=1520, height=900),
                     dict(row=['hbox', dict(name='menu')],
@@ -465,6 +468,10 @@ class ReferenceViewer(object):
                 logger.error("Error processing Ginga config file: %s" % (
                     str(e)))
                 logger.error("Traceback:\n%s" % (tb_str))
+
+        # Redirect warnings to logger
+        for hdlr in logger.handlers:
+            logging.getLogger('py.warnings').addHandler(hdlr)
 
         # Display banner the first time run, unless suppressed
         showBanner = True
