@@ -211,7 +211,7 @@ class PyFitsFileHandler(BaseFitsFileHandler):
 
         for kwd in header.keys():
             card = header.get_card(kwd)
-            hdu.header.update(card.key, card.value, comment=card.comment)
+            hdu.header[card.key] = (card.value, card.comment)
 
         fits_f.append(hdu)
         return fits_f
