@@ -734,16 +734,17 @@ class TreeView(WidgetBase):
         item = self._path_to_item(path)
 
         # A little painfully inefficient, can we do better than this?
-        font = QtGui.QFont()
+        font = QtHelp.QFont()
         if not onoff:
-            color = QtGui.QColor('black')
+            color = QtHelp.QColor('black')
         else:
             font.setBold(True)
-            color = QtGui.QColor(font_color)
+            color = QtHelp.QColor(font_color)
+        brush = QtHelp.QBrush(color)
 
         for i in range(item.columnCount()):
+            item.setForeground(i, brush)
             item.setFont(i, font)
-            item.setTextColor(i, color)
 
     def scroll_to_path(self, path):
         # TODO: this doesn't give an error, but does not seem to be

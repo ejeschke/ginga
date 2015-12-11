@@ -28,7 +28,7 @@ if toolkit in ('qt5', 'choose') and (not configured):
         from PyQt5 import QtWidgets as QtGui
         from PyQt5.QtGui import QImage, QColor, QFont, QPixmap, QIcon, \
              QCursor, QPainter, QPen, QPolygonF, QPolygon, QTextCursor, \
-             QDrag, QPainterPath
+             QDrag, QPainterPath, QBrush
         from PyQt5.QtCore import QItemSelectionModel
         from PyQt5.QtWidgets import QApplication
         have_pyqt5 = True
@@ -53,7 +53,8 @@ if toolkit in ('qt4', 'choose') and (not configured):
         from PyQt4 import QtCore, QtGui
         from PyQt4.QtGui import QImage, QColor, QFont, QPixmap, QIcon, \
              QCursor, QPainter, QPen, QPolygonF, QPolygon, QTextCursor, \
-             QDrag, QItemSelectionModel, QPainterPath, QApplication
+             QDrag, QItemSelectionModel, QPainterPath, QApplication, \
+             QBrush
         have_pyqt4 = True
         try:
             from PyQt4 import QtWebKit
