@@ -732,6 +732,10 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         w.delete()
         if rsp == 0:
             return
+        if len(self.channelNames) <= 1:
+            self.logger.error('Delete channel failed. Need at least one '
+                              'active channel.')
+            return
         self.delete_channel(chname)
         return True
 
