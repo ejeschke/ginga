@@ -44,15 +44,22 @@ class WidgetBase(Callback.Callbacks):
         self.widget.set_sensitive(tf)
 
     def get_size(self):
-        rect = self.widget.get_allocation()
-        x, y, wd, ht = rect.x, rect.y, rect.width, rect.height
-        return (wd, ht)
+        window = self.widget.get_window()
+        if window is not None:
+            rect = self.widget.get_allocation()
+            x, y, wd, ht = rect.x, rect.y, rect.width, rect.height
+            return wd, ht
+
+        # window isn't realized yet--return request size
+        wd, ht = self.widget.size_request()
+        return wd, ht
 
     def delete(self):
         self.widget.destroy()
 
     def show(self):
-        self.widget.show()
+        #self.widget.show()
+        self.widget.show_all()
 
     def hide(self):
         self.widget.hide()

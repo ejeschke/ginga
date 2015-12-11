@@ -229,16 +229,6 @@ class Desktop(Callback.Callbacks):
             root.delete()
         return True
 
-    ## def close_page_cb(self, ws, event):
-    ##     num_children = bnch.ws.num_children()
-    ##     if num_children == 0:
-    ##         del self.workspace[ws.name]
-    ##         #ws.root.destroy()
-    ##         event.accept()
-    ##     else:
-    ##         event.ignore()
-    ##     return True
-
     def page_detach_cb(self, ws, child):
         try:
             width, height = child.get_size()
@@ -291,9 +281,8 @@ class Desktop(Callback.Callbacks):
                 else:
                     height = params.height
                     h_exp = 1|4
-                widget.resize(width, height)
                 widget.cfg_expand(w_exp, h_exp)
-                #print((widget, width, height))
+                widget.resize(width, height)
 
             # User wants to place window somewhere
             if (params.xpos >= 0) and isinstance(widget, Widgets.WidgetBase):
@@ -446,21 +435,17 @@ class Desktop(Callback.Callbacks):
             process_common_params(widget, params)
             pack(widget)
 
-        # Sequence of separate items
+        # Sequence of separate top-level items
         def seq(params, cols, pack):
             def mypack(w):
                 w_top = self.app.make_window()
                 #w_top.cfg_expand(8, 8)
+                # Ask the size of the widget that wants to get packed
+                # and resize the top-level to fit
+                wd, ht = w.get_size()
+                w_top.resize(wd, ht)
                 w_top.set_widget(w)
                 self.toplevels.append(w_top)
-                ## def closeEvent(*args):
-                ##     #self.logger.debug("window %s closed" % str(w))
-                ##     self.toplevels.remove(w)
-                ##     w.deleteLater()
-                ##     if len(self.toplevels) == 0:
-                ##         self.make_callback('all-closed')
-
-                ## w.closeEvent = closeEvent
                 w_top.show()
 
             for dct in cols:

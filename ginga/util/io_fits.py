@@ -100,7 +100,7 @@ class PyFitsFileHandler(BaseFitsFileHandler):
             for card in header.ascardlist():
                 if len(card.key) == 0:
                     continue
-                ahdr.set_card(card.keyword, card.value, comment=card.comment)
+                ahdr.set_card(card.key, card.value, comment=card.comment)
 
     def load_hdu(self, hdu, ahdr, fobj=None, naxispath=None):
         data = hdu.data
