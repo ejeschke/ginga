@@ -22,6 +22,7 @@ else:
 import threading
 import logging
 import mimetypes
+from collections import deque
 import atexit, shutil
 
 import numpy
@@ -100,8 +101,8 @@ class GingaControl(Callback.Callbacks):
         self.cur_channel = None
         self.wscount = 0
         self.statustask = None
-        self.preloadLock = threading.RLock()
-        self.preloadList = []
+        self.preload_lock = threading.RLock()
+        self.preload_list = deque([], 4)
 
         # Create general preferences
         self.settings = self.prefs.createCategory('general')
@@ -725,22 +726,21 @@ class GingaControl(Callback.Callbacks):
         # Return the image
         return image
 
-    def add_preload(self, chname, imname, path, image_future=None):
-        bnch = Bunch.Bunch(chname=chname, imname=imname, path=path,
-                           image_future=image_future)
-        with self.preloadLock:
-            self.preloadList.append(bnch)
+    def add_preload(self, chname, image_info):
+        bnch = Bunch.Bunch(chname=chname, info=image_info)
+        with self.preload_lock:
+            self.preload_list.append(bnch)
         self.nongui_do(self.preload_scan)
 
     def preload_scan(self):
         # preload any pending files
         # TODO: do we need any throttling of loading here?
-        with self.preloadLock:
-            while len(self.preloadList) > 0:
-                bnch = self.preloadList.pop(0)
+        with self.preload_lock:
+            while len(self.preload_list) > 0:
+                bnch = self.preload_list.pop()
                 self.nongui_do(self.preload_file, bnch.chname,
-                               bnch.imname, bnch.path,
-                               image_future=bnch.image_future)
+                               bnch.info.name, bnch.info.path,
+                               image_future=bnch.info.image_future)
 
     def preload_file(self, chname, imname, path, image_future=None):
         # sanity check to see if the file is already in memory
@@ -1061,7 +1061,7 @@ class GingaControl(Callback.Callbacks):
                                       self.settings.get('numImages', 1))
         settings.setDefaults(switchnew=True, numImages=num_images,
                              raisenew=True, genthumb=True,
-                             sort_order='loadtime')
+                             preload_images=False, sort_order='loadtime')
 
         use_readout = not self.settings.get('share_readout', True)
 
@@ -1362,8 +1362,11 @@ class Channel(Callback.Callbacks):
 
         idx = image.get('idx', None)
         path = image.get('path', None)
+        image_loader = image.get('image_loader', None)
         image_future = image.get('image_future', None)
-        info = self.add_history(imname, path, image_future=image_future,
+        info = self.add_history(imname, path,
+                                image_loader=image_loader,
+                                image_future=image_future,
                                 idx=idx)
 
         #self.make_callback('add-image', self.name, image, info)
@@ -1380,10 +1383,19 @@ class Channel(Callback.Callbacks):
 
 
     def add_image_info(self, info):
+
+        image_loader = info.get('image_loader', self.fv.load_image)
+
+        # create an image_future if one does not exist
         image_future = info.get('image_future', None)
+        if (image_future is None) and (info.path is not None):
+            image_future = Future.Future()
+            image_future.freeze(image_loader, info.path)
+
         info = self.add_history(info.name, info.path,
+                                image_loader=image_loader,
                                 image_future=image_future)
-        self.fv.make_callback('add-image-info', info)
+        self.fv.make_callback('add-image-info', self, info)
 
     def get_image_info(self, imname):
         return self.image_index[imname]
@@ -1399,7 +1411,6 @@ class Channel(Callback.Callbacks):
 
         # switch to current image?
         if self.settings['switchnew']:
-            #and channel.switchfn(image):
             self.logger.debug("switching to new image '%s'" % (curname))
             self.switch_image(image)
 
@@ -1461,10 +1472,21 @@ class Channel(Callback.Callbacks):
             if self.hist_sort is not None:
                 self.history.sort(key=self.hist_sort)
 
-    def add_history(self, imname, path, idx=None, image_future=None):
+    def add_history(self, imname, path, idx=None,
+                    image_loader=None, image_future=None):
+
         if not (imname in self.image_index):
+
+            if image_loader is None:
+                image_loader = self.fv.load_image
+            # create an image_future if one does not exist
+            if (image_future is None) and (path is not None):
+                image_future = Future.Future()
+                image_future.freeze(image_loader, path)
+
             info = Bunch.Bunch(name=imname, path=path,
                                idx=idx,
+                               image_loader=image_loader,
                                image_future=image_future,
                                time_added=time.time())
             self._add_info(info)
@@ -1499,6 +1521,23 @@ class Channel(Callback.Callbacks):
 
                 self.fv.channel_image_updated(self, image)
 
+                # Check for preloading any images into memory
+                preload = self.settings.get('preload_images', False)
+                if not preload:
+                    return
+
+                # queue next and previous files for preloading
+                index = self.cursor
+                if index < len(self.history)-1:
+                    info = self.history[index+1]
+                    if info.path is not None:
+                        self.fv.add_preload(self.name, info)
+
+                if index > 0:
+                    info = self.history[index-1]
+                    if info.path is not None:
+                        self.fv.add_preload(self.name, info)
+
             else:
                 self.logger.debug("Apparently no need to set large fits image.")
 
@@ -1512,8 +1551,11 @@ class Channel(Callback.Callbacks):
             return
 
         if not (imname in self.image_index):
-            raise ControlError("No image by the name '%s' found" % (
+            errmsg = ("No image by the name '%s' found" % (
                 imname))
+            self.logger.error("Can't switch to image '%s': %s" % (
+                imname, errmsg))
+            raise ControlError(errmsg)
 
         # Do we have a way to reconstruct this image from a future?
         info = self.image_index[imname]
@@ -1569,5 +1611,6 @@ class Channel(Callback.Callbacks):
         self._configure_sort()
 
         self.history.sort(key=self.hist_sort)
+
 
 # END

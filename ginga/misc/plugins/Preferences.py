@@ -77,6 +77,9 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.t_.addDefaults(numImages=4)
         self.t_.getSetting('numImages').add_callback('set', self.set_buflen_ext_cb)
 
+        # preload images
+        self.t_.addDefaults(preload_images=False)
+
         self.icc_profiles = list(io_rgb.get_profiles())
         self.icc_profiles.insert(0, None)
         self.icc_intents = io_rgb.get_intents()
@@ -467,6 +470,7 @@ class Preferences(GingaPlugin.LocalPlugin):
 
         captions = (('Num Images:', 'label', 'Num Images', 'entryset'),
                     ('Sort Order:', 'label', 'Sort Order', 'combobox'),
+                    ('Preload Images', 'checkbutton'),
                     )
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
@@ -486,6 +490,11 @@ class Preferences(GingaPlugin.LocalPlugin):
         combobox.set_index(index)
         combobox.add_callback('activated', self.set_sort_cb)
         b.sort_order.set_tooltip("Sort order for images in channel")
+
+        preload_images = self.t_.get('preload_images', False)
+        self.w.preload_images.set_state(preload_images)
+        self.w.preload_images.add_callback('activated', self.set_preload_cb)
+        b.preload_images.set_tooltip("Preload adjacent images to speed up access")
 
         fr = Widgets.Frame()
         fr.set_widget(w)
@@ -896,6 +905,11 @@ class Preferences(GingaPlugin.LocalPlugin):
         name = self.sort_options[index]
         self.t_.set(sort_order=name)
 
+    def set_preload_cb(self, w, tf):
+        """This callback is invoked when the user checks the preload images
+        box in the preferences pane."""
+        self.t_.set(preload_images=tf)
+
     def set_icc_profile_cb(self, setting, idx):
         idx = self.w.output_icc_profile.get_index()
         output_profile_name = self.icc_profiles[idx]
@@ -1141,6 +1155,8 @@ class Preferences(GingaPlugin.LocalPlugin):
 
         num_images = prefs.get('numImages', 0)
         self.w.num_images.set_text(str(num_images))
+        prefs.setdefault('preload_images', False)
+        self.w.preload_images.set_state(prefs['preload_images'])
 
         # profile settings
         prefs.setdefault('profile_use_scale', False)

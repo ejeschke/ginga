@@ -8,7 +8,7 @@
 # Please see the file LICENSE.txt for details.
 #
 from ginga import GingaPlugin
-from ginga.misc import Bunch, Future
+from ginga.misc import Bunch
 
 from ginga.gw import Widgets
 import time
@@ -43,6 +43,7 @@ class Contents(GingaPlugin.GlobalPlugin):
         self._hl_path = set([])
 
         fv.add_callback('add-image', self.add_image_cb)
+        fv.set_callback('add-image-info', self.add_image_info_cb)
         fv.add_callback('remove-image', self.remove_image_cb)
         fv.add_callback('add-channel', self.add_channel_cb)
         fv.add_callback('delete-channel', self.delete_channel_cb)
@@ -65,6 +66,9 @@ class Contents(GingaPlugin.GlobalPlugin):
 
         self.gui_up = True
 
+    def stop(self):
+        self.gui_up = False
+
     def switch_image(self, widget, res_dict):
         chname = list(res_dict.keys())[0]
         img_dict = res_dict[chname]
@@ -77,13 +81,9 @@ class Contents(GingaPlugin.GlobalPlugin):
         self.fv.switch_name(chname, imname, path=path,
                             image_future=bnch.image_future)
 
-    def get_info(self, chname, name, image):
-        path = image.get('path', None)
-        future = image.get('image_future', None)
-        if future is None:
-            image_loader = image.get('loader', self.fv.load_image)
-            future = Future.Future()
-            future.freeze(image_loader, path)
+    def get_info(self, chname, name, image, info):
+        path = info.get('path', None)
+        future = info.get('image_future', None)
 
         bnch = Bunch.Bunch(CHNAME=chname, imname=name, path=path,
                            image_future=future)
@@ -133,7 +133,7 @@ class Contents(GingaPlugin.GlobalPlugin):
             fileDict = {}
             self.name_dict[chname] = fileDict
 
-        bnch = self.get_info(chname, name, image)
+        bnch = self.get_info(chname, name, image, image_info)
         fileDict[key] = bnch
 
         tree_dict = { chname: { name: bnch } }
@@ -288,8 +288,14 @@ class Contents(GingaPlugin.GlobalPlugin):
             self.update_highlights(self._hl_path, new_highlight)
             self._hl_path = new_highlight
 
-    def stop(self):
-        self.gui_up = False
+    def add_image_info_cb(self, viewer, channel, image_info):
+        chname = channel.name
+        image = None
+
+        # TODO: figure out what information to show for an image
+        # that is not yet been loaded
+        ## self.fv.gui_do(self.add_image_cb, viewer, chname, image,
+        ##                  image_info)
 
     def __str__(self):
         return 'contents'

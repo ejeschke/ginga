@@ -361,11 +361,12 @@ class FBrowser(GingaPlugin.LocalPlugin):
 
         # find out our channel
         chname = self.fv.get_channelName(self.fitsimage)
+        channel = self.fv.get_channelInfo(chname)
 
-        # Invoke the method in this channel's Thumbs plugin
-        # TODO: don't expose gpmon!
-        rsobj = self.fv.gpmon.getPlugin('Thumbs')
-        self.fv.nongui_do(rsobj.make_thumbs, chname, filelist)
+        for path in filelist:
+            name = self.fv.name_image_from_path(path)
+            info = Bunch.Bunch(name=name, path=path)
+            self.fv.nongui_do(channel.add_image_info, info)
 
     def start(self):
         self.win = None
