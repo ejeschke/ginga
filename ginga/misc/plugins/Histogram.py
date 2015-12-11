@@ -322,6 +322,7 @@ class Histogram(GingaPlugin.LocalPlugin):
 
         self.w.cut_low.set_text(str(loval))
         self.w.cut_high.set_text(str(hival))
+        self.plot.fig.tight_layout(pad=0.3)
         self.plot.fig.canvas.draw()
 
         self.fv.showStatus("Click or drag left mouse button to move region")
