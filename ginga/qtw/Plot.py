@@ -13,7 +13,6 @@ from ginga.qtw import QtHelp, Widgets
 from ginga.toolkit import toolkit
 
 if toolkit == 'qt5':
-    # qt5 backend is not yet released in matplotlib stable
     from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg \
          as FigureCanvas
 else:
@@ -26,19 +25,22 @@ class PlotWidget(Widgets.WidgetBase):
         super(PlotWidget, self).__init__()
 
         self.widget = FigureCanvas(plot.get_figure())
-        #self.widget.resizeEvent = self.resize_event
+        self.widget._resizeEvent = self.widget.resizeEvent
+        self.widget.resizeEvent = self.resize_event
         self.plot = plot
 
     def configure_window(self, wd, ht):
-        self.logger.debug("canvas resized to %dx%d" % (wd, ht))
         fig = self.plot.get_figure()
         fig.set_size_inches(float(wd) / fig.dpi, float(ht) / fig.dpi)
 
-    def resize_event(self, *args):
+    def resize_event(self, event):
         rect = self.widget.geometry()
         x1, y1, x2, y2 = rect.getCoords()
         width = x2 - x1
         height = y2 - y1
 
-        self.configure_window(width, height)
+        if width > 0 and height > 0:
+            self.configure_window(width, height)
+            self.widget._resizeEvent(event)
+
 #END

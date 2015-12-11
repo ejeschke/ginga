@@ -52,6 +52,7 @@ class WidgetBase(Callback.Callbacks):
 
         # window isn't realized yet--return request size
         wd, ht = self.widget.size_request()
+        wd, ht = max(0, wd), max(0, ht)
         return wd, ht
 
     def delete(self):
