@@ -24,6 +24,7 @@ import logging
 import mimetypes
 from collections import deque
 import atexit, shutil
+from datetime import datetime
 
 import numpy
 magic_tester = None
@@ -54,11 +55,15 @@ pluginconfpfx = None
 
 packageHome = os.path.split(sys.modules[__name__].__file__)[0]
 
+
 class ControlError(Exception):
     pass
 
-class GingaControl(Callback.Callbacks):
 
+class GingaControl(Callback.Callbacks):
+    """Main Ginga control.
+
+    """
     def __init__(self, logger, threadPool, module_manager, preferences,
                  ev_quit=None):
         Callback.Callbacks.__init__(self)
@@ -80,7 +85,7 @@ class GingaControl(Callback.Callbacks):
         # For callbacks
         for name in ('add-image', 'channel-change', 'remove-image',
                      'add-channel', 'delete-channel', 'field-info',
-                     'add-image-info', 'add-operation'):
+                     'add-image-info', 'add-operation', 'image-modified'):
             self.enable_callback(name)
 
         # Initialize the timer factory
@@ -134,7 +139,6 @@ class GingaControl(Callback.Callbacks):
 
         self.operations = []
 
-
     def get_ServerBank(self):
         return self.imgsrv
 
@@ -164,8 +168,7 @@ class GingaControl(Callback.Callbacks):
             info.y += off
 
         except Exception as e:
-            self.logger.warn("Can't get info under the cursor: %s" % (
-                str(e)))
+            self.logger.warn("Can't get info under the cursor: %s" % (str(e)))
             return
 
         self.make_callback('field-info', fitsimage, info)
@@ -248,8 +251,8 @@ class GingaControl(Callback.Callbacks):
         return True
 
     def focus_cb(self, fitsimage, tf, name):
-        """Called when _fitsimage_ gets (tf==True) or loses (tf==False)
-        the focus.
+        """Called when ``fitsimage`` gets ``(tf==True)`` or loses
+        ``(tf==False)`` the focus.
         """
         if not self.channel_follows_focus:
             return True
@@ -404,13 +407,15 @@ class GingaControl(Callback.Callbacks):
                         return ('image', 'fits')
 
             except Exception as e:
-                self.logger.warn("python-magic error: %s; falling back to 'mimetypes'" % (str(e)))
+                self.logger.warn("python-magic error: %s; falling back "
+                                 "to 'mimetypes'" % (str(e)))
 
         if typ is None:
             try:
                 typ, enc = mimetypes.guess_type(filepath)
             except Exception as e:
-                self.logger.warn("mimetypes error: %s; can't determine file type" % (str(e)))
+                self.logger.warn("mimetypes error: %s; can't determine "
+                                 "file type" % (str(e)))
 
         if typ:
             typ, subtyp = typ.split('/')
@@ -432,7 +437,8 @@ class GingaControl(Callback.Callbacks):
             typ, subtyp = self.guess_filetype(filepfx)
 
         except Exception as e:
-            self.logger.warn("error determining file type: %s; assuming 'image/fits'" % (str(e)))
+            self.logger.warn("error determining file type: %s; "
+                             "assuming 'image/fits'" % (str(e)))
             # Can't determine file type: assume and attempt FITS
             typ, subtyp = 'image', 'fits'
 
@@ -469,20 +475,20 @@ class GingaControl(Callback.Callbacks):
         self.logger.debug("Successfully loaded file into image object.")
         return image
 
-
     def get_fileinfo(self, filespec, dldir=None):
-        """
-        Break down a file specification into its components.
+        """Break down a file specification into its components.
 
         Parameters
         ----------
-        `filespec`: string
-            the path of the file to load (can be a URL)
+        filespec : str
+            The path of the file to load (can be a URL).
+
+        dldir
 
         Returns
         -------
-        res:
-            a Bunch object
+        res : `~ginga.misc.bunch.Bunch`
+
         """
         if dldir is None:
             dldir = self.tmpdir
@@ -510,10 +516,8 @@ class GingaControl(Callback.Callbacks):
 
         return info
 
-
     def name_image_from_path(self, path, idx=None):
         return iohelper.name_image_from_path(path, idx=idx)
-
 
     def load_file(self, filepath, chname=None, wait=True,
                   create_channel=True, display_image=True,
@@ -522,21 +526,30 @@ class GingaControl(Callback.Callbacks):
 
         Parameters
         ----------
-        `filepath`: string
-            the path of the file to load (can be a URL)
-        `chname`: string (optional)
-            the name of the channel in which to display the image
-        `display_image`: boolean (optional)
-            if not False, then will load the image
-        `wait`: boolean (optional)
-            if True, then wait for the file to be displayed before returning
-              (synchronous behavior)
-        `image_loader`: function (optional)
-            a special image loader, if provided
+        filepath : str
+            The path of the file to load (can be a URL).
+
+        chname : str, optional
+            The name of the channel in which to display the image.
+
+        wait : bool, optional
+            If `True`, then wait for the file to be displayed before returning
+            (synchronous behavior).
+
+        create_channel : bool, optional
+            Create channel.
+
+        display_image : bool, optional
+            If not `False`, then will load the image.
+
+        image_loader : func, optional
+            A special image loader, if provided.
+
         Returns
         -------
-        image:
-            the image object that was loaded
+        image
+            The image object that was loaded.
+
         """
         if not chname:
             channel = self.get_channelInfo()
@@ -575,7 +588,7 @@ class GingaControl(Callback.Callbacks):
         if image.get('path', None) is None:
             image.set(path=filepath)
 
-        # Assign a name to the image if the loader did not
+        # Assign a name to the image if the loader did not.
         name = image.get('name', None)
         if name is None:
             name = self.name_image_from_path(filepath, idx=idx)
@@ -717,8 +730,14 @@ class GingaControl(Callback.Callbacks):
         if chname is None:
             channel = self.get_channelInfo()
             if channel is None:
-                raise ValueError("Need to provide a channel name to add the image")
+                raise ValueError("Need to provide a channel name to add "
+                                 "the image")
             chname = channel.name
+
+        # Initialize MODIFIED header keyword for image-modified callback.
+        # This is for consistent keyword display in Contents, and used in
+        # 'image-modified' callback.
+        image.metadata['header']['MODIFIED'] = None
 
         # add image to named channel
         channel = self.get_channel_on_demand(chname)
@@ -726,7 +745,7 @@ class GingaControl(Callback.Callbacks):
 
     def advertise_image(self, chname, image):
         channel = self.get_channelInfo(chname)
-        info = channel.get_image_info(image.name)
+        info = channel.get_image_info(image.get('name'))
 
         self.make_callback('add-image', chname, image, info)
 
@@ -770,8 +789,7 @@ class GingaControl(Callback.Callbacks):
                 self.gui_do(obj.redo)
 
             except Exception as e:
-                self.logger.error("Failed to continue operation: %s" % (
-                    str(e)))
+                self.logger.error("Failed to continue operation: %s" % (str(e)))
                 # TODO: log traceback?
 
     def channel_image_updated(self, channel, image):
@@ -876,13 +894,26 @@ class GingaControl(Callback.Callbacks):
 
         Parameters
         ----------
-        `chname`: string
-            the name of the channel to create.
+        chname : str
+            The name of the channel to create.
+
+        workspace
+
+        num_images
+
+        settings
+
+        settings_template
+
+        settings_share
+
+        share_keylist
 
         Returns
         -------
-        channel: bunch
-            the channel info bunch
+        channel : `~ginga.misc.Bunch.Bunch`
+            The channel info bunch.
+
         """
         if self.has_channel(chname):
             return self.get_channelInfo(chname)
@@ -894,8 +925,8 @@ class GingaControl(Callback.Callbacks):
                 settings.load(onError='raise')
 
             except Exception as e:
-                self.logger.warn("no saved preferences found for channel '%s': %s" % (
-                    name, str(e)))
+                self.logger.warn("no saved preferences found for channel "
+                                 "'%s': %s" % (name, str(e)))
 
                 # copy template settings to new channel
                 if settings_template is not None:
@@ -906,8 +937,8 @@ class GingaControl(Callback.Callbacks):
                         # use channel_Image as a template if one was not
                         # provided
                         osettings = self.prefs.getSettings('channel_Image')
-                        self.logger.debug("Copying settings from 'Image' to '%s'" % (
-                            name))
+                        self.logger.debug("Copying settings from 'Image' to "
+                                          "'%s'" % (name))
                         osettings.copySettings(settings)
                     except KeyError:
                         pass
@@ -1042,7 +1073,13 @@ class GingaControl(Callback.Callbacks):
         self.channel_follows_focus = tf
 
     def showStatus(self, text):
-        """Write a message to the status bar.  _text_ is the message.
+        """Write a message to the status bar.
+
+        Parameters
+        ----------
+        text : str
+            The message.
+
         """
         self.statusMsg("%s", text)
 
@@ -1064,20 +1101,16 @@ class GingaControl(Callback.Callbacks):
             hdlr.setLevel(level)
 
     def play_soundfile(self, filepath, format=None, priority=20):
-        self.logger.debug("Subclass could override this to play sound file '%s'" % (
-            filepath))
+        self.logger.debug("Subclass could override this to play sound file "
+                          "'%s'" % (filepath))
 
     def get_color_maps(self):
         """Get the list of named color maps.
 
-        Parameters
-        ----------
-        None
-
         Returns
         -------
-        `names`: list
-            A list of all named colormaps installed
+        names : list
+            A list of all named colormaps installed.
 
         """
         return cmap.get_names()
@@ -1085,14 +1118,10 @@ class GingaControl(Callback.Callbacks):
     def get_intensity_maps(self):
         """Get the list of named intensity maps.
 
-        Parameters
-        ----------
-        None
-
         Returns
         -------
-        `names`: list
-            A list of all named intensity maps installed
+        names : list
+            A list of all named intensity maps installed.
 
         """
         return imap.get_names()
@@ -1113,6 +1142,7 @@ def _rmtmpdir(tmpdir):
     if os.path.isdir(tmpdir):
         shutil.rmtree(tmpdir)
 
+
 class GuiLogHandler(logging.Handler):
     """Logs to a pane in the GUI."""
 
@@ -1126,7 +1156,23 @@ class GuiLogHandler(logging.Handler):
 
 
 class Channel(Callback.Callbacks):
+    """Class to manage a channel.
 
+    Parameters
+    ----------
+    name : str
+        Name of the channel.
+
+    fv
+        Parent viewer.
+
+    settings
+        Channel settings.
+
+    datasrc : `~ginga.misc.Datasrc.Datasrc`
+        Data cache.
+
+    """
     def __init__(self, name, fv, settings, datasrc=None):
         super(Channel, self).__init__()
 
@@ -1155,8 +1201,8 @@ class Channel(Callback.Callbacks):
         self.extdata = Bunch.Bunch()
 
         self._configure_sort()
-        self.settings.getSetting('sort_order').add_callback('set',
-                                               self._sort_changed_ext_cb)
+        self.settings.getSetting('sort_order').add_callback(
+            'set', self._sort_changed_ext_cb)
 
     def connect_viewer(self, viewer):
         self.viewer = viewer
@@ -1199,7 +1245,24 @@ class Channel(Callback.Callbacks):
         return [ info.name for info in self.history ]
 
     def get_loaded_image(self, imname):
-        """Will raise a KeyError if image is not in memory."""
+        """Get an image from memory.
+
+        Parameters
+        ----------
+        imname : str
+            Key, usually image name and extension.
+
+        Returns
+        -------
+        image
+            Image object.
+
+        Raises
+        ------
+        KeyError
+            Image is not in memory.
+
+        """
         image = channel.datasrc[imname]
         return image
 
@@ -1234,7 +1297,6 @@ class Channel(Callback.Callbacks):
             # only update the gui for the latest image, which saves
             # work
             self.fv.gui_do(self._add_image_update, image, info)
-
 
     def add_image_info(self, info):
 
@@ -1272,6 +1334,52 @@ class Channel(Callback.Callbacks):
             channel = self.fv.get_channelInfo()
             if channel != self:
                 self.fv.change_channel(self.name)
+
+    def image_data_modified(self, image, reset=False):
+        """Call this when data in buffer is modified.
+
+        Header metadata, ``MODIFIED``, will be updated with UTC timestamp info.
+        Plugins with ``redo()`` methods will pick this up.
+
+        **Callbacks**
+
+        Both ``'image-modified'`` and ``'modified'`` callbacks will be issued.
+        To use this from a plugin:
+
+        .. code-block:: python
+
+            image = self.fitsimage.get_image()
+            data = image.get_data()
+            new_data = do_something(data)
+            image.set_data(new_data, metadata=image.metadata)
+            chname = self.fv.get_channelName(self.fitsimage)
+            channel = self.fv.get_channelInfo(chname)
+            channel.image_data_modified()
+
+        Parameters
+        ----------
+        image
+            Image object to update.
+
+        reset : bool
+            Set to `True` on init or if image fell out of cache.
+            This will set the modified timestamp to `None`.
+
+        """
+        if reset:
+            timestamp = None
+        else:
+            # Z: Zulu time, GMT, UTC
+            timestamp = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%SZ')
+
+        # Set metadata in header, to be consistent with Contents plugin
+        image.metadata['header']['MODIFIED'] = timestamp
+        self.logger.debug("Modified timestamp for {0} set to '{1}'".format(
+            image.get('name'), timestamp))
+
+        # Issue callbacks
+        self.fv.make_callback('image-modified', self.name, image)
+        self.fv.make_callback('modified', image)  # For redo()
 
     def get_current_image(self):
         return self.fitsimage.get_image()
@@ -1395,7 +1503,6 @@ class Channel(Callback.Callbacks):
             else:
                 self.logger.debug("Apparently no need to set large fits image.")
 
-
     def switch_name(self, imname):
 
         if self.datasrc.has_key(imname):
@@ -1405,8 +1512,7 @@ class Channel(Callback.Callbacks):
             return
 
         if not (imname in self.image_index):
-            errmsg = ("No image by the name '%s' found" % (
-                imname))
+            errmsg = "No image by the name '%s' found" % (imname)
             self.logger.error("Can't switch to image '%s': %s" % (
                 imname, errmsg))
             raise ControlError(errmsg)
@@ -1414,8 +1520,8 @@ class Channel(Callback.Callbacks):
         # Do we have a way to reconstruct this image from a future?
         info = self.image_index[imname]
         if info.image_future is not None:
-            self.logger.info("Image '%s' is no longer in memory; attempting reloader" % (
-                    imname))
+            self.logger.info("Image '%s' is no longer in memory; attempting "
+                             "reloader" % (imname))
             # TODO: recode this--it's a bit messy
             def _switch(image):
                 # this will be executed in the gui thread
@@ -1427,14 +1533,14 @@ class Channel(Callback.Callbacks):
                 # reconstitute the image
                 image = self.fv.error_wrap(image_future.thaw)
                 if isinstance(image, Exception):
-                    errmsg = "Error reconstituting image: %s" % (
-                                                                 str(image))
+                    errmsg = "Error reconstituting image: %s" % (str(image))
                     self.logger.error(errmsg)
                     raise image
 
                 # perpetuate the image_future
-                image.set(image_future=image_future, name=imname,
-                          path=path)
+                image.set(image_future=image_future, name=imname, path=path)
+                # Reset modified timestamp
+                self.fv.gui_do(self.image_data_modified, image, reset=True)
                 self.fv.gui_do(_switch, image)
 
             self.fv.nongui_do(_load_n_switch, imname, info.path,
@@ -1442,16 +1548,14 @@ class Channel(Callback.Callbacks):
 
         elif info.path is not None:
             # Do we have a path? We can try to reload it
-            self.logger.debug("Image '%s' is no longer in memory; attempting to load from %s" % (
-                imname, info.path))
+            self.logger.debug("Image '%s' is no longer in memory; attempting "
+                              "to load from %s" % (imname, info.path))
 
             #self.fv.load_file(path, chname=chname)
-            self.fv.nongui_do(self.load_file, info.path,
-                           chname=self.name)
+            self.fv.nongui_do(self.load_file, info.path, chname=self.name)
 
         else:
-            raise ControlError("No way to recreate image '%s'" % (
-                imname))
+            raise ControlError("No way to recreate image '%s'" % (imname))
 
     def _configure_sort(self):
         self.hist_sort = lambda info: info.time_added
@@ -1465,6 +1569,5 @@ class Channel(Callback.Callbacks):
         self._configure_sort()
 
         self.history.sort(key=self.hist_sort)
-
 
 # END
