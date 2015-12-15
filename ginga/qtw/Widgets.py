@@ -71,7 +71,9 @@ class WidgetBase(Callback.Callbacks):
         return font
 
     def cfg_expand(self, horizontal=0, vertical=0):
-        self.widget.setSizePolicy(QtGui.QSizePolicy(horizontal, vertical))
+        h_policy = QtGui.QSizePolicy.Policy(horizontal)
+        v_policy = QtGui.QSizePolicy.Policy(vertical)
+        self.widget.setSizePolicy(QtGui.QSizePolicy(h_policy, v_policy))
 
 
 # BASIC WIDGETS

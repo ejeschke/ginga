@@ -73,7 +73,7 @@ if toolkit in ('pyside', 'choose') and (not configured):
         from PySide import QtCore, QtGui
         from PySide.QtGui import QImage, QColor, QFont, QPixmap, QIcon, \
              QCursor, QPainter, QPen, QPolygonF, QPolygon, QTextCursor, \
-             QDrag, QItemSelectionModel, QPainterPath
+             QDrag, QItemSelectionModel, QPainterPath, QBrush
         have_pyside = True
         try:
             from PySide import QtWebKit
