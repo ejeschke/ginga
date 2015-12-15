@@ -79,11 +79,12 @@ class WidgetBase(Callback.Callbacks):
 # BASIC WIDGETS
 
 class TextEntry(WidgetBase):
-    def __init__(self, text=''):
+    def __init__(self, text='', editable=True):
         super(TextEntry, self).__init__()
 
         self.widget = QtGui.QLineEdit()
         self.widget.setText(text)
+        self.widget.setReadOnly(not editable)
         self.widget.returnPressed.connect(self._cb_redirect)
 
         self.enable_callback('activated')
@@ -97,6 +98,9 @@ class TextEntry(WidgetBase):
     def set_text(self, text):
         self.widget.setText(text)
 
+    def set_editable(self, tf):
+        self.widget.setReadOnly(not tf)
+
     def set_font(self, font):
         self.widget.setFont(font)
 
@@ -107,12 +111,13 @@ class TextEntry(WidgetBase):
         pass
 
 class TextEntrySet(WidgetBase):
-    def __init__(self, text=''):
+    def __init__(self, text='', editable=True):
         super(TextEntrySet, self).__init__()
 
         self.widget = QtHelp.HBox()
         self.entry = QtGui.QLineEdit()
         self.entry.setText(text)
+        self.entry.setReadOnly(not editable)
         layout = self.widget.layout()
         layout.addWidget(self.entry, stretch=1)
         self.btn = QtGui.QPushButton('Set')
@@ -131,6 +136,9 @@ class TextEntrySet(WidgetBase):
     def set_text(self, text):
         self.entry.setText(text)
 
+    def set_editable(self, tf):
+        self.entry.setReadOnly(not tf)
+
     def set_font(self, font):
         self.widget.setFont(font)
 
@@ -139,6 +147,10 @@ class TextEntrySet(WidgetBase):
         # really have a good way to do that)
         #self.widget.setMaxLength(numchars)
         pass
+
+    def set_enabled(self, tf):
+        super(TextEntrySet, self).set_enabled(tf)
+        self.entry.setEnabled(tf)
 
 class GrowingTextEdit(QtGui.QTextEdit):
 
@@ -190,6 +202,9 @@ class TextArea(WidgetBase):
     def set_text(self, text):
         self.clear()
         self.append_text(text)
+
+    def set_editable(self, tf):
+        self.widget.setReadOnly(not tf)
 
     def set_limit(self, numlines):
         #self.widget.setMaximumBlockCount(numlines)

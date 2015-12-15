@@ -110,11 +110,12 @@ class WidgetBase(Callback.Callbacks):
 # BASIC WIDGETS
 
 class TextEntry(WidgetBase):
-    def __init__(self, text=''):
+    def __init__(self, text='', editable=True):
         super(TextEntry, self).__init__()
 
         self.widget = None
         self.text = text
+        self.editable = editable
         self.font = default_font
         self.length = 20    # seems to be default HTML5 size
 
@@ -129,6 +130,9 @@ class TextEntry(WidgetBase):
 
     def set_text(self, text):
         self.text = text
+
+    def set_editable(self, tf):
+        self.editable = tf
 
     def set_font(self, font):
         self.font = font
@@ -145,12 +149,13 @@ class TextEntry(WidgetBase):
         return '''<input id=%(id)s type="text" size=%(size)d name="%(id)s" %(disabled)s onchange="ginga_app.widget_handler('%(id)s', document.getElementById('%(id)s').value)" value="%(text)s">''' % d
 
 class TextEntrySet(WidgetBase):
-    def __init__(self, text=''):
+    def __init__(self, text='', editable=True):
         super(TextEntrySet, self).__init__()
 
         self.widget = None
         self.text = text
         self.font = default_font
+        self.editable = editable
         ## self.entry = None
         ## self.btn = None
         self.length = 20    # seems to be default HTML5 size
@@ -170,12 +175,15 @@ class TextEntrySet(WidgetBase):
     def set_font(self, font):
         self.font = font
 
+    def set_editable(self, tf):
+        self.editable = tf
+
     def set_length(self, numchars):
         # this is only supposed to set the visible length
         self.length = numchars
 
     def render(self):
-        # TODO: render font
+        # TODO: render font, editable
         d = dict(id=self.id, text=self.text, disabled='', size=20)
         return '''<span> <input id=%(id)s type="text" size=%(size)d name="%(id)s" %(disabled)s onchange="ginga_app.widget_handler('%(id)s', document.getElementById('%(id)s').value)" value="%(text)s"/>
  <input type="button" %(disabled)s onclick="ginga_app.widget_handler('%(id)s', document.getElementById('%(id)s').value)" value="Set"/> </span>''' % d
@@ -213,6 +221,9 @@ class TextArea(WidgetBase):
     def set_limit(self, numlines):
         # for compatibility with the other supported widget sets
         pass
+
+    def set_editable(self, tf):
+        self.editable = tf
 
     def set_font(self, font):
         self.font = font

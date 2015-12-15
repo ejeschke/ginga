@@ -82,11 +82,12 @@ class WidgetBase(Callback.Callbacks):
 # BASIC WIDGETS
 
 class TextEntry(WidgetBase):
-    def __init__(self, text=''):
+    def __init__(self, text='', editable=True):
         super(TextEntry, self).__init__()
 
         w = gtk.Entry()
         w.set_text(text)
+        w.set_editable(editable)
         w.connect('activate', self._cb_redirect)
         self.widget = w
 
@@ -101,6 +102,9 @@ class TextEntry(WidgetBase):
     def set_text(self, text):
         self.widget.set_text(text)
 
+    def set_editable(self, tf):
+        self.widget.set_editable(tf)
+
     def set_font(self, font):
         self.widget.modify_font(font)
 
@@ -110,13 +114,14 @@ class TextEntry(WidgetBase):
         pass
 
 class TextEntrySet(WidgetBase):
-    def __init__(self, text=''):
+    def __init__(self, text='', editable=True):
         super(TextEntrySet, self).__init__()
 
         hbox = gtk.HBox()
         hbox.set_spacing(4)
         w = gtk.Entry()
         w.set_text(text)
+        w.set_editable(editable)
         hbox.pack_start(w, fill=True)
         w.connect('activate', self._cb_redirect)
         self.entry = w
@@ -137,12 +142,19 @@ class TextEntrySet(WidgetBase):
     def set_text(self, text):
         self.entry.set_text(text)
 
+    def set_editable(self, tf):
+        self.entry.set_editable(tf)
+
     def set_font(self, font):
         self.widget.modify_font(font)
 
     def set_length(self, numchars):
         #self.widget.set_width_chars(numchars)
         pass
+
+    def set_enabled(self, tf):
+        super(TextEntrySet, self).set_enabled(tf)
+        self.entry.set_sensitive(tf)
 
 class TextArea(WidgetBase):
     def __init__(self, wrap=False, editable=False):
@@ -203,6 +215,9 @@ class TextArea(WidgetBase):
     def set_limit(self, numlines):
         self.histlimit = numlines
         self._history_housekeeping()
+
+    def set_editable(self, tf):
+        self.widget.set_editable(tf)
 
     def set_font(self, font):
         self.widget.modify_font(font)
