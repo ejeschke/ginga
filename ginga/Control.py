@@ -472,6 +472,11 @@ class GingaControl(Callback.Callbacks):
             #channel.fitsimage.onscreen_message("Failed to load file", delay=1.0)
             raise ControlError(errmsg)
 
+        # Initialize MODIFIED header keyword for image-modified callback.
+        # This is for consistent keyword display in Contents, and used in
+        # 'image-modified' callback.
+        image.metadata['header']['MODIFIED'] = None
+
         self.logger.debug("Successfully loaded file into image object.")
         return image
 
