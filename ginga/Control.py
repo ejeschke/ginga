@@ -487,7 +487,7 @@ class GingaControl(Callback.Callbacks):
 
         Returns
         -------
-        res : `~ginga.misc.bunch.Bunch`
+        res : `~ginga.misc.Bunch.Bunch`
 
         """
         if dldir is None:
