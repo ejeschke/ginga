@@ -1256,7 +1256,8 @@ class GingaControl(Callback.Callbacks):
 
 
 def _rmtmpdir(tmpdir):
-    shutil.rmtree(tmpdir)
+    if os.path.isdir(tmpdir):
+        shutil.rmtree(tmpdir)
 
 class GuiLogHandler(logging.Handler):
     """Logs to a pane in the GUI."""
