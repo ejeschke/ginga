@@ -683,6 +683,10 @@ class TreeView(WidgetBase):
         for kwd in self.datakeys:
             self.cell_sort_funcs.append(self._mksrtfnN(kwd))
 
+        # Remove old columns, if any
+        for col in list(self.tv.get_columns()):
+            self.tv.remove_column(col)
+
         # Set up headers
         for n in range(0, len(self.columns)):
             kwd = self.datakeys[n]
