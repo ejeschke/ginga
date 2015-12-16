@@ -122,7 +122,6 @@ class Cuts(GingaPlugin.LocalPlugin):
                                   show_cuts_legend=False, enable_slit=False)
         self.settings.load(onError='silent')
         self.colors = self.settings.get('colors', cut_colors)
-        self.show_legend = self.settings.get('show_cuts_legend', False)
 
         self.dc = fv.getDrawClasses()
         canvas = self.dc.DrawingCanvas()
@@ -172,12 +171,6 @@ class Cuts(GingaPlugin.LocalPlugin):
         self.plot.resize(400, 300)
         ax = self.cuts_plot.add_axis()
         ax.grid(True)
-
-        # Shrink plot width by 20%
-        if self.show_legend:
-            cbox = self.cuts_plot.ax.get_position()
-            self.cuts_plot.ax.set_position(
-                [cbox.x0, cbox.y0, cbox.width * 0.8, cbox.height])
 
         self.slit_plot = plots.Plot(logger=self.logger,
                                     width=400, height=300)
@@ -576,14 +569,13 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         self.cuts_plot.cuts(points, xtitle="Line Index", ytitle="Pixel Value",
                             color=rgb)
 
-        if self.show_legend:
+        if self.settings.get('show_cuts_legend', False):
             self.add_legend()
 
     def add_legend(self):
         """Add or update Cuts plot legend."""
         cuts = [tag for tag in self.tags if tag is not self._new_cut]
-        self.cuts_plot.ax.legend(cuts, loc='center left',
-                                 bbox_to_anchor=(1, 0.5),
+        self.cuts_plot.ax.legend(cuts, loc='best',
                                  shadow=True, fancybox=True,
                                  prop={'size': 8}, labelspacing=0.2)
 
@@ -706,6 +698,7 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
                     self.save_slit.set_enabled(True)
 
         # force mpl redraw
+        self.cuts_plot.fig.tight_layout(pad=0.3)
         self.cuts_plot.draw()
 
         self.canvas.redraw(whence=3)
