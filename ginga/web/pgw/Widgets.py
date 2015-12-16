@@ -647,6 +647,63 @@ class TreeView(WidgetBase):
         self.datakeys = []
         # shadow index
         self.shadow = {}
+        self.widget = None
+
+        for cbname in ('selected', 'activated', 'drag-start'):
+            self.enable_callback(cbname)
+
+    def setup_table(self, columns, levels, leaf_key):
+        self.clear()
+        # TODO
+
+    def set_tree(self, tree_dict):
+        self.clear()
+        self.add_tree(tree_dict)
+
+    def add_tree(self, tree_dict):
+        # TODO
+        pass
+
+    def _selection_cb(self):
+        res_dict = self.get_selected()
+        self.make_callback('selected', res_dict)
+
+    def _cb_redirect(self, item):
+        res_dict = {}
+        self._get_item(res_dict, item)
+        self.make_callback('activated', res_dict)
+
+    def get_selected(self):
+        res_dict = {}
+        return res_dict
+
+    def clear(self):
+        self.shadow = {}
+
+    def clear_selection(self):
+        pass
+
+    def _path_to_item(self, path):
+        s = self.shadow
+        for name in path[:-1]:
+            s = s[name].node
+        item = s[path[-1]].item
+        return item
+
+    def select_path(self, path):
+        item = self._path_to_item(path)
+        # TODO
+
+    def highlight_path(self, path, onoff, font_color='green'):
+        item = self._path_to_item(path)
+        # TODO
+
+    def scroll_to_path(self, path):
+        item = self._path_to_item(path)
+        # TODO
+
+    def sort_on_column(self, i):
+        pass
 
 
 class Canvas(WidgetBase):
@@ -1073,6 +1130,13 @@ class Toolbar(ContainerBase):
 
     def add_widget(self, child):
         self.add_ref(child)
+
+    def add_menu(self, text, menu=None):
+        if menu is None:
+            menu = Menu()
+        child = self.add_action(text)
+        child.add_callback('activated', lambda w: menu.popup())
+        return menu
 
     def add_separator(self):
         #self.widget.addSeparator()
