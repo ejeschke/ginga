@@ -96,6 +96,8 @@ class Contents(GingaPlugin.GlobalPlugin):
             bnch[key] = str(header.get(key, 'N/A'))
         # name should always be available
         bnch.NAME = name
+        # Modified timestamp is special and for internal use only
+        bnch.MODIFIED = None
         return bnch
 
     def recreate_toc(self):
@@ -142,20 +144,23 @@ class Contents(GingaPlugin.GlobalPlugin):
         self.treeview.add_tree(tree_dict)
         self.logger.debug("%s added to Contents" % (name))
 
-    def image_modified_cb(self, viewer, chname, image):
-        """Update MODIFIED column with timestamp from image header."""
+    def image_modified_cb(self, viewer, chname, image, timestamp, reason):
+        """Update MODIFIED column with timestamp."""
         key = image.get('name')
-        timestamp = image.get_header().get('MODIFIED', None)
+
+        if timestamp is not None:
+            # Z: Zulu time, GMT, UTC
+            timestamp = timestamp.strftime('%Y-%m-%d %H:%M:%SZ')
 
         try:
             self.name_dict[chname][key]['MODIFIED'] = timestamp
         except KeyError as e:
             self.logger.error(
                 'Modified status update failed: {0}'.format(str(e)))
-        else:
-            self.logger.debug("Updating modified status of {0} in channel {1} "
-                              "with '{2}'".format(image, chname, timestamp))
+            return
 
+        self.logger.debug("Updating modified timestamp of {0} in channel {1} "
+                          "with '{2}'".format(key, chname, timestamp))
         if self.gui_up:
             self.recreate_toc()
 
