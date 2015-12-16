@@ -492,11 +492,6 @@ class GingaControl(Callback.Callbacks):
             #channel.fitsimage.onscreen_message("Failed to load file", delay=1.0)
             raise ControlError(errmsg)
 
-        # Initialize MODIFIED header keyword for image-modified callback.
-        # This is for consistent keyword display in Contents, and used in
-        # 'image-modified' callback.
-        image.metadata['header']['MODIFIED'] = None
-
         self.logger.debug("Successfully loaded file into image object.")
         return image
 
@@ -758,11 +753,6 @@ class GingaControl(Callback.Callbacks):
                 raise ValueError("Need to provide a channel name to add "
                                  "the image")
             chname = channel.name
-
-        # Initialize MODIFIED header keyword for image-modified callback.
-        # This is for consistent keyword display in Contents, and used in
-        # 'image-modified' callback.
-        image.metadata['header']['MODIFIED'] = None
 
         # add image to named channel
         channel = self.get_channel_on_demand(chname)
@@ -1366,15 +1356,12 @@ class Channel(Callback.Callbacks):
             if channel != self:
                 self.fv.change_channel(self.name)
 
-    def image_data_modified(self, image, reset=False):
+    def image_data_modified(self, image, reason='', reset=False):
         """Call this when data in buffer is modified.
 
-        Header metadata, ``MODIFIED``, will be updated with UTC timestamp info.
-        Plugins with ``redo()`` methods will pick this up.
+         **Callbacks**
 
-        **Callbacks**
-
-        Both ``'image-modified'`` and ``'modified'`` callbacks will be issued.
+        The ``'image-modified'`` callback will be issued.
         To use this from a plugin:
 
         .. code-block:: python
@@ -1382,15 +1369,24 @@ class Channel(Callback.Callbacks):
             image = self.fitsimage.get_image()
             data = image.get_data()
             new_data = do_something(data)
+
+            # This issues a 'modified' callback, which calls redo()
             image.set_data(new_data, metadata=image.metadata)
+
             chname = self.fv.get_channelName(self.fitsimage)
             channel = self.fv.get_channelInfo(chname)
-            channel.image_data_modified()
+
+            # This issues a 'image-modified' callback, which sets
+            # the UTC timestamp and reason
+            channel.image_data_modified(image, reason='Did something')
 
         Parameters
         ----------
         image
             Image object to update.
+
+        reason : str
+            Reason for modification.
 
         reset : bool
             Set to `True` on init or if image fell out of cache.
@@ -1400,17 +1396,13 @@ class Channel(Callback.Callbacks):
         if reset:
             timestamp = None
         else:
-            # Z: Zulu time, GMT, UTC
-            timestamp = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%SZ')
+            timestamp = datetime.utcnow()
 
-        # Set metadata in header, to be consistent with Contents plugin
-        image.metadata['header']['MODIFIED'] = timestamp
-        self.logger.debug("Modified timestamp for {0} set to '{1}'".format(
-            image.get('name'), timestamp))
-
-        # Issue callbacks
-        self.fv.make_callback('image-modified', self.name, image)
-        self.fv.make_callback('modified', image)  # For redo()
+        # Issue callback
+        self.fv.make_callback(
+            'image-modified', self.name, image, timestamp, reason)
+        self.logger.debug("{0} modified at '{1}' because '{2}'".format(
+            image.get('name'), timestamp, reason))
 
     def get_current_image(self):
         return self.fitsimage.get_image()
@@ -1571,7 +1563,8 @@ class Channel(Callback.Callbacks):
                 # perpetuate the image_future
                 image.set(image_future=image_future, name=imname, path=path)
                 # Reset modified timestamp
-                self.fv.gui_do(self.image_data_modified, image, reset=True)
+                self.fv.gui_do(self.image_data_modified, image,
+                               reason='Reloaded from file', reset=True)
                 self.fv.gui_do(_switch, image)
 
             self.fv.nongui_do(_load_n_switch, imname, info.path,
