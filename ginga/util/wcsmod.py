@@ -224,21 +224,12 @@ class AstropyWCS2(BaseWCS):
 
     def __init__(self, logger):
         super(AstropyWCS2, self).__init__()
-        self.kind = 'astropy/WCSLIB'
+        self.kind = 'astropy/wcs'
         self.logger = logger
         self.header = None
         self.wcs = None
-        self.coordframe = 'raw'
-
-    @property
-    def coordsys(self):
-        """
-        We include this here to make this compatible with the other WCSs.  But
-        "coordsys" is a bad name in astropy coordinates, and using the name
-        `coordframe` internally makes it clearer what's going on (see
-        http://astropy.readthedocs.org/en/latest/coordinates/definitions.html)
-        """
-        return self.coordframe
+        self.coordsys = 'raw'  # this is used by external objects and has to be a string
+        self.coordframe = None
 
 
     def load_header(self, header, fobj=None):
@@ -250,14 +241,14 @@ class AstropyWCS2(BaseWCS):
         try:
             self.logger.debug("Trying to make astropy wcs object")
             self.wcs = pywcs.WCS(self.header, fobj=fobj, relax=True)
-            try:
+
+            self.coordsys = get_coord_system_name(self.header)
+            if self.coordsys in ('raw', 'pixel'):
+                self.coordframe = None
+            else:
                 self.coordframe = wcs_to_celestial_frame(self.wcs)
-            except ValueError:
-                sysname = get_coord_system_name(self.header)
-                if sysname in ('raw', 'pixel'):
-                    self.coordframe = sysname
-                else:
-                    raise
+
+            self.coordsys = get_coord_system_name(self.header)
 
         except Exception as e:
             self.logger.error("Error making WCS object: %s" % (str(e)))
