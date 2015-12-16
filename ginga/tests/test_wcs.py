@@ -187,7 +187,7 @@ class TestImageView(unittest.TestCase):
 
 
     def pixtoradec_scalar_runtest(self, modname):
-        if not wcsmod.use(modname):
+        if not wcsmod.use(modname, raise_err=False):
             return False
         wcs = wcsmod.WCS(self.logger)
         wcs.load_header(self.header)
@@ -224,7 +224,7 @@ class TestImageView(unittest.TestCase):
             print("WCS '%s' not available--skipping test" % ('astropy'))
 
     def radectopix_scalar_runtest(self, modname):
-        if not wcsmod.use(modname):
+        if not wcsmod.use(modname, raise_err=False):
             return False
         wcs = wcsmod.WCS(self.logger)
         wcs.load_header(self.header)

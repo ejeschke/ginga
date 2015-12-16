@@ -117,19 +117,21 @@ def use(wcspkg, raise_err=True):
     elif wcspkg == 'astropy2':
         try:
             import astropy
+
+            from distutils.version import LooseVersion
+            if LooseVersion(astropy.__version__) <= LooseVersion('1'):
+                raise ImportError("astropy2 wrapper requires version 1 of astropy")
+
+            import astropy.coordinates
+            import astropy.wcs as pywcs
+            from astropy.io import fits as pyfits
+            import astropy.units as u
+            from astropy.version import version
+
         except ImportError:
             if raise_err:
                 raise
-
-        from distutils.version import LooseVersion
-        if LooseVersion(astropy.__version__) <= LooseVersion('1'):
             return False
-
-        import astropy.coordinates
-        import astropy.wcs as pywcs
-        from astropy.io import fits as pyfits
-        import astropy.units as u
-        from astropy.version import version
 
         have_pywcs = True
         have_astropy = True
@@ -157,6 +159,7 @@ def use(wcspkg, raise_err=True):
             except ImportError as e:
                 if raise_err:
                     raise
+                return False
 
         try:
             from astropy import coordinates
