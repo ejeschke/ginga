@@ -36,9 +36,9 @@ class Header(GingaPlugin.GlobalPlugin):
                                   color_alternate_rows=True)
         self.settings.load(onError='silent')
 
-        fv.set_callback('add-channel', self.add_channel)
-        fv.set_callback('delete-channel', self.delete_channel)
-        fv.set_callback('active-image', self.focus_cb)
+        fv.add_callback('add-channel', self.add_channel)
+        fv.add_callback('delete-channel', self.delete_channel)
+        fv.add_callback('active-image', self.focus_cb)
 
     def build_gui(self, container):
         nb = Widgets.StackWidget()
@@ -110,7 +110,7 @@ class Header(GingaPlugin.GlobalPlugin):
         self.channel[chname] = info
 
         fitsimage = chinfo.fitsimage
-        fitsimage.set_callback('image-set', self.new_image_cb, info)
+        fitsimage.add_callback('image-set', self.new_image_cb, info)
 
     def delete_channel(self, viewer, chinfo):
         chname = chinfo.name

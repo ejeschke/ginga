@@ -124,15 +124,16 @@ class GingaControl(Callback.Callbacks):
         # Should channel change as mouse moves between windows
         self.channel_follows_focus = self.settings['channel_follows_focus']
 
-        self.cm = cmap.get_cmap("gray")
-        self.im = imap.get_imap("ramp")
-
         self.fn_keys = ('f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8',
                         'f9', 'f10', 'f11', 'f12')
 
         self.global_plugins = {}
         self.local_plugins = {}
         self.operations  = []
+
+        # some default colormap info
+        self.cm = cmap.get_cmap("gray")
+        self.im = imap.get_imap("ramp")
 
         # This plugin manager handles "global" (aka standard) plug ins
         # (unique instances, not per channel)
@@ -183,53 +184,6 @@ class GingaControl(Callback.Callbacks):
 
         self.update_pending()
         return True
-
-    def readout_config(self, fitsimage, image, readout):
-        # A new image has come into the viewer. Get and store the
-        # sizes of the fields necessary to display all X, Y coords
-        # as well as values.
-        width, height = fitsimage.get_data_size()
-        # Set size of coordinate areas (4 is "." + precision 3)
-        readout.maxx = len(str(width)) + 4
-        readout.maxy = len(str(height)) + 4
-        minval, maxval = image.get_minmax()
-        readout.maxv = max(len(str(minval)), len(str(maxval)))
-        return True
-
-    def readout_cb(self, viewer, fitsimage, info, readout, name):
-        # TEMP: hack
-        if readout.fitsimage != fitsimage:
-            return
-
-        # If this is a multiband image, then average the values
-        # for the readout
-        value = info.value
-        if isinstance(value, numpy.ndarray):
-            avg = numpy.average(value)
-            value = avg
-
-        # Update the readout
-        px_x = "%.3f" % info.x
-        px_y = "%.3f" % info.y
-        maxx = max(readout.maxx, len(str(px_x)))
-        if maxx > readout.maxx:
-            readout.maxx = maxx
-        maxy = max(readout.maxy, len(str(px_y)))
-        if maxy > readout.maxy:
-            readout.maxy = maxy
-        maxv = max(readout.maxv, len(str(value)))
-        if maxv > readout.maxv:
-            readout.maxv = maxv
-
-        if 'ra_txt' in info:
-            text = "%1.1s: %-14.14s  %1.1s: %-14.14s  X: %-*.*s  Y: %-*.*s  Value: %-*.*s" % (
-                info.ra_lbl, info.ra_txt, info.dec_lbl, info.dec_txt,
-                maxx, maxx, px_x, maxy, maxy, px_y, maxv, maxv, value)
-        else:
-            text = "%1.1s: %-14.14s  %1.1s: %-14.14s  X: %-*.*s  Y: %-*.*s  Value: %-*.*s" % (
-                '', '', '', '',
-                maxx, maxx, px_x, maxy, maxy, px_y, maxv, maxv, value)
-        readout.set_text(text)
 
     def motion_cb(self, fitsimage, button, data_x, data_y):
         """Motion event in the big fits window.  Show the pointing
@@ -326,12 +280,6 @@ class GingaControl(Callback.Callbacks):
         """Called when _fitsimage_ gets (tf==True) or loses (tf==False)
         the focus.
         """
-        if tf and hasattr(self, 'readout') and (self.readout is not None):
-            self.readout.fitsimage = fitsimage
-            image = fitsimage.get_image()
-            if image is not None:
-                self.readout_config(fitsimage, image, self.readout)
-
         if not self.channel_follows_focus:
             return True
         self.logger.debug("Focus %s=%s" % (name, tf))
@@ -1004,15 +952,12 @@ class GingaControl(Callback.Callbacks):
                              raisenew=True, genthumb=True,
                              preload_images=False, sort_order='loadtime')
 
-        use_readout = not self.settings.get('share_readout', True)
-
         with self.lock:
             self.logger.debug("Adding channel '%s'" % (chname))
             channel = Channel(chname, self, datasrc=None,
                               settings=settings)
 
             bnch = self.add_viewer(chname, settings,
-                                   use_readout=use_readout,
                                    workspace=workspace)
             # for debugging
             bnch.fitsimage.set_name('channel:%s' % (chname))
@@ -1022,7 +967,6 @@ class GingaControl(Callback.Callbacks):
             opmon.set_widget(self.w.optray)
 
             channel.widget = bnch.view
-            channel.readout = bnch.readout
             channel.container = bnch.container
             channel.workspace = bnch.workspace
             channel.fitsimage = bnch.fitsimage
@@ -1225,7 +1169,6 @@ class Channel(Callback.Callbacks):
 
         # CHANNEL ATTRIBUTES
         self.name = name
-        self.readout = None
         self.widget = None
         self.container = None
         self.workspace = None

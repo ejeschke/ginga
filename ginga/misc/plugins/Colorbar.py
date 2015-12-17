@@ -9,7 +9,6 @@
 #
 from ginga import GingaPlugin
 from ginga.misc import Bunch
-import ginga.util.six as six
 from ginga.gw import Widgets, ColorBar
 
 
@@ -26,30 +25,24 @@ class Colorbar(GingaPlugin.GlobalPlugin):
 
         prefs = self.fv.get_preferences()
         self.settings = prefs.createCategory('plugin_ColorBar')
-        self.settings.addDefaults(sortable=False,
-                                  color_alternate_rows=True)
+        #self.settings.addDefaults()
         self.settings.load(onError='silent')
 
-        fv.set_callback('add-channel', self.add_channel_cb)
-        fv.set_callback('delete-channel', self.delete_channel_cb)
-        # fv.set_callback('active-image', self.focus_cb)
+        fv.add_callback('add-channel', self.add_channel_cb)
+        fv.add_callback('delete-channel', self.delete_channel_cb)
+        # fv.add_callback('active-image', self.focus_cb)
 
     def build_gui(self, container):
         cbar = ColorBar.ColorBar(self.logger)
         cbar.set_cmap(self.fv.cm)
         cbar.set_imap(self.fv.im)
         cbar_w = Widgets.wrap(cbar)
-        #cbar_w.resize(-1, 15)
         self.colorbar = cbar
         self.fv.add_callback('active-image', self.change_cbar, cbar)
         cbar.add_callback('motion', self.cbar_value_cb)
 
-        ## hbox = Widgets.HBox()
-        ## hbox.set_border_width(0)
-        ## hbox.add_widget(cbar_w, stretch=1)
         fr = Widgets.Frame()
         fr.set_border_width(0)
-        ## fr.set_widget(hbox)
         fr.set_widget(cbar_w)
 
         container.add_widget(fr, stretch=0)
@@ -67,8 +60,8 @@ class Colorbar(GingaPlugin.GlobalPlugin):
         rgbmap = fi.get_rgbmap()
         rgbmap.add_callback('changed', self.rgbmap_cb, fi)
 
-    def delete_channel_cb(self, viewer, chinfo):
-        chname = chinfo.name
+    def delete_channel_cb(self, viewer, channel):
+        chname = channel.name
         self.logger.debug("deleting channel %s" % (chname))
         self.active = None
         self.info = None
@@ -91,8 +84,8 @@ class Colorbar(GingaPlugin.GlobalPlugin):
 
     # def focus_cb(self, viewer, fitsimage):
     #     chname = self.fv.get_channelName(fitsimage)
-    #     chinfo = self.fv.get_channelInfo(chname)
-    #     chname = chinfo.name
+    #     channel = self.fv.get_channelInfo(chname)
+    #     chname = channel.name
 
     #     if self.active != chname:
     #         self.active = chname
@@ -125,10 +118,7 @@ class Colorbar(GingaPlugin.GlobalPlugin):
         channel = self.fv.get_channelInfo()
         if channel is None:
             return
-        readout = channel.readout
-        if readout is None:
-            # must be using a shared readout
-            readout = self.fv.readout
+        readout = channel.extdata.get('readout', None)
         if readout is not None:
             maxv = readout.maxv
             text = "Value: %-*.*s" % (maxv, maxv, value)
@@ -147,11 +137,10 @@ class Colorbar(GingaPlugin.GlobalPlugin):
     def start(self):
         names = self.fv.get_channelNames()
         for name in names:
-            chinfo = self.fv.get_channelInfo(name)
-            self.add_channel(self.fv, chinfo)
+            channel = self.fv.get_channelInfo(name)
+            self.add_channel(self.fv, channel)
 
     def __str__(self):
         return 'colorbar'
 
 #END
-

@@ -9,13 +9,13 @@
 #
 # stdlib imports
 import sys, os
+import platform
 import glob
 import traceback
-import platform
 import time
 
 # GUI imports
-from ginga.gw import GwHelp, GwMain, PluginManager, Readout
+from ginga.gw import GwHelp, GwMain, PluginManager
 from ginga.gw import Widgets, Viewers, Desktop
 from ginga import toolkit
 
@@ -58,7 +58,6 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         self._cur_dialogs = []
 
         self.filesel = None
-        self.readout = None
 
     def set_layout(self, layout):
         self.layout = layout
@@ -102,13 +101,6 @@ class GingaView(GwMain.GwMain, Widgets.Application):
                 nb.add_callback('page-switch', self.page_switch_cb)
             if nb.has_callback('page-close'):
                 nb.add_callback('page-close', self.page_closed_cb, wsname)
-
-        # readout
-        if self.settings.get('share_readout', True):
-            self.readout = self.build_readout()
-            self.add_callback('field-info', self.readout_cb, self.readout, None)
-            rw = self.readout.get_widget()
-            self.w.vbox.add_widget(rw, stretch=0)
 
         # bottom buttons
         hbox = Widgets.HBox()
@@ -329,17 +321,6 @@ class GingaView(GwMain.GwMain, Widgets.Application):
     def set_titlebar(self, text):
         self.w.root.set_title("Ginga: %s" % text)
 
-    def build_readout(self):
-        readout = Readout.Readout(-1, 20)
-        # NOTE: Special hack for Mac OS X, otherwise the font on the readout
-        # is too small
-        macos_ver = platform.mac_ver()[0]
-        if len(macos_ver) > 0:
-            readout.set_font(self.font14)
-        else:
-            readout.set_font(self.font11)
-        return readout
-
     def build_viewpane(self, settings, rgbmap=None, size=(1, 1)):
         # instantiate bindings loaded with users preferences
         bclass = Viewers.ImageViewCanvas.bindingsClass
@@ -371,8 +352,7 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         fi.set_bg(0.2, 0.2, 0.2)
         return fi
 
-    def add_viewer(self, name, settings,
-                   use_readout=False, workspace=None):
+    def add_viewer(self, name, settings, workspace=None):
 
         vbox = Widgets.VBox()
         vbox.set_border_width(1)
@@ -393,23 +373,12 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         vbox.add_widget(iw, stretch=1)
         fi.set_name(name)
 
-        if use_readout:
-            readout = self.build_readout()
-            # TEMP: hack
-            readout.fitsimage = fi
-            fi.add_callback('image-set', self.readout_config, readout)
-            self.add_callback('field-info', self.readout_cb, readout, name)
-            rw = readout.get_widget()
-            vbox.add_widget(rw, stretch=0)
-        else:
-            readout = None
-
         # Add the viewer to the specified workspace
         self.ds.add_tab(workspace, vbox, 1, name)
 
         self.update_pending()
         bnch = Bunch.Bunch(fitsimage=fi, view=iw, container=vbox,
-                           readout=readout, workspace=workspace)
+                           workspace=workspace)
         return bnch
 
 
