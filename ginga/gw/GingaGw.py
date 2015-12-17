@@ -16,7 +16,7 @@ import time
 
 # GUI imports
 from ginga.gw import GwHelp, GwMain, PluginManager, Readout
-from ginga.gw import Widgets, Viewers, Desktop, ColorBar
+from ginga.gw import Widgets, Viewers, Desktop
 from ginga import toolkit
 
 # Local application imports
@@ -57,7 +57,6 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         self._rsize = None
         self._cur_dialogs = []
 
-        self.colorbar = None
         self.filesel = None
         self.readout = None
 
@@ -136,11 +135,6 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         hbox.add_widget(self.w.optray, stretch=1)
 
         self.w.vbox.add_widget(hbox, stretch=0)
-
-        # Add colormap bar
-        if hasattr(ColorBar, 'ColorBar'):
-            cbar = self.build_colorbar()
-            self.w.vbox.add_widget(cbar, stretch=0)
 
         menuholder = self.w['menu']
         self.w.menubar = self.add_menus(menuholder)
@@ -346,21 +340,6 @@ class GingaView(GwMain.GwMain, Widgets.Application):
             readout.set_font(self.font11)
         return readout
 
-    def build_colorbar(self):
-        cbar = ColorBar.ColorBar(self.logger)
-        cbar.set_cmap(self.cm)
-        cbar.set_imap(self.im)
-        cbar_w = Widgets.wrap(cbar)
-        #cbar_w.resize(-1, 15)
-        self.colorbar = cbar
-        self.add_callback('active-image', self.change_cbar, cbar)
-        cbar.add_callback('motion', self.cbar_value_cb)
-
-        fr = Widgets.Frame()
-        fr.set_border_width(0)
-        fr.set_widget(cbar_w)
-        return fr
-
     def build_viewpane(self, settings, rgbmap=None, size=(1, 1)):
         # instantiate bindings loaded with users preferences
         bclass = Viewers.ImageViewCanvas.bindingsClass
@@ -386,15 +365,9 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         fi.add_callback('drag-drop', self.dragdrop)
         fi.ui_setActive(True)
 
-        for name in ['cuts']:
-            settings.getSetting(name).add_callback('set',
-                               self.change_range_cb, fi, self.colorbar)
-
         bd = fi.get_bindings()
         bd.enable_all(True)
 
-        rgbmap = fi.get_rgbmap()
-        rgbmap.add_callback('changed', self.rgbmap_cb, fi)
         fi.set_bg(0.2, 0.2, 0.2)
         return fi
 

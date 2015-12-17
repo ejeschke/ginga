@@ -1,5 +1,5 @@
 #
-# HeaderBase.py -- FITS Header plugin base class for fits viewer
+# Header.py -- Image header plugin for Ginga viewer
 #
 # Eric Jeschke (eric@naoj.org)
 #

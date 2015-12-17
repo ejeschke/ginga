@@ -231,9 +231,6 @@ class GingaControl(Callback.Callbacks):
                 maxx, maxx, px_x, maxy, maxy, px_y, maxv, maxv, value)
         readout.set_text(text)
 
-        # Draw colorbar value wedge
-        #self.colorbar.set_current_value(value)
-
     def motion_cb(self, fitsimage, button, data_x, data_y):
         """Motion event in the big fits window.  Show the pointing
         information under the cursor.
@@ -319,62 +316,6 @@ class GingaControl(Callback.Callbacks):
             self.nongui_do(self.load_file, url, chname=to_chname,
                            wait=False)
         return True
-
-    def _match_cmap(self, fitsimage, colorbar):
-        """
-        Help method to change the ColorBar to match the cut levels or
-        colormap used in a ginga ImageView.
-        """
-        rgbmap = fitsimage.get_rgbmap()
-        loval, hival = fitsimage.get_cut_levels()
-        colorbar.set_range(loval, hival)
-        # If we are sharing a ColorBar for all channels, then store
-        # to change the ColorBar's rgbmap to match our
-        colorbar.set_rgbmap(rgbmap)
-
-    def change_cbar(self, viewer, fitsimage, cbar):
-        self._match_cmap(fitsimage, cbar)
-
-    def change_range_cb(self, setting, value, fitsimage, cbar):
-        """
-        This method is called when the cut level values (lo/hi) have
-        changed in a channel.  We adjust them in the ColorBar to match.
-        """
-        if cbar is None:
-            return
-        if fitsimage != self.getfocus_fitsimage():
-            # values have changed in a channel that doesn't have the focus
-            return False
-        loval, hival = value
-        cbar.set_range(loval, hival)
-
-    def cbar_value_cb(self, cbar, value, event):
-        """
-        This method is called when the user moves the mouse over the
-        ColorBar.  It displays the value of the mouse position in the
-        ColorBar in the Readout (if any).
-        """
-        channel = self.get_channelInfo()
-        if channel is None:
-            return
-        readout = channel.readout
-        if readout is None:
-            # must be using a shared readout
-            readout = self.readout
-        if readout is not None:
-            maxv = readout.maxv
-            text = "Value: %-*.*s" % (maxv, maxv, value)
-            readout.set_text(text)
-
-    def rgbmap_cb(self, rgbmap, fitsimage):
-        """
-        This method is called when the RGBMap is changed.  We update
-        the ColorBar to match.
-        """
-        if fitsimage != self.getfocus_fitsimage():
-            return False
-        if self.colorbar is not None:
-            self.change_cbar(self, fitsimage, self.colorbar)
 
     def force_focus_cb(self, fitsimage, event, data_x, data_y):
         chname = self.get_channelName(fitsimage)
