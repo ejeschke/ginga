@@ -826,9 +826,6 @@ class GingaControl(Callback.Callbacks):
             with self.lock:
                 self.cur_channel = channel
 
-            # change plugin manager info
-            channel.opmon.update_taskbar(localmode=False)
-
             # Update the channel control
             self.w.channel.show_text(channel.name)
 

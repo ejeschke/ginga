@@ -22,6 +22,7 @@ class WidgetError(Exception):
 
 # (see TabWidget)
 _widget_move_event = None
+_app = None
 
 # BASE
 
@@ -54,6 +55,9 @@ class WidgetBase(Callback.Callbacks):
         wd, ht = self.widget.size_request()
         wd, ht = max(0, wd), max(0, ht)
         return wd, ht
+
+    def get_app(self):
+        return _app
 
     def delete(self):
         self.widget.destroy()
@@ -1613,6 +1617,7 @@ class TopLevel(ContainerBase):
 class Application(object):
 
     def __init__(self, logger=None):
+        global _app
 
         self.logger = logger
         self.window_list = []
@@ -1629,6 +1634,8 @@ class Application(object):
             self.screen_ht = 1200
         ## self.logger.debug("screen dimensions %dx%d" % (
         ##     self.screen_wd, self.screen_ht))
+
+        _app = self
 
     def get_screen_size(self):
         return (self.screen_wd, self.screen_ht)

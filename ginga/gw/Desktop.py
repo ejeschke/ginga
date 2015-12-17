@@ -25,6 +25,7 @@ class Desktop(Callback.Callbacks):
         self.workspace = Bunch.caselessDict()
 
         self.toplevels = []
+        self._cur_dialogs = []
 
         for name in ('page-switch', 'all-closed'):
             self.enable_callback(name)
@@ -168,6 +169,21 @@ class Desktop(Callback.Callbacks):
         ## #bnch.widget.closeEvent = lambda event: self.close_page_cb(bnch, event)
         ## closeitem.add_callback('activated',
         ##                        lambda *args: self._close_page(ws))
+
+    def show_dialog(self, dialog):
+        dialog.show()
+        # save a handle so widgets aren't garbage collected
+        if not dialog in self._cur_dialogs:
+            self._cur_dialogs.append(dialog)
+
+    def hide_dialog(self, dialog):
+        dialog.hide()
+
+    def remove_dialog(self, dialog):
+        dialog.hide()
+        if dialog in self._cur_dialogs:
+            self._cur_dialogs.remove(dialog)
+        dialog.delete()
 
     def add_toplevel(self, bnch, wsname, width=700, height=700):
         topw = self.app.make_window(title=wsname)

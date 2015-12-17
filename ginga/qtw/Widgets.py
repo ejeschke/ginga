@@ -24,6 +24,8 @@ class WidgetError(Exception):
     """For errors thrown in this module."""
     pass
 
+_app = None
+
 # BASE
 
 class WidgetBase(Callback.Callbacks):
@@ -48,6 +50,9 @@ class WidgetBase(Callback.Callbacks):
     def get_size(self):
         wd, ht = self.widget.width(), self.widget.height()
         return (wd, ht)
+
+    def get_app(self):
+        return _app
 
     def delete(self):
         self.widget.deleteLater()
@@ -1550,6 +1555,7 @@ class TopLevel(ContainerBase):
 class Application(object):
 
     def __init__(self, logger=None):
+        global _app
 
         self.logger = logger
         self.window_list = []
@@ -1562,6 +1568,7 @@ class Application(object):
         app = QtGui.QApplication([])
         #app.lastWindowClosed.connect(lambda *args: self._quit())
         self._qtapp = app
+        _app = self
 
         # Get screen size
         desktop = self._qtapp.desktop()
