@@ -195,6 +195,174 @@ def use(wcspkg, raise_err=True):
 
 class BaseWCS(object):
     """Base class for WCS."""
+
+    def __init__(self, logger):
+        self.logger = logger
+        # The header (or WCS parts thereof) that is in a format readable
+        # by the WCS package used by the wrapper.
+        self.header = None
+        # Internal object holding the wrapped WCS object.  This should
+        # be None if no valid WCS could be created by the WCS package.
+        self.wcs = None
+        # Name of the coordinate system defined by the keywords in
+        # the header.  "raw" means no system that ginga understands.
+        # See types returned by get_coord_system_name()
+        self.coordsys = 'raw'
+
+    def load_header(self, header, fobj=None):
+        """
+        Initializes the internal package WCS from the keywords in
+        the WCS header.
+
+        Parameters
+        ----------
+        header : dict-like
+            A dictionary like object mapping WCS keywords to values.
+
+        fobj : object, optional
+            A handle to the open object used to load the image.
+
+        This method is called to create and initialize a wrapped WCS
+        object from WCS keywords.  It typically will set self.header
+        as needed and from that initialize self.wcs
+
+        If the WCS creation fails, self.wcs should be set to None and
+        a WCSError raised.
+
+        The value of `fobj` depends on the method used to open the file,
+        but will usually be an open handle to the file (e.g. astropy.io.fits)
+        """
+        pass
+
+    def spectral_coord(self, idxs, coords='data'):
+        """
+        Map data (pixel) indexes into an element of the WCS coordinate.
+
+        Parameters
+        ----------
+        idxs : tuple-like
+            A sequence of indexes making up a data coordinate
+
+        coords : 'data' or None, optional, default to 'data'
+            Expresses whether the data coordinate is indexed from zero
+
+        See `pixtoradec` for discussion of the `idxs` and `coords`
+        parameters.
+
+        Returns
+        -------
+        The spectral coordinate resolved from the wrapped WCS.
+
+        This is usually the WCS value in the third axis of the coordinate
+        system defined by the WCS for multidimensional (i.e. > 2D) data.
+        """
+        pass
+
+    def pixtoradec(self, idxs, coords='data'):
+        """
+        Map pixel indexes into a sky coordinate in the WCS system
+        defined by the header.
+
+        Parameters
+        ----------
+        idxs : tuple-like
+            A sequence of indexes making up a data coordinate
+
+        coords : 'data' or None, optional, default to 'data'
+            Expresses whether the data coordinate is indexed from zero
+
+        This method returns part of the world coordinates for the data
+        (e.g. pixel) coordinate specified by `idxs`.
+
+        `idxs` is expressed as a sequence of floating point values,
+        usually representing (possibly fractional) pixel values.
+
+        The `coords` parameter should be consulted to determine whether
+        to increment the constituents of the data coordinate, depending
+        on the API for the wrapped WCS.  If coords == 'data', then the
+        indexes originate at 0, otherwise they can be assumed to originate
+        from 1.
+
+        Returns
+        -------
+        Returns a 2-tuple containing the WCS converted values in the
+        first two axes of the coordinate system defined by the WCS
+        (e.g. (ra_deg, dec_deg) as floats).
+        """
+        pass
+
+    def radectopix(self, ra_deg, dec_deg, coords='data', naxispath=None):
+        """
+        Map a sky coordinate in the WCS system defined by the header
+        into pixel indexes.
+
+        Parameters
+        ----------
+        ra_deg : float
+            First coordinate
+
+        dec_deg : float
+            Second coordinate
+
+        coords : 'data' or None, optional, defaults to 'data'
+            Expresses whether to return coordinates indexed from zero
+
+        naxispath : list-like or None, optional, defaults to None
+            A sequence defining the pixel indexes > 2D, if any
+
+        This method returns the 2D data (e.g. pixel) coordinate for the
+        world coordinate defined by (ra_deg, dec_deg) + [0]*len(naxispath)
+
+        ra_deg and dec_deg are expressed in degrees (float) and prepended
+        to the naxispath, which is usually provided only for dimensions > 2D.
+
+        The `coords` parameter should be consulted to determine whether
+        to return the values of the data coordinates at origin 0 or 1.
+        If coords == 'data', then the values should be returned at 0
+        origin.
+
+        Returns
+        -------
+        Returns a 2-tuple containing the data (pixel) values in the
+        first two axes of the data coordinate system defined by the WCS
+        (e.g. (x, y) as floats).
+        """
+        pass
+
+    def pixtosystem(self, idxs, system=None, coords='data'):
+        """
+        Map pixel values into a sky coordinate in a named system.
+
+        Parameters
+        ----------
+        idxs : tuple-like
+            A sequence of indexes making up a data coordinate
+
+        system : str or None
+            A string naming a coordinate system
+
+        coords : 'data' or None, optional, default to 'data'
+            Expresses whether the data coordinate is indexed from zero
+
+        See `pixtoradec` for discussion of the `idxs` and `coords`
+        parameters.
+
+        `system` names a coordinate system in which the results are
+        expected.  For example, the wrapped WCS may express a coordinate
+        system in "fk5" and the `system` parameter is "galactic".
+
+        This call differs from pixtoradec() in that it may need to do
+        a secondary mapping from the image's default coordinate system
+        to the `system` one.
+
+        Returns
+        -------
+        Returns a 2-tuple containing the WCS converted values in the
+        first two axes of the coordinate system defined by `system`
+        (e.g. (ra_deg, dec_deg) as floats).
+        """
+        pass
+
     def get_keyword(self, key):
         return self.header[key]
 
@@ -202,7 +370,10 @@ class BaseWCS(object):
         return list(map(lambda key: self.header[key], args))
 
     def fix_bad_headers(self):
-        """Fix up bad headers that cause problems for WCSLIB.
+        """
+        Fix up bad headers that cause problems for the wrapped WCS
+        module.
+
         Subclass can override this method to fix up issues with the
         header for problem FITS files.
         """
@@ -226,11 +397,8 @@ class AstropyWCS2(BaseWCS):
     """
 
     def __init__(self, logger):
-        super(AstropyWCS2, self).__init__()
+        super(AstropyWCS2, self).__init__(logger)
         self.kind = 'astropy/WCSLIB'
-        self.logger = logger
-        self.header = None
-        self.wcs = None
         self.coordframe = 'raw'
 
     @property
@@ -445,14 +613,10 @@ class AstropyWCS(BaseWCS):
 
     """
     def __init__(self, logger):
-        super(AstropyWCS, self).__init__()
+        super(AstropyWCS, self).__init__(logger)
 
         if not have_astropy:
             raise WCSError("Please install module 'astropy' first!")
-        self.logger = logger
-        self.header = None
-        self.wcs = None
-        self.coordsys = 'raw'
         self.new_coords = False            # new astropy coordinate system
 
         if hasattr(coordinates, 'SkyCoord'):
@@ -637,14 +801,10 @@ class AstLibWCS(BaseWCS):
 
     """
     def __init__(self, logger):
-        super(AstLibWCS, self).__init__()
+        super(AstLibWCS, self).__init__(logger)
 
         if not have_astlib:
             raise WCSError("Please install package 'astLib' first!")
-        self.logger = logger
-        self.header = None
-        self.wcs = None
-        self.coordsys = 'raw'
         self.kind = 'astlib/wcstools'
 
     def load_header(self, header, fobj=None):
@@ -755,14 +915,10 @@ class KapteynWCS(BaseWCS):
 
     """
     def __init__(self, logger):
-        super(KapteynWCS, self).__init__()
+        super(KapteynWCS, self).__init__(logger)
 
         if not have_kapteyn:
             raise WCSError("Please install package 'kapteyn' first!")
-        self.logger = logger
-        self.header = None
-        self.wcs = None
-        self.coordsys = 'raw'
         self.kind = 'kapteyn/WCSLIB'
         self._skyout = "equatorial icrs J2000.0"
 
@@ -877,14 +1033,10 @@ class StarlinkWCS(BaseWCS):
 
     """
     def __init__(self, logger):
-        super(StarlinkWCS, self).__init__()
+        super(StarlinkWCS, self).__init__(logger)
 
         if not have_starlink:
             raise WCSError("Please install package 'starlink-pyast' first!")
-        self.logger = logger
-        self.header = None
-        self.wcs = None
-        self.coordsys = 'raw'
         self.kind = 'starlink'
 
     def load_header(self, header, fobj=None):
@@ -1032,12 +1184,8 @@ class BareBonesWCS(BaseWCS):
 
     """
     def __init__(self, logger):
-        super(BareBonesWCS, self).__init__()
-        self.logger = logger
-        self.header = {}
-        self.coordsys = 'raw'
+        super(BareBonesWCS, self).__init__(logger)
         self.kind = 'barebones'
-        self.wcs = True
 
     def load_header(self, header, fobj=None):
         self.header = {}
