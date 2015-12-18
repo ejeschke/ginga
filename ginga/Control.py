@@ -787,6 +787,18 @@ class GingaControl(Callback.Callbacks):
                 self.logger.error("Failed to continue operation: %s" % (str(e)))
                 # TODO: log traceback?
 
+    def _close_plugins(self, channel):
+        """Close all plugins associated with the channel."""
+        opmon = channel.opmon
+        for key in opmon.get_active():
+            obj = opmon.getPlugin(key)
+            try:
+                self.gui_do(obj.close)
+
+            except Exception as e:
+                self.logger.error("Failed to continue operation: %s" % (str(e)))
+                # TODO: log traceback?
+
     def channel_image_updated(self, channel, image):
 
         with self.lock:
@@ -984,11 +996,19 @@ class GingaControl(Callback.Callbacks):
         return channel
 
     def delete_channel(self, chname):
+        """Delete a given channel from viewer."""
         name = chname.lower()
-        # TODO: need to close plugins open on this channel
+
+        if len(self.channelNames) < 1:
+            self.logger.error('Delete channel={0} failed. '
+                              'No channels left.'.format(chname))
+            return
 
         with self.lock:
             channel = self.channel[name]
+
+            # Close local plugins open on this channel
+            self._close_plugins(channel)
 
             # Update the channels control
             self.channelNames.remove(chname)
