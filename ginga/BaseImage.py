@@ -8,7 +8,6 @@
 # Please see the file LICENSE.txt for details.
 #
 import math
-import time
 import numpy
 import logging
 
@@ -42,7 +41,6 @@ class BaseImage(Callback.Callbacks):
         # but we'd have to fix a lot of code that is currently checking for
         # None
         self.metadata.setdefault('name', None)
-        self.metadata.setdefault('time_modified', None)
 
         self._set_minmax()
 
@@ -156,8 +154,6 @@ class BaseImage(Callback.Callbacks):
 
         if metadata:
             self.update_metadata(metadata)
-        # record modification time
-        self.set(time_modified=time.time())
 
         self._set_minmax()
 
