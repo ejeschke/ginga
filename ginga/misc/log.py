@@ -97,7 +97,7 @@ def addlogopts(optprs):
     optprs.add_option("--log", dest="logfile", metavar="FILE",
                       help="Write logging output to FILE")
     optprs.add_option("--loglevel", dest="loglevel", metavar="LEVEL",
-                      default='info',
+                      default=20, type=int,
                       help="Set logging level to LEVEL")
     optprs.add_option("--logsize", dest="logsize", metavar="NUMBYTES",
                       type="int", default=log_maxsize,

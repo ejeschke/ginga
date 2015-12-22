@@ -180,11 +180,22 @@ class Pick(GingaPlugin.LocalPlugin):
 
         if have_mpl:
             # Contour plot
+            hbox = Widgets.HBox()
             self.contour_plot = plots.ContourPlot(logger=self.logger)
             self.contour_plot.add_axis(axisbg='black')
             pw = Plot.PlotWidget(self.contour_plot)
             pw.resize(400, 300)
-            nb.add_widget(pw, title="Contour")
+            hbox.add_widget(pw, stretch=1)
+            zoom = Widgets.Slider(orientation='vertical', track=True)
+            zoom.set_limits(1, 100, incr_value=1)
+            zoom.set_value(self.contour_plot.plot_zoomlevel)
+
+            def zoom_contour_cb(w, val):
+                self.contour_plot.plot_zoom(val/10.0)
+
+            zoom.add_callback('value-changed', zoom_contour_cb)
+            hbox.add_widget(zoom, stretch=0)
+            nb.add_widget(hbox, title="Contour")
 
             # FWHM gaussians plot
             self.fwhm_plot = plots.FWHMPlot(logger=self.logger)
@@ -210,8 +221,7 @@ class Pick(GingaPlugin.LocalPlugin):
         self.w.nb2 = nb
 
         # Build report panel
-        captions = (('Zoom:', 'label', 'Zoom', 'llabel',
-                     'Contour Zoom:', 'label', 'Contour Zoom', 'llabel'),
+        captions = (('Zoom:', 'label', 'Zoom', 'llabel'),
                     ('Object_X', 'label', 'Object_X', 'llabel',
                      'Object_Y', 'label', 'Object_Y', 'llabel'),
                     ('RA:', 'label', 'RA', 'llabel',
@@ -613,10 +623,8 @@ class Pick(GingaPlugin.LocalPlugin):
             x, y = self.pickcenter.x, self.pickcenter.y
 
         try:
-            # TODO: fix
-            self.contour_plot.num_contours = self.num_contours
-
-            self.contour_plot.plot_contours(x, y, data)
+            self.contour_plot.plot_contours(x, y, data,
+                                            num_contours=self.num_contours)
 
         except Exception as e:
             self.logger.error("Error making contour plot: %s" % (

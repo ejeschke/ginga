@@ -24,8 +24,9 @@ from ginga.misc import Task, Future, Callback
 
 class GwMain(Callback.Callbacks):
 
-    def __init__(self, queue=None, logger=None, ev_quit=None, app=None):
-        super(GwMain, self).__init__()
+    def __init__(self, queue=None, logger=None, ev_quit=None, app=None,
+                 thread_pool=None):
+        Callback.Callbacks.__init__(self)
 
         self.enable_callback('shutdown')
 
@@ -43,12 +44,23 @@ class GwMain(Callback.Callbacks):
         self.app = app
         self.gui_thread_id = None
 
+        self.threadPool = thread_pool
+        # For asynchronous tasks on the thread pool
+        self.tag = 'master'
+        self.shares = ['threadPool', 'logger']
+
+        self.min_events = 100
+
+
     def get_widget(self):
         return self.app
 
+    def get_threadPool(self):
+        return self.threadPool
+
     def update_pending(self, timeout=0.0):
 
-        #print "1. PROCESSING OUT-BAND"
+        # "1. PROCESSING OUT-BAND"
         try:
             self.app.process_events()
         except Exception as e:
@@ -91,14 +103,12 @@ class GwMain(Callback.Callbacks):
                 self.logger.error("Main GUI loop error: %s" % str(e))
                 #pass
 
-        # Process "out-of-band" events
-        #print "3. PROCESSING OUT-BAND"
+        # Process "out-of-band" events, again
         try:
             self.app.process_events()
             pass
         except Exception as e:
             self.logger.error(str(e))
-            # TODO: traceback!
 
 
     def gui_do(self, method, *args, **kwdargs):

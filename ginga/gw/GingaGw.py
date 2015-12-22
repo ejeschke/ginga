@@ -44,10 +44,10 @@ class GingaViewError(Exception):
 
 class GingaView(GwMain.GwMain, Widgets.Application):
 
-    def __init__(self, logger, ev_quit):
-        Widgets.Application.__init__(self, logger=logger)
+    def __init__(self, logger, ev_quit, thread_pool):
         GwMain.GwMain.__init__(self, logger=logger, ev_quit=ev_quit,
-                               app=self)
+                               app=self, thread_pool=thread_pool)
+        Widgets.Application.__init__(self, logger=logger)
 
         self.w = Bunch.Bunch()
         self.iconpath = icon_path

@@ -1309,11 +1309,12 @@ class TopLevel(ContainerBase):
 </html>''' % d
 
 
-class Application(object):
+class Application(Callback.Callbacks):
 
     def __init__(self, logger=None, base_url=None,
                  host='localhost', port=9909):
         global _app, widget_dict
+        super(Application, self).__init__()
 
         self.logger = logger
         self.base_url = base_url
@@ -1337,6 +1338,9 @@ class Application(object):
         # TODO: need to pass this from Web browser
         self.screen_wd = 1600
         self.screen_ht = 1200
+
+        for name in ('shutdown', ):
+            self.enable_callback(name)
 
     def get_screen_size(self):
         return (self.screen_wd, self.screen_ht)

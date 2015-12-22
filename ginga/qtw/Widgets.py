@@ -12,7 +12,7 @@ from functools import reduce
 
 from ginga.qtw.QtHelp import QtGui, QtCore, QTextCursor, \
      QIcon, QPixmap, QImage, have_pyqt4
-from ginga.qtw import QtHelp, QtMain
+from ginga.qtw import QtHelp
 
 from ginga.misc import Callback, Bunch
 import ginga.icons
@@ -378,12 +378,13 @@ class Slider(WidgetBase):
 
         if orientation == 'horizontal':
             w = QtGui.QSlider(QtCore.Qt.Horizontal)
+            w.setTickPosition(QtGui.QSlider.TicksBelow)
         else:
             w = QtGui.QSlider(QtCore.Qt.Vertical)
+            w.setTickPosition(QtGui.QSlider.TicksRight)
         # this controls whether the callbacks are made *as the user
         # moves the slider* or afterwards
         w.setTracking(track)
-        w.setTickPosition(QtGui.QSlider.TicksBelow)
         self.widget = w
         w.valueChanged.connect(self._cb_redirect)
 
@@ -1552,10 +1553,11 @@ class TopLevel(ContainerBase):
         self.widget.setWindowTitle(title)
 
 
-class Application(object):
+class Application(Callback.Callbacks):
 
     def __init__(self, logger=None):
         global _app
+        super(Application, self).__init__()
 
         self.logger = logger
         self.window_list = []
@@ -1577,6 +1579,9 @@ class Application(object):
         size = rect.size()
         self.screen_wd = size.width()
         self.screen_ht = size.height()
+
+        for name in ('shutdown', ):
+            self.enable_callback(name)
 
     def get_screen_size(self):
         return (self.screen_wd, self.screen_ht)

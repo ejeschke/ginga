@@ -7,7 +7,7 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-from ginga.gtkw import GtkHelp, gtksel, GtkMain
+from ginga.gtkw import GtkHelp, gtksel
 import ginga.util.six as six
 import gtk
 import gobject
@@ -1111,14 +1111,18 @@ class TabWidget(ContainerBase):
         child = self.index_to_widget(index)
         self.make_callback('page-switch', child)
 
+    def _cb_select(self, widget, event, child):
+        self.make_callback('page-switch', child)
+
     def add_widget(self, child, title=''):
         self.add_ref(child)
         child_w = child.get_widget()
         label = gtk.Label(title)
         evbox = gtk.EventBox()
+        evbox.props.visible_window = True
         evbox.add(label)
         evbox.show_all()
-        #evbox.connect("button-press-event", self.select_cb, labelname, data)
+        evbox.connect("button-press-event", self._cb_select, child)
         self.widget.append_page(child_w, evbox)
         if self.reorderable:
             self.widget.set_tab_reorderable(child_w, True)
@@ -1141,6 +1145,14 @@ class TabWidget(ContainerBase):
         """Returns child corresponding to `idx`"""
         nchild = self.widget.get_nth_page(idx)
         return self._native_to_child(nchild)
+
+    def highlight_tab(self, idx, tf):
+        nchild = self.widget.get_nth_page(idx)
+        evbox = self.widget.get_tab_label(nchild)
+        if tf:
+            evbox.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse('palegreen'))
+        else:
+            evbox.modify_bg(gtk.STATE_NORMAL, None)
 
 class StackWidget(TabWidget):
     def __init__(self):
@@ -1614,10 +1626,11 @@ class TopLevel(ContainerBase):
         self.widget.set_title(title)
 
 
-class Application(object):
+class Application(Callback.Callbacks):
 
     def __init__(self, logger=None):
         global _app
+        super(Application, self).__init__()
 
         self.logger = logger
         self.window_list = []
@@ -1636,6 +1649,9 @@ class Application(object):
         ##     self.screen_wd, self.screen_ht))
 
         _app = self
+
+        for name in ('shutdown', ):
+            self.enable_callback(name)
 
     def get_screen_size(self):
         return (self.screen_wd, self.screen_ht)

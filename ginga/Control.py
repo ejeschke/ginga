@@ -64,7 +64,6 @@ class GingaControl(Callback.Callbacks):
         Callback.Callbacks.__init__(self)
 
         self.logger = logger
-        self.threadPool = threadPool
         self.mm = module_manager
         self.prefs = preferences
         # event for controlling termination of threads executing in this
@@ -83,12 +82,6 @@ class GingaControl(Callback.Callbacks):
                      'add-channel', 'delete-channel', 'field-info',
                      'add-image-info'):
             self.enable_callback(name)
-
-        self.gui_queue = Queue.Queue()
-        self.gui_thread_id = None
-        # For asynchronous tasks on the thread pool
-        self.tag = 'master'
-        self.shares = ['threadPool', 'logger']
 
         # Initialize the timer factory
         self.timer_factory = Timer.TimerFactory(ev_quit=self.ev_quit,
@@ -147,9 +140,6 @@ class GingaControl(Callback.Callbacks):
     def get_ServerBank(self):
         return self.imgsrv
 
-    def get_threadPool(self):
-        return self.threadPool
-
     def get_preferences(self):
         return self.prefs
 
@@ -195,7 +185,7 @@ class GingaControl(Callback.Callbacks):
         return True
 
     def keypress(self, fitsimage, keyname):
-        """Key press event in the big FITS window."""
+        """Key press event in a channel window."""
         chname = self.get_channelName(fitsimage)
         self.logger.debug("key press (%s) in channel %s" % (
             keyname, chname))
@@ -246,14 +236,6 @@ class GingaControl(Callback.Callbacks):
                 self.start_local_plugin(chname, opname, None)
         return True
 
-    def _is_thumb(self, url):
-        return '||' in url
-
-    def move_image_by_thumb(self, url, to_chname):
-        from_chname, imname, path = url.split('||')
-        self.move_image_by_name(from_chname, imname, to_chname,
-                                impath=path)
-
     def dragdrop(self, fitsimage, urls):
         """Called when a drop operation is performed on our main window.
         We are called back with a URL and we attempt to load it if it
@@ -262,11 +244,7 @@ class GingaControl(Callback.Callbacks):
         for url in urls:
             to_chname = self.get_channelName(fitsimage)
 
-            if self._is_thumb(url):
-                self.move_image_by_thumb(url, to_chname)
-                continue
-
-            #self.load_file(url)
+            ## self.load_file(url)
             self.nongui_do(self.load_file, url, chname=to_chname,
                            wait=False)
         return True

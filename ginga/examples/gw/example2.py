@@ -11,6 +11,7 @@
 from __future__ import print_function
 import sys, os
 import logging
+import threading
 
 from ginga import AstroImage, colors
 import ginga.toolkit as ginga_toolkit
@@ -26,18 +27,18 @@ class FitsViewer(object):
         self.drawcolors = colors.get_colors()
         self.dc = get_canvas_types()
 
-        from ginga.gw import Widgets, Viewers
+        from ginga.gw import Widgets, Viewers, GwHelp
 
-        self.app = Widgets.Application()
+        self.app = Widgets.Application(logger=logger)
         self.app.add_callback('shutdown', self.quit)
-        self.top = self.app.window("Ginga example2")
-        self.top.add_callback('closed', self.closed)
+        self.top = self.app.make_window("Ginga example2")
+        self.top.add_callback('close', self.closed)
 
         vbox = Widgets.VBox()
         vbox.set_border_width(2)
         vbox.set_spacing(1)
 
-        fi = Viewers.CanvasView(logger)
+        fi = Viewers.CanvasView(logger=logger)
         fi.enable_autocuts('on')
         fi.set_autocut_params('zscale')
         fi.enable_autozoom('on')
@@ -79,7 +80,8 @@ class FitsViewer(object):
         self.drawtypes.sort()
 
         fi.set_desired_size(512, 512)
-        vbox.add_widget(fi, stretch=1)
+        iw = Viewers.GingaViewerWidget(viewer=fi)
+        vbox.add_widget(iw, stretch=1)
 
         self.readout = Widgets.Label("")
         vbox.add_widget(self.readout, stretch=0)
@@ -151,6 +153,10 @@ class FitsViewer(object):
 
         self.top.set_widget(vbox)
 
+        self.fs = None
+        if hasattr(GwHelp, 'FileSelection'):
+            self.fs = GwHelp.FileSelection(self.top.get_widget())
+
     def set_drawparams(self):
         index = self.wdrawtype.get_index()
         kind = self.drawtypes[index]
@@ -179,14 +185,7 @@ class FitsViewer(object):
         self.top.set_title(filepath)
 
     def open_file(self):
-        res = Widgets.FileDialog.getOpenFileName(self, "Open FITS file",
-                                                     ".", "FITS files (*.fits)")
-        if isinstance(res, tuple):
-            fileName = res[0]
-        else:
-            fileName = str(res)
-        if len(fileName) != 0:
-            self.load_file(fileName)
+        self.fs.popup("Open FITS file", self.load_file)
 
     def drop_file(self, fitsimage, paths):
         fileName = paths[0]
@@ -272,7 +271,15 @@ def main(options, args):
     viewer.top.raise_()
 
     try:
-        viewer.app.mainloop()
+        app = viewer.top.get_app()
+
+        # TODO: unify these
+        if hasattr(app, 'start'):
+            app.start()
+
+        else:
+            while True:
+                app.process_events()
 
     except KeyboardInterrupt:
         print("Terminating viewer...")
@@ -289,20 +296,13 @@ if __name__ == "__main__":
 
     optprs.add_option("--debug", dest="debug", default=False, action="store_true",
                       help="Enter the pdb debugger on main()")
-    optprs.add_option("--log", dest="logfile", metavar="FILE",
-                      help="Write logging output to FILE")
-    optprs.add_option("--loglevel", dest="loglevel", metavar="LEVEL",
-                      type='int', default=logging.INFO,
-                      help="Set logging level to LEVEL")
-    optprs.add_option("--stderr", dest="logstderr", default=False,
-                      action="store_true",
-                      help="Copy logging also to stderr")
     optprs.add_option("-t", "--toolkit", dest="toolkit", metavar="NAME",
                       default='qt',
                       help="Choose GUI toolkit (gtk|qt)")
     optprs.add_option("--profile", dest="profile", action="store_true",
                       default=False,
                       help="Run the profiler on main()")
+    log.addlogopts(optprs)
 
     (options, args) = optprs.parse_args(sys.argv[1:])
 

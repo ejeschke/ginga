@@ -150,7 +150,7 @@ class Desktop(Callback.Callbacks):
     def highlight_tab(self, tabname, onoff):
         nb, index = self._find_nb(tabname)
         if (nb is not None) and hasattr(nb, 'highlight_tab'):
-            nb.highlight_tab(index)
+            nb.highlight_tab(index, onoff)
 
     def _add_toolbar(self, vbox, ws):
         toolbar = Widgets.Toolbar()

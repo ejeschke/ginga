@@ -306,7 +306,7 @@ class ReferenceViewer(object):
 
             def __init__(self, logger, thread_pool, module_manager, prefs,
                          ev_quit=None):
-                GingaView.__init__(self, logger, ev_quit)
+                GingaView.__init__(self, logger, ev_quit, thread_pool)
                 GingaControl.__init__(self, logger, thread_pool, module_manager,
                                       prefs, ev_quit=ev_quit)
 

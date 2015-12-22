@@ -163,12 +163,13 @@ class ContourPlot(Plot):
         self.plot_pany = 0
         self.plot_zoomlevel = 1.0
 
-        ## canvas = self.fig.canvas
-        ## connect = canvas.mpl_connect
-        ## # These are not ready for prime time...
-        ## # connect("motion_notify_event", self.plot_motion_notify)
-        ## # connect("button_press_event", self.plot_button_press)
-        ## connect("scroll_event", self.plot_scroll)
+    def connect_zoom_callbacks(self):
+        canvas = self.fig.canvas
+        connect = canvas.mpl_connect
+        # These are not ready for prime time...
+        # connect("motion_notify_event", self.plot_motion_notify)
+        # connect("button_press_event", self.plot_button_press)
+        connect("scroll_event", self.plot_scroll)
 
     def plot_contours(self, x, y, data, num_contours=None):
         # Make a contour plot
@@ -195,7 +196,7 @@ class ContourPlot(Plot):
             # Create a contour plot
             self.xdata = numpy.arange(wd)
             self.ydata = numpy.arange(ht)
-            self.ax.contourf(self.xdata, self.ydata, data, self.num_contours)
+            self.ax.contourf(self.xdata, self.ydata, data, num_contours)
             # Mark the center of the object
             self.ax.plot([x], [y], marker='x', ms=20.0,
                          color='black')
@@ -245,6 +246,10 @@ class ContourPlot(Plot):
 
         self.draw()
 
+    def plot_zoom(self, val):
+        self.plot_zoomlevel = val
+        self.plot_panzoom()
+
     def plot_scroll(self, event):
         # Matplotlib only gives us the number of steps of the scroll,
         # positive for up and negative for down.
@@ -263,6 +268,7 @@ class ContourPlot(Plot):
         # self.ax.set_xlim(x1*delta, x2*delta)
         # self.ax.set_ylim(y1*delta, y2*delta)
         # self.draw()
+        return True
 
     def plot_button_press(self, event):
         if event.button == 1:
