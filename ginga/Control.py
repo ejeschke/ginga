@@ -976,7 +976,7 @@ class GingaControl(Callback.Callbacks):
 
     def get_channelNames(self):
         with self.lock:
-            return [ self.channel[key].name for key in self.channel.keys() ]
+            return self.channelNames
 
     def scale2text(self, scalefactor):
         if scalefactor >= 1.0:

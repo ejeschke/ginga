@@ -291,6 +291,7 @@ class ComboBox(WidgetBase):
         super(ComboBox, self).__init__()
 
         self.widget = QtHelp.ComboBox()
+        self.widget.setSizeAdjustPolicy(QtGui.QComboBox.AdjustToContents)
         self.widget.setEditable(editable)
         self.widget.activated.connect(self._cb_redirect)
 
