@@ -78,9 +78,9 @@ class GingaControl(Callback.Callbacks):
         atexit.register(_rmtmpdir, self.tmpdir)
 
         # For callbacks
-        for name in ('add-image', 'active-image', 'remove-image',
+        for name in ('add-image', 'channel-change', 'remove-image',
                      'add-channel', 'delete-channel', 'field-info',
-                     'add-image-info'):
+                     'add-image-info', 'add-operation'):
             self.enable_callback(name)
 
         # Initialize the timer factory
@@ -117,12 +117,8 @@ class GingaControl(Callback.Callbacks):
         # Should channel change as mouse moves between windows
         self.channel_follows_focus = self.settings['channel_follows_focus']
 
-        self.fn_keys = ('f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8',
-                        'f9', 'f10', 'f11', 'f12')
-
         self.global_plugins = {}
         self.local_plugins = {}
-        self.operations  = []
 
         # some default colormap info
         self.cm = cmap.get_cmap("gray")
@@ -135,6 +131,8 @@ class GingaControl(Callback.Callbacks):
 
         # Initialize catalog and image server bank
         self.imgsrv = catalog.ServerBank(self.logger)
+
+        self.operations = []
 
 
     def get_ServerBank(self):
@@ -229,11 +227,6 @@ class GingaControl(Callback.Callbacks):
             self.prev_channel()
         elif keyname in ('right',):
             self.next_channel()
-        elif keyname in self.fn_keys:
-            index = self.fn_keys.index(keyname)
-            if (index >= 0) and (index < len(self.operations)):
-                opname = self.operations[index]
-                self.start_local_plugin(chname, opname, None)
         return True
 
     def dragdrop(self, fitsimage, urls):
@@ -330,6 +323,13 @@ class GingaControl(Callback.Callbacks):
         except Exception as e:
             self.logger.error("Unable to load local plugin '%s': %s" % (
                 name, str(e)))
+
+    def add_operation(self, opname):
+        self.operations.append(opname)
+        self.make_callback('add-operation', opname)
+
+    def get_operations(self):
+        return self.operations
 
     def add_global_plugin(self, spec):
         try:
@@ -804,9 +804,6 @@ class GingaControl(Callback.Callbacks):
             with self.lock:
                 self.cur_channel = channel
 
-            # Update the channel control
-            self.w.channel.show_text(channel.name)
-
         if name != oldchname:
             # raise tab
             if raisew:
@@ -831,7 +828,7 @@ class GingaControl(Callback.Callbacks):
         if image:
             channel.switch_image(image)
 
-        self.make_callback('active-image', channel.fitsimage)
+        self.make_callback('channel-change', channel)
 
         self.update_pending()
         return True
@@ -939,7 +936,6 @@ class GingaControl(Callback.Callbacks):
 
             opmon = self.getPluginManager(self.logger, self,
                                           self.ds, self.mm)
-            opmon.set_widget(self.w.optray)
 
             channel.widget = bnch.view
             channel.container = bnch.container
@@ -953,7 +949,6 @@ class GingaControl(Callback.Callbacks):
             # Update the channels control
             self.channelNames.append(chname)
             self.channelNames.sort()
-            self.w.channel.insert_alpha(chname)
 
         # Prepare local plugins for this channel
         for opname, spec in self.local_plugins.items():
@@ -972,7 +967,6 @@ class GingaControl(Callback.Callbacks):
             # Update the channels control
             self.channelNames.remove(chname)
             self.channelNames.sort()
-            self.w.channel.delete_alpha(chname)
 
             self.ds.remove_tab(chname)
             del self.channel[name]

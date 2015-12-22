@@ -74,7 +74,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         fv.set_callback('remove-image', self.remove_image_cb)
         fv.set_callback('add-channel', self.add_channel_cb)
         fv.set_callback('delete-channel', self.delete_channel_cb)
-        fv.add_callback('active-image', self.focus_cb)
+        fv.add_callback('channel-change', self.focus_cb)
 
         self.gui_up = False
 
@@ -291,11 +291,12 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         # add old highlight set to channel external data
         chinfo.extdata.setdefault('thumbs_old_highlight', set([]))
 
-    def focus_cb(self, viewer, fitsimage):
+    def focus_cb(self, viewer, channel):
         # Reflect transforms, colormap, etc.
+        fitsimage = channel.fitsimage
         image = fitsimage.get_image()
         if image is not None:
-            chname = viewer.get_channelName(fitsimage)
+            chname = channel.name
             thumbkey = self._get_thumb_key(chname, image)
             new_highlight = set([thumbkey])
 

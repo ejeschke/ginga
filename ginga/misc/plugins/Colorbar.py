@@ -30,7 +30,6 @@ class Colorbar(GingaPlugin.GlobalPlugin):
 
         fv.add_callback('add-channel', self.add_channel_cb)
         fv.add_callback('delete-channel', self.delete_channel_cb)
-        # fv.add_callback('active-image', self.focus_cb)
 
     def build_gui(self, container):
         cbar = ColorBar.ColorBar(self.logger)
@@ -38,7 +37,7 @@ class Colorbar(GingaPlugin.GlobalPlugin):
         cbar.set_imap(self.fv.im)
         cbar_w = Widgets.wrap(cbar)
         self.colorbar = cbar
-        self.fv.add_callback('active-image', self.change_cbar, cbar)
+        self.fv.add_callback('channel-change', self.change_cbar, cbar)
         cbar.add_callback('motion', self.cbar_value_cb)
 
         fr = Widgets.Frame()
@@ -79,19 +78,17 @@ class Colorbar(GingaPlugin.GlobalPlugin):
         # to change the ColorBar's rgbmap to match our
         colorbar.set_rgbmap(rgbmap)
 
-    def change_cbar(self, viewer, fitsimage, cbar):
-        self._match_cmap(fitsimage, cbar)
+    def change_cbar(self, viewer, channel, cbar):
+        self._match_cmap(channel.fitsimage, cbar)
 
-    # def focus_cb(self, viewer, fitsimage):
-    #     chname = self.fv.get_channelName(fitsimage)
-    #     channel = self.fv.get_channelInfo(chname)
+    # def focus_cb(self, viewer, channel):
     #     chname = channel.name
 
     #     if self.active != chname:
     #         self.active = chname
     #         self.info = self.channel[self.active]
 
-    #     image = fitsimage.get_image()
+    #     image = channel.fitsimage.get_image()
     #     if image is None:
     #         return
     #     # install rgbmap
@@ -135,10 +132,11 @@ class Colorbar(GingaPlugin.GlobalPlugin):
             self.change_cbar(self.fv, fitsimage, self.colorbar)
 
     def start(self):
-        names = self.fv.get_channelNames()
-        for name in names:
-            channel = self.fv.get_channelInfo(name)
-            self.add_channel(self.fv, channel)
+        ## names = self.fv.get_channelNames()
+        ## for name in names:
+        ##     channel = self.fv.get_channelInfo(name)
+        ##     self.add_channel_cb(self.fv, channel)
+        pass
 
     def __str__(self):
         return 'colorbar'

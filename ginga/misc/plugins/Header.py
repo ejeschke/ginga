@@ -38,7 +38,7 @@ class Header(GingaPlugin.GlobalPlugin):
 
         fv.add_callback('add-channel', self.add_channel)
         fv.add_callback('delete-channel', self.delete_channel)
-        fv.add_callback('active-image', self.focus_cb)
+        fv.add_callback('channel-change', self.focus_cb)
 
     def build_gui(self, container):
         nb = Widgets.StackWidget()
@@ -121,10 +121,8 @@ class Header(GingaPlugin.GlobalPlugin):
         self.info = None
         del self.channel[chname]
 
-    def focus_cb(self, viewer, fitsimage):
-        chname = self.fv.get_channelName(fitsimage)
-        chinfo = self.fv.get_channelInfo(chname)
-        chname = chinfo.name
+    def focus_cb(self, viewer, channel):
+        chname = channel.name
 
         if self.active != chname:
             widget = self.channel[chname].widget
@@ -133,7 +131,7 @@ class Header(GingaPlugin.GlobalPlugin):
             self.active = chname
             self.info = self.channel[self.active]
 
-        image = fitsimage.get_image()
+        image = channel.fitsimage.get_image()
         if image is None:
             return
         self.set_header(self.info, image)

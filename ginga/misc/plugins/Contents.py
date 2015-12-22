@@ -47,7 +47,7 @@ class Contents(GingaPlugin.GlobalPlugin):
         fv.add_callback('remove-image', self.remove_image_cb)
         fv.add_callback('add-channel', self.add_channel_cb)
         fv.add_callback('delete-channel', self.delete_channel_cb)
-        fv.add_callback('active-image', self.focus_cb)
+        fv.add_callback('channel-change', self.focus_cb)
 
         self.gui_up = False
 
@@ -271,11 +271,9 @@ class Contents(GingaPlugin.GlobalPlugin):
 
         return True
 
-    def focus_cb(self, viewer, fitsimage):
-        chname = self.fv.get_channelName(fitsimage)
-        chinfo = self.fv.get_channelInfo(chname)
-        chname = chinfo.name
-        image = fitsimage.get_image()
+    def focus_cb(self, viewer, channel):
+        chname = channel.name
+        image = channel.fitsimage.get_image()
 
         if image is not None:
             key = self._get_hl_key(chname, image)

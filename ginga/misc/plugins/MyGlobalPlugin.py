@@ -35,7 +35,7 @@ class MyGlobalPlugin(GingaPlugin.GlobalPlugin):
         # your plugin does
         fv.set_callback('add-channel', self.add_channel)
         fv.set_callback('delete-channel', self.delete_channel)
-        fv.set_callback('active-image', self.focus_cb)
+        fv.set_callback('channel-change', self.focus_cb)
 
     def build_gui(self, container):
         """
@@ -102,39 +102,38 @@ class MyGlobalPlugin(GingaPlugin.GlobalPlugin):
 
     def get_channel_info(self, fitsimage):
         chname = self.fv.get_channelName(fitsimage)
-        chinfo = self.fv.get_channelInfo(chname)
-        return chinfo
+        channel = self.fv.get_channelInfo(chname)
+        return channel
 
     def set_info(self, text):
         self.tw.set_text(text)
 
     # CALLBACKS
 
-    def add_channel(self, viewer, chinfo):
+    def add_channel(self, viewer, channel):
         """
         Callback from the reference viewer shell when a channel is added.
         """
         self.set_info("Channel '%s' has been added" % (
-                chinfo.name))
+                channel.name))
         # Register for new image callbacks on this channel's canvas
-        fitsimage = chinfo.fitsimage
+        fitsimage = channel.fitsimage
         fitsimage.set_callback('image-set', self.new_image_cb)
 
-    def delete_channel(self, viewer, chinfo):
+    def delete_channel(self, viewer, channel):
         """
         Callback from the reference viewer shell when a channel is deleted.
         """
         self.set_info("Channel '%s' has been deleted" % (
-                chinfo.name))
+                channel.name))
         return True
 
-    def focus_cb(self, viewer, fitsimage):
+    def focus_cb(self, viewer, channel):
         """
         Callback from the reference viewer shell when the focus changes
         between channels.
         """
-        chinfo = self.get_channel_info(fitsimage)
-        chname = chinfo.name
+        chname = channel.name
 
         if self.active != chname:
             # focus has shifted to a different channel than our idea
@@ -149,8 +148,8 @@ class MyGlobalPlugin(GingaPlugin.GlobalPlugin):
         Callback from the reference viewer shell when a new image has
         been added to a channel.
         """
-        chinfo = self.get_channel_info(fitsimage)
-        chname = chinfo.name
+        channel = self.get_channel_info(fitsimage)
+        chname = channel.name
 
         # Only update our GUI if the activity is in the focused
         # channel

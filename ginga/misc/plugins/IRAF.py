@@ -92,7 +92,7 @@ class IRAF(GingaPlugin.GlobalPlugin):
 
         fv.add_callback('add-channel', self.add_channel)
         fv.add_callback('delete-channel', self.delete_channel)
-        #fv.set_callback('active-image', self.focus_cb)
+        #fv.set_callback('channel-change', self.focus_cb)
 
         self.gui_up = False
 

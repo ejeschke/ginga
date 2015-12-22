@@ -47,7 +47,7 @@ class Zoom(GingaPlugin.GlobalPlugin):
         self._ht = 200
 
         fv.add_callback('add-channel', self.add_channel)
-        fv.add_callback('active-image', self.focus_cb)
+        fv.add_callback('channel-change', self.focus_cb)
 
     def build_gui(self, container):
 
@@ -141,7 +141,6 @@ class Zoom(GingaPlugin.GlobalPlugin):
         fitssettings = fitsimage.get_settings()
         zoomsettings = self.zoomimage.get_settings()
         fitsimage.add_callback('image-set', self.new_image_cb)
-        #fitsimage.add_callback('focus', self.focus_cb)
         # TODO: should we add our own canvas instead?
         fitsimage.add_callback('motion', self.motion_cb)
         for name in ['cuts']:
@@ -177,7 +176,8 @@ class Zoom(GingaPlugin.GlobalPlugin):
         ## data = image.get_data()
         ## self.set_data(data)
 
-    def focus_cb(self, viewer, fitsimage):
+    def focus_cb(self, viewer, channel):
+        fitsimage = channel.fitsimage
         self.fitsimage_focus = fitsimage
         # Reflect transforms, colormap, etc.
         fitsimage.copy_attributes(self.zoomimage,
@@ -261,7 +261,9 @@ class Zoom(GingaPlugin.GlobalPlugin):
         # If this is a new source, then update our widget with the
         # attributes of the source
         if self.fitsimage_focus != fitsimage:
-            self.focus_cb(self.fv, fitsimage)
+            chname = self.fv.get_channelName(fitsimage)
+            channel = self.fv.get_channelInfo(chname)
+            self.focus_cb(self.fv, channel)
 
         # If the refresh interval has expired then update the zoom image;
         # otherwise (re)set the timer until the end of the interval.

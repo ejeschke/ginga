@@ -26,7 +26,7 @@ class Pan(GingaPlugin.GlobalPlugin):
 
         fv.add_callback('add-channel', self.add_channel)
         fv.add_callback('delete-channel', self.delete_channel)
-        fv.set_callback('active-image', self.focus_cb)
+        fv.set_callback('channel-change', self.focus_cb)
 
         self.dc = fv.getDrawClasses()
 
@@ -177,10 +177,8 @@ class Pan(GingaPlugin.GlobalPlugin):
             self.fv.gui_do(self.set_image, chinfo, paninfo, image)
         return False
 
-    def focus_cb(self, viewer, fitsimage):
-        chname = self.fv.get_channelName(fitsimage)
-        chinfo = self.fv.get_channelInfo(chname)
-        chname = chinfo.name
+    def focus_cb(self, viewer, channel):
+        chname = channel.name
 
         # If the active widget has changed, then raise our Info widget
         # that corresponds to it

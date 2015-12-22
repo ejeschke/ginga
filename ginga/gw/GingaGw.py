@@ -101,32 +101,6 @@ class GingaView(GwMain.GwMain, Widgets.Application):
             if nb.has_callback('page-close'):
                 nb.add_callback('page-close', self.page_closed_cb, wsname)
 
-        # bottom buttons
-        hbox = Widgets.HBox()
-        hbox.set_border_width(0)
-        hbox.set_spacing(2)
-
-        cbox1 = Widgets.ComboBox()
-        self.w.channel = cbox1
-        cbox1.set_tooltip("Select a channel")
-        cbox1.add_callback('activated', self.channel_select_cb)
-        hbox.add_widget(cbox1, stretch=0)
-
-        opmenu = Widgets.Menu()
-        self.w.operation = opmenu
-        btn = Widgets.Button("Operation")
-        btn.add_callback('activated', self.invoke_op_cb)
-        btn.set_tooltip("Invoke operation")
-        self.w.opbtn = btn
-        hbox.add_widget(btn, stretch=0)
-
-        self.w.optray = Widgets.HBox()
-        self.w.optray.set_border_width(0)
-        self.w.optray.set_spacing(2)
-        hbox.add_widget(self.w.optray, stretch=1)
-
-        self.w.vbox.add_widget(hbox, stretch=0)
-
         menuholder = self.w['menu']
         self.w.menubar = self.add_menus(menuholder)
 
@@ -305,13 +279,6 @@ class GingaView(GwMain.GwMain, Widgets.Application):
 
         root.fullscreen()
         self.w.fscreen = root
-
-    def add_operation(self, title):
-        opmenu = self.w.operation
-        item = opmenu.add_name(title)
-        item.add_callback('activated',
-                          lambda *args: self.start_operation_cb(title))
-        self.operations.append(title)
 
     ####################################################
     # THESE METHODS ARE CALLED FROM OTHER MODULES & OBJECTS
@@ -511,7 +478,7 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         self.ds.show_dialog(dialog)
 
     def gui_load_file(self, initialdir=None):
-        #self.start_operation_cb('FBrowser')
+        #self.start_operation('FBrowser')
         self.filesel.popup("Load File", self.load_file,
                            initialdir=initialdir)
 
@@ -617,13 +584,6 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         while len(self.ds.toplevels) > 0:
             w = self.ds.toplevels.pop()
             w.delete()
-
-    def channel_select_cb(self, widget, index):
-        if index >= 0:
-            chname = self.channelNames[index]
-            self.logger.debug("Channel changed, index=%d chname=%s" % (
-                index, chname))
-            self.change_channel(chname)
 
     def add_channel_cb(self, w, rsp, b, names):
         chname = str(b.channel_name.get_text())
@@ -739,17 +699,6 @@ class GingaView(GwMain.GwMain, Widgets.Application):
             self.logger.debug(
                 'Found {0} and only loading {1}'.format(paths, paths[0]))
             self.load_file(paths[0])
-
-    def invoke_op_cb(self, btn_w):
-        self.logger.debug("invoking operation menu")
-        menu = self.w.operation
-        menu.popup(btn_w)
-
-    def start_operation_cb(self, name):
-        self.logger.debug("invoking operation menu")
-        idx = self.w.channel.get_index()
-        chname = str(self.w.channel.get_alpha(idx))
-        return self.start_local_plugin(chname, name, None)
 
     def tile_panes_cb(self, ws):
         ws.tile_panes()

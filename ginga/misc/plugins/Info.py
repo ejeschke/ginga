@@ -30,7 +30,7 @@ class Info(GingaPlugin.GlobalPlugin):
         fv.add_callback('add-channel', self.add_channel)
         fv.add_callback('delete-channel', self.delete_channel)
         fv.add_callback('field-info', self.field_info)
-        fv.add_callback('active-image', self.focus_cb)
+        fv.add_callback('channel-change', self.focus_cb)
 
     def build_gui(self, container):
         nb = Widgets.StackWidget()
@@ -168,10 +168,8 @@ class Info(GingaPlugin.GlobalPlugin):
             self.fv.gui_do(self.set_info, info, fitsimage)
         return True
 
-    def focus_cb(self, viewer, fitsimage):
-        chname = self.fv.get_channelName(fitsimage)
-        chinfo = self.fv.get_channelInfo(chname)
-        chname = chinfo.name
+    def focus_cb(self, viewer, channel):
+        chname = channel.name
 
         if self.active != chname:
             widget = self.channel[chname].widget
@@ -180,7 +178,7 @@ class Info(GingaPlugin.GlobalPlugin):
             self.active = chname
             self.info = self.channel[self.active]
 
-        self.set_info(self.info, fitsimage)
+        self.set_info(self.info, channel.fitsimage)
 
     def zoomset_cb(self, setting, value, fitsimage, info):
         """This callback is called when the main window is zoomed.

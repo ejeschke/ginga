@@ -12,13 +12,13 @@ import threading
 import traceback
 
 from ginga.gw import Widgets
-from ginga.misc import Bunch
+from ginga.misc import Bunch, Callback
 from ginga.util.six.moves import filter
 
 class PluginManagerError(Exception):
     pass
 
-class PluginManager(object):
+class PluginManager(Callback.Callbacks):
     """
     A PluginManager manages the start and stop of plugins.
     """
@@ -36,12 +36,10 @@ class PluginManager(object):
         self.active = {}
         self.focus  = set([])
         self.exclusive = set([])
-        self.focuscolor = "lightgreen"
 
-        self.hbox = None
-
-    def set_widget(self, hbox):
-        self.hbox = hbox
+        for name in ('activate-plugin', 'deactivate-plugin',
+                     'focus-plugin', 'unfocus-plugin'):
+            self.enable_callback(name)
 
     def loadPlugin(self, name, spec, chinfo=None):
         try:
@@ -121,7 +119,7 @@ class PluginManager(object):
                 # local plugin
                 tup = name.split(':')
                 bnch.lblname = ' ' + tup[0] + ':\n' + tup[1] + ' '
-                self.add_taskbar(bnch)
+                self.make_callback('activate-plugin', bnch)
             else:
                 # global plugin
                 bnch.exclusive = False
@@ -140,8 +138,7 @@ class PluginManager(object):
             self.logger.debug("removing from task bar: %s" % (lname))
             bnch = self.active[lname]
 
-            if bnch.widget is not None:
-                self.remove_taskbar(bnch)
+            self.make_callback('deactivate-plugin', bnch)
             del self.active[lname]
 
             try:
@@ -180,7 +177,7 @@ class PluginManager(object):
 
             self.logger.debug("resuming plugin %s" % (name))
             pInfo.obj.resume()
-            self.highlight_taskbar(bnch)
+            self.make_callback('focus-plugin', bnch)
             # raise the workspace this plugin is in
             in_ws = pInfo.spec.ws
             self.ds.raise_tab(in_ws)
@@ -203,7 +200,7 @@ class PluginManager(object):
 
             if pInfo.chinfo is not None:
                 bnch.pInfo.obj.pause()
-                self.unhighlight_taskbar(bnch)
+                self.make_callback('unfocus-plugin', bnch)
         except:
             pass
 
@@ -334,45 +331,6 @@ class PluginManager(object):
         textw = Widgets.TextArea(editable=False, wrap=True)
         textw.append_text(text)
         box.add_widget(textw, stretch=1)
-
-    def add_taskbar(self, bnch):
-        lname = bnch.pInfo.name.lower()
-        menu = Widgets.Menu()
-        item = menu.add_name("Focus")
-        item.add_callback('activated', lambda *args: self.set_focus(lname))
-        item = menu.add_name("Unfocus")
-        item.add_callback('activated', lambda *args: self.clear_focus(lname))
-        item = menu.add_name("Stop")
-        item.add_callback('activated', lambda *args: self.deactivate(lname))
-
-        lblname = bnch.lblname
-        lbl = Widgets.Label(lblname, halign='center', style='clickable',
-                            menu=menu)
-        lbl.set_tooltip("Right click for menu")
-        self.hbox.add_widget(lbl, stretch=0)
-
-        lbl.add_callback('activated', self.set_focus_cb, lname)
-
-        bnch.setvals(widget=lbl, label=lbl, menu=menu)
-
-    def set_focus_cb(self, widget, lname):
-        self.set_focus(lname)
-
-    def remove_taskbar(self, bnch):
-        self.logger.debug("removing widget from taskbar")
-        self.hbox.remove(bnch.widget)
-        bnch.widget = None
-        bnch.label = None
-
-    def highlight_taskbar(self, bnch):
-        self.logger.debug("highlighting widget")
-        if bnch.label is not None:
-            bnch.label.set_color(bg=self.focuscolor)
-
-    def unhighlight_taskbar(self, bnch):
-        self.logger.debug("unhighlighting widget")
-        if bnch.label is not None:
-            bnch.label.set_color(bg='grey')
 
     def finish_gui(self, pInfo, vbox):
         # add container to workspace

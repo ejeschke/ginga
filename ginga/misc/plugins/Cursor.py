@@ -82,10 +82,11 @@ class Cursor(GingaPlugin.GlobalPlugin):
         self.logger.debug("deleting channel %s" % (chname))
 
     def start(self):
-        names = self.fv.get_channelNames()
-        for name in names:
-            channel = self.fv.get_channelInfo(name)
-            self.add_channel(self.fv, channel)
+        ## names = self.fv.get_channelNames()
+        ## for name in names:
+        ##     channel = self.fv.get_channelInfo(name)
+        ##     self.add_channel_cb(self.fv, channel)
+        pass
 
     def readout_config(self, fitsimage, image, readout):
         self.logger.debug("configuring readout (%s)" % (str(readout)))

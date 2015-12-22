@@ -35,7 +35,7 @@ class Toolbar(GingaPlugin.GlobalPlugin):
 
         fv.set_callback('add-channel', self.add_channel_cb)
         fv.set_callback('delete-channel', self.delete_channel_cb)
-        fv.set_callback('active-image', self.focus_cb)
+        fv.set_callback('channel-change', self.focus_cb)
 
     def build_gui(self, container):
         top = Widgets.VBox()
@@ -161,7 +161,8 @@ class Toolbar(GingaPlugin.GlobalPlugin):
         # we don't keep around any baggage on channels so nothing
         # to delete
 
-    def focus_cb(self, viewer, fitsimage):
+    def focus_cb(self, viewer, channel):
+        fitsimage = channel.fitsimage
         self.active = fitsimage
         self._update_toolbar_state(fitsimage)
         return True
