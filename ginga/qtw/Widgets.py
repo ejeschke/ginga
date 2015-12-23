@@ -1048,6 +1048,14 @@ class TabWidget(ContainerBase):
             return nchild
         return self._native_to_child(nchild)
 
+    def highlight_tab(self, idx, tf):
+        tabbar = self.widget.tabBar()
+        if not tf:
+            color = QtHelp.QColor('black')
+        else:
+            color = QtHelp.QColor('green')
+        tabbar.setTabTextColor(idx, color)
+
 class StackWidget(ContainerBase):
     def __init__(self):
         super(StackWidget, self).__init__()
