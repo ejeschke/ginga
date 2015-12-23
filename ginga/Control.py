@@ -85,7 +85,7 @@ class GingaControl(Callback.Callbacks):
         # For callbacks
         for name in ('add-image', 'channel-change', 'remove-image',
                      'add-channel', 'delete-channel', 'field-info',
-                     'add-image-info', 'add-operation', 'image-modified'):
+                     'add-image-info', 'add-operation'):
             self.enable_callback(name)
 
         # Initialize the timer factory
@@ -281,6 +281,10 @@ class GingaControl(Callback.Callbacks):
 
     def get_draw_classes(self):
         return drawCatalog
+
+    def make_async_gui_callback(self, name, *args, **kwdargs):
+        # NOTE: asynchronous!
+        self.gui_do(self.make_callback, name, *args, **kwdargs)
 
     # PLUGIN MANAGEMENT
 
@@ -742,7 +746,7 @@ class GingaControl(Callback.Callbacks):
         channel = self.get_channelInfo(chname)
         info = channel.get_image_info(image.get('name'))
 
-        self.make_callback('add-image', chname, image, info)
+        self.make_async_gui_callback('add-image', chname, image, info)
 
     def bulk_add_image(self, imname, image, chname):
         channel = self.get_channel_on_demand(chname)
@@ -802,14 +806,14 @@ class GingaControl(Callback.Callbacks):
     def channel_image_updated(self, channel, image):
 
         with self.lock:
-            self.logger.info("Update image start")
+            self.logger.debug("Update image start")
             start_time = time.time()
 
             # add cb so that if image is modified internally
             #  our plugins get updated
             image.add_callback('modified', self._redo_plugins, channel)
 
-            self.logger.info("executing redo() in plugins...")
+            self.logger.debug("executing redo() in plugins...")
             self._redo_plugins(image, channel)
 
             split_time1 = time.time()
@@ -853,7 +857,7 @@ class GingaControl(Callback.Callbacks):
         if image:
             channel.switch_image(image)
 
-        self.make_callback('channel-change', channel)
+        self.make_async_gui_callback('channel-change', channel)
 
         self.update_pending()
         return True
@@ -992,7 +996,7 @@ class GingaControl(Callback.Callbacks):
         for opname, spec in self.local_plugins.items():
             opmon.loadPlugin(opname, spec, chinfo=channel)
 
-        self.make_callback('add-channel', channel)
+        self.make_async_gui_callback('add-channel', channel)
         return channel
 
     def delete_channel(self, chname):
@@ -1018,7 +1022,7 @@ class GingaControl(Callback.Callbacks):
             del self.channel[name]
             self.prefs.remove_settings('channel_'+chname)
 
-        self.make_callback('delete-channel', channel)
+        self.make_async_gui_callback('delete-channel', channel)
 
     def get_channelNames(self):
         with self.lock:
@@ -1066,7 +1070,7 @@ class GingaControl(Callback.Callbacks):
                 viewer.clear()
 
         bnch = channel.remove_image(imname)
-        self.make_callback('remove-image', channel.name, imname, impath)
+        self.make_async_gui_callback('remove-image', channel.name, imname, impath)
 
     def move_image_by_name(self, from_chname, imname, to_chname, impath=None):
 
@@ -1232,7 +1236,7 @@ class Channel(Callback.Callbacks):
         self.copy_image_to(imname, channel)
         self.remove_image(imname)
 
-    def copy_image_to(self, imname, channel):
+    def copy_image_to(self, imname, channel, silent=False):
         if self == channel:
             return
 
@@ -1240,14 +1244,15 @@ class Channel(Callback.Callbacks):
             # copy image to other channel's datasrc if still
             # in memory
             image = self.datasrc[imname]
-            channel.datasrc[imname] = image
 
         except KeyError:
-            pass
+            # transfer image info
+            info = self.image_index[imname]
+            channel._add_info(info)
+            return
 
-        # transfer image info
-        info = self.image_index[imname]
-        channel._add_info(info)
+        #channel.datasrc[imname] = image
+        channel.add_image(image, silent=silent)
 
     def remove_image(self, imname):
         if self.datasrc.has_key(imname):
@@ -1278,7 +1283,7 @@ class Channel(Callback.Callbacks):
             Image is not in memory.
 
         """
-        image = channel.datasrc[imname]
+        image = self.datasrc[imname]
         return image
 
     def add_image(self, image, silent=False, bulk_add=False):
@@ -1301,7 +1306,10 @@ class Channel(Callback.Callbacks):
                                 image_future=image_future,
                                 idx=idx)
 
-        #self.make_callback('add-image', self.name, image, info)
+        # we'll get notified if an image changes and can update
+        # metadata and make a chained callback
+        image.add_callback('modified', self._image_modified_cb)
+
         if not silent:
             if not bulk_add:
                 self._add_image_update(image, info)
@@ -1326,13 +1334,13 @@ class Channel(Callback.Callbacks):
         info = self.add_history(info.name, info.path,
                                 image_loader=image_loader,
                                 image_future=image_future)
-        self.fv.make_callback('add-image-info', self, info)
+        self.fv.make_async_gui_callback('add-image-info', self, info)
 
     def get_image_info(self, imname):
         return self.image_index[imname]
 
     def _add_image_update(self, image, info):
-        self.fv.make_callback('add-image', self.name, image, info)
+        self.fv.make_async_gui_callback('add-image', self.name, image, info)
 
         current = self.datasrc.youngest()
         curname = current.get('name')
@@ -1350,53 +1358,13 @@ class Channel(Callback.Callbacks):
             if channel != self:
                 self.fv.change_channel(self.name)
 
-    def image_data_modified(self, image, reason='', reset=False):
-        """Call this when data in buffer is modified.
+    def _image_modified_cb(self, image):
+        imname = image.get('name')
+        info = self.image_index[imname]
+        info.time_modified = datetime.utcnow()
+        self.logger.debug("image modified; making chained callback")
 
-         **Callbacks**
-
-        The ``'image-modified'`` callback will be issued.
-        To use this from a plugin:
-
-        .. code-block:: python
-
-            image = self.fitsimage.get_image()
-            data = image.get_data()
-            new_data = do_something(data)
-
-            # This issues a 'modified' callback, which calls redo()
-            image.set_data(new_data, metadata=image.metadata)
-
-            chname = self.fv.get_channelName(self.fitsimage)
-            channel = self.fv.get_channelInfo(chname)
-
-            # This issues a 'image-modified' callback, which sets
-            # the UTC timestamp and reason
-            channel.image_data_modified(image, reason='Did something')
-
-        Parameters
-        ----------
-        image
-            Image object to update.
-
-        reason : str
-            Reason for modification.
-
-        reset : bool
-            Set to `True` on init or if image fell out of cache.
-            This will set the modified timestamp to `None`.
-
-        """
-        if reset:
-            timestamp = None
-        else:
-            timestamp = datetime.utcnow()
-
-        # Issue callback
-        self.fv.make_callback(
-            'image-modified', self.name, image, timestamp, reason)
-        self.logger.debug("{0} modified at '{1}' because '{2}'".format(
-            image.get('name'), timestamp, reason))
+        self.fv.make_async_gui_callback('add-image-info', self, info)
 
     def get_current_image(self):
         return self.fitsimage.get_image()
@@ -1467,7 +1435,8 @@ class Channel(Callback.Callbacks):
                                idx=idx,
                                image_loader=image_loader,
                                image_future=image_future,
-                               time_added=time.time())
+                               time_added=time.time(),
+                               time_modified=None)
             self._add_info(info)
         else:
             # already in history
@@ -1487,7 +1456,7 @@ class Channel(Callback.Callbacks):
         with self.lock:
             curimage = self.fitsimage.get_image()
             if curimage != image:
-                self.logger.info("Setting image...")
+                self.logger.debug("Setting image...")
                 self.fitsimage.set_image(image,
                                          raise_initialize_errors=False)
 
@@ -1518,7 +1487,7 @@ class Channel(Callback.Callbacks):
                         self.fv.add_preload(self.name, info)
 
             else:
-                self.logger.debug("Apparently no need to set large fits image.")
+                self.logger.debug("Apparently no need to set image.")
 
     def switch_name(self, imname):
 
@@ -1545,6 +1514,10 @@ class Channel(Callback.Callbacks):
                 self.add_image(image, silent=True)
                 self.switch_image(image)
 
+                # reset modified timestamp
+                info.time_modified = None
+                self.fv.make_async_gui_callback('add-image-info', self, info)
+
             def _load_n_switch(imname, path, image_future):
                 # this will be executed in a non-gui thread
                 # reconstitute the image
@@ -1556,9 +1529,7 @@ class Channel(Callback.Callbacks):
 
                 # perpetuate the image_future
                 image.set(image_future=image_future, name=imname, path=path)
-                # Reset modified timestamp
-                self.fv.gui_do(self.image_data_modified, image,
-                               reason='Reloaded from file', reset=True)
+
                 self.fv.gui_do(_switch, image)
 
             self.fv.nongui_do(_load_n_switch, imname, info.path,

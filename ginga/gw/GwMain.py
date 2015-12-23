@@ -161,6 +161,10 @@ class GwMain(Callback.Callbacks):
             self.logger.error("Error starting task: %s" % (str(e)))
             raise(e)
 
+    def is_gui_thread(self):
+        my_id = thread.get_ident()
+        return my_id == self.gui_thread_id
+
     def assert_gui_thread(self):
         my_id = thread.get_ident()
         assert my_id == self.gui_thread_id, \

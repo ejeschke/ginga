@@ -432,6 +432,7 @@ class AstroImage(BaseImage):
 
     def mosaic_inline(self, imagelist, bg_ref=None, trim_px=None,
                       merge=False, allow_expand=True, expand_pad_deg=0.01,
+                      max_expand_pct=None,
                       update_minmax=True, suppress_callback=False):
         """Drops new images into the current image (if there is room),
         relocating them according the WCS between the two images.
@@ -591,6 +592,18 @@ class AstroImage(BaseImage):
 
                 new_wd = mywd + nx1_off + nx2_off
                 new_ht = myht + ny1_off + ny2_off
+
+                # sanity check on new mosaic size
+                old_area = mywd * myht
+                new_area = new_wd * new_ht
+                expand_pct = new_area / old_area
+                if ((max_expand_pct is not None) and
+                    (expand_pct > max_expand_pct)):
+                    raise Exception("New area exceeds current one by %.2f %%;"
+                                    "increase max_expand_pct (%.2f) to allow" %
+                                    (expand_pct*100, max_expand_pct))
+
+                # go for it!
                 new_data = numpy.zeros((new_ht, new_wd))
                 # place current data into new data
                 new_data[ny1_off:ny1_off+myht, nx1_off:nx1_off+mywd] = \

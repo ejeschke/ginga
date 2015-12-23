@@ -45,7 +45,6 @@ class Contents(GingaPlugin.GlobalPlugin):
 
         fv.add_callback('add-image', self.add_image_cb)
         fv.add_callback('add-image-info', self.add_image_info_cb)
-        fv.add_callback('image-modified', self.image_modified_cb)
         fv.add_callback('remove-image', self.remove_image_cb)
         fv.add_callback('add-channel', self.add_channel_cb)
         fv.add_callback('delete-channel', self.delete_channel_cb)
@@ -91,13 +90,24 @@ class Contents(GingaPlugin.GlobalPlugin):
                            image_future=future)
 
         # Get header keywords of interest
-        header = image.get_header()
+        if image is not None:
+            header = image.get_header()
+        else:
+            header = {}
+
         for hdr, key in self.columns:
             bnch[key] = str(header.get(key, 'N/A'))
+
         # name should always be available
         bnch.NAME = name
-        # Modified timestamp is special and for internal use only
-        bnch.MODIFIED = None
+
+        # Modified timestamp will be set if image data is modified
+        timestamp = info.time_modified
+        if timestamp is not None:
+            # Z: Zulu time, GMT, UTC
+            timestamp = timestamp.strftime('%Y-%m-%d %H:%M:%SZ')
+        bnch.MODIFIED = timestamp
+
         return bnch
 
     def recreate_toc(self):
@@ -125,44 +135,52 @@ class Contents(GingaPlugin.GlobalPlugin):
         if nothumb:
             return
 
-        key = name
-
-        if chname in self.name_dict:
-            fileDict = self.name_dict[chname]
-            if key in fileDict:
-                # there is already an entry
-                return
-        else:
-            # channel does not exist yet in contents
-            fileDict = {}
-            self.name_dict[chname] = fileDict
-
         bnch = self.get_info(chname, name, image, image_info)
-        fileDict[key] = bnch
 
-        tree_dict = { chname: { name: bnch } }
-        self.treeview.add_tree(tree_dict)
+        if not chname in self.name_dict:
+            # channel does not exist yet in contents
+            # Note: this typically shouldn't happen, because add_channel_cb()
+            # will have added an empty dict
+            file_dict = {}
+            self.name_dict[chname] = file_dict
+        else:
+            file_dict = self.name_dict[chname]
+
+        if not name in file_dict:
+            # new image
+            file_dict[name] = bnch
+        else:
+            # old image
+            file_dict[name].update(bnch)
+
+        # TODO: either make add_tree() merge updates or make an
+        #    update_tree() method
+        ## tree_dict = { chname: { name: bnch } }
+        ## self.treeview.add_tree(tree_dict)
+        self.recreate_toc()
         self.logger.debug("%s added to Contents" % (name))
 
-    def image_modified_cb(self, viewer, chname, image, timestamp, reason):
-        """Update MODIFIED column with timestamp."""
-        key = image.get('name')
 
-        if timestamp is not None:
-            # Z: Zulu time, GMT, UTC
-            timestamp = timestamp.strftime('%Y-%m-%d %H:%M:%SZ')
+    def add_image_info_cb(self, viewer, channel, image_info):
+        """Almost the same as add_image_info(), except that the image
+        may not be loaded in memory.
+        """
+        chname = channel.name
+        key = image_info.name
 
-        try:
-            self.name_dict[chname][key]['MODIFIED'] = timestamp
-        except KeyError as e:
-            self.logger.error(
-                'Modified status update failed: {0}'.format(str(e)))
+        if not key in self.name_dict[chname]:
+            # TODO: figure out what information to show for an image
+            # that is not yet been loaded
             return
 
-        self.logger.debug("Updating modified timestamp of {0} in channel {1} "
-                          "with '{2}'".format(key, chname, timestamp))
-        if self.gui_up:
-            self.recreate_toc()
+        # Updates of any extant information
+        try:
+            image = channel.get_loaded_image(key)
+        except KeyError:
+            image = None
+
+        self.add_image_cb(viewer, chname, image, image_info)
+
 
     def remove_image_cb(self, viewer, chname, name, path):
         if not self.gui_up:
@@ -171,13 +189,12 @@ class Contents(GingaPlugin.GlobalPlugin):
         if chname not in self.name_dict:
             return
 
-        fileDict = self.name_dict[chname]
+        file_dict = self.name_dict[chname]
 
-        key = name
-        if key not in fileDict:
+        if name not in file_dict:
             return
 
-        del fileDict[key]
+        del file_dict[name]
 
         # Unhighlight
         channel = self.fv.get_channelInfo(chname)
@@ -193,29 +210,30 @@ class Contents(GingaPlugin.GlobalPlugin):
         self._hl_path = set([])
         self.recreate_toc()
 
-    def add_channel_cb(self, viewer, chinfo):
+    def add_channel_cb(self, viewer, channel):
         """Called when a channel is added from the main interface.
-        Parameter is chinfo (a bunch)."""
-        chname = chinfo.name
-        chinfo.fitsimage.add_callback('image-set', self.set_image_cb, chname)
+        Parameter is a channel (a Channel object)."""
+        chname = channel.name
+        channel.fitsimage.add_callback('image-set', self.set_image_cb,
+                                       channel)
 
         # add old highlight set to channel external data
-        chinfo.extdata.setdefault('contents_old_highlight', set([]))
+        channel.extdata.setdefault('contents_old_highlight', set([]))
 
         if not self.gui_up:
             return False
 
         # Add the channel to the treeview
-        fileDict = {}
-        self.name_dict.setdefault(chname, fileDict)
+        file_dict = {}
+        self.name_dict.setdefault(chname, file_dict)
 
         tree_dict = { chname: { } }
         self.treeview.add_tree(tree_dict)
 
-    def delete_channel_cb(self, viewer, chinfo):
+    def delete_channel_cb(self, viewer, channel):
         """Called when a channel is deleted from the main interface.
-        Parameter is chinfo (a bunch)."""
-        chname = chinfo.name
+        Parameter is a channel (a Channel object)."""
+        chname = channel.name
         del self.name_dict[chname]
 
         # Unhighlight
@@ -267,12 +285,12 @@ class Contents(GingaPlugin.GlobalPlugin):
         for key in re_hilite_set:
             self._highlight_path(key, True)
 
-    def set_image_cb(self, fitsimage, image, chname):
+    def set_image_cb(self, fitsimage, image, channel):
         """This method is called when an image is set in a channel."""
 
         # get old highlighted entries for this channel -- will be
         # an empty set or one key
-        channel = self.fv.get_channelInfo(chname)
+        chname = channel.name
         old_highlight = channel.extdata.contents_old_highlight
 
         # calculate new highlight keys -- again, an empty set or one key
@@ -309,15 +327,6 @@ class Contents(GingaPlugin.GlobalPlugin):
         if self.highlight_tracks_keyboard_focus:
             self.update_highlights(self._hl_path, new_highlight)
             self._hl_path = new_highlight
-
-    def add_image_info_cb(self, viewer, channel, image_info):
-        chname = channel.name
-        image = None
-
-        # TODO: figure out what information to show for an image
-        # that is not yet been loaded
-        ## self.fv.gui_do(self.add_image_cb, viewer, chname, image,
-        ##                  image_info)
 
     def __str__(self):
         return 'contents'
