@@ -7,6 +7,7 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+import os
 import logging
 import logging.handlers
 
@@ -73,6 +74,9 @@ def get_logger(name='ginga', level=None, null=False,
         log_file = options.logfile
 
     if log_file is not None:
+        if ((options is not None) and (options.rmlog) and
+            os.path.exists(log_file)):
+            os.remove(log_file)
         # TODO: get maxsize and backup from options, if present
         fileHdlr  = logging.handlers.RotatingFileHandler(log_file,
                                                          maxBytes=log_maxsize,
@@ -99,12 +103,18 @@ def addlogopts(optprs):
     optprs.add_option("--loglevel", dest="loglevel", metavar="LEVEL",
                       default=20, type=int,
                       help="Set logging level to LEVEL")
+    optprs.add_option("--lognull", dest="nulllogger", default=False,
+                      action="store_true",
+                      help="Use a null logger")
     optprs.add_option("--logsize", dest="logsize", metavar="NUMBYTES",
                       type="int", default=log_maxsize,
                       help="Set maximum logging level to NUMBYTES")
     optprs.add_option("--logbackups", dest="logbackups", metavar="NUM",
                       type="int", default=log_backups,
                       help="Set maximum number of backups to NUM")
+    optprs.add_option("--rmlog", dest="rmlog", default=False,
+                      action="store_true",
+                      help="Remove log if present (don't append)")
     optprs.add_option("--stderr", dest="logstderr", default=False,
                       action="store_true",
                       help="Copy logging also to stderr")

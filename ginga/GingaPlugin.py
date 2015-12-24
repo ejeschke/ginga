@@ -1,6 +1,6 @@
 #
 # GingaPlugin.py -- Base classes for plugins in Ginga FITS viewer
-# 
+#
 # Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c) Eric R. Jeschke.  All rights reserved.
@@ -34,9 +34,14 @@ class GlobalPlugin(object):
         build_gui().
         """
         pass
-        
+
     def stop(self):
         """This method is called to stop the plugin.
+        """
+        pass
+
+    def redo(self, channel, image):
+        """This method is called when an image is set in a channel.
         """
         pass
 
@@ -56,7 +61,7 @@ class LocalPlugin(object):
         # turn off any mode user may be in
         bm = self.fitsimage.get_bindmap()
         bm.reset_mode(self.fitsimage)
-        
+
     # def build_gui(self, container):
     #     """If a plugin defines this method, it will be called with a
     #     container object in which to build its GUI. It should finish
@@ -70,7 +75,7 @@ class LocalPlugin(object):
         activated.
         """
         pass
-        
+
     def stop(self):
         """This method is called when the plugin is deactivated.
         """

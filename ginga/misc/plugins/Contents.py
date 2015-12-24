@@ -124,6 +124,17 @@ class Contents(GingaPlugin.GlobalPlugin):
                 new_highlight |= channel.extdata.contents_old_highlight
         self.update_highlights(set([]), new_highlight)
 
+
+    def is_in_contents(self, chname, imname):
+        if not chname in self.name_dict:
+            return False
+
+        file_dict = self.name_dict[chname]
+        if not imname in file_dict:
+            return False
+
+        return True
+
     def add_image_cb(self, viewer, chname, image, image_info):
         if not self.gui_up:
             return False
@@ -131,9 +142,10 @@ class Contents(GingaPlugin.GlobalPlugin):
         name = image_info.name
         self.logger.debug("name=%s" % (name))
 
-        nothumb = image.get('nothumb', False)
-        if nothumb:
-            return
+        if image is not None:
+            nothumb = image.get('nothumb', False)
+            if nothumb:
+                return
 
         bnch = self.get_info(chname, name, image, image_info)
 
@@ -154,10 +166,12 @@ class Contents(GingaPlugin.GlobalPlugin):
             file_dict[name].update(bnch)
 
         # TODO: either make add_tree() merge updates or make an
-        #    update_tree() method
+        #    update_tree() method--shouldn't need to recreate entire
+        #    tree, just add new entry and possibly rehighlight
         ## tree_dict = { chname: { name: bnch } }
         ## self.treeview.add_tree(tree_dict)
         self.recreate_toc()
+
         self.logger.debug("%s added to Contents" % (name))
 
 
@@ -166,7 +180,8 @@ class Contents(GingaPlugin.GlobalPlugin):
         may not be loaded in memory.
         """
         chname = channel.name
-        key = image_info.name
+        name = image_info.name
+        self.logger.debug("name=%s" % (name))
 
         if not key in self.name_dict[chname]:
             # TODO: figure out what information to show for an image
@@ -175,7 +190,7 @@ class Contents(GingaPlugin.GlobalPlugin):
 
         # Updates of any extant information
         try:
-            image = channel.get_loaded_image(key)
+            image = channel.get_loaded_image(name)
         except KeyError:
             image = None
 
@@ -214,18 +229,16 @@ class Contents(GingaPlugin.GlobalPlugin):
         """Called when a channel is added from the main interface.
         Parameter is a channel (a Channel object)."""
         chname = channel.name
-        channel.fitsimage.add_callback('image-set', self.set_image_cb,
-                                       channel)
 
         # add old highlight set to channel external data
         channel.extdata.setdefault('contents_old_highlight', set([]))
 
-        if not self.gui_up:
-            return False
-
         # Add the channel to the treeview
         file_dict = {}
         self.name_dict.setdefault(chname, file_dict)
+
+        if not self.gui_up:
+            return False
 
         tree_dict = { chname: { } }
         self.treeview.add_tree(tree_dict)
@@ -285,12 +298,16 @@ class Contents(GingaPlugin.GlobalPlugin):
         for key in re_hilite_set:
             self._highlight_path(key, True)
 
-    def set_image_cb(self, fitsimage, image, channel):
+    def redo(self, channel, image):
         """This method is called when an image is set in a channel."""
+
+        imname = image.get('name', 'none')
+        chname = channel.name
+        # is image in contents tree yet?
+        in_contents = self.is_in_contents(chname, imname)
 
         # get old highlighted entries for this channel -- will be
         # an empty set or one key
-        chname = channel.name
         old_highlight = channel.extdata.contents_old_highlight
 
         # calculate new highlight keys -- again, an empty set or one key
@@ -303,12 +320,14 @@ class Contents(GingaPlugin.GlobalPlugin):
 
         # Only highlights active image in the current channel
         if self.highlight_tracks_keyboard_focus:
-            self.update_highlights(self._hl_path, new_highlight)
+            if in_contents:
+                self.update_highlights(self._hl_path, new_highlight)
             self._hl_path = new_highlight
 
         # Highlight all active images in all channels
         else:
-            self.update_highlights(old_highlight, new_highlight)
+            if in_contents:
+                self.update_highlights(old_highlight, new_highlight)
             channel.extdata.contents_old_highlight = new_highlight
 
         return True

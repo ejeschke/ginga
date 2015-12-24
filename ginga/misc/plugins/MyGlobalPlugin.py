@@ -116,9 +116,6 @@ class MyGlobalPlugin(GingaPlugin.GlobalPlugin):
         """
         self.set_info("Channel '%s' has been added" % (
                 channel.name))
-        # Register for new image callbacks on this channel's canvas
-        fitsimage = channel.fitsimage
-        fitsimage.set_callback('image-set', self.new_image_cb)
 
     def delete_channel(self, viewer, channel):
         """
@@ -143,12 +140,11 @@ class MyGlobalPlugin(GingaPlugin.GlobalPlugin):
                 self.active))
         return True
 
-    def new_image_cb(self, fitsimage, image):
+    def redo(self, channel, image):
         """
-        Callback from the reference viewer shell when a new image has
+        Called from the reference viewer shell when a new image has
         been added to a channel.
         """
-        channel = self.get_channel_info(fitsimage)
         chname = channel.name
 
         # Only update our GUI if the activity is in the focused

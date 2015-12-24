@@ -148,16 +148,15 @@ class Toolbar(GingaPlugin.GlobalPlugin):
 
     # CALLBACKS
 
-    def add_channel_cb(self, viewer, chinfo):
-        fitsimage = chinfo.fitsimage
-        #fitsimage.add_callback('image-set', self.new_image_cb)
+    def add_channel_cb(self, viewer, channel):
+        fitsimage = channel.fitsimage
         fitsimage.add_callback('transform', self.viewer_transform_cb)
 
         bm = fitsimage.get_bindmap()
         bm.add_callback('mode-set', self.mode_set_cb, fitsimage)
 
-    def delete_channel_cb(self, viewer, chinfo):
-        self.logger.debug("delete channel %s" % (chinfo.name))
+    def delete_channel_cb(self, viewer, channel):
+        self.logger.debug("delete channel %s" % (channel.name))
         # we don't keep around any baggage on channels so nothing
         # to delete
 
@@ -208,7 +207,6 @@ class Toolbar(GingaPlugin.GlobalPlugin):
         return True
 
     def start_plugin_cb(self, name):
-        chinfo = self.fv.get_channelInfo()
         self.fv.start_operation(name)
         return True
 
@@ -301,8 +299,8 @@ class Toolbar(GingaPlugin.GlobalPlugin):
     # LOGIC
 
     def _get_view(self):
-        chinfo = self.fv.get_channelInfo()
-        view = chinfo.fitsimage
+        channel = self.fv.get_channelInfo()
+        view = channel.fitsimage
         return (view, view.get_bindings())
 
     def _update_toolbar_state(self, fitsimage):

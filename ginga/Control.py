@@ -780,7 +780,19 @@ class GingaControl(Callback.Callbacks):
         self.change_channel(channel.name)
 
     def _redo_plugins(self, image, channel):
-        # New data in channel--update active plugins
+        # New data in channel
+        # update active global plugins
+        opmon = self.gpmon
+        for key in opmon.get_active():
+            obj = opmon.getPlugin(key)
+            try:
+                self.gui_do(obj.redo, channel, image)
+
+            except Exception as e:
+                self.logger.error("Failed to continue operation: %s" % (str(e)))
+                # TODO: log traceback?
+
+        # update active local plugins
         opmon = channel.opmon
         for key in opmon.get_active():
             obj = opmon.getPlugin(key)

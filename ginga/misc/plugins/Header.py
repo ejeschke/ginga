@@ -99,8 +99,8 @@ class Header(GingaPlugin.GlobalPlugin):
         self.logger.debug("setting header done ({0})".format(is_sorted))
         self._image = image
 
-    def add_channel(self, viewer, chinfo):
-        chname = chinfo.name
+    def add_channel(self, viewer, channel):
+        chname = channel.name
         info = Bunch.Bunch(chname=chname)
         sw = self._create_header_window(info)
 
@@ -109,11 +109,8 @@ class Header(GingaPlugin.GlobalPlugin):
         info.setvals(widget=sw)
         self.channel[chname] = info
 
-        fitsimage = chinfo.fitsimage
-        fitsimage.add_callback('image-set', self.new_image_cb, info)
-
-    def delete_channel(self, viewer, chinfo):
-        chname = chinfo.name
+    def delete_channel(self, viewer, channel):
+        chname = channel.name
         self.logger.debug("deleting channel %s" % (chname))
         widget = self.channel[chname].widget
         self.nb.remove(widget, delete=True)
@@ -139,16 +136,19 @@ class Header(GingaPlugin.GlobalPlugin):
     def start(self):
         names = self.fv.get_channelNames()
         for name in names:
-            chinfo = self.fv.get_channelInfo(name)
-            self.add_channel(self.fv, chinfo)
+            channel = self.fv.get_channelInfo(name)
+            self.add_channel(self.fv, channel)
 
-    def new_image_cb(self, fitsimage, image, info):
+    def redo(self, channel, image):
+        chname = channel.name
+        info = self.channel[chname]
+
         self.set_header(info, image)
 
     def set_sortable_cb(self, info):
         self._image = None
-        chinfo = self.fv.get_channelInfo(info.chname)
-        image = chinfo.fitsimage.get_image()
+        channel = self.fv.get_channelInfo(info.chname)
+        image = channel.fitsimage.get_image()
         self.set_header(info, image)
 
     def __str__(self):

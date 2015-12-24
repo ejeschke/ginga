@@ -216,8 +216,6 @@ class IRAF(GingaPlugin.GlobalPlugin):
         fmap = self.get_channel_frame_mapping()
         self.fv.gui_do(self.update_chinfo, fmap)
 
-        chinfo.fitsimage.add_callback('image-set', self.new_image_cb,
-                                      chinfo)
 
     def delete_channel(self, viewer, chinfo):
         self.logger.debug("delete channel %s" % (chinfo.name))
@@ -281,7 +279,8 @@ class IRAF(GingaPlugin.GlobalPlugin):
         l = [ (fb.chname, n+1) for n, fb in self.fb.items() ]
         return l
 
-    def new_image_cb(self, fitsimage, image, chinfo):
+    def redo(self, channel, image):
+        """Called when a new image appears in the channel."""
         if not self.gui_up:
             return
         # check if this is an image we received from IRAF or
@@ -292,12 +291,11 @@ class IRAF(GingaPlugin.GlobalPlugin):
             # construct extra fb information for it
             return
 
-        n = self.channel_to_frame(chinfo.name)
+        n = self.channel_to_frame(channel.name)
         if n is None:
             return
         self.logger.debug("new image, frame is %d" % (n))
         fb = self.get_frame(n)
-        #image = fitsimage.get_image()
         newpath  = image.get('path', 'NO_PATH')
         host = socket.getfqdn()
         newhost  = image.get('host', host)
@@ -602,7 +600,7 @@ class IRAF(GingaPlugin.GlobalPlugin):
         frame = self.channel_to_frame(chinfo.name)
 
         # add framebuffer information if it is not there already
-        self.new_image_cb(fitsimage, image, chinfo)
+        self.redo(chinfo, image)
 
         self.keyqueue.put(Bunch.Bunch(x=last_x, y=last_y, key=keyname,
                                       frame=frame))

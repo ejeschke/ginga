@@ -97,14 +97,14 @@ class WCSMatch(GingaPlugin.GlobalPlugin):
         self.gui_up = True
         self._reset_channels_gui()
 
-    def add_channel(self, viewer, chinfo):
-        chname = chinfo.name
-        info = Bunch.Bunch(chinfo=chinfo)
+    def add_channel(self, viewer, channel):
+        chname = channel.name
+        info = Bunch.Bunch(chinfo=channel)
         self.channel[chname] = info
 
         # Add callbacks to the viewer for all the scale, pan, rotation and
         # transform settings changes
-        fitsimage = chinfo.fitsimage
+        fitsimage = channel.fitsimage
         fitssettings = fitsimage.get_settings()
         fitsimage.add_callback('image-set', self.new_image_cb, info)
         fitssettings.getSetting('scale').add_callback('set',
@@ -119,8 +119,8 @@ class WCSMatch(GingaPlugin.GlobalPlugin):
         self.fv.gui_do(self._reset_channels_gui)
 
 
-    def delete_channel(self, viewer, chinfo):
-        chname = chinfo.name
+    def delete_channel(self, viewer, channel):
+        chname = channel.name
         self.logger.debug("deleting channel %s" % (chname))
         self.active = None
         self.info = None

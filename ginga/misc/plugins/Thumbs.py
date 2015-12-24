@@ -283,7 +283,6 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             fitssettings.getSetting(name).add_callback('set',
                                self.cutset_cb, fitsimage)
         fitsimage.add_callback('transform', self.transform_cb)
-        fitsimage.add_callback('image-set', self.image_set_cb)
 
         rgbmap = fitsimage.get_rgbmap()
         rgbmap.add_callback('changed', self.rgbmap_cb, fitsimage)
@@ -372,10 +371,11 @@ class Thumbs(GingaPlugin.GlobalPlugin):
                     namelbl = self.thumbDict[thumbkey].get('namelbl')
                     namelbl.set_color(bg=bg, fg=fg)
 
-    def image_set_cb(self, fitsimage, image):
+    def redo(self, channel, image):
         """This method is called when an image is set in a channel."""
-        chname = self.fv.get_channelName(fitsimage)
-        channel = self.fv.get_channelInfo(chname)
+        self.logger.debug("image set")
+        chname = channel.name
+
         # get old highlighted thumbs for this channel -- will be
         # an empty set or one thumbkey
         old_highlight = channel.extdata.thumbs_old_highlight
@@ -389,6 +389,12 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             # no image has the focus
             new_highlight = set([])
 
+        # TODO: already calculated thumbkey, use simpler test
+        if not self.have_thumbnail(channel.fitsimage, image):
+            # No memory of this thumbnail, so regenerate it
+            self._add_image(self.fv, chname, image)
+
+        self.logger.debug("highlighting")
         # Only highlights active image in the current channel
         if self.highlight_tracks_keyboard_focus:
             self.update_highlights(self._tkf_highlight, new_highlight)

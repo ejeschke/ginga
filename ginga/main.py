@@ -198,14 +198,6 @@ class ReferenceViewer(object):
         optprs.add_option("-g", "--geometry", dest="geometry",
                           default=None, metavar="GEOM",
                           help="X geometry for initial size and placement")
-        optprs.add_option("--log", dest="logfile", metavar="FILE",
-                          help="Write logging output to FILE")
-        optprs.add_option("--loglevel", dest="loglevel", metavar="LEVEL",
-                          type='int', default=logging.INFO,
-                          help="Set logging level to LEVEL")
-        optprs.add_option("--lognull", dest="nulllogger", default=False,
-                          action="store_true",
-                          help="Use a null logger")
         optprs.add_option("--modules", dest="modules", metavar="NAMES",
                           help="Specify additional modules to load")
         optprs.add_option("--nosplash", dest="nosplash", default=False,
@@ -217,9 +209,6 @@ class ReferenceViewer(object):
         optprs.add_option("--opencv", dest="opencv", default=False,
                           action="store_true",
                           help="Use OpenCv acceleration")
-        optprs.add_option("--stderr", dest="logstderr", default=False,
-                          action="store_true",
-                          help="Copy logging also to stderr")
         optprs.add_option("--plugins", dest="plugins", metavar="NAMES",
                           help="Specify additional plugins to load")
         optprs.add_option("--profile", dest="profile", action="store_true",
@@ -231,6 +220,7 @@ class ReferenceViewer(object):
         optprs.add_option("--wcspkg", dest="wcspkg", metavar="NAME",
                           default=None,
                           help="Prefer WCS module NAME")
+        log.addlogopts(optprs)
 
     def main(self, options, args):
         """
