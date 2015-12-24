@@ -145,6 +145,7 @@ class Desktop(Callback.Callbacks):
         nb, index = self._find_nb(tabname)
         widget = self.tab[tabname].widget
         if (nb is not None) and (index >= 0):
+            del self.tab[tabname]
             nb.remove(widget)
 
     def highlight_tab(self, tabname, onoff):

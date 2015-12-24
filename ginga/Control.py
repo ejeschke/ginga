@@ -1004,6 +1004,9 @@ class GingaControl(Callback.Callbacks):
             self.channelNames.append(chname)
             self.channelNames.sort()
 
+            if len(self.channelNames) == 1:
+                self.cur_channel = channel
+
         # Prepare local plugins for this channel
         for opname, spec in self.local_plugins.items():
             opmon.loadPlugin(opname, spec, chinfo=channel)
@@ -1033,6 +1036,12 @@ class GingaControl(Callback.Callbacks):
             self.ds.remove_tab(chname)
             del self.channel[name]
             self.prefs.remove_settings('channel_'+chname)
+
+            # pick new channel
+            if len(self.channelNames) > 0:
+                self.change_channel(self.channelNames[0])
+            else:
+                self.cur_channel = None
 
         self.make_async_gui_callback('delete-channel', channel)
 

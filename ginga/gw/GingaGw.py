@@ -415,6 +415,10 @@ class GingaView(GwMain.GwMain, Widgets.Application):
 
     def gui_delete_channel(self, chname=None):
         channel = self.get_channelInfo(chname=chname)
+        if (len(self.get_channelNames()) == 0) or (channel is None):
+            self.show_error("There are no more channels to delete.")
+            return
+
         chname = channel.name
         lbl = Widgets.Label("Really delete channel '%s' ?" % (chname))
         dialog = Widgets.Dialog(title="Delete Channel",
@@ -623,6 +627,7 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         if rsp == 0:
             return
         self.delete_channel(chname)
+
         return True
 
     def add_ws_cb(self, w, rsp, b, names):
