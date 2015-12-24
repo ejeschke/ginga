@@ -183,7 +183,7 @@ class Contents(GingaPlugin.GlobalPlugin):
         name = image_info.name
         self.logger.debug("name=%s" % (name))
 
-        if not key in self.name_dict[chname]:
+        if not name in self.name_dict[chname]:
             # TODO: figure out what information to show for an image
             # that is not yet been loaded
             return
