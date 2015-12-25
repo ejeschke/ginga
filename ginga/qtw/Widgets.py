@@ -253,6 +253,9 @@ class Label(WidgetBase):
 
             lbl.customContextMenuRequested.connect(on_context_menu)
 
+        # Enable highlighting for copying
+        lbl.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
+
         self.enable_callback('activated')
 
     def _cb_redirect(self, event):
