@@ -119,6 +119,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         self.settings = prefs.createCategory('plugin_Cuts')
         self.settings.addDefaults(select_new_cut=True, draw_then_move=True,
                                   label_cuts=True, colors=cut_colors,
+                                  drag_update=False,
                                   show_cuts_legend=False, enable_slit=False)
         self.settings.load(onError='silent')
         self.colors = self.settings.get('colors', cut_colors)
@@ -460,6 +461,8 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         self.instructions()
         self.cuts_plot.set_titles(rtitle="Cuts")
 
+        self.drag_update = self.settings.get('drag_update', False)
+
         # insert canvas, if not already
         p_canvas = self.fitsimage.get_canvas()
         try:
@@ -800,6 +803,9 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         obj = obj.objects[0]
         obj.move_to(data_x, data_y)
         canvas.redraw(whence=3)
+
+        if self.drag_update:
+            self.replot_all()
         return True
 
     def buttonup_cb(self, canvas, event, data_x, data_y, viewer):

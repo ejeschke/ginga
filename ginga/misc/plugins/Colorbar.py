@@ -57,7 +57,7 @@ class Colorbar(GingaPlugin.GlobalPlugin):
 
         fi = channel.fitsimage
         rgbmap = fi.get_rgbmap()
-        rgbmap.add_callback('changed', self.rgbmap_cb, fi)
+        rgbmap.add_callback('changed', self.rgbmap_cb, channel)
 
     def delete_channel_cb(self, viewer, channel):
         chname = channel.name
@@ -121,15 +121,16 @@ class Colorbar(GingaPlugin.GlobalPlugin):
             text = "Value: %-*.*s" % (maxv, maxv, value)
             readout.set_text(text)
 
-    def rgbmap_cb(self, rgbmap, fitsimage):
+    def rgbmap_cb(self, rgbmap, channel):
         """
         This method is called when the RGBMap is changed.  We update
         the ColorBar to match.
         """
+        fitsimage = channel.fitsimage
         if fitsimage != self.fv.getfocus_fitsimage():
             return False
         if self.colorbar is not None:
-            self.change_cbar(self.fv, fitsimage, self.colorbar)
+            self.change_cbar(self.fv, channel, self.colorbar)
 
     def start(self):
         ## names = self.fv.get_channelNames()
