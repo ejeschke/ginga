@@ -750,15 +750,25 @@ class TreeView(WidgetBase):
         s = self.shadow
         for name in path[:-1]:
             s = s[name].node
-        item = s[path[-1]].item
+
+        # Sometimes s is an empty dictionary
+        if path[-1] in s:
+            item = s[path[-1]].item
+        else:
+            item = None
+
         return item
 
     def select_path(self, path):
         item = self._path_to_item(path)
-        self.widget.setItemSelected(item, True)
+        if item is not None:
+            self.widget.setItemSelected(item, True)
 
     def highlight_path(self, path, onoff, font_color='green'):
         item = self._path_to_item(path)
+
+        if item is None:
+            return
 
         # A little painfully inefficient, can we do better than this?
         font = QtHelp.QFont()
@@ -777,9 +787,10 @@ class TreeView(WidgetBase):
         # TODO: this doesn't give an error, but does not seem to be
         # working as the API indicates
         item = self._path_to_item(path)
-        row = self.widget.indexOfTopLevelItem(item)
-        midx = self.widget.indexAt(QtCore.QPoint(row, 0))
-        self.widget.scrollTo(midx, QtGui.QAbstractItemView.PositionAtCenter)
+        if item is not None:
+            row = self.widget.indexOfTopLevelItem(item)
+            midx = self.widget.indexAt(QtCore.QPoint(row, 0))
+            self.widget.scrollTo(midx, QtGui.QAbstractItemView.PositionAtCenter)
 
     def sort_on_column(self, i):
         self.widget.sortByColumn(i, QtCore.Qt.AscendingOrder)
