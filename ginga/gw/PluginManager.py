@@ -104,6 +104,11 @@ class PluginManager(Callback.Callbacks):
     def get_focus(self):
         return list(self.focus)
 
+    def has_focus(self, name):
+        lname = name.lower()
+        names = self.get_focus()
+        return lname in names
+
     def get_info(self, name):
         lname = name.lower()
         return self.active[lname]
@@ -366,12 +371,40 @@ class PluginManager(Callback.Callbacks):
 
             else:
                 self.ds.add_tab(in_ws, vbox, 2, pInfo.tabname, pInfo.tabname)
+
+                ws_w = self.ds.get_nb(in_ws)
+                ws_w.add_callback('page-switch', self.tab_switched_cb)
                 pInfo.widget = vbox
                 pInfo.is_toplevel = False
 
         except Exception as e:
             self.fv.show_error("Error finishing plugin UI for '%s': %s" % (
                 pInfo.name, str(e)))
+
+    def tab_switched_cb(self, tab_w, widget):
+        # A tab in a workspace in which we started a plugin has been
+        # raised.  Check for this widget and focus the plugin
+        title = widget.extdata.get('tab_title', None)
+        if title is not None:
+            # is this a local plugin tab?
+            if ':' in title:
+                chname, plname = title.split(':')
+                plname = plname.strip()
+                try:
+                    info = self.get_info(plname)
+                except KeyError:
+                    # no
+                    return
+                pInfo = info.pInfo
+                # important: make sure channel matches ours!
+                if pInfo.tabname == title:
+                    if self.is_active(pInfo.name):
+                        if not self.has_focus(pInfo.name):
+                            self.set_focus(pInfo.name)
+                        elif pInfo.chinfo is not None:
+                            # raise the channel associated with the plugin
+                            itab = pInfo.chinfo.name
+                            self.ds.raise_tab(itab)
 
     def dispose_gui(self, pInfo):
         self.logger.debug("disposing of gui")

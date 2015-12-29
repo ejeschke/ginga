@@ -116,12 +116,12 @@ class ImageViewBindings(object):
             kp_lock = ['l'],
 
             # SCROLLING/WHEEL
-            sc_pan = [],
+            sc_pan = ['shift+scroll'],
             sc_pan_fine = [],
             sc_pan_coarse = [],
             sc_zoom = ['scroll'],
-            sc_zoom_fine = ['shift+scroll'],
-            sc_zoom_coarse = ['ctrl+scroll'],
+            sc_zoom_fine = ['ctrl+scroll'],
+            sc_zoom_coarse = [],
             sc_cuts_fine = ['cuts+scroll'],
             sc_cuts_coarse = [],
             sc_dist = ['dist+scroll'],
@@ -133,6 +133,8 @@ class ImageViewBindings(object):
             # 1.0 is appropriate for a mouse, 0.1 for most trackpads
             scroll_zoom_acceleration = 1.0,
             #scroll_zoom_acceleration = 0.1,
+            scroll_zoom_direct_scale = False,
+
             mouse_zoom_acceleration = 1.085,
             mouse_rotate_acceleration = 0.75,
             pan_reverse = False,
@@ -1257,25 +1259,27 @@ class ImageViewBindings(object):
         """Interactively zoom the image by scrolling motion.
         This zooms by the zoom steps configured under Preferences.
         """
-        if self.canzoom:
-            msg = self.settings.get('msg_zoom', msg)
+        if not self.canzoom:
+            return True
+
+        msg = self.settings.get('msg_zoom', msg)
+
+        if self.settings.get('scroll_zoom_direct_scale', True):
+            zoom_accel = self.settings.get('scroll_zoom_acceleration', 1.0)
+            amount = zoom_accel * 0.50
+            self._scale_image(viewer, event.direction, amount, msg=msg)
+
+        else:
             rev = self.settings.get('zoom_scroll_reverse', False)
             direction = self.get_direction(event.direction, rev=rev)
             if direction == 'up':
                 viewer.zoom_in()
             elif direction == 'down':
                 viewer.zoom_out()
-            if msg:
-                viewer.onscreen_message(viewer.get_scale_text(),
-                                           delay=0.4)
+                if msg:
+                    viewer.onscreen_message(viewer.get_scale_text(),
+                                            delay=0.4)
         return True
-
-    ## def sc_zoom(self, viewer, event, msg=True):
-    ##     if self.canzoom:
-    ##         zoom_accel = self.settings.get('scroll_zoom_acceleration', 1.0)
-    ##         amount = zoom_accel * 0.50
-    ##         self._scale_image(viewer, event.direction, amount, msg=msg)
-    ##     return True
 
     def sc_zoom_coarse(self, viewer, event, msg=True):
         """Interactively zoom the image by scrolling motion.

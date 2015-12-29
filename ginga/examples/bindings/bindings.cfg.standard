@@ -86,12 +86,12 @@ kp_reset = ['escape']
 kp_lock = ['l']
 
 # SCROLLING/WHEEL commands
-sc_pan = []
+sc_pan = ['shift+scroll']
 sc_pan_fine = []
 sc_pan_coarse = []
 sc_zoom = ['scroll']
-sc_zoom_fine = ['shift+scroll']
-sc_zoom_coarse = ['ctrl+scroll']
+sc_zoom_fine = ['ctrl+scroll']
+sc_zoom_coarse = []
 sc_cuts_fine = ['cuts+scroll']
 sc_cuts_coarse = []
 sc_dist = ['dist+scroll']
@@ -102,8 +102,11 @@ sc_imap = []
 # Increase to speed up panning
 scroll_pan_acceleration = 1.0
 # For trackpads you can adjust this down if it seems too sensitive.
+# 1.0 is appropriate for a mouse, 0.1 for most trackpads
 scroll_zoom_acceleration = 1.0
-
+# If set to True, then don't zoom by "zoom steps", but by a more direct
+# scaling call that uses scroll_zoom_acceleration
+scroll_zoom_direct_scale = False
 
 # MOUSE/BUTTON commands
 # NOTE: most plugins in the reference viewer need "none", "cursor" and "draw"
