@@ -214,7 +214,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
         self.preprocess = fn
 
 
-    def prepare_mosaic(self, image, fov_deg):
+    def prepare_mosaic(self, image, fov_deg, name=None):
         """Prepare a new (blank) mosaic image based on the pointing of
         the parameter image
         """
@@ -254,6 +254,8 @@ class Mosaic(GingaPlugin.LocalPlugin):
                                                pfx='mosaic',
                                                dtype=dtype)
 
+            if name is not None:
+                img_mosaic.set(name=name)
             imname = img_mosaic.get('name', image.get('name', "NoName"))
 
             # avoid making a thumbnail of this if seed image is also that way
@@ -450,7 +452,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
                 self.ingest_one(image)
 
 
-    def mosaic(self, paths, new_mosaic=False, image_loader=None):
+    def mosaic(self, paths, new_mosaic=False, name=None, image_loader=None):
         if image_loader is None:
             image_loader = self.fv.load_image
 
@@ -477,7 +479,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
 
         # If there is no current mosaic then prepare a new one
         if new_mosaic or (self.img_mosaic is None):
-            self.prepare_mosaic(image, fov_deg)
+            self.prepare_mosaic(image, fov_deg, name=name)
 
         elif max_center_deg_delta is not None:
             # get our center position
@@ -493,7 +495,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
                                           ra2_deg, dec2_deg)
             # if distance is greater than trip setting, start a new mosaic
             if dist > max_center_deg_delta:
-                self.prepare_mosaic(image, fov_deg)
+                self.prepare_mosaic(image, fov_deg, name=name)
 
         self.update_status("Loading images...")
         #self.fv.gui_call(self.fv.error_wrap, self.ingest_one, image)

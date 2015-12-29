@@ -183,15 +183,11 @@ class Contents(GingaPlugin.GlobalPlugin):
         name = image_info.name
         self.logger.debug("name=%s" % (name))
 
-        if not name in self.name_dict[chname]:
-            # TODO: figure out what information to show for an image
-            # that is not yet been loaded
-            return
-
         # Updates of any extant information
         try:
             image = channel.get_loaded_image(name)
         except KeyError:
+            # images that are not yet loaded will show "N/A" for keywords
             image = None
 
         self.add_image_cb(viewer, chname, image, image_info)

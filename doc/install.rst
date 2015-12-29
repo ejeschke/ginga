@@ -14,19 +14,19 @@ On recent Linux, Mac and Windows versions, all of the packages are
 available in binary (installable) form; it should not be necessary to
 compile anything.  But as always, YMMV.
 
-You will need:
+REQUIRED
+--------
 
-* python (v. 2.7, 3,3 or higher)
+* python (v. 2.7, 3.3 or higher)
 * numpy  (v. 1.7 or higher)
 
 Highly recommended, because some features will not be available without it:
 
 * scipy
 
-For opening FITS files you will need ONE of (astropy recommended):
+For opening FITS files you will need ONE of:
 
 * astropy
-* pyfits
 * fitsio
 
 For WCS resolution you will need ONE of:
@@ -36,11 +36,13 @@ For WCS resolution you will need ONE of:
 * starlink
 * astropy
 
-Also, depending on which GUI toolkit you prefer (and what you want to
+BACKENDS (one or more)
+----------------------
+Ginga can draw it's output to a number of different back ends.
+Depending on which GUI toolkit you prefer (and what you want to
 do), you will need either: 
 
-* python-gtk
-* python-cairo
+* python-gtk (gtk2) AND python-cairo
 
 OR
 
@@ -62,16 +64,32 @@ OR
 
 * matplotlib
 
+OR
+
+* tornado
+
+OR
+
+* aggdraw
+
+OR
+
+* PIL (pillow)
+
+
+RECOMMENDED
+-----------
 Certain plugins in the reference viewer (or features of those plugins)
 will not work without the following packages:
 
-* matplotlib (Pick, Cuts, Histogram)
+* matplotlib (Pick, Cuts, Histogram, LineProfile)
 * webkit (WBrowser (online help))
-* scipy (Pick)
+* scipy (Pick, certain auto cuts algorithms)
+* astropy (MultiDim, SAMP)
 
 To save a movie:
 
-* mencoder
+* mencoder (Cuts)
 
 Helpful, but not necessary (may optimize or speed up certain operations):
 
@@ -161,19 +179,19 @@ Linux
 =====
 
 Install the necessary dependences.  If you are on a relatively recent
-version of Ubuntu (e.g. v14.04), something like the following will work::
+version of Ubuntu (e.g. v14.04 or later), something like the following
+will work::
 
     $ apt-get install python-numpy python-scipy python-matplotlib \
-      python-astropy python-gtk python-cairo python-webkit \
-      python-magic python-numexpr git pip
+      python-astropy python-qt4 python-webkit python-magic git pip
 
 Or::
 
     $ apt-get install python-numpy python-scipy python-matplotlib \
-      python-astropy python-qt4 python-webkit python-magic \
-      python-numexpr git pip
+      python-astropy python-gtk python-cairo python-webkit \
+      python-magic git pip
 
-(if you want to use the Qt version)
+(if you want to use the Gtk version)
 
 Then install ginga with pip::
 
@@ -194,7 +212,8 @@ Ginga.
 As an alternative, you also have the choice of Enthought Canopy.  The 
 `free version <https://www.enthought.com/canopy-express/>`_ works fine.
 After installing this, open the Canopy package manager, search for
-"astropy" and install it.  
+"astropy" and install it.  Also search for and install "pyside"
+(free version of Qt bindings).
 
 After installing one of these distributions, open a Terminal and
 install Ginga via "pip install ginga".  You can then run the reference
@@ -237,7 +256,8 @@ After installing Anaconda, you can find the reference viewer script as
 As an alternative, you also have the choice of Enthought Canopy.  The 
 `free version <https://www.enthought.com/canopy-express/>` works fine.
 After installing this, open the Canopy package manager, search for
-"astropy" and install it.  
+"astropy" and install it.  Also search for and install "pyside"
+(free version of Qt bindings).  
 
     Start -> All Programs -> Enthought Canopy -> Canopy command prompt
     pip install ginga

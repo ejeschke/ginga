@@ -773,11 +773,15 @@ class GingaControl(Callback.Callbacks):
     def switch_name(self, chname, imname, path=None,
                     image_future=None):
 
-        # create channel if it doesn't exist already
-        channel = self.get_channel_on_demand(chname)
-        channel.switch_name(imname)
+        try:
+            # create channel if it doesn't exist already
+            channel = self.get_channel_on_demand(chname)
+            channel.switch_name(imname)
 
-        self.change_channel(channel.name)
+            self.change_channel(channel.name)
+        except Exception as e:
+            self.logger.error("Couldn't switch to image '%s': %s" % (
+                str(imname), str(e)))
 
     def _redo_plugins(self, image, channel):
         # New data in channel
