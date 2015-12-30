@@ -207,12 +207,23 @@ class ComboBoxEntry(WidgetMask, gtk.ComboBoxEntry, ComboBoxMixin):
         gtk.ComboBoxEntry.__init__(self, *args, **kwdargs)
 
 
-class Notebook(gtk.Notebook):
+class Notebook(WidgetMask, gtk.Notebook):
+    def __init__(self, *args, **kwdargs):
+        WidgetMask.__init__(self)
+        gtk.Notebook.__init__(self, *args, **kwdargs)
+
     def set_group_id(self, id):
         if not gtksel.have_gtk3:
             super(Notebook, self).set_group_id(id)
         else:
             super(Notebook, self).set_group_name(str(id))
+
+    def set_current_page(self, new_idx):
+        old_idx = self.get_current_page()
+        if old_idx != new_idx:
+            self.change()
+
+        super(Notebook, self).set_current_page(new_idx)
 
 
 class MultiDragDropTreeView(gtk.TreeView):

@@ -286,6 +286,12 @@ class GingaControl(Callback.Callbacks):
         # NOTE: asynchronous!
         self.gui_do(self.make_callback, name, *args, **kwdargs)
 
+    def make_gui_callback(self, name, *args, **kwdargs):
+        if self.is_gui_thread():
+            return self.make_callback(name, *args, **kwdargs)
+        else:
+            self.gui_do(self.make_callback, name, *args, **kwdargs)
+
     # PLUGIN MANAGEMENT
 
     def start_operation(self, opname):
@@ -873,7 +879,7 @@ class GingaControl(Callback.Callbacks):
         if image:
             channel.switch_image(image)
 
-        self.make_async_gui_callback('channel-change', channel)
+        self.make_gui_callback('channel-change', channel)
 
         self.update_pending()
         return True

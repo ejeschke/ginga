@@ -1050,7 +1050,8 @@ class TabWidget(ContainerBase):
         self.reorderable = reorderable
         self.detachable = detachable
 
-        nb = gtk.Notebook()
+        nb = GtkHelp.Notebook()
+        #nb = gtk.Notebook()
         nb.set_show_border(False)
         nb.set_scrollable(True)
         if not gtksel.have_gtk3:
@@ -1060,7 +1061,8 @@ class TabWidget(ContainerBase):
             nb.connect("create-window", self._tab_detach_cb)
         nb.connect("page-added", self._tab_insert_cb)
         nb.connect("page-removed", self._tab_remove_cb)
-        nb.connect("switch-page", self._cb_redirect)
+        nb.sconnect("switch-page", self._cb_redirect)
+        #nb.connect("switch-page", self._cb_redirect)
         self.widget = nb
         self.set_tab_position(tabpos)
 
