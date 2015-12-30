@@ -245,7 +245,6 @@ Use MultiDim to change step values of axes.""")
 
             self.clear_plot()
             self.plot.plot(axis_data, mddata[slice_obj])
-            self.plot.fig.tight_layout(pad=0.3)
 
     def _slice(self, naxes, mk):
         # Build N-dim slice

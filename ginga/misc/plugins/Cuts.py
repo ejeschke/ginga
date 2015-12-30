@@ -654,7 +654,6 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
                 self.slit_data, interpolation='nearest',
                 origin='lower', aspect='auto').set_cmap('gray')
             self.set_labels()
-            self.slit_plot.fig.tight_layout(pad=0.3)
             self.slit_plot.draw()
 
     def _replot(self, lines, colors):
@@ -701,7 +700,6 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
                     self.save_slit.set_enabled(True)
 
         # force mpl redraw
-        self.cuts_plot.fig.tight_layout(pad=0.3)
         self.cuts_plot.draw()
 
         self.canvas.redraw(whence=3)
@@ -1039,7 +1037,6 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
                 self.slit_data, interpolation='nearest',
                 origin='lower', aspect='auto').set_cmap('gray')
             self.set_labels()
-            self.slit_plot.fig.tight_layout(pad=0.3)
 
         self.slit_plot.draw()
 
