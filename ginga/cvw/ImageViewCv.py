@@ -1,5 +1,5 @@
 #
-# ImageViewCv.py -- classes for the display of FITS files on OpenCV surfaces
+# ImageViewCv.py -- a backend for Ginga using OpenCv surfaces
 #
 # Eric Jeschke (eric@naoj.org)
 #

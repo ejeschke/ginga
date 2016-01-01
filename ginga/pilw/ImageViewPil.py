@@ -1,5 +1,5 @@
 #
-# ImageViewPil.py -- classes for the display of FITS files on PIL surfaces
+# ImageViewPil.py -- a backend for Ginga using Python Imaging Library
 #
 # Eric Jeschke (eric@naoj.org)
 #

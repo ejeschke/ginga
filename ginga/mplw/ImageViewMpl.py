@@ -1,6 +1,5 @@
 #
-# ImageViewMpl.py -- classes for the display of FITS files in a
-#                             Matplotlib FigureCanvas
+# ImageViewMpl.py -- a backend for Ginga using a Matplotlib figure
 #
 # Eric Jeschke (eric@naoj.org)
 #

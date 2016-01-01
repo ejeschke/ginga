@@ -1,5 +1,5 @@
 #
-# ImageViewAgg.py -- classes for the display of FITS files on AGG surfaces
+# ImageViewAgg.py -- a backend for Ginga using the aggdraw library
 #
 # Eric Jeschke (eric@naoj.org)
 #

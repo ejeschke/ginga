@@ -1,5 +1,5 @@
 #
-# ImageViewGtk.py -- classes for the display of FITS files in Gtk widgets
+# ImageViewGtk.py -- a backend for Ginga using Gtk widgets and Cairo
 #
 # Eric Jeschke (eric@naoj.org)
 #

@@ -10,6 +10,7 @@
 import os
 import math
 import numpy
+from collections import OrderedDict
 
 from ginga.misc import Bunch
 from ginga import GingaPlugin
@@ -1132,7 +1133,9 @@ class CatalogListing(object):
         # rebuild table according to metadata
         self.build_table(info)
 
-        tree_dict = {}
+        # Use ordered dict so star list order is preserved if it is
+        # significant coming in
+        tree_dict = OrderedDict({})
         index = 0
         # TODO: have stars assigned a unique index coming in so we don't
         # have to do it here

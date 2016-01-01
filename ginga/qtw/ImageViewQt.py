@@ -1,5 +1,5 @@
 #
-# ImageViewQt.py -- classes for the display of Ginga canvases in Qt widgets
+# ImageViewQt.py -- a backend for Ginga using Qt widgets
 #
 # Eric Jeschke (eric@naoj.org)
 #

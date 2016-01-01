@@ -1,5 +1,5 @@
 #
-# ImageViewMock.py -- classes for the display of FITS files in mock widgets
+# ImageViewMock.py -- a backend for Ginga using a mock renderer
 #
 # Eric Jeschke (eric@naoj.org)
 #

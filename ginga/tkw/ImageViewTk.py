@@ -1,5 +1,5 @@
 #
-# ImageViewTk.py -- classes for the display of FITS files in Tk surfaces
+# ImageViewTk.py -- a backend for Ginga using a Tk canvas widget
 #
 # Eric Jeschke (eric@naoj.org)
 #

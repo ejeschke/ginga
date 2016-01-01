@@ -1,6 +1,6 @@
 #
-# ImageViewPg.py -- classes for the display of science data in web browsers
-#                        using javascript/HTML5 canvas/websockets
+# ImageViewPg.py -- a backend for Ginga using javascript and
+#      HTML5 canvas and websockets
 #
 # Eric Jeschke (eric@naoj.org)
 #

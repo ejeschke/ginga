@@ -1,5 +1,5 @@
 #
-# ImageViewCanvasTypesMpl.py -- for rendering into a ImageViewMpl widget
+# CanvasRenderMpl.py -- for rendering into a ImageViewMpl widget
 #
 # Eric Jeschke (eric@naoj.org)
 #
