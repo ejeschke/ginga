@@ -39,6 +39,7 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
         self.set_rgbmap(rgbmap)
 
         self._start_x = 0
+        self._sarr = None
         # for drawing range
         self.t_showrange = True
         self.t_font = 'Sans Serif'
@@ -300,6 +301,8 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
         self.redraw()
 
     def shift_colormap(self, pct):
+        if self._sarr is None:
+            return
         self.rgbmap.set_sarr(self._sarr, callback=False)
         self.rgbmap.shift(pct)
         self.redraw()

@@ -705,6 +705,18 @@ class TreeView(WidgetBase):
     def sort_on_column(self, i):
         pass
 
+    def set_column_width(self, i, width):
+        pass
+
+    def set_column_widths(self, lwidths):
+        for i, width in enumerate(lwidths):
+            if width is not None:
+                self.set_column_width(i, width)
+
+    def set_optimal_column_widths(self):
+        for i in range(len(self.columns)):
+            pass
+
 
 class Canvas(WidgetBase):
 
@@ -1151,12 +1163,13 @@ class MenuAction(WidgetBase):
 
         self.widget = None
         self.text = text
+        self.is_checkable = False
+        self.value = False
         self.enable_callback('activated')
 
     def _cb_redirect(self, *args):
-        if self.widget.isCheckable():
-            tf = self.widget.isChecked()
-            self.make_callback('activated', tf)
+        if self.is_checkable:
+            self.make_callback('activated', self.value)
         else:
             self.make_callback('activated')
 
@@ -1626,7 +1639,7 @@ def build_info(captions, orientation='vertical'):
     numcols = reduce(lambda acc, tup: max(acc, len(tup)), captions, 0)
     if (numcols % 2) != 0:
         raise ValueError("Column spec is not an even number")
-    numcols /= 2
+    numcols = int(numcols // 2)
 
     ## widget = QtGui.QWidget()
     ## table = QtGui.QGridLayout()

@@ -254,7 +254,7 @@ class Label(WidgetBase):
             lbl.customContextMenuRequested.connect(on_context_menu)
 
         # Enable highlighting for copying
-        lbl.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
+        #lbl.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
 
         self.enable_callback('activated')
 
@@ -783,6 +783,18 @@ class TreeView(WidgetBase):
 
     def sort_on_column(self, i):
         self.widget.sortByColumn(i, QtCore.Qt.AscendingOrder)
+
+    def set_column_width(self, i, width):
+        self.widget.setColumnWidth(i, width)
+
+    def set_column_widths(self, lwidths):
+        for i, width in enumerate(lwidths):
+            if width is not None:
+                self.set_column_width(i, width)
+
+    def set_optimal_column_widths(self):
+        for i in range(item.columnCount()):
+            self.widget.resizeColumnToContents(i)
 
     def _start_drag(self, event):
         res_dict = self.get_selected()
@@ -1769,7 +1781,7 @@ def build_info(captions, orientation='vertical'):
     numcols = reduce(lambda acc, tup: max(acc, len(tup)), captions, 0)
     if (numcols % 2) != 0:
         raise ValueError("Column spec is not an even number")
-    numcols /= 2
+    numcols = int(numcols // 2)
 
     widget = QtGui.QWidget()
     table = QtGui.QGridLayout()

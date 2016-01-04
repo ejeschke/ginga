@@ -130,6 +130,8 @@ class ImageViewPg(ImageView):
         self.configure_surface(width, height)
 
     def map_event(self, event):
+        self.logger.info("window mapped to %dx%d" % (
+            event.width, event.height))
         self.configure_window(event.width, event.height)
         self.redraw(whence=0)
 

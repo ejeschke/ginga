@@ -3,30 +3,43 @@
 +++++++++++++++++
 Customizing Ginga
 +++++++++++++++++
+One of the primary guiding concepts behind the Ginga project is to
+provide easy ways to build custom viewers, whether that is by using the
+viewer class by itself in your project or by customizing the reference
+viewer.  
+
+The reference viewer embodies this concept of configurability through
+the use of a flexible layout engine and the use of plugins to implement
+all the major user interface features.  By modifying or replacing the
+layout and adding, subclassing or removing plugins you can completely
+change the look, feel and operation and make your own version of a
+viewer that has exactly the features you want. 
+
 This chapter explains how you can customize the Ginga reference viewer
-in various ways. 
+in various ways, as a user or a developer.
 
 =====================
 Configuration Options
 =====================
 
-Ginga creates a `.ginga` subdirectory in the user's home directory in
-which various configuration settings can be saved.
+Ginga uses a configuration directory in which various configuration
+settings can be saved and loaded as individual configuration files.   
 
-general.cfg::
+.. note:: The configuration area is determined first by examining the
+          environment variable `GINGA_HOME`.  If that is not set, then 
+          `$HOME/.ginga` (Mac OS X, Linux) or
+          `$HOMEDRIVE:$HOMEPATH\.ginga` (Windows) will be used.
 
-    # General preferences
-    
-    # Preference for fixed and sans fonts
-    fixedFont = 'Monospace'
-    sansFont = 'Sans Serif'
-    
-    # Import matplotlib colormaps in addition to our own set if matplotlib
-    # is installed
-    useMatplotlibColormaps = True
-    channel_follows_focus = False
-    showBanner = False
-    numImages = 10
+Examples of these configuration files with comments describing the
+effects of the parameters can be found in `.../ginga/examples/configs`.
+Many of the plugins use a configuration file, with preferences that are
+only changed via the configuration file.  You can copy an example
+configuration file to your Ginga settings area and change the settings 
+to your liking.
+
+.. note:: Usually it is sufficient to simply close the plugin and open
+          it again to pick up any settings changes, but some changes may
+          require a viewer restart to take effect.
 
 .. _sec-bindings:
 
@@ -34,280 +47,157 @@ general.cfg::
 Rebinding Controls
 ==================
 
-Example: ds9 bindings
----------------------
-
-This example shows a way to use ds9-like mouse bindings for colormap
-stretch (right mouse button) and setting pan position (scroll
-button). This is taken verbatim from a file called "bindings.cfg.ds9"
-in the "examples/bindings" directory in the source download.  This file
-can be installed in the user's $HOME/.ginga folder as "bindings.cfg".
-
-bindings.cfg::
-
-    #
-    # bindings.cfg -- Ginga user interface bindings customization
-    #
-    # Put this in your $HOME/.ginga directory as "bindings.cfg"
-    #
-    # Troubleshooting:
-    # Run the scripts/example2_xyz.py, where "xyz" is the toolkit you want
-    # to use.  Run it from a terminal like this:
-    #    ./examples/xyz/example2_xyz.py --loglevel=10 --stderr
-    # Further commentary in sections below.
-    #
-    
-    # BUTTON SET UP
-    # You should rarely have to change these, but if you have a non-standard
-    # mouse or setup it might be useful.
-    # To find out what buttons are generating what codes, start up things as
-    # described in "Troubleshooting" above and look for messages like this as
-    # you click around in the window:
-    #  ... | D | Bindings.py:1260 (window_button_press) | x,y=70,-69 btncode=0x1
-    btn_nobtn = 0x0
-    btn_left  = 0x1
-    btn_middle= 0x2
-    btn_right = 0x4
-    
-    # Set up our standard modifiers.
-    # These should not contain "normal" keys--they should be valid modifier
-    # keys for your platform.
-    # To find out what symbol is used for a keystroke on your platform,
-    # start up things as described above in "Troubleshooting" and look for
-    # messages like this as you press keys while focus is in the window:
-    #  ... | D | Bindings.py:1203 (window_key_press) | keyname=shift_l
-    mod_shift = ['shift_l', 'shift_r']
-    # same setting ends up as "Ctrl" on a pc and "Command" on a mac:
-    mod_ctrl = ['control_l', 'control_r']
-    # "Control" key on a mac:
-    mod_draw = ['meta_right']
-    
-    # KEYPRESS commands
-    kp_zoom_in = ['+', '=']
-    kp_zoom_out = ['-', '_']
-    kp_zoom = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']
-    kp_zoom_inv = ['!', '@', '#', '$', '%', '^', '&', '*', '(', ')']
-    kp_zoom_fit = ['backquote']
-    kp_autozoom_on = ['doublequote']
-    kp_autozoom_override = ['singlequote']
-    kp_draw = ['space']
-    kp_dist = ['s']
-    kp_dist_reset = ['S']
-    kp_freepan = ['q']
-    kp_pan_set = ['p']
-    kp_center = ['c']
-    kp_cut_low = ['<']
-    kp_cut_high = ['>']
-    kp_cut_all = ['.']
-    kp_cut_255 = ['A']
-    kp_cut_auto = ['a']
-    kp_autocuts_on = [':']
-    kp_autocuts_override = [';']
-    kp_cmap_warp = ['/']
-    kp_cmap_restore = ['?']
-    kp_flip_x = ['[', '{']
-    kp_flip_y = [']', '}']
-    kp_swap_xy = ['backslash', '|']
-    #kp_rotate = ['r']
-    kp_rotate_reset = ['R']
-    kp_reset = ['escape']
-    
-    # SCROLLING/WHEEL commands
-    sc_pan = ['ctrl+scroll', 'shift+scroll']
-    sc_pan_fine = []
-    sc_pan_coarse = []
-    sc_zoom = ['scroll']
-    sc_zoom_fine = []
-    sc_zoom_coarse = []
-    sc_contrast_fine = []
-    sc_contrast_coarse = []
-    sc_dist = []
-    
-    # This controls how fast panning occurs with the sc_pan* functions.
-    # Increase to speed up panning
-    scroll_pan_acceleration = 1.0
-    # For trackpads you can adjust this down if it seems too sensitive.
-    scroll_zoom_acceleration = 1.0
-    
-    
-    # MOUSE/BUTTON commands
-    # NOTE: most plugins in the reference viewer need "none", "cursor" and "draw"
-    # events to work!  If you want to use them you need to provide a valid
-    # non-conflicting binding
-    ms_none = ['nobtn']
-    ms_cursor = ['left']
-    ms_wheel = []
-    ms_draw = ['draw+left']
-    
-    # mouse commands initiated by a preceeding keystroke (see above)
-    ms_rotate = ['rotate+left']
-    ms_cmapwarp = ['cmapwarp+left', 'right']
-    ms_cmaprest = ['ctrl+middle']
-    ms_pan = ['ctrl+left']
-    ms_freepan = ['freepan+left', 'shift+middle']
-    ms_cutlo = ['cutlo+left']
-    ms_cuthi = ['cuthi+left']
-    ms_cutall = ['cutall+left']
-    ms_panset = ['shift+left', 'middle']
-    
-    # GESTURES (Qt version only)
-    # Uncomment to enable pinch gensture on touchpads.
-    # NOTE: if you enable this, it is *highly* recommended to disable any
-    # "scroll zoom" (sc_zoom*) features above because the two kinds don't play
-    # well together.  A good combination for trackpads is enabling pinch with
-    # zoom and the sc_pan functions.
-    #gs_pinch = ['pinch']
-    
-    # This controls what operations the pinch gesture controls.  Possibilities are
-    # (empty list or) some combination of 'zoom' and 'rotate'.
-    pinch_actions = ['zoom']
-    pinch_zoom_acceleration = 1.0
-    pinch_rotate_acceleration = 1.0
-    
-    # ds9 uses opposite sense of panning direction
-    pan_reverse = True
-    
-    # ds9 uses opposite sense of zooming scroll wheel
-    zoom_scroll_reverse = True
-    
-    # No messages for color map warps or setting pan position
-    msg_cmap = False
-    msg_panset = False
-    
-    #END
+One configuration file that many users will be interested in is the one
+controlling how keyboard and mouse/touch bindings are assigned.  This is
+handled by the configuration file `bindings.cfg`.  Several examples 
+are stored in `.../ginga/examples/bindings`, including an example for
+users familiar with the ds9 mouse controls, and an example for users
+using a touchpad without a mouse (pinch zoom and scroll panning).
+Simply copy the appropriate file to your Ginga settings area as
+`bindings.cfg`. 
 
 .. _sec-workspaceconfig:
+
+======================================================
+Customizing the Reference Viewer During Initialization
+======================================================
+
+The reference viewer can be customized during viewer initialization
+via a module called `ginga_config`, which can be anywhere in the
+user's Python import path, including in the Ginga settings folder
+described above (e.g. `$HOME/.ginga/ginga_config.py`).
+
+Specifically, this file will be imported and two methods will be run if
+defined: `pre_gui_config(ginga)` and `post_gui_config(ginga)`.  The
+parameter to each function is the main viewer shell.  These functions
+can be used to define a different viewer layout, add or remove plugins,
+add menu entries, add custom image or star catalogs, etc.  We will refer
+back to these functions in the sections below.
 
 =======================
 Workspace configuration
 =======================
 
 Ginga has a flexible table-driven layout scheme for dynamically creating
-workspaces and mapping the plugins to workspaces.  By changing a couple
-of tables you can change the way Ginga looks and presents its content. 
-If you examine the top-level startup script `ginga.py` you will find
-the tables: `default_layout`, `global_plugins` and
-`local_plugins`.
-global_plugins and local_plugins define the mapping of plugins to
-workspaces and the titles on the tabs in the workspaces (if the
-workspace has tabs--some don't).  
-Here is an example of these two tables::
+workspaces and mapping the available plugins to workspaces.  By changing
+a couple of tables via `ginga_config.pre_gui_config()` you can change
+the way Ginga looks and presents its content.
 
-    global_plugins = [
-        Bunch(module='Pan', tab='Pan', ws='uleft', raisekey='I'),
-        Bunch(module='Info', tab='Info', ws='lleft', raisekey='I'),
-        Bunch(module='Header', tab='Header', ws='left', raisekey='H'),
-        Bunch(module='Zoom', tab='Zoom', ws='left', raisekey='Z'),
-        Bunch(module='Thumbs', tab='Thumbs', ws='right', raisekey='T'),
-        Bunch(module='Contents', tab='Contents', ws='right', raisekey='c'),
-        Bunch(module='WBrowser', tab='Help', ws='right', raisekey='?'),
-        Bunch(module='Errors', tab='Errors', ws='right'),
-        Bunch(module='Log', tab='Log', ws='right'),
-        Bunch(module='Debug', tab='Debug', ws='right'),
-        ]
-    
-    local_plugins = [
-        Bunch(module='Pick', ws='dialogs', shortkey='f1'),
-        Bunch(module='Ruler', ws='dialogs', shortkey='f2'),
-        Bunch(module='MultiDim', ws='dialogs', shortkey='f4'),
-        Bunch(module='Cuts', ws='dialogs', shortkey='f5'),
-        Bunch(module='Histogram', ws='dialogs', shortkey='f6'),
-        Bunch(module='PixTable', ws='dialogs', shortkey='f7'),
-        Bunch(module='Preferences', ws='dialogs', shortkey='f9'),
-        Bunch(module='Catalogs', ws='dialogs', shortkey='f10'),
-        Bunch(module='Drawing', ws='dialogs', shortkey='f11'),
-        Bunch(module='FBrowser', ws='dialogs', shortkey='f12'),
-        ]
+If you examine the module `ginga.main` you will find a layout table
+called `default_layout`.  It should look something like this::
 
-The format of this table is simply a series of tuples"bunches".
-In the case of global_plugins, each bunch specifies a module, 
-a title for the tab, the workspace that it should occupy, and an
-optional key to raise that tab when pressed.
-We can see that the "Pan" plugin will occupy the "uleft" workspace
-and have a tab name of "Pan" (if that workspace has tabs).
+    my_layout = ['seq', {},
+                   ['vbox', dict(name='top', width=1520, height=900),
+                    dict(row=['hbox', dict(name='menu')],
+                         stretch=0),
+                    dict(row=['hpanel', dict(name='hpnl'),
+                     ['ws', dict(name='left', wstype='tabs',
+                                 width=300, height=-1, group=2),
+                      # (tabname, layout), ...
+                      [("Info", ['vpanel', {},
+                                 ['ws', dict(name='uleft', wstype='stack',
+                                             height=300, group=3)],
+                                 ['ws', dict(name='lleft', wstype='tabs',
+                                             height=430, group=3)],
+                                 ]
+                        )]],
+                     ['vbox', dict(name='main', width=700),
+                      dict(row=['ws', dict(name='channels', wstype='tabs',
+                                           group=1)], stretch=1),
+                      dict(row=['ws', dict(name='cbar', wstype='stack',
+                                           group=99)], stretch=0),
+                      dict(row=['ws', dict(name='readout', wstype='stack',
+                                           group=99)], stretch=0),
+                      dict(row=['ws', dict(name='operations', wstype='stack',
+                                           group=99)], stretch=0),
+                      ],
+                     ['ws', dict(name='right', wstype='tabs',
+                                 width=400, height=-1, group=2),
+                      # (tabname, layout), ...
+                      [("Dialogs", ['ws', dict(name='dialogs', wstype='tabs',
+                                               group=2)
+                                    ]
+                        )]
+                      ],
+                     ], stretch=1),
+                    dict(row=['ws', dict(name='toolbar', height=40,
+                                             show_tabs=False, group=2)],
+                         stretch=0),
+                    dict(row=['hbox', dict(name='status')], stretch=0),
+                    ]]
 
-Next we look at the default_layout table::
+This (admittedly arcane-looking) table defines the precise layout
+of the reference viewer shell, including how many workspaces it will
+have, their characteristics, how they are organized, how they are
+divided into (fixed or resizable) rows and columns and their names.
 
-    default_layout = ['seq', {},
-                       ['vbox', dict(name='top', width=1500, height=900),
-                        dict(row=['hbox', dict(name='menu')],
-                             stretch=0),
-                        dict(row=['hpanel', {},
-                         ['ws', dict(name='left', width=340, group=2),
-                          # (tabname, layout), ...
-                          [("Info", ['vpanel', {},
-                                     ['ws', dict(name='uleft', height=300,
-                                                 show_tabs=False, group=3)],
-                                     ['ws', dict(name='lleft', height=430,
-                                                 show_tabs=False, group=3)],
-                                     ]
-                            )]],
-                         ['vbox', dict(name='main', width=700),
-                          dict(row=['ws', dict(name='channels', group=1)], stretch=1)],
-                         ['ws', dict(name='right', width=350, group=2),
-                          # (tabname, layout), ...
-                          [("Dialogs", ['ws', dict(name='dialogs', group=2)
-                                        ]
-                            )]
-                          ],
-                         ], stretch=1),
-                        dict(row=['hbox', dict(name='status')], stretch=0),
-                        ]]
+The key point here is that you can modify this table or replace it
+entirely with one of your own design and set it in the
+`pre_gui_config()` method described above::
 
-This table defines how many workspaces we will have, their
-characteristics, how they are organized, and their names.
-The table consists again of a series of sublists or tuples, but in this
-case they can be nested.
-The first item in a sublist indicates the type of the container to be
-constructed.  The following types are available:
+    my_layout = [
+                  ...
+                 ]
 
-* hpanel: a horizontal panel of containers, with handles to size them
+    def pre_gui_config(ginga):
+        ...
 
-* vpanel: a vertical panel of containers, with handles to size
-  them
+        ginga.set_layout(my_layout)
 
-* hbox: a horizontal panel of containers of fixed size
+If done in the `pre_gui_config()` method (as shown) the new layout will
+be the one that is used when the GUI is constructed.
 
-* vbox: a vertical panel of containers of fixed size
+Format of the Layout Table
+--------------------------
 
-* ws: a workspace that allows a plugin gui or other items, usually
-  implemented by a notebook-type widget
+The table consists of a nested list of sublists, tuples and/or dictionaries.
+The lists are structured as::
 
-* widget: a preconstructed widget passed in
+    [ <Type of item>  <Dict of item attributes>
+      <Optional Dict or sublist defining sub-item>
+      ...
+    ]
+
+The following types of items can be constructed:
+
+* `seq`: defines a sequence of top-level windows to be created
+
+* `hpanel`: a horizontal panel of containers, with handles to size them
+
+* `vpanel`: a vertical panel of containers, with handles to size them
+
+* `hbox`: a horizontal panel of containers of fixed size
+
+* `vbox`: a vertical panel of containers of fixed size
+
+* `ws`: a workspace container that allows a plugin or a channel viewer
+  to be loaded into it. 
+
+* `widget`: a preconstructed widget passed in.  This allows extremely
+  fine control when customizing.
 
 In every case the second item in the sublist is a dictionary that
 provides some optional parameters that modify the characteristics of the
-container.
-If there is no need to override the default parameters the dictionary
-can simply be empty.
-The optional third and following items are specifications for nested
-content.
+container.  If there is no need to override the default parameters the
+dictionary can simply be empty.  These attributes include:
 
-All types of containers honor the following parameters:
+* `name`: key that this item should get stored under in the widget
+  dictionary that is constructed as part of building the layout (this is
+  described elsewhere).  The name is mostly important for workspaces,
+  as it provides the reference for where a plugin should be loaded. 
+  Because of this workspace names should really be unique.
+
+* `wstype`: used when the item type is 'ws', and specifies the type of
+   workspace to be constructed.  A workspace can be configured in four
+   ways: as a tabbed notebook (`wstype="tabs"`), as a stack
+   (`wstype="stack"`), as an MDI (Multiple Document Interface,
+   `wstype="mdi"`) or as a grid (`wstype="grid"`).
 
 * width: can specify a desired width in pixels for the container.
 
 * height: can specify a desired height in pixels for the container.
 
-* name: specifies a mapping of a name to the created container
-  widget.  The name is important especially for workspaces, as they may
-  be referred to in the default_tabs table.
-
-In the above example, we define a top-level horizontal panel of three
-containers: a workspace named "left" with a width of 320 pixels, a
-vertical fixed container named "main" with a width of 700 pixels and a
-workspace called "right" with a width of 400 pixels.  The "left"
-workspace is pre-populated with an "Info" tab containing a vertical
-panel of two workspaces: "uleft" and "lleft" with heights of 300 and
-430 pixels, respectively, and neither one should show tabs.  The "right"
-workspace is pre-populated with a "Dialogs" tab containing an empty
-workspace.  Looking back at the  default_tabs table you can now more 
-clearly see how the mapping of plugins to workspaces is handled through
-the names.
-
-Ginga uses some container names in special ways.
-For example, the "main" container is populated by Ginga with the tabs
-for each channel, and the "dialogs" workspace is where all of the
-local plugins are instantiated (when activated).
-These two names should at least be defined somewhere in default_layout.
+The optional third and following items are specifications for nested
+content.  These are usually also sublists, but can also be specified as
+dictionaries.
 

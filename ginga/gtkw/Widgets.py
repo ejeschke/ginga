@@ -871,6 +871,18 @@ class TreeView(WidgetBase):
         model = self.tv.get_model()
         model.set_sort_column_id(i, gtk.SORT_ASCENDING)
 
+    def set_column_width(self, i, width):
+        col = self.tv.get_column(i)
+        col.set_max_width(width)
+
+    def set_column_widths(self, lwidths):
+        for i, width in enumerate(lwidths):
+            if width is not None:
+                self.set_column_width(i, width)
+
+    def set_optimal_column_widths(self):
+        self.tv.columns_autosize()
+
     def sort_cb(self, column, idx):
         treeview = column.get_tree_view()
         model = treeview.get_model()
@@ -1856,7 +1868,7 @@ def build_info(captions, orientation='vertical'):
     numcols = reduce(lambda acc, tup: max(acc, len(tup)), captions, 0)
     if (numcols % 2) != 0:
         raise ValueError("Column spec is not an even number")
-    numcols /= 2
+    numcols = int(numcols // 2)
     table = gtk.Table(rows=numrows, columns=numcols)
     table.set_row_spacings(2)
     table.set_col_spacings(4)
