@@ -88,11 +88,6 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         self.w.root = root
         self.w.fscreen = None
 
-        # Configure main (center) FITS image pane
-        # TODO: fix this--relies on a workspace named "main" existing
-        self.w.vbox = self.w['main']
-        self.w.vbox.set_spacing(0)
-
         # get informed about window closures in existing workspaces
         for wsname in self.ds.get_wsnames():
             nb = self.ds.get_nb(wsname)

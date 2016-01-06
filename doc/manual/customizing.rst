@@ -28,14 +28,14 @@ settings can be saved and loaded as individual configuration files.
 .. note:: The configuration area is determined first by examining the
           environment variable `GINGA_HOME`.  If that is not set, then 
           `$HOME/.ginga` (Mac OS X, Linux) or
-          `$HOMEDRIVE:$HOMEPATH\.ginga` (Windows) will be used.
+          `$HOMEDRIVE:$HOMEPATH\\.ginga` (Windows) will be used.
 
 Examples of these configuration files with comments describing the
 effects of the parameters can be found in `.../ginga/examples/configs`.
-Many of the plugins use a configuration file, with preferences that are
-only changed via the configuration file.  You can copy an example
-configuration file to your Ginga settings area and change the settings 
-to your liking.
+Many of the plugins have preferences that are only changed via a
+plugin-specific configuration file (e.g. `plugin_Pick.cfg`).
+You can copy an example configuration file to your Ginga settings area
+and change the settings to your liking.
 
 .. note:: Usually it is sufficient to simply close the plugin and open
           it again to pick up any settings changes, but some changes may
@@ -120,8 +120,8 @@ called `default_layout`.  It should look something like this::
                         )]
                       ],
                      ], stretch=1),
-                    dict(row=['ws', dict(name='toolbar', height=40,
-                                             show_tabs=False, group=2)],
+                    dict(row=['ws', dict(name='toolbar', wstype='stack',
+                                         height=40, group=2)],
                          stretch=0),
                     dict(row=['hbox', dict(name='status')], stretch=0),
                     ]]
@@ -187,11 +187,11 @@ dictionary can simply be empty.  These attributes include:
   as it provides the reference for where a plugin should be loaded. 
   Because of this workspace names should really be unique.
 
-* `wstype`: used when the item type is 'ws', and specifies the type of
-   workspace to be constructed.  A workspace can be configured in four
-   ways: as a tabbed notebook (`wstype="tabs"`), as a stack
-   (`wstype="stack"`), as an MDI (Multiple Document Interface,
-   `wstype="mdi"`) or as a grid (`wstype="grid"`).
+* `wstype`: used when the item type is "ws", and specifies the type of
+  workspace to be constructed.  A workspace can be configured in four
+  ways: as a tabbed notebook (`wstype="tabs"`), as a stack
+  (`wstype="stack"`), as a Multiple Document Interface (`wstype="mdi"`)
+  or as a grid (`wstype="grid"`).
 
 * width: can specify a desired width in pixels for the container.
 
@@ -199,5 +199,70 @@ dictionary can simply be empty.  These attributes include:
 
 The optional third and following items are specifications for nested
 content.  These are usually also sublists, but can also be specified as
-dictionaries.
+dictionaries for types `hbox` and `vbox`.
+
+==========================
+Adding or Removing Plugins
+==========================
+
+A plugin can be added to the reference viewer in `pre_gui_config()`
+using one of two methods.  The first method is using the
+`add_local_plugin()` or `add_global_plugin()` methods, 
+depending on whether it is a local or global plugin, respectively::
+
+    def pre_gui_config(ginga):
+        ...
+
+        ginga.add_local_plugin('DQCheck', "dialogs")
+
+The above call would try to load a local plugin called "DQCheck" from a
+module called "DQCheck".  When invoked from the Operations menu it would
+occupy a spot in the "dialogs" workspace (see layout discussion above).
+
+.. note:: It is a convention in Ginga plugins that the module name and
+          plugin name (a class name) are the same.
+
+Global plugins are similar, except that some of them are considered
+critical to the viewers basic operation and so should be started when
+the program starts::
+
+    def pre_gui_config(ginga):
+        ...
+
+        ginga.add_global_plugin('SpecScope', "left",
+                                tab_name="Spec Scope", start_plugin=True)
+
+
+==============================
+Making a Custom Startup Script
+==============================
+
+You can make a custom startup script to make the same reference viewer
+configuration available without relying on the `ginga_config` module in
+a personal settings area.  To do this we make use of the `main` module::
+
+    import sys
+    from ginga.main import ReferenceViewer
+    from optparse import OptionParser
+
+    my_layout = [ ... ]
+
+    if __name__ == "__main__":
+        viewer = ReferenceViewer(layout=my_layout)
+        # add global plugins
+        viewer.add_global_plugin(...)
+        viewer.add_global_plugin(...)
+
+        # add local plugins
+        viewer.add_local_plugin(...)
+        viewer.add_local_plugin(...)
+
+        # Parse command line options with optparse module
+        usage = "usage: %prog [options] cmd [args]"
+        optprs = OptionParser(usage=usage)
+        viewer.add_default_options(optprs)
+
+        (options, args) = optprs.parse_args(sys_argv[1:])
+
+        viewer.main(options, args)
 

@@ -276,34 +276,52 @@ class Desktop(Callback.Callbacks):
 
         def process_common_params(widget, inparams):
             params = Bunch.Bunch(name=None, height=-1, width=-1,
-                                 xpos=-1, ypos=-1)
+                                 xpos=-1, ypos=-1, spacing=None,
+                                 wexp=None, hexp=None)
             params.update(inparams)
 
             if params.name:
                 widgetDict[params.name] = widget
 
-            # User is specifying the size of the widget
-            if ((params.width >= 0) or (params.height >= 0)) and \
-                   isinstance(widget, Widgets.WidgetBase):
-                w_exp, h_exp = 0, 0
-                if params.width < 0:
-                    width = widget.get_size()[0]
-                    w_exp = 8
-                else:
-                    width = params.width
-                    w_exp = 1|4
-                if params.height < 0:
-                    height = widget.get_size()[1]
-                    h_exp = 8
-                else:
-                    height = params.height
-                    h_exp = 1|4
-                widget.cfg_expand(w_exp, h_exp)
-                widget.resize(width, height)
+            wexp, hexp = params.wexp, params.hexp
 
-            # User wants to place window somewhere
-            if (params.xpos >= 0) and isinstance(widget, Widgets.WidgetBase):
-                widget.move(params.xpos, params.ypos)
+            # User is specifying the size of the widget
+            if isinstance(widget, Widgets.WidgetBase):
+
+                if params.spacing is not None:
+                    widget.set_spacing(params.spacing)
+
+                # directive to size widget
+                if (params.width >= 0) or (params.height >= 0):
+                    if params.width < 0:
+                        width = widget.get_size()[0]
+                        if wexp is None:
+                            wexp = 8
+                    else:
+                        width = params.width
+                        if wexp is None:
+                            wexp = 1|4
+                    if params.height < 0:
+                        height = widget.get_size()[1]
+                        if hexp is None:
+                            hexp = 8
+                    else:
+                        height = params.height
+                        if hexp is None:
+                            hexp = 1|4
+                    widget.resize(width, height)
+
+                # specify expansion policy of widget
+                if (wexp is not None) or (hexp is not None):
+                    if wexp is None:
+                        wexp = 0
+                    if hexp is None:
+                        hexp = 0
+                    widget.cfg_expand(wexp, hexp)
+
+                # User wants to place window somewhere
+                if params.xpos >= 0:
+                    widget.move(params.xpos, params.ypos)
 
         def make_widget(kind, paramdict, args, pack):
             kind = kind.lower()
@@ -359,7 +377,7 @@ class Desktop(Callback.Callbacks):
             #return widget
 
         # Horizontal adjustable panel
-        def horz(params, cols, pack):
+        def hpanel(params, cols, pack):
             if len(cols) >= 2:
                 widget = Widgets.Splitter(orientation='horizontal')
                 process_common_params(widget, params)
@@ -387,7 +405,7 @@ class Desktop(Callback.Callbacks):
             pack(widget)
 
         # Vertical adjustable panel
-        def vert(params, rows, pack):
+        def vpanel(params, rows, pack):
             if len(rows) >= 2:
                 widget = Widgets.Splitter(orientation='vertical')
                 process_common_params(widget, params)
@@ -418,6 +436,7 @@ class Desktop(Callback.Callbacks):
         def hbox(params, cols, pack):
             widget = Widgets.HBox()
             widget.set_border_width(0)
+            widget.set_spacing(0)
 
             for dct in cols:
                 if isinstance(dct, dict):
@@ -425,7 +444,7 @@ class Desktop(Callback.Callbacks):
                     col = dct.get('col', None)
                 else:
                     # assume a list defining the col
-                    stretch = align = 0
+                    stretch = 0
                     col = dct
                 if col is not None:
                     make(col, lambda w: widget.add_widget(w,
@@ -437,6 +456,7 @@ class Desktop(Callback.Callbacks):
         def vbox(params, rows, pack):
             widget = Widgets.VBox()
             widget.set_border_width(0)
+            widget.set_spacing(0)
 
             for dct in rows:
                 if isinstance(dct, dict):
@@ -444,7 +464,7 @@ class Desktop(Callback.Callbacks):
                     row = dct.get('row', None)
                 else:
                     # assume a list defining the row
-                    stretch = align = 0
+                    stretch = 0
                     row = dct
                 if row is not None:
                     make(row, lambda w: widget.add_widget(w,
@@ -471,7 +491,7 @@ class Desktop(Callback.Callbacks):
                     col = dct.get('col', None)
                 else:
                     # assume a list defining the col
-                    stretch = align = 0
+                    stretch = 0
                     col = dct
                 if col is not None:
                     make(col, mypack)
@@ -488,9 +508,9 @@ class Desktop(Callback.Callbacks):
                 rest = []
 
             if kind == 'vpanel':
-                vert(params, rest, pack)
+                vpanel(params, rest, pack)
             elif kind == 'hpanel':
-                horz(params, rest, pack)
+                hpanel(params, rest, pack)
             elif kind == 'vbox':
                 vbox(params, rest, pack)
             elif kind == 'hbox':

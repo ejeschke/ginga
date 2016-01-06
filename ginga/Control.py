@@ -290,6 +290,8 @@ class GingaControl(Callback.Callbacks):
         if self.is_gui_thread():
             return self.make_callback(name, *args, **kwdargs)
         else:
+            # note: this cannot be "gui_call"--locks viewer.
+            # so call becomes async when a non-gui thread invokes it
             self.gui_do(self.make_callback, name, *args, **kwdargs)
 
     # PLUGIN MANAGEMENT
@@ -1021,7 +1023,7 @@ class GingaControl(Callback.Callbacks):
         for opname, spec in self.local_plugins.items():
             opmon.loadPlugin(opname, spec, chinfo=channel)
 
-        self.make_async_gui_callback('add-channel', channel)
+        self.make_gui_callback('add-channel', channel)
         return channel
 
     def delete_channel(self, chname):
@@ -1053,7 +1055,7 @@ class GingaControl(Callback.Callbacks):
             else:
                 self.cur_channel = None
 
-        self.make_async_gui_callback('delete-channel', channel)
+        self.make_gui_callback('delete-channel', channel)
 
     def get_channelNames(self):
         with self.lock:

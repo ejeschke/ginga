@@ -82,10 +82,10 @@ class Pan(GingaPlugin.GlobalPlugin):
 
         return pi
 
-    def add_channel(self, viewer, chinfo):
-        fitsimage = chinfo.fitsimage
+    def add_channel(self, viewer, channel):
+        fitsimage = channel.fitsimage
         panimage = self._create_pan_image(fitsimage)
-        chname = chinfo.name
+        chname = channel.name
 
         iw = Viewers.GingaViewerWidget(panimage)
         iw.resize(self._wd, self._ht)
@@ -102,7 +102,7 @@ class Pan(GingaPlugin.GlobalPlugin):
         rgbmap.add_callback('changed', self.rgbmap_cb, panimage)
 
         fitsimage.copy_attributes(panimage, ['cutlevels'])
-        fitsimage.add_callback('image-set', self.new_image_cb, chinfo, paninfo)
+        fitsimage.add_callback('image-set', self.new_image_cb, channel, paninfo)
 
         fitssettings = fitsimage.get_settings()
         pansettings = panimage.get_settings()
@@ -111,26 +111,26 @@ class Pan(GingaPlugin.GlobalPlugin):
         fitssettings.shareSettings(pansettings, xfrmsettings)
         for key in xfrmsettings:
             pansettings.getSetting(key).add_callback('set', self.settings_cb,
-                                                     fitsimage, chinfo, paninfo, 0)
+                                                     fitsimage, channel, paninfo, 0)
 
 
         fitssettings.shareSettings(pansettings, ['cuts'])
         pansettings.getSetting('cuts').add_callback('set', self.settings_cb,
-                                                    fitsimage, chinfo, paninfo, 1)
+                                                    fitsimage, channel, paninfo, 1)
 
         zoomsettings = ['zoom_algorithm', 'zoom_rate',
                         'scale_x_base', 'scale_y_base']
         fitssettings.shareSettings(pansettings, zoomsettings)
         for key in zoomsettings:
             pansettings.getSetting(key).add_callback('set', self.zoom_ext_cb,
-                                                     fitsimage, chinfo, paninfo)
+                                                     fitsimage, channel, paninfo)
 
-        fitsimage.add_callback('redraw', self.redraw_cb, chinfo, paninfo)
+        fitsimage.add_callback('redraw', self.redraw_cb, channel, paninfo)
 
-        self.logger.debug("channel '%s' added." % (chinfo.name))
+        self.logger.debug("channel '%s' added." % (channel.name))
 
-    def delete_channel(self, viewer, chinfo):
-        chname = chinfo.name
+    def delete_channel(self, viewer, channel):
+        chname = channel.name
         self.logger.debug("deleting channel %s" % (chname))
         widget = self.channel[chname].widget
         self.nb.remove(widget, delete=True)
@@ -141,8 +141,8 @@ class Pan(GingaPlugin.GlobalPlugin):
     def start(self):
         names = self.fv.get_channelNames()
         for name in names:
-            chinfo = self.fv.get_channelInfo(name)
-            self.add_channel(self.fv, chinfo)
+            channel = self.fv.get_channelInfo(name)
+            self.add_channel(self.fv, channel)
 
     # CALLBACKS
 
@@ -150,7 +150,7 @@ class Pan(GingaPlugin.GlobalPlugin):
         # color mapping has changed in some way
         panimage.redraw(whence=1)
 
-    def new_image_cb(self, fitsimage, image, chinfo, paninfo):
+    def new_image_cb(self, fitsimage, image, channel, paninfo):
 
         # HACK: when is the non-shared _imgobj being created?
         # we have to null it here so that it get's recreated correctly--fix!
@@ -162,19 +162,19 @@ class Pan(GingaPlugin.GlobalPlugin):
 
         # add cb to image so that if it is modified we can update info
         ## image.add_callback('modified', self.image_update_cb, fitsimage,
-        ##                    chinfo, paninfo)
+        ##                    channel, paninfo)
 
         # This seems to trigger a crash with mosaic images if we call
         # set_image() immediately, so just queue up on the GUI thread
-        #self.set_image(chinfo, paninfo, image)
-        self.fv.gui_do(self.set_image, chinfo, paninfo, image)
+        #self.set_image(channel, paninfo, image)
+        self.fv.gui_do(self.set_image, channel, paninfo, image)
         return False
 
-    def image_update_cb(self, image, fitsimage, chinfo, paninfo):
+    def image_update_cb(self, image, fitsimage, channel, paninfo):
         # image has changed (e.g. size, value range, etc)
         cur_img = fitsimage.get_image()
         if cur_img == image:
-            self.fv.gui_do(self.set_image, chinfo, paninfo, image)
+            self.fv.gui_do(self.set_image, channel, paninfo, image)
         return False
 
     def focus_cb(self, viewer, channel):
@@ -183,6 +183,8 @@ class Pan(GingaPlugin.GlobalPlugin):
         # If the active widget has changed, then raise our Info widget
         # that corresponds to it
         if self.active != chname:
+            if not chname in self.channel:
+                self.add_channel(viewer, channel)
             iw = self.channel[chname].widget
             index = self.nb.index_of(iw)
             self.nb.set_index(index)
@@ -197,21 +199,21 @@ class Pan(GingaPlugin.GlobalPlugin):
         panimage.redraw(whence=0)
         return True
 
-    def redraw_cb(self, fitsimage, chinfo, paninfo):
+    def redraw_cb(self, fitsimage, channel, paninfo):
         #paninfo.panimage.redraw(whence=whence)
-        self.panset(chinfo.fitsimage, chinfo, paninfo)
+        self.panset(channel.fitsimage, channel, paninfo)
         return True
 
-    def settings_cb(self, setting, value, fitsimage, chinfo, paninfo, whence):
+    def settings_cb(self, setting, value, fitsimage, channel, paninfo, whence):
         #paninfo.panimage.redraw(whence=whence)
-        self.panset(chinfo.fitsimage, chinfo, paninfo)
+        self.panset(channel.fitsimage, channel, paninfo)
         return True
 
-    def zoom_ext_cb(self, setting, value, fitsimage, chinfo, paninfo):
+    def zoom_ext_cb(self, setting, value, fitsimage, channel, paninfo):
         # refit the pan image, because scale factors may have changed
         paninfo.panimage.zoom_fit()
         # redraw pan info
-        self.panset(fitsimage, chinfo, paninfo)
+        self.panset(fitsimage, channel, paninfo)
         return False
 
     # LOGIC
@@ -219,7 +221,7 @@ class Pan(GingaPlugin.GlobalPlugin):
     def clear(self):
         self.info.panimage.clear()
 
-    def set_image(self, chinfo, paninfo, image):
+    def set_image(self, channel, paninfo, image):
         if image is None:
             return
 
@@ -261,9 +263,9 @@ class Pan(GingaPlugin.GlobalPlugin):
                     tb_str = "Traceback information unavailable."
                     self.logger.error(tb_str)
 
-        self.panset(chinfo.fitsimage, chinfo, paninfo)
+        self.panset(channel.fitsimage, channel, paninfo)
 
-    def panset(self, fitsimage, chinfo, paninfo):
+    def panset(self, fitsimage, channel, paninfo):
         image = fitsimage.get_image()
         if image is None:
             return

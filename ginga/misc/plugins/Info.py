@@ -172,6 +172,8 @@ class Info(GingaPlugin.GlobalPlugin):
         chname = channel.name
 
         if self.active != chname:
+            if not chname in self.channel:
+                self.add_channel(viewer, channel)
             widget = self.channel[chname].widget
             index = self.nb.index_of(widget)
             self.nb.set_index(index)

@@ -88,8 +88,8 @@ default_layout = ['seq', {},
                         )]
                       ],
                      ], stretch=1),
-                    dict(row=['ws', dict(name='toolbar', height=40,
-                                             show_tabs=False, group=2)],
+                    dict(row=['ws', dict(name='toolbar', wstype='stack',
+                                         height=40, group=2)],
                          stretch=0),
                     dict(row=['hbox', dict(name='status')], stretch=0),
                     ]]
