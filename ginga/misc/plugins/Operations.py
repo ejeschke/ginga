@@ -26,6 +26,7 @@ class Operations(GingaPlugin.GlobalPlugin):
         prefs = self.fv.get_preferences()
         self.settings = prefs.createCategory('plugin_Operations')
         self.settings.addDefaults(show_channel_control=True,
+                                  use_popup_menu=True,
                                   focuscolor="lightgreen")
         self.settings.load(onError='silent')
 
@@ -37,6 +38,7 @@ class Operations(GingaPlugin.GlobalPlugin):
         self.operations = list(fv.get_operations())
 
         self.focuscolor = self.settings.get('focuscolor', "lightgreen")
+        self.use_popup = True
 
     def build_gui(self, container):
 
@@ -51,9 +53,17 @@ class Operations(GingaPlugin.GlobalPlugin):
         if self.settings.get('show_channel_control', True):
             hbox.add_widget(cbox1, stretch=0)
 
-        opmenu = Widgets.Menu()
+        self.use_popup = self.settings.get('use_popup_menu', True)
+        if self.use_popup:
+            opmenu = Widgets.Menu()
+            btn = Widgets.Button("Operation")
+        else:
+            opmenu = Widgets.ComboBox()
+            opmenu.set_tooltip("Select an operation")
+            hbox.add_widget(opmenu, stretch=0)
+            btn = Widgets.Button("Go")
+
         self.w.operation = opmenu
-        btn = Widgets.Button("Operation")
         btn.add_callback('activated', self.invoke_op_cb)
         btn.set_tooltip("Invoke operation")
         self.w.opbtn = btn
@@ -92,9 +102,12 @@ class Operations(GingaPlugin.GlobalPlugin):
 
     def add_operation_cb(self, viewer, opname):
         opmenu = self.w.operation
-        item = opmenu.add_name(opname)
-        item.add_callback('activated',
-                          lambda *args: self.start_operation_cb(opname))
+        if self.use_popup:
+            item = opmenu.add_name(opname)
+            item.add_callback('activated',
+                              lambda *args: self.start_operation_cb(opname))
+        else:
+            opmenu.insert_alpha(opname)
 
     def start_operation_cb(self, name):
         self.logger.debug("invoking operation menu")
@@ -116,7 +129,12 @@ class Operations(GingaPlugin.GlobalPlugin):
     def invoke_op_cb(self, btn_w):
         self.logger.debug("invoking operation menu")
         menu = self.w.operation
-        menu.popup(btn_w)
+        if self.use_popup:
+            menu.popup(btn_w)
+        else:
+            idx = menu.get_index()
+            opname = str(menu.get_alpha(idx))
+            self.start_operation_cb(opname)
 
     def activate_plugin_cb(self, pl_mgr, bnch):
         lname = bnch.pInfo.name.lower()

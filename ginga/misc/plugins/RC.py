@@ -77,6 +77,7 @@ import sys
 import numpy
 import binascii
 import bz2
+from io import BytesIO
 
 from ginga import GingaPlugin
 from ginga import AstroImage
@@ -217,7 +218,7 @@ class GingaWrapper(object):
         else:
             return "Please use 'help ginga <method>' or 'help channel <chname> <method>'"
 
-    def load_buffer(self, imname, chname, data, dims, dtype,
+    def load_buffer(self, imname, chname, img_buf, dims, dtype,
                     header, metadata, compressed):
         """Display a FITS image buffer.
 
@@ -227,7 +228,7 @@ class GingaWrapper(object):
             a name to use for the image in Ginga
         `chname`: string
             channel in which to load the image
-        `data`: string
+        `img_buf`: string
             the image data, encoded as a base64 ascii encoded string
         `dims`: tuple
             image dimensions in pixels (usually (height, width))
@@ -237,8 +238,8 @@ class GingaWrapper(object):
             fits file header as a dictionary
         `metadata`: dict
             other metadata about image to attach to image
-        `compressed`: boolean
-            True if `data` is bz2 compressed before ascii encoding
+        `compressed`: bool
+            decompress buffer using "bz2"
 
         Returns
         -------
@@ -252,25 +253,27 @@ class GingaWrapper(object):
         * Compress the buffer: buf = bz2.compress(buf)
         * Convert buffer to ascii-encoding: buf = binascii.b2a_base64(buf)
         """
+        self.logger.info("received image data len=%d" % (len(img_buf)))
 
         # Unpack the data
         try:
             # Decode binary data
-            data = binascii.a2b_base64(data)
+            img_buf = binascii.a2b_base64(img_buf)
 
             # Uncompress data if necessary
-            if compressed:
-                data = bz2.decompress(data)
+            decompress = metadata.get('decompress', None)
+            if compressed  or (decompress == 'bz2'):
+                img_buf = bz2.decompress(img_buf)
 
+            # dtype string works for most instances
             if dtype == '':
                 dtype = numpy.float32
-            else:
-                # string to actual type
-                dtype = getattr(numpy, dtype)
+
+            byteswap = metadata.get('byteswap', False)
 
             # Create image container
             image = AstroImage.AstroImage(logger=self.logger)
-            image.load_buffer(data, dims, dtype, byteswap=byteswap,
+            image.load_buffer(img_buf, dims, dtype, byteswap=byteswap,
                               metadata=metadata)
             image.set(name=imname)
             image.update_keywords(header)
@@ -278,12 +281,50 @@ class GingaWrapper(object):
         except Exception as e:
             # Some kind of error unpacking the data
             errmsg = "Error creating image data for '%s': %s" % (
-                fitsname, str(e))
+                imname, str(e))
             self.logger.error(errmsg)
             raise GingaPlugin.PluginError(errmsg)
 
         # Enqueue image to display datasrc
-        self.fv.gui_do(self.fv.add_image, fitsname, image,
+        self.fv.gui_do(self.fv.add_image, imname, image,
+                            chname=chname)
+        return 0
+
+    def load_fits_buffer(self, imname, chname, file_buf, num_hdu,
+                         metadata):
+        from astropy.io import fits
+
+        # Unpack the data
+        try:
+            # Decode binary data
+            file_buf = binascii.a2b_base64(file_buf)
+
+            # Uncompress data if necessary
+            decompress = metadata.get('decompress', None)
+            if decompress == 'bz2':
+                file_buf = bz2.decompress(file_buf)
+
+            self.logger.info("received data: len=%d num_hdu=%d" % (
+                len(file_buf), num_hdu))
+
+            in_f = BytesIO(file_buf)
+
+            # Create image container
+            with fits.open(in_f, 'readonly') as fits_f:
+                image = AstroImage.AstroImage(metadata=metadata,
+                                              logger=self.logger)
+                image.load_hdu(fits_f[num_hdu], fobj=fits_f)
+                image.set(name=imname)
+
+        except Exception as e:
+            # Some kind of error unpacking the data
+            errmsg = "Error creating image data for '%s': %s" % (
+                imname, str(e))
+            self.logger.error(errmsg)
+            raise GingaPlugin.PluginError(errmsg)
+
+        # Enqueue image to display datasrc
+        self.fv.gui_do(self.fv.add_image, imname, image,
                             chname=chname)
         return 0
 

@@ -77,6 +77,10 @@ class PluginManager(Callback.Callbacks):
         pInfo = self.getPluginInfo(plname)
         return self.loadPlugin(pInfo.name, pInfo.spec, chinfo=chinfo)
 
+    def has_plugin(self, plname):
+        plname = plname.lower()
+        return plname in self.plugin
+
     def getPluginInfo(self, plname):
         plname = plname.lower()
         pInfo = self.plugin[plname]

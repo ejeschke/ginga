@@ -608,18 +608,18 @@ class Image(WidgetBase):
         return '''<img id=%(id)s src="%(src)s" alt="%(tooltip)s"
                         width="%(width)d" height="%(height)d">''' % d
 
-class ProgressBar(WidgetBase):
+class ProgressBar(Label):
     def __init__(self):
-        super(ProgressBar, self).__init__()
+        self.value = 0.0
+        super(ProgressBar, self).__init__(self._format())
 
-        ## w = QtGui.QProgressBar()
-        ## w.setRange(0, 100)
-        ## w.setTextVisible(True)
-        self.widget = None
-        self.value = None
+    def _format(self):
+        return "%.2f %%" % (self.value * 100.0)
 
     def set_value(self, pct):
         self.value = pct
+
+        self.set_text(self._format())
 
 
 class StatusBar(Label):

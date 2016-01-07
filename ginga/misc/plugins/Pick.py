@@ -174,14 +174,16 @@ class Pick(GingaPlugin.LocalPlugin):
         bd.enable_zoom(True)
         bd.enable_cuts(True)
 
-        iw = Viewers.GingaViewerWidget(viewer=di)
-        nb.add_widget(iw, title="Image")
         di.configure(width, height)
+        iw = Viewers.GingaViewerWidget(viewer=di)
+        iw.resize(300, 300)
+        nb.add_widget(iw, title="Image")
 
         if have_mpl:
             # Contour plot
             hbox = Widgets.HBox()
-            self.contour_plot = plots.ContourPlot(logger=self.logger)
+            self.contour_plot = plots.ContourPlot(logger=self.logger,
+                                                  width=400, height=300)
             self.contour_plot.add_axis(axisbg='black')
             pw = Plot.PlotWidget(self.contour_plot)
             pw.resize(400, 300)
@@ -198,14 +200,16 @@ class Pick(GingaPlugin.LocalPlugin):
             nb.add_widget(hbox, title="Contour")
 
             # FWHM gaussians plot
-            self.fwhm_plot = plots.FWHMPlot(logger=self.logger)
+            self.fwhm_plot = plots.FWHMPlot(logger=self.logger,
+                                            width=400, height=300)
             self.fwhm_plot.add_axis(axisbg='white')
             pw = Plot.PlotWidget(self.fwhm_plot)
             pw.resize(400, 300)
             nb.add_widget(pw, title="FWHM")
 
             # Radial profile plot
-            self.radial_plot = plots.RadialPlot(logger=self.logger)
+            self.radial_plot = plots.RadialPlot(logger=self.logger,
+                                                width=400, height=300)
             self.radial_plot.add_axis(axisbg='white')
             pw = Plot.PlotWidget(self.radial_plot)
             pw.resize(400, 300)
@@ -1175,7 +1179,6 @@ class Pick(GingaPlugin.LocalPlugin):
                          color=self.pickcolor)))
         self.picktag = tag
 
-        #self.fv.raise_tab("detail")
         return self.redo()
 
     def edit_cb(self, canvas, obj):

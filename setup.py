@@ -12,7 +12,10 @@ srcdir = os.path.dirname(__file__)
 from distutils.command.build_py import build_py
 
 def read(fname):
-    buf = open(os.path.join(srcdir, fname), 'r').read()
+    try:
+        buf = open(os.path.join(srcdir, fname), 'r').read()
+    except Exception:
+        buf = "Ginga astronomic/scientific viewer toolkit"
     return buf
 
 # not yet working...

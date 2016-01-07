@@ -366,10 +366,11 @@ class GingaControl(Callback.Callbacks):
                 name, str(e)))
 
     def show_error(self, errmsg, raisetab=True):
-        obj = self.gpmon.getPlugin('Errors')
-        obj.add_error(errmsg)
-        if raisetab:
-            self.ds.raise_tab('Errors')
+        if self.gpmon.has_plugin('Errors'):
+            obj = self.gpmon.getPlugin('Errors')
+            obj.add_error(errmsg)
+            if raisetab:
+                self.ds.raise_tab('Errors')
 
     def error_wrap(self, method, *args, **kwdargs):
         try:
@@ -387,6 +388,10 @@ class GingaControl(Callback.Callbacks):
             self.gui_do(self.show_error, errmsg, raisetab=True)
 
     def help(self):
+        if not self.gpmon.has_plugin('WBrowser'):
+            self.logger.error("help() requires 'WBrowser' plugin")
+            return
+
         self.start_global_plugin('WBrowser')
 
         localDoc = os.path.join(packageHome, 'doc', 'help.html')
