@@ -269,14 +269,7 @@ def main(options, args):
 
     try:
         app = viewer.top.get_app()
-
-        # TODO: unify these
-        if hasattr(app, 'start'):
-            app.start()
-
-        else:
-            while True:
-                app.process_events()
+        app.mainloop()
 
     except KeyboardInterrupt:
         print("Terminating viewer...")

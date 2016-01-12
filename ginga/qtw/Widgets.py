@@ -1676,6 +1676,10 @@ class Application(Callback.Callbacks):
         self.add_window(w)
         return w
 
+    def mainloop(self):
+        while True:
+            self.process_events()
+
 
 class Dialog(TopLevelMixin, WidgetBase):
 

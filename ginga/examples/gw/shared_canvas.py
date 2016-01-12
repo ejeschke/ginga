@@ -25,7 +25,7 @@ class FitsViewer(object):
 
         self.app = Widgets.Application(logger=logger)
         #self.app.add_callback('shutdown', self.quit)
-        self.top = self.app.make_window("Ginga example2")
+        self.top = self.app.make_window("Ginga shared canvas example")
         self.top.add_callback('close', self.closed)
 
         vbox = Widgets.VBox()
@@ -55,15 +55,9 @@ class FitsViewer(object):
         bd.enable_all(True)
 
         # shared canvas between the two viewers
-        canvas = self.dc.DrawingCanvas()
-        canvas.enable_draw(True)
-        canvas.enable_edit(True)
-        canvas.set_drawtype('rectangle', color='lightblue')
-        self.canvas = canvas
+        shcanvas = self.dc.DrawingCanvas()
         # Tell viewer1 to use this canvas
-        v1.set_canvas(canvas)
-        self.drawtypes = canvas.get_drawtypes()
-        self.drawtypes.sort()
+        v1.set_canvas(shcanvas)
 
         v1.set_desired_size(300, 300)
         iw = Viewers.GingaViewerWidget(viewer=v1)
@@ -86,7 +80,7 @@ class FitsViewer(object):
         self._mi2 = ModeIndicator(v2)
 
         # Tell viewer2 to use this same canvas
-        v2.set_canvas(canvas)
+        v2.set_canvas(shcanvas)
 
         bd = v2.get_bindings()
         bd.enable_all(True)
@@ -94,6 +88,20 @@ class FitsViewer(object):
         v2.set_desired_size(300, 300)
         iw = Viewers.GingaViewerWidget(viewer=v2)
         hbox.add_widget(iw, stretch=1)
+
+        # 2nd canvas as a subcanvas of the shared canvas
+        canvas = self.dc.DrawingCanvas()
+        canvas.enable_draw(True)
+        canvas.enable_edit(True)
+        canvas.set_drawtype('rectangle', color='lightblue')
+        self.canvas = canvas
+        shcanvas.add(self.canvas)
+        shcanvas.ui_setActive(True)
+        canvas.ui_setActive(True)
+        canvas.set_surface(v1)
+
+        self.drawtypes = canvas.get_drawtypes()
+        self.drawtypes.sort()
 
         vbox.add_widget(hbox, stretch=1)
 
@@ -166,7 +174,7 @@ class FitsViewer(object):
         self.canvas.set_drawtype(kind, **params)
 
     def clear_canvas(self):
-        self.canvas.deleteAllObjects()
+        self.canvas.delete_all_objects()
 
     def load_file(self, viewer, filepath):
         image = AstroImage.AstroImage(logger=self.logger)
@@ -260,7 +268,8 @@ def main(options, args):
     viewer.top.raise_()
 
     try:
-        viewer.mainloop()
+        app = viewer.top.get_app()
+        app.mainloop()
 
     except KeyboardInterrupt:
         print("Terminating viewer...")

@@ -106,7 +106,7 @@ class CompoundMixin(object):
             res = []
         return res
 
-    def initialize(self, tag, viewer, logger):
+    def initialize(self, canvas, viewer, logger):
         # TODO: this needs to be merged with the code in CanvasObject
         self.viewer = viewer
         self.logger = logger
@@ -122,7 +122,7 @@ class CompoundMixin(object):
 
         # initialize children
         for obj in self.objects:
-            obj.initialize(None, viewer, logger)
+            obj.initialize(self, viewer, logger)
 
     def inherit_from(self, obj):
         self.crdmap = obj.crdmap
@@ -154,7 +154,7 @@ class CompoundMixin(object):
             self.delete_object(obj)
 
     def delete_all_objects(self):
-        self.objects = []
+        self.objects[:] = []
 
     def roll_objects(self, n):
         num = len(self.objects)
@@ -176,9 +176,9 @@ class CompoundMixin(object):
                     setattr(obj, attrname, val)
 
     def add_object(self, obj, belowThis=None):
-        obj.initialize(None, self.viewer, self.logger)
-        # isn't this taken care of above?
-        #obj.viewer = self.viewer
+
+        obj.initialize(self, self.viewer, self.logger)
+
         if belowThis is None:
             self.objects.append(obj)
         else:

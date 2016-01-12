@@ -615,7 +615,7 @@ class ImageViewBase(Callback.Callbacks):
             Image object.
 
         """
-        if not (self._imgobj is None):
+        if self._imgobj is not None:
             # quick optomization
             return self._imgobj.get_image()
 
@@ -631,12 +631,13 @@ class ImageViewBase(Callback.Callbacks):
             Normalized image sitting on the canvas.
 
         """
-        if not (self._imgobj is None):
+        if self._imgobj is not None:
             return self._imgobj
 
         try:
             # See if there is an image on the canvas
             self._imgobj = self.canvas.get_object_by_tag(self._canvas_img_tag)
+            self._imgobj.add_callback('image-set', self._image_set_cb)
 
         except KeyError:
             # add a normalized image item to this canvas if we don't
@@ -645,10 +646,11 @@ class ImageViewBase(Callback.Callbacks):
             interp = self.t_.get('interpolation', 'basic')
             self._imgobj = NormImage(0, 0, None, alpha=1.0,
                                       interpolation=interp)
+            self._imgobj.add_callback('image-set', self._image_set_cb)
+
         return self._imgobj
 
-    def set_image(self, image, add_to_canvas=True,
-                  raise_initialize_errors=True):
+    def set_image(self, image, add_to_canvas=True):
         """Set an image to be displayed.
 
         If there is no error, the ``'image-unset'`` and ``'image-set'``
@@ -662,116 +664,138 @@ class ImageViewBase(Callback.Callbacks):
         add_to_canvas : bool
             Add image to canvas.
 
-        raise_initialize_errors : bool
-            Raise errors caught during initialization. If set to `False`,
-            errors related to orienting/zooming/centering/autolevelling will not
-            raise an exception, although error message and traceback will still
-            appear in the log.
-
         """
+        canvas_img = self.get_canvas_image()
+
+        old_image = canvas_img.get_image()
+        self.make_callback('image-unset', old_image)
+
         with self.suppress_redraw:
 
-            canvas_img = self.get_canvas_image()
-            old_image = canvas_img.get_image()
+            # this line should force the callback of _image_set_cb()
             canvas_img.set_image(image)
 
             if add_to_canvas:
                 try:
                     self.canvas.get_object_by_tag(self._canvas_img_tag)
+
                 except KeyError:
                     tag = self.canvas.add(canvas_img,
-                                                tag=self._canvas_img_tag)
-                    #print("adding image to canvas %s" % self.canvas)
+                                          tag=self._canvas_img_tag)
+                    #self.logger.debug("adding image to canvas %s" % self.canvas)
 
                 # move image to bottom of layers
                 self.canvas.lowerObject(canvas_img)
 
-            profile = image.get('profile', None)
+            #self.canvas.update_canvas(whence=0)
+
+
+
+    def _image_set_cb(self, canvas_img, image):
+        try:
+            self.apply_profile_or_settings(image)
+
+        except Exception as e:
+            self.logger.error("Failed to initialize image: %s" % (str(e)))
             try:
-                # initialize transform
-                if ((profile is not None) and
-                        (self.t_['profile_use_transform']) and
-                        profile.has_key('flip_x')):
-                    flip_x, flip_y = profile['flip_x'], profile['flip_y']
-                    swap_xy = profile['swap_xy']
-                    self.transform(flip_x, flip_y, swap_xy)
-                else:
-                    self.logger.debug(
-                        "auto orient (%s)" % (self.t_['auto_orient']))
-                    if self.t_['auto_orient']:
-                        self.auto_orient()
+                # log traceback, if possible
+                (type, value, tb) = sys.exc_info()
+                tb_str = "".join(traceback.format_tb(tb))
+                self.logger.error("Traceback:\n%s" % (tb_str))
+            except Exception:
+                tb_str = "Traceback information unavailable."
+                self.logger.error(tb_str)
 
-                # initialize scale
-                if ((profile is not None) and (self.t_['profile_use_scale']) and
-                        profile.has_key('scale_x')):
-                    scale_x, scale_y = profile['scale_x'], profile['scale_y']
-                    self.logger.debug("restoring scale to (%f,%f)" % (
-                        scale_x, scale_y))
-                    self.scale_to(scale_x, scale_y, no_reset=True)
-                else:
-                    self.logger.debug("auto zoom (%s)" % (self.t_['autozoom']))
-                    if self.t_['autozoom'] != 'off':
-                        self.zoom_fit(no_reset=True)
+        # update our display if the image changes underneath us
+        image.add_callback('modified', self._image_modified_cb)
 
-                # initialize pan position
-                if ((profile is not None) and (self.t_['profile_use_pan']) and
-                       profile.has_key('pan_x')):
-                    pan_x, pan_y = profile['pan_x'], profile['pan_y']
-                    self.logger.debug("restoring pan position to (%f,%f)" % (
-                        pan_x, pan_y))
-                    self.set_pan(pan_x, pan_y, no_reset=True)
-                else:
-                    # NOTE: False a possible value from historical use
-                    self.logger.debug(
-                        "auto center (%s)" % (self.t_['autocenter']))
-                    if not self.t_['autocenter'] in ('off', False):
-                        self.center_image(no_reset=True)
+        # out with the old, in with the new...
+        self.make_callback('image-set', image)
 
-                # initialize rotation
-                if ((profile is not None) and
-                        (self.t_['profile_use_rotation']) and
-                        profile.has_key('rot_deg')):
-                    rot_deg = profile['rot_deg']
-                    self.rotate(rot_deg)
+    def apply_profile_or_settings(self, image):
+        """Apply an embedded profile in an image to the viewer.
 
-                # initialize cuts
-                if ((profile is not None) and (self.t_['profile_use_cuts']) and
-                       profile.has_key('cutlo')):
-                    loval, hival = profile['cutlo'], profile['cuthi']
-                    self.cut_levels(loval, hival, no_reset=True)
-                else:
-                    self.logger.debug("auto cuts (%s)" % (self.t_['autocuts']))
-                    if self.t_['autocuts'] != 'off':
-                        self.auto_levels()
+        Parameters
+        ----------
+        image : `~ginga.AstroImage.AstroImage` or `~ginga.RGBImage.RGBImage`
+            Image object.
 
-            except Exception as e:
-                self.logger.error("Failed to initialize image: %s" % (str(e)))
-                try:
-                    # log traceback, if possible
-                    (type, value, tb) = sys.exc_info()
-                    tb_str = "".join(traceback.format_tb(tb))
-                    self.logger.error("Traceback:\n%s" % (tb_str))
-                except Exception:
-                    tb_str = "Traceback information unavailable."
-                    self.logger.error(tb_str)
-                if raise_initialize_errors:
-                    raise e
+        This function is used to initialize the viewer when a new image
+        is loaded.  Either the profile settings embedded in the image or
+        the default settings are applied as specified in the preferences.
+        """
+        profile = image.get('profile', None)
+
+        with self.suppress_redraw:
+            # initialize transform
+            if ((profile is not None) and
+                    (self.t_['profile_use_transform']) and
+                    profile.has_key('flip_x')):
+                flip_x, flip_y = profile['flip_x'], profile['flip_y']
+                swap_xy = profile['swap_xy']
+                self.transform(flip_x, flip_y, swap_xy)
+            else:
+                self.logger.debug(
+                    "auto orient (%s)" % (self.t_['auto_orient']))
+                if self.t_['auto_orient']:
+                    self.auto_orient()
+
+            # initialize scale
+            if ((profile is not None) and (self.t_['profile_use_scale']) and
+                    profile.has_key('scale_x')):
+                scale_x, scale_y = profile['scale_x'], profile['scale_y']
+                self.logger.debug("restoring scale to (%f,%f)" % (
+                    scale_x, scale_y))
+                self.scale_to(scale_x, scale_y, no_reset=True)
+            else:
+                self.logger.debug("auto zoom (%s)" % (self.t_['autozoom']))
+                if self.t_['autozoom'] != 'off':
+                    self.zoom_fit(no_reset=True)
+
+            # initialize pan position
+            if ((profile is not None) and (self.t_['profile_use_pan']) and
+                   profile.has_key('pan_x')):
+                pan_x, pan_y = profile['pan_x'], profile['pan_y']
+                self.logger.debug("restoring pan position to (%f,%f)" % (
+                    pan_x, pan_y))
+                self.set_pan(pan_x, pan_y, no_reset=True)
+            else:
+                # NOTE: False a possible value from historical use
+                self.logger.debug(
+                    "auto center (%s)" % (self.t_['autocenter']))
+                if not self.t_['autocenter'] in ('off', False):
+                    self.center_image(no_reset=True)
+
+            # initialize rotation
+            if ((profile is not None) and
+                    (self.t_['profile_use_rotation']) and
+                    profile.has_key('rot_deg')):
+                rot_deg = profile['rot_deg']
+                self.rotate(rot_deg)
+
+            # initialize cuts
+            if ((profile is not None) and (self.t_['profile_use_cuts']) and
+                   profile.has_key('cutlo')):
+                loval, hival = profile['cutlo'], profile['cuthi']
+                self.cut_levels(loval, hival, no_reset=True)
+            else:
+                self.logger.debug("auto cuts (%s)" % (self.t_['autocuts']))
+                if self.t_['autocuts'] != 'off':
+                    self.auto_levels()
 
             self.canvas.update_canvas(whence=0)
 
-        # update our display if the image changes underneath us
-        image.add_callback('modified', self._image_updated)
 
-        # out with the old, in with the new...
-        self.make_callback('image-unset', old_image)
-        self.make_callback('image-set', image)
+    def _image_modified_cb(self, image):
 
-    def _image_updated(self, image):
+        canvas_img = self.get_canvas_image()
+        image2 = canvas_img.get_image()
+        if image is not image2:
+            # not the image we are now displaying, perhaps a former image
+            return
 
         with self.suppress_redraw:
 
-            canvas_img = self.get_canvas_image()
-            #canvas_img.set_image(image)
             canvas_img.reset_optimize()
 
             # Per issue #111, zoom and pan and cuts probably should
@@ -939,6 +963,21 @@ class ImageViewBase(Callback.Callbacks):
     def canvas_changed_cb(self, canvas, whence):
         """Handle callback for when canvas has changed."""
         self.logger.debug("root canvas changed, whence=%d" % (whence))
+
+        # special check for whether image changed out from under us in
+        # a shared canvas scenario
+        try:
+            # See if there is an image on the canvas
+            canvas_img = self.canvas.get_object_by_tag(self._canvas_img_tag)
+            if self._imgobj is not canvas_img:
+                self._imgobj = canvas_img
+                self._imgobj.add_callback('image-set', self._image_set_cb)
+
+                self._image_set_cb(canvas_img, canvas_img.get_image())
+
+        except KeyError:
+            self._imgobj = None
+
         self.redraw(whence=whence)
 
     def delayed_redraw(self):
@@ -1540,6 +1579,7 @@ class ImageViewBase(Callback.Callbacks):
         image = self.get_image()
         if image is not None:
             return image.get_data_xy(data_x, data_y)
+
         raise ImageViewNoDataError("No image found")
 
     def get_pixel_distance(self, x1, y1, x2, y2):
@@ -1824,6 +1864,7 @@ class ImageViewBase(Callback.Callbacks):
         # calculate actual width of the image, considering rotation
         try:
             width, height = self.get_data_size()
+
         except ImageViewNoDataError:
             return
 
@@ -2100,6 +2141,7 @@ class ImageViewBase(Callback.Callbacks):
         """
         try:
             width, height = self.get_data_size()
+
         except ImageViewNoDataError:
             return
 
@@ -2117,6 +2159,7 @@ class ImageViewBase(Callback.Callbacks):
         """
         try:
             width, height = self.get_data_size()
+
         except ImageViewNoDataError:
             return
 

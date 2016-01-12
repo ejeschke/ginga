@@ -1,14 +1,12 @@
 #
-# CanvasObject.py -- classes for shapes drawn on ginga canvases.
+# CanvasObject.py -- base class for shapes drawn on ginga canvases.
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
 import math
 import numpy
+from collections import namedtuple
 
 from ginga.misc import Callback, Bunch
 from ginga import trcalc, colors
@@ -21,6 +19,16 @@ __all__ = ['CanvasObjectBase', 'get_canvas_type', 'get_canvas_types',
 
 colors_plus_none = [ None ] + colors.get_colors()
 
+Point = namedtuple('Point', ['x', 'y'])
+
+class EditPoint(Point):
+    edit_color = 'yellow'
+class MovePoint(EditPoint):
+    edit_color = 'orangered'
+class ScalePoint(EditPoint):
+    edit_color = 'green'
+class RotatePoint(EditPoint):
+    edit_color = 'skyblue'
 
 class CanvasObjectError(Exception):
     pass
@@ -47,13 +55,13 @@ class CanvasObjectBase(Callback.Callbacks):
         self.crdmap = None
         # For debugging
         self.name = None
+        self.viewer = None
 
         ## # For callbacks
         ## for name in ('modified', ):
         ##     self.enable_callback(name)
 
-    def initialize(self, tag, viewer, logger):
-        self.tag = tag
+    def initialize(self, canvas, viewer, logger):
         self.viewer = viewer
         self.logger = logger
         if self.crdmap is None:
@@ -103,20 +111,11 @@ class CanvasObjectBase(Callback.Callbacks):
         # finally, convert to viewer's canvas coordinates
         return viewer.get_canvas_xy(data_x, data_y, center=center)
 
-    ## def canvascoords(self, viewer, x, y, center=True):
-    ##     crdmap = viewer.get_coordmap(self.coord)
-
-    ##     # convert coordinates to data coordinates
-    ##     data_x, data_y = crdmap.to_data(x, y)
-
-    ##     # finally, convert to viewer's canvas coordinates
-    ##     return viewer.get_canvas_xy(data_x, data_y, center=center)
-
     def is_compound(self):
         return False
 
     def contains_arr(self, x_arr, y_arr):
-        contains = numpy.array([False] * len(x_arr))
+        contains = numpy.asarray([False] * len(x_arr))
         return contains
 
     def contains(self, x, y):
@@ -133,20 +132,18 @@ class CanvasObjectBase(Callback.Callbacks):
         cr.draw_polygon(((x2, y2), (i1, j1), (i2, j2)))
         cr.set_fill(None)
 
-    def draw_caps(self, cr, cap, points, radius=None, isedit=False):
+    def draw_caps(self, cr, cap, points, radius=None):
         i = 0
-        for cx, cy in points:
+        for pt in points:
+            cx, cy = pt
             if radius is None:
                 radius = self.cap_radius
             alpha = getattr(self, 'alpha', 1.0)
             if cap == 'ball':
-                # Draw move control point in a different color than the others
-                # (move cp is always cp #0)
-                if (i == 0) and isedit:
-                    # TODO: configurable
-                    color = 'orangered'
-                else:
-                    color = self.color
+                color = self.color
+                # Draw edit control points in different colors than the others
+                if isinstance(pt, EditPoint):
+                    color = pt.edit_color
 
                 cr.set_fill(color, alpha=alpha)
                 cr.draw_circle(cx, cy, radius)
@@ -154,8 +151,23 @@ class CanvasObjectBase(Callback.Callbacks):
             i += 1
 
     def draw_edit(self, cr, viewer):
-        cpoints = self.get_cpoints(viewer, points=self.get_edit_points())
-        self.draw_caps(cr, 'ball', cpoints, isedit=True)
+        bbox = self.get_bbox()
+        cpoints = self.get_cpoints(viewer, points=bbox, no_rotate=True)
+        cr.set_fill(None)
+        cr.set_line(color='cyan', style='dash')
+        cr.draw_polygon(cpoints)
+
+        points = self.get_edit_points()
+        cpoints = self.get_cpoints(viewer, points=points)
+        # preserve point types for coloring
+        def _map_cpt(pt, cpt):
+            if isinstance(pt, EditPoint):
+                return pt.__class__(*cpt)
+            return cpt
+
+        cpoints = tuple([ _map_cpt(points[i], cpoints[i])
+                    for i in range(len(points)) ])
+        self.draw_caps(cr, 'ball', cpoints)
 
     def calc_radius(self, viewer, x1, y1, radius):
         # scale radius
@@ -196,99 +208,84 @@ class CanvasObjectBase(Callback.Callbacks):
             return 8
 
     def rotate(self, theta, xoff=0, yoff=0):
-        if hasattr(self, 'x'):
-            self.x, self.y = self.crdmap.rotate_pt(self.x, self.y, theta,
-                                                   xoff=xoff, yoff=yoff)
-        elif hasattr(self, 'x1'):
-            self.x1, self.y1 = self.crdmap.rotate_pt(self.x1, self.y1, theta,
-                                                     xoff=xoff, yoff=yoff)
-            self.x2, self.y2 = self.crdmap.rotate_pt(self.x2, self.y2, theta,
-                                                     xoff=xoff, yoff=yoff)
-        elif hasattr(self, 'points'):
-            self.points = list(map(
-                lambda p: self.crdmap.rotate_pt(p[0], p[1], theta,
-                                                xoff=xoff, yoff=yoff),
-                self.points))
+        self.points = list(map(
+            lambda p: self.crdmap.rotate_pt(p[0], p[1], theta,
+                                            xoff=xoff, yoff=yoff),
+            self.points))
 
     def rotate_by(self, theta_deg):
         ref_x, ref_y = self.get_reference_pt()
         self.rotate(theta_deg, xoff=ref_x, yoff=ref_y)
 
+    def rerotate_by(self, theta_deg, detail):
+        ref_x, ref_y = detail.center_pos
+        self.points = list(map(
+            lambda p: self.crdmap.rotate_pt(p[0], p[1], theta_deg,
+                                            xoff=ref_x, yoff=ref_y),
+            detail.points))
+
     def move_delta(self, xoff, yoff):
-        if hasattr(self, 'x'):
-            self.x, self.y = self.crdmap.offset_pt((self.x, self.y), xoff, yoff)
-
-        elif hasattr(self, 'x1'):
-            self.x1, self.y1 = self.crdmap.offset_pt((self.x1, self.y1), xoff, yoff)
-            self.x2, self.y2 = self.crdmap.offset_pt((self.x2, self.y2), xoff, yoff)
-
-        elif hasattr(self, 'points'):
-            for i in range(len(self.points)):
-                self.points[i] = self.crdmap.offset_pt(self.points[i], xoff, yoff)
+        self.points = list(map(
+            lambda pt: self.crdmap.offset_pt(pt, xoff, yoff),
+            self.points))
 
     def move_to(self, xdst, ydst):
         x, y = self.get_reference_pt()
         return self.move_delta(xdst - x, ydst - y)
 
     def get_num_points(self):
-        if hasattr(self, 'x'):
-            return 1
-        elif hasattr(self, 'x1'):
-            return 2
-        elif hasattr(self, 'points'):
-            return(len(self.points))
-        else:
-            return 0
+        return(len(self.points))
 
     def set_point_by_index(self, i, pt):
-        if hasattr(self, 'points'):
-            self.points[i] = pt
-        elif i == 0:
-            if hasattr(self, 'x'):
-                self.x, self.y = pt
-            elif hasattr(self, 'x1'):
-                self.x1, self.y1 = pt
-        elif i == 1:
-            self.x2, self.y2 = pt
-        else:
-            raise ValueError("No point corresponding to index %d" % (i))
+        points = numpy.asarray(self.points)
+        points[i] = pt
+        self.points = points
 
     def get_point_by_index(self, i):
-        if hasattr(self, 'points'):
-            return self.points[i]
-        elif i == 0:
-            if hasattr(self, 'x'):
-                return self.x, self.y
-            elif hasattr(self, 'x1'):
-                return self.x1, self.y1
-        elif i == 1:
-            return self.x2, self.y2
-        else:
-            raise ValueError("No point corresponding to index %d" % (i))
+        return self.points[i]
 
     def scale_by(self, scale_x, scale_y):
-        if hasattr(self, 'radius'):
-            self.radius *= max(scale_x, scale_y)
+        ctr_x, ctr_y = self.get_center_pt()
+        pts = numpy.array(self.points)
+        pts[:, 0] = (pts[:, 0] - ctr_x) * scale_x + ctr_x
+        pts[:, 1] = (pts[:, 1] - ctr_y) * scale_y + ctr_y
+        self.points = pts
 
-        elif hasattr(self, 'xradius'):
-            self.xradius *= scale_x
-            self.yradius *= scale_y
+    def rescale_by(self, scale_x, scale_y, detail):
+        ctr_x, ctr_y = detail.center_pos
+        pts = numpy.array(detail.points)
+        pts[:, 0] = (pts[:, 0] - ctr_x) * scale_x + ctr_x
+        pts[:, 1] = (pts[:, 1] - ctr_y) * scale_y + ctr_y
+        self.points = pts
 
-        elif hasattr(self, 'x1'):
-            ctr_x, ctr_y = self.get_center_pt()
-            pts = [(self.x1, self.y1), (self.x2, self.y2)]
-            P = numpy.array(pts)
-            P[:, 0] = (P[:, 0] - ctr_x) * scale_x + ctr_x
-            P[:, 1] = (P[:, 1] - ctr_y) * scale_y + ctr_y
-            self.x1, self.y1 = P[0, 0], P[0, 1]
-            self.x2, self.y2 = P[1, 0], P[1, 1]
+    def setup_edit(self, detail):
+        """subclass should override as necessary."""
+        detail.center_pos = self.get_center_pt()
 
-        elif hasattr(self, 'points'):
-            ctr_x, ctr_y = self.get_center_pt()
-            P = numpy.array(self.points)
-            P[:, 0] = (P[:, 0] - ctr_x) * scale_x + ctr_x
-            P[:, 1] = (P[:, 1] - ctr_y) * scale_y + ctr_y
-            self.points = list(P)
+    def calc_rotation_from_pt(self, pt, detail):
+        x, y = pt
+        ctr_x, ctr_y = detail.center_pos
+        start_x, start_y = detail.start_pos
+        # calc angle of starting point wrt origin
+        deg1 = math.degrees(math.atan2(start_y - ctr_y,
+                                       start_x - ctr_x))
+        # calc angle of current point wrt origin
+        deg2 = math.degrees(math.atan2(y - ctr_y, x - ctr_x))
+        delta_deg = deg2 - deg1
+        return delta_deg
+
+    def calc_scale_from_pt(self, pt, detail):
+        x, y = pt
+        ctr_x, ctr_y = detail.center_pos
+        start_x, start_y = detail.start_pos
+        dx, dy = start_x - ctr_x, start_y - ctr_y
+        # calc distance of starting point wrt origin
+        dist1 = math.sqrt(dx**2.0 + dy**2.0)
+        dx, dy = x - ctr_x, y - ctr_y
+        # calc distance of current point wrt origin
+        dist2 = math.sqrt(dx**2.0 + dy**2.0)
+        scale_f = dist2 / dist1
+        return scale_f
 
     def convert_mapper(self, tomap):
         """
@@ -417,11 +414,11 @@ class CanvasObjectBase(Callback.Callbacks):
     #####
 
     def get_points(self):
-        return []
+        return self.points
 
     def get_center_pt(self):
         # default is geometric average of points
-        P = numpy.array(self.get_points())
+        P = numpy.asarray(self.get_points())
         x = P[:, 0]
         y = P[:, 1]
         Cx = numpy.sum(x) / float(len(x))
@@ -431,20 +428,44 @@ class CanvasObjectBase(Callback.Callbacks):
     def get_reference_pt(self):
         return self.get_center_pt()
 
-    def get_cpoints(self, viewer, points=None):
+    def get_move_scale_rotate_pts(self):
+        """Returns 3 edit control points for editing this object: a move
+        point, a scale point and a rotate point.  These points are all in
+        data coordinates.
+        """
+        ref_x, ref_y = self.get_center_pt()
+        xl, yl, xu, yu = self.get_llur()
+        offset = 50
+        scl_x, scl_y = xl - offset, yl - offset
+        rot_x, rot_y = xu + offset, yu + offset
+        if hasattr(self, 'rot_deg'):
+            # if this is an object with a rotation attribute, pre rotate
+            # the control points in the opposite direction, because they
+            # will be rotated back
+            theta = -self.rot_deg
+            scl_x, scl_y = self.crdmap.rotate_pt(scl_x, scl_y, theta,
+                                                 xoff=ref_x, yoff=ref_y)
+            rot_x, rot_y = self.crdmap.rotate_pt(rot_x, rot_y, theta,
+                                                 xoff=ref_x, yoff=ref_y)
+        move_pt = MovePoint(ref_x, ref_y)
+        scale_pt = ScalePoint(scl_x, scl_y)
+        rotate_pt = RotatePoint(rot_x, rot_y)
+
+        return (move_pt, scale_pt, rotate_pt)
+
+    def get_cpoints(self, viewer, points=None, no_rotate=False):
         if points is None:
             points = self.get_points()
-        if hasattr(self, 'rot_deg') and self.rot_deg != 0.0:
+
+        if (not no_rotate) and hasattr(self, 'rot_deg') and self.rot_deg != 0.0:
             # rotate vertices according to rotation
             x, y = self.get_center_pt()
-            rpoints = tuple(map(lambda p: self.crdmap.rotate_pt(p[0], p[1],
-                                                                self.rot_deg,
-                                                                xoff=x, yoff=y),
-                                points))
-        else:
-            rpoints = points
+            points = tuple(map(lambda p: self.crdmap.rotate_pt(p[0], p[1],
+                                                               self.rot_deg,
+                                                               xoff=x, yoff=y),
+                               points))
         cpoints = tuple(map(lambda p: self.canvascoords(viewer, p[0], p[1]),
-                            rpoints))
+                            points))
         return cpoints
 
     def get_bbox(self):

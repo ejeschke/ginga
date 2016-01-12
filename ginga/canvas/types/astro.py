@@ -2,9 +2,6 @@
 # astro.py -- classes for special astronomy shapes drawn on
 #                   ginga canvases.
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -12,14 +9,17 @@ import math
 import numpy
 
 from ginga.canvas.CanvasObject import (CanvasObjectBase, _bool, _color,
+                                       Point, MovePoint, ScalePoint,
+                                       RotatePoint,
                                        register_canvas_types, get_canvas_type,
                                        colors_plus_none)
 from ginga.misc.ParamSet import Param
 from ginga.misc.Bunch import Bunch
 from ginga.util import wcs
 
-from .basic import TwoPointMixin, OnePointOneRadiusMixin
+from .mixins import OnePointMixin, TwoPointMixin, OnePointOneRadiusMixin
 from .layer import CompoundObject
+
 
 class Ruler(TwoPointMixin, CanvasObjectBase):
     """Draws a WCS ruler (like a right triangle) on a DrawingCanvas.
@@ -284,18 +284,23 @@ class Compass(OnePointOneRadiusMixin, CanvasObjectBase):
         OnePointOneRadiusMixin.__init__(self)
 
     def get_points(self):
-        image = self.viewer.get_image()
+        # TODO: this attribute will be deprecated--fix!
+        viewer = self.viewer
+
+        image = viewer.get_image()
         x, y, xn, yn, xe, ye = image.calc_compass_radius(self.x,
                                                          self.y,
                                                          self.radius)
         return [(x, y), (xn, yn), (xe, ye)]
 
     def get_edit_points(self):
-        return self.get_points()
+        c_pt, n_pt, e_pt = self.get_points()
+        return [ MovePoint(*c_pt), ScalePoint(*n_pt), ScalePoint(*e_pt) ]
 
-    def set_edit_point(self, i, pt):
+    def set_edit_point(self, i, pt, detail):
         if i == 0:
-            self.set_point_by_index(i, pt)
+            x, y = pt
+            self.move_to(x, y)
         elif i in (1, 2):
             x, y = pt
             self.radius = max(abs(x - self.x), abs(y - self.y))
@@ -364,7 +369,7 @@ class Compass(OnePointOneRadiusMixin, CanvasObjectBase):
         return (xd, yd)
 
 
-class Crosshair(CanvasObjectBase):
+class Crosshair(OnePointMixin, CanvasObjectBase):
     """Draws a crosshair on a DrawingCanvas.
     Parameters are:
     x, y: 0-based coordinates of the center in the data space
@@ -423,18 +428,7 @@ class Crosshair(CanvasObjectBase):
                                   text=text, textcolor=textcolor,
                                   fontsize=fontsize, font=font,
                                   x=x, y=y, format=format, **kwdargs)
-
-    def get_points(self):
-        return [ (self.x, self.y) ]
-
-    def get_edit_points(self):
-        return self.get_points()
-
-    def set_edit_point(self, i, pt):
-        if i == 0:
-            self.set_point_by_index(i, pt)
-        else:
-            raise ValueError("No point corresponding to index %d" % (i))
+        OnePointMixin.__init__(self)
 
     def select_contains(self, viewer, data_x, data_y):
         xd, yd = self.crdmap.to_data(self.x, self.y)
@@ -592,11 +586,11 @@ class Annulus(AnnulusMixin, OnePointOneRadiusMixin, CompoundObject):
         self.kind = 'annulus'
 
     def get_edit_points(self):
-        return [(self.x, self.y),
-                (self.x + self.radius, self.y),
-                (self.x + self.radius + self.width, self.y)]
+        return [MovePoint(self.x, self.y),
+                ScalePoint(self.x + self.radius, self.y),
+                Point(self.x + self.radius + self.width, self.y)]
 
-    def set_edit_point(self, i, pt):
+    def set_edit_point(self, i, pt, detail):
         if i == 0:
             # move control point
             self.set_point_by_index(i, pt)

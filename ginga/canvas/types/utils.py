@@ -1,9 +1,6 @@
 #
 # utils.py -- classes for special shapes added to Ginga canvases.
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -220,7 +217,7 @@ class ModeIndicator(CanvasObjectBase):
 
     def draw(self, viewer):
 
-        win_wd, win_ht = self.viewer.get_window_size()
+        win_wd, win_ht = viewer.get_window_size()
 
         bm = viewer.get_bindmap()
         mode, mode_type = bm.current_mode()

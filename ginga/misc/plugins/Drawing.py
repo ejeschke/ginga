@@ -225,9 +225,9 @@ For polygons/paths press 'v' to create a vertex, 'z' to remove last vertex.""")
         return True
 
     def set_drawparams_cb(self):
-        if self.canvas.get_draw_mode() != 'draw':
-            # if we are in edit mode then don't initialize draw gui
-            return
+        ## if self.canvas.get_draw_mode() != 'draw':
+        ##     # if we are in edit mode then don't initialize draw gui
+        ##     return
         index = self.w.draw_type.get_index()
         kind = self.drawtypes[index]
         index = self.w.coord_type.get_index()

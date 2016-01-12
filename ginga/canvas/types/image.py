@@ -1,9 +1,6 @@
 #
 # images.py -- classes for images drawn on ginga canvases.
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -16,7 +13,9 @@ from ginga.misc.ParamSet import Param
 from ginga.misc import Bunch
 from ginga import trcalc
 
-class Image(CanvasObjectBase):
+from .mixins import OnePointMixin
+
+class Image(OnePointMixin, CanvasObjectBase):
     """Draws an image on a ImageViewCanvas.
     Parameters are:
     x, y: 0-based coordinates of one corner in the data space
@@ -70,13 +69,14 @@ class Image(CanvasObjectBase):
                  showcap=False, flipy=False, optimize=True,
                  **kwdargs):
         self.kind = 'image'
-        super(Image, self).__init__(x=x, y=y, image=image, alpha=alpha,
-                                        scale_x=scale_x, scale_y=scale_y,
-                                        interpolation=interpolation,
-                                        linewidth=linewidth, linestyle=linestyle,
-                                        color=color, showcap=showcap,
-                                        flipy=flipy, optimize=optimize,
-                                        **kwdargs)
+        CanvasObjectBase.__init__(self, x=x, y=y, image=image, alpha=alpha,
+                                  scale_x=scale_x, scale_y=scale_y,
+                                  interpolation=interpolation,
+                                  linewidth=linewidth, linestyle=linestyle,
+                                  color=color, showcap=showcap,
+                                  flipy=flipy, optimize=optimize,
+                                  **kwdargs)
+        OnePointMixin.__init__(self)
 
         # The cache holds intermediate step results by viewer.
         # Depending on value of `whence` they may not need to be recomputed.
@@ -84,6 +84,8 @@ class Image(CanvasObjectBase):
         self._zorder = 0
         # images are not editable by default
         self.editable = False
+
+        self.enable_callback('image-set')
 
     def get_zorder(self):
         return self._zorder
@@ -93,6 +95,9 @@ class Image(CanvasObjectBase):
         for viewer in self._cache:
             viewer.reorder_layers()
             viewer.redraw(whence=2)
+
+    def in_cache(self, viewer):
+        return viewer in self._cache
 
     def get_cache(self, viewer):
         if viewer in self._cache:
@@ -227,6 +232,8 @@ class Image(CanvasObjectBase):
         self.image = image
         self.reset_optimize()
 
+        self.make_callback('image-set', image)
+
     def get_scaled_wdht(self):
         width = int(self.image.width * self.scale_x)
         height = int(self.image.height * self.scale_y)
@@ -256,7 +263,7 @@ class Image(CanvasObjectBase):
     def rotate(self, theta, xoff=0, yoff=0):
         raise ValueError("Images cannot be rotated")
 
-    def set_edit_point(self, i, pt):
+    def set_edit_point(self, i, pt, detail):
         if i == 0:
             x, y = pt
             self.move_to(x, y)
@@ -483,6 +490,8 @@ class NormImage(Image):
     def set_image(self, image):
         self.image = image
         self.reset_optimize()
+
+        self.make_callback('image-set', image)
 
     def scale_by(self, scale_x, scale_y):
         #print("scaling image")

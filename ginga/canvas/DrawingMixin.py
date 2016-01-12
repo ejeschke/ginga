@@ -1,9 +1,6 @@
 #
 # DrawingMixin.py -- enable drawing capabilities.
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -49,6 +46,7 @@ class DrawingMixin(object):
         self._cp_index = None
         self._edit_obj = None
         self._edit_status = False
+        self._edit_detail = {}
 
         # For modes
         self._mode = 'draw'
@@ -87,7 +85,8 @@ class DrawingMixin(object):
     def set_surface(self, viewer):
         self.viewer = viewer
 
-        # register this canvas for events of interest
+        # Register this canvas for events of interest.
+        # Assumes we are mixed in with a canvas
         canvas = self
 
         # for legacy drawing via draw mode in Bindmap
@@ -103,9 +102,6 @@ class DrawingMixin(object):
         canvas.add_callback('keydown-edit_del', self.edit_delete_cb, viewer)
         #canvas.add_callback('draw-scroll', self._edit_rotate_cb, viewer)
         #canvas.add_callback('draw-scroll', self._edit_scale_cb, viewer)
-
-    def get_surface(self):
-        return self.viewer
 
     def register_for_cursor_drawing(self, viewer):
         canvas = self
@@ -182,13 +178,6 @@ class DrawingMixin(object):
         cxt.setvals(x=x, y=y, data_x=data_x, data_y=data_y)
 
         obj = klass.idraw(self, cxt)
-
-        # elif self.t_drawtype == 'equilateraltriangle':
-        #         len_x = self._start_x - x
-        #         len_y = self._start_y - y
-        #         length = max(abs(len_x), abs(len_y))
-        #         obj = klass(self._start_x, self._start_y,
-        #                     length, length, **self.t_drawparams)
 
         if obj is not None:
             obj.initialize(None, cxt.viewer, self.logger)
@@ -325,6 +314,13 @@ class DrawingMixin(object):
     def enable_edit(self, tf):
         self.canedit = tf
 
+    def _rot_xlate(self, obj, x, y):
+        # translate point back into non-rotated form
+        rot_deg = - obj.rot_deg
+        xoff, yoff = obj.get_center_pt()
+        x, y = obj.crdmap.rotate_pt(x, y, rot_deg, xoff=xoff, yoff=yoff)
+        return x, y
+
     def _edit_update(self, data_x, data_y, viewer):
         if (not self.canedit) or (self._cp_index is None):
             return False
@@ -336,16 +332,15 @@ class DrawingMixin(object):
                 ## self._edit_obj.move_to(x - self._start_x,
                 ##                        y - self._start_y)
                 self._edit_obj.set_edit_point(0, (x - self._start_x,
-                                                  y - self._start_y))
+                                                  y - self._start_y),
+                                              self._edit_detail)
         else:
             # special hack for objects that have rot_deg attribute
             if hasattr(self._edit_obj, 'rot_deg') and (self._cp_index > 0):
-                rot_deg = - self._edit_obj.rot_deg
-                xoff, yoff = self._edit_obj.get_center_pt()
-                x, y = self._edit_obj.crdmap.rotate_pt(x, y, rot_deg,
-                                                       xoff=xoff, yoff=yoff)
+                x, y = self._rot_xlate(self._edit_obj, x, y)
 
-            self._edit_obj.set_edit_point(self._cp_index, (x, y))
+            self._edit_obj.set_edit_point(self._cp_index, (x, y),
+                                          self._edit_detail)
 
         #self._edit_obj.sync_state()
 
@@ -371,6 +366,7 @@ class DrawingMixin(object):
 
         self._edit_tmp = self._edit_obj
         self._edit_status = False
+        self._edit_detail = Bunch()
         self._cp_index = None
         #shift_held = 'shift' in event.modifiers
         shift_held = False
@@ -414,6 +410,12 @@ class DrawingMixin(object):
                     # editing a control point from an existing object
                     self._edit_obj = obj
                     self._cp_index = i
+                    if hasattr(obj, 'rot_deg'):
+                        x, y = self._rot_xlate(self._edit_obj, data_x, data_y)
+                    else:
+                        x, y = data_x, data_y
+                    self._edit_detail.start_pos = (x, y)
+                    obj.setup_edit(self._edit_detail)
                     self._edit_update(data_x, data_y, viewer)
                     return True
 
@@ -697,7 +699,6 @@ class DrawingMixin(object):
     ### NON-PEP8 EQUIVALENTS -- TO BE DEPRECATED ###
 
     setSurface = set_surface
-    getSurface = get_surface
     getDrawClass = get_draw_class
 
 
