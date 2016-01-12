@@ -56,7 +56,7 @@ def zscale(image, nsamples=1000, contrast=0.25):
     return zscale_samples(samples, contrast=contrast)
 
 def zsc_sample(image, maxpix, bpmask=None, zmask=None):
-    
+
     # Figure out which pixels to use for the zscale algorithm
     # Returns the 1-d array samples
     # Don't worry about the bad pixel mask or zmask for the moment
@@ -69,14 +69,14 @@ def zsc_sample(image, maxpix, bpmask=None, zmask=None):
     # remove NaN and Inf
     samples = samples[numpy.isfinite(samples)]
     return samples[:maxpix]
-    
+
 def zscale_samples(samples, contrast=0.25):
     npix = len(samples)
     samples.sort()
     zmin = samples[0]
     zmax = samples[-1]
     # For a zero-indexed array
-    center_pixel = (npix - 1) / 2
+    center_pixel = int((npix - 1) // 2)
     if npix%2 == 1:
         median = samples[center_pixel]
     else:
@@ -123,7 +123,7 @@ def zsc_fit_line(samples, npix, krej, ngrow, maxiter):
 
         if (ngoodpix >= last_ngoodpix) or (ngoodpix < minpix):
             break
-        
+
         # Accumulate sums to calculate straight line fit
         goodpixels = numpy.where(badpix == GOOD_PIXEL)
         sumx = xnorm[goodpixels].sum()
@@ -136,7 +136,7 @@ def zsc_fit_line(samples, npix, krej, ngrow, maxiter):
         # Slope and intercept
         intercept = (sumxx * sumy - sumx * sumxy) / delta
         slope = (sum * sumxy - sumx * sumy) / delta
-        
+
         # Subtract fitted line from the data array
         fitted = xnorm*slope + intercept
         flat = samples - fitted
@@ -154,13 +154,13 @@ def zsc_fit_line(samples, npix, krej, ngrow, maxiter):
 
         badpix[below] = BAD_PIXEL
         badpix[above] = BAD_PIXEL
-        
+
         # Convolve with a kernel of length ngrow
         kernel = numpy.ones(ngrow,dtype="int32")
         badpix = numpy.convolve(badpix, kernel, mode='same')
 
         ngoodpix = len(numpy.where(badpix == GOOD_PIXEL)[0])
-        
+
         niter += 1
 
     # Transform the line coefficients back to the X range [0:npix-1]

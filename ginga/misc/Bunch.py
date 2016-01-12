@@ -1,6 +1,6 @@
 #
 # Bunch.py -- simple classes for grouping variables
-# 
+#
 # See http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/52308
 # Description:
 #
@@ -34,7 +34,7 @@ class caselessDict(object):
 
     def update(self, inDict):
         for key in inDict.keys():
-            k = self.lower(key) 
+            k = self.lower(key)
             self.dict[k] = (key, inDict[key])
 
     def store(self, inDict):
@@ -52,14 +52,14 @@ class caselessDict(object):
 
     def fetchDict(self, keyDict):
         res = {}
-        for key in keyDict.keys():
+        for key in keyDict:
             res[key] = self.dict[key]
         return res
 
     def fetch(self, keyDict):
         """Like update(), but for retrieving values.
         """
-        for key in keyDict.keys():
+        for key in keyDict:
             keyDict[key] = self.dict[key]
 
     def clear(self):
@@ -74,15 +74,18 @@ class caselessDict(object):
 
     def __iter__(self):
         self.iterPosition = 0
-        self.keyList = self.dict.keys()
+        self.keyList = list(self.dict.keys())
         return(self)
 
-    def next(self):
+    def __next__(self):
         if self.iterPosition >= len(self.keyList):
             raise StopIteration
         x = self.dict[self.keyList[self.iterPosition]][0]
         self.iterPosition += 1
         return x
+
+    def next(self):
+        return self.__next__()
 
     def iteritems(self):
         return iter(self.items())
@@ -132,7 +135,7 @@ class caselessDict(object):
 
     def __contains__(self, item):
         return item.lower() in self.dict
-        
+
     def __repr__(self):
         items = ", ".join([("%r: %r" % (k,v)) for k,v in self.items()])
         return "{%s}" % items
@@ -143,19 +146,19 @@ class caselessDict(object):
     def copy(self):
         d={}
         for k,v in self.dict.items():
-            d[k]=v[1] 
+            d[k]=v[1]
         return d
 
 
-    
+
 class Bunch(object):
     """Often we want to just collect a bunch of stuff together, naming each
     item of the bunch; a dictionary's OK for that, but a small do-nothing
     class is even handier, and prettier to use.
-    
+
     e.g.
     point = Bunch(datum=y, squared=y*y, coord=x)
-    
+
     and of course you can read/write the named attributes you just created,
     add others, delete some of them, e.g.
         if point.squared > threshold:
@@ -192,7 +195,7 @@ class Bunch(object):
         # after initialisation, setting attributes is the same as setting
         # an item.
         self.__initialised = True
-        
+
 
     def __getitem__(self, key):
         """Maps dictionary keys to values.
@@ -349,7 +352,7 @@ class threadSafeBunch(object):
         # After initialisation, setting attributes is the same as setting
         # an item.
         self.__initialised = True
-        
+
 
     def enter(self):
         """Acquires the lock used for this Bunch.  USE WITH EXTREME CAUTION!
@@ -396,7 +399,7 @@ class threadSafeBunch(object):
                 res[key] = self.tbl[key]
 
             return res
-        
+
 
     def fetchList(self, keySeq):
         with self.lock:
@@ -417,12 +420,12 @@ class threadSafeBunch(object):
 
     def __setitem__(self, key, value):
         return self.setitem(key, value)
-    
+
 
     def setvals(self, **kwdargs):
         return self.update(kwdargs)
 
-    
+
     def delitem(self, key):
         """Deletes key/value pairs from object.
         """
@@ -432,10 +435,10 @@ class threadSafeBunch(object):
     def __contains__(self, key):
         with self.lock:
             return key in self.tbl
-    
+
     def __delitem__(self, key):
         return self.delitem(key)
-    
+
 
     def __getattr__(self, key):
         """Maps values to attributes.
@@ -464,7 +467,7 @@ class threadSafeBunch(object):
                 # Others are entries in the table
                 else:
                     self.tbl[key] = value
-            
+
 
     def __delattr__(self, key):
         """Deletes key/value pairs from object.
@@ -520,7 +523,7 @@ class threadSafeBunch(object):
     def update(self, updict):
         """Updates key/value pairs in dictionary from _updict_.
         """
-        
+
         with self.lock:
             for (key, value) in updict.items():
                 self.setitem(key, value)
@@ -535,12 +538,12 @@ class threadSafeBunch(object):
 
     def get(self, key, alt=None):
         """If dictionary contains _key_ return the associated value,
-        otherwise return _alt_. 
+        otherwise return _alt_.
         """
         with self.lock:
             if key in self:
                 return self.getitem(key)
-            
+
             else:
                 return alt
 
@@ -595,19 +598,18 @@ class threadSafeList(object):
     def append(self, item):
         with self.lock:
             self.list.append(item)
-        
+
     def extend(self, list2):
         with self.lock:
             self.list.extend(list2)
-        
+
     def prepend(self, item):
         with self.lock:
             self.list = [item].extend(self.list)
             return self.list
-        
+
     def cons(self, item):
         return self.prepend(item)
 
-    
-#END Bunch.py
 
+#END Bunch.py
