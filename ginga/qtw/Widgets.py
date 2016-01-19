@@ -793,7 +793,7 @@ class TreeView(WidgetBase):
                 self.set_column_width(i, width)
 
     def set_optimal_column_widths(self):
-        for i in range(item.columnCount()):
+        for i in range(len(self.columns)):
             self.widget.resizeColumnToContents(i)
 
     def _start_drag(self, event):

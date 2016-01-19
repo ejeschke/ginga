@@ -7,11 +7,14 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+from ginga.util.six import itervalues
+
 from ginga import GingaPlugin
 from ginga.misc import Bunch
 
 from ginga.gw import Widgets
 import time
+
 
 class Contents(GingaPlugin.GlobalPlugin):
 
@@ -30,7 +33,8 @@ class Contents(GingaPlugin.GlobalPlugin):
                                   always_expand=True,
                                   highlight_tracks_keyboard_focus=True,
                                   color_alternate_rows=True,
-                                  row_font_color='green')
+                                  row_font_color='green',
+                                  max_rows_for_col_resize=100)
         self.settings.load(onError='silent')
 
         # For table-of-contents pane
@@ -124,6 +128,20 @@ class Contents(GingaPlugin.GlobalPlugin):
                 new_highlight |= channel.extdata.contents_old_highlight
         self.update_highlights(set([]), new_highlight)
 
+        # Resize column widths
+        n_rows = self.nrows()
+        if n_rows < self.settings.get('max_rows_for_col_resize', 100):
+            self.treeview.set_optimal_column_widths()
+            self.logger.debug("Resized columns for {0} row(s)".format(n_rows))
+
+    def nrows(self):
+        """Return number of rows."""
+        n_rows = 0
+
+        for file_dict in itervalues(self.name_dict):
+            n_rows += len(file_dict)
+
+        return n_rows
 
     def is_in_contents(self, chname, imname):
         if not chname in self.name_dict:
@@ -174,7 +192,6 @@ class Contents(GingaPlugin.GlobalPlugin):
 
         self.logger.debug("%s added to Contents" % (name))
 
-
     def add_image_info_cb(self, viewer, channel, image_info):
         """Almost the same as add_image_info(), except that the image
         may not be loaded in memory.
@@ -191,7 +208,6 @@ class Contents(GingaPlugin.GlobalPlugin):
             image = None
 
         self.add_image_cb(viewer, chname, image, image_info)
-
 
     def remove_image_cb(self, viewer, chname, name, path):
         if not self.gui_up:
