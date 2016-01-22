@@ -789,7 +789,10 @@ def add_color(name, tup):
 
 def remove_color(name):
     global color_dict
-    del color_dict[name]
+    try:
+        del color_dict[name]
+    except KeyError:
+        raise KeyError("%s color does not exist in color_dict"%(name))
     recalc_color_list()
 
 def get_colors():
