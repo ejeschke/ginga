@@ -764,9 +764,22 @@ def lookup_color(name, format='tuple'):
     else:
         raise ValueError("format needs to be 'tuple' or 'hash'")
 
+def _validate_color_tuple(tup):
+    if not(isinstance(tup, tuple) or isinstance(tup, list)) :
+        raise TypeError("the color element must be a tuple or list")    
+
+    if len(tup) != 3:
+        raise ValueError("length of color tuple must be 3 specifying RBG values")
+
+    for rbg_value in tup:
+        if rbg_value < 0.0 or rbg_value > 1.0:
+            raise ValueError("RBG value can only be a number between 0 and 1")
+
 def add_color(name, tup):
+    _validate_color_tuple(tup)
+
     global color_dict
-    color_dict[name] = tup
+    color_dict[name] = tuple(tup)
     recalc_color_list()
 
 def remove_color(name):
