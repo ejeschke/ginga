@@ -755,7 +755,12 @@ def recalc_color_list():
     color_list.sort()
 
 def lookup_color(name, format='tuple'):
-    color = color_dict[name]
+    color = None
+    try:
+        color = color_dict[name]
+    except KeyError:
+        raise KeyError("%s color does not exist in color_dict"%(name))
+
     if format == 'tuple':
         return color
     elif format == 'hash':
