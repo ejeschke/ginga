@@ -802,6 +802,9 @@ def scan_rgbtxt(filepath):
     with open(filepath, 'r') as in_f:
         buf = in_f.read()
 
+    return scan_rgbtxt_buf(buf)
+
+def scan_rgbtxt_buf(buf):
     res = {}
 
     for line in buf.split('\n'):
