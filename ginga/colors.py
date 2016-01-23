@@ -755,7 +755,12 @@ def recalc_color_list():
     color_list.sort()
 
 def lookup_color(name, format='tuple'):
-    color = color_dict[name]
+    color = None
+    try:
+        color = color_dict[name]
+    except KeyError:
+        raise KeyError("%s color does not exist in color_dict"%(name))
+
     if format == 'tuple':
         return color
     elif format == 'hash':
@@ -764,14 +769,30 @@ def lookup_color(name, format='tuple'):
     else:
         raise ValueError("format needs to be 'tuple' or 'hash'")
 
+def _validate_color_tuple(tup):
+    if not(isinstance(tup, tuple) or isinstance(tup, list)) :
+        raise TypeError("the color element must be a tuple or list")    
+
+    if len(tup) != 3:
+        raise ValueError("length of color tuple must be 3 specifying RBG values")
+
+    for rbg_value in tup:
+        if rbg_value < 0.0 or rbg_value > 1.0:
+            raise ValueError("RBG value can only be a number between 0 and 1")
+
 def add_color(name, tup):
+    _validate_color_tuple(tup)
+
     global color_dict
-    color_dict[name] = tup
+    color_dict[name] = tuple(tup)
     recalc_color_list()
 
 def remove_color(name):
     global color_dict
-    del color_dict[name]
+    try:
+        del color_dict[name]
+    except KeyError:
+        raise KeyError("%s color does not exist in color_dict"%(name))
     recalc_color_list()
 
 def get_colors():
@@ -781,6 +802,9 @@ def scan_rgbtxt(filepath):
     with open(filepath, 'r') as in_f:
         buf = in_f.read()
 
+    return scan_rgbtxt_buf(buf)
+
+def scan_rgbtxt_buf(buf):
     res = {}
 
     for line in buf.split('\n'):
