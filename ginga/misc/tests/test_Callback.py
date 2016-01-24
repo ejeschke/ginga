@@ -51,10 +51,18 @@ class TestCallbacks(unittest.TestCase):
 
 	def test_clear_callback_nonexistent_name(self):
 		test_callbacks = Callback.Callbacks()
-		self.assertRaises(Callback.CallbackError,
-					test_callbacks.clear_callback,
-					"unknown_callback_key"	
-				)
+
+		assert "unknown_callback_key" not in test_callbacks.cb
+
+		test_callbacks.clear_callback("unknown_callback_key")
+
+		assert "unknown_callback_key" in test_callbacks.cb
+		assert isinstance(test_callbacks.cb["unknown_callback_key"], list)
+
+		expected = 0
+		actual = len(test_callbacks.cb["unknown_callback_key"])
+		assert expected == actual
+
 
 	def tearDown(self):
 		pass
