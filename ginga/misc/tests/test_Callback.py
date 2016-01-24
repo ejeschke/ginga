@@ -102,6 +102,37 @@ class TestCallbacks(unittest.TestCase):
 		actual = len(test_callbacks.cb["test_name"])
 		assert expected == actual
 
+	def test_has_callback_existent_name(self):
+		test_callbacks = Callback.Callbacks()
+
+		def test_callback_function():
+			pass
+
+		test_callbacks.cb["test_name"] = [(test_callbacks, (), {}),]
+
+		expected = True
+		actual = test_callbacks.has_callback("test_name")
+		assert expected == actual
+
+	def test_has_callback_non_existent_name(self):
+		test_callbacks = Callback.Callbacks()
+
+		def test_callback_function():
+			pass
+
+		test_callbacks.cb["test_name"] = [(test_callbacks, (), {}),]
+
+		expected = False
+		actual = test_callbacks.has_callback("non_existent_test_name")
+		assert expected == actual
+
+
+	def test_has_callback_non_existent_name_empty_dict(self):
+		test_callbacks = Callback.Callbacks()
+
+		expected = False
+		actual = test_callbacks.has_callback("non_existent_test_name")
+		assert expected == actual
 
 	def tearDown(self):
 		pass
