@@ -123,7 +123,7 @@ class TestCallbacks(unittest.TestCase):
 		test_callbacks.cb["test_name"] = [(test_callbacks, (), {}),]
 
 		expected = False
-		actual = test_callbacks.has_callback("non_existent_test_name")
+		actual = test_callbacks.has_callback("non_existent_name")
 		assert expected == actual
 
 
@@ -131,8 +131,45 @@ class TestCallbacks(unittest.TestCase):
 		test_callbacks = Callback.Callbacks()
 
 		expected = False
-		actual = test_callbacks.has_callback("non_existent_test_name")
+		actual = test_callbacks.has_callback("non_existent_name")
 		assert expected == actual
+
+	def test_delete_callback_existent_name(self):
+		test_callbacks = Callback.Callbacks()
+
+		def test_callback_function():
+			pass
+
+		test_callbacks.cb["test_name"] = [(test_callbacks, (), {}),]
+		assert "test_name" in test_callbacks.cb
+
+		test_callbacks.delete_callback("test_name")
+		assert "test_name" not in test_callbacks.cb
+		
+	def test_delete_callback_non_existent_name(self):
+		test_callbacks = Callback.Callbacks()
+
+		def test_callback_function():
+			pass
+
+		test_callbacks.cb["test_name"] = [(test_callbacks, (), {}),]
+
+		self.assertRaises(
+			Callback.CallbackError, 
+			test_callbacks.delete_callback, 
+			"non_existent_name"
+		)
+
+
+	def test_delete_callback_non_existent_name_empty_dict(self):
+		test_callbacks = Callback.Callbacks()
+		
+		self.assertRaises(
+			Callback.CallbackError, 
+			test_callbacks.delete_callback, 
+			"non_existent_name"
+		)
+		
 
 	def tearDown(self):
 		pass
