@@ -63,6 +63,45 @@ class TestCallbacks(unittest.TestCase):
 		actual = len(test_callbacks.cb["unknown_callback_key"])
 		assert expected == actual
 
+	def test_enable_callback_nonexistent_name(self):
+		test_callbacks = Callback.Callbacks()
+
+		assert "unknown_callback_key" not in test_callbacks.cb
+
+		test_callbacks.enable_callback("unknown_callback_key")
+
+		assert "unknown_callback_key" in test_callbacks.cb
+		assert isinstance(test_callbacks.cb["unknown_callback_key"], list)
+
+		expected = 0
+		actual = len(test_callbacks.cb["unknown_callback_key"])
+		assert expected == actual
+
+	def test_enable_callback_already_existent_name(self):
+		test_callbacks = Callback.Callbacks()
+
+		def test_callback_function():
+			pass
+
+		test_callbacks.cb["test_name"] = [(test_callbacks, (), {}),]
+
+		assert "test_name" in test_callbacks.cb
+		assert isinstance(test_callbacks.cb["test_name"], list)
+
+		expected = 1
+		actual = len(test_callbacks.cb["test_name"])
+		assert expected == actual
+
+		test_callbacks.enable_callback("test_name")
+
+		# testing that enable_callback() causes no change
+		assert "test_name" in test_callbacks.cb
+		assert isinstance(test_callbacks.cb["test_name"], list)
+
+		expected = 1
+		actual = len(test_callbacks.cb["test_name"])
+		assert expected == actual
+
 
 	def tearDown(self):
 		pass
