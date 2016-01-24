@@ -17,12 +17,15 @@ class Callbacks(object):
     def __init__(self):
         self.cb = {}
 
+
+    # TODO: This should raise KeyError or simply do nothing if unknown key passed
     def clear_callback(self, name):
         try:
             self.cb[name][:] = []
         except KeyError:
             self.cb[name] = []
 
+    # TODO: Should this call clear_callback()? Should create empty list here only
     def enable_callback(self, name):
         if not self.has_callback(name):
             self.clear_callback(name)
