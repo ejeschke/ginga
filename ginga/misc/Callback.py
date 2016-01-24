@@ -18,7 +18,11 @@ class Callbacks(object):
         self.cb = {}
 
     def clear_callback(self, name):
-        self.cb[name] = []
+        try:
+            self.cb[name][:] = []
+        except KeyError:
+            raise CallbackError("No callback category of '%s'" % (
+                name))
 
     def enable_callback(self, name):
         if not self.has_callback(name):
