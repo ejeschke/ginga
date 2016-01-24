@@ -34,8 +34,14 @@ class Callbacks(object):
         #return self.cb.has_key(name) and (len(self.cb[name]) > 0)
         return name in self.cb
 
+    # TODO: Should this raise CallbackError, or silently pass
     def delete_callback(self, name):
-        del self.cb[name]
+        try:
+            del self.cb[name]
+        except KeyError:
+            raise CallbackError("No callback category of '%s'" % (
+                name))
+
 
     def add_callback(self, name, fn, *args, **kwdargs):
         try:
