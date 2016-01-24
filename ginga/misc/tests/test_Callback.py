@@ -30,7 +30,32 @@ class TestCallbacks(unittest.TestCase):
 		expected = {}
 		actual = test_callbacks.cb
 		assert expected == actual
-		
+
+	def test_clear_callback_empties_list(self):
+		test_callbacks = Callback.Callbacks()
+
+		def test_callback_function():
+			pass
+
+		test_callbacks.cb["test_name"] = [(test_callbacks, (), {}),]
+
+		expected = 1
+		actual = len(test_callbacks.cb["test_name"])
+		assert expected == actual
+
+		test_callbacks.clear_callback("test_name")
+
+		expected = 0
+		actual = len(test_callbacks.cb["test_name"])
+		assert expected == actual
+
+	def test_clear_callback_nonexistent_name(self):
+		test_callbacks = Callback.Callbacks()
+		self.assertRaises(Callback.CallbackError,
+					test_callbacks.clear_callback,
+					"unknown_callback_key"	
+				)
+
 	def tearDown(self):
 		pass
 
