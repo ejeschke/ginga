@@ -43,6 +43,15 @@ class Callbacks(object):
                 name))
 
 
+    # TODO: Add a argumet validation function for a callback
+    # Pointers:
+    #      * Check the name of the event for which callback added
+    #      * Check that fn is a function
+    #      * Check fn accepts at least one argument, the calling object
+    #      * Check fn takes:
+    #           - at least len(args) + len(kwdargs) number of args
+    #           - variable number of args or keyword args
+    #          
     def add_callback(self, name, fn, *args, **kwdargs):
         self.enable_callback(name)
         

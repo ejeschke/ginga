@@ -169,7 +169,131 @@ class TestCallbacks(unittest.TestCase):
 			test_callbacks.delete_callback, 
 			"non_existent_name"
 		)
+	
+
+	def test_add_callback(self):
+		test_callbacks = Callback.Callbacks()
 		
+		def test_callback_function(obj, *args, **kwargs):
+			pass
+
+		test_callbacks.add_callback("test_name", test_callback_function)
+
+		assert "test_name" in test_callbacks.cb
+
+		expected = 1
+		actual = len(test_callbacks.cb["test_name"])
+		assert expected == actual
+
+		expected = (test_callback_function, (), {})
+		actual = test_callbacks.cb["test_name"][0]
+		assert expected == actual
+
+		def another_test_callback_function(obj, *args, **kwargs):
+			pass
+
+		test_callbacks.add_callback("test_name", another_test_callback_function)
+
+		expected = 2
+		actual = len(test_callbacks.cb["test_name"])
+		assert expected == actual
+
+		expected = (another_test_callback_function, (), {})
+		actual = test_callbacks.cb["test_name"][1]
+		assert expected == actual
+
+
+
+	def test_add_callback_arguments(self):
+		test_callbacks = Callback.Callbacks()
+		
+		def test_callback_function(obj, *args, **kwargs):
+			pass
+
+		test_callbacks.add_callback(
+							"test_name", 
+							test_callback_function,
+							'test_arg_1',
+							'test_arg_2',
+							test_keyword_arg1 = "test",
+							test_keyword_arg2 = "test"
+						)
+
+		assert "test_name" in test_callbacks.cb
+
+		expected = 1
+		actual = len(test_callbacks.cb["test_name"])
+		assert expected == actual
+
+		expected = 	(
+						test_callback_function, 
+						('test_arg_1', 'test_arg_2'), 
+						{'test_keyword_arg1':'test', 'test_keyword_arg2':'test'}
+					)
+		actual = test_callbacks.cb["test_name"][0]
+		assert expected == actual
+
+	def test_set_callback(self):
+		test_callbacks = Callback.Callbacks()
+		
+		def test_callback_function(obj, *args, **kwargs):
+			pass
+
+		test_callbacks.set_callback("test_name", test_callback_function)
+
+		assert "test_name" in test_callbacks.cb
+
+		expected = 1
+		actual = len(test_callbacks.cb["test_name"])
+		assert expected == actual
+
+		expected = (test_callback_function, (), {})
+		actual = test_callbacks.cb["test_name"][0]
+		assert expected == actual
+
+		def another_test_callback_function(obj, *args, **kwargs):
+			pass
+
+		test_callbacks.set_callback("test_name", another_test_callback_function)
+
+		expected = 2
+		actual = len(test_callbacks.cb["test_name"])
+		assert expected == actual
+
+		expected = (another_test_callback_function, (), {})
+		actual = test_callbacks.cb["test_name"][1]
+		assert expected == actual
+
+
+	def test_set_callback_arguments(self):
+		test_callbacks = Callback.Callbacks()
+		
+		def test_callback_function(obj, *args, **kwargs):
+			pass
+
+		test_callbacks.set_callback(
+							"test_name", 
+							test_callback_function,
+							'test_arg_1',
+							'test_arg_2',
+							test_keyword_arg1 = "test",
+							test_keyword_arg2 = "test"
+						)
+
+		assert "test_name" in test_callbacks.cb
+
+		expected = 1
+		actual = len(test_callbacks.cb["test_name"])
+		assert expected == actual
+
+		expected = 	(
+						test_callback_function, 
+						('test_arg_1', 'test_arg_2'), 
+						{'test_keyword_arg1':'test', 'test_keyword_arg2':'test'}
+					)
+		actual = test_callbacks.cb["test_name"][0]
+		assert expected == actual
+
 
 	def tearDown(self):
 		pass
