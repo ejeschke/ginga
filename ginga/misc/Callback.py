@@ -44,19 +44,14 @@ class Callbacks(object):
 
 
     def add_callback(self, name, fn, *args, **kwdargs):
-        try:
-            tup = (fn, args, kwdargs)
-            if not tup in self.cb[name]:
-                self.cb[name].append(tup)
-        except KeyError:
-            raise CallbackError("No callback category of '%s'" % (
-                name))
-
-    # TODO: to be deprecated ?
+        self.enable_callback(name)
+        
+        tup = (fn, args, kwdargs)
+        if not tup in self.cb[name]:
+            self.cb[name].append(tup)
+        
     def set_callback(self, name, fn, *args, **kwdargs):
-        if not self.has_callback(name):
-            self.enable_callback(name)
-        return self.add_callback(name, fn, *args, **kwdargs)
+        self.add_callback(name, fn, *args, **kwdargs)
 
     def make_callback(self, name, *args, **kwdargs):
         if not self.has_callback(name):
