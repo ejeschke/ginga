@@ -51,6 +51,7 @@ class Callbacks(object):
     #      * Check fn takes:
     #           - at least len(args) + len(kwdargs) number of args
     #           - variable number of args or keyword args
+    #      * Does and what value the callback funtion return
     #          
     def add_callback(self, name, fn, *args, **kwdargs):
         self.enable_callback(name)
@@ -62,6 +63,7 @@ class Callbacks(object):
     def set_callback(self, name, fn, *args, **kwdargs):
         self.add_callback(name, fn, *args, **kwdargs)
 
+    # TODO: Returns True even if any one of the callback succeeds...Is that desired?
     def make_callback(self, name, *args, **kwdargs):
         if not self.has_callback(name):
             return None

@@ -316,6 +316,35 @@ class TestCallbacks(unittest.TestCase):
 		assert expected == actual
 
 
+	def test_make_callback_single_callback_true(self):
+		test_callbacks = Callback.Callbacks()
+		
+		def test_callback_function(obj, *args, **kwargs):
+			return True
+
+		test_callbacks.add_callback("test_name", test_callback_function)
+
+		assert "test_name" in test_callbacks.cb
+
+		expected = True
+		actual = test_callbacks.make_callback("test_name")
+		assert expected == actual
+
+
+	def test_make_callback_single_callback_false(self):
+		test_callbacks = Callback.Callbacks()
+		
+		def test_callback_function(obj, *args, **kwargs):
+			return False
+
+		test_callbacks.add_callback("test_name", test_callback_function)
+
+		assert "test_name" in test_callbacks.cb
+
+		expected = False
+		actual = test_callbacks.make_callback("test_name")
+		assert expected == actual
+
 
 	def tearDown(self):
 		pass
