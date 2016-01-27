@@ -8,6 +8,7 @@
 # Please see the file LICENSE.txt for details.
 #
 from ginga.util.six import itervalues
+from ginga.util.six.moves import map
 
 from ginga import GingaPlugin
 from ginga.misc import Bunch
@@ -129,19 +130,10 @@ class Contents(GingaPlugin.GlobalPlugin):
         self.update_highlights(set([]), new_highlight)
 
         # Resize column widths
-        n_rows = self.nrows()
+        n_rows = sum(map(len, self.name_dict.values()))
         if n_rows < self.settings.get('max_rows_for_col_resize', 100):
             self.treeview.set_optimal_column_widths()
             self.logger.debug("Resized columns for {0} row(s)".format(n_rows))
-
-    def nrows(self):
-        """Return number of rows."""
-        n_rows = 0
-
-        for file_dict in itervalues(self.name_dict):
-            n_rows += len(file_dict)
-
-        return n_rows
 
     def is_in_contents(self, chname, imname):
         if not chname in self.name_dict:
