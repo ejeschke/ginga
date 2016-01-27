@@ -175,9 +175,10 @@ class TestCallbacks(unittest.TestCase):
 		def test_callback_function(obj, *args, **kwargs):
 			pass
 
-		test_callbacks.add_callback("test_name", test_callback_function)
-
+		test_callbacks.enable_callback("test_name")
 		assert "test_name" in test_callbacks.cb
+
+		test_callbacks.add_callback("test_name", test_callback_function)
 
 		expected = 1
 		actual = len(test_callbacks.cb["test_name"])
@@ -206,6 +207,9 @@ class TestCallbacks(unittest.TestCase):
 		def test_callback_function(obj, *args, **kwargs):
 			pass
 
+		test_callbacks.enable_callback("test_name")
+		assert "test_name" in test_callbacks.cb
+
 		test_callbacks.add_callback(
 							"test_name", 
 							test_callback_function,
@@ -228,6 +232,14 @@ class TestCallbacks(unittest.TestCase):
 					)
 		actual = test_callbacks.cb["test_name"][0]
 		assert expected == actual
+
+	def test_add_callback_exception(self):
+		test_callbacks = Callback.Callbacks()
+		
+		def test_callback_function(obj, *args, **kwargs):
+			pass
+
+		self.assertRaises(Callback.CallbackError, test_callbacks.add_callback, "test_name", test_callback_function)
 
 	def test_set_callback(self):
 		test_callbacks = Callback.Callbacks()
@@ -315,7 +327,7 @@ class TestCallbacks(unittest.TestCase):
 		def test_callback_function(obj, *args, **kwargs):
 			return True
 
-		test_callbacks.add_callback("test_name", test_callback_function)
+		test_callbacks.set_callback("test_name", test_callback_function)
 
 		expected = True
 		actual = test_callbacks.make_callback("test_name")
@@ -327,7 +339,7 @@ class TestCallbacks(unittest.TestCase):
 		def test_callback_function(obj, *args, **kwargs):
 			return False
 
-		test_callbacks.add_callback("test_name", test_callback_function)
+		test_callbacks.set_callback("test_name", test_callback_function)
 
 		expected = False
 		actual = test_callbacks.make_callback("test_name")
@@ -342,8 +354,8 @@ class TestCallbacks(unittest.TestCase):
 		def another_test_callback_function(obj, *args, **kwargs):
 			return True
 
-		test_callbacks.add_callback("test_name", test_callback_function)
-		test_callbacks.add_callback("test_name", another_test_callback_function)
+		test_callbacks.set_callback("test_name", test_callback_function)
+		test_callbacks.set_callback("test_name", another_test_callback_function)
 
 		expected = True
 		actual = test_callbacks.make_callback("test_name")
@@ -358,8 +370,8 @@ class TestCallbacks(unittest.TestCase):
 		def another_test_callback_function(obj, *args, **kwargs):
 			return True
 
-		test_callbacks.add_callback("test_name", test_callback_function)
-		test_callbacks.add_callback("test_name", another_test_callback_function)
+		test_callbacks.set_callback("test_name", test_callback_function)
+		test_callbacks.set_callback("test_name", another_test_callback_function)
 
 		expected = True
 		actual = test_callbacks.make_callback("test_name")
@@ -374,8 +386,8 @@ class TestCallbacks(unittest.TestCase):
 		def another_test_callback_function(obj, *args, **kwargs):
 			return False
 
-		test_callbacks.add_callback("test_name", test_callback_function)
-		test_callbacks.add_callback("test_name", another_test_callback_function)
+		test_callbacks.set_callback("test_name", test_callback_function)
+		test_callbacks.set_callback("test_name", another_test_callback_function)
 
 		expected = False
 		actual = test_callbacks.make_callback("test_name")
@@ -390,7 +402,7 @@ class TestCallbacks(unittest.TestCase):
 		def test_callback_function():
 			return True
 
-		test_callbacks.add_callback("test_name", test_callback_function)
+		test_callbacks.set_callback("test_name", test_callback_function)
 		
 		# Checking that the callback eats up the TypeError exception
 		expected = False
@@ -406,8 +418,8 @@ class TestCallbacks(unittest.TestCase):
 		def another_test_callback_function(obj, *args, **kwargs):
 			return True
 
-		test_callbacks.add_callback("test_name", test_callback_function)
-		test_callbacks.add_callback("test_name", another_test_callback_function)
+		test_callbacks.set_callback("test_name", test_callback_function)
+		test_callbacks.set_callback("test_name", another_test_callback_function)
 
 		# Checking that the callback eats up the TypeError exception and 
 		# continues to the other callback and returns True in the end
