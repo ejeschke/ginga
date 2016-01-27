@@ -57,6 +57,30 @@ class TestFuture(unittest.TestCase):
         actual = test_future.get_data()
         assert expected == actual
 
+    def test_freeze(self):
+    	test_future = gingaMisc.Future("TestData")
+
+    	def test_method(*args, **kwargs):
+    		pass
+
+    	test_future.freeze(test_method, "arg1", "arg2", kwarg1="test", kwarg2="test")
+
+    	assert test_future.method == test_method
+    	assert test_future.args == ("arg1", "arg2")
+    	assert test_future.kwdargs == {"kwarg1":"test", "kwarg2":"test"}
+
+    def test_freeze_empty_args(self):
+    	test_future = gingaMisc.Future("TestData")
+
+    	def test_method():
+    		pass
+
+    	test_future.freeze(test_method)
+
+    	assert test_future.method == test_method
+    	assert test_future.args == ()
+    	assert test_future.kwdargs == {}
+
     def tearDown(self):
         pass
 
