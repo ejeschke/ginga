@@ -8,7 +8,7 @@ import logging
 import threading
 import time
 
-import ginga.misc.Future as gingaMisc
+from ginga.misc.Future import Future, TimeoutError
 
 
 class TestError(Exception):
@@ -21,7 +21,7 @@ class TestFuture(unittest.TestCase):
         self.future_thread = None
 
     def test_init(self):
-        test_future = gingaMisc.Future()
+        test_future = Future()
 
         assert hasattr(test_future, 'cb')
         assert isinstance(test_future.evt, threading._Event)
@@ -35,7 +35,7 @@ class TestFuture(unittest.TestCase):
         assert expected == actual
 
     def test_init_with_data(self):
-        test_future = gingaMisc.Future("TestData")
+        test_future = Future("TestData")
 
         assert hasattr(test_future, 'cb')
         assert isinstance(test_future.evt, threading._Event)
@@ -49,21 +49,21 @@ class TestFuture(unittest.TestCase):
         assert expected == actual
 
     def test_get_data_no_data(self):
-        test_future = gingaMisc.Future()
+        test_future = Future()
 
         expected = None
         actual = test_future.get_data()
         assert expected == actual
 
     def test_get_data_some_data(self):
-        test_future = gingaMisc.Future("TestData")
+        test_future = Future("TestData")
 
         expected = "TestData"
         actual = test_future.get_data()
         assert expected == actual
 
     def test_freeze(self):
-        test_future = gingaMisc.Future("TestData")
+        test_future = Future("TestData")
 
         def test_method(*args, **kwargs):
             pass
@@ -76,7 +76,7 @@ class TestFuture(unittest.TestCase):
         assert test_future.kwdargs == {"kwarg1": "test", "kwarg2": "test"}
 
     def test_freeze_empty_args(self):
-        test_future = gingaMisc.Future("TestData")
+        test_future = Future("TestData")
 
         def test_method():
             pass
@@ -88,7 +88,7 @@ class TestFuture(unittest.TestCase):
         assert test_future.kwdargs == {}
 
     def test_thaw_suppress_exception_no_exception(self):
-        test_future = gingaMisc.Future("TestData")
+        test_future = Future("TestData")
 
         def test_method(*args, **kwargs):
             return True
@@ -103,7 +103,7 @@ class TestFuture(unittest.TestCase):
         assert test_future.evt.isSet() == True
 
     def test_thaw_suppress_exception_exception(self):
-        test_future = gingaMisc.Future("TestData")
+        test_future = Future("TestData")
 
         def test_method():
             return True
@@ -119,7 +119,7 @@ class TestFuture(unittest.TestCase):
         assert test_future.evt.isSet() == True
 
     def test_thaw_not_suppress_exception_no_exception(self):
-        test_future = gingaMisc.Future("TestData")
+        test_future = Future("TestData")
 
         def test_method(*args, **kwargs):
             return True
@@ -134,7 +134,7 @@ class TestFuture(unittest.TestCase):
         assert test_future.evt.isSet() == True
 
     def test_thaw_not_suppress_exception_raise_exception(self):
-        test_future = gingaMisc.Future("TestData")
+        test_future = Future("TestData")
 
         def test_method():
             return True
@@ -148,14 +148,14 @@ class TestFuture(unittest.TestCase):
         assert test_future.evt.isSet() == False
 
     def test_has_value_unset(self):
-        test_future = gingaMisc.Future("TestData")
+        test_future = Future("TestData")
 
         expected = False
         actual = test_future.has_value()
         assert expected == actual
 
     def test_has_value_set(self):
-        test_future = gingaMisc.Future("TestData")
+        test_future = Future("TestData")
 
         test_future.evt.set()
 
@@ -164,7 +164,7 @@ class TestFuture(unittest.TestCase):
         assert expected == actual
 
     def test_resolve(self):
-        test_future = gingaMisc.Future("TestData")
+        test_future = Future("TestData")
 
         test_future.resolve(True)
 
@@ -172,7 +172,7 @@ class TestFuture(unittest.TestCase):
         assert test_future.evt.isSet() == True
 
     def test_resolve_callback(self):
-        test_future = gingaMisc.Future("TestData")
+        test_future = Future("TestData")
 
         def test_callback(obj):
             try:
@@ -189,7 +189,7 @@ class TestFuture(unittest.TestCase):
         assert test_future.evt.isSet() == True
 
     def test_wait(self):
-        test_future = gingaMisc.Future("TestData")
+        test_future = Future("TestData")
 
         def test_method(*args, **kwargs):
             time.sleep(2)
@@ -205,7 +205,7 @@ class TestFuture(unittest.TestCase):
         assert expected == actual
 
     def test_wait_timeout(self):
-        test_future = gingaMisc.Future("TestData")
+        test_future = Future("TestData")
 
         def test_method(*args, **kwargs):
             time.sleep(2)
@@ -216,10 +216,10 @@ class TestFuture(unittest.TestCase):
         self.future_thread = threading.Thread(target=test_future.thaw)
         self.future_thread.start()
 
-        self.assertRaises(gingaMisc.TimeoutError, test_future.wait, 1)
+        self.assertRaises(TimeoutError, test_future.wait, 1)
 
     def test_get_value_block_no_timeout(self):
-        test_future = gingaMisc.Future("TestData")
+        test_future = Future("TestData")
 
         def test_method(*args, **kwargs):
             time.sleep(2)
@@ -235,7 +235,7 @@ class TestFuture(unittest.TestCase):
         assert expected == actual
 
     def test_get_value_block_timeout(self):
-        test_future = gingaMisc.Future("TestData")
+        test_future = Future("TestData")
 
         def test_method(*args, **kwargs):
             time.sleep(2)
@@ -247,10 +247,10 @@ class TestFuture(unittest.TestCase):
         self.future_thread.start()
 
         self.assertRaises(
-            gingaMisc.TimeoutError, test_future.get_value, True, 1)
+            TimeoutError, test_future.get_value, True, 1)
 
     def test_get_value_no_block_fail(self):
-        test_future = gingaMisc.Future("TestData")
+        test_future = Future("TestData")
 
         def test_method(*args, **kwargs):
             time.sleep(2)
@@ -261,10 +261,10 @@ class TestFuture(unittest.TestCase):
         self.future_thread = threading.Thread(target=test_future.thaw)
         self.future_thread.start()
 
-        self.assertRaises(gingaMisc.TimeoutError, test_future.get_value, False)
+        self.assertRaises(TimeoutError, test_future.get_value, False)
 
     def test_get_value_no_block_pass(self):
-        test_future = gingaMisc.Future("TestData")
+        test_future = Future("TestData")
 
         def test_method(*args, **kwargs):
             return True
@@ -283,7 +283,7 @@ class TestFuture(unittest.TestCase):
         assert expected == actual
 
     def test_get_value_suppress_exception(self):
-        test_future = gingaMisc.Future("TestData")
+        test_future = Future("TestData")
 
         def test_method(*args, **kwargs):
             raise TestError("Test Error")
@@ -297,7 +297,7 @@ class TestFuture(unittest.TestCase):
         assert isinstance(future_value, Exception)
 
     def test_get_value_no_suppress_exception(self):
-        test_future = gingaMisc.Future("TestData")
+        test_future = Future("TestData")
 
         def test_method(*args, **kwargs):
             raise TestError("Test Error")
