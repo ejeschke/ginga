@@ -6,6 +6,7 @@
 import unittest
 import logging
 import threading
+import time
 
 import ginga.misc.Future as gingaMisc
 
@@ -147,49 +148,75 @@ class TestFuture(unittest.TestCase):
         assert test_future.evt.isSet() == False
 
     def test_has_value_unset(self):
-    	test_future = gingaMisc.Future("TestData")
+        test_future = gingaMisc.Future("TestData")
 
-    	expected = False
-    	actual = test_future.has_value()
-    	assert expected == actual
-
+        expected = False
+        actual = test_future.has_value()
+        assert expected == actual
 
     def test_has_value_set(self):
-    	test_future = gingaMisc.Future("TestData")
+        test_future = gingaMisc.Future("TestData")
 
-    	test_future.evt.set()
+        test_future.evt.set()
 
-    	expected = True
-    	actual = test_future.has_value()
-    	assert expected == actual
+        expected = True
+        actual = test_future.has_value()
+        assert expected == actual
 
     def test_resolve(self):
-    	test_future = gingaMisc.Future("TestData")
+        test_future = gingaMisc.Future("TestData")
 
-    	test_future.resolve(True)
+        test_future.resolve(True)
 
-    	assert test_future.res == True
-    	assert test_future.evt.isSet() == True
+        assert test_future.res == True
+        assert test_future.evt.isSet() == True
 
     def test_resolve_callback(self):
-    	test_future = gingaMisc.Future("TestData")
+        test_future = gingaMisc.Future("TestData")
 
-    	def test_callback(obj):
-    		try:
-    			obj.res = not obj.res
-    		except:
-    			pass
+        def test_callback(obj):
+            try:
+                obj.res = not obj.res
+            except:
+                pass
 
         test_future.add_callback('resolved', test_callback)
 
-    	test_future.resolve(True)
+        test_future.resolve(True)
 
-    	# Callback reverses the boolean 'res' value
-    	assert test_future.res == False
-    	assert test_future.evt.isSet() == True
+        # Callback reverses the boolean 'res' value
+        assert test_future.res == False
+        assert test_future.evt.isSet() == True
 
+    def test_wait(self):
+        test_future = gingaMisc.Future("TestData")
 
+        def test_method(*args, **kwargs):
+            time.sleep(2)
+            return True
 
+        test_future.freeze(test_method)
+
+        future_thread = threading.Thread(target=test_future.thaw)
+        future_thread.start()
+
+        expected = True
+        actual = test_future.wait()
+        assert expected == actual
+
+    def test_wait_timeout(self):
+        test_future = gingaMisc.Future("TestData")
+
+        def test_method(*args, **kwargs):
+            time.sleep(2)
+            return True
+
+        test_future.freeze(test_method)
+
+        future_thread = threading.Thread(target=test_future.thaw)
+        future_thread.start()
+
+        self.assertRaises(gingaMisc.TimeoutError, test_future.wait, 1)
 
     def tearDown(self):
         pass
