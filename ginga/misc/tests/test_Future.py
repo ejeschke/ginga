@@ -7,7 +7,7 @@ import unittest
 import logging
 import numpy as np
 
-import ginga.misc.Future as Future
+import ginga.misc.Future as gingaMisc
 
 
 class TestError(Exception):
@@ -18,6 +18,30 @@ class TestFuture(unittest.TestCase):
 
     def setUp(self):
         pass
+
+    def test_init(self):
+        test_future = gingaMisc.Future()
+
+        assert hasattr(test_future, 'cb')
+        assert test_future.res == None
+        assert test_future.data == None
+        assert 'resolved' in test_future.cb
+
+        expected = []
+        actual = test_future.cb['resolved']
+        assert expected == actual
+
+    def test_init_with_data(self):
+        test_future = gingaMisc.Future("TestData")
+
+        assert hasattr(test_future, 'cb')
+        assert test_future.res == None
+        assert test_future.data == "TestData"
+        assert 'resolved' in test_future.cb
+
+        expected = []
+        actual = test_future.cb['resolved']
+        assert expected == actual
 
     def tearDown(self):
         pass
