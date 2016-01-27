@@ -5,7 +5,7 @@
 #
 import unittest
 import logging
-import numpy as np
+import threading
 
 import ginga.misc.Future as gingaMisc
 
@@ -23,6 +23,8 @@ class TestFuture(unittest.TestCase):
         test_future = gingaMisc.Future()
 
         assert hasattr(test_future, 'cb')
+        assert isinstance(test_future.evt, threading._Event)
+        assert test_future.evt.isSet() == False
         assert test_future.res == None
         assert test_future.data == None
         assert 'resolved' in test_future.cb
@@ -35,6 +37,8 @@ class TestFuture(unittest.TestCase):
         test_future = gingaMisc.Future("TestData")
 
         assert hasattr(test_future, 'cb')
+        assert isinstance(test_future.evt, threading._Event)
+        assert test_future.evt.isSet() == False
         assert test_future.res == None
         assert test_future.data == "TestData"
         assert 'resolved' in test_future.cb
@@ -58,28 +62,29 @@ class TestFuture(unittest.TestCase):
         assert expected == actual
 
     def test_freeze(self):
-    	test_future = gingaMisc.Future("TestData")
+        test_future = gingaMisc.Future("TestData")
 
-    	def test_method(*args, **kwargs):
-    		pass
+        def test_method(*args, **kwargs):
+            pass
 
-    	test_future.freeze(test_method, "arg1", "arg2", kwarg1="test", kwarg2="test")
+        test_future.freeze(
+            test_method, "arg1", "arg2", kwarg1="test", kwarg2="test")
 
-    	assert test_future.method == test_method
-    	assert test_future.args == ("arg1", "arg2")
-    	assert test_future.kwdargs == {"kwarg1":"test", "kwarg2":"test"}
+        assert test_future.method == test_method
+        assert test_future.args == ("arg1", "arg2")
+        assert test_future.kwdargs == {"kwarg1": "test", "kwarg2": "test"}
 
     def test_freeze_empty_args(self):
-    	test_future = gingaMisc.Future("TestData")
+        test_future = gingaMisc.Future("TestData")
 
-    	def test_method():
-    		pass
+        def test_method():
+            pass
 
-    	test_future.freeze(test_method)
+        test_future.freeze(test_method)
 
-    	assert test_future.method == test_method
-    	assert test_future.args == ()
-    	assert test_future.kwdargs == {}
+        assert test_future.method == test_method
+        assert test_future.args == ()
+        assert test_future.kwdargs == {}
 
     def tearDown(self):
         pass
