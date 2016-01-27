@@ -86,6 +86,61 @@ class TestFuture(unittest.TestCase):
         assert test_future.args == ()
         assert test_future.kwdargs == {}
 
+    def test_thaw_suppress_exception_no_exception(self):
+        test_future = gingaMisc.Future("TestData")
+
+        def test_method(*args, **kwargs):
+            return True
+
+        test_future.freeze(test_method)
+
+        expected = True
+        actual = test_future.thaw()
+        assert expected == actual
+
+        assert test_future.evt.isSet() == True
+
+    def test_thaw_suppress_exception_exception(self):
+        test_future = gingaMisc.Future("TestData")
+
+        def test_method():
+            return True
+
+        test_future.freeze(
+            test_method, "arg1", "arg2", kwarg1="test", kwarg2="test")
+
+        test_result = test_future.thaw()
+
+        assert isinstance(test_result, TypeError)
+        assert test_future.evt.isSet() == True
+
+    def test_thaw_not_suppress_exception_no_exception(self):
+        test_future = gingaMisc.Future("TestData")
+
+        def test_method(*args, **kwargs):
+            return True
+
+        test_future.freeze(test_method)
+
+        expected = True
+        actual = test_future.thaw(False)
+        assert expected == actual
+
+        assert test_future.evt.isSet() == True
+
+    def test_thaw_not_suppress_exception_raise_exception(self):
+        test_future = gingaMisc.Future("TestData")
+
+        def test_method():
+            return True
+
+        test_future.freeze(
+            test_method, "arg1", "arg2", kwarg1="test", kwarg2="test")
+
+        self.assertRaises(TypeError, test_future.thaw, False)
+
+        assert test_future.evt.isSet() == False
+
     def tearDown(self):
         pass
 
