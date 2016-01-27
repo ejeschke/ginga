@@ -18,7 +18,7 @@ class TestError(Exception):
 class TestFuture(unittest.TestCase):
 
     def setUp(self):
-        pass
+        self.future_thread = None
 
     def test_init(self):
         test_future = gingaMisc.Future()
@@ -197,8 +197,8 @@ class TestFuture(unittest.TestCase):
 
         test_future.freeze(test_method)
 
-        future_thread = threading.Thread(target=test_future.thaw)
-        future_thread.start()
+        self.future_thread = threading.Thread(target=test_future.thaw)
+        self.future_thread.start()
 
         expected = True
         actual = test_future.wait()
@@ -213,13 +213,105 @@ class TestFuture(unittest.TestCase):
 
         test_future.freeze(test_method)
 
-        future_thread = threading.Thread(target=test_future.thaw)
-        future_thread.start()
+        self.future_thread = threading.Thread(target=test_future.thaw)
+        self.future_thread.start()
 
         self.assertRaises(gingaMisc.TimeoutError, test_future.wait, 1)
 
+    def test_get_value_block_no_timeout(self):
+        test_future = gingaMisc.Future("TestData")
+
+        def test_method(*args, **kwargs):
+            time.sleep(2)
+            return True
+
+        test_future.freeze(test_method)
+
+        self.future_thread = threading.Thread(target=test_future.thaw)
+        self.future_thread.start()
+
+        expected = True
+        actual = test_future.get_value()
+        assert expected == actual
+
+    def test_get_value_block_timeout(self):
+        test_future = gingaMisc.Future("TestData")
+
+        def test_method(*args, **kwargs):
+            time.sleep(2)
+            return True
+
+        test_future.freeze(test_method)
+
+        self.future_thread = threading.Thread(target=test_future.thaw)
+        self.future_thread.start()
+
+        self.assertRaises(
+            gingaMisc.TimeoutError, test_future.get_value, True, 1)
+
+    def test_get_value_no_block_fail(self):
+        test_future = gingaMisc.Future("TestData")
+
+        def test_method(*args, **kwargs):
+            time.sleep(2)
+            return True
+
+        test_future.freeze(test_method)
+
+        self.future_thread = threading.Thread(target=test_future.thaw)
+        self.future_thread.start()
+
+        self.assertRaises(gingaMisc.TimeoutError, test_future.get_value, False)
+
+    def test_get_value_no_block_pass(self):
+        test_future = gingaMisc.Future("TestData")
+
+        def test_method(*args, **kwargs):
+            return True
+
+        test_future.freeze(test_method)
+
+        self.future_thread = threading.Thread(target=test_future.thaw)
+        self.future_thread.start()
+
+        # Making the test running thread to sleep for a while
+        # for the self.future_thread to complete and ensure success
+        time.sleep(0.5)
+
+        expected = True
+        actual = test_future.get_value()
+        assert expected == actual
+
+    def test_get_value_suppress_exception(self):
+        test_future = gingaMisc.Future("TestData")
+
+        def test_method(*args, **kwargs):
+            raise TestError("Test Error")
+
+        test_future.freeze(test_method)
+
+        self.future_thread = threading.Thread(target=test_future.thaw)
+        self.future_thread.start()
+
+        future_value = test_future.get_value(True, None, True)
+        assert isinstance(future_value, Exception)
+
+    def test_get_value_no_suppress_exception(self):
+        test_future = gingaMisc.Future("TestData")
+
+        def test_method(*args, **kwargs):
+            raise TestError("Test Error")
+
+        test_future.freeze(test_method)
+
+        self.future_thread = threading.Thread(target=test_future.thaw)
+        self.future_thread.start()
+
+        self.assertRaises(TestError, test_future.get_value)
+
     def tearDown(self):
-        pass
+        if self.future_thread != None:
+            self.future_thread.join()
 
 if __name__ == '__main__':
     unittest.main()
