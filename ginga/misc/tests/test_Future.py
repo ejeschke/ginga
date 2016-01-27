@@ -98,6 +98,7 @@ class TestFuture(unittest.TestCase):
         actual = test_future.thaw()
         assert expected == actual
 
+        assert test_future.res == True
         assert test_future.evt.isSet() == True
 
     def test_thaw_suppress_exception_exception(self):
@@ -112,6 +113,8 @@ class TestFuture(unittest.TestCase):
         test_result = test_future.thaw()
 
         assert isinstance(test_result, TypeError)
+
+        assert isinstance(test_future.res, TypeError)
         assert test_future.evt.isSet() == True
 
     def test_thaw_not_suppress_exception_no_exception(self):
@@ -126,6 +129,7 @@ class TestFuture(unittest.TestCase):
         actual = test_future.thaw(False)
         assert expected == actual
 
+        assert test_future.res == True
         assert test_future.evt.isSet() == True
 
     def test_thaw_not_suppress_exception_raise_exception(self):
@@ -139,7 +143,25 @@ class TestFuture(unittest.TestCase):
 
         self.assertRaises(TypeError, test_future.thaw, False)
 
+        assert test_future.res == None
         assert test_future.evt.isSet() == False
+
+    def test_has_value_unset(self):
+    	test_future = gingaMisc.Future("TestData")
+
+    	expected = False
+    	actual = test_future.has_value()
+    	assert expected == actual
+
+
+    def test_has_value_set(self):
+    	test_future = gingaMisc.Future("TestData")
+
+    	test_future.evt.set()
+
+    	expected = True
+    	actual = test_future.has_value()
+    	assert expected == actual
 
     def tearDown(self):
         pass
