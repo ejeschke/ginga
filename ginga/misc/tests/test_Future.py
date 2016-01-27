@@ -163,6 +163,34 @@ class TestFuture(unittest.TestCase):
     	actual = test_future.has_value()
     	assert expected == actual
 
+    def test_resolve(self):
+    	test_future = gingaMisc.Future("TestData")
+
+    	test_future.resolve(True)
+
+    	assert test_future.res == True
+    	assert test_future.evt.isSet() == True
+
+    def test_resolve_callback(self):
+    	test_future = gingaMisc.Future("TestData")
+
+    	def test_callback(obj):
+    		try:
+    			obj.res = not obj.res
+    		except:
+    			pass
+
+        test_future.add_callback('resolved', test_callback)
+
+    	test_future.resolve(True)
+
+    	# Callback reverses the boolean 'res' value
+    	assert test_future.res == False
+    	assert test_future.evt.isSet() == True
+
+
+
+
     def tearDown(self):
         pass
 
