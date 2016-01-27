@@ -34,7 +34,6 @@ class Callbacks(object):
         #return self.cb.has_key(name) and (len(self.cb[name]) > 0)
         return name in self.cb
 
-    # TODO: Should this raise CallbackError, or silently pass
     def delete_callback(self, name):
         try:
             del self.cb[name]
@@ -43,7 +42,7 @@ class Callbacks(object):
                 name))
 
 
-    # TODO: Add a argumet validation function for a callback
+    # TODO: Add a argument validation function for a callback
     # Pointers:
     #      * Check the name of the event for which callback added
     #      * Check that fn is a function
@@ -51,18 +50,24 @@ class Callbacks(object):
     #      * Check fn takes:
     #           - at least len(args) + len(kwdargs) number of args
     #           - variable number of args or keyword args
-    #      * Does and what value the callback funtion return
+    #      * Does and what value the callback function return
     #          
     def add_callback(self, name, fn, *args, **kwdargs):
-        self.enable_callback(name)
-        
-        tup = (fn, args, kwdargs)
-        if not tup in self.cb[name]:
-            self.cb[name].append(tup)
-        
-    def set_callback(self, name, fn, *args, **kwdargs):
-        self.add_callback(name, fn, *args, **kwdargs)
+        try:
+            tup = (fn, args, kwdargs)
+            if not tup in self.cb[name]:
+                self.cb[name].append(tup)
+        except KeyError:
+            raise CallbackError("No callback category of '%s'" % (
+                name))
 
+    # TODO: to be deprecated ?
+    def set_callback(self, name, fn, *args, **kwdargs):
+        if not self.has_callback(name):
+            self.enable_callback(name)
+        return self.add_callback(name, fn, *args, **kwdargs)
+
+    
     # TODO: Returns True even if any one of the callback succeeds...Is that desired?
     def make_callback(self, name, *args, **kwdargs):
         if not self.has_callback(name):
