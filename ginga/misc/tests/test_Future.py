@@ -43,6 +43,20 @@ class TestFuture(unittest.TestCase):
         actual = test_future.cb['resolved']
         assert expected == actual
 
+    def test_get_data_no_data(self):
+        test_future = gingaMisc.Future()
+
+        expected = None
+        actual = test_future.get_data()
+        assert expected == actual
+
+    def test_get_data_some_data(self):
+        test_future = gingaMisc.Future("TestData")
+
+        expected = "TestData"
+        actual = test_future.get_data()
+        assert expected == actual
+
     def tearDown(self):
         pass
 
