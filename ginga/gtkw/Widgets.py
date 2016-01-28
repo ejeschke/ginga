@@ -1845,6 +1845,8 @@ def make_widget(title, wtype):
         w = TextArea(editable=True)
     elif wtype == 'toolbar':
         w = Toolbar()
+    elif wtype == 'progress':
+        w = ProgressBar()
     elif wtype == 'menubar':
         w = Menubar()
     else:

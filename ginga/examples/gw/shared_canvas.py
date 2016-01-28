@@ -23,10 +23,10 @@ class FitsViewer(object):
 
         from ginga.gw import Widgets, Viewers
 
-        self.app = Widgets.Application()
-        self.app.add_callback('shutdown', self.quit)
-        self.top = self.app.window("Ginga example2")
-        self.top.add_callback('closed', self.closed)
+        self.app = Widgets.Application(logger=logger)
+        #self.app.add_callback('shutdown', self.quit)
+        self.top = self.app.make_window("Ginga example2")
+        self.top.add_callback('close', self.closed)
 
         vbox = Widgets.VBox()
         vbox.set_border_width(2)
@@ -47,6 +47,7 @@ class FitsViewer(object):
         v1.set_callback('none-move', self.motion)
         v1.set_bg(0.2, 0.2, 0.2)
         v1.ui_setActive(True)
+        v1.set_name('tweedledee')
         self.viewer1 = v1
         self._mi1 = ModeIndicator(v1)
 
@@ -64,7 +65,9 @@ class FitsViewer(object):
         self.drawtypes = canvas.get_drawtypes()
         self.drawtypes.sort()
 
-        hbox.add_widget(v1, stretch=1)
+        v1.set_desired_size(300, 300)
+        iw = Viewers.GingaViewerWidget(viewer=v1)
+        hbox.add_widget(iw, stretch=1)
 
         # Add a second viewer viewing the same canvas
         v2 = Viewers.CanvasView(logger)
@@ -78,6 +81,7 @@ class FitsViewer(object):
         v2.set_callback('none-move', self.motion)
         v2.set_bg(0.2, 0.2, 0.2)
         v2.ui_setActive(True)
+        v1.set_name('tweedledum')
         self.viewer2 = v2
         self._mi2 = ModeIndicator(v2)
 
@@ -87,7 +91,9 @@ class FitsViewer(object):
         bd = v2.get_bindings()
         bd.enable_all(True)
 
-        hbox.add_widget(v2, stretch=1)
+        v2.set_desired_size(300, 300)
+        iw = Viewers.GingaViewerWidget(viewer=v2)
+        hbox.add_widget(iw, stretch=1)
 
         vbox.add_widget(hbox, stretch=1)
 
@@ -228,6 +234,10 @@ class FitsViewer(object):
             self.top.close()
         sys.exit()
 
+    def mainloop(self):
+        while True:
+            self.app.process_events()
+
 
 def main(options, args):
 
@@ -250,7 +260,7 @@ def main(options, args):
     viewer.top.raise_()
 
     try:
-        viewer.app.mainloop()
+        viewer.mainloop()
 
     except KeyboardInterrupt:
         print("Terminating viewer...")

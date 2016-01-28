@@ -106,6 +106,7 @@ global_plugins = [
     Bunch(module='Cursor', tab='_readout', ws='readout', start=True),
     Bunch(module='Operations', tab='_opns', ws='operations', start=True),
     Bunch(module='WBrowser', tab='Help', ws='channels', raisekey='?', start=False),
+    Bunch(module='FBrowser', tab='Open File', ws='right', start=False),
     Bunch(module='Errors', tab='Errors', ws='right', start=True),
     Bunch(module='RC', tab='RC', ws='right', start=False),
     Bunch(module='WCSMatch', tab='WCSMatch', ws='right', start=False),

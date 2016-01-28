@@ -116,7 +116,7 @@ class Desktop(Callback.Callbacks):
         ws.add_tab(widget, title=labelname)
         self.tab[tabname] = Bunch.Bunch(widget=widget, name=labelname,
                                         tabname=tabname, data=data,
-                                        group=group)
+                                        group=group, wsname=wsname)
         return tabname
 
     def _find_nb(self, tabname):
@@ -136,11 +136,23 @@ class Desktop(Callback.Callbacks):
         return None
 
     def raise_tab(self, tabname):
-        nb, index = self._find_nb(tabname)
-        widget = self.tab[tabname].widget
-        if (nb is not None) and (index >= 0):
-            nb.set_index(index)
+        # construct a list of the tabs to raise in the order they
+        # should be raised
+        l = []
+        name = tabname.lower()
+        while self.tab.has_key(name):
+            bnch = self.tab[name]
+            l.insert(0, name)
+            name = bnch.wsname.lower()
+            if name in l:
+                break
 
+        # now raise those tabs
+        for name in l:
+            nb, index = self._find_nb(name)
+            if (nb is not None) and (index >= 0):
+                nb.set_index(index)
+            
     def remove_tab(self, tabname):
         nb, index = self._find_nb(tabname)
         widget = self.tab[tabname].widget

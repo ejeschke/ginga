@@ -414,11 +414,11 @@ class AstropyWCS2(BaseWCS):
 
     def load_header(self, header, fobj=None):
         from astropy.wcs.utils import wcs_to_celestial_frame
-        # reconstruct a pyfits header, because otherwise we take an
-        # incredible performance hit in astropy.wcs
-        self.header = pyfits.Header(header.items())
-
         try:
+            # reconstruct a pyfits header, because otherwise we take an
+            # incredible performance hit in astropy.wcs
+            self.header = pyfits.Header(header.items())
+
             self.logger.debug("Trying to make astropy wcs object")
             self.wcs = pywcs.WCS(self.header, fobj=fobj, relax=True)
             try:
@@ -643,12 +643,12 @@ class AstropyWCS(BaseWCS):
         self.kind = 'astropy/WCSLIB'
 
     def load_header(self, header, fobj=None):
-        # reconstruct a pyfits header, because otherwise we take an
-        # incredible performance hit in astropy.wcs
-        self.logger.debug("Reconstructing PyFITS header")
-        self.header = pyfits.Header(header.items())
-
         try:
+            # reconstruct a pyfits header, because otherwise we take an
+            # incredible performance hit in astropy.wcs
+            self.logger.debug("Reconstructing PyFITS header")
+            self.header = pyfits.Header(header.items())
+
             self.logger.debug("Trying to make astropy-- wcs object")
             self.wcs = pywcs.WCS(self.header, fobj=fobj, relax=True)
             self.logger.debug("made astropy wcs object")
@@ -813,9 +813,10 @@ class AstLibWCS(BaseWCS):
 
         self.fix_bad_headers()
 
-        # reconstruct a pyfits header
-        hdr = pyfits.Header(header.items())
         try:
+            # reconstruct a pyfits header
+            hdr = pyfits.Header(header.items())
+
             self.logger.debug("Trying to make astLib wcs object")
             self.wcs = astWCS.WCS(hdr, mode='pyfits')
 

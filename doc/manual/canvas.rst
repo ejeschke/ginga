@@ -69,7 +69,7 @@ implement a viewport onto a ``DrawingCanvas`` object.  Each viewer
 contains a handle to a canvas and provides a particular view onto that
 canvas defined by:
 
-* dimensions of their viewport (typically tied to the height and
+* dimensions of their viewport (i.e. the height and
   width of the native widget's window into which the viewer is rendering),
 * scale in X and Y dimensions,
 * a *pan position* linking the center of the viewport to a canvas
@@ -83,10 +83,11 @@ handle, providing different views into the same canvas.  Another typical
 arrangement for sharing is where each viewer has a private canvas, and
 on each private canvas is placed a shared transparent subcanvas, an
 arrangement which allows each viewer to have a mix of private and shared
-canvas objects.  Another common idiom is to layer multiple ``Canvas`` or
+canvas objects.  Another common idiom is to layer multiple 
 ``DrawingCanvas`` objects to more easily manage multiple collections of
 overlaid graphics.
 
 The various subclasses of ``ImageView`` are designed to render into a
-different widget set or "native" canvas using a ``CanvasRenderer``
-customized for that target.
+different widget set's "native" canvas using a ``CanvasRenderer``
+customized for that target. 
+

@@ -150,11 +150,9 @@ class Pick(GingaPlugin.LocalPlugin):
 
         cm, im = self.fv.cm, self.fv.im
 
-        #di = Viewers.ImageViewCanvas(logger=self.logger)
         di = Viewers.CanvasView(logger=self.logger)
         width, height = 300, 300
         di.set_desired_size(width, height)
-        #di.configure_window(width, height)
         di.enable_autozoom('off')
         di.enable_autocuts('off')
         di.zoom_to(3)
@@ -214,10 +212,6 @@ class Pick(GingaPlugin.LocalPlugin):
             pw = Plot.PlotWidget(self.radial_plot)
             pw.resize(400, 300)
             nb.add_widget(pw, title="Radial")
-
-        vpaned.add_widget(Widgets.Label(''))
-        vbox.add_widget(vpaned, stretch=1)
-        #vbox.add_widget(nb, stretch=1)
 
         fr = Widgets.Frame("Pick")
 
@@ -282,9 +276,7 @@ class Pick(GingaPlugin.LocalPlugin):
         hbox.add_widget(btn, stretch=0)
 
         self.w.eval_pgs = Widgets.ProgressBar()
-        #self.w.eval_pgs.cfg_expand(8, 0)
         hbox.add_widget(self.w.eval_pgs, stretch=1)
-        #hbox.cfg_expand(8, 0)
         vbox1.add_widget(hbox, stretch=0)
 
         nb.add_widget(vbox1, title="Readout")
@@ -320,6 +312,7 @@ class Pick(GingaPlugin.LocalPlugin):
         b.ellipticity.set_tooltip("Minimum ellipticity for selection")
         b.edge.set_tooltip("Minimum edge distance for selection")
         b.show_candidates.set_tooltip("Show all peak candidates")
+        b.max_side.set_tooltip("Maximum dimension to search for peaks")
         b.coordinate_base.set_tooltip("Base of pixel coordinate system")
         # radius control
         #b.radius.set_digits(2)
@@ -504,7 +497,12 @@ class Pick(GingaPlugin.LocalPlugin):
         nb.add_widget(vbox3, title="Report")
 
         fr.set_widget(nb)
-        vbox.add_widget(fr, stretch=0)
+
+        sw2 = Widgets.ScrollArea()
+        sw2.set_widget(fr)
+        vpaned.add_widget(sw2)
+        vbox.add_widget(vpaned, stretch=1)
+        #vbox.add_widget(fr, stretch=0)
 
         mode = self.canvas.get_draw_mode()
         hbox = Widgets.HBox()
@@ -746,12 +744,12 @@ class Pick(GingaPlugin.LocalPlugin):
         serialnum = self.bump_serial()
         self.ev_intr.set()
 
-        fig = self.canvas.get_object_by_tag(self.picktag)
-        if fig.kind != 'compound':
+        pickobj = self.canvas.get_object_by_tag(self.picktag)
+        if pickobj.kind != 'compound':
             return True
-        bbox  = fig.objects[0]
-        point = fig.objects[1]
-        text = fig.objects[2]
+        bbox  = pickobj.objects[0]
+        point = pickobj.objects[1]
+        text = pickobj.objects[2]
         data_x, data_y = point.x, point.y
         #self.fitsimage.panset_xy(data_x, data_y)
 
@@ -815,14 +813,14 @@ class Pick(GingaPlugin.LocalPlugin):
             # Offload this task to another thread so that GUI remains
             # responsive
             self.fv.nongui_do(self.search, serialnum, data,
-                              x1, y1, wd, ht, fig)
+                              x1, y1, wd, ht, pickobj)
 
         except Exception as e:
             self.logger.error("Error calculating quality metrics: %s" % (
                 str(e)))
             return True
 
-    def search(self, serialnum, data, x1, y1, wd, ht, fig):
+    def search(self, serialnum, data, x1, y1, wd, ht, pickobj):
         if serialnum != self.get_serial():
             return
         with self.lock2:
@@ -876,7 +874,7 @@ class Pick(GingaPlugin.LocalPlugin):
 
             if serialnum == self.get_serial():
                 self.fv.gui_do(self.update_pick, serialnum, results, qs,
-                               x1, y1, wd, ht, fig, msg)
+                               x1, y1, wd, ht, pickobj, msg)
 
     def _make_report_header(self):
         return self.rpt_header + '\n'
@@ -931,14 +929,14 @@ class Pick(GingaPlugin.LocalPlugin):
 
         return d
 
-    def update_pick(self, serialnum, objlist, qs, x1, y1, wd, ht, fig, msg):
+    def update_pick(self, serialnum, objlist, qs, x1, y1, wd, ht, pickobj, msg):
         if serialnum != self.get_serial():
             return
 
         try:
             image = self.fitsimage.get_image()
-            point = fig.objects[1]
-            text = fig.objects[2]
+            point = pickobj.objects[1]
+            text = pickobj.objects[2]
             text.text = "Pick"
 
             if msg is not None:

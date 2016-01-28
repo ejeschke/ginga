@@ -26,7 +26,8 @@ class Plot(Callback.Callbacks):
             wd_in, ht_in = float(width)/dpi, float(height)/dpi
             figure = Figure(figsize=(wd_in, ht_in), dpi=dpi)
         self.fig = figure
-        self.fig.set_tight_layout(True)
+        if hasattr(self.fig, 'set_tight_layout'):
+            self.fig.set_tight_layout(True)
         self.logger = logger
         self.fontsize = 10
         self.ax = None

@@ -46,12 +46,16 @@ info_plist_template = u"""<?xml version="1.0" encoding="UTF-8"?>
 """
 
 from ginga import __version__
+import ginga.util.six as six
 
 d = dict(version=__version__, build=__version__.replace('.', ''))
 plist = info_plist_template % d
 
 with open('Info.plist', 'w') as out_f:
-    out_f.write(plist.encode('utf-8'))
+    if six.PY2:
+        out_f.write(plist.encode('utf-8'))
+    else:
+        out_f.write(plist)
 
 
 APP = ['Ginga.py']

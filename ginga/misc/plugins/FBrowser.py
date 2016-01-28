@@ -26,9 +26,12 @@ except ImportError:
 
 class FBrowser(GingaPlugin.LocalPlugin):
 
-    def __init__(self, fv, fitsimage):
+    def __init__(self, *args):
         # superclass defines some variables for us, like logger
-        super(FBrowser, self).__init__(fv, fitsimage)
+        if len(args) == 2:
+            super(FBrowser, self).__init__(*args)
+        else:
+            super(FBrowser, self).__init__(args[0], None)
 
         keywords = [ ('Object', 'OBJECT'),
                      ('Date', 'DATE-OBS'),
@@ -129,6 +132,13 @@ class FBrowser(GingaPlugin.LocalPlugin):
 
         container.add_widget(vbox, stretch=1)
 
+    def load_paths(self, paths):
+        if self.fitsimage is not None:
+            self.fv.gui_do(self.fitsimage.make_callback, 'drag-drop', paths)
+        else:
+            fitsimage = self.fv.getfocus_fitsimage()
+            self.fv.gui_do(fitsimage.make_callback, 'drag-drop', paths)
+
     def load_cb(self):
         # Load from text box
         path = str(self.entry.get_text()).strip()
@@ -153,7 +163,7 @@ class FBrowser(GingaPlugin.LocalPlugin):
         paths = [path for path in paths if os.path.isfile(path)]
 
         # Load files
-        self.fv.gui_do(self.fitsimage.make_callback, 'drag-drop', paths)
+        self.load_paths(paths)
 
     def makelisting(self, path):
         self.entry.set_text(path)
@@ -208,8 +218,11 @@ class FBrowser(GingaPlugin.LocalPlugin):
         self.fv.error_wrap(image.save_as_file, path)
 
     def close(self):
-        chname = self.fv.get_channelName(self.fitsimage)
-        self.fv.stop_local_plugin(chname, str(self))
+        if self.fitsimage is None:
+            self.fv.stop_global_plugin(str(self))
+        else:
+            chname = self.fv.get_channelName(self.fitsimage)
+            self.fv.stop_local_plugin(chname, str(self))
         return True
 
     def file_icon(self, bnch):
@@ -238,8 +251,8 @@ class FBrowser(GingaPlugin.LocalPlugin):
         ext = iohelper.get_hdu_suffix(info.numhdu)
         files = glob.glob(info.filepath)  # Expand wildcard
         paths = ['{0}{1}'.format(f, ext) for f in files]
-        self.fv.gui_do(self.fitsimage.make_callback, 'drag-drop', paths)
 
+        self.load_paths(paths)
         return True
 
     def open_file(self, path):
@@ -256,7 +269,7 @@ class FBrowser(GingaPlugin.LocalPlugin):
         elif os.path.exists(path):
             #self.fv.load_file(path)
             uri = "file://%s" % (path)
-            self.fitsimage.make_callback('drag-drop', [uri])
+            self.load_paths([uri])
 
         else:
             self.browse(path)
@@ -359,8 +372,13 @@ class FBrowser(GingaPlugin.LocalPlugin):
         filelist = glob.glob(path)
         filelist.sort(key=lambda s: s.lower())
 
+        if self.fitsimage is not None:
+            fitsimage = self.fitsimage
+        else:
+            fitsimage = self.fv.getfocus_fitsimage()
+
         # find out our channel
-        chname = self.fv.get_channelName(self.fitsimage)
+        chname = self.fv.get_channelName(fitsimage)
         channel = self.fv.get_channelInfo(chname)
 
         for path in filelist:
@@ -381,7 +399,7 @@ class FBrowser(GingaPlugin.LocalPlugin):
     def stop(self):
         pass
 
-    def redo(self):
+    def redo(self, *args):
         return True
 
     def __str__(self):

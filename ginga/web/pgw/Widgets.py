@@ -611,13 +611,20 @@ class Image(WidgetBase):
 class ProgressBar(Label):
     def __init__(self):
         self.value = 0.0
+        self.start_time = time.time()
         super(ProgressBar, self).__init__(self._format())
 
     def _format(self):
-        return "%.2f %%" % (self.value * 100.0)
+        pct = self.value * 100.0
+        elapsed = time.time() - self.start_time
+        text = "%.2f %%  %.2f sec" % (pct, elapsed)
+        return text
 
     def set_value(self, pct):
         self.value = pct
+        if pct == 0.0:
+            # reset start time
+            self.start_time = time.time()
 
         self.set_text(self._format())
 
@@ -1618,6 +1625,8 @@ def make_widget(title, wtype):
         w = TextArea(editable=True)
     elif wtype == 'toolbar':
         w = Toolbar()
+    elif wtype == 'progress':
+        w = ProgressBar()
     elif wtype == 'menubar':
         w = Menubar()
     else:

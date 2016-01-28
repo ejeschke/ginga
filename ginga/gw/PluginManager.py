@@ -181,19 +181,16 @@ class PluginManager(Callback.Callbacks):
         # plug in
         if pInfo.chinfo is not None:
             itab = pInfo.chinfo.name
-            self.logger.debug("raising tab %s" % (itab))
+            self.logger.debug("raising channel tab %s" % (itab))
             self.ds.raise_tab(itab)
 
             self.logger.debug("resuming plugin %s" % (name))
             pInfo.obj.resume()
             self.make_callback('focus-plugin', bnch)
-            # raise the workspace this plugin is in
-            in_ws = pInfo.spec.ws
-            self.ds.raise_tab(in_ws)
 
         self.focus.add(lname)
         if pInfo.widget is not None:
-            self.logger.debug("raising tab %s" % (pInfo.tabname))
+            self.logger.debug("raising plugin tab %s" % (pInfo.tabname))
             if pInfo.is_toplevel:
                 pInfo.widget.raise_()
             else:
