@@ -178,6 +178,9 @@ class FBrowser(GingaPlugin.LocalPlugin):
 
         self.treeview.set_tree(tree_dict)
 
+        # Resize column widths
+        self.treeview.set_optimal_column_widths()
+
     def get_path_from_item(self, res_dict):
         paths = [ info.path for key, info in res_dict.items() ]
         path = paths[0]
