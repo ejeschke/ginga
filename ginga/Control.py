@@ -759,7 +759,7 @@ class GingaControl(Callback.Callbacks):
         channel = self.get_channelInfo(chname)
         info = channel.get_image_info(image.get('name'))
 
-        self.make_async_gui_callback('add-image', chname, image, info)
+        self.make_gui_callback('add-image', chname, image, info)
 
     def bulk_add_image(self, imname, image, chname):
         channel = self.get_channel_on_demand(chname)
