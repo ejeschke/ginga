@@ -1,9 +1,6 @@
 #
-# Catalogs.py -- Catalogs plugin for Ginga fits viewer
+# Catalogs.py -- Catalogs plugin for Ginga reference viewer
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -246,8 +243,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
         self.fv.update_pending()
 
     def close(self):
-        chname = self.fv.get_channelName(self.fitsimage)
-        self.fv.stop_local_plugin(chname, str(self))
+        self.fv.stop_local_plugin(self.chname, str(self))
         return True
 
     def start(self, future=None):
@@ -471,7 +467,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
             if not self.fv.has_channel(chname):
                 self.fv.add_channel(chname)
         else:
-            chname = self.fv.get_channelName(self.fitsimage)
+            chname = self.chname
 
         self.fitsimage.onscreen_message("Querying image db...",
                                         delay=1.0)

@@ -1,9 +1,6 @@
 #
-# Drawing.py -- Drawing plugin for Ginga fits viewer
+# Drawing.py -- Drawing plugin for Ginga reference viewer
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -165,8 +162,7 @@ class Drawing(GingaPlugin.LocalPlugin):
 
 
     def close(self):
-        chname = self.fv.get_channelName(self.fitsimage)
-        self.fv.stop_local_plugin(chname, str(self))
+        self.fv.stop_local_plugin(self.chname, str(self))
 
     def instructions(self):
         self.tw.set_text(

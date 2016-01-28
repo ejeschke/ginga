@@ -1,9 +1,6 @@
 #
-# GingaPlugin.py -- Base classes for plugins in Ginga FITS viewer
+# GingaPlugin.py -- Base classes for plugins in Ginga reference viewer
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -53,6 +50,11 @@ class LocalPlugin(object):
         self.fv = fv
         self.logger = fv.logger
         self.fitsimage = fitsimage
+
+        # find our channel info
+        if self.fitsimage is not None:
+            self.chname = self.fv.get_channelName(self.fitsimage)
+            self.chinfo = self.fv.get_channelInfo(self.chname)
 
         # Holds GUI widgets
         self.w = Bunch.Bunch()

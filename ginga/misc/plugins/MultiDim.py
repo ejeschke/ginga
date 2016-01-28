@@ -1,9 +1,6 @@
 #
-# MultiDim.py -- Multidimensional plugin for fits viewer
+# MultiDim.py -- Multidimensional plugin for Ginga reference viewer
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c)  Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -277,8 +274,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
             self.w.save_movie.set_enabled(is_dc)
 
     def close(self):
-        chname = self.fv.get_channelName(self.fitsimage)
-        self.fv.stop_local_plugin(chname, str(self))
+        self.fv.stop_local_plugin(self.chname, str(self))
         return True
 
     def new_image_cb(self, fitsimage, image):
@@ -308,8 +304,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
 
         # Start ourselves if GUI is not up yet
         if not self.gui_up:
-            chname = self.fv.get_channelName(self.fitsimage)
-            self.fv.start_local_plugin(chname, str(self), None)
+            self.fv.start_local_plugin(self.chname, str(self), None)
 
         return True
 
@@ -350,8 +345,8 @@ class MultiDim(GingaPlugin.LocalPlugin):
 
         # See if this HDU is still in the channel's datasrc
         imname = self.get_name(sfx)
-        chname = self.fv.get_channelName(self.fitsimage)
-        chinfo = self.fv.get_channelInfo(chname)
+        chname = self.chname
+        chinfo = self.chinfo
         if imname in chinfo.datasrc:
             self.curhdu = idx
             self.image = chinfo.datasrc[imname]

@@ -1,9 +1,6 @@
 #
-# Preferences.py -- Preferences plugin for fits viewer
+# Preferences.py -- Preferences plugin for Ginga channels
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -23,8 +20,6 @@ class Preferences(GingaPlugin.LocalPlugin):
     def __init__(self, fv, fitsimage):
         # superclass defines some variables for us, like logger
         super(Preferences, self).__init__(fv, fitsimage)
-
-        self.chname = self.fv.get_channelName(self.fitsimage)
 
         self.cmap_names = cmap.get_names()
         self.imap_names = imap.get_names()
@@ -890,8 +885,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         num_images = self.t_['numImages']
 
         # update the datasrc length
-        chname = self.fv.get_channelName(self.fitsimage)
-        chinfo = self.fv.get_channelInfo(chname)
+        chinfo = self.chinfo
         chinfo.datasrc.set_bufsize(num_images)
         self.logger.debug("num images was set to {0}".format(num_images))
 

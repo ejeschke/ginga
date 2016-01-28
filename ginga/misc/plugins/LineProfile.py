@@ -1,3 +1,9 @@
+#
+# LineProfile.py -- LineProfile plugin for Ginga reference viewer
+#
+# This is open-source software licensed under a BSD license.
+# Please see the file LICENSE.txt for details.
+#
 from ginga import GingaPlugin
 from ginga.misc import Widgets, Plot
 from ginga.util import plots
@@ -190,8 +196,7 @@ class LineProfile(GingaPlugin.LocalPlugin):
 Use MultiDim to change step values of axes.""")
 
     def close(self):
-        chname = self.fv.get_channelName(self.fitsimage)
-        self.fv.stop_local_plugin(chname, str(self))
+        self.fv.stop_local_plugin(self.chname, str(self))
         self.gui_up = False
         return True
 

@@ -1,9 +1,6 @@
 #
-# Mosaic.py -- Mosaic plugin for Ginga FITS viewer
+# Mosaic.py -- Mosaic plugin for Ginga reference viewer
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c)  Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -68,7 +65,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
         self.settings.load(onError='silent')
 
         # channel where mosaic should appear (default=ours)
-        self.mosaic_chname = self.fv.get_channelName(self.fitsimage)
+        self.mosaic_chname = self.chname
 
         # hook to allow special processing before inlining
         self.preprocess = lambda x: x
@@ -337,8 +334,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
 
     def close(self):
         self.img_mosaic = None
-        chname = self.fv.get_channelName(self.fitsimage)
-        self.fv.stop_local_plugin(chname, str(self))
+        self.fv.stop_local_plugin(self.chname, str(self))
         self.gui_up = False
         return True
 

@@ -1,9 +1,6 @@
 #
-# Pick.py -- Pick plugin for Ginga fits viewer
+# Pick.py -- Pick plugin for Ginga reference viewer
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -691,8 +688,7 @@ class Pick(GingaPlugin.LocalPlugin):
                 self.pick_log = None
 
     def close(self):
-        chname = self.fv.get_channelName(self.fitsimage)
-        self.fv.stop_local_plugin(chname, str(self))
+        self.fv.stop_local_plugin(self.chname, str(self))
         return True
 
     def start(self):

@@ -1,9 +1,6 @@
 #
-# Cuts.py -- Cuts plugin for Ginga fits viewer
+# Cuts.py -- Cuts plugin for Ginga reference viewer
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c)  Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -450,9 +447,8 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
                 self.set_mode('move')
 
     def close(self):
-        chname = self.fv.get_channelName(self.fitsimage)
         #self.set_mode('move')
-        self.fv.stop_local_plugin(chname, str(self))
+        self.fv.stop_local_plugin(self.chname, str(self))
         self.gui_up = False
         return True
 
