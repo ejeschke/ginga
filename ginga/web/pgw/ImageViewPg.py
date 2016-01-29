@@ -91,7 +91,7 @@ class ImageViewPg(ImageView):
             self.logger.error("Couldn't update canvas: %s" % (str(e)))
 
     def reschedule_redraw(self, time_sec):
-        if not (self.pgcanvas is None):
+        if self.pgcanvas is not None:
             self.pgcanvas.reset_timer('redraw', time_sec)
         else:
             self.delayed_redraw()

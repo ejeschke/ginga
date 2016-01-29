@@ -248,6 +248,8 @@ class Label(WidgetBase):
         self.font = default_font
         self.halign = halign
         self.style = style
+        self.fgcolor = None
+        self.bgcolor = None
         self.menu = menu
         self.widget = None
 
@@ -271,9 +273,16 @@ class Label(WidgetBase):
             self.bgcolor = bg
 
     def render(self):
-        # TODO: render font, color, alignment, style, menu, clickable
-        d = dict(id=self.id, text=self.text)
-        return '''<span id=%(id)s>%(text)s</span>''' % d
+        # TODO: render font, alignment, style, menu, clickable
+        style = ""
+        #style += ("text-align: %s; " % self.halign)
+        if self.fgcolor is not None:
+            style += ("color: %s; " % self.fgcolor)
+        if self.bgcolor is not None:
+            style += ("background-color: %s; " % self.bgcolor)
+
+        d = dict(id=self.id, text=self.text, style=style)
+        return '''<span id=%(id)s style="%(style)s">%(text)s</span>''' % d
 
 
 class Button(WidgetBase):
@@ -426,7 +435,7 @@ class Slider(WidgetBase):
         self.enable_callback('value-changed')
 
     def _cb_redirect(self, event):
-        self.value = event.value
+        self.value = self.dtype(event.value)
         self.make_callback('value-changed', self.value)
 
     def get_value(self):
@@ -446,13 +455,18 @@ class Slider(WidgetBase):
 
     def render(self):
         d = dict(id=self.id, value=self.value, incr=self.incr,
-                 max=self.maxval, min=self.minval, disabled='')
+                 max=self.maxval, min=self.minval, disabled='',
+                 orient='', style='')
+        if self.orientation == 'vertical':
+            # firefox
+            d['orient'] = 'orient=vertical'
+            d['style'] = "-webkit-appearance: slider-vertical;"
         if not self.enabled:
             d['disabled'] = 'disabled'
         if self.dtype == float:
-            return '''<input id=%(id)s type="range" %(disabled)s onchange="ginga_app.widget_handler('%(id)s', document.getElementById('%(id)s').value)" value="%(value)f" step="%(incr)f" max="%(max)f" min="%(min)f" disabled=%(disabled)s>''' % d
+            return '''<input id=%(id)s type="range" %(disabled)s style="%(style)s" onchange="ginga_app.widget_handler('%(id)s', document.getElementById('%(id)s').value)" value="%(value)f" step="%(incr)f" max="%(max)f" min="%(min)f orient="%(orient)s">''' % d
         else:
-            return '''<input id=%(id)s type="range" %(disabled)s onchange="ginga_app.widget_handler('%(id)s', document.getElementById('%(id)s').value)" value="%(value)d" step="%(incr)d" max="%(max)d" min="%(min)d"  disabled=%(disabled)s>''' % d
+            return '''<input id=%(id)s type="range" %(disabled)s style="%(style)s" onchange="ginga_app.widget_handler('%(id)s', document.getElementById('%(id)s').value)" value="%(value)d" step="%(incr)d" max="%(max)d" min="%(min)d orient="%(orient)s">''' % d
 
 class ScrollBar(WidgetBase):
     def __init__(self, orientation='horizontal'):
@@ -742,6 +756,7 @@ support HTML5 canvas.</canvas>
         self.widget = None
         self.width = width
         self.height = height
+        self.name = ''
 
         self.timers = {}
 
@@ -1411,7 +1426,10 @@ class Application(Callback.Callbacks):
         for handler in handlers:
             try:
                 handler.do_operation(operation, **kwdargs)
+
             except Exception as e:
+                self.logger.error("Error doing operation '%s': %s" % (
+                    operation, str(e)))
                 bad_handlers.append(handler)
 
         # remove problematic clients

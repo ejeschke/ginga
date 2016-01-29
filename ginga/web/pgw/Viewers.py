@@ -20,6 +20,7 @@ class GingaViewerWidget(Widgets.Canvas):
         self.logger = viewer.logger
 
         self._configured = False
+        self.refresh_delay = 0.010
 
         self.set_viewer(viewer)
 
@@ -77,12 +78,12 @@ class GingaViewerWidget(Widgets.Canvas):
 
     def map_event_cb(self, event):
         self.viewer.map_event(event)
-        self.reset_timer('refresh', 0.010)
+        self.reset_timer('refresh', self.refresh_delay)
 
     def refresh_cb(self, *args):
         app = self.get_app()
         app.do_operation('refresh_canvas', id=self.id)
-        self.reset_timer('refresh', 0.010)
+        self.reset_timer('refresh', self.refresh_delay)
 
     def do_update(self, buf):
         self.clear_rect(0, 0, self.width, self.height)

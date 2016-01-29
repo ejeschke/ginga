@@ -27,6 +27,7 @@ class PlotWidget(Widgets.Canvas):
         self.logger = plot.logger
 
         self._configured = False
+        self.refresh_delay = 0.010
 
         self.set_plot(plot)
 
@@ -36,7 +37,7 @@ class PlotWidget(Widgets.Canvas):
 
         self._dispatch_event_table = {
             "activate": self.ignore_event,
-            "setbounds": self.map_event,
+            "setbounds": self.map_event_cb,
             "mousedown": self.ignore_event,
             "mouseup": self.ignore_event,
             "mousemove": self.ignore_event,
@@ -71,16 +72,18 @@ class PlotWidget(Widgets.Canvas):
 
         self.plot.add_callback('draw-canvas', self.draw_cb)
 
+        self.add_timer('refresh', self.refresh_cb)
+
     def get_plot(self):
         return self.plot
 
     def ignore_event(self, event):
         pass
 
-    def refresh(self):
+    def refresh_cb(self):
         app = self.get_app()
         app.do_operation('refresh_canvas', id=self.id)
-        self.logger.debug("did refresh")
+        self.reset_timer('refresh', self.refresh_delay)
 
     def get_rgb_buffer(self, plot):
         buf = BytesIO()
@@ -99,14 +102,14 @@ class PlotWidget(Widgets.Canvas):
         self.logger.debug("drawing %dx%d image" % (wd, ht))
         self.draw_image(buf, 0, 0, wd, ht)
 
-        self.refresh()
+        self.reset_timer('refresh', self.refresh_delay)
 
     def configure_window(self, wd, ht):
         self.logger.debug("canvas resized to %dx%d" % (wd, ht))
         fig = self.plot.get_figure()
         fig.set_size_inches(float(wd) / fig.dpi, float(ht) / fig.dpi)
 
-    def map_event(self, event):
+    def map_event_cb(self, event):
         wd, ht = event.width, event.height
         self.configure_window(wd, ht)
 

@@ -19,7 +19,7 @@ try:
     have_scipy = True
 except ImportError:
     have_scipy = False
-    
+
 from ginga.misc import Bunch
 
 
@@ -113,7 +113,7 @@ class IQCalc(object):
         """
         if medv is None:
             medv = numpy.median(data)
-            
+
         # Get two cuts of the data, one in X and one in Y
         x0, y0, xarr, yarr = self.cut_cross(x, y, radius, data)
 
@@ -153,7 +153,7 @@ class IQCalc(object):
         ## threshold = median + sigma * std
         self.logger.debug("calc threshold=%f" % (threshold))
         return threshold
-        
+
     def find_bright_peaks(self, data, threshold=None, sigma=5, radius=5):
         """
         Find bright peak candidates in (data).  (threshold) specifies a
@@ -231,7 +231,7 @@ class IQCalc(object):
 
 
     # EVALUATION ON A FIELD
-    
+
     def evaluate_peaks(self, peaks, data, bright_radius=2, fwhm_radius=15,
                        fwhm_method=1, cb_fn=None, ev_intr=None):
 
@@ -254,7 +254,7 @@ class IQCalc(object):
         for x, y in peaks:
             if ev_intr and ev_intr.isSet():
                 raise IQCalcError("Evaluation interrupted!")
-            
+
             # Find the fwhm in x and y
             try:
                 if fwhm_method == 1:
@@ -300,7 +300,7 @@ class IQCalc(object):
             else:
                 pos = 1.0 - dy2
 
-            obj = Bunch.Bunch(objx=ctr_x, objy=ctr_y, pos=pos, 
+            obj = Bunch.Bunch(objx=ctr_x, objy=ctr_y, pos=pos,
                               fwhm_x=fwhm_x, fwhm_y=fwhm_y,
                               fwhm=fwhm, fwhm_radius=fwhm_radius,
                               brightness=bright, elipse=elipse,
@@ -326,7 +326,7 @@ class IQCalc(object):
     def _sortkey(self, obj):
         val = obj.brightness * obj.pos/math.sqrt(obj.fwhm)
         return val
-            
+
     def objlist_select(self, objlist, width, height,
                         minfwhm=2.0, maxfwhm=150.0, minelipse=0.5,
                         edgew=0.01):
@@ -360,7 +360,7 @@ class IQCalc(object):
         peaks = self.find_bright_peaks(data, radius=peak_radius,
                                        threshold=threshold)
         #print "peaks=", peaks
-        self.logger.info("peaks=%s" % str(peaks))
+        self.logger.debug("peaks=%s" % str(peaks))
         if len(peaks) == 0:
             raise IQCalcError("Cannot find bright peaks")
 
@@ -370,7 +370,7 @@ class IQCalc(object):
                                       fwhm_radius=fwhm_radius)
         if len(objlist) == 0:
             raise IQCalcError("Error evaluating bright peaks")
-        
+
         results = self.objlist_select(objlist, width, height,
                                       minfwhm=minfwhm, maxfwhm=maxfwhm,
                                       minelipse=minelipse, edgew=edgew)
@@ -381,10 +381,10 @@ class IQCalc(object):
 
 
     def qualsize(self, image, x1=None, y1=None, x2=None, y2=None,
-                 radius=5, bright_radius=2, fwhm_radius=15, threshold=None, 
+                 radius=5, bright_radius=2, fwhm_radius=15, threshold=None,
                  minfwhm=2.0, maxfwhm=50.0, minelipse=0.5,
                  edgew=0.01):
-        
+
         x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
         data = image.cutout_data(x1, y1, x2, y2, astype='float32')
 
@@ -405,5 +405,5 @@ class IQCalc(object):
             qs.objx, qs.objy, qs.fwhm, qs.skylevel, qs.brightness))
 
         return qs
-     
+
 #END
