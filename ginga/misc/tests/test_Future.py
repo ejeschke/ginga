@@ -7,6 +7,7 @@ import unittest
 import logging
 import threading
 import time
+import sys
 
 from ginga.misc.Future import Future, TimeoutError
 
@@ -24,7 +25,12 @@ class TestFuture(unittest.TestCase):
         test_future = Future()
 
         assert hasattr(test_future, 'cb')
-        assert isinstance(test_future.evt, threading._Event)
+
+        if sys.version_info.major == 2:
+            assert isinstance(test_future.evt, threading._Event)
+        elif sys.version_info.major == 3:
+            assert isinstance(test_future.evt, threading.Event)
+
         assert test_future.evt.isSet() == False
         assert test_future.res == None
         assert test_future.data == None
@@ -38,7 +44,12 @@ class TestFuture(unittest.TestCase):
         test_future = Future("TestData")
 
         assert hasattr(test_future, 'cb')
-        assert isinstance(test_future.evt, threading._Event)
+        
+        if sys.version_info.major == 2:
+            assert isinstance(test_future.evt, threading._Event)
+        elif sys.version_info.major == 3:
+            assert isinstance(test_future.evt, threading.Event)
+
         assert test_future.evt.isSet() == False
         assert test_future.res == None
         assert test_future.data == "TestData"
