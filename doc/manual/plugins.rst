@@ -163,6 +163,21 @@ the images viewed since the program was started.  Unlike Thumbs,
 Contents is sorted by channel, and then by image name.  The contents
 also shows some common metadata from the image.
 
+.. _sec-plugins-changehistory:
+
+ChangeHistory
+=============
+
+.. image:: figures/changehistory-plugin.png
+   :align: center
+   :width: 400px
+   :alt: ChangeHistory plugin
+
+This global plugin is used to log any changes to data buffer. For example,
+a change log would appear here if a new image is added to a mosaic via the
+Mosaic plugin. Like :ref:`sec-plugins-contents`, the log is sorted by channel,
+and then by image name.
+
 .. _sec-localplugins:
 
 =============
@@ -250,10 +265,10 @@ If the `enable_slit` setting is set to True this plugin will also enable
 slit image functionality (for multidimensional images) via a "Slit" tab.
 In the tab UI, select one axes from the "Axes" list and draw a
 line. This will create a 2D image that assumes the first two axes are
-spatial and index the data along the selected axis. 
+spatial and index the data along the selected axis.
 
 Much like Cuts, you can view the other slit images using the cut
-selection drop down box. 
+selection drop down box.
 
 
 .. _sec-plugins-lineprofile:
@@ -268,7 +283,7 @@ The Line Profile plugin is used for multidimensional (i.e. 3D or higher)
 images.  It plots the values of the pixels at the current cursor
 position through the selected axis.  This can be used to create
 normal spectral line profiles.  Be warned, there are no restrictions to
-what axes can be chosen.  As such, the output can be meaningless. 
+what axes can be chosen.  As such, the output can be meaningless.
 
 .. _sec-plugins-histogram:
 

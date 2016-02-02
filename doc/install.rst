@@ -15,7 +15,7 @@ available in binary (installable) form; it should not be necessary to
 compile anything.  But as always, YMMV.
 
 REQUIRED
---------
+========
 
 * python (v. 2.7, 3.3 or higher)
 * numpy  (v. 1.7 or higher)
@@ -37,10 +37,10 @@ For WCS resolution you will need ONE of:
 * astropy
 
 BACKENDS (one or more)
-----------------------
+======================
 Ginga can draw it's output to a number of different back ends.
 Depending on which GUI toolkit you prefer (and what you want to
-do), you will need either: 
+do), you will need either:
 
 * python-gtk (gtk2) AND python-cairo
 
@@ -78,7 +78,7 @@ OR
 
 
 RECOMMENDED
------------
+===========
 Certain plugins in the reference viewer (or features of those plugins)
 will not work without the following packages:
 
@@ -115,7 +115,7 @@ Qt/PySide
 Ginga can use either PyQt or PySide, version 4 or 5.  It will auto-detect
 which one is installed.  There is support for both the basic widget and
 the full reference viewer.
-  
+
 .. note:: If you have both installed and you want to use a specific one
 	  then set the environment variable QT_API to either "pyqt" or
 	  "pyside".  This is the same procedure as for Matplotlib.
@@ -131,7 +131,7 @@ Tk
 
 Ginga's Tk support is limited to the viewing widget itself.  For
 overplotting (graphics) support you also need to build and install the
-"aggdraw" module, which you can find 
+"aggdraw" module, which you can find
 `here <https://github.com/ejeschke/aggdraw>`_, or install the Python
 "OpenCv" module.
 
@@ -147,7 +147,7 @@ HTML5 web browser
 =================
 
 Ginga can render via a web server into an HTML5 canvas.  Support is limited
-to the viewing widget itself.  See the notes in example/pg/example1_pg.py 
+to the viewing widget itself.  See the notes in example/pg/example1_pg.py
 Tested browsers include Chromium (Chrome), Firefox, Safari
 
 ========================
@@ -161,7 +161,7 @@ Clone from github::
 Or see links on `this page <http://ejeschke.github.io/ginga/>`_
 to get a zip or tar ball.
 
-Unpack, go into the top level directory and:: 
+Unpack, go into the top level directory and::
 
     $ python setup.py install
 
@@ -205,11 +205,11 @@ Mac
 
 For Mac users, if you have a working Macports or Homebrew installation
 skip to the appropriate section below.  If not, we recommend installing
-the `Anaconda distribution <http://continuum.io/downloads>`_.  
+the `Anaconda distribution <http://continuum.io/downloads>`_.
 This distribution already includes all of the necessary packages to run
 Ginga.
 
-As an alternative, you also have the choice of Enthought Canopy.  The 
+As an alternative, you also have the choice of Enthought Canopy.  The
 `free version <https://www.enthought.com/canopy-express/>`_ works fine.
 After installing this, open the Canopy package manager, search for
 "astropy" and install it.  Also search for and install "pyside"
@@ -229,11 +229,11 @@ Either method should provide all the modules necessary to run
 Ginga.  Then install Ginga from pip or from source as described in the
 section above on "Installation from Source".
 
-With macports you will need to install the necessary packages.  Assuming 
+With macports you will need to install the necessary packages.  Assuming
 that you have a working macports installed, it will be something like::
 
-    port install python27 
-    port install py27-numpy py27-matplotlib py27-pil py27-scipy 
+    port install python27
+    port install py27-numpy py27-matplotlib py27-pil py27-scipy
     port install py27-astropy py27-pyqt4 py27-pip
     pip install ginga
 
@@ -244,7 +244,7 @@ Windows
 =======
 
 For Windows users we recommend installing the
-`Anaconda distribution <http://continuum.io/downloads>`.  
+`Anaconda distribution <http://continuum.io/downloads>`.
 This distribution already includes all of the necessary packages to run
 Ginga.
 
@@ -253,11 +253,11 @@ After installing Anaconda, you can find the reference viewer script as
     Start -> All Programs -> Anaconda -> Anaconda Command Prompt
     pythonw Scripts\ginga
 
-As an alternative, you also have the choice of Enthought Canopy.  The 
+As an alternative, you also have the choice of Enthought Canopy.  The
 `free version <https://www.enthought.com/canopy-express/>` works fine.
 After installing this, open the Canopy package manager, search for
 "astropy" and install it.  Also search for and install "pyside"
-(free version of Qt bindings).  
+(free version of Qt bindings).
 
     Start -> All Programs -> Enthought Canopy -> Canopy command prompt
     pip install ginga
