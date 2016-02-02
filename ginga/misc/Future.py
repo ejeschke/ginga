@@ -1,4 +1,4 @@
-# 
+#
 # Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c) Eric R. Jeschke.  All rights reserved.
@@ -8,10 +8,13 @@
 import threading
 from . import Callback
 
+
 class TimeoutError(Exception):
     pass
 
+
 class Future(Callback.Callbacks):
+
     def __init__(self, data=None):
         Callback.Callbacks.__init__(self)
 
@@ -24,7 +27,8 @@ class Future(Callback.Callbacks):
 
     def get_data(self):
         return self.data
-    
+
+    # TODO: Could add some args type/value, return value validation here
     def freeze(self, method, *args, **kwdargs):
         self.method = method
         self.args = args
@@ -44,10 +48,10 @@ class Future(Callback.Callbacks):
 
         self.resolve(res)
         return res
-        
+
     def has_value(self):
         return self.evt.isSet()
-    
+
     def resolve(self, value):
         self.res = value
         self.evt.set()
@@ -74,4 +78,4 @@ class Future(Callback.Callbacks):
         return self.res
 
 
-#END
+# END

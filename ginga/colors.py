@@ -787,6 +787,7 @@ def add_color(name, tup):
     color_dict[name] = tuple(tup)
     recalc_color_list()
 
+# TODO: Should this throw KeyError if key not present or silently pass?
 def remove_color(name):
     global color_dict
     try:

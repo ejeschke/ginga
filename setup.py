@@ -60,7 +60,7 @@ setup(
                 'ginga.web', 'ginga.web.pgw',
                 'ginga.web.pgw.js', 'ginga.web.pgw.templates',
                 # Common stuff
-                'ginga.misc', 'ginga.misc.plugins',
+                'ginga.misc', 'ginga.misc.plugins', 'ginga.misc.tests',
                 'ginga.canvas', 'ginga.canvas.types', 'ginga.util',
                 # Misc
                 'ginga.icons', 'ginga.doc', 'ginga.tests',
@@ -76,7 +76,7 @@ setup(
                      },
     scripts = ['scripts/ginga', 'scripts/grc', 'scripts/gris'],
     install_requires = ['numpy>=1.7'],
-    test_suite = "ginga.tests",
+    test_suite = "ginga.tests.ginga_test_suite",
     classifiers=[
           'Intended Audience :: Science/Research',
           'License :: OSI Approved :: BSD License',
