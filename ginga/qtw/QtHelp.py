@@ -230,6 +230,34 @@ class FileSelection(object):
                 self.cb(filename)
 
 
+class DirectorySelection(object):
+    """Handle directory selection dialog."""
+    def __init__(self, parent_w):
+        self.parent = parent_w
+        self.cb = None
+
+    def popup(self, title, callfn, initialdir=None):
+        """Let user select a directory.
+
+        Parameters
+        ----------
+        title : str
+            Title for the dialog.
+
+        callfn : func
+            Function used to handle selected directory.
+
+        initialdir : str or `None`
+            Directory for dialog.
+
+        """
+        self.cb = callfn
+        dirname = QtGui.QFileDialog.getExistingDirectory(
+            self.parent, title, initialdir)
+        if dirname:
+            self.cb(dirname)
+
+
 def cmap2pixmap(cmap, steps=50):
     """Convert a Ginga colormap into a QPixmap
     """
