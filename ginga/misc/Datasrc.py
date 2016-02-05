@@ -53,6 +53,9 @@ class Datasrc(object):
             self.datums[key] = value
             self._eject_old()
 
+            self.sortedkeys = list(self.datums.keys())
+            self.sortedkeys.sort()
+
             self.newdata.set()
             self.cond.notify()
 
