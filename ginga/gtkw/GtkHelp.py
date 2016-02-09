@@ -498,11 +498,11 @@ class MDIWidget(gtk.Layout):
 
 class FileSelection(object):
 
-    def __init__(self, parent_w, action=gtk.FILE_CHOOSER_ACTION_OPEN):
+    def __init__(self, parent_w, action=gtk.FILE_CHOOSER_ACTION_OPEN,
+                 title="Select a file"):
         self.parent = parent_w
         # Create a new file selection widget
-        self.filew = gtk.FileChooserDialog(title="Select a file",
-                                           action=action)
+        self.filew = gtk.FileChooserDialog(title=title, action=action)
         self.filew.connect("destroy", self.close)
         if action == gtk.FILE_CHOOSER_ACTION_SAVE:
             self.filew.add_buttons(gtk.STOCK_SAVE, 1, gtk.STOCK_CANCEL, 0)
@@ -514,8 +514,8 @@ class FileSelection(object):
         # Connect the cancel_button to destroy the widget
         #self.filew.cancel_button.connect("clicked", self.close)
 
-    def popup(self, title, callfn, initialdir=None,
-              filename=None):
+    def popup(self, title, callfn, initialdir=None, filename=None):
+        """Let user select and load file."""
         self.cb = callfn
         self.filew.set_title(title)
         if initialdir:
@@ -538,6 +538,18 @@ class FileSelection(object):
 
     def close(self, widget):
         self.filew.hide()
+
+
+class DirectorySelection(FileSelection):
+    """Handle directory selection dialog."""
+    def __init__(self, parent_w):
+        super(DirectorySelection, self).__init__(
+            parent_w, action=gtk.FILE_CHOOSER_ACTION_SELECT_FOLDER,
+            title="Select a directory")
+
+    def popup(self, title, callfn, initialdir=None):
+        """Let user select a directory."""
+        super(DirectorySelection, self).popup(title, callfn, initialdir)
 
 
 def combo_box_new_text():
