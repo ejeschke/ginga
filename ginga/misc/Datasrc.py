@@ -7,11 +7,13 @@
 #
 import threading
 
+
 class TimeoutError(Exception):
     pass
 
-class Datasrc(object):
 
+class Datasrc(object):
+    """Class to handle internal data cache."""
     def __init__(self, length=0):
         self.length = length
         self.cursor = -1
@@ -53,12 +55,8 @@ class Datasrc(object):
             self.datums[key] = value
             self._eject_old()
 
-            self.sortedkeys = list(self.datums.keys())
-            self.sortedkeys.sort()
-
             self.newdata.set()
             self.cond.notify()
-
 
     def pop_one(self):
         return self.remove(self.history[0])
@@ -82,16 +80,15 @@ class Datasrc(object):
             return val
 
     def _eject_old(self):
-        if (self.length is None) or (self.length <= 0):
-            # no limit
-            return
-        while len(self.history) > self.length:
-            oldest = self.history.pop(0)
-            del self.datums[oldest]
+        # Eject oldest cache unless there is no cache limit
+        if (self.length is not None) and (self.length > 0):
+            while len(self.history) > self.length:
+                oldest = self.history.pop(0)
+                del self.datums[oldest]
 
+        # Update sorted keys regardless
         self.sortedkeys = list(self.datums.keys())
         self.sortedkeys.sort()
-
 
     def index(self, key):
         with self.cond:
@@ -136,16 +133,13 @@ class Datasrc(object):
             self.newdata.clear()
             return self.history[-1]
 
-
     def get_bufsize(self):
         with self.cond:
             return self.length
-
 
     def set_bufsize(self, length):
         with self.cond:
             self.length = length
             self._eject_old()
-
 
 #END
