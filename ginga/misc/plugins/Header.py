@@ -33,7 +33,8 @@ class Header(GingaPlugin.GlobalPlugin):
         prefs = self.fv.get_preferences()
         self.settings = prefs.createCategory('plugin_Header')
         self.settings.addDefaults(sortable=False,
-                                  color_alternate_rows=True)
+                                  color_alternate_rows=True,
+                                  max_rows_for_col_resize=5000)
         self.settings.load(onError='silent')
 
         fv.add_callback('add-channel', self.add_channel)
@@ -95,6 +96,12 @@ class Header(GingaPlugin.GlobalPlugin):
             tree_dict[key] = card
 
         table.set_tree(tree_dict)
+
+        # Resize column widths
+        n_rows = len(tree_dict)
+        if n_rows < self.settings.get('max_rows_for_col_resize', 5000):
+            table.set_optimal_column_widths()
+            self.logger.debug("Resized columns for {0} row(s)".format(n_rows))
 
         self.logger.debug("setting header done ({0})".format(is_sorted))
         self._image = image
