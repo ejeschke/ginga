@@ -162,6 +162,10 @@ class ReferenceViewer(object):
             Bunch(module=module_name, ws=ws_name, tab=tab_name,
                   start=start_plugin, pfx=pfx))
 
+    def clear_default_plugins(self):
+        self.local_plugins = []
+        self.global_plugins = []
+
     def add_default_plugins(self):
         """
         Add the ginga-distributed default set of plugins to the
