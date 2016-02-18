@@ -40,6 +40,9 @@ class TestCmap(unittest.TestCase):
         actual = test_color_map.clst[1]
         assert np.allclose(expected, actual)
 
+    def test_ColorMap_init_exception(self):
+        self.assertRaises(TypeError, ColorMap, 'test-name')
+
     def test_cmap(self):
         count = 0
         for attribute_name in dir(ginga.cmap):
@@ -49,6 +52,35 @@ class TestCmap(unittest.TestCase):
         expected = count
         actual = len(ginga.cmap.cmaps)
         assert expected == actual
+
+    def test_add_cmap(self):
+        test_clst = ((0.0, 0.0, 0.0), (1.0, 1.0, 1.0))
+
+        ginga.cmap.add_cmap('test-name', test_clst)
+
+        expected = ColorMap('test-name', test_clst)
+        actual = ginga.cmap.cmaps['test-name']
+        assert expected.name == actual.name
+        assert expected.clst == actual.clst
+
+        # Teardown
+        del ginga.cmap.cmaps['test-name']
+
+    def test_get_cmap(self):
+        test_clst = ((0.0, 0.0, 0.0), (1.0, 1.0, 1.0))
+
+        ginga.cmap.add_cmap('test-name', test_clst)
+
+        expected = ColorMap('test-name', test_clst)
+        actual = ginga.cmap.get_cmap('test-name')
+        assert expected.name == actual.name
+        assert expected.clst == actual.clst
+
+        # Teardown
+        del ginga.cmap.cmaps['test-name']
+
+    def test_get_cmap_exception(self):
+        self.assertRaises(KeyError, ginga.cmap.get_cmap, 'non-existent-name')
 
     def tearDown(self):
         pass
