@@ -40,6 +40,16 @@ class TestCmap(unittest.TestCase):
         actual = test_color_map.clst[1]
         assert np.allclose(expected, actual)
 
+    def test_cmap(self):
+        count = 0
+        for attribute_name in dir(ginga.cmap):
+            if attribute_name.startswith('cmap_'):
+                count = count + 1
+
+        expected = count
+        actual = len(ginga.cmap.cmaps)
+        assert expected == actual
+
     def tearDown(self):
         pass
 
