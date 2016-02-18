@@ -1,5 +1,5 @@
 #
-# Unit Tests for the colors.py functions
+# Unit Tests for the cmap.py functions
 #
 # Rajul Srivastava  (rajul09@gmail.com)
 #
@@ -43,7 +43,7 @@ class TestCmap(unittest.TestCase):
     def test_ColorMap_init_exception(self):
         self.assertRaises(TypeError, ColorMap, 'test-name')
 
-    def test_cmap(self):
+    def test_cmaps(self):
         count = 0
         for attribute_name in dir(ginga.cmap):
             if attribute_name.startswith('cmap_'):
