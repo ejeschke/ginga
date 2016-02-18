@@ -82,6 +82,18 @@ class TestCmap(unittest.TestCase):
     def test_get_cmap_exception(self):
         self.assertRaises(KeyError, ginga.cmap.get_cmap, 'non-existent-name')
 
+    def test_get_names(self):
+        names = []
+        for attribute_name in dir(ginga.cmap):
+            if attribute_name.startswith('cmap_'):
+                names.append(attribute_name[5:])
+
+        expected = sorted(names, key=lambda s: s.lower())
+        actual = ginga.cmap.get_names()
+        assert expected == actual
+
+    # TODO: Add tests for matplotlib functions
+
     def tearDown(self):
         pass
 
