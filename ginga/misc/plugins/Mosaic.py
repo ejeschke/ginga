@@ -310,6 +310,11 @@ class Mosaic(GingaPlugin.LocalPlugin):
 
         time_intr1 = time.time()
 
+        # Add description for ChangeHistory
+        iminfo = self.chinfo.get_image_info(self.img_mosaic.get('name'))
+        iminfo.reason_modified = 'Added {0}'.format(
+            ','.join([im.get('name') for im in images]))
+
         loc = self.img_mosaic.mosaic_inline(images,
                                             bg_ref=bg_ref,
                                             trim_px=trim_px,
