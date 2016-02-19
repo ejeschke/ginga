@@ -52,6 +52,7 @@ class Zoom(GingaPlugin.GlobalPlugin):
     def build_gui(self, container):
 
         vbox, sw, orientation = Widgets.get_oriented_box(container,
+                                                         fill=True,
                                                          scrolled=False)
         vbox.set_border_width(4)
         vbox.set_spacing(2)
