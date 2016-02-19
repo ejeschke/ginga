@@ -76,11 +76,11 @@ class Histogram(GingaPlugin.LocalPlugin):
         vbox.add_widget(fr, stretch=0)
 
         self.plot = plots.Plot(logger=self.logger,
-                               width=400, height=300)
+                               width=400, height=400)
         ax = self.plot.add_axis()
         ax.grid(True)
         w = Plot.PlotWidget(self.plot)
-        w.resize(400, 300)
+        w.resize(400, 400)
         vbox.add_widget(w, stretch=1)
 
         captions = (('Cut Low:', 'label', 'Cut Low', 'entry'),

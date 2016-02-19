@@ -126,9 +126,9 @@ class Pick(GingaPlugin.LocalPlugin):
         vtop = Widgets.VBox()
         vtop.set_border_width(4)
 
-        vbox, sw, orientation = Widgets.get_oriented_box(container)
-        vbox.set_border_width(4)
-        vbox.set_spacing(2)
+        box, sw, orientation = Widgets.get_oriented_box(container, fill=True)
+        box.set_border_width(4)
+        box.set_spacing(2)
 
         self.msgFont = self.fv.getFont("sansFont", 12)
         tw = Widgets.TextArea(wrap=True, editable=False)
@@ -137,7 +137,7 @@ class Pick(GingaPlugin.LocalPlugin):
 
         fr = Widgets.Expander("Instructions")
         fr.set_widget(tw)
-        vbox.add_widget(fr, stretch=0)
+        box.add_widget(fr, stretch=0)
 
         vpaned = Widgets.Splitter(orientation=orientation)
 
@@ -401,7 +401,10 @@ class Pick(GingaPlugin.LocalPlugin):
         b.coordinate_base.set_text(str(self.pixel_coords_offset))
         b.coordinate_base.add_callback('activated', self.coordinate_base_cb)
 
-        nb.add_widget(w, title="Settings")
+        vbox3 = Widgets.VBox()
+        vbox3.add_widget(w, stretch=0)
+        vbox3.add_widget(Widgets.Label(''), stretch=1)
+        nb.add_widget(vbox3, title="Settings")
 
         # Build controls panel
         vbox3 = Widgets.VBox()
@@ -493,13 +496,12 @@ class Pick(GingaPlugin.LocalPlugin):
 
         nb.add_widget(vbox3, title="Report")
 
+        ## sw2 = Widgets.ScrollArea()
+        ## sw2.set_widget(nb)
+        ## fr.set_widget(sw2)
         fr.set_widget(nb)
 
-        sw2 = Widgets.ScrollArea()
-        sw2.set_widget(fr)
-        vpaned.add_widget(sw2)
-        vbox.add_widget(vpaned, stretch=1)
-        #vbox.add_widget(fr, stretch=0)
+        vpaned.add_widget(fr)
 
         mode = self.canvas.get_draw_mode()
         hbox = Widgets.HBox()
@@ -525,9 +527,12 @@ class Pick(GingaPlugin.LocalPlugin):
         hbox.add_widget(btn3)
 
         hbox.add_widget(Widgets.Label(''), stretch=1)
-        vbox.add_widget(hbox, stretch=0)
+        #box.add_widget(hbox, stretch=0)
+        vpaned.add_widget(hbox)
 
-        vtop.add_widget(sw, stretch=1)
+        box.add_widget(vpaned, stretch=1)
+
+        vtop.add_widget(sw, stretch=5)
 
         ## spacer = Widgets.Label('')
         ## vtop.add_widget(spacer, stretch=0)
@@ -539,13 +544,10 @@ class Pick(GingaPlugin.LocalPlugin):
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn)
         btns.add_widget(Widgets.Label(''), stretch=1)
+
         vtop.add_widget(btns, stretch=0)
 
-        container.add_widget(vtop, stretch=1)
-
-    def copyText(self, w):
-        text = w.get_text()
-        # TODO: put it in the clipboard
+        container.add_widget(vtop, stretch=5)
 
     def record_cb(self, w, tf):
         self.do_record = tf

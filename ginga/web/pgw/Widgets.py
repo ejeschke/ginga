@@ -1668,13 +1668,6 @@ def build_info(captions, orientation='vertical'):
         raise ValueError("Column spec is not an even number")
     numcols = int(numcols // 2)
 
-    ## widget = QtGui.QWidget()
-    ## table = QtGui.QGridLayout()
-    ## widget.setLayout(table)
-    ## table.setVerticalSpacing(2)
-    ## table.setHorizontalSpacing(4)
-    ## table.setContentsMargins(2, 2, 2, 2)
-
     table = GridBox(rows=numrows, columns=numcols)
 
     wb = Bunch.Bunch()
@@ -1724,8 +1717,9 @@ def get_oriented_box(container, scrolled=True, fill=False):
         box2 = VBox()
 
     box2.add_widget(box1)
-    if scrolled:
+    if not fill:
         box2.add_widget(Label(''), stretch=1)
+    if scrolled:
         sw = ScrollArea()
         sw.set_widget(box2)
     else:

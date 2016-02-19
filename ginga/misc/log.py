@@ -74,7 +74,7 @@ def get_logger(name='ginga', level=None, null=False,
         log_file = options.logfile
 
     if log_file is not None:
-        if ((options is not None) and (options.rmlog) and
+        if ((options is not None) and (getattr(options, 'rmlog', False)) and
             os.path.exists(log_file)):
             os.remove(log_file)
         # TODO: get maxsize and backup from options, if present

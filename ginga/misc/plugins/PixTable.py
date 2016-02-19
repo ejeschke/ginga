@@ -49,7 +49,8 @@ class PixTable(GingaPlugin.LocalPlugin):
         top = Widgets.VBox()
         top.set_border_width(4)
 
-        vbox, sw, orientation = Widgets.get_oriented_box(container)
+        vbox, sw, orientation = Widgets.get_oriented_box(container,
+                                                         fill=True)
         vbox.set_border_width(4)
         vbox.set_spacing(2)
 
@@ -67,12 +68,16 @@ class PixTable(GingaPlugin.LocalPlugin):
         # Make the values table as a text widget
         msgFont = self.fv.getFont('fixedFont', 10)
         tw = Widgets.TextArea(wrap=False, editable=False)
+        #tw.cfg_expand(1, 1)
         tw.set_font(msgFont)
         self.tw = tw
 
+        ## sw1 = Widgets.ScrollArea()
+        ## sw1.set_widget(tw)
         vbox2 = Widgets.VBox()
         vbox2.add_widget(tw)
-        vbox2.add_widget(Widgets.Label(''), stretch=1)
+        ## vbox2.add_widget(sw1)
+        ## vbox2.add_widget(Widgets.Label(''), stretch=1)
         fr.set_widget(vbox2)
         vbox.add_widget(fr, stretch=1)
 

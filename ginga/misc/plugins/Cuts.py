@@ -164,17 +164,17 @@ class Cuts(GingaPlugin.LocalPlugin):
         vbox.add_widget(nb, stretch=1)
 
         self.cuts_plot = plots.CutsPlot(logger=self.logger,
-                                        width=400, height=300)
+                                        width=400, height=400)
         self.plot = Plot.PlotWidget(self.cuts_plot)
-        self.plot.resize(400, 300)
+        self.plot.resize(400, 400)
         ax = self.cuts_plot.add_axis()
         ax.grid(True)
 
         self.slit_plot = plots.Plot(logger=self.logger,
-                                    width=400, height=300)
+                                    width=400, height=400)
         self.slit_plot.add_axis(axisbg='black')
         self.plot2 = Plot.PlotWidget(self.slit_plot)
-        self.plot2.resize(400, 300)
+        self.plot2.resize(400, 400)
 
         captions = (('Cut:', 'label', 'Cut', 'combobox',
                      'New Cut Type:', 'label', 'Cut Type', 'combobox'),

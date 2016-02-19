@@ -1931,9 +1931,10 @@ def get_oriented_box(container, scrolled=True, fill=False):
         box1 = HBox()
         box2 = VBox()
 
-    box2.add_widget(box1)
-    if scrolled:
+    box2.add_widget(box1, stretch=1)
+    if not fill:
         box2.add_widget(Label(''), stretch=1)
+    if scrolled:
         sw = ScrollArea()
         sw.set_widget(box2)
     else:
