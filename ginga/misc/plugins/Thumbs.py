@@ -204,9 +204,6 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         if not self.gui_up:
             return
 
-        if path is None:
-            # Currently we need a path to make a thumb key
-            return
         self.logger.info("removing thumb for %s" % (name))
 
         try:
