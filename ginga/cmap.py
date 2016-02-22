@@ -1,6 +1,6 @@
 #
 # cmap.py -- color maps for fits viewing
-# 
+#
 # Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c) Eric R. Jeschke.  All rights reserved.
@@ -11414,6 +11414,10 @@ cmap_rainbow3 = (
 # to be eventually deprecated
 cmap_ramp = cmap_gray
 
+# needed length of a ginga color map
+min_cmap_len = 256
+
+
 class ColorMapError(Exception):
     pass
 
@@ -11424,8 +11428,11 @@ class ColorMap(object):
 
 def add_cmap(name, clst):
     global cmaps
+    assert len(clst) == min_cmap_len, \
+           ValueError("color map '%s' length mismatch %d != %d (needed)" % (
+        name, len(clst), min_cmap_len))
     cmaps[name] = ColorMap(name, clst)
-    
+
 def get_cmap(name):
     """Get a color map array.  May raise a KeyError if a map of the given name
     does not exist.
@@ -11440,15 +11447,15 @@ def get_names():
 def matplotlib_to_ginga_cmap(cm, name=None):
     if name is None:
         name = cm.name
-    arr = cm(numpy.arange(256))
+    arr = cm(numpy.arange(min_cmap_len))
     clst = tuple(map(lambda rec: tuple(rec)[:3], arr))
     return ColorMap(name, clst)
-    
+
 def add_matplotlib_cmap(cm, name=None):
     global cmaps
     cmap = matplotlib_to_ginga_cmap(cm, name=name)
     cmaps[cmap.name] = cmap
-    
+
 def add_matplotlib_cmaps():
     import matplotlib.pyplot as plt
 
@@ -11471,5 +11478,3 @@ for name, value in list(globals().items()):
         add_cmap(key, value)
 
 #END
-
-

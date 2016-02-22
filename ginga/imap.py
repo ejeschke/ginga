@@ -1,6 +1,6 @@
 #
 # imap.py -- intensity maps for fits viewing
-# 
+#
 # Eric Jeschke (eric@naoj.org)
 #
 # Copyright (c) Eric R. Jeschke.  All rights reserved.
@@ -527,7 +527,7 @@ imap_ultrasmooth = (
     0.992156862745,
     0.996078431373,
     1.0,
-    )    
+    )
 
 imap_lasritt = (
                 0.05882,
@@ -3378,6 +3378,9 @@ imap_null = (
                 0.00000,
         )
 
+min_imap_len = 256
+
+
 class IntensityMap(object):
     def __init__(self, name, ilst):
         self.name = name
@@ -3386,6 +3389,9 @@ class IntensityMap(object):
 
 def add_imap(name, ilst):
     global imaps
+    assert len(ilst) == min_imap_len, \
+           ValueError("intensity map '%s' length mismatch %d != %d (needed)" % (
+        name, len(ilst), min_imap_len))
     imaps[name] = IntensityMap(name, ilst)
 
 def get_imap(name):
