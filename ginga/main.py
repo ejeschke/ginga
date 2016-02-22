@@ -303,7 +303,7 @@ class ReferenceViewer(object):
         from ginga.Control import GingaControl, GuiLogHandler
 
         # Define class dynamically based on toolkit choice
-        class Ginga(GingaControl, GingaView):
+        class GingaShell(GingaControl, GingaView):
 
             def __init__(self, logger, thread_pool, module_manager, prefs,
                          ev_quit=None):
@@ -362,8 +362,9 @@ class ReferenceViewer(object):
         thread_pool.startall()
 
         # Create the Ginga main object
-        ginga = Ginga(logger, thread_pool, mm, prefs, ev_quit=ev_quit)
-        ginga.set_layout(self.layout)
+        ginga_shell = GingaShell(logger, thread_pool, mm, prefs,
+                                 ev_quit=ev_quit)
+        ginga_shell.set_layout(self.layout)
 
         gc = os.path.join(basedir, "ginga_config.py")
         have_ginga_config = os.path.exists(gc)
@@ -373,7 +374,7 @@ class ReferenceViewer(object):
             try:
                 import ginga_config
 
-                ginga_config.pre_gui_config(ginga)
+                ginga_config.pre_gui_config(ginga_shell)
             except Exception as e:
                 try:
                     (type, value, tb) = sys.exc_info()
@@ -387,11 +388,11 @@ class ReferenceViewer(object):
                 logger.error("Traceback:\n%s" % (tb_str))
 
         # Build desired layout
-        ginga.build_toplevel()
+        ginga_shell.build_toplevel()
 
         # Did user specify a particular geometry?
         if options.geometry:
-            ginga.set_geometry(options.geometry)
+            ginga_shell.set_geometry(options.geometry)
 
         # make the list of disabled plugins
         disabled_plugins = []
@@ -401,10 +402,10 @@ class ReferenceViewer(object):
         # Add desired global plugins
         for spec in self.global_plugins:
             if not spec.module.lower() in disabled_plugins:
-                ginga.add_global_plugin(spec)
+                ginga_shell.add_global_plugin(spec)
 
         # Add GUI log handler (for "Log" global plugin)
-        guiHdlr = GuiLogHandler(ginga)
+        guiHdlr = GuiLogHandler(ginga_shell)
         guiHdlr.setLevel(options.loglevel)
         fmt = logging.Formatter(log.LOG_FORMAT)
         guiHdlr.setFormatter(fmt)
@@ -423,12 +424,12 @@ class ReferenceViewer(object):
                     pfx = None
                 spec = Bunch(name=pluginName, module=pluginName,
                              tab=pluginName, ws='right', pfx=pfx)
-                ginga.add_global_plugin(spec)
+                ginga_shell.add_global_plugin(spec)
 
         # Load modules for "local" (per-channel) plug ins
         for spec in self.local_plugins:
             if not spec.module.lower() in disabled_plugins:
-                ginga.add_local_plugin(spec)
+                ginga_shell.add_local_plugin(spec)
 
         # Load any custom plugins
         if options.plugins:
@@ -443,28 +444,28 @@ class ReferenceViewer(object):
                     pfx = None
                 spec = Bunch(module=pluginName, ws='dialogs',
                              hidden=False, pfx=pfx)
-                ginga.add_local_plugin(spec)
+                ginga_shell.add_local_plugin(spec)
 
-        ginga.update_pending()
+        ginga_shell.update_pending()
 
         # TEMP?
         tab_names = list(map(lambda name: name.lower(),
-                             ginga.ds.get_tabnames(group=None)))
+                             ginga_shell.ds.get_tabnames(group=None)))
         if 'info' in tab_names:
-            ginga.ds.raise_tab('Info')
+            ginga_shell.ds.raise_tab('Info')
         if 'thumbs' in tab_names:
-            ginga.ds.raise_tab('Thumbs')
+            ginga_shell.ds.raise_tab('Thumbs')
 
         # Add custom channels
         channels = options.channels.split(',')
         for chname in channels:
-            ginga.add_channel(chname)
-        ginga.change_channel(channels[0])
+            ginga_shell.add_channel(chname)
+        ginga_shell.change_channel(channels[0])
 
         # User configuration (custom star catalogs, etc.)
         if have_ginga_config:
             try:
-                ginga_config.post_gui_config(ginga)
+                ginga_config.post_gui_config(ginga_shell)
             except Exception as e:
                 try:
                     (type, value, tb) = sys.exc_info()
@@ -492,22 +493,22 @@ class ReferenceViewer(object):
             settings.save()
 
         if (not options.nosplash) and (len(args) == 0) and showBanner:
-            ginga.banner(raiseTab=True)
+            ginga_shell.banner(raiseTab=True)
 
         # Assume remaining arguments are fits files and load them.
         for imgfile in args:
-            ginga.nongui_do(ginga.load_file, imgfile)
+            ginga_shell.nongui_do(ginga_shell.load_file, imgfile)
 
         try:
             try:
                 # if there is a network component, start it
-                if hasattr(ginga, 'start'):
-                    task = Task.FuncTask2(ginga.start)
+                if hasattr(ginga_shell, 'start'):
+                    task = Task.FuncTask2(ginga_shell.start)
                     thread_pool.addTask(task)
 
                 # Main loop to handle GUI events
                 logger.info("Entering mainloop...")
-                ginga.mainloop(timeout=0.001)
+                ginga_shell.mainloop(timeout=0.001)
 
             except KeyboardInterrupt:
                 logger.error("Received keyboard interrupt!")

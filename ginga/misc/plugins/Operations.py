@@ -95,10 +95,16 @@ class Operations(GingaPlugin.GlobalPlugin):
         self.logger.debug("deleted channel %s" % (chname))
 
     def start(self):
+        # get the list of channels and populate our channel control
         names = self.fv.get_channelNames()
         for name in names:
             channel = self.fv.get_channelInfo(name)
             self.add_channel_cb(self.fv, channel)
+
+        # get the list of local plugins and populate our operation control
+        operations = self.fv.get_operations()
+        for opname in operations:
+            self.add_operation_cb(self.fv, opname)
 
     def add_operation_cb(self, viewer, opname):
         opmenu = self.w.operation
@@ -113,7 +119,7 @@ class Operations(GingaPlugin.GlobalPlugin):
         self.logger.debug("invoking operation menu")
         idx = self.w.channel.get_index()
         chname = str(self.w.channel.get_alpha(idx))
-        return self.fv.start_local_plugin(chname, name, None)
+        self.fv.error_wrap(self.fv.start_local_plugin, chname, name, None)
 
     def channel_select_cb(self, widget, index):
         if index >= 0:

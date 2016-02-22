@@ -216,7 +216,13 @@ class PluginManager(Callback.Callbacks):
 
     def start_plugin_future(self, chname, opname, future,
                             alreadyOpenOk=True):
-        pInfo = self.getPluginInfo(opname)
+        try:
+            pInfo = self.getPluginInfo(opname)
+
+        except KeyError:
+            self.fv.show_error("No plugin information for plugin '%s'" % (
+                opname))
+            return
         if chname is not None:
             # local plugin
             plname = chname.upper() + ': ' + pInfo.name

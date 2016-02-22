@@ -76,8 +76,9 @@ user's Python import path, including in the Ginga configuration folder
 described above (e.g. `$HOME/.ginga/ginga_config.py`).
 
 Specifically, this file will be imported and two methods will be run if
-defined: `pre_gui_config(ginga)` and `post_gui_config(ginga)`.  The
-parameter to each function is the main viewer shell.  These functions
+defined: `pre_gui_config(ginga_shell)` and
+`post_gui_config(ginga_shell)`.
+The parameter to each function is the main viewer shell.  These functions
 can be used to define a different viewer layout, add or remove plugins,
 add menu entries, add custom image or star catalogs, etc.  We will refer
 back to these functions in the sections below.
@@ -147,10 +148,10 @@ replace it entirely with one of your own design and set it in the
                   ...
                  ]
 
-    def pre_gui_config(ginga):
+    def pre_gui_config(ginga_shell):
         ...
 
-        ginga.set_layout(my_layout)
+        ginga_shell.set_layout(my_layout)
 
 If done in the `pre_gui_config()` method (as shown) the new layout will
 be the one that is used when the GUI is constructed.
@@ -225,10 +226,10 @@ using one of two methods.  The first method is using the
 `add_local_plugin()` or `add_global_plugin()` methods, 
 depending on whether it is a local or global plugin, respectively::
 
-    def pre_gui_config(ginga):
+    def pre_gui_config(ginga_shell):
         ...
 
-        ginga.add_local_plugin('DQCheck', "dialogs")
+        ginga_shell.add_local_plugin('DQCheck', "dialogs")
 
 The above call would try to load a local plugin called "DQCheck" from a
 module called "DQCheck".  When invoked from the Operations menu it would
@@ -241,11 +242,11 @@ Global plugins are similar, except that some of them are considered
 critical to the viewers basic operation and so should be started when
 the program starts::
 
-    def pre_gui_config(ginga):
+    def pre_gui_config(ginga_shell):
         ...
 
-        ginga.add_global_plugin('SpecScope', "left",
-                                tab_name="Spec Scope", start_plugin=True)
+        ginga_shell.add_global_plugin('SpecScope', "left",
+                                      tab_name="Spec Scope", start_plugin=True)
 
 
 ==============================
