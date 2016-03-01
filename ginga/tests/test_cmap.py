@@ -21,14 +21,15 @@ class TestCmap(unittest.TestCase):
         pass
 
     def test_ColorMap_init(self):
-        test_clst = ((0.0, 0.0, 0.0), (1.0, 1.0, 1.0))
+        test_clst = tuple([(x, x, x)
+                           for x in np.linspace(0, 1, ginga.cmap.min_cmap_len)])
         test_color_map = ColorMap('test-name', test_clst)
 
         expected = 'test-name'
         actual = test_color_map.name
         assert expected == actual
 
-        expected = 2
+        expected = 256
         actual = len(test_color_map.clst)
         assert expected == actual
 
@@ -37,7 +38,7 @@ class TestCmap(unittest.TestCase):
         assert np.allclose(expected, actual)
 
         expected = (1.0, 1.0, 1.0)
-        actual = test_color_map.clst[1]
+        actual = test_color_map.clst[-1]
         assert np.allclose(expected, actual)
 
     def test_ColorMap_init_exception(self):
@@ -54,8 +55,8 @@ class TestCmap(unittest.TestCase):
         assert expected == actual
 
     def test_add_cmap(self):
-        test_clst = ((0.0, 0.0, 0.0), (1.0, 1.0, 1.0))
-
+        test_clst = tuple([(x, x, x)
+                           for x in np.linspace(0, 1, ginga.cmap.min_cmap_len)])
         ginga.cmap.add_cmap('test-name', test_clst)
 
         expected = ColorMap('test-name', test_clst)
@@ -66,9 +67,13 @@ class TestCmap(unittest.TestCase):
         # Teardown
         del ginga.cmap.cmaps['test-name']
 
-    def test_get_cmap(self):
+    def test_add_cmap_exception(self):
         test_clst = ((0.0, 0.0, 0.0), (1.0, 1.0, 1.0))
+        self.assertRaises(AssertionError, ginga.cmap.add_cmap, 'test-name', test_clst)
 
+    def test_get_cmap(self):
+        test_clst = tuple([(x, x, x)
+                           for x in np.linspace(0, 1, ginga.cmap.min_cmap_len)])
         ginga.cmap.add_cmap('test-name', test_clst)
 
         expected = ColorMap('test-name', test_clst)
