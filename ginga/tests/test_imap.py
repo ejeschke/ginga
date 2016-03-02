@@ -21,14 +21,14 @@ class TestCmap(unittest.TestCase):
         pass
 
     def test_IntensityMap_init(self):
-        test_ilst = (0.0, 1.0, 1.0, 1.0)
+        test_ilst = tuple(np.linspace(0, 1, ginga.imap.min_imap_len))
         test_intensity_map = IntensityMap('test-name', test_ilst)
 
         expected = 'test-name'
         actual = test_intensity_map.name
         assert expected == actual
 
-        expected = 4
+        expected = 256
         actual = len(test_intensity_map.ilst)
         assert expected == actual
 
@@ -50,27 +50,32 @@ class TestCmap(unittest.TestCase):
         assert expected == actual
 
     def test_add_imap(self):
-        test_ilst = (0.0, 1.0, 1.0, 1.0)
+        test_ilst = tuple(np.linspace(0, 1, ginga.imap.min_imap_len))
 
         ginga.imap.add_imap('test-name', test_ilst)
 
         expected = IntensityMap('test-name', test_ilst)
         actual = ginga.imap.imaps['test-name']
         assert expected.name == actual.name
-        assert expected.ilst == actual.ilst
+        assert np.allclose(expected.ilst, actual.ilst)
 
         # Teardown
         del ginga.imap.imaps['test-name']
 
+    def test_add_imap_exception(self):
+        test_ilst = (0.0, 1.0)
+        self.assertRaises(
+            AssertionError, ginga.imap.add_imap, 'test-name', test_ilst)
+
     def test_get_imap(self):
-        test_ilst = (0.0, 1.0, 1.0, 1.0)
+        test_ilst = tuple(np.linspace(0, 1, ginga.imap.min_imap_len))
 
         ginga.imap.add_imap('test-name', test_ilst)
 
         expected = IntensityMap('test-name', test_ilst)
         actual = ginga.imap.get_imap('test-name')
         assert expected.name == actual.name
-        assert expected.ilst == actual.ilst
+        assert np.allclose(expected.ilst, actual.ilst)
 
         # Teardown
         del ginga.imap.imaps['test-name']
