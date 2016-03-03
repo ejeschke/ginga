@@ -506,7 +506,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
         self.process_elapsed += time_intr2 - time_intr1
 
         num_threads = self.settings.get('num_threads', 4)
-        groups = split_n(paths, num_threads)
+        groups = dp.split_n(paths, num_threads)
         self.logger.info("len groups=%d" % (len(groups)))
         for group in groups:
             self.fv.nongui_do(self.mosaic_some, group,
@@ -565,11 +565,5 @@ class Mosaic(GingaPlugin.LocalPlugin):
 
     def __str__(self):
         return 'mosaic'
-
-def split_n(lst, sz):
-    n = len(lst)
-    k, m = n // sz, n % sz
-    return [ lst[i * k + min(i, m):(i + 1) * k + min(i + 1, m)]
-             for i in range(sz) ]
 
 #END

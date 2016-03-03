@@ -1641,15 +1641,21 @@ class BindingMapper(Callback.Callbacks):
         viewer.add_callback('key-release', self.window_key_release)
         ## viewer.add_callback('drag-drop', self.window_drag_drop)
         viewer.add_callback('scroll', self.window_scroll)
-        ## viewer.add_callback('map', self.window_map)
-        ## viewer.add_callback('focus', self.window_focus)
-        ## viewer.add_callback('enter', self.window_enter)
-        ## viewer.add_callback('leave', self.window_leave)
+        viewer.add_callback('map', self.window_map)
+        viewer.add_callback('focus', self.window_focus)
+        viewer.add_callback('enter', self.window_enter)
+        viewer.add_callback('leave', self.window_leave)
 
     def window_map(self, viewer):
-        pass
+        return True
 
-    def window_focus(self, viewer, hasFocus):
+    def window_focus(self, viewer, has_focus):
+        if not has_focus:
+            # fixes a problem with not receiving key release events when the
+            # window loses focus
+            # TODO: does this need to force a key release callback if there
+            # are any keys held?
+            self._modifiers = frozenset([])
         return True
 
     def window_enter(self, viewer):

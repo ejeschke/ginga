@@ -237,4 +237,10 @@ def masktorgb(mask, color='lightgreen', alpha=1.0):
 
     return rgbobj
 
+def split_n(lst, sz):
+    n = len(lst)
+    k, m = n // sz, n % sz
+    return [ lst[i * k + min(i, m):(i + 1) * k + min(i + 1, m)]
+             for i in range(sz) ]
+
 # END
