@@ -36,6 +36,7 @@ class Pick(GingaPlugin.LocalPlugin):
         self.pickcenter = None
         self.pick_qs = None
         self.picktag = None
+        self._textlabel = 'Pick'
 
         # get Pick preferences
         prefs = self.fv.get_preferences()
@@ -210,7 +211,7 @@ class Pick(GingaPlugin.LocalPlugin):
             pw.resize(400, 300)
             nb.add_widget(pw, title="Radial")
 
-        fr = Widgets.Frame("Pick")
+        fr = Widgets.Frame(self._textlabel)
 
         nb = Widgets.TabWidget(tabpos='bottom')
         self.w.nb2 = nb
@@ -793,7 +794,7 @@ class Pick(GingaPlugin.LocalPlugin):
             self.wdetail.sample_area.set_text('%dx%d' % (x2-x1, y2-y1))
 
             point.color = 'red'
-            text.text = 'Pick: calc'
+            text.text = '{0}: calc'.format(self._textlabel)
             self.pickcenter.x = xc
             self.pickcenter.y = yc
             self.pickcenter.color = 'red'
@@ -935,7 +936,7 @@ class Pick(GingaPlugin.LocalPlugin):
             image = self.fitsimage.get_image()
             point = pickobj.objects[1]
             text = pickobj.objects[2]
-            text.text = "Pick"
+            text.text = self._textlabel
 
             if msg is not None:
                 raise Exception(msg)
@@ -1171,7 +1172,7 @@ class Pick(GingaPlugin.LocalPlugin):
             self.dc.Rectangle(x1, y1, x2, y2,
                               color=self.pickcolor),
             self.dc.Point(x, y, 10, color='red'),
-            self.dc.Text(x1, y2+4, "Pick: calc",
+            self.dc.Text(x1, y2+4, '{0}: calc'.format(self._textlabel),
                          color=self.pickcolor)))
         self.picktag = tag
 
