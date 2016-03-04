@@ -32,7 +32,8 @@ tab_idx = 0
 _app = None
 
 
-default_font = 'Ariel 8'
+default_font = Bunch.Bunch(family='Arial', point_size='8',
+                           style='normal', weight='normal')
 
 # BASE
 class WidgetBase(Callback.Callbacks):
@@ -271,16 +272,26 @@ class Label(WidgetBase):
             self.fgcolor = fg
         if bg is not None:
             self.bgcolor = bg
+        style = self._compose_style()
+        app = self.get_app()
+        app.do_operation('update_style', id=self.id, value=style)
 
-    def render(self):
-        # TODO: render font, alignment, style, menu, clickable
+    def _compose_style(self):
         style = ""
         #style += ("text-align: %s; " % self.halign)
         if self.fgcolor is not None:
             style += ("color: %s; " % self.fgcolor)
         if self.bgcolor is not None:
             style += ("background-color: %s; " % self.bgcolor)
+        style += ("font-family: %s; " % self.font.family)
+        style += ("font-size: %s; "   % self.font.point_size)
+        style += ("font-style: %s; "  % self.font.style)
+        style += ("font-weight: %s; " % self.font.weight)
+        return style
 
+    def render(self):
+        # TODO: render font, alignment, style, menu, clickable
+        style = self._compose_style()
         d = dict(id=self.id, text=self.text, style=style)
         return '''<span id=%(id)s style="%(style)s">%(text)s</span>''' % d
 

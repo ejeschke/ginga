@@ -302,8 +302,8 @@ class RGBMapper(Callback.Callbacks):
         xi = numpy.mgrid[0:new_wd]
         iscale_x = float(old_wd) / float(new_wd)
 
-        xi *= iscale_x
-        xi = xi.astype('int').clip(0, old_wd-1)
+        xi = (xi * iscale_x).astype('int')
+        xi = xi.clip(0, old_wd-1)
         newdata = sarr[xi]
         return newdata
 
