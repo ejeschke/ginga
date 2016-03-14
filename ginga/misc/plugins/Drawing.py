@@ -4,10 +4,16 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+
+# THIRD-PARTY
+import numpy as np
+
+# LOCSL
 from ginga import GingaPlugin
 from ginga import colors
 from ginga.gw import Widgets
 from ginga.misc import ParamSet, Bunch
+from ginga.util import dp
 
 draw_colors = colors.get_colors()
 
@@ -16,7 +22,9 @@ default_drawcolor = 'lightblue'
 fillkinds = ('circle', 'rectangle', 'polygon', 'triangle', 'righttriangle',
              'square', 'ellipse', 'box')
 
+
 class Drawing(GingaPlugin.LocalPlugin):
+    """Local plugin to draw shapes on canvas."""
 
     def __init__(self, fv, fitsimage):
         # superclass defines some variables for us, like logger
@@ -48,6 +56,10 @@ class Drawing(GingaPlugin.LocalPlugin):
         self.drawparams_cache = {}
         # holds object being edited
         self.edit_obj = None
+
+        # For mask creation from drawn objects
+        self._drawn_tags = []
+        self._mask_prefix = 'drawing'
 
     def build_gui(self, container):
         top = Widgets.VBox()
@@ -124,7 +136,7 @@ class Drawing(GingaPlugin.LocalPlugin):
         captions = (("Rotate By:", 'label', 'Rotate By', 'entry',
                      "Scale By:", 'label', 'Scale By', 'entry'),
                     ("Delete Obj", 'button', "sp1", 'spacer',
-                     "sp2", 'spacer', "Clear canvas", 'button'),
+                     "Create mask", 'button', "Clear canvas", 'button'),
                     )
         w, b = Widgets.build_info(captions)
         self.w.update(b)
@@ -139,6 +151,8 @@ class Drawing(GingaPlugin.LocalPlugin):
         b.rotate_by.set_text('90.0')
         b.rotate_by.set_tooltip("Rotate selected object in edit mode")
         b.rotate_by.set_enabled(False)
+        b.create_mask.add_callback('activated', lambda w: self.create_mask())
+        b.create_mask.set_tooltip("Create boolean mask from drawing")
         b.clear_canvas.add_callback('activated', lambda w: self.clear_canvas())
         b.clear_canvas.set_tooltip("Delete all drawing objects")
 
@@ -160,6 +174,7 @@ class Drawing(GingaPlugin.LocalPlugin):
 
         container.add_widget(top, stretch=1)
 
+        self.toggle_create_button()
 
     def close(self):
         self.fv.stop_local_plugin(self.chname, str(self))
@@ -209,6 +224,8 @@ For polygons/paths press 'v' to create a vertex, 'z' to remove last vertex.""")
 
     def draw_cb(self, canvas, tag):
         obj = canvas.getObjectByTag(tag)
+        self._drawn_tags.append(tag)
+        self.toggle_create_button()
         self.logger.info("drew a %s" % (obj.kind))
         return True
 
@@ -331,11 +348,77 @@ For polygons/paths press 'v' to create a vertex, 'z' to remove last vertex.""")
                 self.set_drawparams_cb()
         return True
 
+    def toggle_create_button(self):
+        """Enable or disable Create Mask button based on drawn objects."""
+        if len(self._drawn_tags) > 0:
+            self.w.create_mask.set_enabled(True)
+        else:
+            self.w.create_mask.set_enabled(False)
+
+    def create_mask(self):
+        """Create boolean mask from drawing.
+
+        All areas enclosed by all the shapes drawn will be set to 1 (True)
+        in the mask. Otherwise, the values will be set to 0 (False).
+        The mask will be inserted as a new image buffer, like ``Mosaic``.
+
+        """
+        ntags = len(self._drawn_tags)
+
+        if ntags == 0:
+            return
+
+        old_image = self.fitsimage.get_image()
+
+        if old_image is None:
+            return
+
+        mask = np.zeros(old_image.shape).astype(np.bool)
+        obj_kinds = set()
+
+        # Create mask
+        for tag in self._drawn_tags:
+            obj = self.canvas.get_object_by_tag(tag)
+
+            try:
+                cur_mask = old_image.get_shape_mask(obj)
+            except Exception as e:
+                self.logger.error('Cannot create mask: {0}'.format(str(e)))
+                continue
+
+            mask |= cur_mask
+            obj_kinds.add(obj.kind)
+
+        # Might be useful to inherit header from displayed image (e.g., WCS)
+        # but the displayed image should not be modified.
+        # Bool needs to be converted to int so FITS writer would not crash.
+        image = dp.make_image(mask.astype(np.int16), old_image, {},
+                              pfx=self._mask_prefix)
+        imname = image.get('name')
+
+        # Insert new image
+        self.fv.gui_call(self.fv.add_image, imname, image, chname=self.chname)
+
+        # This sets timestamp
+        image.make_callback('modified')
+
+        # Add change log to ChangeHistory
+        s = 'Mask created from {0} drawings ({1})'.format(
+            ntags, ','.join(sorted(obj_kinds)))
+        iminfo = self.chinfo.get_image_info(imname)
+        iminfo.reason_modified = s
+        self.logger.info(s)
+
     def clear_canvas(self):
         self.canvas.clear_selected()
         self.canvas.deleteAllObjects()
+        self._drawn_tags = []
+        self.toggle_create_button()
 
     def delete_object(self):
+        tag = self.canvas.lookup_object_tag(self.canvas._edit_obj)
+        self._drawn_tags.remove(tag)
+        self.toggle_create_button()
         self.canvas.edit_delete()
         self.canvas.redraw(whence=2)
 
