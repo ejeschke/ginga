@@ -4,11 +4,6 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-
-# THIRD-PARTY
-import numpy as np
-
-# LOCSL
 from ginga import GingaPlugin
 from ginga import colors
 from ginga.gw import Widgets
@@ -373,7 +368,7 @@ For polygons/paths press 'v' to create a vertex, 'z' to remove last vertex.""")
         if old_image is None:
             return
 
-        mask = np.zeros(old_image.shape).astype(np.bool)
+        mask = None
         obj_kinds = set()
 
         # Create mask
@@ -386,13 +381,17 @@ For polygons/paths press 'v' to create a vertex, 'z' to remove last vertex.""")
                 self.logger.error('Cannot create mask: {0}'.format(str(e)))
                 continue
 
-            mask |= cur_mask
+            if mask is not None:
+                mask |= cur_mask
+            else:
+                mask = cur_mask
+
             obj_kinds.add(obj.kind)
 
         # Might be useful to inherit header from displayed image (e.g., WCS)
         # but the displayed image should not be modified.
         # Bool needs to be converted to int so FITS writer would not crash.
-        image = dp.make_image(mask.astype(np.int16), old_image, {},
+        image = dp.make_image(mask.astype('int16'), old_image, {},
                               pfx=self._mask_prefix)
         imname = image.get('name')
 
