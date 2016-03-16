@@ -29,7 +29,7 @@ class TestCmap(unittest.TestCase):
         actual = test_color_map.name
         assert expected == actual
 
-        expected = 256
+        expected = ginga.cmap.min_cmap_len
         actual = len(test_color_map.clst)
         assert expected == actual
 
@@ -69,7 +69,8 @@ class TestCmap(unittest.TestCase):
 
     def test_add_cmap_exception(self):
         test_clst = ((0.0, 0.0, 0.0), (1.0, 1.0, 1.0))
-        self.assertRaises(AssertionError, ginga.cmap.add_cmap, 'test-name', test_clst)
+        self.assertRaises(
+            AssertionError, ginga.cmap.add_cmap, 'test-name', test_clst)
 
     def test_get_cmap(self):
         test_clst = tuple([(x, x, x)

@@ -28,7 +28,7 @@ class TestCmap(unittest.TestCase):
         actual = test_intensity_map.name
         assert expected == actual
 
-        expected = 256
+        expected = ginga.imap.min_imap_len
         actual = len(test_intensity_map.ilst)
         assert expected == actual
 
