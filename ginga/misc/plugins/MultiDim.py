@@ -18,6 +18,7 @@ from ginga.util import iohelper
 
 import numpy as np
 import matplotlib.pyplot as plt
+import copy
 
 have_mencoder = False
 if spawn.find_executable("mencoder"):
@@ -143,8 +144,8 @@ class MultiDim(GingaPlugin.LocalPlugin):
         b.interval.set_enabled(False)
         vbox.add_widget(w, stretch=0)
 
-        captions = [("Slice:", 'label', "Slice", 'llabel',
-                     "Value:", 'label', "Value", 'llabel'),
+        captions = [("Slice:", 'label', "Slice", 'llabel',),
+                     #"Value:", 'label', "Value", 'llabel'),
                     ("Save Slice", 'button'),
                     ]
         w, b = Widgets.build_info(captions, orientation=orientation)
@@ -227,12 +228,13 @@ class MultiDim(GingaPlugin.LocalPlugin):
                                  #"Choose %s" % (title), 'spinbutton'))
                                  "Choose %s" % (title), 'hscale'))
 
-        radiobuttons = []
-        for i in range(2, len(dims)):
-            title = 'AXIS%d' % (i+1)
-            radiobuttons.extend((title,'radiobutton'))
-        captions.append(radiobuttons)
-        
+        if len(dims) > 3: # only add radiobuttons if we have more than 3 dimensions
+            radiobuttons = []
+            for i in range(2, len(dims)):
+                title = 'AXIS%d' % (i+1)
+                radiobuttons.extend((title,'radiobutton'))
+            captions.append(radiobuttons)
+            
         # Remove old naxis widgets
         for key in self.w:
             if key.startswith('choose_'):
@@ -262,24 +264,35 @@ class MultiDim(GingaPlugin.LocalPlugin):
 
         # for storing play_idx for each dim of image. used for going back to
         # the idx where you left off.
-        self.play_indices = [0 for i in range(len(dims) - 2)]
+        self.play_indices = [0 for i in range(len(dims) - 2)] if len(dims) > 3 else None
 
-        def play_axis_change_func_creator(n):
-            def play_axis_change():
-                # print "play_axis changed to %d" % n
-                # print "play_idx switch from %d to %d" %(self.play_indices[self.play_axis-2], self.play_indices[n-2])
-                self.play_indices[self.play_axis - 2] = self.play_idx
-                self.play_axis = n
-                if self.play_axis < len(dims):
-                    self.play_max = dims[self.play_axis]
-                self.play_idx = self.play_indices[n - 2]
-            return play_axis_change
+        if len(dims) > 3:
+        
+            # dims only exists in here, hence this function exists here
+            def play_axis_change_func_creator(n):
+                # widget callable needs (widget, value) args
+                def play_axis_change():
+                    
+                    self.play_indices[self.play_axis - 2] = (self.play_idx - 1) % dims[self.play_axis]
+                    
+                    self.play_axis = n
+                    self.logger.debug("play_axis changed to %d" % n)
+                    
+                    if self.play_axis < len(dims):
+                        self.play_max = dims[self.play_axis]
+                        
+                    self.play_idx = self.play_indices[n - 2]
+                    
+                def check_if_we_need_change(w,v):
+                    if self.play_axis is not n:
+                        play_axis_change()
+                
+                return check_if_we_need_change
 
-        for n in range(2, len(dims)):
-            key = 'axis%d' % (n + 1)
-            # the following line doesn't trigger, hence, the hack in the following line
-            # self.w[key].set_callback('activated', play_axis_change_func_creator(n) )
-            self.w[key].widget.toggled.connect(play_axis_change_func_creator(n))
+            for n in range(2, len(dims)):
+                key = 'axis%d' % (n + 1)
+                self.w[key].add_callback('activated', play_axis_change_func_creator(n))
+
             
         self.play_axis = 2
         if self.play_axis < len(dims):
@@ -450,15 +463,15 @@ class MultiDim(GingaPlugin.LocalPlugin):
             image.set_naxispath(self.naxispath)
             self.logger.debug("NAXIS%d slice %d loaded." % (n+1, idx+1))
 
-            if n == 2:
-                # Try to print the spectral coordinate
-                try:
-                    specval = image.spectral_coord()
-                    self.w.slice.set_text(str(idx+1))
-                    self.w.value.set_text(str(specval))
-                except:
-                    pass
-
+           
+            
+            if self.play_indices:
+                text = self.play_indices
+                text[m]= idx
+            else:
+                text = idx
+            self.w.slice.set_text(str(text))
+                
         except Exception as e:
             errmsg = "Error loading NAXIS%d slice %d: %s" % (
                 n+1, idx+1, str(e))
