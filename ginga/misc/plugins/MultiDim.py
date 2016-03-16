@@ -227,6 +227,12 @@ class MultiDim(GingaPlugin.LocalPlugin):
                                  #"Choose %s" % (title), 'spinbutton'))
                                  "Choose %s" % (title), 'hscale'))
 
+        radiobuttons = []
+        for i in range(2, len(dims)):
+            title = 'AXIS%d' % (i+1)
+            radiobuttons.extend((title,'radiobutton'))
+        captions.append(radiobuttons)
+        
         # Remove old naxis widgets
         for key in self.w:
             if key.startswith('choose_'):
@@ -254,6 +260,27 @@ class MultiDim(GingaPlugin.LocalPlugin):
         # Add vbox of naxis controls to gui
         self.naxisfr.set_widget(w)
 
+        # for storing play_idx for each dim of image. used for going back to
+        # the idx where you left off.
+        self.play_indices = [0 for i in range(len(dims) - 2)]
+
+        def play_axis_change_func_creator(n):
+            def play_axis_change():
+                # print "play_axis changed to %d" % n
+                # print "play_idx switch from %d to %d" %(self.play_indices[self.play_axis-2], self.play_indices[n-2])
+                self.play_indices[self.play_axis - 2] = self.play_idx
+                self.play_axis = n
+                if self.play_axis < len(dims):
+                    self.play_max = dims[self.play_axis]
+                self.play_idx = self.play_indices[n - 2]
+            return play_axis_change
+
+        for n in range(2, len(dims)):
+            key = 'axis%d' % (n + 1)
+            # the following line doesn't trigger, hence, the hack in the following line
+            # self.w[key].set_callback('activated', play_axis_change_func_creator(n) )
+            self.w[key].widget.toggled.connect(play_axis_change_func_creator(n))
+            
         self.play_axis = 2
         if self.play_axis < len(dims):
             self.play_max = dims[self.play_axis]
@@ -415,9 +442,8 @@ class MultiDim(GingaPlugin.LocalPlugin):
             if image is None:
                 raise ValueError("Please load an image cube")
 
-            # invert index
-            naxislen = 2 + len(image.naxispath)
-            m = naxislen - (n+1)
+            m = n - 2
+            
             self.naxispath[m] = idx
             self.logger.debug("m=%d naxispath=%s" % (m, str(self.naxispath)))
 
