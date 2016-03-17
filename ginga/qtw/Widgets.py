@@ -386,6 +386,7 @@ class Slider(WidgetBase):
         else:
             w = QtGui.QSlider(QtCore.Qt.Vertical)
             w.setTickPosition(QtGui.QSlider.TicksRight)
+        #w.setTickPosition(QtGui.QSlider.NoTicks)
         # this controls whether the callbacks are made *as the user
         # moves the slider* or afterwards
         w.setTracking(track)
@@ -395,9 +396,13 @@ class Slider(WidgetBase):
         self.enable_callback('value-changed')
 
     def _cb_redirect(self, val):
-        if self.changed:
-            self.changed = False
-            return
+        # It appears that Qt uses set_value() to set the value of the
+        # slider when it is dragged, so we cannot use the usual method
+        # of setting a hidden "changed" variable to suppress the callback
+        # when setting the value programmatically.
+        ## if self.changed:
+        ##     self.changed = False
+        ##     return
         self.make_callback('value-changed', val)
 
     def get_value(self):

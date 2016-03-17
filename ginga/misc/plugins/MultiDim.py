@@ -234,7 +234,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
                 title = 'AXIS%d' % (i+1)
                 radiobuttons.extend((title,'radiobutton'))
             captions.append(radiobuttons)
-            
+
         # Remove old naxis widgets
         for key in self.w:
             if key.startswith('choose_'):
@@ -247,7 +247,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
             lbl = b[key]
             maxn = int(dims[n])
             lbl.set_text("%d" % maxn)
-            slkey = 'choose_'+key
+            slkey = 'choose_' + key
             if slkey in b:
                 slider = b[slkey]
                 lower = 1
@@ -267,26 +267,26 @@ class MultiDim(GingaPlugin.LocalPlugin):
         self.play_indices = [0 for i in range(len(dims) - 2)] if len(dims) > 3 else None
 
         if len(dims) > 3:
-        
+
             # dims only exists in here, hence this function exists here
             def play_axis_change_func_creator(n):
                 # widget callable needs (widget, value) args
                 def play_axis_change():
-                    
+
                     self.play_indices[self.play_axis - 2] = (self.play_idx - 1) % dims[self.play_axis]
-                    
+
                     self.play_axis = n
                     self.logger.debug("play_axis changed to %d" % n)
-                    
+
                     if self.play_axis < len(dims):
                         self.play_max = dims[self.play_axis]
-                        
+
                     self.play_idx = self.play_indices[n - 2]
-                    
+
                 def check_if_we_need_change(w,v):
                     if self.play_axis is not n:
                         play_axis_change()
-                
+
                 return check_if_we_need_change
 
             for n in range(2, len(dims)):
@@ -295,7 +295,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
                 if n == 2:
                     self.w[key].set_state(True)
 
-            
+
         self.play_axis = 2
         if self.play_axis < len(dims):
             self.play_max = dims[self.play_axis]
@@ -458,22 +458,22 @@ class MultiDim(GingaPlugin.LocalPlugin):
                 raise ValueError("Please load an image cube")
 
             m = n - 2
-            
+
             self.naxispath[m] = idx
             self.logger.debug("m=%d naxispath=%s" % (m, str(self.naxispath)))
 
             image.set_naxispath(self.naxispath)
             self.logger.debug("NAXIS%d slice %d loaded." % (n+1, idx+1))
 
-           
-            
+
+
             if self.play_indices:
                 text = self.play_indices
                 text[m]= idx
             else:
                 text = idx
             self.w.slice.set_text(str(text))
-                
+
         except Exception as e:
             errmsg = "Error loading NAXIS%d slice %d: %s" % (
                 n+1, idx+1, str(e))
