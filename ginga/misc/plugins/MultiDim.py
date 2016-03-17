@@ -292,6 +292,8 @@ class MultiDim(GingaPlugin.LocalPlugin):
             for n in range(2, len(dims)):
                 key = 'axis%d' % (n + 1)
                 self.w[key].add_callback('activated', play_axis_change_func_creator(n))
+                if n == 2:
+                    self.w[key].set_state(True)
 
             
         self.play_axis = 2
