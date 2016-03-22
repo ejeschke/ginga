@@ -57,9 +57,10 @@ class EnhancedCanvasView(Viewers.CanvasView):
         canvas = DrawingCanvas()
         # enable drawing on the canvas
         canvas.enable_draw(True)
-        #canvas.enable_edit(True)
+        canvas.enable_edit(True)
         canvas.ui_setActive(True)
         canvas.set_surface(self)
+        canvas.register_for_cursor_drawing(self)
         # add the canvas to the view.
         my_canvas.add(canvas, tag=tag)
 
@@ -96,18 +97,22 @@ class ImageViewer(object):
         bd = fi.get_bindings()
         bd.enable_all(True)
 
+        # adjustment so trackpad scrolling can be adjusted
+        settings = bd.get_settings()
+        settings.set(scroll_zoom_direct_scale=True)
+
         # canvas that we will draw on
         canvas = self.dc.DrawingCanvas()
-        canvas.enable_draw(True)
-        canvas.enable_edit(True)
-        canvas.set_drawtype('rectangle', color='lightblue')
+        #canvas.enable_draw(True)
+        #canvas.enable_edit(True)
+        #canvas.set_drawtype('rectangle', color='lightblue')
         canvas.setSurface(fi)
         self.canvas = canvas
         # add canvas to view
         private_canvas = fi.get_canvas()
         private_canvas.add(canvas)
         canvas.ui_setActive(True)
-        canvas.register_for_cursor_drawing(fi)
+        #canvas.register_for_cursor_drawing(fi)
         fi.set_canvas(canvas)
         ## self.drawtypes = canvas.get_drawtypes()
         ## self.drawtypes.sort()
@@ -249,10 +254,11 @@ class ViewerFactory(object):
             pass
 
         #  create top level window
-        window = self.app.make_window("Viewer %s" % v_id)
+        window = self.app.make_window("Viewer %s" % v_id, wid=v_id)
 
         # our own viewer object, customized with methods (see above)
         viewer = ImageViewer(self.logger, window)
+        viewer.url = window.url
 
         self.viewers[v_id] = viewer
         return viewer
@@ -318,8 +324,10 @@ class WebServer(object):
         from IPython.display import display, HTML
         v = self.factory.get_viewer(v_id)
         url = v.top.url
-        display(HTML('<a href="%s">link to viewer</a>' % url))
-        return v.fitsimage
+        viewer = v.fitsimage
+        viewer.url = url
+        #display(HTML('<a href="%s">link to viewer</a>' % url))
+        return viewer
 
 
 def make_server(logger=None, basedir='.', numthreads=5,
@@ -340,7 +348,8 @@ def make_server(logger=None, basedir='.', numthreads=5,
                                   ev_quit=ev_quit)
 
     base_url = "http://%s:%d/app" % (host, port)
-    app = Widgets.Application(logger=logger, base_url=base_url)
+    app = Widgets.Application(logger=logger, base_url=base_url,
+                              host=host, port=port)
 
     factory = ViewerFactory(logger, basedir, app, thread_pool)
 

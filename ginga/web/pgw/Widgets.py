@@ -1416,9 +1416,9 @@ class Application(Callback.Callbacks):
     def get_wids(self):
         return list(self.window_dict.keys())
 
-    def make_window(self, title=None):
+    def make_window(self, title=None, wid=None):
         w = TopLevel(title=title)
-        self.add_window(w)
+        self.add_window(w, wid=wid)
         return w
 
     def _cb_redirect(self, event):
