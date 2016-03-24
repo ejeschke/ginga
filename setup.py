@@ -74,7 +74,8 @@ setup(
                      'ginga.fonts': ['*/*.ttf', '*/*.txt'],
                      'ginga': ['examples/*/*'],
                      },
-    scripts = ['scripts/ginga', 'scripts/grc', 'scripts/gris'],
+    scripts = ['scripts/grc', 'scripts/gris'],
+    entry_points = {'console_scripts': 'ginga = ginga.main:_main'},
     install_requires = ['numpy>=1.7'],
     test_suite = "ginga.tests.ginga_test_suite",
     classifiers=[
