@@ -38,7 +38,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 from __future__ import print_function
 
 # stdlib imports
-import sys, os
+import sys
+import os
 import logging, logging.handlers
 import threading
 import traceback
@@ -552,5 +553,10 @@ def reference_viewer(sys_argv):
 
     else:
         viewer.main(options, args)
+
+
+def _main():
+    """Run from command line."""
+    reference_viewer(sys.argv)
 
 # END
