@@ -1,9 +1,6 @@
 #
 # BaseImage.py -- Abstraction of an generic data image.
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -392,6 +389,9 @@ class BaseImage(Callback.Callbacks):
         If `getvalues`==False then it will return tuples of (x, y) coordinates
         instead of pixel values.
         """
+        # NOTE: seems to be necessary or we get a non-terminating result
+        x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
+        
         dx = abs(x2 - x1)
         dy = abs(y2 - y1)
         if x1 < x2:
