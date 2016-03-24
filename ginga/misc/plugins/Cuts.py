@@ -626,7 +626,7 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         spatial_axes = [naxes-1, naxes-2]
 
         # Build N-dim slice
-        axes_slice = [0] * naxes
+        axes_slice = image.revnaxis + [0, 0]
 
         # Slice data according to axis
         for i, sa in enumerate(spatial_axes):
