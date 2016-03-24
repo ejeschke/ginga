@@ -137,7 +137,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         canvas.setSurface(self.fitsimage)
         self.canvas = canvas
 
-        self.use_slit = self.settings.get('enable_slit', False)
+        self.use_slit = self.settings.get('enable_slit', True)
         self.cuts_image = None
 
         self.gui_up = False
