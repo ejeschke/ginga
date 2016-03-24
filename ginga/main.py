@@ -132,11 +132,11 @@ local_plugins = [
     Bunch(module='Preferences', ws='dialogs', shortkey='f9'),
     Bunch(module='Catalogs', ws='dialogs', shortkey='f10'),
     Bunch(module='Mosaic', ws='dialogs'),
-    # Not ready for prime time
-    #Bunch(module='Pipeline', ws='dialogs'),
     Bunch(module='Drawing', ws='dialogs', shortkey='f11'),
     Bunch(module='FBrowser', ws='dialogs', shortkey='f12'),
     Bunch(module='Compose', ws='dialogs'),
+    # Not ready for prime time
+    #Bunch(module='Pipeline', ws='dialogs'),
     ]
 
 

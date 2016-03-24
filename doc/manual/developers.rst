@@ -380,7 +380,7 @@ rulers on the image.  For reference, you may want to refer to the ruler
 shown in :ref:`fig6`.
 
 .. _fig6:
-.. figure:: figures/ruler_plugin.png
+.. figure:: plugins_local/figures/ruler_plugin.png
    :scale: 100%
    :figclass: thb
 
