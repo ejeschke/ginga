@@ -138,6 +138,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         self.canvas = canvas
 
         self.use_slit = self.settings.get('enable_slit', False)
+        self.cuts_image = None
 
         self.gui_up = False
 
@@ -347,7 +348,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         if image is not None:
             # Add Checkbox widgets
             # `image.naxispath` returns only mdim axes
-            for i in xrange(1, len(image.naxispath)+3):
+            for i in range(1, len(image.naxispath)+3):
                 chkbox = Widgets.CheckBox('NAXIS%d' % i)
                 self.hbox_axes.add_widget(chkbox)
 
@@ -481,6 +482,7 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         self.canvas.ui_setActive(True)
         self.fv.showStatus("Draw a line with the right mouse button")
         self.replot_all()
+        self.cuts_image = self.fitsimage.get_image()
 
     def stop(self):
         # remove the canvas from the image
@@ -493,7 +495,10 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         existing image changes.
         """
         if self.use_slit:
-            self.build_axes()
+            image = self.fitsimage.get_image()
+            if image != self.cuts_image:
+                self.build_axes()
+        self.cuts_image = image
 
         self.replot_all()
 
