@@ -374,11 +374,11 @@ class RenderMixin(object):
     def keyPressEvent(self, event):
         # without this we do not get key release events if the focus
         # changes to another window
-        self.grabKeyboard()
+        #self.grabKeyboard()
         self.viewer.key_press_event(self, event)
 
     def keyReleaseEvent(self, event):
-        self.releaseKeyboard()
+        #self.releaseKeyboard()
         self.viewer.key_release_event(self, event)
 
     def mousePressEvent(self, event):
