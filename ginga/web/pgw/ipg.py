@@ -2,9 +2,6 @@
 #
 # ipg.py -- Module for simple FITS viewer in an HTML5 canvas web browser.
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c)  Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -97,7 +94,7 @@ class ImageViewer(object):
         bd = fi.get_bindings()
         bd.enable_all(True)
 
-        # adjustment so trackpad scrolling can be adjusted
+        # so trackpad scrolling can be adjusted
         settings = bd.get_settings()
         settings.set(scroll_zoom_direct_scale=True)
 

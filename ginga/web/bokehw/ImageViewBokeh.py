@@ -15,7 +15,7 @@ from io import BytesIO
 
 # Bokeh imports
 from bokeh.plotting import figure, show, curdoc
-from bokeh.models import BoxSelectTool, TapTool
+from bokeh.models import BoxSelectTool, TapTool, PanTool
 #from bokeh.client import push_session
 #from bokeh.io import push_notebook
 
@@ -193,6 +193,8 @@ class ImageViewBokeh(ImageView.ImageViewBase):
         # Holds the image on the plot
         self.bkimage = None
         self._push_server = False
+
+        self.defer_redraw = False
 
         # NOTE: Bokeh manages it's Y coordinates by default with
         # the origin at the bottom (see base class)
@@ -462,6 +464,8 @@ class ImageViewEvent(ImageViewBokeh):
 
         ## self._box_select_tool = self.figure.select(dict(type=BoxSelectTool))
         ## self._box_select_tool.select_every_mousemove = True
+        self._pan_tool = self.figure.select(dict(type=PanTool))
+        #self._pan_tool.select_every_mousemove = True
 
         ## connect = figure.canvas.mpl_connect
         ## #connect("map_event", self.map_event)
@@ -479,6 +483,7 @@ class ImageViewEvent(ImageViewBokeh):
         ## connect("scroll_event", self.scroll_event)
 
         # TODO: drag-drop event
+        pass
 
     def transkey(self, keyname):
         self.logger.debug("matplotlib keyname='%s'" % (keyname))

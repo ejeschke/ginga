@@ -1,11 +1,12 @@
 from __future__ import print_function
+import sys, os
 
 from bokeh.plotting import figure, curdoc, vplot
 from bokeh.models.widgets import TextInput
 #from bokeh.io import vform
 
 from ginga.web.bokehw import ImageViewBokeh as ib
-from ginga.misc.log import get_logger
+from ginga.misc import log
 from ginga.AstroImage import AstroImage
 
 def main(options, args):

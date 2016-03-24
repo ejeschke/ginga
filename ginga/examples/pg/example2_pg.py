@@ -2,9 +2,6 @@
 #
 # example2.py -- Simple, configurable FITS viewer.
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c)  Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -47,6 +44,10 @@ class FitsViewer(object):
 
         bd = fi.get_bindings()
         bd.enable_all(True)
+
+        # so trackpad scrolling can be adjusted
+        settings = bd.get_settings()
+        settings.set(scroll_zoom_direct_scale=True)
 
         # canvas that we will draw on
         canvas = self.dc.DrawingCanvas()

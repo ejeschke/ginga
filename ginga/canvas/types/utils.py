@@ -232,6 +232,8 @@ class ModeIndicator(CanvasObjectBase):
 
         if mode_type == 'locked':
             text = '%s [L]' % (mode)
+        elif mode_type == 'softlock':
+            text = '%s [SL]' % (mode)
         else:
             text = mode
 

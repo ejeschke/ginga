@@ -51,6 +51,9 @@ dmod_rotate = ['r', None, None]
 dmod_pan = ['q', None, None]
 dmod_freepan = ['w', None, None]
 
+default_mode_type = 'oneshot'
+default_lock_mode_type = 'softlock'
+
 # KEYPRESS commands
 kp_zoom_in = ['+', '=']
 kp_zoom_out = ['-', '_']

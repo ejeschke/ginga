@@ -80,6 +80,9 @@ class ImageViewBindings(object):
             dmod_pan = ['q', None, None],
             dmod_freepan = ['w', None, None],
 
+            default_mode_type = 'oneshot',
+            default_lock_mode_type = 'softlock',
+
             # KEYBOARD
             kp_zoom_in = ['+', '='],
             kp_zoom_out = ['-', '_'],
@@ -229,6 +232,9 @@ class ImageViewBindings(object):
         # First scan settings for buttons and modes
         bindmap.clear_modifier_map()
         bindmap.clear_mode_map()
+
+        mode_type = self.settings.get('default_mode_type', 'oneshot')
+        bindmap.set_default_mode_type(mode_type)
 
         for name, value in d.items():
             if name.startswith('mod_'):
@@ -981,13 +987,14 @@ class ImageViewBindings(object):
         # get current mode
         mode_name, cur_modetype = bm.current_mode()
 
-        if dfl_modetype == 'locked':
+        if dfl_modetype in ('locked', 'softlock'):
             mode_type = 'oneshot'
             bm.set_default_mode_type(mode_type)
             # turning off lock also resets the mode
             bm.reset_mode(viewer)
         else:
-            mode_type = 'locked'
+            # install the default lock type
+            mode_type = self.settings.get('default_lock_mode_type', 'softlock')
             bm.set_default_mode_type(mode_type)
             bm.set_mode(mode_name, mode_type=mode_type)
         return True
@@ -1504,9 +1511,9 @@ class BindingMapper(Callback.Callbacks):
         self.eventmap = {}
 
         self._kbdmode = None
-        self._kbdmode_types = ('held', 'oneshot', 'locked')
+        self._kbdmode_types = ('held', 'oneshot', 'locked', 'softlock')
         self._kbdmode_type = 'held'
-        self._kbdmode_type_default = 'oneshot'
+        self._kbdmode_type_default = 'softlock'
         self._delayed_reset = False
         self._modifiers = frozenset([])
 
@@ -1685,6 +1692,14 @@ class BindingMapper(Callback.Callbacks):
                     self._delayed_reset = False
                 return False
 
+            if self._kbdmode_type == 'softlock':
+                if bnch.name == self._kbdmode:
+                    # pressing same key that started the mode cancels it
+                    # otherwise switch to the new mode
+                    self.reset_mode(viewer)
+                    return
+                self.reset_mode(viewer)
+                
             # if there is not a mode active now,
             # activate this one
             if self._kbdmode is None:
