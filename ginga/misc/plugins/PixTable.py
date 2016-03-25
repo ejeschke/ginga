@@ -293,6 +293,10 @@ class PixTable(GingaPlugin.LocalPlugin):
             return
         # cut out and set the pixel table data
         image = self.fitsimage.get_image()
+
+        if image is None:
+            return
+
         data, x1, y1, x2, y2 = image.cutout_radius(self.lastx, self.lasty,
                                                    self.pixtbl_radius)
         self.plot(data, x1, y1, x2, y2, self.lastx, self.lasty,
