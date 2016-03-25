@@ -4,12 +4,17 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+
+# STDLIB
 import math
 import time
-import numpy
 import os.path
 import threading
 
+# THIRD-PARTY
+import numpy
+
+# GINGA
 from ginga import AstroImage
 from ginga.util import mosaic
 from ginga.util import wcs, iqcalc, dp
@@ -21,6 +26,7 @@ try:
     have_pyfits = True
 except ImportError:
     have_pyfits = False
+
 
 class Mosaic(GingaPlugin.LocalPlugin):
 
@@ -40,6 +46,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
         # holds processed images to be inserted into mosaic image
         self.images = []
         self.total_files = 0
+        self._pfx = 'mosaic'
 
         self.dc = self.fv.getDrawClasses()
 
@@ -70,8 +77,12 @@ class Mosaic(GingaPlugin.LocalPlugin):
         # hook to allow special processing before inlining
         self.preprocess = lambda x: x
 
-        self.gui_up = False
+        fv.add_callback('add-image', self.add_image_cb)
+        fv.add_callback('add-image-info', self.add_image_info_cb)
+        fv.add_callback('remove-image', self.remove_image_cb)
+        fv.add_callback('delete-channel', self.delete_channel_cb)
 
+        self.gui_up = False
 
     def build_gui(self, container):
         top = Widgets.VBox()
@@ -248,7 +259,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
                                                rot_deg,
                                                cdbase=cdbase,
                                                logger=self.logger,
-                                               pfx='mosaic',
+                                               pfx=self._pfx,
                                                dtype=dtype)
 
             if name is not None:
@@ -280,7 +291,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
                                           rot_deg,
                                           cdbase=cdbase,
                                           logger=self.logger,
-                                          pfx='mosaic')
+                                          pfx=self._pfx)
 
         header = img_mosaic.get_header()
         (rot, cdelt1, cdelt2) = wcs.get_rotation_and_scale(header,
@@ -390,6 +401,50 @@ class Mosaic(GingaPlugin.LocalPlugin):
         self.fv.nongui_do(self.fv.error_wrap, self.mosaic, paths,
                           new_mosaic=new_mosaic)
         return True
+
+    def _mos_check(self, name):
+        """This is for error_wrap() invoked on deletion.
+        Also does mosaic clean-up."""
+        if name is not None and name.startswith(self._pfx):
+
+            # Clean up, but only reset if it is current active mosaic.
+            if name == self.img_mosaic.get('name'):
+                self.img_mosaic = None
+
+            # Emit user facing error.
+            raise ValueError('{0} is no longer accessible after '
+                             'deletion'.format(name))
+
+    def add_image_cb(self, viewer, chname, image, image_info):
+        """Check if mosaic fell out of cache."""
+        if not self.gui_up or self.img_mosaic is None:
+            return False
+
+        mosname = self.img_mosaic.get('name')
+
+        # Active mosaic fell out of cache, alert user.
+        if mosname not in self.chinfo.datasrc:
+            self.fv.error_wrap(self._mos_check, mosname)
+
+    def add_image_info_cb(self, viewer, channel, image_info):
+        """Almost the same as add_image_info(), except that the image
+        may not be loaded in memory.
+        """
+        # Only check mosaic, not active image.
+        self.add_image_cb(viewer, channel.name, None, image_info)
+
+    def remove_image_cb(self, viewer, chname, name, path):
+        """Issue user facing error when mosaic is deleted."""
+        if not self.gui_up:
+            return False
+
+        # Is the image being removed a mosaic?
+        self.fv.error_wrap(self._mos_check, name)
+
+    # TODO: Do we really need this?
+    def delete_channel_cb(self, viewer, channel):
+        """Clean up when the whole channel is deleted."""
+        self.img_mosaic = None
 
     def annotate_cb(self, widget, tf):
         self.settings.set(annotate_images=tf)
