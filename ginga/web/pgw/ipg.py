@@ -13,7 +13,7 @@ server and view it via a browser.
 
 See example usage with an ipython notebook at:
 
-    http://nbviewer.ipython.org/gist/ejeschke/6067409
+    https://gist.github.com/ejeschke/6067409
 
 You will need a reasonably modern web browser with HTML5 canvas support.
 Tested with Chromium 41.0.2272.76, Firefox 37.0.2, Safari 7.1.6
@@ -36,14 +36,55 @@ from ginga.web.pgw import templates, js, PgHelp, Widgets, Viewers
 
 class EnhancedCanvasView(Viewers.CanvasView):
 
+    def embed(self, width=600, height=650):
+        """
+        Embed a viewer into a Jupyter notebook.
+        """
+        from IPython.display import IFrame
+        return IFrame(self.url, width, height)
+
+    def open(self, new=1):
+        """
+        Open this viewer in a new browser window or tab.
+        (requires `webbrowser` module)
+        """
+        import webbrowser
+        webbrowser.open(self.url, new=new)
+        
     def show(self):
+        """
+        Capture the window of a viewer.
+        """
         from IPython.display import Image
         return Image(data=bytes(self.get_rgb_image_as_bytes(format='png')),
                      format='png', embed=True)
 
-    def load(self, filepath):
+    def load_fits(self, filepath):
+        """
+        Load a FITS file into the viewer.
+        """
         image = AstroImage.AstroImage(logger=self.logger)
         image.load_file(filepath)
+
+        self.set_image(image)
+
+    load = load_fits
+    
+    def load_hdu(self, hdu):
+        """
+        Load an HDU into the viewer.
+        """
+        image = AstroImage.AstroImage(logger=self.logger)
+        image.load_hdu(hdu)
+
+        self.set_image(image)
+
+    def load_data(self, data_np):
+        """
+        Load raw numpy data into the viewer.
+        """
+        image = AstroImage.AstroImage(logger=self.logger)
+        image.set_data(data_np)
 
         self.set_image(image)
 
@@ -66,8 +107,11 @@ class EnhancedCanvasView(Viewers.CanvasView):
 
 class ImageViewer(object):
 
-    def __init__(self, logger, window):
+    def __init__(self, logger, window, viewer_class=None):
+        if viewer_class is None:
+            viewer_class = EnhancedCanvasView
         self.logger = logger
+        self.url = window.url
         self.drawcolors = colors.get_colors()
         self.dc = get_canvas_types()
 
@@ -78,7 +122,8 @@ class ImageViewer(object):
         vbox.set_border_width(2)
         vbox.set_spacing(1)
 
-        fi = EnhancedCanvasView(logger)
+        fi = viewer_class(logger)
+        fi.url = self.url
         fi.enable_autocuts('on')
         fi.set_autocut_params('zscale')
         fi.enable_autozoom('on')
@@ -255,7 +300,7 @@ class ViewerFactory(object):
 
         # our own viewer object, customized with methods (see above)
         viewer = ImageViewer(self.logger, window)
-        viewer.url = window.url
+        #viewer.url = window.url
 
         self.viewers[v_id] = viewer
         return viewer
