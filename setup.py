@@ -1,96 +1,121 @@
-#! /usr/bin/env python
-#
-try:
-    from setuptools import setup
-except ImportError:
-    from distutils.core import setup
-from ginga.version import version
+#!/usr/bin/env python
+# Licensed under a 3-clause BSD style license - see LICENSE.rst
+
+import glob
 import os
+import sys
 
-srcdir = os.path.dirname(__file__)
+import ah_bootstrap
+from setuptools import setup
 
-from distutils.command.build_py import build_py
+#A dirty hack to get around some early import/configurations ambiguities
+if sys.version_info[0] >= 3:
+    import builtins
+else:
+    import __builtin__ as builtins
+builtins._ASTROPY_SETUP_ = True
 
-def read(fname):
-    try:
-        buf = open(os.path.join(srcdir, fname), 'r').read()
-    except Exception:
-        buf = "Ginga astronomic/scientific viewer toolkit"
-    return buf
+from astropy_helpers.setup_helpers import (
+    register_commands, get_debug_option, get_package_info)
+from astropy_helpers.git_helpers import get_git_devstr
+from astropy_helpers.version_helpers import generate_version_py
 
-# not yet working...
-def get_docs():
-    docdir = os.path.join(srcdir, 'doc')
-    res = []
-    # ['../../doc/Makefile', 'doc/conf.py', 'doc/*.rst',
-    #                              'doc/manual/*.rst', 'doc/figures/*.png']
-    return res
+# Get some values from the setup.cfg
+from distutils import config
+conf = config.ConfigParser()
+conf.read(['setup.cfg'])
+metadata = dict(conf.items('metadata'))
 
-setup(
-    name = "ginga",
-    version = version,
-    author = "Eric Jeschke",
-    author_email = "eric@naoj.org",
-    description = ("An astronomical image viewer and toolkit."),
-    long_description = read('README.txt'),
-    license = "BSD",
-    keywords = "scientific image viewer numpy toolkit astronomy FITS",
-    url = "http://ejeschke.github.com/ginga",
-    packages = ['ginga',
-                # Gtk version
-                'ginga.cairow', 'ginga.gtkw', 'ginga.gtkw.plugins',
-                'ginga.gtkw.tests',
-                # Qt version
-                'ginga.qtw', 'ginga.qtw.plugins', 'ginga.qtw.tests',
-                # Tk version
-                'ginga.tkw',
-                # Matplotlib version
-                'ginga.mplw',
-                # aggdraw backend
-                'ginga.aggw',
-                # OpenCv backend
-                'ginga.cvw',
-                # PIL backend
-                'ginga.pilw',
-                # Mock version
-                'ginga.mockw',
-                # Ginga (wrapped) widgets
-                'ginga.gw',
-                # Web backends
-                'ginga.web', 'ginga.web.pgw',
-                'ginga.web.pgw.js', 'ginga.web.pgw.templates',
-                # Common stuff
-                'ginga.misc', 'ginga.misc.plugins', 'ginga.misc.tests',
-                'ginga.canvas', 'ginga.canvas.types', 'ginga.util',
-                # Misc
-                'ginga.icons', 'ginga.doc', 'ginga.tests',
-                'ginga.fonts',
-                ],
-    package_data = { 'ginga.icons': ['*.ppm', '*.png'],
-                     'ginga.gtkw': ['gtk_rc'],
-                     #'ginga.doc': get_docs(),
-                     'ginga.doc': ['manual/*.html'],
-                     'ginga.web.pgw': ['templates/*.html', 'js/*.js'],
-                     'ginga.fonts': ['*/*.ttf', '*/*.txt'],
-                     'ginga': ['examples/*/*'],
-                     },
-    scripts = ['scripts/grc', 'scripts/gris'],
-    entry_points = {'console_scripts': 'ginga = ginga.main:_main'},
-    install_requires = ['numpy>=1.7'],
-    test_suite = "ginga.tests.ginga_test_suite",
-    classifiers=[
-          'Intended Audience :: Science/Research',
-          'License :: OSI Approved :: BSD License',
-          'Operating System :: MacOS :: MacOS X',
-          'Operating System :: Microsoft :: Windows',
-          'Operating System :: POSIX',
-          'Programming Language :: C',
-          'Programming Language :: Python :: 2.7',
-          'Programming Language :: Python :: 3.3',
-          'Programming Language :: Python :: 3.4',
-          'Programming Language :: Python :: 3',
-          'Topic :: Scientific/Engineering :: Astronomy',
-          'Topic :: Scientific/Engineering :: Physics',
-          ],
-    cmdclass={'build_py': build_py}
+PACKAGENAME = metadata.get('package_name', 'packagename')
+DESCRIPTION = metadata.get('description', 'Astropy affiliated package')
+AUTHOR = metadata.get('author', '')
+AUTHOR_EMAIL = metadata.get('author_email', '')
+LICENSE = metadata.get('license', 'unknown')
+URL = metadata.get('url', 'http://astropy.org')
+
+# Get the long description from the package's docstring
+__import__(PACKAGENAME)
+package = sys.modules[PACKAGENAME]
+LONG_DESCRIPTION = package.__doc__
+
+# Store the package name in a built-in variable so it's easy
+# to get from other parts of the setup infrastructure
+builtins._ASTROPY_PACKAGE_NAME_ = PACKAGENAME
+
+# VERSION should be PEP386 compatible (http://www.python.org/dev/peps/pep-0386)
+VERSION = '2.5.20160330023527'
+
+# Indicates if this version is a release version
+RELEASE = 'dev' not in VERSION
+
+if not RELEASE:
+    VERSION += get_git_devstr(False)
+
+# Populate the dict of setup command overrides; this should be done before
+# invoking any other functionality from distutils since it can potentially
+# modify distutils' behavior.
+cmdclassd = register_commands(PACKAGENAME, VERSION, RELEASE)
+
+# Adjust the compiler in case the default on this platform is to use a
+# broken one.
+#adjust_compiler(PACKAGENAME)
+
+# Freeze build information in version.py
+generate_version_py(PACKAGENAME, VERSION, RELEASE,
+                    get_debug_option(PACKAGENAME))
+
+# Treat everything in scripts except README.rst and fits2pdf.py
+# as a script to be installed
+scripts = [fname for fname in glob.glob(os.path.join('scripts', '*'))
+           if (os.path.basename(fname) != 'README.rst' and
+               os.path.basename(fname) != 'fits2pdf.py')]
+
+# Get configuration information from all of the various subpackages.
+# See the docstring for setup_helpers.update_package_files for more
+# details.
+package_info = get_package_info()
+
+# Add the project-global data
+package_info['package_data'].setdefault(PACKAGENAME, [])
+package_info['package_data'][PACKAGENAME].append('examples/*/*')
+
+# Define entry points for command-line scripts
+entry_points = {'console_scripts': []}
+
+entry_point_list = conf.items('entry_points')
+for entry_point in entry_point_list:
+    entry_points['console_scripts'].append('{0} = {1}'.format(entry_point[0],
+                                                              entry_point[1]))
+
+# Include all .c files, recursively, including those generated by
+# Cython, since we can not do this in MANIFEST.in with a "dynamic"
+# directory name.
+c_files = []
+for root, dirs, files in os.walk(PACKAGENAME):
+    for filename in files:
+        if filename.endswith('.c'):
+            c_files.append(
+                os.path.join(
+                    os.path.relpath(root, PACKAGENAME), filename))
+package_info['package_data'][PACKAGENAME].extend(c_files)
+
+# Note that requires and provides should not be included in the call to
+# ``setup``, since these are now deprecated. See this link for more details:
+# https://groups.google.com/forum/#!topic/astropy-dev/urYO8ckB2uM
+
+setup(name=PACKAGENAME,
+      version=VERSION,
+      description=DESCRIPTION,
+      scripts=scripts,
+      install_requires=['astropy', 'numpy>=1.7'],
+      author=AUTHOR,
+      author_email=AUTHOR_EMAIL,
+      license=LICENSE,
+      url=URL,
+      long_description=LONG_DESCRIPTION,
+      cmdclass=cmdclassd,
+      zip_safe=False,
+      use_2to3=True,
+      entry_points=entry_points,
+      **package_info
 )

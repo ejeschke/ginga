@@ -16,10 +16,15 @@ from ginga.util.six.moves import map
 
 from . import coordmap
 
+__all__ = ['CanvasObjectBase', 'get_canvas_type', 'get_canvas_types',
+           'register_canvas_type', 'register_canvas_types']
+
 colors_plus_none = [ None ] + colors.get_colors()
+
 
 class CanvasObjectError(Exception):
     pass
+
 
 class CanvasObjectBase(Callback.Callbacks):
     """This is the abstract base class for a CanvasObject.  A CanvasObject

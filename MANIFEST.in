@@ -1,2 +1,23 @@
-include LICENSE.txt
+include README.txt
+include CHANGES.rst
 include ginga.desktop
+
+include ez_setup.py
+include ah_bootstrap.py
+include setup.cfg
+
+recursive-include *.pyx *.c *.pxd
+recursive-include doc *
+recursive-include licenses *
+recursive-include cextern *
+recursive-include scripts *
+
+prune build
+prune doc/_build
+prune doc/api
+
+recursive-include astropy_helpers *
+exclude astropy_helpers/.git
+exclude astropy_helpers/.gitignore
+
+global-exclude *.pyc *.o

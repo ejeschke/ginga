@@ -14,6 +14,9 @@ from ginga.misc.Bunch import Bunch
 from ginga.Bindings import KeyEvent
 from .CanvasMixin import CanvasMixin
 
+__all__ = ['DrawingMixin']
+
+
 class DrawingMixin(object):
     """The DrawingMixin is a mixin class that adds drawing capability for
     some of the basic CanvasObject-derived types.  The set_surface method is

@@ -1,19 +1,5 @@
-# ignore some commonly problematic files
-
-# python compiled files
-*.py[co]
-
-# emacs backups
-*~
-\#*\#
-
-# TeX products
-*.aux
-*.log
-*.pdf
-*.toc
-
 # Compiled files
+*.py[cod]
 *.a
 *.o
 *.so
@@ -24,10 +10,29 @@ __pycache__
 *.c
 
 # Other generated files
-#*/version.py
+*/version.py
+*/cython_version.py
+htmlcov
+.coverage
+MANIFEST
 
 # Sphinx
-_build
+doc/api
+doc/_build
+
+# TeX products
+*.aux
+*.log
+*.pdf
+*.toc
+
+# Eclipse editor project files
+.project
+.pydevproject
+.settings
+
+# Pycharm editor project files
+.idea
 
 # Packages/installer info
 *.egg
@@ -43,16 +48,15 @@ develop-eggs
 .installed.cfg
 distribute-*.tar.gz
 
+# IPython notebook (Jupyter) checkpoints
++.ipynb_checkpoints
+
 # Other
-.*.swp
+.cache
+.tox
+.*.sw[op]
+*~
+\#*\#
 
 # Mac OSX
 .DS_Store
-
-# Eclipse project files
-.settings
-.project
-.pydevproject
-
-# Ignore IPython notebook (Jupyter) checkpoints.
-+.ipynb_checkpoints

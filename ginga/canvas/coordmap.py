@@ -11,6 +11,9 @@ from ginga import trcalc
 from ginga.util import wcs
 from ginga.util.six.moves import map
 
+__all__ = ['CanvasMapper', 'DataMapper', 'OffsetMapper', 'WCSMapper']
+
+
 class CanvasMapper(object):
     """A coordinate mapper that maps to the viewer's canvas in
     canvas coordinates.
@@ -57,6 +60,7 @@ class DataMapper(object):
     def rotate_pt(self, x, y, theta, xoff=0, yoff=0):
         return trcalc.rotate_pt(x, y, theta, xoff=xoff, yoff=yoff)
 
+
 class OffsetMapper(object):
     """A coordinate mapper that maps to the viewer's canvas
     in data coordinates that are offsets relative to some other
@@ -96,6 +100,7 @@ class OffsetMapper(object):
     def rotate_pt(self, x, y, theta, xoff=0, yoff=0):
         # TODO?  Not sure if it is needed with this mapper type
         return x, y
+
 
 class WCSMapper(DataMapper):
     """A coordinate mapper that maps to the viewer's canvas

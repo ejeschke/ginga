@@ -10,8 +10,12 @@
 from ginga.canvas.CompoundMixin import CompoundMixin
 from ginga.util.six.moves import map, filter
 
+__all__ = ['CanvasMixin']
+
+
 class CanvasError(Exception):
     pass
+
 
 class CanvasMixin(object):
     """A CanvasMixin is combined with the CompoundMixin to make a

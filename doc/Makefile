@@ -44,6 +44,7 @@ help:
 
 clean:
 	-rm -rf $(BUILDDIR)/*
+	-rm -rf api
 
 install:  html
 	cp -r $(BUILDDIR)/html/* ../ginga/doc/.
