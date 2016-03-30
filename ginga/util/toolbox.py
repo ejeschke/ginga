@@ -52,6 +52,8 @@ class ModeIndicator(object):
 
             if modetype == 'locked':
                 text = '%s [L]' % (mode)
+            elif modetype == 'softlock':
+                text = '%s [SL]' % (mode)
             else:
                 text = mode
 

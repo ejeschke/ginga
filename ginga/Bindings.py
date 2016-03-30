@@ -666,10 +666,16 @@ class ImageViewBindings(object):
 
     def _rotate_xy(self, viewer, x, y, msg=True):
         msg = self.settings.get('msg_rotate', msg)
-        x_pct, y_pct = self._get_pct_xy(viewer, x, y)
-        delta_deg = x_pct * 360.0
-        factor = self.settings.get('mouse_rotate_acceleration', 0.75)
-        deg = math.fmod(self._start_rot + delta_deg * factor, 360.0)
+        ## x_pct, y_pct = self._get_pct_xy(viewer, x, y)
+        ## delta_deg = x_pct * 360.0
+        ctr_x, ctr_y = viewer.get_center()
+        deg1 = math.degrees(math.atan2(ctr_y - self._start_y,
+                                       self._start_x - ctr_x))
+        deg2 = math.degrees(math.atan2(ctr_y - y, x - ctr_x))
+        delta_deg = deg2 - deg1
+        ## factor = self.settings.get('mouse_rotate_acceleration', 0.75)
+        ## deg = math.fmod(self._start_rot + delta_deg * factor, 360.0)
+        deg = math.fmod(self._start_rot + delta_deg, 360.0)
         if msg:
             viewer.onscreen_message("Rotate: %.2f" % (deg))
         viewer.rotate(deg)
