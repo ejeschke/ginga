@@ -138,15 +138,16 @@ def generate_cfg_example(config_name, **kwargs):
         warnings.warn(str(e), AstropyUserWarning)
         return ''
 
-    userpath = '~/.ginga'  # Where user should save it
-    userfile = os.path.join(userpath, cfgname)
+    homepath = '~'  # Symbol for HOME for doc only, not actual code
+    userfile = os.path.join(homepath, '.ginga', cfgname)
 
     docstring = io.StringIO()
-    docstring.write("""It is customizable using ``{0}``:
+    docstring.write("""It is customizable using ``{0}``, where ``{1}``
+is your HOME directory:
 
 .. code-block:: Python
 
-""".format(userfile))
+""".format(userfile, homepath))
 
     for line in cfgdata.split('\n'):
         line = line.strip()
