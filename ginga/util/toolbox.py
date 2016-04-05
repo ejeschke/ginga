@@ -4,6 +4,18 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
+
+# STDLIB
+import io
+import os
+import warnings
+
+# THIRD-PARTY
+from astropy.utils.data import get_pkg_data_contents
+from astropy.utils.exceptions import AstropyUserWarning
+
 
 class ModeIndicator(object):
     """
@@ -90,5 +102,61 @@ class ModeIndicator(object):
         bm = view.get_bindmap()
         mode, modetype = bm.current_mode()
         self.mode_change_cb(bm, mode, modetype)
+
+
+def generate_cfg_example(config_name, **kwargs):
+    """Generate config file documentation for a given config name.
+
+    If found, it will be a Python code block of the contents.
+    If not found, it will have a generic message that the config
+    is not available.
+
+    Parameters
+    ----------
+    config_name : str
+        Config name that is attached to the configuration file.
+        This is the same as input for ``prefs.createCategory()``.
+        For example, ``'general'``, ``'channel_Image'``, or
+        ``'plugin_Zoom'``.
+
+    kwargs : dict
+        Optional keywords for :func:`~astropy.utils.data.get_pkg_data_contents`.
+
+    Returns
+    -------
+    docstr : str
+        Docstring to be inserted into documentation.
+
+    """
+    cfgpath = 'examples/configs'  # Where it is in pkg data
+    cfgname = config_name + '.cfg'
+
+    try:
+        cfgdata = get_pkg_data_contents(
+            os.path.join(cfgpath, cfgname), **kwargs)
+    except Exception as e:
+        warnings.warn(str(e), AstropyUserWarning)
+        return ''
+
+    homepath = '~'  # Symbol for HOME for doc only, not actual code
+    userfile = os.path.join(homepath, '.ginga', cfgname)
+
+    docstring = io.StringIO()
+    docstring.write("""It is customizable using ``{0}``, where ``{1}``
+is your HOME directory:
+
+.. code-block:: Python
+
+""".format(userfile, homepath))
+
+    for line in cfgdata.split('\n'):
+        line = line.strip()
+
+        if len(line) == 0:
+            docstring.write('\n')  # Prevent trailing spaces
+        else:
+            docstring.write('  {0}\n'.format(line))
+
+    return docstring.getvalue()
 
 #END
