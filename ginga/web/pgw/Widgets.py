@@ -172,6 +172,8 @@ class TextEntrySet(WidgetBase):
 
     def set_text(self, text):
         self.text = text
+        app = self.get_app()
+        app.do_operation('update_value', id=self.id, value=text)
 
     def set_font(self, font):
         self.font = font
@@ -828,6 +830,8 @@ class ContainerBase(WidgetBase):
     def remove_all(self):
         for w in list(self.children):
             self.remove(w)
+        app = self.get_app()
+        app.do_operation('update_html', id=self.id, value=self.render())
 
     def get_children(self):
         return self.children
@@ -857,6 +861,8 @@ class Box(ContainerBase):
 
     def add_widget(self, child, stretch=0.0):
         self.add_ref(child)
+        app = self.get_app()
+        app.do_operation('update_html', id=self.id, value=self.render())
 
     def set_spacing(self, val):
         self.spacing = val
