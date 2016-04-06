@@ -14,18 +14,22 @@ addons:
 
 python:
     #- 2.7
-    #- 3.3
     #- 3.4
+    #- 3.5
     # This is just for "egg_info".  All other builds are explicitly given in the matrix
 env:
     global:
         # The following versions are the 'default' for tests, unless
         # overidden underneath. They are defined here in order to save having
         # to repeat them for all configurations.
-        - NUMPY_VERSION=1.8
-        - ASTROPY_VERSION=stable
+        - NUMPY_VERSION=1.10
         - CONDA_INSTALL='conda install -c astropy-ci-extras --yes'
         - PIP_INSTALL='pip install'
+
+        # Use dev version until astropy/astropy#4748 is in stable version (1.2)
+        #- ASTROPY_VERSION=stable
+        - ASTROPY_VERSION=development
+
     #matrix:
     #    - SETUP_CMD='egg_info'
 
@@ -45,17 +49,18 @@ matrix:
           env: SETUP_CMD='build_sphinx'
 
         # Try Astropy development version
-        - python: 2.7
-          env: ASTROPY_VERSION=development SETUP_CMD='test'
-        - python: 3.3
-          env: ASTROPY_VERSION=development SETUP_CMD='test'
+        # NOTE: Uncomment this if global version is stable, not dev
+        #- python: 2.7
+        #  env: ASTROPY_VERSION=development SETUP_CMD='test'
+        #- python: 3.5
+        #  env: ASTROPY_VERSION=development SETUP_CMD='test'
 
         # Try all python versions with the latest numpy
         - python: 2.7
           env: SETUP_CMD='test'
-        - python: 3.3
-          env: SETUP_CMD='test'
         - python: 3.4
+          env: SETUP_CMD='test'
+        - python: 3.5
           env: SETUP_CMD='test'
 
         # Try older numpy versions
@@ -112,12 +117,10 @@ install:
 
 script:
    - python setup.py $SETUP_CMD
-   # TODO: once Ginga has adopted the affiliated package-template,
-   # the Python module index should be generated and `--ignore-url py-modindex.html` can be removed here.
-   - if [[ $SETUP_CMD == build_sphinx* ]]; then linkchecker doc/_build/html/index.html --ignore-url py-modindex.html; fi
+   - if [[ $SETUP_CMD == build_sphinx* ]]; then linkchecker doc/_build/html/index.html; fi
 
 after_success:
     # If coveralls.io is set up for this package, uncomment the line
     # below and replace "packagename" with the name of your package.
     # The coveragerc file may be customized as needed for your package.
-    # - if [[ $SETUP_CMD == 'test --coverage' ]]; then coveralls --rcfile='packagename/tests/coveragerc'; fi
+    # - if [[ $SETUP_CMD == 'test --coverage' ]]; then coveralls --rcfile='ginga/tests/coveragerc'; fi
