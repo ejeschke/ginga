@@ -4,16 +4,25 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-from __future__ import print_function
+from __future__ import absolute_import, print_function
+from ..util import six
+from ..util.six.moves import map, zip
 
-import sys, time, os
-import ginga.util.six as six
+import sys
+import time
+import os
+
 if six.PY2:
     import thread
     import Queue
 else:
-    import _thread as thread
-    import queue as Queue
+    import _thread
+    import queue
+
+    # NOTE: For whatever reason "import ... as ..." did not work on Travis CI.
+    thread = _thread
+    Queue = queue
+
     # NOTE: See http://bugs.python.org/issue7946
     # we cannot effectively use threading for loading files/network/etc.
     # without setting the switchinterval down on python 3 due to the new
@@ -23,8 +32,6 @@ else:
 
 import threading
 import traceback
-
-from ginga.util.six.moves import map, zip
 
 
 class TaskError(Exception):
@@ -872,6 +879,7 @@ class QueueTaskset(Task):
 
     def addTask(self, task):
         self.queue.put(task)
+
 
 # ------------ PRIORITY QUEUES ------------
 
