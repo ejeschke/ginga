@@ -513,6 +513,18 @@ class ImageViewEvent(ImageViewQt):
             return 'left'
         if keycode in [QtCore.Qt.Key_Right]:
             return 'right'
+        if keycode in [QtCore.Qt.Key_PageUp]:
+            return 'page_up'
+        if keycode in [QtCore.Qt.Key_PageDown]:
+            return 'page_down'
+        if keycode in [QtCore.Qt.Key_Home]:
+            return 'home'
+        if keycode in [QtCore.Qt.Key_End]:
+            return 'end'
+        if keycode in [QtCore.Qt.Key_Insert]:
+            return 'insert'
+        if keycode in [QtCore.Qt.Key_Delete]:
+            return 'delete'
         # if keycode in [QtCore.Qt.Key_Super_L]:
         #     return 'super_l'
         # if keycode in [QtCore.Qt.Key_Super_R]:

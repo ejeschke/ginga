@@ -5,7 +5,6 @@
 # Takeshi Inagaki
 # Bruce Bon
 #
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -622,6 +621,16 @@ def get_RaDecOffsets(ra1_deg, dec1_deg, ra2_deg, dec2_deg):
     delta_dec_deg = dec1_deg - dec2_deg
     return (delta_ra_deg, delta_dec_deg)
 
+def calc_midpoint_radec(ra1, dec1, ra2, dec2):
+    delta_ra = ra2 - ra1
+    bx = numpy.cos(dec2) * numpy.cos(delta_ra)
+    by = numpy.cos(dec2) * numpy.sin(delta_ra)
+    dec_term1 = numpy.sin(dec1) + numpy.sin(dec2)
+    dec_term2 = numpy.sqrt(numpy.power((numpy.cos(dec1) + bx), 2) +
+                           numpy.power(by, 2))
+    dec_mid = numpy.arctan2(dec_term1, dec_term2)
+    ra_mid = ra1 + numpy.arctan2(by, np.cos(dec1) + bx)
+    return (ra_mid, dec_mid)
 
 def lon_to_deg(lon):
     """Convert longitude to degrees."""
