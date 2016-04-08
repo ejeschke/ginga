@@ -1,9 +1,6 @@
 #
 # Control.py -- Controller for the Ginga FITS viewer.
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -852,12 +849,13 @@ class GingaControl(Callback.Callbacks):
     def change_channel(self, chname, image=None, raisew=True):
         self.logger.debug("change channel: %s" % (chname))
         name = chname.lower()
-        if not self.cur_channel:
+        if self.cur_channel is None:
             oldchname = None
         else:
             oldchname = self.cur_channel.name.lower()
 
         channel = self.get_channelInfo(name)
+
         if name != oldchname:
             with self.lock:
                 self.cur_channel = channel
@@ -907,7 +905,7 @@ class GingaControl(Callback.Callbacks):
         if self.has_channel(chname):
             return self.get_channelInfo(chname)
 
-        return self.add_channel(chname)
+        return self.gui_call(self.add_channel, chname)
 
     def get_channelName(self, fitsimage):
         with self.lock:

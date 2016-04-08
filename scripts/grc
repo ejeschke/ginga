@@ -2,9 +2,6 @@
 #
 # grc -- Ginga Remote Control example client
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -40,7 +37,7 @@ def main(options, args):
         #print (("args=", args, "kwdargs=", kwdargs))
 
     # invoke method on rest of parameters
-    method = getattr(ginga, method_name)
+    method = ginga.lookup_attr(method_name)
     res = method(*args, **kwdargs)
     if res not in (grc.undefined, None):
         print(res)

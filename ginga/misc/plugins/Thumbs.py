@@ -1,9 +1,6 @@
 #
 # Thumbs.py -- Thumbs plugin for Ginga image viewer
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -411,7 +408,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         # Look up our version of the thumb
         idx = image.get('idx', None)
         path = image.get('path', None)
-        if not (path is None):
+        if path is not None:
             path = os.path.abspath(path)
             name = self.fv.name_image_from_path(path, idx=idx)
         else:
@@ -444,7 +441,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         # Look up our version of the thumb
         idx = image.get('idx', None)
         path = image.get('path', None)
-        if not (path is None):
+        if path is not None:
             path = os.path.abspath(path)
             name = self.fv.name_image_from_path(path, idx=idx)
         else:

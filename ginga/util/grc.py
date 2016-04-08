@@ -1,13 +1,12 @@
 #
 # grc.py -- Ginga Remote Control module
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
 import threading
+import binascii
+from io import BytesIO
 
 import ginga.util.six as six
 if six.PY2:
@@ -39,7 +38,7 @@ class RemoteClient(object):
         self._proxy = xmlrpclib.ServerProxy(url, allow_none=True)
         return self._proxy
 
-    def __getattr__(self, method_name):
+    def lookup_attr(self, method_name):
         def call(*args, **kwdargs):
             if self._proxy is None:
                 self.__connect()
@@ -52,6 +51,108 @@ class RemoteClient(object):
 
             return unmarshall(res)
         return call
+
+    def load_np(self, imname, chname, data_np, imtype, header):
+        """Display a numpy image buffer in a remote Ginga reference viewer.
+
+        Parameters
+        ----------
+        imname : str
+            A name to use for the image in the reference viewer.
+
+        chname : str
+            Name of a channel in which to load the image.
+
+        data_np : ndarray
+            This should be at least a 2D Numpy array.
+
+        imtype : str
+            Image type--currently ignored.
+
+        header : dict
+            Fits header as a dictionary, or other keyword metadata.
+
+        Returns
+        -------
+        0
+
+        Notes
+        -----
+        * The "RC" plugin needs to be started in the viewer for this to work.
+        """
+        # future: handle imtype
+
+        load_buffer = self.lookup_attr('load_buffer')
+
+        return load_buffer(imname, chname,
+                           binascii.b2a_base64(data_np.tostring()),
+                           data_np.shape, str(data_np.dtype),
+                           header, {}, False)
+
+    def load_hdu(self, imname, chname, hdulist, num_hdu):
+        """Display an astropy.io.fits HDU in a remote Ginga reference viewer.
+
+        Parameters
+        ----------
+        imname : str
+            A name to use for the image in the reference viewer.
+
+        chname : str
+            Name of a channel in which to load the image.
+
+        hdulist : `~astropy.io.fits.HDUList`
+            This should be a valid HDUList loaded via the `astropy.io.fits` module.
+
+        num_hdu : int or 2-tuple
+            Number or key of the HDU to open from the `HDUList`.
+
+        Returns
+        -------
+        0
+
+        Notes
+        -----
+        * The "RC" plugin needs to be started in the viewer for this to work.
+        """
+        buf_io = BytesIO()
+        hdulist.writeto(buf_io)
+
+        load_fits_buffer = self.lookup_attr('load_fits_buffer')
+
+        return load_fits_buffer(imname, chname,
+                                binascii.b2a_base64(buf_io.getvalue()),
+                                num_hdu, {})
+
+    def load_fitsbuf(self, imname, chname, fitsbuf, num_hdu):
+        """Display a FITS file buffer in a remote Ginga reference viewer.
+
+        Parameters
+        ----------
+        imname : str
+            A name to use for the image in the reference viewer.
+
+        chname : str
+            Name of a channel in which to load the image.
+
+        fitsbuf : str
+            This should be a valid FITS file, read in as a complete buffer.
+
+        num_hdu : int or 2-tuple
+            Number or key of the HDU to open from the buffer.
+
+        Returns
+        -------
+        0
+
+        Notes
+        -----
+        * The "RC" plugin needs to be started in the viewer for this to work.
+        """
+        load_fits_buffer = self.lookup_attr('load_fits_buffer')
+
+        return load_fits_buffer(imname, chname,
+                                binascii.b2a_base64(fitsbuf),
+                                num_hdu, {})
 
 
 class RemoteServer(object):
@@ -115,7 +216,7 @@ class RemoteServer(object):
             res = method(*args, **kwdargs)
 
             self.logger.debug("marshalling return val")
-            return marshall(method(*args, **kwdargs))
+            return marshall(res)
 
         raise AttributeError("No such method: '%s'" % (method_name))
 

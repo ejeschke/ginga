@@ -1,9 +1,6 @@
 #
 # RC.py -- Remote Control plugin for Ginga fits viewer
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c)  Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -275,8 +272,8 @@ class GingaWrapper(object):
             image = AstroImage.AstroImage(logger=self.logger)
             image.load_buffer(img_buf, dims, dtype, byteswap=byteswap,
                               metadata=metadata)
-            image.set(name=imname)
             image.update_keywords(header)
+            image.set(name=imname, path=None)
 
         except Exception as e:
             # Some kind of error unpacking the data
@@ -285,9 +282,10 @@ class GingaWrapper(object):
             self.logger.error(errmsg)
             raise GingaPlugin.PluginError(errmsg)
 
-        # Enqueue image to display datasrc
+        # Display the image
+        channel = self.fv.gui_call(self.fv.get_channel_on_demand, chname)
         self.fv.gui_do(self.fv.add_image, imname, image,
-                            chname=chname)
+                       chname=channel.name)
         return 0
 
     def load_fits_buffer(self, imname, chname, file_buf, num_hdu,
@@ -314,7 +312,7 @@ class GingaWrapper(object):
                 image = AstroImage.AstroImage(metadata=metadata,
                                               logger=self.logger)
                 image.load_hdu(fits_f[num_hdu], fobj=fits_f)
-                image.set(name=imname)
+            image.set(name=imname, path=None, idx=num_hdu)
 
         except Exception as e:
             # Some kind of error unpacking the data
@@ -323,9 +321,10 @@ class GingaWrapper(object):
             self.logger.error(errmsg)
             raise GingaPlugin.PluginError(errmsg)
 
-        # Enqueue image to display datasrc
+        # Display the image
+        channel = self.fv.gui_call(self.fv.get_channel_on_demand, chname)
         self.fv.gui_do(self.fv.add_image, imname, image,
-                            chname=chname)
+                       chname=channel.name)
         return 0
 
     def channel(self, chname, method_name, *args, **kwdargs):
