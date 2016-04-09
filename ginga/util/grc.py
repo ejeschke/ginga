@@ -24,44 +24,36 @@ from ginga.misc import Task, log
 undefined = '#UNDEFINED'
 
 
-class RemoteClient(object):
+class _ginga_proxy(object):
 
-    def __init__(self, host, port):
-        self.host = host
-        self.port = port
+    def __init__(self, client):
+        self._client = client
+        self._fn = client.lookup_attr('ginga')
 
-        self._proxy = None
+    def __getattr__(self, name):
+        def _call(*args, **kwdargs):
+            return self._fn(name, *args, **kwdargs)
+        return _call
 
-    def __connect(self):
-        # Get proxy to server
-        url = "http://%s:%d" % (self.host, self.port)
-        self._proxy = xmlrpclib.ServerProxy(url, allow_none=True)
-        return self._proxy
+class _channel_proxy(object):
 
-    def lookup_attr(self, method_name):
-        def call(*args, **kwdargs):
-            if self._proxy is None:
-                self.__connect()
+    def __init__(self, client, chname):
+        self._client = client
+        self._chname = chname
+        self._fn = client.lookup_attr('channel')
 
-            # marshall args and kwdargs
-            p_args = marshall(args)
-            p_kwdargs = marshall(kwdargs)
+    def __getattr__(self, name):
+        def _call(*args, **kwdargs):
+            return self._fn(self._chname, name, *args, **kwdargs)
+        return _call
 
-            res = self._proxy.dispatch_call(method_name, p_args, p_kwdargs)
-
-            return unmarshall(res)
-        return call
-
-    def load_np(self, imname, chname, data_np, imtype, header):
+    def load_np(self, imname, data_np, imtype, header):
         """Display a numpy image buffer in a remote Ginga reference viewer.
 
         Parameters
         ----------
         imname : str
             A name to use for the image in the reference viewer.
-
-        chname : str
-            Name of a channel in which to load the image.
 
         data_np : ndarray
             This should be at least a 2D Numpy array.
@@ -82,23 +74,20 @@ class RemoteClient(object):
         """
         # future: handle imtype
 
-        load_buffer = self.lookup_attr('load_buffer')
+        load_buffer = self._client.lookup_attr('load_buffer')
 
-        return load_buffer(imname, chname,
+        return load_buffer(imname, self._chname,
                            binascii.b2a_base64(data_np.tostring()),
                            data_np.shape, str(data_np.dtype),
                            header, {}, False)
 
-    def load_hdu(self, imname, chname, hdulist, num_hdu):
+    def load_hdu(self, imname, hdulist, num_hdu):
         """Display an astropy.io.fits HDU in a remote Ginga reference viewer.
 
         Parameters
         ----------
         imname : str
             A name to use for the image in the reference viewer.
-
-        chname : str
-            Name of a channel in which to load the image.
 
         hdulist : `~astropy.io.fits.HDUList`
             This should be a valid HDUList loaded via the `astropy.io.fits` module.
@@ -117,13 +106,13 @@ class RemoteClient(object):
         buf_io = BytesIO()
         hdulist.writeto(buf_io)
 
-        load_fits_buffer = self.lookup_attr('load_fits_buffer')
+        load_fits_buffer = self._client.lookup_attr('load_fits_buffer')
 
-        return load_fits_buffer(imname, chname,
+        return load_fits_buffer(imname, self._chname,
                                 binascii.b2a_base64(buf_io.getvalue()),
                                 num_hdu, {})
 
-    def load_fitsbuf(self, imname, chname, fitsbuf, num_hdu):
+    def load_fitsbuf(self, imname, fitsbuf, num_hdu):
         """Display a FITS file buffer in a remote Ginga reference viewer.
 
         Parameters
@@ -148,11 +137,45 @@ class RemoteClient(object):
         -----
         * The "RC" plugin needs to be started in the viewer for this to work.
         """
-        load_fits_buffer = self.lookup_attr('load_fits_buffer')
+        load_fits_buffer = self._client_.lookup_attr('load_fits_buffer')
 
-        return load_fits_buffer(imname, chname,
+        return load_fits_buffer(imname, self._chname,
                                 binascii.b2a_base64(fitsbuf),
                                 num_hdu, {})
+
+class RemoteClient(object):
+
+    def __init__(self, host, port):
+        self.host = host
+        self.port = port
+
+        self._proxy = None
+
+    def __connect(self):
+        # Get proxy to server
+        url = "http://%s:%d" % (self.host, self.port)
+        self._proxy = xmlrpclib.ServerProxy(url, allow_none=True)
+        return self._proxy
+
+    def shell(self):
+        return _ginga_proxy(self)
+
+    def channel(self, chname):
+        return _channel_proxy(self, chname)
+
+    def lookup_attr(self, method_name):
+        def call(*args, **kwdargs):
+            if self._proxy is None:
+                self.__connect()
+
+            # marshall args and kwdargs
+            p_args = marshall(args)
+            p_kwdargs = marshall(kwdargs)
+
+            res = self._proxy.dispatch_call(method_name, p_args, p_kwdargs)
+
+            return unmarshall(res)
+        return call
 
 
 class RemoteServer(object):
