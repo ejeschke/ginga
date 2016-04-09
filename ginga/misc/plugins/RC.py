@@ -284,6 +284,11 @@ class GingaWrapper(object):
 
         # Display the image
         channel = self.fv.gui_call(self.fv.get_channel_on_demand, chname)
+
+        # Note: this little hack needed to let window resize in time for
+        # file to auto-size properly
+        self.fv.gui_do(self.fv.change_channel, channel.name)
+
         self.fv.gui_do(self.fv.add_image, imname, image,
                        chname=channel.name)
         return 0
@@ -323,6 +328,11 @@ class GingaWrapper(object):
 
         # Display the image
         channel = self.fv.gui_call(self.fv.get_channel_on_demand, chname)
+
+        # Note: this little hack needed to let window resize in time for
+        # file to auto-size properly
+        self.fv.gui_do(self.fv.change_channel, channel.name)
+
         self.fv.gui_do(self.fv.add_image, imname, image,
                        chname=channel.name)
         return 0
