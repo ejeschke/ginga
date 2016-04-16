@@ -116,7 +116,8 @@ class ImageViewBindings(object):
             kp_poly_del = ['z', 'draw+z'],
             kp_edit_del = ['draw+x'],
             kp_reset = ['escape'],
-            kp_lock = ['l'],
+            kp_lock = ['L'],
+            kp_softlock = ['l'],
 
             # SCROLLING/WHEEL
             sc_pan = ['shift+scroll'],
@@ -125,8 +126,9 @@ class ImageViewBindings(object):
             sc_zoom = ['scroll'],
             sc_zoom_fine = ['ctrl+scroll'],
             sc_zoom_coarse = [],
-            sc_cuts_fine = ['cuts+scroll'],
-            sc_cuts_coarse = [],
+            sc_cuts_fine = ['cuts+ctrl+scroll'],
+            sc_cuts_coarse = ['cuts+scroll'],
+            sc_cuts_alg = ['cuts+shift+scroll'],
             sc_dist = ['dist+scroll'],
             sc_cmap = ['cmap+scroll'],
             sc_imap = [],
@@ -159,8 +161,8 @@ class ImageViewBindings(object):
             ms_freepan = ['freepan+left', 'middle'],
             ms_zoom_in = ['freepan+middle'],
             ms_zoom_out = ['freepan+right'],
-            ## ms_cutlo = ['cutlo+left'],
-            ## ms_cuthi = ['cuthi+left'],
+            ms_cutlo = ['cuts+shift+left'],
+            ms_cuthi = ['cuts+ctrl+left'],
             ms_cutall = ['cuts+left'],
             ms_cut_auto = ['cuts+right'],
             ms_panset = ['pan+middle', 'shift+left'],
@@ -526,9 +528,10 @@ class ImageViewBindings(object):
     def _cut_pct(self, viewer, pct, msg=True):
         msg = self.settings.get('msg_cuts', msg)
         image = viewer.get_image()
-        minval, maxval = image.get_minmax()
-        spread = maxval - minval
         loval, hival = viewer.get_cut_levels()
+        ## minval, maxval = image.get_minmax()
+        ## spread = maxval - minval
+        spread = hival - loval
         loval = loval + (pct * spread)
         hival = hival - (pct * spread)
         if msg:
@@ -597,6 +600,24 @@ class ImageViewBindings(object):
             if msg:
                 viewer.onscreen_message("Color dist: %s" % (algname),
                                            delay=1.0)
+
+    def _cycle_cuts_alg(self, viewer, msg, direction='down'):
+        if self.cancut:
+            msg = self.settings.get('msg_autocuts_alg', msg)
+            algs = viewer.get_autocut_methods()
+            settings = viewer.get_settings()
+            algname = settings.get('autocut_method', 'minmax')
+            idx = algs.index(algname)
+            if direction == 'down':
+                idx = (idx + 1) % len(algs)
+            else:
+                idx = idx - 1
+                if idx < 0: idx = len(algs) - 1
+            algname = algs[idx]
+            viewer.set_autocut_params(algname)
+            if msg:
+                viewer.onscreen_message("Autocuts alg: %s" % (algname),
+                                        delay=1.0)
 
     def _cycle_cmap(self, viewer, msg, direction='down'):
         if self.cancmap:
@@ -986,7 +1007,7 @@ class ImageViewBindings(object):
         self.reset(viewer)
         return True
 
-    def kp_lock(self, viewer, event, data_x, data_y):
+    def _toggle_lock(self, viewer, mode_type):
         bm = viewer.get_bindmap()
         # toggle default mode type to locked/oneshot
         dfl_modetype = bm.get_default_mode_type()
@@ -999,10 +1020,16 @@ class ImageViewBindings(object):
             # turning off lock also resets the mode
             bm.reset_mode(viewer)
         else:
-            # install the default lock type
-            mode_type = self.settings.get('default_lock_mode_type', 'softlock')
+            # install the lock type
             bm.set_default_mode_type(mode_type)
             bm.set_mode(mode_name, mode_type=mode_type)
+
+    def kp_lock(self, viewer, event, data_x, data_y):
+        self._toggle_lock(viewer, 'locked')
+        return True
+
+    def kp_softlock(self, viewer, event, data_x, data_y):
+        self._toggle_lock(viewer, 'softlock')
         return True
 
     #####  MOUSE ACTION CALLBACKS #####
@@ -1257,7 +1284,8 @@ class ImageViewBindings(object):
         levels.  This function adjusts it coarsely.
         """
         if self.cancut:
-            self._adjust_cuts(viewer, event.direction, 0.01, msg=msg)
+            # adjust the cut by 10% on each end
+            self._adjust_cuts(viewer, event.direction, 0.1, msg=msg)
         return True
 
     def sc_cuts_fine(self, viewer, event, msg=True):
@@ -1265,7 +1293,16 @@ class ImageViewBindings(object):
         levels.  This function adjusts it finely.
         """
         if self.cancut:
-            self._adjust_cuts(viewer, event.direction, 0.001, msg=msg)
+            # adjust the cut by 1% on each end
+            self._adjust_cuts(viewer, event.direction, 0.01, msg=msg)
+        return True
+
+    def sc_cuts_alg(self, viewer, event, msg=True):
+        """Adjust cuts algorithm interactively.
+        """
+        if self.cancut:
+            direction = self.get_direction(event.direction)
+            self._cycle_cuts_alg(viewer, msg, direction=direction)
         return True
 
     def sc_zoom(self, viewer, event, msg=True):
@@ -1279,6 +1316,7 @@ class ImageViewBindings(object):
 
         if self.settings.get('scroll_zoom_direct_scale', True):
             zoom_accel = self.settings.get('scroll_zoom_acceleration', 1.0)
+            # change scale by 50%
             amount = zoom_accel * 0.50
             self._scale_image(viewer, event.direction, amount, msg=msg)
 
@@ -1300,6 +1338,7 @@ class ImageViewBindings(object):
         """
         if self.canzoom:
             zoom_accel = self.settings.get('scroll_zoom_acceleration', 1.0)
+            # change scale by 20%
             amount = zoom_accel * 0.20
             self._scale_image(viewer, event.direction, amount, msg=msg)
         return True
@@ -1310,7 +1349,8 @@ class ImageViewBindings(object):
         """
         if self.canzoom:
             zoom_accel = self.settings.get('scroll_zoom_acceleration', 1.0)
-            amount = zoom_accel * 0.08
+            # change scale by 5%
+            amount = zoom_accel * 0.05
             self._scale_image(viewer, event.direction, 0.08, msg=msg)
         return True
 
@@ -1705,7 +1745,7 @@ class BindingMapper(Callback.Callbacks):
                     self.reset_mode(viewer)
                     return
                 self.reset_mode(viewer)
-                
+
             # if there is not a mode active now,
             # activate this one
             if self._kbdmode is None:

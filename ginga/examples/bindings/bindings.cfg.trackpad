@@ -39,7 +39,7 @@ mod_meta = ['meta_right']
 # These are typically "normal" keys.  The modifier is defined by a triplet:
 # [ keyname, modtype, msg ], where
 # keyname is a key whose press initiates the modifier,
-# modtype is None or a type in {'held', 'oneshot', 'locked'}
+# modtype is either None or a type in {'held', 'oneshot', 'locked'}
 # msg is a string to be shown in the display or None for no indicator
 dmod_draw = ['space', None, None]
 dmod_edit = ['b', None, None]
@@ -85,8 +85,10 @@ kp_orient_lh = ['o']
 kp_orient_rh = ['O']
 kp_poly_add = ['v', 'draw+v']
 kp_poly_del = ['z', 'draw+z']
+kp_edit_del = ['draw+x']
 kp_reset = ['escape']
-kp_lock = ['l']
+kp_lock = ['L']
+kp_softlock = ['l']
 
 # SCROLLING/WHEEL commands
 sc_pan = ['scroll', 'shift+scroll']
@@ -94,9 +96,10 @@ sc_pan_fine = []
 sc_pan_coarse = []
 sc_zoom = []
 sc_zoom_fine = []
-sc_zoom_coarse = ['ctrl+scroll']
-sc_cuts_fine = ['cuts+scroll']
-sc_cuts_coarse = []
+sc_zoom_coarse = []
+sc_cuts_fine = ['cuts+ctrl+scroll']
+sc_cuts_coarse = ['cuts+scroll']
+sc_cuts_alg = ['cuts+shift+scroll']
 sc_dist = ['dist+scroll']
 sc_cmap = ['cmap+scroll']
 sc_imap = []
@@ -128,6 +131,8 @@ ms_zoom = ['pan+right']
 ms_freepan = ['freepan+left', 'middle']
 ms_zoom_in = ['freepan+middle']
 ms_zoom_out = ['freepan+right']
+ms_cutlo = ['cuts+shift+left'],
+ms_cuthi = ['cuts+ctrl+left'],
 ms_cutall = ['cuts+left']
 ms_cut_auto = ['cuts+right']
 ms_panset = ['pan+middle', 'shift+left']
