@@ -16,7 +16,6 @@ from ginga.GingaPlugin import LocalPlugin
 from ginga.gw import Widgets
 from ginga.gw.GwHelp import DirectorySelection
 from ginga.misc import Bunch
-from ginga.util import io_fits
 
 __all__ = []
 
@@ -383,18 +382,15 @@ Output image will have the filename of <inputname>_<suffix>.fits.""")
         return
 
     def save_images(self):
-        """Save selected images."""
+        """Save selected images.
+
+        This uses Astropy FITS package to save the outputs no matter
+        what user chose to load the images.
+
+        """
         res_dict = self.treeview.get_selected()
         clobber = self.settings.get('clobber', False)
         self.treeview.clear_selection()  # Automatically disables Save button
-
-        # If user chooses fitsio over astropy, cannot continue.
-        if (io_fits.fitsLoaderClass.__name__ !=
-                io_fits.PyFitsFileHandler.__name__):
-            s = 'Set FITSpkg="astropy" in general.cfg'
-            self.w.status.set_text(s)
-            self.logger.error(s)
-            return
 
         # If user gives empty string, no suffix.
         if self.suffix:

@@ -9,9 +9,9 @@ SaveImage
 
 .. note::
 
-  This plugin only works if :ref:`Astropy FITS <astropy:astropy-io-fits>`
-  is used. One way to enforce this is to set `FITSpkg='astropy'` in
-  your `~/.ginga/general.cfg` configuration file.
+  This plugin uses :ref:`Astropy FITS <astropy:astropy-io-fits>` to
+  write the output images, regardless of what is chosen for
+  ``FITSpkg`` in your `~/.ginga/general.cfg` configuration file.
 
 This local plugin is used to save any changes made in Ginga back to output
 images. For example, a mosaic image that was created by
