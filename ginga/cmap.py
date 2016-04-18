@@ -7,10 +7,16 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-from __future__ import print_function
+from __future__ import absolute_import, print_function
+from .util import six
+from .util.six.moves import map, zip
 
 import numpy
-from ginga.util.six.moves import map, zip
+
+__all__ = ['ColorMap', 'add_cmap', 'get_cmap', 'get_names',
+           'matplotlib_to_ginga_cmap', 'add_matplotlib_cmap',
+           'add_matplotlib_cmaps']
+
 
 # Some built in colormaps
 
@@ -11421,17 +11427,22 @@ min_cmap_len = 256
 class ColorMapError(Exception):
     pass
 
+
 class ColorMap(object):
+    """Class to handle color maps."""
     def __init__(self, name, clst):
         self.name = name
         self.clst = clst
 
+
 def add_cmap(name, clst):
+    """Add a color map."""
     global cmaps
     assert len(clst) == min_cmap_len, \
            ValueError("color map '%s' length mismatch %d != %d (needed)" % (
         name, len(clst), min_cmap_len))
     cmaps[name] = ColorMap(name, clst)
+
 
 def get_cmap(name):
     """Get a color map array.  May raise a KeyError if a map of the given name
@@ -11439,36 +11450,54 @@ def get_cmap(name):
     """
     return cmaps[name]
 
+
 def get_names():
+    """Get colormap names."""
     res = list(cmaps.keys())
     res = sorted(res, key=lambda s: s.lower())
     return res
 
+
 def matplotlib_to_ginga_cmap(cm, name=None):
+    """Convert matplotlib colormap to Ginga's."""
     if name is None:
         name = cm.name
     arr = cm(numpy.arange(min_cmap_len))
     clst = tuple(map(lambda rec: tuple(rec)[:3], arr))
     return ColorMap(name, clst)
 
+
 def add_matplotlib_cmap(cm, name=None):
+    """Add a matplotlib colormap."""
     global cmaps
     cmap = matplotlib_to_ginga_cmap(cm, name=name)
     cmaps[cmap.name] = cmap
 
+
 def add_matplotlib_cmaps():
+    """Add all matplotlib colormaps."""
     import matplotlib.pyplot as plt
 
-    for name in plt.cm.datad.keys():
-        if not isinstance(name, str):
+    names = list(plt.cm.datad.keys())
+
+    # New default colormap for matplotlib 2.0, for those who cannot wait.
+    # Somehow Viridis is not part of "plt.cm.datad" keys above for
+    # "transition" versions of matplotlib (e.g., v1.5.1).
+    # See http://matplotlib.org/style_changes.html
+    if 'viridis' not in names:
+        names.append('viridis')
+        names.sort()
+
+    for name in names:
+        if not isinstance(name, six.string_types):
             continue
-        cm = plt.get_cmap(name)
         try:
+            cm = plt.get_cmap(name)
             add_matplotlib_cmap(cm, name=name)
         except Exception as e:
-            print("Error adding colormap '%s': %s" % (
-                name, str(e)))
+            print("Error adding colormap '%s': %s" % (name, str(e)))
             #pass
+
 
 # Add colormaps from this file
 cmaps = {}
