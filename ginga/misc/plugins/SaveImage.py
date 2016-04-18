@@ -39,11 +39,6 @@ class SaveImage(LocalPlugin):
         self.columns = [('Image', 'IMAGE'), ('Mod. Ext.', 'MODEXT')]
 
         try:
-            self.list_plugin_obj = self.fv.gpmon.getPlugin('Contents')
-        except:
-            self.list_plugin_obj = None
-
-        try:
             self.history_obj = self.fv.gpmon.getPlugin('ChangeHistory')
         except:
             self.history_obj = None
@@ -160,12 +155,12 @@ Output image will have the filename of <inputname>_<suffix>.fits.""")
         self.w.status.set_text('')
 
         # Only list modified images for saving. Scanning Datasrc is enough.
-        if mod_only or (self.list_plugin_obj is None):
+        if mod_only:
             func = self.keys_from_datasrc
 
-        # List all images in the channel. Need to scan Contents global plugin.
+        # List all images in the channel.
         else:
-            func = self.keys_from_contents
+            func = self.chinfo.get_image_names
 
         # Extract info for listing and saving
         for key in func():
@@ -246,12 +241,6 @@ Output image will have the filename of <inputname>_<suffix>.fits.""")
     def keys_from_datasrc(self):
         """Yield back keys for image listing from Ginga's data cache."""
         for key in self.chinfo.datasrc.sortedkeys:
-            yield key
-
-    def keys_from_contents(self):
-        """Yield back keys for image listing  from ``Contents`` global plugin.
-        """
-        for key in self.list_plugin_obj.name_dict[self.chname]:
             yield key
 
     def _format_extname(self, ext):
