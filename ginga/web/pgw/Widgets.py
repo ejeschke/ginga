@@ -1,15 +1,12 @@
 #
 # Widgets.py -- wrapped HTML widgets and convenience functions
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
 import os.path
 import threading
-import time
+import time, re
 from functools import reduce
 
 from ginga.misc import Callback, Bunch
@@ -32,8 +29,27 @@ tab_idx = 0
 _app = None
 
 
-default_font = Bunch.Bunch(family='Arial', point_size='8',
-                           style='normal', weight='normal')
+default_font = "Arial 8"
+
+def _font_info(font_str):
+    """Extract font information from a font string, such as supplied to the
+    'font' argument to a widget.
+    """
+    vals = font_str.split(';')
+    point_size, style, weight = 8, 'normal', 'normal'
+    family = vals[0]
+    if len(vals) > 1:
+        style = vals[1]
+    if len(vals) > 2:
+        weight = vals[2]
+
+    match = re.match(r'^(.+)\s+(\d+)$', family)
+    if match:
+        family, point_size = match.groups()
+        point_size = int(point_size)
+
+    return Bunch.Bunch(family=family, point_size=point_size,
+                       style=style, weight=weight)
 
 # BASE
 class WidgetBase(Callback.Callbacks):
@@ -285,10 +301,11 @@ class Label(WidgetBase):
             style += ("color: %s; " % self.fgcolor)
         if self.bgcolor is not None:
             style += ("background-color: %s; " % self.bgcolor)
-        style += ("font-family: %s; " % self.font.family)
-        style += ("font-size: %s; "   % self.font.point_size)
-        style += ("font-style: %s; "  % self.font.style)
-        style += ("font-weight: %s; " % self.font.weight)
+        f_info = _font_info(self.font)
+        style += ("font-family: %s; " % f_info.family)
+        style += ("font-size: %s; "   % f_info.point_size)
+        style += ("font-style: %s; "  % f_info.style)
+        style += ("font-weight: %s; " % f_info.weight)
         return style
 
     def render(self):
@@ -861,6 +878,7 @@ class Box(ContainerBase):
 
     def add_widget(self, child, stretch=0.0):
         self.add_ref(child)
+
         app = self.get_app()
         app.do_operation('update_html', id=self.id, value=self.render())
 
@@ -963,11 +981,15 @@ class TabWidget(ContainerBase):
         # attach title to child
         child.extdata.tab_title = title
 
+        app = self.get_app()
+        app.do_operation('update_html', id=self.id, value=self.render())
+
     def get_index(self):
         return self.index
 
     def set_index(self, idx):
         self.index = idx
+
         app = self.get_app()
         app.do_operation('set_tab', id=self.id, value=self.index)
 

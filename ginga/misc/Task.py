@@ -192,7 +192,7 @@ class Task(object):
         # --> self.result is set
         # If it is an exception, then raise it in this waiter
         if isinstance(self.result, Exception):
-            raise self
+            raise self.result
 
         # Release waiters and perform callbacks
         # done() has already been called, because of self.ev_done check
@@ -744,7 +744,7 @@ class QueueTaskset(Task):
     completion before starting the next task.
     """
 
-    def __init__(self, queue, waitflag=True, timeout=0.1):
+    def __init__(self, queue, waitflag=True, timeout=0.1, ev_quit=None):
 
         super(QueueTaskset, self).__init__()
 
@@ -755,6 +755,9 @@ class QueueTaskset(Task):
         self.task = None
         self.ev_cancel = threading.Event()
         self.ev_pause = threading.Event()
+        if ev_quit == None:
+            ev_quit = threading.Event()
+        self.ev_quit = ev_quit
 
 
     def flush(self):
@@ -779,6 +782,9 @@ class QueueTaskset(Task):
             #self.logger.error("Error cancelling child task: %s" % (str(e)))
             pass
 
+        # put termination sentinel
+        self.queue.put(None)
+
 
     def stop_child(self):
         self.flush()
@@ -796,11 +802,15 @@ class QueueTaskset(Task):
         self.count = 0
         self.totaltime = 0
         self.logger.debug("Queue Taskset starting")
-        while True:
+        while not self.ev_quit.isSet():
             try:
                 self.check_state()
 
                 task = self.queue.get(block=True, timeout=self.timeout)
+                if task == None:
+                    # termination sentinel
+                    break
+
                 self.task = task
 
                 task.register_callback(self.child_done, args=[task])
@@ -984,6 +994,10 @@ class WorkerThread(object):
                     # self.timeout secs
                     (priority, task) = self.queue.get(block=True,
                                                       timeout=self.timeout)
+                    if task == None:
+                        # termination sentinel
+                        self.queue.put((priority, task))
+                        break
 
                     self.execute(task)
 
@@ -1008,6 +1022,8 @@ class WorkerThread(object):
         self.thread.start()
 
     def stop(self):
+        # Put termination sentinal on queue
+        self.queue.put((priority, task))
         self.ev_quit.set()
 
 # ------------ THREAD POOL ------------
