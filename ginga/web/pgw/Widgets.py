@@ -420,7 +420,7 @@ class SpinBox(WidgetBase):
         self.enable_callback('value-changed')
 
     def _cb_redirect(self, event):
-        self.value = event.value
+        self.value = self.dtype(event.value)
         self.make_callback('value-changed', self.value)
 
     def get_value(self):
@@ -428,15 +428,15 @@ class SpinBox(WidgetBase):
 
     def set_value(self, val):
         self.changed = True
-        self.value = val
+        self.value = self.dtype(val)
 
     def set_decimals(self, num):
         self.decimals = num
 
     def set_limits(self, minval, maxval, incr_value=1):
-        self.minval = minval
-        self.maxval = maxval
-        self.incr = incr_value
+        self.minval = self.dtype(minval)
+        self.maxval = self.dtype(maxval)
+        self.incr = self.dtype(incr_value)
 
     def render(self):
         d = dict(id=self.id, value=self.value, step=self.incr,
@@ -649,8 +649,11 @@ class Image(WidgetBase):
         # TODO: callback for click
         d = dict(id=self.id, src=self.img_src, tooltip=self.tooltip,
                  height=self.height, width=self.width)
-        return '''<img id=%(id)s src="%(src)s" alt="%(tooltip)s"
-                        width="%(width)d" height="%(height)d">''' % d
+        ## return '''<div><img id=%(id)s src="%(src)s" alt="%(tooltip)s"
+        ##                 width="%(width)d" height="%(height)d"></div>''' % d
+        ## return '''<img id=%(id)s width="%(width)d" height="%(height)d"
+        ##              src="%(src)s" alt="%(tooltip)s">''' % d
+        return '''<img id=%(id)s src="%(src)s" alt="%(tooltip)s">''' % d
 
 class ProgressBar(Label):
     def __init__(self):
@@ -844,9 +847,12 @@ class ContainerBase(WidgetBase):
             raise KeyError("Widget is not a child of this container")
         self.children.remove(w)
 
+        app = self.get_app()
+        app.do_operation('update_html', id=self.id, value=self.render())
+
     def remove_all(self):
-        for w in list(self.children):
-            self.remove(w)
+        self.children[:] = []
+
         app = self.get_app()
         app.do_operation('update_html', id=self.id, value=self.render())
 
@@ -864,8 +870,9 @@ class ContainerBase(WidgetBase):
 
     def render_children(self, ifx=' ', spacing=0, spacing_side='right'):
         def _render_child(child):
-            return '''<span style="margin-%s: %dpx;">%s</span>''' % (
-                spacing_side, spacing, child.render())
+            ## return '''<span style="margin-%s: %dpx;">%s</span>''' % (
+            ##     spacing_side, spacing, child.render())
+            return child.render()
         return ifx.join(map(_render_child, self.children))
 
 class Box(ContainerBase):
@@ -1093,6 +1100,9 @@ class Splitter(Box):
         return length // self.num_children()
 
     def set_sizes(self, sizes):
+        pass
+
+    def _cb_redirect(self, event):
         pass
 
 

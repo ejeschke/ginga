@@ -50,7 +50,7 @@ class EnhancedCanvasView(Viewers.CanvasView):
         """
         import webbrowser
         webbrowser.open(self.url, new=new)
-        
+
     def show(self):
         """
         Capture the window of a viewer.
@@ -69,7 +69,7 @@ class EnhancedCanvasView(Viewers.CanvasView):
         self.set_image(image)
 
     load = load_fits
-    
+
     def load_hdu(self, hdu):
         """
         Load an HDU into the viewer.
@@ -185,7 +185,13 @@ class ImageViewer(object):
         hbox.add_widget(Widgets.Label(''), stretch=1)
         vbox.add_widget(hbox, stretch=0)
 
-        self.top.set_widget(vbox)
+        # need to put this in an hbox with an expanding label or the
+        # browser wants to resize the canvas, distorting it
+        hbox = Widgets.HBox()
+        hbox.add_widget(vbox, stretch=0)
+        hbox.add_widget(Widgets.Label(''), stretch=1)
+
+        self.top.set_widget(hbox)
 
     def load_file(self, filepath):
         image = AstroImage.AstroImage(logger=self.logger)

@@ -147,7 +147,13 @@ class FitsViewer(object):
         hbox.add_widget(Widgets.Label(''), stretch=1)
         vbox.add_widget(hbox, stretch=0)
 
-        self.top.set_widget(vbox)
+        # need to put this in an hbox with an expanding label or the
+        # browser wants to resize the canvas
+        hbox = Widgets.HBox()
+        hbox.add_widget(vbox, stretch=0)
+        hbox.add_widget(Widgets.Label(''), stretch=1)
+
+        self.top.set_widget(hbox)
 
     def set_drawparams(self):
         index = self.wdrawtype.get_index()
