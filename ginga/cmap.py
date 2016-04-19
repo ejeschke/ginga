@@ -11476,23 +11476,13 @@ def add_matplotlib_cmap(cm, name=None):
 
 def add_matplotlib_cmaps():
     """Add all matplotlib colormaps."""
-    import matplotlib.pyplot as plt
+    from matplotlib import cm as _cm
 
-    names = list(plt.cm.datad.keys())
-
-    # New default colormap for matplotlib 2.0, for those who cannot wait.
-    # Somehow Viridis is not part of "plt.cm.datad" keys above for
-    # "transition" versions of matplotlib (e.g., v1.5.1).
-    # See http://matplotlib.org/style_changes.html
-    if 'viridis' not in names:
-        names.append('viridis')
-        names.sort()
-
-    for name in names:
+    for name in _cm.cmap_d:
         if not isinstance(name, six.string_types):
             continue
         try:
-            cm = plt.get_cmap(name)
+            cm = _cm.get_cmap(name)
             add_matplotlib_cmap(cm, name=name)
         except Exception as e:
             print("Error adding colormap '%s': %s" % (name, str(e)))
