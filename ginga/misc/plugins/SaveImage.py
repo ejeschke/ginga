@@ -12,7 +12,7 @@ import shutil
 from astropy.io import fits
 
 # GINGA
-from ginga.GingaPlugin import LocalPlugin
+from ginga.GingaPlugin import GlobalPlugin
 from ginga.gw import Widgets
 from ginga.gw.GwHelp import DirectorySelection
 from ginga.misc import Bunch
@@ -20,20 +20,13 @@ from ginga.misc import Bunch
 __all__ = []
 
 
-class SaveImage(LocalPlugin):
+class SaveImage(GlobalPlugin):
     """Save images to output files.
 
-    This is a local plugin, not global, to avoid complications with
-    the same image opened in multiple channels but having different
-    modifications.
-
     """
-    def __init__(self, *args):
+    def __init__(self, fv):
         # superclass defines some variables for us, like logger
-        if len(args) == 2:
-            super(SaveImage, self).__init__(*args)
-        else:
-            super(SaveImage, self).__init__(args[0], None)
+        super(SaveImage, self).__init__(fv)
 
         # Image listing
         self.columns = [('Image', 'IMAGE'), ('Mod. Ext.', 'MODEXT')]
@@ -47,15 +40,27 @@ class SaveImage(LocalPlugin):
         # changed by GUI.
         prefs = self.fv.get_preferences()
         self.settings = prefs.createCategory('plugin_SaveImage')
+        self.settings.addDefaults(output_directory = '.',
+                                  output_suffix = 'ginga',
+                                  clobber = False,
+                                  modified_only = True,
+                                  max_mosaic_size = 1e8,
+                                  max_rows_for_col_resize = 5000)
         self.settings.load(onError='silent')
+
         self.outdir = os.path.abspath(
             self.settings.get('output_directory', '.'))
         self.suffix = self.settings.get('output_suffix', 'ginga')
 
         self.fv.add_callback('add-image', lambda *args: self.redo())
         self.fv.add_callback('remove-image', lambda *args: self.redo())
-        self.fv.add_callback('delete-channel', self.delete_channel_cb)
+        self.fv.add_callback('add-channel',
+                             lambda *args: self.update_channels())
+        self.fv.add_callback('delete-channel',
+                             lambda *args: self.update_channels())
 
+        self.chnames = []
+        self.chname = None
         self.gui_up = False
 
     def build_gui(self, container):
@@ -72,15 +77,16 @@ class SaveImage(LocalPlugin):
         fr.set_widget(tw)
         container.add_widget(fr, stretch=0)
 
-        captions = (('Channel:', 'llabel', 'Channel Name', 'llabel'),
+        captions = (('Channel:', 'llabel', 'Channel Name', 'combobox'),
                     ('Path:', 'llabel', 'OutDir', 'entry',
                      'Browse', 'button'),
-                    ('Suffix:', 'llabel', 'Suffix', 'entry'))
+                    ('Suffix:', 'llabel', 'Suffix', 'entry'),
+                    ('Modified images only', 'checkbutton'))
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
 
-        b.channel_name.set_text('Unknown')
-        b.channel_name.set_tooltip('Channel this plugin is attached to')
+        b.channel_name.set_tooltip('Channel for locating images to save')
+        b.channel_name.add_callback('activated', self.select_channel_cb)
 
         b.outdir.set_text(self.outdir)
         b.outdir.set_tooltip('Output directory')
@@ -92,6 +98,11 @@ class SaveImage(LocalPlugin):
         b.suffix.set_text(self.suffix)
         b.suffix.set_tooltip('Suffix to append to filename')
         b.suffix.add_callback('activated', lambda w: self.set_suffix())
+
+        mod_only = self.settings.get('modified_only', True)
+        b.modified_images_only.set_state(mod_only)
+        b.modified_images_only.add_callback('activated',
+                                            lambda *args: self.redo())
 
         container.add_widget(w, stretch=0)
 
@@ -132,12 +143,8 @@ class SaveImage(LocalPlugin):
         # Initialize directory selection dialog
         self.dirsel = DirectorySelection(self.fv.w.root.get_widget())
 
-        # In case this is called from global plugin space
-        self.fv.error_wrap(self._check_chinfo)
-        self.w.channel_name.set_text(self.chname)
-
         # Generate initial listing
-        self.redo()
+        self.update_channels()
 
     def instructions(self):
         self.tw.set_text("""Enter output directory and suffix, if different than default. Left click to select image name to save. Multiple images can be selected using click with Shift or CTRL key. Click Save to save the selected image(s).
@@ -149,10 +156,15 @@ Output image will have the filename of <inputname>_<suffix>.fits.""")
         if not self.gui_up:
             return
 
-        mod_only = self.settings.get('modified_only', True)
+        #mod_only = self.settings.get('modified_only', True)
+        mod_only = self.w.modified_images_only.get_state()
         treedict = Bunch.caselessDict()
         self.treeview.clear()
         self.w.status.set_text('')
+
+        channel = self.fv.get_channelInfo(self.chname)
+        if channel is None:
+            return
 
         # Only list modified images for saving. Scanning Datasrc is enough.
         if mod_only:
@@ -160,11 +172,11 @@ Output image will have the filename of <inputname>_<suffix>.fits.""")
 
         # List all images in the channel.
         else:
-            func = self.chinfo.get_image_names
+            func = channel.get_image_names
 
         # Extract info for listing and saving
         for key in func():
-            iminfo = self.chinfo.get_image_info(key)
+            iminfo = channel.get_image_info(key)
             path = iminfo.get('path')
             idx = iminfo.get('idx')
             t = iminfo.get('time_modified')
@@ -220,27 +232,51 @@ Output image will have the filename of <inputname>_<suffix>.fits.""")
 
         return
 
-    def _check_chinfo(self):
-        """Special handling for when plugin is started from global plugin
-        menu.
-
-        This locks the plugin to the active channel when it starts.
-        To change the associated channel in global plugin space, user
-        needs to manual close and reload the plugin. Doing this
-        dynamically inside redo() messes up the behavior in
-        local plugin space.
-
+    def update_channels(self):
+        """Update the GUI to reflect channels and image listing.
         """
-        self.chinfo = self.fv.get_channelInfo()
+        if not self.gui_up:
+            return
 
-        if self.chinfo is None:
+        self.logger.debug("channel configuration has changed--updating gui")
+        try:
+            channel = self.fv.get_channelInfo(self.chname)
+
+        except KeyError:
+            channel = self.fv.get_channelInfo()
+
+        if channel is None:
             raise ValueError('No channel available')
 
-        self.chname = self.chinfo.name
+        self.chname = channel.name
+
+        w = self.w.channel_name
+        w.clear()
+
+        self.chnames = list(self.fv.get_channelNames())
+        #self.chnames.sort()
+        for chname in self.chnames:
+            w.append_text(chname)
+
+        # select the channel that is the current one
+        try:
+            i = self.chnames.index(channel.name)
+        except IndexError:
+            i = 0
+        self.w.channel_name.set_index(i)
+
+        # update the image listing
+        self.redo()
+
+    def select_channel_cb(self, w, idx):
+        self.chname = self.chnames[idx]
+        self.logger.debug("channel name changed to '%s'" % (self.chname))
+        self.redo()
 
     def keys_from_datasrc(self):
         """Yield back keys for image listing from Ginga's data cache."""
-        for key in self.chinfo.datasrc.sortedkeys:
+        channel = self.fv.get_channelInfo()
+        for key in channel.datasrc.sortedkeys:
             yield key
 
     def _format_extname(self, ext):
@@ -280,7 +316,10 @@ Output image will have the filename of <inputname>_<suffix>.fits.""")
         if self.history_obj is None:
             return
 
-        file_dict = self.history_obj.name_dict[self.chname]
+        channel = self.fv.get_channelInfo()
+        if channel is None:
+            return
+        file_dict = self.history_obj.name_dict[channel.name]
         chistory = []
         ind = ' ' * indentchar
 
@@ -328,7 +367,8 @@ Output image will have the filename of <inputname>_<suffix>.fits.""")
 
         """
         maxsize = self.settings.get('max_mosaic_size', 1e8)  # Default 10k x 10k
-        image = self.chinfo.datasrc[key]
+        channel = self.fv.get_channelInfo()
+        image = channel.datasrc[key]
 
         # Prevent writing very large mosaic
         if (image.width * image.height) > maxsize:
@@ -349,11 +389,12 @@ Output image will have the filename of <inputname>_<suffix>.fits.""")
 
     def _write_mef(self, key, extlist, outfile):
         """Write out regular multi-extension FITS data."""
+        channel = self.fv.get_channelInfo()
         with fits.open(outfile, mode='update') as pf:
             # Process each modified data extension
             for idx in extlist:
                 k = '{0}[{1}]'.format(key, self._format_extname(idx))
-                image = self.chinfo.datasrc[k]
+                image = channel.datasrc[k]
 
                 # Insert data and header into output HDU
                 pf[idx].data = image.get_data()
@@ -414,25 +455,13 @@ Output image will have the filename of <inputname>_<suffix>.fits.""")
 
         self.w.status.set_text('Saving done, see log')
 
-    def delete_channel_cb(self, viewer, channel):
-        """If channel is deleted, close the plugin immediately in
-        global plugin space."""
-        if self.chname == channel.name and self.fitsimage is None:
-            self.close()
-
     def close(self):
-        if self.fitsimage is None:
-            self.fv.stop_global_plugin(str(self))
-        else:
-            self.fv.stop_local_plugin(self.chname, str(self))
+        self.fv.stop_global_plugin(str(self))
         return
 
     def start(self):
         self.instructions()
         self.resume()
-
-    def pause(self):
-        self.canvas.ui_setActive(False)
 
     def resume(self):
         # turn off any mode user may be in
