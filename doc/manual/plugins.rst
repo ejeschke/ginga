@@ -42,6 +42,7 @@ Global plugins
    plugins_global/operations
    plugins_global/wbrowser
    plugins_global/fbrowser
+   plugins_global/saveimage
    plugins_global/errors
    plugins_global/rc
    plugins_global/wcsmatch
@@ -80,5 +81,6 @@ is the graphical way to start an operation.
    plugins_local/mosaic
    plugins_local/drawing
    plugins_local/fbrowser
+   plugins_local/saveimage
    plugins_local/compose
    plugins_local/pipeline
