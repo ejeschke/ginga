@@ -135,7 +135,6 @@ local_plugins = [
     Bunch(module='Mosaic', ws='dialogs'),
     Bunch(module='Drawing', ws='dialogs', shortkey='f11'),
     Bunch(module='FBrowser', ws='dialogs', shortkey='f12'),
-    Bunch(module='SaveImage', ws='dialogs'),
     Bunch(module='Compose', ws='dialogs'),
     # Not ready for prime time
     #Bunch(module='Pipeline', ws='dialogs'),
