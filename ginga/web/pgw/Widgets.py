@@ -989,7 +989,10 @@ class TabWidget(ContainerBase):
         child.extdata.tab_title = title
 
         app = self.get_app()
-        app.do_operation('update_html', id=self.id, value=self.render())
+        #app.do_operation('update_html', id=self.id, value=self.render())
+        # this is a hack--we really don't want to reload the page, but just
+        # re-rendering the HTML does not seem to process the CSS right
+        app.do_operation('reload_page', id=self.id)
 
     def get_index(self):
         return self.index
