@@ -66,6 +66,10 @@ ginga_make_application = function (ws_url) {
                 else if (message.operation == "disable") {
                     // update widget value
                     elt.disabled = message.value;
+	        }
+                else if (message.operation == "reload_page") {
+                    // js 1.2-- do we need a check for this?
+                    window.location.reload(true);
 	        };
             };
         }
