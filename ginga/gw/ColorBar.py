@@ -7,3 +7,8 @@ if tkname == 'gtk':
 
 elif tkname == 'qt':
     from ginga.qtw.ColorBar import *
+
+else:
+    # Possible TODO: replace above colorbar implementations with this
+    # generic one.
+    from .colorbar import *
