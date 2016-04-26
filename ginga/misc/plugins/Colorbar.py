@@ -35,7 +35,14 @@ class Colorbar(GingaPlugin.GlobalPlugin):
         cbar = ColorBar.ColorBar(self.logger)
         cbar.set_cmap(self.fv.cm)
         cbar.set_imap(self.fv.im)
-        cbar_w = Widgets.wrap(cbar)
+        if hasattr(cbar, 'get_widget'):
+            # generic version based on a ginga widget
+            cbar_w = cbar.get_widget()
+            # TEMP
+            cbar_w.resize(600, 16)
+        else:
+            # dedicated widget version
+            cbar_w = Widgets.wrap(cbar)
         self.colorbar = cbar
         self.fv.add_callback('channel-change', self.change_cbar, cbar)
         cbar.add_callback('motion', self.cbar_value_cb)
