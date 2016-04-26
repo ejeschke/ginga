@@ -33,8 +33,8 @@ class ColorBar(Callback.Callbacks):
         cbar.enable_autocuts('off')
 
         # JPEG rendering makes for mushy text
-        #settings = cbar.get_settings()
-        #settings.set(html5_canvas_format='png')
+        ## settings = cbar.get_settings()
+        ## settings.set(html5_canvas_format='png')
 
         # to respond quickly to contrast adjustment
         #cbar.defer_lagtime = 0.005
@@ -94,8 +94,9 @@ class ColorBar(Callback.Callbacks):
         self.redraw()
 
     def resize_cb(self, viewer, width, height):
+        self.logger.info("colorbar resized to %dx%d" % (width, height))
         self.cbar.height = height
-        self.redraw()
+        self.cbar_view.redraw(whence=0)
 
     def redraw(self):
         self.cbar_view.redraw()
