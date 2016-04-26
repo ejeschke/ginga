@@ -61,6 +61,7 @@ class SaveImage(GlobalPlugin):
 
         self.chnames = []
         self.chname = None
+
         self.gui_up = False
 
     def build_gui(self, container):
@@ -77,11 +78,11 @@ class SaveImage(GlobalPlugin):
         fr.set_widget(tw)
         container.add_widget(fr, stretch=0)
 
-        captions = (('Channel:', 'llabel', 'Channel Name', 'combobox'),
-                    ('Path:', 'llabel', 'OutDir', 'entry',
-                     'Browse', 'button'),
-                    ('Suffix:', 'llabel', 'Suffix', 'entry'),
-                    ('Modified images only', 'checkbutton'))
+        captions = (('Channel:', 'label', 'Channel Name', 'combobox'),
+                    ('Path:', 'label', 'OutDir', 'entry'),
+                    ('Browse', 'button'),
+                    ('Suffix:', 'label', 'Suffix', 'entry'),
+                    ('Modified only', 'checkbutton'))
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
 
@@ -100,9 +101,10 @@ class SaveImage(GlobalPlugin):
         b.suffix.add_callback('activated', lambda w: self.set_suffix())
 
         mod_only = self.settings.get('modified_only', True)
-        b.modified_images_only.set_state(mod_only)
-        b.modified_images_only.add_callback('activated',
+        b.modified_only.set_state(mod_only)
+        b.modified_only.add_callback('activated',
                                             lambda *args: self.redo())
+        b.modified_only.set_tooltip("Show only locally modified images")
 
         container.add_widget(w, stretch=0)
 
@@ -157,7 +159,7 @@ Output image will have the filename of <inputname>_<suffix>.fits.""")
             return
 
         #mod_only = self.settings.get('modified_only', True)
-        mod_only = self.w.modified_images_only.get_state()
+        mod_only = self.w.modified_only.get_state()
         treedict = Bunch.caselessDict()
         self.treeview.clear()
         self.w.status.set_text('')
