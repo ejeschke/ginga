@@ -108,6 +108,18 @@ ginga_make_application = function (ws_url) {
         ginga_app.send_pkt(message);
     }
 
+    ginga_app.resize_window = function (e) {
+        console.log("browser window is resized");
+        e.preventDefault();
+
+        for (var key in ginga_app.canvases) {
+            ginga_app.canvases[key].resize_canvas(e)
+        }
+    }
+    // document.body.addEventListener("resize", ginga_app.resize_window,
+    //                                false);
+    document.body.onresize = ginga_app.resize_window;
+
     ginga_app.init_socket();
   
     ginga_app.socket.onopen = function(e) {
@@ -115,6 +127,9 @@ ginga_make_application = function (ws_url) {
         for (var key in ginga_app.canvases) {
             ginga_app.canvases[key].initialize_canvas(e)
         }
+
+        // report initial sizes
+        ginga_app.resize_window(e)
     }
 
     return ginga_app;
@@ -230,41 +245,40 @@ ginga_initialize_canvas = function (canvas, id, app) {
         e.preventDefault();
     }
     
-    pg_canvas.resize_window = function resize_canvas(e) {
-        console.log("canvas is resized");
-        e.preventDefault();
+    //pg_canvas.resize_window = function resize_canvas(e) {
+    pg_canvas.resize_canvas = function (e) {
+        console.log("canvas " + pg_canvas.canvas_id + " resize cb");
+        //e.preventDefault();
         canvas = document.getElementById(pg_canvas.canvas_id);
+        console.log("current height is "+canvas.width.toFixed(0)+"x"+canvas.height.toFixed(0)+" pixels")
 
-        // ack--this is bad--assumes the canvas size is the window size
-        // width = window.innerWidth;
-        // height = window.innerHeight;
-    
-        // canvas.width = width;
-        // canvas.height = height;
+        // Set the canvas size to the pixel size reported for the
+        // display area--important--we need to ensure no canvas scaling
+        // so we can accurately maintain the peer's  pixel <--> data mapping
+        width = canvas.clientWidth;
+        height = canvas.clientHeight;
+        console.log("client dimensions "+width.toFixed(0)+"x"+height.toFixed(0)+" pixels")
 
-        // canvas is auto-resized
-        width = canvas.width;
-        height = canvas.height;
+        // If an element is obscured it's size will be reported as 0.
+        // In such a case we don't want to reset the peer's idea of the size
+        // unnecessarily, so only report size changes > 0
+        if ((width != 0) && (height != 0)) {
+            canvas.width = width
+            canvas.height = height
     
-        // now resize hidden backing canvas
-        pg_canvas.hiddenCanvas.width = width;
-        pg_canvas.hiddenCanvas.height = height;
+            // now resize hidden backing canvas
+            pg_canvas.hiddenCanvas.width = width;
+            pg_canvas.hiddenCanvas.height = height;
     
-        var message = {
-            type: e.type || "",
-            id: pg_canvas.canvas_id,
-            x: width || 0,
-            y: height || 0,
-            button: e.button || 0,
-            delta: e.wheelDelta || 0,
-            alt_key: e.altKey || false,
-            ctrl_key: e.ctrlKey || false,
-            meta_key: e.metaKey || false,
-            shift_key: e.shiftKey || false,
-            key_code: e.keyCode || 0
-        }
-        pg_canvas.send_pkt(message);
-        console.log("resized canvas");
+            // inform the other side about our new dimensions
+            var message = { type: "resize",
+                            id: pg_canvas.canvas_id,
+                            width: width,
+                            height: height
+                          };
+            pg_canvas.send_pkt(message);
+            console.log("resized canvas");
+        };
     }
 
     pg_canvas.redrawCanvas = function() {
@@ -461,15 +475,9 @@ ginga_initialize_canvas = function (canvas, id, app) {
             pg_canvas.hammer.on('rotateend', pg_canvas.input_handler_gesture)
         }
 
-        // document.body.addEventListener("resize", pg_canvas.resize_window,
-        //                                false);
-        document.body.onresize = pg_canvas.resize_window;
-
         canvas.addEventListener("focus", pg_canvas.input_handler, true);
         //canvas.addEventListener("blur", pg_canvas.input_handler, true);
         canvas.addEventListener("focusout", pg_canvas.input_handler, true);
-        // document.body.onfocus = pg_canvas.input_handler;
-        // document.body.onblur = pg_canvas.input_handler;
 
 	canvas.style.cursor = 'crosshair';
 
@@ -477,6 +485,8 @@ ginga_initialize_canvas = function (canvas, id, app) {
                         id: pg_canvas.canvas_id,
                         width: canvas.width,
                         height: canvas.height
+                        //width: canvas.clientWidth,
+                        //height: canvas.clientHeight
                       };
         pg_canvas.send_pkt(message);
     }
