@@ -776,6 +776,7 @@ class Canvas(WidgetBase):
 
     canvas_template = '''
     <canvas id="%(id)s" tabindex="%(tab_idx)d"
+       style="position: relative; left: 0px; right: 0px; top: 0px; bottom: 0px;"
        width="%(width)s" height="%(height)s">Your browser does not appear to
 support HTML5 canvas.</canvas>
     <script type="text/javascript">
@@ -1372,7 +1373,7 @@ class TopLevel(ContainerBase):
         padding: 0px;
         margin: 0px;
         border: 0;
-        /* overflow: hidden; disable scrollbars */
+        overflow: hidden; /* disable scrollbars */
         display: block; /* no floating content on sides */
       }
     </style>
@@ -1381,6 +1382,8 @@ class TopLevel(ContainerBase):
 </head>
 <body>
     <script type="text/javascript" src="/js/hammer.js"></script>
+
+    <!-- The next three lines are for the jQuery widgets (e.g., Dialog) -->
     <link rel="stylesheet" href="//code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css">
     <script src="//code.jquery.com/jquery-1.10.2.js"></script>
     <script src="//code.jquery.com/ui/1.11.4/jquery-ui.js"></script>

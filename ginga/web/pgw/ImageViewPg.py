@@ -42,6 +42,9 @@ except ImportError:
                  ImageViewMockError as ImageViewError
 
 
+default_html_fmt = 'jpeg'
+
+
 class ImageViewPgError(ImageViewError):
     pass
 
@@ -57,7 +60,7 @@ class ImageViewPg(ImageView):
         # format for rendering image on HTML5 canvas
         # NOTE: 'jpeg' has much better performance than 'png', but can show
         # some artifacts, especially noticeable with small text
-        self.t_.setDefaults(html5_canvas_format='jpeg')
+        self.t_.setDefaults(html5_canvas_format=default_html_fmt)
 
         #self.defer_redraw = False
 
@@ -68,7 +71,6 @@ class ImageViewPg(ImageView):
         """
         self.logger.debug("set widget canvas=%s" % canvas)
         self.pgcanvas = canvas
-        #self.pgcanvas.set_viewer(self)
 
     def get_widget(self):
         return self.pgcanvas
@@ -80,7 +82,7 @@ class ImageViewPg(ImageView):
 
         try:
             self.logger.debug("getting image as buffer...")
-            format = self.t_.get('html5_canvas_format', 'jpeg')
+            format = self.t_.get('html5_canvas_format', default_html_fmt)
             buf = self.get_rgb_image_as_buffer(format=format, quality=90)
             self.logger.debug("got '%s' RGB image buffer, len=%d" % (
                 format, len(buf)))
@@ -136,9 +138,10 @@ class ImageViewPg(ImageView):
         self.redraw(whence=0)
 
     def resize_event(self, event):
-        wd, ht = event.x, event.y
-        # Not yet ready for prime-time--browser seems to mess with the
+        wd, ht = event.width, event.height
+        # Not quite ready for prime-time--browser seems to mess with the
         # aspect ratio
+        self.logger.info("canvas resized to %dx%d" % (wd, ht))
         self.configure_window(wd, ht)
         self.redraw(whence=0)
 
@@ -241,21 +244,9 @@ class ImageViewEvent(ImageViewPg):
     def set_widget(self, canvas):
         super(ImageViewEvent, self).set_widget(canvas)
 
-        ## canvas.bind("<Enter>", self.enter_notify_event)
-        ## canvas.bind("<Leave>", self.leave_notify_event)
-        ## canvas.bind("<FocusIn>", lambda evt: self.focus_event(evt, True))
-        ## canvas.bind("<FocusOut>", lambda evt: self.focus_event(evt, False))
-        ## canvas.bind("<KeyPress>", self.key_press_event)
-        ## canvas.bind("<KeyRelease>", self.key_release_event)
-        ## #canvas.bind("<Map>", self.map_event)
-        ## # scroll events in tk are overloaded into the button press events
-        ## canvas.bind("<ButtonPress>", self.button_press_event)
-        ## canvas.bind("<ButtonRelease>", self.button_release_event)
-        ## canvas.bind("<Motion>", self.motion_notify_event)
+        # see event binding setup in Viewers.py
 
-        # TODO: Set up widget as a drag and drop destination
-
-        return self.make_callback('map')
+        #return self.make_callback('map')
 
     def transkey(self, keycode):
         self.logger.debug("key code in js '%d'" % (keycode))

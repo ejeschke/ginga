@@ -59,7 +59,7 @@ class ApplicationHandler(tornado.websocket.WebSocketHandler):
             "keydown": InputEvent,
             "keyup": InputEvent,
             "keypress": InputEvent,
-            "resize": InputEvent,
+            "resize": ConfigEvent,
             "focus": InputEvent,
             "focusout": InputEvent,
             "blur": InputEvent,
