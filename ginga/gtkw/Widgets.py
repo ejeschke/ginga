@@ -1,9 +1,6 @@
 #
 # Widgets.py -- wrapped Gtk widgets and convenience functions
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -1512,6 +1509,7 @@ class Menubar(ContainerBase):
         super(Menubar, self).__init__()
 
         self.widget = gtk.MenuBar()
+        self.menus = Bunch.Bunch(caseless=True)
 
     def add_widget(self, child):
         menu_w = child.get_widget()
@@ -1524,10 +1522,14 @@ class Menubar(ContainerBase):
         item_w = gtk.MenuItem(label=name)
         child = Menu()
         self.add_ref(child)
+        self.menus[name] = child
         item_w.set_submenu(child.get_widget())
         self.widget.append(item_w)
         item_w.show()
         return child
+
+    def get_menu(self, name):
+        return self.menus[name]
 
 
 class TopLevel(ContainerBase):

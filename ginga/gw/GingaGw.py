@@ -208,6 +208,18 @@ class GingaView(GwMain.GwMain, Widgets.Application):
 
         return menubar
 
+    def add_menu(self, name):
+        """Add a menu with name `name` to the global menu bar.
+        Returns a menu widget.
+        """
+        return self.menubar.add_name(name)
+
+    def get_menu(self, name):
+        """Get the menu with name `name` from the global menu bar.
+        Returns a menu widget.
+        """
+        return self.menubar.get_menu(name)
+
     def add_dialogs(self):
         if hasattr(GwHelp, 'FileSelection'):
             self.filesel = GwHelp.FileSelection(self.w.root.get_widget())
