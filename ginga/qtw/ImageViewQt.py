@@ -1,9 +1,6 @@
 #
 # ImageViewQt.py -- a backend for Ginga using Qt widgets
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -306,7 +303,7 @@ class ImageViewQt(ImageView.ImageViewBase):
             #self.imgwin.show()
 
     def set_cursor(self, cursor):
-        if self.imgwin:
+        if self.imgwin is not None:
             self.imgwin.setCursor(cursor)
 
     def define_cursor(self, ctype, cursor):
@@ -314,6 +311,28 @@ class ImageViewQt(ImageView.ImageViewBase):
 
     def get_cursor(self, ctype):
         return self.cursor[ctype]
+
+    def center_cursor(self):
+        if self.imgwin is None:
+            return
+        win_x, win_y = self.get_center()
+        w_pt = QtCore.QPoint(win_x, win_y)
+        s_pt = self.imgwin.mapToGlobal(w_pt)
+
+        # set the cursor position
+        cursor = self.imgwin.cursor()
+        cursor.setPos(s_pt)
+
+    def position_cursor(self, data_x, data_y):
+        if self.imgwin is None:
+            return
+        win_x, win_y = self.get_canvas_xy(data_x, data_y)
+        w_pt = QtCore.QPoint(win_x, win_y)
+        s_pt = self.imgwin.mapToGlobal(w_pt)
+
+        # set the cursor position
+        cursor = self.imgwin.cursor()
+        cursor.setPos(s_pt)
 
     def get_rgb_order(self):
         return self._rgb_order

@@ -1,9 +1,6 @@
 #
 # Bindings.py -- Bindings classes for Ginga FITS viewer.
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 
@@ -158,14 +155,14 @@ class ImageViewBindings(object):
             ms_contrast_restore = ['contrast+right', 'ctrl+middle'],
             ms_pan = ['pan+left', 'ctrl+left'],
             ms_zoom = ['pan+right'],
-            ms_freepan = ['freepan+left', 'middle'],
-            ms_zoom_in = ['freepan+middle'],
+            ms_freepan = ['freepan+middle'],
+            ms_zoom_in = ['freepan+left'],
             ms_zoom_out = ['freepan+right'],
             ms_cutlo = ['cuts+shift+left'],
             ms_cuthi = ['cuts+ctrl+left'],
             ms_cutall = ['cuts+left'],
             ms_cut_auto = ['cuts+right'],
-            ms_panset = ['pan+middle', 'shift+left'],
+            ms_panset = ['pan+middle', 'shift+left', 'middle'],
 
             # GESTURES (some backends only)
             gs_pinch = [],
@@ -178,6 +175,9 @@ class ImageViewBindings(object):
             pinch_actions = [],
             pinch_zoom_acceleration = 1.4,
             pinch_rotate_acceleration = 1.0,
+
+            # No messages for following operations:
+            msg_panset = False,
             )
 
     def get_settings(self):
@@ -552,9 +552,9 @@ class ImageViewBindings(object):
         scale_x, scale_y = viewer.get_scale_xy()
         direction = self.get_direction(direction, rev=rev)
         if direction == 'up':
-                mult = 1.0 + factor
+                mult = factor
         elif direction == 'down':
-                mult = 1.0 - factor
+                mult = 1.0 / factor
         scale_x, scale_y = scale_x * mult, scale_y * mult
         viewer.scale_to(scale_x, scale_y)
         if msg:
@@ -564,8 +564,7 @@ class ImageViewBindings(object):
     def _zoom_xy(self, viewer, x, y, msg=True):
         win_wd, win_ht = viewer.get_window_size()
         delta = float(x - self._start_x)
-        factor = math.fabs(self.settings.get('mouse_zoom_acceleration', 1.085)
-                           - 1.0)
+        factor = self.settings.get('mouse_zoom_acceleration', 1.085)
         direction = 0.0
         if delta < 0.0:
             direction = 180.0
@@ -1067,29 +1066,55 @@ class ImageViewBindings(object):
             viewer.onscreen_message(None)
         return True
 
-    def ms_zoom_in(self, viewer, event, data_x, data_y, msg=True):
+    def ms_zoom_in(self, viewer, event, data_x, data_y, msg=False):
         """Zoom in one level by a mouse click.
         """
         if not self.canzoom:
             return True
 
-        if event.state == 'down':
+        if not (event.state == 'down'):
+            return True
+
+        with viewer.suppress_redraw:
             viewer.panset_xy(data_x, data_y)
-            viewer.zoom_in()
+
+            if self.settings.get('scroll_zoom_direct_scale', True):
+                zoom_accel = self.settings.get('scroll_zoom_acceleration', 1.0)
+                # change scale by 100%
+                amount = zoom_accel * 2.0
+                self._scale_image(viewer, 0.0, amount, msg=msg)
+            else:
+                viewer.zoom_in()
+
+            if hasattr(viewer, 'center_cursor'):
+                viewer.center_cursor()
             if msg:
                 viewer.onscreen_message(viewer.get_scale_text(),
-                                           delay=1.0)
+                                        delay=1.0)
         return True
 
-    def ms_zoom_out(self, viewer, event, data_x, data_y, msg=True):
+    def ms_zoom_out(self, viewer, event, data_x, data_y, msg=False):
         """Zoom out one level by a mouse click.
         """
         if not self.canzoom:
             return True
 
-        if event.state == 'down':
+        if not (event.state == 'down'):
+            return True
+
+        with viewer.suppress_redraw:
             viewer.panset_xy(data_x, data_y)
-            viewer.zoom_out()
+
+            if self.settings.get('scroll_zoom_direct_scale', True):
+                zoom_accel = self.settings.get('scroll_zoom_acceleration', 1.0)
+                # change scale by 100%
+                amount = zoom_accel * 2.0
+                self._scale_image(viewer, 180.0, amount, msg=msg)
+            else:
+                viewer.zoom_out()
+
+            if hasattr(viewer, 'center_cursor'):
+                viewer.center_cursor()
             if msg:
                 viewer.onscreen_message(viewer.get_scale_text(),
                                            delay=1.0)
@@ -1317,7 +1342,7 @@ class ImageViewBindings(object):
         if self.settings.get('scroll_zoom_direct_scale', True):
             zoom_accel = self.settings.get('scroll_zoom_acceleration', 1.0)
             # change scale by 50%
-            amount = zoom_accel * 0.50
+            amount = zoom_accel * 1.50
             self._scale_image(viewer, event.direction, amount, msg=msg)
 
         else:
@@ -1339,7 +1364,7 @@ class ImageViewBindings(object):
         if self.canzoom:
             zoom_accel = self.settings.get('scroll_zoom_acceleration', 1.0)
             # change scale by 20%
-            amount = zoom_accel * 0.20
+            amount = zoom_accel * 1.20
             self._scale_image(viewer, event.direction, amount, msg=msg)
         return True
 
@@ -1350,8 +1375,8 @@ class ImageViewBindings(object):
         if self.canzoom:
             zoom_accel = self.settings.get('scroll_zoom_acceleration', 1.0)
             # change scale by 5%
-            amount = zoom_accel * 0.05
-            self._scale_image(viewer, event.direction, 0.08, msg=msg)
+            amount = zoom_accel * 1.05
+            self._scale_image(viewer, event.direction, amount, msg=msg)
         return True
 
     def sc_pan(self, viewer, event, msg=True):

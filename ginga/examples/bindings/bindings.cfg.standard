@@ -131,14 +131,14 @@ ms_contrast = ['contrast+left', 'ctrl+right']
 ms_contrast_restore = ['contrast+right', 'ctrl+middle']
 ms_pan = ['pan+left', 'ctrl+left']
 ms_zoom = ['pan+right']
-ms_freepan = ['freepan+left', 'middle']
-ms_zoom_in = ['freepan+middle']
+ms_freepan = ['freepan+middle']
+ms_zoom_in = ['freepan+left']
 ms_zoom_out = ['freepan+right']
-ms_cutlo = ['cuts+shift+left'],
-ms_cuthi = ['cuts+ctrl+left'],
+ms_cutlo = ['cuts+shift+left']
+ms_cuthi = ['cuts+ctrl+left']
 ms_cutall = ['cuts+left']
 ms_cut_auto = ['cuts+right']
-ms_panset = ['pan+middle', 'shift+left']
+ms_panset = ['pan+middle', 'shift+left', 'middle']
 
 mouse_zoom_acceleration = 1.085
 mouse_rotate_acceleration = 0.75
@@ -167,6 +167,7 @@ zoom_scroll_reverse = False
 
 # No messages for color map warps or setting pan position
 #msg_cmap = False
-#msg_panset = False
+msg_panset = False
+
 
 #END

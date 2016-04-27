@@ -1,9 +1,6 @@
 #
 # ImageView.py -- base class for the display of image files
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -2655,39 +2652,23 @@ class ImageViewBase(Callback.Callbacks):
         self.logger.warn("Subclass should override this abstract method!")
 
 
-## class SuppressRedraw(object):
-##     def __init__(self, viewer):
-##         self.viewer = viewer
-
-##     def __enter__(self):
-##         self.viewer._hold_redraw_cnt += 1
-##         return self
-
-##     def __exit__(self, exc_type, exc_val, exc_tb):
-##         self.viewer._hold_redraw_cnt -= 1
-
-##         if (self.viewer._hold_redraw_cnt <= 0):
-##             # TODO: whence should be largest possible
-##             # maybe self.viewer._defer_whence ??
-##             whence = 0
-##             self.viewer.redraw(whence=whence)
-##         return False
-
-
 class SuppressRedraw(object):
     def __init__(self, viewer):
         self.viewer = viewer
 
     def __enter__(self):
+        self.viewer._hold_redraw_cnt += 1
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        self.viewer._hold_redraw_cnt -= 1
+
+        if (self.viewer._hold_redraw_cnt <= 0):
+            # TODO: whence should be largest possible
+            # maybe self.viewer._defer_whence ??
+            whence = 0
+            self.viewer.redraw(whence=whence)
         return False
 
-
-# FOOTNOTES
-# [1] This redraw is redundant due to the automatic redraw happening via
-#     a preferences callback.  It is commented out, but left here in case
-#     we can/need to implement it again.
 
 #END
