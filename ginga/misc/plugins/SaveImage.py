@@ -158,7 +158,6 @@ Output image will have the filename of <inputname>_<suffix>.fits.""")
         if not self.gui_up:
             return
 
-        #mod_only = self.settings.get('modified_only', True)
         mod_only = self.w.modified_only.get_state()
         treedict = Bunch.caselessDict()
         self.treeview.clear()
@@ -232,8 +231,6 @@ Output image will have the filename of <inputname>_<suffix>.fits.""")
             self.treeview.set_optimal_column_widths()
             self.logger.debug('Resized columns for {0} row(s)'.format(n_rows))
 
-        return
-
     def update_channels(self):
         """Update the GUI to reflect channels and image listing.
         """
@@ -277,7 +274,7 @@ Output image will have the filename of <inputname>_<suffix>.fits.""")
 
     def keys_from_datasrc(self):
         """Yield back keys for image listing from Ginga's data cache."""
-        channel = self.fv.get_channelInfo()
+        channel = self.fv.get_channelInfo(self.chname)
         for key in channel.datasrc.sortedkeys:
             yield key
 
@@ -411,7 +408,6 @@ Output image will have the filename of <inputname>_<suffix>.fits.""")
             self.w.save.set_enabled(True)
         else:
             self.w.save.set_enabled(False)
-        return
 
     def save_images(self):
         """Save selected images.
@@ -459,7 +455,6 @@ Output image will have the filename of <inputname>_<suffix>.fits.""")
 
     def close(self):
         self.fv.stop_global_plugin(str(self))
-        return
 
     def start(self):
         self.instructions()
