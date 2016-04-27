@@ -1,9 +1,6 @@
 #
 # Widgets.py -- wrapped Qt widgets and convenience functions
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -1458,7 +1455,7 @@ class Menu(ContainerBase):
     def __init__(self):
         super(Menu, self).__init__()
 
-        # this get's overwritten if created from Menubar
+        # NOTE: this get's overwritten if created from Menubar
         self.widget = QtGui.QMenu()
 
     def add_widget(self, child):
@@ -1489,6 +1486,7 @@ class Menubar(ContainerBase):
         super(Menubar, self).__init__()
 
         self.widget = QtGui.QMenuBar()
+        self.menus = Bunch.Bunch(caseless=True)
 
     def add_widget(self, child):
         menu_w = child.get_widget()
@@ -1500,7 +1498,11 @@ class Menubar(ContainerBase):
         child = Menu()
         child.widget = menu_w
         self.add_ref(child)
+        self.menus[name] = child
         return child
+
+    def get_menu(self, name):
+        return self.menus[name]
 
 
 class TopLevel(ContainerBase):

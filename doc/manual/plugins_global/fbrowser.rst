@@ -3,4 +3,5 @@
 FBrowser (Open File)
 ====================
 
-TBD
+This brings up :ref:`plugins-fbrowser` local plugin from the global menu
+for convenience.
