@@ -44,8 +44,8 @@ appear in the latter.
 
 To create a mask that this plugin can read, one can use results from
 :ref:`plugins-drawing` (press "Create Mask" after drawing and save the
-mask using ``SaveImage``), in addition to creating a FITS file
-by hand using :ref:`Astropy FITS <astropy:astropy-io-fits>`, etc.
+mask using :ref:`sec-plugins-global-saveimage`), in addition to creating a FITS
+file by hand using :ref:`Astropy FITS <astropy:astropy-io-fits>`, etc.
 
 Used together with :ref:`local-plugin-tvmark`, you can overlay both point
 sources and masked regions in Ginga.

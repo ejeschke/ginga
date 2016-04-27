@@ -14,8 +14,13 @@ from astropy.io import fits
 # GINGA
 from ginga.GingaPlugin import GlobalPlugin
 from ginga.gw import Widgets
-from ginga.gw.GwHelp import DirectorySelection
 from ginga.misc import Bunch
+from ginga.util.iohelper import shorten_name
+
+try:
+    from ginga.gw.GwHelp import DirectorySelection
+except ImportError:  # This is needed for RTD to build
+    pass
 
 __all__ = []
 
@@ -42,6 +47,7 @@ class SaveImage(GlobalPlugin):
         self.settings = prefs.createCategory('plugin_SaveImage')
         self.settings.addDefaults(output_directory = '.',
                                   output_suffix = 'ginga',
+                                  include_chname = True,
                                   clobber = False,
                                   modified_only = True,
                                   max_mosaic_size = 1e8,
@@ -78,16 +84,25 @@ class SaveImage(GlobalPlugin):
         fr.set_widget(tw)
         container.add_widget(fr, stretch=0)
 
-        captions = (('Channel:', 'label', 'Channel Name', 'combobox'),
-                    ('Path:', 'label', 'OutDir', 'entry'),
-                    ('Browse', 'button'),
-                    ('Suffix:', 'label', 'Suffix', 'entry'),
-                    ('Modified only', 'checkbutton'))
+        captions = (('Channel:', 'label', 'Channel Name', 'combobox',
+                     'Modified only', 'checkbutton'), )
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
 
         b.channel_name.set_tooltip('Channel for locating images to save')
         b.channel_name.add_callback('activated', self.select_channel_cb)
+
+        mod_only = self.settings.get('modified_only', True)
+        b.modified_only.set_state(mod_only)
+        b.modified_only.add_callback('activated', lambda *args: self.redo())
+        b.modified_only.set_tooltip("Show only locally modified images")
+
+        container.add_widget(w, stretch=0)
+
+        captions = (('Path:', 'llabel', 'OutDir', 'entry', 'Browse', 'button'),
+                    ('Suffix:', 'llabel', 'Suffix', 'entry'))
+        w, b = Widgets.build_info(captions, orientation=orientation)
+        self.w.update(b)
 
         b.outdir.set_text(self.outdir)
         b.outdir.set_tooltip('Output directory')
@@ -99,12 +114,6 @@ class SaveImage(GlobalPlugin):
         b.suffix.set_text(self.suffix)
         b.suffix.set_tooltip('Suffix to append to filename')
         b.suffix.add_callback('activated', lambda w: self.set_suffix())
-
-        mod_only = self.settings.get('modified_only', True)
-        b.modified_only.set_state(mod_only)
-        b.modified_only.add_callback('activated',
-                                            lambda *args: self.redo())
-        b.modified_only.set_tooltip("Show only locally modified images")
 
         container.add_widget(w, stretch=0)
 
@@ -169,14 +178,14 @@ Output image will have the filename of <inputname>_<suffix>.fits.""")
 
         # Only list modified images for saving. Scanning Datasrc is enough.
         if mod_only:
-            func = self.keys_from_datasrc
+            all_keys = channel.datasrc.sortedkeys
 
         # List all images in the channel.
         else:
-            func = channel.get_image_names
+            all_keys = channel.get_image_names()
 
         # Extract info for listing and saving
-        for key in func():
+        for key in all_keys:
             iminfo = channel.get_image_info(key)
             path = iminfo.get('path')
             idx = iminfo.get('idx')
@@ -272,12 +281,6 @@ Output image will have the filename of <inputname>_<suffix>.fits.""")
         self.logger.debug("channel name changed to '%s'" % (self.chname))
         self.redo()
 
-    def keys_from_datasrc(self):
-        """Yield back keys for image listing from Ginga's data cache."""
-        channel = self.fv.get_channelInfo(self.chname)
-        for key in channel.datasrc.sortedkeys:
-            yield key
-
     def _format_extname(self, ext):
         """Pretty print given extension name and number tuple."""
         if ext is None:
@@ -315,7 +318,7 @@ Output image will have the filename of <inputname>_<suffix>.fits.""")
         if self.history_obj is None:
             return
 
-        channel = self.fv.get_channelInfo()
+        channel = self.fv.get_channelInfo(self.chname)
         if channel is None:
             return
         file_dict = self.history_obj.name_dict[channel.name]
@@ -366,7 +369,7 @@ Output image will have the filename of <inputname>_<suffix>.fits.""")
 
         """
         maxsize = self.settings.get('max_mosaic_size', 1e8)  # Default 10k x 10k
-        channel = self.fv.get_channelInfo()
+        channel = self.fv.get_channelInfo(self.chname)
         image = channel.datasrc[key]
 
         # Prevent writing very large mosaic
@@ -388,7 +391,7 @@ Output image will have the filename of <inputname>_<suffix>.fits.""")
 
     def _write_mef(self, key, extlist, outfile):
         """Write out regular multi-extension FITS data."""
-        channel = self.fv.get_channelInfo()
+        channel = self.fv.get_channelInfo(self.chname)
         with fits.open(outfile, mode='update') as pf:
             # Process each modified data extension
             for idx in extlist:
@@ -426,6 +429,11 @@ Output image will have the filename of <inputname>_<suffix>.fits.""")
         else:
             sfx = ''
 
+        # Also include channel name in suffix. This is useful if user likes to
+        # open the same image in multiple channels.
+        if self.settings.get('include_chname', True):
+            sfx += '_' + self.chname
+
         # Process each selected file. Each can have multiple edited extensions.
         for infile in res_dict:
             f_pfx = os.path.splitext(infile)[0]  # prefix
@@ -433,9 +441,11 @@ Output image will have the filename of <inputname>_<suffix>.fits.""")
             oname = f_pfx + sfx + f_ext
             outfile = os.path.join(self.outdir, oname)
 
-            s = 'Writing out {0} to {1} ...'.format(infile, oname)
-            self.w.status.set_text(s)
-            self.logger.debug(s)
+            self.w.status.set_text(
+                'Writing out {0} to {1} ...'.format(shorten_name(infile, 10),
+                                                    shorten_name(oname, 10)))
+            self.logger.debug(
+                'Writing out {0} to {1} ...'.format(infile, oname))
 
             if os.path.exists(outfile) and not clobber:
                 self.logger.error('{0} already exists'.format(outfile))
