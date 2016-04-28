@@ -255,9 +255,9 @@ class ReferenceViewer(object):
             try:
                 os.mkdir(basedir)
             except OSError as e:
-                logger.warn("Couldn't create ginga settings area (%s): %s" % (
+                logger.warning("Couldn't create ginga settings area (%s): %s" % (
                     basedir, str(e)))
-                logger.warn("Preferences will not be able to be saved")
+                logger.warning("Preferences will not be able to be saved")
 
         # Set up preferences
         prefs = Settings.Preferences(basefolder=basedir, logger=logger)
@@ -321,7 +321,7 @@ class ReferenceViewer(object):
                 from ginga import cmap
                 cmap.add_matplotlib_cmaps()
             except Exception as e:
-                logger.warn("failed to load matplotlib colormaps: %s" % (str(e)))
+                logger.warning("failed to load matplotlib colormaps: %s" % (str(e)))
 
         # User wants to customize the WCS package?
         if options.wcspkg:
@@ -333,7 +333,7 @@ class ReferenceViewer(object):
             from ginga.util import wcsmod
             assert wcsmod.use(wcspkg) == True
         except Exception as e:
-            logger.warn("failed to set WCS package preference: %s" % (str(e)))
+            logger.warning("failed to set WCS package preference: %s" % (str(e)))
 
         # User wants to customize the FITS package?
         if options.fitspkg:
@@ -345,7 +345,7 @@ class ReferenceViewer(object):
             from ginga.util import io_fits
             assert io_fits.use(fitspkg) == True
         except Exception as e:
-            logger.warn("failed to set FITS package preference: %s" % (str(e)))
+            logger.warning("failed to set FITS package preference: %s" % (str(e)))
 
         # Check whether user wants to use OpenCv
         use_opencv = settings.get('use_opencv', False)
@@ -354,7 +354,7 @@ class ReferenceViewer(object):
             try:
                 trcalc.use('opencv')
             except Exception as e:
-                logger.warn("failed to set OpenCv preference: %s" % (str(e)))
+                logger.warning("failed to set OpenCv preference: %s" % (str(e)))
 
         # Create the dynamic module manager
         mm = ModuleManager.ModuleManager(logger)

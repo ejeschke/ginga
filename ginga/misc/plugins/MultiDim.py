@@ -417,10 +417,10 @@ class MultiDim(GingaPlugin.LocalPlugin):
 
             if hdu.data is None:
                 # <- empty data part to this HDU
-                self.logger.warn("Empty data part in HDU #%d" % (idx))
+                self.logger.warning("Empty data part in HDU #%d" % (idx))
 
             elif info['htype'].lower() not in ('imagehdu', 'primaryhdu'):
-                self.logger.warn("HDU #%d is not an image" % (idx))
+                self.logger.warning("HDU #%d is not an image" % (idx))
 
             else:
                 dims = list(hdu.data.shape)

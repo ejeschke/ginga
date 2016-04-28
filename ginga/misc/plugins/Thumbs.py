@@ -662,7 +662,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             try:
                 text = kwd + ': ' + str(metadata[kwd])
             except Exception as e:
-                self.logger.warn("Couldn't determine %s name: %s" % (
+                self.logger.warning("Couldn't determine %s name: %s" % (
                     kwd, str(e)))
                 text = "%s: N/A" % (kwd)
             result.append(text)

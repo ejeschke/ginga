@@ -1,10 +1,6 @@
 #
 # catalog.py -- DSS and star catalog interfaces for the Ginga fits viewer
 #
-# Eric Jeschke (eric@naoj.org)
-# Raymond Plante -- pyvo interfaces
-#
-# Copyright (c)  Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -255,7 +251,7 @@ class AstroQueryImageServer(object):
         if len(results) > 0:
             self.logger.info("Found %d images" % len(results))
         else:
-            self.logger.warn("Found no images in this area" % len(results))
+            self.logger.warning("Found no images in this area" % len(results))
             return None
 
         # For now, we pick the first one found
@@ -453,7 +449,7 @@ class PyVOImageServer(object):
         if len(results) > 0:
             self.logger.info("Found %d images" % len(results))
         else:
-            self.logger.warn("Found no images in this area" % len(results))
+            self.logger.warning("Found no images in this area" % len(results))
             return None
 
         # For now, we pick the first one found

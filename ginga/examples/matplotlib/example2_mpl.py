@@ -3,9 +3,6 @@
 # example2_mpl.py -- Simple, configurable FITS viewer using a matplotlib
 #                      QtAgg backend for Ginga and embedded in a Qt program.
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c)  Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -192,7 +189,7 @@ class FitsViewer(QtGui.QMainWindow):
             ra_txt, dec_txt = image.pixtoradec(fits_x, fits_y,
                                                format='str', coords='fits')
         except Exception as e:
-            self.logger.warn("Bad coordinate conversion: %s" % (
+            self.logger.warning("Bad coordinate conversion: %s" % (
                 str(e)))
             ra_txt  = 'BAD WCS'
             dec_txt = 'BAD WCS'

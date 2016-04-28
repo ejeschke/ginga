@@ -1,9 +1,6 @@
 #
 # io_rgb.py -- RGB image file handling.
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -111,7 +108,7 @@ class RGBFileHandler(object):
                     kwds[kwd] = value
 
             except Exception as e:
-                self.logger.warn("Failed to get image metadata: %s" % (str(e)))
+                self.logger.warning("Failed to get image metadata: %s" % (str(e)))
 
             # If we have a working color profile then handle any embedded
             # profile or color space information, if possible
@@ -164,7 +161,7 @@ class RGBFileHandler(object):
                         in_profile, profile['working']))
                 except Exception as e:
                     self.logger.error("Error converting from embedded color profile: %s" % (str(e)))
-                    self.logger.warn("Leaving image unprofiled.")
+                    self.logger.warning("Leaving image unprofiled.")
 
             data_np = numpy.array(image)
 

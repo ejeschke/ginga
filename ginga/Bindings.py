@@ -279,7 +279,7 @@ class ImageViewBindings(object):
                 cb_method = getattr(self, name)
 
             except AttributeError:
-                self.logger.warn("No method found matching '%s'" % (name))
+                self.logger.warning("No method found matching '%s'" % (name))
                 cb_method = None
 
             if pfx == 'kp_':
@@ -1872,7 +1872,7 @@ class BindingMapper(Callback.Callbacks):
                 idx = (None, self._empty_set, button)
                 emap = self.eventmap[idx]
             except KeyError:
-                #self.logger.warn("No button map binding for %s" % (str(btncode)))
+                #self.logger.warning("No button map binding for %s" % (str(btncode)))
                 return False
 
         self.logger.debug("Event map for %s" % (str(idx)))
@@ -1927,7 +1927,7 @@ class BindingMapper(Callback.Callbacks):
                 idx = (None, self._empty_set, button)
                 emap = self.eventmap[idx]
             except KeyError:
-                #self.logger.warn("No button map binding for %s" % (str(btncode)))
+                #self.logger.warning("No button map binding for %s" % (str(btncode)))
                 return False
 
         self.logger.debug("Event map for %s" % (str(idx)))

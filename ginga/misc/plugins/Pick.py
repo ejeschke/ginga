@@ -889,7 +889,7 @@ class Pick(GingaPlugin.LocalPlugin):
                 ra_txt, dec_txt = wcs.deg2fmt(ra_deg, dec_deg, 'str')
 
             except Exception as e:
-                self.logger.warn("Couldn't calculate sky coordinates: %s" % (str(e)))
+                self.logger.warning("Couldn't calculate sky coordinates: %s" % (str(e)))
                 ra_deg, dec_deg = 0.0, 0.0
                 ra_txt = dec_txt = 'BAD WCS'
 
@@ -902,7 +902,7 @@ class Pick(GingaPlugin.LocalPlugin):
                 starsize = self.iqcalc.starsize(qs.fwhm_x, cdelt1,
                                                 qs.fwhm_y, cdelt2)
             except Exception as e:
-                self.logger.warn("Couldn't calculate star size: %s" % (str(e)))
+                self.logger.warning("Couldn't calculate star size: %s" % (str(e)))
                 starsize = 0.0
 
             rpt_x = x + self.pixel_coords_offset

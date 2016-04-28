@@ -3,9 +3,6 @@
 # example1_mpl.py -- Simple, configurable FITS viewer using a matplotlib
 #                      QtAgg backend for Ginga and embedded in a Qt program.
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c)  Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -32,7 +29,7 @@ class FitsViewer(QtGui.QMainWindow):
 
         fig = Figure()
         w = FigureCanvas(fig)
-        
+
         fi = ImageViewCanvas(self.logger)
         fi.enable_autocuts('on')
         fi.set_autocut_params('zscale')
@@ -55,7 +52,7 @@ class FitsViewer(QtGui.QMainWindow):
         self.readout = QtGui.QLabel("")
         vbox.addWidget(self.readout, stretch=0,
                        alignment=QtCore.Qt.AlignCenter)
-        
+
         hbox = QtGui.QHBoxLayout()
         hbox.setContentsMargins(QtCore.QMargins(4, 2, 4, 2))
 
@@ -80,7 +77,7 @@ class FitsViewer(QtGui.QMainWindow):
 
     def get_fitsimage(self):
         return self.fitsimage
-    
+
     def load_file(self, filepath):
         image = AstroImage.AstroImage()
         image.load_file(filepath)
@@ -125,7 +122,7 @@ class FitsViewer(QtGui.QMainWindow):
             ra_txt, dec_txt = image.pixtoradec(fits_x, fits_y,
                                                format='str', coords='fits')
         except Exception as e:
-            self.logger.warn("Bad coordinate conversion: %s" % (
+            self.logger.warning("Bad coordinate conversion: %s" % (
                 str(e)))
             ra_txt  = 'BAD WCS'
             dec_txt = 'BAD WCS'
@@ -134,9 +131,9 @@ class FitsViewer(QtGui.QMainWindow):
             ra_txt, dec_txt, fits_x, fits_y, value)
         self.readout.setText(text)
 
-        
+
 def main(options, args):
-    
+
     #QtGui.QApplication.setGraphicsSystem('raster')
     app = QtGui.QApplication(args)
 
@@ -153,13 +150,13 @@ def main(options, args):
 
 
 if __name__ == "__main__":
-   
+
     # Parse command line options with nifty optparse module
     from optparse import OptionParser
 
     usage = "usage: %prog [options] cmd [args]"
     optprs = OptionParser(usage=usage, version=('%%prog'))
-    
+
     optprs.add_option("--debug", dest="debug", default=False, action="store_true",
                       help="Enter the pdb debugger on main()")
     optprs.add_option("--log", dest="logfile", metavar="FILE",

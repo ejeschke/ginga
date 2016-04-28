@@ -1,9 +1,6 @@
 #
 # log.py -- logging routines for Ginga
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -38,10 +35,13 @@ class NullLogger(object):
             self.f_out.write("%s\n" % msg)
             self.f_out.flush()
 
-    def warn(self, msg):
+    def warning(self, msg):
         if self.f_out:
             self.f_out.write("%s\n" % msg)
             self.f_out.flush()
+
+    def warn(self, msg):
+        return self.warning(msg)
 
     def error(self, msg):
         if self.f_out:

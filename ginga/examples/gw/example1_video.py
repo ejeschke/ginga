@@ -2,9 +2,6 @@
 #
 # video_play.py -- video playback example with Ginga
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c)  Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -209,7 +206,7 @@ class GingaVision(object):
             elapsed_time = end_time - start_time
             sleep_time = self.playback_rate - elapsed_time
             if sleep_time < 0:
-                self.logger.warn("underrun %.4f sec" % (-sleep_time))
+                self.logger.warning("underrun %.4f sec" % (-sleep_time))
 
             else:
                 sleep_time = max(sleep_time, 0.0)

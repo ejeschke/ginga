@@ -1175,8 +1175,8 @@ class ImageViewBase(Callback.Callbacks):
         if (sx < 1.0) or (sy < 1.0):
             new_scale_x = scale_x * sx
             new_scale_y = scale_y * sy
-            self.logger.warn("scale adjusted downward X (%.4f -> %.4f), "
-                             "Y (%.4f -> %.4f)" % (
+            self.logger.warning("scale adjusted downward X (%.4f -> %.4f), "
+                                "Y (%.4f -> %.4f)" % (
                 scale_x, new_scale_x, scale_y, new_scale_y))
             scale_x, scale_y = new_scale_x, new_scale_y
 
@@ -1618,8 +1618,8 @@ class ImageViewBase(Callback.Callbacks):
             if (sx < 1.0) or (sy < 1.0):
                 new_scale_x = scale_x * sx
                 new_scale_y = scale_y * sy
-                self.logger.warn("scale adjusted downward X (%.4f -> %.4f), "
-                                 "Y (%.4f -> %.4f)" % (
+                self.logger.warning("scale adjusted downward X (%.4f -> %.4f), "
+                                    "Y (%.4f -> %.4f)" % (
                     scale_x, new_scale_x, scale_y, new_scale_y))
                 scale_x, scale_y = new_scale_x, new_scale_y
         except:
@@ -2622,7 +2622,7 @@ class ImageViewBase(Callback.Callbacks):
         This must be implemented by subclasses.
 
         """
-        self.logger.warn("Subclass should override this abstract method!")
+        self.logger.warning("Subclass should override this abstract method!")
 
     def render_image(self, rgbobj, dst_x, dst_y):
         """Render image.
@@ -2637,7 +2637,7 @@ class ImageViewBase(Callback.Callbacks):
             Offsets in screen coordinates.
 
         """
-        self.logger.warn("Subclass should override this abstract method!")
+        self.logger.warning("Subclass should override this abstract method!")
 
     def reschedule_redraw(self, time_sec):
         """Reschedule redraw event.
@@ -2649,7 +2649,7 @@ class ImageViewBase(Callback.Callbacks):
             Time, in seconds, to wait.
 
         """
-        self.logger.warn("Subclass should override this abstract method!")
+        self.logger.warning("Subclass should override this abstract method!")
 
 
 class SuppressRedraw(object):

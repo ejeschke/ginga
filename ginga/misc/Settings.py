@@ -1,9 +1,6 @@
 #
 # Settings.py -- Simple class to manage stateful user preferences.
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -169,7 +166,7 @@ class SettingGroup(object):
             if onError == 'silent':
                 pass
             elif onError == 'warn':
-                self.logger.warn(errmsg)
+                self.logger.warning(errmsg)
             else:
                 raise SettingError(errmsg)
 

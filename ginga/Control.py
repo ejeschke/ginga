@@ -165,7 +165,7 @@ class GingaControl(Callback.Callbacks):
             info.y += off
 
         except Exception as e:
-            self.logger.warn("Can't get info under the cursor: %s" % (str(e)))
+            self.logger.warning("Can't get info under the cursor: %s" % (str(e)))
             return
 
         self.make_callback('field-info', fitsimage, info)
@@ -297,7 +297,7 @@ class GingaControl(Callback.Callbacks):
         return self.start_local_plugin(None, opname, None)
 
     def stop_operation_channel(self, chname, opname):
-        self.logger.warn("Do not use this method name--it will be deprecated!")
+        self.logger.warning("Do not use this method name--it will be deprecated!")
         return self.stop_local_plugin(chname, opname)
 
     def start_local_plugin(self, chname, opname, future):
@@ -421,15 +421,15 @@ class GingaControl(Callback.Callbacks):
                         return ('image', 'fits')
 
             except Exception as e:
-                self.logger.warn("python-magic error: %s; falling back "
-                                 "to 'mimetypes'" % (str(e)))
+                self.logger.warning("python-magic error: %s; falling back "
+                                    "to 'mimetypes'" % (str(e)))
 
         if typ is None:
             try:
                 typ, enc = mimetypes.guess_type(filepath)
             except Exception as e:
-                self.logger.warn("mimetypes error: %s; can't determine "
-                                 "file type" % (str(e)))
+                self.logger.warning("mimetypes error: %s; can't determine "
+                                    "file type" % (str(e)))
 
         if typ:
             typ, subtyp = typ.split('/')
@@ -451,8 +451,8 @@ class GingaControl(Callback.Callbacks):
             typ, subtyp = self.guess_filetype(filepfx)
 
         except Exception as e:
-            self.logger.warn("error determining file type: %s; "
-                             "assuming 'image/fits'" % (str(e)))
+            self.logger.warning("error determining file type: %s; "
+                                "assuming 'image/fits'" % (str(e)))
             # Can't determine file type: assume and attempt FITS
             typ, subtyp = 'image', 'fits'
 
@@ -963,8 +963,8 @@ class GingaControl(Callback.Callbacks):
                 settings.load(onError='raise')
 
             except Exception as e:
-                self.logger.warn("no saved preferences found for channel "
-                                 "'%s': %s" % (name, str(e)))
+                self.logger.warning("no saved preferences found for channel "
+                                    "'%s': %s" % (name, str(e)))
 
                 # copy template settings to new channel
                 if settings_template is not None:
@@ -1185,11 +1185,11 @@ class GingaControl(Callback.Callbacks):
     ### TO BE DEPRECATED
 
     def getDrawClass(self, drawtype):
-        #self.logger.warn("This method to be deprecated--use 'get_draw_class' instead")
+        #self.logger.warning("This method to be deprecated--use 'get_draw_class' instead")
         return self.get_draw_class(drawtype)
 
     def getDrawClasses(self):
-        #self.logger.warn("This method to be deprecated--use 'get_draw_classes' instead")
+        #self.logger.warning("This method to be deprecated--use 'get_draw_classes' instead")
         return self.get_draw_classes()
 
 

@@ -66,7 +66,7 @@ class ImageViewGtk(ImageViewCairo.ImageViewCairo):
             pixbuf = gtksel.pixbuf_new_from_array(arr, gtk.gdk.COLORSPACE_RGB,
                                                   8)
         except Exception as e:
-            self.logger.warn("Error making pixbuf: %s" % (str(e)))
+            self.logger.warning("Error making pixbuf: %s" % (str(e)))
             # pygtk might have been compiled without numpy support
             daht, dawd, depth = arr.shape
             rgb_buf = self._get_rgbbuf(arr)

@@ -1,9 +1,6 @@
 #
 # AutoCuts.py -- class for calculating auto cut levels
-# 
-# Eric Jeschke (eric@naoj.org)
 #
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -39,7 +36,7 @@ class AutoCutsBase(object):
     @classmethod
     def get_params_metadata(cls):
         return []
-    
+
     def __init__(self, logger):
         super(AutoCutsBase, self).__init__()
 
@@ -49,7 +46,7 @@ class AutoCutsBase(object):
 
     def get_algorithms(self):
         return autocut_methods
-    
+
     def get_autocut_levels(self, image):
         loval, hival = self.calc_cut_levels(image)
         return loval, hival
@@ -66,7 +63,7 @@ class AutoCutsBase(object):
         (data, x1, y1, x2, y2) = image.cutout_radius(wd//2, ht//2,
                                                      crop_radius)
         return data
-    
+
     def cut_levels(self, data, loval, hival, vmin=0.0, vmax=255.0):
         loval, hival = float(loval), float(hival)
         self.logger.debug("loval=%.2f hival=%.2f" % (loval, hival))
@@ -135,7 +132,7 @@ class Histogram(AutoCutsBase):
                   min=100, max=10000, default=2048,
                   description="Number of bins for the histogram"),
             ]
-    
+
     def __init__(self, logger, usecrop=True, pct=0.999, numbins=2048):
         super(Histogram, self).__init__(logger)
 
@@ -143,7 +140,7 @@ class Histogram(AutoCutsBase):
         self.usecrop = usecrop
         self.pct = pct
         self.numbins = numbins
-        
+
     def calc_cut_levels(self, image):
         if self.usecrop:
             data = self.get_crop(image)
@@ -152,7 +149,7 @@ class Histogram(AutoCutsBase):
         bnch = self.calc_histogram(data, pct=self.pct, numbins=self.numbins)
         loval, hival = bnch.loval, bnch.hival
 
-        return loval, hival    
+        return loval, hival
 
     def calc_histogram(self, data, pct=1.0, numbins=2048):
 
@@ -169,7 +166,7 @@ class Histogram(AutoCutsBase):
             # We have to workaround this by making a copy of the array
             # and substituting for the problem values, otherwise numpy's
             # histogram() cannot handle it
-            self.logger.warn("NaN's found in data, using workaround for histogram")
+            self.logger.warning("NaN's found in data, using workaround for histogram")
             data = data.copy()
             # TODO: calculate a reasonable replacement value
             data[numpy.isinf(data)] = 0.0
@@ -295,11 +292,11 @@ class StdDev(AutoCutsBase):
 
         hensa_lo_factor = (hensa_lo - 50.0) / 10.0
         hensa_hi_factor = (hensa_hi - 50.0) / 10.0
-        
+
         loval = hensa_lo_factor * sdev + mean
         hival = hensa_hi_factor * sdev + mean
 
-        return loval, hival    
+        return loval, hival
 
 
 class MedianFilter(AutoCutsBase):
@@ -327,7 +324,7 @@ class MedianFilter(AutoCutsBase):
 
     def calc_cut_levels(self, image):
         wd, ht = image.get_size()
-        
+
         # sample the data
         xmax = wd - 1
         ymax = ht - 1
@@ -377,10 +374,10 @@ class ZScale(AutoCutsBase):
         self.kind = 'zscale'
         self.contrast = contrast
         self.num_points = num_points
-        
+
     def calc_cut_levels(self, image):
         wd, ht = image.get_size()
-        
+
         # calculate num_points parameter, if omitted
         total_points = wd * ht
         num_points = self.num_points
@@ -449,7 +446,7 @@ class ZScale2(AutoCutsBase):
         self.contrast = contrast
         self.num_points = num_points
         self.num_per_row = num_per_row
-        
+
     def calc_cut_levels(self, image):
         data = image.get_data()
 
@@ -462,7 +459,7 @@ class ZScale2(AutoCutsBase):
                     num_points=1000, num_per_row=None):
         """
         From the IRAF documentation:
-        
+
         The zscale algorithm is designed to display the  image  values
         near the median  image value  without the  time consuming process of
         computing a full image histogram.  This is particularly  useful  for
@@ -574,14 +571,14 @@ class ZScale2(AutoCutsBase):
         ## threshold = numpy.std(cutout) * 2.5
         ## cutout = cutout[numpy.where(numpy.fabs(cutout - median) > threshold)]
         ## num_pix = len(cutout)
-        
+
         # zscale fitting function:
         # I(x) = slope * (x - midpoint) + intercept
         def fitting(x, slope, intercept):
             y = slope * (x - midpoint) + intercept
             return y
 
-        # compute a least squares fit 
+        # compute a least squares fit
         X = numpy.arange(num_pix)
         Y = cutout
         sigma = numpy.array([ 1.0 ]* num_pix)
@@ -600,7 +597,7 @@ class ZScale2(AutoCutsBase):
             except Exception as e:
                 self.logger.debug("curve fitting failed: %s" % (str(e)))
                 cov = None
-            
+
         if cov is None:
             self.logger.debug("curve fitting failed")
             return (float(data_min), float(data_max))

@@ -1,9 +1,6 @@
 #
 # AstroImage.py -- Abstraction of an astronomical data image.
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c)  Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -711,7 +708,7 @@ class AstroImage(BaseImage):
                     ra_lbl, dec_lbl = "x-Solar", "y-Solar"
 
         except Exception as e:
-            self.logger.warn("Bad coordinate conversion: %s" % (
+            self.logger.warning("Bad coordinate conversion: %s" % (
                 str(e)))
             ra_txt  = 'BAD WCS'
             dec_txt = 'BAD WCS'

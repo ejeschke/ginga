@@ -1,9 +1,6 @@
 #
 # Task.py -- Basic command pattern and thread pool implementation.
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -662,7 +659,7 @@ class newConcurrentAndTaskset(Task):
                     continue
 
                 except Exception as e:
-                    #self.logger.warn("Subtask propagated exception: %s" % str(e))
+                    #self.logger.warning("Subtask propagated exception: %s" % str(e))
                     self.child_done(e, task)
                     continue
 
@@ -1131,7 +1128,7 @@ class ThreadPool(object):
             while self.status != 'up':
                 if self.status in ('stop', 'down') or self.ev_quit.isSet():
                     # For now, silently abandon additional request to stop
-                    self.logger.warn("ignoring duplicate request to stop thread pool.")
+                    self.logger.warning("ignoring duplicate request to stop thread pool.")
                     return
 
                 self.logger.debug("waiting for threads: count=%d" % \

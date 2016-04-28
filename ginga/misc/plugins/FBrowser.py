@@ -338,7 +338,7 @@ class FBrowser(GingaPlugin.LocalPlugin):
             if num_files <= self.scan_limit:
                 self.scan_fits()
             else:
-                self.logger.warn("Number of files (%d) is greater than scan limit (%d)--skipping header scan" % (
+                self.logger.warning("Number of files (%d) is greater than scan limit (%d)--skipping header scan" % (
                     num_files, self.scan_limit))
 
         self.makelisting(path)
@@ -356,7 +356,7 @@ class FBrowser(GingaPlugin.LocalPlugin):
                                   for attrname, kwd in self.keywords}
                 bnch.update(kwds)
             except Exception as e:
-                self.logger.warn("Error reading FITS keywords from '%s': %s" % (
+                self.logger.warning("Error reading FITS keywords from '%s': %s" % (
                     bnch.path, str(e)))
                 continue
         elapsed = time.time() - start_time

@@ -220,7 +220,7 @@ class FitsViewer(object):
             ra_txt, dec_txt = image.pixtoradec(fits_x, fits_y,
                                                format='str', coords='fits')
         except Exception as e:
-            self.logger.warn("Bad coordinate conversion: %s" % (
+            self.logger.warning("Bad coordinate conversion: %s" % (
                 str(e)))
             ra_txt  = 'BAD WCS'
             dec_txt = 'BAD WCS'
@@ -265,7 +265,7 @@ def main(options, args):
         try:
             trcalc.use('opencv')
         except Exception as e:
-            logger.warn("Error using opencv: %s" % str(e))
+            logger.warning("Error using opencv: %s" % str(e))
 
     base_url = "http://%s:%d/app" % (options.host, options.port)
 

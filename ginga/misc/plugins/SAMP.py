@@ -1,9 +1,6 @@
 #
 # SAMP.py -- SAMP plugin for Ginga fits viewer
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c)  Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -122,7 +119,7 @@ class SAMP(GingaPlugin.GlobalPlugin):
                 self.hub.start()
 
         except Exception as e:
-            self.logger.warn("Cannot start hub: %s" % (str(e)))
+            self.logger.warning("Cannot start hub: %s" % (str(e)))
 
         # Used to fetch data
         self.fetcher = catalog.ImageServer(self.logger, "SAMP Image Fetcher",
@@ -246,7 +243,7 @@ class SAMP(GingaPlugin.GlobalPlugin):
         self.logger.debug("key=%s sender=%s msg_id=%s mtype=%s" % (
             private_key, sender_id, msg_id, mtype))
         self.logger.debug("params=%s extra=%s" % (params, extra))
-        self.logger.warn("SAMP message (%s) handler not yet implemented." % (
+        self.logger.warning("SAMP message (%s) handler not yet implemented." % (
             str(msg_id)))
 
     def _load_fits(self, private_key, sender_id, msg_id, mtype, params,

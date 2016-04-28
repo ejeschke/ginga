@@ -1,9 +1,6 @@
 #
 # ImageViewMpl.py -- a backend for Ginga using a Matplotlib figure
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c)  Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 
@@ -371,7 +368,7 @@ class ImageViewMpl(ImageView.ImageViewBase):
             self._defer_timer.start()
 
         except Exception as e:
-            self.logger.warn("Exception starting timer: %s; "
+            self.logger.warning("Exception starting timer: %s; "
                              "using unoptomized redraw" % (str(e)))
             self.delayed_redraw()
 

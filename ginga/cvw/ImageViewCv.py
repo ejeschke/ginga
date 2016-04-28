@@ -1,9 +1,6 @@
 #
 # ImageViewCv.py -- a backend for Ginga using OpenCv surfaces
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c)  Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 
@@ -156,13 +153,13 @@ class ImageViewCv(ImageView.ImageViewBase):
     def update_image(self):
         # subclass implements this method to actually update a widget
         # from the cv surface
-        self.logger.warn("Subclass should override this method")
+        self.logger.warning("Subclass should override this method")
         return False
 
     def set_cursor(self, cursor):
         # subclass implements this method to actually set a defined
         # cursor on a widget
-        self.logger.warn("Subclass should override this method")
+        self.logger.warning("Subclass should override this method")
 
     def define_cursor(self, ctype, cursor):
         self.cursor[ctype] = cursor
@@ -178,7 +175,7 @@ class ImageViewCv(ImageView.ImageViewBase):
 
     def onscreen_message(self, text, delay=None):
         # subclass implements this method using a timer
-        self.logger.warn("Subclass should override this method")
+        self.logger.warning("Subclass should override this method")
 
     def show_pan_mark(self, tf):
         self.t_.set(show_pan_position=tf)

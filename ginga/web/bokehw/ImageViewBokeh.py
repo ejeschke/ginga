@@ -1,9 +1,6 @@
 #
 # ImageViewBokeh.py -- classes implementing a ginga viewer backend for Bokeh
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c)  Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 
@@ -123,7 +120,7 @@ class ImageViewBokeh2(ImageViewSS):
                                                   dw=[wd], dh=[ht])
             d_src = self.bkimage.data_source
             self._setup_handlers(d_src)
-            
+
         else:
             # note: get the data source (a ColumnDataSource) and update
             # the values
@@ -141,7 +138,7 @@ class ImageViewBokeh2(ImageViewSS):
                 cursession().store_objects(d_src)
 
             except Exception as e:
-                self.logger.warn("Can't update bokeh plot: %s" % (str(e)))
+                self.logger.warning("Can't update bokeh plot: %s" % (str(e)))
 
 
     def reschedule_redraw(self, time_sec):
@@ -159,7 +156,7 @@ class ImageViewBokeh2(ImageViewSS):
 
     def _setup_handlers(self, source):
         pass
-        
+
     def set_cursor(self, cursor):
         if self.figure is None:
             return
@@ -309,7 +306,7 @@ class ImageViewBokeh(ImageView.ImageViewBase):
                 #push_notebook()
 
             except Exception as e:
-                self.logger.warn("Can't update bokeh plot: %s" % (str(e)))
+                self.logger.warning("Can't update bokeh plot: %s" % (str(e)))
 
 
     def configure_window(self, width, height):
@@ -317,7 +314,7 @@ class ImageViewBokeh(ImageView.ImageViewBase):
 
     def _setup_handlers(self, source):
         pass
-        
+
     def _resize_cb(self, event):
         wd, ht = event.width, event.height
         self.logger.debug("canvas resized %dx%d" % (wd, ht))
@@ -383,8 +380,8 @@ class ImageViewBokeh(ImageView.ImageViewBase):
             self._defer_timer.start()
 
         except Exception as e:
-            self.logger.warn("Exception starting timer: %s; "
-                             "using unoptomized redraw" % (str(e)))
+            self.logger.warning("Exception starting timer: %s; "
+                                "using unoptomized redraw" % (str(e)))
             self.delayed_redraw()
 
     def show_pan_mark(self, tf):
@@ -552,7 +549,7 @@ class ImageViewEvent(ImageViewBokeh):
     def select_event_cb(self, attrname, old_val, new_val):
         print("select cb: %s <-- %s" % (attrname, str(new_val)))
         self.logger.info("select cb: %s <-- %s" % (attrname, str(new_val)))
-        
+
     def get_last_win_xy(self):
         return (self.last_win_x, self.last_win_y)
 
@@ -656,5 +653,5 @@ class CanvasView(ImageViewZoom):
         self.objects[0] = self.private_canvas
 
 
-        
+
 #END

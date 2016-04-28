@@ -885,7 +885,7 @@ class CatalogListing(object):
                 # remove selection from table
                 self._unselect_tv(star, fromtable=fromtable)
             except Exception as e:
-                self.logger.warn("Error unhilighting star: %s" % (str(e)))
+                self.logger.warning("Error unhilighting star: %s" % (str(e)))
 
             self.catalog.update_selected()
             return False
@@ -897,7 +897,7 @@ class CatalogListing(object):
                     try:
                         self._unselect_tv(star2, fromtable=fromtable)
                     except Exception as e:
-                        self.logger.warn("Error unhilighting star: %s" % (str(e)))
+                        self.logger.warning("Error unhilighting star: %s" % (str(e)))
             self.selected.append(star)
             try:
                 # highlight line in table
@@ -905,7 +905,7 @@ class CatalogListing(object):
                 if self.catalog.pan_to_selected:
                     self.catalog.pan_to_star(star)
             except Exception as e:
-                self.logger.warn("Error hilighting star: %s" % (str(e)))
+                self.logger.warning("Error hilighting star: %s" % (str(e)))
 
             self.catalog.update_selected()
             return True

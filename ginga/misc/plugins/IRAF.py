@@ -670,7 +670,7 @@ class IRAF_AstroImage(AstroImage.AstroImage):
             dec_txt = 'BAD WCS'
 
         except Exception as e:
-            self.logger.warn("Bad coordinate conversion: %s" % (
+            self.logger.warning("Bad coordinate conversion: %s" % (
                 str(e)))
             ra_txt  = 'BAD WCS'
             dec_txt = 'BAD WCS'

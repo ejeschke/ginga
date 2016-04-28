@@ -1,9 +1,6 @@
 #
 # Pan.py -- Pan plugin for fits viewer
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -252,7 +249,7 @@ class Pan(GingaPlugin.GlobalPlugin):
                     x, y, radius, color=self.settings.get('compass_color', 'skyblue'),
                     fontsize=14))
             except Exception as e:
-                self.logger.warn("Can't calculate compass: %s" % (
+                self.logger.warning("Can't calculate compass: %s" % (
                     str(e)))
                 try:
                     # log traceback, if possible

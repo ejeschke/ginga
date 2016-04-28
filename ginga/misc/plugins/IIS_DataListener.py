@@ -1,13 +1,10 @@
 #
 # IIS_DataListener.py -- IIS (XImtool protocol) server
 #
-# Eric Jeschke (eric@naoj.org)
-#
 # This file contains code by "fpierfed" (email addr unknown) downloaded from:
 #   http://pyimtool.cvs.sourceforge.net/viewvc/pyimtool/pyimtool/src/
 # and modified.
 #
-# Modifications Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -537,7 +534,7 @@ Where   nbytes | NB  = number of bytes expected or written
                 (nframes, fb.width, fb.height) = fbconfigs [fb_config]
 
             except KeyError:
-                self.logger.warn('Non existing framebuffer config (%s)' % (
+                self.logger.warning('Non existing framebuffer config (%s)' % (
                         str(fb_config)))
                 self.logger.info('Adding a new framebuffer config (%s)' % (
                         str(fb_config)))
@@ -587,7 +584,7 @@ Where   nbytes | NB  = number of bytes expected or written
             end = start + pkt.nbytes
             data = fb.buffer[start:end]
             if len(data) != pkt.nbytes:
-                self.logger.warn("buffer length/packet size mismatch: %d != %d" % (
+                self.logger.warning("buffer length/packet size mismatch: %d != %d" % (
                         len(data), pkt.nbytes))
             #data.reverse()
             #self.logger.debug("DATA=%s" % str(data))
@@ -613,7 +610,7 @@ Where   nbytes | NB  = number of bytes expected or written
                 end = start + pkt.nbytes
                 fb.buffer[start:end] = array.array('B', pkt.datain.read(pkt.nbytes))
             else:
-                self.logger.warn("uninitialized framebuffer frame=%d" % (
+                self.logger.warning("uninitialized framebuffer frame=%d" % (
                         self.frame))
                 if not self.needs_update:
                     # init the framebuffer
