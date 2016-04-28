@@ -173,7 +173,7 @@ class ContourPlot(Plot):
         # connect("button_press_event", self.plot_button_press)
         connect("scroll_event", self.plot_scroll)
 
-    def plot_contours(self, x, y, data, num_contours=None):
+    def plot_contours_data(self, x, y, data, num_contours=None):
         # Make a contour plot
         if num_contours is None:
             num_contours = self.num_contours
@@ -209,6 +209,11 @@ class ContourPlot(Plot):
         except Exception as e:
             self.logger.error("Error making contour plot: %s" % (
                 str(e)))
+
+    def plot_contours(self, x, y, radius, image, num_contours=None):
+        img_data, x1, y1, x2, y2 = image.cutout_radius(x, y, radius)
+
+        self.plot_contours_data(x, y, img_data, num_contours=num_contours)
 
     def plot_panzoom(self):
         ht, wd = len(self.ydata), len(self.xdata)
@@ -374,7 +379,7 @@ class FWHMPlot(Plot):
                            facecolor=color3, alpha=0.25)
         return (fwhm, mu, sdev, maxv)
 
-    def plot_fwhm(self, x, y, radius, cutout_data, image, iqcalc=None):
+    def plot_fwhm(self, x, y, radius, image, cutout_data=None, iqcalc=None):
 
         x0, y0, xarr, yarr = image.cutout_cross(x, y, radius)
 
@@ -391,6 +396,9 @@ class FWHMPlot(Plot):
         # Make a FWHM plot
         try:
             # get median value from the cutout area
+            if cutout_data is None:
+                cutout_data, x1, y1, x2, y2 = image.cutout_radius(x, y, radius)
+
             skybg = numpy.median(cutout_data)
             self.logger.debug("cutting x=%d y=%d r=%d med=%f" % (
                 x, y, radius, skybg))

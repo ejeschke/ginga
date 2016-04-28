@@ -625,8 +625,8 @@ class Pick(GingaPlugin.LocalPlugin):
             x, y = self.pickcenter.x, self.pickcenter.y
 
         try:
-            self.contour_plot.plot_contours(x, y, data,
-                                            num_contours=self.num_contours)
+            self.contour_plot.plot_contours_data(x, y, data,
+                                                 num_contours=self.num_contours)
 
         except Exception as e:
             self.logger.error("Error making contour plot: %s" % (
@@ -640,7 +640,8 @@ class Pick(GingaPlugin.LocalPlugin):
         x, y, radius = qs.x, qs.y, qs.fwhm_radius
 
         try:
-            self.fwhm_plot.plot_fwhm(x, y, radius, self.pick_data, image,
+            self.fwhm_plot.plot_fwhm(x, y, radius, image,
+                                     cutout_data=self.pick_data,
                                      iqcalc=self.iqcalc)
 
         except Exception as e:
