@@ -1707,7 +1707,7 @@ class Application(Callback.Callbacks):
 
 class Dialog(WidgetBase):
     def __init__(self, title=None, flags=None, buttons=None,
-                 parent=None):
+                 parent=None, modal=False):
         super(Dialog, self).__init__()
 
         button_list = []
@@ -1717,6 +1717,7 @@ class Dialog(WidgetBase):
         self.parent = parent.get_widget()
         self.widget = gtk.Dialog(title=title, flags=flags,
                                  buttons=tuple(button_list))
+        self.widget.set_modal(modal)
         self.content = VBox()
         content = self.widget.get_content_area()
         content.pack_start(self.content.get_widget(), fill=True, expand=True)
@@ -1731,6 +1732,10 @@ class Dialog(WidgetBase):
 
     def get_content_area(self):
         return self.content
+
+    def raise_(self):
+        window = self.widget.get_window()
+        window.raise_()
 
 class SaveDialog(object):
     def __init__(self, title='Save File', selectedfilter=None):

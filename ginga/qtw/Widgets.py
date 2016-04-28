@@ -1650,11 +1650,11 @@ class Application(Callback.Callbacks):
 
 class Dialog(WidgetBase):
     def __init__(self, title=None, flags=None, buttons=None,
-                 parent=None):
+                 parent=None, modal=False):
         super(Dialog, self).__init__()
 
         self.widget = QtGui.QDialog(parent.get_widget())
-        self.widget.setModal(True)
+        self.widget.setModal(modal)
 
         vbox = QtGui.QVBoxLayout()
         self.widget.setLayout(vbox)
@@ -1683,6 +1683,10 @@ class Dialog(WidgetBase):
 
     def get_content_area(self):
         return self.content
+
+    def raise_(self):
+        self.widget.raise_()
+        self.widget.activateWindow()
 
 
 class SaveDialog(QtGui.QFileDialog):

@@ -279,6 +279,29 @@ class ReferenceViewer(object):
         pluginDir = os.path.join(basedir, 'plugins')
         sys.path.insert(0, pluginDir)
 
+        gc = os.path.join(basedir, "ginga_config.py")
+        have_ginga_config = os.path.exists(gc)
+
+        # User configuration, earliest possible intervention
+        if have_ginga_config:
+            try:
+                import ginga_config
+
+                if hasattr(ginga_config, 'init_config'):
+                    ginga_config.init_config(self)
+
+            except Exception as e:
+                try:
+                    (type, value, tb) = sys.exc_info()
+                    tb_str = "\n".join(traceback.format_tb(tb))
+
+                except Exception:
+                    tb_str = "Traceback information unavailable."
+
+                logger.error("Error processing Ginga config file: %s" % (
+                    str(e)))
+                logger.error("Traceback:\n%s" % (tb_str))
+
         # Choose a toolkit
         if options.toolkit:
             toolkit = options.toolkit
@@ -370,15 +393,11 @@ class ReferenceViewer(object):
                                  ev_quit=ev_quit)
         ginga_shell.set_layout(self.layout)
 
-        gc = os.path.join(basedir, "ginga_config.py")
-        have_ginga_config = os.path.exists(gc)
-
         # User configuration (custom star catalogs, etc.)
         if have_ginga_config:
             try:
-                import ginga_config
-
-                ginga_config.pre_gui_config(ginga_shell)
+                if hasattr(ginga_config, 'pre_gui_config'):
+                    ginga_config.pre_gui_config(ginga_shell)
             except Exception as e:
                 try:
                     (type, value, tb) = sys.exc_info()
@@ -469,7 +488,9 @@ class ReferenceViewer(object):
         # User configuration (custom star catalogs, etc.)
         if have_ginga_config:
             try:
-                ginga_config.post_gui_config(ginga_shell)
+                if hasattr(ginga_config, 'post_gui_config'):
+                    ginga_config.post_gui_config(ginga_shell)
+
             except Exception as e:
                 try:
                     (type, value, tb) = sys.exc_info()

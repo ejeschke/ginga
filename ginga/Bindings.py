@@ -1793,7 +1793,7 @@ class BindingMapper(Callback.Callbacks):
 
         except KeyError:
             try:
-                idx = (None, self._empty_set, keyname)
+                idx = (None, self._modifiers, keyname)
                 emap = self.eventmap[idx]
             except KeyError:
                 return False
@@ -1823,7 +1823,7 @@ class BindingMapper(Callback.Callbacks):
 
         except KeyError:
             try:
-                idx = (None, self._empty_set, keyname)
+                idx = (None, self._modifiers, keyname)
                 emap = self.eventmap[idx]
             except KeyError:
                 emap = None
@@ -1869,7 +1869,7 @@ class BindingMapper(Callback.Callbacks):
         except KeyError:
             # no entry for this mode, try unmodified entry
             try:
-                idx = (None, self._empty_set, button)
+                idx = (None, self._modifiers, button)
                 emap = self.eventmap[idx]
             except KeyError:
                 #self.logger.warning("No button map binding for %s" % (str(btncode)))
@@ -1895,7 +1895,7 @@ class BindingMapper(Callback.Callbacks):
         except KeyError:
             # no entry for this mode, try unmodified entry
             try:
-                idx = (None, self._empty_set, button)
+                idx = (None, self._modifiers, button)
                 emap = self.eventmap[idx]
             except KeyError:
                 return False
@@ -1924,7 +1924,7 @@ class BindingMapper(Callback.Callbacks):
         except KeyError:
             # no entry for this mode, try unmodified entry
             try:
-                idx = (None, self._empty_set, button)
+                idx = (None, self._modifiers, button)
                 emap = self.eventmap[idx]
             except KeyError:
                 #self.logger.warning("No button map binding for %s" % (str(btncode)))
@@ -1947,7 +1947,7 @@ class BindingMapper(Callback.Callbacks):
         except KeyError:
             # no entry for this mode, try unmodified entry
             try:
-                idx = (None, self._empty_set, 'scroll')
+                idx = (None, self._modifiers, 'scroll')
                 emap = self.eventmap[idx]
             except KeyError:
                 return False

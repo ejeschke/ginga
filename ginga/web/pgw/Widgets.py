@@ -1601,7 +1601,7 @@ class Dialog(WidgetBase):
     '''
 
     def __init__(self, title=None, flags=None, buttons=None,
-                 callback=None):
+                 parent=None, callback=None, modal=False):
 
         super(Dialog, self).__init__()
         self.title = title
@@ -1631,6 +1631,10 @@ class Dialog(WidgetBase):
     def show(self):
         app = self.get_app()
         app.do_operation('dialog_action', id=self.id, action="open")
+
+    def raise_(self):
+        # TODO
+        pass
 
     def close(self):
         app = self.get_app()

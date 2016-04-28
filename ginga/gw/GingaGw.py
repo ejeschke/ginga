@@ -57,6 +57,7 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         self._rsize = None
 
         self.filesel = None
+        self.menubar = None
 
     def set_layout(self, layout):
         self.layout = layout
@@ -96,13 +97,15 @@ class GingaView(GwMain.GwMain, Widgets.Application):
             if nb.has_callback('page-close'):
                 nb.add_callback('page-close', self.page_closed_cb, wsname)
 
-        menuholder = self.w['menu']
-        self.w.menubar = self.add_menus(menuholder)
+        if 'menu' in self.w:
+            menuholder = self.w['menu']
+            self.w.menubar = self.add_menus(menuholder)
 
         self.add_dialogs()
 
-        statusholder = self.w['status']
-        self.add_statusbar(statusholder)
+        if 'status' in self.w:
+            statusholder = self.w['status']
+            self.add_statusbar(statusholder)
 
         self.w.root.show()
 
@@ -212,12 +215,16 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         """Add a menu with name `name` to the global menu bar.
         Returns a menu widget.
         """
+        if self.menubar is None:
+            raise ValueError("No menu bar configured")
         return self.menubar.add_name(name)
 
     def get_menu(self, name):
         """Get the menu with name `name` from the global menu bar.
         Returns a menu widget.
         """
+        if self.menubar is None:
+            raise ValueError("No menu bar configured")
         return self.menubar.get_menu(name)
 
     def add_dialogs(self):
@@ -226,9 +233,10 @@ class GingaView(GwMain.GwMain, Widgets.Application):
 
     def add_plugin_menu(self, name):
         # NOTE: self.w.menu_plug is a ginga.Widgets wrapper
-        item = self.w.menu_plug.add_name("Start %s" % (name))
-        item.add_callback('activated',
-                          lambda *args: self.start_global_plugin(name))
+        if 'menu_plug' in self.w:
+            item = self.w.menu_plug.add_name("Start %s" % (name))
+            item.add_callback('activated',
+                              lambda *args: self.start_global_plugin(name))
 
     def add_statusbar(self, holder):
         self.w.status = Widgets.StatusBar()
@@ -499,7 +507,8 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         else:
             s = format % args
 
-        self.w.status.set_message(s)
+        if 'status' in self.w:
+            self.w.status.set_message(s)
 
     def set_pos(self, x, y):
         self.w.root.move(x, y)
