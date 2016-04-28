@@ -127,6 +127,8 @@ local_plugins = [
     Bunch(module='Histogram', ws='dialogs', shortkey='f6'),
     Bunch(module='Crosshair', ws='dialogs'),
     Bunch(module='Overlays', ws='dialogs'),
+    Bunch(module='TVMark', ws='dialogs'),
+    Bunch(module='TVMask', ws='dialogs'),
     Bunch(module='Blink', ws='dialogs'),
     Bunch(module='LineProfile', ws='dialogs'),
     Bunch(module='PixTable', ws='dialogs', shortkey='f7'),
