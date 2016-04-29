@@ -11,7 +11,7 @@ from ginga.qtw.QtHelp import QtGui, QtCore, QTextCursor, \
      QIcon, QPixmap, QImage, have_pyqt4
 from ginga.qtw import QtHelp
 
-from ginga.misc import Callback, Bunch
+from ginga.misc import Callback, Bunch, LineHistory
 import ginga.icons
 
 # path to our icons
@@ -88,11 +88,31 @@ class TextEntry(WidgetBase):
         self.widget.setText(text)
         self.widget.setReadOnly(not editable)
         self.widget.returnPressed.connect(self._cb_redirect)
+        self.widget.keyPressEvent_org = self.widget.keyPressEvent
+        self.widget.keyPressEvent = self._key_press_event
+
+        self.history = LineHistory.LineHistory()
 
         self.enable_callback('activated')
 
     def _cb_redirect(self, *args):
+        self.history.append(self.get_text())
         self.make_callback('activated')
+
+    def _key_press_event(self, event):
+        keycode = event.key()
+        if keycode in [QtCore.Qt.Key_Up]:
+            try:
+                self.set_text(self.history.prev())
+            except ValueError:
+                pass
+        elif keycode in [QtCore.Qt.Key_Down]:
+            try:
+                self.set_text(self.history.next())
+            except ValueError:
+                pass
+        else:
+            self.widget.keyPressEvent_org(event)
 
     def get_text(self):
         return self.widget.text()

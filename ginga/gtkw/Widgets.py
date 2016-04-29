@@ -9,7 +9,7 @@ import ginga.util.six as six
 import gtk
 import gobject
 
-from ginga.misc import Callback, Bunch
+from ginga.misc import Callback, Bunch, LineHistory
 from functools import reduce
 
 class WidgetError(Exception):
@@ -89,13 +89,37 @@ class TextEntry(WidgetBase):
         w = gtk.Entry()
         w.set_text(text)
         w.set_editable(editable)
+        w.connect('key-press-event', self._key_press_event)
         w.connect('activate', self._cb_redirect)
         self.widget = w
+
+        self.history = LineHistory.LineHistory()
 
         self.enable_callback('activated')
 
     def _cb_redirect(self, *args):
+        self.history.append(self.get_text())
         self.make_callback('activated')
+
+    def _key_press_event(self, widget, event):
+        keyname = gtk.gdk.keyval_name(event.keyval)
+        if keyname == 'Up':
+            try:
+                text = self.history.prev()
+                self.set_text(text)
+                self.widget.set_position(len(text))
+            except ValueError:
+                pass
+            return True
+        elif keyname == 'Down':
+            try:
+                text = self.history.next()
+                self.set_text(text)
+                self.widget.set_position(len(text))
+            except ValueError:
+                pass
+            return True
+        return False
 
     def get_text(self):
         return self.widget.get_text()

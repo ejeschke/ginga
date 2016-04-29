@@ -1597,16 +1597,18 @@ class Dialog(WidgetBase):
     <script>
     ginga_initialize_dialog(document.getElementById("%(id)s"), "%(id)s", "%(title)s", %(buttons)s, ginga_app)
     </script>
+    %(content)s
     </div>
     '''
 
-    def __init__(self, title=None, flags=None, buttons=None,
+    def __init__(self, title='', flags=None, buttons=[],
                  parent=None, callback=None, modal=False):
 
         super(Dialog, self).__init__()
         self.title = title
         self.buttons = buttons
         self.value = None
+        self.content = VBox()
         if callback:
             self.enable_callback('activated')
             self.add_callback('activated', callback)
@@ -1628,6 +1630,9 @@ class Dialog(WidgetBase):
         self.value = event.value
         self.make_callback('activated', self.value)
 
+    def get_content_area(self):
+        return self.content
+
     def show(self):
         app = self.get_app()
         app.do_operation('dialog_action', id=self.id, action="open")
@@ -1642,6 +1647,7 @@ class Dialog(WidgetBase):
 
     def render(self):
         d = dict(id=self.id, title=self.title, buttons=self.buttons_to_js_obj())
+        d['content'] = self.content.render()
         return self.dialog_template % d
 
 ## class SaveDialog(QtGui.QFileDialog):

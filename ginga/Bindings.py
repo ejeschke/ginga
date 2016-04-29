@@ -1793,7 +1793,7 @@ class BindingMapper(Callback.Callbacks):
 
         except KeyError:
             try:
-                idx = (None, self._modifiers, keyname)
+                idx = (None, self._empty_set, keyname)
                 emap = self.eventmap[idx]
             except KeyError:
                 return False
@@ -1823,7 +1823,7 @@ class BindingMapper(Callback.Callbacks):
 
         except KeyError:
             try:
-                idx = (None, self._modifiers, keyname)
+                idx = (None, self._empty_set, keyname)
                 emap = self.eventmap[idx]
             except KeyError:
                 emap = None
