@@ -100,6 +100,7 @@ class ImageViewBindings(object):
             kp_autocenter_override = ['/'],
             kp_contrast_restore = ['T'],
             kp_cmap_reset = ['Y'],
+            kp_cmap_invert = ['I'],
             kp_imap_reset = [],
             kp_flip_x = ['[', '{'],
             kp_flip_y = [']', '}'],
@@ -163,6 +164,8 @@ class ImageViewBindings(object):
             ms_cutall = ['cuts+left'],
             ms_cut_auto = ['cuts+right'],
             ms_panset = ['pan+middle', 'shift+left', 'middle'],
+            ms_cmap_rotate = ['cmap+left'],
+            ms_cmap_restore = ['cmap+right'],
 
             # GESTURES (some backends only)
             gs_pinch = [],
@@ -463,6 +466,20 @@ class ImageViewBindings(object):
 
         viewer.scale_and_shift_cmap(scale_pct, shift_pct)
 
+    def _rotate_colormap(self, viewer, x, y, mode):
+        win_wd, win_ht = viewer.get_window_size()
+
+        # translate X cursor position as a percentage of the window
+        # width into a shifting factor
+        half_wd = win_wd / 2.0
+        shift_pct = (x - half_wd) / float(half_wd)
+        num = int(shift_pct * 255)
+        self.logger.debug("rotating color map by %d steps" % (num))
+
+        rgbmap = viewer.get_rgbmap()
+        rgbmap.restore_cmap(callback=False)
+        rgbmap.rotate_cmap(num)
+
     def _cutlow_pct(self, viewer, pct, msg=True):
         msg = self.settings.get('msg_cuts', msg)
         image = viewer.get_image()
@@ -647,6 +664,15 @@ class ImageViewBindings(object):
             if msg:
                 viewer.onscreen_message("Color map: %s" % (cmapname),
                                            delay=1.0)
+
+    def _invert_cmap(self, viewer, msg):
+        if self.cancmap:
+            msg = self.settings.get('msg_cmap', msg)
+            rgbmap = viewer.get_rgbmap()
+            rgbmap.invert_cmap()
+            if msg:
+                viewer.onscreen_message("Inverted color map",
+                                        delay=1.0)
 
     def _cycle_imap(self, viewer, msg, direction='down'):
         if self.cancmap:
@@ -970,6 +996,10 @@ class ImageViewBindings(object):
         self._reset_cmap(viewer, msg)
         return True
 
+    def kp_cmap_invert(self, viewer, event, data_x, data_y, msg=True):
+        self._invert_cmap(viewer, msg)
+        return True
+
     def kp_imap_reset(self, viewer, event, data_x, data_y, msg=True):
         self._reset_imap(viewer, msg)
         return True
@@ -1185,7 +1215,41 @@ class ImageViewBindings(object):
         """
         if self.cancmap and (event.state == 'down'):
             self.restore_colormap(viewer, msg=msg)
+        return True
+
+
+    def ms_cmap_rotate(self, viewer, event, data_x, data_y, msg=True):
+        """Shift the colormap by dragging the cursor left or right.
+        Stretch the colormap by dragging the cursor up or down.
+        """
+        if not self.cancmap:
             return True
+        msg = self.settings.get('msg_cmap', msg)
+
+        x, y = viewer.get_last_win_xy()
+        if not viewer._originUpper:
+            y = viewer._imgwin_ht - y
+        if event.state == 'move':
+            self._rotate_colormap(viewer, x, y, 'preview')
+
+        elif event.state == 'down':
+            self._start_x, self._start_y = x, y
+            if msg:
+                viewer.onscreen_message("Rotate colormap (drag mouse L/R)",
+                                           delay=1.0)
+        else:
+            viewer.onscreen_message(None)
+        return True
+
+
+    def ms_cmap_restore(self, viewer, event, data_x, data_y, msg=True):
+        """An interactive way to restore the colormap settings after
+        a warp operation.
+        """
+        if self.cancmap and (event.state == 'down'):
+            rgbmap = viewer.get_rgbmap()
+            rgbmap.restore_cmap()
+        return True
 
 
     def ms_pan(self, viewer, event, data_x, data_y):

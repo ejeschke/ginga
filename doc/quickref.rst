@@ -59,8 +59,8 @@ Panning and Zooming commands
 | Equals, Plus         | Zoom in                                          | 
 |    (=, +)            |                                                  |
 +----------------------+--------------------------------------------------+
-| Middle (scroll)      | Pan image freely (when zoomed in)                |
-| button drag          |                                                  |
+| Middle (scroll)      | Set pan position (under cursor)                  |
+| button click         |                                                  |
 +----------------------+--------------------------------------------------+
 | p                    | Set pan position (under cursor) for zooming      |
 +----------------------+--------------------------------------------------+
@@ -72,9 +72,8 @@ Panning and Zooming commands
 |                      |   right-drag zooms, middle-click sets pan        |
 |                      |   position                                       | 
 +----------------------+--------------------------------------------------+
-| w                    | Free pan mode: Left-drag pans freely,            |
-|                      |   middle-click sets pan and zooms in one step,   |
-|                      |   right-click zooms out one step                 | 
+| w                    | Free pan mode: Left-click zooms in, right-click  |
+|                      |   zooms out.  Middle-drag pans freely.           |
 +----------------------+--------------------------------------------------+
 | Ctrl + Left drag     | Proportional pan (press and drag left mouse      |
 |                      |     button                                       |
@@ -118,9 +117,12 @@ Cut levels and colormap commands
 | T                    | Restore the contrast (via colormap) to its       |
 |                      |   original (unstretched, unshifted) state        |
 +----------------------+--------------------------------------------------+
-| y                    | Color map mode: scroll wheel to set colormap     |
+| y                    | Color map mode: scroll wheel to set colormap;    |
+|                      |   left drag rotates cmap, right click unrotates  |
 +----------------------+--------------------------------------------------+
 | Y                    | Restore the color map to default                 |
++----------------------+--------------------------------------------------+
+| I                    | Invert the color map                             |
 +----------------------+--------------------------------------------------+
 | semicolon (;)        | Set autocuts for new images to *override*        |
 +----------------------+--------------------------------------------------+

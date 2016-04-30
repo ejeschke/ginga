@@ -523,6 +523,13 @@ class ImageViewBase(Callback.Callbacks):
         """
         self.rgbmap.set_cmap(cm)
 
+    def invert_cmap(self):
+        """Invert the color map.
+        See :meth:`ginga.RGBMap.RGBMapper.invert_cmap`.
+
+        """
+        self.rgbmap.invert_cmap()
+
     def set_imap(self, im):
         """Set intensity map.
         See :meth:`ginga.RGBMap.RGBMapper.set_imap`.

@@ -119,6 +119,18 @@ class RGBMapper(Callback.Callbacks):
         #self.carr = arr.astype('uint8')
         self.carr = numpy.round(arr).astype('uint8')
 
+    def invert_cmap(self, callback=True):
+        self.carr = numpy.fliplr(self.carr)
+        self.recalc(callback=callback)
+
+    def rotate_cmap(self, num, callback=True):
+        self.carr = numpy.roll(self.carr, num, axis=1)
+        self.recalc(callback=callback)
+
+    def restore_cmap(self, callback=True):
+        self.calc_cmap()
+        self.recalc(callback=callback)
+
     def get_rgb(self, index):
         """
         Return a tuple of (R, G, B) values in the 0-255 range associated

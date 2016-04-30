@@ -74,6 +74,7 @@ kp_autocenter_toggle = ['?']
 kp_autocenter_override = ['/']
 kp_contrast_restore = ['T']
 kp_cmap_reset = ['Y']
+kp_cmap_invert = ['I']
 kp_imap_reset = []
 kp_flip_x = ['[', '{']
 kp_flip_y = [']', '}']
@@ -136,6 +137,8 @@ ms_cuthi = ['cuts+ctrl+left']
 ms_cutall = ['cuts+left']
 ms_cut_auto = ['cuts+right']
 ms_panset = ['pan+middle', 'shift+left', 'middle']
+ms_cmap_rotate = ['cmap+left']
+ms_cmap_restore = ['cmap+right']
 
 mouse_zoom_acceleration = 1.085
 mouse_rotate_acceleration = 0.75
