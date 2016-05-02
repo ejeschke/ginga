@@ -35,11 +35,6 @@ class SaveImage(GlobalPlugin):
         # Image listing
         self.columns = [('Image', 'IMAGE'), ('Mod. Ext.', 'MODEXT')]
 
-        try:
-            self.history_obj = self.fv.gpmon.getPlugin('ChangeHistory')
-        except:
-            self.history_obj = None
-
         # User preferences. Some are just default values and can also be
         # changed by GUI.
         prefs = self.fv.get_preferences()
@@ -314,13 +309,26 @@ Output image will have the filename of <inputname>_<suffix>.fits.""")
         Limit each HISTORY line to given number of characters.
         Subsequent lines of the same history will be indented.
         """
-        if self.history_obj is None:
-            return
-
         channel = self.fv.get_channelInfo(self.chname)
         if channel is None:
             return
-        file_dict = self.history_obj.name_dict[channel.name]
+
+        history_plgname = 'ChangeHistory'
+        try:
+            history_obj = self.fv.gpmon.getPlugin(history_plgname)
+        except:
+            self.logger.error(
+                '{0} plugin is not loaded. No HISTORY will be written to '
+                '{1}.'.format(history_plgname, pfx))
+            return
+
+        if channel.name not in history_obj.name_dict:
+            self.logger.error(
+                '{0} channel not found in {1}. No HISTORY will be written to '
+                '{2}.'.format(channel.name, history_plgname, pfx))
+            return
+
+        file_dict = history_obj.name_dict[channel.name]
         chistory = []
         ind = ' ' * indentchar
 
