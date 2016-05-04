@@ -411,7 +411,7 @@ class AstropyWCS2(BaseWCS):
         We include this here to make this compatible with the other WCSs.  But
         "coordsys" is a bad name in astropy coordinates, and using the name
         `coordframe` internally makes it clearer what's going on (see
-        http://astropy.readthedocs.io/en/latest/coordinates/definitions.html)
+        :ref:`Astropy Coordinates Definitions <astropy:astropy-coordinates-definitions>`).
         """
         return self.coordframe
 

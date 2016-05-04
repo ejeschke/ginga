@@ -1,3 +1,5 @@
+.. _ginga-faq:
+
 +++++++++++++
 The Ginga FAQ
 +++++++++++++
@@ -57,7 +59,7 @@ Yes.  There is more information in Section :ref:`sec-bindings`.
 
 Where can I find a quick reference of the bindings?
 ---------------------------------------------------
-`Look here <https://ginga.readthedocs.io/en/latest/quickref.html>`_.
+See Section :ref:`ginga-quick-reference`.
 
 -------------
 Miscellaneous
