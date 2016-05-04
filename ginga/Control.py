@@ -393,7 +393,7 @@ class GingaControl(Callback.Callbacks):
 
         localDoc = os.path.join(packageHome, 'doc', 'help.html')
         if not os.path.exists(localDoc):
-            url = "https://readthedocs.org/docs/ginga/en/latest"
+            url = "https://ginga.readthedocs.io/en/latest"
         else:
             url = "file:%s" % (os.path.abspath(localDoc))
 

@@ -40,7 +40,7 @@ instructions in the documentation.
 DOCUMENTATION
 -------------
 It is online at
-http://ginga.readthedocs.org/en/latest/index.html
+http://ginga.readthedocs.io/en/latest/index.html
 
 DEVELOPERS
 ----------

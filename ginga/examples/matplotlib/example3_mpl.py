@@ -13,7 +13,7 @@
 example3 displays a native ginga widget beside a matplotlib figure as two
 panes.  A fits file can be dropped into the left pane and manipulated using
 the standard Ginga interactive controls
-see (http://ginga.readthedocs.org/en/latest/quickref.html).
+see (http://ginga.readthedocs.io/en/latest/quickref.html).
 Drop down boxes allow the color map to be changed.
 
 The right pane has two buttons under it: pressing each button sets up a

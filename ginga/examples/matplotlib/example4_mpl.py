@@ -21,7 +21,7 @@ using matplotlib plotting on top of the image and the plots will follow all
 the transformations.
 
 See the Ginga quick reference
-(http://ginga.readthedocs.org/en/latest/quickref.html)
+(http://ginga.readthedocs.io/en/latest/quickref.html)
 for a list of the interactive features in the standard ginga widget.
 
 example4 produces a simple matplotlib fits view with a couple of overplots.
@@ -78,7 +78,7 @@ fi.get_bindings().enable_all(True)
 if len(sys.argv) < 2:
     print("Please provide a FITS file on the command line")
     sys.exit(1)
-    
+
 image = AstroImage(logger)
 image.load_file(sys.argv[1])
 fi.set_image(image)
@@ -103,5 +103,5 @@ ax.add_patch(r)
 
 # if you rotate, flip, zoom or pan the the ginga image the graphics
 # stay properly plotted.  See quickref of interactive ginga commands here:
-#    http://ginga.readthedocs.org/en/latest/quickref.html
+#    http://ginga.readthedocs.io/en/latest/quickref.html
 plt.show()
