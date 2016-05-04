@@ -49,7 +49,7 @@ develop-eggs
 distribute-*.tar.gz
 
 # IPython notebook (Jupyter) checkpoints
-+.ipynb_checkpoints
+.ipynb_checkpoints
 
 # Other
 .cache
