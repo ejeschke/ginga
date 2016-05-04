@@ -529,7 +529,8 @@ def convert_profile_fromto(image_np, from_name, to_name,
         return out_np
 
     except Exception as e:
-        print(str(e))
+        print("Error converting profile from '%s' to '%s': %s" % (
+            from_name, to_name, str(e)))
         return image_np
 
 

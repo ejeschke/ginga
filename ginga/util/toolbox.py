@@ -34,6 +34,8 @@ class ModeIndicator(object):
         # set to false to disable
         self.visible = True
 
+        self.fontsize = 12
+
         # for displaying modal keyboard state
         self.mode_obj = None
         bm = viewer.get_bindmap()
@@ -49,7 +51,7 @@ class ModeIndicator(object):
         canvas = self.viewer.private_canvas
         if obj:
             try:
-                canvas.deleteObject(obj)
+                canvas.delete_object(obj)
             except:
                 pass
 
@@ -58,9 +60,9 @@ class ModeIndicator(object):
 
         # if not one of the standard modifiers, display the new one
         if not mode in (None, 'ctrl', 'shift'):
-            Text = canvas.getDrawClass('text')
-            Rect = canvas.getDrawClass('rectangle')
-            Compound = canvas.getDrawClass('compoundobject')
+            Text = canvas.get_draw_class('text')
+            Rect = canvas.get_draw_class('rectangle')
+            Compound = canvas.get_draw_class('compoundobject')
 
             if modetype == 'locked':
                 text = '%s [L]' % (mode)
@@ -71,14 +73,15 @@ class ModeIndicator(object):
 
             xsp, ysp = 4, 6
             wd, ht = self.viewer.get_window_size()
+            wd, ht = int(wd), int(ht)
             if self.viewer._originUpper:
-                x1, y1 = wd-12*len(text), ht-12
+                x1, y1 = wd-self.fontsize*len(text), ht-self.fontsize
             else:
                 # matplotlib case
-                x1, y1 = wd-12*len(text), 12
+                x1, y1 = wd-self.fontsize*len(text), self.fontsize
 
             o1 = Text(x1, y1, text,
-                      fontsize=12, color='yellow', coord='canvas')
+                      fontsize=self.fontsize, color='yellow', coord='canvas')
 
             wd, ht = self.viewer.renderer.get_dimensions(o1)
 

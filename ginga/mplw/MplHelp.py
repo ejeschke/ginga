@@ -1,9 +1,6 @@
 #
 # MplHelp.py -- help classes for Matplotlib drawing
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c)  Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 
@@ -81,10 +78,10 @@ class MplContext(object):
         self.kwdargs['linestyle'] = pen.linestyle
 
     def get_color(self, color, alpha):
-        if isinstance(color, str):
+        if isinstance(color, str) or isinstance(color, type(u"")):
             r, g, b = colors.lookup_color(color)
         elif isinstance(color, tuple):
-            # color is assumed to be a 4-tuple of RGBA values as floats
+            # color is assumed to be a 3-tuple of RGBA values as floats
             # between 0 and 1
             r, g, b = color
         else:

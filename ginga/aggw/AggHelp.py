@@ -1,9 +1,6 @@
 #
 # AggHelp.py -- help classes for the Agg drawing
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c)  Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 
@@ -27,7 +24,7 @@ class AggContext(object):
         self.canvas = canvas
 
     def get_color(self, color):
-        if isinstance(color, str):
+        if isinstance(color, str) or isinstance(color, type(u"")):
             r, g, b = colors.lookup_color(color)
         elif isinstance(color, tuple):
             # color is assumed to be a 3-tuple of RGB values as floats

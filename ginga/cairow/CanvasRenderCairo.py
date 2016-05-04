@@ -1,9 +1,6 @@
 #
 # CanvasRenderCairo.py -- for rendering into a ImageViewCairo widget
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 
@@ -26,7 +23,7 @@ class RenderContext(object):
         self.fill_alpha = 1.0
 
     def __get_color(self, color, alpha):
-        if isinstance(color, str):
+        if isinstance(color, str) or isinstance(color, type(u"")):
             r, g, b = colors.lookup_color(color)
         elif isinstance(color, tuple):
             # color is assumed to be a 3-tuple of RGB values as floats

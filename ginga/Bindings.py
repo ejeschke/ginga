@@ -158,7 +158,7 @@ class ImageViewBindings(object):
             ms_zoom = ['pan+right'],
             ms_freepan = ['freepan+middle'],
             ms_zoom_in = ['freepan+left'],
-            ms_zoom_out = ['freepan+right'],
+            ms_zoom_out = ['freepan+right', 'freepan+ctrl+left'],
             ms_cutlo = ['cuts+shift+left'],
             ms_cuthi = ['cuts+ctrl+left'],
             ms_cutall = ['cuts+left'],
@@ -712,15 +712,16 @@ class ImageViewBindings(object):
 
     def _rotate_xy(self, viewer, x, y, msg=True):
         msg = self.settings.get('msg_rotate', msg)
-        ## x_pct, y_pct = self._get_pct_xy(viewer, x, y)
-        ## delta_deg = x_pct * 360.0
         ctr_x, ctr_y = viewer.get_center()
-        deg1 = math.degrees(math.atan2(ctr_y - self._start_y,
-                                       self._start_x - ctr_x))
-        deg2 = math.degrees(math.atan2(ctr_y - y, x - ctr_x))
+        if not viewer.window_has_origin_upper():
+            deg1 = math.degrees(math.atan2(self._start_y - ctr_y,
+                                           self._start_x - ctr_x))
+            deg2 = math.degrees(math.atan2(y - ctr_y, x - ctr_x))
+        else:
+            deg1 = math.degrees(math.atan2(ctr_y - self._start_y,
+                                           self._start_x - ctr_x))
+            deg2 = math.degrees(math.atan2(ctr_y - y, x - ctr_x))
         delta_deg = deg2 - deg1
-        ## factor = self.settings.get('mouse_rotate_acceleration', 0.75)
-        ## deg = math.fmod(self._start_rot + delta_deg * factor, 360.0)
         deg = math.fmod(self._start_rot + delta_deg, 360.0)
         if msg:
             viewer.onscreen_message("Rotate: %.2f" % (deg))
@@ -1194,7 +1195,7 @@ class ImageViewBindings(object):
         msg = self.settings.get('msg_contrast', msg)
 
         x, y = viewer.get_last_win_xy()
-        if not viewer._originUpper:
+        if not viewer.window_has_origin_upper():
             y = viewer._imgwin_ht - y
         if event.state == 'move':
             self._tweak_colormap(viewer, x, y, 'preview')
@@ -1227,7 +1228,7 @@ class ImageViewBindings(object):
         msg = self.settings.get('msg_cmap', msg)
 
         x, y = viewer.get_last_win_xy()
-        if not viewer._originUpper:
+        if not viewer.window_has_origin_upper():
             y = viewer._imgwin_ht - y
         if event.state == 'move':
             self._rotate_colormap(viewer, x, y, 'preview')
@@ -1338,7 +1339,7 @@ class ImageViewBindings(object):
             return True
 
         x, y = viewer.get_last_win_xy()
-        if not viewer._originUpper:
+        if not viewer.window_has_origin_upper():
             y = viewer._imgwin_ht - y
         if event.state == 'move':
             self._cutboth_xy(viewer, x, y)

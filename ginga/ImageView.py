@@ -2624,6 +2624,18 @@ class ImageViewBase(Callback.Callbacks):
         """
         return False
 
+    def window_has_origin_upper(self):
+        """Indicate if window of backend toolkit is implemented with an
+        origin up or down.
+
+        Returns
+        -------
+        res : bool
+            Returns `True` if the origin is up, `False` otherwise.
+
+        """
+        return self._originUpper
+
     def update_image(self):
         """Update image.
         This must be implemented by subclasses.

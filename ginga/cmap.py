@@ -1,9 +1,6 @@
 #
 # cmap.py -- color maps for fits viewing
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -11474,9 +11471,15 @@ def add_matplotlib_cmap(cm, name=None):
     cmaps[cmap.name] = cmap
 
 
-def add_matplotlib_cmaps():
+def add_matplotlib_cmaps(fail_on_import_error=True):
     """Add all matplotlib colormaps."""
-    from matplotlib import cm as _cm
+    try:
+        from matplotlib import cm as _cm
+    except ImportError as e:
+        if fail_on_import_error:
+            raise e
+        # silently fail
+        return
 
     for name in _cm.cmap_d:
         if not isinstance(name, six.string_types):

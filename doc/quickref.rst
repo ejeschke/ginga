@@ -107,6 +107,8 @@ Cut levels and colormap commands
 | s                    | Go into Cuts mode:                               |
 |                      | - left drag does interactive cut *both* low      |
 |                      | and high levels, right click resets to auto cuts |
+|                      | ctrl+left: adjust low cut only                   |
+|                      | shift+left: adjust high cut only                 |
 |                      | scroll: coarse (10%) adjustment in/out           |
 |                      | ctrl+scroll: fine (1%) adjustment                |
 |                      | shift+scroll: cycle through auto cuts algorithms |
