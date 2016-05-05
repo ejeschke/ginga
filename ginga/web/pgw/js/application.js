@@ -1,5 +1,5 @@
 
-ginga_make_application = function (ws_url) {
+ginga_make_application = function (ws_url, debug_flag) {
         
     var ginga_app = {};
     
@@ -7,7 +7,7 @@ ginga_make_application = function (ws_url) {
     //ginga_app.socket = new WebSocket(ws_url);
     ginga_app.canvases = {}
     // set this to true to get javascript console debugging
-    ginga_app.debug = false
+    ginga_app.debug = debug_flag
     ginga_app.dialogs = {}
     ginga_app.tab_widgets = {}
     
@@ -495,14 +495,14 @@ ginga_initialize_canvas = function (canvas, id, app) {
     return pg_canvas;
 }
 
-ginga_initialize_dialog = function (doc_elem, id, title, buttons, app) {
+ginga_initialize_dialog = function (doc_elem, id, title, buttons, modal, app) {
 
     var pg_dialog = {};
     pg_dialog.dialog_id = id;
     pg_dialog.app = app;
     app.dialogs[id] = pg_dialog;
 
-    pg_dialog.options = {autoOpen: false, modal: true, title: title, buttons: buttons};
+    pg_dialog.options = {autoOpen: false, modal: modal, title: title, buttons: buttons};
 
     pg_dialog.dialogObj = $("#"+id).dialog(pg_dialog.options);
 

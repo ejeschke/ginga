@@ -9,7 +9,7 @@ import threading
 import time, re
 from functools import reduce
 
-from ginga.misc import Callback, Bunch
+from ginga.misc import Callback, Bunch, LineHistory
 from ginga.web.pgw import PgHelp
 import ginga.icons
 
@@ -136,10 +136,13 @@ class TextEntry(WidgetBase):
         self.font = default_font
         self.length = 20    # seems to be default HTML5 size
 
+        self.history = LineHistory.LineHistory()
+
         self.enable_callback('activated')
 
     def _cb_redirect(self, event):
         self.text = event.value
+        self.history.append(self.get_text())
         self.make_callback('activated')
 
     def get_text(self):
@@ -147,6 +150,8 @@ class TextEntry(WidgetBase):
 
     def set_text(self, text):
         self.text = text
+        app = self.get_app()
+        app.do_operation('update_value', id=self.id, value=text)
 
     def set_editable(self, tf):
         self.editable = tf
@@ -222,9 +227,13 @@ class TextArea(WidgetBase):
         #self.make_callback('activated')
 
     def append_text(self, text, autoscroll=True):
-        if text.endswith('\n'):
-            text = text[:-1]
+        ## if text.endswith('\n'):
+        ##     text = text[:-1]
         self.text = self.text + text
+
+        app = self.get_app()
+        app.do_operation('update_value', id=self.id, value=self.text)
+
         if not autoscroll:
             return
 
@@ -236,6 +245,9 @@ class TextArea(WidgetBase):
 
     def set_text(self, text):
         self.text = text
+
+        app = self.get_app()
+        app.do_operation('update_value', id=self.id, value=self.text)
 
     def set_limit(self, numlines):
         # for compatibility with the other supported widget sets
@@ -1305,12 +1317,20 @@ class TopLevel(ContainerBase):
         self.wid = None
         self.url = None
         self.app = None
+        self.debug = False
         #widget.closeEvent = lambda event: self._quit(event)
 
         self.enable_callback('close')
 
     def set_widget(self, child):
         self.add_ref(child)
+
+    def add_dialog(self, child):
+        self.add_ref(child)
+
+        app = self.get_app()
+        app.do_operation('update_html', id=self.id,
+                         value=self.render_children())
 
     def show(self):
         pass
@@ -1365,8 +1385,13 @@ class TopLevel(ContainerBase):
         base_url = self.app.base_url
         url = base_url + "?wid=%s" % (self.wid)
         ws_url = base_url + "/socket?wid=%s" % (self.wid)
+        if self.debug:
+            debug = 'true'
+        else:
+            debug = 'false'
         d = dict(title=self.title, content=self.render_children(),
-                 wid=self.wid, url=url, ws_url=ws_url)
+                 wid=self.wid, id=self.id, url=url, ws_url=ws_url,
+                 debug=debug)
         return '''
 <!doctype html>
 <html>
@@ -1398,9 +1423,9 @@ class TopLevel(ContainerBase):
         var wid = "%(wid)s";
         var url = "%(url)s";
         var ws_url = "ws://" + window.location.host + "/app/socket?wid=%(wid)s";
-        var ginga_app = ginga_make_application(ws_url);
+        var ginga_app = ginga_make_application(ws_url, %(debug)s);
     </script>
-%(content)s
+<div id=%(id)s>%(content)s</div>
 </body>
 </html>''' % d
 
@@ -1595,7 +1620,7 @@ class Dialog(WidgetBase):
     dialog_template = '''
     <div id="%(id)s">
     <script>
-    ginga_initialize_dialog(document.getElementById("%(id)s"), "%(id)s", "%(title)s", %(buttons)s, ginga_app)
+    ginga_initialize_dialog(document.getElementById("%(id)s"), "%(id)s", "%(title)s", %(buttons)s, %(modal)s, ginga_app)
     </script>
     %(content)s
     </div>
@@ -1605,13 +1630,22 @@ class Dialog(WidgetBase):
                  parent=None, callback=None, modal=False):
 
         super(Dialog, self).__init__()
+
+        if parent is None:
+            raise ValueError("Top level 'parent' parameter required")
+
         self.title = title
         self.buttons = buttons
         self.value = None
+        self.modal = modal
         self.content = VBox()
+        self.enable_callback('close')
         if callback:
             self.enable_callback('activated')
             self.add_callback('activated', callback)
+
+        self.parent = parent
+        parent.add_dialog(self)
 
     def buttons_to_js_obj(self):
         d = dict(id=self.id)
@@ -1645,8 +1679,10 @@ class Dialog(WidgetBase):
         app = self.get_app()
         app.do_operation('dialog_action', id=self.id, action="close")
 
+        self.make_callback('close')
+
     def render(self):
-        d = dict(id=self.id, title=self.title, buttons=self.buttons_to_js_obj())
+        d = dict(id=self.id, title=self.title, buttons=self.buttons_to_js_obj(), modal=str(self.modal).lower())
         d['content'] = self.content.render()
         return self.dialog_template % d
 

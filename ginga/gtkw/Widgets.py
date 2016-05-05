@@ -1556,28 +1556,19 @@ class Menubar(ContainerBase):
         return self.menus[name]
 
 
-class TopLevel(ContainerBase):
-    def __init__(self, title=None):
-        super(TopLevel, self).__init__()
+class TopLevelMixin(object):
 
+    def __init__(self, title=None):
         self._fullscreen = False
 
-        widget = GtkHelp.TopLevel()
-        self.widget = widget
-        widget.set_border_width(0)
-        widget.connect("destroy", self._quit)
-        widget.connect("delete_event", self._close_event)
-        widget.connect("window_state_event", self._window_event)
+        self.widget.connect("destroy", self._quit)
+        self.widget.connect("delete_event", self._close_event)
+        self.widget.connect("window_state_event", self._window_event)
 
         if not title is None:
-            widget.set_title(title)
+            self.widget.set_title(title)
 
         self.enable_callback('close')
-
-    def set_widget(self, child):
-        self.add_ref(child)
-        child_w = child.get_widget()
-        self.widget.add(child_w)
 
     def show(self):
         self.widget.show_all()
@@ -1666,6 +1657,25 @@ class TopLevel(ContainerBase):
         self.widget.set_title(title)
 
 
+class TopLevel(TopLevelMixin, ContainerBase):
+
+    def __init__(self, title=None):
+        ContainerBase.__init__(self)
+
+        self._fullscreen = False
+
+        widget = GtkHelp.TopLevel()
+        self.widget = widget
+        widget.set_border_width(0)
+
+        TopLevelMixin.__init__(self, title=title)
+
+    def set_widget(self, child):
+        self.add_ref(child)
+        child_w = child.get_widget()
+        self.widget.add(child_w)
+
+
 class Application(Callback.Callbacks):
 
     def __init__(self, logger=None):
@@ -1729,24 +1739,32 @@ class Application(Callback.Callbacks):
         return w
 
 
-class Dialog(WidgetBase):
-    def __init__(self, title=None, flags=None, buttons=None,
+class Dialog(TopLevelMixin, WidgetBase):
+
+    def __init__(self, title='', flags=0, buttons=[],
                  parent=None, modal=False):
-        super(Dialog, self).__init__()
+        WidgetBase.__init__(self)
+
+        if parent is not None:
+            self.parent = parent.get_widget()
+        else:
+            self.parent = None
 
         button_list = []
         for name, val in buttons:
             button_list.extend([name, val])
 
-        self.parent = parent.get_widget()
         self.widget = gtk.Dialog(title=title, flags=flags,
                                  buttons=tuple(button_list))
         self.widget.set_modal(modal)
+
+        TopLevelMixin.__init__(self, title=title)
+
         self.content = VBox()
+        self.content.set_border_width(0)
         content = self.widget.get_content_area()
         content.pack_start(self.content.get_widget(), fill=True, expand=True)
-        ## self.widget.connect("delete_event",
-        ##                     lambda *args: self._cb_redirect(self.widget, 0))
+
         self.widget.connect("response", self._cb_redirect)
 
         self.enable_callback('activated')
@@ -1757,9 +1775,6 @@ class Dialog(WidgetBase):
     def get_content_area(self):
         return self.content
 
-    def raise_(self):
-        window = self.widget.get_window()
-        window.raise_()
 
 class SaveDialog(object):
     def __init__(self, title='Save File', selectedfilter=None):

@@ -1525,28 +1525,17 @@ class Menubar(ContainerBase):
         return self.menus[name]
 
 
-class TopLevel(ContainerBase):
-    def __init__(self, title=None):
-        super(TopLevel, self).__init__()
+class TopLevelMixin(object):
 
-        widget = QtHelp.TopLevel()
-        self.widget = widget
-        box = QtGui.QVBoxLayout()
-        box.setContentsMargins(0, 0, 0, 0)
-        box.setSpacing(0)
-        widget.setLayout(box)
-        widget.closeEvent = lambda event: self._quit(event)
-        widget.destroyed = self._destroyed_cb
+    def __init__(self, title=None):
+
+        self.widget.closeEvent = lambda event: self._quit(event)
+        self.widget.destroyed = self._destroyed_cb
 
         if not title is None:
-            widget.setWindowTitle(title)
+            self.widget.setWindowTitle(title)
 
         self.enable_callback('close')
-
-    def set_widget(self, child):
-        self.add_ref(child)
-        child_w = child.get_widget()
-        self.widget.layout().addWidget(child_w)
 
     def _quit(self, event):
         #event.accept()
@@ -1602,6 +1591,26 @@ class TopLevel(ContainerBase):
 
     def set_title(self, title):
         self.widget.setWindowTitle(title)
+
+
+class TopLevel(TopLevelMixin, ContainerBase):
+
+    def __init__(self, title=None):
+        ContainerBase.__init__(self)
+
+        widget = QtHelp.TopLevel()
+        self.widget = widget
+        box = QtGui.QVBoxLayout()
+        box.setContentsMargins(0, 0, 0, 0)
+        box.setSpacing(0)
+        widget.setLayout(box)
+
+        TopLevelMixin.__init__(self, title=title)
+
+    def set_widget(self, child):
+        self.add_ref(child)
+        child_w = child.get_widget()
+        self.widget.layout().addWidget(child_w)
 
 
 class Application(Callback.Callbacks):
@@ -1668,33 +1677,40 @@ class Application(Callback.Callbacks):
         return w
 
 
-class Dialog(WidgetBase):
-    def __init__(self, title=None, flags=None, buttons=None,
-                 parent=None, modal=False):
-        super(Dialog, self).__init__()
+class Dialog(TopLevelMixin, WidgetBase):
 
-        self.widget = QtGui.QDialog(parent.get_widget())
+    def __init__(self, title='', flags=None, buttons=[],
+                 parent=None, modal=False):
+        WidgetBase.__init__(self)
+
+        if parent is not None:
+            parent = parent.get_widget()
+        self.widget = QtGui.QDialog(parent)
         self.widget.setModal(modal)
 
         vbox = QtGui.QVBoxLayout()
+        vbox.setContentsMargins(0, 0, 0, 0)
         self.widget.setLayout(vbox)
+
+        TopLevelMixin.__init__(self, title=title)
 
         self.content = VBox()
         vbox.addWidget(self.content.get_widget(), stretch=1)
 
-        hbox_w = QtGui.QWidget()
-        hbox = QtGui.QHBoxLayout()
-        hbox_w.setLayout(hbox)
+        if len(buttons) > 0:
+            hbox_w = QtGui.QWidget()
+            hbox = QtGui.QHBoxLayout()
+            hbox_w.setLayout(hbox)
 
-        for name, val in buttons:
-            btn = QtGui.QPushButton(name)
-            def cb(val):
-                return lambda: self._cb_redirect(val)
-            btn.clicked.connect(cb(val))
-            hbox.addWidget(btn, stretch=0)
+            for name, val in buttons:
+                btn = QtGui.QPushButton(name)
+                def cb(val):
+                    return lambda: self._cb_redirect(val)
+                btn.clicked.connect(cb(val))
+                hbox.addWidget(btn, stretch=0)
 
-        vbox.addWidget(hbox_w, stretch=0)
-        ## self.widget.closeEvent = lambda event: self.delete()
+            vbox.addWidget(hbox_w, stretch=0)
+            ## self.widget.closeEvent = lambda event: self.delete()
 
         self.enable_callback('activated')
 
@@ -1703,10 +1719,6 @@ class Dialog(WidgetBase):
 
     def get_content_area(self):
         return self.content
-
-    def raise_(self):
-        self.widget.raise_()
-        self.widget.activateWindow()
 
 
 class SaveDialog(QtGui.QFileDialog):
