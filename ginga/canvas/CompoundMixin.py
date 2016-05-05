@@ -13,6 +13,9 @@ import numpy
 from ginga.util.six.moves import map, zip, reduce
 from ginga.canvas import coordmap
 
+__all__ = ['CompoundMixin']
+
+
 class CompoundMixin(object):
     """A CompoundMixin is a mixin class that makes an object that is an
     aggregation of other objects.

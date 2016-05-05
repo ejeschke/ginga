@@ -18,15 +18,19 @@ from ..CompoundMixin import CompoundMixin
 from ..CanvasMixin import CanvasMixin
 from ..DrawingMixin import DrawingMixin
 
+__all__ = ['CompoundObject', 'Canvas', 'DrawingCanvas']
+
 
 class CompoundObject(CompoundMixin, CanvasObjectBase):
     """Compound object on a ImageViewCanvas.
-    Parameters are:
-    the child objects making up the compound object.  Objects are drawn
-    in the order listed.
-    Example:
-      CompoundObject(Point(x, y, radius, ...),
-                     Circle(x, y, radius, ...))
+    Parameters are the child objects making up the compound object.
+    Objects are drawn in the order listed. Example:
+
+    .. code-block: Python
+
+        CompoundObject(Point(x, y, radius, ...),
+                       Circle(x, y, radius, ...))
+
     This makes a point inside a circle.
     """
 
@@ -49,6 +53,7 @@ class CompoundObject(CompoundMixin, CanvasObjectBase):
 
 
 class Canvas(CanvasMixin, CompoundObject):
+    """Class to handle canvas in Ginga."""
     @classmethod
     def get_params_metadata(cls):
         return [
@@ -66,6 +71,7 @@ class Canvas(CanvasMixin, CompoundObject):
 
 
 class DrawingCanvas(Mixins.UIMixin, DrawingMixin, Canvas):
+    """Drawing canvas."""
     def __init__(self):
         Canvas.__init__(self)
         DrawingMixin.__init__(self)

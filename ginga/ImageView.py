@@ -20,6 +20,8 @@ from ginga.canvas import coordmap
 from ginga.canvas.types.layer import DrawingCanvas
 from ginga.util import io_rgb
 
+__all__ = ['ImageViewBase']
+
 
 class ImageViewError(Exception):
     pass
