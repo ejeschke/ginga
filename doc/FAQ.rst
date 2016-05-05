@@ -27,7 +27,7 @@ What GUI toolkit does Ginga use?
 It depends what exactly you want to run--Ginga is both a toolkit for
 building viewers and also includes a "reference viewer".  The example
 programs currently support Qt, Gtk, Tk, Matplotlib and web browser via
-HTML5 canvas.  
+HTML5 canvas.
 
 The full reference viewer currently supports Qt and Gtk.  The difference
 is explained here :ref:`ch-programming-ginga`.
@@ -46,7 +46,7 @@ Control Bindings
 
 Can I get ds9-like user interface mappings?
 -------------------------------------------
-Save the file called called `bindings.cfg.ds9 
+Save the file called called `bindings.cfg.ds9
 <https://raw.github.com/ejeschke/ginga/master/examples/bindings/bindings.cfg.ds9>`_
 and drop it in your $HOME/.ginga folder as "bindings.cfg".
 Then restart Ginga.
@@ -91,7 +91,7 @@ try to match it feature for feature.  Instead, since Ginga is
 plugin-based, you can write plugins to give you the features you need.
 ds9 is a "everything including kitchen sink" kind of viewer, whereas
 ginga reference viewer is more like a "take what you need from the
-pantry and whip it up" type viewer.  
+pantry and whip it up" type viewer.
 
 Please send a pull request!
 
@@ -102,16 +102,16 @@ World Coordinate System
 What library are you using for WCS?
 -----------------------------------
 We are lucky to have several possible choices for a python WCS package
-compatible with Ginga: 
-`astLib <http://astlib.sourceforge.net/>`_, 
+compatible with Ginga:
+`astLib <http://astlib.sourceforge.net/>`_,
 `kapteyn <http://www.astro.rug.nl/software/kapteyn/>`_,
 `starlink <https://github.com/timj/starlink-pyast>`_ and
-`astropy <https://github.com/astropy/astropy>`_.
+:ref:`Astropy WCS <astropy:astropy-wcs>`.
 
 kapteyn and astropy wrap Doug Calabretta's "WCSLIB", astLib wraps
 Doug Mink's "wcstools", and I'm not sure what starlink uses (their own?).
 Note that astlib and starlink require pyfits (or astropy) to be
-installed in order to create a WCS object from a FITS header. 
+installed in order to create a WCS object from a FITS header.
 
 To force the use of a particular one add this to your "general.cfg"
 in $HOME/.ginga:
@@ -120,7 +120,7 @@ WCSpkg = 'package'
 
 Replace 'package' with one of {'astropy', 'kapteyn', 'starlink' or
 'astlib', 'choose'}.  If you pick 'choose' Ginga will try to pick one
-for you. 
+for you.
 
 How easy is it for Ginga to support a custom WCS?
 -------------------------------------------------
@@ -134,12 +134,12 @@ I/O and File Formats
 What library are you using for FITS I/O?
 ----------------------------------------
 There are two possible choices for a python FITS file reading package
-compatible with Ginga: 
-`astropy <https://github.com/astropy/astropy>`_ and
-`fitsio <https://github.com/esheldon/fitsio>`_.  
+compatible with Ginga:
+:ref:`Astropy FITS <astropy:astropy-io-fits>` and
+`fitsio <https://github.com/esheldon/fitsio>`_.
 Both are originally based on the CFITSIO library (although astropy's
 version uses very little of it any more, while fitsio is still
-tracking the current version). 
+tracking the current version).
 
 To force the use of a particular one add this to your "general.cfg"
 in $HOME/.ginga:
@@ -184,7 +184,7 @@ channel that I'm viewing.
 	  levels--it will use the new settings.
 
 No image shows in the display, and I get an error in the terminal about
-histogram and keyword "density". 
+histogram and keyword "density".
 
 .. note:: You need a slightly newer version of numpy.
 

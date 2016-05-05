@@ -32,6 +32,10 @@ import re
 import numpy
 from ginga.util.six.moves import map, zip
 
+__all__ = ['use', 'BaseWCS', 'AstropyWCS2', 'AstropyWCS', 'AstLibWCS',
+           'KapteynWCS', 'StarlinkWCS', 'BareBonesWCS', 'choose_coord_units',
+           'get_coord_system_name']
+
 # Module variables that get configured at module load time
 # or when use() is called
 coord_types = []

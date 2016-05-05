@@ -15,6 +15,14 @@ from collections import OrderedDict
 import numpy
 from ginga.misc import Bunch
 
+__all__ = ['hmsToDeg', 'dmsToDeg', 'decTimeToDeg', 'degToHms', 'degToDms',
+           'arcsecToDeg', 'hmsStrToDeg', 'dmsStrToDeg', 'raDegToString',
+           'decDegToString', 'trans_coeff', 'eqToEq2000',
+           'get_xy_rotation_and_scale', 'get_rotation_and_scale',
+           'get_relative_orientation', 'simple_wcs', 'deg2fmt', 'dispos',
+           'deltaStarsRaDecDeg1', 'deltaStarsRaDecDeg2', 'get_starsep_RaDecDeg',
+           'add_offset_radec', 'get_RaDecOffsets', 'lon_to_deg', 'lat_to_deg']
+
 
 class WCSError(Exception):
     pass

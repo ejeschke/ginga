@@ -13,10 +13,16 @@ Ginga is distributed under an open-source BSD licence. Please see the
 file LICENSE.txt in the top-level directory for details.
 """
 
-try:
-    from .version import version as __version__
-except ImportError:
-    __version__ = ''
+# Affiliated packages may add whatever they like to this file, but
+# should keep this content at the top.
+# ----------------------------------------------------------------------------
+from ._astropy_init import *
+# ----------------------------------------------------------------------------
+
+# For egg_info test builds to pass, put package imports here.
+if not _ASTROPY_SETUP_:
+    #from example_mod import *
+    pass
 
 try:
     # As long as we're using setuptools/distribute, we need to do this the

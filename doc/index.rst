@@ -3,9 +3,9 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-+++++++++++++++++++++++++++++++++
-Welcome to Ginga's documentation!
-+++++++++++++++++++++++++++++++++
++++++++++++++++++++++++++++++++
+Ginga: Image Viewer and Toolkit
++++++++++++++++++++++++++++++++
 
 .. toctree::
    :maxdepth: 2
@@ -34,7 +34,7 @@ star catalog access, cuts, star pick/fwhm, thumbnails, etc.
 Copyright and License
 =====================
 
-Copyright (c) 2011-2015 Eric R. Jeschke. All rights reserved.
+Copyright (c) 2011-2016 Eric R. Jeschke. All rights reserved.
 
 Ginga is distributed under an open-source BSD licence. Please see the
 file LICENSE.txt in the top-level directory for details.
@@ -65,6 +65,7 @@ Building and Installation
 =========================
 
 Download and install from `pip`::
+
     $ pip install ginga
 
 Or, if you have downloaded the source, go into the top level directory and::
@@ -89,7 +90,7 @@ Documentation
    quickref
    FAQ
    manual/index
-   api/index
+   ref_api
 
 Some training videos are available in the
 `downloads <https://github.com/ejeschke/ginga/downloads>`_ section at
@@ -144,10 +145,3 @@ Ginga the viewer may be pronounced "ging-ga" (proper japanese) or
 has meaning in the Brazilian dance/martial art capoeira: a fundamental
 rocking or back and forth swinging motion.  Pronounciation as "jin-ja"
 is considered poor form.
-
-==================
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
