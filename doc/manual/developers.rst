@@ -17,7 +17,8 @@ follow one of two logical development paths:
 The first approach is probably best for when the developer has a custom
 application in mind, needs a minimal but powerful viewer or wants to
 develop an entirely new full-featured viewer.  Developers interested in
-this direction should head over to the Ginga Toolkit Manual.
+this direction should head over to the chapter on the viewer object
+(see :ref:`ch-developing_with_the_ginga_view_class`).
 
 The second approach is probably best for end users or developers that
 are mostly satisfied with the reference viewer as a general purpose tool

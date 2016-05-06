@@ -1,21 +1,14 @@
 #! /usr/bin/env python
 #
-# example1_qt.py -- Simple, configurable FITS viewer.
-#
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c)  Eric R. Jeschke.  All rights reserved.
-# This is open-source software licensed under a BSD license.
-# Please see the file LICENSE.txt for details.
+# example1_qt.py -- Simple FITS viewer using the Ginga toolkit and Qt widgets.
 #
 import sys, os
 import logging
 
 from ginga import AstroImage
+from ginga.misc import log
 from ginga.qtw.QtHelp import QtGui, QtCore
 from ginga.qtw.ImageViewCanvasQt import ImageViewCanvas
-
-STD_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcName)s) | %(message)s'
 
 
 class FitsViewer(QtGui.QMainWindow):
@@ -35,10 +28,7 @@ class FitsViewer(QtGui.QMainWindow):
         self.fitsimage = fi
 
         bd = fi.get_bindings()
-        bd.enable_pan(True)
-        bd.enable_zoom(True)
-        bd.enable_cuts(True)
-        bd.enable_flip(True)
+        bd.enable_all(True)
 
         w = fi.get_widget()
         w.resize(512, 512)
@@ -97,12 +87,10 @@ def main(options, args):
 
     app = QtGui.QApplication(sys.argv)
 
-    logger = logging.getLogger("example1")
-    logger.setLevel(logging.INFO)
-    fmt = logging.Formatter(STD_FORMAT)
-    stderrHdlr = logging.StreamHandler()
-    stderrHdlr.setFormatter(fmt)
-    logger.addHandler(stderrHdlr)
+    # ginga needs a logger.
+    # If you don't want to log anything you can create a null logger by
+    # using null=True in this call instead of log_stderr=True
+    logger = log.get_logger("example1", log_stderr=True)
 
     w = FitsViewer(logger)
     w.resize(524, 540)

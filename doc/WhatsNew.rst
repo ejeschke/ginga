@@ -2,6 +2,11 @@
 What's New in Ginga?
 ++++++++++++++++++++
 
+Ver 2.2.20160505170200
+======================
+Ginga has merged the astropy-helpers template.  This should make it more
+compatible management-wise with other astropy-affiliated packages.
+
 Ver 2.2.20150203025858
 ======================
 Ginga drawing canvas objects now can specify points and radii in world

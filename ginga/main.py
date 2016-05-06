@@ -142,22 +142,25 @@ class ReferenceViewer(object):
         self.local_plugins = []
         self.global_plugins = []
 
-    def add_default_plugins(self):
+    def add_default_plugins(self, except_global=[], except_local=[]):
         """
         Add the ginga-distributed default set of plugins to the
         reference viewer.
         """
         # add default global plugins
         for bnch in global_plugins:
-            start = bnch.get('start', True)
-            pfx = bnch.get('pfx', None)
-            self.add_global_plugin(bnch.module, bnch.ws,
-                          tab_name=bnch.tab, start_plugin=start, pfx=pfx)
+            if not bnch.module in except_global:
+                start = bnch.get('start', True)
+                pfx = bnch.get('pfx', None)
+                self.add_global_plugin(bnch.module, bnch.ws,
+                                       tab_name=bnch.tab, start_plugin=start,
+                                       pfx=pfx)
 
         # add default local plugins
         for bnch in local_plugins:
-            pfx = bnch.get('pfx', None)
-            self.add_local_plugin(bnch.module, bnch.ws, pfx=pfx)
+            if not bnch.module in except_local:
+                pfx = bnch.get('pfx', None)
+                self.add_local_plugin(bnch.module, bnch.ws, pfx=pfx)
 
     def add_default_options(self, optprs):
         """
