@@ -50,7 +50,7 @@ Global plugins
    plugins_global/samp
    plugins_global/iraf
    plugins_global/log
-   plugins_global/debug
+   plugins_global/command
 
 
 .. _sec-localplugins:

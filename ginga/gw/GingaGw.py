@@ -1,9 +1,6 @@
 #
 # GingaGw.py -- Gw display handler for the Ginga reference viewer.
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -265,10 +262,10 @@ class GingaView(GwMain.GwMain, Widgets.Application):
             return
 
         # Get image from current focused channel
-        channel = self.get_channelInfo()
-        fitsimage = channel.fitsimage
-        settings = fitsimage.get_settings()
-        rgbmap = fitsimage.get_rgbmap()
+        channel = self.get_current_channel()
+        viewer = channel.viewer
+        settings = viewer.get_settings()
+        rgbmap = viewer.get_rgbmap()
 
         root = Widgets.TopLevel()
         vbox = Widgets.VBox()
@@ -281,13 +278,13 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         vbox.add_widget(iw, stretch=1)
 
         # Get image from current focused channel
-        image = fitsimage.get_image()
+        image = viewer.get_image()
         if image is None:
             return
         fi.set_image(image)
 
         # Copy attributes of the frame
-        fitsimage.copy_attributes(fi,
+        viewer.copy_attributes(fi,
                                   [#'transforms',
                                    #'cutlevels',
                                    'rgbmap'])
@@ -358,7 +355,9 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         self.ds.add_tab(workspace, vbox, 1, name)
 
         self.update_pending()
-        bnch = Bunch.Bunch(fitsimage=fi, view=iw, container=vbox,
+
+        bnch = Bunch.Bunch(viewer=fi, widget=iw, container=vbox,
+                           fitsimage=fi, view=iw,  # older names, to be deprecated
                            workspace=workspace)
         return bnch
 
@@ -732,21 +731,21 @@ class GingaView(GwMain.GwMain, Widgets.Application):
 
     def _get_channel_by_container(self, child):
         for chname in self.get_channelNames():
-            chinfo = self.get_channelInfo(chname)
-            if chinfo.container == child:
-                return chinfo
+            channel = self.get_channel(chname)
+            if channel.container == child:
+                return channel
         return None
 
     def page_switch_cb(self, tab_w, child):
         self.logger.debug("page switched to %s" % (str(child)))
 
         # Find the channel that contains this widget
-        chinfo = self._get_channel_by_container(child)
-        self.logger.debug("chinfo: %s" % (str(chinfo)))
-        if chinfo is not None:
-            fitsimage = chinfo.fitsimage
-            if fitsimage != self.getfocus_fitsimage():
-                chname = chinfo.name
+        channel = self._get_channel_by_container(child)
+        self.logger.debug("channel: %s" % (str(channel)))
+        if channel is not None:
+            viewer = channel.viewer
+            if viewer != self.getfocus_viewer():
+                chname = channel.name
                 self.logger.debug("Active channel switch to '%s'" % (
                     chname))
                 self.change_channel(chname, raisew=False)
@@ -756,9 +755,9 @@ class GingaView(GwMain.GwMain, Widgets.Application):
     def page_closed_cb(self, widget, child, wsname):
         self.logger.debug("page closed in %s: '%s'" % (wsname, str(child)))
 
-        chinfo = self._get_channel_by_container(child)
-        if chinfo is not None:
-            self.gui_delete_channel(chinfo.name)
+        channel = self._get_channel_by_container(child)
+        if channel is not None:
+            self.gui_delete_channel(channel.name)
 
 
 # END

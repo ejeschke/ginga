@@ -68,13 +68,14 @@ default_layout = ['seq', {},
                     ]]
 
 global_plugins = [
-    Bunch(module='Toolbar', tab='Toolbar', ws='toolbar'),
-    Bunch(module='Pan', tab='_pan', ws='uleft', raisekey=None),
-    Bunch(module='Info', tab='Synopsis', ws='lleft', raisekey=None),
-    Bunch(module='Header', tab='Header', ws='left', raisekey='H'),
-    Bunch(module='Zoom', tab='Zoom', ws='left', raisekey='Z'),
-    Bunch(module='Thumbs', tab='Thumbs', ws='right', raisekey='T'),
-    Bunch(module='Contents', tab='Contents', ws='right', raisekey='c'),
+    Bunch(module='Toolbar', tab='Toolbar', ws='toolbar', start=True),
+    Bunch(module='Pan', tab='_pan', ws='uleft', start=True, raisekey=None),
+    Bunch(module='Info', tab='Synopsis', ws='lleft', start=True, raisekey=None),
+    Bunch(module='Header', tab='Header', ws='left', start=True, raisekey='H'),
+    Bunch(module='Zoom', tab='Zoom', ws='left', start=True, raisekey='Z'),
+    Bunch(module='Command', tab='Command', ws='lleft', start=True),
+    Bunch(module='Thumbs', tab='Thumbs', ws='right', start=True, raisekey='T'),
+    Bunch(module='Contents', tab='Contents', ws='right', start=True, raisekey='c'),
     Bunch(module='Colorbar', tab='_cbar', ws='cbar', start=True),
     Bunch(module='Cursor', tab='_readout', ws='readout', start=True),
     Bunch(module='Operations', tab='_opns', ws='operations', start=True),
@@ -88,7 +89,6 @@ global_plugins = [
     Bunch(module='SAMP', tab='SAMP', ws='right', start=False),
     Bunch(module='IRAF', tab='IRAF', ws='right', start=False),
     Bunch(module='Log', tab='Log', ws='right', start=False),
-    Bunch(module='Debug', tab='Debug', ws='right', start=False),
     ]
 
 local_plugins = [
@@ -451,6 +451,8 @@ class ReferenceViewer(object):
                              ginga_shell.ds.get_tabnames(group=None)))
         if 'info' in tab_names:
             ginga_shell.ds.raise_tab('Info')
+        if 'synopsis' in tab_names:
+            ginga_shell.ds.raise_tab('synopsis')
         if 'thumbs' in tab_names:
             ginga_shell.ds.raise_tab('Thumbs')
 

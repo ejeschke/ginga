@@ -149,14 +149,14 @@ class GingaControl(Callback.Callbacks):
     # CALLBACKS
     ####################################################
 
-    def showxy(self, fitsimage, data_x, data_y):
+    def showxy(self, viewer, data_x, data_y):
         try:
-            image = fitsimage.get_image()
+            image = viewer.get_image()
             if image is None:
                 # No image loaded for this channel
                 return
 
-            settings = fitsimage.get_settings()
+            settings = viewer.get_settings()
             info = image.info_xy(data_x, data_y, settings)
 
             # Are we reporting in data or FITS coordinates?
@@ -168,23 +168,23 @@ class GingaControl(Callback.Callbacks):
             self.logger.warning("Can't get info under the cursor: %s" % (str(e)))
             return
 
-        self.make_callback('field-info', fitsimage, info)
+        self.make_callback('field-info', viewer, info)
 
         self.update_pending()
         return True
 
-    def motion_cb(self, fitsimage, button, data_x, data_y):
+    def motion_cb(self, viewer, button, data_x, data_y):
         """Motion event in the big fits window.  Show the pointing
         information under the cursor.
         """
         ## if button == 0:
-        ##     self.showxy(fitsimage, data_x, data_y)
-        self.showxy(fitsimage, data_x, data_y)
+        ##     self.showxy(viewer, data_x, data_y)
+        self.showxy(viewer, data_x, data_y)
         return True
 
-    def keypress(self, fitsimage, keyname):
+    def keypress(self, viewer, keyname):
         """Key press event in a channel window."""
-        chname = self.get_channelName(fitsimage)
+        chname = self.get_channelName(viewer)
         self.logger.debug("key press (%s) in channel %s" % (
             keyname, chname))
         # TODO: keyboard accelerators to raise tabs need to be integrated into
@@ -229,33 +229,33 @@ class GingaControl(Callback.Callbacks):
             self.next_channel()
         return True
 
-    def dragdrop(self, fitsimage, urls):
+    def dragdrop(self, viewer, urls):
         """Called when a drop operation is performed on our main window.
         We are called back with a URL and we attempt to load it if it
         names a file.
         """
         for url in urls:
-            to_chname = self.get_channelName(fitsimage)
+            to_chname = self.get_channelName(viewer)
 
             ## self.load_file(url)
             self.nongui_do(self.load_file, url, chname=to_chname,
                            wait=False)
         return True
 
-    def force_focus_cb(self, fitsimage, event, data_x, data_y):
-        chname = self.get_channelName(fitsimage)
+    def force_focus_cb(self, viewer, event, data_x, data_y):
+        chname = self.get_channelName(viewer)
         self.change_channel(chname, raisew=True)
         return True
 
-    def focus_cb(self, fitsimage, tf, name):
-        """Called when ``fitsimage`` gets ``(tf==True)`` or loses
+    def focus_cb(self, viewer, tf, name):
+        """Called when ``viewer`` gets ``(tf==True)`` or loses
         ``(tf==False)`` the focus.
         """
         if not self.channel_follows_focus:
             return True
         self.logger.debug("Focus %s=%s" % (name, tf))
         if tf:
-            if fitsimage != self.getfocus_fitsimage():
+            if viewer != self.getfocus_viewer():
                 self.change_channel(name, raisew=False)
 
         return True
@@ -267,7 +267,7 @@ class GingaControl(Callback.Callbacks):
         self.logger.debug("should be exiting now")
 
     def reset_viewer(self):
-        channel = self.get_channelInfo()
+        channel = self.get_current_channel()
         opmon = channel.opmon
         opmon.deactivate_focused()
         self.normalsize()
@@ -301,13 +301,13 @@ class GingaControl(Callback.Callbacks):
         return self.stop_local_plugin(chname, opname)
 
     def start_local_plugin(self, chname, opname, future):
-        channel = self.get_channelInfo(chname)
+        channel = self.get_channel(chname)
         opmon = channel.opmon
         opmon.start_plugin_future(channel.name, opname, future)
-        channel.fitsimage.onscreen_message(opname, delay=1.0)
+        channel.viewer.onscreen_message(opname, delay=1.0)
 
     def stop_local_plugin(self, chname, opname):
-        channel = self.get_channelInfo(chname)
+        channel = self.get_channel(chname)
         opmon = channel.opmon
         opmon.deactivate(opname)
 
@@ -483,7 +483,7 @@ class GingaControl(Callback.Callbacks):
             except Exception as e:
                 tb_str = "Traceback information unavailable."
             self.gui_do(self.show_error, errmsg + '\n' + tb_str)
-            #channel.fitsimage.onscreen_message("Failed to load file", delay=1.0)
+            #channel.viewer.onscreen_message("Failed to load file", delay=1.0)
             raise ControlError(errmsg)
 
         self.logger.debug("Successfully loaded file into image object.")
@@ -566,12 +566,12 @@ class GingaControl(Callback.Callbacks):
 
         """
         if not chname:
-            channel = self.get_channelInfo()
+            channel = self.get_current_channel()
             chname = channel.name
         else:
             if not self.has_channel(chname) and create_channel:
                 self.gui_call(self.add_channel, chname)
-            channel = self.get_channelInfo(chname)
+            channel = self.get_channel(chname)
             chname = channel.name
 
         if image_loader is None:
@@ -639,7 +639,7 @@ class GingaControl(Callback.Callbacks):
     def preload_file(self, chname, imname, path, image_future=None):
         # sanity check to see if the file is already in memory
         self.logger.debug("preload: checking %s in %s" % (imname, chname))
-        channel = self.get_channelInfo(chname)
+        channel = self.get_channel(chname)
         datasrc = channel.datasrc
 
         if not channel.datasrc.has_key(imname):
@@ -657,36 +657,36 @@ class GingaControl(Callback.Callbacks):
         self.logger.debug("end preload")
 
     def zoom_in(self):
-        fitsimage = self.getfocus_fitsimage()
-        fitsimage.zoom_in()
+        viewer = self.getfocus_viewer()
+        viewer.zoom_in()
         return True
 
     def zoom_out(self):
-        fitsimage = self.getfocus_fitsimage()
-        fitsimage.zoom_out()
+        viewer = self.getfocus_viewer()
+        viewer.zoom_out()
         return True
 
     def zoom_1_to_1(self):
-        fitsimage = self.getfocus_fitsimage()
-        fitsimage.zoom_to(1)
+        viewer = self.getfocus_viewer()
+        viewer.zoom_to(1)
         return True
 
     def zoom_fit(self):
-        fitsimage = self.getfocus_fitsimage()
-        fitsimage.zoom_fit()
+        viewer = self.getfocus_viewer()
+        viewer.zoom_fit()
         return True
 
     def auto_levels(self):
-        fitsimage = self.getfocus_fitsimage()
-        fitsimage.auto_levels()
+        viewer = self.getfocus_viewer()
+        viewer.auto_levels()
 
     def prev_img(self, loop=True):
-        channel = self.get_channelInfo()
+        channel = self.get_current_channel()
         channel.prev_image()
         return True
 
     def next_img(self, loop=True):
-        channel = self.get_channelInfo()
+        channel = self.get_current_channel()
         channel.next_image()
         return True
 
@@ -742,7 +742,7 @@ class GingaControl(Callback.Callbacks):
 
     def add_image(self, imname, image, chname=None, silent=False):
         if chname is None:
-            channel = self.get_channelInfo()
+            channel = self.get_current_channel()
             if channel is None:
                 raise ValueError("Need to provide a channel name to add "
                                  "the image")
@@ -753,7 +753,7 @@ class GingaControl(Callback.Callbacks):
         channel.add_image(image, silent=silent)
 
     def advertise_image(self, chname, image):
-        channel = self.get_channelInfo(chname)
+        channel = self.get_channel(chname)
         info = channel.get_image_info(image.get('name'))
 
         self.make_gui_callback('add-image', chname, image, info)
@@ -763,22 +763,26 @@ class GingaControl(Callback.Callbacks):
         channel.add_image(image, bulk_add=True)
 
     def get_image(self, chname, imname):
-        channel = self.get_channelInfo(chname)
+        channel = self.get_channel(chname)
         if channel is None:
             return None
         return channel.get_loaded_image(imname)
 
-    def getfocus_fitsimage(self):
-        channel = self.get_channelInfo()
+    def getfocus_viewer(self):
+        channel = self.get_current_channel()
         if channel is None:
             return None
-        return channel.fitsimage
+        return channel.viewer
 
-    def get_fitsimage(self, chname):
-        channel = self.get_channelInfo(chname)
+    def get_viewer(self, chname):
+        channel = self.get_channel(chname)
         if channel is None:
             return None
-        return channel.fitsimage
+        return channel.viewer
+
+    # TO BE DEPRECATED EVENTUALLY
+    getfocus_fitsimage = getfocus_viewer
+    get_fitsimage = get_viewer
 
     def switch_name(self, chname, imname, path=None,
                     image_future=None):
@@ -854,7 +858,7 @@ class GingaControl(Callback.Callbacks):
         else:
             oldchname = self.cur_channel.name.lower()
 
-        channel = self.get_channelInfo(name)
+        channel = self.get_channel(name)
 
         if name != oldchname:
             with self.lock:
@@ -894,6 +898,13 @@ class GingaControl(Callback.Callbacks):
         with self.lock:
             return name in self.channel
 
+    def get_channel(self, chname):
+        return self.get_channelInfo(chname=chname)
+
+    def get_current_channel(self):
+        with self.lock:
+            return self.cur_channel
+
     def get_channelInfo(self, chname=None):
         with self.lock:
             if not chname:
@@ -903,15 +914,15 @@ class GingaControl(Callback.Callbacks):
 
     def get_channel_on_demand(self, chname):
         if self.has_channel(chname):
-            return self.get_channelInfo(chname)
+            return self.get_channel(chname)
 
         return self.gui_call(self.add_channel, chname)
 
-    def get_channelName(self, fitsimage):
+    def get_channelName(self, viewer):
         with self.lock:
             items = self.channel.items()
         for name, channel in items:
-            if channel.fitsimage == fitsimage:
+            if channel.viewer == viewer:
                 return channel.name
         return None
 
@@ -954,7 +965,7 @@ class GingaControl(Callback.Callbacks):
 
         """
         if self.has_channel(chname):
-            return self.get_channelInfo(chname)
+            return self.get_channel(chname)
 
         name = chname
         if settings is None:
@@ -1001,7 +1012,7 @@ class GingaControl(Callback.Callbacks):
             bnch = self.add_viewer(chname, settings,
                                    workspace=workspace)
             # for debugging
-            bnch.fitsimage.set_name('channel:%s' % (chname))
+            bnch.viewer.set_name('channel:%s' % (chname))
 
             opmon = self.getPluginManager(self.logger, self,
                                           self.ds, self.mm)
@@ -1009,7 +1020,9 @@ class GingaControl(Callback.Callbacks):
             channel.widget = bnch.view
             channel.container = bnch.container
             channel.workspace = bnch.workspace
-            channel.fitsimage = bnch.fitsimage
+            channel.viewer = bnch.viewer
+            # older name, should eventually be deprecated
+            channel.fitsimage = bnch.viewer
             channel.opmon = opmon
 
             name = chname.lower()
@@ -1077,8 +1090,8 @@ class GingaControl(Callback.Callbacks):
         bannerFile = os.path.join(self.iconpath, 'ginga-splash.ppm')
         chname = 'Ginga'
         self.add_channel(chname)
-        channel = self.get_channelInfo(chname)
-        viewer = channel.fitsimage
+        channel = self.get_channel(chname)
+        viewer = channel.viewer
         viewer.enable_autocuts('off')
         viewer.enable_autozoom('on')
         viewer.cut_levels(0, 255)
@@ -1095,8 +1108,8 @@ class GingaControl(Callback.Callbacks):
             viewer.zoom_fit()
 
     def remove_image_by_name(self, chname, imname, impath=None):
-        channel = self.get_channelInfo(chname)
-        viewer = channel.fitsimage
+        channel = self.get_channel(chname)
+        viewer = channel.viewer
         self.logger.info("removing image %s" % (imname))
         # If this is the current image in the viewer, clear the viewer
         image = viewer.get_image()
@@ -1110,13 +1123,13 @@ class GingaControl(Callback.Callbacks):
 
     def move_image_by_name(self, from_chname, imname, to_chname, impath=None):
 
-        channel_from = self.get_channelInfo(from_chname)
-        channel_to = self.get_channelInfo(to_chname)
+        channel_from = self.get_channel(from_chname)
+        channel_to = self.get_channel(to_chname)
         channel_from.move_image_to(imname, channel_to)
 
     def remove_current_image(self):
-        channel = self.get_channelInfo()
-        viewer = channel.fitsimage
+        channel = self.get_current_channel()
+        viewer = channel.viewer
         image = viewer.get_image()
         if image is None:
             return
@@ -1180,6 +1193,7 @@ class GingaControl(Callback.Callbacks):
 
         """
         return imap.get_names()
+
 
     ########################################################
     ### TO BE DEPRECATED
@@ -1390,7 +1404,7 @@ class Channel(Callback.Callbacks):
             self.switch_image(image)
 
         if self.settings['raisenew']:
-            channel = self.fv.get_channelInfo()
+            channel = self.fv.get_current_channel()
             if channel != self:
                 self.fv.change_channel(self.name)
 

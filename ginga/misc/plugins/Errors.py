@@ -1,9 +1,6 @@
 #
 # Errors.py -- Error reporting plugin for fits viewer
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c)  Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -18,8 +15,11 @@ class Errors(GingaPlugin.GlobalPlugin):
         # superclass defines some variables for us, like logger
         super(Errors, self).__init__(fv)
 
+        self.pending_errors = []
+        self.gui_up = False
+
     def build_gui(self, container):
-        self.msgFont = self.fv.getFont("fixedFont", 10)
+        self.msg_font = self.fv.getFont("fixedFont", 10)
 
         vbox = Widgets.VBox()
 
@@ -41,7 +41,23 @@ class Errors(GingaPlugin.GlobalPlugin):
         vbox.add_widget(hbox, stretch=0)
         container.add_widget(vbox, stretch=1)
 
-    def add_error(self, errmsg):
+        self.gui_up = True
+
+        pending = self.pending_errors
+        self.pending_errors = []
+
+        for errmsg, ts in pending:
+            self.add_error(errmsg, ts=ts)
+
+    def add_error(self, errmsg, ts=None):
+        if ts is None:
+            # Add the time the error occurred
+            ts = time.strftime("%m/%d %H:%M:%S", time.localtime())
+
+        if not self.gui_up:
+            self.pending_errors.append((errmsg, ts))
+            return
+
         vbox = Widgets.VBox()
 
         hbox = Widgets.HBox()
@@ -53,7 +69,7 @@ class Errors(GingaPlugin.GlobalPlugin):
         vbox.add_widget(hbox, stretch=0)
 
         tw = Widgets.TextArea(editable=False, wrap=False)
-        tw.set_font(self.msgFont)
+        tw.set_font(self.msg_font)
 
         tw.set_text(errmsg)
         vbox.add_widget(tw, stretch=1)

@@ -358,16 +358,17 @@ placeholders in the right panel in the container where it tried to build
 the GUI or possibly under the Errors tab.
 
 .. note:: Ginga has a feature for quickly reloading plugins to
-          facilitate rapid debugging cycles.  Start the "Debug" plugin
+          facilitate rapid debugging cycles.  Start the "Command" plugin
           from the "Plugins" menu in the menu bar.  If your plugin
           launched (but has some error), make sure you have closed your
           plugin by right clicking (or Control + click on Mac touchpad)
           on the small box representing your plugin in the Plugin
-          Manager bar and selecting "Stop".  Then type the name of the
-          plugin into the "Local plugin" box in "Debug" and press
-          "Reload"--this will reload the python module representing your
-          plugin and you should be able to immediately restart it using
-          the Plugin Manager bar as described above.
+          Manager bar and selecting "Stop".  In the Command plugin, use
+          the command "reload_local <plugin_name>"--this will reload the
+          python module representing your plugin and you should be able
+          to immediately restart it using the Plugin Manager bar as
+          described above (if the plugin is of the global plugin
+          variety, use the command "reload_global" instead).
 
           If you have edited third party modules that are included in
           the plugin, this will not be enough to pick up those changes.

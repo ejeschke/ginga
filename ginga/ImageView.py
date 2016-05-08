@@ -148,12 +148,6 @@ class ImageViewBase(Callback.Callbacks):
         self.autozoom_options = ('on', 'override', 'once', 'off')
         self.t_.addDefaults(autozoom='on')
 
-        # image overlays
-        # TO BE DEPRECATED
-        self.t_.addDefaults(image_overlays=True)
-        self.t_.getSetting('image_overlays').add_callback(
-            'set', self.overlays_change_cb)
-
         # for panning
         self.autocenter_options = ('on', 'override', 'once', 'off')
         self.t_.addDefaults(autocenter='on')
@@ -2544,29 +2538,6 @@ class ImageViewBase(Callback.Callbacks):
 
         """
         self.coordmap[key] = mapper
-
-    # TO BE DEPRECATED
-    def enable_overlays(self, tf):
-        """Set ``image_overlays`` behavior.
-
-        .. note:: To be deprecated.
-
-        Parameters
-        ----------
-        tf : bool
-            Turns image overlay on or off.
-
-        """
-        self.t_.set(image_overlays=tf)
-
-    # TO BE DEPRECATED
-    def overlays_change_cb(self, setting, value):
-        """Handle callback related to changes in image overlay.
-
-        .. note:: To be deprecated.
-
-        """
-        self.redraw(whence=2)
 
     def set_bg(self, r, g, b):
         """Set the background color.
