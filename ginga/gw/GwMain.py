@@ -14,8 +14,8 @@ import threading
 import logging
 import ginga.util.six as six
 if six.PY2:
-    import thread
-    import Queue
+    import thread as thread
+    import Queue as Queue
 else:
     import _thread as thread
     import queue as Queue
