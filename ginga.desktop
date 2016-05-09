@@ -2,6 +2,6 @@
 Type=Application
 Name=Ginga
 Comment=The Ginga astronomical FITS file viewer
-Exec=ginga
+Exec=ginga %F
 Categories=Education;Science;Astronomy;
 MimeType=image/x-fits;
