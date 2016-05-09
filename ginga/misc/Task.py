@@ -16,12 +16,8 @@ if six.PY2:
     import thread
     import Queue
 else:
-    import _thread
-    import queue
-
-    # NOTE: For whatever reason "import ... as ..." did not work on Travis CI.
-    thread = _thread
-    Queue = queue
+    import _thread as thread
+    import queue as Queue
 
     # NOTE: See http://bugs.python.org/issue7946
     # we cannot effectively use threading for loading files/network/etc.
