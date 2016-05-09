@@ -172,7 +172,7 @@ Output image will have the filename of <inputname>_<suffix>.fits.""")
 
         # Only list modified images for saving. Scanning Datasrc is enough.
         if mod_only:
-            all_keys = channel.datasrc.sortedkeys
+            all_keys = channel.datasrc.keys(sort='alpha')
 
         # List all images in the channel.
         else:
