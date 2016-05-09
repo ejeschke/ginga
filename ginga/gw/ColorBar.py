@@ -9,6 +9,6 @@ elif tkname == 'qt':
     from ginga.qtw.ColorBar import *
 
 else:
-    # Possible TODO: replace above colorbar implementations with this
+    # TODO: replace above colorbar implementations with this
     # generic one.
-    from .colorbar import *
+    from .g_ColorBar import *
