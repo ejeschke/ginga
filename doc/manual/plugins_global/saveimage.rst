@@ -19,8 +19,11 @@ images. For example, a mosaic image that was created by
 multiple extensions) are supported.
 
 Given the output directory (e.g., ``/mypath/outputs/``), a suffix
-(e.g., ``ginga``), and a selected image (e.g., ``image1.fits``), the output
-file will be ``/mypath/outputs/image1_ginga.fits``. The modified extension(s)
+(e.g., ``ginga``), an image channel (``Image``), and a selected image
+(e.g., ``image1.fits``), the output file will be
+``/mypath/outputs/image1_ginga_Image.fits``. Inclusion of the channel name is
+optional and can be omitted using plugin configuration file (see below).
+The modified extension(s)
 will have new header or data extracted from Ginga, while those not modified will
 remain untouched. Relevant change log entries from
 :ref:`sec-plugins-changehistory` global plugin will be inserted into the

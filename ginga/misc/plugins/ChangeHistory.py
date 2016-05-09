@@ -6,6 +6,7 @@ from ginga.util.six import iteritems
 from ginga import GingaPlugin
 from ginga.gw import Widgets
 from ginga.misc import Bunch
+from ginga.util.iohelper import shorten_name
 
 
 class ChangeHistory(GingaPlugin.GlobalPlugin):
@@ -161,7 +162,7 @@ class ChangeHistory(GingaPlugin.GlobalPlugin):
 
         # Display on GUI
         self.w.chname.set_text(chname)
-        self.w.imname.set_text(imname)
+        self.w.imname.set_text(shorten_name(imname, 25))
         self.w.modified.set_text(timestamp)
         self.w.descrip.set_text(bnch.DESCRIP)
 
