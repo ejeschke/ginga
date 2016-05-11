@@ -159,7 +159,7 @@ class CvContext(object):
 
 ## def bezier_curve_range(steps, points):
 ##     """Range of points in a curve bezier"""
-##     for i in xrange(steps):
+##     for i in range(steps):
 ##         t = i / float(steps - 1)
 ##         yield bezier(t, points)
 

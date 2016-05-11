@@ -637,7 +637,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
 
         W, H = image.get_data_size()
         with self.video_writer(VideoSink((H, W), target_file)) as video:
-            for i in xrange(start, end):
+            for i in range(start, end):
                 video.write(np.flipud(data_rescaled[i]))
 
         self.fv.showStatus("Successfully saved movie")

@@ -156,7 +156,7 @@ class LayerImage(object):
     # def rgb_compose(self):
     #     slices = []
     #     start_time = time.time()
-    #     for i in xrange(len(self._layer)):
+    #     for i in range(len(self._layer)):
     #         layer = self.get_layer(i)
     #         data = self.alpha_multiply(layer.alpha, layer.image.get_data())
     #         slices.append(data)
