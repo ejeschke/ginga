@@ -116,9 +116,9 @@ class Command(GingaPlugin.GlobalPlugin):
     def exec_shell(self, cmd_str):
         res, out, err = grc.get_exitcode_stdout_stderr(cmd_str)
         if len(out) > 0:
-            self.log(out)
+            self.log(out.decode('utf-8'))
         if len(err) > 0:
-            self.log(err)
+            self.log(err.decode('utf-8'))
         if res != 0:
             self.log("command terminated with error code %d" % res)
 
@@ -149,11 +149,12 @@ class CommandInterpreter(object):
         self.log = plugin.log
 
     def get_viewer(self, chname):
-        channel = self.fv.get_channelInfo(chname)
-        if channel is None:
-            return None
+        if chname is None:
+            channel = self.fv.get_channelInfo()
+        else:
+            channel = self.fv.get_channel_on_demand(chname)
 
-        viewer = channel.fitsimage
+        viewer = channel.viewer
         return viewer
 
     ##### COMMANDS #####
@@ -259,8 +260,8 @@ class CommandInterpreter(object):
             for path in files:
                 self.fv.nongui_do(self.fv.load_file, path, chname=ch, wait=True)
 
-    def cmd_cuts(self, ch=None, lo=None, hi=None):
-        """cuts ch=chname lo=val hi=val
+    def cmd_cuts(self, lo=None, hi=None, ch=None):
+        """cuts lo=val hi=val ch=chname
 
         If neither `lo` nor `hi` is provided, returns the current cut levels.
         Otherwise sets the corresponding cut level for the given channel.
@@ -306,8 +307,8 @@ class CommandInterpreter(object):
         """
         self.log("\n".join(self.fv.get_color_maps()))
 
-    def cmd_cm(self, ch=None, nm=None):
-        """cm ch=chname nm=color_map_name
+    def cmd_cm(self, nm=None, ch=None):
+        """cm nm=color_map_name ch=chname
 
         Set a color map (name `nm`) for the given channel.
         If no value is given, reports the current color map.
@@ -337,8 +338,8 @@ class CommandInterpreter(object):
 
         viewer.invert_cmap()
 
-    def cmd_dist(self, ch=None, nm=None):
-        """dist ch=chname nm=dist_name
+    def cmd_dist(self, nm=None, ch=None):
+        """dist nm=dist_name ch=chname
 
         Set a color distribution for the given channel.
         Possible values are linear, log, power, sqrt, squared, asinh, sinh,
@@ -366,8 +367,8 @@ class CommandInterpreter(object):
         """
         self.log("\n".join(self.fv.get_intensity_maps()))
 
-    def cmd_imap(self, ch=None, nm=None):
-        """imap ch=chname nm=intensity_map_name
+    def cmd_imap(self, nm=None, ch=None):
+        """imap nm=intensity_map_name ch=chname
 
         Set an intensity map (name `nm`) for the given channel.
         If no value is given, reports the current intensity map.
@@ -407,8 +408,8 @@ class CommandInterpreter(object):
 
         self.log("\n".join(res))
 
-    def cmd_rot(self, ch=None, deg=None):
-        """rot ch=chname deg=num_deg
+    def cmd_rot(self, deg=None, ch=None):
+        """rot deg=num_deg ch=chname
 
         Rotate the image for the given viewer/channel by the given
         number of degrees.
@@ -425,8 +426,8 @@ class CommandInterpreter(object):
         else:
             viewer.rotate(deg)
 
-    def cmd_tr(self, ch=None, x=None, y=None, xy=None):
-        """tr ch=chname x=0|1 y=0|1 xy=0|1
+    def cmd_tr(self, x=None, y=None, xy=None, ch=None):
+        """tr x=0|1 y=0|1 xy=0|1 ch=chname
 
         Transform the image for the given viewer/channel by flipping
         (x=1 and/or y=1) or swapping axes (xy=1).
@@ -459,8 +460,8 @@ class CommandInterpreter(object):
 
             viewer.transform(x, y, xy)
 
-    def cmd_scale(self, ch=None, x=None, y=None):
-        """scale ch=chname x=scale_x y=scale_y
+    def cmd_scale(self, x=None, y=None, ch=None):
+        """scale x=scale_x y=scale_y ch=chname
 
         Scale the image for the given viewer/channel by the given amounts.
         If only one scale value is given, the other is assumed to be the
@@ -483,6 +484,40 @@ class CommandInterpreter(object):
                 if x is None: x = y
             viewer.scale_to(x, y)
 
+    def cmd_z(self, lvl=None, ch=None):
+        """z lvl=level ch=chname
+
+        Zoom the image for the given viewer/channel to the given zoom
+        level.  Levels can be positive or negative numbers and are
+        relative to a scale of 1:1 at zoom level 0.
+        """
+        viewer = self.get_viewer(ch)
+        if viewer is None:
+            self.log("No current viewer/channel.")
+            return
+
+        cur_lvl = viewer.get_zoom()
+
+        if lvl is None:
+            self.log("zoom=%f" % (cur_lvl))
+
+        else:
+            viewer.zoom_to(lvl)
+
+    def cmd_zf(self, ch=None):
+        """zf ch=chname
+
+        Zoom the image for the given viewer/channel to fit the window.
+        """
+        viewer = self.get_viewer(ch)
+        if viewer is None:
+            self.log("No current viewer/channel.")
+            return
+
+        viewer.zoom_fit()
+        cur_lvl = viewer.get_zoom()
+        self.log("zoom=%f" % (cur_lvl))
+
     def cmd_c(self, ch=None):
         """c ch=chname
 
@@ -495,7 +530,7 @@ class CommandInterpreter(object):
 
         viewer.center_image()
 
-    def cmd_pan(self, ch=None, x=None, y=None):
+    def cmd_pan(self, x=None, y=None, ch=None):
         """scale ch=chname x=pan_x y=pan_y
 
         Set the pan position for the given viewer/channel to the given

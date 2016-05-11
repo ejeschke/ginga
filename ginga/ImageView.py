@@ -1613,7 +1613,7 @@ class ImageViewBase(Callback.Callbacks):
         # Sanity check on the scale vs. window size
         try:
             win_wd, win_ht = self.get_window_size()
-            if (win_ht <= 0) or (win_ht <= 0):
+            if (win_wd <= 0) or (win_ht <= 0):
                 # TODO: exception?
                 return
             sx = float(win_wd) / scale_x
@@ -1625,8 +1625,17 @@ class ImageViewBase(Callback.Callbacks):
                                     "Y (%.4f -> %.4f)" % (
                     scale_x, new_scale_x, scale_y, new_scale_y))
                 scale_x, scale_y = new_scale_x, new_scale_y
-        except:
-            pass
+
+            # final sanity check on resulting output image size
+            if (win_wd * scale_x < 1) or (win_ht * scale_y < 1):
+                self.logger.warning("resulting scale (%f, %f) "
+                                    "would result in size of <0 in width or height" % (
+                    scale_x, scale_y))
+                return
+
+        except Exception as e:
+            self.logger.warning("Error in scaling: %s" % (str(e)))
+            return
 
         self.t_.set(scale=(scale_x, scale_y))
 

@@ -727,6 +727,10 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
         try:
             if image is None:
+                if info.path is None:
+                    # No way to generate a thumbnail for this image
+                    return
+
                 # no luck loading thumbnail, try to load the full image
                 image = info.image_loader(info.path)
 
