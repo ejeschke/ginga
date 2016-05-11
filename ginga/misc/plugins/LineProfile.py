@@ -160,7 +160,7 @@ class LineProfile(GingaPlugin.LocalPlugin):
         if image is not None:
             # Add Checkbox widgets
             # `image.naxispath` returns only mdim axes
-            for i in xrange(1, len(image.naxispath)+3):
+            for i in range(1, len(image.naxispath)+3):
                 chkbox = Widgets.CheckBox('NAXIS%d' % i)
                 self.hbox_axes.add_widget(chkbox)
 
@@ -261,7 +261,7 @@ Use MultiDim to change step values of axes.""")
             slice_obj[1] = self.mark_data_y[mk]
 
         # For axis > 3
-        for i in xrange(2, naxes):
+        for i in range(2, naxes):
             slice_obj[i] = self.image.revnaxis[i-2] + 1
 
         # Slice selected axis
