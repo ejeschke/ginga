@@ -93,6 +93,8 @@ class FitsViewer(object):
         canvas = self.dc.DrawingCanvas()
         canvas.enable_draw(True)
         canvas.enable_edit(True)
+        canvas.register_for_cursor_drawing(v1)
+        canvas.register_for_cursor_drawing(v2)
         canvas.set_drawtype('rectangle', color='lightblue')
         self.canvas = canvas
         shcanvas.add(self.canvas)
@@ -150,6 +152,27 @@ class FitsViewer(object):
                   Widgets.Label('Alpha:'), walpha, wclear, wquit):
             hbox.add_widget(w, stretch=0)
 
+        vbox.add_widget(hbox, stretch=0)
+
+        mode = self.canvas.get_draw_mode()
+        hbox = Widgets.HBox()
+        btn1 = Widgets.RadioButton("Draw")
+        btn1.set_state(mode == 'draw')
+        btn1.add_callback('activated', lambda w, val: self.set_mode_cb('draw', val))
+        btn1.set_tooltip("Choose this to draw on the canvas")
+        hbox.add_widget(btn1)
+
+        btn2 = Widgets.RadioButton("Edit", group=btn1)
+        btn2.set_state(mode == 'edit')
+        btn2.add_callback('activated', lambda w, val: self.set_mode_cb('edit', val))
+        btn2.set_tooltip("Choose this to edit things on the canvas")
+        hbox.add_widget(btn2)
+
+        ## btn3 = Widgets.CheckBox("I'm using a trackpad")
+        ## btn3.add_callback('activated', lambda w, tf: self.use_trackpad_cb(tf))
+        ## hbox.add_widget(btn3)
+
+        hbox.add_widget(Widgets.Label(''), stretch=1)
         vbox.add_widget(hbox, stretch=0)
 
         self.top.set_widget(vbox)
@@ -230,6 +253,12 @@ class FitsViewer(object):
         text = "RA: %s  DEC: %s  X: %.2f  Y: %.2f  Value: %s" % (
             ra_txt, dec_txt, fits_x, fits_y, value)
         self.readout.set_text(text)
+
+    def set_mode_cb(self, mode, tf):
+        self.logger.info("canvas mode changed (%s) %s" % (mode, tf))
+        if not (tf is False):
+            self.canvas.set_draw_mode(mode)
+        return True
 
     def closed(self, w):
         self.logger.info("Top window closed.")
