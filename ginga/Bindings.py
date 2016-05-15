@@ -1097,6 +1097,13 @@ class ImageViewBindings(object):
             viewer.onscreen_message(None)
         return True
 
+    def _scale_adjust(self, factor, zoom_accel, max_limit=None):
+        amount = factor - ((factor - 1.0) * (1.0 - zoom_accel))
+        amount = max(1.000000001, amount)
+        if max_limit is not None:
+            amount = min(amount, max_limit)
+        return amount
+        
     def ms_zoom_in(self, viewer, event, data_x, data_y, msg=False):
         """Zoom in one level by a mouse click.
         """
@@ -1112,7 +1119,7 @@ class ImageViewBindings(object):
             if self.settings.get('scroll_zoom_direct_scale', True):
                 zoom_accel = self.settings.get('scroll_zoom_acceleration', 1.0)
                 # change scale by 100%
-                amount = zoom_accel * 2.0
+                amount = self._scale_adjust(2.0, zoom_accel, max_limit=4.0)
                 self._scale_image(viewer, 0.0, amount, msg=msg)
             else:
                 viewer.zoom_in()
@@ -1139,7 +1146,7 @@ class ImageViewBindings(object):
             if self.settings.get('scroll_zoom_direct_scale', True):
                 zoom_accel = self.settings.get('scroll_zoom_acceleration', 1.0)
                 # change scale by 100%
-                amount = zoom_accel * 2.0
+                amount = self._scale_adjust(2.0, zoom_accel, max_limit=4.0)
                 self._scale_image(viewer, 180.0, amount, msg=msg)
             else:
                 viewer.zoom_out()
@@ -1407,7 +1414,7 @@ class ImageViewBindings(object):
         if self.settings.get('scroll_zoom_direct_scale', True):
             zoom_accel = self.settings.get('scroll_zoom_acceleration', 1.0)
             # change scale by 50%
-            amount = zoom_accel * 1.50
+            amount = self._scale_adjust(1.5, zoom_accel, max_limit=4.0)
             self._scale_image(viewer, event.direction, amount, msg=msg)
 
         else:
@@ -1429,7 +1436,7 @@ class ImageViewBindings(object):
         if self.canzoom:
             zoom_accel = self.settings.get('scroll_zoom_acceleration', 1.0)
             # change scale by 20%
-            amount = zoom_accel * 1.20
+            amount = self._scale_adjust(1.2, zoom_accel, max_limit=4.0)
             self._scale_image(viewer, event.direction, amount, msg=msg)
         return True
 
@@ -1440,7 +1447,7 @@ class ImageViewBindings(object):
         if self.canzoom:
             zoom_accel = self.settings.get('scroll_zoom_acceleration', 1.0)
             # change scale by 5%
-            amount = zoom_accel * 1.05
+            amount = self._scale_adjust(1.05, zoom_accel, max_limit=4.0)
             self._scale_image(viewer, event.direction, amount, msg=msg)
         return True
 

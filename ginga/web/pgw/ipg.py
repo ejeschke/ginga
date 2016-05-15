@@ -152,6 +152,10 @@ class ImageViewer(object):
         settings = bd.get_settings()
         settings.set(scroll_zoom_direct_scale=True)
 
+        # so trackpad scrolling can be adjusted
+        settings = bd.get_settings()
+        settings.set(scroll_zoom_direct_scale=True)
+
         # canvas that we will draw on
         canvas = self.dc.DrawingCanvas()
         #canvas.enable_draw(True)
@@ -187,9 +191,13 @@ class ImageViewer(object):
         vbox.add_widget(self.readout, stretch=0)
 
         hbox = Widgets.HBox()
-        btn3 = Widgets.CheckBox("I'm using a trackpad")
-        btn3.add_callback('activated', lambda w, tf: self.use_trackpad_cb(tf))
-        hbox.add_widget(btn3)
+        hbox.add_widget(Widgets.Label('Zoom sensitivity: '))
+        slider = Widgets.Slider(orientation='horizontal', dtype=float)
+        slider.add_callback('value-changed',
+                            lambda w, val: self.adjust_scrolling_accel_cb(val))
+        slider.set_limits(0.0, 12.0, 0.005)
+        slider.set_value(8.0)
+        hbox.add_widget(slider, stretch=1)
 
         hbox.add_widget(Widgets.Label(''), stretch=1)
         vbox.add_widget(hbox, stretch=0)
@@ -246,12 +254,14 @@ class ImageViewer(object):
             ra_txt, dec_txt, fits_x, fits_y, value)
         self.readout.set_text(text)
 
-    def use_trackpad_cb(self, state):
+    def adjust_scrolling_accel_cb(self, val):
+        def f(x):
+            return (1.0 / 2.0**(10.0-x))
+        val = f(val)
+        self.logger.info("value is %f" % (val))
         settings = self.fitsimage.get_bindings().get_settings()
-        val = 1.0
-        if state:
-            val = 0.1
         settings.set(scroll_zoom_acceleration=val)
+        return True
 
     def closed(self, w):
         self.logger.info("Top window closed.")
