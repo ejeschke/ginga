@@ -73,12 +73,12 @@ class ImageViewPil(ImageView.ImageViewBase):
             pen = cr.get_pen('white')
             cr.text((x, y), self.message, font, pen)
 
-        # for debugging
-        #self.save_rgb_image_as_file('/tmp/temp.png', format='png')
-
     def configure_surface(self, width, height):
-        # create agg surface the size of the window
-        self.surface = Image.new("RGBA", (width, height), color=0)
+        # create PIL surface the size of the window
+        # NOTE: pillow needs an RGB image in order to draw with alpha
+        # blending, not RGBA
+        #self.surface = Image.new("RGBA", (width, height), color=0)
+        self.surface = Image.new("RGB", (width, height), color=0)
 
         # inform the base class about the actual window size
         self.configure(width, height)
@@ -146,7 +146,7 @@ class ImageViewPil(ImageView.ImageViewBase):
 
     def update_image(self):
         # subclass implements this method to actually update a widget
-        # from the agg surface
+        # from the PIL surface
         self.logger.warning("Subclass should override this method")
         return False
 

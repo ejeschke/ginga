@@ -5,7 +5,7 @@
 # Please see the file LICENSE.txt for details.
 
 import os.path
-from PIL import ImageFont, ImageDraw
+from PIL import Image, ImageFont, ImageDraw
 
 from ginga import colors
 import ginga.fonts
@@ -62,10 +62,10 @@ class Font(object):
 class PilContext(object):
 
     def __init__(self, surface):
-        self.ctx = ImageDraw.Draw(surface)
+        self.set_canvas(surface)
 
     def set_canvas(self, surface):
-        self.ctx = ImageDraw.Draw(surface)
+        self.ctx = ImageDraw.Draw(surface, 'RGBA')
 
     def get_color(self, color, alpha=1.0):
         if isinstance(color, str) or isinstance(color, type(u"")):
@@ -119,21 +119,6 @@ class PilContext(object):
                              fill=brush.color, outline=pen.color)
         else:
             self.ctx.ellipse(((x-radius, y-radius), (x+radius, y+radius)),
-                             outline=pen.color)
-
-    ## def rectangle(self, pt1, pt2, pen, brush):
-    ##     x1, y1 = pt1
-    ##     x2, y2 = pt2
-    ##     self.ctx.polygon(((x1, y1), (x1, y2), (x2, y2), (x2, y1)),
-    ##                      fill=brush.color, outline=pen.color)
-
-    def ellipse(self, pt, xr, yr, theta, pen, brush):
-        x, y = pt
-        if (brush is not None) and brush.fill:
-            self.ctx.ellipse(((x-xr, y-yr), (x+xr, y+yr)),
-                             fill=brush.color, outline=pen.color)
-        else:
-            self.ctx.ellipse(((x-xr, y-yr), (x+xr, y+yr)),
                              outline=pen.color)
 
     def polygon(self, points, pen, brush):

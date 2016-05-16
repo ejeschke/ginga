@@ -10,15 +10,13 @@
 import math
 import warnings
 import numpy
-# for BezierCurve
-from collections import OrderedDict
 
 from ginga.canvas.CanvasObject import (CanvasObjectBase, _bool, _color,
                                        register_canvas_types,
                                        colors_plus_none)
 from ginga import trcalc
 from ginga.misc.ParamSet import Param
-from ginga.util import wcs
+from ginga.util import wcs, bezier
 from ginga.util.six.moves import map
 
 #
@@ -538,46 +536,14 @@ class BezierCurve(Path):
                                   **kwdargs)
         PolygonMixin.__init__(self)
 
-    def calc_bezier_curve_range(self, steps, points):
-        """Hacky method to get an ordered set of points that are on the
-        Bezier curve.  This is used by some backends (which don't support
-        drawing cubic Bezier curves) to render the curve using paths.
-        """
-        n = len(points) - 1
-        fact_n = math.factorial(n)
-
-        # press OrderedDict into use as an OrderedSet of points
-        d = OrderedDict()
-
-        m = float(steps - 1)
-
-        # TODO: optomize this code as much as possible
-        for i in range(steps):
-            #t = i / float(steps - 1)
-            t = i / m
-
-            # optomize a call to calculate the bezier point
-            #x, y = bezier(t, points)
-            x = y = 0
-            for j, pos in enumerate(points):
-                #bern = bernstein(t, j, n)
-                bin = fact_n / float(math.factorial(j) * math.factorial(n - j))
-                bern = bin * (t ** j) * ((1 - t) ** (n - j))
-                x += pos[0] * bern
-                y += pos[1] * bern
-
-            # convert to integer data coordinates and remove duplicates
-            d[int(round(x)), int(round(y))] = None
-
-        return list(d.keys())
-
     def get_points_on_curve(self, image):
         points = list(map(lambda pt: self.crdmap.to_data(pt[0], pt[1]),
                                       self.points))
         # use maximum dimension of image to estimate a reasonable number
         # of intermediate points
-        steps = max(*image.get_size())
-        return self.calc_bezier_curve_range(steps, points)
+        #steps = max(*image.get_size())
+        steps = bezier.bezier_steps
+        return list(bezier.get_4pt_bezier(steps, points))
 
     def select_contains(self, viewer, data_x, data_y):
         image = viewer.get_image()
@@ -606,11 +572,13 @@ class BezierCurve(Path):
         else:
             if hasattr(cr, 'draw_bezier_curve'):
                 cr.draw_bezier_curve(cpoints)
+
             else:
                 # No Bezier support in this backend, so calculate intermediate
                 # points and draw a path
-                steps = max(*viewer.get_window_size())
-                ipoints = self.calc_bezier_curve_range(steps, cpoints)
+                #steps = max(*viewer.get_window_size())
+                steps = bezier.bezier_steps
+                ipoints = list(bezier.get_4pt_bezier(steps, cpoints))
                 cr.draw_path(ipoints)
 
         if self.showcap:
@@ -975,33 +943,37 @@ class Ellipse(OnePointTwoRadiusMixin, CanvasObjectBase):
         res = self.contains_arr(x_arr, y_arr)
         return res[0]
 
-    def get_bezier_pts(self, kappa=0.5522848):
-        """Used by drawing subclasses to draw the ellipse."""
+    def get_bezier_pts(self):
+        # TODO: need to do coord transformation to data
+        ## points = list(map(lambda pt: self.crdmap.to_data(pt[0], pt[1]),
+        ##                               self.points))
+        x, y = self.x, self.y
+        xradius, yradius = self.xradius, self.yradius
 
-        mx, my = self.x, self.y
-        xs, ys = mx - self.xradius, my - self.yradius
-        ox, oy = self.xradius * kappa, self.yradius * kappa
-        xe, ye = mx + self.xradius, my + self.yradius
-
-        pts = [(xs, my),
-               (xs, my - oy), (mx - ox, ys), (mx, ys),
-               (mx + ox, ys), (xe, my - oy), (xe, my),
-               (xe, my + oy), (mx + ox, ye), (mx, ye),
-               (mx - ox, ye), (xs, my + oy), (xs, my)]
-        return pts
+        return bezier.get_bezier_ellipse(x, y, xradius, yradius)
 
     def draw(self, viewer):
         cr = viewer.renderer.setup_cr(self)
 
-        if hasattr(cr, 'draw_ellipse_bezier'):
-            cp = self.get_cpoints(viewer, points=self.get_bezier_pts())
-            cr.draw_ellipse_bezier(cp)
-        else:
+        if hasattr(cr, 'draw_ellipse'):
+            # <- backend can draw rotated ellipses
             cpoints = self.get_cpoints(viewer, points=self.get_edit_points())
             cx, cy = cpoints[0]
             cxradius = abs(cpoints[1][0] - cx)
             cyradius = abs(cpoints[2][1] - cy)
             cr.draw_ellipse(cx, cy, cxradius, cyradius, self.rot_deg)
+
+        elif hasattr(cr, 'draw_ellipse_bezier'):
+            # <- backend can draw Bezier curves
+            cp = self.get_cpoints(viewer, points=self.get_bezier_pts())
+            cr.draw_ellipse_bezier(cp)
+
+        else:
+            # <- backend can draw polygons
+            cp = self.get_cpoints(viewer, points=self.get_bezier_pts())
+            num_pts = bezier.bezier_steps
+            cp = bezier.get_bezier(num_pts, cp)
+            cr.draw_polygon(cp)
 
         if self.showcap:
             cpoints = self.get_cpoints(viewer)

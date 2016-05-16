@@ -1,9 +1,6 @@
 #
 # CanvasRenderPil.py -- for rendering into a PIL Image
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 
@@ -12,6 +9,7 @@ import math
 from PIL import Image, ImageDraw, ImageFont
 from . import PilHelp
 from itertools import chain
+
 # force registration of all canvas types
 import ginga.canvas.types.all
 
@@ -99,7 +97,6 @@ class RenderContext(object):
     ##### DRAWING OPERATIONS #####
 
     def draw_text(self, cx, cy, text, rot_deg=0.0):
-
         wd, ht = self.cr.text_extents(text, self.font)
 
         self.cr.text((cx, cy-ht), text, self.font, self.pen)
@@ -109,11 +106,6 @@ class RenderContext(object):
 
     def draw_circle(self, cx, cy, cradius):
         self.cr.circle((cx, cy), cradius, self.pen, self.brush)
-
-    def draw_ellipse(self, cx, cy, cxradius, cyradius, theta):
-        # NOTE: theta currently not supported with PIL renderer
-        self.cr.ellipse((cx, cy), cxradius, cyradius, theta,
-                        self.pen, self.brush)
 
     def draw_line(self, cx1, cy1, cx2, cy2):
         self.cr.line((cx1, cy1), (cx2, cy2), self.pen)

@@ -133,34 +133,4 @@ class CvContext(object):
         cv2.polylines(self.canvas, [pts], False, pen.color, pen.linewidth)
 
 
-# Help functions for drawing Bezier curves
-# Basis at:
-#   https://gist.github.com/Alquimista/1274149
-#
-
-## def binomial(i, n):
-##     """Binomial coefficient"""
-##     return math.factorial(n) / float(
-##         math.factorial(i) * math.factorial(n - i))
-
-## def bernstein(t, i, n):
-##     """Bernstein polynomial"""
-##     return binomial(i, n) * (t ** i) * ((1 - t) ** (n - i))
-
-## def bezier(t, points):
-##     """Calculate coordinate of a point in the bezier curve"""
-##     n = len(points) - 1
-##     x = y = 0
-##     for j, pos in enumerate(points):
-##         bern = bernstein(t, j, n)
-##         x += pos[0] * bern
-##         y += pos[1] * bern
-##     return x, y
-
-## def bezier_curve_range(steps, points):
-##     """Range of points in a curve bezier"""
-##     for i in range(steps):
-##         t = i / float(steps - 1)
-##         yield bezier(t, points)
-
 #END

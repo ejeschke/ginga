@@ -47,8 +47,9 @@ class FitsViewer(object):
 
         # so trackpad scrolling can be adjusted
         settings = bd.get_settings()
-        settings.set(scroll_zoom_direct_scale=True)
-
+        settings.set(scroll_zoom_direct_scale=True,
+                     scroll_zoom_acceleration=0.07)
+        
         # canvas that we will draw on
         canvas = self.dc.DrawingCanvas()
         canvas.enable_draw(True)
@@ -242,10 +243,10 @@ class FitsViewer(object):
     def adjust_scrolling_accel_cb(self, val):
         def f(x):
             return (1.0 / 2.0**(10.0-x))
-        val = f(val)
-        self.logger.info("value is %f" % (val))
+        val2 = f(val)
+        self.logger.debug("slider value is %f, setting will be %f" % (val, val2))
         settings = self.fitsimage.get_bindings().get_settings()
-        settings.set(scroll_zoom_acceleration=val)
+        settings.set(scroll_zoom_acceleration=val2)
         return True
 
     def closed(self, w):
