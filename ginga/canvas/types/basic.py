@@ -78,8 +78,8 @@ class Text(OnePointMixin, CanvasObjectBase):
         OnePointMixin.__init__(self)
 
     def select_contains(self, viewer, x, y):
-        return self.within_radius(viewer, x, y, self.x, self.y,
-                                  self.cap_radius)
+        xd, yd = self.get_data_points()[0]
+        return self.within_radius(viewer, x, y, xd, yd, self.cap_radius)
 
     def draw(self, viewer):
         cr = viewer.renderer.setup_cr(self)
@@ -321,7 +321,7 @@ class BezierCurve(Path):
         PolygonMixin.__init__(self)
 
     def get_points_on_curve(self, image):
-        points = self.get_data_points()
+        points = list(self.get_data_points())
         # use maximum dimension of image to estimate a reasonable number
         # of intermediate points
         #steps = max(*image.get_size())
@@ -1297,8 +1297,8 @@ class Square(Rectangle):
         len_x = cxt.start_x - cxt.x
         len_y = cxt.start_y - cxt.y
         length = max(abs(len_x), abs(len_y))
-        len_x = cmp(len_x, 0) * length
-        len_y = cmp(len_y, 0) * length
+        len_x = numpy.sign(len_x) * length
+        len_y = numpy.sign(len_y) * length
         return cls(cxt.start_x, cxt.start_y,
                    cxt.start_x-len_x, cxt.start_y-len_y,
                    **cxt.drawparams)

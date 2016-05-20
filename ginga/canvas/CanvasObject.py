@@ -457,7 +457,7 @@ class CanvasObjectBase(Callback.Callbacks):
         """
         ref_x, ref_y = self.get_center_pt()
         xl, yl, xu, yu = self.get_llur()
-        offset = 50
+        offset = 10
         scl_x, scl_y = xl - offset, yl - offset
         rot_x, rot_y = xu + offset, yu + offset
         if hasattr(self, 'rot_deg'):

@@ -206,7 +206,7 @@ For polygons/paths press 'v' to create a vertex, 'z' to remove last vertex.""")
         # remove the canvas from the image
         p_canvas = self.fitsimage.get_canvas()
         try:
-            p_canvas.deleteObjectByTag(self.layertag)
+            p_canvas.delete_object_by_tag(self.layertag)
         except:
             pass
         # don't leave us stuck in edit mode
@@ -218,7 +218,7 @@ For polygons/paths press 'v' to create a vertex, 'z' to remove last vertex.""")
         pass
 
     def draw_cb(self, canvas, tag):
-        obj = canvas.getObjectByTag(tag)
+        obj = canvas.get_object_by_tag(tag)
         self._drawn_tags.append(tag)
         self.toggle_create_button()
         self.logger.info("drew a %s" % (obj.kind))
@@ -237,7 +237,7 @@ For polygons/paths press 'v' to create a vertex, 'z' to remove last vertex.""")
         self.w.drawvbox.remove_all()
 
         # Create new drawing class of the right kind
-        drawClass = self.canvas.getDrawClass(kind)
+        drawClass = self.canvas.get_draw_class(kind)
 
         self.w.attrlbl.set_text("New Object: %s" % (kind))
         # Build up a set of control widgets for the parameters
@@ -410,7 +410,7 @@ For polygons/paths press 'v' to create a vertex, 'z' to remove last vertex.""")
 
     def clear_canvas(self):
         self.canvas.clear_selected()
-        self.canvas.deleteAllObjects()
+        self.canvas.delete_all_objects()
         self._drawn_tags = []
         self.toggle_create_button()
 

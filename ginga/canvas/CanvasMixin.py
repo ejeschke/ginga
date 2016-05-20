@@ -116,7 +116,7 @@ class CanvasMixin(object):
             self.update_canvas(whence=3)
 
     def delete_objects(self, objects, redraw=True):
-        for tag, obj in self.tags.items():
+        for tag, obj in list(self.tags.items()):
             if obj in objects:
                 self.delete_object_by_tag(tag, redraw=False)
 

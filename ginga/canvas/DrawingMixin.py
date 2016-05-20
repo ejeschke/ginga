@@ -291,7 +291,6 @@ class DrawingMixin(object):
 
     def process_drawing(self):
         self._process_time = time.time()
-        #viewer.redraw(whence=3)
         #self.redraw(whence=3)
         self.update_canvas()
 
@@ -644,35 +643,6 @@ class DrawingMixin(object):
         if obj not in self._selected:
             self._selected.append(obj)
 
-    def select_stop(self, canvas, button, data_x, data_y, viewer):
-        #print("getting items")
-        objs = canvas.select_items_at(viewer, data_x, data_y,
-                                      test=self._is_selectable)
-        if len(objs) == 0:
-            # no objects
-            return False
-
-        # pick top object
-        obj = objs[-1]
-
-        if obj not in self._selected:
-            self._selected.append(obj)
-        else:
-            self._selected.remove(obj)
-            obj = None
-
-        self.logger.debug("selected: %s" % (str(self._selected)))
-        self.process_drawing()
-
-        #self.make_callback('edit-select', obj, self._selected)
-        return True
-
-    def group_selection(self):
-        Compound = self.get_draw_class('compoundobject')
-        c_obj = Compound(self._selected)
-        self._selected = [ comp_obj ]
-
-
     # The canvas drawing
 
     def draw(self, viewer):
@@ -684,12 +654,15 @@ class DrawingMixin(object):
             self._draw_obj.draw(viewer)
 
         # Draw control points on edited objects
-        # TODO: there is a problem if the object has been removed from
-        # the canvas but not removed from the selection--we still end
-        # up drawing the control points for it
-        selected = self.get_selected()
+        selected = list(self.get_selected())
         if len(selected) > 0:
             for obj in selected:
+                ## if not self.has_object(obj):
+                ##     # <-- the object has been removed from the canvas
+                ##     # but not removed from the selection
+                ##     self.select_remove(obj)
+                ##     continue
+
                 cr = viewer.renderer.setup_cr(obj)
                 obj.draw_edit(cr, viewer)
 
