@@ -80,6 +80,14 @@ def rotate_pt(x_arr, y_arr, theta_deg, xoff=0, yoff=0):
 
 rotate_arr = rotate_pt
 
+def rotate_coord(coord, theta_deg, offsets):
+    arr = numpy.asarray(coord)
+    # TODO: handle dimensional rotation N>2
+    x_arr, y_arr = rotate_pt(arr.T[0], arr.T[1], theta_deg,
+                             xoff=offsets[0], yoff=offsets[1])
+    arr = numpy.column_stack((x_arr, y_arr))
+    return arr
+
 def rotate_clip(data_np, theta_deg, rotctr_x=None, rotctr_y=None,
                 out=None):
     """

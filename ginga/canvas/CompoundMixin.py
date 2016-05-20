@@ -27,8 +27,10 @@ class CompoundMixin(object):
     def __init__(self):
         # holds a list of objects to be drawn
         self.objects = []
-        self.crdmap = None
-        self.coord = 'data'
+        if not hasattr(self, 'crdmap'):
+            self.crdmap = None
+        if not hasattr(self, 'coord'):
+            self.coord = None
         self.opaque = False
         self._contains_reduce = numpy.logical_or
 
@@ -229,7 +231,8 @@ class CompoundMixin(object):
     def get_reference_pt(self):
         # Reference point for a compound object is the average of all
         # it's contituents reference points
-        points = numpy.array([ obj.get_reference_pt() for obj in self.objects ])
+        points = numpy.asarray([ obj.get_reference_pt()
+                                 for obj in self.objects ])
         t_ = points.T
         x, y = numpy.average(t_[0]), numpy.average(t_[1])
         return (x, y)

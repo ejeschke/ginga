@@ -7,6 +7,7 @@
 import numpy
 
 from ginga.canvas.CanvasObject import (CanvasObjectBase, _bool, _color,
+                                       Point, MovePoint, ScalePoint,
                                        register_canvas_types,
                                        colors_plus_none)
 from ginga.misc.ParamSet import Param
@@ -240,7 +241,7 @@ class Image(OnePointMixin, CanvasObjectBase):
         return (width, height)
 
     def get_coords(self):
-        x1, y1 = self.x, self.y
+        x1, y1 = self.crdmap.to_data(self.x, self.y)
         wd, ht = self.get_scaled_wdht()
         x2, y2 = x1 + wd, y1 + ht
         return (x1, y1, x2, y2)
@@ -254,40 +255,44 @@ class Image(OnePointMixin, CanvasObjectBase):
         return [(x1, y1), (x2, y1), (x2, y2), (x1, y2)]
 
     def contains(self, data_x, data_y):
-        width, height = self.get_scaled_wdht()
-        x2, y2 = self.x + width, self.y + height
-        if ((self.x <= data_x < x2) and (self.y <= data_y < y2)):
+        x1, y1, x2, y2 = self.get_coords()
+        if ((x1 <= data_x < x2) and (y1 <= data_y < y2)):
             return True
         return False
 
     def rotate(self, theta, xoff=0, yoff=0):
         raise ValueError("Images cannot be rotated")
 
+    def setup_edit(self, detail):
+        detail.center_pos = self.get_center_pt()
+        detail.scale_x = self.scale_x
+        detail.scale_y = self.scale_y
+
     def set_edit_point(self, i, pt, detail):
         if i == 0:
             x, y = pt
             self.move_to(x, y)
         elif i == 1:
-            x, y = pt
-            self.scale_x = abs(x - self.x) / float(self.image.width)
+            scale_x, scale_y = self.calc_dual_scale_from_pt(pt, detail)
+            self.scale_x = detail.scale_x * scale_x
         elif i == 2:
-            x, y = pt
-            self.scale_y = abs(y - self.y) / float(self.image.height)
+            scale_x, scale_y = self.calc_dual_scale_from_pt(pt, detail)
+            self.scale_y = detail.scale_y * scale_y
         elif i == 3:
-            x, y = pt
-            self.scale_x = abs(x - self.x) / float(self.image.width)
-            self.scale_y = abs(y - self.y) / float(self.image.height)
+            scale_x, scale_y = self.calc_dual_scale_from_pt(pt, detail)
+            self.scale_x = detail.scale_x * scale_x
+            self.scale_y = detail.scale_y * scale_y
         else:
             raise ValueError("No point corresponding to index %d" % (i))
 
         self.reset_optimize()
 
     def get_edit_points(self):
-        width, height = self.get_scaled_wdht()
-        return [self.get_center_pt(),    # location
-                (self.x + width, self.y + height / 2.),
-                (self.x + width / 2., self.y + height),
-                (self.x + width, self.y + height)
+        x1, y1, x2, y2 = self.get_coords()
+        return [MovePoint(*self.get_center_pt()),    # location
+                Point(x2, (y1 + y2) / 2.),   # width scale
+                Point((x1 + x2) / 2., y2),   # height scale
+                Point(x2, y2),               # both scale
                 ]
 
     def scale_by(self, scale_x, scale_y):

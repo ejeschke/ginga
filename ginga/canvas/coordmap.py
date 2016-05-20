@@ -124,7 +124,6 @@ class WCSMapper(DataMapper):
 
     def rotate_pt(self, x, y, theta, xoff=0, yoff=0):
         # TODO: optomize by rotating in WCS space
-        x, y = self.to_data(x, y)
         xoff, yoff = self.to_data(xoff, yoff)
 
         x, y = super(WCSMapper, self).rotate_pt(x, y, theta,

@@ -4,13 +4,7 @@
 # See http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/52308
 # Description:
 #
-# TODO: make these true subclasses of dict
-#
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
-# This is open-source software licensed under a BSD license.
-# Please see the file LICENSE.txt for details.
+# TODO: make these true subclasses of dict?
 #
 import threading
 
@@ -259,22 +253,6 @@ class Bunch(object):
 
     def __contains__(self, key):
         return key in self.tbl
-
-    ## def next(self):
-    ##     if self.iterPosition >= len(self.keyList):
-    ##         raise StopIteration
-    ##     x = self.tbl[self.keyList[self.iterPosition]][0]
-    ##     self.iterPosition += 1
-    ##     return x
-
-    ## def iteritems(self):
-    ##     return iter(self.items())
-
-    ## def iterkeys(self):
-    ##     return iter(self.keys())
-
-    ## def itervalues(self):
-    ##     return iter(self.values())
 
     def update(self, dict2):
         return self.tbl.update(dict2)

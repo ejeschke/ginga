@@ -27,11 +27,12 @@ class OnePointMixin(object):
     points = property(__get_points, __set_points)
 
     def get_center_pt(self):
-        return (self.x, self.y)
+        points = self.get_data_points(points=[(self.x, self.y)])
+        return points[0]
 
     def setup_edit(self, detail):
         detail.center_pos = self.get_center_pt()
-        detail.points = numpy.array(self.points)
+        detail.points = self.get_data_points()
 
     def set_edit_point(self, i, pt, detail):
         if i == 0:
@@ -70,7 +71,10 @@ class TwoPointMixin(object):
         return self.points[i]
 
     def get_center_pt(self):
-        return ((self.x1 + self.x2) / 2., (self.y1 + self.y2) / 2.)
+        points = self.get_data_points(points=[
+            ((self.x1 + self.x2) / 2., (self.y1 + self.y2) / 2.),
+            ])
+        return points[0]
 
     def set_edit_point(self, i, pt, detail):
         if i == 0:
@@ -89,20 +93,22 @@ class TwoPointMixin(object):
 
     def get_edit_points(self):
         move_pt, scale_pt, rotate_pt = self.get_move_scale_rotate_pts()
+        points = self.get_data_points()
         return [move_pt,
-                Point(self.x1, self.y1),
-                Point(self.x2, self.y2),
+                Point(*points[0]),
+                Point(*points[1]),
                 scale_pt,
                 rotate_pt,
                 ]
 
     def setup_edit(self, detail):
         detail.center_pos = self.get_center_pt()
-        detail.points = numpy.array(self.points)
+        detail.points = self.get_data_points()
 
     def get_llur(self):
-        x1, y1 = self.crdmap.to_data(self.x1, self.y1)
-        x2, y2 = self.crdmap.to_data(self.x2, self.y2)
+        points = self.get_data_points()
+        x1, y1 = points[0]
+        x2, y2 = points[1]
         return self.swapxy(x1, y1, x2, y2)
 
 
@@ -116,9 +122,8 @@ class OnePointOneRadiusMixin(OnePointMixin):
             x, y = pt
             self.move_to(x, y)
         elif i == 1:
-            x, y = pt
-            self.radius = math.sqrt(abs(x - self.x)**2 +
-                                    abs(y - self.y)**2 )
+            scalef = self.calc_scale_from_pt(pt, detail)
+            self.radius = detail.radius * scalef
         elif i == 2:
             delta_deg = self.calc_rotation_from_pt(pt, detail)
             self.rotate_by(delta_deg)
@@ -127,32 +132,33 @@ class OnePointOneRadiusMixin(OnePointMixin):
 
     def get_edit_points(self):
         move_pt, scale_pt, rotate_pt = self.get_move_scale_rotate_pts()
+        points = self.get_data_points(points=(
+            self.crdmap.offset_pt((self.x, self.y), self.radius, 0),
+            ))
         return [move_pt,
-                ScalePoint(self.x + self.radius, self.y),
+                ScalePoint(*points[0]),
                 rotate_pt,
                 ]
 
     def setup_edit(self, detail):
         detail.center_pos = self.get_center_pt()
         detail.radius = self.radius
-        detail.points = numpy.array(self.points)
+        detail.points = numpy.array(self.get_data_points())
 
     def get_llur(self):
-        xd, yd = self.crdmap.to_data(self.x, self.y)
-        points = ((self.x - self.radius, self.y - self.radius),
-                  (self.x + self.radius, self.y - self.radius),
-                  (self.x + self.radius, self.y + self.radius),
-                  (self.x - self.radius, self.y + self.radius))
+        points = (self.crdmap.offset_pt((self.x, self.y),
+                                        -self.radius, -self.radius),
+                  self.crdmap.offset_pt((self.x, self.y),
+                                        self.radius, -self.radius),
+                  self.crdmap.offset_pt((self.x, self.y),
+                                        self.radius, self.radius),
+                  self.crdmap.offset_pt((self.x, self.y),
+                                        -self.radius, self.radius))
+        mpts = numpy.asarray(self.get_data_points(points=points))
+
         if hasattr(self, 'rot_deg'):
-            mpts = numpy.asarray(
-                list(map(lambda pt: trcalc.rotate_pt(pt[0], pt[1], self.rot_deg,
-                                                     xoff=xd, yoff=yd),
-                         map(lambda pt: self.crdmap.to_data(pt[0], pt[1]),
-                             points))))
-        else:
-            mpts = numpy.asarray(
-                list(map(lambda pt: self.crdmap.to_data(pt[0], pt[1]),
-                         points)))
+            xd, yd = self.crdmap.to_data(self.x, self.y)
+            mpts = trcalc.rotate_coord(mpts, self.rot_deg, [xd, yd])
 
         t_ = mpts.T
         x1, y1 = t_[0].min(), t_[1].min()
@@ -176,14 +182,15 @@ class OnePointTwoRadiusMixin(OnePointMixin):
             x, y = pt
             self.move_to(x, y)
         elif i == 1:
-            x, y = pt
-            self.xradius = abs(x - self.x)
+            scale_x, scale_y = self.calc_dual_scale_from_pt(pt, detail)
+            self.xradius = detail.xradius * scale_x
         elif i == 2:
-            x, y = pt
-            self.yradius = abs(y - self.y)
+            scale_x, scale_y = self.calc_dual_scale_from_pt(pt, detail)
+            self.yradius = detail.yradius * scale_y
         elif i == 3:
-            x, y = pt
-            self.xradius, self.yradius = abs(x - self.x), abs(y - self.y)
+            scale_x, scale_y = self.calc_dual_scale_from_pt(pt, detail)
+            self.xradius = detail.xradius * scale_x
+            self.yradius = detail.yradius * scale_y
         elif i == 4:
             scalef = self.calc_scale_from_pt(pt, detail)
             self.xradius = detail.xradius * scalef
@@ -196,10 +203,19 @@ class OnePointTwoRadiusMixin(OnePointMixin):
 
     def get_edit_points(self):
         move_pt, scale_pt, rotate_pt = self.get_move_scale_rotate_pts()
+
+        points = (self.crdmap.offset_pt((self.x, self.y),
+                                        self.xradius, 0),
+                  self.crdmap.offset_pt((self.x, self.y),
+                                        0, self.yradius),
+                  self.crdmap.offset_pt((self.x, self.y),
+                                        self.xradius, self.yradius),
+                  )
+        points = self.get_data_points(points=points)
         return [move_pt,    # location
-                Point(self.x + self.xradius, self.y),  # adj xradius
-                Point(self.x, self.y + self.yradius),  # adj yradius
-                Point(self.x + self.xradius, self.y + self.yradius), # adj both
+                Point(*points[0]),  # adj xradius
+                Point(*points[1]),  # adj yradius
+                Point(*points[2]),  # adj both
                 scale_pt,
                 rotate_pt,
                 ]
@@ -208,7 +224,7 @@ class OnePointTwoRadiusMixin(OnePointMixin):
         detail.center_pos = self.get_center_pt()
         detail.xradius = self.xradius
         detail.yradius = self.yradius
-        detail.points = numpy.array(self.points)
+        detail.points = self.get_data_points()
 
     def rotate_by(self, theta_deg):
         new_rot = math.fmod(self.rot_deg + theta_deg, 360.0)
@@ -220,16 +236,20 @@ class OnePointTwoRadiusMixin(OnePointMixin):
         self.yradius *= scale_y
 
     def get_llur(self):
-        xd, yd = self.crdmap.to_data(self.x, self.y)
-        points = ((self.x - self.xradius, self.y - self.yradius),
-                  (self.x + self.xradius, self.y - self.yradius),
-                  (self.x + self.xradius, self.y + self.yradius),
-                  (self.x - self.xradius, self.y + self.yradius))
-        mpts = numpy.asarray(
-            list(map(lambda pt: trcalc.rotate_pt(pt[0], pt[1], self.rot_deg,
-                                                 xoff=xd, yoff=yd),
-                     map(lambda pt: self.crdmap.to_data(pt[0], pt[1]),
-                         points))))
+        points = (self.crdmap.offset_pt((self.x, self.y),
+                                        -self.xradius, -self.yradius),
+                  self.crdmap.offset_pt((self.x, self.y),
+                                        self.xradius, -self.yradius),
+                  self.crdmap.offset_pt((self.x, self.y),
+                                        self.xradius, self.yradius),
+                  self.crdmap.offset_pt((self.x, self.y),
+                                        -self.xradius, self.yradius))
+        mpts = numpy.asarray(self.get_data_points(points=points))
+
+        if hasattr(self, 'rot_deg'):
+            xd, yd = self.crdmap.to_data(self.x, self.y)
+            mpts = trcalc.rotate_coord(mpts, self.rot_deg, [xd, yd])
+
         t_ = mpts.T
         x1, y1 = t_[0].min(), t_[1].min()
         x2, y2 = t_[0].max(), t_[1].max()
@@ -242,37 +262,23 @@ class PolygonMixin(object):
     def __init__(self):
         pass
 
-    ## def get_center_pt(self, closed=True):
-    ##     if closed:
-    ##         P = numpy.asarray(self.points + [self.points[0]])
-    ##     else:
-    ##         P = numpy.asarray(self.points)
-    ##     x = P[:, 0]
-    ##     y = P[:, 1]
+    def insert_pt(self, idx, pt):
+        self.points.insert(idx, pt)
 
-    ##     a = x[:-1] * y[1:]
-    ##     b = y[:-1] * x[1:]
-    ##     A = numpy.sum(a - b) / 2.
-
-    ##     cx = x[:-1] + x[1:]
-    ##     cy = y[:-1] + y[1:]
-
-    ##     Cx = numpy.sum(cx * (a - b)) / (6. * A)
-    ##     Cy = numpy.sum(cy * (a - b)) / (6. * A)
-    ##     return (Cx, Cy)
+    def delete_pt(self, idx):
+        self.points.pop(idx)
 
     def get_center_pt(self):
         # default is geometric average of points
-        P = numpy.array(self.get_points())
+        P = numpy.asarray(self.get_data_points())
         x = P[:, 0]
         y = P[:, 1]
-        Cx = numpy.sum(x) / float(len(x))
-        Cy = numpy.sum(y) / float(len(y))
-        return (Cx, Cy)
+        ctr_x = numpy.sum(x) / float(len(x))
+        ctr_y = numpy.sum(y) / float(len(y))
+        return ctr_x, ctr_y
 
     def get_llur(self):
-        points = numpy.asarray(list(map(lambda pt: self.crdmap.to_data(pt[0], pt[1]),
-                                        self.points)))
+        points = numpy.asarray(self.get_data_points())
         t_ = points.T
         x1, y1 = t_[0].min(), t_[1].min()
         x2, y2 = t_[0].max(), t_[1].max()
@@ -295,9 +301,11 @@ class PolygonMixin(object):
         result = numpy.empty((ya.size, xa.size), dtype=numpy.bool)
         result.fill(False)
 
-        xj, yj = self.crdmap.to_data(*self.points[-1])
-        for point in self.points:
-            xi, yi = self.crdmap.to_data(*point)
+        points = self.get_data_points()
+
+        xj, yj = points[-1]
+        for point in points:
+            xi, yi = point
             tf = numpy.logical_and(
                 numpy.logical_or(numpy.logical_and(yi < ya, yj >= ya),
                                  numpy.logical_and(yj < ya, yi >= ya)),
@@ -345,11 +353,12 @@ class PolygonMixin(object):
 
     def get_edit_points(self):
         move_pt, scale_pt, rotate_pt = self.get_move_scale_rotate_pts()
-        return [move_pt] + list(self.points) + [scale_pt, rotate_pt]
+        points = self.get_data_points()
+        return [move_pt] + list(points) + [scale_pt, rotate_pt]
 
     def setup_edit(self, detail):
         detail.center_pos = self.get_center_pt()
-        detail.points = numpy.array(self.points)
+        detail.points = self.get_data_points()
 
 
 #END

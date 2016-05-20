@@ -98,17 +98,7 @@ class CanvasObjectBase(Callback.Callbacks):
     def use_coordmap(self, mapobj):
         self.crdmap = mapobj
 
-    def canvascoords(self, viewer, x, y, center=True):
-        # if object has a valid coordinate map, use it
-        crdmap = self.crdmap
-        if crdmap is None:
-            # otherwise get viewer's default one
-            crdmap = viewer.get_coordmap('data')
-
-        # convert coordinates to data coordinates
-        data_x, data_y = crdmap.to_data(x, y)
-
-        # finally, convert to viewer's canvas coordinates
+    def canvascoords(self, viewer, data_x, data_y, center=True):
         return viewer.get_canvas_xy(data_x, data_y, center=center)
 
     def is_compound(self):
@@ -169,13 +159,12 @@ class CanvasObjectBase(Callback.Callbacks):
                     for i in range(len(points)) ])
         self.draw_caps(cr, 'ball', cpoints)
 
-    def calc_radius(self, viewer, x1, y1, radius):
-        # scale radius
-        cx1, cy1 = self.canvascoords(viewer, x1, y1)
-        cx2, cy2 = self.canvascoords(viewer, x1, y1 + radius)
+    def calc_radius(self, viewer, p1, p2):
+        x1, y1 = p1
+        x2, y2 = p2
         # TODO: the accuracy of this calculation of radius might be improved?
-        cradius = math.sqrt(abs(cy2 - cy1)**2 + abs(cx2 - cx1)**2)
-        return (cx1, cy1, cradius)
+        radius = math.sqrt(abs(y2 - y1)**2 + abs(x2 - x1)**2)
+        return (x1, y1, radius)
 
     def calc_vertexes(self, start_cx, start_cy, end_cx, end_cy,
                      arrow_length=10, arrow_degrees=0.35):
@@ -207,11 +196,31 @@ class CanvasObjectBase(Callback.Callbacks):
         else:
             return 8
 
-    def rotate(self, theta, xoff=0, yoff=0):
-        self.points = list(map(
-            lambda p: self.crdmap.rotate_pt(p[0], p[1], theta,
-                                            xoff=xoff, yoff=yoff),
-            self.points))
+    def get_points(self):
+        """Get the set of points that is used to draw the object.
+
+        Points are returned in *data* coordinates.
+        """
+        points = list(map(lambda pt: self.crdmap.to_data(pt[0], pt[1]),
+                          self.points))
+        return points
+
+    def get_data_points(self, points=None):
+        if points is None:
+            points = self.points
+        points = list(map(lambda pt: self.crdmap.to_data(pt[0], pt[1]),
+                          points))
+        return points
+
+    def set_data_points(self, points):
+        points = list(map(lambda pt: self.crdmap.data_to(pt[0], pt[1]),
+                          points))
+        self.points = points
+
+    def rotate(self, theta_deg, xoff=0, yoff=0):
+        points = numpy.asarray(self.get_data_points())
+        points = trcalc.rotate_coord(points, theta_deg, [xoff, yoff])
+        self.set_data_points(points, coord='data')
 
     def rotate_by(self, theta_deg):
         ref_x, ref_y = self.get_reference_pt()
@@ -219,15 +228,18 @@ class CanvasObjectBase(Callback.Callbacks):
 
     def rerotate_by(self, theta_deg, detail):
         ref_x, ref_y = detail.center_pos
-        self.points = list(map(
-            lambda p: self.crdmap.rotate_pt(p[0], p[1], theta_deg,
-                                            xoff=ref_x, yoff=ref_y),
-            detail.points))
+        points = numpy.asarray(detail.points)
+        points = trcalc.rotate_coord(points, theta_deg, [ref_x, ref_y])
+        self.set_data_points(points)
 
     def move_delta(self, xoff, yoff):
-        self.points = list(map(
-            lambda pt: self.crdmap.offset_pt(pt, xoff, yoff),
-            self.points))
+        ## self.points = list(map(
+        ##     lambda pt: self.crdmap.offset_pt(pt, xoff, yoff),
+        ##     self.points))
+        points = numpy.asarray(self.get_data_points())
+        points.T[0] += xoff
+        points.T[1] += yoff
+        self.set_data_points(points)
 
     def move_to(self, xdst, ydst):
         x, y = self.get_reference_pt()
@@ -237,26 +249,27 @@ class CanvasObjectBase(Callback.Callbacks):
         return(len(self.points))
 
     def set_point_by_index(self, i, pt):
-        points = numpy.asarray(self.points)
+        points = self.get_data_points()
         points[i] = pt
-        self.points = points
+        self.set_data_points(points)
 
     def get_point_by_index(self, i):
-        return self.points[i]
+        points = self.get_data_points()
+        return points[i]
 
     def scale_by(self, scale_x, scale_y):
         ctr_x, ctr_y = self.get_center_pt()
-        pts = numpy.array(self.points)
+        pts = numpy.asarray(self.get_data_points())
         pts[:, 0] = (pts[:, 0] - ctr_x) * scale_x + ctr_x
         pts[:, 1] = (pts[:, 1] - ctr_y) * scale_y + ctr_y
-        self.points = pts
+        self.set_data_points(pts)
 
     def rescale_by(self, scale_x, scale_y, detail):
         ctr_x, ctr_y = detail.center_pos
-        pts = numpy.array(detail.points)
+        pts = numpy.asarray(detail.points)
         pts[:, 0] = (pts[:, 0] - ctr_x) * scale_x + ctr_x
         pts[:, 1] = (pts[:, 1] - ctr_y) * scale_y + ctr_y
-        self.points = pts
+        self.set_data_points(pts)
 
     def setup_edit(self, detail):
         """subclass should override as necessary."""
@@ -286,6 +299,17 @@ class CanvasObjectBase(Callback.Callbacks):
         dist2 = math.sqrt(dx**2.0 + dy**2.0)
         scale_f = dist2 / dist1
         return scale_f
+
+    def calc_dual_scale_from_pt(self, pt, detail):
+        x, y = pt
+        ctr_x, ctr_y = detail.center_pos
+        start_x, start_y = detail.start_pos
+        # calc distance of starting point wrt origin
+        dx, dy = start_x - ctr_x, start_y - ctr_y
+        # calc distance of current point wrt origin
+        ex, ey = x - ctr_x, y - ctr_y
+        scale_x, scale_y = float(ex) / dx, float(ey) / dy
+        return scale_x, scale_y
 
     def convert_mapper(self, tomap):
         """
@@ -367,7 +391,7 @@ class CanvasObjectBase(Callback.Callbacks):
 
         if hasattr(self, 'rot_deg'):
             # rotate point back to cartesian alignment for test
-            ctr_x, ctr_y = self.crdmap.to_data(*self.get_center_pt())
+            ctr_x, ctr_y = self.get_center_pt()
             xp, yp = trcalc.rotate_pt(x, y, -self.rot_deg,
                                       xoff=ctr_x, yoff=ctr_y)
         else:
@@ -413,17 +437,15 @@ class CanvasObjectBase(Callback.Callbacks):
 
     #####
 
-    def get_points(self):
-        return self.points
-
     def get_center_pt(self):
-        # default is geometric average of points
-        P = numpy.asarray(self.get_points())
+        """Return the geometric average of points as data_points.
+        """
+        P = numpy.asarray(self.get_data_points())
         x = P[:, 0]
         y = P[:, 1]
-        Cx = numpy.sum(x) / float(len(x))
-        Cy = numpy.sum(y) / float(len(y))
-        return (Cx, Cy)
+        ctr_x = numpy.sum(x) / float(len(x))
+        ctr_y = numpy.sum(y) / float(len(y))
+        return ctr_x, ctr_y
 
     def get_reference_pt(self):
         return self.get_center_pt()
@@ -443,10 +465,10 @@ class CanvasObjectBase(Callback.Callbacks):
             # the control points in the opposite direction, because they
             # will be rotated back
             theta = -self.rot_deg
-            scl_x, scl_y = self.crdmap.rotate_pt(scl_x, scl_y, theta,
-                                                 xoff=ref_x, yoff=ref_y)
-            rot_x, rot_y = self.crdmap.rotate_pt(rot_x, rot_y, theta,
-                                                 xoff=ref_x, yoff=ref_y)
+            scl_x, scl_y = trcalc.rotate_pt(scl_x, scl_y, theta,
+                                            xoff=ref_x, yoff=ref_y)
+            rot_x, rot_y = trcalc.rotate_pt(rot_x, rot_y, theta,
+                                            xoff=ref_x, yoff=ref_y)
         move_pt = MovePoint(ref_x, ref_y)
         scale_pt = ScalePoint(scl_x, scl_y)
         rotate_pt = RotatePoint(rot_x, rot_y)
@@ -457,13 +479,13 @@ class CanvasObjectBase(Callback.Callbacks):
         if points is None:
             points = self.get_points()
 
+        points = numpy.asarray(points)
+
         if (not no_rotate) and hasattr(self, 'rot_deg') and self.rot_deg != 0.0:
             # rotate vertices according to rotation
-            x, y = self.get_center_pt()
-            points = tuple(map(lambda p: self.crdmap.rotate_pt(p[0], p[1],
-                                                               self.rot_deg,
-                                                               xoff=x, yoff=y),
-                               points))
+            ctr_x, ctr_y = self.get_center_pt()
+            points = trcalc.rotate_coord(points, self.rot_deg, (ctr_x, ctr_y))
+
         cpoints = tuple(map(lambda p: self.canvascoords(viewer, p[0], p[1]),
                             points))
         return cpoints

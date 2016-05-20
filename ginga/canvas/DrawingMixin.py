@@ -7,6 +7,7 @@
 import time
 import math
 
+from ginga import trcalc
 from ginga.misc.Bunch import Bunch
 from ginga.Bindings import KeyEvent
 from .CanvasMixin import CanvasMixin
@@ -180,8 +181,7 @@ class DrawingMixin(object):
         obj = klass.idraw(self, cxt)
 
         if obj is not None:
-            obj.initialize(None, cxt.viewer, self.logger)
-            #obj.initialize(None, cxt.viewer, viewer.logger)
+            obj.initialize(self, cxt.viewer, self.logger)
             self._draw_obj = obj
             if time.time() - self._process_time > self._delta_time:
                 self.process_drawing()
@@ -314,23 +314,22 @@ class DrawingMixin(object):
     def enable_edit(self, tf):
         self.canedit = tf
 
-    def _rot_xlate(self, obj, x, y):
+    def _rot_xlate(self, obj, data_x, data_y):
         # translate point back into non-rotated form
         rot_deg = - obj.rot_deg
         xoff, yoff = obj.get_center_pt()
-        x, y = obj.crdmap.rotate_pt(x, y, rot_deg, xoff=xoff, yoff=yoff)
-        return x, y
+        data_x, data_y = trcalc.rotate_pt(data_x, data_y, rot_deg,
+                                          xoff=xoff, yoff=yoff)
+        return data_x, data_y
 
     def _edit_update(self, data_x, data_y, viewer):
         if (not self.canedit) or (self._cp_index is None):
             return False
 
-        x, y = self._edit_obj.crdmap.data_to(data_x, data_y)
+        x, y = data_x, data_y
 
         if self._cp_index < 0:
             if self.easymove:
-                ## self._edit_obj.move_to(x - self._start_x,
-                ##                        y - self._start_y)
                 self._edit_obj.set_edit_point(0, (x - self._start_x,
                                                   y - self._start_y),
                                               self._edit_detail)
@@ -356,8 +355,7 @@ class DrawingMixin(object):
         self.edit_select(obj)
         self._cp_index = -1
         ref_x, ref_y = self._edit_obj.get_reference_pt()
-        x, y = obj.crdmap.data_to(data_x, data_y)
-        self._start_x, self._start_y = x - ref_x, y - ref_y
+        self._start_x, self._start_y = data_x - ref_x, data_y - ref_y
         #print(("end moving an object", obj.editable))
 
     def edit_start(self, canvas, event, data_x, data_y, viewer):
@@ -398,9 +396,7 @@ class DrawingMixin(object):
             contains = []
             for obj in selects:
                 #print("editing: checking for cp")
-                #edit_pts = self._edit_obj.get_edit_points()
-                edit_pts = list(map(lambda pt: obj.crdmap.to_data(*pt),
-                                    obj.get_edit_points()))
+                edit_pts = obj.get_edit_points()
                 #print((self._edit_obj, edit_pts))
                 i = obj.get_pt(viewer, edit_pts, data_x, data_y,
                                obj.cap_radius)
@@ -419,7 +415,11 @@ class DrawingMixin(object):
                     self._edit_update(data_x, data_y, viewer)
                     return True
 
-                if obj.contains(data_x, data_y):
+                ## if obj.contains(data_x, data_y):
+                ##     contains.append(obj)
+                # update: check if objects bbox contains this point
+                x1, y1, x2, y2 = obj.get_llur()
+                if (x1 <= data_x <= x2) and (y1 <= data_y <= y2):
                     contains.append(obj)
 
             # <-- no control points match, is there an object that contains
@@ -506,13 +506,13 @@ class DrawingMixin(object):
                (obj.kind in ('polygon', 'path')):
             self.logger.debug("checking points")
             # determine which line we are adding a point to
-            points = list(obj.get_points())
+            points = list(obj.get_data_points())
             if obj.kind == 'polygon':
                 points = points + [points[0]]
-            x0, y0 = obj.crdmap.to_data(*points[0])
+            x0, y0 = points[0]
             insert = None
             for i in range(1, len(points[1:])):
-                x1, y1 = obj.crdmap.to_data(*points[i])
+                x1, y1 = points[i]
                 self.logger.debug("checking line %d" % (i))
                 if obj.within_line(viewer, data_x, data_y, x0, y0, x1, y1,
                                    8):
@@ -522,9 +522,8 @@ class DrawingMixin(object):
             if insert is not None:
                 self.logger.debug("inserting point")
                 # Point near a line
-                x, y = obj.crdmap.data_to(data_x, data_y)
-                points.insert(insert, (x, y))
-                obj.points = points
+                pt = obj.crdmap.data_to(data_x, data_y)
+                obj.insert_pt(insert, pt)
                 self.process_drawing()
             else:
                 self.logger.debug("cursor not near a line")
@@ -539,10 +538,10 @@ class DrawingMixin(object):
                (obj.kind in ('polygon', 'path')):
             self.logger.debug("checking points")
             # determine which point we are deleting
-            points = list(obj.get_points())
+            points = list(obj.get_data_points())
             delete = None
             for i in range(len(points)):
-                x1, y1 = obj.crdmap.to_data(*points[i])
+                x1, y1 = points[i]
                 self.logger.debug("checking vertex %d" % (i))
                 if obj.within_radius(viewer, data_x, data_y, x1, y1,
                                      8):
@@ -550,8 +549,7 @@ class DrawingMixin(object):
                     break
             if delete is not None:
                 self.logger.debug("deleting point")
-                points.pop(delete)
-                obj.points = points
+                obj.delete_pt(delete)
                 self.process_drawing()
             else:
                 self.logger.debug("cursor not near a point")
@@ -597,7 +595,7 @@ class DrawingMixin(object):
         if (self._edit_obj is not None) and self.is_selected(self._edit_obj):
             self.select_remove(self._edit_obj)
             obj, self._edit_obj = self._edit_obj, None
-            self.deleteObject(obj)
+            self.delete_object(obj)
             self.make_callback('edit-event', self._edit_obj)
         return True
 
