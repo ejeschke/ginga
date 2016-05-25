@@ -25,6 +25,9 @@ class CanvasMapper(object):
     def to_data(self, canvas_x, canvas_y):
         return self.viewer.get_data_xy(canvas_x, canvas_y)
 
+    def data_to(self, data_x, data_y):
+        return self.viewer.get_canvas_xy(data_x, data_y)
+
     def offset_pt(self, pt, xoff, yoff):
         x, y = pt
         return x + xoff, y + yoff

@@ -223,7 +223,7 @@ class CanvasObjectBase(Callback.Callbacks):
     def rotate(self, theta_deg, xoff=0, yoff=0):
         points = numpy.asarray(self.get_data_points())
         points = trcalc.rotate_coord(points, theta_deg, [xoff, yoff])
-        self.set_data_points(points, coord='data')
+        self.set_data_points(points)
 
     def rotate_by(self, theta_deg):
         ref_x, ref_y = self.get_reference_pt()
