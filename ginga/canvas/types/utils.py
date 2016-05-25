@@ -1,15 +1,13 @@
 #
 # utils.py -- classes for special shapes added to Ginga canvases.
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
 from ginga.canvas.CanvasObject import (CanvasObjectBase, _bool, _color,
                                        register_canvas_types, get_canvas_type,
                                        colors_plus_none)
+from .basic import Rectangle
 from ginga.misc.ParamSet import Param
 
 
@@ -172,6 +170,166 @@ class ColorBar(CanvasObjectBase):
                 cr.draw_text(cx, cy, text)
 
 
+class DrawableColorBar(Rectangle):
+
+    @classmethod
+    def get_params_metadata(cls):
+        return [
+            Param(name='x1', type=float, default=0.0, argpos=0,
+                  description="First X coordinate of object"),
+            Param(name='y1', type=float, default=0.0, argpos=1,
+                  description="First Y coordinate of object"),
+            Param(name='x2', type=float, default=0.0, argpos=2,
+                  description="Second X coordinate of object"),
+            Param(name='y2', type=float, default=0.0, argpos=3,
+                  description="Second Y coordinate of object"),
+            Param(name='cm_name', type=str, default='gray',
+                  description="Color map name to draw"),
+            Param(name='showrange', type=_bool,
+                  default=True, valid=[False, True],
+                  description="Show the range in the colorbar"),
+            Param(name='font', type=str, default='Sans Serif',
+                  description="Font family for text"),
+            Param(name='fontsize', type=int, default=8,
+                  min=8, max=72,
+                  description="Font size of text (default: 8)"),
+            Param(name='linewidth', type=int, default=1,
+                  min=0, max=20, widget='spinbutton', incr=1,
+                  description="Width of outline"),
+            Param(name='linestyle', type=str, default='solid',
+                  valid=['solid', 'dash'],
+                  description="Style of outline (default: solid)"),
+            Param(name='color',
+                  valid=colors_plus_none, type=_color, default='black',
+                  description="Color of outline"),
+            Param(name='alpha', type=float, default=1.0,
+                  min=0.0, max=1.0, widget='spinfloat', incr=0.05,
+                  description="Opacity of outline"),
+            Param(name='fillalpha', type=float, default=1.0,
+                  min=0.0, max=1.0, widget='spinfloat', incr=0.05,
+                  description="Opacity of fill"),
+            ]
+
+    def __init__(self, x1, y1, x2, y2, showrange=True,
+                 font='Sans Serif', fontsize=8,
+                 color='black', linewidth=1, linestyle='solid', alpha=1.0,
+                 fillalpha=1.0, rgbmap=None, optimize=True, **kwdargs):
+        Rectangle.__init__(self, x1, y1, x2, y2,
+                           font=font, fontsize=fontsize,
+                           color=color, linewidth=linewidth,
+                           linestyle=linestyle, alpha=alpha,
+                           fillalpha=fillalpha, **kwdargs)
+        self.showrange = showrange
+        self.rgbmap = rgbmap
+        self.kind = 'drawablecolorbar'
+
+        # for drawing range
+        self.t_spacing = 40
+        self.tick_ht = 4
+
+
+    def draw(self, viewer):
+        rgbmap = self.rgbmap
+        if rgbmap is None:
+            rgbmap = viewer.get_rgbmap()
+
+        cpoints = self.get_cpoints(viewer)
+        cx1, cy1 = cpoints[0]
+        cx2, cy2 = cpoints[2]
+        cx1, cy1, cx2, cy2 = self.swapxy(cx1, cy1, cx2, cy2)
+        width, height = abs(cx2 - cx1), abs(cy2 - cy1)
+
+        loval, hival = viewer.get_cut_levels()
+
+        cr = viewer.renderer.setup_cr(self)
+
+        # Calculate reasonable spacing for range numbers
+        cr.set_font(self.font, self.fontsize, color=self.color,
+                    alpha=self.alpha)
+        text = "%.4g" % (hival)
+        txt_wd, txt_ht = cr.text_extents(text)
+        avg_pixels_per_range_num = self.t_spacing + txt_wd
+
+        pxwd, pxht = width, max(height, txt_ht + self.tick_ht + 2)
+        pxwd, pxht = max(pxwd, 1), max(pxht, 1)
+
+        # calculate intervals for range numbers
+        nums = max(int(pxwd // avg_pixels_per_range_num), 1)
+        spacing = 256 // nums
+        _interval = { i*spacing: True for i in range(nums) }
+
+        y_base = cy1
+
+        x1 = cx1; x2 = pxwd
+        clr_wd = pxwd // 256
+        rem_px = x2 - (clr_wd * 256)
+        if rem_px > 0:
+            ival = 256 // rem_px
+        else:
+            ival = 0
+        clr_ht = pxht
+        #print("clr is %dx%d width=%d rem=%d ival=%d" % (
+        #       width, height, clr_wd, rem_px, ival))
+
+        dist = rgbmap.get_dist()
+
+        j = ival; off = cx1
+        range_pts = []
+        for i in range(256):
+
+            wd = clr_wd
+            if rem_px > 0:
+                j -= 1
+                if j == 0:
+                    rem_px -= 1
+                    j = ival
+                    wd += 1
+            x = off
+
+            (r, g, b) = rgbmap.get_rgbval(i)
+            color = (r/255., g/255., b/255.)
+
+            cr.set_line(color, linewidth=0)
+            cr.set_fill(color, alpha=self.fillalpha)
+
+            cx1, cy1, cx2, cy2 = x, y_base, x+wd, y_base+pxht
+            cr.draw_polygon(((cx1, cy1), (cx2, cy1), (cx2, cy2), (cx1, cy2)))
+
+            # Draw range scale if we are supposed to
+            if self.showrange and i in _interval:
+                cb_pct = float(x) / pxwd
+                # get inverse of distribution function and calculate value
+                # at this position
+                rng_pct = dist.get_dist_pct(cb_pct)
+                val = float(loval + (rng_pct * (hival - loval)))
+                text = "%.4g" % (val)
+
+                rx = x
+                ry = y_base + self.tick_ht + txt_ht
+                ryy = y_base
+                range_pts.append((rx, ry, ryy, text))
+
+            off += wd
+
+        cr.set_line(color=self.color, linewidth=1, alpha=self.alpha)
+
+        # draw optional border
+        if self.linewidth > 0:
+            cx1, cy1, cx2, cy2 = 0, y_base, wd, y_base+pxht
+            cpoints = ((cx1, cy1), (cx2, cy1), (cx2, cy2), (cx1, cy2))
+            cr.draw_polygon(cpoints)
+
+        # draw range
+        if self.showrange:
+            cr.set_font(self.font, self.fontsize, color=self.color,
+                    alpha=self.alpha)
+            for (cx, cy, cyy, text) in range_pts:
+                # tick
+                cr.draw_line(cx, cyy, cx, cyy+self.tick_ht)
+                # number
+                cr.draw_text(cx, cy, text)
+
+
 class ModeIndicator(CanvasObjectBase):
     """
     Shows a mode indicator.
@@ -220,7 +378,7 @@ class ModeIndicator(CanvasObjectBase):
 
     def draw(self, viewer):
 
-        win_wd, win_ht = self.viewer.get_window_size()
+        win_wd, win_ht = viewer.get_window_size()
 
         bm = viewer.get_bindmap()
         mode, mode_type = bm.current_mode()
@@ -267,4 +425,5 @@ class ModeIndicator(CanvasObjectBase):
 
 
 # register our types
-register_canvas_types(dict(colorbar=ColorBar, modeindicator=ModeIndicator))
+register_canvas_types(dict(colorbar=ColorBar, drawablecolorbar=DrawableColorBar,
+                           modeindicator=ModeIndicator))

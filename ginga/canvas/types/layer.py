@@ -2,9 +2,6 @@
 # layers.py -- classes for special compound objects layered on
 #                   ginga canvases.
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -42,8 +39,8 @@ class CompoundObject(CompoundMixin, CanvasObjectBase):
             ##       description="Set type of coordinates"),
             ]
 
-    def __init__(self, *objects):
-        CanvasObjectBase.__init__(self)
+    def __init__(self, *objects, **kwdargs):
+        CanvasObjectBase.__init__(self, **kwdargs)
         CompoundMixin.__init__(self)
         self.objects = list(objects)
         self.logger = get_logger('foo', log_stderr=True, level=10)
@@ -62,8 +59,8 @@ class Canvas(CanvasMixin, CompoundObject):
             ##       description="Set type of coordinates"),
             ]
 
-    def __init__(self, *objects):
-        CompoundObject.__init__(self, *objects)
+    def __init__(self, *objects, **kwdargs):
+        CompoundObject.__init__(self, *objects, **kwdargs)
         CanvasMixin.__init__(self)
 
         self.kind = 'canvas'
@@ -72,8 +69,8 @@ class Canvas(CanvasMixin, CompoundObject):
 
 class DrawingCanvas(Mixins.UIMixin, DrawingMixin, Canvas):
     """Drawing canvas."""
-    def __init__(self):
-        Canvas.__init__(self)
+    def __init__(self, **kwdargs):
+        Canvas.__init__(self, **kwdargs)
         DrawingMixin.__init__(self)
         Mixins.UIMixin.__init__(self)
 

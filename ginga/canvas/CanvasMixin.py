@@ -1,9 +1,6 @@
 #
 # CanvasMixin.py -- enable canvas like capabilities.
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -65,7 +62,7 @@ class CanvasMixin(object):
                 # make up our own tag
                 tag = '@%d' % (self.count)
 
-        obj.tag = tag
+        #obj.tag = tag
         self.tags[tag] = obj
         self.add_object(obj, belowThis=belowThis)
 
@@ -119,7 +116,7 @@ class CanvasMixin(object):
             self.update_canvas(whence=3)
 
     def delete_objects(self, objects, redraw=True):
-        for tag, obj in self.tags.items():
+        for tag, obj in list(self.tags.items()):
             if obj in objects:
                 self.delete_object_by_tag(tag, redraw=False)
 

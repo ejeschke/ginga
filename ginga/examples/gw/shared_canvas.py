@@ -25,7 +25,7 @@ class FitsViewer(object):
 
         self.app = Widgets.Application(logger=logger)
         #self.app.add_callback('shutdown', self.quit)
-        self.top = self.app.make_window("Ginga example2")
+        self.top = self.app.make_window("Ginga shared canvas example")
         self.top.add_callback('close', self.closed)
 
         vbox = Widgets.VBox()
@@ -55,15 +55,9 @@ class FitsViewer(object):
         bd.enable_all(True)
 
         # shared canvas between the two viewers
-        canvas = self.dc.DrawingCanvas()
-        canvas.enable_draw(True)
-        canvas.enable_edit(True)
-        canvas.set_drawtype('rectangle', color='lightblue')
-        self.canvas = canvas
+        shcanvas = self.dc.DrawingCanvas()
         # Tell viewer1 to use this canvas
-        v1.set_canvas(canvas)
-        self.drawtypes = canvas.get_drawtypes()
-        self.drawtypes.sort()
+        v1.set_canvas(shcanvas)
 
         v1.set_desired_size(300, 300)
         iw = Viewers.GingaViewerWidget(viewer=v1)
@@ -86,7 +80,7 @@ class FitsViewer(object):
         self._mi2 = ModeIndicator(v2)
 
         # Tell viewer2 to use this same canvas
-        v2.set_canvas(canvas)
+        v2.set_canvas(shcanvas)
 
         bd = v2.get_bindings()
         bd.enable_all(True)
@@ -94,6 +88,22 @@ class FitsViewer(object):
         v2.set_desired_size(300, 300)
         iw = Viewers.GingaViewerWidget(viewer=v2)
         hbox.add_widget(iw, stretch=1)
+
+        # 2nd canvas as a subcanvas of the shared canvas
+        canvas = self.dc.DrawingCanvas()
+        canvas.enable_draw(True)
+        canvas.enable_edit(True)
+        canvas.register_for_cursor_drawing(v1)
+        canvas.register_for_cursor_drawing(v2)
+        canvas.set_drawtype('rectangle', color='lightblue')
+        self.canvas = canvas
+        shcanvas.add(self.canvas)
+        shcanvas.ui_setActive(True)
+        canvas.ui_setActive(True)
+        canvas.set_surface(v1)
+
+        self.drawtypes = canvas.get_drawtypes()
+        self.drawtypes.sort()
 
         vbox.add_widget(hbox, stretch=1)
 
@@ -144,6 +154,27 @@ class FitsViewer(object):
 
         vbox.add_widget(hbox, stretch=0)
 
+        mode = self.canvas.get_draw_mode()
+        hbox = Widgets.HBox()
+        btn1 = Widgets.RadioButton("Draw")
+        btn1.set_state(mode == 'draw')
+        btn1.add_callback('activated', lambda w, val: self.set_mode_cb('draw', val))
+        btn1.set_tooltip("Choose this to draw on the canvas")
+        hbox.add_widget(btn1)
+
+        btn2 = Widgets.RadioButton("Edit", group=btn1)
+        btn2.set_state(mode == 'edit')
+        btn2.add_callback('activated', lambda w, val: self.set_mode_cb('edit', val))
+        btn2.set_tooltip("Choose this to edit things on the canvas")
+        hbox.add_widget(btn2)
+
+        ## btn3 = Widgets.CheckBox("I'm using a trackpad")
+        ## btn3.add_callback('activated', lambda w, tf: self.use_trackpad_cb(tf))
+        ## hbox.add_widget(btn3)
+
+        hbox.add_widget(Widgets.Label(''), stretch=1)
+        vbox.add_widget(hbox, stretch=0)
+
         self.top.set_widget(vbox)
 
     def set_drawparams(self):
@@ -166,7 +197,7 @@ class FitsViewer(object):
         self.canvas.set_drawtype(kind, **params)
 
     def clear_canvas(self):
-        self.canvas.deleteAllObjects()
+        self.canvas.delete_all_objects()
 
     def load_file(self, viewer, filepath):
         image = AstroImage.AstroImage(logger=self.logger)
@@ -223,6 +254,12 @@ class FitsViewer(object):
             ra_txt, dec_txt, fits_x, fits_y, value)
         self.readout.set_text(text)
 
+    def set_mode_cb(self, mode, tf):
+        self.logger.info("canvas mode changed (%s) %s" % (mode, tf))
+        if not (tf is False):
+            self.canvas.set_draw_mode(mode)
+        return True
+
     def closed(self, w):
         self.logger.info("Top window closed.")
         self.top = None
@@ -260,7 +297,8 @@ def main(options, args):
     viewer.top.raise_()
 
     try:
-        viewer.mainloop()
+        app = viewer.top.get_app()
+        app.mainloop()
 
     except KeyboardInterrupt:
         print("Terminating viewer...")

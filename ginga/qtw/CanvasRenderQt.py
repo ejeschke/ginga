@@ -1,14 +1,11 @@
 #
 # CanvasRenderQt.py -- for rendering into a ImageViewQt widget
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
 from ginga.qtw.QtHelp import QtGui, QtCore, QFont, QPainter, QPen, \
-     QPolygonF, QPolygon, QColor
+     QPolygonF, QPolygon, QColor, QPainterPath
 
 from ginga import colors
 from ginga.util.six.moves import map, zip
@@ -135,14 +132,14 @@ class RenderContext(object):
         self.cr.drawEllipse(pt, float(cradius), float(cradius))
 
     def draw_bezier_curve(self, cp):
-        path = QtGui.QPainterPath()
+        path = QPainterPath()
         path.moveTo(cp[0][0], cp[0][1])
         path.cubicTo(cp[1][0], cp[1][1], cp[2][0], cp[2][1], cp[3][0], cp[3][1])
         self.cr.drawPath(path)
 
     def draw_ellipse_bezier(self, cp):
         # draw 4 bezier curves to make the ellipse
-        path = QtGui.QPainterPath()
+        path = QPainterPath()
         path.moveTo(cp[0][0], cp[0][1])
         path.cubicTo(cp[1][0], cp[1][1], cp[2][0], cp[2][1], cp[3][0], cp[3][1])
         path.cubicTo(cp[4][0], cp[4][1], cp[5][0], cp[5][1], cp[6][0], cp[6][1])

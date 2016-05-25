@@ -2,9 +2,6 @@
 # astro.py -- classes for special astronomy shapes drawn on
 #                   ginga canvases.
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -12,14 +9,17 @@ import math
 import numpy
 
 from ginga.canvas.CanvasObject import (CanvasObjectBase, _bool, _color,
+                                       Point, MovePoint, ScalePoint,
+                                       RotatePoint,
                                        register_canvas_types, get_canvas_type,
                                        colors_plus_none)
 from ginga.misc.ParamSet import Param
 from ginga.misc.Bunch import Bunch
 from ginga.util import wcs
 
-from .basic import TwoPointMixin, OnePointOneRadiusMixin
+from .mixins import OnePointMixin, TwoPointMixin, OnePointOneRadiusMixin
 from .layer import CompoundObject
+
 
 class Ruler(TwoPointMixin, CanvasObjectBase):
     """Draws a WCS ruler (like a right triangle) on a DrawingCanvas.
@@ -94,28 +94,35 @@ class Ruler(TwoPointMixin, CanvasObjectBase):
         TwoPointMixin.__init__(self)
 
     def get_points(self):
-        return [(self.x1, self.y1), (self.x2, self.y2)]
+        points = [(self.x1, self.y1), (self.x2, self.y2)]
+        points = self.get_data_points(points=points)
+        return points
 
     def select_contains(self, viewer, data_x, data_y):
-        x1, y1 = self.crdmap.to_data(self.x1, self.y1)
-        x2, y2 = self.crdmap.to_data(self.x2, self.y2)
+        points = self.get_points()
+        x1, y1 = points[0]
+        x2, y2 = points[1]
         return self.within_line(viewer, data_x, data_y, x1, y1, x2, y2,
                                 self.cap_radius)
 
     def get_ruler_distances(self, viewer):
         mode = self.units.lower()
+        points = self.get_points()
+        x1, y1 = points[0]
+        x2, y2 = points[1]
+
         try:
             image = viewer.get_image()
             if mode in ('arcmin', 'degrees'):
                 # Calculate RA and DEC for the three points
                 # origination point
-                ra_org, dec_org = image.pixtoradec(self.x1, self.y1)
+                ra_org, dec_org = image.pixtoradec(x1, y1)
 
                 # destination point
-                ra_dst, dec_dst = image.pixtoradec(self.x2, self.y2)
+                ra_dst, dec_dst = image.pixtoradec(x2, y2)
 
                 # "heel" point making a right triangle
-                ra_heel, dec_heel = image.pixtoradec(self.x2, self.y1)
+                ra_heel, dec_heel = image.pixtoradec(x2, y1)
 
                 if mode == 'arcmin':
                     text_h = wcs.get_starsep_RaDecDeg(ra_org, dec_org,
@@ -135,8 +142,8 @@ class Ruler(TwoPointMixin, CanvasObjectBase):
                                                     ra_dst, dec_dst)
                     text_y = str(sep_y)
             else:
-                dx = abs(self.x2 - self.x1)
-                dy = abs(self.y2 - self.y1)
+                dx = abs(x2 - x1)
+                dy = abs(y2 - y1)
                 dh = math.sqrt(dx**2 + dy**2)
                 text_x = str(dx)
                 text_y = str(dy)
@@ -150,8 +157,11 @@ class Ruler(TwoPointMixin, CanvasObjectBase):
         return (text_x, text_y, text_h)
 
     def draw(self, viewer):
-        cx1, cy1 = self.canvascoords(viewer, self.x1, self.y1)
-        cx2, cy2 = self.canvascoords(viewer, self.x2, self.y2)
+        points = self.get_points()
+        x1, y1 = points[0]
+        x2, y2 = points[1]
+        cx1, cy1 = self.canvascoords(viewer, x1, y1)
+        cx2, cy2 = self.canvascoords(viewer, x2, y2)
 
         text_x, text_y, text_h = self.get_ruler_distances(viewer)
 
@@ -284,18 +294,23 @@ class Compass(OnePointOneRadiusMixin, CanvasObjectBase):
         OnePointOneRadiusMixin.__init__(self)
 
     def get_points(self):
-        image = self.viewer.get_image()
+        # TODO: this attribute will be deprecated--fix!
+        viewer = self.viewer
+
+        image = viewer.get_image()
         x, y, xn, yn, xe, ye = image.calc_compass_radius(self.x,
                                                          self.y,
                                                          self.radius)
         return [(x, y), (xn, yn), (xe, ye)]
 
     def get_edit_points(self):
-        return self.get_points()
+        c_pt, n_pt, e_pt = self.get_points()
+        return [ MovePoint(*c_pt), ScalePoint(*n_pt), ScalePoint(*e_pt) ]
 
-    def set_edit_point(self, i, pt):
+    def set_edit_point(self, i, pt, detail):
         if i == 0:
-            self.set_point_by_index(i, pt)
+            x, y = pt
+            self.move_to(x, y)
         elif i in (1, 2):
             x, y = pt
             self.radius = max(abs(x - self.x), abs(y - self.y))
@@ -364,7 +379,7 @@ class Compass(OnePointOneRadiusMixin, CanvasObjectBase):
         return (xd, yd)
 
 
-class Crosshair(CanvasObjectBase):
+class Crosshair(OnePointMixin, CanvasObjectBase):
     """Draws a crosshair on a DrawingCanvas.
     Parameters are:
     x, y: 0-based coordinates of the center in the data space
@@ -423,18 +438,7 @@ class Crosshair(CanvasObjectBase):
                                   text=text, textcolor=textcolor,
                                   fontsize=fontsize, font=font,
                                   x=x, y=y, format=format, **kwdargs)
-
-    def get_points(self):
-        return [ (self.x, self.y) ]
-
-    def get_edit_points(self):
-        return self.get_points()
-
-    def set_edit_point(self, i, pt):
-        if i == 0:
-            self.set_point_by_index(i, pt)
-        else:
-            raise ValueError("No point corresponding to index %d" % (i))
+        OnePointMixin.__init__(self)
 
     def select_contains(self, viewer, data_x, data_y):
         xd, yd = self.crdmap.to_data(self.x, self.y)
@@ -529,7 +533,7 @@ class Annulus(AnnulusMixin, OnePointOneRadiusMixin, CompoundObject):
             Param(name='radius', type=float, default=1.0,  argpos=2,
                   min=0.0,
                   description="Inner radius of annulus"),
-            Param(name='width', type=float, default=5,
+            Param(name='width', type=float, default=None,
                   min=0.0,
                   description="Width of annulus"),
             Param(name='atype', type=str, default='circle',
@@ -562,29 +566,33 @@ class Annulus(AnnulusMixin, OnePointOneRadiusMixin, CompoundObject):
                  **kwdargs):
 
         if width is None:
+            # default width is 15% of radius
             width = 0.15 * radius
         oradius = radius + width
 
         if oradius < radius:
             raise ValueError('Outer boundary < inner boundary')
 
-        CanvasObjectBase.__init__(self, x=x, y=y, radius=radius,
-                                  width=width, color=color,
-                                  linewidth=linewidth, linestyle=linestyle,
-                                  alpha=alpha, **kwdargs)
+        coord = kwdargs.get('coord', None)
 
         klass = get_canvas_type(atype)
         obj1 = klass(x, y, radius, color=color,
                      linewidth=linewidth,
-                     linestyle=linestyle, alpha=alpha)
+                     linestyle=linestyle, alpha=alpha,
+                     coord=coord)
         obj1.editable = False
 
         obj2 = klass(x, y, oradius, color=color,
                      linewidth=linewidth,
-                     linestyle=linestyle, alpha=alpha)
+                     linestyle=linestyle, alpha=alpha,
+                     coord=coord)
         obj2.editable = False
 
-        CompoundObject.__init__(self, obj1, obj2)
+        CompoundObject.__init__(self, obj1, obj2,
+                                x=x, y=y, radius=radius,
+                                width=width, color=color,
+                                linewidth=linewidth, linestyle=linestyle,
+                                alpha=alpha, **kwdargs)
         OnePointOneRadiusMixin.__init__(self)
 
         self.editable = True
@@ -592,24 +600,36 @@ class Annulus(AnnulusMixin, OnePointOneRadiusMixin, CompoundObject):
         self.kind = 'annulus'
 
     def get_edit_points(self):
-        return [(self.x, self.y),
-                (self.x + self.radius, self.y),
-                (self.x + self.radius + self.width, self.y)]
+        points = ((self.x, self.y),
+                  self.crdmap.offset_pt((self.x, self.y),
+                                        self.radius, 0),
+                  self.crdmap.offset_pt((self.x, self.y),
+                                        self.radius + self.width, 0),
+                  )
+        points = self.get_data_points(points=points)
+        return [MovePoint(*points[0]),
+                ScalePoint(*points[1]),
+                Point(*points[2])]
 
-    def set_edit_point(self, i, pt):
+    def setup_edit(self, detail):
+        detail.center_pos = self.get_center_pt()
+        detail.radius = self.radius
+        detail.width = self.width
+
+    def set_edit_point(self, i, pt, detail):
         if i == 0:
             # move control point
-            self.set_point_by_index(i, pt)
-        else:
             x, y = pt
-            radius = math.sqrt(abs(x - self.x)**2 +
-                               abs(y - self.y)**2 )
+            self.move_to(x, y)
+        else:
             if i == 1:
+                scalef = self.calc_scale_from_pt(pt, detail)
                 # inner obj radius control pt
-                self.radius = radius
+                self.radius = detail.radius * scalef
             elif i == 2:
+                scalef = self.calc_scale_from_pt(pt, detail)
+                width = detail.width * scalef
                 # outer obj radius control pt--calculate new width
-                width = radius - self.radius
                 assert width > 0, ValueError("Must have a positive width")
                 self.width = width
             else:
@@ -637,8 +657,8 @@ class Annulus(AnnulusMixin, OnePointOneRadiusMixin, CompoundObject):
 
     def move_to(self, xdst, ydst):
         super(Annulus, self).move_to(xdst, ydst)
-        self.x = xdst
-        self.y = ydst
+
+        self.set_data_points([(xdst, ydst)])
 
 
 register_canvas_types(dict(ruler=Ruler, compass=Compass,

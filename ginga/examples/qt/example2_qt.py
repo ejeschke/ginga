@@ -49,7 +49,7 @@ class FitsViewer(QtGui.QMainWindow):
         canvas = self.dc.DrawingCanvas()
         canvas.enable_draw(True)
         canvas.set_drawtype('rectangle', color='lightblue')
-        canvas.setSurface(fi)
+        canvas.set_surface(fi)
         self.canvas = canvas
         # add canvas to view
         #fi.add(canvas)

@@ -1,22 +1,22 @@
 #
 # images.py -- classes for images drawn on ginga canvases.
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
 import numpy
 
 from ginga.canvas.CanvasObject import (CanvasObjectBase, _bool, _color,
+                                       Point, MovePoint, ScalePoint,
                                        register_canvas_types,
                                        colors_plus_none)
 from ginga.misc.ParamSet import Param
 from ginga.misc import Bunch
 from ginga import trcalc
 
-class Image(CanvasObjectBase):
+from .mixins import OnePointMixin
+
+class Image(OnePointMixin, CanvasObjectBase):
     """Draws an image on a ImageViewCanvas.
     Parameters are:
     x, y: 0-based coordinates of one corner in the data space
@@ -70,13 +70,14 @@ class Image(CanvasObjectBase):
                  showcap=False, flipy=False, optimize=True,
                  **kwdargs):
         self.kind = 'image'
-        super(Image, self).__init__(x=x, y=y, image=image, alpha=alpha,
-                                        scale_x=scale_x, scale_y=scale_y,
-                                        interpolation=interpolation,
-                                        linewidth=linewidth, linestyle=linestyle,
-                                        color=color, showcap=showcap,
-                                        flipy=flipy, optimize=optimize,
-                                        **kwdargs)
+        CanvasObjectBase.__init__(self, x=x, y=y, image=image, alpha=alpha,
+                                  scale_x=scale_x, scale_y=scale_y,
+                                  interpolation=interpolation,
+                                  linewidth=linewidth, linestyle=linestyle,
+                                  color=color, showcap=showcap,
+                                  flipy=flipy, optimize=optimize,
+                                  **kwdargs)
+        OnePointMixin.__init__(self)
 
         # The cache holds intermediate step results by viewer.
         # Depending on value of `whence` they may not need to be recomputed.
@@ -84,6 +85,8 @@ class Image(CanvasObjectBase):
         self._zorder = 0
         # images are not editable by default
         self.editable = False
+
+        self.enable_callback('image-set')
 
     def get_zorder(self):
         return self._zorder
@@ -93,6 +96,9 @@ class Image(CanvasObjectBase):
         for viewer in self._cache:
             viewer.reorder_layers()
             viewer.redraw(whence=2)
+
+    def in_cache(self, viewer):
+        return viewer in self._cache
 
     def get_cache(self, viewer):
         if viewer in self._cache:
@@ -227,13 +233,15 @@ class Image(CanvasObjectBase):
         self.image = image
         self.reset_optimize()
 
+        self.make_callback('image-set', image)
+
     def get_scaled_wdht(self):
         width = int(self.image.width * self.scale_x)
         height = int(self.image.height * self.scale_y)
         return (width, height)
 
     def get_coords(self):
-        x1, y1 = self.x, self.y
+        x1, y1 = self.crdmap.to_data(self.x, self.y)
         wd, ht = self.get_scaled_wdht()
         x2, y2 = x1 + wd, y1 + ht
         return (x1, y1, x2, y2)
@@ -247,40 +255,44 @@ class Image(CanvasObjectBase):
         return [(x1, y1), (x2, y1), (x2, y2), (x1, y2)]
 
     def contains(self, data_x, data_y):
-        width, height = self.get_scaled_wdht()
-        x2, y2 = self.x + width, self.y + height
-        if ((self.x <= data_x < x2) and (self.y <= data_y < y2)):
+        x1, y1, x2, y2 = self.get_coords()
+        if ((x1 <= data_x < x2) and (y1 <= data_y < y2)):
             return True
         return False
 
     def rotate(self, theta, xoff=0, yoff=0):
         raise ValueError("Images cannot be rotated")
 
-    def set_edit_point(self, i, pt):
+    def setup_edit(self, detail):
+        detail.center_pos = self.get_center_pt()
+        detail.scale_x = self.scale_x
+        detail.scale_y = self.scale_y
+
+    def set_edit_point(self, i, pt, detail):
         if i == 0:
             x, y = pt
             self.move_to(x, y)
         elif i == 1:
-            x, y = pt
-            self.scale_x = abs(x - self.x) / float(self.image.width)
+            scale_x, scale_y = self.calc_dual_scale_from_pt(pt, detail)
+            self.scale_x = detail.scale_x * scale_x
         elif i == 2:
-            x, y = pt
-            self.scale_y = abs(y - self.y) / float(self.image.height)
+            scale_x, scale_y = self.calc_dual_scale_from_pt(pt, detail)
+            self.scale_y = detail.scale_y * scale_y
         elif i == 3:
-            x, y = pt
-            self.scale_x = abs(x - self.x) / float(self.image.width)
-            self.scale_y = abs(y - self.y) / float(self.image.height)
+            scale_x, scale_y = self.calc_dual_scale_from_pt(pt, detail)
+            self.scale_x = detail.scale_x * scale_x
+            self.scale_y = detail.scale_y * scale_y
         else:
             raise ValueError("No point corresponding to index %d" % (i))
 
         self.reset_optimize()
 
     def get_edit_points(self):
-        width, height = self.get_scaled_wdht()
-        return [self.get_center_pt(),    # location
-                (self.x + width, self.y + height / 2.),
-                (self.x + width / 2., self.y + height),
-                (self.x + width, self.y + height)
+        x1, y1, x2, y2 = self.get_coords()
+        return [MovePoint(*self.get_center_pt()),    # location
+                Point(x2, (y1 + y2) / 2.),   # width scale
+                Point((x1 + x2) / 2., y2),   # height scale
+                Point(x2, y2),               # both scale
                 ]
 
     def scale_by(self, scale_x, scale_y):
@@ -483,6 +495,8 @@ class NormImage(Image):
     def set_image(self, image):
         self.image = image
         self.reset_optimize()
+
+        self.make_callback('image-set', image)
 
     def scale_by(self, scale_x, scale_y):
         #print("scaling image")

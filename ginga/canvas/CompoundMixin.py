@@ -27,8 +27,10 @@ class CompoundMixin(object):
     def __init__(self):
         # holds a list of objects to be drawn
         self.objects = []
-        self.crdmap = None
-        self.coord = 'data'
+        if not hasattr(self, 'crdmap'):
+            self.crdmap = None
+        if not hasattr(self, 'coord'):
+            self.coord = None
         self.opaque = False
         self._contains_reduce = numpy.logical_or
 
@@ -106,7 +108,7 @@ class CompoundMixin(object):
             res = []
         return res
 
-    def initialize(self, tag, viewer, logger):
+    def initialize(self, canvas, viewer, logger):
         # TODO: this needs to be merged with the code in CanvasObject
         self.viewer = viewer
         self.logger = logger
@@ -122,7 +124,7 @@ class CompoundMixin(object):
 
         # initialize children
         for obj in self.objects:
-            obj.initialize(None, viewer, logger)
+            obj.initialize(canvas, viewer, logger)
 
     def inherit_from(self, obj):
         self.crdmap = obj.crdmap
@@ -154,7 +156,7 @@ class CompoundMixin(object):
             self.delete_object(obj)
 
     def delete_all_objects(self):
-        self.objects = []
+        self.objects[:] = []
 
     def roll_objects(self, n):
         num = len(self.objects)
@@ -176,9 +178,9 @@ class CompoundMixin(object):
                     setattr(obj, attrname, val)
 
     def add_object(self, obj, belowThis=None):
-        obj.initialize(None, self.viewer, self.logger)
-        # isn't this taken care of above?
-        #obj.viewer = self.viewer
+
+        obj.initialize(self, self.viewer, self.logger)
+
         if belowThis is None:
             self.objects.append(obj)
         else:
@@ -229,7 +231,8 @@ class CompoundMixin(object):
     def get_reference_pt(self):
         # Reference point for a compound object is the average of all
         # it's contituents reference points
-        points = numpy.array([ obj.get_reference_pt() for obj in self.objects ])
+        points = numpy.asarray([ obj.get_reference_pt()
+                                 for obj in self.objects ])
         t_ = points.T
         x, y = numpy.average(t_[0]), numpy.average(t_[1])
         return (x, y)

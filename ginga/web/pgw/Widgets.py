@@ -1614,6 +1614,8 @@ class Application(Callback.Callbacks):
 
         self.ev_quit.set()
 
+    def mainloop(self, no_ioloop=False):
+        self.start(no_ioloop=no_ioloop)
 
 class Dialog(WidgetBase):
 

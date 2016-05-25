@@ -1507,8 +1507,7 @@ class Channel(Callback.Callbacks):
             curimage = self.fitsimage.get_image()
             if curimage != image:
                 self.logger.debug("Setting image...")
-                self.fitsimage.set_image(image,
-                                         raise_initialize_errors=False)
+                self.fitsimage.set_image(image)
 
                 # update cursor to match image
                 imname = image.get('name')

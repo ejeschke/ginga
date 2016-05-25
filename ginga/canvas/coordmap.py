@@ -1,9 +1,6 @@
 #
-# coormap.py -- coordinate mappings.
+# coordmap.py -- coordinate mappings.
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -27,6 +24,9 @@ class CanvasMapper(object):
 
     def to_data(self, canvas_x, canvas_y):
         return self.viewer.get_data_xy(canvas_x, canvas_y)
+
+    def data_to(self, data_x, data_y):
+        return self.viewer.get_canvas_xy(data_x, data_y)
 
     def offset_pt(self, pt, xoff, yoff):
         x, y = pt
@@ -127,7 +127,6 @@ class WCSMapper(DataMapper):
 
     def rotate_pt(self, x, y, theta, xoff=0, yoff=0):
         # TODO: optomize by rotating in WCS space
-        x, y = self.to_data(x, y)
         xoff, yoff = self.to_data(xoff, yoff)
 
         x, y = super(WCSMapper, self).rotate_pt(x, y, theta,
