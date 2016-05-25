@@ -161,6 +161,11 @@ class ImageViewCv(ImageView.ImageViewBase):
         # cursor on a widget
         self.logger.warning("Subclass should override this method")
 
+    def reschedule_redraw(self, time_sec):
+        # subclass implements this method to call delayed_redraw() after
+        # time_sec
+        self.delayed_redraw()
+
     def define_cursor(self, ctype, cursor):
         self.cursor[ctype] = cursor
 

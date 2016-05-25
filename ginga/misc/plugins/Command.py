@@ -43,12 +43,6 @@ class Command(GingaPlugin.GlobalPlugin):
 
         self.msg_font = self.fv.getFont("fixedFont", 12)
 
-        vbox.add_widget(Widgets.Label("Type command here:"))
-        self.cmd_w = Widgets.TextEntry()
-        self.cmd_w.set_font(self.msg_font)
-        vbox.add_widget(self.cmd_w, stretch=0)
-        self.cmd_w.add_callback('activated', self.exec_cmd_cb)
-
         vbox.add_widget(Widgets.Label("Output:"))
         tw = Widgets.TextArea(wrap=True, editable=False)
         tw.set_font(self.msg_font)
@@ -59,6 +53,12 @@ class Command(GingaPlugin.GlobalPlugin):
         ## sw.set_widget(self.hist_w)
         ## vbox.add_widget(sw, stretch=1)
         vbox.add_widget(tw, stretch=1)
+
+        vbox.add_widget(Widgets.Label("Type command here:"))
+        self.cmd_w = Widgets.TextEntry()
+        self.cmd_w.set_font(self.msg_font)
+        vbox.add_widget(self.cmd_w, stretch=0)
+        self.cmd_w.add_callback('activated', self.exec_cmd_cb)
 
         btns = Widgets.HBox()
         btns.set_spacing(4)

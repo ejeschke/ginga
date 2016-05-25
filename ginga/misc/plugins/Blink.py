@@ -17,6 +17,13 @@ class Blink(GingaPlugin.LocalPlugin):
         self.blink_timer = fv.get_timer()
         self.blink_timer.set_callback('expired', self._blink_timer_cb)
 
+        prefs = self.fv.get_preferences()
+        self.settings = prefs.createCategory('plugin_Blink')
+        self.settings.addDefaults(blink_channels=False)
+        self.settings.load(onError='silent')
+
+        self.blink_channels = self.settings.get('blink_channels', False)
+
     def build_gui(self, container):
         top = Widgets.VBox()
         top.set_border_width(4)
@@ -35,6 +42,7 @@ class Blink(GingaPlugin.LocalPlugin):
         vbox.add_widget(fr, stretch=0)
 
         fr = Widgets.Frame("Blink")
+        vbox2 = Widgets.VBox()
 
         captions = (("Interval:", 'label', 'Interval', 'entry',
                      "Start Blink", 'button', "Stop Blink", 'button'),
@@ -50,8 +58,29 @@ class Blink(GingaPlugin.LocalPlugin):
                                    lambda w: self._start_blink_cb())
         b.stop_blink.add_callback('activated',
                                   lambda w: self._stop_blink_cb())
+        vbox2.add_widget(w, stretch=0)
 
-        fr.set_widget(w)
+        hbox = Widgets.HBox()
+        btn1 = Widgets.RadioButton("Blink channels")
+        btn1.add_callback('activated',
+                          lambda w, tf: self._set_blink_mode_cb(tf == True))
+        btn1.set_tooltip("Choose this to blink across channels")
+        btn1.set_state(self.blink_channels)
+        self.w.blink_channels = btn1
+        hbox.add_widget(btn1)
+
+        btn2 = Widgets.RadioButton("Blink images in channel", group=btn1)
+        btn2.set_state(not self.blink_channels)
+        btn2.add_callback('activated',
+                          lambda w, tf: self._set_blink_mode_cb(tf == False))
+        btn2.set_tooltip("Choose this to blink images within a channel")
+        self.w.blink_within = btn2
+        hbox.add_widget(btn2)
+
+        hbox.add_widget(Widgets.Label(''), stretch=1)
+        vbox2.add_widget(hbox, stretch=0)
+
+        fr.set_widget(vbox2)
         vbox.add_widget(fr, stretch=0)
 
         spacer = Widgets.Label('')
@@ -97,7 +126,11 @@ Only images loaded in memory will be cycled.""")
 
     def _blink_timer_cb(self, timer):
         # set timer
-        self.fv.gui_do(self.fv.next_img, loop=True)
+        if self.blink_channels:
+            self.fv.gui_do(self.fv.next_channel)
+        else:
+            self.fv.gui_do(self.fv.next_img, loop=True)
+
         timer.set(self.interval)
 
     def start_blinking(self):
@@ -118,6 +151,9 @@ Only images loaded in memory will be cycled.""")
         self.interval = max(min(interval, 30.0), 0.25)
         self.stop_blinking()
         self.start_blinking()
+
+    def _set_blink_mode_cb(self, tf):
+        self.blink_channels = tf
 
     def __str__(self):
         return 'blink'
