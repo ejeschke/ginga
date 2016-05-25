@@ -278,6 +278,7 @@ class ImageViewBase(Callback.Callbacks):
         self.coordmap = {
             'canvas': coordmap.CanvasMapper(self),
             'data': coordmap.DataMapper(self),
+            None: coordmap.DataMapper(self),
             #'offset': coordmap.OffsetMapper(self),
             'wcs': coordmap.WCSMapper(self),
             }

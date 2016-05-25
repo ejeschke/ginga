@@ -124,7 +124,7 @@ class CompoundMixin(object):
 
         # initialize children
         for obj in self.objects:
-            obj.initialize(self, viewer, logger)
+            obj.initialize(canvas, viewer, logger)
 
     def inherit_from(self, obj):
         self.crdmap = obj.crdmap

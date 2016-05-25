@@ -51,7 +51,6 @@ class CanvasObjectBase(Callback.Callbacks):
         self.ref_obj = None
         self.__dict__.update(kwdargs)
         self.data = None
-        # default mapping is to data coordinates
         self.crdmap = None
         # For debugging
         self.name = None
@@ -65,6 +64,10 @@ class CanvasObjectBase(Callback.Callbacks):
         self.viewer = viewer
         self.logger = logger
         if self.crdmap is None:
+            if self.coord is None:
+                # default mapping is to data coordinates
+                self.coord = 'data'
+
             if self.coord == 'offset':
                 self.crdmap = coordmap.OffsetMapper(viewer, self.ref_obj)
             else:
