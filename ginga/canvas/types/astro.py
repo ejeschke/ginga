@@ -303,7 +303,7 @@ class Compass(OnePointOneRadiusMixin, CanvasObjectBase):
                                                          self.radius)
         return [(x, y), (xn, yn), (xe, ye)]
 
-    def get_edit_points(self):
+    def get_edit_points(self, viewer):
         c_pt, n_pt, e_pt = self.get_points()
         return [ MovePoint(*c_pt), ScalePoint(*n_pt), ScalePoint(*e_pt) ]
 
@@ -599,7 +599,7 @@ class Annulus(AnnulusMixin, OnePointOneRadiusMixin, CompoundObject):
         self.opaque = True
         self.kind = 'annulus'
 
-    def get_edit_points(self):
+    def get_edit_points(self, viewer):
         points = ((self.x, self.y),
                   self.crdmap.offset_pt((self.x, self.y),
                                         self.radius, 0),

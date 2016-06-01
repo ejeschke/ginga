@@ -61,6 +61,10 @@ class DrawingMixin(object):
                            move=self.edit_motion, up=self.edit_stop,
                            poly_add=self.edit_poly_add,
                            poly_delete=self.edit_poly_delete)
+        self.add_draw_mode('pick', down=self.pick_start,
+                           move=self.pick_motion, up=self.pick_stop,
+                           poly_add=self.edit_poly_add,
+                           poly_delete=self.edit_poly_delete)
 
         # For selection
         self._selected = []
@@ -395,7 +399,7 @@ class DrawingMixin(object):
             contains = []
             for obj in selects:
                 #print("editing: checking for cp")
-                edit_pts = obj.get_edit_points()
+                edit_pts = obj.get_edit_points(viewer)
                 #print((self._edit_obj, edit_pts))
                 i = obj.get_pt(viewer, edit_pts, data_x, data_y,
                                obj.cap_radius)
@@ -484,6 +488,7 @@ class DrawingMixin(object):
             self._edit_update(data_x, data_y, viewer)
             self._cp_index = None
             self.make_callback('edit-event', self._edit_obj)
+            self._edit_obj.make_callback('edited')
 
         return True
 
@@ -510,7 +515,7 @@ class DrawingMixin(object):
                 points = points + [points[0]]
             x0, y0 = points[0]
             insert = None
-            for i in range(1, len(points[1:])):
+            for i in range(1, len(points[1:])+1):
                 x1, y1 = points[i]
                 self.logger.debug("checking line %d" % (i))
                 if obj.within_line(viewer, data_x, data_y, x0, y0, x1, y1,
@@ -642,6 +647,43 @@ class DrawingMixin(object):
     def select_add(self, obj):
         if obj not in self._selected:
             self._selected.append(obj)
+
+
+    ##### PICK LOGIC #####
+
+    def _do_pick(self, canvas, event, data_x, data_y, cb_name, viewer):
+        # check for objects at this location
+        objs = canvas.select_items_at(viewer, data_x, data_y)#,
+        #test=self._is_editable)
+
+        if len(objs) == 0:
+            # <-- no objects under cursor
+            return False
+
+        # pick top object
+        obj = objs[-1]
+        self.logger.info("%s event in %s obj at x, y = %d, %d" % (
+            cb_name, obj.kind, data_x, data_y))
+
+        # get coordinates in native form for this object
+        pt = obj.crdmap.data_to(data_x, data_y)
+
+        # make pick callback
+        obj.make_callback(cb_name, canvas, event, pt)
+        return True
+
+    def pick_start(self, canvas, event, data_x, data_y, viewer):
+        return self._do_pick(canvas, event, data_x, data_y,
+                             'pick-down', viewer)
+
+    def pick_motion(self, canvas, event, data_x, data_y, viewer):
+        return self._do_pick(canvas, event, data_x, data_y,
+                             'pick-move', viewer)
+
+    def pick_stop(self, canvas, event, data_x, data_y, viewer):
+        return self._do_pick(canvas, event, data_x, data_y,
+                             'pick-up', viewer)
+
 
     # The canvas drawing
 
