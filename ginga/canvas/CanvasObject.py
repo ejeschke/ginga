@@ -52,6 +52,7 @@ class CanvasObjectBase(Callback.Callbacks):
         self.__dict__.update(kwdargs)
         self.data = None
         self.crdmap = None
+        self.tag = None
         # For debugging
         self.name = None
         self.viewer = None
