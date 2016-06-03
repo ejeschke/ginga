@@ -22,6 +22,7 @@ In a mode, there are usually some special key, cursor and scroll bindings
 which will override *some* of the default ones.
 
 Modes additionally have a *mode type* which can be set to one of:
+
 * `held`: mode is active while the activating key is held down
 * `oneshot`: mode is released by initiating and finishing a cursor drag
 * `locked`: mode is locked until the mode key is pressed again (or `Esc`)
@@ -72,8 +73,9 @@ Panning and Zooming commands
 |                      |   right-drag zooms, middle-click sets pan        |
 |                      |   position                                       | 
 +----------------------+--------------------------------------------------+
-| w                    | Free pan mode: Left-click zooms in, right-click  |
-|                      |   zooms out.  Middle-drag pans freely.           |
+| w                    | Free pan mode: Left-click pans and zooms in,     |
+|                      |   right-click pans and zooms out.  Middle-drag   |
+|                      |   pans freely.                                   |
 +----------------------+--------------------------------------------------+
 | Ctrl + Left drag     | Proportional pan (press and drag left mouse      |
 |                      |     button                                       |
@@ -86,7 +88,7 @@ Panning and Zooming commands
 +----------------------+--------------------------------------------------+
 | doublequote (")      | Toggle autozoom for new images to *on* or *off*  |
 +----------------------+--------------------------------------------------+
-| Ctrl + Scroll wheel  | Adjust zoom by intermediate coarse steps         |
+| Ctrl + Scroll wheel  | Adjust zoom by intermediate fine steps           |
 |   turned             |                                                  | 
 +----------------------+--------------------------------------------------+
 | Shift + Scroll wheel | Adjust pan up/down (and left/right if you have   |
@@ -99,8 +101,8 @@ Cut levels and colormap commands
 +----------------------+--------------------------------------------------+
 | a                    | Auto cut levels                                  |
 +----------------------+--------------------------------------------------+
-| d                    | Go into Distribution mode: scroll wheel to set   |
-|                      |  algorithm.                                      |
+| d                    | Go into Distribution ("dist") mode:              |
+|                      |  scroll wheel to set algorithm used.             |
 +----------------------+--------------------------------------------------+
 | D                    | Reset color distribution algorithm to "linear"   |
 +----------------------+--------------------------------------------------+
@@ -168,8 +170,6 @@ Reference Viewer Only
 =====================
 
 +----------------------+--------------------------------------------------+
-| I                    | Raise Info tab                                   |
-+----------------------+--------------------------------------------------+
 | H                    | Raise Header tab                                 |
 +----------------------+--------------------------------------------------+
 | Z                    | Raise Zoom tab                                   |
@@ -187,6 +187,18 @@ Reference Viewer Only
 | F                    | Panoramic full screen                            | 
 +----------------------+--------------------------------------------------+
 | m                    | Maximize window                                  | 
++----------------------+--------------------------------------------------+
+| j                    | Cycle workspace type (tabs/mdi/stack/grid).      | 
+|                      |   Note that "mdi" type is not supported on all   |
+|                      |   platforms.                                     |
++----------------------+--------------------------------------------------+
+| k                    | Add a channel with a generic name.               | 
++----------------------+--------------------------------------------------+
+| Left, Right          | Previous/Next channel.                           | 
+|   (arrow keys)       |                                                  |
++----------------------+--------------------------------------------------+
+| Up, Down             | Previous/Next image in channel.                  | 
+|   (arrow keys)       |                                                  |
 +----------------------+--------------------------------------------------+
 
 .. note:: If there are one or more plugins active, additional mouse

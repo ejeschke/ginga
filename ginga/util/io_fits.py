@@ -1,9 +1,6 @@
 #
 # io_fits.py -- Module wrapper for loading FITS files.
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -125,7 +122,7 @@ class PyFitsFileHandler(BaseFitsFileHandler):
         return (data, naxispath)
 
     def load_file(self, filespec, ahdr, numhdu=None, naxispath=None,
-                  phdr=None):
+                  phdr=None, memmap=None):
 
         info = iohelper.get_fileinfo(filespec)
         if not info.ondisk:
@@ -134,7 +131,7 @@ class PyFitsFileHandler(BaseFitsFileHandler):
         filepath = info.filepath
 
         self.logger.debug("Loading file '%s' ..." % (filepath))
-        fits_f = pyfits.open(filepath, 'readonly')
+        fits_f = pyfits.open(filepath, 'readonly', memmap=memmap)
 
         # this seems to be necessary now for some fits files...
         try:
@@ -266,7 +263,7 @@ class FitsioFileHandler(BaseFitsFileHandler):
         return (data, naxispath)
 
     def load_file(self, filespec, ahdr, numhdu=None, naxispath=None,
-                  phdr=None):
+                  phdr=None, memmap=None):
 
         info = iohelper.get_fileinfo(filespec)
         if not info.ondisk:
@@ -275,7 +272,7 @@ class FitsioFileHandler(BaseFitsFileHandler):
         filepath = info.filepath
 
         self.logger.debug("Loading file '%s' ..." % (filepath))
-        fits_f = fitsio.FITS(filepath)
+        fits_f = fitsio.FITS(filepath, memmap=memmap)
 
         if numhdu is None:
             found_valid_hdu = False

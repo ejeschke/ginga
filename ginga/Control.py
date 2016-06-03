@@ -114,7 +114,8 @@ class GingaControl(Callback.Callbacks):
                                   # Offset to add to numpy-based coords
                                   pixel_coords_offset=1.0,
                                   # inherit from primary header
-                                  inherit_primary_header=False)
+                                  inherit_primary_header=False,
+                                  cursor_interval=0.050)
 
         # Should channel change as mouse moves between windows
         self.channel_follows_focus = self.settings['channel_follows_focus']
@@ -136,6 +137,13 @@ class GingaControl(Callback.Callbacks):
 
         self.operations = []
 
+        # state for implementing field-info callback
+        self._cursor_task = self.get_timer()
+        self._cursor_task.set_callback('expired', self._cursor_timer_cb)
+        self._cursor_last_update = time.time()
+        self.cursor_interval = self.settings.get('cursor_interval', 0.050)
+
+
     def get_ServerBank(self):
         return self.imgsrv
 
@@ -150,6 +158,45 @@ class GingaControl(Callback.Callbacks):
     ####################################################
 
     def showxy(self, viewer, data_x, data_y):
+        """Called by the mouse-tracking callback to handle reporting of
+        cursor position to various plugins that subscribe to the
+        'field-info' callback.
+        """
+        # This is an optimization to get around slow coordinate
+        # transformation by astropy and possibly other WCS packages,
+        # which causes delay for other mouse tracking events, e.g.
+        # the zoom plugin.
+        # We only update the under cursor information every period
+        # defined by (self.cursor_interval) sec.
+        #
+        # If the refresh interval has expired then update the info;
+        # otherwise (re)set the timer until the end of the interval.
+        cur_time = time.time()
+        elapsed = cur_time - self._cursor_last_update
+        if elapsed > self.cursor_interval:
+            # cancel timer
+            self._cursor_task.clear()
+            self._showxy(viewer, data_x, data_y)
+        else:
+            # store needed data into the timer data area
+            self._cursor_task.data.setvals(viewer=viewer,
+                                           data_x=data_x, data_y=data_y)
+            # calculate delta until end of refresh interval
+            period = self.cursor_interval - elapsed
+            # set timer conditionally (only if it hasn't yet been set)
+            self._cursor_task.cond_set(period)
+        return True
+
+    def _cursor_timer_cb(self, timer):
+        """Callback when the cursor timer expires.
+        """
+        data = timer.data
+        self.gui_do(self._showxy, data.viewer, data.data_x, data.data_y)
+
+    def _showxy(self, viewer, data_x, data_y):
+        """Update the info from the last position recorded under the cursor.
+        """
+        self._cursor_last_update = time.time()
         try:
             image = viewer.get_image()
             if image is None:
