@@ -1273,7 +1273,7 @@ class Rectangle(TwoPointMixin, CanvasObjectBase):
 
         if self.drawdims:
             fontsize = self.scale_font(viewer)
-            cr.set_font(self.font, fontsize)
+            cr.set_font(self.font, fontsize, color=self.color)
 
             cx1, cy1 = cpoints[0]
             cx2, cy2 = cpoints[2]
