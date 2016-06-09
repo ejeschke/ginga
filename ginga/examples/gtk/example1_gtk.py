@@ -31,7 +31,7 @@ class FitsViewer(object):
         root.connect("delete_event", lambda w, e: self.quit(w))
         self.root = root
 
-        self.select = GtkHelp.FileSelection(rootr)
+        self.select = GtkHelp.FileSelection(root)
         vbox = gtk.VBox(spacing=2)
 
         fi = ImageViewCanvas(logger)
