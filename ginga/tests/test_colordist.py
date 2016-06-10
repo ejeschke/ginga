@@ -1,25 +1,18 @@
 import unittest
-import logging
 import numpy as np
 
 from ginga import ColorDist as cd
 
-from functools import wraps
-
-
-class TestError(Exception):
-    pass
 
 class TestColorDist(unittest.TestCase):
-
-    def setUp(self):
-        pass
     
     def test_ColorDists(self):
+
         hashsize = 256
         colorlen = 256
-        data = np.tile(np.arange(hashsize, dtype='int'), (20,1))
-        
+
+        # wrapper needed to first scale the data to range(0,1)
+        # then returns with the original range given
         def scale_and_rescale(func):
             def wrapper(x, **kwargs):
                 base = x / float(hashsize)
@@ -28,6 +21,8 @@ class TestColorDist(unittest.TestCase):
                 return result.astype('int')
             return wrapper
 
+        # look at http://ds9.si.edu/doc/ref/how.html or in 'ColorDist.py' 
+        # for how these functions are defined
         @scale_and_rescale
         def test_linear(x):
             return x
@@ -55,12 +50,22 @@ class TestColorDist(unittest.TestCase):
         @scale_and_rescale
         def test_sinh(x, factor= 10.0, nonlinearity= 3.0):
             return np.sinh(nonlinearity*x)/factor
-        
-        @scale_and_rescale
-        def test_histeq(x):
-            return x # not right, certain fail case
 
-        x = data[0]
+        def test_histeq(x):
+            idx = x.clip(0, hashsize-1)
+            hist, bins = np.histogram(idx.ravel(), hashsize, density=False)
+            cdf = hist.cumsum()
+
+            l = (cdf - cdf.min()) * (colorlen - 1) / (cdf.max() - cdf.min())
+            hash = l.astype('int')
+            return hash[idx]
+
+
+        # test data
+        data = np.tile(np.arange(hashsize, dtype='int'), (20,1))
+        x = data[0] # only using the first row as input
+
+        # example test results, use this to compare against the actual module
         dists = {
             'linear': test_linear(x),
             'log': test_log(x),
@@ -74,18 +79,13 @@ class TestColorDist(unittest.TestCase):
         for dist_name in dists.keys():
             dist = cd.get_dist(dist_name)(hashsize, colorlen=colorlen)
             out = dist.hash_array(data)
-            y = out[0]
+            y = out[0] # again, only using first row for input/ouput testing
             expected_y = dists[dist_name]
         
             try:
                 assert np.array_equal(y, expected_y)
             except:
-                print y
-                print expected_y
-                print AssertionError("Assertion failed for " + dist_name)
-    
-    def tearDown(self):
-        pass
+                raise AssertionError("Assertion failed for " + dist_name)
 
     
 if __name__ == '__main__':
