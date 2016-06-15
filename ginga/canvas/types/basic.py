@@ -605,12 +605,12 @@ class SquareBox(OnePointOneRadiusMixin, CanvasObjectBase):
         else:
             raise ValueError("No point corresponding to index %d" % (i))
 
-    def get_edit_points(self):
+    def get_edit_points(self, viewer):
         points = self.get_data_points(points=(
             self.crdmap.offset_pt((self.x, self.y),
                                   self.radius, self.radius),
             ))
-        move_pt, scale_pt, rotate_pt = self.get_move_scale_rotate_pts()
+        move_pt, scale_pt, rotate_pt = self.get_move_scale_rotate_pts(viewer)
         return [move_pt,
                 ScalePoint(*points[0]),
                 rotate_pt,
@@ -774,7 +774,8 @@ class Ellipse(OnePointTwoRadiusMixin, CanvasObjectBase):
 
         if hasattr(cr, 'draw_ellipse'):
             # <- backend can draw rotated ellipses
-            cpoints = self.get_cpoints(viewer, points=self.get_edit_points())
+            cpoints = self.get_cpoints(viewer,
+                                       points=self.get_edit_points(viewer))
             cx, cy = cpoints[0]
             cxradius = abs(cpoints[1][0] - cx)
             cyradius = abs(cpoints[2][1] - cy)
@@ -1026,7 +1027,7 @@ class Circle(OnePointOneRadiusMixin, CanvasObjectBase):
         res = self.contains_arr(x_arr, y_arr)
         return res[0]
 
-    def get_edit_points(self):
+    def get_edit_points(self, viewer):
         points = self.get_data_points(points=(
             (self.x, self.y),
             self.crdmap.offset_pt((self.x, self.y), self.radius, 0),
@@ -1136,9 +1137,9 @@ class Point(OnePointOneRadiusMixin, CanvasObjectBase):
         return self.within_radius(viewer, data_x, data_y, xd, yd,
                                   self.cap_radius)
 
-    def get_edit_points(self):
+    def get_edit_points(self, viewer):
         points = self.get_data_points(points=[(self.x, self.y)])
-        move_pt, scale_pt, rotate_pt = self.get_move_scale_rotate_pts()
+        move_pt, scale_pt, rotate_pt = self.get_move_scale_rotate_pts(viewer)
         return [MovePoint(*points[0]), scale_pt]
 
     def draw(self, viewer):
@@ -1272,7 +1273,7 @@ class Rectangle(TwoPointMixin, CanvasObjectBase):
 
         if self.drawdims:
             fontsize = self.scale_font(viewer)
-            cr.set_font(self.font, fontsize)
+            cr.set_font(self.font, fontsize, color=self.color)
 
             cx1, cy1 = cpoints[0]
             cx2, cy2 = cpoints[2]

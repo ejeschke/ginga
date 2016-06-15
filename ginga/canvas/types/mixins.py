@@ -41,7 +41,7 @@ class OnePointMixin(object):
         else:
             raise ValueError("No point corresponding to index %d" % (i))
 
-    def get_edit_points(self):
+    def get_edit_points(self, viewer):
         return [MovePoint(*self.get_center_pt())]
 
     def get_llur(self):
@@ -91,8 +91,8 @@ class TwoPointMixin(object):
         else:
             raise ValueError("No point corresponding to index %d" % (i))
 
-    def get_edit_points(self):
-        move_pt, scale_pt, rotate_pt = self.get_move_scale_rotate_pts()
+    def get_edit_points(self, viewer):
+        move_pt, scale_pt, rotate_pt = self.get_move_scale_rotate_pts(viewer)
         points = self.get_data_points()
         return [move_pt,
                 Point(*points[0]),
@@ -130,8 +130,8 @@ class OnePointOneRadiusMixin(OnePointMixin):
         else:
             raise ValueError("No point corresponding to index %d" % (i))
 
-    def get_edit_points(self):
-        move_pt, scale_pt, rotate_pt = self.get_move_scale_rotate_pts()
+    def get_edit_points(self, viewer):
+        move_pt, scale_pt, rotate_pt = self.get_move_scale_rotate_pts(viewer)
         points = self.get_data_points(points=(
             self.crdmap.offset_pt((self.x, self.y), self.radius, 0),
             ))
@@ -201,8 +201,8 @@ class OnePointTwoRadiusMixin(OnePointMixin):
         else:
             raise ValueError("No point corresponding to index %d" % (i))
 
-    def get_edit_points(self):
-        move_pt, scale_pt, rotate_pt = self.get_move_scale_rotate_pts()
+    def get_edit_points(self, viewer):
+        move_pt, scale_pt, rotate_pt = self.get_move_scale_rotate_pts(viewer)
 
         points = (self.crdmap.offset_pt((self.x, self.y),
                                         self.xradius, 0),
@@ -351,8 +351,8 @@ class PolygonMixin(object):
         else:
             raise ValueError("No point corresponding to index %d" % (i))
 
-    def get_edit_points(self):
-        move_pt, scale_pt, rotate_pt = self.get_move_scale_rotate_pts()
+    def get_edit_points(self, viewer):
+        move_pt, scale_pt, rotate_pt = self.get_move_scale_rotate_pts(viewer)
         points = self.get_data_points()
         return [move_pt] + list(points) + [scale_pt, rotate_pt]
 

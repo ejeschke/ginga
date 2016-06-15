@@ -191,11 +191,19 @@ class TextArea(WidgetBase):
         else:
             tw.set_wrap_mode(gtk.WRAP_NONE)
         tw.set_editable(editable)
-        self.widget = tw
+        self.tw = tw
+
+        # this widget has a built in ScrollArea to match Qt functionality
+        sw = gtk.ScrolledWindow()
+        sw.set_border_width(2)
+        sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+        sw.add(self.tw)
+        self.widget = sw
+
         self.histlimit = 0
 
     def append_text(self, text, autoscroll=True):
-        buf = self.widget.get_buffer()
+        buf = self.tw.get_buffer()
         end = buf.get_end_iter()
         buf.insert(end, text)
 
@@ -206,20 +214,20 @@ class TextArea(WidgetBase):
 
         end = buf.get_end_iter()
         mark = buf.get_insert()
-        #self.widget.scroll_to_iter(end, 0.5)
+        #self.tw.scroll_to_iter(end, 0.5)
         # NOTE: this was causing a segfault if the text widget is
         # not mapped yet!  Seems to be fixed in recent versions of
         # gtk
         buf.move_mark(mark, end)
-        res = self.widget.scroll_to_mark(mark, 0.2, True)
+        res = self.tw.scroll_to_mark(mark, 0.2, True)
 
     def get_text(self):
-        buf = self.widget.get_buffer()
+        buf = self.tw.get_buffer()
         return buf.get_text()
 
     def _history_housekeeping(self):
         # remove some lines to keep us within our history limit
-        buf = self.widget.get_buffer()
+        buf = self.tw.get_buffer()
         numlines = buf.get_line_count()
         if numlines > self.histlimit:
             rmcount = int(numlines - self.histlimit)
@@ -228,7 +236,7 @@ class TextArea(WidgetBase):
             buf.delete(start, end)
 
     def clear(self):
-        buf = self.widget.get_buffer()
+        buf = self.tw.get_buffer()
         start = buf.get_start_iter()
         end = buf.get_end_iter()
         buf.delete(start, end)
@@ -242,16 +250,16 @@ class TextArea(WidgetBase):
         self._history_housekeeping()
 
     def set_editable(self, tf):
-        self.widget.set_editable(tf)
+        self.tw.set_editable(tf)
 
     def set_font(self, font):
-        self.widget.modify_font(font)
+        self.tw.modify_font(font)
 
     def set_wrap(self, tf):
         if tf:
-            self.widget.set_wrap_mode(gtk.WRAP_WORD)
+            self.tw.set_wrap_mode(gtk.WRAP_WORD)
         else:
-            self.widget.set_wrap_mode(gtk.WRAP_NONE)
+            self.tw.set_wrap_mode(gtk.WRAP_NONE)
 
 class Label(WidgetBase):
     def __init__(self, text='', halign='left', style='normal', menu=None):

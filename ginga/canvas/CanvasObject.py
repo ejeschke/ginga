@@ -52,13 +52,14 @@ class CanvasObjectBase(Callback.Callbacks):
         self.__dict__.update(kwdargs)
         self.data = None
         self.crdmap = None
+        self.tag = None
         # For debugging
         self.name = None
         self.viewer = None
 
-        ## # For callbacks
-        ## for name in ('modified', ):
-        ##     self.enable_callback(name)
+        # For callbacks
+        for name in ('edited', 'pick-down', 'pick-move', 'pick-up'):
+            self.enable_callback(name)
 
     def initialize(self, canvas, viewer, logger):
         self.viewer = viewer
@@ -136,6 +137,9 @@ class CanvasObjectBase(Callback.Callbacks):
                 color = self.color
                 # Draw edit control points in different colors than the others
                 if isinstance(pt, EditPoint):
+                    cr.set_fill('black', alpha=alpha)
+                    cr.draw_circle(cx, cy, radius+2.0)
+
                     color = pt.edit_color
 
                 cr.set_fill(color, alpha=alpha)
@@ -150,7 +154,7 @@ class CanvasObjectBase(Callback.Callbacks):
         cr.set_line(color='cyan', style='dash')
         cr.draw_polygon(cpoints)
 
-        points = self.get_edit_points()
+        points = self.get_edit_points(viewer)
         cpoints = self.get_cpoints(viewer, points=points)
         # preserve point types for coloring
         def _map_cpt(pt, cpt):
@@ -453,14 +457,15 @@ class CanvasObjectBase(Callback.Callbacks):
     def get_reference_pt(self):
         return self.get_center_pt()
 
-    def get_move_scale_rotate_pts(self):
+    def get_move_scale_rotate_pts(self, viewer):
         """Returns 3 edit control points for editing this object: a move
         point, a scale point and a rotate point.  These points are all in
         data coordinates.
         """
+        scale = viewer.get_scale_min()
         ref_x, ref_y = self.get_center_pt()
         xl, yl, xu, yu = self.get_llur()
-        offset = 10
+        offset = 8.0 / scale
         scl_x, scl_y = xl - offset, yl - offset
         rot_x, rot_y = xu + offset, yu + offset
         if hasattr(self, 'rot_deg'):

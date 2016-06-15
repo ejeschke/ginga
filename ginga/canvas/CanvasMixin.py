@@ -62,7 +62,7 @@ class CanvasMixin(object):
                 # make up our own tag
                 tag = '@%d' % (self.count)
 
-        #obj.tag = tag
+        obj.tag = tag
         self.tags[tag] = obj
         self.add_object(obj, belowThis=belowThis)
 

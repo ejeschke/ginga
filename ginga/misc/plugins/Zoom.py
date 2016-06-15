@@ -281,7 +281,7 @@ class Zoom(GingaPlugin.GlobalPlugin):
             # calculate delta until end of refresh interval
             period = self.refresh_interval - elapsed
             # set timer
-            self.zoomtask.set(period)
+            self.zoomtask.cond_set(period)
         return True
 
     def motion_cb(self, fitsimage, button, data_x, data_y):

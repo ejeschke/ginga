@@ -66,13 +66,15 @@ class FitsViewer(object):
         canvas = self.dc.DrawingCanvas()
         canvas.enable_draw(True)
         canvas.enable_edit(True)
-        canvas.set_drawtype('rectangle', color='lightblue')
+        canvas.set_drawtype('rectangle', color='lightblue', coord='data')
         canvas.setSurface(fi)
         self.canvas = canvas
         # add canvas to view
         fi.get_canvas().add(canvas)
         canvas.ui_setActive(True)
         canvas.register_for_cursor_drawing(fi)
+        canvas.add_callback('draw-event', self.draw_cb)
+
         self.drawtypes = canvas.get_drawtypes()
         self.drawtypes.sort()
 
@@ -141,8 +143,10 @@ class FitsViewer(object):
         btn2.set_tooltip("Choose this to edit things on the canvas")
         hbox.add_widget(btn2)
 
-        btn3 = Widgets.CheckBox("I'm using a trackpad")
-        btn3.add_callback('activated', lambda w, tf: self.use_trackpad_cb(tf))
+        btn3 = Widgets.RadioButton("Pick", group=btn1)
+        btn3.set_state(mode == 'pick')
+        btn3.add_callback('activated', lambda w, val: self.set_mode_cb('pick', val))
+        btn3.set_tooltip("Choose this to pick things on the canvas")
         hbox.add_widget(btn3)
 
         hbox.add_widget(Widgets.Label(''), stretch=1)
@@ -228,12 +232,18 @@ class FitsViewer(object):
             self.canvas.set_draw_mode(mode)
         return True
 
-    def use_trackpad_cb(self, state):
-        settings = self.fitsimage.get_bindings().get_settings()
-        val = 1.0
-        if state:
-            val = 0.1
-        settings.set(scroll_zoom_acceleration=val)
+    def draw_cb(self, canvas, tag):
+        obj = canvas.get_object_by_tag(tag)
+        obj.add_callback('pick-down', self.pick_cb)
+        obj.add_callback('edited', self.edit_cb)
+
+    def pick_cb(self, obj, canvas, event, pt):
+        self.logger.info("pick point is %s" % (str(pt)))
+        return True
+
+    def edit_cb(self, obj):
+        self.logger.info("object %s has been edited" % (obj.kind))
+        return True
 
     def closed(self, w):
         self.logger.info("Top window closed.")

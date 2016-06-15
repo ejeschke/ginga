@@ -1732,6 +1732,18 @@ class ImageViewBase(Callback.Callbacks):
         scalefactor = max(self._scale_x, self._scale_y)
         return scalefactor
 
+    def get_scale_min(self):
+        """Get minimum scale factor.
+
+        Returns
+        -------
+        scalefactor : float
+            Scale factor for X or Y, whichever is smaller.
+
+        """
+        scalefactor = min(self._scale_x, self._scale_y)
+        return scalefactor
+
     def get_scale_xy(self):
         """Get scale factors.
 

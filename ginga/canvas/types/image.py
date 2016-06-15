@@ -287,7 +287,7 @@ class Image(OnePointMixin, CanvasObjectBase):
 
         self.reset_optimize()
 
-    def get_edit_points(self):
+    def get_edit_points(self, viewer):
         x1, y1, x2, y2 = self.get_coords()
         return [MovePoint(*self.get_center_pt()),    # location
                 Point(x2, (y1 + y2) / 2.),   # width scale

@@ -104,7 +104,7 @@ class AstroImage(BaseImage):
         self.wcs.load_header(hdu.header, fobj=fobj)
 
     def load_file(self, filepath, numhdu=None, naxispath=None,
-                  allow_numhdu_override=True):
+                  allow_numhdu_override=True, memmap=None):
         self.logger.debug("Loading file '%s' ..." % (filepath))
         self.clear_metadata()
 
@@ -117,7 +117,8 @@ class AstroImage(BaseImage):
         _data, numhdu_, naxispath = self.io.load_file(info.filepath, ahdr,
                                                       numhdu=numhdu,
                                                       naxispath=naxispath,
-                                                      phdr=self._primary_hdr)
+                                                      phdr=self._primary_hdr,
+                                                      memmap=memmap)
         # this is a handle to the full data array
         self._md_data = _data
 
