@@ -1,4 +1,3 @@
-#! /usr/bin/env python
 #
 # fits2pdf.py -- Image a FITS file as a PDF.
 #
@@ -9,22 +8,35 @@
 # Please see the file LICENSE.txt for details.
 #
 """
-   $ ./fits2pdf.py <fitsfile> <output.pdf>
+To run this script::
+
+    $ ./fits2pdf.py <fitsfile> <output.pdf>
+
 """
-import sys, os
+from __future__ import absolute_import, division, print_function
+
 import logging
+import sys
+from optparse import OptionParser
 
-from ginga.cairow.ImageViewCairo import ImageViewCairo
 import cairo
-from ginga import AstroImage
 
+from ..cairow.ImageViewCairo import ImageViewCairo
+from ..AstroImage import AstroImage
 
-STD_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcName)s) | %(message)s'
+try:
+    from ..version import version
+except ImportError:
+    version = 'unknown'
 
-point_in = 1/72.0
+STD_FORMAT = ('%(asctime)s | %(levelname)1.1s | '
+              '%(filename)s:%(lineno)d (%(funcName)s) | %(message)s')
+point_in = 1 / 72.0
 point_cm = 0.0352777778
 
-def main(options, args):
+
+def convert(filepath, outfilepath):
+    """Convert FITS image to PDF."""
 
     logger = logging.getLogger("example1")
     logger.setLevel(logging.INFO)
@@ -37,8 +49,7 @@ def main(options, args):
     fi.configure(500, 1000)
 
     # Load fits file
-    filepath = args[0]
-    image = AstroImage.AstroImage(logger=logger)
+    image = AstroImage(logger=logger)
     image.load_file(filepath)
 
     # Make any adjustments to the image that we want
@@ -51,8 +62,7 @@ def main(options, args):
     ht_pts = 11.0 / point_in
     wd_pts = 8.5 / point_in
     off_x, off_y = 0, 0
-    
-    outfilepath = args[1]
+
     out_f = open(outfilepath, 'w')
     surface = cairo.PDFSurface(out_f, wd_pts, ht_pts)
     # set pixels per inch
@@ -66,8 +76,13 @@ def main(options, args):
     finally:
         out_f.close()
 
-    
-if __name__ == '__main__':
-    main(None, sys.argv[1:])
-    
+
+def _main():
+    """Run from command line."""
+    usage = "usage: %prog input output"
+    optprs = OptionParser(usage=usage, version=version)
+    (options, args) = optprs.parse_args(sys.argv[1:])
+
+    convert(args)
+
 # END
