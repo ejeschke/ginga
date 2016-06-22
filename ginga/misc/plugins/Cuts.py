@@ -482,7 +482,8 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         self.canvas.ui_setActive(True)
         self.fv.showStatus("Draw a line with the right mouse button")
         self.replot_all()
-        self.cuts_image = self.fitsimage.get_image()
+        if self.use_slit:
+            self.cuts_image = self.fitsimage.get_image()
 
     def stop(self):
         # remove the canvas from the image
@@ -497,8 +498,8 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         if self.use_slit:
             image = self.fitsimage.get_image()
             if image != self.cuts_image:
+                self.cuts_image = image
                 self.build_axes()
-        self.cuts_image = image
 
         self.replot_all()
 

@@ -6,6 +6,7 @@
 #
 import os
 import pprint
+import ast
 import numpy
 
 from . import Callback
@@ -153,7 +154,7 @@ class SettingGroup(object):
                     try:
                         i = line.index('=')
                         key = line[:i].strip()
-                        val = eval(line[i+1:].strip())
+                        val = ast.literal_eval(line[i+1:].strip())
                         d[key] = val
                     except Exception as e:
                         # silently skip parse errors, for now
