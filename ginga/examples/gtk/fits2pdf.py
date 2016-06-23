@@ -1,3 +1,4 @@
+#! /usr/bin/env python
 #
 # fits2pdf.py -- Image a FITS file as a PDF.
 #
@@ -21,11 +22,11 @@ from optparse import OptionParser
 
 import cairo
 
-from ..cairow.ImageViewCairo import ImageViewCairo
-from ..AstroImage import AstroImage
+from ginga.cairow.ImageViewCairo import ImageViewCairo
+from ginga.AstroImage import AstroImage
 
 try:
-    from ..version import version
+    from ginga.version import version
 except ImportError:
     version = 'unknown'
 
@@ -77,7 +78,7 @@ def convert(filepath, outfilepath):
         out_f.close()
 
 
-def _main():
+if __name__ == "__main__":
     """Run from command line."""
     usage = "usage: %prog input output"
     optprs = OptionParser(usage=usage, version=version)
