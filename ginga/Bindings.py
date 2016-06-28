@@ -570,9 +570,9 @@ class ImageViewBindings(object):
         direction = self.get_direction(direction, rev=rev)
         mult = 1.0
         if direction == 'up':
-                mult = factor
+            mult = factor
         elif direction == 'down':
-                mult = 1.0 / factor
+            mult = 1.0 / factor
         scale_x, scale_y = scale_x * mult, scale_y * mult
         viewer.scale_to(scale_x, scale_y)
         if msg:

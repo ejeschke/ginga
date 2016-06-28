@@ -930,9 +930,10 @@ class ImageViewBase(Callback.Callbacks):
 
         with self._defer_lock:
             whence = min(self._defer_whence, whence)
-            # If there is no redraw scheduled:
-            if not self._defer_flag:
-                elapsed = time.time() - self.time_last_redraw
+            elapsed = time.time() - self.time_last_redraw
+
+            # If there is no redraw scheduled, or we are overdue for one:
+            if (not self._defer_flag) or (elapsed > self.defer_lagtime):
                 # If more time than defer_lagtime has passed since the
                 # last redraw then just do the redraw immediately
                 if elapsed > self.defer_lagtime:
@@ -1312,8 +1313,9 @@ class ImageViewBase(Callback.Callbacks):
 
         # Rotate the image as necessary
         if rot_deg != 0:
-            # TODO: this is the slowest part of the rendering
-            # need to find a way to speed it up!
+            # This is the slowest part of the rendering--install the OpenCv or pyopencl
+            # packages to speed it up
+            data = numpy.ascontiguousarray(data)
             data = trcalc.rotate_clip(data, -rot_deg, out=data)
 
         split2_time = time.time()
@@ -1670,7 +1672,7 @@ class ImageViewBase(Callback.Callbacks):
             # final sanity check on resulting output image size
             if (win_wd * scale_x < 1) or (win_ht * scale_y < 1):
                 self.logger.warning("resulting scale (%f, %f) "
-                                    "would result in size of <0 in width or height" % (
+                                    "would result in size of <1 in width or height" % (
                     scale_x, scale_y))
                 return
 
