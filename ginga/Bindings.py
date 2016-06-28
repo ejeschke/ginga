@@ -568,6 +568,7 @@ class ImageViewBindings(object):
         rev = self.settings.get('zoom_scroll_reverse', False)
         scale_x, scale_y = viewer.get_scale_xy()
         direction = self.get_direction(direction, rev=rev)
+        mult = 1.0
         if direction == 'up':
                 mult = factor
         elif direction == 'down':
