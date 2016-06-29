@@ -1099,14 +1099,17 @@ class ThreadPool(object):
                 self.workers.append(t)
                 t.start()
 
+            # if started with wait=True, then expect that threads will register
+            # themselves and last one up will set status to "up"
             if wait:
                 # Threads are on the way up.  Wait until last one starts.
                 while self.status != 'up' and not self.ev_quit.isSet():
                     self.logger.debug("waiting for threads: count=%d" % \
                                       self.runningcount)
                     self.regcond.wait()
-
-            self.status = 'up'
+            else:
+                # otherwise, we just assume the pool is up
+                self.status = 'up'
             self.logger.debug("startall done")
 
 
