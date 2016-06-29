@@ -1106,6 +1106,7 @@ class ThreadPool(object):
                                       self.runningcount)
                     self.regcond.wait()
 
+            self.status = 'up'
             self.logger.debug("startall done")
 
 
