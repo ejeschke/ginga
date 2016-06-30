@@ -673,7 +673,11 @@ class SymmetricGridWidget(Widgets.GridBox):
 
     def _relayout(self, widgets):
         # remove all the old widgets
-        self.remove_all()
+        # TEMP: this call causes a recursive loop to happen
+        #self.remove_all()
+        children = list(self.get_children())
+        for child in children:
+            super(SymmetricGridWidget, self).remove(child)
 
         # calculate number of rows and cols, try to maintain a square
         # TODO: take into account the window geometry

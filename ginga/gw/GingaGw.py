@@ -482,7 +482,7 @@ class GingaView(GwMain.GwMain, Widgets.Application):
 
         b.channel_prefix.set_text("Image")
         spnbtn = b.num_channels
-        spnbtn.set_limits(0, 12, incr_value=1)
+        spnbtn.set_limits(0, 36, incr_value=1)
         spnbtn.set_value(4)
 
         dialog = Widgets.Dialog(title="Add Workspace",
