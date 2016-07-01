@@ -264,6 +264,8 @@ class GingaControl(Callback.Callbacks):
             self.cycle_workspace_type()
         elif keyname == 'k':
             self.add_channel_auto()
+        elif keyname == 'K':
+            self.remove_channel_auto()
         ## elif keyname == 'escape':
         ##     self.reset_viewer()
         elif keyname in ('up',):
@@ -738,8 +740,11 @@ class GingaControl(Callback.Callbacks):
         return True
 
     def get_current_workspace(self):
-        # TODO: track current workspace
-        return self.ds.get_ws('channels')
+        channel = self.get_channelInfo()
+        if channel is None:
+            return None
+        ws = self.ds.get_ws(channel.workspace)
+        return ws
 
     def prev_channel(self):
         ws = self.get_current_workspace()
@@ -761,6 +766,12 @@ class GingaControl(Callback.Callbacks):
         ws = self.get_current_workspace()
         chname = self.make_channel_name('Image')
         self.add_channel(chname, workspace=ws.name)
+
+    def remove_channel_auto(self):
+        channel = self.get_channelInfo()
+        if channel is None:
+            return
+        self.delete_channel(channel.name)
 
     def configure_workspace(self, wstype):
         ws = self.get_current_workspace()
@@ -1104,8 +1115,13 @@ class GingaControl(Callback.Callbacks):
             # Close local plugins open on this channel
             self._close_plugins(channel)
 
+            try:
+                idx = self.channelNames.index(chname)
+            except ValueError:
+                idx = 0
+
             # Update the channels control
-            self.channelNames.remove(chname)
+            self.channelNames.remove(channel.name)
             self.channelNames.sort()
 
             self.ds.remove_tab(chname)
@@ -1113,8 +1129,11 @@ class GingaControl(Callback.Callbacks):
             self.prefs.remove_settings('channel_'+chname)
 
             # pick new channel
-            if len(self.channelNames) > 0:
-                self.change_channel(self.channelNames[0])
+            num_channels = len(self.channelNames)
+            if num_channels > 0:
+                if idx >= num_channels:
+                    idx = num_channels - 1
+                self.change_channel(self.channelNames[idx])
             else:
                 self.cur_channel = None
 
