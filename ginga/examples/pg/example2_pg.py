@@ -272,7 +272,14 @@ def main(options, args):
         try:
             trcalc.use('opencv')
         except Exception as e:
-            logger.warning("Error using opencv: %s" % str(e))
+            logger.warning("Error using OpenCv: %s" % str(e))
+
+    if options.use_opencl:
+        from ginga import trcalc
+        try:
+            trcalc.use('opencl')
+        except Exception as e:
+            logger.warning("Error using OpenCL: %s" % str(e))
 
     base_url = "http://%s:%d/app" % (options.host, options.port)
 
@@ -323,6 +330,9 @@ if __name__ == "__main__":
     optprs.add_option("--opencv", dest="use_opencv", default=False,
                       action="store_true",
                       help="Use OpenCv acceleration")
+    optprs.add_option("--opencl", dest="use_opencl", default=False,
+                      action="store_true",
+                      help="Use OpenCL acceleration")
     optprs.add_option("--port", dest="port", metavar="PORT",
                       type=int, default=9909,
                       help="Listen on PORT for connections")

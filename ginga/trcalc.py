@@ -1,9 +1,6 @@
 #
 # trcalc.py -- transformation calculations for image data
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -12,9 +9,9 @@ import numpy
 import time
 
 interpolation_methods = ['basic']
-
 def use(pkgname):
     global have_opencv, cv2, cv2_resize
+    global have_opencl, trcalc_cl
 
     if pkgname == 'opencv':
         import cv2
@@ -30,6 +27,15 @@ def use(pkgname):
             interpolation_methods.extend(cv2_resize.keys())
             interpolation_methods.sort()
 
+    elif pkgname == 'opencl':
+        try:
+            from ginga.opencl import CL
+            have_opencl = True
+
+            trcalc_cl = CL.CL('trcalc.cl')
+        except Exception as e:
+            raise ImportError(e)
+
 have_opencv = False
 try:
     # optional opencv package speeds up certain operations, especially
@@ -37,6 +43,19 @@ try:
     # TEMP: opencv broken on anaconda mac (importing causes segv)
     # --> temporarily disable, can enable using use() function above
     #use('opencv')
+    pass
+
+except ImportError:
+    pass
+
+have_opencl = False
+trcalc_cl = None
+try:
+    # optional opencl package speeds up certain operations, especially
+    # rotation
+    # TEMP: opencv not yet ready for enabling by default
+    # --> temporarily disable, can enable using use() function above
+    #use('opencl')
     pass
 
 except ImportError:
@@ -55,6 +74,7 @@ except ImportError:
 # For testing
 #have_numexpr = False
 #have_opencv = False
+#have_opencl = False
 
 def get_center(data_np):
     ht, wd = data_np.shape[:2]
@@ -89,7 +109,7 @@ def rotate_coord(coord, theta_deg, offsets):
     return arr
 
 def rotate_clip(data_np, theta_deg, rotctr_x=None, rotctr_y=None,
-                out=None):
+                out=None, use_opencl=True):
     """
     Rotate numpy array `data_np` by `theta_deg` around rotation center
     (rotctr_x, rotctr_y).  If the rotation center is omitted it defaults
@@ -117,6 +137,7 @@ def rotate_clip(data_np, theta_deg, rotctr_x=None, rotctr_y=None,
         if out is not None:
             out[:, :, ...] = cv2.warpAffine(data_np, M, (wd, ht))
             newdata = out
+
         else:
             newdata = cv2.warpAffine(data_np, M, (wd, ht))
             new_ht, new_wd = newdata.shape[:2]
@@ -124,6 +145,18 @@ def rotate_clip(data_np, theta_deg, rotctr_x=None, rotctr_y=None,
             assert (wd == new_wd) and (ht == new_ht), \
                    Exception("rotated cutout is %dx%d original=%dx%d" % (
                 new_wd, new_ht, wd, ht))
+
+    elif have_opencl and use_opencl:
+        # opencl is very close, sometimes better, sometimes worse
+        if (data_np.dtype == numpy.uint8) and (len(data_np.shape) == 3):
+            # special case for 3D RGB images
+            newdata = trcalc_cl.rotate_clip_uint32(data_np, theta_deg,
+                                                   rotctr_x, rotctr_y,
+                                                   out=out)
+        else:
+            newdata = trcalc_cl.rotate_clip(data_np, theta_deg,
+                                            rotctr_x, rotctr_y,
+                                            out=out)
 
     else:
         yi, xi = numpy.mgrid[0:ht, 0:wd]
@@ -165,7 +198,8 @@ def rotate_clip(data_np, theta_deg, rotctr_x=None, rotctr_y=None,
     return newdata
 
 
-def rotate(data_np, theta_deg, rotctr_x=None, rotctr_y=None):
+def rotate(data_np, theta_deg, rotctr_x=None, rotctr_y=None, pad=20,
+           use_opencl=True):
 
     # If there is no rotation, then we are done
     if math.fmod(theta_deg, 360.0) == 0.0:
@@ -173,37 +207,38 @@ def rotate(data_np, theta_deg, rotctr_x=None, rotctr_y=None):
 
     ht, wd = data_np.shape[:2]
 
-    ## ocx, ocy = rotctr_x, rotctr_y
-    ## if ocx is None:
-    ##     ocx = wd // 2
-    ## if ocy is None:
-    ##     ocy = ht // 2
     ocx, ocy = wd // 2, ht // 2
 
     # Make a square with room to rotate
-    slop = 20
-    side = int(math.sqrt(wd**2 + ht**2) + slop)
+    side = int(math.sqrt(wd**2 + ht**2) + pad)
     new_wd = new_ht = side
     dims = (new_ht, new_wd) + data_np.shape[2:]
-    # TODO: fill with a different value?
-    newdata = numpy.zeros(dims)
     # Find center of new data array
     ncx, ncy = new_wd // 2, new_ht // 2
 
-    # Overlay the old image on the new (blank) image
-    ldx, rdx = min(ocx, ncx), min(wd - ocx, ncx)
-    bdy, tdy = min(ocy, ncy), min(ht - ocy, ncy)
+    if have_opencl and use_opencl:
+        # find offsets of old image in new image
+        dx, dy = ncx - ocx, ncy - ocy
 
-    newdata[ncy-bdy:ncy+tdy, ncx-ldx:ncx+rdx] = \
-                             data_np[ocy-bdy:ocy+tdy, ocx-ldx:ocx+rdx]
+        newdata = trcalc_cl.rotate(data_np, theta_deg,
+                                   rotctr_x=rotctr_x, rotctr_y=rotctr_y,
+                                   clip_val=0, out=None,
+                                   out_wd=new_wd, out_ht=new_ht,
+                                   out_dx=dx, out_dy=dy)
+    else:
+        # Overlay the old image on the new (blank) image
+        ldx, rdx = min(ocx, ncx), min(wd - ocx, ncx)
+        bdy, tdy = min(ocy, ncy), min(ht - ocy, ncy)
 
-    # find offsets of old image in new image
-    #dx, dy = ncx - ocx, ncy - ocy
+        # TODO: fill with a different value?
+        newdata = numpy.zeros(dims, dtype=data_np.dtype)
+        newdata[ncy-bdy:ncy+tdy, ncx-ldx:ncx+rdx] = \
+                                 data_np[ocy-bdy:ocy+tdy, ocx-ldx:ocx+rdx]
 
-    # Now rotate as usual
-    newdata = rotate_clip(newdata, theta_deg,
-                          rotctr_x=rotctr_x, rotctr_y=rotctr_y,
-                          out=newdata)
+        # Now rotate with clip as usual
+        newdata = rotate_clip(newdata, theta_deg,
+                              rotctr_x=rotctr_x, rotctr_y=rotctr_y,
+                              out=newdata)
     return newdata
 
 
@@ -250,9 +285,11 @@ def get_scaled_cutout_wdht_view(shp, x1, y1, x2, y2, new_wd, new_ht):
 
 
 def get_scaled_cutout_wdht(data_np, x1, y1, x2, y2, new_wd, new_ht,
-                           interpolation='nearest'):
-    if have_opencv and (interpolation != 'basic'):
+                           interpolation='basic'):
+    if have_opencv:
         # opencv is fastest
+        if interpolation == 'basic':
+            interpolation = 'nearest'
         method = cv2_resize[interpolation]
         newdata = cv2.resize(data_np[y1:y2+1, x1:x2+1], (new_wd, new_ht),
                              interpolation=method)
@@ -260,6 +297,10 @@ def get_scaled_cutout_wdht(data_np, x1, y1, x2, y2, new_wd, new_ht,
         old_wd, old_ht = max(x2 - x1 + 1, 1), max(y2 - y1 + 1, 1)
         ht, wd = newdata.shape[:2]
         scale_x, scale_y = float(wd) / old_wd, float(ht) / old_ht
+
+    elif interpolation not in ('basic', 'nearest'):
+        raise ValueError("Interpolation method not supported: '%s'" % (
+            interpolation))
 
     else:
         view, (scale_x, scale_y) = get_scaled_cutout_wdht_view(data_np.shape,
@@ -287,10 +328,12 @@ def get_scaled_cutout_basic_view(shp, x1, y1, x2, y2, scale_x, scale_y):
 
 
 def get_scaled_cutout_basic(data_np, x1, y1, x2, y2, scale_x, scale_y,
-                            interpolation='nearest'):
+                            interpolation='basic'):
 
-    if have_opencv and (interpolation != 'basic'):
+    if have_opencv:
         # opencv is fastest
+        if interpolation == 'basic':
+            interpolation = 'nearest'
         method = cv2_resize[interpolation]
         newdata = cv2.resize(data_np[y1:y2+1, x1:x2+1], None,
                              fx=scale_x, fy=scale_y,
@@ -299,7 +342,7 @@ def get_scaled_cutout_basic(data_np, x1, y1, x2, y2, scale_x, scale_y,
         ht, wd = newdata.shape[:2]
         scale_x, scale_y = float(wd) / old_wd, float(ht) / old_ht
 
-    elif interpolation != 'basic':
+    elif interpolation not in ('basic', 'nearest'):
         raise ValueError("Interpolation method not supported: '%s'" % (
             interpolation))
 

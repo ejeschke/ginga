@@ -197,6 +197,9 @@ class ReferenceViewer(object):
         optprs.add_option("--opencv", dest="opencv", default=False,
                           action="store_true",
                           help="Use OpenCv acceleration")
+        optprs.add_option("--opencl", dest="opencl", default=False,
+                          action="store_true",
+                          help="Use OpenCL acceleration")
         optprs.add_option("--plugins", dest="plugins", metavar="NAMES",
                           help="Specify additional plugins to load")
         optprs.add_option("--profile", dest="profile", action="store_true",
@@ -354,6 +357,15 @@ class ReferenceViewer(object):
                 trcalc.use('opencv')
             except Exception as e:
                 logger.warning("failed to set OpenCv preference: %s" % (str(e)))
+
+        # Check whether user wants to use OpenCL
+        use_opencl = settings.get('use_opencl', False)
+        if use_opencl or options.opencl:
+            from ginga import trcalc
+            try:
+                trcalc.use('opencl')
+            except Exception as e:
+                logger.warning("failed to set OpenCL preference: %s" % (str(e)))
 
         # Create the dynamic module manager
         mm = ModuleManager.ModuleManager(logger)
