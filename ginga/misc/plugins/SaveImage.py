@@ -1,4 +1,4 @@
-"""Save output images local plugin for Ginga."""
+"""Save output images global plugin for Ginga."""
 from __future__ import absolute_import, division, print_function
 from ginga.util.six import itervalues
 from ginga.util.six.moves import map

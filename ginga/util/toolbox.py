@@ -107,7 +107,7 @@ class ModeIndicator(object):
         self.mode_change_cb(bm, mode, modetype)
 
 
-def generate_cfg_example(config_name, **kwargs):
+def generate_cfg_example(config_name, cfgpath='examples/configs', **kwargs):
     """Generate config file documentation for a given config name.
 
     If found, it will be a Python code block of the contents.
@@ -122,6 +122,9 @@ def generate_cfg_example(config_name, **kwargs):
         For example, ``'general'``, ``'channel_Image'``, or
         ``'plugin_Zoom'``.
 
+    cfgpath : str
+        Where it is within package data.
+
     kwargs : dict
         Optional keywords for :func:`~astropy.utils.data.get_pkg_data_contents`.
 
@@ -131,7 +134,6 @@ def generate_cfg_example(config_name, **kwargs):
         Docstring to be inserted into documentation.
 
     """
-    cfgpath = 'examples/configs'  # Where it is in pkg data
     cfgname = config_name + '.cfg'
 
     try:
