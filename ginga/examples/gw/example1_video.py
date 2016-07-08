@@ -14,15 +14,15 @@ Caveats:
     1. There is no sound.  This is due to the lack of a decent python module
     that can read video files and provide _both_ audio and video streams.
 
-    2. Currently, it expects an AVI file as a command line parameter.
-    Only AVI formats supported by OpenCV can be used (typically JPEG encoded).
+    2. Currently, it expects an OpenCV readable file as a command line parameter.
+    Only formats supported by OpenCV can be used (typically JPEG encoded).
 
     Requirements:
     To run this example you will need the OpenCV bindings for Python installed.
-    This module lets us access the video stream of an AVI file frame-by-frame.
+    This module lets us access the video stream of a video file frame-by-frame.
 
 Usage:
-    $ example1_video.py [log options] <AVI file>
+    $ example1_video.py [log options] <video file>
 
 """
 from __future__ import print_function
@@ -48,6 +48,9 @@ try:
 except ImportError:
     print("You need to install the OpenCV python module to run this example")
     sys.exit(1)
+
+from ginga import trcalc
+trcalc.use('opencv')
 
 STD_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcName)s) | %(message)s'
 
@@ -92,28 +95,29 @@ class GingaVision(object):
         fi.cut_levels(0, 255)
         fi.defer_redraw = False
         fi.set_bg(0.2, 0.2, 0.2)
-        # flip y
-        fi.transform(False, False, False)
         fi.ui_setActive(True)
         self.fitsimage = fi
 
-        # Some optomizations to smooth playback at decent FPS
+        # these options are needed for correct panning with this type of image
+        fi._invertY = False
+        fi._originUpper = False
+
+        # <-- Some optimizations to smooth playback at decent FPS
         fi.set_redraw_lag(self.playback_rate)
         #fi.set_redraw_lag(0.0)
-        fi._invertY = False
-        # PassThruRGBMapper doesn't color map data--data is already colored
+
+        # PassThruRGBMapper is the most efficient mapper
+        #rgbmap = RGBMap.NonColorMapper(self.logger)
         rgbmap = RGBMap.PassThruRGBMapper(self.logger)
         fi.set_rgbmap(rgbmap)
+
         # Clip cuts assumes data does not need to be scaled in cut levels--
         # only clipped
         fi.set_autocuts(AutoCuts.Clip(logger=self.logger))
+        # <-- end optimizations
 
         bd = fi.get_bindings()
-        bd.enable_pan(True)
-        bd.enable_zoom(True)
-        bd.enable_cuts(True)
-        bd.enable_flip(True)
-        bd.enable_cmap(True)
+        bd.enable_all(True)
 
         fi.set_desired_size(512, 512)
         iw = Viewers.GingaViewerWidget(viewer=fi)

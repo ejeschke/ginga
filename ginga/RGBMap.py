@@ -380,42 +380,77 @@ class RGBMapper(Callback.Callbacks):
         self.recalc()
 
 
-class PassThruRGBMapper(RGBMapper):
+class NonColorMapper(RGBMapper):
+    """
+    A kind of color mapper for data that is already in RGB 24/32bpp
+    (0-255 per channel) form.
 
+    This mapper allows changing of color distribution and contrast
+    adjustment, but does no coloring.
+    """
+    def __init__(self, logger, dist=None):
+        super(NonColorMapper, self).__init__(logger)
+
+        self.dist.set_hash_size(256)
+        self.reset_sarr(callback=False)
+
+    def _get_rgbarray(self, idx, rgbobj, image_order):
+        # NOTE: data is assumed to be in the range 0-255 at this point
+        # but clip as a precaution
+        # See NOTE [A]: idx is always an array calculated in the caller and
+        #    discarded afterwards
+        idx.clip(0, 255, out=idx)
+
+        # run it through the shift array and clip the result
+        # See NOTE [A]
+        idx = self.sarr[idx]
+        idx.clip(0, 255, out=idx)
+
+        ri, gi, bi = self.get_order_indexes(rgbobj.get_order(), 'RGB')
+        rj, gj, bj = self.get_order_indexes(image_order, 'RGB')
+        out = rgbobj.rgbarr
+
+        out[..., ri] = idx[..., rj]
+        out[..., gi] = idx[..., gj]
+        out[..., bi] = idx[..., bj]
+
+
+class PassThruRGBMapper(RGBMapper):
+    """
+    A kind of color mapper for data that is already in RGB 24/32bpp
+    (0-255 per channel) form.
+
+    This mapper bypasses color distribution, contrast adjustment and
+    coloring.  It is thus the most efficient one to use for maximum
+    speed rendering of "finished" RGB data.
+    """
     def __init__(self, logger, dist=None):
         super(PassThruRGBMapper, self).__init__(logger)
 
         # ignore passed in distribution
         self.dist = ColorDist.LinearDist(256)
 
-    def get_rgbarray(self, idx, out=None, order='RGB', image_order='RGB'):
-        # prepare output array
-        shape = idx.shape
-        depth = len(order)
-        res_shape = (shape[0], shape[1], depth)
-        if out is None:
-            out = numpy.empty(res_shape, dtype=numpy.uint8, order='C')
-        else:
-            # TODO: assertion check on shape of out
-            assert res_shape == out.shape, \
-                   RGBMapError("Output array shape %s doesn't match result shape %s" % (
-                str(out.shape), str(res_shape)))
+    def get_hasharray(self, idx):
+        # data is already constrained to 0..255 and we want to
+        # bypass color redistribution
+        return idx
 
-        res = RGBPlanes(out, order)
+    def _get_rgbarray(self, idx, rgbobj, image_order):
+        # NOTE: data is assumed to be in the range 0-255 at this point
+        # but clip as a precaution
+        # See NOTE [A]: idx is always an array calculated in the caller and
+        #    discarded afterwards
+        idx.clip(0, 255, out=idx)
 
-        # set alpha channel
-        if res.hasAlpha:
-            aa = res.get_slice('A')
-            aa.fill(255)
-
-        # skip color mapping, index is the final data
-        ri, gi, bi = self.get_order_indexes(res.get_order(), 'RGB')
+        # bypass the shift array and skip color mapping,
+        # index is the final data
+        ri, gi, bi = self.get_order_indexes(rgbobj.get_order(), 'RGB')
         rj, gj, bj = self.get_order_indexes(image_order, 'RGB')
+        out = rgbobj.rgbarr
+
         out[..., ri] = idx[..., rj]
         out[..., gi] = idx[..., gj]
         out[..., bi] = idx[..., bj]
-
-        return res
 
 
 #END
