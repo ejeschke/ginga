@@ -250,7 +250,7 @@ class Label(WidgetBase):
             lbl.setAlignment(QtCore.Qt.AlignLeft)
         elif halign == 'center':
             lbl.setAlignment(QtCore.Qt.AlignHCenter)
-        elif halign == 'center':
+        elif halign == 'right':
             lbl.setAlignment(QtCore.Qt.AlignRight)
 
         self.widget = lbl
