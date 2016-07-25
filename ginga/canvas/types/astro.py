@@ -323,9 +323,14 @@ class Compass(OnePointOneRadiusMixin, CanvasObjectBase):
                                   self.cap_radius)
 
     def draw(self, viewer):
-        (cx1, cy1), (cx2, cy2), (cx3, cy3) = self.get_cpoints(viewer)
         cr = viewer.renderer.setup_cr(self)
         cr.set_font_from_shape(self)
+        
+        try:
+            (cx1, cy1), (cx2, cy2), (cx3, cy3) = self.get_cpoints(viewer)
+        except ValueError:
+            cr.draw_text(self.x, self.y, 'BAD WCS')
+            return
 
         # draw North line and arrowhead
         cr.draw_line(cx1, cy1, cx2, cy2)
