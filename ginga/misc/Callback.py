@@ -113,6 +113,10 @@ class Callbacks(object):
                     self.logger.error("Error making callback '%s': %s" % (
                         name, str(e)))
                     self.logger.error("Traceback:\n%s" % (tb_str))
+                else:
+                    print("Error making callback '%s': %s" % (
+                        name, str(e)))
+                    print("Traceback:\n%s" % (tb_str))
 
         return result
 
