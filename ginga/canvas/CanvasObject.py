@@ -53,6 +53,8 @@ class CanvasObjectBase(Callback.Callbacks):
         self.data = None
         self.crdmap = None
         self.tag = None
+        if not hasattr(self, 'kind'):
+            self.kind = None
         # For debugging
         self.name = None
         self.viewer = None

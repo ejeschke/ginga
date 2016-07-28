@@ -90,7 +90,10 @@ class ImageViewTk(ImageView):
         if isinstance(surface, numpy.ndarray):
             arr8 = surface
         else:
-            arr8 = numpy.fromstring(surface.tostring(), dtype=numpy.uint8)
+            if hasattr(surface, 'tobytes'):
+                arr8 = numpy.fromstring(surface.tobytes(), dtype=numpy.uint8)
+            else:
+                arr8 = numpy.fromstring(surface.tostring(), dtype=numpy.uint8)
             arr8 = arr8.reshape((ht, wd, 4))
 
         # make a Tk photo image and stick it to the canvas
