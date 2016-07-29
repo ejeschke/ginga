@@ -42,7 +42,7 @@ class Cursor(GingaPlugin.GlobalPlugin):
         macos_ver = platform.mac_ver()[0]
         if len(macos_ver) > 0:
             #readout.set_font(self.fv.font14)
-            readout.set_font('fixed 14')
+            readout.set_font('monaco 16')
         else:
             #readout.set_font(self.fv.font11)
             readout.set_font('fixed 11')

@@ -58,7 +58,8 @@ class ColorBar(Callback.Callbacks):
         iw.resize(width, height)
 
         canvas = self.cbar_view.get_canvas()
-        self.cbar = utils.ColorBar(offset=0, height=height, rgbmap=rgbmap)
+        self.cbar = utils.ColorBar(offset=0, height=height, rgbmap=rgbmap,
+                                   fontsize=8)
         canvas.add(self.cbar, tag='colorbar')
 
         self.set_rgbmap(rgbmap)

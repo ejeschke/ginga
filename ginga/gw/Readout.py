@@ -26,7 +26,8 @@ class Readout(object):
         Text = canvas.get_draw_class('text')
         xoff, yoff = 4, 4
         self.text_obj = Text(xoff, height-yoff, text='',
-                             color='lightgreen', coord='canvas')
+                             color='lightgreen', fontsize=14,
+                             coord='canvas')
         canvas.add(self.text_obj, redraw=False)
 
         self.maxx = 0
