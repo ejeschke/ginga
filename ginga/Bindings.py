@@ -1240,14 +1240,12 @@ class ImageViewBindings(object):
         mode_name, cur_modetype = bm.current_mode()
 
         if dfl_modetype in ('locked', 'softlock'):
-            mode_type = 'oneshot'
-            bm.set_default_mode_type(mode_type)
-            # turning off lock also resets the mode
-            bm.reset_mode(viewer)
-        else:
-            # install the lock type
-            bm.set_default_mode_type(mode_type)
-            bm.set_mode(mode_name, mode_type=mode_type)
+            if mode_type == dfl_modetype:
+                mode_type = 'oneshot'
+
+        # install the lock type
+        bm.set_default_mode_type(mode_type)
+        bm.set_mode(mode_name, mode_type=mode_type)
 
     def kp_lock(self, viewer, event, data_x, data_y):
         self._toggle_lock(viewer, 'locked')
@@ -2017,48 +2015,20 @@ class BindingMapper(Callback.Callbacks):
             self._modifiers = self._modifiers.union(set([bnch.name]))
             return True
 
-        # Is this a mode key?
-        elif keyname in self.mode_map:
-            bnch = self.mode_map[keyname]
-            if self._kbdmode_type == 'locked':
-                if bnch.name == self._kbdmode:
-                    self.reset_mode(viewer)
-                return True
-
-            if self._delayed_reset:
-                if bnch.name == self._kbdmode:
-                    self._delayed_reset = False
-                return False
-
-            if self._kbdmode_type == 'softlock':
-                if bnch.name == self._kbdmode:
-                    # pressing same key that started the mode cancels it
-                    # otherwise switch to the new mode
-                    self.reset_mode(viewer)
-                    return
-                self.reset_mode(viewer)
-
-            # if there is not a mode active now,
-            # activate this one
-            if self._kbdmode is None:
-                mode_type = bnch.type
-                if mode_type == None:
-                    mode_type = self._kbdmode_type_default
-                self.set_mode(bnch.name, mode_type)
-                if bnch.msg is not None:
-                    viewer.onscreen_message(bnch.msg)
-                return True
-
         trigger = 'kp_' + keyname
+        has_mapping = False
         try:
+            kbdmode = self._kbdmode
             # TEMP: hack to get around the issue of how keynames
             # are generated.
             if keyname == 'escape':
                 idx = (None, self._empty_set, trigger)
+                kbdmode = True
             else:
-                idx = (self._kbdmode, self._modifiers, trigger)
+                idx = (kbdmode, self._modifiers, trigger)
             emap = self.eventmap[idx]
             cbname = 'keydown-%s' % (emap.name)
+            has_mapping = (kbdmode is not None)
 
         except KeyError:
             try:
@@ -2068,6 +2038,32 @@ class BindingMapper(Callback.Callbacks):
 
             except KeyError:
                 cbname = 'keydown-%s' % str(self._kbdmode).lower()
+
+        # Is this a mode key?
+        if keyname in self.mode_map:
+            bnch = self.mode_map[keyname]
+            if bnch.name == self._kbdmode:
+                # <== same key was pressed that started the mode we're in
+                self.reset_mode(viewer)
+                return True
+
+            if self._delayed_reset:
+                self._delayed_reset = False
+                return False
+
+            if (not has_mapping) and (self._kbdmode_type != 'locked'):
+                # <== there is not a mapping for the key in this mode
+                self.reset_mode(viewer)
+
+                # activate this mode
+                if self._kbdmode is None:
+                    mode_type = bnch.type
+                    if mode_type == None:
+                        mode_type = self._kbdmode_type_default
+                    self.set_mode(bnch.name, mode_type)
+                    if bnch.msg is not None:
+                        viewer.onscreen_message(bnch.msg)
+                    return True
 
         self.logger.debug("idx=%s" % (str(idx)))
         last_x, last_y = viewer.get_last_data_xy()
@@ -2088,10 +2084,12 @@ class BindingMapper(Callback.Callbacks):
             return True
 
         trigger = 'kp_' + keyname
+        has_mapping = False
         try:
             idx = (self._kbdmode, self._modifiers, trigger)
             emap = self.eventmap[idx]
             cbname = 'keyup-%s' % (emap.name)
+            has_mapping = True
 
         except KeyError:
             try:
