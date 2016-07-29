@@ -35,15 +35,17 @@ class Cursor(GingaPlugin.GlobalPlugin):
         self.readout = None
 
     def _build_readout(self):
-        readout = Readout.Readout(-1, 20)
+        readout = Readout.Readout(-1, 24)
 
         # NOTE: Special hack for Mac OS X, otherwise the font on the readout
         # is too small
         macos_ver = platform.mac_ver()[0]
         if len(macos_ver) > 0:
-            readout.set_font(self.fv.font14)
+            #readout.set_font(self.fv.font14)
+            readout.set_font('fixed 14')
         else:
-            readout.set_font(self.fv.font11)
+            #readout.set_font(self.fv.font11)
+            readout.set_font('fixed 11')
         return readout
 
     def build_gui(self, container):
