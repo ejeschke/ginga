@@ -19,6 +19,7 @@ class Desktop(Callback.Callbacks):
         super(Desktop, self).__init__()
 
         self.app = app
+        self.logger = app.logger
         # for tabs
         self.tab = Bunch.caselessDict()
         self.tabcount = 0
