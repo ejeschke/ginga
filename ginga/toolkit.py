@@ -1,9 +1,6 @@
 #
 # toolkit.py -- module for customizing Ginga GUI toolkit version
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -33,10 +30,12 @@ def use(name):
                ToolKitError("ToolKit '%s' not supported!" % (name))
 
     elif name.startswith('gtk'):
-        family = 'gtk'
-        if name == 'gtk':
+        if name in ('gtk', 'gtk2'):
             name = 'gtk2'
-        assert name in ('gtk2', ), \
+            family = 'gtk'
+        elif name in ('gtk3',):
+            family = 'gtk3'
+        assert name in ('gtk2', 'gtk3'), \
                ToolKitError("ToolKit '%s' not supported!" % (name))
 
     elif name.startswith('tk'):
@@ -62,6 +61,6 @@ def get_family():
 
 def get_rv_toolkits():
     """Returns a list of reference viewer supported toolkits."""
-    return ['qt4', 'qt5', 'pyside', 'gtk', 'pg']
+    return ['qt4', 'qt5', 'pyside', 'gtk2', 'gtk3', 'pg']
 
 #END

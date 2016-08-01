@@ -1,5 +1,5 @@
 #
-# GtkHelp.py -- customized Gtk2 widgets
+# GtkHelp.py -- customized Gtk3 widgets
 #
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
@@ -9,11 +9,14 @@ from __future__ import print_function
 from ginga.misc import Bunch
 import ginga.toolkit
 
-import gtk
-import gobject
-import pango
+from gi.repository import Gtk
+from gi.repository import Gdk
+from gi.repository import GdkPixbuf
+from gi.repository import GObject
+from gi.repository import Pango
+import cairo
 
-ginga.toolkit.use('gtk2')
+ginga.toolkit.use('gtk3')
 
 
 class WidgetMask(object):
@@ -48,14 +51,14 @@ class WidgetMask(object):
         return self.cb_fn(*newargs, **kwdargs)
 
 
-class TopLevel(gtk.Window):
+class TopLevel(Gtk.Window):
     def __init__(self):
-        gtk.Window.__init__(self, gtk.WINDOW_TOPLEVEL)
+        Gtk.Window.__init__(self)
 
-class CheckButton(WidgetMask, gtk.CheckButton):
+class CheckButton(WidgetMask, Gtk.CheckButton):
     def __init__(self, *args, **kwdargs):
         WidgetMask.__init__(self)
-        gtk.CheckButton.__init__(self, *args, **kwdargs)
+        Gtk.CheckButton.__init__(self, *args, **kwdargs)
 
     def set_active(self, newval):
         oldval = self.get_active()
@@ -64,10 +67,10 @@ class CheckButton(WidgetMask, gtk.CheckButton):
 
         super(CheckButton, self).set_active(newval)
 
-class ToggleButton(WidgetMask, gtk.ToggleButton):
+class ToggleButton(WidgetMask, Gtk.ToggleButton):
     def __init__(self, *args, **kwdargs):
         WidgetMask.__init__(self)
-        gtk.ToggleButton.__init__(self, *args, **kwdargs)
+        Gtk.ToggleButton.__init__(self, *args, **kwdargs)
 
     def set_active(self, newval):
         oldval = self.get_active()
@@ -82,10 +85,10 @@ class ToggleButton(WidgetMask, gtk.ToggleButton):
         super(ToggleButton, self).set_active(newval)
 
 
-class RadioButton(WidgetMask, gtk.RadioButton):
+class RadioButton(WidgetMask, Gtk.RadioButton):
     def __init__(self, *args, **kwdargs):
         WidgetMask.__init__(self)
-        gtk.RadioButton.__init__(self, *args, **kwdargs)
+        Gtk.RadioButton.__init__(self, *args, **kwdargs)
 
     def set_active(self, newval):
         oldval = self.get_active()
@@ -100,10 +103,10 @@ class RadioButton(WidgetMask, gtk.RadioButton):
         super(RadioButton, self).set_active(newval)
 
 
-class CheckMenuItem(WidgetMask, gtk.CheckMenuItem):
+class CheckMenuItem(WidgetMask, Gtk.CheckMenuItem):
     def __init__(self, *args, **kwdargs):
         WidgetMask.__init__(self)
-        gtk.CheckMenuItem.__init__(self, *args, **kwdargs)
+        Gtk.CheckMenuItem.__init__(self, *args, **kwdargs)
 
     def set_active(self, newval):
         oldval = self.get_active()
@@ -113,10 +116,10 @@ class CheckMenuItem(WidgetMask, gtk.CheckMenuItem):
         super(CheckMenuItem, self).set_active(newval)
 
 
-class SpinButton(WidgetMask, gtk.SpinButton):
+class SpinButton(WidgetMask, Gtk.SpinButton):
     def __init__(self, *args, **kwdargs):
         WidgetMask.__init__(self)
-        gtk.SpinButton.__init__(self, *args, **kwdargs)
+        Gtk.SpinButton.__init__(self, *args, **kwdargs)
 
     def set_value(self, newval):
         oldval = self.get_value()
@@ -126,10 +129,10 @@ class SpinButton(WidgetMask, gtk.SpinButton):
         super(SpinButton, self).set_value(newval)
 
 
-class HScale(WidgetMask, gtk.HScale):
+class HScale(WidgetMask, Gtk.HScale):
     def __init__(self, *args, **kwdargs):
         WidgetMask.__init__(self)
-        gtk.HScale.__init__(self, *args, **kwdargs)
+        Gtk.HScale.__init__(self, *args, **kwdargs)
 
     def set_value(self, newval):
         oldval = self.get_value()
@@ -138,10 +141,10 @@ class HScale(WidgetMask, gtk.HScale):
 
         super(HScale, self).set_value(newval)
 
-class VScale(WidgetMask, gtk.VScale):
+class VScale(WidgetMask, Gtk.VScale):
     def __init__(self, *args, **kwdargs):
         WidgetMask.__init__(self)
-        gtk.VScale.__init__(self, *args, **kwdargs)
+        Gtk.VScale.__init__(self, *args, **kwdargs)
 
     def set_value(self, newval):
         oldval = self.get_value()
@@ -194,22 +197,22 @@ class ComboBoxMixin(object):
                 self.set_active(i)
                 return
 
-class ComboBox(WidgetMask, gtk.ComboBox, ComboBoxMixin):
+class ComboBox(WidgetMask, Gtk.ComboBox, ComboBoxMixin):
     def __init__(self, *args, **kwdargs):
         WidgetMask.__init__(self)
-        gtk.ComboBox.__init__(self, *args, **kwdargs)
+        Gtk.ComboBox.__init__(self, *args, **kwdargs)
 
 
-class ComboBoxEntry(WidgetMask, gtk.ComboBoxEntry, ComboBoxMixin):
+## class ComboBoxEntry(WidgetMask, Gtk.ComboBoxEntry, ComboBoxMixin):
+##     def __init__(self, *args, **kwdargs):
+##         WidgetMask.__init__(self)
+##         Gtk.ComboBoxEntry.__init__(self, *args, **kwdargs)
+
+
+class Notebook(WidgetMask, Gtk.Notebook):
     def __init__(self, *args, **kwdargs):
         WidgetMask.__init__(self)
-        gtk.ComboBoxEntry.__init__(self, *args, **kwdargs)
-
-
-class Notebook(WidgetMask, gtk.Notebook):
-    def __init__(self, *args, **kwdargs):
-        WidgetMask.__init__(self)
-        gtk.Notebook.__init__(self, *args, **kwdargs)
+        Gtk.Notebook.__init__(self, *args, **kwdargs)
 
     def set_group_id(self, id):
         super(Notebook, self).set_group_name(str(id))
@@ -222,7 +225,7 @@ class Notebook(WidgetMask, gtk.Notebook):
         super(Notebook, self).set_current_page(new_idx)
 
 
-class MultiDragDropTreeView(gtk.TreeView):
+class MultiDragDropTreeView(Gtk.TreeView):
     '''TreeView that captures mouse events to make drag and drop work
     properly
     See: https://gist.github.com/kevinmehall/278480#file-multiple-selection-dnd-class-py
@@ -240,8 +243,8 @@ class MultiDragDropTreeView(gtk.TreeView):
         # drag multiple items without the click selecting only one
         target = self.get_path_at_pos(int(event.x), int(event.y))
         if (target
-           and event.type == gtk.gdk.BUTTON_PRESS
-           and not (event.state & (gtk.gdk.CONTROL_MASK|gtk.gdk.SHIFT_MASK))
+           and event.type == Gdk.EventType.BUTTON_PRESS
+           and not (event.state & (Gdk.ModifierType.CONTROL_MASK | Gdk.ModifierType.SHIFT_MASK))
            and self.get_selection().path_is_selected(target[0])):
             # disable selection
             self.get_selection().set_select_function(lambda *ignore: False)
@@ -260,7 +263,7 @@ class MultiDragDropTreeView(gtk.TreeView):
         self.defer_select=False
 
 
-class MDIWidget(gtk.Layout):
+class MDIWidget(Gtk.Layout):
     """
     Multiple Document Interface type widget for Gtk.
 
@@ -280,33 +283,33 @@ class MDIWidget(gtk.Layout):
         self.connect("button_release_event", self.button_release_event)
         mask = self.get_events()
         self.set_events(mask
-                        | gtk.gdk.ENTER_NOTIFY_MASK
-                        | gtk.gdk.LEAVE_NOTIFY_MASK
-                        | gtk.gdk.FOCUS_CHANGE_MASK
-                        | gtk.gdk.STRUCTURE_MASK
-                        | gtk.gdk.BUTTON_PRESS_MASK
-                        | gtk.gdk.BUTTON_RELEASE_MASK
-                        | gtk.gdk.KEY_PRESS_MASK
-                        | gtk.gdk.KEY_RELEASE_MASK
-                        | gtk.gdk.POINTER_MOTION_MASK
-                        #| gtk.gdk.POINTER_MOTION_HINT_MASK
-                        | gtk.gdk.SCROLL_MASK)
+                        | Gdk.EventMask.ENTER_NOTIFY_MASK
+                        | Gdk.EventMask.LEAVE_NOTIFY_MASK
+                        | Gdk.EventMask.FOCUS_CHANGE_MASK
+                        | Gdk.EventMask.STRUCTURE_MASK
+                        | Gdk.EventMask.BUTTON_PRESS_MASK
+                        | Gdk.EventMask.BUTTON_RELEASE_MASK
+                        | Gdk.EventMask.KEY_PRESS_MASK
+                        | Gdk.EventMask.KEY_RELEASE_MASK
+                        | Gdk.EventMask.POINTER_MOTION_MASK
+                        #| Gdk.EventMask.POINTER_MOTION_HINT_MASK
+                        | Gdk.EventMask.SCROLL_MASK)
 
     def append_page(self, widget, label):
-        vbox = gtk.VBox()
+        vbox = Gtk.VBox()
         vbox.set_border_width(4)
-        evbox = gtk.EventBox()
+        evbox = Gtk.EventBox()
         evbox.add(label)
-        #evbox.modify_fg(gtk.STATE_NORMAL, gtk.gdk.color_parse("yellow"))
-        evbox.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse("skyblue"))
-        vbox.pack_start(evbox, fill=False, expand=False, padding=0)
-        vbox.pack_start(widget, fill=True, expand=True, padding=4)
+        #evbox.modify_fg(Gtk.StateType.NORMAL, Gdk.color_parse("yellow"))
+        evbox.modify_bg(Gtk.StateType.NORMAL, Gdk.color_parse("skyblue"))
+        vbox.pack_start(evbox, False, False, 0)
+        vbox.pack_start(widget, True, True, 4)
 
-        frame = gtk.EventBox()
+        frame = Gtk.EventBox()
         frame.set_size_request(300, 300)
         frame.props.visible_window = True
         frame.set_border_width(0)
-        frame.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse("palegreen1"))
+        frame.modify_bg(Gtk.StateType.NORMAL, Gdk.color_parse("palegreen1"))
 
         frame.add(vbox)
         frame.show_all()
@@ -458,11 +461,11 @@ class MDIWidget(gtk.Layout):
         else:
             x, y, state = event.x_root, event.y_root, event.state
 
-        if state & gtk.gdk.BUTTON1_MASK:
+        if state & Gdk.ModifierType.BUTTON1_MASK:
             button |= 0x1
-        elif state & gtk.gdk.BUTTON2_MASK:
+        elif state & Gdk.ModifierType.BUTTON2_MASK:
             button |= 0x2
-        elif state & gtk.gdk.BUTTON3_MASK:
+        elif state & Gdk.ModifierType.BUTTON3_MASK:
             button |= 0x4
 
         if (button & 0x1) and (self.selected_child is not None):
@@ -494,16 +497,16 @@ class MDIWidget(gtk.Layout):
 
 class FileSelection(object):
 
-    def __init__(self, parent_w, action=gtk.FILE_CHOOSER_ACTION_OPEN,
+    def __init__(self, parent_w, action=Gtk.FileChooserAction.OPEN,
                  title="Select a file"):
         self.parent = parent_w
         # Create a new file selection widget
-        self.filew = gtk.FileChooserDialog(title=title, action=action)
+        self.filew = Gtk.FileChooserDialog(title=title, action=action)
         self.filew.connect("destroy", self.close)
-        if action == gtk.FILE_CHOOSER_ACTION_SAVE:
-            self.filew.add_buttons(gtk.STOCK_SAVE, 1, gtk.STOCK_CANCEL, 0)
+        if action == Gtk.FileChooserAction.SAVE:
+            self.filew.add_buttons(Gtk.STOCK_SAVE, 1, Gtk.STOCK_CANCEL, 0)
         else:
-            self.filew.add_buttons(gtk.STOCK_OPEN, 1, gtk.STOCK_CANCEL, 0)
+            self.filew.add_buttons(Gtk.STOCK_OPEN, 1, Gtk.STOCK_CANCEL, 0)
         self.filew.set_default_response(1)
         self.filew.connect("response", self.file_ok_sel)
 
@@ -540,7 +543,7 @@ class DirectorySelection(FileSelection):
     """Handle directory selection dialog."""
     def __init__(self, parent_w):
         super(DirectorySelection, self).__init__(
-            parent_w, action=gtk.FILE_CHOOSER_ACTION_SELECT_FOLDER,
+            parent_w, action=Gtk.FileChooserAction.SELECT_FOLDER,
             title="Select a directory")
 
     def popup(self, title, callfn, initialdir=None):
@@ -549,10 +552,10 @@ class DirectorySelection(FileSelection):
 
 
 def combo_box_new_text():
-    liststore = gtk.ListStore(gobject.TYPE_STRING)
+    liststore = Gtk.ListStore(GObject.TYPE_STRING)
     combobox = ComboBox()
     combobox.set_model(liststore)
-    cell = gtk.CellRendererText()
+    cell = Gtk.CellRendererText()
     combobox.pack_start(cell, True)
     combobox.add_attribute(cell, 'text', 0)
     return combobox
@@ -562,13 +565,13 @@ def get_scroll_info(event):
     Returns the (degrees, direction) of a scroll motion Gtk event.
     """
     direction = None
-    if event.direction == gtk.gdk.SCROLL_UP:
+    if event.direction == Gdk.ScrollDirection.UP:
         direction = 0.0
-    elif event.direction == gtk.gdk.SCROLL_DOWN:
+    elif event.direction == Gdk.ScrollDirection.DOWN:
         direction = 180.0
-    elif event.direction == gtk.gdk.SCROLL_LEFT:
+    elif event.direction == Gdk.ScrollDirection.LEFT:
         direction = 270.0
-    elif event.direction == gtk.gdk.SCROLL_RIGHT:
+    elif event.direction == Gdk.ScrollDirection.RIGHT:
         direction = 90.0
 
     # TODO: does Gtk encode the amount of scroll?
@@ -586,27 +589,41 @@ def get_icon(iconpath, size=None):
     return pixbuf
 
 def get_font(font_family, point_size):
-    font = pango.FontDescription('%s %d' % (font_family, point_size))
+    font = Pango.FontDescription('%s %d' % (font_family, point_size))
     return font
 
 def pixbuf_new_from_xpm_data(xpm_data):
-    return gtk.gdk.pixbuf_new_from_xpm_data(xpm_data)
+    xpm_data = bytes('\n'.join(xpm_data))
+    return GdkPixbuf.Pixbuf.new_from_xpm_data(xpm_data)
 
 def pixbuf_new_from_array(data, rgbtype, bpp):
-    return gtk.gdk.pixbuf_new_from_array(data, rgbtype, bpp)
+    # NOTE: there is a bug in gtk3 with pixbuf_new_from_array()
+    # See: http://stackoverflow.com/questions/24062779/how-to-correctly-covert-3d-array-into-continguous-rgb-bytes/24070152#24070152
+    #return GdkPixbuf.Pixbuf.new_from_array(data, rgbtype, bpp)
+
+    height, width, depth = data.shape
+    pixl = GdkPixbuf.PixbufLoader.new_with_type('pnm')
+    # P6 is the magic number of PNM format, 
+    # and 255 is the max color allowed
+    pixl.write("P6 %d %d 255 " % (width, height) + data.tostring(order='C'))
+    pix = pixl.get_pixbuf()
+    pixl.close()
+    return pix
 
 def pixbuf_new_from_data(rgb_buf, rgbtype, hasAlpha, bpp, dawd, daht, stride):
-    return gtk.gdk.pixbuf_new_from_data(rgb_buf, rgbtype, hasAlpha, bpp,
-                                        dawd, daht, stride)
+    return GdkPixbuf.Pixbuf.new_from_data(rgb_buf, rgbtype, hasAlpha, bpp,
+                                          dawd, daht, stride, None, None)
 
 def pixbuf_new_from_file_at_size(foldericon, width, height):
-    return gtk.gdk.pixbuf_new_from_file_at_size(foldericon,
-                                                width, height)
+    return GdkPixbuf.Pixbuf.new_from_file_at_size(foldericon,
+                                                  width, height)
 
 def make_cursor(widget, iconpath, x, y):
-    pixbuf = gtk.gdk.pixbuf_new_from_file(iconpath)
+    image = Gtk.Image()
+    image.set_from_file(iconpath)
+    pixbuf = image.get_pixbuf()
     screen = widget.get_screen()
     display = screen.get_display()
-    return gtk.gdk.Cursor(display, pixbuf, x, y)
+    return Gdk.Cursor(display, pixbuf, x, y)
 
 #END
