@@ -57,6 +57,7 @@ class ImageViewTk(ImageView):
         # see reschedule_redraw() method
         self._defer_task = None
 
+
     def set_widget(self, canvas):
         """Call this method with the Tkinter canvas that will be used
         for the display.
@@ -86,12 +87,7 @@ class ImageViewTk(ImageView):
         wd, ht = self.get_window_size()
 
         # Get surface as a numpy array
-        surface = self.get_surface()
-        if isinstance(surface, numpy.ndarray):
-            arr8 = surface
-        else:
-            arr8 = numpy.fromstring(surface.tostring(), dtype=numpy.uint8)
-            arr8 = arr8.reshape((ht, wd, 4))
+        arr8 = self.get_image_as_array()
 
         # make a Tk photo image and stick it to the canvas
         image = PILimage.fromarray(arr8)

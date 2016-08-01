@@ -52,6 +52,15 @@ class ImageViewPil(ImageView.ImageViewBase):
         # get window contents as a buffer and paste it into the PIL surface
         rgb_arr = self.getwin_array(order=self._rgb_order)
         p_image = Image.fromarray(rgb_arr)
+
+        if p_image.size != canvas.size:
+            # window size must have changed out from underneath us!
+            width, height = self.get_window_size()
+            canvas = Image.new("RGB", (width, height), color=0)
+            assert p_image.size == canvas.size, \
+                   ImageViewPilError("Rendered image does not match window size")
+            self.surface = canvas
+
         canvas.paste(p_image)
 
         cr = PilHelp.PilContext(canvas)
@@ -77,7 +86,7 @@ class ImageViewPil(ImageView.ImageViewBase):
         # create PIL surface the size of the window
         # NOTE: pillow needs an RGB image in order to draw with alpha
         # blending, not RGBA
-        #self.surface = Image.new("RGBA", (width, height), color=0)
+        #self.surface = Image.new(self._rgb_order, (width, height), color=0)
         self.surface = Image.new("RGB", (width, height), color=0)
 
         # inform the base class about the actual window size
@@ -114,7 +123,7 @@ class ImageViewPil(ImageView.ImageViewBase):
         # Get PIL surface
         p_image = self.get_surface()
         arr8 = numpy.array(p_image, dtype=numpy.uint8)
-        #arr8 = arr8.reshape((ht, wd, 4))
+        arr8 = arr8.reshape((ht, wd, 3))
         return arr8
 
     def get_image_as_buffer(self, output=None):
