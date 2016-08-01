@@ -1,0 +1,72 @@
+style "window"
+{
+GtkWindow::resize-grip-default = true
+GtkWindow::resize-grip-height = 15
+GtkWindow::resize-grip-width = 15
+}
+
+style "mybutton_bg"
+{
+  bg[PRELIGHT] = 'forestgreen'
+}
+
+style "mybutton"
+{
+  fg[PRELIGHT] = 'yellow'
+# text[PRELIGHT] = 'yellow'
+
+#GtkButton::focus-line-width = 1
+#GtkButton::focus-padding = 0
+#GtkLabel::width-chars = 20
+}
+
+style "mycombobox"
+{
+  fg[PRELIGHT] = 'yellow'
+  text[PRELIGHT] = 'yellow'
+}
+
+style "menubar-style"
+{
+GtkMenuBar::shadow_type = none
+}
+
+style "paned-style"
+{
+GtkPaned::handle_size = 5
+}
+
+style "statusbar-style"
+{
+GtkStatusbar::shadow_type = none
+}
+
+style "treeview-style"
+{
+GtkTreeView::odd_row_color = "#00CBFF"
+GtkTreeView::even_row_color = "#90EE90"
+}
+
+style "text"
+{
+  fg[NORMAL] = { 1.0, 1.0, 1.0 }
+  font_name = "Monospace 10"
+##  gtk-key-theme-name = "Emacs" 
+}
+
+# These set the widget types to use the styles defined above.
+# The widget types are listed in the class hierarchy, but could probably be
+# just listed in this document for the users reference.
+
+widget_class "*GtkMenuBar" style "menubar-style"
+widget_class "*GtkStatusbar" style "statusbar-style"
+widget_class "GtkWidget*" style "window"
+widget_class "GtkDialog*" style "window"
+widget_class "GtkFileSelection" style "window"
+widget_class "*GtkButton*" style "mybutton_bg"
+widget_class "*GtkButton.GtkLabel" style "mybutton"
+widget_class "*GtkComboBox*" style "mybutton_bg"
+widget_class "*GtkComboBox*GtkCellView*" style "mycombobox"
+widget_class "*GtkTextView*" style "text"
+
+#END

@@ -4,11 +4,14 @@
 from ginga import toolkit
 tkname = toolkit.get_family()
 
-if tkname == 'gtk':
+if tkname == 'qt':
+    from ginga.qtw.QtHelp import *
+
+elif tkname == 'gtk':
     from ginga.gtkw.GtkHelp import *
 
-elif tkname == 'qt':
-    from ginga.qtw.QtHelp import *
+elif tkname == 'gtk3':
+    from ginga.gtk3w.GtkHelp import *
 
 elif tkname == 'pg':
     from ginga.web.pgw.PgHelp import *

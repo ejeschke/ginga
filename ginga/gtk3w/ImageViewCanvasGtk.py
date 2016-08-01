@@ -4,7 +4,7 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-from ginga.gtkw import ImageViewGtk
+from ginga.gtk3w import ImageViewGtk
 from ginga.canvas.mixins import DrawingMixin, CanvasMixin, CompoundMixin
 from ginga.util.toolbox import ModeIndicator
 

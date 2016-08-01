@@ -1,17 +1,13 @@
 #
 # ColorBar.py -- color bar widget
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 
 import math
 import numpy
 
-from ginga.gtkw import gtksel
-from ginga.gtkw.GtkHelp import get_scroll_info
+from ginga.gtkw import GtkHelp
 import gtk, gobject, cairo
 
 from ginga.misc import Callback
@@ -55,10 +51,7 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
         for name in ('motion', 'scroll'):
             self.enable_callback(name)
 
-        if not gtksel.have_gtk3:
-            self.connect("expose_event", self.expose_event)
-        else:
-            self.connect("draw", self.draw_event)
+        self.connect("expose_event", self.expose_event)
         self.connect("configure_event", self.configure_event)
         self.connect("size-request", self.size_request)
         self.connect("motion_notify_event", self.motion_notify_event)
@@ -141,15 +134,6 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
         requisition.width = -1
         requisition.height = 15
         return True
-
-    # For Gtk3
-    def draw_event(self, widget, cr):
-        if self.surface is not None:
-            self.logger.debug("surface is %s" % self.surface)
-            cr.set_source_surface(self.surface, 0, 0)
-            cr.set_operator(cairo.OPERATOR_SOURCE)
-            cr.paint()
-        return False
 
     def expose_event(self, widget, event):
         # When an area of the window is exposed, we just copy out of the
@@ -353,10 +337,7 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
         button = 0
         if event.is_hint:
             tup = event.window.get_pointer()
-            if gtksel.have_gtk3:
-                xx, x, y, state = tup
-            else:
-                x, y, state = tup
+            x, y, state = tup
         else:
             x, y, state = event.x, event.y, event.state
 
@@ -380,7 +361,7 @@ class ColorBar(gtk.DrawingArea, Callback.Callbacks):
 
     def scroll_event(self, widget, event):
         # event.button, event.x, event.y
-        num_degrees, direction = get_scroll_info(event)
+        num_degrees, direction = GtkHelp.get_scroll_info(event)
 
         if (direction < 90.0) or (direction > 270.0):
             # up
