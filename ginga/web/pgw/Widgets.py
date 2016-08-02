@@ -1404,7 +1404,7 @@ class TopLevel(ContainerBase):
         padding: 0px;
         margin: 0px;
         border: 0;
-        overflow: hidden; /* disable scrollbars */
+        overflow-x: hidden; /* disable horizontal scrollbar */
         display: block; /* no floating content on sides */
       }
     </style>
