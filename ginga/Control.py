@@ -229,8 +229,9 @@ class GingaControl(Callback.Callbacks):
         self.showxy(viewer, data_x, data_y)
         return True
 
-    def keypress(self, viewer, keyname):
+    def keypress(self, viewer, event, data_x, data_y):
         """Key press event in a channel window."""
+        keyname = event.key
         chname = self.get_channelName(viewer)
         self.logger.debug("key press (%s) in channel %s" % (
             keyname, chname))
@@ -706,35 +707,49 @@ class GingaControl(Callback.Callbacks):
         self.logger.debug("end preload")
 
     def zoom_in(self):
+        """Zoom the view in one zoom step.
+        """
         viewer = self.getfocus_viewer()
         viewer.zoom_in()
         return True
 
     def zoom_out(self):
+        """Zoom the view out one zoom step.
+        """
         viewer = self.getfocus_viewer()
         viewer.zoom_out()
         return True
 
     def zoom_1_to_1(self):
+        """Zoom the view to a 1 to 1 pixel ratio (100 %%).
+        """
         viewer = self.getfocus_viewer()
         viewer.zoom_to(1)
         return True
 
     def zoom_fit(self):
+        """Zoom the view to fit the image entirely in the window.
+        """
         viewer = self.getfocus_viewer()
         viewer.zoom_fit()
         return True
 
     def auto_levels(self):
+        """Perform an auto cut levels on the image.
+        """
         viewer = self.getfocus_viewer()
         viewer.auto_levels()
 
     def prev_img(self, loop=True):
+        """Go to the previous image in the channel.
+        """
         channel = self.get_current_channel()
         channel.prev_image()
         return True
 
     def next_img(self, loop=True):
+        """Go to the next image in the channel.
+        """
         channel = self.get_current_channel()
         channel.next_image()
         return True
