@@ -993,7 +993,7 @@ class CatalogListing(object):
         rgbmap = self.cbar.get_rgbmap()
         rgbmap.add_callback('changed', lambda *args: self.replot_stars())
 
-        cbar_w = Widgets.wrap(self.cbar)
+        cbar_w = self.cbar.get_widget()
         vbox.add_widget(cbar_w, stretch=0)
 
         btns = Widgets.HBox()
