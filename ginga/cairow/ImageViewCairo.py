@@ -9,14 +9,20 @@
 # Please see the file LICENSE.txt for details.
 
 import sys, re
-import cairo
 import numpy
 import threading
 import math
 from io import BytesIO
 
+import cairo
+
+import ginga.util.six as six
 from ginga import ImageView
 from ginga.cairow.CanvasRenderCairo import CanvasRenderer
+
+if six.PY3:
+    from io import BytesIO
+    from PIL import Image
 
 class ImageViewCairoError(ImageView.ImageViewError):
     pass
@@ -64,17 +70,27 @@ class ImageViewCairo(ImageView.ImageViewBase):
         #cr.set_operator(cairo.OPERATOR_OVER)
         cr.fill()
 
-        ## arr8 = data.astype(numpy.uint8).flatten()
-        arr8 = data
-
-        ## stride = cairo.ImageSurface.format_stride_for_width(cairo.FORMAT_RGB24,
         stride = cairo.ImageSurface.format_stride_for_width(cairo.FORMAT_ARGB32,
                                                             width)
 
-        img_surface = cairo.ImageSurface.create_for_data(arr8,
-                                                         #cairo.FORMAT_RGB24,
-                                                         cairo.FORMAT_ARGB32,
-                                                         dawd, daht, stride)
+        if six.PY2:
+            img_surface = cairo.ImageSurface.create_for_data(data,
+                                                             cairo.FORMAT_ARGB32,
+                                                             dawd, daht, stride)
+        else:
+            # NOTE: pycairo3 does not have create_from_data(), so we have to
+            # use this painful workaround.
+            # TODO: need a faster method--this is S-L-O-W
+            # 1. create a PIL Image object from the image array
+            p_image = Image.fromarray(data)
+
+            # 2. save the rgb buffer as a PNG
+            png_buf = BytesIO()
+            p_image.save(png_buf, format='png', compress_level=0)
+
+            # 3. create the surface from the PNG
+            png_buf.seek(0)
+            img_surface = cairo.ImageSurface.create_from_png(png_buf)
 
         cr.set_source_surface(img_surface, dst_x, dst_y)
         cr.set_operator(cairo.OPERATOR_SOURCE)
@@ -138,15 +154,17 @@ class ImageViewCairo(ImageView.ImageViewBase):
                                       width, height)
 
     def configure_surface(self, width, height):
-        arr8 = numpy.zeros(height*width*4, dtype=numpy.uint8)
-        #stride = cairo.ImageSurface.format_stride_for_width(cairo.FORMAT_RGB24,
-        stride = cairo.ImageSurface.format_stride_for_width(cairo.FORMAT_ARGB32,
-                                                            width)
+        if six.PY2:
+            arr8 = numpy.zeros(height*width*4, dtype=numpy.uint8)
 
-        surface = cairo.ImageSurface.create_for_data(arr8,
-                                                     #cairo.FORMAT_RGB24,
-                                                     cairo.FORMAT_ARGB32,
-                                                     width, height, stride)
+            stride = cairo.ImageSurface.format_stride_for_width(cairo.FORMAT_ARGB32,
+                                                                width)
+            surface = cairo.ImageSurface.create_for_data(arr8,
+                                                         cairo.FORMAT_ARGB32,
+                                                         width, height, stride)
+        else:
+            surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, width, height)
+
         self.surface = surface
         self.configure(width, height)
 

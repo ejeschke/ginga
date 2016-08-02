@@ -4,13 +4,16 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-from ginga.gtkw import GtkHelp
+from ginga.gtk3w import GtkHelp
 import ginga.util.six as six
-import gtk
-import gobject
 
 from ginga.misc import Callback, Bunch, LineHistory
 from functools import reduce
+
+from gi.repository import Gtk
+from gi.repository import Gdk
+from gi.repository import GObject
+from gi.repository import GdkPixbuf
 
 class WidgetError(Exception):
     """For errors thrown in this module."""
@@ -49,7 +52,8 @@ class WidgetBase(Callback.Callbacks):
             return wd, ht
 
         # window isn't realized yet--return request size
-        wd, ht = self.widget.size_request()
+        req = self.widget.get_size_request()
+        wd, ht = req
         wd, ht = max(0, wd), max(0, ht)
         return wd, ht
 
@@ -86,7 +90,7 @@ class TextEntry(WidgetBase):
     def __init__(self, text='', editable=True):
         super(TextEntry, self).__init__()
 
-        w = gtk.Entry()
+        w = Gtk.Entry()
         w.set_text(text)
         w.set_editable(editable)
         w.connect('key-press-event', self._key_press_event)
@@ -102,7 +106,7 @@ class TextEntry(WidgetBase):
         self.make_callback('activated')
 
     def _key_press_event(self, widget, event):
-        keyname = gtk.gdk.keyval_name(event.keyval)
+        keyname = Gdk.keyval_name(event.keyval)
         if keyname == 'Up':
             try:
                 text = self.history.prev()
@@ -142,17 +146,17 @@ class TextEntrySet(WidgetBase):
     def __init__(self, text='', editable=True):
         super(TextEntrySet, self).__init__()
 
-        hbox = gtk.HBox()
+        hbox = Gtk.HBox()
         hbox.set_spacing(4)
-        w = gtk.Entry()
+        w = Gtk.Entry()
         w.set_text(text)
         w.set_editable(editable)
-        hbox.pack_start(w, fill=True)
+        hbox.pack_start(w, True, True, 0)
         w.connect('activate', self._cb_redirect)
         self.entry = w
-        w = gtk.Button('Set')
+        w = Gtk.Button('Set')
         w.connect('clicked', self._cb_redirect)
-        hbox.pack_start(w, fill=False)
+        hbox.pack_start(w, False, False, 0)
         self.btn = w
         self.widget = hbox
 
@@ -185,18 +189,18 @@ class TextArea(WidgetBase):
     def __init__(self, wrap=False, editable=False):
         super(TextArea, self).__init__()
 
-        tw = gtk.TextView()
+        tw = Gtk.TextView()
         if wrap:
-            tw.set_wrap_mode(gtk.WRAP_WORD)
+            tw.set_wrap_mode(Gtk.WrapMode.WORD)
         else:
-            tw.set_wrap_mode(gtk.WRAP_NONE)
+            tw.set_wrap_mode(Gtk.WrapMode.NONE)
         tw.set_editable(editable)
         self.tw = tw
 
         # this widget has a built in ScrollArea to match Qt functionality
-        sw = gtk.ScrolledWindow()
+        sw = Gtk.ScrolledWindow()
         sw.set_border_width(2)
-        sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+        sw.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
         sw.add(self.tw)
         self.widget = sw
 
@@ -219,7 +223,7 @@ class TextArea(WidgetBase):
         # not mapped yet!  Seems to be fixed in recent versions of
         # gtk
         buf.move_mark(mark, end)
-        res = self.tw.scroll_to_mark(mark, 0.2, True)
+        res = self.tw.scroll_to_mark(mark, 0.2, False, 0.0, 0.0)
 
     def get_text(self):
         buf = self.tw.get_buffer()
@@ -257,27 +261,27 @@ class TextArea(WidgetBase):
 
     def set_wrap(self, tf):
         if tf:
-            self.tw.set_wrap_mode(gtk.WRAP_WORD)
+            self.tw.set_wrap_mode(Gtk.WrapMode.WORD)
         else:
-            self.tw.set_wrap_mode(gtk.WRAP_NONE)
+            self.tw.set_wrap_mode(Gtk.WrapMode.NONE)
 
 class Label(WidgetBase):
     def __init__(self, text='', halign='left', style='normal', menu=None):
         super(Label, self).__init__()
 
-        label = gtk.Label(text)
-        evbox = gtk.EventBox()
+        label = Gtk.Label(text)
+        evbox = Gtk.EventBox()
         evbox.set_border_width(0)
         evbox.props.visible_window = False
         evbox.add(label)
         evbox.connect("button_press_event", self._cb_redirect)
 
         if halign == 'left':
-            label.set_justify(gtk.JUSTIFY_LEFT)
+            label.set_justify(Gtk.Justification.LEFT)
         elif halign == 'center':
-            label.set_justify(gtk.JUSTIFY_CENTER)
+            label.set_justify(Gtk.Justification.CENTER)
         elif halign == 'right':
-            label.set_justify(gtk.JUSTIFY_RIGHT)
+            label.set_justify(Gtk.Justification.RIGHT)
 
         evbox.connect("button_press_event", self._cb_redirect)
         self.enable_callback('activated')
@@ -287,8 +291,8 @@ class Label(WidgetBase):
         self.evbox = evbox
         self.widget = evbox
         if style == 'clickable':
-            fr = gtk.Frame()
-            fr.set_shadow_type(gtk.SHADOW_OUT)
+            fr = Gtk.Frame()
+            fr.set_shadow_type(Gtk.ShadowType.OUT)
             evbox.props.visible_window = True
             fr.add(evbox)
             self.frame = fr
@@ -302,7 +306,7 @@ class Label(WidgetBase):
 
         elif event.button == 3 and self.menu is not None:
             menu_w = self.menu.get_widget()
-            return menu_w.popup(None, None, None,
+            return menu_w.popup(None, None, None, None,
                                 event.button, event.time)
         return False
 
@@ -317,15 +321,15 @@ class Label(WidgetBase):
 
     def set_color(self, fg=None, bg=None):
         if bg is not None:
-            self.evbox.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse(bg))
+            self.evbox.modify_bg(Gtk.StateType.NORMAL, Gdk.color_parse(bg))
         if fg is not None:
-            self.label.modify_fg(gtk.STATE_NORMAL, gtk.gdk.color_parse(fg))
+            self.label.modify_fg(Gtk.StateType.NORMAL, Gdk.color_parse(fg))
 
 class Button(WidgetBase):
     def __init__(self, text=''):
         super(Button, self).__init__()
 
-        w = gtk.Button(text)
+        w = Gtk.Button(text)
         self.widget = w
         w.connect('clicked', self._cb_redirect)
 
@@ -343,9 +347,9 @@ class ComboBox(WidgetBase):
             cb = GtkHelp.ComboBoxEntry()
         else:
             cb = GtkHelp.ComboBox()
-        liststore = gtk.ListStore(gobject.TYPE_STRING)
+        liststore = Gtk.ListStore(GObject.TYPE_STRING)
         cb.set_model(liststore)
-        cell = gtk.CellRendererText()
+        cell = Gtk.CellRendererText()
         cb.pack_start(cell, True)
         cb.add_attribute(cell, 'text', 0)
         self.widget = cb
@@ -414,7 +418,6 @@ class SpinBox(WidgetBase):
         super(SpinBox, self).__init__()
 
         self.widget = GtkHelp.SpinButton()
-        #self.widget.set_update_policy(gtk.UPDATE_DISCONTINUOUS)
         self.widget.sconnect('value-changed', self._cb_redirect)
 
         self.enable_callback('value-changed')
@@ -451,7 +454,7 @@ class Slider(WidgetBase):
         self.widget = w
 
         w.set_draw_value(True)
-        w.set_value_pos(gtk.POS_BOTTOM)
+        w.set_value_pos(Gtk.PositionType.BOTTOM)
         self.set_tracking(track)
         w.sconnect('value-changed', self._cb_redirect)
 
@@ -469,9 +472,11 @@ class Slider(WidgetBase):
 
     def set_tracking(self, tf):
         if tf:
-            self.widget.set_update_policy(gtk.UPDATE_CONTINUOUS)
+            #self.widget.set_update_policy(Gtk.UPDATE_CONTINUOUS)
+            pass
         else:
-            self.widget.set_update_policy(gtk.UPDATE_DISCONTINUOUS)
+            #self.widget.set_update_policy(Gtk.UPDATE_DISCONTINUOUS)
+            pass
 
     def set_limits(self, minval, maxval, incr_value=1):
         adj = self.widget.get_adjustment()
@@ -483,9 +488,9 @@ class ScrollBar(WidgetBase):
         super(ScrollBar, self).__init__()
 
         if orientation == 'horizontal':
-            self.widget = gtk.HScrollbar()
+            self.widget = Gtk.HScrollbar()
         else:
-            self.widget = gtk.VScrollbar()
+            self.widget = Gtk.VScrollbar()
         self.widget.connect('value-changed', self._cb_redirect)
 
         self.enable_callback('activated')
@@ -564,10 +569,10 @@ class Image(WidgetBase):
         super(Image, self).__init__()
 
         if native_image is None:
-            native_image = gtk.Image()
+            native_image = Gtk.Image()
         self.image = native_image
         self.image.set_property("has-tooltip", True)
-        evbox = gtk.EventBox()
+        evbox = Gtk.EventBox()
         evbox.add(self.image)
         evbox.connect("button-press-event", self._cb_redirect1)
         evbox.connect("button-release-event", self._cb_redirect2)
@@ -578,17 +583,17 @@ class Image(WidgetBase):
         self.enable_callback('activated')
 
     def _cb_redirect1(self, widget, event):
-        if event.type == gtk.gdk.BUTTON_PRESS:
+        if event.type == Gdk.EventType.BUTTON_PRESS:
             if event.button == 1:
                 self._action = 'click'
 
             elif event.button == 3 and self.menu is not None:
                 menu_w = self.menu.get_widget()
-                return menu_w.popup(None, None, None,
+                return menu_w.popup(None, None, None, None,
                                     event.button, event.time)
 
     def _cb_redirect2(self, widget, event):
-        if event.type == gtk.gdk.BUTTON_RELEASE:
+        if event.type == Gdk.EventType.BUTTON_RELEASE:
             if (event.button == 1) and (self._action == 'click'):
                 self._action = None
                 self.make_callback('activated')
@@ -600,9 +605,9 @@ class ProgressBar(WidgetBase):
     def __init__(self):
         super(ProgressBar, self).__init__()
 
-        w = gtk.ProgressBar()
+        w = Gtk.ProgressBar()
         # GTK3
-        #w.set_orientation(gtk.ORIENTATION_HORIZONTAL)
+        #w.set_orientation(Gtk.Orientation.HORIZONTAL)
         #w.set_inverted(False)
         self.widget = w
 
@@ -615,8 +620,7 @@ class StatusBar(WidgetBase):
     def __init__(self):
         super(StatusBar, self).__init__()
 
-        sbar = gtk.Statusbar()
-        sbar.set_has_resize_grip(True)
+        sbar = Gtk.Statusbar()
         self.ctx_id = None
         self.widget = sbar
         self.statustask = None
@@ -631,8 +635,8 @@ class StatusBar(WidgetBase):
 
         # remove message in about 10 seconds
         if self.statustask:
-            gobject.source_remove(self.statustask)
-        self.statustask = gobject.timeout_add(10000,
+            GObject.source_remove(self.statustask)
+        self.statustask = GObject.timeout_add(10000,
                                   self.widget.remove_all, self.ctx_id)
 
 
@@ -654,20 +658,20 @@ class TreeView(WidgetBase):
         self.shadow = {}
 
         # this widget has a built in ScrollArea to match Qt functionality
-        sw = gtk.ScrolledWindow()
+        sw = Gtk.ScrolledWindow()
         sw.set_border_width(2)
-        sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+        sw.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
         self.widget = sw
 
         if self.dragable:
             tv = GtkHelp.MultiDragDropTreeView()
             # enable drag from this widget
             toImage = [ ( "text/plain", 0, 0 ) ]
-            tv.enable_model_drag_source(gtk.gdk.BUTTON1_MASK,
-                                        toImage, gtk.gdk.ACTION_COPY)
+            tv.enable_model_drag_source(Gdk.ModifierType.BUTTON1_MASK,
+                                        toImage, Gdk.DragAction.COPY)
             tv.connect("drag-data-get", self._start_drag)
         else:
-            tv = gtk.TreeView()
+            tv = Gtk.TreeView()
 
         self.tv = tv
         sw.add(self.tv)
@@ -679,7 +683,7 @@ class TreeView(WidgetBase):
         if self.selection == 'multiple':
             # enable multiple selection
             treeselection = tv.get_selection()
-            treeselection.set_mode(gtk.SELECTION_MULTIPLE)
+            treeselection.set_mode(Gtk.SelectionMode.MULTIPLE)
 
         for cbname in ('selected', 'activated', 'drag-start'):
             self.enable_callback(cbname)
@@ -714,12 +718,12 @@ class TreeView(WidgetBase):
         for n in range(0, len(self.columns)):
             kwd = self.datakeys[n]
             if kwd == 'icon':
-                cell = gtk.CellRendererPixbuf()
+                cell = Gtk.CellRendererPixbuf()
             else:
-                cell = gtk.CellRendererText()
+                cell = Gtk.CellRendererText()
             cell.set_padding(2, 0)
             header = headers[n]
-            tvc = gtk.TreeViewColumn(header, cell)
+            tvc = Gtk.TreeViewColumn(header, cell)
             tvc.set_resizable(True)
             if self.sortable:
                 tvc.connect('clicked', self.sort_cb, n)
@@ -732,7 +736,7 @@ class TreeView(WidgetBase):
             tvc.set_cell_data_func(cell, fn_data)
             self.tv.append_column(tvc)
 
-        treemodel = gtk.TreeStore(object)
+        treemodel = Gtk.TreeStore(object)
         self.tv.set_fixed_height_mode(False)
         self.tv.set_model(treemodel)
         # This speeds up rendering of TreeViews
@@ -741,7 +745,7 @@ class TreeView(WidgetBase):
     def set_tree(self, tree_dict):
         self.clear()
 
-        model = gtk.TreeStore(object)
+        model = Gtk.TreeStore(object)
         self._add_tree(model, tree_dict)
 
     def add_tree(self, tree_dict):
@@ -799,6 +803,8 @@ class TreeView(WidgetBase):
 
     def _selection_cb(self, treeview):
         path, column = treeview.get_cursor()
+        if path is None:
+            return
         model = treeview.get_model()
         item = model.get_iter(path)
         res_dict = {}
@@ -856,7 +862,7 @@ class TreeView(WidgetBase):
         return res_dict
 
     def clear(self):
-        model = gtk.TreeStore(object)
+        model = Gtk.TreeStore(object)
         self.tv.set_model(model)
         self.shadow = {}
 
@@ -888,7 +894,7 @@ class TreeView(WidgetBase):
 
     def sort_on_column(self, i):
         model = self.tv.get_model()
-        model.set_sort_column_id(i, gtk.SORT_ASCENDING)
+        model.set_sort_column_id(i, Gtk.SortType.ASCENDING)
 
     def set_column_width(self, i, width):
         col = self.tv.get_column(i)
@@ -905,7 +911,7 @@ class TreeView(WidgetBase):
     def sort_cb(self, column, idx):
         treeview = column.get_tree_view()
         model = treeview.get_model()
-        model.set_sort_column_id(idx, gtk.SORT_ASCENDING)
+        model.set_sort_column_id(idx, Gtk.SortType.ASCENDING)
         fn = self.cell_sort_funcs[idx]
         model.set_sort_func(idx, fn)
         return True
@@ -933,9 +939,9 @@ class TreeView(WidgetBase):
             bnch = model.get_value(iter, 0)
             if isinstance(bnch, str):
                 cell.set_property('text', bnch)
-            elif isinstance(bnch, gtk.gdk.Pixbuf):
+            elif isinstance(bnch, GdkPixbuf.Pixbuf):
                 cell.set_property('pixbuf', bnch)
-            elif isinstance(bnch[idx], gtk.gdk.Pixbuf):
+            elif isinstance(bnch[idx], GdkPixbuf.Pixbuf):
                 cell.set_property('pixbuf', bnch[idx])
             else:
                 cell.set_property('text', bnch[idx])
@@ -947,12 +953,12 @@ class TreeView(WidgetBase):
             bnch = model.get_value(iter, 0)
             if isinstance(bnch, str):
                 cell.set_property('text', '')
-            elif isinstance(bnch, gtk.gdk.Pixbuf):
+            elif isinstance(bnch, GdkPixbuf.Pixbuf):
                 cell.set_property('text', '')
-            elif isinstance(bnch[idx], gtk.gdk.Pixbuf):
+            elif isinstance(bnch[idx], GdkPixbuf.Pixbuf):
                 cell.set_property('pixbuf', bnch[idx])
             else:
-                cell.set_property('text', bnch[idx])
+                cell.set_property('text', str(bnch[idx]))
         return fn
 
     def _start_drag(self, treeview, context, selection,
@@ -1019,9 +1025,9 @@ class Box(ContainerBase):
         super(Box, self).__init__()
 
         if orientation == 'horizontal':
-            self.widget = gtk.HBox()
+            self.widget = Gtk.HBox()
         else:
-            self.widget = gtk.VBox()
+            self.widget = Gtk.VBox()
 
     def set_spacing(self, val):
         self.widget.set_spacing(val)
@@ -1031,7 +1037,7 @@ class Box(ContainerBase):
         child_w = child.get_widget()
         # TODO: can this be made more accurate?
         expand = (float(stretch) != 0.0)
-        self.widget.pack_start(child_w, expand=expand, fill=True)
+        self.widget.pack_start(child_w, expand, True, 0)
         self.widget.show_all()
 
 class VBox(Box):
@@ -1047,8 +1053,8 @@ class Frame(ContainerBase):
     def __init__(self, title=None):
         super(Frame, self).__init__()
 
-        fr = gtk.Frame(label=title)
-        fr.set_shadow_type(gtk.SHADOW_ETCHED_IN)
+        fr = Gtk.Frame(label=title)
+        fr.set_shadow_type(Gtk.ShadowType.ETCHED_IN)
         fr.set_label_align(0.10, 0.5)
         self.widget = fr
 
@@ -1063,7 +1069,7 @@ class Expander(ContainerBase):
     def __init__(self, title=None):
         super(Expander, self).__init__()
 
-        w = gtk.Expander(label=title)
+        w = Gtk.Expander(label=title)
         self.widget = w
 
     def set_widget(self, child):
@@ -1082,11 +1088,11 @@ class TabWidget(ContainerBase):
         self.detachable = detachable
 
         nb = GtkHelp.Notebook()
-        #nb = gtk.Notebook()
+        #nb = Gtk.Notebook()
         nb.set_show_border(False)
         nb.set_scrollable(True)
         # Allows drag-and-drop between notebooks
-        nb.set_group_id(group)
+        #nb.set_group_id(group)  # in gtk3?
         if self.detachable:
             nb.connect("create-window", self._tab_detach_cb)
         nb.connect("page-added", self._tab_insert_cb)
@@ -1102,13 +1108,13 @@ class TabWidget(ContainerBase):
     def set_tab_position(self, tabpos):
         nb = self.widget
         if tabpos == 'top':
-            nb.set_tab_pos(gtk.POS_TOP)
+            nb.set_tab_pos(Gtk.PositionType.TOP)
         elif tabpos == 'bottom':
-            nb.set_tab_pos(gtk.POS_BOTTOM)
+            nb.set_tab_pos(Gtk.PositionType.BOTTOM)
         elif tabpos == 'left':
-            nb.set_tab_pos(gtk.POS_LEFT)
+            nb.set_tab_pos(Gtk.PositionType.LEFT)
         elif tabpos == 'right':
-            nb.set_tab_pos(gtk.POS_RIGHT)
+            nb.set_tab_pos(Gtk.PositionType.RIGHT)
 
     def _tab_detach_cb(self, source, nchild_w, x, y):
         child = self._native_to_child(nchild_w)
@@ -1149,8 +1155,8 @@ class TabWidget(ContainerBase):
     def add_widget(self, child, title=''):
         self.add_ref(child)
         child_w = child.get_widget()
-        label = gtk.Label(title)
-        evbox = gtk.EventBox()
+        label = Gtk.Label(title)
+        evbox = Gtk.EventBox()
         evbox.props.visible_window = True
         evbox.add(label)
         evbox.show_all()
@@ -1182,9 +1188,9 @@ class TabWidget(ContainerBase):
         nchild = self.widget.get_nth_page(idx)
         evbox = self.widget.get_tab_label(nchild)
         if tf:
-            evbox.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse('palegreen'))
+            evbox.modify_bg(Gtk.StateType.NORMAL, Gdk.color_parse('palegreen'))
         else:
-            evbox.modify_bg(gtk.STATE_NORMAL, None)
+            evbox.modify_bg(Gtk.StateType.NORMAL, None)
 
 class StackWidget(TabWidget):
     def __init__(self):
@@ -1227,9 +1233,9 @@ class MDIWidget2(ContainerBase):
         self.mode = 'tabs'
         self.true_mdi = False
 
-        sw = gtk.ScrolledWindow()
+        sw = Gtk.ScrolledWindow()
         sw.set_border_width(2)
-        sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+        sw.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
         self.widget = sw
         self.mdi_w = GtkHelp.MDIWidget()
         sw.add(self.mdi_w)
@@ -1243,7 +1249,7 @@ class MDIWidget2(ContainerBase):
     def add_widget(self, child, title=''):
         self.add_ref(child)
         child_w = child.get_widget()
-        label = gtk.Label(title)
+        label = Gtk.Label(title)
         self.mdi_w.append_page(child_w, label)
         #self.mdi_w.show_all()
         # attach title to child
@@ -1280,9 +1286,9 @@ class ScrollArea(ContainerBase):
     def __init__(self):
         super(ScrollArea, self).__init__()
 
-        sw = gtk.ScrolledWindow()
+        sw = Gtk.ScrolledWindow()
         sw.set_border_width(2)
-        sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+        sw.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
         self.widget = sw
 
         self.enable_callback('configure')
@@ -1321,9 +1327,9 @@ class Splitter(ContainerBase):
 
     def _get_pane(self):
         if self.orientation == 'horizontal':
-            w = gtk.HPaned()
+            w = Gtk.HPaned()
         else:
-            w = gtk.VPaned()
+            w = Gtk.VPaned()
         return w
 
     def add_widget(self, child):
@@ -1375,7 +1381,7 @@ class GridBox(ContainerBase):
     def __init__(self, rows=1, columns=1):
         super(GridBox, self).__init__()
 
-        w = gtk.Table(rows=rows, columns=columns)
+        w = Gtk.Table(rows=rows, columns=columns)
         self.widget = w
         self.num_rows = rows
         self.num_cols = columns
@@ -1409,11 +1415,11 @@ class GridBox(ContainerBase):
         self.add_ref(child)
         w = child.get_widget()
         if stretch > 0:
-            xoptions = gtk.EXPAND|gtk.FILL
-            yoptions = gtk.EXPAND|gtk.FILL
+            xoptions = Gtk.AttachOptions.EXPAND | Gtk.AttachOptions.FILL
+            yoptions = Gtk.AttachOptions.EXPAND | Gtk.AttachOptions.FILL
         else:
-            xoptions = gtk.FILL
-            yoptions = gtk.FILL
+            xoptions = Gtk.AttachOptions.FILL
+            yoptions = Gtk.AttachOptions.FILL
         self.widget.attach(w, col, col+1, row, row+1,
                            xoptions=xoptions, yoptions=yoptions,
                            xpadding=0, ypadding=0)
@@ -1424,12 +1430,12 @@ class Toolbar(ContainerBase):
     def __init__(self, orientation='horizontal'):
         super(Toolbar, self).__init__()
 
-        w = gtk.Toolbar()
-        w.set_style(gtk.TOOLBAR_ICONS)
+        w = Gtk.Toolbar()
+        w.set_style(Gtk.ToolbarStyle.ICONS)
         if orientation == 'horizontal':
-            w.set_orientation(gtk.ORIENTATION_HORIZONTAL)
+            w.set_orientation(Gtk.Orientation.HORIZONTAL)
         else:
-            w.set_orientation(gtk.ORIENTATION_VERTICAL)
+            w.set_orientation(Gtk.Orientation.VERTICAL)
         self.widget = w
 
     def add_action(self, text, toggle=False, iconpath=None):
@@ -1441,10 +1447,10 @@ class Toolbar(ContainerBase):
         if iconpath is not None:
             pixbuf = GtkHelp.pixbuf_new_from_file_at_size(iconpath, 24, 24)
             if pixbuf is not None:
-                image = gtk.image_new_from_pixbuf(pixbuf)
+                image = Gtk.Image.new_from_pixbuf(pixbuf)
                 child.get_widget().set_image(image)
 
-        self.add_widget(child)
+        self.widget.insert(child.get_widget(), -1)
         return child
 
     def add_widget(self, child):
@@ -1464,10 +1470,10 @@ class MenuAction(WidgetBase):
         self.checkable = checkable
 
         if checkable:
-            self.widget = gtk.CheckMenuItem(label=text)
+            self.widget = Gtk.CheckMenuItem(label=text)
             self.widget.connect('toggled', self._cb_redirect)
         else:
-            self.widget = gtk.MenuItem(label=text)
+            self.widget = Gtk.MenuItem(label=text)
             self.widget.connect('activate', self._cb_redirect)
         self.widget.show()
 
@@ -1493,7 +1499,7 @@ class Menu(ContainerBase):
     def __init__(self):
         super(Menu, self).__init__()
 
-        self.widget = gtk.Menu()
+        self.widget = Gtk.Menu()
         self.widget.show()
 
     def add_widget(self, child):
@@ -1508,7 +1514,7 @@ class Menu(ContainerBase):
         return child
 
     def add_separator(self):
-        sep = gtk.SeparatorMenuItem()
+        sep = Gtk.SeparatorMenuItem()
         self.widget.append(sep)
         sep.show()
 
@@ -1519,14 +1525,14 @@ class Menu(ContainerBase):
             now = long(0)
         else:
             now = int(0)
-        menu.popup(None, None, None, 0, now)
+        menu.popup(None, None, None, None, 0, now)
 
 
 class Menubar(ContainerBase):
     def __init__(self):
         super(Menubar, self).__init__()
 
-        self.widget = gtk.MenuBar()
+        self.widget = Gtk.MenuBar()
         self.menus = Bunch.Bunch(caseless=True)
 
     def add_widget(self, child):
@@ -1537,7 +1543,7 @@ class Menubar(ContainerBase):
         return child
 
     def add_name(self, name):
-        item_w = gtk.MenuItem(label=name)
+        item_w = Gtk.MenuItem(label=name)
         child = Menu()
         self.add_ref(child)
         self.menus[name] = child
@@ -1579,8 +1585,8 @@ class TopLevelMixin(object):
         return True
 
     def _window_event(self, widget, event):
-        if ((event.changed_mask & gtk.gdk.WINDOW_STATE_FULLSCREEN) or
-            (event.changed_mask & gtk.gdk.WINDOW_STATE_MAXIMIZED)):
+        if ((event.changed_mask & Gdk.WindowState.FULLSCREEN) or
+            (event.changed_mask & Gdk.WindowState.MAXIMIZED)):
             self._fullscreen = True
         else:
             self._fullscreen = False
@@ -1610,6 +1616,7 @@ class TopLevelMixin(object):
         window.lower()
 
     def resize(self, width, height):
+        # TODO: use window.set_default_size() ?
         self.widget.set_size_request(width, height)
 
     def focus(self):
@@ -1683,7 +1690,7 @@ class Application(Callback.Callbacks):
         self.wincnt = 0
 
         try:
-            screen = gtk.gdk.screen_get_default()
+            screen = Gdk.screen_get_default()
             self.screen_ht = screen.get_height()
             self.screen_wd = screen.get_width()
         except:
@@ -1701,9 +1708,9 @@ class Application(Callback.Callbacks):
         return (self.screen_wd, self.screen_ht)
 
     def process_events(self):
-        while gtk.events_pending():
-            #gtk.main_iteration(False)
-            gtk.main_iteration()
+        while Gtk.events_pending():
+            #Gtk.main_iteration(False)
+            Gtk.main_iteration()
 
     def process_end(self):
         pass
@@ -1752,7 +1759,7 @@ class Dialog(TopLevelMixin, WidgetBase):
         for name, val in buttons:
             button_list.extend([name, val])
 
-        self.widget = gtk.Dialog(title=title, flags=flags,
+        self.widget = Gtk.Dialog(title=title, flags=flags,
                                  buttons=tuple(button_list))
         self.widget.set_modal(modal)
 
@@ -1761,7 +1768,7 @@ class Dialog(TopLevelMixin, WidgetBase):
         self.content = VBox()
         self.content.set_border_width(0)
         content = self.widget.get_content_area()
-        content.pack_start(self.content.get_widget(), fill=True, expand=True)
+        content.pack_start(self.content.get_widget(), True, True, 0)
 
         self.widget.connect("response", self._cb_redirect)
 
@@ -1776,11 +1783,11 @@ class Dialog(TopLevelMixin, WidgetBase):
 
 class SaveDialog(object):
     def __init__(self, title='Save File', selectedfilter=None):
-        action = gtk.FILE_CHOOSER_ACTION_SAVE
-        buttons = (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
-                   gtk.STOCK_SAVE, gtk.RESPONSE_OK)
+        action = Gtk.FileChooserAction.SAVE
+        buttons = (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
+                   Gtk.STOCK_SAVE, Gtk.ResponseType.OK)
 
-        self.widget = gtk.FileChooserDialog(title=title, action=action,
+        self.widget = Gtk.FileChooserDialog(title=title, action=action,
                                             buttons=buttons)
         self.selectedfilter = selectedfilter
 
@@ -1788,7 +1795,7 @@ class SaveDialog(object):
             self._add_filter(selectedfilter)
 
     def _add_filter(self, selectedfilter):
-        filtr = gtk.FileFilter()
+        filtr = Gtk.FileFilter()
         filtr.add_pattern(selectedfilter)
         if 'png' in selectedfilter:
             filtr.set_name('Image (*.png)')
@@ -1804,13 +1811,13 @@ class SaveDialog(object):
     def get_path(self):
         response = self.widget.run()
 
-        if response == gtk.RESPONSE_OK:
+        if response == Gtk.ResponseType.OK:
             path = self.widget.get_filename()
             if self.selectedfilter is not None and not path.endswith(self.selectedfilter):
                 path += self.selectedfilter
             self.widget.destroy()
             return path
-        elif response == gtk.RESPONSE_CANCEL:
+        elif response == Gtk.ResponseType.CANCEL:
             self.widget.destroy()
             return None
 
@@ -1908,17 +1915,17 @@ def hadjust(w, orientation):
 
 
 def build_info(captions, orientation='vertical'):
-    vbox = gtk.VBox(spacing=2)
+    vbox = Gtk.VBox(spacing=2)
 
     numrows = len(captions)
     numcols = reduce(lambda acc, tup: max(acc, len(tup)), captions, 0)
     if (numcols % 2) != 0:
         raise ValueError("Column spec is not an even number")
     numcols = int(numcols // 2)
-    table = gtk.Table(rows=numrows, columns=numcols)
+    table = Gtk.Table(rows=numrows, columns=numcols)
     table.set_row_spacings(2)
     table.set_col_spacings(4)
-    vbox.pack_start(table, expand=False)
+    vbox.pack_start(table, False, False, 0)
 
     wb = Bunch.Bunch()
     row = 0
@@ -1934,7 +1941,8 @@ def build_info(captions, orientation='vertical'):
                     name = name_mangle('lbl_'+title[:-1])
                 w = make_widget(title, wtype)
                 table.attach(w.get_widget(), col, col+1, row, row+1,
-                             xoptions=gtk.FILL, yoptions=gtk.FILL,
+                             xoptions=Gtk.AttachOptions.FILL,
+                             yoptions=Gtk.AttachOptions.FILL,
                              xpadding=1, ypadding=1)
                 wb[name] = w
             col += 1

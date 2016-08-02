@@ -2,11 +2,14 @@
 from ginga import toolkit
 tkname = toolkit.get_family()
 
-if tkname == 'gtk':
+if tkname == 'qt':
+    from ginga.qtw.Plot import *
+
+elif tkname == 'gtk':
     from ginga.gtkw.Plot import *
 
-elif tkname == 'qt':
-    from ginga.qtw.Plot import *
+elif tkname == 'gtk3':
+    from ginga.gtk3w.Plot import *
 
 elif tkname == 'pg':
     from ginga.web.pgw.Plot import *
