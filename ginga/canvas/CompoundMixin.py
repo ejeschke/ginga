@@ -10,7 +10,7 @@
 import sys, traceback
 import numpy
 
-from ginga.util.six.moves import map, zip, reduce
+from ginga.util.six.moves import map, zip, reduce, filter
 from ginga.canvas import coordmap
 
 __all__ = ['CompoundMixin']
@@ -72,6 +72,12 @@ class CompoundMixin(object):
                 #res.insert(0, obj)
                 res.append(obj)
         return res
+
+    def get_objects_by_kind(self, kind):
+        return filter(lambda obj: obj.kind == kind, self.objects)
+
+    def get_objects_by_kinds(self, kinds):
+        return filter(lambda obj: obj.kind in kinds, self.objects)
 
     def select_contains(self, viewer, x, y):
         for obj in self.objects:

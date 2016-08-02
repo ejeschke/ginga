@@ -328,7 +328,8 @@ class Toolbar(GingaPlugin.GlobalPlugin):
 
             default_mode_type = bm.get_default_mode_type()
             if self.w.has_key('btn_modelock'):
-                self.w.btn_modelock.set_state(default_mode_type == 'locked')
+                is_locked = (default_mode_type in ('locked', 'softlock'))
+                self.w.btn_modelock.set_state(is_locked)
 
         except Exception as e:
             self.logger.error("error updating toolbar: %s" % str(e))
