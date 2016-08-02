@@ -884,7 +884,7 @@ class Triangle(OnePointTwoRadiusMixin, CanvasObjectBase):
 
     def get_llur(self):
         xd, yd = self.crdmap.to_data(self.x, self.y)
-        points = numpy.asarray(self.get_points())
+        points = numpy.asarray(self.get_points(), dtype=numpy.double)
 
         mpts = trcalc.rotate_coord(points, self.rot_deg, [xd, yd])
         t_ = mpts.T

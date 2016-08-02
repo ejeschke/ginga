@@ -227,7 +227,7 @@ class CanvasObjectBase(Callback.Callbacks):
         self.points = points
 
     def rotate(self, theta_deg, xoff=0, yoff=0):
-        points = numpy.asarray(self.get_data_points())
+        points = numpy.asarray(self.get_data_points(), dtype=numpy.double)
         points = trcalc.rotate_coord(points, theta_deg, [xoff, yoff])
         self.set_data_points(points)
 
@@ -237,7 +237,7 @@ class CanvasObjectBase(Callback.Callbacks):
 
     def rerotate_by(self, theta_deg, detail):
         ref_x, ref_y = detail.center_pos
-        points = numpy.asarray(detail.points)
+        points = numpy.asarray(detail.points, dtype=numpy.double)
         points = trcalc.rotate_coord(points, theta_deg, [ref_x, ref_y])
         self.set_data_points(points)
 
@@ -245,7 +245,7 @@ class CanvasObjectBase(Callback.Callbacks):
         ## self.points = list(map(
         ##     lambda pt: self.crdmap.offset_pt(pt, xoff, yoff),
         ##     self.points))
-        points = numpy.asarray(self.get_data_points())
+        points = numpy.asarray(self.get_data_points(), dtype=numpy.double)
         points.T[0] += xoff
         points.T[1] += yoff
         self.set_data_points(points)
@@ -268,14 +268,14 @@ class CanvasObjectBase(Callback.Callbacks):
 
     def scale_by(self, scale_x, scale_y):
         ctr_x, ctr_y = self.get_center_pt()
-        pts = numpy.asarray(self.get_data_points())
+        pts = numpy.asarray(self.get_data_points(), dtype=numpy.double)
         pts[:, 0] = (pts[:, 0] - ctr_x) * scale_x + ctr_x
         pts[:, 1] = (pts[:, 1] - ctr_y) * scale_y + ctr_y
         self.set_data_points(pts)
 
     def rescale_by(self, scale_x, scale_y, detail):
         ctr_x, ctr_y = detail.center_pos
-        pts = numpy.asarray(detail.points)
+        pts = numpy.asarray(detail.points, dtype=numpy.double)
         pts[:, 0] = (pts[:, 0] - ctr_x) * scale_x + ctr_x
         pts[:, 1] = (pts[:, 1] - ctr_y) * scale_y + ctr_y
         self.set_data_points(pts)
@@ -449,7 +449,7 @@ class CanvasObjectBase(Callback.Callbacks):
     def get_center_pt(self):
         """Return the geometric average of points as data_points.
         """
-        P = numpy.asarray(self.get_data_points())
+        P = numpy.asarray(self.get_data_points(), dtype=numpy.double)
         x = P[:, 0]
         y = P[:, 1]
         ctr_x = numpy.sum(x) / float(len(x))
