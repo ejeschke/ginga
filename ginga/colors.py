@@ -756,10 +756,18 @@ def recalc_color_list():
 
 def lookup_color(name, format='tuple'):
     color = None
-    try:
-        color = color_dict[name]
-    except KeyError:
-        raise KeyError("%s color does not exist in color_dict"%(name))
+    if name.startswith('#'):
+        # hex notation
+        name = name[1:]
+        color = (int(name[:2], 16) / 255.0,
+                 int(name[2:4], 16) / 255.0,
+                 int(name[4:6], 16) / 255.0)
+    else:
+        # must be a name
+        try:
+            color = color_dict[name]
+        except KeyError:
+            raise KeyError("%s color does not exist in color_dict"%(name))
 
     if format == 'tuple':
         return color
@@ -771,7 +779,7 @@ def lookup_color(name, format='tuple'):
 
 def _validate_color_tuple(tup):
     if not(isinstance(tup, tuple) or isinstance(tup, list)) :
-        raise TypeError("the color element must be a tuple or list")    
+        raise TypeError("the color element must be a tuple or list")
 
     if len(tup) != 3:
         raise ValueError("length of color tuple must be 3 specifying RBG values")

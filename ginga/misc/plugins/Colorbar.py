@@ -1,9 +1,6 @@
 #
 # Colorbar.py -- Color bar plugin for Ginga viewer
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -35,25 +32,13 @@ class Colorbar(GingaPlugin.GlobalPlugin):
         cbar = ColorBar.ColorBar(self.logger)
         cbar.set_cmap(self.fv.cm)
         cbar.set_imap(self.fv.im)
-        if hasattr(cbar, 'get_widget'):
-            # generic version based on a ginga widget
-            cbar_w = cbar.get_widget()
-            # TEMP
-            #cbar_w.resize(600, 16)
-            fr = cbar_w
-        else:
-            # dedicated widget version
-            cbar_w = Widgets.wrap(cbar)
-
-            fr = Widgets.Frame()
-            fr.set_border_width(0)
-            fr.set_widget(cbar_w)
+        cbar_w = cbar.get_widget()
 
         self.colorbar = cbar
         self.fv.add_callback('channel-change', self.change_cbar, cbar)
         cbar.add_callback('motion', self.cbar_value_cb)
 
-        container.add_widget(fr, stretch=0)
+        container.add_widget(cbar_w, stretch=0)
 
     def add_channel_cb(self, viewer, channel):
         settings = channel.settings
