@@ -447,6 +447,7 @@ class AstroImage(BaseImage):
         mydata = self._get_data()
 
         count = 1
+        res = []
         for image in imagelist:
             name = image.get('name', 'image%d' % (count))
             count += 1
@@ -505,13 +506,13 @@ class AstroImage(BaseImage):
             flip_x = False
             flip_y = False
 
-            ## # Flip X due to negative CDELT1
-            ## if numpy.sign(cdelt1) < 0:
-            ##     flip_x = True
+            # Flip X due to negative CDELT1
+            if numpy.sign(cdelt1) < 0:
+                flip_x = True
 
-            ## # Flip Y due to negative CDELT2
-            ## if numpy.sign(cdelt2) < 0:
-            ##     flip_y = True
+            # Flip Y due to negative CDELT2
+            if numpy.sign(cdelt2) < 0:
+                flip_y = True
 
             # Optomization for 180 rotations
             if numpy.isclose(math.fabs(rot_dx), 180.0):
@@ -629,6 +630,8 @@ class AstroImage(BaseImage):
                 self.logger.error("Error fitting tile: %s" % (str(e)))
                 raise
 
+            res.append((xlo, ylo, xhi, yhi))
+
         # TODO: recalculate min and max values
         # Can't use usual techniques because it adds too much time to the
         # mosacing
@@ -638,7 +641,7 @@ class AstroImage(BaseImage):
         if not suppress_callback:
             self.make_callback('modified')
 
-        return (xlo, ylo, xhi, yhi)
+        return res
 
     def info_xy(self, data_x, data_y, settings):
         # Get the value under the data coordinates

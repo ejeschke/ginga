@@ -40,6 +40,9 @@ class Mosaic(GingaPlugin.LocalPlugin):
         # holds processed images to be inserted into mosaic image
         self.images = []
         self.total_files = 0
+        # can set this to annotate images with a specific
+        # value drawn from the FITS kwd
+        self.ann_fits_kwd = None
 
         self.dc = self.fv.getDrawClasses()
 
@@ -322,13 +325,20 @@ class Mosaic(GingaPlugin.LocalPlugin):
                                             allow_expand=allow_expand,
                                             expand_pad_deg=expand_pad_deg,
                                             suppress_callback=False)
-        (xlo, ylo, xhi, yhi) = loc
 
         # annotate ingested image with its name?
         if annotate and (not allow_expand):
-            x, y = (xlo+xhi)//2, (ylo+yhi)//2
-            self.canvas.add(self.dc.Text(x, y, imname, color='red'),
-                            redraw=False)
+            for i, image in enumerate(images):
+                (xlo, ylo, xhi, yhi) = loc[i]
+                header = image.get_header()
+                if self.ann_fits_kwd is not None:
+                    imname = str(header[self.ann_fits_kwd])
+                else:
+                    imname = image.get('name', 'noname')
+
+                x, y = (xlo+xhi) / 2., (ylo+yhi) / 2.
+                self.canvas.add(self.dc.Text(x, y, imname, color='red'),
+                                redraw=False)
 
         time_intr2 = time.time()
         self.process_elapsed += time_intr2 - time_intr1
@@ -404,12 +414,12 @@ class Mosaic(GingaPlugin.LocalPlugin):
             self.ingest_count += 1
             count = self.ingest_count
 
-            self.update_progress(float(count)/self.total_files)
+            self.update_progress(float(count) / self.total_files)
 
             if count == self.total_files:
                 self.end_progress()
 
-                self.update_status("Inserting into mosaic...")
+                #self.update_status("Inserting into mosaic...")
                 images, self.images = self.images, []
                 self.fv.gui_do(self._inline, images)
 

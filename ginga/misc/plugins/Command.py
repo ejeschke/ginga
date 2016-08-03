@@ -129,6 +129,7 @@ class Command(GingaPlugin.GlobalPlugin):
                 pfx = time.strftime("%H:%M:%S", time.localtime()) + ": "
             self.hist_w.append_text(pfx + text + '\n',
                                     autoscroll=True)
+            self.fv.update_pending()
 
     def close(self):
         self.fv.stop_global_plugin(str(self))
