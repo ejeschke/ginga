@@ -548,7 +548,10 @@ class RadioButton(WidgetBase):
 
         if group is not None:
             group = group.get_widget()
-        self.widget = GtkHelp.RadioButton(group, text)
+            self.widget = GtkHelp.RadioButton.new_with_label_from_widget(group,
+                                                                         text)
+        else:
+            self.widget = GtkHelp.RadioButton.new_with_label(None, text)
         self.widget.connect('toggled', self._cb_redirect)
 
         self.enable_callback('activated')
@@ -1036,7 +1039,7 @@ class Box(ContainerBase):
         self.add_ref(child)
         child_w = child.get_widget()
         # TODO: can this be made more accurate?
-        expand = (float(stretch) != 0.0)
+        expand = (float(stretch) > 0.0)
         self.widget.pack_start(child_w, expand, True, 0)
         self.widget.show_all()
 
@@ -1450,16 +1453,25 @@ class Toolbar(ContainerBase):
                 image = Gtk.Image.new_from_pixbuf(pixbuf)
                 child.get_widget().set_image(image)
 
-        self.widget.insert(child.get_widget(), -1)
+        self.add_widget(child)
         return child
 
     def add_widget(self, child):
-        self.add_ref(child)
+        # gtk3 says to add a generic widget using ToolItem.new()
+        tool_w = Gtk.ToolItem.new()
         w = child.get_widget()
-        self.widget.append_widget(w, None, None)
+        tool_w.add(w)
+        tool = ContainerBase()
+        tool.add_ref(child)
+        self.add_ref(tool)
+        self.widget.insert(tool_w, -1)
+        return tool
 
     def add_separator(self):
-        self.widget.append_space()
+        sep_w = Gtk.SeparatorToolItem()
+        sep = wrap(sep_w)
+        self.widget.insert(sep_w, -1)
+        self.add_ref(sep)
 
 
 class MenuAction(WidgetBase):
@@ -1710,7 +1722,12 @@ class Application(Callback.Callbacks):
     def process_events(self):
         while Gtk.events_pending():
             #Gtk.main_iteration(False)
-            Gtk.main_iteration()
+            try:
+                Gtk.main_iteration()
+
+            except Exception as e:
+                self.logger.error("Exception in main_iteration() loop: %s" %
+                                  (str(e)))
 
     def process_end(self):
         pass

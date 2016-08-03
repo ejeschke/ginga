@@ -509,7 +509,6 @@ class ImageViewEvent(ImageViewGtk):
         else:
             paths = buf.split('\n')
         self.logger.debug("dropped filename(s): %s" % (str(paths)))
-        print(paths)
 
         self.make_ui_callback('drag-drop', paths)
 

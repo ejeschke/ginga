@@ -64,7 +64,7 @@ class FitsViewer(object):
         vbox.pack_start(w, True, True, 1)
 
         self.readout = Gtk.Label("")
-        vbox.pack_start(self.readout, True, False, 0)
+        vbox.pack_start(self.readout, False, False, 0)
 
         hbox = Gtk.HBox(spacing=5)
 

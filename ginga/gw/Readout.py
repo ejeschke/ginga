@@ -21,6 +21,7 @@ class Readout(object):
 
         self.viewer = readout
         self.readout = Widgets.wrap(readout.get_widget())
+        self.readout.resize(width, height)
 
         canvas = readout.get_canvas()
         Text = canvas.get_draw_class('text')

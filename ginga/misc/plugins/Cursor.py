@@ -10,7 +10,7 @@
 import platform
 import numpy
 
-from ginga import GingaPlugin
+from ginga import GingaPlugin, toolkit
 from ginga.misc import Bunch
 from ginga.gw import Widgets, Readout
 
@@ -37,14 +37,16 @@ class Cursor(GingaPlugin.GlobalPlugin):
     def _build_readout(self):
         readout = Readout.Readout(-1, 24)
 
-        # NOTE: Special hack for Mac OS X, otherwise the font on the readout
-        # is too small
+        # NOTE: Special hack for certain platforms, otherwise the font
+        # on the readout is too small
         macos_ver = platform.mac_ver()[0]
         if len(macos_ver) > 0:
-            #readout.set_font(self.fv.font14)
+            # Mac OS X
             readout.set_font('monaco 16')
+        elif toolkit.get_family().startswith('gtk'):
+            # Gtk
+            readout.set_font('fixed 14')
         else:
-            #readout.set_font(self.fv.font11)
             readout.set_font('fixed 11')
         return readout
 

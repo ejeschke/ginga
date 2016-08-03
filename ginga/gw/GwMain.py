@@ -49,8 +49,6 @@ class GwMain(Callback.Callbacks):
         self.tag = 'master'
         self.shares = ['threadPool', 'logger']
 
-        self.min_events = 100
-
 
     def get_widget(self):
         return self.app
@@ -106,10 +104,8 @@ class GwMain(Callback.Callbacks):
         # Process "out-of-band" events, again
         try:
             self.app.process_events()
-            pass
         except Exception as e:
             self.logger.error(str(e))
-
 
     def gui_do(self, method, *args, **kwdargs):
         """General method for asynchronously calling into the GUI.
