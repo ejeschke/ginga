@@ -506,26 +506,13 @@ class AstroImage(BaseImage):
             flip_x = False
             flip_y = False
 
-            # Flip X due to negative CDELT1
-            if numpy.sign(cdelt1) < 0:
-                flip_x = True
-
-            # Flip Y due to negative CDELT2
-            if numpy.sign(cdelt2) < 0:
-                flip_y = True
-
             # Optomization for 180 rotations
-            if numpy.isclose(math.fabs(rot_dx), 180.0):
-                flip_x = not flip_x
-                rot_dx = 0.0
-            if numpy.isclose(math.fabs(rot_dy), 180.0):
-                flip_y = not flip_y
-                rot_dy = 0.0
-
-            self.logger.debug("flip_x=%s flip_y=%s" % (flip_x, flip_y))
-            if flip_x or flip_y:
+            if (numpy.isclose(math.fabs(rot_dx), 180.0) or
+                numpy.isclose(math.fabs(rot_dy), 180.0)):
                 rotdata = trcalc.transform(data_np,
-                                           flip_x=flip_x, flip_y=flip_y)
+                                           flip_x=True, flip_y=True)
+                rot_dx = 0.0
+                rot_dy = 0.0
             else:
                 rotdata = data_np
 
@@ -536,6 +523,18 @@ class AstroImage(BaseImage):
                 rotdata = trcalc.rotate(rotdata, rot_deg,
                                         #rotctr_x=ctr_x, rotctr_y=ctr_y
                                         )
+
+            # Flip X due to negative CDELT1
+            if numpy.sign(cdelt1) != numpy.sign(cdelt1_ref):
+                flip_x = True
+
+            # Flip Y due to negative CDELT2
+            if numpy.sign(cdelt2)  != numpy.sign(cdelt2_ref):
+                flip_y = True
+
+            if flip_x or flip_y:
+                rotdata = trcalc.transform(rotdata,
+                                           flip_x=flip_x, flip_y=flip_y)
 
             # Get size and data of new image
             ht, wd = rotdata.shape[:2]
