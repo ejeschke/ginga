@@ -52,11 +52,15 @@ class CL(object):
         data_np = np.ascontiguousarray(data_np, dtype=np.float64)
 
         if out is None:
+            # no output array specified
             if out_ht == 0:
+                # no desired output size specified--use dimensions of input
+                # a clip, basically
                 out_ht, out_wd = data_np.shape[:2]
             out_shape = (out_ht, out_wd) + data_np.shape[2:]
             out = np.empty(out_shape, dtype=data_np.dtype)
         else:
+            # get dimensions of output array
             out_ht, out_wd = out.shape[:2]
 
         assert out.shape[2:] == data_np.shape[2:], ValueError(">2D dimensions don't match")
@@ -69,21 +73,20 @@ class CL(object):
                             hostbuf=data_np)
         dst_buf = cl.Buffer(self.ctx, mf.WRITE_ONLY, numbytes)
 
-        evt = self.program.image_rotate_float64(self.queue, [height, width], None,
+        evt = self.program.image_rotate_float64(self.queue, [out_ht, out_wd], None,
                                                 src_buf, dst_buf,
                                                 np.int32(rotctr_x), np.int32(rotctr_y),
                                                 np.int32(width), np.int32(height),
                                                 np.int32(out_wd), np.int32(out_ht),
                                                 np.int32(out_dx), np.int32(out_dy),
                                                 np.float64(sin_theta), np.float64(cos_theta),
-                                                np.uint32(clip_val))
+                                                np.float64(clip_val))
 
-        if dtype == numpy.float64:
+        if dtype == np.float64:
             out_np = out
         else:
-            out_np = np.empty(out_shape, dtype=numpy.float64)
+            out_np = np.empty(out_shape, dtype=np.float64)
 
-        #print("reading buffer")
         cl.enqueue_read_buffer(self.queue, dst_buf, out_np).wait()
         #cl.enqueue_copy(self.queue, out_np, dst_buf).wait()
 
@@ -129,10 +132,9 @@ class CL(object):
                                                 np.int32(out_wd), np.int32(out_ht),
                                                 np.int32(out_dx), np.int32(out_dy),
                                                 np.float64(sin_theta), np.float64(cos_theta),
-                                                np.uint32(clip_val))
+                                                np.float64(clip_val))
 
         out_np = np.empty_like(data_np)
-        #print("reading buffer")
         cl.enqueue_read_buffer(self.queue, dst_buf, out_np).wait()
         #cl.enqueue_copy(self.queue, out_np, dst_buf).wait()
 
@@ -262,12 +264,10 @@ class CL(object):
         new_ht = int(height * scale_y)
         new_wd = int(width * scale_x)
         new_shape = [new_ht, new_wd] + list(data_np.shape[2:])
-        #print("new shape is %s" % new_shape)
 
         mf = cl.mem_flags
 
         #create OpenCL buffers on devices
-        #print("creating buffers")
         data_np = np.ascontiguousarray(data_np)
         src_buf = cl.Buffer(self.ctx, mf.READ_ONLY | mf.COPY_HOST_PTR,
                             hostbuf=data_np)
@@ -275,18 +275,15 @@ class CL(object):
         num_bytes = new_ht * new_wd * np.uint32(0).nbytes
         dst_buf = cl.Buffer(self.ctx, mf.WRITE_ONLY, num_bytes)
 
-        #print("calling resize in opencl")
         evt = self.program.image_resize_uint32(self.queue, [new_ht, new_wd], None,
                                                src_buf, dst_buf,
                                                np.int32(width), np.int32(new_wd),
                                                np.float64(scale_x), np.float64(scale_y))
 
-        #print("reading buffer")
         if out is None:
             out = np.empty(new_shape, dtype=data_np.dtype)
         cl.enqueue_read_buffer(self.queue, dst_buf, out).wait()
 
-        #print("returning new array %s" % str(out_np.shape))
         return out
 
     def get_scaled_cutout_basic_uint32(self, data_np, x1, y1, x2, y2, scale_x, scale_y,
@@ -294,7 +291,6 @@ class CL(object):
 
         newdata = self.resize_uint32(data_np[y1:y2+1, x1:x2+1],
                                      scale_x, scale_y, out=out)
-        #old_wd, old_ht = max(x2 - x1 + 1, 1), max(y2 - y1 + 1, 1)
         old_ht, old_wd = data_np.shape[:2]
         ht, wd = newdata.shape[:2]
         scale_x, scale_y = float(wd) / old_wd, float(ht) / old_ht

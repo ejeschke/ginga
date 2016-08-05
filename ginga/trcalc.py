@@ -53,7 +53,7 @@ trcalc_cl = None
 try:
     # optional opencl package speeds up certain operations, especially
     # rotation
-    # TEMP: opencv not yet ready for enabling by default
+    # TEMP: opencl not yet ready for enabling by default
     # --> temporarily disable, can enable using use() function above
     #use('opencl')
     pass
