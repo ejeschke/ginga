@@ -417,17 +417,18 @@ class SpinBox(WidgetBase):
     def __init__(self, dtype=int):
         super(SpinBox, self).__init__()
 
+        self.dtype = dtype
         self.widget = GtkHelp.SpinButton()
         self.widget.sconnect('value-changed', self._cb_redirect)
 
         self.enable_callback('value-changed')
 
     def _cb_redirect(self, w):
-        val = w.get_value()
+        val = self.dtype(w.get_value())
         self.make_callback('value-changed', val)
 
     def get_value(self):
-        return self.widget.get_value()
+        return self.dtype(self.widget.get_value())
 
     def set_value(self, val):
         self.widget.set_value(val)
