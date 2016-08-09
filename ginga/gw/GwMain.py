@@ -1,9 +1,6 @@
 #
 # GwMain.py -- application threading help routines.
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -42,7 +39,9 @@ class GwMain(Callback.Callbacks):
             ev_quit = threading.Event()
         self.ev_quit = ev_quit
         self.app = app
-        self.gui_thread_id = None
+        # Mark our thread id
+        #self.gui_thread_id = None
+        self.gui_thread_id = thread.get_ident()
 
         self.threadPool = thread_pool
         # For asynchronous tasks on the thread pool
@@ -58,17 +57,20 @@ class GwMain(Callback.Callbacks):
 
     def update_pending(self, timeout=0.0):
 
-        # "1. PROCESSING OUT-BAND"
+        self.assert_gui_thread()
+
+        # Process "out-of-band" events
+        #print("1. PROCESSING OUT-BAND")
         try:
             self.app.process_events()
+
         except Exception as e:
             self.logger.error(str(e))
-            # TODO: traceback!
 
         done = False
         while not done:
-            #print "2. PROCESSING IN-BAND len=%d" % self.gui_queue.qsize()
-            # Process "in-band" Qt events
+            #print("2. PROCESSING IN-BAND len=%d" % self.gui_queue.qsize())
+            # Process "in-band" GUI events
             try:
                 future = self.gui_queue.get(block=True,
                                             timeout=timeout)
@@ -99,13 +101,15 @@ class GwMain(Callback.Callbacks):
 
             except Exception as e:
                 self.logger.error("Main GUI loop error: %s" % str(e))
-                #pass
 
         # Process "out-of-band" events, again
+        #print("3. PROCESSING OUT-BAND")
         try:
             self.app.process_events()
+
         except Exception as e:
             self.logger.error(str(e))
+        #print("4. DONE")
 
     def gui_do(self, method, *args, **kwdargs):
         """General method for asynchronously calling into the GUI.
@@ -178,6 +182,7 @@ class GwMain(Callback.Callbacks):
         self.gui_thread_id = thread.get_ident()
 
         while not self.ev_quit.isSet():
+
             self.update_pending(timeout=timeout)
 
     def gui_quit(self):

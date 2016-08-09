@@ -4,6 +4,8 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+import time
+
 from ginga.gtk3w import GtkHelp
 import ginga.util.six as six
 
@@ -11,7 +13,6 @@ from ginga.misc import Callback, Bunch, LineHistory
 from functools import reduce
 
 from gi.repository import Gtk
-from gi.repository import GLib
 from gi.repository import Gdk
 from gi.repository import GObject
 from gi.repository import GdkPixbuf
@@ -1717,9 +1718,7 @@ class Application(Callback.Callbacks):
 
         # supposedly needed for GObject < 3.10.2
         GObject.threads_init()
-        GLib.threads_init()
-        Gdk.threads_init()
-        #Gdk.threads_enter()
+        self._time_save = time.time()
 
         for name in ('shutdown', ):
             self.enable_callback(name)
@@ -1728,10 +1727,18 @@ class Application(Callback.Callbacks):
         return (self.screen_wd, self.screen_ht)
 
     def process_events(self):
+
         while Gtk.events_pending():
-            #Gtk.main_iteration(False)
             try:
                 Gtk.main_iteration()
+                # TEMP: to help solve the issue of gtk3 events getting
+                # lost--we want to know whether the process_event loop
+                # is running, so ping periodically if events are showing
+                # up
+                cur_time = time.time()
+                if cur_time - self._time_save > 10.0:
+                    self.logger.info("process_events ping!")
+                    self._time_save = cur_time
 
             except Exception as e:
                 self.logger.error("Exception in main_iteration() loop: %s" %

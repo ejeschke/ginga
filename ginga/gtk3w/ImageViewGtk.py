@@ -390,7 +390,7 @@ class ImageViewEvent(ImageViewGtk):
     def key_press_event(self, widget, event):
         # without this we do not get key release events if the focus
         # changes to another window
-        #Gdk.keyboard_grab(widget.get_window(), False)
+        #Gdk.keyboard_grab(widget.get_window(), False, event.time)
 
         keyname = Gdk.keyval_name(event.keyval)
         keyname = self.transkey(keyname)
@@ -398,7 +398,7 @@ class ImageViewEvent(ImageViewGtk):
         return self.make_ui_callback('key-press', keyname)
 
     def key_release_event(self, widget, event):
-        #Gdk.keyboard_ungrab()
+        #Gdk.keyboard_ungrab(event.time)
 
         keyname = Gdk.keyval_name(event.keyval)
         keyname = self.transkey(keyname)
