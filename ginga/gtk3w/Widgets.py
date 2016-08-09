@@ -11,6 +11,7 @@ from ginga.misc import Callback, Bunch, LineHistory
 from functools import reduce
 
 from gi.repository import Gtk
+from gi.repository import GLib
 from gi.repository import Gdk
 from gi.repository import GObject
 from gi.repository import GdkPixbuf
@@ -1714,6 +1715,12 @@ class Application(Callback.Callbacks):
 
         _app = self
 
+        # supposedly needed for GObject < 3.10.2
+        GObject.threads_init()
+        GLib.threads_init()
+        Gdk.threads_init()
+        #Gdk.threads_enter()
+
         for name in ('shutdown', ):
             self.enable_callback(name)
 
@@ -1729,6 +1736,7 @@ class Application(Callback.Callbacks):
             except Exception as e:
                 self.logger.error("Exception in main_iteration() loop: %s" %
                                   (str(e)))
+
 
     def process_end(self):
         pass

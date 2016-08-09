@@ -10,7 +10,7 @@ from gi.repository import Gtk
 
 has_webkit = False
 try:
-    from gi.repository import webkit
+    from gi.repository import WebKit
     has_webkit = True
 except ImportError:
     pass
@@ -30,7 +30,7 @@ class WBrowser(GingaPlugin.GlobalPlugin):
         if not has_webkit:
             self.browser = Gtk.Label("Please install the python-webkit package to enable this plugin")
         else:
-            self.browser = webkit.WebView()
+            self.browser = WebKit.WebView()
 
         sw = Gtk.ScrolledWindow()
         sw.set_border_width(2)
@@ -39,10 +39,10 @@ class WBrowser(GingaPlugin.GlobalPlugin):
         sw.add(self.browser)
 
         cw = container.get_widget()
-        cw.pack_start(sw, fill=True, expand=True)
+        cw.pack_start(sw, True, True, 0)
 
         self.entry = Gtk.Entry()
-        cw.pack_start(self.entry, fill=True, expand=False)
+        cw.pack_start(self.entry, False, True, 0)
         self.entry.connect('activate', self.browse_cb)
 
         if has_webkit:
@@ -54,12 +54,12 @@ class WBrowser(GingaPlugin.GlobalPlugin):
         btns = Gtk.HButtonBox()
         btns.set_layout(Gtk.ButtonBoxStyle.START)
         btns.set_spacing(3)
-        btns.set_child_size(15, -1)
+        #btns.set_child_size(15, -1)
 
         btn = Gtk.Button("Close")
         btn.connect('clicked', lambda w: self.close())
         btns.add(btn)
-        cw.pack_start(btns, padding=4, fill=True, expand=False)
+        cw.pack_start(btns, False, True, 4)
         cw.show_all()
 
     def browse(self, url):
