@@ -1,0 +1,18 @@
+/*
+ CSS for styling Gtk3 widgets
+ */
+
+/*
+ under some themes, toggle buttons don't have any border, are
+ crammed together too closely, and don't show any difference
+ when they are checked or not.
+ */
+ 
+GtkToggleButton {
+    border: 1px solid shade (@theme_bg_color, 0.9) ;
+    padding: 4;
+}
+
+GtkToolbar GtkToggleButton:checked {
+    background-color: shade (@theme_bg_color, 0.9);
+}

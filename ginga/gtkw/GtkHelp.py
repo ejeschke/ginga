@@ -5,6 +5,7 @@
 # Please see the file LICENSE.txt for details.
 #
 from __future__ import print_function
+import sys, os.path
 
 from ginga.misc import Bunch
 import ginga.toolkit
@@ -608,5 +609,13 @@ def make_cursor(widget, iconpath, x, y):
     screen = widget.get_screen()
     display = screen.get_display()
     return gtk.gdk.Cursor(display, pixbuf, x, y)
+
+def set_default_style():
+    module_home = os.path.split(sys.modules[__name__].__file__)[0]
+    gtk_rc = os.path.join(module_home, 'gtk_rc')
+    with open(gtk_rc, 'rb') as rc_f:
+        rc_data = rc_f.read()
+
+    gtk.rc_parse(rc_data)
 
 #END

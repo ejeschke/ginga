@@ -4,7 +4,7 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-from __future__ import print_function
+import sys, os.path
 
 from ginga.misc import Bunch
 import ginga.toolkit
@@ -627,5 +627,20 @@ def make_cursor(widget, iconpath, x, y):
     screen = widget.get_screen()
     display = screen.get_display()
     return Gdk.Cursor(display, pixbuf, x, y)
+
+def set_default_style():
+    style_provider = Gtk.CssProvider()
+
+    module_home = os.path.split(sys.modules[__name__].__file__)[0]
+    gtk_css = os.path.join(module_home, 'gtk_css')
+    with open(gtk_css, 'rb') as css_f:
+        css_data = css_f.read()
+
+    style_provider.load_from_data(css_data)
+
+    Gtk.StyleContext.add_provider_for_screen(
+        Gdk.Screen.get_default(), style_provider,
+        Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+        )
 
 #END

@@ -1723,6 +1723,9 @@ class Application(Callback.Callbacks):
         for name in ('shutdown', ):
             self.enable_callback(name)
 
+        # Set up Gtk style
+        GtkHelp.set_default_style()
+
     def get_screen_size(self):
         return (self.screen_wd, self.screen_ht)
 

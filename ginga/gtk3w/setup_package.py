@@ -3,4 +3,4 @@ from __future__ import absolute_import
 
 
 def get_package_data():
-    return {'ginga.gtk3w': ['gtk_rc']}
+    return {'ginga.gtk3w': ['gtk_css']}
