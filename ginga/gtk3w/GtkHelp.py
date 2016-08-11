@@ -9,6 +9,8 @@ from __future__ import print_function
 from ginga.misc import Bunch
 import ginga.toolkit
 
+import gi
+gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk
 from gi.repository import Gdk
 from gi.repository import GdkPixbuf
@@ -603,9 +605,9 @@ def pixbuf_new_from_array(data, rgbtype, bpp):
 
     height, width, depth = data.shape
     pixl = GdkPixbuf.PixbufLoader.new_with_type('pnm')
-    # P6 is the magic number of PNM format, 
+    # P6 is the magic number of PNM format,
     # and 255 is the max color allowed
-    pixl.write("P6 %d %d 255 " % (width, height) + data.tostring(order='C'))
+    pixl.write((b"P6 %d %d 255 " % (width, height)) + data.tobytes(order='C'))
     pix = pixl.get_pixbuf()
     pixl.close()
     return pix

@@ -9,30 +9,41 @@ import sys, os
 import numpy
 
 from ginga.gtk3w import GtkHelp
+from ginga import Mixins, Bindings, colors
+import ginga.util.six as six
+if six.PY2:
+    from ginga.cairow.ImageViewCairo import (ImageViewCairo as ImageView,
+                                             ImageViewCairoError as ImageViewError)
+
+else:
+    # NOTE [1]: this is a workaround for broken pycairo3--
+    # it lacks the ImageSurface.create_for_data() function present in
+    # pycairo2.  Supposedly this will be added.  Until this is fixed
+    # we use a workaround to draw with PIL, so we use a different base
+    # class and just change the draw handler accordingly
+    #
+    from ginga.pilw.ImageViewPil import (ImageViewPil as ImageView,
+                                         ImageViewPilError as ImageViewError)
 
 from gi.repository import Gtk
 from gi.repository import Gdk
 from gi.repository import GObject
 from gi.repository import GdkPixbuf
-#from gi.repository import cairo
 import cairo
-
-from ginga.cairow import ImageViewCairo
-from ginga import Mixins, Bindings, colors
 
 moduleHome = os.path.split(sys.modules[__name__].__file__)[0]
 icon_dir = os.path.abspath(os.path.join(moduleHome, '..', 'icons'))
 
 
-class ImageViewGtkError(ImageViewCairo.ImageViewCairoError):
+class ImageViewGtkError(ImageViewError):
     pass
 
-class ImageViewGtk(ImageViewCairo.ImageViewCairo):
+class ImageViewGtk(ImageView):
 
     def __init__(self, logger=None, rgbmap=None, settings=None):
-        ImageViewCairo.ImageViewCairo.__init__(self, logger=logger,
-                                               rgbmap=rgbmap,
-                                               settings=settings)
+        ImageView.__init__(self, logger=logger,
+                           rgbmap=rgbmap,
+                           settings=settings)
 
         imgwin = Gtk.DrawingArea()
         imgwin.connect("draw", self.draw_event)
@@ -105,8 +116,9 @@ class ImageViewGtk(ImageViewCairo.ImageViewCairo):
     def reschedule_redraw(self, time_sec):
         time_ms = int(time_sec * 1000)
         try:
-            if self._defer_task:
+            if self._defer_task is not None:
                 GObject.source_remove(self._defer_task)
+                self._defer_task = None
         except:
             pass
         self._defer_task = GObject.timeout_add(time_ms,
@@ -133,8 +145,17 @@ class ImageViewGtk(ImageViewCairo.ImageViewCairo):
 
     def draw_event(self, widget, cr):
         self.logger.debug("updating window from surface")
-        # redraw the screen from backing surface
-        cr.set_source_surface(self.surface, 0, 0)
+        if six.PY2:
+            # redraw the screen from backing surface
+            cr.set_source_surface(self.surface, 0, 0)
+        else:
+            # see NOTE [1] above
+            arr8 = self.get_image_as_array()
+            pixbuf = GtkHelp.pixbuf_new_from_array(arr8,
+                                                   GdkPixbuf.Colorspace.RGB,
+                                                   8)
+            Gdk.cairo_set_source_pixbuf(cr, pixbuf, 0, 0)
+
         cr.set_operator(cairo.OPERATOR_SOURCE)
         cr.paint()
         return False
@@ -212,9 +233,10 @@ class ImageViewGtk(ImageViewCairo.ImageViewCairo):
         return buf
 
     def onscreen_message(self, text, delay=None, redraw=True):
-        if self.msgtask:
+        if self.msgtask is not None:
             try:
                 GObject.source_remove(self.msgtask)
+                self.msgtask = None
             except:
                 pass
         self.message = text

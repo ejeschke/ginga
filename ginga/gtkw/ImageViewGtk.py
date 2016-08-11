@@ -112,8 +112,9 @@ class ImageViewGtk(ImageViewCairo.ImageViewCairo):
     def reschedule_redraw(self, time_sec):
         time_ms = int(time_sec * 1000)
         try:
-            if self._defer_task:
+            if self._defer_task is not None:
                 gobject.source_remove(self._defer_task)
+                self._defer_task = None
         except:
             pass
         self._defer_task = gobject.timeout_add(time_ms,
@@ -231,9 +232,10 @@ class ImageViewGtk(ImageViewCairo.ImageViewCairo):
         return buf
 
     def onscreen_message(self, text, delay=None, redraw=True):
-        if self.msgtask:
+        if self.msgtask is not None:
             try:
                 gobject.source_remove(self.msgtask)
+                self.msgtask = None
             except:
                 pass
         self.message = text
