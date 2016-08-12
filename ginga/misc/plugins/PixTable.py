@@ -6,8 +6,8 @@
 #
 import numpy
 
-from ginga.gw import Widgets
-from ginga import GingaPlugin
+from ginga.gw import Widgets, Viewers
+from ginga import GingaPlugin, colors
 
 
 class PixTable(GingaPlugin.LocalPlugin):
@@ -21,9 +21,6 @@ class PixTable(GingaPlugin.LocalPlugin):
 
         self.dc = self.fv.getDrawClasses()
         canvas = self.dc.DrawingCanvas()
-        ## canvas.enable_draw(True)
-        ## canvas.set_drawtype('point', color='pink')
-        ## canvas.set_callback('draw-event', self.draw_cb)
         canvas.set_callback('cursor-down', self.btndown_cb)
         canvas.set_callback('none-move', self.motion_cb)
         canvas.setSurface(self.fitsimage)
@@ -31,7 +28,10 @@ class PixTable(GingaPlugin.LocalPlugin):
 
         # For pixel table
         self.pixtbl_radius = 2
+        self.txt_arr = None
+        self.sum_arr = None
         self.sizes = [ 1, 2, 3, 4 ]
+        self.maxdigits = 9
         self.lastx = 0
         self.lasty = 0
 
@@ -65,21 +65,22 @@ class PixTable(GingaPlugin.LocalPlugin):
 
         fr = Widgets.Frame("Pixel Values")
 
-        # Make the values table as a text widget
-        msgFont = self.fv.getFont('fixedFont', 10)
-        tw = Widgets.TextArea(wrap=False, editable=False)
-        #tw.cfg_expand(1, 1)
-        tw.set_font(msgFont)
-        self.tw = tw
+        # We just use a ginga widget to implement the pixtable
+        pixview = Viewers.CanvasView(logger=self.logger)
+        width, height = 300, 300
+        pixview.set_desired_size(width, height)
+        bg = colors.lookup_color('#202030')
+        pixview.set_bg(*bg)
 
-        ## sw1 = Widgets.ScrollArea()
-        ## sw1.set_widget(tw)
-        vbox2 = Widgets.VBox()
-        vbox2.add_widget(tw)
-        ## vbox2.add_widget(sw1)
-        ## vbox2.add_widget(Widgets.Label(''), stretch=1)
-        fr.set_widget(vbox2)
+        bd = pixview.get_bindings()
+
+        self.pixview = pixview
+        self.pix_w = Widgets.wrap(pixview.get_widget())
+        self.pix_w.resize(width, height)
+        fr.set_widget(self.pix_w)
         vbox.add_widget(fr, stretch=1)
+
+        self._rebuild_table()
 
         btns = Widgets.HBox()
         btns.set_border_width(4)
@@ -94,7 +95,7 @@ class PixTable(GingaPlugin.LocalPlugin):
             index += 1
         index = self.sizes.index(self.pixtbl_radius)
         cbox1.set_index(index)
-        cbox1.add_callback('activated', self.set_cutout_size)
+        cbox1.add_callback('activated', self.set_cutout_size_cb)
         cbox1.set_tooltip("Select size of pixel table")
         btns.add_widget(cbox1, stretch=0)
 
@@ -217,36 +218,28 @@ class PixTable(GingaPlugin.LocalPlugin):
              maxv=9):
 
         width, height = self.fitsimage.get_dims(data)
+        if self.txt_arr is None:
+            return
 
         maxval = numpy.nanmax(data)
         minval = numpy.nanmin(data)
         avgval = numpy.average(data)
 
-        maxdigits = 9
-        sep = '  '
-        # make format string for a row
-        fmt_cell = '%%%d.2f' % maxdigits
-        fmt_r = (fmt_cell + sep) * width
-        fmt_r = '%6d | ' + fmt_r
+        fmt_cell = '%%%d.2f' % self.maxdigits
 
-        fmt_h = (('%%%dd' % maxdigits) + sep) * width
-        fmt_h = ('%6s | ') % '' + fmt_h
-        t = tuple([i + x1 + 1 for i in range(width)])
-
-        # format the buffer and insert into the tw
-        l = [fmt_h % t]
-        for i in range(height):
-            t = tuple([y1 + i + 1] + list(data[i]))
-            l.append(fmt_r % t)
-        l.append('')
+        # can we do this with a numpy.vectorize() fn call and
+        # speed things up?
+        for i in range(width):
+            for j in range(height):
+                self.txt_arr[i][j].text = fmt_cell % data[i][j]
 
         # append statistics line
         fmt_stat = "  Min: %s  Max: %s  Avg: %s" % (fmt_cell, fmt_cell,
-                                                  fmt_cell)
-        l.append(fmt_stat % (minval, maxval, avgval))
+                                                    fmt_cell)
+        self.sum_arr[0].text = fmt_stat % (minval, maxval, avgval)
 
-        # update the text widget
-        self.tw.set_text('\n'.join(l))
+        # update the pixtable
+        self.pixview.redraw(whence=3)
 
     def close(self):
         self.fv.stop_local_plugin(self.chname, str(self))
@@ -297,21 +290,74 @@ class PixTable(GingaPlugin.LocalPlugin):
         if image is None:
             return
 
-        data, x1, y1, x2, y2 = image.cutout_radius(self.lastx, self.lasty,
+        # We report the value across the pixel, even though the coords
+        # change halfway across the pixel
+        data_x, data_y = int(self.lastx+0.5), int(self.lasty+0.5)
+
+        # cutout image data
+        data, x1, y1, x2, y2 = image.cutout_radius(data_x, data_y,
                                                    self.pixtbl_radius)
         self.plot(data, x1, y1, x2, y2, self.lastx, self.lasty,
                   self.pixtbl_radius, maxv=9)
 
-    def set_cutout_size(self, w, val):
+    def _rebuild_table(self):
+        canvas = self.pixview.get_canvas()
+        canvas.delete_all_objects(redraw=False)
+
+        Text = canvas.get_draw_class('text')
+        font_ht = 10
+        font_wd = 10
+        max_wd = self.maxdigits + 2
+
+        rows = []
+        objs = []
+        for row in range(self.pixtbl_radius*2+1):
+            cols = []
+            for col in range(self.pixtbl_radius*2+1):
+                x = (font_wd + 2) * max_wd * col + 4
+                y = (font_ht + 10) * (row + 1) + font_ht+4
+
+                color = 'lightgreen'
+                if (row == col) and (row == self.pixtbl_radius):
+                    color = 'pink'
+
+                text_obj = Text(x, y, text='',
+                                color=color, fontsize=font_ht,
+                                coord='canvas')
+                objs.append(text_obj)
+                cols.append(text_obj)
+
+            rows.append(cols)
+
+        self.txt_arr = numpy.array(rows)
+
+        # add summary row(s)
+        x = (font_wd + 2) + 4
+        y += font_ht+20
+        s1 = Text(x, y, text='',
+                  color=color, fontsize=font_ht,
+                  coord='canvas')
+        objs.append(s1)
+        self.sum_arr = numpy.array([s1])
+
+        # add all of the text objects to the canvas as one large
+        # compound object
+        CompoundObject = canvas.get_draw_class('compoundobject')
+        canvas.add(CompoundObject(*objs), redraw=False)
+
+    def set_cutout_size_cb(self, w, val):
         index = w.get_index()
         self.pixtbl_radius = self.sizes[index]
+        self._rebuild_table()
 
     def motion_cb(self, canvas, event, data_x, data_y):
         if self.mark_selected is not None:
             return False
         if self.tw is None:
             return
+
         self.lastx, self.lasty = data_x, data_y
+
         self.redo()
         return False
 
