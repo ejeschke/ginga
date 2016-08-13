@@ -34,6 +34,9 @@ class PixTable(GingaPlugin.LocalPlugin):
         self.maxdigits = 9
         self.lastx = 0
         self.lasty = 0
+        self.font = 'fixed'
+        self.fontsize = 14
+        self.row_ht = self.fontsize + 2
 
         # For "marks" feature
         self.mark_radius = 10
@@ -305,24 +308,23 @@ class PixTable(GingaPlugin.LocalPlugin):
         canvas.delete_all_objects(redraw=False)
 
         Text = canvas.get_draw_class('text')
-        font_ht = 10
-        font_wd = 10
-        max_wd = self.maxdigits + 2
+        font_wd = int(self.row_ht * 0.666)
+        max_wd = self.maxdigits
 
         rows = []
         objs = []
         for row in range(self.pixtbl_radius*2+1):
             cols = []
             for col in range(self.pixtbl_radius*2+1):
-                x = (font_wd + 2) * max_wd * col + 4
-                y = (font_ht + 10) * (row + 1) + font_ht+4
+                x = (font_wd) * max_wd * col + 4
+                y = (self.row_ht) * (row + 1) + 4
 
                 color = 'lightgreen'
                 if (row == col) and (row == self.pixtbl_radius):
                     color = 'pink'
 
-                text_obj = Text(x, y, text='',
-                                color=color, fontsize=font_ht,
+                text_obj = Text(x, y, text='', font=self.font,
+                                color=color, fontsize=self.fontsize,
                                 coord='canvas')
                 objs.append(text_obj)
                 cols.append(text_obj)
@@ -333,9 +335,9 @@ class PixTable(GingaPlugin.LocalPlugin):
 
         # add summary row(s)
         x = (font_wd + 2) + 4
-        y += font_ht+20
-        s1 = Text(x, y, text='',
-                  color=color, fontsize=font_ht,
+        y += self.row_ht+20
+        s1 = Text(x, y, text='', font=self.font,
+                  color=color, fontsize=self.fontsize,
                   coord='canvas')
         objs.append(s1)
         self.sum_arr = numpy.array([s1])
