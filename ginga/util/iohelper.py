@@ -1,14 +1,12 @@
 #
 # iohelper.py -- misc routines used in manipulating files, paths and urls.
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
 import os
 import re
+import hashlib
 
 from ginga.misc import Bunch
 from ginga.util.six.moves import urllib_parse
@@ -138,3 +136,35 @@ def shorten_name(name, char_limit, side='right'):
                 name = '...{0}'.format(name[-len1:])
 
     return name
+
+def gethex(s):
+    return hashlib.sha1(s.encode()).hexdigest()
+
+def get_thumbpath(thumbdir, path, makedir=True):
+    if path is None:
+        return None
+
+    path = os.path.abspath(path)
+    dirpath, filename = os.path.split(path)
+
+    if not os.path.exists(thumbdir):
+        if not makedir:
+            raise ValueError("Thumb directory does not exist: %s" % (
+                thumbdir))
+
+        try:
+            os.makedirs(thumbdir)
+            # Write meta file
+            metafile = os.path.join(thumbdir, "meta")
+            with open(metafile, 'w') as out_f:
+                out_f.write("srcdir: %s\n" % (dirpath))
+
+        except OSError as e:
+            raise Exception("Could not make thumb directory '%s': %s" % (
+                thumbdir, str(e)))
+
+    # Get location of thumb
+    modtime = os.stat(path).st_mtime
+    thumb_fname = gethex("%s.%s" % (filename, modtime))
+    thumbpath = os.path.join(thumbdir, thumb_fname + ".jpg")
+    return thumbpath

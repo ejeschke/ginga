@@ -5,7 +5,6 @@
 # Please see the file LICENSE.txt for details.
 #
 import os
-import hashlib
 import threading
 
 from ginga import GingaPlugin
@@ -41,7 +40,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
                                   rebuild_wait=4.0,
                                   tt_keywords=tt_keywords,
                                   mouseover_name_key='NAME',
-                                  thumb_length=150,
+                                  thumb_length=192,
                                   sort_order=None,
                                   label_length=25,
                                   label_cutoff='right',
@@ -79,8 +78,10 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         width, height = 300, 300
         cm, im = self.fv.cm, self.fv.im
 
+        thumb_len = self.settings.get('thumb_length', 192)
+
         tg = Viewers.ImageViewCanvas(logger=self.logger)
-        tg.configure_window(200, 200)
+        tg.configure_window(thumb_len, thumb_len)
         tg.enable_autozoom('on')
         tg.set_autocut_params('zscale')
         tg.enable_autocuts('override')
@@ -468,6 +469,8 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             if save_thumb:
                 thumbpath = self.get_thumbpath(path)
                 if thumbpath is not None:
+                    if os.path.exists(thumbpath):
+                        os.remove(thumbpath)
                     self.thumb_generator.save_image_as_file(thumbpath,
                                                             format='jpeg')
 
@@ -523,9 +526,6 @@ class Thumbs(GingaPlugin.GlobalPlugin):
                               image_future)
         self.fv.update_pending(timeout=0.001)
 
-    def _gethex(self, s):
-        return hashlib.sha1(s.encode()).hexdigest()
-
     def get_thumbpath(self, path, makedir=True):
         if path is None:
             return None
@@ -538,34 +538,20 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             # thumbs in .ginga cache
             prefs = self.fv.get_preferences()
             thumbDir = os.path.join(prefs.get_baseFolder(), 'thumbs')
-            thumbdir = os.path.join(thumbDir, self._gethex(dirpath))
+            thumbdir = os.path.join(thumbDir, iohelper.gethex(dirpath))
         else:
             # thumbs in .thumbs subdirectory of image folder
             thumbdir = os.path.join(dirpath, '.thumbs')
 
-        if not os.path.exists(thumbdir):
-            if not makedir:
-                self.logger.error("Thumb directory does not exist: %s" % (
-                    thumbdir))
-                return None
+        try:
+            thumbpath = iohelper.get_thumbpath(thumbdir, path,
+                                               makedir=makedir)
 
-            try:
-                os.makedirs(thumbdir)
-                # Write meta file
-                metafile = os.path.join(thumbdir, "meta")
-                with open(metafile, 'w') as out_f:
-                    out_f.write("srcdir: %s\n" % (dirpath))
+        except Exception as e:
+            self.logger.debug("Error getting thumb path for '%s': %s" % (
+                path, str(e)))
+            thumbpath = None
 
-            except OSError as e:
-                self.logger.error("Could not make thumb directory '%s': %s" % (
-                    thumbdir, str(e)))
-                return None
-
-        # Get location of thumb
-        modtime = os.stat(path).st_mtime
-        thumb_fname = self._gethex("%s.%s" % (filename, modtime))
-        thumbpath = os.path.join(thumbdir, thumb_fname + ".jpg")
-        self.logger.debug("thumb path is '%s'" % (thumbpath))
         return thumbpath
 
     def insert_thumbnail(self, imgwin, thumbkey, thumbname, chname, name, path,

@@ -345,26 +345,28 @@ class Pan(GingaPlugin.GlobalPlugin):
             return False
         xc = (obj.x1 + obj.x2) / 2.0
         yc = (obj.y1 + obj.y2) / 2.0
-        fitsimage = self.fv.getfocus_fitsimage()
-        # note: fitsimage <-- referring to large non-pan image
-        fitsimage.panset_xy(xc, yc)
+        viewer = self.fv.getfocus_fitsimage()
+        # note: viewer <-- referring to large non-pan image
+        with viewer.suppress_redraw:
+            viewer.panset_xy(xc, yc)
 
-        # Determine appropriate zoom level to fit this rect
-        wd = obj.x2 - obj.x1
-        ht = obj.y2 - obj.y1
-        wwidth, wheight = fitsimage.get_window_size()
-        wd_scale = float(wwidth) / float(wd)
-        ht_scale = float(wheight) / float(ht)
-        scale = min(wd_scale, ht_scale)
-        self.logger.debug("wd_scale=%f ht_scale=%f scale=%f" % (
-            wd_scale, ht_scale, scale))
-        if scale < 1.0:
-            zoomlevel = - max(2, int(math.ceil(1.0/scale)))
-        else:
-            zoomlevel = max(1, int(math.floor(scale)))
-        self.logger.debug("zoomlevel=%d" % (zoomlevel))
+            # Determine appropriate zoom level to fit this rect
+            wd = obj.x2 - obj.x1
+            ht = obj.y2 - obj.y1
+            wwidth, wheight = viewer.get_window_size()
+            wd_scale = float(wwidth) / float(wd)
+            ht_scale = float(wheight) / float(ht)
+            scale = min(wd_scale, ht_scale)
+            self.logger.debug("wd_scale=%f ht_scale=%f scale=%f" % (
+                wd_scale, ht_scale, scale))
+            if scale < 1.0:
+                zoomlevel = - max(2, int(math.ceil(1.0/scale)))
+            else:
+                zoomlevel = max(1, int(math.floor(scale)))
+            self.logger.debug("zoomlevel=%d" % (zoomlevel))
 
-        fitsimage.zoom_to(zoomlevel)
+            viewer.zoom_to(zoomlevel)
+
         return True
 
 

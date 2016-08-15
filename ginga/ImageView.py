@@ -645,6 +645,13 @@ class ImageViewBase(Callback.Callbacks):
             # have one already--then just keep reusing it
             NormImage = self.canvas.getDrawClass('normimage')
             interp = self.t_.get('interpolation', 'basic')
+
+            # previous choice might not be available if preferences
+            # were saved when opencv was being used (and not used now)
+            # --if so, default to "basic"
+            if not interp in trcalc.interpolation_methods:
+                interp='basic'
+
             self._imgobj = NormImage(0, 0, None, alpha=1.0,
                                       interpolation=interp)
             self._imgobj.add_callback('image-set', self._image_set_cb)

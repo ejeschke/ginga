@@ -143,8 +143,6 @@ class ImageViewPil(ImageView.ImageViewBase):
         return buf
 
     def save_rgb_image_as_file(self, filepath, format='png', quality=90):
-        if not have_PIL:
-            raise ImageViewPilError("Please install PIL to use this method")
         if self.surface is None:
             raise ImageViewPilError("No PIL surface defined")
 

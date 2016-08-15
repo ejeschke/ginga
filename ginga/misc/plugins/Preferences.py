@@ -348,7 +348,13 @@ class Preferences(GingaPlugin.LocalPlugin):
             b.interpolation.append_text(name)
             index += 1
         interp = self.t_.get('interpolation', "basic")
-        index = trcalc.interpolation_methods.index(interp)
+        try:
+            index = trcalc.interpolation_methods.index(interp)
+        except ValueError:
+            # previous choice might not be available if preferences
+            # were saved when opencv was being used--if so, default
+            # to "basic"
+            index = trcalc.interpolation_methods.index('basic')
         b.interpolation.set_index(index)
         b.interpolation.set_tooltip("Choose interpolation method")
         b.interpolation.add_callback('activated', self.set_interp_cb)
