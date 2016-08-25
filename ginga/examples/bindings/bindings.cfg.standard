@@ -108,12 +108,13 @@ kp_softlock = ['l']
 key_pan_pct = 0.666667
 
 # SCROLLING/WHEEL commands
-sc_pan = ['shift+scroll']
+sc_pan = []
 sc_pan_fine = ['pan+shift+scroll']
 sc_pan_coarse = ['pan+ctrl+scroll']
 sc_zoom = ['scroll']
 sc_zoom_fine = ['ctrl+scroll']
 sc_zoom_coarse = []
+sc_zoom_origin = ['shift+scroll', 'freepan+scroll']
 sc_cuts_fine = ['cuts+ctrl+scroll']
 sc_cuts_coarse = ['cuts+scroll']
 sc_cuts_alg = []

@@ -51,8 +51,7 @@ Panning and Zooming commands
 | Ctrl + Scroll wheel  | Adjust zoom by intermediate fine steps           |
 |   turned             |                                                  | 
 +----------------------+--------------------------------------------------+
-| Shift + Scroll wheel | Adjust pan up/down (and left/right if you have   |
-|  turned              |   a device that allows that)                     |
+| Shift + Scroll wheel | Zoom while keeping location under the cursor.    |
 +----------------------+--------------------------------------------------+
 | Digit                | Zoom image to zoom steps 1, 2, ..., 9, 10        |
 | (1234567890)         |                                                  |
@@ -189,6 +188,8 @@ Pan mode
 Freepan mode
 ============
 
++----------------------+--------------------------------------------------+
+| Scroll wheel turned  | Zoom while keeping location under the cursor     |
 +----------------------+--------------------------------------------------+
 | left click           | Set pan position, zoom in a step and warp cursor |
 |                      |   to pan position (if supported on backend)      |

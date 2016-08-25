@@ -207,9 +207,8 @@ class ImageViewBase(Callback.Callbacks):
         self._org_xoff = 0
         self._org_yoff = 0
 
-        # pan position
-        self._pan_x = 0.0
-        self._pan_y = 0.0
+        # offset of pixel 0 from data coordinates
+        # (pixels are centered on the coordinate)
         self.data_off = 0.5
 
         # Origin in the data array of what is currently displayed (LL, UR)
@@ -222,13 +221,11 @@ class ImageViewBase(Callback.Callbacks):
         self._dst_y = 0
         self._invertY = True
         self._originUpper = True
+        self._self_scaling = False
         # offsets in the screen image (in data coords)
         self._off_x = 0
         self._off_y = 0
 
-        # desired scale factors
-        self._scale_x = 1.0
-        self._scale_y = 1.0
         # actual scale factors produced from desired ones
         self._org_scale_x = 1.0
         self._org_scale_y = 1.0
@@ -1068,8 +1065,9 @@ class ImageViewBase(Callback.Callbacks):
             # window has not been realized yet
             return
 
-        rgbobj = self.get_rgb_object(whence=whence)
-        self.render_image(rgbobj, self._dst_x, self._dst_y)
+        if not self._self_scaling:
+            rgbobj = self.get_rgb_object(whence=whence)
+            self.render_image(rgbobj, self._dst_x, self._dst_y)
 
         self.private_canvas.draw(self)
 
@@ -1171,8 +1169,10 @@ class ImageViewBase(Callback.Callbacks):
 
         if (whence <= 0.0) or (self._rgbarr is None):
             # calculate dimensions of window RGB backing image
-            wd, ht = self._calc_bg_dimensions(self._scale_x, self._scale_y,
-                                              self._pan_x, self._pan_y,
+            pan_x, pan_y = self.get_pan()
+            scale_x, scale_y = self.get_scale_xy()
+            wd, ht = self._calc_bg_dimensions(scale_x, scale_y,
+                                              pan_x, pan_y,
                                               win_wd, win_ht)
 
             # create backing image
@@ -1700,9 +1700,7 @@ class ImageViewBase(Callback.Callbacks):
 
     def scale_cb(self, setting, value):
         """Handle callback related to image scaling."""
-        scale_x, scale_y = self.t_['scale']
-        self._scale_x = scale_x
-        self._scale_y = scale_y
+        scale_x, scale_y = value
 
         if self.t_['zoom_algorithm'] == 'rate':
             zoom_x = math.log(scale_x / self.t_['scale_x_base'],
@@ -1711,14 +1709,11 @@ class ImageViewBase(Callback.Callbacks):
                               self.t_['zoom_rate'])
             # TODO: avg, max?
             zoomlevel = min(zoom_x, zoom_y)
-            #print "calc zoom_x=%f zoom_y=%f zoomlevel=%f" % (
-            #    zoom_x, zoom_y, zoomlevel)
         else:
             maxscale = max(scale_x, scale_y)
             zoomlevel = maxscale
             if zoomlevel < 1.0:
                 zoomlevel = - (1.0 / zoomlevel)
-            #print "calc zoomlevel=%f" % (zoomlevel)
 
         self.t_.set(zoomlevel=zoomlevel)
 
@@ -1737,8 +1732,8 @@ class ImageViewBase(Callback.Callbacks):
             Scale factor for X or Y, whichever is larger.
 
         """
-        #scalefactor = max(self._org_scale_x, self._org_scale_y)
-        scalefactor = max(self._scale_x, self._scale_y)
+        scale = self.get_scale_xy()
+        scalefactor = max(*scale)
         return scalefactor
 
     def get_scale_min(self):
@@ -1750,7 +1745,8 @@ class ImageViewBase(Callback.Callbacks):
             Scale factor for X or Y, whichever is smaller.
 
         """
-        scalefactor = min(self._scale_x, self._scale_y)
+        scale = self.get_scale_xy()
+        scalefactor = min(*scale)
         return scalefactor
 
     def get_scale_xy(self):
@@ -1763,7 +1759,7 @@ class ImageViewBase(Callback.Callbacks):
 
         """
         #return (self._org_scale_x, self._org_scale_y)
-        return (self._scale_x, self._scale_y)
+        return self.t_['scale']
 
     def get_scale_base_xy(self):
         """Get stretch factors.
@@ -2094,9 +2090,8 @@ class ImageViewBase(Callback.Callbacks):
 
     def pan_cb(self, setting, value):
         """Handle callback related to changes in pan."""
-        pan_x, pan_y = self.t_['pan']
-        self._pan_x = pan_x
-        self._pan_y = pan_y
+        pan_x, pan_y = value
+
         self.logger.debug("pan set to %.2f,%.2f" % (pan_x, pan_y))
         self.redraw(whence=0)
 
@@ -2115,7 +2110,7 @@ class ImageViewBase(Callback.Callbacks):
             X and Y positions, in that order.
 
         """
-        pan_x, pan_y = self._pan_x, self._pan_y
+        pan_x, pan_y = self.t_['pan']
         if coord == 'wcs':
             if self.t_['pan_coord'] == 'data':
                 image = self.get_image()
@@ -2459,7 +2454,9 @@ class ImageViewBase(Callback.Callbacks):
                 dst_fi.zoom_to(self.t_['zoomlevel'])
 
             if 'pan' in attrlist:
-                dst_fi.set_pan(self._pan_x, self._pan_y)
+                pan_x, pan_y = self.get_pan()[:2]
+                pan_coord = self.t_['pan_coord']
+                dst_fi.set_pan(pan_x, pan_y, coord=pan_coord)
 
             dst_fi.redraw(whence=0)
 

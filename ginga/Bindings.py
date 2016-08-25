@@ -138,12 +138,13 @@ class ImageViewBindings(object):
             key_pan_pct = 0.666667,
 
             # SCROLLING/WHEEL
-            sc_pan = ['shift+scroll'],
+            sc_pan = [],
             sc_pan_fine = ['pan+shift+scroll'],
             sc_pan_coarse = ['pan+ctrl+scroll'],
             sc_zoom = ['scroll'],
             sc_zoom_fine = ['ctrl+scroll'],
             sc_zoom_coarse = [],
+            sc_zoom_origin = ['shift+scroll', 'freepan+scroll'],
             sc_cuts_fine = ['cuts+ctrl+scroll'],
             sc_cuts_coarse = ['cuts+scroll'],
             sc_cuts_alg = [],
@@ -1595,53 +1596,110 @@ class ImageViewBindings(object):
             self._cycle_cuts_alg(viewer, msg, direction=direction)
         return True
 
-    def sc_zoom(self, viewer, event, msg=True):
-        """Interactively zoom the image by scrolling motion.
-        This zooms by the zoom steps configured under Preferences.
-        """
+    def calc_coord_offset(self, viewer, origin):
+        data_x, data_y = origin[:2]
+        win_x, win_y = viewer.get_canvas_xy(data_x, data_y)
+        pan_x, pan_y = viewer.get_pan(coord='data')
+        ctr_x, ctr_y = viewer.get_center()
+        # dx, dy: distance from the cursor to the center of the window
+        # in canvas pixels
+        dx, dy = ctr_x - win_x, win_y - ctr_y
+        flipx, flipy, swapxy = viewer.get_transforms()
+        if swapxy:
+            dx, dy = dy, dx
+        if flipx:
+            dx = - dx
+        if flipy:
+            dy = - dy
+        return (dx, dy)
+
+    def calc_coord_pan(self, viewer, origin, offset):
+        data_x, data_y = origin
+        dx, dy = offset
+        scale_x, scale_y = viewer.get_scale_xy()
+        dx, dy = dx / scale_x, dy / scale_y
+        pan_x, pan_y = data_x + dx, data_y + dy
+        return (pan_x, pan_y)
+
+    def zoom_step(self, viewer, direction, msg=True, origin=None, adjust=1.5):
+        if origin is not None:
+            # get offset in canvas pixels of data item under cursor from center
+            offset = self.calc_coord_offset(viewer, origin)
+
+        with viewer.suppress_redraw:
+            if self.settings.get('scroll_zoom_direct_scale', True):
+                zoom_accel = self.settings.get('scroll_zoom_acceleration', 1.0)
+                # change scale by 50%
+                amount = self._scale_adjust(adjust, zoom_accel, max_limit=4.0)
+                self._scale_image(viewer, direction, amount, msg=msg)
+
+            else:
+                if direction == 'up':
+                    viewer.zoom_in()
+                elif direction == 'down':
+                    viewer.zoom_out()
+                    if msg:
+                        viewer.onscreen_message(viewer.get_scale_text(),
+                                                delay=0.4)
+
+            if origin is not None:
+                # now set the pan position to keep the offset
+                pan_x, pan_y = self.calc_coord_pan(viewer, origin, offset)
+                viewer.panset_xy(pan_x, pan_y)
+
+    def _sc_zoom(self, viewer, event, msg=True, origin=None):
         if not self.canzoom:
             return True
 
         msg = self.settings.get('msg_zoom', msg)
+        rev = self.settings.get('zoom_scroll_reverse', False)
 
-        if self.settings.get('scroll_zoom_direct_scale', True):
-            zoom_accel = self.settings.get('scroll_zoom_acceleration', 1.0)
-            # change scale by 50%
-            amount = self._scale_adjust(1.5, zoom_accel, max_limit=4.0)
-            self._scale_image(viewer, event.direction, amount, msg=msg)
+        direction = self.get_direction(event.direction, rev=rev)
 
-        else:
-            rev = self.settings.get('zoom_scroll_reverse', False)
-            direction = self.get_direction(event.direction, rev=rev)
-            if direction == 'up':
-                viewer.zoom_in()
-            elif direction == 'down':
-                viewer.zoom_out()
-                if msg:
-                    viewer.onscreen_message(viewer.get_scale_text(),
-                                            delay=0.4)
+        self.zoom_step(viewer, direction, msg=msg, origin=origin,
+                       adjust=1.5)
+        return True
+
+    def sc_zoom(self, viewer, event, msg=True):
+        """Interactively zoom the image by scrolling motion.
+        This zooms by the zoom steps configured under Preferences.
+        """
+        self._sc_zoom(viewer, event, msg=msg, origin=None)
+        return True
+
+    def sc_zoom_origin(self, viewer, event, msg=True):
+        """Like sc_zoom(), but pans the image as well to keep the
+        coordinate under the cursor in that same position relative
+        to the window.
+        """
+        origin = (event.data_x, event.data_y)
+        self._sc_zoom(viewer, event, msg=msg, origin=origin)
         return True
 
     def sc_zoom_coarse(self, viewer, event, msg=True):
         """Interactively zoom the image by scrolling motion.
         This zooms by adjusting the scale in x and y coarsely.
         """
-        if self.canzoom:
-            zoom_accel = self.settings.get('scroll_zoom_acceleration', 1.0)
-            # change scale by 20%
-            amount = self._scale_adjust(1.2, zoom_accel, max_limit=4.0)
-            self._scale_image(viewer, event.direction, amount, msg=msg)
+        if not self.canzoom:
+            return True
+
+        zoom_accel = self.settings.get('scroll_zoom_acceleration', 1.0)
+        # change scale by 20%
+        amount = self._scale_adjust(1.2, zoom_accel, max_limit=4.0)
+        self._scale_image(viewer, event.direction, amount, msg=msg)
         return True
 
     def sc_zoom_fine(self, viewer, event, msg=True):
         """Interactively zoom the image by scrolling motion.
         This zooms by adjusting the scale in x and y coarsely.
         """
-        if self.canzoom:
-            zoom_accel = self.settings.get('scroll_zoom_acceleration', 1.0)
-            # change scale by 5%
-            amount = self._scale_adjust(1.05, zoom_accel, max_limit=4.0)
-            self._scale_image(viewer, event.direction, amount, msg=msg)
+        if not self.canzoom:
+            return True
+
+        zoom_accel = self.settings.get('scroll_zoom_acceleration', 1.0)
+        # change scale by 5%
+        amount = self._scale_adjust(1.05, zoom_accel, max_limit=4.0)
+        self._scale_image(viewer, event.direction, amount, msg=msg)
         return True
 
     def sc_pan(self, viewer, event, msg=True):
