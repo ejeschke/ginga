@@ -115,3 +115,21 @@ __kernel void image_resize_uint32(
 
     dst_data[new_idx] = src_data[old_idx];
 }
+
+__kernel void image_resize_float64(
+    __global const double * src_data,
+    __global double * dst_data,
+    const int old_wd,
+    const int new_wd,
+    const double scale_x,
+    const double scale_y)
+{
+    // Thread gets its index within index space
+    const int ix = get_global_id(1);
+    const int iy = get_global_id(0);
+
+    int new_idx = iy * new_wd + ix;
+    int old_idx = convert_int_rtz(iy * (1.0/scale_y)) * old_wd + convert_int_rtz(ix * (1.0/scale_x));
+
+    dst_data[new_idx] = src_data[old_idx];
+}

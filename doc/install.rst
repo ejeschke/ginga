@@ -17,7 +17,7 @@ compile anything.  But as always, YMMV.
 REQUIRED
 ========
 
-* python (v. 2.7, 3.3 or higher)
+* python (v. 2.7, 3.4 or higher)
 * numpy  (v. 1.7 or higher)
 
 Highly recommended, because some features will not be available without it:
@@ -42,10 +42,6 @@ Ginga can draw it's output to a number of different back ends.
 Depending on which GUI toolkit you prefer (and what you want to
 do), you will need either:
 
-* python-gtk (gtk2) AND python-cairo
-
-OR
-
 * python-qt4
 
 OR
@@ -55,6 +51,14 @@ OR
 OR
 
 * python-pyside (qt4 alternative)
+
+OR
+
+* python-gtk (gtk2) AND python-cairo
+
+OR
+
+* python gtk3 (gi) AND python-cairo
 
 OR
 
@@ -76,6 +80,10 @@ OR
 
 * PIL (pillow)
 
+OR
+
+* OpenCv
+
 
 RECOMMENDED
 ===========
@@ -94,6 +102,8 @@ To save a movie:
 Helpful, but not necessary (may optimize or speed up certain operations):
 
 * python-opencv  (speeds up rotation and some transformations)
+* python-pyopencl  (speeds up rotation and some transformations)
+* python-numexpr  (speeds up rotation)
 * python-filemagic (aids in identifying files when opening them)
 * python-PIL or pillow (useful for various RGB file manipulations)
 
@@ -124,16 +134,15 @@ the full reference viewer.
 Gtk
 ===
 
-At the present time only Gtk 2 is supported.
+Ginga can use either Gtk 2 (with pygtk) or gtk 3 (with gi).
 
 Tk
 ===
 
 Ginga's Tk support is limited to the viewing widget itself.  For
-overplotting (graphics) support you also need to build and install the
-"aggdraw" module, which you can find
-`here <https://github.com/ejeschke/aggdraw>`_, or install the Python
-"OpenCv" module.
+overplotting (graphics) support you also need the "pillow"/PIL package,
+the Python "OpenCv" module, or the "aggdraw" module (which you can find 
+`here <https://github.com/ejeschke/aggdraw>`_, supports Python 2 only).
 
 Matplotlib
 ==========
@@ -203,9 +212,8 @@ or by obtaining the source and installing as described above.
 Mac
 ===
 
-For Mac users, if you have a working Macports or Homebrew installation
-skip to the appropriate section below.  If not, we recommend installing
-the `Anaconda distribution <http://continuum.io/downloads>`_.
+For Mac users, we recommend installing the
+`Anaconda distribution <http://continuum.io/downloads>`_.
 This distribution already includes all of the necessary packages to run
 Ginga.
 
@@ -219,26 +227,9 @@ After installing one of these distributions, open a Terminal and
 install Ginga via "pip install ginga".  You can then run the reference
 viewer via the command "ginga".
 
-Macports and Homebrew
----------------------
-
-* Install from `homebrew <http://brew.sh/>`_
-* Install from `macports <http://www.macports.org/>`_
-
-Either method should provide all the modules necessary to run
-Ginga.  Then install Ginga from pip or from source as described in the
-section above on "Installation from Source".
-
-With macports you will need to install the necessary packages.  Assuming
-that you have a working macports installed, it will be something like::
-
-    port install python27
-    port install py27-numpy py27-matplotlib py27-pil py27-scipy
-    port install py27-astropy py27-pyqt4 py27-pip
-    pip install ginga
-
-Have a cup of your favorite beverage.  It takes a while to compile all these!
-
+Ginga can be installed and run fine using a working Macports or Homebrew
+installation.  Simply follow the package advice given above under the
+Linux instructions.
 
 Windows
 =======

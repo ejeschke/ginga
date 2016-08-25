@@ -45,9 +45,10 @@ Requirements and Supported Platforms
 
 Because Ginga is written in pure python, it can run on any platform that
 has the required python modules and has a supported widget set.
-The basic Ginga display class supports the Qt, Gtk, Tk widget sets
-natively as well as any matplotlib Figure, while the full reference
-viewer supports Qt and Gtk.  Ginga can also be used in ipython notebooks.
+The basic Ginga display class supports the Qt (4 and 5), PySide, Gtk (2
+and 3), Tk widget sets natively as well as any matplotlib Figure, and
+HTML5 canvases in a web browser. The full reference viewer supports Qt
+and Gtk variants.  Ginga can also be used in Jupyter notebooks. 
 
 ==================
 Getting the source
@@ -90,6 +91,7 @@ Documentation
    quickref
    FAQ
    manual/index
+   optimizing
    ref_api
 
 Some training videos are available in the

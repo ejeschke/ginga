@@ -40,7 +40,7 @@ have_opencv = False
 try:
     # optional opencv package speeds up certain operations, especially
     # rotation
-    # TEMP: opencv broken on anaconda mac (importing causes segv)
+    # TEMP: opencv broken on older anaconda mac (importing causes segv)
     # --> temporarily disable, can enable using use() function above
     #use('opencv')
     pass
@@ -53,7 +53,8 @@ trcalc_cl = None
 try:
     # optional opencl package speeds up certain operations, especially
     # rotation
-    # TEMP: opencl not yet ready for enabling by default
+    # TEMP: pyopencl prompts users if it can't determine which device
+    #       to use for acceleration.
     # --> temporarily disable, can enable using use() function above
     #use('opencl')
     pass
@@ -109,7 +110,7 @@ def rotate_coord(coord, theta_deg, offsets):
     return arr
 
 def rotate_clip(data_np, theta_deg, rotctr_x=None, rotctr_y=None,
-                out=None, use_opencl=True):
+                out=None, use_opencl=True, logger=None):
     """
     Rotate numpy array `data_np` by `theta_deg` around rotation center
     (rotctr_x, rotctr_y).  If the rotation center is omitted it defaults
@@ -132,6 +133,8 @@ def rotate_clip(data_np, theta_deg, rotctr_x=None, rotctr_y=None,
         rotctr_y = ht // 2
 
     if have_opencv:
+        if logger is not None:
+            logger.debug("rotating with OpenCv")
         # opencv is fastest
         M = cv2.getRotationMatrix2D((rotctr_y, rotctr_x), theta_deg, 1)
         if out is not None:
@@ -147,6 +150,8 @@ def rotate_clip(data_np, theta_deg, rotctr_x=None, rotctr_y=None,
                 new_wd, new_ht, wd, ht))
 
     elif have_opencl and use_opencl:
+        if logger is not None:
+            logger.debug("rotating with OpenCL")
         # opencl is very close, sometimes better, sometimes worse
         if (data_np.dtype == numpy.uint8) and (len(data_np.shape) == 3):
             # special case for 3D RGB images
@@ -159,20 +164,20 @@ def rotate_clip(data_np, theta_deg, rotctr_x=None, rotctr_y=None,
                                             out=out)
 
     else:
+        if logger is not None:
+            logger.debug("rotating with numpy")
         yi, xi = numpy.mgrid[0:ht, 0:wd]
         xi -= rotctr_x
         yi -= rotctr_y
         cos_t = numpy.cos(numpy.radians(theta_deg))
         sin_t = numpy.sin(numpy.radians(theta_deg))
 
-        #t1 = time.time()
         if have_numexpr:
             ap = ne.evaluate("(xi * cos_t) - (yi * sin_t) + rotctr_x")
             bp = ne.evaluate("(xi * sin_t) + (yi * cos_t) + rotctr_y")
         else:
             ap = (xi * cos_t) - (yi * sin_t) + rotctr_x
             bp = (xi * sin_t) + (yi * cos_t) + rotctr_y
-        #print "rotation in %.5f sec" % (time.time() - t1)
 
         #ap = numpy.rint(ap).astype('int').clip(0, wd-1)
         #bp = numpy.rint(bp).astype('int').clip(0, ht-1)
@@ -199,7 +204,7 @@ def rotate_clip(data_np, theta_deg, rotctr_x=None, rotctr_y=None,
 
 
 def rotate(data_np, theta_deg, rotctr_x=None, rotctr_y=None, pad=20,
-           use_opencl=True):
+           use_opencl=True, logger=None):
 
     # If there is no rotation, then we are done
     if math.fmod(theta_deg, 360.0) == 0.0:
@@ -217,6 +222,8 @@ def rotate(data_np, theta_deg, rotctr_x=None, rotctr_y=None, pad=20,
     ncx, ncy = new_wd // 2, new_ht // 2
 
     if have_opencl and use_opencl:
+        if logger is not None:
+            logger.debug("rotating with OpenCL")
         # find offsets of old image in new image
         dx, dy = ncx - ocx, ncy - ocy
 
@@ -285,9 +292,11 @@ def get_scaled_cutout_wdht_view(shp, x1, y1, x2, y2, new_wd, new_ht):
 
 
 def get_scaled_cutout_wdht(data_np, x1, y1, x2, y2, new_wd, new_ht,
-                           interpolation='basic'):
+                           interpolation='basic', logger=None):
     if have_opencv:
-        # opencv is fastest
+        if logger is not None:
+            logger.debug("resizing with OpenCv")
+        # opencv is fastest and supports many methods
         if interpolation == 'basic':
             interpolation = 'nearest'
         method = cv2_resize[interpolation]
@@ -298,17 +307,31 @@ def get_scaled_cutout_wdht(data_np, x1, y1, x2, y2, new_wd, new_ht,
         ht, wd = newdata.shape[:2]
         scale_x, scale_y = float(wd) / old_wd, float(ht) / old_ht
 
+    elif have_opencl and interpolation in ('basic', 'nearest'):
+        # opencl is almost as fast or sometimes faster, but currently
+        # we only support nearest neighbor
+        if logger is not None:
+            logger.debug("resizing with OpenCL")
+        old_wd, old_ht = max(x2 - x1 + 1, 1), max(y2 - y1 + 1, 1)
+        scale_x, scale_y = float(new_wd) / old_wd, float(new_ht) / old_ht
+
+        newdata, (scale_x, scale_y) = trcalc_cl.get_scaled_cutout_basic(data_np,
+                                                                        x1, y1, x2, y2,
+                                                                        scale_x, scale_y)
+
     elif interpolation not in ('basic', 'nearest'):
         raise ValueError("Interpolation method not supported: '%s'" % (
             interpolation))
 
     else:
+        if logger is not None:
+            logger.debug('resizing by slicing')
         view, (scale_x, scale_y) = get_scaled_cutout_wdht_view(data_np.shape,
                                                                x1, y1, x2, y2,
                                                                new_wd, new_ht)
-        new_data = data_np[view]
+        newdata = data_np[view]
 
-    return new_data, (scale_x, scale_y)
+    return newdata, (scale_x, scale_y)
 
 
 def get_scaled_cutout_basic_view(shp, x1, y1, x2, y2, scale_x, scale_y):
@@ -328,9 +351,11 @@ def get_scaled_cutout_basic_view(shp, x1, y1, x2, y2, scale_x, scale_y):
 
 
 def get_scaled_cutout_basic(data_np, x1, y1, x2, y2, scale_x, scale_y,
-                            interpolation='basic'):
+                            interpolation='basic', logger=None):
 
     if have_opencv:
+        if logger is not None:
+            logger.debug("resizing with OpenCv")
         # opencv is fastest
         if interpolation == 'basic':
             interpolation = 'nearest'
@@ -342,11 +367,20 @@ def get_scaled_cutout_basic(data_np, x1, y1, x2, y2, scale_x, scale_y,
         ht, wd = newdata.shape[:2]
         scale_x, scale_y = float(wd) / old_wd, float(ht) / old_ht
 
+    elif have_opencl and interpolation in ('basic', 'nearest'):
+        if logger is not None:
+            logger.debug("resizing with OpenCL")
+        newdata, (scale_x, scale_y) = trcalc_cl.get_scaled_cutout_basic(data_np,
+                                                                        x1, y1, x2, y2,
+                                                                        scale_x, scale_y)
+
     elif interpolation not in ('basic', 'nearest'):
         raise ValueError("Interpolation method not supported: '%s'" % (
             interpolation))
 
     else:
+        if logger is not None:
+            logger.debug('resizing by slicing')
         view, (scale_x, scale_y) = get_scaled_cutout_basic_view(data_np.shape,
                                                                 x1, y1, x2, y2,
                                                                 scale_x, scale_y)
@@ -379,8 +413,8 @@ def calc_image_merge_clip(x1, y1, x2, y2,
     Refines the tuple (a1, b1, a2, b2) defining the clipped rectangle
     needed to be cut from the source array and scaled.
     """
-    #print "calc clip in dst", x1, y1, x2, y2
-    #print "calc clip in src", dst_x, dst_y, a1, b1, a2, b2
+    #print(("calc clip in dst", x1, y1, x2, y2))
+    #print(("calc clip in src", dst_x, dst_y, a1, b1, a2, b2))
 
     src_wd, src_ht = a2 - a1, b2 - b1
 
@@ -412,7 +446,7 @@ def calc_image_merge_clip(x1, y1, x2, y2,
         src_wd -= ex
         a2 -= ex
 
-    #print "calc clip out", dst_x, dst_y, a1, b1, a2, b2
+    #print(("calc clip out", dst_x, dst_y, a1, b1, a2, b2))
     return (dst_x, dst_y, a1, b1, a2, b2)
 
 
@@ -426,8 +460,8 @@ def overlay_image(dstarr, dst_x, dst_y, srcarr, dst_order='RGBA',
     if flipy:
         srcarr = numpy.flipud(srcarr)
 
-    ## print "1. dst_x, dst_y, dst_wd, dst_ht", dst_x, dst_y, dst_wd, dst_ht
-    ## print "2. src_wd, src_ht, shape", src_wd, src_ht, srcarr.shape
+    ## print(("1. dst_x, dst_y, dst_wd, dst_ht", dst_x, dst_y, dst_wd, dst_ht))
+    ## print(("2. src_wd, src_ht, shape", src_wd, src_ht, srcarr.shape))
     # Trim off parts of srcarr that would be "hidden"
     # to the left and above the dstarr edge.
     if dst_y < 0:
@@ -457,8 +491,8 @@ def overlay_image(dstarr, dst_x, dst_y, srcarr, dst_order='RGBA',
         srcarr = srcarr[:, :dst_wd, :]
         src_wd -= ex
 
-    ## print "2. dst_x, dst_y", dst_x, dst_y
-    ## print "2. src_wd, src_ht, shape", src_wd, src_ht, srcarr.shape
+    ## print(("2. dst_x, dst_y", dst_x, dst_y))
+    ## print(("2. src_wd, src_ht, shape", src_wd, src_ht, srcarr.shape))
 
     if copy:
         dstarr = numpy.copy(dstarr, order='C')

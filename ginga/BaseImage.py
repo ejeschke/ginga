@@ -339,37 +339,51 @@ class BaseImage(Callback.Callbacks):
         mdata = numpy.ma.array(data, mask=numpy.logical_not(mask))
         return mdata
 
-    def get_scaled_cutout_wdht(self, x1, y1, x2, y2, new_wd, new_ht):
+    def get_scaled_cutout_wdht(self, x1, y1, x2, y2, new_wd, new_ht,
+                               method='basic'):
+        """Extract a region of the image defined by corners (x1, y1) and
+        (x2, y2) and resample it to fit dimensions (new_wd, new_ht).
 
-        shp = self.shape
+        `method` describes the method of interpolation used, where the
+        default "basic" is nearest neighbor.
+        """
 
-        (view, (scale_x, scale_y)) = \
-            trcalc.get_scaled_cutout_wdht_view(shp, x1, y1, x2, y2,
-                                               new_wd, new_ht)
-        newdata = self._slice(view)
+        if method in ('basic', 'view'):
+            shp = self.shape
+
+            (view, (scale_x, scale_y)) = \
+                   trcalc.get_scaled_cutout_wdht_view(shp, x1, y1, x2, y2,
+                                                      new_wd, new_ht)
+            newdata = self._slice(view)
+
+        else:
+            data_np = self._get_data()
+            (newdata, (scale_x, scale_y)) = \
+                      trcalc.get_scaled_cutout_wdht(data_np, x1, y1, x2, y2,
+                                                    new_wd, new_ht,
+                                                    interpolation=method,
+                                                    logger=self.logger)
 
         res = Bunch.Bunch(data=newdata, scale_x=scale_x, scale_y=scale_y)
         return res
 
-    def get_scaled_cutout_basic(self, x1, y1, x2, y2, scale_x, scale_y):
+    def get_scaled_cutout_basic(self, x1, y1, x2, y2, scale_x, scale_y,
+                                method='basic'):
+        """Extract a region of the image defined by corners (x1, y1) and
+        (x2, y2) and scale it by scale factors (scale_x, scale_y).
+
+        `method` describes the method of interpolation used, where the
+        default "basic" is nearest neighbor.
+        """
+
         new_wd = int(round(scale_x * (x2 - x1 + 1)))
         new_ht = int(round(scale_y * (y2 - y1 + 1)))
-        return self.get_scaled_cutout_wdht(x1, y1, x2, y2, new_wd, new_ht)
 
-    def get_scaled_cutout_by_dims(self, x1, y1, x2, y2, dst_wd, dst_ht,
-                                  method='basic'):
-        if method == 'basic':
-            return self.get_scaled_cutout_wdht(x1, y1, x2, y2, dst_wd, dst_ht)
-
-        data = self._get_data()
-        newdata, (scale_x, scale_y) = trcalc.get_scaled_cutout_wdht(
-            data, x1, y1, x2, y2, dst_wd, dst_ht, interpolation=method)
-
-        res = Bunch.Bunch(data=newdata, scale_x=scale_x, scale_y=scale_y)
-        return res
+        return self.get_scaled_cutout_wdht(x1, y1, x2, y2, new_wd, new_ht,
+                                           method=method)
 
     def get_scaled_cutout(self, x1, y1, x2, y2, scale_x, scale_y,
-                          method='basic'):
+                          method='basic', logger=None):
         if method == 'basic':
             return self.get_scaled_cutout_basic(x1, y1, x2, y2,
                                                 scale_x, scale_y)
@@ -391,7 +405,7 @@ class BaseImage(Callback.Callbacks):
         """
         # NOTE: seems to be necessary or we get a non-terminating result
         x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
-        
+
         dx = abs(x2 - x1)
         dy = abs(y2 - y1)
         if x1 < x2:

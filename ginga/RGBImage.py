@@ -114,7 +114,7 @@ class RGBImage(BaseImage):
                                   method='bicubic'):
         newdata, (scale_x, scale_y) = trcalc.get_scaled_cutout_wdht(
             self._get_data(), x1, y1, x2, y2, new_wd, new_ht,
-            interpolation=method)
+            interpolation=method, logger=self.logger)
 
         res = Bunch.Bunch(data=newdata, scale_x=scale_x, scale_y=scale_y)
         return res
@@ -123,7 +123,7 @@ class RGBImage(BaseImage):
                           method='bicubic'):
         newdata, (scale_x, scale_y) = trcalc.get_scaled_cutout_basic(
             self._get_data(), x1, y1, x2, y2, scale_x, scale_y,
-            interpolation=method)
+            interpolation=method, logger=self.logger)
 
         res = Bunch.Bunch(data=newdata, scale_x=scale_x, scale_y=scale_y)
         return res

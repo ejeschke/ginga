@@ -498,7 +498,8 @@ class AstroImage(BaseImage):
                 self.logger.debug("scaling piece by x(%f), y(%f)" % (
                     nscale_x, nscale_y))
                 data_np, (ascale_x, ascale_y) = trcalc.get_scaled_cutout_basic(
-                    data_np, 0, 0, wd-1, ht-1, nscale_x, nscale_y)
+                    data_np, 0, 0, wd-1, ht-1, nscale_x, nscale_y,
+                    logger=self.logger)
 
             # Rotate piece into our orientation, according to wcs
             rot_dx, rot_dy = xrot - xrot_ref, yrot - yrot_ref
@@ -522,7 +523,7 @@ class AstroImage(BaseImage):
                 self.logger.debug("rotating %s by %f deg" % (name, rot_deg))
                 rotdata = trcalc.rotate(rotdata, rot_deg,
                                         #rotctr_x=ctr_x, rotctr_y=ctr_y
-                                        )
+                                        logger=logger)
 
             # Flip X due to negative CDELT1
             if numpy.sign(cdelt1) != numpy.sign(cdelt1_ref):

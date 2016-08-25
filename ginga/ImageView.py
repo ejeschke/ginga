@@ -1323,7 +1323,8 @@ class ImageViewBase(Callback.Callbacks):
             # This is the slowest part of the rendering--install the OpenCv or pyopencl
             # packages to speed it up
             data = numpy.ascontiguousarray(data)
-            data = trcalc.rotate_clip(data, -rot_deg, out=data)
+            data = trcalc.rotate_clip(data, -rot_deg, out=data,
+                                      logger=self.logger)
 
         split2_time = time.time()
 

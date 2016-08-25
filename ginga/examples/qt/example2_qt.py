@@ -218,6 +218,22 @@ def main(options, args):
 
     logger = log.get_logger("example2", options=options)
 
+    # Check whether user wants to use OpenCv
+    if options.opencv:
+        from ginga import trcalc
+        try:
+            trcalc.use('opencv')
+        except Exception as e:
+            logger.warning("failed to set OpenCv preference: %s" % (str(e)))
+
+    # Check whether user wants to use OpenCL
+    elif options.opencl:
+        from ginga import trcalc
+        try:
+            trcalc.use('opencl')
+        except Exception as e:
+            logger.warning("failed to set OpenCL preference: %s" % (str(e)))
+
     w = FitsViewer(logger)
     w.resize(524, 540)
     w.show()
@@ -245,6 +261,12 @@ if __name__ == "__main__":
     optprs.add_option("--loglevel", dest="loglevel", metavar="LEVEL",
                       type='int', default=logging.INFO,
                       help="Set logging level to LEVEL")
+    optprs.add_option("--opencv", dest="opencv", default=False,
+                      action="store_true",
+                      help="Use OpenCv acceleration")
+    optprs.add_option("--opencl", dest="opencl", default=False,
+                      action="store_true",
+                      help="Use OpenCL acceleration")
     optprs.add_option("--stderr", dest="logstderr", default=False,
                       action="store_true",
                       help="Copy logging also to stderr")

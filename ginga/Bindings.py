@@ -1599,18 +1599,19 @@ class ImageViewBindings(object):
     def calc_coord_offset(self, viewer, origin):
         data_x, data_y = origin[:2]
         win_x, win_y = viewer.get_canvas_xy(data_x, data_y)
-        pan_x, pan_y = viewer.get_pan(coord='data')
         ctr_x, ctr_y = viewer.get_center()
         # dx, dy: distance from the cursor to the center of the window
         # in canvas pixels
         dx, dy = ctr_x - win_x, win_y - ctr_y
         flipx, flipy, swapxy = viewer.get_transforms()
+
         if swapxy:
             dx, dy = dy, dx
         if flipx:
             dx = - dx
         if flipy:
             dy = - dy
+
         return (dx, dy)
 
     def calc_coord_pan(self, viewer, origin, offset):
@@ -1619,6 +1620,7 @@ class ImageViewBindings(object):
         scale_x, scale_y = viewer.get_scale_xy()
         dx, dy = dx / scale_x, dy / scale_y
         pan_x, pan_y = data_x + dx, data_y + dy
+
         return (pan_x, pan_y)
 
     def zoom_step(self, viewer, direction, msg=True, origin=None, adjust=1.5):
