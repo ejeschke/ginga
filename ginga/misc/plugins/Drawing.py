@@ -43,7 +43,7 @@ class Drawing(GingaPlugin.LocalPlugin):
         self.drawtypes = list(canvas.get_drawtypes())
         self.drawcolors = draw_colors
         self.linestyles = ['solid', 'dash']
-        self.coordtypes = ['data', 'wcs', 'canvas']
+        self.coordtypes = ['data', 'wcs', 'cartesian', 'canvas']
         # contains all parameters to be passed to the constructor
         self.draw_args = []
         self.draw_kwdargs = {}
@@ -104,14 +104,14 @@ class Drawing(GingaPlugin.LocalPlugin):
         btn1 = Widgets.RadioButton("Draw")
         btn1.set_state(mode == 'draw')
         btn1.add_callback('activated', lambda w, val: self.set_mode_cb('draw', val))
-        btn1.set_tooltip("Choose this to draw a ruler")
+        btn1.set_tooltip("Choose this to draw")
         self.w.btn_draw = btn1
         hbox.add_widget(btn1)
 
         btn2 = Widgets.RadioButton("Edit", group=btn1)
         btn2.set_state(mode == 'edit')
         btn2.add_callback('activated', lambda w, val: self.set_mode_cb('edit', val))
-        btn2.set_tooltip("Choose this to edit a ruler")
+        btn2.set_tooltip("Choose this to edit")
         self.w.btn_edit = btn2
         hbox.add_widget(btn2)
 

@@ -1640,9 +1640,9 @@ class ImageViewBindings(object):
                     viewer.zoom_in()
                 elif direction == 'down':
                     viewer.zoom_out()
-                    if msg:
-                        viewer.onscreen_message(viewer.get_scale_text(),
-                                                delay=0.4)
+                if msg:
+                    viewer.onscreen_message(viewer.get_scale_text(),
+                                            delay=0.4)
 
             if origin is not None:
                 # now set the pan position to keep the offset

@@ -274,6 +274,7 @@ class ImageViewBase(Callback.Callbacks):
 
         self.coordmap = {
             'canvas': coordmap.CanvasMapper(self),
+            'cartesian': coordmap.CartesianMapper(self),
             'data': coordmap.DataMapper(self),
             None: coordmap.DataMapper(self),
             #'offset': coordmap.OffsetMapper(self),
@@ -1424,9 +1425,33 @@ class ImageViewBase(Callback.Callbacks):
             Data coordinates in the form of ``(x, y)``.
 
         """
-        # First, translate window coordinates onto pixel image
+        # First, translate window coordinates onto cartesian canvas
         off_x, off_y = self.window_to_offset(win_x, win_y)
 
+        # Then translate into window coordinates
+        return self.offset_to_data(off_x, off_y, center=center)
+
+    def offset_to_data(self, off_x, off_y, center=True):
+        """Get the closest coordinates in the data array to those
+        in cartesian fixed (non-scaled) canvas coordinates.
+
+        Parameters
+        ----------
+        off_x, off_y : float or ndarray
+            Cartesian canvas coordinates.
+
+        center : bool
+            If `True`, then the coordinates are mapped such that the
+            pixel is centered on the square when the image is zoomed in past
+            1X. This is the specification of the FITS image standard,
+            that the pixel is centered on the integer row/column.
+
+        Returns
+        -------
+        coord : tuple
+            Data coordinates in the form of ``(x, y)``.
+
+        """
         # Reverse scaling
         off_x = off_x * (1.0 / self._org_scale_x)
         off_y = off_y * (1.0 / self._org_scale_y)
@@ -1442,6 +1467,12 @@ class ImageViewBase(Callback.Callbacks):
 
     def get_canvas_xy(self, data_x, data_y, center=True):
         """Reverse of :meth:`get_data_xy`."""
+        off_x, off_y = self.data_to_offset(data_x, data_y)
+
+        return self.offset_to_window(off_x, off_y)
+
+    def data_to_offset(self, data_x, data_y, center=True):
+        """Reverse of :meth:`offset_to_data`."""
         if center:
             data_x -= self.data_off
             data_y -= self.data_off
@@ -1453,8 +1484,7 @@ class ImageViewBase(Callback.Callbacks):
         off_x *= self._org_scale_x
         off_y *= self._org_scale_y
 
-        win_x, win_y = self.offset_to_window(off_x, off_y)
-        return (win_x, win_y)
+        return (off_x, off_y)
 
     def offset_to_window(self, off_x, off_y, asint=True):
         """Convert data offset to window coordinates.

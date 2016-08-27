@@ -37,6 +37,30 @@ class CanvasMapper(object):
         return x, y
 
 
+class CartesianMapper(object):
+    """A coordinate mapper that maps to the viewer's canvas
+    in Cartesian coordinates that do not scale (unlike DataMapper).
+    """
+    def __init__(self, viewer):
+        self.viewer = viewer
+
+    def to_canvas(self, crt_x, crt_y):
+        return self.viewer.offset_to_window(crt_x, crt_y)
+
+    def to_data(self, crt_x, crt_y):
+        return self.viewer.offset_to_data(crt_x, crt_y)
+
+    def data_to(self, data_x, data_y):
+        return self.viewer.data_to_offset(data_x, data_y)
+
+    def offset_pt(self, pt, xoff, yoff):
+        x, y = pt
+        return x + xoff, y + yoff
+
+    def rotate_pt(self, x, y, theta, xoff=0, yoff=0):
+        return trcalc.rotate_pt(x, y, theta, xoff=xoff, yoff=yoff)
+
+
 class DataMapper(object):
     """A coordinate mapper that maps to the viewer's canvas
     in data coordinates.
