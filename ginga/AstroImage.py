@@ -523,7 +523,7 @@ class AstroImage(BaseImage):
                 self.logger.debug("rotating %s by %f deg" % (name, rot_deg))
                 rotdata = trcalc.rotate(rotdata, rot_deg,
                                         #rotctr_x=ctr_x, rotctr_y=ctr_y
-                                        logger=logger)
+                                        logger=self.logger)
 
             # Flip X due to negative CDELT1
             if numpy.sign(cdelt1) != numpy.sign(cdelt1_ref):

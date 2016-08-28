@@ -1623,7 +1623,7 @@ class ImageViewBindings(object):
 
         return (pan_x, pan_y)
 
-    def zoom_step(self, viewer, direction, msg=True, origin=None, adjust=1.5):
+    def zoom_step(self, viewer, event, msg=True, origin=None, adjust=1.5):
         if origin is not None:
             # get offset in canvas pixels of data item under cursor from center
             offset = self.calc_coord_offset(viewer, origin)
@@ -1633,13 +1633,18 @@ class ImageViewBindings(object):
                 zoom_accel = self.settings.get('scroll_zoom_acceleration', 1.0)
                 # change scale by 50%
                 amount = self._scale_adjust(adjust, zoom_accel, max_limit=4.0)
-                self._scale_image(viewer, direction, amount, msg=msg)
+                self._scale_image(viewer, event.direction, amount, msg=msg)
 
             else:
+                rev = self.settings.get('zoom_scroll_reverse', False)
+                direction = self.get_direction(event.direction, rev=rev)
+
                 if direction == 'up':
                     viewer.zoom_in()
+
                 elif direction == 'down':
                     viewer.zoom_out()
+
                 if msg:
                     viewer.onscreen_message(viewer.get_scale_text(),
                                             delay=0.4)
@@ -1654,11 +1659,8 @@ class ImageViewBindings(object):
             return True
 
         msg = self.settings.get('msg_zoom', msg)
-        rev = self.settings.get('zoom_scroll_reverse', False)
 
-        direction = self.get_direction(event.direction, rev=rev)
-
-        self.zoom_step(viewer, direction, msg=msg, origin=origin,
+        self.zoom_step(viewer, event, msg=msg, origin=origin,
                        adjust=1.5)
         return True
 
