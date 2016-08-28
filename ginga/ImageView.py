@@ -164,7 +164,10 @@ class ImageViewBase(Callback.Callbacks):
 
         # misc
         self.t_.addDefaults(auto_orient=False,
-                            defer_redraw=True, defer_lagtime=0.025)
+                            defer_redraw=True, defer_lagtime=0.025,
+                            show_pan_position=False,
+                            show_mode_indicator=True,
+                            onscreen_ff='Sans Serif')
 
         # embedded image "profiles"
         self.t_.addDefaults(profile_use_scale=False, profile_use_pan=False,
@@ -452,6 +455,17 @@ class ImageViewBase(Callback.Callbacks):
         if (self.private_canvas != self.canvas) and (
             not self.private_canvas.has_object(canvas)):
             self.private_canvas.add(canvas)
+
+    def get_private_canvas(self):
+        """Get the private canvas object used by this instance.
+
+        Returns
+        -------
+        canvas : `~ginga.canvas.types.layer.DrawingCanvas`
+            Canvas.
+
+        """
+        return self.private_canvas
 
     def set_color_map(self, cmap_name):
         """Set the color map.
@@ -2562,7 +2576,9 @@ class ImageViewBase(Callback.Callbacks):
         Returns
         -------
         rgb : str
-            Currently, this is *always* RGB.
+            Returns the order of RGBA planes required by the subclass
+            to render the canvas properly.
+            Should be overridden by any subclass.
 
         """
         return 'RGB'
@@ -2726,6 +2742,9 @@ class ImageViewBase(Callback.Callbacks):
         """
         return self._originUpper
 
+    def onscreen_message(self, text, delay=None, redraw=True):
+        self.logger.warning("Subclass should override this abstract method!")
+
     def update_image(self):
         """Update image.
         This must be implemented by subclasses.
@@ -2759,6 +2778,114 @@ class ImageViewBase(Callback.Callbacks):
 
         """
         self.logger.warning("Subclass should override this abstract method!")
+
+    def show_pan_mark(self, tf):
+        """Show a mark in the pan position.
+
+        Parameters
+        ----------
+        tf : bool
+            If True, show the mark; else remove it if present.
+
+        """
+        self.t_.set(show_pan_position=tf)
+        tag = '_$pan_mark'
+        radius = 10
+
+        canvas = self.get_private_canvas()
+        try:
+            mark = canvas.get_object_by_tag(tag)
+            if not tf:
+                canvas.delete_object_by_tag(tag)
+
+        except KeyError:
+            if tf:
+                Point = canvas.get_draw_class('point')
+                canvas.add(Point(0, 0, radius, style='plus', color='red',
+                                 coord='cartesian'),
+                           tag=tag, redraw=False)
+
+        self.redraw(whence=3)
+
+    def show_mode_indicator(self, tf, corner='lr'):
+        """Show a keyboard mode indicator in one of the corners.
+
+        Parameters
+        ----------
+        tf : bool
+            If True, show the mark; else remove it if present.
+
+        corner : str
+            One of 'll', 'lr', 'ul' or 'ur' selecting a corner.
+            The default is 'lr'.
+
+        """
+        self.t_.set(show_mode_indicator=tf)
+        tag = '_$mode_indicator'
+
+        canvas = self.get_private_canvas()
+        try:
+            indic = canvas.get_object_by_tag(tag)
+            if not tf:
+                canvas.delete_object_by_tag(tag)
+
+        except KeyError:
+            if tf:
+                # force a redraw if the mode changes
+                bm = self.get_bindmap()
+                bm.add_callback('mode-set',
+                                lambda *args: self.redraw(whence=3))
+
+                Indicator = canvas.get_draw_class('modeindicator')
+                canvas.add(Indicator(corner=corner),
+                           tag=tag, redraw=False)
+
+        self.redraw(whence=3)
+
+    def set_onscreen_message(self, text, redraw=True):
+        """Called by a subclass to update the onscreen message.
+
+        Parameters
+        ----------
+        text : str
+            The text to show in the display.
+
+        """
+        font = self.t_['onscreen_ff']
+        font_size = 18.0
+
+        # TODO: need some way to accurately estimate text extents
+        # without actually putting text on the canvas
+        ht, wd = font_size, font_size
+        if text is not None:
+            wd = len(text) * font_size
+
+        width, height = self.get_window_size()
+        y = ((height // 3) * 2) - (ht // 2)
+        x = (width // 2) - (wd // 2)
+
+        tag = '_$onscreen_msg'
+
+        canvas = self.get_private_canvas()
+        try:
+            message = canvas.get_object_by_tag(tag)
+            if text is None:
+                canvas.delete_object_by_tag(tag)
+            else:
+                message.x = x
+                message.y = y
+                message.text = text
+
+        except KeyError:
+            if text is not None:
+                Text = canvas.get_draw_class('text')
+                canvas.add(Text(x, y, text=text,
+                                font=font, fontsize=font_size,
+                                color=self.img_fg, coord='canvas'),
+                           tag=tag, redraw=False)
+
+        if redraw:
+            self.redraw(whence=3)
 
 
 class SuppressRedraw(object):

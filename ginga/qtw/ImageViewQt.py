@@ -131,10 +131,6 @@ class ImageViewQt(ImageView.ImageViewBase):
 
         self.renderer = CanvasRenderer(self)
 
-        self.t_.setDefaults(show_pan_position=False,
-                            onscreen_ff='Sans Serif')
-
-        self.message = None
         self.msgtimer = QtCore.QTimer()
         self.msgtimer.timeout.connect(self.onscreen_message_off)
         self.msgfont = QFont(self.t_['onscreen_ff'],
@@ -173,33 +169,6 @@ class ImageViewQt(ImageView.ImageViewBase):
         painter.drawImage(QtCore.QRect(dst_x, dst_y, width, height),
                           qimage,
                           QtCore.QRect(0, 0, width, height))
-
-        # Draw a cross in the center of the window in debug mode
-        if self.t_['show_pan_position']:
-            clr = QColor()
-            clr.setRgbF(1.0, 0.0, 0.0)
-            painter.setPen(clr)
-            ctr_x, ctr_y = self.get_center()
-            painter.drawLine(ctr_x - 10, ctr_y, ctr_x + 10, ctr_y)
-            painter.drawLine(ctr_x, ctr_y - 10, ctr_x, ctr_y + 10)
-
-        # render self.message
-        if self.message:
-            self._draw_message(painter, imgwin_wd, imgwin_ht,
-                               self.message)
-
-    def _draw_message(self, painter, width, height, message):
-        fgclr = self._get_color(*self.img_fg)
-        painter.setPen(fgclr)
-        painter.setBrush(fgclr)
-        painter.setFont(self.msgfont)
-        rect = painter.boundingRect(0, 0, 1000, 1000, 0, message)
-        x1, y1, x2, y2 = rect.getCoords()
-        wd = x2 - x1
-        ht = y2 - y1
-        y = ((height // 3) * 2) - (ht // 2)
-        x = (width // 2) - (wd // 2)
-        painter.drawText(x, y, message)
 
 
     def render_image(self, rgbobj, dst_x, dst_y):
@@ -354,23 +323,18 @@ class ImageViewQt(ImageView.ImageViewBase):
         clr = QColor(int(r*n), int(g*n), int(b*n))
         return clr
 
-    def onscreen_message(self, text, delay=None):
+    def onscreen_message(self, text, delay=None, redraw=True):
         try:
             self.msgtimer.stop()
         except:
             pass
-        self.message = text
-        self.redraw(whence=3)
+        self.set_onscreen_message(text, redraw=redraw)
         if delay:
             ms = int(delay * 1000.0)
             self.msgtimer.start(ms)
 
     def onscreen_message_off(self):
         return self.onscreen_message(None)
-
-    def show_pan_mark(self, tf):
-        self.t_.set(show_pan_position=tf)
-        self.redraw(whence=3)
 
 
 class RenderMixin(object):

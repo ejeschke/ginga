@@ -334,8 +334,8 @@ class ModeIndicator(CanvasObjectBase):
     """
     Shows a mode indicator.
 
-    NOTE: to get this to work properly, you need to add a callback to your viewer's
-    bindmapper like so:
+    NOTE: to get this to work properly, you need to add a callback to your
+    viewer's bindmapper like so:
 
         bm = viewer.get_bindmap()
         bm.add_callback('mode-set', lambda *args: viewer.redraw(whence=3))

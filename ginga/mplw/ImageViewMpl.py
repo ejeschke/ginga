@@ -65,8 +65,6 @@ class ImageViewMpl(ImageView.ImageViewBase):
         self.img_fg = (1.0, 1.0, 1.0)
         self.img_bg = (0.5, 0.5, 0.5)
 
-        self.message = None
-
         self.in_axes = False
         # Matplotlib expects RGBA data for color images
         self._rgb_order = 'RGBA'
@@ -79,9 +77,6 @@ class ImageViewMpl(ImageView.ImageViewBase):
         # For timing events
         self._msg_timer = None
         self._defer_timer = None
-
-        self.t_.setDefaults(show_pan_position=False,
-                            onscreen_ff='Sans Serif')
 
     def set_figure(self, figure):
         """Call this with the matplotlib Figure() object."""
@@ -122,14 +117,6 @@ class ImageViewMpl(ImageView.ImageViewBase):
             self._defer_timer = figure.canvas.new_timer()
             self._defer_timer.single_shot = True
             self._defer_timer.add_callback(self.delayed_redraw)
-
-        # marker drawn at the center of the image for debugging
-        self.cross1 = lines.Line2D((0.49, 0.51), (0.50, 0.50),
-                                   transform=newax.transAxes,
-                                   color='red', alpha=1.0)
-        self.cross2 = lines.Line2D((0.50, 0.50), (0.49, 0.51),
-                                    transform=newax.transAxes,
-                                    color='red', alpha=1.0)
 
         canvas = figure.canvas
         if hasattr(canvas, 'viewer'):
@@ -260,15 +247,6 @@ class ImageViewMpl(ImageView.ImageViewBase):
         # clear utility axis
         self.ax_util.cla()
 
-        # Draw a cross in the center of the window in debug mode
-        if self.t_['show_pan_position']:
-            self.ax_util.add_line(self.cross1)
-            self.ax_util.add_line(self.cross2)
-
-        # render message if there is one currently
-        if self.message:
-            self.draw_message(self.message)
-
         # force an update of the figure
         self.figure.canvas.draw()
 
@@ -281,14 +259,6 @@ class ImageViewMpl(ImageView.ImageViewBase):
         ## for ax in self.figure.axes:
         ##     ax.set_xlim(x0, x1)
         ##     ax.set_ylim(y0, y1)
-
-    def draw_message(self, message):
-        # r, g, b = self.img_fg
-        self.ax_util.text(0.5, 0.33, message,
-                          fontsize=24, horizontalalignment='center',
-                          color='white',
-                          verticalalignment='center',
-                          transform=self.ax_util.transAxes)
 
     def configure_window(self, width, height):
         self.configure(width, height)
@@ -330,17 +300,13 @@ class ImageViewMpl(ImageView.ImageViewBase):
     def switch_cursor(self, ctype):
         self.set_cursor(self.cursor[ctype])
 
-    def set_fg(self, r, g, b):
-        self.img_fg = (r, g, b)
-        self.redraw(whence=3)
-
-    def onscreen_message(self, text, delay=None):
+    def onscreen_message(self, text, delay=None, redraw=True):
         try:
             self._msg_timer.stop()
         except:
             pass
 
-        self.message = text
+        self.set_onscreen_message(text, redraw=redraw)
         self.redraw(whence=3)
 
         if delay:
@@ -372,9 +338,6 @@ class ImageViewMpl(ImageView.ImageViewBase):
                              "using unoptomized redraw" % (str(e)))
             self.delayed_redraw()
 
-    def show_pan_mark(self, tf):
-        self.t_.set(show_pan_position=tf)
-        self.redraw(whence=3)
 
 class ImageViewEvent(ImageViewMpl):
 

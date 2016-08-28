@@ -2,9 +2,6 @@
 # ImageViewCairo.py -- classes for the display of Ginga canvases
 #                         in Cairo surfaces
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c)  Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 
@@ -47,10 +44,6 @@ class ImageViewCairo(ImageView.ImageViewBase):
         self.renderer = CanvasRenderer(self)
 
         self.cr = None
-        self.message = None
-
-        self.t_.setDefaults(show_pan_position=False,
-                            onscreen_ff='Sans Serif')
 
 
     def _render_offscreen(self, surface, data, dst_x, dst_y,
@@ -98,36 +91,6 @@ class ImageViewCairo(ImageView.ImageViewBase):
         cr.mask_surface(img_surface, dst_x, dst_y)
         #cr.rectangle(dst_x, dst_y, dawd, daht)
         cr.fill()
-
-        # Draw a cross in the center of the window in debug mode
-        if self.t_['show_pan_position']:
-            cr.set_source_rgb(1.0, 0.0, 0.0)
-            cr.set_line_width(1)
-            ctr_x, ctr_y = self.get_center()
-            cr.move_to(ctr_x - 10, ctr_y)
-            cr.line_to(ctr_x + 10, ctr_y)
-            cr.move_to(ctr_x, ctr_y - 10)
-            cr.line_to(ctr_x, ctr_y + 10)
-            cr.close_path()
-            cr.stroke_preserve()
-
-        # render self.message
-        if self.message:
-            self.draw_message(cr, imgwin_wd, imgwin_ht,
-                              self.message)
-
-
-    def draw_message(self, cr, width, height, message):
-        r, g, b = self.img_fg
-        #cr.set_source_rgb(1.0, 1.0, 1.0)
-        cr.set_source_rgb(r, g, b)
-        cr.select_font_face(self.t_['onscreen_ff'])
-        cr.set_font_size(24.0)
-        a, b, wd, ht, i, j = cr.text_extents(message)
-        y = ((height // 3) * 2) - (ht // 2)
-        x = (width // 2) - (wd // 2)
-        cr.move_to(x, y)
-        cr.show_text(message)
 
     def get_offscreen_context(self):
         if self.surface is None:
@@ -214,13 +177,6 @@ class ImageViewCairo(ImageView.ImageViewBase):
 
     def get_rgb_order(self):
         return self._rgb_order
-
-    def onscreen_message(self, text, delay=None):
-        pass
-
-    def show_pan_mark(self, tf):
-        self.t_.set(show_pan_position=tf)
-        self.redraw(whence=3)
 
     def pix2canvas(self, x, y):
         x, y = self.cr.device_to_user(x, y)

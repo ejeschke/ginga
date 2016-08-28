@@ -238,9 +238,7 @@ class ImageViewGtk(ImageViewCairo.ImageViewCairo):
                 self.msgtask = None
             except:
                 pass
-        self.message = text
-        if redraw:
-            self.redraw(whence=3)
+        self.set_onscreen_message(text, redraw=redraw)
         if delay:
             ms = int(delay * 1000.0)
             self.msgtask = gobject.timeout_add(ms,

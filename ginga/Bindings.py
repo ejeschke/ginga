@@ -712,7 +712,7 @@ class ImageViewBindings(object):
                                         delay=1.0)
 
     def show_cbar(self, viewer):
-        canvas = viewer.private_canvas
+        canvas = viewer.get_private_canvas()
         # canvas already has a color bar?
         objs = list(canvas.get_objects_by_kinds(('colorbar', 'drawablecolorbar')))
         if len(objs) == 0:
@@ -722,7 +722,7 @@ class ImageViewBindings(object):
             canvas.add(cbar, tag='__cbar')
 
     def remove_cbar(self, viewer):
-        canvas = viewer.private_canvas
+        canvas = viewer.get_private_canvas()
         try:
             # canvas already has a color bar?
             canvas.delete_object_by_tag('__cbar')
@@ -731,7 +731,7 @@ class ImageViewBindings(object):
             pass
 
     def toggle_cbar(self, viewer):
-        canvas = viewer.private_canvas
+        canvas = viewer.get_private_canvas()
         try:
             obj = canvas.get_object_by_tag('__cbar')
             self.remove_cbar(viewer)

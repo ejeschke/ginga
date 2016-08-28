@@ -39,7 +39,6 @@ class ImageViewMock(ImageView.ImageViewBase):
         self.t_.setDefaults(show_pan_position=False,
                             onscreen_ff='Sans Serif')
 
-        self.message = None
         # This holds the off-screen pixel map.  It's creation is usually
         # deferred until we know the final size of the window.
         self.pixmap = None
@@ -84,18 +83,6 @@ class ImageViewMock(ImageView.ImageViewBase):
         ## painter.drawImage(Rect(dst_x, dst_y, width, height),
         ##                   data,
         ##                   Rect(0, 0, width, height))
-
-        # Draw a cross in the center of the window in debug mode
-        if self.t_['show_pan_position']:
-            ctr_x, ctr_y = self.get_center()
-            #painter.drawLine(ctr_x - 10, ctr_y, ctr_x + 10, ctr_y)
-            #painter.drawLine(ctr_x, ctr_y - 10, ctr_x, ctr_y + 10)
-
-        # render self.message
-        if self.message:
-            y = ((imgwin_ht // 3) * 2) - (ht // 2)
-            x = (imgwin_wd // 2) - (wd // 2)
-            #painter.drawText(x, y, message)
 
 
     def render_image(self, rgbobj, dst_x, dst_y):
@@ -229,13 +216,11 @@ class ImageViewMock(ImageView.ImageViewBase):
         clr = (r, g, b)
         return clr
 
-    def onscreen_message(self, text, delay=None):
+    def onscreen_message(self, text, delay=None, redraw=True):
         # stop any scheduled updates of the message
 
         # set new message text
-        self.message = text
-        self.redraw(whence=3)
-
+        self.set_onscreen_message(text, redraw=redraw)
         if delay:
             # schedule a call to onscreen_message_off after
             # `delay` sec
@@ -243,10 +228,6 @@ class ImageViewMock(ImageView.ImageViewBase):
 
     def onscreen_message_off(self):
         return self.onscreen_message(None)
-
-    def show_pan_mark(self, tf):
-        self.t_.set(show_pan_position=tf)
-        self.redraw(whence=3)
 
 
 class ImageViewEvent(ImageViewMock):

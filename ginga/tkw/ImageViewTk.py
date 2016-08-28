@@ -1,9 +1,6 @@
 #
 # ImageViewTk.py -- a backend for Ginga using a Tk canvas widget
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c)  Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 
@@ -121,7 +118,7 @@ class ImageViewTk(ImageView):
             return
         self.tkcanvas.config(cursor=cursor)
 
-    def onscreen_message(self, text, delay=None):
+    def onscreen_message(self, text, delay=None, redraw=True):
         if self.tkcanvas is None:
             return
         if self.msgtask:
@@ -129,7 +126,7 @@ class ImageViewTk(ImageView):
                 self.tkcanvas.after_cancel(self.msgtask)
             except:
                 pass
-        self.message = text
+        self.set_onscreen_message(text, redraw=redraw)
         self.redraw(whence=3)
         if delay:
             ms = int(delay * 1000.0)

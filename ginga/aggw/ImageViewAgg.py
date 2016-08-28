@@ -35,13 +35,8 @@ class ImageViewAgg(ImageView.ImageViewBase):
 
         self.renderer = CanvasRenderer(self)
 
-        self.message = None
-
         # cursors
         self.cursor = {}
-
-        self.t_.setDefaults(show_pan_position=False,
-                            onscreen_ff='Sans Serif')
 
     def get_surface(self):
         return self.surface
@@ -58,24 +53,6 @@ class ImageViewAgg(ImageView.ImageViewBase):
         # get window contents as a buffer and load it into the AGG surface
         rgb_buf = self.getwin_buffer(order=self._rgb_order)
         canvas.fromstring(rgb_buf)
-
-        cr = AggHelp.AggContext(canvas)
-
-        # Draw a cross in the center of the window in debug mode
-        if self.t_['show_pan_position']:
-            ctr_x, ctr_y = self.get_center()
-            pen = cr.get_pen('red')
-            canvas.line((ctr_x - 10, ctr_y, ctr_x + 10, ctr_y), pen)
-            canvas.line((ctr_x, ctr_y - 10, ctr_x, ctr_y + 10), pen)
-
-        # render self.message
-        if self.message:
-            font = cr.get_font(self.t_['onscreen_ff'], 24.0, self.img_fg)
-            wd, ht = cr.text_extents(self.message, font)
-            imgwin_wd, imgwin_ht = self.get_window_size()
-            y = ((imgwin_ht // 3) * 2) - (ht // 2)
-            x = (imgwin_wd // 2) - (wd // 2)
-            canvas.text((x, y), self.message, font)
 
         # for debugging
         #self.save_rgb_image_as_file('/tmp/temp.png', format='png')
@@ -180,14 +157,6 @@ class ImageViewAgg(ImageView.ImageViewBase):
 
     def get_rgb_order(self):
         return self._rgb_order
-
-    def onscreen_message(self, text, delay=None):
-        # subclass implements this method using a timer
-        self.logger.warning("Subclass should override this method")
-
-    def show_pan_mark(self, tf):
-        self.t_.set(show_pan_position=tf)
-        self.redraw(whence=3)
 
 
 #END
