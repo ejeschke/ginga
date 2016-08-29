@@ -111,7 +111,7 @@ Cut levels and colormap commands
 +----------------------+--------------------------------------------------+
 | y                    | Enter CMap (color map) mode.  See CMap section.  |
 +----------------------+--------------------------------------------------+
-| Y                    | Restore the color map to default                 |
+| Y                    | Restore the color map to default (gray)          |
 +----------------------+--------------------------------------------------+
 | I                    | Invert the color map                             |
 +----------------------+--------------------------------------------------+
@@ -257,7 +257,8 @@ Contrast mode
 |                      |   and bias).  L/R controls shift, U/D controls   |
 |                      |   stretch                                        |
 +----------------------+--------------------------------------------------+
-| right click          | Restore default (non stretched/shifted) colormap |
+| right click          | Restore the contrast (via colormap) to its       |
+|                      |   original (unstretched, unshifted) state        |
 +----------------------+--------------------------------------------------+
 | T                    | Restore the contrast (via colormap) to its       |
 |                      |   original (unstretched, unshifted) state        |
@@ -314,17 +315,19 @@ Cmap mode
 +----------------------+--------------------------------------------------+
 | I                    | Toggle invert color map                          |
 +----------------------+--------------------------------------------------+
+| r                    | Restore color map to unrotated, uninverted state |
++----------------------+--------------------------------------------------+
 | Ctrl + scroll        | Select intensity map                             |
 +----------------------+--------------------------------------------------+
-| k                    | Select prev intensity map in list                |
+| j, left_arrow        | Select prev intensity map in list                |
 +----------------------+--------------------------------------------------+
-| l                    | Select next intensity map in list                |
+| k, right_arrow       | Select next intensity map in list                |
 +----------------------+--------------------------------------------------+
 | i                    | Restore intensity map to "ramp"                  |
 +----------------------+--------------------------------------------------+
 | c                    | Toggle a color bar overlay on the image          |
 +----------------------+--------------------------------------------------+
-| Y                    | Restore the color map to default                 |
+| Y                    | Restore the color map to default ('gray')        |
 +----------------------+--------------------------------------------------+
 
 Autozoom setting

@@ -112,13 +112,14 @@ class ImageViewBindings(object):
             kp_autocenter_override = ['/', 'pan+/'],
             kp_contrast_restore = ['T', 'contrast+T'],
             kp_cmap_reset = ['Y', 'cmap+Y'],
+            kp_cmap_restore = ['cmap+r'],
             kp_cmap_invert = ['I', 'cmap+I'],
             kp_cmap_prev = ['cmap+up', 'cmap+b'],
             kp_cmap_next = ['cmap+down', 'cmap+n'],
             kp_toggle_cbar = ['cmap+c'],
             kp_imap_reset = ['cmap+i'],
-            kp_imap_prev = ['cmap+k'],
-            kp_imap_next = ['cmap+l'],
+            kp_imap_prev = ['cmap+left', 'cmap+j'],
+            kp_imap_next = ['cmap+right', 'cmap+k'],
             kp_flip_x = ['[', '{', 'rotate+[', 'rotate+{'],
             kp_flip_y = [']', '}', 'rotate+]', 'rotate+}'],
             kp_swap_xy = ['backslash', '|', 'rotate+backslash', 'rotate+|'],
@@ -711,34 +712,6 @@ class ImageViewBindings(object):
                 viewer.onscreen_message("Autocuts alg: %s" % (algname),
                                         delay=1.0)
 
-    def show_cbar(self, viewer):
-        canvas = viewer.get_private_canvas()
-        # canvas already has a color bar?
-        objs = list(canvas.get_objects_by_kinds(('colorbar', 'drawablecolorbar')))
-        if len(objs) == 0:
-            # no color bar present
-            Cbar = canvas.get_draw_class('colorbar')
-            cbar = Cbar()
-            canvas.add(cbar, tag='__cbar')
-
-    def remove_cbar(self, viewer):
-        canvas = viewer.get_private_canvas()
-        try:
-            # canvas already has a color bar?
-            canvas.delete_object_by_tag('__cbar')
-
-        except KeyError:
-            pass
-
-    def toggle_cbar(self, viewer):
-        canvas = viewer.get_private_canvas()
-        try:
-            obj = canvas.get_object_by_tag('__cbar')
-            self.remove_cbar(viewer)
-
-        except KeyError:
-            self.show_cbar(viewer)
-
     def _cycle_cmap(self, viewer, msg, direction='down'):
         if self.cancmap:
             msg = self.settings.get('msg_cmap', msg)
@@ -889,10 +862,18 @@ class ImageViewBindings(object):
         self._pantype = 1
         self.to_default_mode(viewer)
 
-    def restore_colormap(self, viewer, msg=True):
+    def restore_contrast(self, viewer, msg=True):
         msg = self.settings.get('msg_cmap', msg)
         rgbmap = viewer.get_rgbmap()
         rgbmap.reset_sarr()
+        if msg:
+            viewer.onscreen_message("Restored contrast", delay=0.5)
+        return True
+
+    def restore_colormap(self, viewer, msg=True):
+        msg = self.settings.get('msg_cmap', msg)
+        rgbmap = viewer.get_rgbmap()
+        rgbmap.restore_cmap()
         if msg:
             viewer.onscreen_message("Restored color map", delay=0.5)
         return True
@@ -1111,7 +1092,7 @@ class ImageViewBindings(object):
     def kp_contrast_restore(self, viewer, event, data_x, data_y, msg=True):
         if self.cancmap:
             msg = self.settings.get('msg_cmap', msg)
-            self.restore_colormap(viewer, msg=msg)
+            self.restore_contrast(viewer, msg=msg)
         return True
 
     def kp_flip_x(self, viewer, event, data_x, data_y, msg=True):
@@ -1173,6 +1154,10 @@ class ImageViewBindings(object):
         self._reset_cmap(viewer, msg)
         return True
 
+    def kp_cmap_restore(self, viewer, event, data_x, data_y, msg=True):
+        self.restore_colormap(viewer, msg)
+        return True
+
     def kp_cmap_invert(self, viewer, event, data_x, data_y, msg=True):
         self._invert_cmap(viewer, msg)
         return True
@@ -1186,7 +1171,11 @@ class ImageViewBindings(object):
         return True
 
     def kp_toggle_cbar(self, viewer, event, data_x, data_y, msg=True):
-        self.toggle_cbar(viewer)
+        canvas = viewer.get_private_canvas()
+        # canvas already has a color bar?
+        objs = list(canvas.get_objects_by_kinds(('colorbar', 'drawablecolorbar')))
+        tf = (len(objs) == 0)
+        viewer.show_color_bar(tf)
         return True
 
     def kp_imap_reset(self, viewer, event, data_x, data_y, msg=True):
@@ -1412,11 +1401,11 @@ class ImageViewBindings(object):
 
 
     def ms_contrast_restore(self, viewer, event, data_x, data_y, msg=True):
-        """An interactive way to restore the colormap settings after
+        """An interactive way to restore the colormap contrast settings after
         a warp operation.
         """
         if self.cancmap and (event.state == 'down'):
-            self.restore_colormap(viewer, msg=msg)
+            self.restore_contrast(viewer, msg=msg)
         return True
 
 
@@ -1446,11 +1435,10 @@ class ImageViewBindings(object):
 
     def ms_cmap_restore(self, viewer, event, data_x, data_y, msg=True):
         """An interactive way to restore the colormap settings after
-        a warp operation.
+        a rotate or invert operation.
         """
         if self.cancmap and (event.state == 'down'):
-            rgbmap = viewer.get_rgbmap()
-            rgbmap.restore_cmap()
+            self.restore_colormap(viewer, msg)
         return True
 
 

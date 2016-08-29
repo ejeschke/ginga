@@ -190,6 +190,8 @@ class TestImageView(unittest.TestCase):
         if not wcsmod.use(modname, raise_err=False):
             return False
         wcs = wcsmod.WCS(self.logger)
+        if wcs.wcs is None:
+            return False
         wcs.load_header(self.header)
         img = AstroImage.AstroImage(logger=self.logger)
         img.wcs = wcs
@@ -227,6 +229,8 @@ class TestImageView(unittest.TestCase):
         if not wcsmod.use(modname, raise_err=False):
             return False
         wcs = wcsmod.WCS(self.logger)
+        if wcs.wcs is None:
+            return False
         wcs.load_header(self.header)
         img = AstroImage.AstroImage(logger=self.logger)
         img.wcs = wcs

@@ -133,8 +133,7 @@ class ImageViewQt(ImageView.ImageViewBase):
 
         self.msgtimer = QtCore.QTimer()
         self.msgtimer.timeout.connect(self.onscreen_message_off)
-        self.msgfont = QFont(self.t_['onscreen_ff'],
-                                   pointSize=24)
+
         # cursors
         self.cursor = {}
 

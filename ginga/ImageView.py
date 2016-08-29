@@ -167,7 +167,8 @@ class ImageViewBase(Callback.Callbacks):
                             defer_redraw=True, defer_lagtime=0.025,
                             show_pan_position=False,
                             show_mode_indicator=True,
-                            onscreen_ff='Sans Serif')
+                            onscreen_font='Sans Serif',
+                            onscreen_font_size=24)
 
         # embedded image "profiles"
         self.t_.addDefaults(profile_use_scale=False, profile_use_pan=False,
@@ -1241,6 +1242,13 @@ class ImageViewBase(Callback.Callbacks):
         if (sx < 1.0) or (sy < 1.0):
             new_scale_x = scale_x * sx
             new_scale_y = scale_y * sy
+
+            # vet against max/min scale preferences
+            new_scale_x = min(new_scale_x, self.t_['scale_max'])
+            new_scale_y = min(new_scale_y, self.t_['scale_max'])
+            new_scale_x = max(new_scale_x, self.t_['scale_min'])
+            new_scale_y = max(new_scale_y, self.t_['scale_min'])
+
             self.logger.warning("scale adjusted downward X (%.4f -> %.4f), "
                                 "Y (%.4f -> %.4f)" % (
                 scale_x, new_scale_x, scale_y, new_scale_y))
@@ -2779,14 +2787,16 @@ class ImageViewBase(Callback.Callbacks):
         """
         self.logger.warning("Subclass should override this abstract method!")
 
-    def show_pan_mark(self, tf):
-        """Show a mark in the pan position.
+    def show_pan_mark(self, tf, color='red'):
+        """Show a mark in the pan position (center of window).
 
         Parameters
         ----------
         tf : bool
             If True, show the mark; else remove it if present.
 
+        color : str
+            Color of the mark; default is 'red'.
         """
         self.t_.set(show_pan_position=tf)
         tag = '_$pan_mark'
@@ -2797,17 +2807,19 @@ class ImageViewBase(Callback.Callbacks):
             mark = canvas.get_object_by_tag(tag)
             if not tf:
                 canvas.delete_object_by_tag(tag)
+            else:
+                mark.color = color
 
         except KeyError:
             if tf:
                 Point = canvas.get_draw_class('point')
-                canvas.add(Point(0, 0, radius, style='plus', color='red',
+                canvas.add(Point(0, 0, radius, style='plus', color=color,
                                  coord='cartesian'),
                            tag=tag, redraw=False)
 
         self.redraw(whence=3)
 
-    def show_mode_indicator(self, tf, corner='lr'):
+    def show_mode_indicator(self, tf, corner='ur'):
         """Show a keyboard mode indicator in one of the corners.
 
         Parameters
@@ -2817,7 +2829,7 @@ class ImageViewBase(Callback.Callbacks):
 
         corner : str
             One of 'll', 'lr', 'ul' or 'ur' selecting a corner.
-            The default is 'lr'.
+            The default is 'ur'.
 
         """
         self.t_.set(show_mode_indicator=tf)
@@ -2828,6 +2840,8 @@ class ImageViewBase(Callback.Callbacks):
             indic = canvas.get_object_by_tag(tag)
             if not tf:
                 canvas.delete_object_by_tag(tag)
+            else:
+                indic.corner = corner
 
         except KeyError:
             if tf:
@@ -2842,6 +2856,36 @@ class ImageViewBase(Callback.Callbacks):
 
         self.redraw(whence=3)
 
+    def show_color_bar(self, tf, side='bottom'):
+        """Show a color bar in the window.
+
+        Parameters
+        ----------
+        tf : bool
+            If True, show the color bar; else remove it if present.
+
+        side : str
+            One of 'top' or 'bottom'. The default is 'bottom'.
+
+        """
+
+        tag = '_$color_bar'
+
+        canvas = self.get_private_canvas()
+        try:
+            cbar = canvas.get_object_by_tag(tag)
+            if not tf:
+                canvas.delete_object_by_tag(tag)
+            else:
+                cbar.side = side
+
+        except KeyError:
+            if tf:
+                Cbar = canvas.get_draw_class('colorbar')
+                canvas.add(Cbar(side=side), tag=tag, redraw=False)
+
+        self.redraw(whence=3)
+
     def set_onscreen_message(self, text, redraw=True):
         """Called by a subclass to update the onscreen message.
 
@@ -2851,18 +2895,18 @@ class ImageViewBase(Callback.Callbacks):
             The text to show in the display.
 
         """
-        font = self.t_['onscreen_ff']
-        font_size = 18.0
+        font = self.t_.get('onscreen_font', 'sans serif')
+        font_size = self.t_.get('onscreen_font_size', 24)
 
         # TODO: need some way to accurately estimate text extents
         # without actually putting text on the canvas
         ht, wd = font_size, font_size
         if text is not None:
-            wd = len(text) * font_size
+            wd = len(text) * font_size * 0.5
 
         width, height = self.get_window_size()
-        y = ((height // 3) * 2) - (ht // 2)
         x = (width // 2) - (wd // 2)
+        y = ((height // 3) * 2) - (ht // 2)
 
         tag = '_$onscreen_msg'
 

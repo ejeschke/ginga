@@ -60,15 +60,10 @@ class FitsViewer(QtGui.QMainWindow):
         self.drawtypes.sort()
 
         # add a color bar
-        private_canvas.add(self.dc.ColorBar(side='bottom', offset=10))
+        #fi.show_color_bar(True)
 
-        # add little mode indicator that shows modal states in
-        # the corner
-        private_canvas.add(self.dc.ModeIndicator(corner='ur'))
-        # little hack necessary to get correct operation of the mode indicator
-        # in all circumstances
-        bm = fi.get_bindmap()
-        bm.add_callback('mode-set', lambda *args: fi.redraw(whence=3))
+        # add little mode indicator that shows keyboard modal states
+        fi.show_mode_indicator(True, corner='ur')
 
         w = fi.get_widget()
         w.resize(512, 512)

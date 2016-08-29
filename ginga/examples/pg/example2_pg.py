@@ -49,7 +49,7 @@ class FitsViewer(object):
         settings = bd.get_settings()
         settings.set(scroll_zoom_direct_scale=True,
                      scroll_zoom_acceleration=0.07)
-        
+
         # canvas that we will draw on
         canvas = self.dc.DrawingCanvas()
         canvas.enable_draw(True)
@@ -66,15 +66,10 @@ class FitsViewer(object):
         self.drawtypes.sort()
 
         # add a color bar
-        private_canvas.add(self.dc.ColorBar(side='bottom', offset=10))
+        fi.show_color_bar(True)
 
-        # add little mode indicator that shows modal states in
-        # the corner
-        private_canvas.add(self.dc.ModeIndicator(corner='ur', fontsize=14))
-        # little hack necessary to get correct operation of the mode indicator
-        # in all circumstances
-        bm = fi.get_bindmap()
-        bm.add_callback('mode-set', lambda *args: fi.redraw(whence=3))
+        # add little mode indicator that shows keyboard modal states
+        fi.show_mode_indicator(True, corner='ur')
 
         fi.set_desired_size(512, 512)
         w = Viewers.GingaViewerWidget(viewer=fi)

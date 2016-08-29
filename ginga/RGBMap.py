@@ -92,6 +92,8 @@ class RGBMapper(Callback.Callbacks):
             dist = ColorDist.LinearDist(hashsize)
         self.dist = dist
 
+        self.reset_sarr(callback=False)
+
         # For callbacks
         for name in ('changed', ):
             self.enable_callback(name)
@@ -116,7 +118,6 @@ class RGBMapper(Callback.Callbacks):
     def calc_cmap(self):
         clst = self.cmap.clst
         arr = numpy.array(clst).transpose() * 255.0
-        #self.carr = arr.astype('uint8')
         self.carr = numpy.round(arr).astype('uint8')
 
     def invert_cmap(self, callback=True):
@@ -128,6 +129,7 @@ class RGBMapper(Callback.Callbacks):
         self.recalc(callback=callback)
 
     def restore_cmap(self, callback=True):
+        self.reset_sarr(callback=False)
         self.calc_cmap()
         self.recalc(callback=callback)
 
@@ -198,7 +200,11 @@ class RGBMapper(Callback.Callbacks):
             self.arr[1] = self.arr[1][idx]
             self.arr[2] = self.arr[2][idx]
 
-        self.reset_sarr(callback=callback)
+        # NOTE: don't reset shift array
+        #self.reset_sarr(callback=False)
+        if callback:
+            self.make_callback('changed')
+
 
     def get_hash_size(self):
         return self.dist.get_hash_size()
