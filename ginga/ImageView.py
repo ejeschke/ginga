@@ -1276,6 +1276,19 @@ class ImageViewBase(Callback.Callbacks):
 
         return (wd, ht)
 
+
+    def _reset_bbox(self):
+        """This function should only be called internally.  It resets
+        the viewers bounding box based on changes to pan or scale.
+        """
+        scale_x, scale_y = self.get_scale_xy()
+        pan_x, pan_y = self.get_pan()
+        win_wd, win_ht = self.get_window_size()
+
+        self._calc_bg_dimensions(scale_x, scale_y,
+                                 pan_x, pan_y, win_wd, win_ht)
+
+
     def apply_transforms(self, data, rot_deg):
         """Apply transformations to the given data.
         These include flip/swap X/Y, invert Y, and rotation.
@@ -1719,6 +1732,7 @@ class ImageViewBase(Callback.Callbacks):
             return
 
         self.t_.set(scale=(scale_x, scale_y))
+        self._reset_bbox()
 
         # If user specified "override" or "once" for auto zoom, then turn off
         # auto zoom now that they have set the zoom manually
@@ -2109,6 +2123,7 @@ class ImageViewBase(Callback.Callbacks):
         """
         with self.suppress_redraw:
             self.t_.set(pan=(pan_x, pan_y), pan_coord=coord)
+            self._reset_bbox()
 
         # If user specified "override" or "once" for auto center, then turn off
         # auto center now that they have set the pan manually

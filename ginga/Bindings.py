@@ -1596,39 +1596,18 @@ class ImageViewBindings(object):
             self._cycle_cuts_alg(viewer, msg, direction=direction)
         return True
 
-    def calc_coord_offset(self, viewer, origin):
-        data_x, data_y = origin[:2]
-        win_x, win_y = viewer.get_canvas_xy(data_x, data_y)
-        ctr_x, ctr_y = viewer.get_center()
-        # dx, dy: distance from the cursor to the center of the window
-        # in canvas pixels
-        dx, dy = ctr_x - win_x, win_y - ctr_y
-        flipx, flipy, swapxy = viewer.get_transforms()
-
-        if swapxy:
-            dx, dy = dy, dx
-        if flipx:
-            dx = - dx
-        if flipy:
-            dy = - dy
-
-        return (dx, dy)
-
-    def calc_coord_pan(self, viewer, origin, offset):
-        data_x, data_y = origin
-        dx, dy = offset
-        scale_x, scale_y = viewer.get_scale_xy()
-        dx, dy = dx / scale_x, dy / scale_y
-        pan_x, pan_y = data_x + dx, data_y + dy
-
-        return (pan_x, pan_y)
-
     def zoom_step(self, viewer, event, msg=True, origin=None, adjust=1.5):
-        if origin is not None:
-            # get offset in canvas pixels of data item under cursor from center
-            offset = self.calc_coord_offset(viewer, origin)
 
         with viewer.suppress_redraw:
+
+            if origin is not None:
+                # get cartesian canvas coords of data item under cursor
+                data_x, data_y = origin
+                off_x, off_y = viewer.data_to_offset(data_x, data_y)
+                # set the pan position to the data item
+                viewer.set_pan(data_x, data_y)
+
+            # scale by the desired means
             if self.settings.get('scroll_zoom_direct_scale', True):
                 zoom_accel = self.settings.get('scroll_zoom_acceleration', 1.0)
                 # change scale by 50%
@@ -1650,9 +1629,10 @@ class ImageViewBindings(object):
                                             delay=0.4)
 
             if origin is not None:
-                # now set the pan position to keep the offset
-                pan_x, pan_y = self.calc_coord_pan(viewer, origin, offset)
-                viewer.panset_xy(pan_x, pan_y)
+                # now adjust the pan position to keep the offset
+                data_x2, data_y2 = viewer.offset_to_data(off_x, off_y)
+                dx, dy = data_x2 - data_x , data_y2 - data_y
+                viewer.panset_xy(data_x - dx, data_y - dy)
 
     def _sc_zoom(self, viewer, event, msg=True, origin=None):
         if not self.canzoom:
