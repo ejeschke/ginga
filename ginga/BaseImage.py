@@ -380,7 +380,11 @@ class BaseImage(Callback.Callbacks):
         new_ht = int(round(scale_y * (y2 - y1 + 1)))
 
         return self.get_scaled_cutout_wdht(x1, y1, x2, y2, new_wd, new_ht,
-                                           method=method)
+                                           # TODO:
+                                           # this causes a problem for the
+                                           # current Glue plugin--update that
+                                           #method=method
+                                           )
 
     def get_scaled_cutout(self, x1, y1, x2, y2, scale_x, scale_y,
                           method='basic', logger=None):
