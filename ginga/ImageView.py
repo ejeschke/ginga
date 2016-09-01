@@ -272,6 +272,7 @@ class ImageViewBase(Callback.Callbacks):
 
         # private canvas for drawing
         self.private_canvas = self.canvas
+
         # handle to image object on the image canvas
         self._imgobj = None
         self._canvas_img_tag = '__image'
@@ -289,6 +290,7 @@ class ImageViewBase(Callback.Callbacks):
         for name in ('transform', 'image-set', 'image-unset', 'configure',
                      'redraw', ):
             self.enable_callback(name)
+
 
     def set_window_size(self, width, height):
         """Report the size of the window to display the image.
@@ -457,6 +459,8 @@ class ImageViewBase(Callback.Callbacks):
             not self.private_canvas.has_object(canvas)):
             self.private_canvas.add(canvas)
 
+        self.initialize_private_canvas(self.private_canvas)
+
     def get_private_canvas(self):
         """Get the private canvas object used by this instance.
 
@@ -467,6 +471,12 @@ class ImageViewBase(Callback.Callbacks):
 
         """
         return self.private_canvas
+
+    def initialize_private_canvas(self, private_canvas):
+        """Initialize the private canvas used by this instance.
+        """
+        if self.t_.get('show_pan_position', False):
+            self.show_pan_mark(True)
 
     def set_color_map(self, cmap_name):
         """Set the color map.
@@ -1351,9 +1361,6 @@ class ImageViewBase(Callback.Callbacks):
         self.logger.debug("reshape time %.3f sec" % (
             split_time - start_time))
 
-        # dimensions may have changed in a swap axes
-        wd, ht = self.get_dims(data)
-
         # Rotate the image as necessary
         if rot_deg != 0:
             # This is the slowest part of the rendering--install the OpenCv or pyopencl
@@ -1373,11 +1380,19 @@ class ImageViewBase(Callback.Callbacks):
         self.logger.debug("rotate time %.3f sec, total reshape %.3f sec" % (
             split2_time - split_time, split2_time - start_time))
 
+        # dimensions may have changed in transformations
+        wd, ht = self.get_dims(data)
+
         ctr_x, ctr_y = self._ctr_x, self._ctr_y
         dst_x, dst_y = ctr_x - xoff, ctr_y - (ht - yoff)
         self._dst_x, self._dst_y = dst_x, dst_y
         self.logger.debug("ctr=%d,%d off=%d,%d dst=%d,%d cutout=%dx%d" % (
             ctr_x, ctr_y, xoff, yoff, dst_x, dst_y, wd, ht))
+
+        win_wd, win_ht = self.get_window_size()
+        self.logger.debug("win=%d,%d coverage=%d,%d" % (
+            win_wd, win_ht, dst_x + wd, dst_y + ht))
+
         return data
 
     def overlay_images(self, canvas, data, whence=0.0):
@@ -2798,7 +2813,6 @@ class ImageViewBase(Callback.Callbacks):
         color : str
             Color of the mark; default is 'red'.
         """
-        self.t_.set(show_pan_position=tf)
         tag = '_$pan_mark'
         radius = 10
 
@@ -2817,7 +2831,7 @@ class ImageViewBase(Callback.Callbacks):
                                  coord='cartesian'),
                            tag=tag, redraw=False)
 
-        self.redraw(whence=3)
+        canvas.update_canvas(whence=3)
 
     def show_mode_indicator(self, tf, corner='ur'):
         """Show a keyboard mode indicator in one of the corners.
@@ -2832,7 +2846,6 @@ class ImageViewBase(Callback.Callbacks):
             The default is 'ur'.
 
         """
-        self.t_.set(show_mode_indicator=tf)
         tag = '_$mode_indicator'
 
         canvas = self.get_private_canvas()
@@ -2854,7 +2867,7 @@ class ImageViewBase(Callback.Callbacks):
                 canvas.add(Indicator(corner=corner),
                            tag=tag, redraw=False)
 
-        self.redraw(whence=3)
+        canvas.update_canvas(whence=3)
 
     def show_color_bar(self, tf, side='bottom'):
         """Show a color bar in the window.
@@ -2870,7 +2883,6 @@ class ImageViewBase(Callback.Callbacks):
         """
 
         tag = '_$color_bar'
-
         canvas = self.get_private_canvas()
         try:
             cbar = canvas.get_object_by_tag(tag)
@@ -2884,7 +2896,7 @@ class ImageViewBase(Callback.Callbacks):
                 Cbar = canvas.get_draw_class('colorbar')
                 canvas.add(Cbar(side=side), tag=tag, redraw=False)
 
-        self.redraw(whence=3)
+        canvas.update_canvas(whence=3)
 
     def set_onscreen_message(self, text, redraw=True):
         """Called by a subclass to update the onscreen message.
@@ -2929,7 +2941,7 @@ class ImageViewBase(Callback.Callbacks):
                            tag=tag, redraw=False)
 
         if redraw:
-            self.redraw(whence=3)
+            canvas.update_canvas(whence=3)
 
 
 class SuppressRedraw(object):
