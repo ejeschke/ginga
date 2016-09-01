@@ -255,6 +255,40 @@ class DirectorySelection(object):
             self.cb(dirname)
 
 
+class Timer(object):
+    """Abstraction of a GUI-toolkit implemented timer."""
+
+    def __init__(self, ival_sec, expire_cb, data=None):
+        """Create a timer set to expire after `ival_sec` and which will
+        call the callable `expire_cb` when it expires.
+        """
+        self.ival_sec = ival_sec
+        self.data = data
+        self.timer = QtCore.QTimer()
+        self.timer.setSingleShot(True)
+        self.timer.timeout.connect(lambda: expire_cb(self))
+
+    def start(self, ival_sec=None):
+        """Start the timer.  If `ival_sec` is not None, it should
+        specify the time to expiration in seconds.
+        """
+        if ival_sec is None:
+            ival_sec = self.ival_sec
+
+        # QTimer set in milliseconds
+        ms = int(ival_sec * 1000.0)
+        self.timer.start(ms)
+
+    def cancel(self):
+        """Cancel this timer.  If the timer is not running, there
+        is no error.
+        """
+        try:
+            self.timer.stop()
+        except:
+            pass
+
+
 def cmap2pixmap(cmap, steps=50):
     """Convert a Ginga colormap into a QPixmap
     """

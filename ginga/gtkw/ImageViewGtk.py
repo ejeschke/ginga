@@ -9,7 +9,6 @@ import sys, os
 import numpy
 
 import gtk
-import gobject
 import cairo
 
 from ginga.gtkw import GtkHelp
@@ -48,8 +47,10 @@ class ImageViewGtk(ImageViewCairo.ImageViewCairo):
         self.cursor = {}
 
         # see reschedule_redraw() method
-        self._defer_task = None
-        self.msgtask = None
+        self._defer_task = GtkHelp.Timer(0.0,
+                                         lambda timer: self.delayed_redraw())
+        self.msgtask = GtkHelp.Timer(0.0,
+                                     lambda timer: self.onscreen_message(None))
 
 
     def get_widget(self):
@@ -110,19 +111,8 @@ class ImageViewGtk(ImageViewCairo.ImageViewCairo):
         pixbuf.save(filepath, format, options)
 
     def reschedule_redraw(self, time_sec):
-        time_ms = int(time_sec * 1000)
-        try:
-            if self._defer_task is not None:
-                gobject.source_remove(self._defer_task)
-                self._defer_task = None
-        except:
-            pass
-        self._defer_task = gobject.timeout_add(time_ms,
-                                               self.delayed_redraw_gtk)
-
-    def delayed_redraw_gtk(self):
-        self._defer_task = None
-        self.delayed_redraw()
+        self._defer_task.cancel()
+        self._defer_task.start(time_sec)
 
     def update_image(self):
         if not self.surface:
@@ -232,21 +222,11 @@ class ImageViewGtk(ImageViewCairo.ImageViewCairo):
         return buf
 
     def onscreen_message(self, text, delay=None, redraw=True):
-        if self.msgtask is not None:
-            try:
-                gobject.source_remove(self.msgtask)
-                self.msgtask = None
-            except:
-                pass
+        self.msgtask.cancel()
         self.set_onscreen_message(text, redraw=redraw)
-        if delay:
-            ms = int(delay * 1000.0)
-            self.msgtask = gobject.timeout_add(ms,
-                                               self.clear_onscreen_message_gtk)
+        if delay is not None:
+            self.msgtask.start(delay)
 
-    def clear_onscreen_message_gtk(self):
-        self.msgtask = None
-        self.onscreen_message(None)
 
 class ImageViewEvent(ImageViewGtk):
 

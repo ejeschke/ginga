@@ -12,6 +12,7 @@ import PIL.ImageTk as PILimageTk
 from ginga import Mixins, Bindings, colors
 from ginga.canvas.mixins import DrawingMixin, CanvasMixin, CompoundMixin
 from ginga.util.toolbox import ModeIndicator
+from ginga.tkw import TkHelp
 
 try:
     # See if we have aggdraw module--best choice
@@ -49,10 +50,8 @@ class ImageViewTk(ImageView):
         self.tkcanvas = None
         self.tkphoto = None
 
-        self.msgtask = None
-
-        # see reschedule_redraw() method
         self._defer_task = None
+        self.msgtask = None
 
 
     def set_widget(self, canvas):
@@ -64,6 +63,14 @@ class ImageViewTk(ImageView):
         canvas.bind("<Configure>", self._resize_cb)
         width = canvas.winfo_width()
         height = canvas.winfo_height()
+
+        # see reschedule_redraw() method
+        self._defer_task = TkHelp.Timer(0.0,
+                                        lambda timer: self.delayed_redraw(),
+                                        tkcanvas=canvas)
+        self.msgtask = TkHelp.Timer(0.0,
+                                    lambda timer: self.onscreen_message(None),
+                                    tkcanvas=canvas)
 
         self.configure_window(width, height)
 
@@ -98,14 +105,8 @@ class ImageViewTk(ImageView):
         cr.config(scrollregion=cr.bbox('all'))
 
     def reschedule_redraw(self, time_sec):
-        if self.tkcanvas is not None:
-            try:
-                self.tkcanvas.after_cancel(self._defer_task)
-            except:
-                pass
-            time_ms = int(time_sec * 1000)
-            self._defer_task = self.tkcanvas.after(time_ms,
-                                                   self.delayed_redraw)
+        self._defer_task.cancel()
+        self._defer_task.start(time_sec)
 
     def configure_window(self, width, height):
         self.configure_surface(width, height)
@@ -121,17 +122,10 @@ class ImageViewTk(ImageView):
     def onscreen_message(self, text, delay=None, redraw=True):
         if self.tkcanvas is None:
             return
-        if self.msgtask:
-            try:
-                self.tkcanvas.after_cancel(self.msgtask)
-            except:
-                pass
+        self.msgtask.cancel()
         self.set_onscreen_message(text, redraw=redraw)
-        self.redraw(whence=3)
-        if delay:
-            ms = int(delay * 1000.0)
-            self.msgtask = self.tkcanvas.after(ms,
-                                              lambda: self.onscreen_message(None))
+        if delay is not None:
+            self.msgtask.start(delay)
 
 
 class ImageViewEvent(ImageViewTk):

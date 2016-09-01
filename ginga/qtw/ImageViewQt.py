@@ -10,7 +10,7 @@ import numpy
 from io import BytesIO
 
 from ginga.qtw.QtHelp import QtGui, QtCore, QFont, QColor, QImage, \
-     QPixmap, QCursor, QPainter, have_pyqt5, get_scroll_info
+     QPixmap, QCursor, QPainter, have_pyqt5, Timer, get_scroll_info
 from ginga import ImageView, Mixins, Bindings
 import ginga.util.six as six
 from ginga.util.six.moves import map, zip
@@ -131,16 +131,13 @@ class ImageViewQt(ImageView.ImageViewBase):
 
         self.renderer = CanvasRenderer(self)
 
-        self.msgtimer = QtCore.QTimer()
-        self.msgtimer.timeout.connect(self.onscreen_message_off)
+        self.msgtimer = Timer(0.0, lambda timer: self.onscreen_message_off())
 
         # cursors
         self.cursor = {}
 
         # For optomized redrawing
-        self._defer_task = QtCore.QTimer()
-        self._defer_task.setSingleShot(True)
-        self._defer_task.timeout.connect(self.delayed_redraw)
+        self._defer_task = Timer(0.0, lambda timer: self.delayed_redraw())
 
 
     def get_widget(self):
@@ -249,13 +246,8 @@ class ImageViewQt(ImageView.ImageViewBase):
         res = qimg.save(filepath, format=format, quality=quality)
 
     def reschedule_redraw(self, time_sec):
-        try:
-            self._defer_task.stop()
-        except:
-            pass
-
-        time_ms = int(time_sec * 1000)
-        self._defer_task.start(time_ms)
+        self._defer_task.cancel()
+        self._defer_task.start(time_sec)
 
     def update_image(self):
         if (not self.pixmap) or (not self.imgwin):
@@ -323,14 +315,10 @@ class ImageViewQt(ImageView.ImageViewBase):
         return clr
 
     def onscreen_message(self, text, delay=None, redraw=True):
-        try:
-            self.msgtimer.stop()
-        except:
-            pass
+        self.msgtimer.cancel()
         self.set_onscreen_message(text, redraw=redraw)
-        if delay:
-            ms = int(delay * 1000.0)
-            self.msgtimer.start(ms)
+        if delay is not None:
+            self.msgtimer.start(delay)
 
     def onscreen_message_off(self):
         return self.onscreen_message(None)

@@ -110,4 +110,46 @@ class MplContext(object):
         wd, ht = bb.width, bb.height
         return (wd, ht)
 
+
+class Timer(object):
+    """Abstraction of a GUI-toolkit implemented timer."""
+
+    def __init__(self, ival_sec, expire_cb, data=None, mplcanvas=None):
+        """Create a timer set to expire after `ival_sec` and which will
+        call the callable `expire_cb` when it expires.
+        """
+        self.ival_sec = ival_sec
+        self.cb = expire_cb
+        self.data = data
+
+        self._timer = mplcanvas.new_timer()
+        self._timer.single_shot = True
+        self._timer.add_callback(self._redirect_cb)
+
+    def start(self, ival_sec=None):
+        """Start the timer.  If `ival_sec` is not None, it should
+        specify the time to expiration in seconds.
+        """
+        if ival_sec is None:
+            ival_sec = self.ival_sec
+
+        self.cancel()
+
+        # Matplotlib timer set in milliseconds
+        time_ms = int(ival_sec * 1000.0)
+        self._timer.interval = time_ms
+        self._timer.start()
+
+    def _redirect_cb(self):
+        self.cb(self)
+
+    def cancel(self):
+        """Cancel this timer.  If the timer is not running, there
+        is no error.
+        """
+        try:
+            self._timer.stop()
+        except:
+            pass
+
 #END

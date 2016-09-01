@@ -2,9 +2,6 @@
 # ImageViewPg.py -- a backend for Ginga using javascript and
 #      HTML5 canvas and websockets
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #

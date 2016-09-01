@@ -21,6 +21,7 @@ from ginga import ImageView
 from ginga import Mixins, Bindings, colors
 from . import transform
 from ginga.mplw.CanvasRenderMpl import CanvasRenderer
+from ginga.mplw.MplHelp import Timer
 
 # Override some matplotlib keyboard UI defaults
 rc = matplotlib.rcParams
@@ -110,13 +111,13 @@ class ImageViewMpl(ImageView.ImageViewBase):
         self._defer_timer = None
 
         if hasattr(figure.canvas, 'new_timer'):
-            self._msg_timer = figure.canvas.new_timer()
-            self._msg_timer.single_shot = True
-            self._msg_timer.add_callback(self.onscreen_message_off)
+            self._msg_timer = Timer(0.0,
+                                    lambda timer: self.onscreen_message(None),
+                                    mplcanvas=figure.canvas)
 
-            self._defer_timer = figure.canvas.new_timer()
-            self._defer_timer.single_shot = True
-            self._defer_timer.add_callback(self.delayed_redraw)
+            self._defer_timer = Timer(0.0,
+                                      lambda timer: self.delayed_redraw(),
+                                      mplcanvas=figure.canvas)
 
         canvas = figure.canvas
         if hasattr(canvas, 'viewer'):
@@ -301,42 +302,21 @@ class ImageViewMpl(ImageView.ImageViewBase):
         self.set_cursor(self.cursor[ctype])
 
     def onscreen_message(self, text, delay=None, redraw=True):
-        try:
-            self._msg_timer.stop()
-        except:
-            pass
+        if self._msg_timer is not None:
+            self._msg_timer.cancel()
 
         self.set_onscreen_message(text, redraw=redraw)
-        self.redraw(whence=3)
 
-        if delay:
-            time_ms = int(delay * 1000.0)
-            self._msg_timer.interval = time_ms
-            self._msg_timer.start()
-
-    def onscreen_message_off(self):
-        return self.onscreen_message(None)
+        if self._msg_timer is not None and delay is not None:
+            self._msg_timer.start(delay)
 
     def reschedule_redraw(self, time_sec):
-
         if self._defer_timer is None:
             self.delayed_redraw()
             return
 
-        try:
-            self._defer_timer.stop()
-        except:
-            pass
-
-        time_ms = int(time_sec * 1000)
-        try:
-            self._defer_timer.interval = time_ms
-            self._defer_timer.start()
-
-        except Exception as e:
-            self.logger.warning("Exception starting timer: %s; "
-                             "using unoptomized redraw" % (str(e)))
-            self.delayed_redraw()
+        self._defer_timer.cancel()
+        self._defer_timer.start(time_sec)
 
 
 class ImageViewEvent(ImageViewMpl):

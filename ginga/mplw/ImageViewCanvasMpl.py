@@ -1,9 +1,6 @@
 #
 # ImageViewCanvasMpl.py -- A FITS image widget with canvas drawing in Matplotlib
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -38,6 +35,7 @@ class ImageViewCanvas(ImageViewMpl.ImageViewZoom,
         super(ImageViewCanvas, self).redraw_data(whence=whence)
 
         # refresh the matplotlib canvas
-        self.figure.canvas.draw()
+        if self.figure is not None and self.figure.canvas is not None:
+            self.figure.canvas.draw()
 
 #END
