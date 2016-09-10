@@ -457,6 +457,7 @@ def overlay_image(dstarr, dst_x, dst_y, srcarr, dst_order='RGBA',
 
     dst_ht, dst_wd, dst_dp = dstarr.shape
     src_ht, src_wd, src_dp = srcarr.shape
+    dst_x, dst_y = int(round(dst_x)), int(round(dst_y))
 
     if flipy:
         srcarr = numpy.flipud(srcarr)

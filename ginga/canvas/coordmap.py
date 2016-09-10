@@ -8,25 +8,67 @@ from ginga import trcalc
 from ginga.util import wcs
 from ginga.util.six.moves import map
 
-__all__ = ['CanvasMapper', 'DataMapper', 'OffsetMapper', 'WCSMapper']
+__all__ = ['CanvasMapper', 'CartesianMapper', 'DataMapper', 'OffsetMapper',
+           'WCSMapper']
+
+class CoordMapError(Exception):
+    pass
 
 
-class CanvasMapper(object):
+class BaseMapper(object):
+    """Base class for coordinate mapper objects."""
+    def __init__(self):
+        super(BaseMapper, self).__init__()
+
+    def to_canvas(self, canvas_x, canvas_y):
+        raise CoordMapError("this method is deprecated")
+
+    def to_data(self, canvas_x, canvas_y):
+        raise CoordMapError("subclass should override this method")
+
+    def data_to(self, data_x, data_y):
+        raise CoordMapError("subclass should override this method")
+
+    def offset_pt(self, pt, xoff, yoff):
+        """
+        Offset a point specified by `pt`, by the offsets (`xoff`, `yoff`).
+        Coordinates are assumed to be in the space defined by this mapper.
+        """
+        raise CoordMapError("subclass should override this method")
+
+    def rotate_pt(self, x, y, theta, xoff=0, yoff=0):
+        """
+        Rotate a point specified by (`x`, `y`) by the angle `theta` (in degrees)
+        around the point indicated by (`xoff`, `yoff`).
+        Coordinates are assumed to be in the space defined by this mapper.
+        """
+        raise CoordMapError("subclass should override this method")
+
+class CanvasMapper(BaseMapper):
     """A coordinate mapper that maps to the viewer's canvas in
     canvas coordinates.
     """
     def __init__(self, viewer):
-        # record the viewer just in case
+        super(CanvasMapper, self).__init__()
         self.viewer = viewer
 
-    def to_canvas(self, canvas_x, canvas_y):
-        return (canvas_x, canvas_y)
+    def to_data(self, canvas_x, canvas_y, viewer=None):
+        if viewer is None:
+            viewer = self.viewer
 
-    def to_data(self, canvas_x, canvas_y):
-        return self.viewer.get_data_xy(canvas_x, canvas_y)
+        canvas_x, canvas_y = viewer.tform['canvas_to_window'].from_(canvas_x,
+                                                                    canvas_y)
+        # flip Y axis for certain backends
+        return viewer.tform['data_to_window'].from_(canvas_x, canvas_y)
 
-    def data_to(self, data_x, data_y):
-        return self.viewer.get_canvas_xy(data_x, data_y)
+    def data_to(self, data_x, data_y, viewer=None):
+        if viewer is None:
+            viewer = self.viewer
+
+        canvas_x, canvas_y = viewer.tform['data_to_window'].to_(data_x,
+                                                                data_y)
+        # flip Y axis for certain backends
+        return viewer.tform['canvas_to_window'].to_(canvas_x, canvas_y)
 
     def offset_pt(self, pt, xoff, yoff):
         x, y = pt
@@ -37,21 +79,23 @@ class CanvasMapper(object):
         return x, y
 
 
-class CartesianMapper(object):
+class CartesianMapper(BaseMapper):
     """A coordinate mapper that maps to the viewer's canvas
     in Cartesian coordinates that do not scale (unlike DataMapper).
     """
     def __init__(self, viewer):
+        super(CartesianMapper, self).__init__()
         self.viewer = viewer
 
-    def to_canvas(self, crt_x, crt_y):
-        return self.viewer.offset_to_window(crt_x, crt_y)
+    def to_data(self, crt_x, crt_y, viewer=None):
+        if viewer is None:
+            viewer = self.viewer
+        return viewer.tform['data_to_cartesian'].from_(crt_x, crt_y)
 
-    def to_data(self, crt_x, crt_y):
-        return self.viewer.offset_to_data(crt_x, crt_y)
-
-    def data_to(self, data_x, data_y):
-        return self.viewer.data_to_offset(data_x, data_y)
+    def data_to(self, data_x, data_y, viewer=None):
+        if viewer is None:
+            viewer = self.viewer
+        return viewer.tform['data_to_cartesian'].to_(data_x, data_y)
 
     def offset_pt(self, pt, xoff, yoff):
         x, y = pt
@@ -61,20 +105,18 @@ class CartesianMapper(object):
         return trcalc.rotate_pt(x, y, theta, xoff=xoff, yoff=yoff)
 
 
-class DataMapper(object):
+class DataMapper(BaseMapper):
     """A coordinate mapper that maps to the viewer's canvas
     in data coordinates.
     """
     def __init__(self, viewer):
+        super(DataMapper, self).__init__()
         self.viewer = viewer
 
-    def to_canvas(self, data_x, data_y):
-        return self.viewer.canvascoords(data_x, data_y)
-
-    def to_data(self, data_x, data_y):
+    def to_data(self, data_x, data_y, viewer=None):
         return data_x, data_y
 
-    def data_to(self, data_x, data_y):
+    def data_to(self, data_x, data_y, viewer=None):
         return data_x, data_y
 
     def offset_pt(self, pt, xoff, yoff):
@@ -85,12 +127,13 @@ class DataMapper(object):
         return trcalc.rotate_pt(x, y, theta, xoff=xoff, yoff=yoff)
 
 
-class OffsetMapper(object):
+class OffsetMapper(BaseMapper):
     """A coordinate mapper that maps to the viewer's canvas
     in data coordinates that are offsets relative to some other
     reference object.
     """
     def __init__(self, viewer, refobj):
+        super(OffsetMapper, self).__init__()
         # TODO: provide a keyword arg to specify which point in the obj
         self.viewer = viewer
         self.refobj = refobj
@@ -103,13 +146,11 @@ class OffsetMapper(object):
             return x - ref_x, y - ref_y
         return map(_cvt, points)
 
-    def to_canvas(self, delta_x, delta_y):
-        data_x, data_y = self.to_data(delta_x, delta_y)
-        return self.viewer.canvascoords(data_x, data_y)
-
-    def to_data(self, delta_x, delta_y):
+    def to_data(self, delta_x, delta_y, viewer=None):
+        if viewer is None:
+            viewer = self.viewer
         ref_x, ref_y = self.refobj.get_reference_pt()
-        data_x, data_y = self.refobj.crdmap.to_data(ref_x, ref_y)
+        data_x, data_y = self.refobj.crdmap.to_data(ref_x, ref_y, viewer=viewer)
         return data_x + delta_x, data_y + delta_y
 
     ## def data_to(self, data_x, data_y):
@@ -126,36 +167,40 @@ class OffsetMapper(object):
         return x, y
 
 
-class WCSMapper(DataMapper):
+class WCSMapper(BaseMapper):
     """A coordinate mapper that maps to the viewer's canvas
     in WCS coordinates.
     """
 
-    def to_canvas(self, lon, lat):
-        data_x, data_y = self.to_data(lon, lat)
-        return super(WCSMapper, self).to_canvas(data_x, data_y)
+    def __init__(self, viewer, data_mapper):
+        super(WCSMapper, self).__init__()
+        self.viewer = viewer
+        self.data_mapper = data_mapper
 
-    def to_data(self, lon, lat):
-        image = self.viewer.get_image()
-        data_x, data_y = image.radectopix(lon, lat)
-        return data_x, data_y
+    def to_data(self, lon, lat, viewer=None):
+        if viewer is None:
+            viewer = self.viewer
+        return viewer.tform['wcs_to_data'].to_(lon, lat)
 
-    def data_to(self, data_x, data_y):
-        image = self.viewer.get_image()
-        lon, lat = image.pixtoradec(data_x, data_y)
-        return lon, lat
+    def data_to(self, data_x, data_y, viewer=None):
+        if viewer is None:
+            viewer = self.viewer
+        return viewer.tform['wcs_to_data'].from_(data_x, data_y)
 
     def offset_pt(self, pt, xoff, yoff):
         x, y = pt
         return wcs.add_offset_radec(x, y, xoff, yoff)
 
     def rotate_pt(self, x, y, theta, xoff=0, yoff=0):
-        # TODO: optomize by rotating in WCS space
+        # TODO: rotate in WCS space?
+        # rotate in data space
         xoff, yoff = self.to_data(xoff, yoff)
+        data_x, data_y = self.to_data(x, y)
 
-        x, y = super(WCSMapper, self).rotate_pt(x, y, theta,
-                                                xoff=xoff, yoff=yoff)
-        x, y = self.data_to(x, y)
+        rot_x, rot_y = trcalc.rotate_pt(data_x, data_y, theta,
+                                        xoff=xoff, yoff=yoff)
+
+        x, y = self.data_to(rot_x, rot_y)
         return x, y
 
 

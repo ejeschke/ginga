@@ -16,7 +16,7 @@ import time
 from ginga.misc import Callback, Settings
 from ginga import RGBMap, AstroImage, AutoCuts, ColorDist
 from ginga import cmap, imap, trcalc, version
-from ginga.canvas import coordmap
+from ginga.canvas import coordmap, transform
 from ginga.canvas.types.layer import DrawingCanvas
 from ginga.util import io_rgb
 
@@ -277,13 +277,26 @@ class ImageViewBase(Callback.Callbacks):
         self._imgobj = None
         self._canvas_img_tag = '__image'
 
+        # set up basic transforms
+        self.tform = {
+            'canvas_to_window': transform.CanvasWindowTransform(self),
+            'cartesian_to_window': transform.CartesianWindowTransform(self),
+            'data_to_cartesian': transform.DataCartesianTransform(self),
+            'data_to_window': (transform.DataCartesianTransform(self) +
+                               transform.CartesianWindowTransform(self)),
+            'wcs_to_data': transform.WCSDataTransform(self),
+            'wcs_to_window': (transform.WCSDataTransform(self) +
+                              transform.DataCartesianTransform(self) +
+                              transform.CartesianWindowTransform(self)),
+            }
+
         self.coordmap = {
             'canvas': coordmap.CanvasMapper(self),
             'cartesian': coordmap.CartesianMapper(self),
             'data': coordmap.DataMapper(self),
             None: coordmap.DataMapper(self),
             #'offset': coordmap.OffsetMapper(self),
-            'wcs': coordmap.WCSMapper(self),
+            'wcs': coordmap.WCSMapper(self, coordmap.DataMapper(self)),
             }
 
         # For callbacks
@@ -316,8 +329,8 @@ class ImageViewBase(Callback.Callbacks):
             The height of the window in pixels.
 
         """
-        self._imgwin_wd = width
-        self._imgwin_ht = height
+        self._imgwin_wd = int(width)
+        self._imgwin_ht = int(height)
         self._ctr_x = width // 2
         self._ctr_y = height // 2
         self.logger.info("widget resized to %dx%d" % (width, height))
@@ -1475,11 +1488,7 @@ class ImageViewBase(Callback.Callbacks):
             Data coordinates in the form of ``(x, y)``.
 
         """
-        # First, translate window coordinates onto cartesian canvas
-        off_x, off_y = self.window_to_offset(win_x, win_y)
-
-        # Then translate into window coordinates
-        return self.offset_to_data(off_x, off_y, center=center)
+        return self.tform['data_to_window'].from_(win_x, win_y)
 
     def offset_to_data(self, off_x, off_y, center=True):
         """Get the closest coordinates in the data array to those
@@ -1502,39 +1511,16 @@ class ImageViewBase(Callback.Callbacks):
             Data coordinates in the form of ``(x, y)``.
 
         """
-        # Reverse scaling
-        off_x = off_x * (1.0 / self._org_scale_x)
-        off_y = off_y * (1.0 / self._org_scale_y)
-
-        # Add data index at (_ctr_x, _ctr_y) to offset
-        data_x = self._org_x + off_x
-        data_y = self._org_y + off_y
-        if center:
-            data_x += self.data_off
-            data_y += self.data_off
-
-        return (data_x, data_y)
+        return self.tform['data_to_cartesian'].from_(off_x, off_y,
+                                                     center=center)
 
     def get_canvas_xy(self, data_x, data_y, center=True):
         """Reverse of :meth:`get_data_xy`."""
-        off_x, off_y = self.data_to_offset(data_x, data_y)
-
-        return self.offset_to_window(off_x, off_y)
+        return self.tform['data_to_window'].to_(data_x, data_y)
 
     def data_to_offset(self, data_x, data_y, center=True):
         """Reverse of :meth:`offset_to_data`."""
-        if center:
-            data_x -= self.data_off
-            data_y -= self.data_off
-        # subtract data indexes at center reference pixel
-        off_x = data_x - self._org_x
-        off_y = data_y - self._org_y
-
-        # scale according to current settings
-        off_x *= self._org_scale_x
-        off_y *= self._org_scale_y
-
-        return (off_x, off_y)
+        return self.tform['data_to_cartesian'].to_(data_x, data_y, center=True)
 
     def offset_to_window(self, off_x, off_y, asint=True):
         """Convert data offset to window coordinates.
@@ -1553,60 +1539,16 @@ class ImageViewBase(Callback.Callbacks):
             Offset in window coordinates in the form of ``(x, y)``.
 
         """
-        if self.t_['flip_x']:
-            off_x = - off_x
-        if self.t_['flip_y']:
-            off_y = - off_y
-        if self.t_['swap_xy']:
-            off_x, off_y = off_y, off_x
-
-        if self.t_['rot_deg'] != 0:
-            off_x, off_y = trcalc.rotate_pt(off_x, off_y,
-                                            self.t_['rot_deg'])
-
-        # add center pixel to convert from X/Y coordinate space to
-        # canvas graphics space
-        win_x = off_x + self._ctr_x
-        if self._originUpper:
-            win_y = self._ctr_y - off_y
-        else:
-            win_y = off_y + self._ctr_y
-
-        # round to pixel units
-        if asint:
-            win_x = numpy.rint(win_x).astype(numpy.int)
-            win_y = numpy.rint(win_y).astype(numpy.int)
-
-        return (win_x, win_y)
+        return self.tform['cartesian_to_window'].to_(off_x, off_y, asint=asint)
 
     def window_to_offset(self, win_x, win_y):
         """Reverse of :meth:`offset_to_window`."""
-        # make relative to center pixel to convert from canvas
-        # graphics space to standard X/Y coordinate space
-        off_x = win_x - self._ctr_x
-        if self._originUpper:
-            off_y = self._ctr_y - win_y
-        else:
-            off_y = win_y - self._ctr_y
-
-        if self.t_['rot_deg'] != 0:
-            off_x, off_y = trcalc.rotate_pt(off_x, off_y,
-                                            -self.t_['rot_deg'])
-
-        if self.t_['swap_xy']:
-            off_x, off_y = off_y, off_x
-        if self.t_['flip_y']:
-            off_y = - off_y
-        if self.t_['flip_x']:
-            off_x = - off_x
-
-        return (off_x, off_y)
+        return self.tform['cartesian_to_window'].from_(win_x, win_y)
 
     def canvascoords(self, data_x, data_y, center=True):
         """Same as :meth:`get_canvas_xy`."""
         # data->canvas space coordinate conversion
-        x, y = self.get_canvas_xy(data_x, data_y, center=center)
-        return (x, y)
+        return self.tform['data_to_window'].to_(data_x, data_y)
 
     def get_data_pct(self, xpct, ypct):
         """Calculate new data size for the given axis ratios.
