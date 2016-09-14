@@ -1718,7 +1718,7 @@ class Application(Callback.Callbacks):
 
         # supposedly needed for GObject < 3.10.2
         GObject.threads_init()
-        self._time_save = time.time()
+        ## self._time_save = time.time()
 
         for name in ('shutdown', ):
             self.enable_callback(name)
@@ -1738,10 +1738,10 @@ class Application(Callback.Callbacks):
                 # lost--we want to know whether the process_event loop
                 # is running, so ping periodically if events are showing
                 # up
-                cur_time = time.time()
-                if cur_time - self._time_save > 10.0:
-                    self.logger.info("process_events ping!")
-                    self._time_save = cur_time
+                ## cur_time = time.time()
+                ## if cur_time - self._time_save > 10.0:
+                ##     self.logger.info("process_events ping!")
+                ##     self._time_save = cur_time
 
             except Exception as e:
                 self.logger.error("Exception in main_iteration() loop: %s" %

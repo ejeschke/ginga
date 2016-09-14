@@ -39,6 +39,7 @@ class Operations(GingaPlugin.GlobalPlugin):
 
         self.focuscolor = self.settings.get('focuscolor', "lightgreen")
         self.use_popup = True
+        self.spacer = None
 
     def build_gui(self, container):
 
@@ -72,8 +73,12 @@ class Operations(GingaPlugin.GlobalPlugin):
         self.w.optray = Widgets.HBox()
         self.w.optray.set_border_width(0)
         self.w.optray.set_spacing(2)
-        hbox.add_widget(self.w.optray, stretch=1)
 
+        # add a spacer to keep the icons aligned to the left
+        self.spacer = Widgets.Label('')
+        self.w.optray.add_widget(self.spacer, stretch=1)
+
+        hbox.add_widget(self.w.optray, stretch=1)
         container.add_widget(hbox, stretch=0)
 
 
@@ -156,7 +161,11 @@ class Operations(GingaPlugin.GlobalPlugin):
         lbl = Widgets.Label(lblname, halign='center', style='clickable',
                             menu=menu)
         lbl.set_tooltip("Right click for menu")
+        # don't let this widget expand to fill the bar
+        lbl.cfg_expand(0x0, 0x4)
+        self.w.optray.remove(self.spacer)
         self.w.optray.add_widget(lbl, stretch=0)
+        self.w.optray.add_widget(self.spacer, stretch=1)
 
         lbl.add_callback('activated', lambda w: pl_mgr.set_focus(lname))
 

@@ -66,6 +66,8 @@ class Info(GingaPlugin.GlobalPlugin):
         col.add_widget(row, stretch=0)
         #col.add_widget(Widgets.Label(''), stretch=1)
         sw2 = Widgets.ScrollArea()
+        # hack for Qt to expand this widget properly
+        sw2.cfg_expand(0x7, 0x4)
         sw2.set_widget(col)
         vbox.add_widget(sw2, stretch=2)
 

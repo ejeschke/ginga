@@ -904,11 +904,7 @@ class Box(ContainerBase):
     def add_widget(self, child, stretch=0.0):
         self.add_ref(child)
         child_w = child.get_widget()
-        if self.orientation == 'horizontal':
-            self.layout.addWidget(child_w, stretch=stretch,
-                                           alignment=QtCore.Qt.AlignLeft)
-        else:
-            self.layout.addWidget(child_w, stretch=stretch)
+        self.layout.addWidget(child_w, stretch=stretch)
 
     def set_spacing(self, val):
         self.layout.setSpacing(val)

@@ -88,7 +88,7 @@ class PluginManager(Callback.Callbacks):
         return pInfo.obj
 
     def getNames(self):
-        return self.plugin.keys()
+        return list(self.plugin.keys())
 
     def deactivate_focused(self):
         names = self.get_focus()
@@ -96,7 +96,7 @@ class PluginManager(Callback.Callbacks):
             self.deactivate(name)
 
     def get_active(self):
-        return self.active.keys()
+        return list(self.active.keys())
 
     def is_active(self, key):
         lname = key.lower()
@@ -155,7 +155,7 @@ class PluginManager(Callback.Callbacks):
                 # TODO: log traceback
 
             # Set focus to another plugin if one is running
-            active = self.active.keys()
+            active = list(self.active.keys())
             if len(active) > 0:
                 name = active[0]
                 self.logger.debug("focusing: %s" % (name))

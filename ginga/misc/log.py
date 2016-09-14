@@ -97,27 +97,34 @@ def get_logger(name='ginga', level=None, null=False,
     return logger
 
 
-def addlogopts(optprs):
-    optprs.add_option("--log", dest="logfile", metavar="FILE",
-                      help="Write logging output to FILE")
-    optprs.add_option("--loglevel", dest="loglevel", metavar="LEVEL",
-                      default=20, type=int,
-                      help="Set logging level to LEVEL")
-    optprs.add_option("--lognull", dest="nulllogger", default=False,
-                      action="store_true",
-                      help="Use a null logger")
-    optprs.add_option("--logsize", dest="logsize", metavar="NUMBYTES",
-                      type="int", default=log_maxsize,
-                      help="Set maximum logging level to NUMBYTES")
-    optprs.add_option("--logbackups", dest="logbackups", metavar="NUM",
-                      type="int", default=log_backups,
-                      help="Set maximum number of backups to NUM")
-    optprs.add_option("--rmlog", dest="rmlog", default=False,
-                      action="store_true",
-                      help="Remove log if present (don't append)")
-    optprs.add_option("--stderr", dest="logstderr", default=False,
-                      action="store_true",
-                      help="Copy logging also to stderr")
+def addlogopts(parser):
+    if hasattr(parser, 'add_option'):
+        # older OptParse
+        add_argument = parser.add_option
+    else:
+        # newer ArgParse
+        add_argument = parser.add_argument
+
+    add_argument("--log", dest="logfile", metavar="FILE",
+                 help="Write logging output to FILE")
+    add_argument("--loglevel", dest="loglevel", metavar="LEVEL",
+                 default=20, type=int,
+                 help="Set logging level to LEVEL")
+    add_argument("--lognull", dest="nulllogger", default=False,
+                 action="store_true",
+                 help="Use a null logger")
+    add_argument("--logsize", dest="logsize", metavar="NUMBYTES",
+                 type=int, default=log_maxsize,
+                 help="Set maximum logging level to NUMBYTES")
+    add_argument("--logbackups", dest="logbackups", metavar="NUM",
+                 type=int, default=log_backups,
+                 help="Set maximum number of backups to NUM")
+    add_argument("--rmlog", dest="rmlog", default=False,
+                 action="store_true",
+                 help="Remove log if present (don't append)")
+    add_argument("--stderr", dest="logstderr", default=False,
+                 action="store_true",
+                 help="Copy logging also to stderr")
 
 
 #END
