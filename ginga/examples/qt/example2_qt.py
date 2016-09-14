@@ -11,7 +11,6 @@ import logging
 from ginga.qtw.QtHelp import QtGui, QtCore
 
 from ginga import AstroImage, colors
-from ginga.qtw.ImageViewCanvasQt import ImageViewCanvas
 from ginga.qtw.ImageViewQt import CanvasView
 from ginga.canvas.CanvasObject import get_canvas_types
 from ginga.misc import log
@@ -27,7 +26,6 @@ class FitsViewer(QtGui.QMainWindow):
         self.drawcolors = colors.get_colors()
         self.dc = get_canvas_types()
 
-        #fi = ImageViewCanvas(logger, render='widget')
         fi = CanvasView(logger, render='widget')
         fi.enable_autocuts('on')
         fi.set_autocut_params('zscale')
@@ -54,6 +52,7 @@ class FitsViewer(QtGui.QMainWindow):
         # add canvas to view
         #fi.add(canvas)
         private_canvas = fi.get_canvas()
+        private_canvas.register_for_cursor_drawing(fi)
         private_canvas.add(canvas)
         canvas.ui_setActive(True)
         self.drawtypes = canvas.get_drawtypes()
@@ -145,7 +144,7 @@ class FitsViewer(QtGui.QMainWindow):
         self.canvas.set_drawtype(kind, **params)
 
     def clear_canvas(self):
-        self.canvas.deleteAllObjects()
+        self.canvas.delete_all_objects()
 
     def load_file(self, filepath):
         image = AstroImage.AstroImage(logger=self.logger)
@@ -251,23 +250,16 @@ if __name__ == "__main__":
 
     optprs.add_option("--debug", dest="debug", default=False, action="store_true",
                       help="Enter the pdb debugger on main()")
-    optprs.add_option("--log", dest="logfile", metavar="FILE",
-                      help="Write logging output to FILE")
-    optprs.add_option("--loglevel", dest="loglevel", metavar="LEVEL",
-                      type='int', default=logging.INFO,
-                      help="Set logging level to LEVEL")
     optprs.add_option("--opencv", dest="opencv", default=False,
                       action="store_true",
                       help="Use OpenCv acceleration")
     optprs.add_option("--opencl", dest="opencl", default=False,
                       action="store_true",
                       help="Use OpenCL acceleration")
-    optprs.add_option("--stderr", dest="logstderr", default=False,
-                      action="store_true",
-                      help="Copy logging also to stderr")
     optprs.add_option("--profile", dest="profile", action="store_true",
                       default=False,
                       help="Run the profiler on main()")
+    log.addlogopts(optprs)
 
     (options, args) = optprs.parse_args(sys.argv[1:])
 

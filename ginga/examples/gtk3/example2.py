@@ -11,9 +11,10 @@ import logging, logging.handlers
 
 from ginga import AstroImage
 from ginga.gtk3w import GtkHelp
-from ginga.gtk3w.ImageViewCanvasGtk import ImageViewCanvas
-from ginga.canvas.types.all import DrawingCanvas
+from ginga.gtk3w.ImageViewGtk import CanvasView
+from ginga.canvas.CanvasObject import get_canvas_types
 from ginga import colors
+from ginga.misc import log
 
 from gi.repository import Gtk
 
@@ -25,8 +26,9 @@ class FitsViewer(object):
 
         self.logger = logger
         self.drawcolors = colors.get_colors()
+        self.dc = get_canvas_types()
 
-        root = Gtk.Window(title="ImageViewCanvas Example")
+        root = Gtk.Window(title="Gtk3 CanvasView Example")
         root.set_border_width(2)
         root.connect("delete_event", lambda w, e: quit(w))
         self.root = root
@@ -34,11 +36,13 @@ class FitsViewer(object):
 
         vbox = Gtk.VBox(spacing=2)
 
-        fi = ImageViewCanvas(logger)
+        fi = CanvasView(logger)
         fi.enable_autocuts('on')
         fi.set_autocut_params('zscale')
         fi.enable_autozoom('on')
-        fi.enable_draw(False)
+        fi.set_zoom_algorithm('rate')
+        fi.set_zoomrate(1.4)
+        fi.show_pan_mark(True)
         fi.set_callback('drag-drop', self.drop_file)
         fi.set_callback('none-move', self.motion)
         fi.set_bg(0.2, 0.2, 0.2)
@@ -49,14 +53,24 @@ class FitsViewer(object):
         bd.enable_all(True)
 
         # canvas that we will draw on
-        canvas = DrawingCanvas()
+        canvas = self.dc.DrawingCanvas()
         canvas.enable_draw(True)
         canvas.set_drawtype('rectangle', color='lightblue')
         canvas.setSurface(fi)
         self.canvas = canvas
         # add canvas to view
-        fi.add(canvas)
+        private_canvas = fi.get_canvas()
+        private_canvas.register_for_cursor_drawing(fi)
+        private_canvas.add(canvas)
         canvas.ui_setActive(True)
+        self.drawtypes = canvas.get_drawtypes()
+        self.drawtypes.sort()
+
+        # add a color bar
+        fi.show_color_bar(True)
+
+        # add little mode indicator that shows keyboard modal states
+        fi.show_mode_indicator(True, corner='ur')
 
         w = fi.get_widget()
         w.set_size_request(512, 512)
@@ -69,7 +83,6 @@ class FitsViewer(object):
         hbox = Gtk.HBox(spacing=5)
 
         wdrawtype = GtkHelp.combo_box_new_text()
-        self.drawtypes = fi.get_drawtypes()
         index = 0
         for name in self.drawtypes:
             wdrawtype.insert_text(index, name)
@@ -195,20 +208,23 @@ class FitsViewer(object):
 
 def main(options, args):
 
-    logger = logging.getLogger("example2")
-    logger.setLevel(options.loglevel)
-    fmt = logging.Formatter(STD_FORMAT)
-    if options.logfile:
-        fileHdlr  = logging.handlers.RotatingFileHandler(options.logfile)
-        fileHdlr.setLevel(options.loglevel)
-        fileHdlr.setFormatter(fmt)
-        logger.addHandler(fileHdlr)
+    logger = log.get_logger("example2", options=options)
 
-    if options.logstderr:
-        stderrHdlr = logging.StreamHandler()
-        stderrHdlr.setLevel(options.loglevel)
-        stderrHdlr.setFormatter(fmt)
-        logger.addHandler(stderrHdlr)
+    # Check whether user wants to use OpenCv
+    if options.opencv:
+        from ginga import trcalc
+        try:
+            trcalc.use('opencv')
+        except Exception as e:
+            logger.warning("failed to set OpenCv preference: %s" % (str(e)))
+
+    # Check whether user wants to use OpenCL
+    elif options.opencl:
+        from ginga import trcalc
+        try:
+            trcalc.use('opencl')
+        except Exception as e:
+            logger.warning("failed to set OpenCL preference: %s" % (str(e)))
 
     fv = FitsViewer(logger)
     root = fv.get_widget()
@@ -229,17 +245,16 @@ if __name__ == "__main__":
 
     optprs.add_option("--debug", dest="debug", default=False, action="store_true",
                       help="Enter the pdb debugger on main()")
-    optprs.add_option("--log", dest="logfile", metavar="FILE",
-                      help="Write logging output to FILE")
-    optprs.add_option("--loglevel", dest="loglevel", metavar="LEVEL",
-                      type='int', default=logging.INFO,
-                      help="Set logging level to LEVEL")
-    optprs.add_option("--stderr", dest="logstderr", default=False,
+    optprs.add_option("--opencv", dest="opencv", default=False,
                       action="store_true",
-                      help="Copy logging also to stderr")
+                      help="Use OpenCv acceleration")
+    optprs.add_option("--opencl", dest="opencl", default=False,
+                      action="store_true",
+                      help="Use OpenCL acceleration")
     optprs.add_option("--profile", dest="profile", action="store_true",
                       default=False,
                       help="Run the profiler on main()")
+    log.addlogopts(optprs)
 
     (options, args) = optprs.parse_args(sys.argv[1:])
 

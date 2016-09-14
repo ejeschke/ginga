@@ -653,8 +653,7 @@ class DrawingMixin(object):
 
     def _do_pick(self, canvas, event, data_x, data_y, cb_name, viewer):
         # check for objects at this location
-        objs = canvas.select_items_at(viewer, data_x, data_y)#,
-        #test=self._is_editable)
+        objs = canvas.select_items_at(viewer, data_x, data_y)
 
         if len(objs) == 0:
             # <-- no objects under cursor

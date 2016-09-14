@@ -100,10 +100,9 @@ class RenderContext(object):
         self.cr.setFont(QFont(fontname, pointSize=fontsize))
 
     def text_extents(self, text):
-        rect = self.cr.boundingRect(0, 0, 1000, 1000, 0, text)
-        x1, y1, x2, y2 = rect.getCoords()
-        width = x2 - x1
-        height = y2 - y1
+        fm = self.cr.fontMetrics()
+        width = fm.width(text)
+        height = fm.height()
         return width, height
 
     ##### DRAWING OPERATIONS #####

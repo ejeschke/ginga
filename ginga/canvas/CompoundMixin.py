@@ -60,10 +60,9 @@ class CompoundMixin(object):
                           self.objects))
 
     def contains(self, x, y):
-        for obj in self.objects:
-            if obj.contains(x, y):
-                return True
-        return False
+        x_arr, y_arr = numpy.array([x]), numpy.array([y])
+        res = self.contains_arr(x_arr, y_arr)
+        return res[0]
 
     def get_items_at(self, x, y):
         res = []
