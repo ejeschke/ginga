@@ -399,6 +399,16 @@ class BaseImage(Callback.Callbacks):
         res = Bunch.Bunch(data=newdata, scale_x=scale_x, scale_y=scale_y)
         return res
 
+    def get_thumbnail(self, length):
+        wd, ht = self.get_size()
+        if wd > ht:
+            width, height = length, int(length * float(ht)/wd)
+        else:
+            width, height = int(length * float(wd)/ht), length
+
+        res = self.get_scaled_cutout_wdht(0, 0, wd, ht, width, height)
+        return res.data
+
     def get_pixels_on_line(self, x1, y1, x2, y2, getvalues=True):
         """Uses Bresenham's line algorithm to enumerate the pixels along
         a line.

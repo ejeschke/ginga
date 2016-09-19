@@ -344,20 +344,29 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         if isinstance(w, Widgets.MDIWidget) and w.true_mdi:
             size = (300, 300)
 
+        # build image viewer & widget
         fi = self.build_viewpane(settings, size=size)
         iw = Viewers.GingaViewerWidget(viewer=fi)
 
+        stk_w = Widgets.StackWidget()
+        stk_w.add_widget(iw, title='image')
+
         fi.add_callback('focus', self.focus_cb, name)
-        vbox.add_widget(iw, stretch=1)
+        vbox.add_widget(stk_w, stretch=1)
         fi.set_name(name)
+
+        # build table viewer
+        tbl_viewer = Viewers.TableViewGw(logger=self.logger,
+                                         settings=settings)
+        stk_w.add_widget(tbl_viewer.get_widget(), title='table')
 
         # Add the viewer to the specified workspace
         self.ds.add_tab(workspace, vbox, 1, name)
 
         self.update_pending()
 
-        bnch = Bunch.Bunch(viewer=fi, widget=iw, container=vbox,
-                           fitsimage=fi, view=iw,  # older names, to be deprecated
+        bnch = Bunch.Bunch(image_viewer=fi, table_viewer=tbl_viewer,
+                           widget=stk_w, container=vbox,
                            workspace=workspace)
         return bnch
 

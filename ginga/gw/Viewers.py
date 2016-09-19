@@ -12,3 +12,5 @@ elif tkname == 'gtk3':
 
 elif tkname == 'pg':
     from ginga.web.pgw.Viewers import *
+
+from ginga.table.TableView import TableViewGw

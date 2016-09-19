@@ -338,7 +338,7 @@ class Contents(GingaPlugin.GlobalPlugin):
 
     def focus_cb(self, viewer, channel):
         chname = channel.name
-        image = channel.fitsimage.get_image()
+        image = channel.get_current_image()
 
         if image is not None:
             key = self._get_hl_key(chname, image)

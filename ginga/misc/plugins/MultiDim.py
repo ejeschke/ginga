@@ -10,6 +10,7 @@ from distutils import spawn
 from contextlib import contextmanager
 
 from ginga import AstroImage
+from ginga.table import AstroTable
 from ginga.gw import Widgets
 from ginga.misc import Future, Bunch
 from ginga import GingaPlugin
@@ -48,6 +49,8 @@ class MultiDim(GingaPlugin.LocalPlugin):
         self.name_pfx = 'NONAME'
         self.image = None
         self.orientation = 'vertical'
+        chname = fv.get_channel_name(fitsimage)
+        self.channel = fv.get_channel(chname)
 
         # For animation feature
         self.play_axis = 2
@@ -404,11 +407,17 @@ class MultiDim(GingaPlugin.LocalPlugin):
         # Nope, we'll have to load it
         self.logger.debug("HDU %d not in memory; refreshing from file" % (idx))
 
-        # inherit from primary header?
-        inherit_prihdr = self.fv.settings.get('inherit_primary_header', False)
+        if info['htype'].lower() in ('tablehdu',):
+            image = AstroTable.AstroTable(logger=self.logger)
 
-        image = AstroImage.AstroImage(logger=self.logger,
-                                      inherit_primary_header=inherit_prihdr)
+        else:
+            # inherit from primary header?
+            inherit_prihdr = self.fv.settings.get('inherit_primary_header',
+                                                  False)
+
+            image = AstroImage.AstroImage(logger=self.logger,
+                                          inherit_primary_header=inherit_prihdr)
+
         self.image = image
         try:
             self.curhdu = idx
@@ -418,6 +427,9 @@ class MultiDim(GingaPlugin.LocalPlugin):
             if hdu.data is None:
                 # <- empty data part to this HDU
                 self.logger.warning("Empty data part in HDU #%d" % (idx))
+
+            elif info['htype'].lower() in ('tablehdu',):
+                dims = [0, 0]
 
             elif info['htype'].lower() not in ('imagehdu', 'primaryhdu'):
                 self.logger.warning("HDU #%d is not an image" % (idx))
@@ -433,8 +445,6 @@ class MultiDim(GingaPlugin.LocalPlugin):
             future.freeze(self.fv.load_image, self.path, idx=aidx)
             image.set(path=self.path, idx=aidx, name=imname, image_future=future)
 
-            ## self.fitsimage.set_image(image,
-            ##                          raise_initialize_errors=False)
             self.fv.add_image(imname, image, chname=chname)
 
             self.build_naxis(dims)
@@ -559,7 +569,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
 
     def redo(self):
         """Called when an image is set in the channel."""
-        image = self.fitsimage.get_image()
+        image = self.channel.get_current_image()
         if (image is None) or (image == self.image):
             return True
 

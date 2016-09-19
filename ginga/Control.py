@@ -39,7 +39,10 @@ except (ImportError, Exception):
     have_magic = False
 
 # Local application imports
-from ginga import cmap, imap, AstroImage, RGBImage, ImageView
+from ginga import cmap, imap
+from ginga import AstroImage, RGBImage, BaseImage
+from ginga import ImageView
+from ginga.table import AstroTable
 from ginga.misc import Bunch, Datasrc, Callback, Timer, Task, Future
 from ginga.util import catalog, iohelper
 from ginga.canvas.CanvasObject import drawCatalog
@@ -853,10 +856,6 @@ class GingaControl(Callback.Callbacks):
             return None
         return channel.viewer
 
-    # TO BE DEPRECATED EVENTUALLY
-    getfocus_fitsimage = getfocus_viewer
-    get_fitsimage = get_viewer
-
     def switch_name(self, chname, imname, path=None,
                     image_future=None):
 
@@ -972,18 +971,19 @@ class GingaControl(Callback.Callbacks):
             return name in self.channel
 
     def get_channel(self, chname):
-        return self.get_channelInfo(chname=chname)
+        with self.lock:
+            if chname is None:
+                return self.cur_channel
+            name = chname.lower()
+            return self.channel[name]
 
     def get_current_channel(self):
         with self.lock:
             return self.cur_channel
 
     def get_channelInfo(self, chname=None):
-        with self.lock:
-            if not chname:
-                return self.cur_channel
-            name = chname.lower()
-            return self.channel[name]
+        # TO BE DEPRECATED--please use get_channel()
+        return self.get_channel(chname)
 
     def get_channel_on_demand(self, chname):
         if self.has_channel(chname):
@@ -991,11 +991,11 @@ class GingaControl(Callback.Callbacks):
 
         return self.gui_call(self.add_channel, chname)
 
-    def get_channelName(self, viewer):
+    def get_channel_name(self, viewer):
         with self.lock:
             items = self.channel.items()
         for name, channel in items:
-            if channel.viewer == viewer:
+            if viewer in channel.viewers:
                 return channel.name
         return None
 
@@ -1085,17 +1085,19 @@ class GingaControl(Callback.Callbacks):
             bnch = self.add_viewer(chname, settings,
                                    workspace=workspace)
             # for debugging
-            bnch.viewer.set_name('channel:%s' % (chname))
+            bnch.image_viewer.set_name('channel:%s' % (chname))
 
             opmon = self.getPluginManager(self.logger, self,
                                           self.ds, self.mm)
 
-            channel.widget = bnch.view
+            channel.widget = bnch.widget
             channel.container = bnch.container
             channel.workspace = bnch.workspace
-            channel.viewer = bnch.viewer
+            channel.viewers.append(bnch.image_viewer)
+            channel.viewers.append(bnch.table_viewer)
+            channel.viewer = bnch.image_viewer
             # older name, should eventually be deprecated
-            channel.fitsimage = bnch.viewer
+            channel.fitsimage = bnch.image_viewer
             channel.opmon = opmon
 
             name = chname.lower()
@@ -1154,7 +1156,7 @@ class GingaControl(Callback.Callbacks):
 
         self.make_gui_callback('delete-channel', channel)
 
-    def get_channelNames(self):
+    def get_channel_names(self):
         with self.lock:
             return self.channelNames
 
@@ -1218,10 +1220,10 @@ class GingaControl(Callback.Callbacks):
         impath = image.get('path', None)
         self.remove_image_by_name(channel.name, imname, impath=impath)
 
-    def followFocus(self, tf):
+    def follow_focus(self, tf):
         self.channel_follows_focus = tf
 
-    def showStatus(self, text):
+    def show_status(self, text):
         """Write a message to the status bar.
 
         Parameters
@@ -1279,13 +1281,14 @@ class GingaControl(Callback.Callbacks):
     ########################################################
     ### TO BE DEPRECATED
 
-    def getDrawClass(self, drawtype):
-        #self.logger.warning("This method to be deprecated--use 'get_draw_class' instead")
-        return self.get_draw_class(drawtype)
-
-    def getDrawClasses(self):
-        #self.logger.warning("This method to be deprecated--use 'get_draw_classes' instead")
-        return self.get_draw_classes()
+    getDrawClass = get_draw_class
+    getDrawClasses = get_draw_classes
+    get_channelName = get_channel_name
+    get_channelNames = get_channel_names
+    followFocus = follow_focus
+    showStatus = show_status
+    getfocus_fitsimage = getfocus_viewer
+    get_fitsimage = get_viewer
 
 
 def _rmtmpdir(tmpdir):
@@ -1338,8 +1341,11 @@ class Channel(Callback.Callbacks):
         self.container = None
         self.workspace = None
         self.opmon = None
-        # this is the viewer we are connected to
+        # this is the image viewer we are connected to
         self.fitsimage = None
+        # this is the currently active viewer
+        self.viewer = None
+        self.viewers = []
         if datasrc is None:
             num_images = self.settings.get('numImages', 1)
             datasrc = Datasrc.Datasrc(num_images)
@@ -1354,11 +1360,13 @@ class Channel(Callback.Callbacks):
         self.settings.getSetting('sort_order').add_callback(
             'set', self._sort_changed_ext_cb)
 
-    def connect_viewer(self, viewer):
-        self.viewer = viewer
+    ## def connect_viewer(self, viewer):
+    ##     if not viewer in self.viewers:
+    ##         self.viewers.append(viewer)
+    ##     self.viewer = viewer
 
-        # redraw top image
-        self.refresh_cursor_image()
+    ##     # redraw top image
+    ##     self.refresh_cursor_image()
 
     def move_image_to(self, imname, channel):
         if self == channel:
@@ -1497,9 +1505,6 @@ class Channel(Callback.Callbacks):
 
         self.fv.make_async_gui_callback('add-image-info', self, info)
 
-    def get_current_image(self):
-        return self.fitsimage.get_image()
-
     def refresh_cursor_image(self):
         info = self.history[self.cursor]
         if self.datasrc.has_key(info.name):
@@ -1582,13 +1587,28 @@ class Channel(Callback.Callbacks):
             return info
         return None
 
+    def get_current_image(self):
+        return self.viewer.get_image()
+
+    def view_object(self, dataobj):
+
+        if isinstance(dataobj, BaseImage.BaseImage):
+            self.viewer = self.viewers[0]
+            self.widget.set_index(0)
+            self.viewer.set_image(dataobj)
+
+        elif isinstance(dataobj, AstroTable.AstroTable):
+            self.viewer = self.viewers[1]
+            self.widget.set_index(1)
+            self.viewer.set_table(dataobj)
+
     def switch_image(self, image):
 
         with self.lock:
-            curimage = self.fitsimage.get_image()
+            curimage = self.get_current_image()
             if curimage != image:
-                self.logger.debug("Setting image...")
-                self.fitsimage.set_image(image)
+                self.logger.debug("updating viewer...")
+                self.view_object(image)
 
                 # update cursor to match image
                 imname = image.get('name')
