@@ -14,6 +14,7 @@ from ginga.table import AstroTable
 from ginga.gw import Widgets
 from ginga.misc import Future, Bunch
 from ginga import GingaPlugin
+from ginga.util.iohelper import get_hdu_suffix
 from ginga.util.videosink import VideoSink
 
 import numpy as np
@@ -375,19 +376,16 @@ class MultiDim(GingaPlugin.LocalPlugin):
         self.image = None
         self.fv.showStatus("")
 
-    def get_name(self, sfx):
-        return '%s[%s]' % (self.name_pfx, sfx)
-
     def set_hdu(self, idx):
         self.logger.debug("Loading fits hdu #%d" % (idx))
 
         # determine canonical index of this HDU
         info = self.hdu_info[idx]
         aidx = (info.name, info.extver)
-        sfx = '%s,%d' % aidx
+        sfx = get_hdu_suffix(aidx)
 
         # See if this HDU is still in the channel's datasrc
-        imname = self.get_name(sfx)
+        imname = self.name_pfx + sfx
         chname = self.chname
         chinfo = self.chinfo
         if imname in chinfo.datasrc:
