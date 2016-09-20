@@ -32,7 +32,8 @@ class Pan(GingaPlugin.GlobalPlugin):
         self.settings.addDefaults(use_shared_canvas=False,
                                   pan_position_color='yellow',
                                   pan_rectangle_color='red',
-                                  compass_color='skyblue')
+                                  compass_color='skyblue',
+                                  rotate_pan_image=True)
         self.settings.load(onError='silent')
         # share canvas with channel viewer?
         self.use_shared_canvas = self.settings.get('use_shared_canvas', False)
@@ -104,7 +105,9 @@ class Pan(GingaPlugin.GlobalPlugin):
         fitssettings = fitsimage.get_settings()
         pansettings = panimage.get_settings()
 
-        xfrmsettings = ['flip_x', 'flip_y', 'swap_xy', 'rot_deg']
+        xfrmsettings = ['flip_x', 'flip_y', 'swap_xy']
+        if self.settings.get('rotate_pan_image', False):
+            xfrmsettings.append('rot_deg')
         fitssettings.shareSettings(pansettings, xfrmsettings)
         for key in xfrmsettings:
             pansettings.getSetting(key).add_callback('set', self.settings_cb,
@@ -303,7 +306,8 @@ class Pan(GingaPlugin.GlobalPlugin):
                 self.dc.Polygon(points,
                                 color=self.settings.get('pan_rectangle_color', 'red'))))
 
-        p_canvas.update_canvas(whence=0)
+        #p_canvas.update_canvas(whence=0)
+        paninfo.panimage.zoom_fit()
         return True
 
     def motion_cb(self, fitsimage, event, data_x, data_y):

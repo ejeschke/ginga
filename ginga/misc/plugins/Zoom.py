@@ -36,12 +36,14 @@ class Zoom(GingaPlugin.GlobalPlugin):
         self.settings = prefs.createCategory('plugin_Zoom')
         self.settings.addDefaults(zoom_radius=self.default_radius,
                                   zoom_amount=self.default_zoom,
-                                  refresh_interval=0.02)
+                                  refresh_interval=0.02,
+                                  rotate_zoom_image=True)
         self.settings.load(onError='silent')
 
         self.zoom_radius = self.settings.get('zoom_radius', self.default_radius)
         self.zoom_amount = self.settings.get('zoom_amount', self.default_zoom)
         self.refresh_interval = self.settings.get('refresh_interval', 0.02)
+        self.zoom_rotate = self.settings.get('rotate_zoom_image', False)
 
         self._wd = 200
         self._ht = 200
@@ -205,6 +207,8 @@ class Zoom(GingaPlugin.GlobalPlugin):
 
     def rotate_cb(self, setting, deg, fitsimage):
         if fitsimage != self.fitsimage_focus:
+            return True
+        if not self.zoom_rotate:
             return True
         self.zoomimage.rotate(deg)
         return True
