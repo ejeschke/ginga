@@ -15,11 +15,9 @@ from ginga.gw import Widgets
 from ginga.misc import Future, Bunch
 from ginga import GingaPlugin
 from ginga.util.videosink import VideoSink
-from ginga.util import iohelper
 
 import numpy as np
 import matplotlib.pyplot as plt
-import copy
 
 have_mencoder = False
 if spawn.find_executable("mencoder"):
@@ -35,6 +33,7 @@ except ImportError:
         have_pyfits = True
     except ImportError:
         pass
+
 
 class MultiDim(GingaPlugin.LocalPlugin):
 
@@ -73,8 +72,8 @@ class MultiDim(GingaPlugin.LocalPlugin):
         self.gui_up = False
 
     def build_gui(self, container):
-        assert have_pyfits == True, \
-               Exception("Please install astropy/pyfits to use this plugin")
+        if not have_pyfits:
+            raise Exception("Please install astropy/pyfits to use this plugin")
 
         top = Widgets.VBox()
         top.set_border_width(4)
@@ -231,11 +230,11 @@ class MultiDim(GingaPlugin.LocalPlugin):
                                  #"Choose %s" % (title), 'spinbutton'))
                                  "Choose %s" % (title), 'hscale'))
 
-        if len(dims) > 3: # only add radiobuttons if we have more than 3 dimensions
+        if len(dims) > 3:  # only add radiobuttons if we have more than 3 dimensions
             radiobuttons = []
             for i in range(2, len(dims)):
                 title = 'AXIS%d' % (i+1)
-                radiobuttons.extend((title,'radiobutton'))
+                radiobuttons.extend((title, 'radiobutton'))
             captions.append(radiobuttons)
 
         # Remove old naxis widgets
@@ -286,7 +285,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
 
                     self.play_idx = self.play_indices[n - 2]
 
-                def check_if_we_need_change(w,v):
+                def check_if_we_need_change(w, v):
                     if self.play_axis is not n:
                         play_axis_change()
 
@@ -297,7 +296,6 @@ class MultiDim(GingaPlugin.LocalPlugin):
                 self.w[key].add_callback('activated', play_axis_change_func_creator(n))
                 if n == 2:
                     self.w[key].set_state(True)
-
 
         self.play_axis = 2
         if self.play_axis < len(dims):
@@ -443,7 +441,8 @@ class MultiDim(GingaPlugin.LocalPlugin):
             # create a future for reconstituting this HDU
             future = Future.Future()
             future.freeze(self.fv.load_image, self.path, idx=aidx)
-            image.set(path=self.path, idx=aidx, name=imname, image_future=future)
+            image.set(path=self.path, idx=aidx, name=imname,
+                      image_future=future)
 
             self.fv.add_image(imname, image, chname=chname)
 
@@ -475,11 +474,9 @@ class MultiDim(GingaPlugin.LocalPlugin):
             image.set_naxispath(self.naxispath)
             self.logger.debug("NAXIS%d slice %d loaded." % (n+1, idx+1))
 
-
-
             if self.play_indices:
                 text = self.play_indices
-                text[m]= idx
+                text[m] = idx
             else:
                 text = idx
             self.w.slice.set_text(str(text))
@@ -575,7 +572,8 @@ class MultiDim(GingaPlugin.LocalPlugin):
 
         path = image.get('path', None)
         if path is None:
-            self.fv.show_error("Cannot open image: no value for metadata key 'path'")
+            self.fv.show_error(
+                "Cannot open image: no value for metadata key 'path'")
             return
 
         self.path = path
@@ -590,7 +588,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
 
         self.fits_f = pyfits.open(path, 'readonly')
 
-        lower = 0
+        # lower = 0
         upper = len(self.fits_f) - 1
         info = self.fits_f.info(output=False)
         self.prep_hdu_menu(self.w.hdu, info)
@@ -609,13 +607,15 @@ class MultiDim(GingaPlugin.LocalPlugin):
         self.w.hdu.set_enabled(len(self.fits_f) > 0)
 
     def save_slice_cb(self):
-        target = Widgets.SaveDialog(title='Save slice', selectedfilter='*.png').get_path()
+        target = Widgets.SaveDialog(title='Save slice',
+                                    selectedfilter='*.png').get_path()
         with open(target, 'w') as target_file:
             hival = self.fitsimage.get_cut_levels()[1]
             image = self.fitsimage.get_image()
             curr_slice_data = image.get_data()
 
-            plt.imsave(target_file, curr_slice_data, vmax=hival, cmap=plt.get_cmap('gray'), origin='lower')
+            plt.imsave(target_file, curr_slice_data, vmax=hival,
+                       cmap=plt.get_cmap('gray'), origin='lower')
             self.fv.showStatus("Successfully saved slice")
 
     def save_movie_cb(self):
@@ -633,7 +633,8 @@ class MultiDim(GingaPlugin.LocalPlugin):
         if start == 1:
             start = 0
 
-        target = Widgets.SaveDialog(title='Save Movie', selectedfilter='*.avi').get_path()
+        target = Widgets.SaveDialog(title='Save Movie',
+                                    selectedfilter='*.avi').get_path()
         if target:
             self.save_movie(start, end, target)
 
