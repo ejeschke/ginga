@@ -208,8 +208,9 @@ class IQCalc(object):
         """
         n = radius
         ht, wd = data.shape
-        x0, x1 = max(0, x-n), min(wd-1, x+n)
-        y0, y1 = max(0, y-n), min(ht-1, y+n)
+        x, y = int(round(x)), int(round(y))
+        x0, x1 = int(max(0, x-n)), int(min(wd-1, x+n))
+        y0, y1 = int(max(0, y-n)), int(min(ht-1, y+n))
         xarr = data[y, x0:x1+1]
         yarr = data[y0:y1+1, x]
         return (x0, y0, xarr, yarr)

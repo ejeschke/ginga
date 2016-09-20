@@ -1,9 +1,6 @@
 #
 # plots.py -- Utility functions for plotting.
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -193,15 +190,18 @@ class ContourPlot(Plot):
         self.plot_pany = float(y) / ht
 
         self.ax.cla()
+        self.ax.set_axis_bgcolor('black')
 
         try:
             # Create a contour plot
             self.xdata = numpy.arange(wd)
             self.ydata = numpy.arange(ht)
-            self.ax.contourf(self.xdata, self.ydata, data, num_contours)
+            colors = [ 'lightgreen' ] * num_contours
+            cs = self.ax.contour(self.xdata, self.ydata, data, num_contours,
+                                 colors=colors)
             # Mark the center of the object
             self.ax.plot([x], [y], marker='x', ms=20.0,
-                         color='black')
+                         color='cyan')
 
             # Set the pan and zoom position & redraw
             self.plot_panzoom()
