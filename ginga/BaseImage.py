@@ -4,16 +4,18 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-import math
+from ginga.util.six.moves import map
+
 import numpy
 import logging
 
 from ginga.misc import Bunch, Callback
 from ginga import trcalc, AutoCuts
-from ginga.util.six.moves import map, zip
+
 
 class ImageError(Exception):
     pass
+
 
 class BaseImage(Callback.Callbacks):
 
@@ -182,7 +184,7 @@ class BaseImage(Callback.Callbacks):
 
     def get_order_indexes(self, cs):
         cs = cs.upper()
-        return [ self.order.index(c) for c in cs ]
+        return [self.order.index(c) for c in cs]
 
     def has_valid_wcs(self):
         return hasattr(self, 'wcs') and self.wcs.has_valid_wcs()
@@ -352,17 +354,17 @@ class BaseImage(Callback.Callbacks):
             shp = self.shape
 
             (view, (scale_x, scale_y)) = \
-                   trcalc.get_scaled_cutout_wdht_view(shp, x1, y1, x2, y2,
-                                                      new_wd, new_ht)
+                trcalc.get_scaled_cutout_wdht_view(shp, x1, y1, x2, y2,
+                                                   new_wd, new_ht)
             newdata = self._slice(view)
 
         else:
             data_np = self._get_data()
             (newdata, (scale_x, scale_y)) = \
-                      trcalc.get_scaled_cutout_wdht(data_np, x1, y1, x2, y2,
-                                                    new_wd, new_ht,
-                                                    interpolation=method,
-                                                    logger=self.logger)
+                trcalc.get_scaled_cutout_wdht(data_np, x1, y1, x2, y2,
+                                              new_wd, new_ht,
+                                              interpolation=method,
+                                              logger=self.logger)
 
         res = Bunch.Bunch(data=newdata, scale_x=scale_x, scale_y=scale_y)
         return res
@@ -449,12 +451,11 @@ class BaseImage(Callback.Callbacks):
             if e2 > -dy:
                 err = err - dy
                 x += sx
-            if e2 <  dx:
+            if e2 < dx:
                 err = err + dx
                 y += sy
 
         return res
-
 
     def info_xy(self, data_x, data_y, settings):
         # Get the value under the data coordinates
