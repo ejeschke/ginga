@@ -403,10 +403,12 @@ class BaseImage(Callback.Callbacks):
 
     def get_thumbnail(self, length):
         wd, ht = self.get_size()
-        if wd > ht:
-            width, height = length, int(length * float(ht)/wd)
+        if ht == 0:
+            width, height = length, length
+        elif wd > ht:
+            width, height = length, int(length * float(ht) / wd)
         else:
-            width, height = int(length * float(wd)/ht), length
+            width, height = int(length * float(wd) / ht), length
 
         res = self.get_scaled_cutout_wdht(0, 0, wd, ht, width, height)
         return res.data
