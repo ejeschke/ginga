@@ -11,10 +11,12 @@ from astropy.table import Table
 from astropy.io import fits
 
 from ginga.misc import Callback
+from ginga.util import iohelper
 
 
 class TableError(Exception):
     pass
+
 
 class AstroTable(Callback.Callbacks):
 
@@ -131,8 +133,6 @@ class AstroTable(Callback.Callbacks):
             if name is None:
                 name = info.name
                 if ('[' not in name):
-                    if (numhdu is None) or allow_numhdu_override:
-                        numhdu = numhdu_
                     name += iohelper.get_hdu_suffix(numhdu)
                 self.set(name=name)
 
