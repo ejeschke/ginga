@@ -395,10 +395,11 @@ class MultiDim(GingaPlugin.LocalPlugin):
 
             # Still need to build datacube profile
             hdu = self.fits_f[idx]
-            dims = list(hdu.data.shape)
-            dims.reverse()
-            self.build_naxis(dims)
-            return
+            if hdu.data is not None:
+                dims = list(hdu.data.shape)
+                dims.reverse()
+                self.build_naxis(dims)
+                return
 
         # Nope, we'll have to load it
         self.logger.debug("HDU %d not in memory; refreshing from file" % (idx))

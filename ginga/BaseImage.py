@@ -404,7 +404,7 @@ class BaseImage(Callback.Callbacks):
     def get_thumbnail(self, length):
         wd, ht = self.get_size()
         if ht == 0:
-            width, height = length, length
+            width, height = 1, 1
         elif wd > ht:
             width, height = length, int(length * float(ht) / wd)
         else:
