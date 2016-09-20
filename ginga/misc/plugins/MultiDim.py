@@ -424,7 +424,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
                 # <- empty data part to this HDU
                 self.logger.warning("Empty data part in HDU #%d" % (idx))
 
-            elif info['htype'].lower() in ('tablehdu',):
+            elif info['htype'].lower() in ('bintablehdu', 'tablehdu',):
                 dims = [0, 0]
 
             elif info['htype'].lower() not in ('imagehdu', 'primaryhdu'):
