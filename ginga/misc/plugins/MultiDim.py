@@ -403,7 +403,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
         # Nope, we'll have to load it
         self.logger.debug("HDU %d not in memory; refreshing from file" % (idx))
 
-        if info['htype'].lower() in ('tablehdu',):
+        if info['htype'].lower() in ('bintablehdu', 'tablehdu'):
             image = AstroTable.AstroTable(logger=self.logger)
 
         else:
