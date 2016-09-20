@@ -10,8 +10,7 @@ import threading
 from ginga import GingaPlugin
 from ginga.misc import Bunch
 from ginga.util import iohelper
-from ginga.misc import Bunch
-from ginga.gw import GwHelp, Widgets, Viewers
+from ginga.gw import Widgets, Viewers
 
 
 class Thumbs(GingaPlugin.GlobalPlugin):
@@ -75,8 +74,8 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         self.gui_up = False
 
     def build_gui(self, container):
-        width, height = 300, 300
-        cm, im = self.fv.cm, self.fv.im
+        # width, height = 300, 300
+        # cm, im = self.fv.cm, self.fv.im
 
         thumb_len = self.settings.get('thumb_length', 192)
 
@@ -137,7 +136,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         if nothumb:
             return
 
-        idx = image.get('idx', None)
+        # idx = image.get('idx', None)
         # get image path
         path = image_info.path
 
@@ -169,7 +168,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         metadata = {}
         for kwd in self.keywords:
             metadata[kwd] = header.get(kwd, 'N/A')
-        metadata[self.settings.get('mouseover_name_key','NAME')] = name
+        metadata[self.settings.get('mouseover_name_key', 'NAME')] = name
 
         thumbpath = self.get_thumbpath(path)
 
@@ -276,8 +275,8 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         fitsimage = chinfo.fitsimage
         fitssettings = fitsimage.get_settings()
         for name in ['cuts']:
-            fitssettings.getSetting(name).add_callback('set',
-                               self.cutset_cb, fitsimage)
+            fitssettings.getSetting(name).add_callback(
+                'set', self.cutset_cb, fitsimage)
         fitsimage.add_callback('transform', self.transform_cb)
 
         rgbmap = fitsimage.get_rgbmap()
@@ -451,7 +450,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
         # get image name
         name = image.get('name', name)
-        metadata[self.settings.get('mouseover_name_key','NAME')] = name
+        metadata[self.settings.get('mouseover_name_key', 'NAME')] = name
 
         thumbkey = self.get_thumb_key(chname, name, path)
         with self.thmblock:
