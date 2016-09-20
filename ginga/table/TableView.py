@@ -119,8 +119,9 @@ class TableViewGw(TableViewBase):
         # Table contents
         for i, row in enumerate(a_tab, 1):
             bnch = Bunch.Bunch(zip(row.colnames, row.as_void()))
-            bnch['_DISPLAY_ROW'] = i_fmt.format(i)
-            tree_dict[i] = bnch
+            i_str = i_fmt.format(i)
+            bnch['_DISPLAY_ROW'] = i_str
+            tree_dict[i_str] = bnch
 
         self.widget.set_tree(tree_dict)
 
