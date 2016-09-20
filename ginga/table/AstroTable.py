@@ -4,39 +4,54 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-import logging
+from ginga.util.six import iteritems
 
 import numpy as np
 from astropy.table import Table
 from astropy.io import fits
 
+from ginga.BaseImage import BaseImage, Header
 from ginga.misc import Callback
-from ginga.util import iohelper
+from ginga.util import wcsmod, iohelper
 
 
 class TableError(Exception):
     pass
 
 
+class AstroTableHeader(Header):
+    pass
+
+
 class AstroTable(Callback.Callbacks):
+    """Abstraction of an astronomical data (table).
 
-    def __init__(self, data_ap=None, metadata=None, logger=None, name=None):
+    .. note:: This module is NOT thread-safe!
 
-        Callback.Callbacks.__init__(self)
+    """
+    # class variables for WCS can be set
+    wcsClass = None
 
-        if logger is not None:
-            self.logger = logger
-        else:
-            self.logger = logging.Logger('AstroTable')
-        self._data = data_ap
-        self.metadata = {}
-        self.name = name
-        # make sure a table has these attributes
-        self.metadata.setdefault('name', None)
+    @classmethod
+    def set_wcsClass(cls, klass):
+        cls.wcsClass = klass
 
-        # For callbacks
-        for name in ('modified', ):
-            self.enable_callback(name)
+    def __init__(self, data_ap=None, metadata=None, logger=None, name=None,
+                 wcsclass=wcsClass):
+
+        BaseImage.__init__(self, data_np=data_ap, metadata=metadata,
+                           logger=logger, name=name)
+
+        # wcsclass specifies a pluggable WCS module
+        if wcsclass is None:
+            wcsclass = wcsmod.WCS
+        self.wcs = wcsclass(self.logger)
+
+        # TODO: How to handle table with WCS data? For example, spectrum
+        #       table may store dispersion solution as WCS.
+        #if metadata is not None:
+        #    header = self.get_header()
+        #    self.wcs.load_header(header)
 
     @property
     def rows(self):
@@ -56,6 +71,12 @@ class AstroTable(Callback.Callbacks):
 
     def _get_data(self):
         return self._data
+
+    def _set_minmax(self):
+        self.maxval = 0
+        self.minval = 0
+        self.maxval_noinf = self.maxval
+        self.minval_noinf = self.minval
 
     def get(self, kwd, *args):
         if kwd in self.metadata:
@@ -81,9 +102,28 @@ class AstroTable(Callback.Callbacks):
     def clear_metadata(self):
         self.metadata = {}
 
-    def get_header(self):
-        # for compatibility with images--what should this contain?
-        return {}
+    def update_metadata(self, keyDict):
+        for key, val in iteritems(keyDict):
+            self.metadata[key] = val
+
+        # TODO: refresh the WCS
+        #if hasattr(self, 'wcs'):
+        #    header = self.get_header()
+        #    self.wcs.load_header(header)
+
+    def get_header(self, create=True):
+        try:
+            # By convention, the fits header is stored in a dictionary
+            # under the metadata keyword 'header'
+            displayhdr = self.metadata['header']
+
+        except KeyError as e:
+            if not create:
+                raise e
+            displayhdr = AstroTableHeader()
+            self.metadata['header'] = displayhdr
+
+        return displayhdr
 
     def set_data(self, data_ap, metadata=None):
         """Use this method to SHARE (not copy) the incoming table.
@@ -95,21 +135,32 @@ class AstroTable(Callback.Callbacks):
 
         self.make_callback('modified')
 
-    def load_hdu(self, hdu, fobj=None):
+    def load_hdu(self, hdu, fobj=None, **kwargs):
         self.clear_metadata()
 
+        ahdr = self.get_header()
+
+        if 'format' not in kwargs:
+            kwargs['format'] = 'fits'
+
         try:
-            tbl = Table.read(hdu, format='fits')
-            self._data = tbl
+            self._data = Table.read(hdu, **kwargs)
+            ahdr.update(hdu.header)
 
         except Exception as e:
             self.logger.error("Error reading table from hdu: {0}".format(
                 str(e)))
 
-    def load_file(self, filepath, numhdu=None,
-                  allow_numhdu_override=True, memmap=None):
+        # TODO: Try to make a wcs object on the header
+        #self.wcs.load_header(hdu.header, fobj=fobj)
+
+    def load_file(self, filepath, numhdu=None, **kwargs):
         self.logger.debug("Loading file '%s' ..." % (filepath))
         self.clear_metadata()
+
+        # These keywords might be provided but not used.
+        kwargs.pop('allow_numhdu_override')
+        kwargs.pop('memmap')
 
         info = iohelper.get_fileinfo(filepath)
         if numhdu is None:
@@ -117,8 +168,7 @@ class AstroTable(Callback.Callbacks):
 
         try:
             with fits.open(filepath, 'readonly') as in_f:
-                tbl = Table.read(in_f[numhdu], format='fits')
-            self._data = tbl
+                self.load_hdu(in_f[numhdu], **kwargs)
 
         except Exception as e:
             self.logger.error("Error reading table from file: {0}".format(
@@ -126,7 +176,7 @@ class AstroTable(Callback.Callbacks):
 
         # Set the table name if no name currently exists for this table
         # TODO: should this *change* the existing name, if any?
-        if not (self.name is None):
+        if self.name is not None:
             self.set(name=self.name)
         else:
             name = self.get('name', None)
