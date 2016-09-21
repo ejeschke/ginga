@@ -11,7 +11,6 @@ from collections import OrderedDict
 
 from ginga import GingaPlugin
 from ginga.misc import Bunch
-import ginga.util.six as six
 from ginga.gw import Widgets
 
 
@@ -89,10 +88,10 @@ class Header(GingaPlugin.GlobalPlugin):
             keys.sort()
         for key in keys:
             card = header.get_card(key)
-            ## tree_dict[key] = Bunch.Bunch(key=card.key,
-            ##                              value=str(card.value),
-            ##                              comment=card.comment,
-            ##                              __terminal__=True)
+            # tree_dict[key] = Bunch.Bunch(key=card.key,
+            #                              value=str(card.value),
+            #                              comment=card.comment,
+            #                              __terminal__=True)
             tree_dict[key] = card
 
         table.set_tree(tree_dict)
@@ -112,7 +111,7 @@ class Header(GingaPlugin.GlobalPlugin):
         sw = self._create_header_window(info)
 
         self.nb.add_widget(sw)
-        index = self.nb.index_of(sw)
+        # index = self.nb.index_of(sw)
         info.setvals(widget=sw)
         self.channel[chname] = info
 
@@ -129,7 +128,7 @@ class Header(GingaPlugin.GlobalPlugin):
         chname = channel.name
 
         if self.active != chname:
-            if not chname in self.channel:
+            if chname not in self.channel:
                 self.add_channel(viewer, channel)
             widget = self.channel[chname].widget
             index = self.nb.index_of(widget)
@@ -165,4 +164,4 @@ class Header(GingaPlugin.GlobalPlugin):
     def __str__(self):
         return 'header'
 
-#END
+# END
