@@ -23,7 +23,6 @@ from collections import deque
 import atexit, shutil
 from datetime import datetime
 
-import numpy
 magic_tester = None
 try:
     import magic
@@ -41,9 +40,8 @@ except (ImportError, Exception):
 # Local application imports
 from ginga import cmap, imap
 from ginga import AstroImage, RGBImage, BaseImage
-from ginga import ImageView
 from ginga.table import AstroTable
-from ginga.misc import Bunch, Datasrc, Callback, Timer, Task, Future
+from ginga.misc import Bunch, Datasrc, Callback, Timer, Future
 from ginga.util import catalog, iohelper
 from ginga.canvas.CanvasObject import drawCatalog
 
@@ -357,7 +355,7 @@ class GingaControl(Callback.Callbacks):
         channel = self.get_channel(chname)
         opmon = channel.opmon
         opmon.start_plugin_future(channel.name, opname, future)
-        channel.viewer.onscreen_message(opname, delay=1.0)
+        channel.viewers[0].onscreen_message(opname, delay=1.0)
 
     def stop_local_plugin(self, chname, opname):
         channel = self.get_channel(chname)

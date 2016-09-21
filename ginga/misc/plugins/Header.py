@@ -1,9 +1,6 @@
 #
 # Header.py -- Image header plugin for Ginga viewer
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -136,7 +133,7 @@ class Header(GingaPlugin.GlobalPlugin):
             self.active = chname
             self.info = self.channel[self.active]
 
-        image = channel.fitsimage.get_image()
+        image = channel.get_current_image()
         if image is None:
             return
         self.set_header(self.info, image)
@@ -158,7 +155,7 @@ class Header(GingaPlugin.GlobalPlugin):
     def set_sortable_cb(self, info):
         self._image = None
         channel = self.fv.get_channelInfo(info.chname)
-        image = channel.fitsimage.get_image()
+        image = channel.get_current_image()
         self.set_header(info, image)
 
     def __str__(self):
