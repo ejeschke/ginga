@@ -664,4 +664,9 @@ class MultiDim(GingaPlugin.LocalPlugin):
     def __str__(self):
         return 'multidim'
 
-#END
+
+# Replace module docstring with config doc for auto insert by Sphinx.
+# In the future, if we need the real docstring, we can append instead of
+# overwrite.
+from ginga.util.toolbox import generate_cfg_example  # noqa
+__doc__ = generate_cfg_example('plugin_MultiDim', package='ginga')
