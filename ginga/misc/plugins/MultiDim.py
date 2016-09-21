@@ -13,12 +13,12 @@ from ginga import AstroImage
 from ginga.gw import Widgets
 from ginga.misc import Future, Bunch
 from ginga import GingaPlugin
+from ginga.util.iohelper import get_hdu_suffix
 from ginga.util.videosink import VideoSink
-from ginga.util import iohelper
 
 import numpy as np
 import matplotlib.pyplot as plt
-import copy
+from astropy.table import Table
 
 have_mencoder = False
 if spawn.find_executable("mencoder"):
@@ -34,6 +34,7 @@ except ImportError:
         have_pyfits = True
     except ImportError:
         pass
+
 
 class MultiDim(GingaPlugin.LocalPlugin):
 
@@ -70,8 +71,8 @@ class MultiDim(GingaPlugin.LocalPlugin):
         self.gui_up = False
 
     def build_gui(self, container):
-        assert have_pyfits == True, \
-               Exception("Please install astropy/pyfits to use this plugin")
+        if not have_pyfits:
+            raise Exception("Please install astropy/pyfits to use this plugin")
 
         top = Widgets.VBox()
         top.set_border_width(4)
@@ -295,7 +296,6 @@ class MultiDim(GingaPlugin.LocalPlugin):
                 if n == 2:
                     self.w[key].set_state(True)
 
-
         self.play_axis = 2
         if self.play_axis < len(dims):
             self.play_max = dims[self.play_axis]
@@ -374,19 +374,16 @@ class MultiDim(GingaPlugin.LocalPlugin):
         self.image = None
         self.fv.showStatus("")
 
-    def get_name(self, sfx):
-        return '%s[%s]' % (self.name_pfx, sfx)
-
     def set_hdu(self, idx):
         self.logger.debug("Loading fits hdu #%d" % (idx))
 
         # determine canonical index of this HDU
         info = self.hdu_info[idx]
         aidx = (info.name, info.extver)
-        sfx = '%s,%d' % aidx
+        sfx = get_hdu_suffix(aidx)
 
         # See if this HDU is still in the channel's datasrc
-        imname = self.get_name(sfx)
+        imname = self.name_pfx + sfx
         chname = self.chname
         chinfo = self.chinfo
         if imname in chinfo.datasrc:
@@ -431,20 +428,36 @@ class MultiDim(GingaPlugin.LocalPlugin):
             # create a future for reconstituting this HDU
             future = Future.Future()
             future.freeze(self.fv.load_image, self.path, idx=aidx)
-            image.set(path=self.path, idx=aidx, name=imname, image_future=future)
+            image.set(path=self.path, idx=aidx, name=imname,
+                      image_future=future)
 
-            ## self.fitsimage.set_image(image,
-            ##                          raise_initialize_errors=False)
+            # self.fitsimage.set_image(image, raise_initialize_errors=False)
             self.fv.add_image(imname, image, chname=chname)
 
             self.build_naxis(dims)
             self.logger.debug("HDU #%d loaded." % (idx))
 
         except Exception as e:
-            errmsg = "Error loading FITS HDU #%d: %s" % (
-                idx, str(e))
-            self.logger.error(errmsg)
-            self.fv.show_error(errmsg, raisetab=False)
+            try:
+                # Maybe it is a FITS table
+                imname = 'tab_' + imname
+                if imname in chinfo.datasrc:
+                    self.logger.debug('Reading {0} from cache'.format(imname))
+                    tbl = chinfo.datasrc[imname]
+                else:
+                    self.logger.debug('Reading {0} from file'.format(imname))
+                    tbl = Table.read(self.fits_f[idx], format='fits')
+                    chinfo.datasrc[imname] = tbl
+            except:
+                errmsg = 'Error loading FITS HDU #{0}: {1}'.format(
+                    idx, str(e))
+                self.logger.error(errmsg)
+                self.fv.show_error(errmsg, raisetab=False)
+            else:
+                self.fv.gpmon.start_plugin(
+                    None, 'TableViewer', alreadyOpenOk=True)
+                tview_obj = self.fv.gpmon.getPlugin('TableViewer')
+                tview_obj.display_table(tbl, tabname=imname)
 
     def set_naxis(self, idx, n):
         self.play_idx = idx
@@ -465,11 +478,9 @@ class MultiDim(GingaPlugin.LocalPlugin):
             image.set_naxispath(self.naxispath)
             self.logger.debug("NAXIS%d slice %d loaded." % (n+1, idx+1))
 
-
-
             if self.play_indices:
                 text = self.play_indices
-                text[m]= idx
+                text[m] = idx
             else:
                 text = idx
             self.w.slice.set_text(str(text))
@@ -580,7 +591,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
 
         self.fits_f = pyfits.open(path, 'readonly')
 
-        lower = 0
+        # lower = 0
         upper = len(self.fits_f) - 1
         info = self.fits_f.info(output=False)
         self.prep_hdu_menu(self.w.hdu, info)
@@ -654,4 +665,9 @@ class MultiDim(GingaPlugin.LocalPlugin):
     def __str__(self):
         return 'multidim'
 
-#END
+
+# Replace module docstring with config doc for auto insert by Sphinx.
+# In the future, if we need the real docstring, we can append instead of
+# overwrite.
+from ginga.util.toolbox import generate_cfg_example  # noqa
+__doc__ = generate_cfg_example('plugin_MultiDim', package='ginga')

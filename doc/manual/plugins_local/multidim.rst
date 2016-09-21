@@ -14,3 +14,5 @@ or create a movie using the `Save Movie` button by entering the "Start"
 and "End" slice indices.  This feature requires 'mencoder' to be installed.
 Note that currently there is no support for tables in Ginga,
 so at present only image data can be displayed.
+
+.. automodule:: ginga.misc.plugins.MultiDim
