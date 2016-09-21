@@ -1040,26 +1040,27 @@ class Pick(GingaPlugin.LocalPlugin):
         self.ev_intr.set()
 
     def btndown(self, canvas, event, data_x, data_y, viewer):
-        try:
-            obj = self.canvas.get_object_by_tag(self.picktag)
-            if obj.kind == 'rectangle':
-                bbox = obj
-            else:
-                bbox  = obj.objects[0]
-                point = obj.objects[1]
-            self.dx = (bbox.x2 - bbox.x1) // 2
-            self.dy = (bbox.y2 - bbox.y1) // 2
-        except Exception as e:
-            pass
+        if self.picktag is not None:
+            try:
+                obj = self.canvas.get_object_by_tag(self.picktag)
+                if obj.kind == 'rectangle':
+                    bbox = obj
+                else:
+                    bbox  = obj.objects[0]
+                    point = obj.objects[1]
+                self.dx = (bbox.x2 - bbox.x1) // 2
+                self.dy = (bbox.y2 - bbox.y1) // 2
+            except Exception as e:
+                pass
 
-        dx = self.dx
-        dy = self.dy
+            try:
+                self.canvas.delete_object_by_tag(self.picktag)
+            except:
+                pass
 
         # Mark center of object and region on main image
-        try:
-            self.canvas.delete_object_by_tag(self.picktag)
-        except:
-            pass
+        dx = self.dx
+        dy = self.dy
 
         x1, y1 = data_x - dx, data_y - dy
         x2, y2 = data_x + dx, data_y + dy
@@ -1073,18 +1074,20 @@ class Pick(GingaPlugin.LocalPlugin):
         return True
 
     def update(self, canvas, event, data_x, data_y, viewer):
-        try:
-            obj = self.canvas.get_object_by_tag(self.picktag)
-            if obj.kind == 'rectangle':
-                bbox = obj
-            else:
-                bbox  = obj.objects[0]
-                point = obj.objects[1]
-            self.dx = (bbox.x2 - bbox.x1) // 2
-            self.dy = (bbox.y2 - bbox.y1) // 2
-        except Exception as e:
-            obj = None
-            pass
+        obj = None
+
+        if self.picktag is not None:
+            try:
+                obj = self.canvas.get_object_by_tag(self.picktag)
+                if obj.kind == 'rectangle':
+                    bbox = obj
+                else:
+                    bbox  = obj.objects[0]
+                    point = obj.objects[1]
+                self.dx = (bbox.x2 - bbox.x1) // 2
+                self.dy = (bbox.y2 - bbox.y1) // 2
+            except Exception as e:
+                pass
 
         dx = self.dx
         dy = self.dy
@@ -1092,16 +1095,16 @@ class Pick(GingaPlugin.LocalPlugin):
         x1, y1 = data_x - dx, data_y - dy
         x2, y2 = data_x + dx, data_y + dy
 
-        if (not obj) or (obj.kind == 'compound'):
+        if obj is None:
             # Replace compound image with rectangle
+            tag = self.canvas.add(self.dc.Rectangle(x1, y1, x2, y2,
+                                                    color='cyan',
+                                                    linestyle='dash'))
             try:
                 self.canvas.delete_object_by_tag(self.picktag)
             except:
                 pass
 
-            tag = self.canvas.add(self.dc.Rectangle(x1, y1, x2, y2,
-                                                    color='cyan',
-                                                    linestyle='dash'))
         else:
             # Update current rectangle with new coords
             bbox.x1, bbox.y1, bbox.x2, bbox.y2 = x1, y1, x2, y2
@@ -1112,6 +1115,9 @@ class Pick(GingaPlugin.LocalPlugin):
 
 
     def drag(self, canvas, event, data_x, data_y, viewer):
+
+        if self.picktag is None:
+            return True
 
         obj = self.canvas.get_object_by_tag(self.picktag)
         if obj.kind == 'compound':
@@ -1135,7 +1141,7 @@ class Pick(GingaPlugin.LocalPlugin):
         # calculate new coords
         x1, y1, x2, y2 = bbox.x1+dx, bbox.y1+dy, bbox.x2+dx, bbox.y2+dy
 
-        if (not obj) or (obj.kind == 'compound'):
+        if (obj is None) or (obj.kind == 'compound'):
             # Replace compound image with rectangle
             try:
                 self.canvas.delete_object_by_tag(self.picktag)
@@ -1158,7 +1164,7 @@ class Pick(GingaPlugin.LocalPlugin):
             return True
         canvas.delete_object_by_tag(tag)
 
-        if self.picktag:
+        if self.picktag is not None:
             try:
                 canvas.delete_object_by_tag(self.picktag)
             except:

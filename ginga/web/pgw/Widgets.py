@@ -692,8 +692,8 @@ class StatusBar(Label):
     def __init__(self):
         super(StatusBar, self).__init__()
 
-    def set_message(self, msg_str):
-        # TODO: remove message in about 10 seconds
+    def set_message(self, msg_str, duration=10.0):
+        # TODO: remove message in about `duration` seconds
         self.set_text(msg_str)
 
 

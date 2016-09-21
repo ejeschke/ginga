@@ -577,9 +577,9 @@ class StatusBar(WidgetBase):
         sbar = QtGui.QStatusBar()
         self.widget = sbar
 
-    def set_message(self, msg_str):
-        # remove message in about 10 seconds
-        self.widget.showMessage(msg_str, 10000)
+    def set_message(self, msg_str, duration=10.0):
+        # remove message in about `duration` seconds
+        self.widget.showMessage(msg_str, int(duration * 1000))
 
 class TreeView(WidgetBase):
     def __init__(self, auto_expand=False, sortable=False,

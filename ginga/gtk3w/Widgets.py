@@ -631,7 +631,11 @@ class StatusBar(WidgetBase):
         self.widget = sbar
         self.statustask = None
 
-    def set_message(self, msg_str):
+    def _clear_message(self):
+        self.statustask = None
+        self.widget.remove_all(self.ctx_id)
+
+    def set_message(self, msg_str, duration=10.0):
         try:
             self.widget.remove_all(self.ctx_id)
         except:
@@ -640,10 +644,10 @@ class StatusBar(WidgetBase):
         self.widget.push(self.ctx_id, msg_str)
 
         # remove message in about 10 seconds
-        if self.statustask:
+        if self.statustask is not None:
             GObject.source_remove(self.statustask)
-        self.statustask = GObject.timeout_add(10000,
-                                  self.widget.remove_all, self.ctx_id)
+        self.statustask = GObject.timeout_add(int(1000 * duration),
+                                              self._clear_message)
 
 
 class TreeView(WidgetBase):
