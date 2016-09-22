@@ -101,8 +101,8 @@ class MyGlobalPlugin(GingaPlugin.GlobalPlugin):
         #cw.addWidget(widget, stretch=1)
 
     def get_channel_info(self, fitsimage):
-        chname = self.fv.get_channelName(fitsimage)
-        channel = self.fv.get_channelInfo(chname)
+        chname = self.fv.get_channel_name(fitsimage)
+        channel = self.fv.get_channel(chname)
         return channel
 
     def set_info(self, text):

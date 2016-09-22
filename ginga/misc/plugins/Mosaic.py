@@ -314,7 +314,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
         time_intr1 = time.time()
 
         # Add description for ChangeHistory
-        iminfo = self.chinfo.get_image_info(self.img_mosaic.get('name'))
+        iminfo = self.channel.get_image_info(self.img_mosaic.get('name'))
         iminfo.reason_modified = 'Added {0}'.format(
             ','.join([im.get('name') for im in images]))
 

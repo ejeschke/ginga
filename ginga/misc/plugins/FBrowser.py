@@ -381,8 +381,8 @@ class FBrowser(GingaPlugin.LocalPlugin):
             fitsimage = self.fv.getfocus_fitsimage()
 
         # find out our channel
-        chname = self.fv.get_channelName(fitsimage)
-        channel = self.fv.get_channelInfo(chname)
+        chname = self.fv.get_channel_name(fitsimage)
+        channel = self.fv.get_channel(chname)
 
         for path in filelist:
             name = self.fv.name_image_from_path(path)

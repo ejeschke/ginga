@@ -21,7 +21,7 @@ class ChangeHistory(GingaPlugin.GlobalPlugin):
 
     .. code-block:: python
 
-        channel = self.fv.get_channelInfo(chname)
+        channel = self.fv.get_channel_info(chname)
         iminfo = channel.get_image_info(imname)
         timestamp = iminfo.time_modified
         description = iminfo.reason_modified  # Optional
@@ -37,8 +37,8 @@ class ChangeHistory(GingaPlugin.GlobalPlugin):
         image.set_data(new_data, ...)
 
         # Manually add the description
-        chname = self.fv.get_channelName(self.fitsimage)
-        channel = self.fv.get_channelInfo(chname)
+        chname = self.fv.get_channel_name(self.fitsimage)
+        channel = self.fv.get_channel_info(chname)
         iminfo = channel.get_image_info(image.get('name'))
         iminfo.reason_modified = 'Something was done to this image buffer'
 

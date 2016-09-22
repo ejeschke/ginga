@@ -891,7 +891,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         num_images = self.t_['numImages']
 
         # update the datasrc length
-        chinfo = self.chinfo
+        chinfo = self.channel
         chinfo.datasrc.set_bufsize(num_images)
         self.logger.debug("num images was set to {0}".format(num_images))
 

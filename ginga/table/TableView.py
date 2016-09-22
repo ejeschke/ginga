@@ -7,6 +7,7 @@
 import logging
 from collections import OrderedDict
 
+from ginga.table import AstroTable
 from ginga.misc import Callback, Settings
 from ginga.misc import Bunch
 from ginga.util.six.moves import zip
@@ -25,6 +26,10 @@ class TableViewBase(Callback.Callbacks):
         Viewer preferences. If not given, one will be created.
 
     """
+
+    vname = 'Ginga Table'
+    vtypes = [AstroTable.AstroTable]
+
     def __init__(self, logger=None, settings=None):
         Callback.Callbacks.__init__(self)
 
@@ -80,6 +85,7 @@ class TableViewBase(Callback.Callbacks):
 
     # for compatibility with ImageView
     get_image = get_table
+    set_image = set_table
 
 
 class TableViewGw(TableViewBase):

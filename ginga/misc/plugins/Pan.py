@@ -139,9 +139,9 @@ class Pan(GingaPlugin.GlobalPlugin):
         del self.channel[chname]
 
     def start(self):
-        names = self.fv.get_channelNames()
+        names = self.fv.get_channel_names()
         for name in names:
-            channel = self.fv.get_channelInfo(name)
+            channel = self.fv.get_channel(name)
             self.add_channel(self.fv, channel)
 
     # CALLBACKS

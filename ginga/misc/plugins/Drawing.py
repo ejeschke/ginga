@@ -404,7 +404,7 @@ For polygons/paths press 'v' to create a vertex, 'z' to remove last vertex.""")
         # Add change log to ChangeHistory
         s = 'Mask created from {0} drawings ({1})'.format(
             ntags, ','.join(sorted(obj_kinds)))
-        iminfo = self.chinfo.get_image_info(imname)
+        iminfo = self.channel.get_image_info(imname)
         iminfo.reason_modified = s
         self.logger.info(s)
 

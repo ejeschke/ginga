@@ -150,7 +150,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         future = image_info.image_future
 
         # Is there a preference set to avoid making thumbnails?
-        chinfo = self.fv.get_channelInfo(chname)
+        chinfo = self.fv.get_channel(chname)
         prefs = chinfo.settings
         if not prefs.get('genthumb', False):
             return
@@ -190,7 +190,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
                               thumbpath, metadata, future)
 
     def _add_image(self, viewer, chname, image):
-        chinfo = self.fv.get_channelInfo(chname)
+        chinfo = self.fv.get_channel(chname)
         try:
             info = chinfo.get_image_info(image.name)
         except KeyError:
@@ -222,7 +222,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
             # Unhighlight
             chname = thumbkey[0]
-            channel = self.fv.get_channelInfo(chname)
+            channel = self.fv.get_channel(chname)
             self._tkf_highlight.discard(thumbkey)
             channel.extdata.thumbs_old_highlight.discard(thumbkey)
 
@@ -404,7 +404,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         """Returns True if we already have a thumbnail version of this image
         cached, False otherwise.
         """
-        chname = self.fv.get_channelName(fitsimage)
+        chname = self.fv.get_channel_name(fitsimage)
 
         # Look up our version of the thumb
         idx = image.get('idx', None)
@@ -431,7 +431,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         if save_thumb is None:
             save_thumb = self.settings.get('cache_thumbs', False)
 
-        chname = self.fv.get_channelName(fitsimage)
+        chname = self.fv.get_channel_name(fitsimage)
 
         # Get metadata for mouse-over tooltip
         header = image.get_header()

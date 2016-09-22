@@ -1,9 +1,6 @@
 #
 # Zoom.py -- Zoom plugin for fits viewer
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -159,9 +156,9 @@ class Zoom(GingaPlugin.GlobalPlugin):
         self.prepare(chinfo.fitsimage)
 
     def start(self):
-        names = self.fv.get_channelNames()
+        names = self.fv.get_channel_names()
         for name in names:
-            chinfo = self.fv.get_channelInfo(name)
+            chinfo = self.fv.get_channel(name)
             self.add_channel(self.fv, chinfo)
 
     # CALLBACKS
@@ -266,8 +263,8 @@ class Zoom(GingaPlugin.GlobalPlugin):
         # If this is a new source, then update our widget with the
         # attributes of the source
         if self.fitsimage_focus != fitsimage:
-            chname = self.fv.get_channelName(fitsimage)
-            channel = self.fv.get_channelInfo(chname)
+            chname = self.fv.get_channel_name(fitsimage)
+            channel = self.fv.get_channel(chname)
             self.focus_cb(self.fv, channel)
 
         # If the refresh interval has expired then update the zoom image;

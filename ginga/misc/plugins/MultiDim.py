@@ -49,8 +49,6 @@ class MultiDim(GingaPlugin.LocalPlugin):
         self.name_pfx = 'NONAME'
         self.image = None
         self.orientation = 'vertical'
-        chname = fv.get_channel_name(fitsimage)
-        self.channel = fv.get_channel(chname)
 
         # For animation feature
         self.play_axis = 2
@@ -387,7 +385,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
         # See if this HDU is still in the channel's datasrc
         imname = self.name_pfx + sfx
         chname = self.chname
-        chinfo = self.chinfo
+        chinfo = self.channel
         if imname in chinfo.datasrc:
             self.curhdu = idx
             self.image = chinfo.datasrc[imname]

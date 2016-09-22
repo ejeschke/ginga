@@ -39,8 +39,7 @@ except (ImportError, Exception):
 
 # Local application imports
 from ginga import cmap, imap
-from ginga import AstroImage, RGBImage, BaseImage
-from ginga.table import AstroTable
+from ginga import AstroImage, RGBImage
 from ginga.misc import Bunch, Datasrc, Callback, Timer, Future
 from ginga.util import catalog, iohelper
 from ginga.canvas.CanvasObject import drawCatalog
@@ -93,7 +92,7 @@ class GingaControl(Callback.Callbacks):
 
         self.lock = threading.RLock()
         self.channel = {}
-        self.channelNames = []
+        self.channel_names = []
         self.cur_channel = None
         self.wscount = 0
         self.statustask = None
@@ -233,7 +232,7 @@ class GingaControl(Callback.Callbacks):
     def keypress(self, viewer, event, data_x, data_y):
         """Key press event in a channel window."""
         keyname = event.key
-        chname = self.get_channelName(viewer)
+        chname = self.get_channel_name(viewer)
         self.logger.debug("key press (%s) in channel %s" % (
             keyname, chname))
         # TODO: keyboard accelerators to raise tabs need to be integrated into
@@ -286,7 +285,7 @@ class GingaControl(Callback.Callbacks):
         names a file.
         """
         for url in urls:
-            to_chname = self.get_channelName(viewer)
+            to_chname = self.get_channel_name(viewer)
 
             ## self.load_file(url)
             self.nongui_do(self.load_file, url, chname=to_chname,
@@ -294,7 +293,7 @@ class GingaControl(Callback.Callbacks):
         return True
 
     def force_focus_cb(self, viewer, event, data_x, data_y):
-        chname = self.get_channelName(viewer)
+        chname = self.get_channel_name(viewer)
         self.change_channel(chname, raisew=True)
         return True
 
@@ -355,7 +354,8 @@ class GingaControl(Callback.Callbacks):
         channel = self.get_channel(chname)
         opmon = channel.opmon
         opmon.start_plugin_future(channel.name, opname, future)
-        channel.viewers[0].onscreen_message(opname, delay=1.0)
+        if hasattr(channel.viewer, 'onscreen_message'):
+            channel.viewer.onscreen_message(opname, delay=1.0)
 
     def stop_local_plugin(self, chname, opname):
         channel = self.get_channel(chname)
@@ -756,7 +756,7 @@ class GingaControl(Callback.Callbacks):
         return True
 
     def get_current_workspace(self):
-        channel = self.get_channelInfo()
+        channel = self.get_channel_info()
         if channel is None:
             return None
         ws = self.ds.get_ws(channel.workspace)
@@ -784,7 +784,7 @@ class GingaControl(Callback.Callbacks):
         self.add_channel(chname, workspace=ws.name)
 
     def remove_channel_auto(self):
-        channel = self.get_channelInfo()
+        channel = self.get_channel_info()
         if channel is None:
             return
         self.delete_channel(channel.name)
@@ -979,7 +979,7 @@ class GingaControl(Callback.Callbacks):
         with self.lock:
             return self.cur_channel
 
-    def get_channelInfo(self, chname=None):
+    def get_channel_info(self, chname=None):
         # TO BE DEPRECATED--please use get_channel()
         return self.get_channel(chname)
 
@@ -1091,8 +1091,7 @@ class GingaControl(Callback.Callbacks):
             channel.widget = bnch.widget
             channel.container = bnch.container
             channel.workspace = bnch.workspace
-            channel.viewers.append(bnch.image_viewer)
-            channel.viewers.append(bnch.table_viewer)
+            channel.connect_viewer(bnch.image_viewer)
             channel.viewer = bnch.image_viewer
             # older name, should eventually be deprecated
             channel.fitsimage = bnch.image_viewer
@@ -1102,10 +1101,10 @@ class GingaControl(Callback.Callbacks):
             self.channel[name] = channel
 
             # Update the channels control
-            self.channelNames.append(chname)
-            self.channelNames.sort()
+            self.channel_names.append(chname)
+            self.channel_names.sort()
 
-            if len(self.channelNames) == 1:
+            if len(self.channel_names) == 1:
                 self.cur_channel = channel
 
         # Prepare local plugins for this channel
@@ -1119,7 +1118,7 @@ class GingaControl(Callback.Callbacks):
         """Delete a given channel from viewer."""
         name = chname.lower()
 
-        if len(self.channelNames) < 1:
+        if len(self.channel_names) < 1:
             self.logger.error('Delete channel={0} failed. '
                               'No channels left.'.format(chname))
             return
@@ -1131,24 +1130,24 @@ class GingaControl(Callback.Callbacks):
             self._close_plugins(channel)
 
             try:
-                idx = self.channelNames.index(chname)
+                idx = self.channel_names.index(chname)
             except ValueError:
                 idx = 0
 
             # Update the channels control
-            self.channelNames.remove(channel.name)
-            self.channelNames.sort()
+            self.channel_names.remove(channel.name)
+            self.channel_names.sort()
 
             self.ds.remove_tab(chname)
             del self.channel[name]
             self.prefs.remove_settings('channel_'+chname)
 
             # pick new channel
-            num_channels = len(self.channelNames)
+            num_channels = len(self.channel_names)
             if num_channels > 0:
                 if idx >= num_channels:
                     idx = num_channels - 1
-                self.change_channel(self.channelNames[idx])
+                self.change_channel(self.channel_names[idx])
             else:
                 self.cur_channel = None
 
@@ -1156,7 +1155,7 @@ class GingaControl(Callback.Callbacks):
 
     def get_channel_names(self):
         with self.lock:
-            return self.channelNames
+            return self.channel_names
 
     def scale2text(self, scalefactor):
         if scalefactor >= 1.0:
@@ -1277,11 +1276,12 @@ class GingaControl(Callback.Callbacks):
 
 
     ########################################################
-    ### TO BE DEPRECATED
+    ### NON-PEP8 PREDECESSORS: TO BE DEPRECATED
 
     getDrawClass = get_draw_class
     getDrawClasses = get_draw_classes
     get_channelName = get_channel_name
+    get_channelInfo = get_channel_info
     get_channelNames = get_channel_names
     followFocus = follow_focus
     showStatus = show_status
@@ -1344,6 +1344,7 @@ class Channel(Callback.Callbacks):
         # this is the currently active viewer
         self.viewer = None
         self.viewers = []
+        self.viewer_dict = {}
         if datasrc is None:
             num_images = self.settings.get('numImages', 1)
             datasrc = Datasrc.Datasrc(num_images)
@@ -1358,13 +1359,10 @@ class Channel(Callback.Callbacks):
         self.settings.getSetting('sort_order').add_callback(
             'set', self._sort_changed_ext_cb)
 
-    ## def connect_viewer(self, viewer):
-    ##     if not viewer in self.viewers:
-    ##         self.viewers.append(viewer)
-    ##     self.viewer = viewer
-
-    ##     # redraw top image
-    ##     self.refresh_cursor_image()
+    def connect_viewer(self, viewer):
+        if not viewer in self.viewers:
+            self.viewers.append(viewer)
+            self.viewer_dict[viewer.vname] = viewer
 
     def move_image_to(self, imname, channel):
         if self == channel:
@@ -1590,15 +1588,28 @@ class Channel(Callback.Callbacks):
 
     def view_object(self, dataobj):
 
-        if isinstance(dataobj, BaseImage.BaseImage):
-            self.viewer = self.viewers[0]
-            self.widget.set_index(0)
-            self.viewer.set_image(dataobj)
+        # find available viewers that can view this kind of object
+        vnames = self.fv.get_viewer_names(dataobj)
+        if len(vnames) == 0:
+            raise ValueError("I don't know how to view objects of type '%s'" % (
+                str(type(dataobj))))
+        self.logger.debug("available viewers are: %s" % (str(vnames)))
 
-        elif isinstance(dataobj, AstroTable.AstroTable):
-            self.viewer = self.viewers[1]
-            self.widget.set_index(1)
-            self.viewer.set_table(dataobj)
+        # for now, pick first available viewer that can view this type
+        vname = vnames[0]
+
+        # if we don't have this viewer type then install one in the channel
+        if not vname in self.viewer_dict:
+            self.fv.make_viewer(vname, self)
+
+        self.viewer = self.viewer_dict[vname]
+        # find this viewer and raise it
+        idx = self.viewers.index(self.viewer)
+        self.widget.set_index(idx)
+
+        # and load the data
+        self.viewer.set_image(dataobj)
+
 
     def switch_image(self, image):
 

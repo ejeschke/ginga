@@ -1,9 +1,6 @@
 #
 # WCSMatch.py -- WCSMatch plugin for Ginga reference viewer
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c)  Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -128,7 +125,7 @@ class WCSMatch(GingaPlugin.GlobalPlugin):
         self.fv.gui_do(self._reset_channels_gui)
 
     def _reset_channels_gui(self):
-        self.chnames = list(self.fv.get_channelNames())
+        self.chnames = list(self.fv.get_channel_names())
         self.chnames.sort()
         self.chnames.insert(0, "None")
         if not self.gui_up:
@@ -155,7 +152,7 @@ class WCSMatch(GingaPlugin.GlobalPlugin):
             self.ref_image = None
             self.ref_channel = None
 
-        chinfo = self.fv.get_channelInfo(chname)
+        chinfo = self.fv.get_channel(chname)
         self.ref_channel = chinfo
         fitsimage = chinfo.fitsimage
         self.ref_image = fitsimage.get_image()
@@ -187,7 +184,7 @@ class WCSMatch(GingaPlugin.GlobalPlugin):
         self.fv.showStatus("")
 
     def get_other_channels(self, myname):
-        return set(self.fv.get_channelNames()) - set([myname])
+        return set(self.fv.get_channel_names()) - set([myname])
 
     def zoomset_cb(self, setting, value, fitsimage, info):
         """This callback is called when a channel window is zoomed.
@@ -231,7 +228,7 @@ class WCSMatch(GingaPlugin.GlobalPlugin):
         # for all other channels except ours
         chnames = self.get_other_channels(chinfo.name)
         for chname in chnames:
-            chinfo2 = self.fv.get_channelInfo(chname)
+            chinfo2 = self.fv.get_channel(chname)
 
             # calculate scale from orientation to reference image
             image = chinfo2.fitsimage.get_image()
@@ -290,7 +287,7 @@ class WCSMatch(GingaPlugin.GlobalPlugin):
         # for all other channels except ours
         chnames = self.get_other_channels(chinfo.name)
         for chname in chnames:
-            chinfo2 = self.fv.get_channelInfo(chname)
+            chinfo2 = self.fv.get_channel(chname)
 
             # Get relative rotation of their image
             image = chinfo2.fitsimage.get_image()
@@ -341,7 +338,7 @@ class WCSMatch(GingaPlugin.GlobalPlugin):
         # for all other channels except ours
         chnames = self.get_other_channels(chinfo.name)
         for chname in chnames:
-            chinfo2 = self.fv.get_channelInfo(chname)
+            chinfo2 = self.fv.get_channel(chname)
 
             # set pan position on their viewer
             image = chinfo2.fitsimage.get_image()
@@ -388,7 +385,7 @@ class WCSMatch(GingaPlugin.GlobalPlugin):
         # for all other channels except ours
         chnames = self.get_other_channels(chinfo.name)
         for chname in chnames:
-            chinfo2 = self.fv.get_channelInfo(chname)
+            chinfo2 = self.fv.get_channel(chname)
 
             # set our pan position on their viewer
             image = chinfo2.fitsimage.get_image()
@@ -402,7 +399,7 @@ class WCSMatch(GingaPlugin.GlobalPlugin):
             # no reference image
             return
 
-        chinfo = self.fv.get_channelInfo(chname)
+        chinfo = self.fv.get_channel_info()
         viewer = chinfo.fitsimage
 
         image = viewer.get_image()

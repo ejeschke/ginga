@@ -1,9 +1,6 @@
 #
 # Contents.py -- Table of Contents plugin for fits viewer
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c)  Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -125,7 +122,7 @@ class Contents(GingaPlugin.GlobalPlugin):
         else:
             new_highlight = set([])
             for chname in self.name_dict:
-                channel = self.fv.get_channelInfo(chname)
+                channel = self.fv.get_channel_info(chname)
                 new_highlight |= channel.extdata.contents_old_highlight
         self.update_highlights(set([]), new_highlight)
 
@@ -216,7 +213,7 @@ class Contents(GingaPlugin.GlobalPlugin):
         del file_dict[name]
 
         # Unhighlight
-        channel = self.fv.get_channelInfo(chname)
+        channel = self.fv.get_channel_info(chname)
         key = (chname, name)
         self._hl_path.discard(key)
         channel.extdata.contents_old_highlight.discard(key)

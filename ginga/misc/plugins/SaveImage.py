@@ -1,3 +1,9 @@
+#
+# SaveImage.py -- Save output images global plugin for Ginga
+#
+# This is open-source software licensed under a BSD license.
+# Please see the file LICENSE.txt for details.
+#
 """Save output images global plugin for Ginga."""
 from __future__ import absolute_import, division, print_function
 from ginga.util.six import itervalues
@@ -166,7 +172,7 @@ Output image will have the filename of <inputname>_<suffix>.fits.""")
         self.treeview.clear()
         self.w.status.set_text('')
 
-        channel = self.fv.get_channelInfo(self.chname)
+        channel = self.fv.get_channel(self.chname)
         if channel is None:
             return
 
@@ -242,10 +248,10 @@ Output image will have the filename of <inputname>_<suffix>.fits.""")
 
         self.logger.debug("channel configuration has changed--updating gui")
         try:
-            channel = self.fv.get_channelInfo(self.chname)
+            channel = self.fv.get_channel(self.chname)
 
         except KeyError:
-            channel = self.fv.get_channelInfo()
+            channel = self.fv.get_channel_info()
 
         if channel is None:
             raise ValueError('No channel available')
@@ -255,7 +261,7 @@ Output image will have the filename of <inputname>_<suffix>.fits.""")
         w = self.w.channel_name
         w.clear()
 
-        self.chnames = list(self.fv.get_channelNames())
+        self.chnames = list(self.fv.get_channel_names())
         #self.chnames.sort()
         for chname in self.chnames:
             w.append_text(chname)
@@ -309,7 +315,7 @@ Output image will have the filename of <inputname>_<suffix>.fits.""")
         Limit each HISTORY line to given number of characters.
         Subsequent lines of the same history will be indented.
         """
-        channel = self.fv.get_channelInfo(self.chname)
+        channel = self.fv.get_channel(self.chname)
         if channel is None:
             return
 
@@ -376,7 +382,7 @@ Output image will have the filename of <inputname>_<suffix>.fits.""")
 
         """
         maxsize = self.settings.get('max_mosaic_size', 1e8)  # Default 10k x 10k
-        channel = self.fv.get_channelInfo(self.chname)
+        channel = self.fv.get_channel(self.chname)
         image = channel.datasrc[key]
 
         # Prevent writing very large mosaic
@@ -398,7 +404,7 @@ Output image will have the filename of <inputname>_<suffix>.fits.""")
 
     def _write_mef(self, key, extlist, outfile):
         """Write out regular multi-extension FITS data."""
-        channel = self.fv.get_channelInfo(self.chname)
+        channel = self.fv.get_channel(self.chname)
         with fits.open(outfile, mode='update') as pf:
             # Process each modified data extension
             for idx in extlist:

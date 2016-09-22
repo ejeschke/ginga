@@ -56,6 +56,13 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         self.filesel = None
         self.menubar = None
 
+        # this holds registered viewers
+        self.viewer_db = {}
+
+        self.register_viewer(Viewers.CanvasView)
+        self.register_viewer(Viewers.TableViewGw)
+
+
     def set_layout(self, layout):
         self.layout = layout
 
@@ -263,7 +270,7 @@ class GingaView(GwMain.GwMain, Widgets.Application):
 
         # Get image from current focused channel
         channel = self.get_current_channel()
-        viewer = channel.viewer
+        viewer = channel.fitsimage
         settings = viewer.get_settings()
         rgbmap = viewer.get_rgbmap()
 
@@ -291,6 +298,41 @@ class GingaView(GwMain.GwMain, Widgets.Application):
 
         root.fullscreen()
         self.w.fscreen = root
+
+    def register_viewer(self, vclass):
+        self.viewer_db[vclass.vname] = Bunch.Bunch(vname=vclass.vname,
+                                                   vclass=vclass,
+                                                   vtypes=vclass.vtypes)
+
+    def get_viewer_names(self, dataobj):
+        """Returns a list of viewer names that are registered that
+        can view `dataobj`.
+        """
+        res = []
+        for bnch in self.viewer_db.values():
+            for vtype in bnch.vtypes:
+                if isinstance(dataobj, vtype):
+                    res.append(bnch.vname)
+        return res
+
+    def make_viewer(self, vname, channel):
+
+        if not vname in self.viewer_db:
+            raise ValueError("I don't know how to build a '%s' viewer" % (
+                vname))
+
+        stk_w = channel.widget
+        settings = channel.settings
+
+        bnch = self.viewer_db[vname]
+
+        viewer = bnch.vclass(logger=self.logger,
+                             settings=channel.settings)
+        stk_w.add_widget(viewer.get_widget(), title=vname)
+
+        self.update_pending()
+
+        channel.connect_viewer(viewer)
 
     ####################################################
     # THESE METHODS ARE CALLED FROM OTHER MODULES & OBJECTS
@@ -355,17 +397,12 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         vbox.add_widget(stk_w, stretch=1)
         fi.set_name(name)
 
-        # build table viewer
-        tbl_viewer = Viewers.TableViewGw(logger=self.logger,
-                                         settings=settings)
-        stk_w.add_widget(tbl_viewer.get_widget(), title='table')
-
         # Add the viewer to the specified workspace
         self.ds.add_tab(workspace, vbox, 1, name)
 
         self.update_pending()
 
-        bnch = Bunch.Bunch(image_viewer=fi, table_viewer=tbl_viewer,
+        bnch = Bunch.Bunch(image_viewer=fi,
                            widget=stk_w, container=vbox,
                            workspace=workspace)
         return bnch
@@ -437,8 +474,8 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         self.ds.show_dialog(dialog)
 
     def gui_delete_channel(self, chname=None):
-        channel = self.get_channelInfo(chname=chname)
-        if (len(self.get_channelNames()) == 0) or (channel is None):
+        channel = self.get_channel(chname)
+        if (len(self.get_channel_names()) == 0) or (channel is None):
             self.show_error("There are no more channels to delete.")
             return
 
@@ -739,7 +776,7 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         ws.use_tabs(tf)
 
     def _get_channel_by_container(self, child):
-        for chname in self.get_channelNames():
+        for chname in self.get_channel_names():
             channel = self.get_channel(chname)
             if channel.container == child:
                 return channel

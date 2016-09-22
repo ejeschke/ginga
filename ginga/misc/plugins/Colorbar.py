@@ -106,7 +106,7 @@ class Colorbar(GingaPlugin.GlobalPlugin):
         ColorBar.  It displays the value of the mouse position in the
         ColorBar in the Readout (if any).
         """
-        channel = self.fv.get_channelInfo()
+        channel = self.fv.get_channel_info()
         if channel is None:
             return
         readout = channel.extdata.get('readout', None)
@@ -127,9 +127,9 @@ class Colorbar(GingaPlugin.GlobalPlugin):
             self.change_cbar(self.fv, channel, self.colorbar)
 
     def start(self):
-        ## names = self.fv.get_channelNames()
+        ## names = self.fv.get_channel_names()
         ## for name in names:
-        ##     channel = self.fv.get_channelInfo(name)
+        ##     channel = self.fv.get_channel(name)
         ##     self.add_channel_cb(self.fv, channel)
         pass
 

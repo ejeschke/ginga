@@ -1,9 +1,6 @@
 #
 # Cursor.py -- Cursor plugin for Ginga viewer
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -57,7 +54,7 @@ class Cursor(GingaPlugin.GlobalPlugin):
             rw = self.readout.get_widget()
             container.add_widget(rw, stretch=0)
 
-            channel = self.fv.get_channelInfo()
+            channel = self.fv.get_channel_info()
             if channel is not None:
                 self.focus_cb(channel.fitsimage, True)
 
@@ -86,9 +83,9 @@ class Cursor(GingaPlugin.GlobalPlugin):
         self.logger.debug("deleting channel %s" % (chname))
 
     def start(self):
-        ## names = self.fv.get_channelNames()
+        ## names = self.fv.get_channel_names()
         ## for name in names:
-        ##     channel = self.fv.get_channelInfo(name)
+        ##     channel = self.fv.get_channel_info(name)
         ##     self.add_channel_cb(self.fv, channel)
         pass
 
@@ -121,8 +118,8 @@ class Cursor(GingaPlugin.GlobalPlugin):
 
         else:
             # Get this channel's readout (if any)
-            chname = self.fv.get_channelName(fitsimage)
-            channel = self.fv.get_channelInfo(chname)
+            chname = self.fv.get_channel_name(fitsimage)
+            channel = self.fv.get_channel(chname)
             self.readout = channel.extdata.get('readout', None)
 
     def focus_cb(self, fitsimage, tf):

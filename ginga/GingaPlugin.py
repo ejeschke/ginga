@@ -53,8 +53,10 @@ class LocalPlugin(object):
 
         # find our channel info
         if self.fitsimage is not None:
-            self.chname = self.fv.get_channelName(self.fitsimage)
-            self.chinfo = self.fv.get_channelInfo(self.chname)
+            self.chname = self.fv.get_channel_name(self.fitsimage)
+            self.channel = self.fv.get_channel(self.chname)
+            # TO BE DEPRECATED
+            self.chinfo = self.channel
 
         # Holds GUI widgets
         self.w = Bunch.Bunch()

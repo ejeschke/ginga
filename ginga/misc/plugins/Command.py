@@ -151,7 +151,7 @@ class CommandInterpreter(object):
 
     def get_viewer(self, chname):
         if chname is None:
-            channel = self.fv.get_channelInfo()
+            channel = self.fv.get_channel_info()
         else:
             channel = self.fv.get_channel_on_demand(chname)
 
@@ -197,8 +197,8 @@ class CommandInterpreter(object):
         all instances of the plugin before attempting to reload.
         """
         self.fv.mm.loadModule(plname)
-        for chname in self.fv.get_channelNames():
-            chinfo = self.fv.get_channelInfo(chname)
+        for chname in self.fv.get_channel_names():
+            chinfo = self.fv.get_channel(chname)
             chinfo.opmon.reloadPlugin(plname, chinfo=chinfo)
         return True
 
@@ -392,7 +392,7 @@ class CommandInterpreter(object):
 
         List the channels, showing the current one.
         """
-        names = list(self.fv.get_channelNames())
+        names = list(self.fv.get_channel_names())
         names.sort()
 
         if len(names) == 0:
@@ -400,7 +400,7 @@ class CommandInterpreter(object):
             return
 
         res = []
-        cur_ch = self.fv.get_channelInfo()
+        cur_ch = self.fv.get_channel_info()
         for name in names:
             if (cur_ch is not None) and (cur_ch.name == name):
                 res.append("=>%s" % (name))

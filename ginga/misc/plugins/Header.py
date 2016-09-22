@@ -139,9 +139,9 @@ class Header(GingaPlugin.GlobalPlugin):
         self.set_header(self.info, image)
 
     def start(self):
-        names = self.fv.get_channelNames()
+        names = self.fv.get_channel_names()
         for name in names:
-            channel = self.fv.get_channelInfo(name)
+            channel = self.fv.get_channel(name)
             self.add_channel(self.fv, channel)
 
     def redo(self, channel, image):
@@ -154,7 +154,7 @@ class Header(GingaPlugin.GlobalPlugin):
 
     def set_sortable_cb(self, info):
         self._image = None
-        channel = self.fv.get_channelInfo(info.chname)
+        channel = self.fv.get_channel(info.chname)
         image = channel.get_current_image()
         self.set_header(info, image)
 
