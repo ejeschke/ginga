@@ -18,7 +18,6 @@ class Header(GingaPlugin.GlobalPlugin):
         super(Header, self).__init__(fv)
 
         self._image = None
-        self.channel = {}
         self.active = None
         self.info = None
         self.columns = [('Keyword', 'key'),
@@ -110,28 +109,29 @@ class Header(GingaPlugin.GlobalPlugin):
         self.nb.add_widget(sw)
         # index = self.nb.index_of(sw)
         info.setvals(widget=sw)
-        self.channel[chname] = info
+        channel.extdata._header_info = info
 
     def delete_channel(self, viewer, channel):
         chname = channel.name
         self.logger.debug("deleting channel %s" % (chname))
-        widget = self.channel[chname].widget
+        info = channel.extdata._header_info
+        widget = info.widget
         self.nb.remove(widget, delete=True)
         self.active = None
         self.info = None
-        del self.channel[chname]
 
     def focus_cb(self, viewer, channel):
         chname = channel.name
 
         if self.active != chname:
-            if chname not in self.channel:
+            if not channel.extdata.has_key('_header_info'):
                 self.add_channel(viewer, channel)
-            widget = self.channel[chname].widget
+            info = channel.extdata._header_info
+            widget = info.widget
             index = self.nb.index_of(widget)
             self.nb.set_index(index)
             self.active = chname
-            self.info = self.channel[self.active]
+            self.info = info
 
         image = channel.get_current_image()
         if image is None:
@@ -148,7 +148,7 @@ class Header(GingaPlugin.GlobalPlugin):
         """This is called when buffer is modified."""
         self._image = None  # Skip cache checking in set_header()
         chname = channel.name
-        info = self.channel[chname]
+        info = channel.extdata._header_info
 
         self.set_header(info, image)
 

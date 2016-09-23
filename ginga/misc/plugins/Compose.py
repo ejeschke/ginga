@@ -59,10 +59,10 @@ class Compose(GingaPlugin.LocalPlugin):
 
         self.layertag = 'compose-canvas'
 
-        self.dc = fv.getDrawClasses()
+        self.dc = fv.get_draw_classes()
         canvas = self.dc.DrawingCanvas()
         canvas.set_callback('drag-drop', self.drop_file_cb)
-        canvas.setSurface(self.fitsimage)
+        canvas.set_surface(self.fitsimage)
         self.canvas = canvas
 
         self.gui_up = False
@@ -75,9 +75,9 @@ class Compose(GingaPlugin.LocalPlugin):
         vbox.set_border_width(4)
         vbox.set_spacing(2)
 
-        self.msgFont = self.fv.getFont("sansFont", 12)
+        self.msg_font = self.fv.get_font("sansFont", 12)
         tw = Widgets.TextArea(wrap=True, editable=False)
-        tw.set_font(self.msgFont)
+        tw.set_font(self.msg_font)
         self.tw = tw
 
         fr = Widgets.Expander("Instructions")
@@ -319,7 +319,7 @@ Then manipulate channel mix using the sliders.""")
         # start ruler drawing operation
         p_canvas = self.fitsimage.get_canvas()
         try:
-            obj = p_canvas.getObjectByTag(self.layertag)
+            obj = p_canvas.get_object_by_tag(self.layertag)
 
         except KeyError:
             # Add ruler layer
@@ -337,11 +337,11 @@ Then manipulate channel mix using the sliders.""")
         # remove the canvas from the image
         p_canvas = self.fitsimage.get_canvas()
         try:
-            p_canvas.deleteObjectByTag(self.layertag)
+            p_canvas.delete_object_by_tag(self.layertag)
         except:
             pass
         self.canvas.ui_setActive(False)
-        self.fv.showStatus("")
+        self.fv.show_status("")
         self.gui_up = False
 
     def redo(self):

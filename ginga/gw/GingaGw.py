@@ -113,7 +113,7 @@ class GingaView(GwMain.GwMain, Widgets.Application):
 
         self.w.root.show()
 
-    def getPluginManager(self, logger, fitsview, ds, mm):
+    def get_plugin_manager(self, logger, fitsview, ds, mm):
         return PluginManager.PluginManager(logger, fitsview, ds, mm)
 
     def _name_mangle(self, name, pfx=''):
@@ -152,7 +152,7 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         filemenu.add_separator()
 
         item = filemenu.add_name("Quit")
-        item.add_callback('activated', lambda *args: self.windowClose())
+        item.add_callback('activated', lambda *args: self.window_close())
 
         # create a Channel pulldown menu, and add it to the menu bar
         chmenu = menubar.add_name("Channel")
@@ -300,6 +300,9 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         self.w.fscreen = root
 
     def register_viewer(self, vclass):
+        """Register a channel viewer with the reference viewer.
+        `vclass` is the class of the viewer.
+        """
         self.viewer_db[vclass.vname] = Bunch.Bunch(vname=vclass.vname,
                                                    vclass=vclass,
                                                    vtypes=vclass.vtypes)
@@ -316,7 +319,8 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         return res
 
     def make_viewer(self, vname, channel):
-
+        """Make a viewer whose type name is `vname` and add it to `channel`.
+        """
         if not vname in self.viewer_db:
             raise ValueError("I don't know how to build a '%s' viewer" % (
                 vname))
@@ -330,9 +334,14 @@ class GingaView(GwMain.GwMain, Widgets.Application):
                              settings=channel.settings)
         stk_w.add_widget(viewer.get_widget(), title=vname)
 
+        # let the GUI respond to this widget addition
         self.update_pending()
 
+        # let the channel object do any necessary initialization
         channel.connect_viewer(viewer)
+
+        # finally, let the viewer do any viewer-side initialization
+        viewer.initialize_channel(self, channel)
 
     ####################################################
     # THESE METHODS ARE CALLED FROM OTHER MODULES & OBJECTS
@@ -546,7 +555,7 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         self.filesel.popup("Load File", self.load_file,
                            initialdir=initialdir)
 
-    def statusMsg(self, format, *args):
+    def status_msg(self, format, *args):
         if not format:
             s = ''
         else:
@@ -620,7 +629,7 @@ class GingaView(GwMain.GwMain, Widgets.Application):
                 lsize = 0
         hsplit.set_sizes([lsize, msize, rsize])
 
-    def getFont(self, fontType, pointSize):
+    def get_font(self, fontType, pointSize):
         font_family = self.settings.get(fontType)
         return GwHelp.get_font(font_family, pointSize)
 
@@ -633,7 +642,7 @@ class GingaView(GwMain.GwMain, Widgets.Application):
     # CALLBACKS
     ####################################################
 
-    def windowClose(self, *args):
+    def window_close(self, *args):
         """Quit the application.
         """
         self.quit()
@@ -805,5 +814,12 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         if channel is not None:
             self.gui_delete_channel(channel.name)
 
+
+    ########################################################
+    ### NON-PEP8 PREDECESSORS: TO BE DEPRECATED
+
+    getFont = get_font
+    getPluginManager = get_plugin_manager
+    statusMsg = status_msg
 
 # END

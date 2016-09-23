@@ -39,7 +39,7 @@ except (ImportError, Exception):
 
 # Local application imports
 from ginga import cmap, imap
-from ginga import AstroImage, RGBImage
+from ginga import AstroImage, RGBImage, BaseImage
 from ginga.misc import Bunch, Datasrc, Callback, Timer, Future
 from ginga.util import catalog, iohelper
 from ginga.canvas.CanvasObject import drawCatalog
@@ -144,7 +144,7 @@ class GingaControl(Callback.Callbacks):
         self.cursor_interval = self.settings.get('cursor_interval', 0.050)
 
 
-    def get_ServerBank(self):
+    def get_server_bank(self):
         return self.imgsrv
 
     def get_preferences(self):
@@ -199,8 +199,8 @@ class GingaControl(Callback.Callbacks):
         self._cursor_last_update = time.time()
         try:
             image = viewer.get_image()
-            if image is None:
-                # No image loaded for this channel
+            if (image is None) or not isinstance(image, BaseImage.BaseImage):
+                # No compatible image loaded for this channel
                 return
 
             settings = viewer.get_settings()
@@ -215,17 +215,19 @@ class GingaControl(Callback.Callbacks):
             self.logger.warning("Can't get info under the cursor: %s" % (str(e)))
             return
 
-        self.make_callback('field-info', viewer, info)
+        # TODO: can this be made more efficient?
+        chname = self.get_channel_name(viewer)
+        channel = self.get_channel(chname)
+
+        self.make_callback('field-info', channel, info)
 
         self.update_pending()
         return True
 
     def motion_cb(self, viewer, button, data_x, data_y):
-        """Motion event in the big fits window.  Show the pointing
+        """Motion event in the channel viewer window.  Show the pointing
         information under the cursor.
         """
-        ## if button == 0:
-        ##     self.showxy(viewer, data_x, data_y)
         self.showxy(viewer, data_x, data_y)
         return True
 
@@ -867,7 +869,7 @@ class GingaControl(Callback.Callbacks):
             self.logger.error("Couldn't switch to image '%s': %s" % (
                 str(imname), str(e)))
 
-    def _redo_plugins(self, image, channel):
+    def redo_plugins(self, image, channel):
         # New data in channel
         # update active global plugins
         opmon = self.gpmon
@@ -891,7 +893,7 @@ class GingaControl(Callback.Callbacks):
                 self.logger.error("Failed to continue operation: %s" % (str(e)))
                 # TODO: log traceback?
 
-    def _close_plugins(self, channel):
+    def close_plugins(self, channel):
         """Close all plugins associated with the channel."""
         opmon = channel.opmon
         for key in opmon.get_active():
@@ -911,10 +913,10 @@ class GingaControl(Callback.Callbacks):
 
             # add cb so that if image is modified internally
             #  our plugins get updated
-            image.add_callback('modified', self._redo_plugins, channel)
+            image.add_callback('modified', self.redo_plugins, channel)
 
             self.logger.debug("executing redo() in plugins...")
-            self._redo_plugins(image, channel)
+            self.redo_plugins(image, channel)
 
             split_time1 = time.time()
             self.logger.info("Large image update: %.4f sec" % (
@@ -1127,7 +1129,7 @@ class GingaControl(Callback.Callbacks):
             channel = self.channel[name]
 
             # Close local plugins open on this channel
-            self._close_plugins(channel)
+            self.close_plugins(channel)
 
             try:
                 idx = self.channel_names.index(chname)
@@ -1287,7 +1289,7 @@ class GingaControl(Callback.Callbacks):
     showStatus = show_status
     getfocus_fitsimage = getfocus_viewer
     get_fitsimage = get_viewer
-
+    get_ServerBank = get_server_bank
 
 def _rmtmpdir(tmpdir):
     if os.path.isdir(tmpdir):

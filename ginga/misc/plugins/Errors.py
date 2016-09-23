@@ -19,16 +19,16 @@ class Errors(GingaPlugin.GlobalPlugin):
         self.gui_up = False
 
     def build_gui(self, container):
-        self.msg_font = self.fv.getFont("fixedFont", 10)
+        self.msg_font = self.fv.get_font("fixedFont", 10)
 
         vbox = Widgets.VBox()
 
         mlst = Widgets.VBox()
         mlst.set_spacing(2)
-        self.msgList = mlst
+        self.msg_list = mlst
 
         sw = Widgets.ScrollArea()
-        sw.set_widget(self.msgList)
+        sw.set_widget(self.msg_list)
 
         vbox.add_widget(sw, stretch=1)
 
@@ -83,14 +83,14 @@ class Errors(GingaPlugin.GlobalPlugin):
         # special hack for Qt
         vbox.cfg_expand(horizontal=1)
 
-        self.msgList.add_widget(vbox, stretch=0)
+        self.msg_list.add_widget(vbox, stretch=0)
         # TODO: force scroll to bottom
 
     def remove_error(self, child):
-        self.msgList.remove(child)
+        self.msg_list.remove(child)
 
     def remove_all(self):
-        for child in list(self.msgList.get_children()):
+        for child in list(self.msg_list.get_children()):
             self.remove_error(child)
 
     def __str__(self):

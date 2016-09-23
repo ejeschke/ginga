@@ -58,14 +58,14 @@ class TVMask(LocalPlugin):
         self._maskobjs = []
         self._treepaths = []
 
-        self.dc = self.fv.getDrawClasses()
+        self.dc = self.fv.get_draw_classes()
 
         canvas = self.dc.DrawingCanvas()
         canvas.enable_draw(True)
         canvas.enable_edit(False)
         canvas.set_callback('draw-event', self.hl_canvas2table_box)
         canvas.set_callback('cursor-down', self.hl_canvas2table)
-        canvas.setSurface(self.fitsimage)
+        canvas.set_surface(self.fitsimage)
         canvas.set_drawtype('rectangle', color='green', linestyle='dash')
         self.canvas = canvas
 
@@ -81,9 +81,9 @@ class TVMask(LocalPlugin):
     def build_gui(self, container):
         vbox, sw, self.orientation = Widgets.get_oriented_box(container)
 
-        msgFont = self.fv.getFont('sansFont', 12)
+        msg_font = self.fv.get_font('sansFont', 12)
         tw = Widgets.TextArea(wrap=True, editable=False)
-        tw.set_font(msgFont)
+        tw.set_font(msg_font)
         self.tw = tw
 
         fr = Widgets.Expander('Instructions')
@@ -189,13 +189,13 @@ Press "Hide" to clear all masks (does not clear memory). Press "Show" to replot 
         This does not clear loaded masks from memory."""
         if self.masktag:
             try:
-                self.canvas.deleteObjectByTag(self.masktag, redraw=False)
+                self.canvas.delete_object_by_tag(self.masktag, redraw=False)
             except:
                 pass
 
         if self.maskhltag:
             try:
-                self.canvas.deleteObjectByTag(self.maskhltag, redraw=False)
+                self.canvas.delete_object_by_tag(self.maskhltag, redraw=False)
             except:
                 pass
 
@@ -273,7 +273,7 @@ Press "Hide" to clear all masks (does not clear memory). Press "Show" to replot 
         # Remove existing highlight
         if self.maskhltag:
             try:
-                self.canvas.deleteObjectByTag(self.maskhltag, redraw=False)
+                self.canvas.delete_object_by_tag(self.maskhltag, redraw=False)
             except:
                 pass
 
@@ -296,21 +296,21 @@ Press "Hide" to clear all masks (does not clear memory). Press "Show" to replot 
         self.treeview.clear_selection()
 
         # Remove existing box
-        cobj = canvas.getObjectByTag(tag)
+        cobj = canvas.get_object_by_tag(tag)
         if cobj.kind != 'rectangle':
             return
-        canvas.deleteObjectByTag(tag, redraw=False)
+        canvas.delete_object_by_tag(tag, redraw=False)
 
         # Remove existing highlight
         if self.maskhltag:
             try:
-                canvas.deleteObjectByTag(self.maskhltag, redraw=True)
+                canvas.delete_object_by_tag(self.maskhltag, redraw=True)
             except:
                 pass
 
         # Nothing to do if no masks are displayed
         try:
-            obj = canvas.getObjectByTag(self.masktag)
+            obj = canvas.get_object_by_tag(self.masktag)
         except:
             return
 
@@ -341,13 +341,13 @@ Press "Hide" to clear all masks (does not clear memory). Press "Show" to replot 
         # Remove existing highlight
         if self.maskhltag:
             try:
-                canvas.deleteObjectByTag(self.maskhltag, redraw=True)
+                canvas.delete_object_by_tag(self.maskhltag, redraw=True)
             except:
                 pass
 
         # Nothing to do if no masks are displayed
         try:
-            obj = canvas.getObjectByTag(self.masktag)
+            obj = canvas.get_object_by_tag(self.masktag)
         except:
             return
 
@@ -403,7 +403,7 @@ Press "Hide" to clear all masks (does not clear memory). Press "Show" to replot 
         # insert canvas, if not already
         p_canvas = self.fitsimage.get_canvas()
         try:
-            obj = p_canvas.getObjectByTag(self.layertag)
+            obj = p_canvas.get_object_by_tag(self.layertag)
         except KeyError:
             # Add drawing layer
             p_canvas.add(self.canvas, tag=self.layertag)
@@ -418,18 +418,18 @@ Press "Hide" to clear all masks (does not clear memory). Press "Show" to replot 
         self.modes_off()
 
         self.canvas.ui_setActive(True)
-        self.fv.showStatus('See instructions')
+        self.fv.show_status('See instructions')
 
     def stop(self):
         # remove canvas from image
         p_canvas = self.fitsimage.get_canvas()
         try:
-            p_canvas.deleteObjectByTag(self.layertag)
+            p_canvas.delete_object_by_tag(self.layertag)
         except:
             pass
 
         self.gui_up = False
-        self.fv.showStatus('')
+        self.fv.show_status('')
 
     def __str__(self):
         """

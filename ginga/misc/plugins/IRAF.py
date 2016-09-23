@@ -64,7 +64,7 @@ class IRAF(GingaPlugin.GlobalPlugin):
         self.layertag = 'iraf-canvas'
         # this will be set in initialize()
         self.canvas = None
-        self.dc = fv.getDrawClasses()
+        self.dc = fv.get_draw_classes()
 
         self.addr = iis.get_interface()
 
@@ -538,10 +538,10 @@ class IRAF(GingaPlugin.GlobalPlugin):
     def start_imexamine(self, fitsimage, chname):
         self.logger.info("STARTING")
         # Turn off regular UI processing in the frame
-        self.canvas.setSurface(fitsimage)
+        self.canvas.set_surface(fitsimage)
         # insert layer if it is not already
         try:
-            obj = fitsimage.getObjectByTag(self.layertag)
+            obj = fitsimage.get_object_by_tag(self.layertag)
 
         except KeyError:
             # Add canvas layer
@@ -622,10 +622,10 @@ class IRAF(GingaPlugin.GlobalPlugin):
         if self.mode != 'iraf':
             return False
 
-        fitsimage = self.fv.getfocus_fitsimage()
+        chviewer = self.fv.getfocus_viewer()
 
         if event.state == 'move':
-            self.fv.showxy(fitsimage, data_x, data_y)
+            self.fv.showxy(chviewer, data_x, data_y)
             return True
 
         return False

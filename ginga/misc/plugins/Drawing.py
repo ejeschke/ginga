@@ -27,7 +27,7 @@ class Drawing(GingaPlugin.LocalPlugin):
 
         self.layertag = 'drawing-canvas'
 
-        self.dc = fv.getDrawClasses()
+        self.dc = fv.get_draw_classes()
         canvas = self.dc.DrawingCanvas()
         canvas.enable_draw(True)
         canvas.enable_edit(True)
@@ -35,7 +35,7 @@ class Drawing(GingaPlugin.LocalPlugin):
         canvas.set_callback('draw-event', self.draw_cb)
         canvas.set_callback('edit-event', self.edit_cb)
         canvas.set_callback('edit-select', self.edit_select_cb)
-        canvas.setSurface(self.fitsimage)
+        canvas.set_surface(self.fitsimage)
         # So we can draw and edit with the cursor
         canvas.register_for_cursor_drawing(self.fitsimage)
         self.canvas = canvas
@@ -65,9 +65,9 @@ class Drawing(GingaPlugin.LocalPlugin):
         vbox.set_border_width(4)
         vbox.set_spacing(2)
 
-        msgFont = self.fv.getFont("sansFont", 12)
+        msg_font = self.fv.get_font("sansFont", 12)
         tw = Widgets.TextArea(wrap=True, editable=False)
-        tw.set_font(msgFont)
+        tw.set_font(msg_font)
         self.tw = tw
 
         fr = Widgets.Expander("Instructions")
@@ -187,7 +187,7 @@ For polygons/paths press 'v' to create a vertex, 'z' to remove last vertex.""")
         # insert layer if it is not already
         p_canvas = self.fitsimage.get_canvas()
         try:
-            obj = p_canvas.getObjectByTag(self.layertag)
+            obj = p_canvas.get_object_by_tag(self.layertag)
 
         except KeyError:
             # Add canvas layer
@@ -200,7 +200,7 @@ For polygons/paths press 'v' to create a vertex, 'z' to remove last vertex.""")
 
     def resume(self):
         self.canvas.ui_setActive(True)
-        self.fv.showStatus("Draw a figure with the right mouse button")
+        self.fv.show_status("Draw a figure with the right mouse button")
 
     def stop(self):
         # remove the canvas from the image
@@ -212,7 +212,7 @@ For polygons/paths press 'v' to create a vertex, 'z' to remove last vertex.""")
         # don't leave us stuck in edit mode
         self.canvas.set_draw_mode('draw')
         self.canvas.ui_setActive(False)
-        self.fv.showStatus("")
+        self.fv.show_status("")
 
     def redo(self):
         pass

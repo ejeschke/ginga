@@ -59,14 +59,13 @@ class Cursor(GingaPlugin.GlobalPlugin):
                 self.focus_cb(channel.fitsimage, True)
 
     def add_channel_cb(self, viewer, channel):
-        chname = channel.name
         fi = channel.fitsimage
+
         fi.add_callback('focus', self.focus_cb)
 
         if not self.share_readout:
             readout = self._build_readout()
             readout.fitsimage = fi
-            fi.add_callback('image-set', self.readout_config, readout)
 
             rw = readout.get_widget()
             channel.container.add_widget(rw, stretch=0)
@@ -105,7 +104,11 @@ class Cursor(GingaPlugin.GlobalPlugin):
         readout.maxv = max(len(str(minval)), len(str(maxval)))
         return True
 
-    def change_readout(self, fitsimage):
+    def redo(self, channel, image):
+        readout = channel.extdata.readout
+        self.readout_config(channel.fitsimage, image, readout)
+
+    def change_readout(self, channel, fitsimage):
         if (self.share_readout) and (self.readout is not None):
             self.logger.debug("configuring readout")
 
@@ -118,8 +121,6 @@ class Cursor(GingaPlugin.GlobalPlugin):
 
         else:
             # Get this channel's readout (if any)
-            chname = self.fv.get_channel_name(fitsimage)
-            channel = self.fv.get_channel(chname)
             self.readout = channel.extdata.get('readout', None)
 
     def focus_cb(self, fitsimage, tf):
@@ -127,16 +128,21 @@ class Cursor(GingaPlugin.GlobalPlugin):
         if (not tf) or fitsimage is None:
             return
 
-        self.change_readout(fitsimage)
+        chname = self.fv.get_channel_name(fitsimage)
+        channel = self.fv.get_channel(chname)
 
-    def field_info_cb(self, viewer, fitsimage, info):
+        self.change_readout(channel, fitsimage)
+
+    def field_info_cb(self, viewer, channel, info):
         readout = self.readout
         if readout is None:
             return
+
+        fitsimage = channel.fitsimage
         ## self.logger.debug("fitsimage: %s readout.fitsimage: %s" % (
         ##     str(fitsimage), str(readout.fitsimage)))
         if readout.fitsimage != fitsimage:
-            self.change_readout(fitsimage)
+            self.change_readout(channel, fitsimage)
             if self.readout is None:
                 return
             readout = self.readout

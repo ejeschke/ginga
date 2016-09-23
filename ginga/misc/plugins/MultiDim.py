@@ -65,9 +65,6 @@ class MultiDim(GingaPlugin.LocalPlugin):
         self.settings.setDefaults(auto_start_naxis=False)
         self.settings.load(onError='silent')
 
-        # register for new image notification in this channel
-        fitsimage.set_callback('image-set', self.new_image_cb)
-
         self.gui_up = False
 
     def build_gui(self, container):
@@ -83,9 +80,9 @@ class MultiDim(GingaPlugin.LocalPlugin):
         vbox.set_border_width(4)
         vbox.set_spacing(2)
 
-        self.msgFont = self.fv.getFont("sansFont", 12)
+        self.msg_font = self.fv.get_font("sansFont", 12)
         tw = Widgets.TextArea(wrap=True, editable=False)
-        tw.set_font(self.msgFont)
+        tw.set_font(self.msg_font)
         self.tw = tw
 
         fr = Widgets.Expander("Instructions")
@@ -319,16 +316,14 @@ class MultiDim(GingaPlugin.LocalPlugin):
         self.fv.stop_local_plugin(self.chname, str(self))
         return True
 
-    def new_image_cb(self, fitsimage, image):
-        """We are called when a new image is set in the channel.
-        If our GUI is not up, and auto_start_naxis preference is True,
-        and NAXIS >= 3 then start us up.
-        """
+    def redo(self, channel, image):
+
+        fitsimage = channel.fitsimage
+
         if fitsimage != self.fitsimage:
             # Focus is not our channel-->not an event for us
             return False
 
-        image = fitsimage.get_image()
         if image is None:
             return False
 
@@ -349,6 +344,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
             self.fv.start_local_plugin(self.chname, str(self), None)
 
         return True
+
 
     def instructions(self):
         self.tw.set_text("""Use mouse wheel to choose HDU or axis of data cube (NAXIS controls).""")
@@ -372,7 +368,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
         except:
             pass
         self.image = None
-        self.fv.showStatus("")
+        self.fv.show_status("")
 
     def set_hdu(self, idx):
         self.logger.debug("Loading fits hdu #%d" % (idx))
@@ -613,7 +609,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
 
             plt.imsave(target_file, curr_slice_data, vmax=hival,
                        cmap=plt.get_cmap('gray'), origin='lower')
-            self.fv.showStatus("Successfully saved slice")
+            self.fv.show_status("Successfully saved slice")
 
     def save_movie_cb(self):
         start = int(self.w.start_slice.get_text())
@@ -621,10 +617,10 @@ class MultiDim(GingaPlugin.LocalPlugin):
         if not start or not end:
             return
         elif start < 0 or end > self.play_max:
-            self.fv.showStatus("Wrong slice index")
+            self.fv.show_status("Wrong slice index")
             return
         elif start > end:
-            self.fv.showStatus("Wrong slice order")
+            self.fv.show_status("Wrong slice order")
             return
 
         if start == 1:
@@ -648,7 +644,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
             for i in range(start, end):
                 video.write(np.flipud(data_rescaled[i]))
 
-        self.fv.showStatus("Successfully saved movie")
+        self.fv.show_status("Successfully saved movie")
 
     @contextmanager
     def video_writer(self, v):

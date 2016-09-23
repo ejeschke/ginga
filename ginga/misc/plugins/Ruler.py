@@ -17,7 +17,7 @@ class Ruler(GingaPlugin.LocalPlugin):
         self.layertag = 'ruler-canvas'
         self.ruletag = None
 
-        self.dc = fv.getDrawClasses()
+        self.dc = fv.get_draw_classes()
         canvas = self.dc.DrawingCanvas()
         canvas.enable_draw(True)
         canvas.enable_edit(True)
@@ -43,9 +43,9 @@ class Ruler(GingaPlugin.LocalPlugin):
         vbox.set_border_width(4)
         vbox.set_spacing(2)
 
-        self.msgFont = self.fv.getFont("sansFont", 12)
+        self.msg_font = self.fv.get_font("sansFont", 12)
         tw = Widgets.TextArea(wrap=True, editable=False)
-        tw.set_font(self.msgFont)
+        tw.set_font(self.msg_font)
         self.tw = tw
 
         fr = Widgets.Expander("Instructions")
@@ -141,7 +141,7 @@ Display the Zoom tab at the same time to precisely see detail while drawing.""")
 
     def resume(self):
         self.canvas.ui_setActive(True)
-        self.fv.showStatus("Draw a ruler with the right mouse button")
+        self.fv.show_status("Draw a ruler with the right mouse button")
 
     def stop(self):
         # remove the canvas from the image
@@ -151,7 +151,7 @@ Display the Zoom tab at the same time to precisely see detail while drawing.""")
         except:
             pass
         self.canvas.ui_setActive(False)
-        self.fv.showStatus("")
+        self.fv.show_status("")
 
     def redo(self):
         obj = self.canvas.get_object_by_tag(self.ruletag)

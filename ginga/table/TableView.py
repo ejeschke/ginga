@@ -87,6 +87,12 @@ class TableViewBase(Callback.Callbacks):
     get_image = get_table
     set_image = set_table
 
+    def initialize_channel(self, fv, channel):
+        """The reference viewer calls this method with itself and the channel
+        when it is inserted into a channel.
+        """
+        self.logger.warning("subclass should override this method")
+
 
 class TableViewGw(TableViewBase):
 
@@ -142,5 +148,10 @@ class TableViewGw(TableViewBase):
 
     def clear(self):
         self.widget.clear()
+
+    def initialize_channel(self, fv, channel):
+        # no housekeeping to do (for now) on our part, just override to
+        # suppress the logger warning
+        pass
 
 #END

@@ -75,9 +75,9 @@ class SaveImage(GlobalPlugin):
 
         vbox, sw, orientation = Widgets.get_oriented_box(container)
 
-        msgFont = self.fv.getFont('sansFont', 12)
+        msg_font = self.fv.get_font('sansFont', 12)
         tw = Widgets.TextArea(wrap=True, editable=False)
-        tw.set_font(msgFont)
+        tw.set_font(msg_font)
         self.tw = tw
 
         fr = Widgets.Expander('Instructions')
@@ -490,11 +490,11 @@ Output image will have the filename of <inputname>_<suffix>.fits.""")
         except AttributeError:
             pass
 
-        self.fv.showStatus('See instructions')
+        self.fv.show_status('See instructions')
 
     def stop(self):
         self.gui_up = False
-        self.fv.showStatus('')
+        self.fv.show_status('')
 
     def __str__(self):
         """

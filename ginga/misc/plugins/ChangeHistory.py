@@ -250,7 +250,7 @@ class ChangeHistory(GingaPlugin.GlobalPlugin):
 
     def stop(self):
         self.gui_up = False
-        self.fv.showStatus('')
+        self.fv.show_status('')
 
     def start(self):
         self.recreate_toc()

@@ -41,7 +41,7 @@ class ImageViewCanvas(ImageViewMock.ImageViewZoom,
         # enable drawing on the canvas
         canvas.enable_draw(True)
         canvas.ui_setActive(True)
-        canvas.setSurface(self)
+        canvas.set_surface(self)
         # add the canvas to the view.
         self.add(canvas, tag=tag)
         return canvas

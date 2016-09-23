@@ -162,7 +162,7 @@ class ImageViewer(object):
         #canvas.enable_draw(True)
         #canvas.enable_edit(True)
         #canvas.set_drawtype('rectangle', color='lightblue')
-        canvas.setSurface(fi)
+        canvas.set_surface(fi)
         self.canvas = canvas
         # add canvas to view
         private_canvas = fi.get_canvas()

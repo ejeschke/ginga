@@ -16,7 +16,6 @@ class Colorbar(GingaPlugin.GlobalPlugin):
         super(Colorbar, self).__init__(fv)
 
         self._image = None
-        self.channel = {}
         self.active = None
         self.info = None
 
@@ -47,7 +46,7 @@ class Colorbar(GingaPlugin.GlobalPlugin):
 
         chname = channel.name
         info = Bunch.Bunch(chname=chname, channel=channel)
-        self.channel[chname] = info
+        channel.extdata._colorbar_info = info
 
         fi = channel.fitsimage
         rgbmap = fi.get_rgbmap()
@@ -58,7 +57,6 @@ class Colorbar(GingaPlugin.GlobalPlugin):
         self.logger.debug("deleting channel %s" % (chname))
         self.active = None
         self.info = None
-        del self.channel[chname]
 
     def _match_cmap(self, fitsimage, colorbar):
         """
@@ -80,7 +78,7 @@ class Colorbar(GingaPlugin.GlobalPlugin):
 
     #     if self.active != chname:
     #         self.active = chname
-    #         self.info = self.channel[self.active]
+    #         self.info = channel.extdata._colorbar_info
 
     #     image = channel.fitsimage.get_image()
     #     if image is None:
@@ -94,7 +92,7 @@ class Colorbar(GingaPlugin.GlobalPlugin):
         """
         if cbar is None:
             return
-        if fitsimage != self.fv.getfocus_fitsimage():
+        if fitsimage != self.fv.getfocus_viewer():
             # values have changed in a channel that doesn't have the focus
             return False
         loval, hival = value

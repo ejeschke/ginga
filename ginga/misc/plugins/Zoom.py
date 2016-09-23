@@ -140,7 +140,6 @@ class Zoom(GingaPlugin.GlobalPlugin):
     def prepare(self, fitsimage):
         fitssettings = fitsimage.get_settings()
         zoomsettings = self.zoomimage.get_settings()
-        fitsimage.add_callback('image-set', self.new_image_cb)
         # TODO: should we add our own canvas instead?
         fitsimage.add_callback('motion', self.motion_cb)
         for name in ['cuts']:
@@ -163,28 +162,22 @@ class Zoom(GingaPlugin.GlobalPlugin):
 
     # CALLBACKS
 
-    def new_image_cb(self, fitsimage, image):
-        if fitsimage != self.fv.getfocus_fitsimage():
-            return True
-
-        self.fitsimage_focus = fitsimage
-        # Reflect transforms, colormap, etc.
-        fitsimage.copy_attributes(self.zoomimage,
-                                  ['transforms', 'cutlevels',
-                                   'rgbmap'])
-
-        ## data = image.get_data()
-        ## self.set_data(data)
-
-    def focus_cb(self, viewer, channel):
+    def update_zoomviewer(self, channel):
         fitsimage = channel.fitsimage
         self.fitsimage_focus = fitsimage
         # Reflect transforms, colormap, etc.
         fitsimage.copy_attributes(self.zoomimage,
                                   ['transforms', 'cutlevels',
                                    'rgbmap', 'rotation'])
+    def redo(self, channel, image):
+        fitsimage = channel.fitsimage
+        if fitsimage != self.fv.getfocus_viewer():
+            return True
 
-        # TODO: redo cutout?
+        self.update_zoomviewer(channel)
+
+    def focus_cb(self, viewer, channel):
+        self.update_zoomviewer(channel)
 
     # Match cut-levels to the ones in the "main" image
     def cutset_cb(self, setting, value, fitsimage):

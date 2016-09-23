@@ -325,7 +325,7 @@ class Compass(OnePointOneRadiusMixin, CanvasObjectBase):
     def draw(self, viewer):
         cr = viewer.renderer.setup_cr(self)
         cr.set_font_from_shape(self)
-        
+
         try:
             (cx1, cy1), (cx2, cy2), (cx3, cy3) = self.get_cpoints(viewer)
         except ValueError:
@@ -521,7 +521,7 @@ class Annulus(AnnulusMixin, OnePointOneRadiusMixin, CompoundObject):
     Examples
     --------
     >>> tag = canvas.add(Annulus(100, 200, 10, width=5, atype='circle'))
-    >>> obj = canvas.getObjectByTag(tag)
+    >>> obj = canvas.get_object_by_tag(tag)
     >>> arr_masked = image.cutout_shape(obj)
 
     """
