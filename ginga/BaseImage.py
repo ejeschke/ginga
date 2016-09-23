@@ -17,9 +17,9 @@ class ImageError(Exception):
     pass
 
 
-class BaseImage(Callback.Callbacks):
+class ViewerObjectBase(Callback.Callbacks):
 
-    def __init__(self, data_np=None, metadata=None, logger=None, name=None):
+    def __init__(self, metadata=None, logger=None, name=None):
 
         Callback.Callbacks.__init__(self)
 
@@ -27,27 +27,70 @@ class BaseImage(Callback.Callbacks):
             self.logger = logger
         else:
             self.logger = logging.Logger('BaseImage')
-        if data_np is None:
-            data_np = numpy.zeros((1, 1))
-        self._data = data_np
         self.metadata = {}
         if metadata:
             self.update_metadata(metadata)
-        self.order = ''
-        self.name = name
-        # make sure an image has these attributes
+        # make sure an object has these attributes
         # TODO: this maybe should have a unique random string or something
         # but we'd have to fix a lot of code that is currently checking for
         # None
         self.metadata.setdefault('name', None)
 
-        self._set_minmax()
-
-        self.autocuts = AutoCuts.Histogram(self.logger)
-
         # For callbacks
         for name in ('modified', ):
             self.enable_callback(name)
+
+    def get_metadata(self):
+        return self.metadata.copy()
+
+    def clear_metadata(self):
+        self.metadata = {}
+
+    def update_metadata(self, map_like):
+        for key, val in map_like.items():
+            self.metadata[key] = val
+
+    def get(self, kwd, *args):
+        if kwd in self.metadata:
+            return self.metadata[kwd]
+        else:
+            # return a default if there is one
+            if len(args) > 0:
+                return args[0]
+            raise KeyError(kwd)
+
+    def get_list(self, *args):
+        return list(map(self.get, args))
+
+    def __getitem__(self, kwd):
+        return self.metadata[kwd]
+
+    def update(self, kwds):
+        self.metadata.update(kwds)
+
+    def set(self, **kwds):
+        self.update(kwds)
+
+    def __setitem__(self, kwd, value):
+        self.metadata[kwd] = value
+
+
+class BaseImage(ViewerObjectBase):
+
+    def __init__(self, data_np=None, metadata=None, logger=None, name=None):
+
+        ViewerObjectBase.__init__(self, logger=logger, metadata=metadata,
+                                  name=name)
+
+        if data_np is None:
+            data_np = numpy.zeros((1, 1))
+        self._data = data_np
+        self.order = ''
+        self.name = name
+
+        self._set_minmax()
+
+        self.autocuts = AutoCuts.Histogram(self.logger)
 
     @property
     def shape(self):
@@ -111,36 +154,6 @@ class BaseImage(Callback.Callbacks):
                 x, y))
         view = numpy.s_[y, x]
         return self._slice(view)
-
-    def get_metadata(self):
-        return self.metadata.copy()
-
-    def get_header(self):
-        return self.get('header', Header())
-
-    def get(self, kwd, *args):
-        if kwd in self.metadata:
-            return self.metadata[kwd]
-        else:
-            # return a default if there is one
-            if len(args) > 0:
-                return args[0]
-            raise KeyError(kwd)
-
-    def get_list(self, *args):
-        return list(map(self.get, args))
-
-    def __getitem__(self, kwd):
-        return self.metadata[kwd]
-
-    def update(self, kwds):
-        self.metadata.update(kwds)
-
-    def set(self, **kwds):
-        self.update(kwds)
-
-    def __setitem__(self, kwd, value):
-        self.metadata[kwd] = value
 
     def set_data(self, data_np, metadata=None, astype=None):
         """Use this method to SHARE (not copy) the incoming array.
@@ -221,9 +234,8 @@ class BaseImage(Callback.Callbacks):
         else:
             return (self.minval_noinf, self.maxval_noinf)
 
-    def update_metadata(self, keyDict):
-        for key, val in keyDict.items():
-            self.metadata[key] = val
+    def get_header(self):
+        return self.get('header', Header())
 
     def transfer(self, other, astype=None):
         data = self._get_data()

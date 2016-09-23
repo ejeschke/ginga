@@ -10,7 +10,7 @@ import numpy as np
 from astropy.table import Table
 from astropy.io import fits
 
-from ginga.BaseImage import BaseImage, Header
+from ginga.BaseImage import ViewerObjectBase, Header
 from ginga.misc import Callback
 from ginga.util import wcsmod, iohelper
 
@@ -23,7 +23,7 @@ class AstroTableHeader(Header):
     pass
 
 
-class AstroTable(Callback.Callbacks):
+class AstroTable(ViewerObjectBase):
     """Abstraction of an astronomical data (table).
 
     .. note:: This module is NOT thread-safe!
@@ -39,8 +39,10 @@ class AstroTable(Callback.Callbacks):
     def __init__(self, data_ap=None, metadata=None, logger=None, name=None,
                  wcsclass=wcsClass):
 
-        BaseImage.__init__(self, data_np=data_ap, metadata=metadata,
-                           logger=logger, name=name)
+        ViewerObjectBase.__init__(self, logger=logger, metadata=metadata,
+                                  name=name)
+
+        self._data = data_ap
 
         # wcsclass specifies a pluggable WCS module
         if wcsclass is None:
@@ -72,45 +74,6 @@ class AstroTable(Callback.Callbacks):
     def _get_data(self):
         return self._data
 
-    def _set_minmax(self):
-        self.maxval = 0
-        self.minval = 0
-        self.maxval_noinf = self.maxval
-        self.minval_noinf = self.minval
-
-    def get(self, kwd, *args):
-        if kwd in self.metadata:
-            return self.metadata[kwd]
-        else:
-            # return a default if there is one
-            if len(args) > 0:
-                return args[0]
-            raise KeyError(kwd)
-
-    def __getitem__(self, kwd):
-        return self.metadata[kwd]
-
-    def update(self, kwds):
-        self.metadata.update(kwds)
-
-    def set(self, **kwds):
-        self.update(kwds)
-
-    def __setitem__(self, kwd, value):
-        self.metadata[kwd] = value
-
-    def clear_metadata(self):
-        self.metadata = {}
-
-    def update_metadata(self, keyDict):
-        for key, val in iteritems(keyDict):
-            self.metadata[key] = val
-
-        # TODO: refresh the WCS
-        #if hasattr(self, 'wcs'):
-        #    header = self.get_header()
-        #    self.wcs.load_header(header)
-
     def get_header(self, create=True):
         try:
             # By convention, the fits header is stored in a dictionary
@@ -134,6 +97,10 @@ class AstroTable(Callback.Callbacks):
             self.update_metadata(metadata)
 
         self.make_callback('modified')
+
+    def get_minmax(self, noinf=False):
+        # TODO: what should this mean for a table?
+        return (0, 0)
 
     def load_hdu(self, hdu, fobj=None, **kwargs):
         self.clear_metadata()

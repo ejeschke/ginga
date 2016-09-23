@@ -73,8 +73,12 @@ class Contents(GingaPlugin.GlobalPlugin):
         self.gui_up = False
 
     def switch_image(self, widget, res_dict):
+        if len(res_dict) == 0:
+            return
         chname = list(res_dict.keys())[0]
         img_dict = res_dict[chname]
+        if len(img_dict) == 0:
+            return
         imname = list(img_dict.keys())[0]
         bnch = img_dict[imname]
         path = bnch.path
