@@ -32,7 +32,7 @@ env:
         # *** TODO: We should test the various GUI toolkits that ginga supports
         # on travis-ci ... probably one build for Python 2 / 3 and each toolkit
         # https://ginga.readthedocs.io/en/latest/install.html#dependences
-        - CONDA_DEPENDENCIES='pyqt qt=4'
+        - CONDA_DEPENDENCIES='pyqt'
         # Conda channels now need to be explicitly listed, ci-helpers won't
         # add astropy and astropy-ci-extras by default.
         - CONDA_CHANNELS='astropy-ci-extras astropy'
