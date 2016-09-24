@@ -95,11 +95,13 @@ class GingaView(GwMain.GwMain, Widgets.Application):
 
         # get informed about window closures in existing workspaces
         for wsname in self.ds.get_wsnames():
-            nb = self.ds.get_nb(wsname)
-            if nb.has_callback('page-switch'):
-                nb.add_callback('page-switch', self.page_switch_cb)
-            if nb.has_callback('page-close'):
-                nb.add_callback('page-close', self.page_closed_cb, wsname)
+            ws = self.ds.get_ws(wsname)
+            self.init_workspace(ws)
+            ## nb = self.ds.get_nb(wsname)
+            ## if nb.has_callback('page-switch'):
+            ##     nb.add_callback('page-switch', self.page_switch_cb)
+            ## if nb.has_callback('page-close'):
+            ##     nb.add_callback('page-close', self.page_closed_cb, wsname)
 
         if 'menu' in self.w:
             menuholder = self.w['menu']
@@ -171,31 +173,6 @@ class GingaView(GwMain.GwMain, Widgets.Application):
 
         item = wsmenu.add_name("Add Workspace")
         item.add_callback('activated', lambda *args: self.gui_add_ws())
-
-        # TODO: Make this an individual workspace menu in Desktop
-        if self.ds.has_ws('channels'):
-            mnb = self.ds.get_nb('channels')
-
-            ## item = wsmenu.add_name("Take Tab")
-            ## item.add_callback('activated',
-            ##                   lambda *args: self.ds.take_tab_cb(mnb, args))
-
-            if isinstance(mnb, Widgets.MDIWidget) and mnb.true_mdi:
-                mnb.set_mode('tabs')
-
-                item = wsmenu.add_name("Panes as Tabs", checkable=True)
-                item.add_callback('activated',
-                                  lambda w, tf: self.tabstoggle_cb(mnb, tf))
-                is_tabs = (mnb.get_mode() == 'tabs')
-                item.set_state(is_tabs)
-
-                item = wsmenu.add_name("Tile Panes")
-                item.add_callback('activated',
-                                  lambda *args: self.tile_panes_cb(mnb))
-
-                item = wsmenu.add_name("Cascade Panes")
-                item.add_callback('activated',
-                                  lambda *args: self.cascade_panes_cb(mnb))
 
         # # create a Option pulldown menu, and add it to the menu bar
         # optionmenu = menubar.add_name("Option")
@@ -700,6 +677,52 @@ class GingaView(GwMain.GwMain, Widgets.Application):
 
         return True
 
+    def init_workspace(self, ws):
+
+        # add close handlers
+        ws.add_callback('ws-close', self.workspace_closed_cb)
+
+        if ws.nb.has_callback('page-closed'):
+            ws.nb.add_callback('page-closed', self.page_closed_cb,
+                                   wsname)
+        if ws.nb.has_callback('page-switch'):
+            ws.nb.add_callback('page-switch', self.page_switch_cb)
+
+        if ws.toolbar is not None:
+            ws.toolbar.add_separator()
+
+            btn = Widgets.Button('^')
+            btn.set_tooltip("Previous image in current channel")
+            btn.add_callback('activated', lambda w: self.prev_img())
+            ws.toolbar.add_widget(btn)
+            btn = Widgets.Button('v')
+            btn.set_tooltip("Next image in current channel")
+            btn.add_callback('activated', lambda w: self.next_img())
+            ws.toolbar.add_widget(btn)
+
+            ws.toolbar.add_separator()
+
+            btn = Widgets.Button('<<')
+            btn.set_tooltip("Focus previous channel in this workspace")
+            btn.add_callback('activated', lambda w: self.prev_channel_ws(ws))
+            ws.toolbar.add_widget(btn)
+            btn = Widgets.Button('>>')
+            btn.set_tooltip("Focus next channel in this workspace")
+            btn.add_callback('activated', lambda w: self.next_channel_ws(ws))
+            ws.toolbar.add_widget(btn)
+
+            ws.toolbar.add_separator()
+
+            btn = Widgets.Button('+')
+            btn.set_tooltip("Add a channel to this workspace")
+            btn.add_callback('activated', lambda w: self.add_channel_auto())
+            ws.toolbar.add_widget(btn)
+            btn = Widgets.Button('-')
+            btn.set_tooltip("Delete current channel from this workspace")
+            btn.add_callback('activated',
+                             lambda w: self.remove_channel_auto())
+            ws.toolbar.add_widget(btn)
+
     def add_ws_cb(self, w, rsp, b, names):
         try:
             wsname = str(b.workspace_name.get_text())
@@ -723,23 +746,29 @@ class GingaView(GwMain.GwMain, Widgets.Application):
             idx = b.workspace.get_index()
             in_space = names[idx]
 
-            chpfx = b.channel_prefix.get_text()
+            chpfx = b.channel_prefix.get_text().strip()
             num = int(b.num_channels.get_value())
             share_list = b.share_settings.get_text().split()
 
             self.ds.remove_dialog(w)
 
-            self.error_wrap(self.add_workspace, wsname, wstype,
-                            inSpace=in_space)
+            ws = self.error_wrap(self.add_workspace, wsname, wstype,
+                                 inSpace=in_space)
+            ws.extdata.chpfx = chpfx
+
+            self.init_workspace(ws)
 
             if num <= 0:
                 return
 
             # Create a settings template to copy settings from
-            settings_template = self.prefs.getSettings('channel_Image')
             name = "channel_template_%f" % (time.time())
             settings = self.prefs.createCategory(name)
-            settings_template.copySettings(settings)
+            try:
+                settings_template = self.prefs.getSettings('channel_Image')
+                settings_template.copySettings(settings)
+            except KeyError:
+                settings_template = None
 
             for i in range(num):
                 chname = self.make_channel_name(chpfx)
@@ -775,15 +804,6 @@ class GingaView(GwMain.GwMain, Widgets.Application):
                 'Found {0} and only loading {1}'.format(paths, paths[0]))
             self.load_file(paths[0])
 
-    def tile_panes_cb(self, ws):
-        ws.tile_panes()
-
-    def cascade_panes_cb(self, ws):
-        ws.cascade_panes()
-
-    def tabstoggle_cb(self, ws, tf):
-        ws.use_tabs(tf)
-
     def _get_channel_by_container(self, child):
         for chname in self.get_channel_names():
             channel = self.get_channel(chname)
@@ -806,6 +826,10 @@ class GingaView(GwMain.GwMain, Widgets.Application):
                 self.change_channel(chname, raisew=False)
 
         return True
+
+    def workspace_closed_cb(self, *args):
+        self.logger.debug("workspace requests close")
+        # TODO: this will prompt the user if we should close the workspace
 
     def page_closed_cb(self, widget, child, wsname):
         self.logger.debug("page closed in %s: '%s'" % (wsname, str(child)))

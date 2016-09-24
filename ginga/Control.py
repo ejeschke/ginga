@@ -764,9 +764,19 @@ class GingaControl(Callback.Callbacks):
         ws = self.ds.get_ws(channel.workspace)
         return ws
 
+    def prev_channel_ws(self, ws):
+        ws.to_previous()
+        idx = ws.nb.get_index()
+        child = ws.nb.index_to_widget(idx)
+        chname = child.extdata.tab_title
+        self.change_channel(chname, raisew=True)
+
     def prev_channel(self):
         ws = self.get_current_workspace()
-        ws.to_previous()
+        self.prev_channel_ws(ws)
+
+    def next_channel_ws(self, ws):
+        ws.to_next()
         idx = ws.nb.get_index()
         child = ws.nb.index_to_widget(idx)
         chname = child.extdata.tab_title
@@ -774,11 +784,7 @@ class GingaControl(Callback.Callbacks):
 
     def next_channel(self):
         ws = self.get_current_workspace()
-        ws.to_next()
-        idx = ws.nb.get_index()
-        child = ws.nb.index_to_widget(idx)
-        chname = child.extdata.tab_title
-        self.change_channel(chname, raisew=True)
+        self.next_channel_ws(ws)
 
     def add_channel_auto(self):
         ws = self.get_current_workspace()
@@ -801,7 +807,8 @@ class GingaControl(Callback.Callbacks):
 
     def add_workspace(self, wsname, wstype, inSpace='channels'):
 
-        ws = self.ds.make_ws(name=wsname, group=1, wstype=wstype)
+        ws = self.ds.make_ws(name=wsname, group=1, wstype=wstype,
+                             use_toolbar=True)
         if inSpace != 'top level':
             self.ds.add_tab(inSpace, ws.widget, 1, ws.name)
         else:
@@ -809,10 +816,7 @@ class GingaControl(Callback.Callbacks):
             #self.ds.create_toplevel_ws(width, height, group=1)
             self.ds.add_toplevel(ws, ws.name)
 
-        if ws.widget.has_callback('page-closed'):
-            ws.widget.add_callback('page-closed', self.page_closed_cb, wsname)
-
-        return True
+        return ws
 
     # CHANNEL MANAGEMENT
 

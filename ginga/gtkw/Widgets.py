@@ -1458,6 +1458,13 @@ class Toolbar(ContainerBase):
         w = child.get_widget()
         self.widget.append_widget(w, None, None)
 
+    def add_menu(self, text, menu=None):
+        if menu is None:
+            menu = Menu()
+        child = self.add_action(text)
+        child.add_callback('activated', lambda w: menu.popup())
+        return menu
+
     def add_separator(self):
         self.widget.append_space()
 

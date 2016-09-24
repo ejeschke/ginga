@@ -1,9 +1,6 @@
 #
 # Desktop.py -- Generic widgets Desktop GUI layout
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -35,13 +32,14 @@ class Desktop(Callback.Callbacks):
 
     def make_ws(self, name, group=1, show_tabs=True, show_border=False,
                 detachable=False, tabpos=None, scrollable=True, closeable=False,
-                wstype='tabs'):
+                wstype='tabs', use_toolbar=False):
 
         if (wstype in ('nb', 'ws', 'tabs')) and (not show_tabs):
             wstype = 'stack'
 
         ws = Workspace(name=name, wstype=wstype,
-                       group=group, detachable=detachable)
+                       group=group, detachable=detachable,
+                       use_toolbar=use_toolbar)
         ws.add_callback('page-switch', self.switch_page_cb)
         ws.add_callback('page-detach', self.page_detach_cb)
 
@@ -53,18 +51,12 @@ class Desktop(Callback.Callbacks):
         if (wstype == 'tabs') and show_tabs:
             nb.set_tab_position(tabpos)
 
-        ## vbox = Widgets.VBox()
-        ## toolbar = Widgets.Toolbar(orientation='horizontal')
-        ## vbox.add_widget(toolbar, stretch=0)
-        ## vbox.add_widget(nb, stretch=1)
-
-        ## # create a Workspace pulldown menu, and add it to the menu bar
-        ## winbtn = toolbar.add_action(text="Workspace")
-
-        ## winmenu = Widgets.Menu()
-        ## item = winmenu.add_name("Take Tab")
-        ## item.add_callback('activated',
-        ##                   lambda *args: self.take_tab_cb(nb, args))
+        # # create a Workspace pulldown menu, and add it to the tool bar
+        # if ws.toolbar is not None:
+        #     winmenu = ws.toolbar.add_menu("Workspace")
+        #     item = winmenu.add_name("Take Tab")
+        #     item.add_callback('activated',
+        #                       lambda *args: self.take_tab_cb(nb, args))
 
         self.workspace[name] = ws
         return ws
@@ -153,7 +145,7 @@ class Desktop(Callback.Callbacks):
             nb, index = self._find_nb(name)
             if (nb is not None) and (index >= 0):
                 nb.set_index(index)
-            
+
     def remove_tab(self, tabname):
         nb, index = self._find_nb(tabname)
         widget = self.tab[tabname].widget
@@ -167,7 +159,7 @@ class Desktop(Callback.Callbacks):
             nb.highlight_tab(index, onoff)
 
     def _add_toolbar(self, vbox, ws):
-        toolbar = Widgets.Toolbar()
+        toolbar = Widgets.Toolbar(orientation='horizontal')
         vbox.add_widget(toolbar, stretch=0)
 
         # create a Workspace pulldown menu, and add it to the menu bar
@@ -344,7 +336,7 @@ class Desktop(Callback.Callbacks):
                                  width=-1, group=1, show_tabs=True,
                                  show_border=False, scrollable=True,
                                  detachable=False, wstype='tabs',
-                                 tabpos='top')
+                                 tabpos='top', use_toolbar=False)
             params.update(paramdict)
 
             if kind == 'widget':
@@ -353,12 +345,13 @@ class Desktop(Callback.Callbacks):
             elif kind == 'ws':
                 group = int(params.group)
                 ws = self.make_ws(params.name, group=group,
-                                      show_tabs=params.show_tabs,
-                                      show_border=params.show_border,
-                                      detachable=params.detachable,
-                                      tabpos=params.tabpos,
-                                      wstype=params.wstype,
-                                      scrollable=params.scrollable)
+                                  show_tabs=params.show_tabs,
+                                  show_border=params.show_border,
+                                  detachable=params.detachable,
+                                  tabpos=params.tabpos,
+                                  wstype=params.wstype,
+                                  scrollable=params.scrollable,
+                                  use_toolbar=params.use_toolbar)
                 widget = ws.widget
                 #debug(widget)
 
@@ -540,23 +533,67 @@ class Desktop(Callback.Callbacks):
 
 class Workspace(Widgets.WidgetBase):
 
-    def __init__(self, name, wstype='tab', group=0, detachable=False):
+    def __init__(self, name, wstype='tab', group=0, detachable=False,
+                 use_toolbar=False):
         super(Workspace, self).__init__()
 
         self.name = name
         self.wstype = wstype
         self.wstypes = ['tabs', 'mdi', 'stack', 'grid']
         self.vbox = Widgets.VBox()
+        self.vbox.set_spacing(0)
+        self.vbox.set_border_width(0)
         # for now
         self.widget = self.vbox
         self.nb = None
         self.group = group
         self.detachable = detachable
+        self.toolbar = None
+        self.mdi_menu = None
+        self.wstypes_c = ['Tabs', 'Grid', 'MDI', 'Stack']
+        self.wstypes_l = ['tabs', 'grid', 'mdi', 'stack']
+        self.extdata = Bunch.Bunch()
+
+        if use_toolbar:
+            self.toolbar = Widgets.Toolbar(orientation='horizontal')
+            self.toolbar.set_border_width(0)
+            self.vbox.add_widget(self.toolbar, stretch=0)
+
+            ws_menu = self.toolbar.add_menu("Workspace")
+            item = ws_menu.add_name("Close")
+            item.add_callback('activated', self._close_menuitem_cb)
+
 
         self._set_wstype(wstype)
         self.vbox.add_widget(self.nb, stretch=1)
 
-        for name in ('page-switch', 'page-detach'):
+        if use_toolbar:
+            cbox = Widgets.ComboBox()
+            for _wstype in self.wstypes_c:
+                cbox.append_text(_wstype)
+            idx = self.wstypes_l.index(wstype)
+            cbox.set_index(idx)
+            cbox.add_callback('activated', self.config_wstype_cb)
+            self.toolbar.add_widget(cbox)
+
+            mdi_menu = self.toolbar.add_menu("MDI")
+            ## item = mdi_menu.add_name("Panes as Tabs", checkable=True)
+            ## item.add_callback('activated',
+            ##                   lambda w, tf: self.tabstoggle_cb(tf))
+            ## is_tabs = (self.nb.get_mode() == 'tabs')
+            ## item.set_state(is_tabs)
+
+            item = mdi_menu.add_name("Tile Panes")
+            item.add_callback('activated',
+                              lambda *args: self.tile_panes_cb())
+
+            item = mdi_menu.add_name("Cascade Panes")
+            item.add_callback('activated',
+                              lambda *args: self.cascade_panes_cb())
+            self.mdi_menu = mdi_menu
+            self._update_mdi_menu()
+
+        for name in ('page-switch', 'page-detach', 'ws-close'):
             self.enable_callback(name)
 
     def _set_wstype(self, wstype):
@@ -564,6 +601,7 @@ class Workspace(Widgets.WidgetBase):
             wstype = 'tabs'
             self.nb = Widgets.TabWidget(detachable=self.detachable,
                                             group=self.group)
+
         elif wstype == 'mdi':
             self.nb = Widgets.MDIWidget(mode='mdi')
 
@@ -573,6 +611,7 @@ class Workspace(Widgets.WidgetBase):
         elif wstype == 'grid':
             self.nb = SymmetricGridWidget()
 
+        self._update_mdi_menu()
         if self.nb.has_callback('page-switch'):
             self.nb.add_callback('page-switch', self._switch_page_cb)
         if self.nb.has_callback('page-detach'):
@@ -580,12 +619,35 @@ class Workspace(Widgets.WidgetBase):
 
         self.wstype = wstype
 
+    def _update_mdi_menu(self):
+        if self.mdi_menu is None:
+            return
+        if isinstance(self.nb, Widgets.MDIWidget) and self.nb.true_mdi:
+            self.mdi_menu.set_enabled(True)
+        else:
+            self.mdi_menu.set_enabled(False)
+
+    def tile_panes_cb(self):
+        if isinstance(self.nb, Widgets.MDIWidget) and self.nb.true_mdi:
+            self.nb.tile_panes()
+
+    def cascade_panes_cb(self):
+        if isinstance(self.nb, Widgets.MDIWidget) and self.nb.true_mdi:
+            self.nb.cascade_panes()
+
+    def tabstoggle_cb(self, tf):
+        if isinstance(self.nb, Widgets.MDIWidget) and self.nb.true_mdi:
+            self.nb.use_tabs(tf)
+
     def _switch_page_cb(self, nb, child):
         self.focus_index()
         self.make_callback('page-switch', child)
 
     def _detach_page_cb(self, nb, child):
         self.make_callback('page-detach', child)
+
+    def _close_menuitem_cb(self, *args):
+        self.make_callback('ws-close')
 
     def configure_wstype(self, wstype):
         old_widget = self.nb
@@ -609,6 +671,10 @@ class Workspace(Widgets.WidgetBase):
         if idx >= 0:
             self.nb.set_index(idx)
         self.focus_index()
+
+    def config_wstype_cb(self, w, idx):
+        wstype = self.wstypes_l[idx]
+        self.configure_wstype(wstype)
 
     def cycle_wstype(self):
         idx = self.wstypes.index(self.wstype)
