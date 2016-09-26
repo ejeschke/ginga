@@ -24,6 +24,8 @@ button or create a movie using the **Save Movie** button by entering the
 installed.
 
 For a FITS table, its data are read in using
-:ref:`astropy.table <astropy:astropy-table>`.
+:ref:`astropy.table <astropy:astropy-table>`. Column units, if present, are
+displayed right under the main header as "Row 0000". Table data start from
+"Row 0001".
 
 .. automodule:: ginga.misc.plugins.MultiDim
