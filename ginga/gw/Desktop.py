@@ -61,6 +61,14 @@ class Desktop(Callback.Callbacks):
         self.workspace[name] = ws
         return ws
 
+    def delete_ws(self, name):
+        if not self.has_ws(name):
+            raise ValueError("No workspace named '%s'" % (name))
+
+        # NOTE: currently the Desktop object does not close the window
+        # or tab--you must manage that yourself
+        del self.workspace[name]
+
     def has_ws(self, name):
         return name in self.workspace
 
@@ -158,24 +166,6 @@ class Desktop(Callback.Callbacks):
         if (nb is not None) and hasattr(nb, 'highlight_tab'):
             nb.highlight_tab(index, onoff)
 
-    def _add_toolbar(self, vbox, ws):
-        toolbar = Widgets.Toolbar(orientation='horizontal')
-        vbox.add_widget(toolbar, stretch=0)
-
-        # create a Workspace pulldown menu, and add it to the menu bar
-        winmenu = toolbar.add_name("Workspace")
-
-        item = winmenu.add_name("Take Tab")
-        item.add_callback('activated',
-                          lambda *args: self.take_tab_cb(ws.widget, args))
-
-        ## winmenu.add_separator()
-
-        ## closeitem = winmenu.add_name("Close")
-        ## #bnch.widget.closeEvent = lambda event: self.close_page_cb(bnch, event)
-        ## closeitem.add_callback('activated',
-        ##                        lambda *args: self._close_page(ws))
-
     def show_dialog(self, dialog):
         dialog.show()
         # save a handle so widgets aren't garbage collected
@@ -201,11 +191,16 @@ class Desktop(Callback.Callbacks):
         vbox = Widgets.VBox()
         vbox.set_border_width(0)
         topw.set_widget(vbox)
-        self._add_toolbar(vbox)
 
         vbox.add_widget(bnch.widget, stretch=1)
         topw.show()
         return topw
+
+    def remove_toplevel(self, widget):
+        widget.hide()
+        if widget in self.toplevels:
+            self.toplevels.remove(widget)
+        widget.delete()
 
     def create_toplevel_ws(self, wsname, width, height,
                            group=2, x=None, y=None):
@@ -214,12 +209,10 @@ class Desktop(Callback.Callbacks):
 
         # TODO: this needs to be more sophisticated
         ## root.set_title(wsname)
-        ws = self.make_ws(wsname, wstype='tabs')
+        ws = self.make_ws(wsname, wstype='tabs', use_toolbar=True)
 
         vbox = Widgets.VBox()
         vbox.set_border_width(0)
-
-        self._add_toolbar(vbox, ws)
 
         vbox.add_widget(bnch.widget)
         root.set_widget(vbox)
@@ -574,6 +567,7 @@ class Workspace(Widgets.WidgetBase):
             idx = self.wstypes_l.index(wstype)
             cbox.set_index(idx)
             cbox.add_callback('activated', self.config_wstype_cb)
+            cbox.set_tooltip("Set workspace type")
             self.toolbar.add_widget(cbox)
 
             mdi_menu = self.toolbar.add_menu("MDI")

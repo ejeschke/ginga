@@ -747,6 +747,9 @@ class GingaControl(Callback.Callbacks):
         """Go to the previous image in the channel.
         """
         channel = self.get_current_channel()
+        if channel is None:
+            self.show_error("Please create a channel.", raisetab=True)
+            return
         channel.prev_image()
         return True
 
@@ -754,6 +757,9 @@ class GingaControl(Callback.Callbacks):
         """Go to the next image in the channel.
         """
         channel = self.get_current_channel()
+        if channel is None:
+            self.show_error("Please create a channel.", raisetab=True)
+            return
         channel.next_image()
         return True
 
@@ -765,6 +771,11 @@ class GingaControl(Callback.Callbacks):
         return ws
 
     def prev_channel_ws(self, ws):
+        children = list(ws.nb.get_children())
+        if len(children) == 0:
+            self.show_error("No channels in this workspace.",
+                            raisetab=True)
+            return
         ws.to_previous()
         idx = ws.nb.get_index()
         child = ws.nb.index_to_widget(idx)
@@ -773,9 +784,18 @@ class GingaControl(Callback.Callbacks):
 
     def prev_channel(self):
         ws = self.get_current_workspace()
+        if ws is None:
+            self.show_error("Please select or create a workspace",
+                            raisetab=True)
+            return
         self.prev_channel_ws(ws)
 
     def next_channel_ws(self, ws):
+        children = list(ws.nb.get_children())
+        if len(children) == 0:
+            self.show_error("No channels in this workspace.",
+                            raisetab=True)
+            return
         ws.to_next()
         idx = ws.nb.get_index()
         child = ws.nb.index_to_widget(idx)
@@ -784,12 +804,27 @@ class GingaControl(Callback.Callbacks):
 
     def next_channel(self):
         ws = self.get_current_workspace()
+        if ws is None:
+            self.show_error("Please select or create a workspace",
+                            raisetab=True)
+            return
         self.next_channel_ws(ws)
+
+    def add_channel_auto_ws(self, ws):
+        chpfx = "Image"
+        chpfx = ws.extdata.get('chpfx', chpfx)
+
+        chname = self.make_channel_name(chpfx)
+        self.add_channel(chname, workspace=ws.name)
 
     def add_channel_auto(self):
         ws = self.get_current_workspace()
-        chname = self.make_channel_name('Image')
-        self.add_channel(chname, workspace=ws.name)
+        if ws is None:
+            self.show_error("Please select or create a workspace",
+                            raisetab=True)
+            return
+
+        self.add_channel_auto_ws(ws)
 
     def remove_channel_auto(self):
         channel = self.get_channel_info()
@@ -814,7 +849,8 @@ class GingaControl(Callback.Callbacks):
         else:
             #width, height = 700, 800
             #self.ds.create_toplevel_ws(width, height, group=1)
-            self.ds.add_toplevel(ws, ws.name)
+            top_w = self.ds.add_toplevel(ws, ws.name)
+            ws.extdata.top_w = top_w
 
         return ws
 

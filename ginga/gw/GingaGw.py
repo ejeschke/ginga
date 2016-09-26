@@ -97,11 +97,6 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         for wsname in self.ds.get_wsnames():
             ws = self.ds.get_ws(wsname)
             self.init_workspace(ws)
-            ## nb = self.ds.get_nb(wsname)
-            ## if nb.has_callback('page-switch'):
-            ##     nb.add_callback('page-switch', self.page_switch_cb)
-            ## if nb.has_callback('page-close'):
-            ##     nb.add_callback('page-close', self.page_closed_cb, wsname)
 
         if 'menu' in self.w:
             menuholder = self.w['menu']
@@ -395,8 +390,13 @@ class GingaView(GwMain.GwMain, Widgets.Application):
 
 
     def gui_add_channel(self, chname=None):
+        chpfx = "Image"
+        ws = self.get_current_workspace()
+        if ws is not None:
+            chpfx = ws.extdata.get('chpfx', chpfx)
+
         if not chname:
-            chname = self.make_channel_name("Image")
+            chname = self.make_channel_name(chpfx)
 
         captions = (('New channel name:', 'label', 'channel_name', 'entry'),
                     ('In workspace:', 'label', 'workspace', 'combobox'),
@@ -429,13 +429,18 @@ class GingaView(GwMain.GwMain, Widgets.Application):
 
     def gui_add_channels(self):
 
+        chpfx = "Image"
+        ws = self.get_current_workspace()
+        if ws is not None:
+            chpfx = ws.extdata.get('chpfx', chpfx)
+
         captions = (('Prefix:', 'label', 'Prefix', 'entry'),
                     ('Number:', 'label', 'Number', 'spinbutton'),
                     ('In workspace:', 'label', 'workspace', 'combobox'),
                     )
 
         w, b = Widgets.build_info(captions)
-        b.prefix.set_text("Image")
+        b.prefix.set_text(chpfx)
         b.number.set_limits(1, 12, incr_value=1)
         b.number.set_value(1)
 
@@ -462,7 +467,8 @@ class GingaView(GwMain.GwMain, Widgets.Application):
     def gui_delete_channel(self, chname=None):
         channel = self.get_channel(chname)
         if (len(self.get_channel_names()) == 0) or (channel is None):
-            self.show_error("There are no more channels to delete.")
+            self.show_error("There are no more channels to delete.",
+                            raisetab=True)
             return
 
         chname = channel.name
@@ -478,7 +484,23 @@ class GingaView(GwMain.GwMain, Widgets.Application):
 
         self.ds.show_dialog(dialog)
 
+    def gui_delete_channel_ws(self, ws):
+        children = list(ws.nb.get_children())
+        if len(children) == 0:
+            self.show_error("No channels in this workspace to delete.",
+                            raisetab=True)
+            return
+        idx = ws.nb.get_index()
+        child = ws.nb.index_to_widget(idx)
+        chname = child.extdata.tab_title
+        self.gui_delete_channel(chname)
+
     def gui_add_ws(self):
+
+        chpfx = "Image"
+        ws = self.get_current_workspace()
+        if ws is not None:
+            chpfx = ws.extdata.get('chpfx', chpfx)
 
         captions = (('Workspace name:', 'label', 'Workspace name', 'entry'),
                     ('Workspace type:', 'label', 'Workspace type', 'combobox'),
@@ -512,7 +534,7 @@ class GingaView(GwMain.GwMain, Widgets.Application):
             cbox.append_text(name)
         cbox.set_index(idx)
 
-        b.channel_prefix.set_text("Image")
+        b.channel_prefix.set_text(chpfx)
         spnbtn = b.num_channels
         spnbtn.set_limits(0, 36, incr_value=1)
         spnbtn.set_value(4)
@@ -684,19 +706,19 @@ class GingaView(GwMain.GwMain, Widgets.Application):
 
         if ws.nb.has_callback('page-closed'):
             ws.nb.add_callback('page-closed', self.page_closed_cb,
-                                   wsname)
+                                   ws.name)
         if ws.nb.has_callback('page-switch'):
             ws.nb.add_callback('page-switch', self.page_switch_cb)
 
         if ws.toolbar is not None:
             ws.toolbar.add_separator()
 
-            btn = Widgets.Button('^')
-            btn.set_tooltip("Previous image in current channel")
+            btn = Widgets.Button('Prev')
+            btn.set_tooltip("Previous object in current channel")
             btn.add_callback('activated', lambda w: self.prev_img())
             ws.toolbar.add_widget(btn)
-            btn = Widgets.Button('v')
-            btn.set_tooltip("Next image in current channel")
+            btn = Widgets.Button('Next')
+            btn.set_tooltip("Next object in current channel")
             btn.add_callback('activated', lambda w: self.next_img())
             ws.toolbar.add_widget(btn)
 
@@ -715,12 +737,13 @@ class GingaView(GwMain.GwMain, Widgets.Application):
 
             btn = Widgets.Button('+')
             btn.set_tooltip("Add a channel to this workspace")
-            btn.add_callback('activated', lambda w: self.add_channel_auto())
+            btn.add_callback('activated',
+                             lambda w: self.add_channel_auto_ws(ws))
             ws.toolbar.add_widget(btn)
             btn = Widgets.Button('-')
             btn.set_tooltip("Delete current channel from this workspace")
             btn.add_callback('activated',
-                             lambda w: self.remove_channel_auto())
+                             lambda w: self.gui_delete_channel_ws(ws))
             ws.toolbar.add_widget(btn)
 
     def add_ws_cb(self, w, rsp, b, names):
@@ -827,9 +850,44 @@ class GingaView(GwMain.GwMain, Widgets.Application):
 
         return True
 
-    def workspace_closed_cb(self, *args):
+    def workspace_closed_cb(self, ws):
         self.logger.debug("workspace requests close")
+        children = list(ws.nb.get_children())
+        if len(children) > 0:
+            self.show_error("Please close all windows in this workspace first!",
+                            raisetab=True)
+            return
+
         # TODO: this will prompt the user if we should close the workspace
+        lbl = Widgets.Label("Really delete workspace '%s' ?" % (ws.name))
+        dialog = Widgets.Dialog(title="Delete Workspace",
+                                flags=0,
+                                buttons=[['Cancel', 0], ['Ok', 1]],
+                                parent=self.w.root)
+        dialog.add_callback('activated',
+                            lambda w, rsp: self.delete_workspace_cb(w, rsp,
+                                                                    ws))
+        box = dialog.get_content_area()
+        box.add_widget(lbl, stretch=0)
+
+        self.ds.show_dialog(dialog)
+
+    def delete_workspace_cb(self, w, rsp, ws):
+        self.ds.remove_dialog(w)
+        if rsp == 0:
+            return
+
+        top_w = ws.extdata.get('top_w', None)
+        if top_w is None:
+            self.ds.remove_tab(name)
+        else:
+            # this is a top-level window
+            self.ds.remove_toplevel(top_w)
+
+        # inform desktop we are no longer tracking this
+        self.ds.delete_ws(ws.name)
+
+        return True
 
     def page_closed_cb(self, widget, child, wsname):
         self.logger.debug("page closed in %s: '%s'" % (wsname, str(child)))
