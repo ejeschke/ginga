@@ -4,13 +4,15 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+from ginga.util.six import itervalues
+from ginga.util.six.moves import zip
+
 import logging
 from collections import OrderedDict
 
 from ginga.table import AstroTable
 from ginga.misc import Callback, Settings
 from ginga.misc import Bunch
-from ginga.util.six.moves import zip
 
 
 class TableViewBase(Callback.Callbacks):
@@ -115,18 +117,24 @@ class TableViewGw(TableViewBase):
     def set_table_cb(self, viewer, table):
         """Display the given table object."""
         self.clear()
+        tree_dict = OrderedDict()
 
         # extract data as astropy table
         a_tab = table.get_data()
 
-        # Table header
-        columns = [('Row', '_DISPLAY_ROW')] + [(c, c) for c in a_tab.colnames]
-        self.widget.setup_table(columns, 1, '_DISPLAY_ROW')
-
         # This is to get around table widget not sorting numbers properly
         i_fmt = '{{0:0{0}d}}'.format(len(str(len(a_tab))))
 
-        tree_dict = OrderedDict()
+        # Table headers
+        i_str = i_fmt.format(0)
+        bnch = Bunch.Bunch([('_DISPLAY_ROW', i_str)])
+        columns = [('Row', '_DISPLAY_ROW')]
+        for c in itervalues(a_tab.columns):
+            bnch[c.name] = str(c.unit)
+            columns.append((c.name, c.name))
+
+        tree_dict[i_str] = bnch
+        self.widget.setup_table(columns, 1, '_DISPLAY_ROW')
 
         # Table contents
         for i, row in enumerate(a_tab, 1):
@@ -154,4 +162,4 @@ class TableViewGw(TableViewBase):
         # suppress the logger warning
         pass
 
-#END
+# END
