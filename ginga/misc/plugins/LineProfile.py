@@ -25,7 +25,7 @@ class LineProfile(GingaPlugin.LocalPlugin):
         self.selected_axis = None
         self.hbox_axes = None
 
-        self.dc = self.fv.getDrawClasses()
+        self.dc = self.fv.get_draw_classes()
         canvas = self.dc.DrawingCanvas()
         canvas.set_callback('cursor-down', self.btndown_cb)
         canvas.set_callback('cursor-up', self.update)
@@ -54,9 +54,9 @@ class LineProfile(GingaPlugin.LocalPlugin):
         vbox.set_margins(4, 4, 4, 4)
         vbox.set_spacing(2)
 
-        self.msgFont = self.fv.getFont("sansFont", 12)
+        self.msg_font = self.fv.get_font("sansFont", 12)
         tw = Widgets.TextArea(wrap=True, editable=False)
-        tw.set_font(self.msgFont)
+        tw.set_font(self.msg_font)
         self.tw = tw
 
         fr = Widgets.Expander("Instructions")
@@ -205,7 +205,7 @@ Use MultiDim to change step values of axes.""")
 
         # insert layer if it is not already
         try:
-            obj = self.fitsimage.getObjectByTag(self.layertag)
+            obj = self.fitsimage.get_object_by_tag(self.layertag)
 
         except KeyError:
             # Add canvas layer
@@ -223,7 +223,7 @@ Use MultiDim to change step values of axes.""")
     def stop(self):
         self.canvas.ui_setActive(False)
         try:
-            self.fitsimage.deleteObjectByTag(self.layertag)
+            self.fitsimage.delete_object_by_tag(self.layertag)
         except:
             pass
 
@@ -312,7 +312,7 @@ Use MultiDim to change step values of axes.""")
         if tag is None:
             return
         idx = int(tag.strip('mark'))
-        obj = self.canvas.getObjectByTag(tag)
+        obj = self.canvas.get_object_by_tag(tag)
         obj.move_to(data_x+5, data_y)
 
         canvas.redraw(whence=3)
@@ -357,7 +357,7 @@ Use MultiDim to change step values of axes.""")
         # deselect the current selected mark, if there is one
         if self.mark_selected is not None:
             try:
-                obj = self.canvas.getObjectByTag(self.mark_selected)
+                obj = self.canvas.get_object_by_tag(self.mark_selected)
                 obj.setAttrAll(color=self.mark_color)
             except:
                 # old object may have been deleted
@@ -370,7 +370,7 @@ Use MultiDim to change step values of axes.""")
             return
 
         self.w.marks.show_text(tag)
-        obj = self.canvas.getObjectByTag(tag)
+        obj = self.canvas.get_object_by_tag(tag)
         obj.setAttrAll(color=self.select_color)
         if self.pan2mark and pan:
             self.fitsimage.panset_xy(obj.objects[0].x, obj.objects[0].y)
@@ -403,7 +403,7 @@ Use MultiDim to change step values of axes.""")
         if tag is None:
             return
         idx = int(tag.strip('mark'))
-        self.canvas.deleteObjectByTag(tag)
+        self.canvas.delete_object_by_tag(tag)
         self.w.marks.delete_alpha(tag)
         self.marks.remove(tag)
         self.w.marks.set_index(0)
@@ -418,7 +418,7 @@ Use MultiDim to change step values of axes.""")
             self.del_all_btn.set_enabled(False)
 
     def clear_all(self):
-        self.canvas.deleteAllObjects()
+        self.canvas.delete_all_objects()
         for name in self.marks:
             self.w.marks.delete_alpha(name)
         self.marks = ['None']

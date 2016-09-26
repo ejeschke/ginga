@@ -90,12 +90,16 @@ def get_hdu_suffix(idx):
         hduname, extver = idx
         hduname = hduname.strip()
         extver = int(extver)
-        return "[%s,%d]" % (hduname, extver)
+        if len(hduname) > 0:
+            return "[%s,%d]" % (hduname, extver)
+        else:
+            return "[%d]" % extver
 
     if isinstance(idx, str):
         return "[%s]" % idx.strip()
 
     return "[%d]" % idx
+
 
 def name_image_from_path(path, idx=None):
     (path, filename) = os.path.split(path)
@@ -106,6 +110,7 @@ def name_image_from_path(path, idx=None):
     if idx is not None:
         name += get_hdu_suffix(idx)
     return name
+
 
 def shorten_name(name, char_limit, side='right'):
     """Shorten `name` if it is longer than `char_limit`.
@@ -137,8 +142,10 @@ def shorten_name(name, char_limit, side='right'):
 
     return name
 
+
 def gethex(s):
     return hashlib.sha1(s.encode()).hexdigest()
+
 
 def get_thumbpath(thumbdir, path, makedir=True):
     if path is None:

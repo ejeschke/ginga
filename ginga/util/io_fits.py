@@ -28,8 +28,10 @@ fitsLoaderClass = None
 have_pyfits = False
 have_fitsio = False
 
+
 class FITSError(Exception):
     pass
+
 
 def use(fitspkg, raise_err=True):
     global fits_configured, fitsLoaderClass, \
@@ -74,6 +76,7 @@ def use(fitspkg, raise_err=True):
 class BaseFitsFileHandler(object):
     # Reserved for future use
     pass
+
 
 class PyFitsFileHandler(BaseFitsFileHandler):
 
@@ -180,7 +183,13 @@ class PyFitsFileHandler(BaseFitsFileHandler):
                 ## raise FITSError("No data HDU found that Ginga can open in '%s'" % (
                 ##     filepath))
                 # Load just the header
-                numhdu = 0
+                hdu = fits_f[0]
+                name = hdu.name
+                extver = hdu.ver
+                if len(name) == 0:
+                    numhdu = 0
+                else:
+                    numhdu = (name, extver)
 
         elif isinstance(numhdu, (int, str)):
             hdu = fits_f[numhdu]
@@ -299,7 +308,14 @@ class FitsioFileHandler(BaseFitsFileHandler):
                 ## raise FITSError("No data HDU found that Ginga can open in '%s'" % (
                 ##     filepath))
                 # Just load the header
-                numhdu = 0
+                hdu = fits_f[0]
+                info = hdu.get_info()
+                name = info['extname']
+                extver = info['extver']
+                if len(name) == 0:
+                    numhdu = 0
+                else:
+                    numhdu = (name, extver)
 
         elif isinstance(numhdu, (int, str)):
             hdu = fits_f[numhdu]
@@ -353,6 +369,7 @@ if not fits_configured:
     for name in ('astropy', 'fitsio'):
         if use(name, raise_err=False):
             break
+
 
 def get_fitsloader(kind=None, logger=None):
     return fitsLoaderClass(logger)

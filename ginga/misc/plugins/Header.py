@@ -1,9 +1,6 @@
 #
 # Header.py -- Image header plugin for Ginga viewer
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -11,7 +8,6 @@ from collections import OrderedDict
 
 from ginga import GingaPlugin
 from ginga.misc import Bunch
-import ginga.util.six as six
 from ginga.gw import Widgets
 
 
@@ -22,7 +18,6 @@ class Header(GingaPlugin.GlobalPlugin):
         super(Header, self).__init__(fv)
 
         self._image = None
-        self.channel = {}
         self.active = None
         self.info = None
         self.columns = [('Keyword', 'key'),
@@ -89,10 +84,10 @@ class Header(GingaPlugin.GlobalPlugin):
             keys.sort()
         for key in keys:
             card = header.get_card(key)
-            ## tree_dict[key] = Bunch.Bunch(key=card.key,
-            ##                              value=str(card.value),
-            ##                              comment=card.comment,
-            ##                              __terminal__=True)
+            # tree_dict[key] = Bunch.Bunch(key=card.key,
+            #                              value=str(card.value),
+            #                              comment=card.comment,
+            #                              __terminal__=True)
             tree_dict[key] = card
 
         table.set_tree(tree_dict)
@@ -112,57 +107,58 @@ class Header(GingaPlugin.GlobalPlugin):
         sw = self._create_header_window(info)
 
         self.nb.add_widget(sw)
-        index = self.nb.index_of(sw)
+        # index = self.nb.index_of(sw)
         info.setvals(widget=sw)
-        self.channel[chname] = info
+        channel.extdata._header_info = info
 
     def delete_channel(self, viewer, channel):
         chname = channel.name
         self.logger.debug("deleting channel %s" % (chname))
-        widget = self.channel[chname].widget
+        info = channel.extdata._header_info
+        widget = info.widget
         self.nb.remove(widget, delete=True)
         self.active = None
         self.info = None
-        del self.channel[chname]
 
     def focus_cb(self, viewer, channel):
         chname = channel.name
 
         if self.active != chname:
-            if not chname in self.channel:
+            if not channel.extdata.has_key('_header_info'):
                 self.add_channel(viewer, channel)
-            widget = self.channel[chname].widget
+            info = channel.extdata._header_info
+            widget = info.widget
             index = self.nb.index_of(widget)
             self.nb.set_index(index)
             self.active = chname
-            self.info = self.channel[self.active]
+            self.info = info
 
-        image = channel.fitsimage.get_image()
+        image = channel.get_current_image()
         if image is None:
             return
         self.set_header(self.info, image)
 
     def start(self):
-        names = self.fv.get_channelNames()
+        names = self.fv.get_channel_names()
         for name in names:
-            channel = self.fv.get_channelInfo(name)
+            channel = self.fv.get_channel(name)
             self.add_channel(self.fv, channel)
 
     def redo(self, channel, image):
         """This is called when buffer is modified."""
         self._image = None  # Skip cache checking in set_header()
         chname = channel.name
-        info = self.channel[chname]
+        info = channel.extdata._header_info
 
         self.set_header(info, image)
 
     def set_sortable_cb(self, info):
         self._image = None
-        channel = self.fv.get_channelInfo(info.chname)
-        image = channel.fitsimage.get_image()
+        channel = self.fv.get_channel(info.chname)
+        image = channel.get_current_image()
         self.set_header(info, image)
 
     def __str__(self):
         return 'header'
 
-#END
+# END

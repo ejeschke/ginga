@@ -14,7 +14,8 @@ import traceback
 import time
 
 from ginga.misc import Callback, Settings
-from ginga import RGBMap, AstroImage, AutoCuts, ColorDist
+from ginga import BaseImage, AstroImage
+from ginga import RGBMap, AutoCuts, ColorDist
 from ginga import cmap, imap, trcalc, version
 from ginga.canvas import coordmap, transform
 from ginga.canvas.types.layer import DrawingCanvas
@@ -57,6 +58,10 @@ class ImageViewBase(Callback.Callbacks):
         Viewer preferences. If not given, one will be created.
 
     """
+
+    vname = 'Ginga Image'
+    vtypes = [BaseImage.BaseImage]
+
     def __init__(self, logger=None, rgbmap=None, settings=None):
         Callback.Callbacks.__init__(self)
 
@@ -732,8 +737,6 @@ class ImageViewBase(Callback.Callbacks):
                 self.canvas.lowerObject(canvas_img)
 
             #self.canvas.update_canvas(whence=0)
-
-
 
     def _image_set_cb(self, canvas_img, image):
         try:

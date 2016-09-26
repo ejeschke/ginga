@@ -208,8 +208,8 @@ class GingaWrapper(object):
         elif which == 'channel':
             chname = args[1]
             method = args[2]
-            chinfo = self.fv.get_channelInfo(chname)
-            _method = getattr(chinfo.fitsimage, method)
+            chinfo = self.fv.get_channel(chname)
+            _method = getattr(chinfo.viewer, method)
             return _method.__doc__
 
         else:
@@ -338,8 +338,8 @@ class GingaWrapper(object):
         return 0
 
     def channel(self, chname, method_name, *args, **kwdargs):
-        chinfo = self.fv.get_channelInfo(chname)
-        _method = getattr(chinfo.fitsimage, method_name)
+        chinfo = self.fv.get_channel(chname)
+        _method = getattr(chinfo.viewer, method_name)
         return self.fv.gui_call(_method, *args, **kwdargs)
 
     def ginga(self, method_name, *args, **kwdargs):

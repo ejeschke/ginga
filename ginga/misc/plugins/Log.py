@@ -1,9 +1,6 @@
 #
 # Log.py -- Logging plugin for fits viewer
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -30,9 +27,9 @@ class Log(GingaPlugin.GlobalPlugin):
     def build_gui(self, container):
         vbox = Widgets.VBox()
 
-        self.msgFont = self.fv.getFont("fixedFont", 12)
+        self.msg_font = self.fv.get_font("fixedFont", 12)
         tw = Widgets.TextArea(wrap=False, editable=False)
-        tw.set_font(self.msgFont)
+        tw.set_font(self.msg_font)
         tw.set_limit(self.histlimit)
         self.tw = tw
 

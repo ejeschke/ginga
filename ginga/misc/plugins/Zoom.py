@@ -1,9 +1,6 @@
 #
 # Zoom.py -- Zoom plugin for fits viewer
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -143,7 +140,6 @@ class Zoom(GingaPlugin.GlobalPlugin):
     def prepare(self, fitsimage):
         fitssettings = fitsimage.get_settings()
         zoomsettings = self.zoomimage.get_settings()
-        fitsimage.add_callback('image-set', self.new_image_cb)
         # TODO: should we add our own canvas instead?
         fitsimage.add_callback('motion', self.motion_cb)
         for name in ['cuts']:
@@ -159,35 +155,29 @@ class Zoom(GingaPlugin.GlobalPlugin):
         self.prepare(chinfo.fitsimage)
 
     def start(self):
-        names = self.fv.get_channelNames()
+        names = self.fv.get_channel_names()
         for name in names:
-            chinfo = self.fv.get_channelInfo(name)
+            chinfo = self.fv.get_channel(name)
             self.add_channel(self.fv, chinfo)
 
     # CALLBACKS
 
-    def new_image_cb(self, fitsimage, image):
-        if fitsimage != self.fv.getfocus_fitsimage():
-            return True
-
-        self.fitsimage_focus = fitsimage
-        # Reflect transforms, colormap, etc.
-        fitsimage.copy_attributes(self.zoomimage,
-                                  ['transforms', 'cutlevels',
-                                   'rgbmap'])
-
-        ## data = image.get_data()
-        ## self.set_data(data)
-
-    def focus_cb(self, viewer, channel):
+    def update_zoomviewer(self, channel):
         fitsimage = channel.fitsimage
         self.fitsimage_focus = fitsimage
         # Reflect transforms, colormap, etc.
         fitsimage.copy_attributes(self.zoomimage,
                                   ['transforms', 'cutlevels',
                                    'rgbmap', 'rotation'])
+    def redo(self, channel, image):
+        fitsimage = channel.fitsimage
+        if fitsimage != self.fv.getfocus_viewer():
+            return True
 
-        # TODO: redo cutout?
+        self.update_zoomviewer(channel)
+
+    def focus_cb(self, viewer, channel):
+        self.update_zoomviewer(channel)
 
     # Match cut-levels to the ones in the "main" image
     def cutset_cb(self, setting, value, fitsimage):
@@ -266,8 +256,8 @@ class Zoom(GingaPlugin.GlobalPlugin):
         # If this is a new source, then update our widget with the
         # attributes of the source
         if self.fitsimage_focus != fitsimage:
-            chname = self.fv.get_channelName(fitsimage)
-            channel = self.fv.get_channelInfo(chname)
+            chname = self.fv.get_channel_name(fitsimage)
+            channel = self.fv.get_channel(chname)
             self.focus_cb(self.fv, channel)
 
         # If the refresh interval has expired then update the zoom image;

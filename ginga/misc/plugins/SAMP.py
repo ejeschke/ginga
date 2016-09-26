@@ -62,9 +62,9 @@ class SAMP(GingaPlugin.GlobalPlugin):
         vbox.set_border_width(4)
         vbox.set_spacing(2)
 
-        msgFont = self.fv.getFont("sansFont", 12)
+        msg_font = self.fv.get_font("sansFont", 12)
         tw = Widgets.TextArea(wrap=True, editable=False)
-        tw.set_font(msgFont)
+        tw.set_font(msg_font)
         self.tw = tw
 
         fr = Widgets.Frame("Instructions")

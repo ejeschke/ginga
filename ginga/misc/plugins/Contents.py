@@ -1,9 +1,6 @@
 #
 # Contents.py -- Table of Contents plugin for fits viewer
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c)  Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -76,8 +73,12 @@ class Contents(GingaPlugin.GlobalPlugin):
         self.gui_up = False
 
     def switch_image(self, widget, res_dict):
+        if len(res_dict) == 0:
+            return
         chname = list(res_dict.keys())[0]
         img_dict = res_dict[chname]
+        if len(img_dict) == 0:
+            return
         imname = list(img_dict.keys())[0]
         bnch = img_dict[imname]
         path = bnch.path
@@ -125,7 +126,7 @@ class Contents(GingaPlugin.GlobalPlugin):
         else:
             new_highlight = set([])
             for chname in self.name_dict:
-                channel = self.fv.get_channelInfo(chname)
+                channel = self.fv.get_channel_info(chname)
                 new_highlight |= channel.extdata.contents_old_highlight
         self.update_highlights(set([]), new_highlight)
 
@@ -216,7 +217,7 @@ class Contents(GingaPlugin.GlobalPlugin):
         del file_dict[name]
 
         # Unhighlight
-        channel = self.fv.get_channelInfo(chname)
+        channel = self.fv.get_channel_info(chname)
         key = (chname, name)
         self._hl_path.discard(key)
         channel.extdata.contents_old_highlight.discard(key)
@@ -338,7 +339,7 @@ class Contents(GingaPlugin.GlobalPlugin):
 
     def focus_cb(self, viewer, channel):
         chname = channel.name
-        image = channel.fitsimage.get_image()
+        image = channel.get_current_image()
 
         if image is not None:
             key = self._get_hl_key(chname, image)

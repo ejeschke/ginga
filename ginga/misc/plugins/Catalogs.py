@@ -50,7 +50,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
         self.catalog_server_options = []
         self.catalog_server_params = None
 
-        self.dc = fv.getDrawClasses()
+        self.dc = fv.get_draw_classes()
         canvas = self.dc.DrawingCanvas()
         canvas.enable_draw(True)
         canvas.set_drawtype(self.drawtype, color='cyan', linestyle='dash',
@@ -59,7 +59,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
         canvas.set_callback('cursor-down', self.btndown)
         canvas.set_callback('cursor-up', self.btnup)
         canvas.set_callback('draw-event', self.draw_cb)
-        canvas.setSurface(self.fitsimage)
+        canvas.set_surface(self.fitsimage)
         self.canvas = canvas
 
         self.color_selected = 'skyblue'
@@ -69,9 +69,9 @@ class Catalogs(GingaPlugin.LocalPlugin):
     def build_gui(self, container, future=None):
         vbox1 = Widgets.VBox()
 
-        msgFont = self.fv.getFont("sansFont", 14)
+        msg_font = self.fv.get_font("sansFont", 14)
         tw = Widgets.TextArea()
-        tw.set_font(msgFont)
+        tw.set_font(msg_font)
         tw.set_wrap(True)
         self.tw = tw
 
@@ -251,7 +251,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
         # start catalog operation
         p_canvas = self.fitsimage.get_canvas()
         try:
-            obj = p_canvas.getObjectByTag(self.layertag)
+            obj = p_canvas.get_object_by_tag(self.layertag)
 
         except KeyError:
             # Add canvas layer
@@ -271,7 +271,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
         self.modes_off()
 
         self.canvas.ui_setActive(True)
-        #self.fv.showStatus("Draw a rectangle with the right mouse button")
+        #self.fv.show_status("Draw a rectangle with the right mouse button")
 
     def stop(self):
         # stop catalog operation
@@ -280,7 +280,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
         self.canvas.ui_setActive(False)
         p_canvas = self.fitsimage.get_canvas()
         try:
-            p_canvas.deleteObjectByTag(self.layertag)
+            p_canvas.delete_object_by_tag(self.layertag)
         except:
             pass
         try:
@@ -288,10 +288,10 @@ class Catalogs(GingaPlugin.LocalPlugin):
         except:
             pass
         self.gui_up = False
-        self.fv.showStatus("")
+        self.fv.show_status("")
 
     def redo(self):
-        obj = self.canvas.getObjectByTag(self.areatag)
+        obj = self.canvas.get_object_by_tag(self.areatag)
         if not obj.kind in ('rectangle', 'circle'):
             return True
 
@@ -477,7 +477,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
 
     def get_sky_image(self, servername, params):
 
-        srvbank = self.fv.get_ServerBank()
+        srvbank = self.fv.get_server_bank()
         #filename = 'sky-' + str(time.time()).replace('.', '-') + '.fits'
         filename = 'sky-' + str(self.dsscnt) + '.fits'
         self.dsscnt = (self.dsscnt + 1) % 5
@@ -548,7 +548,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
 
     def getcatalog(self, server, params, obj):
         try:
-            srvbank = self.fv.get_ServerBank()
+            srvbank = self.fv.get_server_bank()
             starlist, info = self._get_catalog(srvbank, server, params)
             self.logger.debug("starlist=%s" % str(starlist))
 

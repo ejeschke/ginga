@@ -7,6 +7,7 @@
 import sys
 import traceback
 import math
+from ginga.BaseImage import BaseImage
 from ginga.gw import Widgets, Viewers
 from ginga.misc import Bunch
 from ginga import GingaPlugin
@@ -17,7 +18,6 @@ class Pan(GingaPlugin.GlobalPlugin):
         # superclass defines some variables for us, like logger
         super(Pan, self).__init__(fv)
 
-        self.channel = {}
         self.active = None
         self.info = None
 
@@ -25,7 +25,7 @@ class Pan(GingaPlugin.GlobalPlugin):
         fv.add_callback('delete-channel', self.delete_channel)
         fv.set_callback('channel-change', self.focus_cb)
 
-        self.dc = fv.getDrawClasses()
+        self.dc = fv.get_draw_classes()
 
         prefs = self.fv.get_preferences()
         self.settings = prefs.createCategory('plugin_Pan')
@@ -47,7 +47,6 @@ class Pan(GingaPlugin.GlobalPlugin):
         container.add_widget(self.nb, stretch=1)
 
     def _create_pan_image(self, fitsimage):
-        #pi = Viewers.ImageViewCanvas(logger=self.logger)
         pi = Viewers.CanvasView(logger=self.logger)
         pi.enable_autozoom('on')
         pi.enable_autocuts('off')
@@ -91,7 +90,7 @@ class Pan(GingaPlugin.GlobalPlugin):
         index = self.nb.index_of(iw)
         paninfo = Bunch.Bunch(panimage=panimage, widget=iw,
                               pancompass=None, panrect=None)
-        self.channel[chname] = paninfo
+        channel.extdata._pan_info = paninfo
 
         # Extract RGBMap object from main image and attach it to this
         # pan image
@@ -100,7 +99,6 @@ class Pan(GingaPlugin.GlobalPlugin):
         rgbmap.add_callback('changed', self.rgbmap_cb, panimage)
 
         fitsimage.copy_attributes(panimage, ['cutlevels'])
-        fitsimage.add_callback('image-set', self.new_image_cb, channel, paninfo)
 
         fitssettings = fitsimage.get_settings()
         pansettings = panimage.get_settings()
@@ -132,16 +130,15 @@ class Pan(GingaPlugin.GlobalPlugin):
     def delete_channel(self, viewer, channel):
         chname = channel.name
         self.logger.debug("deleting channel %s" % (chname))
-        widget = self.channel[chname].widget
+        widget = channel.extdata._pan_info.widget
         self.nb.remove(widget, delete=True)
         self.active = None
         self.info = None
-        del self.channel[chname]
 
     def start(self):
-        names = self.fv.get_channelNames()
+        names = self.fv.get_channel_names()
         for name in names:
-            channel = self.fv.get_channelInfo(name)
+            channel = self.fv.get_channel(name)
             self.add_channel(self.fv, channel)
 
     # CALLBACKS
@@ -150,32 +147,28 @@ class Pan(GingaPlugin.GlobalPlugin):
         # color mapping has changed in some way
         panimage.redraw(whence=1)
 
-    def new_image_cb(self, fitsimage, image, channel, paninfo):
+    def redo(self, channel, image):
+        paninfo = channel.extdata._pan_info
 
-        # HACK: when is the non-shared _imgobj being created?
-        # we have to null it here so that it get's recreated correctly--fix!
-        #print(('new_image_cb', paninfo.panimage._imgobj))
-        paninfo.panimage._imgobj = None
+        if (image is None) or not isinstance(image, BaseImage):
+            # TODO: clear not yet working
+            #paninfo.panimage.clear()
+            return
 
-        loval, hival = fitsimage.get_cut_levels()
+        loval, hival = channel.fitsimage.get_cut_levels()
         paninfo.panimage.cut_levels(loval, hival)
 
         # add cb to image so that if it is modified we can update info
         ## image.add_callback('modified', self.image_update_cb, fitsimage,
         ##                    channel, paninfo)
+        self.set_image(channel, paninfo, image)
 
-        # This seems to trigger a crash with mosaic images if we call
-        # set_image() immediately, so just queue up on the GUI thread
-        #self.set_image(channel, paninfo, image)
-        self.fv.gui_do(self.set_image, channel, paninfo, image)
-        return False
-
-    def image_update_cb(self, image, fitsimage, channel, paninfo):
-        # image has changed (e.g. size, value range, etc)
-        cur_img = fitsimage.get_image()
-        if cur_img == image:
-            self.fv.gui_do(self.set_image, channel, paninfo, image)
-        return False
+    ## def image_update_cb(self, image, fitsimage, channel, paninfo):
+    ##     # image has changed (e.g. size, value range, etc)
+    ##     cur_img = fitsimage.get_image()
+    ##     if cur_img == image:
+    ##         self.fv.gui_do(self.set_image, channel, paninfo, image)
+    ##     return False
 
     def focus_cb(self, viewer, channel):
         chname = channel.name
@@ -183,13 +176,14 @@ class Pan(GingaPlugin.GlobalPlugin):
         # If the active widget has changed, then raise our Info widget
         # that corresponds to it
         if self.active != chname:
-            if not chname in self.channel:
+            if not channel.extdata.has_key('_pan_info'):
                 self.add_channel(viewer, channel)
-            iw = self.channel[chname].widget
+            paninfo = channel.extdata._pan_info
+            iw = paninfo.widget
             index = self.nb.index_of(iw)
             self.nb.set_index(index)
             self.active = chname
-            self.info = self.channel[self.active]
+            self.info = paninfo
 
 
     def reconfigure(self, panimage, width, height):
@@ -222,7 +216,9 @@ class Pan(GingaPlugin.GlobalPlugin):
         self.info.panimage.clear()
 
     def set_image(self, channel, paninfo, image):
-        if image is None:
+        if (image is None) or not isinstance(image, BaseImage):
+            # TODO: clear not yet working
+            #paninfo.panimage.clear()
             return
 
         if not self.use_shared_canvas:
@@ -230,10 +226,10 @@ class Pan(GingaPlugin.GlobalPlugin):
         else:
             paninfo.panimage.zoom_fit()
 
-        p_canvas = paninfo.panimage.private_canvas
+        p_canvas = paninfo.panimage.get_private_canvas()
         # remove old compass
         try:
-            p_canvas.deleteObjectByTag(paninfo.pancompass)
+            p_canvas.delete_object_by_tag(paninfo.pancompass)
         except Exception:
             pass
 
@@ -267,7 +263,9 @@ class Pan(GingaPlugin.GlobalPlugin):
 
     def panset(self, fitsimage, channel, paninfo):
         image = fitsimage.get_image()
-        if image is None:
+        if (image is None) or not isinstance(image, BaseImage):
+            # TODO: clear not yet working
+            #paninfo.panimage.clear()
             return
 
         x, y = fitsimage.get_pan()
@@ -276,7 +274,7 @@ class Pan(GingaPlugin.GlobalPlugin):
         # calculate pan position point radius
         p_image = paninfo.panimage.get_image()
         try:
-            obj = paninfo.panimage.canvas.getObjectByTag('__image')
+            obj = paninfo.panimage.canvas.get_object_by_tag('__image')
         except KeyError:
             obj = None
         #print(('panset', image, p_image, obj, obj.image, paninfo.panimage._imgobj))
@@ -287,9 +285,9 @@ class Pan(GingaPlugin.GlobalPlugin):
 
         # Mark pan rectangle and pan position
         #p_canvas = paninfo.panimage.get_canvas()
-        p_canvas = paninfo.panimage.private_canvas
+        p_canvas = paninfo.panimage.get_private_canvas()
         try:
-            obj = p_canvas.getObjectByTag(paninfo.panrect)
+            obj = p_canvas.get_object_by_tag(paninfo.panrect)
             if obj.kind != 'compound':
                 return False
             point, bbox = obj.objects
@@ -311,53 +309,53 @@ class Pan(GingaPlugin.GlobalPlugin):
         return True
 
     def motion_cb(self, fitsimage, event, data_x, data_y):
-        bigimage = self.fv.getfocus_fitsimage()
-        self.fv.showxy(bigimage, data_x, data_y)
+        chviewer = self.fv.getfocus_viewer()
+        self.fv.showxy(chviewer, data_x, data_y)
         return True
 
     def drag_cb(self, fitsimage, event, data_x, data_y):
         # this is a panning move in the small
         # window for the big window
-        bigimage = self.fv.getfocus_fitsimage()
-        bigimage.panset_xy(data_x, data_y)
+        chviewer = self.fv.getfocus_viewer()
+        chviewer.panset_xy(data_x, data_y)
         return True
 
     def btndown(self, fitsimage, event, data_x, data_y):
-        bigimage = self.fv.getfocus_fitsimage()
-        bigimage.panset_xy(data_x, data_y)
+        chviewer = self.fv.getfocus_viewer()
+        chviewer.panset_xy(data_x, data_y)
         return True
 
     def zoom_cb(self, fitsimage, event):
         """Zoom event in the small fits window.  Just zoom the large fits
         window.
         """
-        fitsimage = self.fv.getfocus_fitsimage()
-        bd = fitsimage.get_bindings()
+        chviewer = self.fv.getfocus_viewer()
+        bd = chviewer.get_bindings()
 
         if hasattr(bd, 'sc_zoom'):
-            return bd.sc_zoom(fitsimage, event)
+            return bd.sc_zoom(chviewer, event)
 
         return False
 
     def draw_cb(self, canvas, tag):
         # Get and delete the drawn object
-        obj = canvas.getObjectByTag(tag)
-        canvas.deleteObjectByTag(tag)
+        obj = canvas.get_object_by_tag(tag)
+        canvas.delete_object_by_tag(tag)
 
         # determine center of drawn rectangle and set pan position
         if obj.kind != 'rectangle':
             return False
         xc = (obj.x1 + obj.x2) / 2.0
         yc = (obj.y1 + obj.y2) / 2.0
-        viewer = self.fv.getfocus_fitsimage()
-        # note: viewer <-- referring to large non-pan image
-        with viewer.suppress_redraw:
-            viewer.panset_xy(xc, yc)
+        chviewer = self.fv.getfocus_viewer()
+        # note: chviewer <-- referring to channel viewer
+        with chviewer.suppress_redraw:
+            chviewer.panset_xy(xc, yc)
 
             # Determine appropriate zoom level to fit this rect
             wd = obj.x2 - obj.x1
             ht = obj.y2 - obj.y1
-            wwidth, wheight = viewer.get_window_size()
+            wwidth, wheight = chviewer.get_window_size()
             wd_scale = float(wwidth) / float(wd)
             ht_scale = float(wheight) / float(ht)
             scale = min(wd_scale, ht_scale)
@@ -369,7 +367,7 @@ class Pan(GingaPlugin.GlobalPlugin):
                 zoomlevel = max(1, int(math.floor(scale)))
             self.logger.debug("zoomlevel=%d" % (zoomlevel))
 
-            viewer.zoom_to(zoomlevel)
+            chviewer.zoom_to(zoomlevel)
 
         return True
 

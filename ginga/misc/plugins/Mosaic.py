@@ -44,12 +44,12 @@ class Mosaic(GingaPlugin.LocalPlugin):
         # value drawn from the FITS kwd
         self.ann_fits_kwd = None
 
-        self.dc = self.fv.getDrawClasses()
+        self.dc = self.fv.get_draw_classes()
 
         canvas = self.dc.DrawingCanvas()
         canvas.enable_draw(False)
         canvas.add_callback('drag-drop', self.drop_cb)
-        canvas.setSurface(fitsimage)
+        canvas.set_surface(fitsimage)
         #canvas.ui_setActive(True)
         self.canvas = canvas
         self.layertag = 'mosaic-canvas'
@@ -84,9 +84,9 @@ class Mosaic(GingaPlugin.LocalPlugin):
         vbox.set_border_width(4)
         vbox.set_spacing(2)
 
-        self.msgFont = self.fv.getFont("sansFont", 12)
+        self.msg_font = self.fv.get_font("sansFont", 12)
         tw = Widgets.TextArea(wrap=True, editable=False)
-        tw.set_font(self.msgFont)
+        tw.set_font(self.msg_font)
         self.tw = tw
 
         fr = Widgets.Expander("Instructions")
@@ -294,7 +294,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
         return img_mosaic
 
     def _prepare_mosaic1(self, msg):
-        self.canvas.deleteAllObjects()
+        self.canvas.delete_all_objects()
         self.update_status(msg)
 
     def _inline(self, images):
@@ -314,7 +314,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
         time_intr1 = time.time()
 
         # Add description for ChangeHistory
-        iminfo = self.chinfo.get_image_info(self.img_mosaic.get('name'))
+        iminfo = self.channel.get_image_info(self.img_mosaic.get('name'))
         iminfo.reason_modified = 'Added {0}'.format(
             ','.join([im.get('name') for im in images]))
 
@@ -361,7 +361,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
         # insert layer if it is not already
         p_canvas = self.fitsimage.get_canvas()
         try:
-            obj = p_canvas.getObjectByTag(self.layertag)
+            obj = p_canvas.get_object_by_tag(self.layertag)
 
         except KeyError:
             # Add canvas layer
@@ -373,12 +373,12 @@ class Mosaic(GingaPlugin.LocalPlugin):
         self.canvas.ui_setActive(False)
         p_canvas = self.fitsimage.get_canvas()
         try:
-            p_canvas.deleteObjectByTag(self.layertag)
+            p_canvas.delete_object_by_tag(self.layertag)
         except:
             pass
         # dereference potentially large mosaic image
         self.img_mosaic = None
-        self.fv.showStatus("")
+        self.fv.show_status("")
 
     def pause(self):
         # comment this to NOT disable the UI for this plugin

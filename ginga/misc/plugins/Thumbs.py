@@ -10,8 +10,7 @@ import threading
 from ginga import GingaPlugin
 from ginga.misc import Bunch
 from ginga.util import iohelper
-from ginga.misc import Bunch
-from ginga.gw import GwHelp, Widgets, Viewers
+from ginga.gw import Widgets, Viewers
 
 
 class Thumbs(GingaPlugin.GlobalPlugin):
@@ -75,8 +74,8 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         self.gui_up = False
 
     def build_gui(self, container):
-        width, height = 300, 300
-        cm, im = self.fv.cm, self.fv.im
+        # width, height = 300, 300
+        # cm, im = self.fv.cm, self.fv.im
 
         thumb_len = self.settings.get('thumb_length', 192)
 
@@ -137,7 +136,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         if nothumb:
             return
 
-        idx = image.get('idx', None)
+        # idx = image.get('idx', None)
         # get image path
         path = image_info.path
 
@@ -151,7 +150,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         future = image_info.image_future
 
         # Is there a preference set to avoid making thumbnails?
-        chinfo = self.fv.get_channelInfo(chname)
+        chinfo = self.fv.get_channel(chname)
         prefs = chinfo.settings
         if not prefs.get('genthumb', False):
             return
@@ -169,13 +168,14 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         metadata = {}
         for kwd in self.keywords:
             metadata[kwd] = header.get(kwd, 'N/A')
-        metadata[self.settings.get('mouseover_name_key','NAME')] = name
+        metadata[self.settings.get('mouseover_name_key', 'NAME')] = name
 
         thumbpath = self.get_thumbpath(path)
 
         with self.thmblock:
             self.copy_attrs(chinfo.fitsimage)
-            self.thumb_generator.set_image(image)
+            thumb_np = image.get_thumbnail(self.thumbWidth)
+            self.thumb_generator.set_data(thumb_np)
             imgwin = self.thumb_generator.get_image_as_widget()
 
         label_length = self.settings.get('label_length', None)
@@ -190,7 +190,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
                               thumbpath, metadata, future)
 
     def _add_image(self, viewer, chname, image):
-        chinfo = self.fv.get_channelInfo(chname)
+        chinfo = self.fv.get_channel(chname)
         try:
             info = chinfo.get_image_info(image.name)
         except KeyError:
@@ -222,7 +222,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
             # Unhighlight
             chname = thumbkey[0]
-            channel = self.fv.get_channelInfo(chname)
+            channel = self.fv.get_channel(chname)
             self._tkf_highlight.discard(thumbkey)
             channel.extdata.thumbs_old_highlight.discard(thumbkey)
 
@@ -275,8 +275,8 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         fitsimage = chinfo.fitsimage
         fitssettings = fitsimage.get_settings()
         for name in ['cuts']:
-            fitssettings.getSetting(name).add_callback('set',
-                               self.cutset_cb, fitsimage)
+            fitssettings.getSetting(name).add_callback(
+                'set', self.cutset_cb, fitsimage)
         fitsimage.add_callback('transform', self.transform_cb)
 
         rgbmap = fitsimage.get_rgbmap()
@@ -288,7 +288,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
     def focus_cb(self, viewer, channel):
         # Reflect transforms, colormap, etc.
         fitsimage = channel.fitsimage
-        image = fitsimage.get_image()
+        image = channel.get_current_image()
         if image is not None:
             chname = channel.name
             thumbkey = self._get_thumb_key(chname, image)
@@ -404,7 +404,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         """Returns True if we already have a thumbnail version of this image
         cached, False otherwise.
         """
-        chname = self.fv.get_channelName(fitsimage)
+        chname = self.fv.get_channel_name(fitsimage)
 
         # Look up our version of the thumb
         idx = image.get('idx', None)
@@ -431,7 +431,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         if save_thumb is None:
             save_thumb = self.settings.get('cache_thumbs', False)
 
-        chname = self.fv.get_channelName(fitsimage)
+        chname = self.fv.get_channel_name(fitsimage)
 
         # Get metadata for mouse-over tooltip
         header = image.get_header()
@@ -450,7 +450,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
         # get image name
         name = image.get('name', name)
-        metadata[self.settings.get('mouseover_name_key','NAME')] = name
+        metadata[self.settings.get('mouseover_name_key', 'NAME')] = name
 
         thumbkey = self.get_thumb_key(chname, name, path)
         with self.thmblock:
@@ -463,7 +463,8 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             fitsimage.copy_attributes(self.thumb_generator,
                                       ['transforms', 'cutlevels',
                                        'rgbmap'])
-            self.thumb_generator.set_image(image)
+            thumb_np = image.get_thumbnail(self.thumbWidth)
+            self.thumb_generator.set_data(thumb_np)
 
             # Save a thumbnail for future browsing
             if save_thumb:
@@ -504,15 +505,15 @@ class Thumbs(GingaPlugin.GlobalPlugin):
                     image_future, save_thumb=False, thumbpath=None):
         # This is called by the make_thumbs() as a gui thread
         with self.thmblock:
-            self.thumb_generator.set_image(image)
+            thumb_np = image.get_thumbnail(self.thumbWidth)
+            self.thumb_generator.set_data(thumb_np)
+
             # Save a thumbnail for future browsing
             if save_thumb and (thumbpath is not None):
                 self.thumb_generator.save_image_as_file(thumbpath,
                                                         format='jpeg')
 
             imgwin = self.thumb_generator.get_image_as_widget()
-
-            image = self.thumb_generator.get_image()
 
         # Get metadata for mouse-over tooltip
         header = image.get_header()
@@ -562,8 +563,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
         thumbw = Widgets.Image(native_image=imgwin, menu=menu,
                                style='clickable')
-        wd, ht = self.thumb_generator.get_window_size()
-        thumbw.resize(wd, ht)
+        thumbw.resize(self.thumbWidth, self.thumbWidth)
 
         # set the load callback
         thumbw.add_callback('activated',

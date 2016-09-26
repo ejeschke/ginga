@@ -64,7 +64,7 @@ class IRAF(GingaPlugin.GlobalPlugin):
         self.layertag = 'iraf-canvas'
         # this will be set in initialize()
         self.canvas = None
-        self.dc = fv.getDrawClasses()
+        self.dc = fv.get_draw_classes()
 
         self.addr = iis.get_interface()
 
@@ -230,7 +230,7 @@ class IRAF(GingaPlugin.GlobalPlugin):
     def switchMode(self, modeStr):
         modeStr = modeStr.lower()
         chname = self.imexam_chname
-        chinfo = self.fv.get_channelInfo(chname)
+        chinfo = self.fv.get_channel(chname)
 
         if modeStr == 'iraf':
             self.ui_disable(chinfo.fitsimage)
@@ -460,7 +460,7 @@ class IRAF(GingaPlugin.GlobalPlugin):
         if not self.fv.has_channel(chname):
             chinfo = self.fv.add_channel(chname)
         else:
-            chinfo = self.fv.get_channelInfo(chname)
+            chinfo = self.fv.get_channel(chname)
         fitsimage = chinfo.fitsimage
 
         # Set the RGB mapping appropriate for IIS/IRAF
@@ -484,7 +484,7 @@ class IRAF(GingaPlugin.GlobalPlugin):
 
     def get_cursor(self):
         self.logger.info("get_cursor() called")
-        chinfo = self.fv.get_channelInfo()
+        chinfo = self.fv.get_channel_info()
         # Find out which frame we are looking at
         #frame = self.current_frame
         frame = self.channel_to_frame(chinfo.name)
@@ -501,7 +501,7 @@ class IRAF(GingaPlugin.GlobalPlugin):
 
     def get_keystroke(self):
         self.logger.info("get_keystroke() called")
-        chinfo = self.fv.get_channelInfo()
+        chinfo = self.fv.get_channel_info()
         fitsimage = chinfo.fitsimage
         # Find out which frame we are looking at
         #frame = self.current_frame
@@ -538,10 +538,10 @@ class IRAF(GingaPlugin.GlobalPlugin):
     def start_imexamine(self, fitsimage, chname):
         self.logger.info("STARTING")
         # Turn off regular UI processing in the frame
-        self.canvas.setSurface(fitsimage)
+        self.canvas.set_surface(fitsimage)
         # insert layer if it is not already
         try:
-            obj = fitsimage.getObjectByTag(self.layertag)
+            obj = fitsimage.get_object_by_tag(self.layertag)
 
         except KeyError:
             # Add canvas layer
@@ -595,8 +595,8 @@ class IRAF(GingaPlugin.GlobalPlugin):
 
         # Get frame info
         #frame = self.current_frame
-        chname = self.fv.get_channelName(fitsimage)
-        chinfo = self.fv.get_channelInfo(chname)
+        chname = self.fv.get_channel_name(fitsimage)
+        chinfo = self.fv.get_channel(chname)
         frame = self.channel_to_frame(chinfo.name)
 
         # add framebuffer information if it is not there already
@@ -622,10 +622,10 @@ class IRAF(GingaPlugin.GlobalPlugin):
         if self.mode != 'iraf':
             return False
 
-        fitsimage = self.fv.getfocus_fitsimage()
+        chviewer = self.fv.getfocus_viewer()
 
         if event.state == 'move':
-            self.fv.showxy(fitsimage, data_x, data_y)
+            self.fv.showxy(chviewer, data_x, data_y)
             return True
 
         return False

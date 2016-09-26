@@ -37,7 +37,7 @@ class CustomMplViewer(ImageViewCanvas):
         canvas.enable_draw(True)
         canvas.enable_edit(True)
         canvas.ui_setActive(True)
-        canvas.setSurface(self)
+        canvas.set_surface(self)
         # add the canvas to the view.
         self.add(canvas, tag=tag)
         return canvas

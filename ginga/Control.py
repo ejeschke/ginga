@@ -23,7 +23,6 @@ from collections import deque
 import atexit, shutil
 from datetime import datetime
 
-import numpy
 magic_tester = None
 try:
     import magic
@@ -39,8 +38,9 @@ except (ImportError, Exception):
     have_magic = False
 
 # Local application imports
-from ginga import cmap, imap, AstroImage, RGBImage, ImageView
-from ginga.misc import Bunch, Datasrc, Callback, Timer, Task, Future
+from ginga import cmap, imap
+from ginga import AstroImage, RGBImage, BaseImage
+from ginga.misc import Bunch, Datasrc, Callback, Timer, Future
 from ginga.util import catalog, iohelper
 from ginga.canvas.CanvasObject import drawCatalog
 
@@ -92,7 +92,7 @@ class GingaControl(Callback.Callbacks):
 
         self.lock = threading.RLock()
         self.channel = {}
-        self.channelNames = []
+        self.channel_names = []
         self.cur_channel = None
         self.wscount = 0
         self.statustask = None
@@ -144,7 +144,7 @@ class GingaControl(Callback.Callbacks):
         self.cursor_interval = self.settings.get('cursor_interval', 0.050)
 
 
-    def get_ServerBank(self):
+    def get_server_bank(self):
         return self.imgsrv
 
     def get_preferences(self):
@@ -199,8 +199,8 @@ class GingaControl(Callback.Callbacks):
         self._cursor_last_update = time.time()
         try:
             image = viewer.get_image()
-            if image is None:
-                # No image loaded for this channel
+            if (image is None) or not isinstance(image, BaseImage.BaseImage):
+                # No compatible image loaded for this channel
                 return
 
             settings = viewer.get_settings()
@@ -215,24 +215,26 @@ class GingaControl(Callback.Callbacks):
             self.logger.warning("Can't get info under the cursor: %s" % (str(e)))
             return
 
-        self.make_callback('field-info', viewer, info)
+        # TODO: can this be made more efficient?
+        chname = self.get_channel_name(viewer)
+        channel = self.get_channel(chname)
+
+        self.make_callback('field-info', channel, info)
 
         self.update_pending()
         return True
 
     def motion_cb(self, viewer, button, data_x, data_y):
-        """Motion event in the big fits window.  Show the pointing
+        """Motion event in the channel viewer window.  Show the pointing
         information under the cursor.
         """
-        ## if button == 0:
-        ##     self.showxy(viewer, data_x, data_y)
         self.showxy(viewer, data_x, data_y)
         return True
 
     def keypress(self, viewer, event, data_x, data_y):
         """Key press event in a channel window."""
         keyname = event.key
-        chname = self.get_channelName(viewer)
+        chname = self.get_channel_name(viewer)
         self.logger.debug("key press (%s) in channel %s" % (
             keyname, chname))
         # TODO: keyboard accelerators to raise tabs need to be integrated into
@@ -285,7 +287,7 @@ class GingaControl(Callback.Callbacks):
         names a file.
         """
         for url in urls:
-            to_chname = self.get_channelName(viewer)
+            to_chname = self.get_channel_name(viewer)
 
             ## self.load_file(url)
             self.nongui_do(self.load_file, url, chname=to_chname,
@@ -293,7 +295,7 @@ class GingaControl(Callback.Callbacks):
         return True
 
     def force_focus_cb(self, viewer, event, data_x, data_y):
-        chname = self.get_channelName(viewer)
+        chname = self.get_channel_name(viewer)
         self.change_channel(chname, raisew=True)
         return True
 
@@ -354,7 +356,8 @@ class GingaControl(Callback.Callbacks):
         channel = self.get_channel(chname)
         opmon = channel.opmon
         opmon.start_plugin_future(channel.name, opname, future)
-        channel.viewer.onscreen_message(opname, delay=1.0)
+        if hasattr(channel.viewer, 'onscreen_message'):
+            channel.viewer.onscreen_message(opname, delay=1.0)
 
     def stop_local_plugin(self, chname, opname):
         channel = self.get_channel(chname)
@@ -755,7 +758,7 @@ class GingaControl(Callback.Callbacks):
         return True
 
     def get_current_workspace(self):
-        channel = self.get_channelInfo()
+        channel = self.get_channel_info()
         if channel is None:
             return None
         ws = self.ds.get_ws(channel.workspace)
@@ -783,7 +786,7 @@ class GingaControl(Callback.Callbacks):
         self.add_channel(chname, workspace=ws.name)
 
     def remove_channel_auto(self):
-        channel = self.get_channelInfo()
+        channel = self.get_channel_info()
         if channel is None:
             return
         self.delete_channel(channel.name)
@@ -853,10 +856,6 @@ class GingaControl(Callback.Callbacks):
             return None
         return channel.viewer
 
-    # TO BE DEPRECATED EVENTUALLY
-    getfocus_fitsimage = getfocus_viewer
-    get_fitsimage = get_viewer
-
     def switch_name(self, chname, imname, path=None,
                     image_future=None):
 
@@ -870,7 +869,7 @@ class GingaControl(Callback.Callbacks):
             self.logger.error("Couldn't switch to image '%s': %s" % (
                 str(imname), str(e)))
 
-    def _redo_plugins(self, image, channel):
+    def redo_plugins(self, image, channel):
         # New data in channel
         # update active global plugins
         opmon = self.gpmon
@@ -894,7 +893,7 @@ class GingaControl(Callback.Callbacks):
                 self.logger.error("Failed to continue operation: %s" % (str(e)))
                 # TODO: log traceback?
 
-    def _close_plugins(self, channel):
+    def close_plugins(self, channel):
         """Close all plugins associated with the channel."""
         opmon = channel.opmon
         for key in opmon.get_active():
@@ -914,10 +913,10 @@ class GingaControl(Callback.Callbacks):
 
             # add cb so that if image is modified internally
             #  our plugins get updated
-            image.add_callback('modified', self._redo_plugins, channel)
+            image.add_callback('modified', self.redo_plugins, channel)
 
             self.logger.debug("executing redo() in plugins...")
-            self._redo_plugins(image, channel)
+            self.redo_plugins(image, channel)
 
             split_time1 = time.time()
             self.logger.info("Large image update: %.4f sec" % (
@@ -972,18 +971,19 @@ class GingaControl(Callback.Callbacks):
             return name in self.channel
 
     def get_channel(self, chname):
-        return self.get_channelInfo(chname=chname)
+        with self.lock:
+            if chname is None:
+                return self.cur_channel
+            name = chname.lower()
+            return self.channel[name]
 
     def get_current_channel(self):
         with self.lock:
             return self.cur_channel
 
-    def get_channelInfo(self, chname=None):
-        with self.lock:
-            if not chname:
-                return self.cur_channel
-            name = chname.lower()
-            return self.channel[name]
+    def get_channel_info(self, chname=None):
+        # TO BE DEPRECATED--please use get_channel()
+        return self.get_channel(chname)
 
     def get_channel_on_demand(self, chname):
         if self.has_channel(chname):
@@ -991,11 +991,11 @@ class GingaControl(Callback.Callbacks):
 
         return self.gui_call(self.add_channel, chname)
 
-    def get_channelName(self, viewer):
+    def get_channel_name(self, viewer):
         with self.lock:
             items = self.channel.items()
         for name, channel in items:
-            if channel.viewer == viewer:
+            if viewer in channel.viewers:
                 return channel.name
         return None
 
@@ -1085,27 +1085,28 @@ class GingaControl(Callback.Callbacks):
             bnch = self.add_viewer(chname, settings,
                                    workspace=workspace)
             # for debugging
-            bnch.viewer.set_name('channel:%s' % (chname))
+            bnch.image_viewer.set_name('channel:%s' % (chname))
 
             opmon = self.getPluginManager(self.logger, self,
                                           self.ds, self.mm)
 
-            channel.widget = bnch.view
+            channel.widget = bnch.widget
             channel.container = bnch.container
             channel.workspace = bnch.workspace
-            channel.viewer = bnch.viewer
+            channel.connect_viewer(bnch.image_viewer)
+            channel.viewer = bnch.image_viewer
             # older name, should eventually be deprecated
-            channel.fitsimage = bnch.viewer
+            channel.fitsimage = bnch.image_viewer
             channel.opmon = opmon
 
             name = chname.lower()
             self.channel[name] = channel
 
             # Update the channels control
-            self.channelNames.append(chname)
-            self.channelNames.sort()
+            self.channel_names.append(chname)
+            self.channel_names.sort()
 
-            if len(self.channelNames) == 1:
+            if len(self.channel_names) == 1:
                 self.cur_channel = channel
 
         # Prepare local plugins for this channel
@@ -1119,7 +1120,7 @@ class GingaControl(Callback.Callbacks):
         """Delete a given channel from viewer."""
         name = chname.lower()
 
-        if len(self.channelNames) < 1:
+        if len(self.channel_names) < 1:
             self.logger.error('Delete channel={0} failed. '
                               'No channels left.'.format(chname))
             return
@@ -1128,35 +1129,35 @@ class GingaControl(Callback.Callbacks):
             channel = self.channel[name]
 
             # Close local plugins open on this channel
-            self._close_plugins(channel)
+            self.close_plugins(channel)
 
             try:
-                idx = self.channelNames.index(chname)
+                idx = self.channel_names.index(chname)
             except ValueError:
                 idx = 0
 
             # Update the channels control
-            self.channelNames.remove(channel.name)
-            self.channelNames.sort()
+            self.channel_names.remove(channel.name)
+            self.channel_names.sort()
 
             self.ds.remove_tab(chname)
             del self.channel[name]
             self.prefs.remove_settings('channel_'+chname)
 
             # pick new channel
-            num_channels = len(self.channelNames)
+            num_channels = len(self.channel_names)
             if num_channels > 0:
                 if idx >= num_channels:
                     idx = num_channels - 1
-                self.change_channel(self.channelNames[idx])
+                self.change_channel(self.channel_names[idx])
             else:
                 self.cur_channel = None
 
         self.make_gui_callback('delete-channel', channel)
 
-    def get_channelNames(self):
+    def get_channel_names(self):
         with self.lock:
-            return self.channelNames
+            return self.channel_names
 
     def scale2text(self, scalefactor):
         if scalefactor >= 1.0:
@@ -1218,10 +1219,10 @@ class GingaControl(Callback.Callbacks):
         impath = image.get('path', None)
         self.remove_image_by_name(channel.name, imname, impath=impath)
 
-    def followFocus(self, tf):
+    def follow_focus(self, tf):
         self.channel_follows_focus = tf
 
-    def showStatus(self, text):
+    def show_status(self, text):
         """Write a message to the status bar.
 
         Parameters
@@ -1277,16 +1278,18 @@ class GingaControl(Callback.Callbacks):
 
 
     ########################################################
-    ### TO BE DEPRECATED
+    ### NON-PEP8 PREDECESSORS: TO BE DEPRECATED
 
-    def getDrawClass(self, drawtype):
-        #self.logger.warning("This method to be deprecated--use 'get_draw_class' instead")
-        return self.get_draw_class(drawtype)
-
-    def getDrawClasses(self):
-        #self.logger.warning("This method to be deprecated--use 'get_draw_classes' instead")
-        return self.get_draw_classes()
-
+    getDrawClass = get_draw_class
+    getDrawClasses = get_draw_classes
+    get_channelName = get_channel_name
+    get_channelInfo = get_channel_info
+    get_channelNames = get_channel_names
+    followFocus = follow_focus
+    showStatus = show_status
+    getfocus_fitsimage = getfocus_viewer
+    get_fitsimage = get_viewer
+    get_ServerBank = get_server_bank
 
 def _rmtmpdir(tmpdir):
     if os.path.isdir(tmpdir):
@@ -1338,8 +1341,12 @@ class Channel(Callback.Callbacks):
         self.container = None
         self.workspace = None
         self.opmon = None
-        # this is the viewer we are connected to
+        # this is the image viewer we are connected to
         self.fitsimage = None
+        # this is the currently active viewer
+        self.viewer = None
+        self.viewers = []
+        self.viewer_dict = {}
         if datasrc is None:
             num_images = self.settings.get('numImages', 1)
             datasrc = Datasrc.Datasrc(num_images)
@@ -1355,10 +1362,9 @@ class Channel(Callback.Callbacks):
             'set', self._sort_changed_ext_cb)
 
     def connect_viewer(self, viewer):
-        self.viewer = viewer
-
-        # redraw top image
-        self.refresh_cursor_image()
+        if not viewer in self.viewers:
+            self.viewers.append(viewer)
+            self.viewer_dict[viewer.vname] = viewer
 
     def move_image_to(self, imname, channel):
         if self == channel:
@@ -1497,9 +1503,6 @@ class Channel(Callback.Callbacks):
 
         self.fv.make_async_gui_callback('add-image-info', self, info)
 
-    def get_current_image(self):
-        return self.fitsimage.get_image()
-
     def refresh_cursor_image(self):
         info = self.history[self.cursor]
         if self.datasrc.has_key(info.name):
@@ -1582,13 +1585,41 @@ class Channel(Callback.Callbacks):
             return info
         return None
 
+    def get_current_image(self):
+        return self.viewer.get_image()
+
+    def view_object(self, dataobj):
+
+        # find available viewers that can view this kind of object
+        vnames = self.fv.get_viewer_names(dataobj)
+        if len(vnames) == 0:
+            raise ValueError("I don't know how to view objects of type '%s'" % (
+                str(type(dataobj))))
+        self.logger.debug("available viewers are: %s" % (str(vnames)))
+
+        # for now, pick first available viewer that can view this type
+        vname = vnames[0]
+
+        # if we don't have this viewer type then install one in the channel
+        if not vname in self.viewer_dict:
+            self.fv.make_viewer(vname, self)
+
+        self.viewer = self.viewer_dict[vname]
+        # find this viewer and raise it
+        idx = self.viewers.index(self.viewer)
+        self.widget.set_index(idx)
+
+        # and load the data
+        self.viewer.set_image(dataobj)
+
+
     def switch_image(self, image):
 
         with self.lock:
-            curimage = self.fitsimage.get_image()
+            curimage = self.get_current_image()
             if curimage != image:
-                self.logger.debug("Setting image...")
-                self.fitsimage.set_image(image)
+                self.logger.debug("updating viewer...")
+                self.view_object(image)
 
                 # update cursor to match image
                 imname = image.get('name')

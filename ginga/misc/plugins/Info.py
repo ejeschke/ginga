@@ -1,9 +1,6 @@
 #
 # Info.py -- FITS Info plugin for the Ginga fits viewer
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -20,7 +17,6 @@ class Info(GingaPlugin.GlobalPlugin):
         # superclass defines some variables for us, like logger
         super(Info, self).__init__(fv)
 
-        self.channel = {}
         self.active = None
         self.info = None
         # truncate names after this size
@@ -110,29 +106,28 @@ class Info(GingaPlugin.GlobalPlugin):
 
         return sw, b
 
-    def add_channel(self, viewer, chinfo):
+    def add_channel(self, viewer, channel):
         sw, winfo = self._create_info_window()
-        chname = chinfo.name
+        chname = channel.name
 
         self.nb.add_widget(sw, title=chname)
         index = self.nb.index_of(sw)
         info = Bunch.Bunch(widget=sw, winfo=winfo,
                            mode_w=None,
-                           chinfo=chinfo)
-        self.channel[chname] = info
+                           chinfo=channel)
+        channel.extdata._info_info = info
 
         winfo.cut_low.add_callback('activated', self.cut_levels,
-                                   chinfo.fitsimage, info)
+                                   channel.fitsimage, info)
         winfo.cut_high.add_callback('activated', self.cut_levels,
-                                    chinfo.fitsimage, info)
+                                    channel.fitsimage, info)
         winfo.cut_levels.add_callback('activated', self.cut_levels,
-                                      chinfo.fitsimage, info)
+                                      channel.fitsimage, info)
         winfo.auto_levels.add_callback('activated', self.auto_levels,
-                                       chinfo.fitsimage, info)
+                                       channel.fitsimage, info)
 
-        fitsimage = chinfo.fitsimage
+        fitsimage = channel.fitsimage
         fitssettings = fitsimage.get_settings()
-        fitsimage.add_callback('image-set', self.new_image_cb, info)
         for name in ['cuts']:
             fitssettings.getSetting(name).add_callback('set',
                                self.cutset_cb, fitsimage, info)
@@ -146,18 +141,21 @@ class Info(GingaPlugin.GlobalPlugin):
         fitssettings.getSetting('autocenter').add_callback('set',
                                self.autocenter_cb, fitsimage, info)
 
-    def delete_channel(self, viewer, chinfo):
-        chname = chinfo.name
+    def delete_channel(self, viewer, channel):
+        chname = channel.name
         self.logger.debug("deleting channel %s" % (chname))
-        widget = self.channel[chname].widget
+        info = channel.extdata._info_info
+        widget = info.widget
         self.nb.remove(widget, delete=True)
         self.active = None
         self.info = None
-        del self.channel[chname]
 
     # CALLBACKS
 
-    def new_image_cb(self, fitsimage, image, info):
+    def redo(self, channel, image):
+        fitsimage = channel.fitsimage
+        info = channel.extdata._info_info
+
         # add cb to image so that if it is modified we can update info
         image.add_callback('modified', self.image_update_cb, fitsimage, info)
 
@@ -174,13 +172,14 @@ class Info(GingaPlugin.GlobalPlugin):
         chname = channel.name
 
         if self.active != chname:
-            if not chname in self.channel:
+            if not channel.extdata.has_key('_info_info'):
                 self.add_channel(viewer, channel)
-            widget = self.channel[chname].widget
+            info = channel.extdata._info_info
+            widget = info.widget
             index = self.nb.index_of(widget)
             self.nb.set_index(index)
             self.active = chname
-            self.info = self.channel[self.active]
+            self.info = info
 
         self.set_info(self.info, channel.fitsimage)
 
@@ -275,14 +274,11 @@ class Info(GingaPlugin.GlobalPlugin):
         info.winfo.center_new.set_text(option)
 
 
-    def field_info(self, viewer, fitsimage, info):
-        # TODO: can this be made more efficient?
-        chname = self.fv.get_channelName(fitsimage)
-        chinfo = self.fv.get_channelInfo(chname)
-        chname = chinfo.name
-        if not chname in self.channel:
+    def field_info(self, viewer, channel, info):
+        chname = channel.name
+        if not channel.extdata.has_key('_info_info'):
             return
-        obj = self.channel[chname]
+        obj = channel.extdata._info_info
 
         obj.winfo.x.set_text("%.3f" % info.x)
         obj.winfo.y.set_text("%.3f" % info.y)

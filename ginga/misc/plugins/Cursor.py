@@ -1,9 +1,6 @@
 #
 # Cursor.py -- Cursor plugin for Ginga viewer
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -57,19 +54,18 @@ class Cursor(GingaPlugin.GlobalPlugin):
             rw = self.readout.get_widget()
             container.add_widget(rw, stretch=0)
 
-            channel = self.fv.get_channelInfo()
+            channel = self.fv.get_channel_info()
             if channel is not None:
                 self.focus_cb(channel.fitsimage, True)
 
     def add_channel_cb(self, viewer, channel):
-        chname = channel.name
         fi = channel.fitsimage
+
         fi.add_callback('focus', self.focus_cb)
 
         if not self.share_readout:
             readout = self._build_readout()
             readout.fitsimage = fi
-            fi.add_callback('image-set', self.readout_config, readout)
 
             rw = readout.get_widget()
             channel.container.add_widget(rw, stretch=0)
@@ -86,9 +82,9 @@ class Cursor(GingaPlugin.GlobalPlugin):
         self.logger.debug("deleting channel %s" % (chname))
 
     def start(self):
-        ## names = self.fv.get_channelNames()
+        ## names = self.fv.get_channel_names()
         ## for name in names:
-        ##     channel = self.fv.get_channelInfo(name)
+        ##     channel = self.fv.get_channel_info(name)
         ##     self.add_channel_cb(self.fv, channel)
         pass
 
@@ -108,7 +104,11 @@ class Cursor(GingaPlugin.GlobalPlugin):
         readout.maxv = max(len(str(minval)), len(str(maxval)))
         return True
 
-    def change_readout(self, fitsimage):
+    def redo(self, channel, image):
+        readout = channel.extdata.readout
+        self.readout_config(channel.fitsimage, image, readout)
+
+    def change_readout(self, channel, fitsimage):
         if (self.share_readout) and (self.readout is not None):
             self.logger.debug("configuring readout")
 
@@ -121,8 +121,6 @@ class Cursor(GingaPlugin.GlobalPlugin):
 
         else:
             # Get this channel's readout (if any)
-            chname = self.fv.get_channelName(fitsimage)
-            channel = self.fv.get_channelInfo(chname)
             self.readout = channel.extdata.get('readout', None)
 
     def focus_cb(self, fitsimage, tf):
@@ -130,16 +128,21 @@ class Cursor(GingaPlugin.GlobalPlugin):
         if (not tf) or fitsimage is None:
             return
 
-        self.change_readout(fitsimage)
+        chname = self.fv.get_channel_name(fitsimage)
+        channel = self.fv.get_channel(chname)
 
-    def field_info_cb(self, viewer, fitsimage, info):
+        self.change_readout(channel, fitsimage)
+
+    def field_info_cb(self, viewer, channel, info):
         readout = self.readout
         if readout is None:
             return
+
+        fitsimage = channel.fitsimage
         ## self.logger.debug("fitsimage: %s readout.fitsimage: %s" % (
         ##     str(fitsimage), str(readout.fitsimage)))
         if readout.fitsimage != fitsimage:
-            self.change_readout(fitsimage)
+            self.change_readout(channel, fitsimage)
             if self.readout is None:
                 return
             readout = self.readout

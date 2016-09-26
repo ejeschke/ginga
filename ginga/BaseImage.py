@@ -4,20 +4,22 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-import math
+from ginga.util.six.moves import map
+
 import numpy
 import logging
 
 from ginga.misc import Bunch, Callback
 from ginga import trcalc, AutoCuts
-from ginga.util.six.moves import map, zip
+
 
 class ImageError(Exception):
     pass
 
-class BaseImage(Callback.Callbacks):
 
-    def __init__(self, data_np=None, metadata=None, logger=None, name=None):
+class ViewerObjectBase(Callback.Callbacks):
+
+    def __init__(self, metadata=None, logger=None, name=None):
 
         Callback.Callbacks.__init__(self)
 
@@ -25,27 +27,70 @@ class BaseImage(Callback.Callbacks):
             self.logger = logger
         else:
             self.logger = logging.Logger('BaseImage')
-        if data_np is None:
-            data_np = numpy.zeros((1, 1))
-        self._data = data_np
         self.metadata = {}
         if metadata:
             self.update_metadata(metadata)
-        self.order = ''
-        self.name = name
-        # make sure an image has these attributes
+        # make sure an object has these attributes
         # TODO: this maybe should have a unique random string or something
         # but we'd have to fix a lot of code that is currently checking for
         # None
         self.metadata.setdefault('name', None)
 
-        self._set_minmax()
-
-        self.autocuts = AutoCuts.Histogram(self.logger)
-
         # For callbacks
         for name in ('modified', ):
             self.enable_callback(name)
+
+    def get_metadata(self):
+        return self.metadata.copy()
+
+    def clear_metadata(self):
+        self.metadata = {}
+
+    def update_metadata(self, map_like):
+        for key, val in map_like.items():
+            self.metadata[key] = val
+
+    def get(self, kwd, *args):
+        if kwd in self.metadata:
+            return self.metadata[kwd]
+        else:
+            # return a default if there is one
+            if len(args) > 0:
+                return args[0]
+            raise KeyError(kwd)
+
+    def get_list(self, *args):
+        return list(map(self.get, args))
+
+    def __getitem__(self, kwd):
+        return self.metadata[kwd]
+
+    def update(self, kwds):
+        self.metadata.update(kwds)
+
+    def set(self, **kwds):
+        self.update(kwds)
+
+    def __setitem__(self, kwd, value):
+        self.metadata[kwd] = value
+
+
+class BaseImage(ViewerObjectBase):
+
+    def __init__(self, data_np=None, metadata=None, logger=None, name=None):
+
+        ViewerObjectBase.__init__(self, logger=logger, metadata=metadata,
+                                  name=name)
+
+        if data_np is None:
+            data_np = numpy.zeros((1, 1))
+        self._data = data_np
+        self.order = ''
+        self.name = name
+
+        self._set_minmax()
+
+        self.autocuts = AutoCuts.Histogram(self.logger)
 
     @property
     def shape(self):
@@ -110,36 +155,6 @@ class BaseImage(Callback.Callbacks):
         view = numpy.s_[y, x]
         return self._slice(view)
 
-    def get_metadata(self):
-        return self.metadata.copy()
-
-    def get_header(self):
-        return self.get('header', Header())
-
-    def get(self, kwd, *args):
-        if kwd in self.metadata:
-            return self.metadata[kwd]
-        else:
-            # return a default if there is one
-            if len(args) > 0:
-                return args[0]
-            raise KeyError(kwd)
-
-    def get_list(self, *args):
-        return list(map(self.get, args))
-
-    def __getitem__(self, kwd):
-        return self.metadata[kwd]
-
-    def update(self, kwds):
-        self.metadata.update(kwds)
-
-    def set(self, **kwds):
-        self.update(kwds)
-
-    def __setitem__(self, kwd, value):
-        self.metadata[kwd] = value
-
     def set_data(self, data_np, metadata=None, astype=None):
         """Use this method to SHARE (not copy) the incoming array.
         """
@@ -182,7 +197,7 @@ class BaseImage(Callback.Callbacks):
 
     def get_order_indexes(self, cs):
         cs = cs.upper()
-        return [ self.order.index(c) for c in cs ]
+        return [self.order.index(c) for c in cs]
 
     def has_valid_wcs(self):
         return hasattr(self, 'wcs') and self.wcs.has_valid_wcs()
@@ -219,9 +234,8 @@ class BaseImage(Callback.Callbacks):
         else:
             return (self.minval_noinf, self.maxval_noinf)
 
-    def update_metadata(self, keyDict):
-        for key, val in keyDict.items():
-            self.metadata[key] = val
+    def get_header(self):
+        return self.get('header', Header())
 
     def transfer(self, other, astype=None):
         data = self._get_data()
@@ -352,17 +366,17 @@ class BaseImage(Callback.Callbacks):
             shp = self.shape
 
             (view, (scale_x, scale_y)) = \
-                   trcalc.get_scaled_cutout_wdht_view(shp, x1, y1, x2, y2,
-                                                      new_wd, new_ht)
+                trcalc.get_scaled_cutout_wdht_view(shp, x1, y1, x2, y2,
+                                                   new_wd, new_ht)
             newdata = self._slice(view)
 
         else:
             data_np = self._get_data()
             (newdata, (scale_x, scale_y)) = \
-                      trcalc.get_scaled_cutout_wdht(data_np, x1, y1, x2, y2,
-                                                    new_wd, new_ht,
-                                                    interpolation=method,
-                                                    logger=self.logger)
+                trcalc.get_scaled_cutout_wdht(data_np, x1, y1, x2, y2,
+                                              new_wd, new_ht,
+                                              interpolation=method,
+                                              logger=self.logger)
 
         res = Bunch.Bunch(data=newdata, scale_x=scale_x, scale_y=scale_y)
         return res
@@ -398,6 +412,18 @@ class BaseImage(Callback.Callbacks):
 
         res = Bunch.Bunch(data=newdata, scale_x=scale_x, scale_y=scale_y)
         return res
+
+    def get_thumbnail(self, length):
+        wd, ht = self.get_size()
+        if ht == 0:
+            width, height = 1, 1
+        elif wd > ht:
+            width, height = length, int(length * float(ht) / wd)
+        else:
+            width, height = int(length * float(wd) / ht), length
+
+        res = self.get_scaled_cutout_wdht(0, 0, wd, ht, width, height)
+        return res.data
 
     def get_pixels_on_line(self, x1, y1, x2, y2, getvalues=True):
         """Uses Bresenham's line algorithm to enumerate the pixels along
@@ -439,12 +465,11 @@ class BaseImage(Callback.Callbacks):
             if e2 > -dy:
                 err = err - dy
                 x += sx
-            if e2 <  dx:
+            if e2 < dx:
                 err = err + dx
                 y += sy
 
         return res
-
 
     def info_xy(self, data_x, data_y, settings):
         # Get the value under the data coordinates

@@ -1,9 +1,6 @@
 #
 # Pipeline.py -- Simple data reduction pipeline plugin for Ginga FITS viewer
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c)  Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -47,9 +44,9 @@ class Pipeline(GingaPlugin.LocalPlugin):
         vbox1.set_border_width(4)
         vbox1.set_spacing(2)
 
-        self.msgFont = self.fv.getFont("sansFont", 12)
+        self.msg_font = self.fv.get_font("sansFont", 12)
         tw = Widgets.TextArea(wrap=True, editable=False)
-        tw.set_font(self.msgFont)
+        tw.set_font(self.msg_font)
         self.tw = tw
 
         fr = Widgets.Frame("Instructions")
@@ -189,7 +186,7 @@ class Pipeline(GingaPlugin.LocalPlugin):
 
 
     def close(self):
-        chname = self.fv.get_channelName(self.fitsimage)
+        chname = self.fv.get_channel_name(self.fitsimage)
         self.fv.stop_local_plugin(chname, str(self))
         self.gui_up = False
         return True
@@ -201,7 +198,7 @@ class Pipeline(GingaPlugin.LocalPlugin):
         self.instructions()
 
     def stop(self):
-        self.fv.showStatus("")
+        self.fv.show_status("")
 
     def update_status(self, text):
         self.fv.gui_do(self.w.eval_status.set_text, text)

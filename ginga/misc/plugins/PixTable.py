@@ -19,11 +19,11 @@ class PixTable(GingaPlugin.LocalPlugin):
         self.layertag = 'pixtable-canvas'
         self.pan2mark = False
 
-        self.dc = self.fv.getDrawClasses()
+        self.dc = self.fv.get_draw_classes()
         canvas = self.dc.DrawingCanvas()
         canvas.set_callback('cursor-down', self.btndown_cb)
         canvas.set_callback('none-move', self.motion_cb)
-        canvas.setSurface(self.fitsimage)
+        canvas.set_surface(self.fitsimage)
         self.canvas = canvas
 
         # For pixel table
@@ -57,9 +57,9 @@ class PixTable(GingaPlugin.LocalPlugin):
         vbox.set_border_width(4)
         vbox.set_spacing(2)
 
-        self.msgFont = self.fv.getFont("sansFont", 12)
+        self.msg_font = self.fv.get_font("sansFont", 12)
         tw = Widgets.TextArea(wrap=True, editable=False)
-        tw.set_font(self.msgFont)
+        tw.set_font(self.msg_font)
         self.tw = tw
 
         fr = Widgets.Expander("Instructions")
@@ -166,7 +166,7 @@ class PixTable(GingaPlugin.LocalPlugin):
         # deselect the current selected mark, if there is one
         if self.mark_selected is not None:
             try:
-                obj = self.canvas.getObjectByTag(self.mark_selected)
+                obj = self.canvas.get_object_by_tag(self.mark_selected)
                 obj.setAttrAll(color=self.mark_color)
             except:
                 # old object may have been deleted
@@ -179,7 +179,7 @@ class PixTable(GingaPlugin.LocalPlugin):
             return
 
         self.w.marks.show_text(tag)
-        obj = self.canvas.getObjectByTag(tag)
+        obj = self.canvas.get_object_by_tag(tag)
         obj.setAttrAll(color=self.select_color)
         self.lastx = obj.objects[0].x
         self.lasty = obj.objects[0].y
@@ -202,14 +202,14 @@ class PixTable(GingaPlugin.LocalPlugin):
         tag = self.mark_selected
         if tag is None:
             return
-        self.canvas.deleteObjectByTag(tag)
+        self.canvas.delete_object_by_tag(tag)
         self.w.marks.delete_alpha(tag)
         self.marks.remove(tag)
         self.w.marks.set_index(0)
         self.mark_selected = None
 
     def clear_all(self):
-        self.canvas.deleteAllObjects()
+        self.canvas.delete_all_objects()
         for name in self.marks:
             self.w.marks.delete_alpha(name)
         self.marks = ['None']
@@ -257,7 +257,7 @@ class PixTable(GingaPlugin.LocalPlugin):
         # insert layer if it is not already
         p_canvas = self.fitsimage.get_canvas()
         try:
-            obj = p_canvas.getObjectByTag(self.layertag)
+            obj = p_canvas.get_object_by_tag(self.layertag)
 
         except KeyError:
             # Add canvas layer
@@ -269,7 +269,7 @@ class PixTable(GingaPlugin.LocalPlugin):
         self.canvas.ui_setActive(False)
         p_canvas = self.fitsimage.get_canvas()
         try:
-            p_canvas.deleteObjectByTag(self.layertag)
+            p_canvas.delete_object_by_tag(self.layertag)
         except:
             pass
         self.tw = None

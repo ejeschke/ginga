@@ -1,9 +1,6 @@
 #
 # Toolbar.py -- Tool bar plugin for the Ginga fits viewer
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -299,7 +296,7 @@ class Toolbar(GingaPlugin.GlobalPlugin):
     # LOGIC
 
     def _get_view(self):
-        channel = self.fv.get_channelInfo()
+        channel = self.fv.get_channel_info()
         view = channel.fitsimage
         return (view, view.get_bindings())
 

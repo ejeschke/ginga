@@ -1,9 +1,6 @@
 #
 # Operations.py -- Operations management plugin for Ginga viewer
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -101,9 +98,9 @@ class Operations(GingaPlugin.GlobalPlugin):
 
     def start(self):
         # get the list of channels and populate our channel control
-        names = self.fv.get_channelNames()
+        names = self.fv.get_channel_names()
         for name in names:
-            channel = self.fv.get_channelInfo(name)
+            channel = self.fv.get_channel(name)
             self.add_channel_cb(self.fv, channel)
 
         # get the list of local plugins and populate our operation control
@@ -128,7 +125,7 @@ class Operations(GingaPlugin.GlobalPlugin):
 
     def channel_select_cb(self, widget, index):
         if index >= 0:
-            chname = self.fv.get_channelNames()[index]
+            chname = self.fv.get_channel_names()[index]
             self.logger.debug("Channel changed, index=%d chname=%s" % (
                 index, chname))
             self.fv.change_channel(chname)

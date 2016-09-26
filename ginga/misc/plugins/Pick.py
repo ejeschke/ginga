@@ -60,7 +60,7 @@ class Pick(GingaPlugin.LocalPlugin):
         self.last_rpt = {}
         self.iqcalc = iqcalc.IQCalc(self.logger)
 
-        self.dc = self.fv.getDrawClasses()
+        self.dc = self.fv.get_draw_classes()
 
         canvas = self.dc.DrawingCanvas()
         canvas.enable_draw(True)
@@ -72,7 +72,7 @@ class Pick(GingaPlugin.LocalPlugin):
         canvas.add_draw_mode('move', down=self.btndown,
                              move=self.drag, up=self.update)
         canvas.register_for_cursor_drawing(self.fitsimage)
-        canvas.setSurface(self.fitsimage)
+        canvas.set_surface(self.fitsimage)
         canvas.set_draw_mode('move')
         self.canvas = canvas
 
@@ -131,9 +131,9 @@ class Pick(GingaPlugin.LocalPlugin):
         box.set_border_width(4)
         box.set_spacing(2)
 
-        self.msgFont = self.fv.getFont("sansFont", 12)
+        self.msg_font = self.fv.get_font("sansFont", 12)
         tw = Widgets.TextArea(wrap=True, editable=False)
-        tw.set_font(self.msgFont)
+        tw.set_font(self.msg_font)
         self.tw = tw
 
         fr = Widgets.Expander("Instructions")
@@ -461,9 +461,9 @@ class Pick(GingaPlugin.LocalPlugin):
         nb.add_widget(vbox3, title="Controls")
 
         vbox3 = Widgets.VBox()
-        msgFont = self.fv.getFont("fixedFont", 10)
+        msg_font = self.fv.get_font("fixedFont", 10)
         tw = Widgets.TextArea(wrap=False, editable=True)
-        tw.set_font(msgFont)
+        tw.set_font(msg_font)
         self.w.report = tw
         sw1 = Widgets.ScrollArea()
         sw1.set_widget(tw)
@@ -574,7 +574,7 @@ class Pick(GingaPlugin.LocalPlugin):
 
     def instructions(self):
         self.tw.set_text("""Left-click to place region.  Left-drag to position region.  Redraw region with the right mouse button.""")
-        self.tw.set_font(self.msgFont)
+        self.tw.set_font(self.msg_font)
 
     def update_status(self, text):
         self.fv.gui_do(self.w.eval_status.set_text, text)
@@ -718,7 +718,7 @@ class Pick(GingaPlugin.LocalPlugin):
         self.modes_off()
 
         self.canvas.ui_setActive(True)
-        self.fv.showStatus("Draw a rectangle with the right mouse button")
+        self.fv.show_status("Draw a rectangle with the right mouse button")
 
     def stop(self):
         # Delete previous peak marks
@@ -735,7 +735,7 @@ class Pick(GingaPlugin.LocalPlugin):
             p_canvas.delete_object_by_tag(self.layertag)
         except:
             pass
-        self.fv.showStatus("")
+        self.fv.show_status("")
 
     def redo(self):
         if self.picktag is None:
@@ -1033,7 +1033,7 @@ class Pick(GingaPlugin.LocalPlugin):
         self.pickimage.redraw(whence=3)
         self.canvas.redraw(whence=3)
 
-        self.fv.showStatus("Click left mouse button to reposition pick")
+        self.fv.show_status("Click left mouse button to reposition pick")
         return True
 
     def eval_intr(self):
@@ -1233,7 +1233,7 @@ class Pick(GingaPlugin.LocalPlugin):
 
     def pan_to_pick_cb(self):
         if not self.pick_qs:
-            self.fv.showStatus("Please pick an object to set the sky level!")
+            self.fv.show_status("Please pick an object to set the sky level!")
             return
         pan_x, pan_y = self.pick_qs.objx, self.pick_qs.objy
 
@@ -1243,7 +1243,7 @@ class Pick(GingaPlugin.LocalPlugin):
 
     def sky_cut(self):
         if not self.pick_qs:
-            self.fv.showStatus("Please pick an object to set the sky level!")
+            self.fv.show_status("Please pick an object to set the sky level!")
             return
         loval = self.pick_qs.skylevel
         oldlo, hival = self.fitsimage.get_cut_levels()
@@ -1252,11 +1252,11 @@ class Pick(GingaPlugin.LocalPlugin):
             self.fitsimage.cut_levels(loval, hival)
 
         except Exception as e:
-            self.fv.showStatus("No valid sky level: '%s'" % (loval))
+            self.fv.show_status("No valid sky level: '%s'" % (loval))
 
     def bright_cut(self):
         if not self.pick_qs:
-            self.fv.showStatus("Please pick an object to set the brightness!")
+            self.fv.show_status("Please pick an object to set the brightness!")
             return
         skyval = self.pick_qs.skylevel
         hival = self.pick_qs.brightness
@@ -1267,7 +1267,7 @@ class Pick(GingaPlugin.LocalPlugin):
             self.fitsimage.cut_levels(loval, hival)
 
         except Exception as e:
-            self.fv.showStatus("No valid brightness level: '%s'" % (hival))
+            self.fv.show_status("No valid brightness level: '%s'" % (hival))
 
     def zoomset(self, setting, zoomlevel, fitsimage):
         scalefactor = fitsimage.get_scale()
@@ -1282,16 +1282,16 @@ class Pick(GingaPlugin.LocalPlugin):
         if button == 0:
             # TODO: we could track the focus changes to make this check
             # more efficient
-            fitsimage = self.fv.getfocus_fitsimage()
-            # Don't update global information if our fitsimage isn't focused
-            if fitsimage != self.fitsimage:
+            chviewer = self.fv.getfocus_viewer()
+            # Don't update global information if our chviewer isn't focused
+            if chviewer != self.fitsimage:
                 return True
 
             # Add offsets from cutout
             data_x = data_x + self.pick_x1
             data_y = data_y + self.pick_y1
 
-            return self.fv.showxy(self.fitsimage, data_x, data_y)
+            return self.fv.showxy(chviewer, data_x, data_y)
 
     def cutdetail(self, srcimage, dstimage, x1, y1, x2, y2):
         image = srcimage.get_image()

@@ -35,7 +35,7 @@ class Histogram(GingaPlugin.LocalPlugin):
         self.numbins = self.settings.get('num_bins', 2048)
         self.autocuts = AutoCuts.Histogram(self.logger)
 
-        self.dc = self.fv.getDrawClasses()
+        self.dc = self.fv.get_draw_classes()
 
         canvas = self.dc.DrawingCanvas()
         canvas.enable_draw(True)
@@ -47,7 +47,7 @@ class Histogram(GingaPlugin.LocalPlugin):
         canvas.add_draw_mode('move', down=self.drag,
                              move=self.drag, up=self.update)
         canvas.register_for_cursor_drawing(self.fitsimage)
-        canvas.setSurface(self.fitsimage)
+        canvas.set_surface(self.fitsimage)
         canvas.set_draw_mode('draw')
         self.canvas = canvas
 
@@ -66,9 +66,9 @@ class Histogram(GingaPlugin.LocalPlugin):
         vbox.set_border_width(4)
         vbox.set_spacing(2)
 
-        msgFont = self.fv.getFont("sansFont", 12)
+        msg_font = self.fv.get_font("sansFont", 12)
         tw = Widgets.TextArea(wrap=True, editable=False)
-        tw.set_font(msgFont)
+        tw.set_font(msg_font)
         self.tw = tw
 
         fr = Widgets.Expander("Instructions")
@@ -187,13 +187,13 @@ class Histogram(GingaPlugin.LocalPlugin):
         # insert canvas, if not already
         p_canvas = self.fitsimage.get_canvas()
         try:
-            obj = p_canvas.getObjectByTag(self.layertag)
+            obj = p_canvas.get_object_by_tag(self.layertag)
 
         except KeyError:
             # Add ruler layer
             p_canvas.add(self.canvas, tag=self.layertag)
 
-        #self.canvas.deleteAllObjects()
+        #self.canvas.delete_all_objects()
         self.resume()
 
     def pause(self):
@@ -204,12 +204,12 @@ class Histogram(GingaPlugin.LocalPlugin):
         self.modes_off()
 
         self.canvas.ui_setActive(True)
-        self.fv.showStatus("Draw a rectangle with the right mouse button")
+        self.fv.show_status("Draw a rectangle with the right mouse button")
 
     def stop(self):
         # remove the rect from the canvas
         ## try:
-        ##     self.canvas.deleteObjectByTag(self.histtag)
+        ##     self.canvas.delete_object_by_tag(self.histtag)
         ## except:
         ##     pass
         ##self.histtag = None
@@ -217,16 +217,16 @@ class Histogram(GingaPlugin.LocalPlugin):
         # remove the canvas from the image
         p_canvas = self.fitsimage.get_canvas()
         try:
-            p_canvas.deleteObjectByTag(self.layertag)
+            p_canvas.delete_object_by_tag(self.layertag)
         except:
             pass
         self.gui_up = False
-        self.fv.showStatus("")
+        self.fv.show_status("")
 
     def full_image_cb(self):
         canvas = self.canvas
         try:
-            canvas.deleteObjectByTag(self.histtag)
+            canvas.delete_object_by_tag(self.histtag)
         except:
             pass
 
@@ -252,7 +252,7 @@ class Histogram(GingaPlugin.LocalPlugin):
         if self.histtag is None:
             return
 
-        obj = self.canvas.getObjectByTag(self.histtag)
+        obj = self.canvas.get_object_by_tag(self.histtag)
         if obj.kind != 'compound':
             return True
         bbox = obj.objects[0]
@@ -320,12 +320,12 @@ class Histogram(GingaPlugin.LocalPlugin):
         self.w.cut_high.set_text(str(hival))
         self.plot.fig.canvas.draw()
 
-        self.fv.showStatus("Click or drag left mouse button to move region")
+        self.fv.show_status("Click or drag left mouse button to move region")
         return True
 
     def update(self, canvas, event, data_x, data_y, viewer):
 
-        obj = self.canvas.getObjectByTag(self.histtag)
+        obj = self.canvas.get_object_by_tag(self.histtag)
         if obj.kind == 'compound':
             bbox = obj.objects[0]
         elif obj.kind == 'rectangle':
@@ -348,7 +348,7 @@ class Histogram(GingaPlugin.LocalPlugin):
         x1, y1, x2, y2 = bbox.x1+dx, bbox.y1+dy, bbox.x2+dx, bbox.y2+dy
 
         try:
-            canvas.deleteObjectByTag(self.histtag)
+            canvas.delete_object_by_tag(self.histtag)
         except:
             pass
 
@@ -360,7 +360,7 @@ class Histogram(GingaPlugin.LocalPlugin):
 
     def drag(self, canvas, event, data_x, data_y, viewer):
 
-        obj = self.canvas.getObjectByTag(self.histtag)
+        obj = self.canvas.get_object_by_tag(self.histtag)
         if obj.kind == 'compound':
             bbox = obj.objects[0]
         elif obj.kind == 'rectangle':
@@ -384,7 +384,7 @@ class Histogram(GingaPlugin.LocalPlugin):
 
         if obj.kind == 'compound':
             try:
-                canvas.deleteObjectByTag(self.histtag)
+                canvas.delete_object_by_tag(self.histtag)
             except:
                 pass
 
@@ -397,14 +397,14 @@ class Histogram(GingaPlugin.LocalPlugin):
         return True
 
     def draw_cb(self, canvas, tag):
-        obj = canvas.getObjectByTag(tag)
+        obj = canvas.get_object_by_tag(tag)
         if obj.kind != 'rectangle':
             return True
-        canvas.deleteObjectByTag(tag)
+        canvas.delete_object_by_tag(tag)
 
         if self.histtag:
             try:
-                canvas.deleteObjectByTag(self.histtag)
+                canvas.delete_object_by_tag(self.histtag)
             except:
                 pass
 
@@ -432,7 +432,7 @@ class Histogram(GingaPlugin.LocalPlugin):
 
         # Get the compound object that sits on the canvas.
         # Make sure edited rectangle was our histogram rectangle.
-        c_obj = self.canvas.getObjectByTag(self.histtag)
+        c_obj = self.canvas.get_object_by_tag(self.histtag)
         if ((c_obj.kind != 'compound') or (len(c_obj.objects) < 2) or
                 (c_obj.objects[0] != obj)):
             return False
@@ -456,7 +456,7 @@ class Histogram(GingaPlugin.LocalPlugin):
 
         except Exception as e:
             errmsg = 'Error cutting levels: {0}'.format(str(e))
-            self.fv.showStatus(errmsg)
+            self.fv.show_status(errmsg)
             self.logger.error(errmsg)
 
         else:
@@ -507,7 +507,7 @@ class Histogram(GingaPlugin.LocalPlugin):
 
     def edit_select_box(self):
         if self.histtag is not None:
-            obj = self.canvas.getObjectByTag(self.histtag)
+            obj = self.canvas.get_object_by_tag(self.histtag)
             if obj.kind != 'compound':
                 return True
             # drill down to reference shape

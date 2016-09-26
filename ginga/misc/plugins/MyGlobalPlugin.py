@@ -61,7 +61,7 @@ class MyGlobalPlugin(GingaPlugin.GlobalPlugin):
         vbox.set_spacing(2)
 
         # Take a text widget to show some instructions
-        self.msgFont = self.fv.getFont("sansFont", 12)
+        self.msgFont = self.fv.get_font("sansFont", 12)
         tw = Widgets.TextArea(wrap=True, editable=False)
         tw.set_font(self.msgFont)
         self.tw = tw
@@ -101,8 +101,8 @@ class MyGlobalPlugin(GingaPlugin.GlobalPlugin):
         #cw.addWidget(widget, stretch=1)
 
     def get_channel_info(self, fitsimage):
-        chname = self.fv.get_channelName(fitsimage)
-        channel = self.fv.get_channelInfo(chname)
+        chname = self.fv.get_channel_name(fitsimage)
+        channel = self.fv.get_channel(chname)
         return channel
 
     def set_info(self, text):

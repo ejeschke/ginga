@@ -17,7 +17,7 @@ class Crosshair(GingaPlugin.LocalPlugin):
         self.layertag = 'crosshair-canvas'
         self.xhtag = None
 
-        self.dc = fv.getDrawClasses()
+        self.dc = fv.get_draw_classes()
         canvas = self.dc.DrawingCanvas()
         canvas.name = 'crosshair-canvas'
         ## canvas.add_draw_mode('move', down=self.btndown,
@@ -46,9 +46,9 @@ class Crosshair(GingaPlugin.LocalPlugin):
         vbox.set_border_width(4)
         vbox.set_spacing(2)
 
-        self.msgFont = self.fv.getFont("sansFont", 12)
+        self.msg_font = self.fv.get_font("sansFont", 12)
         tw = Widgets.TextArea(wrap=True, editable=False)
-        tw.set_font(self.msgFont)
+        tw.set_font(self.msg_font)
         self.tw = tw
 
         fr = Widgets.Expander("Instructions")
@@ -117,7 +117,7 @@ class Crosshair(GingaPlugin.LocalPlugin):
 
     def resume(self):
         self.canvas.ui_setActive(True)
-        self.fv.showStatus("Draw a ruler with the right mouse button")
+        self.fv.show_status("Draw a ruler with the right mouse button")
 
     def stop(self):
         # remove the canvas from the image
@@ -127,7 +127,7 @@ class Crosshair(GingaPlugin.LocalPlugin):
         except:
             pass
         self.canvas.ui_setActive(False)
-        self.fv.showStatus("")
+        self.fv.show_status("")
 
     def redo(self):
         pass

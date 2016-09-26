@@ -7,8 +7,8 @@
 import os.path
 from functools import reduce
 
-from ginga.qtw.QtHelp import QtGui, QtCore, QTextCursor, \
-     QIcon, QPixmap, QImage, have_pyqt4
+from ginga.qtw.QtHelp import (QtGui, QtCore, QTextCursor, QIcon, QPixmap,
+                              QImage, have_pyqt4)
 from ginga.qtw import QtHelp
 
 from ginga.misc import Callback, Bunch, LineHistory
@@ -17,11 +17,13 @@ import ginga.icons
 # path to our icons
 icondir = os.path.split(ginga.icons.__file__)[0]
 
+
 class WidgetError(Exception):
     """For errors thrown in this module."""
     pass
 
 _app = None
+
 
 # BASE
 
@@ -132,6 +134,7 @@ class TextEntry(WidgetBase):
         #self.widget.setMaxLength(numchars)
         pass
 
+
 class TextEntrySet(WidgetBase):
     def __init__(self, text='', editable=True):
         super(TextEntrySet, self).__init__()
@@ -173,6 +176,7 @@ class TextEntrySet(WidgetBase):
     def set_enabled(self, tf):
         super(TextEntrySet, self).set_enabled(tf)
         self.entry.setEnabled(tf)
+
 
 class GrowingTextEdit(QtGui.QTextEdit):
 
@@ -241,6 +245,7 @@ class TextArea(WidgetBase):
         else:
             self.widget.setLineWrapMode(QtGui.QTextEdit.NoWrap)
 
+
 class Label(WidgetBase):
     def __init__(self, text='', halign='left', style='normal', menu=None):
         super(Label, self).__init__()
@@ -290,7 +295,8 @@ class Label(WidgetBase):
         self.widget.setFont(font)
 
     def set_color(self, fg=None, bg=None):
-        self.widget.setStyleSheet("QLabel { background-color: %s; color: %s; }" % (bg, fg));
+        self.widget.setStyleSheet(
+            "QLabel { background-color: %s; color: %s; }" % (bg, fg))
 
 
 class Button(WidgetBase):
@@ -355,6 +361,7 @@ class ComboBox(WidgetBase):
 
     def get_index(self):
         return self.widget.currentIndex()
+
 
 class SpinBox(WidgetBase):
     def __init__(self, dtype=int):
@@ -476,6 +483,7 @@ class CheckBox(WidgetBase):
         # returns 0 (unchecked) or 2 (checked)
         return (val != 0)
 
+
 class ToggleButton(WidgetBase):
     def __init__(self, text=''):
         super(ToggleButton, self).__init__()
@@ -570,6 +578,7 @@ class ProgressBar(WidgetBase):
     def set_value(self, pct):
         self.widget.setValue(int(pct * 100.0))
 
+
 class StatusBar(WidgetBase):
     def __init__(self):
         super(StatusBar, self).__init__()
@@ -580,6 +589,7 @@ class StatusBar(WidgetBase):
     def set_message(self, msg_str, duration=10.0):
         # remove message in about `duration` seconds
         self.widget.showMessage(msg_str, int(duration * 1000))
+
 
 class TreeView(WidgetBase):
     def __init__(self, auto_expand=False, sortable=False,
@@ -630,8 +640,8 @@ class TreeView(WidgetBase):
         # create the column headers
         if not isinstance(columns[0], str):
             # columns specifies a mapping
-            headers = [ col[0] for col in columns ]
-            datakeys = [ col[1] for col in columns ]
+            headers = [col[0] for col in columns]
+            datakeys = [col[1] for col in columns]
         else:
             headers = datakeys = columns
 
@@ -668,8 +678,8 @@ class TreeView(WidgetBase):
 
         if level >= self.levels:
             # leaf node
-            values = [ '' if _key == 'icon' else str(node[_key])
-                       for _key in self.datakeys ]
+            values = ['' if _key == 'icon' else str(node[_key])
+                      for _key in self.datakeys]
             try:
                 bnch = shadow[key]
                 item = bnch.item
@@ -846,7 +856,7 @@ class ContainerBase(WidgetBase):
             childw.deleteLater()
 
     def remove(self, w, delete=False):
-        if not w in self.children:
+        if w not in self.children:
             raise ValueError("Widget is not a child of this container")
         self.children.remove(w)
 
@@ -886,6 +896,7 @@ class ContainerBase(WidgetBase):
         layout = self.widget.layout()
         layout.setContentsMargins(pix, pix, pix, pix)
 
+
 class Box(ContainerBase):
     def __init__(self, orientation='horizontal'):
         super(Box, self).__init__()
@@ -909,13 +920,16 @@ class Box(ContainerBase):
     def set_spacing(self, val):
         self.layout.setSpacing(val)
 
+
 class HBox(Box):
     def __init__(self):
         super(HBox, self).__init__(orientation='horizontal')
 
+
 class VBox(Box):
     def __init__(self):
         super(VBox, self).__init__(orientation='vertical')
+
 
 class Frame(ContainerBase):
     def __init__(self, title=None):
@@ -962,13 +976,11 @@ class Expander(ContainerBase):
         # Qt doesn't seem to like it (segfault) if we actually construct
         # these icons in the class variable declarations
         if Expander.r_arrow is None:
-            Expander.r_arrow = QtHelp.get_icon(os.path.join(icondir,
-                                                            'triangle-right-48.png'),
-                                               size=(12, 12))
+            Expander.r_arrow = QtHelp.get_icon(
+                os.path.join(icondir, 'triangle-right-48.png'), size=(12, 12))
         if Expander.d_arrow is None:
-            Expander.d_arrow = QtHelp.get_icon(os.path.join(icondir,
-                                                            'triangle-down-48.png'),
-                                               size=(12, 12))
+            Expander.d_arrow = QtHelp.get_icon(
+                os.path.join(icondir, 'triangle-down-48.png'), size=(12, 12))
 
         self.widget = QtGui.QWidget()
         vbox = QtGui.QVBoxLayout()
@@ -1068,7 +1080,7 @@ class TabWidget(ContainerBase):
 
     def set_index(self, idx):
         self.widget.setCurrentIndex(idx)
-        child = self.index_to_widget(idx)
+        #child = self.index_to_widget(idx)
         #child.focus()
 
     def index_of(self, child):
@@ -1088,6 +1100,7 @@ class TabWidget(ContainerBase):
         else:
             color = QtHelp.QColor('green')
         tabbar.setTabTextColor(idx, color)
+
 
 class StackWidget(ContainerBase):
     def __init__(self):
@@ -1120,6 +1133,7 @@ class StackWidget(ContainerBase):
     def index_to_widget(self, idx):
         nchild = self.widget.widget(idx)
         return self._native_to_child(nchild)
+
 
 class MDIWidget(ContainerBase):
     def __init__(self, tabpos='top', mode='mdi'):
@@ -1235,7 +1249,7 @@ class MDIWidget(ContainerBase):
 
     def _remove(self, nchild, delete=False):
         subwins = list(self.widget.subWindowList())
-        l = [ sw.widget() for sw in subwins ]
+        l = [sw.widget() for sw in subwins]
         try:
             idx = l.index(nchild)
             subwin = subwins[idx]
@@ -1318,9 +1332,11 @@ class ScrollArea(ContainerBase):
     def scroll_to_end(self, vertical=True, horizontal=False):
         area = self.widget
         if vertical:
-            area.verticalScrollBar().setValue(area.verticalScrollBar().maximum())
+            area.verticalScrollBar().setValue(
+                area.verticalScrollBar().maximum())
         if horizontal:
-            area.horizontalScrollBar().setValue(area.horizontalScrollBar().maximum())
+            area.horizontalScrollBar().setValue(
+                area.horizontalScrollBar().maximum())
 
 
 class Splitter(ContainerBase):
@@ -1497,6 +1513,7 @@ class Menu(ContainerBase):
         else:
             self.widget.exec_(QtGui.QCursor.pos())
 
+
 class Menubar(ContainerBase):
     def __init__(self):
         super(Menubar, self).__init__()
@@ -1528,7 +1545,7 @@ class TopLevelMixin(object):
         self.widget.closeEvent = lambda event: self._quit(event)
         self.widget.destroyed = self._destroyed_cb
 
-        if not title is None:
+        if title is not None:
             self.widget.setWindowTitle(title)
 
         self.enable_callback('close')
@@ -1539,7 +1556,7 @@ class TopLevelMixin(object):
         event.ignore()
         self.close()
 
-    def _closeEvent(*args):
+    def _closeEvent(self, *args):
         self.close()
 
     def close(self):
@@ -1547,7 +1564,7 @@ class TopLevelMixin(object):
         #self.widget = None
         self.make_callback('close')
 
-    def _destroyed_cb(self, *args):
+    def _destroyed_cb(self, event, *args):
         event.accept()
 
     def raise_(self):
@@ -1704,8 +1721,10 @@ class Dialog(TopLevelMixin, WidgetBase):
 
             for name, val in buttons:
                 btn = QtGui.QPushButton(name)
+
                 def cb(val):
                     return lambda: self._cb_redirect(val)
+
                 btn.clicked.connect(cb(val))
                 hbox.addWidget(btn, stretch=0)
 
@@ -1729,7 +1748,8 @@ class SaveDialog(QtGui.QFileDialog):
         self.widget = self.getSaveFileName(self, title, '', selectedfilter)
 
     def get_path(self):
-        if self.widget and self.selectedfilter is not None and not self.widget.endswith(self.selectedfilter[1:]):
+        if (self.widget and self.selectedfilter is not None and
+                not self.widget.endswith(self.selectedfilter[1:])):
             self.widget += self.selectedfilter[1:]
         return self.widget
 
@@ -1741,15 +1761,16 @@ class DragPackage(object):
 
     def set_urls(self, urls):
         mimeData = QtCore.QMimeData()
-        _urls = [ QtCore.QUrl(url) for url in urls ]
+        _urls = [QtCore.QUrl(url) for url in urls]
         mimeData.setUrls(_urls)
         self._drag.setMimeData(mimeData)
 
     def start_drag(self):
         if QtHelp.have_pyqt5:
-            result = self._drag.exec_(QtCore.Qt.MoveAction)
+            self._drag.exec_(QtCore.Qt.MoveAction)
         else:
-            result = self._drag.start(QtCore.Qt.MoveAction)
+            self._drag.start(QtCore.Qt.MoveAction)
+
 
 # MODULE FUNCTIONS
 
@@ -1761,6 +1782,7 @@ def name_mangle(name, pfx=''):
         else:
             newname.append(c)
     return pfx + ''.join(newname)
+
 
 def make_widget(title, wtype):
     if wtype == 'label':
@@ -1822,7 +1844,7 @@ def hadjust(w, orientation):
 
 
 def build_info(captions, orientation='vertical'):
-    numrows = len(captions)
+    # numrows = len(captions)
     numcols = reduce(lambda acc, tup: max(acc, len(tup)), captions, 0)
     if (numcols % 2) != 0:
         raise ValueError("Column spec is not an even number")
@@ -1858,10 +1880,12 @@ def build_info(captions, orientation='vertical'):
 
     return w, wb
 
+
 def wrap(native_widget):
     wrapper = WidgetBase()
     wrapper.widget = native_widget
     return wrapper
+
 
 def get_orientation(container):
     if not hasattr(container, 'size'):
@@ -1873,6 +1897,7 @@ def get_orientation(container):
         return 'vertical'
     else:
         return 'horizontal'
+
 
 def get_oriented_box(container, scrolled=True, fill=False):
     orientation = get_orientation(container)

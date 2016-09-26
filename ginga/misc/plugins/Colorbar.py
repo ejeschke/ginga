@@ -16,7 +16,6 @@ class Colorbar(GingaPlugin.GlobalPlugin):
         super(Colorbar, self).__init__(fv)
 
         self._image = None
-        self.channel = {}
         self.active = None
         self.info = None
 
@@ -47,7 +46,7 @@ class Colorbar(GingaPlugin.GlobalPlugin):
 
         chname = channel.name
         info = Bunch.Bunch(chname=chname, channel=channel)
-        self.channel[chname] = info
+        channel.extdata._colorbar_info = info
 
         fi = channel.fitsimage
         rgbmap = fi.get_rgbmap()
@@ -58,7 +57,6 @@ class Colorbar(GingaPlugin.GlobalPlugin):
         self.logger.debug("deleting channel %s" % (chname))
         self.active = None
         self.info = None
-        del self.channel[chname]
 
     def _match_cmap(self, fitsimage, colorbar):
         """
@@ -80,7 +78,7 @@ class Colorbar(GingaPlugin.GlobalPlugin):
 
     #     if self.active != chname:
     #         self.active = chname
-    #         self.info = self.channel[self.active]
+    #         self.info = channel.extdata._colorbar_info
 
     #     image = channel.fitsimage.get_image()
     #     if image is None:
@@ -94,7 +92,7 @@ class Colorbar(GingaPlugin.GlobalPlugin):
         """
         if cbar is None:
             return
-        if fitsimage != self.fv.getfocus_fitsimage():
+        if fitsimage != self.fv.getfocus_viewer():
             # values have changed in a channel that doesn't have the focus
             return False
         loval, hival = value
@@ -106,7 +104,7 @@ class Colorbar(GingaPlugin.GlobalPlugin):
         ColorBar.  It displays the value of the mouse position in the
         ColorBar in the Readout (if any).
         """
-        channel = self.fv.get_channelInfo()
+        channel = self.fv.get_channel_info()
         if channel is None:
             return
         readout = channel.extdata.get('readout', None)
@@ -127,9 +125,9 @@ class Colorbar(GingaPlugin.GlobalPlugin):
             self.change_cbar(self.fv, channel, self.colorbar)
 
     def start(self):
-        ## names = self.fv.get_channelNames()
+        ## names = self.fv.get_channel_names()
         ## for name in names:
-        ##     channel = self.fv.get_channelInfo(name)
+        ##     channel = self.fv.get_channel(name)
         ##     self.add_channel_cb(self.fv, channel)
         pass
 

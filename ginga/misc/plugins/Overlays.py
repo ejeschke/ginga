@@ -17,10 +17,10 @@ class Overlays(GingaPlugin.LocalPlugin):
 
         self.layertag = 'overlays-canvas'
 
-        self.dc = fv.getDrawClasses()
+        self.dc = fv.get_draw_classes()
         canvas = self.dc.DrawingCanvas()
         canvas.enable_draw(False)
-        canvas.setSurface(self.fitsimage)
+        canvas.set_surface(self.fitsimage)
         self.canvas = canvas
 
         self.colornames = colors.get_colors()
@@ -44,9 +44,9 @@ class Overlays(GingaPlugin.LocalPlugin):
         vbox.set_border_width(4)
         vbox.set_spacing(2)
 
-        self.msgFont = self.fv.getFont("sansFont", 12)
+        self.msg_font = self.fv.get_font("sansFont", 12)
         tw = Widgets.TextArea(wrap=True, editable=False)
-        tw.set_font(self.msgFont)
+        tw.set_font(self.msg_font)
         self.tw = tw
 
         fr = Widgets.Expander("Instructions")
@@ -126,7 +126,7 @@ class Overlays(GingaPlugin.LocalPlugin):
         # start ruler drawing operation
         p_canvas = self.fitsimage.get_canvas()
         try:
-            obj = p_canvas.getObjectByTag(self.layertag)
+            obj = p_canvas.get_object_by_tag(self.layertag)
 
         except KeyError:
             # Add ruler layer
@@ -141,17 +141,17 @@ class Overlays(GingaPlugin.LocalPlugin):
 
     def resume(self):
         self.canvas.ui_setActive(True)
-        self.fv.showStatus("Enter a value for saturation limit")
+        self.fv.show_status("Enter a value for saturation limit")
 
     def stop(self):
         # remove the canvas from the image
         p_canvas = self.fitsimage.get_canvas()
         try:
-            p_canvas.deleteObjectByTag(self.layertag)
+            p_canvas.delete_object_by_tag(self.layertag)
         except:
             pass
         #self.canvas.ui_setActive(False)
-        self.fv.showStatus("")
+        self.fv.show_status("")
 
     def redo(self):
         hi_value_s = self.w.hi_value.get_text().strip()
@@ -238,7 +238,7 @@ class Overlays(GingaPlugin.LocalPlugin):
 
     def clear(self, canvas, button, data_x, data_y):
         self.canvas_img = None
-        self.canvas.deleteAllObjects()
+        self.canvas.delete_all_objects()
         return False
 
     def __str__(self):

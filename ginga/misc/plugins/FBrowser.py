@@ -134,8 +134,8 @@ class FBrowser(GingaPlugin.LocalPlugin):
         if self.fitsimage is not None:
             self.fv.gui_do(self.fitsimage.make_callback, 'drag-drop', paths)
         else:
-            fitsimage = self.fv.getfocus_fitsimage()
-            self.fv.gui_do(fitsimage.make_callback, 'drag-drop', paths)
+            chviewer = self.fv.getfocus_viewer()
+            self.fv.gui_do(chviewer.make_callback, 'drag-drop', paths)
 
     def load_cb(self):
         # Load from text box
@@ -376,13 +376,13 @@ class FBrowser(GingaPlugin.LocalPlugin):
         filelist.sort(key=lambda s: s.lower())
 
         if self.fitsimage is not None:
-            fitsimage = self.fitsimage
+            # we were invoked as a local plugin
+            channel = self.channel
         else:
-            fitsimage = self.fv.getfocus_fitsimage()
-
-        # find out our channel
-        chname = self.fv.get_channelName(fitsimage)
-        channel = self.fv.get_channelInfo(chname)
+            chviewer = self.fv.getfocus_viewer()
+            # find out our channel
+            chname = self.fv.get_channel_name(chviewer)
+            channel = self.fv.get_channel(chname)
 
         for path in filelist:
             name = self.fv.name_image_from_path(path)

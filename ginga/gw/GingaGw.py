@@ -56,6 +56,13 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         self.filesel = None
         self.menubar = None
 
+        # this holds registered viewers
+        self.viewer_db = {}
+
+        self.register_viewer(Viewers.CanvasView)
+        self.register_viewer(Viewers.TableViewGw)
+
+
     def set_layout(self, layout):
         self.layout = layout
 
@@ -106,7 +113,7 @@ class GingaView(GwMain.GwMain, Widgets.Application):
 
         self.w.root.show()
 
-    def getPluginManager(self, logger, fitsview, ds, mm):
+    def get_plugin_manager(self, logger, fitsview, ds, mm):
         return PluginManager.PluginManager(logger, fitsview, ds, mm)
 
     def _name_mangle(self, name, pfx=''):
@@ -145,7 +152,7 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         filemenu.add_separator()
 
         item = filemenu.add_name("Quit")
-        item.add_callback('activated', lambda *args: self.windowClose())
+        item.add_callback('activated', lambda *args: self.window_close())
 
         # create a Channel pulldown menu, and add it to the menu bar
         chmenu = menubar.add_name("Channel")
@@ -263,7 +270,7 @@ class GingaView(GwMain.GwMain, Widgets.Application):
 
         # Get image from current focused channel
         channel = self.get_current_channel()
-        viewer = channel.viewer
+        viewer = channel.fitsimage
         settings = viewer.get_settings()
         rgbmap = viewer.get_rgbmap()
 
@@ -291,6 +298,50 @@ class GingaView(GwMain.GwMain, Widgets.Application):
 
         root.fullscreen()
         self.w.fscreen = root
+
+    def register_viewer(self, vclass):
+        """Register a channel viewer with the reference viewer.
+        `vclass` is the class of the viewer.
+        """
+        self.viewer_db[vclass.vname] = Bunch.Bunch(vname=vclass.vname,
+                                                   vclass=vclass,
+                                                   vtypes=vclass.vtypes)
+
+    def get_viewer_names(self, dataobj):
+        """Returns a list of viewer names that are registered that
+        can view `dataobj`.
+        """
+        res = []
+        for bnch in self.viewer_db.values():
+            for vtype in bnch.vtypes:
+                if isinstance(dataobj, vtype):
+                    res.append(bnch.vname)
+        return res
+
+    def make_viewer(self, vname, channel):
+        """Make a viewer whose type name is `vname` and add it to `channel`.
+        """
+        if not vname in self.viewer_db:
+            raise ValueError("I don't know how to build a '%s' viewer" % (
+                vname))
+
+        stk_w = channel.widget
+        settings = channel.settings
+
+        bnch = self.viewer_db[vname]
+
+        viewer = bnch.vclass(logger=self.logger,
+                             settings=channel.settings)
+        stk_w.add_widget(viewer.get_widget(), title=vname)
+
+        # let the GUI respond to this widget addition
+        self.update_pending()
+
+        # let the channel object do any necessary initialization
+        channel.connect_viewer(viewer)
+
+        # finally, let the viewer do any viewer-side initialization
+        viewer.initialize_channel(self, channel)
 
     ####################################################
     # THESE METHODS ARE CALLED FROM OTHER MODULES & OBJECTS
@@ -344,11 +395,15 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         if isinstance(w, Widgets.MDIWidget) and w.true_mdi:
             size = (300, 300)
 
+        # build image viewer & widget
         fi = self.build_viewpane(settings, size=size)
         iw = Viewers.GingaViewerWidget(viewer=fi)
 
+        stk_w = Widgets.StackWidget()
+        stk_w.add_widget(iw, title='image')
+
         fi.add_callback('focus', self.focus_cb, name)
-        vbox.add_widget(iw, stretch=1)
+        vbox.add_widget(stk_w, stretch=1)
         fi.set_name(name)
 
         # Add the viewer to the specified workspace
@@ -356,8 +411,8 @@ class GingaView(GwMain.GwMain, Widgets.Application):
 
         self.update_pending()
 
-        bnch = Bunch.Bunch(viewer=fi, widget=iw, container=vbox,
-                           fitsimage=fi, view=iw,  # older names, to be deprecated
+        bnch = Bunch.Bunch(image_viewer=fi,
+                           widget=stk_w, container=vbox,
                            workspace=workspace)
         return bnch
 
@@ -428,8 +483,8 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         self.ds.show_dialog(dialog)
 
     def gui_delete_channel(self, chname=None):
-        channel = self.get_channelInfo(chname=chname)
-        if (len(self.get_channelNames()) == 0) or (channel is None):
+        channel = self.get_channel(chname)
+        if (len(self.get_channel_names()) == 0) or (channel is None):
             self.show_error("There are no more channels to delete.")
             return
 
@@ -500,7 +555,7 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         self.filesel.popup("Load File", self.load_file,
                            initialdir=initialdir)
 
-    def statusMsg(self, format, *args):
+    def status_msg(self, format, *args):
         if not format:
             s = ''
         else:
@@ -574,7 +629,7 @@ class GingaView(GwMain.GwMain, Widgets.Application):
                 lsize = 0
         hsplit.set_sizes([lsize, msize, rsize])
 
-    def getFont(self, fontType, pointSize):
+    def get_font(self, fontType, pointSize):
         font_family = self.settings.get(fontType)
         return GwHelp.get_font(font_family, pointSize)
 
@@ -587,7 +642,7 @@ class GingaView(GwMain.GwMain, Widgets.Application):
     # CALLBACKS
     ####################################################
 
-    def windowClose(self, *args):
+    def window_close(self, *args):
         """Quit the application.
         """
         self.quit()
@@ -730,7 +785,7 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         ws.use_tabs(tf)
 
     def _get_channel_by_container(self, child):
-        for chname in self.get_channelNames():
+        for chname in self.get_channel_names():
             channel = self.get_channel(chname)
             if channel.container == child:
                 return channel
@@ -759,5 +814,12 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         if channel is not None:
             self.gui_delete_channel(channel.name)
 
+
+    ########################################################
+    ### NON-PEP8 PREDECESSORS: TO BE DEPRECATED
+
+    getFont = get_font
+    getPluginManager = get_plugin_manager
+    statusMsg = status_msg
 
 # END

@@ -121,7 +121,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         self.settings.load(onError='silent')
         self.colors = self.settings.get('colors', cut_colors)
 
-        self.dc = fv.getDrawClasses()
+        self.dc = fv.get_draw_classes()
         canvas = self.dc.DrawingCanvas()
         canvas.enable_draw(True)
         canvas.enable_edit(True)
@@ -134,7 +134,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         canvas.set_draw_mode('draw')
         canvas.register_for_cursor_drawing(self.fitsimage)
         #canvas.set_callback('key-press', self.keydown)
-        canvas.setSurface(self.fitsimage)
+        canvas.set_surface(self.fitsimage)
         self.canvas = canvas
 
         self.use_slit = self.settings.get('enable_slit', True)
@@ -151,9 +151,9 @@ class Cuts(GingaPlugin.LocalPlugin):
         vbox.set_margins(4, 4, 4, 4)
         vbox.set_spacing(2)
 
-        msgFont = self.fv.getFont("sansFont", 12)
+        msg_font = self.fv.get_font("sansFont", 12)
         tw = Widgets.TextArea(wrap=True, editable=False)
-        tw.set_font(msgFont)
+        tw.set_font(msg_font)
         self.tw = tw
 
         fr = Widgets.Expander("Instructions")
@@ -409,7 +409,7 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         if tag == self._new_cut:
             return
         index = self.tags.index(tag)
-        self.canvas.deleteObjectByTag(tag)
+        self.canvas.delete_object_by_tag(tag)
         self.w.cuts.delete_alpha(tag)
         self.tags.remove(tag)
         idx = len(self.tags) - 1
@@ -423,7 +423,7 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         self.replot_all()
 
     def delete_all_cb(self, w):
-        self.canvas.deleteAllObjects()
+        self.canvas.delete_all_objects()
         self.w.cuts.clear()
         self.tags = [self._new_cut]
         self.cutstag = self._new_cut
@@ -463,13 +463,13 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         # insert canvas, if not already
         p_canvas = self.fitsimage.get_canvas()
         try:
-            obj = p_canvas.getObjectByTag(self.layertag)
+            obj = p_canvas.get_object_by_tag(self.layertag)
 
         except KeyError:
             # Add ruler layer
             p_canvas.add(self.canvas, tag=self.layertag)
 
-        #self.canvas.deleteAllObjects()
+        #self.canvas.delete_all_objects()
         self.resume()
 
     def pause(self):
@@ -480,7 +480,7 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         self.modes_off()
 
         self.canvas.ui_setActive(True)
-        self.fv.showStatus("Draw a line with the right mouse button")
+        self.fv.show_status("Draw a line with the right mouse button")
         self.replot_all()
         if self.use_slit:
             self.cuts_image = self.fitsimage.get_image()
@@ -488,8 +488,8 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
     def stop(self):
         # remove the canvas from the image
         p_canvas = self.fitsimage.get_canvas()
-        p_canvas.deleteObjectByTag(self.layertag)
-        self.fv.showStatus("")
+        p_canvas.delete_object_by_tag(self.layertag)
+        self.fv.show_status("")
 
     def redo(self):
         """This is called when a new image arrives or the data in the
@@ -645,7 +645,7 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         if not self.selected_axis:
             return
 
-        obj = self.canvas.getObjectByTag(self.cutstag)
+        obj = self.canvas.get_object_by_tag(self.cutstag)
         line = self._getlines(obj)
 
         self.get_slit_data(self.get_coords(line[0]))
@@ -677,7 +677,7 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         for cutstag in self.tags:
             if cutstag == self._new_cut:
                 continue
-            obj = self.canvas.getObjectByTag(cutstag)
+            obj = self.canvas.get_object_by_tag(cutstag)
             if obj.kind != 'compound':
                 continue
             lines = self._getlines(obj)
@@ -705,7 +705,7 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         self.cuts_plot.draw()
 
         self.canvas.redraw(whence=3)
-        self.fv.showStatus("Click or drag left mouse button to reposition cuts")
+        self.fv.show_status("Click or drag left mouse button to reposition cuts")
         return True
 
     def _create_cut(self, x, y, count, x1, y1, x2, y2, color='cyan'):
@@ -798,7 +798,7 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
     def motion_cb(self, canvas, event, data_x, data_y, viewer):
         if self.cutstag == self._new_cut:
             return True
-        obj = self.canvas.getObjectByTag(self.cutstag)
+        obj = self.canvas.get_object_by_tag(self.cutstag)
         # Assume first element of this compound object is the reference obj
         obj = obj.objects[0]
         obj.move_to(data_x, data_y)
@@ -811,7 +811,7 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
     def buttonup_cb(self, canvas, event, data_x, data_y, viewer):
         if self.cutstag == self._new_cut:
             return True
-        obj = self.canvas.getObjectByTag(self.cutstag)
+        obj = self.canvas.get_object_by_tag(self.cutstag)
         # Assume first element of this compound object is the reference obj
         obj = obj.objects[0]
         obj.move_to(data_x, data_y)
@@ -835,7 +835,7 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         counts = set([])
         for cutstag in self.tags:
             try:
-                obj = self.canvas.getObjectByTag(cutstag)
+                obj = self.canvas.get_object_by_tag(cutstag)
             except KeyError:
                 continue
             counts.add(obj.get_data('count', 0))
@@ -854,8 +854,8 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
             # Replacing a cut
             self.logger.debug("replacing cut position")
             try:
-                cutobj = self.canvas.getObjectByTag(self.cutstag)
-                self.canvas.deleteObjectByTag(self.cutstag)
+                cutobj = self.canvas.get_object_by_tag(self.cutstag)
+                self.canvas.delete_object_by_tag(self.cutstag)
                 count = cutobj.get_data('count')
             except KeyError:
                 count = self._get_new_count()
@@ -900,7 +900,7 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
 
         cut.set_data(count=count)
 
-        self.canvas.deleteObjectByTag(tag)
+        self.canvas.delete_object_by_tag(tag)
         self.canvas.add(cut, tag=tag)
         self.add_cuts_tag(tag)
 
@@ -908,8 +908,8 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         return self.replot_all()
 
     def draw_cb(self, canvas, tag):
-        obj = canvas.getObjectByTag(tag)
-        canvas.deleteObjectByTag(tag)
+        obj = canvas.get_object_by_tag(tag)
+        canvas.delete_object_by_tag(tag)
 
         if not obj.kind in self.cuttypes:
             return True
@@ -921,7 +921,7 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         cut.set_data(count=count)
         self._update_tines(cut)
 
-        canvas.deleteObjectByTag(tag)
+        canvas.delete_object_by_tag(tag)
         self.canvas.add(cut, tag=tag)
         self.add_cuts_tag(tag)
 
@@ -935,7 +935,7 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
 
     def edit_select_cuts(self):
         if self.cutstag != self._new_cut:
-            obj = self.canvas.getObjectByTag(self.cutstag)
+            obj = self.canvas.get_object_by_tag(self.cutstag)
             # drill down to reference shape
             if hasattr(obj, 'objects'):
                 obj = obj.objects[0]
@@ -964,7 +964,7 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
         for cutstag in self.tags:
             if cutstag == self._new_cut:
                 continue
-            obj = self.canvas.getObjectByTag(cutstag)
+            obj = self.canvas.get_object_by_tag(cutstag)
             if obj.kind != 'compound':
                 continue
             self._update_tines(obj)
