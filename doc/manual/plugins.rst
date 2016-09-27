@@ -84,4 +84,5 @@ is the graphical way to start an operation.
    plugins_local/drawing
    plugins_local/fbrowser
    plugins_local/compose
+   plugins_local/plottable
    plugins_local/pipeline
