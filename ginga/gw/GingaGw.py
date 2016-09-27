@@ -711,40 +711,42 @@ class GingaView(GwMain.GwMain, Widgets.Application):
             ws.nb.add_callback('page-switch', self.page_switch_cb)
 
         if ws.toolbar is not None:
-            ws.toolbar.add_separator()
+            tb = ws.toolbar
+            tb.add_separator()
 
-            btn = Widgets.Button('Prev')
+            # add toolbar buttons for navigating images in the channel
+            iconpath = os.path.join(self.iconpath, "up_48.png")
+            btn = tb.add_action(None, iconpath=iconpath)
             btn.set_tooltip("Previous object in current channel")
             btn.add_callback('activated', lambda w: self.prev_img())
-            ws.toolbar.add_widget(btn)
-            btn = Widgets.Button('Next')
+            iconpath = os.path.join(self.iconpath, "down_48.png")
+            btn = tb.add_action(None, iconpath=iconpath)
             btn.set_tooltip("Next object in current channel")
             btn.add_callback('activated', lambda w: self.next_img())
-            ws.toolbar.add_widget(btn)
 
-            ws.toolbar.add_separator()
+            tb.add_separator()
 
-            btn = Widgets.Button('<<')
+            # add toolbar buttons for navigating between channels
+            iconpath = os.path.join(self.iconpath, "prev_48.png")
+            btn = tb.add_action(None, iconpath=iconpath)
             btn.set_tooltip("Focus previous channel in this workspace")
             btn.add_callback('activated', lambda w: self.prev_channel_ws(ws))
-            ws.toolbar.add_widget(btn)
-            btn = Widgets.Button('>>')
+            iconpath = os.path.join(self.iconpath, "next_48.png")
+            btn = tb.add_action(None, iconpath=iconpath)
             btn.set_tooltip("Focus next channel in this workspace")
             btn.add_callback('activated', lambda w: self.next_channel_ws(ws))
-            ws.toolbar.add_widget(btn)
 
-            ws.toolbar.add_separator()
+            tb.add_separator()
 
-            btn = Widgets.Button('+')
+            # add toolbar buttons adding and deleting channels
+            btn = tb.add_action('+')
             btn.set_tooltip("Add a channel to this workspace")
             btn.add_callback('activated',
                              lambda w: self.add_channel_auto_ws(ws))
-            ws.toolbar.add_widget(btn)
-            btn = Widgets.Button('-')
+            btn = tb.add_action('-')
             btn.set_tooltip("Delete current channel from this workspace")
             btn.add_callback('activated',
                              lambda w: self.gui_delete_channel_ws(ws))
-            ws.toolbar.add_widget(btn)
 
     def add_ws_cb(self, w, rsp, b, names):
         try:
