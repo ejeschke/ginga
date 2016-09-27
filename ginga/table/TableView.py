@@ -119,21 +119,24 @@ class TableViewGw(TableViewBase):
         self.clear()
         tree_dict = OrderedDict()
 
-        # extract data as astropy table
+        # Extract data as astropy table
         a_tab = table.get_data()
+
+        # Fill masked values, if applicable
+        try:
+            a_tab = a_tab.filled()
+        except Exception:  # Just use original table
+            pass
 
         # This is to get around table widget not sorting numbers properly
         i_fmt = '{{0:0{0}d}}'.format(len(str(len(a_tab))))
 
-        # Table headers
-        i_str = i_fmt.format(0)
-        bnch = Bunch.Bunch([('_DISPLAY_ROW', i_str)])
+        # Table header with units
         columns = [('Row', '_DISPLAY_ROW')]
         for c in itervalues(a_tab.columns):
-            bnch[c.name] = str(c.unit)
-            columns.append((c.name, c.name))
+            col_str = '{0:^s}\n{1:^s}'.format(c.name, str(c.unit))
+            columns.append((col_str, c.name))
 
-        tree_dict[i_str] = bnch
         self.widget.setup_table(columns, 1, '_DISPLAY_ROW')
 
         # Table contents

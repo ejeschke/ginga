@@ -10,7 +10,7 @@ MultiDim
 
 .. image:: figures/multidim-plugin-table.png
    :align: center
-   :width: 500px
+   :width: 600px
    :alt: MultDim table display
 
 MultiDim is a plugin designed to handle data cubes and multi-HDU FITS
@@ -24,8 +24,8 @@ button or create a movie using the **Save Movie** button by entering the
 installed.
 
 For a FITS table, its data are read in using
-:ref:`astropy.table <astropy:astropy-table>`. Column units, if present, are
-displayed right under the main header as "Row 0000". Table data start from
-"Row 0001".
+:ref:`astropy.table <astropy:astropy-table>`.
+Column units are displayed right under the main header ("None" if no unit).
+For masked columns, masked values are replaced with pre-defined fill values.
 
 .. automodule:: ginga.misc.plugins.MultiDim
