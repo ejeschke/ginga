@@ -1425,11 +1425,14 @@ class Toolbar(ContainerBase):
             w.setOrientation(QtCore.Qt.Vertical)
         self.widget = w
 
-    def add_action(self, text, toggle=False, iconpath=None):
+    def add_action(self, text, toggle=False, iconpath=None, iconsize=None):
         child = ToolbarAction()
         if iconpath:
             image = QImage(iconpath)
-            qsize = QtCore.QSize(24, 24)
+            wd, ht = 24, 24
+            if iconsize is not None:
+                wd, ht = iconsize
+            qsize = QtCore.QSize(wd, ht)
             image = image.scaled(qsize)
             pixmap = QPixmap.fromImage(image)
             iconw = QIcon(pixmap)

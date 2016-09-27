@@ -716,11 +716,11 @@ class GingaView(GwMain.GwMain, Widgets.Application):
 
             # add toolbar buttons for navigating images in the channel
             iconpath = os.path.join(self.iconpath, "up_48.png")
-            btn = tb.add_action(None, iconpath=iconpath)
+            btn = tb.add_action(None, iconpath=iconpath, iconsize=(18, 18))
             btn.set_tooltip("Previous object in current channel")
             btn.add_callback('activated', lambda w: self.prev_img())
             iconpath = os.path.join(self.iconpath, "down_48.png")
-            btn = tb.add_action(None, iconpath=iconpath)
+            btn = tb.add_action(None, iconpath=iconpath, iconsize=(18, 18))
             btn.set_tooltip("Next object in current channel")
             btn.add_callback('activated', lambda w: self.next_img())
 
@@ -728,11 +728,11 @@ class GingaView(GwMain.GwMain, Widgets.Application):
 
             # add toolbar buttons for navigating between channels
             iconpath = os.path.join(self.iconpath, "prev_48.png")
-            btn = tb.add_action(None, iconpath=iconpath)
+            btn = tb.add_action(None, iconpath=iconpath, iconsize=(18, 18))
             btn.set_tooltip("Focus previous channel in this workspace")
             btn.add_callback('activated', lambda w: self.prev_channel_ws(ws))
             iconpath = os.path.join(self.iconpath, "next_48.png")
-            btn = tb.add_action(None, iconpath=iconpath)
+            btn = tb.add_action(None, iconpath=iconpath, iconsize=(18, 18))
             btn.set_tooltip("Focus next channel in this workspace")
             btn.add_callback('activated', lambda w: self.next_channel_ws(ws))
 

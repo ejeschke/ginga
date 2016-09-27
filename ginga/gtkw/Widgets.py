@@ -1438,14 +1438,17 @@ class Toolbar(ContainerBase):
             w.set_orientation(gtk.ORIENTATION_VERTICAL)
         self.widget = w
 
-    def add_action(self, text, toggle=False, iconpath=None):
+    def add_action(self, text, toggle=False, iconpath=None, iconsize=None):
         if toggle:
             child = ToggleButton(text)
         else:
             child = Button(text)
 
         if iconpath is not None:
-            pixbuf = GtkHelp.pixbuf_new_from_file_at_size(iconpath, 24, 24)
+            wd, ht = 24, 24
+            if iconsize is not None:
+                wd, ht = iconsize
+            pixbuf = GtkHelp.pixbuf_new_from_file_at_size(iconpath, wd, ht)
             if pixbuf is not None:
                 image = gtk.image_new_from_pixbuf(pixbuf)
                 child.get_widget().set_image(image)

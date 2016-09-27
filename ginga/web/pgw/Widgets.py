@@ -1212,14 +1212,17 @@ class Toolbar(ContainerBase):
         self.orientation = orientation
         self.widget = Box(orientation=orientation)
 
-    def add_action(self, text, toggle=False, iconpath=None):
+    def add_action(self, text, toggle=False, iconpath=None, iconsize=None):
         child = ToolbarAction()
         self.text = text
         if iconpath:
-            native_image = PgHelp.get_icon(iconpath, size=(24, 24),
+            wd, ht = 24, 24
+            if iconsize is not None:
+                wd, ht = iconsize
+            native_image = PgHelp.get_icon(iconpath, size=(wd, ht),
                                            format='png')
             widget = Image(native_image=native_image)
-            widget.resize(24, 24)
+            widget.resize(wd, ht)
         else:
             widget = Button(text)
         child.checkable = toggle
