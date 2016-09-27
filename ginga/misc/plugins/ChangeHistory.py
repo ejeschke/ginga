@@ -1,8 +1,6 @@
 #
 # ChangeHistory.py -- ChangeHistory global plugin for Ginga.
 #
-from ginga.util.six import iteritems
-
 from ginga import GingaPlugin
 from ginga.gw import Widgets
 from ginga.misc import Bunch
@@ -47,9 +45,9 @@ class ChangeHistory(GingaPlugin.GlobalPlugin):
         # superclass defines some variables for us, like logger
         super(ChangeHistory, self).__init__(fv)
 
-        self.columns = [ ('Timestamp (UTC)', 'MODIFIED'),
-                         ('Description', 'DESCRIP'),
-                         ]
+        self.columns = [('Timestamp (UTC)', 'MODIFIED'),
+                        ('Description', 'DESCRIP'),
+                        ]
         # For table-of-contents pane
         self.name_dict = Bunch.caselessDict()
         self.treeview = None
@@ -153,12 +151,15 @@ class ChangeHistory(GingaPlugin.GlobalPlugin):
         self.treeview.set_tree(self.name_dict)
 
     def show_more(self, widget, res_dict):
-        chname = list(res_dict.keys())[0]
-        img_dict = res_dict[chname]
-        imname = list(img_dict.keys())[0]
-        entries = img_dict[imname]
-        timestamp = list(entries.keys())[0]
-        bnch = entries[timestamp]
+        try:
+            chname = list(res_dict.keys())[0]
+            img_dict = res_dict[chname]
+            imname = list(img_dict.keys())[0]
+            entries = img_dict[imname]
+            timestamp = list(entries.keys())[0]
+            bnch = entries[timestamp]
+        except Exception:  # The drop-down row is selected, nothing to show
+            return
 
         # Display on GUI
         self.w.chname.set_text(chname)
@@ -262,5 +263,5 @@ class ChangeHistory(GingaPlugin.GlobalPlugin):
 # Replace module docstring with config doc for auto insert by Sphinx.
 # In the future, if we need the real docstring, we can append instead of
 # overwrite.
-from ginga.util.toolbox import generate_cfg_example
+from ginga.util.toolbox import generate_cfg_example  # noqa
 __doc__ = generate_cfg_example('plugin_ChangeHistory', package='ginga')
