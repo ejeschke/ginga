@@ -122,6 +122,12 @@ class TableViewGw(TableViewBase):
         # Extract data as astropy table
         a_tab = table.get_data()
 
+        # Fill masked values, if applicable
+        try:
+            a_tab = a_tab.filled()
+        except Exception:  # Just use original table
+            pass
+
         # This is to get around table widget not sorting numbers properly
         i_fmt = '{{0:0{0}d}}'.format(len(str(len(a_tab))))
 
