@@ -1,5 +1,5 @@
 #
-# Zoom.py -- Zoom plugin for fits viewer
+# Zoom.py -- Zoom plugin for Ginga reference viewer
 #
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.

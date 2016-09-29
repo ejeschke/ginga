@@ -156,4 +156,24 @@ class ImageViewPil(ImageView.ImageViewBase):
         return self._rgb_order
 
 
+class CanvasView(ImageViewPil):
+
+    def __init__(self, logger=None, settings=None, rgbmap=None,
+                 bindmap=None, bindings=None):
+        ImageViewPil.__init__(self, logger=logger, settings=settings,
+                              rgbmap=rgbmap)
+
+        # Needed for UIMixin to propagate events correctly
+        self.objects = [self.private_canvas]
+
+    def set_canvas(self, canvas, private_canvas=None):
+        super(CanvasView, self).set_canvas(canvas,
+                                           private_canvas=private_canvas)
+
+        self.objects[0] = self.private_canvas
+
+    def update_image(self):
+        # no widget to update
+        pass
+
 #END

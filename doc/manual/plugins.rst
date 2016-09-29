@@ -42,7 +42,8 @@ Global plugins
    plugins_global/operations
    plugins_global/wbrowser
    plugins_global/fbrowser
-   plugins_global/saveimage
+   plugins_global/fbrowser
+   plugins_global/colormappicker
    plugins_global/errors
    plugins_global/rc
    plugins_global/wcsmatch

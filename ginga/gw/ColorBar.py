@@ -133,7 +133,7 @@ class ColorBar(Callback.Callbacks):
         return True
 
     def draw_release_cb(self, canvas, event, data_x, data_y):
-        self.rgbmap.reset_cmap()
+        self.rgbmap.restore_cmap()
         return True
 
     def cursor_drag_cb(self, canvas, event, data_x, data_y):

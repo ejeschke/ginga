@@ -20,7 +20,7 @@ class Colorbar(GingaPlugin.GlobalPlugin):
         self.info = None
 
         prefs = self.fv.get_preferences()
-        self.settings = prefs.createCategory('plugin_ColorBar')
+        self.settings = prefs.createCategory('plugin_Colorbar')
         #self.settings.addDefaults()
         self.settings.load(onError='silent')
 

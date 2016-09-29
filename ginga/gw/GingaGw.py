@@ -881,7 +881,7 @@ class GingaView(GwMain.GwMain, Widgets.Application):
 
         top_w = ws.extdata.get('top_w', None)
         if top_w is None:
-            self.ds.remove_tab(name)
+            self.ds.remove_tab(ws.name)
         else:
             # this is a top-level window
             self.ds.remove_toplevel(top_w)

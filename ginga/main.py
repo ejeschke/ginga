@@ -82,6 +82,8 @@ global_plugins = [
     Bunch(module='Operations', tab='_opns', ws='operations', start=True),
     Bunch(module='WBrowser', tab='Help', ws='channels', raisekey='?', start=False),
     Bunch(module='FBrowser', tab='Open File', ws='right', start=False),
+    Bunch(module='ColorMapPicker', tab='Color Map Picker', ws='right',
+          start=False),
     # TODO: Move SaveImage to File menu.
     Bunch(module='SaveImage', tab='Save File', ws='right', start=False),
     Bunch(module='Errors', tab='Errors', ws='right', start=True),
