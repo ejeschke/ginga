@@ -104,16 +104,6 @@ class EnhancedCanvasView(Viewers.CanvasView):
 
         return canvas
 
-    def resize(self, width, height):
-        # this shouldn't be needed
-        self.configure_window(width, height)
-
-        self.pgcanvas.resize(width, height)
-
-        # hack to force a browser reload
-        app = self.pgcanvas.get_app()
-        app.do_operation('reload_page', id=self.pgcanvas.id)
-
 class ImageViewer(object):
 
     def __init__(self, logger, window, viewer_class=None):

@@ -141,6 +141,19 @@ class ImageViewPg(ImageView):
         self.configure_window(wd, ht)
         self.redraw(whence=0)
 
+    def resize(self, width, height):
+        """Resize our window to width x height.
+        May not work---depending on how the HTML5 canvas is embedded.
+        """
+        # this shouldn't be needed
+        self.configure_window(width, height)
+
+        self.pgcanvas.resize(width, height)
+
+        # hack to force a browser reload
+        app = self.pgcanvas.get_app()
+        app.do_operation('reload_page', id=self.pgcanvas.id)
+
 
 class ImageViewEvent(ImageViewPg):
 
