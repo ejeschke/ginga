@@ -67,6 +67,9 @@ ginga_make_application = function (ws_url, debug_flag) {
                     // update widget value
                     elt.disabled = message.value;
 	        }
+                else if (message.operation == "scroll_bottom") {
+                    elt.scrollTop = elt.scrollHeight;
+	        }
                 else if (message.operation == "reload_page") {
                     // js 1.2-- do we need a check for this?
                     window.location.reload(true);

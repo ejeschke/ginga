@@ -116,7 +116,7 @@ class PlotWidget(Widgets.Canvas):
         self.plot.draw()
 
     def resize_event(self, event):
-        wd, ht = event.x, event.y
+        wd, ht = event.width, event.height
         self.configure_window(wd, ht)
 
         self.plot.draw()

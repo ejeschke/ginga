@@ -236,6 +236,7 @@ class TextArea(WidgetBase):
 
         if not autoscroll:
             return
+        app.do_operation('scroll_bottom', id=self.id)
 
     def get_text(self):
         return self.text
