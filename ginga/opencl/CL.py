@@ -331,7 +331,7 @@ class CL(object):
 
         if (data_np.dtype == np.uint32) or ((data_np.dtype == np.uint8) and
                                                (len(data_np.shape) == 3)):
-            newdata = self.resize_uint32(data_np[y1:y2+1, x1:x2+1],
+            newdata = self.resize_uint32(data_np[y1:y2+1, x1:x2+1, ...],
                                          scale_x, scale_y, out=out)
         else:
             newdata = self.resize(data_np[y1:y2+1, x1:x2+1],

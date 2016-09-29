@@ -294,6 +294,10 @@ def get_scaled_cutout_wdht_view(shp, x1, y1, x2, y2, new_wd, new_ht):
 
 def get_scaled_cutout_wdht(data_np, x1, y1, x2, y2, new_wd, new_ht,
                            interpolation='basic', logger=None):
+
+    rdim = data_np.shape[2:]
+    open_cl_ok = (len(rdim) == 0 or (len(rdim) == 1 and rdim[0] == 4))
+
     if have_opencv:
         if logger is not None:
             logger.debug("resizing with OpenCv")
@@ -308,7 +312,8 @@ def get_scaled_cutout_wdht(data_np, x1, y1, x2, y2, new_wd, new_ht,
         ht, wd = newdata.shape[:2]
         scale_x, scale_y = float(wd) / old_wd, float(ht) / old_ht
 
-    elif have_opencl and interpolation in ('basic', 'nearest'):
+    elif (have_opencl and interpolation in ('basic', 'nearest')
+          and open_cl_ok):
         # opencl is almost as fast or sometimes faster, but currently
         # we only support nearest neighbor
         if logger is not None:
@@ -354,6 +359,9 @@ def get_scaled_cutout_basic_view(shp, x1, y1, x2, y2, scale_x, scale_y):
 def get_scaled_cutout_basic(data_np, x1, y1, x2, y2, scale_x, scale_y,
                             interpolation='basic', logger=None):
 
+    rdim = data_np.shape[2:]
+    open_cl_ok = (len(rdim) == 0 or (len(rdim) == 1 and rdim[0] == 4))
+
     if have_opencv:
         if logger is not None:
             logger.debug("resizing with OpenCv")
@@ -368,7 +376,8 @@ def get_scaled_cutout_basic(data_np, x1, y1, x2, y2, scale_x, scale_y,
         ht, wd = newdata.shape[:2]
         scale_x, scale_y = float(wd) / old_wd, float(ht) / old_ht
 
-    elif have_opencl and interpolation in ('basic', 'nearest'):
+    elif (have_opencl and interpolation in ('basic', 'nearest')
+          and open_cl_ok):
         if logger is not None:
             logger.debug("resizing with OpenCL")
         newdata, (scale_x, scale_y) = trcalc_cl.get_scaled_cutout_basic(data_np,
