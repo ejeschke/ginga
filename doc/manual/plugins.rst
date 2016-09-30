@@ -51,6 +51,7 @@ Global plugins
    plugins_global/iraf
    plugins_global/log
    plugins_global/command
+   plugins_global/saveimage
 
 
 .. _sec-localplugins:
