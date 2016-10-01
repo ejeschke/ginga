@@ -5,7 +5,6 @@
 # Please see the file LICENSE.txt for details.
 #
 import numpy as np
-from astropy.table import Column
 
 from ginga.GingaPlugin import LocalPlugin
 from ginga.gw import Widgets, Plot
@@ -21,10 +20,12 @@ class PlotTable(LocalPlugin):
     def __init__(self, fv, fitsimage):
         # superclass defines some variables for us, like logger
         super(PlotTable, self).__init__(fv, fitsimage)
+        self._idxname = '_idx'
 
         # To store all active table info
         self.tab = None
         self.cols = []
+        self._idx = []
 
         # To store selected columns names of active table
         self.x_col = ''
@@ -180,14 +181,12 @@ class PlotTable(LocalPlugin):
         if not isinstance(tab, AstroTable):
             return
 
-        # Add row number as first column
+        # Generate column indices
         self.tab = tab.get_data()
-        if '_idx' not in self.tab.colnames:
-            self.tab.add_column(
-                Column(np.arange(len(self.tab)), name='_idx'), index=0)
+        self._idx = np.arange(len(self.tab))
 
         # Populate combobox with table column names
-        self.cols = self.tab.colnames
+        self.cols = [self._idxname] + self.tab.colnames
         self.x_col = self._set_combobox(
             'xcombo', self.cols, default=self.settings.get('x_index', 1))
         self.y_col = self._set_combobox(
@@ -205,6 +204,7 @@ class PlotTable(LocalPlugin):
         """Clear comboboxes and columns."""
         self.tab = None
         self.cols = []
+        self._idx = []
         self.x_col = ''
         self.y_col = ''
         self.w.xcombo.clear()
@@ -237,14 +237,11 @@ class PlotTable(LocalPlugin):
         plt_kw['mec'] = plt_kw['mfc']
 
         try:
-            x = self.tab[self.x_col]
-            y = self.tab[self.y_col]
-            x_data, y_data, marker = self._get_plot_data(x, y)
+            x_data, y_data, marker = self._get_plot_data()
 
-            # TODO: Allow plot customization?
             self.tab_plot.plot(
                 x_data, y_data,
-                xtitle=self._get_label(x), ytitle=self._get_label(y),
+                xtitle=self._get_label('x'), ytitle=self._get_label('y'),
                 marker=marker, **plt_kw)
 
             if reset_xlimits:
@@ -278,17 +275,34 @@ class PlotTable(LocalPlugin):
         if set_max:
             self.w.y_hi.set_text('{0}'.format(ymax))
 
-    def _get_plot_data(self, x, y):
+    def _get_plot_data(self):
         """Extract only good data point for plotting."""
         _marker_type = self.settings.get('markerstyle', 'o')
 
-        if self.tab.masked:
-            mask = ~(x.mask | y.mask)
-            x_data = x.data[mask]
-            y_data = y.data[mask]
+        if self.x_col == self._idxname:
+            x_data = self._idx
         else:
-            x_data = x.data
-            y_data = y.data
+            x_data = self.tab[self.x_col].data
+
+        if self.y_col == self._idxname:
+            y_data = self._idx
+        else:
+            y_data = self.tab[self.y_col].data
+
+        if self.tab.masked:
+            if self.x_col == self._idxname:
+                x_mask = np.ones_like(self._idx, dtype=np.bool)
+            else:
+                x_mask = ~self.tab[self.x_col].mask
+
+            if self.y_col == self._idxname:
+                y_mask = np.ones_like(self._idx, dtype=np.bool)
+            else:
+                y_mask = ~self.tab[self.y_col].mask
+
+            mask = x_mask & y_mask
+            x_data = x_data[mask]
+            y_data = y_data[mask]
 
         if len(x_data) > 1:
             i = np.argsort(x_data)  # Sort X-axis to avoid messy line plot
@@ -300,13 +314,23 @@ class PlotTable(LocalPlugin):
 
         return x_data, y_data, _marker_type
 
-    @staticmethod
-    def _get_label(col):
-        """Return plot label for given column."""
-        if col.unit:
-            label = '{0} ({1})'.format(col.name, col.unit)
+    def _get_label(self, axis):
+        """Return plot label for column for the given axis."""
+
+        if axis == 'x':
+            colname = self.x_col
+        else:  # y
+            colname = self.y_col
+
+        if colname == self._idxname:
+            label = 'Index'
         else:
-            label = col.name
+            col = self.tab[colname]
+            if col.unit:
+                label = '{0} ({1})'.format(col.name, col.unit)
+            else:
+                label = col.name
+
         return label
 
     def x_select_cb(self, w, index):
