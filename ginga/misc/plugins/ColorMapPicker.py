@@ -42,6 +42,7 @@ class ColorMapPicker(GingaPlugin.GlobalPlugin):
         self._cmxoff = 20
         self._wd = 300
         self._ht = 400
+        self._max_y = 0
 
         # create a PIL viewer that we use to construct an RGB image
         # containing all the possible color bars and their labels
@@ -88,7 +89,7 @@ class ColorMapPicker(GingaPlugin.GlobalPlugin):
         c_v.add_callback('scroll', self.scroll_cb)
 
         bd = c_v.get_bindings()
-        bd.enable_pan(True)
+        bd.enable_pan(False)
         # disable zooming so scrolling can be used to pan up/down
         bd.enable_zoom(False)
         bd.enable_cmap(False)
@@ -143,6 +144,9 @@ class ColorMapPicker(GingaPlugin.GlobalPlugin):
             pan_y -= qty
         else:
             pan_y += qty
+
+        pan_y = min(max(pan_y, 0), self._max_y)
+
         viewer.set_pan(pan_x, pan_y)
 
     def rebuild_cmaps(self):
@@ -188,6 +192,8 @@ class ColorMapPicker(GingaPlugin.GlobalPlugin):
         Compound = canvas.get_draw_class('compoundobject')
         obj = Compound(*l2)
         canvas.add(obj)
+
+        self._max_y = y2
 
         rgb_img = self.p_view.get_image_as_array()
         self.r_image.set_data(rgb_img)
