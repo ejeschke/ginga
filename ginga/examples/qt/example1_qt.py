@@ -9,6 +9,7 @@ from ginga import AstroImage
 from ginga.misc import log
 from ginga.qtw.QtHelp import QtGui, QtCore
 from ginga.qtw.ImageViewCanvasQt import ImageViewCanvas
+from ginga.qtw.ImageViewQt import ScrolledView
 
 
 class FitsViewer(QtGui.QMainWindow):
@@ -17,6 +18,7 @@ class FitsViewer(QtGui.QMainWindow):
         super(FitsViewer, self).__init__()
         self.logger = logger
 
+        # create the ginga viewer and configure it
         fi = ImageViewCanvas(self.logger, render='widget')
         fi.enable_autocuts('on')
         fi.set_autocut_params('zscale')
@@ -27,16 +29,20 @@ class FitsViewer(QtGui.QMainWindow):
         fi.enable_draw(False)
         self.fitsimage = fi
 
+        # enable some user interaction
         bd = fi.get_bindings()
         bd.enable_all(True)
 
         w = fi.get_widget()
         w.resize(512, 512)
 
+        # add scrollbar interface around this viewer
+        si = ScrolledView(fi)
+
         vbox = QtGui.QVBoxLayout()
         vbox.setContentsMargins(QtCore.QMargins(2, 2, 2, 2))
         vbox.setSpacing(1)
-        vbox.addWidget(w, stretch=1)
+        vbox.addWidget(si, stretch=1)
 
         hbox = QtGui.QHBoxLayout()
         hbox.setContentsMargins(QtCore.QMargins(4, 2, 4, 2))

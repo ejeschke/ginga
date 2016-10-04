@@ -573,4 +573,121 @@ class CanvasView(ImageViewZoom):
         self.objects[0] = self.private_canvas
 
 
+class ScrolledView(gtk.ScrolledWindow):
+    """A class that can take a viewer as a parameter and add scroll bars
+    that respond to the pan/zoom levels.
+    """
+
+    def __init__(self, viewer, parent=None):
+        self.viewer = viewer
+        super(ScrolledView, self).__init__()
+
+        # the window jiggles annoyingly as the scrollbar is alternately
+        # shown and hidden if we use the default "automatic" policy, so
+        # default to always showing them (user can change this after
+        # calling the constructor, if desired)
+        self.scroll_bars(horizontal='on', vertical='on')
+
+        self.set_border_width(0)
+
+        self._adjusting = False
+        self.pad = 20
+
+        # reparent the viewer widget
+        self.v_w = viewer.get_widget()
+        self.add(self.v_w)
+
+        hsb = self.get_hadjustment()
+        hsb.connect('value-changed', self._scroll_contents)
+        vsb = self.get_vadjustment()
+        vsb.connect('value-changed', self._scroll_contents)
+
+        self.viewer.add_callback('redraw', self._calc_scrollbars)
+
+    def _calc_scrollbars(self, viewer):
+        """Calculate and set the scrollbar handles from the pan and
+        zoom positions.
+        """
+        image = viewer.get_image()
+        if image is None:
+            # no way to tell data extents
+            return
+
+        # flag that suppresses a cyclical callback
+        self._adjusting = True
+        try:
+            mxwd, mxht = image.get_size()
+            mxwd, mxht = mxwd + self.pad, mxht + self.pad
+            mnwd, mnht = 0 - self.pad, 0 - self.pad
+
+            rect = viewer.get_pan_rect()
+            x1, y1 = rect[0]
+            x2, y2 = rect[2]
+            dwd = int(abs(x2 - x1))
+            dht = int(abs(y2 - y1))
+
+            hsb = self.get_hadjustment()
+            vsb = self.get_vadjustment()
+
+            rx1, rx2 = min(x1, mnwd), max(x2, mxwd)
+            ry1, ry2 = min(y1, mnht), max(y2, mxht)
+
+            pos_wd = int(round(x1))
+            pos_ht = int(round(ry2 - y1))
+
+            hsb.configure(pos_wd, rx1, rx2, 1, dwd, dwd)
+            vsb.configure(pos_ht, ry1, ry2, 1, dht, dht)
+        finally:
+            self._adjusting = False
+
+    def _scroll_contents(self, adj):
+        """Called when the scroll bars are adjusted by the user.
+        (dx, dy) specifies the amount of the scroll.
+        """
+        if self._adjusting:
+            return
+
+        image = self.viewer.get_image()
+        if image is None:
+            # no way to tell data extents
+            return
+
+        rect = self.viewer.get_pan_rect()
+        x1, y1 = rect[0]
+        x2, y2 = rect[2]
+        dwd = abs(x2 - x1)
+        dht = abs(y2 - y1)
+
+        hsb = self.get_hadjustment()
+        vsb = self.get_vadjustment()
+        pos_wd = hsb.get_value() + dwd / 2.0
+        pos_ht = vsb.get_value() + dht / 2.0
+
+        mxwd, mxht = self.viewer.get_data_size()
+        mxht = max(mxht + self.pad, vsb.get_value())
+
+        self.viewer.panset_xy(pos_wd, mxht - pos_ht)
+        ## print(('scroll adjusted by %d and %d' % (dx, dy)))
+
+    def scroll_bars(self, horizontal='on', vertical='on'):
+        if horizontal == 'on':
+            hpolicy = gtk.POLICY_ALWAYS
+        elif horizontal == 'off':
+            hpolicy = gtk.POLICY_NEVER
+        elif horizontal == 'auto':
+            hpolicy = gtk.POLICY_AUTOMATIC
+        else:
+            raise ValueError("Bad scroll bar option: '%s'; should be one of ('on', 'off' or 'auto')" % (horizontal))
+
+        if vertical == 'on':
+            vpolicy = gtk.POLICY_ALWAYS
+        elif vertical == 'off':
+            vpolicy = gtk.POLICY_NEVER
+        elif vertical == 'auto':
+            vpolicy = gtk.POLICY_AUTOMATIC
+        else:
+            raise ValueError("Bad scroll bar option: '%s'; should be one of ('on', 'off' or 'auto')" % (vertical))
+
+        self.set_policy(hpolicy, vpolicy)
+
 #END

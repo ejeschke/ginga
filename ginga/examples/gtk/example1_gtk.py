@@ -2,9 +2,6 @@
 #
 # example1_gtk.py -- Simple, configurable FITS viewer.
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -12,6 +9,7 @@ import sys, os
 import logging
 
 from ginga.gtkw.ImageViewCanvasGtk import ImageViewCanvas
+from ginga.gtkw.ImageViewGtk import ScrolledView
 from ginga.gtkw import GtkHelp
 from ginga import AstroImage
 
@@ -19,6 +17,7 @@ import gtk
 
 
 STD_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcName)s) | %(message)s'
+
 
 class FitsViewer(object):
 
@@ -34,6 +33,7 @@ class FitsViewer(object):
         self.select = GtkHelp.FileSelection(root)
         vbox = gtk.VBox(spacing=2)
 
+        # create the ginga viewer and configure it
         fi = ImageViewCanvas(logger)
         fi.enable_autocuts('on')
         fi.set_autocut_params('zscale')
@@ -43,6 +43,7 @@ class FitsViewer(object):
         fi.ui_setActive(True)
         self.fitsimage = fi
 
+        # enable some user interaction
         bd = fi.get_bindings()
         bd.enable_pan(True)
         bd.enable_zoom(True)
@@ -52,7 +53,10 @@ class FitsViewer(object):
         w = fi.get_widget()
         w.set_size_request(512, 512)
 
-        vbox.pack_start(w, fill=True, expand=True)
+        # add scrollbar interface around this viewer
+        si = ScrolledView(fi)
+
+        vbox.pack_start(si, fill=True, expand=True)
 
         hbox = gtk.HButtonBox()
         hbox.set_layout(gtk.BUTTONBOX_END)

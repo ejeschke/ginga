@@ -805,6 +805,126 @@ class CanvasView(ImageViewZoom):
         self.objects[0] = self.private_canvas
 
 
+class ScrolledView(QtGui.QAbstractScrollArea):
+    """A class that can take a viewer as a parameter and add scroll bars
+    that respond to the pan/zoom levels.
+    """
+
+    def __init__(self, viewer, parent=None):
+        self.viewer = viewer
+        super(ScrolledView, self).__init__(parent=parent)
+
+        # the window jiggles annoyingly as the scrollbar is alternately
+        # shown and hidden if we use the default "as needed" policy, so
+        # default to always showing them (user can change this after
+        # calling the constructor, if desired)
+        self.scroll_bars(horizontal='on', vertical='on')
+
+        self._adjusting = False
+        self.pad = 20
+
+        # reparent the viewer widget
+        vp = self.viewport()
+        self.v_w = viewer.get_widget()
+        self.v_w.setParent(vp)
+
+        self.viewer.add_callback('redraw', self._calc_scrollbars)
+
+    def resizeEvent(self, event):
+        """Override from QAbstractScrollArea.
+        Resize the viewer widget when the viewport is resized."""
+        vp = self.viewport()
+        rect = vp.geometry()
+        x1, y1, x2, y2 = rect.getCoords()
+        width = x2 - x1
+        height = y2 - y1
+
+        self.v_w.resize(width, height)
+
+    def _calc_scrollbars(self, viewer):
+        """Calculate and set the scrollbar handles from the pan and
+        zoom positions.
+        """
+        image = viewer.get_image()
+        if image is None:
+            # no way to tell data extents
+            return
+
+        # flag that suppresses a cyclical callback
+        self._adjusting = True
+        try:
+            mxwd, mxht = image.get_size()
+            mxwd, mxht = mxwd + self.pad, mxht + self.pad
+            mnwd, mnht = 0 - self.pad, 0 - self.pad
+
+            rect = viewer.get_pan_rect()
+            x1, y1 = rect[0]
+            x2, y2 = rect[2]
+            dwd = int(abs(x2 - x1))
+            dht = int(abs(y2 - y1))
+
+            hsb = self.horizontalScrollBar()
+            hsb.setPageStep(dwd)
+            vsb = self.verticalScrollBar()
+            vsb.setPageStep(dht)
+
+            rx1, rx2 = min(x1, mnwd), max(x2, mxwd)
+            hsb.setRange(rx1, rx2 - dwd)
+            ry1, ry2 = min(y1, mnht), max(y2, mxht)
+            vsb.setRange(ry1, ry2 - dht)
+
+            pos_wd = int(round(x1))
+            pos_ht = int(round(ry2 - y1))
+            hsb.setValue(pos_wd)
+            vsb.setValue(pos_ht)
+        finally:
+            self._adjusting = False
+
+    def scrollContentsBy(self, dx, dy):
+        """Override from QAbstractScrollArea.
+        Called when the scroll bars are adjusted by the user.
+        (dx, dy) specifies the amount of the scroll.
+        """
+        if self._adjusting:
+            return
+
+        rect = self.viewer.get_pan_rect()
+        x1, y1 = rect[0]
+        x2, y2 = rect[2]
+        dwd = abs(x2 - x1)
+        dht = abs(y2 - y1)
+
+        hsb = self.horizontalScrollBar()
+        vsb = self.verticalScrollBar()
+        pos_wd = hsb.value() + dwd / 2.0
+        pos_ht = vsb.value() + dht / 2.0
+
+        mxwd, mxht = self.viewer.get_data_size()
+        mxht = max(mxht + self.pad, vsb.value())
+
+        self.viewer.panset_xy(pos_wd, mxht - pos_ht)
+        ## print(('scroll adjusted by %d and %d' % (dx, dy)))
+
+    def scroll_bars(self, horizontal='on', vertical='on'):
+        if horizontal == 'on':
+            self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOn)
+        elif horizontal == 'off':
+            self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
+        elif horizontal == 'auto':
+            self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
+        else:
+            raise ValueError("Bad scroll bar option: '%s'; should be one of ('on', 'off' or 'auto')" % (horizontal))
+
+        if vertical == 'on':
+            self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOn)
+        elif vertical == 'off':
+            self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
+        elif vertical == 'auto':
+            self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
+        else:
+            raise ValueError("Bad scroll bar option: '%s'; should be one of ('on', 'off' or 'auto')" % (vertical))
+
+
 def make_cursor(iconpath, x, y):
     image = QImage()
     image.load(iconpath)

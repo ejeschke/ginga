@@ -30,6 +30,7 @@ class FitsViewer(object):
         self.select = GtkHelp.FileSelection(root)
         vbox = Gtk.VBox(spacing=2)
 
+        # create the ginga viewer and configure it
         fi = ImageViewCanvas(logger)
         fi.enable_autocuts('on')
         fi.set_autocut_params('zscale')
@@ -39,6 +40,7 @@ class FitsViewer(object):
         fi.ui_setActive(True)
         self.fitsimage = fi
 
+        # enable some user interaction
         bd = fi.get_bindings()
         bd.enable_all(True)
 
