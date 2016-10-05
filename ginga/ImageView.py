@@ -285,13 +285,21 @@ class ImageViewBase(Callback.Callbacks):
         # set up basic transforms
         self.tform = {
             'canvas_to_window': transform.CanvasWindowTransform(self),
-            'cartesian_to_window': transform.CartesianWindowTransform(self),
-            'data_to_cartesian': transform.DataCartesianTransform(self),
+            'cartesian_to_window': (transform.RotationTransform(self) +
+                                    transform.CartesianWindowTransform(self)),
+            'data_to_cartesian': (transform.DataCartesianTransform(self) +
+                                  transform.ScaleTransform(self)),
+            'data_to_scrollbar': (transform.DataCartesianTransform(self) +
+                                  transform.RotationTransform(self)),
             'data_to_window': (transform.DataCartesianTransform(self) +
+                               transform.ScaleTransform(self) +
+                               transform.RotationTransform(self) +
                                transform.CartesianWindowTransform(self)),
             'wcs_to_data': transform.WCSDataTransform(self),
             'wcs_to_window': (transform.WCSDataTransform(self) +
                               transform.DataCartesianTransform(self) +
+                              transform.ScaleTransform(self) +
+                              transform.RotationTransform(self) +
                               transform.CartesianWindowTransform(self)),
             }
 
@@ -1289,10 +1297,10 @@ class ImageViewBase(Callback.Callbacks):
         # necessary to fit the window in the desired size
 
         # get the data points in the four corners
-        xul, yul = self.get_data_xy(0, 0, center=True)
-        xur, yur = self.get_data_xy(win_wd, 0, center=True)
-        xlr, ylr = self.get_data_xy(win_wd, win_ht, center=True)
-        xll, yll = self.get_data_xy(0, win_ht, center=True)
+        xul, yul = self.get_data_xy(0, 0)
+        xur, yur = self.get_data_xy(win_wd, 0)
+        xlr, ylr = self.get_data_xy(win_wd, win_ht)
+        xll, yll = self.get_data_xy(0, win_ht)
 
         # determine bounding box
         a1 = min(xul, xur, xlr, xll)
@@ -1470,7 +1478,7 @@ class ImageViewBase(Callback.Callbacks):
         out[..., gi] = arr[..., 1]
         out[..., bi] = arr[..., 2]
 
-    def get_data_xy(self, win_x, win_y, center=True):
+    def get_data_xy(self, win_x, win_y, center=None):
         """Get the closest coordinates in the data array to those
         reported on the window.
 
@@ -1491,9 +1499,12 @@ class ImageViewBase(Callback.Callbacks):
             Data coordinates in the form of ``(x, y)``.
 
         """
+        if center is not None:
+            self.logger.warn("`center` keyword is ignored and will be deprecated")
+
         return self.tform['data_to_window'].from_(win_x, win_y)
 
-    def offset_to_data(self, off_x, off_y, center=True):
+    def offset_to_data(self, off_x, off_y, center=None):
         """Get the closest coordinates in the data array to those
         in cartesian fixed (non-scaled) canvas coordinates.
 
@@ -1502,30 +1513,36 @@ class ImageViewBase(Callback.Callbacks):
         off_x, off_y : float or ndarray
             Cartesian canvas coordinates.
 
-        center : bool
-            If `True`, then the coordinates are mapped such that the
-            pixel is centered on the square when the image is zoomed in past
-            1X. This is the specification of the FITS image standard,
-            that the pixel is centered on the integer row/column.
-
         Returns
         -------
         coord : tuple
             Data coordinates in the form of ``(x, y)``.
 
         """
-        return self.tform['data_to_cartesian'].from_(off_x, off_y,
-                                                     center=center)
+        if center is not None:
+            self.logger.warn("`center` keyword is ignored and will be deprecated")
 
-    def get_canvas_xy(self, data_x, data_y, center=True):
-        """Reverse of :meth:`get_data_xy`."""
+        return self.tform['data_to_cartesian'].from_(off_x, off_y)
+
+    def get_canvas_xy(self, data_x, data_y, center=None):
+        """Reverse of :meth:`get_data_xy`.
+
+        """
+        if center is not None:
+            self.logger.warn("`center` keyword is ignored and will be deprecated")
+
         return self.tform['data_to_window'].to_(data_x, data_y)
 
-    def data_to_offset(self, data_x, data_y, center=True):
-        """Reverse of :meth:`offset_to_data`."""
-        return self.tform['data_to_cartesian'].to_(data_x, data_y, center=True)
+    def data_to_offset(self, data_x, data_y, center=None):
+        """Reverse of :meth:`offset_to_data`.
 
-    def offset_to_window(self, off_x, off_y, asint=True):
+        """
+        if center is not None:
+            self.logger.warn("`center` keyword is ignored and will be deprecated")
+
+        return self.tform['data_to_cartesian'].to_(data_x, data_y)
+
+    def offset_to_window(self, off_x, off_y):
         """Convert data offset to window coordinates.
 
         Parameters
@@ -1533,23 +1550,25 @@ class ImageViewBase(Callback.Callbacks):
         off_x, off_y : float or ndarray
             Data offsets.
 
-        asint : bool
-            Force output coordinates to be integers.
-
         Returns
         -------
         coord : tuple
             Offset in window coordinates in the form of ``(x, y)``.
 
         """
-        return self.tform['cartesian_to_window'].to_(off_x, off_y, asint=asint)
+        return self.tform['cartesian_to_window'].to_(off_x, off_y)
 
     def window_to_offset(self, win_x, win_y):
         """Reverse of :meth:`offset_to_window`."""
         return self.tform['cartesian_to_window'].from_(win_x, win_y)
 
-    def canvascoords(self, data_x, data_y, center=True):
-        """Same as :meth:`get_canvas_xy`."""
+    def canvascoords(self, data_x, data_y, center=None):
+        """Same as :meth:`get_canvas_xy`.
+
+        """
+        if center is not None:
+            self.logger.warn("`center` keyword is ignored and will be deprecated")
+
         # data->canvas space coordinate conversion
         return self.tform['data_to_window'].to_(data_x, data_y)
 

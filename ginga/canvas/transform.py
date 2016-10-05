@@ -10,6 +10,7 @@ from ginga import trcalc
 
 __all__ = ['TransformError', 'BaseTransform', 'ComposedTransform',
            'CanvasWindowTransform', 'CartesianWindowTransform',
+           'RotationTransform', 'ScaleTransform',
            'DataCartesianTransform', 'OffsetDataTransform',
            'WCSDataTransform',
            ]
@@ -42,11 +43,11 @@ class ComposedTransform(BaseTransform):
         self.tform1 = tform1
         self.tform2 = tform2
 
-    def to_(self, x, y):
-        return self.tform2.to_(*self.tform1.to_(x, y))
+    def to_(self, x, y, **kwargs):
+        return self.tform2.to_(*self.tform1.to_(x, y, **kwargs))
 
-    def from_(self, tx, ty):
-        return self.tform1.from_(*self.tform2.from_(tx, ty))
+    def from_(self, tx, ty, **kwargs):
+        return self.tform1.from_(*self.tform2.from_(tx, ty), **kwargs)
 
 
 class CanvasWindowTransform(BaseTransform):
@@ -74,42 +75,16 @@ class CanvasWindowTransform(BaseTransform):
 
 class CartesianWindowTransform(BaseTransform):
     """
-    A transform from non-scaled cartesian coordinates to the flipped,
-    swapped and rotated window pixel coordinates of the back end.
+    A transform from cartesian coordinates to the window pixel coordinates
+    of a viewer.
     """
 
-    def __init__(self, viewer):
+    def __init__(self, viewer, as_int=True):
         super(CartesianWindowTransform, self).__init__()
         self.viewer = viewer
+        self.as_int = as_int
 
-    def to_(self, off_x, off_y, asint=True):
-        """Convert non-scaled cartesian offset to window coordinates.
-
-        Parameters
-        ----------
-        off_x, off_y : float or ndarray
-            Non-scaled cartesian offsets.
-
-        asint : bool
-            Force output coordinates to be integers.
-
-        Returns
-        -------
-        coord : tuple
-            Offset in window coordinates in the form of ``(x, y)``.
-
-        """
-        t_ = self.viewer.t_
-        if t_['flip_x']:
-            off_x = - off_x
-        if t_['flip_y']:
-            off_y = - off_y
-        if t_['swap_xy']:
-            off_x, off_y = off_y, off_x
-
-        if t_['rot_deg'] != 0:
-            off_x, off_y = trcalc.rotate_pt(off_x, off_y, t_['rot_deg'])
-
+    def to_(self, off_x, off_y):
         # add center pixel to convert from X/Y coordinate space to
         # canvas graphics space
         ctr_x, ctr_y = self.viewer.get_center()
@@ -120,7 +95,7 @@ class CartesianWindowTransform(BaseTransform):
             win_y = off_y + ctr_y
 
         # round to pixel units, if asked
-        if asint:
+        if self.as_int:
             win_x = np.rint(win_x).astype(np.int)
             win_y = np.rint(win_y).astype(np.int)
 
@@ -137,6 +112,35 @@ class CartesianWindowTransform(BaseTransform):
         else:
             off_y = win_y - ctr_y
 
+        return (off_x, off_y)
+
+
+class RotationTransform(BaseTransform):
+    """
+    A transform in cartesian coordinates based on the flip/swap setting and
+    rotation setting of a viewer.
+    """
+
+    def __init__(self, viewer):
+        super(RotationTransform, self).__init__()
+        self.viewer = viewer
+
+    def to_(self, off_x, off_y):
+        t_ = self.viewer.t_
+        if t_['flip_x']:
+            off_x = - off_x
+        if t_['flip_y']:
+            off_y = - off_y
+        if t_['swap_xy']:
+            off_x, off_y = off_y, off_x
+
+        if t_['rot_deg'] != 0:
+            off_x, off_y = trcalc.rotate_pt(off_x, off_y, t_['rot_deg'])
+
+        return (off_x, off_y)
+
+    def from_(self, off_x, off_y):
+        """Reverse of :meth:`to_`."""
         t_ = self.viewer.t_
         if t_['rot_deg'] != 0:
             off_x, off_y = trcalc.rotate_pt(off_x, off_y, -t_['rot_deg'])
@@ -151,60 +155,64 @@ class CartesianWindowTransform(BaseTransform):
         return (off_x, off_y)
 
 
-class DataCartesianTransform(BaseTransform):
+class ScaleTransform(BaseTransform):
     """
-    A transform from the scaled data space of a viewer to non-scaled
-    cartesian coordinates.
+    A transform in cartesian coordinates based on the scale of a viewer.
     """
 
     def __init__(self, viewer):
-        super(DataCartesianTransform, self).__init__()
+        super(ScaleTransform, self).__init__()
         self.viewer = viewer
 
-    def to_(self, data_x, data_y, center=True):
+    def to_(self, off_x, off_y):
         """Reverse of :meth:`from_`."""
-        if center:
-            data_x -= self.viewer.data_off
-            data_y -= self.viewer.data_off
-        # subtract data indexes at center reference pixel
-        off_x = data_x - self.viewer._org_x
-        off_y = data_y - self.viewer._org_y
-
         # scale according to current settings
         off_x *= self.viewer._org_scale_x
         off_y *= self.viewer._org_scale_y
 
         return (off_x, off_y)
 
-    def from_(self, off_x, off_y, center=True):
-        """Get the closest coordinates in the data array to those
-        in cartesian fixed (non-scaled) canvas coordinates.
-
-        Parameters
-        ----------
-        off_x, off_y : float or ndarray
-            Cartesian canvas coordinates.
-
-        center : bool
-            If `True`, then the coordinates are mapped such that the
-            pixel is centered on the square when the image is zoomed in past
-            1X. This is the specification of the FITS image standard,
-            that the pixel is centered on the integer row/column.
-
-        Returns
-        -------
-        coord : tuple
-            Data coordinates in the form of ``(x, y)``.
-
-        """
+    def from_(self, off_x, off_y):
         # Reverse scaling
         off_x = off_x * (1.0 / self.viewer._org_scale_x)
         off_y = off_y * (1.0 / self.viewer._org_scale_y)
 
-        # Add data index at (_ctr_x, _ctr_y) to offset
+        return (off_x, off_y)
+
+
+class DataCartesianTransform(BaseTransform):
+    """
+    A transform from data coordinates to cartesian coordinates based on
+    a viewer's pan position.
+    """
+
+    def __init__(self, viewer, use_center=True):
+        super(DataCartesianTransform, self).__init__()
+        self.viewer = viewer
+        # If use_center is True, then the coordinates are mapped such that the
+        # pixel is centered on the square when the image is zoomed in past
+        # 1X. This is the specification of the FITS image standard,
+        # that the pixel is centered on the integer row/column.
+        self.use_center = use_center
+
+    def to_(self, data_x, data_y):
+        """Reverse of :meth:`from_`."""
+        if self.use_center:
+            data_x -= self.viewer.data_off
+            data_y -= self.viewer.data_off
+
+        # subtract data indexes at center reference pixel
+        off_x = data_x - self.viewer._org_x
+        off_y = data_y - self.viewer._org_y
+
+        return (off_x, off_y)
+
+    def from_(self, off_x, off_y):
+        # Add data index at center to offset
         data_x = self.viewer._org_x + off_x
         data_y = self.viewer._org_y + off_y
-        if center:
+
+        if self.use_center:
             data_x += self.viewer.data_off
             data_y += self.viewer.data_off
 
