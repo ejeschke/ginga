@@ -572,9 +572,10 @@ class ImageViewBindings(object):
         # calculate current pan pct
         res = self.calc_pan_pct(viewer, pad=0)
 
+        pct_page = res.vis_x / res.rng_x
         # modify the pct, as per the params
-        amt = 1.0 + sign * pct_vw
-        pct_x = res.pan_pct_x * amt
+        amt = sign * pct_vw * pct_page
+        pct_x = res.pan_pct_x + amt
 
         # update the pan position by pct
         self.pan_by_pct(viewer, pct_x, res.pan_pct_y)
@@ -583,9 +584,10 @@ class ImageViewBindings(object):
         # calculate current pan pct
         res = self.calc_pan_pct(viewer, pad=0)
 
+        pct_page = res.vis_y / res.rng_y
         # modify the pct, as per the params
-        amt = 1.0 + sign * pct_vh
-        pct_y = res.pan_pct_y * amt
+        amt = sign * pct_vh * pct_page
+        pct_y = res.pan_pct_y + amt
 
         # update the pan position by pct
         self.pan_by_pct(viewer, res.pan_pct_x, pct_y)
