@@ -10,7 +10,8 @@ from __future__ import print_function
 # stdlib imports
 import sys
 import os
-import logging, logging.handlers
+import logging
+import logging.handlers
 import threading
 import traceback
 
@@ -19,7 +20,6 @@ from ginga.misc.Bunch import Bunch
 from ginga.misc import Task, ModuleManager, Settings, log
 import ginga.version as version
 import ginga.toolkit as ginga_toolkit
-from ginga import AstroImage
 from ginga.util import paths
 
 # Catch warnings
@@ -71,16 +71,19 @@ default_layout = ['seq', {},
 global_plugins = [
     Bunch(module='Toolbar', tab='Toolbar', ws='toolbar', start=True),
     Bunch(module='Pan', tab='_pan', ws='uleft', start=True, raisekey=None),
-    Bunch(module='Info', tab='Synopsis', ws='lleft', start=True, raisekey=None),
+    Bunch(module='Info', tab='Synopsis', ws='lleft', start=True,
+          raisekey=None),
     Bunch(module='Header', tab='Header', ws='left', start=True, raisekey='H'),
     Bunch(module='Zoom', tab='Zoom', ws='left', start=True, raisekey='Z'),
     Bunch(module='Command', tab='Command', ws='lleft', start=True),
     Bunch(module='Thumbs', tab='Thumbs', ws='right', start=True, raisekey='T'),
-    Bunch(module='Contents', tab='Contents', ws='right', start=True, raisekey='c'),
+    Bunch(module='Contents', tab='Contents', ws='right', start=True,
+          raisekey='c'),
     Bunch(module='Colorbar', tab='_cbar', ws='cbar', start=True),
     Bunch(module='Cursor', tab='_readout', ws='readout', start=True),
     Bunch(module='Operations', tab='_opns', ws='operations', start=True),
-    Bunch(module='WBrowser', tab='Help', ws='channels', raisekey='?', start=False),
+    Bunch(module='WBrowser', tab='Help', ws='channels', raisekey='?',
+          start=False),
     Bunch(module='FBrowser', tab='Open File', ws='right', start=False),
     Bunch(module='ColorMapPicker', tab='Color Map Picker', ws='right',
           start=False),
@@ -114,6 +117,7 @@ local_plugins = [
     Bunch(module='Drawing', ws='dialogs', shortkey='f11'),
     Bunch(module='FBrowser', ws='dialogs', shortkey='f12'),
     Bunch(module='Compose', ws='dialogs'),
+    Bunch(module='PlotTable', ws='dialogs'),
     # Not ready for prime time
     #Bunch(module='Pipeline', ws='dialogs'),
     ]
@@ -153,7 +157,7 @@ class ReferenceViewer(object):
         """
         # add default global plugins
         for bnch in global_plugins:
-            if not bnch.module in except_global:
+            if bnch.module not in except_global:
                 start = bnch.get('start', True)
                 pfx = bnch.get('pfx', None)
                 self.add_global_plugin(bnch.module, bnch.ws,
@@ -162,7 +166,7 @@ class ReferenceViewer(object):
 
         # add default local plugins
         for bnch in local_plugins:
-            if not bnch.module in except_local:
+            if bnch.module not in except_local:
                 pfx = bnch.get('pfx', None)
                 self.add_local_plugin(bnch.module, bnch.ws, pfx=pfx)
 
@@ -176,7 +180,8 @@ class ReferenceViewer(object):
                           help="Buffer length to NUM")
         optprs.add_option("--channels", dest="channels", default="Image",
                           help="Specify list of channels to create")
-        optprs.add_option("--debug", dest="debug", default=False, action="store_true",
+        optprs.add_option("--debug", dest="debug", default=False,
+                          action="store_true",
                           help="Enter the pdb debugger on main()")
         optprs.add_option("--disable-plugins", dest="disable_plugins",
                           metavar="NAMES",
@@ -292,10 +297,10 @@ class ReferenceViewer(object):
 
         if toolkit == 'choose':
             try:
-                from ginga.qtw import QtHelp
+                from ginga.qtw import QtHelp  # noqa
             except ImportError:
                 try:
-                    from ginga.gtkw import GtkHelp
+                    from ginga.gtkw import GtkHelp  # noqa
                 except ImportError:
                     print("You need python-gtk or python-qt to run Ginga!")
                     sys.exit(1)
@@ -317,8 +322,8 @@ class ReferenceViewer(object):
             def __init__(self, logger, thread_pool, module_manager, prefs,
                          ev_quit=None):
                 GingaView.__init__(self, logger, ev_quit, thread_pool)
-                GingaControl.__init__(self, logger, thread_pool, module_manager,
-                                      prefs, ev_quit=ev_quit)
+                GingaControl.__init__(self, logger, thread_pool,
+                                      module_manager, prefs, ev_quit=ev_quit)
 
         if settings.get('useMatplotlibColormaps', False):
             # Add matplotlib color maps if matplotlib is installed
@@ -326,7 +331,8 @@ class ReferenceViewer(object):
                 from ginga import cmap
                 cmap.add_matplotlib_cmaps()
             except Exception as e:
-                logger.warning("failed to load matplotlib colormaps: %s" % (str(e)))
+                logger.warning(
+                    "failed to load matplotlib colormaps: %s" % (str(e)))
 
         # User wants to customize the WCS package?
         if options.wcspkg:
@@ -336,9 +342,10 @@ class ReferenceViewer(object):
 
         try:
             from ginga.util import wcsmod
-            assert wcsmod.use(wcspkg) == True
+            assert wcsmod.use(wcspkg) is True
         except Exception as e:
-            logger.warning("failed to set WCS package preference: %s" % (str(e)))
+            logger.warning(
+                "failed to set WCS package preference: %s" % (str(e)))
 
         # User wants to customize the FITS package?
         if options.fitspkg:
@@ -348,9 +355,10 @@ class ReferenceViewer(object):
 
         try:
             from ginga.util import io_fits
-            assert io_fits.use(fitspkg) == True
+            assert io_fits.use(fitspkg) is True
         except Exception as e:
-            logger.warning("failed to set FITS package preference: %s" % (str(e)))
+            logger.warning(
+                "failed to set FITS package preference: %s" % (str(e)))
 
         # Check whether user wants to use OpenCv
         use_opencv = settings.get('use_opencv', False)
@@ -359,7 +367,8 @@ class ReferenceViewer(object):
             try:
                 trcalc.use('opencv')
             except Exception as e:
-                logger.warning("failed to set OpenCv preference: %s" % (str(e)))
+                logger.warning(
+                    "failed to set OpenCv preference: %s" % (str(e)))
 
         # Check whether user wants to use OpenCL
         use_opencl = settings.get('use_opencl', False)
@@ -368,7 +377,8 @@ class ReferenceViewer(object):
             try:
                 trcalc.use('opencl')
             except Exception as e:
-                logger.warning("failed to set OpenCL preference: %s" % (str(e)))
+                logger.warning(
+                    "failed to set OpenCL preference: %s" % (str(e)))
 
         # Create the dynamic module manager
         mm = ModuleManager.ModuleManager(logger)
@@ -376,7 +386,7 @@ class ReferenceViewer(object):
         # Create and start thread pool
         ev_quit = threading.Event()
         thread_pool = Task.ThreadPool(options.numthreads, logger,
-                                     ev_quit=ev_quit)
+                                      ev_quit=ev_quit)
         thread_pool.startall()
 
         # Create the Ginga main object
@@ -537,8 +547,9 @@ class ReferenceViewer(object):
 
         sys.exit(0)
 
-def reference_viewer(sys_argv):
 
+def reference_viewer(sys_argv):
+    """Create reference viewer from command line."""
     viewer = ReferenceViewer(layout=default_layout)
     viewer.add_default_plugins()
 
