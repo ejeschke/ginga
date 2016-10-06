@@ -1,4 +1,4 @@
-. _sec-plugins-plottable:
+.. _sec-plugins-plottable:
 
 PlotTable
 =========
