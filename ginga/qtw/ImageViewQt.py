@@ -828,7 +828,19 @@ class ScrolledView(QtGui.QAbstractScrollArea):
         self.v_w = viewer.get_widget()
         self.v_w.setParent(vp)
 
+        hsb = self.horizontalScrollBar()
+        hsb.setTracking(True)
+        hsb.setRange(0, 100)
+        hsb.setSingleStep(1)
+        vsb = self.verticalScrollBar()
+        vsb.setRange(0, 100)
+        vsb.setSingleStep(1)
+        vsb.setTracking(True)
+
         self.viewer.add_callback('redraw', self._calc_scrollbars)
+
+    def get_widget(self):
+        return self
 
     def resizeEvent(self, event):
         """Override from QAbstractScrollArea.
@@ -845,65 +857,40 @@ class ScrolledView(QtGui.QAbstractScrollArea):
         """Calculate and set the scrollbar handles from the pan and
         zoom positions.
         """
-        image = viewer.get_image()
-        if image is None:
-            # no way to tell data extents
-            return
-
         # flag that suppresses a cyclical callback
         self._adjusting = True
         try:
-            mxwd, mxht = image.get_size()
-            mxwd, mxht = mxwd + self.pad, mxht + self.pad
-            mnwd, mnht = 0 - self.pad, 0 - self.pad
-
-            rect = viewer.get_pan_rect()
-            x1, y1 = rect[0]
-            x2, y2 = rect[2]
-            dwd = int(abs(x2 - x1))
-            dht = int(abs(y2 - y1))
+            bd = self.viewer.get_bindings()
+            res = bd.calc_pan_pct(self.viewer, pad=self.pad)
+            if res is None:
+                return
 
             hsb = self.horizontalScrollBar()
-            hsb.setPageStep(dwd)
             vsb = self.verticalScrollBar()
-            vsb.setPageStep(dht)
 
-            rx1, rx2 = min(x1, mnwd), max(x2, mxwd)
-            hsb.setRange(rx1, rx2 - dwd)
-            ry1, ry2 = min(y1, mnht), max(y2, mxht)
-            vsb.setRange(ry1, ry2 - dht)
+            hsb.setPageStep(int(round(res.thm_pct_x * 100)))
+            vsb.setPageStep(int(round(res.thm_pct_y * 100)))
 
-            pos_wd = int(round(x1))
-            pos_ht = int(round(ry2 - y1))
-            hsb.setValue(pos_wd)
-            vsb.setValue(pos_ht)
+            hsb.setValue(int(round(res.pan_pct_x * 100)))
+            vsb.setValue(int(round((1.0 - res.pan_pct_y) * 100)))
         finally:
             self._adjusting = False
 
     def scrollContentsBy(self, dx, dy):
         """Override from QAbstractScrollArea.
         Called when the scroll bars are adjusted by the user.
-        (dx, dy) specifies the amount of the scroll.
         """
         if self._adjusting:
             return
 
-        rect = self.viewer.get_pan_rect()
-        x1, y1 = rect[0]
-        x2, y2 = rect[2]
-        dwd = abs(x2 - x1)
-        dht = abs(y2 - y1)
-
         hsb = self.horizontalScrollBar()
         vsb = self.verticalScrollBar()
-        pos_wd = hsb.value() + dwd / 2.0
-        pos_ht = vsb.value() + dht / 2.0
+        pct_x = hsb.value() / 100.0
+        # invert Y pct because of orientation of scrollbar
+        pct_y = 1.0 - (vsb.value() / 100.0)
 
-        mxwd, mxht = self.viewer.get_data_size()
-        mxht = max(mxht + self.pad, vsb.value())
-
-        self.viewer.panset_xy(pos_wd, mxht - pos_ht)
-        ## print(('scroll adjusted by %d and %d' % (dx, dy)))
+        bd = self.viewer.get_bindings()
+        bd.pan_by_pct(self.viewer, pct_x, pct_y, pad=self.pad)
 
     def scroll_bars(self, horizontal='on', vertical='on'):
         if horizontal == 'on':

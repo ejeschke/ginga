@@ -604,70 +604,50 @@ class ScrolledView(gtk.ScrolledWindow):
 
         self.viewer.add_callback('redraw', self._calc_scrollbars)
 
+    def get_widget(self):
+        return self
+
     def _calc_scrollbars(self, viewer):
         """Calculate and set the scrollbar handles from the pan and
         zoom positions.
         """
-        image = viewer.get_image()
-        if image is None:
-            # no way to tell data extents
-            return
-
         # flag that suppresses a cyclical callback
         self._adjusting = True
         try:
-            mxwd, mxht = image.get_size()
-            mxwd, mxht = mxwd + self.pad, mxht + self.pad
-            mnwd, mnht = 0 - self.pad, 0 - self.pad
-
-            rect = viewer.get_pan_rect()
-            x1, y1 = rect[0]
-            x2, y2 = rect[2]
-            dwd = int(abs(x2 - x1))
-            dht = int(abs(y2 - y1))
+            bd = self.viewer.get_bindings()
+            res = bd.calc_pan_pct(self.viewer, pad=self.pad)
+            if res is None:
+                return
 
             hsb = self.get_hadjustment()
             vsb = self.get_vadjustment()
 
-            rx1, rx2 = min(x1, mnwd), max(x2, mxwd)
-            ry1, ry2 = min(y1, mnht), max(y2, mxht)
+            page_x, page_y = int(round(res.thm_pct_x * 100)), int(round(res.thm_pct_y * 100))
+            val_x, val_y = int(round(res.pan_pct_x * 100)), int(round((1.0 - res.pan_pct_y) * 100))
 
-            pos_wd = int(round(x1))
-            pos_ht = int(round(ry2 - y1))
-
-            hsb.configure(pos_wd, rx1, rx2, 1, dwd, dwd)
-            vsb.configure(pos_ht, ry1, ry2, 1, dht, dht)
+            hsb.configure(val_x, 0, 100, 1, page_x, page_x)
+            vsb.configure(val_y, 0, 100, 1, page_y, page_y)
         finally:
             self._adjusting = False
 
     def _scroll_contents(self, adj):
         """Called when the scroll bars are adjusted by the user.
-        (dx, dy) specifies the amount of the scroll.
         """
         if self._adjusting:
             return
 
-        image = self.viewer.get_image()
-        if image is None:
-            # no way to tell data extents
-            return
-
-        rect = self.viewer.get_pan_rect()
-        x1, y1 = rect[0]
-        x2, y2 = rect[2]
-        dwd = abs(x2 - x1)
-        dht = abs(y2 - y1)
-
         hsb = self.get_hadjustment()
         vsb = self.get_vadjustment()
-        pos_wd = hsb.get_value() + dwd / 2.0
-        pos_ht = vsb.get_value() + dht / 2.0
 
-        mxwd, mxht = self.viewer.get_data_size()
-        mxht = max(mxht + self.pad, vsb.get_value())
+        pos_x = hsb.get_value()
+        pos_y = vsb.get_value()
 
-        self.viewer.panset_xy(pos_wd, mxht - pos_ht)
-        ## print(('scroll adjusted by %d and %d' % (dx, dy)))
+        pct_x = pos_x / 100.0
+        # invert Y pct because of orientation of scrollbar
+        pct_y = 1.0 - (pos_y / 100.0)
+
+        bd = self.viewer.get_bindings()
+        bd.pan_by_pct(self.viewer, pct_x, pct_y, pad=self.pad)
 
     def scroll_bars(self, horizontal='on', vertical='on'):
         if horizontal == 'on':

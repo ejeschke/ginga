@@ -6,6 +6,7 @@
 
 import math
 import itertools
+import numpy as np
 
 from ginga.misc import Bunch, Settings, Callback
 from ginga import AutoCuts, trcalc
@@ -483,30 +484,111 @@ class ImageViewBindings(object):
             amt /= 10.0
         return amt
 
-    def pan_lr(self, viewer, pct_vw, sign, msg=False):
-        # calc amt of data shown in X relative to data size of image
-        wd, ht = viewer.get_data_size()
-        prect = viewer.get_pan_rect()
-        dwd = abs(prect[2][0] - prect[0][0])
-        # shift the pan by percentage of viewer width
-        amt = sign * dwd * pct_vw
-        pan_x, pan_y = viewer.get_pan(coord='data')
-        pan_x += amt
+    def calc_pan_pct(self, viewer, pad=0):
+        """Calculate values for vertical/horizontal panning by percentages
+        from the current pan position.
+        """
+        image = viewer.get_image()
+        if image is None:
+            # no way to tell data extents
+            return None
 
-        self._panset(viewer, pan_x, pan_y, msg=msg)
+        tr = viewer.tform['data_to_scrollbar']
+
+        # calculate the corners of the entire image in unscaled cartesian
+        mxwd, mxht = image.get_size()
+        mxwd, mxht = mxwd + pad, mxht + pad
+        mnwd, mnht = 0 - pad, 0 - pad
+
+        arr = np.array([(mnwd, mnht), (mxwd, mnht),
+                        (mxwd, mxht), (mnwd, mxht)],
+                       dtype=np.float)
+        x, y = tr.to_(arr.T[0], arr.T[1])
+
+        rx1, rx2 = np.min(x), np.max(x)
+        ry1, ry2 = np.min(y), np.max(y)
+
+        rect = viewer.get_pan_rect()
+        arr = np.array(rect, dtype=np.float)
+        x, y = tr.to_(arr.T[0], arr.T[1])
+
+        qx1, qx2 = np.min(x), np.max(x)
+        qy1, qy2 = np.min(y), np.max(y)
+
+        qx1, qx2 = max(rx1, qx1), min(rx2, qx2)
+        qy1, qy2 = max(ry1, qy1), min(ry2, qy2)
+
+        # this is the range of X and Y of the entire image
+        # in the viewer (unscaled)
+        rng_x, rng_y = abs(rx2 - rx1), abs(ry2 - ry1)
+
+        # this is the *visually shown* range of X and Y
+        abs_x, abs_y = abs(qx2 - qx1), abs(qy2 - qy1)
+
+        # calculate the width of the slider arms as a ratio
+        xthm_pct = max(0.0, min(abs_x / (rx2 - rx1), 1.0))
+        ythm_pct = max(0.0, min(abs_y / (ry2 - ry1), 1.0))
+
+        # calculate the pan position as a ratio
+        pct_x = min(max(0.0, abs(0.0 - rx1) / rng_x), 1.0)
+        pct_y = min(max(0.0, abs(0.0 - ry1) / rng_y), 1.0)
+
+        return Bunch.Bunch(rng_x=rng_x, rng_y=rng_y, vis_x=abs_x, vis_y=abs_y,
+                           thm_pct_x=xthm_pct, thm_pct_y=ythm_pct,
+                           pan_pct_x=pct_x, pan_pct_y=pct_y)
+
+    def pan_by_pct(self, viewer, pct_x, pct_y, pad=0):
+        """Called when the scroll bars are adjusted by the user.
+        """
+        image = viewer.get_image()
+        if image is None:
+            # no way to tell data extents
+            return
+
+        tr = viewer.tform['data_to_scrollbar']
+
+        mxwd, mxht = image.get_size()
+        mxwd, mxht = mxwd + pad, mxht + pad
+        mnwd, mnht = 0 - pad, 0 - pad
+
+        arr = np.array([(mnwd, mnht), (mxwd, mnht),
+                        (mxwd, mxht), (mnwd, mxht)],
+                       dtype=np.float)
+        x, y = tr.to_(arr.T[0], arr.T[1])
+
+        rx1, rx2 = np.min(x), np.max(x)
+        ry1, ry2 = np.min(y), np.max(y)
+
+        crd_x = rx1 + (pct_x * (rx2 - rx1))
+        crd_y = ry1 + (pct_y * (ry2 - ry1))
+
+        pan_x, pan_y = tr.from_(crd_x, crd_y)
+        self.logger.debug("crd=%f,%f pan=%f,%f" % (
+            crd_x, crd_y, pan_x, pan_y))
+
+        viewer.panset_xy(pan_x, pan_y)
+
+    def pan_lr(self, viewer, pct_vw, sign, msg=False):
+        # calculate current pan pct
+        res = self.calc_pan_pct(viewer, pad=0)
+
+        # modify the pct, as per the params
+        amt = sign * 1.0 + pct_vw
+        pct_x = res.pan_pct_x * amt
+
+        # update the pan position by pct
+        self.pan_by_pct(viewer, pct_x, res.pan_pct_y)
 
     def pan_ud(self, viewer, pct_vh, sign, msg=False):
-        # calc amt of data shown in X relative to data size of image
-        wd, ht = viewer.get_data_size()
-        prect = viewer.get_pan_rect()
-        dht = abs(prect[2][1] - prect[0][1])
-        # shift the pan by that percentage
-        #pct = 1.0 + sign * dht / float(ht) * (1.0 - pct_vh)
-        amt = sign * dht * pct_vh
-        pan_x, pan_y = viewer.get_pan(coord='data')
-        pan_y += amt
+        # calculate current pan pct
+        res = self.calc_pan_pct(viewer, pad=0)
 
-        self._panset(viewer, pan_x, pan_y, msg=msg)
+        # modify the pct, as per the params
+        amt = sign * 1.0 + pct_vh
+        pct_y = res.pan_pct_y * amt
+
+        # update the pan position by pct
+        self.pan_by_pct(viewer, res.pan_pct_x, pct_y)
 
     def get_direction(self, direction, rev=False):
         """

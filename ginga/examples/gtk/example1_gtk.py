@@ -45,10 +45,7 @@ class FitsViewer(object):
 
         # enable some user interaction
         bd = fi.get_bindings()
-        bd.enable_pan(True)
-        bd.enable_zoom(True)
-        bd.enable_cuts(True)
-        bd.enable_flip(True)
+        bd.enable_all(True)
 
         w = fi.get_widget()
         w.set_size_request(512, 512)
