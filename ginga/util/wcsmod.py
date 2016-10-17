@@ -10,8 +10,8 @@
 """
 We are fortunate to have several possible choices for a python WCS package
 compatible with Ginga: astlib, kapteyn, starlink and astropy.
-kapteyn and astropy wrap Doug Calabretta's "WCSLIB", astLib wraps
-Doug Mink's "wcstools", and I'm not sure what starlink uses (their own?).
+kapteyn and astropy wrap Mark Calabretta's "WCSLIB", astLib wraps
+Jessica Mink's "wcstools", and I'm not sure what starlink uses (their own?).
 
 Note that astlib requires pyfits (or astropy) in order to create a WCS
 object from a FITS header.

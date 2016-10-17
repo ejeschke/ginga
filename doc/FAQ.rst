@@ -110,8 +110,8 @@ compatible with Ginga:
 `starlink <https://github.com/timj/starlink-pyast>`_ and
 :ref:`Astropy WCS <astropy:astropy-wcs>`.
 
-kapteyn and astropy wrap Doug Calabretta's "WCSLIB", astLib wraps
-Doug Mink's "wcstools", and I'm not sure what starlink uses (their own?).
+kapteyn and astropy wrap Mark Calabretta's "WCSLIB", astLib wraps
+Jessica Mink's "wcstools", and I'm not sure what starlink uses (their own?).
 Note that astlib and starlink require pyfits (or astropy) to be
 installed in order to create a WCS object from a FITS header.
 
