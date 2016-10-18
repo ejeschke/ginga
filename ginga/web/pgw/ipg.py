@@ -30,6 +30,9 @@ from ginga import AstroImage, colors
 from ginga.canvas.CanvasObject import get_canvas_types
 from ginga.misc import log, Task
 from ginga.util import catalog, iohelper
+from ginga.Bindings import ImageViewBindings
+from ginga.misc.Settings import SettingGroup
+from ginga.util.paths import ginga_home
 
 from ginga.web.pgw import templates, js, PgHelp, Widgets, Viewers
 
@@ -111,7 +114,6 @@ class ImageViewer(object):
             viewer_class = EnhancedCanvasView
         self.logger = logger
         self.url = window.url
-        self.drawcolors = colors.get_colors()
         self.dc = get_canvas_types()
         self.pixel_base = 1.0
 
@@ -122,26 +124,28 @@ class ImageViewer(object):
         vbox.set_border_width(2)
         vbox.set_spacing(1)
 
-        fi = viewer_class(logger)
+        # load binding preferences if available
+        cfgfile = os.path.join(ginga_home, "ipg_bindings.cfg")
+        bindprefs = SettingGroup(name='bindings', logger=logger,
+                                 preffile=cfgfile)
+        bindprefs.load(onError='silent')
+
+        bd = ImageViewBindings(logger, settings=bindprefs)
+
+        fi = viewer_class(logger, bindings=bd)
         fi.url = self.url
         fi.enable_autocuts('on')
         fi.set_autocut_params('zscale')
         fi.enable_autozoom('on')
-        fi.set_zoom_algorithm('rate')
-        fi.set_zoomrate(1.4)
-        fi.show_pan_mark(True)
-        fi.set_callback('drag-drop', self.drop_file)
+        #fi.set_callback('drag-drop', self.drop_file)
         fi.set_callback('none-move', self.motion)
         fi.set_bg(0.2, 0.2, 0.2)
         fi.ui_setActive(True)
         self.fitsimage = fi
+        fi.ipg_parent = self
 
         bd = fi.get_bindings()
         bd.enable_all(True)
-
-        # so trackpad scrolling can be adjusted
-        settings = bd.get_settings()
-        settings.set(scroll_zoom_direct_scale=True)
 
         # so trackpad scrolling can be adjusted
         settings = bd.get_settings()
@@ -150,34 +154,21 @@ class ImageViewer(object):
 
         # canvas that we will draw on
         canvas = self.dc.DrawingCanvas()
-        #canvas.enable_draw(True)
-        #canvas.enable_edit(True)
-        #canvas.set_drawtype('rectangle', color='lightblue')
         canvas.set_surface(fi)
         self.canvas = canvas
         # add canvas to view
         private_canvas = fi.get_canvas()
         private_canvas.add(canvas)
         canvas.ui_setActive(True)
-        #canvas.register_for_cursor_drawing(fi)
         fi.set_canvas(canvas)
-        ## self.drawtypes = canvas.get_drawtypes()
-        ## self.drawtypes.sort()
-
-        # add a color bar
-        private_canvas.add(self.dc.ColorBar(side='bottom', offset=10))
-
-        # add little mode indicator that shows modal states in
-        # the corner
-        private_canvas.add(self.dc.ModeIndicator(corner='ur', fontsize=14))
-        # little hack necessary to get correct operation of the mode indicator
-        # in all circumstances
-        bm = fi.get_bindmap()
-        bm.add_callback('mode-set', lambda *args: fi.redraw(whence=3))
 
         fi.set_desired_size(width, height)
         # force allocation of a surface--may be resized later
         fi.configure_surface(width, height)
+
+        # add little mode indicator that shows modal states in
+        # the corner
+        fi.show_mode_indicator(True)
 
         w = Viewers.GingaViewerWidget(viewer=fi)
         vbox.add_widget(w, stretch=1)
@@ -250,6 +241,9 @@ class ImageViewer(object):
             ra_txt, dec_txt, fits_x, fits_y, value)
         self.readout.set_text(text)
 
+    def set_readout_text(self, text):
+        self.readout.set_text(text)
+
     def adjust_scrolling_accel_cb(self, val):
         def f(x):
             return (1.0 / 2.0**(10.0-x))
@@ -306,7 +300,7 @@ class ViewerFactory(object):
     def get_threadpool(self):
         return self.thread_pool
 
-    def get_viewer(self, v_id):
+    def get_viewer(self, v_id, viewer_class=None, width=512, height=512):
         """
         Get an existing viewer by viewer id.  If the viewer does not yet
         exist, make a new one.
@@ -320,7 +314,8 @@ class ViewerFactory(object):
         window = self.app.make_window("Viewer %s" % v_id, wid=v_id)
 
         # our own viewer object, customized with methods (see above)
-        viewer = ImageViewer(self.logger, window)
+        viewer = ImageViewer(self.logger, window,
+                             viewer_class=viewer_class, width=width, height=height)
         #viewer.url = window.url
 
         self.viewers[v_id] = viewer
