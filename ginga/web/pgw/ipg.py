@@ -106,13 +106,14 @@ class EnhancedCanvasView(Viewers.CanvasView):
 
 class ImageViewer(object):
 
-    def __init__(self, logger, window, viewer_class=None):
+    def __init__(self, logger, window, viewer_class=None, width=512, height=512):
         if viewer_class is None:
             viewer_class = EnhancedCanvasView
         self.logger = logger
         self.url = window.url
         self.drawcolors = colors.get_colors()
         self.dc = get_canvas_types()
+        self.pixel_base = 1.0
 
         self.top = window
         self.top.add_callback('close', self.closed)
@@ -174,7 +175,10 @@ class ImageViewer(object):
         bm = fi.get_bindmap()
         bm.add_callback('mode-set', lambda *args: fi.redraw(whence=3))
 
-        fi.set_desired_size(512, 512)
+        fi.set_desired_size(width, height)
+        # force allocation of a surface--may be resized later
+        fi.configure_surface(width, height)
+
         w = Viewers.GingaViewerWidget(viewer=fi)
         vbox.add_widget(w, stretch=1)
 
@@ -224,7 +228,8 @@ class ImageViewer(object):
         except Exception:
             value = None
 
-        fits_x, fits_y = data_x + 1, data_y + 1
+        pb = self.pixel_base
+        fits_x, fits_y = data_x + pb, data_y + pb
 
         # Calculate WCS RA
         try:
@@ -338,6 +343,7 @@ class WebServer(object):
         self.ev_quit = ev_quit
 
         self.server = None
+        self.http_server = None
 
     def start(self, use_thread=True, no_ioloop=False):
         self.thread_pool.startall()
@@ -358,7 +364,7 @@ class WebServer(object):
             ],
                factory=self.factory, logger=self.logger)
 
-        self.server.listen(self.port, self.host)
+        self.http_server = self.server.listen(self.port, self.host)
 
         if no_ioloop:
             self.t_ioloop = None
@@ -372,11 +378,16 @@ class WebServer(object):
 
     def stop(self):
         # how to stop tornado server?
-        if not self.t_ioloop is None:
+        if self.t_ioloop is not None:
             self.t_ioloop.stop()
 
         self.thread_pool.stopall()
         self.ev_quit.set()
+        # stop and dereference the tornado server
+        if self.http_server is not None:
+            self.http_server.stop()
+            self.http_server = None
+        self.server = None
 
     def get_viewer(self, v_id):
         from IPython.display import display, HTML
