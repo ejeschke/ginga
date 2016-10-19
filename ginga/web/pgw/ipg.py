@@ -104,6 +104,7 @@ class EnhancedCanvasView(Viewers.CanvasView):
         # enable drawing on the canvas
         canvas.enable_draw(True)
         canvas.enable_edit(True)
+        canvas.set_drawtype(None)
         canvas.ui_setActive(True)
         canvas.set_surface(self)
         canvas.register_for_cursor_drawing(self)
@@ -305,15 +306,17 @@ class ViewerFactory(object):
     def get_threadpool(self):
         return self.thread_pool
 
-    def get_viewer(self, v_id, viewer_class=None, width=512, height=512):
+    def get_viewer(self, v_id, viewer_class=None, width=512, height=512,
+                   force_new=False):
         """
         Get an existing viewer by viewer id.  If the viewer does not yet
         exist, make a new one.
         """
-        try:
-            return self.viewers[v_id]
-        except KeyError:
-            pass
+        if not force_new:
+            try:
+                return self.viewers[v_id]
+            except KeyError:
+                pass
 
         #  create top level window
         window = self.app.make_window("Viewer %s" % v_id, wid=v_id)
@@ -326,6 +329,11 @@ class ViewerFactory(object):
         self.viewers[v_id] = viewer
         return viewer
 
+    def delete_viewer(self, v_id):
+        del self.viewers[v_id]
+
+    def delete_all_viewers(self):
+        self.viewers = {}
 
 class WebServer(object):
 

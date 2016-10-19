@@ -174,6 +174,8 @@ class DrawingMixin(object):
 
         ## self.logger.debug("drawing a '%s' x,y=%f,%f" % (
         ##     self.t_drawtype, data_x, data_y))
+        if self.t_drawtype is None:
+            return False
 
         klass = self.draw_dict[self.t_drawtype]
         obj = None
@@ -219,7 +221,7 @@ class DrawingMixin(object):
         self._draw_update(data_x, data_y, self._draw_cxt)
         obj, self._draw_obj = self._draw_obj, None
 
-        if obj:
+        if obj is not None:
             objtag = self.add(obj)
             self.make_callback('draw-event', objtag)
 
@@ -272,10 +274,11 @@ class DrawingMixin(object):
         self.t_drawparams['color'] = colorname
 
     def set_drawtype(self, drawtype, **drawparams):
-        drawtype = drawtype.lower()
-        assert drawtype in self.drawtypes, \
-               ValueError("Bad drawing type '%s': must be one of %s" % (
-            drawtype, self.drawtypes))
+        if drawtype is not None:
+            drawtype = drawtype.lower()
+            assert drawtype in self.drawtypes, \
+                   ValueError("Bad drawing type '%s': must be one of %s" % (
+                drawtype, self.drawtypes))
         self.t_drawtype = drawtype
         self.t_drawparams = drawparams.copy()
 
