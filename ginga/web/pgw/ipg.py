@@ -58,6 +58,11 @@ class EnhancedCanvasView(Viewers.CanvasView):
         """
         Capture the window of a viewer.
         """
+        # force any delayed redraws
+        # TODO: this really needs to be addressed in get_rgb_image_as_bytes()
+        # of the various superclasses, as it affects other backends as well
+        self.redraw_now()
+
         from IPython.display import Image
         return Image(data=bytes(self.get_rgb_image_as_bytes(format='png')),
                      format='png', embed=True)
