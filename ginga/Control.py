@@ -23,6 +23,7 @@ from ginga import cmap, imap
 from ginga import AstroImage, RGBImage, BaseImage
 from ginga.misc import Bunch, Datasrc, Callback, Timer, Future
 from ginga.util import catalog, iohelper
+from ginga.table import AstroTable
 from ginga.canvas.CanvasObject import drawCatalog
 
 # Version
@@ -522,20 +523,28 @@ class GingaControl(Callback.Callbacks):
                 filepath, str(kwdargs)))
             image.load_file(filepath, **kwdargs)
 
-        except Exception as e:
-            errmsg = "Failed to load file '%s': %s" % (
-                filepath, str(e))
-            self.logger.error(errmsg)
+        except Exception:
+            # TODO: Refactor code to be less hacky.
+            # Maybe it has a table on EXT 1.
             try:
-                (type, value, tb) = sys.exc_info()
-                tb_str = "\n".join(traceback.format_tb(tb))
+                self.logger.info("Loading table from %s kwdargs=%s" % (
+                        filepath, str(kwdargs)))
+                image = AstroTable.AstroTable(logger=self.logger)
+                image.load_file(filepath, logger=self.logger, **kwdargs)
             except Exception as e:
-                tb_str = "Traceback information unavailable."
-            self.gui_do(self.show_error, errmsg + '\n' + tb_str)
-            #channel.viewer.onscreen_message("Failed to load file", delay=1.0)
-            raise ControlError(errmsg)
+                errmsg = "Failed to load file '%s': %s" % (
+                    filepath, str(e))
+                self.logger.error(errmsg)
+                try:
+                    (type, value, tb) = sys.exc_info()
+                    tb_str = "\n".join(traceback.format_tb(tb))
+                except Exception as e:
+                    tb_str = "Traceback information unavailable."
+                self.gui_do(self.show_error, errmsg + '\n' + tb_str)
+                #channel.viewer.onscreen_message("Failed to load file", delay=1.0)
+                raise ControlError(errmsg)
 
-        self.logger.debug("Successfully loaded file into image object.")
+        self.logger.debug("Successfully loaded file into data object.")
         return image
 
     def get_fileinfo(self, filespec, dldir=None):

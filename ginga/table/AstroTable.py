@@ -126,8 +126,9 @@ class AstroTable(ViewerObjectBase):
         self.clear_metadata()
 
         # These keywords might be provided but not used.
-        kwargs.pop('allow_numhdu_override')
-        kwargs.pop('memmap')
+        for key in ('allow_numhdu_override', 'memmap'):
+            if key in kwargs:
+                kwargs.pop(key)
 
         info = iohelper.get_fileinfo(filepath)
         if numhdu is None:
