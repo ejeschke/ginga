@@ -42,6 +42,7 @@ class AstroTable(ViewerObjectBase):
         ViewerObjectBase.__init__(self, logger=logger, metadata=metadata,
                                   name=name)
 
+        self.name = name
         self._data = data_ap
 
         # wcsclass specifies a pluggable WCS module
@@ -110,6 +111,10 @@ class AstroTable(ViewerObjectBase):
         if 'format' not in kwargs:
             kwargs['format'] = 'fits'
 
+        # Remove irrelevant keywords
+        if 'logger' in kwargs:
+            del kwargs['logger']
+
         try:
             self._data = Table.read(hdu, **kwargs)
             ahdr.update(hdu.header)
@@ -128,14 +133,17 @@ class AstroTable(ViewerObjectBase):
         # These keywords might be provided but not used.
         for key in ('allow_numhdu_override', 'memmap'):
             if key in kwargs:
-                kwargs.pop(key)
+                del kwargs[key]
 
         info = iohelper.get_fileinfo(filepath)
         if numhdu is None:
-            numhdu = info.numhdu
+            # If no specific HDU index given, assume Extension 1.
+            numhdu = info.numhdu if info.numhdu is not None else 1
 
         try:
             with fits.open(filepath, 'readonly') as in_f:
+                # Name extension consistently with Ginga.
+                numhdu = (in_f[numhdu].name, in_f[numhdu].ver)
                 self.load_hdu(in_f[numhdu], **kwargs)
 
         except Exception as e:
@@ -160,4 +168,4 @@ class AstroTable(ViewerObjectBase):
         thumb_np = np.eye(length)
         return thumb_np
 
-#END
+# END

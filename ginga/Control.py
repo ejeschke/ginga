@@ -649,6 +649,7 @@ class GingaControl(Callback.Callbacks):
         except Exception as e:
             errmsg = "Failed to load '%s': %s" % (filepath, str(e))
             self.gui_do(self.show_error, errmsg)
+            return
 
         future = Future.Future()
         future.freeze(image_loader, filepath, **kwdargs)
