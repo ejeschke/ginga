@@ -140,11 +140,11 @@ class ImageViewBindings(object):
             key_pan_pct = 0.666667,
 
             # SCROLLING/WHEEL
-            sc_pan = [],
+            sc_pan = ['ctrl+scroll'],
             sc_pan_fine = ['pan+shift+scroll'],
             sc_pan_coarse = ['pan+ctrl+scroll'],
             sc_zoom = ['scroll'],
-            sc_zoom_fine = ['ctrl+scroll'],
+            sc_zoom_fine = [],
             sc_zoom_coarse = [],
             sc_zoom_origin = ['shift+scroll', 'freepan+scroll'],
             sc_cuts_fine = ['cuts+ctrl+scroll'],
@@ -567,6 +567,26 @@ class ImageViewBindings(object):
             crd_x, crd_y, pan_x, pan_y))
 
         viewer.panset_xy(pan_x, pan_y)
+
+    def pan_omni(self, viewer, direction, amount, msg=False):
+        # calculate current pan pct
+        res = self.calc_pan_pct(viewer, pad=0)
+
+        ang_rad = math.radians(90.0 - direction)
+        amt_x = math.cos(ang_rad) * amount
+        amt_y = math.sin(ang_rad) * amount
+
+        # modify the pct, as per the params
+        pct_page_x = res.vis_x / res.rng_x
+        amt_x = amt_x * pct_page_x
+        pct_page_y = res.vis_y / res.rng_y
+        amt_y = amt_y * pct_page_y
+
+        pct_x = res.pan_pct_x + amt_x
+        pct_y = res.pan_pct_y + amt_y
+
+        # update the pan position by pct
+        self.pan_by_pct(viewer, pct_x, pct_y)
 
     def pan_lr(self, viewer, pct_vw, sign, msg=False):
         # calculate current pan pct
@@ -1364,8 +1384,10 @@ class ImageViewBindings(object):
             viewer.onscreen_message(None)
         return True
 
-    def _scale_adjust(self, factor, zoom_accel, max_limit=None):
-        amount = factor - ((factor - 1.0) * (1.0 - zoom_accel))
+    def _scale_adjust(self, factor, event_amt, zoom_accel, max_limit=None):
+        # adjust scale by factor, amount encoded in event and zoom acceleration value
+        amount = factor - ((factor - 1.0) * (1.0 - min(event_amt, 15.0) / 15.0) *
+                           zoom_accel)
         amount = max(1.000000001, amount)
         if max_limit is not None:
             amount = min(amount, max_limit)
@@ -1386,7 +1408,7 @@ class ImageViewBindings(object):
             if self.settings.get('scroll_zoom_direct_scale', True):
                 zoom_accel = self.settings.get('scroll_zoom_acceleration', 1.0)
                 # change scale by 100%
-                amount = self._scale_adjust(2.0, zoom_accel, max_limit=4.0)
+                amount = self._scale_adjust(2.0, 15.0, zoom_accel, max_limit=4.0)
                 self._scale_image(viewer, 0.0, amount, msg=msg)
             else:
                 viewer.zoom_in()
@@ -1413,7 +1435,7 @@ class ImageViewBindings(object):
             if self.settings.get('scroll_zoom_direct_scale', True):
                 zoom_accel = self.settings.get('scroll_zoom_acceleration', 1.0)
                 # change scale by 100%
-                amount = self._scale_adjust(2.0, zoom_accel, max_limit=4.0)
+                amount = self._scale_adjust(2.0, 15.0, zoom_accel, max_limit=4.0)
                 self._scale_image(viewer, 180.0, amount, msg=msg)
             else:
                 viewer.zoom_out()
@@ -1683,7 +1705,8 @@ class ImageViewBindings(object):
             if self.settings.get('scroll_zoom_direct_scale', True):
                 zoom_accel = self.settings.get('scroll_zoom_acceleration', 1.0)
                 # change scale by 50%
-                amount = self._scale_adjust(adjust, zoom_accel, max_limit=4.0)
+                amount = self._scale_adjust(adjust, event.amount, zoom_accel,
+                                            max_limit=4.0)
                 self._scale_image(viewer, event.direction, amount, msg=msg)
 
             else:
@@ -1741,7 +1764,7 @@ class ImageViewBindings(object):
 
         zoom_accel = self.settings.get('scroll_zoom_acceleration', 1.0)
         # change scale by 20%
-        amount = self._scale_adjust(1.2, zoom_accel, max_limit=4.0)
+        amount = self._scale_adjust(1.2, event.amount, zoom_accel, max_limit=4.0)
         self._scale_image(viewer, event.direction, amount, msg=msg)
         return True
 
@@ -1754,7 +1777,7 @@ class ImageViewBindings(object):
 
         zoom_accel = self.settings.get('scroll_zoom_acceleration', 1.0)
         # change scale by 5%
-        amount = self._scale_adjust(1.05, zoom_accel, max_limit=4.0)
+        amount = self._scale_adjust(1.05, event.amount, zoom_accel, max_limit=4.0)
         self._scale_image(viewer, event.direction, amount, msg=msg)
         return True
 
@@ -1771,36 +1794,12 @@ class ImageViewBindings(object):
             direction = math.fmod(direction + 180.0, 360.0)
 
         pan_accel = self.settings.get('scroll_pan_acceleration', 1.0)
-        num_degrees = event.amount * pan_accel
-        ang_rad = math.radians(90.0 - direction)
+        # Internal factor to adjust the panning speed so that user-adjustable
+        # scroll_pan_acceleration is normalized to 1.0 for "normal" speed
+        scr_pan_adj_factor = 1.4142135623730951
+        amount = (event.amount * scr_pan_adj_factor * pan_accel) / 360.0
 
-        # Calculate distance of pan amount, based on current scale
-        wd, ht = viewer.get_data_size()
-        # pageSize = min(wd, ht)
-        ((x0, y0), (x1, y1), (x2, y2), (x3, y3)) = viewer.get_pan_rect()
-        page_size = min(abs(x2 - x0), abs(y2 - y0))
-        distance = (num_degrees / 360.0) * page_size
-        self.logger.debug("angle=%f ang_rad=%f distance=%f" % (
-            direction, ang_rad, distance))
-
-        # Calculate new pan position
-        pan_x, pan_y = viewer.get_pan()
-        new_x = pan_x + math.cos(ang_rad) * distance
-        new_y = pan_y + math.sin(ang_rad) * distance
-
-        # cap pan position
-        new_x = min(max(new_x, 0.0), wd)
-        new_y = min(max(new_y, 0.0), ht)
-
-        # Because pan position is reported +0.5
-        #new_x, new_y = new_x - 0.5, new_y - 0.5
-        #print "data x,y=%f,%f   new x, y=%f,%f" % (pan_x, pan_y, new_x, new_y)
-
-        viewer.panset_xy(new_x, new_y)
-
-        # For checking result
-        #pan_x, pan_y = viewer.get_pan()
-        #print "new pan x,y=%f, %f" % (pan_x, pan_y)
+        self.pan_omni(viewer, direction, amount)
         return True
 
     def sc_pan_coarse(self, viewer, event, msg=True):

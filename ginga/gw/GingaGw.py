@@ -739,11 +739,13 @@ class GingaView(GwMain.GwMain, Widgets.Application):
             tb.add_separator()
 
             # add toolbar buttons adding and deleting channels
-            btn = tb.add_action('+')
+            iconpath = os.path.join(self.iconpath, "plus_48.png")
+            btn = tb.add_action(None, iconpath=iconpath, iconsize=(18, 18))
             btn.set_tooltip("Add a channel to this workspace")
             btn.add_callback('activated',
                              lambda w: self.add_channel_auto_ws(ws))
-            btn = tb.add_action('-')
+            iconpath = os.path.join(self.iconpath, "minus_48.png")
+            btn = tb.add_action(None, iconpath=iconpath, iconsize=(18, 18))
             btn.set_tooltip("Delete current channel from this workspace")
             btn.add_callback('activated',
                              lambda w: self.gui_delete_channel_ws(ws))
