@@ -48,10 +48,10 @@ Panning and Zooming commands
 +----------------------+--------------------------------------------------+
 | Scroll wheel turned  | Zoom in or out                                   |
 +----------------------+--------------------------------------------------+
-| Ctrl + Scroll wheel  | Adjust zoom by intermediate fine steps           |
-|   turned             |                                                  | 
+| Shift + Scroll wheel | Zoom while keeping location under the cursor     |
 +----------------------+--------------------------------------------------+
-| Shift + Scroll wheel | Zoom while keeping location under the cursor.    |
+| Ctrl + Scroll wheel  | Pan in direction of scroll                       |
+|   turned             |                                                  | 
 +----------------------+--------------------------------------------------+
 | Digit                | Zoom image to zoom steps 1, 2, ..., 9, 10        |
 | (1234567890)         |                                                  |
