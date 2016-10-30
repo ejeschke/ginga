@@ -397,9 +397,12 @@ class WebServer(object):
             self.http_server = None
         self.server = None
 
-    def get_viewer(self, v_id):
+    def get_viewer(self, v_id, viewer_class=None, width=512, height=512,
+                   force_new=False):
         from IPython.display import display, HTML
-        v = self.factory.get_viewer(v_id)
+        v = self.factory.get_viewer(v_id, viewer_class=viewer_class,
+                                    width=width, height=height,
+                                    force_new=force_new)
         url = v.top.url
         viewer = v.fitsimage
         viewer.url = url
