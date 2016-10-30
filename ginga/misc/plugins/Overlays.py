@@ -144,6 +144,9 @@ class Overlays(GingaPlugin.LocalPlugin):
         self.fv.show_status("Enter a value for saturation limit")
 
     def stop(self):
+        self.arrsize = None
+        self.rgbobj.set_data(self.rgbarr)
+
         # remove the canvas from the image
         p_canvas = self.fitsimage.get_canvas()
         try:
