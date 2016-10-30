@@ -1752,8 +1752,7 @@ class Application(Callback.Callbacks):
         return w
 
     def mainloop(self):
-        while True:
-            self.process_events()
+        gtk.main()
 
 
 class Dialog(TopLevelMixin, WidgetBase):

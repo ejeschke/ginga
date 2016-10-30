@@ -1693,8 +1693,7 @@ class Application(Callback.Callbacks):
         return w
 
     def mainloop(self):
-        while True:
-            self.process_events()
+        self._qtapp.exec_()
 
 
 class Dialog(TopLevelMixin, WidgetBase):
