@@ -94,7 +94,7 @@ class ColorMapPicker(GingaPlugin.GlobalPlugin):
         bd.enable_zoom(False)
         bd.enable_cmap(False)
 
-        iw = Viewers.GingaViewerWidget(c_v)
+        iw = Viewers.GingaScrolledViewerWidget(c_v)
         iw.resize(self._wd, self._ht)
 
         vbox.add_widget(iw, stretch=1)
