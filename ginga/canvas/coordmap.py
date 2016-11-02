@@ -153,9 +153,9 @@ class OffsetMapper(BaseMapper):
         data_x, data_y = self.refobj.crdmap.to_data(ref_x, ref_y, viewer=viewer)
         return data_x + delta_x, data_y + delta_y
 
-    ## def data_to(self, data_x, data_y):
-    ##     ref_x, ref_y = self.refobj.get_reference_pt()
-    ##     return data_x - ref_data_x, data_y - ref_data_y
+    def data_to(self, data_x, data_y, viewer=None):
+        ref_x, ref_y = self.refobj.get_reference_pt()
+        return data_x - ref_x, data_y - ref_y
 
     def offset_pt(self, pt, xoff, yoff):
         # A no-op because this object's points are always considered

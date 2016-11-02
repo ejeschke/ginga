@@ -286,9 +286,8 @@ class GingaControl(Callback.Callbacks):
         We are called back with a URL and we attempt to load it if it
         names a file.
         """
+        to_chname = self.get_channel_name(viewer)
         for url in urls:
-            to_chname = self.get_channel_name(viewer)
-
             ## self.load_file(url)
             self.nongui_do(self.load_file, url, chname=to_chname,
                            wait=False)

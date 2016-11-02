@@ -311,7 +311,7 @@ class ImageViewBase(Callback.Callbacks):
             'cartesian': coordmap.CartesianMapper(self),
             'data': coordmap.DataMapper(self),
             None: coordmap.DataMapper(self),
-            #'offset': coordmap.OffsetMapper(self),
+            'offset': coordmap.OffsetMapper(self, None),
             'wcs': coordmap.WCSMapper(self, coordmap.DataMapper(self)),
             }
 

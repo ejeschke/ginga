@@ -48,6 +48,7 @@ class DrawingMixin(object):
         self._edit_obj = None
         self._edit_status = False
         self._edit_detail = {}
+        self._pick_cur_obj = None
 
         # For modes
         self._mode = 'draw'
@@ -63,6 +64,7 @@ class DrawingMixin(object):
                            poly_delete=self.edit_poly_delete)
         self.add_draw_mode('pick', down=self.pick_start,
                            move=self.pick_motion, up=self.pick_stop,
+                           hover=self.pick_hover,
                            poly_add=self.edit_poly_add,
                            poly_delete=self.edit_poly_delete)
 
@@ -113,6 +115,7 @@ class DrawingMixin(object):
         canvas.add_callback('cursor-down', self._draw_op, 'down', viewer)
         canvas.add_callback('cursor-move', self._draw_op, 'move', viewer)
         canvas.add_callback('cursor-up', self._draw_op, 'up', viewer)
+        canvas.set_callback('none-move', self._draw_op, 'hover', viewer)
 
     ##### MODE LOGIC #####
 
@@ -660,6 +663,13 @@ class DrawingMixin(object):
 
         if len(objs) == 0:
             # <-- no objects under cursor
+
+            if self._pick_cur_obj is not None:
+                # leaving an object that we were in--make pick-leave cb
+                obj, self._pick_cur_obj = self._pick_cur_obj, None
+                pt = obj.crdmap.data_to(data_x, data_y)
+                obj.make_callback('pick-leave', canvas, event, pt)
+
             return False
 
         # pick top object
@@ -669,6 +679,11 @@ class DrawingMixin(object):
 
         # get coordinates in native form for this object
         pt = obj.crdmap.data_to(data_x, data_y)
+
+        if self._pick_cur_obj is None:
+            # entering a new object--make pick-enter cb
+            self._pick_cur_obj = obj
+            obj.make_callback('pick-enter', canvas, event, pt)
 
         # make pick callback
         obj.make_callback(cb_name, canvas, event, pt)
@@ -681,6 +696,10 @@ class DrawingMixin(object):
     def pick_motion(self, canvas, event, data_x, data_y, viewer):
         return self._do_pick(canvas, event, data_x, data_y,
                              'pick-move', viewer)
+
+    def pick_hover(self, canvas, event, data_x, data_y, viewer):
+        return self._do_pick(canvas, event, data_x, data_y,
+                             'pick-hover', viewer)
 
     def pick_stop(self, canvas, event, data_x, data_y, viewer):
         return self._do_pick(canvas, event, data_x, data_y,
