@@ -155,7 +155,7 @@ class Image(OnePointMixin, CanvasObjectBase):
 
             # destination location in data_coords
             #dst_x, dst_y = self.x, self.y + ht
-            dst_x, dst_y = self.x, self.y
+            dst_x, dst_y = self.crdmap.to_data(self.x, self.y)
 
             a1, b1, a2, b2 = 0, 0, self.image.width, self.image.height
 
@@ -395,7 +395,7 @@ class NormImage(Image):
             ymax = int(numpy.ceil(max(y0, y1, y2, y3)))
 
             # destination location in data_coords
-            dst_x, dst_y = self.x, self.y
+            dst_x, dst_y = self.crdmap.to_data(self.x, self.y)
 
             a1, b1, a2, b2 = 0, 0, self.image.width, self.image.height
 

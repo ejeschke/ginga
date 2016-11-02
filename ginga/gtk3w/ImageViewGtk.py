@@ -606,6 +606,8 @@ class ScrolledView(Gtk.ScrolledWindow):
         vsb.connect('value-changed', self._scroll_contents)
 
         self.viewer.add_callback('redraw', self._calc_scrollbars)
+        self.viewer.add_callback('limits-set',
+                                 lambda v, l: self._calc_scrollbars(v))
 
     def get_widget(self):
         return self

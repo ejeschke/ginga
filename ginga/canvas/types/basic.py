@@ -15,7 +15,6 @@ from ginga.canvas.CanvasObject import (CanvasObjectBase, _bool, _color,
 from ginga import trcalc
 from ginga.misc.ParamSet import Param
 from ginga.util import wcs, bezier
-from ginga.util.six.moves import map
 
 from .mixins import (OnePointMixin, TwoPointMixin, OnePointOneRadiusMixin,
                      OnePointTwoRadiusMixin, PolygonMixin)
@@ -183,9 +182,9 @@ class Path(PolygonMixin, CanvasObjectBase):
     @classmethod
     def get_params_metadata(cls):
         return [
-            Param(name='coord', type=str, default='data',
-                  valid=['data', 'wcs'],
-                  description="Set type of coordinates"),
+            ## Param(name='coord', type=str, default='data',
+            ##       valid=['data', 'wcs'],
+            ##       description="Set type of coordinates"),
             ## Param(name='points', type=list, default=[], argpos=0,
             ##       description="points making up polygon"),
             Param(name='linewidth', type=int, default=1,

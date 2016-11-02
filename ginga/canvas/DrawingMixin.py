@@ -664,7 +664,7 @@ class DrawingMixin(object):
 
         # pick top object
         obj = objs[-1]
-        self.logger.info("%s event in %s obj at x, y = %d, %d" % (
+        self.logger.debug("%s event in %s obj at x, y = %d, %d" % (
             cb_name, obj.kind, data_x, data_y))
 
         # get coordinates in native form for this object

@@ -838,6 +838,8 @@ class ScrolledView(QtGui.QAbstractScrollArea):
         vsb.setTracking(True)
 
         self.viewer.add_callback('redraw', self._calc_scrollbars)
+        self.viewer.add_callback('limits-set',
+                                 lambda v, l: self._calc_scrollbars(v))
 
     def get_widget(self):
         return self

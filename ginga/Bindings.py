@@ -488,17 +488,15 @@ class ImageViewBindings(object):
         """Calculate values for vertical/horizontal panning by percentages
         from the current pan position.
         """
-        image = viewer.get_image()
-        if image is None:
-            # no way to tell data extents
-            return None
+        limits = viewer.get_limits()
 
         tr = viewer.tform['data_to_scrollbar']
 
         # calculate the corners of the entire image in unscaled cartesian
-        mxwd, mxht = image.get_size()
+        mxwd, mxht = limits[1]
         mxwd, mxht = mxwd + pad, mxht + pad
-        mnwd, mnht = 0 - pad, 0 - pad
+        mnwd, mnht = limits[0]
+        mnwd, mnht = mnwd - pad, mnht - pad
 
         arr = np.array([(mnwd, mnht), (mxwd, mnht),
                         (mxwd, mxht), (mnwd, mxht)],
@@ -540,16 +538,14 @@ class ImageViewBindings(object):
     def pan_by_pct(self, viewer, pct_x, pct_y, pad=0):
         """Called when the scroll bars are adjusted by the user.
         """
-        image = viewer.get_image()
-        if image is None:
-            # no way to tell data extents
-            return
+        limits = viewer.get_limits()
 
         tr = viewer.tform['data_to_scrollbar']
 
-        mxwd, mxht = image.get_size()
+        mxwd, mxht = limits[1]
         mxwd, mxht = mxwd + pad, mxht + pad
-        mnwd, mnht = 0 - pad, 0 - pad
+        mnwd, mnht = limits[0]
+        mnwd, mnht = mnwd - pad, mnht - pad
 
         arr = np.array([(mnwd, mnht), (mxwd, mnht),
                         (mxwd, mxht), (mnwd, mxht)],

@@ -20,6 +20,7 @@ from ginga import cmap, imap, trcalc, version
 from ginga.canvas import coordmap, transform
 from ginga.canvas.types.layer import DrawingCanvas
 from ginga.util import io_rgb
+from ginga.util.six.moves import map
 
 __all__ = ['ImageViewBase']
 
@@ -215,6 +216,8 @@ class ImageViewBase(Callback.Callbacks):
         # offset from pan position (at center) in this array
         self._org_xoff = 0
         self._org_yoff = 0
+        # limits for data
+        self._limits = None
 
         # offset of pixel 0 from data coordinates
         # (pixels are centered on the coordinate)
@@ -314,7 +317,7 @@ class ImageViewBase(Callback.Callbacks):
 
         # For callbacks
         for name in ('transform', 'image-set', 'image-unset', 'configure',
-                     'redraw', ):
+                     'redraw', 'limits-set'):
             self.enable_callback(name)
 
 
@@ -1190,6 +1193,59 @@ class ImageViewBase(Callback.Callbacks):
         """
         x1, y1, x2, y2 = self._org_x1, self._org_y1, self._org_x2, self._org_y2
         return (x1, y1, x2, y2)
+
+    def get_limits(self, coord='data'):
+        """Get the bounding box of the viewer extents.
+
+        Returns
+        -------
+        rect : tuple
+            Bounding box in data coordinates in the form of
+            ``(x1, y1, x2, y2)``.
+
+        """
+        if self._limits is not None:
+            # User set limits
+            limits = self._limits
+
+        else:
+            # No user defined limits.  If there is an image loaded
+            # use its dimensions as the limits
+            image = self.get_image()
+            if image is not None:
+                wd, ht = image.get_size()
+                limits = ((0.0, 0.0), (float(wd), float(ht)))
+
+            else:
+                # No limits found, go to default
+                limits = ((0.0, 0.0), (0.0, 0.0))
+
+        # convert to data coordinates
+        crdmap = self.get_coordmap(coord)
+        limits = list(map(lambda pt: crdmap.data_to(pt[0], pt[1]),
+                          limits))
+
+        return limits
+
+    def set_limits(self, limits, coord='data'):
+        """Set the bounding box of the viewer extents.
+
+        Parameters
+        ----------
+        limits : tuple or None
+            A tuple setting the extents of the viewer in the form of
+            ``((x1, y1), (x2, y2))``.
+        """
+        if limits is not None:
+            assert len(limits) == 2, ValueError("limits takes a 2 tuple")
+
+            # convert to data coordinates
+            crdmap = self.get_coordmap(coord)
+            limits = list(map(lambda pt: crdmap.to_data(pt[0], pt[1]),
+                              limits))
+
+        self._limits = limits
+        self.make_callback('limits-set', limits)
 
     def get_rgb_object(self, whence=0):
         """Create and return RGB slices representing the data

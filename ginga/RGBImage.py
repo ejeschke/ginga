@@ -1,9 +1,6 @@
 #
 # RGBImage.py -- Abstraction of an generic data image.
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -17,16 +14,15 @@ import numpy
 class RGBImage(BaseImage):
 
     def __init__(self, data_np=None, metadata=None,
-                 logger=None, name=None, order='RGBA',
+                 logger=None, name=None, order=None,
                  ioclass=io_rgb.RGBFileHandler):
 
         BaseImage.__init__(self, data_np=data_np, metadata=metadata,
                            logger=logger, name=name)
 
         self.io = ioclass(self.logger)
-        order = order.upper()
-        self.order = order
-        self.hasAlpha = 'A' in order
+        self._calc_order(order)
+        self.hasAlpha = 'A' in self.order
 
     def get_slice(self, ch):
         data = self._get_data()
@@ -49,11 +45,9 @@ class RGBImage(BaseImage):
         l = [ self.get_slice(c) for c in order ]
         return numpy.dstack(l)
 
-    def set_data(self, data_np, order=None, **kwdargs):
-        super(RGBImage, self).set_data(data_np, **kwdargs)
-
+    def _calc_order(self, order):
         if order is not None:
-            self.order = order
+            self.order = order.upper()
         else:
             # TODO; need something better here than a guess!
             depth = self.get_depth()
@@ -64,7 +58,10 @@ class RGBImage(BaseImage):
             elif depth == 3:
                 self.order = 'RGB'
             elif depth == 4:
-                self.order = 'ARGB'
+                self.order = 'RGBA'
+
+    def set_data(self, data_np, order=None, **kwdargs):
+        super(RGBImage, self).set_data(data_np, **kwdargs)
 
     def set_color(self, r, g, b):
         # TODO: handle other sizes
@@ -109,6 +106,18 @@ class RGBImage(BaseImage):
     def has_alpha(self):
         order = self.get_order()
         return 'A' in order
+
+    def insert_alpha(self, pos, alpha):
+        if not self.has_alpha():
+            order = list(self.order)
+            l = [ self.get_slice(c) for c in order ]
+            wd, ht = self.get_size()
+            a = numpy.zeros((ht, wd), dtype=numpy.uint8)
+            a[:] = int(alpha)
+            l.insert(pos, a)
+            self._data = numpy.dstack(l)
+            order.insert(pos, 'A')
+            self.order = ''.join(order)
 
     def get_scaled_cutout_wdht(self, x1, y1, x2, y2, new_wd, new_ht,
                                   method='basic'):
