@@ -106,6 +106,8 @@ class PyFitsFileHandler(BaseFitsFileHandler):
         data = hdu.data
         if data is None:
             data = numpy.zeros((0, 0))
+        elif isinstance(hdu, pyfits.BinTableHDU):
+            pass
         elif not isinstance(data, numpy.ndarray):
             data = numpy.zeros((0, 0))
         elif 0 in data.shape:
@@ -159,9 +161,9 @@ class PyFitsFileHandler(BaseFitsFileHandler):
                 extver_db[name] = extver
 
                 # rule out HDUs we can't deal with
-                if not (isinstance(hdu, pyfits.ImageHDU) or
-                        isinstance(hdu, pyfits.PrimaryHDU)):
-                    # Don't open tables, etc.
+                if not isinstance(hdu, (pyfits.ImageHDU, pyfits.PrimaryHDU,
+                                        pyfits.BinTableHDU)):
+                    # Don't open anything that is not header, image, or table.
                     continue
                 if not isinstance(hdu.data, numpy.ndarray):
                     # We need to open a numpy array

@@ -122,6 +122,10 @@ class TableViewGw(TableViewBase):
         # Extract data as astropy table
         a_tab = table.get_data()
 
+        if a_tab is None:
+            self.logger.error('{0} has no data'.format(table))
+            return
+
         # Fill masked values, if applicable
         try:
             a_tab = a_tab.filled()

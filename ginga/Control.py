@@ -5,23 +5,29 @@
 # Please see the file LICENSE.txt for details.
 #
 # stdlib imports
-import sys, os
+import sys
+import os
 import traceback
-import re, time
+import time
 import tempfile
-import ginga.util.six as six
-if six.PY2:
-    import thread
-    import Queue
-else:
-    import _thread as thread
-    import queue as Queue
 import threading
 import logging
 import mimetypes
 from collections import deque
-import atexit, shutil
+import atexit
+import shutil
 from datetime import datetime
+
+# Local application imports
+from ginga import cmap, imap
+from ginga import AstroImage, RGBImage, BaseImage
+from ginga.misc import Bunch, Datasrc, Callback, Timer, Future
+from ginga.util import catalog, iohelper
+from ginga.table import AstroTable
+from ginga.canvas.CanvasObject import drawCatalog
+
+# Version
+from ginga import __version__
 
 magic_tester = None
 try:
@@ -37,17 +43,7 @@ try:
 except (ImportError, Exception):
     have_magic = False
 
-# Local application imports
-from ginga import cmap, imap
-from ginga import AstroImage, RGBImage, BaseImage
-from ginga.misc import Bunch, Datasrc, Callback, Timer, Future
-from ginga.util import catalog, iohelper
-from ginga.canvas.CanvasObject import drawCatalog
-
-# Version
-from ginga import __version__
-
-#pluginconfpfx = 'plugins'
+# pluginconfpfx = 'plugins'
 pluginconfpfx = None
 
 packageHome = os.path.split(sys.modules[__name__].__file__)[0]
@@ -143,7 +139,6 @@ class GingaControl(Callback.Callbacks):
         self._cursor_last_update = time.time()
         self.cursor_interval = self.settings.get('cursor_interval', 0.050)
 
-
     def get_server_bank(self):
         return self.imgsrv
 
@@ -212,7 +207,8 @@ class GingaControl(Callback.Callbacks):
             info.y += off
 
         except Exception as e:
-            self.logger.warning("Can't get info under the cursor: %s" % (str(e)))
+            self.logger.warning(
+                "Can't get info under the cursor: %s" % (str(e)))
             return
 
         # TODO: can this be made more efficient?
@@ -348,7 +344,8 @@ class GingaControl(Callback.Callbacks):
         return self.start_local_plugin(None, opname, None)
 
     def stop_operation_channel(self, chname, opname):
-        self.logger.warning("Do not use this method name--it will be deprecated!")
+        self.logger.warning(
+            "Do not use this method name--it will be deprecated!")
         return self.stop_local_plugin(chname, opname)
 
     def start_local_plugin(self, chname, opname, future):
@@ -516,8 +513,8 @@ class GingaControl(Callback.Callbacks):
             filepath = filepfx
         else:
             inherit_prihdr = self.settings.get('inherit_primary_header', False)
-            image = AstroImage.AstroImage(logger=self.logger,
-                                          inherit_primary_header=inherit_prihdr)
+            image = AstroImage.AstroImage(
+                logger=self.logger, inherit_primary_header=inherit_prihdr)
             kwdargs.update(dict(numhdu=idx))
 
         try:
@@ -525,20 +522,28 @@ class GingaControl(Callback.Callbacks):
                 filepath, str(kwdargs)))
             image.load_file(filepath, **kwdargs)
 
-        except Exception as e:
-            errmsg = "Failed to load file '%s': %s" % (
-                filepath, str(e))
-            self.logger.error(errmsg)
+        except Exception:
+            # TODO: Refactor code to be less hacky.
+            # Maybe it has a table on EXT 1.
             try:
-                (type, value, tb) = sys.exc_info()
-                tb_str = "\n".join(traceback.format_tb(tb))
+                self.logger.info("Loading table from %s kwdargs=%s" % (
+                        filepath, str(kwdargs)))
+                image = AstroTable.AstroTable(logger=self.logger)
+                image.load_file(filepath, logger=self.logger, **kwdargs)
             except Exception as e:
-                tb_str = "Traceback information unavailable."
-            self.gui_do(self.show_error, errmsg + '\n' + tb_str)
-            #channel.viewer.onscreen_message("Failed to load file", delay=1.0)
-            raise ControlError(errmsg)
+                errmsg = "Failed to load file '%s': %s" % (
+                    filepath, str(e))
+                self.logger.error(errmsg)
+                try:
+                    (type, value, tb) = sys.exc_info()
+                    tb_str = "\n".join(traceback.format_tb(tb))
+                except Exception as e:
+                    tb_str = "Traceback information unavailable."
+                self.gui_do(self.show_error, errmsg + '\n' + tb_str)
+                #channel.viewer.onscreen_message("Failed to load file", delay=1.0)
+                raise ControlError(errmsg)
 
-        self.logger.debug("Successfully loaded file into image object.")
+        self.logger.debug("Successfully loaded file into data object.")
         return image
 
     def get_fileinfo(self, filespec, dldir=None):
@@ -562,10 +567,10 @@ class GingaControl(Callback.Callbacks):
         # Get information about this file/URL
         info = iohelper.get_fileinfo(filespec, cache_dir=dldir)
 
-        if (not info.ondisk) and (info.url is not None) and \
-               (not info.url.startswith('file:')):
+        if ((not info.ondisk) and (info.url is not None) and
+                (not info.url.startswith('file:'))):
             # Download the file if a URL was passed
-            def  _dl_indicator(count, blksize, totalsize):
+            def _dl_indicator(count, blksize, totalsize):
                 pct = float(count * blksize) / float(totalsize)
                 msg = "Downloading: %%%.2f complete" % (pct*100.0)
                 self.gui_do(self.showStatus, msg)
@@ -575,8 +580,8 @@ class GingaControl(Callback.Callbacks):
             try:
                 dl = catalog.URLServer(self.logger, "downloader", "dl",
                                        info.url, "")
-                filepath = dl.retrieve(info.url, filepath=info.filepath,
-                                       cb_fn=_dl_indicator)
+                dl.retrieve(info.url, filepath=info.filepath,
+                            cb_fn=_dl_indicator)
             finally:
                 self.gui_do(self.showStatus, "")
 
@@ -643,6 +648,7 @@ class GingaControl(Callback.Callbacks):
         except Exception as e:
             errmsg = "Failed to load '%s': %s" % (filepath, str(e))
             self.gui_do(self.show_error, errmsg)
+            return
 
         future = Future.Future()
         future.freeze(image_loader, filepath, **kwdargs)
@@ -694,7 +700,7 @@ class GingaControl(Callback.Callbacks):
         channel = self.get_channel(chname)
         datasrc = channel.datasrc
 
-        if not channel.datasrc.has_key(imname):
+        if imname not in datasrc:
             # not there--load image in a non-gui thread, then have the
             # gui add it to the channel silently
             self.logger.info("preloading image %s" % (path))
@@ -705,7 +711,7 @@ class GingaControl(Callback.Callbacks):
                 image = image_future.thaw()
 
             self.gui_do(self.add_image, imname, image,
-                           chname=chname, silent=True)
+                        chname=chname, silent=True)
         self.logger.debug("end preload")
 
     def zoom_in(self):
@@ -918,7 +924,8 @@ class GingaControl(Callback.Callbacks):
                 self.gui_do(obj.redo, channel, image)
 
             except Exception as e:
-                self.logger.error("Failed to continue operation: %s" % (str(e)))
+                self.logger.error(
+                    "Failed to continue operation: %s" % (str(e)))
                 # TODO: log traceback?
 
         # update active local plugins
@@ -929,7 +936,8 @@ class GingaControl(Callback.Callbacks):
                 self.gui_do(obj.redo)
 
             except Exception as e:
-                self.logger.error("Failed to continue operation: %s" % (str(e)))
+                self.logger.error(
+                    "Failed to continue operation: %s" % (str(e)))
                 # TODO: log traceback?
 
     def close_plugins(self, channel):
@@ -941,7 +949,8 @@ class GingaControl(Callback.Callbacks):
                 self.gui_do(obj.close)
 
             except Exception as e:
-                self.logger.error("Failed to continue operation: %s" % (str(e)))
+                self.logger.error(
+                    "Failed to continue operation: %s" % (str(e)))
                 # TODO: log traceback?
 
     def channel_image_updated(self, channel, image):
@@ -1239,8 +1248,9 @@ class GingaControl(Callback.Callbacks):
             if curname == imname:
                 viewer.clear()
 
-        bnch = channel.remove_image(imname)
-        self.make_async_gui_callback('remove-image', channel.name, imname, impath)
+        channel.remove_image(imname)
+        self.make_async_gui_callback(
+            'remove-image', channel.name, imname, impath)
 
     def move_image_by_name(self, from_chname, imname, to_chname, impath=None):
 
@@ -1330,6 +1340,7 @@ class GingaControl(Callback.Callbacks):
     get_fitsimage = get_viewer
     get_ServerBank = get_server_bank
 
+
 def _rmtmpdir(tmpdir):
     if os.path.isdir(tmpdir):
         shutil.rmtree(tmpdir)
@@ -1401,7 +1412,7 @@ class Channel(Callback.Callbacks):
             'set', self._sort_changed_ext_cb)
 
     def connect_viewer(self, viewer):
-        if not viewer in self.viewers:
+        if viewer not in self.viewers:
             self.viewers.append(viewer)
             self.viewer_dict[viewer.vname] = viewer
 
@@ -1431,14 +1442,14 @@ class Channel(Callback.Callbacks):
         channel.add_image(image, silent=silent)
 
     def remove_image(self, imname):
-        if self.datasrc.has_key(imname):
+        if imname in self.datasrc:
             self.datasrc.remove(imname)
 
         info = self.remove_history(imname)
         return info
 
     def get_image_names(self):
-        return [ info.name for info in self.history ]
+        return [info.name for info in self.history]
 
     def get_loaded_image(self, imname):
         """Get an image from memory.
@@ -1465,8 +1476,8 @@ class Channel(Callback.Callbacks):
     def add_image(self, image, silent=False, bulk_add=False):
 
         imname = image.get('name', None)
-        assert imname is not None, \
-               ValueError("image has no name")
+        if imname is None:
+            raise ValueError("image has no name")
 
         self.logger.debug("Adding image '%s' in channel %s" % (
             imname, self.name))
@@ -1520,7 +1531,8 @@ class Channel(Callback.Callbacks):
 
         current = self.datasrc.youngest()
         curname = current.get('name')
-        self.logger.debug("image=%s youngest=%s" % (image.get('name'), curname))
+        self.logger.debug(
+            "image=%s youngest=%s" % (image.get('name'), curname))
         if current != image:
             return
 
@@ -1544,7 +1556,7 @@ class Channel(Callback.Callbacks):
 
     def refresh_cursor_image(self):
         info = self.history[self.cursor]
-        if self.datasrc.has_key(info.name):
+        if info.name in self.datasrc:
             # image still in memory
             image = self.datasrc[info.name]
             self.switch_image(image)
@@ -1585,7 +1597,7 @@ class Channel(Callback.Callbacks):
         return True
 
     def _add_info(self, info):
-        if not info in self.image_index:
+        if info not in self.image_index:
             self.history.append(info)
             self.image_index[info.name] = info
 
@@ -1632,15 +1644,16 @@ class Channel(Callback.Callbacks):
         # find available viewers that can view this kind of object
         vnames = self.fv.get_viewer_names(dataobj)
         if len(vnames) == 0:
-            raise ValueError("I don't know how to view objects of type '%s'" % (
-                str(type(dataobj))))
+            raise ValueError(
+                "I don't know how to view objects of type "
+                "'%s'" % (str(type(dataobj))))
         self.logger.debug("available viewers are: %s" % (str(vnames)))
 
         # for now, pick first available viewer that can view this type
         vname = vnames[0]
 
         # if we don't have this viewer type then install one in the channel
-        if not vname in self.viewer_dict:
+        if vname not in self.viewer_dict:
             self.fv.make_viewer(vname, self)
 
         self.viewer = self.viewer_dict[vname]
@@ -1650,7 +1663,6 @@ class Channel(Callback.Callbacks):
 
         # and load the data
         self.viewer.set_image(dataobj)
-
 
     def switch_image(self, image):
 
@@ -1691,7 +1703,7 @@ class Channel(Callback.Callbacks):
 
     def switch_name(self, imname):
 
-        if self.datasrc.has_key(imname):
+        if imname in self.datasrc:
             # Image is still in the heap
             image = self.datasrc[imname]
             self.switch_image(image)
@@ -1708,6 +1720,7 @@ class Channel(Callback.Callbacks):
         if info.image_future is not None:
             self.logger.info("Image '%s' is no longer in memory; attempting "
                              "reloader" % (imname))
+
             # TODO: recode this--it's a bit messy
             def _switch(image):
                 # this will be executed in the gui thread
