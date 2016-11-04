@@ -423,9 +423,6 @@ def calc_image_merge_clip(x1, y1, x2, y2,
     Refines the tuple (a1, b1, a2, b2) defining the clipped rectangle
     needed to be cut from the source array and scaled.
     """
-    #print(("calc clip in dst", x1, y1, x2, y2))
-    #print(("calc clip in src", dst_x, dst_y, a1, b1, a2, b2))
-
     src_wd, src_ht = a2 - a1, b2 - b1
 
     # Trim off parts of srcarr that would be "hidden"
@@ -456,7 +453,6 @@ def calc_image_merge_clip(x1, y1, x2, y2,
         src_wd -= ex
         a2 -= ex
 
-    #print(("calc clip out", dst_x, dst_y, a1, b1, a2, b2))
     return (dst_x, dst_y, a1, b1, a2, b2)
 
 
@@ -471,8 +467,6 @@ def overlay_image(dstarr, dst_x, dst_y, srcarr, dst_order='RGBA',
     if flipy:
         srcarr = numpy.flipud(srcarr)
 
-    ## print(("1. dst_x, dst_y, dst_wd, dst_ht", dst_x, dst_y, dst_wd, dst_ht))
-    ## print(("2. src_wd, src_ht, shape", src_wd, src_ht, srcarr.shape))
     # Trim off parts of srcarr that would be "hidden"
     # to the left and above the dstarr edge.
     if dst_y < 0:
@@ -502,19 +496,19 @@ def overlay_image(dstarr, dst_x, dst_y, srcarr, dst_order='RGBA',
         srcarr = srcarr[:, :dst_wd, :]
         src_wd -= ex
 
-    ## print(("2. dst_x, dst_y", dst_x, dst_y))
-    ## print(("2. src_wd, src_ht, shape", src_wd, src_ht, srcarr.shape))
-
     if copy:
         dstarr = numpy.copy(dstarr, order='C')
 
     da_idx = -1
+    slc = slice(0, 3)
     if 'A' in dst_order:
         da_idx = dst_order.index('A')
 
-    # Currently we assume that alpha channel is in position 3 in dstarr
-    assert da_idx == 3, \
-           ValueError("Alpha channel not in expected position in dstarr")
+        # Currently we assume that alpha channel is in position 0 or 3 in dstarr
+        if da_idx == 0:
+            slc = slice(1, 4)
+        elif da_idx != 3:
+            raise ValueError("Alpha channel not in expected position (0 or 4) in dstarr")
 
     # fill alpha channel in destination in the area we will be dropping
     # the image
@@ -537,15 +531,15 @@ def overlay_image(dstarr, dst_x, dst_y, srcarr, dst_order='RGBA',
 
     # calculate alpha blending
     #   Co = CaAa + CbAb(1 - Aa)
-    a_arr = (alpha * srcarr[0:src_ht, 0:src_wd, 0:3]).astype(numpy.uint8)
+    a_arr = (alpha * srcarr[0:src_ht, 0:src_wd, slc]).astype(numpy.uint8)
     b_arr = ((1.0 - alpha) * dstarr[dst_y:dst_y+src_ht,
                                     dst_x:dst_x+src_wd,
-                                    0:3]).astype(numpy.uint8)
+                                    slc]).astype(numpy.uint8)
 
     # Place our srcarr into this dstarr at dst offsets
-    #dstarr[dst_y:dst_y+src_ht, dst_x:dst_x+src_wd, 0:3] += addarr[0:src_ht, 0:src_wd, 0:3]
-    dstarr[dst_y:dst_y+src_ht, dst_x:dst_x+src_wd, 0:3] = \
-             a_arr[0:src_ht, 0:src_wd, 0:3] + b_arr[0:src_ht, 0:src_wd, 0:3]
+    #dstarr[dst_y:dst_y+src_ht, dst_x:dst_x+src_wd, slc] += addarr[0:src_ht, 0:src_wd, slc]
+    dstarr[dst_y:dst_y+src_ht, dst_x:dst_x+src_wd, slc] = \
+             a_arr[0:src_ht, 0:src_wd, slc] + b_arr[0:src_ht, 0:src_wd, slc]
 
     return dstarr
 

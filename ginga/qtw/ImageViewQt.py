@@ -139,7 +139,6 @@ class ImageViewQt(ImageView.ImageViewBase):
         # For optomized redrawing
         self._defer_task = Timer(0.0, lambda timer: self.delayed_redraw())
 
-
     def get_widget(self):
         return self.imgwin
 
@@ -187,7 +186,11 @@ class ImageViewQt(ImageView.ImageViewBase):
         self.logger.debug("window size reconfigured to %dx%d" % (
             width, height))
         if hasattr(self, 'scene'):
-            self.scene.setSceneRect(0, 0, width, height)
+            # By default, a QGraphicsView comes with a 1-pixel margin
+            # You will get scrollbars unless you account for this
+            # See http://stackoverflow.com/questions/3513788/qt-qgraphicsview-without-scrollbar
+            width, height = width - 2, height - 2
+            self.scene.setSceneRect(1, 1, width-2, height-2)
         # If we need to build a new pixmap do it here.  We allocate one
         # twice as big as necessary to prevent having to reinstantiate it
         # all the time.  On Qt this causes unpleasant flashing in the display.

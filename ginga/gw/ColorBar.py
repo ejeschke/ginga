@@ -128,7 +128,6 @@ class ColorBar(Callback.Callbacks):
         dx = x - self._start_x
         wd, ht = event.viewer.get_window_size()
         pct = float(dx) / float(wd)
-        #print "dx=%f wd=%d pct=%f" % (dx, wd, pct)
         self.shift_colormap(pct)
         return True
 
@@ -142,7 +141,6 @@ class ColorBar(Callback.Callbacks):
 
         dx = x - self._start_x
         pct = float(dx) / float(wd)
-        #print "dx=%f wd=%d pct=%f" % (dx, wd, pct)
         self.shift_colormap(pct)
         return True
 

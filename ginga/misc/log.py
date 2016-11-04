@@ -24,6 +24,7 @@ class NullLogger(object):
     """
     def __init__(self, f_out=None):
         self.f_out = f_out
+        self.handlers = []
 
     def debug(self, msg):
         if self.f_out:
