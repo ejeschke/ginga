@@ -63,6 +63,8 @@ class RGBImage(BaseImage):
     def set_data(self, data_np, order=None, **kwdargs):
         super(RGBImage, self).set_data(data_np, **kwdargs)
 
+        self._calc_order(order)
+
     def set_color(self, r, g, b):
         # TODO: handle other sizes
         ch_max = 255
