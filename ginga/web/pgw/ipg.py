@@ -20,6 +20,7 @@ Tested with Chromium 41.0.2272.76, Firefox 37.0.2, Safari 7.1.6
 """
 from __future__ import print_function
 import sys, os
+import math
 import logging
 import threading
 
@@ -142,6 +143,8 @@ class ImageViewer(object):
         fi.url = self.url
         fi.enable_autocuts('on')
         fi.set_autocut_params('zscale')
+        fi.set_zoom_algorithm('rate')
+        fi.set_zoomrate(1.1)
         fi.enable_autozoom('on')
         #fi.set_callback('drag-drop', self.drop_file)
         fi.set_callback('none-move', self.motion)
@@ -152,11 +155,6 @@ class ImageViewer(object):
 
         bd = fi.get_bindings()
         bd.enable_all(True)
-
-        # so trackpad scrolling can be adjusted
-        settings = bd.get_settings()
-        settings.set(scroll_zoom_direct_scale=True,
-                     scroll_zoom_acceleration=0.07)
 
         # canvas that we will draw on
         canvas = self.dc.DrawingCanvas()
@@ -187,8 +185,10 @@ class ImageViewer(object):
         slider = Widgets.Slider(orientation='horizontal', dtype=float)
         slider.add_callback('value-changed',
                             lambda w, val: self.adjust_scrolling_accel_cb(val))
-        slider.set_limits(0.0, 12.0, 0.005)
-        slider.set_value(8.0)
+        slider.set_limits(1.0, 9.5, 0.1)
+        val = 4.0
+        slider.set_value(val)
+        self.adjust_scrolling_accel_cb(val)
         hbox.add_widget(slider, stretch=1)
 
         hbox.add_widget(Widgets.Label(''), stretch=1)
@@ -252,11 +252,14 @@ class ImageViewer(object):
 
     def adjust_scrolling_accel_cb(self, val):
         def f(x):
-            return (1.0 / 2.0**(10.0-x))
+            return (math.log10(x) / (10 - x) * x/12) + 1.0001
         val2 = f(val)
         self.logger.debug("slider value is %f, setting will be %f" % (val, val2))
-        settings = self.fitsimage.get_bindings().get_settings()
-        settings.set(scroll_zoom_acceleration=val2)
+        # save scale
+        scale_x, scale_y = self.fitsimage.get_scale_xy()
+        self.fitsimage.set_zoomrate(val2)
+        # restore scale
+        self.fitsimage.scale_to(scale_x, scale_y)
         return True
 
     def closed(self, w):
