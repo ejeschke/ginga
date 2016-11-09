@@ -619,14 +619,14 @@ class ImageViewEvent(ImageViewQt):
         self.last_win_x, self.last_win_y = x, y
 
         numDegrees, direction = get_scroll_info(event)
-        self.logger.debug("scroll deg=%f direction=%f" % (
+        self.logger.debug("scroll deg={} direction={}".format(
             numDegrees, direction))
 
         data_x, data_y = self.get_data_xy(x, y)
         self.last_data_x, self.last_data_y = data_x, data_y
 
         return self.make_ui_callback('scroll', direction, numDegrees,
-                                  data_x, data_y)
+                                     data_x, data_y)
 
     def gesture_event(self, widget, event):
         gesture = event.gestures()[0]
