@@ -11,7 +11,7 @@ import logging
 import time
 import traceback
 
-import numpy, numpy.ma
+import numpy
 
 from ginga.util import wcsmod, io_fits, iohelper
 from ginga.util import wcs, iqcalc
@@ -56,10 +56,11 @@ class AstroImage(BaseImage):
             wcsclass = wcsmod.WCS
         self.wcs = wcsclass(self.logger)
 
-        # wcsclass specifies a pluggable IO module
+        # ioclass specifies a pluggable IO module
         if ioclass is None:
             ioclass = io_fits.fitsLoaderClass
         self.io = ioclass(self.logger)
+        self.io.register_type('image', self.__class__)
 
         self.inherit_primary_header = inherit_primary_header
         if self.inherit_primary_header:
@@ -77,83 +78,64 @@ class AstroImage(BaseImage):
         self.revnaxis = []
         self._md_data = None
 
-    def load_hdu(self, hdu, fobj=None, naxispath=None):
+    def load_hdu(self, hdu, fobj=None, naxispath=None,
+                 inherit_primary_header=None):
+
+        if self.io is None:
+            # need image loader for the fromHDU() call below
+            raise ImageError("No IO loader defined")
+
         self.clear_metadata()
 
+        # collect HDU header
         ahdr = self.get_header()
+        self.io.fromHDU(hdu, ahdr)
 
-        loader = io_fits.PyFitsFileHandler(self.logger)
-        _data, naxispath = loader.load_hdu(hdu, ahdr, naxispath=naxispath)
+        # Set PRIMARY header
+        if inherit_primary_header is None:
+            inherit_primary_header = self.inherit_primary_header
+
+        if inherit_primary_header and (fobj is not None):
+            if self._primary_hdr is None:
+                self._primary_hdr = AstroHeader()
+
+            self.io.fromHDU(fobj[0], self._primary_hdr)
+
+        data = hdu.data
+        if data is None:
+            data = numpy.zeros((0, 0))
+        elif not isinstance(data, numpy.ndarray):
+            data = numpy.zeros((0, 0))
+        elif 0 in data.shape:
+            data = numpy.zeros((0, 0))
+        elif len(data.shape) < 2:
+            # Expand 1D arrays into 1xN array
+            data = data.reshape((1, data.shape[0]))
+
         # this is a handle to the full data array
-        self._md_data = _data
+        self._md_data = data
+        # this will get reset in set_naxispath() if array is
+        # multidimensional
+        self._data = data
 
         if naxispath is None:
             naxispath = []
 
-        # Drill down to 2D data slice
+        # Set naxispath to drill down to 2D data slice
         if len(naxispath) == 0:
-            naxispath = ([0] * (len(_data.shape)-2))
+            naxispath = ([0] * (len(data.shape) - 2))
 
         self.set_naxispath(naxispath)
-
-        # Set PRIMARY header
-        if self.inherit_primary_header and fobj is not None:
-            self.io.fromHDU(fobj[0], self._primary_hdr)
 
         # Try to make a wcs object on the header
         self.wcs.load_header(hdu.header, fobj=fobj)
 
-    def load_file(self, filepath, numhdu=None, naxispath=None,
-                  allow_numhdu_override=True, memmap=None):
-        self.logger.debug("Loading file '%s' ..." % (filepath))
-        self.clear_metadata()
+    def load_file(self, filespec, **kwargs):
 
-        ahdr = self.get_header()
+        if self.io is None:
+            raise ImageError("No IO loader defined")
 
-        info = iohelper.get_fileinfo(filepath)
-        if numhdu is None:
-            numhdu = info.numhdu
-
-        _data, numhdu_, naxispath = self.io.load_file(info.filepath, ahdr,
-                                                      numhdu=numhdu,
-                                                      naxispath=naxispath,
-                                                      phdr=self._primary_hdr,
-                                                      memmap=memmap)
-        # this is a handle to the full data array
-        self._md_data = _data
-
-        if naxispath is None:
-            naxispath = []
-
-        # Drill down to 2D data slice
-        if len(naxispath) == 0:
-            naxispath = ([0] * (len(_data.shape)-2))
-
-        # Set the image name if no name currently exists for this image
-        # TODO: should this *change* the existing name, if any?
-        if not (self.name is None):
-            self.set(name=self.name)
-        else:
-            name = self.get('name', None)
-            if name is None:
-                name = info.name
-                if ('[' not in name):
-                    if (numhdu is None) or allow_numhdu_override:
-                        numhdu = numhdu_
-                    name += iohelper.get_hdu_suffix(numhdu)
-                self.set(name=name)
-
-        self.set(path=filepath, idx=numhdu)
-
-        self.set_naxispath(naxispath)
-
-        # Try to make a wcs object on the header
-        # TODO: in order to do more sophisticated WCS (e.g. distortion
-        #   correction) that requires info in additional headers we need
-        #   to pass additional information to the wcs class
-        #self.wcs.load_header(hdu.header, fobj=fobj)
-        self.wcs.load_header(ahdr)
-
+        self.io.load_file(filespec, dstobj=self, **kwargs)
 
     def load_buffer(self, data, dims, dtype, byteswap=False,
                     metadata=None):
@@ -276,8 +258,12 @@ class AstroImage(BaseImage):
             header = self.get_header()
             self.wcs.load_header(header)
 
-    def clear_metadata(self):
-        self.metadata = {}
+    def clear_all(self):
+        # clear metadata and data
+        super(AstroImage, self).clear_all()
+
+        # unreference full data array
+        self._md_data = self._data
 
     def transfer(self, other, astype=None):
         data = self._get_data()
@@ -472,7 +458,6 @@ class AstroImage(BaseImage):
             if bg_ref is not None:
                 bg = iqcalc.get_median(data_np)
                 bg_inc = bg_ref - bg
-                #print "bg=%f inc=%f" % (bg, bg_inc)
                 data_np = data_np + bg_inc
 
             # Determine max/min to update our values
@@ -726,7 +711,6 @@ class AstroImage(BaseImage):
                 self.logger.error(tb_str)
 
         te = time.time() - ts
-        #print "time elapsed: %.4f" % te
         info = Bunch.Bunch(itype='astro', data_x=data_x, data_y=data_y,
                            x=data_x, y=data_y,
                            ra_txt=ra_txt, dec_txt=dec_txt,
