@@ -376,6 +376,8 @@ class MultiDim(GingaPlugin.LocalPlugin):
         # determine canonical index of this HDU
         info = self.hdu_info[idx]
         aidx = (info.name, info.extver)
+        if not aidx in self.fits_f:
+            aidx = idx
         sfx = get_hdu_suffix(aidx)
 
         # See if this HDU is still in the channel's datasrc
