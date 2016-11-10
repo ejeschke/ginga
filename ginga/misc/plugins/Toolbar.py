@@ -134,13 +134,15 @@ class Toolbar(GingaPlugin.GlobalPlugin):
             # add widget to toolbar
             #tb.add_widget(btn)
 
+        hbox = Widgets.HBox()
+        hbox.add_widget(tb, stretch=0)
         # stretcher
-        #tb.add_widget(Widgets.Label(''), stretch=1)
+        hbox.add_widget(Widgets.Label(''), stretch=1)
         #sw.set_widget(tb)
 
         #top.add_widget(sw, stretch=1)
 
-        container.add_widget(tb, stretch=1)
+        container.add_widget(hbox, stretch=0)
         self.gui_up = True
 
     # CALLBACKS
