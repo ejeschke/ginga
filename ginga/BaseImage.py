@@ -46,6 +46,9 @@ class ViewerObjectBase(Callback.Callbacks):
     def clear_metadata(self):
         self.metadata = {}
 
+    def clear_all(self):
+        self.clear_metadata()
+
     def update_metadata(self, map_like):
         for key, val in map_like.items():
             self.metadata[key] = val
@@ -170,6 +173,13 @@ class BaseImage(ViewerObjectBase):
         self._set_minmax()
 
         self.make_callback('modified')
+
+    def clear_all(self):
+        # clear metadata
+        super(BaseImage, self).clear_all()
+
+        # unreference data array
+        self._data = numpy.zeros((1, 1))
 
     def _slice(self, view):
         return self._get_data()[view]

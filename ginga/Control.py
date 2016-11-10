@@ -40,8 +40,9 @@ except (ImportError, Exception):
 # Local application imports
 from ginga import cmap, imap
 from ginga import AstroImage, RGBImage, BaseImage
+from ginga.table import AstroTable
 from ginga.misc import Bunch, Datasrc, Callback, Timer, Future
-from ginga.util import catalog, iohelper
+from ginga.util import catalog, iohelper, io_fits
 from ginga.canvas.CanvasObject import drawCatalog
 
 # Version
@@ -142,6 +143,12 @@ class GingaControl(Callback.Callbacks):
         self._cursor_task.set_callback('expired', self._cursor_timer_cb)
         self._cursor_last_update = time.time()
         self.cursor_interval = self.settings.get('cursor_interval', 0.050)
+
+        # for loading FITS files
+        fo = io_fits.fitsLoaderClass(self.logger)
+        fo.register_type('image', AstroImage.AstroImage)
+        fo.register_type('table', AstroTable.AstroTable)
+        self.fits_opener = fo
 
 
     def get_server_bank(self):
@@ -330,17 +337,17 @@ class GingaControl(Callback.Callbacks):
     def get_draw_classes(self):
         return drawCatalog
 
-    def make_async_gui_callback(self, name, *args, **kwdargs):
+    def make_async_gui_callback(self, name, *args, **kwargs):
         # NOTE: asynchronous!
-        self.gui_do(self.make_callback, name, *args, **kwdargs)
+        self.gui_do(self.make_callback, name, *args, **kwargs)
 
-    def make_gui_callback(self, name, *args, **kwdargs):
+    def make_gui_callback(self, name, *args, **kwargs):
         if self.is_gui_thread():
-            return self.make_callback(name, *args, **kwdargs)
+            return self.make_callback(name, *args, **kwargs)
         else:
             # note: this cannot be "gui_call"--locks viewer.
             # so call becomes async when a non-gui thread invokes it
-            self.gui_do(self.make_callback, name, *args, **kwdargs)
+            self.gui_do(self.make_callback, name, *args, **kwargs)
 
     # PLUGIN MANAGEMENT
 
@@ -421,9 +428,9 @@ class GingaControl(Callback.Callbacks):
             if raisetab:
                 self.ds.raise_tab('Errors')
 
-    def error_wrap(self, method, *args, **kwdargs):
+    def error_wrap(self, method, *args, **kwargs):
         try:
-            return method(*args, **kwdargs)
+            return method(*args, **kwargs)
 
         except Exception as e:
             errmsg = "\n".join([e.__class__.__name__, str(e)])
@@ -508,22 +515,21 @@ class GingaControl(Callback.Callbacks):
             # Can't determine file type: assume and attempt FITS
             typ, subtyp = 'image', 'fits'
 
-        kwdargs = {}
+        kwargs = {}
 
         self.logger.debug("assuming file type: %s/%s'" % (typ, subtyp))
-        if (typ == 'image') and (subtyp not in ('fits', 'x-fits')):
-            image = RGBImage.RGBImage(logger=self.logger)
-            filepath = filepfx
-        else:
-            inherit_prihdr = self.settings.get('inherit_primary_header', False)
-            image = AstroImage.AstroImage(logger=self.logger,
-                                          inherit_primary_header=inherit_prihdr)
-            kwdargs.update(dict(numhdu=idx))
-
         try:
-            self.logger.info("Loading image from %s kwdargs=%s" % (
-                filepath, str(kwdargs)))
-            image.load_file(filepath, **kwdargs)
+            if (typ == 'image') and (subtyp not in ('fits', 'x-fits')):
+                image = RGBImage.RGBImage(logger=self.logger)
+                filepath = filepfx
+                image.load_file(filepath, **kwargs)
+            else:
+                inherit_prihdr = self.settings.get('inherit_primary_header', False)
+                kwargs.update(dict(numhdu=idx, inherit_primary_header=inherit_prihdr))
+
+                self.logger.info("Loading object from %s kwargs=%s" % (
+                    filepath, str(kwargs)))
+                image = self.fits_opener.load_file(filepath, **kwargs)
 
         except Exception as e:
             errmsg = "Failed to load file '%s': %s" % (
@@ -538,7 +544,7 @@ class GingaControl(Callback.Callbacks):
             #channel.viewer.onscreen_message("Failed to load file", delay=1.0)
             raise ControlError(errmsg)
 
-        self.logger.debug("Successfully loaded file into image object.")
+        self.logger.debug("Successfully loaded file into object.")
         return image
 
     def get_fileinfo(self, filespec, dldir=None):
@@ -632,20 +638,20 @@ class GingaControl(Callback.Callbacks):
         info = self.get_fileinfo(filepath)
         filepath = info.filepath
 
-        kwdargs = {}
+        kwargs = {}
         idx = None
         if info.numhdu is not None:
-            kwdargs['idx'] = info.numhdu
+            kwargs['idx'] = info.numhdu
 
         try:
-            image = image_loader(filepath, **kwdargs)
+            image = image_loader(filepath, **kwargs)
 
         except Exception as e:
             errmsg = "Failed to load '%s': %s" % (filepath, str(e))
             self.gui_do(self.show_error, errmsg)
 
         future = Future.Future()
-        future.freeze(image_loader, filepath, **kwdargs)
+        future.freeze(image_loader, filepath, **kwargs)
 
         # Save a future for this image to reload it later if we
         # have to remove it from memory
