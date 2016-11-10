@@ -161,8 +161,10 @@ class PyFitsFileHandler(BaseFitsFileHandler):
             # this seems to be necessary now for some fits files...
             try:
                 fits_f.verify('fix')
+                
             except Exception as e:
-                raise FITSError("Error loading fits file '%s': %s" % (
+                # Let's hope for the best!
+                self.logger.warn("Problem verifying fits file '%s': %s" % (
                     filepath, str(e)))
 
             if numhdu is None:
