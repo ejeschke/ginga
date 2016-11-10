@@ -342,7 +342,8 @@ class ReferenceViewer(object):
 
         try:
             from ginga.util import wcsmod
-            assert wcsmod.use(wcspkg) is True
+            if wcspkg != 'choose':
+                assert wcsmod.use(wcspkg) is True
         except Exception as e:
             logger.warning(
                 "failed to set WCS package preference: %s" % (str(e)))
@@ -355,7 +356,8 @@ class ReferenceViewer(object):
 
         try:
             from ginga.util import io_fits
-            assert io_fits.use(fitspkg) is True
+            if wcspkg != 'choose':
+                assert io_fits.use(fitspkg) is True
         except Exception as e:
             logger.warning(
                 "failed to set FITS package preference: %s" % (str(e)))

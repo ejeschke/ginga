@@ -21,6 +21,7 @@ any images.  Otherwise Ginga will try to pick one for you.
 """
 import numpy
 
+from ginga import AstroImage
 from ginga.util import iohelper
 
 fits_configured = False
@@ -183,6 +184,7 @@ class PyFitsFileHandler(BaseFitsFileHandler):
                     if not isinstance(hdu, (pyfits.ImageHDU,
                                             pyfits.PrimaryHDU,
                                             pyfits.TableHDU,
+                                            pyfits.BinTableHDU,
                                             )):
                         continue
                     if not isinstance(hdu.data, numpy.ndarray):
@@ -194,10 +196,11 @@ class PyFitsFileHandler(BaseFitsFileHandler):
 
                     # Looks good, let's try it
                     found_valid_hdu = True
-                    if len(name) == 0:
+                    _numhdu = (name, extver)
+                    if (len(name) == 0) or (not _numhdu in fits_f):
                         numhdu = i
                     else:
-                        numhdu = (name, extver)
+                        numhdu = _numhdu
                     break
 
                 if not found_valid_hdu:
@@ -205,17 +208,19 @@ class PyFitsFileHandler(BaseFitsFileHandler):
                     hdu = fits_f[0]
                     name = hdu.name
                     extver = hdu.ver
-                    if len(name) == 0:
+                    _numhdu = (name, extver)
+                    if (len(name) == 0) or (not _numhdu in fits_f):
                         numhdu = 0
                     else:
-                        numhdu = (name, extver)
+                        numhdu = _numhdu
 
             elif isinstance(numhdu, (int, str)):
                 hdu = fits_f[numhdu]
                 name = hdu.name
                 extver = hdu.ver
-                if len(name) > 0:
-                    numhdu = (name, extver)
+                _numhdu = (name, extver)
+                if (len(name) > 0) and (_numhdu in fits_f):
+                    numhdu = _numhdu
 
             self.logger.debug("HDU index looks like: %s" % str(numhdu))
             hdu = fits_f[numhdu]
@@ -273,10 +278,9 @@ class FitsioFileHandler(BaseFitsFileHandler):
         for d in header.records():
             if len(d['name']) == 0:
                 continue
-            bnch = ahdr.__setitem__(d['name'], d['value'])
-            bnch.comment = d['comment']
+            ahdr.set_card(d['name'], d['value'], comment=d.get('comment', ''))
 
-    def load_hdu(self, hdu, ahdr, fobj=None, naxispath=None):
+    def load_hdu(self, hdu, dstobj=None, **kwargs):
 
         if dstobj is None:
             # get model class for this type of object
@@ -288,11 +292,11 @@ class FitsioFileHandler(BaseFitsFileHandler):
 
         data = hdu.read()
 
-        # For now, call back into the object to load it from pyfits-style HDU
-        # in future migrate to storage-neutral format
-        dstobj.load_hdu(hdu, **kwargs)
-
+        ahdr = AstroImage.AstroHeader()
         self.fromHDU(hdu, ahdr)
+
+        metadata = dict(header=ahdr)
+        dstobj.set_data(data, metadata=metadata)
 
         return dstobj
 
@@ -335,8 +339,6 @@ class FitsioFileHandler(BaseFitsFileHandler):
                     break
 
                 if not found_valid_hdu:
-                    ## raise FITSError("No data HDU found that Ginga can open in '%s'" % (
-                    ##     filepath))
                     # Just load the header
                     hdu = fits_f[0]
                     hduinfo = hdu.get_info()
@@ -362,8 +364,7 @@ class FitsioFileHandler(BaseFitsFileHandler):
                                    **kwargs)
 
             # Read PRIMARY header
-            if phdr is not None:
-                self.fromHDU(fits_f[0], phdr)
+            #self.fromHDU(fits_f[0], phdr)
 
         finally:
             fits_f.close()
