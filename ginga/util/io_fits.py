@@ -21,7 +21,6 @@ any images.  Otherwise Ginga will try to pick one for you.
 """
 import numpy
 
-from ginga import AstroImage
 from ginga.util import iohelper
 
 fits_configured = False
@@ -83,7 +82,8 @@ class PyFitsFileHandler(BaseFitsFileHandler):
 
     def __init__(self, logger):
         if not have_astropy:
-            raise FITSError("Need astropy module installed to use this file handler")
+            raise FITSError(
+                "Need astropy module installed to use this file handler")
 
         super(PyFitsFileHandler, self).__init__(logger)
         self.kind = 'pyfits'
@@ -102,23 +102,23 @@ class PyFitsFileHandler(BaseFitsFileHandler):
                     continue
                 ahdr.set_card(card.key, card.value, comment=card.comment)
 
-
     def load_hdu(self, hdu, dstobj=None, **kwargs):
 
         if (isinstance(hdu, pyfits.ImageHDU) or
-            isinstance(hdu, pyfits.PrimaryHDU)):
+                isinstance(hdu, pyfits.PrimaryHDU)):
             # <-- data is an image
 
             if dstobj is None:
                 # get model class for this type of object
                 obj_class = self.factory_dict.get('image', None)
                 if obj_class is None:
-                    raise FITSError("I don't know how to load objects of kind 'image'")
+                    raise FITSError(
+                        "I don't know how to load objects of kind 'image'")
 
                 dstobj = obj_class(logger=self.logger)
 
-            # For now, call back into the object to load it from pyfits-style HDU
-            # in future migrate to storage-neutral format
+            # For now, call back into the object to load it from pyfits-style
+            # HDU in future migrate to storage-neutral format
             dstobj.load_hdu(hdu, **kwargs)
 
         elif isinstance(hdu, (pyfits.TableHDU,
@@ -129,19 +129,19 @@ class PyFitsFileHandler(BaseFitsFileHandler):
                 # get model class for this type of object
                 obj_class = self.factory_dict.get('table', None)
                 if obj_class is None:
-                    raise FITSError("I don't know how to load objects of kind 'table'")
+                    raise FITSError(
+                        "I don't know how to load objects of kind 'table'")
 
                 dstobj = obj_class(logger=self.logger)
 
-            # For now, call back into the object to load it from pyfits-style HDU
-            # in future migrate to storage-neutral format
+            # For now, call back into the object to load it from pyfits-style
+            # HDU in future migrate to storage-neutral format
             dstobj.load_hdu(hdu, **kwargs)
 
         else:
             raise FITSError("I don't know how to read this HDU")
 
         return dstobj
-
 
     def load_file(self, filespec, numhdu=None, dstobj=None, memmap=None,
                   **kwargs):
@@ -197,7 +197,7 @@ class PyFitsFileHandler(BaseFitsFileHandler):
                     # Looks good, let's try it
                     found_valid_hdu = True
                     _numhdu = (name, extver)
-                    if (len(name) == 0) or (not _numhdu in fits_f):
+                    if (len(name) == 0) or (_numhdu not in fits_f):
                         numhdu = i
                     else:
                         numhdu = _numhdu
@@ -209,7 +209,7 @@ class PyFitsFileHandler(BaseFitsFileHandler):
                     name = hdu.name
                     extver = hdu.ver
                     _numhdu = (name, extver)
-                    if (len(name) == 0) or (not _numhdu in fits_f):
+                    if (len(name) == 0) or (_numhdu not in fits_f):
                         numhdu = 0
                     else:
                         numhdu = _numhdu
@@ -268,7 +268,8 @@ class FitsioFileHandler(BaseFitsFileHandler):
 
     def __init__(self, logger):
         if not have_fitsio:
-            raise FITSError("Need fitsio module installed to use this file handler")
+            raise FITSError(
+                "Need fitsio module installed to use this file handler")
 
         super(FitsioFileHandler, self).__init__(logger)
         self.kind = 'fitsio'
@@ -281,12 +282,14 @@ class FitsioFileHandler(BaseFitsFileHandler):
             ahdr.set_card(d['name'], d['value'], comment=d.get('comment', ''))
 
     def load_hdu(self, hdu, dstobj=None, **kwargs):
+        from ginga import AstroImage  # Put here to avoid circular import
 
         if dstobj is None:
             # get model class for this type of object
             obj_class = self.factory_dict.get('image', None)
             if obj_class is None:
-                raise FITSError("I don't know how to load objects of kind 'image'")
+                raise FITSError(
+                    "I don't know how to load objects of kind 'image'")
 
             dstobj = obj_class(logger=self.logger)
 
@@ -419,4 +422,4 @@ if not fits_configured:
 def get_fitsloader(kind=None, logger=None):
     return fitsLoaderClass(logger)
 
-#END
+# END
