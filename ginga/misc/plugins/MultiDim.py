@@ -157,14 +157,16 @@ class MultiDim(GingaPlugin.LocalPlugin):
         fr = Widgets.Frame("Movie")
         if have_mencoder:
             captions = [("Start:", 'label', "Start Slice", 'entry',
-                         "End:", 'label', "End Slice", 'entry', 'Save Movie', 'button')]
+                         "End:", 'label', "End Slice", 'entry',
+                         'Save Movie', 'button')]
             w, b = Widgets.build_info(captions, orientation=orientation)
             self.w.update(b)
             b.start_slice.set_tooltip("Starting slice")
             b.end_slice.set_tooltip("Ending slice")
             b.start_slice.set_length(6)
             b.end_slice.set_length(6)
-            b.save_movie.add_callback('activated', lambda w: self.save_movie_cb())
+            b.save_movie.add_callback(
+                'activated', lambda w: self.save_movie_cb())
             b.save_movie.set_enabled(False)
             fr.set_widget(w)
         else:
@@ -226,7 +228,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
                                  #"Choose %s" % (title), 'spinbutton'))
                                  "Choose %s" % (title), 'hscale'))
 
-        if len(dims) > 3:  # only add radiobuttons if we have more than 3 dimensions
+        if len(dims) > 3:  # only add radiobuttons if we have more than 3 dim
             radiobuttons = []
             for i in range(2, len(dims)):
                 title = 'AXIS%d' % (i+1)
@@ -262,7 +264,8 @@ class MultiDim(GingaPlugin.LocalPlugin):
 
         # for storing play_idx for each dim of image. used for going back to
         # the idx where you left off.
-        self.play_indices = [0 for i in range(len(dims) - 2)] if len(dims) > 3 else None
+        self.play_indices = ([0 for i in range(len(dims) - 2)] if len(dims) > 3
+                             else None)
 
         if len(dims) > 3:
 
@@ -271,7 +274,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
                 # widget callable needs (widget, value) args
                 def play_axis_change():
 
-                    self.play_indices[self.play_axis - 2] = (self.play_idx - 1) % dims[self.play_axis]
+                    self.play_indices[self.play_axis - 2] = (self.play_idx - 1) % dims[self.play_axis]  # noqa
 
                     self.play_axis = n
                     self.logger.debug("play_axis changed to %d" % n)
@@ -289,7 +292,8 @@ class MultiDim(GingaPlugin.LocalPlugin):
 
             for n in range(2, len(dims)):
                 key = 'axis%d' % (n + 1)
-                self.w[key].add_callback('activated', play_axis_change_func_creator(n))
+                self.w[key].add_callback(
+                    'activated', play_axis_change_func_creator(n))
                 if n == 2:
                     self.w[key].set_state(True)
 
@@ -316,38 +320,8 @@ class MultiDim(GingaPlugin.LocalPlugin):
         self.fv.stop_local_plugin(self.chname, str(self))
         return True
 
-    def redo(self, channel, image):
-
-        fitsimage = channel.fitsimage
-
-        if fitsimage != self.fitsimage:
-            # Focus is not our channel-->not an event for us
-            return False
-
-        if image is None:
-            return False
-
-        auto_start = self.settings.get('auto_start_naxis', False)
-
-        if not hasattr(image, 'naxispath'):
-            return False
-        # Start ourselves if file is multidimensional
-        if len(image.naxispath) <= 0:
-            return False
-
-        # check preference for auto_start_naxis
-        if not auto_start:
-            return False
-
-        # Start ourselves if GUI is not up yet
-        if not self.gui_up:
-            self.fv.start_local_plugin(self.chname, str(self), None)
-
-        return True
-
-
     def instructions(self):
-        self.tw.set_text("""Use mouse wheel to choose HDU or axis of data cube (NAXIS controls).""")
+        self.tw.set_text("""Use mouse wheel to choose HDU or axis of data cube (NAXIS controls).""")  # noqa
 
     def start(self):
         self.instructions()
@@ -376,7 +350,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
         # determine canonical index of this HDU
         info = self.hdu_info[idx]
         aidx = (info.name, info.extver)
-        if not aidx in self.fits_f:
+        if aidx not in self.fits_f:
             aidx = idx
         sfx = get_hdu_suffix(aidx)
 
@@ -408,8 +382,8 @@ class MultiDim(GingaPlugin.LocalPlugin):
             inherit_prihdr = self.fv.settings.get('inherit_primary_header',
                                                   False)
 
-            image = AstroImage.AstroImage(logger=self.logger,
-                                          inherit_primary_header=inherit_prihdr)
+            image = AstroImage.AstroImage(
+                logger=self.logger, inherit_primary_header=inherit_prihdr)
 
         self.image = image
         try:
@@ -548,7 +522,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
             # by (hduname, extver)
             self.hdu_db[(name, extver)] = d
 
-            toc_ent = "%(index)4d %(name)-12.12s (%(extver)3d) %(htype)-12.12s %(dtype)-8.8s" % d
+            toc_ent = "%(index)4d %(name)-12.12s (%(extver)3d) %(htype)-12.12s %(dtype)-8.8s" % d  # noqa
             w.append_text(toc_ent)
             idx += 1
 
@@ -639,7 +613,8 @@ class MultiDim(GingaPlugin.LocalPlugin):
         data = np.array(image.get_mddata()).clip(loval, hival)
 
         # http://stackoverflow.com/questions/7042190/plotting-directly-to-movie-with-numpy-and-mencoder
-        data_rescaled = ((data - loval) * 255 / (hival - loval)).astype(np.uint8, copy=False)
+        data_rescaled = ((data - loval) * 255 / (hival - loval)).astype(
+            np.uint8, copy=False)
 
         W, H = image.get_data_size()
         with self.video_writer(VideoSink((H, W), target_file)) as video:

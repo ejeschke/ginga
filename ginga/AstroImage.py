@@ -4,26 +4,25 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-import sys, os
-import re
+import sys
 import math
-import logging
-import time
+#import time
 import traceback
 
 import numpy
 
-from ginga.util import wcsmod, io_fits, iohelper
+from ginga.util import wcsmod, io_fits
 from ginga.util import wcs, iqcalc
 from ginga.BaseImage import BaseImage, ImageError, Header
 from ginga.misc import Bunch
 from ginga import trcalc
 import ginga.util.six as six
-from ginga.util.six.moves import map, zip
+from ginga.util.six.moves import map
 
 
 class AstroHeader(Header):
     pass
+
 
 class AstroImage(BaseImage):
     """
@@ -42,7 +41,6 @@ class AstroImage(BaseImage):
     @classmethod
     def set_ioClass(cls, klass):
         cls.ioClass = klass
-
 
     def __init__(self, data_np=None, metadata=None, logger=None,
                  name=None, wcsclass=wcsClass, ioclass=ioClass,
@@ -158,9 +156,9 @@ class AstroImage(BaseImage):
         view = revnaxis + [slice(None), slice(None)]
         data = self.get_mddata()[view]
 
-        assert len(data.shape) == 2, \
-               ImageError("naxispath does not lead to a 2D slice: %s" % (
-            str(naxispath)))
+        if len(data.shape) != 2:
+            raise ImageError(
+                "naxispath does not lead to a 2D slice: {}".format(naxispath))
 
         self.naxispath = naxispath
         self.revnaxis = revnaxis
@@ -201,7 +199,6 @@ class AstroImage(BaseImage):
         except KeyError as e:
             if not create:
                 raise e
-            #hdr = {}
             hdr = AstroHeader()
             self.metadata['header'] = hdr
             displayhdr = hdr
@@ -226,7 +223,7 @@ class AstroImage(BaseImage):
         kwds = self.get_header(create=create)
         kwd = kwd.upper()
         if not create:
-            prev = kwds[kwd]
+            prev = kwds[kwd]  # noqa, this raises KeyError
         kwds[kwd] = value
 
     def update_keywords(self, keyDict):
@@ -305,7 +302,7 @@ class AstroImage(BaseImage):
         return self.wcs.radectopix(ra_deg, dec_deg, coords=coords,
                                    naxispath=self.revnaxis)
 
-    #-----> TODO: merge into wcs.py ?
+    # -----> TODO: merge into wcs.py ?
     #
     def get_starsep_XY(self, x1, y1, x2, y2):
         # source point
@@ -359,7 +356,6 @@ class AstroImage(BaseImage):
                                    float(self.height / 2.0),
                                    delta_deg)
 
-
     def calc_compass(self, x, y, len_deg_e, len_deg_n):
 
         # Get east and north coordinates
@@ -398,7 +394,7 @@ class AstroImage(BaseImage):
 
         return self.calc_compass_radius(x, y, radius_px)
     #
-    #<----- TODO: merge this into wcs.py ?
+    # <----- TODO: merge this into wcs.py ?
 
     def get_wcs_rotation_deg(self):
         header = self.get_header()
@@ -425,7 +421,7 @@ class AstroImage(BaseImage):
         header = self.get_header()
         ((xrot_ref, yrot_ref),
          (cdelt1_ref, cdelt2_ref)) = wcs.get_xy_rotation_and_scale(header)
-        ref_rot = yrot_ref
+        #ref_rot = yrot_ref
 
         scale_x, scale_y = math.fabs(cdelt1_ref), math.fabs(cdelt2_ref)
 
@@ -471,13 +467,13 @@ class AstroImage(BaseImage):
             header = image.get_header()
             ((xrot, yrot),
              (cdelt1, cdelt2)) = wcs.get_xy_rotation_and_scale(header)
-            self.logger.debug("image(%s) xrot=%f yrot=%f cdelt1=%f cdelt2=%f" % (
-                name, xrot, yrot, cdelt1, cdelt2))
+            self.logger.debug("image(%s) xrot=%f yrot=%f cdelt1=%f "
+                              "cdelt2=%f" % (name, xrot, yrot, cdelt1, cdelt2))
 
             # scale if necessary
             # TODO: combine with rotation?
             if (not numpy.isclose(math.fabs(cdelt1), scale_x) or
-                not numpy.isclose(math.fabs(cdelt2), scale_y)):
+                    not numpy.isclose(math.fabs(cdelt2), scale_y)):
                 nscale_x = math.fabs(cdelt1) / scale_x
                 nscale_y = math.fabs(cdelt2) / scale_y
                 self.logger.debug("scaling piece by x(%f), y(%f)" % (
@@ -494,7 +490,7 @@ class AstroImage(BaseImage):
 
             # Optomization for 180 rotations
             if (numpy.isclose(math.fabs(rot_dx), 180.0) or
-                numpy.isclose(math.fabs(rot_dy), 180.0)):
+                    numpy.isclose(math.fabs(rot_dy), 180.0)):
                 rotdata = trcalc.transform(data_np,
                                            flip_x=True, flip_y=True)
                 rot_dx = 0.0
@@ -515,7 +511,7 @@ class AstroImage(BaseImage):
                 flip_x = True
 
             # Flip Y due to negative CDELT2
-            if numpy.sign(cdelt2)  != numpy.sign(cdelt2_ref):
+            if numpy.sign(cdelt2) != numpy.sign(cdelt2_ref):
                 flip_y = True
 
             if flip_x or flip_y:
@@ -545,16 +541,17 @@ class AstroImage(BaseImage):
             xlo, xhi = x0 - ctr_x, x0 + wd - ctr_x
             ylo, yhi = y0 - ctr_y, y0 + ht - ctr_y
             assert (xhi - xlo == wd), \
-                   Exception("Width differential %d != %d" % (xhi - xlo, wd))
+                Exception("Width differential %d != %d" % (xhi - xlo, wd))
             assert (yhi - ylo == ht), \
-                   Exception("Height differential %d != %d" % (yhi - ylo, ht))
+                Exception("Height differential %d != %d" % (yhi - ylo, ht))
 
             mywd, myht = self.get_size()
             if xlo < 0 or xhi > mywd or ylo < 0 or yhi > myht:
                 if not allow_expand:
-                    raise Exception("New piece doesn't fit on image and allow_expand=False")
+                    raise Exception("New piece doesn't fit on image and "
+                                    "allow_expand=False")
 
-                #<-- Resize our data array to allow the new image
+                # <-- Resize our data array to allow the new image
 
                 # determine amount to pad expansion by
                 expand_x = max(int(expand_pad_deg / scale_x), 0)
@@ -582,7 +579,7 @@ class AstroImage(BaseImage):
                 new_area = new_wd * new_ht
                 expand_pct = new_area / old_area
                 if ((max_expand_pct is not None) and
-                    (expand_pct > max_expand_pct)):
+                        (expand_pct > max_expand_pct)):
                     raise Exception("New area exceeds current one by %.2f %%;"
                                     "increase max_expand_pct (%.2f) to allow" %
                                     (expand_pct*100, max_expand_pct))
@@ -591,7 +588,7 @@ class AstroImage(BaseImage):
                 new_data = numpy.zeros((new_ht, new_wd))
                 # place current data into new data
                 new_data[ny1_off:ny1_off+myht, nx1_off:nx1_off+mywd] = \
-                                               mydata
+                    mydata
                 self._data = new_data
                 mydata = new_data
 
@@ -609,7 +606,7 @@ class AstroImage(BaseImage):
                 else:
                     idx = (mydata[ylo:yhi, xlo:xhi, ...] == 0.0)
                     mydata[ylo:yhi, xlo:xhi, ...][idx] = \
-                                    rotdata[0:ht, 0:wd, ...][idx]
+                        rotdata[0:ht, 0:wd, ...][idx]
 
             except Exception as e:
                 self.logger.error("Error fitting tile: %s" % (str(e)))
@@ -643,7 +640,7 @@ class AstroImage(BaseImage):
         ra_lbl, dec_lbl = six.unichr(945), six.unichr(948)
 
         # Calculate WCS coords, if available
-        ts = time.time()
+        #ts = time.time()
         try:
             if self.wcs is None:
                 self.logger.debug("No WCS for this image")
@@ -655,8 +652,8 @@ class AstroImage(BaseImage):
 
             elif self.wcs.coordsys == 'pixel':
                 args = [data_x, data_y] + self.revnaxis
-                x, y = self.wcs.pixtosystem(#(data_x, data_y),
-                    args, system=system, coords='data')
+                # args = (data_x, data_y)
+                x, y = self.wcs.pixtosystem(args, system=system, coords='data')
                 ra_txt = "%+.3f" % (x)
                 dec_txt = "%+.3f" % (y)
                 ra_lbl, dec_lbl = "X", "Y"
@@ -664,13 +661,14 @@ class AstroImage(BaseImage):
             else:
                 args = [data_x, data_y] + self.revnaxis
 
-                lon_deg, lat_deg = self.wcs.pixtosystem(#(data_x, data_y),
+                # args = (data_x, data_y)
+                lon_deg, lat_deg = self.wcs.pixtosystem(
                     args, system=system, coords='data')
 
                 if format == 'sexagesimal':
                     if system in ('galactic', 'ecliptic'):
                         sign, deg, min, sec = wcs.degToDms(lon_deg,
-                                                               isLatitude=False)
+                                                           isLatitude=False)
                         ra_txt = '+%03d:%02d:%06.3f' % (deg, min, sec)
                     else:
                         deg, min, sec = wcs.degToHms(lon_deg)
@@ -699,8 +697,7 @@ class AstroImage(BaseImage):
         except Exception as e:
             self.logger.warning("Bad coordinate conversion: %s" % (
                 str(e)))
-            ra_txt  = 'BAD WCS'
-            dec_txt = 'BAD WCS'
+            ra_txt = dec_txt = 'BAD WCS'
             try:
                 # log traceback, if possible
                 (type_, value_, tb) = sys.exc_info()
@@ -710,7 +707,7 @@ class AstroImage(BaseImage):
                 tb_str = "Traceback information unavailable."
                 self.logger.error(tb_str)
 
-        te = time.time() - ts
+        #te = time.time() - ts
         info = Bunch.Bunch(itype='astro', data_x=data_x, data_y=data_y,
                            x=data_x, y=data_y,
                            ra_txt=ra_txt, dec_txt=dec_txt,
@@ -718,4 +715,4 @@ class AstroImage(BaseImage):
                            value=value)
         return info
 
-#END
+# END
