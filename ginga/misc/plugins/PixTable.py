@@ -32,6 +32,7 @@ class PixTable(GingaPlugin.LocalPlugin):
         self.sum_arr = None
         self.sizes = [ 1, 2, 3, 4 ]
         self.maxdigits = 9
+        self.fmt_cell = '{:> %d.%dg}'% (self.maxdigits-1, self.maxdigits // 2)
         self.lastx = 0
         self.lasty = 0
         self.font = 'fixed'
@@ -167,7 +168,7 @@ class PixTable(GingaPlugin.LocalPlugin):
         if self.mark_selected is not None:
             try:
                 obj = self.canvas.get_object_by_tag(self.mark_selected)
-                obj.setAttrAll(color=self.mark_color)
+                obj.set_attr_all(color=self.mark_color)
             except:
                 # old object may have been deleted
                 pass
@@ -180,7 +181,7 @@ class PixTable(GingaPlugin.LocalPlugin):
 
         self.w.marks.show_text(tag)
         obj = self.canvas.get_object_by_tag(tag)
-        obj.setAttrAll(color=self.select_color)
+        obj.set_attr_all(color=self.select_color)
         self.lastx = obj.objects[0].x
         self.lasty = obj.objects[0].y
         if self.pan2mark and pan:
@@ -227,19 +228,18 @@ class PixTable(GingaPlugin.LocalPlugin):
         maxval = numpy.nanmax(data)
         minval = numpy.nanmin(data)
         avgval = numpy.average(data)
-
-        fmt_cell = '%%%d.2f' % self.maxdigits
+        fmt_cell = self.fmt_cell
 
         # can we do this with a numpy.vectorize() fn call and
         # speed things up?
         for i in range(width):
             for j in range(height):
-                self.txt_arr[i][j].text = fmt_cell % data[i][j]
+                self.txt_arr[i][j].text = fmt_cell.format(data[i][j])
 
         # append statistics line
         fmt_stat = "  Min: %s  Max: %s  Avg: %s" % (fmt_cell, fmt_cell,
                                                     fmt_cell)
-        self.sum_arr[0].text = fmt_stat % (minval, maxval, avgval)
+        self.sum_arr[0].text = fmt_stat.format(minval, maxval, avgval)
 
         # update the pixtable
         self.pixview.redraw(whence=3)
@@ -308,8 +308,9 @@ class PixTable(GingaPlugin.LocalPlugin):
         canvas.delete_all_objects(redraw=False)
 
         Text = canvas.get_draw_class('text')
-        font_wd = int(self.row_ht * 0.666)
-        max_wd = self.maxdigits
+        ex_txt = Text(0, 0, text='5')
+        font_wd, font_ht = self.fitsimage.renderer.get_dimensions(ex_txt)
+        max_wd = self.maxdigits + 2
 
         rows = []
         objs = []
