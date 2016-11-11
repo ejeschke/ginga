@@ -19,6 +19,12 @@ class PixTable(GingaPlugin.LocalPlugin):
         self.layertag = 'pixtable-canvas'
         self.pan2mark = False
 
+        prefs = self.fv.get_preferences()
+        self.settings = prefs.createCategory('plugin_PixTable')
+        self.settings.addDefaults(fontsize=12,
+                                  font='fixed')
+        self.settings.load(onError='silent')
+
         self.dc = self.fv.get_draw_classes()
         canvas = self.dc.DrawingCanvas()
         canvas.set_callback('cursor-down', self.btndown_cb)
@@ -35,9 +41,9 @@ class PixTable(GingaPlugin.LocalPlugin):
         self.fmt_cell = '{:> %d.%dg}'% (self.maxdigits-1, self.maxdigits // 2)
         self.lastx = 0
         self.lasty = 0
-        self.font = 'fixed'
-        self.fontsize = 14
-        self.row_ht = self.fontsize + 2
+        self.font = self.settings.get('font', 'fixed')
+        self.fontsize = self.settings.get('fontsize', 12)
+        self.fontsizes = [6, 8, 9, 10, 11, 12, 14, 16]
 
         # For "marks" feature
         self.mark_radius = 10
@@ -79,7 +85,7 @@ class PixTable(GingaPlugin.LocalPlugin):
         bd = pixview.get_bindings()
 
         self.pixview = pixview
-        self.pix_w = Widgets.wrap(pixview.get_widget())
+        self.pix_w = Viewers.ScrolledView(pixview)
         self.pix_w.resize(width, height)
         fr.set_widget(self.pix_w)
         vbox.add_widget(fr, stretch=1)
@@ -143,6 +149,20 @@ class PixTable(GingaPlugin.LocalPlugin):
         btns.add_widget(Widgets.Label(''), stretch=1)
 
         vbox2.add_widget(btns, stretch=0)
+
+        captions = [
+            ('Font size:', 'label', 'Font size', 'combobox'),
+            ]
+        w, b = Widgets.build_info(captions)
+        self.w.update(b)
+        vbox2.add_widget(w, stretch=0)
+
+        b.font_size.set_tooltip("Set font size for pixel display")
+        for size in (8, 9, 10, 11, 12, 14, 16):
+            b.font_size.append_text(str(size))
+        b.font_size.show_text(str(self.fontsize))
+        b.font_size.add_callback('activated', self.set_font_size_cb)
+
         vbox2.add_widget(Widgets.Label(''), stretch=1)
         vbox.add_widget(vbox2, stretch=1)
 
@@ -217,6 +237,10 @@ class PixTable(GingaPlugin.LocalPlugin):
         self.w.marks.append_text('None')
         self.w.marks.set_index(0)
         self.mark_selected = None
+
+    def set_font_size_cb(self, w, index):
+        self.fontsize = self.fontsizes[index]
+        self._rebuild_table()
 
     def plot(self, data, x1, y1, x2, y2, data_x, data_y, radius,
              maxv=9):
@@ -308,25 +332,30 @@ class PixTable(GingaPlugin.LocalPlugin):
         canvas.delete_all_objects(redraw=False)
 
         Text = canvas.get_draw_class('text')
-        ex_txt = Text(0, 0, text='5')
+        ex_txt = Text(0, 0, text='5', fontsize=self.fontsize, font=self.font)
         font_wd, font_ht = self.fitsimage.renderer.get_dimensions(ex_txt)
         max_wd = self.maxdigits + 2
+        crdmap = self.pixview.get_coordmap('canvas')
 
         rows = []
         objs = []
+        max_x = 0
         for row in range(self.pixtbl_radius*2+1):
             cols = []
             for col in range(self.pixtbl_radius*2+1):
-                x = (font_wd) * max_wd * col + 4
-                y = (self.row_ht) * (row + 1) + 4
+                col_wd = font_wd * max_wd
+                x = col_wd * col + 4
+                max_x = max(max_x, x + col_wd)
+                y = font_ht * (row + 1) + 4
 
                 color = 'lightgreen'
                 if (row == col) and (row == self.pixtbl_radius):
                     color = 'pink'
 
-                text_obj = Text(x, y, text='', font=self.font,
+                dx, dy = crdmap.to_data(x, y)
+                text_obj = Text(dx, dy, text='', font=self.font,
                                 color=color, fontsize=self.fontsize,
-                                coord='canvas')
+                                coord='data')
                 objs.append(text_obj)
                 cols.append(text_obj)
 
@@ -336,10 +365,11 @@ class PixTable(GingaPlugin.LocalPlugin):
 
         # add summary row(s)
         x = (font_wd + 2) + 4
-        y += self.row_ht+20
-        s1 = Text(x, y, text='', font=self.font,
+        y += font_ht+20
+        dx, dy = crdmap.to_data(x, y)
+        s1 = Text(dx, dy, text='', font=self.font,
                   color=color, fontsize=self.fontsize,
-                  coord='canvas')
+                  coord='data')
         objs.append(s1)
         self.sum_arr = numpy.array([s1])
 
@@ -347,6 +377,9 @@ class PixTable(GingaPlugin.LocalPlugin):
         # compound object
         CompoundObject = canvas.get_draw_class('compoundobject')
         canvas.add(CompoundObject(*objs), redraw=False)
+
+        # set limits for scrolling
+        self.pixview.set_limits(((0, 0), (max_x, y)), coord='canvas')
 
     def set_cutout_size_cb(self, w, val):
         index = w.get_index()
