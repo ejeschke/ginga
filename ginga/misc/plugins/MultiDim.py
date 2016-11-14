@@ -9,8 +9,6 @@ import re
 from distutils import spawn
 from contextlib import contextmanager
 
-from ginga import AstroImage
-from ginga.table import AstroTable
 from ginga.gw import Widgets
 from ginga.misc import Future, Bunch
 from ginga import GingaPlugin
@@ -373,23 +371,13 @@ class MultiDim(GingaPlugin.LocalPlugin):
 
         # Nope, we'll have to load it
         self.logger.debug("HDU %d not in memory; refreshing from file" % (idx))
-
-        if info['htype'].lower() in ('bintablehdu', 'tablehdu'):
-            image = AstroTable.AstroTable(logger=self.logger)
-
-        else:
-            # inherit from primary header?
-            inherit_prihdr = self.fv.settings.get('inherit_primary_header',
-                                                  False)
-
-            image = AstroImage.AstroImage(
-                logger=self.logger, inherit_primary_header=inherit_prihdr)
-
-        self.image = image
         try:
             self.curhdu = idx
             dims = [0, 0]
             hdu = self.fits_f[idx]
+
+            image = self.fv.fits_opener.load_hdu(hdu, fobj=self.fits_f)
+            self.image = image
 
             if hdu.data is None:
                 # <- empty data part to this HDU
