@@ -607,6 +607,20 @@ class ImageViewBase(Callback.Callbacks):
         """
         self.rgbmap.scale_and_shift(scale_pct, shift_pct)
 
+    def restore_contrast(self):
+        """Restores the color map from any stretch and/or shrinkage.
+        See :meth:`ginga.RGBMap.RGBMapper.reset_sarr`.
+
+        """
+        self.rgbmap.reset_sarr()
+
+    def restore_cmap(self):
+        """Restores the color map from any rotation, stretch and/or shrinkage.
+        See :meth:`ginga.RGBMap.RGBMapper.restore_cmap`.
+
+        """
+        self.rgbmap.restore_cmap()
+
     def rgbmap_cb(self, rgbmap):
         """Handle callback for when RGB map has changed."""
         self.logger.debug("RGB map has changed.")

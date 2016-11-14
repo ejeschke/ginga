@@ -175,20 +175,19 @@ class DrawingMixin(object):
 
     def _draw_update(self, data_x, data_y, cxt):
 
-        ## self.logger.debug("drawing a '%s' x,y=%f,%f" % (
-        ##     self.t_drawtype, data_x, data_y))
-        if self.t_drawtype is None:
-            return False
-
-        klass = self.draw_dict[self.t_drawtype]
         obj = None
 
         # update the context with current position
         x, y = cxt.crdmap.data_to(data_x, data_y)
         cxt.setvals(x=x, y=y, data_x=data_x, data_y=data_y)
 
-        obj = klass.idraw(self, cxt)
+        draw_class = cxt.draw_class
+        if draw_class is None:
+            return False
 
+        obj = draw_class.idraw(self, cxt)
+
+        # update display every delta_time secs
         if obj is not None:
             obj.initialize(self, cxt.viewer, self.logger)
             self._draw_obj = obj
@@ -206,12 +205,15 @@ class DrawingMixin(object):
         crdtype = self.t_drawparams.get('coord', 'data')
         crdmap = viewer.get_coordmap(crdtype)
         x, y = crdmap.data_to(data_x, data_y)
+
+        klass = self.draw_dict.get(self.t_drawtype, None)
+
         # create the drawing context
         self._draw_cxt = Bunch(start_x=x, start_y=y, points=[(x, y)],
                                x=x, y=y, data_x=data_x, data_y=data_y,
                                drawparams=self.t_drawparams,
                                crdmap=crdmap, viewer=viewer,
-                               logger=self.logger)
+                               draw_class=klass, logger=self.logger)
 
         self._draw_update(data_x, data_y, self._draw_cxt)
         self.process_drawing()
@@ -249,7 +251,7 @@ class DrawingMixin(object):
             return False
 
         cxt = self._draw_cxt
-        if self.t_drawtype in ('polygon', 'path'):
+        if self.t_drawtype in ('polygon', 'freepolygon', 'path', 'freepath'):
             x, y = cxt.crdmap.data_to(data_x, data_y)
             cxt.points.append((x, y))
         elif self.t_drawtype == 'beziercurve' and len(cxt.points) < 3:
@@ -262,7 +264,8 @@ class DrawingMixin(object):
             return False
 
         cxt = self._draw_cxt
-        if self.t_drawtype in ('polygon', 'path', 'beziercurve'):
+        if self.t_drawtype in ('polygon', 'freepolygon', 'path',
+                               'freepath', 'beziercurve'):
             if len(cxt.points) > 0:
                 cxt.points.pop()
         return True

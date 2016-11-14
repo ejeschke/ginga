@@ -9,7 +9,7 @@ import numpy
 
 from ginga.canvas.CanvasObject import (CanvasObjectBase, _bool, _color,
                                        Point as XPoint, MovePoint, ScalePoint,
-                                       RotatePoint,
+                                       RotatePoint, EditPoint,
                                        register_canvas_types,
                                        colors_plus_none)
 from ginga import trcalc
@@ -1521,12 +1521,220 @@ class RightTriangle(TwoPointMixin, CanvasObjectBase):
             self.draw_caps(cr, self.cap, cpoints)
 
 
+class XRange(Rectangle):
+    """Draws an xrange on a DrawingCanvas.
+    Parameters are:
+    x1: start X coordinate in the data space
+    x2: end X coordinate in the data space
+    Optional parameters for linesize, color, etc.
+    """
+
+    @classmethod
+    def get_params_metadata(cls):
+        return [
+            ## Param(name='coord', type=str, default='data',
+            ##       valid=['data', 'wcs'],
+            ##       description="Set type of coordinates"),
+            Param(name='x1', type=float, default=0.0, argpos=0,
+                  description="First X coordinate of object"),
+            Param(name='x2', type=float, default=0.0, argpos=1,
+                  description="Second X coordinate of object"),
+            Param(name='linewidth', type=int, default=0,
+                  min=0, max=20, widget='spinbutton', incr=1,
+                  description="Width of outline"),
+            Param(name='linestyle', type=str, default='solid',
+                  valid=['solid', 'dash'],
+                  description="Style of outline (default solid)"),
+            Param(name='color',
+                  valid=colors_plus_none, type=_color, default='yellow',
+                  description="Color of outline"),
+            Param(name='alpha', type=float, default=1.0,
+                  min=0.0, max=1.0, widget='spinfloat', incr=0.05,
+                  description="Opacity of outline"),
+            Param(name='fillcolor', default='aquamarine',
+                  valid=colors_plus_none, type=_color,
+                  description="Color of fill"),
+            Param(name='fillalpha', type=float, default=0.5,
+                  min=0.0, max=1.0, widget='spinfloat', incr=0.05,
+                  description="Opacity of fill"),
+            Param(name='drawdims', type=_bool,
+                  default=False, valid=[False, True],
+                  description="Annotate with dimensions of object"),
+            Param(name='font', type=str, default='Sans Serif',
+                  description="Font family for text"),
+            ]
+
+    @classmethod
+    def idraw(cls, canvas, cxt):
+        return cls(cxt.start_x, cxt.x, **cxt.drawparams)
+
+    def __init__(self, x1, x2, color='yellow',
+                 linewidth=0, linestyle='solid', showcap=False,
+                 fillcolor='aquamarine', alpha=1.0,
+                 drawdims=False, font='Sans Serif', fillalpha=0.5,
+                 **kwdargs):
+        Rectangle.__init__(self, x1, 0, x2, 0, color=color,
+                           linewidth=linewidth,
+                           linestyle=linestyle,
+                           fill=True, fillcolor=fillcolor,
+                           alpha=alpha, fillalpha=fillalpha,
+                           drawdims=drawdims, font=font,
+                           **kwdargs)
+        self.kind = 'xrange'
+
+    def contains_arr(self, x_arr, y_arr):
+        x1, y1, x2, y2 = self.get_llur()
+
+        contains = numpy.logical_and(x1 <= x_arr, x_arr <= x2)
+        return contains
+
+    def contains(self, data_x, data_y):
+        x1, y1, x2, y2 = self.get_llur()
+
+        return (x1 <= data_x <= x2)
+
+    def get_edit_points(self, viewer):
+        win_wd, win_ht = viewer.get_window_size()
+        crdmap = viewer.get_coordmap('canvas')
+        dx, dy = crdmap.to_data(0, win_ht // 2)
+        pt = self.get_data_points(points=self.get_points())
+        return [ MovePoint((pt[0][0] + pt[2][0]) / 2.0, dy),
+                 EditPoint(pt[0][0], dy),
+                 EditPoint(pt[2][0], dy),
+                ]
+
+    def draw(self, viewer):
+        cr = viewer.renderer.setup_cr(self)
+
+        win_wd, win_ht = viewer.get_window_size()
+        cp = self.get_cpoints(viewer)
+        cpoints = ((cp[0][0], 0), (cp[1][0], 0), (cp[2][0], win_ht), (cp[3][0], win_ht))
+
+        cr.draw_polygon(cpoints)
+
+        if self.drawdims:
+            fontsize = self.scale_font(viewer)
+            cr.set_font(self.font, fontsize, color=self.color)
+
+            cx1, cy1 = cpoints[0]
+            cx2, cy2 = cpoints[2]
+
+            # draw label on X dimension
+            cx = cx1 + (cx2 - cx1) // 2
+            cy = (cy1 + cy2) // 2
+            cr.draw_text(cx, cy, "%f:%f" % (self.x1, self.x2))
+
+
+class YRange(Rectangle):
+    """Draws a yrange on a DrawingCanvas.
+    Parameters are:
+    y1: start Y coordinate in the data space
+    y2: end Y coordinate in the data space
+    Optional parameters for linesize, color, etc.
+    """
+
+    @classmethod
+    def get_params_metadata(cls):
+        return [
+            ## Param(name='coord', type=str, default='data',
+            ##       valid=['data', 'wcs'],
+            ##       description="Set type of coordinates"),
+            Param(name='y1', type=float, default=0.0, argpos=0,
+                  description="First Y coordinate of object"),
+            Param(name='y2', type=float, default=0.0, argpos=1,
+                  description="Second Y coordinate of object"),
+            Param(name='linewidth', type=int, default=0,
+                  min=0, max=20, widget='spinbutton', incr=1,
+                  description="Width of outline"),
+            Param(name='linestyle', type=str, default='solid',
+                  valid=['solid', 'dash'],
+                  description="Style of outline (default solid)"),
+            Param(name='color',
+                  valid=colors_plus_none, type=_color, default='yellow',
+                  description="Color of outline"),
+            Param(name='alpha', type=float, default=1.0,
+                  min=0.0, max=1.0, widget='spinfloat', incr=0.05,
+                  description="Opacity of outline"),
+            Param(name='fillcolor', default='aquamarine',
+                  valid=colors_plus_none, type=_color,
+                  description="Color of fill"),
+            Param(name='fillalpha', type=float, default=0.5,
+                  min=0.0, max=1.0, widget='spinfloat', incr=0.05,
+                  description="Opacity of fill"),
+            Param(name='drawdims', type=_bool,
+                  default=False, valid=[False, True],
+                  description="Annotate with dimensions of object"),
+            Param(name='font', type=str, default='Sans Serif',
+                  description="Font family for text"),
+            ]
+
+    @classmethod
+    def idraw(cls, canvas, cxt):
+        return cls(cxt.start_y, cxt.y, **cxt.drawparams)
+
+    def __init__(self, y1, y2, color='yellow',
+                 linewidth=0, linestyle='solid', showcap=False,
+                 fill=True, fillcolor='aquamarine', alpha=1.0,
+                 drawdims=False, font='Sans Serif', fillalpha=0.5,
+                 **kwdargs):
+        Rectangle.__init__(self, 0, y1, 0, y2,
+                           color=color, linewidth=linewidth,
+                           linestyle=linestyle,
+                           fill=True, fillcolor=fillcolor,
+                           alpha=alpha, fillalpha=fillalpha,
+                           drawdims=drawdims, font=font,
+                           **kwdargs)
+        self.kind = 'yrange'
+
+    def contains_arr(self, x_arr, y_arr):
+        x1, y1, x2, y2 = self.get_llur()
+
+        contains = numpy.logical_and(y1 <= y_arr, y_arr <= y2)
+        return contains
+
+    def contains(self, data_x, data_y):
+        x1, y1, x2, y2 = self.get_llur()
+
+        return (y1 <= data_y <= y2)
+
+    def get_edit_points(self, viewer):
+        win_wd, win_ht = viewer.get_window_size()
+        crdmap = viewer.get_coordmap('canvas')
+        dx, dy = crdmap.to_data(win_wd // 2, 0)
+        pt = self.get_data_points(points=self.get_points())
+        return [ MovePoint(dx, (pt[0][1] + pt[2][1]) / 2.0),
+                 EditPoint(dx, pt[0][1]),
+                 EditPoint(dx, pt[2][1]),
+                ]
+
+    def draw(self, viewer):
+        cr = viewer.renderer.setup_cr(self)
+
+        win_wd, win_ht = viewer.get_window_size()
+        cp = self.get_cpoints(viewer)
+        cpoints = ((0, cp[0][1]), (win_wd, cp[1][1]), (win_wd, cp[2][1]), (0, cp[3][1]))
+
+        cr.draw_polygon(cpoints)
+
+        if self.drawdims:
+            fontsize = self.scale_font(viewer)
+            cr.set_font(self.font, fontsize, color=self.color)
+
+            cx1, cy1 = cpoints[0]
+            cx2, cy2 = cpoints[2]
+
+            # draw label on Y dimension
+            cy = cy1 + (cy2 - cy1) // 2
+            cx = (cx1 + cx2) // 2
+            cr.draw_text(cx, cy, "%f:%f" % (self.y1, self.y2))
+
+
 register_canvas_types(
     dict(text=Text, rectangle=Rectangle, circle=Circle,
          line=Line, point=Point, polygon=Polygon,
          freepolygon=FreePolygon, path=Path, freepath=FreePath,
          righttriangle=RightTriangle, triangle=Triangle,
          ellipse=Ellipse, square=Square, beziercurve=BezierCurve,
-         box=Box, squarebox=SquareBox))
+         box=Box, squarebox=SquareBox, xrange=XRange, yrange=YRange))
 
 #END

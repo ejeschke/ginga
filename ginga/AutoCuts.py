@@ -636,7 +636,7 @@ autocuts_table = {
     'histogram': Histogram,
     'median': MedianFilter,
     'zscale': ZScale,
-    'zscale2': ZScale2,
+    #'zscale2': ZScale2,
     }
 
 def get_autocuts(name):
@@ -645,5 +645,9 @@ def get_autocuts(name):
 
     return autocuts_table[name]
 
+def get_autocuts_names():
+    l = list(autocuts_table.keys())
+    l.sort()
+    return l
 
 # END
