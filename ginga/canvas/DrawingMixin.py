@@ -173,7 +173,7 @@ class DrawingMixin(object):
 
     ##### DRAWING LOGIC #####
 
-    def _draw_update(self, data_x, data_y, cxt):
+    def _draw_update(self, data_x, data_y, cxt, force_update=False):
 
         obj = None
 
@@ -191,7 +191,7 @@ class DrawingMixin(object):
         if obj is not None:
             obj.initialize(self, cxt.viewer, self.logger)
             self._draw_obj = obj
-            if time.time() - self._process_time > self._delta_time:
+            if force_update or (time.time() - self._process_time > self._delta_time):
                 self.process_drawing()
 
         return True
@@ -215,8 +215,7 @@ class DrawingMixin(object):
                                crdmap=crdmap, viewer=viewer,
                                draw_class=klass, logger=self.logger)
 
-        self._draw_update(data_x, data_y, self._draw_cxt)
-        self.process_drawing()
+        self._draw_update(data_x, data_y, self._draw_cxt, force_update=True)
         return True
 
     def draw_stop(self, canvas, event, data_x, data_y, viewer):
@@ -257,6 +256,8 @@ class DrawingMixin(object):
         elif self.t_drawtype == 'beziercurve' and len(cxt.points) < 3:
             x, y = cxt.crdmap.data_to(data_x, data_y)
             cxt.points.append((x, y))
+
+        self._draw_update(data_x, data_y, cxt, force_update=True)
         return True
 
     def draw_poly_delete(self, canvas, event, data_x, data_y, viewer):
@@ -268,6 +269,8 @@ class DrawingMixin(object):
                                'freepath', 'beziercurve'):
             if len(cxt.points) > 0:
                 cxt.points.pop()
+
+        self._draw_update(data_x, data_y, cxt, force_update=True)
         return True
 
     def is_drawing(self):
