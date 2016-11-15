@@ -6,7 +6,6 @@
 #
 import sys
 import math
-#import time
 import traceback
 
 import numpy
@@ -640,7 +639,6 @@ class AstroImage(BaseImage):
         ra_lbl, dec_lbl = six.unichr(945), six.unichr(948)
 
         # Calculate WCS coords, if available
-        #ts = time.time()
         try:
             if self.wcs is None:
                 self.logger.debug("No WCS for this image")
@@ -652,7 +650,6 @@ class AstroImage(BaseImage):
 
             elif self.wcs.coordsys == 'pixel':
                 args = [data_x, data_y] + self.revnaxis
-                # args = (data_x, data_y)
                 x, y = self.wcs.pixtosystem(args, system=system, coords='data')
                 ra_txt = "%+.3f" % (x)
                 dec_txt = "%+.3f" % (y)
@@ -661,7 +658,6 @@ class AstroImage(BaseImage):
             else:
                 args = [data_x, data_y] + self.revnaxis
 
-                # args = (data_x, data_y)
                 lon_deg, lat_deg = self.wcs.pixtosystem(
                     args, system=system, coords='data')
 
@@ -707,7 +703,6 @@ class AstroImage(BaseImage):
                 tb_str = "Traceback information unavailable."
                 self.logger.error(tb_str)
 
-        #te = time.time() - ts
         info = Bunch.Bunch(itype='astro', data_x=data_x, data_y=data_y,
                            x=data_x, y=data_y,
                            ra_txt=ra_txt, dec_txt=dec_txt,
