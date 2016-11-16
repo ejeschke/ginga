@@ -420,7 +420,6 @@ class AstroImage(BaseImage):
         header = self.get_header()
         ((xrot_ref, yrot_ref),
          (cdelt1_ref, cdelt2_ref)) = wcs.get_xy_rotation_and_scale(header)
-        #ref_rot = yrot_ref
 
         scale_x, scale_y = math.fabs(cdelt1_ref), math.fabs(cdelt2_ref)
 
