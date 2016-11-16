@@ -10,7 +10,7 @@ import numpy
 import os.path
 import threading
 
-from ginga import AstroImage
+from ginga.AstroImage import AstroImage
 from ginga.util import mosaic
 from ginga.util import wcs, iqcalc, dp
 from ginga import GingaPlugin
@@ -40,6 +40,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
         # holds processed images to be inserted into mosaic image
         self.images = []
         self.total_files = 0
+        self.num_groups = 0
         # can set this to annotate images with a specific
         # value drawn from the FITS kwd
         self.ann_fits_kwd = None
@@ -298,7 +299,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
         self.update_status(msg)
 
     def _inline(self, images):
-        self.fv.assert_gui_thread()
+        self.fv.assert_nongui_thread()
 
         # Get optional parameters
         trim_px = self.settings.get('trim_px', 0)
@@ -324,7 +325,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
                                             merge=merge,
                                             allow_expand=allow_expand,
                                             expand_pad_deg=expand_pad_deg,
-                                            suppress_callback=False)
+                                            suppress_callback=True)
 
         # annotate ingested image with its name?
         if annotate and (not allow_expand):
@@ -342,10 +343,6 @@ class Mosaic(GingaPlugin.LocalPlugin):
 
         time_intr2 = time.time()
         self.process_elapsed += time_intr2 - time_intr1
-
-        # special hack for GUI responsiveness during entire ingestion
-        # process
-        #self.fv.update_pending(timeout=0.0)
 
     def close(self):
         self.img_mosaic = None
@@ -416,52 +413,83 @@ class Mosaic(GingaPlugin.LocalPlugin):
 
             self.update_progress(float(count) / self.total_files)
 
-            if count == self.total_files:
-                self.end_progress()
-
-                #self.update_status("Inserting into mosaic...")
-                images, self.images = self.images, []
-                self.fv.gui_do(self._inline, images)
-
-                total_elapsed = time.time() - self.start_time
-                msg = "Done. Total=%.2f Process=%.2f (sec)" % (
-                    total_elapsed, self.process_elapsed)
-                self.update_status(msg)
-
     def mosaic_some(self, paths, image_loader=None):
         if image_loader is None:
             image_loader = self.fv.load_image
 
-        for url in paths:
-            if self.ev_intr.isSet():
-                break
-            mosaic_hdus = self.settings.get('mosaic_hdus', False)
-            if mosaic_hdus:
-                self.logger.debug("mosaicing hdus")
-                # User wants us to mosaic HDUs
-                # TODO: do this in a different thread?
-                with pyfits.open(url, 'readonly') as in_f:
-                    i = 0
-                    for hdu in in_f:
-                        i += 1
-                        # TODO: I think we need a little more rigorous test
-                        # than just whether the data section is empty
-                        if hdu.data is None:
-                            continue
-                        self.logger.debug("ingesting hdu #%d" % (i))
-                        image = AstroImage.AstroImage(logger=self.logger)
-                        image.load_hdu(hdu)
-                        image.set(name='hdu%d' % (i))
+        try:
+            for url in paths:
+                if self.ev_intr.isSet():
+                    break
+                mosaic_hdus = self.settings.get('mosaic_hdus', False)
+                if mosaic_hdus:
+                    self.logger.debug("loading hdus")
+                    # User wants us to mosaic HDUs
+                    # TODO: do this in a different thread?
+                    with pyfits.open(url, 'readonly') as in_f:
+                        i = 0
+                        for hdu in in_f:
+                            i += 1
+                            # TODO: I think we need a little more rigorous test
+                            # than just whether the data section is empty
+                            if hdu.data is None:
+                                continue
+                            self.logger.debug("ingesting hdu #%d" % (i))
+                            image = None
+                            try:
+                                image = self.fv.fits_opener.load_hdu(hdu)
 
-                        image = self.preprocess(image)
-                        self.ingest_one(image)
+                            except Exception as e:
+                                self.logger.error("Failed to open HDU #%d: %s" % (
+                                    i, str(e)))
+                                continue
 
-            else:
-                image = image_loader(url)
+                            if not isinstance(image, AstroImage):
+                                self.logger.debug("HDU #%d is not an image; skipping..." % (
+                                    i))
+                                continue
 
-                image = self.preprocess(image)
-                self.ingest_one(image)
+                            image.set(name='hdu%d' % (i))
 
+                            image = self.preprocess(image)
+
+                            # we have to up the number of total files
+                            if i > 1:
+                                with self.lock:
+                                    self.total_files += 1
+
+                            self.ingest_one(image)
+
+                else:
+                    image = image_loader(url)
+
+                    image = self.preprocess(image)
+                    self.ingest_one(image)
+
+        finally:
+            with self.lock:
+                self.num_groups -= 1
+                if self.num_groups <= 0:
+                    self.fv.nongui_do(self.finish_mosaic)
+
+
+    def finish_mosaic(self):
+        # NOTE: this runs in a nongui thread
+        self.fv.assert_nongui_thread()
+
+        self.update_status("mosaicing images...")
+        images, self.images = self.images, []
+        #self.fv.gui_do(self._inline, images)
+        self._inline(images)
+
+        self.end_progress()
+
+        total_elapsed = time.time() - self.start_time
+        msg = "Done. Total=%.2f Process=%.2f (sec)" % (
+            total_elapsed, self.process_elapsed)
+        self.update_status(msg)
+
+        self.fv.gui_do(self.fitsimage.redraw, whence=0)
 
     def mosaic(self, paths, new_mosaic=False, name=None, image_loader=None):
         if image_loader is None:
@@ -517,7 +545,10 @@ class Mosaic(GingaPlugin.LocalPlugin):
 
         num_threads = self.settings.get('num_threads', 4)
         groups = dp.split_n(paths, num_threads)
-        self.logger.info("len groups=%d" % (len(groups)))
+        with self.lock:
+            self.num_groups = len(groups)
+        self.logger.info("num groups=%d" % (self.num_groups))
+
         for group in groups:
             self.fv.nongui_do(self.mosaic_some, group,
                               image_loader=image_loader)
