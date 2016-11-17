@@ -2,6 +2,17 @@
 What's New in Ginga?
 ++++++++++++++++++++
 
+Ver 2.6.0 (2016-11-16)
+======================
+With release 2.6.0 we are moving to a new versioning scheme that makes
+use of github tagged releases and a "dev" versioning scheme for updates
+between releases.
+
+This release includes many bugfixes and improvements, new canvas types
+(XRange and YRange), a Command plugin, WCSMatch plugin, dynamically
+configurable workspaces, OpenCv acceleration, an HTML5 backend and much
+much more.
+
 Ver 2.2.20160505170200
 ======================
 Ginga has merged the astropy-helpers template.  This should make it more
