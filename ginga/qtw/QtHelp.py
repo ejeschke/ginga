@@ -4,7 +4,6 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-from __future__ import print_function
 import glob
 import os
 import math
@@ -12,87 +11,58 @@ import math
 import ginga.toolkit
 from ginga.util import iohelper
 
-have_pyqt4 = False
-have_pyside = False
-have_pyqt5 = False
 configured = False
 
 toolkit = ginga.toolkit.toolkit
 
-if toolkit in ('qt5', 'choose') and (not configured):
-    try:
-        from PyQt5 import QtCore
-        from PyQt5 import QtWidgets as QtGui
-        from PyQt5.QtGui import QImage, QColor, QFont, QPixmap, QIcon, \
-             QCursor, QPainter, QPen, QPolygonF, QPolygon, QTextCursor, \
-             QDrag, QPainterPath, QBrush
-        from PyQt5.QtCore import QItemSelectionModel
-        from PyQt5.QtWidgets import QApplication
-        have_pyqt5 = True
-        try:
-            from PyQt5 import QtWebKit
-            from PyQt5.QtWebKitWidgets import QWebView
-        except ImportError as e:
-            pass
+# if user wants to force a toolkit
+if toolkit == 'qt5':
+    os.environ['QT_API'] = 'pyqt5'
 
-        # for Matplotlib
-        os.environ['QT_API'] = 'pyqt5'
-        configured = True
+elif toolkit == 'qt4':
+    os.environ['QT_API'] = 'pyqt'
+
+elif toolkit == 'pyside':
+    os.environ['QT_API'] = 'pyside'
+
+have_pyqt4 = False
+have_pyqt5 = False
+have_pyside = False
+
+try:
+    from qtpy import QtCore
+    from qtpy import QtWidgets as QtGui
+    from qtpy.QtGui import QImage, QColor, QFont, QPixmap, QIcon, \
+         QCursor, QPainter, QPen, QPolygonF, QPolygon, QTextCursor, \
+         QDrag, QPainterPath, QBrush
+    from qtpy.QtCore import QItemSelectionModel
+    from qtpy.QtWidgets import QApplication
+    try:
+        from qtpy.QtWebEngineWidgets import QWebEngineView as QWebView
     except ImportError as e:
         pass
 
-if toolkit in ('qt4', 'choose') and (not configured):
-    try:
-        import sip
-        for cl in ('QString', 'QVariant'):
-            sip.setapi(cl, 2)
+    # Let's see what qtpy configured for us...
+    from qtpy import PYQT4, PYQT5, PYSIDE
+    have_pyqt4 = PYQT4
+    have_pyqt5 = PYQT5
+    have_pyside = PYSIDE
 
-        from PyQt4 import QtCore, QtGui
-        from PyQt4.QtGui import QImage, QColor, QFont, QPixmap, QIcon, \
-             QCursor, QPainter, QPen, QPolygonF, QPolygon, QTextCursor, \
-             QDrag, QItemSelectionModel, QPainterPath, QApplication, \
-             QBrush
-        have_pyqt4 = True
-        try:
-            from PyQt4 import QtWebKit
-            from PyQt4.QtWebKit import QWebView
-        except ImportError:
-            pass
-
-        # for Matplotlib
-        os.environ['QT_API'] = 'pyqt'
-        configured = True
-    except ImportError as e:
-        pass
-
-if toolkit in ('pyside', 'choose') and (not configured):
-    try:
-        from PySide import QtCore, QtGui
-        from PySide.QtGui import QImage, QColor, QFont, QPixmap, QIcon, \
-             QCursor, QPainter, QPen, QPolygonF, QPolygon, QTextCursor, \
-             QDrag, QItemSelectionModel, QPainterPath, QBrush
-        have_pyside = True
-        try:
-            from PySide import QtWebKit
-            from PySide.QtWebKit import QWebView
-        except ImportError:
-            pass
-
-        # for Matplotlib
-        os.environ['QT_API'] = 'pyside'
-        configured = True
-    except ImportError:
-        pass
+    configured = True
+except ImportError as e:
+    pass
 
 if have_pyqt5:
     ginga.toolkit.use('qt5')
+    os.environ['QT_API'] = 'pyqt5'
 elif have_pyqt4:
     ginga.toolkit.use('qt4')
+    os.environ['QT_API'] = 'pyqt'
 elif have_pyside:
     ginga.toolkit.use('pyside')
+    os.environ['QT_API'] = 'pyside'
 else:
-    raise ImportError("Failed to import qt4, qt5 or pyside. There may be an "
-                      "issue with the toolkit module or it is not installed")
+    raise ImportError("Failed to configure qt4, qt5 or pyside. Is the 'qtpy' package installed?")
 
 
 tabwidget_style = """
