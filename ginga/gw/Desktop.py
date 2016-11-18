@@ -115,10 +115,11 @@ class Desktop(Callback.Callbacks):
                 tabname = 'tab%d' % self.tabcount
 
         ws.add_tab(widget, title=labelname)
-        self.tab[tabname] = Bunch.Bunch(widget=widget, name=labelname,
-                                        tabname=tabname, data=data,
-                                        group=group, wsname=wsname)
-        return tabname
+        bnch = Bunch.Bunch(widget=widget, name=labelname,
+                           tabname=tabname, data=data,
+                           group=group, wsname=wsname)
+        self.tab[tabname] = bnch
+        return bnch
 
     def _find_nb(self, tabname):
         widget = self.tab[tabname].widget

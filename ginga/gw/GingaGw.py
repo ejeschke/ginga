@@ -465,13 +465,15 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         self.ds.show_dialog(dialog)
 
     def gui_delete_channel(self, chname=None):
-        channel = self.get_channel(chname)
-        if (len(self.get_channel_names()) == 0) or (channel is None):
-            self.show_error("There are no more channels to delete.",
-                            raisetab=True)
-            return
+        if chname is None:
+            channel = self.get_channel(chname)
+            if (len(self.get_channel_names()) == 0) or (channel is None):
+                self.show_error("There are no more channels to delete.",
+                                raisetab=True)
+                return
 
-        chname = channel.name
+            chname = channel.name
+
         lbl = Widgets.Label("Really delete channel '%s' ?" % (chname))
         dialog = Widgets.Dialog(title="Delete Channel",
                                 flags=0,
@@ -479,6 +481,21 @@ class GingaView(GwMain.GwMain, Widgets.Application):
                                 parent=self.w.root)
         dialog.add_callback('activated',
                             lambda w, rsp: self.delete_channel_cb(w, rsp, chname))
+
+        box = dialog.get_content_area()
+        box.add_widget(lbl, stretch=0)
+
+        self.ds.show_dialog(dialog)
+
+    def gui_delete_window(self, tabname):
+        lbl = Widgets.Label("Really delete window '%s' ?" % (tabname))
+        dialog = Widgets.Dialog(title="Delete Window",
+                                flags=0,
+                                buttons=[['Cancel', 0], ['Ok', 1]],
+                                parent=self.w.root)
+        dialog.add_callback('activated',
+                            lambda w, rsp: self.delete_tab_cb(w, rsp, tabname))
+
         box = dialog.get_content_area()
         box.add_widget(lbl, stretch=0)
 
@@ -493,7 +510,12 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         idx = ws.nb.get_index()
         child = ws.nb.index_to_widget(idx)
         chname = child.extdata.tab_title
-        self.gui_delete_channel(chname)
+
+        if self.has_channel(chname):
+            self.gui_delete_channel(chname)
+        else:
+            self.gui_delete_window(chname)
+
 
     def gui_add_ws(self):
 
@@ -628,9 +650,8 @@ class GingaView(GwMain.GwMain, Widgets.Application):
                 lsize = 0
         hsplit.set_sizes([lsize, msize, rsize])
 
-    def get_font(self, fontType, pointSize):
-        font_family = self.settings.get(fontType)
-        return GwHelp.get_font(font_family, pointSize)
+    def get_font(self, font_family, point_size):
+        return GwHelp.get_font(font_family, point_size)
 
     def get_icon(self, icondir, filename):
         iconpath = os.path.join(icondir, filename)
@@ -696,7 +717,13 @@ class GingaView(GwMain.GwMain, Widgets.Application):
         if rsp == 0:
             return
         self.delete_channel(chname)
+        return True
 
+    def delete_tab_cb(self, w, rsp, tabname):
+        self.ds.remove_dialog(w)
+        if rsp == 0:
+            return
+        self.ds.remove_tab(tabname)
         return True
 
     def init_workspace(self, ws):
