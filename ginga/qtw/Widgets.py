@@ -1350,8 +1350,7 @@ class Splitter(ContainerBase):
         else:
             w.setOrientation(QtCore.Qt.Vertical)
         self.widget = w
-        w.setStretchFactor(0, 0.5)
-        w.setStretchFactor(1, 0.5)
+        w.setChildrenCollapsible(True)
 
     def add_widget(self, child):
         self.add_ref(child)

@@ -19,9 +19,12 @@ class Plot(Callback.Callbacks):
         Callback.Callbacks.__init__(self)
 
         if figure is None:
-            dpi = 100
+            figure = Figure()
+            dpi = figure.get_dpi()
+            if dpi is None or dpi < 0.1:
+                dpi = 100
             wd_in, ht_in = float(width)/dpi, float(height)/dpi
-            figure = Figure(figsize=(wd_in, ht_in), dpi=dpi)
+            figure.set_size_inches(wd_in, ht_in)
         self.fig = figure
         if hasattr(self.fig, 'set_tight_layout'):
             self.fig.set_tight_layout(True)

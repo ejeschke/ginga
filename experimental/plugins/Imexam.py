@@ -13,6 +13,7 @@ from ginga import GingaPlugin
 from ginga.gw import Widgets
 from ginga.gw import Plot
 from ginga.util import plots
+from ginga.misc import Bunch
 
 have_imexam = False
 try:
@@ -67,7 +68,8 @@ class Imexam(GingaPlugin.LocalPlugin):
         # get Imexam preferences
         prefs = self.fv.get_preferences()
         self.settings = prefs.createCategory('plugin_Imexam')
-        self.settings.addDefaults(font='Courier', fontsize=12)
+        self.settings.addDefaults(font='Courier', fontsize=12,
+                                  plots_in_workspace=False)
         self.settings.load(onError='silent')
 
         self.layertag = 'imexam-canvas'
@@ -76,9 +78,6 @@ class Imexam(GingaPlugin.LocalPlugin):
         # this is our imexamine object
         self.imex = Imexamine()
         self.out_f = StringIO()
-
-        fi = self.fitsimage
-        bm = fi.get_bindmap()
 
         self.dc = fv.get_draw_classes()
         canvas = self.dc.DrawingCanvas()
@@ -92,6 +91,8 @@ class Imexam(GingaPlugin.LocalPlugin):
         self._plot = None
         self._plot_w = None
         self._plot_idx = 0
+        self._plots_in_ws = self.settings.get('plots_in_workspace', False)
+        self.w = Bunch.Bunch()
 
     def build_gui(self, container):
         if not have_imexam:
@@ -111,8 +112,13 @@ class Imexam(GingaPlugin.LocalPlugin):
         fr.set_widget(tw)
         top.add_widget(fr, stretch=0)
 
-        vbox = Widgets.VBox()
         fr = Widgets.Frame("Imexam output:")
+
+        if not self._plots_in_ws:
+            splitter = Widgets.Splitter(orientation='vertical')
+
+            self.nb = Widgets.TabWidget()
+            splitter.add_widget(self.nb)
 
         # this holds the messages returned from imexamine
         tw = Widgets.TextArea(wrap=False, editable=False)
@@ -121,20 +127,27 @@ class Imexam(GingaPlugin.LocalPlugin):
         tw.set_font(fixed_font)
         self.msg_res = tw
 
-        vbox.add_widget(tw, stretch=1)
-        fr.set_widget(vbox)
+        if not self._plots_in_ws:
+            splitter.add_widget(tw)
+            fr.set_widget(splitter)
+        else:
+            fr.set_widget(tw)
 
         top.add_widget(fr, stretch=1)
 
-        captions = (('Detach plot', 'button'),
-                    )
-        w, b = Widgets.build_info(captions, orientation='vertical')
-        self.w = b
+        hbox = Widgets.HBox()
+        btn = Widgets.Button('Detach Plot')
+        btn.add_callback('activated', self.detach_plot_cb)
+        btn.set_tooltip("Detach current plot and start a new one")
+        hbox.add_widget(btn, stretch=0)
+        btn = Widgets.Button('Clear Text')
+        btn.add_callback('activated', self.clear_text_cb)
+        btn.set_tooltip("Clear the imexam output")
+        hbox.add_widget(btn, stretch=0)
+        hbox.add_widget(Widgets.Label(''), stretch=1)
+        top.add_widget(hbox, stretch=0)
 
-        b.detach_plot.add_callback('activated', self.detach_plot_cb)
-        b.detach_plot.set_tooltip("Detach current plot and start a new one")
-
-        top.add_widget(w, stretch=0)
+        top.add_widget(hbox, stretch=0)
 
         hbox = Widgets.HBox()
         lbl = Widgets.Label("Keys active:")
@@ -165,6 +178,11 @@ class Imexam(GingaPlugin.LocalPlugin):
         btns.add_widget(Widgets.Label(''), stretch=1)
         top.add_widget(btns, stretch=0)
 
+        self._plot = None
+        self._plot_w = None
+        self._plot_idx = 0
+        self.make_new_figure()
+
         container.add_widget(top, stretch=1)
 
     def close(self):
@@ -175,7 +193,7 @@ class Imexam(GingaPlugin.LocalPlugin):
         self.imexam_active = onoff
         self.canvas.ui_setActive(onoff)
 
-        if update_ui:
+        if update_ui and 'btn_on' in self.w:
             if onoff:
                 self.w.btn_on.set_state(True)
             else:
@@ -196,6 +214,10 @@ class Imexam(GingaPlugin.LocalPlugin):
     def detach_plot_cb(self, w):
         self._plot = None
         self._plot_w = None
+        self.make_new_figure()
+
+    def clear_text_cb(self, w):
+        self.msg_res.clear()
 
     def instructions(self):
         lines = ["Key bindings:"]
@@ -239,7 +261,7 @@ class Imexam(GingaPlugin.LocalPlugin):
     def make_new_figure(self):
         chname = self.fv.get_channel_name(self.fitsimage)
 
-        wd, ht = 600, 500
+        wd, ht = 400, 300
         self._plot_idx += 1
         self._plot = plots.Plot(logger=self.logger,
                                 width=wd, height=ht)
@@ -250,18 +272,36 @@ class Imexam(GingaPlugin.LocalPlugin):
         pw = Plot.PlotWidget(self._plot)
 
         vbox = Widgets.VBox()
-        vbox.add_widget(pw, stretch=0)
+        vbox.add_widget(pw, stretch=1)
+        hbox = Widgets.HBox()
+        hbox.add_widget(Widgets.Label(''), stretch=1)
+        btn = Widgets.Button('Close Plot')
+        btn.add_callback('activated', lambda w: self.close_plot(name, vbox))
+        hbox.add_widget(btn, stretch=0)
+        vbox.add_widget(hbox, stretch=0)
 
-        vbox.resize(wd, ht)
+        #vbox.resize(wd, ht)
         self._plot_w = vbox
 
-        ws = self.fv.get_current_workspace()
-        tab = self.fv.ds.add_tab(ws.name, vbox, group, name, name,
-                                 data=dict(plot=self._plot))
+        if self._plots_in_ws:
+            ws = self.fv.get_current_workspace()
+            tab = self.fv.ds.add_tab(ws.name, vbox, group, name, name,
+                                     data=dict(plot=self._plot))
+        else:
+            self.nb.add_widget(vbox, name)
 
         # imexam should get a clean figure
         fig = self._plot.get_figure()
         fig.clf()
+
+    def close_plot(self, name, child):
+        if child == self._plot_w:
+            self.make_new_figure()
+
+        if not self._plots_in_ws:
+            self.nb.remove(child)
+
+        return True
 
     def imexam_cmd(self, canvas, keyname, data_x, data_y, func):
         if not self.imexam_active:
