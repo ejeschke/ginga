@@ -8,7 +8,7 @@ import os.path
 from functools import reduce
 
 from ginga.qtw.QtHelp import (QtGui, QtCore, QTextCursor, QIcon, QPixmap,
-                              QImage, have_pyqt4)
+                              QImage, QCursor, have_pyqt4)
 from ginga.qtw import QtHelp
 
 from ginga.misc import Callback, Bunch, LineHistory
@@ -1513,7 +1513,7 @@ class Menu(ContainerBase):
             #self.widget.popup(w.mapToGlobal(QtCore.QPoint(0, 0)))
             self.widget.exec_(w.mapToGlobal(QtCore.QPoint(0, 0)))
         else:
-            self.widget.exec_(QtGui.QCursor.pos())
+            self.widget.exec_(QCursor.pos())
 
 
 class Menubar(ContainerBase):

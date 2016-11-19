@@ -275,6 +275,7 @@ class MDIWidget(gtk.Layout):
         self.selected_child = None
         self.kbdmouse_mask = 0
         self.cascade_offset = 50
+        self.minimized_width = 150
 
         self.connect("motion_notify_event", self.motion_notify_event)
         self.connect("button_press_event", self.button_press_event)
@@ -290,24 +291,35 @@ class MDIWidget(gtk.Layout):
                         | gtk.gdk.KEY_PRESS_MASK
                         | gtk.gdk.KEY_RELEASE_MASK
                         | gtk.gdk.POINTER_MOTION_MASK
-                        #| gtk.gdk.POINTER_MOTION_HINT_MASK
+                        | gtk.gdk.POINTER_MOTION_HINT_MASK
                         | gtk.gdk.SCROLL_MASK)
+
+        self.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse("gray50"))
 
     def append_page(self, widget, label):
         vbox = gtk.VBox()
         vbox.set_border_width(4)
+        hbox = gtk.HBox()
+        close = gtk.Button("x")
+        maxim = gtk.Button("^")
+        minim = gtk.Button("v")
+        hbox.pack_start(close, False, False, 0)
+        hbox.pack_start(minim, False, False, 0)
+        hbox.pack_start(maxim, False, False, 0)
+
         evbox = gtk.EventBox()
         evbox.add(label)
-        #evbox.modify_fg(gtk.STATE_NORMAL, gtk.gdk.color_parse("yellow"))
-        evbox.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse("skyblue"))
-        vbox.pack_start(evbox, fill=False, expand=False, padding=0)
+        evbox.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse("gray90"))
+        hbox.pack_start(evbox, True, True, 2)
+
+        vbox.pack_start(hbox, fill=False, expand=False, padding=0)
         vbox.pack_start(widget, fill=True, expand=True, padding=4)
 
         frame = gtk.EventBox()
         frame.set_size_request(300, 300)
         frame.props.visible_window = True
         frame.set_border_width(0)
-        frame.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse("palegreen1"))
+        frame.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse("gray70"))
 
         frame.add(vbox)
         frame.show_all()
@@ -324,6 +336,8 @@ class MDIWidget(gtk.Layout):
 
         evbox.connect("button_press_event", self.select_child_cb, subwin)
         frame.connect("button_press_event", self.start_resize_cb, subwin)
+        maxim.connect('clicked', lambda *args: self.maximize_page(subwin))
+        minim.connect('clicked', lambda *args: self.minimize_page(subwin))
         self.put(frame, self.cascade_offset, self.cascade_offset)
 
     def set_tab_reorderable(self, w, tf):
@@ -383,6 +397,16 @@ class MDIWidget(gtk.Layout):
         x, y, width, height = widget.get_allocation()
         return width, height
 
+    def update_subwin_position(self, subwin):
+        rect = subwin.frame.get_allocation()
+        x, y, wd, ht = rect.x, rect.y, rect.width, rect.height
+        subwin.x, subwin.y = x, y
+
+    def update_subwin_size(self, subwin):
+        rect = subwin.frame.get_allocation()
+        x, y, wd, ht = rect.x, rect.y, rect.width, rect.height
+        subwin.width, subwin.height = wd, ht
+
     def raise_widget(self, subwin):
         frame = subwin.frame
         # Hack to bring widget to the top--no documentation on any other
@@ -403,8 +427,8 @@ class MDIWidget(gtk.Layout):
             self.set_current_page(idx)
 
         self.selected_child = Bunch.Bunch(subwin=subwin, action='move',
-                                          cr = self.setup_cr(self.bin_window),
                                           x_origin=x, y_origin=y, dx=ex, dy=ey)
+
         return True
 
     def start_resize_cb(self, widget, event, subwin):
@@ -412,26 +436,17 @@ class MDIWidget(gtk.Layout):
         x, y = self.get_widget_position(subwin.frame)
         subwin.x, subwin.y = x, y
         self.selected_child = Bunch.Bunch(subwin=subwin, action='resize',
-                                          cr = self.setup_cr(self.bin_window),
                                           x_origin=x, y_origin=y, dx=ex, dy=ey)
         return True
 
     def button_press_event(self, widget, event):
-        # event.button, event.x, event.y
         x = event.x; y = event.y
         button = self.kbdmouse_mask
         if event.button != 0:
             button |= 0x1 << (event.button - 1)
         return True
 
-    def setup_cr(self, drawable):
-        cr = drawable.cairo_create()
-        cr.set_line_width(2)
-        cr.set_dash([ 3.0, 4.0, 6.0, 4.0], 5.0)
-        return cr
-
     def button_release_event(self, widget, event):
-        # event.button, event.x, event.y
         x = event.x_root; y = event.y_root
         button = self.kbdmouse_mask
         if event.button != 0:
@@ -442,13 +457,13 @@ class MDIWidget(gtk.Layout):
             if bnch.action == 'move':
                 x = int(subwin.x + (x - bnch.dx))
                 y = int(subwin.y + (y - bnch.dy))
-                self.move(subwin.frame, x, y)
-                subwin.x, subwin.y = self.get_widget_position(subwin.frame)
+                self.move_page(subwin, x, y)
+
             elif bnch.action == 'resize':
                 wd = int(subwin.width + (x - bnch.dx))
                 ht = int(subwin.height + (y - bnch.dy))
-                subwin.frame.set_size_request(wd, ht)
-                subwin.width, subwin.height = self.get_widget_size(subwin.frame)
+                self.resize_page(subwin, wd, ht)
+
             self.selected_child = None
         return True
 
@@ -472,11 +487,15 @@ class MDIWidget(gtk.Layout):
             if bnch.action == 'move':
                 x = int(subwin.x + (x - bnch.dx))
                 y = int(subwin.y + (y - bnch.dy))
+                # this works better if it is not self.move_page()
                 self.move(subwin.frame, x, y)
+
             elif bnch.action == 'resize':
                 wd = int(subwin.width + (x - bnch.dx))
                 ht = int(subwin.height + (y - bnch.dy))
+                # this works better if it is not self.resize_page()
                 subwin.frame.set_size_request(wd, ht)
+
         return True
 
     def tile_pages(self):
@@ -485,12 +504,42 @@ class MDIWidget(gtk.Layout):
     def cascade_pages(self):
         x, y = 0, 0
         for subwin in self.children:
-            self.move(subwin.frame, x, y)
+            self.move_page(subwin, x, y)
+            self.raise_widget(subwin)
             x += self.cascade_offset
             y += self.cascade_offset
 
     def use_tabs(self, tf):
         pass
+
+    def move_page(self, subwin, x, y):
+        self.move(subwin.frame, x, y)
+        subwin.x, subwin.y = x, y
+
+    def resize_page(self, subwin, wd, ht):
+        subwin.frame.set_size_request(wd, ht)
+        subwin.width, subwin.height = wd, ht
+
+    def maximize_page(self, subwin):
+        x, y, wd, ht = self.get_allocation()
+
+        self.raise_widget(subwin)
+        self.resize_page(subwin, wd, ht)
+        self.move_page(subwin, 0, 0)
+
+    def minimize_page(self, subwin):
+        rect = self.get_allocation()
+        _x, _y, width, height = rect.x, rect.y, rect.width, rect.height
+
+        rect = subwin.frame.get_allocation()
+        x, y, wd, ht = rect.x, rect.y, rect.width, rect.height
+
+        rect = subwin.label.get_allocation()
+        _x, _y, wd, ht = rect.x, rect.y, rect.width, rect.height
+
+        self.resize_page(subwin, self.minimized_width, ht)
+        self.move_page(subwin, x, height-ht)
+        #self.lower_widget(subwin)
 
 
 class FileSelection(object):

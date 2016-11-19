@@ -1201,38 +1201,15 @@ class StackWidget(TabWidget):
         nb.set_show_tabs(False)
         nb.set_show_border(False)
 
-class MDIWidget(TabWidget):
+class MDIWidget(ContainerBase):
 
     def __init__(self, tabpos='top', mode='tabs'):
-        super(MDIWidget, self).__init__(tabpos=tabpos)
+        super(MDIWidget, self).__init__()
 
-        self.mode = 'tabs'
-        self.true_mdi = False
+        self.mode = 'mdi'
+        self.true_mdi = True
 
-    def get_mode(self):
-        return self.mode
-
-    def set_mode(self, mode):
-        pass
-
-    def tile_panes(self):
-        pass
-
-    def cascade_panes(self):
-        pass
-
-    def use_tabs(self, tf):
-        pass
-
-
-class MDIWidget2(ContainerBase):
-
-    def __init__(self, tabpos='top', mode='tabs'):
-        super(MDIWidget2, self).__init__()
-
-        self.mode = 'tabs'
-        self.true_mdi = False
-
+        # TODO: currently scrollbars are not working
         sw = gtk.ScrolledWindow()
         sw.set_border_width(2)
         sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
@@ -1254,6 +1231,11 @@ class MDIWidget2(ContainerBase):
         #self.mdi_w.show_all()
         # attach title to child
         child.extdata.tab_title = title
+
+    def _remove(self, childw, delete=False):
+        self.mdi_w.remove(childw)
+        if delete:
+            childw.destroy()
 
     def _cb_redirect(self, nbw, gptr, index):
         child = self.index_to_widget(index)

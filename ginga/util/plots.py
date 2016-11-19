@@ -202,6 +202,8 @@ class ContourPlot(Plot):
             colors = [ 'lightgreen' ] * num_contours
             cs = self.ax.contour(self.xdata, self.ydata, data, num_contours,
                                  colors=colors)
+            ## self.ax.clabel(cs, inline=1, fontsize=10,
+            ##                fmt='%5.3f', color='cyan')
             # Mark the center of the object
             self.ax.plot([x], [y], marker='x', ms=20.0,
                          color='cyan')
@@ -216,7 +218,9 @@ class ContourPlot(Plot):
     def plot_contours(self, x, y, radius, image, num_contours=None):
         img_data, x1, y1, x2, y2 = image.cutout_radius(x, y, radius)
 
-        self.plot_contours_data(x, y, img_data, num_contours=num_contours)
+        cx, cy = x - x1, y - y1
+
+        self.plot_contours_data(cx, cy, img_data, num_contours=num_contours)
 
     def plot_panzoom(self):
         ht, wd = len(self.ydata), len(self.xdata)
