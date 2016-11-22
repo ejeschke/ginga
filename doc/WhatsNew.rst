@@ -2,6 +2,10 @@
 What's New in Ginga?
 ++++++++++++++++++++
 
+Ver 2.7.0.dev
+=============
+- Added a working MDI workspace for gtk2/gtk3
+
 Ver 2.6.0 (2016-11-16)
 ======================
 With release 2.6.0 we are moving to a new versioning scheme that makes

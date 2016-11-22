@@ -5,7 +5,9 @@
 # Please see the file LICENSE.txt for details.
 #
 from __future__ import print_function
-import sys, os.path
+import sys
+import os.path
+import math
 
 from ginga.misc import Bunch
 import ginga.toolkit
@@ -504,7 +506,31 @@ class MDIWidget(gtk.Layout):
         return True
 
     def tile_pages(self):
-        pass
+        # calculate number of rows and cols, try to maintain a square
+        # TODO: take into account the window geometry
+        num_widgets = len(self.children)
+        rows = int(round(math.sqrt(num_widgets)))
+        cols = rows
+        if rows**2 < num_widgets:
+            cols += 1
+
+        # find out how big each window should be
+        x, y, width, height = self.get_allocation()
+        wd, ht = width // cols, height // rows
+
+        # and move and resize them into place
+        for i in range(0, rows):
+            for j in range(0, cols):
+                index = i*cols + j
+                if index < num_widgets:
+                    subwin = self.children[index]
+
+                    self.resize_page(subwin, wd, ht)
+
+                    x, y = j * wd, i * ht
+                    self.move_page(subwin, x, y)
+
+                    self.raise_widget(subwin)
 
     def cascade_pages(self):
         x, y = 0, 0
