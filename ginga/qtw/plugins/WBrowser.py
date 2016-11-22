@@ -1,9 +1,6 @@
 #
 # WBrowser.py -- Web Browser plugin for fits viewer
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c)  Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -12,7 +9,7 @@ from ginga import GingaPlugin
 
 from ginga.qtw.QtHelp import QtGui, QtCore
 from ginga.qtw import QtHelp
-from ginga.Control import packageHome
+from ginga.rv.Control import package_home
 
 has_webkit = False
 try:
@@ -58,7 +55,7 @@ class WBrowser(GingaPlugin.GlobalPlugin):
         cw.layout().addWidget(btns, stretch=0, alignment=QtCore.Qt.AlignLeft)
 
         if has_webkit:
-            helpfile = os.path.abspath(os.path.join(packageHome,
+            helpfile = os.path.abspath(os.path.join(package_home,
                                                     "doc", "help.html"))
             helpurl = "file://%s" % (helpfile)
             self.browse(helpurl)

@@ -1,9 +1,9 @@
 #
 # main.py -- reference viewer for the Ginga toolkit.
 #
-# Eric Jeschke (eric@naoj.org, eric@redskiesatnight.com)
+# This is open-source software licensed under a BSD license.
+# Please see the file LICENSE.txt for details.
 #
-# See LICENSE.txt for license information.
 """This module handles the main reference viewer."""
 from __future__ import print_function
 
@@ -260,11 +260,11 @@ class ReferenceViewer(object):
 
         # So we can find our plugins
         sys.path.insert(0, basedir)
-        moduleHome = os.path.split(sys.modules['ginga.version'].__file__)[0]
-        childDir = os.path.join(moduleHome, 'misc', 'plugins')
-        sys.path.insert(0, childDir)
-        pluginDir = os.path.join(basedir, 'plugins')
-        sys.path.insert(0, pluginDir)
+        package_home = os.path.split(sys.modules['ginga.version'].__file__)[0]
+        child_dir = os.path.join(package_home, 'rv', 'plugins')
+        sys.path.insert(0, child_dir)
+        plugin_dir = os.path.join(basedir, 'plugins')
+        sys.path.insert(0, plugin_dir)
 
         gc = os.path.join(basedir, "ginga_config.py")
         have_ginga_config = os.path.exists(gc)
@@ -313,8 +313,7 @@ class ReferenceViewer(object):
 
         # these imports have to be here, otherwise they force the choice
         # of toolkit too early
-        from ginga.gw.GingaGw import GingaView
-        from ginga.Control import GingaControl, GuiLogHandler
+        from ginga.rv.Control import GingaControl, GingaView, GuiLogHandler
 
         # Define class dynamically based on toolkit choice
         class GingaShell(GingaControl, GingaView):
