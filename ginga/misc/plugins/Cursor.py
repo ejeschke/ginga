@@ -10,6 +10,7 @@ import numpy
 from ginga import GingaPlugin, toolkit
 from ginga.misc import Bunch
 from ginga.gw import Widgets, Readout
+from ginga.ImageView import ImageViewNoDataError
 
 
 class Cursor(GingaPlugin.GlobalPlugin):
@@ -96,7 +97,12 @@ class Cursor(GingaPlugin.GlobalPlugin):
         if image is None:
             return True
 
-        width, height = fitsimage.get_data_size()
+        try:
+            width, height = fitsimage.get_data_size()
+        except ImageViewNoDataError as exc:  # table
+            self.logger.debug(str(exc))
+            return
+
         # Set size of coordinate areas (4 is "." + precision 3)
         readout.maxx = len(str(width)) + 4
         readout.maxy = len(str(height)) + 4
