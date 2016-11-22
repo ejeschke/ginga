@@ -315,8 +315,15 @@ class MDIWidget(gtk.Layout):
         vbox.pack_start(hbox, fill=False, expand=False, padding=0)
         vbox.pack_start(widget, fill=True, expand=True, padding=4)
 
+        # what size does the widget want to be?
+        x, y, wd, ht = widget.get_allocation()
+        ## wd = widget.get_preferred_width()
+        ## ht = widget.get_preferred_height()
+        ## wd, ht = widget.get_size_request()
+        wd, ht = max(wd, 300), max(ht, 300)
+
         frame = gtk.EventBox()
-        frame.set_size_request(300, 300)
+        frame.set_size_request(wd, ht)
         frame.props.visible_window = True
         frame.set_border_width(0)
         frame.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse("gray70"))
@@ -338,6 +345,7 @@ class MDIWidget(gtk.Layout):
         frame.connect("button_press_event", self.start_resize_cb, subwin)
         maxim.connect('clicked', lambda *args: self.maximize_page(subwin))
         minim.connect('clicked', lambda *args: self.minimize_page(subwin))
+
         self.put(frame, self.cascade_offset, self.cascade_offset)
 
     def set_tab_reorderable(self, w, tf):
@@ -469,10 +477,7 @@ class MDIWidget(gtk.Layout):
 
     def motion_notify_event(self, widget, event):
         button = self.kbdmouse_mask
-        if event.is_hint:
-            return
-        else:
-            x, y, state = event.x_root, event.y_root, event.state
+        x, y, state = event.x_root, event.y_root, event.state
 
         if state & gtk.gdk.BUTTON1_MASK:
             button |= 0x1

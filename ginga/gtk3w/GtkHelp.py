@@ -319,8 +319,16 @@ class MDIWidget(Gtk.Layout):
         vbox.pack_start(hbox, False, False, 0)
         vbox.pack_start(widget, True, True, 4)
 
+        # what size does the widget want to be?
+        rect = widget.get_allocation()
+        x, y, wd, ht = rect.x, rect.y, rect.width, rect.height
+        ## wd = widget.get_preferred_width()
+        ## ht = widget.get_preferred_height()
+        ## wd, ht = widget.get_size_request()
+        wd, ht = max(wd, 300), max(ht, 300)
+
         frame = Gtk.EventBox()
-        frame.set_size_request(300, 300)
+        frame.set_size_request(wd, ht)
         frame.props.visible_window = True
         frame.set_border_width(0)
         frame.modify_bg(Gtk.StateType.NORMAL, Gdk.color_parse("gray70"))
@@ -477,10 +485,7 @@ class MDIWidget(Gtk.Layout):
 
     def motion_notify_event(self, widget, event):
         button = self.kbdmouse_mask
-        if event.is_hint:
-            return
-        else:
-            x, y, state = event.x_root, event.y_root, event.state
+        x, y, state = event.x_root, event.y_root, event.state
 
         if state & Gdk.ModifierType.BUTTON1_MASK:
             button |= 0x1

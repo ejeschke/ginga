@@ -1225,6 +1225,8 @@ class MDIWidget(ContainerBase):
         sw.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
         self.widget = sw
         self.mdi_w = GtkHelp.MDIWidget()
+        sw.set_hadjustment(self.mdi_w.get_hadjustment())
+        sw.set_vadjustment(self.mdi_w.get_vadjustment())
         sw.add(self.mdi_w)
 
     def get_mode(self):
