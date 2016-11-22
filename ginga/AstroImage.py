@@ -91,6 +91,8 @@ class AstroImage(BaseImage):
         # Set PRIMARY header
         if inherit_primary_header is None:
             inherit_primary_header = self.inherit_primary_header
+        else:  # This ensures get_header() is consistent
+            self.inherit_primary_header = inherit_primary_header
 
         if inherit_primary_header and (fobj is not None):
             if self._primary_hdr is None:
