@@ -5,7 +5,7 @@
 # Please see the file LICENSE.txt for details.
 #
 from ginga import GingaPlugin
-from ginga.misc import Widgets, Plot
+from ginga.gw import Widgets, Plot
 from ginga.util import plots
 
 import numpy as np

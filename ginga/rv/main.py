@@ -313,16 +313,7 @@ class ReferenceViewer(object):
 
         # these imports have to be here, otherwise they force the choice
         # of toolkit too early
-        from ginga.rv.Control import GingaControl, GingaView, GuiLogHandler
-
-        # Define class dynamically based on toolkit choice
-        class GingaShell(GingaControl, GingaView):
-
-            def __init__(self, logger, thread_pool, module_manager, prefs,
-                         ev_quit=None):
-                GingaView.__init__(self, logger, ev_quit, thread_pool)
-                GingaControl.__init__(self, logger, thread_pool,
-                                      module_manager, prefs, ev_quit=ev_quit)
+        from ginga.rv.Control import GingaShell, GuiLogHandler
 
         if settings.get('useMatplotlibColormaps', False):
             # Add matplotlib color maps if matplotlib is installed
