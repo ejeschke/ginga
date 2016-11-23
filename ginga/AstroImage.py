@@ -75,6 +75,35 @@ class AstroImage(BaseImage):
         self.revnaxis = []
         self._md_data = None
 
+    def setup_data(self, data, naxispath=None):
+        # initialize data attribute to something reasonable
+        if data is None:
+            data = numpy.zeros((0, 0))
+        elif not isinstance(data, numpy.ndarray):
+            data = numpy.zeros((0, 0))
+        elif 0 in data.shape:
+            data = numpy.zeros((0, 0))
+        elif len(data.shape) < 2:
+            # Expand 1D arrays into 1xN array
+            data = data.reshape((1, data.shape[0]))
+
+        # this is a handle to the full data array
+        self._md_data = data
+
+        # this will get reset in set_naxispath() if array is
+        # multidimensional
+        self._data = data
+
+        if naxispath is None:
+            naxispath = []
+
+        # Set naxispath to drill down to first 2D data slice
+        if len(naxispath) == 0:
+            naxispath = ([0] * (len(data.shape) - 2))
+
+        self.set_naxispath(naxispath)
+
+
     def load_hdu(self, hdu, fobj=None, naxispath=None,
                  inherit_primary_header=None):
 
@@ -100,31 +129,7 @@ class AstroImage(BaseImage):
 
             self.io.fromHDU(fobj[0], self._primary_hdr)
 
-        data = hdu.data
-        if data is None:
-            data = numpy.zeros((0, 0))
-        elif not isinstance(data, numpy.ndarray):
-            data = numpy.zeros((0, 0))
-        elif 0 in data.shape:
-            data = numpy.zeros((0, 0))
-        elif len(data.shape) < 2:
-            # Expand 1D arrays into 1xN array
-            data = data.reshape((1, data.shape[0]))
-
-        # this is a handle to the full data array
-        self._md_data = data
-        # this will get reset in set_naxispath() if array is
-        # multidimensional
-        self._data = data
-
-        if naxispath is None:
-            naxispath = []
-
-        # Set naxispath to drill down to 2D data slice
-        if len(naxispath) == 0:
-            naxispath = ([0] * (len(data.shape) - 2))
-
-        self.set_naxispath(naxispath)
+        self.setup_data(hdu.data)
 
         # Try to make a wcs object on the header
         self.wcs.load_header(hdu.header, fobj=fobj)
@@ -136,13 +141,23 @@ class AstroImage(BaseImage):
 
         self.io.load_file(filespec, dstobj=self, **kwargs)
 
-    def load_buffer(self, data, dims, dtype, byteswap=False,
-                    metadata=None):
-        data = numpy.fromstring(data, dtype=dtype)
+    def load_data(self, data_np, naxispath=None, metadata=None):
+
+        self.clear_metadata()
+
+        self.setup_data(data_np, naxispath=naxispath)
+
+        if metadata is not None:
+            self.update_metadata(metadata)
+
+    def load_buffer(self, buf, dims, dtype, byteswap=False,
+                    naxispath=None, metadata=None):
+        data = numpy.fromstring(buf, dtype=dtype)
         if byteswap:
             data.byteswap(True)
         data = data.reshape(dims)
-        self.set_data(data, metadata=metadata)
+
+        self.load_data(data, naxispath=naxispath, metadata=metadata)
 
     def get_mddata(self):
         return self._md_data
@@ -247,8 +262,8 @@ class AstroImage(BaseImage):
         self.set_data(data_np.copy(), metadata=metadata,
                       astype=astype)
 
-    def update_metadata(self, keyDict):
-        for key, val in keyDict.items():
+    def update_metadata(self, key_dict):
+        for key, val in key_dict.items():
             self.metadata[key] = val
 
         # refresh the WCS

@@ -19,6 +19,7 @@ class Callbacks(object):
 
     def __init__(self):
         self.cb = {}
+        self._cb_block = {}
 
     # TODO: This should raise KeyError or simply do nothing if unknown key
     # passed
@@ -27,6 +28,7 @@ class Callbacks(object):
             self.cb[name][:] = []
         except KeyError:
             self.cb[name] = []
+        self._cb_block[name] = []
 
     # TODO: Should this call clear_callback()? Should create empty list here
     # only
@@ -41,9 +43,21 @@ class Callbacks(object):
     def delete_callback(self, name):
         try:
             del self.cb[name]
+
+            if name in self._cb_block:
+                del self._cb_block[name]
         except KeyError:
             raise CallbackError("No callback category of '%s'" % (
                 name))
+
+    def block_callback(self, name):
+        self._cb_block[name].append(True)
+
+    def unblock_callback(self, name):
+        self._cb_block[name].pop()
+
+    def suppress_callback(self, name):
+        return SuppressCallback(self, name)
 
     # TODO: Add a argument validation function for a callback
     # Pointers:
@@ -76,11 +90,14 @@ class Callbacks(object):
         if not self.has_callback(name):
             return None
             # raise CallbackError("No callback category of '%s'" % (
-            # name))
+            #                       name))
 
         # might save some slow code setting up for iteration/blocks
         if len(self.cb[name]) == 0:
-            # print "no callbacks registered for '%s'" % (name)
+            return False
+
+        if (name in self._cb_block) and (len(self._cb_block[name]) > 0):
+            # callback temporarily blocked
             return False
 
         result = False
@@ -119,5 +136,20 @@ class Callbacks(object):
                     print("Traceback:\n%s" % (tb_str))
 
         return result
+
+
+class SuppressCallback(object):
+    def __init__(self, cb_obj, cb_name):
+        self.cb_obj = cb_obj
+        self.cb_name = cb_name
+
+    def __enter__(self):
+        self.cb_obj._cb_block[self.cb_name].append(True)
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.cb_obj._cb_block[self.cb_name].pop()
+        return False
+
 
 # END

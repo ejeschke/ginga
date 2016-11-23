@@ -195,9 +195,16 @@ in the AstroImage class.  You should implement this abstract class:
     class MyIOHandler(object):
         def __init__(self, logger):
             self.logger = logger
-    
-        def load_file(self, filespec, header, **kwdargs):
-            return (data, numhdu, naxispath)
+
+        def register_type(self, name, klass):
+            self.factory_dict[name.lower()] = klass
+
+        def load_file(self, filespec, numhdu=None, dstobj=None, **kwdargs):
+            # create object of the appropriate type, usually
+            # an AstroImage or AstroTable, by looking up the correct
+            # class in self.factory_dict, under the keys 'image' or
+            # 'table'
+            return dstobj
     
         def save_as_file(self, path, data, header, **kwdargs):
             pass

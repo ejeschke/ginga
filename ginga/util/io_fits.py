@@ -161,7 +161,7 @@ class PyFitsFileHandler(BaseFitsFileHandler):
             # this seems to be necessary now for some fits files...
             try:
                 fits_f.verify('fix')
-                
+
             except Exception as e:
                 # Let's hope for the best!
                 self.logger.warn("Problem verifying fits file '%s': %s" % (
@@ -301,7 +301,7 @@ class FitsioFileHandler(BaseFitsFileHandler):
         self.fromHDU(hdu, ahdr)
 
         metadata = dict(header=ahdr)
-        dstobj.set_data(data, metadata=metadata)
+        dstobj.load_data(data, metadata=metadata)
 
         return dstobj
 

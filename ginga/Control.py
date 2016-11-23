@@ -1765,4 +1765,5 @@ class Channel(Callback.Callbacks):
 
         self.history.sort(key=self.hist_sort)
 
+
 # END

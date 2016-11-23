@@ -53,9 +53,11 @@ class MultiDim(GingaPlugin.LocalPlugin):
         self.play_idx = 1
         self.play_max = 1
         self.play_int_sec = 0.1
-        self.play_min_sec = 0.1
+        self.play_min_sec = 1.0 / 30
+        self.play_last_time = 0.0
+        self.play_fps = 0
         self.timer = fv.get_timer()
-        self.timer.set_callback('expired', self.play_next)
+        self.timer.set_callback('expired', self._play_next_cb)
 
         # Load plugin preferences
         prefs = self.fv.get_preferences()
@@ -115,7 +117,8 @@ class MultiDim(GingaPlugin.LocalPlugin):
 
         captions = [("First", 'button', "Prev", 'button', "Stop", 'button'),
                     ("Last", 'button', "Next", 'button', "Play", 'button'),
-                    ("Interval:", 'label', "Interval", 'spinfloat'),
+                    ("Interval:", 'label', "Interval", 'spinfloat',
+                     "fps", 'llabel'),
                     ]
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
@@ -125,9 +128,9 @@ class MultiDim(GingaPlugin.LocalPlugin):
         b.last.add_callback('activated', lambda w: self.last_slice())
         b.play.add_callback('activated', lambda w: self.play_start())
         b.stop.add_callback('activated', lambda w: self.play_stop())
-        lower, upper = 0.1, 8.0
-        b.interval.set_limits(lower, upper, incr_value=0.1)
-        b.interval.set_value(lower)
+        lower, upper = self.play_min_sec, 8.0
+        b.interval.set_limits(lower, upper, incr_value=0.01)
+        b.interval.set_value(self.play_int_sec)
         b.interval.set_decimals(2)
         b.interval.add_callback('value-changed', self.play_int_cb)
 
@@ -445,20 +448,54 @@ class MultiDim(GingaPlugin.LocalPlugin):
             self.fv.error(errmsg)
 
     def play_start(self):
+        image = self.fitsimage.get_image()
+        if image is None:
+            return
+        self.play_image = image
         self._isplaying = True
+        image.block_callback('modified')
+        self.play_last_time = time.time()
         self.play_next(self.timer)
 
+    def _play_next_cb(self, timer):
+        # this is the playback timer callback
+        # timer is run in a non-gui thread
+        self.fv.gui_do(self.play_next, timer)
+
     def play_next(self, timer):
-        if self._isplaying:
-            time_start = time.time()
-            deadline = time_start + self.play_int_sec
-            self.next_slice()
-            #self.fv.update_pending(0.001)
-            delta = max(deadline - time.time(), 0.001)
-            self.timer.set(delta)
+        if not self._isplaying:
+            # callback after user stopped playback
+            return
+
+        image = self.fitsimage.get_image()
+        if image is None:
+            self.play_stop()
+            return
+
+        time_start = time.time()
+        deadline = time_start + self.play_int_sec
+
+        # calculate fps
+        fps = 1.0 / (time_start - self.play_last_time)
+        self.play_last_time = time_start
+        if int(fps) != int(self.play_fps):
+            self.play_fps = fps
+            self.w.fps.set_text(str("%.2f fps" % fps))
+
+        self.next_slice()
+
+        # schedule a redraw
+        self.fitsimage.redraw(whence=0)
+
+        # set timer for next turnaround
+        delta = deadline - time.time()
+        timer.set(max(delta, 0.001))
 
     def play_stop(self):
         self._isplaying = False
+        if self.play_image is not None:
+            self.play_image.unblock_callback('modified')
+            self.play_image = None
 
     def first_slice(self):
         play_idx = 1
