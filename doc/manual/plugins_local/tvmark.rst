@@ -68,4 +68,4 @@ To create a table that this plugin can read, one can use results from
 Used together with :ref:`local-plugin-tvmask`, you can overlay both point
 sources and masked regions in Ginga.
 
-.. automodule:: ginga.misc.plugins.TVMark
+.. automodule:: ginga.rv.plugins.TVMark

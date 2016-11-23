@@ -15,4 +15,4 @@ For masked columns, masked data is not shown (even if only one of the
 It is meant as a way to quickly look at table data and not for detailed
 scientific analysis.
 
-.. automodule:: ginga.misc.plugins.PlotTable
+.. automodule:: ginga.rv.plugins.PlotTable

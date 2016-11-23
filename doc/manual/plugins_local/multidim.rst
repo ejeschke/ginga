@@ -28,4 +28,4 @@ For a FITS table, its data are read in using
 Column units are displayed right under the main header ("None" if no unit).
 For masked columns, masked values are replaced with pre-defined fill values.
 
-.. automodule:: ginga.misc.plugins.MultiDim
+.. automodule:: ginga.rv.plugins.MultiDim

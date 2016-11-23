@@ -29,4 +29,4 @@ remain untouched. Relevant change log entries from
 :ref:`sec-plugins-changehistory` global plugin will be inserted into the
 history of its ``PRIMARY`` header.
 
-.. automodule:: ginga.misc.plugins.SaveImage
+.. automodule:: ginga.rv.plugins.SaveImage

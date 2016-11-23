@@ -17,4 +17,4 @@ When a mosaic falls out of memory, it is no longer accessible in Ginga.
 To avoid this, you must configure your session such that your Ginga data cache
 is sufficiently large (see :ref:`ch-customization`).
 
-.. automodule:: ginga.misc.plugins.Mosaic
+.. automodule:: ginga.rv.plugins.Mosaic
