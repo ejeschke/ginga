@@ -24,7 +24,7 @@ Reference/API
 .. automodapi:: ginga.ImageView
    :no-inheritance-diagram:
 
-.. automodapi:: ginga.main
+.. automodapi:: ginga.rv.main
    :no-inheritance-diagram:
 
 .. automodapi:: ginga.util.wcsmod
