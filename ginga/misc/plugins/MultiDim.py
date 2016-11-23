@@ -52,7 +52,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
         self.play_axis = 2
         self.play_idx = 1
         self.play_max = 1
-        self.play_int_sec = 0.1
+        self.play_int_sec = 1
         self.play_min_sec = 0.1
         self.timer = fv.get_timer()
         self.timer.set_callback('expired', self.play_next)
