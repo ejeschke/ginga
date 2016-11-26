@@ -40,8 +40,8 @@ class Toolbar(GingaPlugin.GlobalPlugin):
 
         vbox, sw, orientation = Widgets.get_oriented_box(container)
         self.orientation = orientation
-        #vbox.set_border_width(2)
-        vbox.set_spacing(2)
+        vbox.set_spacing(0)
+        vbox.set_border_width(0)
 
         tb = Widgets.Toolbar(orientation=orientation)
 

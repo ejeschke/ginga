@@ -824,7 +824,10 @@ class ScrolledView(QtGui.QAbstractScrollArea):
         self.scroll_bars(horizontal='on', vertical='on')
 
         self._adjusting = False
+        self._scrolling = False
         self.pad = 20
+        self.upper_h = 100
+        self.upper_v = 100
 
         # reparent the viewer widget
         vp = self.viewport()
@@ -862,6 +865,9 @@ class ScrolledView(QtGui.QAbstractScrollArea):
         """Calculate and set the scrollbar handles from the pan and
         zoom positions.
         """
+        if self._scrolling:
+            return
+
         # flag that suppresses a cyclical callback
         self._adjusting = True
         try:
@@ -873,11 +879,21 @@ class ScrolledView(QtGui.QAbstractScrollArea):
             hsb = self.horizontalScrollBar()
             vsb = self.verticalScrollBar()
 
-            hsb.setPageStep(int(round(res.thm_pct_x * 100)))
-            vsb.setPageStep(int(round(res.thm_pct_y * 100)))
+            page_h, page_v = (int(round(res.thm_pct_x * 100)),
+                              int(round(res.thm_pct_y * 100)))
+            hsb.setPageStep(page_h)
+            vsb.setPageStep(page_v)
 
-            hsb.setValue(int(round(res.pan_pct_x * 100)))
-            vsb.setValue(int(round((1.0 - res.pan_pct_y) * 100)))
+            upper_h, upper_v = 100 - page_h, 100 - page_v
+            hsb.setRange(0, upper_h)
+            vsb.setRange(0, upper_v)
+            self.upper_h, self.upper_v = upper_h, upper_v
+
+            val_h, val_v = (int(round(res.pan_pct_x * self.upper_h)),
+                            int(round((1.0 - res.pan_pct_y) * self.upper_v)))
+            hsb.setValue(val_h)
+            vsb.setValue(val_v)
+
         finally:
             self._adjusting = False
 
@@ -888,14 +904,20 @@ class ScrolledView(QtGui.QAbstractScrollArea):
         if self._adjusting:
             return
 
-        hsb = self.horizontalScrollBar()
-        vsb = self.verticalScrollBar()
-        pct_x = hsb.value() / 100.0
-        # invert Y pct because of orientation of scrollbar
-        pct_y = 1.0 - (vsb.value() / 100.0)
+        self._scrolling = True
+        try:
+            hsb = self.horizontalScrollBar()
+            vsb = self.verticalScrollBar()
 
-        bd = self.viewer.get_bindings()
-        bd.pan_by_pct(self.viewer, pct_x, pct_y, pad=self.pad)
+            pct_x = hsb.value() / float(self.upper_h)
+            # invert Y pct because of orientation of scrollbar
+            pct_y = 1.0 - (vsb.value() / float(self.upper_v))
+
+            bd = self.viewer.get_bindings()
+            bd.pan_by_pct(self.viewer, pct_x, pct_y, pad=self.pad)
+
+        finally:
+            self._scrolling = False
 
     def scroll_bars(self, horizontal='on', vertical='on'):
         if horizontal == 'on':

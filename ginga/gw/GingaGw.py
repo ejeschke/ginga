@@ -369,7 +369,12 @@ class GingaView(GwMain.GwMain, Widgets.Application):
 
         # build image viewer & widget
         fi = self.build_viewpane(settings, size=size)
-        iw = Viewers.GingaViewerWidget(viewer=fi)
+
+        # add scrollbar interface around this viewer
+        scr = settings.get('scrollbars', 'off')
+        si = Viewers.ScrolledView(fi)
+        si.scroll_bars(horizontal=scr, vertical=scr)
+        iw = Widgets.wrap(si)
 
         stk_w = Widgets.StackWidget()
         stk_w.add_widget(iw, title='image')
