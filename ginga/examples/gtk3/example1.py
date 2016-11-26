@@ -9,6 +9,7 @@ import sys, os
 import logging
 
 from ginga.gtk3w.ImageViewCanvasGtk import ImageViewCanvas
+from ginga.gtk3w.ImageViewGtk import ScrolledView
 from ginga.gtk3w import GtkHelp
 from ginga import AstroImage
 
@@ -47,7 +48,10 @@ class FitsViewer(object):
         w = fi.get_widget()
         w.set_size_request(512, 512)
 
-        vbox.pack_start(w, True, True, 0)
+        # add scrollbar interface around this viewer
+        si = ScrolledView(fi)
+
+        vbox.pack_start(si, True, True, 0)
 
         hbox = Gtk.HButtonBox()
         hbox.set_layout(Gtk.ButtonBoxStyle.END)

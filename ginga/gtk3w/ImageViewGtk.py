@@ -592,6 +592,7 @@ class ScrolledView(Gtk.ScrolledWindow):
         self.scroll_bars(horizontal='on', vertical='on')
 
         self.set_border_width(0)
+        self.set_overlay_scrolling(False)
 
         self._adjusting = False
         self.pad = 20
@@ -627,11 +628,14 @@ class ScrolledView(Gtk.ScrolledWindow):
             hsb = self.get_hadjustment()
             vsb = self.get_vadjustment()
 
-            page_x, page_y = int(round(res.thm_pct_x * 100)), int(round(res.thm_pct_y * 100))
-            val_x, val_y = int(round(res.pan_pct_x * 100)), int(round((1.0 - res.pan_pct_y) * 100))
+            page_x, page_y = (int(round(res.thm_pct_x * 100)),
+                              int(round(res.thm_pct_y * 100)))
+            val_x, val_y = (int(round(res.pan_pct_x * 100)),
+                            int(round((1.0 - res.pan_pct_y) * 100)))
 
-            hsb.configure(val_x, 0, 100, 1, page_x, page_x)
-            vsb.configure(val_y, 0, 100, 1, page_y, page_y)
+            upper_x, upper_y = 100 + page_x, 100 + page_y
+            hsb.configure(val_x, 0, upper_x, 1, page_x, page_x)
+            vsb.configure(val_y, 0, upper_y, 1, page_y, page_y)
         finally:
             self._adjusting = False
 
