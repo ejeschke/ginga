@@ -16,7 +16,7 @@ except ImportError:
     pass
 
 from ginga import GingaPlugin
-from ginga.Control import packageHome
+from ginga.rv.Control import package_home
 
 class WBrowser(GingaPlugin.GlobalPlugin):
 
@@ -46,7 +46,7 @@ class WBrowser(GingaPlugin.GlobalPlugin):
         self.entry.connect('activate', self.browse_cb)
 
         if has_webkit:
-            helpfile = os.path.abspath(os.path.join(packageHome,
+            helpfile = os.path.abspath(os.path.join(package_home,
                                                     "doc", "help.html"))
             helpurl = "file:%s" % (helpfile)
             self.browse(helpurl)

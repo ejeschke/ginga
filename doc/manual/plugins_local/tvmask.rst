@@ -50,4 +50,4 @@ file by hand using :ref:`Astropy FITS <astropy:astropy-io-fits>`, etc.
 Used together with :ref:`local-plugin-tvmark`, you can overlay both point
 sources and masked regions in Ginga.
 
-.. automodule:: ginga.misc.plugins.TVMask
+.. automodule:: ginga.rv.plugins.TVMask

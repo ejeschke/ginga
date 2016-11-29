@@ -13,4 +13,4 @@ a change log would appear here if a new image is added to a mosaic via the
 Mosaic plugin. Like :ref:`sec-plugins-contents`, the log is sorted by channel,
 and then by image name.
 
-.. automodule:: ginga.misc.plugins.ChangeHistory
+.. automodule:: ginga.rv.plugins.ChangeHistory
