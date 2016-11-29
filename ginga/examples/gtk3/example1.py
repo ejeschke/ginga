@@ -8,8 +8,7 @@
 import sys, os
 import logging
 
-from ginga.gtk3w.ImageViewCanvasGtk import ImageViewCanvas
-from ginga.gtk3w.ImageViewGtk import ScrolledView
+from ginga.gtk3w.ImageViewGtk import CanvasView, ScrolledView
 from ginga.gtk3w import GtkHelp
 from ginga import AstroImage
 
@@ -32,7 +31,7 @@ class FitsViewer(object):
         vbox = Gtk.VBox(spacing=2)
 
         # create the ginga viewer and configure it
-        fi = ImageViewCanvas(logger)
+        fi = CanvasView(logger)
         fi.enable_autocuts('on')
         fi.set_autocut_params('zscale')
         fi.enable_autozoom('on')

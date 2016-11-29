@@ -1518,9 +1518,12 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
         # add scrollbar interface around this viewer
         scr = settings.get('scrollbars', 'off')
-        si = Viewers.ScrolledView(fi)
-        si.scroll_bars(horizontal=scr, vertical=scr)
-        iw = Widgets.wrap(si)
+        if scr != 'off':
+            si = Viewers.ScrolledView(fi)
+            si.scroll_bars(horizontal=scr, vertical=scr)
+            iw = Widgets.wrap(si)
+        else:
+            iw = Viewers.GingaViewerWidget(viewer=fi)
 
         stk_w = Widgets.StackWidget()
         stk_w.add_widget(iw, title='image')

@@ -573,7 +573,7 @@ class CanvasView(ImageViewZoom):
         self.objects[0] = self.private_canvas
 
 
-class ScrolledView(gtk.ScrolledWindow):
+class ScrolledView1(gtk.ScrolledWindow):
     """A class that can take a viewer as a parameter and add scroll bars
     that respond to the pan/zoom levels.
     """
@@ -591,7 +591,10 @@ class ScrolledView(gtk.ScrolledWindow):
         self.set_border_width(0)
 
         self._adjusting = False
+        self._scrolling = False
         self.pad = 20
+        self.upper_h = 100.0
+        self.upper_v = 100.0
 
         # reparent the viewer widget
         self.v_w = viewer.get_widget()
@@ -613,6 +616,9 @@ class ScrolledView(gtk.ScrolledWindow):
         """Calculate and set the scrollbar handles from the pan and
         zoom positions.
         """
+        if self._scrolling:
+            return
+
         # flag that suppresses a cyclical callback
         self._adjusting = True
         try:
@@ -624,14 +630,19 @@ class ScrolledView(gtk.ScrolledWindow):
             hsb = self.get_hadjustment()
             vsb = self.get_vadjustment()
 
-            page_x, page_y = (int(round(res.thm_pct_x * 100)),
+            page_h, page_v = (int(round(res.thm_pct_x * 100)),
                               int(round(res.thm_pct_y * 100)))
-            val_x, val_y = (int(round(res.pan_pct_x * 100)),
-                            int(round((1.0 - res.pan_pct_y) * 100)))
 
-            upper_x, upper_y = 100 + page_x, 100 + page_y
-            hsb.configure(val_x, 0, upper_x, 1, page_x, page_x)
-            vsb.configure(val_y, 0, upper_y, 1, page_y, page_y)
+            self.upper_h, self.upper_v = 100 + page_h, 100 + page_v
+
+            ## val_h, val_v = (int(round(res.pan_pct_x * 100)),
+            ##                 int(round((1.0 - res.pan_pct_y) * 100)))
+            val_h, val_v = (int(round(res.pan_pct_x * 100.0)),
+                            int(round((1.0 - res.pan_pct_y) * 100.0)))
+
+            hsb.configure(val_h, 0, self.upper_h, 1, page_h, page_h)
+            vsb.configure(val_v, 0, self.upper_v, 1, page_v, page_v)
+
         finally:
             self._adjusting = False
 
@@ -641,18 +652,23 @@ class ScrolledView(gtk.ScrolledWindow):
         if self._adjusting:
             return
 
-        hsb = self.get_hadjustment()
-        vsb = self.get_vadjustment()
+        self._scrolling = True
+        try:
+            hsb = self.get_hadjustment()
+            vsb = self.get_vadjustment()
 
-        pos_x = hsb.get_value()
-        pos_y = vsb.get_value()
+            pos_x = hsb.get_value()
+            pos_y = vsb.get_value()
 
-        pct_x = pos_x / 100.0
-        # invert Y pct because of orientation of scrollbar
-        pct_y = 1.0 - (pos_y / 100.0)
+            pct_x = pos_x / 100.0
+            # invert Y pct because of orientation of scrollbar
+            pct_y = 1.0 - (pos_y / 100.0)
 
-        bd = self.viewer.get_bindings()
-        bd.pan_by_pct(self.viewer, pct_x, pct_y, pad=self.pad)
+            bd = self.viewer.get_bindings()
+            bd.pan_by_pct(self.viewer, pct_x, pct_y, pad=self.pad)
+
+        finally:
+            self._scrolling = False
 
     def scroll_bars(self, horizontal='on', vertical='on'):
         if horizontal == 'on':
@@ -674,5 +690,131 @@ class ScrolledView(gtk.ScrolledWindow):
             raise ValueError("Bad scroll bar option: '%s'; should be one of ('on', 'off' or 'auto')" % (vertical))
 
         self.set_policy(hpolicy, vpolicy)
+
+
+class ScrolledView(gtk.Table):
+    """A class that can take a viewer as a parameter and add scroll bars
+    that respond to the pan/zoom levels.
+    """
+
+    def __init__(self, viewer, parent=None):
+        self.viewer = viewer
+        super(ScrolledView, self).__init__(rows=2, columns=2)
+
+        self.set_border_width(0)
+        self.set_row_spacings(0)
+        self.set_col_spacings(0)
+
+        self._adjusting = False
+        self._scrolling = False
+        self.pad = 20
+        self.rng_x = 100.0
+        self.rng_y = 100.0
+
+        xoptions = gtk.EXPAND | gtk.FILL
+        yoptions = gtk.EXPAND | gtk.FILL
+
+        # reparent the viewer widget
+        self.v_w = viewer.get_widget()
+        self.attach(self.v_w, 0, 1, 0, 1,
+                    xoptions=xoptions, yoptions=yoptions,
+                    xpadding=0, ypadding=0)
+
+        self.hsb = gtk.HScrollbar()
+        self.hsb.set_round_digits(4)
+        self.hsb.connect('value-changed', self._scroll_contents)
+        self.attach(self.hsb, 0, 1, 1, 2,
+                    xoptions=gtk.FILL, yoptions=0, xpadding=0, ypadding=0)
+        self.vsb = gtk.VScrollbar()
+        self.vsb.set_round_digits(4)
+        self.vsb.connect('value-changed', self._scroll_contents)
+        self.attach(self.vsb, 1, 2, 0, 1,
+                    xoptions=0, yoptions=gtk.FILL, xpadding=0, ypadding=0)
+
+        self.viewer.add_callback('redraw', self._calc_scrollbars)
+        self.viewer.add_callback('limits-set',
+                                 lambda v, l: self._calc_scrollbars(v))
+
+        self._calc_scrollbars(self.viewer)
+
+    def get_widget(self):
+        return self
+
+    def _calc_scrollbars(self, viewer):
+        """Calculate and set the scrollbar handles from the pan and
+        zoom positions.
+        """
+        if self._scrolling:
+            return
+
+        # flag that suppresses a cyclical callback
+        self._adjusting = True
+        try:
+            bd = self.viewer.get_bindings()
+            res = bd.calc_pan_pct(self.viewer, pad=self.pad)
+            if res is None:
+                return
+
+            page_x, page_y = (float(res.thm_pct_x * 100),
+                              float(res.thm_pct_y * 100))
+            self.rng_x, self.rng_y = 100 - page_x, 100 - page_y
+            val_x, val_y = (float(res.pan_pct_x * self.rng_x),
+                            float((1.0 - res.pan_pct_y) * self.rng_y))
+
+            upper_x, upper_y = 100.0, 100.0
+
+            adj = self.hsb.get_adjustment()
+            adj.configure(val_x, 0.0, upper_x, 1.0, page_x, page_x)
+            self.hsb.set_adjustment(adj)
+            adj = self.vsb.get_adjustment()
+            adj.configure(val_y, 0.0, upper_y, 1.0, page_y, page_y)
+            self.vsb.set_adjustment(adj)
+
+        finally:
+            self._adjusting = False
+        return True
+
+    def _scroll_contents(self, adj):
+        """Called when the scroll bars are adjusted by the user.
+        """
+        if self._adjusting:
+            return True
+
+        try:
+            pos_x = self.hsb.get_value()
+            pos_y = self.vsb.get_value()
+
+            pct_x = pos_x / self.rng_x
+            # invert Y pct because of orientation of scrollbar
+            pct_y = 1.0 - (pos_y / self.rng_y)
+
+            bd = self.viewer.get_bindings()
+            bd.pan_by_pct(self.viewer, pct_x, pct_y, pad=self.pad)
+
+        finally:
+            self._scrolling = False
+
+        return True
+
+    def scroll_bars(self, horizontal='on', vertical='on'):
+        if horizontal == 'on':
+            pass
+        elif horizontal == 'off':
+            pass
+        elif horizontal == 'auto':
+            pass
+        else:
+            raise ValueError("Bad scroll bar option: '%s'; should be one of ('on', 'off' or 'auto')" % (horizontal))
+
+        if vertical == 'on':
+            pass
+        elif vertical == 'off':
+            pass
+        elif vertical == 'auto':
+            pass
+        else:
+            raise ValueError("Bad scroll bar option: '%s'; should be one of ('on', 'off' or 'auto')" % (vertical))
+
+        self.viewer.logger.warning("scroll_bar(): settings for gtk currently ignored!")
 
 #END

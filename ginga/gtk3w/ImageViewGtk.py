@@ -66,7 +66,6 @@ class ImageViewGtk(ImageView):
         self.msgtask = GtkHelp.Timer(0.0,
                                      lambda timer: self.onscreen_message(None))
 
-
     def get_widget(self):
         return self.imgwin
 
@@ -576,39 +575,52 @@ class CanvasView(ImageViewZoom):
         self.objects[0] = self.private_canvas
 
 
-class ScrolledView(Gtk.ScrolledWindow):
+class ScrolledView(Gtk.Table):
     """A class that can take a viewer as a parameter and add scroll bars
     that respond to the pan/zoom levels.
     """
 
     def __init__(self, viewer, parent=None):
         self.viewer = viewer
-        super(ScrolledView, self).__init__()
-
-        # the window jiggles annoyingly as the scrollbar is alternately
-        # shown and hidden if we use the default "automatic" policy, so
-        # default to always showing them (user can change this after
-        # calling the constructor, if desired)
-        self.scroll_bars(horizontal='on', vertical='on')
+        super(ScrolledView, self).__init__(rows=2, columns=2)
 
         self.set_border_width(0)
-        self.set_overlay_scrolling(False)
+        self.set_row_spacings(0)
+        self.set_col_spacings(0)
 
         self._adjusting = False
+        self._scrolling = False
         self.pad = 20
+        self.rng_x = 100.0
+        self.rng_y = 100.0
+
+        xoptions = Gtk.AttachOptions.EXPAND | Gtk.AttachOptions.FILL
+        yoptions = Gtk.AttachOptions.EXPAND | Gtk.AttachOptions.FILL
 
         # reparent the viewer widget
         self.v_w = viewer.get_widget()
-        self.add(self.v_w)
+        self.attach(self.v_w, 0, 1, 0, 1,
+                    xoptions=xoptions, yoptions=yoptions,
+                    xpadding=0, ypadding=0)
 
-        hsb = self.get_hadjustment()
-        hsb.connect('value-changed', self._scroll_contents)
-        vsb = self.get_vadjustment()
-        vsb.connect('value-changed', self._scroll_contents)
+        self.hsb = Gtk.HScrollbar()
+        self.hsb.set_round_digits(4)
+        self.hsb.connect('value-changed', self._scroll_contents)
+        self.attach(self.hsb, 0, 1, 1, 2,
+                    xoptions=Gtk.AttachOptions.FILL, yoptions=0,
+                    xpadding=0, ypadding=0)
+        self.vsb = Gtk.VScrollbar()
+        self.vsb.set_round_digits(4)
+        self.vsb.connect('value-changed', self._scroll_contents)
+        self.attach(self.vsb, 1, 2, 0, 1,
+                    xoptions=0, yoptions=Gtk.AttachOptions.FILL,
+                    xpadding=0, ypadding=0)
 
         self.viewer.add_callback('redraw', self._calc_scrollbars)
         self.viewer.add_callback('limits-set',
                                  lambda v, l: self._calc_scrollbars(v))
+
+        self._calc_scrollbars(self.viewer)
 
     def get_widget(self):
         return self
@@ -617,6 +629,9 @@ class ScrolledView(Gtk.ScrolledWindow):
         """Calculate and set the scrollbar handles from the pan and
         zoom positions.
         """
+        if self._scrolling:
+            return
+
         # flag that suppresses a cyclical callback
         self._adjusting = True
         try:
@@ -625,58 +640,68 @@ class ScrolledView(Gtk.ScrolledWindow):
             if res is None:
                 return
 
-            hsb = self.get_hadjustment()
-            vsb = self.get_vadjustment()
+            page_x, page_y = (float(res.thm_pct_x * 100),
+                              float(res.thm_pct_y * 100))
+            self.rng_x, self.rng_y = 100 - page_x, 100 - page_y
+            val_x, val_y = (float(res.pan_pct_x * self.rng_x),
+                            float((1.0 - res.pan_pct_y) * self.rng_y))
 
-            page_x, page_y = (int(round(res.thm_pct_x * 100)),
-                              int(round(res.thm_pct_y * 100)))
-            val_x, val_y = (int(round(res.pan_pct_x * 100)),
-                            int(round((1.0 - res.pan_pct_y) * 100)))
+            upper_x, upper_y = 100.0, 100.0
 
-            upper_x, upper_y = 100 + page_x, 100 + page_y
-            hsb.configure(val_x, 0, upper_x, 1, page_x, page_x)
-            vsb.configure(val_y, 0, upper_y, 1, page_y, page_y)
+            adj = self.hsb.get_adjustment()
+            adj.configure(val_x, 0.0, upper_x, 1.0, page_x, page_x)
+            self.hsb.set_adjustment(adj)
+            adj = self.vsb.get_adjustment()
+            adj.configure(val_y, 0.0, upper_y, 1.0, page_y, page_y)
+            self.vsb.set_adjustment(adj)
+
         finally:
             self._adjusting = False
+        return True
 
     def _scroll_contents(self, adj):
         """Called when the scroll bars are adjusted by the user.
         """
         if self._adjusting:
-            return
+            return True
 
-        hsb = self.get_hadjustment()
-        vsb = self.get_vadjustment()
+        self._scrolling = True
+        try:
+            pos_x = self.hsb.get_value()
+            pos_y = self.vsb.get_value()
 
-        pos_x = hsb.get_value()
-        pos_y = vsb.get_value()
+            pct_x = pos_x / float(self.rng_x)
+            # invert Y pct because of orientation of scrollbar
+            pct_y = 1.0 - (pos_y / float(self.rng_y))
 
-        pct_x = pos_x / 100.0
-        # invert Y pct because of orientation of scrollbar
-        pct_y = 1.0 - (pos_y / 100.0)
+            bd = self.viewer.get_bindings()
+            bd.pan_by_pct(self.viewer, pct_x, pct_y, pad=self.pad)
 
-        bd = self.viewer.get_bindings()
-        bd.pan_by_pct(self.viewer, pct_x, pct_y, pad=self.pad)
+        finally:
+            self._scrolling = False
+
+        return True
 
     def scroll_bars(self, horizontal='on', vertical='on'):
         if horizontal == 'on':
-            hpolicy = Gtk.PolicyType.ALWAYS
+            pass
         elif horizontal == 'off':
-            hpolicy = Gtk.PolicyType.NEVER
+            pass
         elif horizontal == 'auto':
-            hpolicy = Gtk.PolicyType.AUTOMATIC
+            pass
         else:
             raise ValueError("Bad scroll bar option: '%s'; should be one of ('on', 'off' or 'auto')" % (horizontal))
 
         if vertical == 'on':
-            vpolicy = Gtk.PolicyType.ALWAYS
+            pass
         elif vertical == 'off':
-            vpolicy = Gtk.PolicyType.NEVER
+            pass
         elif vertical == 'auto':
-            vpolicy = Gtk.PolicyType.AUTOMATIC
+            pass
         else:
             raise ValueError("Bad scroll bar option: '%s'; should be one of ('on', 'off' or 'auto')" % (vertical))
 
-        self.set_policy(hpolicy, vpolicy)
+        self.viewer.logger.warning("scroll_bar(): settings for gtk3 currently ignored!")
+
 
 #END
