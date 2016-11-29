@@ -314,6 +314,7 @@ class PluginManager(Callback.Callbacks):
     def stop_plugin(self, pInfo):
         self.logger.debug("stopping plugin %s" % (str(pInfo)))
         wasError = False
+        e = None
         try:
             pInfo.obj.stop()
 

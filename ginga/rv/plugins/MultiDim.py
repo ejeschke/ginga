@@ -49,6 +49,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
         self.orientation = 'vertical'
 
         # For animation feature
+        self.play_image = None
         self.play_axis = 2
         self.play_idx = 1
         self.play_max = 1
