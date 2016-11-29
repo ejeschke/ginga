@@ -787,7 +787,7 @@ class TreeView(WidgetBase):
 
     def select_path(self, path):
         item = self._path_to_item(path)
-        self.widget.setItemSelected(item, True)
+        item.setSelected(True)
 
     def highlight_path(self, path, onoff, font_color='green'):
         item = self._path_to_item(path)
