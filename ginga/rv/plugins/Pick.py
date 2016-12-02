@@ -7,6 +7,7 @@
 import threading
 import numpy
 import time
+from collections import OrderedDict
 import os.path
 
 from ginga.gw import Widgets, Viewers
@@ -58,6 +59,16 @@ class Pick(GingaPlugin.LocalPlugin):
         self.ev_intr = threading.Event()
 
         self.last_rpt = {}
+        self.rpt_dict = OrderedDict({})
+        self.rpt_cnt = 0
+        self.rpt_tbl = None
+        self.rpt_mod_time = 0.0
+        self.rpt_wrt_time = 0.0
+        self.rpt_wrt_interval = self.settings.get('report_write_interval',
+                                                  30.0)
+        self.rpt_timer = fv.get_timer()
+        self.rpt_timer.set_callback('expired', self.write_pick_log_cb)
+
         self.iqcalc = iqcalc.IQCalc(self.logger)
 
         self.dc = self.fv.get_draw_classes()
@@ -103,15 +114,20 @@ class Pick(GingaPlugin.LocalPlugin):
 
         # Formatting for reports
         self.do_record = self.settings.get('record_picks', False)
-        self.rpt_header = self.settings.get('report_header',
-                                            "# ra, dec, eq, x, y, fwhm, fwhm_x, fwhm_y, starsize, ellip, bg, sky, bright, time_local, time_ut")
-        self.rpt_format = self.settings.get('report_format',
-                                            "%(ra_deg)f, %(dec_deg)f, %(equinox)6.1f, %(x)f, %(y)f, %(fwhm)f, %(fwhm_x)f, %(fwhm_y)f, %(starsize)f, %(ellipse)f, %(background)f, %(skylevel)f, %(brightness)f, %(time_local)s, %(time_ut)s")
-
+        columns = [("RA", 'ra_txt'), ("DEC", 'dec_txt'), ("Equinox", 'equinox'),
+                   ("X", 'x'), ("Y", 'y'), ("FWHM", 'fwhm'),
+                   ("FWHM_X", 'fwhm_x'), ("FWHM_Y", 'fwhm_y'),
+                   ("Star Size", 'starsize'),
+                   ("Ellip", 'ellipse'), ("Background", 'background'),
+                   ("Sky Level", 'skylevel'), ("Brightness", 'brightness'),
+                   ("Time Local", 'time_local'), ("Time UT", 'time_ut'),
+                   ("RA deg", 'ra_deg'), ("DEC deg", 'dec_deg'),
+                   ]
+        self.rpt_columns = self.settings.get('report_columns', columns)
         self.do_report_log = self.settings.get('report_to_log', False)
         report_log = self.settings.get('report_log_path', None)
         if report_log is None:
-            report_log = "pick_log.txt"
+            report_log = "pick_log.fits"
         self.report_log = report_log
 
         # For contour plot
@@ -461,14 +477,11 @@ class Pick(GingaPlugin.LocalPlugin):
         nb.add_widget(vbox3, title="Controls")
 
         vbox3 = Widgets.VBox()
-        msg_font = self.fv.get_font("fixedFont", 10)
-        tw = Widgets.TextArea(wrap=False, editable=True)
-        tw.set_font(msg_font)
-        self.w.report = tw
-        sw1 = Widgets.ScrollArea()
-        sw1.set_widget(tw)
-        vbox3.add_widget(sw1, stretch=1)
-        tw.append_text(self._make_report_header())
+        tv = Widgets.TreeView(sortable=True, use_alt_row_color=True)
+        self.rpt_tbl = tv
+        vbox3.add_widget(tv, stretch=1)
+
+        tv.setup_table(self.rpt_columns, 1, 'time_local')
 
         btns = Widgets.HBox()
         btns.set_spacing(4)
@@ -478,6 +491,9 @@ class Pick(GingaPlugin.LocalPlugin):
         btn = Widgets.CheckBox("Record Picks automatically")
         btn.set_state(self.do_record)
         btn.add_callback('activated', self.record_cb)
+        btns.add_widget(btn)
+        btn = Widgets.Button("Clear Log")
+        btn.add_callback('activated', lambda w: self.clear_pick_log_cb())
         btns.add_widget(btn)
         btns.add_widget(Widgets.Label(''), stretch=1)
         vbox3.add_widget(btns, stretch=0)
@@ -556,20 +572,14 @@ class Pick(GingaPlugin.LocalPlugin):
 
     def do_report_log_cb(self, w, tf):
         self.do_report_log = tf
-        if tf and (self.pick_log is None):
-            self.open_report_log()
         return True
 
     def set_report_log_cb(self, w):
-        self.close_report_log()
-
         report_log = w.get_text().strip()
         if len(report_log) == 0:
-            report_log = "pick_log.txt"
+            report_log = "pick_log.fits"
             w.set_text(report_log)
         self.report_log = report_log
-
-        self.open_report_log()
         return True
 
     def instructions(self):
@@ -665,39 +675,12 @@ class Pick(GingaPlugin.LocalPlugin):
     def clear_radial(self):
         self.radial_plot.clear()
 
-    def open_report_log(self):
-        # Open report log if user specified one
-        if self.do_report_log and (self.report_log is not None) and \
-               (self.pick_log is None):
-            try:
-                file_exists = os.path.exists(self.report_log)
-                self.pick_log = open(self.report_log, 'a')
-                if not file_exists:
-                    self.pick_log.write(self.rpt_header + '\n')
-                self.logger.info("Opened Pick log '%s'" % (self.report_log))
-
-            except IOError as e:
-                self.logger.error("Error opening Pick log (%s): %s" % (
-                    self.report_log, str(e)))
-
-    def close_report_log(self):
-        if self.pick_log is not None:
-            try:
-                self.pick_log.close()
-                self.logger.info("Closed Pick log '%s'" % (self.report_log))
-            except IOError as e:
-                self.logger.error("Error closing Pick log (%s): %s" % (
-                    self.report_log, str(e)))
-            finally:
-                self.pick_log = None
-
     def close(self):
         self.fv.stop_local_plugin(self.chname, str(self))
         return True
 
     def start(self):
         self.instructions()
-        self.open_report_log()
 
         # insert layer if it is not already
         p_canvas = self.fitsimage.get_canvas()
@@ -726,7 +709,7 @@ class Pick(GingaPlugin.LocalPlugin):
         self.canvas.delete_objects(objs)
 
         # close pick log, if any
-        self.close_report_log()
+        self.write_pick_log(self.report_log)
 
         # deactivate the canvas
         self.canvas.ui_setActive(False)
@@ -1309,18 +1292,45 @@ class Pick(GingaPlugin.LocalPlugin):
         self.w.ax.set_ylim(y1+ydelta, y2+ydelta)
         self.w.canvas.draw()
 
-    def write_pick_log(self, rpt):
-        if self.pick_log is not None:
-            self.pick_log.write(rpt)
-            self.pick_log.flush()
+    def write_pick_log(self, filepath):
+        if (not self.do_report_log or len(self.rpt_dict) == 0 or
+            self.rpt_wrt_time >= self.rpt_mod_time):
+            return
+
+        # Save the table as a binary table HDU
+        from astropy.table import Table
+        from astropy.io import fits
+
+        try:
+            self.logger.debug("Writing modified pick log")
+            tbl = Table(rows=list(self.rpt_dict.values()))
+            tbl.meta['COMMENT'] = ["Written by ginga Pick plugin"]
+            tbl.write(self.report_log, overwrite=True)
+
+            self.rpt_wrt_time = time.time()
+
+        except Exception as e:
+            self.logger.error("Error writing to pick log: %s" % (str(e)))
+
+    def write_pick_log_cb(self, timer):
+        self.write_pick_log(self.report_log)
 
     def add_pick_cb(self):
         if self.last_rpt is not None:
-            rpt = (self.rpt_format % self.last_rpt) + '\n'
-            self.w.report.append_text(rpt)
-            ## if self.pick_log:
-            ##     self.fv.nongui_do(self.write_pick_log, rpt)
-            self.write_pick_log(rpt)
+            self.rpt_cnt += 1
+            # Hack to insure that we get the columns in the desired order
+            d = OrderedDict([(key, self.last_rpt[key])
+                             for col, key in self.rpt_columns])
+            self.rpt_dict[self.rpt_cnt] = d
+            self.last_rpt = None
+            self.rpt_mod_time = time.time()
+            self.rpt_timer.cond_set(self.rpt_wrt_interval)
+
+            self.rpt_tbl.set_tree(self.rpt_dict)
+
+    def clear_pick_log_cb(self):
+        self.rpt_dict = OrderedDict({})
+        self.rpt_tbl.set_tree(self.rpt_dict)
 
     def edit_select_pick(self):
         if self.picktag is not None:

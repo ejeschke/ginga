@@ -164,6 +164,9 @@ class ContourPlot(Plot):
         self.plot_panx = 0
         self.plot_pany = 0
         self.plot_zoomlevel = 1.0
+        self.cmap = "RdYlGn_r"
+        self.interpolation = "bilinear"
+        self.cbar = None
 
     def connect_zoom_callbacks(self):
         canvas = self.fig.canvas
@@ -173,7 +176,8 @@ class ContourPlot(Plot):
         # connect("button_press_event", self.plot_button_press)
         connect("scroll_event", self.plot_scroll)
 
-    def plot_contours_data(self, x, y, data, num_contours=None):
+    def _plot_contours(self, x, y, x1, y1, x2, y2, data,
+                       num_contours=None):
         # Make a contour plot
         if num_contours is None:
             num_contours = self.num_contours
@@ -186,28 +190,37 @@ class ContourPlot(Plot):
         self.ax.set_aspect('equal', adjustable='box')
         self.set_titles(title='Contours')
         #self.fig.tight_layout()
-        #self.ax.grid(True)
 
         # Set pan position in contour plot
         self.plot_panx = float(x) / wd
         self.plot_pany = float(y) / ht
 
+        if self.cbar is not None:
+            self.cbar.remove()
+
         self.ax.cla()
-        self.ax.set_axis_bgcolor('black')
+        self.ax.set_axis_bgcolor('#303030')
 
         try:
+            im = self.ax.imshow(data, interpolation=self.interpolation,
+                                origin='lower', cmap=self.cmap)
+
             # Create a contour plot
-            self.xdata = numpy.arange(wd)
-            self.ydata = numpy.arange(ht)
-            colors = [ 'lightgreen' ] * num_contours
+            self.xdata = numpy.arange(x1, x2, 1)
+            self.ydata = numpy.arange(y1, y2, 1)
+            colors = [ 'black' ] * num_contours
             cs = self.ax.contour(self.xdata, self.ydata, data, num_contours,
-                                 colors=colors)
+                                 colors=colors
+                                 #cmap=self.cmap
+                                 )
             ## self.ax.clabel(cs, inline=1, fontsize=10,
             ##                fmt='%5.3f', color='cyan')
             # Mark the center of the object
             self.ax.plot([x], [y], marker='x', ms=20.0,
                          color='cyan')
 
+            self.cbar = self.fig.colorbar(im, orientation='horizontal',
+                                          shrink=0.8, pad=0.07)
             # Set the pan and zoom position & redraw
             self.plot_panzoom()
 
@@ -215,12 +228,19 @@ class ContourPlot(Plot):
             self.logger.error("Error making contour plot: %s" % (
                 str(e)))
 
+    def plot_contours_data(self, x, y, data, num_contours=None):
+        ht, wd = data.shape
+        self._plot_contours(x, y, 0, 0, wd, ht, data,
+                            num_contours=num_contours)
+
     def plot_contours(self, x, y, radius, image, num_contours=None):
         img_data, x1, y1, x2, y2 = image.cutout_radius(x, y, radius)
 
+        ## self._plot_contours(x, y, x1, y1, x2, y2, img_data,
+        ##                     num_contours=num_contours)
         cx, cy = x - x1, y - y1
-
-        self.plot_contours_data(cx, cy, img_data, num_contours=num_contours)
+        self.plot_contours_data(cx, cy, img_data,
+                            num_contours=num_contours)
 
     def plot_panzoom(self):
         ht, wd = len(self.ydata), len(self.xdata)
@@ -431,5 +451,66 @@ class FWHMPlot(Plot):
             self.logger.error("Error making fwhm plot: %s" % (
                 str(e)))
 
+
+class SurfacePlot(Plot):
+
+    def __init__(self, *args, **kwargs):
+        super(SurfacePlot, self).__init__(*args, **kwargs)
+
+        self.dx = 21
+        self.dy = 21
+        self.floor = None
+        self.ceiling = None
+        self.stride = 1
+        self.cmap = "RdYlGn_r"
+
+    def plot_surface(self, x, y, radius, image, cutout_data=None):
+
+        Z, x1, y1, x2, y2 = image.cutout_radius(x, y, radius)
+        X = numpy.arange(x1, x2, 1)
+        Y = numpy.arange(y1, y2, 1)
+        X, Y = numpy.meshgrid(X, Y)
+
+        try:
+            from mpl_toolkits.mplot3d import Axes3D
+            from matplotlib.ticker import LinearLocator, FormatStrFormatter
+
+            self.ax = self.fig.gca(projection='3d', axisbg='#808080')
+            self.ax.set_aspect('equal', adjustable='box')
+            #self.ax.cla()
+
+            self.set_titles(ytitle='Y', xtitle='X',
+                            title='Surface Plot')
+            self.ax.grid(True)
+
+            zmin = numpy.min(Z) if self.floor is None else self.floor
+            zmax = numpy.max(Z) if self.ceiling is None else self.ceiling
+
+            sfc = self.ax.plot_surface(X, Y, Z, rstride=self.stride,
+                                       cstride=self.stride,
+                                       cmap=self.cmap, linewidth=0,
+                                       antialiased=False)
+
+            # TODO: need to determine sensible defaults for these based
+            # on the data
+            self.ax.zaxis.set_major_locator(LinearLocator(10))
+            self.ax.zaxis.set_major_formatter(FormatStrFormatter('%.0f'))
+            self.ax.set_zlim(zmin, zmax)
+
+            self.ax.xaxis.set_ticks(numpy.arange(x1, x2, 10))
+            self.ax.xaxis.set_major_formatter(FormatStrFormatter('%.0f'))
+            self.ax.yaxis.set_ticks(numpy.arange(y1, y2, 10))
+            self.ax.yaxis.set_major_formatter(FormatStrFormatter('%.0f'))
+
+            self.ax.view_init(elev=20.0, azim=30.0)
+
+            self.fig.colorbar(sfc, orientation='horizontal', shrink=0.9,
+                              pad=0.01)
+
+            self.draw()
+
+        except Exception as e:
+            self.logger.error("Error making surface plot: %s" % (
+                str(e)))
 
 #END

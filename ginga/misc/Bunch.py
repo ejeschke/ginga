@@ -251,6 +251,9 @@ class Bunch(object):
     def __iter__(self):
         return iter(self.tbl.keys())
 
+    def __len__(self):
+        return len(self.tbl)
+
     def __contains__(self, key):
         return key in self.tbl
 

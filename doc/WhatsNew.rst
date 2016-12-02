@@ -9,6 +9,8 @@ Ver 2.7.0.dev
   widget.  Can be added to reference viewer by putting 'scrollbars = "on"'
   in your channel_Image.cfg preferences.
 - Reorganized reference viewer files under "rv" folder.
+- Improved Pick plugin: nicer contour plot, pick log uses table widget,
+  pick log saved as a FITS table HDU
 
 Ver 2.6.0 (2016-11-16)
 ======================
