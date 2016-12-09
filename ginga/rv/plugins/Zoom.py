@@ -33,6 +33,8 @@ class Zoom(GingaPlugin.GlobalPlugin):
         self.settings = prefs.createCategory('plugin_Zoom')
         self.settings.addDefaults(zoom_radius=self.default_radius,
                                   zoom_amount=self.default_zoom,
+                                  zoom_cmap_name=None,
+                                  zoom_imap_name=None,
                                   refresh_interval=0.02,
                                   rotate_zoom_image=True)
         self.settings.load(onError='silent')
@@ -41,6 +43,10 @@ class Zoom(GingaPlugin.GlobalPlugin):
         self.zoom_amount = self.settings.get('zoom_amount', self.default_zoom)
         self.refresh_interval = self.settings.get('refresh_interval', 0.02)
         self.zoom_rotate = self.settings.get('rotate_zoom_image', False)
+        self.copy_attrs = ['transforms', 'cutlevels', 'rotation']
+        if (self.settings.get('zoom_cmap_name', None) is None and
+            self.settings.get('zoom_imap_name', None) is None):
+            self.copy_attrs.append('rgbmap')
 
         self._wd = 200
         self._ht = 200
@@ -70,6 +76,12 @@ class Zoom(GingaPlugin.GlobalPlugin):
                                self.zoomset, zi)
         zi.set_bg(0.4, 0.4, 0.4)
         zi.show_pan_mark(True)
+        cmname = self.settings.get('zoom_cmap_name', None)
+        if cmname is not None:
+            zi.set_color_map(cmname)
+        imname = self.settings.get('zoom_imap_name', None)
+        if imname is not None:
+            zi.set_intensity_map(imname)
         # for debugging
         zi.set_name('zoomimage')
         self.zoomimage = zi
@@ -166,9 +178,8 @@ class Zoom(GingaPlugin.GlobalPlugin):
         fitsimage = channel.fitsimage
         self.fitsimage_focus = fitsimage
         # Reflect transforms, colormap, etc.
-        fitsimage.copy_attributes(self.zoomimage,
-                                  ['transforms', 'cutlevels',
-                                   'rgbmap', 'rotation'])
+        fitsimage.copy_attributes(self.zoomimage, self.copy_attrs)
+
     def redo(self, channel, image):
         fitsimage = channel.fitsimage
         if fitsimage != self.fv.getfocus_viewer():

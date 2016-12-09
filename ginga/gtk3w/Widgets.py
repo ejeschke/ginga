@@ -47,17 +47,24 @@ class WidgetBase(Callback.Callbacks):
         self.widget.set_sensitive(tf)
 
     def get_size(self):
-        window = self.widget.get_window()
-        if window is not None:
+        try:
             rect = self.widget.get_allocation()
             x, y, wd, ht = rect.x, rect.y, rect.width, rect.height
-            return wd, ht
 
-        # window isn't realized yet--return request size
-        req = self.widget.get_size_request()
-        wd, ht = req
-        wd, ht = max(0, wd), max(0, ht)
+        except Exception as e:
+            # window maybe isn't realized yet--try other ways
+            min_req, nat_req = self.widget.get_preferred_size()
+            wd, ht = nat_req.width, nat_req.height
+            #req = self.widget.get_size_request()
+            #wd, ht = req
+
+            #wd, ht = max(1, wd), max(1, ht)
         return wd, ht
+
+    def get_pos(self):
+        rect = widget.get_allocation()
+        x, y, width, height = rect.x, rect.y, rect.width, rect.height
+        return x, y
 
     def get_app(self):
         return _app
@@ -77,6 +84,8 @@ class WidgetBase(Callback.Callbacks):
 
     def resize(self, width, height):
         self.widget.set_size_request(width, height)
+        # hackish way to allow the widget to be resized down again later
+        GObject.idle_add(self.widget.set_size_request, -1, -1)
 
     def get_font(self, font_family, point_size):
         font = GtkHelp.get_font(font_family, point_size)
@@ -1224,7 +1233,13 @@ class MDIWidget(ContainerBase):
         sw.set_border_width(2)
         sw.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
         self.widget = sw
-        self.mdi_w = GtkHelp.MDIWidget()
+        w = GtkHelp.MDIWidget()
+        self.mdi_w = w
+        w._move_page = w.move_page
+        w.move_page = self._window_moved
+        w._resize_page = w.resize_page
+        w.resize_page = self._window_resized
+
         sw.set_hadjustment(self.mdi_w.get_hadjustment())
         sw.set_vadjustment(self.mdi_w.get_vadjustment())
         sw.add(self.mdi_w)
@@ -1239,10 +1254,22 @@ class MDIWidget(ContainerBase):
         self.add_ref(child)
         child_w = child.get_widget()
         label = Gtk.Label(title)
-        self.mdi_w.append_page(child_w, label)
+        subwin = self.mdi_w.append_page(child_w, label)
         #self.mdi_w.show_all()
         # attach title to child
         child.extdata.tab_title = title
+
+        # does child have a previously saved size
+        size = child.extdata.get('mdi_size', None)
+        if size is not None:
+            wd, ht = size
+            self.mdi_w.resize_page(subwin, wd, ht)
+
+        # does child have a previously saved position
+        pos = child.extdata.get('mdi_pos', None)
+        if pos is not None:
+            x, y = pos
+            self.mdi_w.move_page(subwin, x, y)
 
     def _remove(self, childw, delete=False):
         self.mdi_w.remove(childw)
@@ -1252,6 +1279,24 @@ class MDIWidget(ContainerBase):
     def _cb_redirect(self, nbw, gptr, index):
         child = self.index_to_widget(index)
         self.make_callback('page-switch', child)
+
+    def _window_resized(self, subwin, wd, ht):
+        self.mdi_w._resize_page(subwin, wd, ht)
+
+        # save size
+        nchild = subwin.widget
+        child = self._native_to_child(nchild)
+        child.extdata.mdi_size = (wd, ht)
+        return True
+
+    def _window_moved(self, subwin, x, y):
+        self.mdi_w._move_page(subwin, x, y)
+
+        # save position
+        nchild = subwin.widget
+        child = self._native_to_child(nchild)
+        child.extdata.mdi_pos = (x, y)
+        return True
 
     def get_index(self):
         return self.mdi_w.get_current_page()
@@ -1578,6 +1623,7 @@ class TopLevelMixin(object):
         self.widget.connect("destroy", self._quit)
         self.widget.connect("delete_event", self._close_event)
         self.widget.connect("window_state_event", self._window_event)
+        self.widget.connect("configure-event", self._configure_event)
 
         if not title is None:
             self.widget.set_title(title)
@@ -1594,9 +1640,12 @@ class TopLevelMixin(object):
         self.close()
 
     def _close_event(self, widget, event):
-        self.close()
-        # don't automatically destroy window
-        return True
+        try:
+            self.close()
+
+        finally:
+            # don't automatically destroy window
+            return True
 
     def _window_event(self, widget, event):
         if ((event.changed_mask & Gdk.WindowState.FULLSCREEN) or
@@ -1604,6 +1653,12 @@ class TopLevelMixin(object):
             self._fullscreen = True
         else:
             self._fullscreen = False
+
+    def _configure_event(self, widget, event):
+        x, y, width, height = event.x, event.y, event.width, event.height
+        x, y = self.widget.translate_coordinates(self.widget, x, y)
+        self.extdata.setvals(x=x, y=y, width=width, height=height)
+        return False
 
     def close(self):
         ## try:
@@ -1614,47 +1669,76 @@ class TopLevelMixin(object):
 
         self.make_callback('close')
 
+    def get_size(self):
+        try:
+            rect = self.widget.get_allocation()
+            x, y, wd, ht = rect.x, rect.y, rect.width, rect.height
+
+        except Exception as e:
+            # window maybe isn't realized yet--try other ways
+            #req = self.widget.get_size_request()
+            #wd, ht = req
+            min_req, nat_req = self.widget.get_preferred_size()
+            wd, ht = nat_req.width, nat_req.height
+            ed = self.extdata
+            wd, ht = ed.get('width', wd), ed.get('height', ht)
+
+        return wd, ht
+
+    def get_pos(self):
+        window = self.widget.get_window()
+        if window is not None:
+            x, y = window.get_origin()
+        else:
+            ed = self.extdata
+            x, y = ed.get('x', None), ed.get('y', None)
+
+        return x, y
+
     def raise_(self):
         window = self.widget.get_window()
-        ## if window:
-        ##     if hasattr(window, 'present'):
-        ##         # gtk3 ?
-        ##         window.present()
-        ##     else:
-        ##         # gtk2
-        ##         window.show()
         window.raise_()
 
     def lower(self):
         window = self.widget.get_window()
+        if window is None:
+            return
         window.lower()
-
-    def resize(self, width, height):
-        # TODO: use window.set_default_size() ?
-        self.widget.set_size_request(width, height)
 
     def focus(self):
         window = self.widget.get_window()
+        if window is None:
+            return
         window.focus()
 
     def move(self, x, y):
         window = self.widget.get_window()
+        if window is None:
+            return
         window.move(x, y)
 
     def maximize(self):
         window = self.widget.get_window()
+        if window is None:
+            return
         window.maximize()
 
     def unmaximize(self):
         window = self.widget.get_window()
+        if window is None:
+            return
         window.unmaximize()
 
     def fullscreen(self):
         window = self.widget.get_window()
+        if window is None:
+            return
         window.fullscreen()
 
     def unfullscreen(self):
         window = self.widget.get_window()
+        if window is None:
+            return
         window.unfullscreen()
 
     def is_fullscreen(self):
@@ -1662,10 +1746,14 @@ class TopLevelMixin(object):
 
     def iconify(self):
         window = self.widget.get_window()
+        if window is None:
+            return
         window.iconify()
 
     def uniconify(self):
         window = self.widget.get_window()
+        if window is None:
+            return
         window.deiconify()
 
     def set_title(self, title):

@@ -23,6 +23,8 @@ class Desktop(Callback.Callbacks):
         self.workspace = Bunch.caselessDict()
 
         self.toplevels = []
+        self.node = {}
+        self.node_idx = 0
         self._cur_dialogs = []
 
         for name in ('page-switch', 'all-closed'):
@@ -269,18 +271,29 @@ class Desktop(Callback.Callbacks):
             self.make_callback('page-switch', bnch.name, bnch.data)
         return False
 
-    def make_desktop(self, layout, widgetDict=None):
-        if widgetDict is None:
-            widgetDict = {}
+    def make_desktop(self, layout, widget_dict=None):
+        if widget_dict is None:
+            widget_dict = {}
+        self.node = {}
+        self.node_idx = 0
 
-        def process_common_params(widget, inparams):
-            params = Bunch.Bunch(name=None, height=-1, width=-1,
-                                 xpos=-1, ypos=-1, spacing=None,
-                                 wexp=None, hexp=None)
-            params.update(inparams)
+        def process_common_params(kind, widget, params):
+            subst_params = Bunch.Bunch(name=None, height=-1, width=-1,
+                                       xpos=-1, ypos=-1, spacing=None,
+                                       wexp=None, hexp=None)
+            subst_params.update(params)
+            params.update(subst_params)
 
-            if params.name:
-                widgetDict[params.name] = widget
+            if params.name is not None:
+                name = params.name
+                widget_dict[params.name] = widget
+            else:
+                name = '%s_%d' % (kind, self.node_idx)
+                self.node_idx += 1
+
+            bnch = Bunch.Bunch(kind=kind, widget=widget,
+                               name=name, params=params)
+            self.node[name] = bnch
 
             wexp, hexp = params.wexp, params.hexp
 
@@ -322,16 +335,19 @@ class Desktop(Callback.Callbacks):
                 if params.xpos >= 0:
                     widget.move(params.xpos, params.ypos)
 
-        def make_widget(kind, paramdict, args, pack):
+            return bnch
+
+        def make_widget(kind, params, args, pack):
             kind = kind.lower()
 
             # Process workspace parameters
-            params = Bunch.Bunch(name=None, title=None, height=-1,
-                                 width=-1, group=1, show_tabs=True,
-                                 show_border=False, scrollable=True,
-                                 detachable=False, wstype='tabs',
-                                 tabpos='top', use_toolbar=False)
-            params.update(paramdict)
+            param_dict = Bunch.Bunch(name=None, title=None, height=-1,
+                                      width=-1, group=1, show_tabs=True,
+                                      show_border=False, scrollable=True,
+                                      detachable=False, wstype='tabs',
+                                      tabpos='top', use_toolbar=False)
+            param_dict.update(params)
+            params.update(param_dict)
 
             if kind == 'widget':
                 widget = args[0]
@@ -358,8 +374,9 @@ class Desktop(Callback.Callbacks):
             else:
                 pack(widget)
 
-            #process_common_params(widget, params)
+            #process_common_params(kind, widget, params)
 
+            res = []
             if (kind in ('ws', 'mdi', 'grid', 'stack')) and (len(args) > 0):
                 # <-- Workspace specified a sub-layout.  We expect a list
                 # of tabname, layout pairs--iterate over these and add them
@@ -370,67 +387,82 @@ class Desktop(Callback.Callbacks):
                         self.add_tab(params.name, w, group,
                                      tabname, tabname.lower())
 
-                    make(layout, pack)
+                    res.append((tabname, make(layout, pack)))
 
-            process_common_params(widget, params)
+            bnch = process_common_params(kind, widget, params)
+            if kind == 'ws':
+                bnch.ws = ws
 
-            #return widget
+            #return [kind, params] + res
+            return [kind, params, res]
 
         # Horizontal adjustable panel
         def hpanel(params, cols, pack):
+            res = []
             if len(cols) >= 2:
                 widget = Widgets.Splitter(orientation='horizontal')
-                process_common_params(widget, params)
+                process_common_params('hpanel', widget, params)
 
                 sizes = []
                 for col in cols:
-                    make(col, lambda w: widget.add_widget(w))
+                    c = make(col, lambda w: widget.add_widget(w))
+                    res.append(c)
 
                     # collect widths to set width of panes
                     params = col[1]
                     if 'width' in params:
                         sizes.append(params['width'])
 
+                sizes = params.get('sizes', sizes)
                 if len(sizes) == len(cols):
                     widget.set_sizes(sizes)
+                    params.update(dict(sizes=sizes))
 
             elif len(cols) == 1:
                 widget = Widgets.HBox()
                 widget.set_border_width(0)
-                process_common_params(widget, params)
+                process_common_params('hbox', widget, params)
 
-                make(cols[0], lambda w: widget.add_widget(w, stretch=1))
+                c = make(cols[0], lambda w: widget.add_widget(w, stretch=1))
+                res.append(c)
                 #widget.show()
 
             pack(widget)
+            return ['hpanel', params] + res
 
         # Vertical adjustable panel
         def vpanel(params, rows, pack):
+            res = []
             if len(rows) >= 2:
                 widget = Widgets.Splitter(orientation='vertical')
-                process_common_params(widget, params)
+                process_common_params('vpanel', widget, params)
 
                 sizes = []
                 for row in rows:
-                    make(row, lambda w: widget.add_widget(w))
+                    r = make(row, lambda w: widget.add_widget(w))
+                    res.append(r)
 
                     # collect heights to set height of panes
                     params = row[1]
                     if 'height' in params:
                         sizes.append(params['height'])
 
+                sizes = params.get('sizes', sizes)
                 if len(sizes) == len(rows):
                     widget.set_sizes(sizes)
+                    params.update(dict(sizes=sizes))
 
             elif len(rows) == 1:
                 widget = Widgets.VBox()
                 widget.set_border_width(0)
-                process_common_params(widget, params)
+                process_common_params('vbox', widget, params)
 
-                make(rows[0], lambda w: widget.add_widget(w, stretch=1))
+                r = make(rows[0], lambda w: widget.add_widget(w, stretch=1))
+                res.append(r)
                 #widget.show()
 
             pack(widget)
+            return ['vpanel', params] + res
 
         # Horizontal fixed array
         def hbox(params, cols, pack):
@@ -438,6 +470,7 @@ class Desktop(Callback.Callbacks):
             widget.set_border_width(0)
             widget.set_spacing(0)
 
+            res = []
             for dct in cols:
                 if isinstance(dct, dict):
                     stretch = dct.get('stretch', 0)
@@ -447,10 +480,14 @@ class Desktop(Callback.Callbacks):
                     stretch = 0
                     col = dct
                 if col is not None:
-                    make(col, lambda w: widget.add_widget(w,
-                                                          stretch=stretch))
-            process_common_params(widget, params)
+                    c = make(col, lambda w: widget.add_widget(w,
+                                                              stretch=stretch))
+                    c = dict(col=c, stretch=stretch)
+                    res.append(c)
+
+            process_common_params('hbox', widget, params)
             pack(widget)
+            return ['hbox', params] + res
 
         # Vertical fixed array
         def vbox(params, rows, pack):
@@ -458,6 +495,7 @@ class Desktop(Callback.Callbacks):
             widget.set_border_width(0)
             widget.set_spacing(0)
 
+            res = []
             for dct in rows:
                 if isinstance(dct, dict):
                     stretch = dct.get('stretch', 0)
@@ -467,10 +505,14 @@ class Desktop(Callback.Callbacks):
                     stretch = 0
                     row = dct
                 if row is not None:
-                    make(row, lambda w: widget.add_widget(w,
-                                                          stretch=stretch))
-            process_common_params(widget, params)
+                    r = make(row, lambda w: widget.add_widget(w,
+                                                              stretch=stretch))
+                    r = dict(row=r, stretch=stretch)
+                    res.append(r)
+
+            process_common_params('vbox', widget, params)
             pack(widget)
+            return ['vbox', params] + res
 
         # Sequence of separate top-level items
         def seq(params, cols, pack):
@@ -484,7 +526,9 @@ class Desktop(Callback.Callbacks):
                 w_top.set_widget(w)
                 self.toplevels.append(w_top)
                 w_top.show()
+                process_common_params('top', w_top, params)
 
+            res = []
             for dct in cols:
                 if isinstance(dct, dict):
                     stretch = dct.get('stretch', 0)
@@ -494,34 +538,96 @@ class Desktop(Callback.Callbacks):
                     stretch = 0
                     col = dct
                 if col is not None:
-                    make(col, mypack)
+                    res.append(make(col, mypack))
 
             widget = Widgets.Label("Placeholder")
             pack(widget)
+            return ['seq', params] + res
 
         def make(constituents, pack):
             kind = constituents[0]
-            params = constituents[1]
+            params = Bunch.Bunch(constituents[1])
             if len(constituents) > 2:
                 rest = constituents[2:]
             else:
                 rest = []
 
             if kind == 'vpanel':
-                vpanel(params, rest, pack)
+                res = vpanel(params, rest, pack)
             elif kind == 'hpanel':
-                hpanel(params, rest, pack)
+                res = hpanel(params, rest, pack)
             elif kind == 'vbox':
-                vbox(params, rest, pack)
+                res = vbox(params, rest, pack)
             elif kind == 'hbox':
-                hbox(params, rest, pack)
+                res = hbox(params, rest, pack)
             elif kind == 'seq':
-                seq(params, rest, pack)
+                res = seq(params, rest, pack)
             elif kind in ('ws', 'mdi', 'widget'):
-                make_widget(kind, params, rest, pack)
+                res = make_widget(kind, params, rest, pack)
 
-        make(layout, lambda w: None)
+            return res
 
+        self.layout = make(layout, lambda w: None)
+        return self.layout
+
+    def record_sizes(self):
+        """Record sizes of all container widgets in the layout.
+        The sizes are recorded in the `params` mappings in the layout.
+        """
+        for rec in self.node.values():
+            w = rec.widget
+            wd, ht = w.get_size()
+
+            rec.params.update(dict(name=rec.name, width=wd, height=ht))
+
+            if rec.kind in ('hpanel', 'vpanel'):
+                sizes = w.get_sizes()
+                rec.params.update(dict(sizes=sizes))
+
+            if rec.kind in ('ws',):
+                # record ws type
+                # TODO: record positions of subwindows
+                rec.params.update(dict(wstype=rec.ws.wstype))
+
+            if rec.kind == 'top':
+                # record position for top-level widgets as well
+                x, y = w.get_pos()
+                if x is not None and y is not None:
+                    # we don't always get reliable information about position
+                    rec.params.update(dict(xpos=x, ypos=y))
+
+    def write_layout_conf(self, lo_file, layout=None):
+        if layout is None:
+            layout = self.layout
+
+        import pprint
+        self.record_sizes()
+
+        # write layout
+        with open(lo_file, 'w') as out_f:
+            pprint.pprint(layout, out_f)
+
+    def read_layout_conf(self, lo_file):
+        import ast
+
+        # read layout
+        with open(lo_file, 'r') as in_f:
+            buf = in_f.read()
+
+        layout = ast.literal_eval(buf)
+        return layout
+
+    def build_desktop(self, layout, lo_file=None, widget_dict=None):
+        if lo_file is not None:
+            alt_layout = layout
+            try:
+                layout = self.read_layout_conf(lo_file)
+
+            except Exception as e:
+                self.logger.error("Error reading saved layout: %s" % (str(e)))
+                layout = alt_layout
+
+        return self.make_desktop(layout, widget_dict=widget_dict)
 
     ##### WORKSPACES #####
 

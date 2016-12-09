@@ -50,6 +50,10 @@ class WidgetBase(Callback.Callbacks):
         wd, ht = self.widget.width(), self.widget.height()
         return (wd, ht)
 
+    def get_pos(self):
+        x, y = self.widget.x(), self.widget.y()
+        return (x, y)
+
     def get_app(self):
         return _app
 

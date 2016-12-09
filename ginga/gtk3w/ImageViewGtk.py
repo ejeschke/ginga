@@ -173,12 +173,6 @@ class ImageViewGtk(ImageView):
         self.configure_window(width, height)
         return True
 
-    def size_request(self, widget, requisition):
-        """Callback function to request our desired size.
-        """
-        requisition.width, requisition.height = self.get_desired_size()
-        return True
-
     def set_cursor(self, cursor):
         win = self.imgwin.get_window()
         if win is not None:
@@ -390,6 +384,7 @@ class ImageViewEvent(ImageViewGtk):
         # without this we do not get key release events if the focus
         # changes to another window
         #Gdk.keyboard_grab(widget.get_window(), False, event.time)
+        #widget.grab_add()
 
         keyname = Gdk.keyval_name(event.keyval)
         keyname = self.transkey(keyname)
@@ -398,6 +393,7 @@ class ImageViewEvent(ImageViewGtk):
 
     def key_release_event(self, widget, event):
         #Gdk.keyboard_ungrab(event.time)
+        #widget.grab_remove()
 
         keyname = Gdk.keyval_name(event.keyval)
         keyname = self.transkey(keyname)

@@ -70,6 +70,11 @@ class Pick(GingaPlugin.LocalPlugin):
         self.rpt_timer.set_callback('expired', self.write_pick_log_cb)
 
         self.iqcalc = iqcalc.IQCalc(self.logger)
+        self.contour_interp_methods = ('bilinear', 'nearest', 'bicubic')
+        self.copy_attrs = ['transforms', 'cutlevels']
+        if (self.settings.get('pick_cmap_name', None) is None and
+            self.settings.get('pick_imap_name', None) is None):
+            self.copy_attrs.append('rgbmap')
 
         self.dc = self.fv.get_draw_classes()
 
@@ -132,7 +137,10 @@ class Pick(GingaPlugin.LocalPlugin):
 
         # For contour plot
         self.num_contours = self.settings.get('num_contours', 8)
-        self.contour_size_limit = self.settings.get('contour_size_limit', 70)
+        self.contour_size_max = self.settings.get('contour_size_limit', 70)
+        self.contour_size_min = self.settings.get('contour_size_min', 10)
+        self.contour_interpolation = self.settings.get('contour_interpolation',
+                                                       'bilinear')
 
     def build_gui(self, container):
         assert iqcalc.have_scipy == True, \
@@ -173,8 +181,17 @@ class Pick(GingaPlugin.LocalPlugin):
         settings = di.get_settings()
         settings.getSetting('zoomlevel').add_callback('set',
                                self.zoomset, di)
-        di.set_cmap(cm)
-        di.set_imap(im)
+
+        cmname = self.settings.get('pick_cmap_name', None)
+        if cmname is not None:
+            di.set_color_map(cmname)
+        else:
+            di.set_cmap(cm)
+        imname = self.settings.get('pick_imap_name', None)
+        if imname is not None:
+            di.set_intensity_map(imname)
+        else:
+            di.set_imap(im)
         di.set_callback('none-move', self.detailxy)
         di.set_bg(0.4, 0.4, 0.4)
         # for debugging
@@ -185,6 +202,7 @@ class Pick(GingaPlugin.LocalPlugin):
         bd.enable_pan(True)
         bd.enable_zoom(True)
         bd.enable_cuts(True)
+        bd.enable_cmap(True)
 
         di.configure(width, height)
         iw = Viewers.GingaViewerWidget(viewer=di)
@@ -200,9 +218,16 @@ class Pick(GingaPlugin.LocalPlugin):
             pw = Plot.PlotWidget(self.contour_plot)
             pw.resize(400, 300)
             hbox.add_widget(pw, stretch=1)
+
+            # calc contour zoom setting
+            max_z = 100
+            zv = int(numpy.sqrt(self.dx**2 + self.dy**2) * 0.15)
+            zv = max(1, min(zv, 100))
+            self.contour_plot.plot_zoomlevel = zv
+
             zoom = Widgets.Slider(orientation='vertical', track=True)
-            zoom.set_limits(1, 100, incr_value=1)
-            zoom.set_value(self.contour_plot.plot_zoomlevel)
+            zoom.set_limits(1, max_z, incr_value=1)
+            zoom.set_value(zv)
 
             def zoom_contour_cb(w, val):
                 self.contour_plot.plot_zoom(val/10.0)
@@ -314,6 +339,8 @@ class Pick(GingaPlugin.LocalPlugin):
                     ('Coordinate Base:', 'label',
                      'xlbl_coordinate_base', 'label',
                      'Coordinate Base', 'entry'),
+                    ('Contour Interpolation:', 'label', 'xlbl_cinterp', 'label',
+                     'Contour Interpolation', 'combobox'),
                     ('Redo Pick', 'button'),
                     )
 
@@ -328,6 +355,7 @@ class Pick(GingaPlugin.LocalPlugin):
         b.show_candidates.set_tooltip("Show all peak candidates")
         b.max_side.set_tooltip("Maximum dimension to search for peaks")
         b.coordinate_base.set_tooltip("Base of pixel coordinate system")
+        b.contour_interpolation.set_tooltip("Interpolation for use in contour plot")
         # radius control
         #b.radius.set_digits(2)
         #b.radius.set_numeric(True)
@@ -410,6 +438,20 @@ class Pick(GingaPlugin.LocalPlugin):
             return True
         b.xlbl_max_side.set_text(str(self.max_side))
         b.max_side.add_callback('value-changed', chg_max_side)
+
+        combobox = b.contour_interpolation
+        def chg_contour_interp(w, idx):
+            self.contour_interpolation = self.contour_interp_methods[idx]
+            self.w.xlbl_cinterp.set_text(self.contour_interpolation)
+            self.contour_plot.interpolation = self.contour_interpolation
+            return True
+        for name in self.contour_interp_methods:
+            combobox.append_text(name)
+        index = self.contour_interp_methods.index(self.contour_interpolation)
+        combobox.set_index(index)
+        self.w.xlbl_cinterp.set_text(self.contour_interpolation)
+        self.contour_plot.interpolation = self.contour_interpolation
+        combobox.add_callback('activated', chg_contour_interp)
 
         b.redo_pick.add_callback('activated', lambda w: self.redo())
         b.show_candidates.set_state(self.show_candidates)
@@ -620,16 +662,27 @@ class Pick(GingaPlugin.LocalPlugin):
         # Make a contour plot
 
         ht, wd = self.pick_data.shape
+        x, y = self.pick_x1 + wd // 2, self.pick_y1 + ht // 2
 
-        # If size of pick region is too large, carve out a subset around
-        # the picked object coordinates for plotting contours
-        maxsize = max(ht, wd)
-        if maxsize > self.contour_size_limit:
-            radius = int(self.contour_size_limit // 2)
-            x, y = self.pick_qs.x, self.pick_qs.y
+        # If size of pick region is too small/large, recut out a subset
+        # around the picked object coordinates for plotting contours
+        recut = False
+        if wd < self.contour_size_min or wd > self.contour_size_max:
+            wd = max(self.contour_size_min, min(wd, self.contour_size_max))
+            recut = True
+        if ht < self.contour_size_min or ht > self.contour_size_max:
+            ht = max(self.contour_size_min, min(ht, self.contour_size_max))
+            recut = True
+
+        if recut:
+            radius = max(wd, ht)
+
+            if self.pick_qs is not None:
+                x, y = self.pick_qs.x, self.pick_qs.y
             data, x1, y1, x2, y2 = image.cutout_radius(x, y, radius)
             x, y = x - x1, y - y1
             ht, wd = data.shape
+
         else:
             data = self.pick_data
             x, y = self.pickcenter.x, self.pickcenter.y
@@ -737,9 +790,7 @@ class Pick(GingaPlugin.LocalPlugin):
         #self.fitsimage.panset_xy(data_x, data_y)
 
         # set the pick image to have the same cut levels and transforms
-        self.fitsimage.copy_attributes(self.pickimage,
-                                       ['transforms', 'cutlevels',
-                                        'rgbmap'])
+        self.fitsimage.copy_attributes(self.pickimage, self.copy_attrs)
 
         try:
             image = self.fitsimage.get_image()
@@ -849,6 +900,8 @@ class Pick(GingaPlugin.LocalPlugin):
                                                      edgew=self.edgew)
                 if len(results) == 0:
                     raise Exception("No object matches selection criteria")
+
+                # pick main result
                 qs = results[0]
 
             except Exception as e:
@@ -1009,7 +1062,7 @@ class Pick(GingaPlugin.LocalPlugin):
             text.color = 'red'
 
             self.plot_panx = self.plot_pany = 0.5
-            #self.plot_contours(image)
+            self.plot_contours(image)
             # TODO: could calc background based on numpy calc
 
         self.w.btn_intr_eval.set_enabled(False)

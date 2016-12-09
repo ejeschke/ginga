@@ -253,7 +253,8 @@ class ReferenceViewer(object):
         settings.setDefaults(useMatplotlibColormaps=False,
                              widgetSet='choose',
                              WCSpkg='choose', FITSpkg='choose',
-                             recursion_limit=2000)
+                             recursion_limit=2000,
+                             save_layout=False)
 
         # default of 1000 is a little too small
         sys.setrecursionlimit(settings.get('recursion_limit'))
@@ -384,7 +385,12 @@ class ReferenceViewer(object):
         # Create the Ginga main object
         ginga_shell = GingaShell(logger, thread_pool, mm, prefs,
                                  ev_quit=ev_quit)
-        ginga_shell.set_layout(self.layout)
+
+        layout_file = None
+        if settings.get('save_layout', False):
+            layout_file = os.path.join(basedir, 'layout')
+
+        ginga_shell.set_layout(self.layout, layout_file=layout_file)
 
         # User configuration (custom star catalogs, etc.)
         if have_ginga_config:

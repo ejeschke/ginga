@@ -11,6 +11,14 @@ Ver 2.7.0.dev
 - Reorganized reference viewer files under "rv" folder.
 - Improved Pick plugin: nicer contour plot, pick log uses table widget,
   pick log saved as a FITS table HDU
+- Pick and Zoom plugins can now use a specific color map, rather than
+  always using the same one as the channel window
+- gtk3 reference viewer can now be resized smaller than the original
+  layout (gtk2 still cannot)
+- added ability to save the reference viewer size, layout and position
+  on screen
+- gtk MDI windows now remember their size and location when toggling
+  workspace types
 
 Ver 2.6.0 (2016-11-16)
 ======================

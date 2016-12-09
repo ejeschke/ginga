@@ -95,6 +95,10 @@ class WidgetBase(Callback.Callbacks):
     def get_size(self):
         return self.width, self.height
 
+    def get_pos(self):
+        # TODO
+        return 0, 0
+
     def delete(self):
         # for now...
         pass

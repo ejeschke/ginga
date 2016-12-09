@@ -349,6 +349,7 @@ class MDIWidget(gtk.Layout):
         minim.connect('clicked', lambda *args: self.minimize_page(subwin))
 
         self.put(frame, self.cascade_offset, self.cascade_offset)
+        return subwin
 
     def set_tab_reorderable(self, w, tf):
         pass

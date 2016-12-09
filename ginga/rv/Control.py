@@ -145,7 +145,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                                   pixel_coords_offset=1.0,
                                   # inherit from primary header
                                   inherit_primary_header=False,
-                                  cursor_interval=0.050)
+                                  cursor_interval=0.050,
+                                  save_layout=False)
 
         # Should channel change as mouse moves between windows
         self.channel_follows_focus = self.settings['channel_follows_focus']
@@ -184,6 +185,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         self.iconpath = icon_path
         self._lastwsname = 'channels'
         self.layout = None
+        self.layout_file = None
         self._lsize = None
         self._rsize = None
 
@@ -1209,8 +1211,9 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         """
         return imap.get_names()
 
-    def set_layout(self, layout):
+    def set_layout(self, layout, layout_file=None):
         self.layout = layout
+        self.layout_file = layout_file
 
     def get_screen_dimensions(self):
         return (self.screen_wd, self.screen_ht)
@@ -1225,7 +1228,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         self.w.tooltips = None
 
         self.ds = Desktop.Desktop(self)
-        self.ds.make_desktop(self.layout, widgetDict=self.w)
+        self.ds.build_desktop(self.layout, lo_file=self.layout_file,
+                              widget_dict=self.w)
         # TEMP: FIX ME!
         self.gpmon.ds = self.ds
 
@@ -1509,7 +1513,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             workspace = 'channels'
         w = self.ds.get_nb(workspace)
 
-        size = (1, 1)
+        size = (700, 700)
         if isinstance(w, Widgets.MDIWidget) and w.true_mdi:
             size = (300, 300)
 
@@ -1825,6 +1829,13 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         """Quit the application.
         """
         self.logger.info("Attempting to shut down the application...")
+        if self.layout_file is not None:
+            try:
+                self.ds.write_layout_conf(self.layout_file)
+
+            except Exception as e:
+                self.logger.error("Error writing layout file: %s" % (str(e)))
+
         self.stop()
 
         root = self.w.root

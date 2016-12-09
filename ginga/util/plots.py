@@ -165,6 +165,7 @@ class ContourPlot(Plot):
         self.plot_pany = 0
         self.plot_zoomlevel = 1.0
         self.cmap = "RdYlGn_r"
+        # decent choices: { bicubic | bilinear | nearest }
         self.interpolation = "bilinear"
         self.cbar = None
 
