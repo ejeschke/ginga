@@ -60,7 +60,7 @@ matrix:
         # *** TODO: The `-w` option doesn't work with `python setup.py build_sphinx` yet for `ginga` ... removing it for now
         - python: 2.7
           # env: SETUP_CMD='build_sphinx -w'
-          env: SETUP_CMD='build_sphinx'
+          env: SETUP_CMD='build_sphinx' PIP_DEPENDENCIES='sphinx_rtd_theme'
 
         # Try Astropy development version
         # NOTE: Uncomment this if global version is stable, not dev
