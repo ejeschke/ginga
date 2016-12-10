@@ -173,6 +173,7 @@ class ImageViewBase(Callback.Callbacks):
                             defer_redraw=True, defer_lagtime=0.025,
                             show_pan_position=False,
                             show_mode_indicator=True,
+                            show_focus_indicator=False,
                             onscreen_font='Sans Serif',
                             onscreen_font_size=24)
 
@@ -506,6 +507,9 @@ class ImageViewBase(Callback.Callbacks):
         """
         if self.t_.get('show_pan_position', False):
             self.show_pan_mark(True)
+
+        if self.t_.get('show_focus_indicator', False):
+            self.show_focus_indicator(True)
 
     def set_color_map(self, cmap_name):
         """Set the color map.
@@ -2976,6 +2980,38 @@ class ImageViewBase(Callback.Callbacks):
 
         if redraw:
             canvas.update_canvas(whence=3)
+
+
+    def show_focus_indicator(self, tf, color='white'):
+        """Show a focus indicator in the window.
+
+        Parameters
+        ----------
+        tf : bool
+            If True, show the color bar; else remove it if present.
+
+        color : str
+            Color for the focus indicator.
+
+        """
+
+        tag = '_$focus_indicator'
+        canvas = self.get_private_canvas()
+        try:
+            fcsi = canvas.get_object_by_tag(tag)
+            if not tf:
+                canvas.delete_object_by_tag(tag)
+            else:
+                fcsi.color = color
+
+        except KeyError:
+            if tf:
+                Fcsi = canvas.get_draw_class('focusindicator')
+                fcsi = Fcsi(color=color)
+                canvas.add(fcsi, tag=tag, redraw=False)
+                self.add_callback('focus', fcsi.focus_cb)
+
+        canvas.update_canvas(whence=3)
 
 
 class SuppressRedraw(object):

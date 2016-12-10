@@ -1489,6 +1489,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         fi.set_canvas(canvas)
 
         fi.set_enter_focus(settings.get('enter_focus', False))
+        fi.show_focus_indicator(settings.get('focus_indicator', False))
         fi.enable_auto_orient(True)
 
         fi.add_callback('motion', self.motion_cb)

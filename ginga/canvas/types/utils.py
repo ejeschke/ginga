@@ -423,7 +423,70 @@ class ModeIndicator(CanvasObjectBase):
         cr.draw_text(cx, cy, text)
 
 
+class FocusIndicator(CanvasObjectBase):
+    """
+    Shows an indicator that the canvas has the keyboard/mouse focus.
+    This is shown by a dotted rectangle around the perimeter of the window.
+
+    NOTE: to get this to work properly, you need to add a callback to your
+    viewer like so:
+
+        viewer.add_callback('focus', focus_obj.focus_cb)
+
+    """
+    @classmethod
+    def get_params_metadata(cls):
+        return [
+            Param(name='color',
+                  valid=colors_plus_none, type=_color, default='white',
+                  description="Color of text"),
+            Param(name='alpha', type=float, default=1.0,
+                  min=0.0, max=1.0, widget='spinfloat', incr=0.05,
+                  description="Opacity of outline"),
+            Param(name='linewidth', type=int, default=2,
+                  min=0, max=20, widget='spinbutton', incr=1,
+                  description="Width of outline"),
+            Param(name='linestyle', type=str, default='dash',
+                  valid=['solid', 'dash'],
+                  description="Style of outline (default: dash)"),
+            ]
+
+    def __init__(self, color='white', linewidth=2, linestyle='dash',
+                 alpha=1.0, **kwdargs):
+        super(FocusIndicator, self).__init__(color=color, linewidth=linewidth,
+                                             linestyle=linestyle,
+                                             alpha=alpha, **kwdargs)
+        self.kind = 'focusindicator'
+        self.has_focus = False
+        self.enabled = True
+
+    def draw(self, viewer):
+
+        if (not self.has_focus) or (not self.enabled):
+            return
+
+        cr = viewer.renderer.setup_cr(self)
+
+        wd, ht = viewer.get_window_size()
+        lw = self.linewidth
+        off = lw // 2
+
+        # draw a rectangle around the perimeter
+        cr.set_line(color=self.color, linewidth=lw, alpha=self.alpha,
+                    style=self.linestyle)
+
+        points = ((off, off), (wd-off, off), (wd-off, ht-off), (off, ht-off))
+        cr.draw_polygon(points)
+
+    def focus_cb(self, viewer, onoff):
+        has_focus = self.has_focus
+        self.has_focus = onoff
+
+        if has_focus != self.has_focus:
+            viewer.redraw(whence=3)
+
 
 # register our types
 register_canvas_types(dict(colorbar=ColorBar, drawablecolorbar=DrawableColorBar,
-                           modeindicator=ModeIndicator))
+                           modeindicator=ModeIndicator,
+                           focusindicator=FocusIndicator))
