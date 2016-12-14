@@ -286,28 +286,33 @@ def get_scroll_info(event):
     if have_pyqt5:
         # TODO: use pixelDelta() for better handling on hi-res devices
         point = event.angleDelta()
-        delta = math.sqrt(point.x() ** 2 + point.y() ** 2)
-        if point.y() < 0:
+        dx, dy = point.x(), point.y()
+        delta = math.sqrt(dx ** 2 + dy ** 2)
+        if dy < 0:
             delta = -delta
-        orientation = QtCore.Qt.Vertical
+
+        ang_rad = math.atan2(dy, dx)
+        direction = math.degrees(ang_rad) - 90.0
+
     else:
         delta = event.delta()
         orientation = event.orientation()
-    numDegrees = abs(delta) / 8.0
 
-    direction = None
-    if orientation == QtCore.Qt.Horizontal:
-        if delta > 0:
-            direction = 270.0
-        elif delta < 0:
-            direction = 90.0
-    else:
-        if delta > 0:
-            direction = 0.0
-        elif delta < 0:
-            direction = 180.0
+        direction = None
+        if orientation == QtCore.Qt.Horizontal:
+            if delta > 0:
+                direction = 270.0
+            elif delta < 0:
+                direction = 90.0
+        else:
+            if delta > 0:
+                direction = 0.0
+            elif delta < 0:
+                direction = 180.0
 
-    return (numDegrees, direction)
+    num_degrees = abs(delta) / 8.0
+
+    return (num_degrees, direction)
 
 
 def get_icon(iconpath, size=None):

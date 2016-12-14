@@ -750,7 +750,9 @@ class ImageViewBindings(object):
         elif direction == 'down':
             mult = 1.0 / factor
         scale_x, scale_y = scale_x * mult, scale_y * mult
-        viewer.scale_to(scale_x, scale_y)
+        scale = max(scale_x, scale_y)
+        #viewer.scale_to(scale_x, scale_y)
+        viewer.scale_to(scale, scale)
         if msg:
             viewer.onscreen_message(viewer.get_scale_text(),
                                        delay=0.4)
@@ -1687,7 +1689,6 @@ class ImageViewBindings(object):
         return True
 
     def zoom_step(self, viewer, event, msg=True, origin=None, adjust=1.5):
-
         with viewer.suppress_redraw:
 
             if origin is not None:
@@ -1786,6 +1787,7 @@ class ImageViewBindings(object):
         # User has "Pan Reverse" preference set?
         rev = self.settings.get('pan_reverse', False)
         direction = event.direction
+
         if rev:
             direction = math.fmod(direction + 180.0, 360.0)
 
@@ -1836,8 +1838,15 @@ class ImageViewBindings(object):
             if self.canzoom and ('zoom' in pinch_actions):
                 scale_accel = self.settings.get('pinch_zoom_acceleration', 1.0)
                 scale = scale * scale_accel
-                scale_x, scale_y = (self._start_scale_x * scale,
-                                    self._start_scale_y * scale)
+                # NOTE: scale reported by Qt (the only toolkit that really gives
+                # us a pinch gesture right now) the scale reports are iterative
+                # so it makes more sense to keep updating the scale than to base
+                # the scale on the original scale captured when the gesture starts
+                ## scale_x, scale_y = (self._start_scale_x * scale,
+                ##                     self._start_scale_y * scale)
+                scale_x, scale_y = viewer.get_scale_xy()
+                scale_x, scale_y = scale_x * scale, scale_y * scale
+
                 viewer.scale_to(scale_x, scale_y)
                 msg_str = viewer.get_scale_text()
                 msg = self.settings.get('msg_zoom', True)

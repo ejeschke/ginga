@@ -1348,19 +1348,8 @@ class ImageViewBase(Callback.Callbacks):
         sx = float(win_wd) / scale_x
         sy = float(win_ht) / scale_y
         if (sx < 1.0) or (sy < 1.0):
-            new_scale_x = scale_x * sx
-            new_scale_y = scale_y * sy
-
-            # vet against max/min scale preferences
-            new_scale_x = min(new_scale_x, self.t_['scale_max'])
-            new_scale_y = min(new_scale_y, self.t_['scale_max'])
-            new_scale_x = max(new_scale_x, self.t_['scale_min'])
-            new_scale_y = max(new_scale_y, self.t_['scale_min'])
-
-            self.logger.warning("scale adjusted downward X (%.4f -> %.4f), "
-                                "Y (%.4f -> %.4f)" % (
-                scale_x, new_scale_x, scale_y, new_scale_y))
-            scale_x, scale_y = new_scale_x, new_scale_y
+            self.logger.warning("new scale would exceed max/min; scale unchanged")
+            scale_x, scale_y = self._org_scale_x, self._org_scale_y
 
         # It is necessary to store these so that the get_data_xy()
         # (below) calculations can proceed
@@ -1731,6 +1720,20 @@ class ImageViewBase(Callback.Callbacks):
         dist = round(dist)
         return dist
 
+    def _sanity_check_scale(self, scale_x, scale_y):
+        """Do a sanity check on the proposed scale vs. window size.
+        Raises an exception if there will be a problem.
+        """
+        win_wd, win_ht = self.get_window_size()
+        if (win_wd <= 0) or (win_ht <= 0):
+            raise Exception("window size undefined; avoiding scaling")
+
+        # final sanity check on resulting output image size
+        if (win_wd * scale_x < 1) or (win_ht * scale_y < 1):
+            raise ValueError("resulting scale (%f, %f) "
+                             "would result in size of <1 in width or height" % (
+                scale_x, scale_y))
+
     def scale_to(self, scale_x, scale_y, no_reset=False):
         """Scale the image in a channel.
         This only changes the relevant settings; The image is not modified.
@@ -1745,6 +1748,13 @@ class ImageViewBase(Callback.Callbacks):
             Do not reset ``autozoom`` setting.
 
         """
+        try:
+            self._sanity_check_scale(scale_x, scale_y)
+
+        except Exception as e:
+            self.logger.warning("Error in scaling: %s" % (str(e)))
+            return
+
         ratio = float(scale_x) / float(scale_y)
         if ratio < 1.0:
             # Y is stretched
@@ -1752,14 +1762,8 @@ class ImageViewBase(Callback.Callbacks):
         else:
             # X may be stretched
             scale_x_base, scale_y_base = ratio, 1.0
-        if scale_x_base != scale_y_base:
-            zoomalg = 'rate'
-        else:
-            zoomalg = 'step'
 
-        self.t_.set(scale_x_base=scale_x_base, scale_y_base=scale_y_base,
-                    #zoom_algorithm=zoomalg)
-                    )
+        self.t_.set(scale_x_base=scale_x_base, scale_y_base=scale_y_base)
 
         self._scale_to(scale_x, scale_y, no_reset=no_reset)
 
@@ -1781,26 +1785,7 @@ class ImageViewBase(Callback.Callbacks):
 
         # Sanity check on the scale vs. window size
         try:
-            win_wd, win_ht = self.get_window_size()
-            if (win_wd <= 0) or (win_ht <= 0):
-                # TODO: exception?
-                return
-            sx = float(win_wd) / scale_x
-            sy = float(win_ht) / scale_y
-            if (sx < 1.0) or (sy < 1.0):
-                new_scale_x = scale_x * sx
-                new_scale_y = scale_y * sy
-                self.logger.warning("scale adjusted downward X (%.4f -> %.4f), "
-                                    "Y (%.4f -> %.4f)" % (
-                    scale_x, new_scale_x, scale_y, new_scale_y))
-                scale_x, scale_y = new_scale_x, new_scale_y
-
-            # final sanity check on resulting output image size
-            if (win_wd * scale_x < 1) or (win_ht * scale_y < 1):
-                self.logger.warning("resulting scale (%f, %f) "
-                                    "would result in size of <1 in width or height" % (
-                    scale_x, scale_y))
-                return
+            self._sanity_check_scale(scale_x, scale_y)
 
         except Exception as e:
             self.logger.warning("Error in scaling: %s" % (str(e)))

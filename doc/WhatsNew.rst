@@ -19,6 +19,9 @@ Ver 2.7.0.dev
   on screen
 - gtk MDI windows now remember their size and location when toggling
   workspace types
+- Fixes for problems with pinch and scroll gestures with Qt5 backend
+- Fixed a bug where scale changes between X and Y axes unexpectedly at
+  extreme zoom levels
 
 Ver 2.6.0 (2016-11-16)
 ======================

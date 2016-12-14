@@ -168,8 +168,16 @@ class PyFitsFileHandler(BaseFitsFileHandler):
                     filepath, str(e)))
 
             if numhdu is None:
+                try:
+                    # this can fail for certain FITS files, with a "name undefined"
+                    # error bubbling up from astropy
+                    hduinfo = fits_f.info(output=False)
 
-                hduinfo = fits_f.info(output=False)
+                except Exception as e:
+                    # if so, this insures that name will be translated into the
+                    # HDU index below
+                    hduinfo = tuple((None, '') for i in range(len(fits_f)))
+
                 extver_db = {}
 
                 found_valid_hdu = False
