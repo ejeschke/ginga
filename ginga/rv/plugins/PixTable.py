@@ -85,8 +85,8 @@ class PixTable(GingaPlugin.LocalPlugin):
         bd = pixview.get_bindings()
 
         self.pixview = pixview
-        self.pix_w = Viewers.ScrolledView(pixview)
-        self.pix_w.resize(width, height)
+        self.pix_w = Viewers.GingaViewerWidget(pixview)
+        #self.pix_w.resize(width, height)
         fr.set_widget(self.pix_w)
         vbox.add_widget(fr, stretch=1)
 

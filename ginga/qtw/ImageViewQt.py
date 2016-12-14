@@ -884,7 +884,7 @@ class ScrolledView(QtGui.QAbstractScrollArea):
             hsb.setPageStep(page_h)
             vsb.setPageStep(page_v)
 
-            upper_h, upper_v = 100 - page_h, 100 - page_v
+            upper_h, upper_v = max(1, 100 - page_h), max(1, 100 - page_v)
             hsb.setRange(0, upper_h)
             vsb.setRange(0, upper_v)
             self.upper_h, self.upper_v = upper_h, upper_v
