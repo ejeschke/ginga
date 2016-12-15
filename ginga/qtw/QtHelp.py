@@ -293,6 +293,7 @@ def get_scroll_info(event):
 
         ang_rad = math.atan2(dy, dx)
         direction = math.degrees(ang_rad) - 90.0
+        direction = math.fmod(direction + 360.0, 360.0)
 
     else:
         delta = event.delta()
