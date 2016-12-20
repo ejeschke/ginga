@@ -80,7 +80,7 @@ class ImageViewPg(ImageView):
         try:
             self.logger.debug("getting image as buffer...")
             format = self.t_.get('html5_canvas_format', default_html_fmt)
-            buf = self.get_rgb_image_as_buffer(format=format, quality=90)
+            buf = self.get_rgb_image_as_bytes(format=format, quality=90)
             self.logger.debug("got '%s' RGB image buffer, len=%d" % (
                 format, len(buf)))
 
@@ -95,14 +95,14 @@ class ImageViewPg(ImageView):
         else:
             self.delayed_redraw()
 
-    def get_image_as_widget(self):
+    def get_plain_image_as_widget(self):
         """Used for generating thumbnails.  Does not include overlaid
         graphics.
         """
-        image_buf = self.get_rgb_image_as_bytes()
+        image_buf = self.get_image_as_bytes()
         return image_buf
 
-    def save_image_as_file(self, filepath, format='png', quality=90):
+    def save_plain_image_as_file(self, filepath, format='png', quality=90):
         """Used for generating thumbnails.  Does not include overlaid
         graphics.
         """
@@ -161,12 +161,6 @@ class ImageViewEvent(ImageViewPg):
         ImageViewPg.__init__(self, logger=logger, rgbmap=rgbmap,
                              settings=settings)
 
-        # last known window mouse position
-        self.last_win_x = 0
-        self.last_win_y = 0
-        # last known data mouse position
-        self.last_data_x = 0
-        self.last_data_y = 0
         # Does widget accept focus when mouse enters window
         self.enter_focus = self.t_.get('enter_focus', True)
 
@@ -311,30 +305,28 @@ class ImageViewEvent(ImageViewPg):
 
     def button_press_event(self, event):
         x = event.x; y = event.y
+        self.last_win_x, self.last_win_y = x, y
         button = 0
         button |= 0x1 << event.button
         self._button = button
         self.logger.debug("button event at %dx%d, button=%x" % (x, y, button))
 
         data_x, data_y = self.get_data_xy(x, y)
+        self.last_data_x, self.last_data_y = data_x, data_y
         return self.make_ui_callback('button-press', button, data_x, data_y)
 
     def button_release_event(self, event):
         # event.button, event.x, event.y
         x = event.x; y = event.y
+        self.last_win_x, self.last_win_y = x, y
         button = 0
         button |= 0x1 << event.button
         self._button = 0
         self.logger.debug("button release at %dx%d button=%x" % (x, y, button))
 
         data_x, data_y = self.get_data_xy(x, y)
+        self.last_data_x, self.last_data_y = data_x, data_y
         return self.make_ui_callback('button-release', button, data_x, data_y)
-
-    def get_last_win_xy(self):
-        return (self.last_win_x, self.last_win_y)
-
-    def get_last_data_xy(self):
-        return (self.last_data_x, self.last_data_y)
 
     def motion_notify_event(self, event):
         #button = 0

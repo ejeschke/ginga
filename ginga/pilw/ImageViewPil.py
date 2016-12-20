@@ -29,9 +29,6 @@ class ImageViewPil(ImageView.ImageViewBase):
 
         self.renderer = CanvasRenderer(self)
 
-        # cursors
-        self.cursor = {}
-
     def get_surface(self):
         return self.surface
 
@@ -68,26 +65,6 @@ class ImageViewPil(ImageView.ImageViewBase):
         # inform the base class about the actual window size
         self.configure(width, height)
 
-    def get_rgb_image_as_buffer(self, output=None, format='png', quality=90):
-        if self.surface is None:
-            raise ImageViewPilError("No PIL surface defined")
-
-        obuf = output
-        if obuf is None:
-            obuf = BytesIO()
-
-        # TODO: could these have changed between the time that self.surface
-        # was last updated?
-        wd, ht = self.get_window_size()
-
-        # Get PIL surface
-        p_image = self.get_surface()
-
-        p_image.save(obuf, format=format, quality=quality)
-        if output is not None:
-            return None
-        return obuf.getvalue()
-
     def get_image_as_array(self):
         if self.surface is None:
             raise ImageViewPilError("No PIL surface defined")
@@ -102,30 +79,21 @@ class ImageViewPil(ImageView.ImageViewBase):
         arr8 = arr8.reshape((ht, wd, 3))
         return arr8
 
-    def get_image_as_buffer(self, output=None):
+    def get_rgb_image_as_buffer(self, output=None, format='png', quality=90):
+        if self.surface is None:
+            raise ImageViewPilError("No PIL surface defined")
+
         obuf = output
         if obuf is None:
             obuf = BytesIO()
 
-        arr8 = self.get_image_as_array()
-        obuf.write(arr8.tostring(order='C'))
+        # Get PIL surface
+        p_image = self.get_surface()
 
-        if not (output is None):
+        p_image.save(obuf, format=format, quality=quality)
+        if output is not None:
             return None
-        return obuf.getvalue()
-
-    def get_rgb_image_as_bytes(self, format='png', quality=90):
-        buf = self.get_rgb_image_as_buffer(format=format, quality=quality)
-        return buf
-
-    def save_rgb_image_as_file(self, filepath, format='png', quality=90):
-        if self.surface is None:
-            raise ImageViewPilError("No PIL surface defined")
-
-        with open(filepath, 'w') as out_f:
-            self.get_rgb_image_as_buffer(output=out_f, format=format,
-                                          quality=quality)
-        self.logger.debug("wrote %s file '%s'" % (format, filepath))
+        return obuf
 
     def update_image(self):
         # subclass implements this method to actually update a widget
@@ -142,15 +110,6 @@ class ImageViewPil(ImageView.ImageViewBase):
         # subclass implements this method to call delayed_redraw() after
         # time_sec
         self.delayed_redraw()
-
-    def define_cursor(self, ctype, cursor):
-        self.cursor[ctype] = cursor
-
-    def get_cursor(self, ctype):
-        return self.cursor[ctype]
-
-    def switch_cursor(self, ctype):
-        self.set_cursor(self.cursor[ctype])
 
     def get_rgb_order(self):
         return self._rgb_order

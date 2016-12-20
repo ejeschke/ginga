@@ -14,9 +14,7 @@ import cairo
 from ginga.gtkw import GtkHelp
 from ginga.cairow import ImageViewCairo
 from ginga import Mixins, Bindings, colors
-
-moduleHome = os.path.split(sys.modules[__name__].__file__)[0]
-icon_dir = os.path.abspath(os.path.join(moduleHome, '..', 'icons'))
+from ginga.util.paths import icondir
 
 
 class ImageViewGtkError(ImageViewCairo.ImageViewCairoError):
@@ -43,9 +41,6 @@ class ImageViewGtk(ImageViewCairo.ImageViewCairo):
         self.imgwin = imgwin
         self.imgwin.show_all()
 
-        # cursors
-        self.cursor = {}
-
         # see reschedule_redraw() method
         self._defer_task = GtkHelp.Timer(0.0,
                                          lambda timer: self.delayed_redraw())
@@ -56,7 +51,7 @@ class ImageViewGtk(ImageViewCairo.ImageViewCairo):
     def get_widget(self):
         return self.imgwin
 
-    def get_image_as_pixbuf(self):
+    def get_plain_image_as_pixbuf(self):
         #arr = self.getwin_array(order=self._rgb_order)
         arr = self.getwin_array(order='RGB')
 
@@ -69,26 +64,26 @@ class ImageViewGtk(ImageViewCairo.ImageViewCairo):
             daht, dawd, depth = arr.shape
             rgb_buf = self._get_rgbbuf(arr)
             pixbuf = GtkHelp.pixbuf_new_from_data(rgb_buf,
-                                                 gtk.gdk.COLORSPACE_RGB,
-                                                 False, 8, dawd, daht, dawd*3)
+                                                  gtk.gdk.COLORSPACE_RGB,
+                                                  False, 8, dawd, daht, dawd*3)
 
         return pixbuf
 
-    def get_image_as_widget(self):
+    def get_plain_image_as_widget(self):
         """Used for generating thumbnails.  Does not include overlaid
         graphics.
         """
-        pixbuf = self.get_image_as_pixbuf()
+        pixbuf = self.get_plain_image_as_pixbuf()
         image = gtk.Image()
         image.set_from_pixbuf(pixbuf)
         image.show()
         return image
 
-    def save_image_as_file(self, filepath, format='png', quality=90):
+    def save_plain_image_as_file(self, filepath, format='png', quality=90):
         """Used for generating thumbnails.  Does not include overlaid
         graphics.
         """
-        pixbuf = self.get_image_as_pixbuf()
+        pixbuf = self.get_plain_image_as_pixbuf()
         options = {}
         if format == 'jpeg':
             options['quality'] = str(quality)
@@ -99,7 +94,7 @@ class ImageViewGtk(ImageViewCairo.ImageViewCairo):
         daht = self.surface.get_height()
         rgb_buf = bytes(self.surface.get_data())
         pixbuf = GtkHelp.pixbuf_new_from_data(rgb_buf, gtk.gdk.COLORSPACE_RGB,
-                                             False, 8, dawd, daht, dawd*3)
+                                              False, 8, dawd, daht, dawd*3)
 
         return pixbuf
 
@@ -184,14 +179,9 @@ class ImageViewGtk(ImageViewCairo.ImageViewCairo):
         if win is not None:
             win.set_cursor(cursor)
 
-    def define_cursor(self, ctype, cursor):
-        self.cursor[ctype] = cursor
-
-    def get_cursor(self, ctype):
-        return self.cursor[ctype]
-
-    def switch_cursor(self, ctype):
-        self.set_cursor(self.cursor[ctype])
+    def make_cursor(self, iconpath, x, y):
+        cursor = GtkHelp.make_cursor(self.imgwin, iconpath, x, y)
+        return cursor
 
     def center_cursor(self):
         if self.imgwin is None:
@@ -275,12 +265,6 @@ class ImageViewEvent(ImageViewGtk):
         imgwin.drag_dest_set(gtk.DEST_DEFAULT_ALL, toImage,
                              gtk.gdk.ACTION_COPY)
 
-        # last known window mouse position
-        self.last_win_x = 0
-        self.last_win_y = 0
-        # last known data mouse position
-        self.last_data_x = 0
-        self.last_data_y = 0
         # Does widget accept focus when mouse enters window
         self.enter_focus = self.t_.get('enter_focus', True)
 
@@ -351,9 +335,9 @@ class ImageViewEvent(ImageViewGtk):
 
         # Define cursors
         for curname, filename in (('pan', 'openHandCursor.png'),
-                               ('pick', 'thinCrossCursor.png')):
-            path = os.path.join(icon_dir, filename)
-            cur = GtkHelp.make_cursor(self.imgwin, path, 8, 8)
+                                  ('pick', 'thinCrossCursor.png')):
+            path = os.path.join(icondir, filename)
+            cur = self.make_cursor(path, 8, 8)
             self.define_cursor(curname, cur)
 
         for name in ('motion', 'button-press', 'button-release',
@@ -412,30 +396,32 @@ class ImageViewEvent(ImageViewGtk):
     def button_press_event(self, widget, event):
         # event.button, event.x, event.y
         x = event.x; y = event.y
+        self.last_win_x, self.last_win_y = x, y
+
         button = 0
         if event.button != 0:
             button |= 0x1 << (event.button - 1)
         self.logger.debug("button event at %dx%d, button=%x" % (x, y, button))
 
         data_x, data_y = self.get_data_xy(x, y)
+        self.last_data_x, self.last_data_y = data_x, data_y
+
         return self.make_ui_callback('button-press', button, data_x, data_y)
 
     def button_release_event(self, widget, event):
         # event.button, event.x, event.y
         x = event.x; y = event.y
+        self.last_win_x, self.last_win_y = x, y
+
         button = 0
         if event.button != 0:
             button |= 0x1 << (event.button - 1)
         self.logger.debug("button release at %dx%d button=%x" % (x, y, button))
 
         data_x, data_y = self.get_data_xy(x, y)
+        self.last_data_x, self.last_data_y = data_x, data_y
+
         return self.make_ui_callback('button-release', button, data_x, data_y)
-
-    def get_last_win_xy(self):
-        return (self.last_win_x, self.last_win_y)
-
-    def get_last_data_xy(self):
-        return (self.last_data_x, self.last_data_y)
 
     def motion_notify_event(self, widget, event):
         button = 0
@@ -462,6 +448,7 @@ class ImageViewEvent(ImageViewGtk):
     def scroll_event(self, widget, event):
         # event.button, event.x, event.y
         x = event.x; y = event.y
+        self.last_win_x, self.last_win_y = x, y
 
         degrees, direction = GtkHelp.get_scroll_info(event)
         self.logger.debug("scroll deg=%f direction=%f" % (

@@ -5,12 +5,14 @@
 # Please see the file LICENSE.txt for details.
 
 import math
+import os.path
 import itertools
 import numpy as np
 
 from ginga.misc import Bunch, Settings, Callback
 from ginga import AutoCuts, trcalc
 from ginga import cmap, imap
+from ginga.util.paths import icondir
 
 
 class ImageViewBindings(object):
@@ -26,7 +28,6 @@ class ImageViewBindings(object):
 
         self.canpan = False
         self.canzoom = False
-        self._ispanning = False
         self.cancut = False
         self.cancmap = False
         self.canflip = False
@@ -56,14 +57,19 @@ class ImageViewBindings(object):
             # name, attr pairs
             pan='canpan', zoom='canzoom', cuts='cancut', cmap='cancmap',
             flip='canflip', rotate='canrotate')
+        self.cursor_map = {}
 
     def initialize_settings(self, settings):
         settings.addSettings(
             # You should rarely have to change these.
             btn_nobtn = 0x0,
             btn_left  = 0x1,
-            btn_middle= 0x2,
+            btn_middle = 0x2,
             btn_right = 0x4,
+
+            # define our cursors
+            ## cur_pick = 'thinCrossCursor',
+            ## cur_pan = 'openHandCursor',
 
             # Set up our standard modifiers
             mod_shift = ['shift_l', 'shift_r'],
@@ -77,8 +83,8 @@ class ImageViewBindings(object):
             dmod_dist = ['d', None, None],
             dmod_contrast = ['t', None, None],
             dmod_rotate = ['r', None, None],
-            dmod_pan = ['q', None, None],
-            dmod_freepan = ['w', None, None],
+            dmod_pan = ['q', None, 'pan'],
+            dmod_freepan = ['w', None, 'pan'],
 
             default_mode_type = 'oneshot',
             default_lock_mode_type = 'softlock',
@@ -219,12 +225,18 @@ class ImageViewBindings(object):
         bindmap.clear_button_map()
         bindmap.clear_event_map()
 
+        bindmap.add_callback('mode-set', self.mode_set_cb, viewer)
+
         # Set up bindings
         self.setup_settings_events(viewer, bindmap)
 
     def set_mode(self, viewer, name, mode_type='oneshot'):
         bindmap = viewer.get_bindmap()
         bindmap.set_mode(name, mode_type=mode_type)
+
+    def mode_set_cb(self, bm, mode, mode_type, viewer):
+        cursor_name = self.cursor_map.get(mode, 'pick')
+        viewer.switch_cursor(cursor_name)
 
     def parse_combo(self, combo, modes_set, modifiers_set, pfx):
         """
@@ -284,15 +296,21 @@ class ImageViewBindings(object):
                     keyname = combo
                     bindmap.add_modifier(keyname, modname)
 
+            elif name.startswith('cur_'):
+                curname = name[4:]
+                self.add_cursor(viewer, curname, value)
+
             elif name.startswith('btn_'):
                 btnname = name[4:]
                 bindmap.map_button(value, btnname)
 
             elif name.startswith('dmod_'):
                 mode_name = name[5:]
-                keyname, mode_type, msg = value
+                keyname, mode_type, curname = value
                 bindmap.add_mode(keyname, mode_name, mode_type=mode_type,
-                                     msg=msg)
+                                     msg=None)
+                if curname is not None:
+                    self.cursor_map[mode_name] = curname
 
         modes_set = bindmap.get_modes()
         modifiers_set = bindmap.get_modifiers()
@@ -357,8 +375,13 @@ class ImageViewBindings(object):
     def reset(self, viewer):
         bindmap = viewer.get_bindmap()
         bindmap.reset_mode(viewer)
-        self.pan_stop(viewer)
         viewer.onscreen_message(None)
+
+    def add_cursor(self, viewer, curname, curpath):
+        if not curpath.startswith('/'):
+            curpath = os.path.join(icondir, curpath)
+        cursor = viewer.make_cursor(curpath, 8, 8)
+        viewer.define_cursor(curname, cursor)
 
     #####  ENABLERS #####
     # These methods are a quick way to enable or disable certain user
@@ -764,7 +787,6 @@ class ImageViewBindings(object):
         direction = 0.0
         if delta < 0.0:
             direction = 180.0
-        #print("factor=%f direction=%f" % (factor, direction))
         self._start_x = x
         self._scale_image(viewer, direction, factor, msg=msg)
 
@@ -943,26 +965,18 @@ class ImageViewBindings(object):
                 degn, str(xflip)), delay=1.0)
 
     def to_default_mode(self, viewer):
-        self._ispanning = False
-        viewer.switch_cursor('pick')
+        self.reset(viewer)
 
     def pan_start(self, viewer, ptype=1):
-        # If already panning then ignore multiple keystrokes
-        if self._ispanning:
-            return
         self._pantype = ptype
-        viewer.switch_cursor('pan')
-        self._ispanning = True
 
     def pan_set_origin(self, viewer, win_x, win_y, data_x, data_y):
         self._start_x, self._start_y = viewer.window_to_offset(win_x, win_y)
         self._start_panx, self._start_pany = viewer.get_pan()
 
     def pan_stop(self, viewer):
-        self._ispanning = False
         self._start_x = None
         self._pantype = 1
-        self.to_default_mode(viewer)
 
     def restore_contrast(self, viewer, msg=True):
         msg = self.settings.get('msg_cmap', msg)
@@ -2114,8 +2128,6 @@ class BindingMapper(Callback.Callbacks):
         if not has_focus:
             # fixes a problem with not receiving key release events when the
             # window loses focus
-            # TODO: does this need to force a key release callback if there
-            # are any keys held?
             self._modifiers = frozenset([])
         return True
 

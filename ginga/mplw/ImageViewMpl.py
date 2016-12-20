@@ -72,9 +72,6 @@ class ImageViewMpl(ImageView.ImageViewBase):
 
         self.renderer = CanvasRenderer(self)
 
-        # cursors
-        self.cursor = {}
-
         # For timing events
         self._msg_timer = None
         self._defer_timer = None
@@ -292,15 +289,6 @@ class ImageViewMpl(ImageView.ImageViewBase):
     def set_cursor(self, cursor):
         pass
 
-    def define_cursor(self, ctype, cursor):
-        self.cursor[ctype] = cursor
-
-    def get_cursor(self, ctype):
-        return self.cursor[ctype]
-
-    def switch_cursor(self, ctype):
-        self.set_cursor(self.cursor[ctype])
-
     def onscreen_message(self, text, delay=None, redraw=True):
         if self._msg_timer is not None:
             self._msg_timer.cancel()
@@ -325,12 +313,6 @@ class ImageViewEvent(ImageViewMpl):
         ImageViewMpl.__init__(self, logger=logger, rgbmap=rgbmap,
                               settings=settings)
 
-        # last known window mouse position
-        self.last_win_x = 0
-        self.last_win_y = 0
-        # last known data mouse position
-        self.last_data_x = 0
-        self.last_data_y = 0
         # Does widget accept focus when mouse enters window
         self.enter_focus = self.t_.get('enter_focus', True)
 
@@ -445,29 +427,31 @@ class ImageViewEvent(ImageViewMpl):
 
     def button_press_event(self, event):
         x, y = event.x, event.y
+        self.last_win_x, self.last_win_y = x, y
+
         button = 0
         if event.button in (1, 2, 3):
             button |= 0x1 << (event.button - 1)
         self.logger.debug("button event at %dx%d, button=%x" % (x, y, button))
 
         data_x, data_y = self.get_data_xy(x, y)
+        self.last_data_x, self.last_data_y = data_x, data_y
+
         return self.make_ui_callback('button-press', button, data_x, data_y)
 
     def button_release_event(self, event):
         x, y = event.x, event.y
+        self.last_win_x, self.last_win_y = x, y
+
         button = 0
         if event.button in (1, 2, 3):
             button |= 0x1 << (event.button - 1)
         self.logger.debug("button release at %dx%d button=%x" % (x, y, button))
 
         data_x, data_y = self.get_data_xy(x, y)
+        self.last_data_x, self.last_data_y = data_x, data_y
+
         return self.make_ui_callback('button-release', button, data_x, data_y)
-
-    def get_last_win_xy(self):
-        return (self.last_win_x, self.last_win_y)
-
-    def get_last_data_xy(self):
-        return (self.last_data_x, self.last_data_y)
 
     def motion_notify_event(self, event):
         button = 0
@@ -486,6 +470,7 @@ class ImageViewEvent(ImageViewMpl):
 
     def scroll_event(self, event):
         x, y = event.x, event.y
+        self.last_win_x, self.last_win_y = x, y
 
         # Matplotlib only gives us the number of steps of the scroll,
         # positive for up and negative for down.  No horizontal scrolling.

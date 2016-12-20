@@ -22,6 +22,9 @@ Ver 2.7.0.dev
 - Fixes for problems with pinch and scroll gestures with Qt5 backend
 - Fixed a bug where scale changes between X and Y axes unexpectedly at
   extreme zoom levels
+- Fixed a bug where cursor could get stuck on a pan cursor
+- Added ability to define a cursor for any mode
+- Added documented virtual methods to ImageView base class
 
 Ver 2.6.0 (2016-11-16)
 ======================

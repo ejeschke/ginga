@@ -267,6 +267,20 @@ def main(options, args):
     # decide our toolkit, then import
     ginga_toolkit.use(options.toolkit)
 
+    if options.use_opencv:
+        from ginga import trcalc
+        try:
+            trcalc.use('opencv')
+        except Exception as e:
+            logger.warning("Error using OpenCv: %s" % str(e))
+
+    if options.use_opencl:
+        from ginga import trcalc
+        try:
+            trcalc.use('opencl')
+        except Exception as e:
+            logger.warning("Error using OpenCL: %s" % str(e))
+
     viewer = FitsViewer(logger)
 
     viewer.top.resize(700, 540)
@@ -299,6 +313,12 @@ if __name__ == "__main__":
     optprs.add_option("-t", "--toolkit", dest="toolkit", metavar="NAME",
                       default='qt',
                       help="Choose GUI toolkit (gtk|qt)")
+    optprs.add_option("--opencv", dest="use_opencv", default=False,
+                      action="store_true",
+                      help="Use OpenCv acceleration")
+    optprs.add_option("--opencl", dest="use_opencl", default=False,
+                      action="store_true",
+                      help="Use OpenCL acceleration")
     optprs.add_option("--profile", dest="profile", action="store_true",
                       default=False,
                       help="Run the profiler on main()")

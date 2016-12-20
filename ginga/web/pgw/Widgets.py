@@ -11,10 +11,6 @@ from functools import reduce
 
 from ginga.misc import Callback, Bunch, LineHistory
 from ginga.web.pgw import PgHelp
-import ginga.icons
-
-# path to our icons
-icondir = os.path.split(ginga.icons.__file__)[0]
 
 class WidgetError(Exception):
     """For errors thrown in this module."""

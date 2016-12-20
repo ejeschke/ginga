@@ -41,8 +41,6 @@ class ImageViewCv(ImageView.ImageViewBase):
 
         self.renderer = CanvasRenderer(self)
 
-        # cursors
-        self.cursor = {}
 
     def get_surface(self):
         return self.surface
@@ -80,18 +78,6 @@ class ImageViewCv(ImageView.ImageViewBase):
         arr8 = self.get_surface()
         return numpy.copy(arr8)
 
-    def get_image_as_buffer(self, output=None):
-        obuf = output
-        if obuf is None:
-            obuf = BytesIO()
-
-        arr8 = self.get_image_as_array()
-        obuf.write(arr8.tostring(order='C'))
-
-        if not (output is None):
-            return None
-        return obuf.getvalue()
-
     def get_rgb_image_as_buffer(self, output=None, format='png', quality=90):
         if not have_PIL:
             raise ImageViewCvError("Please install PIL to use this method")
@@ -99,32 +85,15 @@ class ImageViewCv(ImageView.ImageViewBase):
         if self.surface is None:
             raise ImageViewCvError("No CV surface defined")
 
-        ibuf = output
-        if ibuf is None:
-            ibuf = BytesIO()
+        obuf = output
+        if obuf is None:
+            obuf = BytesIO()
 
         # make a PIL image
         image = PILimage.fromarray(self.surface)
 
-        image.save(ibuf, format=format, quality=quality)
-        if output is not None:
-            return None
-        return ibuf.getvalue()
-
-    def get_rgb_image_as_bytes(self, format='png', quality=90):
-        buf = self.get_rgb_image_as_buffer(format=format, quality=quality)
-        return buf
-
-    def save_rgb_image_as_file(self, filepath, format='png', quality=90):
-        if not have_PIL:
-            raise ImageViewCvError("Please install PIL to use this method")
-        if self.surface is None:
-            raise ImageViewCvError("No CV surface defined")
-
-        with open(filepath, 'w') as out_f:
-            self.get_rgb_image_as_buffer(output=out_f, format=format,
-                                          quality=quality)
-        self.logger.debug("wrote %s file '%s'" % (format, filepath))
+        image.save(obuf, format=format, quality=quality)
+        return obuf
 
     def update_image(self):
         # subclass implements this method to actually update a widget
@@ -141,15 +110,6 @@ class ImageViewCv(ImageView.ImageViewBase):
         # subclass implements this method to call delayed_redraw() after
         # time_sec
         self.delayed_redraw()
-
-    def define_cursor(self, ctype, cursor):
-        self.cursor[ctype] = cursor
-
-    def get_cursor(self, ctype):
-        return self.cursor[ctype]
-
-    def switch_cursor(self, ctype):
-        self.set_cursor(self.cursor[ctype])
 
     def get_rgb_order(self):
         return self._rgb_order

@@ -166,15 +166,6 @@ class ImageViewCairo(ImageView.ImageViewBase):
     def set_cursor(self, cursor):
         pass
 
-    def define_cursor(self, ctype, cursor):
-        pass
-
-    def get_cursor(self, ctype):
-        return self.cursor[ctype]
-
-    def switch_cursor(self, ctype):
-        self.set_cursor(self.cursor[ctype])
-
     def get_rgb_order(self):
         return self._rgb_order
 

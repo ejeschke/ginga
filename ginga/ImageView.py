@@ -260,6 +260,13 @@ class ImageViewBase(Callback.Callbacks):
         self.img_bg = (0.2, 0.2, 0.2)
         self.img_fg = (1.0, 1.0, 1.0)
 
+        # last known window mouse position
+        self.last_win_x = 0
+        self.last_win_y = 0
+        # last known data mouse position
+        self.last_data_x = 0
+        self.last_data_y = 0
+
         self.orientMap = {
             # tag: (flip_x, flip_y, swap_xy)
             1: (False, True,  False),
@@ -315,6 +322,9 @@ class ImageViewBase(Callback.Callbacks):
             'offset': coordmap.OffsetMapper(self, None),
             'wcs': coordmap.WCSMapper(self, coordmap.DataMapper(self)),
             }
+
+        # cursors
+        self.cursor = {}
 
         # For callbacks
         for name in ('transform', 'image-set', 'image-unset', 'configure',
@@ -1197,7 +1207,7 @@ class ImageViewBase(Callback.Callbacks):
         """
         outarr = self.getwin_array(order=order)
 
-        return outarr.tostring(order='C')
+        return outarr.tobytes(order='C')
 
     def get_datarect(self):
         """Get the approximate bounding box of the displayed image.
@@ -1348,8 +1358,8 @@ class ImageViewBase(Callback.Callbacks):
         sx = float(win_wd) / scale_x
         sy = float(win_ht) / scale_y
         if (sx < 1.0) or (sy < 1.0):
-            self.logger.warning("new scale would exceed max/min; scale unchanged")
-            scale_x, scale_y = self._org_scale_x, self._org_scale_y
+            #self.logger.warning("new scale would exceed max/min; scale unchanged")
+            raise ImageViewError("new scale would exceed pixel max; scale unchanged")
 
         # It is necessary to store these so that the get_data_xy()
         # (below) calculations can proceed
@@ -1726,12 +1736,19 @@ class ImageViewBase(Callback.Callbacks):
         """
         win_wd, win_ht = self.get_window_size()
         if (win_wd <= 0) or (win_ht <= 0):
-            raise Exception("window size undefined; avoiding scaling")
+            raise ImageViewError("window size undefined")
 
         # final sanity check on resulting output image size
         if (win_wd * scale_x < 1) or (win_ht * scale_y < 1):
             raise ValueError("resulting scale (%f, %f) "
-                             "would result in size of <1 in width or height" % (
+                             "would result in image size of <1 in width or height" % (
+                scale_x, scale_y))
+
+        sx = float(win_wd) / scale_x
+        sy = float(win_ht) / scale_y
+        if (sx < 1.0) or (sy < 1.0):
+            raise ValueError("resulting scale (%f, %f) "
+                             "would result in pixel size approaching window size" % (
                 scale_x, scale_y))
 
     def scale_to(self, scale_x, scale_y, no_reset=False):
@@ -2788,7 +2805,59 @@ class ImageViewBase(Callback.Callbacks):
         """
         return self._originUpper
 
+    def get_last_win_xy(self):
+        """Get the last position of the cursor in window coordinates.
+        This can be overridden by subclasses, if necessary.
+
+        """
+        return (self.last_win_x, self.last_win_y)
+
+    def get_last_data_xy(self):
+        """Get the last position of the cursor in data coordinates.
+        This can be overridden by subclasses, if necessary.
+
+        """
+        return (self.last_data_x, self.last_data_y)
+
     def onscreen_message(self, text, delay=None, redraw=True):
+        """Place a message onscreen in the viewer window.
+        This must be implemented by subclasses.
+
+        Parameters
+        ----------
+        text : str
+            the text to draw in the window
+
+        delay : float or None
+            if None, the message will remain until another message is
+            set.  If a float, specifies the time in seconds before the
+            message will be erased.  (default: None)
+
+        redraw : bool
+            True if the widget should be redrawn right away (so that
+            the message appears).  (default: True)
+
+        """
+        self.logger.warning("Subclass should override this abstract method!")
+
+    def onscreen_message_off(self):
+        """Erase any message onscreen in the viewer window.
+
+        """
+        return self.onscreen_message(None)
+
+    def set_enter_focus(self, tf):
+        """Determine whether the viewer widget should take focus the
+        cursor enters the window.
+
+        Parameters
+        ----------
+        tf : bool
+            If True the widget will grab focus when the cursor moves into
+            the window.
+
+        This should be implemented by subclasses.
+        """
         self.logger.warning("Subclass should override this abstract method!")
 
     def update_image(self):
@@ -2824,6 +2893,261 @@ class ImageViewBase(Callback.Callbacks):
 
         """
         self.logger.warning("Subclass should override this abstract method!")
+
+    def set_cursor(self, cursor):
+        """Set the cursor in the viewer widget.
+        This should be implemented by subclasses.
+
+        Parameters
+        ----------
+        cursor : object
+            a cursor object in the back end's toolkit
+
+        """
+        self.logger.warning("Subclass should override this abstract method!")
+
+    def make_cursor(self, iconpath, x, y):
+        """Make a cursor in the viewer's native widget toolkit.
+        This should be implemented by subclasses.
+
+        Parameters
+        ----------
+        iconpath : str
+            the path to a PNG image file defining the cursor
+
+        x : int
+            the X position of the center of the cursor hot spot
+
+        y : int
+            the Y position of the center of the cursor hot spot
+
+        """
+        self.logger.warning("Subclass should override this abstract method!")
+        return None
+
+    def center_cursor(self):
+        """Center the cursor in the viewer's widget, in both X and Y.
+
+        This should be implemented by subclasses.
+
+        """
+        self.logger.warning("Subclass should override this abstract method!")
+
+    def position_cursor(self, data_x, data_y):
+        """Position the current cursor to a location defined it data coords.
+        This should be implemented by subclasses.
+
+        Parameters
+        ----------
+        data_x : float
+            the X position to position the cursor in data coords
+
+        data_y : float
+            the X position to position the cursor in data coords
+
+        """
+        self.logger.warning("Subclass should override this abstract method!")
+
+    def get_cursor(self, cname):
+        """Get the cursor stored under the name.
+        This can be overridden by subclasses, if necessary.
+
+        Parameters
+        ----------
+        cname : str
+            name of the cursor to return.
+
+        """
+        return self.cursor[cname]
+
+    def define_cursor(self, cname, cursor):
+        """Define a viewer cursor under a name.  Does not change the
+        current cursor.
+
+        Parameters
+        ----------
+        cname : str
+            name of the cursor to define.
+
+        cursor : object
+            a cursor object in the back end's toolkit
+
+        `cursor` is usually constructed from `make_cursor`.
+        """
+        self.cursor[cname] = cursor
+
+    def switch_cursor(self, cname):
+        """Switch the viewer's cursor to the one defined under a name.
+
+        Parameters
+        ----------
+        cname : str
+            name of the cursor to switch to.
+
+        """
+        self.set_cursor(self.cursor[cname])
+
+    def get_image_as_array(self):
+        """Get the current image shown in the viewer, with any overlaid
+        graphics, in a numpy array with channels as needed and ordered
+        by the back end widget.
+
+        This should be implemented by subclasses.
+        """
+        raise ImageViewError("Subclass should override this abstract method!")
+
+    def get_image_as_buffer(self, output=None):
+        """Get the current image shown in the viewer, with any overlaid
+        graphics, in a IO buffer with channels as needed and ordered
+        by the back end widget.
+
+        This can be overridden by subclasses.
+
+        Parameters
+        ----------
+        output : a file IO-like object or None
+            open python IO descriptor or None to have one created
+
+        Returns
+        -------
+        buffer : file IO-like object
+            This will be the one passed in, unless `output` is None
+            in which case a BytesIO obejct is returned
+
+        """
+        obuf = output
+        if obuf is None:
+            obuf = BytesIO()
+
+        arr8 = self.get_image_as_array()
+        obuf.write(arr8.tobytes(order='C'))
+
+        ## if output is not None:
+        ##     return None
+        return obuf
+
+    def get_rgb_image_as_buffer(self, output=None, format='png',
+                                quality=90):
+        """Get the current image shown in the viewer, with any overlaid
+        graphics, in a file IO-like object encoded as a bitmap graphics
+        file.
+        This should be implemented by subclasses.
+
+        Parameters
+        ----------
+        output : a file IO-like object or None
+            open python IO descriptor or None to have one created
+
+        format : str
+            A string defining the format to save the image.  Typically
+            at least 'jpeg' and 'png' are supported. (default: 'png')
+
+        quality: int
+            The quality metric for saving lossy compressed formats.
+
+        Returns
+        -------
+        buffer : file IO-like object
+            This will be the one passed in, unless `output` is None
+            in which case a BytesIO obejct is returned
+
+        """
+        raise ImageViewError("Subclass should override this abstract method!")
+
+    def get_rgb_image_as_bytes(self, format='png', quality=90):
+        """Get the current image shown in the viewer, with any overlaid
+        graphics, in the form of a buffer in the form of bytes.
+
+        Parameters
+        ----------
+        format : str
+            See :meth:`get_rgb_image_as_buffer`.
+
+        quality: int
+            See :meth:`get_rgb_image_as_buffer`.
+
+        Returns
+        -------
+        buffer : bytes
+            The window contents as a buffer in the form of bytes.
+
+        """
+        obuf = self.get_rgb_image_as_buffer(format=format, quality=quality)
+        return bytes(obuf.getvalue())
+
+    def get_rgb_image_as_widget(self, output=None, format='png',
+                                quality=90):
+        """Get the current image shown in the viewer, with any overlaid
+        graphics, in the form of a image widget in the toolkit of the
+        back end.
+
+        Parameters
+        ----------
+        See :meth:`get_rgb_image_as_buffer`.
+
+        Returns
+        -------
+        widget : object
+            An image widget object in the viewer's back end toolkit
+
+        """
+        raise ImageViewError("Subclass should override this abstract method!")
+
+    def save_rgb_image_as_file(self, filepath, format='png', quality=90):
+        """Save the current image shown in the viewer, with any overlaid
+        graphics, in a file with the specified format and quality.
+        This can be overridden by subclasses.
+
+        Parameters
+        ----------
+        filepath : str
+            path of the file to write
+
+        format : str
+            See :meth:`get_rgb_image_as_buffer`.
+
+        quality: int
+            See :meth:`get_rgb_image_as_buffer`.
+
+        """
+        with open(filepath, 'w') as out_f:
+            self.get_rgb_image_as_buffer(output=out_f, format=format,
+                                         quality=quality)
+        self.logger.debug("wrote %s file '%s'" % (format, filepath))
+
+    def get_plain_image_as_widget(self):
+        """Get the current image shown in the viewer, without any overlaid
+        graphics, in the format of an image widget in the back end toolkit.
+        Typically used for generating thumbnails.
+        This should be implemented by subclasses.
+
+        Returns
+        -------
+        widget : object
+            An image widget object in the viewer's back end toolkit
+
+        """
+        raise ImageViewError("Subclass should override this abstract method!")
+
+    def save_plain_image_as_file(self, filepath, format='png', quality=90):
+        """Save the current image shown in the viewer, without any overlaid
+        graphics, in a file with the specified format and quality.
+        Typically used for generating thumbnails.
+        This should be implemented by subclasses.
+
+        Parameters
+        ----------
+        filepath : str
+            path of the file to write
+
+        format : str
+            See :meth:`get_rgb_image_as_buffer`.
+
+        quality: int
+            See :meth:`get_rgb_image_as_buffer`.
+
+        """
+        raise ImageViewError("Subclass should override this abstract method!")
 
     def show_pan_mark(self, tf, color='red'):
         """Show a mark in the pan position (center of window).

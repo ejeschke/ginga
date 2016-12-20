@@ -35,9 +35,6 @@ class ImageViewAgg(ImageView.ImageViewBase):
 
         self.renderer = CanvasRenderer(self)
 
-        # cursors
-        self.cursor = {}
-
     def get_surface(self):
         return self.surface
 
@@ -88,10 +85,7 @@ class ImageViewAgg(ImageView.ImageViewBase):
 
         surface = self.get_surface()
         obuf.write(surface.tostring())
-
-        if not (output is None):
-            return None
-        return obuf.getvalue()
+        return obuf
 
     def get_rgb_image_as_buffer(self, output=None, format='png', quality=90):
         if not have_PIL:
@@ -145,15 +139,6 @@ class ImageViewAgg(ImageView.ImageViewBase):
         # subclass implements this method to call delayed_redraw() after
         # time_sec
         self.delayed_redraw()
-
-    def define_cursor(self, ctype, cursor):
-        self.cursor[ctype] = cursor
-
-    def get_cursor(self, ctype):
-        return self.cursor[ctype]
-
-    def switch_cursor(self, ctype):
-        self.set_cursor(self.cursor[ctype])
 
     def get_rgb_order(self):
         return self._rgb_order

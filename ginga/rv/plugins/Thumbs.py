@@ -176,7 +176,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             self.copy_attrs(chinfo.fitsimage)
             thumb_np = image.get_thumbnail(self.thumbWidth)
             self.thumb_generator.set_data(thumb_np)
-            imgwin = self.thumb_generator.get_image_as_widget()
+            imgwin = self.thumb_generator.get_plain_image_as_widget()
 
         label_length = self.settings.get('label_length', None)
         label_cutoff = self.settings.get('label_cutoff', 'right')
@@ -472,10 +472,10 @@ class Thumbs(GingaPlugin.GlobalPlugin):
                 if thumbpath is not None:
                     if os.path.exists(thumbpath):
                         os.remove(thumbpath)
-                    self.thumb_generator.save_image_as_file(thumbpath,
+                    self.thumb_generator.save_plain_image_as_file(thumbpath,
                                                             format='jpeg')
 
-            imgwin = self.thumb_generator.get_image_as_widget()
+            imgwin = self.thumb_generator.get_plain_image_as_widget()
 
         self.update_thumbnail(thumbkey, imgwin, name, metadata)
 
@@ -510,10 +510,10 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
             # Save a thumbnail for future browsing
             if save_thumb and (thumbpath is not None):
-                self.thumb_generator.save_image_as_file(thumbpath,
+                self.thumb_generator.save_plain_image_as_file(thumbpath,
                                                         format='jpeg')
 
-            imgwin = self.thumb_generator.get_image_as_widget()
+            imgwin = self.thumb_generator.get_plain_image_as_widget()
 
         # Get metadata for mouse-over tooltip
         header = image.get_header()

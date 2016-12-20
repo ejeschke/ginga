@@ -14,9 +14,7 @@ from io import BytesIO
 from ginga import ImageView, Mixins, Bindings
 from ginga.util.io_rgb import RGBFileHandler
 from ginga.mockw.CanvasRenderMock import CanvasRenderer
-
-moduleHome = os.path.split(sys.modules[__name__].__file__)[0]
-icon_dir = os.path.abspath(os.path.join(moduleHome, '..', 'icons'))
+from ginga.util.paths import icondir
 
 
 class ImageViewMockError(ImageView.ImageViewError):
@@ -45,9 +43,6 @@ class ImageViewMock(ImageView.ImageViewBase):
         # This holds the native image RGB or canvas widget. You should
         # create it here
         self.imgwin = None
-
-        # cursors
-        self.cursor = {}
 
         # override default
         #self.defer_redraw = False
@@ -118,6 +113,9 @@ class ImageViewMock(ImageView.ImageViewBase):
 
         self.configure(width, height)
 
+    def get_image_as_array(self):
+        return self.getwin_array(order=self.get_rgb_order())
+
     def get_rgb_image_as_buffer(self, output=None, format='png',
                                 quality=90):
         # copy pixmap to buffer
@@ -126,16 +124,6 @@ class ImageViewMock(ImageView.ImageViewBase):
         fmt_buf = self.rgb_fh.get_buffer(data_np, header, format,
                                          output=output)
         return fmt_buf
-
-    def get_image_as_buffer(self, output=None):
-        return self.get_rgb_image_as_buffer(self, output=output)
-
-    def get_image_as_array(self):
-        return self.getwin_array(order=self.get_rgb_order())
-
-    def get_rgb_image_as_bytes(self, format='png', quality=90):
-        buf = self.get_rgb_image_as_buffer(format=format, quality=quality)
-        return buf
 
     def get_rgb_image_as_widget(self, output=None, format='png',
                                 quality=90):
@@ -153,7 +141,7 @@ class ImageViewMock(ImageView.ImageViewBase):
         # a file
         res = img_w.save(filepath, format=format, quality=quality)
 
-    def get_image_as_widget(self):
+    def get_plain_image_as_widget(self):
         """Used for generating thumbnails.  Does not include overlaid
         graphics.
         """
@@ -163,11 +151,11 @@ class ImageViewMock(ImageView.ImageViewBase):
         image_w = self._get_wimage(arr)
         return image_w
 
-    def save_image_as_file(self, filepath, format='png', quality=90):
+    def save_plain_image_as_file(self, filepath, format='png', quality=90):
         """Used for generating thumbnails.  Does not include overlaid
         graphics.
         """
-        img_w = self.get_image_as_widget()
+        img_w = self.get_plain_image_as_widget()
         # assumes that the image widget has some method for saving to
         # a file
         res = qimg.save(filepath, format=format, quality=quality)
@@ -194,14 +182,12 @@ class ImageViewMock(ImageView.ImageViewBase):
             # set the cursor on self.imgwin
             pass
 
-    def define_cursor(self, ctype, cursor):
-        self.cursor[ctype] = cursor
-
-    def get_cursor(self, ctype):
-        return self.cursor[ctype]
-
-    def switch_cursor(self, ctype):
-        self.set_cursor(self.cursor[ctype])
+    def make_cursor(self, iconpath, x, y):
+        # return a cursor in the widget set's instance type
+        # iconpath usually refers to a PNG file and x/y is the
+        # cursor hot spot
+        cursorw = None
+        return cursorw
 
     def _get_wimage(self, arr_np):
         """Convert the numpy array (which is in our expected order)
@@ -226,9 +212,6 @@ class ImageViewMock(ImageView.ImageViewBase):
             # `delay` sec
             pass
 
-    def onscreen_message_off(self):
-        return self.onscreen_message(None)
-
 
 class ImageViewEvent(ImageViewMock):
 
@@ -242,20 +225,14 @@ class ImageViewEvent(ImageViewMock):
         # gestures
         #...
 
-        # last known window mouse position
-        self.last_win_x = 0
-        self.last_win_y = 0
-        # last known data mouse position
-        self.last_data_x = 0
-        self.last_data_y = 0
         # Does widget accept focus when mouse enters window
         self.enter_focus = self.t_.get('enter_focus', True)
 
         # Define cursors
         for curname, filename in (('pan', 'openHandCursor.png'),
-                               ('pick', 'thinCrossCursor.png')):
-            path = os.path.join(icon_dir, filename)
-            cur = make_cursor(path, 8, 8)
+                                  ('pick', 'thinCrossCursor.png')):
+            path = os.path.join(icondir, filename)
+            cur = self.make_cursor(path, 8, 8)
             self.define_cursor(curname, cur)
 
         # key table mapping characters produced by the key down events
@@ -367,6 +344,7 @@ class ImageViewEvent(ImageViewMock):
         Adjust method signature as appropriate for callback.
         """
         # x, y = coordinates where the button was pressed
+        self.last_win_x, self.last_win_y = x, y
 
         button = 0
         # Prepare a button mask with bits set as follows:
@@ -377,6 +355,8 @@ class ImageViewEvent(ImageViewMock):
         self.logger.debug("button down event at %dx%d, button=%x" % (x, y, button))
 
         data_x, data_y = self.get_data_xy(x, y)
+        self.last_data_x, self.last_data_y = data_x, data_y
+
         return self.make_ui_callback('button-press', button, data_x, data_y)
 
     def button_release_event(self, widget, event):
@@ -385,18 +365,15 @@ class ImageViewEvent(ImageViewMock):
         Adjust method signature as appropriate for callback.
         """
         # x, y = coordinates where the button was released
+        self.last_win_x, self.last_win_y = x, y
 
         button = 0
         # prepare button mask as in button_press_event()
 
         data_x, data_y = self.get_data_xy(x, y)
+        self.last_data_x, self.last_data_y = data_x, data_y
+
         return self.make_ui_callback('button-release', button, data_x, data_y)
-
-    def get_last_win_xy(self):
-        return (self.last_win_x, self.last_win_y)
-
-    def get_last_data_xy(self):
-        return (self.last_data_x, self.last_data_y)
 
     def motion_notify_event(self, widget, event):
         """
@@ -505,12 +482,5 @@ class CanvasView(ImageViewZoom):
 
         self.objects[0] = self.private_canvas
 
-
-def make_cursor(iconpath, x, y):
-    # return a cursor in the widget set's instance type
-    # iconpath usually refers to a PNG file and x/y is the
-    # cursor hot spot
-    cursorw = None
-    return cursorw
 
 #END

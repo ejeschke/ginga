@@ -15,9 +15,7 @@ from ginga import ImageView, Mixins, Bindings
 import ginga.util.six as six
 from ginga.util.six.moves import map, zip
 from ginga.qtw.CanvasRenderQt import CanvasRenderer
-
-moduleHome = os.path.split(sys.modules[__name__].__file__)[0]
-icon_dir = os.path.abspath(os.path.join(moduleHome, '..', 'icons'))
+from ginga.util.paths import icondir
 
 
 class ImageViewQtError(ImageView.ImageViewError):
@@ -133,9 +131,6 @@ class ImageViewQt(ImageView.ImageViewBase):
 
         self.msgtimer = Timer(0.0, lambda timer: self.onscreen_message_off())
 
-        # cursors
-        self.cursor = {}
-
         # For optomized redrawing
         self._defer_task = Timer(0.0, lambda timer: self.delayed_redraw())
 
@@ -218,10 +213,6 @@ class ImageViewQt(ImageView.ImageViewBase):
         qbuf.close()
         return ibuf
 
-    def get_rgb_image_as_bytes(self, format='png', quality=90):
-        ibuf = self.get_rgb_image_as_buffer(format=format, quality=quality)
-        return bytes(ibuf.getvalue())
-
     def get_rgb_image_as_widget(self, output=None, format='png',
                                 quality=90):
         imgwin_wd, imgwin_ht = self.get_window_size()
@@ -233,7 +224,7 @@ class ImageViewQt(ImageView.ImageViewBase):
         qimg = self.get_rgb_image_as_widget()
         res = qimg.save(filepath, format=format, quality=quality)
 
-    def get_image_as_widget(self):
+    def get_plain_image_as_widget(self):
         """Used for generating thumbnails.  Does not include overlaid
         graphics.
         """
@@ -241,11 +232,11 @@ class ImageViewQt(ImageView.ImageViewBase):
         image = self._get_qimage(arr)
         return image
 
-    def save_image_as_file(self, filepath, format='png', quality=90):
+    def save_plain_image_as_file(self, filepath, format='png', quality=90):
         """Used for generating thumbnails.  Does not include overlaid
         graphics.
         """
-        qimg = self.get_image_as_widget()
+        qimg = self.get_plain_image_as_widget()
         res = qimg.save(filepath, format=format, quality=quality)
 
     def reschedule_redraw(self, time_sec):
@@ -269,11 +260,11 @@ class ImageViewQt(ImageView.ImageViewBase):
         if self.imgwin is not None:
             self.imgwin.setCursor(cursor)
 
-    def define_cursor(self, ctype, cursor):
-        self.cursor[ctype] = cursor
-
-    def get_cursor(self, ctype):
-        return self.cursor[ctype]
+    def make_cursor(self, iconpath, x, y):
+        image = QImage()
+        image.load(iconpath)
+        pm = QPixmap(image)
+        return QCursor(pm, x, y)
 
     def center_cursor(self):
         if self.imgwin is None:
@@ -300,9 +291,6 @@ class ImageViewQt(ImageView.ImageViewBase):
     def get_rgb_order(self):
         return self._rgb_order
 
-    def switch_cursor(self, ctype):
-        self.set_cursor(self.cursor[ctype])
-
     def _get_qimage(self, bgra):
         h, w, channels = bgra.shape
 
@@ -322,9 +310,6 @@ class ImageViewQt(ImageView.ImageViewBase):
         self.set_onscreen_message(text, redraw=redraw)
         if delay is not None:
             self.msgtimer.start(delay)
-
-    def onscreen_message_off(self):
-        return self.onscreen_message(None)
 
 
 class RenderMixin(object):
@@ -431,20 +416,14 @@ class ImageViewEvent(ImageViewQt):
         #imgwin.grabGesture(QtCore.Qt.TapGesture)
         #imgwin.grabGesture(QtCore.Qt.TapAndHoldGesture)
 
-        # last known window mouse position
-        self.last_win_x = 0
-        self.last_win_y = 0
-        # last known data mouse position
-        self.last_data_x = 0
-        self.last_data_y = 0
         # Does widget accept focus when mouse enters window
         self.enter_focus = self.t_.get('enter_focus', True)
 
         # Define cursors
         for curname, filename in (('pan', 'openHandCursor.png'),
                                ('pick', 'thinCrossCursor.png')):
-            path = os.path.join(icon_dir, filename)
-            cur = make_cursor(path, 8, 8)
+            path = os.path.join(icondir, filename)
+            cur = self.make_cursor(path, 8, 8)
             self.define_cursor(curname, cur)
 
         # @$%&^(_)*&^ qt!!
@@ -561,6 +540,7 @@ class ImageViewEvent(ImageViewQt):
     def button_press_event(self, widget, event):
         buttons = event.buttons()
         x, y = event.x(), event.y()
+        self.last_win_x, self.last_win_y = x, y
 
         button = 0
         if buttons & QtCore.Qt.LeftButton:
@@ -572,12 +552,15 @@ class ImageViewEvent(ImageViewQt):
         self.logger.debug("button down event at %dx%d, button=%x" % (x, y, button))
 
         data_x, data_y = self.get_data_xy(x, y)
+        self.last_data_x, self.last_data_y = data_x, data_y
+
         return self.make_ui_callback('button-press', button, data_x, data_y)
 
     def button_release_event(self, widget, event):
         # note: for mouseRelease this needs to be button(), not buttons()!
         buttons = event.button()
         x, y = event.x(), event.y()
+        self.last_win_x, self.last_win_y = x, y
 
         button = 0
         if buttons & QtCore.Qt.LeftButton:
@@ -588,13 +571,9 @@ class ImageViewEvent(ImageViewQt):
             button |= 0x4
 
         data_x, data_y = self.get_data_xy(x, y)
+        self.last_data_x, self.last_data_y = data_x, data_y
+
         return self.make_ui_callback('button-release', button, data_x, data_y)
-
-    def get_last_win_xy(self):
-        return (self.last_win_x, self.last_win_y)
-
-    def get_last_data_xy(self):
-        return (self.last_data_x, self.last_data_y)
 
     def motion_notify_event(self, widget, event):
         buttons = event.buttons()
@@ -937,13 +916,6 @@ class ScrolledView(QtGui.QAbstractScrollArea):
             self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
         else:
             raise ValueError("Bad scroll bar option: '%s'; should be one of ('on', 'off' or 'auto')" % (vertical))
-
-
-def make_cursor(iconpath, x, y):
-    image = QImage()
-    image.load(iconpath)
-    pm = QPixmap(image)
-    return QCursor(pm, x, y)
 
 
 #END

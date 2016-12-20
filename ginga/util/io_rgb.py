@@ -221,10 +221,7 @@ class RGBFileHandler(object):
         if buf is None:
             buf = BytesIO()
         image.save(buf, format)
-        contents = buf.getvalue()
-        if output is None:
-            buf.close()
-        return contents
+        return buf
 
     def imresize(self, data, new_wd, new_ht, method='bilinear'):
         """Scale an image in numpy array _data_ to the specified width and
