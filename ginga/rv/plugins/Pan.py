@@ -234,7 +234,7 @@ class Pan(GingaPlugin.GlobalPlugin):
             pass
 
         # create compass
-        if image.has_valid_wcs():
+        if image.has_valid_wcs() and hasattr(image, 'calc_compass_radius'):
             try:
                 width, height = image.get_size()
                 x, y = width / 2.0, height / 2.0
@@ -247,6 +247,7 @@ class Pan(GingaPlugin.GlobalPlugin):
                 paninfo.pancompass = p_canvas.add(self.dc.Compass(
                     x, y, radius, color=self.settings.get('compass_color', 'skyblue'),
                     fontsize=14))
+
             except Exception as e:
                 self.logger.warning("Can't calculate compass: %s" % (
                     str(e)))
