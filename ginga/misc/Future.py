@@ -15,15 +15,20 @@ class TimeoutError(Exception):
 
 class Future(Callback.Callbacks):
 
-    def __init__(self, data=None):
+    def __init__(self, data=None, priority=0):
         Callback.Callbacks.__init__(self)
 
         self.evt = threading.Event()
         self.res = None
         # User can attach some arbitrary data if desired
         self.data = data
+        self.priority = priority
 
         self.enable_callback('resolved')
+
+    # for sorting in PriorityQueues
+    def __lt__(self, other):
+        return self.priority < other.priority
 
     def get_data(self):
         return self.data

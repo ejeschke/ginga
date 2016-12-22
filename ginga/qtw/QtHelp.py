@@ -249,6 +249,9 @@ class Timer(object):
         ms = int(ival_sec * 1000.0)
         self.timer.start(ms)
 
+    def set(self, time_sec):
+        self.start(ival_sec=time_sec)
+
     def cancel(self):
         """Cancel this timer.  If the timer is not running, there
         is no error.
@@ -257,6 +260,8 @@ class Timer(object):
             self.timer.stop()
         except:
             pass
+
+    clear = cancel
 
 
 def cmap2pixmap(cmap, steps=50):

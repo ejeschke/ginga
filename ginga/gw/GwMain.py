@@ -9,6 +9,7 @@ import sys, traceback
 import os
 import threading
 import logging
+import time
 import ginga.util.six as six
 if six.PY2:
     import thread
@@ -17,7 +18,9 @@ else:
     import _thread as thread
     import queue as Queue
 
+from ginga.util.six.moves import filter
 from ginga.misc import Task, Future, Callback
+from collections import deque
 
 class GwMain(Callback.Callbacks):
 
@@ -29,7 +32,8 @@ class GwMain(Callback.Callbacks):
 
         # You can pass in a queue if you prefer to do so
         if not queue:
-            queue = Queue.Queue()
+            queue = Queue.PriorityQueue()
+            #queue = Queue.Queue()
         self.gui_queue = queue
         # You can pass in a logger if you prefer to do so
         if logger is None:
@@ -48,6 +52,8 @@ class GwMain(Callback.Callbacks):
         self.tag = 'master'
         self.shares = ['threadPool', 'logger']
 
+        self.oneshots = {}
+
 
     def get_widget(self):
         return self.app
@@ -55,75 +61,94 @@ class GwMain(Callback.Callbacks):
     def get_threadPool(self):
         return self.threadPool
 
-    def update_pending(self, timeout=0.0):
+    def _execute_future(self, future):
+        # Execute the GUI method
+        try:
+            try:
+                res = future.thaw(suppress_exception=False)
+
+            except Exception as e:
+                self.logger.error("gui event loop error: %s" % str(e))
+                try:
+                    (type, value, tb) = sys.exc_info()
+                    tb_str = "".join(traceback.format_tb(tb))
+                    self.logger.error("Traceback:\n%s" % (tb_str))
+
+                except Exception:
+                    self.logger.error("Traceback information unavailable.")
+
+                future.resolve(e)
+
+        except Exception as e2:
+            self.logger.error("Exception resolving future: %s" % str(e2))
+
+    def update_pending(self, timeout=0.0, elapsed_max=0.02):
 
         self.assert_gui_thread()
 
         # Process "out-of-band" events
-        #print("1. PROCESSING OUT-BAND")
+        # self.logger.debug("1. processing out-of-band GUI events")
         try:
             self.app.process_events()
 
         except Exception as e:
             self.logger.error(str(e))
 
+        # Process "in-band" GUI events
+        # self.logger.debug("2. processing approx %d in-band GUI events" % (
+        #                    self.gui_queue.qsize()))
         done = False
+        time_start = time.time()
         while not done:
-            #print("2. PROCESSING IN-BAND len=%d" % self.gui_queue.qsize())
-            # Process "in-band" GUI events
             try:
                 future = self.gui_queue.get(block=True,
                                             timeout=timeout)
-
-                # Execute the GUI method
-                try:
-                    try:
-                        res = future.thaw(suppress_exception=False)
-
-                    except Exception as e:
-                        future.resolve(e)
-
-                        self.logger.error("gui error: %s" % str(e))
-                        try:
-                            (type, value, tb) = sys.exc_info()
-                            tb_str = "".join(traceback.format_tb(tb))
-                            self.logger.error("Traceback:\n%s" % (tb_str))
-
-                        except Exception as e:
-                            self.logger.error("Traceback information unavailable.")
-
-                finally:
-                    pass
-
+                self._execute_future(future)
 
             except Queue.Empty:
                 done = True
 
-            except Exception as e:
-                self.logger.error("Main GUI loop error: %s" % str(e))
+            if time.time() - time_start > elapsed_max:
+                done = True
+
+        # Execute all the one-shots
+        # self.logger.debug("3. processing one-shot GUI events")
+        deqs = list(filter(lambda deq: len(deq) > 0, self.oneshots.values()))
+        for deq in deqs:
+            try:
+                future = deq.pop()
+
+                self._execute_future(future)
+
+            except IndexError:
+                continue
 
         # Process "out-of-band" events, again
-        #print("3. PROCESSING OUT-BAND")
+        # self.logger.debug("4. processing out-of-band GUI events")
         try:
             self.app.process_events()
 
         except Exception as e:
             self.logger.error(str(e))
-        #print("4. DONE")
 
-    def gui_do(self, method, *args, **kwdargs):
+        # self.logger.debug("5. done")
+
+    def gui_do_priority(self, priority, method, *args, **kwdargs):
         """General method for asynchronously calling into the GUI.
         It makes a future to call the given (method) with the given (args)
         and (kwdargs) inside the gui thread.  If the calling thread is a
         non-gui thread the future is returned.
         """
-        future = Future.Future()
+        future = Future.Future(priority=priority)
         future.freeze(method, *args, **kwdargs)
         self.gui_queue.put(future)
 
         my_id = thread.get_ident()
         if my_id != self.gui_thread_id:
             return future
+
+    def gui_do(self, method, *args, **kwdargs):
+        return self.gui_do_priority(0, method, *args, **kwdargs)
 
     def gui_call(self, method, *args, **kwdargs):
         """General method for synchronously calling into the GUI.
@@ -139,6 +164,20 @@ class GwMain(Callback.Callbacks):
     def gui_do_future(self, future):
         self.gui_queue.put(future)
         return future
+
+    def gui_do_oneshot(self, catname, method, *args, **kwdargs):
+        if not catname in self.oneshots:
+            deq = self.oneshots.setdefault(catname, deque([], 1))
+        else:
+            deq = self.oneshots[catname]
+
+        future = Future.Future()
+        future.freeze(method, *args, **kwdargs)
+        deq.append(future)
+
+        my_id = thread.get_ident()
+        if my_id != self.gui_thread_id:
+            return future
 
     def nongui_do(self, method, *args, **kwdargs):
         task = Task.FuncTask(method, args, kwdargs, logger=self.logger)

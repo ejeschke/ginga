@@ -84,12 +84,16 @@ class Timer(Callback.Callbacks):
         self.timer.stop()
         self.make_callback('canceled')
 
+    cancel = clear
+
     def set(self, time_sec):
         """
         Set the timer for time_sec.   Any callbacks registered for the
         'expired' event will be called when the timer reaches the deadline.
         """
         self.timer.start(time_sec)
+
+    start = set
 
     def is_set(self):
         """

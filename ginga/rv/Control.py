@@ -464,7 +464,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             def  _dl_indicator(count, blksize, totalsize):
                 pct = float(count * blksize) / float(totalsize)
                 msg = "Downloading: %%%.2f complete" % (pct*100.0)
-                self.gui_do(self.showStatus, msg)
+                self.gui_do(self.show_status, msg)
 
             # Try to download the URL.  We press our generic URL server
             # into use as a generic file downloader.
@@ -474,7 +474,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                 filepath = dl.retrieve(info.url, filepath=info.filepath,
                                        cb_fn=_dl_indicator)
             finally:
-                self.gui_do(self.showStatus, "")
+                self.gui_do(self.show_status, "")
 
         return info
 
@@ -563,7 +563,6 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                 self.gui_call(self.add_image, name, image, chname=chname)
             else:
                 self.gui_do(self.bulk_add_image, name, image, chname)
-                #self.gui_do(self.add_image, name, image, chname=chname)
 
         # Return the image
         return image
@@ -2113,7 +2112,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         if elapsed > self.cursor_interval:
             # cancel timer
             self._cursor_task.clear()
-            self._showxy(viewer, data_x, data_y)
+            self.gui_do_oneshot('field-info', self._showxy,
+                                viewer, data_x, data_y)
         else:
             # store needed data into the timer data area
             self._cursor_task.data.setvals(viewer=viewer,
@@ -2128,7 +2128,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         """Callback when the cursor timer expires.
         """
         data = timer.data
-        self.gui_do(self._showxy, data.viewer, data.data_x, data.data_y)
+        self.gui_do_oneshot('field-info', self._showxy,
+                            data.viewer, data.data_x, data.data_y)
 
     def _showxy(self, viewer, data_x, data_y):
         """Update the info from the last position recorded under the cursor.

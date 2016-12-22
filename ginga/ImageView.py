@@ -252,6 +252,7 @@ class ImageViewBase(Callback.Callbacks):
         self.defer_lagtime = self.t_.get('defer_lagtime', 0.025)
         self.time_last_redraw = time.time()
         self._defer_whence = 0
+        self._defer_whence_reset = 5
         self._defer_lock = threading.RLock()
         self._defer_flag = False
         self._hold_redraw_cnt = 0
@@ -1027,7 +1028,7 @@ class ImageViewBase(Callback.Callbacks):
                         self._defer_whence = whence
                         return
 
-                    self._defer_whence = 3
+                    self._defer_whence = self._defer_whence_reset
                     self.logger.debug("lagtime expired--forced redraw")
                     self.redraw_now(whence=whence)
                     return
@@ -1046,6 +1047,17 @@ class ImageViewBase(Callback.Callbacks):
                 # A redraw is already scheduled.  Just record whence.
                 self._defer_whence = whence
                 self.logger.debug("update whence=%.2f" % (whence))
+
+    def is_redraw_pending(self):
+        """Indicates whether a deferred redraw has been scheduled.
+
+        Returns
+        -------
+        pending : bool
+            True if a deferred redraw is pending, False otherwise.
+
+        """
+        return self._defer_whence < self._defer_whence_reset
 
     def canvas_changed_cb(self, canvas, whence):
         """Handle callback for when canvas has changed."""
@@ -1074,7 +1086,7 @@ class ImageViewBase(Callback.Callbacks):
         with self._defer_lock:
             # pick up the lowest necessary level of redrawing
             whence = self._defer_whence
-            self._defer_whence = 3
+            self._defer_whence = self._defer_whence_reset
             flag = self._defer_flag
             self._defer_flag = False
 
@@ -3336,8 +3348,8 @@ class SuppressRedraw(object):
 
         if (self.viewer._hold_redraw_cnt <= 0):
             # TODO: whence should be largest possible
-            # maybe self.viewer._defer_whence ??
-            whence = 0
+            #whence = 0
+            whence = self.viewer._defer_whence
             self.viewer.redraw(whence=whence)
         return False
 

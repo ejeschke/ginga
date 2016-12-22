@@ -182,7 +182,7 @@ class TimerHeap(object):
                     expired.expire = None
                     expired.run()
         except Exception as ex:
-            self.logger.error("Unexpected Exception: %s", str(ex))
+            self.logger.error("Unexpected Exception: %s" % str(ex))
         finally:
             # This is never set while expiring is True
             assert self.rtimer is None

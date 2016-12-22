@@ -576,6 +576,16 @@ class ImageViewEvent(ImageViewQt):
         return self.make_ui_callback('button-release', button, data_x, data_y)
 
     def motion_notify_event(self, widget, event):
+
+        if self.is_redraw_pending():
+            # NOTE: this hack works around a bug in Qt5 (ver < 5.6.2)
+            # where mouse motion events are not compressed properly,
+            # causing many events to build up in the queue and slowing
+            # down the viewer due to each one forcing a redraw.
+            # This test tells us there is a deferred redraw waiting;
+            # discard any motion events until the redraw happens.
+            return True
+
         buttons = event.buttons()
         x, y = event.x(), event.y()
         self.last_win_x, self.last_win_y = x, y
