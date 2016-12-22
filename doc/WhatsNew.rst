@@ -2,8 +2,8 @@
 What's New in Ginga?
 ++++++++++++++++++++
 
-Ver 2.7.0.dev
-=============
+Ver 2.6.1 (2016-12-22)
+======================
 - Added a working MDI workspace for gtk2/gtk3.
 - Added scrollbar frames.  See examples/qt/example1_qt.py for standalone
   widget.  Can be added to reference viewer by putting 'scrollbars = "on"'
@@ -25,6 +25,8 @@ Ver 2.7.0.dev
 - Fixed a bug where cursor could get stuck on a pan cursor
 - Added ability to define a cursor for any mode
 - Added documented virtual methods to ImageView base class
+- Added a workaround for a bug in early versions of Qt5 where excessive
+  mouse motion events accumulate in the event queue
 
 Ver 2.6.0 (2016-11-16)
 ======================
