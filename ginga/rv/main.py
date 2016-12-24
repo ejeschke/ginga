@@ -178,7 +178,7 @@ class ReferenceViewer(object):
         optprs.add_option("--bufsize", dest="bufsize", metavar="NUM",
                           type="int", default=10,
                           help="Buffer length to NUM")
-        optprs.add_option("--channels", dest="channels", default="Image",
+        optprs.add_option('-c', "--channels", dest="channels", default="Image",
                           help="Specify list of channels to create")
         optprs.add_option("--debug", dest="debug", default=False,
                           action="store_true",

@@ -1830,11 +1830,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         """
         self.logger.info("Attempting to shut down the application...")
         if self.layout_file is not None:
-            try:
-                self.ds.write_layout_conf(self.layout_file)
-
-            except Exception as e:
-                self.logger.error("Error writing layout file: %s" % (str(e)))
+            self.error_wrap(self.ds.write_layout_conf, self.layout_file)
 
         self.stop()
 

@@ -1686,13 +1686,15 @@ class TopLevelMixin(object):
         return wd, ht
 
     def get_pos(self):
+        res = None
         window = self.widget.get_window()
         if window is not None:
-            x, y = window.get_origin()
-        else:
-            ed = self.extdata
-            x, y = ed.get('x', None), ed.get('y', None)
+            res = window.get_origin()
+            if isinstance(res, tuple) and len(res) == 2:
+                return res
 
+        ed = self.extdata
+        x, y = ed.get('x', None), ed.get('y', None)
         return x, y
 
     def raise_(self):

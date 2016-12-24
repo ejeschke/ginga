@@ -694,21 +694,40 @@ def get_scroll_info(event):
     """
     Returns the (degrees, direction) of a scroll motion Gtk event.
     """
-    direction = None
-    if event.direction == Gdk.ScrollDirection.UP:
-        direction = 0.0
-    elif event.direction == Gdk.ScrollDirection.DOWN:
-        direction = 180.0
-    elif event.direction == Gdk.ScrollDirection.LEFT:
-        direction = 270.0
-    elif event.direction == Gdk.ScrollDirection.RIGHT:
-        direction = 90.0
+    valid, dx, dy = event.get_scroll_deltas()
+    if valid:
+        # we have a trackpad or some device that reports pixel deltas
+        delta = math.sqrt(dx ** 2 + dy ** 2)
+        if dy < 0:
+            delta = -delta
 
-    # TODO: does Gtk encode the amount of scroll?
-    # 15 deg is standard 1-click turn for a wheel mouse
-    degrees = 15.0
+        ang_rad = math.atan2(dy, dx)
+        direction = math.degrees(ang_rad) - 90.0
+        direction = math.fmod(direction + 360.0, 360.0)
 
-    return (degrees, direction)
+        # TODO: is this accurate?--NOT TESTED
+        num_degrees = delta / 8.0
+
+    else:
+        valid, direction = event.get_scroll_direction()
+        if valid:
+            if event.direction == Gdk.ScrollDirection.UP:
+                direction = 0.0
+            elif event.direction == Gdk.ScrollDirection.DOWN:
+                direction = 180.0
+            elif event.direction == Gdk.ScrollDirection.LEFT:
+                direction = 270.0
+            elif event.direction == Gdk.ScrollDirection.RIGHT:
+                direction = 90.0
+
+        else:
+            direction = None
+
+        # TODO: does Gtk encode the amount of scroll?
+        # 15 deg is standard 1-click turn for a wheel mouse
+        num_degrees = 15.0
+
+    return (num_degrees, direction)
 
 def get_icon(iconpath, size=None):
     if size is not None:

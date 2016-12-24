@@ -441,6 +441,15 @@ class ImageViewEvent(ImageViewGtk):
         x = event.x; y = event.y
         self.last_win_x, self.last_win_y = x, y
 
+        # NOTE: for future use in distinguishing mouse wheel vs.
+        # trackpad events
+        dev = event.get_source_device()
+        src = 'mouse'
+        if dev is not None:
+            _src = dev.get_source()
+            if _src == Gdk.InputSource.TOUCHPAD:
+                src == 'touchpad'
+
         degrees, direction = GtkHelp.get_scroll_info(event)
         self.logger.debug("scroll deg=%f direction=%f" % (
             degrees, direction))

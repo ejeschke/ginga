@@ -611,6 +611,17 @@ class ImageViewEvent(ImageViewQt):
         self.logger.debug("scroll deg={} direction={}".format(
             num_degrees, direction))
 
+        # NOTE: for future use in distinguishing mouse wheel vs.
+        # trackpad events
+        src = 'wheel'
+        if hasattr(event, 'source'):
+            # Qt5 only, it seems
+            _src = event.source()
+            if _src == QtCore.Qt.MouseEventNotSynthesized:
+                src = 'wheel'
+            else:
+                src = 'trackpad'
+
         data_x, data_y = self.get_data_xy(x, y)
         self.last_data_x, self.last_data_y = data_x, data_y
 

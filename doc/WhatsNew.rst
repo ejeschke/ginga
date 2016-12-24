@@ -2,6 +2,11 @@
 What's New in Ginga?
 ++++++++++++++++++++
 
+Ver 2.6.2.dev
+=============
+- Added some colormaps from ds9 that don't have equivalents in Ginga or
+  matplotlib
+
 Ver 2.6.1 (2016-12-22)
 ======================
 - Added a working MDI workspace for gtk2/gtk3.
