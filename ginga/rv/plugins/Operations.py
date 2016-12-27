@@ -21,10 +21,10 @@ class Operations(GingaPlugin.GlobalPlugin):
         super(Operations, self).__init__(fv)
 
         prefs = self.fv.get_preferences()
-        self.settings = prefs.createCategory('plugin_Operations')
-        self.settings.addDefaults(show_channel_control=True,
-                                  use_popup_menu=True,
-                                  focuscolor="lightgreen")
+        self.settings = prefs.create_category('plugin_Operations')
+        self.settings.add_defaults(show_channel_control=True,
+                                   use_popup_menu=True,
+                                   focuscolor="lightgreen")
         self.settings.load(onError='silent')
 
         fv.add_callback('add-channel', self.add_channel_cb)

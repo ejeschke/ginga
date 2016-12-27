@@ -38,7 +38,7 @@ class PluginManager(Callback.Callbacks):
                      'focus-plugin', 'unfocus-plugin'):
             self.enable_callback(name)
 
-    def loadPlugin(self, name, spec, chinfo=None):
+    def load_plugin(self, name, spec, chinfo=None):
         try:
             module = self.mm.getModule(spec.module)
             className = spec.get('klass', spec.module)
@@ -53,7 +53,7 @@ class PluginManager(Callback.Callbacks):
                 fitsimage = chinfo.fitsimage
                 obj = klass(self.fv, fitsimage)
 
-            # Prepare configuration for module.  This becomes the pInfo
+            # Prepare configuration for module.  This becomes the p_info
             # object referred to in later code.
             opname = name.lower()
             self.plugin[opname] = Bunch.Bunch(klass=klass, obj=obj,
@@ -70,24 +70,24 @@ class PluginManager(Callback.Callbacks):
                 name, str(e)))
             #raise PluginManagerError(e)
 
-    def reloadPlugin(self, plname, chinfo=None):
-        pInfo = self.getPluginInfo(plname)
-        return self.loadPlugin(pInfo.name, pInfo.spec, chinfo=chinfo)
+    def reload_plugin(self, plname, chinfo=None):
+        p_info = self.get_plugin_info(plname)
+        return self.load_plugin(p_info.name, p_info.spec, chinfo=chinfo)
 
     def has_plugin(self, plname):
         plname = plname.lower()
         return plname in self.plugin
 
-    def getPluginInfo(self, plname):
+    def get_plugin_info(self, plname):
         plname = plname.lower()
-        pInfo = self.plugin[plname]
-        return pInfo
+        p_info = self.plugin[plname]
+        return p_info
 
-    def getPlugin(self, name):
-        pInfo = self.getPluginInfo(name)
-        return pInfo.obj
+    def get_plugin(self, name):
+        p_info = self.get_plugin_info(name)
+        return p_info.obj
 
-    def getNames(self):
+    def get_names(self):
         return list(self.plugin.keys())
 
     def deactivate_focused(self):
@@ -114,14 +114,14 @@ class PluginManager(Callback.Callbacks):
         lname = name.lower()
         return self.active[lname]
 
-    def activate(self, pInfo, exclusive=True):
-        name = pInfo.tabname
-        lname = pInfo.name.lower()
+    def activate(self, p_info, exclusive=True):
+        name = p_info.tabname
+        lname = p_info.name.lower()
         if lname not in self.active:
-            bnch = Bunch.Bunch(pInfo=pInfo, lblname=None, widget=None,
+            bnch = Bunch.Bunch(pInfo=p_info, lblname=None, widget=None,
                                exclusive=exclusive)
 
-            if pInfo.chinfo is not None:
+            if p_info.chinfo is not None:
                 # local plugin
                 tup = name.split(':')
                 bnch.lblname = ' ' + tup[0] + ':\n' + tup[1] + ' '
@@ -173,36 +173,36 @@ class PluginManager(Callback.Callbacks):
             for xname in defocus:
                 self.clear_focus(xname)
 
-        pInfo = bnch.pInfo
+        p_info = bnch.pInfo
         # If this is a local plugin, raise the channel associated with the
         # plug in
-        if pInfo.chinfo is not None:
-            itab = pInfo.chinfo.name
+        if p_info.chinfo is not None:
+            itab = p_info.chinfo.name
             self.logger.debug("raising channel tab %s" % (itab))
             self.ds.raise_tab(itab)
 
             self.logger.debug("resuming plugin %s" % (name))
-            pInfo.obj.resume()
+            p_info.obj.resume()
             self.make_callback('focus-plugin', bnch)
 
         self.focus.add(lname)
-        if pInfo.widget is not None:
-            self.logger.debug("raising plugin tab %s" % (pInfo.tabname))
-            if pInfo.is_toplevel:
-                pInfo.widget.raise_()
+        if p_info.widget is not None:
+            self.logger.debug("raising plugin tab %s" % (p_info.tabname))
+            if p_info.is_toplevel:
+                p_info.widget.raise_()
             else:
-                self.ds.raise_tab(pInfo.tabname)
+                self.ds.raise_tab(p_info.tabname)
 
     def clear_focus(self, name):
         self.logger.debug("Unfocusing plugin '%s'" % (name))
         lname = name.lower()
         bnch = self.active[lname]
-        pInfo = bnch.pInfo
+        p_info = bnch.pInfo
         try:
             self.focus.remove(lname)
 
-            if pInfo.chinfo is not None:
-                bnch.pInfo.obj.pause()
+            if p_info.chinfo is not None:
+                p_info.obj.pause()
                 self.make_callback('unfocus-plugin', bnch)
         except:
             pass
@@ -214,7 +214,7 @@ class PluginManager(Callback.Callbacks):
     def start_plugin_future(self, chname, opname, future,
                             alreadyOpenOk=True):
         try:
-            pInfo = self.getPluginInfo(opname)
+            p_info = self.get_plugin_info(opname)
 
         except KeyError:
             self.fv.show_error("No plugin information for plugin '%s'" % (
@@ -222,27 +222,27 @@ class PluginManager(Callback.Callbacks):
             return
         if chname is not None:
             # local plugin
-            plname = chname.upper() + ': ' + pInfo.name
+            plname = chname.upper() + ': ' + p_info.name
         else:
             # global plugin
-            plname = pInfo.name
-        lname = pInfo.name.lower()
+            plname = p_info.name
+        lname = p_info.name.lower()
         if lname in self.active:
             if alreadyOpenOk:
-                self.set_focus(pInfo.name)
+                self.set_focus(p_info.name)
                 return
             raise PluginManagerError("Plugin %s is already active." % (
                 plname))
 
         # Raise tab with GUI
-        pInfo.tabname = pInfo.spec.get('tab', plname)
+        p_info.tabname = p_info.spec.get('tab', plname)
         vbox = None
         had_error = False
         try:
-            if hasattr(pInfo.obj, 'build_gui'):
+            if hasattr(p_info.obj, 'build_gui'):
                 vbox = Widgets.VBox()
 
-                in_ws = pInfo.spec.ws
+                in_ws = p_info.spec.ws
                 if in_ws.startswith('in:'):
                     # TODO: how to set this size appropriately
                     # Which plugins are actually using this attribute?
@@ -255,9 +255,9 @@ class PluginManager(Callback.Callbacks):
                     vbox.size = (wd, ht)
 
                 if future:
-                    pInfo.obj.build_gui(vbox, future=future)
+                    p_info.obj.build_gui(vbox, future=future)
                 else:
-                    pInfo.obj.build_gui(vbox)
+                    p_info.obj.build_gui(vbox)
 
         except Exception as e:
             errstr = "Plugin UI failed to initialize: %s" % (
@@ -278,9 +278,9 @@ class PluginManager(Callback.Callbacks):
         if not had_error:
             try:
                 if future:
-                    pInfo.obj.start(future=future)
+                    p_info.obj.start(future=future)
                 else:
-                    pInfo.obj.start()
+                    p_info.obj.start()
 
             except Exception as e:
                 had_error = True
@@ -300,23 +300,23 @@ class PluginManager(Callback.Callbacks):
                 #raise PluginManagerError(e)
 
         if vbox is not None:
-            self.finish_gui(pInfo, vbox)
+            self.finish_gui(p_info, vbox)
 
-            self.activate(pInfo)
-            self.set_focus(pInfo.name)
+            self.activate(p_info)
+            self.set_focus(p_info.name)
         else:
             # If this is a local plugin, raise the channel associated with the
             # plug in
-            if pInfo.chinfo is not None:
-                itab = pInfo.chinfo.name
+            if p_info.chinfo is not None:
+                itab = p_info.chinfo.name
                 self.ds.raise_tab(itab)
 
-    def stop_plugin(self, pInfo):
-        self.logger.debug("stopping plugin %s" % (str(pInfo)))
+    def stop_plugin(self, p_info):
+        self.logger.debug("stopping plugin %s" % (str(p_info)))
         wasError = False
         e = None
         try:
-            pInfo.obj.stop()
+            p_info.obj.stop()
 
         except Exception as e:
             wasError = True
@@ -330,9 +330,9 @@ class PluginManager(Callback.Callbacks):
             except Exception:
                 self.logger.error("Traceback information unavailable.")
 
-        if pInfo.widget is not None:
-            self.dispose_gui(pInfo)
-            self.ds.remove_tab(pInfo.tabname)
+        if p_info.widget is not None:
+            self.dispose_gui(p_info)
+            self.ds.remove_tab(p_info.tabname)
 
         if wasError:
             raise PluginManagerError(e)
@@ -342,49 +342,49 @@ class PluginManager(Callback.Callbacks):
         textw.append_text(text)
         box.add_widget(textw, stretch=1)
 
-    def finish_gui(self, pInfo, vbox):
+    def finish_gui(self, p_info, vbox):
         # add container to workspace
         # TODO: how to figure out the appropriate size for top-levels?
         wd, ht = vbox.get_size()
 
         try:
-            in_ws = pInfo.spec.ws
+            in_ws = p_info.spec.ws
 
             if in_ws == 'in:toplevel':
                 topw = vbox.get_app().make_window()
                 topw.add_callback('close',
-                                  lambda *args: self.deactivate(pInfo.name))
+                                  lambda *args: self.deactivate(p_info.name))
                 topw.resize(wd, ht)
                 topw.set_widget(vbox)
-                pInfo.widget = topw
-                pInfo.is_toplevel = True
+                p_info.widget = topw
+                p_info.is_toplevel = True
                 topw.show()
 
             elif in_ws == 'in:dialog':
-                dialog = Widgets.Dialog(title=pInfo.name,
+                dialog = Widgets.Dialog(title=p_info.name,
                                         flags=0,
                                         buttons=[],
                                         parent=self.fv.w.root)
                 dialog.resize(wd, ht)
                 box = dialog.get_content_area()
                 box.add_widget(vbox, stretch=1)
-                pInfo.widget = dialog
-                pInfo.is_toplevel = True
+                p_info.widget = dialog
+                p_info.is_toplevel = True
                 # TODO: need to add callback to remove from Desktop
                 # dialog list?
                 self.ds.show_dialog(dialog)
 
             else:
-                self.ds.add_tab(in_ws, vbox, 2, pInfo.tabname, pInfo.tabname)
+                self.ds.add_tab(in_ws, vbox, 2, p_info.tabname, p_info.tabname)
 
                 ws_w = self.ds.get_nb(in_ws)
                 ws_w.add_callback('page-switch', self.tab_switched_cb)
-                pInfo.widget = vbox
-                pInfo.is_toplevel = False
+                p_info.widget = vbox
+                p_info.is_toplevel = False
 
         except Exception as e:
             self.fv.show_error("Error finishing plugin UI for '%s': %s" % (
-                pInfo.name, str(e)))
+                p_info.name, str(e)))
 
     def tab_switched_cb(self, tab_w, widget):
         # A tab in a workspace in which we started a plugin has been
@@ -400,22 +400,32 @@ class PluginManager(Callback.Callbacks):
                 except KeyError:
                     # no
                     return
-                pInfo = info.pInfo
+                p_info = info.pInfo
                 # important: make sure channel matches ours!
-                if pInfo.tabname == title:
-                    if self.is_active(pInfo.name):
-                        if not self.has_focus(pInfo.name):
-                            self.set_focus(pInfo.name)
-                        elif pInfo.chinfo is not None:
+                if p_info.tabname == title:
+                    if self.is_active(p_info.name):
+                        if not self.has_focus(p_info.name):
+                            self.set_focus(p_info.name)
+                        elif p_info.chinfo is not None:
                             # raise the channel associated with the plugin
-                            itab = pInfo.chinfo.name
+                            itab = p_info.chinfo.name
                             self.ds.raise_tab(itab)
 
-    def dispose_gui(self, pInfo):
+    def dispose_gui(self, p_info):
         self.logger.debug("disposing of gui")
-        vbox = pInfo.widget
-        pInfo.widget = None
+        vbox = p_info.widget
+        p_info.widget = None
         vbox.hide()
         vbox.delete()
+
+
+    ########################################################
+    ### NON-PEP8 PREDECESSORS: TO BE DEPRECATED
+
+    loadPlugin = load_plugin
+    reloadPlugin = reload_plugin
+    getPluginInfo = get_plugin_info
+    getPlugin = get_plugin
+    getNames = get_names
 
 #END

@@ -72,22 +72,22 @@ class SettingGroup(object):
 
         self.group = Bunch.Bunch()
 
-    def addSettings(self, **kwdargs):
+    def add_settings(self, **kwdargs):
         for key, value in kwdargs.items():
             self.group[key] = Setting(value=value, name=key,
                                       logger=self.logger)
             # TODO: add group change callback?
 
-    def getSetting(self, key):
+    def get_setting(self, key):
         return self.group[key]
 
-    def shareSettings(self, other, keylist=None):
+    def share_settings(self, other, keylist=None):
         if keylist is None:
             keylist = self.group.keys()
         for key in keylist:
             other.group[key] = self.group[key]
 
-    def copySettings(self, other, keylist=None):
+    def copy_settings(self, other, keylist=None):
         if keylist is None:
             keylist = self.group.keys()
         d = {}
@@ -100,15 +100,15 @@ class SettingGroup(object):
             return self.group[key].get(value)
         else:
             d = { key: value }
-            self.addSettings(**d)
+            self.add_settings(**d)
             return self.group[key].get(value)
 
-    def addDefaults(self, **kwdargs):
+    def add_defaults(self, **kwdargs):
         for key, value in kwdargs.items():
             self.setdefault(key, value)
 
-    def setDefaults(self, **kwdargs):
-        return self.addDefaults(**kwdargs)
+    def set_defaults(self, **kwdargs):
+        return self.add_defaults(**kwdargs)
 
     def get(self, *args):
         key = args[0]
@@ -117,10 +117,11 @@ class SettingGroup(object):
         if len(args) == 2:
             return self.setdefault(key, args[1])
 
-    def getDict(self):
-        return dict([[name, self.group[name].value] for name in self.group.keys()])
+    def get_dict(self):
+        return dict([[name, self.group[name].value]
+                     for name in self.group.keys()])
 
-    def setDict(self, d, callback=True):
+    def set_dict(self, d, callback=True):
         for key, value in d.items():
             if key not in self.group:
                 self.setdefault(key, value)
@@ -128,7 +129,7 @@ class SettingGroup(object):
                 self.group[key].set(value, callback=callback)
 
     def set(self, callback=True, **kwdargs):
-        self.setDict(kwdargs, callback=callback)
+        self.set_dict(kwdargs, callback=callback)
 
     def __getitem__(self, key):
         return self.group[key].value
@@ -160,7 +161,7 @@ class SettingGroup(object):
                         # silently skip parse errors, for now
                         continue
 
-            self.setDict(d)
+            self.set_dict(d)
         except Exception as e:
             errmsg = "Error opening settings file (%s): %s" % (
                 self.preffile, str(e))
@@ -186,7 +187,7 @@ class SettingGroup(object):
         return d
 
     def save(self):
-        d = self.getDict()
+        d = self.get_dict()
         # sanitize data -- hard to parse NaN or Inf
         self._check(d)
         try:
@@ -202,6 +203,18 @@ class SettingGroup(object):
                 self.preffile, str(e))
             self.logger.error(errmsg)
 
+    ########################################################
+    ### NON-PEP8 PREDECESSORS: TO BE DEPRECATED
+
+    addSettings = add_settings
+    getSetting = get_setting
+    shareSettings = share_settings
+    copySettings = copy_settings
+    addDefaults = add_defaults
+    setDefaults = set_defaults
+    getDict = get_dict
+    setDict = set_dict
+
 
 class Preferences(object):
 
@@ -210,19 +223,19 @@ class Preferences(object):
         self.logger = logger
         self.settings = Bunch.Bunch(caseless=True)
 
-    def setDefaults(self, category, **kwdargs):
-        self.settings[category].addDefaults(**kwdargs)
+    def set_defaults(self, category, **kwdargs):
+        self.settings[category].add_defaults(**kwdargs)
 
-    def getSettings(self, category):
+    def get_settings(self, category):
         return self.settings[category]
 
     def remove_settings(self, category):
         del self.settings[category]
 
     def get_dict_category(self, category):
-        return self.settings[category].getDict()
+        return self.settings[category].get_dict()
 
-    def createCategory(self, category):
+    def create_category(self, category):
         if category not in self.settings:
             suffix = '.cfg'
             path = os.path.join(self.folder, category + suffix)
@@ -231,12 +244,22 @@ class Preferences(object):
                                                    preffile=path)
         return self.settings[category]
 
-    def get_baseFolder(self):
+    def get_base_folder(self):
         return self.folder
 
-    def getDict(self):
-        return dict([[name, self.settings[name].getDict()] for name in
+    def get_dict(self):
+        return dict([[name, self.settings[name].get_dict()] for name in
                      self.settings.keys()])
+
+
+    ########################################################
+    ### NON-PEP8 PREDECESSORS: TO BE DEPRECATED
+
+    setDefaults = set_defaults
+    getSettings = get_settings
+    createCategory = create_category
+    get_baseFolder = get_base_folder
+    getDict = get_dict
 
 
 #END

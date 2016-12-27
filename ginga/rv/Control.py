@@ -130,23 +130,23 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         self.preload_list = deque([], 4)
 
         # Create general preferences
-        self.settings = self.prefs.createCategory('general')
+        self.settings = self.prefs.create_category('general')
         self.settings.load(onError='silent')
         # Load bindings preferences
-        bindprefs = self.prefs.createCategory('bindings')
+        bindprefs = self.prefs.create_category('bindings')
         bindprefs.load(onError='silent')
 
-        self.settings.addDefaults(fixedFont='Monospace',
-                                  sansFont='Sans',
-                                  channel_follows_focus=False,
-                                  share_readout=True,
-                                  numImages=10,
-                                  # Offset to add to numpy-based coords
-                                  pixel_coords_offset=1.0,
-                                  # inherit from primary header
-                                  inherit_primary_header=False,
-                                  cursor_interval=0.050,
-                                  save_layout=False)
+        self.settings.add_defaults(fixedFont='Monospace',
+                                   sansFont='Sans',
+                                   channel_follows_focus=False,
+                                   share_readout=True,
+                                   numImages=10,
+                                   # Offset to add to numpy-based coords
+                                   pixel_coords_offset=1.0,
+                                   # inherit from primary header
+                                   inherit_primary_header=False,
+                                   cursor_interval=0.050,
+                                   save_layout=False)
 
         # Should channel change as mouse moves between windows
         self.channel_follows_focus = self.settings['channel_follows_focus']
@@ -160,8 +160,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
         # This plugin manager handles "global" (aka standard) plug ins
         # (unique instances, not per channel)
-        self.gpmon = self.getPluginManager(self.logger, self,
-                                           None, self.mm)
+        self.gpmon = self.get_plugin_manager(self.logger, self,
+                                             None, self.mm)
 
         # Initialize catalog and image server bank
         self.imgsrv = catalog.ServerBank(self.logger)
@@ -263,7 +263,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
     def start_global_plugin(self, pluginName, raise_tab=False):
         self.gpmon.start_plugin_future(None, pluginName, None)
         if raise_tab:
-            pInfo = self.gpmon.getPluginInfo(pluginName)
+            pInfo = self.gpmon.get_plugin_info(pluginName)
             self.ds.raise_tab(pInfo.tabname)
 
     def stop_global_plugin(self, pluginName):
@@ -275,7 +275,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             self.local_plugins[name] = spec
 
             pfx = spec.get('pfx', pluginconfpfx)
-            self.mm.loadModule(spec.module, pfx=pfx)
+            self.mm.load_module(spec.module, pfx=pfx)
 
             hidden = spec.get('hidden', False)
             if not hidden:
@@ -298,9 +298,9 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             self.global_plugins[name] = spec
 
             pfx = spec.get('pfx', pluginconfpfx)
-            self.mm.loadModule(spec.module, pfx=pfx)
+            self.mm.load_module(spec.module, pfx=pfx)
 
-            self.gpmon.loadPlugin(name, spec)
+            self.gpmon.load_plugin(name, spec)
             self.add_plugin_menu(name)
 
             start = spec.get('start', True)
@@ -313,7 +313,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
     def show_error(self, errmsg, raisetab=True):
         if self.gpmon.has_plugin('Errors'):
-            obj = self.gpmon.getPlugin('Errors')
+            obj = self.gpmon.get_plugin('Errors')
             obj.add_error(errmsg)
             if raisetab:
                 self.ds.raise_tab('Errors')
@@ -340,16 +340,16 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
         self.start_global_plugin('WBrowser')
 
-        localDoc = os.path.join(package_home, 'doc', 'help.html')
-        if not os.path.exists(localDoc):
+        local_doc = os.path.join(package_home, 'doc', 'help.html')
+        if not os.path.exists(local_doc):
             url = "https://ginga.readthedocs.io/en/latest"
         else:
-            url = "file:%s" % (os.path.abspath(localDoc))
+            url = "file:%s" % (os.path.abspath(local_doc))
 
         # TODO: need to let GUI finish processing, it seems
         self.update_pending()
 
-        obj = self.gpmon.getPlugin('WBrowser')
+        obj = self.gpmon.get_plugin('WBrowser')
         obj.browse(url)
 
     # BASIC IMAGE OPERATIONS
@@ -808,7 +808,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         # update active global plugins
         opmon = self.gpmon
         for key in opmon.get_active():
-            obj = opmon.getPlugin(key)
+            obj = opmon.get_plugin(key)
             try:
                 self.gui_do(obj.redo, channel, image)
 
@@ -819,7 +819,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         # update active local plugins
         opmon = channel.opmon
         for key in opmon.get_active():
-            obj = opmon.getPlugin(key)
+            obj = opmon.get_plugin(key)
             try:
                 self.gui_do(obj.redo)
 
@@ -831,7 +831,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         """Close all plugins associated with the channel."""
         opmon = channel.opmon
         for key in opmon.get_active():
-            obj = opmon.getPlugin(key)
+            obj = opmon.get_plugin(key)
             try:
                 self.gui_do(obj.close)
 
@@ -976,7 +976,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
         name = chname
         if settings is None:
-            settings = self.prefs.createCategory('channel_'+name)
+            settings = self.prefs.create_category('channel_'+name)
             try:
                 settings.load(onError='raise')
 
@@ -987,27 +987,27 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                 # copy template settings to new channel
                 if settings_template is not None:
                     osettings = settings_template
-                    osettings.copySettings(settings)
+                    osettings.copy_settings(settings)
                 else:
                     try:
                         # use channel_Image as a template if one was not
                         # provided
-                        osettings = self.prefs.getSettings('channel_Image')
+                        osettings = self.prefs.get_settings('channel_Image')
                         self.logger.debug("Copying settings from 'Image' to "
                                           "'%s'" % (name))
-                        osettings.copySettings(settings)
+                        osettings.copy_settings(settings)
                     except KeyError:
                         pass
 
         if (share_keylist is not None) and (settings_share is not None):
             # caller wants us to share settings with another viewer
-            settings_share.shareSettings(settings, keylist=share_keylist)
+            settings_share.share_settings(settings, keylist=share_keylist)
 
         # Make sure these preferences are at least defined
         if num_images is None:
             num_images = settings.get('numImages',
                                       self.settings.get('numImages', 1))
-        settings.setDefaults(switchnew=True, numImages=num_images,
+        settings.set_defaults(switchnew=True, numImages=num_images,
                              raisenew=True, genthumb=True,
                              preload_images=False, sort_order='loadtime')
 
@@ -1021,7 +1021,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             # for debugging
             bnch.image_viewer.set_name('channel:%s' % (chname))
 
-            opmon = self.getPluginManager(self.logger, self,
+            opmon = self.get_plugin_manager(self.logger, self,
                                           self.ds, self.mm)
 
             channel.widget = bnch.widget
@@ -1045,7 +1045,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
         # Prepare local plugins for this channel
         for opname, spec in self.local_plugins.items():
-            opmon.loadPlugin(opname, spec, chinfo=channel)
+            opmon.load_plugin(opname, spec, chinfo=channel)
 
         self.make_gui_callback('add-channel', channel)
         return channel
@@ -1103,7 +1103,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         return text
 
     def banner(self, raiseTab=False):
-        bannerFile = os.path.join(self.iconpath, 'ginga-splash.ppm')
+        banner_file = os.path.join(self.iconpath, 'ginga-splash.ppm')
         chname = 'Ginga'
         self.add_channel(chname)
         channel = self.get_channel(chname)
@@ -1113,7 +1113,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         viewer.cut_levels(0, 255)
 
         #self.nongui_do(self.load_file, bannerFile, chname=chname)
-        image = self.load_file(bannerFile, chname=chname, wait=False)
+        image = self.load_file(banner_file, chname=chname, wait=False)
 
         # Insert Ginga version info
         header = image.get_header()
@@ -1169,12 +1169,12 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
     def error(self, text):
         self.logger.error(text)
-        self.statusMsg("%s", text)
+        self.status_msg("%s", text)
         # TODO: turn bar red
 
     def logit(self, text):
         try:
-            obj = self.gpmon.getPlugin('Log')
+            obj = self.gpmon.get_plugin('Log')
             self.gui_do(obj.log, text)
         except:
             pass
@@ -1219,10 +1219,10 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
     def build_toplevel(self):
 
-        self.font = self.getFont('fixedFont', 12)
-        self.font11 = self.getFont('fixedFont', 11)
-        self.font14 = self.getFont('fixedFont', 14)
-        self.font18 = self.getFont('fixedFont', 18)
+        self.font = self.get_font('fixedFont', 12)
+        self.font11 = self.get_font('fixedFont', 11)
+        self.font14 = self.get_font('fixedFont', 14)
+        self.font18 = self.get_font('fixedFont', 18)
 
         self.w.tooltips = None
 
@@ -1978,10 +1978,10 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
             # Create a settings template to copy settings from
             name = "channel_template_%f" % (time.time())
-            settings = self.prefs.createCategory(name)
+            settings = self.prefs.create_category(name)
             try:
-                settings_template = self.prefs.getSettings('channel_Image')
-                settings_template.copySettings(settings)
+                settings_template = self.prefs.get_settings('channel_Image')
+                settings_template.copy_settings(settings)
             except KeyError:
                 settings_template = None
 
