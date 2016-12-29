@@ -35,7 +35,10 @@ class RenderContext(object):
     def set_line_from_shape(self, shape):
         # TODO: support line width and style
         alpha = getattr(shape, 'alpha', 1.0)
-        self.pen = self.cr.get_pen(shape.color, alpha=alpha)
+        linewidth = getattr(shape, 'linewidth', 1.0)
+        linestyle = getattr(shape, 'linestyle', 'solid')
+        self.pen = self.cr.get_pen(shape.color, linewidth=linewidth,
+                                   linestyle=linestyle, alpha=alpha)
 
     def set_fill_from_shape(self, shape):
         fill = getattr(shape, 'fill', False)

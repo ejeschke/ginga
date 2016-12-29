@@ -85,6 +85,7 @@ class ImageViewBindings(object):
             dmod_rotate = ['r', None, None],
             dmod_pan = ['q', None, 'pan'],
             dmod_freepan = ['w', None, 'pan'],
+            dmod_camera = ['u', None, 'pan'],
 
             default_mode_type = 'oneshot',
             default_lock_mode_type = 'softlock',
@@ -141,6 +142,8 @@ class ImageViewBindings(object):
             kp_reset = ['escape'],
             kp_lock = ['L'],
             kp_softlock = ['l'],
+            kp_camera_save = ['camera+s'],
+            kp_camera_reset = ['camera+r'],
 
             # pct of a window of data to move with pan key commands
             key_pan_pct = 0.666667,
@@ -160,6 +163,7 @@ class ImageViewBindings(object):
             sc_cmap = ['cmap+scroll'],
             sc_imap = ['cmap+ctrl+scroll'],
             #sc_draw = ['draw+scroll'],
+            sc_camera_track = ['camera+scroll'],
 
             scroll_pan_acceleration = 1.0,
             # 1.0 is appropriate for a mouse, 0.1 for most trackpads
@@ -195,6 +199,8 @@ class ImageViewBindings(object):
             ms_panset = ['pan+middle', 'shift+left', 'middle'],
             ms_cmap_rotate = ['cmap+left'],
             ms_cmap_restore = ['cmap+right'],
+            ms_camera_orbit = ['camera+left'],
+            ms_camera_pan_delta = ['camera+right'],
 
             # GESTURES (some backends only)
             gs_pinch = [],
@@ -1926,6 +1932,104 @@ class ImageViewBindings(object):
             if msg and (msg_str is not None):
                 viewer.onscreen_message(msg_str, delay=0.4)
         return True
+
+
+    ##### CAMERA MOTION CALLBACKS #####
+
+    def get_camera(self, viewer):
+        widget = viewer.get_widget()
+        if not hasattr(widget, 'camera'):
+            return None, None
+        return widget, widget.camera
+
+
+    def sc_camera_track(self, viewer, event, msg=True):
+        widget, camera = self.get_camera(viewer)
+        if camera is None:
+            # this viewer doesn't have a camera
+            return
+
+        delta = event.amount * 6
+        direction = self.get_direction(event.direction)
+        if direction == 'down':
+            delta = - delta
+
+        camera.track(delta)
+        widget.update()
+        return True
+
+
+    def ms_camera_orbit(self, viewer, event, data_x, data_y, msg=True):
+        widget, camera = self.get_camera(viewer)
+        if camera is None:
+            # this viewer doesn't have a camera
+            return False
+
+        x, y = self.get_win_xy(viewer)
+
+        if event.state == 'move':
+            camera.orbit(self._start_x, self._start_y, x, y)
+            self._start_x, self._start_y = x, y
+            pos = tuple(camera.position.get())
+            mst = "Camera position: (%.4f, %.4f, %.4f)" % pos
+            if msg:
+                viewer.onscreen_message(mst, delay=0.5)
+
+        elif event.state == 'down':
+            self._start_x, self._start_y = x, y
+
+        else:
+            viewer.onscreen_message(None)
+
+        widget.update()
+        return True
+
+
+    def ms_camera_pan_delta(self, viewer, event, data_x, data_y, msg=True):
+        widget, camera = self.get_camera(viewer)
+        if camera is None:
+            # this viewer doesn't have a camera
+            return False
+
+        x, y = self.get_win_xy(viewer)
+
+        if event.state == 'move':
+            dx, dy = x - self._start_x, self._start_y - y
+            camera.pan_delta(dx, dy)
+            self._start_x, self._start_y = x, y
+
+        elif event.state == 'down':
+            self._start_x, self._start_y = x, y
+            if msg:
+                viewer.onscreen_message("Camera translate", delay=1.0)
+
+        else:
+            viewer.onscreen_message(None)
+
+        widget.update()
+        return True
+
+    def kp_camera_reset(self, viewer, event, data_x, data_y):
+        widget, camera = self.get_camera(viewer)
+        if camera is None:
+            # this viewer doesn't have a camera
+            return False
+
+        camera.reset()
+        viewer.onscreen_message("Reset camera", delay=0.5)
+        widget.update()
+        return True
+
+    def kp_camera_save(self, viewer, event, data_x, data_y):
+        widget, camera = self.get_camera(viewer)
+        if camera is None:
+            # this viewer doesn't have a camera
+            return False
+
+        camera.save_positions()
+        viewer.onscreen_message("Saved camera position", delay=0.5)
+        return True
+
 
 class UIEvent(object):
     pass

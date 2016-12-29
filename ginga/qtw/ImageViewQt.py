@@ -213,8 +213,7 @@ class ImageViewQt(ImageView.ImageViewBase):
         qbuf.close()
         return ibuf
 
-    def get_rgb_image_as_widget(self, output=None, format='png',
-                                quality=90):
+    def get_rgb_image_as_widget(self):
         imgwin_wd, imgwin_ht = self.get_window_size()
         qpix = self.pixmap.copy(0, 0,
                                 imgwin_wd, imgwin_ht)
@@ -384,21 +383,11 @@ class RenderWidgetZoom(RenderMixin, RenderWidget):
 class RenderGraphicsViewZoom(RenderMixin, RenderGraphicsView):
     pass
 
-class ImageViewEvent(ImageViewQt):
 
-    def __init__(self, logger=None, rgbmap=None, settings=None, render=None):
-        ImageViewQt.__init__(self, logger=logger, rgbmap=rgbmap,
-                             settings=settings, render=render)
+class QtEventMixin(object):
 
-        # replace the widget our parent provided
-        if self.wtype == 'scene':
-            imgwin = RenderGraphicsViewZoom()
-            imgwin.setScene(self.scene)
-        else:
-            imgwin = RenderWidgetZoom()
-
-        imgwin.viewer = self
-        self.imgwin = imgwin
+    def __init__(self):
+        imgwin = self.imgwin
         imgwin.setFocusPolicy(QtCore.Qt.FocusPolicy(
                               QtCore.Qt.TabFocus |
                               QtCore.Qt.ClickFocus |
@@ -447,6 +436,9 @@ class ImageViewEvent(ImageViewQt):
                      'scroll', 'map', 'focus', 'enter', 'leave',
                      'pinch', 'pan', 'swipe', 'tap'):
             self.enable_callback(name)
+
+    def set_enter_focus(self, tf):
+        self.enter_focus = tf
 
     def transkey(self, keycode, keyname):
         self.logger.debug("keycode=%d keyname='%s'" % (
@@ -498,9 +490,6 @@ class ImageViewEvent(ImageViewQt):
 
     def get_keyTable(self):
         return self._keytbl
-
-    def set_enter_focus(self, tf):
-        self.enter_focus = tf
 
     def map_event(self, widget, event):
         rect = widget.geometry()
@@ -745,6 +734,26 @@ class ImageViewEvent(ImageViewQt):
         event.setAccepted(True)
         #event.acceptProposedAction()
         self.make_ui_callback('drag-drop', data)
+
+
+class ImageViewEvent(ImageViewQt, QtEventMixin):
+
+    def __init__(self, logger=None, rgbmap=None, settings=None, render=None):
+        ImageViewQt.__init__(self, logger=logger, rgbmap=rgbmap,
+                             settings=settings, render=render)
+
+        # replace the widget our parent provided
+        if self.wtype == 'scene':
+            imgwin = RenderGraphicsViewZoom()
+            imgwin.setScene(self.scene)
+        else:
+            imgwin = RenderWidgetZoom()
+
+        imgwin.viewer = self
+        self.imgwin = imgwin
+
+        QtEventMixin.__init__(self)
+
 
 class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
 
