@@ -20,8 +20,6 @@ class RenderContext(object):
 
     def __init__(self, viewer):
         self.viewer = viewer
-        wd, ht = viewer.get_window_size()
-        self.hwd, self.hht = wd / 2.0, ht / 2.0
 
         # TODO: encapsulate this drawable
         self.cr = GlHelp.GlContext(viewer.get_widget())
@@ -96,10 +94,10 @@ class RenderContext(object):
 
     def _scale(self, pt):
         x, y = pt
-        #sx = (x - self.hwd) / float(self.hwd)
-        sx = (self.hwd - x) / float(self.hwd)
-        sy = (self.hht - y) / float(self.hht)
-        return (sx, sy, -0.1)
+        widget = self.cr.widget
+        sx, sy = x - widget.lim_x, widget.lim_y - y
+        sz = 1 if not widget.mode3d else 10
+        return (sx, sy, sz)
 
     def _draw_pts(self, shape, cpoints):
         if not self.cr.widget._drawing:

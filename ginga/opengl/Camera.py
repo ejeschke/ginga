@@ -52,7 +52,7 @@ class Camera(object):
         self.ground = Vector3D(0, 1, 0)
 
         # this is the default eye position to reset the camera
-        self.home_position = Point3D(0, 0, -2)
+        self.home_position = Point3D(0, 0, 1)
 
         # this is the default target position to reset the camera
         self.tgt_position = Point3D(0, 0, 0)
@@ -81,7 +81,7 @@ class Camera(object):
 
         tangent = np.tan(self.fov_deg / 2.0 / 180.0 * np.pi)
         distance_from_target = self.scene_radius / tangent
-        self.home_position = Point3D(x, y, -distance_from_target)
+        self.home_position = Point3D(x, y, distance_from_target)
 
     def set_camera_home_position(self, pt):
         self.home_position = Point3D(*pt)
@@ -99,6 +99,7 @@ class Camera(object):
         """
         tangent = np.tan(self.fov_deg / 2.0 / 180.0 * np.pi)
         vport_radius = self.near_plane * tangent
+        # calculate aspect of the viewport
         if self.vport_wd_px < self.vport_ht_px:
             vport_wd = 2.0 * vport_radius
             vport_ht = vport_wd * self.vport_ht_px / float(self.vport_wd_px)
@@ -108,8 +109,8 @@ class Camera(object):
             vport_wd = vport_ht * self.vport_wd_px / float(self.vport_ht_px)
 
         gl.glFrustum(
-            - 0.5 * vport_wd, 0.5 * vport_wd,    # left, right
-            - 0.5 * vport_ht, 0.5 * vport_ht,    # bottom, top
+            -0.5 * vport_wd, 0.5 * vport_wd,    # left, right
+            -0.5 * vport_ht, 0.5 * vport_ht,    # bottom, top
             self.near_plane, self.far_plane
             )
 
@@ -168,18 +169,28 @@ class Camera(object):
         self.position = self.position + translation
         self.target = self.target + translation
 
-    def track(self, delta_pixels, push_target=False):
+    def track(self, delta_pixels, push_target=False, adj_fov=False):
         """
         This causes the camera to translate forward into the scene.
         This is also called "dollying" or "tracking" in some software packages.
         Passing in a negative delta causes the opposite motion.
+
         If ``push_target'' is True, the point of interest translates forward
         (or backward) *with* the camera, i.e. it's "pushed" along with the
         camera; otherwise it remains stationary.
+
+        if ``adj_fov`` is True then the camera's FOV is adjusted to keep the
+        target at the same size as before (so called "dolly zoom" or
+        "trombone effect").
         """
         direction = self.target - self.position
         distance_from_target = direction.length()
         direction = direction.normalized()
+
+        initial_ht = frustum_height_at_distance(self.fov_deg,
+                                                distance_from_target)
+        ## print("frustum height at distance %.4f is %.4f" % (
+        ##     distance_from_target, initial_ht))
 
         speed_per_radius = self.get_translation_speed(distance_from_target)
         px_per_unit = self.vport_radius_px / speed_per_radius
@@ -193,5 +204,49 @@ class Camera(object):
 
         self.position += direction * dolly_distance
         self.target = self.position + direction * distance_from_target
+
+        if adj_fov:
+            # adjust FOV to match the size of the target before the dolly
+            direction = self.target - self.position
+            distance_from_target = direction.length()
+            fov_deg = fov_for_height_and_distance(initial_ht,
+                                                  distance_from_target)
+            #print("fov is now %.4f" % fov_deg)
+            self.fov_deg = fov_deg
+
+
+    def frustum_dimensions_at_target(self, vfov_deg=None):
+        if vfov_deg is None:
+            vfov_deg = self.fov_deg
+
+        direction = self.target - self.position
+        distance_from_target = direction.length()
+
+        height = frustum_height_at_distance(vfov_deg, distance_from_target)
+
+        vp_wd, vp_ht = self.get_viewport_dimensions()
+        aspect = float(vp_wd) / vp_ht
+
+        hfov_rad = 2.0 * np.arctan(np.tan(np.radians(vfov_deg) * 0.5) * aspect)
+        hfov_deg = np.degrees(hfov_rad)
+        width = 2.0 * np.tan(hfov_rad * 0.5) * distance_from_target
+
+        return (distance_from_target, hfov_deg, vfov_deg, width, height)
+
+
+def frustum_height_at_distance(vfov_deg, distance):
+    """Calculate the frustum height (in world units) at a given distance
+    (in world units) from the camera.
+    """
+    height = 2.0 * distance * np.tan(np.radians(vfov_deg * 0.5))
+    return height
+
+def fov_for_height_and_distance(height, distance):
+    """Calculate the FOV needed to get a given frustum height at a
+    given distance.
+    """
+    vfov_deg = np.degrees(2.0 * np.arctan(height * 0.5 / distance))
+    return vfov_deg
+
 
 # END

@@ -144,6 +144,7 @@ class ImageViewBindings(object):
             kp_softlock = ['l'],
             kp_camera_save = ['camera+s'],
             kp_camera_reset = ['camera+r'],
+            kp_camera_toggle3d = ['camera+3'],
 
             # pct of a window of data to move with pan key commands
             key_pan_pct = 0.666667,
@@ -1972,14 +1973,14 @@ class ImageViewBindings(object):
             self._start_x, self._start_y = x, y
             pos = tuple(camera.position.get())
             mst = "Camera position: (%.4f, %.4f, %.4f)" % pos
-            if msg:
-                viewer.onscreen_message(mst, delay=0.5)
+            ## if msg:
+            ##     viewer.onscreen_message(mst, delay=0.5)
 
         elif event.state == 'down':
             self._start_x, self._start_y = x, y
 
-        else:
-            viewer.onscreen_message(None)
+        ## else:
+        ##     viewer.onscreen_message(None)
 
         widget.update()
         return True
@@ -2000,11 +2001,11 @@ class ImageViewBindings(object):
 
         elif event.state == 'down':
             self._start_x, self._start_y = x, y
-            if msg:
-                viewer.onscreen_message("Camera translate", delay=1.0)
+            ## if msg:
+            ##     viewer.onscreen_message("Camera translate", delay=1.0)
 
-        else:
-            viewer.onscreen_message(None)
+        ## else:
+        ##     viewer.onscreen_message(None)
 
         widget.update()
         return True
@@ -2028,6 +2029,16 @@ class ImageViewBindings(object):
 
         camera.save_positions()
         viewer.onscreen_message("Saved camera position", delay=0.5)
+        return True
+
+    def kp_camera_toggle3d(self, viewer, event, data_x, data_y):
+        widget, camera = self.get_camera(viewer)
+        if camera is None:
+            # this viewer doesn't have a camera
+            return False
+
+        widget.mode3d = not widget.mode3d
+        widget.update()
         return True
 
 

@@ -183,12 +183,12 @@ class Matrix4x4(object):
         s = np.sin(angle_rad)
         one_minus_c = 1 - c
         M = Matrix4x4()
-        M.f[ 0] = c + one_minus_c * axis_vector.x*axis_vector.x
-        M.f[ 5] = c + one_minus_c * axis_vector.y*axis_vector.y
-        M.f[10] = c + one_minus_c * axis_vector.z*axis_vector.z
-        M.f[ 1] = M.f[ 4] = one_minus_c * axis_vector.x*axis_vector.y
-        M.f[ 2] = M.f[ 8] = one_minus_c * axis_vector.x*axis_vector.z
-        M.f[ 6] = M.f[ 9] = one_minus_c * axis_vector.y*axis_vector.z
+        M.f[ 0] = c + one_minus_c * axis_vector.x * axis_vector.x
+        M.f[ 5] = c + one_minus_c * axis_vector.y * axis_vector.y
+        M.f[10] = c + one_minus_c * axis_vector.z * axis_vector.z
+        M.f[ 1] = M.f[ 4] = one_minus_c * axis_vector.x * axis_vector.y
+        M.f[ 2] = M.f[ 8] = one_minus_c * axis_vector.x * axis_vector.z
+        M.f[ 6] = M.f[ 9] = one_minus_c * axis_vector.y * axis_vector.z
         xs = axis_vector.x * s
         ys = axis_vector.y * s
         zs = axis_vector.z * s

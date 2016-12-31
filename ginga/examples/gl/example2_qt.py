@@ -182,6 +182,7 @@ class FitsViewer(QtGui.QMainWindow):
             value = None
 
         fits_x, fits_y = data_x + 1, data_y + 1
+        #fits_x, fits_y = data_x, data_y
 
         # Calculate WCS RA
         try:
@@ -230,7 +231,7 @@ def main(options, args):
             logger.warning("failed to set OpenCL preference: %s" % (str(e)))
 
     w = FitsViewer(logger)
-    w.resize(524, 540)
+    w.resize(524, 1000)
     w.show()
     app.setActiveWindow(w)
     w.raise_()
