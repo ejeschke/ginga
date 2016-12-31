@@ -104,8 +104,10 @@ class PyFitsFileHandler(BaseFitsFileHandler):
 
     def load_hdu(self, hdu, dstobj=None, **kwargs):
 
-        if (isinstance(hdu, pyfits.ImageHDU) or
-                isinstance(hdu, pyfits.PrimaryHDU)):
+        if isinstance(hdu, (pyfits.ImageHDU,
+                            pyfits.CompImageHDU,
+                            pyfits.PrimaryHDU,
+                            )):
             # <-- data is an image
 
             if dstobj is None:
@@ -192,6 +194,7 @@ class PyFitsFileHandler(BaseFitsFileHandler):
 
                     # rule out HDUs we can't deal with
                     if not isinstance(hdu, (pyfits.ImageHDU,
+                                            pyfits.CompImageHDU,
                                             pyfits.PrimaryHDU,
                                             pyfits.TableHDU,
                                             pyfits.BinTableHDU,

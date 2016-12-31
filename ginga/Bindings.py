@@ -648,6 +648,15 @@ class ImageViewBindings(object):
         else:
             return 'none'
 
+    def get_win_xy(self, viewer):
+        x, y = viewer.get_last_win_xy()
+
+        if not viewer.window_has_origin_upper():
+            wd, ht = viewer.get_window_size()
+            y = ht - y
+
+        return x, y
+
     def _tweak_colormap(self, viewer, x, y, mode):
         win_wd, win_ht = viewer.get_window_size()
 
@@ -1382,7 +1391,8 @@ class ImageViewBindings(object):
             return True
         msg = self.settings.get('msg_zoom', msg)
 
-        x, y = viewer.get_last_win_xy()
+        x, y = self.get_win_xy(viewer)
+
         if event.state == 'move':
             self._zoom_xy(viewer, x, y)
 
@@ -1467,7 +1477,8 @@ class ImageViewBindings(object):
             return True
         msg = self.settings.get('msg_rotate', msg)
 
-        x, y = viewer.get_last_win_xy()
+        x, y = self.get_win_xy(viewer)
+
         if event.state == 'move':
             self._rotate_xy(viewer, x, y)
 
@@ -1502,9 +1513,8 @@ class ImageViewBindings(object):
             return True
         msg = self.settings.get('msg_contrast', msg)
 
-        x, y = viewer.get_last_win_xy()
-        if not viewer.window_has_origin_upper():
-            y = viewer._imgwin_ht - y
+        x, y = self.get_win_xy(viewer)
+
         if event.state == 'move':
             self._tweak_colormap(viewer, x, y, 'preview')
 
@@ -1535,9 +1545,8 @@ class ImageViewBindings(object):
             return True
         msg = self.settings.get('msg_cmap', msg)
 
-        x, y = viewer.get_last_win_xy()
-        if not viewer.window_has_origin_upper():
-            y = viewer._imgwin_ht - y
+        x, y = self.get_win_xy(viewer)
+
         if event.state == 'move':
             self._rotate_colormap(viewer, x, y, 'preview')
 
@@ -1609,7 +1618,8 @@ class ImageViewBindings(object):
         if not self.cancut:
             return True
 
-        x, y = viewer.get_last_win_xy()
+        x, y = self.get_win_xy(viewer)
+
         if event.state == 'move':
             self._cutlow_xy(viewer, x, y)
 
@@ -1627,7 +1637,8 @@ class ImageViewBindings(object):
         if not self.cancut:
             return True
 
-        x, y = viewer.get_last_win_xy()
+        x, y = self.get_win_xy(viewer)
+
         if event.state == 'move':
             self._cuthigh_xy(viewer, x, y)
 
@@ -1645,9 +1656,8 @@ class ImageViewBindings(object):
         if not self.cancut:
             return True
 
-        x, y = viewer.get_last_win_xy()
-        if not viewer.window_has_origin_upper():
-            y = viewer._imgwin_ht - y
+        x, y = self.get_win_xy(viewer)
+
         if event.state == 'move':
             self._cutboth_xy(viewer, x, y)
 
@@ -2034,6 +2044,14 @@ class BindingMapper(Callback.Callbacks):
     def clear_mode_map(self):
         self.mode_map = {}
 
+    def has_mode(self, mode_name):
+        key = 'mode_%s' % mode_name
+        return key in self.mode_map
+
+    def remove_mode(self, mode_name):
+        key = 'mode_%s' % mode_name
+        del self.mode_map[key]
+
     def current_mode(self):
         return (self._kbdmode, self._kbdmode_type)
 
@@ -2047,7 +2065,9 @@ class BindingMapper(Callback.Callbacks):
                 mode_type, self._kbdmode_types))
 
         bnch = Bunch.Bunch(name=mode_name, type=mode_type, msg=msg)
-        self.mode_map[keyname] = bnch
+        if keyname is not None:
+            # No key to launch this mode
+            self.mode_map[keyname] = bnch
         self.mode_map['mode_%s' % mode_name] = bnch
 
     def set_mode(self, name, mode_type=None):

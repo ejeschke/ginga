@@ -709,7 +709,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         chpfx = ws.extdata.get('chpfx', chpfx)
 
         chname = self.make_channel_name(chpfx)
-        self.add_channel(chname, workspace=ws.name)
+        return self.add_channel(chname, workspace=ws.name)
 
     def add_channel_auto(self):
         ws = self.get_current_workspace()
@@ -718,7 +718,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                             raisetab=True)
             return
 
-        self.add_channel_auto_ws(ws)
+        return self.add_channel_auto_ws(ws)
 
     def remove_channel_auto(self):
         channel = self.get_channel_info()
@@ -953,17 +953,23 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         chname : str
             The name of the channel to create.
 
-        workspace
+        workspace : str or None
+            The name of the workspace in which to create the channel
 
-        num_images
+        num_images : int or None
+            The cache size for the number of images to keep in memory
 
-        settings
+        settings : `~ginga.misc.Settings.SettingGroup` or `None`
+            Viewer preferences. If not given, one will be created.
 
-        settings_template
+        settings_template : `~ginga.misc.Settings.SettingGroup` or `None`
+            Viewer preferences template
 
-        settings_share
+        settings_share : `~ginga.misc.Settings.SettingGroup` or `None`
+            Viewer preferences instance to share with newly created settings
 
-        share_keylist
+        share_keylist : list of str
+            List of names of settings that should be shared
 
         Returns
         -------
