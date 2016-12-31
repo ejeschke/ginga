@@ -1938,14 +1938,14 @@ class ImageViewBindings(object):
     ##### CAMERA MOTION CALLBACKS #####
 
     def get_camera(self, viewer):
-        widget = viewer.get_widget()
-        if not hasattr(widget, 'camera'):
+        renderer = viewer.renderer
+        if not hasattr(renderer, 'camera'):
             return None, None
-        return widget, widget.camera
+        return renderer.camera
 
 
     def sc_camera_track(self, viewer, event, msg=True):
-        widget, camera = self.get_camera(viewer)
+        camera = self.get_camera(viewer)
         if camera is None:
             # this viewer doesn't have a camera
             return
@@ -1956,12 +1956,13 @@ class ImageViewBindings(object):
             delta = - delta
 
         camera.track(delta)
-        widget.update()
+
+        viewer.gl_update()
         return True
 
 
     def ms_camera_orbit(self, viewer, event, data_x, data_y, msg=True):
-        widget, camera = self.get_camera(viewer)
+        camera = self.get_camera(viewer)
         if camera is None:
             # this viewer doesn't have a camera
             return False
@@ -1982,12 +1983,12 @@ class ImageViewBindings(object):
         ## else:
         ##     viewer.onscreen_message(None)
 
-        widget.update()
+        viewer.gl_update()
         return True
 
 
     def ms_camera_pan_delta(self, viewer, event, data_x, data_y, msg=True):
-        widget, camera = self.get_camera(viewer)
+        camera = self.get_camera(viewer)
         if camera is None:
             # this viewer doesn't have a camera
             return False
@@ -2007,22 +2008,22 @@ class ImageViewBindings(object):
         ## else:
         ##     viewer.onscreen_message(None)
 
-        widget.update()
+        viewer.gl_update()
         return True
 
     def kp_camera_reset(self, viewer, event, data_x, data_y):
-        widget, camera = self.get_camera(viewer)
+        camera = self.get_camera(viewer)
         if camera is None:
             # this viewer doesn't have a camera
             return False
 
         camera.reset()
         viewer.onscreen_message("Reset camera", delay=0.5)
-        widget.update()
+        viewer.gl_update()
         return True
 
     def kp_camera_save(self, viewer, event, data_x, data_y):
-        widget, camera = self.get_camera(viewer)
+        camera = self.get_camera(viewer)
         if camera is None:
             # this viewer doesn't have a camera
             return False
@@ -2032,13 +2033,14 @@ class ImageViewBindings(object):
         return True
 
     def kp_camera_toggle3d(self, viewer, event, data_x, data_y):
-        widget, camera = self.get_camera(viewer)
+        camera = self.get_camera(viewer)
         if camera is None:
             # this viewer doesn't have a camera
             return False
 
-        widget.mode3d = not widget.mode3d
-        widget.update()
+        renderer = viewer.renderer
+        renderer.mode3d = not renderer.mode3d
+        viewer.gl_update()
         return True
 
 
