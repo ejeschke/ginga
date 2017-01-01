@@ -7,6 +7,7 @@
 import sys
 import inspect
 import traceback
+import logging
 from io import StringIO
 
 from ginga import GingaPlugin
@@ -22,6 +23,7 @@ try:
 
 except ImportError:
     pass
+
 
 class Imexam(GingaPlugin.LocalPlugin):
     """
@@ -77,7 +79,12 @@ class Imexam(GingaPlugin.LocalPlugin):
 
         # this is our imexamine object
         self.imex = Imexamine()
-        self.out_f = StringIO()
+
+        # capture the stdout logger from imexam
+        self.log_capture_string = StringIO()
+        self.stream_handler = logging.StreamHandler(self.log_capture_string)
+        self.stream_handler.setLevel(logging.INFO)
+        self.imex.log.addHandler(self.stream_handler)
 
         self.dc = fv.get_draw_classes()
         canvas = self.dc.DrawingCanvas()
@@ -280,7 +287,7 @@ class Imexam(GingaPlugin.LocalPlugin):
         hbox.add_widget(btn, stretch=0)
         vbox.add_widget(hbox, stretch=0)
 
-        #vbox.resize(wd, ht)
+        # vbox.resize(wd, ht)
         self._plot_w = vbox
 
         if self._plots_in_ws:
@@ -308,7 +315,7 @@ class Imexam(GingaPlugin.LocalPlugin):
             return False
         self.logger.debug("imexam_cb")
 
-        #keyname = event.key
+        # keyname = event.key
         self.logger.debug("key pressed: %s" % (keyname))
 
         image = self.fitsimage.get_image()
@@ -330,27 +337,17 @@ class Imexam(GingaPlugin.LocalPlugin):
             if self._plot is None:
                 self.make_new_figure()
             kwargs['fig'] = self._plot.get_figure()
-
-        if 'out_f' in args:
-            # buffer for any printed output
-            self.out_f.seek(0)
-            self.out_f.truncate()
-            kwargs['out_f'] = self.out_f
-
+        self.log_capture_string.seek(0)
+        self.log_capture_string.truncate()
         self.msg_res.append_text("----\ncmd: '%s'\n" % keyname)
-
         try:
             func(data_x, data_y, **kwargs)
-
-            if 'out_f' in args:
-                result = self.out_f.getvalue()
-                self.msg_res.append_text(result, autoscroll=True)
-
+            self.msg_res.append_text(self.log_capture_string.getvalue(),
+                                     autoscroll=True)
         except Exception as e:
+            self.msg_res.append_text(self.log_capture_string.getvalue(),
+                                     autoscroll=True)
             # get any partial output
-            result = self.out_f.getvalue()
-            self.msg_res.append_text(result)
-
             errmsg = ("Error calling imexam function: %s" % (
                 str(e)))
             self.msg_res.append_text(errmsg)
