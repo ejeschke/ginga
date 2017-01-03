@@ -6,6 +6,9 @@ Ver 2.6.2.dev
 =============
 - Added some colormaps from ds9 that don't have equivalents in Ginga or
   matplotlib
+- Fix for recognizing CompImage HDU type when using astropy.io.fits
+- Add new experimental OpenGL back end
+- Fixes for Tk back end on python 3    
 
 Ver 2.6.1 (2016-12-22)
 ======================

@@ -280,8 +280,8 @@ def get_scaled_cutout_wdht_view(shp, x1, y1, x2, y2, new_wd, new_ht):
 
     else:
         # simple stepped view will do, because new view is same as old
-        view = numpy.s_[y1:y2+1, x1:x2+1]
         wd, ht = old_wd, old_ht
+        view = numpy.s_[y1:y2+1, x1:x2+1]
 
     # Calculate actual scale used (vs. desired)
     old_wd, old_ht = max(old_wd, 1), max(old_ht, 1)
@@ -290,6 +290,58 @@ def get_scaled_cutout_wdht_view(shp, x1, y1, x2, y2, new_wd, new_ht):
 
     # return view + actual scale factors used
     return (view, (scale_x, scale_y))
+
+def get_scaled_cutout_wdhtdp_view(shp, p1, p2, new_dims):
+    """
+    Like get_scaled_cutout_wdht, but returns the view/slice to extract
+    from an image instead of the extraction itself.
+    """
+    x1, y1, z1 = p1
+    x2, y2, z2 = p2
+    new_wd, new_ht, new_dp = new_dims
+
+    # calculate dimensions of NON-scaled cutout
+    old_wd = x2 - x1 + 1
+    old_ht = y2 - y1 + 1
+    old_dp = z2 - z1 + 1
+    max_x, max_y, max_z = shp[1] - 1, shp[0] - 1, shp[2] - 1
+
+    if (new_wd != old_wd) or (new_ht != old_ht) or (new_dp != old_dp):
+        # Make indexes and scale them
+        # Is there a more efficient way to do this?
+        yi = numpy.mgrid[0:new_ht].reshape(-1, 1, 1)
+        xi = numpy.mgrid[0:new_wd].reshape(1, -1, 1)
+        zi = numpy.mgrid[0:new_dp].reshape(1, 1, -1)
+        iscale_x = float(old_wd) / float(new_wd)
+        iscale_y = float(old_ht) / float(new_ht)
+        iscale_z = float(old_dp) / float(new_dp)
+
+        xi = (x1 + xi * iscale_x).clip(0, max_x).astype('int')
+        yi = (y1 + yi * iscale_y).clip(0, max_y).astype('int')
+        zi = (z1 + zi * iscale_z).clip(0, max_z).astype('int')
+        wd, ht, dp = xi.shape[1], yi.shape[0], zi.shape[2]
+
+        # bounds check against shape (to protect future data access)
+        xi_max, yi_max, zi_max = xi[0, -1, 0], yi[-1, 0, 0], zi[0, 0, -1]
+        assert xi_max <= max_x, ValueError("X index (%d) exceeds shape bounds (%d)" % (xi_max, max_x))
+        assert yi_max <= max_y, ValueError("Y index (%d) exceeds shape bounds (%d)" % (yi_max, max_y))
+        assert zi_max <= max_z, ValueError("Z index (%d) exceeds shape bounds (%d)" % (zi_max, max_z))
+
+        view = numpy.s_[yi, xi, zi]
+
+    else:
+        # simple stepped view will do, because new view is same as old
+        wd, ht, dp = old_wd, old_ht, old_dp
+        view = numpy.s_[y1:y2+1, x1:x2+1, z1:z2+1]
+
+    # Calculate actual scale used (vs. desired)
+    old_wd, old_ht, old_dp = max(old_wd, 1), max(old_ht, 1), max(old_dp, 1)
+    scale_x = float(wd) / old_wd
+    scale_y = float(ht) / old_ht
+    scale_z = float(dp) / old_dp
+
+    # return view + actual scale factors used
+    return (view, (scale_x, scale_y, scale_z))
 
 
 def get_scaled_cutout_wdht(data_np, x1, y1, x2, y2, new_wd, new_ht,
@@ -339,13 +391,24 @@ def get_scaled_cutout_wdht(data_np, x1, y1, x2, y2, new_wd, new_ht,
 
     return newdata, (scale_x, scale_y)
 
+def get_scaled_cutout_wdhtdp(data_np, p1, p2, new_dims):
+    if logger is not None:
+        logger.debug('resizing by slicing')
+    view, scales = get_scaled_cutout_wdhtdp_view(data_np.shape,
+                                                 p1, p2, new_dims)
+    newdata = data_np[view]
 
-def get_scaled_cutout_basic_view(shp, x1, y1, x2, y2, scale_x, scale_y):
+    return newdata, scales
+
+def get_scaled_cutout_basic_view(shp, p1, p2, scales):
     """
     Like get_scaled_cutout_basic, but returns the view/slice to extract
     from an image, instead of the extraction itself
     """
 
+    x1, y1 = p1[:2]
+    x2, y2 = p2[:2]
+    scale_x, scale_y = scales[:2]
     # calculate dimensions of NON-scaled cutout
     old_wd = x2 - x1 + 1
     old_ht = y2 - y1 + 1
@@ -353,7 +416,13 @@ def get_scaled_cutout_basic_view(shp, x1, y1, x2, y2, scale_x, scale_y):
     new_wd = int(round(scale_x * old_wd))
     new_ht = int(round(scale_y * old_ht))
 
-    return get_scaled_cutout_wdht_view(shp, x1, y1, x2, y2, new_wd, new_ht)
+    if len(scales) == 2:
+        return get_scaled_cutout_wdht_view(shp, x1, y1, x2, y2, new_wd, new_ht)
+
+    z1, z2, scale_x = p1[2], p2[2], scales[2]
+    old_dp = z2 - z1 + 1
+    new_dp = int(round(scale_z * old_dp))
+    return get_scaled_cutout_wdhtdp_view(shp, p1, p2, (new_wd, new_ht, new_dp))
 
 
 def get_scaled_cutout_basic(data_np, x1, y1, x2, y2, scale_x, scale_y,
@@ -391,12 +460,29 @@ def get_scaled_cutout_basic(data_np, x1, y1, x2, y2, scale_x, scale_y,
     else:
         if logger is not None:
             logger.debug('resizing by slicing')
-        view, (scale_x, scale_y) = get_scaled_cutout_basic_view(data_np.shape,
-                                                                x1, y1, x2, y2,
-                                                                scale_x, scale_y)
+        view, scales = get_scaled_cutout_basic_view(data_np.shape,
+                                                    (x1, y1), (x2, y2),
+                                                    (scale_x, scale_y))
+        scale_x, scale_y = scales
         newdata = data_np[view]
 
     return newdata, (scale_x, scale_y)
+
+
+def get_scaled_cutout_basic2(data_np, p1, p2, scales,
+                            interpolation='basic', logger=None):
+
+    if interpolation not in ('basic', 'nearest'):
+        raise ValueError("Interpolation method not supported: '%s'" % (
+            interpolation))
+
+    if logger is not None:
+        logger.debug('resizing by slicing')
+    view, scales = get_scaled_cutout_basic_view(data_np.shape,
+                                                p1, p2, scales)
+    newdata = data_np[view]
+
+    return newdata, scales
 
 
 def transform(data_np, flip_x=False, flip_y=False, swap_xy=False):
@@ -412,17 +498,20 @@ def transform(data_np, flip_x=False, flip_y=False, swap_xy=False):
     return data_np
 
 
-def calc_image_merge_clip(x1, y1, x2, y2,
-                          dst_x, dst_y, a1, b1, a2, b2):
+def calc_image_merge_clip(p1, p2, dst, q1, q2):
     """
-    (x1, y1) and (x2, y2) define the extent of the (non-scaled) data
-    shown.  The image, defined by region (a1, b1), (a2, b2) is to be
-    placed at (dst_x, dst_y) in the image (destination may be outside
-    of the actual data array).
+    p1 (x1, y1, z1) and p2 (x2, y2, z2) define the extent of the (non-scaled)
+    data shown.  The image, defined by region q1, q2 is to be placed at dst
+    in the image (destination may be outside of the actual data array).
 
-    Refines the tuple (a1, b1, a2, b2) defining the clipped rectangle
+    Refines the modified points (q1', q2') defining the clipped rectangle
     needed to be cut from the source array and scaled.
     """
+    x1, y1 = p1[:2]
+    x2, y2 = p2[:2]
+    dst_x, dst_y = dst[:2]
+    a1, b1 = q1[:2]
+    a2, b2 = q2[:2]
     src_wd, src_ht = a2 - a1, b2 - b1
 
     # Trim off parts of srcarr that would be "hidden"
@@ -431,7 +520,6 @@ def calc_image_merge_clip(x1, y1, x2, y2,
     if ex > 0:
         src_ht -= ex
         dst_y += ex
-        #b2 -= ex
         b1 += ex
 
     ex = x1 - dst_x
@@ -441,11 +529,10 @@ def calc_image_merge_clip(x1, y1, x2, y2,
         a1 += ex
 
     # Trim off parts of srcarr that would be "hidden"
-    # to the right and below the dstarr edge.
+    # to the right and below dstarr edge.
     ex = dst_y + src_ht - y2
     if ex > 0:
         src_ht -= ex
-        #b1 += ex
         b2 -= ex
 
     ex = dst_x + src_wd - x2
@@ -453,16 +540,35 @@ def calc_image_merge_clip(x1, y1, x2, y2,
         src_wd -= ex
         a2 -= ex
 
-    return (dst_x, dst_y, a1, b1, a2, b2)
+    if len(p1) > 2:
+        # 3D image
+        z1, z2, dst_z, c1, c2 = p1[2], p2[2], dst[2], q1[2], q2[2]
+        src_dp = c2 - c1
+
+        ex = z1 - dst_z
+        if ex > 0:
+            src_dp -= ex
+            dst_z += ex
+            c1 += ex
+
+        ex = dst_z + src_dp - z2
+        if ex > 0:
+            src_dp -= ex
+            c2 -= ex
+
+        return ((dst_x, dst_y, dst_z), (a1, b1, c1), (a2, b2, c2))
+
+    else:
+        return ((dst_x, dst_y), (a1, b1), (a2, b2))
 
 
-def overlay_image(dstarr, dst_x, dst_y, srcarr, dst_order='RGBA',
-                  src_order='RGBA',
-                  alpha=1.0, copy=False, fill=True, flipy=False):
+def overlay_image_2d(dstarr, pos, srcarr, dst_order='RGBA',
+                     src_order='RGBA',
+                     alpha=1.0, copy=False, fill=True, flipy=False):
 
-    dst_ht, dst_wd, dst_dp = dstarr.shape
-    src_ht, src_wd, src_dp = srcarr.shape
-    dst_x, dst_y = int(round(dst_x)), int(round(dst_y))
+    dst_ht, dst_wd, dst_ch = dstarr.shape
+    src_ht, src_wd, src_ch = srcarr.shape
+    dst_x, dst_y = int(round(pos[0])), int(round(pos[1]))
 
     if flipy:
         srcarr = numpy.flipud(srcarr)
@@ -515,7 +621,7 @@ def overlay_image(dstarr, dst_x, dst_y, srcarr, dst_order='RGBA',
     if fill and (da_idx >= 0):
         dstarr[dst_y:dst_y+src_ht, dst_x:dst_x+src_wd, da_idx] = 255
 
-    if src_dp > 3:
+    if src_ch > 3:
         sa_idx = src_order.index('A')
         # if overlay source contains an alpha channel, extract it
         # and use it, otherwise use scalar keyword parameter
@@ -543,9 +649,126 @@ def overlay_image(dstarr, dst_x, dst_y, srcarr, dst_order='RGBA',
 
     return dstarr
 
+def overlay_image_3d(dstarr, pos, srcarr, dst_order='RGBA', src_order='RGBA',
+                     alpha=1.0, copy=False, fill=True, flipy=False):
+
+    dst_x, dst_y, dst_z = pos
+    dst_ht, dst_wd, dst_dp, dst_ch = dstarr.shape
+    src_ht, src_wd, src_dp, src_ch = srcarr.shape
+
+    if flipy:
+        srcarr = numpy.flipud(srcarr)
+
+    # Trim off parts of srcarr that would be "hidden"
+    # to the left and above the dstarr edge.
+    if dst_y < 0:
+        dy = abs(dst_y)
+        srcarr = srcarr[dy:, :, :]
+        src_ht -= dy
+        dst_y = 0
+
+    if dst_x < 0:
+        dx = abs(dst_x)
+        srcarr = srcarr[:, dx:, :]
+        src_wd -= dx
+        dst_x = 0
+
+    if dst_z < 0:
+        dz = abs(dst_z)
+        srcarr = srcarr[:, :, dz:]
+        src_dp -= dz
+        dst_z = 0
+
+    if src_wd <= 0 or src_ht <=0 or src_dp <= 0:
+        return dstarr
+
+    # Trim off parts of srcarr that would be "hidden"
+    # to the right and below the dstarr edge.
+    ex = dst_y + src_ht - dst_ht
+    if ex > 0:
+        srcarr = srcarr[:dst_ht, :, :]
+        src_ht -= ex
+
+    ex = dst_x + src_wd - dst_wd
+    if ex > 0:
+        srcarr = srcarr[:, :dst_wd, :]
+        src_wd -= ex
+
+    ex = dst_z + src_dp - dst_dp
+    if ex > 0:
+        srcarr = srcarr[:, :, :dst_dp]
+        src_dp -= ex
+
+    if src_wd <= 0 or src_ht <=0 or src_dp <= 0:
+        return dstarr
+
+    if copy:
+        dstarr = numpy.copy(dstarr, order='C')
+
+    da_idx = -1
+    slc = slice(0, 3)
+    if 'A' in dst_order:
+        da_idx = dst_order.index('A')
+
+        # Currently we assume that alpha channel is in position 0 or 3 in dstarr
+        if da_idx == 0:
+            slc = slice(1, 4)
+        elif da_idx != 3:
+            raise ValueError("Alpha channel not in expected position (0 or 4) in dstarr")
+
+    # fill alpha channel in destination in the area we will be dropping
+    # the image
+    if fill and (da_idx >= 0):
+        dstarr[dst_y:dst_y+src_ht, dst_x:dst_x+src_wd,
+               dst_z:dst_z+src_dp, da_idx] = 255
+
+    if src_ch > 3:
+        sa_idx = src_order.index('A')
+        # if overlay source contains an alpha channel, extract it
+        # and use it, otherwise use scalar keyword parameter
+        alpha = srcarr[0:src_ht, 0:src_wd, 0:src_dp, sa_idx] / 255.0
+        #alpha = numpy.dstack((alpha, alpha, alpha))
+        alpha = numpy.concatenate([ alpha[..., numpy.newaxis],
+                                    alpha[..., numpy.newaxis],
+                                    alpha[..., numpy.newaxis] ],
+                                  axis=-1)
+
+    # reorder srcarr if necessary to match dstarr for alpha merge
+    get_order = dst_order
+    if ('A' in dst_order) and not ('A' in src_order):
+        get_order = dst_order.replace('A', '')
+    if get_order != src_order:
+        srcarr = reorder_image(get_order, srcarr, src_order)
+
+    # calculate alpha blending
+    #   Co = CaAa + CbAb(1 - Aa)
+    a_arr = (alpha * srcarr[0:src_ht, 0:src_wd,
+                            0:src_dp, slc]).astype(numpy.uint8)
+    b_arr = ((1.0 - alpha) * dstarr[dst_y:dst_y+src_ht,
+                                    dst_x:dst_x+src_wd,
+                                    dst_z:dst_z+src_dp,
+                                    slc]).astype(numpy.uint8)
+
+    # Place our srcarr into this dstarr at dst offsets
+    dstarr[dst_y:dst_y+src_ht, dst_x:dst_x+src_wd,
+           dst_z:dst_z+src_dp, slc] = \
+             a_arr[0:src_ht, 0:src_wd, 0:src_dp, slc] + \
+             b_arr[0:src_ht, 0:src_wd, 0:src_dp, slc]
+
+    return dstarr
+
+def overlay_image(dstarr, pos, srcarr, **kwargs):
+    method = overlay_image_2d
+    if len(srcarr.shape) > 3:
+        method = overlay_image_3d
+
+    return method(dstarr, pos, srcarr, **kwargs)
+
 def reorder_image(dst_order, src_arr, src_order):
     indexes = [ src_order.index(c) for c in dst_order ]
-    return numpy.dstack([ src_arr[..., idx] for idx in indexes ])
+    #return numpy.dstack([ src_arr[..., idx] for idx in indexes ])
+    return numpy.concatenate([ src_arr[..., idx, numpy.newaxis]
+                               for idx in indexes ], axis=-1)
 
 
 #END

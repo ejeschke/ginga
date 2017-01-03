@@ -423,6 +423,23 @@ class BaseImage(ViewerObjectBase):
         res = Bunch.Bunch(data=newdata, scale_x=scale_x, scale_y=scale_y)
         return res
 
+    def get_scaled_cutout2(self, p1, p2, scales,
+                           method='basic', logger=None):
+        # NOTE: method is here for compatibility, but is ignored
+        shp = self.shape
+
+        view, scales = trcalc.get_scaled_cutout_basic_view(
+            shp, p1, p2, scales)
+
+        newdata = self._slice(view)
+
+        scale_x, scale_y = scales[:2]
+        res = Bunch.Bunch(data=newdata, scale_x=scale_x, scale_y=scale_y)
+        if len(scales) > 2:
+            res.scale_z = scales[2]
+
+        return res
+
     def get_thumbnail(self, length):
         wd, ht = self.get_size()
         if ht == 0:

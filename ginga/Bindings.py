@@ -85,7 +85,7 @@ class ImageViewBindings(object):
             dmod_rotate = ['r', None, None],
             dmod_pan = ['q', None, 'pan'],
             dmod_freepan = ['w', None, 'pan'],
-            dmod_camera = ['u', None, 'pan'],
+            dmod_camera = [None, None, 'pan'],
 
             default_mode_type = 'oneshot',
             default_lock_mode_type = 'softlock',

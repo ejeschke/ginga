@@ -1,9 +1,6 @@
 #
 # RGBMap.py -- color mapping
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -56,7 +53,9 @@ class RGBPlanes(object):
         if order == self.order:
             return self.rgbarr
         l = [ self.get_slice(c) for c in order ]
-        return numpy.dstack(l)
+        return numpy.concatenate([ arr[..., numpy.newaxis]
+                                   for arr in l ], axis=-1)
+
 
     def get_size(self):
         """Returns (height, width) tuple of slice size."""
@@ -205,7 +204,6 @@ class RGBMapper(Callback.Callbacks):
         if callback:
             self.make_callback('changed')
 
-
     def get_hash_size(self):
         return self.dist.get_hash_size()
 
@@ -245,7 +243,7 @@ class RGBMapper(Callback.Callbacks):
         cs = cs.upper()
         return [ order.index(c) for c in cs ]
 
-    def _get_rgbarray(self, idx, rgbobj, image_order):
+    def _get_rgbarray(self, idx, rgbobj, image_order=''):
         # NOTE: data is assumed to be in the range 0-255 at this point
         # but clip as a precaution
         # See NOTE [A]: idx is always an array calculated in the caller and
@@ -262,21 +260,44 @@ class RGBMapper(Callback.Callbacks):
         ri, gi, bi = self.get_order_indexes(rgbobj.get_order(), 'RGB')
         out = rgbobj.rgbarr
 
-        if len(idx.shape) == 2:
+        # change [A]
+        if (image_order is None) or (len(image_order) < 3):
             out[..., ri] = self.arr[0][idx]
             out[..., gi] = self.arr[1][idx]
             out[..., bi] = self.arr[2][idx]
         else:
+            # <== indexes already contain RGB info.
             rj, gj, bj = self.get_order_indexes(image_order, 'RGB')
             out[..., ri] = self.arr[0][idx[..., rj]]
             out[..., gi] = self.arr[1][idx[..., gj]]
             out[..., bi] = self.arr[2][idx[..., bj]]
 
-    def get_rgbarray(self, idx, out=None, order='RGB', image_order='RGB'):
+    def get_rgbarray(self, idx, out=None, order='RGB', image_order=''):
+        """
+        Parameters
+        ----------
+        idx : index array
+
+        out : output array or None
+            The output array.  If `None` one of the correct size and depth
+            will be created.
+
+        order : str
+            The order of the color planes in the output array (e.g. "ARGB")
+
+        image_order : str or None
+            The order of channels if indexes already contain RGB info.
+        """
         # prepare output array
         shape = idx.shape
         depth = len(order)
-        res_shape = (shape[0], shape[1], depth)
+
+        if (image_order is not None) and (len(image_order) > 2):
+            # indexes contain RGB axis, so omit this
+            res_shape = shape[:-1] + (depth, )
+        else:
+            res_shape = shape + (depth, )
+
         if out is None:
             out = numpy.empty(res_shape, dtype=numpy.uint8, order='C')
         else:
@@ -294,7 +315,7 @@ class RGBMapper(Callback.Callbacks):
 
         idx = self.get_hasharray(idx)
 
-        self._get_rgbarray(idx, res, image_order)
+        self._get_rgbarray(idx, res, image_order=image_order)
 
         return res
 
@@ -400,7 +421,7 @@ class NonColorMapper(RGBMapper):
         self.dist.set_hash_size(256)
         self.reset_sarr(callback=False)
 
-    def _get_rgbarray(self, idx, rgbobj, image_order):
+    def _get_rgbarray(self, idx, rgbobj, image_order='RGB'):
         # NOTE: data is assumed to be in the range 0-255 at this point
         # but clip as a precaution
         # See NOTE [A]: idx is always an array calculated in the caller and
@@ -441,7 +462,7 @@ class PassThruRGBMapper(RGBMapper):
         # bypass color redistribution
         return idx
 
-    def _get_rgbarray(self, idx, rgbobj, image_order):
+    def _get_rgbarray(self, idx, rgbobj, image_order='RGB'):
         # NOTE: data is assumed to be in the range 0-255 at this point
         # but clip as a precaution
         # See NOTE [A]: idx is always an array calculated in the caller and
@@ -457,6 +478,5 @@ class PassThruRGBMapper(RGBMapper):
         out[..., ri] = idx[..., rj]
         out[..., gi] = idx[..., gj]
         out[..., bi] = idx[..., bj]
-
 
 #END

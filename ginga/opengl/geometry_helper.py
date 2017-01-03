@@ -1,6 +1,10 @@
 #
 # geometry_helper.py -- help module for Ginga OpenGL camera
 #
+# Credit:
+#   Modified from code written by M. McGuffin
+#   http://profs.etsmtl.ca/mmcguffin/code/python/example-3D_Python-Qt-OpenGL/
+#
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #

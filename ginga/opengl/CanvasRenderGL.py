@@ -97,7 +97,7 @@ class RenderContext(object):
         # TODO
         pass
 
-    def _scale(self, pt):
+    def cvs_to_gl(self, pt):
         x, y = pt
         sx, sy = x - self.renderer.lim_x, self.renderer.lim_y - y
         sz = 1 if not self.renderer.mode3d else 10
@@ -112,7 +112,7 @@ class RenderContext(object):
 
         #print('drawing canvas')
 
-        z_pts = numpy.array(list(map(self._scale, cpoints)))
+        z_pts = numpy.array(list(map(self.cvs_to_gl, cpoints)))
 
         gl.glEnableClientState(gl.GL_VERTEX_ARRAY)
 
@@ -124,22 +124,23 @@ class RenderContext(object):
             gl.glVertexPointerf(z_pts)
             gl.glDrawArrays(shape, 0, len(z_pts))
 
-        # draw outline
-        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
-        gl.glColor4f(*self.pen.color)
-        gl.glLineWidth(self.pen.linewidth)
+        if self.pen is not None and self.pen.linewidth > 0:
+            # draw outline
+            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
+            gl.glColor4f(*self.pen.color)
+            gl.glLineWidth(self.pen.linewidth)
 
-        if self.pen.linestyle == 'dash':
-            gl.glEnable(gl.GL_LINE_STIPPLE)
-            gl.glLineStipple(3, 0x1C47)
+            if self.pen.linestyle == 'dash':
+                gl.glEnable(gl.GL_LINE_STIPPLE)
+                gl.glLineStipple(3, 0x1C47)
 
-        gl.glVertexPointerf(z_pts)
-        gl.glDrawArrays(shape, 0, len(z_pts))
+            gl.glVertexPointerf(z_pts)
+            gl.glDrawArrays(shape, 0, len(z_pts))
+
+            if self.pen.linestyle == 'dash':
+                gl.glDisable(gl.GL_LINE_STIPPLE)
 
         gl.glDisableClientState(gl.GL_VERTEX_ARRAY)
-
-        if self.pen.linestyle == 'dash':
-            gl.glDisable(gl.GL_LINE_STIPPLE)
 
     def draw_polygon(self, cpoints):
         self._draw_pts(gl.GL_POLYGON, cpoints)
@@ -245,17 +246,16 @@ class CanvasRenderer(object):
         gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MIN_FILTER,
                            gl.GL_NEAREST)
 
-    def gl_set_image(self, img_np, dst_x, dst_y):
+    def gl_set_image(self, img_np, pos):
+        dst_x, dst_y = pos
         # TODO: can we avoid this transformation?
         data = numpy.flipud(img_np[0:self.ht, 0:self.wd])
         ht, wd = data.shape[:2]
-        #print("received image %dx%d" % (wd, ht))
 
-        gl.glTexImage2D(gl.GL_TEXTURE_2D, 0, gl.GL_RGB, wd, ht, 0, gl.GL_RGB,
-                        gl.GL_UNSIGNED_BYTE, data)
+        gl.glTexImage2D(gl.GL_TEXTURE_2D, 0, gl.GL_RGBA, wd, ht, 0,
+                        gl.GL_RGBA, gl.GL_UNSIGNED_BYTE, data)
 
     def gl_resize(self, width, height):
-        #print("resize to %dx%d" % (width, height))
         self.wd, self.ht = width, height
         self.lim_x, self.lim_y = width / 2.0, height / 2.0
 
@@ -268,7 +268,6 @@ class CanvasRenderer(object):
     def gl_paint(self):
         self._drawing = True
         try:
-            #print('paint!')
             self.setup_3D(self.mode3d)
 
             r, g, b = self.viewer.img_bg
@@ -279,7 +278,7 @@ class CanvasRenderer(object):
             gl.glColor4f(1, 1, 1, 1.0)
             gl.glEnable(gl.GL_TEXTURE_2D)
             gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
-            gl.glBegin(gl.GL_POLYGON)
+            gl.glBegin(gl.GL_QUADS)
             try:
                 gl.glTexCoord(0, 0)
                 gl.glVertex(self.mn_x, self.mn_y)
@@ -297,20 +296,6 @@ class CanvasRenderer(object):
             gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
 
             lim = max(self.lim_x, self.lim_y)
-
-            if self.mode3d and self.draw_wrapper:
-                # draw orienting wrapper around scene
-                gl.glColor(1.0, 1.0, 1.0)
-                gl.glBegin(gl.GL_LINE_STRIP)
-                gl.glVertex(-lim, -lim, -lim)
-                gl.glVertex( lim, -lim, -lim)
-                gl.glVertex( lim, lim, -lim)
-                gl.glVertex(-lim, lim, -lim)
-                gl.glVertex(-lim, -lim, lim)
-                gl.glVertex( lim, -lim, lim)
-                gl.glVertex( lim, lim, lim)
-                gl.glVertex(-lim, lim, lim)
-                gl.glEnd()
 
             if self.mode3d and self.draw_spines:
                 # draw orienting spines radiating in x, y and z
@@ -336,7 +321,6 @@ class CanvasRenderer(object):
 
         finally:
             self._drawing = False
-            #print('paint done!')
             gl.glFlush()
 
     def pix2canvas(self, pt):

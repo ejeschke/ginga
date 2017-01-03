@@ -68,7 +68,7 @@ class ColorMapPicker(GingaPlugin.GlobalPlugin):
         vbox.set_border_width(4)
         vbox.set_spacing(2)
 
-        # construct an interaactive viewer to view and scroll
+        # construct an interactive viewer to view and scroll
         # the RGB image, and to let the user pick the cmap
         self.c_view = Viewers.CanvasView(logger=self.logger)
         c_v = self.c_view

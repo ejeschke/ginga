@@ -69,10 +69,11 @@ class ImageViewQtGL(ImageViewQt.ImageViewQt):
         """Render the image represented by (rgbobj) at dst_x, dst_y
         in the pixel space.
         """
-        arr = self.getwin_array()
-        self.renderer.gl_set_image(arr, 0, 0)
-        #arr = rgbobj.get_array(self._rgb_order)
-        #self.renderer.gl_set_image(arr, dst_x, dst_y)
+        pos = (0, 0)
+        arr = self.getwin_array(order=self._rgb_order, alpha=1.0)
+        ## pos = (dst_x, dst_y)
+        ## arr = rgbobj.get_array(self._rgb_order)
+        self.renderer.gl_set_image(arr, pos)
 
     def configure_window(self, width, height):
         self.logger.debug("window size reconfigured to %dx%d" % (

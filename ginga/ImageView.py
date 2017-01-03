@@ -1207,7 +1207,7 @@ class ImageViewBase(Callback.Callbacks):
             outarr[:, :, i] = bgval[order[i]]
 
         # overlay our data
-        trcalc.overlay_image(outarr, self._dst_x, self._dst_y,
+        trcalc.overlay_image(outarr, (self._dst_x, self._dst_y),
                              data, flipy=False, fill=False, copy=False)
 
         return outarr
