@@ -292,7 +292,7 @@ class RGBMapper(Callback.Callbacks):
         shape = idx.shape
         depth = len(order)
 
-        if (image_order is not None) and (len(image_order) > 2):
+        if (image_order is not None) and (len(image_order) > 1):
             # indexes contain RGB axis, so omit this
             res_shape = shape[:-1] + (depth, )
         else:

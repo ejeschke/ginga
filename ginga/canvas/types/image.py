@@ -141,7 +141,6 @@ class Image(OnePointMixin, CanvasObjectBase):
 
         cache = self.get_cache(viewer)
 
-        #print("redraw whence=%f" % (whence))
         dst_order = viewer.get_rgb_order()
         image_order = self.image.get_order()
 
@@ -170,7 +169,6 @@ class Image(OnePointMixin, CanvasObjectBase):
             # is image completely off the screen?
             if (a2 - a1 <= 0) or (b2 - b1 <= 0):
                 # no overlay needed
-                #print "no overlay needed"
                 return
 
             # cutout and scale the piece appropriately by the viewer scale
@@ -200,12 +198,10 @@ class Image(OnePointMixin, CanvasObjectBase):
             pan_x, pan_y = viewer.get_pan()
             pan_off = viewer.data_off
             pan_x, pan_y = pan_x + pan_off, pan_y + pan_off
-            #print "pan x,y=%f,%f" % (pan_x, pan_y)
             off_x, off_y = dst_x - pan_x, dst_y - pan_y
             # scale offset
             off_x *= scale_x
             off_y *= scale_y
-            #print "off_x,y=%f,%f" % (off_x, off_y)
 
             # dst position in the pre-transformed array should be calculated
             # from the center of the array plus offsets
@@ -385,7 +381,6 @@ class NormImage(Image):
         if self.image is None:
             return
 
-        #print("redraw whence=%f" % (whence))
         cache = self.get_cache(viewer)
 
         if (whence <= 0.0) or (cache.cutout is None) or (not self.optimize):
@@ -412,7 +407,6 @@ class NormImage(Image):
             # is image completely off the screen?
             if (a2 - a1 <= 0) or (b2 - b1 <= 0):
                 # no overlay needed
-                #print "no overlay needed"
                 return
 
             # cutout and scale the piece appropriately by viewer scale
@@ -429,12 +423,10 @@ class NormImage(Image):
             pan_x, pan_y = viewer.get_pan()
             pan_off = viewer.data_off
             pan_x, pan_y = pan_x + pan_off, pan_y + pan_off
-            #print "pan x,y=%f,%f" % (pan_x, pan_y)
             off_x, off_y = dst_x - pan_x, dst_y - pan_y
             # scale offset
             off_x *= scale_x
             off_y *= scale_y
-            #print "off_x,y=%f,%f" % (off_x, off_y)
 
             # dst position in the pre-transformed array should be calculated
             # from the center of the array plus offsets
@@ -503,11 +495,9 @@ class NormImage(Image):
         self.make_callback('image-set', image)
 
     def scale_by(self, scale_x, scale_y):
-        #print("scaling image")
         self.scale_x *= scale_x
         self.scale_y *= scale_y
         self.reset_optimize()
-        #print("image scale_x=%f scale_y=%f" % (self.scale_x, self.scale_y))
 
 
 # register our types
