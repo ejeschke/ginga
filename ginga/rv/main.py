@@ -298,13 +298,10 @@ class ReferenceViewer(object):
 
         if toolkit == 'choose':
             try:
-                from ginga.qtw import QtHelp  # noqa
-            except ImportError:
-                try:
-                    from ginga.gtkw import GtkHelp  # noqa
-                except ImportError:
-                    print("You need python-gtk or python-qt to run Ginga!")
-                    sys.exit(1)
+                ginga_toolkit.choose()
+            except ImportError as e:
+                print("UI toolkit choose error: %s" % str(e))
+                sys.exit(1)
         else:
             ginga_toolkit.use(toolkit)
 

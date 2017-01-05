@@ -63,4 +63,13 @@ def get_rv_toolkits():
     """Returns a list of reference viewer supported toolkits."""
     return ['qt4', 'qt5', 'pyside', 'gtk2', 'gtk3', 'pg']
 
+def choose():
+    try:
+        from ginga.qtw import QtHelp  # noqa
+    except ImportError:
+        try:
+            from ginga.gtkw import GtkHelp  # noqa
+        except ImportError:
+            raise ImportError("qt or gtk variants not found")
+
 #END
