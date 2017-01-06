@@ -15,6 +15,7 @@ class Readout(object):
 
         # We just use a ginga widget to implement the readout
         readout = Viewers.CanvasView(logger=logger)
+        readout.name = 'readout'
         readout.set_desired_size(width, height)
         bg = colors.lookup_color('#202030')
         readout.set_bg(*bg)

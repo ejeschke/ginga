@@ -32,16 +32,19 @@ class GwMain(Callback.Callbacks):
 
         # You can pass in a queue if you prefer to do so
         if not queue:
-            queue = Queue.PriorityQueue()
-            #queue = Queue.Queue()
+            queue = Queue.Queue()
         self.gui_queue = queue
+        self.priority_gui_queue = Queue.PriorityQueue()
+
         # You can pass in a logger if you prefer to do so
         if logger is None:
             logger = logging.getLogger('GwMain')
         self.logger = logger
+
         if not ev_quit:
             ev_quit = threading.Event()
         self.ev_quit = ev_quit
+
         self.app = app
         # Mark our thread id
         #self.gui_thread_id = None
@@ -99,6 +102,20 @@ class GwMain(Callback.Callbacks):
         #                    self.gui_queue.qsize()))
         done = False
         time_start = time.time()
+
+        # First process priority futures
+        while not done:
+            try:
+                future = self.priority_gui_queue.get(block=False)
+                self._execute_future(future)
+
+            except Queue.Empty:
+                break
+
+            if time.time() - time_start > elapsed_max:
+                done = True
+
+        # Next process non-priority futures
         while not done:
             try:
                 future = self.gui_queue.get(block=True,
@@ -141,14 +158,20 @@ class GwMain(Callback.Callbacks):
         """
         future = Future.Future(priority=priority)
         future.freeze(method, *args, **kwdargs)
-        self.gui_queue.put(future)
+        self.priority_gui_queue.put(future)
 
         my_id = thread.get_ident()
         if my_id != self.gui_thread_id:
             return future
 
     def gui_do(self, method, *args, **kwdargs):
-        return self.gui_do_priority(0, method, *args, **kwdargs)
+        future = Future.Future(priority=0)
+        future.freeze(method, *args, **kwdargs)
+        self.gui_queue.put(future)
+
+        my_id = thread.get_ident()
+        if my_id != self.gui_thread_id:
+            return future
 
     def gui_call(self, method, *args, **kwdargs):
         """General method for synchronously calling into the GUI.
