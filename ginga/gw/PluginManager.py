@@ -40,7 +40,7 @@ class PluginManager(Callback.Callbacks):
 
     def load_plugin(self, name, spec, chinfo=None):
         try:
-            module = self.mm.getModule(spec.module)
+            module = self.mm.get_module(spec.module)
             className = spec.get('klass', spec.module)
             klass = getattr(module, className)
 
@@ -68,6 +68,14 @@ class PluginManager(Callback.Callbacks):
         except Exception as e:
             self.logger.error("Failed to load plugin '%s': %s" % (
                 name, str(e)))
+            try:
+                (type, value, tb) = sys.exc_info()
+                tb_str = "\n".join(traceback.format_tb(tb))
+                self.logger.error("Traceback:\n%s" % (tb_str))
+
+            except Exception as e:
+                tb_str = "Traceback information unavailable."
+                self.logger.error(tb_str)
             #raise PluginManagerError(e)
 
     def reload_plugin(self, plname, chinfo=None):
@@ -336,6 +344,14 @@ class PluginManager(Callback.Callbacks):
 
         if wasError:
             raise PluginManagerError(e)
+
+    def stop_all_plugins(self):
+        for plugin_name in self.plugin:
+            try:
+                self.stop_plugin(plugin_name)
+            except Exception as e:
+                self.logger.error('Exception while calling stop for plugin %s: %s' % (plugin_name, str(e)))
+        return True
 
     def plugin_build_error(self, box, text):
         textw = Widgets.TextArea(editable=False, wrap=True)

@@ -260,14 +260,14 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         opmon = channel.opmon
         opmon.deactivate(opname)
 
-    def start_global_plugin(self, pluginName, raise_tab=False):
-        self.gpmon.start_plugin_future(None, pluginName, None)
+    def start_global_plugin(self, plugin_name, raise_tab=False):
+        self.gpmon.start_plugin_future(None, plugin_name, None)
         if raise_tab:
-            pInfo = self.gpmon.get_plugin_info(pluginName)
+            pInfo = self.gpmon.get_plugin_info(plugin_name)
             self.ds.raise_tab(pInfo.tabname)
 
-    def stop_global_plugin(self, pluginName):
-        self.gpmon.deactivate(pluginName)
+    def stop_global_plugin(self, plugin_name):
+        self.gpmon.deactivate(plugin_name)
 
     def add_local_plugin(self, spec):
         try:

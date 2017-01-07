@@ -36,9 +36,12 @@ class FitsViewer(QtGui.QMainWindow):
         #fi.enable_draw(False)
         fi.set_callback('drag-drop', self.drop_file)
         fi.set_callback('none-move', self.motion)
-        fi.set_bg(0.2, 0.2, 0.2)
         fi.ui_setActive(True)
         self.fitsimage = fi
+
+        # quick hack to get 'u' to invoke hidden camera mode
+        bm = fi.get_bindmap()
+        bm.mode_map['u'] = bm.mode_map['mode_camera']
 
         bd = fi.get_bindings()
         bd.enable_all(True)
