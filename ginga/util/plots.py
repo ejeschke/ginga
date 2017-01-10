@@ -183,6 +183,11 @@ class ContourPlot(Plot):
         if num_contours is None:
             num_contours = self.num_contours
 
+        # TEMP: until we figure out a more reliable way to remove
+        # the color bar on all recent versions of matplotlib
+        self.fig.clf()
+        self.ax = self.cbar = None
+
         if self.ax is None:
             self.add_axis()
 
@@ -196,8 +201,11 @@ class ContourPlot(Plot):
         self.plot_panx = float(x) / wd
         self.plot_pany = float(y) / ht
 
-        if self.cbar is not None:
-            self.cbar.remove()
+        ## # SEE TEMP, above
+        ## # Seems remove() method is not supported for some recent
+        ## # versions of matplotlib
+        ## if self.cbar is not None:
+        ##     self.cbar.remove()
 
         self.ax.cla()
         self.ax.set_axis_bgcolor('#303030')
@@ -220,8 +228,17 @@ class ContourPlot(Plot):
             self.ax.plot([x], [y], marker='x', ms=20.0,
                          color='cyan')
 
-            self.cbar = self.fig.colorbar(im, orientation='horizontal',
-                                          shrink=0.8, pad=0.07)
+            if self.cbar is None:
+                self.cbar = self.fig.colorbar(im, orientation='horizontal',
+                                              shrink=0.8, pad=0.07)
+            else:
+                self.cbar.update_bruteforce(im)
+
+            # Make x axis labels a little more readable
+            lbls = self.cbar.ax.xaxis.get_ticklabels()
+            for lbl in lbls:
+                lbl.set(rotation=45, horizontalalignment='right')
+
             # Set the pan and zoom position & redraw
             self.plot_panzoom()
 
