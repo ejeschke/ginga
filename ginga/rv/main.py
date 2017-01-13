@@ -133,17 +133,21 @@ class ReferenceViewer(object):
         self.global_plugins = []
         self.layout = layout
 
-    def add_local_plugin(self, module_name, ws_name, pfx=None):
+    def add_local_plugin(self, module_name, ws_name,
+                         path=None, klass=None, pfx=None):
         self.local_plugins.append(
-            Bunch(module=module_name, ws=ws_name, pfx=pfx))
+            Bunch(module=module_name, ws=ws_name,
+                  path=path, klass=klass, pfx=pfx))
 
     def add_global_plugin(self, module_name, ws_name,
+                          path=None, klass=None,
                           tab_name=None, start_plugin=True, pfx=None):
         if tab_name is None:
             tab_name = module_name
 
         self.global_plugins.append(
             Bunch(module=module_name, ws=ws_name, tab=tab_name,
+                  path=path, klass=klass,
                   start=start_plugin, pfx=pfx))
 
     def clear_default_plugins(self):
@@ -158,17 +162,43 @@ class ReferenceViewer(object):
         # add default global plugins
         for bnch in global_plugins:
             if bnch.module not in except_global:
-                start = bnch.get('start', True)
-                pfx = bnch.get('pfx', None)
                 self.add_global_plugin(bnch.module, bnch.ws,
-                                       tab_name=bnch.tab, start_plugin=start,
-                                       pfx=pfx)
+                                       path=bnch.get('path', None),
+                                       klass=bnch.get('klass', bnch.module),
+                                       tab_name=bnch.tab,
+                                       start_plugin=bnch.get('start', False),
+                                       pfx=bnch.get('pfx', None))
 
         # add default local plugins
         for bnch in local_plugins:
             if bnch.module not in except_local:
-                pfx = bnch.get('pfx', None)
-                self.add_local_plugin(bnch.module, bnch.ws, pfx=pfx)
+                self.add_local_plugin(bnch.module, bnch.ws,
+                                      path=bnch.get('path', None),
+                                      klass=bnch.get('klass', bnch.module),
+                                      pfx=bnch.get('pfx', None))
+
+    def add_separately_distributed_plugins(self):
+        from pkg_resources import iter_entry_points
+        groups = ['ginga.rv.plugins']
+        available_methods = []
+
+        for group in groups:
+            for entry_point in iter_entry_points(group=group, name=None):
+                available_methods.append(entry_point.load())
+
+        for method in available_methods:
+            spec = method()
+            if 'start' in spec:
+                # global plugin
+                self.add_global_plugin(spec.module, spec.workspace,
+                                       path=spec.get('path', None),
+                                       klass=spec.get('klass', spec.module),
+                                       tab_name=spec.tab, start_plugin=spec.start)
+            else:
+                # local plugin
+                self.add_local_plugin(spec.module, spec.workspace,
+                                       path=spec.get('path', None),
+                                       klass=spec.get('klass', spec.module))
 
     def add_default_options(self, optprs):
         """
@@ -546,6 +576,7 @@ class ReferenceViewer(object):
 def reference_viewer(sys_argv):
     """Create reference viewer from command line."""
     viewer = ReferenceViewer(layout=default_layout)
+    viewer.add_separately_distributed_plugins()
     viewer.add_default_plugins()
 
     # Parse command line options with optparse module

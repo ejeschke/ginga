@@ -275,7 +275,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             self.local_plugins[name] = spec
 
             pfx = spec.get('pfx', pluginconfpfx)
-            self.mm.load_module(spec.module, pfx=pfx)
+            path = spec.get('path', None)
+            self.mm.load_module(spec.module, pfx=pfx, path=path)
 
             hidden = spec.get('hidden', False)
             if not hidden:
@@ -298,7 +299,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             self.global_plugins[name] = spec
 
             pfx = spec.get('pfx', pluginconfpfx)
-            self.mm.load_module(spec.module, pfx=pfx)
+            path = spec.get('path', None)
+            self.mm.load_module(spec.module, pfx=pfx, path=path)
 
             self.gpmon.load_plugin(name, spec)
             self.add_plugin_menu(name)
