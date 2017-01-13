@@ -357,12 +357,4 @@ class GingaWrapper(object):
         elif command == 'clear':
             canvas.delete_objects()
 
-    #def add_canvas_obj(self, chname, typename, *args, **kwargs):
-    #    chinfo = self.fv.get_channel(chname)
-    #    canvas = chinfo.viewer.get_canvas()
-    #    klass = canvas.get_draw_class(typename)
-    #    obj = klass(*args, **kwargs)
-    #    return self.fv.gui_call(canvas.add, obj)
-
-
 #END
