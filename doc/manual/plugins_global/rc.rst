@@ -174,7 +174,7 @@ of points defined by two Numpy arrays:
 
     x = np.arange(100)
     y = np.sqrt(x)
-    points = zip(x.tolist(), y.tolist())
+    points = list(zip(x.tolist(), y.tolist()))
     canvas.add('path', points, color='red')
 
 This will draw a red line on the image.
