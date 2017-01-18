@@ -221,6 +221,8 @@ Use MultiDim to change step values of axes.""")
         self.redo()
 
     def stop(self):
+        # Don't hang on to current image
+        self.image = None
         self.canvas.ui_setActive(False)
         try:
             self.fitsimage.delete_object_by_tag(self.layertag)
@@ -246,10 +248,17 @@ Use MultiDim to change step values of axes.""")
 
         if self.selected_axis:
             axis_data = self.get_axis(self.selected_axis)
+            if axis_data is None:
+                # image may lack the required keywords, or some trouble
+                # building the axis
+                return
             slice_obj = self._slice(naxes, mk=mark)
 
             self.clear_plot()
             self.plot.plot(axis_data, mddata[slice_obj])
+
+        else:
+            self.fv.show_error("Please select an axis")
 
     def _slice(self, naxes, mk):
         # Build N-dim slice
@@ -271,15 +280,19 @@ Use MultiDim to change step values of axes.""")
 
     def get_axis(self, i):
         try:
-            header = self.image.get_header()
-            axis = header.get('CRVAL%d' % i) + \
-                   np.arange(0, header.get('NAXIS%d' % i), 1) * \
-                   header.get('CDELT%d' % i)
+            try:
+                kwds = ['CRVAL%d' % i, 'NAXIS%d' % i, 'CDELT%d' % i]
+                crval_i, naxis_i, cdelt_i = self.image.get_keywords_list(*kwds)
+            except KeyError as e:
+                raise ValueError("Missing FITS keyword: %s" % str(e))
+            
+            axis = crval_i + np.arange(0, naxis_i, 1) * cdelt_i
             return axis
+        
         except Exception as e:
             errmsg = "Error loading axis %d: %s" % (i, str(e))
             self.logger.error(errmsg)
-            self.fv.error(errmsg)
+            self.fv.show_error(errmsg)
 
     def clear_plot(self):
         self.plot.clear()
