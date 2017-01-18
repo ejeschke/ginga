@@ -110,3 +110,72 @@ usually interpreted as a program option.  In order to pass a signed
 integer you may need to do something like::
 
     $ grc -- channel FOO zoom -7
+
+
+Interfacing from within Python
+==============================
+
+It is also possible to control Ginga in RC mode
+from within Python.   The following describes
+some of the functionality.
+
+Connecting
+----------
+
+One first launches Ginga and starts the RC plugin.
+This can be done from the command line::
+
+    ginga --modules=RC
+
+From within Python, connect with a RemoteClient object as
+follows::
+
+    from ginga.util import grc
+    host='localhost'
+    port=9000
+    viewer = grc.RemoteClient(host, port)
+
+This viewer object is now linked to the Ginga using RC.
+
+Load an Image
+-------------
+
+One can load an image from memory in a channel of
+one's choosing.  First connect to a Channel::
+
+    ch = viewer.channel('Image')
+
+Then load a numpy image (i.e. any 2D ndarray)::
+
+    img = np.ones((100,100))
+    ch.load_np('any_str_here', img, 'fits', {})
+
+The image will display in Ginga and can be manipulated
+as usual.
+
+Overlay a Canvas Object
+-----------------------
+
+It is possible to add objects to the Canvas in a given
+Channel.  First connect::
+
+    canvas = viewer.canvas('Image')
+
+This connects to the Channel named "Image".  One can
+clear the objects drawn in the Canvas::
+
+    canvas.clear()
+
+Or add any basic Canvas object.  The key issue to keep in
+mind is that the objects input must pass through the XMLRC
+protocol.  This means simple data types:  float, int, lists, str.
+No arrays.  Here is an example to plot a line through a series
+of points defined by two Numpy arrays:
+
+    x = np.arange(100)
+    y = np.sqrt(x)
+    points = list(zip(x.tolist(), y.tolist()))
+    canvas.add('path', points, color='red')
+
+This will draw a red line on the image.
+

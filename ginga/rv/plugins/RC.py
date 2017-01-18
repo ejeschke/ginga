@@ -346,5 +346,26 @@ class GingaWrapper(object):
         _method = getattr(self.fv, method_name)
         return self.fv.gui_call(_method, *args, **kwdargs)
 
+    def canvas(self, chname, command, *args, **kwargs):
+        chinfo = self.fv.get_channel(chname)
+        canvas = chinfo.viewer.get_canvas()
+        if command == 'add':
+            klass = canvas.get_draw_class(args[0])
+            newargs = args[1:]
+            obj = klass(*newargs, **kwargs)
+            return self.fv.gui_call(canvas.add, obj)
+        elif command == 'clear':  # Clear only drawn objects, not the image
+            nobj = len(canvas.objects)
+            if nobj == 0:
+                return
+            elif nobj == 1:  # Assume it is the image, don't remove
+                return
+            else:
+                canvas.objects = canvas.objects[0:1]
+        elif command == 'nobj':
+            return len(canvas.objects)
+        else:
+            print("Canvas RC command not recognized")
+            return
 
 #END

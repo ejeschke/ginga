@@ -35,6 +35,22 @@ class _ginga_proxy(object):
             return self._fn(name, *args, **kwdargs)
         return _call
 
+class _canvas_proxy(object):
+    """ Links to the canvas method in ginga.rv.plugins.RC.GingaWrapper
+    User has to be savvy on the objects that can be passed through
+    the XMLRPC service (e.g. lists, not arrays)
+    """
+
+    def __init__(self, client, chname):
+        self._client = client
+        self._chname = chname
+        self._fn = client.lookup_attr('canvas')
+
+    def __getattr__(self, command):
+        def _call(*args, **kwdargs):
+            return self._fn(self._chname, command, *args, **kwdargs)
+        return _call
+
 class _channel_proxy(object):
 
     def __init__(self, client, chname):
@@ -162,6 +178,9 @@ class RemoteClient(object):
 
     def channel(self, chname):
         return _channel_proxy(self, chname)
+
+    def canvas(self, chname):
+        return _canvas_proxy(self, chname)
 
     def lookup_attr(self, method_name):
         def call(*args, **kwdargs):
