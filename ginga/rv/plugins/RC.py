@@ -9,21 +9,21 @@ The RC plugin implements a remote control interface for the Ginga FITS
 viewer.
 
  Show example usage:
- $ grc help
+ $ ggrc help
 
  Show help for a specific ginga method:
- $ grc help ginga <method>
+ $ ggrc help ginga <method>
 
  Show help for a specific channel method:
- $ grc help channel <chname> <method>
+ $ ggrc help channel <chname> <method>
 
 Ginga methods can be called like this:
 
- $ grc ginga <method> <arg1> <arg2> ...
+ $ ggrc ginga <method> <arg1> <arg2> ...
 
 Channel methods can be called like this:
 
- $ grc channel <chname> <method> <arg1> <arg2> ...
+ $ ggrc channel <chname> <method> <arg1> <arg2> ...
 
 Calls can be made from a remote host by adding the options
    --host=<hostname> --port=9000
@@ -34,40 +34,40 @@ from the addr, but leave the colon and port)
 Examples:
 
  Create a new channel:
- $ grc ginga add_channel FOO
+ $ ggrc ginga add_channel FOO
 
  Load a file into current channel:
- $ grc ginga load_file /home/eric/testdata/SPCAM/SUPA01118797.fits
+ $ ggrc ginga load_file /home/eric/testdata/SPCAM/SUPA01118797.fits
 
  Load a file into a specific channel:
- $ grc ginga load_file /home/eric/testdata/SPCAM/SUPA01118797.fits FOO
+ $ ggrc ginga load_file /home/eric/testdata/SPCAM/SUPA01118797.fits FOO
 
  Cut levels:
- $ grc channel FOO cut_levels 163 1300
+ $ ggrc channel FOO cut_levels 163 1300
 
  Auto cut levels:
- $ grc channel FOO auto_levels
+ $ ggrc channel FOO auto_levels
 
  Zoom to a specific level:
- $ grc -- channel FOO zoom_to -7
+ $ ggrc -- channel FOO zoom_to -7
 
  Zoom to fit:
- $ grc channel FOO zoom_fit
+ $ ggrc channel FOO zoom_fit
 
  Transform (args are boolean triplet: (flipx flipy swapxy)):
- $ grc channel FOO transform 1 0 1
+ $ ggrc channel FOO transform 1 0 1
 
  Rotate:
- $ grc channel FOO rotate 37.5
+ $ ggrc channel FOO rotate 37.5
 
  Change color map:
- $ grc channel FOO set_color_map rainbow3
+ $ ggrc channel FOO set_color_map rainbow3
 
  Change color distribution algorithm:
- $ grc channel FOO set_color_algorithm log
+ $ ggrc channel FOO set_color_algorithm log
 
  Change intensity map:
- $ grc channel FOO set_intensity_map neg
+ $ ggrc channel FOO set_intensity_map neg
 
 """
 import sys
@@ -141,7 +141,8 @@ class RC(GingaPlugin.GlobalPlugin):
     def start(self):
         self.robj = GingaWrapper(self.fv, self.logger)
 
-        self.server = grc.RemoteServer(self.robj, host=self.host, port=self.port,
+        self.server = grc.RemoteServer(self.robj,
+                                       host=self.host, port=self.port,
                                        ev_quit=self.fv.ev_quit)
         self.server.start(thread_pool=self.fv.get_threadPool())
 
@@ -174,9 +175,6 @@ class GingaWrapper(object):
     def __init__(self, fv, logger):
         self.fv = fv
         self.logger = logger
-
-        # List of XML-RPC acceptable return types
-        self.ok_types = list(map(type, [str, int, float, bool, list, tuple]))
 
     def help(self, *args):
         """Get help for a remote interface method.
