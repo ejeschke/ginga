@@ -43,6 +43,8 @@ class LineProfile(GingaPlugin.LocalPlugin):
         self.tw = None
         self.mark_data_x = [None]
         self.mark_data_y = [None]
+        self.y_lbl = 'Flux'
+        self.x_lbl = ''
 
         self.gui_up = False
 
@@ -247,15 +249,17 @@ Use MultiDim to change step values of axes.""")
         naxes = mddata.ndim
 
         if self.selected_axis:
-            axis_data = self.get_axis(self.selected_axis)
-            if axis_data is None:
+            plot_x_axis_data = self.get_axis(self.selected_axis)
+            if plot_x_axis_data is None:
                 # image may lack the required keywords, or some trouble
                 # building the axis
                 return
             slice_obj = self._slice(naxes, mk=mark)
+            plot_y_axis_data = mddata[slice_obj]
 
             self.clear_plot()
-            self.plot.plot(axis_data, mddata[slice_obj])
+            self.plot.plot(plot_x_axis_data, plot_y_axis_data,
+                           xtitle=self.x_lbl, ytitle=self.y_lbl)
 
         else:
             self.fv.show_error("Please select an axis")
@@ -266,12 +270,12 @@ Use MultiDim to change step values of axes.""")
 
         # For axes 1 and 2
         if mk is not None:
-            slice_obj[0] = self.mark_data_x[mk]
-            slice_obj[1] = self.mark_data_y[mk]
+            slice_obj[0] = int(round(self.mark_data_x[mk]))
+            slice_obj[1] = int(round(self.mark_data_y[mk]))
 
         # For axis > 3
         for i in range(2, naxes):
-            slice_obj[i] = self.image.revnaxis[i-2] + 1
+            slice_obj[i] = int(round(self.image.revnaxis[i-2] + 1))
 
         # Slice selected axis
         slice_obj[self.selected_axis-1] = slice(None, None, None)
@@ -280,15 +284,26 @@ Use MultiDim to change step values of axes.""")
 
     def get_axis(self, i):
         try:
+            self.x_lbl = self.image.get_keyword('CTYPE%d' % i, None)
             try:
                 kwds = ['CRVAL%d' % i, 'NAXIS%d' % i, 'CDELT%d' % i]
                 crval_i, naxis_i, cdelt_i = self.image.get_keywords_list(*kwds)
+
             except KeyError as e:
                 raise ValueError("Missing FITS keyword: %s" % str(e))
-            
+
             axis = crval_i + np.arange(0, naxis_i, 1) * cdelt_i
+
+            if self.x_lbl is not None:
+                units = self.image.get_keyword('CUNIT%d' % i, None)
+                if units is not None:
+                    self.x_lbl += (' (%s)' % str(units))
+            else:
+                self.x_lbl = ''
+            # Assume Y label should always be flux?
+            self.y_lbl = 'Flux'
             return axis
-        
+
         except Exception as e:
             errmsg = "Error loading axis %d: %s" % (i, str(e))
             self.logger.error(errmsg)
