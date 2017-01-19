@@ -17,7 +17,7 @@ else:
     import xmlrpc.client as xmlrpclib
     import xmlrpc.server as SimpleXMLRPCServer
     import pickle
-from ginga.util.six.moves import map
+from ginga.util.six.moves import map, zip
 from ginga.misc import Task, log
 
 # undefined passed value--for a data type that cannot be converted
@@ -93,7 +93,7 @@ class _channel_proxy(object):
         load_buffer = self._client.lookup_attr('load_buffer')
 
         return load_buffer(imname, self._chname,
-                           binascii.b2a_base64(data_np.tostring()),
+                           data_np.tobytes(),
                            data_np.shape, str(data_np.dtype),
                            header, {}, False)
 
@@ -125,7 +125,7 @@ class _channel_proxy(object):
         load_fits_buffer = self._client.lookup_attr('load_fits_buffer')
 
         return load_fits_buffer(imname, self._chname,
-                                binascii.b2a_base64(buf_io.getvalue()),
+                                buf_io.getvalue(),
                                 num_hdu, {})
 
     def load_fitsbuf(self, imname, fitsbuf, num_hdu):
@@ -156,7 +156,7 @@ class _channel_proxy(object):
         load_fits_buffer = self._client_.lookup_attr('load_fits_buffer')
 
         return load_fits_buffer(imname, self._chname,
-                                binascii.b2a_base64(fitsbuf),
+                                fitsbuf,
                                 num_hdu, {})
 
 class RemoteClient(object):
@@ -264,50 +264,45 @@ class RemoteServer(object):
 
 
 
-# List of XML-RPC acceptable return types
-ok_types = [str, int, float, bool, list, tuple, dict]
+# List of XML-RPC types
+base_types = [str, int, float, bool]
+compound_types = [list, tuple, dict]
 
-## def marshall(res):
-##     """Transform results into XML-RPC friendy ones.
-##     """
-##     ptype = type(res)
-
-##     if ptype in ok_types:
-##         return (0, res)
-
-##     raise ValueError("Don't know how to marshall this type of argument (%s)" % (
-##         ptype))
-##     ## pkl = pickle.dumps(res)
-##     ## return ('pickle', pkl)
-
-
-## def unmarshall(rtnval):
-##     (kind, res) = rtnval
-
-##     if kind == 0:
-##         # this is a type passable by the transport
-##         return res
-
-##     raise ValueError("Don't know how to marshall this kind of argument (%s)" % (
-##         kind))
-##     ## if kind == 'pickle':
-##     ##     return pickle.loads(res)
-
-
-## def marshall(res):
-##     pkl = pickle.dumps(res)
-##     return ('pickle', pkl)
-
-## def unmarshall(rtnval):
-##     (kind, res) = rtnval
-##     return pickle.loads(res)
 
 def marshall(res):
-    if not type(res) in ok_types:
+    typ = type(res)
+
+    # take care of compound types
+    if isinstance(res, list):
+        return list(map(marshall, res))
+    if isinstance(res, tuple):
+        return tuple(map(marshall, res))
+    if isinstance(res, dict):
+        return dict(zip(res.keys(), map(marshall, res.values())))
+
+    # base types
+    if isinstance(res, bytes):
+        return xmlrpclib.Binary(res)
+
+    if not typ in base_types:
         res = undefined
+
     return res
 
 def unmarshall(rtnval):
+    typ = type(rtnval)
+
+    # take care of compound types
+    if isinstance(rtnval, list):
+        return list(map(unmarshall, rtnval))
+    if isinstance(rtnval, tuple):
+        return tuple(map(unmarshall, rtnval))
+    if isinstance(rtnval, dict):
+        return dict(zip(rtnval.keys(), map(unmarshall, rtnval.values())))
+
+    if isinstance(rtnval, xmlrpclib.Binary):
+        rtnval = rtnval.data
+
     return rtnval
 
 def prep_arg(arg):

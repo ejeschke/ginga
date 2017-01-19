@@ -72,7 +72,6 @@ Examples:
 """
 import sys
 import numpy
-import binascii
 import bz2
 from io import BytesIO
 
@@ -226,7 +225,7 @@ class GingaWrapper(object):
         `chname`: string
             channel in which to load the image
         `img_buf`: string
-            the image data, encoded as a base64 ascii encoded string
+            the image data, as a bytes object
         `dims`: tuple
             image dimensions in pixels (usually (height, width))
         `dtype`: string
@@ -248,15 +247,11 @@ class GingaWrapper(object):
         * Get array dtype: str(data.dtype)
         * Make a string from a numpy array: buf = data.tostring()
         * Compress the buffer: buf = bz2.compress(buf)
-        * Convert buffer to ascii-encoding: buf = binascii.b2a_base64(buf)
         """
         self.logger.info("received image data len=%d" % (len(img_buf)))
 
         # Unpack the data
         try:
-            # Decode binary data
-            img_buf = binascii.a2b_base64(img_buf)
-
             # Uncompress data if necessary
             decompress = metadata.get('decompress', None)
             if compressed  or (decompress == 'bz2'):
@@ -299,9 +294,6 @@ class GingaWrapper(object):
 
         # Unpack the data
         try:
-            # Decode binary data
-            file_buf = binascii.a2b_base64(file_buf)
-
             # Uncompress data if necessary
             decompress = metadata.get('decompress', None)
             if decompress == 'bz2':
