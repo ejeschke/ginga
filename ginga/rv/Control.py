@@ -354,6 +354,44 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         obj = self.gpmon.get_plugin('WBrowser')
         obj.browse(url)
 
+    def show_help_text(self, name, help_txt, wsname='channels'):
+        """Show help text in a closeable tab window.  The title of the
+        window is set from `name` prefixed with 'HELP:'
+        """
+        tabname = 'HELP: %s' % name
+        group = 1
+        tabnames = self.ds.get_tabnames(group)
+        if tabname in tabnames:
+            # tab is already up somewhere
+            return
+
+        vbox = Widgets.VBox()
+        vbox.set_margins(4, 4, 4, 4)
+        vbox.set_spacing(2)
+
+        msg_font = self.get_font("Courier", 12)
+        tw = Widgets.TextArea(wrap=False, editable=False)
+        tw.set_font(msg_font)
+        tw.set_text(help_txt)
+        vbox.add_widget(tw, stretch=1)
+
+        btns = Widgets.HBox()
+        btns.set_border_width(4)
+        btns.set_spacing(3)
+
+        def _close_cb(w):
+            self.ds.remove_tab(tabname)
+
+        btn = Widgets.Button("Close")
+        btn.add_callback('activated', _close_cb)
+        btns.add_widget(btn, stretch=0)
+        btns.add_widget(Widgets.Label(''), stretch=1)
+
+        vbox.add_widget(btns, stretch=0)
+
+        self.ds.add_tab(wsname, vbox, group, tabname)
+        self.ds.raise_tab(tabname)
+
     # BASIC IMAGE OPERATIONS
 
     def guess_filetype(self, filepath):

@@ -151,15 +151,6 @@ class Cuts(GingaPlugin.LocalPlugin):
         vbox.set_margins(4, 4, 4, 4)
         vbox.set_spacing(2)
 
-        msg_font = self.fv.get_font("sansFont", 12)
-        tw = Widgets.TextArea(wrap=True, editable=False)
-        tw.set_font(msg_font)
-        self.tw = tw
-
-        fr = Widgets.Expander("Instructions")
-        fr.set_widget(tw)
-        vbox.add_widget(fr, stretch=0)
-
         # Add Tab Widget
         nb = Widgets.TabWidget(tabpos='top')
         vbox.add_widget(nb, stretch=1)
@@ -327,6 +318,9 @@ class Cuts(GingaPlugin.LocalPlugin):
         btn = Widgets.Button("Close")
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn, stretch=0)
+        btn = Widgets.Button("Help")
+        btn.add_callback('activated', lambda w: self.help())
+        btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
 
         top.add_widget(btns, stretch=0)
@@ -366,10 +360,8 @@ class Cuts(GingaPlugin.LocalPlugin):
         chkbox.add_callback('activated',
                             lambda w, tf: self.axis_toggle_cb(w, tf, pos))
 
-    def instructions(self):
-        self.tw.set_text("""When drawing a path or Bezier cut, press 'v' to add a vertex.
-
-Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full vertical cut.""")
+    def help(self):
+        self.fv.show_help_text('Cuts', self.__doc__)
 
     def select_cut(self, tag):
         self.cutstag = tag
@@ -455,7 +447,6 @@ Keyboard shortcuts: press 'h' for a full horizontal cut and 'j' for a full verti
 
     def start(self):
         # start line cuts operation
-        self.instructions()
         self.cuts_plot.set_titles(rtitle="Cuts")
 
         self.drag_update = self.settings.get('drag_update', False)

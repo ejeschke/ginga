@@ -836,10 +836,9 @@ you create new channels, delete channels or load images into channels.
 Writing Separately Installable Plugins
 --------------------------------------
 If you want to distribute your plugin(s) as a separately installable
-package and have Ginga discover them when it starts up, you can use the
-.. _Ginga Plugin Template:
-https://github.com/ejeschke/ginga-plugin-template to write your own 
-package that installs plugins.
+package and have Ginga discover them when it starts up, you can use
+the .. _Ginga Plugin Template: https://github.com/ejeschke/ginga-plugin-template to
+write your own package that installs plugins.
 
 You can include as many plugins in your package as you want.
 You write your plugins in exactly the same way as described above, and

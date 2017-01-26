@@ -243,6 +243,9 @@ class ReferenceViewer(object):
         optprs.add_option("--profile", dest="profile", action="store_true",
                           default=False,
                           help="Run the profiler on main()")
+        optprs.add_option("--sep", dest="separate_channels", default=False,
+                          action="store_true",
+                          help="Load files in separate channels")
         optprs.add_option("-t", "--toolkit", dest="toolkit", metavar="NAME",
                           default=None,
                           help="Prefer GUI toolkit (gtk|qt)")
@@ -549,8 +552,15 @@ class ReferenceViewer(object):
             ginga_shell.banner(raiseTab=True)
 
         # Assume remaining arguments are fits files and load them.
+        chname = None
         for imgfile in args:
-            ginga_shell.nongui_do(ginga_shell.load_file, imgfile)
+            if options.separate_channels and (chname is not None):
+                channel = ginga_shell.add_channel_auto()
+            else:
+                channel = ginga_shell.get_channel_info()
+            chname = channel.name
+            ginga_shell.nongui_do(ginga_shell.load_file, imgfile,
+                                  chname=chname)
 
         try:
             try:

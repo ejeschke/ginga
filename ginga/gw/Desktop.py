@@ -800,7 +800,10 @@ class Workspace(Widgets.WidgetBase):
             return False
 
         cur_idx = self.nb.get_index()
-        child = self.nb.index_to_widget(cur_idx)
+        try:
+            child = self.nb.index_to_widget(cur_idx)
+        except IndexError:
+            return
         _f(child)
 
     def to_next(self):

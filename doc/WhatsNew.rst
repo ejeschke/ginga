@@ -8,7 +8,11 @@ Ver 2.6.2.dev
   matplotlib
 - Fix for recognizing CompImage HDU type when using astropy.io.fits
 - Add new experimental OpenGL back end
-- Fixes for Tk back end on python 3    
+- Fixes for Tk back end on python 3
+- You can now write separately distributed and installable plugins for
+  the reference viewer that Ginga will find and load on startup
+- Added --sep option to load command line files into separate channels
+- New help screen feature available for plugins
 
 Ver 2.6.1 (2016-12-22)
 ======================
