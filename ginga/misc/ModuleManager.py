@@ -9,13 +9,27 @@
 from __future__ import absolute_import
 
 from ..util.six.moves import reload_module
+import imp
 
 __all__ = ['ModuleManager']
 
 
-def my_import(name):
+def my_import(name, path=None):
     """Return imported module for the given name."""
-    mod = __import__(name)
+    #mod = __import__(name)
+    if path is None:
+        fp, path, description = imp.find_module(name)
+
+    else:
+        fp = open(path, 'r')
+        description = ('.py', 'r', imp.PY_SOURCE)
+
+    try:
+        mod = imp.load_module(name, fp, path, description)
+
+    finally:
+        fp.close()
+
     components = name.split('.')
     for comp in components[1:]:
         mod = getattr(mod, comp)
@@ -35,7 +49,7 @@ class ModuleManager(object):
 
         self.module = {}
 
-    def load_module(self, module_name, pfx=None):
+    def load_module(self, module_name, pfx=None, path=None):
         """Load module from the given name."""
         try:
             if module_name in self.module:
@@ -49,7 +63,7 @@ class ModuleManager(object):
                     name = module_name
 
                 self.logger.info("Loading module '%s'..." % module_name)
-                module = my_import(name)
+                module = my_import(name, path=path)
 
             self.module[module_name] = module
 

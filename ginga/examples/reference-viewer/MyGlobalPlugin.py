@@ -29,6 +29,8 @@ class MyGlobalPlugin(GingaPlugin.GlobalPlugin):
         # Create some variables to keep track of what is happening
         # with which channel
         self.active = None
+        self.gui_up = False
+        self.tw = None
 
         # Subscribe to some interesting callbacks that will inform us
         # of channel events.  You may not need these depending on what
@@ -100,12 +102,17 @@ class MyGlobalPlugin(GingaPlugin.GlobalPlugin):
         #cw = container.get_widget()
         #cw.addWidget(widget, stretch=1)
 
+        self.gui_up = True
+
     def get_channel_info(self, fitsimage):
         chname = self.fv.get_channel_name(fitsimage)
         channel = self.fv.get_channel(chname)
         return channel
 
     def set_info(self, text):
+        if not self.gui_up:
+            # Our GUi is not built so we don't actually have a widget
+            return
         self.tw.set_text(text)
 
     # CALLBACKS
@@ -172,7 +179,7 @@ class MyGlobalPlugin(GingaPlugin.GlobalPlugin):
         the plugin is opened and closed, and may be omitted if there is no
         special cleanup required when stopping.
         """
-        pass
+        self.gui_up = False
 
     def close(self):
         self.fv.stop_global_plugin(str(self))
