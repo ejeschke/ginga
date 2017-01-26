@@ -576,8 +576,8 @@ class ReferenceViewer(object):
 def reference_viewer(sys_argv):
     """Create reference viewer from command line."""
     viewer = ReferenceViewer(layout=default_layout)
-    viewer.add_separately_distributed_plugins()
     viewer.add_default_plugins()
+    viewer.add_separately_distributed_plugins()
 
     # Parse command line options with optparse module
     from optparse import OptionParser
