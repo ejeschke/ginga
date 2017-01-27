@@ -8,6 +8,7 @@
 from __future__ import print_function
 
 # stdlib imports
+import glob
 import sys
 import os
 import logging
@@ -553,9 +554,23 @@ class ReferenceViewer(object):
         if (not options.nosplash) and (len(args) == 0) and showBanner:
             ginga_shell.banner(raiseTab=True)
 
+        # Handle inputs like "*.fits[ext]" that sys cmd cannot auto expand.
+        expanded_args = []
+        for imgfile in args:
+            if '*' in imgfile:
+                if '[' in imgfile and imgfile.endswith(']'):
+                    s = imgfile.split('[')
+                    ext = '[' + s[1]
+                else:
+                    ext = ''
+                for fname in glob.iglob(s[0]):
+                    expanded_args.append(fname + ext)
+            else:
+                expanded_args.append(imgfile)
+
         # Assume remaining arguments are fits files and load them.
         chname = None
-        for imgfile in args:
+        for imgfile in expanded_args:
             if options.separate_channels and (chname is not None):
                 channel = ginga_shell.add_channel_auto()
             else:
