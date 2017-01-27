@@ -437,8 +437,6 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
         info = iohelper.get_fileinfo(filepath, cache_dir=self.tmpdir)
         filepfx = info.filepath
-        if idx is None:
-            idx = info.numhdu
 
         # Create an image.  Assume type to be an AstroImage unless
         # the MIME association says it is something different.
@@ -455,11 +453,17 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
         self.logger.debug("assuming file type: %s/%s'" % (typ, subtyp))
         try:
+            # RGB
             if (typ == 'image') and (subtyp not in ('fits', 'x-fits')):
                 image = RGBImage.RGBImage(logger=self.logger)
                 filepath = filepfx
                 image.load_file(filepath, **kwargs)
+
+            # FITS
             else:
+                if idx is None:
+                    idx = info.numhdu
+
                 inherit_prihdr = self.settings.get(
                     'inherit_primary_header', False)
                 kwargs.update(
