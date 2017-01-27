@@ -193,12 +193,13 @@ class ReferenceViewer(object):
                 self.add_global_plugin(spec.module, spec.workspace,
                                        path=spec.get('path', None),
                                        klass=spec.get('klass', spec.module),
-                                       tab_name=spec.tab, start_plugin=spec.start)
+                                       tab_name=spec.tab,
+                                       start_plugin=spec.start)
             else:
                 # local plugin
                 self.add_local_plugin(spec.module, spec.workspace,
-                                       path=spec.get('path', None),
-                                       klass=spec.get('klass', spec.module))
+                                      path=spec.get('path', None),
+                                      klass=spec.get('klass', spec.module))
 
     def add_default_options(self, optprs):
         """
@@ -275,8 +276,9 @@ class ReferenceViewer(object):
             try:
                 os.mkdir(basedir)
             except OSError as e:
-                logger.warning("Couldn't create ginga settings area (%s): %s" % (
-                    basedir, str(e)))
+                logger.warning(
+                    "Couldn't create ginga settings area (%s): %s" % (
+                        basedir, str(e)))
                 logger.warning("Preferences will not be able to be saved")
 
         # Set up preferences
