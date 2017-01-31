@@ -85,6 +85,7 @@ global_plugins = [
     Bunch(module='WBrowser', tab='Help', ws='channels', raisekey='?',
           start=False),
     Bunch(module='FBrowser', tab='Open File', ws='right', start=False),
+    Bunch(module='Blink', tab='Blink Channels', ws='right', start=False),
     Bunch(module='ColorMapPicker', tab='Color Map Picker', ws='right',
           start=False),
     # TODO: Move SaveImage to File menu.
