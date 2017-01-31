@@ -5,24 +5,49 @@
 # Please see the file LICENSE.txt for details.
 #
 # stdlib imports
-import sys, os
+import sys
+import os
 import traceback
-import re, time
+import time
 import tempfile
 import glob
+import threading
+import logging
+import mimetypes
+import platform
+import atexit
+import shutil
+from collections import deque
+
+# Local application imports
+from ginga import cmap, imap
+from ginga import AstroImage, RGBImage, BaseImage
+from ginga.table import AstroTable
+from ginga.misc import Bunch, Timer, Future
+from ginga.util import catalog, iohelper, io_fits
+from ginga.canvas.CanvasObject import drawCatalog
+from ginga.canvas.types.layer import DrawingCanvas
+from ginga.util.six.moves import map
+
+# GUI imports
+from ginga.gw import GwHelp, GwMain, PluginManager
+from ginga.gw import Widgets, Viewers, Desktop
+from ginga import toolkit
+
+# Version
+from ginga import __version__
+
+# Reference viewer
+from ginga.rv.Channel import Channel
+
+# Conditional imports
 import ginga.util.six as six
 if six.PY2:
     import thread
     import Queue
 else:
-    import _thread as thread
-    import queue as Queue
-import threading
-import logging
-import mimetypes
-import platform
-from collections import deque
-import atexit, shutil
+    import _thread as thread  # noqa
+    import queue as Queue  # noqa
 
 magic_tester = None
 try:
@@ -37,27 +62,6 @@ try:
 
 except (ImportError, Exception):
     have_magic = False
-
-# Local application imports
-from ginga import cmap, imap
-from ginga import AstroImage, RGBImage, BaseImage
-from ginga.table import AstroTable
-from ginga.misc import Bunch, Callback, Timer, Future
-from ginga.util import catalog, iohelper, io_fits
-from ginga.canvas.CanvasObject import drawCatalog
-from ginga.canvas.types.layer import DrawingCanvas
-from ginga.util.six.moves import map, zip
-
-# GUI imports
-from ginga.gw import GwHelp, GwMain, PluginManager
-from ginga.gw import Widgets, Viewers, Desktop
-from ginga import toolkit
-
-# Version
-from ginga import __version__
-
-# Reference viewer
-from ginga.rv.Channel import Channel
 
 #pluginconfpfx = 'plugins'
 pluginconfpfx = None
@@ -80,8 +84,10 @@ icon_path = os.path.abspath(os.path.join(package_home, 'icons'))
 class ControlError(Exception):
     pass
 
+
 class GingaViewError(Exception):
     pass
+
 
 class GingaShell(GwMain.GwMain, Widgets.Application):
     """
@@ -198,7 +204,6 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         self.register_viewer(Viewers.CanvasView)
         self.register_viewer(Viewers.TableViewGw)
 
-
     def get_server_bank(self):
         return self.imgsrv
 
@@ -245,7 +250,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         return self.start_local_plugin(None, opname, None)
 
     def stop_operation_channel(self, chname, opname):
-        self.logger.warning("Do not use this method name--it will be deprecated!")
+        self.logger.warning(
+            "Do not use this method name--it will be deprecated!")
         return self.stop_local_plugin(chname, opname)
 
     def start_local_plugin(self, chname, opname, future):
@@ -431,8 +437,6 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
         info = iohelper.get_fileinfo(filepath, cache_dir=self.tmpdir)
         filepfx = info.filepath
-        if idx is None:
-            idx = info.numhdu
 
         # Create an image.  Assume type to be an AstroImage unless
         # the MIME association says it is something different.
@@ -449,13 +453,21 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
         self.logger.debug("assuming file type: %s/%s'" % (typ, subtyp))
         try:
+            # RGB
             if (typ == 'image') and (subtyp not in ('fits', 'x-fits')):
                 image = RGBImage.RGBImage(logger=self.logger)
                 filepath = filepfx
                 image.load_file(filepath, **kwargs)
+
+            # FITS
             else:
-                inherit_prihdr = self.settings.get('inherit_primary_header', False)
-                kwargs.update(dict(numhdu=idx, inherit_primary_header=inherit_prihdr))
+                if idx is None:
+                    idx = info.numhdu
+
+                inherit_prihdr = self.settings.get(
+                    'inherit_primary_header', False)
+                kwargs.update(
+                    dict(numhdu=idx, inherit_primary_header=inherit_prihdr))
 
                 self.logger.info("Loading object from %s kwargs=%s" % (
                     filepath, str(kwargs)))
@@ -498,10 +510,11 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         # Get information about this file/URL
         info = iohelper.get_fileinfo(filespec, cache_dir=dldir)
 
-        if (not info.ondisk) and (info.url is not None) and \
-               (not info.url.startswith('file:')):
+        if ((not info.ondisk) and (info.url is not None) and
+                (not info.url.startswith('file:'))):
+
             # Download the file if a URL was passed
-            def  _dl_indicator(count, blksize, totalsize):
+            def _dl_indicator(count, blksize, totalsize):
                 pct = float(count * blksize) / float(totalsize)
                 msg = "Downloading: %%%.2f complete" % (pct*100.0)
                 self.gui_do(self.show_status, msg)
@@ -579,6 +592,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         except Exception as e:
             errmsg = "Failed to load '%s': %s" % (filepath, str(e))
             self.gui_do(self.show_error, errmsg)
+            return
 
         future = Future.Future()
         future.freeze(image_loader, filepath, **kwargs)
@@ -627,9 +641,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         # sanity check to see if the file is already in memory
         self.logger.debug("preload: checking %s in %s" % (imname, chname))
         channel = self.get_channel(chname)
-        datasrc = channel.datasrc
 
-        if not channel.datasrc.has_key(imname):
+        if imname not in channel.datasrc:
             # not there--load image in a non-gui thread, then have the
             # gui add it to the channel silently
             self.logger.info("preloading image %s" % (path))
@@ -640,7 +653,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                 image = image_future.thaw()
 
             self.gui_do(self.add_image, imname, image,
-                           chname=chname, silent=True)
+                        chname=chname, silent=True)
         self.logger.debug("end preload")
 
     def zoom_in(self):
@@ -853,7 +866,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                 self.gui_do(obj.redo, channel, image)
 
             except Exception as e:
-                self.logger.error("Failed to continue operation: %s" % (str(e)))
+                self.logger.error(
+                    "Failed to continue operation: %s" % (str(e)))
                 # TODO: log traceback?
 
         # update active local plugins
@@ -864,7 +878,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                 self.gui_do(obj.redo)
 
             except Exception as e:
-                self.logger.error("Failed to continue operation: %s" % (str(e)))
+                self.logger.error(
+                    "Failed to continue operation: %s" % (str(e)))
                 # TODO: log traceback?
 
     def close_plugins(self, channel):
@@ -876,7 +891,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                 self.gui_do(obj.close)
 
             except Exception as e:
-                self.logger.error("Failed to continue operation: %s" % (str(e)))
+                self.logger.error(
+                    "Failed to continue operation: %s" % (str(e)))
                 # TODO: log traceback?
 
     def channel_image_updated(self, channel, image):
@@ -1054,8 +1070,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             num_images = settings.get('numImages',
                                       self.settings.get('numImages', 1))
         settings.set_defaults(switchnew=True, numImages=num_images,
-                             raisenew=True, genthumb=True,
-                             preload_images=False, sort_order='loadtime')
+                              raisenew=True, genthumb=True,
+                              preload_images=False, sort_order='loadtime')
 
         with self.lock:
             self.logger.debug("Adding channel '%s'" % (chname))
@@ -1068,7 +1084,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             bnch.image_viewer.set_name('channel:%s' % (chname))
 
             opmon = self.get_plugin_manager(self.logger, self,
-                                          self.ds, self.mm)
+                                            self.ds, self.mm)
 
             channel.widget = bnch.widget
             channel.container = bnch.container
@@ -1180,8 +1196,9 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             if curname == imname:
                 viewer.clear()
 
-        bnch = channel.remove_image(imname)
-        self.make_async_gui_callback('remove-image', channel.name, imname, impath)
+        channel.remove_image(imname)
+        self.make_async_gui_callback('remove-image',
+                                     channel.name, imname, impath)
 
     def move_image_by_name(self, from_chname, imname, to_chname, impath=None):
 
@@ -1339,7 +1356,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         item.add_callback('activated', lambda *args: self.gui_load_file())
 
         item = filemenu.add_name("Remove Image")
-        item.add_callback("activated", lambda *args: self.remove_current_image())
+        item.add_callback("activated",
+                          lambda *args: self.remove_current_image())
 
         filemenu.add_separator()
 
@@ -1375,7 +1393,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         helpmenu = menubar.add_name("Help")
 
         item = helpmenu.add_name("About")
-        item.add_callback('activated', lambda *args: self.banner(raiseTab=True))
+        item.add_callback('activated',
+                          lambda *args: self.banner(raiseTab=True))
 
         item = helpmenu.add_name("Documentation")
         item.add_callback('activated', lambda *args: self.help())
@@ -1458,10 +1477,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         fi.set_image(image)
 
         # Copy attributes of the frame
-        viewer.copy_attributes(fi,
-                                  [#'transforms',
-                                   #'cutlevels',
-                                   'rgbmap'])
+        viewer.copy_attributes(fi, ['rgbmap'])  # 'transforms', 'cutlevels'
 
         root.fullscreen()
         self.w.fscreen = root
@@ -1488,12 +1504,11 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
     def make_viewer(self, vname, channel):
         """Make a viewer whose type name is `vname` and add it to `channel`.
         """
-        if not vname in self.viewer_db:
+        if vname not in self.viewer_db:
             raise ValueError("I don't know how to build a '%s' viewer" % (
                 vname))
 
         stk_w = channel.widget
-        settings = channel.settings
 
         bnch = self.viewer_db[vname]
 
@@ -1592,7 +1607,6 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                            workspace=workspace)
         return bnch
 
-
     def gui_add_channel(self, chname=None):
         chpfx = "Image"
         ws = self.get_current_workspace()
@@ -1625,7 +1639,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                                 buttons=[['Cancel', 0], ['Ok', 1]],
                                 parent=self.w.root)
         dialog.add_callback('activated',
-                            lambda w, rsp: self.add_channel_cb(w, rsp, b, names))
+                            lambda w, rsp: self.add_channel_cb(w, rsp, b, names))  # noqa
         box = dialog.get_content_area()
         box.add_widget(w, stretch=0)
 
@@ -1648,7 +1662,6 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         b.number.set_limits(1, 12, incr_value=1)
         b.number.set_value(1)
 
-        cbox = b.workspace
         names = self.ds.get_wsnames()
         try:
             idx = names.index('channels')
@@ -1662,7 +1675,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                                 buttons=[['Cancel', 0], ['Ok', 1]],
                                 parent=self.w.root)
         dialog.add_callback('activated',
-                            lambda w, rsp: self.add_channels_cb(w, rsp, b, names))
+                            lambda w, rsp: self.add_channels_cb(w, rsp, b, names))  # noqa
         box = dialog.get_content_area()
         box.add_widget(w, stretch=0)
 
@@ -1684,7 +1697,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                                 buttons=[['Cancel', 0], ['Ok', 1]],
                                 parent=self.w.root)
         dialog.add_callback('activated',
-                            lambda w, rsp: self.delete_channel_cb(w, rsp, chname))
+                            lambda w, rsp: self.delete_channel_cb(w, rsp, chname))  # noqa
 
         box = dialog.get_content_area()
         box.add_widget(lbl, stretch=0)
@@ -1720,7 +1733,6 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         else:
             self.gui_delete_window(chname)
 
-
     def gui_add_ws(self):
 
         chpfx = "Image"
@@ -1732,7 +1744,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                     ('Workspace type:', 'label', 'Workspace type', 'combobox'),
                     ('In workspace:', 'label', 'workspace', 'combobox'),
                     ('Channel prefix:', 'label', 'Channel prefix', 'entry'),
-                    ('Number of channels:', 'label', 'num_channels', 'spinbutton'),
+                    ('Number of channels:', 'label', 'num_channels',
+                     'spinbutton'),
                     ('Share settings:', 'label', 'Share settings', 'entry'),
                     )
         w, b = Widgets.build_info(captions)
@@ -1818,7 +1831,6 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             coords = list(map(int, coords))
             self.set_pos(*coords)
 
-
     def collapse_pane(self, side):
         """
         Toggle collapsing the left or right panes.
@@ -1880,7 +1892,6 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
         self.stop()
 
-        root = self.w.root
         self.w.root = None
         while len(self.ds.toplevels) > 0:
             w = self.ds.toplevels.pop()
@@ -1939,8 +1950,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         ws.add_callback('ws-close', self.workspace_closed_cb)
 
         if ws.nb.has_callback('page-closed'):
-            ws.nb.add_callback('page-closed', self.page_closed_cb,
-                                   ws.name)
+            ws.nb.add_callback('page-closed', self.page_closed_cb, ws.name)
         if ws.nb.has_callback('page-switch'):
             ws.nb.add_callback('page-switch', self.page_switch_cb)
 
@@ -1993,16 +2003,16 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                 return
 
             try:
-                nb = self.ds.get_nb(wsname)
-                self.show_error("Workspace name '%s' cannot be used, sorry." % (
-                    wsname))
+                nb = self.ds.get_nb(wsname)  # noqa
+                self.show_error(
+                    "Workspace name '%s' cannot be used, sorry." % (wsname))
                 self.ds.remove_dialog(w)
                 return
 
             except KeyError:
                 pass
 
-            d = { 0: 'grid', 1: 'tabs', 2: 'mdi', 3: 'stack' }
+            d = {0: 'grid', 1: 'tabs', 2: 'mdi', 3: 'stack'}
             wstype = d[idx]
             idx = b.workspace.get_index()
             in_space = names[idx]
@@ -2092,8 +2102,9 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         self.logger.debug("workspace requests close")
         children = list(ws.nb.get_children())
         if len(children) > 0:
-            self.show_error("Please close all windows in this workspace first!",
-                            raisetab=True)
+            self.show_error(
+                "Please close all windows in this workspace first!",
+                raisetab=True)
             return
 
         # TODO: this will prompt the user if we should close the workspace
@@ -2133,7 +2144,6 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         channel = self._get_channel_by_container(child)
         if channel is not None:
             self.gui_delete_channel(channel.name)
-
 
     def showxy(self, viewer, data_x, data_y):
         """Called by the mouse-tracking callback to handle reporting of
@@ -2192,7 +2202,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             info.y += off
 
         except Exception as e:
-            self.logger.warning("Can't get info under the cursor: %s" % (str(e)))
+            self.logger.warning(
+                "Can't get info under the cursor: %s" % (str(e)))
             return
 
         # TODO: can this be made more efficient?
@@ -2324,6 +2335,5 @@ class GuiLogHandler(logging.Handler):
 def _rmtmpdir(tmpdir):
     if os.path.isdir(tmpdir):
         shutil.rmtree(tmpdir)
-
 
 # END

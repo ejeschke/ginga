@@ -8,6 +8,7 @@
 from __future__ import print_function
 
 # stdlib imports
+import glob
 import sys
 import os
 import logging
@@ -194,12 +195,13 @@ class ReferenceViewer(object):
                 self.add_global_plugin(spec.module, spec.workspace,
                                        path=spec.get('path', None),
                                        klass=spec.get('klass', spec.module),
-                                       tab_name=spec.tab, start_plugin=spec.start)
+                                       tab_name=spec.tab,
+                                       start_plugin=spec.start)
             else:
                 # local plugin
                 self.add_local_plugin(spec.module, spec.workspace,
-                                       path=spec.get('path', None),
-                                       klass=spec.get('klass', spec.module))
+                                      path=spec.get('path', None),
+                                      klass=spec.get('klass', spec.module))
 
     def add_default_options(self, optprs):
         """
@@ -276,8 +278,9 @@ class ReferenceViewer(object):
             try:
                 os.mkdir(basedir)
             except OSError as e:
-                logger.warning("Couldn't create ginga settings area (%s): %s" % (
-                    basedir, str(e)))
+                logger.warning(
+                    "Couldn't create ginga settings area (%s): %s" % (
+                        basedir, str(e)))
                 logger.warning("Preferences will not be able to be saved")
 
         # Set up preferences
@@ -552,9 +555,23 @@ class ReferenceViewer(object):
         if (not options.nosplash) and (len(args) == 0) and showBanner:
             ginga_shell.banner(raiseTab=True)
 
+        # Handle inputs like "*.fits[ext]" that sys cmd cannot auto expand.
+        expanded_args = []
+        for imgfile in args:
+            if '*' in imgfile:
+                if '[' in imgfile and imgfile.endswith(']'):
+                    s = imgfile.split('[')
+                    ext = '[' + s[1]
+                else:
+                    ext = ''
+                for fname in glob.iglob(s[0]):
+                    expanded_args.append(fname + ext)
+            else:
+                expanded_args.append(imgfile)
+
         # Assume remaining arguments are fits files and load them.
         chname = None
-        for imgfile in args:
+        for imgfile in expanded_args:
             if options.separate_channels and (chname is not None):
                 channel = ginga_shell.add_channel_auto()
             else:
