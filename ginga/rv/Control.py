@@ -1197,8 +1197,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                 viewer.clear()
 
         channel.remove_image(imname)
-        self.make_async_gui_callback(
-            'remove-image', channel.name, imname, impath)
+        self.make_async_gui_callback('remove-image',
+                                     channel.name, imname, impath)
 
     def move_image_by_name(self, from_chname, imname, to_chname, impath=None):
 
@@ -1356,8 +1356,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         item.add_callback('activated', lambda *args: self.gui_load_file())
 
         item = filemenu.add_name("Remove Image")
-        item.add_callback(
-            "activated", lambda *args: self.remove_current_image())
+        item.add_callback("activated",
+                          lambda *args: self.remove_current_image())
 
         filemenu.add_separator()
 
@@ -1393,8 +1393,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         helpmenu = menubar.add_name("Help")
 
         item = helpmenu.add_name("About")
-        item.add_callback(
-            'activated', lambda *args: self.banner(raiseTab=True))
+        item.add_callback('activated',
+                          lambda *args: self.banner(raiseTab=True))
 
         item = helpmenu.add_name("Documentation")
         item.add_callback('activated', lambda *args: self.help())
@@ -1638,8 +1638,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                                 flags=0,
                                 buttons=[['Cancel', 0], ['Ok', 1]],
                                 parent=self.w.root)
-        dialog.add_callback(
-            'activated', lambda w, rsp: self.add_channel_cb(w, rsp, b, names))
+        dialog.add_callback('activated',
+                            lambda w, rsp: self.add_channel_cb(w, rsp, b, names))  # noqa
         box = dialog.get_content_area()
         box.add_widget(w, stretch=0)
 
@@ -1674,8 +1674,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                                 flags=0,
                                 buttons=[['Cancel', 0], ['Ok', 1]],
                                 parent=self.w.root)
-        dialog.add_callback(
-            'activated', lambda w, rsp: self.add_channels_cb(w, rsp, b, names))
+        dialog.add_callback('activated',
+                            lambda w, rsp: self.add_channels_cb(w, rsp, b, names))  # noqa
         box = dialog.get_content_area()
         box.add_widget(w, stretch=0)
 
@@ -1696,8 +1696,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                                 flags=0,
                                 buttons=[['Cancel', 0], ['Ok', 1]],
                                 parent=self.w.root)
-        dialog.add_callback(
-            'activated', lambda w, rsp: self.delete_channel_cb(w, rsp, chname))
+        dialog.add_callback('activated',
+                            lambda w, rsp: self.delete_channel_cb(w, rsp, chname))  # noqa
 
         box = dialog.get_content_area()
         box.add_widget(lbl, stretch=0)
