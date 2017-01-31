@@ -10,10 +10,11 @@ Histogram
 Histogram plots a histogram for a region drawn in the image, or for the
 entire image.
 
-Histogram is a local plugin, and thus must be invoked separately for
-each channel in which you want to use it.  If a new image is selected
-for the channel the histogram plot will be recalculated based on the
-current parameters with the new data.
+.. note:: Histogram is a local plugin, and thus must be invoked
+          separately for each channel in which you want to use it.  If a
+          new image is selected for the channel the histogram plot will
+          be recalculated based on the current parameters with the new
+          data. 
 
 Usage
 -----
@@ -28,7 +29,7 @@ Three radio buttons at the bottom of the UI are used to control the
 effects of the click/drag action::
 * select "Move" to drag the region to a different location
 * select "Draw" to draw a new region
-* select "Edit" to edit the region  
+* select "Edit" to edit the region
 
 To make a log plot of the histogram, check the "Log Histogram" checkbox.
 To plot by the full range of values in the image instead of by the range

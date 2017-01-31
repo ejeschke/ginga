@@ -10,6 +10,29 @@ from ginga import GingaPlugin, RGBImage, colors
 from ginga.gw import Widgets
 
 class Overlays(GingaPlugin.LocalPlugin):
+    """
+    A plugin for generating color overlays representing under- and
+    overexposure in the loaded image.
+
+    Overlays is a local plugin, and thus must be invoked separately for
+    each channel in which you want to use it.  If a new image is selected
+    for the channel the overlays image will be recalculated based on the
+    current parameters with the new data.
+
+    Usage
+    -----
+    Choose colors from the drop-down menus for the low limit and/or
+    high-limit ("Lo color" and "Hi color").  Specify the limits for low and
+    high values in the limit boxes ("Lo limit" and "Hi limit").  Set the
+    opacity of the overlays with a value between 0 and 1 in the "Opacity"
+    box.  Finally, press the "Redo" button.
+
+    The color overlay should show areas below the low limit with a low color
+    and the areas above the high limit in the high color.
+
+    If you omit a limit (leave the box blank), that color won't be shown in
+    the overlay.
+    """
 
     def __init__(self, fv, fitsimage):
         # superclass defines some variables for us, like logger
@@ -43,15 +66,6 @@ class Overlays(GingaPlugin.LocalPlugin):
         vbox, sw, orientation = Widgets.get_oriented_box(container)
         vbox.set_border_width(4)
         vbox.set_spacing(2)
-
-        self.msg_font = self.fv.get_font("sansFont", 12)
-        tw = Widgets.TextArea(wrap=True, editable=False)
-        tw.set_font(self.msg_font)
-        self.tw = tw
-
-        fr = Widgets.Expander("Instructions")
-        fr.set_widget(tw)
-        vbox.add_widget(fr, stretch=0)
 
         fr = Widgets.Frame("Limits")
 
@@ -109,20 +123,23 @@ class Overlays(GingaPlugin.LocalPlugin):
         btn = Widgets.Button("Close")
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn, stretch=0)
+        btn = Widgets.Button("Help")
+        btn.add_callback('activated', lambda w: self.help())
+        btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
         top.add_widget(btns, stretch=0)
 
         container.add_widget(top, stretch=1)
 
+    def help(self):
+        name = str(self).capitalize()
+        self.fv.show_help_text(name, self.__doc__)
+
     def close(self):
         self.fv.stop_local_plugin(self.chname, str(self))
         return True
 
-    def instructions(self):
-        self.tw.set_text("""Enter a limit for saturation.""")
-
     def start(self):
-        self.instructions()
         # start ruler drawing operation
         p_canvas = self.fitsimage.get_canvas()
         try:
