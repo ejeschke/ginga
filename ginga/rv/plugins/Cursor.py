@@ -40,12 +40,12 @@ class Cursor(GingaPlugin.GlobalPlugin):
         macos_ver = platform.mac_ver()[0]
         if len(macos_ver) > 0:
             # Mac OS X
-            readout.set_font('monaco 16')
+            readout.set_font('monaco', 16)
         elif toolkit.get_family().startswith('gtk'):
             # Gtk
-            readout.set_font('fixed 14')
+            readout.set_font('fixed', 14)
         else:
-            readout.set_font('fixed 11')
+            readout.set_font('fixed', 11)
         return readout
 
     def build_gui(self, container):
