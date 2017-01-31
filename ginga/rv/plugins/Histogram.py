@@ -13,7 +13,45 @@ from ginga.util import plots
 
 
 class Histogram(GingaPlugin.LocalPlugin):
+    """
+    Histogram plots a histogram for a region drawn in the image, or for the
+    entire image.
 
+    Histogram is a local plugin, and thus must be invoked separately for
+    each channel in which you want to use it.  If a new image is selected
+    for the channel the histogram plot will be recalculated based on the
+    current parameters with the new data.
+
+    Usage
+    -----
+    Click and drag to define a region within the image that will be used to
+    calculate the histogram.  To take the histogram of the full image, click
+    the button in the UI labeled "Full Image" (NOTE: depending on the size
+    of the image calculating the full histogram can take time).
+
+    UI Controls
+    -----------
+    Three radio buttons at the bottom of the UI are used to control the
+    effects of the click/drag action::
+    * select "Move" to drag the region to a different location
+    * select "Draw" to draw a new region
+    * select "Edit" to edit the region
+
+    To make a log plot of the histogram, check the "Log Histogram" checkbox.
+    To plot by the full range of values in the image instead of by the range
+    within the cut values, uncheck the "Plot By Cuts" checkbox.
+
+    The "NumBins" parameter determines how many bins are used in calculating
+    the histogram.  Type a number in the box and press Enter to change the
+    default value.
+
+    Cut Levels Convenience Controls
+    -------------------------------
+    Because a histogram is useful feedback for setting the cut levels,
+    controls are provided in the UI for setting the low and high cut levels
+    in the image, as well as for performing an auto cut levels, according to
+    the auto cut levels settings in the channel preferences.
+    """
     def __init__(self, fv, fitsimage):
         # superclass defines some variables for us, like logger
         super(Histogram, self).__init__(fv, fitsimage)
@@ -65,15 +103,6 @@ class Histogram(GingaPlugin.LocalPlugin):
         vbox, sw, orientation = Widgets.get_oriented_box(container)
         vbox.set_border_width(4)
         vbox.set_spacing(2)
-
-        msg_font = self.fv.get_font("sansFont", 12)
-        tw = Widgets.TextArea(wrap=True, editable=False)
-        tw.set_font(msg_font)
-        self.tw = tw
-
-        fr = Widgets.Expander("Instructions")
-        fr.set_widget(tw)
-        vbox.add_widget(fr, stretch=0)
 
         self.plot = plots.Plot(logger=self.logger,
                                width=400, height=400)
@@ -166,6 +195,9 @@ class Histogram(GingaPlugin.LocalPlugin):
         btn = Widgets.Button("Close")
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn, stretch=0)
+        btn = Widgets.Button("Help")
+        btn.add_callback('activated', lambda w: self.help())
+        btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
 
         top.add_widget(btns, stretch=0)
@@ -173,15 +205,16 @@ class Histogram(GingaPlugin.LocalPlugin):
         container.add_widget(top, stretch=1)
         self.gui_up = True
 
-    def instructions(self):
-        self.tw.set_text("""Draw (or redraw) a region with the right mouse button.  Click or drag left mouse button to reposition region.""")
 
     def close(self):
         self.fv.stop_local_plugin(self.chname, str(self))
         return True
 
+    def help(self):
+        name = str(self).capitalize()
+        self.fv.show_help_text(name, self.__doc__)
+
     def start(self):
-        self.instructions()
         self.plot.set_titles(rtitle="Histogram")
 
         # insert canvas, if not already

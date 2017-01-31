@@ -361,7 +361,8 @@ class Cuts(GingaPlugin.LocalPlugin):
                             lambda w, tf: self.axis_toggle_cb(w, tf, pos))
 
     def help(self):
-        self.fv.show_help_text('Cuts', self.__doc__)
+        name = str(self).capitalize()
+        self.fv.show_help_text(name, self.__doc__)
 
     def select_cut(self, tag):
         self.cutstag = tag
