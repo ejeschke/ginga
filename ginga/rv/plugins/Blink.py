@@ -44,7 +44,7 @@ class Blink(GingaPlugin.LocalPlugin):
         self.blink_timer.set_callback('expired', self._blink_timer_cb)
 
         prefs = self.fv.get_preferences()
-        self.settings = prefs.createCategory('plugin_Blink')
+        self.settings = prefs.create_category('plugin_Blink')
         self.settings.add_defaults(interval_max=30.0, interval_min=0.25)
         self.settings.load(onError='silent')
 

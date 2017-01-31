@@ -113,7 +113,7 @@ class Cuts(GingaPlugin.LocalPlugin):
 
         # get Cuts preferences
         prefs = self.fv.get_preferences()
-        self.settings = prefs.createCategory('plugin_Cuts')
+        self.settings = prefs.create_category('plugin_Cuts')
         self.settings.add_defaults(select_new_cut=True, draw_then_move=True,
                                    label_cuts=True, colors=cut_colors,
                                    drag_update=False,
