@@ -4,6 +4,7 @@ WCSMatch
 ========
 
 .. image:: figures/wcsmatch-plugin.png
+   :width: 400px
    :align: center
 
 WCSMatch is a global plugin for the Ginga image viewer that allows

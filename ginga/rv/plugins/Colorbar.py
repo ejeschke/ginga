@@ -10,7 +10,20 @@ from ginga.gw import Widgets, ColorBar
 
 
 class Colorbar(GingaPlugin.GlobalPlugin):
+    """
+    The Colorbar plugin shows a color bar indicating the color map applied
+    to the image and showing the example values along the range.
 
+    Usage
+    -----
+    Clicking and dragging in the Colorbar window will shift the colormap
+    left or right.  Scrolling will stretch or shrink the colormap at the
+    cursor position.  Right-clicking will restore the colormap from any
+    shift or stretch.
+
+    If the focus shifts to another channel, the colorbar will be updated
+    to reflect that channel's colormap and value information.
+    """
     def __init__(self, fv):
         # superclass defines some variables for us, like logger
         super(Colorbar, self).__init__(fv)
