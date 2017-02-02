@@ -4,6 +4,7 @@ Histogram
 =========
 
 .. image:: figures/histogram-plugin.png
+   :width: 400px
    :align: center
 
 
@@ -14,7 +15,7 @@ entire image.
           separately for each channel in which you want to use it.  If a
           new image is selected for the channel the histogram plot will
           be recalculated based on the current parameters with the new
-          data. 
+          data.
 
 Usage
 -----
@@ -26,14 +27,15 @@ of the image calculating the full histogram can take time).
 UI Controls
 -----------
 Three radio buttons at the bottom of the UI are used to control the
-effects of the click/drag action::
+effects of the click/drag action:
+
 * select "Move" to drag the region to a different location
 * select "Draw" to draw a new region
 * select "Edit" to edit the region
 
 To make a log plot of the histogram, check the "Log Histogram" checkbox.
 To plot by the full range of values in the image instead of by the range
-within the cut values, uncheck the "Plot By Cuts" checkbox. 
+within the cut values, uncheck the "Plot By Cuts" checkbox.
 
 The "NumBins" parameter determines how many bins are used in calculating
 the histogram.  Type a number in the box and press Enter to change the

@@ -4,6 +4,7 @@ Blink
 =====
 
 .. image:: figures/blink-plugin.png
+   :width: 400px
    :align: center
 
 Blink switches through the images shown in a channel at a rate chosen by
@@ -18,7 +19,7 @@ within a short timescale--like blinking your eyes.
 
 .. note:: Local plugins are started from the "Operations" button, while
           global plugins are started from the "Plugins" menu.
-   
+
 
 Usage
 -----

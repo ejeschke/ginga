@@ -4,16 +4,17 @@ Overlays
 ========
 
 .. image:: figures/overlays-plugin.png
+   :width: 400px
    :align: center
 
 A plugin for generating color overlays representing under- and
-overexposure in the loaded image.
+over-exposure in the loaded image.
 
 .. note:: Overlays is a local plugin, and thus must be invoked
           separately for each channel in which you want to use it.  If a
           new image is selected for the channel the overlays will
           be recalculated based on the current parameters with the new
-          data. 
+          data.
 
 
 Usage
