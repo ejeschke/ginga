@@ -4,6 +4,7 @@ Crosshair
 =========
 
 .. image:: figures/crosshair-plugin.png
+   :width: 400px
    :align: center
 
 
@@ -19,6 +20,6 @@ Usage
 -----
 Select the appropriate type of output in the "Format" drop-down
 box in the UI: "xy" for pixel coordinates, "coords" for the WCS
-coordinates and "value" for the value at the crosshair position.
+coordinates, and "value" for the value at the crosshair position.
 
 Then click and drag to position the crosshair.
