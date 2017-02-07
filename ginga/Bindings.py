@@ -85,6 +85,7 @@ class ImageViewBindings(object):
             dmod_rotate = ['r', None, None],
             dmod_pan = ['q', None, 'pan'],
             dmod_freepan = ['w', None, 'pan'],
+            dmod_camera = [None, None, 'pan'],
 
             default_mode_type = 'oneshot',
             default_lock_mode_type = 'softlock',
@@ -141,6 +142,9 @@ class ImageViewBindings(object):
             kp_reset = ['escape'],
             kp_lock = ['L'],
             kp_softlock = ['l'],
+            kp_camera_save = ['camera+s'],
+            kp_camera_reset = ['camera+r'],
+            kp_camera_toggle3d = ['camera+3'],
 
             # pct of a window of data to move with pan key commands
             key_pan_pct = 0.666667,
@@ -160,6 +164,7 @@ class ImageViewBindings(object):
             sc_cmap = ['cmap+scroll'],
             sc_imap = ['cmap+ctrl+scroll'],
             #sc_draw = ['draw+scroll'],
+            sc_camera_track = ['camera+scroll'],
 
             scroll_pan_acceleration = 1.0,
             # 1.0 is appropriate for a mouse, 0.1 for most trackpads
@@ -195,6 +200,8 @@ class ImageViewBindings(object):
             ms_panset = ['pan+middle', 'shift+left', 'middle'],
             ms_cmap_rotate = ['cmap+left'],
             ms_cmap_restore = ['cmap+right'],
+            ms_camera_orbit = ['camera+left'],
+            ms_camera_pan_delta = ['camera+right'],
 
             # GESTURES (some backends only)
             gs_pinch = [],
@@ -647,6 +654,15 @@ class ImageViewBindings(object):
                 return 'up'
         else:
             return 'none'
+
+    def get_win_xy(self, viewer):
+        x, y = viewer.get_last_win_xy()
+
+        if not viewer.window_has_origin_upper():
+            wd, ht = viewer.get_window_size()
+            y = ht - y
+
+        return x, y
 
     def _tweak_colormap(self, viewer, x, y, mode):
         win_wd, win_ht = viewer.get_window_size()
@@ -1382,7 +1398,8 @@ class ImageViewBindings(object):
             return True
         msg = self.settings.get('msg_zoom', msg)
 
-        x, y = viewer.get_last_win_xy()
+        x, y = self.get_win_xy(viewer)
+
         if event.state == 'move':
             self._zoom_xy(viewer, x, y)
 
@@ -1467,7 +1484,8 @@ class ImageViewBindings(object):
             return True
         msg = self.settings.get('msg_rotate', msg)
 
-        x, y = viewer.get_last_win_xy()
+        x, y = self.get_win_xy(viewer)
+
         if event.state == 'move':
             self._rotate_xy(viewer, x, y)
 
@@ -1502,9 +1520,8 @@ class ImageViewBindings(object):
             return True
         msg = self.settings.get('msg_contrast', msg)
 
-        x, y = viewer.get_last_win_xy()
-        if not viewer.window_has_origin_upper():
-            y = viewer._imgwin_ht - y
+        x, y = self.get_win_xy(viewer)
+
         if event.state == 'move':
             self._tweak_colormap(viewer, x, y, 'preview')
 
@@ -1535,9 +1552,8 @@ class ImageViewBindings(object):
             return True
         msg = self.settings.get('msg_cmap', msg)
 
-        x, y = viewer.get_last_win_xy()
-        if not viewer.window_has_origin_upper():
-            y = viewer._imgwin_ht - y
+        x, y = self.get_win_xy(viewer)
+
         if event.state == 'move':
             self._rotate_colormap(viewer, x, y, 'preview')
 
@@ -1609,7 +1625,8 @@ class ImageViewBindings(object):
         if not self.cancut:
             return True
 
-        x, y = viewer.get_last_win_xy()
+        x, y = self.get_win_xy(viewer)
+
         if event.state == 'move':
             self._cutlow_xy(viewer, x, y)
 
@@ -1627,7 +1644,8 @@ class ImageViewBindings(object):
         if not self.cancut:
             return True
 
-        x, y = viewer.get_last_win_xy()
+        x, y = self.get_win_xy(viewer)
+
         if event.state == 'move':
             self._cuthigh_xy(viewer, x, y)
 
@@ -1645,9 +1663,8 @@ class ImageViewBindings(object):
         if not self.cancut:
             return True
 
-        x, y = viewer.get_last_win_xy()
-        if not viewer.window_has_origin_upper():
-            y = viewer._imgwin_ht - y
+        x, y = self.get_win_xy(viewer)
+
         if event.state == 'move':
             self._cutboth_xy(viewer, x, y)
 
@@ -1917,6 +1934,116 @@ class ImageViewBindings(object):
                 viewer.onscreen_message(msg_str, delay=0.4)
         return True
 
+
+    ##### CAMERA MOTION CALLBACKS #####
+
+    def get_camera(self, viewer):
+        renderer = viewer.renderer
+        if not hasattr(renderer, 'camera'):
+            return None, None
+        return renderer.camera
+
+
+    def sc_camera_track(self, viewer, event, msg=True):
+        camera = self.get_camera(viewer)
+        if camera is None:
+            # this viewer doesn't have a camera
+            return
+
+        delta = event.amount * 6
+        direction = self.get_direction(event.direction)
+        if direction == 'down':
+            delta = - delta
+
+        camera.track(delta)
+
+        viewer.gl_update()
+        return True
+
+
+    def ms_camera_orbit(self, viewer, event, data_x, data_y, msg=True):
+        camera = self.get_camera(viewer)
+        if camera is None:
+            # this viewer doesn't have a camera
+            return False
+
+        x, y = self.get_win_xy(viewer)
+
+        if event.state == 'move':
+            camera.orbit(self._start_x, self._start_y, x, y)
+            self._start_x, self._start_y = x, y
+            pos = tuple(camera.position.get())
+            mst = "Camera position: (%.4f, %.4f, %.4f)" % pos
+            ## if msg:
+            ##     viewer.onscreen_message(mst, delay=0.5)
+
+        elif event.state == 'down':
+            self._start_x, self._start_y = x, y
+
+        ## else:
+        ##     viewer.onscreen_message(None)
+
+        viewer.gl_update()
+        return True
+
+
+    def ms_camera_pan_delta(self, viewer, event, data_x, data_y, msg=True):
+        camera = self.get_camera(viewer)
+        if camera is None:
+            # this viewer doesn't have a camera
+            return False
+
+        x, y = self.get_win_xy(viewer)
+
+        if event.state == 'move':
+            dx, dy = x - self._start_x, self._start_y - y
+            camera.pan_delta(dx, dy)
+            self._start_x, self._start_y = x, y
+
+        elif event.state == 'down':
+            self._start_x, self._start_y = x, y
+            ## if msg:
+            ##     viewer.onscreen_message("Camera translate", delay=1.0)
+
+        ## else:
+        ##     viewer.onscreen_message(None)
+
+        viewer.gl_update()
+        return True
+
+    def kp_camera_reset(self, viewer, event, data_x, data_y):
+        camera = self.get_camera(viewer)
+        if camera is None:
+            # this viewer doesn't have a camera
+            return False
+
+        camera.reset()
+        viewer.onscreen_message("Reset camera", delay=0.5)
+        viewer.gl_update()
+        return True
+
+    def kp_camera_save(self, viewer, event, data_x, data_y):
+        camera = self.get_camera(viewer)
+        if camera is None:
+            # this viewer doesn't have a camera
+            return False
+
+        camera.save_positions()
+        viewer.onscreen_message("Saved camera position", delay=0.5)
+        return True
+
+    def kp_camera_toggle3d(self, viewer, event, data_x, data_y):
+        camera = self.get_camera(viewer)
+        if camera is None:
+            # this viewer doesn't have a camera
+            return False
+
+        renderer = viewer.renderer
+        renderer.mode3d = not renderer.mode3d
+        viewer.gl_update()
+        return True
+
+
 class UIEvent(object):
     pass
 
@@ -2034,6 +2161,14 @@ class BindingMapper(Callback.Callbacks):
     def clear_mode_map(self):
         self.mode_map = {}
 
+    def has_mode(self, mode_name):
+        key = 'mode_%s' % mode_name
+        return key in self.mode_map
+
+    def remove_mode(self, mode_name):
+        key = 'mode_%s' % mode_name
+        del self.mode_map[key]
+
     def current_mode(self):
         return (self._kbdmode, self._kbdmode_type)
 
@@ -2047,7 +2182,9 @@ class BindingMapper(Callback.Callbacks):
                 mode_type, self._kbdmode_types))
 
         bnch = Bunch.Bunch(name=mode_name, type=mode_type, msg=msg)
-        self.mode_map[keyname] = bnch
+        if keyname is not None:
+            # No key to launch this mode
+            self.mode_map[keyname] = bnch
         self.mode_map['mode_%s' % mode_name] = bnch
 
     def set_mode(self, name, mode_type=None):

@@ -240,7 +240,7 @@ Manager bar.
             callback to a button that you place in your GUI to close the plugin
             as a convenience to the user.
             """
-            chname = self.fv.get_channelName(self.fitsimage)
+            chname = self.fv.get_channel_name(self.fitsimage)
             self.fv.stop_local_plugin(chname, str(self))
             return True
 
@@ -328,7 +328,8 @@ ginga configuration area.  In a terminal:
 Put your plugin in there (a good one to start with is to modify the
 MyLocalPlugin example that comes with Ginga):
 
-    $ cp MyPlugin.py $HOME/.ginga/plugins/.
+    $ cd .../ginga/examples/reference-viewer
+    $ cp MyLocalPlugin.py $HOME/.ginga/plugins/MyPlugin.py
 
 To load it when the reference viewer starts (and add some logging to stderr
 as well as to a file):
@@ -358,7 +359,8 @@ placeholders in the right panel in the container where it tried to build
 the GUI or possibly under the Errors tab.
 
 .. note:: Ginga has a feature for quickly reloading plugins to
-          facilitate rapid debugging cycles.  Start the "Command" plugin
+          facilitate rapid debugging cycles.  If it is not already
+          running, start the "Command" plugin
           from the "Plugins" menu in the menu bar.  If your plugin
           launched (but has some error), make sure you have closed your
           plugin by right clicking (or Control + click on Mac touchpad)
@@ -829,4 +831,19 @@ you create new channels, delete channels or load images into channels.
             name of the plugin.
             """
             return 'myglobalplugin'
+
+
+Writing Separately Installable Plugins
+--------------------------------------
+If you want to distribute your plugin(s) as a separately installable
+package and have Ginga discover them when it starts up, you can use the
+`Ginga Plugin Template <https://github.com/ejeschke/ginga-plugin-template>`_
+to write your own package that installs plugins.
+
+You can include as many plugins in your package as you want.
+You write your plugins in exactly the same way as described above, and
+they can be either global or local.  For details, clone the repo at the
+link above and follow the directions in the README.
+
+
 

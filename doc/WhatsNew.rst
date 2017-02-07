@@ -2,6 +2,18 @@
 What's New in Ginga?
 ++++++++++++++++++++
 
+Ver 2.6.2.dev
+=============
+- Added some colormaps from ds9 that don't have equivalents in Ginga or
+  matplotlib
+- Fix for recognizing CompImage HDU type when using astropy.io.fits
+- Add new experimental OpenGL back end
+- Fixes for Tk back end on python 3
+- You can now write separately distributed and installable plugins for
+  the reference viewer that Ginga will find and load on startup
+- Added --sep option to load command line files into separate channels
+- New help screen feature available for plugins
+
 Ver 2.6.1 (2016-12-22)
 ======================
 - Added a working MDI workspace for gtk2/gtk3.

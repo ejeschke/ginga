@@ -14,7 +14,26 @@ from ginga.ImageView import ImageViewNoDataError
 
 
 class Cursor(GingaPlugin.GlobalPlugin):
+    """
+    The Cursor plugin displays a summary line of text that changes as the
+    user moves the cursor around an image.  In the standard reference viewer
+    configuration, it appears as a line containing green text just below the
+    Colorbar plugin.
 
+    Cursor is a global plugin and there is no associated configuration GUI.
+
+    Usage
+    -----
+    Cursor simply tracks the cursor as it moves around an image and displays
+    information about the pixel coordinates, WCS coordinates (if available)
+    and the value of the pixel under the cursor.
+
+    NOTE: Pixel coordinates are affected by the general setting
+    "pixel_coords_offset" which can be set in the "general.cfg" configuration
+    file for ginga.  The default is value for this setting is 1.0, which
+    means pixel coordinates are reported from an origin of 1, as per the FITS
+    standard.
+    """
     def __init__(self, fv):
         # superclass defines some variables for us, like logger
         super(Cursor, self).__init__(fv)
@@ -40,12 +59,12 @@ class Cursor(GingaPlugin.GlobalPlugin):
         macos_ver = platform.mac_ver()[0]
         if len(macos_ver) > 0:
             # Mac OS X
-            readout.set_font('monaco 16')
+            readout.set_font('monaco', 16)
         elif toolkit.get_family().startswith('gtk'):
             # Gtk
-            readout.set_font('fixed 14')
+            readout.set_font('fixed', 14)
         else:
-            readout.set_font('fixed 11')
+            readout.set_font('fixed', 11)
         return readout
 
     def build_gui(self, container):

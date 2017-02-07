@@ -12,11 +12,9 @@ from ginga.misc import Bunch
 
 class WCSMatch(GingaPlugin.GlobalPlugin):
     """
-    *** This plugin is experimental/alpha/testing/preview ***
-
     WCSMatch is a global plugin for the Ginga image viewer that allows
     you to roughly align images with different scales and orientations
-    using WCS for viewing purposes.
+    using the images' World Coordinate System for viewing purposes.
 
     To use, simply start the plugin, and from the plugin GUI select a
     channel from the drop-down menu labeled "Reference Channel".  The
@@ -30,7 +28,6 @@ class WCSMatch(GingaPlugin.GlobalPlugin):
     Currently there is no way to limit the channels that are affected
     by the plugin.
     """
-
     def __init__(self, fv):
         # superclass defines some variables for us, like logger
         super(WCSMatch, self).__init__(fv)
@@ -51,15 +48,6 @@ class WCSMatch(GingaPlugin.GlobalPlugin):
         vbox, sw, orientation = Widgets.get_oriented_box(container)
         vbox.set_border_width(4)
         vbox.set_spacing(2)
-
-        self.msg_font = self.fv.get_font("sansFont", 12)
-        tw = Widgets.TextArea(wrap=True, editable=False)
-        tw.set_font(self.msg_font)
-        self.tw = tw
-
-        fr = Widgets.Expander("Instructions")
-        fr.set_widget(tw)
-        vbox.add_widget(fr, stretch=0)
 
         fr = Widgets.Frame("WCS Match")
 
@@ -84,6 +72,9 @@ class WCSMatch(GingaPlugin.GlobalPlugin):
 
         btn = Widgets.Button("Close")
         btn.add_callback('activated', lambda w: self.close())
+        btns.add_widget(btn, stretch=0)
+        btn = Widgets.Button("Help")
+        btn.add_callback('activated', lambda w: self.help())
         btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
         top.add_widget(btns, stretch=0)
@@ -163,20 +154,21 @@ class WCSMatch(GingaPlugin.GlobalPlugin):
 
         self.logger.info("set reference channel to '%s'" % (chname))
 
+    def help(self):
+        name = str(self).capitalize()
+        self.fv.show_help_text(name, self.__doc__)
+
     def close(self):
         self.fv.stop_global_plugin(str(self))
         return True
 
-    def instructions(self):
-        self.tw.set_text(WCSMatch.__doc__)
-
     def start(self):
-        self.instructions()
+        pass
 
     def stop(self):
         self.ref_channel = None
         self.ref_image = None
-        self.fv.showStatus("")
+        self.fv.show_status("")
 
     def get_other_channels(self, myname):
         return set(self.fv.get_channel_names()) - set([myname])

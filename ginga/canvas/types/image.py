@@ -141,7 +141,6 @@ class Image(OnePointMixin, CanvasObjectBase):
 
         cache = self.get_cache(viewer)
 
-        #print("redraw whence=%f" % (whence))
         dst_order = viewer.get_rgb_order()
         image_order = self.image.get_order()
 
@@ -162,14 +161,14 @@ class Image(OnePointMixin, CanvasObjectBase):
             # calculate the cutout that we can make and scale to merge
             # onto the final image--by only cutting out what is necessary
             # this speeds scaling greatly at zoomed in sizes
-            dst_x, dst_y, a1, b1, a2, b2 = \
-                   trcalc.calc_image_merge_clip(xmin, ymin, xmax, ymax,
-                                                dst_x, dst_y, a1, b1, a2, b2)
+            ((dst_x, dst_y), (a1, b1), (a2, b2)) = \
+                 trcalc.calc_image_merge_clip((xmin, ymin), (xmax, ymax),
+                                              (dst_x, dst_y),
+                                              (a1, b1), (a2, b2))
 
             # is image completely off the screen?
             if (a2 - a1 <= 0) or (b2 - b1 <= 0):
                 # no overlay needed
-                #print "no overlay needed"
                 return
 
             # cutout and scale the piece appropriately by the viewer scale
@@ -177,10 +176,10 @@ class Image(OnePointMixin, CanvasObjectBase):
             # scale additionally by our scale
             _scale_x, _scale_y = scale_x * self.scale_x, scale_y * self.scale_y
 
-            res = self.image.get_scaled_cutout(a1, b1, a2, b2,
-                                               _scale_x, _scale_y,
-                                               #flipy=self.flipy,
-                                               method=self.interpolation)
+            res = self.image.get_scaled_cutout2((a1, b1), (a2, b2),
+                                                (_scale_x, _scale_y),
+                                                #flipy=self.flipy,
+                                                method=self.interpolation)
 
             # don't ask for an alpha channel from overlaid image if it
             # doesn't have one
@@ -199,27 +198,26 @@ class Image(OnePointMixin, CanvasObjectBase):
             pan_x, pan_y = viewer.get_pan()
             pan_off = viewer.data_off
             pan_x, pan_y = pan_x + pan_off, pan_y + pan_off
-            #print "pan x,y=%f,%f" % (pan_x, pan_y)
             off_x, off_y = dst_x - pan_x, dst_y - pan_y
             # scale offset
             off_x *= scale_x
             off_y *= scale_y
-            #print "off_x,y=%f,%f" % (off_x, off_y)
 
             # dst position in the pre-transformed array should be calculated
             # from the center of the array plus offsets
             ht, wd, dp = dstarr.shape
-            cache.cvs_x = int(round(wd / 2.0  + off_x))
-            cache.cvs_y = int(round(ht / 2.0  + off_y))
+            cvs_x = int(round(wd / 2.0  + off_x))
+            cvs_y = int(round(ht / 2.0  + off_y))
+            cache.cvs_pos = (cvs_x, cvs_y)
 
         # composite the image into the destination array at the
         # calculated position
-        trcalc.overlay_image(dstarr, cache.cvs_x, cache.cvs_y, cache.cutout,
+        trcalc.overlay_image(dstarr, cache.cvs_pos, cache.cutout,
                              dst_order=dst_order, src_order=image_order,
                              alpha=self.alpha, flipy=False)
 
     def _reset_cache(self, cache):
-        cache.setvals(cutout=None, drawn=False, cvs_x=0, cvs_y=0)
+        cache.setvals(cutout=None, drawn=False, cvs_pos=(0, 0))
         return cache
 
     def reset_optimize(self):
@@ -383,7 +381,6 @@ class NormImage(Image):
         if self.image is None:
             return
 
-        #print("redraw whence=%f" % (whence))
         cache = self.get_cache(viewer)
 
         if (whence <= 0.0) or (cache.cutout is None) or (not self.optimize):
@@ -402,14 +399,14 @@ class NormImage(Image):
             # calculate the cutout that we can make and scale to merge
             # onto the final image--by only cutting out what is necessary
             # this speeds scaling greatly at zoomed in sizes
-            dst_x, dst_y, a1, b1, a2, b2 = \
-                   trcalc.calc_image_merge_clip(xmin, ymin, xmax, ymax,
-                                                dst_x, dst_y, a1, b1, a2, b2)
+            ((dst_x, dst_y), (a1, b1), (a2, b2)) = \
+                 trcalc.calc_image_merge_clip((xmin, ymin), (xmax, ymax),
+                                              (dst_x, dst_y),
+                                              (a1, b1), (a2, b2))
 
             # is image completely off the screen?
             if (a2 - a1 <= 0) or (b2 - b1 <= 0):
                 # no overlay needed
-                #print "no overlay needed"
                 return
 
             # cutout and scale the piece appropriately by viewer scale
@@ -417,27 +414,26 @@ class NormImage(Image):
             # scale additionally by our scale
             _scale_x, _scale_y = scale_x * self.scale_x, scale_y * self.scale_y
 
-            res = self.image.get_scaled_cutout(a1, b1, a2, b2,
-                                               _scale_x, _scale_y,
-                                               method=self.interpolation)
+            res = self.image.get_scaled_cutout2((a1, b1), (a2, b2),
+                                                (_scale_x, _scale_y),
+                                                method=self.interpolation)
             cache.cutout = res.data
 
             # calculate our offset from the pan position
             pan_x, pan_y = viewer.get_pan()
             pan_off = viewer.data_off
             pan_x, pan_y = pan_x + pan_off, pan_y + pan_off
-            #print "pan x,y=%f,%f" % (pan_x, pan_y)
             off_x, off_y = dst_x - pan_x, dst_y - pan_y
             # scale offset
             off_x *= scale_x
             off_y *= scale_y
-            #print "off_x,y=%f,%f" % (off_x, off_y)
 
             # dst position in the pre-transformed array should be calculated
             # from the center of the array plus offsets
             ht, wd, dp = dstarr.shape
-            cache.cvs_x = int(round(wd / 2.0  + off_x))
-            cache.cvs_y = int(round(ht / 2.0  + off_y))
+            cvs_x = int(round(wd / 2.0  + off_x))
+            cvs_y = int(round(ht / 2.0  + off_y))
+            cache.cvs_pos = (cvs_x, cvs_y)
 
         if self.rgbmap is not None:
             rgbmap = self.rgbmap
@@ -471,7 +467,7 @@ class NormImage(Image):
 
         # composite the image into the destination array at the
         # calculated position
-        trcalc.overlay_image(dstarr, cache.cvs_x, cache.cvs_y, cache.rgbarr,
+        trcalc.overlay_image(dstarr, cache.cvs_pos, cache.rgbarr,
                              dst_order=dst_order, src_order=get_order,
                              alpha=self.alpha, flipy=False)
 
@@ -489,7 +485,7 @@ class NormImage(Image):
 
     def _reset_cache(self, cache):
         cache.setvals(cutout=None, prergb=None, rgbarr=None,
-                      drawn=False, cvs_x=0, cvs_y=0)
+                      drawn=False, cvs_pos=(0, 0))
         return cache
 
     def set_image(self, image):
@@ -499,11 +495,9 @@ class NormImage(Image):
         self.make_callback('image-set', image)
 
     def scale_by(self, scale_x, scale_y):
-        #print("scaling image")
         self.scale_x *= scale_x
         self.scale_y *= scale_y
         self.reset_optimize()
-        #print("image scale_x=%f scale_y=%f" % (self.scale_x, self.scale_y))
 
 
 # register our types

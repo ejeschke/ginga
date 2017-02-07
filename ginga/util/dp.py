@@ -46,7 +46,8 @@ def make_image(data_np, oldimage, header, pfx='dp'):
 
 
 def create_blank_image(ra_deg, dec_deg, fov_deg, px_scale, rot_deg,
-                       cdbase=[1, 1], dtype=None, logger=None, pfx='dp'):
+                       cdbase=[1, 1], dtype=None, logger=None, pfx='dp',
+                       mmap_path=None, mmap_mode='w+'):
 
     # ra and dec in traditional format
     ra_txt = wcs.raDegToString(ra_deg, format='%02d:%02d:%06.3f')
@@ -64,7 +65,12 @@ def create_blank_image(ra_deg, dec_deg, fov_deg, px_scale, rot_deg,
 
     if dtype is None:
         dtype = numpy.float32
-    data = numpy.zeros((height, width), dtype=dtype)
+    if mmap_path is None:
+        data = numpy.zeros((height, width), dtype=dtype)
+
+    else:
+        data = numpy.memmap(mmap_path, dtype=dtype, mode=mmap_mode,
+                            shape=(height, width))
 
     crpix = float(imagesize // 2)
     header = OrderedDict((('SIMPLE', True),

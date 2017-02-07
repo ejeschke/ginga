@@ -15,6 +15,7 @@ class Readout(object):
 
         # We just use a ginga widget to implement the readout
         readout = Viewers.CanvasView(logger=logger)
+        readout.name = 'readout'
         readout.set_desired_size(width, height)
         bg = colors.lookup_color('#202030')
         readout.set_bg(*bg)
@@ -40,13 +41,10 @@ class Readout(object):
     def get_widget(self):
         return self.readout
 
-    def set_font(self, font):
-        # TODO: font format should be compatible with that used in Widgets
-        if ' ' in font:
-            font, fontsize = font.split()
-            fontsize = int(fontsize)
-            self.text_obj.fontsize = fontsize
+    def set_font(self, font, fontsize=None):
         self.text_obj.font = font
+        if fontsize is not None:
+            self.text_obj.fontsize = fontsize
         self.viewer.redraw(whence=3)
 
     def set_text(self, text):

@@ -12,7 +12,7 @@ import mimetypes
 import hashlib
 from io import BytesIO
 
-from ginga.util import paths
+from ginga.util import paths, iohelper
 from ginga.util.six.moves import map, zip
 
 try:
@@ -67,7 +67,13 @@ class RGBFileHandler(object):
     def __init__(self, logger):
         self.logger = logger
 
-    def load_file(self, filepath, header):
+    def load_file(self, filespec, header):
+        info = iohelper.get_fileinfo(filespec)
+        if not info.ondisk:
+            raise FITSError("File does not appear to be on disk: %s" % (
+                info.url))
+
+        filepath = info.filepath
         return self._imload(filepath, header)
 
     def save_file_as(self, filepath, data_np, header):

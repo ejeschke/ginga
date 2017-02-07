@@ -8,7 +8,38 @@ from ginga import GingaPlugin
 from ginga.gw import Widgets
 
 class Ruler(GingaPlugin.LocalPlugin):
+    """
+    Ruler is a simple plugin designed to measure distances on an image.
+    It does this by calculating a spherical triangulation via WCS mapping
+    of three points defined by a single line drawn on the image.  By default,
+    the distance is shown in arcminutes of sky, but using the Units control
+    it can be changed to show degrees or pixel distance instead.
 
+    [ Should you want "sticky rulers", use the Drawing plugin (and choose
+      "Ruler" as the drawing type). ]
+
+    Usage
+    -----
+    Click and drag to establish a ruler between two points.
+
+    Display the Zoom tab at the same time to precisely see detail
+    while drawing the ruler, if desired.
+
+    To erase the old and make a new ruler, click and drag again.
+
+    Editing
+    -------
+    To edit an existing ruler, click the radio button in the plugin
+    UI labeled 'Edit'.  If the ruler does not become selected
+    immediately, click on it.  Then click and drag the points to edit
+    the ruler.
+
+    Units
+    -----
+    The units shown for distance can be selected from the drop-down box
+    in the UI.  You have a choice of 'arcmin', 'degrees' or 'pixels'.
+    The first two require a valid and working WCS in the image.
+    """
     def __init__(self, fv, fitsimage):
         # superclass defines some variables for us, like logger
         super(Ruler, self).__init__(fv, fitsimage)
@@ -42,15 +73,6 @@ class Ruler(GingaPlugin.LocalPlugin):
         vbox, sw, orientation = Widgets.get_oriented_box(container)
         vbox.set_border_width(4)
         vbox.set_spacing(2)
-
-        self.msg_font = self.fv.get_font("sansFont", 12)
-        tw = Widgets.TextArea(wrap=True, editable=False)
-        tw.set_font(self.msg_font)
-        self.tw = tw
-
-        fr = Widgets.Expander("Instructions")
-        fr.set_widget(tw)
-        vbox.add_widget(fr, stretch=0)
 
         fr = Widgets.Frame("Ruler")
 
@@ -99,6 +121,9 @@ class Ruler(GingaPlugin.LocalPlugin):
         btn = Widgets.Button("Close")
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn, stretch=0)
+        btn = Widgets.Button("Help")
+        btn.add_callback('activated', lambda w: self.help())
+        btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
         top.add_widget(btns, stretch=0)
 
@@ -121,13 +146,11 @@ class Ruler(GingaPlugin.LocalPlugin):
         self.fv.stop_local_plugin(self.chname, str(self))
         return True
 
-    def instructions(self):
-        self.tw.set_text("""Draw (or redraw) a line with the cursor.
-
-Display the Zoom tab at the same time to precisely see detail while drawing.""")
+    def help(self):
+        name = str(self).capitalize()
+        self.fv.show_help_text(name, self.__doc__)
 
     def start(self):
-        self.instructions()
         # start ruler drawing operation
         p_canvas = self.fitsimage.get_canvas()
         if not p_canvas.has_object(self.canvas):

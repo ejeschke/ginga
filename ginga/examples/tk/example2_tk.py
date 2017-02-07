@@ -9,8 +9,13 @@ from __future__ import print_function
 
 import sys, os
 import logging
-import Tkinter
-from tkFileDialog import askopenfilename
+from ginga.util import six
+if six.PY2:
+    import Tkinter
+    from tkFileDialog import askopenfilename
+else:
+    import tkinter as Tkinter
+    from tkinter.filedialog import askopenfilename
 
 from ginga import AstroImage
 from ginga.tkw.ImageViewTk import ImageViewCanvas

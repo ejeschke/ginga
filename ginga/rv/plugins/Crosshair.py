@@ -8,7 +8,22 @@ from ginga import GingaPlugin
 from ginga.gw import Widgets
 
 class Crosshair(GingaPlugin.LocalPlugin):
+    """
+    Crosshair is a simple plugin to draw crosshairs labeled with the
+    position of the cross in pixels coordinates, WCS coordinates or
+    data value at the cross position.
 
+    NOTE: Crosshair is a local plugin, and thus must be invoked
+          separately for each channel in which you want to use it.
+
+    Usage
+    -----
+    Select the appropriate type of output in the "Format" drop-down
+    box in the UI: "xy" for pixel coordinates, "coords" for the WCS
+    coordinates and "value" for the value at the crosshair position.
+
+    Then click and drag to position the crosshair.
+    """
     def __init__(self, fv, fitsimage):
         # superclass defines some variables for us, like logger
         super(Crosshair, self).__init__(fv, fitsimage)
@@ -46,15 +61,6 @@ class Crosshair(GingaPlugin.LocalPlugin):
         vbox.set_border_width(4)
         vbox.set_spacing(2)
 
-        self.msg_font = self.fv.get_font("sansFont", 12)
-        tw = Widgets.TextArea(wrap=True, editable=False)
-        tw.set_font(self.msg_font)
-        self.tw = tw
-
-        fr = Widgets.Expander("Instructions")
-        fr.set_widget(tw)
-        vbox.add_widget(fr, stretch=0)
-
         fr = Widgets.Frame("Crosshair")
 
         captions = (('Format:', 'label', 'Format', 'combobox'),
@@ -83,6 +89,9 @@ class Crosshair(GingaPlugin.LocalPlugin):
         btn = Widgets.Button("Close")
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn, stretch=0)
+        btn = Widgets.Button("Help")
+        btn.add_callback('activated', lambda w: self.help())
+        btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
         top.add_widget(btns, stretch=0)
 
@@ -96,15 +105,15 @@ class Crosshair(GingaPlugin.LocalPlugin):
         self.canvas.redraw(whence=3)
         return True
 
+    def help(self):
+        name = str(self).capitalize()
+        self.fv.show_help_text(name, self.__doc__)
+
     def close(self):
         self.fv.stop_local_plugin(self.chname, str(self))
         return True
 
-    def instructions(self):
-        self.tw.set_text("""Click or drag to set crosshair.""")
-
     def start(self):
-        self.instructions()
         # start crosshair operation
         p_canvas = self.fitsimage.get_canvas()
         if not p_canvas.has_object(self.canvas):
@@ -117,7 +126,7 @@ class Crosshair(GingaPlugin.LocalPlugin):
 
     def resume(self):
         self.canvas.ui_setActive(True)
-        self.fv.show_status("Draw a ruler with the right mouse button")
+        self.fv.show_status("Click and drag to position crosshair")
 
     def stop(self):
         # remove the canvas from the image

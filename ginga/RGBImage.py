@@ -18,52 +18,10 @@ class RGBImage(BaseImage):
                  ioclass=io_rgb.RGBFileHandler):
 
         BaseImage.__init__(self, data_np=data_np, metadata=metadata,
-                           logger=logger, name=name)
+                           logger=logger, order=order, name=name)
 
         self.io = ioclass(self.logger)
-        self._calc_order(order)
         self.hasAlpha = 'A' in self.order
-
-    def get_slice(self, ch):
-        data = self._get_data()
-        return data[..., self.order.index(ch.upper())]
-
-    def has_slice(self, ch):
-        return ch.upper() in self.order
-
-    def get_order(self):
-        return self.order
-
-    def get_order_indexes(self, cs):
-        cs = cs.upper()
-        return [ self.order.index(c) for c in cs ]
-
-    def get_array(self, order):
-        order = order.upper()
-        if order == self.order:
-            return self._get_data()
-        l = [ self.get_slice(c) for c in order ]
-        return numpy.dstack(l)
-
-    def _calc_order(self, order):
-        if order is not None:
-            self.order = order.upper()
-        else:
-            # TODO; need something better here than a guess!
-            depth = self.get_depth()
-            if depth == 1:
-                self.order = 'M'
-            elif depth == 2:
-                self.order = 'AM'
-            elif depth == 3:
-                self.order = 'RGB'
-            elif depth == 4:
-                self.order = 'RGBA'
-
-    def set_data(self, data_np, order=None, **kwdargs):
-        super(RGBImage, self).set_data(data_np, **kwdargs)
-
-        self._calc_order(order)
 
     def set_color(self, r, g, b):
         # TODO: handle other sizes

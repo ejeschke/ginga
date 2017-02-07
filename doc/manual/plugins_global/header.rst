@@ -4,6 +4,7 @@ Header
 ======
 
 .. image:: figures/header-plugin.png
+   :width: 400px
    :align: center
 
 The Header plugin shows the FITS keyword metadata from the image.

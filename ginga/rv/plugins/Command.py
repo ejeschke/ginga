@@ -196,10 +196,10 @@ class CommandInterpreter(object):
         Reload the *local* plugin named `plname`.  You should close
         all instances of the plugin before attempting to reload.
         """
-        self.fv.mm.loadModule(plname)
+        self.fv.mm.load_module(plname)
         for chname in self.fv.get_channel_names():
             chinfo = self.fv.get_channel(chname)
-            chinfo.opmon.reloadPlugin(plname, chinfo=chinfo)
+            chinfo.opmon.reload_plugin(plname, chinfo=chinfo)
         return True
 
     def cmd_reload_global(self, plname):
@@ -209,11 +209,11 @@ class CommandInterpreter(object):
         all instances of the plugin before attempting to reload.
         """
         gpmon = self.fv.gpmon
-        pInfo = gpmon.getPluginInfo(plname)
-        gpmon.stop_plugin(pInfo)
+        p_info = gpmon.get_plugin_info(plname)
+        gpmon.stop_plugin(p_info)
         self.fv.update_pending(0.5)
-        self.fv.mm.loadModule(plname)
-        gpmon.reloadPlugin(plname)
+        self.fv.mm.load_module(plname)
+        gpmon.reload_plugin(plname)
         self.fv.start_global_plugin(plname)
         return True
 

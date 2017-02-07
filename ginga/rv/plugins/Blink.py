@@ -8,21 +8,53 @@ from ginga import GingaPlugin
 from ginga.gw import Widgets
 
 class Blink(GingaPlugin.LocalPlugin):
+    """
+    Blink switches through the images shown in a channel at a rate
+    chosen by the user.  Alternatively, it can switch between channels
+    in the main workspace.  In both cases, the primary purpose is to
+    compare and contrast the images (within a channel, or across
+    channels) visually within a short timescale--like blinking your
+    eyes.
 
-    def __init__(self, fv, fitsimage):
+    NOTE: Blink can be invoked either as a local plugin, in which case
+    it cycles through the images in the channel, or as a global
+    plugin, in which case it cycles through the channels.
+
+    Local plugins are started from the "Operations" button, while
+    global plugins are started from the "Plugins" menu.
+
+    Usage
+    -----
+    Set the interval between image changes in terms of seconds in
+    the box labeled "Interval".  Finally, press "Start Blink" to start
+    the timed cycling, and "Stop Blink" to stop the cycling.
+
+    You can change the number in "Interval" and press Enter to
+    dynamically change the cycle time while the cycle is running.
+    """
+    def __init__(self, *args):
         # superclass defines some variables for us, like logger
-        super(Blink, self).__init__(fv, fitsimage)
+        if len(args) == 2:
+            super(Blink, self).__init__(*args)
+        else:
+            super(Blink, self).__init__(args[0], None)
 
         self.interval = 1.0
-        self.blink_timer = fv.get_timer()
+        self.blink_timer = self.fv.get_timer()
         self.blink_timer.set_callback('expired', self._blink_timer_cb)
 
         prefs = self.fv.get_preferences()
-        self.settings = prefs.createCategory('plugin_Blink')
-        self.settings.addDefaults(blink_channels=False)
+        self.settings = prefs.create_category('plugin_Blink')
+        self.settings.add_defaults(interval_max=30.0, interval_min=0.25)
         self.settings.load(onError='silent')
 
-        self.blink_channels = self.settings.get('blink_channels', False)
+        # TODO: need to deprecate the blink_channels setting
+        # the mode is now determined by whether the plugin is loaded
+        # as a local or global
+        self.blink_channels = (self.fitsimage is None)
+
+        self.ival_min = self.settings.get('interval_min', 0.25)
+        self.ival_max = self.settings.get('interval_max', 30.0)
 
     def build_gui(self, container):
         top = Widgets.VBox()
@@ -32,20 +64,14 @@ class Blink(GingaPlugin.LocalPlugin):
         vbox.set_border_width(4)
         vbox.set_spacing(2)
 
-        self.msg_font = self.fv.get_font("sansFont", 12)
-        tw = Widgets.TextArea(wrap=True, editable=False)
-        tw.set_font(self.msg_font)
-        self.tw = tw
-
-        fr = Widgets.Expander("Instructions")
-        fr.set_widget(tw)
-        vbox.add_widget(fr, stretch=0)
-
         fr = Widgets.Frame("Blink")
         vbox2 = Widgets.VBox()
 
         captions = (("Interval:", 'label', 'Interval', 'entry',
                      "Start Blink", 'button', "Stop Blink", 'button'),
+                    ("Max:", 'label', 'max', 'llabel',
+                     "Min:", 'label', 'min', 'llabel'),
+                    ("Mode:", 'label', 'mode', 'llabel'),
                     )
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w = b
@@ -58,27 +84,16 @@ class Blink(GingaPlugin.LocalPlugin):
                                    lambda w: self._start_blink_cb())
         b.stop_blink.add_callback('activated',
                                   lambda w: self._stop_blink_cb())
+
+        b.min.set_text(str(self.ival_min))
+        b.max.set_text(str(self.ival_max))
+
+        mode = 'blink channels'
+        if not self.blink_channels:
+            mode = 'blink images in channel'
+        b.mode.set_text(mode)
+
         vbox2.add_widget(w, stretch=0)
-
-        hbox = Widgets.HBox()
-        btn1 = Widgets.RadioButton("Blink channels")
-        btn1.add_callback('activated',
-                          lambda w, tf: self._set_blink_mode_cb(tf == True))
-        btn1.set_tooltip("Choose this to blink across channels")
-        btn1.set_state(self.blink_channels)
-        self.w.blink_channels = btn1
-        hbox.add_widget(btn1)
-
-        btn2 = Widgets.RadioButton("Blink images in channel", group=btn1)
-        btn2.set_state(not self.blink_channels)
-        btn2.add_callback('activated',
-                          lambda w, tf: self._set_blink_mode_cb(tf == False))
-        btn2.set_tooltip("Choose this to blink images within a channel")
-        self.w.blink_within = btn2
-        hbox.add_widget(btn2)
-
-        hbox.add_widget(Widgets.Label(''), stretch=1)
-        vbox2.add_widget(hbox, stretch=0)
 
         fr.set_widget(vbox2)
         vbox.add_widget(fr, stretch=0)
@@ -94,22 +109,26 @@ class Blink(GingaPlugin.LocalPlugin):
         btn = Widgets.Button("Close")
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn, stretch=0)
+        btn = Widgets.Button("Help")
+        btn.add_callback('activated', lambda w: self.help())
+        btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
         top.add_widget(btns, stretch=0)
 
         container.add_widget(top, stretch=1)
 
+    def help(self):
+        name = str(self).capitalize()
+        self.fv.show_help_text(name, self.__doc__)
+
     def close(self):
-        self.fv.stop_local_plugin(self.chname, str(self))
+        if self.fitsimage is None:
+            self.fv.stop_global_plugin(str(self))
+        else:
+            self.fv.stop_local_plugin(self.chname, str(self))
         return True
 
-    def instructions(self):
-        self.tw.set_text("""Blink the images in this channel.
-
-Only images loaded in memory will be cycled.""")
-
     def start(self):
-        self.instructions()
         self.resume()
 
     def pause(self):
@@ -148,7 +167,7 @@ Only images loaded in memory will be cycled.""")
 
     def _set_interval_cb(self):
         interval = float(self.w.interval.get_text())
-        self.interval = max(min(interval, 30.0), 0.25)
+        self.interval = max(min(interval, self.ival_max), self.ival_min)
         self.stop_blinking()
         self.start_blinking()
 

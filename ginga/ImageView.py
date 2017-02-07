@@ -16,7 +16,7 @@ import time
 from ginga.misc import Callback, Settings
 from ginga import BaseImage, AstroImage
 from ginga import RGBMap, AutoCuts, ColorDist
-from ginga import cmap, imap, trcalc, version
+from ginga import cmap, imap, colors, trcalc, version
 from ginga.canvas import coordmap, transform
 from ginga.canvas.types.layer import DrawingCanvas
 from ginga.util import io_rgb
@@ -74,6 +74,8 @@ class ImageViewBase(Callback.Callbacks):
         # Create settings and set defaults
         if settings is None:
             settings = Settings.SettingGroup(logger=self.logger)
+        self.settings = settings
+        # to be eventually deprecated
         self.t_ = settings
 
         # RGB mapper
@@ -175,7 +177,8 @@ class ImageViewBase(Callback.Callbacks):
                             show_mode_indicator=True,
                             show_focus_indicator=False,
                             onscreen_font='Sans Serif',
-                            onscreen_font_size=24)
+                            onscreen_font_size=24,
+                            color_fg="#D0F0E0", color_bg="#404040")
 
         # embedded image "profiles"
         self.t_.addDefaults(profile_use_scale=False, profile_use_pan=False,
@@ -258,9 +261,6 @@ class ImageViewBase(Callback.Callbacks):
         self._hold_redraw_cnt = 0
         self.suppress_redraw = SuppressRedraw(self)
 
-        self.img_bg = (0.2, 0.2, 0.2)
-        self.img_fg = (1.0, 1.0, 1.0)
-
         # last known window mouse position
         self.last_win_x = 0
         self.last_win_y = 0
@@ -326,6 +326,16 @@ class ImageViewBase(Callback.Callbacks):
 
         # cursors
         self.cursor = {}
+
+        # setup default fg color
+        color = self.t_.get('color_fg', "#D0F0E0")
+        r, g, b = colors.lookup_color(color)
+        self.img_fg = (r, g, b)
+
+        # setup default bg color
+        color = self.t_.get('color_bg', "#404040")
+        r, g, b = colors.lookup_color(color)
+        self.img_bg = (r, g, b)
 
         # For callbacks
         for name in ('transform', 'image-set', 'image-unset', 'configure',
@@ -1207,7 +1217,7 @@ class ImageViewBase(Callback.Callbacks):
             outarr[:, :, i] = bgval[order[i]]
 
         # overlay our data
-        trcalc.overlay_image(outarr, self._dst_x, self._dst_y,
+        trcalc.overlay_image(outarr, (self._dst_x, self._dst_y),
                              data, flipy=False, fill=False, copy=False)
 
         return outarr
@@ -1329,7 +1339,8 @@ class ImageViewBase(Callback.Callbacks):
         if (whence <= 2.0) or (self._rgbarr2 is None):
             # Apply any RGB image overlays
             self._rgbarr2 = numpy.copy(self._rgbarr)
-            self.overlay_images(self.canvas, self._rgbarr2, whence=whence)
+            self.overlay_images(self.private_canvas, self._rgbarr2,
+                                whence=whence)
 
         if (whence <= 2.5) or (self._rgbobj is None):
             rotimg = self._rgbarr2

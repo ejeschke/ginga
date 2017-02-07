@@ -8,6 +8,7 @@
 from __future__ import print_function
 
 # stdlib imports
+import glob
 import sys
 import os
 import logging
@@ -85,6 +86,7 @@ global_plugins = [
     Bunch(module='WBrowser', tab='Help', ws='channels', raisekey='?',
           start=False),
     Bunch(module='FBrowser', tab='Open File', ws='right', start=False),
+    Bunch(module='Blink', tab='Blink Channels', ws='right', start=False),
     Bunch(module='ColorMapPicker', tab='Color Map Picker', ws='right',
           start=False),
     # TODO: Move SaveImage to File menu.
@@ -133,17 +135,21 @@ class ReferenceViewer(object):
         self.global_plugins = []
         self.layout = layout
 
-    def add_local_plugin(self, module_name, ws_name, pfx=None):
+    def add_local_plugin(self, module_name, ws_name,
+                         path=None, klass=None, pfx=None):
         self.local_plugins.append(
-            Bunch(module=module_name, ws=ws_name, pfx=pfx))
+            Bunch(module=module_name, ws=ws_name,
+                  path=path, klass=klass, pfx=pfx))
 
     def add_global_plugin(self, module_name, ws_name,
+                          path=None, klass=None,
                           tab_name=None, start_plugin=True, pfx=None):
         if tab_name is None:
             tab_name = module_name
 
         self.global_plugins.append(
             Bunch(module=module_name, ws=ws_name, tab=tab_name,
+                  path=path, klass=klass,
                   start=start_plugin, pfx=pfx))
 
     def clear_default_plugins(self):
@@ -158,17 +164,44 @@ class ReferenceViewer(object):
         # add default global plugins
         for bnch in global_plugins:
             if bnch.module not in except_global:
-                start = bnch.get('start', True)
-                pfx = bnch.get('pfx', None)
                 self.add_global_plugin(bnch.module, bnch.ws,
-                                       tab_name=bnch.tab, start_plugin=start,
-                                       pfx=pfx)
+                                       path=bnch.get('path', None),
+                                       klass=bnch.get('klass', bnch.module),
+                                       tab_name=bnch.tab,
+                                       start_plugin=bnch.get('start', False),
+                                       pfx=bnch.get('pfx', None))
 
         # add default local plugins
         for bnch in local_plugins:
             if bnch.module not in except_local:
-                pfx = bnch.get('pfx', None)
-                self.add_local_plugin(bnch.module, bnch.ws, pfx=pfx)
+                self.add_local_plugin(bnch.module, bnch.ws,
+                                      path=bnch.get('path', None),
+                                      klass=bnch.get('klass', bnch.module),
+                                      pfx=bnch.get('pfx', None))
+
+    def add_separately_distributed_plugins(self):
+        from pkg_resources import iter_entry_points
+        groups = ['ginga.rv.plugins']
+        available_methods = []
+
+        for group in groups:
+            for entry_point in iter_entry_points(group=group, name=None):
+                available_methods.append(entry_point.load())
+
+        for method in available_methods:
+            spec = method()
+            if 'start' in spec:
+                # global plugin
+                self.add_global_plugin(spec.module, spec.workspace,
+                                       path=spec.get('path', None),
+                                       klass=spec.get('klass', spec.module),
+                                       tab_name=spec.tab,
+                                       start_plugin=spec.start)
+            else:
+                # local plugin
+                self.add_local_plugin(spec.module, spec.workspace,
+                                      path=spec.get('path', None),
+                                      klass=spec.get('klass', spec.module))
 
     def add_default_options(self, optprs):
         """
@@ -178,7 +211,7 @@ class ReferenceViewer(object):
         optprs.add_option("--bufsize", dest="bufsize", metavar="NUM",
                           type="int", default=10,
                           help="Buffer length to NUM")
-        optprs.add_option("--channels", dest="channels", default="Image",
+        optprs.add_option('-c', "--channels", dest="channels", default="Image",
                           help="Specify list of channels to create")
         optprs.add_option("--debug", dest="debug", default=False,
                           action="store_true",
@@ -213,6 +246,9 @@ class ReferenceViewer(object):
         optprs.add_option("--profile", dest="profile", action="store_true",
                           default=False,
                           help="Run the profiler on main()")
+        optprs.add_option("--sep", dest="separate_channels", default=False,
+                          action="store_true",
+                          help="Load files in separate channels")
         optprs.add_option("-t", "--toolkit", dest="toolkit", metavar="NAME",
                           default=None,
                           help="Prefer GUI toolkit (gtk|qt)")
@@ -242,8 +278,9 @@ class ReferenceViewer(object):
             try:
                 os.mkdir(basedir)
             except OSError as e:
-                logger.warning("Couldn't create ginga settings area (%s): %s" % (
-                    basedir, str(e)))
+                logger.warning(
+                    "Couldn't create ginga settings area (%s): %s" % (
+                        basedir, str(e)))
                 logger.warning("Preferences will not be able to be saved")
 
         # Set up preferences
@@ -298,13 +335,10 @@ class ReferenceViewer(object):
 
         if toolkit == 'choose':
             try:
-                from ginga.qtw import QtHelp  # noqa
-            except ImportError:
-                try:
-                    from ginga.gtkw import GtkHelp  # noqa
-                except ImportError:
-                    print("You need python-gtk or python-qt to run Ginga!")
-                    sys.exit(1)
+                ginga_toolkit.choose()
+            except ImportError as e:
+                print("UI toolkit choose error: %s" % str(e))
+                sys.exit(1)
         else:
             ginga_toolkit.use(toolkit)
 
@@ -521,9 +555,30 @@ class ReferenceViewer(object):
         if (not options.nosplash) and (len(args) == 0) and showBanner:
             ginga_shell.banner(raiseTab=True)
 
-        # Assume remaining arguments are fits files and load them.
+        # Handle inputs like "*.fits[ext]" that sys cmd cannot auto expand.
+        expanded_args = []
         for imgfile in args:
-            ginga_shell.nongui_do(ginga_shell.load_file, imgfile)
+            if '*' in imgfile:
+                if '[' in imgfile and imgfile.endswith(']'):
+                    s = imgfile.split('[')
+                    ext = '[' + s[1]
+                else:
+                    ext = ''
+                for fname in glob.iglob(s[0]):
+                    expanded_args.append(fname + ext)
+            else:
+                expanded_args.append(imgfile)
+
+        # Assume remaining arguments are fits files and load them.
+        chname = None
+        for imgfile in expanded_args:
+            if options.separate_channels and (chname is not None):
+                channel = ginga_shell.add_channel_auto()
+            else:
+                channel = ginga_shell.get_channel_info()
+            chname = channel.name
+            ginga_shell.nongui_do(ginga_shell.load_file, imgfile,
+                                  chname=chname)
 
         try:
             try:
@@ -550,6 +605,7 @@ def reference_viewer(sys_argv):
     """Create reference viewer from command line."""
     viewer = ReferenceViewer(layout=default_layout)
     viewer.add_default_plugins()
+    viewer.add_separately_distributed_plugins()
 
     # Parse command line options with optparse module
     from optparse import OptionParser

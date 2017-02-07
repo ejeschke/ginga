@@ -5,9 +5,20 @@
 # Please see the file LICENSE.txt for details.
 
 import numpy
+from ginga.util import six
 
 import PIL.Image as PILimage
-import PIL.ImageTk as PILimageTk
+
+have_pil_imagetk = False
+try:
+    # sometimes this is not installed even though PIL is
+    from PIL.ImageTk import PhotoImage
+    have_pil_imagetk = True
+except ImportError:
+    if six.PY2:
+        from Tkinter import PhotoImage
+    else:
+        from tkinter import PhotoImage
 
 from ginga import Mixins, Bindings, colors
 from ginga.canvas.mixins import DrawingMixin, CanvasMixin, CompoundMixin
@@ -21,15 +32,15 @@ try:
 
 except ImportError:
     try:
-        # No, hmm..ok, see if we have opencv module...
-        from ginga.cvw.ImageViewCv import ImageViewCv as ImageView, \
-             ImageViewCvError as ImageViewError
+        # No dice. How about the PIL module?
+        from ginga.pilw.ImageViewPil import ImageViewPil as ImageView, \
+             ImageViewPilError as ImageViewError
 
     except ImportError:
         try:
-            # No dice. How about the PIL module?
-            from ginga.pilw.ImageViewPil import ImageViewPil as ImageView, \
-                 ImageViewPilError as ImageViewError
+            # No, hmm..ok, see if we have opencv module...
+            from ginga.cvw.ImageViewCv import ImageViewCv as ImageView, \
+                 ImageViewCvError as ImageViewError
 
         except ImportError:
             # Fall back to mock--there will be no graphic overlays
@@ -90,12 +101,20 @@ class ImageViewTk(ImageView):
 
         wd, ht = self.get_window_size()
 
-        # Get surface as a numpy array
-        arr8 = self.get_image_as_array()
-
         # make a Tk photo image and stick it to the canvas
-        image = PILimage.fromarray(arr8)
-        photo = PILimageTk.PhotoImage(image)
+
+        if have_pil_imagetk:
+            # Get surface as a numpy array
+            arr8 = self.get_image_as_array()
+            image = PILimage.fromarray(arr8)
+            photo = PhotoImage(image)
+
+        else:
+            # fallback to a little slower method--make a PNG image
+            buf = self.get_rgb_image_as_buffer(format='png')
+            image = buf.getvalue()
+            photo = PhotoImage(data=image)
+
         # hang on to a reference otherwise it gets gc'd
         self.tkphoto = photo
 

@@ -80,7 +80,8 @@ class ViewerObjectBase(Callback.Callbacks):
 
 class BaseImage(ViewerObjectBase):
 
-    def __init__(self, data_np=None, metadata=None, logger=None, name=None):
+    def __init__(self, data_np=None, metadata=None, logger=None, order=None,
+                 name=None):
 
         ViewerObjectBase.__init__(self, logger=logger, metadata=metadata,
                                   name=name)
@@ -92,6 +93,7 @@ class BaseImage(ViewerObjectBase):
         self.name = name
 
         self._set_minmax()
+        self._calc_order(order)
 
         self.autocuts = AutoCuts.Histogram(self.logger)
 
@@ -117,13 +119,17 @@ class BaseImage(ViewerObjectBase):
     def ndim(self):
         return len(self.shape)
 
+    @property
+    def dtype(self):
+        return self._get_data().dtype
+
     def get_size(self):
         return (self.width, self.height)
 
     def get_depth(self):
         shape = self.shape
         if len(shape) > 2:
-            return shape[2]
+            return shape[-1]
         return 1
 
     def get_shape(self):
@@ -143,7 +149,9 @@ class BaseImage(ViewerObjectBase):
     def _get_fast_data(self):
         """
         Return an array similar to but possibly smaller than self._data,
-        for fast calculation of the intensity distribution
+        for fast calculation of the intensity distribution.
+
+        NOTE: this is used by the Ginga plugin for Glue
         """
         return self._data
 
@@ -158,7 +166,7 @@ class BaseImage(ViewerObjectBase):
         view = numpy.s_[y, x]
         return self._slice(view)
 
-    def set_data(self, data_np, metadata=None, astype=None):
+    def set_data(self, data_np, metadata=None, order=None, astype=None):
         """Use this method to SHARE (not copy) the incoming array.
         """
         if astype:
@@ -166,6 +174,8 @@ class BaseImage(ViewerObjectBase):
         else:
             data = data_np
         self._data = data
+
+        self._calc_order(order)
 
         if metadata:
             self.update_metadata(metadata)
@@ -208,6 +218,27 @@ class BaseImage(ViewerObjectBase):
     def get_order_indexes(self, cs):
         cs = cs.upper()
         return [self.order.index(c) for c in cs]
+
+    def _calc_order(self, order):
+        if order is not None and order != '':
+            self.order = order.upper()
+        else:
+            shape = self.shape
+            if len(shape) <= 2:
+                self.order = 'M'
+            elif self.dtype != numpy.uint8:
+                self.order = 'M'
+            else:
+                depth = shape[-1]
+                # TODO; need something better here than a guess!
+                if depth == 1:
+                    self.order = 'M'
+                elif depth == 2:
+                    self.order = 'AM'
+                elif depth == 3:
+                    self.order = 'RGB'
+                elif depth == 4:
+                    self.order = 'RGBA'
 
     def has_valid_wcs(self):
         return hasattr(self, 'wcs') and self.wcs.has_valid_wcs()
@@ -421,6 +452,23 @@ class BaseImage(ViewerObjectBase):
             data, x1, y1, x2, y2, scale_x, scale_y, interpolation=method)
 
         res = Bunch.Bunch(data=newdata, scale_x=scale_x, scale_y=scale_y)
+        return res
+
+    def get_scaled_cutout2(self, p1, p2, scales,
+                           method='basic', logger=None):
+        # NOTE: method is here for compatibility, but is ignored
+        shp = self.shape
+
+        view, scales = trcalc.get_scaled_cutout_basic_view(
+            shp, p1, p2, scales)
+
+        newdata = self._slice(view)
+
+        scale_x, scale_y = scales[:2]
+        res = Bunch.Bunch(data=newdata, scale_x=scale_x, scale_y=scale_y)
+        if len(scales) > 2:
+            res.scale_z = scales[2]
+
         return res
 
     def get_thumbnail(self, length):
