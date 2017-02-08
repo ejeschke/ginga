@@ -26,6 +26,10 @@ class ModeIndicator(object):
     Instantiate this class with a Ginga ImageView{Toolkit} object as the
     sole constructor argument.  Save a reference to the mode indicator
     object somewhere so it doesn't get collected.
+
+    NOTE: Please don't use this class--it's likely to be deprecated!
+    Instead, use the show_mode_indicator() method provided by the
+    ImageView class.
     """
 
     def __init__(self, viewer):
@@ -35,6 +39,9 @@ class ModeIndicator(object):
         self.visible = True
 
         self.fontsize = 12
+        self.xpad = 8
+        self.ypad = 4
+        self.offset = 10
 
         # for displaying modal keyboard state
         self.mode_obj = None
@@ -47,8 +54,7 @@ class ModeIndicator(object):
         # delete the old indicator
         obj = self.mode_obj
         self.mode_obj = None
-        #canvas = self.viewer.get_canvas()
-        canvas = self.viewer.private_canvas
+        canvas = self.viewer.get_private_canvas()
         if obj:
             try:
                 canvas.delete_object(obj)
@@ -61,7 +67,7 @@ class ModeIndicator(object):
         # if not one of the standard modifiers, display the new one
         if not mode in (None, 'ctrl', 'shift'):
             Text = canvas.get_draw_class('text')
-            Rect = canvas.get_draw_class('rectangle')
+            Polygon = canvas.get_draw_class('polygon')
             Compound = canvas.get_draw_class('compoundobject')
 
             if modetype == 'locked':
@@ -71,27 +77,21 @@ class ModeIndicator(object):
             else:
                 text = mode
 
-            xsp, ysp = 4, 6
-            wd, ht = self.viewer.get_window_size()
-            wd, ht = int(wd), int(ht)
-            if self.viewer._originUpper:
-                x1, y1 = wd-self.fontsize*len(text), ht-self.fontsize
-            else:
-                # matplotlib case
-                x1, y1 = wd-self.fontsize*len(text), self.fontsize
-
-            o1 = Text(x1, y1, text,
+            o1 = Text(0, 0, text,
                       fontsize=self.fontsize, color='yellow', coord='canvas')
 
-            wd, ht = self.viewer.renderer.get_dimensions(o1)
+            txt_wd, txt_ht = self.viewer.renderer.get_dimensions(o1)
+
+            box_wd, box_ht = 2 * self.xpad + txt_wd, 2 * self.ypad + txt_ht
+            win_wd, win_ht = self.viewer.get_window_size()
+            x_base, y_base = win_wd - self.offset - box_wd, win_ht - self.offset - box_ht
+
+            o1.x, o1.y = x_base + self.xpad, y_base + txt_ht + self.ypad
 
             # yellow text on a black filled rectangle
-            if self.viewer._originUpper:
-                a1, b1, a2, b2 = x1-xsp, y1+ysp, x1+wd+xsp, y1-ht
-            else:
-                # matplotlib case
-                a1, b1, a2, b2 = x1-xsp, y1-ysp, x1+wd+2*xsp, y1+ht+ysp
-            o2 = Compound(Rect(a1, b1, a2, b2,
+            cx1, cy1, cx2, cy2 = x_base, y_base, x_base + box_wd, y_base + box_ht
+            poly_pts = ((cx1, cy1), (cx2, cy1), (cx2, cy2), (cx1, cy2))
+            o2 = Compound(Polygon(poly_pts,
                                color='black', coord='canvas',
                                fill=True, fillcolor='black'),
                                o1)
