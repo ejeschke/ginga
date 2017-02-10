@@ -1,9 +1,6 @@
 #
 # wcsmod.py -- module wrapper for WCS calculations.
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -25,16 +22,21 @@ To force the use of one, do:
 
 before you load any images.  Otherwise Ginga will try to pick one for
 you.
+
+Note that you can register custom WCS types using the register_wcs()
+function.
 """
 
 import math
 import re
 import numpy
+
+from ginga.misc import Bunch
 from ginga.util.six.moves import map, zip
 
 __all__ = ['use', 'BaseWCS', 'AstropyWCS2', 'AstropyWCS', 'AstLibWCS',
            'KapteynWCS', 'StarlinkWCS', 'BareBonesWCS', 'choose_coord_units',
-           'get_coord_system_name']
+           'get_coord_system_name', 'register_wcs']
 
 # Module variables that get configured at module load time
 # or when use() is called
@@ -50,6 +52,13 @@ have_starlink = False
 
 WCS = None
 """Alias to the chosen WCS system."""
+
+# Holds custom WCSes that are registered
+custom_wcs = Bunch.caselessDict()
+
+# try to load them in this order until we find one that works.
+# If none can be loaded, we default to the BareBones dummy WCS
+wcs_try_order = ('kapteyn', 'astropy', 'astropy2', 'starlink', 'astlib')
 
 
 class WCSError(Exception):
@@ -189,12 +198,40 @@ def use(wcspkg, raise_err=True):
         return False
 
     elif wcspkg == 'barebones':
-        coord_types = ['fk5']
+        coord_types = ['pixel']
         WCS = BareBonesWCS
         wcs_configured = True
         return True
 
+    elif wcspkg in custom_wcs:
+        # Custom WCS installed?
+        bnch = custom_wcs[wcspkg]
+        WCS = bnch.wrapper_class
+        coord_types = bnch.coord_types
+        wcs_configured = True
+        return True
+
     return False
+
+
+def register_wcs(name, wrapper_class, coord_types):
+    """Register a custom WCS wrapper.
+
+    Parameters
+    ----------
+    name : str
+        The name of the custom WCS wrapper
+
+    wrapper_class : subclass of `~ginga.util.wcsmod.BaseWCS`
+        The class implementing the WCS wrapper
+
+    coord_types : list of str
+        List of names of coordinate types supported by the WCS
+    """
+    global custom_wcs
+    custom_wcs[wcs_name] = Bunch.Bunch(name=name,
+                                       wrapper_class=wrapper_class,
+                                       coord_types=coord_types)
 
 
 class BaseWCS(object):
@@ -1180,12 +1217,11 @@ class StarlinkWCS(BaseWCS):
 
 
 class BareBonesWCS(BaseWCS):
-    """A very basic WCS.  Assumes J2000, units in degrees, projection TAN.
+    """A dummy placeholder WCS.
 
     .. note::
-        We strongly recommend that you install one of the 3rd party python
-        WCS modules referred to at the top of this module, all of which are
-        much more capable than BareBonesWCS.
+        To get WCS functionality, please install one of the 3rd party python
+        WCS modules referred to at the top of this module.
 
     """
     def __init__(self, logger):
@@ -1193,118 +1229,19 @@ class BareBonesWCS(BaseWCS):
         self.kind = 'barebones'
 
     def load_header(self, header, fobj=None):
-        self.header = {}
-        self.header.update(header.items())
-
-        self.fix_bad_headers()
-        self.coordsys = get_coord_system_name(self.header)
-
-    # WCS calculations
-    def get_reference_pixel(self):
-        x = float(self.get_keyword('CRPIX1'))
-        y = float(self.get_keyword('CRPIX2'))
-        return x, y
-
-    def get_physical_reference_pixel(self):
-        xv = float(self.get_keyword('CRVAL1'))
-        yv = float(self.get_keyword('CRVAL2'))
-        assert 0.0 <= xv < 360.0, \
-               WCSError("CRVAL1 out of range: %f" % (xv))
-
-        assert -90.0 <= yv <= 90.0, \
-               WCSError("CRVAL2 out of range: %f" % (yv))
-        return xv, yv
-
-    def get_pixel_coordinates(self):
-        try:
-            cd11 = float(self.get_keyword('CD1_1'))
-            cd12 = float(self.get_keyword('CD1_2'))
-            cd21 = float(self.get_keyword('CD2_1'))
-            cd22 = float(self.get_keyword('CD2_2'))
-
-        except Exception as e:
-            cdelt1 = float(self.get_keyword('CDELT1'))
-            cdelt2 = float(self.get_keyword('CDELT2'))
-            try:
-                cd11 = float(self.get_keyword('PC1_1')) * cdelt1
-                cd12 = float(self.get_keyword('PC1_2')) * cdelt1
-                cd21 = float(self.get_keyword('PC2_1')) * cdelt2
-                cd22 = float(self.get_keyword('PC2_2')) * cdelt2
-            except KeyError:
-                cd11 = float(self.get_keyword('PC001001')) * cdelt1
-                cd12 = float(self.get_keyword('PC001002')) * cdelt1
-                cd21 = float(self.get_keyword('PC002001')) * cdelt2
-                cd22 = float(self.get_keyword('PC002002')) * cdelt2
-
-        return (cd11, cd12, cd21, cd22)
+        self.coordsys = 'pixel'
 
     def spectral_coord(self, idxs, coords='data'):
         raise WCSError("This feature not supported by BareBonesWCS")
 
     def pixtoradec(self, idxs, coords='data'):
-        """Convert a (x, y) pixel coordinate on the image to a (ra, dec)
-        coordinate in space.
+        px_x, px_y = idxs[:2]
+        px_x, px_y = px_x + 1.0, px_y + 1.0
+        return (px_x, px_y)
 
-        Parameter (coords):
-        - if 'data' then x, y coordinates are interpreted as 0-based
-        - otherwise coordinates are interpreted as 1-based (traditional FITS)
-        """
-        x, y = idxs[:2]
-
-        # account for DATA->FITS coordinate space
-        if coords == 'data':
-            x, y = x + 1, y + 1
-
-        crpix1, crpix2 = self.get_reference_pixel()
-        crval1, crval2 = self.get_physical_reference_pixel()
-        cd11, cd12, cd21, cd22 = self.get_pixel_coordinates()
-
-        ra_deg = (cd11 * (x - crpix1) + cd12 *
-                 (y - crpix2)) / math.cos(math.radians(crval2)) + crval1
-        dec_deg = cd21 * (x - crpix1) + cd22 * (y - crpix2) + crval2
-
-        return ra_deg, dec_deg
-
-    def radectopix(self, ra_deg, dec_deg, coords='data', naxispath=None):
-        """Convert a (ra_deg, dec_deg) space coordinates to (x, y) pixel
-        coordinates on the image.  ra and dec are expected as floats in
-        degrees.
-
-        Parameter (coords):
-        - if 'data' then x, y coordinates are returned as 0-based
-        - otherwise coordinates are returned as 1-based (traditional FITS)
-        """
-        crpix1, crpix2 = self.get_reference_pixel()
-        crval1, crval2 = self.get_physical_reference_pixel()
-        cd11, cd12, cd21, cd22 = self.get_pixel_coordinates()
-
-        # reverse matrix
-        rmatrix = (cd11 * cd22) - (cd12 * cd21)
-
-        if not cmp(rmatrix, 0.0):
-            raise WCSError("WCS Matrix Error: check values")
-
-        # Adjust RA as necessary
-        if (ra_deg - crval1) > 180.0:
-            ra_deg -= 360.0
-        elif (ra_deg - crval1) < -180.0:
-            ra_deg += 360.0
-
-        try:
-            x = (cd22 * math.cos(crval2 * math.pi/180.0) *
-                 (ra_deg - crval1) - cd12 *
-                 (dec_deg - crval2))/rmatrix + crpix1
-            y = (cd11 * (dec_deg - crval2) - cd21 *
-                 math.cos(crval2 * math.pi/180.0) *
-                 (ra_deg - crval1))/rmatrix + crpix2
-
-        except Exception as e:
-            raise WCSError("radectopix calculation error: %s" % str(e))
-
-        # account for FITS->DATA space
-        if coords == 'data':
-            x, y = x - 1, y - 1
-        return (x, y)
+    def radectopix(self, px_x, px_y, coords='data', naxispath=None):
+        #px_x, px_y = px_x - 1.0, px_y - 1.0
+        return (px_x, px_y)
 
     def pixtosystem(self, idxs, system=None, coords='data'):
         return self.pixtoradec(idxs, coords=coords)
@@ -1413,9 +1350,7 @@ if not wcs_configured:
     # default
     WCS = BareBonesWCS
 
-    # try to use them in this order
-    order = ('kapteyn', 'starlink', 'astlib', 'astropy', 'astropy2')
-    for name in order:
+    for name in wcs_try_order:
         try:
             if use(name, raise_err=False):
                 break

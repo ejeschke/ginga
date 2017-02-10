@@ -141,7 +141,7 @@ class caselessDict(object):
         d={}
         for k,v in self.dict.items():
             d[k]=v[1]
-        return d
+        return caselessDict(inDict=d)
 
 
 
@@ -310,7 +310,7 @@ class Bunch(object):
         return self.tbl.values()
 
     def copy(self):
-        return self.tbl.copy()
+        return Bunch(inDict=self.tbl)
 
 
 class threadSafeBunch(object):
@@ -516,6 +516,10 @@ class threadSafeBunch(object):
         with self.lock:
             return self.tbl.items()
 
+
+    def copy(self):
+        with self.lock:
+            return threadSafeBunch(inDict=self.tbl)
 
     def get(self, key, alt=None):
         """If dictionary contains _key_ return the associated value,
