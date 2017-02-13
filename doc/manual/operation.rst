@@ -20,7 +20,7 @@ with the mouse:
   the left mouse button;
 * *Drag* or *Left-drag* means to click, hold and drag with
   the left mouse button;
-* *Scroll* means to scroll with the middle mouse wheel;
+* *Scroll* means to scroll with the middle mouse wheel or a trackpad/touchpad;
 * *Scroll-click* means to click with the middle mouse wheel/button;
 * *Scroll-drag* means to click, hold and drag with the middle
   mouse wheel/button;
@@ -53,7 +53,7 @@ There are several ways to load a file into Ginga:
 
 * Ginga supports drag-and-drop in a typical desktop environment, so
   you can simply drag and drop files from a graphical file manager such
-  as the Mac Finder or Linux Nautilus onto the main FITS viewing pane to
+  as the Mac Finder or Linux Nautilus onto a ginga viewing pane to
   load an image.
 
 * [RV] Another way is to invoke the FBrowser plugin, which opens in the
@@ -82,16 +82,21 @@ corresponding zoom level, while holding Shift and pressing a zoom key
 zooms out to the corresponding level.
 
 When zoomed in, panning is enabled.  Panning takes two forms.
-*Free panning* allows scrolling around the entire image by mapping
+
+1) *Proportional panning* or "drag panning" pans the image in direct
+proportion to the distance the mouse is moved; you can think of this as
+dragging the image canvas in the direction you want to move it under the
+window portal.  
+To utilize a proportional pan, Ctrl-drag the canvas, or press
+"q" to go into pan mode, and then drag the canvas.
+
+2) *Free panning* allows scrolling around the entire image by mapping
 the entire image boundaries to the window boundaries.  For example,
 moving the mouse to the upper right-hand corner of the window will pan to
-the upper right hand corner of the image, etc.  There are two ways to
-initiate a free pan: Scroll-dragging (pressing the mouse scroll wheel
-and dragging) or press and release "q" and then Left-drag.
-*Proportional panning* or "drag panning" pans the image in direct
-proportion to the distance the mouse is moved; a common idiom is
-dragging the image canvas in the direction you want to move it under the
-window.  To utilize a proportional pan, Ctrl-drag the canvas.
+the upper right hand corner of the image, etc.  You can think of this
+mode as moving the window portal around over the canvas.
+To initiate a free pan, press "w" to enter "freepan" mode and then
+Scroll-drag to move around the window.
 
 [RV] The Pan plugin (usually embedded under the Info tab) shows the
 outline of the current pan position as a rectangle on a small version of
@@ -117,29 +122,32 @@ pressed.  See section :ref:`preferences_zoom` for details.
 How Ginga maps an image to color
 ================================
 
-The process of mapping an image to color in Ginga involves three
-steps:
+The process of mapping a monochrome science image to color in Ginga
+involves four steps, in order:
 
-1) setting the *cut levels*, which scales all values in the image to a
-   specified range,
-2) a *color distribution algorithm*, which distributes values within
-   that range to indexes into a color map table, and
-3) an *intensity map* and *color map*, which are applied to these
-   indexes to map the final values to RGB pixels.
+1) applying the *cut levels*, which scales all values in the image to a
+   specified range [#f1]_,
+2) applying a *color distribution algorithm*, which distributes values
+   within that range to indexes into a color map table, and
+3) applying a *shift map*, which shifts and stretches/shrinks the values
+   according to the user's contrast adjustment [#f2]_, and
+4) applying an *intensity map* and *color map* to map the final output
+   to RGB pixel values. 
 
 .. _setting_cut_levels:
 
-==================
+------------------
 Setting cut levels
-==================
+------------------
 
 When visualizing pixel data with an arbitrary value range, the range is
 first scaled into a limited range based on the low and high *cut levels*
-defined in the view object.  These cut levels can be set manually by the
-user or automatically based on an algorithm.
+defined in the view object.  These cut levels can be set manually
+by the user or automatically based on an algorithm.  This eliminates the
+effect of outlier pixel/flux values.
 
 Manually setting cut levels
-===========================
+---------------------------
 
 There are several ways to manually set the cut levels:
 
@@ -159,14 +167,14 @@ There are several ways to manually set the cut levels:
   plugin.
 
 Automatically setting cut levels
-================================
+--------------------------------
 
 Ginga can algorithmically estimate and set the cut levels--a so called
 "auto (cut) levels".  To activate the auto levels:
 
 * Press the ("a") key when the viewing widget has the focus.
 
-* [RV] Click the "Auto Levels" button in the Info plugin panel, or
+* [RV] Click the "Auto Levels" button in the Info plugin panel.
 
 [RV] The auto cut levels feature is controlled by several factors in the
 preferences, including the choice of algorithm and some parameters to
@@ -174,22 +182,81 @@ the algorithm.  See section :ref:`preferences_autocuts` for details.
 Ginga can also automatically set the cut levels for new images displayed
 in the view.  See section :ref:`preferences_newimages` for details.
 
-Setting the color scale algorithm
-=================================
+----------------------------------------
+Setting the color distribution algorithm
+----------------------------------------
 
 Ginga supports a number of color scale distribution algorithms,
 including "linear", "log", "power", "sqrt", "squared", "asinh", "sinh"
-and "histeq".  These can be sampled with the current color and intensity
-maps by pressing the "d" key to go into "dist" mode, and then scrolling
-the mouse.  To reset to the default ("linear") map, press "D" (capital D).
+and "histeq" (histogram equalization).  These can be sampled with the
+current color and intensity maps by pressing the "d" key to go into
+"dist" mode, and then scrolling the mouse, pressing the up/down keys, or
+the "b" and "n" keys.  Press Esc to exit the "dist" mode.
+
+To reset to the default ("linear") map, press "D" (capital D).
 
 [RV] The color scale distribution algorithms can also be set from the
 Preferences plugin, under the heading "Color Distribution".
 
-Changing the color and intensity maps
-=====================================
+---------------------------
+Making contrast adjustments
+---------------------------
 
-The color and intensity maps
+The value range can be shifted and stretched or squeezed to alter the
+visibility and contrast of the image.  This is sometimes called a
+"bias/contrast" adjustment in other viewers.
+
+In most Ginga configurations the shift map adjustment is bound to the
+Ctrl-right drag combination (hold Ctrl down and right drag).  Dragging
+left/right shifts the map, and up/down stretches or shrinks the map.
+
+You can also press "t" to enter "contrast" mode, where you can then use
+a regular Left-drag.
+
+-------------------------------------
+Changing the color and intensity maps
+-------------------------------------
+
+The color and intensity maps control the final mapping of colors to the
+values in the image.
+
+Intensity Maps
+--------------
+Intensity maps are available to produce a final permutation on the value
+range of the image before color is applied.  The function of these
+largely overlaps the function of the color distribution algorithm, so *most
+users will typically use either one or the other, but not both*.
+For example, the intensity map "log" essentially applies a log
+distribution to the range.  If this has already been done with the color
+distribution "log", the effect is doubly applied.
+
+Possible values for the intensity map are "equa", "expo", "gamma",
+"jigsaw", "lasritt", "log", "neg", "neglog", "null", "ramp" and
+"stairs".  "ramp" is the default.
+
+While in "cmap" mode (described below), the "j" and "k" keys can be used
+to cycle through the intensity maps.
+
+Color Maps
+----------
+To change color maps from the keyboard shortcuts, press "Y" to go into
+"cmap" mode.  While in "cmap" mode you can change color maps by
+scrolling the mouse, pressing the up/down keys, or the "b" and "n" keys.
+
+While in "cmap" mode, pressing (capital) "I" will invert the current
+color map.
+
+.. note:: Setting a new color map will cancel the color map inversion.
+          Some color maps are available in both regular and inverted
+          forms.  If selecting an already inverted (aka "reversed")
+          color map it is not necessary to explicitly invert it.
+
+While many color maps are available built in, users can also define
+their own color maps or use matplotlib color maps, if the matplotlib
+package is installed.
+
+[RV] The "ColorMapPicker" global plugin is useful you to visualize all
+of the colormaps and apply one to the currently active channel viewer.
 
 ===========================
 Transforming the image view
@@ -217,4 +284,12 @@ angle.  Press "R" (Shift+R) to restore the angle to 0 (unrotated).
 [RV] The image can also be transformed in the channel Preferences (see
 :ref:`preferences_transform`) which has checkboxes for flip X, flip Y,
 swap XY and a box for rotation by degrees.
+
+
+.. rubric:: Footnotes
+
+.. [#f1] Some image viewers or graphing programs use the term "limits"
+         for what we call "cut levels".
+
+.. [#f2] What some programs call a "contrast/bias" adjustment.
 

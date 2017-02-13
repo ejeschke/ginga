@@ -4,9 +4,9 @@
 Core Concepts
 +++++++++++++
 
-Ginga operation and documentation is organized around a few core
-concepts and associated nomenclature.  Knowing these may aid in
-understanding the rest of the documentation. 
+Ginga reference viewer operation is organized around several basic 
+concepts: *workspaces*, *channels*, *plugins*, *modes*.
+Understanding these will greatly aid in using and/or modifying Ginga.
 
 .. _concepts-workspaces:
 
@@ -19,39 +19,52 @@ lot of customization into the appearance of the program.  The majority
 of the interface is constructed as hierchical series of horizontally or
 vertically-adjustable panels.  At the terminus of each panel is a
 *workspace*.
-Each workspace is typically
-implemented by a GUI toolkit container widget such as a notebook widget,
-where each item in the workspace is identified by a tab.  But workspaces
-can also take the form of a stack (like a tabbed widget, but with no
-tabs showing), a Multiple Document Interface (MDI) style container, or a
-grid layout.
+Each workspace is implemented by a GUI toolkit container widget such as
+a notebook widget, where each item in the workspace is identified by a
+tab.  But workspaces can also take the form of a stack (like a tabbed
+widget, but with no tabs showing), a Multiple Document Interface (MDI)
+style container (subwindow desktop-style layout), or a grid layout.
 
-Some workspaces can be converted dynamically between the different types.
-If the workspace contains a workspace toolbar, the workspace type
+Workspaces typically contain either a channel *viewer*, a *plugin* UI or
+another workspace. 
+In its default configuration, Ginga starts up with a
+single row (horizontal) panel of three workspaces, as shown in
+the image below.
+This panel is sandwiched vertically between a menu bar and a status bar.
+The left workspace is further subdivided into an upper and lower, and
+there are also thin horizontal workspaces below the central workspace.
+The central workspace is mainly used for viewers, while the other
+workspaces hold plugin UIs.
+
+.. image:: figures/gingadefault.png
+   :width: 1024px
+   :align: center
+
+The initial layout of the workspaces is controlled by a 
+table in the Ginga startup script (see :ref:`ch-customization`).
+By changing this table the layout can be substantially altered. 
+
+Some workspaces can be converted dynamically between the different types. 
+If the workspace contains a *workspace toolbar*, the workspace type
 selector can be used to change the type: 
 
 .. image:: figures/wstype_selector.png
    :width: 800px
    :align: center
 
-Workspaces can be nested, so a tab might contain yet another nested set
-in the form of an MDI container, and so on [#f1]_. 
-Depending on the the support of the back end widget set, tabs can be
-freely dragged between workspaces, (or out onto the desktop if you are
-using the Gtk widget set), forming a new, detached workspace.
+In the example shown below, we show a cutout of the main workspace
+(tabbed), which has two tabs: a channel viewer ("Image") and a second
+workspace ("ws1").  The "ws1" workspace is configured as type "MDI" and
+has two windows: a viewer ("Image0") and a third workspace ("ws2").  The
+third workspace contains a grid of four viewers. 
 
-In its default configuration, Ginga starts up with a
-single row (horizontal) panel of three workspaces, as shown in
-the image below.
-This panel is sandwiched vertically between a menu bar and a status bar.
-
-.. image:: figures/gingadefault.png
+.. image:: figures/nested_workspaces.png
    :width: 1024px
    :align: center
 
-The layout of the workspaces is controlled by a 
-table in the Ginga startup script (see :ref:`ch-customization`).
-By changing this table the layout can be substantially altered. 
+Depending on the the support of the back end widget set, tabs can be
+dragged between workspaces, (or out onto the desktop if you are
+using the Gtk widget set), forming a new, detached workspace.
 
 .. _concepts-channels:
 
@@ -75,12 +88,17 @@ default channel named "Image".  New channels can be created using the
 "Channel/Add channel" menu item.  Pressing the "+" button in the
 workspace menu also adds a new channel using a default name.
 
+A channel always has an image viewer associated with it, and my
+additionally have a table viewer.  The viewer is what you see when you
+show the window representing that channel.
+
 .. image:: figures/channels.png
    :width: 800px
    :align: center
 
-Pressing "-" removes the currently selected channel, while pressing the
-"up" or "down" arrows moves between images in the selected channel.
+In the workspace toolbar, pressing "-" removes the currently selected
+channel, while pressing the "up" or "down" arrows moves between images
+in the selected channel. 
 
 In the case where multiple channels are present, they are usually visually
 organized as tabs/windows/grid within the central workspace of the
@@ -104,13 +122,35 @@ to special rules).
 To keep images organized, simply change to the desired channel before
 opening a new image, or drag the image to the desired channel window.
 
-Many preferences in Ginga are set on a per-channel basis.  A new channel
-will generally "inherit" the settings for the generic "Image"
+Many preferences in Ginga are set on a per-channel basis.
+Some per-channel settings include:
+
+* color distribution algorithm
+* color map
+* intensity map
+* cut levels
+* auto cut levels algorihm
+* transforms (flip, swap)
+* rotation
+* WCS display coordinates
+* zoom algorithm
+* scale
+* interpolation type
+* pan position
+* etc.
+
+A new channel will generally "inherit" the settings for the generic "Image"
 channel until new preferences are defined and saved. If you create a 
 new channel and have already saved preferences for a channel with that
 name, it will adopt those preferences. Thus you can set up channels 
 configured for certain telescopes or types of data and easily reuse
 them in later sessions.
+
+Another idea embodied in the channel concept is that the user should not
+have to manage memory usage too explicitly.  Each channels has a setting
+that limits how many images it should keep in memory: if the number
+exceeds the limit Ginga will remove older images and load them back in as
+needed without user intervention.
 
 .. _concepts_plugins:
 
@@ -150,4 +190,49 @@ plugins is described in Chapter :ref:`ch-plugins`.
 	 container widgets such as fixed position subwindows, sliding panes,
 	 MDI-style subwindows, etc.  A notebook widget is simply the most
 	 common (default) case.
+
+
+.. _concepts-modes:
+
+===========
+About modes
+===========
+Ginga provides a number of default bindings for key and pointer actions.
+But there are too many different actions to bind to a limited set of
+keys and pointer buttons.
+*Modes* are a mechanism that allow Ginga to accomodate many key and
+pointer bindings for a large number of operations. 
+
+Modes are set on a per-channel basis.  Pressing a particular
+mode key in a channel viewer puts that viewer into that mode, 
+in which *some* special key, cursor and scroll bindings will override
+the default ones (if a mode does not override a particular binding, the
+default one will still be active).  An adjacent viewer for a different
+channel may be in a different mode, or no mode.
+
+Modes have an associated *mode type* which can be set to one of:
+
+* `held`: the mode is active while the activating key is held down
+* `oneshot`: the mode is released by initiating and finishing a cursor drag,
+  or when `Esc` is pressed, if no cursor drag is performed
+* `locked`: the mode is locked until the mode key is pressed again (or `Esc`)
+* `softlock`: the mode is locked until another mode key is pressed (or `Esc`)
+
+By default most modes are activated in "oneshot" type, unless the mode
+lock is toggled.  The mode lock is typically toggled in and out of
+softlock by the "l" key and "locked" with the (capital) "L".
+
+Modes are usually indicated by a small black rectangle with the mode
+name in one corner of the viewer. 
+When the lock is active it is signified by an additional "[SL]" (softlock) or
+"[L]" (locked) appearing in the mode indicator.
+
+.. image:: figures/mode_indicator.png
+   :width: 800px
+   :align: center
+
+In the above figure, you can see the mode indicator showing that
+the viewer is in "contrast" mode, with the softlock on.  The same
+information can be seen in the Toolbar plugin.  On the Toolbar plugin
+you can click to set the mode and toggle the lock on/off.
 

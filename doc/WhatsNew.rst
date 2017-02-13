@@ -13,6 +13,7 @@ Ver 2.6.2.dev
   the reference viewer that Ginga will find and load on startup
 - Added --sep option to load command line files into separate channels
 - New help screen feature available for plugins
+- Lots of updates to documentation    
 
 Ver 2.6.1 (2016-12-22)
 ======================
