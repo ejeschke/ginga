@@ -13,7 +13,11 @@ Ver 2.6.2.dev
   the reference viewer that Ginga will find and load on startup
 - Added --sep option to load command line files into separate channels
 - New help screen feature available for plugins
-- Lots of updates to documentation    
+- Lots of updates to documentation
+- Fixed a stability issue with drag and dropping large number of files
+  under Linux
+- Fixes for python3 and several example programs
+- Fix for interactive rotation bug under matplotlib back end    
 
 Ver 2.6.1 (2016-12-22)
 ======================

@@ -76,12 +76,12 @@ class ImageViewTk(ImageView):
         height = canvas.winfo_height()
 
         # see reschedule_redraw() method
-        self._defer_task = TkHelp.Timer(0.0,
-                                        lambda timer: self.delayed_redraw(),
-                                        tkcanvas=canvas)
-        self.msgtask = TkHelp.Timer(0.0,
-                                    lambda timer: self.onscreen_message(None),
-                                    tkcanvas=canvas)
+        self._defer_task = TkHelp.Timer(tkcanvas=canvas)
+        self._defer_task.add_callback('expired',
+                                      lambda timer: self.delayed_redraw())
+        self.msgtask = TkHelp.Timer(tkcanvas=canvas)
+        self.msgtask.add_callback('expired',
+                                  lambda timer: self.onscreen_message(None))
 
         self.configure_window(width, height)
 
@@ -124,7 +124,7 @@ class ImageViewTk(ImageView):
         cr.config(scrollregion=cr.bbox('all'))
 
     def reschedule_redraw(self, time_sec):
-        self._defer_task.cancel()
+        self._defer_task.stop()
         self._defer_task.start(time_sec)
 
     def configure_window(self, width, height):
@@ -141,7 +141,7 @@ class ImageViewTk(ImageView):
     def onscreen_message(self, text, delay=None, redraw=True):
         if self.tkcanvas is None:
             return
-        self.msgtask.cancel()
+        self.msgtask.stop()
         self.set_onscreen_message(text, redraw=redraw)
         if delay is not None:
             self.msgtask.start(delay)

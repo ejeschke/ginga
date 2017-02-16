@@ -65,10 +65,11 @@ class TimerFactory(object):
 
 class Timer(Callback.Callbacks):
 
-    def __init__(self, factory):
+    def __init__(self, factory, duration=0.0):
         super(Timer, self).__init__()
 
         self.tfact = factory
+        self.duration = duration
         # For storing aritrary data with timers
         self.data = Bunch.Bunch()
 
@@ -77,23 +78,19 @@ class Timer(Callback.Callbacks):
         for name in ('expired', 'canceled'):
             self.enable_callback(name)
 
-    def clear(self):
-        """
-        Clear a pending expiration event.
-        """
-        self.timer.stop()
-        self.make_callback('canceled')
-
-    cancel = clear
-
     def set(self, time_sec):
         """
         Set the timer for time_sec.   Any callbacks registered for the
         'expired' event will be called when the timer reaches the deadline.
         """
+        #self.timer.stop()
         self.timer.start(time_sec)
 
-    start = set
+    def start(self, duration=None):
+        if duration is None:
+            duration = self.duration
+
+        self.set(duration)
 
     def is_set(self):
         """
@@ -112,6 +109,18 @@ class Timer(Callback.Callbacks):
 
     def get_deadline(self):
         return self.timer.expiration_time()
+
+    def stop(self):
+        self.timer.stop()
+
+    def cancel(self):
+        """
+        Clear a pending expiration event.
+        """
+        self.stop()
+        self.make_callback('canceled')
+
+    clear = cancel
 
 
 def main():

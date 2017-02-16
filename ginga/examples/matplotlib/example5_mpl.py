@@ -56,7 +56,7 @@ class MyGingaFigure(object):
     def __init__(self, logger, fig):
         self.logger = logger
         # create a ginga object and tell it about the figure
-        fi = ImageViewCanvas(logger)
+        fi = ImageViewCanvas(logger=logger)
         fi.enable_autocuts('on')
         fi.set_autocut_params('zscale')
         fi.add_callback('key-press', self.key_press_ginga)
@@ -80,7 +80,7 @@ class MyGingaFigure(object):
 
     def load(self, fitspath):
         # load an image
-        image = AstroImage(self.logger)
+        image = AstroImage(logger=self.logger)
         image.load_file(fitspath)
         self.fitsimage.set_image(image)
 
@@ -89,21 +89,21 @@ class MyGingaFigure(object):
         Insert our canvas so that we intercept all events before they reach
         processing by the bindings layer of Ginga.
         """
-        # insert the canvas 
+        # insert the canvas
         self.fitsimage.add(self.canvas, tag='mycanvas')
 
     def release(self):
         """
         Remove our canvas so that we no longer intercept events.
         """
-        # retract the canvas 
-        self.fitsimage.deleteObjectByTag('mycanvas')
+        # retract the canvas
+        self.fitsimage.delete_object_by_tag('mycanvas')
 
     def clear(self):
         """
         Clear the canvas of any drawing made on it.
         """
-        self.canvas.deleteAllObjects()
+        self.canvas.delete_all_objects()
 
     def get_wcs(self, data_x, data_y):
         """Return (re_deg, dec_deg) for the (data_x, data_y) position
@@ -125,7 +125,7 @@ class MyGingaFigure(object):
         elif keyname == 'c':
             self.clear()
             return True
-        
+
         fi = canvas.fitsimage
         data_x, data_y = fi.get_last_data_xy()
         ra, dec = self.get_wcs(data_x, data_y)
@@ -153,7 +153,7 @@ class MyGingaFigure(object):
         return False
 
     def draw_event(self, canvas, tag):
-        obj = canvas.getObjectByTag(tag)
+        obj = canvas.get_object_by_tag(tag)
         data_x, data_y = obj.x, obj.y
         ra, dec = self.get_wcs(data_x, data_y)
         print("A %s was drawn at data %d,%d ra=%s dec=%s" % (

@@ -108,13 +108,13 @@ class ImageViewMpl(ImageView.ImageViewBase):
         self._defer_timer = None
 
         if hasattr(figure.canvas, 'new_timer'):
-            self._msg_timer = Timer(0.0,
-                                    lambda timer: self.onscreen_message(None),
-                                    mplcanvas=figure.canvas)
+            self._msg_timer = Timer(mplcanvas=figure.canvas)
+            self._msg_timer.add_callback('expired',
+                                         lambda timer: self.onscreen_message(None))
 
-            self._defer_timer = Timer(0.0,
-                                      lambda timer: self.delayed_redraw(),
-                                      mplcanvas=figure.canvas)
+            self._defer_timer = Timer(mplcanvas=figure.canvas)
+            self._defer_timer.add_callback('expired',
+                                           lambda timer: self.delayed_redraw())
 
         canvas = figure.canvas
         if hasattr(canvas, 'viewer'):
@@ -291,7 +291,7 @@ class ImageViewMpl(ImageView.ImageViewBase):
 
     def onscreen_message(self, text, delay=None, redraw=True):
         if self._msg_timer is not None:
-            self._msg_timer.cancel()
+            self._msg_timer.stop()
 
         self.set_onscreen_message(text, redraw=redraw)
 
@@ -303,7 +303,7 @@ class ImageViewMpl(ImageView.ImageViewBase):
             self.delayed_redraw()
             return
 
-        self._defer_timer.cancel()
+        self._defer_timer.stop()
         self._defer_timer.start(time_sec)
 
 

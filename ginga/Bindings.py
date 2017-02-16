@@ -930,14 +930,9 @@ class ImageViewBindings(object):
     def _rotate_xy(self, viewer, x, y, msg=True):
         msg = self.settings.get('msg_rotate', msg)
         ctr_x, ctr_y = viewer.get_center()
-        if not viewer.window_has_origin_upper():
-            deg1 = math.degrees(math.atan2(self._start_y - ctr_y,
-                                           self._start_x - ctr_x))
-            deg2 = math.degrees(math.atan2(y - ctr_y, x - ctr_x))
-        else:
-            deg1 = math.degrees(math.atan2(ctr_y - self._start_y,
-                                           self._start_x - ctr_x))
-            deg2 = math.degrees(math.atan2(ctr_y - y, x - ctr_x))
+        deg1 = math.degrees(math.atan2(ctr_y - self._start_y,
+                                       self._start_x - ctr_x))
+        deg2 = math.degrees(math.atan2(ctr_y - y, x - ctr_x))
         delta_deg = deg2 - deg1
         deg = math.fmod(self._start_rot + delta_deg, 360.0)
         if msg:
@@ -1491,7 +1486,7 @@ class ImageViewBindings(object):
 
         elif event.state == 'down':
             if msg:
-                viewer.onscreen_message("Rotate (drag mouse L-R)",
+                viewer.onscreen_message("Rotate (drag around center)",
                                            delay=1.0)
             self._start_x, self._start_y = x, y
             self._start_rot = viewer.get_rotation()

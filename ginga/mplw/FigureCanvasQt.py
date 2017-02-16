@@ -20,6 +20,8 @@ from ginga.qtw.QtHelp import QtGui, QtCore
 
 def setup_Qt(widget, viewer):
 
+    _resizeEvent = widget.resizeEvent
+
     def resizeEvent(*args):
         rect = widget.geometry()
         x1, y1, x2, y2 = rect.getCoords()
@@ -28,6 +30,8 @@ def setup_Qt(widget, viewer):
 
         if viewer is not None:
             viewer.configure_window(width, height)
+
+        _resizeEvent(*args)
 
     widget.setFocusPolicy(QtCore.Qt.FocusPolicy(
         QtCore.Qt.TabFocus |
@@ -38,8 +42,7 @@ def setup_Qt(widget, viewer):
     widget.setAcceptDrops(True)
 
     # Matplotlib has a bug where resize events are not reported
-    widget.connect(widget, QtCore.SIGNAL('resizeEvent()'),
-                   resizeEvent)
+    widget.resizeEvent = resizeEvent
 
 
 class FigureCanvas(QtFigureCanvas):

@@ -360,7 +360,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         obj = self.gpmon.get_plugin('WBrowser')
         obj.browse(url)
 
-    def show_help_text(self, name, help_txt, wsname='channels'):
+    def show_help_text(self, name, help_txt, wsname='right'):
         """Show help text in a closeable tab window.  The title of the
         window is set from `name` prefixed with 'HELP:'
         """
@@ -1071,6 +1071,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                                       self.settings.get('numImages', 1))
         settings.set_defaults(switchnew=True, numImages=num_images,
                               raisenew=True, genthumb=True,
+                              enter_focus=False, focus_indicator=False,
                               preload_images=False, sort_order='loadtime')
 
         with self.lock:
@@ -1549,7 +1550,9 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         fi.set_canvas(canvas)
 
         fi.set_enter_focus(settings.get('enter_focus', False))
-        fi.show_focus_indicator(settings.get('focus_indicator', False))
+        # check general settings for default value of focus indicator
+        focus_ind = self.settings.get('focus_indicator', False)
+        fi.show_focus_indicator(self.settings.get('focus_indicator', focus_ind))
         fi.enable_auto_orient(True)
 
         fi.add_callback('motion', self.motion_cb)
@@ -2260,6 +2263,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             self.add_channel_auto()
         elif keyname == 'K':
             self.remove_channel_auto()
+        elif keyname == 'f1':
+            self.show_channel_names()
         ## elif keyname == 'escape':
         ##     self.reset_viewer()
         elif keyname in ('up',):
@@ -2279,9 +2284,11 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         """
         to_chname = self.get_channel_name(viewer)
         for url in urls:
-            ## self.load_file(url)
-            self.nongui_do(self.load_file, url, chname=to_chname,
-                           wait=False)
+            # NOTE: this used to be a nongui_do(), but there is some
+            # subtle interaction inside the toolkit code with the
+            # loading that makes it unstable
+            self.gui_do_priority(20, self.load_file, url, chname=to_chname,
+                                 wait=False)
         return True
 
     def force_focus_cb(self, viewer, event, data_x, data_y):
@@ -2295,12 +2302,22 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         """
         if not self.channel_follows_focus:
             return True
+
         self.logger.debug("Focus %s=%s" % (name, tf))
         if tf:
             if viewer != self.getfocus_viewer():
                 self.change_channel(name, raisew=False)
 
         return True
+
+    def show_channel_names(self):
+        """Show each channel's name in its image viewer.
+        Useful in 'grid' or 'stack' workspace type to identify which window
+        is which.
+        """
+        for name in self.get_channel_names():
+            channel = self.get_channel(name)
+            channel.fitsimage.onscreen_message(name, delay=2.5)
 
     ########################################################
     ### NON-PEP8 PREDECESSORS: TO BE DEPRECATED

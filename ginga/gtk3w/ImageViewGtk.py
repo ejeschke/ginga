@@ -56,10 +56,12 @@ class ImageViewGtk(ImageView):
         self.imgwin.show_all()
 
         # see reschedule_redraw() method
-        self._defer_task = GtkHelp.Timer(0.0,
-                                         lambda timer: self.delayed_redraw())
-        self.msgtask = GtkHelp.Timer(0.0,
-                                     lambda timer: self.onscreen_message(None))
+        self._defer_task = GtkHelp.Timer()
+        self._defer_task.add_callback('expired',
+                                      lambda timer: self.delayed_redraw())
+        self.msgtask = GtkHelp.Timer()
+        self.msgtask.add_callback('expired',
+                                  lambda timer: self.onscreen_message(None))
 
     def get_widget(self):
         return self.imgwin
@@ -109,7 +111,7 @@ class ImageViewGtk(ImageView):
         pixbuf.save(filepath, format, options)
 
     def reschedule_redraw(self, time_sec):
-        self._defer_task.cancel()
+        self._defer_task.stop()
         self._defer_task.start(time_sec)
 
     def update_image(self):
@@ -206,7 +208,7 @@ class ImageViewGtk(ImageView):
         return buf
 
     def onscreen_message(self, text, delay=None, redraw=True):
-        self.msgtask.cancel()
+        self.msgtask.stop()
         self.set_onscreen_message(text, redraw=redraw)
         if delay is not None:
             self.msgtask.start(delay)

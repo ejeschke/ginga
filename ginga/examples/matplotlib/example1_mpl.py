@@ -30,7 +30,7 @@ class FitsViewer(QtGui.QMainWindow):
         fig = Figure()
         w = FigureCanvas(fig)
 
-        fi = ImageViewCanvas(self.logger)
+        fi = ImageViewCanvas(logger=self.logger)
         fi.enable_autocuts('on')
         fi.set_autocut_params('zscale')
         fi.enable_autozoom('on')
@@ -79,7 +79,7 @@ class FitsViewer(QtGui.QMainWindow):
         return self.fitsimage
 
     def load_file(self, filepath):
-        image = AstroImage.AstroImage()
+        image = AstroImage.AstroImage(logger=self.logger)
         image.load_file(filepath)
 
         self.fitsimage.set_image(image)

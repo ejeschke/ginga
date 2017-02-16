@@ -129,10 +129,14 @@ class ImageViewQt(ImageView.ImageViewBase):
 
         self.renderer = CanvasRenderer(self)
 
-        self.msgtimer = Timer(0.0, lambda timer: self.onscreen_message_off())
+        self.msgtimer = Timer()
+        self.msgtimer.add_callback('expired',
+                                   lambda timer: self.onscreen_message_off())
 
         # For optomized redrawing
-        self._defer_task = Timer(0.0, lambda timer: self.delayed_redraw())
+        self._defer_task = Timer()
+        self._defer_task.add_callback('expired',
+                                      lambda timer: self.delayed_redraw())
 
     def get_widget(self):
         return self.imgwin
@@ -239,7 +243,7 @@ class ImageViewQt(ImageView.ImageViewBase):
         res = qimg.save(filepath, format=format, quality=quality)
 
     def reschedule_redraw(self, time_sec):
-        self._defer_task.cancel()
+        self._defer_task.stop()
         self._defer_task.start(time_sec)
 
     def update_image(self):
@@ -305,7 +309,7 @@ class ImageViewQt(ImageView.ImageViewBase):
         return clr
 
     def onscreen_message(self, text, delay=None, redraw=True):
-        self.msgtimer.cancel()
+        self.msgtimer.stop()
         self.set_onscreen_message(text, redraw=redraw)
         if delay is not None:
             self.msgtimer.start(delay)

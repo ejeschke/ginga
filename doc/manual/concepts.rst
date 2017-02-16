@@ -88,7 +88,7 @@ default channel named "Image".  New channels can be created using the
 "Channel/Add channel" menu item.  Pressing the "+" button in the
 workspace menu also adds a new channel using a default name.
 
-A channel always has an image viewer associated with it, and my
+A channel always has an image viewer associated with it and may
 additionally have a table viewer.  The viewer is what you see when you
 show the window representing that channel.
 
@@ -120,7 +120,7 @@ By default, images are loaded into the same channel you are currently
 viewing (unless your viewer has been customized to load images according
 to special rules).
 To keep images organized, simply change to the desired channel before
-opening a new image, or drag the image to the desired channel window.
+opening a new image, or drag the image to the desired channel viewer.
 
 Many preferences in Ginga are set on a per-channel basis.
 Some per-channel settings include:
@@ -147,7 +147,7 @@ configured for certain telescopes or types of data and easily reuse
 them in later sessions.
 
 Another idea embodied in the channel concept is that the user should not
-have to manage memory usage too explicitly.  Each channels has a setting
+have to manage memory usage too explicitly.  Each channel has a setting
 that limits how many images it should keep in memory: if the number
 exceeds the limit Ginga will remove older images and load them back in as
 needed without user intervention.
