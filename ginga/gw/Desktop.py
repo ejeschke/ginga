@@ -27,7 +27,7 @@ class Desktop(Callback.Callbacks):
         self.node_idx = 0
         self._cur_dialogs = []
 
-        for name in ('page-switch', 'all-closed'):
+        for name in ('page-switch', 'page-close', 'all-closed'):
             self.enable_callback(name)
 
     # --- Workspace Handling ---
@@ -44,6 +44,7 @@ class Desktop(Callback.Callbacks):
                        use_toolbar=use_toolbar)
         ws.add_callback('page-switch', self.switch_page_cb)
         ws.add_callback('page-detach', self.page_detach_cb)
+        ws.add_callback('page-close', self.page_close_cb)
 
         nb = ws.nb
 
@@ -269,6 +270,13 @@ class Desktop(Callback.Callbacks):
         bnch = self._find_tab(child)
         if bnch is not None:
             self.make_callback('page-switch', bnch.name, bnch.data)
+        return False
+
+    def page_close_cb(self, ws, child):
+        self.logger.debug("page close: %s" % str(child))
+        bnch = self._find_tab(child)
+        if bnch is not None:
+            self.make_callback('page-close', bnch.name, bnch.data)
         return False
 
     def make_desktop(self, layout, widget_dict=None):
@@ -694,7 +702,8 @@ class Workspace(Widgets.WidgetBase):
             self.mdi_menu = mdi_menu
             self._update_mdi_menu()
 
-        for name in ('page-switch', 'page-detach', 'ws-close'):
+        for name in ('page-switch', 'page-detach', 'page-close',
+                     'ws-close'):
             self.enable_callback(name)
 
     def _set_wstype(self, wstype):
@@ -717,6 +726,8 @@ class Workspace(Widgets.WidgetBase):
             self.nb.add_callback('page-switch', self._switch_page_cb)
         if self.nb.has_callback('page-detach'):
             self.nb.add_callback('page-detach', self._detach_page_cb)
+        if self.nb.has_callback('page-close'):
+            self.nb.add_callback('page-close', self._close_page_cb)
 
         self.wstype = wstype
 
@@ -746,6 +757,9 @@ class Workspace(Widgets.WidgetBase):
 
     def _detach_page_cb(self, nb, child):
         self.make_callback('page-detach', child)
+
+    def _close_page_cb(self, nb, child):
+        self.make_callback('page-close', child)
 
     def _close_menuitem_cb(self, *args):
         self.make_callback('ws-close')

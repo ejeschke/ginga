@@ -85,7 +85,7 @@ class WidgetBase(Callback.Callbacks):
     def resize(self, width, height):
         self.widget.set_size_request(width, height)
         # hackish way to allow the widget to be resized down again later
-        GObject.idle_add(self.widget.set_size_request, -1, -1)
+        #GObject.idle_add(self.widget.set_size_request, -1, -1)
 
     def get_font(self, font_family, point_size):
         font = GtkHelp.get_font(font_family, point_size)

@@ -347,6 +347,7 @@ class MDIWidget(gtk.Layout):
         frame.connect("button_press_event", self.start_resize_cb, subwin)
         maxim.connect('clicked', lambda *args: self.maximize_page(subwin))
         minim.connect('clicked', lambda *args: self.minimize_page(subwin))
+        close.connect('clicked', lambda *args: self.close_page(subwin))
 
         self.put(frame, self.cascade_offset, self.cascade_offset)
         return subwin
@@ -573,6 +574,8 @@ class MDIWidget(gtk.Layout):
         self.move_page(subwin, x, height-ht)
         #self.lower_widget(subwin)
 
+    def close_page(self, subwin):
+        pass
 
 class FileSelection(object):
 

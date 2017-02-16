@@ -1953,11 +1953,10 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
         # add close handlers
         ws.add_callback('ws-close', self.workspace_closed_cb)
-
-        if ws.nb.has_callback('page-closed'):
-            ws.nb.add_callback('page-closed', self.page_closed_cb, ws.name)
-        if ws.nb.has_callback('page-switch'):
-            ws.nb.add_callback('page-switch', self.page_switch_cb)
+        if ws.has_callback('page-close'):
+            ws.add_callback('page-close', self.page_close_cb)
+        if ws.has_callback('page-switch'):
+            ws.add_callback('page-switch', self.page_switch_cb)
 
         if ws.toolbar is not None:
             tb = ws.toolbar
@@ -2087,7 +2086,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                 return channel
         return None
 
-    def page_switch_cb(self, tab_w, child):
+    def page_switch_cb(self, ws, child):
         self.logger.debug("page switched to %s" % (str(child)))
 
         # Find the channel that contains this widget
@@ -2143,8 +2142,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
         return True
 
-    def page_closed_cb(self, widget, child, wsname):
-        self.logger.debug("page closed in %s: '%s'" % (wsname, str(child)))
+    def page_close_cb(self, ws, child):
+        self.logger.debug("page closed in %s: '%s'" % (ws.name, str(child)))
 
         channel = self._get_channel_by_container(child)
         if channel is not None:
