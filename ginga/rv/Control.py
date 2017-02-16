@@ -145,6 +145,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         self.settings.add_defaults(fixedFont='Monospace',
                                    sansFont='Sans',
                                    channel_follows_focus=False,
+                                   scrollbars='off',
                                    share_readout=True,
                                    numImages=10,
                                    # Offset to add to numpy-based coords
@@ -1071,7 +1072,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                                       self.settings.get('numImages', 1))
         settings.set_defaults(switchnew=True, numImages=num_images,
                               raisenew=True, genthumb=True,
-                              enter_focus=False, focus_indicator=False,
+                              enter_focus=True, focus_indicator=False,
                               preload_images=False, sort_order='loadtime')
 
         with self.lock:
@@ -1549,7 +1550,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         canvas.enable_draw(False)
         fi.set_canvas(canvas)
 
-        fi.set_enter_focus(settings.get('enter_focus', False))
+        fi.set_enter_focus(settings.get('enter_focus', True))
         # check general settings for default value of focus indicator
         focus_ind = self.settings.get('focus_indicator', False)
         fi.show_focus_indicator(self.settings.get('focus_indicator', focus_ind))
@@ -1585,7 +1586,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         fi = self.build_viewpane(settings, size=size)
 
         # add scrollbar interface around this viewer
-        scr = settings.get('scrollbars', 'off')
+        scr_onoff = self.settings.get('scrollbars', 'off')
+        scr = settings.get('scrollbars', scr_onoff)
         if scr != 'off':
             si = Viewers.ScrolledView(fi)
             si.scroll_bars(horizontal=scr, vertical=scr)
