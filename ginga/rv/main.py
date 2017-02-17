@@ -186,22 +186,33 @@ class ReferenceViewer(object):
 
         for group in groups:
             for entry_point in iter_entry_points(group=group, name=None):
-                available_methods.append(entry_point.load())
+                try:
+                    method = entry_point.load()
+                    available_methods.append(method)
+
+                except Exception as e:
+                    print("Error trying to load entry point %s: %s" % (
+                        str(entry_point), str(e)))
 
         for method in available_methods:
-            spec = method()
-            if 'start' in spec:
-                # global plugin
-                self.add_global_plugin(spec.module, spec.workspace,
-                                       path=spec.get('path', None),
-                                       klass=spec.get('klass', spec.module),
-                                       tab_name=spec.tab,
-                                       start_plugin=spec.start)
-            else:
-                # local plugin
-                self.add_local_plugin(spec.module, spec.workspace,
-                                      path=spec.get('path', None),
-                                      klass=spec.get('klass', spec.module))
+            try:
+                spec = method()
+                if 'start' in spec:
+                    # global plugin
+                    self.add_global_plugin(spec.module, spec.workspace,
+                                           path=spec.get('path', None),
+                                           klass=spec.get('klass', spec.module),
+                                           tab_name=spec.tab,
+                                           start_plugin=spec.start)
+                else:
+                    # local plugin
+                    self.add_local_plugin(spec.module, spec.workspace,
+                                          path=spec.get('path', None),
+                                          klass=spec.get('klass', spec.module))
+
+            except Exception as e:
+                print("Error trying to instantiate external plugin using %s: %s" % (
+                    str(method), str(e)))
 
     def add_default_options(self, optprs):
         """

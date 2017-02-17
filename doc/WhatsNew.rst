@@ -2,8 +2,13 @@
 What's New in Ginga?
 ++++++++++++++++++++
 
-Ver 2.6.2.dev
+Ver 2.6.3.dev
 =============
+- Fix for issue that stops ginga startup when loading externally
+  distributed plugins that have errors
+
+Ver 2.6.2 (2017-02-16)
+======================
 - Added some colormaps from ds9 that don't have equivalents in Ginga or
   matplotlib
 - Fix for recognizing CompImage HDU type when using astropy.io.fits
