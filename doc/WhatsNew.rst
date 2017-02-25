@@ -6,6 +6,10 @@ Ver 2.6.3.dev
 =============
 - Fix for issue that stops ginga startup when loading externally
   distributed plugins that have errors
+- Fix for an issue loading plugins from the command line when they
+  are nested in a package
+- Added bindings for moving +/- 1 pixel in X or Y and centering on the
+  pixel
 
 Ver 2.6.2 (2017-02-16)
 ======================
