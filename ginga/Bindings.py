@@ -108,6 +108,11 @@ class ImageViewBindings(object):
             kp_pan_right = ['pan+*+right', 'freepan+*+right'],
             kp_pan_up = ['pan+*+up', 'freepan+*+up'],
             kp_pan_down = ['pan+*+down', 'freepan+*+down'],
+            kp_pan_px_xminus1 = ['shift+left'],
+            kp_pan_px_xplus1 = ['shift+right'],
+            kp_pan_px_yminus1 = ['shift+down'],
+            kp_pan_px_yplus1 = ['shift+up'],
+            kp_pan_px_center = ['shift+home'],
             kp_center = ['c', 'pan+c', 'freepan+c'],
             kp_cut_255 = ['cuts+A'],
             kp_cut_minmax = ['cuts+S'],
@@ -638,6 +643,18 @@ class ImageViewBindings(object):
         # update the pan position by pct
         self.pan_by_pct(viewer, res.pan_pct_x, pct_y)
 
+    def pan_delta_px(self, viewer, x_px, y_px):
+        pan_x, pan_y = viewer.get_pan(coord='data')[:2]
+        pan_x += x_px
+        pan_y += y_px
+        viewer.panset_xy(pan_x, pan_y)
+
+    def pan_center_px(self, viewer):
+        pan_x, pan_y = viewer.get_pan(coord='data')[:2]
+        pan_x = float(int(pan_x + viewer.data_off))
+        pan_y = float(int(pan_y + viewer.data_off))
+        viewer.panset_xy(pan_x, pan_y)
+
     def get_direction(self, direction, rev=False):
         """
         Translate a direction in compass degrees into 'up' or 'down'.
@@ -1061,6 +1078,37 @@ class ImageViewBindings(object):
             return False
         amt = self._get_key_pan_pct(event)
         self.pan_ud(viewer, amt, -1.0, msg=msg)
+        return True
+
+    def kp_pan_px_xminus1(self, viewer, event, data_x, data_y, msg=True):
+        if not self.canpan:
+            return False
+        self.pan_delta_px(viewer, -1.0, 0.0)
+        return True
+
+    def kp_pan_px_xplus1(self, viewer, event, data_x, data_y, msg=True):
+        if not self.canpan:
+            return False
+        self.pan_delta_px(viewer, 1.0, 0.0)
+        return True
+
+    def kp_pan_px_yminus1(self, viewer, event, data_x, data_y, msg=True):
+        if not self.canpan:
+            return False
+        self.pan_delta_px(viewer, 0.0, -1.0)
+        return True
+
+    def kp_pan_px_yplus1(self, viewer, event, data_x, data_y, msg=True):
+        if not self.canpan:
+            return False
+        self.pan_delta_px(viewer, 0.0, 1.0)
+        return True
+
+    def kp_pan_px_center(self, viewer, event, data_x, data_y, msg=True):
+        """This pans to the center of the current pixel."""
+        if not self.canpan:
+            return False
+        self.pan_center_px(viewer)
         return True
 
     def kp_center(self, viewer, event, data_x, data_y):
