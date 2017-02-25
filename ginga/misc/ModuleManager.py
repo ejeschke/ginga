@@ -16,23 +16,28 @@ __all__ = ['ModuleManager']
 
 def my_import(name, path=None):
     """Return imported module for the given name."""
-    #mod = __import__(name)
-    if path is None:
-        fp, path, description = imp.find_module(name)
-
-    else:
-        fp = open(path, 'r')
+    if path is not None:
         description = ('.py', 'r', imp.PY_SOURCE)
 
-    try:
-        mod = imp.load_module(name, fp, path, description)
+        with open(path, 'r') as fp:
+            mod = imp.load_module(name, fp, path, description)
 
-    finally:
-        fp.close()
+    else:
+        components = name.split('.')
+        for comp in components:
+            fp, path, description = imp.find_module(comp, path=path)
 
-    components = name.split('.')
-    for comp in components[1:]:
-        mod = getattr(mod, comp)
+            try:
+                mod = imp.load_module(comp, fp, path, description)
+                if hasattr(mod, '__path__'):
+                    path = mod.__path__
+                else:
+                    path = mod.__file__
+
+            finally:
+                if fp is not None:
+                    fp.close()
+
     return mod
 
 
