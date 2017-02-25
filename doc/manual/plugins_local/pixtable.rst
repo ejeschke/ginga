@@ -3,6 +3,10 @@
 PixTable
 ========
 
+.. image:: figures/pixtable-plugin.png
+   :width: 800px
+   :align: center
+
 PixTable provides a way to check or monitor the pixel values in
 a region.
 
