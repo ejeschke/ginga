@@ -11,6 +11,51 @@ from ginga import GingaPlugin, colors
 
 
 class PixTable(GingaPlugin.LocalPlugin):
+    """
+    PixTable provides a way to check or monitor the pixel values in
+    a region.
+
+    Basic Use
+    ---------
+    In the most basic use, simply move the cursor around the channel
+    viewer; an array of pixel values will appear in the "Pixel Values"
+    display in the plugin UI.  The center value is highlighted, and this
+    corresponds to the value under the cursor.
+
+    You can choose a 3x3, 5x5, 7x7 or 9x9 grid from the leftmost
+    combobox control.  It may help to adjust the "Font Size" control
+    to prevent having the array values cut off on the sides.  You can
+    also enlarge the plugin workspace to see more of the table.
+
+    NOTE: the order of the value table shown will not necessarily match to
+    the channel viewer if the images is flipped, transposed or rotated.
+
+    Using Marks
+    -----------
+    If you click in the channel viewer, it will set a mark.  There can
+    be any number of marks, and they are each noted with an "X"
+    annotated with a number.  When that mark is selected it will only
+    show the values around the mark.  Simply change the mark control to
+    select a different mark to see the values around it.
+
+    The marks will stay in position even if a new image is loaded and
+    they will show the values for the new image.  In this way you can
+    monitor the area around a spot if the image is updating frequently.
+
+    If the "Pan to mark" checkbox is selected, then when you select a
+    different mark from the mark control, the channel viewer will pan to
+    that mark.  This can be useful to inspect the same spots in several
+    different images.
+
+    NOTE: if you change the mark control back to "None" then the pixel
+    table will again update as you move the cursor around the viewer.
+
+    Deleting Marks
+    --------------
+    To delete a mark, select it in the mark control and then press the
+    button marked "Delete".  To delete all the marks, press the button
+    marked "Delete All".
+    """
 
     def __init__(self, fv, fitsimage):
         # superclass defines some variables for us, like logger
@@ -44,6 +89,7 @@ class PixTable(GingaPlugin.LocalPlugin):
         self.font = self.settings.get('font', 'fixed')
         self.fontsize = self.settings.get('fontsize', 12)
         self.fontsizes = [6, 8, 9, 10, 11, 12, 14, 16]
+        self.pixview = None
 
         # For "marks" feature
         self.mark_radius = 10
@@ -53,7 +99,6 @@ class PixTable(GingaPlugin.LocalPlugin):
         self.marks = ['None']
         self.mark_index = 0
         self.mark_selected = None
-        self.tw = None
 
     def build_gui(self, container):
         top = Widgets.VBox()
@@ -63,15 +108,6 @@ class PixTable(GingaPlugin.LocalPlugin):
                                                          fill=True)
         vbox.set_border_width(4)
         vbox.set_spacing(2)
-
-        self.msg_font = self.fv.get_font("sansFont", 12)
-        tw = Widgets.TextArea(wrap=True, editable=False)
-        tw.set_font(self.msg_font)
-        self.tw = tw
-
-        fr = Widgets.Expander("Instructions")
-        fr.set_widget(tw)
-        vbox.add_widget(fr, stretch=0)
 
         fr = Widgets.Frame("Pixel Values")
 
@@ -178,6 +214,9 @@ class PixTable(GingaPlugin.LocalPlugin):
         btn = Widgets.Button("Close")
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn)
+        btn = Widgets.Button("Help")
+        btn.add_callback('activated', lambda w: self.help())
+        btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
 
         top.add_widget(btns, stretch=0)
@@ -245,6 +284,10 @@ class PixTable(GingaPlugin.LocalPlugin):
     def plot(self, data, x1, y1, x2, y2, data_x, data_y, radius,
              maxv=9):
 
+        # Because most FITS data is stored with lower Y indexes to
+        # bottom
+        data = numpy.flipud(data)
+
         width, height = self.fitsimage.get_dims(data)
         if self.txt_arr is None:
             return
@@ -260,24 +303,26 @@ class PixTable(GingaPlugin.LocalPlugin):
             for j in range(height):
                 self.txt_arr[i][j].text = fmt_cell.format(data[i][j])
 
+        ctr_txt = self.txt_arr[width // 2][height // 2]
+
         # append statistics line
         fmt_stat = "  Min: %s  Max: %s  Avg: %s" % (fmt_cell, fmt_cell,
                                                     fmt_cell)
         self.sum_arr[0].text = fmt_stat.format(minval, maxval, avgval)
 
         # update the pixtable
-        self.pixview.redraw(whence=3)
+        #self.pixview.redraw(whence=3)
+        self.pixview.panset_xy(ctr_txt.x, ctr_txt.y)
 
     def close(self):
         self.fv.stop_local_plugin(self.chname, str(self))
         return True
 
-    def instructions(self):
-        self.tw.set_text("""Move cursor around to see surrounding pixel values.
-""")
+    def help(self):
+        name = str(self).capitalize()
+        self.fv.show_help_text(name, self.__doc__)
 
     def start(self):
-        self.instructions()
         # insert layer if it is not already
         p_canvas = self.fitsimage.get_canvas()
         try:
@@ -296,7 +341,7 @@ class PixTable(GingaPlugin.LocalPlugin):
             p_canvas.delete_object_by_tag(self.layertag)
         except:
             pass
-        self.tw = None
+        self.pixview = None
 
     def pause(self):
         self.canvas.ui_setActive(False)
@@ -309,7 +354,7 @@ class PixTable(GingaPlugin.LocalPlugin):
         self.redo()
 
     def redo(self):
-        if self.tw is None:
+        if self.pixview is None:
             return
         # cut out and set the pixel table data
         image = self.fitsimage.get_image()
@@ -324,8 +369,9 @@ class PixTable(GingaPlugin.LocalPlugin):
         # cutout image data
         data, x1, y1, x2, y2 = image.cutout_radius(data_x, data_y,
                                                    self.pixtbl_radius)
-        self.plot(data, x1, y1, x2, y2, self.lastx, self.lasty,
-                  self.pixtbl_radius, maxv=9)
+        self.fv.error_wrap(self.plot, data, x1, y1, x2, y2,
+                           self.lastx, self.lasty,
+                           self.pixtbl_radius, maxv=9)
 
     def _rebuild_table(self):
         canvas = self.pixview.get_canvas()
@@ -389,7 +435,7 @@ class PixTable(GingaPlugin.LocalPlugin):
     def motion_cb(self, canvas, event, data_x, data_y):
         if self.mark_selected is not None:
             return False
-        if self.tw is None:
+        if self.pixview is None:
             return
 
         self.lastx, self.lasty = data_x, data_y
