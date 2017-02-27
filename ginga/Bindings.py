@@ -108,10 +108,10 @@ class ImageViewBindings(object):
             kp_pan_right = ['pan+*+right', 'freepan+*+right'],
             kp_pan_up = ['pan+*+up', 'freepan+*+up'],
             kp_pan_down = ['pan+*+down', 'freepan+*+down'],
-            kp_pan_px_xminus1 = ['shift+left'],
-            kp_pan_px_xplus1 = ['shift+right'],
-            kp_pan_px_yminus1 = ['shift+down'],
-            kp_pan_px_yplus1 = ['shift+up'],
+            kp_pan_px_xminus = ['shift+left'],
+            kp_pan_px_xplus = ['shift+right'],
+            kp_pan_px_yminus = ['shift+down'],
+            kp_pan_px_yplus = ['shift+up'],
             kp_pan_px_center = ['shift+home'],
             kp_center = ['c', 'pan+c', 'freepan+c'],
             kp_cut_255 = ['cuts+A'],
@@ -153,6 +153,8 @@ class ImageViewBindings(object):
 
             # pct of a window of data to move with pan key commands
             key_pan_pct = 0.666667,
+            # amount to move (in pixels) when using key pan arrow
+            key_pan_px_delta = 1.0,
 
             # SCROLLING/WHEEL
             sc_pan = ['ctrl+scroll'],
@@ -1080,28 +1082,32 @@ class ImageViewBindings(object):
         self.pan_ud(viewer, amt, -1.0, msg=msg)
         return True
 
-    def kp_pan_px_xminus1(self, viewer, event, data_x, data_y, msg=True):
+    def kp_pan_px_xminus(self, viewer, event, data_x, data_y, msg=True):
         if not self.canpan:
             return False
-        self.pan_delta_px(viewer, -1.0, 0.0)
+        px_amt = self.settings.get('key_pan_px_delta', 1.0)
+        self.pan_delta_px(viewer, -px_amt, 0.0)
         return True
 
-    def kp_pan_px_xplus1(self, viewer, event, data_x, data_y, msg=True):
+    def kp_pan_px_xplus(self, viewer, event, data_x, data_y, msg=True):
         if not self.canpan:
             return False
-        self.pan_delta_px(viewer, 1.0, 0.0)
+        px_amt = self.settings.get('key_pan_px_delta', 1.0)
+        self.pan_delta_px(viewer, px_amt, 0.0)
         return True
 
-    def kp_pan_px_yminus1(self, viewer, event, data_x, data_y, msg=True):
+    def kp_pan_px_yminus(self, viewer, event, data_x, data_y, msg=True):
         if not self.canpan:
             return False
-        self.pan_delta_px(viewer, 0.0, -1.0)
+        px_amt = self.settings.get('key_pan_px_delta', 1.0)
+        self.pan_delta_px(viewer, 0.0, -px_amt)
         return True
 
-    def kp_pan_px_yplus1(self, viewer, event, data_x, data_y, msg=True):
+    def kp_pan_px_yplus(self, viewer, event, data_x, data_y, msg=True):
         if not self.canpan:
             return False
-        self.pan_delta_px(viewer, 0.0, 1.0)
+        px_amt = self.settings.get('key_pan_px_delta', 1.0)
+        self.pan_delta_px(viewer, 0.0, px_amt)
         return True
 
     def kp_pan_px_center(self, viewer, event, data_x, data_y, msg=True):

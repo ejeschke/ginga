@@ -311,8 +311,7 @@ class ImageViewEvent(ImageViewPg):
         self._button = button
         self.logger.debug("button event at %dx%d, button=%x" % (x, y, button))
 
-        data_x, data_y = self.get_data_xy(x, y)
-        self.last_data_x, self.last_data_y = data_x, data_y
+        data_x, data_y = self.check_cursor_location()
         return self.make_ui_callback('button-press', button, data_x, data_y)
 
     def button_release_event(self, event):
@@ -324,8 +323,7 @@ class ImageViewEvent(ImageViewPg):
         self._button = 0
         self.logger.debug("button release at %dx%d button=%x" % (x, y, button))
 
-        data_x, data_y = self.get_data_xy(x, y)
-        self.last_data_x, self.last_data_y = data_x, data_y
+        data_x, data_y = self.check_cursor_location()
         return self.make_ui_callback('button-release', button, data_x, data_y)
 
     def motion_notify_event(self, event):
@@ -336,8 +334,7 @@ class ImageViewEvent(ImageViewPg):
 
         self.logger.debug("motion event at %dx%d, button=%x" % (x, y, button))
 
-        data_x, data_y = self.get_data_xy(x, y)
-        self.last_data_x, self.last_data_y = data_x, data_y
+        data_x, data_y = self.check_cursor_location()
 
         return self.make_ui_callback('motion', button, data_x, data_y)
 
@@ -358,8 +355,7 @@ class ImageViewEvent(ImageViewPg):
         self.logger.debug("scroll deg=%f direction=%f" % (
             numDegrees, direction))
 
-        data_x, data_y = self.get_data_xy(x, y)
-        self.last_data_x, self.last_data_y = data_x, data_y
+        data_x, data_y = self.check_cursor_location()
 
         return self.make_ui_callback('scroll', direction, numDegrees,
                                   data_x, data_y)

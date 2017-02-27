@@ -86,7 +86,7 @@ class DrawingMixin(object):
                      'cursor-down', 'cursor-up', 'cursor-move',
                      'draw-scroll', 'keydown-poly_add', 'keydown-poly_del',
                      'keydown-edit_del', 'edit-event',
-                     'edit-select', 'drag-drop'):
+                     'edit-select', 'drag-drop', 'cursor-changed'):
             self.enable_callback(name)
 
     def set_surface(self, viewer):

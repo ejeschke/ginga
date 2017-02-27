@@ -396,8 +396,7 @@ class ImageViewEvent(ImageViewGtk):
             button |= 0x1 << (event.button - 1)
         self.logger.debug("button event at %dx%d, button=%x" % (x, y, button))
 
-        data_x, data_y = self.get_data_xy(x, y)
-        self.last_data_x, self.last_data_y = data_x, data_y
+        data_x, data_y = self.check_cursor_location()
 
         return self.make_ui_callback('button-press', button, data_x, data_y)
 
@@ -411,8 +410,7 @@ class ImageViewEvent(ImageViewGtk):
             button |= 0x1 << (event.button - 1)
         self.logger.debug("button release at %dx%d button=%x" % (x, y, button))
 
-        data_x, data_y = self.get_data_xy(x, y)
-        self.last_data_x, self.last_data_y = data_x, data_y
+        data_x, data_y = self.check_cursor_location()
 
         return self.make_ui_callback('button-release', button, data_x, data_y)
 
@@ -433,8 +431,7 @@ class ImageViewEvent(ImageViewGtk):
             button |= 0x4
         # self.logger.debug("motion event at %dx%d, button=%x" % (x, y, button))
 
-        data_x, data_y = self.get_data_xy(x, y)
-        self.last_data_x, self.last_data_y = data_x, data_y
+        data_x, data_y = self.check_cursor_location()
 
         return self.make_ui_callback('motion', button, data_x, data_y)
 
@@ -456,8 +453,7 @@ class ImageViewEvent(ImageViewGtk):
         self.logger.debug("scroll deg=%f direction=%f" % (
             degrees, direction))
 
-        data_x, data_y = self.get_data_xy(x, y)
-        self.last_data_x, self.last_data_y = data_x, data_y
+        data_x, data_y = self.check_cursor_location()
 
         return self.make_ui_callback('scroll', direction, degrees,
                                   data_x, data_y)

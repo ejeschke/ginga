@@ -73,6 +73,8 @@ Panning and Zooming commands
 +----------------------+--------------------------------------------------+
 | Shift + Left click   | Set pan position for zooming                     |
 +----------------------+--------------------------------------------------+
+| Shift + arrow key    | Move pan position 1 pixel in that direction      |
++----------------------+--------------------------------------------------+
 | c                    | Set pan position to the center of the image      |
 +----------------------+--------------------------------------------------+
 | q                    | Enter Pan mode. See Pan section.                 | 

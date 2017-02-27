@@ -73,7 +73,7 @@ class PixTable(GingaPlugin.LocalPlugin):
         self.dc = self.fv.get_draw_classes()
         canvas = self.dc.DrawingCanvas()
         canvas.set_callback('cursor-down', self.btndown_cb)
-        canvas.set_callback('none-move', self.motion_cb)
+        canvas.set_callback('cursor-changed', self.cursor_cb)
         canvas.set_surface(self.fitsimage)
         self.canvas = canvas
 
@@ -432,7 +432,7 @@ class PixTable(GingaPlugin.LocalPlugin):
         self.pixtbl_radius = self.sizes[index]
         self._rebuild_table()
 
-    def motion_cb(self, canvas, event, data_x, data_y):
+    def cursor_cb(self, canvas, junk, data_x, data_y):
         if self.mark_selected is not None:
             return False
         if self.pixview is None:

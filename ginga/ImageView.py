@@ -339,7 +339,7 @@ class ImageViewBase(Callback.Callbacks):
 
         # For callbacks
         for name in ('transform', 'image-set', 'image-unset', 'configure',
-                     'redraw', 'limits-set'):
+                     'redraw', 'limits-set', 'cursor-changed'):
             self.enable_callback(name)
 
 
@@ -1177,6 +1177,31 @@ class ImageViewBase(Callback.Callbacks):
         # TODO: see if we can deprecate this fake callback
         if whence <= 0:
             self.make_callback('redraw')
+
+        if whence < 2:
+            self.check_cursor_location()
+
+    def check_cursor_location(self):
+        """Check whether the data location of the last known position
+        of the cursor has changed.  If so, issue a callback.
+        """
+        # Check whether cursor data position has changed relative
+        # to previous value
+        data_x, data_y = self.get_data_xy(self.last_win_x,
+                                          self.last_win_y)
+        if (data_x != self.last_data_x or
+            data_y != self.last_data_y):
+            self.last_data_x, self.last_data_y = data_x, data_y
+            self.logger.debug("cursor location changed %.4f,%.4f => %.4f,%.4f" % (
+                self.last_data_x, self.last_data_y, data_x, data_y))
+
+            # we make this call compatible with the motion callback
+            # for now, but there is no concept of a button here
+            button = 0
+
+            self.make_ui_callback('cursor-changed', button, data_x, data_y)
+
+        return data_x, data_y
 
     def getwin_array(self, order='RGB', alpha=1.0):
         """Get Numpy data array for display window.

@@ -1,9 +1,6 @@
 #
 # ImageViewMock.py -- a backend for Ginga using a mock renderer
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -354,8 +351,7 @@ class ImageViewEvent(ImageViewMock):
         # Others can be added as appropriate
         self.logger.debug("button down event at %dx%d, button=%x" % (x, y, button))
 
-        data_x, data_y = self.get_data_xy(x, y)
-        self.last_data_x, self.last_data_y = data_x, data_y
+        data_x, data_y = self.check_cursor_location()
 
         return self.make_ui_callback('button-press', button, data_x, data_y)
 
@@ -370,8 +366,7 @@ class ImageViewEvent(ImageViewMock):
         button = 0
         # prepare button mask as in button_press_event()
 
-        data_x, data_y = self.get_data_xy(x, y)
-        self.last_data_x, self.last_data_y = data_x, data_y
+        data_x, data_y = self.check_cursor_location()
 
         return self.make_ui_callback('button-release', button, data_x, data_y)
 
@@ -386,8 +381,7 @@ class ImageViewEvent(ImageViewMock):
         button = 0
         # prepare button mask as in button_press_event()
 
-        data_x, data_y = self.get_data_xy(x, y)
-        self.last_data_x, self.last_data_y = data_x, data_y
+        data_x, data_y = self.check_cursor_location()
 
         return self.make_ui_callback('motion', button, data_x, data_y)
 
@@ -407,8 +401,7 @@ class ImageViewEvent(ImageViewMock):
         self.logger.debug("scroll deg=%f direction=%f" % (
             numDegrees, direction))
 
-        data_x, data_y = self.get_data_xy(x, y)
-        self.last_data_x, self.last_data_y = data_x, data_y
+        data_x, data_y = self.check_cursor_location()
 
         return self.make_ui_callback('scroll', direction, numDegrees,
                                   data_x, data_y)

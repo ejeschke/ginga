@@ -544,8 +544,7 @@ class QtEventMixin(object):
             button |= 0x4
         self.logger.debug("button down event at %dx%d, button=%x" % (x, y, button))
 
-        data_x, data_y = self.get_data_xy(x, y)
-        self.last_data_x, self.last_data_y = data_x, data_y
+        data_x, data_y = self.check_cursor_location()
 
         return self.make_ui_callback('button-press', button, data_x, data_y)
 
@@ -563,8 +562,7 @@ class QtEventMixin(object):
         if buttons & QtCore.Qt.RightButton:
             button |= 0x4
 
-        data_x, data_y = self.get_data_xy(x, y)
-        self.last_data_x, self.last_data_y = data_x, data_y
+        data_x, data_y = self.check_cursor_location()
 
         return self.make_ui_callback('button-release', button, data_x, data_y)
 
@@ -591,8 +589,7 @@ class QtEventMixin(object):
         if buttons & QtCore.Qt.RightButton:
             button |= 0x4
 
-        data_x, data_y = self.get_data_xy(x, y)
-        self.last_data_x, self.last_data_y = data_x, data_y
+        data_x, data_y = self.check_cursor_location()
 
         return self.make_ui_callback('motion', button, data_x, data_y)
 
@@ -615,8 +612,7 @@ class QtEventMixin(object):
             else:
                 src = 'trackpad'
 
-        data_x, data_y = self.get_data_xy(x, y)
-        self.last_data_x, self.last_data_y = data_x, data_y
+        data_x, data_y = self.check_cursor_location()
 
         return self.make_ui_callback('scroll', direction, num_degrees,
                                      data_x, data_y)
@@ -780,7 +776,7 @@ class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
                                 rgbmap=rgbmap, render=render)
         Mixins.UIMixin.__init__(self)
 
-        self.ui_setActive(True)
+        self.ui_set_active(True)
 
         if bindmap is None:
             bindmap = ImageViewZoom.bindmapClass(self.logger)
