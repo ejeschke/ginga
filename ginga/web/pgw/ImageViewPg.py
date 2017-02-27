@@ -227,6 +227,16 @@ class ImageViewEvent(ImageViewPg):
             'f10': 'f10',
             'f11': 'f11',
             'f12': 'f12',
+            37: 'left',
+            38: 'up',
+            39: 'right',
+            40: 'down',
+            45: 'insert',
+            46: 'delete',
+            36: 'home',
+            35: 'end',
+            33: 'page_up',
+            34: 'page_down',
             }
 
         self._browser_problem_keys = ('shift_l', 'control_l', 'escape',

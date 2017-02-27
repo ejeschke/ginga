@@ -333,6 +333,12 @@ class ImageViewEvent(ImageViewGtk):
             'left': 'left',
             'up': 'up',
             'down': 'down',
+            'insert': 'insert',
+            'delete': 'delete',
+            'home': 'home',
+            'end': 'end',
+            'page_up': 'page_up',
+            'page_down': 'page_down',
             }
 
         # Define cursors

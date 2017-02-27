@@ -217,6 +217,16 @@ class ImageViewEvent(ImageViewTk):
             'f10': 'f10',
             'f11': 'f11',
             'f12': 'f12',
+            'right': 'right',
+            'left': 'left',
+            'up': 'up',
+            'down': 'down',
+            'insert': 'insert',
+            'delete': 'delete',
+            'home': 'home',
+            'end': 'end',
+            'prior': 'page_up',
+            'next': 'page_down',
             }
 
         # Define cursors for pick and pan

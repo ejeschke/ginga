@@ -225,17 +225,10 @@ if __name__ == "__main__":
 
     optprs.add_option("--debug", dest="debug", default=False, action="store_true",
                       help="Enter the pdb debugger on main()")
-    optprs.add_option("--log", dest="logfile", metavar="FILE",
-                      help="Write logging output to FILE")
-    optprs.add_option("--loglevel", dest="loglevel", metavar="LEVEL",
-                      type='int', default=None,
-                      help="Set logging level to LEVEL")
-    optprs.add_option("--stderr", dest="logstderr", default=False,
-                      action="store_true",
-                      help="Copy logging also to stderr")
     optprs.add_option("--profile", dest="profile", action="store_true",
                       default=False,
                       help="Run the profiler on main()")
+    log.addlogopts(optprs)
 
     (options, args) = optprs.parse_args(sys.argv[1:])
 

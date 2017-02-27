@@ -345,6 +345,16 @@ class ImageViewEvent(ImageViewMpl):
             'f10': 'f10',
             'f11': 'f11',
             'f12': 'f12',
+            'right': 'right',
+            'left': 'left',
+            'up': 'up',
+            'down': 'down',
+            'insert': 'insert',
+            'delete': 'delete',
+            'home': 'home',
+            'end': 'end',
+            'pageup': 'page_up',
+            'pagedown': 'page_down',
             }
 
         # Define cursors for pick and pan
@@ -386,7 +396,12 @@ class ImageViewEvent(ImageViewMpl):
         if keyname is None:
             return keyname
         try:
-            return self._keytbl[keyname.lower()]
+            key = keyname.lower()
+            if 'shift+' in key:
+                key = key.replace('shift+', '')
+            if 'ctrl+' in key:
+                key = key.replace('ctrl+', '')
+            return self._keytbl[key]
 
         except KeyError:
             return keyname
