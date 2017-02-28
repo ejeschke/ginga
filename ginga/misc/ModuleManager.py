@@ -4,39 +4,45 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-"""Dynamically manage module imports."""
+"""
+Dynamically manage module imports.
+
+The ModuleManager class
+"""
 
 from __future__ import absolute_import
 
-from ..util.six.moves import reload_module
-import imp
+import sys, os
+import importlib
 
 __all__ = ['ModuleManager']
 
 
 def my_import(name, path=None):
     """Return imported module for the given name."""
-    if path is not None:
-        description = ('.py', 'r', imp.PY_SOURCE)
 
-        with open(path, 'r') as fp:
-            mod = imp.load_module(name, fp, path, description)
+    # Documentation for importlib says this may be needed to pick up
+    # modules created after the program has started
+    if hasattr(importlib, 'invalidate_caches'):
+        # python 3.3+
+        importlib.invalidate_caches()
+
+    if path is not None:
+        directory, src_file = os.path.split(path)
+
+        # it would be better to use the importlib.util machinery
+        # but it is not supported on python 3 versions < 3.5
+        sys.path.insert(0, directory)
+        try:
+            mod = importlib.import_module(name)
+        finally:
+            sys.path.pop(0)
 
     else:
         components = name.split('.')
-        for comp in components:
-            fp, path, description = imp.find_module(comp, path=path)
-
-            try:
-                mod = imp.load_module(comp, fp, path, description)
-                if hasattr(mod, '__path__'):
-                    path = mod.__path__
-                else:
-                    path = mod.__file__
-
-            finally:
-                if fp is not None:
-                    fp.close()
+        modname = components[-1]
+        pkg = '.'.join(components[:-1])
+        mod = importlib.import_module(modname, package=pkg)
 
     return mod
 
@@ -55,11 +61,17 @@ class ModuleManager(object):
         self.module = {}
 
     def load_module(self, module_name, pfx=None, path=None):
-        """Load module from the given name."""
+        """Load/reload module from the given name."""
         try:
             if module_name in self.module:
                 self.logger.info("Reloading module '%s'..." % module_name)
-                module = reload_module(self.module[module_name])
+                if hasattr(importlib, 'reload'):
+                    # python 3.4+
+                    module = importlib.reload(self.module[module_name])
+
+                else:
+                    import imp
+                    module = imp.reload(self.module[module_name])
 
             else:
                 if pfx:
@@ -71,6 +83,7 @@ class ModuleManager(object):
                 module = my_import(name, path=path)
 
             self.module[module_name] = module
+            return module
 
         except Exception as e:
             self.logger.error("Failed to load module '%s': %s" % (
@@ -80,6 +93,7 @@ class ModuleManager(object):
     def get_module(self, module_name):
         """Return loaded module from the given name."""
         return self.module[module_name]
+
 
     ########################################################
     ### NON-PEP8 PREDECESSORS: TO BE DEPRECATED
