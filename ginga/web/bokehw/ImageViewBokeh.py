@@ -71,7 +71,7 @@ class ImageViewBokeh2(ImageViewSS):
 
         # NOTE: Bokeh manages it's Y coordinates by default with
         # the origin at the bottom (see base class)
-        self._originUpper = False
+        self.origin_upper = False
 
         # override, until we can get access to a timer
         #self.defer_redraw = False
@@ -195,7 +195,7 @@ class ImageViewBokeh(ImageView.ImageViewBase):
 
         # NOTE: Bokeh manages it's Y coordinates by default with
         # the origin at the bottom (see base class)
-        self._originUpper = False
+        self.origin_upper = False
 
         self.img_fg = (1.0, 1.0, 1.0)
         self.img_bg = (0.5, 0.5, 0.5)

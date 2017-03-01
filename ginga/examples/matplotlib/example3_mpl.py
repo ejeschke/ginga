@@ -75,10 +75,10 @@ class FitsViewer(QtGui.QMainWindow):
         fi.set_autocut_params('zscale')
         fi.enable_autozoom('on')
         fi.enable_draw(False)
-        fi.set_callback('drag-drop', self.drop_file)
-        fi.set_callback('none-move', self.motion)
+        fi.set_callback('drag-drop', self.drop_file_cb)
+        fi.set_callback('cursor-changed', self.cursor_cb)
         fi.set_bg(0.2, 0.2, 0.2)
-        fi.ui_setActive(True)
+        fi.ui_set_active(True)
         self.fitsimage = fi
 
         fi.show_color_bar(True)
@@ -217,7 +217,7 @@ class FitsViewer(QtGui.QMainWindow):
             # radius we want the arms to be (approx 1/4 the largest dimension)
             radius = float(max(width, height)) / 4.0
 
-            Compass = self.fitsimage.getDrawClass('compass')
+            Compass = self.fitsimage.get_draw_class('compass')
             self.fitsimage.add(Compass(x, y, radius, color='skyblue',
                                        fontsize=14), tag=self.cp_tag)
         except Exception as e:
@@ -235,22 +235,23 @@ class FitsViewer(QtGui.QMainWindow):
         if len(fileName) != 0:
             self.load_file(fileName)
 
-    def drop_file(self, fitsimage, paths):
-        fileName = paths[0]
-        #print(fileName)
-        self.load_file(fileName)
+    def drop_file_cb(self, viewer, paths):
+        filename = paths[0]
+        self.load_file(filename)
 
     def closeEvent(self, ce):
         self.close()
 
-    def motion(self, fitsimage, button, data_x, data_y):
-
+    def cursor_cb(self, viewer, button, data_x, data_y):
+        """This gets called when the data position relative to the cursor
+        changes.
+        """
         # Get the value under the data coordinates
         try:
-            #value = fitsimage.get_data(data_x, data_y)
             # We report the value across the pixel, even though the coords
             # change halfway across the pixel
-            value = fitsimage.get_data(int(data_x+0.5), int(data_y+0.5))
+            value = viewer.get_data(int(data_x + viewer.data_off),
+                                    int(data_y + viewer.data_off))
 
         except Exception:
             value = None
@@ -260,7 +261,7 @@ class FitsViewer(QtGui.QMainWindow):
         # Calculate WCS RA
         try:
             # NOTE: image function operates on DATA space coords
-            image = fitsimage.get_image()
+            image = viewer.get_image()
             if image is None:
                 # No image loaded
                 return

@@ -223,6 +223,8 @@ class ImageViewBase(Callback.Callbacks):
         # limits for data
         self._limits = None
 
+        # viewer window backend has its canvas origin (0, 0) in upper left
+        self.origin_upper = True
         # offset of pixel 0 from data coordinates
         # (pixels are centered on the coordinate)
         self.data_off = 0.5
@@ -235,8 +237,7 @@ class ImageViewBase(Callback.Callbacks):
         # offsets in the screen image for drawing (in screen coords)
         self._dst_x = 0
         self._dst_y = 0
-        self._invertY = True
-        self._originUpper = True
+        self._invert_y = True
         self._self_scaling = False
         # offsets in the screen image (in data coords)
         self._off_x = 0
@@ -1132,6 +1133,7 @@ class ImageViewBase(Callback.Callbacks):
 
             # finally update the window drawable from the offscreen surface
             self.update_image()
+
             time_done = time.time()
             time_delta = time_start - self.time_last_redraw
             time_elapsed = time_done - time_start
@@ -1517,7 +1519,7 @@ class ImageViewBase(Callback.Callbacks):
         split2_time = time.time()
 
         # apply other transforms
-        if self._invertY:
+        if self._invert_y:
             # Flip Y for natural natural Y-axis inversion between FITS coords
             # and screen coords
             data = numpy.flipud(data)
@@ -2721,7 +2723,7 @@ class ImageViewBase(Callback.Callbacks):
         image = self.get_image()
         if image is None:
             return
-        invertY = not isinstance(image, AstroImage.AstroImage)
+        invert_y = not isinstance(image, AstroImage.AstroImage)
 
         # Check for various things to set based on metadata
         header = image.get_header()
@@ -2740,14 +2742,14 @@ class ImageViewBase(Callback.Callbacks):
                     flip_x, flip_y, swap_xy = self.orientMap[orient]
 
                     self.transform(flip_x, flip_y, swap_xy)
-                    invertY = False
+                    invert_y = False
 
                 except Exception as e:
                     # problems figuring out orientation--let it be
                     self.logger.error("orientation error: %s" % str(e))
                     pass
 
-        if invertY:
+        if invert_y:
             flip_x, flip_y, swap_xy = self.get_transforms()
             #flip_y = not flip_y
             flip_y = True
@@ -2851,7 +2853,7 @@ class ImageViewBase(Callback.Callbacks):
             Returns `True` if the origin is up, `False` otherwise.
 
         """
-        return self._originUpper
+        return self.origin_upper
 
     def get_last_win_xy(self):
         """Get the last position of the cursor in window coordinates.

@@ -99,8 +99,8 @@ class GingaVision(object):
         self.fitsimage = fi
 
         # these options are needed for correct panning with this type of image
-        fi._invertY = False
-        fi._originUpper = False
+        fi._invert_y = False
+        fi.origin_upper = False
 
         # <-- Some optimizations to smooth playback at decent FPS
         fi.set_redraw_lag(self.playback_rate)

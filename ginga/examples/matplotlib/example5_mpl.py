@@ -3,9 +3,6 @@
 # example5_mpl.py -- Load a fits file into a Ginga widget with a
 #          matplotlib backend.
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c)  Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -69,13 +66,12 @@ class MyGingaFigure(object):
         canvas = DrawingCanvas()
         canvas.enable_draw(True)
         canvas.set_callback('button-press', self.btn_down)
-        #canvas.set_callback('motion', self.drag)
         canvas.set_callback('button-release', self.btn_up)
         canvas.set_drawtype('point', color='cyan')
         canvas.set_callback('draw-event', self.draw_event)
         canvas.add_callback('key-press', self.key_press)
-        canvas.setSurface(self.fitsimage)
-        canvas.ui_setActive(True)
+        canvas.set_surface(self.fitsimage)
+        canvas.ui_set_active(True)
         self.canvas = canvas
 
     def load(self, fitspath):

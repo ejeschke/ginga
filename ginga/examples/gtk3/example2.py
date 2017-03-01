@@ -7,7 +7,6 @@
 #
 from __future__ import print_function
 import sys, os
-import logging, logging.handlers
 
 from ginga import AstroImage
 from ginga.gtk3w import GtkHelp
@@ -43,10 +42,10 @@ class FitsViewer(object):
         fi.set_zoom_algorithm('rate')
         fi.set_zoomrate(1.4)
         fi.show_pan_mark(True)
-        fi.set_callback('drag-drop', self.drop_file)
-        fi.set_callback('none-move', self.motion)
+        fi.set_callback('drag-drop', self.drop_file_cb)
+        fi.set_callback('cursor-changed', self.cursor_cb)
         fi.set_bg(0.2, 0.2, 0.2)
-        fi.ui_setActive(True)
+        fi.ui_set_active(True)
         self.fitsimage = fi
 
         bd = fi.get_bindings()
@@ -56,13 +55,13 @@ class FitsViewer(object):
         canvas = self.dc.DrawingCanvas()
         canvas.enable_draw(True)
         canvas.set_drawtype('rectangle', color='lightblue')
-        canvas.setSurface(fi)
+        canvas.set_surface(fi)
         self.canvas = canvas
         # add canvas to view
         private_canvas = fi.get_canvas()
         private_canvas.register_for_cursor_drawing(fi)
         private_canvas.add(canvas)
-        canvas.ui_setActive(True)
+        canvas.ui_set_active(True)
         self.drawtypes = canvas.get_drawtypes()
         self.drawtypes.sort()
 
@@ -166,18 +165,20 @@ class FitsViewer(object):
     def open_file(self, w):
         self.select.popup("Open FITS file", self.load_file)
 
-    def drop_file(self, fitsimage, paths):
+    def drop_file_cb(self, fitsimage, paths):
         fileName = paths[0]
         self.load_file(fileName)
 
-    def motion(self, fitsimage, button, data_x, data_y):
-
+    def cursor_cb(self, viewer, button, data_x, data_y):
+        """This gets called when the data position relative to the cursor
+        changes.
+        """
         # Get the value under the data coordinates
         try:
-            #value = fitsimage.get_data(data_x, data_y)
             # We report the value across the pixel, even though the coords
             # change halfway across the pixel
-            value = fitsimage.get_data(int(data_x+0.5), int(data_y+0.5))
+            value = viewer.get_data(int(data_x + viewer.data_off),
+                                    int(data_y + viewer.data_off))
 
         except Exception:
             value = None
@@ -187,7 +188,7 @@ class FitsViewer(object):
         # Calculate WCS RA
         try:
             # NOTE: image function operates on DATA space coords
-            image = fitsimage.get_image()
+            image = viewer.get_image()
             if image is None:
                 # No image loaded
                 return

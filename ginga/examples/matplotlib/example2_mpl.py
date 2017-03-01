@@ -39,10 +39,10 @@ class FitsViewer(QtGui.QMainWindow):
         fi.set_autocut_params('zscale')
         fi.enable_autozoom('on')
         fi.enable_draw(False)
-        fi.set_callback('drag-drop', self.drop_file)
-        fi.set_callback('none-move', self.motion)
+        fi.set_callback('drag-drop', self.drop_file_cb)
+        fi.set_callback('cursor-changed', self.cursor_cb)
         fi.set_bg(0.2, 0.2, 0.2)
-        fi.ui_setActive(True)
+        fi.ui_set_active(True)
         self.fitsimage = fi
         fi.set_figure(fig)
 
@@ -55,11 +55,11 @@ class FitsViewer(QtGui.QMainWindow):
         canvas.enable_draw(True)
         #canvas.enable_edit(True)
         canvas.set_drawtype('rectangle', color='lightblue')
-        canvas.setSurface(fi)
+        canvas.set_surface(fi)
         self.canvas = canvas
         # add canvas to view
         fi.add(canvas)
-        canvas.ui_setActive(True)
+        canvas.ui_set_active(True)
 
         w.resize(512, 512)
 
@@ -160,19 +160,20 @@ class FitsViewer(QtGui.QMainWindow):
         if len(fileName) != 0:
             self.load_file(fileName)
 
-    def drop_file(self, fitsimage, paths):
+    def drop_file_cb(self, viewer, paths):
         fileName = paths[0]
-        #print(fileName)
         self.load_file(fileName)
 
-    def motion(self, fitsimage, button, data_x, data_y):
-
+    def cursor_cb(self, viewer, button, data_x, data_y):
+        """This gets called when the data position relative to the cursor
+        changes.
+        """
         # Get the value under the data coordinates
         try:
-            #value = fitsimage.get_data(data_x, data_y)
             # We report the value across the pixel, even though the coords
             # change halfway across the pixel
-            value = fitsimage.get_data(int(data_x+0.5), int(data_y+0.5))
+            value = viewer.get_data(int(data_x + viewer.data_off),
+                                    int(data_y + viewer.data_off))
 
         except Exception:
             value = None
@@ -182,7 +183,7 @@ class FitsViewer(QtGui.QMainWindow):
         # Calculate WCS RA
         try:
             # NOTE: image function operates on DATA space coords
-            image = fitsimage.get_image()
+            image = viewer.get_image()
             if image is None:
                 # No image loaded
                 return
@@ -197,6 +198,7 @@ class FitsViewer(QtGui.QMainWindow):
         text = "RA: %s  DEC: %s  X: %.2f  Y: %.2f  Value: %s" % (
             ra_txt, dec_txt, fits_x, fits_y, value)
         self.readout.setText(text)
+
 
 def main(options, args):
 

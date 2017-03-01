@@ -52,9 +52,9 @@ class FitsViewer(object):
         fi.set_autocut_params('zscale')
         fi.enable_autozoom('on')
         fi.enable_draw(False)
-        fi.set_callback('none-move', self.motion)
+        fi.set_callback('cursor-changed', self.cursor_cb)
         fi.set_bg(0.2, 0.2, 0.2)
-        fi.ui_setActive(True)
+        fi.ui_set_active(True)
         fi.show_pan_mark(True)
         self.fitsimage = fi
 
@@ -71,7 +71,7 @@ class FitsViewer(object):
         self.canvas = canvas
         # add canvas to view
         fi.add(canvas)
-        canvas.ui_setActive(True)
+        canvas.ui_set_active(True)
 
         fi.configure(512, 512)
 
@@ -155,14 +155,16 @@ class FitsViewer(object):
                                               ("fitsfiles","*.fits")])
         self.load_file(filename)
 
-    def motion(self, fitsimage, button, data_x, data_y):
-
+    def cursor_cb(self, viewer, button, data_x, data_y):
+        """This gets called when the data position relative to the cursor
+        changes.
+        """
         # Get the value under the data coordinates
         try:
-            #value = fitsimage.get_data(data_x, data_y)
             # We report the value across the pixel, even though the coords
             # change halfway across the pixel
-            value = fitsimage.get_data(int(data_x+0.5), int(data_y+0.5))
+            value = viewer.get_data(int(data_x + viewer.data_off),
+                                    int(data_y + viewer.data_off))
 
         except Exception:
             value = None
@@ -172,7 +174,7 @@ class FitsViewer(object):
         # Calculate WCS RA
         try:
             # NOTE: image function operates on DATA space coords
-            image = fitsimage.get_image()
+            image = viewer.get_image()
             if image is None:
                 # No image loaded
                 return

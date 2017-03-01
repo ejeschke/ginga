@@ -61,7 +61,7 @@ class ImageViewMpl(ImageView.ImageViewBase):
 
         # NOTE: matplotlib manages it's Y coordinates by default with
         # the origin at the bottom (see base class)
-        self._originUpper = False
+        self.origin_upper = False
 
         self.img_fg = (1.0, 1.0, 1.0)
         self.img_bg = (0.5, 0.5, 0.5)

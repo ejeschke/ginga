@@ -61,7 +61,7 @@ class CanvasWindowTransform(BaseTransform):
         self.viewer = viewer
 
     def to_(self, cvs_x, cvs_y):
-        if self.viewer._originUpper:
+        if self.viewer.origin_upper:
             return (cvs_x, cvs_y)
 
         # invert Y coord for backends that have the origin in the lower left
@@ -89,7 +89,7 @@ class CartesianWindowTransform(BaseTransform):
         # canvas graphics space
         ctr_x, ctr_y = self.viewer.get_center()
         win_x = off_x + ctr_x
-        if self.viewer._originUpper:
+        if self.viewer.origin_upper:
             win_y = ctr_y - off_y
         else:
             win_y = off_y + ctr_y
@@ -107,7 +107,7 @@ class CartesianWindowTransform(BaseTransform):
         # graphics space to standard X/Y coordinate space
         ctr_x, ctr_y = self.viewer.get_center()
         off_x = win_x - ctr_x
-        if self.viewer._originUpper:
+        if self.viewer.origin_upper:
             off_y = ctr_y - win_y
         else:
             off_y = win_y - ctr_y
