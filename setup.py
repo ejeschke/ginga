@@ -104,11 +104,22 @@ package_info['package_data'][PACKAGENAME].extend(c_files)
 # ``setup``, since these are now deprecated. See this link for more details:
 # https://groups.google.com/forum/#!topic/astropy-dev/urYO8ckB2uM
 
+# pretty much needed
+install_requires = ['astropy>=0.4', 'numpy>=1.7', 'qtpy>=1.1',
+                    'setuptools>=1.0']
+
+# nice to have, but not required, depending on the application
+extras_require = {
+    'recommended': ['pillow>=3.2.0', 'scipy>=0.18.1', 'matplotlib>=1.5.1',
+                    'pyopencl>=2016.2.1'],
+}
+
 setup(name=PACKAGENAME,
       version=VERSION,
       description=DESCRIPTION,
       scripts=scripts,
-      install_requires=['astropy', 'numpy>=1.7', 'qtpy>=1.1'],
+      install_requires=install_requires,
+      extras_require=extras_require,
       author=AUTHOR,
       author_email=AUTHOR_EMAIL,
       license=LICENSE,

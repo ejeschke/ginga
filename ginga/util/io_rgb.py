@@ -23,23 +23,12 @@ try:
 except ImportError:
     have_pil = False
 
-# We only need one of { have_pilutil, have_qtimage }, but both have
-# their strengths
 have_pilutil = False
-have_qtimage = False
 try:
     from scipy.misc import imresize, imsave, toimage, fromimage
     have_pilutil = True
 except ImportError:
     pass
-
-# Qt can be used as a replacement for PIL
-if not have_pilutil:
-    try:
-        from ginga.qtw.QtHelp import QImage, QColor, QtCore
-        have_qtimage = True
-    except ImportError as e:
-        pass
 
 # EXIF library for getting metadata, in the case that we don't have PIL
 try:
@@ -56,10 +45,10 @@ except ImportError:
     have_cms = False
 
 # For testing...
-#have_qtimage = False
 #have_pilutil = False
 #have_pil = False
 #have_cms = False
+#have_exif = False
 
 
 class RGBFileHandler(object):
@@ -171,18 +160,6 @@ class RGBFileHandler(object):
 
             data_np = numpy.array(image)
 
-        elif have_qtimage:
-            # QImage doesn't give EXIF info, so use 3rd-party lib if available
-            if have_exif:
-                with open(filepath, 'rb') as in_f:
-                    d = EXIF.process_file(in_f)
-                kwds.update(d)
-
-            means = 'QImage'
-            qimage = QImage()
-            qimage.load(filepath)
-            data_np = qimage2numpy(qimage)
-
         else:
             raise ImageError("No way to load image format '%s/%s'" % (
                 typ, subtyp))
@@ -236,22 +213,7 @@ class RGBFileHandler(object):
         old_ht, old_wd = data.shape[:2]
         start_time = time.time()
 
-        if have_qtimage:
-            # QImage method is slightly faster and gives a smoother looking
-            # result than PIL
-            means = 'QImage'
-            qimage = numpy2qimage(data)
-            if (old_wd != new_wd) or (old_ht != new_ht):
-                # NOTE: there is a strange bug in qimage.scaled if the new
-                # dimensions are exactly the same--so we check and only
-                # scale if there is some difference
-                qimage = qimage.scaled(new_wd, new_ht,
-                                   transformMode=QtCore.Qt.SmoothTransformation)
-                newdata = qimage2numpy(qimage)
-            else:
-                newdata = data
-
-        elif have_pilutil:
+        if have_pilutil:
             means = 'PIL'
             zoom_x = float(new_wd) / float(old_wd)
             zoom_y = float(new_ht) / float(old_ht)
@@ -314,114 +276,6 @@ def open_ppm(filepath):
         arr = arr.byteswap()
     return arr
 
-
-# --- Credit ---
-#   the following function set by Hans Meine was found here:
-#  http://kogs-www.informatik.uni-hamburg.de/~meine/software/vigraqt/qimage2ndarray.py
-#
-# see also a newer version at
-#   http://kogs-www.informatik.uni-hamburg.de/~meine/software/qimage2ndarray/
-#
-def qimage2numpy(qimage):
-    """Convert QImage to numpy.ndarray."""
-    #print "FORMAT IS %s" % str(qimage.format())
-    result_shape = (qimage.height(), qimage.width())
-    temp_shape = (qimage.height(),
-                  qimage.bytesPerLine() * 8 / qimage.depth())
-    if qimage.format() in (QImage.Format_ARGB32_Premultiplied,
-                              QImage.Format_ARGB32,
-                              QImage.Format_RGB32):
-        dtype = numpy.uint8
-        result_shape += (4, )
-        temp_shape += (4, )
-    else:
-        raise ValueError("qimage2numpy only supports 32bit and 8bit images")
-
-    # FIXME: raise error if alignment does not match
-    buf = qimage.bits()
-    if hasattr(buf, 'asstring'):
-        # Qt4
-        buf = bytes(buf.asstring(qimage.numBytes()))
-    else:
-        # PySide
-        buf = bytes(buf)
-    result = numpy.frombuffer(buf, dtype).reshape(temp_shape)
-    if result_shape != temp_shape:
-        result = result[:,:result_shape[1]]
-
-    # QImage loads the image as BGRA, we want RGB
-    #res = numpy.dstack((result[:, :, 2], result[:, :, 1], result[:, :, 0]))
-    res = numpy.empty((qimage.height(), qimage.width(), 3))
-    res[:, :, 0] = result[:, :, 2]
-    res[:, :, 1] = result[:, :, 1]
-    res[:, :, 2] = result[:, :, 0]
-    return res
-
-def numpy2qimage(array):
-    if numpy.ndim(array) == 2:
-        return gray2qimage(array)
-    elif numpy.ndim(array) == 3:
-        return rgb2qimage(array)
-    raise ValueError("can only convert 2D or 3D arrays")
-
-def gray2qimage(gray):
-    """Convert the 2D numpy array `gray` into a 8-bit QImage with a gray
-    colormap.  The first dimension represents the vertical image axis.
-
-    ATTENTION: This QImage carries an attribute `ndarray` with a
-    reference to the underlying numpy array that holds the data. On
-    Windows, the conversion into a QPixmap does not copy the data, so
-    that you have to take care that the QImage does not get garbage
-    collected (otherwise PyQt will throw away the wrapper, effectively
-    freeing the underlying memory - boom!)."""
-    if len(gray.shape) != 2:
-        raise ValueError("gray2QImage can only convert 2D arrays")
-
-    h, w = gray.shape
-    bgra = numpy.empty((h, w, 4), numpy.uint8, 'C')
-    bgra[...,0] = gray
-    bgra[...,1] = gray
-    bgra[...,2] = gray
-    bgra[...,3].fill(255)
-    fmt = QImage.Format_RGB32
-    result = QImage(bgra.data, w, h, fmt)
-    result.ndarray = bgra
-    return result
-
-def rgb2qimage(rgb):
-    """Convert the 3D numpy array `rgb` into a 32-bit QImage.  `rgb` must
-    have three dimensions with the vertical, horizontal and RGB image axes.
-
-    ATTENTION: This QImage carries an attribute `ndarray` with a
-    reference to the underlying numpy array that holds the data. On
-    Windows, the conversion into a QPixmap does not copy the data, so
-    that you have to take care that the QImage does not get garbage
-    collected (otherwise PyQt will throw away the wrapper, effectively
-    freeing the underlying memory - boom!)."""
-    if len(rgb.shape) != 3:
-        raise ValueError("rgb2QImage can only convert 3D arrays")
-    if rgb.shape[2] not in (3, 4):
-        raise ValueError("rgb2QImage can expects the last dimension to contain exactly three (R,G,B) or four (R,G,B,A) channels")
-
-    h, w, channels = rgb.shape
-
-    # Qt expects 32bit BGRA data for color images:
-    bgra = numpy.empty((h, w, 4), numpy.uint8, 'C')
-    bgra[...,0] = rgb[...,2]
-    bgra[...,1] = rgb[...,1]
-    bgra[...,2] = rgb[...,0]
-    if rgb.shape[2] == 3:
-        bgra[...,3].fill(255)
-        fmt = QImage.Format_RGB32
-    else:
-        bgra[...,3] = rgb[...,3]
-        fmt = QImage.Format_ARGB32
-
-    result = QImage(bgra.data, w, h, fmt)
-    result.ndarray = bgra
-    return result
-
-# --- end QImage to numpy conversion functions ---
 
 # --- Color Management conversion functions ---
 
@@ -580,11 +434,6 @@ if have_cms:
                    relative_colorimetric=ImageCms.INTENT_RELATIVE_COLORIMETRIC,
                    saturation=ImageCms.INTENT_SATURATION)
 
-    # # build input transforms
-    # for inprof, outprof in [('sRGB', 'working'), ('AdobeRGB', 'working')]:
-    #     for intent_name, intent_value in intents.items():
-    #         if os.path.exists(profile[inprof]) and os.path.exists(profile[outprof]):
-    #             get_transform(profile[inprof], profile[outprof])
 
 def get_profiles():
     names = list(profile.keys())

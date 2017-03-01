@@ -1,3 +1,4 @@
+
 #
 # GtkHelp.py -- customized Gtk2 widgets
 #
@@ -215,7 +216,8 @@ class Notebook(WidgetMask, gtk.Notebook):
         gtk.Notebook.__init__(self, *args, **kwdargs)
 
     def set_group_id(self, id):
-        super(Notebook, self).set_group_name(str(id))
+        if hasattr(self, 'set_group_name'):
+            super(Notebook, self).set_group_name(str(id))
 
     def set_current_page(self, new_idx):
         old_idx = self.get_current_page()
