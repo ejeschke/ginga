@@ -13,7 +13,6 @@ import tempfile
 import glob
 import threading
 import logging
-import mimetypes
 import platform
 import atexit
 import shutil
@@ -48,20 +47,6 @@ if six.PY2:
 else:
     import _thread as thread  # noqa
     import queue as Queue  # noqa
-
-magic_tester = None
-try:
-    import magic
-    have_magic = True
-    # it seems there are conflicting versions of a 'magic'
-    # module for python floating around...*sigh*
-    if not hasattr(magic, 'from_file'):
-        # TODO: do this at program start only
-        magic_tester = magic.open(magic.DEFAULT_MODE)
-        magic_tester.load()
-
-except (ImportError, Exception):
-    have_magic = False
 
 #pluginconfpfx = 'plugins'
 pluginconfpfx = None
@@ -401,39 +386,6 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
     # BASIC IMAGE OPERATIONS
 
-    def guess_filetype(self, filepath):
-        # If we have python-magic, use it to determine file type
-        typ = None
-        if have_magic:
-            try:
-                # it seems there are conflicting versions of a 'magic'
-                # module for python floating around...*sigh*
-                if hasattr(magic, 'from_file'):
-                    typ = magic.from_file(filepath, mime=True)
-
-                elif magic_tester is not None:
-                    descrip = magic_tester.file(filepath)
-                    if descrip.startswith("FITS image data"):
-                        return ('image', 'fits')
-
-            except Exception as e:
-                self.logger.warning("python-magic error: %s; falling back "
-                                    "to 'mimetypes'" % (str(e)))
-
-        if typ is None:
-            try:
-                typ, enc = mimetypes.guess_type(filepath)
-            except Exception as e:
-                self.logger.warning("mimetypes error: %s; can't determine "
-                                    "file type" % (str(e)))
-
-        if typ:
-            typ, subtyp = typ.split('/')
-            self.logger.debug("MIME type is %s/%s" % (typ, subtyp))
-            return (typ, subtyp)
-
-        raise ControlError("Can't determine file type of '%s'" % (filepath))
-
     def load_image(self, filepath, idx=None):
 
         info = iohelper.get_fileinfo(filepath, cache_dir=self.tmpdir)
@@ -442,7 +394,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         # Create an image.  Assume type to be an AstroImage unless
         # the MIME association says it is something different.
         try:
-            typ, subtyp = self.guess_filetype(filepfx)
+            typ, subtyp = iohelper.guess_filetype(filepfx)
 
         except Exception as e:
             self.logger.warning("error determining file type: %s; "
