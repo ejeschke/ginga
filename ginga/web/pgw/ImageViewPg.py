@@ -239,8 +239,12 @@ class ImageViewEvent(ImageViewPg):
             34: 'page_down',
             }
 
-        self._browser_problem_keys = ('shift_l', 'control_l', 'escape',
-                                      'tab')
+        self._browser_problem_keys = set(['shift_l', 'control_l', 'alt_l',
+                                          'escape', 'tab',
+                                          'left', 'up', 'right', 'down',
+                                          'insert', 'delete', 'home', 'end',
+                                          'page_up', 'page_down',
+                                          ])
         # Define cursors for pick and pan
         #hand = openHandCursor()
         hand = 'fleur'

@@ -652,10 +652,11 @@ class ImageViewBindings(object):
         viewer.panset_xy(pan_x, pan_y)
 
     def pan_center_px(self, viewer):
-        pan_x, pan_y = viewer.get_pan(coord='data')[:2]
-        pan_x = float(int(pan_x + viewer.data_off))
-        pan_y = float(int(pan_y + viewer.data_off))
-        viewer.panset_xy(pan_x, pan_y)
+        data_x, data_y = viewer.get_last_data_xy()
+        ndata_x = float(int(data_x + viewer.data_off))
+        ndata_y = float(int(data_y + viewer.data_off))
+        x_px, y_px = ndata_x - data_x, ndata_y - data_y
+        self.pan_delta_px(viewer, x_px, y_px)
 
     def get_direction(self, direction, rev=False):
         """
@@ -1111,7 +1112,8 @@ class ImageViewBindings(object):
         return True
 
     def kp_pan_px_center(self, viewer, event, data_x, data_y, msg=True):
-        """This pans to the center of the current pixel."""
+        """This pans so that the cursor is over the center of the
+        current pixel."""
         if not self.canpan:
             return False
         self.pan_center_px(viewer)
