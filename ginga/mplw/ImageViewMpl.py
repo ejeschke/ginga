@@ -68,7 +68,7 @@ class ImageViewMpl(ImageView.ImageViewBase):
 
         self.in_axes = False
         # Matplotlib expects RGBA data for color images
-        self._rgb_order = 'RGBA'
+        self.rgb_order = 'RGBA'
 
         self.renderer = CanvasRenderer(self)
 
@@ -136,9 +136,6 @@ class ImageViewMpl(ImageView.ImageViewBase):
     def get_widget(self):
         return self.figure.canvas
 
-    def get_rgb_order(self):
-        return self._rgb_order
-
     def calculate_aspect(self, shape, extent):
         dx = abs(extent[1] - extent[0]) / float(shape[1])
         dy = abs(extent[3] - extent[2]) / float(shape[0])
@@ -158,7 +155,7 @@ class ImageViewMpl(ImageView.ImageViewBase):
 
         # Grab the RGB array for the current image and place it in the
         # matplotlib figure axis
-        data = self.getwin_array(order=self._rgb_order)
+        data = self.getwin_array(order=self.rgb_order)
 
         dst_x = dst_y = 0
 
@@ -193,7 +190,7 @@ class ImageViewMpl(ImageView.ImageViewBase):
 
         # Grab the RGB array for the current image and place it in the
         # matplotlib figure axis
-        arr = self.getwin_array(order=self._rgb_order)
+        arr = self.getwin_array(order=self.rgb_order)
 
         # Get the data extents
         x0, y0 = 0, 0

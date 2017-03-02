@@ -58,7 +58,7 @@ class CvContext(object):
 
         # According to documentation, OpenCV expects colors as BGRA tuple
         # BUT, seems we need to specify RGBA--I suppose we need to match
-        # what is defined as _rgb_order attribute in ImageViewCv class
+        # what is defined as rgb_order attribute in ImageViewCv class
         #return (int(alpha*255), int(b*255), int(g*255), int(r*255))
         return (int(r*255), int(g*255), int(b*255), int(alpha*255))
 

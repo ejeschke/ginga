@@ -31,7 +31,7 @@ class ImageViewAgg(ImageView.ImageViewBase):
                                          settings=settings)
 
         self.surface = None
-        self._rgb_order = 'RGBA'
+        self.rgb_order = 'RGBA'
 
         self.renderer = CanvasRenderer(self)
 
@@ -48,7 +48,7 @@ class ImageViewAgg(ImageView.ImageViewBase):
         self.logger.debug("redraw surface")
 
         # get window contents as a buffer and load it into the AGG surface
-        rgb_buf = self.getwin_buffer(order=self._rgb_order)
+        rgb_buf = self.getwin_buffer(order=self.rgb_order)
         canvas.fromstring(rgb_buf)
 
         # for debugging
@@ -139,9 +139,6 @@ class ImageViewAgg(ImageView.ImageViewBase):
         # subclass implements this method to call delayed_redraw() after
         # time_sec
         self.delayed_redraw()
-
-    def get_rgb_order(self):
-        return self._rgb_order
 
 
 #END

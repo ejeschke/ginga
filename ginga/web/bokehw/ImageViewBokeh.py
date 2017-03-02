@@ -203,7 +203,7 @@ class ImageViewBokeh(ImageView.ImageViewBase):
         self.message = None
 
         # Bokeh expects RGBA data for color images
-        self._rgb_order = 'RGBA'
+        self.rgb_order = 'RGBA'
 
         self.renderer = CanvasRenderer(self)
 
@@ -237,9 +237,6 @@ class ImageViewBokeh(ImageView.ImageViewBase):
     def get_figure(self):
         return self.figure
 
-    def get_rgb_order(self):
-        return self._rgb_order
-
     def render_image(self, rgbobj, dst_x, dst_y):
         """Render the image represented by (rgbobj) at dst_x, dst_y
         in the pixel space.
@@ -252,7 +249,7 @@ class ImageViewBokeh(ImageView.ImageViewBase):
 
         # Grab the RGB array for the current image and place it in the
         # Bokeh image
-        data = self.getwin_array(order=self._rgb_order)
+        data = self.getwin_array(order=self.rgb_order)
         ht, wd = data.shape[:2]
 
         # Bokeh expects a 32-bit uint array type

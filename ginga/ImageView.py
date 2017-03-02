@@ -2691,10 +2691,9 @@ class ImageViewBase(Callback.Callbacks):
         rgb : str
             Returns the order of RGBA planes required by the subclass
             to render the canvas properly.
-            Should be overridden by any subclass.
 
         """
-        return 'RGB'
+        return self.rgb_order
 
     def get_rotation_info(self):
         """Get rotation information.

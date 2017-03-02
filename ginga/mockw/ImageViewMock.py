@@ -27,7 +27,7 @@ class ImageViewMock(ImageView.ImageViewBase):
         # Set this to the order in which you want channels stacked
         # in the numpy array delivered for writing to the off-screen
         # pixmap for your widget set
-        self._rgb_order = 'BGRA'
+        self.rgb_order = 'BGRA'
 
         self.renderer = CanvasRenderer(self)
 
@@ -54,11 +54,8 @@ class ImageViewMock(ImageView.ImageViewBase):
 
     def get_surface(self):
         # for compatibility with agg and opencv backends
-        surface = self.getwin_array(order=self._rgb_order)
+        surface = self.getwin_array(order=self.rgb_order)
         return surface
-
-    def get_rgb_order(self):
-        return self._rgb_order
 
     def _render_offscreen(self, drawable, data, dst_x, dst_y,
                           width, height):
@@ -87,7 +84,7 @@ class ImageViewMock(ImageView.ImageViewBase):
         self.logger.debug("drawing to pixmap")
 
         # Prepare array for rendering
-        arr = rgbobj.get_array(self._rgb_order)
+        arr = rgbobj.get_array(self.rgb_order)
         (height, width) = arr.shape[:2]
 
         return self._render_offscreen(self.pixmap, arr, dst_x, dst_y,
@@ -111,12 +108,12 @@ class ImageViewMock(ImageView.ImageViewBase):
         self.configure(width, height)
 
     def get_image_as_array(self):
-        return self.getwin_array(order=self.get_rgb_order())
+        return self.getwin_array(order=self.rgb_order)
 
     def get_rgb_image_as_buffer(self, output=None, format='png',
                                 quality=90):
         # copy pixmap to buffer
-        data_np = self.getwin_array(order=self.get_rgb_order())
+        data_np = self.getwin_array(order=self.rgb_order)
         header = {}
         fmt_buf = self.rgb_fh.get_buffer(data_np, header, format,
                                          output=output)
@@ -142,7 +139,7 @@ class ImageViewMock(ImageView.ImageViewBase):
         """Used for generating thumbnails.  Does not include overlaid
         graphics.
         """
-        arr = self.getwin_array(order=self._rgb_order)
+        arr = self.getwin_array(order=self.rgb_order)
 
         # convert numpy array to native image widget
         image_w = self._get_wimage(arr)

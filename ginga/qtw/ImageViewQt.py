@@ -125,7 +125,7 @@ class ImageViewQt(ImageView.ImageViewBase):
         self.imgwin.viewer = self
         self.pixmap = None
         # Qt expects 32bit BGRA data for color images
-        self._rgb_order = 'BGRA'
+        self.rgb_order = 'BGRA'
 
         self.renderer = CanvasRenderer(self)
 
@@ -175,7 +175,7 @@ class ImageViewQt(ImageView.ImageViewBase):
         self.logger.debug("drawing to pixmap")
 
         # Prepare array for rendering
-        arr = rgbobj.get_array(self._rgb_order)
+        arr = rgbobj.get_array(self.rgb_order)
         (height, width) = arr.shape[:2]
 
         return self._render_offscreen(self.pixmap, arr, dst_x, dst_y,
@@ -231,7 +231,7 @@ class ImageViewQt(ImageView.ImageViewBase):
         """Used for generating thumbnails.  Does not include overlaid
         graphics.
         """
-        arr = self.getwin_array(order=self._rgb_order)
+        arr = self.getwin_array(order=self.rgb_order)
         image = self._get_qimage(arr)
         return image
 
@@ -290,9 +290,6 @@ class ImageViewQt(ImageView.ImageViewBase):
         # set the cursor position
         cursor = self.imgwin.cursor()
         cursor.setPos(s_pt)
-
-    def get_rgb_order(self):
-        return self._rgb_order
 
     def _get_qimage(self, bgra):
         h, w, channels = bgra.shape

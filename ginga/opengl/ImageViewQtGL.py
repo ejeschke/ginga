@@ -61,7 +61,7 @@ class ImageViewQtGL(ImageViewQt.ImageViewQt):
         self.imgwin = RenderGLWidget()
         self.imgwin.viewer = self
         # Qt expects 32bit BGRA data for color images
-        self._rgb_order = 'RGBA'
+        self.rgb_order = 'RGBA'
 
         self.renderer = CanvasRenderer(self)
 
@@ -70,9 +70,9 @@ class ImageViewQtGL(ImageViewQt.ImageViewQt):
         in the pixel space.
         """
         pos = (0, 0)
-        arr = self.getwin_array(order=self._rgb_order, alpha=1.0)
+        arr = self.getwin_array(order=self.rgb_order, alpha=1.0)
         ## pos = (dst_x, dst_y)
-        ## arr = rgbobj.get_array(self._rgb_order)
+        ## arr = rgbobj.get_array(self.rgb_order)
         self.renderer.gl_set_image(arr, pos)
 
     def configure_window(self, width, height):

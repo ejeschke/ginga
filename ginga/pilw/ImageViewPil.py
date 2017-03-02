@@ -25,7 +25,7 @@ class ImageViewPil(ImageView.ImageViewBase):
                                          settings=settings)
 
         self.surface = None
-        self._rgb_order = 'RGBA'
+        self.rgb_order = 'RGBA'
 
         self.renderer = CanvasRenderer(self)
 
@@ -42,7 +42,7 @@ class ImageViewPil(ImageView.ImageViewBase):
         self.logger.debug("redraw surface")
 
         # get window contents as a buffer and paste it into the PIL surface
-        rgb_arr = self.getwin_array(order=self._rgb_order)
+        rgb_arr = self.getwin_array(order=self.rgb_order)
         p_image = Image.fromarray(rgb_arr)
 
         if p_image.size != canvas.size:
@@ -59,7 +59,7 @@ class ImageViewPil(ImageView.ImageViewBase):
         # create PIL surface the size of the window
         # NOTE: pillow needs an RGB image in order to draw with alpha
         # blending, not RGBA
-        #self.surface = Image.new(self._rgb_order, (width, height), color=0)
+        #self.surface = Image.new(self.rgb_order, (width, height), color=0)
         self.surface = Image.new("RGB", (width, height), color=0)
 
         # inform the base class about the actual window size
@@ -110,9 +110,6 @@ class ImageViewPil(ImageView.ImageViewBase):
         # subclass implements this method to call delayed_redraw() after
         # time_sec
         self.delayed_redraw()
-
-    def get_rgb_order(self):
-        return self._rgb_order
 
 
 class CanvasView(ImageViewPil):
