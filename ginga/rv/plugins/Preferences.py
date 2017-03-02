@@ -11,7 +11,7 @@ from ginga.misc import ParamSet, Bunch
 from ginga import cmap, imap, trcalc
 from ginga import GingaPlugin
 from ginga import AutoCuts, ColorDist
-from ginga.util import wcs, wcsmod, io_rgb
+from ginga.util import wcs, wcsmod, rgb_cms
 
 from ginga.misc import Bunch
 
@@ -75,9 +75,9 @@ class Preferences(GingaPlugin.LocalPlugin):
         # preload images
         self.t_.addDefaults(preload_images=False)
 
-        self.icc_profiles = list(io_rgb.get_profiles())
+        self.icc_profiles = list(rgb_cms.get_profiles())
         self.icc_profiles.insert(0, None)
-        self.icc_intents = io_rgb.get_intents()
+        self.icc_intents = rgb_cms.get_intents()
 
     def build_gui(self, container):
         top = Widgets.VBox()

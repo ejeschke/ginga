@@ -19,7 +19,7 @@ from ginga import RGBMap, AutoCuts, ColorDist
 from ginga import cmap, imap, colors, trcalc, version
 from ginga.canvas import coordmap, transform
 from ginga.canvas.types.layer import DrawingCanvas
-from ginga.util import io_rgb
+from ginga.util import rgb_cms
 from ginga.util.six.moves import map
 
 __all__ = ['ImageViewBase']
@@ -286,7 +286,7 @@ class ImageViewBase(Callback.Callbacks):
         self.canvas.initialize(None, self, self.logger)
         self.canvas.add_callback('modified', self.canvas_changed_cb)
         self.canvas.set_surface(self)
-        self.canvas.ui_setActive(True)
+        self.canvas.ui_set_active(True)
 
         # private canvas for drawing
         self.private_canvas = self.canvas
@@ -488,7 +488,7 @@ class ImageViewBase(Callback.Callbacks):
         canvas.initialize(None, self, self.logger)
         canvas.add_callback('modified', self.canvas_changed_cb)
         canvas.set_surface(self)
-        canvas.ui_setActive(True)
+        canvas.ui_set_active(True)
 
         self._imgobj = None
 
@@ -498,7 +498,7 @@ class ImageViewBase(Callback.Callbacks):
 
             if private_canvas != canvas:
                 private_canvas.set_surface(self)
-                private_canvas.ui_setActive(True)
+                private_canvas.ui_set_active(True)
                 private_canvas.add_callback('modified', self.canvas_changed_cb)
 
         # sanity check that we have a private canvas, and if not,
@@ -1369,6 +1369,12 @@ class ImageViewBase(Callback.Callbacks):
             self.overlay_images(self.private_canvas, self._rgbarr2,
                                 whence=whence)
 
+            # convert to output ICC profile, if one is specified
+            output_profile = self.t_.get('icc_output_profile', None)
+            if output_profile is not None:
+                self.convert_via_profile(self._rgbarr2, order,
+                                         'working', output_profile)
+
         if (whence <= 2.5) or (self._rgbobj is None):
             rotimg = self._rgbarr2
 
@@ -1379,12 +1385,6 @@ class ImageViewBase(Callback.Callbacks):
             rotimg = numpy.ascontiguousarray(rotimg)
 
             self._rgbobj = RGBMap.RGBPlanes(rotimg, order)
-
-            # convert to output ICC profile, if one is specified
-            output_profile = self.t_.get('icc_output_profile', None)
-            if not (output_profile is None):
-                self.convert_via_profile(self._rgbobj, 'working',
-                                         output_profile)
 
         time_end = time.time()
         self.logger.debug("times: total=%.4f" % (
@@ -1567,16 +1567,20 @@ class ImageViewBase(Callback.Callbacks):
             elif obj.is_compound() and (obj != canvas):
                 self.overlay_images(obj, data, whence=whence)
 
-    def convert_via_profile(self, rgbobj, inprof_name, outprof_name):
-        """Convert the given RGB object from one ICC profile to another.
+    def convert_via_profile(self, data_np, order, inprof_name, outprof_name):
+        """Convert the given RGB data from the working ICC profile
+        to the output profile in-place.
 
         Parameters
         ----------
-        rgbobj : `~ginga.RGBMap.RGBPlanes`
-            RGB object that is modified in-place.
+        data_np : ndarray
+            RGB image data to be displayed.
+
+        order : str
+            Order of channels in the data (e.g. "BGRA").
 
         inprof_name, outprof_name : str
-            ICC profile names (see :func:`ginga.util.io_rgb.get_profiles`).
+            ICC profile names (see :func:`ginga.util.rgb_cms.get_profiles`).
 
         """
         # get rest of necessary conversion parameters
@@ -1585,21 +1589,30 @@ class ImageViewBase(Callback.Callbacks):
         proof_intent = self.t_.get('icc_proof_intent', 'perceptual')
         use_black_pt = self.t_.get('icc_black_point_compensation', False)
 
-        self.logger.info("Attempting conversion from '%s' to '%s' profile" % (
-            inprof_name, outprof_name))
+        try:
+            rgbobj = RGBMap.RGBPlanes(data_np, order)
+            arr_np = rgbobj.get_array('RGB')
 
-        inp = rgbobj.get_array('RGB')
-        arr = io_rgb.convert_profile_fromto(inp, inprof_name, outprof_name,
-                                            to_intent=to_intent,
-                                            proof_name=proofprof_name,
-                                            proof_intent=proof_intent,
-                                            use_black_pt=use_black_pt)
-        out = rgbobj.rgbarr
+            arr = rgb_cms.convert_profile_fromto(arr_np, inprof_name, outprof_name,
+                                                 to_intent=to_intent,
+                                                 proof_name=proofprof_name,
+                                                 proof_intent=proof_intent,
+                                                 use_black_pt=use_black_pt)
+            ri, gi, bi = rgbobj.get_order_indexes('RGB')
 
-        ri, gi, bi = rgbobj.get_order_indexes('RGB')
-        out[..., ri] = arr[..., 0]
-        out[..., gi] = arr[..., 1]
-        out[..., bi] = arr[..., 2]
+            out = data_np
+            out[..., ri] = arr[..., 0]
+            out[..., gi] = arr[..., 1]
+            out[..., bi] = arr[..., 2]
+
+            self.logger.debug("Converted from '%s' to '%s' profile" % (
+                inprof_name, outprof_name))
+
+        except Exception as e:
+            self.logger.warn("Error converting output from working profile: %s" % (str(e)))
+            # TODO: maybe should have a traceback here
+            self.logger.info("Output left unprofiled")
+
 
     def get_data_xy(self, win_x, win_y, center=None):
         """Get the closest coordinates in the data array to those

@@ -257,7 +257,6 @@ class ImageViewQt(ImageView.ImageViewBase):
                                   QtGui.QGraphicsScene.BackgroundLayer)
         else:
             self.imgwin.update()
-            #self.imgwin.show()
 
     def set_cursor(self, cursor):
         if self.imgwin is not None:
