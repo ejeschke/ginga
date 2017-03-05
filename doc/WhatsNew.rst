@@ -8,8 +8,10 @@ Ver 2.6.3.dev
   distributed plugins that have errors
 - Fix for an issue loading plugins from the command line when they
   are nested in a package
-- Added bindings for moving +/- 1 pixel in X or Y and centering on the
+- Added bindings for moving +/- pixel delta in X or Y and centering on the
   pixel
+- Fixes for some key mappings for tk, matplotlib and HTML5 canvas backends
+- Fixes for IRAF plugin under python 3
 
 Ver 2.6.2 (2017-02-16)
 ======================

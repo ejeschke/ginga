@@ -5,7 +5,7 @@
 # Please see the file LICENSE.txt for details.
 #
 import time
-import re
+import re, os
 from distutils import spawn
 from contextlib import contextmanager
 
@@ -116,31 +116,32 @@ class MultiDim(GingaPlugin.LocalPlugin):
         self.naxisfr = fr
         vbox.add_widget(fr, stretch=0)
 
-        captions = [("First", 'button', "Prev", 'button', "Stop", 'button'),
-                    ("Last", 'button', "Next", 'button', "Play", 'button'),
-                    ("Interval:", 'label', "Interval", 'spinfloat',
+        tbar = Widgets.Toolbar(orientation='horizontal')
+        for name, actn, cb in (('first', 'first', lambda w: self.first_slice()),
+                               ('last', 'last', lambda w: self.last_slice()),
+                               ('reverse', 'prev', lambda w: self.prev_slice()),
+                               ('forward', 'next', lambda w: self.next_slice()),
+                               ('play', 'play', lambda w: self.play_start()),
+                               ('stop', 'stop', lambda w: self.play_stop()),
+                               ):
+            iconpath = os.path.join(self.fv.iconpath, "%s_48.png" % name)
+            btn = tbar.add_action(actn, iconpath=iconpath)
+            self.w[actn] = btn
+            btn.set_enabled(False)
+            btn.add_callback('activated', cb)
+        vbox.add_widget(tbar, stretch=0)
+
+        captions = [("Interval:", 'label', "Interval", 'spinfloat',
                      "fps", 'llabel'),
                     ]
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
-        b.next.add_callback('activated', lambda w: self.next_slice())
-        b.prev.add_callback('activated', lambda w: self.prev_slice())
-        b.first.add_callback('activated', lambda w: self.first_slice())
-        b.last.add_callback('activated', lambda w: self.last_slice())
-        b.play.add_callback('activated', lambda w: self.play_start())
-        b.stop.add_callback('activated', lambda w: self.play_stop())
         lower, upper = self.play_min_sec, 8.0
         b.interval.set_limits(lower, upper, incr_value=0.01)
         b.interval.set_value(self.play_int_sec)
         b.interval.set_decimals(2)
         b.interval.add_callback('value-changed', self.play_int_cb)
 
-        b.next.set_enabled(False)
-        b.prev.set_enabled(False)
-        b.first.set_enabled(False)
-        b.last.set_enabled(False)
-        b.play.set_enabled(False)
-        b.stop.set_enabled(False)
         b.interval.set_enabled(False)
         vbox.add_widget(w, stretch=0)
 

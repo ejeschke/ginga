@@ -73,7 +73,7 @@ class RGBImage(BaseImage):
             l = [ self.get_slice(c) for c in order ]
             wd, ht = self.get_size()
             a = numpy.zeros((ht, wd), dtype=numpy.uint8)
-            a[:] = int(alpha)
+            a.fill(alpha)
             l.insert(pos, a)
             self._data = numpy.dstack(l)
             order.insert(pos, 'A')
