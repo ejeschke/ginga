@@ -125,9 +125,10 @@ class MultiDim(GingaPlugin.LocalPlugin):
                                ('stop', 'stop', lambda w: self.play_stop()),
                                ):
             iconpath = os.path.join(self.fv.iconpath, "%s_48.png" % name)
-            btn = tbar.add_action(actn, iconpath=iconpath)
+            btn = tbar.add_action(None, iconpath=iconpath)
             self.w[actn] = btn
             btn.set_enabled(False)
+            btn.set_tooltip(actn)
             btn.add_callback('activated', cb)
         vbox.add_widget(tbar, stretch=0)
 
