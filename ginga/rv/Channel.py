@@ -425,4 +425,7 @@ class Channel(Callback.Callbacks):
 
         self.history.sort(key=self.hist_sort)
 
+    def __len__(self):
+        return len(self.history)
+
 # END

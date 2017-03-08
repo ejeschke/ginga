@@ -4,6 +4,8 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+import time
+
 from ginga import GingaPlugin
 from ginga.gw import Widgets
 
@@ -67,11 +69,7 @@ class Blink(GingaPlugin.LocalPlugin):
         fr = Widgets.Frame("Blink")
         vbox2 = Widgets.VBox()
 
-        captions = (("Interval:", 'label', 'Interval', 'entry',
-                     "Start Blink", 'button', "Stop Blink", 'button'),
-                    ("Max:", 'label', 'max', 'llabel',
-                     "Min:", 'label', 'min', 'llabel'),
-                    ("Mode:", 'label', 'mode', 'llabel'),
+        captions = (("Interval:", 'label', 'Interval', 'entry'),
                     )
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w = b
@@ -79,7 +77,14 @@ class Blink(GingaPlugin.LocalPlugin):
         b.interval.set_text(str(self.interval))
         b.interval.add_callback('activated', lambda w: self._set_interval_cb())
         b.interval.set_tooltip("Interval in seconds between changing images")
+        vbox2.add_widget(w, stretch=0)
 
+        captions = (("Start Blink", 'button', "Stop Blink", 'button'),
+                    ("Max:", 'label', 'max', 'llabel',
+                     "Min:", 'label', 'min', 'llabel'),
+                    )
+        w, b = Widgets.build_info(captions, orientation=orientation)
+        self.w.update(b)
         b.start_blink.add_callback('activated',
                                    lambda w: self._start_blink_cb())
         b.stop_blink.add_callback('activated',
@@ -87,6 +92,12 @@ class Blink(GingaPlugin.LocalPlugin):
 
         b.min.set_text(str(self.ival_min))
         b.max.set_text(str(self.ival_max))
+        vbox2.add_widget(w, stretch=0)
+
+        captions = (("Mode:", 'label', 'mode', 'llabel'),
+                    )
+        w, b = Widgets.build_info(captions, orientation=orientation)
+        self.w.update(b)
 
         mode = 'blink channels'
         if not self.blink_channels:
@@ -129,13 +140,14 @@ class Blink(GingaPlugin.LocalPlugin):
         return True
 
     def start(self):
-        self.resume()
+        pass
 
     def pause(self):
         self.stop_blinking()
 
     def resume(self):
-        self.start_blinking()
+        # Don't automatically resume blinking
+        pass
 
     def stop(self):
         self.stop_blinking()
@@ -145,12 +157,15 @@ class Blink(GingaPlugin.LocalPlugin):
 
     def _blink_timer_cb(self, timer):
         # set timer
+        cur_time = time.time()
+        deadline = cur_time + self.interval
+
         if self.blink_channels:
             self.fv.gui_do(self.fv.next_channel)
         else:
             self.fv.gui_do(self.fv.next_img, loop=True)
 
-        timer.set(self.interval)
+        timer.set(max(0.001, deadline - time.time()))
 
     def start_blinking(self):
         self.blink_timer.set(self.interval)
@@ -159,8 +174,14 @@ class Blink(GingaPlugin.LocalPlugin):
         self.blink_timer.clear()
 
     def _start_blink_cb(self):
+        if not self.blink_channels:
+            # Don't start blinking if there are no multiple images to blink
+            # in this channel
+            if len(self.channel) <= 1:
+                self.fv.show_error("Blink opened in local mode and there are not multiple images to blink in this channel")
+                return
+
         self._set_interval_cb()
-        self.start_blinking()
 
     def _stop_blink_cb(self):
         self.stop_blinking()
