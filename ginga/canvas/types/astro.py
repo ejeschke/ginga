@@ -134,19 +134,19 @@ class Ruler(TwoPointMixin, CanvasObjectBase):
                 else:
                     sep_h = wcs.deltaStarsRaDecDeg(ra_org, dec_org,
                                                    ra_dst, dec_dst)
-                    text_h = str(sep_h)
+                    text_h = ("%.8f" % sep_h)
                     sep_x = wcs.deltaStarsRaDecDeg(ra_org, dec_org,
                                                    ra_heel, dec_heel)
-                    text_x = str(sep_x)
+                    text_x = ("%.8f" % sep_x)
                     sep_y = wcs.deltaStarsRaDecDeg(ra_heel, dec_heel,
-                                                    ra_dst, dec_dst)
-                    text_y = str(sep_y)
+                                                   ra_dst, dec_dst)
+                    text_y = ("%.8f" % sep_y)
             else:
                 dx = abs(x2 - x1)
                 dy = abs(y2 - y1)
                 dh = math.sqrt(dx**2 + dy**2)
-                text_x = str(dx)
-                text_y = str(dy)
+                text_x = ("%.3f" % dx)
+                text_y = ("%.3f" % dy)
                 text_h = ("%.3f" % dh)
 
         except Exception as e:
