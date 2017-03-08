@@ -161,12 +161,13 @@ class PyFitsFileHandler(BaseFitsFileHandler):
     def load_file(self, filespec, numhdu=None, dstobj=None, memmap=None,
                   **kwargs):
 
-        self.open_file(filespec, memmap=memmap, **kwargs)
+        opener = self.get_factory()
+        opener.open_file(filespec, memmap=memmap, **kwargs)
         try:
-            return self.get_hdu(numhdu, dstobj=dstobj)
+            return opener.get_hdu(numhdu, dstobj=dstobj)
 
         finally:
-            self.close()
+            opener.close()
 
 
     def open_file(self, filespec, memmap=None, **kwargs):
@@ -392,12 +393,13 @@ class FitsioFileHandler(BaseFitsFileHandler):
     def load_file(self, filespec, numhdu=None, dstobj=None, memmap=None,
                   **kwargs):
 
-        self.open_file(filespec, memmap=memmap, **kwargs)
+        opener = self.get_factory()
+        opener.open_file(filespec, memmap=memmap, **kwargs)
         try:
-            return self.get_hdu(numhdu, dstobj=dstobj)
+            return opener.get_hdu(numhdu, dstobj=dstobj)
 
         finally:
-            self.close()
+            opener.close()
 
     def open_file(self, filespec, memmap=None, **kwargs):
 
