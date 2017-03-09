@@ -1418,10 +1418,11 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         vbox = Widgets.VBox()
         vbox.set_border_width(0)
         vbox.set_spacing(0)
-        root.add_widget(vbox, stretch=1)
+        root.set_widget(vbox)
 
         fi = self.build_viewpane(settings, rgbmap=rgbmap)
-        iw = fi.get_widget()
+
+        iw = Viewers.GingaViewerWidget(viewer=fi)
         vbox.add_widget(iw, stretch=1)
 
         # Get image from current focused channel
@@ -1489,7 +1490,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
     def build_viewpane(self, settings, rgbmap=None, size=(1, 1)):
         # instantiate bindings loaded with users preferences
         bclass = Viewers.ImageViewCanvas.bindingsClass
-        bindprefs = self.prefs.createCategory('bindings')
+        bindprefs = self.prefs.create_category('bindings')
         bd = bclass(self.logger, settings=bindprefs)
 
         fi = Viewers.ImageViewCanvas(logger=self.logger,
@@ -2210,7 +2211,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             self.collapse_pane('right')
         elif keyname == 'n':
             self.next_channel()
-        elif keyname == 'j':
+        elif keyname == 'J':
             self.cycle_workspace_type()
         elif keyname == 'k':
             self.add_channel_auto()

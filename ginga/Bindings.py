@@ -86,6 +86,7 @@ class ImageViewBindings(object):
             dmod_pan = ['q', None, 'pan'],
             dmod_freepan = ['w', None, 'pan'],
             dmod_camera = [None, None, 'pan'],
+            dmod_naxis = [None, None, None],
 
             default_mode_type = 'oneshot',
             default_lock_mode_type = 'softlock',
@@ -170,8 +171,8 @@ class ImageViewBindings(object):
             sc_dist = ['dist+scroll'],
             sc_cmap = ['cmap+scroll'],
             sc_imap = ['cmap+ctrl+scroll'],
-            #sc_draw = ['draw+scroll'],
             sc_camera_track = ['camera+scroll'],
+            sc_naxis = ['naxis+scroll'],
 
             scroll_pan_acceleration = 1.0,
             # 1.0 is appropriate for a mouse, 0.1 for most trackpads
@@ -209,6 +210,7 @@ class ImageViewBindings(object):
             ms_cmap_restore = ['cmap+right'],
             ms_camera_orbit = ['camera+left'],
             ms_camera_pan_delta = ['camera+right'],
+            ms_naxis = ['naxis+left'],
 
             # GESTURES (some backends only)
             gs_pinch = [],
@@ -1742,6 +1744,33 @@ class ImageViewBindings(object):
             self._panset(viewer, data_x, data_y, msg=msg)
         return True
 
+    def ms_naxis(self, viewer, event, data_x, data_y, msg=True):
+
+        # TODO: be able to pick axis
+        axis = 2
+        x, y = self.get_win_xy(viewer)
+
+        image = viewer.get_image()
+        if image is None:
+            return
+        mddata = image.get_mddata()
+        if len(mddata.shape) < axis+1:
+            # image dimensions < 3D
+            return
+
+        naxispath = list(image.naxispath)
+        axis_lim = mddata.shape[axis]
+        m = axis - 2
+
+        if event.state in ('down', 'move'):
+            win_wd, win_ht = viewer.get_window_size()
+            x_pct = x / float(win_wd)
+            idx = int(x_pct * axis_lim)
+            naxispath[m] = idx
+            image.set_naxispath(naxispath)
+
+        return True
+
     #####  SCROLL ACTION CALLBACKS #####
 
     def sc_cuts_coarse(self, viewer, event, msg=True):
@@ -1889,6 +1918,35 @@ class ImageViewBindings(object):
     def sc_pan_fine(self, viewer, event, msg=True):
         event.amount = event.amount / 5.0
         return self.sc_pan(viewer, event, msg=msg)
+
+    def sc_naxis(self, viewer, event, msg=True):
+
+        # TODO: be able to pick axis
+        axis = 2
+        direction = self.get_direction(event.direction)
+
+        image = viewer.get_image()
+        if image is None:
+            return
+        mddata = image.get_mddata()
+        if len(mddata.shape) < axis+1:
+            # image dimensions < 3D
+            return
+
+        naxispath = list(image.naxispath)
+        axis_lim = mddata.shape[axis]
+        m = axis - 2
+
+        idx = naxispath[m]
+        if direction == 'down':
+            idx = (idx + 1) % axis_lim
+        else:
+            idx = idx - 1
+            if idx < 0:
+                idx = axis_lim - 1
+
+        naxispath[m] = idx
+        image.set_naxispath(naxispath)
 
     def sc_dist(self, viewer, event, msg=True):
 

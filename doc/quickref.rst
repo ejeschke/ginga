@@ -407,7 +407,7 @@ Reference Viewer Only
 +----------------------+--------------------------------------------------+
 | m                    | Maximize window                                  | 
 +----------------------+--------------------------------------------------+
-| j                    | Cycle workspace type (tabs/mdi/stack/grid).      | 
+| J                    | Cycle workspace type (tabs/mdi/stack/grid).      | 
 |                      |   Note that "mdi" type is not supported on all   |
 |                      |   platforms.                                     |
 +----------------------+--------------------------------------------------+

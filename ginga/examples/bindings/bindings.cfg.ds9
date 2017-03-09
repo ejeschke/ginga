@@ -50,6 +50,7 @@ dmod_contrast = ['t', None, None]
 dmod_rotate = ['r', None, None]
 dmod_pan = ['q', None, None]
 dmod_freepan = ['w', None, None]
+dmod_naxis = [None, None, None]
 
 default_mode_type = 'oneshot'
 default_lock_mode_type = 'softlock'
@@ -129,6 +130,7 @@ sc_cuts_alg = []
 sc_dist = ['dist+scroll']
 sc_cmap = ['cmap+scroll']
 sc_imap = ['cmap+ctrl+scroll']
+sc_naxis = ['naxis+scroll']
 
 # This controls how fast panning occurs with the sc_pan* functions.
 # Increase to speed up panning
@@ -167,6 +169,7 @@ ms_cut_auto = ['cuts+right']
 ms_panset = ['pan+middle', 'shift+left', 'middle']
 ms_cmap_rotate = ['cmap+left']
 ms_cmap_restore = ['cmap+right']
+ms_naxis = ['naxis+left']
 
 mouse_zoom_acceleration = 1.085
 mouse_rotate_acceleration = 0.75
