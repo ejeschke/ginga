@@ -73,6 +73,10 @@ class WBrowser(GingaPlugin.GlobalPlugin):
         url = str(self.entry.text()).strip()
         self.browse(url)
 
+    def load_html(self, text_html):
+        self.browser.setHtml(text_html)
+        self.entry.setText('')
+
     def close(self):
         self.fv.stop_global_plugin(str(self))
         return True

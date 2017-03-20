@@ -138,11 +138,7 @@ class caselessDict(object):
         return repr(self)
 
     def copy(self):
-        d={}
-        for k,v in self.dict.items():
-            d[k]=v[1]
-        return caselessDict(inDict=d)
-
+        return caselessDict(self.dict)
 
 
 class Bunch(object):

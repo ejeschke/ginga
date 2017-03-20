@@ -107,6 +107,32 @@ class ModeIndicator(object):
         self.mode_change_cb(bm, mode, modetype)
 
 
+def trim_prefix(text, nchr):
+    """Trim characters off of the beginnings of text lines.
+
+    Parameters
+    ----------
+    text : str
+        The text to be trimmed, with newlines (\n) separating lines
+
+    nchr: int
+        The number of spaces to trim off the beginning of a line if
+        it starts with that many spaces
+
+    Returns
+    -------
+    text : str
+        The trimmed text
+    """
+    res = []
+    for line in text.split('\n'):
+        if line.startswith(' ' * nchr):
+            line = line[nchr:]
+        res.append(line)
+
+    return '\n'.join(res)
+
+
 def generate_cfg_example(config_name, cfgpath='examples/configs', **kwargs):
     """Generate config file documentation for a given config name.
 
