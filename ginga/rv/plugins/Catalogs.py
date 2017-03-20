@@ -769,13 +769,13 @@ class Catalogs(GingaPlugin.LocalPlugin):
         for bnch in (self.image_server_params,
                      self.catalog_server_params):
             if bnch is not None:
-                for key in bnch.keys():
+                for key in list(bnch.keys()):
                     if key in d:
                         bnch[key].set_text(str(d[key]))
 
     def get_params(self, bnch):
         params = {}
-        for key in bnch.keys():
+        for key in list(bnch.keys()):
             params[key] = str(bnch[key].get_text())
         return params
 
