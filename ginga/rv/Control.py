@@ -23,7 +23,7 @@ from ginga import cmap, imap
 from ginga import AstroImage, RGBImage, BaseImage
 from ginga.table import AstroTable
 from ginga.misc import Bunch, Timer, Future
-from ginga.util import catalog, iohelper, io_fits
+from ginga.util import catalog, iohelper, io_fits, toolbox
 from ginga.canvas.CanvasObject import drawCatalog
 from ginga.canvas.types.layer import DrawingCanvas
 from ginga.util.six.moves import map
@@ -47,6 +47,14 @@ if six.PY2:
 else:
     import _thread as thread  # noqa
     import queue as Queue  # noqa
+
+have_docutils = False
+try:
+    from docutils.core import publish_string
+    have_docutils = True
+except ImportError:
+    pass
+
 
 #pluginconfpfx = 'plugins'
 pluginconfpfx = None
@@ -327,24 +335,81 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             self.logger.error(errmsg)
             self.gui_do(self.show_error, errmsg, raisetab=True)
 
-    def help(self):
+    def help(self, text=None, text_kind='url', trim_pfx=0):
+        """
+        Provide help text for the user.
+
+        Parameters
+        ----------
+        text : str or None (optional)
+            The text to show.  Should be a URL, HTML text or RST text
+
+        text_kind : str (optional)
+            One of 'url', 'html', 'rst'.  Default is 'url'.
+
+        trim_pfx : int (optional)
+            Number of spaces to trim off the beginning of each line of text.
+
+        This method will convert the text as necessary with docutils and
+        display it in the WBrowser plugin, if available.  If the plugin is
+        not available and the text is type 'rst' then the text will be
+        displayed in a plain text widget.
+        """
+
+        if text is not None:
+            if trim_pfx > 0:
+                # caller wants to trim some space off the front
+                # of each line
+                text = toolbox.trim_prefix(text, trim_pfx)
+
+            if text_kind in ('html', 'url'):
+                pass
+
+            elif text_kind == 'rst':
+                # try to convert RST to HTML using docutils
+                try:
+                    overrides = {'input_encoding': 'ascii',
+                                 'output_encoding': 'utf-8'}
+                    text_html = publish_string(text, writer_name='html',
+                                               settings_overrides=overrides)
+                    # docutils produces 'bytes' output, but webkit needs
+                    # a utf-8 string
+                    text = text_html.decode('utf-8')
+
+                except Exception as e:
+                    self.logger.error("Error converting help text to HTML: %s" % (
+                        str(e)))
+                    # revert to showing RST as plain text
+                    return self.show_help_text('Help', text)
+
+            else:
+                raise ValueError("I don't know how to display text of kind '%s'" % (text_kind))
+
         if not self.gpmon.has_plugin('WBrowser'):
-            self.logger.error("help() requires 'WBrowser' plugin")
-            return
+            return self.show_error("help() requires 'WBrowser' plugin")
 
         self.start_global_plugin('WBrowser')
 
-        local_doc = os.path.join(package_home, 'doc', 'help.html')
-        if not os.path.exists(local_doc):
-            url = "https://ginga.readthedocs.io/en/latest"
-        else:
-            url = "file:%s" % (os.path.abspath(local_doc))
-
-        # TODO: need to let GUI finish processing, it seems
+        # need to let GUI finish processing, it seems
         self.update_pending()
 
         obj = self.gpmon.get_plugin('WBrowser')
-        obj.browse(url)
+
+        if text is not None:
+            if text_kind == 'url':
+                obj.browse(text)
+
+            else:
+                obj.load_html(text)
+
+        else:
+            local_doc = os.path.join(package_home, 'doc', 'help.html')
+            if not os.path.exists(local_doc):
+                url = "https://ginga.readthedocs.io/en/latest"
+            else:
+                url = "file:%s" % (os.path.abspath(local_doc))
+
+            obj.browse(url)
 
     def show_help_text(self, name, help_txt, wsname='right'):
         """Show help text in a closeable tab window.  The title of the

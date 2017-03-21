@@ -19,17 +19,19 @@ cut_colors = ['magenta', 'skyblue2', 'chartreuse2', 'cyan', 'pink',
 
 class Cuts(GingaPlugin.LocalPlugin):
     """
+    Cuts
+    ====
     A plugin for generating a plot of the values along a line or path.
 
     There are four kinds of cuts available: line, path, freepath and
     beziercurve:
 
-    - The 'line' cut is a straight line between two points.
-    - The 'path' cut is drawn like an open polygon, with straight segments
+    - The "line" cut is a straight line between two points.
+    - The "path" cut is drawn like an open polygon, with straight segments
       in-between.
-    - The 'freepath' cut is like a path cut, but drawn using a free-form
+    - The "freepath" cut is like a path cut, but drawn using a free-form
       stroke following the cursor movement.
-    - The 'beziercurve' path is a cubic Bezier curve.
+    - The "beziercurve" path is a cubic Bezier curve.
 
     Multiple cuts can be plotted.
 
@@ -76,14 +78,14 @@ class Cuts(GingaPlugin.LocalPlugin):
 
     - "none" indicates a cut of zero radius; i.e. only showing the pixel
       values along the line
-    - "x" will plot the sum of values along the X axis orthoginal to the
+    - "x" will plot the sum of values along the X axis orthogonal to the
       cut.
-    - "y" will plot the sum of values along the Y axis orthoginal to the
+    - "y" will plot the sum of values along the Y axis orthogonal to the
       cut.
     - "perpendicular" will plot the sum of values along an axis perpendicular
       to the cut.
 
-    The "Width radius" controls the width of the orthoginal summation by
+    The "Width radius" controls the width of the orthogonal summation by
     an amount on either side of the cut--1 would be 3 pixels, 2 would be 5
     pixels, etc.
 
@@ -362,7 +364,7 @@ class Cuts(GingaPlugin.LocalPlugin):
 
     def help(self):
         name = str(self).capitalize()
-        self.fv.show_help_text(name, self.__doc__)
+        self.fv.help(text=self.__doc__, text_kind='rst', trim_pfx=4)
 
     def select_cut(self, tag):
         self.cutstag = tag
