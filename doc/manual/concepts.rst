@@ -16,7 +16,7 @@ Workspaces
 
 Ginga has a flexible panel/workspace layout algorithm that allows a
 lot of customization into the appearance of the program.  The majority
-of the interface is constructed as hierchical series of horizontally or
+of the interface is constructed as hierarchical series of horizontally or
 vertically-adjustable panels.  At the terminus of each panel is a
 *workspace*.
 Each workspace is implemented by a GUI toolkit container widget such as
@@ -200,7 +200,7 @@ About modes
 Ginga provides a number of default bindings for key and pointer actions.
 But there are too many different actions to bind to a limited set of
 keys and pointer buttons.
-*Modes* are a mechanism that allow Ginga to accomodate many key and
+*Modes* are a mechanism that allow Ginga to accommodate many key and
 pointer bindings for a large number of operations. 
 
 Modes are set on a per-channel basis.  Pressing a particular

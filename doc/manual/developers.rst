@@ -57,7 +57,7 @@ simply changing a table used in the startup script.
 Ginga distinguishes between two types of plugin: *global* and *local*.
 Global plugins are used where the functionality is generally enabled
 during the entire session with the viewer and where the plugin is active
-no matter which channel is currenly under interaction with the user.
+no matter which channel is currently under interaction with the user.
 Examples of global plugins include a panning view (a small, bird's-eye
 view of the image that shows a panning rectangle and allows graphical
 positioning of the pan region), a zoomed view (that shows an enlarged

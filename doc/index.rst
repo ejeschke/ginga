@@ -145,5 +145,5 @@ Pronunciation
 Ginga the viewer may be pronounced "ging-ga" (proper japanese) or
 "jing-ga" (perhaps easier for western tongues). The latter pronunciation
 has meaning in the Brazilian dance/martial art capoeira: a fundamental
-rocking or back and forth swinging motion.  Pronounciation as "jin-ja"
+rocking or back and forth swinging motion.  Pronunciation as "jin-ja"
 is considered poor form.
