@@ -6,7 +6,7 @@ Plugins
 
 Ginga is written so that most of the functionality of the program is
 achieved through the use of plugins.  This modular approach allows a
-large degree of flexiblity and customization, as well as making overall
+large degree of flexibility and customization, as well as making overall
 design and maintenance of the program simpler.
 
 Plugins are divided into two types: *global* and *local*.
