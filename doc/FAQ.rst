@@ -48,7 +48,7 @@ Control Bindings
 
 Can I get ds9-like user interface mappings?
 -------------------------------------------
-Save the file called called `bindings.cfg.ds9
+Save the file called `bindings.cfg.ds9
 <https://raw.github.com/ejeschke/ginga/master/examples/bindings/bindings.cfg.ds9>`_
 and drop it in your $HOME/.ginga folder as "bindings.cfg".
 Then restart Ginga.
