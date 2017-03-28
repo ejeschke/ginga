@@ -89,12 +89,12 @@ class ImageViewBase(Callback.Callbacks):
         self.name = str(self)
 
         # for color mapping
-        self.t_.addDefaults(color_map='gray', intensity_map='ramp',
-                            color_algorithm='linear',
-                            color_hashsize=65535)
+        self.t_.add_defaults(color_map='gray', intensity_map='ramp',
+                             color_algorithm='linear',
+                             color_hashsize=65535)
         for name in ('color_map', 'intensity_map', 'color_algorithm',
                      'color_hashsize'):
-            self.t_.getSetting(name).add_callback('set', self.cmap_changed_cb)
+            self.t_.get_setting(name).add_callback('set', self.cmap_changed_cb)
 
         # Initialize RGBMap
         cmap_name = self.t_.get('color_map', 'gray')
@@ -117,83 +117,83 @@ class ImageViewBase(Callback.Callbacks):
         rgbmap.add_callback('changed', self.rgbmap_cb)
 
         # for scale
-        self.t_.addDefaults(scale=(1.0, 1.0))
+        self.t_.add_defaults(scale=(1.0, 1.0))
         for name in ['scale']:
-            self.t_.getSetting(name).add_callback('set', self.scale_cb)
+            self.t_.get_setting(name).add_callback('set', self.scale_cb)
 
         # for pan
-        self.t_.addDefaults(pan=(1.0, 1.0), pan_coord='data')
+        self.t_.add_defaults(pan=(1.0, 1.0), pan_coord='data')
         for name in ['pan', ]:   #'pan_coord'
-            self.t_.getSetting(name).add_callback('set', self.pan_cb)
+            self.t_.get_setting(name).add_callback('set', self.pan_cb)
 
         # for cut levels
-        self.t_.addDefaults(cuts=(0.0, 0.0))
+        self.t_.add_defaults(cuts=(0.0, 0.0))
         for name in ['cuts']:
-            self.t_.getSetting(name).add_callback('set', self.cut_levels_cb)
+            self.t_.get_setting(name).add_callback('set', self.cut_levels_cb)
 
         # for auto cut levels
         self.autocuts_options = ('on', 'override', 'once', 'off')
-        self.t_.addDefaults(autocuts='override', autocut_method='zscale',
+        self.t_.add_defaults(autocuts='override', autocut_method='zscale',
                             autocut_params=[])
         for name in ('autocut_method', 'autocut_params'):
-            self.t_.getSetting(name).add_callback('set', self.auto_levels_cb)
+            self.t_.get_setting(name).add_callback('set', self.auto_levels_cb)
 
         # for zooming
-        self.t_.addDefaults(zoomlevel=1.0, zoom_algorithm='step',
-                            scale_x_base=1.0, scale_y_base=1.0,
-                            interpolation='basic',
-                            zoom_rate=math.sqrt(2.0))
+        self.t_.add_defaults(zoomlevel=1.0, zoom_algorithm='step',
+                             scale_x_base=1.0, scale_y_base=1.0,
+                             interpolation='basic',
+                             zoom_rate=math.sqrt(2.0))
         for name in ('zoom_rate', 'zoom_algorithm',
                      'scale_x_base', 'scale_y_base'):
-            self.t_.getSetting(name).add_callback('set', self.zoomalg_change_cb)
-        self.t_.getSetting('interpolation').add_callback(
+            self.t_.get_setting(name).add_callback('set', self.zoomalg_change_cb)
+        self.t_.get_setting('interpolation').add_callback(
             'set', self.interpolation_change_cb)
 
         # max/min scaling
-        self.t_.addDefaults(scale_max=10000.0, scale_min=0.00001)
+        self.t_.add_defaults(scale_max=10000.0, scale_min=0.00001)
 
         # autozoom options
         self.autozoom_options = ('on', 'override', 'once', 'off')
-        self.t_.addDefaults(autozoom='on')
+        self.t_.add_defaults(autozoom='on')
 
         # for panning
         self.autocenter_options = ('on', 'override', 'once', 'off')
-        self.t_.addDefaults(autocenter='on')
+        self.t_.add_defaults(autocenter='on')
 
         # for transforms
-        self.t_.addDefaults(flip_x=False, flip_y=False, swap_xy=False)
+        self.t_.add_defaults(flip_x=False, flip_y=False, swap_xy=False)
         for name in ('flip_x', 'flip_y', 'swap_xy'):
-            self.t_.getSetting(name).add_callback('set', self.transform_cb)
+            self.t_.get_setting(name).add_callback('set', self.transform_cb)
 
         # desired rotation angle
-        self.t_.addDefaults(rot_deg=0.0)
-        self.t_.getSetting('rot_deg').add_callback(
+        self.t_.add_defaults(rot_deg=0.0)
+        self.t_.get_setting('rot_deg').add_callback(
             'set', self.rotation_change_cb)
 
         # misc
-        self.t_.addDefaults(auto_orient=False,
-                            defer_redraw=True, defer_lagtime=0.025,
-                            show_pan_position=False,
-                            show_mode_indicator=True,
-                            show_focus_indicator=False,
-                            onscreen_font='Sans Serif',
-                            onscreen_font_size=24,
-                            color_fg="#D0F0E0", color_bg="#404040")
+        self.t_.add_defaults(auto_orient=False,
+                             defer_redraw=True, defer_lagtime=0.025,
+                             show_pan_position=False,
+                             show_mode_indicator=True,
+                             show_focus_indicator=False,
+                             onscreen_font='Sans Serif',
+                             onscreen_font_size=24,
+                             color_fg="#D0F0E0", color_bg="#404040")
 
         # embedded image "profiles"
-        self.t_.addDefaults(profile_use_scale=False, profile_use_pan=False,
-                            profile_use_cuts=False, profile_use_transform=False,
-                            profile_use_rotation=False)
+        self.t_.add_defaults(profile_use_scale=False, profile_use_pan=False,
+                             profile_use_cuts=False, profile_use_transform=False,
+                             profile_use_rotation=False)
 
         # ICC profile support
         d = dict(icc_output_profile=None, icc_output_intent='perceptual',
                  icc_proof_profile=None,  icc_proof_intent='perceptual',
                  icc_black_point_compensation=False)
-        self.t_.addDefaults(**d)
+        self.t_.add_defaults(**d)
         for key in d:
             # Note: transform_cb will redraw enough to pick up
             #       ICC profile change
-            self.t_.getSetting(key).add_callback('set', self.transform_cb)
+            self.t_.get_setting(key).add_callback('set', self.transform_cb)
 
         # Object that calculates auto cut levels
         name = self.t_.get('autocut_method', 'zscale')
@@ -545,8 +545,7 @@ class ImageViewBase(Callback.Callbacks):
             The name of a color map.
 
         """
-        cm = cmap.get_cmap(cmap_name)
-        self.set_cmap(cm)
+        self.t_.set(color_map=cmap_name)
 
     def set_intensity_map(self, imap_name):
         """Set the intensity map.
@@ -560,8 +559,7 @@ class ImageViewBase(Callback.Callbacks):
             The name of an intensity map.
 
         """
-        im = imap.get_imap(imap_name)
-        self.set_imap(im)
+        self.t_.set(intensity_map=imap_name)
 
     def set_color_algorithm(self, calg_name, **kwdargs):
         """Set the color distribution algorithm.

@@ -29,7 +29,8 @@ What GUI toolkit does Ginga use?
 It depends what exactly you want to run--Ginga is both a toolkit for
 building viewers and also includes a "reference viewer".  The example
 programs currently support Qt, Gtk, Tk, Matplotlib and web browser via
-HTML5 canvas.
+HTML5 canvas.  Some other toolkits are being worked on and may be
+partially supported.
 
 The full reference viewer currently supports Qt and Gtk.  The difference
 is explained here :ref:`ch-programming-ginga`.
@@ -40,7 +41,9 @@ Yes.
 
 Can Ginga work with Gtk3?
 -------------------------
-Not yet.
+Yes, although the performance is not as good as gtk2 yet.  Cairo for
+python3 still lacks the important ImageSurface.create_for_data()
+API call so we have to use a workaround.
 
 ----------------
 Control Bindings

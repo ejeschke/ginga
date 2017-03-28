@@ -37,43 +37,43 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.sort_options = ('loadtime', 'alpha')
 
         self.t_ = self.fitsimage.get_settings()
-        self.t_.getSetting('autocuts').add_callback('set',
+        self.t_.get_setting('autocuts').add_callback('set',
                                                self.autocuts_changed_ext_cb)
-        self.t_.getSetting('autozoom').add_callback('set',
+        self.t_.get_setting('autozoom').add_callback('set',
                                                self.autozoom_changed_ext_cb)
-        self.t_.getSetting('autocenter').add_callback('set',
+        self.t_.get_setting('autocenter').add_callback('set',
                                                       self.autocenter_changed_ext_cb)
         for key in ['pan']:
-            self.t_.getSetting(key).add_callback('set',
+            self.t_.get_setting(key).add_callback('set',
                                           self.pan_changed_ext_cb)
         for key in ['scale']:
-            self.t_.getSetting(key).add_callback('set',
+            self.t_.get_setting(key).add_callback('set',
                                           self.scale_changed_ext_cb)
 
-        self.t_.getSetting('zoom_algorithm').add_callback('set', self.set_zoomalg_ext_cb)
-        self.t_.getSetting('zoom_rate').add_callback('set', self.set_zoomrate_ext_cb)
+        self.t_.get_setting('zoom_algorithm').add_callback('set', self.set_zoomalg_ext_cb)
+        self.t_.get_setting('zoom_rate').add_callback('set', self.set_zoomrate_ext_cb)
         for key in ['scale_x_base', 'scale_y_base']:
-            self.t_.getSetting(key).add_callback('set', self.scalebase_changed_ext_cb)
-        self.t_.getSetting('rot_deg').add_callback('set', self.set_rotate_ext_cb)
+            self.t_.get_setting(key).add_callback('set', self.scalebase_changed_ext_cb)
+        self.t_.get_setting('rot_deg').add_callback('set', self.set_rotate_ext_cb)
         for name in ('flip_x', 'flip_y', 'swap_xy'):
-            self.t_.getSetting(name).add_callback('set', self.set_transform_ext_cb)
+            self.t_.get_setting(name).add_callback('set', self.set_transform_ext_cb)
 
         ## for name in ('autocut_method', 'autocut_params'):
-        ##     self.t_.getSetting(name).add_callback('set', self.set_autocuts_ext_cb)
+        ##     self.t_.get_setting(name).add_callback('set', self.set_autocuts_ext_cb)
 
         ## for key in ['color_algorithm', 'color_hashsize', 'color_map',
         ##             'intensity_map']:
-        ##     self.t_.getSetting(key).add_callback('set', self.cmap_changed_ext_cb)
+        ##     self.t_.get_setting(key).add_callback('set', self.cmap_changed_ext_cb)
 
         self.t_.setdefault('wcs_coords', 'icrs')
         self.t_.setdefault('wcs_display', 'sexagesimal')
 
         # buffer len (number of images in memory)
-        self.t_.addDefaults(numImages=4)
-        self.t_.getSetting('numImages').add_callback('set', self.set_buflen_ext_cb)
+        self.t_.add_defaults(numImages=4)
+        self.t_.get_setting('numImages').add_callback('set', self.set_buflen_ext_cb)
 
         # preload images
-        self.t_.addDefaults(preload_images=False)
+        self.t_.add_defaults(preload_images=False)
 
         self.icc_profiles = list(rgb_cms.get_profiles())
         self.icc_profiles.insert(0, None)
@@ -881,8 +881,8 @@ class Preferences(GingaPlugin.LocalPlugin):
     def set_transform_ext_cb(self, setting, value):
         if not self.gui_up:
             return
-        flip_x, flip_y, swap_xy = \
-                self.t_['flip_x'], self.t_['flip_y'], self.t_['swap_xy']
+        flip_x, flip_y, swap_xy = (
+            self.t_['flip_x'], self.t_['flip_y'], self.t_['swap_xy'])
         self.w.flip_x.set_state(flip_x)
         self.w.flip_y.set_state(flip_y)
         self.w.swap_xy.set_state(swap_xy)
