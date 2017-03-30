@@ -12,6 +12,9 @@ Ver 2.6.3.dev
   pixel
 - Fixes for some key mappings for tk, matplotlib and HTML5 canvas backends
 - Fixes for IRAF plugin under python 3
+- Fix for a bug using remote control (RC) plugin from python2 client to
+  python 3 ginga
+- Documentation updates
 
 Ver 2.6.2 (2017-02-16)
 ======================

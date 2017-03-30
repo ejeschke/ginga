@@ -143,7 +143,8 @@ class RC(GingaPlugin.GlobalPlugin):
 
         self.server = grc.RemoteServer(self.robj,
                                        host=self.host, port=self.port,
-                                       ev_quit=self.fv.ev_quit)
+                                       ev_quit=self.fv.ev_quit,
+                                       logger=self.logger)
         self.server.start(thread_pool=self.fv.get_threadPool())
 
     def stop(self):
