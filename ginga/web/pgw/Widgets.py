@@ -1419,9 +1419,9 @@ class TopLevel(ContainerBase):
     <script type="text/javascript" src="/js/hammer.js"></script>
 
     <!-- The next three lines are for the jQuery widgets (e.g., Dialog) -->
-    <link rel="stylesheet" href="//code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css">
-    <script src="//code.jquery.com/jquery-1.10.2.js"></script>
-    <script src="//code.jquery.com/ui/1.11.4/jquery-ui.js"></script>
+    <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/smoothness/jquery-ui.css">
+    <script src="//code.jquery.com/jquery-1.12.4.js"></script>
+    <script src="//code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
     <script type="text/javascript" src="/js/application.js"></script>
     <script type="text/javascript">
         var wid = "%(wid)s";
