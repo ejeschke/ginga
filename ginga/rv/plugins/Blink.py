@@ -11,6 +11,8 @@ from ginga.gw import Widgets
 
 class Blink(GingaPlugin.LocalPlugin):
     """
+    Blink
+    =====
     Blink switches through the images shown in a channel at a rate
     chosen by the user.  Alternatively, it can switch between channels
     in the main workspace.  In both cases, the primary purpose is to
@@ -130,7 +132,7 @@ class Blink(GingaPlugin.LocalPlugin):
 
     def help(self):
         name = str(self).capitalize()
-        self.fv.show_help_text(name, self.__doc__)
+        self.fv.help_text(name, self.__doc__, text_kind='rst', trim_pfx=4)
 
     def close(self):
         if self.fitsimage is None:

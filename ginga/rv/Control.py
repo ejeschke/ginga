@@ -335,17 +335,20 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             self.logger.error(errmsg)
             self.gui_do(self.show_error, errmsg, raisetab=True)
 
-    def help(self, text=None, text_kind='url', trim_pfx=0):
+    def help_text(self, name, text, text_kind='plain', trim_pfx=0):
         """
         Provide help text for the user.
 
         Parameters
         ----------
-        text : str or None (optional)
-            The text to show.  Should be a URL, HTML text or RST text
+        name : str
+            Category of help to show.
+
+        text : str
+            The text to show.  Should be plain, HTML or RST text
 
         text_kind : str (optional)
-            One of 'url', 'html', 'rst'.  Default is 'url'.
+            One of 'plain', 'html', 'rst'.  Default is 'plain'.
 
         trim_pfx : int (optional)
             Number of spaces to trim off the beginning of each line of text.
@@ -356,34 +359,38 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         displayed in a plain text widget.
         """
 
-        if text is not None:
-            if trim_pfx > 0:
-                # caller wants to trim some space off the front
-                # of each line
-                text = toolbox.trim_prefix(text, trim_pfx)
+        if trim_pfx > 0:
+            # caller wants to trim some space off the front
+            # of each line
+            text = toolbox.trim_prefix(text, trim_pfx)
 
-            if text_kind in ('html', 'url'):
-                pass
+        if text_kind == 'rst':
+            # try to convert RST to HTML using docutils
+            try:
+                overrides = {'input_encoding': 'ascii',
+                             'output_encoding': 'utf-8'}
+                text_html = publish_string(text, writer_name='html',
+                                           settings_overrides=overrides)
+                # docutils produces 'bytes' output, but webkit needs
+                # a utf-8 string
+                text = text_html.decode('utf-8')
+                text_kind = 'html'
 
-            elif text_kind == 'rst':
-                # try to convert RST to HTML using docutils
-                try:
-                    overrides = {'input_encoding': 'ascii',
-                                 'output_encoding': 'utf-8'}
-                    text_html = publish_string(text, writer_name='html',
-                                               settings_overrides=overrides)
-                    # docutils produces 'bytes' output, but webkit needs
-                    # a utf-8 string
-                    text = text_html.decode('utf-8')
+            except Exception as e:
+                self.logger.error("Error converting help text to HTML: %s" % (
+                    str(e)))
+                # revert to showing RST as plain text
 
-                except Exception as e:
-                    self.logger.error("Error converting help text to HTML: %s" % (
-                        str(e)))
-                    # revert to showing RST as plain text
-                    return self.show_help_text('Help', text)
+        else:
+            raise ValueError("I don't know how to display text of kind '%s'" % (text_kind))
 
-            else:
-                raise ValueError("I don't know how to display text of kind '%s'" % (text_kind))
+        if text_kind == 'html':
+            self.help(text=text, text_kind='html')
+
+        else:
+            self.show_help_text(name, text)
+
+    def help(self, text=None, text_kind='url'):
 
         if not self.gpmon.has_plugin('WBrowser'):
             return self.show_error("help() requires 'WBrowser' plugin")

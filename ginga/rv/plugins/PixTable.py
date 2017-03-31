@@ -12,6 +12,8 @@ from ginga import GingaPlugin, colors
 
 class PixTable(GingaPlugin.LocalPlugin):
     """
+    PixTable
+    ========
     PixTable provides a way to check or monitor the pixel values in
     a region.
 
@@ -320,7 +322,7 @@ class PixTable(GingaPlugin.LocalPlugin):
 
     def help(self):
         name = str(self).capitalize()
-        self.fv.show_help_text(name, self.__doc__)
+        self.fv.help_text(name, self.__doc__, text_kind='rst', trim_pfx=4)
 
     def start(self):
         # insert layer if it is not already

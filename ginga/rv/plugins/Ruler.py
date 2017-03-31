@@ -9,6 +9,8 @@ from ginga.gw import Widgets
 
 class Ruler(GingaPlugin.LocalPlugin):
     """
+    Ruler
+    =====
     Ruler is a simple plugin designed to measure distances on an image.
     It does this by calculating a spherical triangulation via WCS mapping
     of three points defined by a single line drawn on the image.  By default,
@@ -16,7 +18,7 @@ class Ruler(GingaPlugin.LocalPlugin):
     it can be changed to show degrees or pixel distance instead.
 
     [ Should you want "sticky rulers", use the Drawing plugin (and choose
-      "Ruler" as the drawing type). ]
+    "Ruler" as the drawing type). ]
 
     Usage
     -----
@@ -148,7 +150,7 @@ class Ruler(GingaPlugin.LocalPlugin):
 
     def help(self):
         name = str(self).capitalize()
-        self.fv.show_help_text(name, self.__doc__)
+        self.fv.help_text(name, self.__doc__, text_kind='rst', trim_pfx=4)
 
     def start(self):
         # start ruler drawing operation

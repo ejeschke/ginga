@@ -364,7 +364,7 @@ class Cuts(GingaPlugin.LocalPlugin):
 
     def help(self):
         name = str(self).capitalize()
-        self.fv.help(text=self.__doc__, text_kind='rst', trim_pfx=4)
+        self.fv.help_text(name, self.__doc__, text_kind='rst', trim_pfx=4)
 
     def select_cut(self, tag):
         self.cutstag = tag

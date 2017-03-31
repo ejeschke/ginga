@@ -14,6 +14,8 @@ from ginga.util import plots
 
 class Histogram(GingaPlugin.LocalPlugin):
     """
+    Histogram
+    =========
     Histogram plots a histogram for a region drawn in the image, or for the
     entire image.
 
@@ -212,7 +214,7 @@ class Histogram(GingaPlugin.LocalPlugin):
 
     def help(self):
         name = str(self).capitalize()
-        self.fv.show_help_text(name, self.__doc__)
+        self.fv.help_text(name, self.__doc__, text_kind='rst', trim_pfx=4)
 
     def start(self):
         self.plot.set_titles(rtitle="Histogram")

@@ -11,6 +11,8 @@ from ginga.gw import Widgets
 
 class Overlays(GingaPlugin.LocalPlugin):
     """
+    Overlays
+    ========
     A plugin for generating color overlays representing under- and
     overexposure in the loaded image.
 
@@ -133,7 +135,7 @@ class Overlays(GingaPlugin.LocalPlugin):
 
     def help(self):
         name = str(self).capitalize()
-        self.fv.show_help_text(name, self.__doc__)
+        self.fv.help_text(name, self.__doc__, text_kind='rst', trim_pfx=4)
 
     def close(self):
         self.fv.stop_local_plugin(self.chname, str(self))
