@@ -2,8 +2,12 @@
 What's New in Ginga?
 ++++++++++++++++++++
 
-Ver 2.6.3.dev
+Ver 2.6.4.dev
 =============
+- Added new ScreenShot plugin to take PNG/JPEG snaps of the viewer window
+
+Ver 2.6.3 (2017-03-30)
+======================
 - Fix for issue that stops ginga startup when loading externally
   distributed plugins that have errors
 - Fix for an issue loading plugins from the command line when they

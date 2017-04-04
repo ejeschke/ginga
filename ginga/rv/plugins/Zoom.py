@@ -69,8 +69,8 @@ class Zoom(GingaPlugin.GlobalPlugin):
 
         # read preferences for this plugin
         prefs = self.fv.get_preferences()
-        self.settings = prefs.createCategory('plugin_Zoom')
-        self.settings.addDefaults(zoom_radius=self.default_radius,
+        self.settings = prefs.create_category('plugin_Zoom')
+        self.settings.add_defaults(zoom_radius=self.default_radius,
                                   zoom_amount=self.default_zoom,
                                   zoom_cmap_name=None,
                                   zoom_imap_name=None,
@@ -111,8 +111,8 @@ class Zoom(GingaPlugin.GlobalPlugin):
         #zi.set_scale_limits(0.001, 1000.0)
         zi.zoom_to(self.default_zoom)
         settings = zi.get_settings()
-        settings.getSetting('zoomlevel').add_callback('set',
-                               self.zoomset, zi)
+        settings.get_setting('zoomlevel').add_callback('set',
+                                 self.zoomset, zi)
         zi.set_bg(0.4, 0.4, 0.4)
         zi.show_pan_mark(True)
         cmname = self.settings.get('zoom_cmap_name', None)
@@ -194,12 +194,12 @@ class Zoom(GingaPlugin.GlobalPlugin):
         # TODO: should we add our own canvas instead?
         fitsimage.add_callback('motion', self.motion_cb)
         for name in ['cuts']:
-            fitssettings.getSetting(name).add_callback('set',
+            fitssettings.get_setting(name).add_callback('set',
                                self.cutset_cb, fitsimage)
         fitsimage.add_callback('transform', self.transform_cb)
-        fitssettings.copySettings(zoomsettings, ['rot_deg'])
-        fitssettings.getSetting('rot_deg').add_callback('set', self.rotate_cb, fitsimage)
-        fitssettings.getSetting('zoomlevel').add_callback('set',
+        fitssettings.copy_settings(zoomsettings, ['rot_deg'])
+        fitssettings.get_setting('rot_deg').add_callback('set', self.rotate_cb, fitsimage)
+        fitssettings.get_setting('zoomlevel').add_callback('set',
                                self.zoomset_cb, fitsimage)
 
     def add_channel(self, viewer, chinfo):

@@ -952,6 +952,7 @@ class ImageViewBase(Callback.Callbacks):
         try:
             # See if there is an image on the canvas
             self.canvas.delete_object_by_tag(self._canvas_img_tag)
+            self.redraw()
         except KeyError:
             pass
 
@@ -2373,7 +2374,7 @@ class ImageViewBase(Callback.Callbacks):
         if self.t_['autocenter'] == 'once':
             self.t_.set(autocenter='off')
 
-    def set_autocenter(self, option):
+    def enable_autocenter(self, option):
         """Set ``autocenter`` behavior.
 
         Parameters
@@ -2393,6 +2394,8 @@ class ImageViewBase(Callback.Callbacks):
             ImageViewError("Bad autocenter option '%s': must be one of %s" % (
                 str(self.autocenter_options)))
         self.t_.set(autocenter=option)
+
+    set_autocenter = enable_autocenter
 
     def get_autocenter_options(self):
         """Get all valid ``autocenter`` options.

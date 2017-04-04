@@ -120,8 +120,7 @@ local_plugins = [
     Bunch(module='FBrowser', ws='dialogs', shortkey='f12'),
     Bunch(module='Compose', ws='dialogs'),
     Bunch(module='PlotTable', ws='dialogs'),
-    # Not ready for prime time
-    #Bunch(module='Pipeline', ws='dialogs'),
+    Bunch(module='ScreenShot', ws='dialogs'),
     ]
 
 
