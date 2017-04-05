@@ -41,7 +41,7 @@ class Pick(GingaPlugin.LocalPlugin):
 
         # get Pick preferences
         prefs = self.fv.get_preferences()
-        self.settings = prefs.createCategory('plugin_Pick')
+        self.settings = prefs.create_category('plugin_Pick')
         self.settings.load(onError='silent')
 
         self.sync_preferences()
@@ -642,7 +642,7 @@ class Pick(GingaPlugin.LocalPlugin):
         self.show_candidates = state
         if not self.show_candidates:
             # Delete previous peak marks
-            objs = self.canvas.getObjectsByTagpfx('peak')
+            objs = self.canvas.get_objects_by_tag_pfx('peak')
             self.canvas.delete_objects(objs)
 
     def coordinate_base_cb(self, w):
@@ -747,25 +747,25 @@ class Pick(GingaPlugin.LocalPlugin):
         self.resume()
 
     def pause(self):
-        self.canvas.ui_setActive(False)
+        self.canvas.ui_set_active(False)
 
     def resume(self):
         # turn off any mode user may be in
         self.modes_off()
 
-        self.canvas.ui_setActive(True)
+        self.canvas.ui_set_active(True)
         self.fv.show_status("Draw a rectangle with the right mouse button")
 
     def stop(self):
         # Delete previous peak marks
-        objs = self.canvas.getObjectsByTagpfx('peak')
+        objs = self.canvas.get_objects_by_tag_pfx('peak')
         self.canvas.delete_objects(objs)
 
         # close pick log, if any
         self.write_pick_log(self.report_log)
 
         # deactivate the canvas
-        self.canvas.ui_setActive(False)
+        self.canvas.ui_set_active(False)
         p_canvas = self.fitsimage.get_canvas()
         try:
             p_canvas.delete_object_by_tag(self.layertag)
@@ -841,7 +841,7 @@ class Pick(GingaPlugin.LocalPlugin):
                 self.clear_radial()
 
             # Delete previous peak marks
-            objs = self.canvas.getObjectsByTagpfx('peak')
+            objs = self.canvas.get_objects_by_tag_pfx('peak')
             self.canvas.delete_objects(objs)
 
             # Offload this task to another thread so that GUI remains
