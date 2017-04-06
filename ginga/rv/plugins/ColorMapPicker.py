@@ -12,17 +12,25 @@ from ginga import cmap, RGBMap, RGBImage
 
 class ColorMapPicker(GingaPlugin.GlobalPlugin):
     """
-    A plugin for graphically browsing and selecting a color map.
+    ColorMapPicker
+    ==============
+    The ColorMapPicker plugin is used to graphically browse and select a
+    color map for a channel image viewer.
 
-    USAGE:
-    When the plugin starts for the first time, it will generate a
-    bitmap RGB image of color bars and labels corresponding to all
-    the available color maps.  This can take a few seconds depending
-    on the number of color maps installed.
-
-    The color maps are displayed in the view pane of the plugin.
+    Usage
+    -----
+    Operation of the plugin is very simple: the color maps are displayed in
+    the form of color bars and labels in the main view pane of the plugin.
     Click on any one of the bars to set the color map of the currently
-    active channel image viewer.
+    active channel in the viewer.
+
+    You can scroll vertically or use the scroll bars to move through the
+    color bar samples.
+
+    .. note:: When the plugin starts for the first time, it will generate
+              a bitmap RGB image of color bars and labels corresponding to
+              all the available color maps.  This can take a few seconds
+              depending on the number of color maps installed.
     """
 
     def __init__(self, fv):
@@ -31,9 +39,9 @@ class ColorMapPicker(GingaPlugin.GlobalPlugin):
 
         # read preferences for this plugin
         prefs = self.fv.get_preferences()
-        self.settings = prefs.createCategory('plugin_ColorMapPicker')
-        self.settings.addDefaults(cbar_ht=20, cbar_wd=300, cbar_sep=10,
-                                  cbar_pan_accel=1.0)
+        self.settings = prefs.create_category('plugin_ColorMapPicker')
+        self.settings.add_defaults(cbar_ht=20, cbar_wd=300, cbar_sep=10,
+                                   cbar_pan_accel=1.0)
         self.settings.load(onError='silent')
 
         self._cmht = self.settings.get('cbar_ht', 20)
@@ -105,7 +113,10 @@ class ColorMapPicker(GingaPlugin.GlobalPlugin):
 
         btn = Widgets.Button("Close")
         btn.add_callback('activated', lambda w: self.close())
-        btns.add_widget(btn)
+        btns.add_widget(btn, stretch=0)
+        btn = Widgets.Button("Help")
+        btn.add_callback('activated', lambda w: self.help())
+        btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
         vbox.add_widget(btns, stretch=0)
 
@@ -198,6 +209,8 @@ class ColorMapPicker(GingaPlugin.GlobalPlugin):
         rgb_img = self.p_view.get_image_as_array()
         self.r_image.set_data(rgb_img)
 
+    # CALLBACKS
+
     def start(self):
         if len(self.cm_names) == 0:
             self.cm_names = list(cmap.get_names())
@@ -207,7 +220,9 @@ class ColorMapPicker(GingaPlugin.GlobalPlugin):
             self.c_view.onscreen_message(None)
         self.c_view.set_image(self.r_image)
 
-    # CALLBACKS
+    def help(self):
+        name = str(self).capitalize()
+        self.fv.help_text(name, self.__doc__, text_kind='rst', trim_pfx=4)
 
     def close(self):
         self.fv.stop_global_plugin(str(self))

@@ -4,7 +4,17 @@ What's New in Ginga?
 
 Ver 2.6.4.dev
 =============
-- Added new ScreenShot plugin to take PNG/JPEG snaps of the viewer window
+- Added new ScreenShot plugin to take PNG/JPEG snaps of the viewer
+  window
+- Enhancements to the Pick plugin
+  - Added ability to make shapes besides rectangles for enclosing pick area.
+    Masks out unwanted pixels.  Choose the shape in the Settings tab.
+  - Changed behavior of pick log to only write the log when the user clicks
+    the save button.
+  - Changed the name of the save button to "Save as FITS table" to make it
+    clear what is being written.
+  - If "Show candidates" is selected in Settings, then ALL of the candidates
+    are saved to the log.
 
 Ver 2.6.3 (2017-03-30)
 ======================
