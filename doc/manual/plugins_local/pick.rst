@@ -127,10 +127,16 @@ measurements:
   change the setting).
 
 The "Report" tab is used to record information about the measurements in
-tabular form.  By pressing the "Add Pick" button the information about
-the most recent candidate is added to the table.  If the "Record Picks
-automatically" checkbox is checked, then any candidates are added to the
-table automatically.
+tabular form:
+
+  .. image:: figures/pick-report.png
+     :width: 400px
+     :align: center
+
+By pressing the "Add Pick" button the information about the most recent
+candidate is added to the table.  If the "Record Picks automatically"
+checkbox is checked, then any candidates are added to the table
+automatically. 
 
 .. note:: If the "Show candidates" checkbox in the "Settings" tab is
           checked, then *all* objects found in the region (according to
@@ -203,6 +209,6 @@ if you have changed some parameters and want to see the effect based on the
 current pick area without disturbing it.
 
 .. image:: figures/pick-candidates.png
-   :width: 400px
+   :width: 800px
    :align: center
    :alt: The channel viewer when "Show candidates" is checked.
