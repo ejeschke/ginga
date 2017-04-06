@@ -108,6 +108,9 @@ class CanvasMixin(object):
     def get_tags(self):
         return self.tags.keys()
 
+    def has_tag(self, tag):
+        return tag in self.tags
+
     def get_objects_by_tag_pfx(self, tagpfx):
         return list(map(lambda k: self.tags[k], self.getTagsByTagpfx(tagpfx)))
 

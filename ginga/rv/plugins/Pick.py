@@ -39,6 +39,10 @@ class Pick(GingaPlugin.LocalPlugin):
         self.picktag = None
         self._textlabel = 'Pick'
 
+        # types of pick shapes that can be drawn
+        self.drawtypes = ['rectangle', 'box', 'circle', 'ellipse',
+                          'freepolygon', 'polygon', 'triangle']
+
         # get Pick preferences
         prefs = self.fv.get_preferences()
         self.settings = prefs.create_category('plugin_Pick')
@@ -58,7 +62,7 @@ class Pick(GingaPlugin.LocalPlugin):
         self.lock2 = threading.RLock()
         self.ev_intr = threading.Event()
 
-        self.last_rpt = {}
+        self.last_rpt = []
         self.rpt_dict = OrderedDict({})
         self.rpt_cnt = 0
         self.rpt_tbl = None
@@ -66,8 +70,6 @@ class Pick(GingaPlugin.LocalPlugin):
         self.rpt_wrt_time = 0.0
         self.rpt_wrt_interval = self.settings.get('report_write_interval',
                                                   30.0)
-        self.rpt_timer = fv.get_timer()
-        self.rpt_timer.set_callback('expired', self.write_pick_log_cb)
 
         self.iqcalc = iqcalc.IQCalc(self.logger)
         self.contour_interp_methods = ('bilinear', 'nearest', 'bicubic')
@@ -81,12 +83,11 @@ class Pick(GingaPlugin.LocalPlugin):
         canvas = self.dc.DrawingCanvas()
         canvas.enable_draw(True)
         canvas.enable_edit(True)
-        canvas.set_drawtype('rectangle', color='cyan', linestyle='dash',
-                            drawdims=True)
+        canvas.set_drawtype(self.pickshape, color='cyan', linestyle='dash')
         canvas.set_callback('draw-event', self.draw_cb)
         canvas.set_callback('edit-event', self.edit_cb)
-        canvas.add_draw_mode('move', down=self.btndown,
-                             move=self.drag, up=self.update)
+        canvas.add_draw_mode('move', down=self.btn_down,
+                             move=self.btn_drag, up=self.btn_up)
         canvas.register_for_cursor_drawing(self.fitsimage)
         canvas.set_surface(self.fitsimage)
         canvas.set_draw_mode('move')
@@ -97,6 +98,9 @@ class Pick(GingaPlugin.LocalPlugin):
     def sync_preferences(self):
         # Load various preferences
         self.pickcolor = self.settings.get('color_pick', 'green')
+        self.pickshape = self.settings.get('shape_pick', 'rectangle')
+        if self.pickshape not in self.drawtypes:
+            self.pickshape = 'box'
         self.candidate_color = self.settings.get('color_candidate', 'purple')
 
         # Peak finding parameters and selection criteria
@@ -129,11 +133,6 @@ class Pick(GingaPlugin.LocalPlugin):
                    ("RA deg", 'ra_deg'), ("DEC deg", 'dec_deg'),
                    ]
         self.rpt_columns = self.settings.get('report_columns', columns)
-        self.do_report_log = self.settings.get('report_to_log', False)
-        report_log = self.settings.get('report_log_path', None)
-        if report_log is None:
-            report_log = "pick_log.fits"
-        self.report_log = report_log
 
         # For contour plot
         self.num_contours = self.settings.get('num_contours', 8)
@@ -322,6 +321,8 @@ class Pick(GingaPlugin.LocalPlugin):
 
         # Build settings panel
         captions = (('Show Candidates', 'checkbutton'),
+                    ("Draw type:", 'label', 'xlbl_drawtype', 'label',
+                     "Draw type", 'combobox'),
                     ('Radius:', 'label', 'xlbl_radius', 'label',
                      'Radius', 'spinbutton'),
                     ('Threshold:', 'label', 'xlbl_threshold', 'label',
@@ -356,6 +357,19 @@ class Pick(GingaPlugin.LocalPlugin):
         b.max_side.set_tooltip("Maximum dimension to search for peaks")
         b.coordinate_base.set_tooltip("Base of pixel coordinate system")
         b.contour_interpolation.set_tooltip("Interpolation for use in contour plot")
+
+        def chg_pickshape(w, idx):
+            pickshape = self.drawtypes[idx]
+            self.set_drawtype(pickshape)
+            return True
+        combobox = b.draw_type
+        for name in self.drawtypes:
+            combobox.append_text(name)
+        index = self.drawtypes.index(self.pickshape)
+        combobox.set_index(index)
+        combobox.add_callback('activated', chg_pickshape)
+        b.xlbl_drawtype.set_text(self.pickshape)
+
         # radius control
         #b.radius.set_digits(2)
         #b.radius.set_numeric(True)
@@ -542,14 +556,16 @@ class Pick(GingaPlugin.LocalPlugin):
 
         btns = Widgets.HBox()
         btns.set_spacing(4)
-        btn = Widgets.CheckBox("Log Records")
-        btn.set_state(self.do_report_log)
-        btn.add_callback('activated', self.do_report_log_cb)
+        btn = Widgets.Button("Save as FITS table")
+        btn.add_callback('activated', self.write_pick_log_cb)
         btns.add_widget(btn)
         btns.add_widget(Widgets.Label("File:"))
         ent = Widgets.TextEntry()
-        ent.set_text(self.report_log)
-        ent.add_callback('activated', self.set_report_log_cb)
+        report_log = self.settings.get('report_log_path', None)
+        if report_log is None:
+            report_log = "pick_log.fits"
+        ent.set_text(report_log)
+        self.w.report_log = ent
         btns.add_widget(ent, stretch=1)
         vbox3.add_widget(btns, stretch=0)
 
@@ -581,7 +597,7 @@ class Pick(GingaPlugin.LocalPlugin):
         btn3 = Widgets.RadioButton("Edit", group=btn1)
         btn3.set_state(mode == 'edit')
         btn3.add_callback('activated', lambda w, val: self.set_mode_cb('edit', val))
-        btn3.set_tooltip("Choose this to edit a pick")
+        btn3.set_tooltip("Choose this to edit or move a pick")
         self.w.btn_edit = btn3
         hbox.add_widget(btn3)
 
@@ -610,18 +626,6 @@ class Pick(GingaPlugin.LocalPlugin):
 
     def record_cb(self, w, tf):
         self.do_record = tf
-        return True
-
-    def do_report_log_cb(self, w, tf):
-        self.do_report_log = tf
-        return True
-
-    def set_report_log_cb(self, w):
-        report_log = w.get_text().strip()
-        if len(report_log) == 0:
-            report_log = "pick_log.fits"
-            w.set_text(report_log)
-        self.report_log = report_log
         return True
 
     def instructions(self):
@@ -761,9 +765,6 @@ class Pick(GingaPlugin.LocalPlugin):
         objs = self.canvas.get_objects_by_tag_pfx('peak')
         self.canvas.delete_objects(objs)
 
-        # close pick log, if any
-        self.write_pick_log(self.report_log)
-
         # deactivate the canvas
         self.canvas.ui_set_active(False)
         p_canvas = self.fitsimage.get_canvas()
@@ -783,11 +784,15 @@ class Pick(GingaPlugin.LocalPlugin):
         pickobj = self.canvas.get_object_by_tag(self.picktag)
         if pickobj.kind != 'compound':
             return True
-        bbox  = pickobj.objects[0]
+        shape = pickobj.objects[0]
         point = pickobj.objects[1]
         text = pickobj.objects[2]
-        data_x, data_y = point.x, point.y
-        #self.fitsimage.panset_xy(data_x, data_y)
+
+        # reposition other elements to match
+        ctr_x, ctr_y = shape.get_center_pt()
+        point.x, point.y = ctr_x, ctr_y
+        x1, y1, x2, y2 = shape.get_llur()
+        text.x, text.y = x1, y2 + 4
 
         # set the pick image to have the same cut levels and transforms
         self.fitsimage.copy_attributes(self.pickimage, self.copy_attrs)
@@ -795,9 +800,9 @@ class Pick(GingaPlugin.LocalPlugin):
         try:
             image = self.fitsimage.get_image()
 
-            # sanity check on region
-            width = bbox.x2 - bbox.x1
-            height = bbox.y2 - bbox.y1
+            # sanity check on size of region
+            width, height = abs(x2 - x1), abs(y2 - y1)
+
             if (width > self.max_side) or (height > self.max_side):
                 errmsg = "Image area (%dx%d) too large!" % (
                     width, height)
@@ -805,14 +810,11 @@ class Pick(GingaPlugin.LocalPlugin):
                 raise Exception(errmsg)
 
             # Cut and show pick image in pick window
-            #self.pick_x, self.pick_y = data_x, data_y
-            self.logger.debug("bbox %f,%f %f,%f" % (bbox.x1, bbox.y1,
-                                                    bbox.x2, bbox.y2))
+            self.logger.debug("bbox %f,%f %f,%f" % (x1, y1, x2, y2))
             x1, y1, x2, y2, data = self.cutdetail(self.fitsimage,
                                                   self.pickimage,
-                                                  int(bbox.x1), int(bbox.y1),
-                                                  int(bbox.x2), int(bbox.y2))
-            self.logger.debug("cut box %f,%f %f,%f" % (x1, y1, x2, y2))
+                                                  shape)
+            self.logger.debug("cut box %d,%d %d,%d" % (x1, y1, x2, y2))
 
             # calculate center of pick image
             wd, ht = self.pickimage.get_data_size()
@@ -901,6 +903,14 @@ class Pick(GingaPlugin.LocalPlugin):
                 if len(results) == 0:
                     raise Exception("No object matches selection criteria")
 
+                # Add back in offsets into image to get correct values with
+                # respect to the entire image
+                for qs in results:
+                    qs.x += x1
+                    qs.y += y1
+                    qs.objx += x1
+                    qs.objy += y1
+
                 # pick main result
                 qs = results[0]
 
@@ -971,6 +981,7 @@ class Pick(GingaPlugin.LocalPlugin):
 
         try:
             image = self.fitsimage.get_image()
+            shape_obj = pickobj.objects[0]
             point = pickobj.objects[1]
             text = pickobj.objects[2]
             text.text = self._textlabel
@@ -980,20 +991,17 @@ class Pick(GingaPlugin.LocalPlugin):
 
             # Mark new peaks, if desired
             if self.show_candidates:
+                reports = list(map(lambda x: self._make_report(image, x),
+                                   objlist))
                 for obj in objlist:
-                    tag = self.canvas.add(self.dc.Point(x1+obj.objx,
-                                                        y1+obj.objy,
+                    tag = self.canvas.add(self.dc.Point(obj.objx,
+                                                        obj.objy,
                                                         5,
                                                         linewidth=1,
                                                         color=self.candidate_color),
                                           tagpfx='peak')
-
-            # Add back in offsets into image to get correct values with respect
-            # to the entire image
-            qs.x += x1
-            qs.y += y1
-            qs.objx += x1
-            qs.objy += y1
+            else:
+                reports = [self._make_report(image, qs)]
 
             # Calculate X/Y of center of star
             obj_x = qs.objx
@@ -1004,11 +1012,12 @@ class Pick(GingaPlugin.LocalPlugin):
             text.color = 'cyan'
 
             # Make report
-            self.last_rpt = self._make_report(image, qs)
-            d = self.last_rpt
+            self.last_rpt = reports
             if self.do_record:
-                self.add_pick_cb()
+                self.add_reports(reports)
+                self.last_rpt = []
 
+            d = reports[0]
             self.wdetail.fwhm_x.set_text('%.3f' % fwhm_x)
             self.wdetail.fwhm_y.set_text('%.3f' % fwhm_y)
             self.wdetail.fwhm.set_text('%.3f' % fwhm)
@@ -1036,6 +1045,7 @@ class Pick(GingaPlugin.LocalPlugin):
 
             # Mark object center on image
             point.color = 'cyan'
+            shape_obj.linestyle = 'solid'
             #self.fitsimage.panset_xy(obj_x, obj_y)
 
             self.update_status("Done")
@@ -1053,13 +1063,15 @@ class Pick(GingaPlugin.LocalPlugin):
             self.fv.show_error(errmsg, raisetab=False)
             #self.update_status("Error")
             for key in ('sky_level', 'background', 'brightness',
-                        'star_size', 'fwhm_x', 'fwhm_y'):
+                        'star_size', 'fwhm_x', 'fwhm_y',
+                        'ra', 'dec', 'object_x', 'object_y'):
                 self.wdetail[key].set_text('')
             self.wdetail.fwhm.set_text('Failed')
             self.w.btn_sky_cut.set_enabled(False)
             self.w.btn_bright_cut.set_enabled(False)
             self.pick_qs = None
             text.color = 'red'
+            shape_obj.linestyle = 'dash'
 
             self.plot_panx = self.plot_pany = 0.5
             self.plot_contours(image)
@@ -1075,128 +1087,9 @@ class Pick(GingaPlugin.LocalPlugin):
     def eval_intr(self):
         self.ev_intr.set()
 
-    def btndown(self, canvas, event, data_x, data_y, viewer):
-        if self.picktag is not None:
-            try:
-                obj = self.canvas.get_object_by_tag(self.picktag)
-                if obj.kind == 'rectangle':
-                    bbox = obj
-                else:
-                    bbox  = obj.objects[0]
-                    point = obj.objects[1]
-                self.dx = (bbox.x2 - bbox.x1) // 2
-                self.dy = (bbox.y2 - bbox.y1) // 2
-            except Exception as e:
-                pass
-
-            try:
-                self.canvas.delete_object_by_tag(self.picktag)
-            except:
-                pass
-
-        # Mark center of object and region on main image
-        dx = self.dx
-        dy = self.dy
-
-        x1, y1 = data_x - dx, data_y - dy
-        x2, y2 = data_x + dx, data_y + dy
-
-        tag = self.canvas.add(self.dc.Rectangle(x1, y1, x2, y2,
-                                                color='cyan',
-                                                linestyle='dash'))
-        self.picktag = tag
-
-        #self.draw_cb(self.canvas, tag)
-        return True
-
-    def update(self, canvas, event, data_x, data_y, viewer):
-        obj = None
-
-        if self.picktag is not None:
-            try:
-                obj = self.canvas.get_object_by_tag(self.picktag)
-                if obj.kind == 'rectangle':
-                    bbox = obj
-                else:
-                    bbox  = obj.objects[0]
-                    point = obj.objects[1]
-                self.dx = (bbox.x2 - bbox.x1) // 2
-                self.dy = (bbox.y2 - bbox.y1) // 2
-            except Exception as e:
-                pass
-
-        dx = self.dx
-        dy = self.dy
-
-        x1, y1 = data_x - dx, data_y - dy
-        x2, y2 = data_x + dx, data_y + dy
-
-        if obj is None:
-            # Replace compound image with rectangle
-            tag = self.canvas.add(self.dc.Rectangle(x1, y1, x2, y2,
-                                                    color='cyan',
-                                                    linestyle='dash'))
-            try:
-                self.canvas.delete_object_by_tag(self.picktag)
-            except:
-                pass
-
-        else:
-            # Update current rectangle with new coords
-            bbox.x1, bbox.y1, bbox.x2, bbox.y2 = x1, y1, x2, y2
-            tag = self.picktag
-
-        self.draw_cb(self.canvas, tag)
-        return True
-
-
-    def drag(self, canvas, event, data_x, data_y, viewer):
-
-        if self.picktag is None:
-            return True
-
-        obj = self.canvas.get_object_by_tag(self.picktag)
-        if obj.kind == 'compound':
-            bbox = obj.objects[0]
-        elif obj.kind == 'rectangle':
-            bbox = obj
-        else:
-            return True
-
-        # calculate center of bbox
-        wd = bbox.x2 - bbox.x1
-        dw = wd // 2
-        ht = bbox.y2 - bbox.y1
-        dh = ht // 2
-        x, y = bbox.x1 + dw, bbox.y1 + dh
-
-        # calculate offsets of move
-        dx = (data_x - x)
-        dy = (data_y - y)
-
-        # calculate new coords
-        x1, y1, x2, y2 = bbox.x1+dx, bbox.y1+dy, bbox.x2+dx, bbox.y2+dy
-
-        if (obj is None) or (obj.kind == 'compound'):
-            # Replace compound image with rectangle
-            try:
-                self.canvas.delete_object_by_tag(self.picktag)
-            except:
-                pass
-
-            self.picktag = self.canvas.add(self.dc.Rectangle(x1, y1, x2, y2,
-                                                             color='cyan',
-                                                             linestyle='dash'))
-        else:
-            # Update current rectangle with new coords and redraw
-            bbox.x1, bbox.y1, bbox.x2, bbox.y2 = x1, y1, x2, y2
-            self.canvas.redraw(whence=3)
-
-        return True
-
     def draw_cb(self, canvas, tag):
         obj = canvas.get_object_by_tag(tag)
-        if obj.kind != 'rectangle':
+        if obj.kind not in self.drawtypes:
             return True
         canvas.delete_object_by_tag(tag)
 
@@ -1206,14 +1099,14 @@ class Pick(GingaPlugin.LocalPlugin):
             except:
                 pass
 
-        # determine center of rectangle
+        # determine center of bounding box
         x1, y1, x2, y2 = obj.get_llur()
         x = x1 + (x2 - x1) // 2
         y = y1 + (y2 - y1) // 2
 
+        obj.color = self.pickcolor
         tag = canvas.add(self.dc.CompoundObject(
-            self.dc.Rectangle(x1, y1, x2, y2,
-                              color=self.pickcolor),
+            obj,
             self.dc.Point(x, y, 10, color='red'),
             self.dc.Text(x1, y2+4, '{0}: calc'.format(self._textlabel),
                          color=self.pickcolor)))
@@ -1222,7 +1115,7 @@ class Pick(GingaPlugin.LocalPlugin):
         return self.redo()
 
     def edit_cb(self, canvas, obj):
-        if obj.kind != 'rectangle':
+        if obj.kind not in self.drawtypes:
             return True
 
         # Get the compound object that sits on the canvas.
@@ -1232,40 +1125,33 @@ class Pick(GingaPlugin.LocalPlugin):
                (c_obj.objects[0] != obj):
             return False
 
-        # determine center of rectangle
-        x1, y1, x2, y2 = obj.get_llur()
-        x = x1 + (x2 - x1) // 2
-        y = y1 + (y2 - y1) // 2
-
-        # reposition other elements to match
-        point = c_obj.objects[1]
-        point.x, point.y = x, y
-        text = c_obj.objects[2]
-        text.x, text.y = x1, y2 + 4
-
         return self.redo()
 
     def reset_region(self):
         self.dx = region_default_width
         self.dy = region_default_height
+        self.set_drawtype('rectangle')
 
+        if not self.canvas.has_tag(self.picktag):
+            return
         obj = self.canvas.get_object_by_tag(self.picktag)
         if obj.kind != 'compound':
-            return True
-        bbox = obj.objects[0]
+            return
+        shape = obj.objects[0]
 
-        # calculate center of bbox
-        wd = bbox.x2 - bbox.x1
-        dw = wd // 2
-        ht = bbox.y2 - bbox.y1
-        dh = ht // 2
-        x, y = bbox.x1 + dw, bbox.y1 + dh
+        # determine center of shape
+        data_x, data_y = shape.get_center_pt()
+        rd_x, rd_y = self.dx // 2, self.dy // 2
+        x1, y1 = data_x - rd_x, data_y - rd_y
+        x2, y2 = data_x + rd_x, data_y + rd_y
 
-        # calculate new coords
-        bbox.x1, bbox.y1, bbox.x2, bbox.y2 = (x-self.dx, y-self.dy,
-                                              x+self.dx, y+self.dy)
+        # replace shape
+        # TODO: makes sense to change this to 'box'
+        Rect = self.canvas.get_draw_class('rectangle')
+        tag = self.canvas.add(Rect(x1, y1, x2, y2,
+                                   color=self.pickcolor))
 
-        self.redo()
+        self.draw_cb(self.canvas, tag)
 
     def pan_to_pick_cb(self):
         if not self.pick_qs:
@@ -1329,13 +1215,21 @@ class Pick(GingaPlugin.LocalPlugin):
 
             return self.fv.showxy(chviewer, data_x, data_y)
 
-    def cutdetail(self, srcimage, dstimage, x1, y1, x2, y2):
-        image = srcimage.get_image()
-        data, x1, y1, x2, y2 = image.cutout_adjust(x1, y1, x2, y2)
+    def cutdetail(self, src_view, dst_view, shape_obj):
+        image = src_view.get_image()
+        view, mask = image.get_shape_view(shape_obj)
 
-        dstimage.set_data(data)
+        data = image._slice(view)
 
-        return (x1, y1, x2, y2, data)
+        y1, y2 = view[0].start, view[0].stop
+        x1, x2 = view[1].start, view[1].stop
+
+        # mask non-containing members
+        mdata = numpy.ma.array(data, mask=numpy.logical_not(mask))
+
+        dst_view.set_data(mdata)
+
+        return (x1, y1, x2, y2, mdata)
 
     def pan_plot(self, xdelta, ydelta):
         x1, x2 = self.w.ax.get_xlim()
@@ -1346,8 +1240,7 @@ class Pick(GingaPlugin.LocalPlugin):
         self.w.canvas.draw()
 
     def write_pick_log(self, filepath):
-        if (not self.do_report_log or len(self.rpt_dict) == 0 or
-            self.rpt_wrt_time >= self.rpt_mod_time):
+        if len(self.rpt_dict) == 0:
             return
 
         # Save the table as a binary table HDU
@@ -1358,32 +1251,46 @@ class Pick(GingaPlugin.LocalPlugin):
             self.logger.debug("Writing modified pick log")
             tbl = Table(rows=list(self.rpt_dict.values()))
             tbl.meta['COMMENT'] = ["Written by ginga Pick plugin"]
-            tbl.write(self.report_log, overwrite=True)
+            tbl.write(filepath, overwrite=True)
 
             self.rpt_wrt_time = time.time()
 
         except Exception as e:
             self.logger.error("Error writing to pick log: %s" % (str(e)))
 
-    def write_pick_log_cb(self, timer):
-        self.write_pick_log(self.report_log)
+    def write_pick_log_cb(self, w):
+        path = self.w.report_log.get_text().strip()
+        self.write_pick_log(path)
 
-    def add_pick_cb(self):
-        if self.last_rpt is not None:
+    def add_reports(self, reports):
+        for rpt in reports:
             self.rpt_cnt += 1
             # Hack to insure that we get the columns in the desired order
-            d = OrderedDict([(key, self.last_rpt[key])
+            d = OrderedDict([(key, rpt[key])
                              for col, key in self.rpt_columns])
             self.rpt_dict[self.rpt_cnt] = d
-            self.last_rpt = None
             self.rpt_mod_time = time.time()
-            self.rpt_timer.cond_set(self.rpt_wrt_interval)
 
             self.rpt_tbl.set_tree(self.rpt_dict)
+
+    def add_pick_cb(self):
+        if len(self.last_rpt) > 0:
+            self.add_reports(self.last_rpt)
+            self.last_rpt = []
 
     def clear_pick_log_cb(self):
         self.rpt_dict = OrderedDict({})
         self.rpt_tbl.set_tree(self.rpt_dict)
+
+    def set_drawtype(self, shapename):
+        if shapename not in self.drawtypes:
+            raise ValueError("shape must be one of %s not %s" % (
+                str(self.drawtypes), shapename))
+
+        self.pickshape = shapename
+        self.w.xlbl_drawtype.set_text(self.pickshape)
+        self.canvas.set_drawtype(self.pickshape, color='cyan',
+                                     linestyle='dash')
 
     def edit_select_pick(self):
         if self.picktag is not None:
@@ -1396,6 +1303,69 @@ class Pick(GingaPlugin.LocalPlugin):
         else:
             self.canvas.clear_selected()
         self.canvas.update_canvas()
+
+    def btn_down(self, canvas, event, data_x, data_y, viewer):
+
+        if (self.picktag is not None) and canvas.has_tag(self.picktag):
+            obj = self.canvas.get_object_by_tag(self.picktag)
+            if obj.kind != 'compound':
+                return False
+
+            shape = obj.objects[0]
+            shape.linestyle = 'dash'
+            point = obj.objects[1]
+            point.color = 'red'
+
+            shape.move_to(data_x, data_y)
+            self.canvas.update_canvas()
+
+        else:
+            # No object yet? Add a default one.
+            self.set_drawtype('rectangle')
+            rd_x, rd_y = self.dx // 2, self.dy // 2
+            x1, y1 = data_x - rd_x, data_y - rd_y
+            x2, y2 = data_x + rd_x, data_y + rd_y
+
+            # TODO: makes sense to change this to 'box'
+            Rect = self.canvas.get_draw_class('rectangle')
+            tag = self.canvas.add(Rect(x1, y1, x2, y2,
+                                       color=self.pickcolor))
+
+            self.draw_cb(self.canvas, tag)
+
+        return True
+
+    def btn_drag(self, canvas, event, data_x, data_y, viewer):
+
+        if (self.picktag is not None) and canvas.has_tag(self.picktag):
+            obj = self.canvas.get_object_by_tag(self.picktag)
+            if obj.kind != 'compound':
+                return False
+
+            shape = obj.objects[0]
+
+            shape.move_to(data_x, data_y)
+            self.canvas.update_canvas()
+            return True
+
+        return False
+
+    def btn_up(self, canvas, event, data_x, data_y, viewer):
+
+        if (self.picktag is not None) and canvas.has_tag(self.picktag):
+            obj = self.canvas.get_object_by_tag(self.picktag)
+            if obj.kind != 'compound':
+                return False
+
+            shape = obj.objects[0]
+
+            shape.move_to(data_x, data_y)
+            self.canvas.update_canvas()
+
+            self.redo()
+
+        return True
+
 
     def set_mode_cb(self, mode, tf):
         if tf:

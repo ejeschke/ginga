@@ -1,9 +1,6 @@
 #
 # iqcalc.py -- image quality calculations on FITS data
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) 2011-2012, Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -144,12 +141,14 @@ class IQCalc(object):
     # FINDING BRIGHT PEAKS
 
     def get_threshold(self, data, sigma=5.0):
-        median = numpy.median(data)
+        # data may be masked or contain NaNs
+        fdata = numpy.ma.compressed(data[numpy.isfinite(data)])
+        median = numpy.median(fdata)
         # NOTE: for this method a good default sigma is 5.0
-        dist = numpy.fabs(data - median).mean()
+        dist = numpy.fabs(fdata - median).mean()
         threshold = median + sigma * dist
         # NOTE: for this method a good default sigma is 2.0
-        ## std = numpy.std(data - median)
+        ## std = numpy.std(fdata - median)
         ## threshold = median + sigma * std
         self.logger.debug("calc threshold=%f" % (threshold))
         return threshold
@@ -171,11 +170,13 @@ class IQCalc(object):
             self.logger.debug("threshold defaults to %f (sigma=%f)" % (
                 threshold, sigma))
 
+        #self.logger.debug("filtering")
         data_max = filters.maximum_filter(data, radius)
         maxima = (data == data_max)
         diff = data_max > threshold
         maxima[diff == 0] = 0
 
+        #self.logger.debug("finding")
         labeled, num_objects = ndimage.label(maxima)
         slices = ndimage.find_objects(labeled)
         peaks = []
@@ -187,6 +188,7 @@ class IQCalc(object):
             # calculation to refine further
             peaks.append((xc, yc))
 
+        self.logger.debug("peaks=%s" % (str(peaks)))
         return peaks
 
 

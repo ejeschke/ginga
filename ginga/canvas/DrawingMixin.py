@@ -201,6 +201,8 @@ class DrawingMixin(object):
             return False
 
         self._draw_obj = None
+        self.clear_selected()
+
         # get the drawing coordinate type (default 'data')
         crdtype = self.t_drawparams.get('coord', 'data')
         crdmap = viewer.get_coordmap(crdtype)
@@ -231,7 +233,6 @@ class DrawingMixin(object):
 
             if self.edit_follows_draw:
                 #self.set_draw_mode('edit')
-                self.clear_selected()
                 self.edit_select(obj)
                 self.make_callback('edit-select', self._edit_obj)
             return True
@@ -660,7 +661,6 @@ class DrawingMixin(object):
         if obj not in self._selected:
             self._selected.append(obj)
 
-
     ##### PICK LOGIC #####
 
     def _do_pick(self, canvas, event, data_x, data_y, cb_name, viewer):
@@ -726,12 +726,6 @@ class DrawingMixin(object):
         selected = list(self.get_selected())
         if len(selected) > 0:
             for obj in selected:
-                ## if not self.has_object(obj):
-                ##     # <-- the object has been removed from the canvas
-                ##     # but not removed from the selection
-                ##     self.select_remove(obj)
-                ##     continue
-
                 cr = viewer.renderer.setup_cr(obj)
                 obj.draw_edit(cr, viewer)
 
