@@ -118,6 +118,7 @@ class Pick(GingaPlugin.LocalPlugin):
                                                      coord_offset)
 
         # For controls
+        self.delta_bg = self.settings.get('delta_bg', 0.0)
         self.delta_sky = self.settings.get('delta_sky', 0.0)
         self.delta_bright = self.settings.get('delta_bright', 0.0)
 
@@ -482,6 +483,8 @@ class Pick(GingaPlugin.LocalPlugin):
         # Build controls panel
         vbox3 = Widgets.VBox()
         captions = (
+            ('Bg cut', 'button', 'Delta bg:', 'label',
+             'xlbl_delta_bg', 'label', 'Delta bg', 'entry'),
             ('Sky cut', 'button', 'Delta sky:', 'label',
              'xlbl_delta_sky', 'label', 'Delta sky', 'entry'),
             ('Bright cut', 'button', 'Delta bright:', 'label',
@@ -490,10 +493,28 @@ class Pick(GingaPlugin.LocalPlugin):
 
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
+        b.bg_cut.set_tooltip("Set image low cut to Background Level")
+        b.delta_bg.set_tooltip("Delta to apply to this cut")
         b.sky_cut.set_tooltip("Set image low cut to Sky Level")
-        b.delta_sky.set_tooltip("Delta to apply to low cut")
+        b.delta_sky.set_tooltip("Delta to apply to this cut")
         b.bright_cut.set_tooltip("Set image high cut to Sky Level+Brightness")
-        b.delta_bright.set_tooltip("Delta to apply to high cut")
+        b.delta_bright.set_tooltip("Delta to apply to this cut")
+
+        b.bg_cut.set_enabled(False)
+        self.w.btn_bg_cut = b.bg_cut
+        self.w.btn_bg_cut.add_callback('activated', lambda w: self.bg_cut())
+        self.w.bg_cut_delta = b.delta_bg
+        b.xlbl_delta_bg.set_text(str(self.delta_bg))
+        b.delta_bg.set_text(str(self.delta_bg))
+        def chg_delta_bg(w):
+            delta_bg = 0.0
+            val = w.get_text().strip()
+            if len(val) > 0:
+                delta_bg = float(val)
+            self.delta_bg = delta_bg
+            self.w.xlbl_delta_bg.set_text(str(self.delta_bg))
+            return True
+        b.delta_bg.add_callback('activated', chg_delta_bg)
 
         b.sky_cut.set_enabled(False)
         self.w.btn_sky_cut = b.sky_cut
@@ -1031,6 +1052,7 @@ class Pick(GingaPlugin.LocalPlugin):
             self.wdetail.equinox.set_text(str(d.equinox))
             self.wdetail.star_size.set_text('%.3f' % d.starsize)
 
+            self.w.btn_bg_cut.set_enabled(True)
             self.w.btn_sky_cut.set_enabled(True)
             self.w.btn_bright_cut.set_enabled(True)
 
@@ -1067,6 +1089,7 @@ class Pick(GingaPlugin.LocalPlugin):
                         'ra', 'dec', 'object_x', 'object_y'):
                 self.wdetail[key].set_text('')
             self.wdetail.fwhm.set_text('Failed')
+            self.w.btn_bg_cut.set_enabled(False)
             self.w.btn_sky_cut.set_enabled(False)
             self.w.btn_bright_cut.set_enabled(False)
             self.pick_qs = None
@@ -1162,6 +1185,19 @@ class Pick(GingaPlugin.LocalPlugin):
         # TODO: convert to WCS coords based on user preference
         self.fitsimage.set_pan(pan_x, pan_y, coord='data')
         return True
+
+    def bg_cut(self):
+        if not self.pick_qs:
+            self.fv.show_status("Please pick an object to set the bg level!")
+            return
+        loval = self.pick_qs.background
+        oldlo, hival = self.fitsimage.get_cut_levels()
+        try:
+            loval += self.delta_bg
+            self.fitsimage.cut_levels(loval, hival)
+
+        except Exception as e:
+            self.fv.show_status("No valid bg level: '%s'" % (loval))
 
     def sky_cut(self):
         if not self.pick_qs:
